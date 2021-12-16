@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,15 +31,16 @@
 #include "ElementContext.h"
 #include "IntRect.h"
 #include "ProcessIdentifier.h"
+#include <wtf/EnumTraits.h>
 
 namespace WebCore {
 
-enum FrameState {
-    FrameStateProvisional,
+enum class FrameState : uint8_t {
+    Provisional,
     // This state indicates we are ready to commit to a page,
     // which means the view will transition to use the new data source.
-    FrameStateCommittedPage,
-    FrameStateComplete
+    CommittedPage,
+    Complete
 };
 
 enum class PolicyAction : uint8_t {
@@ -112,6 +113,11 @@ Optional<PolicyCheckIdentifier> PolicyCheckIdentifier::decode(Decoder& decoder)
     return PolicyCheckIdentifier { *process, policyCheck };
 }
 
+enum class ShouldContinuePolicyCheck : bool {
+    Yes,
+    No
+};
+
 enum class NewFrameOpenerPolicy : uint8_t {
     Suppress,
     Allow
@@ -128,7 +134,7 @@ enum class NavigationType : uint8_t {
 
 enum class ShouldOpenExternalURLsPolicy : uint8_t {
     ShouldNotAllow,
-    ShouldAllowExternalSchemes,
+    ShouldAllowExternalSchemesButNotAppLinks,
     ShouldAllow,
 };
 
@@ -137,9 +143,9 @@ enum class InitiatedByMainFrame : uint8_t {
     Unknown,
 };
 
-enum ClearProvisionalItemPolicy {
-    ShouldClearProvisionalItem,
-    ShouldNotClearProvisionalItem
+enum class ClearProvisionalItem : bool {
+    Yes,
+    No
 };
 
 enum class StopLoadingPolicy {
@@ -154,15 +160,10 @@ enum class ObjectContentType : uint8_t {
     PlugIn,
 };
 
-enum UnloadEventPolicy {
-    UnloadEventPolicyNone,
-    UnloadEventPolicyUnloadOnly,
-    UnloadEventPolicyUnloadAndPageHide
-};
-
-enum ShouldSendReferrer {
-    MaybeSendReferrer,
-    NeverSendReferrer
+enum class UnloadEventPolicy {
+    None,
+    UnloadOnly,
+    UnloadAndPageHide
 };
 
 // Passed to FrameLoader::urlSelected() and ScriptController::executeIfJavaScriptURL()
@@ -174,7 +175,7 @@ enum ShouldReplaceDocumentIfJavaScriptURL {
     DoNotReplaceDocumentIfJavaScriptURL
 };
 
-enum WebGLLoadPolicy {
+enum class WebGLLoadPolicy : uint8_t {
     WebGLBlockCreation,
     WebGLAllowCreation,
     WebGLPendingCreation
@@ -222,24 +223,19 @@ Optional<SystemPreviewInfo> SystemPreviewInfo::decode(Decoder& decoder)
     return { { WTFMove(*element), WTFMove(*previewRect), WTFMove(*isPreview) } };
 }
 
-enum class LoadCompletionType : uint8_t {
+enum class LoadCompletionType : bool {
     Finish,
     Cancel
+};
+
+enum class AllowsContentJavaScript : bool {
+    No,
+    Yes,
 };
 
 } // namespace WebCore
 
 namespace WTF {
-
-template<> struct EnumTraits<WebCore::PolicyAction> {
-    using values = EnumValues<
-        WebCore::PolicyAction,
-        WebCore::PolicyAction::Use,
-        WebCore::PolicyAction::Download,
-        WebCore::PolicyAction::Ignore,
-        WebCore::PolicyAction::StopAllLoads
-    >;
-};
 
 template<> struct EnumTraits<WebCore::FrameLoadType> {
     using values = EnumValues<
@@ -257,12 +253,43 @@ template<> struct EnumTraits<WebCore::FrameLoadType> {
     >;
 };
 
+template<> struct EnumTraits<WebCore::NavigationType> {
+    using values = EnumValues<
+        WebCore::NavigationType,
+        WebCore::NavigationType::LinkClicked,
+        WebCore::NavigationType::FormSubmitted,
+        WebCore::NavigationType::BackForward,
+        WebCore::NavigationType::Reload,
+        WebCore::NavigationType::FormResubmitted,
+        WebCore::NavigationType::Other
+    >;
+};
+
+template<> struct EnumTraits<WebCore::PolicyAction> {
+    using values = EnumValues<
+        WebCore::PolicyAction,
+        WebCore::PolicyAction::Use,
+        WebCore::PolicyAction::Download,
+        WebCore::PolicyAction::Ignore,
+        WebCore::PolicyAction::StopAllLoads
+    >;
+};
+
 template<> struct EnumTraits<WebCore::ShouldOpenExternalURLsPolicy> {
     using values = EnumValues<
         WebCore::ShouldOpenExternalURLsPolicy,
         WebCore::ShouldOpenExternalURLsPolicy::ShouldNotAllow,
-        WebCore::ShouldOpenExternalURLsPolicy::ShouldAllowExternalSchemes,
+        WebCore::ShouldOpenExternalURLsPolicy::ShouldAllowExternalSchemesButNotAppLinks,
         WebCore::ShouldOpenExternalURLsPolicy::ShouldAllow
+    >;
+};
+
+template<> struct EnumTraits<WebCore::WebGLLoadPolicy> {
+    using values = EnumValues<
+        WebCore::WebGLLoadPolicy,
+        WebCore::WebGLLoadPolicy::WebGLBlockCreation,
+        WebCore::WebGLLoadPolicy::WebGLAllowCreation,
+        WebCore::WebGLLoadPolicy::WebGLPendingCreation
     >;
 };
 

@@ -1,6 +1,6 @@
 /*
  *  Copyright (C) 1999-2000 Harri Porten (porten@kde.org)
- *  Copyright (C) 2003, 2008, 2011, 2016 Apple Inc. All rights reserved.
+ *  Copyright (C) 2003-2020 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -21,17 +21,13 @@
 #include "config.h"
 #include "BooleanPrototype.h"
 
-#include "Error.h"
-#include "ExceptionHelpers.h"
-#include "JSFunction.h"
-#include "JSString.h"
-#include "ObjectPrototype.h"
+#include "IntegrityInlines.h"
 #include "JSCInlines.h"
 
 namespace JSC {
 
-static EncodedJSValue JSC_HOST_CALL booleanProtoFuncToString(JSGlobalObject*, CallFrame*);
-static EncodedJSValue JSC_HOST_CALL booleanProtoFuncValueOf(JSGlobalObject*, CallFrame*);
+static JSC_DECLARE_HOST_FUNCTION(booleanProtoFuncToString);
+static JSC_DECLARE_HOST_FUNCTION(booleanProtoFuncValueOf);
 
 }
 
@@ -65,7 +61,7 @@ void BooleanPrototype::finishCreation(VM& vm, JSGlobalObject*)
 
 // ------------------------------ Functions ---------------------------
 
-EncodedJSValue JSC_HOST_CALL booleanProtoFuncToString(JSGlobalObject* globalObject, CallFrame* callFrame)
+JSC_DEFINE_HOST_FUNCTION(booleanProtoFuncToString, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
@@ -80,6 +76,7 @@ EncodedJSValue JSC_HOST_CALL booleanProtoFuncToString(JSGlobalObject* globalObje
     if (UNLIKELY(!thisObject))
         return throwVMTypeError(globalObject, scope);
 
+    Integrity::auditStructureID(vm, thisObject->structureID());
     if (thisObject->internalValue() == jsBoolean(false))
         return JSValue::encode(vm.smallStrings.falseString());
 
@@ -87,7 +84,7 @@ EncodedJSValue JSC_HOST_CALL booleanProtoFuncToString(JSGlobalObject* globalObje
     return JSValue::encode(vm.smallStrings.trueString());
 }
 
-EncodedJSValue JSC_HOST_CALL booleanProtoFuncValueOf(JSGlobalObject* globalObject, CallFrame* callFrame)
+JSC_DEFINE_HOST_FUNCTION(booleanProtoFuncValueOf, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
@@ -99,6 +96,7 @@ EncodedJSValue JSC_HOST_CALL booleanProtoFuncValueOf(JSGlobalObject* globalObjec
     if (UNLIKELY(!thisObject))
         return throwVMTypeError(globalObject, scope);
 
+    Integrity::auditStructureID(vm, thisObject->structureID());
     return JSValue::encode(thisObject->internalValue());
 }
 

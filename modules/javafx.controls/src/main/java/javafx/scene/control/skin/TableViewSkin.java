@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -64,7 +64,7 @@ import com.sun.javafx.scene.control.behavior.TableViewBehavior;
  */
 public class TableViewSkin<T> extends TableViewSkinBase<T, T, TableView<T>, TableRow<T>, TableColumn<T, ?>> {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private Fields                                                          *
      *                                                                         *
@@ -74,7 +74,7 @@ public class TableViewSkin<T> extends TableViewSkinBase<T, T, TableView<T>, Tabl
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -98,13 +98,6 @@ public class TableViewSkin<T> extends TableViewSkinBase<T, T, TableView<T>, Tabl
         flow.setCellFactory(flow -> createCell());
 
         EventHandler<MouseEvent> ml = event -> {
-            // RT-15127: cancel editing on scroll. This is a bit extreme
-            // (we are cancelling editing on touching the scrollbars).
-            // This can be improved at a later date.
-            if (control.getEditingCell() != null) {
-                control.edit(-1, null);
-            }
-
             // This ensures that the table maintains the focus, even when the vbar
             // and hbar controls inside the flow are clicked. Without this, the
             // focus border will not be shown when the user interacts with the
@@ -138,7 +131,7 @@ public class TableViewSkin<T> extends TableViewSkinBase<T, T, TableView<T>, Tabl
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *
@@ -205,7 +198,7 @@ public class TableViewSkin<T> extends TableViewSkinBase<T, T, TableView<T>, Tabl
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private methods                                                         *
      *                                                                         *

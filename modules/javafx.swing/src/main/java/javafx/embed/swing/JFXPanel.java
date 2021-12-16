@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -212,6 +212,7 @@ public class JFXPanel extends JComponent {
         if (fxInitialized) {
             return;
         }
+        @SuppressWarnings("removal")
         EventQueue eventQueue = AccessController.doPrivileged(
                                 (PrivilegedAction<EventQueue>) java.awt.Toolkit
                                 .getDefaultToolkit()::getSystemEventQueue);
@@ -295,16 +296,19 @@ public class JFXPanel extends JComponent {
         if (Toolkit.getToolkit().isFxUserThread()) {
             setSceneImpl(newScene);
         } else {
+            @SuppressWarnings("removal")
             EventQueue eventQueue = AccessController.doPrivileged(
                     (PrivilegedAction<EventQueue>) java.awt.Toolkit
                             .getDefaultToolkit()::getSystemEventQueue);
             SecondaryLoop secondaryLoop = eventQueue.createSecondaryLoop();
-            if (secondaryLoop.enter()) {
-                Platform.runLater(() -> {
+            Platform.runLater(() -> {
+                try {
                     setSceneImpl(newScene);
-                });
-                secondaryLoop.exit();
-            }
+                } finally {
+                    secondaryLoop.exit();
+                }
+            });
+            secondaryLoop.enter();
         }
     }
 
@@ -870,6 +874,7 @@ public class JFXPanel extends JComponent {
      * method is invoked, the chain of parent components is set up with
      * KeyboardAction event listeners.
      */
+    @SuppressWarnings("removal")
     @Override
     public void addNotify() {
         super.addNotify();
@@ -904,6 +909,7 @@ public class JFXPanel extends JComponent {
      * When this method is invoked, any KeyboardActions set up in the the
      * chain of parent components are removed.
      */
+    @SuppressWarnings("removal")
     @Override public void removeNotify() {
         SwingNodeHelper.runOnFxThread(() -> {
             if ((stage != null) && stage.isShowing()) {

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Apple Inc.  All rights reserved.
+ * Copyright (C) 2015-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -69,12 +69,19 @@ TextStream& operator<<(TextStream& ts, ApplePayButtonType playState)
     case ApplePayButtonType::Buy: ts << "buy"; break;
     case ApplePayButtonType::SetUp: ts << "setup"; break;
     case ApplePayButtonType::Donate: ts << "donate"; break;
-#if ENABLE(APPLE_PAY_SESSION_V4)
     case ApplePayButtonType::CheckOut: ts << "checkout"; break;
     case ApplePayButtonType::Book: ts << "book"; break;
     case ApplePayButtonType::Subscribe: ts << "subscribe"; break;
+#if ENABLE(APPLE_PAY_NEW_BUTTON_TYPES)
+    case ApplePayButtonType::Reload: ts << "reload"; break;
+    case ApplePayButtonType::AddMoney: ts << "add-money"; break;
+    case ApplePayButtonType::TopUp: ts << "top-up"; break;
+    case ApplePayButtonType::Order: ts << "order"; break;
+    case ApplePayButtonType::Rent: ts << "rent"; break;
+    case ApplePayButtonType::Support: ts << "support"; break;
+    case ApplePayButtonType::Contribute: ts << "contribute"; break;
+    case ApplePayButtonType::Tip: ts << "tip"; break;
 #endif
-
     }
     return ts;
 }
@@ -84,9 +91,9 @@ TextStream& operator<<(TextStream& ts, AspectRatioType aspectRatioType)
 {
     switch (aspectRatioType) {
     case AspectRatioType::Auto: ts << "auto"; break;
-    case AspectRatioType::FromIntrinsic: ts << "from-intrinsic"; break;
-    case AspectRatioType::FromDimensions: ts << "from-dimensions"; break;
-    case AspectRatioType::Specified: ts << "specified"; break;
+    case AspectRatioType::Ratio: ts << "ratio"; break;
+    case AspectRatioType::AutoAndRatio: ts << "autoandratio"; break;
+    case AspectRatioType::AutoZero: ts << "autozero"; break;
     }
     return ts;
 }
@@ -462,6 +469,15 @@ TextStream& operator<<(TextStream& ts, EmptyCell emptyCell)
     return ts;
 }
 
+TextStream& operator<<(TextStream& ts, EventListenerRegionType listenerType)
+{
+    switch (listenerType) {
+    case EventListenerRegionType::Wheel: ts << "wheel"; break;
+    case EventListenerRegionType::NonPassiveWheel: ts << "active wheel"; break;
+    }
+    return ts;
+}
+
 TextStream& operator<<(TextStream& ts, FillAttachment attachment)
 {
     switch (attachment) {
@@ -757,6 +773,7 @@ TextStream& operator<<(TextStream& ts, ListStyleType styleType)
     case ListStyleType::HiraganaIroha: ts << "hiragana-iroha"; break;
     case ListStyleType::KatakanaIroha: ts << "katakana-iroha"; break;
     case ListStyleType::None: ts << "none"; break;
+    case ListStyleType::String: ts << "string"; break;
     }
     return ts;
 }
@@ -927,6 +944,7 @@ TextStream& operator<<(TextStream& ts, PseudoId pseudoId)
     case PseudoId::None: ts << "none"; break;
     case PseudoId::FirstLine: ts << "first-line"; break;
     case PseudoId::FirstLetter: ts << "first-letter"; break;
+    case PseudoId::Highlight: ts << "highlight"; break;
     case PseudoId::Marker: ts << "marker"; break;
     case PseudoId::Before: ts << "before"; break;
     case PseudoId::After: ts << "after"; break;
@@ -1018,6 +1036,15 @@ TextStream& operator<<(TextStream& ts, ScrollSnapStrictness strictness)
     case ScrollSnapStrictness::None: ts << "none"; break;
     case ScrollSnapStrictness::Proximity: ts << "proximity"; break;
     case ScrollSnapStrictness::Mandatory: ts << "mandatory"; break;
+    }
+    return ts;
+}
+
+TextStream& operator<<(TextStream& ts, ScrollSnapStop stop)
+{
+    switch (stop) {
+    case ScrollSnapStop::Normal: ts << "normal"; break;
+    case ScrollSnapStop::Always: ts << "always"; break;
     }
     return ts;
 }
@@ -1235,6 +1262,9 @@ TextStream& operator<<(TextStream& ts, TransformStyle3D transformStyle)
     switch (transformStyle) {
     case TransformStyle3D::Flat: ts << "flat"; break;
     case TransformStyle3D::Preserve3D: ts << "preserve-3d"; break;
+#if ENABLE(CSS_TRANSFORM_STYLE_OPTIMIZED_3D)
+    case TransformStyle3D::Optimized3D: ts << "optimized-3d"; break;
+#endif
     }
     return ts;
 }
@@ -1318,6 +1348,15 @@ TextStream& operator<<(TextStream& ts, WordBreak wordBreak)
     case WordBreak::BreakAll: ts << "break-all"; break;
     case WordBreak::KeepAll: ts << "keep-all"; break;
     case WordBreak::BreakWord: ts << "break-word"; break;
+    }
+    return ts;
+}
+
+TextStream& operator<<(TextStream& ts, MathStyle mathStyle)
+{
+    switch (mathStyle) {
+    case MathStyle::Normal: ts << "normal"; break;
+    case MathStyle::Compact: ts << "compact"; break;
     }
     return ts;
 }

@@ -35,8 +35,12 @@ namespace Inspector {
 
 RemoteInspectorServer& RemoteInspectorServer::singleton()
 {
-    static NeverDestroyed<RemoteInspectorServer> server;
-    return server;
+    static LazyNeverDestroyed<RemoteInspectorServer> shared;
+    static std::once_flag onceKey;
+    std::call_once(onceKey, [&] {
+        shared.construct();
+    });
+    return shared;
 }
 
 RemoteInspectorServer::~RemoteInspectorServer()
@@ -47,23 +51,39 @@ RemoteInspectorServer::~RemoteInspectorServer()
 
 bool RemoteInspectorServer::start(const char* address, uint16_t port)
 {
+    if (isRunning())
+        return false;
+
     auto& endpoint = Inspector::RemoteInspectorSocketEndpoint::singleton();
-    m_server = endpoint.listenInet(address, port, *this, RemoteInspector::singleton());
+    m_server = endpoint.listenInet(address, port, *this);
     return isRunning();
 }
 
-bool RemoteInspectorServer::didAccept(ConnectionID acceptedID, ConnectionID, Socket::Domain)
+Optional<uint16_t> RemoteInspectorServer::getPort() const
+{
+    if (!isRunning())
+        return WTF::nullopt;
+
+    const auto& endpoint = Inspector::RemoteInspectorSocketEndpoint::singleton();
+    return endpoint.getPort(m_server.value());
+}
+
+Optional<ConnectionID> RemoteInspectorServer::doAccept(RemoteInspectorSocketEndpoint& endpoint, PlatformSocketType socket)
 {
     ASSERT(!isMainThread());
 
     auto& inspector = RemoteInspector::singleton();
     if (inspector.isConnected()) {
         LOG_ERROR("RemoteInspector can accept only 1 client");
-
-        return false;
+        return WTF::nullopt;
     }
-    inspector.connect(acceptedID);
-    return true;
+
+    if (auto newID = endpoint.createClient(socket, inspector)) {
+        inspector.connect(newID.value());
+        return newID;
+    }
+
+    return WTF::nullopt;
 }
 
 } // namespace Inspector

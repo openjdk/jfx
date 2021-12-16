@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2007 Alexey Proskuryakov <ap@nypop.com>.
- * Copyright (C) 2008, 2009, 2010, 2011 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2020 Apple Inc. All rights reserved.
  * Copyright (C) 2009 Torch Mobile Inc. All rights reserved. (http://www.torchmobile.com/)
  * Copyright (C) 2009 Jeff Schiller <codedread@gmail.com>
  * Copyright (C) Research In Motion Limited 2010. All rights reserved.
@@ -39,6 +39,7 @@
 #include "LineClampValue.h"
 #include "RenderStyleConstants.h"
 #include "SVGRenderStyleDefs.h"
+#include "ScrollTypes.h"
 #include "TextFlags.h"
 #include "ThemeTypes.h"
 #include "TouchAction.h"
@@ -587,9 +588,6 @@ template<> inline CSSPrimitiveValue::CSSPrimitiveValue(ControlPart e)
     case SearchFieldCancelButtonPart:
         m_value.valueID = CSSValueSearchfieldCancelButton;
         break;
-    case SnapshottedPluginOverlayPart:
-        m_value.valueID = CSSValueSnapshottedPluginOverlay;
-        break;
     case TextFieldPart:
         m_value.valueID = CSSValueTextfield;
         break;
@@ -605,11 +603,6 @@ template<> inline CSSPrimitiveValue::CSSPrimitiveValue(ControlPart e)
         break;
     case BorderlessAttachmentPart:
         m_value.valueID = CSSValueBorderlessAttachment;
-        break;
-#endif
-#if ENABLE(SERVICE_CONTROLS)
-    case ImageControlsButtonPart:
-        m_value.valueID = CSSValueImageControlsButton;
         break;
 #endif
 #if ENABLE(APPLE_PAY)
@@ -1924,6 +1917,10 @@ template<> inline CSSPrimitiveValue::CSSPrimitiveValue(ListStyleType e)
     case ListStyleType::Square:
         m_value.valueID = CSSValueSquare;
         break;
+    case ListStyleType::String:
+        ASSERT_NOT_REACHED();
+        m_value.valueID = CSSValueInvalid;
+        break;
     case ListStyleType::Telugu:
         m_value.valueID = CSSValueTelugu;
         break;
@@ -2203,6 +2200,42 @@ template<> inline CSSPrimitiveValue::operator Overflow() const
 
     ASSERT_NOT_REACHED();
     return Overflow::Visible;
+}
+
+template<> inline CSSPrimitiveValue::CSSPrimitiveValue(OverscrollBehavior behavior)
+    : CSSValue(PrimitiveClass)
+{
+    setPrimitiveUnitType(CSSUnitType::CSS_VALUE_ID);
+    switch (behavior) {
+    case OverscrollBehavior::Contain:
+        m_value.valueID = CSSValueContain;
+        break;
+    case OverscrollBehavior::None:
+        m_value.valueID = CSSValueNone;
+        break;
+    case OverscrollBehavior::Auto:
+        m_value.valueID = CSSValueAuto;
+        break;
+    }
+}
+
+template<> inline CSSPrimitiveValue::operator OverscrollBehavior() const
+{
+    ASSERT(isValueID());
+
+    switch (m_value.valueID) {
+    case CSSValueContain:
+        return OverscrollBehavior::Contain;
+    case CSSValueNone:
+        return OverscrollBehavior::None;
+    case CSSValueAuto:
+        return OverscrollBehavior::Auto;
+    default:
+        break;
+    }
+
+    ASSERT_NOT_REACHED();
+    return OverscrollBehavior::Auto;
 }
 
 template<> inline CSSPrimitiveValue::CSSPrimitiveValue(BreakBetween e)
@@ -3193,16 +3226,16 @@ template<> inline CSSPrimitiveValue::CSSPrimitiveValue(WritingMode e)
 {
     setPrimitiveUnitType(CSSUnitType::CSS_VALUE_ID);
     switch (e) {
-    case TopToBottomWritingMode:
+    case WritingMode::TopToBottom:
         m_value.valueID = CSSValueHorizontalTb;
         break;
-    case RightToLeftWritingMode:
+    case WritingMode::RightToLeft:
         m_value.valueID = CSSValueVerticalRl;
         break;
-    case LeftToRightWritingMode:
+    case WritingMode::LeftToRight:
         m_value.valueID = CSSValueVerticalLr;
         break;
-    case BottomToTopWritingMode:
+    case WritingMode::BottomToTop:
         m_value.valueID = CSSValueHorizontalBt;
         break;
     }
@@ -3218,21 +3251,21 @@ template<> inline CSSPrimitiveValue::operator WritingMode() const
     case CSSValueLrTb:
     case CSSValueRl:
     case CSSValueRlTb:
-        return TopToBottomWritingMode;
+        return WritingMode::TopToBottom;
     case CSSValueVerticalRl:
     case CSSValueTb:
     case CSSValueTbRl:
-        return RightToLeftWritingMode;
+        return WritingMode::RightToLeft;
     case CSSValueVerticalLr:
-        return LeftToRightWritingMode;
+        return WritingMode::LeftToRight;
     case CSSValueHorizontalBt:
-        return BottomToTopWritingMode;
+        return WritingMode::BottomToTop;
     default:
         break;
     }
 
     ASSERT_NOT_REACHED();
-    return TopToBottomWritingMode;
+    return WritingMode::TopToBottom;
 }
 
 template<> inline CSSPrimitiveValue::CSSPrimitiveValue(TextCombine e)
@@ -4364,6 +4397,11 @@ template<> inline CSSPrimitiveValue::CSSPrimitiveValue(TransformStyle3D e)
     case TransformStyle3D::Preserve3D:
         m_value.valueID = CSSValuePreserve3d;
         break;
+#if ENABLE(CSS_TRANSFORM_STYLE_OPTIMIZED_3D)
+    case TransformStyle3D::Optimized3D:
+        m_value.valueID = CSSValueOptimized3d;
+        break;
+#endif
     }
 }
 
@@ -4376,6 +4414,10 @@ template<> inline CSSPrimitiveValue::operator TransformStyle3D() const
         return TransformStyle3D::Flat;
     case CSSValuePreserve3d:
         return TransformStyle3D::Preserve3D;
+#if ENABLE(CSS_TRANSFORM_STYLE_OPTIMIZED_3D)
+    case CSSValueOptimized3d:
+        return TransformStyle3D::Optimized3D;
+#endif
     default:
         break;
     }
@@ -4514,6 +4556,7 @@ inline bool CSSPrimitiveValue::convertingToLengthRequiresNonNullStyle(int length
     case CSSUnitType::CSS_EMS:
     case CSSUnitType::CSS_EXS:
     case CSSUnitType::CSS_CHS:
+    case CSSUnitType::CSS_LHS:
         return lengthConversion & (FixedIntegerConversion | FixedFloatConversion);
     default:
         return false;
@@ -4523,18 +4566,18 @@ inline bool CSSPrimitiveValue::convertingToLengthRequiresNonNullStyle(int length
 template<int supported> Length CSSPrimitiveValue::convertToLength(const CSSToLengthConversionData& conversionData) const
 {
     if (isFontRelativeLength() && convertingToLengthRequiresNonNullStyle(supported) && !conversionData.style())
-        return Length(Undefined);
+        return Length(LengthType::Undefined);
     if ((supported & FixedIntegerConversion) && isLength())
         return computeLength<Length>(conversionData);
     if ((supported & FixedFloatConversion) && isLength())
-        return Length(computeLength<double>(conversionData), Fixed);
+        return Length(computeLength<double>(conversionData), LengthType::Fixed);
     if ((supported & PercentConversion) && isPercentage())
-        return Length(doubleValue(), Percent);
+        return Length(doubleValue(), LengthType::Percent);
     if ((supported & AutoConversion) && valueID() == CSSValueAuto)
-        return Length(Auto);
+        return Length(LengthType::Auto);
     if ((supported & CalculatedConversion) && isCalculated())
         return Length(cssCalcValue()->createCalculationValue(conversionData));
-    return Length(Undefined);
+    return Length(LengthType::Undefined);
 }
 
 template<> inline CSSPrimitiveValue::CSSPrimitiveValue(BufferedRendering e)
@@ -5208,7 +5251,6 @@ template<> inline CSSPrimitiveValue::CSSPrimitiveValue(TextZoom textZoom)
     m_value.valueID = CSSValueNormal;
 }
 
-#if ENABLE(POINTER_EVENTS)
 template<> inline CSSPrimitiveValue::CSSPrimitiveValue(TouchAction touchAction)
     : CSSValue(PrimitiveClass)
 {
@@ -5257,7 +5299,6 @@ template<> inline CSSPrimitiveValue::operator OptionSet<TouchAction>() const
     ASSERT_NOT_REACHED();
     return TouchAction::Auto;
 }
-#endif
 
 #if ENABLE(CSS_SCROLL_SNAP)
 
@@ -5375,6 +5416,34 @@ template<> inline CSSPrimitiveValue::operator ScrollSnapAxisAlignType() const
     }
 }
 
+template<> inline CSSPrimitiveValue::CSSPrimitiveValue(ScrollSnapStop snapStop)
+    : CSSValue(PrimitiveClass)
+{
+    setPrimitiveUnitType(CSSUnitType::CSS_VALUE_ID);
+    switch (snapStop) {
+    case ScrollSnapStop::Normal:
+        m_value.valueID = CSSValueNormal;
+        break;
+    case ScrollSnapStop::Always:
+        m_value.valueID = CSSValueAlways;
+        break;
+    }
+}
+
+template<> inline CSSPrimitiveValue::operator ScrollSnapStop() const
+{
+    ASSERT(isValueID());
+    switch (m_value.valueID) {
+    case CSSValueNormal:
+        return ScrollSnapStop::Normal;
+    case CSSValueAlways:
+        return ScrollSnapStop::Always;
+    default:
+        ASSERT_NOT_REACHED();
+        return ScrollSnapStop::Normal;
+    }
+}
+
 #endif
 
 #if ENABLE(CSS_TRAILING_WORD)
@@ -5466,7 +5535,6 @@ template<> inline CSSPrimitiveValue::CSSPrimitiveValue(ApplePayButtonType e)
     case ApplePayButtonType::Donate:
         m_value.valueID = CSSValueDonate;
         break;
-#if ENABLE(APPLE_PAY_SESSION_V4)
     case ApplePayButtonType::CheckOut:
         m_value.valueID = CSSValueCheckOut;
         break;
@@ -5476,8 +5544,32 @@ template<> inline CSSPrimitiveValue::CSSPrimitiveValue(ApplePayButtonType e)
     case ApplePayButtonType::Subscribe:
         m_value.valueID = CSSValueSubscribe;
         break;
+#if ENABLE(APPLE_PAY_NEW_BUTTON_TYPES)
+    case ApplePayButtonType::Reload:
+        m_value.valueID = CSSValueReload;
+        break;
+    case ApplePayButtonType::AddMoney:
+        m_value.valueID = CSSValueAddMoney;
+        break;
+    case ApplePayButtonType::TopUp:
+        m_value.valueID = CSSValueTopUp;
+        break;
+    case ApplePayButtonType::Order:
+        m_value.valueID = CSSValueOrder;
+        break;
+    case ApplePayButtonType::Rent:
+        m_value.valueID = CSSValueRent;
+        break;
+    case ApplePayButtonType::Support:
+        m_value.valueID = CSSValueSupport;
+        break;
+    case ApplePayButtonType::Contribute:
+        m_value.valueID = CSSValueContribute;
+        break;
+    case ApplePayButtonType::Tip:
+        m_value.valueID = CSSValueTip;
+        break;
 #endif
-
     default:
         ASSERT_NOT_REACHED();
         break;
@@ -5496,13 +5588,29 @@ template<> inline CSSPrimitiveValue::operator ApplePayButtonType() const
         return ApplePayButtonType::SetUp;
     case CSSValueDonate:
         return ApplePayButtonType::Donate;
-#if ENABLE(APPLE_PAY_SESSION_V4)
     case CSSValueCheckOut:
         return ApplePayButtonType::CheckOut;
     case CSSValueBook:
         return ApplePayButtonType::Book;
     case CSSValueSubscribe:
         return ApplePayButtonType::Subscribe;
+#if ENABLE(APPLE_PAY_NEW_BUTTON_TYPES)
+    case CSSValueReload:
+        return ApplePayButtonType::Reload;
+    case CSSValueAddMoney:
+        return ApplePayButtonType::AddMoney;
+    case CSSValueTopUp:
+        return ApplePayButtonType::TopUp;
+    case CSSValueOrder:
+        return ApplePayButtonType::Order;
+    case CSSValueRent:
+        return ApplePayButtonType::Rent;
+    case CSSValueSupport:
+        return ApplePayButtonType::Support;
+    case CSSValueContribute:
+        return ApplePayButtonType::Contribute;
+    case CSSValueTip:
+        return ApplePayButtonType::Tip;
 #endif
     default:
         break;
@@ -5715,6 +5823,38 @@ template<> inline CSSPrimitiveValue::operator FontLoadingBehavior() const
     }
     ASSERT_NOT_REACHED();
     return FontLoadingBehavior::Auto;
+}
+
+template<> inline CSSPrimitiveValue::CSSPrimitiveValue(MathStyle mathStyle)
+    : CSSValue(PrimitiveClass)
+{
+    setPrimitiveUnitType(CSSUnitType::CSS_VALUE_ID);
+    switch (mathStyle) {
+    case MathStyle::Normal:
+        m_value.valueID = CSSValueNormal;
+        break;
+    case MathStyle::Compact:
+        m_value.valueID = CSSValueCompact;
+        break;
+    default:
+        ASSERT_NOT_REACHED();
+        break;
+    }
+}
+
+template<> inline CSSPrimitiveValue::operator MathStyle() const
+{
+    ASSERT(isValueID());
+    switch (m_value.valueID) {
+    case CSSValueNormal:
+        return MathStyle::Normal;
+    case CSSValueCompact:
+        return MathStyle::Compact;
+    default:
+        break;
+    }
+    ASSERT_NOT_REACHED();
+    return MathStyle::Normal;
 }
 
 }

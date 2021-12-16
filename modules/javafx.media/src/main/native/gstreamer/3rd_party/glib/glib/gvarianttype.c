@@ -28,6 +28,7 @@
 
 #include <string.h>
 
+#include "gstrfuncsprivate.h"
 
 /**
  * SECTION:gvarianttype
@@ -1124,7 +1125,7 @@ g_variant_type_new_tuple_slow (const GVariantType * const *items,
 {
   /* the "slow" version is needed in case the static buffer of 1024
    * bytes is exceeded when running the normal version.  this will
-   * happen only in truly insane code, so it can be slow.
+   * happen only with very unusually large types, so it can be slow.
    */
   GString *string;
   gint i;
@@ -1185,7 +1186,7 @@ g_variant_type_new_tuple (const GVariantType * const *items,
   g_assert (offset < sizeof buffer);
   buffer[offset++] = ')';
 
-  return (GVariantType *) g_memdup (buffer, offset);
+  return (GVariantType *) g_memdup2 (buffer, offset);
 }
 
 /**

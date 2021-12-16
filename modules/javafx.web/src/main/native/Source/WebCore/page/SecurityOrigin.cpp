@@ -44,6 +44,10 @@
 #include <wtf/URL.h>
 #include <wtf/text/StringBuilder.h>
 
+#if PLATFORM(COCOA)
+#include "VersionChecks.h"
+#endif
+
 namespace WebCore {
 
 constexpr unsigned maximumURLSize = 0x04000000;
@@ -58,7 +62,7 @@ static bool schemeRequiresHost(const URL& url)
 
 bool SecurityOrigin::shouldIgnoreHost(const URL& url)
 {
-    return url.protocolIsData() || url.protocolIsAbout() || protocolIsJavaScript(url) || url.protocolIs("file");
+    return url.protocolIsData() || url.protocolIsAbout() || url.protocolIsJavaScript() || url.protocolIs("file");
 }
 
 bool SecurityOrigin::shouldUseInnerURL(const URL& url)
@@ -106,8 +110,26 @@ static bool shouldTreatAsUniqueOrigin(const URL& url)
     if (LegacySchemeRegistry::shouldTreatURLSchemeAsNoAccess(innerURL.protocol().toStringWithoutCopying()))
         return true;
 
-    // This is the common case.
-    return false;
+#if PLATFORM(COCOA)
+    if (!linkedOnOrAfter(SDKVersion::FirstWithNullOriginForNonSpecialSchemedURLs))
+        return false;
+#endif
+
+    // https://url.spec.whatwg.org/#origin with some additions
+    if (url.hasSpecialScheme()
+#if PLATFORM(COCOA)
+        || url.protocolIs("applewebdata")
+#endif
+#if PLATFORM(GTK) || PLATFORM(WPE)
+        || url.protocolIs("resource")
+#endif
+#if USE(QUICK_LOOK)
+        || url.protocolIs("x-apple-ql-id")
+#endif
+        || url.protocolIs("blob"))
+        return false;
+
+    return !LegacySchemeRegistry::schemeIsHandledBySchemeHandler(url.protocol());
 }
 
 static bool isLoopbackIPAddress(StringView host)
@@ -174,7 +196,7 @@ SecurityOrigin::SecurityOrigin()
     : m_data { emptyString(), emptyString(), WTF::nullopt }
     , m_domain { emptyString() }
     , m_isUnique { true }
-    , m_isPotentiallyTrustworthy { true }
+    , m_isPotentiallyTrustworthy { false }
 {
 }
 
@@ -241,13 +263,13 @@ bool SecurityOrigin::isSecure(const URL& url)
         return true;
 
     // URLs that wrap inner URLs are secure if those inner URLs are secure.
-    if (shouldUseInnerURL(url) && LegacySchemeRegistry::shouldTreatURLSchemeAsSecure(extractInnerURL(url).protocol().toStringWithoutCopying()))
-        return true;
+    if (shouldUseInnerURL(url))
+        return LegacySchemeRegistry::shouldTreatURLSchemeAsSecure(extractInnerURL(url).protocol().toStringWithoutCopying()) || BlobURL::isSecureBlobURL(url);
 
     return false;
 }
 
-bool SecurityOrigin::canAccess(const SecurityOrigin& other) const
+bool SecurityOrigin::isSameOriginDomain(const SecurityOrigin& other) const
 {
     if (m_universalAccess)
         return true;
@@ -323,7 +345,7 @@ bool SecurityOrigin::canRequest(const URL& url) const
     if (isSameSchemeHostPort(targetOrigin.get()))
         return true;
 
-    if (SecurityPolicy::isAccessWhiteListed(this, &targetOrigin.get()))
+    if (SecurityPolicy::isAccessAllowed(*this, targetOrigin.get(), url))
         return true;
 
     return false;
@@ -334,7 +356,7 @@ bool SecurityOrigin::canReceiveDragData(const SecurityOrigin& dragInitiator) con
     if (this == &dragInitiator)
         return true;
 
-    return canAccess(dragInitiator);
+    return isSameOriginDomain(dragInitiator);
 }
 
 // This is a hack to allow keep navigation to http/https feeds working. To remove this
@@ -382,7 +404,7 @@ bool SecurityOrigin::canDisplay(const URL& url) const
         return canRequest(url);
 
     if (LegacySchemeRegistry::shouldTreatURLSchemeAsDisplayIsolated(protocol))
-        return equalIgnoringASCIICase(m_data.protocol, protocol) || SecurityPolicy::isAccessToURLWhiteListed(this, url);
+        return equalIgnoringASCIICase(m_data.protocol, protocol) || SecurityPolicy::isAccessAllowed(*this, url);
 
     if (!SecurityPolicy::restrictAccessToLocal())
         return true;
@@ -391,7 +413,7 @@ bool SecurityOrigin::canDisplay(const URL& url) const
         return true;
 
     if (LegacySchemeRegistry::shouldTreatURLSchemeAsLocal(protocol))
-        return canLoadLocalResources() || SecurityPolicy::isAccessToURLWhiteListed(this, url);
+        return canLoadLocalResources() || SecurityPolicy::isAccessAllowed(*this, url);
 
     return true;
 }
@@ -404,14 +426,14 @@ bool SecurityOrigin::canAccessStorage(const SecurityOrigin* topOrigin, ShouldAll
     if (isLocal() && !needsStorageAccessFromFileURLsQuirk() && !m_universalAccess && shouldAllowFromThirdParty != AlwaysAllowFromThirdParty)
         return false;
 
-    if (m_storageBlockingPolicy == BlockAllStorage)
+    if (m_storageBlockingPolicy == StorageBlockingPolicy::BlockAll)
         return false;
 
     // FIXME: This check should be replaced with an ASSERT once we can guarantee that topOrigin is not null.
     if (!topOrigin)
         return true;
 
-    if (topOrigin->m_storageBlockingPolicy == BlockAllStorage)
+    if (topOrigin->m_storageBlockingPolicy == StorageBlockingPolicy::BlockAll)
         return false;
 
     if (shouldAllowFromThirdParty == AlwaysAllowFromThirdParty)
@@ -420,7 +442,7 @@ bool SecurityOrigin::canAccessStorage(const SecurityOrigin* topOrigin, ShouldAll
     if (m_universalAccess)
         return true;
 
-    if ((m_storageBlockingPolicy == BlockThirdPartyStorage || topOrigin->m_storageBlockingPolicy == BlockThirdPartyStorage) && !topOrigin->isSameOriginAs(*this))
+    if ((m_storageBlockingPolicy == StorageBlockingPolicy::BlockThirdParty || topOrigin->m_storageBlockingPolicy == StorageBlockingPolicy::BlockThirdParty) && !topOrigin->isSameOriginAs(*this))
         return false;
 
     return true;
@@ -488,7 +510,7 @@ void SecurityOrigin::grantStorageAccessFromFileURLsQuirk()
 
 String SecurityOrigin::domainForCachePartition() const
 {
-    if (m_storageBlockingPolicy != BlockThirdPartyStorage)
+    if (m_storageBlockingPolicy != StorageBlockingPolicy::BlockThirdParty)
         return emptyString();
 
     if (isHTTPFamily())
@@ -605,7 +627,7 @@ bool SecurityOrigin::isLocalHostOrLoopbackIPAddress(StringView host)
         return true;
 
     // FIXME: Ensure that localhost resolves to the loopback address.
-    if (equalLettersIgnoringASCIICase(host, "localhost"))
+    if (equalLettersIgnoringASCIICase(host, "localhost") || host.endsWithIgnoringASCIICase(".localhost"))
         return true;
 
     return false;

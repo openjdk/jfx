@@ -43,6 +43,11 @@
 #include "XMLNSNames.h"
 #include "XMLNames.h"
 
+#if ENABLE(GPU_DRIVER_PREWARMING)
+#include "GPUDevice.h"
+#include "GPURequestAdapterOptions.h"
+#endif
+
 namespace WebCore {
 
 void ProcessWarming::initializeNames()
@@ -67,7 +72,7 @@ void ProcessWarming::prewarmGlobally()
     Settings::create(nullptr);
 
     // Prewarms user agent stylesheet.
-    Style::UserAgentStyle::loadFullDefaultStyle();
+    Style::UserAgentStyle::initDefaultStyleSheet();
 
     // Prewarms JS VM.
     commonVM();
@@ -77,6 +82,10 @@ void ProcessWarming::prewarmGlobally()
 
 #if ENABLE(TELEPHONE_NUMBER_DETECTION)
     TelephoneNumberDetector::isSupported();
+#endif
+
+#if ENABLE(GPU_DRIVER_PREWARMING)
+    GPUDevice::tryCreate(WTF::nullopt);
 #endif
 }
 

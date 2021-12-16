@@ -44,13 +44,12 @@ namespace Wasm {
 class EntryPlan : public Plan, public StreamingParserClient {
 public:
     using Base = Plan;
-    enum AsyncWork : uint8_t { FullCompile, Validation };
 
     // Note: CompletionTask should not hold a reference to the Plan otherwise there will be a reference cycle.
-    EntryPlan(Context*, Ref<ModuleInformation>, AsyncWork, CompletionTask&&);
-    JS_EXPORT_PRIVATE EntryPlan(Context*, Vector<uint8_t>&&, AsyncWork, CompletionTask&&);
+    EntryPlan(Context*, Ref<ModuleInformation>, CompilerMode, CompletionTask&&);
+    JS_EXPORT_PRIVATE EntryPlan(Context*, Vector<uint8_t>&&, CompilerMode, CompletionTask&&);
 
-    virtual ~EntryPlan() = default;
+    ~EntryPlan() override = default;
 
     void prepare();
 
@@ -115,13 +114,13 @@ protected:
 
     Vector<uint8_t> m_source;
     Vector<MacroAssemblerCodeRef<WasmEntryPtrTag>> m_wasmToWasmExitStubs;
-    HashSet<uint32_t, typename DefaultHash<uint32_t>::Hash, WTF::UnsignedWithZeroKeyHashTraits<uint32_t>> m_exportedFunctionIndices;
+    HashSet<uint32_t, DefaultHash<uint32_t>, WTF::UnsignedWithZeroKeyHashTraits<uint32_t>> m_exportedFunctionIndices;
 
     Vector<Vector<UnlinkedWasmToWasmCall>> m_unlinkedWasmToWasmCalls;
     StreamingParser m_streamingParser;
     State m_state;
 
-    const AsyncWork m_asyncWork;
+    const CompilerMode m_compilerMode;
     uint8_t m_numberOfActiveThreads { 0 };
     uint32_t m_currentIndex { 0 };
     uint32_t m_numberOfFunctions { 0 };

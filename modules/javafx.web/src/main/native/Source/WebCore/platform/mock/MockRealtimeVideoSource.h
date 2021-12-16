@@ -48,16 +48,14 @@ class GraphicsContext;
 
 class MockRealtimeVideoSource : public RealtimeVideoCaptureSource, private OrientationNotifier::Observer {
 public:
-
     static CaptureSourceOrError create(String&& deviceID, String&& name, String&& hashSalt, const MediaConstraints*);
+
+    ImageBuffer* imageBuffer() const;
 
 protected:
     MockRealtimeVideoSource(String&& deviceID, String&& name, String&& hashSalt);
 
     virtual void updateSampleBuffer() = 0;
-
-    void setCurrentFrame(MediaSample&);
-    ImageBuffer* imageBuffer() const;
 
     Seconds elapsedTime();
     void settingsDidChange(OptionSet<RealtimeMediaSourceSettings::Flag>) override;
@@ -103,7 +101,7 @@ private:
     float m_bipBopFontSize { 0 };
     float m_statsFontSize { 0 };
 
-    mutable std::unique_ptr<ImageBuffer> m_imageBuffer;
+    mutable RefPtr<ImageBuffer> m_imageBuffer;
 
     Path m_path;
     DashArray m_dashWidths;
@@ -124,6 +122,10 @@ private:
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::MockRealtimeVideoSource)
+    static bool isType(const WebCore::RealtimeMediaSource& source) { return source.isCaptureSource() && source.isMockSource() && (source.deviceType() == WebCore::CaptureDevice::DeviceType::Camera || source.deviceType() == WebCore::CaptureDevice::DeviceType::Screen || source.deviceType() == WebCore::CaptureDevice::DeviceType::Window); }
+SPECIALIZE_TYPE_TRAITS_END()
 
 #endif // ENABLE(MEDIA_STREAM)
 

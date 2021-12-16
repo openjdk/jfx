@@ -28,11 +28,10 @@
 
 #if ENABLE(DFG_JIT)
 
-#include "DFGBasicBlockInlines.h"
 #include "DFGGraph.h"
 #include "DFGInsertionSet.h"
 #include "DFGPhase.h"
-#include "JSCInlines.h"
+#include "JSCJSValueInlines.h"
 
 namespace JSC { namespace DFG {
 
@@ -76,8 +75,14 @@ private:
         case AtomicsOr:
         case AtomicsStore:
         case AtomicsSub:
-        case AtomicsXor:
+        case AtomicsXor: {
+            unsigned numExtraArgs = numExtraAtomicsArgs(m_node->op());
+            lowerBoundsCheck(m_graph.child(m_node, 0), m_graph.child(m_node, 1), m_graph.child(m_node, 2 + numExtraArgs));
+            break;
+        }
+
         case HasIndexedProperty:
+        case HasEnumerableIndexedProperty:
             lowerBoundsCheck(m_graph.child(m_node, 0), m_graph.child(m_node, 1), m_graph.child(m_node, 2));
             break;
 

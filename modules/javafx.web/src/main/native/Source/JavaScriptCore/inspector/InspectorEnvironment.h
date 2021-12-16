@@ -32,6 +32,7 @@ class Stopwatch;
 }
 
 namespace JSC {
+class Debugger;
 class Exception;
 class SourceCode;
 class VM;
@@ -39,8 +40,7 @@ class VM;
 
 namespace Inspector {
 
-class ScriptDebugServer;
-typedef JSC::JSValue (*InspectorFunctionCallHandler)(JSC::JSGlobalObject* globalObject, JSC::JSValue functionObject, JSC::CallType callType, const JSC::CallData& callData, JSC::JSValue thisValue, const JSC::ArgList& args, NakedPtr<JSC::Exception>& returnedException);
+typedef JSC::JSValue (*InspectorFunctionCallHandler)(JSC::JSGlobalObject* globalObject, JSC::JSValue functionObject, const JSC::CallData& callData, JSC::JSValue thisValue, const JSC::ArgList& args, NakedPtr<JSC::Exception>& returnedException);
 typedef JSC::JSValue (*InspectorEvaluateHandler)(JSC::JSGlobalObject*, const JSC::SourceCode&, JSC::JSValue thisValue, NakedPtr<JSC::Exception>& returnedException);
 
 class InspectorEnvironment {
@@ -51,8 +51,8 @@ public:
     virtual InspectorFunctionCallHandler functionCallHandler() const = 0;
     virtual InspectorEvaluateHandler evaluateHandler() const = 0;
     virtual void frontendInitialized() = 0;
-    virtual Ref<WTF::Stopwatch> executionStopwatch() = 0;
-    virtual ScriptDebugServer& scriptDebugServer() = 0;
+    virtual WTF::Stopwatch& executionStopwatch() const = 0;
+    virtual JSC::Debugger& debugger() = 0;
     virtual JSC::VM& vm() = 0;
 };
 

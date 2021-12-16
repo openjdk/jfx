@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -54,6 +54,24 @@ public class FilteredListTest {
         mlo = new MockListObserver<String>();
         filteredList = new FilteredList<>(list, predicate);
         filteredList.addListener(mlo);
+    }
+
+    @Test
+    public void test_rt35857_removeFiltered() {
+        ObservableList<String> copyList = FXCollections.observableArrayList(list);
+        // no relation, but use a different method to remove just to be on the super safe side
+        filteredList.forEach(e -> copyList.remove(e));
+        // list has duplicates!
+        list.removeAll(filteredList);
+        assertEquals(copyList, list);
+    }
+
+    @Test
+    public void test_rt35857_retainFiltered() {
+        ObservableList<String> copyFiltered = FXCollections.observableArrayList(filteredList);
+        list.retainAll(filteredList);
+        assertEquals("sanity: filteredList unchanged", copyFiltered, filteredList);
+        assertEquals(filteredList, list);
     }
 
     private <E> void compareIndices(FilteredList<E> filtered) {

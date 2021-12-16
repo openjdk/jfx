@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,8 +28,7 @@
 
 #if ENABLE(DFG_JIT)
 
-#include "BytecodeKills.h"
-#include "BytecodeLivenessAnalysisInlines.h"
+#include "ArrayPrototype.h"
 #include "CodeBlock.h"
 #include "CodeBlockWithJITType.h"
 #include "DFGBackwardsCFG.h"
@@ -42,7 +41,6 @@
 #include "DFGDominators.h"
 #include "DFGFlowIndexing.h"
 #include "DFGFlowMap.h"
-#include "DFGJITCode.h"
 #include "DFGMayExit.h"
 #include "DFGNaturalLoops.h"
 #include "DFGVariableAccessDataDump.h"
@@ -53,8 +51,10 @@
 #include "JSLexicalEnvironment.h"
 #include "MaxFrameExtentForSlowPathCall.h"
 #include "OperandsInlines.h"
-#include "JSCInlines.h"
+#include "SlotVisitorInlines.h"
+#include "Snippet.h"
 #include "StackAlignment.h"
+#include "StructureInlines.h"
 #include <wtf/CommaPrinter.h>
 #include <wtf/ListDump.h>
 
@@ -63,7 +63,7 @@ namespace JSC { namespace DFG {
 static constexpr bool dumpOSRAvailabilityData = false;
 
 // Creates an array of stringized names.
-static const char* dfgOpNames[] = {
+static const char* const dfgOpNames[] = {
 #define STRINGIZE_DFG_OP_ENUM(opcode, flags) #opcode ,
     FOR_EACH_DFG_OP(STRINGIZE_DFG_OP_ENUM)
 #undef STRINGIZE_DFG_OP_ENUM
@@ -247,6 +247,8 @@ void Graph::dump(PrintStream& out, const char* prefixStr, Node* node, DumpContex
         out.print(comma, "global", "(", RawPointer(node->variablePointer()), ")");
     if (node->hasIdentifier() && node->identifierNumber() != UINT32_MAX)
         out.print(comma, "id", node->identifierNumber(), "{", identifiers()[node->identifierNumber()], "}");
+    if (node->hasCacheableIdentifier() && node->cacheableIdentifier())
+        out.print(comma, "cachable-id {", node->cacheableIdentifier(), "}");
     if (node->hasPromotedLocationDescriptor())
         out.print(comma, node->promotedLocationDescriptor());
     if (node->hasClassInfo())
@@ -298,6 +300,12 @@ void Graph::dump(PrintStream& out, const char* prefixStr, Node* node, DumpContex
     }
     if (node->hasMultiPutByOffsetData()) {
         MultiPutByOffsetData& data = node->multiPutByOffsetData();
+        out.print(comma, "id", data.identifierNumber, "{", identifiers()[data.identifierNumber], "}");
+        for (unsigned i = 0; i < data.variants.size(); ++i)
+            out.print(comma, inContext(data.variants[i], context));
+    }
+    if (node->hasMultiDeleteByOffsetData()) {
+        MultiDeleteByOffsetData& data = node->multiDeleteByOffsetData();
         out.print(comma, "id", data.identifierNumber, "{", identifiers()[data.identifierNumber], "}");
         for (unsigned i = 0; i < data.variants.size(); ++i)
             out.print(comma, inContext(data.variants[i], context));
@@ -970,7 +978,7 @@ BlockList Graph::blocksInPostOrder(bool isSafeToValidate)
         }
     }
 
-    if (isSafeToValidate && validationEnabled()) { // There are users of this where we haven't yet built of the CFG enough to be able to run dominators.
+    if (isSafeToValidate && validationEnabled()) { // There are users of this where we haven't yet built the CFG enough to be able to run dominators.
         auto validateResults = [&] (auto& dominators) {
             // When iterating over reverse post order, we should see dominators
             // before things they dominate.
@@ -1116,24 +1124,6 @@ FullBytecodeLiveness& Graph::livenessFor(CodeBlock* codeBlock)
 FullBytecodeLiveness& Graph::livenessFor(InlineCallFrame* inlineCallFrame)
 {
     return livenessFor(baselineCodeBlockFor(inlineCallFrame));
-}
-
-BytecodeKills& Graph::killsFor(CodeBlock* codeBlock)
-{
-    HashMap<CodeBlock*, std::unique_ptr<BytecodeKills>>::iterator iter = m_bytecodeKills.find(codeBlock);
-    if (iter != m_bytecodeKills.end())
-        return *iter->value;
-
-    std::unique_ptr<BytecodeKills> kills = makeUnique<BytecodeKills>();
-    codeBlock->livenessAnalysis().computeKills(codeBlock, *kills);
-    BytecodeKills& result = *kills;
-    m_bytecodeKills.add(codeBlock, WTFMove(kills));
-    return result;
-}
-
-BytecodeKills& Graph::killsFor(InlineCallFrame* inlineCallFrame)
-{
-    return killsFor(baselineCodeBlockFor(inlineCallFrame));
 }
 
 bool Graph::isLiveInBytecode(Operand operand, CodeOrigin codeOrigin)
@@ -1459,13 +1449,17 @@ void Graph::registerFrozenValues()
     m_codeBlock->constantsSourceCodeRepresentation().shrinkToFit();
 }
 
-void Graph::visitChildren(SlotVisitor& visitor)
+template<typename Visitor>
+ALWAYS_INLINE void Graph::visitChildrenImpl(Visitor& visitor)
 {
     for (FrozenValue* value : m_frozenValues) {
         visitor.appendUnbarriered(value->value());
         visitor.appendUnbarriered(value->structure());
     }
 }
+
+void Graph::visitChildren(AbstractSlotVisitor& visitor) { visitChildrenImpl(visitor); }
+void Graph::visitChildren(SlotVisitor& visitor) { visitChildrenImpl(visitor); }
 
 FrozenValue* Graph::freeze(JSValue value)
 {
@@ -1514,6 +1508,34 @@ void Graph::convertToConstant(Node* node, JSValue value)
 void Graph::convertToStrongConstant(Node* node, JSValue value)
 {
     convertToConstant(node, freezeStrong(value));
+}
+
+FrozenValue* Graph::bottomValueMatchingSpeculation(SpeculatedType prediction)
+{
+    // It probably doesn't matter what we return here.
+    if (prediction == SpecNone)
+        return freeze(JSValue());
+
+    if (speculationContains(prediction, SpecOther))
+        return freeze(jsNull());
+
+    if (speculationContains(prediction, SpecBoolean))
+        return freeze(jsBoolean(true));
+
+    if (speculationContains(prediction, SpecFullNumber))
+        return freeze(jsNumber(0));
+
+    if (speculationContains(prediction, SpecBigInt))
+        return freeze(m_vm.heapBigIntConstantOne.get());
+
+    if (speculationContains(prediction, SpecString | SpecSymbol))
+        return freeze(m_vm.smallStrings.emptyString());
+
+    if (speculationContains(prediction, SpecCellOther | SpecObject))
+        return freeze(jsNull());
+
+    ASSERT(speculationContains(prediction, SpecEmpty));
+    return freeze(JSValue());
 }
 
 RegisteredStructure Graph::registerStructure(Structure* structure, StructureRegistrationResult& result)
@@ -1709,8 +1731,7 @@ MethodOfGettingAValueProfile Graph::methodOfGettingAValueProfileFor(Node* curren
 
 bool Graph::getRegExpPrototypeProperty(JSObject* regExpPrototype, Structure* regExpPrototypeStructure, UniquedStringImpl* uid, JSValue& returnJSValue)
 {
-    unsigned attributesUnused;
-    PropertyOffset offset = regExpPrototypeStructure->getConcurrently(uid, attributesUnused);
+    PropertyOffset offset = regExpPrototypeStructure->getConcurrently(uid);
     if (!isValidOffset(offset))
         return false;
 

@@ -23,7 +23,6 @@
 
 platform/audio/glib/AudioBusGLib.cpp
 
-platform/glib/EventHandlerGLib.cpp
 platform/glib/FileMonitorGLib.cpp
 platform/glib/KeyedDecoderGlib.cpp
 platform/glib/KeyedEncoderGlib.cpp
@@ -31,4 +30,5 @@ platform/glib/LowPowerModeNotifierGLib.cpp
 platform/glib/SharedBufferGlib.cpp
 platform/glib/UserAgentGLib.cpp
 
+platform/network/glib/DNSResolveQueueGLib.cpp
 platform/network/glib/NetworkStateNotifierGLib.cpp

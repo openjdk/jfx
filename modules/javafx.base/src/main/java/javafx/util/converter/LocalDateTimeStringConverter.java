@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -208,11 +208,11 @@ public class LocalDateTimeStringConverter extends StringConverter<LocalDateTime>
             TemporalAccessor temporal = parser.parse(text);
 
             if (type == LocalDate.class) {
-                return (T)LocalDate.from(chronology.date(temporal));
+                return (T) LocalDate.from(temporal);
             } else if (type == LocalTime.class) {
-                return (T)LocalTime.from(temporal);
+                return (T) LocalTime.from(temporal);
             } else {
-                return (T)LocalDateTime.from(chronology.localDateTime(temporal));
+                return (T) LocalDateTime.from(temporal);
             }
         }
 
@@ -228,29 +228,7 @@ public class LocalDateTimeStringConverter extends StringConverter<LocalDateTime>
                 formatter = getDefaultFormatter();
             }
 
-            if (value instanceof LocalDate) {
-                ChronoLocalDate cDate;
-                try {
-                    cDate = chronology.date(value);
-                } catch (DateTimeException ex) {
-                    Logging.getLogger().warning("Converting LocalDate " + value + " to " + chronology + " failed, falling back to IsoChronology.", ex);
-                    chronology = IsoChronology.INSTANCE;
-                    cDate = (LocalDate)value;
-                }
-                return formatter.format(cDate);
-            } else if (value instanceof LocalDateTime) {
-                ChronoLocalDateTime<? extends ChronoLocalDate> cDateTime;
-                try {
-                    cDateTime = chronology.localDateTime(value);
-                } catch (DateTimeException ex) {
-                    Logging.getLogger().warning("Converting LocalDateTime " + value + " to " + chronology + " failed, falling back to IsoChronology.", ex);
-                    chronology = IsoChronology.INSTANCE;
-                    cDateTime = (LocalDateTime)value;
-                }
-                return formatter.format(cDateTime);
-            } else {
-                return formatter.format(value);
-            }
+            return formatter.format(value);
         }
 
 

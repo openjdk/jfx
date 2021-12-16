@@ -59,9 +59,9 @@ bool HTMLFrameElementBase::canLoadScriptURL(const URL& scriptURL) const
 
 bool HTMLFrameElementBase::canLoad() const
 {
-    // FIXME: Why is it valuable to return true when m_URL is empty?
+    // FIXME: Why is it valuable to return true when m_frameURL is empty?
     // FIXME: After openURL replaces an empty URL with the blank URL, this may no longer necessarily return true.
-    return m_URL.isEmpty() || canLoadURL(m_URL);
+    return m_frameURL.isEmpty() || canLoadURL(m_frameURL);
 }
 
 bool HTMLFrameElementBase::canLoadURL(const String& relativeURL) const
@@ -72,7 +72,7 @@ bool HTMLFrameElementBase::canLoadURL(const String& relativeURL) const
 // Note that unlike HTMLPlugInImageElement::canLoadURL this uses ScriptController::canAccessFromCurrentOrigin.
 bool HTMLFrameElementBase::canLoadURL(const URL& completeURL) const
 {
-    if (WTF::protocolIsJavaScript(completeURL)) {
+    if (completeURL.protocolIsJavaScript()) {
         RefPtr<Document> contentDocument = this->contentDocument();
         if (contentDocument && !ScriptController::canAccessFromCurrentOrigin(contentDocument->frame(), document()))
             return false;
@@ -86,20 +86,23 @@ void HTMLFrameElementBase::openURL(LockHistory lockHistory, LockBackForwardList 
     if (!canLoad())
         return;
 
-    if (m_URL.isEmpty())
-        m_URL = WTF::blankURL().string();
+    if (m_frameURL.isEmpty())
+        m_frameURL = aboutBlankURL().string();
+
+    if (shouldLoadFrameLazily())
+        return;
 
     RefPtr<Frame> parentFrame = document().frame();
     if (!parentFrame)
         return;
 
-    document().willLoadFrameElement(parentFrame->document()->completeURL(m_URL));
+    document().willLoadFrameElement(document().completeURL(m_frameURL));
 
     String frameName = getNameAttribute();
     if (frameName.isNull() && UNLIKELY(document().settings().needsFrameNameFallbackToIdQuirk()))
         frameName = getIdAttribute();
 
-    parentFrame->loader().subframeLoader().requestFrame(*this, m_URL, frameName, lockHistory, lockBackForwardList);
+    parentFrame->loader().subframeLoader().requestFrame(*this, m_frameURL, frameName, lockHistory, lockBackForwardList);
 }
 
 void HTMLFrameElementBase::parseAttribute(const QualifiedName& name, const AtomString& value)
@@ -153,16 +156,16 @@ void HTMLFrameElementBase::didAttachRenderers()
 URL HTMLFrameElementBase::location() const
 {
     if (hasAttributeWithoutSynchronization(srcdocAttr))
-        return URL({ }, "about:srcdoc");
+        return aboutSrcDocURL();
     return document().completeURL(attributeWithoutSynchronization(srcAttr));
 }
 
 void HTMLFrameElementBase::setLocation(const String& str)
 {
-    if (document().settings().needsAcrobatFrameReloadingQuirk() && m_URL == str)
+    if (document().settings().needsAcrobatFrameReloadingQuirk() && m_frameURL == str)
         return;
 
-    m_URL = AtomString(str);
+    m_frameURL = AtomString(str);
 
     if (isConnected())
         openURL(LockHistory::No, LockBackForwardList::No);
@@ -222,7 +225,10 @@ int HTMLFrameElementBase::height()
 
 ScrollbarMode HTMLFrameElementBase::scrollingMode() const
 {
-    return equalLettersIgnoringASCIICase(attributeWithoutSynchronization(scrollingAttr), "no")
+    auto scrollingAttribute = attributeWithoutSynchronization(scrollingAttr);
+    return equalLettersIgnoringASCIICase(scrollingAttribute, "no")
+        || equalLettersIgnoringASCIICase(scrollingAttribute, "noscroll")
+        || equalLettersIgnoringASCIICase(scrollingAttribute, "off")
         ? ScrollbarAlwaysOff : ScrollbarAuto;
 }
 

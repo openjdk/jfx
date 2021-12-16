@@ -27,55 +27,40 @@
 
 #include "ExtensionsGL.h"
 
-#include "GraphicsContextGLOpenGL.h"
+#include <wtf/HashSet.h>
 #include <wtf/text/StringHash.h>
 
 namespace WebCore {
+
+class GraphicsContextGLOpenGL;
 
 class ExtensionsGLANGLE : public ExtensionsGL {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     // This class only needs to be instantiated by GraphicsContextGLOpenGL implementations.
-    ExtensionsGLANGLE(GraphicsContextGLOpenGL*, bool useIndexedGetString = false);
+    explicit ExtensionsGLANGLE(GraphicsContextGLOpenGL*);
     virtual ~ExtensionsGLANGLE();
 
     // ExtensionsGL methods.
     bool supports(const String&) override;
     void ensureEnabled(const String&) override;
     bool isEnabled(const String&) override;
-    int getGraphicsResetStatusARB() override;
+    GCGLint getGraphicsResetStatusARB() override;
 
     PlatformGLObject createVertexArrayOES() override;
     void deleteVertexArrayOES(PlatformGLObject) override;
     GCGLboolean isVertexArrayOES(PlatformGLObject) override;
     void bindVertexArrayOES(PlatformGLObject) override;
-    void insertEventMarkerEXT(const String&) override;
-    void pushGroupMarkerEXT(const String&) override;
-    void popGroupMarkerEXT(void) override;
-    void drawBuffersEXT(GCGLsizei, const GCGLenum*) override;
+    void drawBuffersEXT(GCGLSpan<const GCGLenum>) override;
 
     String getTranslatedShaderSourceANGLE(PlatformGLObject) override;
 
-    void blitFramebuffer(long srcX0, long srcY0, long srcX1, long srcY1, long dstX0, long dstY0, long dstX1, long dstY1, unsigned long mask, unsigned long filter) override;
-    void renderbufferStorageMultisample(unsigned long target, unsigned long samples, unsigned long internalformat, unsigned long width, unsigned long height) override;
+    void drawArraysInstancedANGLE(GCGLenum mode, GCGLint first, GCGLsizei count, GCGLsizei primcount) override;
+    void drawElementsInstancedANGLE(GCGLenum mode, GCGLsizei count, GCGLenum type, GCGLvoidptr offset, GCGLsizei primcount) override;
+    void vertexAttribDivisorANGLE(GCGLuint index, GCGLuint divisor) override;
 
-    void drawArraysInstanced(GCGLenum mode, GCGLint first, GCGLsizei count, GCGLsizei primcount) override;
-    void drawElementsInstanced(GCGLenum mode, GCGLsizei count, GCGLenum type, long long offset, GCGLsizei primcount) override;
-    void vertexAttribDivisor(GCGLuint index, GCGLuint divisor) override;
-
-    // EXT Robustness - uses getGraphicsResetStatusARB()
-    void readnPixelsEXT(int x, int y, GCGLsizei width, GCGLsizei height, GCGLenum format, GCGLenum type, GCGLsizei bufSize, void *data) override;
-    void getnUniformfvEXT(GCGLuint program, int location, GCGLsizei bufSize, float *params) override;
-    void getnUniformivEXT(GCGLuint program, int location, GCGLsizei bufSize, int *params) override;
-
-    bool isNVIDIA() override { return m_isNVIDIA; }
-    bool isAMD() override { return m_isAMD; }
-    bool isIntel() override { return m_isIntel; }
-    bool isImagination() override { return m_isImagination; }
-    String vendor() override { return m_vendor; }
-
-    bool requiresBuiltInFunctionEmulation() override { return m_requiresBuiltInFunctionEmulation; }
-    bool requiresRestrictedMaximumTextureSize() override { return m_requiresRestrictedMaximumTextureSize; }
+    // Only for non-WebGL 2.0 contexts.
+    GCGLenum adjustWebGL1TextureInternalFormat(GCGLenum internalformat, GCGLenum format, GCGLenum type);
 
 private:
     bool supportsExtension(const WTF::String&);
@@ -90,17 +75,9 @@ private:
     // Weak pointer back to GraphicsContextGLOpenGL.
     GraphicsContextGLOpenGL* m_context;
 
-    bool m_isNVIDIA;
-    bool m_isAMD;
-    bool m_isIntel;
-    bool m_isImagination;
-    bool m_requiresBuiltInFunctionEmulation;
-    bool m_requiresRestrictedMaximumTextureSize;
-
-    bool m_useIndexedGetString { false };
-
-    String m_vendor;
-    String m_renderer;
+    // Whether the WebGL 1.0-related floating-point renderability extensions have been enabled.
+    bool m_webglColorBufferFloatRGB { false };
+    bool m_webglColorBufferFloatRGBA { false };
 };
 
 } // namespace WebCore

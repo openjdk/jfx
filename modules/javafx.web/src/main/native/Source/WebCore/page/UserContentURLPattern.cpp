@@ -32,33 +32,33 @@
 
 namespace WebCore {
 
-bool UserContentURLPattern::matchesPatterns(const URL& url, const Vector<String>& whitelist, const Vector<String>& blacklist)
+bool UserContentURLPattern::matchesPatterns(const URL& url, const Vector<String>& allowlist, const Vector<String>& blocklist)
 {
-    // In order for a URL to be a match it has to be present in the whitelist and not present in the blacklist.
-    // If there is no whitelist at all, then all URLs are assumed to be in the whitelist.
-    bool matchesWhitelist = whitelist.isEmpty();
-    if (!matchesWhitelist) {
-        for (auto& entry : whitelist) {
+    // In order for a URL to be a match it has to be present in the allowlist and not present in the blocklist.
+    // If there is no allowlist at all, then all URLs are assumed to be in the allowlist.
+    bool matchesAllowlist = allowlist.isEmpty();
+    if (!matchesAllowlist) {
+        for (auto& entry : allowlist) {
             UserContentURLPattern contentPattern(entry);
             if (contentPattern.matches(url)) {
-                matchesWhitelist = true;
+                matchesAllowlist = true;
                 break;
             }
         }
     }
 
-    bool matchesBlacklist = false;
-    if (!blacklist.isEmpty()) {
-        for (auto& entry : blacklist) {
+    bool matchesBlocklist = false;
+    if (!blocklist.isEmpty()) {
+        for (auto& entry : blocklist) {
             UserContentURLPattern contentPattern(entry);
             if (contentPattern.matches(url)) {
-                matchesBlacklist = true;
+                matchesBlocklist = true;
                 break;
             }
         }
     }
 
-    return matchesWhitelist && !matchesBlacklist;
+    return matchesAllowlist && !matchesBlocklist;
 }
 
 bool UserContentURLPattern::parse(const String& pattern)
@@ -147,19 +147,16 @@ bool UserContentURLPattern::matchesHost(const URL& test) const
     return host[host.length() - m_host.length() - 1] == '.';
 }
 
-struct MatchTester
-{
-    const String m_pattern;
-    unsigned m_patternIndex;
+struct MatchTester {
+    StringView m_pattern;
+    unsigned m_patternIndex { 0 };
 
-    const String m_test;
-    unsigned m_testIndex;
+    StringView m_test;
+    unsigned m_testIndex { 0 };
 
-    MatchTester(const String& pattern, const String& test)
-    : m_pattern(pattern)
-    , m_patternIndex(0)
-    , m_test(test)
-    , m_testIndex(0)
+    MatchTester(StringView pattern, StringView test)
+        : m_pattern(pattern)
+        , m_test(test)
     {
     }
 
@@ -226,8 +223,7 @@ struct MatchTester
 
 bool UserContentURLPattern::matchesPath(const URL& test) const
 {
-    MatchTester match(m_path, test.path());
-    return match.test();
+    return MatchTester(m_path, test.path()).test();
 }
 
 } // namespace WebCore

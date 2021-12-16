@@ -36,7 +36,7 @@
 #include <JavaScriptCore/StructureInlines.h>
 #include <wtf/StdLibExtras.h>
 
-#if ENABLE(VIDEO_TRACK)
+#if ENABLE(VIDEO)
 #if PLATFORM(MAC) || HAVE(MEDIA_ACCESSIBILITY_FRAMEWORK)
 #include "CaptionUserPreferencesMediaAF.h"
 #else
@@ -91,21 +91,21 @@ PageGroup* PageGroup::pageGroup(const String& groupName)
 
 void PageGroup::addPage(Page& page)
 {
-    ASSERT(!m_pages.contains(&page));
-    m_pages.add(&page);
+    ASSERT(!m_pages.contains(page));
+    m_pages.add(page);
 }
 
 void PageGroup::removePage(Page& page)
 {
-    ASSERT(m_pages.contains(&page));
-    m_pages.remove(&page);
+    ASSERT(m_pages.contains(page));
+    m_pages.remove(page);
 }
 
-#if ENABLE(VIDEO_TRACK)
+#if ENABLE(VIDEO)
 void PageGroup::captionPreferencesChanged()
 {
     for (auto& page : m_pages)
-        page->captionPreferencesChanged();
+        page.captionPreferencesChanged();
     BackForwardCache::singleton().markPagesForCaptionPreferencesChanged();
 }
 

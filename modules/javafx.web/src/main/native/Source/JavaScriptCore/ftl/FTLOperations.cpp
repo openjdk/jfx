@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -36,21 +36,24 @@
 #include "FTLLazySlowPath.h"
 #include "FrameTracers.h"
 #include "InlineCallFrame.h"
-#include "Interpreter.h"
 #include "JSArrayIterator.h"
 #include "JSAsyncFunction.h"
 #include "JSAsyncGeneratorFunction.h"
 #include "JSCInlines.h"
 #include "JSGeneratorFunction.h"
 #include "JSImmutableButterfly.h"
+#include "JSInternalPromise.h"
 #include "JSLexicalEnvironment.h"
+#include "JSMapIterator.h"
+#include "JSSetIterator.h"
 #include "RegExpObject.h"
+#include <wtf/Assertions.h>
 
 IGNORE_WARNINGS_BEGIN("frame-address")
 
 namespace JSC { namespace FTL {
 
-extern "C" void JIT_OPERATION operationPopulateObjectInOSR(JSGlobalObject* globalObject, ExitTimeObjectMaterialization* materialization, EncodedJSValue* encodedValue, EncodedJSValue* values)
+JSC_DEFINE_JIT_OPERATION(operationPopulateObjectInOSR, void, (JSGlobalObject* globalObject, ExitTimeObjectMaterialization* materialization, EncodedJSValue* encodedValue, EncodedJSValue* values))
 {
     using namespace DFG;
     VM& vm = globalObject->vm();
@@ -118,15 +121,41 @@ extern "C" void JIT_OPERATION operationPopulateObjectInOSR(JSGlobalObject* globa
         break;
     }
 
-    case PhantomNewArrayIterator: {
-        JSArrayIterator* arrayIterator = jsCast<JSArrayIterator*>(JSValue::decode(*encodedValue));
+    case PhantomNewInternalFieldObject: {
+        auto materialize = [&] (auto* target) {
+            using JSCellType = std::remove_reference_t<decltype(*target)>;
+            // Figure out what to populate the iterator with
+            for (unsigned i = materialization->properties().size(); i--;) {
+                const ExitPropertyValue& property = materialization->properties()[i];
+                if (property.location().kind() != InternalFieldObjectPLoc)
+                    continue;
+                ASSERT(property.location().info() < JSCellType::numberOfInternalFields);
+                target->internalField(static_cast<typename JSCellType::Field>(property.location().info())).set(vm, target, JSValue::decode(values[i]));
+            }
+        };
 
-        // Figure out what to populate the iterator with
-        for (unsigned i = materialization->properties().size(); i--;) {
-            const ExitPropertyValue& property = materialization->properties()[i];
-            if (property.location().kind() != InternalFieldObjectPLoc)
-                continue;
-            arrayIterator->internalField(static_cast<JSArrayIterator::Field>(property.location().info())).set(vm, arrayIterator, JSValue::decode(values[i]));
+        JSObject* target = jsCast<JSObject*>(JSValue::decode(*encodedValue));
+        switch (target->type()) {
+        case JSArrayIteratorType:
+            materialize(jsCast<JSArrayIterator*>(target));
+            break;
+        case JSMapIteratorType:
+            materialize(jsCast<JSMapIterator*>(target));
+            break;
+        case JSSetIteratorType:
+            materialize(jsCast<JSSetIterator*>(target));
+            break;
+        case JSPromiseType:
+            if (target->classInfo(vm) == JSInternalPromise::info())
+                materialize(jsCast<JSInternalPromise*>(target));
+            else {
+                ASSERT(target->classInfo(vm) == JSPromise::info());
+                materialize(jsCast<JSPromise*>(target));
+            }
+            break;
+        default:
+            RELEASE_ASSERT_NOT_REACHED();
+            break;
         }
         break;
     }
@@ -152,7 +181,8 @@ extern "C" void JIT_OPERATION operationPopulateObjectInOSR(JSGlobalObject* globa
     }
 }
 
-extern "C" JSCell* JIT_OPERATION operationMaterializeObjectInOSR(JSGlobalObject* globalObject, ExitTimeObjectMaterialization* materialization, EncodedJSValue* values)
+
+JSC_DEFINE_JIT_OPERATION(operationMaterializeObjectInOSR, JSCell*, (JSGlobalObject* globalObject, ExitTimeObjectMaterialization* materialization, EncodedJSValue* values))
 {
     using namespace DFG;
     VM& vm = globalObject->vm();
@@ -293,7 +323,7 @@ extern "C" JSCell* JIT_OPERATION operationMaterializeObjectInOSR(JSGlobalObject*
         return result;
     }
 
-    case PhantomNewArrayIterator: {
+    case PhantomNewInternalFieldObject: {
         // Figure out what structure.
         Structure* structure = nullptr;
         for (unsigned i = materialization->properties().size(); i--;) {
@@ -305,14 +335,40 @@ extern "C" JSCell* JIT_OPERATION operationMaterializeObjectInOSR(JSGlobalObject*
         }
         RELEASE_ASSERT(structure);
 
-        JSArrayIterator* result = JSArrayIterator::createWithInitialValues(vm, structure);
-
-        RELEASE_ASSERT(materialization->properties().size() - 1 == JSArrayIterator::numberOfInternalFields);
-
         // The real values will be put subsequently by
         // operationPopulateNewObjectInOSR. See the PhantomNewObject
         // case for details.
-        return result;
+        switch (structure->typeInfo().type()) {
+        case JSArrayIteratorType: {
+            JSArrayIterator* result = JSArrayIterator::createWithInitialValues(vm, structure);
+            RELEASE_ASSERT(materialization->properties().size() - 1 == JSArrayIterator::numberOfInternalFields);
+            return result;
+        }
+        case JSMapIteratorType: {
+            JSMapIterator* result = JSMapIterator::createWithInitialValues(vm, structure);
+            RELEASE_ASSERT(materialization->properties().size() - 1 == JSMapIterator::numberOfInternalFields);
+            return result;
+        }
+        case JSSetIteratorType: {
+            JSSetIterator* result = JSSetIterator::createWithInitialValues(vm, structure);
+            RELEASE_ASSERT(materialization->properties().size() - 1 == JSSetIterator::numberOfInternalFields);
+            return result;
+        }
+        case JSPromiseType: {
+            if (structure->classInfo() == JSInternalPromise::info()) {
+                JSInternalPromise* result = JSInternalPromise::createWithInitialValues(vm, structure);
+                RELEASE_ASSERT(materialization->properties().size() - 1 == JSInternalPromise::numberOfInternalFields);
+                return result;
+            }
+            ASSERT(structure->classInfo() == JSPromise::info());
+            JSPromise* result = JSPromise::createWithInitialValues(vm, structure);
+            RELEASE_ASSERT(materialization->properties().size() - 1 == JSPromise::numberOfInternalFields);
+            return result;
+        }
+        default:
+            RELEASE_ASSERT_NOT_REACHED();
+            return nullptr;
+        }
     }
 
     case PhantomCreateRest:
@@ -642,7 +698,36 @@ extern "C" JSCell* JIT_OPERATION operationMaterializeObjectInOSR(JSGlobalObject*
     }
 }
 
-extern "C" void* JIT_OPERATION operationCompileFTLLazySlowPath(CallFrame* callFrame, unsigned index)
+JSC_DEFINE_JIT_OPERATION(operationSwitchStringAndGetBranchOffset, int32_t, (JSGlobalObject* globalObject, size_t tableIndex, JSString* string))
+{
+    VM& vm = globalObject->vm();
+    CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
+    JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
+    auto throwScope = DECLARE_THROW_SCOPE(vm);
+
+    StringImpl* strImpl = string->value(globalObject).impl();
+
+    RETURN_IF_EXCEPTION(throwScope, 0);
+
+    return callFrame->codeBlock()->stringSwitchJumpTable(tableIndex).offsetForValue(strImpl, std::numeric_limits<int32_t>::min());
+}
+
+JSC_DEFINE_JIT_OPERATION(operationTypeOfObjectAsTypeofType, int32_t, (JSGlobalObject* globalObject, JSCell* object))
+{
+    VM& vm = globalObject->vm();
+    CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
+    JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
+
+    ASSERT(jsDynamicCast<JSObject*>(vm, object));
+
+    if (object->structure(vm)->masqueradesAsUndefined(globalObject))
+        return static_cast<int32_t>(TypeofType::Undefined);
+    if (object->isCallable(vm))
+        return static_cast<int32_t>(TypeofType::Function);
+    return static_cast<int32_t>(TypeofType::Object);
+}
+
+JSC_DEFINE_JIT_OPERATION(operationCompileFTLLazySlowPath, void*, (CallFrame* callFrame, unsigned index))
 {
     VM& vm = callFrame->deprecatedVM();
 
@@ -656,6 +741,13 @@ extern "C" void* JIT_OPERATION operationCompileFTLLazySlowPath(CallFrame* callFr
     lazySlowPath.generate(codeBlock);
 
     return lazySlowPath.stub().code().executableAddress();
+}
+
+JSC_DEFINE_JIT_OPERATION_WITH_ATTRIBUTES(operationReportBoundsCheckEliminationErrorAndCrash, NO_RETURN_DUE_TO_CRASH, void, (intptr_t codeBlockAsIntPtr, int32_t nodeIndex, int32_t child1Index, int32_t child2Index, int32_t checkedIndex, int32_t bounds))
+{
+    CodeBlock* codeBlock = bitwise_cast<CodeBlock*>(codeBlockAsIntPtr);
+    dataLogLn("Bounds Check Eimination error found @ D@", nodeIndex, ": AssertInBounds(index D@", child1Index, ": ", checkedIndex, ", bounds D@", child2Index, " ", bounds, ") in ", codeBlock);
+    CRASH();
 }
 
 } } // namespace JSC::FTL

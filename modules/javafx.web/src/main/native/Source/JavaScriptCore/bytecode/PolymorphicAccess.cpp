@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,8 +35,8 @@
 #include "FullCodeOrigin.h"
 #include "Heap.h"
 #include "JITOperations.h"
-#include "JSCInlines.h"
 #include "LinkBuffer.h"
+#include "StructureInlines.h"
 #include "StructureStubClearingWatchpoint.h"
 #include "StructureStubInfo.h"
 #include "SuperSampler.h"
@@ -118,6 +118,19 @@ auto AccessGenerationState::preserveLiveRegistersToStackForCall(const RegisterSe
     liveRegisters.merge(extra);
 
     unsigned extraStackPadding = 0;
+    unsigned numberOfStackBytesUsedForRegisterPreservation = ScratchRegisterAllocator::preserveRegistersToStackForCall(*jit, liveRegisters, extraStackPadding);
+    return SpillState {
+        WTFMove(liveRegisters),
+        numberOfStackBytesUsedForRegisterPreservation
+    };
+}
+
+auto AccessGenerationState::preserveLiveRegistersToStackForCallWithoutExceptions() -> SpillState
+{
+    RegisterSet liveRegisters = allocator->usedRegisters();
+    liveRegisters.exclude(calleeSaveRegisters());
+
+    constexpr unsigned extraStackPadding = 0;
     unsigned numberOfStackBytesUsedForRegisterPreservation = ScratchRegisterAllocator::preserveRegistersToStackForCall(*jit, liveRegisters, extraStackPadding);
     return SpillState {
         WTFMove(liveRegisters),
@@ -345,7 +358,8 @@ bool PolymorphicAccess::visitWeak(VM& vm) const
     return true;
 }
 
-bool PolymorphicAccess::propagateTransitions(SlotVisitor& visitor) const
+template<typename Visitor>
+bool PolymorphicAccess::propagateTransitions(Visitor& visitor) const
 {
     bool result = true;
     for (unsigned i = 0; i < size(); ++i)
@@ -353,11 +367,17 @@ bool PolymorphicAccess::propagateTransitions(SlotVisitor& visitor) const
     return result;
 }
 
-void PolymorphicAccess::visitAggregate(SlotVisitor& visitor)
+template bool PolymorphicAccess::propagateTransitions(AbstractSlotVisitor&) const;
+template bool PolymorphicAccess::propagateTransitions(SlotVisitor&) const;
+
+template<typename Visitor>
+void PolymorphicAccess::visitAggregateImpl(Visitor& visitor)
 {
     for (unsigned i = 0; i < size(); ++i)
         at(i).visitAggregate(visitor);
 }
+
+DEFINE_VISIT_AGGREGATE(PolymorphicAccess);
 
 void PolymorphicAccess::dump(PrintStream& out) const
 {
@@ -387,15 +407,14 @@ void PolymorphicAccess::commit(
     }
 }
 
-AccessGenerationResult PolymorphicAccess::regenerate(
-    const GCSafeConcurrentJSLocker& locker, VM& vm, CodeBlock* codeBlock, StructureStubInfo& stubInfo)
+AccessGenerationResult PolymorphicAccess::regenerate(const GCSafeConcurrentJSLocker& locker, VM& vm, JSGlobalObject* globalObject, CodeBlock* codeBlock, ECMAMode ecmaMode, StructureStubInfo& stubInfo)
 {
     SuperSamplerScope superSamplerScope(false);
 
     if (PolymorphicAccessInternal::verbose)
         dataLog("Regenerate with m_list: ", listDump(m_list), "\n");
 
-    AccessGenerationState state(vm, codeBlock->globalObject());
+    AccessGenerationState state(vm, globalObject, ecmaMode);
 
     state.access = this;
     state.stubInfo = &stubInfo;
@@ -457,7 +476,8 @@ AccessGenerationResult PolymorphicAccess::regenerate(
     allocator.lock(state.baseGPR);
     if (state.u.thisGPR != InvalidGPRReg)
         allocator.lock(state.u.thisGPR);
-    allocator.lock(state.valueRegs);
+    if (state.valueRegs)
+        allocator.lock(state.valueRegs);
 #if USE(JSVALUE32_64)
     allocator.lock(stubInfo.baseTagGPR);
     if (stubInfo.v.thisTagGPR != InvalidGPRReg)
@@ -795,6 +815,15 @@ void printInternal(PrintStream& out, AccessCase::AccessType type)
     case AccessCase::Transition:
         out.print("Transition");
         return;
+    case AccessCase::Delete:
+        out.print("Delete");
+        return;
+    case AccessCase::DeleteNonConfigurable:
+        out.print("DeleteNonConfigurable");
+        return;
+    case AccessCase::DeleteMiss:
+        out.print("DeleteMiss");
+        return;
     case AccessCase::Replace:
         out.print("Replace");
         return;
@@ -830,6 +859,12 @@ void printInternal(PrintStream& out, AccessCase::AccessType type)
         return;
     case AccessCase::InMiss:
         out.print("InMiss");
+        return;
+    case AccessCase::CheckPrivateBrand:
+        out.print("CheckPrivateBrand");
+        return;
+    case AccessCase::SetPrivateBrand:
+        out.print("SetPrivateBrand");
         return;
     case AccessCase::ArrayLength:
         out.print("ArrayLength");

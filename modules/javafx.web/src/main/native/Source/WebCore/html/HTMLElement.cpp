@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
- * Copyright (C) 2004-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2020 Apple Inc. All rights reserved.
  * Copyright (C) 2009 Torch Mobile Inc. All rights reserved. (http://www.torchmobile.com/)
  * Copyright (C) 2011 Motorola Mobility. All rights reserved.
  *
@@ -36,6 +36,7 @@
 #include "ElementAncestorIterator.h"
 #include "EnterKeyHint.h"
 #include "Event.h"
+#include "EventHandler.h"
 #include "EventListener.h"
 #include "EventNames.h"
 #include "Frame.h"
@@ -44,7 +45,7 @@
 #include "HTMLBDIElement.h"
 #include "HTMLBRElement.h"
 #include "HTMLButtonElement.h"
-#include "HTMLCollection.h"
+#include "HTMLDivElement.h"
 #include "HTMLDocument.h"
 #include "HTMLElementFactory.h"
 #include "HTMLFieldSetElement.h"
@@ -55,22 +56,30 @@
 #include "HTMLOptionElement.h"
 #include "HTMLParserIdioms.h"
 #include "HTMLSelectElement.h"
+#include "HTMLStyleElement.h"
 #include "HTMLTextAreaElement.h"
 #include "HTMLTextFormControlElement.h"
 #include "NodeTraversal.h"
 #include "RenderElement.h"
+#include "RenderImage.h"
 #include "ScriptController.h"
+#include "ScriptDisallowedScope.h"
 #include "ShadowRoot.h"
 #include "SimulatedClick.h"
 #include "StyleProperties.h"
-#include "SubframeLoader.h"
 #include "Text.h"
+#include "UserAgentStyleSheets.h"
 #include "XMLNames.h"
 #include "markup.h"
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/text/CString.h>
+#include <wtf/text/StringBuilder.h>
+
+#if ENABLE(IMAGE_EXTRACTION)
+#include "ImageExtractionResult.h"
+#endif
 
 namespace WebCore {
 
@@ -207,10 +216,15 @@ void HTMLElement::collectStyleForPresentationAttribute(const QualifiedName& name
         if (equalLettersIgnoringASCIICase(value, "auto"))
             addPropertyToPresentationAttributeStyle(style, CSSPropertyUnicodeBidi, unicodeBidiAttributeForDirAuto(*this));
         else {
-            if (isLTROrRTLIgnoringCase(value))
+            auto unicodeBidiValue = CSSValueEmbed;
+
+            if (isLTROrRTLIgnoringCase(value)) {
                 addPropertyToPresentationAttributeStyle(style, CSSPropertyDirection, value);
+                unicodeBidiValue = CSSValueIsolate;
+            }
+
             if (!hasTagName(bdiTag) && !hasTagName(bdoTag) && !hasTagName(outputTag))
-                addPropertyToPresentationAttributeStyle(style, CSSPropertyUnicodeBidi, CSSValueEmbed);
+                addPropertyToPresentationAttributeStyle(style, CSSPropertyUnicodeBidi, unicodeBidiValue);
         }
     } else if (name.matches(XMLNames::langAttr))
         mapLanguageAttributeToLocale(value, style);
@@ -306,6 +320,7 @@ HTMLElement::EventHandlerNameMap HTMLElement::createEventHandlerNameMap()
         &onseekingAttr.get(),
         &onselectAttr.get(),
         &onselectstartAttr.get(),
+        &onslotchangeAttr.get(),
         &onstalledAttr.get(),
         &onsubmitAttr.get(),
         &onsuspendAttr.get(),
@@ -445,10 +460,10 @@ void HTMLElement::parseAttribute(const QualifiedName& name, const AtomString& va
     }
 
     if (name == tabindexAttr) {
-        if (value.isEmpty())
-            clearTabIndexExplicitlyIfNeeded();
-        else if (auto optionalTabIndex = parseHTMLInteger(value))
+        if (auto optionalTabIndex = parseHTMLInteger(value))
             setTabIndexExplicitly(optionalTabIndex.value());
+        else
+            setTabIndexExplicitly(WTF::nullopt);
         return;
     }
 
@@ -506,9 +521,9 @@ static Ref<DocumentFragment> textToFragment(Document& document, const String& te
 // http://www.whatwg.org/specs/web-apps/current-work/multipage/common-dom-interfaces.html#limited-to-only-known-values
 static inline const AtomString& toValidDirValue(const AtomString& value)
 {
-    static NeverDestroyed<AtomString> ltrValue("ltr", AtomString::ConstructFromLiteral);
-    static NeverDestroyed<AtomString> rtlValue("rtl", AtomString::ConstructFromLiteral);
-    static NeverDestroyed<AtomString> autoValue("auto", AtomString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> ltrValue("ltr", AtomString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> rtlValue("rtl", AtomString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> autoValue("auto", AtomString::ConstructFromLiteral);
     if (equalLettersIgnoringASCIICase(value, "ltr"))
         return ltrValue;
     if (equalLettersIgnoringASCIICase(value, "rtl"))
@@ -533,10 +548,7 @@ ExceptionOr<void> HTMLElement::setInnerText(const String& text)
     // FIXME: This doesn't take whitespace collapsing into account at all.
 
     if (!text.contains('\n') && !text.contains('\r')) {
-        if (text.isEmpty())
-            replaceAllChildren(nullptr);
-        else
-            replaceAllChildren(document().createTextNode(text));
+        replaceAllChildrenWithNewText(text);
         return { };
     }
 
@@ -546,19 +558,19 @@ ExceptionOr<void> HTMLElement::setInnerText(const String& text)
     auto* r = renderer();
     if ((r && r->style().preserveNewline()) || (isConnected() && isTextControlInnerTextElement())) {
         if (!text.contains('\r')) {
-            replaceAllChildren(document().createTextNode(text));
+            replaceAllChildrenWithNewText(text);
             return { };
         }
         String textWithConsistentLineBreaks = text;
         textWithConsistentLineBreaks.replace("\r\n", "\n");
         textWithConsistentLineBreaks.replace('\r', '\n');
-        replaceAllChildren(document().createTextNode(textWithConsistentLineBreaks));
+        replaceAllChildrenWithNewText(textWithConsistentLineBreaks);
         return { };
     }
 
     // Add text nodes and <br> elements.
     auto fragment = textToFragment(document(), text);
-    // FIXME: This should use replaceAllChildren() once it accepts DocumentFragments as input.
+    // FIXME: This should use a variant of replaceAllChildrenWithNewText() which accepts DocumentFragments as input.
     // It's safe to dispatch events on the new fragment since author scripts have no access to it yet.
     ScriptDisallowedScope::EventAllowedScope allowedScope(fragment.get());
     return replaceChildrenWithFragment(*this, WTFMove(fragment));
@@ -661,14 +673,32 @@ String HTMLElement::contentEditable() const
     return "inherit"_s;
 }
 
+static const AtomString& trueName()
+{
+    static MainThreadNeverDestroyed<const AtomString> trueValue("true", AtomString::ConstructFromLiteral);
+    return trueValue.get();
+}
+
+static const AtomString& falseName()
+{
+    static MainThreadNeverDestroyed<const AtomString> falseValue("false", AtomString::ConstructFromLiteral);
+    return falseValue.get();
+}
+
+static const AtomString& plaintextOnlyName()
+{
+    static MainThreadNeverDestroyed<const AtomString> plaintextOnlyValue("plaintext-only", AtomString::ConstructFromLiteral);
+    return plaintextOnlyValue.get();
+}
+
 ExceptionOr<void> HTMLElement::setContentEditable(const String& enabled)
 {
     if (equalLettersIgnoringASCIICase(enabled, "true"))
-        setAttributeWithoutSynchronization(contenteditableAttr, AtomString("true", AtomString::ConstructFromLiteral));
+        setAttributeWithoutSynchronization(contenteditableAttr, trueName());
     else if (equalLettersIgnoringASCIICase(enabled, "false"))
-        setAttributeWithoutSynchronization(contenteditableAttr, AtomString("false", AtomString::ConstructFromLiteral));
+        setAttributeWithoutSynchronization(contenteditableAttr, falseName());
     else if (equalLettersIgnoringASCIICase(enabled, "plaintext-only"))
-        setAttributeWithoutSynchronization(contenteditableAttr, AtomString("plaintext-only", AtomString::ConstructFromLiteral));
+        setAttributeWithoutSynchronization(contenteditableAttr, plaintextOnlyName());
     else if (equalLettersIgnoringASCIICase(enabled, "inherit"))
         removeAttribute(contenteditableAttr);
     else
@@ -683,9 +713,7 @@ bool HTMLElement::draggable() const
 
 void HTMLElement::setDraggable(bool value)
 {
-    setAttributeWithoutSynchronization(draggableAttr, value
-        ? AtomString("true", AtomString::ConstructFromLiteral)
-        : AtomString("false", AtomString::ConstructFromLiteral));
+    setAttributeWithoutSynchronization(draggableAttr, value ? trueName() : falseName());
 }
 
 bool HTMLElement::spellcheck() const
@@ -695,9 +723,7 @@ bool HTMLElement::spellcheck() const
 
 void HTMLElement::setSpellcheck(bool enable)
 {
-    setAttributeWithoutSynchronization(spellcheckAttr, enable
-        ? AtomString("true", AtomString::ConstructFromLiteral)
-        : AtomString("false", AtomString::ConstructFromLiteral));
+    setAttributeWithoutSynchronization(spellcheckAttr, enable ? trueName() : falseName());
 }
 
 void HTMLElement::click()
@@ -705,9 +731,33 @@ void HTMLElement::click()
     simulateClick(*this, nullptr, SendNoEvents, DoNotShowPressedLook, SimulatedClickSource::Bindings);
 }
 
-void HTMLElement::accessKeyAction(bool sendMouseEvents)
+bool HTMLElement::accessKeyAction(bool sendMouseEvents)
 {
-    dispatchSimulatedClick(nullptr, sendMouseEvents ? SendMouseUpDownEvents : SendNoEvents);
+    return dispatchSimulatedClick(nullptr, sendMouseEvents ? SendMouseUpDownEvents : SendNoEvents);
+}
+
+String HTMLElement::accessKeyLabel() const
+{
+    const auto& accessKey = attributeWithoutSynchronization(accesskeyAttr);
+    if (accessKey.isEmpty())
+        return String();
+
+    StringBuilder result;
+
+#if PLATFORM(COCOA)
+    auto modifiers = EventHandler::accessKeyModifiers();
+    if (modifiers.contains(PlatformEvent::Modifier::ControlKey))
+        result.append(upArrowhead);
+    if (modifiers.contains(PlatformEvent::Modifier::AltKey))
+        result.append(WTF::Unicode::optionKey);
+#else
+    // Currently accessKeyModifier in non-cocoa platforms is hardcoded to Alt, so no reason to do extra work here.
+    // If this ever becomes configurable, make this code use EventHandler::accessKeyModifiers().
+    result.append("Alt+");
+#endif
+
+    result.append(accessKey);
+    return result.toString();
 }
 
 String HTMLElement::title() const
@@ -741,7 +791,7 @@ bool HTMLElement::rendererIsEverNeeded()
             return false;
     } else if (hasTagName(noembedTag)) {
         RefPtr<Frame> frame = document().frame();
-        if (frame && frame->loader().subframeLoader().allowPlugins())
+        if (frame && frame->arePluginsEnabled())
             return false;
     }
     return StyledElement::rendererIsEverNeeded();
@@ -767,12 +817,14 @@ FormAssociatedElement* HTMLElement::asFormAssociatedElement()
     return nullptr;
 }
 
-static inline bool elementAffectsDirectionality(const Node& node)
+static bool elementAffectsDirectionality(const HTMLElement& element)
 {
-    if (!is<HTMLElement>(node))
-        return false;
-    const HTMLElement& element = downcast<HTMLElement>(node);
     return is<HTMLBDIElement>(element) || element.hasAttributeWithoutSynchronization(dirAttr);
+}
+
+static bool elementAffectsDirectionality(const Node& node)
+{
+    return is<HTMLElement>(node) && elementAffectsDirectionality(downcast<HTMLElement>(node));
 }
 
 static void setHasDirAutoFlagRecursively(Node* firstNode, bool flag, Node* lastNode = nullptr)
@@ -885,10 +937,10 @@ void HTMLElement::adjustDirectionalityIfNeededAfterChildAttributeChanged(Element
     setHasDirAutoFlagRecursively(child, false);
     if (!renderer() || renderer()->style().direction() == textDirection)
         return;
-    for (auto& elementToAdjust : elementLineage(this)) {
-        if (elementAffectsDirectionality(elementToAdjust)) {
-            elementToAdjust.invalidateStyleForSubtree();
-            return;
+    for (auto& element : lineageOfType<HTMLElement>(*this)) {
+        if (elementAffectsDirectionality(element)) {
+            element.invalidateStyleForSubtree();
+            break;
         }
     }
 }
@@ -902,7 +954,7 @@ void HTMLElement::calculateAndAdjustDirectionality()
         invalidateStyleForSubtree();
 }
 
-void HTMLElement::adjustDirectionalityIfNeededAfterChildrenChanged(Element* beforeChange, ChildChangeType changeType)
+void HTMLElement::adjustDirectionalityIfNeededAfterChildrenChanged(Element* beforeChange, ChildChange::Type changeType)
 {
     // FIXME: This function looks suspicious.
 
@@ -911,7 +963,7 @@ void HTMLElement::adjustDirectionalityIfNeededAfterChildrenChanged(Element* befo
 
     RefPtr<Node> oldMarkedNode;
     if (beforeChange)
-        oldMarkedNode = changeType == ElementInserted ? ElementTraversal::nextSibling(*beforeChange) : beforeChange->nextSibling();
+        oldMarkedNode = changeType == ChildChange::Type::ElementInserted ? ElementTraversal::nextSibling(*beforeChange) : beforeChange->nextSibling();
 
     while (oldMarkedNode && elementAffectsDirectionality(*oldMarkedNode))
         oldMarkedNode = oldMarkedNode->nextSibling();
@@ -958,28 +1010,47 @@ void HTMLElement::addHTMLLengthToStyle(MutableStyleProperties& style, CSSPropert
     addPropertyToPresentationAttributeStyle(style, propertyID, value);
 }
 
-static RGBA32 parseColorStringWithCrazyLegacyRules(const String& colorString)
+// Color parsing that matches HTML's "rules for parsing a legacy color value"
+// https://html.spec.whatwg.org/#rules-for-parsing-a-legacy-colour-value
+static Optional<SRGBA<uint8_t>> parseLegacyColorValue(StringView string)
 {
-    // Per spec, only look at the first 128 digits of the string.
-    const size_t maxColorLength = 128;
-    // We'll pad the buffer with two extra 0s later, so reserve two more than the max.
-    Vector<char, maxColorLength+2> digitBuffer;
+    // An empty string doesn't apply a color.
+    if (string.isEmpty())
+        return WTF::nullopt;
 
-    size_t i = 0;
-    // Skip a leading #.
-    if (colorString[0] == '#')
-        i = 1;
+    string = string.stripLeadingAndTrailingMatchedCharacters(isHTMLSpace<UChar>);
+    if (string.isEmpty())
+        return Color::black;
+
+    // "transparent" doesn't apply a color either.
+    if (equalLettersIgnoringASCIICase(string, "transparent"))
+        return WTF::nullopt;
+
+    if (auto namedColor = CSSParser::parseNamedColor(string))
+        return namedColor;
+
+    if (string.length() == 4 && string[0] == '#' && isASCIIHexDigit(string[1]) && isASCIIHexDigit(string[2]) && isASCIIHexDigit(string[3]))
+        return { { static_cast<uint8_t>(toASCIIHexValue(string[1]) * 0x11), static_cast<uint8_t>(toASCIIHexValue(string[2]) * 0x11), static_cast<uint8_t>(toASCIIHexValue(string[3]) * 0x11) } };
+
+    // Per spec, only look at the first 128 digits of the string.
+    constexpr unsigned maxColorLength = 128;
+
+    // We'll pad the buffer with two extra 0s later, so reserve two more than the max.
+    Vector<char, maxColorLength + 2> digitBuffer;
 
     // Grab the first 128 characters, replacing non-hex characters with 0.
     // Non-BMP characters are replaced with "00" due to them appearing as two "characters" in the String.
-    for (; i < colorString.length() && digitBuffer.size() < maxColorLength; i++) {
-        if (!isASCIIHexDigit(colorString[i]))
+    unsigned i = 0;
+    if (string[0] == '#') // Skip a leading #.
+        i = 1;
+    for (; i < string.length() && digitBuffer.size() < maxColorLength; i++) {
+        if (!isASCIIHexDigit(string[i]))
             digitBuffer.append('0');
         else
-            digitBuffer.append(colorString[i]);
+            digitBuffer.append(string[i]);
     }
 
-    if (!digitBuffer.size())
+    if (digitBuffer.isEmpty())
         return Color::black;
 
     // Pad the buffer out to at least the next multiple of three in size.
@@ -987,15 +1058,15 @@ static RGBA32 parseColorStringWithCrazyLegacyRules(const String& colorString)
     digitBuffer.append('0');
 
     if (digitBuffer.size() < 6)
-        return makeRGB(toASCIIHexValue(digitBuffer[0]), toASCIIHexValue(digitBuffer[1]), toASCIIHexValue(digitBuffer[2]));
+        return { { toASCIIHexValue(digitBuffer[0]), toASCIIHexValue(digitBuffer[1]), toASCIIHexValue(digitBuffer[2]) } };
 
     // Split the digits into three components, then search the last 8 digits of each component.
     ASSERT(digitBuffer.size() >= 6);
-    size_t componentLength = digitBuffer.size() / 3;
-    size_t componentSearchWindowLength = std::min<size_t>(componentLength, 8);
-    size_t redIndex = componentLength - componentSearchWindowLength;
-    size_t greenIndex = componentLength * 2 - componentSearchWindowLength;
-    size_t blueIndex = componentLength * 3 - componentSearchWindowLength;
+    unsigned componentLength = digitBuffer.size() / 3;
+    unsigned componentSearchWindowLength = std::min(componentLength, 8U);
+    unsigned redIndex = componentLength - componentSearchWindowLength;
+    unsigned greenIndex = componentLength * 2 - componentSearchWindowLength;
+    unsigned blueIndex = componentLength * 3 - componentSearchWindowLength;
     // Skip digits until one of them is non-zero, or we've only got two digits left in the component.
     while (digitBuffer[redIndex] == '0' && digitBuffer[greenIndex] == '0' && digitBuffer[blueIndex] == '0' && (componentLength - redIndex) > 2) {
         redIndex++;
@@ -1008,34 +1079,16 @@ static RGBA32 parseColorStringWithCrazyLegacyRules(const String& colorString)
     ASSERT(blueIndex >= componentLength * 2);
     ASSERT_WITH_SECURITY_IMPLICATION(blueIndex + 1 < digitBuffer.size());
 
-    int redValue = toASCIIHexValue(digitBuffer[redIndex], digitBuffer[redIndex + 1]);
-    int greenValue = toASCIIHexValue(digitBuffer[greenIndex], digitBuffer[greenIndex + 1]);
-    int blueValue = toASCIIHexValue(digitBuffer[blueIndex], digitBuffer[blueIndex + 1]);
-    return makeRGB(redValue, greenValue, blueValue);
+    uint8_t redValue = toASCIIHexValue(digitBuffer[redIndex], digitBuffer[redIndex + 1]);
+    uint8_t greenValue = toASCIIHexValue(digitBuffer[greenIndex], digitBuffer[greenIndex + 1]);
+    uint8_t blueValue = toASCIIHexValue(digitBuffer[blueIndex], digitBuffer[blueIndex + 1]);
+    return { { redValue, greenValue, blueValue } };
 }
 
-// Color parsing that matches HTML's "rules for parsing a legacy color value"
 void HTMLElement::addHTMLColorToStyle(MutableStyleProperties& style, CSSPropertyID propertyID, const String& attributeValue)
 {
-    // An empty string doesn't apply a color. (One containing only whitespace does, which is why this check occurs before stripping.)
-    if (attributeValue.isEmpty())
-        return;
-
-    String colorString = attributeValue.stripWhiteSpace();
-
-    // "transparent" doesn't apply a color either.
-    if (equalLettersIgnoringASCIICase(colorString, "transparent"))
-        return;
-
-    Color color;
-    // We can't always use the default Color constructor because it accepts
-    // 4/8-digit hex, which conflict with some legacy HTML content using attributes.
-    if ((colorString.length() != 5 && colorString.length() != 9) || colorString[0] != '#')
-        color = Color(colorString);
-    if (!color.isValid())
-        color = Color(parseColorStringWithCrazyLegacyRules(colorString));
-
-    style.setProperty(propertyID, CSSValuePool::singleton().createColorValue(color.rgb()));
+    if (auto color = parseLegacyColorValue(attributeValue))
+        style.setProperty(propertyID, CSSValuePool::singleton().createColorValue(*color));
 }
 
 bool HTMLElement::willRespondToMouseMoveEvents()
@@ -1099,7 +1152,9 @@ bool HTMLElement::shouldAutocorrect() const
 
 void HTMLElement::setAutocorrect(bool autocorrect)
 {
-    setAttributeWithoutSynchronization(autocorrectAttr, autocorrect ? AtomString("on", AtomString::ConstructFromLiteral) : AtomString("off", AtomString::ConstructFromLiteral));
+    static MainThreadNeverDestroyed<const AtomString> onName("on", AtomString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> offName("off", AtomString::ConstructFromLiteral);
+    setAttributeWithoutSynchronization(autocorrectAttr, autocorrect ? onName.get() : offName.get());
 }
 
 #endif
@@ -1138,6 +1193,105 @@ void HTMLElement::setEnterKeyHint(const String& value)
 {
     setAttributeWithoutSynchronization(enterkeyhintAttr, value);
 }
+
+static const AtomString& imageOverlayElementIdentifier()
+{
+    static MainThreadNeverDestroyed<const AtomString> identifier("image-overlay", AtomString::ConstructFromLiteral);
+    return identifier;
+}
+
+bool HTMLElement::shouldUpdateSelectionForMouseDrag(const Node& targetNode, const VisibleSelection& selectionBeforeUpdate)
+{
+    if (!is<HTMLDivElement>(targetNode))
+        return true;
+
+    auto shadowHost = makeRefPtr(targetNode.shadowHost());
+    if (!is<HTMLElement>(shadowHost))
+        return true;
+
+    auto& host = downcast<HTMLElement>(*shadowHost);
+    if (!host.hasImageOverlay())
+        return true;
+
+    if (!targetNode.contains(selectionBeforeUpdate.start().containerNode()))
+        return true;
+
+    for (auto& child : childrenOfType<HTMLDivElement>(*host.userAgentShadowRoot())) {
+        if (child.getIdAttribute() == imageOverlayElementIdentifier())
+            return &targetNode != &child;
+    }
+
+    return true;
+}
+
+bool HTMLElement::hasImageOverlay() const
+{
+    auto shadowRoot = userAgentShadowRoot();
+    if (LIKELY(!shadowRoot))
+        return false;
+
+    return shadowRoot->hasElementWithId(*imageOverlayElementIdentifier().impl());
+}
+
+#if ENABLE(IMAGE_EXTRACTION)
+
+void HTMLElement::updateWithImageExtractionResult(ImageExtractionResult&& result)
+{
+    if (result.isEmpty())
+        return;
+
+    if (auto* renderer = this->renderer()) {
+        if (!is<RenderImage>(renderer))
+            return;
+
+        downcast<RenderImage>(*renderer).setHasImageOverlay();
+    }
+
+    static NeverDestroyed<const String> shadowStyle(imageOverlayUserAgentStyleSheet, String::ConstructFromLiteral);
+    auto style = HTMLStyleElement::create(HTMLNames::styleTag, document(), false);
+    style->setTextContent(shadowStyle);
+
+    auto shadowRoot = makeRef(ensureUserAgentShadowRoot());
+    shadowRoot->appendChild(WTFMove(style));
+
+    auto container = HTMLDivElement::create(document());
+    container->setIdAttribute(imageOverlayElementIdentifier());
+    shadowRoot->appendChild(container);
+
+    static MainThreadNeverDestroyed<const AtomString> imageOverlayTextClass("image-overlay-text", AtomString::ConstructFromLiteral);
+
+    IntSize containerSize { offsetWidth(), offsetHeight() };
+    for (auto& data : result.textData) {
+        auto child = HTMLDivElement::create(document());
+        child->classList().add(imageOverlayTextClass);
+
+        container->appendChild(child);
+        child->appendChild(Text::create(document(), data.text));
+        child->appendChild(HTMLBRElement::create(document()));
+
+        IntSize originalSize { child->offsetWidth(), child->offsetHeight() };
+        if (originalSize.isEmpty())
+            continue;
+
+        auto targetRect = data.normalizedQuad.boundingBox();
+        targetRect.scale(containerSize);
+
+        IntPoint translationOffset {
+            static_cast<int>(targetRect.x() + (targetRect.width() - originalSize.width()) / 2),
+            static_cast<int>(targetRect.y() + (targetRect.height() - originalSize.height()) / 2)
+        };
+
+        child->setInlineStyleProperty(CSSPropertyTransform, makeString(
+            "translate("_s, translationOffset.x(), "px, "_s, translationOffset.y(), "px) "_s
+            "scale("_s, targetRect.width() / originalSize.width(), ", "_s, targetRect.height() / originalSize.height(), ")"_s
+        ));
+    }
+
+    if (auto frame = makeRefPtr(document().frame()))
+        frame->eventHandler().scheduleCursorUpdate();
+}
+
+#endif // ENABLE(IMAGE_EXTRACTION)
 
 } // namespace WebCore
 

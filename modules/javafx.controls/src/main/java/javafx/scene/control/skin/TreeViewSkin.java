@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -60,7 +60,7 @@ import com.sun.javafx.scene.control.behavior.TreeViewBehavior;
  */
 public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeCell<T>> {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Static fields                                                           *
      *                                                                         *
@@ -71,12 +71,13 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeCell<
     // is set to true. This is done in order to make TreeView functional
     // on embedded systems with touch screens which do not generate scroll
     // events for touch drag gestures.
+    @SuppressWarnings("removal")
     private static final boolean IS_PANNABLE =
             AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> Boolean.getBoolean("javafx.scene.control.skin.TreeViewSkin.pannable"));
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private fields                                                          *
      *                                                                         *
@@ -88,7 +89,7 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeCell<
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Listeners                                                               *
      *                                                                         *
@@ -135,8 +136,7 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeCell<
     private WeakEventHandler<TreeModificationEvent<T>> weakRootListener;
 
 
-
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -166,13 +166,6 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeCell<
         setRoot(getSkinnable().getRoot());
 
         EventHandler<MouseEvent> ml = event -> {
-            // RT-15127: cancel editing on scroll. This is a bit extreme
-            // (we are cancelling editing on touching the scrollbars).
-            // This can be improved at a later date.
-            if (control.getEditingItem() != null) {
-                control.edit(null);
-            }
-
             // This ensures that the tree maintains the focus, even when the vbar
             // and hbar controls inside the flow are clicked. Without this, the
             // focus border will not be shown when the user interacts with the
@@ -218,7 +211,7 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeCell<
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *
@@ -226,6 +219,11 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeCell<
 
     /** {@inheritDoc} */
     @Override public void dispose() {
+        if (getSkinnable() == null) return;
+
+        getSkinnable().getProperties().removeListener(propertiesMapListener);
+        setRoot(null);
+        getChildren().remove(flow);
         super.dispose();
 
         if (behavior != null) {
@@ -319,7 +317,7 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeCell<
     }
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private implementation                                                  *
      *                                                                         *

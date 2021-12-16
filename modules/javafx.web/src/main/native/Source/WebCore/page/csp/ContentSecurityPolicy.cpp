@@ -27,6 +27,7 @@
 #include "config.h"
 #include "ContentSecurityPolicy.h"
 
+#include "BlobURL.h"
 #include "ContentSecurityPolicyClient.h"
 #include "ContentSecurityPolicyDirective.h"
 #include "ContentSecurityPolicyDirectiveList.h"
@@ -34,7 +35,6 @@
 #include "ContentSecurityPolicyHash.h"
 #include "ContentSecurityPolicySource.h"
 #include "ContentSecurityPolicySourceList.h"
-#include "CustomHeaderFields.h"
 #include "DOMStringList.h"
 #include "Document.h"
 #include "DocumentLoader.h"
@@ -59,6 +59,7 @@
 #include <wtf/JSONValues.h>
 #include <wtf/SetForScope.h>
 #include <wtf/text/StringBuilder.h>
+#include <wtf/text/StringParsingBuffer.h>
 #include <wtf/text/TextPosition.h>
 
 
@@ -213,22 +214,23 @@ void ContentSecurityPolicy::didReceiveHeader(const String& header, ContentSecuri
     // RFC2616, section 4.2 specifies that headers appearing multiple times can
     // be combined with a comma. Walk the header string, and parse each comma
     // separated chunk as a separate header.
-    auto characters = StringView(header).upconvertedCharacters();
-    const UChar* begin = characters;
-    const UChar* position = begin;
-    const UChar* end = begin + header.length();
-    while (position < end) {
-        skipUntil<UChar>(position, end, ',');
+    readCharactersForParsing(header, [&](auto buffer) {
+        auto begin = buffer.position();
 
-        // header1,header2 OR header1
-        //        ^                  ^
-        m_policies.append(ContentSecurityPolicyDirectiveList::create(*this, String(begin, position - begin), type, policyFrom));
+        while (buffer.hasCharactersRemaining()) {
+            skipUntil(buffer, ',');
 
-        // Skip the comma, and begin the next header from the current position.
-        ASSERT(position == end || *position == ',');
-        skipExactly<UChar>(position, end, ',');
-        begin = position;
-    }
+            // header1,header2 OR header1
+            //        ^                  ^
+            m_policies.append(ContentSecurityPolicyDirectiveList::create(*this, String(begin, buffer.position() - begin), type, policyFrom));
+
+            // Skip the comma, and begin the next header from the current position.
+            ASSERT(buffer.atEnd() || *buffer == ',');
+            skipExactly(buffer, ',');
+            begin = buffer.position();
+        }
+    });
+
 
     if (m_scriptExecutionContext)
         applyPolicyToScriptExecutionContext();
@@ -276,8 +278,12 @@ void ContentSecurityPolicy::setOverrideAllowInlineStyle(bool value)
     m_overrideInlineStyleAllowed = value;
 }
 
-bool ContentSecurityPolicy::urlMatchesSelf(const URL& url) const
+bool ContentSecurityPolicy::urlMatchesSelf(const URL& url, bool forFrameSrc) const
 {
+    // As per https://w3c.github.io/webappsec-csp/#match-url-to-source-expression, we compare the URL origin with the policy origin.
+    // We get origin using https://url.spec.whatwg.org/#concept-url-origin which has specific blob URLs treatment as follow.
+    if (forFrameSrc && url.protocolIsBlob())
+        return m_selfSource->matches(BlobURL::getOriginURL(url));
     return m_selfSource->matches(url);
 }
 
@@ -650,11 +656,16 @@ bool ContentSecurityPolicy::allowBaseURI(const URL& url, bool overrideContentSec
     return allPoliciesAllow(WTFMove(handleViolatedDirective), &ContentSecurityPolicyDirectiveList::violatedDirectiveForBaseURI, url);
 }
 
+static bool shouldReportProtocolOnly(const URL& url)
+{
+    return !url.isHierarchical() || url.protocolIs("file");
+}
+
 String ContentSecurityPolicy::deprecatedURLForReporting(const URL& url) const
 {
     if (!url.isValid())
         return { };
-    if (!url.isHierarchical() || url.protocolIs("file"))
+    if (shouldReportProtocolOnly(url))
         return url.protocol().toString();
     return static_cast<SecurityOriginData>(*m_selfSource).securityOrigin()->canRequest(url) ? url.strippedForUseAsReferrer() : SecurityOrigin::create(url)->toString();
 }
@@ -685,7 +696,9 @@ void ContentSecurityPolicy::reportViolation(const String& effectiveViolatedDirec
 
     // FIXME: Support sending reports from worker.
     CSPInfo info;
-    info.documentURI = blockedURL;
+
+    info.documentURI = m_documentURL ? m_documentURL.value().strippedForUseAsReferrer() : deprecatedURLForReporting(blockedURL);
+
     if (m_client)
         m_client->willSendCSPViolationReport(info);
     else {
@@ -697,7 +710,7 @@ void ContentSecurityPolicy::reportViolation(const String& effectiveViolatedDirec
         if (!frame)
             return;
 
-        info.documentURI = document.url().strippedForUseAsReferrer();
+        info.documentURI = shouldReportProtocolOnly(document.url()) ? document.url().protocol().toString() : document.url().strippedForUseAsReferrer();
 
         auto stack = createScriptCallStack(JSExecState::currentState(), 2);
         auto* callFrame = stack->firstNonNativeCallFrame();

@@ -27,14 +27,15 @@
 #include <wtf/RAMSize.h>
 
 #include <mutex>
-#include <wtf/StdLibExtras.h>
 
 #if OS(WINDOWS)
 #include <windows.h>
 #elif defined(USE_SYSTEM_MALLOC) && USE_SYSTEM_MALLOC
 #if OS(LINUX)
 #include <sys/sysinfo.h>
-#endif // OS(LINUX)
+#elif OS(UNIX)
+#include <unistd.h>
+#endif // OS(LINUX) || OS(UNIX)
 #else
 #include <bmalloc/bmalloc.h>
 #endif
@@ -54,14 +55,18 @@ static size_t computeRAMSize()
     if (!result)
         return ramSizeGuess;
     return status.ullTotalPhys;
-#elif defined(USE_SYSTEM_MALLOC) && USE_SYSTEM_MALLOC
-#if OS(LINUX)
+#elif USE(SYSTEM_MALLOC)
+#if OS(LINUX) || OS(FREEBSD)
     struct sysinfo si;
     sysinfo(&si);
     return si.totalram * si.mem_unit;
+#elif OS(UNIX)
+    long pages = sysconf(_SC_PHYS_PAGES);
+    long pageSize = sysconf(_SC_PAGE_SIZE);
+    return pages * pageSize;
 #else
 #error "Missing a platform specific way of determining the available RAM"
-#endif // OS(LINUX)
+#endif // OS(LINUX) || OS(FREEBSD) || OS(UNIX)
 #else
     return bmalloc::api::availableMemory();
 #endif

@@ -20,11 +20,12 @@
 
 [
     LegacyUnenumerableNamedProperties,
-    OverrideBuiltins,
+    LegacyOverrideBuiltIns,
     JSGenerateToNativeObject,
+    Exposed=Window
 ] interface HTMLFormElement : HTMLElement {
     [CEReactions=NotNeeded, Reflect=accept_charset] attribute DOMString acceptCharset;
-    [CEReactions=NotNeeded, Reflect, URL] attribute USVString action;
+    [CEReactions=NotNeeded] attribute USVString action;
     [CEReactions=NotNeeded] attribute DOMString autocomplete;
     [CEReactions=NotNeeded] attribute DOMString enctype;
     [CEReactions=NotNeeded, ImplementedAs=enctype] attribute DOMString encoding;
@@ -38,8 +39,8 @@
     getter Element? (unsigned long index);
     getter (RadioNodeList or Element)? (DOMString name);
 
-    [ImplementedAs=submitFromJavaScript] void submit();
-    [CEReactions=NotNeeded] void reset();
+    [ImplementedAs=submitFromJavaScript] undefined submit();
+    [CEReactions=NotNeeded] undefined reset();
     boolean checkValidity();
-    [EnabledAtRuntime=InteractiveFormValidation] boolean reportValidity();
+    [EnabledBySetting=InteractiveFormValidation] boolean reportValidity();
 };

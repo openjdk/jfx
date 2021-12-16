@@ -104,17 +104,16 @@ public:
     WEBCORE_EXPORT JSC::JSValue executeUserAgentScriptInWorldIgnoringException(DOMWrapperWorld&, const String& script, bool forceUserGesture);
     WEBCORE_EXPORT ValueOrException executeUserAgentScriptInWorld(DOMWrapperWorld&, const String& script, bool forceUserGesture);
     WEBCORE_EXPORT void executeAsynchronousUserAgentScriptInWorld(DOMWrapperWorld&, RunJavaScriptParameters&&, ResolveFunction&&);
+    ValueOrException evaluateInWorld(const ScriptSourceCode&, DOMWrapperWorld&);
     JSC::JSValue evaluateIgnoringException(const ScriptSourceCode&);
     JSC::JSValue evaluateInWorldIgnoringException(const ScriptSourceCode&, DOMWrapperWorld&);
 
     Expected<void, ExceptionDetails> shouldAllowUserAgentScripts(Document&) const;
 
-    // Returns true if argument is a JavaScript URL.
-    bool executeIfJavaScriptURL(const URL&, RefPtr<SecurityOrigin> = nullptr, ShouldReplaceDocumentIfJavaScriptURL = ReplaceDocumentIfJavaScriptURL);
+    // This asserts that URL argument is a JavaScript URL.
+    void executeJavaScriptURL(const URL&, RefPtr<SecurityOrigin> = nullptr, ShouldReplaceDocumentIfJavaScriptURL = ReplaceDocumentIfJavaScriptURL);
 
-    // This function must be called from the main thread. It is safe to call it repeatedly.
-    // Darwin is an exception to this rule: it is OK to call this function from any thread, even reentrantly.
-    static void initializeThreading();
+    static void initializeMainThread();
 
     void loadModuleScriptInWorld(LoadableModuleScript&, const String& moduleName, Ref<ModuleFetchParameters>&&, DOMWrapperWorld&);
     void loadModuleScript(LoadableModuleScript&, const String& moduleName, Ref<ModuleFetchParameters>&&);
@@ -124,8 +123,8 @@ public:
     JSC::JSValue linkAndEvaluateModuleScriptInWorld(LoadableModuleScript& , DOMWrapperWorld&);
     JSC::JSValue linkAndEvaluateModuleScript(LoadableModuleScript&);
 
-    JSC::JSValue evaluateModule(const URL&, JSC::JSModuleRecord&, DOMWrapperWorld&);
-    JSC::JSValue evaluateModule(const URL&, JSC::JSModuleRecord&);
+    JSC::JSValue evaluateModule(const URL&, JSC::JSModuleRecord&, DOMWrapperWorld&, JSC::JSValue awaitedValue, JSC::JSValue resumeMode);
+    JSC::JSValue evaluateModule(const URL&, JSC::JSModuleRecord&, JSC::JSValue awaitedValue, JSC::JSValue resumeMode);
 
     WTF::TextPosition eventHandlerPosition() const;
 
@@ -140,7 +139,7 @@ public:
     void setPaused(bool b) { m_paused = b; }
     bool isPaused() const { return m_paused; }
 
-    const String* sourceURL() const { return m_sourceURL; } // 0 if we are not evaluating any script
+    const URL* sourceURL() const { return m_sourceURL; } // nullptr if we are not evaluating any script
 
     void updateDocument();
 
@@ -179,7 +178,6 @@ public:
 private:
     ValueOrException executeUserAgentScriptInWorldInternal(DOMWrapperWorld&, RunJavaScriptParameters&&);
     ValueOrException executeScriptInWorld(DOMWrapperWorld&, RunJavaScriptParameters&&);
-    ValueOrException evaluateInWorld(const ScriptSourceCode&, DOMWrapperWorld&);
     ValueOrException callInWorld(RunJavaScriptParameters&&, DOMWrapperWorld&);
 
     void setupModuleScriptHandlers(LoadableModuleScript&, JSC::JSInternalPromise&, DOMWrapperWorld&);
@@ -190,7 +188,7 @@ private:
     WEBCORE_EXPORT JSWindowProxy& jsWindowProxy(DOMWrapperWorld&);
 
     Frame& m_frame;
-    const String* m_sourceURL;
+    const URL* m_sourceURL { nullptr };
 
     bool m_paused;
     bool m_willReplaceWithResultOfExecutingJavascriptURL { false };

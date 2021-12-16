@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,20 +29,13 @@
 #include "APICast.h"
 #include "APIUtils.h"
 #include "DateInstance.h"
-#include "Exception.h"
 #include "JSAPIWrapperObject.h"
 #include "JSCInlines.h"
-#include "JSCJSValue.h"
 #include "JSCallbackObject.h"
-#include "JSGlobalObject.h"
 #include "JSONObject.h"
-#include "JSObjectRefPrivate.h"
-#include "JSString.h"
 #include "LiteralParser.h"
 #include "Protect.h"
-#include <algorithm>
 #include <wtf/Assertions.h>
-#include <wtf/text/StringHash.h>
 #include <wtf/text/WTFString.h>
 
 #if PLATFORM(MAC)
@@ -61,14 +54,17 @@ using namespace JSC;
         ASSERT_NOT_REACHED();
         return kJSTypeUndefined;
     }
+#if !CPU(ADDRESS64)
     JSGlobalObject* globalObject = toJS(ctx);
     JSLockHolder locker(globalObject);
-
     JSValue jsValue = toJS(globalObject, value);
+#else
+    JSValue jsValue = toJS(value);
+#endif
 
     if (jsValue.isUndefined())
         return kJSTypeUndefined;
-    if (jsValue.isNull())
+    if (!jsValue || jsValue.isNull())
         return kJSTypeNull;
     if (jsValue.isBoolean())
         return kJSTypeBoolean;
@@ -88,10 +84,13 @@ bool JSValueIsUndefined(JSContextRef ctx, JSValueRef value)
         ASSERT_NOT_REACHED();
         return false;
     }
+#if !CPU(ADDRESS64)
     JSGlobalObject* globalObject = toJS(ctx);
     JSLockHolder locker(globalObject);
-
     return toJS(globalObject, value).isUndefined();
+#else
+    return toJS(value).isUndefined();
+#endif
 }
 
 bool JSValueIsNull(JSContextRef ctx, JSValueRef value)
@@ -100,10 +99,14 @@ bool JSValueIsNull(JSContextRef ctx, JSValueRef value)
         ASSERT_NOT_REACHED();
         return false;
     }
+
+#if !CPU(ADDRESS64)
     JSGlobalObject* globalObject = toJS(ctx);
     JSLockHolder locker(globalObject);
-
     return toJS(globalObject, value).isNull();
+#else
+    return !value || toJS(value).isNull();
+#endif
 }
 
 bool JSValueIsBoolean(JSContextRef ctx, JSValueRef value)
@@ -112,10 +115,13 @@ bool JSValueIsBoolean(JSContextRef ctx, JSValueRef value)
         ASSERT_NOT_REACHED();
         return false;
     }
+#if !CPU(ADDRESS64)
     JSGlobalObject* globalObject = toJS(ctx);
     JSLockHolder locker(globalObject);
-
     return toJS(globalObject, value).isBoolean();
+#else
+    return toJS(value).isBoolean();
+#endif
 }
 
 bool JSValueIsNumber(JSContextRef ctx, JSValueRef value)
@@ -124,10 +130,13 @@ bool JSValueIsNumber(JSContextRef ctx, JSValueRef value)
         ASSERT_NOT_REACHED();
         return false;
     }
+#if !CPU(ADDRESS64)
     JSGlobalObject* globalObject = toJS(ctx);
     JSLockHolder locker(globalObject);
-
     return toJS(globalObject, value).isNumber();
+#else
+    return toJS(value).isNumber();
+#endif
 }
 
 bool JSValueIsString(JSContextRef ctx, JSValueRef value)
@@ -136,10 +145,13 @@ bool JSValueIsString(JSContextRef ctx, JSValueRef value)
         ASSERT_NOT_REACHED();
         return false;
     }
+#if !CPU(ADDRESS64)
     JSGlobalObject* globalObject = toJS(ctx);
     JSLockHolder locker(globalObject);
-
     return toJS(globalObject, value).isString();
+#else
+    return value && toJS(value).isString();
+#endif
 }
 
 bool JSValueIsObject(JSContextRef ctx, JSValueRef value)
@@ -148,10 +160,13 @@ bool JSValueIsObject(JSContextRef ctx, JSValueRef value)
         ASSERT_NOT_REACHED();
         return false;
     }
+#if !CPU(ADDRESS64)
     JSGlobalObject* globalObject = toJS(ctx);
     JSLockHolder locker(globalObject);
-
     return toJS(globalObject, value).isObject();
+#else
+    return value && toJS(value).isObject();
+#endif
 }
 
 bool JSValueIsSymbol(JSContextRef ctx, JSValueRef value)
@@ -160,10 +175,13 @@ bool JSValueIsSymbol(JSContextRef ctx, JSValueRef value)
         ASSERT_NOT_REACHED();
         return false;
     }
+#if !CPU(ADDRESS64)
     JSGlobalObject* globalObject = toJS(ctx);
     JSLockHolder locker(globalObject);
-
     return toJS(globalObject, value).isSymbol();
+#else
+    return value && toJS(value).isSymbol();
+#endif
 }
 
 bool JSValueIsArray(JSContextRef ctx, JSValueRef value)
@@ -235,7 +253,8 @@ bool JSValueIsEqual(JSContextRef ctx, JSValueRef a, JSValueRef b, JSValueRef* ex
     JSValue jsB = toJS(globalObject, b);
 
     bool result = JSValue::equal(globalObject, jsA, jsB); // false if an exception is thrown
-    handleExceptionIfNeeded(scope, ctx, exception);
+    if (handleExceptionIfNeeded(scope, ctx, exception) == ExceptionStatus::DidThrow)
+        return false;
 
     return result;
 }
@@ -272,7 +291,8 @@ bool JSValueIsInstanceOfConstructor(JSContextRef ctx, JSValueRef value, JSObject
     if (!jsConstructor->structure(vm)->typeInfo().implementsHasInstance())
         return false;
     bool result = jsConstructor->hasInstance(globalObject, jsValue); // false if an exception is thrown
-    handleExceptionIfNeeded(scope, ctx, exception);
+    if (handleExceptionIfNeeded(scope, ctx, exception) == ExceptionStatus::DidThrow)
+        return false;
     return result;
 }
 
@@ -280,48 +300,60 @@ JSValueRef JSValueMakeUndefined(JSContextRef ctx)
 {
     if (!ctx) {
         ASSERT_NOT_REACHED();
-        return 0;
+        return nullptr;
     }
+#if !CPU(ADDRESS64)
     JSGlobalObject* globalObject = toJS(ctx);
     JSLockHolder locker(globalObject);
-
     return toRef(globalObject, jsUndefined());
+#else
+    return toRef(jsUndefined());
+#endif
 }
 
 JSValueRef JSValueMakeNull(JSContextRef ctx)
 {
     if (!ctx) {
         ASSERT_NOT_REACHED();
-        return 0;
+        return nullptr;
     }
+#if !CPU(ADDRESS64)
     JSGlobalObject* globalObject = toJS(ctx);
     JSLockHolder locker(globalObject);
-
     return toRef(globalObject, jsNull());
+#else
+    return toRef(jsNull());
+#endif
 }
 
 JSValueRef JSValueMakeBoolean(JSContextRef ctx, bool value)
 {
     if (!ctx) {
         ASSERT_NOT_REACHED();
-        return 0;
+        return nullptr;
     }
+#if !CPU(ADDRESS64)
     JSGlobalObject* globalObject = toJS(ctx);
     JSLockHolder locker(globalObject);
-
     return toRef(globalObject, jsBoolean(value));
+#else
+    return toRef(jsBoolean(value));
+#endif
 }
 
 JSValueRef JSValueMakeNumber(JSContextRef ctx, double value)
 {
     if (!ctx) {
         ASSERT_NOT_REACHED();
-        return 0;
+        return nullptr;
     }
+#if !CPU(ADDRESS64)
     JSGlobalObject* globalObject = toJS(ctx);
     JSLockHolder locker(globalObject);
-
     return toRef(globalObject, jsNumber(purifyNaN(value)));
+#else
+    return toRef(jsNumber(purifyNaN(value)));
+#endif
 }
 
 JSValueRef JSValueMakeSymbol(JSContextRef ctx, JSStringRef description)
@@ -343,7 +375,7 @@ JSValueRef JSValueMakeString(JSContextRef ctx, JSStringRef string)
 {
     if (!ctx) {
         ASSERT_NOT_REACHED();
-        return 0;
+        return nullptr;
     }
     JSGlobalObject* globalObject = toJS(ctx);
     VM& vm = globalObject->vm();
@@ -356,7 +388,7 @@ JSValueRef JSValueMakeFromJSONString(JSContextRef ctx, JSStringRef string)
 {
     if (!ctx) {
         ASSERT_NOT_REACHED();
-        return 0;
+        return nullptr;
     }
     JSGlobalObject* globalObject = toJS(ctx);
     JSLockHolder locker(globalObject);
@@ -374,7 +406,7 @@ JSStringRef JSValueCreateJSONString(JSContextRef ctx, JSValueRef apiValue, unsig
 {
     if (!ctx) {
         ASSERT_NOT_REACHED();
-        return 0;
+        return nullptr;
     }
     JSGlobalObject* globalObject = toJS(ctx);
     VM& vm = globalObject->vm();
@@ -384,9 +416,9 @@ JSStringRef JSValueCreateJSONString(JSContextRef ctx, JSValueRef apiValue, unsig
     JSValue value = toJS(globalObject, apiValue);
     String result = JSONStringify(globalObject, value, indent);
     if (exception)
-        *exception = 0;
+        *exception = nullptr;
     if (handleExceptionIfNeeded(scope, ctx, exception) == ExceptionStatus::DidThrow)
-        return 0;
+        return nullptr;
     return OpaqueJSString::tryCreate(result).leakRef();
 }
 
@@ -426,7 +458,7 @@ JSStringRef JSValueToStringCopy(JSContextRef ctx, JSValueRef value, JSValueRef* 
 {
     if (!ctx) {
         ASSERT_NOT_REACHED();
-        return 0;
+        return nullptr;
     }
     JSGlobalObject* globalObject = toJS(ctx);
     VM& vm = globalObject->vm();
@@ -445,7 +477,7 @@ JSObjectRef JSValueToObject(JSContextRef ctx, JSValueRef value, JSValueRef* exce
 {
     if (!ctx) {
         ASSERT_NOT_REACHED();
-        return 0;
+        return nullptr;
     }
     JSGlobalObject* globalObject = toJS(ctx);
     VM& vm = globalObject->vm();
@@ -456,7 +488,7 @@ JSObjectRef JSValueToObject(JSContextRef ctx, JSValueRef value, JSValueRef* exce
 
     JSObjectRef objectRef = toRef(jsValue.toObject(globalObject));
     if (handleExceptionIfNeeded(scope, ctx, exception) == ExceptionStatus::DidThrow)
-        objectRef = 0;
+        objectRef = nullptr;
     return objectRef;
 }
 

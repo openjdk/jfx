@@ -144,12 +144,10 @@ public:
     void setStrokeColor(const String& color, Optional<float> alpha = WTF::nullopt);
     void setStrokeColor(float grayLevel, float alpha = 1.0);
     void setStrokeColor(float r, float g, float b, float a);
-    void setStrokeColor(float c, float m, float y, float k, float a);
 
     void setFillColor(const String& color, Optional<float> alpha = WTF::nullopt);
     void setFillColor(float grayLevel, float alpha = 1.0f);
     void setFillColor(float r, float g, float b, float a);
-    void setFillColor(float c, float m, float y, float k, float a);
 
     void beginPath();
 
@@ -174,7 +172,6 @@ public:
     void setShadow(float width, float height, float blur, const String& color = String(), Optional<float> alpha = WTF::nullopt);
     void setShadow(float width, float height, float blur, float grayLevel, float alpha = 1.0);
     void setShadow(float width, float height, float blur, float r, float g, float b, float a);
-    void setShadow(float width, float height, float blur, float c, float m, float y, float k, float a);
 
     void clearShadow();
 
@@ -219,13 +216,16 @@ public:
     bool usesDisplayListDrawing() const { return m_usesDisplayListDrawing; };
     void setUsesDisplayListDrawing(bool flag) { m_usesDisplayListDrawing = flag; };
 
-    bool tracksDisplayListReplay() const { return m_tracksDisplayListReplay; }
-    void setTracksDisplayListReplay(bool);
+    String font() const;
 
-    String displayListAsText(DisplayList::AsTextFlags) const;
-    String replayDisplayListAsText(DisplayList::AsTextFlags) const;
+    CanvasTextAlign textAlign() const;
+    void setTextAlign(CanvasTextAlign);
+
+    CanvasTextBaseline textBaseline() const;
+    void setTextBaseline(CanvasTextBaseline);
 
     using Direction = CanvasDirection;
+    void setDirection(Direction);
 
     class FontProxy : public FontSelectorClient {
     public:
@@ -240,6 +240,10 @@ public:
         const FontCascadeDescription& fontDescription() const;
         float width(const TextRun&, GlyphOverflow* = 0) const;
         void drawBidiText(GraphicsContext&, const TextRun&, const FloatPoint&, FontCascade::CustomFontNotReadyAction) const;
+
+#if ASSERT_ENABLED
+        bool isPopulated() const { return m_font.fonts(); }
+#endif
 
     private:
         void update(FontSelector&);
@@ -313,6 +317,8 @@ protected:
     void didDrawEntireCanvas();
 
     void paintRenderingResultsToCanvas() override;
+    bool needsPreparationForDisplay() const final;
+    void prepareForDisplay() final;
 
     GraphicsContext* drawingContext() const;
 
@@ -339,7 +345,7 @@ protected:
     ExceptionOr<void> drawImage(HTMLImageElement&, const FloatRect& srcRect, const FloatRect& dstRect);
     ExceptionOr<void> drawImage(HTMLImageElement&, const FloatRect& srcRect, const FloatRect& dstRect, const CompositeOperator&, const BlendMode&);
     ExceptionOr<void> drawImage(CanvasBase&, const FloatRect& srcRect, const FloatRect& dstRect);
-    ExceptionOr<void> drawImage(Document&, CachedImage*, const RenderObject*, const FloatRect& imageRect, const FloatRect& srcRect, const FloatRect& dstRect, const CompositeOperator&, const BlendMode&);
+    ExceptionOr<void> drawImage(Document&, CachedImage*, const RenderObject*, const FloatRect& imageRect, const FloatRect& srcRect, const FloatRect& dstRect, const CompositeOperator&, const BlendMode&, ImageOrientation = ImageOrientation::FromImage);
 #if ENABLE(VIDEO)
     ExceptionOr<void> drawImage(HTMLVideoElement&, const FloatRect& srcRect, const FloatRect& dstRect);
 #endif
@@ -364,31 +370,36 @@ protected:
     bool rectContainsCanvas(const FloatRect&) const;
 
     template<class T> IntRect calculateCompositingBufferRect(const T&, IntSize*);
-    std::unique_ptr<ImageBuffer> createCompositingBuffer(const IntRect&);
+    RefPtr<ImageBuffer> createCompositingBuffer(const IntRect&);
     void compositeBuffer(ImageBuffer&, const IntRect&, CompositeOperator);
 
     void inflateStrokeRect(FloatRect&) const;
 
     template<class T> void fullCanvasCompositedDrawImage(T&, const FloatRect&, const FloatRect&, CompositeOperator);
 
-    ExceptionOr<RefPtr<ImageData>> getImageData(ImageBuffer::CoordinateSystem, float sx, float sy, float sw, float sh) const;
-    void putImageData(ImageData&, ImageBuffer::CoordinateSystem, float dx, float dy, float dirtyX, float dirtyY, float dirtyWidth, float dirtyHeight);
-
     bool isAccelerated() const override;
 
     bool hasInvertibleTransform() const override { return state().hasInvertibleTransform; }
 
-#if ENABLE(ACCELERATED_2D_CANVAS)
-    PlatformLayer* platformLayer() const override;
-#endif
+    // The relationship between FontCascade and CanvasRenderingContext2D::FontProxy must hold certain invariants.
+    // Therefore, all font operations must pass through the proxy.
+    virtual const FontProxy* fontProxy() { return nullptr; }
+
+    static void normalizeSpaces(String&);
+    bool canDrawTextWithParams(float x, float y, bool fill, Optional<float> maxWidth = WTF::nullopt);
+    void drawText(const String& text, float x, float y, bool fill, Optional<float> maxWidth = WTF::nullopt);
+    void drawTextUnchecked(const TextRun&, float x, float y, bool fill, Optional<float> maxWidth = WTF::nullopt);
+    Ref<TextMetrics> measureTextInternal(const String& text);
+    Ref<TextMetrics> measureTextInternal(const TextRun&);
+
+    FloatPoint textOffset(float width, TextDirection);
 
     static const unsigned MaxSaveCount = 1024 * 16;
     Vector<State, 1> m_stateStack;
     unsigned m_unrealizedSaveCount { 0 };
     bool m_usesCSSCompatibilityParseMode;
     bool m_usesDisplayListDrawing { false };
-    bool m_tracksDisplayListReplay { false };
-    mutable std::unique_ptr<struct DisplayListDrawingContext> m_recordingContext;
+    mutable std::unique_ptr<DisplayList::DrawingContext> m_recordingContext;
 };
 
 } // namespace WebCore

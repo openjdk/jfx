@@ -43,14 +43,19 @@ class JSGlobalObject;
     v(setBucketHead, nullptr) \
     v(setBucketNext, nullptr) \
     v(setBucketKey, nullptr) \
-    v(propertyIsEnumerable, nullptr) \
-    v(ownKeys, nullptr) \
+    v(setPrototypeDirect, nullptr) \
+    v(copyDataProperties, nullptr) \
     v(enqueueJob, nullptr) \
     v(makeTypeError, nullptr) \
+    v(AggregateError, nullptr) \
     v(typedArrayLength, nullptr) \
+    v(typedArrayContentType, nullptr) \
     v(typedArrayGetOriginalConstructor, nullptr) \
     v(typedArraySort, nullptr) \
     v(isTypedArrayView, nullptr) \
+    v(isSharedTypedArrayView, nullptr) \
+    v(isDetached, nullptr) \
+    v(typedArrayDefaultComparator, nullptr) \
     v(typedArraySubarrayCreate, nullptr) \
     v(isBoundFunction, nullptr) \
     v(hasInstanceBoundFunction, nullptr) \
@@ -58,6 +63,7 @@ class JSGlobalObject;
     v(BuiltinLog, nullptr) \
     v(BuiltinDescribe, nullptr) \
     v(RegExp, nullptr) \
+    v(min, nullptr) \
     v(trunc, nullptr) \
     v(Promise, nullptr) \
     v(InternalPromise, nullptr) \
@@ -69,10 +75,10 @@ class JSGlobalObject;
     v(concatMemcpy, nullptr) \
     v(appendMemcpy, nullptr) \
     v(hostPromiseRejectionTracker, nullptr) \
-    v(InspectorInstrumentation, nullptr) \
     v(Set, nullptr) \
     v(thisTimeValue, nullptr) \
     v(isConstructor, nullptr) \
+    v(sameValue, nullptr) \
     v(regExpProtoFlagsGetter, nullptr) \
     v(regExpProtoGlobalGetter, nullptr) \
     v(regExpProtoIgnoreCaseGetter, nullptr) \
@@ -86,11 +92,13 @@ class JSGlobalObject;
     v(regExpMatchFast, nullptr) \
     v(regExpSearchFast, nullptr) \
     v(regExpSplitFast, nullptr) \
+    v(regExpPrototypeSymbolMatch, nullptr) \
     v(regExpPrototypeSymbolReplace, nullptr) \
     v(regExpTestFast, nullptr) \
     v(stringIncludesInternal, nullptr) \
+    v(stringIndexOfInternal, nullptr) \
     v(stringSplitFast, nullptr) \
-    v(stringSubstrInternal, nullptr) \
+    v(stringSubstringInternal, nullptr) \
     v(makeBoundFunction, nullptr) \
     v(hasOwnLengthProperty, nullptr) \
     v(dateTimeFormat, nullptr) \
@@ -100,6 +108,8 @@ class JSGlobalObject;
     v(Array, nullptr) \
     v(applyFunction, nullptr) \
     v(callFunction, nullptr) \
+    v(hasOwnPropertyFunction, nullptr) \
+    v(createPrivateSymbol, nullptr) \
 
 
 #define DECLARE_LINK_TIME_CONSTANT(name, code) name,

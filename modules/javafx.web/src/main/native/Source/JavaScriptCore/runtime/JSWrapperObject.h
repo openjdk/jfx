@@ -1,6 +1,6 @@
 /*
  *  Copyright (C) 2006 Maks Orlovich
- *  Copyright (C) 2006, 2007, 2008, 2009 Apple Inc. All rights reserved.
+ *  Copyright (C) 2006-2021 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Library General Public
@@ -21,15 +21,15 @@
 
 #pragma once
 
-#include "JSObject.h"
+#include "JSInternalFieldObjectImpl.h"
 
 namespace JSC {
 
 // This class is used as a base for classes such as String,
 // Number, Boolean and Symbol which are wrappers for primitive types.
-class JSWrapperObject : public JSNonFinalObject {
+class JSWrapperObject : public JSInternalFieldObjectImpl<1> {
 public:
-    using Base = JSNonFinalObject;
+    using Base = JSInternalFieldObjectImpl<1>;
 
     template<typename, SubspaceAccess>
     static void subspaceFor(VM&)
@@ -43,15 +43,15 @@ public:
         return sizeof(JSWrapperObject);
     }
 
+    enum class Field : uint32_t {
+        WrappedValue = 0,
+    };
+    static_assert(numberOfInternalFields == 1);
+
     JSValue internalValue() const;
     void setInternalValue(VM&, JSValue);
 
-    static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
-    {
-        return Structure::create(vm, globalObject, prototype, TypeInfo(ObjectType, StructureFlags), info());
-    }
-
-    static ptrdiff_t internalValueOffset() { return OBJECT_OFFSETOF(JSWrapperObject, m_internalValue); }
+    static ptrdiff_t internalValueOffset() { return offsetOfInternalField(static_cast<unsigned>(Field::WrappedValue)); }
     static ptrdiff_t internalValueCellOffset()
     {
 #if USE(JSVALUE64)
@@ -64,10 +64,7 @@ public:
 protected:
     explicit JSWrapperObject(VM&, Structure*);
 
-    JS_EXPORT_PRIVATE static void visitChildren(JSCell*, SlotVisitor&);
-
-private:
-    WriteBarrier<Unknown> m_internalValue;
+    DECLARE_VISIT_CHILDREN_WITH_MODIFIER(JS_EXPORT_PRIVATE);
 };
 
 inline JSWrapperObject::JSWrapperObject(VM& vm, Structure* structure)
@@ -77,14 +74,14 @@ inline JSWrapperObject::JSWrapperObject(VM& vm, Structure* structure)
 
 inline JSValue JSWrapperObject::internalValue() const
 {
-    return m_internalValue.get();
+    return internalField(static_cast<unsigned>(Field::WrappedValue)).get();
 }
 
 inline void JSWrapperObject::setInternalValue(VM& vm, JSValue value)
 {
     ASSERT(value);
     ASSERT(!value.isObject());
-    m_internalValue.set(vm, this, value);
+    internalField(static_cast<unsigned>(Field::WrappedValue)).set(vm, this, value);
 }
 
 } // namespace JSC

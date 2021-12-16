@@ -37,27 +37,25 @@ class Profile;
 
 namespace Inspector {
 
-typedef String ErrorString;
-
 class JS_EXPORT_PRIVATE InspectorScriptProfilerAgent final : public InspectorAgentBase, public ScriptProfilerBackendDispatcherHandler, public JSC::Debugger::ProfilingClient {
     WTF_MAKE_NONCOPYABLE(InspectorScriptProfilerAgent);
     WTF_MAKE_FAST_ALLOCATED;
 public:
     InspectorScriptProfilerAgent(AgentContext&);
-    ~InspectorScriptProfilerAgent() override;
+    ~InspectorScriptProfilerAgent() final;
 
     // InspectorAgentBase
-    void didCreateFrontendAndBackend(FrontendRouter*, BackendDispatcher*) override;
-    void willDestroyFrontendAndBackend(DisconnectReason) override;
+    void didCreateFrontendAndBackend(FrontendRouter*, BackendDispatcher*) final;
+    void willDestroyFrontendAndBackend(DisconnectReason) final;
 
     // ScriptProfilerBackendDispatcherHandler
-    void startTracking(ErrorString&, const bool* includeSamples) override;
-    void stopTracking(ErrorString&) override;
+    Protocol::ErrorStringOr<void> startTracking(Optional<bool>&& includeSamples) final;
+    Protocol::ErrorStringOr<void> stopTracking() final;
 
     // JSC::Debugger::ProfilingClient
-    bool isAlreadyProfiling() const override;
-    Seconds willEvaluateScript() override;
-    void didEvaluateScript(Seconds, JSC::ProfilingReason) override;
+    bool isAlreadyProfiling() const final;
+    Seconds willEvaluateScript() final;
+    void didEvaluateScript(Seconds, JSC::ProfilingReason) final;
 
 private:
     void addEvent(Seconds startTime, Seconds endTime, JSC::ProfilingReason);

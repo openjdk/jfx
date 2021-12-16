@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2017 Apple, Inc. All rights reserved.
+ * Copyright (C) 2013-2021 Apple, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,27 +27,45 @@
 #include "JSSetIterator.h"
 
 #include "JSCInlines.h"
+#include "JSInternalFieldObjectImplInlines.h"
 #include "JSSet.h"
 
 namespace JSC {
 
-const ClassInfo JSSetIterator::s_info = { "Set Iterator", nullptr, nullptr, nullptr, CREATE_METHOD_TABLE(JSSetIterator) };
+const ClassInfo JSSetIterator::s_info = { "Set Iterator", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSSetIterator) };
 
-void JSSetIterator::finishCreation(VM& vm, JSSet* iteratedObject)
+JSSetIterator* JSSetIterator::createWithInitialValues(VM& vm, Structure* structure)
+{
+    JSSetIterator* iterator = new (NotNull, allocateCell<JSSetIterator>(vm.heap)) JSSetIterator(vm, structure);
+    iterator->finishCreation(vm);
+    return iterator;
+}
+
+void JSSetIterator::finishCreation(VM& vm, JSSet* iteratedObject, IterationKind kind)
 {
     Base::finishCreation(vm);
-    m_set.set(vm, this, iteratedObject);
-    setIterator(vm, m_set->head());
+    internalField(Field::SetBucket).set(vm, this, iteratedObject->head());
+    internalField(Field::IteratedObject).set(vm, this, iteratedObject);
+    internalField(Field::Kind).set(vm, this, jsNumber(static_cast<int32_t>(kind)));
 }
 
-void JSSetIterator::visitChildren(JSCell* cell, SlotVisitor& visitor)
+void JSSetIterator::finishCreation(VM& vm)
 {
-    JSSetIterator* thisObject = jsCast<JSSetIterator*>(cell);
+    Base::finishCreation(vm);
+    auto values = initialValues();
+    for (unsigned index = 0; index < values.size(); ++index)
+        Base::internalField(index).set(vm, this, values[index]);
+}
+
+template<typename Visitor>
+void JSSetIterator::visitChildrenImpl(JSCell* cell, Visitor& visitor)
+{
+    auto* thisObject = jsCast<JSSetIterator*>(cell);
     ASSERT_GC_OBJECT_INHERITS(thisObject, info());
     Base::visitChildren(thisObject, visitor);
-    visitor.append(thisObject->m_set);
-    visitor.append(thisObject->m_iter);
 }
+
+DEFINE_VISIT_CHILDREN(JSSetIterator);
 
 JSValue JSSetIterator::createPair(JSGlobalObject* globalObject, JSValue key, JSValue value)
 {

@@ -209,7 +209,7 @@ void RenderSVGImage::paintForeground(PaintInfo& paintInfo)
 
 void RenderSVGImage::invalidateBufferedForeground()
 {
-    m_bufferedForeground.reset();
+    m_bufferedForeground = nullptr;
 }
 
 bool RenderSVGImage::nodeAtFloatPoint(const HitTestRequest& request, HitTestResult& result, const FloatPoint& pointInParent, HitTestAction hitTestAction)
@@ -226,10 +226,12 @@ bool RenderSVGImage::nodeAtFloatPoint(const HitTestRequest& request, HitTestResu
         if (!SVGRenderSupport::pointInClippingArea(*this, localPoint))
             return false;
 
+        SVGHitTestCycleDetectionScope hitTestScope(*this);
+
         if (hitRules.canHitFill) {
             if (m_objectBoundingBox.contains(localPoint)) {
                 updateHitTestResult(result, LayoutPoint(localPoint));
-                if (result.addNodeToListBasedTestResult(&imageElement(), request, localPoint) == HitTestProgress::Stop)
+                if (result.addNodeToListBasedTestResult(nodeForHitTest(), request, localPoint) == HitTestProgress::Stop)
                     return true;
             }
         }

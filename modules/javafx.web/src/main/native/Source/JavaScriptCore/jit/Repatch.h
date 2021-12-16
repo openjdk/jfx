@@ -38,13 +38,23 @@ enum class GetByKind {
     NormalByVal,
     Try,
     WithThis,
-    Direct
+    Direct,
+    PrivateName,
+    PrivateNameById,
+};
+
+enum class DelByKind {
+    Normal,
+    NormalByVal
 };
 
 void repatchArrayGetByVal(JSGlobalObject*, CodeBlock*, JSValue base, JSValue index, StructureStubInfo&);
 void repatchGetBy(JSGlobalObject*, CodeBlock*, JSValue, CacheableIdentifier, const PropertySlot&, StructureStubInfo&, GetByKind);
-void repatchPutByID(JSGlobalObject*, CodeBlock*, JSValue, Structure*, const Identifier&, const PutPropertySlot&, StructureStubInfo&, PutKind);
-void repatchInByID(JSGlobalObject*, CodeBlock*, JSObject*, const Identifier&, bool wasFound, const PropertySlot&, StructureStubInfo&);
+void repatchPutByID(JSGlobalObject*, CodeBlock*, JSValue, Structure*, CacheableIdentifier, const PutPropertySlot&, StructureStubInfo&, PutKind);
+void repatchDeleteBy(JSGlobalObject*, CodeBlock*, DeletePropertySlot&, JSValue, Structure*, CacheableIdentifier, StructureStubInfo&, DelByKind, ECMAMode);
+void repatchInByID(JSGlobalObject*, CodeBlock*, JSObject*, CacheableIdentifier, bool wasFound, const PropertySlot&, StructureStubInfo&);
+void repatchCheckPrivateBrand(JSGlobalObject*, CodeBlock*, JSObject*, CacheableIdentifier, StructureStubInfo&);
+void repatchSetPrivateBrand(JSGlobalObject*, CodeBlock*, JSObject*, Structure*, CacheableIdentifier, StructureStubInfo&);
 void repatchInstanceOf(JSGlobalObject*, CodeBlock*, JSValue value, JSValue prototype, StructureStubInfo&, bool wasFound);
 void linkFor(VM&, CallFrame*, CallLinkInfo&, CodeBlock*, JSObject* callee, MacroAssemblerCodePtr<JSEntryPtrTag>);
 void linkDirectFor(CallFrame*, CallLinkInfo&, CodeBlock*, MacroAssemblerCodePtr<JSEntryPtrTag>);
@@ -53,8 +63,11 @@ void unlinkFor(VM&, CallLinkInfo&);
 void linkPolymorphicCall(JSGlobalObject*, CallFrame*, CallLinkInfo&, CallVariant);
 void resetGetBy(CodeBlock*, StructureStubInfo&, GetByKind);
 void resetPutByID(CodeBlock*, StructureStubInfo&);
+void resetDelBy(CodeBlock*, StructureStubInfo&, DelByKind);
 void resetInByID(CodeBlock*, StructureStubInfo&);
 void resetInstanceOf(StructureStubInfo&);
+void resetCheckPrivateBrand(CodeBlock*, StructureStubInfo&);
+void resetSetPrivateBrand(CodeBlock*, StructureStubInfo&);
 void ftlThunkAwareRepatchCall(CodeBlock*, CodeLocationCall<JSInternalPtrTag>, FunctionPtr<CFunctionPtrTag> newCalleeFunction);
 MacroAssemblerCodePtr<JSEntryPtrTag> jsToWasmICCodePtr(VM&, CodeSpecializationKind, JSObject* callee);
 

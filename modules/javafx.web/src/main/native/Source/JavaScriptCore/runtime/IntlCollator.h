@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2015 Andy VanWagoner (andy@vanwagoner.family)
+ * Copyright (C) 2021 Apple Inc. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,15 +26,14 @@
 
 #pragma once
 
-#if ENABLE(INTL)
-
 #include "JSObject.h"
-
-struct UCollator;
+#include <unicode/ucol.h>
+#include <wtf/unicode/icu/ICUHelpers.h>
 
 namespace JSC {
 
-class IntlCollatorConstructor;
+enum class RelevantExtensionKey : uint8_t;
+
 class JSBoundFunction;
 
 class IntlCollator final : public JSNonFinalObject {
@@ -59,43 +59,56 @@ public:
     DECLARE_INFO;
 
     void initializeCollator(JSGlobalObject*, JSValue locales, JSValue optionsValue);
-    JSValue compareStrings(JSGlobalObject*, StringView, StringView);
-    JSObject* resolvedOptions(JSGlobalObject*);
+    JSValue compareStrings(JSGlobalObject*, StringView, StringView) const;
+    JSObject* resolvedOptions(JSGlobalObject*) const;
 
     JSBoundFunction* boundCompare() const { return m_boundCompare.get(); }
     void setBoundCompare(VM&, JSBoundFunction*);
 
-protected:
-    IntlCollator(VM&, Structure*);
-    void finishCreation(VM&);
-    static void visitChildren(JSCell*, SlotVisitor&);
+    bool canDoASCIIUCADUCETComparison() const
+    {
+        if (m_canDoASCIIUCADUCETComparison == TriState::Indeterminate)
+            updateCanDoASCIIUCADUCETComparison();
+        return m_canDoASCIIUCADUCETComparison == TriState::True;
+    }
+
+#if ASSERT_ENABLED
+    static void checkICULocaleInvariants(const HashSet<String>&);
+#else
+    static inline void checkICULocaleInvariants(const HashSet<String>&) { }
+#endif
 
 private:
+    IntlCollator(VM&, Structure*);
+    void finishCreation(VM&);
+    DECLARE_VISIT_CHILDREN;
+
+    bool updateCanDoASCIIUCADUCETComparison() const;
+
+    static Vector<String> sortLocaleData(const String&, RelevantExtensionKey);
+    static Vector<String> searchLocaleData(const String&, RelevantExtensionKey);
+
     enum class Usage : uint8_t { Sort, Search };
     enum class Sensitivity : uint8_t { Base, Accent, Case, Variant };
     enum class CaseFirst : uint8_t { Upper, Lower, False };
 
-    struct UCollatorDeleter {
-        void operator()(UCollator*) const;
-    };
+    using UCollatorDeleter = ICUDeleter<ucol_close>;
 
-    void createCollator(JSGlobalObject*);
     static ASCIILiteral usageString(Usage);
     static ASCIILiteral sensitivityString(Sensitivity);
     static ASCIILiteral caseFirstString(CaseFirst);
 
-    String m_locale;
-    String m_collation;
     WriteBarrier<JSBoundFunction> m_boundCompare;
     std::unique_ptr<UCollator, UCollatorDeleter> m_collator;
+
+    String m_locale;
+    String m_collation;
     Usage m_usage;
     Sensitivity m_sensitivity;
     CaseFirst m_caseFirst;
+    mutable TriState m_canDoASCIIUCADUCETComparison { TriState::Indeterminate };
     bool m_numeric;
     bool m_ignorePunctuation;
-    bool m_initializedCollator { false };
 };
 
 } // namespace JSC
-
-#endif // ENABLE(INTL)

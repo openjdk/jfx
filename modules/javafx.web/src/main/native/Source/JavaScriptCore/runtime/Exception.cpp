@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,7 +27,9 @@
 #include "Exception.h"
 
 #include "Interpreter.h"
-#include "JSCInlines.h"
+#include "JSCJSValueInlines.h"
+#include "JSObjectInlines.h"
+#include "StructureInlines.h"
 
 namespace JSC {
 
@@ -51,7 +53,8 @@ Structure* Exception::createStructure(VM& vm, JSGlobalObject* globalObject, JSVa
     return Structure::create(vm, globalObject, prototype, TypeInfo(CellType, StructureFlags), info());
 }
 
-void Exception::visitChildren(JSCell* cell, SlotVisitor& visitor)
+template<typename Visitor>
+void Exception::visitChildrenImpl(JSCell* cell, Visitor& visitor)
 {
     Exception* thisObject = jsCast<Exception*>(cell);
     ASSERT_GC_OBJECT_INHERITS(thisObject, info());
@@ -59,8 +62,10 @@ void Exception::visitChildren(JSCell* cell, SlotVisitor& visitor)
 
     visitor.append(thisObject->m_value);
     for (StackFrame& frame : thisObject->m_stack)
-        frame.visitChildren(visitor);
+        frame.visitAggregate(visitor);
 }
+
+DEFINE_VISIT_CHILDREN(Exception);
 
 Exception::Exception(VM& vm)
     : Base(vm, vm.exceptionStructure.get())

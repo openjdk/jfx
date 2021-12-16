@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2018 Andy VanWagoner (andy@vanwagoner.family)
+ * Copyright (C) 2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,20 +26,14 @@
 
 #pragma once
 
-#if ENABLE(INTL)
-
-#include "JSObject.h"
+#include "IntlNumberFormat.h"
 #include <unicode/unum.h>
 #include <unicode/upluralrules.h>
-#include <unicode/uvernum.h>
-
-#define HAVE_ICU_PLURALRULES_KEYWORDS (U_ICU_VERSION_MAJOR_NUM >= 59)
-#define HAVE_ICU_PLURALRULES_WITH_FORMAT (U_ICU_VERSION_MAJOR_NUM >= 59)
+#include <wtf/unicode/icu/ICUHelpers.h>
 
 namespace JSC {
 
-class IntlPluralRulesConstructor;
-class JSBoundFunction;
+enum class RelevantExtensionKey : uint8_t;
 
 class IntlPluralRules final : public JSNonFinalObject {
 public:
@@ -62,36 +57,36 @@ public:
 
     DECLARE_INFO;
 
-    void initializePluralRules(JSGlobalObject*, JSValue locales, JSValue options);
-    JSValue select(JSGlobalObject*, double value);
-    JSObject* resolvedOptions(JSGlobalObject*);
+    template<typename IntlType>
+    friend void setNumberFormatDigitOptions(JSGlobalObject*, IntlType*, Optional<JSObject&>, unsigned minimumFractionDigitsDefault, unsigned maximumFractionDigitsDefault, IntlNotation);
 
-protected:
-    IntlPluralRules(VM&, Structure*);
-    void finishCreation(VM&);
-    static void visitChildren(JSCell*, SlotVisitor&);
+    void initializePluralRules(JSGlobalObject*, JSValue locales, JSValue options);
+    JSValue select(JSGlobalObject*, double value) const;
+    JSObject* resolvedOptions(JSGlobalObject*) const;
 
 private:
-    struct UPluralRulesDeleter {
-        void operator()(UPluralRules*) const;
-    };
-    struct UNumberFormatDeleter {
-        void operator()(UNumberFormat*) const;
-    };
+    IntlPluralRules(VM&, Structure*);
+    void finishCreation(VM&);
+    DECLARE_VISIT_CHILDREN;
 
-    bool m_initializedPluralRules { false };
+    static Vector<String> localeData(const String&, RelevantExtensionKey);
+
+    enum class Type : bool { Cardinal, Ordinal };
+
+    using UPluralRulesDeleter = ICUDeleter<uplrules_close>;
+    using UNumberFormatDeleter = ICUDeleter<unum_close>;
+
     std::unique_ptr<UPluralRules, UPluralRulesDeleter> m_pluralRules;
     std::unique_ptr<UNumberFormat, UNumberFormatDeleter> m_numberFormat;
 
     String m_locale;
-    UPluralType m_type { UPLURAL_TYPE_CARDINAL };
     unsigned m_minimumIntegerDigits { 1 };
     unsigned m_minimumFractionDigits { 0 };
     unsigned m_maximumFractionDigits { 3 };
-    Optional<unsigned> m_minimumSignificantDigits;
-    Optional<unsigned> m_maximumSignificantDigits;
+    unsigned m_minimumSignificantDigits { 0 };
+    unsigned m_maximumSignificantDigits { 0 };
+    IntlRoundingType m_roundingType { IntlRoundingType::FractionDigits };
+    Type m_type { Type::Cardinal };
 };
 
 } // namespace JSC
-
-#endif // ENABLE(INTL)

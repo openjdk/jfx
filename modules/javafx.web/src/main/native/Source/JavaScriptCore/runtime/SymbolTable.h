@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2007-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,10 +35,11 @@
 #include "ScopedArgumentsTable.h"
 #include "TypeLocation.h"
 #include "VarOffset.h"
+#include "VariableEnvironment.h"
 #include "Watchpoint.h"
 #include <memory>
 #include <wtf/HashTraits.h>
-#include <wtf/text/UniquedStringImpl.h>
+#include <wtf/text/SymbolImpl.h>
 
 namespace JSC {
 
@@ -231,7 +232,7 @@ public:
 
     bool isWatchable() const
     {
-        return (m_bits & KindBitsMask) == ScopeKindBits && VM::canUseJIT();
+        return (m_bits & KindBitsMask) == ScopeKindBits && Options::useJIT();
     }
 
     // Asserts if the offset is anything but a scope offset. This structures the assertions
@@ -450,6 +451,7 @@ public:
     typedef HashMap<RefPtr<UniquedStringImpl>, RefPtr<TypeSet>, IdentifierRepHash> UniqueTypeSetMap;
     typedef HashMap<VarOffset, RefPtr<UniquedStringImpl>> OffsetToVariableMap;
     typedef Vector<SymbolTableEntry*> LocalToEntryVec;
+    typedef WTF::IteratorRange<typename PrivateNameEnvironment::iterator> PrivateNameIteratorRange;
 
     template<typename CellType, SubspaceAccess>
     static IsoSubspace* subspaceFor(VM& vm)
@@ -595,6 +597,24 @@ public:
         add(locker, key, std::forward<Entry>(entry));
     }
 
+    bool hasPrivateNames() const { return m_rareData && m_rareData->m_privateNames.size(); }
+    ALWAYS_INLINE PrivateNameIteratorRange privateNames()
+    {
+        // Use of the IteratorRange must be guarded to prevent ASSERT failures in checkValidity().
+        ASSERT(hasPrivateNames());
+        return makeIteratorRange(m_rareData->m_privateNames.begin(), m_rareData->m_privateNames.end());
+    }
+
+    void addPrivateName(const RefPtr<UniquedStringImpl>& key, PrivateNameEntry value)
+    {
+        ASSERT(key && !key->isSymbol());
+        if (!m_rareData)
+            m_rareData = WTF::makeUnique<SymbolTableRareData>();
+
+        ASSERT(m_rareData->m_privateNames.find(key) == m_rareData->m_privateNames.end());
+        m_rareData->m_privateNames.add(key, value);
+    }
+
     template<typename Entry>
     void set(const ConcurrentJSLocker&, UniquedStringImpl* key, Entry&& entry)
     {
@@ -635,12 +655,20 @@ public:
         return m_arguments->length();
     }
 
-    void setArgumentsLength(VM& vm, uint32_t length)
+    bool trySetArgumentsLength(VM& vm, uint32_t length)
     {
-        if (UNLIKELY(!m_arguments))
-            m_arguments.set(vm, this, ScopedArgumentsTable::create(vm, length));
-        else
-            m_arguments.set(vm, this, m_arguments->setLength(vm, length));
+        if (UNLIKELY(!m_arguments)) {
+            ScopedArgumentsTable* table = ScopedArgumentsTable::tryCreate(vm, length);
+            if (UNLIKELY(!table))
+                return false;
+            m_arguments.set(vm, this, table);
+        } else {
+            ScopedArgumentsTable* table = m_arguments->trySetLength(vm, length);
+            if (UNLIKELY(!table))
+                return false;
+            m_arguments.set(vm, this, table);
+        }
+        return true;
     }
 
     ScopeOffset argumentOffset(uint32_t i) const
@@ -649,10 +677,14 @@ public:
         return m_arguments->get(i);
     }
 
-    void setArgumentOffset(VM& vm, uint32_t i, ScopeOffset offset)
+    bool trySetArgumentOffset(VM& vm, uint32_t i, ScopeOffset offset)
     {
         ASSERT_WITH_SECURITY_IMPLICATION(m_arguments);
-        m_arguments.set(vm, this, m_arguments->set(vm, i, offset));
+        auto* maybeCloned = m_arguments->trySet(vm, i, offset);
+        if (!maybeCloned)
+            return false;
+        m_arguments.set(vm, this, maybeCloned);
+        return true;
     }
 
     ScopedArgumentsTable* arguments() const
@@ -701,11 +733,12 @@ public:
         m_singleton.notifyWrite(vm, this, scope, reason);
     }
 
-    static void visitChildren(JSCell*, SlotVisitor&);
+    DECLARE_VISIT_CHILDREN;
 
     DECLARE_EXPORT_INFO;
 
     void finalizeUnconditionally(VM&);
+    void dump(PrintStream&) const;
 
 private:
     JS_EXPORT_PRIVATE SymbolTable(VM&);
@@ -717,10 +750,6 @@ private:
     ScopeOffset m_maxScopeOffset;
 public:
     mutable ConcurrentJSLock m_lock;
-private:
-    unsigned m_usesNonStrictEval : 1;
-    unsigned m_nestedLexicalScope : 1; // Non-function LexicalScope.
-    unsigned m_scopeType : 3; // ScopeType
 
     struct SymbolTableRareData {
         WTF_MAKE_STRUCT_FAST_ALLOCATED;
@@ -728,7 +757,14 @@ private:
         OffsetToVariableMap m_offsetToVariableMap;
         UniqueTypeSetMap m_uniqueTypeSetMap;
         WriteBarrier<CodeBlock> m_codeBlock;
+        PrivateNameEnvironment m_privateNames;
     };
+
+private:
+    unsigned m_usesNonStrictEval : 1;
+    unsigned m_nestedLexicalScope : 1; // Non-function LexicalScope.
+    unsigned m_scopeType : 3; // ScopeType
+
     std::unique_ptr<SymbolTableRareData> m_rareData;
 
     WriteBarrier<ScopedArgumentsTable> m_arguments;

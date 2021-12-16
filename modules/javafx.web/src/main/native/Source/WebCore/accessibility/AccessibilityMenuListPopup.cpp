@@ -70,13 +70,10 @@ bool AccessibilityMenuListPopup::computeAccessibilityIsIgnored() const
 
 AccessibilityMenuListOption* AccessibilityMenuListPopup::menuListOptionAccessibilityObject(HTMLElement* element) const
 {
-    if (!is<HTMLOptionElement>(element) || !element->inRenderedDocument())
+    if (!element || !element->inRenderedDocument())
         return nullptr;
 
-    auto& option = downcast<AccessibilityMenuListOption>(*document()->axObjectCache()->getOrCreate(AccessibilityRole::MenuListOption));
-    option.setElement(element);
-
-    return &option;
+    return downcast<AccessibilityMenuListOption>(document()->axObjectCache()->getOrCreate(element));
 }
 
 bool AccessibilityMenuListPopup::press()
@@ -100,11 +97,9 @@ void AccessibilityMenuListPopup::addChildren()
     m_haveChildren = true;
 
     for (const auto& listItem : downcast<HTMLSelectElement>(*selectNode).listItems()) {
-        AccessibilityMenuListOption* option = menuListOptionAccessibilityObject(listItem);
-        if (option) {
-            option->setParent(this);
+        // FIXME: Why does AccessibilityListBox::addChildren check accessibilityIsIgnored but this does not?
+        if (auto option = menuListOptionAccessibilityObject(listItem))
             m_children.append(option);
-        }
     }
 }
 
@@ -129,11 +124,12 @@ void AccessibilityMenuListPopup::didUpdateActiveOption(int optionIndex)
     ASSERT_ARG(optionIndex, optionIndex >= 0);
     ASSERT_ARG(optionIndex, optionIndex < static_cast<int>(m_children.size()));
 
-    AXObjectCache* cache = axObjectCache();
     RefPtr<AXCoreObject> child = m_children[optionIndex].get();
 
-    cache->postNotification(child.get(), document(), AXObjectCache::AXFocusedUIElementChanged, TargetElement, PostSynchronously);
-    cache->postNotification(child.get(), document(), AXObjectCache::AXMenuListItemSelected, TargetElement, PostSynchronously);
+    if (auto* cache = axObjectCache()) {
+        cache->postNotification(child.get(), document(), AXObjectCache::AXFocusedUIElementChanged);
+        cache->postNotification(child.get(), document(), AXObjectCache::AXMenuListItemSelected);
+    }
 }
 
 } // namespace WebCore

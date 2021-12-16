@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -36,7 +36,8 @@ namespace JSC {
 
 const ClassInfo JSSymbolTableObject::s_info = { "SymbolTableObject", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSSymbolTableObject) };
 
-void JSSymbolTableObject::visitChildren(JSCell* cell, SlotVisitor& visitor)
+template<typename Visitor>
+void JSSymbolTableObject::visitChildrenImpl(JSCell* cell, Visitor& visitor)
 {
     JSSymbolTableObject* thisObject = jsCast<JSSymbolTableObject*>(cell);
     ASSERT_GC_OBJECT_INHERITS(thisObject, info());
@@ -44,16 +45,18 @@ void JSSymbolTableObject::visitChildren(JSCell* cell, SlotVisitor& visitor)
     visitor.append(thisObject->m_symbolTable);
 }
 
-bool JSSymbolTableObject::deleteProperty(JSCell* cell, JSGlobalObject* globalObject, PropertyName propertyName)
+DEFINE_VISIT_CHILDREN(JSSymbolTableObject);
+
+bool JSSymbolTableObject::deleteProperty(JSCell* cell, JSGlobalObject* globalObject, PropertyName propertyName, DeletePropertySlot& slot)
 {
     JSSymbolTableObject* thisObject = jsCast<JSSymbolTableObject*>(cell);
     if (thisObject->symbolTable()->contains(propertyName.uid()))
         return false;
 
-    return Base::deleteProperty(thisObject, globalObject, propertyName);
+    return Base::deleteProperty(thisObject, globalObject, propertyName, slot);
 }
 
-void JSSymbolTableObject::getOwnNonIndexPropertyNames(JSObject* object, JSGlobalObject* globalObject, PropertyNameArray& propertyNames, EnumerationMode mode)
+void JSSymbolTableObject::getOwnSpecialPropertyNames(JSObject* object, JSGlobalObject* globalObject, PropertyNameArray& propertyNames, DontEnumPropertiesMode mode)
 {
     VM& vm = globalObject->vm();
     JSSymbolTableObject* thisObject = jsCast<JSSymbolTableObject*>(object);
@@ -61,15 +64,13 @@ void JSSymbolTableObject::getOwnNonIndexPropertyNames(JSObject* object, JSGlobal
         ConcurrentJSLocker locker(thisObject->symbolTable()->m_lock);
         SymbolTable::Map::iterator end = thisObject->symbolTable()->end(locker);
         for (SymbolTable::Map::iterator it = thisObject->symbolTable()->begin(locker); it != end; ++it) {
-            if (!(it->value.getAttributes() & PropertyAttribute::DontEnum) || mode.includeDontEnumProperties()) {
+            if (mode == DontEnumPropertiesMode::Include || !it->value.isDontEnum()) {
                 if (it->key->isSymbol() && !propertyNames.includeSymbolProperties())
                     continue;
                 propertyNames.add(Identifier::fromUid(vm, it->key.get()));
             }
         }
     }
-
-    Base::getOwnNonIndexPropertyNames(thisObject, globalObject, propertyNames, mode);
 }
 
 } // namespace JSC

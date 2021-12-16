@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,10 +27,9 @@
 #include "PreciseAllocation.h"
 
 #include "AlignedMemoryAllocator.h"
-#include "Heap.h"
 #include "IsoCellSetInlines.h"
 #include "JSCInlines.h"
-#include "Operations.h"
+#include "Scribble.h"
 #include "SubspaceInlines.h"
 
 namespace JSC {
@@ -43,8 +42,8 @@ static inline bool isAlignedForPreciseAllocation(void* memory)
 
 PreciseAllocation* PreciseAllocation::tryCreate(Heap& heap, size_t size, Subspace* subspace, unsigned indexInSpace)
 {
-    if (validateDFGDoesGC)
-        RELEASE_ASSERT(heap.expectDoesGC());
+    if constexpr (validateDFGDoesGC)
+        heap.verifyCanGC();
 
     size_t adjustedAlignmentAllocationSize = headerSize() + size + halfAlignment;
     static_assert(halfAlignment == 8, "We assume that memory returned by malloc has alignment >= 8.");
@@ -123,8 +122,8 @@ PreciseAllocation* PreciseAllocation::tryReallocate(size_t size, Subspace* subsp
 
 PreciseAllocation* PreciseAllocation::createForLowerTier(Heap& heap, size_t size, Subspace* subspace, uint8_t lowerTierIndex)
 {
-    if (validateDFGDoesGC)
-        RELEASE_ASSERT(heap.expectDoesGC());
+    if constexpr (validateDFGDoesGC)
+        heap.verifyCanGC();
 
     size_t adjustedAlignmentAllocationSize = headerSize() + size + halfAlignment;
     static_assert(halfAlignment == 8, "We assume that memory returned by malloc has alignment >= 8.");
@@ -196,25 +195,29 @@ void PreciseAllocation::lastChanceToFinalize()
     sweep();
 }
 
-void PreciseAllocation::shrink()
-{
-    m_weakSet.shrink();
-}
-
-void PreciseAllocation::visitWeakSet(SlotVisitor& visitor)
-{
-    m_weakSet.visit(visitor);
-}
-
-void PreciseAllocation::reapWeakSet()
-{
-    return m_weakSet.reap();
-}
-
 void PreciseAllocation::flip()
 {
     ASSERT(heap()->collectionScope() == CollectionScope::Full);
-    clearMarked();
+    // Propagate the last time's mark bit to m_isNewlyAllocated so that `isLive` will say "yes" until this GC cycle finishes.
+    // After that, m_isNewlyAllocated is cleared again. So only previously marked or actually newly created objects survive.
+    // We do not need to care about concurrency here since marking thread is stopped right now. This is equivalent to the logic
+    // of MarkedBlock::aboutToMarkSlow.
+    // We invoke this function only when this is full collection. This ensures that at the end of upcoming cycle, we will
+    // clear NewlyAllocated bits of all objects. So this works correctly.
+    //
+    //                                      N: NewlyAllocated, M: Marked
+    //                                                 after this         at the end        When cycle
+    //                                            N M  function    N M     of cycle    N M  is finished   N M
+    // The live object survives the last cycle    0 1      =>      1 0        =>       1 1       =>       0 1    => live
+    // The dead object in the last cycle          0 0      =>      0 0        =>       0 0       =>       0 0    => dead
+    // The live object newly created after this            =>      1 0        =>       1 1       =>       0 1    => live
+    // The dead object newly created after this            =>      1 0        =>       1 0       =>       0 0    => dead
+    // The live object newly created before this  1 0      =>      1 0        =>       1 1       =>       0 1    => live
+    // The dead object newly created before this  1 0      =>      1 0        =>       1 0       =>       0 0    => dead
+    //                                                                                                    ^
+    //                                                              This is ensured since this function is used only for full GC.
+    m_isNewlyAllocated |= isMarked();
+    m_isMarked.store(false, std::memory_order_relaxed);
 }
 
 bool PreciseAllocation::isEmpty()

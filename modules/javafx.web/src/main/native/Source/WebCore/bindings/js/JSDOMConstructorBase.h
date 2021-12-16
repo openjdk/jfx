@@ -23,6 +23,8 @@
 
 namespace WebCore {
 
+JSC_DECLARE_HOST_FUNCTION(callThrowTypeErrorForJSDOMConstructorNotConstructable);
+
 // Base class for all constructor objects in the JSC bindings.
 class JSDOMConstructorBase : public JSDOMObject {
 public:
@@ -49,9 +51,7 @@ protected:
     {
     }
 
-    static String className(const JSObject*, JSC::VM&);
-    static String toStringName(const JSObject*, JSC::JSGlobalObject*);
-    static JSC::CallType getCallData(JSCell*, JSC::CallData&);
+    static JSC::CallData getCallData(JSC::JSCell*);
 };
 
 inline JSC::Structure* JSDOMConstructorBase::createStructure(JSC::VM& vm, JSC::JSGlobalObject* globalObject, JSC::JSValue prototype)

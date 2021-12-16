@@ -83,6 +83,9 @@ public:
     WEBCORE_EXPORT static bool shouldTreatURLSchemeAsCORSEnabled(const String& scheme);
     WEBCORE_EXPORT static Vector<String> allURLSchemesRegisteredAsCORSEnabled();
 
+    WEBCORE_EXPORT static void registerURLSchemeAsHandledBySchemeHandler(const String&);
+    WEBCORE_EXPORT static bool schemeIsHandledBySchemeHandler(StringView);
+
     // Allow resources from some schemes to load on a page, regardless of its
     // Content Security Policy.
     WEBCORE_EXPORT static void registerURLSchemeAsBypassingContentSecurityPolicy(const String& scheme); // Thread safe.
@@ -96,11 +99,6 @@ public:
     // Schemes whose requests should be partitioned in the cache
     WEBCORE_EXPORT static void registerURLSchemeAsCachePartitioned(const String& scheme); // Thread safe.
     static bool shouldPartitionCacheForURLScheme(const String& scheme); // Thread safe.
-
-    // Schemes besides http(s) that service workers are allowed to handle
-    WEBCORE_EXPORT static void registerURLSchemeServiceWorkersCanHandle(const String& scheme); // Thread safe.
-    WEBCORE_EXPORT static bool canServiceWorkersHandleURLScheme(const String& scheme); // Thread safe.
-    static bool isServiceWorkerContainerCustomScheme(const String& scheme); // Thread safe.
 
     static bool isUserExtensionScheme(const String& scheme);
 };

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -85,7 +85,7 @@ template<typename T> inline T* raiseOnDOMError(JNIEnv* env, ExceptionOr<Ref<T>>&
         raiseDOMErrorException(env, exceptionOrReturnValue.releaseException());
         return nullptr;
     }
-    return WTF::getPtr(exceptionOrReturnValue.releaseReturnValue());
+    return WTF::getPtr(exceptionOrReturnValue.returnValue());
 }
 
 template<typename T> inline T raiseOnDOMError(JNIEnv* env, ExceptionOr<T>&& exceptionOrReturnValue)

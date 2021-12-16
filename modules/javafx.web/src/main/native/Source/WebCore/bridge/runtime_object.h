@@ -32,10 +32,12 @@
 namespace JSC {
 namespace Bindings {
 
+Exception* throwRuntimeObjectInvalidAccessError(JSGlobalObject*, ThrowScope&);
+
 class WEBCORE_EXPORT RuntimeObject : public JSNonFinalObject {
 public:
     using Base = JSNonFinalObject;
-    static constexpr unsigned StructureFlags = Base::StructureFlags | OverridesGetOwnPropertySlot | OverridesGetPropertyNames | OverridesGetCallData;
+    static constexpr unsigned StructureFlags = Base::StructureFlags | OverridesGetOwnPropertySlot | OverridesGetOwnPropertyNames | OverridesGetCallData | GetOwnPropertySlotMayBeWrongAboutDontEnum;
     static constexpr bool needsDestruction = true;
 
     template<typename CellType, JSC::SubspaceAccess>
@@ -57,18 +59,16 @@ public:
 
     static bool getOwnPropertySlot(JSObject*, JSGlobalObject*, PropertyName, PropertySlot&);
     static bool put(JSCell*, JSGlobalObject*, PropertyName, JSValue, PutPropertySlot&);
-    static bool deleteProperty(JSCell*, JSGlobalObject*, PropertyName);
+    static bool deleteProperty(JSCell*, JSGlobalObject*, PropertyName, DeletePropertySlot&);
     static JSValue defaultValue(const JSObject*, JSGlobalObject*, PreferredPrimitiveType);
-    static CallType getCallData(JSCell*, CallData&);
-    static ConstructType getConstructData(JSCell*, ConstructData&);
+    static CallData getCallData(JSCell*);
+    static CallData getConstructData(JSCell*);
 
-    static void getOwnPropertyNames(JSObject*, JSGlobalObject*, PropertyNameArray&, EnumerationMode);
+    static void getOwnPropertyNames(JSObject*, JSGlobalObject*, PropertyNameArray&, DontEnumPropertiesMode);
 
     void invalidate();
 
     Instance* getInternalInstance() const { return m_instance.get(); }
-
-    static Exception* throwInvalidAccessError(JSGlobalObject*, ThrowScope&);
 
     DECLARE_INFO;
 
@@ -87,10 +87,6 @@ protected:
     void finishCreation(VM&);
 
 private:
-    static EncodedJSValue fallbackObjectGetter(JSGlobalObject*, EncodedJSValue, PropertyName);
-    static EncodedJSValue fieldGetter(JSGlobalObject*, EncodedJSValue, PropertyName);
-    static EncodedJSValue methodGetter(JSGlobalObject*, EncodedJSValue, PropertyName);
-
     static IsoSubspace* subspaceForImpl(VM&);
 
     RefPtr<Instance> m_instance;

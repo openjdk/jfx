@@ -49,9 +49,10 @@ public:
 
     JS_EXPORT_PRIVATE Exception* throwException(JSGlobalObject*, Exception*);
     JS_EXPORT_PRIVATE Exception* throwException(JSGlobalObject*, JSValue);
-    JS_EXPORT_PRIVATE Exception* throwException(JSGlobalObject*, JSObject*);
 
     void release() { m_isReleased = true; }
+
+    void clearException() { m_vm.clearException(); }
 
     JS_EXPORT_PRIVATE void printIfNeedCheck(const char* functionName, const char* file, unsigned line);
 
@@ -79,9 +80,10 @@ public:
 
     ALWAYS_INLINE Exception* throwException(JSGlobalObject* globalObject, Exception* exception) { return m_vm.throwException(globalObject, exception); }
     ALWAYS_INLINE Exception* throwException(JSGlobalObject* globalObject, JSValue value) { return m_vm.throwException(globalObject, value); }
-    ALWAYS_INLINE Exception* throwException(JSGlobalObject* globalObject, JSObject* obj) { return m_vm.throwException(globalObject, obj); }
 
     ALWAYS_INLINE void release() { }
+
+    ALWAYS_INLINE void clearException() { m_vm.clearException(); }
 };
 
 #define DECLARE_THROW_SCOPE(vm__) \
@@ -99,9 +101,16 @@ ALWAYS_INLINE Exception* throwException(JSGlobalObject* globalObject, ThrowScope
     return scope.throwException(globalObject, value);
 }
 
-ALWAYS_INLINE Exception* throwException(JSGlobalObject* globalObject, ThrowScope& scope, JSObject* obj)
+ALWAYS_INLINE EncodedJSValue throwVMException(JSGlobalObject* globalObject, ThrowScope& scope, Exception* exception)
 {
-    return scope.throwException(globalObject, obj);
+    throwException(globalObject, scope, exception);
+    return encodedJSValue();
+}
+
+ALWAYS_INLINE EncodedJSValue throwVMException(JSGlobalObject* globalObject, ThrowScope& scope, JSValue value)
+{
+    throwException(globalObject, scope, value);
+    return encodedJSValue();
 }
 
 } // namespace JSC

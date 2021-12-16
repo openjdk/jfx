@@ -32,15 +32,15 @@ function match(regexp)
     if (@isUndefinedOrNull(this))
         @throwTypeError("String.prototype.match requires that |this| not be null or undefined");
 
-    if (regexp != null) {
-        var matcher = regexp.@matchSymbol;
-        if (matcher != @undefined)
+    if (!@isUndefinedOrNull(regexp)) {
+        var matcher = regexp.@@match;
+        if (!@isUndefinedOrNull(matcher))
             return matcher.@call(regexp, this);
     }
 
     var thisString = @toString(this);
     var createdRegExp = @regExpCreate(regexp, @undefined);
-    return createdRegExp.@matchSymbol(thisString);
+    return createdRegExp.@@match(thisString);
 }
 
 function matchAll(arg)
@@ -54,14 +54,14 @@ function matchAll(arg)
         if (@isRegExp(arg) && !@stringIncludesInternal.@call(@toString(arg.flags), "g"))
             @throwTypeError("String.prototype.matchAll argument must not be a non-global regular expression");
 
-        var matcher = arg.@matchAllSymbol;
+        var matcher = arg.@@matchAll;
         if (!@isUndefinedOrNull(matcher))
             return matcher.@call(arg, this);
     }
 
     var string = @toString(this);
     var regExp = @regExpCreate(arg, "g");
-    return regExp.@matchAllSymbol(string);
+    return regExp.@@matchAll(string);
 }
 
 @globalPrivate
@@ -113,7 +113,7 @@ function repeatCharactersSlowPath(string, count)
         operand += operand;
     }
     if (remainingCharacters)
-        result += @stringSubstrInternal.@call(string, 0, remainingCharacters);
+        result += @stringSubstringInternal.@call(string, 0, remainingCharacters);
     return result;
 }
 
@@ -126,7 +126,7 @@ function repeat(count)
         @throwTypeError("String.prototype.repeat requires that |this| not be null or undefined");
 
     var string = @toString(this);
-    count = @toInteger(count);
+    count = @toIntegerOrInfinity(count);
 
     if (count < 0 || count === @Infinity)
         @throwRangeError("String.prototype.repeat argument must be greater than or equal to 0 and not be Infinity");
@@ -245,9 +245,9 @@ function replace(search, replace)
     if (@isUndefinedOrNull(this))
         @throwTypeError("String.prototype.replace requires that |this| not be null or undefined");
 
-    if (search != null) {
-        var replacer = search.@replaceSymbol;
-        if (replacer !== @undefined) {
+    if (!@isUndefinedOrNull(search)) {
+        var replacer = search.@@replace;
+        if (!@isUndefinedOrNull(replacer)) {
             if (!@hasObservableSideEffectsForStringReplace(search, replacer))
                 return @toString(this).@replaceUsingRegExp(search, replace);
             return replacer.@call(search, this, replace);
@@ -266,12 +266,12 @@ function replaceAll(search, replace)
     if (@isUndefinedOrNull(this))
         @throwTypeError("String.prototype.replaceAll requires |this| not to be null nor undefined");
 
-    if (search != null) {
+    if (!@isUndefinedOrNull(search)) {
         if (@isRegExp(search) && !@stringIncludesInternal.@call(@toString(search.flags), "g"))
             @throwTypeError("String.prototype.replaceAll argument must not be a non-global regular expression");
 
-        var replacer = search.@replaceSymbol;
-        if (replacer !== @undefined) {
+        var replacer = search.@@replace;
+        if (!@isUndefinedOrNull(replacer)) {
             if (!@hasObservableSideEffectsForStringReplace(search, replacer))
                 return @toString(this).@replaceUsingRegExp(search, replace);
             return replacer.@call(search, this, replace);
@@ -290,15 +290,15 @@ function search(regexp)
     if (@isUndefinedOrNull(this))
         @throwTypeError("String.prototype.search requires that |this| not be null or undefined");
 
-    if (regexp != null) {
-        var searcher = regexp.@searchSymbol;
-        if (searcher != @undefined)
+    if (!@isUndefinedOrNull(regexp)) {
+        var searcher = regexp.@@search;
+        if (!@isUndefinedOrNull(searcher))
             return searcher.@call(regexp, this);
     }
 
     var thisString = @toString(this);
     var createdRegExp = @regExpCreate(regexp, @undefined);
-    return createdRegExp.@searchSymbol(thisString);
+    return createdRegExp.@@search(thisString);
 }
 
 function split(separator, limit)
@@ -308,9 +308,9 @@ function split(separator, limit)
     if (@isUndefinedOrNull(this))
         @throwTypeError("String.prototype.split requires that |this| not be null or undefined");
     
-    if (separator != null) {
-        var splitter = separator.@splitSymbol;
-        if (splitter != @undefined)
+    if (!@isUndefinedOrNull(separator)) {
+        var splitter = separator.@@split;
+        if (!@isUndefinedOrNull(splitter))
             return splitter.@call(separator, this, limit);
     }
     
@@ -338,6 +338,25 @@ function concat(arg /* ... */)
     if (@argumentCount() === 1)
         return @toString(this) + @toString(arg);
     return @tailCallForwardArguments(@stringConcatSlowPath, this);
+}
+
+// FIXME: This is extremely similar to charAt, so we should optimize it accordingly.
+//        https://bugs.webkit.org/show_bug.cgi?id=217139
+function at(index)
+{
+    "use strict";
+
+    if (@isUndefinedOrNull(this))
+        @throwTypeError("String.prototype.at requires that |this| not be null or undefined");
+
+    var string = @toString(this);
+    var length = string.length;
+
+    var k = @toIntegerOrInfinity(index);
+    if (k < 0)
+        k += length;
+
+    return (k >= 0 && k < length) ? string[k] : @undefined;
 }
 
 @globalPrivate

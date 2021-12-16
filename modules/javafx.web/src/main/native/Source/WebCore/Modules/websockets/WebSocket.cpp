@@ -42,8 +42,10 @@
 #include "EventNames.h"
 #include "Frame.h"
 #include "FrameLoader.h"
+#include "FrameLoaderClient.h"
 #include "Logging.h"
 #include "MessageEvent.h"
+#include "MixedContentChecker.h"
 #include "ResourceLoadObserver.h"
 #include "ScriptController.h"
 #include "ScriptExecutionContext.h"
@@ -51,6 +53,9 @@
 #include "SocketProvider.h"
 #include "ThreadableWebSocketChannel.h"
 #include "WebSocketChannel.h"
+#include "WorkerGlobalScope.h"
+#include "WorkerLoaderProxy.h"
+#include "WorkerThread.h"
 #include <JavaScriptCore/ArrayBuffer.h>
 #include <JavaScriptCore/ArrayBufferView.h>
 #include <JavaScriptCore/ScriptCallStack.h>
@@ -171,7 +176,7 @@ ExceptionOr<Ref<WebSocket>> WebSocket::create(ScriptExecutionContext& context, c
     auto socket = adoptRef(*new WebSocket(context));
     socket->suspendIfNeeded();
 
-    auto result = socket->connect(context.completeURL(url), protocols);
+    auto result = socket->connect(context.completeURL(url).string(), protocols);
     if (result.hasException())
         return result.releaseException();
 
@@ -253,12 +258,12 @@ ExceptionOr<void> WebSocket::connect(const String& url, const Vector<String>& pr
     if (!portAllowed(m_url)) {
         String message;
         if (m_url.port())
-            message = makeString("WebSocket port ", static_cast<unsigned>(m_url.port().value()), " blocked");
+            message = makeString("WebSocket port ", m_url.port().value(), " blocked");
         else
             message = "WebSocket without port blocked"_s;
         context.addConsoleMessage(MessageSource::JS, MessageLevel::Error, message);
-        m_state = CLOSED;
-        return Exception { SecurityError };
+        failAsynchronously();
+        return { };
     }
 
     // FIXME: Convert this to check the isolated world's Content Security Policy once webkit.org/b/104520 is solved.
@@ -306,7 +311,7 @@ ExceptionOr<void> WebSocket::connect(const String& url, const Vector<String>& pr
         Document& document = downcast<Document>(context);
         RefPtr<Frame> frame = document.frame();
         // FIXME: make the mixed content check equivalent to the non-document mixed content check currently in WorkerThreadableWebSocketChannel::Bridge::connect()
-        if (!frame || !frame->loader().mixedContentChecker().canRunInsecureContent(document.securityOrigin(), m_url)) {
+        if (!frame || !MixedContentChecker::canRunInsecureContent(*frame, document.securityOrigin(), m_url)) {
             failAsynchronously();
             return { };
         }
@@ -320,6 +325,17 @@ ExceptionOr<void> WebSocket::connect(const String& url, const Vector<String>& pr
         failAsynchronously();
         return { };
     }
+
+#if ENABLE(RESOURCE_LOAD_STATISTICS)
+    auto reportRegistrableDomain = [domain = RegistrableDomain(m_url).isolatedCopy()](auto& context) mutable {
+        if (auto* frame = downcast<Document>(context).frame())
+            frame->loader().client().didLoadFromRegistrableDomain(WTFMove(domain));
+    };
+    if (is<Document>(context))
+        reportRegistrableDomain(context);
+    else
+        downcast<WorkerGlobalScope>(context).thread().workerLoaderProxy().postTaskToLoader(WTFMove(reportRegistrableDomain));
+#endif
 
     m_pendingActivity = makePendingActivity(*this);
 
@@ -515,7 +531,8 @@ void WebSocket::resume()
 {
     if (m_channel)
         m_channel->resume();
-    else if (!m_pendingEvents.isEmpty() && !m_resumeTimer.isActive()) {
+
+    if (!m_pendingEvents.isEmpty() && !m_resumeTimer.isActive()) {
         // Fire the pending events in a timer as we are not allowed to execute arbitrary JS from resume().
         m_resumeTimer.startOneShot(0_s);
     }
@@ -580,7 +597,7 @@ void WebSocket::didReceiveBinaryData(Vector<uint8_t>&& binaryData)
     switch (m_binaryType) {
     case BinaryType::Blob:
         // FIXME: We just received the data from NetworkProcess, and are sending it back. This is inefficient.
-        dispatchEvent(MessageEvent::create(Blob::create(WTFMove(binaryData), emptyString()), SecurityOrigin::create(m_url)->toString()));
+        dispatchEvent(MessageEvent::create(Blob::create(scriptExecutionContext(), WTFMove(binaryData), emptyString()), SecurityOrigin::create(m_url)->toString()));
         break;
     case BinaryType::ArrayBuffer:
         dispatchEvent(MessageEvent::create(ArrayBuffer::create(binaryData.data(), binaryData.size()), SecurityOrigin::create(m_url)->toString()));

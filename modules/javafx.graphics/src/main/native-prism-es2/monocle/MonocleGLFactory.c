@@ -35,6 +35,10 @@
 #include "../PrismES2Defs.h"
 
 #include "com_sun_prism_es2_MonocleGLContext.h"
+#ifndef ANDROID
+#define __USE_GNU
+#include <dlfcn.h>
+#endif
 
 extern void *get_dlsym(void *handle, const char *symbol, int warn);
 
@@ -108,6 +112,9 @@ JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_MonocleGLFactory_nPopulateNativeC
 
     // from the eglWrapper.c
     void *handle = asPtr(libraryHandle);
+    if (libraryHandle == 0) {
+         handle = RTLD_DEFAULT;
+    }
 
     /* set function pointers */
     ctxInfo->glActiveTexture = (PFNGLACTIVETEXTUREPROC)

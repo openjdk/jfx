@@ -34,11 +34,8 @@
 #include "DebuggerEvalEnabler.h"
 #include "DebuggerScope.h"
 #include "Interpreter.h"
-#include "JSCInlines.h"
 #include "JSFunction.h"
-#include "JSLexicalEnvironment.h"
 #include "JSWithScope.h"
-#include "Parser.h"
 #include "ShadowChickenInlines.h"
 #include "StackVisitor.h"
 #include "StrongInlines.h"
@@ -212,31 +209,42 @@ JSValue DebuggerCallFrame::thisValue(VM& vm) const
     if (!thisValue)
         return jsUndefined();
 
-    ECMAMode ecmaMode = NotStrictMode;
-    if (codeBlock && codeBlock->isStrictMode())
-        ecmaMode = StrictMode;
+    ECMAMode ecmaMode = ECMAMode::sloppy();
+    if (codeBlock && codeBlock->ownerExecutable()->isInStrictContext())
+        ecmaMode = ECMAMode::strict();
     return thisValue.toThis(m_validMachineFrame->lexicalGlobalObject(vm), ecmaMode);
 }
 
 // Evaluate some JavaScript code in the scope of this frame.
 JSValue DebuggerCallFrame::evaluateWithScopeExtension(const String& script, JSObject* scopeExtensionObject, NakedPtr<Exception>& exception)
 {
-    ASSERT(isValid());
-    CallFrame* callFrame = m_validMachineFrame;
-    if (!callFrame)
+    CallFrame* callFrame = nullptr;
+    CodeBlock* codeBlock = nullptr;
+
+    auto* debuggerCallFrame = this;
+    while (debuggerCallFrame) {
+        ASSERT(debuggerCallFrame->isValid());
+
+        callFrame = debuggerCallFrame->m_validMachineFrame;
+        if (callFrame) {
+            if (debuggerCallFrame->isTailDeleted())
+                codeBlock = debuggerCallFrame->m_shadowChickenFrame.codeBlock;
+            else
+                codeBlock = callFrame->codeBlock();
+        }
+
+        if (callFrame && codeBlock)
+            break;
+
+        debuggerCallFrame = debuggerCallFrame->m_caller.get();
+    }
+
+    if (!callFrame || !codeBlock)
         return jsUndefined();
 
     VM& vm = callFrame->deprecatedVM();
     JSLockHolder lock(vm);
     auto catchScope = DECLARE_CATCH_SCOPE(vm);
-
-    CodeBlock* codeBlock = nullptr;
-    if (isTailDeleted())
-        codeBlock = m_shadowChickenFrame.codeBlock;
-    else
-        codeBlock = callFrame->codeBlock();
-    if (!codeBlock)
-        return jsUndefined();
 
     JSGlobalObject* globalObject = codeBlock->globalObject();
     DebuggerEvalEnabler evalEnabler(globalObject, DebuggerEvalEnabler::Mode::EvalOnGlobalObjectAtDebuggerEntry);
@@ -250,10 +258,12 @@ JSValue DebuggerCallFrame::evaluateWithScopeExtension(const String& script, JSOb
     else
         evalContextType = EvalContextType::None;
 
-    VariableEnvironment variablesUnderTDZ;
-    JSScope::collectClosureVariablesUnderTDZ(scope()->jsScope(), variablesUnderTDZ);
+    TDZEnvironment variablesUnderTDZ;
+    PrivateNameEnvironment privateNameEnvironment;
+    JSScope::collectClosureVariablesUnderTDZ(scope()->jsScope(), variablesUnderTDZ, privateNameEnvironment);
 
-    auto* eval = DirectEvalExecutable::create(globalObject, makeSource(script, callFrame->callerSourceOrigin(vm)), codeBlock->isStrictMode(), codeBlock->unlinkedCodeBlock()->derivedContextType(), codeBlock->unlinkedCodeBlock()->needsClassFieldInitializer(), codeBlock->unlinkedCodeBlock()->isArrowFunction(), evalContextType, &variablesUnderTDZ);
+    ECMAMode ecmaMode = codeBlock->ownerExecutable()->isInStrictContext() ? ECMAMode::strict() : ECMAMode::sloppy();
+    auto* eval = DirectEvalExecutable::create(globalObject, makeSource(script, callFrame->callerSourceOrigin(vm)), codeBlock->unlinkedCodeBlock()->derivedContextType(), codeBlock->unlinkedCodeBlock()->needsClassFieldInitializer(), codeBlock->unlinkedCodeBlock()->privateBrandRequirement(), codeBlock->unlinkedCodeBlock()->isArrowFunction(), codeBlock->ownerExecutable()->isInsideOrdinaryFunction(), evalContextType, &variablesUnderTDZ, &privateNameEnvironment, ecmaMode);
     if (UNLIKELY(catchScope.exception())) {
         exception = catchScope.exception();
         catchScope.clearException();
@@ -265,8 +275,7 @@ JSValue DebuggerCallFrame::evaluateWithScopeExtension(const String& script, JSOb
         globalObject->setGlobalScopeExtension(JSWithScope::create(vm, globalObject, ignoredPreviousScope, scopeExtensionObject));
     }
 
-    JSValue thisValue = this->thisValue(vm);
-    JSValue result = vm.interpreter->execute(eval, globalObject, thisValue, scope()->jsScope());
+    JSValue result = vm.interpreter->execute(eval, globalObject, debuggerCallFrame->thisValue(vm), debuggerCallFrame->scope()->jsScope());
     if (UNLIKELY(catchScope.exception())) {
         exception = catchScope.exception();
         catchScope.clearException();

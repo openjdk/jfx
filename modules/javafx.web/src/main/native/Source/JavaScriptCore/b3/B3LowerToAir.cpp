@@ -29,16 +29,13 @@
 #if ENABLE(B3_JIT)
 
 #include "AirBlockInsertionSet.h"
-#include "AirCCallSpecial.h"
 #include "AirCode.h"
 #include "AirHelpers.h"
 #include "AirInsertionSet.h"
 #include "AirInstInlines.h"
 #include "AirPrintSpecial.h"
-#include "AirStackSlot.h"
 #include "B3ArgumentRegValue.h"
 #include "B3AtomicValue.h"
-#include "B3BasicBlockInlines.h"
 #include "B3BlockWorklist.h"
 #include "B3CCallValue.h"
 #include "B3CheckSpecial.h"
@@ -52,8 +49,8 @@
 #include "B3PhaseScope.h"
 #include "B3PhiChildren.h"
 #include "B3Procedure.h"
+#include "B3ProcedureInlines.h"
 #include "B3SlotBaseValue.h"
-#include "B3StackSlot.h"
 #include "B3UpsilonValue.h"
 #include "B3UseCounts.h"
 #include "B3ValueInlines.h"
@@ -62,7 +59,6 @@
 #include "B3WasmAddressValue.h"
 #include <wtf/IndexMap.h>
 #include <wtf/IndexSet.h>
-#include <wtf/ListDump.h>
 
 #if !ASSERT_ENABLED
 IGNORE_RETURN_TYPE_WARNINGS_BEGIN
@@ -146,7 +142,8 @@ public:
                 break;
             }
             case Get:
-            case Patchpoint: {
+            case Patchpoint:
+            case BottomTuple: {
                 if (value->type().isTuple())
                     ensureTupleTmps(value, m_tupleValueToTmps);
                 break;
@@ -440,7 +437,8 @@ private:
 
         switch (tupleValue->opcode()) {
         case Phi:
-        case Patchpoint: {
+        case Patchpoint:
+        case BottomTuple: {
             return m_tupleValueToTmps.find(tupleValue)->value;
         }
         case Get:
@@ -1592,28 +1590,28 @@ private:
             case NotEqual:
                 return createRelCond(MacroAssembler::NotEqual, MacroAssembler::DoubleNotEqualOrUnordered);
             case Equal:
-                return createRelCond(MacroAssembler::Equal, MacroAssembler::DoubleEqual);
+                return createRelCond(MacroAssembler::Equal, MacroAssembler::DoubleEqualAndOrdered);
             case LessThan:
-                return createRelCond(MacroAssembler::LessThan, MacroAssembler::DoubleLessThan);
+                return createRelCond(MacroAssembler::LessThan, MacroAssembler::DoubleLessThanAndOrdered);
             case GreaterThan:
-                return createRelCond(MacroAssembler::GreaterThan, MacroAssembler::DoubleGreaterThan);
+                return createRelCond(MacroAssembler::GreaterThan, MacroAssembler::DoubleGreaterThanAndOrdered);
             case LessEqual:
-                return createRelCond(MacroAssembler::LessThanOrEqual, MacroAssembler::DoubleLessThanOrEqual);
+                return createRelCond(MacroAssembler::LessThanOrEqual, MacroAssembler::DoubleLessThanOrEqualAndOrdered);
             case GreaterEqual:
-                return createRelCond(MacroAssembler::GreaterThanOrEqual, MacroAssembler::DoubleGreaterThanOrEqual);
+                return createRelCond(MacroAssembler::GreaterThanOrEqual, MacroAssembler::DoubleGreaterThanOrEqualAndOrdered);
             case EqualOrUnordered:
                 // The integer condition is never used in this case.
                 return createRelCond(MacroAssembler::Equal, MacroAssembler::DoubleEqualOrUnordered);
             case Above:
                 // We use a bogus double condition because these integer comparisons won't got down that
                 // path anyway.
-                return createRelCond(MacroAssembler::Above, MacroAssembler::DoubleEqual);
+                return createRelCond(MacroAssembler::Above, MacroAssembler::DoubleEqualAndOrdered);
             case Below:
-                return createRelCond(MacroAssembler::Below, MacroAssembler::DoubleEqual);
+                return createRelCond(MacroAssembler::Below, MacroAssembler::DoubleEqualAndOrdered);
             case AboveEqual:
-                return createRelCond(MacroAssembler::AboveOrEqual, MacroAssembler::DoubleEqual);
+                return createRelCond(MacroAssembler::AboveOrEqual, MacroAssembler::DoubleEqualAndOrdered);
             case BelowEqual:
-                return createRelCond(MacroAssembler::BelowOrEqual, MacroAssembler::DoubleEqual);
+                return createRelCond(MacroAssembler::BelowOrEqual, MacroAssembler::DoubleEqualAndOrdered);
             case BitAnd: {
                 Value* left = value->child(0);
                 Value* right = value->child(1);
@@ -2260,6 +2258,19 @@ private:
             return;
         }
 
+        if (isARM64E()) {
+            append(relaxedMoveForType(atomic->accessType()), expectedValueTmp, valueResultTmp);
+            appendTrapping(OPCODE_FOR_WIDTH(AtomicStrongCAS, width), valueResultTmp, newValueTmp, address);
+            if (returnsOldValue)
+                return;
+            if (isBranch) {
+                m_blockToBlock[m_block]->setSuccessors(success, failure);
+                return;
+            }
+            append(OPCODE_FOR_CANONICAL_WIDTH(Compare, width), Arg::relCond(invert ? MacroAssembler::NotEqual : MacroAssembler::Equal), valueResultTmp, expectedValueTmp, boolResultTmp);
+            return;
+        }
+
         RELEASE_ASSERT(isARM64());
         // We wish to emit:
         //
@@ -2354,12 +2365,12 @@ private:
         Arg address = addr(m_value);
 
         if (isValidForm(atomicOpcode, Arg::Imm, address.kind()) && imm(m_value->child(0))) {
-            append(atomicOpcode, imm(m_value->child(0)), address);
+            appendTrapping(atomicOpcode, imm(m_value->child(0)), address);
             return true;
         }
 
         if (isValidForm(atomicOpcode, Arg::Tmp, address.kind())) {
-            append(atomicOpcode, tmp(m_value->child(0)), address);
+            appendTrapping(atomicOpcode, tmp(m_value->child(0)), address);
             return true;
         }
 
@@ -2979,6 +2990,27 @@ private:
             return;
         }
 
+        case BottomTuple: {
+            forEachImmOrTmp(m_value, [&] (Arg tmp, Type type, unsigned) {
+                switch (type.kind()) {
+                case Void:
+                case Tuple:
+                    RELEASE_ASSERT_NOT_REACHED();
+                    break;
+                case Int32:
+                case Int64:
+                    ASSERT(Arg::isValidImmForm(0));
+                    append(Move, imm(static_cast<int64_t>(0)), tmp.tmp());
+                    break;
+                case Float:
+                case Double:
+                    append(MoveZeroToDouble, tmp.tmp());
+                    break;
+                }
+            });
+            return;
+        }
+
         case FramePointer: {
             ASSERT(tmp(m_value) == Tmp(GPRInfo::callFrameRegister));
             return;
@@ -3573,9 +3605,14 @@ private:
 
             Arg address = addr(atomic);
             Air::Opcode opcode = OPCODE_FOR_WIDTH(AtomicXchgAdd, atomic->accessWidth());
+            if (isValidForm(opcode, Arg::Tmp, address.kind(), Arg::Tmp)) {
+                appendTrapping(opcode, tmp(atomic->child(0)), address, tmp(atomic));
+                return;
+            }
+
             if (isValidForm(opcode, Arg::Tmp, address.kind())) {
                 append(relaxedMoveForType(atomic->type()), tmp(atomic->child(0)), tmp(atomic));
-                append(opcode, tmp(atomic), address);
+                appendTrapping(opcode, tmp(atomic), address);
                 return;
             }
 
@@ -3597,6 +3634,16 @@ private:
             if (appendVoidAtomic(OPCODE_FOR_WIDTH(AtomicAnd, atomic->accessWidth())))
                 return;
 
+            if (isARM64E()) {
+                Arg address = addr(atomic);
+                Air::Opcode opcode = OPCODE_FOR_WIDTH(AtomicXchgClear, atomic->accessWidth());
+                if (isValidForm(opcode, Arg::Tmp, address.kind(), Arg::Tmp)) {
+                    append(OPCODE_FOR_CANONICAL_WIDTH(Not, atomic->accessWidth()), tmp(atomic->child(0)), tmp(atomic));
+                    appendTrapping(opcode, tmp(atomic), address, tmp(atomic));
+                    return;
+                }
+            }
+
             appendGeneralAtomic(OPCODE_FOR_CANONICAL_WIDTH(And, atomic->accessWidth()), Commutative);
             return;
         }
@@ -3605,6 +3652,13 @@ private:
             AtomicValue* atomic = m_value->as<AtomicValue>();
             if (appendVoidAtomic(OPCODE_FOR_WIDTH(AtomicOr, atomic->accessWidth())))
                 return;
+
+            Arg address = addr(atomic);
+            Air::Opcode opcode = OPCODE_FOR_WIDTH(AtomicXchgOr, atomic->accessWidth());
+            if (isValidForm(opcode, Arg::Tmp, address.kind(), Arg::Tmp)) {
+                appendTrapping(opcode, tmp(atomic->child(0)), address, tmp(atomic));
+                return;
+            }
 
             appendGeneralAtomic(OPCODE_FOR_CANONICAL_WIDTH(Or, atomic->accessWidth()), Commutative);
             return;
@@ -3615,6 +3669,13 @@ private:
             if (appendVoidAtomic(OPCODE_FOR_WIDTH(AtomicXor, atomic->accessWidth())))
                 return;
 
+            Arg address = addr(atomic);
+            Air::Opcode opcode = OPCODE_FOR_WIDTH(AtomicXchgXor, atomic->accessWidth());
+            if (isValidForm(opcode, Arg::Tmp, address.kind(), Arg::Tmp)) {
+                appendTrapping(opcode, tmp(atomic->child(0)), address, tmp(atomic));
+                return;
+            }
+
             appendGeneralAtomic(OPCODE_FOR_CANONICAL_WIDTH(Xor, atomic->accessWidth()), Commutative);
             return;
         }
@@ -3624,9 +3685,14 @@ private:
 
             Arg address = addr(atomic);
             Air::Opcode opcode = OPCODE_FOR_WIDTH(AtomicXchg, atomic->accessWidth());
+            if (isValidForm(opcode, Arg::Tmp, address.kind(), Arg::Tmp)) {
+                appendTrapping(opcode, tmp(atomic->child(0)), address, tmp(atomic));
+                return;
+            }
+
             if (isValidForm(opcode, Arg::Tmp, address.kind())) {
                 append(relaxedMoveForType(atomic->type()), tmp(atomic->child(0)), tmp(atomic));
-                append(opcode, tmp(atomic), address);
+                appendTrapping(opcode, tmp(atomic), address);
                 return;
             }
 

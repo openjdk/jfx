@@ -271,7 +271,7 @@ FloatPoint Widget::convertFromContainingView(const FloatPoint& parentPoint) cons
     return convertFromContainingView(IntPoint(parentPoint));
 }
 
-#if !PLATFORM(COCOA) && !PLATFORM(GTK) && !PLATFORM(WIN) && !PLATFORM(JAVA)
+#if !PLATFORM(COCOA) && !PLATFORM(GTK) && !PLATFORM(WIN) && !PLATFORM(PLAYSTATION) && !PLATFORM(JAVA)
 
 Widget::~Widget()
 {
@@ -285,7 +285,7 @@ void Widget::setFrameRect(const IntRect& rect)
     notImplemented();
 }
 
-void Widget::paint(GraphicsContext&, const IntRect&, SecurityOriginPaintPolicy)
+void Widget::paint(GraphicsContext&, const IntRect&, SecurityOriginPaintPolicy, EventRegionContext*)
 {
     notImplemented();
 }
@@ -315,6 +315,6 @@ void Widget::setIsSelected(bool)
     notImplemented();
 }
 
-#endif // !PLATFORM(COCOA) && !PLATFORM(GTK) && !PLATFORM(WIN)
+#endif // !PLATFORM(COCOA) && !PLATFORM(GTK) && !PLATFORM(WIN) && !PLATFORM(PLAYSTATION) && !PLATFORM(JAVA)
 
 } // namespace WebCore

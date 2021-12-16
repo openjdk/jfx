@@ -35,7 +35,7 @@ namespace WebCore {
 using namespace Inspector;
 
 struct GarbageCollectionData {
-    Inspector::Protocol::Heap::GarbageCollection::Type type;
+    Protocol::Heap::GarbageCollection::Type type;
     Seconds startTime;
     Seconds endTime;
 };
@@ -64,7 +64,7 @@ SendGarbageCollectionEventsTask::SendGarbageCollectionEventsTask(WebHeapAgent& a
 void SendGarbageCollectionEventsTask::addGarbageCollection(GarbageCollectionData&& collection)
 {
     {
-        std::lock_guard<Lock> lock(m_mutex);
+        auto locker = holdLock(m_mutex);
         m_collections.append(WTFMove(collection));
     }
 
@@ -75,7 +75,7 @@ void SendGarbageCollectionEventsTask::addGarbageCollection(GarbageCollectionData
 void SendGarbageCollectionEventsTask::reset()
 {
     {
-        std::lock_guard<Lock> lock(m_mutex);
+        auto locker = holdLock(m_mutex);
         m_collections.clear();
     }
 
@@ -87,7 +87,7 @@ void SendGarbageCollectionEventsTask::timerFired()
     Vector<GarbageCollectionData> collectionsToSend;
 
     {
-        std::lock_guard<Lock> lock(m_mutex);
+        auto locker = holdLock(m_mutex);
         m_collections.swap(collectionsToSend);
     }
 
@@ -103,25 +103,27 @@ WebHeapAgent::WebHeapAgent(WebAgentContext& context)
 
 WebHeapAgent::~WebHeapAgent() = default;
 
-void WebHeapAgent::enable(ErrorString& errorString)
+Protocol::ErrorStringOr<void> WebHeapAgent::enable()
 {
-    InspectorHeapAgent::enable(errorString);
+    auto result = InspectorHeapAgent::enable();
 
     if (auto* consoleAgent = m_instrumentingAgents.webConsoleAgent())
-        consoleAgent->setInspectorHeapAgent(this);
+        consoleAgent->setHeapAgent(this);
+
+    return result;
 }
 
-void WebHeapAgent::disable(ErrorString& errorString)
+Protocol::ErrorStringOr<void> WebHeapAgent::disable()
 {
     m_sendGarbageCollectionEventsTask->reset();
 
     if (auto* consoleAgent = m_instrumentingAgents.webConsoleAgent())
-        consoleAgent->setInspectorHeapAgent(nullptr);
+        consoleAgent->setHeapAgent(nullptr);
 
-    InspectorHeapAgent::disable(errorString);
+    return InspectorHeapAgent::disable();
 }
 
-void WebHeapAgent::dispatchGarbageCollectedEvent(Inspector::Protocol::Heap::GarbageCollection::Type type, Seconds startTime, Seconds endTime)
+void WebHeapAgent::dispatchGarbageCollectedEvent(Protocol::Heap::GarbageCollection::Type type, Seconds startTime, Seconds endTime)
 {
     // Dispatch the event asynchronously because this method may be
     // called between collection and sweeping and we don't want to

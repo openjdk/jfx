@@ -27,6 +27,8 @@
 
 #if ENABLE(WEB_AUTHN)
 
+#include <wtf/Optional.h>
+
 namespace WebCore {
 
 struct AuthenticationExtensionsClientOutputs {

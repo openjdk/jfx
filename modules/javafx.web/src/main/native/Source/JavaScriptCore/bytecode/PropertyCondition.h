@@ -40,7 +40,7 @@ public:
         Absence,
         AbsenceOfSetEffect,
         Equivalence, // An adaptive watchpoint on this will be a pair of watchpoints, and when the structure transitions, we will set the replacement watchpoint on the new structure.
-        CustomFunctionEquivalence, // Custom value or accessor.
+        HasStaticProperty, // Custom value or accessor.
         HasPrototype
     };
 
@@ -124,10 +124,10 @@ public:
         return equivalenceWithoutBarrier(uid, value);
     }
 
-    static PropertyCondition customFunctionEquivalence(UniquedStringImpl* uid)
+    static PropertyCondition hasStaticProperty(UniquedStringImpl* uid)
     {
         PropertyCondition result;
-        result.m_header = Header(uid, CustomFunctionEquivalence);
+        result.m_header = Header(uid, HasStaticProperty);
         return result;
     }
 
@@ -201,7 +201,7 @@ public:
         case Equivalence:
             result ^= EncodedJSValueHash::hash(u.equivalence.value);
             break;
-        case CustomFunctionEquivalence:
+        case HasStaticProperty:
             break;
         }
         return result;
@@ -223,7 +223,7 @@ public:
             return u.prototype.prototype == other.u.prototype.prototype;
         case Equivalence:
             return u.equivalence.value == other.u.equivalence.value;
-        case CustomFunctionEquivalence:
+        case HasStaticProperty:
             return true;
         }
         RELEASE_ASSERT_NOT_REACHED();
@@ -361,9 +361,7 @@ namespace WTF {
 void printInternal(PrintStream&, JSC::PropertyCondition::Kind);
 
 template<typename T> struct DefaultHash;
-template<> struct DefaultHash<JSC::PropertyCondition> {
-    typedef JSC::PropertyConditionHash Hash;
-};
+template<> struct DefaultHash<JSC::PropertyCondition> : JSC::PropertyConditionHash { };
 
 template<typename T> struct HashTraits;
 template<> struct HashTraits<JSC::PropertyCondition> : SimpleClassHashTraits<JSC::PropertyCondition> { };

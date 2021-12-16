@@ -28,6 +28,7 @@
 
 #if ENABLE(MEDIA_STREAM) && PLATFORM(COCOA)
 
+#include "GraphicsContextCG.h"
 #include "IOSurface.h"
 #include "Logging.h"
 #include "MediaSample.h"
@@ -36,17 +37,12 @@
 #include <Accelerate/Accelerate.h>
 #endif
 
-#if HAVE(IOSURFACE)
-#include "GraphicsContextCG.h"
-#endif
-
 #include <pal/cf/CoreMediaSoftLink.h>
 #include "CoreVideoSoftLink.h"
 
 namespace WebCore {
 using namespace PAL;
 
-#if HAVE(IOSURFACE)
 static inline std::unique_ptr<IOSurface> transferBGRAPixelBufferToIOSurface(CVPixelBufferRef pixelBuffer)
 {
 #if USE(ACCELERATE)
@@ -60,7 +56,7 @@ static inline std::unique_ptr<IOSurface> transferBGRAPixelBufferToIOSurface(CVPi
     }
 
     IntSize size { static_cast<int>(CVPixelBufferGetWidth(pixelBuffer)), static_cast<int>(CVPixelBufferGetHeight(pixelBuffer)) };
-    auto ioSurface =  IOSurface::create(size, sRGBColorSpaceRef(), IOSurface::Format::RGBA);
+    auto ioSurface =  IOSurface::create(size, sRGBColorSpaceRef(), IOSurface::Format::BGRA);
 
     IOSurface::Locker lock(*ioSurface);
     vImage_Buffer src;
@@ -141,14 +137,13 @@ RemoteVideoSample::RemoteVideoSample(IOSurfaceRef surface, CGColorSpaceRef color
 {
 }
 
-IOSurfaceRef RemoteVideoSample::surface()
+IOSurfaceRef RemoteVideoSample::surface() const
 {
     if (!m_ioSurface && m_sendRight)
-        m_ioSurface = WebCore::IOSurface::createFromSendRight(WTFMove(m_sendRight), sRGBColorSpaceRef());
+        const_cast<RemoteVideoSample*>(this)->m_ioSurface = WebCore::IOSurface::createFromSendRight(WTFMove(const_cast<RemoteVideoSample*>(this)->m_sendRight), sRGBColorSpaceRef());
 
     return m_ioSurface ? m_ioSurface->surface() : nullptr;
 }
-#endif
 
 }
 

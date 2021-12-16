@@ -31,6 +31,7 @@
 #include "Clipboard.h"
 #include "ClipboardItem.h"
 #include "Document.h"
+#include "ExceptionCode.h"
 #include "FileReaderLoader.h"
 #include "Frame.h"
 #include "GraphicsContext.h"
@@ -106,7 +107,7 @@ void ClipboardItemBindingsDataSource::getType(const String& type, Ref<DeferredPr
         String string;
         result.getString(itemPromise->globalObject(), string);
         if (!string.isNull()) {
-            promise->resolve<IDLInterface<Blob>>(ClipboardItem::blobFromString(string, type));
+            promise->resolve<IDLInterface<Blob>>(ClipboardItem::blobFromString(promise->scriptExecutionContext(), string, type));
             return;
         }
 
@@ -249,7 +250,7 @@ void ClipboardItemBindingsDataSource::ClipboardItemTypeLoader::didFinishLoading(
     invokeCompletionHandler();
 }
 
-void ClipboardItemBindingsDataSource::ClipboardItemTypeLoader::didFail(int)
+void ClipboardItemBindingsDataSource::ClipboardItemTypeLoader::didFail(ExceptionCode)
 {
     ASSERT(m_blobLoader);
     m_blobLoader = nullptr;

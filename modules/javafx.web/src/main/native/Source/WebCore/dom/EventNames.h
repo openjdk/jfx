@@ -32,6 +32,10 @@
 #include "RuntimeEnabledFeatures.h"
 #endif
 
+#if USE(APPLE_INTERNAL_SDK)
+#include <WebKitAdditions/EventNamesAdditions.h>
+#endif
+
 namespace WebCore {
 
 #if !defined(ADDITIONAL_DOM_EVENT_NAMES_FOR_EACH)
@@ -144,10 +148,12 @@ namespace WebCore {
     macro(gotpointercapture) \
     macro(hashchange) \
     macro(icecandidate) \
+    macro(icecandidateerror) \
     macro(iceconnectionstatechange) \
     macro(icegatheringstatechange) \
     macro(inactive) \
     macro(input) \
+    macro(inputsourceschange) \
     macro(install) \
     macro(invalid) \
     macro(keydown) \
@@ -212,6 +218,7 @@ namespace WebCore {
     macro(pointerup) \
     macro(popstate) \
     macro(previoustrack) \
+    macro(processorerror) \
     macro(progress) \
     macro(ratechange) \
     macro(readystatechange) \
@@ -231,6 +238,7 @@ namespace WebCore {
     macro(seeked) \
     macro(seeking) \
     macro(select) \
+    macro(selectend) \
     macro(selectionchange) \
     macro(selectstart) \
     macro(shippingaddresschange) \
@@ -247,6 +255,9 @@ namespace WebCore {
     macro(sourceopen) \
     macro(speechend) \
     macro(speechstart) \
+    macro(squeeze) \
+    macro(squeezestart) \
+    macro(squeezeend) \
     macro(stalled) \
     macro(start) \
     macro(started) \
@@ -285,13 +296,6 @@ namespace WebCore {
     macro(versionchange) \
     macro(visibilitychange) \
     macro(volumechange) \
-    macro(vrdisplayactivate) \
-    macro(vrdisplayblur) \
-    macro(vrdisplayconnect) \
-    macro(vrdisplaydeactivate) \
-    macro(vrdisplaydisconnect) \
-    macro(vrdisplayfocus) \
-    macro(vrdisplaypresentchange) \
     macro(waiting) \
     macro(waitingforkey) \
     macro(webglcontextchanged) \

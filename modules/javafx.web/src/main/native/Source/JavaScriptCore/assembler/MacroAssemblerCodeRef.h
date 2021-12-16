@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2009-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,9 +25,9 @@
 
 #pragma once
 
-#include "ExecutableAllocator.h"
 #include "JSCPtrTag.h"
 #include <wtf/DataLog.h>
+#include <wtf/MetaAllocatorHandle.h>
 #include <wtf/PrintStream.h>
 #include <wtf/RefPtr.h>
 #include <wtf/text/CString.h>
@@ -54,6 +54,7 @@
 
 namespace JSC {
 
+typedef WTF::MetaAllocatorHandle ExecutableMemoryHandle;
 template<PtrTag> class MacroAssemblerCodePtr;
 
 enum OpcodeID : unsigned;
@@ -233,15 +234,24 @@ class ReturnAddressPtr {
 public:
     ReturnAddressPtr() { }
 
-    explicit ReturnAddressPtr(const void* value)
-        : m_value(value)
+    explicit ReturnAddressPtr(const void* returnAddress)
     {
+#if CPU(ARM64E)
+        assertIsNotTagged(returnAddress);
+        returnAddress = retagCodePtr<NoPtrTag, ReturnAddressPtrTag>(returnAddress);
+#endif
+        m_value = returnAddress;
         ASSERT_VALID_CODE_POINTER(m_value);
     }
 
     const void* value() const
     {
         return m_value;
+    }
+
+    const void* untaggedValue() const
+    {
+        return untagCodePtr<ReturnAddressPtrTag>(m_value);
     }
 
     void dump(PrintStream& out) const
@@ -277,7 +287,7 @@ public:
         : m_value(value)
 #endif
     {
-        assertIsTaggedWith(value, tag);
+        assertIsTaggedWith<tag>(value);
         ASSERT(value);
 #if CPU(ARM_THUMB2)
         ASSERT(!(reinterpret_cast<uintptr_t>(value) & 1));
@@ -289,17 +299,16 @@ public:
     {
         ASSERT(value);
         ASSERT_VALID_CODE_POINTER(value);
-        assertIsTaggedWith(value, tag);
+        assertIsTaggedWith<tag>(value);
         MacroAssemblerCodePtr result;
         result.m_value = value;
         return result;
     }
 
     explicit MacroAssemblerCodePtr(ReturnAddressPtr ra)
-        : m_value(tagCodePtr<tag>(ra.value()))
+        : m_value(retagCodePtr<ReturnAddressPtrTag, tag>(ra.value()))
     {
-        assertIsNotTagged(ra.value());
-        ASSERT(ra.value());
+        ASSERT(ra.untaggedValue());
         ASSERT_VALID_CODE_POINTER(m_value);
     }
 
@@ -434,7 +443,6 @@ public:
         : m_codePtr(executableMemory->start().retaggedPtr<tag>())
         , m_executableMemory(WTFMove(executableMemory))
     {
-        ASSERT(m_executableMemory->isManaged());
         ASSERT(m_executableMemory->start());
         ASSERT(m_codePtr);
     }
@@ -530,9 +538,7 @@ inline FunctionPtr<tag>::FunctionPtr(MacroAssemblerCodePtr<tag> ptr)
 namespace WTF {
 
 template<typename T> struct DefaultHash;
-template<JSC::PtrTag tag> struct DefaultHash<JSC::MacroAssemblerCodePtr<tag>> {
-    typedef JSC::MacroAssemblerCodePtrHash<tag> Hash;
-};
+template<JSC::PtrTag tag> struct DefaultHash<JSC::MacroAssemblerCodePtr<tag>> : JSC::MacroAssemblerCodePtrHash<tag> { };
 
 template<typename T> struct HashTraits;
 template<JSC::PtrTag tag> struct HashTraits<JSC::MacroAssemblerCodePtr<tag>> : public CustomHashTraits<JSC::MacroAssemblerCodePtr<tag>> { };

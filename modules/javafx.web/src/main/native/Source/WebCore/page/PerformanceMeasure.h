@@ -28,19 +28,30 @@
 #include "PerformanceEntry.h"
 #include <wtf/text/WTFString.h>
 
+namespace JSC {
+class JSGlobalObject;
+class JSValue;
+}
+
 namespace WebCore {
+
+class SerializedScriptValue;
+class ScriptExecutionContext;
 
 class PerformanceMeasure final : public PerformanceEntry {
 public:
-    static Ref<PerformanceMeasure> create(const String& name, double startTime, double duration) { return adoptRef(*new PerformanceMeasure(name, startTime, duration)); }
+    static ExceptionOr<Ref<PerformanceMeasure>> create(const String& name, double startTime, double endTime, Ref<SerializedScriptValue>&& detail);
+
+    JSC::JSValue detail(JSC::JSGlobalObject&);
 
 private:
-    PerformanceMeasure(const String& name, double startTime, double duration)
-        : PerformanceEntry(PerformanceEntry::Type::Measure, name, "measure"_s, startTime, duration)
-    {
-    }
+    PerformanceMeasure(const String& name, double startTime, double endTime, Ref<SerializedScriptValue>&& detail);
+    ~PerformanceMeasure();
 
-    ~PerformanceMeasure() = default;
+    Type type() const final { return Type::Measure; }
+    ASCIILiteral entryType() const final { return "measure"_s; }
+
+    Ref<SerializedScriptValue> m_serializedDetail;
 };
 
 } // namespace WebCore

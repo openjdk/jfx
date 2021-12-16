@@ -45,7 +45,7 @@ namespace WebCore {
 using namespace HTMLNames;
 
 SearchInputType::SearchInputType(HTMLInputElement& element)
-    : BaseTextInputType(element)
+    : BaseTextInputType(Type::Search, element)
     , m_searchEventTimer(*this, &SearchInputType::searchEventTimerFired)
 {
 }
@@ -64,12 +64,15 @@ void SearchInputType::addSearchResult()
 
 static void updateResultButtonPseudoType(SearchFieldResultsButtonElement& resultButton, int maxResults)
 {
+    static MainThreadNeverDestroyed<const AtomString> webkitSearchDecorationName("-webkit-search-decoration", AtomString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> webkitSearchResultsDecorationName("-webkit-search-results-decoration", AtomString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> webkitSearchResultsButtonName("-webkit-search-results-button", AtomString::ConstructFromLiteral);
     if (!maxResults)
-        resultButton.setPseudo(AtomString("-webkit-search-results-decoration", AtomString::ConstructFromLiteral));
+        resultButton.setPseudo(webkitSearchResultsDecorationName);
     else if (maxResults < 0)
-        resultButton.setPseudo(AtomString("-webkit-search-decoration", AtomString::ConstructFromLiteral));
+        resultButton.setPseudo(webkitSearchDecorationName);
     else
-        resultButton.setPseudo(AtomString("-webkit-search-results-button", AtomString::ConstructFromLiteral));
+        resultButton.setPseudo(webkitSearchResultsButtonName);
 }
 
 void SearchInputType::attributeChanged(const QualifiedName& name)
@@ -94,22 +97,17 @@ const AtomString& SearchInputType::formControlType() const
     return InputTypeNames::search();
 }
 
-bool SearchInputType::isSearchField() const
-{
-    return true;
-}
-
 bool SearchInputType::needsContainer() const
 {
     return true;
 }
 
-void SearchInputType::createShadowSubtree()
+void SearchInputType::createShadowSubtreeAndUpdateInnerTextElementEditability(ContainerNode::ChildChange::Source source, bool isInnerTextElementEditable)
 {
     ASSERT(!m_resultsButton);
     ASSERT(!m_cancelButton);
 
-    TextFieldInputType::createShadowSubtree();
+    TextFieldInputType::createShadowSubtreeAndUpdateInnerTextElementEditability(source, isInnerTextElementEditable);
     RefPtr<HTMLElement> container = containerElement();
     RefPtr<HTMLElement> textWrapper = innerBlockElement();
     ASSERT(container);

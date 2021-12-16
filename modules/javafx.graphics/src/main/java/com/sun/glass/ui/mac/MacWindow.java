@@ -25,7 +25,6 @@
 package com.sun.glass.ui.mac;
 
 import com.sun.glass.events.WindowEvent;
-import com.sun.glass.events.mac.NpapiEvent;
 import com.sun.glass.ui.Cursor;
 import com.sun.glass.ui.Pixels;
 import com.sun.glass.ui.Screen;
@@ -49,12 +48,8 @@ final class MacWindow extends Window {
     protected MacWindow(Window owner, Screen screen, int styleMask) {
         super(owner, screen, styleMask);
     }
-    protected MacWindow(long parent) {
-        super(parent);
-    }
 
     @Override native protected long _createWindow(long ownerPtr, long screenPtr, int mask);
-    @Override native protected long _createChildWindow(long parent);
     @Override native protected boolean _close(long ptr);
     @Override native protected boolean _setView(long ptr, View view);
     @Override native protected boolean _setMenubar(long ptr, long menubarPtr);
@@ -121,9 +116,6 @@ final class MacWindow extends Window {
     @Override native protected boolean _grabFocus(long ptr);
     @Override native protected void _ungrabFocus(long ptr);
 
-    @Override native protected int _getEmbeddedX(long ptr);
-    @Override native protected int _getEmbeddedY(long ptr);
-
     @Override
     protected void notifyResize(int type, int width, int height) {
         width  = Math.round( width * getPlatformScaleX());
@@ -145,11 +137,6 @@ final class MacWindow extends Window {
     @Override
     protected void _setCursor(long ptr, Cursor cursor) {
         ((MacCursor)cursor).set();
-    }
-
-    @Override
-    public void dispatchNpapiEvent(Map eventInfo) {
-        NpapiEvent.dispatchCocoaNpapiEvent(this, eventInfo);
     }
 
     @Override

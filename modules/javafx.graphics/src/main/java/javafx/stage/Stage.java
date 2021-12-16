@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1141,6 +1141,7 @@ public class Stage extends Window {
 
             StageStyle stageStyle = getStyle();
             if (stageStyle == StageStyle.TRANSPARENT) {
+                @SuppressWarnings("removal")
                 final SecurityManager securityManager =
                         System.getSecurityManager();
                 if (securityManager != null) {
@@ -1272,9 +1273,6 @@ public class Stage extends Window {
         return fullScreenExitCombination;
     }
 
-    private final ObjectProperty<String> fullScreenExitHint =
-            new SimpleObjectProperty<String>(this, "fullScreenExitHint", null);
-
     /**
      * Specifies the text to show when a user enters full screen mode, usually
      * used to indicate the way a user should go about exiting out of full
@@ -1288,9 +1286,11 @@ public class Stage extends Window {
      * value of this property will be ignored, in which case the
      * default message will be displayed.
      * </p>
-     * @param value the string to be displayed.
      * @since JavaFX 8.0
      */
+    private final ObjectProperty<String> fullScreenExitHint =
+            new SimpleObjectProperty<String>(this, "fullScreenExitHint", null);
+
     public final void setFullScreenExitHint(String value) {
         fullScreenExitHint.set(value);
     }

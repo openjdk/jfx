@@ -19,8 +19,6 @@
  */
 
 #include "config.h"
-
-#if ENABLE(SVG_FONTS)
 #include "SVGGlyphRefElement.h"
 
 #include "SVGGlyphElement.h"
@@ -58,10 +56,7 @@ bool SVGGlyphRefElement::hasValidGlyphElement(String& glyphName) const
 
 static float parseFloat(const AtomString& value)
 {
-    float result;
-    if (!parseNumberFromString(value, result))
-        return 0;
-    return result;
+    return parseNumber(value).valueOr(0);
 }
 
 void SVGGlyphRefElement::parseAttribute(const QualifiedName& name, const AtomString& value)
@@ -102,5 +97,3 @@ void SVGGlyphRefElement::setDy(float dy)
 }
 
 }
-
-#endif

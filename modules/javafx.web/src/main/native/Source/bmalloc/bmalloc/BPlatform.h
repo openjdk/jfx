@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -63,6 +63,9 @@
 #if TARGET_OS_SIMULATOR
 #define BPLATFORM_IOS_SIMULATOR 1
 #endif
+#if defined(TARGET_OS_MACCATALYST) && TARGET_OS_MACCATALYST
+#define BPLATFORM_MACCATALYST 1
+#endif
 #endif
 #if TARGET_OS_IPHONE
 #define BPLATFORM_IOS_FAMILY 1
@@ -88,6 +91,14 @@
 #define BOS_APPLETV 1
 #define BPLATFORM_APPLETV 1
 #endif
+
+#if defined(__SCE__)
+#define BPLATORM_PLAYSTATION 1
+#endif
+
+/* ==== Feature decision macros: these define feature choices for a particular port. ==== */
+
+#define BENABLE(WTF_FEATURE) (defined BENABLE_##WTF_FEATURE && BENABLE_##WTF_FEATURE)
 
 /* ==== Policy decision macros: these define policy choices for a particular port. ==== */
 
@@ -119,8 +130,8 @@
 #define BCPU_X86_64 1
 #endif
 
-/* BCPU(ARM64) - Apple */
-#if (defined(__arm64__) && defined(__APPLE__)) || defined(__aarch64__)
+/* BCPU(ARM64) */
+#if defined(__arm64__) || defined(__aarch64__)
 #define BCPU_ARM64 1
 #endif
 
@@ -275,12 +286,16 @@
 
 #define BATTRIBUTE_PRINTF(formatStringArgument, extraArguments) __attribute__((__format__(printf, formatStringArgument, extraArguments)))
 
-#if BPLATFORM(MAC) || BPLATFORM(IOS_FAMILY)
-#define BUSE_OS_LOG 1
+/* Export macro support. Detects the attributes available for shared library symbol export
+   decorations. */
+#if BOS(WINDOWS) || (BCOMPILER_HAS_CLANG_DECLSPEC(dllimport) && BCOMPILER_HAS_CLANG_DECLSPEC(dllexport))
+#define BUSE_DECLSPEC_ATTRIBUTE 1
+#elif BCOMPILER(GCC_COMPATIBLE)
+#define BUSE_VISIBILITY_ATTRIBUTE 1
 #endif
 
-#if !defined(BUSE_EXPORT_MACROS) && (BPLATFORM(MAC) || BPLATFORM(IOS_FAMILY))
-#define BUSE_EXPORT_MACROS 1
+#if BPLATFORM(MAC) || BPLATFORM(IOS_FAMILY)
+#define BUSE_OS_LOG 1
 #endif
 
 /* BUNUSED_PARAM */
@@ -294,12 +309,6 @@
 /* This is used for debugging when hacking on how bmalloc calculates its physical footprint. */
 #define ENABLE_PHYSICAL_PAGE_MAP 0
 
-#if BPLATFORM(IOS_FAMILY) && (BCPU(ARM64) || BCPU(ARM))
-#define BUSE_CHECK_NANO_MALLOC 1
-#else
-#define BUSE_CHECK_NANO_MALLOC 0
-#endif
-
 #if BPLATFORM(MAC)
 #define BUSE_PARTIAL_SCAVENGE 1
 #else
@@ -312,4 +321,22 @@
 
 #if !defined(BUSE_PRECOMPUTED_CONSTANTS_VMPAGE16K)
 #define BUSE_PRECOMPUTED_CONSTANTS_VMPAGE16K 1
+#endif
+
+/* The unified Config record feature is not available for Windows because the
+   Windows port puts WTF in a separate DLL, and the offlineasm code accessing
+   the config record expects the config record to be directly accessible like
+   a global variable (and not have to go thru DLL shenanigans). C++ code would
+   resolve these DLL bindings automatically, but offlineasm does not.
+
+   The permanently freezing feature also currently relies on the Config records
+   being unified, and the Windows port also does not currently have an
+   implementation for the freezing mechanism anyway. For simplicity, we just
+   disable both the use of unified Config record and config freezing for the
+   Windows port.
+*/
+#if BOS(WINDOWS)
+#define BENABLE_UNIFIED_AND_FREEZABLE_CONFIG_RECORD 0
+#else
+#define BENABLE_UNIFIED_AND_FREEZABLE_CONFIG_RECORD 1
 #endif

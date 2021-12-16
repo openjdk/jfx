@@ -39,10 +39,6 @@
 #include <wtf/RetainPtr.h>
 #endif
 
-#if USE(SOUP)
-#include "GUniquePtrSoup.h"
-#endif
-
 #if USE(GLIB)
 #include <wtf/glib/GRefPtr.h>
 typedef struct _GBytes GBytes;
@@ -89,22 +85,19 @@ public:
     void append(CFDataRef);
 #endif
 
-#if USE(SOUP)
-    GUniquePtr<SoupBuffer> createSoupBuffer(unsigned offset = 0, unsigned size = 0);
-    static Ref<SharedBuffer> wrapSoupBuffer(SoupBuffer*);
-#endif
-
 #if USE(GLIB)
     static Ref<SharedBuffer> create(GBytes*);
+    GRefPtr<GBytes> createGBytes() const;
 #endif
 
 #if USE(GSTREAMER)
-    static Ref<SharedBuffer> create(GstMappedBuffer&);
+    static Ref<SharedBuffer> create(GstMappedOwnedBuffer&);
 #endif
     // Calling data() causes all the data segments to be copied into one segment if they are not already.
     // Iterate the segments using begin() and end() instead.
     // FIXME: Audit the call sites of this function and replace them with iteration if possible.
     const char* data() const;
+    const uint8_t* dataAsUInt8Ptr() const;
 
     // Creates an ArrayBuffer and copies this SharedBuffer's contents to that
     // ArrayBuffer without merging segmented buffers into a flat buffer.
@@ -138,14 +131,11 @@ public:
 #if USE(CF)
         static Ref<DataSegment> create(RetainPtr<CFDataRef>&& data) { return adoptRef(*new DataSegment(WTFMove(data))); }
 #endif
-#if USE(SOUP)
-        static Ref<DataSegment> create(GUniquePtr<SoupBuffer>&& data) { return adoptRef(*new DataSegment(WTFMove(data))); }
-#endif
 #if USE(GLIB)
         static Ref<DataSegment> create(GRefPtr<GBytes>&& data) { return adoptRef(*new DataSegment(WTFMove(data))); }
 #endif
 #if USE(GSTREAMER)
-        static Ref<DataSegment> create(RefPtr<GstMappedBuffer>&& data) { return adoptRef(*new DataSegment(WTFMove(data))); }
+        static Ref<DataSegment> create(RefPtr<GstMappedOwnedBuffer>&& data) { return adoptRef(*new DataSegment(WTFMove(data))); }
 #endif
         static Ref<DataSegment> create(FileSystem::MappedFileData&& data) { return adoptRef(*new DataSegment(WTFMove(data))); }
 
@@ -160,16 +150,12 @@ public:
         DataSegment(RetainPtr<CFDataRef>&& data)
             : m_immutableData(WTFMove(data)) { }
 #endif
-#if USE(SOUP)
-        DataSegment(GUniquePtr<SoupBuffer>&& data)
-            : m_immutableData(WTFMove(data)) { }
-#endif
 #if USE(GLIB)
         DataSegment(GRefPtr<GBytes>&& data)
             : m_immutableData(WTFMove(data)) { }
 #endif
 #if USE(GSTREAMER)
-        DataSegment(RefPtr<GstMappedBuffer>&& data)
+        DataSegment(RefPtr<GstMappedOwnedBuffer>&& data)
             : m_immutableData(WTFMove(data)) { }
 #endif
         DataSegment(FileSystem::MappedFileData&& data)
@@ -179,14 +165,11 @@ public:
 #if USE(CF)
             RetainPtr<CFDataRef>,
 #endif
-#if USE(SOUP)
-            GUniquePtr<SoupBuffer>,
-#endif
 #if USE(GLIB)
             GRefPtr<GBytes>,
 #endif
 #if USE(GSTREAMER)
-            RefPtr<GstMappedBuffer>,
+            RefPtr<GstMappedOwnedBuffer>,
 #endif
             FileSystem::MappedFileData> m_immutableData;
         friend class SharedBuffer;
@@ -221,14 +204,11 @@ private:
 #if USE(CF)
     explicit SharedBuffer(CFDataRef);
 #endif
-#if USE(SOUP)
-    explicit SharedBuffer(SoupBuffer*);
-#endif
 #if USE(GLIB)
     explicit SharedBuffer(GBytes*);
 #endif
 #if USE(GSTREAMER)
-    explicit SharedBuffer(GstMappedBuffer&);
+    explicit SharedBuffer(GstMappedOwnedBuffer&);
 #endif
 
     void combineIntoOneSegment() const;

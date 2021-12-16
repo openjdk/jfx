@@ -26,7 +26,6 @@
 package com.sun.media.jfxmedia.control;
 
 import java.lang.annotation.Native;
-import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -47,7 +46,7 @@ public enum VideoFormat {
     private int nativeType; // value passed down to native code to represent this format
     private static final Map<Integer, VideoFormat> lookupMap = new HashMap<Integer, VideoFormat>();
     static {
-        for (VideoFormat fmt : EnumSet.allOf(VideoFormat.class)) {
+        for (VideoFormat fmt : VideoFormat.values()) {
             lookupMap.put(fmt.getNativeType(), fmt);
         }
     }

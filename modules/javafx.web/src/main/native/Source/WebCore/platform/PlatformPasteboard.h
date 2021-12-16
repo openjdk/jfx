@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Apple Inc.  All rights reserved.
+ * Copyright (C) 2012-2021 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -23,9 +23,9 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef PlatformPasteboard_h
-#define PlatformPasteboard_h
+#pragma once
 
+#include "DataOwnerType.h"
 #include <wtf/Forward.h>
 #include <wtf/Function.h>
 #include <wtf/RetainPtr.h>
@@ -64,7 +64,8 @@ public:
 #endif
     WEBCORE_EXPORT Optional<PasteboardItemInfo> informationForItemAtIndex(size_t index, int64_t changeCount);
     WEBCORE_EXPORT Optional<Vector<PasteboardItemInfo>> allPasteboardItemInfo(int64_t changeCount);
-    WEBCORE_EXPORT static String uniqueName();
+
+    WEBCORE_EXPORT static void performAsDataOwner(DataOwnerType, Function<void()>&&);
 
     enum class IncludeImageTypes : bool { No, Yes };
     static String platformPasteboardTypeForSafeTypeForDOMToReadAndWrite(const String& domType, IncludeImageTypes = IncludeImageTypes::No);
@@ -100,10 +101,11 @@ public:
     WEBCORE_EXPORT int64_t write(const Vector<PasteboardCustomData>&);
     WEBCORE_EXPORT int64_t write(const PasteboardCustomData&);
     WEBCORE_EXPORT Vector<String> typesSafeForDOMToReadAndWrite(const String& origin) const;
+    WEBCORE_EXPORT bool containsStringSafeForDOMToReadForType(const String&) const;
 
-#if PLATFORM(GTK)
-    WEBCORE_EXPORT void writeToClipboard(const SelectionData&, WTF::Function<void()>&& primarySelectionCleared);
-    WEBCORE_EXPORT Ref<SelectionData> readFromClipboard();
+#if PLATFORM(COCOA)
+    WEBCORE_EXPORT bool containsURLStringSuitableForLoading();
+    WEBCORE_EXPORT String urlStringSuitableForLoading(String& title);
 #endif
 
 private:
@@ -121,14 +123,9 @@ private:
 #if PLATFORM(IOS_FAMILY)
     RetainPtr<id> m_pasteboard;
 #endif
-#if PLATFORM(GTK)
-    GtkClipboard* m_clipboard;
-#endif
 #if USE(LIBWPE)
     struct wpe_pasteboard* m_pasteboard;
 #endif
 };
 
-}
-
-#endif // !PlatformPasteboard_h
+} // namespace WebCore

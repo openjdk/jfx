@@ -39,6 +39,7 @@
 #include "HTMLStyleElement.h"
 #include "HTMLTableElement.h"
 #include "NodeTraversal.h"
+#include "Range.h"
 #include "RenderTableCell.h"
 #include "RenderText.h"
 #include "RenderedDocumentMarker.h"
@@ -136,11 +137,11 @@ void DeleteSelectionCommand::initializeStartEnd(Position& start, Position& end)
             break;
 
         // If we're going to expand to include the startSpecialContainer, it must be fully selected.
-        if (startSpecialContainer && !endSpecialContainer && comparePositions(positionInParentAfterNode(startSpecialContainer), end) > -1)
+        if (startSpecialContainer && !endSpecialContainer && positionInParentAfterNode(startSpecialContainer) >= end)
             break;
 
         // If we're going to expand to include the endSpecialContainer, it must be fully selected.
-        if (endSpecialContainer && !startSpecialContainer && comparePositions(start, positionInParentBeforeNode(endSpecialContainer)) > -1)
+        if (endSpecialContainer && !startSpecialContainer && start >= positionInParentBeforeNode(endSpecialContainer))
             break;
 
         if (startSpecialContainer && startSpecialContainer->isDescendantOf(endSpecialContainer))
@@ -186,28 +187,33 @@ void DeleteSelectionCommand::smartDeleteParagraphSpacers()
     bool startAndEndInSameUnsplittableElement = unsplittableElementForPosition(visibleStart.deepEquivalent()) == unsplittableElementForPosition(visibleEnd.deepEquivalent());
     visibleStart = visibleStart.previous(CannotCrossEditingBoundary);
     visibleEnd = visibleEnd.next(CannotCrossEditingBoundary);
+    bool previousPositionIsStartOfContent = startOfEditableContent(visibleStart) == visibleStart;
     bool previousPositionIsBlankParagraph = isBlankParagraph(visibleStart);
-    bool endPositonIsBlankParagraph = isBlankParagraph(visibleEnd);
-    bool hasBlankParagraphAfterEndOrIsEndOfContent = !selectionEndIsEndOfContent && (endPositonIsBlankParagraph || selectionEndsInParagraphSeperator);
+    bool endPositionIsBlankParagraph = isBlankParagraph(visibleEnd);
+    bool hasBlankParagraphAfterEndOrIsEndOfContent = !selectionEndIsEndOfContent && (endPositionIsBlankParagraph || selectionEndsInParagraphSeperator);
     if (startAndEndInSameUnsplittableElement && previousPositionIsBlankParagraph && hasBlankParagraphAfterEndOrIsEndOfContent) {
         m_needPlaceholder = false;
         Position position;
-        if (endPositonIsBlankParagraph)
+        if (endPositionIsBlankParagraph)
             position = startOfNextParagraph(startOfNextParagraph(m_downstreamEnd)).deepEquivalent();
         else
             position = VisiblePosition(m_downstreamEnd).next().deepEquivalent();
         m_upstreamEnd = position.upstream();
         m_downstreamEnd = position.downstream();
-        m_trailingWhitespace = m_downstreamEnd.trailingWhitespacePosition(VP_DEFAULT_AFFINITY);
+        m_trailingWhitespace = m_downstreamEnd.trailingWhitespacePosition(VisiblePosition::defaultAffinity);
         setStartingSelectionOnSmartDelete(m_upstreamStart, m_downstreamEnd);
     }
     if (startAndEndInSameUnsplittableElement && selectionEndIsEndOfContent && previousPositionIsBlankParagraph && selectionEndsInParagraphSeperator) {
         m_needPlaceholder = false;
-        VisiblePosition endOfParagraphBeforeStart = endOfParagraph(VisiblePosition { m_upstreamStart }.previous().previous());
-        Position position = endOfParagraphBeforeStart.deepEquivalent();
+        VisiblePosition endOfParagraphBeforeStart;
+        if (previousPositionIsStartOfContent)
+            endOfParagraphBeforeStart = endOfParagraph(VisiblePosition { m_upstreamStart }.previous());
+        else
+            endOfParagraphBeforeStart = endOfParagraph(VisiblePosition { m_upstreamStart }.previous().previous());
+        auto position = endOfParagraphBeforeStart.deepEquivalent();
         m_upstreamStart = position.upstream();
         m_downstreamStart = position.downstream();
-        m_leadingWhitespace = m_upstreamStart.leadingWhitespacePosition(DOWNSTREAM);
+        m_leadingWhitespace = m_upstreamStart.leadingWhitespacePosition(Affinity::Downstream);
         setStartingSelectionOnSmartDelete(m_upstreamStart, m_upstreamEnd);
     }
 }
@@ -269,20 +275,20 @@ bool DeleteSelectionCommand::initializePositionData()
 
     // Handle leading and trailing whitespace, as well as smart delete adjustments to the selection
     m_leadingWhitespace = m_upstreamStart.leadingWhitespacePosition(m_selectionToDelete.affinity());
-    m_trailingWhitespace = m_downstreamEnd.trailingWhitespacePosition(VP_DEFAULT_AFFINITY);
+    m_trailingWhitespace = m_downstreamEnd.trailingWhitespacePosition(VisiblePosition::defaultAffinity);
 
     if (m_smartDelete) {
 
         // skip smart delete if the selection to delete already starts or ends with whitespace
         Position pos = VisiblePosition(m_upstreamStart, m_selectionToDelete.affinity()).deepEquivalent();
-        bool skipSmartDelete = pos.trailingWhitespacePosition(VP_DEFAULT_AFFINITY, true).isNotNull();
+        bool skipSmartDelete = pos.trailingWhitespacePosition(VisiblePosition::defaultAffinity, true).isNotNull();
         if (!skipSmartDelete)
-            skipSmartDelete = m_downstreamEnd.leadingWhitespacePosition(VP_DEFAULT_AFFINITY, true).isNotNull();
+            skipSmartDelete = m_downstreamEnd.leadingWhitespacePosition(VisiblePosition::defaultAffinity, true).isNotNull();
 
         // extend selection upstream if there is whitespace there
         bool hasLeadingWhitespaceBeforeAdjustment = m_upstreamStart.leadingWhitespacePosition(m_selectionToDelete.affinity(), true).isNotNull();
         if (!skipSmartDelete && hasLeadingWhitespaceBeforeAdjustment) {
-            VisiblePosition visiblePos = VisiblePosition(m_upstreamStart, VP_DEFAULT_AFFINITY).previous();
+            auto visiblePos = VisiblePosition(m_upstreamStart).previous();
             pos = visiblePos.deepEquivalent();
             // Expand out one character upstream for smart delete and recalculate
             // positions based on this change.
@@ -295,13 +301,13 @@ bool DeleteSelectionCommand::initializePositionData()
 
         // trailing whitespace is only considered for smart delete if there is no leading
         // whitespace, as in the case where you double-click the first word of a paragraph.
-        if (!skipSmartDelete && !hasLeadingWhitespaceBeforeAdjustment && m_downstreamEnd.trailingWhitespacePosition(VP_DEFAULT_AFFINITY, true).isNotNull()) {
+        if (!skipSmartDelete && !hasLeadingWhitespaceBeforeAdjustment && m_downstreamEnd.trailingWhitespacePosition(VisiblePosition::defaultAffinity, true).isNotNull()) {
             // Expand out one character downstream for smart delete and recalculate
             // positions based on this change.
-            pos = VisiblePosition(m_downstreamEnd, VP_DEFAULT_AFFINITY).next().deepEquivalent();
+            pos = VisiblePosition(m_downstreamEnd).next().deepEquivalent();
             m_upstreamEnd = pos.upstream();
             m_downstreamEnd = pos.downstream();
-            m_trailingWhitespace = m_downstreamEnd.trailingWhitespacePosition(VP_DEFAULT_AFFINITY);
+            m_trailingWhitespace = m_downstreamEnd.trailingWhitespacePosition(VisiblePosition::defaultAffinity);
 
             setStartingSelectionOnSmartDelete(m_downstreamStart, m_downstreamEnd);
         }
@@ -334,7 +340,7 @@ void DeleteSelectionCommand::saveTypingStyleState()
     // However, if typing style was previously set from another text node at the previous
     // position (now deleted), we need to clear that style as well.
     if (m_upstreamStart.deprecatedNode() == m_downstreamEnd.deprecatedNode() && m_upstreamStart.deprecatedNode()->isTextNode()) {
-        frame().selection().clearTypingStyle();
+        document().selection().clearTypingStyle();
         return;
     }
 
@@ -503,19 +509,23 @@ void DeleteSelectionCommand::deleteTextFromNode(Text& node, unsigned offset, uns
 
 void DeleteSelectionCommand::makeStylingElementsDirectChildrenOfEditableRootToPreventStyleLoss()
 {
-    RefPtr<Range> range = m_selectionToDelete.toNormalizedRange();
-    RefPtr<Node> node = range ? range->firstNode() : nullptr;
-    while (node && node != range->pastLastNode()) {
-        RefPtr<Node> nextNode = NodeTraversal::next(*node);
-        if ((is<HTMLStyleElement>(*node) && !downcast<HTMLStyleElement>(*node).hasAttributeWithoutSynchronization(scopedAttr)) || is<HTMLLinkElement>(*node)) {
-            nextNode = NodeTraversal::nextSkippingChildren(*node);
-            RefPtr<ContainerNode> rootEditableElement = node->rootEditableElement();
-            if (rootEditableElement) {
-                removeNode(*node);
-                appendNode(*node, *rootEditableElement);
+    auto range = m_selectionToDelete.toNormalizedRange();
+    if (!range)
+        return;
+    auto nodes = intersectingNodes(*range).begin();
+    while (nodes) {
+        auto node = makeRef(*nodes);
+        auto shouldMove = is<HTMLLinkElement>(node)
+            || (is<HTMLStyleElement>(node) && !downcast<HTMLStyleElement>(node.get()).hasAttributeWithoutSynchronization(scopedAttr));
+        if (!shouldMove)
+            nodes.advance();
+        else {
+            nodes.advanceSkippingChildren();
+            if (auto rootEditableElement = makeRefPtr(node->rootEditableElement())) {
+                removeNode(node.get());
+                appendNode(node.get(), *rootEditableElement);
             }
         }
-        node = nextNode;
     }
 }
 
@@ -590,7 +600,7 @@ void DeleteSelectionCommand::handleGeneralDelete()
 
         // handle deleting all nodes that are completely selected
         while (node && node != m_downstreamEnd.deprecatedNode()) {
-            if (comparePositions(firstPositionInOrBeforeNode(node.get()), m_downstreamEnd) >= 0) {
+            if (firstPositionInOrBeforeNode(node.get()) >= m_downstreamEnd) {
                 // NodeTraversal::nextSkippingChildren just blew past the end position, so stop deleting
                 node = nullptr;
             } else if (!m_downstreamEnd.deprecatedNode()->isDescendantOf(*node)) {
@@ -639,7 +649,7 @@ void DeleteSelectionCommand::handleGeneralDelete()
                             offset = n->computeNodeIndex() + 1;
                     }
                     removeChildrenInRange(*m_downstreamEnd.deprecatedNode(), offset, m_downstreamEnd.deprecatedEditingOffset());
-                    m_downstreamEnd = createLegacyEditingPosition(m_downstreamEnd.deprecatedNode(), offset);
+                    m_downstreamEnd = makeDeprecatedLegacyPosition(m_downstreamEnd.deprecatedNode(), offset);
                 }
             }
         }
@@ -681,15 +691,10 @@ void DeleteSelectionCommand::mergeParagraphs()
     ASSERT(!m_pruneStartBlockIfNecessary);
 
     // FIXME: Deletion should adjust selection endpoints as it removes nodes so that we never get into this state (4099839).
-    if (m_downstreamEnd.isNull() || m_upstreamStart.isNull() || !m_downstreamEnd.anchorNode()->isConnected() || !m_upstreamStart.anchorNode()->isConnected())
-         return;
-
-    // FIXME: The deletion algorithm shouldn't let this happen.
-    if (comparePositions(m_upstreamStart, m_downstreamEnd) > 0)
+    if (m_downstreamEnd.isNull() || m_upstreamStart.isNull() || m_downstreamEnd.isOrphan() || m_upstreamStart.isOrphan())
         return;
 
-    // There's nothing to merge.
-    if (m_upstreamStart == m_downstreamEnd)
+    if (m_upstreamStart >= m_downstreamEnd)
         return;
 
     VisiblePosition startOfParagraphToMove(m_downstreamEnd);
@@ -738,9 +743,13 @@ void DeleteSelectionCommand::mergeParagraphs()
         return;
     }
 
-    auto range = Range::create(document(), startOfParagraphToMove.deepEquivalent().parentAnchoredEquivalent(), endOfParagraphToMove.deepEquivalent().parentAnchoredEquivalent());
-    auto rangeToBeReplaced = Range::create(document(), mergeDestination.deepEquivalent().parentAnchoredEquivalent(), mergeDestination.deepEquivalent().parentAnchoredEquivalent());
-    if (!frame().editor().client()->shouldMoveRangeAfterDelete(range.ptr(), rangeToBeReplaced.ptr()))
+    auto range = makeSimpleRange(startOfParagraphToMove, endOfParagraphToMove);
+    if (!range)
+        return;
+    auto rangeToBeReplaced = makeSimpleRange(mergeDestination);
+    if (!rangeToBeReplaced)
+        return;
+    if (!document().editor().client()->shouldMoveRangeAfterDelete(*range, *rangeToBeReplaced))
         return;
 
     // moveParagraphs will insert placeholders if it removes blocks that would require their use, don't let block
@@ -750,7 +759,10 @@ void DeleteSelectionCommand::mergeParagraphs()
     moveParagraph(startOfParagraphToMove, endOfParagraphToMove, mergeDestination, false, !paragraphToMergeIsEmpty);
     m_needPlaceholder = needPlaceholder;
     // The endingPosition was likely clobbered by the move, so recompute it (moveParagraph selects the moved paragraph).
-    m_endingPosition = endingSelection().start();
+
+    // FIXME (Bug 211793): endingSelection() becomes disconnected in moveParagraph
+    if (auto* anchorNode = endingSelection().start().anchorNode(); anchorNode && anchorNode->isConnected())
+        m_endingPosition = endingSelection().start();
 }
 
 void DeleteSelectionCommand::removePreviouslySelectedEmptyTableRows()
@@ -785,7 +797,7 @@ void DeleteSelectionCommand::removePreviouslySelectedEmptyTableRows()
                 // FIXME: We probably shouldn't remove m_endTableRow unless it's fully selected, even if it is empty.
                 // We'll need to start adjusting the selection endpoints during deletion to know whether or not m_endTableRow
                 // was fully selected here.
-                CompositeEditCommand::removeNode(*m_endTableRow);
+                removeNodeUpdatingStates(*m_endTableRow, DoNotAssumeContentIsAlwaysEditable);
             }
         }
     }
@@ -814,7 +826,7 @@ void DeleteSelectionCommand::calculateTypingStyleAfterDelete()
     // In this case if we start typing, the new characters should have the same style as the just deleted ones,
     // but, if we change the selection, come back and start typing that style should be lost.  Also see
     // preserveTypingStyle() below.
-    frame().selection().setTypingStyle(m_typingStyle.copyRef());
+    document().selection().setTypingStyle(m_typingStyle.copyRef());
 }
 
 void DeleteSelectionCommand::clearTransientState()
@@ -838,12 +850,11 @@ String DeleteSelectionCommand::originalStringForAutocorrectionAtBeginningOfSelec
     if (!isStartOfWord(startOfSelection))
         return String();
 
-    VisiblePosition nextPosition = startOfSelection.next();
-    if (nextPosition.isNull())
+    auto rangeOfFirstCharacter = makeSimpleRange(startOfSelection, startOfSelection.next());
+    if (!rangeOfFirstCharacter)
         return String();
 
-    auto rangeOfFirstCharacter = Range::create(document(), startOfSelection.deepEquivalent(), nextPosition.deepEquivalent());
-    for (auto* marker : document().markers().markersInRange(rangeOfFirstCharacter, DocumentMarker::Autocorrected)) {
+    for (auto* marker : document().markers().markersInRange(*rangeOfFirstCharacter, DocumentMarker::Autocorrected)) {
         int startOffset = marker->startOffset();
         if (startOffset == startOfSelection.deepEquivalent().offsetInContainerNode())
             return marker->description();
@@ -885,11 +896,11 @@ void DeleteSelectionCommand::doApply()
     if (!m_replace) {
         Element* textControl = enclosingTextFormControl(m_selectionToDelete.start());
         if (textControl && textControl->focused())
-            frame().editor().textWillBeDeletedInTextField(textControl);
+            document().editor().textWillBeDeletedInTextField(textControl);
     }
 
     // save this to later make the selection with
-    EAffinity affinity = m_selectionToDelete.affinity();
+    auto affinity = m_selectionToDelete.affinity();
 
     Position downstreamEnd = m_selectionToDelete.end().downstream();
     m_needPlaceholder = isStartOfParagraph(m_selectionToDelete.visibleStart(), CanCrossEditingBoundary)
@@ -936,11 +947,18 @@ void DeleteSelectionCommand::doApply()
     if (m_needPlaceholder) {
         if (m_sanitizeMarkup)
             removeRedundantBlocks();
+
+        // FIXME (Bug 212723): m_endingPosition becomes disconnected in moveParagraph()
+        // because it is ancestor of the deleted element and gets pruned in removeNodeAndPruneAncestors().
+        // Either removeNodeAndPruneAncestors() should not remove ending position or we should find
+        // a different ending position.
+        if (!m_endingPosition.containerNode() || !m_endingPosition.containerNode()->isConnected())
+            return;
         insertNodeAt(HTMLBRElement::create(document()), m_endingPosition);
     }
 
     bool shouldRebalaceWhiteSpace = true;
-    if (!frame().editor().behavior().shouldRebalanceWhiteSpacesInSecureField()) {
+    if (!document().editor().behavior().shouldRebalanceWhiteSpacesInSecureField()) {
         Node* node = m_endingPosition.deprecatedNode();
         if (is<Text>(node)) {
             Text& textNode = downcast<Text>(*node);
@@ -954,7 +972,7 @@ void DeleteSelectionCommand::doApply()
     calculateTypingStyleAfterDelete();
 
     if (!originalString.isEmpty())
-        frame().editor().deletedAutocorrectionAtPosition(m_endingPosition, originalString);
+        document().editor().deletedAutocorrectionAtPosition(m_endingPosition, originalString);
 
     setEndingSelection(VisibleSelection(m_endingPosition, affinity, endingSelection().isDirectional()));
     clearTransientState();

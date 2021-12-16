@@ -1,4 +1,4 @@
-# Copyright (C) 2011-2018 Apple Inc. All rights reserved.
+# Copyright (C) 2011-2020 Apple Inc. All rights reserved.
 # Copyright (C) 2013 University of Szeged. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -262,9 +262,16 @@ def armLowerLabelReferences(list)
             when "leai", "leap", "leaq"
                 labelRef = node.operands[0]
                 if labelRef.is_a? LabelReference
-                    raise unless labelRef.offset == 0
                     tmp = Tmp.new(node.codeOrigin, :gpr)
                     newList << Instruction.new(codeOrigin, "globaladdr", [LabelReference.new(node.codeOrigin, labelRef.label), node.operands[1], tmp])
+                    # FIXME: This check against 255 is just the simplest check we can do. ARM is capable of encoding some larger constants using
+                    # rotation (subject to some special rules). Perhaps we can add the more comprehensive encoding check here.
+                    if labelRef.offset > 255
+                        newList << Instruction.new(codeOrigin, "move", [Immediate.new(node.codeOrigin, labelRef.offset), tmp])
+                        newList << Instruction.new(codeOrigin, "addp", [tmp, node.operands[1]])
+                    elsif labelRef.offset > 0
+                        newList << Instruction.new(codeOrigin, "addp", [Immediate.new(node.codeOrigin, labelRef.offset), node.operands[1]])
+                    end
                 else
                     newList << node
                 end
@@ -671,6 +678,16 @@ class Instruction
             temp = operands[2]
 
             uid = $asm.newUID
+
+            $asm.putStr("#if OS(DARWIN)")
+            $asm.puts "movw #{operands[1].armOperand}, :lower16:(L#{operands[0].asmLabel}_#{uid}$non_lazy_ptr-(L_offlineasm_#{uid}+4))"
+            $asm.puts "movt #{operands[1].armOperand}, :upper16:(L#{operands[0].asmLabel}_#{uid}$non_lazy_ptr-(L_offlineasm_#{uid}+4))"
+            $asm.puts "L_offlineasm_#{uid}:"
+            $asm.puts "add #{operands[1].armOperand}, pc"
+            $asm.puts "ldr #{operands[1].armOperand}, [#{operands[1].armOperand}]"
+
+            # On Linux, use ELF GOT relocation specifiers.
+            $asm.putStr("#elif OS(LINUX)")
             gotLabel = Assembler.localLabelReference("offlineasm_arm_got_#{uid}")
             offsetLabel = Assembler.localLabelReference("offlineasm_arm_got_offset_#{uid}")
 
@@ -680,12 +697,31 @@ class Instruction
             $asm.puts "add #{dest.armOperand}, pc, #{dest.armOperand}"
             $asm.puts "ldr #{dest.armOperand}, [#{dest.armOperand}, #{temp.armOperand}]"
 
+            # Throw a compiler error everywhere else.
+            $asm.putStr("#else")
+            $asm.putStr("#error Missing globaladdr implementation")
+            $asm.putStr("#endif")
+
             offset = 4
 
             $asm.deferNextLabelAction {
+                $asm.putStr("#if OS(DARWIN)")
+                $asm.puts ".section __DATA,__nl_symbol_ptr,non_lazy_symbol_pointers"
+                $asm.puts ".p2align 2"
+
+                $asm.puts "L#{operands[0].asmLabel}_#{uid}$non_lazy_ptr:"
+                $asm.puts ".indirect_symbol #{operands[0].asmLabel}"
+                $asm.puts ".long 0"
+
+                $asm.puts ".text"
+                $asm.puts ".align 4"
+
+                $asm.putStr("#elif OS(LINUX)")
                 $asm.puts "#{gotLabel}:"
                 $asm.puts ".word _GLOBAL_OFFSET_TABLE_-(#{offsetLabel}+#{offset})"
                 $asm.puts ".word #{labelRef.asmLabel}(GOT)"
+
+                $asm.putStr("#endif")
             }
         else
             lowerDefault

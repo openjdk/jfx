@@ -26,7 +26,7 @@
 
 #include "config.h"
 
-#if ENABLE(GRAPHICS_CONTEXT_GL) && (USE(OPENGL) || USE(OPENGL_ES))
+#if ENABLE(WEBGL) && !USE(ANGLE)
 #include "ExtensionsGLOpenGLCommon.h"
 
 #include "ANGLEWebKitBridge.h"
@@ -128,7 +128,7 @@ void ExtensionsGLOpenGLCommon::ensureEnabled(const String& name)
         ShBuiltInResources ANGLEResources = compiler.getResources();
         if (!ANGLEResources.EXT_draw_buffers) {
             ANGLEResources.EXT_draw_buffers = 1;
-            m_context->getIntegerv(ExtensionsGL::MAX_DRAW_BUFFERS_EXT, &ANGLEResources.MaxDrawBuffers);
+            ANGLEResources.MaxDrawBuffers = m_context->getInteger(ExtensionsGL::MAX_DRAW_BUFFERS_EXT);
             compiler.setResources(ANGLEResources);
         }
     } else if (name == "GL_EXT_shader_texture_lod") {
@@ -172,7 +172,7 @@ String ExtensionsGLOpenGLCommon::getTranslatedShaderSourceANGLE(PlatformGLObject
 
     ANGLEWebKitBridge& compiler = m_context->m_compiler;
 
-    m_context->getShaderiv(shader, GraphicsContextGL::SHADER_TYPE, &GLshaderType);
+    GLshaderType = m_context->getShaderi(shader, GraphicsContextGL::SHADER_TYPE);
 
     if (GLshaderType == GraphicsContextGL::VERTEX_SHADER)
         shaderType = SHADER_TYPE_VERTEX;
@@ -190,7 +190,7 @@ String ExtensionsGLOpenGLCommon::getTranslatedShaderSourceANGLE(PlatformGLObject
 
     String translatedShaderSource;
     String shaderInfoLog;
-    uint64_t extraCompileOptions = SH_CLAMP_INDIRECT_ARRAY_BOUNDS | SH_UNFOLD_SHORT_CIRCUIT | SH_INIT_OUTPUT_VARIABLES | SH_ENFORCE_PACKING_RESTRICTIONS | SH_LIMIT_EXPRESSION_COMPLEXITY | SH_LIMIT_CALL_STACK_DEPTH | SH_INITIALIZE_UNINITIALIZED_LOCALS;
+    GCGLuint64 extraCompileOptions = SH_CLAMP_INDIRECT_ARRAY_BOUNDS | SH_UNFOLD_SHORT_CIRCUIT | SH_INIT_OUTPUT_VARIABLES | SH_ENFORCE_PACKING_RESTRICTIONS | SH_LIMIT_EXPRESSION_COMPLEXITY | SH_LIMIT_CALL_STACK_DEPTH | SH_INITIALIZE_UNINITIALIZED_LOCALS;
 
     if (m_requiresBuiltInFunctionEmulation)
         extraCompileOptions |= SH_EMULATE_ABS_INT_FUNCTION;
@@ -214,7 +214,7 @@ String ExtensionsGLOpenGLCommon::getTranslatedShaderSourceANGLE(PlatformGLObject
 
 void ExtensionsGLOpenGLCommon::initializeAvailableExtensions()
 {
-#if (PLATFORM(COCOA) && USE(OPENGL)) || (PLATFORM(GTK) && !USE(OPENGL_ES))
+#if PLATFORM(GTK) && !USE(OPENGL_ES)
     if (m_useIndexedGetString) {
         GLint numExtensions = 0;
         ::glGetIntegerv(GL_NUM_EXTENSIONS, &numExtensions);
@@ -244,16 +244,16 @@ void ExtensionsGLOpenGLCommon::readnPixelsEXT(int, int, GCGLsizei, GCGLsizei, GC
     m_context->synthesizeGLError(GL_INVALID_OPERATION);
 }
 
-void ExtensionsGLOpenGLCommon::getnUniformfvEXT(GCGLuint, int, GCGLsizei, float *)
+void ExtensionsGLOpenGLCommon::getnUniformfvEXT(GCGLuint, int, GCGLsizei, GCGLfloat *)
 {
     m_context->synthesizeGLError(GL_INVALID_OPERATION);
 }
 
-void ExtensionsGLOpenGLCommon::getnUniformivEXT(GCGLuint, int, GCGLsizei, int *)
+void ExtensionsGLOpenGLCommon::getnUniformivEXT(GCGLuint, int, GCGLsizei, GCGLint *)
 {
     m_context->synthesizeGLError(GL_INVALID_OPERATION);
 }
 
 } // namespace WebCore
 
-#endif // ENABLE(GRAPHICS_CONTEXT_GL) && (USE(OPENGL) || USE(OPENGL_ES))
+#endif // ENABLE(WEBGL) && !USE(ANGLE)

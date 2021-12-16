@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2009-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -37,9 +37,11 @@
 #include "PlatformLayer.h"
 #include "Region.h"
 #include "ScrollableArea.h"
+#include "ScrollTypes.h"
 #include "TimingFunction.h"
 #include "TransformOperations.h"
 #include "WindRule.h"
+#include <wtf/EnumTraits.h>
 #include <wtf/Function.h>
 #include <wtf/TypeCasts.h>
 
@@ -129,6 +131,13 @@ public:
         : AnimationValue(keyTime, timingFunction)
         , m_value(value)
     {
+    }
+
+    TransformAnimationValue(double keyTime, TransformOperation* value, TimingFunction* timingFunction = nullptr)
+        : AnimationValue(keyTime, timingFunction)
+    {
+        if (value)
+            m_value.operations().append(value);
     }
 
     std::unique_ptr<AnimationValue> clone() const override
@@ -323,6 +332,11 @@ public:
     ScrollOffset scrollOffset() const { return m_scrollOffset; }
     void setScrollOffset(const ScrollOffset&, ShouldSetNeedsDisplay = SetNeedsDisplay);
 
+#if ENABLE(SCROLLING_THREAD)
+    ScrollingNodeID scrollingNodeID() const { return m_scrollingNodeID; }
+    virtual void setScrollingNodeID(ScrollingNodeID nodeID) { m_scrollingNodeID = nodeID; }
+#endif
+
     // The position of the layer (the location of its top-left corner in its parent)
     const FloatPoint& position() const { return m_position; }
     virtual void setPosition(const FloatPoint& p) { m_approximatePosition = WTF::nullopt; m_position = p; }
@@ -378,6 +392,11 @@ public:
 
     bool usesDisplayListDrawing() const { return m_usesDisplayListDrawing; }
     virtual void setUsesDisplayListDrawing(bool b) { m_usesDisplayListDrawing = b; }
+
+#if HAVE(CORE_ANIMATION_SEPARATED_LAYERS)
+    bool isSeparated() const { return m_separated; }
+    virtual void setSeparated(bool b) { m_separated = b; }
+#endif
 
     bool needsBackdrop() const { return !m_backdropFilters.isEmpty(); }
 
@@ -446,10 +465,14 @@ public:
     FloatRoundedRect contentsClippingRect() const { return m_contentsClippingRect; }
     virtual void setContentsClippingRect(const FloatRoundedRect& roundedRect) { m_contentsClippingRect = roundedRect; }
 
+    // If true, contentsClippingRect is used to clip child GraphicsLayers.
+    bool contentsRectClipsDescendants() const { return m_contentsRectClipsDescendants; }
+    virtual void setContentsRectClipsDescendants(bool b) { m_contentsRectClipsDescendants = b; }
+
     // Set a rounded rect that is used to clip this layer and its descendants (implies setting masksToBounds).
-    // Returns false if the platform can't support this rounded clip, and we should fall back to painting a mask.
+    // Consult supportsRoundedClip() to know whether non-zero radii are supported.
     FloatRoundedRect maskToBoundsRect() const { return m_masksToBoundsRect; };
-    virtual bool setMasksToBoundsRect(const FloatRoundedRect& roundedRect) { m_masksToBoundsRect = roundedRect; return false; }
+    virtual void setMasksToBoundsRect(const FloatRoundedRect&);
 
     Path shapeLayerPath() const;
     virtual void setShapeLayerPath(const Path&);
@@ -463,14 +486,11 @@ public:
     // Transitions are identified by a special animation name that cannot clash with a keyframe identifier.
     static String animationNameForTransition(AnimatedPropertyID);
 
-    // Return true if the animation is handled by the compositing system. If this returns
-    // false, the animation will be run by CSSAnimationController.
-    // These methods handle both transitions and keyframe animations.
+    // Return true if the animation is handled by the compositing system.
     virtual bool addAnimation(const KeyframeValueList&, const FloatSize& /*boxSize*/, const Animation*, const String& /*animationName*/, double /*timeOffset*/)  { return false; }
     virtual void pauseAnimation(const String& /*animationName*/, double /*timeOffset*/) { }
-    virtual void seekAnimation(const String& /*animationName*/, double /*timeOffset*/) { }
     virtual void removeAnimation(const String& /*animationName*/) { }
-
+    virtual void transformRelatedPropertyDidChange() { }
     WEBCORE_EXPORT virtual void suspendAnimations(MonotonicTime);
     WEBCORE_EXPORT virtual void resumeAnimations();
 
@@ -489,21 +509,11 @@ public:
         Media,
         Canvas,
         BackgroundColor,
-        Plugin,
-        EmbeddedView
+        Plugin
     };
-
-    enum class ContentsLayerEmbeddedViewType : uint8_t {
-        None = 0,
-        EditableImage,
-    };
-
-    using EmbeddedViewID = uint64_t;
-    static EmbeddedViewID nextEmbeddedViewID();
 
     // Pass an invalid color to remove the contents layer.
     virtual void setContentsToSolidColor(const Color&) { }
-    virtual void setContentsToEmbeddedView(GraphicsLayer::ContentsLayerEmbeddedViewType, EmbeddedViewID) { }
     virtual void setContentsToPlatformLayer(PlatformLayer*, ContentsLayerPurpose) { }
     virtual bool usesContentsLayer() const { return false; }
 
@@ -602,14 +612,13 @@ public:
     void resetTrackedRepaints();
     void addRepaintRect(const FloatRect&);
 
+    static bool supportsRoundedClip();
     static bool supportsBackgroundColorContent();
     static bool supportsLayerType(Type);
     static bool supportsContentsTiling();
     static bool supportsSubpixelAntialiasedLayerText();
 
     void updateDebugIndicators();
-
-    virtual bool canThrottleLayerFlush() const { return false; }
 
     virtual bool isGraphicsLayerCA() const { return false; }
     virtual bool isGraphicsLayerCARemote() const { return false; }
@@ -686,6 +695,10 @@ protected:
     FilterOperations m_filters;
     FilterOperations m_backdropFilters;
 
+#if ENABLE(SCROLLING_THREAD)
+    ScrollingNodeID m_scrollingNodeID { 0 };
+#endif
+
 #if ENABLE(CSS_COMPOSITING)
     BlendMode m_blendMode { BlendMode::Normal };
 #endif
@@ -703,6 +716,7 @@ protected:
     bool m_masksToBounds : 1;
     bool m_drawsContent : 1;
     bool m_contentsVisible : 1;
+    bool m_contentsRectClipsDescendants : 1;
     bool m_acceleratesDrawing : 1;
     bool m_usesDisplayListDrawing : 1;
     bool m_appliesPageScale : 1; // Set for the layer which has the page scale applied to it.
@@ -712,6 +726,9 @@ protected:
     bool m_isTrackingDisplayListReplay : 1;
     bool m_userInteractionEnabled : 1;
     bool m_canDetachBackingStore : 1;
+#if HAVE(CORE_ANIMATION_SEPARATED_LAYERS)
+    bool m_separated : 1;
+#endif
 
     int m_repaintCount { 0 };
 
@@ -755,3 +772,18 @@ SPECIALIZE_TYPE_TRAITS_END()
 // Outside the WebCore namespace for ease of invocation from the debugger.
 void showGraphicsLayerTree(const WebCore::GraphicsLayer* layer);
 #endif
+
+namespace WTF {
+
+template<> struct EnumTraits<WebCore::GraphicsLayer::CustomAppearance> {
+    using values = EnumValues<
+        WebCore::GraphicsLayer::CustomAppearance,
+        WebCore::GraphicsLayer::CustomAppearance::None,
+        WebCore::GraphicsLayer::CustomAppearance::ScrollingOverhang,
+        WebCore::GraphicsLayer::CustomAppearance::ScrollingShadow,
+        WebCore::GraphicsLayer::CustomAppearance::LightBackdrop,
+        WebCore::GraphicsLayer::CustomAppearance::DarkBackdrop
+    >;
+};
+
+} // namespace WTF

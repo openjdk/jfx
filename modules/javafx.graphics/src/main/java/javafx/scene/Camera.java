@@ -159,6 +159,9 @@ public abstract class Camera extends Node {
         CameraHelper.initHelper(this);
     }
 
+    /**
+     * Constructor for subclasses to call.
+     */
     protected Camera() {
         InvalidationListener dirtyTransformListener = observable
                 -> NodeHelper.markDirty(this, DirtyBits.NODE_CAMERA_TRANSFORM);

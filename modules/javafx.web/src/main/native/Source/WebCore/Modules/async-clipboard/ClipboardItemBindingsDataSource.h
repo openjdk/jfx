@@ -26,6 +26,7 @@
 #pragma once
 
 #include "ClipboardItemDataSource.h"
+#include "ExceptionCode.h"
 #include "FileReaderLoaderClient.h"
 #include <wtf/Optional.h>
 #include <wtf/Variant.h>
@@ -54,7 +55,7 @@ private:
     void invokeCompletionHandler();
 
     using BufferOrString = Variant<String, Ref<SharedBuffer>>;
-    class ClipboardItemTypeLoader : public FileReaderLoaderClient, public RefCounted<ClipboardItemTypeLoader>, public CanMakeWeakPtr<ClipboardItemTypeLoader> {
+    class ClipboardItemTypeLoader : public FileReaderLoaderClient, public RefCounted<ClipboardItemTypeLoader> {
     public:
         static Ref<ClipboardItemTypeLoader> create(const String& type, CompletionHandler<void()>&& completionHandler)
         {
@@ -80,7 +81,7 @@ private:
         void didStartLoading() final { }
         void didReceiveData() final { }
         void didFinishLoading() final;
-        void didFail(int) final;
+        void didFail(ExceptionCode) final;
 
         String m_type;
         BufferOrString m_data;

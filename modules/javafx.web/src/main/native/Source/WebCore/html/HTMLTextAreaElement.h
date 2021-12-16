@@ -34,6 +34,7 @@ class VisibleSelection;
 class HTMLTextAreaElement final : public HTMLTextFormControlElement {
     WTF_MAKE_ISO_ALLOCATED(HTMLTextAreaElement);
 public:
+    WEBCORE_EXPORT static Ref<HTMLTextAreaElement> create(Document&);
     static Ref<HTMLTextAreaElement> create(const QualifiedName&, Document&, HTMLFormElement*);
 
     unsigned cols() const { return m_cols; }
@@ -54,7 +55,7 @@ public:
     bool tooLong() const final;
     bool isValidValue(const String&) const;
 
-    RefPtr<TextControlInnerTextElement> innerTextElement() const final;
+    WEBCORE_EXPORT RefPtr<TextControlInnerTextElement> innerTextElement() const final;
     RenderStyle createInnerTextStyle(const RenderStyle&) final;
     void copyNonAttributePropertiesFromElement(const Element&) final;
 
@@ -120,7 +121,7 @@ private:
     bool isKeyboardFocusable(KeyboardEvent*) const final;
     void updateFocusAppearance(SelectionRestorationMode, SelectionRevealMode) final;
 
-    void accessKeyAction(bool sendMouseEvents) final;
+    bool accessKeyAction(bool sendMouseEvents) final;
 
     bool shouldUseInputMethod() final;
     bool matchesReadWritePseudoClass() const final;

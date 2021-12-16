@@ -97,6 +97,10 @@ public class ScrollToEvent<T> extends Event {
 
     }
 
+    /**
+     * Gets the target of the scroll-to operation.
+     * @return the target of the scroll-to operation
+     */
     public T getScrollTarget() {
         return scrollTarget;
     }

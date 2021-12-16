@@ -37,7 +37,6 @@
 ALLOW_UNUSED_PARAMETERS_BEGIN
 
 #include <webrtc/api/media_stream_interface.h>
-#include <webrtc/common_video/include/i420_buffer_pool.h>
 
 ALLOW_UNUSED_PARAMETERS_END
 
@@ -51,6 +50,7 @@ class RealtimeOutgoingVideoSource
     : public ThreadSafeRefCounted<RealtimeOutgoingVideoSource, WTF::DestructionThread::Main>
     , public webrtc::VideoTrackSourceInterface
     , private MediaStreamTrackPrivate::Observer
+    , private RealtimeMediaSource::VideoSampleObserver
 #if !RELEASE_LOG_DISABLED
     , private LoggerHelper
 #endif
@@ -71,7 +71,7 @@ public:
         return rtc::RefCountReleaseStatus::kOtherRefsRemained;
     }
 
-    void setApplyRotation(bool shouldApplyRotation) { m_shouldApplyRotation = shouldApplyRotation; }
+    void applyRotation();
 
 protected:
     explicit RealtimeOutgoingVideoSource(Ref<MediaStreamTrackPrivate>&&);
@@ -101,6 +101,9 @@ private:
     void observeSource();
     void unobserveSource();
 
+    using MediaStreamTrackPrivate::Observer::weakPtrFactory;
+    using WeakValueType = MediaStreamTrackPrivate::Observer::WeakValueType;
+
     // Notifier API
     void RegisterObserver(webrtc::ObserverInterface*) final { }
     void UnregisterObserver(webrtc::ObserverInterface*) final { }
@@ -109,6 +112,10 @@ private:
     bool is_screencast() const final { return false; }
     absl::optional<bool> needs_denoising() const final { return absl::optional<bool>(); }
     bool GetStats(Stats*) final { return false; };
+    bool SupportsEncodedOutput() const final { return false; }
+    void GenerateKeyFrame() final { }
+    void AddEncodedSink(rtc::VideoSinkInterface<webrtc::RecordableEncodedFrame>*) final { }
+    void RemoveEncodedSink(rtc::VideoSinkInterface<webrtc::RecordableEncodedFrame>*) final { }
 
     // MediaSourceInterface API
     SourceState state() const final { return SourceState(); }
@@ -125,8 +132,10 @@ private:
     void trackMutedChanged(MediaStreamTrackPrivate&) final { sourceMutedChanged(); }
     void trackEnabledChanged(MediaStreamTrackPrivate&) final { sourceEnabledChanged(); }
     void trackSettingsChanged(MediaStreamTrackPrivate&) final { initializeFromSource(); }
-    void sampleBufferUpdated(MediaStreamTrackPrivate&, MediaSample&) override { }
     void trackEnded(MediaStreamTrackPrivate&) final { }
+
+    // RealtimeMediaSource::VideoSampleObserver API
+    void videoSampleAvailable(MediaSample&) override { }
 
     Ref<MediaStreamTrackPrivate> m_videoSource;
     Timer m_blackFrameTimer;
@@ -134,6 +143,7 @@ private:
 
     mutable RecursiveLock m_sinksLock;
     HashSet<rtc::VideoSinkInterface<webrtc::VideoFrame>*> m_sinks;
+    bool m_areSinksAskingToApplyRotation { false };
 
     bool m_enabled { true };
     bool m_muted { false };

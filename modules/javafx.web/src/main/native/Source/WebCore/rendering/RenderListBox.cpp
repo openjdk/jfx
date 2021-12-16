@@ -49,6 +49,7 @@
 #include "Page.h"
 #include "PaintInfo.h"
 #include "RenderLayer.h"
+#include "RenderLayerScrollableArea.h"
 #include "RenderLayoutState.h"
 #include "RenderScrollbar.h"
 #include "RenderText.h"
@@ -148,7 +149,7 @@ void RenderListBox::updateFromElement()
             if (text.isEmpty())
                 continue;
             text = applyTextTransform(style(), text, ' ');
-            auto textRun = constructTextRun(text, style(), AllowTrailingExpansion);
+            auto textRun = constructTextRun(text, style(), AllowRightExpansion);
             width = std::max(width, selectFont().width(textRun));
         }
         // FIXME: Is ceiling right here, or should we be doing some kind of rounding instead?
@@ -226,23 +227,11 @@ void RenderListBox::computePreferredLogicalWidths()
     m_maxPreferredLogicalWidth = 0;
 
     if (style().width().isFixed() && style().width().value() > 0)
-        m_minPreferredLogicalWidth = m_maxPreferredLogicalWidth = adjustContentBoxLogicalWidthForBoxSizing(style().width().value());
+        m_minPreferredLogicalWidth = m_maxPreferredLogicalWidth = adjustContentBoxLogicalWidthForBoxSizing(style().width());
     else
         computeIntrinsicLogicalWidths(m_minPreferredLogicalWidth, m_maxPreferredLogicalWidth);
 
-    if (style().minWidth().isFixed() && style().minWidth().value() > 0) {
-        m_maxPreferredLogicalWidth = std::max(m_maxPreferredLogicalWidth, adjustContentBoxLogicalWidthForBoxSizing(style().minWidth().value()));
-        m_minPreferredLogicalWidth = std::max(m_minPreferredLogicalWidth, adjustContentBoxLogicalWidthForBoxSizing(style().minWidth().value()));
-    }
-
-    if (style().maxWidth().isFixed()) {
-        m_maxPreferredLogicalWidth = std::min(m_maxPreferredLogicalWidth, adjustContentBoxLogicalWidthForBoxSizing(style().maxWidth().value()));
-        m_minPreferredLogicalWidth = std::min(m_minPreferredLogicalWidth, adjustContentBoxLogicalWidthForBoxSizing(style().maxWidth().value()));
-    }
-
-    LayoutUnit toAdd = horizontalBorderAndPaddingExtent();
-    m_minPreferredLogicalWidth += toAdd;
-    m_maxPreferredLogicalWidth += toAdd;
+    RenderBox::computePreferredLogicalWidths(style().minWidth(), style().maxWidth(), horizontalBorderAndPaddingExtent());
 
     setPreferredLogicalWidthsDirty(false);
 }
@@ -435,7 +424,7 @@ void RenderListBox::paintItemForeground(PaintInfo& paintInfo, const LayoutPoint&
 
     paintInfo.context().setFillColor(textColor);
 
-    TextRun textRun(itemText, 0, 0, AllowTrailingExpansion, itemStyle.direction(), isOverride(itemStyle.unicodeBidi()), true);
+    TextRun textRun(itemText, 0, 0, AllowRightExpansion, itemStyle.direction(), isOverride(itemStyle.unicodeBidi()), true);
     FontCascade itemFont = style().fontCascade();
     LayoutRect r = itemBoundingBoxRect(paintOffset, listIndex);
     r.move(itemOffsetForAlignment(textRun, &itemStyle, itemFont, r));
@@ -743,7 +732,7 @@ int RenderListBox::scrollLeft() const
     return 0;
 }
 
-void RenderListBox::setScrollLeft(int, ScrollType, ScrollClamping)
+void RenderListBox::setScrollLeft(int, const ScrollPositionChangeOptions&)
 {
 }
 
@@ -760,7 +749,7 @@ static void setupWheelEventTestMonitor(RenderListBox& renderer)
     renderer.scrollAnimator().setWheelEventTestMonitor(renderer.page().wheelEventTestMonitor());
 }
 
-void RenderListBox::setScrollTop(int newTop, ScrollType, ScrollClamping)
+void RenderListBox::setScrollTop(int newTop, const ScrollPositionChangeOptions&)
 {
     // Determine an index and scroll to it.
     int index = newTop / itemHeight();
@@ -856,9 +845,9 @@ IntSize RenderListBox::contentsSize() const
     return IntSize(scrollWidth(), scrollHeight());
 }
 
-IntPoint RenderListBox::lastKnownMousePosition() const
+IntPoint RenderListBox::lastKnownMousePositionInView() const
 {
-    return view().frameView().lastKnownMousePosition();
+    return view().frameView().lastKnownMousePositionInView();
 }
 
 bool RenderListBox::isHandlingWheelEvent() const
@@ -873,13 +862,20 @@ bool RenderListBox::shouldSuspendScrollAnimations() const
 
 bool RenderListBox::forceUpdateScrollbarsOnMainThreadForPerformanceTesting() const
 {
-    return settings().forceUpdateScrollbarsOnMainThreadForPerformanceTesting();
+    return settings().scrollingPerformanceTestingEnabled();
 }
 
 ScrollableArea* RenderListBox::enclosingScrollableArea() const
 {
-    // FIXME: Return a RenderLayer that's scrollable.
-    return nullptr;
+    auto* layer = enclosingLayer();
+    if (!layer)
+        return nullptr;
+
+    auto* enclosingScrollableLayer = layer->enclosingScrollableLayer(IncludeSelfOrNot::ExcludeSelf, CrossFrameBoundaries::No);
+    if (!enclosingScrollableLayer)
+        return nullptr;
+
+    return enclosingScrollableLayer->scrollableArea();
 }
 
 bool RenderListBox::isScrollableOrRubberbandable()
@@ -889,7 +885,9 @@ bool RenderListBox::isScrollableOrRubberbandable()
 
 bool RenderListBox::hasScrollableOrRubberbandableAncestor()
 {
-    return enclosingLayer() && enclosingLayer()->hasScrollableOrRubberbandableAncestor();
+    if (auto* scrollableArea = enclosingLayer() ? enclosingLayer()->scrollableArea() : nullptr)
+        return scrollableArea->hasScrollableOrRubberbandableAncestor();
+    return false;
 }
 
 IntRect RenderListBox::scrollableAreaBoundingBox(bool*) const
@@ -905,6 +903,11 @@ bool RenderListBox::usesMockScrollAnimator() const
 void RenderListBox::logMockScrollAnimatorMessage(const String& message) const
 {
     document().addConsoleMessage(MessageSource::Other, MessageLevel::Debug, "RenderListBox: " + message);
+}
+
+String RenderListBox::debugDescription() const
+{
+    return RenderObject::debugDescription();
 }
 
 Ref<Scrollbar> RenderListBox::createScrollbar()

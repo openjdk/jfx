@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -93,10 +93,6 @@ public:
     using ThreadSafeRefCounted<IDBTransaction>::ref;
     using ThreadSafeRefCounted<IDBTransaction>::deref;
 
-    const char* activeDOMObjectName() const final;
-    bool hasPendingActivity() const final;
-    void stop() final;
-
     const IDBTransactionInfo& info() const { return m_info; }
     IDBDatabase& database() { return m_database.get(); }
     const IDBDatabase& database() const { return m_database.get(); }
@@ -153,12 +149,19 @@ public:
 
     void connectionClosedFromServer(const IDBError&);
 
-    void visitReferencedObjectStores(JSC::SlotVisitor&) const;
+    template<typename Visitor> void visitReferencedObjectStores(Visitor&) const;
 
     WEBCORE_EXPORT static std::atomic<unsigned> numberOfIDBTransactions;
 
+    // ActiveDOMObject.
+    void stop() final;
+
 private:
     IDBTransaction(IDBDatabase&, const IDBTransactionInfo&, IDBOpenDBRequest*);
+
+    // ActiveDOMObject.
+    const char* activeDOMObjectName() const final;
+    bool virtualHasPendingActivity() const final;
 
     void commit();
 
@@ -259,7 +262,7 @@ private:
     HashSet<RefPtr<IDBRequest>> m_openRequests;
     RefPtr<IDBRequest> m_currentlyCompletingRequest;
 
-    bool m_contextStopped { false };
+    bool m_isStopped { false };
     bool m_didDispatchAbortOrCommit { false };
 
     uint64_t m_lastWriteOperationID { 0 };

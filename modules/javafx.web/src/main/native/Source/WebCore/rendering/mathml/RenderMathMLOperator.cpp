@@ -107,7 +107,7 @@ LayoutUnit RenderMathMLOperator::minSize() const
 
 LayoutUnit RenderMathMLOperator::maxSize() const
 {
-    LayoutUnit maxSize = intMaxForLayoutUnit; // Default maxsize is "infinity".
+    LayoutUnit maxSize = intMaxForLayoutUnit; // Default maxsize is ∞.
     maxSize = toUserUnits(element().maxSize(), style(), maxSize);
     return std::max<LayoutUnit>(0, maxSize);
 }
@@ -287,6 +287,10 @@ void RenderMathMLOperator::styleDidChange(StyleDifference diff, const RenderStyl
 {
     RenderMathMLBlock::styleDidChange(diff, oldStyle);
     m_mathOperator.reset(style());
+
+    // MathML displaystyle can affect isLargeOperatorInDisplayStyle()
+    if (oldStyle && style().mathStyle() != oldStyle->mathStyle() && !isAnonymous())
+        updateTokenContent();
 }
 
 LayoutUnit RenderMathMLOperator::verticalStretchedOperatorShift() const

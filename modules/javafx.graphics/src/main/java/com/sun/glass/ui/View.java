@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -44,6 +44,7 @@ public abstract class View {
     @Native public final static byte IME_ATTR_TARGET_NOTCONVERTED   = 0x03;
     @Native public final static byte IME_ATTR_INPUT_ERROR           = 0x04;
 
+    @SuppressWarnings("removal")
     final static boolean accessible = AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> {
         String force = System.getProperty("glass.accessible.force");
         if (force != null) return Boolean.parseBoolean(force);
@@ -452,19 +453,13 @@ public abstract class View {
         return _getNativeView(this.ptr);
     }
 
-    /** Only used on Mac when run inside a plugin */
-    public int getNativeRemoteLayerId(String serverName) {
-        Application.checkEventThread();
-        throw new RuntimeException("This operation is not supported on this platform");
-    }
-
     public Window getWindow() {
         Application.checkEventThread();
         return this.window;
     }
 
     protected abstract int _getX(long ptr);
-    /** X coordinate relative to the host (window or applet). */
+    /** X coordinate relative to the host (window). */
     public int getX() {
         Application.checkEventThread();
         checkNotClosed();
@@ -472,7 +467,7 @@ public abstract class View {
     }
 
     protected abstract int _getY(long ptr);
-    /** Y coordinate relative to the host (window or applet). */
+    /** Y coordinate relative to the host (window). */
     public int getY() {
         Application.checkEventThread();
         checkNotClosed();

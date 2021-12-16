@@ -37,6 +37,7 @@
 #include "Event.h"
 #include "JSDOMConvertNumbers.h"
 #include "JSDOMConvertStrings.h"
+#include "JSDOMWindow.h"
 #include "JSEvent.h"
 #include "JSExecState.h"
 #include "JSExecStateInstrumentation.h"
@@ -67,7 +68,7 @@ void JSErrorHandler::handleEvent(ScriptExecutionContext& scriptExecutionContext,
     VM& vm = scriptExecutionContext.vm();
     JSLockHolder lock(vm);
 
-    JSObject* jsFunction = this->jsFunction(scriptExecutionContext);
+    JSObject* jsFunction = this->ensureJSFunction(scriptExecutionContext);
     if (!jsFunction)
         return;
 
@@ -75,14 +76,16 @@ void JSErrorHandler::handleEvent(ScriptExecutionContext& scriptExecutionContext,
     if (!globalObject)
         return;
 
-    CallData callData;
-    CallType callType = jsFunction->methodTable(vm)->getCallData(jsFunction, callData);
-
-    if (callType != CallType::None) {
+    auto callData = getCallData(vm, jsFunction);
+    if (callData.type != CallData::Type::None) {
         Ref<JSErrorHandler> protectedThis(*this);
 
-        Event* savedEvent = globalObject->currentEvent();
-        globalObject->setCurrentEvent(&event);
+        RefPtr<Event> savedEvent;
+        auto* jsFunctionWindow = jsDynamicCast<JSDOMWindow*>(vm, jsFunction->globalObject());
+        if (jsFunctionWindow) {
+            savedEvent = jsFunctionWindow->currentEvent();
+            jsFunctionWindow->setCurrentEvent(&event);
+        }
 
         auto& errorEvent = downcast<ErrorEvent>(event);
 
@@ -97,14 +100,15 @@ void JSErrorHandler::handleEvent(ScriptExecutionContext& scriptExecutionContext,
         VM& vm = globalObject->vm();
         VMEntryScope entryScope(vm, vm.entryScope ? vm.entryScope->globalObject() : globalObject);
 
-        JSExecState::instrumentFunctionCall(&scriptExecutionContext, callType, callData);
+        JSExecState::instrumentFunction(&scriptExecutionContext, callData);
 
         NakedPtr<JSC::Exception> exception;
-        JSValue returnValue = JSExecState::profiledCall(globalObject, JSC::ProfilingReason::Other, jsFunction, callType, callData, globalObject, args, exception);
+        JSValue returnValue = JSExecState::profiledCall(globalObject, JSC::ProfilingReason::Other, jsFunction, callData, globalObject, args, exception);
 
         InspectorInstrumentation::didCallFunction(&scriptExecutionContext);
 
-        globalObject->setCurrentEvent(savedEvent);
+        if (jsFunctionWindow)
+            jsFunctionWindow->setCurrentEvent(savedEvent.get());
 
         if (exception)
             reportException(globalObject, exception);

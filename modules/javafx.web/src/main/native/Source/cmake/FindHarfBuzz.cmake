@@ -65,7 +65,7 @@ This will define the following variables in your project:
 
 #]=======================================================================]
 
-include(FindPkgConfig)
+find_package(PkgConfig QUIET)
 pkg_check_modules(PC_HARFBUZZ QUIET harfbuzz)
 set(HarfBuzz_COMPILE_OPTIONS ${PC_HARFBUZZ_CFLAGS_OTHER})
 set(HarfBuzz_VERSION ${PC_HARFBUZZ_CFLAGS_VERSION})
@@ -106,6 +106,12 @@ endif ()
 if ("ICU" IN_LIST HarfBuzz_FIND_COMPONENTS)
     pkg_check_modules(PC_HARFBUZZ_ICU QUIET harfbuzz-icu)
     set(HarfBuzz_ICU_COMPILE_OPTIONS ${PC_HARFBUZZ_ICU_CFLAGS_OTHER})
+
+    find_path(HarfBuzz_ICU_INCLUDE_DIR
+        NAMES hb-icu.h
+        HINTS ${PC_HARFBUZZ_ICU_INCLUDEDIR} ${PC_HARFBUZZ_ICU_INCLUDE_DIRS}
+        PATH_SUFFIXES harfbuzz
+    )
 
     find_library(HarfBuzz_ICU_LIBRARY
         NAMES ${HarfBuzz_ICU_NAMES} harfbuzz-icu
@@ -164,17 +170,18 @@ if (HarfBuzz_ICU_LIBRARY AND NOT TARGET HarfBuzz::ICU)
     set_target_properties(HarfBuzz::ICU PROPERTIES
         IMPORTED_LOCATION "${HarfBuzz_ICU_LIBRARY}"
         INTERFACE_COMPILE_OPTIONS "${HarfBuzz_ICU_COMPILE_OPTIONS}"
-        INTERFACE_INCLUDE_DIRECTORIES "${HarfBuzz_INCLUDE_DIR}"
+        INTERFACE_INCLUDE_DIRECTORIES "${HarfBuzz_ICU_INCLUDE_DIR}"
     )
 endif ()
 
 mark_as_advanced(
     HarfBuzz_INCLUDE_DIR
+    HarfBuzz_ICU_INCLUDE_DIR
     HarfBuzz_LIBRARY
     HarfBuzz_ICU_LIBRARY
 )
 
 if (HarfBuzz_FOUND)
    set(HarfBuzz_LIBRARIES ${HarfBuzz_LIBRARY} ${HarfBuzz_ICU_LIBRARY})
-   set(HarfBuzz_INCLUDE_DIRS ${HarfBuzz_INCLUDE_DIR})
+   set(HarfBuzz_INCLUDE_DIRS ${HarfBuzz_INCLUDE_DIR} ${HarfBuzz_ICU_INCLUDE_DIR})
 endif ()

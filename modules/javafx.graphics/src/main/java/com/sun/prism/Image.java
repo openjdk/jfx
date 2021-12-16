@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -650,9 +650,9 @@ public class Image implements PlatformImage {
                                                   (IntBuffer) pixelBuffer);
                     break;
             }
-        }
-        if (pixelaccessor != null && pixelScale != 1.0f) {
-            pixelaccessor = new ScaledAccessor<>(pixelaccessor, pixelScale);
+            if (pixelScale != 1.0f) {
+                pixelaccessor = new ScaledAccessor<>(pixelaccessor, pixelScale);
+            }
         }
         return pixelaccessor;
     }

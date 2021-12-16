@@ -33,9 +33,11 @@ from string import Template
 try:
     from .cpp_generator import CppGenerator
     from .cpp_generator_templates import CppGeneratorTemplates as CppTemplates
+    from .models import EnumType, AliasedType
 except ValueError:
     from cpp_generator import CppGenerator
     from cpp_generator_templates import CppGeneratorTemplates as CppTemplates
+    from models import EnumType, AliasedType
 
 log = logging.getLogger('global')
 
@@ -56,7 +58,7 @@ class CppAlternateBackendDispatcherHeaderGenerator(CppGenerator):
         sections = []
         sections.append(self.generate_license())
         sections.append(Template(CppTemplates.AlternateDispatchersHeaderPrelude).substitute(None, **template_args))
-        sections.append('\n'.join([_f for _f in map(self._generate_handler_declarations_for_domain, domains) if _f]))
+        sections.append('\n\n'.join([_f for _f in map(self._generate_handler_declarations_for_domain, domains) if _f]))
         sections.append(Template(CppTemplates.AlternateDispatchersHeaderPostlude).substitute(None, **template_args))
         return '\n\n'.join(sections)
 
@@ -65,7 +67,7 @@ class CppAlternateBackendDispatcherHeaderGenerator(CppGenerator):
     def _generate_secondary_header_includes(self):
         target_framework_name = self.model().framework.name
         header_includes = [
-            ([target_framework_name], (target_framework_name, "%sProtocolTypes.h" % self.protocol_name())),
+            ([target_framework_name], (target_framework_name, "%sProtocolObjects.h" % self.protocol_name())),
             (["JavaScriptCore"], ("JavaScriptCore", "inspector/InspectorFrontendRouter.h")),
             (["JavaScriptCore"], ("JavaScriptCore", "inspector/InspectorBackendDispatcher.h")),
         ]
@@ -87,17 +89,27 @@ class CppAlternateBackendDispatcherHeaderGenerator(CppGenerator):
             'commandDeclarations': '\n'.join(command_declarations),
         }
 
-        return self.wrap_with_guard_for_domain(domain, Template(CppTemplates.AlternateBackendDispatcherHeaderDomainHandlerInterfaceDeclaration).substitute(None, **handler_args))
+        return self.wrap_with_guard_for_condition(domain.condition, Template(CppTemplates.AlternateBackendDispatcherHeaderDomainHandlerInterfaceDeclaration).substitute(None, **handler_args))
 
     def _generate_handler_declaration_for_command(self, command):
         lines = []
-        parameters = ['long callId']
-        for _parameter in command.call_parameters:
-            parameters.append('%s in_%s' % (CppGenerator.cpp_type_for_unchecked_formal_in_parameter(_parameter), _parameter.parameter_name))
+        parameters = ['long protocol_requestId']
+        for parameter in command.call_parameters:
+            parameter_type = parameter.type
+            if isinstance(parameter_type, AliasedType):
+                parameter_type = parameter_type.aliased_type
+            if isinstance(parameter_type, EnumType):
+                parameter_type = parameter_type.primitive_type
+
+            parameter_name = parameter.parameter_name
+            if parameter.is_optional:
+                parameter_name = 'opt_' + parameter_name
+
+            parameters.append('%s %s' % (CppGenerator.cpp_type_for_command_parameter(parameter_type, parameter.is_optional), parameter_name))
 
         command_args = {
             'commandName': command.command_name,
             'parameters': ', '.join(parameters),
         }
         lines.append('    virtual void %(commandName)s(%(parameters)s) = 0;' % command_args)
-        return '\n'.join(lines)
+        return self.wrap_with_guard_for_condition(command.condition, '\n'.join(lines))

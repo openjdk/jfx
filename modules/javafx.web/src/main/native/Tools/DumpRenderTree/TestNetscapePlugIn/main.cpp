@@ -53,11 +53,12 @@ static inline int strcasecmp(const char* s1, const char* s2)
 #endif
 
 extern "C" {
+WTF_EXPORT_DECLARATION
 NPError STDCALL NP_GetEntryPoints(NPPluginFuncs *pluginFuncs);
 }
 
 // Entry points
-extern "C"
+extern "C" WTF_EXPORT_DECLARATION
 NPError STDCALL NP_Initialize(NPNetscapeFuncs *browserFuncs
 #if defined(XP_UNIX)
                               , NPPluginFuncs *pluginFuncs
@@ -114,7 +115,7 @@ NPError STDCALL NP_GetEntryPoints(NPPluginFuncs *pluginFuncs)
     return NPERR_NO_ERROR;
 }
 
-extern "C"
+extern "C" WTF_EXPORT_DECLARATION
 void STDCALL NP_Shutdown(void)
 {
     PluginTest::NP_Shutdown();
@@ -179,7 +180,7 @@ NPError NPP_New(NPMIMEType pluginType, NPP instance, uint16_t mode, int16_t argc
             obj->returnErrorFromNewStream = TRUE;
         else if (strcasecmp(argn[i], "src") == 0 &&
                  strcasecmp(argv[i], "data:application/x-webkit-test-netscape,alertwhenloaded") == 0)
-            executeScript(obj, "alert('Plugin Loaded!')");
+            executeScript(obj, "console.log('Plugin Loaded!')");
         else if (strcasecmp(argn[i], "src") == 0 &&
                  strcasecmp(argv[i], "data:application/x-webkit-test-netscape,logifloaded") == 0) {
             for (int j = 0; j < argc; j++) {
@@ -728,13 +729,13 @@ NPError NPP_SetValue(NPP instance, NPNVariable variable, void *value)
 }
 
 #if defined(XP_UNIX)
-extern "C"
+extern "C" WTF_EXPORT_DECLARATION
 const char* NP_GetMIMEDescription(void)
 {
     return "application/x-webkit-test-netscape:testnetscape:test netscape content;image/png:png:PNG image";
 }
 
-extern "C"
+extern "C" WTF_EXPORT_DECLARATION
 NPError NP_GetValue(NPP instance, NPPVariable variable, void* value)
 {
     return NPP_GetValue(instance, variable, value);

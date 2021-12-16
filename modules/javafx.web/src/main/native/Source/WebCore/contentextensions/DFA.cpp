@@ -51,14 +51,6 @@ size_t DFA::memoryUsed() const
         + nodes.capacity() * sizeof(DFANode);
 }
 
-void DFA::shrinkToFit()
-{
-    nodes.shrinkToFit();
-    actions.shrinkToFit();
-    transitionRanges.shrinkToFit();
-    transitionDestinations.shrinkToFit();
-}
-
 void DFA::minimize()
 {
     DFAMinimizer::minimize(*this);
@@ -98,7 +90,7 @@ static void printTransitions(const DFA& dfa, unsigned sourceNodeId)
     if (transitions.begin() == transitions.end())
         return;
 
-    HashMap<unsigned, Vector<uint16_t>, DefaultHash<unsigned>::Hash, WTF::UnsignedWithZeroKeyHashTraits<unsigned>> transitionsPerTarget;
+    HashMap<unsigned, Vector<uint16_t>, DefaultHash<unsigned>, WTF::UnsignedWithZeroKeyHashTraits<unsigned>> transitionsPerTarget;
 
     // First, we build the list of transitions coming to each target node.
     for (const auto& transition : transitions) {
@@ -113,14 +105,14 @@ static void printTransitions(const DFA& dfa, unsigned sourceNodeId)
     for (const auto& transitionPerTarget : transitionsPerTarget) {
         dataLogF("        %d -> %d [label=\"", sourceNodeId, transitionPerTarget.key);
 
-        Vector<uint16_t> incommingCharacters = transitionPerTarget.value;
-        std::sort(incommingCharacters.begin(), incommingCharacters.end());
+        Vector<uint16_t> incomingCharacters = transitionPerTarget.value;
+        std::sort(incomingCharacters.begin(), incomingCharacters.end());
 
-        char rangeStart = incommingCharacters.first();
+        char rangeStart = incomingCharacters.first();
         char rangeEnd = rangeStart;
         bool first = true;
-        for (unsigned sortedTransitionIndex = 1; sortedTransitionIndex < incommingCharacters.size(); ++sortedTransitionIndex) {
-            char nextChar = incommingCharacters[sortedTransitionIndex];
+        for (unsigned sortedTransitionIndex = 1; sortedTransitionIndex < incomingCharacters.size(); ++sortedTransitionIndex) {
+            char nextChar = incomingCharacters[sortedTransitionIndex];
             if (nextChar == rangeEnd+1) {
                 rangeEnd = nextChar;
                 continue;

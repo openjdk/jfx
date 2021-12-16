@@ -30,6 +30,7 @@ namespace WebCore {
 class ControlStates;
 class KeyframeList;
 class RenderBlock;
+class RenderStyle;
 class RenderTreeBuilder;
 
 class RenderElement : public RenderObject {
@@ -43,6 +44,7 @@ public:
     bool hasInitializedStyle() const { return m_hasInitializedStyle; }
 
     const RenderStyle& style() const { return m_style; }
+    const RenderStyle* parentStyle() const { return !m_parent ? nullptr : &m_parent->style(); }
     const RenderStyle& firstLineStyle() const;
 
     // FIXME: Style shouldn't be mutated.
@@ -68,6 +70,7 @@ public:
     RenderObject* firstChild() const { return m_firstChild; }
     RenderObject* lastChild() const { return m_lastChild; }
 
+    // Note that even if these 2 "canContain" functions return true for a particular renderer, it does not necessarily mean the renderer is the containing block (see containingBlockForAbsolute(Fixed)Position).
     bool canContainFixedPositionObjects() const;
     bool canContainAbsolutelyPositionedObjects() const;
 
@@ -129,6 +132,7 @@ public:
     bool repaintAfterLayoutIfNeeded(const RenderLayerModelObject* repaintContainer, const LayoutRect& oldBounds, const LayoutRect& oldOutlineBox, const LayoutRect* newBoundsPtr = nullptr, const LayoutRect* newOutlineBoxPtr = nullptr);
 
     bool borderImageIsLoadedAndCanBeRendered() const;
+    bool isVisibleIgnoringGeometry() const;
     bool mayCauseRepaintInsideViewport(const IntRect* visibleRect = nullptr) const;
     bool isVisibleInDocumentRect(const IntRect& documentRect) const;
 
@@ -153,10 +157,14 @@ public:
 
     bool checkForRepaintDuringLayout() const;
 
-    // anchorRect() is conceptually similar to absoluteBoundingBoxRect(), but is intended for scrolling to an anchor.
-    // For inline renderers, this gets the logical top left of the first leaf child and the logical bottom right of the
-    // last leaf child, converts them to absolute coordinates, and makes a box out of them.
+    // absoluteAnchorRect() is conceptually similar to absoluteBoundingBoxRect(), but is intended for scrolling to an
+    // anchor. For inline renderers, this gets the logical top left of the first leaf child and the logical bottom
+    // right of the last leaf child, converts them to absolute coordinates, and makes a box out of them.
     LayoutRect absoluteAnchorRect(bool* insideFixed = nullptr) const;
+
+    // absoluteAnchorRectWithScrollMargin() is similar to absoluteAnchorRect, but it also takes into account any
+    // CSS scroll-margin that is set in the style of this RenderElement.
+    virtual LayoutRect absoluteAnchorRectWithScrollMargin(bool* insideFixed = nullptr) const;
 
     bool hasFilter() const { return style().hasFilter(); }
     bool hasBackdropFilter() const
@@ -183,6 +191,9 @@ public:
     VisibleInViewportState visibleInViewportState() const { return static_cast<VisibleInViewportState>(m_visibleInViewportState); }
     void setVisibleInViewportState(VisibleInViewportState);
     virtual void visibleInViewportStateChanged();
+
+    bool didContibuteToVisuallyNonEmptyPixelCount() const { return m_didContributeToVisuallyNonEmptyPixelCount; }
+    void setDidContibuteToVisuallyNonEmptyPixelCount() { m_didContributeToVisuallyNonEmptyPixelCount = true; }
 
     bool repaintForPausedImageAnimationsIfNeeded(const IntRect& visibleRect, CachedImage&);
     bool hasPausedImageAnimations() const { return m_hasPausedImageAnimations; }
@@ -222,16 +233,13 @@ public:
     RenderObject* attachRendererInternal(RenderPtr<RenderObject> child, RenderObject* beforeChild);
     RenderPtr<RenderObject> detachRendererInternal(RenderObject&);
 
-    virtual bool startTransition(double /* timeOffset */, CSSPropertyID, const RenderStyle* /* fromStyle */, const RenderStyle* /* toStyle */) { return false; }
-    virtual void transitionPaused(double /* timeOffset */, CSSPropertyID) { }
-    virtual void transitionFinished(CSSPropertyID) { }
-
     virtual bool startAnimation(double /* timeOffset */, const Animation&, const KeyframeList&) { return false; }
     virtual void animationPaused(double /* timeOffset */, const String& /* name */) { }
-    virtual void animationSeeked(double /* timeOffset */, const String& /* name */) { }
     virtual void animationFinished(const String& /* name */) { }
+    virtual void transformRelatedPropertyDidChange() { }
 
     virtual void suspendAnimations(MonotonicTime = MonotonicTime()) { }
+    std::unique_ptr<RenderStyle> animatedStyle();
 
 protected:
     enum BaseTypeFlag {
@@ -256,12 +264,15 @@ protected:
     void setFirstChild(RenderObject* child) { m_firstChild = child; }
     void setLastChild(RenderObject* child) { m_lastChild = child; }
 
+    bool repaintBeforeStyleChange(StyleDifference, const RenderStyle& oldStyle, const RenderStyle& newStyle);
+
     virtual void styleWillChange(StyleDifference, const RenderStyle& newStyle);
     virtual void styleDidChange(StyleDifference, const RenderStyle* oldStyle);
 
     void insertedIntoTree() override;
     void willBeRemovedFromTree() override;
     void willBeDestroyed() override;
+    void notifyFinished(CachedResource&, const NetworkLoadMetrics&) override;
 
     void setRenderInlineAlwaysCreatesLineBoxes(bool b) { m_renderInlineAlwaysCreatesLineBoxes = b; }
     bool renderInlineAlwaysCreatesLineBoxes() const { return m_renderInlineAlwaysCreatesLineBoxes; }
@@ -318,7 +329,9 @@ private:
 
     bool canDestroyDecodedData() final { return !isVisibleInViewport(); }
     VisibleInViewportState imageFrameAvailable(CachedImage&, ImageAnimatingState, const IntRect* changeRect) final;
+    VisibleInViewportState imageVisibleInViewport(const Document&) const final;
     void didRemoveCachedImageClient(CachedImage&) final;
+    void scheduleRenderingUpdateForImage(CachedImage&) final;
 
     bool getLeadingCorner(FloatPoint& output, bool& insideFixed) const;
     bool getTrailingCorner(FloatPoint& output, bool& insideFixed) const;
@@ -349,6 +362,8 @@ private:
 
     unsigned m_isRegisteredForVisibleInViewportCallback : 1;
     unsigned m_visibleInViewportState : 2;
+
+    unsigned m_didContributeToVisuallyNonEmptyPixelCount : 1;
 
     RenderObject* m_firstChild;
     RenderObject* m_lastChild;

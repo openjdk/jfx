@@ -31,6 +31,8 @@
 #include "WebGLContextGroup.h"
 #include "WebGLRenderingContextBase.h"
 #include <JavaScriptCore/ArrayBuffer.h>
+#include <wtf/Lock.h>
+#include <wtf/Locker.h>
 
 namespace WebCore {
 
@@ -48,10 +50,13 @@ WebGLBuffer::WebGLBuffer(WebGLRenderingContextBase& ctx)
 
 WebGLBuffer::~WebGLBuffer()
 {
-    deleteObject(0);
+    if (!hasGroupOrContext())
+        return;
+
+    runDestructor();
 }
 
-void WebGLBuffer::deleteObjectImpl(GraphicsContextGLOpenGL* context3d, PlatformGLObject object)
+void WebGLBuffer::deleteObjectImpl(const AbstractLocker&, GraphicsContextGL* context3d, PlatformGLObject object)
 {
     context3d->deleteBuffer(object);
 }
@@ -256,11 +261,6 @@ void WebGLBuffer::setCachedMaxIndex(GCGLenum type, unsigned value)
 void WebGLBuffer::setTarget(GCGLenum target)
 {
     m_target = target;
-
-    if (target == GraphicsContextGL::ARRAY_BUFFER || target == GraphicsContextGL::ELEMENT_ARRAY_BUFFER) {
-        ASSERT(!m_arrayBufferOrElementArrayBuffer || target == m_arrayBufferOrElementArrayBuffer);
-        m_arrayBufferOrElementArrayBuffer = target;
-    }
 }
 
 void WebGLBuffer::clearCachedMaxIndices()

@@ -25,8 +25,7 @@
 
 #pragma once
 
-#if USE(REQUEST_ANIMATION_FRAME_DISPLAY_MONITOR)
-
+#include "AnimationFrameRate.h"
 #include "PlatformScreen.h"
 #include <wtf/HashSet.h>
 #include <wtf/Lock.h>
@@ -45,6 +44,8 @@ public:
 
     virtual void displayLinkFired() { }
 
+    virtual void setPreferredFramesPerSecond(FramesPerSecond) { }
+
     // Return true if callback request was scheduled, false if it couldn't be
     // (e.g., hardware refresh is not available)
     virtual bool requestRefreshCallback() = 0;
@@ -61,7 +62,7 @@ public:
 
     bool shouldBeTerminated() const
     {
-        const int maxInactiveFireCount = 20;
+        const int maxInactiveFireCount = 1;
         return !m_scheduled && m_unscheduledFireCount > maxInactiveFireCount;
     }
 
@@ -100,6 +101,3 @@ private:
 };
 
 }
-
-#endif // USE(REQUEST_ANIMATION_FRAME_DISPLAY_MONITOR)
-

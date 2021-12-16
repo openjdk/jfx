@@ -38,17 +38,19 @@ namespace Wasm {
 
 class LLIntCallee;
 class EmbedderEntrypointCallee;
+class StreamingCompiler;
 
-using EmbedderEntrypointCalleeMap = HashMap<uint32_t, RefPtr<EmbedderEntrypointCallee>, typename DefaultHash<uint32_t>::Hash, WTF::UnsignedWithZeroKeyHashTraits<uint32_t>>;
+using EmbedderEntrypointCalleeMap = HashMap<uint32_t, RefPtr<EmbedderEntrypointCallee>, DefaultHash<uint32_t>, WTF::UnsignedWithZeroKeyHashTraits<uint32_t>>;
 
 class LLIntPlan final : public EntryPlan {
     using Base = EntryPlan;
 
 public:
-    JS_EXPORT_PRIVATE LLIntPlan(Context*, Vector<uint8_t>&&, AsyncWork, CompletionTask&&);
+    JS_EXPORT_PRIVATE LLIntPlan(Context*, Vector<uint8_t>&&, CompilerMode, CompletionTask&&);
     LLIntPlan(Context*, Ref<ModuleInformation>, const Ref<LLIntCallee>*, CompletionTask&&);
+    LLIntPlan(Context*, Ref<ModuleInformation>, CompilerMode, CompletionTask&&); // For StreamingCompiler.
 
-    MacroAssemblerCodeRef<B3CompilationPtrTag>&& takeEntryThunks()
+    MacroAssemblerCodeRef<JITCompilationPtrTag>&& takeEntryThunks()
     {
         RELEASE_ASSERT(!failed() && !hasWork());
         return WTFMove(m_entryThunks);
@@ -66,26 +68,30 @@ public:
         return WTFMove(m_embedderCallees);
     }
 
-    bool hasWork() const override
+    bool hasWork() const final
     {
         return m_state < State::Compiled;
     }
 
-    void work(CompilationEffort) override;
+    void work(CompilationEffort) final;
 
-    bool didReceiveFunctionData(unsigned, const FunctionData&) override;
+    bool didReceiveFunctionData(unsigned, const FunctionData&) final;
 
-protected:
-    bool prepareImpl() override;
-    void compileFunction(uint32_t functionIndex) override;
-    void didCompleteCompilation(const AbstractLocker&) override;
+    void compileFunction(uint32_t functionIndex) final;
+
+    void completeInStreaming();
+    void didCompileFunctionInStreaming();
+    void didFailInStreaming(String&&);
 
 private:
+    bool prepareImpl() final;
+    void didCompleteCompilation(const AbstractLocker&) final;
+
     Vector<std::unique_ptr<FunctionCodeBlock>> m_wasmInternalFunctions;
     const Ref<LLIntCallee>* m_callees { nullptr };
     Vector<Ref<LLIntCallee>> m_calleesVector;
     EmbedderEntrypointCalleeMap m_embedderCallees;
-    MacroAssemblerCodeRef<B3CompilationPtrTag> m_entryThunks;
+    MacroAssemblerCodeRef<JITCompilationPtrTag> m_entryThunks;
 };
 
 

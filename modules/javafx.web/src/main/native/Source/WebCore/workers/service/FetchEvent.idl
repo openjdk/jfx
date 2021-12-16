@@ -24,20 +24,21 @@
 */
 
 [
-    Constructor(DOMString type, FetchEventInit eventInitDict),
     Conditional=SERVICE_WORKER,
     JSCustomMarkFunction,
     EnabledAtRuntime=ServiceWorker,
     ExportMacro=WEBCORE_EXPORT,
-    Exposed=(ServiceWorker),
+    Exposed=ServiceWorker,
     JSGenerateToNativeObject
 ] interface FetchEvent : ExtendableEvent {
+    constructor(DOMString type, FetchEventInit eventInitDict);
+
     [SameObject] readonly attribute FetchRequest request;
     readonly attribute DOMString clientId;
     readonly attribute DOMString reservedClientId;
     readonly attribute DOMString targetClientId;
 
-    [MayThrowException] void respondWith(Promise<FetchResponse> r);
+    [MayThrowException] undefined respondWith(Promise<FetchResponse> r);
 };
 
 dictionary FetchEventInit : ExtendableEventInit {

@@ -27,14 +27,6 @@
 #include "JSCallbackFunction.h"
 
 #include "APICallbackFunction.h"
-#include "APICast.h"
-#include "CodeBlock.h"
-#include "Error.h"
-#include "ExceptionHelpers.h"
-#include "FunctionPrototype.h"
-#include "JSFunction.h"
-#include "JSGlobalObject.h"
-#include "JSLock.h"
 #include "JSCInlines.h"
 
 namespace JSC {
@@ -43,15 +35,22 @@ STATIC_ASSERT_IS_TRIVIALLY_DESTRUCTIBLE(JSCallbackFunction);
 
 const ClassInfo JSCallbackFunction::s_info = { "CallbackFunction", &InternalFunction::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSCallbackFunction) };
 
+static JSC_DECLARE_HOST_FUNCTION(callJSCallbackFunction);
+
+JSC_DEFINE_HOST_FUNCTION(callJSCallbackFunction, (JSGlobalObject* globalObject, CallFrame* callFrame))
+{
+    return APICallbackFunction::callImpl<JSCallbackFunction>(globalObject, callFrame);
+}
+
 JSCallbackFunction::JSCallbackFunction(VM& vm, Structure* structure, JSObjectCallAsFunctionCallback callback)
-    : InternalFunction(vm, structure, APICallbackFunction::call<JSCallbackFunction>, nullptr)
+    : InternalFunction(vm, structure, callJSCallbackFunction, nullptr)
     , m_callback(callback)
 {
 }
 
 void JSCallbackFunction::finishCreation(VM& vm, const String& name)
 {
-    Base::finishCreation(vm, name);
+    Base::finishCreation(vm, 0, name);
     ASSERT(inherits(vm, info()));
 }
 

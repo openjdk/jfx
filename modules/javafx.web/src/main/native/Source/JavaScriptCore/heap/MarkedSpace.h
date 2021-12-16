@@ -1,7 +1,7 @@
 /*
  *  Copyright (C) 1999-2000 Harri Porten (porten@kde.org)
  *  Copyright (C) 2001 Peter Kelly (pmk@post.com)
- *  Copyright (C) 2003-2018 Apple Inc. All rights reserved.
+ *  Copyright (C) 2003-2021 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -65,6 +65,7 @@ public:
     // ensures that we only use the size class approach if it means being able to pack two things
     // into one block.
     static constexpr size_t largeCutoff = (blockPayload / 2) & ~(sizeStep - 1);
+    static_assert(largeCutoff <= UINT32_MAX);
 
     // We have an extra size class for size zero.
     static constexpr size_t numSizeClasses = largeCutoff / sizeStep + 1;
@@ -104,7 +105,7 @@ public:
 
     void prepareForAllocation();
 
-    void visitWeakSets(SlotVisitor&);
+    template<typename Visitor> void visitWeakSets(Visitor&);
     void reapWeakSets();
 
     MarkedBlockSet& blocks() { return m_blocks; }
@@ -173,14 +174,9 @@ public:
     // When this is true it means that we have flipped but the mark bits haven't converged yet.
     bool isMarking() const { return m_isMarking; }
 
-    WeakSet* activeWeakSetsBegin() { return m_activeWeakSets.begin(); }
-    WeakSet* activeWeakSetsEnd() { return m_activeWeakSets.end(); }
-    WeakSet* newActiveWeakSetsBegin() { return m_newActiveWeakSets.begin(); }
-    WeakSet* newActiveWeakSetsEnd() { return m_newActiveWeakSets.end(); }
-
     void dumpBits(PrintStream& = WTF::dataFile());
 
-    JS_EXPORT_PRIVATE static std::array<size_t, numSizeClasses> s_sizeClassForSizeStep;
+    JS_EXPORT_PRIVATE static std::array<unsigned, numSizeClasses> s_sizeClassForSizeStep;
 
 private:
     friend class CompleteSubspace;

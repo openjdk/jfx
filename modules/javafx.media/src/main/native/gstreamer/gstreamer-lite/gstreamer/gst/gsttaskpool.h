@@ -103,9 +103,7 @@ void            gst_task_pool_join        (GstTaskPool *pool, gpointer id);
 GST_API
 void    gst_task_pool_cleanup     (GstTaskPool *pool);
 
-#ifdef G_DEFINE_AUTOPTR_CLEANUP_FUNC
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstTaskPool, gst_object_unref)
-#endif
 
 G_END_DECLS
 

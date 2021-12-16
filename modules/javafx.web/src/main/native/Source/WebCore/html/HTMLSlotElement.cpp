@@ -95,7 +95,7 @@ void HTMLSlotElement::attributeChanged(const QualifiedName& name, const AtomStri
     }
 }
 
-const Vector<Node*>* HTMLSlotElement::assignedNodes() const
+const Vector<WeakPtr<Node>>* HTMLSlotElement::assignedNodes() const
 {
     auto shadowRoot = makeRefPtr(containingShadowRoot());
     if (!shadowRoot)
@@ -106,6 +106,9 @@ const Vector<Node*>* HTMLSlotElement::assignedNodes() const
 
 static void flattenAssignedNodes(Vector<Ref<Node>>& nodes, const HTMLSlotElement& slot)
 {
+    if (!slot.containingShadowRoot())
+        return;
+
     auto* assignedNodes = slot.assignedNodes();
     if (!assignedNodes) {
         for (RefPtr<Node> child = slot.firstChild(); child; child = child->nextSibling()) {
@@ -116,8 +119,13 @@ static void flattenAssignedNodes(Vector<Ref<Node>>& nodes, const HTMLSlotElement
         }
         return;
     }
-    for (const RefPtr<Node>& node : *assignedNodes) {
-        if (is<HTMLSlotElement>(*node))
+    for (auto& nodeWeakPtr : *assignedNodes) {
+        auto* node = nodeWeakPtr.get();
+        if (UNLIKELY(!node)) {
+            ASSERT_NOT_REACHED();
+            continue;
+        }
+        if (is<HTMLSlotElement>(*node) && downcast<HTMLSlotElement>(*node).containingShadowRoot())
             flattenAssignedNodes(nodes, downcast<HTMLSlotElement>(*node));
         else
             nodes.append(*node);
@@ -136,7 +144,17 @@ Vector<Ref<Node>> HTMLSlotElement::assignedNodes(const AssignedNodesOptions& opt
     auto* assignedNodes = this->assignedNodes();
     if (!assignedNodes)
         return { };
-    return assignedNodes->map([] (Node* node) { return makeRef(*node); });
+
+    Vector<Ref<Node>> nodes;
+    nodes.reserveInitialCapacity(assignedNodes->size());
+    for (auto& nodePtr : *assignedNodes) {
+        auto* node = nodePtr.get();
+        if (UNLIKELY(!node))
+            continue;
+        nodes.uncheckedAppend(*node);
+    }
+
+    return nodes;
 }
 
 Vector<Ref<Element>> HTMLSlotElement::assignedElements(const AssignedNodesOptions& options) const

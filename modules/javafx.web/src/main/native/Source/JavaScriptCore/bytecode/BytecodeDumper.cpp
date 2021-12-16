@@ -27,19 +27,11 @@
 #include "config.h"
 #include "BytecodeDumper.h"
 
-#include "ArithProfile.h"
-#include "B3Type.h"
 #include "BytecodeGenerator.h"
+#include "BytecodeGraph.h"
 #include "BytecodeStructs.h"
-#include "CallLinkStatus.h"
 #include "CodeBlock.h"
-#include "Error.h"
-#include "HeapInlines.h"
-#include "InterpreterInlines.h"
-#include "PolymorphicAccess.h"
-#include "PutByIdFlags.h"
-#include "StructureInlines.h"
-#include "ToThisStatus.h"
+#include "JSCJSValueInlines.h"
 #include "UnlinkedCodeBlockGenerator.h"
 #include "UnlinkedMetadataTableInlines.h"
 #include "WasmFunctionCodeBlock.h"
@@ -49,11 +41,6 @@
 #include "WasmSignatureInlines.h"
 
 namespace JSC {
-
-static ALWAYS_INLINE bool isConstantRegisterIndex(int index)
-{
-    return index >= FirstConstantRegisterIndex;
-}
 
 void BytecodeDumperBase::printLocationAndOp(InstructionStream::Offset location, const char* op)
 {
@@ -162,7 +149,7 @@ void CodeBlockBytecodeDumper<Block>::dumpConstants()
                 sourceCodeRepresentationDescription = "";
                 break;
             case SourceCodeRepresentation::LinkTimeConstant:
-                sourceCodeRepresentationDescription = ": in source as linke-time-constant";
+                sourceCodeRepresentationDescription = ": in source as link-time-constant";
                 break;
             }
             this->m_out.printf("   k%u = %s%s\n", static_cast<unsigned>(i), toCString(constant.get()).data(), sourceCodeRepresentationDescription);
@@ -225,8 +212,8 @@ void CodeBlockBytecodeDumper<Block>::dumpStringSwitchJumpTables()
     }
 }
 
-template<class Block>
-void CodeBlockBytecodeDumper<Block>::dumpBlock(Block* block, const InstructionStream& instructions, PrintStream& out, const ICStatusMap& statusMap)
+template <typename Block>
+static void dumpHeader(Block* block, const InstructionStream& instructions, PrintStream& out)
 {
     size_t instructionCount = 0;
     size_t wide16InstructionCount = 0;
@@ -255,16 +242,80 @@ void CodeBlockBytecodeDumper<Block>::dumpBlock(Block* block, const InstructionSt
         block->numParameters(), block->numCalleeLocals(), block->numVars());
     out.print("; scope at ", block->scopeRegister());
     out.printf("\n");
+}
 
-    CodeBlockBytecodeDumper<Block> dumper(block, out);
-    for (const auto& it : instructions)
-        dumper.dumpBytecode(it, statusMap);
-
+template <typename Dumper>
+static void dumpFooter(Dumper& dumper)
+{
     dumper.dumpIdentifiers();
     dumper.dumpConstants();
     dumper.dumpExceptionHandlers();
     dumper.dumpSwitchJumpTables();
     dumper.dumpStringSwitchJumpTables();
+}
+
+template<class Block>
+void CodeBlockBytecodeDumper<Block>::dumpBlock(Block* block, const InstructionStream& instructions, PrintStream& out, const ICStatusMap& statusMap)
+{
+    dumpHeader(block, instructions, out);
+
+    CodeBlockBytecodeDumper<Block> dumper(block, out);
+    for (const auto& it : instructions)
+        dumper.dumpBytecode(it, statusMap);
+
+    dumpFooter(dumper);
+
+    out.printf("\n");
+}
+
+template<class Block>
+void CodeBlockBytecodeDumper<Block>::dumpGraph(Block* block, const InstructionStream& instructions, BytecodeGraph& graph, PrintStream& out, const ICStatusMap& icStatusMap)
+{
+    dumpHeader(block, instructions, out);
+
+    CodeBlockBytecodeDumper<Block> dumper(block, out);
+
+    out.printf("\n");
+
+    Vector<Vector<unsigned>> predecessors;
+    predecessors.resize(graph.size());
+    for (auto& block : graph) {
+        if (block.isEntryBlock() || block.isExitBlock())
+            continue;
+        for (auto successorIndex : block.successors()) {
+            if (!predecessors[successorIndex].contains(block.index()))
+                predecessors[successorIndex].append(block.index());
+        }
+    }
+
+    for (BytecodeBasicBlock& block : graph) {
+        if (block.isEntryBlock() || block.isExitBlock())
+            continue;
+
+        out.print("bb#", block.index(), "\n");
+
+        out.print("Predecessors: [");
+        for (unsigned predecessor : predecessors[block.index()]) {
+            if (!graph[predecessor].isEntryBlock())
+                out.print(" #", predecessor);
+        }
+        out.print(" ]\n");
+
+        for (unsigned i = 0; i < block.totalLength(); ) {
+            auto& currentInstruction = instructions.at(i + block.leaderOffset());
+            dumper.dumpBytecode(currentInstruction, icStatusMap);
+            i += currentInstruction.ptr()->size();
+        }
+
+        out.print("Successors: [");
+        for (unsigned successor : block.successors()) {
+            if (!graph[successor].isExitBlock())
+                out.print(" #", successor);
+        }
+        out.print(" ]\n\n");
+    }
+
+    dumpFooter(dumper);
 
     out.printf("\n");
 }
@@ -355,7 +406,7 @@ CString BytecodeDumper::formatConstant(Type type, uint64_t constant) const
     case Type::F64:
         return toCString(bitwise_cast<double>(constant));
         break;
-    case Type::Anyref:
+    case Type::Externref:
     case Type::Funcref:
         if (JSValue::decode(constant) == jsNull())
             return "null";

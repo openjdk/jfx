@@ -28,6 +28,8 @@
 #include "Timer.h"
 #include <wtf/Deque.h>
 #include <wtf/Function.h>
+#include <wtf/MainThread.h>
+#include <wtf/UniqueRef.h>
 #include <wtf/WeakPtr.h>
 
 namespace WTF {
@@ -38,6 +40,7 @@ namespace WebCore {
 
 template <typename T>
 class TaskDispatcher {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     explicit TaskDispatcher(T* context)
         : m_context(context)
@@ -55,7 +58,8 @@ private:
 };
 
 template<>
-class TaskDispatcher<Timer> : public CanMakeWeakPtr<TaskDispatcher<Timer>> {
+class TaskDispatcher<Timer> : public CanMakeWeakPtr<TaskDispatcher<Timer>, WeakPtrFactoryInitialization::Eager> {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     TaskDispatcher();
     void postTask(Function<void()>&&);
@@ -76,19 +80,28 @@ class GenericTaskQueue : public CanMakeWeakPtr<GenericTaskQueue<T>> {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     GenericTaskQueue()
-        : m_dispatcher()
+        : m_dispatcher(makeUniqueRef<TaskDispatcher<T>>())
     {
+        ASSERT(isMainThread());
     }
 
     explicit GenericTaskQueue(T& t)
-        : m_dispatcher(&t)
+        : m_dispatcher(makeUniqueRef<TaskDispatcher<T>>(&t))
     {
+        ASSERT(isMainThread());
     }
 
     explicit GenericTaskQueue(T* t)
-        : m_dispatcher(t)
+        : m_dispatcher(makeUniqueRef<TaskDispatcher<T>>(t))
         , m_isClosed(!t)
     {
+        ASSERT(isMainThread());
+    }
+
+    ~GenericTaskQueue()
+    {
+        if (!isMainThread())
+            m_dispatcher->postTask([dispatcher = WTFMove(m_dispatcher)] { });
     }
 
     typedef WTF::Function<void ()> TaskFunction;
@@ -99,7 +112,7 @@ public:
             return;
 
         ++m_pendingTasks;
-        m_dispatcher.postTask([weakThis = makeWeakPtr(*this), task = WTFMove(task)] {
+        m_dispatcher->postTask([weakThis = makeWeakPtr(*this), task = WTFMove(task)] {
             if (!weakThis)
                 return;
             ASSERT(weakThis->m_pendingTasks);
@@ -124,7 +137,7 @@ public:
     bool isClosed() const { return m_isClosed; }
 
 private:
-    TaskDispatcher<T> m_dispatcher;
+    UniqueRef<TaskDispatcher<T>> m_dispatcher;
     unsigned m_pendingTasks { 0 };
     bool m_isClosed { false };
 };

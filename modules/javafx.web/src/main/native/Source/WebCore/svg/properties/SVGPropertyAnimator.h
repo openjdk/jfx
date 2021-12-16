@@ -72,18 +72,18 @@ protected:
 
     String adjustForInheritance(SVGElement* targetElement, const String& value) const
     {
-        static NeverDestroyed<const AtomString> inherit("inherit", AtomString::ConstructFromLiteral);
+        static MainThreadNeverDestroyed<const AtomString> inherit("inherit", AtomString::ConstructFromLiteral);
         return value == inherit ? computeInheritedCSSPropertyValue(targetElement) : value;
     }
 
-    String computeCSSPropertyValue(SVGElement* targetElement, CSSPropertyID id) const
+    String computeCSSPropertyValue(SVGElement& targetElement, CSSPropertyID id) const
     {
-        ASSERT(targetElement);
+        auto protector = makeRefPtr(targetElement);
 
         // Don't include any properties resulting from CSS Transitions/Animations or SMIL animations, as we want to retrieve the "base value".
-        targetElement->setUseOverrideComputedStyle(true);
-        RefPtr<CSSValue> value = ComputedStyleExtractor(targetElement).propertyValue(id);
-        targetElement->setUseOverrideComputedStyle(false);
+        targetElement.setUseOverrideComputedStyle(true);
+        RefPtr<CSSValue> value = ComputedStyleExtractor(&targetElement).propertyValue(id);
+        targetElement.setUseOverrideComputedStyle(false);
         return value ? value->cssText() : String();
     }
 
@@ -95,7 +95,7 @@ protected:
             return emptyString();
 
         SVGElement& svgParent = downcast<SVGElement>(*parent);
-        return computeCSSPropertyValue(&svgParent, cssPropertyID(m_attributeName.localName()));
+        return computeCSSPropertyValue(svgParent, cssPropertyID(m_attributeName.localName()));
     }
 
     AnimationFunction m_function;

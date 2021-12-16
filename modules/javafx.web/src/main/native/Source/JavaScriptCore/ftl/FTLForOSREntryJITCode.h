@@ -40,10 +40,10 @@ namespace JSC { namespace FTL {
 //
 // - Each OSR entry compilation allows entry through only one bytecode index.
 
-class ForOSREntryJITCode : public FTL::JITCode {
+class ForOSREntryJITCode final : public FTL::JITCode {
 public:
     ForOSREntryJITCode();
-    ~ForOSREntryJITCode();
+    ~ForOSREntryJITCode() final;
 
     void initializeEntryBuffer(VM&, unsigned numCalleeLocals);
     ScratchBuffer* entryBuffer() const { return m_entryBuffer; }
@@ -54,9 +54,11 @@ public:
     void countEntryFailure() { m_entryFailureCount++; }
     unsigned entryFailureCount() const { return m_entryFailureCount; }
 
-    ForOSREntryJITCode* ftlForOSREntry();
+    ForOSREntryJITCode* ftlForOSREntry() final;
+    Vector<DFG::FlushFormat>& argumentFlushFormats() { return m_argumentFlushFormats; }
 
 private:
+    Vector<DFG::FlushFormat> m_argumentFlushFormats;
     ScratchBuffer* m_entryBuffer; // Only for OSR entry code blocks.
     BytecodeIndex m_bytecodeIndex;
     unsigned m_entryFailureCount;

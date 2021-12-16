@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -53,18 +53,23 @@ class LLIntOffsetsExtractor;
 
 // Typed array views have different modes depending on how big they are and
 // whether the user has done anything that requires a separate backing
-// buffer or the DOM-specified neutering capabilities.
+// buffer or the DOM-specified detaching capabilities.
 enum TypedArrayMode : uint32_t {
+    // Legend:
+    // B: JSArrayBufferView::m_butterfly pointer
+    // V: JSArrayBufferView::m_vector pointer
+    // M: JSArrayBufferView::m_mode
+
     // Small and fast typed array. B is unused, V points to a vector
-    // allocated in copied space, and M = FastTypedArray. V's liveness is
-    // determined entirely by the view's liveness.
+    // allocated in the primitive Gigacage, and M = FastTypedArray. V's
+    // liveness is determined entirely by the view's liveness.
     FastTypedArray,
 
     // A large typed array that still attempts not to waste too much
-    // memory. B is initialized to point to a slot that could hold a
-    // buffer pointer, V points to a vector allocated using fastCalloc(),
-    // and M = OversizeTypedArray. V's liveness is determined entirely by
-    // the view's liveness, and the view will add a finalizer to delete V.
+    // memory. B is unused, V points to a vector allocated using
+    // Gigacage::tryMalloc(), and M = OversizeTypedArray. V's liveness is
+    // determined entirely by the view's liveness, and the view will add a
+    // finalizer to delete V.
     OversizeTypedArray,
 
     // A typed array that was used in some crazy way. B's IndexingHeader
@@ -105,6 +110,12 @@ public:
 
     static constexpr unsigned fastSizeLimit = 1000;
     using VectorPtr = CagedBarrierPtr<Gigacage::Primitive, void, tagCagedPtr>;
+
+    static void* nullVectorPtr()
+    {
+        VectorPtr null { };
+        return null.rawBits();
+    }
 
     static size_t sizeOf(uint32_t length, uint32_t elementSize)
     {
@@ -161,7 +172,7 @@ protected:
 
     static bool put(JSCell*, JSGlobalObject*, PropertyName, JSValue, PutPropertySlot&);
 
-    static void visitChildren(JSCell*, SlotVisitor&);
+    DECLARE_VISIT_CHILDREN;
 
 public:
     TypedArrayMode mode() const { return m_mode; }
@@ -174,8 +185,8 @@ public:
     JSArrayBuffer* possiblySharedJSBuffer(JSGlobalObject* globalObject);
     RefPtr<ArrayBufferView> unsharedImpl();
     JS_EXPORT_PRIVATE RefPtr<ArrayBufferView> possiblySharedImpl();
-    bool isNeutered() { return hasArrayBuffer() && !hasVector(); }
-    void neuter();
+    bool isDetached() { return hasArrayBuffer() && !hasVector(); }
+    void detach();
 
     bool hasVector() const { return !!m_vector; }
     void* vector() const { return m_vector.getMayBeNull(length()); }
@@ -184,6 +195,7 @@ public:
     inline Optional<unsigned> byteOffsetConcurrently();
 
     unsigned length() const { return m_length; }
+    unsigned byteLength() const;
 
     DECLARE_EXPORT_INFO;
 
@@ -192,6 +204,7 @@ public:
     static ptrdiff_t offsetOfMode() { return OBJECT_OFFSETOF(JSArrayBufferView, m_mode); }
 
     static RefPtr<ArrayBufferView> toWrapped(VM&, JSValue);
+    static RefPtr<ArrayBufferView> toWrappedAllowShared(VM&, JSValue);
 
 private:
     enum Requester { Mutator, ConcurrentThread };
@@ -206,12 +219,12 @@ protected:
 
     ArrayBuffer* existingBufferInButterfly();
 
-    static String toStringName(const JSObject*, JSGlobalObject*);
-
     VectorPtr m_vector;
     uint32_t m_length;
     TypedArrayMode m_mode;
 };
+
+JSArrayBufferView* validateTypedArray(JSGlobalObject*, JSValue);
 
 } // namespace JSC
 

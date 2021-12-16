@@ -40,13 +40,13 @@ NetworkSendQueue::NetworkSendQueue(Document& document, WriteString&& writeString
 
 NetworkSendQueue::~NetworkSendQueue() = default;
 
-void NetworkSendQueue::enqueue(const String& data)
+void NetworkSendQueue::enqueue(CString&& utf8)
 {
     if (m_queue.isEmpty()) {
-        m_writeString(data);
+        m_writeString(utf8);
         return;
     }
-    m_queue.append(data);
+    m_queue.append(WTFMove(utf8));
 }
 
 void NetworkSendQueue::enqueue(const JSC::ArrayBuffer& binaryData, unsigned byteOffset, unsigned byteLength)
@@ -66,36 +66,42 @@ void NetworkSendQueue::enqueue(WebCore::Blob& blob)
         enqueue(JSC::ArrayBuffer::create(0U, 1), 0, 0);
         return;
     }
-    m_queue.append(makeUniqueRef<BlobLoader>(m_document.get(), blob, [this] {
+    auto blobLoader = makeUniqueRef<BlobLoader>([this](BlobLoader&) {
         processMessages();
-    }));
+    });
+    auto* blobLoaderPtr = &blobLoader.get();
+    m_queue.append(WTFMove(blobLoader));
+    blobLoaderPtr->start(blob, m_document.get(), FileReaderLoader::ReadAsArrayBuffer);
 }
 
 void NetworkSendQueue::clear()
 {
-    m_queue.clear();
+    // Do not call m_queue.clear() here since destroying a BlobLoader will cause its completion
+    // handler to get called, which will call processMessages() to iterate over m_queue.
+    std::exchange(m_queue, { });
 }
 
 void NetworkSendQueue::processMessages()
 {
     while (!m_queue.isEmpty()) {
         bool shouldStopProcessing = false;
-        switchOn(m_queue.first(), [this](const String& message) {
-            m_writeString(message);
+        switchOn(m_queue.first(), [this](const CString& utf8) {
+            m_writeString(utf8);
         }, [this](Ref<SharedBuffer>& data) {
             m_writeRawData(data->data(), data->size());
         }, [this, &shouldStopProcessing](UniqueRef<BlobLoader>& loader) {
-            if (loader->isLoading() || loader->errorCode() == FileError::ABORT_ERR) {
+            auto errorCode = loader->errorCode();
+            if (loader->isLoading() || (errorCode && errorCode.value() == AbortError)) {
                 shouldStopProcessing = true;
                 return;
             }
 
-            if (const auto& result = loader->result()) {
+            if (const auto& result = loader->arrayBufferResult()) {
                 m_writeRawData(static_cast<const char*>(result->data()), result->byteLength());
                 return;
             }
-            ASSERT(loader->errorCode());
-            shouldStopProcessing = m_processError(loader->errorCode()) == Continue::No;
+            ASSERT(errorCode);
+            shouldStopProcessing = m_processError(errorCode.value()) == Continue::No;
         });
         if (shouldStopProcessing)
             return;

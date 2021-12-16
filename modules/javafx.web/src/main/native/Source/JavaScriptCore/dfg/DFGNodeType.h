@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -74,14 +74,15 @@ namespace JSC { namespace DFG {
     macro(GetLocal, NodeResultJS | NodeMustGenerate) \
     macro(SetLocal, 0) \
     \
-    /* These are used in SSA form to represent to track */\
+    /* These are used in SSA form to represent OSR availability on the stack. As long as a local is */\
+    /* available on the stack from all paths into a merge point we don't need to have a Phi. Since OSR */\
+    /* exits are rare this is preferable to representing availability directly in SSA. */\
     macro(PutStack, NodeMustGenerate) \
     macro(KillStack, NodeMustGenerate) \
     macro(GetStack, NodeResultJS) \
     \
     macro(MovHint, NodeMustGenerate) \
-    macro(ZombieHint, NodeMustGenerate) \
-    macro(ExitOK, NodeMustGenerate) /* Indicates that exit state is intact. */ \
+    macro(ExitOK, NodeMustGenerate) /* Indicates that exit state is intact and it is safe to exit back to the beginning of the exit origin. */ \
     macro(Phantom, NodeMustGenerate) \
     macro(Check, NodeMustGenerate) /* Used if we want just a type check but not liveness. Non-checking uses will be removed. */\
     macro(CheckVarargs, NodeMustGenerate | NodeHasVarArgs) /* Used if we want just a type check but not liveness. Non-checking uses will be removed. */\
@@ -209,6 +210,10 @@ namespace JSC { namespace DFG {
     macro(PutByValDirect, NodeMustGenerate | NodeHasVarArgs) \
     macro(PutByVal, NodeMustGenerate | NodeHasVarArgs) \
     macro(PutByValAlias, NodeMustGenerate | NodeHasVarArgs) \
+    macro(PutPrivateName, NodeMustGenerate) \
+    macro(PutPrivateNameById, NodeMustGenerate) \
+    macro(CheckPrivateBrand, NodeMustGenerate) \
+    macro(SetPrivateBrand, NodeMustGenerate) \
     macro(TryGetById, NodeResultJS) \
     macro(GetById, NodeResultJS | NodeMustGenerate) \
     macro(GetByIdFlush, NodeResultJS | NodeMustGenerate) \
@@ -239,8 +244,10 @@ namespace JSC { namespace DFG {
     macro(NukeStructureAndSetButterfly, NodeMustGenerate) \
     macro(CheckArray, NodeMustGenerate) \
     macro(CheckArrayOrEmpty, NodeMustGenerate) \
-    /* This checks if the edge is a typed array and if it is neutered. */ \
-    macro(CheckNeutered, NodeMustGenerate) \
+    macro(GetPrivateName, NodeResultJS | NodeMustGenerate) \
+    macro(GetPrivateNameById, NodeResultJS | NodeMustGenerate) \
+    /* This checks if the edge is a typed array and if it is detached. */ \
+    macro(CheckDetached, NodeMustGenerate) \
     macro(Arrayify, NodeMustGenerate) \
     macro(ArrayifyToStructure, NodeMustGenerate) \
     macro(GetIndexedPropertyStorage, NodeResultStorage) \
@@ -252,6 +259,7 @@ namespace JSC { namespace DFG {
     macro(MultiGetByOffset, NodeResultJS | NodeMustGenerate) \
     macro(PutByOffset, NodeMustGenerate) \
     macro(MultiPutByOffset, NodeMustGenerate) \
+    macro(MultiDeleteByOffset, NodeMustGenerate | NodeResultJS) \
     macro(GetArrayLength, NodeResultInt32) \
     macro(GetVectorLength, NodeResultInt32) \
     macro(GetTypedArrayByteOffset, NodeResultInt32) \
@@ -272,26 +280,29 @@ namespace JSC { namespace DFG {
     macro(GetRegExpObjectLastIndex, NodeResultJS) \
     macro(SetRegExpObjectLastIndex, NodeMustGenerate) \
     macro(RecordRegExpCachedResult, NodeMustGenerate | NodeHasVarArgs) \
-    macro(CheckCell, NodeMustGenerate) \
+    macro(CheckIsConstant, NodeMustGenerate) \
     macro(CheckNotEmpty, NodeMustGenerate) \
     macro(AssertNotEmpty, NodeMustGenerate) \
-    macro(CheckBadCell, NodeMustGenerate) \
+    macro(CheckBadValue, NodeMustGenerate) \
+    macro(AssertInBounds, NodeMustGenerate) \
     macro(CheckInBounds, NodeMustGenerate | NodeResultJS) \
     macro(CheckIdent, NodeMustGenerate) \
     macro(CheckTypeInfoFlags, NodeMustGenerate) /* Takes an OpInfo with the flags you want to test are set */\
-    macro(CheckSubClass, NodeMustGenerate) \
+    macro(CheckJSCast, NodeMustGenerate) /* This is the same as jsCast but as a speculation rather than assertion */\
+    macro(CheckNotJSCast, NodeMustGenerate) \
     macro(ParseInt, NodeMustGenerate | NodeResultJS) \
     macro(GetPrototypeOf, NodeMustGenerate | NodeResultJS) \
     macro(ObjectCreate, NodeMustGenerate | NodeResultJS) \
     macro(ObjectKeys, NodeMustGenerate | NodeResultJS) \
+    macro(ObjectGetOwnPropertyNames, NodeMustGenerate | NodeResultJS) \
     \
     /* Atomics object functions. */\
     macro(AtomicsAdd, NodeResultJS | NodeMustGenerate | NodeHasVarArgs) \
     macro(AtomicsAnd, NodeResultJS | NodeMustGenerate | NodeHasVarArgs) \
     macro(AtomicsCompareExchange, NodeResultJS | NodeMustGenerate | NodeHasVarArgs) \
     macro(AtomicsExchange, NodeResultJS | NodeMustGenerate | NodeHasVarArgs) \
-    macro(AtomicsIsLockFree, NodeResultBoolean) \
-    macro(AtomicsLoad, NodeResultJS | NodeMustGenerate) \
+    macro(AtomicsIsLockFree, NodeResultBoolean | NodeHasVarArgs) \
+    macro(AtomicsLoad, NodeResultJS | NodeMustGenerate | NodeHasVarArgs) \
     macro(AtomicsOr, NodeResultJS | NodeMustGenerate | NodeHasVarArgs) \
     macro(AtomicsStore, NodeResultJS | NodeMustGenerate | NodeHasVarArgs) \
     macro(AtomicsSub, NodeResultJS | NodeMustGenerate | NodeHasVarArgs) \
@@ -351,14 +362,13 @@ namespace JSC { namespace DFG {
     \
     /* Allocations. */\
     macro(NewObject, NodeResultJS) \
-    macro(NewPromise, NodeResultJS) \
     macro(NewGenerator, NodeResultJS) \
     macro(NewAsyncGenerator, NodeResultJS) \
     macro(NewArray, NodeResultJS | NodeHasVarArgs) \
     macro(NewArrayWithSpread, NodeResultJS | NodeHasVarArgs) \
     macro(NewArrayWithSize, NodeResultJS | NodeMustGenerate) \
     macro(NewArrayBuffer, NodeResultJS) \
-    macro(NewArrayIterator, NodeResultJS) \
+    macro(NewInternalFieldObject, NodeResultJS) \
     macro(NewTypedArray, NodeResultJS | NodeMustGenerate) \
     macro(NewRegexp, NodeResultJS) \
     macro(NewSymbol, NodeResultJS) \
@@ -377,7 +387,7 @@ namespace JSC { namespace DFG {
     macro(PhantomNewGeneratorFunction, NodeResultJS | NodeMustGenerate) \
     macro(PhantomNewAsyncFunction, NodeResultJS | NodeMustGenerate) \
     macro(PhantomNewAsyncGeneratorFunction, NodeResultJS | NodeMustGenerate) \
-    macro(PhantomNewArrayIterator, NodeResultJS | NodeMustGenerate) \
+    macro(PhantomNewInternalFieldObject, NodeResultJS | NodeMustGenerate) \
     macro(MaterializeNewInternalFieldObject, NodeResultJS | NodeHasVarArgs) \
     macro(PhantomCreateActivation, NodeResultJS | NodeMustGenerate) \
     macro(MaterializeCreateActivation, NodeResultJS | NodeHasVarArgs) \
@@ -391,14 +401,18 @@ namespace JSC { namespace DFG {
     \
     macro(IsCellWithType, NodeResultBoolean) \
     macro(IsEmpty, NodeResultBoolean) \
-    macro(IsUndefined, NodeResultBoolean) \
+    macro(TypeOfIsUndefined, NodeResultBoolean) \
+    macro(TypeOfIsObject, NodeResultBoolean) \
+    macro(TypeOfIsFunction, NodeResultBoolean) \
     macro(IsUndefinedOrNull, NodeResultBoolean) \
     macro(IsBoolean, NodeResultBoolean) \
     macro(IsNumber, NodeResultBoolean) \
+    /* IsBigInt is only used when USE_BIGINT32. Otherwise we emit IsCellWithType */\
+    macro(IsBigInt, NodeResultBoolean) \
     macro(NumberIsInteger, NodeResultBoolean) \
     macro(IsObject, NodeResultBoolean) \
-    macro(IsObjectOrNull, NodeResultBoolean) \
-    macro(IsFunction, NodeResultBoolean) \
+    macro(IsCallable, NodeResultBoolean) \
+    macro(IsConstructor, NodeResultBoolean) \
     macro(IsTypedArrayView, NodeResultBoolean) \
     macro(TypeOf, NodeResultJS) \
     macro(LogicalNot, NodeResultBoolean) \
@@ -410,6 +424,7 @@ namespace JSC { namespace DFG {
     macro(ToObject, NodeResultJS | NodeMustGenerate) \
     macro(CallObjectConstructor, NodeResultJS) \
     macro(CallStringConstructor, NodeResultJS | NodeMustGenerate) \
+    macro(CallNumberConstructor, NodeResultJS | NodeMustGenerate) \
     macro(NumberToStringWithRadix, NodeResultJS | NodeMustGenerate) \
     macro(NumberToStringWithValidRadixConstant, NodeResultJS) \
     macro(MakeRope, NodeResultJS) \
@@ -483,9 +498,13 @@ namespace JSC { namespace DFG {
     \
     /* For-in enumeration opcodes */\
     macro(GetEnumerableLength, NodeMustGenerate | NodeResultJS) \
-    macro(HasIndexedProperty, NodeResultBoolean | NodeHasVarArgs) \
-    macro(HasStructureProperty, NodeResultBoolean) \
-    macro(HasGenericProperty, NodeResultBoolean) \
+    /* Must generate because of Proxies on the prototype chain */ \
+    macro(HasIndexedProperty, NodeMustGenerate | NodeResultBoolean | NodeHasVarArgs) \
+    macro(HasEnumerableIndexedProperty, NodeMustGenerate | NodeResultBoolean | NodeHasVarArgs) \
+    macro(HasEnumerableStructureProperty, NodeResultBoolean) \
+    macro(HasEnumerableProperty, NodeResultBoolean) \
+    macro(HasOwnStructureProperty, NodeResultBoolean | NodeMustGenerate) \
+    macro(InStructureProperty, NodeMustGenerate | NodeResultBoolean) \
     macro(GetDirectPname, NodeMustGenerate | NodeHasVarArgs | NodeResultJS) \
     macro(GetPropertyEnumerator, NodeMustGenerate | NodeResultJS) \
     macro(GetEnumeratorStructurePname, NodeMustGenerate | NodeResultJS) \
@@ -526,6 +545,9 @@ namespace JSC { namespace DFG {
     macro(FilterGetByStatus, NodeMustGenerate) \
     macro(FilterInByIdStatus, NodeMustGenerate) \
     macro(FilterPutByIdStatus, NodeMustGenerate) \
+    macro(FilterDeleteByStatus, NodeMustGenerate) \
+    macro(FilterCheckPrivateBrandStatus, NodeMustGenerate) \
+    macro(FilterSetPrivateBrandStatus, NodeMustGenerate) \
     /* Data view access */ \
     macro(DataViewGetInt, NodeMustGenerate | NodeResultJS) /* The gets are must generate for now because they do bounds checks */ \
     macro(DataViewGetFloat, NodeMustGenerate | NodeResultDouble) \
@@ -543,6 +565,10 @@ enum NodeType {
 #undef DFG_OP_ENUM
     LastNodeType
 };
+
+#define DFG_OP_COUNT(opcode, flags) + 1
+constexpr unsigned numberOfNodeTypes = FOR_EACH_DFG_OP(DFG_OP_COUNT);
+#undef DFG_OP_COUNT
 
 // Specifies the default flags for each node.
 inline NodeFlags defaultFlags(NodeType op)

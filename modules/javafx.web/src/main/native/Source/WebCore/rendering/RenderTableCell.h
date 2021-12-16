@@ -102,7 +102,7 @@ public:
     LayoutUnit paddingBefore() const override;
     LayoutUnit paddingAfter() const override;
 
-    void setOverrideContentLogicalHeightFromRowHeight(LayoutUnit);
+    void setOverridingLogicalHeightFromRowHeight(LayoutUnit);
 
     void scrollbarsChanged(bool horizontalScrollbarChanged, bool verticalScrollbarChanged) override;
 
@@ -134,11 +134,10 @@ public:
     void invalidateHasEmptyCollapsedBorders();
     void setHasEmptyCollapsedBorder(CollapsedBorderSide, bool empty) const;
 
-protected:
+private:
     void styleDidChange(StyleDifference, const RenderStyle* oldStyle) override;
     void computePreferredLogicalWidths() override;
 
-private:
     static RenderPtr<RenderTableCell> createTableCellWithStyle(Document&, const RenderStyle&);
 
     const char* renderName() const override { return (isAnonymous() || isPseudoElement()) ? "RenderTableCell (anonymous)" : "RenderTableCell"; }

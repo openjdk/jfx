@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2020-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,15 +29,16 @@
 
 namespace JSC {
 
-class JSArrayIterator final : public JSInternalFieldObjectImpl<4> {
+class JSArrayIterator final : public JSInternalFieldObjectImpl<3> {
 public:
-    using Base = JSInternalFieldObjectImpl<4>;
+    using Base = JSInternalFieldObjectImpl<3>;
 
     enum class Field : uint8_t {
         Index = 0,
         IteratedObject,
         Kind,
     };
+    static_assert(numberOfInternalFields == 3);
 
     static size_t allocationSize(Checked<size_t> inlineCapacity)
     {
@@ -60,19 +61,24 @@ public:
         } };
     }
 
+    static constexpr int64_t doneIndex = -1;
     const WriteBarrier<Unknown>& internalField(Field field) const { return Base::internalField(static_cast<uint32_t>(field)); }
     WriteBarrier<Unknown>& internalField(Field field) { return Base::internalField(static_cast<uint32_t>(field)); }
 
-    IterationKind kind() const { return static_cast<IterationKind>(internalField(Field::Kind).get().asUInt32()); }
+    IterationKind kind() const { return static_cast<IterationKind>(internalField(Field::Kind).get().asUInt32AsAnyInt()); }
     JSObject* iteratedObject() const { return jsCast<JSObject*>(internalField(Field::IteratedObject).get()); }
 
-    static JSArrayIterator* create(VM&, Structure*, JSObject* iteratedObject, JSValue kind);
+    JS_EXPORT_PRIVATE static JSArrayIterator* create(VM&, Structure*, JSObject* iteratedObject, JSValue kind);
+    static JSArrayIterator* create(VM& vm, Structure* structure, JSObject* iteratedObject, IterationKind kind)
+    {
+        return create(vm, structure, iteratedObject, jsNumber(static_cast<unsigned>(kind)));
+    }
     static JSArrayIterator* createWithInitialValues(VM&, Structure*);
     static Structure* createStructure(VM&, JSGlobalObject*, JSValue);
 
     DECLARE_INFO;
 
-    static void visitChildren(JSCell*, SlotVisitor&);
+    DECLARE_VISIT_CHILDREN;
 
 private:
     JSArrayIterator(VM&, Structure*);

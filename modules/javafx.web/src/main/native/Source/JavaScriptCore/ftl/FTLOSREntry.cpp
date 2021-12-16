@@ -30,8 +30,8 @@
 #include "CodeBlock.h"
 #include "DFGJITCode.h"
 #include "FTLForOSREntryJITCode.h"
+#include "JSCJSValueInlines.h"
 #include "OperandsInlines.h"
-#include "JSCInlines.h"
 #include "VMInlines.h"
 
 #if ENABLE(FTL_JIT)
@@ -50,7 +50,7 @@ void* prepareOSREntry(
 
     if (!entryCode->dfgCommon()->isStillValid) {
         dfgCode->clearOSREntryBlockAndResetThresholds(dfgCodeBlock);
-        return 0;
+        return nullptr;
     }
 
     dataLogLnIf(Options::verboseOSR(),
@@ -62,7 +62,7 @@ void* prepareOSREntry(
 
     if (bytecodeIndex != entryCode->bytecodeIndex()) {
         dataLogLnIf(Options::verboseOSR(), "    OSR failed because we don't have an entrypoint for ", bytecodeIndex, "; ours is for ", entryCode->bytecodeIndex());
-        return 0;
+        return nullptr;
     }
 
     Operands<Optional<JSValue>> values;
@@ -70,10 +70,42 @@ void* prepareOSREntry(
 
     dataLogLnIf(Options::verboseOSR(), "    Values at entry: ", values);
 
+    Optional<JSValue> reconstructedThis;
     for (int argument = values.numberOfArguments(); argument--;) {
         JSValue valueOnStack = callFrame->r(virtualRegisterForArgumentIncludingThis(argument)).asanUnsafeJSValue();
         Optional<JSValue> reconstructedValue = values.argument(argument);
-        if ((reconstructedValue && valueOnStack == reconstructedValue.value()) || !argument)
+        {
+            JSValue valueToValidate = reconstructedValue ? *reconstructedValue : valueOnStack;
+            auto flushFormat = entryCode->argumentFlushFormats()[argument];
+            switch (flushFormat) {
+            case DFG::FlushedInt32:
+                if (!valueToValidate.isInt32())
+                    return nullptr;
+                break;
+            case DFG::FlushedBoolean:
+                if (!valueToValidate.isBoolean())
+                    return nullptr;
+                break;
+            case DFG::FlushedCell:
+                if (!valueToValidate.isCell())
+                    return nullptr;
+                break;
+            case DFG::FlushedJSValue:
+                break;
+            default:
+                dataLogLn("Unknown flush format for argument during FTL osr entry: ", flushFormat);
+                RELEASE_ASSERT_NOT_REACHED();
+                break;
+            }
+        }
+
+        if (!argument) {
+            // |this| argument can be unboxed. We should store boxed value instead for loop OSR entry since FTL assumes that all arguments are flushed JSValue.
+            // To make this valid, we will modify the stack on the fly: replacing the value with boxed value.
+            reconstructedThis = reconstructedValue;
+            continue;
+        }
+        if (reconstructedValue && valueOnStack == reconstructedValue.value())
             continue;
         dataLog("Mismatch between reconstructed values and the value on the stack for argument arg", argument, " for ", *entryCodeBlock, " at ", bytecodeIndex, ":\n");
         dataLog("    Value on stack: ", valueOnStack, "\n");
@@ -81,8 +113,7 @@ void* prepareOSREntry(
         RELEASE_ASSERT_NOT_REACHED();
     }
 
-    RELEASE_ASSERT(
-        static_cast<int>(values.numberOfLocals()) == baseline->numCalleeLocals());
+    RELEASE_ASSERT(values.numberOfLocals() == baseline->numCalleeLocals());
 
     EncodedJSValue* scratch = static_cast<EncodedJSValue*>(
         entryCode->entryBuffer()->dataBuffer());
@@ -98,13 +129,19 @@ void* prepareOSREntry(
     int stackFrameSize = entryCode->common.requiredRegisterCountForExecutionAndExit();
     if (UNLIKELY(!vm.ensureStackCapacityFor(&callFrame->registers()[virtualRegisterForLocal(stackFrameSize - 1).offset()]))) {
         dataLogLnIf(Options::verboseOSR(), "    OSR failed because stack growth failed.");
-        return 0;
+        return nullptr;
     }
 
     callFrame->setCodeBlock(entryCodeBlock);
 
     void* result = entryCode->addressForCall(ArityCheckNotRequired).executableAddress();
     dataLogLnIf(Options::verboseOSR(), "    Entry will succeed, going to address ", RawPointer(result));
+
+    // At this point, we're committed to triggering an OSR entry immediately after we return. Hence, it is safe to modify stack here.
+    if (result) {
+        if (reconstructedThis)
+            callFrame->r(virtualRegisterForArgumentIncludingThis(0)) = JSValue::encode(reconstructedThis.value());
+    }
 
     return result;
 }

@@ -97,6 +97,7 @@ protected:
     void removedFromAncestor(Node::RemovalType, ContainerNode&);
     void didMoveToNewDocument(Document& oldDocument);
 
+    void clearForm() { setForm(nullptr); }
     void setForm(HTMLFormElement*);
     void formAttributeChanged();
 
@@ -109,6 +110,7 @@ protected:
     String customValidationMessage() const;
 
 private:
+    // "willValidate" means "is a candidate for constraint validation".
     virtual bool willValidate() const = 0;
     virtual void refFormAssociatedElement() = 0;
     virtual void derefFormAssociatedElement() = 0;

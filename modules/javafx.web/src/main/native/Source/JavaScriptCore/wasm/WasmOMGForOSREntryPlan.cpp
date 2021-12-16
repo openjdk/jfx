@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,26 +26,18 @@
 #include "config.h"
 #include "WasmOMGForOSREntryPlan.h"
 
-#if ENABLE(WEBASSEMBLY)
+#if ENABLE(WEBASSEMBLY_B3JIT)
 
-#include "B3Compilation.h"
-#include "B3OpaqueByproducts.h"
-#include "JSCInlines.h"
+#include "JITCompilation.h"
 #include "LinkBuffer.h"
 #include "WasmB3IRGenerator.h"
 #include "WasmCallee.h"
-#include "WasmContext.h"
-#include "WasmInstance.h"
 #include "WasmMachineThreads.h"
-#include "WasmMemory.h"
 #include "WasmNameSection.h"
 #include "WasmSignatureInlines.h"
-#include "WasmWorklist.h"
 #include <wtf/DataLog.h>
 #include <wtf/Locker.h>
-#include <wtf/MonotonicTime.h>
 #include <wtf/StdLibExtras.h>
-#include <wtf/ThreadMessage.h>
 
 namespace JSC { namespace Wasm {
 
@@ -61,6 +53,7 @@ OMGForOSREntryPlan::OMGForOSREntryPlan(Context* context, Ref<Module>&& module, R
     , m_functionIndex(functionIndex)
     , m_loopIndex(loopIndex)
 {
+    ASSERT(Options::useOMGJIT());
     setMode(mode);
     ASSERT(m_codeBlock->runnable());
     ASSERT(m_codeBlock.ptr() == m_module->codeBlockFor(m_mode));
@@ -96,18 +89,16 @@ void OMGForOSREntryPlan::work(CompilationEffort)
         return;
     }
 
-    omgEntrypoint.compilation = makeUnique<B3::Compilation>(
-        FINALIZE_WASM_CODE_FOR_MODE(CompilationMode::OMGForOSREntryMode, linkBuffer, B3CompilationPtrTag, "WebAssembly OMGForOSREntry function[%i] %s name %s", m_functionIndex, signature.toString().ascii().data(), makeString(IndexOrName(functionIndexSpace, m_moduleInformation->nameSection->get(functionIndexSpace))).ascii().data()),
+    omgEntrypoint.compilation = makeUnique<Compilation>(
+        FINALIZE_WASM_CODE_FOR_MODE(CompilationMode::OMGForOSREntryMode, linkBuffer, JITCompilationPtrTag, "WebAssembly OMGForOSREntry function[%i] %s name %s", m_functionIndex, signature.toString().ascii().data(), makeString(IndexOrName(functionIndexSpace, m_moduleInformation->nameSection->get(functionIndexSpace))).ascii().data()),
         WTFMove(context.wasmEntrypointByproducts));
 
     omgEntrypoint.calleeSaveRegisters = WTFMove(parseAndCompileResult.value()->entrypoint.calleeSaveRegisters);
 
-    MacroAssemblerCodePtr<WasmEntryPtrTag> entrypoint;
     ASSERT(m_codeBlock.ptr() == m_module->codeBlockFor(mode()));
     Ref<OMGForOSREntryCallee> callee = OMGForOSREntryCallee::create(WTFMove(omgEntrypoint), functionIndexSpace, m_moduleInformation->nameSection->get(functionIndexSpace), osrEntryScratchBufferSize, m_loopIndex, WTFMove(unlinkedCalls));
     {
         MacroAssembler::repatchPointer(parseAndCompileResult.value()->calleeMoveLocation, CalleeBits::boxWasm(callee.ptr()));
-        entrypoint = callee->entrypoint();
 
         auto locker = holdLock(m_codeBlock->m_lock);
         for (auto& call : callee->wasmToWasmCallsites()) {
@@ -119,11 +110,10 @@ void OMGForOSREntryPlan::work(CompilationEffort)
 
             MacroAssembler::repatchNearCall(call.callLocation, CodeLocationLabel<WasmEntryPtrTag>(entrypoint));
         }
-    }
-    resetInstructionCacheOnAllThreads();
-    WTF::storeStoreFence();
-    {
-        auto locker = holdLock(m_codeBlock->m_lock);
+
+        resetInstructionCacheOnAllThreads();
+        WTF::storeStoreFence();
+
         {
             switch (m_callee->compilationMode()) {
             case CompilationMode::LLIntMode: {
@@ -145,19 +135,6 @@ void OMGForOSREntryPlan::work(CompilationEffort)
                 RELEASE_ASSERT_NOT_REACHED();
             }
         }
-        WTF::storeStoreFence();
-        // It is possible that a new OMG callee is added while we release m_codeBlock->lock.
-        // Until we add OMGForOSREntry callee to BBQCallee's m_osrEntryCallee, this new OMG function linking does not happen for this OMGForOSREntry callee.
-        // We re-link this OMGForOSREntry callee again not to miss that chance.
-        for (auto& call : callee->wasmToWasmCallsites()) {
-            MacroAssemblerCodePtr<WasmEntryPtrTag> entrypoint;
-            if (call.functionIndexSpace < m_module->moduleInformation().importFunctionCount())
-                entrypoint = m_codeBlock->m_wasmToWasmExitStubs[call.functionIndexSpace].code();
-            else
-                entrypoint = m_codeBlock->wasmEntrypointCalleeFromFunctionIndexSpace(call.functionIndexSpace).entrypoint().retagged<WasmEntryPtrTag>();
-
-            MacroAssembler::repatchNearCall(call.callLocation, CodeLocationLabel<WasmEntryPtrTag>(entrypoint));
-        }
     }
     dataLogLnIf(WasmOMGForOSREntryPlanInternal::verbose, "Finished OMGForOSREntry ", m_functionIndex);
     complete(holdLock(m_lock));
@@ -165,4 +142,4 @@ void OMGForOSREntryPlan::work(CompilationEffort)
 
 } } // namespace JSC::Wasm
 
-#endif // ENABLE(WEBASSEMBLY)
+#endif // ENABLE(WEBASSEMBLY_B3JIT)

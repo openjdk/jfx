@@ -29,6 +29,7 @@
 #if ENABLE(DFG_JIT)
 
 #include "ArrayPrototype.h"
+#include "CacheableIdentifierInlines.h"
 #include "DFGAbstractValue.h"
 #include "DFGGraph.h"
 #include "JSCInlines.h"
@@ -144,6 +145,10 @@ ArrayMode ArrayMode::fromObserved(const ConcurrentJSLocker& locker, ArrayProfile
         return ArrayMode(Array::Float32Array, nonArray, Array::AsIs, action).withProfile(locker, profile, makeSafe);
     case Float64ArrayMode:
         return ArrayMode(Array::Float64Array, nonArray, Array::AsIs, action).withProfile(locker, profile, makeSafe);
+    case BigInt64ArrayMode:
+        return ArrayMode(Array::BigInt64Array, nonArray, Array::AsIs, action).withProfile(locker, profile, makeSafe);
+    case BigUint64ArrayMode:
+        return ArrayMode(Array::BigUint64Array, nonArray, Array::AsIs, action).withProfile(locker, profile, makeSafe);
 
     default:
         // If we have seen multiple TypedArray types, or a TypedArray and non-typed array, it doesn't make sense to try to convert the object since you can't convert typed arrays.
@@ -184,9 +189,11 @@ ArrayMode ArrayMode::fromObserved(const ConcurrentJSLocker& locker, ArrayProfile
 
 static bool canBecomeGetArrayLength(Graph& graph, Node* node)
 {
+    if (node->op() == GetArrayLength)
+        return true;
     if (node->op() != GetById)
         return false;
-    auto uid = graph.identifiers()[node->identifierNumber()];
+    auto uid = node->cacheableIdentifier().uid();
     return uid == graph.m_vm.propertyNames->length.impl();
 }
 
@@ -239,12 +246,16 @@ ArrayMode ArrayMode::refine(
             return withTypeAndConversion(Array::Double, Array::Convert);
         return withTypeAndConversion(Array::Contiguous, Array::Convert);
     case Array::Undecided: {
+        // As long as we have a JSArray getting its length shouldn't require any sane chainness.
+        if (canBecomeGetArrayLength(graph, node) && isJSArray())
+            return *this;
+
         // If we have an OriginalArray and the JSArray prototype chain is sane,
         // any indexed access always return undefined. We have a fast path for that.
         JSGlobalObject* globalObject = graph.globalObjectFor(node->origin.semantic);
         Structure* arrayPrototypeStructure = globalObject->arrayPrototype()->structure(graph.m_vm);
         Structure* objectPrototypeStructure = globalObject->objectPrototype()->structure(graph.m_vm);
-        if ((node->op() == GetByVal || canBecomeGetArrayLength(graph, node))
+        if (node->op() == GetByVal
             && isJSArrayWithOriginalStructure()
             && !graph.hasExitSite(node->origin.semantic, OutOfBounds)
             && arrayPrototypeStructure->transitionWatchpointSetIsStillValid()
@@ -253,7 +264,7 @@ ArrayMode ArrayMode::refine(
             graph.registerAndWatchStructureTransition(arrayPrototypeStructure);
             graph.registerAndWatchStructureTransition(objectPrototypeStructure);
             if (globalObject->arrayPrototypeChainIsSane())
-                return withSpeculation(Array::SaneChain);
+                return withSpeculation(Array::InBoundsSaneChain);
         }
         return ArrayMode(Array::Generic, action());
     }
@@ -281,11 +292,14 @@ ArrayMode ArrayMode::refine(
     case Array::Uint32Array:
     case Array::Float32Array:
     case Array::Float64Array:
+    case Array::BigInt64Array:
+    case Array::BigUint64Array:
         if (node->op() == PutByVal) {
             if (graph.hasExitSite(node->origin.semantic, OutOfBounds) || !isInBounds())
                 return typedArrayResult(withSpeculation(Array::OutOfBounds));
         }
         return typedArrayResult(withSpeculation(Array::InBounds));
+
     case Array::Unprofiled:
     case Array::SelectUsingPredictions: {
         base &= ~SpecOther;
@@ -346,6 +360,12 @@ ArrayMode ArrayMode::refine(
 
         if (isFloat64ArraySpeculation(base))
             return typedArrayResult(result.withType(Array::Float64Array));
+
+        if (isBigInt64ArraySpeculation(base))
+            return typedArrayResult(result.withType(Array::BigInt64Array));
+
+        if (isBigUint64ArraySpeculation(base))
+            return typedArrayResult(result.withType(Array::BigUint64Array));
 
         if (type() == Array::Unprofiled)
             return ArrayMode(Array::ForceExit, action());
@@ -510,7 +530,8 @@ bool ArrayMode::alreadyChecked(Graph& graph, Node* node, const AbstractValue& va
 
     case Array::SlowPutArrayStorage:
         switch (arrayClass()) {
-        case Array::OriginalArray: {
+        case Array::OriginalArray:
+        case Array::OriginalCopyOnWriteArray: {
             CRASH();
             return false;
         }
@@ -530,7 +551,25 @@ bool ArrayMode::alreadyChecked(Graph& graph, Node* node, const AbstractValue& va
             return true;
         }
 
-        default: {
+        // Array::OriginalNonArray can be shown when the value is a TypedArray with original structure.
+        // But here, we already filtered TypedArrays. So, just handle it like a NonArray.
+        case Array::NonArray:
+        case Array::OriginalNonArray: {
+            if (arrayModesAlreadyChecked(value.m_arrayModes, asArrayModesIgnoringTypedArrays(NonArrayWithArrayStorage) | asArrayModesIgnoringTypedArrays(NonArrayWithSlowPutArrayStorage)))
+                return true;
+            if (value.m_structure.isTop())
+                return false;
+            for (unsigned i = value.m_structure.size(); i--;) {
+                RegisteredStructure structure = value.m_structure[i];
+                if (!hasAnyArrayStorage(structure->indexingType()))
+                    return false;
+                if (structure->indexingType() & IsArray)
+                    return false;
+            }
+            return true;
+        }
+
+        case Array::PossiblyArray: {
             if (arrayModesAlreadyChecked(value.m_arrayModes, asArrayModesIgnoringTypedArrays(NonArrayWithArrayStorage) | asArrayModesIgnoringTypedArrays(ArrayWithArrayStorage) | asArrayModesIgnoringTypedArrays(NonArrayWithSlowPutArrayStorage) | asArrayModesIgnoringTypedArrays(ArrayWithSlowPutArrayStorage)))
                 return true;
             if (value.m_structure.isTop())
@@ -541,7 +580,10 @@ bool ArrayMode::alreadyChecked(Graph& graph, Node* node, const AbstractValue& va
                     return false;
             }
             return true;
-        } }
+        }
+        default:
+            CRASH();
+        }
 
     case Array::DirectArguments:
         return speculationChecked(value.m_type, SpecDirectArguments);
@@ -575,6 +617,12 @@ bool ArrayMode::alreadyChecked(Graph& graph, Node* node, const AbstractValue& va
 
     case Array::Float64Array:
         return speculationChecked(value.m_type, SpecFloat64Array);
+
+    case Array::BigInt64Array:
+        return speculationChecked(value.m_type, SpecBigInt64Array);
+
+    case Array::BigUint64Array:
+        return speculationChecked(value.m_type, SpecBigUint64Array);
 
     case Array::AnyTypedArray:
         return speculationChecked(value.m_type, SpecTypedArrayView);
@@ -650,6 +698,10 @@ const char* arrayTypeToString(Array::Type type)
         return "Float32Array";
     case Array::Float64Array:
         return "Float64Array";
+    case Array::BigInt64Array:
+        return "BigInt64Array";
+    case Array::BigUint64Array:
+        return "BigUint64Array";
     case Array::AnyTypedArray:
         return "AnyTypedArray";
     default:
@@ -684,14 +736,16 @@ const char* arrayClassToString(Array::Class arrayClass)
 const char* arraySpeculationToString(Array::Speculation speculation)
 {
     switch (speculation) {
-    case Array::SaneChain:
-        return "SaneChain";
+    case Array::InBoundsSaneChain:
+        return "InBoundsSaneChain";
     case Array::InBounds:
         return "InBounds";
     case Array::ToHole:
         return "ToHole";
     case Array::OutOfBounds:
         return "OutOfBounds";
+    case Array::OutOfBoundsSaneChain:
+        return "OutOfBoundsSaneChain";
     default:
         return "Unknown!";
     }
@@ -750,6 +804,10 @@ TypedArrayType toTypedArrayType(Array::Type type)
         return TypeFloat32;
     case Array::Float64Array:
         return TypeFloat64;
+    case Array::BigInt64Array:
+        return TypeBigInt64;
+    case Array::BigUint64Array:
+        return TypeBigUint64;
     case Array::AnyTypedArray:
         RELEASE_ASSERT_NOT_REACHED();
         return NotTypedArray;
@@ -779,6 +837,10 @@ Array::Type toArrayType(TypedArrayType type)
         return Array::Float32Array;
     case TypeFloat64:
         return Array::Float64Array;
+    case TypeBigInt64:
+        return Array::BigInt64Array;
+    case TypeBigUint64:
+        return Array::BigUint64Array;
     default:
         return Array::Generic;
     }
@@ -814,6 +876,8 @@ bool permitsBoundsCheckLowering(Array::Type type)
     case Array::Uint32Array:
     case Array::Float32Array:
     case Array::Float64Array:
+    case Array::BigInt64Array:
+    case Array::BigUint64Array:
     case Array::AnyTypedArray:
         return true;
     default:

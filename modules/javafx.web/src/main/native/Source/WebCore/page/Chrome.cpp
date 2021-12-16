@@ -22,7 +22,10 @@
 #include "config.h"
 #include "Chrome.h"
 
+#include "AppHighlight.h"
 #include "ChromeClient.h"
+#include "ContactInfo.h"
+#include "ContactsRequestData.h"
 #include "DOMWindow.h"
 #include "Document.h"
 #include "DocumentType.h"
@@ -61,8 +64,8 @@
 #include "DataListSuggestionPicker.h"
 #endif
 
-#if PLATFORM(MAC) && ENABLE(GRAPHICS_CONTEXT_GL)
-#include "GraphicsContextGLOpenGLManager.h"
+#if ENABLE(DATE_AND_TIME_INPUT_TYPES)
+#include "DateTimeChooser.h"
 #endif
 
 namespace WebCore {
@@ -181,14 +184,16 @@ void Chrome::focusedFrameChanged(Frame* frame) const
     m_client.focusedFrameChanged(frame);
 }
 
-Page* Chrome::createWindow(Frame& frame, const FrameLoadRequest& request, const WindowFeatures& features, const NavigationAction& action) const
+Page* Chrome::createWindow(Frame& frame, const WindowFeatures& features, const NavigationAction& action) const
 {
-    Page* newPage = m_client.createWindow(frame, request, features, action);
+    Page* newPage = m_client.createWindow(frame, features, action);
     if (!newPage)
         return nullptr;
 
-    if (auto* oldSessionStorage = m_page.sessionStorage(false))
-        newPage->setSessionStorage(oldSessionStorage->copy(*newPage));
+    if (!features.noopener && !features.noreferrer) {
+        if (auto* oldSessionStorage = m_page.sessionStorage(false))
+            newPage->setSessionStorage(oldSessionStorage->copy(*newPage));
+    }
 
     return newPage;
 }
@@ -402,7 +407,7 @@ bool Chrome::print(Frame& frame)
         return false;
     }
 
-    m_client.print(frame);
+    m_client.print(frame, frame.document()->titleWithDirection());
     return true;
 }
 
@@ -421,10 +426,13 @@ void Chrome::disableSuddenTermination()
 std::unique_ptr<ColorChooser> Chrome::createColorChooser(ColorChooserClient& client, const Color& initialColor)
 {
 #if PLATFORM(IOS_FAMILY)
+    UNUSED_PARAM(client);
+    UNUSED_PARAM(initialColor);
     return nullptr;
-#endif
+#else
     notifyPopupOpeningObservers();
     return m_client.createColorChooser(client, initialColor);
+#endif
 }
 
 #endif
@@ -439,6 +447,21 @@ std::unique_ptr<DataListSuggestionPicker> Chrome::createDataListSuggestionPicker
 
 #endif
 
+#if ENABLE(DATE_AND_TIME_INPUT_TYPES)
+
+std::unique_ptr<DateTimeChooser> Chrome::createDateTimeChooser(DateTimeChooserClient& client)
+{
+#if PLATFORM(IOS_FAMILY)
+    UNUSED_PARAM(client);
+    return nullptr;
+#else
+    notifyPopupOpeningObservers();
+    return m_client.createDateTimeChooser(client);
+#endif
+}
+
+#endif
+
 void Chrome::runOpenPanel(Frame& frame, FileChooser& fileChooser)
 {
     notifyPopupOpeningObservers();
@@ -448,6 +471,11 @@ void Chrome::runOpenPanel(Frame& frame, FileChooser& fileChooser)
 void Chrome::showShareSheet(ShareDataWithParsedURL& shareData, CompletionHandler<void(bool)>&& callback)
 {
     m_client.showShareSheet(shareData, WTFMove(callback));
+}
+
+void Chrome::showContactPicker(const ContactsRequestData& requestData, CompletionHandler<void(Optional<Vector<ContactInfo>>&&)>&& callback)
+{
+    m_client.showContactPicker(requestData, WTFMove(callback));
 }
 
 void Chrome::loadIconForFiles(const Vector<String>& filenames, FileIconLoader& loader)
@@ -484,6 +512,13 @@ void Chrome::dispatchViewportPropertiesDidChange(const ViewportArguments& argume
     m_client.dispatchViewportPropertiesDidChange(arguments);
 }
 
+#if ENABLE(APP_HIGHLIGHTS)
+void Chrome::storeAppHighlight(const AppHighlight& highlight) const
+{
+    m_client.storeAppHighlight(highlight);
+}
+#endif
+
 void Chrome::setCursor(const Cursor& cursor)
 {
     m_client.setCursor(cursor);
@@ -494,31 +529,29 @@ void Chrome::setCursorHiddenUntilMouseMoves(bool hiddenUntilMouseMoves)
     m_client.setCursorHiddenUntilMouseMoves(hiddenUntilMouseMoves);
 }
 
-PlatformDisplayID Chrome::displayID() const
+RefPtr<ImageBuffer> Chrome::createImageBuffer(const FloatSize& size, RenderingMode renderingMode, RenderingPurpose purpose, float resolutionScale, DestinationColorSpace colorSpace, PixelFormat pixelFormat) const
 {
-    return m_displayID;
+    return m_client.createImageBuffer(size, renderingMode, purpose, resolutionScale, colorSpace, pixelFormat);
 }
 
-void Chrome::windowScreenDidChange(PlatformDisplayID displayID)
+#if ENABLE(WEBGL)
+RefPtr<GraphicsContextGL> Chrome::createGraphicsContextGL(const GraphicsContextGLAttributes& attributes) const
 {
-    if (displayID == m_displayID)
+    return m_client.createGraphicsContextGL(attributes, displayID());
+}
+#endif
+
+PlatformDisplayID Chrome::displayID() const
+{
+    return m_page.displayID();
+}
+
+void Chrome::windowScreenDidChange(PlatformDisplayID displayID, Optional<unsigned> nominalFrameInterval)
+{
+    if (displayID == m_page.displayID() && nominalFrameInterval == m_page.displayNominalFramesPerSecond())
         return;
 
-    m_displayID = displayID;
-
-    for (Frame* frame = &m_page.mainFrame(); frame; frame = frame->tree().traverseNext()) {
-        if (frame->document())
-            frame->document()->windowScreenDidChange(displayID);
-    }
-
-#if USE(REQUEST_ANIMATION_FRAME_DISPLAY_MONITOR)
-    m_page.renderingUpdateScheduler().windowScreenDidChange(displayID);
-#endif
-    m_page.setNeedsRecalcStyleInAllFrames();
-
-#if PLATFORM(MAC) && ENABLE(GRAPHICS_CONTEXT_GL)
-    GraphicsContextGLOpenGLManager::sharedManager().screenDidChange(displayID, this);
-#endif
+    m_page.windowScreenDidChange(displayID, nominalFrameInterval);
 }
 
 bool Chrome::selectItemWritingDirectionIsNatural()

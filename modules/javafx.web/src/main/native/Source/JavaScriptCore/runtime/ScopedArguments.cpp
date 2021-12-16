@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,7 +27,6 @@
 #include "ScopedArguments.h"
 
 #include "GenericArgumentsInlines.h"
-#include "JSCInlines.h"
 
 namespace JSC {
 
@@ -99,7 +98,8 @@ ScopedArguments* ScopedArguments::createByCopyingFrom(VM& vm, Structure* structu
     return result;
 }
 
-void ScopedArguments::visitChildren(JSCell* cell, SlotVisitor& visitor)
+template<typename Visitor>
+void ScopedArguments::visitChildrenImpl(JSCell* cell, Visitor& visitor)
 {
     ScopedArguments* thisObject = static_cast<ScopedArguments*>(cell);
     ASSERT_GC_OBJECT_INHERITS(thisObject, info());
@@ -115,6 +115,8 @@ void ScopedArguments::visitChildren(JSCell* cell, SlotVisitor& visitor)
             visitor.appendValues(storage, thisObject->m_totalLength - thisObject->m_table->length());
     }
 }
+
+DEFINE_VISIT_CHILDREN(ScopedArguments);
 
 Structure* ScopedArguments::createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
 {
@@ -143,11 +145,17 @@ void ScopedArguments::overrideThingsIfNecessary(JSGlobalObject* globalObject)
 void ScopedArguments::unmapArgument(JSGlobalObject* globalObject, uint32_t i)
 {
     VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
     ASSERT_WITH_SECURITY_IMPLICATION(i < m_totalLength);
     unsigned namedLength = m_table->length();
-    if (i < namedLength)
-        m_table.set(vm, this, m_table->set(vm, i, ScopeOffset()));
-    else
+    if (i < namedLength) {
+        auto* maybeCloned = m_table->trySet(vm, i, ScopeOffset());
+        if (UNLIKELY(!maybeCloned)) {
+            throwOutOfMemoryError(globalObject, scope);
+            return;
+        }
+        m_table.set(vm, this, maybeCloned);
+    } else
         storage()[i - namedLength].clear();
 }
 

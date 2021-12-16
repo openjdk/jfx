@@ -68,6 +68,7 @@ public:
     const Vector<LayoutUnit>& rowPositions() const { return m_rowPositions; }
 
     unsigned autoRepeatCountForDirection(GridTrackSizingDirection direction) const { return m_grid.autoRepeatTracks(direction); }
+    unsigned explicitGridStartForDirection(GridTrackSizingDirection direction) const { return m_grid.explicitGridStart(direction); }
 
     // Required by GridTrackSizingAlgorithm. Keep them under control.
     LayoutUnit guttersSize(const Grid&, GridTrackSizingDirection, unsigned startLine, unsigned span, Optional<LayoutUnit> availableSize) const;
@@ -81,14 +82,13 @@ public:
 
     StyleContentAlignmentData contentAlignment(GridTrackSizingDirection) const;
 
-protected:
+private:
     ItemPosition selfAlignmentNormalBehavior(const RenderBox* child = nullptr) const override
     {
         ASSERT(child);
         return child->isRenderReplaced() ? ItemPosition::Start : ItemPosition::Stretch;
     }
 
-private:
     const char* renderName() const override;
     bool isRenderGrid() const override { return true; }
     void computeIntrinsicLogicalWidths(LayoutUnit& minLogicalWidth, LayoutUnit& maxLogicalWidth) const override;
@@ -159,8 +159,8 @@ private:
     StyleSelfAlignmentData justifySelfForChild(const RenderBox&, const RenderStyle* = nullptr) const;
     StyleSelfAlignmentData alignSelfForChild(const RenderBox&, const RenderStyle* = nullptr) const;
     void applyStretchAlignmentToChildIfNeeded(RenderBox&);
-    bool hasAutoSizeInColumnAxis(const RenderBox& child) const { return isHorizontalWritingMode() ? child.style().height().isAuto() : child.style().width().isAuto(); }
-    bool hasAutoSizeInRowAxis(const RenderBox& child) const { return isHorizontalWritingMode() ? child.style().width().isAuto() : child.style().height().isAuto(); }
+    bool hasAutoSizeInColumnAxis(const RenderBox& child) const;
+    bool hasAutoSizeInRowAxis(const RenderBox& child) const;
     bool allowedToStretchChildAlongColumnAxis(const RenderBox& child) const { return alignSelfForChild(child).position() == ItemPosition::Stretch && hasAutoSizeInColumnAxis(child) && !hasAutoMarginsInColumnAxis(child); }
     bool allowedToStretchChildAlongRowAxis(const RenderBox& child) const { return justifySelfForChild(child).position() == ItemPosition::Stretch && hasAutoSizeInRowAxis(child) && !hasAutoMarginsInRowAxis(child); }
     bool hasAutoMarginsInColumnAxis(const RenderBox&) const;

@@ -48,6 +48,16 @@
 #define NS_RELEASES_ARGUMENT
 #endif
 
+#ifndef __OBJC__
+typedef struct objc_object *id;
+#endif
+
+// Because ARC enablement is a compile-time choice, and we compile this header
+// both ways, we need a separate copy of our code when ARC is enabled.
+#if __has_feature(objc_arc)
+#define adoptNS adoptNSArc
+#endif
+
 namespace WTF {
 
 // Unlike most most of our smart pointers, RetainPtr can take either the pointer type or the pointed-to type,
@@ -342,9 +352,7 @@ template <typename T> struct IsSmartPtr<RetainPtr<T>> {
 template<typename P> struct HashTraits<RetainPtr<P>> : SimpleClassHashTraits<RetainPtr<P>> {
 };
 
-template<typename P> struct DefaultHash<RetainPtr<P>> {
-    typedef PtrHash<RetainPtr<P>> Hash;
-};
+template<typename P> struct DefaultHash<RetainPtr<P>> : PtrHash<RetainPtr<P>> { };
 
 template <typename P>
 struct RetainPtrObjectHashTraits : SimpleClassHashTraits<RetainPtr<P>> {

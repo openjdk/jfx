@@ -27,6 +27,7 @@
 
 #if ENABLE(REMOTE_INSPECTOR)
 
+#include "JSExportMacros.h"
 #include <wtf/TypeCasts.h>
 #include <wtf/text/WTFString.h>
 
@@ -55,6 +56,7 @@ public:
 
     enum class Type {
         Automation,
+        ITML,
         JavaScript,
         Page,
         ServiceWorker,

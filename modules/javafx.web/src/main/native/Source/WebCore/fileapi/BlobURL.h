@@ -49,8 +49,9 @@ class BlobURL {
 public:
     static URL createPublicURL(SecurityOrigin*);
     static URL createInternalURL();
-    static String getOrigin(const URL&);
-    static String getIdentifier(const URL&);
+
+    static URL getOriginURL(const URL&);
+    static bool isSecureBlobURL(const URL&);
 
 private:
     static URL createBlobURL(const String& originString);

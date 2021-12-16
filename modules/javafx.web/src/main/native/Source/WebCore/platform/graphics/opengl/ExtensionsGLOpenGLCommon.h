@@ -28,11 +28,12 @@
 
 #include "ExtensionsGL.h"
 
-#include "GraphicsContextGLOpenGL.h"
 #include <wtf/HashSet.h>
 #include <wtf/text/StringHash.h>
 
 namespace WebCore {
+
+class GraphicsContextGLOpenGL;
 
 class ExtensionsGLOpenGLCommon : public ExtensionsGL {
     WTF_MAKE_FAST_ALLOCATED;
@@ -50,7 +51,7 @@ public:
     GCGLboolean isVertexArrayOES(PlatformGLObject) override = 0;
     void bindVertexArrayOES(PlatformGLObject) override = 0;
 
-    void drawBuffersEXT(GCGLsizei, const GCGLenum*) override = 0;
+    void drawBuffersEXT(GCGLSpan<const GCGLenum>) override = 0;
 
     String getTranslatedShaderSourceANGLE(PlatformGLObject) override;
 
@@ -59,14 +60,14 @@ public:
     void getnUniformfvEXT(GCGLuint program, int location, GCGLsizei bufSize, float *params) override;
     void getnUniformivEXT(GCGLuint program, int location, GCGLsizei bufSize, int *params) override;
 
-    bool isNVIDIA() override { return m_isNVIDIA; }
-    bool isAMD() override { return m_isAMD; }
-    bool isIntel() override { return m_isIntel; }
-    bool isImagination() override { return m_isImagination; }
-    String vendor() override { return m_vendor; }
+    bool isNVIDIA() const { return m_isNVIDIA; }
+    bool isAMD() const { return m_isAMD; }
+    bool isIntel() const { return m_isIntel; }
+    bool isImagination() const { return m_isImagination; }
+    String vendor() const { return m_vendor; }
 
-    bool requiresBuiltInFunctionEmulation() override { return m_requiresBuiltInFunctionEmulation; }
-    bool requiresRestrictedMaximumTextureSize() override { return m_requiresRestrictedMaximumTextureSize; }
+    bool requiresBuiltInFunctionEmulation() const { return m_requiresBuiltInFunctionEmulation; }
+    bool requiresRestrictedMaximumTextureSize() const { return m_requiresRestrictedMaximumTextureSize; }
 
 protected:
     friend class ExtensionsGLOpenGLES;

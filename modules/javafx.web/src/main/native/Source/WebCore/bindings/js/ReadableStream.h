@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include "ExceptionOr.h"
 #include "JSDOMBinding.h"
 #include "JSDOMConvert.h"
 #include "JSDOMGuardedObject.h"
@@ -39,11 +40,11 @@ class ReadableStream final : public DOMGuarded<JSReadableStream> {
 public:
     static Ref<ReadableStream> create(JSDOMGlobalObject& globalObject, JSReadableStream& readableStream) { return adoptRef(*new ReadableStream(globalObject, readableStream)); }
 
-    static Ref<ReadableStream> create(JSC::JSGlobalObject&, RefPtr<ReadableStreamSource>&&);
+    static ExceptionOr<Ref<ReadableStream>> create(JSC::JSGlobalObject&, RefPtr<ReadableStreamSource>&&);
 
     WEBCORE_EXPORT static bool isDisturbed(JSC::JSGlobalObject&, JSC::JSValue);
 
-    std::pair<Ref<ReadableStream>, Ref<ReadableStream>> tee();
+    Optional<std::pair<Ref<ReadableStream>, Ref<ReadableStream>>> tee();
 
     void lock();
     void pipeTo(ReadableStreamSink&);
@@ -52,7 +53,7 @@ public:
 
     JSReadableStream* readableStream() const { return guarded(); }
 
-protected:
+private:
     ReadableStream(JSDOMGlobalObject& globalObject, JSReadableStream& readableStream) : DOMGuarded<JSReadableStream>(globalObject, readableStream) { }
 };
 
@@ -81,6 +82,11 @@ template<> struct JSDOMWrapperConverterTraits<ReadableStream> {
 inline JSC::JSValue toJS(JSC::JSGlobalObject*, JSC::JSGlobalObject*, ReadableStream* stream)
 {
     return stream ? stream->readableStream() : JSC::jsUndefined();
+}
+
+inline JSC::JSValue toJSNewlyCreated(JSC::JSGlobalObject*, JSDOMGlobalObject*, Ref<ReadableStream>&& stream)
+{
+    return stream->readableStream();
 }
 
 }

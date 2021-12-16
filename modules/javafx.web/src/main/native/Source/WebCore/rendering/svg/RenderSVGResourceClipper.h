@@ -54,17 +54,16 @@ public:
 
     SVGUnitTypes::SVGUnitType clipPathUnits() const { return clipPathElement().clipPathUnits(); }
 
-protected:
+private:
     bool selfNeedsClientInvalidation() const override { return (everHadLayout() || m_clipper.size()) && selfNeedsLayout(); }
 
-private:
     struct ClipperData {
         FloatRect objectBoundingBox;
         AffineTransform absoluteTransform;
-        std::unique_ptr<ImageBuffer> imageBuffer;
+        RefPtr<ImageBuffer> imageBuffer;
 
         ClipperData() = default;
-        ClipperData(std::unique_ptr<ImageBuffer>&& buffer, const FloatRect& boundingBox, const AffineTransform& transform)
+        ClipperData(RefPtr<ImageBuffer>&& buffer, const FloatRect& boundingBox, const AffineTransform& transform)
             : objectBoundingBox(boundingBox)
             , absoluteTransform(transform)
             , imageBuffer(WTFMove(buffer))

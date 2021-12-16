@@ -1,7 +1,7 @@
 /*
  *  Copyright (C) 1999-2001 Harri Porten (porten@kde.org)
  *  Copyright (C) 2001 Peter Kelly (pmk@post.com)
- *  Copyright (C) 2003-2019 Apple Inc. All rights reserved.
+ *  Copyright (C) 2003-2021 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Library General Public
@@ -82,7 +82,7 @@ public:
         return create(vm, globalObject, getterObject, setterObject);
     }
 
-    static void visitChildren(JSCell*, SlotVisitor&);
+    DECLARE_VISIT_CHILDREN;
 
     JSObject* getter() const { return m_getter.get(); }
 
@@ -107,7 +107,7 @@ public:
 
     static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
     {
-        return Structure::create(vm, globalObject, prototype, TypeInfo(GetterSetterType), info());
+        return Structure::create(vm, globalObject, prototype, TypeInfo(GetterSetterType, StructureFlags), info());
     }
 
     static ptrdiff_t offsetOfGetter()
@@ -127,7 +127,7 @@ public:
     static bool putByIndex(JSCell*, JSGlobalObject*, unsigned, JSValue, bool) { RELEASE_ASSERT_NOT_REACHED(); return false; }
     static bool setPrototype(JSObject*, JSGlobalObject*, JSValue, bool) { RELEASE_ASSERT_NOT_REACHED(); return false; }
     static bool defineOwnProperty(JSObject*, JSGlobalObject*, PropertyName, const PropertyDescriptor&, bool) { RELEASE_ASSERT_NOT_REACHED(); return false; }
-    static bool deleteProperty(JSCell*, JSGlobalObject*, PropertyName) { RELEASE_ASSERT_NOT_REACHED(); return false; }
+    static bool deleteProperty(JSCell*, JSGlobalObject*, PropertyName, DeletePropertySlot&) { RELEASE_ASSERT_NOT_REACHED(); return false; }
 
 private:
     WriteBarrier<JSObject> m_getter;

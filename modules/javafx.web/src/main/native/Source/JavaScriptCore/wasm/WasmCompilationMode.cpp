@@ -26,6 +26,7 @@
 #include "config.h"
 #include "WasmCompilationMode.h"
 
+#include "Options.h"
 #include <wtf/Assertions.h>
 
 namespace JSC { namespace Wasm {

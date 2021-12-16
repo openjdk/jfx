@@ -97,7 +97,7 @@ class ObjCFrontendDispatcherImplementationGenerator(ObjCGenerator):
             lines.append(self._generate_event(domain, event))
             lines.append('')
         lines.append('@end')
-        return '\n'.join(lines)
+        return self.wrap_with_guard_for_condition(domain.condition, '\n'.join(lines))
 
     def _generate_event(self, domain, event):
         lines = []
@@ -125,13 +125,13 @@ class ObjCFrontendDispatcherImplementationGenerator(ObjCGenerator):
         if required_pointer_parameters or optional_pointer_parameters:
             lines.append('')
 
-        lines.append('    Ref<JSON::Object> jsonMessage = JSON::Object::create();')
-        lines.append('    jsonMessage->setString("method"_s, "%s.%s"_s);' % (domain.domain_name, event.event_name))
+        lines.append('    auto protocol_jsonMessage = JSON::Object::create();')
+        lines.append('    protocol_jsonMessage->setString("method"_s, "%s.%s"_s);' % (domain.domain_name, event.event_name))
         if event.event_parameters:
             lines.extend(self._generate_event_out_parameters(domain, event))
-        lines.append('    router.sendEvent(jsonMessage->toJSONString());')
+        lines.append('    router.sendEvent(protocol_jsonMessage->toJSONString());')
         lines.append('}')
-        return '\n'.join(lines)
+        return self.wrap_with_guard_for_condition(event.condition, '\n'.join(lines))
 
     def _generate_event_signature(self, domain, event):
         if not event.event_parameters:
@@ -145,16 +145,16 @@ class ObjCFrontendDispatcherImplementationGenerator(ObjCGenerator):
 
     def _generate_event_out_parameters(self, domain, event):
         lines = []
-        lines.append('    Ref<JSON::Object> paramsObject = JSON::Object::create();')
+        lines.append('    auto protocol_paramsObject = JSON::Object::create();')
         for parameter in event.event_parameters:
             keyed_set_method = CppGenerator.cpp_setter_method_for_type(parameter.type)
             var_name = parameter.parameter_name
             safe_var_name = '(*%s)' % var_name if parameter.is_optional else var_name
             export_expression = self.objc_protocol_export_expression_for_variable(parameter.type, safe_var_name)
             if not parameter.is_optional:
-                lines.append('    paramsObject->%s("%s"_s, %s);' % (keyed_set_method, parameter.parameter_name, export_expression))
+                lines.append('    protocol_paramsObject->%s("%s"_s, %s);' % (keyed_set_method, parameter.parameter_name, export_expression))
             else:
                 lines.append('    if (%s)' % (parameter.parameter_name))
-                lines.append('        paramsObject->%s("%s"_s, %s);' % (keyed_set_method, parameter.parameter_name, export_expression))
-        lines.append('    jsonMessage->setObject("params"_s, WTFMove(paramsObject));')
+                lines.append('        protocol_paramsObject->%s("%s"_s, %s);' % (keyed_set_method, parameter.parameter_name, export_expression))
+        lines.append('    protocol_jsonMessage->setObject("params"_s, WTFMove(protocol_paramsObject));')
         return lines

@@ -1,4 +1,4 @@
-# Copyright (C) 2011-2018 Apple Inc. All rights reserved.
+# Copyright (C) 2011-2020 Apple Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -31,7 +31,7 @@ require "config"
 #
 # node.children -> Returns an array of immediate children.
 #
-# node.descendents -> Returns an array of all strict descendants (children
+# node.descendants -> Returns an array of all strict descendants (children
 #     and children of children, transitively).
 #
 # node.flatten -> Returns an array containing the strict descendants and
@@ -699,7 +699,10 @@ class FPRegisterID < NoChildren
 end
 
 class SpecialRegister < NoChildren
+    attr_reader :name
+
     def initialize(name)
+        super(codeOrigin)
         @name = name
     end
     
@@ -917,7 +920,11 @@ class Instruction < Node
         @operands = operands
         @annotation = annotation
     end
-    
+
+    def cloneWithNewOperands(newOperands)
+        Instruction.new(self.codeOrigin, self.opcode, newOperands, self.annotation)
+    end
+
     def children
         operands
     end
@@ -938,7 +945,7 @@ class Instruction < Node
             $asm.putGlobalAnnotation
         when "emit"
             $asm.puts "#{operands[0].dump}"
-        when "tagReturnAddress", "untagReturnAddress", "removeCodePtrTag", "untagArrayPtr"
+        when "tagCodePtr", "tagReturnAddress", "untagReturnAddress", "removeCodePtrTag", "untagArrayPtr"
         else
             raise "Unhandled opcode #{opcode} at #{codeOriginString}"
         end
@@ -1159,7 +1166,9 @@ class LabelReference < Node
     end
     
     def mapChildren
-        LabelReference.new(codeOrigin, (yield @label))
+        result = LabelReference.new(codeOrigin, (yield @label))
+        result.offset = @offset
+        result
     end
     
     def name

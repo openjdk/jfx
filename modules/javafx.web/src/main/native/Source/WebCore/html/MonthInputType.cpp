@@ -32,9 +32,14 @@
 #if ENABLE(INPUT_TYPE_MONTH)
 #include "MonthInputType.h"
 
+#include "DateComponents.h"
+#include "DateTimeFieldsState.h"
+#include "Decimal.h"
 #include "HTMLInputElement.h"
 #include "HTMLNames.h"
 #include "InputTypeNames.h"
+#include "PlatformLocale.h"
+#include "StepRange.h"
 #include <wtf/DateMath.h>
 #include <wtf/MathExtras.h>
 #include <wtf/NeverDestroyed.h>
@@ -53,28 +58,28 @@ const AtomString& MonthInputType::formControlType() const
     return InputTypeNames::month();
 }
 
-DateComponents::Type MonthInputType::dateType() const
+DateComponentsType MonthInputType::dateType() const
 {
-    return DateComponents::Month;
+    return DateComponentsType::Month;
 }
 
 double MonthInputType::valueAsDate() const
 {
     ASSERT(element());
-    DateComponents date;
-    if (!parseToDateComponents(element()->value(), &date))
+    auto date = parseToDateComponents(element()->value());
+    if (!date)
         return DateComponents::invalidMilliseconds();
-    double msec = date.millisecondsSinceEpoch();
+    double msec = date->millisecondsSinceEpoch();
     ASSERT(std::isfinite(msec));
     return msec;
 }
 
 String MonthInputType::serializeWithMilliseconds(double value) const
 {
-    DateComponents date;
-    if (!date.setMillisecondsSinceEpochForMonth(value))
-        return String();
-    return serializeWithComponents(date);
+    auto date = DateComponents::fromMillisecondsSinceEpochForMonth(value);
+    if (!date)
+        return { };
+    return serializeWithComponents(*date);
 }
 
 Decimal MonthInputType::defaultValueForStepUp() const
@@ -83,9 +88,11 @@ Decimal MonthInputType::defaultValueForStepUp() const
     int offset = calculateLocalTimeOffset(current).offset / msPerMinute;
     current += offset * msPerMinute;
 
-    DateComponents date;
-    date.setMillisecondsSinceEpochForMonth(current);
-    double months = date.monthsSinceEpoch();
+    auto date = DateComponents::fromMillisecondsSinceEpochForMonth(current);
+    if (!date)
+        return  { };
+
+    double months = date->monthsSinceEpoch();
     ASSERT(std::isfinite(months));
     return Decimal::fromDouble(months);
 }
@@ -102,30 +109,45 @@ StepRange MonthInputType::createStepRange(AnyStepHandling anyStepHandling) const
 
 Decimal MonthInputType::parseToNumber(const String& src, const Decimal& defaultValue) const
 {
-    DateComponents date;
-    if (!parseToDateComponents(src, &date))
+    auto date = parseToDateComponents(src);
+    if (!date)
         return defaultValue;
-    double months = date.monthsSinceEpoch();
+    double months = date->monthsSinceEpoch();
     ASSERT(std::isfinite(months));
     return Decimal::fromDouble(months);
 }
 
-bool MonthInputType::parseToDateComponentsInternal(const UChar* characters, unsigned length, DateComponents* out) const
+Optional<DateComponents> MonthInputType::parseToDateComponents(const StringView& source) const
 {
-    ASSERT(out);
-    unsigned end;
-    return out->parseMonth(characters, length, 0, end) && end == length;
+    return DateComponents::fromParsingMonth(source);
 }
 
-bool MonthInputType::setMillisecondToDateComponents(double value, DateComponents* date) const
+Optional<DateComponents> MonthInputType::setMillisecondToDateComponents(double value) const
 {
-    ASSERT(date);
-    return date->setMonthsSinceEpoch(value);
+    return DateComponents::fromMonthsSinceEpoch(value);
 }
 
-bool MonthInputType::isMonthField() const
+void MonthInputType::handleDOMActivateEvent(Event&)
 {
-    return true;
+}
+
+bool MonthInputType::isValidFormat(OptionSet<DateTimeFormatValidationResults> results) const
+{
+    return results.containsAll({ DateTimeFormatValidationResults::HasYear, DateTimeFormatValidationResults::HasMonth });
+}
+
+String MonthInputType::formatDateTimeFieldsState(const DateTimeFieldsState& state) const
+{
+    if (!state.year || !state.month)
+        return emptyString();
+
+    return makeString(pad('0', 4, *state.year), '-', pad('0', 2, *state.month));
+}
+
+void MonthInputType::setupLayoutParameters(DateTimeEditElement::LayoutParameters& layoutParameters, const DateComponents&) const
+{
+    layoutParameters.dateTimeFormat = layoutParameters.locale.shortMonthFormat();
+    layoutParameters.fallbackDateTimeFormat = "yyyy-MM"_s;
 }
 
 } // namespace WebCore

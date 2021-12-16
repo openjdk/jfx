@@ -25,7 +25,6 @@
 
 #pragma once
 
-#include "CachePolicy.h"
 #include "CachedResource.h"
 #include "CachedResourceHandle.h"
 #include "CachedResourceRequest.h"
@@ -57,10 +56,14 @@ class DocumentLoader;
 class Frame;
 class ImageLoader;
 class Page;
+class SVGImage;
 class Settings;
 
 template <typename T>
 using ResourceErrorOr = Expected<T, ResourceError>;
+
+enum class CachePolicy : uint8_t;
+enum class ImageLoading : uint8_t { Immediate, DeferredUntilVisible };
 
 // The CachedResourceLoader provides a per-context interface to the MemoryCache
 // and enforces a bunch of security checks and rules for resource revalidation.
@@ -79,7 +82,7 @@ public:
     static Ref<CachedResourceLoader> create(DocumentLoader* documentLoader) { return adoptRef(*new CachedResourceLoader(documentLoader)); }
     ~CachedResourceLoader();
 
-    ResourceErrorOr<CachedResourceHandle<CachedImage>> requestImage(CachedResourceRequest&&);
+    ResourceErrorOr<CachedResourceHandle<CachedImage>> requestImage(CachedResourceRequest&&, ImageLoading = ImageLoading::Immediate);
     ResourceErrorOr<CachedResourceHandle<CachedCSSStyleSheet>> requestCSSStyleSheet(CachedResourceRequest&&);
     CachedResourceHandle<CachedCSSStyleSheet> requestUserCSSStyleSheet(Page&, CachedResourceRequest&&);
     ResourceErrorOr<CachedResourceHandle<CachedScript>> requestScript(CachedResourceRequest&&);
@@ -94,11 +97,14 @@ public:
     ResourceErrorOr<CachedResourceHandle<CachedXSLStyleSheet>> requestXSLStyleSheet(CachedResourceRequest&&);
 #endif
     ResourceErrorOr<CachedResourceHandle<CachedResource>> requestLinkResource(CachedResource::Type, CachedResourceRequest&&);
-#if ENABLE(VIDEO_TRACK)
+#if ENABLE(VIDEO)
     ResourceErrorOr<CachedResourceHandle<CachedTextTrack>> requestTextTrack(CachedResourceRequest&&);
 #endif
 #if ENABLE(APPLICATION_MANIFEST)
     ResourceErrorOr<CachedResourceHandle<CachedApplicationManifest>> requestApplicationManifest(CachedResourceRequest&&);
+#endif
+#if ENABLE(MODEL_ELEMENT)
+    ResourceErrorOr<CachedResourceHandle<CachedRawResource>> requestModelResource(CachedResourceRequest&&);
 #endif
 
     // Called to load Web Worker main script, Service Worker main script, importScripts(), XHR,
@@ -113,6 +119,9 @@ public:
 
     typedef HashMap<String, CachedResourceHandle<CachedResource>> DocumentResourceMap;
     const DocumentResourceMap& allCachedResources() const { return m_documentResources; }
+
+    void notifyFinished(const CachedResource&);
+    Vector<Ref<SVGImage>> allCachedSVGImages() const;
 
     bool autoLoadImages() const { return m_autoLoadImages; }
     void setAutoLoadImages(bool);
@@ -160,44 +169,46 @@ public:
 
     KeepaliveRequestTracker& keepaliveRequestTracker() { return m_keepaliveRequestTracker; }
 
+    Vector<CachedResource*> visibleResourcesToPrioritize();
+
 private:
     explicit CachedResourceLoader(DocumentLoader*);
 
     enum class ForPreload { Yes, No };
-    enum class DeferOption { NoDefer, DeferredByClient };
 
-    ResourceErrorOr<CachedResourceHandle<CachedResource>> requestResource(CachedResource::Type, CachedResourceRequest&&, ForPreload = ForPreload::No, DeferOption = DeferOption::NoDefer);
+    ResourceErrorOr<CachedResourceHandle<CachedResource>> requestResource(CachedResource::Type, CachedResourceRequest&&, ForPreload = ForPreload::No, ImageLoading = ImageLoading::Immediate);
     CachedResourceHandle<CachedResource> revalidateResource(CachedResourceRequest&&, CachedResource&);
-    CachedResourceHandle<CachedResource> loadResource(CachedResource::Type, PAL::SessionID, CachedResourceRequest&&, const CookieJar&);
+    CachedResourceHandle<CachedResource> loadResource(CachedResource::Type, PAL::SessionID, CachedResourceRequest&&, const CookieJar&, const Settings&);
 
     void prepareFetch(CachedResource::Type, CachedResourceRequest&);
-    void updateHTTPRequestHeaders(CachedResource::Type, CachedResourceRequest&);
+    void updateHTTPRequestHeaders(FrameLoader&, CachedResource::Type, CachedResourceRequest&);
 
-    bool canRequest(CachedResource::Type, const URL&, const CachedResourceRequest&, ForPreload);
+    bool canRequest(CachedResource::Type, const URL&, const ResourceLoaderOptions&, ForPreload);
 
     enum RevalidationPolicy { Use, Revalidate, Reload, Load };
-    RevalidationPolicy determineRevalidationPolicy(CachedResource::Type, CachedResourceRequest&, CachedResource* existingResource, ForPreload, DeferOption) const;
+    RevalidationPolicy determineRevalidationPolicy(CachedResource::Type, CachedResourceRequest&, CachedResource* existingResource, ForPreload, ImageLoading) const;
 
     bool shouldUpdateCachedResourceWithCurrentRequest(const CachedResource&, const CachedResourceRequest&);
-    CachedResourceHandle<CachedResource> updateCachedResourceWithCurrentRequest(const CachedResource&, CachedResourceRequest&&, const PAL::SessionID&, const CookieJar&);
+    CachedResourceHandle<CachedResource> updateCachedResourceWithCurrentRequest(const CachedResource&, CachedResourceRequest&&, const PAL::SessionID&, const CookieJar&, const Settings&);
 
     bool shouldContinueAfterNotifyingLoadedFromMemoryCache(const CachedResourceRequest&, CachedResource&, ResourceError&);
     bool checkInsecureContent(CachedResource::Type, const URL&) const;
 
     void performPostLoadActions();
 
-    bool clientDefersImage(const URL&) const;
+    ImageLoading clientDefersImage(const URL&) const;
     void reloadImagesIfNotDeferred();
 
     bool canRequestAfterRedirection(CachedResource::Type, const URL&, const ResourceLoaderOptions&) const;
     bool canRequestInContentDispositionAttachmentSandbox(CachedResource::Type, const URL&) const;
 
     HashSet<String> m_validatedURLs;
+    HashSet<String> m_cachedSVGImagesURLs;
     mutable DocumentResourceMap m_documentResources;
     WeakPtr<Document> m_document;
     DocumentLoader* m_documentLoader;
 
-    int m_requestCount;
+    int m_requestCount { 0 };
 
     std::unique_ptr<ListHashSet<CachedResource*>> m_preloads;
     Timer m_unusedPreloadsTimer;
@@ -207,10 +218,9 @@ private:
     ResourceTimingInformation m_resourceTimingInfo;
     KeepaliveRequestTracker m_keepaliveRequestTracker;
 
-    // 29 bits left
-    bool m_autoLoadImages : 1;
-    bool m_imagesEnabled : 1;
-    bool m_allowStaleResources : 1;
+    bool m_autoLoadImages { true };
+    bool m_imagesEnabled { true };
+    bool m_allowStaleResources { false };
 };
 
 class ResourceCacheValidationSuppressor {

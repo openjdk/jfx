@@ -55,32 +55,6 @@ class ScrollingStateScrollingNode : public ScrollingStateNode {
 public:
     virtual ~ScrollingStateScrollingNode();
 
-    enum ChangedProperty {
-        ScrollableAreaSize = NumStateNodeBits,
-        TotalContentsSize,
-        ReachableContentsSize,
-        ParentRelativeScrollableRect,
-        ScrollPosition,
-        ScrollOrigin,
-        ScrollableAreaParams,
-        RequestedScrollPosition,
-#if ENABLE(CSS_SCROLL_SNAP)
-        HorizontalSnapOffsets,
-        VerticalSnapOffsets,
-        HorizontalSnapOffsetRanges,
-        VerticalSnapOffsetRanges,
-        CurrentHorizontalSnapOffsetIndex,
-        CurrentVerticalSnapOffsetIndex,
-#endif
-        IsMonitoringWheelEvents,
-        ScrollContainerLayer,
-        ScrolledContentsLayer,
-        HorizontalScrollbarLayer,
-        VerticalScrollbarLayer,
-        PainterForScrollbar,
-        NumScrollingStateNodeBits // This must remain at the last position.
-    };
-
     const FloatSize& scrollableAreaSize() const { return m_scrollableAreaSize; }
     WEBCORE_EXPORT void setScrollableAreaSize(const FloatSize&);
 
@@ -90,9 +64,6 @@ public:
     const FloatSize& reachableContentsSize() const { return m_reachableContentsSize; }
     WEBCORE_EXPORT void setReachableContentsSize(const FloatSize&);
 
-    const LayoutRect& parentRelativeScrollableRect() const { return m_parentRelativeScrollableRect; }
-    WEBCORE_EXPORT void setParentRelativeScrollableRect(const LayoutRect&);
-
     const FloatPoint& scrollPosition() const { return m_scrollPosition; }
     WEBCORE_EXPORT void setScrollPosition(const FloatPoint&);
 
@@ -100,17 +71,8 @@ public:
     WEBCORE_EXPORT void setScrollOrigin(const IntPoint&);
 
 #if ENABLE(CSS_SCROLL_SNAP)
-    const Vector<float>& horizontalSnapOffsets() const { return m_snapOffsetsInfo.horizontalSnapOffsets; }
-    WEBCORE_EXPORT void setHorizontalSnapOffsets(const Vector<float>&);
-
-    const Vector<float>& verticalSnapOffsets() const { return m_snapOffsetsInfo.verticalSnapOffsets; }
-    WEBCORE_EXPORT void setVerticalSnapOffsets(const Vector<float>&);
-
-    const Vector<ScrollOffsetRange<float>>& horizontalSnapOffsetRanges() const { return m_snapOffsetsInfo.horizontalSnapOffsetRanges; }
-    WEBCORE_EXPORT void setHorizontalSnapOffsetRanges(const Vector<ScrollOffsetRange<float>>&);
-
-    const Vector<ScrollOffsetRange<float>>& verticalSnapOffsetRanges() const { return m_snapOffsetsInfo.verticalSnapOffsetRanges; }
-    WEBCORE_EXPORT void setVerticalSnapOffsetRanges(const Vector<ScrollOffsetRange<float>>&);
+    const ScrollSnapOffsetsInfo<float>& snapOffsetsInfo() const { return m_snapOffsetsInfo; }
+    WEBCORE_EXPORT void setSnapOffsetsInfo(const ScrollSnapOffsetsInfo<float>& newOffsetsInfo);
 
     unsigned currentHorizontalSnapPointIndex() const { return m_currentHorizontalSnapPointIndex; }
     WEBCORE_EXPORT void setCurrentHorizontalSnapPointIndex(unsigned);
@@ -121,6 +83,12 @@ public:
 
     const ScrollableAreaParameters& scrollableAreaParameters() const { return m_scrollableAreaParameters; }
     WEBCORE_EXPORT void setScrollableAreaParameters(const ScrollableAreaParameters& params);
+
+#if ENABLE(SCROLLING_THREAD)
+    OptionSet<SynchronousScrollingReason> synchronousScrollingReasons() const { return m_synchronousScrollingReasons; }
+    WEBCORE_EXPORT void setSynchronousScrollingReasons(OptionSet<SynchronousScrollingReason>);
+    bool hasSynchronousScrollingReasons() const { return !m_synchronousScrollingReasons.isEmpty(); }
+#endif
 
     const RequestedScrollData& requestedScrollData() const { return m_requestedScrollData; }
     WEBCORE_EXPORT void setRequestedScrollData(const RequestedScrollData&);
@@ -151,15 +119,13 @@ protected:
     ScrollingStateScrollingNode(ScrollingStateTree&, ScrollingNodeType, ScrollingNodeID);
     ScrollingStateScrollingNode(const ScrollingStateScrollingNode&, ScrollingStateTree&);
 
-    void setPropertyChangedBitsAfterReattach() override;
-
+    OptionSet<Property> applicableProperties() const override;
     void dumpProperties(WTF::TextStream&, ScrollingStateTreeAsTextBehavior) const override;
 
 private:
     FloatSize m_scrollableAreaSize;
     FloatSize m_totalContentsSize;
     FloatSize m_reachableContentsSize;
-    LayoutRect m_parentRelativeScrollableRect;
     FloatPoint m_scrollPosition;
     IntPoint m_scrollOrigin;
 
@@ -181,7 +147,9 @@ private:
 
     ScrollableAreaParameters m_scrollableAreaParameters;
     RequestedScrollData m_requestedScrollData;
-
+#if ENABLE(SCROLLING_THREAD)
+    OptionSet<SynchronousScrollingReason> m_synchronousScrollingReasons;
+#endif
     bool m_isMonitoringWheelEvents { false };
 };
 

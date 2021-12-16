@@ -56,12 +56,14 @@ inline SpinButtonElement::SpinButtonElement(Document& document, SpinButtonOwner&
     , m_repeatingTimer(*this, &SpinButtonElement::repeatingTimerFired)
 {
     setHasCustomStyleResolveCallbacks();
-    setPseudo(AtomString("-webkit-inner-spin-button", AtomString::ConstructFromLiteral));
 }
 
 Ref<SpinButtonElement> SpinButtonElement::create(Document& document, SpinButtonOwner& spinButtonOwner)
 {
-    return adoptRef(*new SpinButtonElement(document, spinButtonOwner));
+    auto element = adoptRef(*new SpinButtonElement(document, spinButtonOwner));
+    static MainThreadNeverDestroyed<const AtomString> webkitInnerSpinButtonName("-webkit-inner-spin-button", AtomString::ConstructFromLiteral);
+    element->setPseudo(webkitInnerSpinButtonName);
+    return element;
 }
 
 void SpinButtonElement::willDetachRenderers()
@@ -157,9 +159,6 @@ void SpinButtonElement::willOpenPopup()
 
 void SpinButtonElement::forwardEvent(Event& event)
 {
-    if (!renderBox())
-        return;
-
     if (!is<WheelEvent>(event))
         return;
 
@@ -250,11 +249,11 @@ void SpinButtonElement::repeatingTimerFired()
         step(m_upDownState == Up ? 1 : -1);
 }
 
-void SpinButtonElement::setHovered(bool flag)
+void SpinButtonElement::setHovered(bool flag, Style::InvalidationScope invalidationScope)
 {
     if (!flag)
         m_upDownState = Indeterminate;
-    HTMLDivElement::setHovered(flag);
+    HTMLDivElement::setHovered(flag, invalidationScope);
 }
 
 bool SpinButtonElement::shouldRespondToMouseEvents()

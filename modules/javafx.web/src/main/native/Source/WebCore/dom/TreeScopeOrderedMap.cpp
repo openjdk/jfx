@@ -196,28 +196,33 @@ const Vector<Element*>* TreeScopeOrderedMap::getAllElementsById(const AtomString
 {
     m_map.checkConsistency();
 
-    auto it = m_map.find(&key);
-    if (it == m_map.end())
+    auto mapIterator = m_map.find(&key);
+    if (mapIterator == m_map.end())
         return nullptr;
 
-    MapEntry& entry = it->value;
+    auto& entry = mapIterator->value;
     RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(entry.count);
 
     if (entry.orderedList.isEmpty()) {
         entry.orderedList.reserveCapacity(entry.count);
-        auto elementDescandents = descendantsOfType<Element>(scope.rootNode());
-        auto it = entry.element ? elementDescandents.beginAt(*entry.element) : elementDescandents.begin();
-        auto end = elementDescandents.end();
-        for (; it != end; ++it) {
-            auto& element = *it;
-            if (element.getIdAttribute().impl() != &key)
-                continue;
-            entry.orderedList.append(&element);
+        auto elementDescendants = descendantsOfType<Element>(scope.rootNode());
+        for (auto it = entry.element ? elementDescendants.beginAt(*entry.element) : elementDescendants.begin(); it; ++it) {
+            if (it->getIdAttribute().impl() == &key)
+                entry.orderedList.append(&*it);
         }
         RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(entry.orderedList.size() == entry.count);
     }
 
     return &entry.orderedList;
+}
+
+const Vector<AtomString> TreeScopeOrderedMap::keys() const
+{
+    Vector<AtomString> result;
+    result.reserveInitialCapacity(m_map.size());
+    for (auto* key : m_map.keys())
+        result.uncheckedAppend(const_cast<AtomStringImpl*>(key));
+    return result;
 }
 
 } // namespace WebCore

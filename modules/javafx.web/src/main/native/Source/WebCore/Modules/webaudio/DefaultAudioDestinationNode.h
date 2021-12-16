@@ -33,30 +33,42 @@ class AudioDestination;
 class DefaultAudioDestinationNode final : public AudioDestinationNode {
     WTF_MAKE_ISO_ALLOCATED(DefaultAudioDestinationNode);
 public:
-    static Ref<DefaultAudioDestinationNode> create(AudioContext& context)
+    static Ref<DefaultAudioDestinationNode> create(BaseAudioContext& context, Optional<float> sampleRate = WTF::nullopt)
     {
-        return adoptRef(*new DefaultAudioDestinationNode(context));
+        return adoptRef(*new DefaultAudioDestinationNode(context, sampleRate));
     }
 
     virtual ~DefaultAudioDestinationNode();
 
+    unsigned framesPerBuffer() const;
+
+    void startRendering(CompletionHandler<void(Optional<Exception>&&)>&&) final;
+
 private:
-    explicit DefaultAudioDestinationNode(AudioContext&);
+    DefaultAudioDestinationNode(BaseAudioContext&, Optional<float>);
+
     void createDestination();
+    void clearDestination();
+    void recreateDestination();
+
+    Function<void(Function<void()>&&)> dispatchToRenderThreadFunction();
 
     void initialize() final;
     void uninitialize() final;
     ExceptionOr<void> setChannelCount(unsigned) final;
 
+    bool requiresTailProcessing() const final { return false; }
+
     void enableInput(const String& inputDeviceId) final;
-    void startRendering() final;
-    void resume(Function<void ()>&&) final;
-    void suspend(Function<void ()>&&) final;
-    void close(Function<void ()>&&) final;
+    void resume(CompletionHandler<void(Optional<Exception>&&)>&&) final;
+    void suspend(CompletionHandler<void(Optional<Exception>&&)>&&) final;
+    void restartRendering() final;
+    void close(CompletionHandler<void()>&&) final;
     unsigned maxChannelCount() const final;
     bool isPlaying() final;
 
-    std::unique_ptr<AudioDestination> m_destination;
+    RefPtr<AudioDestination> m_destination;
+    bool m_wasDestinationStarted { false };
     String m_inputDeviceId;
     unsigned m_numberOfInputChannels { 0 };
 };

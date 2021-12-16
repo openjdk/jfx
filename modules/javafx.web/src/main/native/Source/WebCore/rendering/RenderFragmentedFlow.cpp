@@ -450,7 +450,7 @@ void RenderFragmentedFlow::removeRenderBoxFragmentInfo(RenderBox& box)
 
 void RenderFragmentedFlow::removeLineFragmentInfo(const RenderBlockFlow& blockFlow)
 {
-    if (!m_lineToFragmentMap || blockFlow.lineLayoutPath() == SimpleLinesPath)
+    if (!m_lineToFragmentMap)
         return;
 
     for (auto* curr = blockFlow.firstRootBox(); curr; curr = curr->nextRootBox())
@@ -909,9 +909,9 @@ LayoutUnit RenderFragmentedFlow::offsetFromLogicalTopOfFirstFragment(const Rende
     return currentBlock->isHorizontalWritingMode() ? blockRect.y() : blockRect.x();
 }
 
-void RenderFragmentedFlow::mapLocalToContainer(const RenderLayerModelObject* repaintContainer, TransformState& transformState, MapCoordinatesFlags mode, bool* wasFixed) const
+void RenderFragmentedFlow::mapLocalToContainer(const RenderLayerModelObject* ancestorContainer, TransformState& transformState, MapCoordinatesFlags mode, bool* wasFixed) const
 {
-    if (this == repaintContainer)
+    if (this == ancestorContainer)
         return;
 
     if (RenderFragmentContainer* fragment = mapFromFlowToFragment(transformState)) {
@@ -920,19 +920,19 @@ void RenderFragmentedFlow::mapLocalToContainer(const RenderLayerModelObject* rep
 
         // If the repaint container is nullptr, we have to climb up to the RenderView, otherwise swap
         // it with the fragment's repaint container.
-        repaintContainer = repaintContainer ? fragment->containerForRepaint() : nullptr;
+        ancestorContainer = ancestorContainer ? fragment->containerForRepaint() : nullptr;
 
         if (RenderFragmentedFlow* fragmentFragmentedFlow = fragment->enclosingFragmentedFlow()) {
             RenderFragmentContainer* startFragment = nullptr;
             RenderFragmentContainer* endFragment = nullptr;
             if (fragmentFragmentedFlow->getFragmentRangeForBox(fragment, startFragment, endFragment)) {
                 CurrentRenderFragmentContainerMaintainer fragmentMaintainer(*startFragment);
-                fragmentObject->mapLocalToContainer(repaintContainer, transformState, mode, wasFixed);
+                fragmentObject->mapLocalToContainer(ancestorContainer, transformState, mode, wasFixed);
                 return;
             }
         }
 
-        fragmentObject->mapLocalToContainer(repaintContainer, transformState, mode, wasFixed);
+        fragmentObject->mapLocalToContainer(ancestorContainer, transformState, mode, wasFixed);
     }
 }
 

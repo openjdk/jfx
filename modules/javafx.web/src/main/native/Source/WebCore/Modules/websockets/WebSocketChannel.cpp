@@ -36,7 +36,7 @@
 #include "ContentRuleListResults.h"
 #include "CookieJar.h"
 #include "Document.h"
-#include "FileError.h"
+#include "ExceptionCode.h"
 #include "FileReaderLoader.h"
 #include "Frame.h"
 #include "FrameLoader.h"
@@ -71,9 +71,9 @@ WebSocketChannel::WebSocketChannel(Document& document, WebSocketChannelClient& c
     , m_socketProvider(provider)
 {
     if (Page* page = document.page())
-        m_identifier = page->progress().createUniqueIdentifier();
+        m_progressIdentifier = page->progress().createUniqueIdentifier();
 
-    LOG(Network, "WebSocketChannel %p ctor, identifier %u", this, m_identifier);
+    LOG(Network, "WebSocketChannel %p ctor, progress identifier %u", this, m_progressIdentifier);
 }
 
 WebSocketChannel::~WebSocketChannel()
@@ -99,20 +99,22 @@ WebSocketChannel::ConnectStatus WebSocketChannel::connect(const URL& requestedUR
     String clientOrigin = m_document->securityOrigin().toString();
     m_handshake = makeUnique<WebSocketHandshake>(validatedURL->url, protocol, userAgent, clientOrigin, m_allowCookies);
     m_handshake->reset();
-    if (m_deflateFramer.canDeflate())
+#if !PLATFORM(JAVA)
         m_handshake->addExtensionProcessor(m_deflateFramer.createExtensionProcessor());
-    if (m_identifier)
-        InspectorInstrumentation::didCreateWebSocket(m_document.get(), m_identifier, validatedURL->url);
+#endif
+    if (m_progressIdentifier)
+        InspectorInstrumentation::didCreateWebSocket(m_document.get(), m_progressIdentifier, validatedURL->url);
 
-    if (Frame* frame = m_document->frame()) {
-        ref();
-        Page* page = frame->page();
-        PAL::SessionID sessionID = page ? page->sessionID() : PAL::SessionID::defaultSessionID();
-        String partition = m_document->domainForCachePartition();
-        // m_handle = m_socketProvider->createSocketStreamHandle(m_handshake->url(), *this, sessionID, partition, frame->loader().networkingContext());
-        // JDK-8094172: JavaFX needs Page instance
-        m_handle = m_socketProvider->createSocketStreamHandle(m_handshake->url(), *this, sessionID, page, partition, frame->loader().networkingContext());
-    }
+    auto* frame = m_document->frame();
+    auto* page = m_document->page();
+    if (!frame || !page)
+        return ConnectStatus::KO;
+
+    ref();
+    String partition = m_document->domainForCachePartition();
+    // m_handle = m_socketProvider->createSocketStreamHandle(m_handshake->url(), *this, identifier(), page->sessionID(), partition, frame->loader().networkingContext());
+    // JDK-8094172: JavaFX needs Page instance
+    m_handle = m_socketProvider->createSocketStreamHandle(m_handshake->url(), *this, identifier(), page->sessionID(), page, partition, frame->loader().networkingContext());
     return ConnectStatus::OK;
 }
 
@@ -207,7 +209,7 @@ void WebSocketChannel::fail(const String& reason)
     RELEASE_LOG(Network, "WebSocketChannel %p fail() reason='%s'", this, reason.utf8().data());
     ASSERT(!m_suspended);
     if (m_document) {
-        InspectorInstrumentation::didReceiveWebSocketFrameError(m_document.get(), m_identifier, reason);
+        InspectorInstrumentation::didReceiveWebSocketFrameError(m_document.get(), m_progressIdentifier, reason);
 
         String consoleMessage;
         if (m_handshake)
@@ -237,8 +239,8 @@ void WebSocketChannel::fail(const String& reason)
 void WebSocketChannel::disconnect()
 {
     LOG(Network, "WebSocketChannel %p disconnect()", this);
-    if (m_identifier && m_document)
-        InspectorInstrumentation::didCloseWebSocket(m_document.get(), m_identifier);
+    if (m_progressIdentifier && m_document)
+        InspectorInstrumentation::didCloseWebSocket(m_document.get(), m_progressIdentifier);
     m_client = nullptr;
     m_document = nullptr;
     if (m_handle)
@@ -263,13 +265,13 @@ void WebSocketChannel::didOpenSocketStream(SocketStreamHandle& handle)
     ASSERT(&handle == m_handle);
     if (!m_document)
         return;
-    if (m_identifier && UNLIKELY(InspectorInstrumentation::hasFrontends())) {
+    if (m_progressIdentifier && UNLIKELY(InspectorInstrumentation::hasFrontends())) {
         auto cookieRequestHeaderFieldValue = [document = m_document] (const URL& url) -> String {
             if (!document || !document->page())
                 return { };
             return document->page()->cookieJar().cookieRequestHeaderFieldValue(*document, url);
         };
-        InspectorInstrumentation::willSendWebSocketHandshakeRequest(m_document.get(), m_identifier, m_handshake->clientHandshakeRequest(WTFMove(cookieRequestHeaderFieldValue)));
+        InspectorInstrumentation::willSendWebSocketHandshakeRequest(m_document.get(), m_progressIdentifier, m_handshake->clientHandshakeRequest(WTFMove(cookieRequestHeaderFieldValue)));
     }
     auto handshakeMessage = m_handshake->clientHandshakeMessage();
     Optional<CookieRequestHeaderFieldProxy> cookieRequestHeaderFieldProxy;
@@ -287,8 +289,8 @@ void WebSocketChannel::didOpenSocketStream(SocketStreamHandle& handle)
 void WebSocketChannel::didCloseSocketStream(SocketStreamHandle& handle)
 {
     LOG(Network, "WebSocketChannel %p didCloseSocketStream()", this);
-    if (m_identifier && m_document)
-        InspectorInstrumentation::didCloseWebSocket(m_document.get(), m_identifier);
+    if (m_progressIdentifier && m_document)
+        InspectorInstrumentation::didCloseWebSocket(m_document.get(), m_progressIdentifier);
     ASSERT_UNUSED(handle, &handle == m_handle || !m_handle);
     m_closed = true;
     if (m_closingTimer.isActive())
@@ -362,7 +364,7 @@ void WebSocketChannel::didFailSocketStream(SocketStreamHandle& handle, const Soc
             message = makeString("WebSocket network error: error code ", error.errorCode());
         else
             message = "WebSocket network error: " + error.localizedDescription();
-        InspectorInstrumentation::didReceiveWebSocketFrameError(m_document.get(), m_identifier, message);
+        InspectorInstrumentation::didReceiveWebSocketFrameError(m_document.get(), m_progressIdentifier, message);
         m_document->addConsoleMessage(MessageSource::Network, MessageLevel::Error, message);
         LOG_ERROR("%s", message.utf8().data());
     }
@@ -396,14 +398,15 @@ void WebSocketChannel::didFinishLoading()
     deref();
 }
 
-void WebSocketChannel::didFail(int errorCode)
+void WebSocketChannel::didFail(ExceptionCode errorCode)
 {
-    LOG(Network, "WebSocketChannel %p didFail() errorCode=%d", this, errorCode);
+    auto code = static_cast<int>(errorCode);
+    LOG(Network, "WebSocketChannel %p didFail() errorCode=%d", this, code);
     ASSERT(m_blobLoader);
     ASSERT(m_blobLoaderStatus == BlobLoaderStarted);
     m_blobLoader = nullptr;
     m_blobLoaderStatus = BlobLoaderFailed;
-    fail(makeString("Failed to load Blob: error code = ", errorCode)); // FIXME: Generate human-friendly reason message.
+    fail(makeString("Failed to load Blob: error code = ", code)); // FIXME: Generate human-friendly reason message.
     deref();
 }
 
@@ -447,8 +450,8 @@ bool WebSocketChannel::processBuffer()
         if (headerLength <= 0)
             return false;
         if (m_handshake->mode() == WebSocketHandshake::Connected) {
-            if (m_identifier)
-                InspectorInstrumentation::didReceiveWebSocketHandshakeResponse(m_document.get(), m_identifier, m_handshake->serverHandshakeResponse());
+            if (m_progressIdentifier)
+                InspectorInstrumentation::didReceiveWebSocketHandshakeResponse(m_document.get(), m_progressIdentifier, m_handshake->serverHandshakeResponse());
             String serverSetCookie = m_handshake->serverSetCookie();
             if (!serverSetCookie.isEmpty()) {
                 if (m_document && m_document->page() && m_document->page()->cookieJar().cookiesEnabled(*m_document))
@@ -582,7 +585,7 @@ bool WebSocketChannel::processFrame()
         return false;
     }
 
-    InspectorInstrumentation::didReceiveWebSocketFrame(m_document.get(), m_identifier, frame);
+    InspectorInstrumentation::didReceiveWebSocketFrame(m_document.get(), m_progressIdentifier, frame);
 
     switch (frame.opCode) {
     case WebSocketFrame::OpCodeContinuation:
@@ -810,7 +813,7 @@ void WebSocketChannel::abortOutgoingFrameQueue()
     m_outgoingFrameQueueStatus = OutgoingFrameQueueClosed;
     if (m_blobLoaderStatus == BlobLoaderStarted) {
         m_blobLoader->cancel();
-        didFail(FileError::ABORT_ERR);
+        didFail(AbortError);
     }
 }
 
@@ -820,7 +823,7 @@ void WebSocketChannel::sendFrame(WebSocketFrame::OpCode opCode, const char* data
     ASSERT(!m_suspended);
 
     WebSocketFrame frame(opCode, true, false, true, data, dataLength);
-    InspectorInstrumentation::didSendWebSocketFrame(m_document.get(), m_identifier, frame);
+    InspectorInstrumentation::didSendWebSocketFrame(m_document.get(), m_progressIdentifier, frame);
 
     auto deflateResult = m_deflateFramer.deflate(frame);
     if (!deflateResult->succeeded()) {
@@ -834,19 +837,14 @@ void WebSocketChannel::sendFrame(WebSocketFrame::OpCode opCode, const char* data
     m_handle->sendData(frameData.data(), frameData.size(), WTFMove(completionHandler));
 }
 
-ResourceRequest WebSocketChannel::clientHandshakeRequest(Function<String(const URL&)>&& cookieRequestHeaderFieldValue)
+ResourceRequest WebSocketChannel::clientHandshakeRequest(const CookieGetter& cookieRequestHeaderFieldValue) const
 {
-    return m_handshake->clientHandshakeRequest(WTFMove(cookieRequestHeaderFieldValue));
+    return m_handshake->clientHandshakeRequest(cookieRequestHeaderFieldValue);
 }
 
 const ResourceResponse& WebSocketChannel::serverHandshakeResponse() const
 {
     return m_handshake->serverHandshakeResponse();
-}
-
-WebSocketHandshake::Mode WebSocketChannel::handshakeMode() const
-{
-    return m_handshake->mode();
 }
 
 } // namespace WebCore

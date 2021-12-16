@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,6 +28,7 @@ package com.sun.webkit.plugin;
 import java.io.IOError;
 import java.net.URL;
 
+import com.sun.prism.paint.Color;
 import com.sun.webkit.graphics.WCGraphicsContext;
 
 
@@ -51,7 +52,7 @@ final class DefaultPlugin implements Plugin {
         //if(g instanceof  WCGraphics2DContext){
             //nullComp.paint( ((WCGraphics2DContext)g).getImageGraphics() );
         //}
-        g.fillRect(x, y, w, h, 0x11aaffff);
+        g.fillRect(x, y, w, h, new Color(2 / 3.0f, 1.0f, 1.0f, 1 / 15.0f));
     }
 
     public void activate(Object nativeContainer, PluginListener pl) {}

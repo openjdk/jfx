@@ -28,14 +28,14 @@
 
 #if ENABLE(DFG_JIT)
 
-#include "DFGBasicBlockInlines.h"
 #include "DFGGraph.h"
 #include "DFGPhase.h"
-#include "JSCInlines.h"
+#include "JSCJSValueInlines.h"
 
 namespace JSC { namespace DFG {
 
 class CPSRethreadingPhase : public Phase {
+    static constexpr bool verbose = false;
 public:
     CPSRethreadingPhase(Graph& graph)
         : Phase(graph, "CPS rethreading")
@@ -414,7 +414,7 @@ private:
         Vector<PhiStackEntry, 128>& phiStack = phiStackFor<operandKind>();
 
         // Ensure that attempts to use this fail instantly.
-        m_block = 0;
+        m_block = nullptr;
 
         while (!phiStack.isEmpty()) {
             PhiStackEntry entry = phiStack.last();
@@ -426,6 +426,11 @@ private:
             VariableAccessData* variable = currentPhi->variableAccessData();
             size_t index = entry.m_index;
 
+            if (verbose) {
+                dataLog(" Iterating on phi from block ", block, " ");
+                m_graph.dump(WTF::dataFile(), "", currentPhi);
+            }
+
             for (size_t i = predecessors.size(); i--;) {
                 BasicBlock* predecessorBlock = predecessors[i];
 
@@ -434,11 +439,13 @@ private:
                     variableInPrevious = addPhi<operandKind>(predecessorBlock, currentPhi->origin, variable, index);
                     predecessorBlock->variablesAtTail.atFor<operandKind>(index) = variableInPrevious;
                     predecessorBlock->variablesAtHead.atFor<operandKind>(index) = variableInPrevious;
+                    dataLogLnIf(verbose, "    No variable in predecessor ", predecessorBlock, " creating a new phi: ", variableInPrevious);
                 } else {
                     switch (variableInPrevious->op()) {
                     case GetLocal:
                     case PhantomLocal:
                     case Flush:
+                        dataLogLnIf(verbose, "    Variable in predecessor ", predecessorBlock, " ", variableInPrevious, " needs to be forwarded to first child ", variableInPrevious->child1().node());
                         ASSERT(variableInPrevious->variableAccessData() == variableInPrevious->child1()->variableAccessData());
                         variableInPrevious = variableInPrevious->child1().node();
                         break;
@@ -452,6 +459,9 @@ private:
                     || variableInPrevious->op() == Phi
                     || variableInPrevious->op() == SetArgumentDefinitely
                     || variableInPrevious->op() == SetArgumentMaybe);
+
+                if (verbose)
+                    m_graph.dump(WTF::dataFile(), "    Adding new variable from predecessor ", variableInPrevious);
 
                 if (!currentPhi->child1()) {
                     currentPhi->children.setChild1(Edge(variableInPrevious));
@@ -468,7 +478,7 @@ private:
 
                 Node* newPhi = addPhiSilently(block, currentPhi->origin, variable);
                 newPhi->children = currentPhi->children;
-                currentPhi->children.initialize(newPhi, variableInPrevious, 0);
+                currentPhi->children.initialize(newPhi, variableInPrevious, nullptr);
             }
         }
     }

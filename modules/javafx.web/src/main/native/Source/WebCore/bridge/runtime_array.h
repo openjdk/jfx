@@ -35,7 +35,7 @@ namespace JSC {
 class RuntimeArray final : public JSArray {
 public:
     using Base = JSArray;
-    static constexpr unsigned StructureFlags = Base::StructureFlags | OverridesGetOwnPropertySlot | InterceptsGetOwnPropertySlotByIndexEvenWhenLengthIsNotZero | OverridesGetPropertyNames;
+    static constexpr unsigned StructureFlags = Base::StructureFlags | OverridesGetOwnPropertySlot | OverridesGetOwnPropertyNames | InterceptsGetOwnPropertySlotByIndexEvenWhenLengthIsNotZero;
     static constexpr bool needsDestruction = true;
 
     template<typename CellType, JSC::SubspaceAccess>
@@ -59,13 +59,13 @@ public:
     ~RuntimeArray();
     static void destroy(JSCell*);
 
-    static void getOwnPropertyNames(JSObject*, JSGlobalObject*, PropertyNameArray&, EnumerationMode);
+    static void getOwnPropertyNames(JSObject*, JSGlobalObject*, PropertyNameArray&, DontEnumPropertiesMode);
     static bool getOwnPropertySlot(JSObject*, JSGlobalObject*, PropertyName, PropertySlot&);
     static bool getOwnPropertySlotByIndex(JSObject*, JSGlobalObject*, unsigned, PropertySlot&);
     static bool put(JSCell*, JSGlobalObject*, PropertyName, JSValue, PutPropertySlot&);
     static bool putByIndex(JSCell*, JSGlobalObject*, unsigned propertyName, JSValue, bool shouldThrow);
 
-    static bool deleteProperty(JSCell*, JSGlobalObject*, PropertyName);
+    static bool deleteProperty(JSCell*, JSGlobalObject*, PropertyName, DeletePropertySlot&);
     static bool deletePropertyByIndex(JSCell*, JSGlobalObject*, unsigned propertyName);
 
     unsigned getLength() const { return m_array->getLength(); }
@@ -84,12 +84,10 @@ public:
         return Structure::create(vm, globalObject, prototype, TypeInfo(DerivedArrayType, StructureFlags), info(), ArrayClass);
     }
 
-protected:
-    void finishCreation(VM&, Bindings::Array*);
-
 private:
     RuntimeArray(VM&, Structure*);
-    static EncodedJSValue lengthGetter(JSGlobalObject*, EncodedJSValue, PropertyName);
+    void finishCreation(VM&, Bindings::Array*);
+
     static JSC::IsoSubspace* subspaceForImpl(JSC::VM&);
 
     BindingsArray* m_array;

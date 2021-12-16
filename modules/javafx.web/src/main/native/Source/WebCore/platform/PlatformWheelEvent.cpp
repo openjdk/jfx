@@ -35,13 +35,13 @@ namespace WebCore {
 TextStream& operator<<(TextStream& ts, PlatformWheelEventPhase phase)
 {
     switch (phase) {
-    case PlatformWheelEventPhaseNone: ts << "none"; break;
-    case PlatformWheelEventPhaseBegan: ts << "began"; break;
-    case PlatformWheelEventPhaseStationary: ts << "stationary"; break;
-    case PlatformWheelEventPhaseChanged: ts << "changed"; break;
-    case PlatformWheelEventPhaseEnded: ts << "ended"; break;
-    case PlatformWheelEventPhaseCancelled: ts << "cancelled"; break;
-    case PlatformWheelEventPhaseMayBegin: ts << "mayBegin"; break;
+    case PlatformWheelEventPhase::None: ts << "none"; break;
+    case PlatformWheelEventPhase::Began: ts << "began"; break;
+    case PlatformWheelEventPhase::Stationary: ts << "stationary"; break;
+    case PlatformWheelEventPhase::Changed: ts << "changed"; break;
+    case PlatformWheelEventPhase::Ended: ts << "ended"; break;
+    case PlatformWheelEventPhase::Cancelled: ts << "cancelled"; break;
+    case PlatformWheelEventPhase::MayBegin: ts << "mayBegin"; break;
     }
     return ts;
 }
@@ -53,9 +53,39 @@ TextStream& operator<<(TextStream& ts, const PlatformWheelEvent& event)
     ts << "PlatformWheelEvent " << &event << " at " << event.position() << " deltaX " << event.deltaX() << " deltaY " << event.deltaY();
 
 #if ENABLE(KINETIC_SCROLLING)
-    ts << " phase \"" << event.phase() << "\" momentumum phase \"" << event.momentumPhase() << "\"";
+    ts << " phase \"" << event.phase() << "\" momentum phase \"" << event.momentumPhase() << "\"";
 #endif
 
+    return ts;
+}
+
+TextStream& operator<<(TextStream& ts, WheelEventProcessingSteps steps)
+{
+    switch (steps) {
+    case WheelEventProcessingSteps::ScrollingThread: ts << "scrolling thread"; break;
+    case WheelEventProcessingSteps::MainThreadForScrolling: ts << "main thread scrolling"; break;
+    case WheelEventProcessingSteps::MainThreadForNonBlockingDOMEventDispatch: ts << "main thread non-blocking DOM event dispatch"; break;
+    case WheelEventProcessingSteps::MainThreadForBlockingDOMEventDispatch: ts << "main thread blocking DOM event dispatch"; break;
+    }
+    return ts;
+}
+
+TextStream& operator<<(TextStream& ts, EventHandling steps)
+{
+    switch (steps) {
+    case EventHandling::DispatchedToDOM: ts << "dispatched to DOM"; break;
+    case EventHandling::DefaultPrevented: ts << "default prevented"; break;
+    case EventHandling::DefaultHandled: ts << "default handled"; break;
+    }
+    return ts;
+}
+
+TextStream& operator<<(TextStream& ts, WheelScrollGestureState state)
+{
+    switch (state) {
+    case WheelScrollGestureState::Blocking: ts << "blocking"; break;
+    case WheelScrollGestureState::NonBlocking: ts << "non-blocking"; break;
+    }
     return ts;
 }
 

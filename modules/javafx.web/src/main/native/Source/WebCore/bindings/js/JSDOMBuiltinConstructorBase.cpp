@@ -1,6 +1,6 @@
 /*
  *  Copyright (C) 1999-2001 Harri Porten (porten@kde.org)
- *  Copyright (C) 2004-2017 Apple Inc. All rights reserved.
+ *  Copyright (C) 2004-2021 Apple Inc. All rights reserved.
  *  Copyright (C) 2007 Samuel Weinig <sam@webkit.org>
  *  Copyright (C) 2013 Michael Pruett <michael@68k.org>
  *
@@ -32,9 +32,8 @@ void JSDOMBuiltinConstructorBase::callFunctionWithCurrentArguments(JSC::JSGlobal
 {
     JSC::VM& vm = lexicalGlobalObject.vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
-    JSC::CallData callData;
-    JSC::CallType callType = JSC::getCallData(vm, &function, callData);
-    ASSERT(callType != CallType::None);
+    auto callData = JSC::getCallData(vm, &function);
+    ASSERT(callData.type != CallData::Type::None);
 
     JSC::MarkedArgumentBuffer arguments;
     for (unsigned i = 0; i < callFrame.argumentCount(); ++i)
@@ -43,16 +42,19 @@ void JSDOMBuiltinConstructorBase::callFunctionWithCurrentArguments(JSC::JSGlobal
         throwOutOfMemoryError(&lexicalGlobalObject, scope);
         return;
     }
-    JSC::call(&lexicalGlobalObject, &function, callType, callData, &thisObject, arguments);
+    JSC::call(&lexicalGlobalObject, &function, callData, &thisObject, arguments);
 }
 
-void JSDOMBuiltinConstructorBase::visitChildren(JSC::JSCell* cell, JSC::SlotVisitor& visitor)
+template<typename Visitor>
+void JSDOMBuiltinConstructorBase::visitChildrenImpl(JSC::JSCell* cell, Visitor& visitor)
 {
     auto* thisObject = jsCast<JSDOMBuiltinConstructorBase*>(cell);
     ASSERT_GC_OBJECT_INHERITS(thisObject, info());
     Base::visitChildren(thisObject, visitor);
     visitor.append(thisObject->m_initializeFunction);
 }
+
+DEFINE_VISIT_CHILDREN(JSDOMBuiltinConstructorBase);
 
 JSC::IsoSubspace* JSDOMBuiltinConstructorBase::subspaceForImpl(JSC::VM& vm)
 {

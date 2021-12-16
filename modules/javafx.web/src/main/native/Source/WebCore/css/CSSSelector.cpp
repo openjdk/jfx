@@ -90,14 +90,13 @@ void CSSSelector::createRareData()
     m_hasRareData = true;
 }
 
-static unsigned simpleSelectorSpecificityInternal(const CSSSelector& simpleSelector, bool isComputingMaximumSpecificity);
+static unsigned simpleSelectorSpecificityInternal(const CSSSelector& simpleSelector);
 
-static unsigned selectorSpecificity(const CSSSelector& firstSimpleSelector, bool isComputingMaximumSpecificity)
+static unsigned selectorSpecificity(const CSSSelector& firstSimpleSelector)
 {
-    unsigned total = simpleSelectorSpecificityInternal(firstSimpleSelector, isComputingMaximumSpecificity);
-
-    for (const CSSSelector* selector = firstSimpleSelector.tagHistory(); selector; selector = selector->tagHistory())
-        total = CSSSelector::addSpecificities(total, simpleSelectorSpecificityInternal(*selector, isComputingMaximumSpecificity));
+    unsigned total = 0;
+    for (const CSSSelector* selector = &firstSimpleSelector; selector; selector = selector->tagHistory())
+        total = CSSSelector::addSpecificities(total, simpleSelectorSpecificityInternal(*selector));
     return total;
 }
 
@@ -105,11 +104,11 @@ static unsigned maxSpecificity(const CSSSelectorList& selectorList)
 {
     unsigned maxSpecificity = 0;
     for (const CSSSelector* subSelector = selectorList.first(); subSelector; subSelector = CSSSelectorList::next(subSelector))
-        maxSpecificity = std::max(maxSpecificity, selectorSpecificity(*subSelector, true));
+        maxSpecificity = std::max(maxSpecificity, selectorSpecificity(*subSelector));
     return maxSpecificity;
 }
 
-static unsigned simpleSelectorSpecificityInternal(const CSSSelector& simpleSelector, bool isComputingMaximumSpecificity)
+static unsigned simpleSelectorSpecificityInternal(const CSSSelector& simpleSelector)
 {
     ASSERT_WITH_MESSAGE(!simpleSelector.isForPage(), "At the time of this writing, page selectors are not treated as real selectors that are matched. The value computed here only account for real selectors.");
 
@@ -120,18 +119,21 @@ static unsigned simpleSelectorSpecificityInternal(const CSSSelector& simpleSelec
     case CSSSelector::PagePseudoClass:
         break;
     case CSSSelector::PseudoClass:
-        if (simpleSelector.pseudoClassType() == CSSSelector::PseudoClassMatches) {
-            ASSERT_WITH_MESSAGE(simpleSelector.selectorList() && simpleSelector.selectorList()->first(), "The parser should never generate a valid selector for an empty :matches().");
-            if (!isComputingMaximumSpecificity)
-                return 0;
+        switch (simpleSelector.pseudoClassType()) {
+        case CSSSelector::PseudoClassIs:
+        case CSSSelector::PseudoClassMatches:
+        case CSSSelector::PseudoClassNot:
             return maxSpecificity(*simpleSelector.selectorList());
+        case CSSSelector::PseudoClassWhere:
+            return 0;
+        case CSSSelector::PseudoClassNthChild:
+        case CSSSelector::PseudoClassNthLastChild:
+        case CSSSelector::PseudoClassHost:
+            return CSSSelector::addSpecificities(static_cast<unsigned>(SelectorSpecificityIncrement::ClassB), simpleSelector.selectorList() ? maxSpecificity(*simpleSelector.selectorList()) : 0);
+        default:
+            break;
         }
-
-        if (simpleSelector.pseudoClassType() == CSSSelector::PseudoClassNot) {
-            ASSERT_WITH_MESSAGE(simpleSelector.selectorList() && simpleSelector.selectorList()->first(), "The parser should never generate a valid selector for an empty :not().");
-            return maxSpecificity(*simpleSelector.selectorList());
-        }
-        FALLTHROUGH;
+        return static_cast<unsigned>(SelectorSpecificityIncrement::ClassB);
     case CSSSelector::Exact:
     case CSSSelector::Class:
     case CSSSelector::Set:
@@ -154,63 +156,12 @@ static unsigned simpleSelectorSpecificityInternal(const CSSSelector& simpleSelec
 
 unsigned CSSSelector::simpleSelectorSpecificity() const
 {
-    return simpleSelectorSpecificityInternal(*this, false);
+    return simpleSelectorSpecificityInternal(*this);
 }
 
-static unsigned staticSpecificityInternal(const CSSSelector& firstSimpleSelector, bool& ok);
-
-static unsigned simpleSelectorFunctionalPseudoClassStaticSpecificity(const CSSSelector& simpleSelector, bool& ok)
+unsigned CSSSelector::computeSpecificity() const
 {
-    if (simpleSelector.match() == CSSSelector::PseudoClass) {
-        CSSSelector::PseudoClassType pseudoClassType = simpleSelector.pseudoClassType();
-        if (pseudoClassType == CSSSelector::PseudoClassMatches || pseudoClassType == CSSSelector::PseudoClassNthChild || pseudoClassType == CSSSelector::PseudoClassNthLastChild) {
-            const CSSSelectorList* selectorList = simpleSelector.selectorList();
-            if (!selectorList) {
-                ASSERT_WITH_MESSAGE(pseudoClassType != CSSSelector::PseudoClassMatches, ":matches() should never be created without a valid selector list.");
-                return 0;
-            }
-
-            const CSSSelector& firstSubselector = *selectorList->first();
-
-            unsigned initialSpecificity = staticSpecificityInternal(firstSubselector, ok);
-            if (!ok)
-                return 0;
-
-            const CSSSelector* subselector = &firstSubselector;
-            while ((subselector = CSSSelectorList::next(subselector))) {
-                unsigned subSelectorSpecificity = staticSpecificityInternal(*subselector, ok);
-                if (initialSpecificity != subSelectorSpecificity)
-                    ok = false;
-                if (!ok)
-                    return 0;
-            }
-            return initialSpecificity;
-        }
-    }
-    return 0;
-}
-
-static unsigned functionalPseudoClassStaticSpecificity(const CSSSelector& firstSimpleSelector, bool& ok)
-{
-    unsigned total = 0;
-    for (const CSSSelector* selector = &firstSimpleSelector; selector; selector = selector->tagHistory()) {
-        total = CSSSelector::addSpecificities(total, simpleSelectorFunctionalPseudoClassStaticSpecificity(*selector, ok));
-        if (!ok)
-            return 0;
-    }
-    return total;
-}
-
-static unsigned staticSpecificityInternal(const CSSSelector& firstSimpleSelector, bool& ok)
-{
-    unsigned staticSpecificity = selectorSpecificity(firstSimpleSelector, false);
-    return CSSSelector::addSpecificities(staticSpecificity, functionalPseudoClassStaticSpecificity(firstSimpleSelector, ok));
-}
-
-unsigned CSSSelector::staticSpecificity(bool &ok) const
-{
-    ok = true;
-    return staticSpecificityInternal(*this, ok);
+    return selectorSpecificity(*this);
 }
 
 unsigned CSSSelector::addSpecificities(unsigned a, unsigned b)
@@ -299,7 +250,7 @@ PseudoId CSSSelector::pseudoId(PseudoElementType type)
         return PseudoId::ScrollbarTrackPiece;
     case PseudoElementResizer:
         return PseudoId::Resizer;
-#if ENABLE(VIDEO_TRACK)
+#if ENABLE(VIDEO)
     case PseudoElementCue:
 #endif
     case PseudoElementSlotted:
@@ -326,9 +277,6 @@ CSSSelector::PseudoElementType CSSSelector::parsePseudoElementType(StringView na
     }
 
     if (type == PseudoElementHighlight && !RuntimeEnabledFeatures::sharedFeatures().highlightAPIEnabled())
-        return PseudoElementUnknown;
-
-    if (type == PseudoElementPart && !RuntimeEnabledFeatures::sharedFeatures().cssShadowPartsEnabled())
         return PseudoElementUnknown;
 
     return type;
@@ -556,10 +504,13 @@ String CSSSelector::selectorText(const String& rightSide) const
             case CSSSelector::PseudoClassFocus:
                 builder.appendLiteral(":focus");
                 break;
+            case CSSSelector::PseudoClassFocusVisible:
+                builder.appendLiteral(":focus-visible");
+                break;
             case CSSSelector::PseudoClassFocusWithin:
                 builder.appendLiteral(":focus-within");
                 break;
-#if ENABLE(VIDEO_TRACK)
+#if ENABLE(VIDEO)
             case CSSSelector::PseudoClassFuture:
                 builder.appendLiteral(":future");
                 break;
@@ -645,8 +596,20 @@ String CSSSelector::selectorText(const String& rightSide) const
             case CSSSelector::PseudoClassOptional:
                 builder.appendLiteral(":optional");
                 break;
+            case CSSSelector::PseudoClassIs: {
+                builder.appendLiteral(":is(");
+                cs->selectorList()->buildSelectorsText(builder);
+                builder.append(')');
+                break;
+            }
             case CSSSelector::PseudoClassMatches: {
                 builder.appendLiteral(":matches(");
+                cs->selectorList()->buildSelectorsText(builder);
+                builder.append(')');
+                break;
+            }
+            case CSSSelector::PseudoClassWhere: {
+                builder.appendLiteral(":where(");
                 cs->selectorList()->buildSelectorsText(builder);
                 builder.append(')');
                 break;
@@ -657,7 +620,7 @@ String CSSSelector::selectorText(const String& rightSide) const
             case CSSSelector::PseudoClassOutOfRange:
                 builder.appendLiteral(":out-of-range");
                 break;
-#if ENABLE(VIDEO_TRACK)
+#if ENABLE(VIDEO)
             case CSSSelector::PseudoClassPast:
                 builder.appendLiteral(":past");
                 break;
@@ -706,6 +669,11 @@ String CSSSelector::selectorText(const String& rightSide) const
                 break;
             case CSSSelector::PseudoClassHost:
                 builder.appendLiteral(":host");
+                if (auto* selectorList = cs->selectorList()) {
+                    builder.append('(');
+                    selectorList->buildSelectorsText(builder);
+                    builder.append(')');
+                }
                 break;
             case CSSSelector::PseudoClassDefined:
                 builder.appendLiteral(":defined");
@@ -735,8 +703,10 @@ String CSSSelector::selectorText(const String& rightSide) const
             case CSSSelector::PseudoElementWebKitCustomLegacyPrefixed:
                 if (cs->value() == "placeholder")
                     builder.appendLiteral("::-webkit-input-placeholder");
+                if (cs->value() == "file-selector-button")
+                    builder.appendLiteral("::-webkit-file-upload-button");
                 break;
-#if ENABLE(VIDEO_TRACK)
+#if ENABLE(VIDEO)
             case CSSSelector::PseudoElementCue: {
                 if (auto* selectorList = cs->selectorList()) {
                     builder.appendLiteral("::cue(");

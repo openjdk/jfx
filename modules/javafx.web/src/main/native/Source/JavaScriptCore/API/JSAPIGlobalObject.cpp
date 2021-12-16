@@ -44,10 +44,18 @@ const GlobalObjectMethodTable JSAPIGlobalObject::s_globalObjectMethodTable = {
     nullptr, // moduleLoaderCreateImportMetaProperties
     nullptr, // moduleLoaderEvaluate
     nullptr, // promiseRejectionTracker
+    &reportUncaughtExceptionAtEventLoop,
+    &currentScriptExecutionOwner,
+    &scriptExecutionStatus,
     nullptr, // defaultLanguage
     nullptr, // compileStreaming
     nullptr, // instantiateStreaming
 };
+
+void JSAPIGlobalObject::reportUncaughtExceptionAtEventLoop(JSGlobalObject* globalObject, Exception* exception)
+{
+    Base::reportUncaughtExceptionAtEventLoop(globalObject, exception);
+}
 
 }
 

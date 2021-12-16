@@ -35,6 +35,7 @@ public class FocusedWindowMonocleTest extends FocusedWindowTestBase {
     static {
         System.setProperty("glass.platform","Monocle");
         System.setProperty("monocle.platform","Headless");
+        System.setProperty("prism.order","sw");
     }
 
     @BeforeClass

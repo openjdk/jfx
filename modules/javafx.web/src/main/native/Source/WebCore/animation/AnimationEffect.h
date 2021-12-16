@@ -53,16 +53,19 @@ public:
 
     virtual bool isKeyframeEffect() const { return false; }
 
+    EffectTiming getBindingsTiming() const;
     EffectTiming getTiming() const;
-    BasicEffectTiming getBasicTiming() const;
-    ComputedEffectTiming getComputedTiming() const;
+    BasicEffectTiming getBasicTiming(Optional<Seconds> = WTF::nullopt) const;
+    ComputedEffectTiming getBindingsComputedTiming() const;
+    ComputedEffectTiming getComputedTiming(Optional<Seconds> = WTF::nullopt) const;
+    ExceptionOr<void> bindingsUpdateTiming(Optional<OptionalEffectTiming>);
     ExceptionOr<void> updateTiming(Optional<OptionalEffectTiming>);
 
-    virtual void apply(RenderStyle&) = 0;
+    virtual void apply(RenderStyle& targetStyle, const RenderStyle* parentElementStyle, Optional<Seconds> = WTF::nullopt) = 0;
     virtual void invalidate() = 0;
     virtual void animationDidTick() = 0;
     virtual void animationDidPlay() = 0;
-    virtual void animationDidSeek() = 0;
+    virtual void animationDidChangeTimingProperties() = 0;
     virtual void animationWasCanceled() = 0;
     virtual void animationSuspensionStateDidChange(bool) = 0;
     virtual void animationTimelineDidChange(AnimationTimeline*) = 0;
@@ -99,8 +102,12 @@ public:
 
     void updateStaticTimingProperties();
 
+    virtual Seconds timeToNextTick() const { return Seconds::infinity(); }
+
 protected:
     explicit AnimationEffect();
+
+    virtual Optional<double> progressUntilNextStep(double) const;
 
 private:
     enum class ComputedDirection : uint8_t { Forwards, Reverse };

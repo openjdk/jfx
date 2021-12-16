@@ -1,6 +1,6 @@
 /*
  *  Copyright (C) 1999-2000 Harri Porten (porten@kde.org)
- *  Copyright (C) 2003-2019 Apple Inc. All rights reserved.
+ *  Copyright (C) 2003-2021 Apple Inc. All rights reserved.
  *  Copyright (C) 2007 Cameron Zwarich (cwzwarich@uwaterloo.ca)
  *  Copyright (C) 2007 Maks Orlovich
  *
@@ -46,7 +46,7 @@ public:
 
     DECLARE_EXPORT_INFO;
 
-    JS_EXPORT_PRIVATE static void visitChildren(JSCell*, SlotVisitor&);
+    DECLARE_VISIT_CHILDREN_WITH_MODIFIER(JS_EXPORT_PRIVATE);
 
     JS_EXPORT_PRIVATE const String& name();
     const String displayName(VM&);
@@ -57,7 +57,8 @@ public:
         return Structure::create(vm, globalObject, proto, TypeInfo(InternalFunctionType, StructureFlags), info());
     }
 
-    static Structure* createSubclassStructure(JSGlobalObject*, JSObject* baseCallee, JSValue newTarget, Structure*);
+    JS_EXPORT_PRIVATE static Structure* createSubclassStructure(JSGlobalObject*, JSObject* newTarget, Structure*);
+    JS_EXPORT_PRIVATE static InternalFunction* createFunctionThatMasqueradesAsUndefined(VM&, JSGlobalObject*, unsigned length, const String& name, NativeFunction);
 
     TaggedNativeFunction nativeFunctionFor(CodeSpecializationKind kind)
     {
@@ -83,15 +84,13 @@ public:
     JSGlobalObject* globalObject() const { return m_globalObject.get(); }
 
 protected:
-    JS_EXPORT_PRIVATE InternalFunction(VM&, Structure*, NativeFunction functionForCall, NativeFunction functionForConstruct);
+    JS_EXPORT_PRIVATE InternalFunction(VM&, Structure*, NativeFunction functionForCall, NativeFunction functionForConstruct = nullptr);
 
-    enum class NameAdditionMode { WithStructureTransition, WithoutStructureTransition };
-    JS_EXPORT_PRIVATE void finishCreation(VM&, const String& name, NameAdditionMode = NameAdditionMode::WithStructureTransition);
+    enum class PropertyAdditionMode { WithStructureTransition, WithoutStructureTransition };
+    JS_EXPORT_PRIVATE void finishCreation(VM&, unsigned length, const String& name, PropertyAdditionMode = PropertyAdditionMode::WithStructureTransition);
 
-    JS_EXPORT_PRIVATE static Structure* createSubclassStructureSlow(JSGlobalObject*, JSValue newTarget, Structure*);
-
-    JS_EXPORT_PRIVATE static ConstructType getConstructData(JSCell*, ConstructData&);
-    JS_EXPORT_PRIVATE static CallType getCallData(JSCell*, CallData&);
+    JS_EXPORT_PRIVATE static CallData getConstructData(JSCell*);
+    JS_EXPORT_PRIVATE static CallData getCallData(JSCell*);
 
     TaggedNativeFunction m_functionForCall;
     TaggedNativeFunction m_functionForConstruct;
@@ -99,13 +98,6 @@ protected:
     WriteBarrier<JSGlobalObject> m_globalObject;
 };
 
-ALWAYS_INLINE Structure* InternalFunction::createSubclassStructure(JSGlobalObject* globalObject, JSObject* baseCallee, JSValue newTarget, Structure* baseClass)
-{
-    // We allow newTarget == JSValue() because the API needs to be able to create classes without having a real JS frame.
-    // Since we don't allow subclassing in the API we just treat newTarget == JSValue() as newTarget == callFrame->jsCallee()
-    if (newTarget && newTarget != baseCallee)
-        return createSubclassStructureSlow(globalObject, newTarget, baseClass);
-    return baseClass;
-}
+JS_EXPORT_PRIVATE JSGlobalObject* getFunctionRealm(VM&, JSObject*);
 
 } // namespace JSC

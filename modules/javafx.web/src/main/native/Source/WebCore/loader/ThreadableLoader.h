@@ -74,8 +74,9 @@ namespace WebCore {
         WTF_MAKE_NONCOPYABLE(ThreadableLoader);
     public:
         static void loadResourceSynchronously(ScriptExecutionContext&, ResourceRequest&&, ThreadableLoaderClient&, const ThreadableLoaderOptions&);
-        static RefPtr<ThreadableLoader> create(ScriptExecutionContext&, ThreadableLoaderClient&, ResourceRequest&&, const ThreadableLoaderOptions&, String&& referrer = String());
+        static RefPtr<ThreadableLoader> create(ScriptExecutionContext&, ThreadableLoaderClient&, ResourceRequest&&, const ThreadableLoaderOptions&, String&& referrer = String(), String&& taskMode = { });
 
+        virtual void computeIsDone() = 0;
         virtual void cancel() = 0;
         void ref() { refThreadableLoader(); }
         void deref() { derefThreadableLoader(); }

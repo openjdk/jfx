@@ -33,7 +33,6 @@
 typedef double DOMHighResTimeStamp;
 
 [
-    EnabledAtRuntime=ResourceTiming,
     Exposed=(Window,Worker),
 ] interface PerformanceResourceTiming : PerformanceEntry {
     readonly attribute DOMString initiatorType;
@@ -53,5 +52,5 @@ typedef double DOMHighResTimeStamp;
     readonly attribute DOMHighResTimeStamp responseEnd;
     [EnabledAtRuntime=ServerTiming] readonly attribute FrozenArray<PerformanceServerTiming> serverTiming;
 
-    serializer = { inherit, attribute };
+    [Default] object toJSON();
 };

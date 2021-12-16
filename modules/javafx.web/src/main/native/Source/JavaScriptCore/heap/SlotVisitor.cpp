@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,8 +26,6 @@
 #include "config.h"
 #include "SlotVisitor.h"
 
-#include "BlockDirectoryInlines.h"
-#include "CPU.h"
 #include "ConservativeRoots.h"
 #include "GCSegmentedArrayInlines.h"
 #include "HeapAnalyzer.h"
@@ -35,15 +33,11 @@
 #include "HeapProfiler.h"
 #include "IntegrityInlines.h"
 #include "JSArray.h"
-#include "JSDestructibleObject.h"
-#include "JSObject.h"
+#include "JSCellInlines.h"
 #include "JSString.h"
-#include "JSCInlines.h"
-#include "MarkedBlockInlines.h"
 #include "MarkingConstraintSolver.h"
 #include "SlotVisitorInlines.h"
 #include "StopIfNecessaryTimer.h"
-#include "SuperSampler.h"
 #include "VM.h"
 #include <wtf/ListDump.h>
 #include <wtf/Lock.h>
@@ -83,15 +77,10 @@ static void validate(JSCell* cell)
 #endif
 
 SlotVisitor::SlotVisitor(Heap& heap, CString codeName)
-    : m_bytesVisited(0)
-    , m_visitCount(0)
-    , m_isInParallelMode(false)
+    : Base(heap, codeName, heap.m_opaqueRoots)
     , m_markingVersion(MarkedSpace::initialVersion)
-    , m_heap(heap)
-    , m_codeName(codeName)
 #if ASSERT_ENABLED
     , m_isCheckingForDefaultMarkViolation(false)
-    , m_isDraining(false)
 #endif
 {
 }
@@ -123,8 +112,8 @@ void SlotVisitor::didStartMarking()
 
 void SlotVisitor::reset()
 {
+    AbstractSlotVisitor::reset();
     m_bytesVisited = 0;
-    m_visitCount = 0;
     m_heapAnalyzer = nullptr;
     RELEASE_ASSERT(!m_currentCell);
 }
@@ -200,11 +189,8 @@ void SlotVisitor::appendJSCellOrAuxiliary(HeapCell* heapCell)
         if (isNuked(structureID))
             die("GC scan found object in bad state: structureID is nuked!\n");
 
-#if USE(JSVALUE64)
         // This detects the worst of the badness.
-        if (!heap()->structureIDTable().isValid(structureID))
-            die("GC scan found corrupt object: structureID is invalid!\n");
-#endif
+        Integrity::auditStructureID(heap()->structureIDTable(), structureID);
     };
 
     // In debug mode, we validate before marking since this makes it clearer what the problem
@@ -217,7 +203,7 @@ void SlotVisitor::appendJSCellOrAuxiliary(HeapCell* heapCell)
 
     switch (heapCell->cellKind()) {
     case HeapCell::JSCell:
-    case HeapCell::JSCellWithInteriorPointers: {
+    case HeapCell::JSCellWithIndexingHeader: {
         // We have ample budget to perform validation here.
 
         JSCell* jsCell = static_cast<JSCell*>(heapCell);
@@ -239,7 +225,7 @@ void SlotVisitor::appendJSCellOrAuxiliary(HeapCell* heapCell)
 void SlotVisitor::appendSlow(JSCell* cell, Dependency dependency)
 {
     if (UNLIKELY(m_heapAnalyzer))
-        m_heapAnalyzer->analyzeEdge(m_currentCell, cell, m_rootMarkReason);
+        m_heapAnalyzer->analyzeEdge(m_currentCell, cell, rootMarkReason());
 
     appendHiddenSlowImpl(cell, dependency);
 }
@@ -294,7 +280,7 @@ ALWAYS_INLINE void SlotVisitor::appendToMarkStack(ContainerType& container, JSCe
 #if CPU(X86_64)
     if (UNLIKELY(Options::dumpZappedCellCrashData())) {
         if (UNLIKELY(cell->isZapped()))
-            reportZappedCellAndCrash(cell);
+            reportZappedCellAndCrash(m_heap, cell);
     }
 #endif
     ASSERT(!cell->isZapped());
@@ -404,7 +390,7 @@ ALWAYS_INLINE void SlotVisitor::visitChildren(const JSCell* cell)
                 methodTable->visitChildren(const_cast<JSCell*>(cell), *this);
                 break;
             }
-            reportZappedCellAndCrash(const_cast<JSCell*>(cell));
+            reportZappedCellAndCrash(m_heap, const_cast<JSCell*>(cell));
         }
 #endif
         cell->methodTable(vm())->visitChildren(const_cast<JSCell*>(cell), *this);
@@ -625,7 +611,7 @@ NEVER_INLINE SlotVisitor::SharedDrainResult SlotVisitor::drainFromShared(SharedD
                 m_heap.m_numberOfActiveParallelMarkers--;
             m_heap.m_numberOfWaitingParallelMarkers++;
 
-            if (sharedDrainMode == MasterDrain) {
+            if (sharedDrainMode == MainDrain) {
                 while (true) {
                     if (hasElapsed(timeout))
                         return SharedDrainResult::TimedOut;
@@ -641,7 +627,7 @@ NEVER_INLINE SlotVisitor::SharedDrainResult SlotVisitor::drainFromShared(SharedD
                     m_heap.m_markingConditionVariable.waitUntil(m_heap.m_markingMutex, timeout);
                 }
             } else {
-                ASSERT(sharedDrainMode == SlaveDrain);
+                ASSERT(sharedDrainMode == HelperDrain);
 
                 if (hasElapsed(timeout))
                     return SharedDrainResult::TimedOut;
@@ -717,7 +703,7 @@ NEVER_INLINE SlotVisitor::SharedDrainResult SlotVisitor::drainFromShared(SharedD
 SlotVisitor::SharedDrainResult SlotVisitor::drainInParallel(MonotonicTime timeout)
 {
     donateAndDrain(timeout);
-    return drainFromShared(MasterDrain, timeout);
+    return drainFromShared(MainDrain, timeout);
 }
 
 SlotVisitor::SharedDrainResult SlotVisitor::drainInParallelPassively(MonotonicTime timeout)
@@ -816,6 +802,11 @@ MarkStackArray& SlotVisitor::correspondingGlobalStack(MarkStackArray& stack)
     return *m_heap.m_sharedMutatorMarkStack;
 }
 
+NO_RETURN_DUE_TO_CRASH void SlotVisitor::addParallelConstraintTask(RefPtr<SharedTask<void(AbstractSlotVisitor&)>>)
+{
+    RELEASE_ASSERT_NOT_REACHED();
+}
+
 void SlotVisitor::addParallelConstraintTask(RefPtr<SharedTask<void(SlotVisitor&)>> task)
 {
     RELEASE_ASSERT(m_currentSolver);
@@ -824,47 +815,5 @@ void SlotVisitor::addParallelConstraintTask(RefPtr<SharedTask<void(SlotVisitor&)
 
     m_currentSolver->addParallelTask(task, *m_currentConstraint);
 }
-
-#if CPU(X86_64)
-NEVER_INLINE NO_RETURN_DUE_TO_CRASH NOT_TAIL_CALLED void SlotVisitor::reportZappedCellAndCrash(JSCell* cell)
-{
-    MarkedBlock::Handle* foundBlockHandle = nullptr;
-    uint64_t* cellWords = reinterpret_cast_ptr<uint64_t*>(cell);
-
-    uintptr_t cellAddress = bitwise_cast<uintptr_t>(cell);
-    uint64_t headerWord = cellWords[0];
-    uint64_t zapReasonAndMore = cellWords[1];
-    unsigned subspaceHash = 0;
-    size_t cellSize = 0;
-
-    m_heap.objectSpace().forEachBlock([&] (MarkedBlock::Handle* blockHandle) {
-        if (blockHandle->contains(cell)) {
-            foundBlockHandle = blockHandle;
-            return IterationStatus::Done;
-        }
-        return IterationStatus::Continue;
-    });
-
-    uint64_t variousState = 0;
-    MarkedBlock* foundBlock = nullptr;
-    if (foundBlockHandle) {
-        foundBlock = &foundBlockHandle->block();
-        subspaceHash = StringHasher::computeHash(foundBlockHandle->subspace()->name());
-        cellSize = foundBlockHandle->cellSize();
-
-        variousState |= static_cast<uint64_t>(foundBlockHandle->isFreeListed()) << 0;
-        variousState |= static_cast<uint64_t>(foundBlockHandle->isAllocated()) << 1;
-        variousState |= static_cast<uint64_t>(foundBlockHandle->isEmpty()) << 2;
-        variousState |= static_cast<uint64_t>(foundBlockHandle->needsDestruction()) << 3;
-        variousState |= static_cast<uint64_t>(foundBlock->isNewlyAllocated(cell)) << 4;
-
-        ptrdiff_t cellOffset = cellAddress - reinterpret_cast<uint64_t>(foundBlockHandle->start());
-        bool cellIsProperlyAligned = !(cellOffset % cellSize);
-        variousState |= static_cast<uint64_t>(cellIsProperlyAligned) << 5;
-    }
-
-    CRASH_WITH_INFO(cellAddress, headerWord, zapReasonAndMore, subspaceHash, cellSize, foundBlock, variousState);
-}
-#endif // PLATFORM(MAC)
 
 } // namespace JSC

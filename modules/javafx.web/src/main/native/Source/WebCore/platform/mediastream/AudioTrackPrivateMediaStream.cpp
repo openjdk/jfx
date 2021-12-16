@@ -26,7 +26,7 @@
 #include "config.h"
 #include "AudioTrackPrivateMediaStream.h"
 
-#if ENABLE(VIDEO_TRACK) && ENABLE(MEDIA_STREAM)
+#if ENABLE(MEDIA_STREAM)
 
 #include "AudioMediaStreamTrackRenderer.h"
 #include "Logging.h"
@@ -35,10 +35,10 @@ namespace WebCore {
 
 AudioTrackPrivateMediaStream::AudioTrackPrivateMediaStream(MediaStreamTrackPrivate& track)
     : m_streamTrack(track)
+    , m_audioSource(track.source())
     , m_id(track.id())
     , m_label(track.label())
-    , m_timelineOffset(MediaTime::invalidTime())
-    , m_renderer { AudioMediaStreamTrackRenderer::create() }
+    , m_renderer(createRenderer(*this))
 {
     track.addObserver(*this);
 }
@@ -46,6 +46,16 @@ AudioTrackPrivateMediaStream::AudioTrackPrivateMediaStream(MediaStreamTrackPriva
 AudioTrackPrivateMediaStream::~AudioTrackPrivateMediaStream()
 {
     clear();
+}
+
+std::unique_ptr<AudioMediaStreamTrackRenderer> AudioTrackPrivateMediaStream::createRenderer(AudioTrackPrivateMediaStream& stream)
+{
+    auto renderer = AudioMediaStreamTrackRenderer::create();
+    renderer->setCrashCallback([stream = makeWeakPtr(stream)] {
+        if (stream)
+            stream->createNewRenderer();
+    });
+    return renderer;
 }
 
 #if !RELEASE_LOG_DISABLED
@@ -62,45 +72,44 @@ void AudioTrackPrivateMediaStream::clear()
         return;
 
     m_isCleared = true;
-    streamTrack().removeObserver(*this);
-
-    m_renderer->clear();
-}
-
-void AudioTrackPrivateMediaStream::playInternal()
-{
-    ASSERT(isMainThread());
 
     if (m_isPlaying)
-        return;
+        m_audioSource->removeAudioSampleObserver(*this);
 
-    m_isPlaying = true;
-    m_autoPlay = false;
-
-    m_renderer->start();
+    streamTrack().removeObserver(*this);
+    m_renderer->clear();
 }
 
 void AudioTrackPrivateMediaStream::play()
 {
-    playInternal();
+    if (m_shouldPlay)
+        return;
+
+    m_shouldPlay = true;
+    updateRenderer();
 }
 
 void AudioTrackPrivateMediaStream::pause()
 {
-    ASSERT(isMainThread());
+    m_shouldPlay = false;
+    updateRenderer();
+}
 
-    if (!m_isPlaying)
-        return;
-
-    m_isPlaying = false;
-    m_autoPlay = false;
-
-    m_renderer->stop();
+void AudioTrackPrivateMediaStream::setMuted(bool muted)
+{
+    m_muted = muted;
+    updateRenderer();
 }
 
 void AudioTrackPrivateMediaStream::setVolume(float volume)
 {
     m_renderer->setVolume(volume);
+    updateRenderer();
+}
+
+void AudioTrackPrivateMediaStream::setAudioOutputDevice(const String& deviceId)
+{
+    m_renderer->setAudioOutputDevice(deviceId);
 }
 
 float AudioTrackPrivateMediaStream::volume() const
@@ -109,44 +118,70 @@ float AudioTrackPrivateMediaStream::volume() const
 }
 
 // May get called on a background thread.
-void AudioTrackPrivateMediaStream::audioSamplesAvailable(MediaStreamTrackPrivate&, const MediaTime& sampleTime, const PlatformAudioData& audioData, const AudioStreamDescription& description, size_t sampleCount)
+void AudioTrackPrivateMediaStream::audioSamplesAvailable(const MediaTime& sampleTime, const PlatformAudioData& audioData, const AudioStreamDescription& description, size_t sampleCount)
 {
-    if (!m_isPlaying) {
-        m_renderer->stop();
-        return;
-    }
-
     m_renderer->pushSamples(sampleTime, audioData, description, sampleCount);
-
-    if (m_autoPlay && !m_hasStartedAutoplay) {
-        m_hasStartedAutoplay = true;
-        callOnMainThread([this, protectedThis = makeRef(*this)] {
-            if (m_autoPlay)
-                playInternal();
-        });
-    }
 }
 
 void AudioTrackPrivateMediaStream::trackMutedChanged(MediaStreamTrackPrivate&)
 {
-    updateRendererMutedState();
+    updateRenderer();
 }
 
 void AudioTrackPrivateMediaStream::trackEnabledChanged(MediaStreamTrackPrivate&)
 {
-    updateRendererMutedState();
-}
-
-void AudioTrackPrivateMediaStream::updateRendererMutedState()
-{
-    m_renderer->setMuted(streamTrack().muted() || streamTrack().ended() || !streamTrack().enabled());
+    updateRenderer();
 }
 
 void AudioTrackPrivateMediaStream::trackEnded(MediaStreamTrackPrivate&)
 {
-    pause();
+    updateRenderer();
+}
+
+void AudioTrackPrivateMediaStream::updateRenderer()
+{
+    if (!m_shouldPlay || !volume() || m_muted || streamTrack().muted() || streamTrack().ended() || !streamTrack().enabled()) {
+        stopRenderer();
+        return;
+    }
+    startRenderer();
+}
+
+void AudioTrackPrivateMediaStream::startRenderer()
+{
+    ASSERT(isMainThread());
+    if (m_isPlaying)
+        return;
+
+    m_isPlaying = true;
+    m_renderer->start();
+    m_audioSource->addAudioSampleObserver(*this);
+}
+
+void AudioTrackPrivateMediaStream::stopRenderer()
+{
+    ASSERT(isMainThread());
+    if (!m_isPlaying)
+        return;
+
+    m_isPlaying = false;
+    m_audioSource->removeAudioSampleObserver(*this);
+    m_renderer->stop();
+}
+
+void AudioTrackPrivateMediaStream::createNewRenderer()
+{
+    bool isPlaying = m_isPlaying;
+    stopRenderer();
+
+    float volume = this->volume();
+    m_renderer = createRenderer(*this);
+    m_renderer->setVolume(volume);
+
+    if (isPlaying)
+        startRenderer();
 }
 
 } // namespace WebCore
 
-#endif // ENABLE(VIDEO_TRACK) && ENABLE(MEDIA_STREAM)
+#endif // ENABLE(MEDIA_STREAM)

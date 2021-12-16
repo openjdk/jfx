@@ -26,6 +26,7 @@
 #pragma once
 
 #include "IterationKind.h"
+#include <wtf/Optional.h>
 
 namespace JSC {
 
@@ -94,6 +95,7 @@ enum Intrinsic : uint8_t {
     RegExpTestFastIntrinsic,
     RegExpMatchFastIntrinsic,
     ObjectCreateIntrinsic,
+    ObjectGetOwnPropertyNamesIntrinsic,
     ObjectGetPrototypeOfIntrinsic,
     ObjectIsIntrinsic,
     ObjectKeysIntrinsic,
@@ -118,12 +120,17 @@ enum Intrinsic : uint8_t {
     JSMapGetIntrinsic,
     JSMapHasIntrinsic,
     JSMapSetIntrinsic,
+    JSMapValuesIntrinsic,
+    JSMapKeysIntrinsic,
+    JSMapEntriesIntrinsic,
     JSMapBucketHeadIntrinsic,
     JSMapBucketNextIntrinsic,
     JSMapBucketKeyIntrinsic,
     JSMapBucketValueIntrinsic,
     JSSetHasIntrinsic,
     JSSetAddIntrinsic,
+    JSSetValuesIntrinsic,
+    JSSetEntriesIntrinsic,
     JSSetBucketHeadIntrinsic,
     JSSetBucketNextIntrinsic,
     JSSetBucketKeyIntrinsic,
@@ -139,11 +146,11 @@ enum Intrinsic : uint8_t {
     AtomicsExchangeIntrinsic,
     AtomicsIsLockFreeIntrinsic,
     AtomicsLoadIntrinsic,
+    AtomicsNotifyIntrinsic,
     AtomicsOrIntrinsic,
     AtomicsStoreIntrinsic,
     AtomicsSubIntrinsic,
     AtomicsWaitIntrinsic,
-    AtomicsWakeIntrinsic,
     AtomicsXorIntrinsic,
     ParseIntIntrinsic,
 
@@ -185,7 +192,11 @@ enum Intrinsic : uint8_t {
     DataViewSetUint32,
     DataViewSetFloat32,
     DataViewSetFloat64,
+
+    WasmFunctionIntrinsic,
 };
+
+Optional<IterationKind> interationKindForIntrinsic(Intrinsic);
 
 const char* intrinsicName(Intrinsic);
 

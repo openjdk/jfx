@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,9 +26,9 @@
 #pragma once
 
 #include <wtf/Assertions.h>
-#include <wtf/DumbPtrTraits.h>
 #include <wtf/Forward.h>
 #include <wtf/GetPtr.h>
+#include <wtf/RawPtrTraits.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/TypeCasts.h>
 
@@ -43,7 +43,7 @@ namespace WTF {
 inline void adopted(const void*) { }
 
 template<typename T, typename PtrTraits> class Ref;
-template<typename T, typename PtrTraits = DumbPtrTraits<T>> Ref<T, PtrTraits> adoptRef(T&);
+template<typename T, typename PtrTraits = RawPtrTraits<T>> Ref<T, PtrTraits> adoptRef(T&);
 
 template<typename T, typename Traits>
 class Ref {
@@ -57,8 +57,8 @@ public:
         if (__asan_address_is_poisoned(this))
             __asan_unpoison_memory_region(this, sizeof(*this));
 #endif
-        if (m_ptr)
-            PtrTraits::unwrap(m_ptr)->deref();
+        if (auto* ptr = PtrTraits::exchange(m_ptr, nullptr))
+            ptr->deref();
     }
 
     Ref(T& object)
@@ -67,9 +67,17 @@ public:
         object.ref();
     }
 
-    // Use copyRef() instead.
-    Ref(const Ref& other) = delete;
-    template<typename X, typename Y> Ref(const Ref<X, Y>& other) = delete;
+    Ref(const Ref& other)
+        : m_ptr(other.ptr())
+    {
+        m_ptr->ref();
+    }
+
+    template<typename X, typename Y> Ref(const Ref<X, Y>& other)
+        : m_ptr(other.ptr())
+    {
+        m_ptr->ref();
+    }
 
     Ref(Ref&& other)
         : m_ptr(&other.leakRef())
@@ -88,9 +96,8 @@ public:
     Ref& operator=(Ref&&);
     template<typename X, typename Y> Ref& operator=(Ref<X, Y>&&);
 
-    // Use copyRef() and the move assignment operators instead.
-    Ref& operator=(const Ref&) = delete;
-    template<typename X, typename Y> Ref& operator=(const Ref<X, Y>&) = delete;
+    Ref& operator=(const Ref&);
+    template<typename X, typename Y> Ref& operator=(const Ref<X, Y>&);
 
     template<typename X, typename Y> void swap(Ref<X, Y>&);
 
@@ -105,17 +112,6 @@ public:
     const T* ptrAllowingHashTableEmptyValue() const { ASSERT(m_ptr || isHashTableEmptyValue()); return PtrTraits::unwrap(m_ptr); }
     T* ptrAllowingHashTableEmptyValue() { ASSERT(m_ptr || isHashTableEmptyValue()); return PtrTraits::unwrap(m_ptr); }
 
-    void assignToHashTableEmptyValue(Ref&& reference)
-    {
-#if ASAN_ENABLED
-        if (__asan_address_is_poisoned(this))
-            __asan_unpoison_memory_region(this, sizeof(*this));
-#endif
-        ASSERT(m_ptr == hashTableEmptyValue());
-        m_ptr = &reference.leakRef();
-        ASSERT(m_ptr);
-    }
-
     T* operator->() const { ASSERT(m_ptr); return PtrTraits::unwrap(m_ptr); }
     T* ptr() const RETURNS_NONNULL { ASSERT(m_ptr); return PtrTraits::unwrap(m_ptr); }
     T& get() const { ASSERT(m_ptr); return *PtrTraits::unwrap(m_ptr); }
@@ -124,6 +120,7 @@ public:
 
     template<typename X, typename Y> Ref<T, PtrTraits> replace(Ref<X, Y>&&) WARN_UNUSED_RETURN;
 
+    // The following function is deprecated.
     Ref copyRef() && = delete;
     Ref copyRef() const & WARN_UNUSED_RETURN { return Ref(*m_ptr); }
 
@@ -188,13 +185,38 @@ inline Ref<T, U>& Ref<T, U>::operator=(Ref<X, Y>&& reference)
 }
 
 template<typename T, typename U>
+inline Ref<T, U>& Ref<T, U>::operator=(const Ref& reference)
+{
+#if ASAN_ENABLED
+    if (__asan_address_is_poisoned(this))
+        __asan_unpoison_memory_region(this, sizeof(*this));
+#endif
+    Ref copiedReference = reference;
+    swap(copiedReference);
+    return *this;
+}
+
+template<typename T, typename U>
+template<typename X, typename Y>
+inline Ref<T, U>& Ref<T, U>::operator=(const Ref<X, Y>& reference)
+{
+#if ASAN_ENABLED
+    if (__asan_address_is_poisoned(this))
+        __asan_unpoison_memory_region(this, sizeof(*this));
+#endif
+    Ref copiedReference = reference;
+    swap(copiedReference);
+    return *this;
+}
+
+template<typename T, typename U>
 template<typename X, typename Y>
 inline void Ref<T, U>::swap(Ref<X, Y>& other)
 {
     U::swap(m_ptr, other.m_ptr);
 }
 
-template<typename T, typename U, typename X, typename Y, typename = std::enable_if_t<!std::is_same<U, DumbPtrTraits<T>>::value || !std::is_same<Y, DumbPtrTraits<X>>::value>>
+template<typename T, typename U, typename X, typename Y, typename = std::enable_if_t<!std::is_same<U, RawPtrTraits<T>>::value || !std::is_same<Y, RawPtrTraits<X>>::value>>
 inline void swap(Ref<T, U>& a, Ref<X, Y>& b)
 {
     a.swap(b);
@@ -213,19 +235,19 @@ inline Ref<T, U> Ref<T, U>::replace(Ref<X, Y>&& reference)
     return oldReference;
 }
 
-template<typename T, typename U = DumbPtrTraits<T>, typename X, typename Y>
+template<typename T, typename U = RawPtrTraits<T>, typename X, typename Y>
 inline Ref<T, U> static_reference_cast(Ref<X, Y>& reference)
 {
     return Ref<T, U>(static_cast<T&>(reference.get()));
 }
 
-template<typename T, typename U = DumbPtrTraits<T>, typename X, typename Y>
+template<typename T, typename U = RawPtrTraits<T>, typename X, typename Y>
 inline Ref<T, U> static_reference_cast(Ref<X, Y>&& reference)
 {
     return adoptRef(static_cast<T&>(reference.leakRef()));
 }
 
-template<typename T, typename U = DumbPtrTraits<T>, typename X, typename Y>
+template<typename T, typename U = RawPtrTraits<T>, typename X, typename Y>
 inline Ref<T, U> static_reference_cast(const Ref<X, Y>& reference)
 {
     return Ref<T, U>(static_cast<T&>(reference.copyRef().get()));

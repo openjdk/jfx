@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -180,7 +180,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLAnchorElementImpl_setTextImpl
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLAnchorElementImpl_getHrefImpl(JNIEnv* env, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, IMPL->getURLAttribute(WebCore::HTMLNames::hrefAttr));
+    return JavaReturn<String>(env, IMPL->getURLAttribute(WebCore::HTMLNames::hrefAttr).string());
 }
 
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLAnchorElementImpl_setHrefImpl(JNIEnv* env, jclass, jlong peer, jstring value)

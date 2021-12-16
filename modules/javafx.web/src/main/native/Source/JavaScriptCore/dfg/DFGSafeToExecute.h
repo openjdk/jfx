@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -79,12 +79,15 @@ public:
         case StringUse:
         case StringOrOtherUse:
         case SymbolUse:
-        case BigIntUse:
+        case AnyBigIntUse:
+        case HeapBigIntUse:
+        case BigInt32Use:
         case StringObjectUse:
         case StringOrStringObjectUse:
         case NotStringVarUse:
         case NotSymbolUse:
         case NotCellUse:
+        case NotCellNorBigIntUse:
         case OtherUse:
         case MiscUse:
         case AnyIntUse:
@@ -180,8 +183,6 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     // always effectful, we return false for, to make auditing the "return true" cases easier.
 
     switch (node->op()) {
-    // FIXME: Audit these:
-    // https://bugs.webkit.org/show_bug.cgi?id=207075
     case JSConstant:
     case DoubleConstant:
     case Int52Constant:
@@ -210,14 +211,12 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case ArithSub:
     case ArithNegate:
     case ArithMul:
-    case ArithIMul:
     case ArithDiv:
     case ArithMod:
     case ArithAbs:
     case ArithMin:
     case ArithMax:
     case ArithPow:
-    case ArithRandom:
     case ArithSqrt:
     case ArithFRound:
     case ArithRound:
@@ -225,13 +224,11 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case ArithCeil:
     case ArithTrunc:
     case ArithUnary:
-    case TryGetById: // FIXME: Audit this: https://bugs.webkit.org/show_bug.cgi?id=163834
     case CheckStructure:
     case CheckStructureOrEmpty:
     case GetExecutable:
-    case CallDOMGetter:
-    case CallDOM:
-    case CheckSubClass:
+    case CheckJSCast:
+    case CheckNotJSCast:
     case CheckArray:
     case CheckArrayOrEmpty:
     case GetScope:
@@ -241,7 +238,7 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case GetClosureVar:
     case GetGlobalVar:
     case GetGlobalLexicalVariable:
-    case CheckCell:
+    case CheckIsConstant:
     case CheckNotEmpty:
     case AssertNotEmpty:
     case CheckIdent:
@@ -259,14 +256,17 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case ParseInt:
     case OverridesHasInstance:
     case IsEmpty:
-    case IsUndefined:
+    case TypeOfIsUndefined:
+    case TypeOfIsObject:
+    case TypeOfIsFunction:
     case IsUndefinedOrNull:
     case IsBoolean:
     case IsNumber:
+    case IsBigInt:
     case NumberIsInteger:
     case IsObject:
-    case IsObjectOrNull:
-    case IsFunction:
+    case IsCallable:
+    case IsConstructor:
     case IsCellWithType:
     case IsTypedArrayView:
     case TypeOf:
@@ -281,6 +281,7 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case StringFromCharCode:
     case ExtractOSREntryLocal:
     case ExtractCatchLocal:
+    case AssertInBounds:
     case CheckInBounds:
     case ConstantStoragePointer:
     case Check:
@@ -291,6 +292,7 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case BooleanToNumber:
     case FiatInt52:
     case HasIndexedProperty:
+    case HasEnumerableIndexedProperty:
     case GetEnumeratorStructurePname:
     case GetEnumeratorGenericPname:
     case ToIndexString:
@@ -298,8 +300,6 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case GetMyArgumentByVal:
     case GetMyArgumentByValOutOfBounds:
     case GetPrototypeOf:
-    case StringReplace:
-    case StringReplaceRegExp:
     case GetRegExpObjectLastIndex:
     case MapHash:
     case NormalizeMapKey:
@@ -361,6 +361,9 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case FilterGetByStatus:
     case FilterPutByIdStatus:
     case FilterInByIdStatus:
+    case FilterDeleteByStatus:
+    case FilterCheckPrivateBrandStatus:
+    case FilterSetPrivateBrandStatus:
         // We don't want these to be moved anywhere other than where we put them, since we want them
         // to capture "profiling" at the point in control flow here the user put them.
         return false;
@@ -378,7 +381,7 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case ArrayPush:
         return node->arrayMode().alreadyChecked(graph, node, state.forNode(graph.varArgChild(node, 1)));
 
-    case CheckNeutered:
+    case CheckDetached:
     case GetTypedArrayByteOffset:
         return !(state.forNode(node->child1()).m_type & ~(SpecTypedArrayView));
 
@@ -475,6 +478,20 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
         return true;
     }
 
+    case CallDOMGetter:
+    case CallDOM: {
+        Node* thisNode = node->child1().node();
+        StructureAbstractValue& structures = state.forNode(thisNode).m_structure;
+        if (!structures.isFinite())
+            return false;
+        bool isSafe = true;
+        const ClassInfo* classInfo = node->requiredDOMJITClassInfo();
+        structures.forEach([&] (RegisteredStructure structure) {
+            isSafe &= structure->classInfo()->isSubClassOf(classInfo);
+        });
+        return isSafe;
+    }
+
     case ToThis:
     case CreateThis:
     case CreatePromise:
@@ -482,12 +499,12 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case CreateAsyncGenerator:
     case ObjectCreate:
     case ObjectKeys:
+    case ObjectGetOwnPropertyNames:
     case SetLocal:
     case SetCallee:
     case PutStack:
     case KillStack:
     case MovHint:
-    case ZombieHint:
     case Upsilon:
     case Phi:
     case Flush:
@@ -513,13 +530,19 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case PutGetterSetterById:
     case PutGetterByVal:
     case PutSetterByVal:
+    case PutPrivateName:
+    case PutPrivateNameById:
+    case GetPrivateName:
+    case GetPrivateNameById:
+    case CheckPrivateBrand:
+    case SetPrivateBrand:
     case DefineDataProperty:
     case DefineAccessorProperty:
     case Arrayify:
     case ArrayifyToStructure:
     case PutClosureVar:
     case PutGlobalVariable:
-    case CheckBadCell:
+    case CheckBadValue:
     case RegExpExec:
     case RegExpExecNonGlobalOrSticky:
     case RegExpTest:
@@ -541,14 +564,13 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case CallForwardVarargs:
     case ConstructForwardVarargs:
     case NewObject:
-    case NewPromise:
     case NewGenerator:
     case NewAsyncGenerator:
     case NewArray:
     case NewArrayWithSize:
     case NewArrayBuffer:
     case NewArrayWithSpread:
-    case NewArrayIterator:
+    case NewInternalFieldObject:
     case Spread:
     case NewRegexp:
     case NewSymbol:
@@ -562,6 +584,7 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case ToNumber:
     case ToNumeric:
     case ToObject:
+    case CallNumberConstructor:
     case NumberToStringWithRadix:
     case SetFunctionName:
     case NewStringObject:
@@ -608,9 +631,12 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case InvalidationPoint:
     case NotifyWrite:
     case MultiPutByOffset:
+    case MultiDeleteByOffset:
     case GetEnumerableLength:
-    case HasGenericProperty:
-    case HasStructureProperty:
+    case HasEnumerableStructureProperty:
+    case HasEnumerableProperty:
+    case HasOwnStructureProperty:
+    case InStructureProperty:
     case GetDirectPname:
     case GetPropertyEnumerator:
     case PhantomNewObject:
@@ -618,7 +644,7 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case PhantomNewGeneratorFunction:
     case PhantomNewAsyncGeneratorFunction:
     case PhantomNewAsyncFunction:
-    case PhantomNewArrayIterator:
+    case PhantomNewInternalFieldObject:
     case PhantomCreateActivation:
     case PhantomNewRegexp:
     case PutHint:
@@ -658,6 +684,11 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case DataViewSet:
     case SetAdd:
     case MapSet:
+    case StringReplaceRegExp:
+    case StringReplace:
+    case ArithRandom:
+    case ArithIMul:
+    case TryGetById:
         return false;
 
     case Inc:
@@ -675,10 +706,10 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case ValueDiv:
     case ValueMod:
     case ValuePow:
-        return node->isBinaryUseKind(BigIntUse);
+        return node->isBinaryUseKind(AnyBigIntUse) || node->isBinaryUseKind(BigInt32Use) || node->isBinaryUseKind(HeapBigIntUse);
 
     case ValueBitNot:
-        return node->child1().useKind() == BigIntUse;
+        return node->child1().useKind() == AnyBigIntUse || node->child1().useKind() == BigInt32Use || node->child1().useKind() == HeapBigIntUse;
 
     case LastNodeType:
         RELEASE_ASSERT_NOT_REACHED();

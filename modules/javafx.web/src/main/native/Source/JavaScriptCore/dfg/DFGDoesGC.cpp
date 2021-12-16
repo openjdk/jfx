@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,7 +31,6 @@
 #include "DFGClobberize.h"
 #include "DFGGraph.h"
 #include "DFGNode.h"
-#include "Operations.h"
 
 namespace JSC { namespace DFG {
 
@@ -71,7 +70,6 @@ bool doesGC(Graph& graph, Node* node)
     case SetLocal:
     case MovHint:
     case InitializeEntrypointArguments:
-    case ZombieHint:
     case ExitOK:
     case Phantom:
     case Upsilon:
@@ -115,10 +113,11 @@ bool doesGC(Graph& graph, Node* node)
     case CheckStructureImmediate:
     case GetExecutable:
     case GetButterfly:
-    case CheckSubClass:
+    case CheckJSCast:
+    case CheckNotJSCast:
     case CheckArray:
     case CheckArrayOrEmpty:
-    case CheckNeutered:
+    case CheckDetached:
     case GetScope:
     case SkipScope:
     case GetGlobalObject:
@@ -133,7 +132,7 @@ bool doesGC(Graph& graph, Node* node)
     case GetGlobalVar:
     case GetGlobalLexicalVariable:
     case PutGlobalVariable:
-    case CheckCell:
+    case CheckIsConstant:
     case CheckNotEmpty:
     case AssertNotEmpty:
     case CheckIdent:
@@ -143,14 +142,17 @@ bool doesGC(Graph& graph, Node* node)
     case ProfileControlFlow:
     case OverridesHasInstance:
     case IsEmpty:
-    case IsUndefined:
+    case TypeOfIsUndefined:
+    case TypeOfIsObject:
+    case TypeOfIsFunction:
     case IsUndefinedOrNull:
     case IsBoolean:
     case IsNumber:
+    case IsBigInt:
     case NumberIsInteger:
     case IsObject:
-    case IsObjectOrNull:
-    case IsFunction:
+    case IsCallable:
+    case IsConstructor:
     case IsCellWithType:
     case IsTypedArrayView:
     case TypeOf:
@@ -162,7 +164,7 @@ bool doesGC(Graph& graph, Node* node)
     case SuperSamplerBegin:
     case SuperSamplerEnd:
     case CPUIntrinsic:
-    case NormalizeMapKey:
+    case NormalizeMapKey: // HeapBigInt => BigInt32 conversion does not involve GC.
     case GetMapBucketHead:
     case GetMapBucketNext:
     case LoadKeyFromMapBucket:
@@ -180,12 +182,14 @@ bool doesGC(Graph& graph, Node* node)
     case FencedStoreBarrier:
     case InvalidationPoint:
     case NotifyWrite:
+    case AssertInBounds:
     case CheckInBounds:
     case ConstantStoragePointer:
     case Check:
     case CheckVarargs:
     case CheckTypeInfoFlags:
     case MultiGetByOffset:
+    case MultiDeleteByOffset:
     case ValueRep:
     case DoubleRep:
     case Int52Rep:
@@ -203,14 +207,14 @@ bool doesGC(Graph& graph, Node* node)
     case GetEnumerableLength:
     case FiatInt52:
     case BooleanToNumber:
-    case CheckBadCell:
+    case CheckBadValue:
     case BottomValue:
     case PhantomNewObject:
     case PhantomNewFunction:
     case PhantomNewGeneratorFunction:
     case PhantomNewAsyncFunction:
     case PhantomNewAsyncGeneratorFunction:
-    case PhantomNewArrayIterator:
+    case PhantomNewInternalFieldObject:
     case PhantomCreateActivation:
     case PhantomDirectArguments:
     case PhantomCreateRest:
@@ -245,6 +249,9 @@ bool doesGC(Graph& graph, Node* node)
     case FilterGetByStatus:
     case FilterPutByIdStatus:
     case FilterInByIdStatus:
+    case FilterDeleteByStatus:
+    case FilterCheckPrivateBrandStatus:
+    case FilterSetPrivateBrandStatus:
     case DateGetInt32OrNaN:
     case DateGetTime:
     case DataViewGetInt:
@@ -290,10 +297,13 @@ bool doesGC(Graph& graph, Node* node)
     case GetDirectPname:
     case GetDynamicVar:
     case GetMapBucket:
-    case HasGenericProperty:
     case HasIndexedProperty:
+    case HasEnumerableIndexedProperty:
+    case HasEnumerableStructureProperty:
+    case HasEnumerableProperty:
     case HasOwnProperty:
-    case HasStructureProperty:
+    case HasOwnStructureProperty:
+    case InStructureProperty:
     case InById:
     case InByVal:
     case InstanceOf:
@@ -315,6 +325,12 @@ bool doesGC(Graph& graph, Node* node)
     case PutGetterSetterById:
     case PutSetterById:
     case PutSetterByVal:
+    case PutPrivateName:
+    case PutPrivateNameById:
+    case GetPrivateName:
+    case GetPrivateNameById:
+    case SetPrivateBrand:
+    case CheckPrivateBrand:
     case PutStack:
     case PutToArguments:
     case RegExpExec:
@@ -346,17 +362,17 @@ bool doesGC(Graph& graph, Node* node)
     case CreateAsyncGenerator:
     case ObjectCreate:
     case ObjectKeys:
+    case ObjectGetOwnPropertyNames:
     case AllocatePropertyStorage:
     case ReallocatePropertyStorage:
     case Arrayify:
     case ArrayifyToStructure:
     case NewObject:
-    case NewPromise:
     case NewGenerator:
     case NewAsyncGenerator:
     case NewArray:
     case NewArrayWithSpread:
-    case NewArrayIterator:
+    case NewInternalFieldObject:
     case Spread:
     case NewArrayWithSize:
     case NewArrayBuffer:
@@ -412,6 +428,15 @@ bool doesGC(Graph& graph, Node* node)
 #endif // not ASSERT_ENABLED
         return true;
 
+    case CallNumberConstructor:
+        switch (node->child1().useKind()) {
+        case BigInt32Use:
+            return false;
+        default:
+            break;
+        }
+        return true;
+
     case CallStringConstructor:
     case ToString:
         switch (node->child1().useKind()) {
@@ -433,11 +458,14 @@ bool doesGC(Graph& graph, Node* node)
     case CompareLessEq:
     case CompareGreater:
     case CompareGreaterEq:
+        // FIXME: Add AnyBigIntUse and HeapBigIntUse specific optimizations in DFG / FTL code generation and ensure it does not perform GC.
+        // https://bugs.webkit.org/show_bug.cgi?id=210923
         if (node->isBinaryUseKind(Int32Use)
 #if USE(JSVALUE64)
             || node->isBinaryUseKind(Int52RepUse)
 #endif
             || node->isBinaryUseKind(DoubleRepUse)
+            || node->isBinaryUseKind(BigInt32Use)
             || node->isBinaryUseKind(StringIdentUse)
             )
             return false;
@@ -499,6 +527,10 @@ bool doesGC(Graph& graph, Node* node)
         case Int32Use:
         case SymbolUse:
         case ObjectUse:
+#if USE(BIGINT32)
+        case BigInt32Use:
+#endif
+        case HeapBigIntUse:
             return false;
         default:
             // We might resolve a rope.

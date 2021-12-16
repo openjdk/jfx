@@ -126,6 +126,14 @@ public:
         case Store8:
         case Store16:
         case Store:
+        case AtomicWeakCAS:
+        case AtomicStrongCAS:
+        case AtomicXchgAdd:
+        case AtomicXchgAnd:
+        case AtomicXchgOr:
+        case AtomicXchgSub:
+        case AtomicXchgXor:
+        case AtomicXchg:
             return true;
         default:
             return false;
@@ -219,9 +227,7 @@ struct KindHash {
 namespace WTF {
 
 template<typename T> struct DefaultHash;
-template<> struct DefaultHash<JSC::B3::Kind> {
-    typedef JSC::B3::KindHash Hash;
-};
+template<> struct DefaultHash<JSC::B3::Kind> : JSC::B3::KindHash { };
 
 template<typename T> struct HashTraits;
 template<> struct HashTraits<JSC::B3::Kind> : public SimpleClassHashTraits<JSC::B3::Kind> {

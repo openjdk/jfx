@@ -48,21 +48,20 @@ InspectorCPUProfilerAgent::~InspectorCPUProfilerAgent() = default;
 
 void InspectorCPUProfilerAgent::didCreateFrontendAndBackend(FrontendRouter*, BackendDispatcher*)
 {
-    m_instrumentingAgents.setInspectorCPUProfilerAgent(this);
+    m_instrumentingAgents.setPersistentCPUProfilerAgent(this);
 }
 
 void InspectorCPUProfilerAgent::willDestroyFrontendAndBackend(DisconnectReason)
 {
-    ErrorString ignored;
-    stopTracking(ignored);
+    stopTracking();
 
-    m_instrumentingAgents.setInspectorCPUProfilerAgent(nullptr);
+    m_instrumentingAgents.setPersistentCPUProfilerAgent(nullptr);
 }
 
-void InspectorCPUProfilerAgent::startTracking(ErrorString&)
+Protocol::ErrorStringOr<void> InspectorCPUProfilerAgent::startTracking()
 {
     if (m_tracking)
-        return;
+        return { };
 
     ResourceUsageThread::addObserver(this, CPU, [this] (const ResourceUsageData& data) {
         collectSample(data);
@@ -70,19 +69,23 @@ void InspectorCPUProfilerAgent::startTracking(ErrorString&)
 
     m_tracking = true;
 
-    m_frontendDispatcher->trackingStart(m_environment.executionStopwatch()->elapsedTime().seconds());
+    m_frontendDispatcher->trackingStart(m_environment.executionStopwatch().elapsedTime().seconds());
+
+    return { };
 }
 
-void InspectorCPUProfilerAgent::stopTracking(ErrorString&)
+Protocol::ErrorStringOr<void> InspectorCPUProfilerAgent::stopTracking()
 {
     if (!m_tracking)
-        return;
+        return { };
 
     ResourceUsageThread::removeObserver(this);
 
     m_tracking = false;
 
-    m_frontendDispatcher->trackingComplete(m_environment.executionStopwatch()->elapsedTime().seconds());
+    m_frontendDispatcher->trackingComplete(m_environment.executionStopwatch().elapsedTime().seconds());
+
+    return { };
 }
 
 static Ref<Protocol::CPUProfiler::ThreadInfo> buildThreadInfo(const ThreadCPUInfo& thread)
@@ -108,12 +111,12 @@ static Ref<Protocol::CPUProfiler::ThreadInfo> buildThreadInfo(const ThreadCPUInf
 void InspectorCPUProfilerAgent::collectSample(const ResourceUsageData& data)
 {
     auto event = Protocol::CPUProfiler::Event::create()
-        .setTimestamp(m_environment.executionStopwatch()->elapsedTimeSince(data.timestamp).seconds())
+        .setTimestamp(m_environment.executionStopwatch().elapsedTimeSince(data.timestamp).seconds())
         .setUsage(data.cpuExcludingDebuggerThreads)
         .release();
 
     if (!data.cpuThreads.isEmpty()) {
-        RefPtr<JSON::ArrayOf<Protocol::CPUProfiler::ThreadInfo>> threads = JSON::ArrayOf<Protocol::CPUProfiler::ThreadInfo>::create();
+        auto threads = JSON::ArrayOf<Protocol::CPUProfiler::ThreadInfo>::create();
         for (auto& threadInfo : data.cpuThreads)
             threads->addItem(buildThreadInfo(threadInfo));
         event->setThreads(WTFMove(threads));

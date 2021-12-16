@@ -96,6 +96,7 @@ public:
     bool isPositiveInfinite() const { return m_timeFlags & PositiveInfinite; }
     bool isNegativeInfinite() const { return m_timeFlags & NegativeInfinite; }
     bool isIndefinite() const { return m_timeFlags & Indefinite; }
+    bool isFinite() const { return !isInvalid() && !isIndefinite() && !isPositiveInfinite() && !isNegativeInfinite(); }
     bool hasDoubleValue() const { return m_timeFlags & DoubleValue; }
     uint8_t timeFlags() const { return m_timeFlags; }
 
@@ -135,7 +136,7 @@ public:
     MediaTime toTimeScale(uint32_t, RoundingFlags = RoundingFlags::HalfAwayFromZero) const;
 
     template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static bool decode(Decoder&, MediaTime&);
+    template<class Decoder> static WARN_UNUSED_RETURN bool decode(Decoder&, MediaTime&);
 
 private:
     void setTimeScale(uint32_t, RoundingFlags = RoundingFlags::HalfAwayFromZero);

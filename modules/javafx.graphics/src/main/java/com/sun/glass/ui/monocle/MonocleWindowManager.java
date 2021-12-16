@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -107,6 +107,9 @@ final class MonocleWindowManager {
             windowsToNotify.get(i).notifyClose();
         }
         window.notifyDestroy();
+        if (focusedWindow == window) {
+            focusedWindow = null;
+        }
         return true;
 
     }
@@ -121,7 +124,7 @@ final class MonocleWindowManager {
 
     boolean requestFocus(MonocleWindow window) {
         int index = getWindowIndex(window);
-        if (index != -1 && window.isVisible()) {
+        if (index != -1) {
             focusedWindow = window;
             window.notifyFocus(WindowEvent.FOCUS_GAINED);
             return true;
@@ -176,7 +179,10 @@ final class MonocleWindowManager {
             @Override
             public void run() {
                 Screen.notifySettingsChanged();
-                instance.getFocusedWindow().setFullScreen(true);
+                MonocleWindow focusedWindow = instance.getFocusedWindow();
+                if (focusedWindow != null) {
+                    focusedWindow.setFullScreen(true);
+                }
                 instance.repaintAll();
                 Toolkit.getToolkit().requestNextPulse();
             }

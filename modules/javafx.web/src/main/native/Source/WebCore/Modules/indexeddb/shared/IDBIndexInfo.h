@@ -49,7 +49,7 @@ public:
     void rename(const String& newName) { m_name = newName; }
 
     template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static bool decode(Decoder&, IDBIndexInfo&);
+    template<class Decoder> static WARN_UNUSED_RETURN bool decode(Decoder&, IDBIndexInfo&);
 
 #if !LOG_DISABLED
     String loggingString(int indent = 0) const;
@@ -59,6 +59,7 @@ public:
     // FIXME: Remove the need for this.
     static const int64_t InvalidId = -1;
 
+    void setIdentifier(uint64_t identifier) { m_identifier = identifier; }
 private:
     uint64_t m_identifier { 0 };
     uint64_t m_objectStoreIdentifier { 0 };

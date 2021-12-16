@@ -29,6 +29,7 @@
 #if ENABLE(SERVICE_WORKER)
 
 #include "ExceptionData.h"
+#include "Logging.h"
 #include "SWServer.h"
 #include "SWServerRegistration.h"
 #include "SWServerWorker.h"
@@ -54,6 +55,18 @@ SWServerJobQueue::~SWServerJobQueue()
 bool SWServerJobQueue::isCurrentlyProcessingJob(const ServiceWorkerJobDataIdentifier& jobDataIdentifier) const
 {
     return !m_jobQueue.isEmpty() && firstJob().identifier() == jobDataIdentifier;
+}
+
+static bool doCertificatesMatch(const CertificateInfo& first, const CertificateInfo& second)
+{
+#if PLATFORM(COCOA) && HAVE(SEC_TRUST_SERIALIZATION)
+    return first.trust() == second.trust() || certificatesMatch(first.trust(), second.trust());
+#else
+    // FIXME: Add support for certificate matching in CertificateInfo.
+    UNUSED_PARAM(first);
+    UNUSED_PARAM(second);
+    return true;
+#endif
 }
 
 void SWServerJobQueue::scriptFetchFinished(const ServiceWorkerFetchResult& result)
@@ -87,7 +100,8 @@ void SWServerJobQueue::scriptFetchFinished(const ServiceWorkerFetchResult& resul
     // If newestWorker is not null, newestWorker's script url equals job's script url with the exclude fragments
     // flag set, and script's source text is a byte-for-byte match with newestWorker's script resource's source
     // text, then:
-    if (newestWorker && equalIgnoringFragmentIdentifier(newestWorker->scriptURL(), job.scriptURL) && result.script == newestWorker->script()) {
+    if (newestWorker && equalIgnoringFragmentIdentifier(newestWorker->scriptURL(), job.scriptURL) && newestWorker->type() == job.workerType && result.script == newestWorker->script() && doCertificatesMatch(result.certificateInfo, newestWorker->certificateInfo())) {
+        RELEASE_LOG(ServiceWorker, "%p - SWServerJobQueue::scriptFetchFinished, script and certificate are matching for registrationID=%llu", this, registration->identifier().toUInt64());
         // FIXME: for non classic scripts, check the script’s module record's [[ECMAScriptCode]].
 
         // Invoke Resolve Job Promise with job and registration.
@@ -100,8 +114,7 @@ void SWServerJobQueue::scriptFetchFinished(const ServiceWorkerFetchResult& resul
 
     // FIXME: Update all the imported scripts as per spec. For now, we just do as if there is none.
 
-    // FIXME: Support the proper worker type (classic vs module)
-    m_server.updateWorker(job.identifier(), *registration, job.scriptURL, result.script, result.contentSecurityPolicy, result.referrerPolicy, WorkerType::Classic, { });
+    m_server.updateWorker(job.identifier(), *registration, job.scriptURL, result.script, result.certificateInfo, result.contentSecurityPolicy, result.referrerPolicy, job.workerType, { });
 }
 
 // https://w3c.github.io/ServiceWorker/#update-algorithm
@@ -155,6 +168,8 @@ void SWServerJobQueue::install(SWServerRegistration& registration, ServiceWorker
 
     // Invoke Resolve Job Promise with job and registration.
     m_server.resolveRegistrationJob(firstJob(), registration.data(), ShouldNotifyWhenResolved::Yes);
+
+    // FIXME: https://bugs.webkit.org/show_bug.cgi?id=215122. We do not need to wait for the registration promise to resolve to continue the install steps.
 }
 
 // https://w3c.github.io/ServiceWorker/#install (after resolving promise).
@@ -164,7 +179,12 @@ void SWServerJobQueue::didResolveRegistrationPromise()
     ASSERT(registration);
     ASSERT(registration->installingWorker());
 
-    RELEASE_LOG(ServiceWorker, "%p - SWServerJobQueue::didResolveRegistrationPromise: Registration ID: %llu. Now proceeding with install", this, registration->identifier().toUInt64());
+    if (!registration || !registration->installingWorker()) {
+        RELEASE_LOG_ERROR(ServiceWorker, "%p - SWServerJobQueue::didResolveRegistrationPromise with null registration (%d) or null worker", this, !!registration);
+        return;
+    }
+
+    RELEASE_LOG(ServiceWorker, "%p - SWServerJobQueue::didResolveRegistrationPromise: RegistrationID=%llu. Now proceeding with install", this, registration->identifier().toUInt64());
 
     // Queue a task to fire an event named updatefound at all the ServiceWorkerRegistration objects
     // for all the service worker clients whose creation URL matches registration's scope url and
@@ -266,7 +286,7 @@ void SWServerJobQueue::runRegisterJob(const ServiceWorkerJobData& job)
     // If registration is not null (in our parlance "empty"), then:
     if (auto* registration = m_server.getRegistration(m_registrationKey)) {
         auto* newestWorker = registration->getNewestWorker();
-        if (newestWorker && equalIgnoringFragmentIdentifier(job.scriptURL, newestWorker->scriptURL()) && job.registrationOptions.updateViaCache == registration->updateViaCache()) {
+        if (newestWorker && equalIgnoringFragmentIdentifier(job.scriptURL, newestWorker->scriptURL()) && job.workerType == newestWorker->type() && job.registrationOptions.updateViaCache == registration->updateViaCache()) {
             RELEASE_LOG(ServiceWorker, "%p - SWServerJobQueue::runRegisterJob: Found directly reusable registration %llu for job %s (DONE)", this, registration->identifier().toUInt64(), job.identifier().loggingString().utf8().data());
             m_server.resolveRegistrationJob(job, registration->data(), ShouldNotifyWhenResolved::No);
             finishCurrentJob();
@@ -328,7 +348,7 @@ void SWServerJobQueue::runUpdateJob(const ServiceWorkerJobData& job)
     // Let newestWorker be the result of running Get Newest Worker algorithm passing registration as the argument.
     auto* newestWorker = registration->getNewestWorker();
 
-    // If job's type is update, and newestWorker's script url does not equal job's script url with the exclude fragments flag set, then:
+    // If job’s type is update, and newestWorker is not null and its script url does not equal job’s script url, then:
     if (job.type == ServiceWorkerJobType::Update && newestWorker && !equalIgnoringFragmentIdentifier(job.scriptURL, newestWorker->scriptURL()))
         return rejectCurrentJob(ExceptionData { TypeError, "Cannot update a service worker with a requested script URL whose newest worker has a different script URL"_s });
 

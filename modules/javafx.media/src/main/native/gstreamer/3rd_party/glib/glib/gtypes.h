@@ -451,9 +451,6 @@ typedef const gchar *   (*GTranslateFunc)       (const gchar   *str,
     _GLIB_CHECKED_MUL_U32(dest, a, b)
 #endif
 
-/* FIXME: Hide this from gtkdoc scanner because it confuses its poor regexes.
- * https://gitlab.gnome.org/GNOME/gtk-doc/issues/90 */
-#ifndef __GTK_DOC_IGNORE__
 /* The names of the following inlines are private.  Use the macro
  * definitions above.
  */
@@ -477,7 +474,6 @@ static inline gboolean _GLIB_CHECKED_ADD_U64 (guint64 *dest, guint64 a, guint64 
 static inline gboolean _GLIB_CHECKED_MUL_U64 (guint64 *dest, guint64 a, guint64 b) {
   *dest = a * b; return !a || *dest / a == b; }
 #endif
-#endif /* __GTK_DOC_IGNORE__ */
 
 /* IEEE Standard 754 Single Precision Storage Format (gfloat):
  *
@@ -569,7 +565,7 @@ G_END_DECLS
 #    else /* !GLIB_STATIC_COMPILATION */
 #      ifdef GLIB_COMPILATION
 #        ifdef DLL_EXPORT
-#          define GLIB_VAR __declspec(dllexport)
+#          define GLIB_VAR extern __declspec(dllexport)
 #        else /* !DLL_EXPORT */
 #          define GLIB_VAR extern
 #        endif /* !DLL_EXPORT */

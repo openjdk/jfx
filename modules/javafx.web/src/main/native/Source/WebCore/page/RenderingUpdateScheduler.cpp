@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,38 +29,81 @@
 #include "Chrome.h"
 #include "ChromeClient.h"
 #include "DisplayRefreshMonitorManager.h"
+#include "Logging.h"
 #include "Page.h"
 #include <wtf/SystemTracing.h>
+#include <wtf/text/TextStream.h>
 
 namespace WebCore {
 
 RenderingUpdateScheduler::RenderingUpdateScheduler(Page& page)
     : m_page(page)
 {
-#if USE(REQUEST_ANIMATION_FRAME_DISPLAY_MONITOR)
     windowScreenDidChange(page.chrome().displayID());
-#endif
 }
 
-void RenderingUpdateScheduler::scheduleTimedRenderingUpdate()
+void RenderingUpdateScheduler::setPreferredFramesPerSecond(FramesPerSecond preferredFramesPerSecond)
 {
+    if (m_preferredFramesPerSecond == preferredFramesPerSecond)
+        return;
+
+    m_preferredFramesPerSecond = preferredFramesPerSecond;
+    DisplayRefreshMonitorManager::sharedManager().setPreferredFramesPerSecond(*this, m_preferredFramesPerSecond);
+}
+
+bool RenderingUpdateScheduler::scheduleAnimation(FramesPerSecond preferredFramesPerSecond)
+{
+#if !PLATFORM(IOS_FAMILY)
+    // PreferredFramesPerSecond can only be changed for iOS DisplayRefreshMonitor.
+    // The caller has to fall back to using the timer.
+    if (preferredFramesPerSecond != FullSpeedFramesPerSecond)
+        return false;
+#endif
+    setPreferredFramesPerSecond(preferredFramesPerSecond);
+    auto result = DisplayRefreshMonitorManager::sharedManager().scheduleAnimation(*this);
+
+    LOG_WITH_STREAM(EventLoop, stream << "RenderingUpdateScheduler for page " << &m_page << " scheduleAnimation(" << preferredFramesPerSecond << "fps) - scheduled " << result);
+
+    return result;
+}
+
+void RenderingUpdateScheduler::adjustRenderingUpdateFrequency()
+{
+    Seconds interval = m_page.preferredRenderingUpdateInterval();
+
+    // PreferredFramesPerSecond is an integer and should be > 0.
+    if (interval <= 1_s)
+        setPreferredFramesPerSecond(preferredFramesPerSecond(interval));
+
+    if (isScheduled()) {
+        clearScheduled();
+        scheduleRenderingUpdate();
+    }
+}
+
+void RenderingUpdateScheduler::scheduleRenderingUpdate()
+{
+    LOG_WITH_STREAM(EventLoop, stream << "RenderingUpdateScheduler for page " << &m_page << " scheduleTimedRenderingUpdate() - already scheduled " << isScheduled() << " page visible " << m_page.isVisible());
+
     if (isScheduled())
         return;
 
     // Optimize the case when an invisible page wants just to schedule layer flush.
     if (!m_page.isVisible()) {
-        scheduleImmediateRenderingUpdate();
+        triggerRenderingUpdate();
         return;
     }
 
     tracePoint(ScheduleRenderingUpdate);
 
-#if USE(REQUEST_ANIMATION_FRAME_DISPLAY_MONITOR)
-    if (!DisplayRefreshMonitorManager::sharedManager().scheduleAnimation(*this))
-#endif
-        startTimer(Seconds(1.0 / 60));
+    Seconds interval = m_page.preferredRenderingUpdateInterval();
 
-    m_scheduled = true;
+    // PreferredFramesPerSecond is an integer and should be > 0.
+    if (interval <= 1_s)
+        m_scheduled = scheduleAnimation(preferredFramesPerSecond(interval));
+
+    if (!isScheduled())
+        startTimer(interval);
 }
 
 bool RenderingUpdateScheduler::isScheduled() const
@@ -71,9 +114,12 @@ bool RenderingUpdateScheduler::isScheduled() const
 
 void RenderingUpdateScheduler::startTimer(Seconds delay)
 {
+    LOG_WITH_STREAM(EventLoop, stream << "RenderingUpdateScheduler for page " << &m_page << " startTimer(" << delay << ")");
+
     ASSERT(!isScheduled());
     m_refreshTimer = makeUnique<Timer>(*this, &RenderingUpdateScheduler::displayRefreshFired);
     m_refreshTimer->startOneShot(delay);
+    m_scheduled = true;
 }
 
 void RenderingUpdateScheduler::clearScheduled()
@@ -82,7 +128,6 @@ void RenderingUpdateScheduler::clearScheduled()
     m_refreshTimer = nullptr;
 }
 
-#if USE(REQUEST_ANIMATION_FRAME_DISPLAY_MONITOR)
 RefPtr<DisplayRefreshMonitor> RenderingUpdateScheduler::createDisplayRefreshMonitor(PlatformDisplayID displayID) const
 {
     if (auto monitor = m_page.chrome().client().createDisplayRefreshMonitor(displayID))
@@ -95,27 +140,25 @@ void RenderingUpdateScheduler::windowScreenDidChange(PlatformDisplayID displayID
 {
     DisplayRefreshMonitorManager::sharedManager().windowScreenDidChange(displayID, *this);
 }
-#endif
 
 void RenderingUpdateScheduler::displayRefreshFired()
 {
+    LOG_WITH_STREAM(EventLoop, stream << "RenderingUpdateScheduler for page " << &m_page << " displayRefreshFired()");
+
     tracePoint(TriggerRenderingUpdate);
 
     clearScheduled();
-    scheduleImmediateRenderingUpdate();
+    triggerRenderingUpdate();
 }
 
-void RenderingUpdateScheduler::scheduleImmediateRenderingUpdate()
+void RenderingUpdateScheduler::triggerRenderingUpdateForTesting()
 {
-    m_page.chrome().client().scheduleCompositingLayerFlush();
+    triggerRenderingUpdate();
 }
 
-void RenderingUpdateScheduler::scheduleRenderingUpdate()
+void RenderingUpdateScheduler::triggerRenderingUpdate()
 {
-    if (m_page.chrome().client().needsImmediateRenderingUpdate())
-        scheduleImmediateRenderingUpdate();
-    else
-        scheduleTimedRenderingUpdate();
+    m_page.chrome().client().triggerRenderingUpdate();
 }
 
 }

@@ -31,13 +31,12 @@
 
 [
     ActiveDOMObject,
-    Constructor(USVString url, optional sequence<DOMString> protocols = []),
-    Constructor(USVString url, DOMString protocol),
-    ConstructorMayThrowException,
-    ConstructorCallWith=ScriptExecutionContext,
     Exposed=(Window,Worker),
     EnabledAtRuntime=WebSocket
 ] interface WebSocket : EventTarget {
+    [CallWith=ScriptExecutionContext] constructor(USVString url, optional sequence<DOMString> protocols = []);
+    [CallWith=ScriptExecutionContext] constructor(USVString url, DOMString protocol);
+
     readonly attribute USVString URL; // Lowercased .url is the one in the spec, but leaving .URL for compatibility reasons.
     readonly attribute USVString url;
 
@@ -59,10 +58,10 @@
 
     attribute DOMString binaryType;
 
-    [MayThrowException] void send(ArrayBuffer data);
-    [MayThrowException] void send(ArrayBufferView data);
-    [MayThrowException] void send(Blob data);
-    [MayThrowException] void send(USVString data);
+    [MayThrowException] undefined send(ArrayBuffer data);
+    [MayThrowException] undefined send(ArrayBufferView data);
+    [MayThrowException] undefined send(Blob data);
+    [MayThrowException] undefined send(USVString data);
 
-    [MayThrowException] void close(optional [Clamp] unsigned short code, optional DOMString reason);
+    [MayThrowException] undefined close(optional [Clamp] unsigned short code, optional USVString reason);
 };

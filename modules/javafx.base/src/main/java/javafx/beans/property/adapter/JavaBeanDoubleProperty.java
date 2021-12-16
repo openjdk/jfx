@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -96,6 +96,7 @@ public final class JavaBeanDoubleProperty extends DoubleProperty implements Java
     private ObservableValue<? extends Number> observable = null;
     private ExpressionHelper<Number> helper = null;
 
+    @SuppressWarnings("removal")
     private final AccessControlContext acc = AccessController.getContext();
 
     JavaBeanDoubleProperty(PropertyDescriptor descriptor, Object bean) {
@@ -112,6 +113,7 @@ public final class JavaBeanDoubleProperty extends DoubleProperty implements Java
      * property throws an {@code IllegalAccessException} or an
      * {@code InvocationTargetException}.
      */
+    @SuppressWarnings("removal")
     @Override
     public double get() {
         return AccessController.doPrivileged((PrivilegedAction<Double>) () -> {
@@ -133,6 +135,7 @@ public final class JavaBeanDoubleProperty extends DoubleProperty implements Java
      * property throws an {@code IllegalAccessException} or an
      * {@code InvocationTargetException}.
      */
+    @SuppressWarnings("removal")
     @Override
     public void set(final double value) {
         if (isBound()) {

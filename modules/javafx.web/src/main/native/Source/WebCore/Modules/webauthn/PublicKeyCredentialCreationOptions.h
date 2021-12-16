@@ -26,7 +26,6 @@
 #pragma once
 
 #if ENABLE(WEB_AUTHN)
-
 #include "AttestationConveyancePreference.h"
 #include "AuthenticationExtensionsClientInputs.h"
 #include "BufferSource.h"
@@ -34,10 +33,12 @@
 #include "PublicKeyCredentialType.h"
 #include "UserVerificationRequirement.h"
 #include <wtf/Forward.h>
+#endif // ENABLE(WEB_AUTHN)
 
 namespace WebCore {
 
 struct PublicKeyCredentialCreationOptions {
+#if ENABLE(WEB_AUTHN)
     enum class AuthenticatorAttachment {
         Platform,
         CrossPlatform
@@ -89,8 +90,10 @@ struct PublicKeyCredentialCreationOptions {
 
     template<class Encoder> void encode(Encoder&) const;
     template<class Decoder> static Optional<PublicKeyCredentialCreationOptions> decode(Decoder&);
+#endif // ENABLE(WEB_AUTHN)
 };
 
+#if ENABLE(WEB_AUTHN)
 template<class Encoder>
 void PublicKeyCredentialCreationOptions::Parameters::encode(Encoder& encoder) const
 {
@@ -101,7 +104,7 @@ template<class Decoder>
 Optional<PublicKeyCredentialCreationOptions::Parameters> PublicKeyCredentialCreationOptions::Parameters::decode(Decoder& decoder)
 {
     PublicKeyCredentialCreationOptions::Parameters result;
-    if (!decoder.decodeEnum(result.type))
+    if (!decoder.decode(result.type))
         return WTF::nullopt;
     if (!decoder.decode(result.alg))
         return WTF::nullopt;
@@ -131,7 +134,7 @@ Optional<PublicKeyCredentialCreationOptions::AuthenticatorSelectionCriteria> Pub
         return WTF::nullopt;
     result.requireResidentKey = *requireResidentKey;
 
-    if (!decoder.decodeEnum(result.userVerification))
+    if (!decoder.decode(result.userVerification))
         return WTF::nullopt;
     return result;
 }
@@ -196,9 +199,11 @@ Optional<PublicKeyCredentialCreationOptions> PublicKeyCredentialCreationOptions:
 
     return result;
 }
+#endif // ENABLE(WEB_AUTHN)
 
 } // namespace WebCore
 
+#if ENABLE(WEB_AUTHN)
 namespace WTF {
 
 template<> struct EnumTraits<WebCore::PublicKeyCredentialCreationOptions::AuthenticatorAttachment> {
@@ -210,5 +215,4 @@ template<> struct EnumTraits<WebCore::PublicKeyCredentialCreationOptions::Authen
 };
 
 } // namespace WTF
-
 #endif // ENABLE(WEB_AUTHN)

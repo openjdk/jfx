@@ -39,35 +39,32 @@
 
 namespace WebCore {
 
-inline DOMURL::DOMURL(URL&& completeURL, URL&& baseURL)
-    : m_baseURL(WTFMove(baseURL))
+inline DOMURL::DOMURL(URL&& completeURL, const URL& baseURL)
+    : m_baseURL(baseURL)
     , m_url(WTFMove(completeURL))
 {
+}
+
+ExceptionOr<Ref<DOMURL>> DOMURL::create(const String& url, const URL& base)
+{
+    ASSERT(base.isValid() || base.isNull());
+    URL completeURL { base, url };
+    if (!completeURL.isValid())
+        return Exception { TypeError };
+    return adoptRef(*new DOMURL(WTFMove(completeURL), base));
 }
 
 ExceptionOr<Ref<DOMURL>> DOMURL::create(const String& url, const String& base)
 {
     URL baseURL { URL { }, base };
-    if (!baseURL.isValid())
+    if (!base.isNull() && !baseURL.isValid())
         return Exception { TypeError };
-    URL completeURL { baseURL, url };
-    if (!completeURL.isValid())
-        return Exception { TypeError };
-    return adoptRef(*new DOMURL(WTFMove(completeURL), WTFMove(baseURL)));
+    return create(url, baseURL);
 }
 
 ExceptionOr<Ref<DOMURL>> DOMURL::create(const String& url, const DOMURL& base)
 {
     return create(url, base.href());
-}
-
-ExceptionOr<Ref<DOMURL>> DOMURL::create(const String& url)
-{
-    URL baseURL { WTF::blankURL() };
-    URL completeURL { baseURL, url };
-    if (!completeURL.isValid())
-        return Exception { TypeError };
-    return adoptRef(*new DOMURL(WTFMove(completeURL), WTFMove(baseURL)));
 }
 
 DOMURL::~DOMURL()

@@ -48,13 +48,15 @@ public:
     // Oversampling requires more resources, so let's only allocate them if needed.
     void lazyInitializeOversampling();
 
-protected:
+private:
     // Apply the shaping curve.
     void processCurve(const float* source, float* dest, size_t framesToProcess);
 
     // Use up-sampling, process at the higher sample-rate, then down-sample.
     void processCurve2x(const float* source, float* dest, size_t framesToProcess);
     void processCurve4x(const float* source, float* dest, size_t framesToProcess);
+
+    bool requiresTailProcessing() const final;
 
     WaveShaperProcessor* waveShaperProcessor() { return static_cast<WaveShaperProcessor*>(processor()); }
 

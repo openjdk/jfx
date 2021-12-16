@@ -34,6 +34,8 @@
 
 namespace JSC {
 
+class BytecodeGraph;
+
 struct Instruction;
 
 class BytecodeDumperBase {
@@ -45,10 +47,12 @@ public:
     void printLocationAndOp(InstructionStream::Offset location, const char* op);
 
     template<typename T>
-    void dumpOperand(T operand, bool isFirst = false)
+    void dumpOperand(const char* operandName, T operand, bool isFirst = false)
     {
         if (!isFirst)
             m_out.print(", ");
+        m_out.print(operandName);
+        m_out.print(":");
         dumpValue(operand);
     }
 
@@ -84,7 +88,7 @@ public:
     {
     }
 
-    virtual ~BytecodeDumper() { }
+    ~BytecodeDumper() override { }
 
 protected:
     Block* block() const { return m_block; }
@@ -101,9 +105,16 @@ private:
 };
 
 template<class Block>
-class CodeBlockBytecodeDumper : public BytecodeDumper<Block> {
+class CodeBlockBytecodeDumper final : public BytecodeDumper<Block> {
 public:
     static void dumpBlock(Block*, const InstructionStream&, PrintStream& out, const ICStatusMap& = ICStatusMap());
+    static void dumpGraph(Block*, const InstructionStream&, BytecodeGraph&, PrintStream& out = WTF::dataFile(), const ICStatusMap& = ICStatusMap());
+
+    void dumpIdentifiers();
+    void dumpConstants();
+    void dumpExceptionHandlers();
+    void dumpSwitchJumpTables();
+    void dumpStringSwitchJumpTables();
 
 private:
     using BytecodeDumper<Block>::BytecodeDumper;
@@ -111,12 +122,6 @@ private:
     ALWAYS_INLINE VM& vm() const;
 
     const Identifier& identifier(int index) const;
-
-    void dumpIdentifiers();
-    void dumpConstants();
-    void dumpExceptionHandlers();
-    void dumpSwitchJumpTables();
-    void dumpStringSwitchJumpTables();
 };
 
 #if ENABLE(WEBASSEMBLY)
@@ -127,7 +132,7 @@ class FunctionCodeBlock;
 struct ModuleInformation;
 enum Type : int8_t;
 
-class BytecodeDumper : public JSC::BytecodeDumper<FunctionCodeBlock> {
+class BytecodeDumper final : public JSC::BytecodeDumper<FunctionCodeBlock> {
 public:
     static void dumpBlock(FunctionCodeBlock*, const ModuleInformation&, PrintStream& out);
 
@@ -135,7 +140,7 @@ private:
     using JSC::BytecodeDumper<FunctionCodeBlock>::BytecodeDumper;
 
     void dumpConstants();
-    CString constantName(VirtualRegister index) const override;
+    CString constantName(VirtualRegister index) const final;
     CString formatConstant(Type, uint64_t) const;
 };
 

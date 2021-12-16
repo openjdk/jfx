@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -356,7 +356,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLInputElementImpl_setSizeImpl(
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLInputElementImpl_getSrcImpl(JNIEnv* env, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, IMPL->getURLAttribute(WebCore::HTMLNames::srcAttr));
+    return JavaReturn<String>(env, IMPL->getURLAttribute(WebCore::HTMLNames::srcAttr).string());
 }
 
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLInputElementImpl_setSrcImpl(JNIEnv* env, jclass, jlong peer, jstring value)

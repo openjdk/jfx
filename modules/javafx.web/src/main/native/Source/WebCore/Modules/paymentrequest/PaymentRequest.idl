@@ -26,15 +26,15 @@
 [
     ActiveDOMObject,
     Conditional=PAYMENT_REQUEST,
-    Constructor(sequence<PaymentMethodData> methodData, PaymentDetailsInit details, optional PaymentOptions options),
-    ConstructorCallWith=Document,
-    ConstructorMayThrowException,
     EnabledBySetting=PaymentRequest,
     EnabledForContext,
     SecureContext,
+    Exposed=Window
 ] interface PaymentRequest : EventTarget {
+    [CallWith=Document] constructor(sequence<PaymentMethodData> methodData, PaymentDetailsInit details, optional PaymentOptions options);
+
     [CallWith=Document] Promise<PaymentResponse> show(optional Promise<PaymentDetailsUpdate> detailsPromise);
-    Promise<void> abort();
+    Promise<undefined> abort();
     [CallWith=Document] Promise<boolean> canMakePayment();
 
     readonly attribute DOMString id;

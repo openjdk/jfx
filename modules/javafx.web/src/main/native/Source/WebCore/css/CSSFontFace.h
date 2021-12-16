@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include "FontLoadTimingOverride.h"
 #include "FontSelectionValueInlines.h"
 #include "FontTaggedSettings.h"
 #include "StyleRule.h"
@@ -52,6 +53,7 @@ class Document;
 class FontDescription;
 class Font;
 class FontFace;
+class ScriptExecutionContext;
 enum class ExternalResourceDownloadPolicy;
 
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(CSSFontFace);
@@ -129,6 +131,7 @@ public:
         virtual void fontLoaded(CSSFontFace&) { }
         virtual void fontStateChanged(CSSFontFace&, Status /*oldState*/, Status /*newState*/) { }
         virtual void fontPropertyChanged(CSSFontFace&, CSSValueList* /*oldFamilies*/ = nullptr) { }
+        virtual void fontStyleUpdateNeeded(CSSFontFace&) { }
         virtual void ref() = 0;
         virtual void deref() = 0;
     };
@@ -143,7 +146,7 @@ public:
     bool rangesMatchCodePoint(UChar32) const;
 
     // We don't guarantee that the FontFace wrapper will be the same every time you ask for it.
-    Ref<FontFace> wrapper();
+    Ref<FontFace> wrapper(ScriptExecutionContext*);
     void setWrapper(FontFace&);
     FontFace* existingWrapper();
 
@@ -152,23 +155,20 @@ public:
         Seconds swapPeriod;
     };
     FontLoadTiming fontLoadTiming() const;
-    bool shouldIgnoreFontLoadCompletions() const;
+    bool shouldIgnoreFontLoadCompletions() const { return m_shouldIgnoreFontLoadCompletions; }
 
     bool purgeable() const;
 
-    AllowUserInstalledFonts allowUserInstalledFonts() const;
+    AllowUserInstalledFonts allowUserInstalledFonts() const { return m_allowUserInstalledFonts; }
 
     void updateStyleIfNeeded();
 
-#if ENABLE(SVG_FONTS)
     bool hasSVGFontFaceSource() const;
-#endif
     void setErrorState();
-
-    Document* document() const;
 
 private:
     CSSFontFace(CSSFontSelector*, StyleRuleFontFace*, FontFace*, bool isLocalFallback);
+    CSSFontFace(const Settings*, StyleRuleFontFace*, FontFace*, bool isLocalFallback);
 
     size_t pump(ExternalResourceDownloadPolicy);
     void setStatus(Status);
@@ -196,6 +196,9 @@ private:
     bool m_isLocalFallback { false };
     bool m_sourcesPopulated { false };
     bool m_mayBePurged { true };
+    bool m_shouldIgnoreFontLoadCompletions { false };
+    FontLoadTimingOverride m_fontLoadTimingOverride { FontLoadTimingOverride::None };
+    AllowUserInstalledFonts m_allowUserInstalledFonts { AllowUserInstalledFonts::Yes };
 
     Timer m_timeoutTimer;
 };

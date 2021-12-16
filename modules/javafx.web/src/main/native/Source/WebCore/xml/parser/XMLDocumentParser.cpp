@@ -125,7 +125,7 @@ void XMLDocumentParser::append(RefPtr<StringImpl>&& inputSource)
     doWrite(source);
 
     // After parsing, dispatch image beforeload events.
-    ImageLoader::dispatchPendingBeforeLoadEvents();
+    ImageLoader::dispatchPendingBeforeLoadEvents(nullptr);
 }
 
 void XMLDocumentParser::handleError(XMLErrors::ErrorType type, const char* m, TextPosition position)
@@ -244,11 +244,6 @@ void XMLDocumentParser::notifyFinished(PendingScript& pendingScript)
         resumeParsing();
 }
 
-bool XMLDocumentParser::isWaitingForScripts() const
-{
-    return m_pendingScript;
-}
-
 void XMLDocumentParser::pauseParsing()
 {
     ASSERT(!m_parserPaused);
@@ -257,6 +252,38 @@ void XMLDocumentParser::pauseParsing()
         return;
 
     m_parserPaused = true;
+}
+
+struct XMLParsingNamespaces {
+    AtomString defaultNamespace;
+    HashMap<AtomString, AtomString> prefixNamespaces;
+};
+
+static XMLParsingNamespaces findXMLParsingNamespaces(Element* contextElement)
+{
+    if (!contextElement)
+        return { };
+
+    XMLParsingNamespaces result;
+
+    bool stopLookingForDefaultNamespace = false;
+
+    for (auto& element : lineageOfType<Element>(*contextElement)) {
+        if (is<SVGForeignObjectElement>(element))
+            stopLookingForDefaultNamespace = true;
+        else if (!stopLookingForDefaultNamespace)
+            result.defaultNamespace = element.namespaceURI();
+
+        if (!element.hasAttributes())
+            continue;
+
+        for (auto& attribute : element.attributesIterator()) {
+            if (attribute.prefix() == xmlnsAtom())
+                result.prefixNamespaces.set(attribute.localName(), attribute.value());
+        }
+    }
+
+    return result;
 }
 
 bool XMLDocumentParser::parseDocumentFragment(const String& chunk, DocumentFragment& fragment, Element* contextElement, ParserContentPolicy parserContentPolicy)
@@ -272,28 +299,8 @@ bool XMLDocumentParser::parseDocumentFragment(const String& chunk, DocumentFragm
         return true;
     }
 
-    HashMap<AtomString, AtomString> prefixToNamespaceMap;
-    AtomString defaultNamespaceURI;
-    bool stopLookingForDefaultNamespaceURI = false;
-
-    for (auto& element : elementLineage(contextElement)) {
-        if (is<SVGForeignObjectElement>(element))
-            stopLookingForDefaultNamespaceURI = true;
-        else if (!stopLookingForDefaultNamespaceURI)
-            defaultNamespaceURI = element.namespaceURI();
-
-        if (!element.hasAttributes())
-            continue;
-
-        for (const Attribute& attribute : element.attributesIterator()) {
-            if (attribute.prefix() == xmlnsAtom())
-                prefixToNamespaceMap.set(attribute.localName(), attribute.value());
-            else if (!stopLookingForDefaultNamespaceURI && attribute.prefix() == xmlnsAtom())
-                defaultNamespaceURI = attribute.value();
-        }
-    }
-
-    auto parser = XMLDocumentParser::create(fragment, WTFMove(prefixToNamespaceMap), defaultNamespaceURI, parserContentPolicy);
+    auto namespaces = findXMLParsingNamespaces(contextElement);
+    auto parser = XMLDocumentParser::create(fragment, WTFMove(namespaces.prefixNamespaces), namespaces.defaultNamespace, parserContentPolicy);
     bool wellFormed = parser->appendFragmentSource(chunk);
     // Do not call finish(). The finish() and doEnd() implementations touch the main document and loader and can cause crashes in the fragment case.
     parser->detach(); // Allows ~DocumentParser to assert it was detached before destruction.

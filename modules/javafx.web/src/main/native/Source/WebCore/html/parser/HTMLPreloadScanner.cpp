@@ -28,6 +28,7 @@
 #include "config.h"
 #include "HTMLPreloadScanner.h"
 
+#include "HTMLImageElement.h"
 #include "HTMLNames.h"
 #include "HTMLParserIdioms.h"
 #include "HTMLSrcsetParser.h"
@@ -41,7 +42,6 @@
 #include "MediaQueryEvaluator.h"
 #include "MediaQueryParser.h"
 #include "RenderView.h"
-#include "RuntimeEnabledFeatures.h"
 #include "SecurityPolicy.h"
 #include "Settings.h"
 #include "SizesAttributeParser.h"
@@ -104,8 +104,9 @@ String TokenPreloadScanner::initiatorFor(TagId tagId)
 
 class TokenPreloadScanner::StartTagScanner {
 public:
-    explicit StartTagScanner(TagId tagId, float deviceScaleFactor = 1.0)
-        : m_tagId(tagId)
+    explicit StartTagScanner(Document& document, TagId tagId, float deviceScaleFactor = 1.0)
+        : m_document(document)
+        , m_tagId(tagId)
         , m_linkIsStyleSheet(false)
         , m_linkIsPreload(false)
         , m_metaIsViewport(false)
@@ -115,7 +116,7 @@ public:
     {
     }
 
-    void processAttributes(const HTMLToken::AttributeList& attributes, Document& document, Vector<bool>& pictureState)
+    void processAttributes(const HTMLToken::AttributeList& attributes, Vector<bool>& pictureState)
     {
         ASSERT(isMainThread());
         if (m_tagId >= TagId::Unknown)
@@ -124,12 +125,12 @@ public:
         for (auto& attribute : attributes) {
             AtomString attributeName(attribute.name);
             String attributeValue = StringImpl::create8BitIfPossible(attribute.value);
-            processAttribute(attributeName, attributeValue, document, pictureState);
+            processAttribute(attributeName, attributeValue, pictureState);
         }
 
         if (m_tagId == TagId::Source && !pictureState.isEmpty() && !pictureState.last() && m_mediaMatched && m_typeMatched && !m_srcSetAttribute.isEmpty()) {
 
-            auto sourceSize = SizesAttributeParser(m_sizesAttribute, document).length();
+            auto sourceSize = SizesAttributeParser(m_sizesAttribute, m_document).length();
             ImageCandidate imageCandidate = bestFitSourceForImageAttributes(m_deviceScaleFactor, m_urlToLoad, m_srcSetAttribute, sourceSize);
             if (!imageCandidate.isEmpty()) {
                 pictureState.last() = true;
@@ -139,16 +140,16 @@ public:
 
         // Resolve between src and srcSet if we have them and the tag is img.
         if (m_tagId == TagId::Img && !m_srcSetAttribute.isEmpty()) {
-            auto sourceSize = SizesAttributeParser(m_sizesAttribute, document).length();
+            auto sourceSize = SizesAttributeParser(m_sizesAttribute, m_document).length();
             ImageCandidate imageCandidate = bestFitSourceForImageAttributes(m_deviceScaleFactor, m_urlToLoad, m_srcSetAttribute, sourceSize);
             setUrlToLoad(imageCandidate.string.toString(), true);
         }
 
         if (m_metaIsViewport && !m_metaContent.isNull())
-            document.processViewport(m_metaContent, ViewportArguments::ViewportMeta);
+            m_document.processViewport(m_metaContent, ViewportArguments::ViewportMeta);
 
         if (m_metaIsDisabledAdaptations && !m_metaContent.isNull())
-            document.processDisabledAdaptations(m_metaContent);
+            m_document.processDisabledAdaptations(m_metaContent);
     }
 
     std::unique_ptr<PreloadRequest> createPreloadRequest(const URL& predictedBaseURL)
@@ -160,12 +161,17 @@ public:
         if (!type)
             return nullptr;
 
-        if (!LinkLoader::isSupportedType(type.value(), m_typeAttribute))
+        if (!LinkLoader::isSupportedType(type.value(), m_typeAttribute, m_document))
+            return nullptr;
+
+        // Do not preload if lazyload is possible but metadata fetch is disabled.
+        if (HTMLImageElement::hasLazyLoadableAttributeValue(m_lazyloadAttribute))
             return nullptr;
 
         auto request = makeUnique<PreloadRequest>(initiatorFor(m_tagId), m_urlToLoad, predictedBaseURL, type.value(), m_mediaAttribute, m_moduleScript, m_referrerPolicy);
         request->setCrossOriginMode(m_crossOriginMode);
         request->setNonce(m_nonceAttribute);
+        request->setScriptIsAsync(m_scriptIsAsync);
 
         // According to the spec, the module tag ignores the "charset" attribute as the same to the worker's
         // importScript. But WebKit supports the "charset" for importScript intentionally. So to be consistent,
@@ -191,7 +197,7 @@ private:
             m_charset = attributeValue;
     }
 
-    void processAttribute(const AtomString& attributeName, const String& attributeValue, Document& document, const Vector<bool>& pictureState)
+    void processAttribute(const AtomString& attributeName, const String& attributeValue, const Vector<bool>& pictureState)
     {
         bool inPicture = !pictureState.isEmpty();
         bool alreadyMatchedSource = inPicture && pictureState.last();
@@ -208,6 +214,12 @@ private:
                 m_sizesAttribute = attributeValue;
                 break;
             }
+            if (m_document.settings().lazyImageLoadingEnabled()) {
+                if (match(attributeName, loadingAttr) && m_lazyloadAttribute.isNull()) {
+                    m_lazyloadAttribute = attributeValue;
+                    break;
+                }
+            }
             processImageAndScriptAttribute(attributeName, attributeValue);
             break;
         case TagId::Source:
@@ -223,10 +235,10 @@ private:
             }
             if (match(attributeName, mediaAttr) && m_mediaAttribute.isNull()) {
                 m_mediaAttribute = attributeValue;
-                auto mediaSet = MediaQuerySet::create(attributeValue, MediaQueryParserContext(document));
-                auto documentElement = makeRefPtr(document.documentElement());
+                auto mediaSet = MediaQuerySet::create(attributeValue, MediaQueryParserContext(m_document));
+                auto documentElement = makeRefPtr(m_document.documentElement());
                 LOG(MediaQueries, "HTMLPreloadScanner %p processAttribute evaluating media queries", this);
-                m_mediaMatched = MediaQueryEvaluator { document.printing() ? "print" : "screen", document, documentElement ? documentElement->computedStyle() : nullptr }.evaluate(mediaSet.get());
+                m_mediaMatched = MediaQueryEvaluator { m_document.printing() ? "print" : "screen", m_document, documentElement ? documentElement->computedStyle() : nullptr }.evaluate(mediaSet.get());
             }
             if (match(attributeName, typeAttr) && m_typeAttribute.isNull()) {
                 // when multiple type attributes present: first value wins, ignore subsequent (to match ImageElement parser and Blink behaviours)
@@ -247,6 +259,9 @@ private:
             } else if (match(attributeName, nomoduleAttr)) {
                 m_scriptIsNomodule = true;
                 break;
+            } else if (match(attributeName, asyncAttr)) {
+                m_scriptIsAsync = true;
+                break;
             }
             processImageAndScriptAttribute(attributeName, attributeValue);
             break;
@@ -254,7 +269,7 @@ private:
             if (match(attributeName, hrefAttr))
                 setUrlToLoad(attributeValue);
             else if (match(attributeName, relAttr)) {
-                LinkRelAttribute parsedAttribute { document, attributeValue };
+                LinkRelAttribute parsedAttribute { m_document, attributeValue };
                 m_linkIsStyleSheet = relAttributeIsStyleSheet(parsedAttribute);
                 m_linkIsPreload = parsedAttribute.isLinkPreload;
             } else if (match(attributeName, mediaAttr))
@@ -269,6 +284,8 @@ private:
                 m_asAttribute = attributeValue;
             else if (match(attributeName, typeAttr))
                 m_typeAttribute = attributeValue;
+            else if (match(attributeName, referrerpolicyAttr))
+                m_referrerPolicy = parseReferrerPolicy(attributeValue, ReferrerPolicySource::ReferrerPolicyAttribute).valueOr(ReferrerPolicy::EmptyString);
             break;
         case TagId::Input:
             if (match(attributeName, srcAttr))
@@ -281,7 +298,7 @@ private:
                 m_metaContent = attributeValue;
             else if (match(attributeName, nameAttr))
                 m_metaIsViewport = equalLettersIgnoringASCIICase(attributeValue, "viewport");
-            else if (RuntimeEnabledFeatures::sharedFeatures().disabledAdaptationsMetaTagEnabled() && match(attributeName, nameAttr))
+            else if (m_document.settings().disabledAdaptationsMetaTagEnabled() && match(attributeName, nameAttr))
                 m_metaIsDisabledAdaptations = equalLettersIgnoringASCIICase(attributeValue, "disabled-adaptations");
             break;
         case TagId::Base:
@@ -329,7 +346,7 @@ private:
             if (m_linkIsStyleSheet)
                 return CachedResource::Type::CSSStyleSheet;
             if (m_linkIsPreload)
-                return LinkLoader::resourceTypeFromAsAttribute(m_asAttribute);
+                return LinkLoader::resourceTypeFromAsAttribute(m_asAttribute, m_document);
             break;
         case TagId::Meta:
         case TagId::Unknown:
@@ -363,6 +380,7 @@ private:
         return true;
     }
 
+    Document& m_document;
     TagId m_tagId;
     String m_urlToLoad;
     String m_srcSetAttribute;
@@ -378,10 +396,12 @@ private:
     String m_metaContent;
     String m_asAttribute;
     String m_typeAttribute;
+    String m_lazyloadAttribute;
     bool m_metaIsViewport;
     bool m_metaIsDisabledAdaptations;
     bool m_inputIsImage;
     bool m_scriptIsNomodule { false };
+    bool m_scriptIsAsync { false };
     float m_deviceScaleFactor;
     PreloadRequest::ModuleScript m_moduleScript { PreloadRequest::ModuleScript::No };
     ReferrerPolicy m_referrerPolicy { ReferrerPolicy::EmptyString };
@@ -443,8 +463,8 @@ void TokenPreloadScanner::scan(const HTMLToken& token, Vector<std::unique_ptr<Pr
             return;
         }
 
-        StartTagScanner scanner(tagId, m_deviceScaleFactor);
-        scanner.processAttributes(token.attributes(), document, m_pictureSourceState);
+        StartTagScanner scanner(document, tagId, m_deviceScaleFactor);
+        scanner.processAttributes(token.attributes(), m_pictureSourceState);
         if (auto request = scanner.createPreloadRequest(m_predictedBaseElementURL))
             requests.append(WTFMove(request));
         return;

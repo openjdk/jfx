@@ -106,12 +106,12 @@ void InsertLineBreakCommand::doApply()
         if (!isStartOfParagraph(positionBeforeNode(nodeToInsert.get())))
             insertNodeBefore(nodeToInsert->cloneNode(false), *nodeToInsert);
 
-        setEndingSelection(VisibleSelection(positionInParentAfterNode(nodeToInsert.get()), DOWNSTREAM, endingSelection().isDirectional()));
+        setEndingSelection(VisibleSelection(positionInParentAfterNode(nodeToInsert.get()), Affinity::Downstream, endingSelection().isDirectional()));
     // If we're inserting after all of the rendered text in a text node, or into a non-text node,
     // a simple insertion is sufficient.
     } else if (position.deprecatedEditingOffset() >= caretMaxOffset(*position.deprecatedNode()) || !is<Text>(*position.deprecatedNode())) {
         insertNodeAt(*nodeToInsert, position);
-        setEndingSelection(VisibleSelection(positionInParentAfterNode(nodeToInsert.get()), DOWNSTREAM, endingSelection().isDirectional()));
+        setEndingSelection(VisibleSelection(positionInParentAfterNode(nodeToInsert.get()), Affinity::Downstream, endingSelection().isDirectional()));
     } else if (is<Text>(*position.deprecatedNode())) {
         // Split a text node
         Text& textNode = downcast<Text>(*position.deprecatedNode());
@@ -137,12 +137,12 @@ void InsertLineBreakCommand::doApply()
             }
         }
 
-        setEndingSelection(VisibleSelection(endingPosition, DOWNSTREAM, endingSelection().isDirectional()));
+        setEndingSelection(VisibleSelection(endingPosition, Affinity::Downstream, endingSelection().isDirectional()));
     }
 
     // Handle the case where there is a typing style.
 
-    RefPtr<EditingStyle> typingStyle = frame().selection().typingStyle();
+    RefPtr<EditingStyle> typingStyle = document().selection().typingStyle();
 
     if (typingStyle && !typingStyle->isEmpty()) {
         // Apply the typing style to the inserted line break, so that if the selection

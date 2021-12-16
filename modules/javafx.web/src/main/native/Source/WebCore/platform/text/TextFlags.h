@@ -44,13 +44,6 @@ enum class FontSmoothingMode : uint8_t {
     SubpixelAntialiased
 };
 
-// This setting is used to provide ways of switching between multiple rendering modes that may have different
-// metrics. It is used to switch between CG and GDI text on Windows.
-enum class FontRenderingMode : uint8_t {
-    Normal,
-    Alternate
-};
-
 enum class FontOrientation : uint8_t {
     Horizontal,
     Vertical
@@ -61,20 +54,18 @@ enum class NonCJKGlyphOrientation : uint8_t {
     Upright
 };
 
-// Here, "Leading" and "Trailing" are relevant after the line has been rearranged for bidi.
-// ("Leading" means "left" and "Trailing" means "right.")
 enum ExpansionBehaviorFlags {
-    ForbidTrailingExpansion = 0 << 0,
-    AllowTrailingExpansion = 1 << 0,
-    ForceTrailingExpansion = 2 << 0,
-    TrailingExpansionMask = 3 << 0,
+    ForbidRightExpansion = 0 << 0,
+    AllowRightExpansion = 1 << 0,
+    ForceRightExpansion = 2 << 0,
+    RightExpansionMask = 3 << 0,
 
-    ForbidLeadingExpansion = 0 << 2,
-    AllowLeadingExpansion = 1 << 2,
-    ForceLeadingExpansion = 2 << 2,
-    LeadingExpansionMask = 3 << 2,
+    ForbidLeftExpansion = 0 << 2,
+    AllowLeftExpansion = 1 << 2,
+    ForceLeftExpansion = 2 << 2,
+    LeftExpansionMask = 3 << 2,
 
-    DefaultExpansion = AllowTrailingExpansion | ForbidLeadingExpansion,
+    DefaultExpansion = AllowRightExpansion | ForbidLeftExpansion,
 };
 typedef unsigned ExpansionBehavior;
 
@@ -646,14 +637,6 @@ template<> struct EnumTraits<WebCore::FontSmoothingMode> {
     WebCore::FontSmoothingMode::Antialiased,
     WebCore::FontSmoothingMode::SubpixelAntialiased,
     WebCore::FontSmoothingMode::AutoSmoothing
-    >;
-};
-
-template<> struct EnumTraits<WebCore::FontRenderingMode> {
-    using values = EnumValues<
-    WebCore::FontRenderingMode,
-    WebCore::FontRenderingMode::Normal,
-    WebCore::FontRenderingMode::Alternate
     >;
 };
 

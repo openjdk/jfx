@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -239,23 +239,8 @@ final class WCPathImpl extends WCPath<Path2D> {
         path.closePath();
     }
 
-    public boolean hasCurrentPoint() {
-        return hasCP;
-    }
-
     public boolean isEmpty() {
-        PathIterator pi = path.getPathIterator(null);
-        float [] coords = new float[6];
-        while(!pi.isDone()) {
-            switch(pi.currentSegment(coords)) {
-                case PathIterator.SEG_LINETO:
-                case PathIterator.SEG_QUADTO:
-                case PathIterator.SEG_CUBICTO:
-                    return false;
-            }
-            pi.next();
-        }
-        return true;
+        return !hasCP;
     }
 
     public int getWindingRule() {

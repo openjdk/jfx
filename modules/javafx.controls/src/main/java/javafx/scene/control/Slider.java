@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -121,6 +121,7 @@ public class Slider extends Control {
         //Initialize the style class to be 'slider'.
         getStyleClass().setAll(DEFAULT_STYLE_CLASS);
         setAccessibleRole(AccessibleRole.SLIDER);
+        pseudoClassStateChanged(HORIZONTAL_PSEUDOCLASS_STATE, true);
     }
     /**
      * The maximum value represented by this Slider. This must be a
@@ -641,7 +642,7 @@ public class Slider extends Control {
         return new SliderSkin(this);
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      *                         Stylesheet Handling                             *
      *                                                                         *
@@ -779,8 +780,9 @@ public class Slider extends Control {
     }
 
     /**
-     * @return The CssMetaData associated with this class, which may include the
-     * CssMetaData of its superclasses.
+     * Gets the {@code CssMetaData} associated with this class, which may include the
+     * {@code CssMetaData} of its superclasses.
+     * @return the {@code CssMetaData}
      * @since JavaFX 8.0
      */
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
@@ -802,7 +804,7 @@ public class Slider extends Control {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Accessibility handling                                                  *
      *                                                                         *

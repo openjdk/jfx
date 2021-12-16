@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2006-2017 Apple Inc. All rights reserved.
+ *  Copyright (C) 2006-2020 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -17,6 +17,8 @@
  */
 
 #pragma once
+
+#include <wtf/EnumTraits.h>
 
 namespace WebCore {
 
@@ -59,12 +61,61 @@ enum ExceptionCode {
     // Simple exceptions (https://heycam.github.io/webidl/#idl-exceptions).
     RangeError,
     TypeError,
+    JSSyntaxError, // Different from DOM SYNTAX_ERR.
 
     // Non-standard error.
     StackOverflowError,
+    OutOfMemoryError,
 
     // Used to indicate to the bindings that a JS exception was thrown below and it should be propagated.
     ExistingExceptionError,
 };
 
 } // namespace WebCore
+
+namespace WTF {
+
+template<> struct EnumTraits<WebCore::ExceptionCode> {
+    using values = EnumValues<
+    WebCore::ExceptionCode,
+    WebCore::ExceptionCode::IndexSizeError,
+    WebCore::ExceptionCode::HierarchyRequestError,
+    WebCore::ExceptionCode::WrongDocumentError,
+    WebCore::ExceptionCode::InvalidCharacterError,
+    WebCore::ExceptionCode::NoModificationAllowedError,
+    WebCore::ExceptionCode::NotFoundError,
+    WebCore::ExceptionCode::NotSupportedError,
+    WebCore::ExceptionCode::InUseAttributeError,
+    WebCore::ExceptionCode::InvalidStateError,
+    WebCore::ExceptionCode::SyntaxError,
+    WebCore::ExceptionCode::InvalidModificationError,
+    WebCore::ExceptionCode::NamespaceError,
+    WebCore::ExceptionCode::InvalidAccessError,
+    WebCore::ExceptionCode::TypeMismatchError,
+    WebCore::ExceptionCode::SecurityError,
+    WebCore::ExceptionCode::NetworkError,
+    WebCore::ExceptionCode::AbortError,
+    WebCore::ExceptionCode::URLMismatchError,
+    WebCore::ExceptionCode::QuotaExceededError,
+    WebCore::ExceptionCode::TimeoutError,
+    WebCore::ExceptionCode::InvalidNodeTypeError,
+    WebCore::ExceptionCode::DataCloneError,
+    WebCore::ExceptionCode::EncodingError,
+    WebCore::ExceptionCode::NotReadableError,
+    WebCore::ExceptionCode::UnknownError,
+    WebCore::ExceptionCode::ConstraintError,
+    WebCore::ExceptionCode::DataError,
+    WebCore::ExceptionCode::TransactionInactiveError,
+    WebCore::ExceptionCode::ReadonlyError,
+    WebCore::ExceptionCode::VersionError,
+    WebCore::ExceptionCode::OperationError,
+    WebCore::ExceptionCode::NotAllowedError,
+    WebCore::ExceptionCode::RangeError,
+    WebCore::ExceptionCode::TypeError,
+    WebCore::ExceptionCode::JSSyntaxError,
+    WebCore::ExceptionCode::StackOverflowError,
+    WebCore::ExceptionCode::ExistingExceptionError
+    >;
+};
+
+} // namespace WTF

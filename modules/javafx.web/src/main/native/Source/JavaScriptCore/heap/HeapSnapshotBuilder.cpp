@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -39,7 +39,7 @@
 
 namespace JSC {
 
-static const char* rootTypeToString(SlotVisitor::RootMarkReason);
+static const char* rootTypeToString(RootMarkReason);
 
 NodeIdentifier HeapSnapshotBuilder::nextAvailableObjectIdentifier = 1;
 NodeIdentifier HeapSnapshotBuilder::getNextObjectIdentifier() { return nextAvailableObjectIdentifier++; }
@@ -73,8 +73,12 @@ void HeapSnapshotBuilder::buildSnapshot()
         m_profiler.vm().heap.collectNow(Sync, CollectionScope::Full);
         m_profiler.setActiveHeapAnalyzer(nullptr);
     }
-    m_snapshot->finalize();
 
+    {
+        auto locker = holdLock(m_buildingNodeMutex);
+        m_appendedCells.clear();
+        m_snapshot->finalize();
+    }
     m_profiler.appendSnapshot(WTFMove(m_snapshot));
 }
 
@@ -88,11 +92,14 @@ void HeapSnapshotBuilder::analyzeNode(JSCell* cell)
     if (previousSnapshotHasNodeForCell(cell, identifier))
         return;
 
-    std::lock_guard<Lock> lock(m_buildingNodeMutex);
+    auto locker = holdLock(m_buildingNodeMutex);
+    auto addResult = m_appendedCells.add(cell);
+    if (!addResult.isNewEntry)
+        return;
     m_snapshot->appendNode(HeapSnapshotNode(cell, getNextObjectIdentifier()));
 }
 
-void HeapSnapshotBuilder::analyzeEdge(JSCell* from, JSCell* to, SlotVisitor::RootMarkReason rootMarkReason)
+void HeapSnapshotBuilder::analyzeEdge(JSCell* from, JSCell* to, RootMarkReason rootMarkReason)
 {
     ASSERT(m_profiler.activeHeapAnalyzer() == this);
     ASSERT(to);
@@ -101,10 +108,10 @@ void HeapSnapshotBuilder::analyzeEdge(JSCell* from, JSCell* to, SlotVisitor::Roo
     if (from == to)
         return;
 
-    std::lock_guard<Lock> lock(m_buildingEdgeMutex);
+    auto locker = holdLock(m_buildingEdgeMutex);
 
     if (m_snapshotType == SnapshotType::GCDebuggingSnapshot && !from) {
-        if (rootMarkReason == SlotVisitor::RootMarkReason::None && m_snapshotType == SnapshotType::GCDebuggingSnapshot)
+        if (rootMarkReason == RootMarkReason::None && m_snapshotType == SnapshotType::GCDebuggingSnapshot)
             WTFLogAlways("Cell %p is a root but no root marking reason was supplied", to);
 
         m_rootData.ensure(to, [] () -> RootData {
@@ -120,7 +127,7 @@ void HeapSnapshotBuilder::analyzePropertyNameEdge(JSCell* from, JSCell* to, Uniq
     ASSERT(m_profiler.activeHeapAnalyzer() == this);
     ASSERT(to);
 
-    std::lock_guard<Lock> lock(m_buildingEdgeMutex);
+    auto locker = holdLock(m_buildingEdgeMutex);
 
     m_edges.append(HeapSnapshotEdge(from, to, EdgeType::Property, propertyName));
 }
@@ -130,7 +137,7 @@ void HeapSnapshotBuilder::analyzeVariableNameEdge(JSCell* from, JSCell* to, Uniq
     ASSERT(m_profiler.activeHeapAnalyzer() == this);
     ASSERT(to);
 
-    std::lock_guard<Lock> lock(m_buildingEdgeMutex);
+    auto locker = holdLock(m_buildingEdgeMutex);
 
     m_edges.append(HeapSnapshotEdge(from, to, EdgeType::Variable, variableName));
 }
@@ -140,7 +147,7 @@ void HeapSnapshotBuilder::analyzeIndexEdge(JSCell* from, JSCell* to, uint32_t in
     ASSERT(m_profiler.activeHeapAnalyzer() == this);
     ASSERT(to);
 
-    std::lock_guard<Lock> lock(m_buildingEdgeMutex);
+    auto locker = holdLock(m_buildingEdgeMutex);
 
     m_edges.append(HeapSnapshotEdge(from, to, index));
 }
@@ -150,7 +157,7 @@ void HeapSnapshotBuilder::setOpaqueRootReachabilityReasonForCell(JSCell* cell, c
     if (!reason || !*reason || m_snapshotType != SnapshotType::GCDebuggingSnapshot)
         return;
 
-    std::lock_guard<Lock> lock(m_buildingEdgeMutex);
+    auto locker = holdLock(m_buildingEdgeMutex);
 
     m_rootData.ensure(cell, [] () -> RootData {
         return { };
@@ -298,36 +305,36 @@ static const char* snapshotTypeToString(HeapSnapshotBuilder::SnapshotType type)
     return "Inspector";
 }
 
-static const char* rootTypeToString(SlotVisitor::RootMarkReason type)
+static const char* rootTypeToString(RootMarkReason type)
 {
     switch (type) {
-    case SlotVisitor::RootMarkReason::None:
+    case RootMarkReason::None:
         return "None";
-    case SlotVisitor::RootMarkReason::ConservativeScan:
+    case RootMarkReason::ConservativeScan:
         return "Conservative scan";
-    case SlotVisitor::RootMarkReason::StrongReferences:
+    case RootMarkReason::StrongReferences:
         return "Strong references";
-    case SlotVisitor::RootMarkReason::ProtectedValues:
+    case RootMarkReason::ProtectedValues:
         return "Protected values";
-    case SlotVisitor::RootMarkReason::MarkListSet:
+    case RootMarkReason::MarkListSet:
         return "Mark list set";
-    case SlotVisitor::RootMarkReason::VMExceptions:
+    case RootMarkReason::VMExceptions:
         return "VM exceptions";
-    case SlotVisitor::RootMarkReason::StrongHandles:
+    case RootMarkReason::StrongHandles:
         return "Strong handles";
-    case SlotVisitor::RootMarkReason::Debugger:
+    case RootMarkReason::Debugger:
         return "Debugger";
-    case SlotVisitor::RootMarkReason::JITStubRoutines:
+    case RootMarkReason::JITStubRoutines:
         return "JIT stub routines";
-    case SlotVisitor::RootMarkReason::WeakSets:
+    case RootMarkReason::WeakSets:
         return "Weak sets";
-    case SlotVisitor::RootMarkReason::Output:
+    case RootMarkReason::Output:
         return "Output";
-    case SlotVisitor::RootMarkReason::DFGWorkLists:
+    case RootMarkReason::DFGWorkLists:
         return "DFG work lists";
-    case SlotVisitor::RootMarkReason::CodeBlocks:
+    case RootMarkReason::CodeBlocks:
         return "Code blocks";
-    case SlotVisitor::RootMarkReason::DOMGCOutput:
+    case RootMarkReason::DOMGCOutput:
         return "DOM GC output";
     }
     ASSERT_NOT_REACHED();
@@ -402,7 +409,7 @@ String HeapSnapshotBuilder::json(Function<bool (const HeapSnapshotNode&)> allowN
             // "Object" in snapshots and not get the name of the prototype's parent.
             JSObject* object = asObject(node.cell);
             if (JSGlobalObject* globalObject = object->globalObject(vm)) {
-                PropertySlot slot(object, PropertySlot::InternalMethodType::VMInquiry);
+                PropertySlot slot(object, PropertySlot::InternalMethodType::VMInquiry, &vm);
                 if (!object->getOwnPropertySlot(object, globalObject, vm.propertyNames->constructor, slot))
                     className = JSObject::calculatedClassName(object);
             }
@@ -413,9 +420,9 @@ String HeapSnapshotBuilder::json(Function<bool (const HeapSnapshotNode&)> allowN
             nextClassNameIndex++;
         unsigned classNameIndex = result.iterator->value;
 
-        void* wrappedAddress = 0;
+        void* wrappedAddress = nullptr;
         unsigned labelIndex = 0;
-        if (!node.cell->isString() && !node.cell->isBigInt()) {
+        if (!node.cell->isString() && !node.cell->isHeapBigInt()) {
             Structure* structure = node.cell->structure(vm);
             if (!structure || !structure->globalObject())
                 flags |= static_cast<unsigned>(NodeFlags::Internal);

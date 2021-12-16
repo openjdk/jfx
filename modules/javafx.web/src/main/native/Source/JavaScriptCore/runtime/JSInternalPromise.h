@@ -44,11 +44,14 @@ public:
     typedef JSPromise Base;
 
     JS_EXPORT_PRIVATE static JSInternalPromise* create(VM&, Structure*);
+    static JSInternalPromise* createWithInitialValues(VM&, Structure*);
     static Structure* createStructure(VM&, JSGlobalObject*, JSValue);
 
     DECLARE_EXPORT_INFO;
 
     JS_EXPORT_PRIVATE JSInternalPromise* then(JSGlobalObject*, JSFunction* = nullptr, JSFunction* = nullptr);
+
+    JS_EXPORT_PRIVATE JSInternalPromise* rejectWithCaughtException(JSGlobalObject*, ThrowScope&);
 
 private:
     JSInternalPromise(VM&, Structure*);

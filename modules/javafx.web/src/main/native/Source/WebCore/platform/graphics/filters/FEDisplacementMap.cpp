@@ -24,16 +24,15 @@
 #include "config.h"
 #include "FEDisplacementMap.h"
 
-#include "ColorUtilities.h"
 #include "Filter.h"
 #include "GraphicsContext.h"
-#include <JavaScriptCore/Uint8ClampedArray.h>
+#include "ImageData.h"
 #include <wtf/text/TextStream.h>
 
 namespace WebCore {
 
 FEDisplacementMap::FEDisplacementMap(Filter& filter, ChannelSelectorType xChannelSelector, ChannelSelectorType yChannelSelector, float scale)
-    : FilterEffect(filter)
+    : FilterEffect(filter, Type::DisplacementMap)
     , m_xChannelSelector(xChannelSelector)
     , m_yChannelSelector(yChannelSelector)
     , m_scale(scale)
@@ -70,7 +69,7 @@ bool FEDisplacementMap::setScale(float scale)
     return true;
 }
 
-void FEDisplacementMap::setResultColorSpace(ColorSpace)
+void FEDisplacementMap::setResultColorSpace(DestinationColorSpace)
 {
     // Spec: The 'color-interpolation-filters' property only applies to the 'in2' source image
     // and does not apply to the 'in' source image. The 'in' source image must remain in its
@@ -86,6 +85,12 @@ void FEDisplacementMap::transformResultColorSpace(FilterEffect* in, const int in
         in->transformResultColorSpace(operatingColorSpace());
 }
 
+static inline unsigned byteOffsetOfPixel(unsigned x, unsigned y, unsigned rowBytes)
+{
+    const unsigned bytesPerPixel = 4;
+    return x * bytesPerPixel + y * rowBytes;
+}
+
 void FEDisplacementMap::platformApplySoftware()
 {
     FilterEffect* in = inputEffect(0);
@@ -94,7 +99,8 @@ void FEDisplacementMap::platformApplySoftware()
     ASSERT(m_xChannelSelector != CHANNEL_UNKNOWN);
     ASSERT(m_yChannelSelector != CHANNEL_UNKNOWN);
 
-    Uint8ClampedArray* dstPixelArray = createPremultipliedImageResult();
+    auto* resultImage = createPremultipliedImageResult();
+    auto* dstPixelArray = resultImage ? resultImage->data() : nullptr;
     if (!dstPixelArray)
         return;
 

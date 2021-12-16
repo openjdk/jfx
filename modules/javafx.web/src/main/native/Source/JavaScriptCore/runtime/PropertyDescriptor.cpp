@@ -25,15 +25,12 @@
 
 
 #include "config.h"
-
 #include "PropertyDescriptor.h"
 
 #include "GetterSetter.h"
-#include "JSObject.h"
-#include "JSCInlines.h"
+#include "JSCJSValueInlines.h"
 
 namespace JSC {
-unsigned PropertyDescriptor::defaultAttributes = PropertyAttribute::DontDelete | PropertyAttribute::DontEnum | PropertyAttribute::ReadOnly;
 
 bool PropertyDescriptor::writable() const
 {
@@ -72,7 +69,7 @@ void PropertyDescriptor::setUndefined()
     m_attributes = PropertyAttribute::ReadOnly | PropertyAttribute::DontDelete | PropertyAttribute::DontEnum;
 }
 
-GetterSetter* PropertyDescriptor::slowGetterSetter(JSGlobalObject* globalObject)
+GetterSetter* PropertyDescriptor::slowGetterSetter(JSGlobalObject* globalObject) const
 {
     VM& vm = globalObject->vm();
     JSValue getter = m_getter && !m_getter.isUndefined() ? jsCast<JSObject*>(m_getter) : jsUndefined();
@@ -95,13 +92,13 @@ JSValue PropertyDescriptor::setter() const
 JSObject* PropertyDescriptor::getterObject() const
 {
     ASSERT(isAccessorDescriptor() && getterPresent());
-    return m_getter.isObject() ? asObject(m_getter) : 0;
+    return m_getter.isObject() ? asObject(m_getter) : nullptr;
 }
 
 JSObject* PropertyDescriptor::setterObject() const
 {
     ASSERT(isAccessorDescriptor() && setterPresent());
-    return m_setter.isObject() ? asObject(m_setter) : 0;
+    return m_setter.isObject() ? asObject(m_setter) : nullptr;
 }
 
 void PropertyDescriptor::setDescriptor(JSValue value, unsigned attributes)
@@ -128,15 +125,16 @@ void PropertyDescriptor::setDescriptor(JSValue value, unsigned attributes)
     }
 }
 
-void PropertyDescriptor::setCustomDescriptor(unsigned attributes)
+void PropertyDescriptor::setAccessorDescriptor(unsigned attributes)
 {
-    ASSERT(!(attributes & PropertyAttribute::CustomValue));
-    m_attributes = attributes | PropertyAttribute::Accessor | PropertyAttribute::CustomAccessor;
-    m_attributes &= ~PropertyAttribute::ReadOnly;
+    ASSERT(attributes & PropertyAttribute::Accessor);
+    ASSERT(!(attributes & PropertyAttribute::CustomAccessorOrValue));
+    attributes &= ~PropertyAttribute::ReadOnly; // FIXME: we should be able to ASSERT this!
+
+    m_attributes = attributes;
+    m_getter = jsUndefined();
+    m_setter = jsUndefined();
     m_seenAttributes = EnumerablePresent | ConfigurablePresent;
-    setGetter(jsUndefined());
-    setSetter(jsUndefined());
-    m_value = JSValue();
 }
 
 void PropertyDescriptor::setAccessorDescriptor(GetterSetter* accessor, unsigned attributes)

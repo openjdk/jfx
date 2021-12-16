@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009 Apple Inc. All rights reserved.
+ * Copyright (C) 2009-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -24,9 +24,9 @@
  */
 
 #include "config.h"
-
 #include "GraphicsLayer.h"
 
+#include "ColorSerialization.h"
 #include "FloatPoint.h"
 #include "FloatRect.h"
 #include "GraphicsContext.h"
@@ -88,6 +88,11 @@ bool GraphicsLayer::supportsLayerType(Type type)
     return false;
 }
 
+bool GraphicsLayer::supportsRoundedClip()
+{
+    return false;
+}
+
 bool GraphicsLayer::supportsBackgroundColorContent()
 {
 #if USE(TEXTURE_MAPPER)
@@ -135,6 +140,7 @@ GraphicsLayer::GraphicsLayer(Type type, GraphicsLayerClient& layerClient)
     , m_masksToBounds(false)
     , m_drawsContent(false)
     , m_contentsVisible(true)
+    , m_contentsRectClipsDescendants(false)
     , m_acceleratesDrawing(false)
     , m_usesDisplayListDrawing(false)
     , m_appliesPageScale(false)
@@ -144,6 +150,9 @@ GraphicsLayer::GraphicsLayer(Type type, GraphicsLayerClient& layerClient)
     , m_isTrackingDisplayListReplay(false)
     , m_userInteractionEnabled(true)
     , m_canDetachBackingStore(true)
+#if HAVE(CORE_ANIMATION_SEPARATED_LAYERS)
+    , m_separated(false)
+#endif
 {
 #ifndef NDEBUG
     client().verifyNotPainting();
@@ -381,6 +390,11 @@ void GraphicsLayer::setMaskLayer(RefPtr<GraphicsLayer>&& layer)
     m_maskLayer = WTFMove(layer);
 }
 
+void GraphicsLayer::setMasksToBoundsRect(const FloatRoundedRect& roundedRect)
+{
+    m_masksToBoundsRect = roundedRect;
+}
+
 Path GraphicsLayer::shapeLayerPath() const
 {
 #if USE(CA)
@@ -597,34 +611,34 @@ void GraphicsLayer::getDebugBorderInfo(Color& color, float& width) const
     width = 2;
 
     if (needsBackdrop()) {
-        color = Color(255, 0, 255, 128); // has backdrop: magenta
+        color = Color::magenta.colorWithAlphaByte(128); // has backdrop: magenta
         width = 12;
         return;
     }
 
     if (drawsContent()) {
         if (tiledBacking()) {
-            color = Color(255, 128, 0, 128); // tiled layer: orange
+            color = Color::orange.colorWithAlphaByte(128); // tiled layer: orange
             return;
         }
 
-        color = Color(0, 128, 32, 128); // normal layer: green
+        color = SRGBA<uint8_t> { 0, 128, 32, 128 }; // normal layer: green
         return;
     }
 
     if (usesContentsLayer()) {
-        color = Color(0, 64, 128, 150); // non-painting layer with contents: blue
+        color = SRGBA<uint8_t> { 0, 64, 128, 150 }; // non-painting layer with contents: blue
         width = 8;
         return;
     }
 
     if (masksToBounds()) {
-        color = Color(128, 255, 255, 48); // masking layer: pale blue
+        color = SRGBA<uint8_t> { 128, 255, 255, 48 }; // masking layer: pale blue
         width = 16;
         return;
     }
 
-    color = Color(255, 255, 0, 192); // container: yellow
+    color = Color::yellow.colorWithAlphaByte(192); // container: yellow
 }
 
 void GraphicsLayer::updateDebugIndicators()
@@ -720,7 +734,7 @@ static inline const TransformOperations& operationsAt(const KeyframeValueList& v
 
 int GraphicsLayer::validateTransformOperations(const KeyframeValueList& valueList, bool& hasBigRotation)
 {
-    ASSERT(valueList.property() == AnimatedPropertyTransform);
+    ASSERT(animatedPropertyIsTransformOrRelated(valueList.property()));
 
     hasBigRotation = false;
 
@@ -830,12 +844,6 @@ void GraphicsLayer::traverse(GraphicsLayer& layer, const WTF::Function<void (Gra
         traverse(*maskLayer, traversalFunc);
 }
 
-GraphicsLayer::EmbeddedViewID GraphicsLayer::nextEmbeddedViewID()
-{
-    static GraphicsLayer::EmbeddedViewID nextEmbeddedViewID;
-    return ++nextEmbeddedViewID;
-}
-
 void GraphicsLayer::dumpLayer(TextStream& ts, LayerTreeAsTextBehavior behavior) const
 {
     ts << indent << "(" << "GraphicsLayer";
@@ -930,7 +938,7 @@ void GraphicsLayer::dumpProperties(TextStream& ts, LayerTreeAsTextBehavior behav
         ts << indent << "(primary-layer-id " << primaryLayerID() << ")\n";
 
     if (m_backgroundColor.isValid() && client().shouldDumpPropertyForLayer(this, "backgroundColor", behavior))
-        ts << indent << "(backgroundColor " << m_backgroundColor.nameForRenderTreeAsText() << ")\n";
+        ts << indent << "(backgroundColor " << serializationForRenderTreeAsText(m_backgroundColor) << ")\n";
 
     if (behavior & LayerTreeAsTextIncludeAcceleratesDrawing && m_acceleratesDrawing)
         ts << indent << "(acceleratesDrawing " << m_acceleratesDrawing << ")\n";
@@ -1004,6 +1012,11 @@ void GraphicsLayer::dumpProperties(TextStream& ts, LayerTreeAsTextBehavior behav
         ts << indent << "(event region" << m_eventRegion;
         ts << indent << ")\n";
     }
+
+#if ENABLE(SCROLLING_THREAD)
+    if ((behavior & LayerTreeAsTextDebug) && m_scrollingNodeID)
+        ts << indent << "(scrolling node " << m_scrollingNodeID << ")\n";
+#endif
 
     if (behavior & LayerTreeAsTextIncludePaintingPhases && paintingPhase())
         ts << indent << "(paintingPhases " << paintingPhase() << ")\n";

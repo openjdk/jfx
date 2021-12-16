@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2009-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,7 +27,7 @@
 #include "ArrayBuffer.h"
 
 #include "JSArrayBufferView.h"
-#include "JSCInlines.h"
+#include "JSCellInlines.h"
 #include <wtf/Gigacage.h>
 
 namespace JSC {
@@ -122,7 +122,7 @@ void ArrayBufferContents::tryAllocate(unsigned numElements, unsigned elementByte
     size_t sizeInBytes = static_cast<size_t>(numElements) * static_cast<size_t>(elementByteSize);
     size_t allocationSize = sizeInBytes;
     if (!allocationSize)
-        allocationSize = 1; // Make sure malloc actually allocates something, but not too much. We use null to mean that the buffer is neutered.
+        allocationSize = 1; // Make sure malloc actually allocates something, but not too much. We use null to mean that the buffer is detached.
 
     void* data = Gigacage::tryMalloc(Gigacage::Primitive, allocationSize);
     m_data = DataType(data, sizeInBytes);
@@ -210,6 +210,7 @@ Ref<ArrayBuffer> ArrayBuffer::create(ArrayBufferContents&& contents)
 //   from the cage.
 Ref<ArrayBuffer> ArrayBuffer::createAdopted(const void* data, unsigned byteLength)
 {
+    ASSERT(!Gigacage::isEnabled() || (Gigacage::contains(data) && Gigacage::contains(static_cast<const uint8_t*>(data) + byteLength - 1)));
     return createFromBytes(data, byteLength, ArrayBuffer::primitiveGigacageDestructor());
 }
 
@@ -310,15 +311,15 @@ unsigned ArrayBuffer::clampIndex(double index) const
 
 RefPtr<ArrayBuffer> ArrayBuffer::slice(double begin, double end) const
 {
-    return sliceImpl(clampIndex(begin), clampIndex(end));
+    return sliceWithClampedIndex(clampIndex(begin), clampIndex(end));
 }
 
 RefPtr<ArrayBuffer> ArrayBuffer::slice(double begin) const
 {
-    return sliceImpl(clampIndex(begin), byteLength());
+    return sliceWithClampedIndex(clampIndex(begin), byteLength());
 }
 
-RefPtr<ArrayBuffer> ArrayBuffer::sliceImpl(unsigned begin, unsigned end) const
+RefPtr<ArrayBuffer> ArrayBuffer::sliceWithClampedIndex(unsigned begin, unsigned end) const
 {
     unsigned size = begin <= end ? end - begin : 0;
     auto result = ArrayBuffer::tryCreate(static_cast<const char*>(data()) + begin, size);
@@ -373,9 +374,9 @@ bool ArrayBuffer::transferTo(VM& vm, ArrayBufferContents& result)
         return true;
     }
 
-    bool isNeuterable = !m_pinCount && !m_locked;
+    bool isDetachable = !m_pinCount && !m_locked;
 
-    if (!isNeuterable) {
+    if (!isDetachable) {
         m_contents.copyTo(result);
         if (!result.m_data)
             return false;
@@ -383,27 +384,27 @@ bool ArrayBuffer::transferTo(VM& vm, ArrayBufferContents& result)
     }
 
     m_contents.transferTo(result);
-    notifyNeutering(vm);
+    notifyDetaching(vm);
     return true;
 }
 
-// We allow neutering wasm memory ArrayBuffers even though they are locked.
-void ArrayBuffer::neuter(VM& vm)
+// We allow detaching wasm memory ArrayBuffers even though they are locked.
+void ArrayBuffer::detach(VM& vm)
 {
     ASSERT(isWasmMemory());
     ArrayBufferContents unused;
     m_contents.transferTo(unused);
-    notifyNeutering(vm);
+    notifyDetaching(vm);
 }
 
-void ArrayBuffer::notifyNeutering(VM& vm)
+void ArrayBuffer::notifyDetaching(VM& vm)
 {
     for (size_t i = numberOfIncomingReferences(); i--;) {
         JSCell* cell = incomingReferenceAt(i);
         if (JSArrayBufferView* view = jsDynamicCast<JSArrayBufferView*>(vm, cell))
-            view->neuter();
+            view->detach();
     }
-    m_neuteringWatchpointSet.fireAll(vm, "Array buffer was neutered");
+    m_detachingWatchpointSet.fireAll(vm, "Array buffer was detached");
 }
 
 ASCIILiteral errorMesasgeForTransfer(ArrayBuffer* buffer)

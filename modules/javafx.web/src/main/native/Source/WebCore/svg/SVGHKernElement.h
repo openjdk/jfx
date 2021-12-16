@@ -21,8 +21,6 @@
 
 #pragma once
 
-#if ENABLE(SVG_FONTS)
-
 #include "SVGFontElement.h"
 
 namespace WebCore {
@@ -32,7 +30,7 @@ class SVGHKernElement final : public SVGElement {
 public:
     static Ref<SVGHKernElement> create(const QualifiedName&, Document&);
 
-    bool buildHorizontalKerningPair(SVGKerningPair& kerningPair) const;
+    Optional<SVGKerningPair> buildHorizontalKerningPair() const;
 
 private:
     SVGHKernElement(const QualifiedName&, Document&);
@@ -41,5 +39,3 @@ private:
 };
 
 } // namespace WebCore
-
-#endif // ENABLE(SVG_FONTS)

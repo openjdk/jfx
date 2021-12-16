@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2007-2020 Apple Inc. All rights reserved.
  * Copyright (C) 2007 Justin Haygood <jhaygood@reaktix.com>
  * Copyright (C) 2017 Yusuke Suzuki <utatane.tea@gmail.com>
  *
@@ -56,6 +56,10 @@
 #include <array>
 #endif
 
+#if HAVE(QOS_CLASSES)
+#include <dispatch/dispatch.h>
+#endif
+
 namespace WTF {
 
 class AbstractLocker;
@@ -66,15 +70,7 @@ enum class ThreadGroupAddResult;
 class ThreadGroup;
 class PrintStream;
 
-// This function can be called from any threads.
-WTF_EXPORT_PRIVATE void initializeThreading();
-
-#if USE(PTHREADS)
-
-// We use SIGUSR1 to suspend and resume machine threads in JavaScriptCore.
-constexpr const int SigThreadSuspendResume = SIGUSR1;
-
-#endif
+WTF_EXPORT_PRIVATE void initialize();
 
 enum class GCThreadType : uint8_t {
     None = 0,
@@ -82,16 +78,39 @@ enum class GCThreadType : uint8_t {
     Helper,
 };
 
+enum class ThreadType : uint8_t {
+    Unknown = 0,
+    JavaScript,
+    Compiler,
+    GarbageCollection,
+    Network,
+    Graphics,
+    Audio,
+};
+
 class Thread : public ThreadSafeRefCounted<Thread> {
+    static std::atomic<uint32_t> s_uid;
 public:
     friend class ThreadGroup;
-    friend WTF_EXPORT_PRIVATE void initializeThreading();
+    friend WTF_EXPORT_PRIVATE void initialize();
 
     WTF_EXPORT_PRIVATE ~Thread();
 
+    enum class QOS {
+        UserInteractive,
+        UserInitiated,
+        Default,
+        Utility,
+        Background
+    };
+
+#if HAVE(QOS_CLASSES)
+    static dispatch_qos_class_t dispatchQOSClass(QOS);
+#endif
+
     // Returns nullptr if thread creation failed.
     // The thread name must be a literal since on some platforms it's passed in to the thread.
-    WTF_EXPORT_PRIVATE static Ref<Thread> create(const char* threadName, Function<void()>&&);
+    WTF_EXPORT_PRIVATE static Ref<Thread> create(const char* threadName, Function<void()>&&, ThreadType = ThreadType::Unknown, QOS = QOS::UserInitiated);
 
     // Returns Thread object.
     static Thread& current();
@@ -101,6 +120,8 @@ public:
     WTF_EXPORT_PRIVATE static Lock& allThreadsMutex();
 
     WTF_EXPORT_PRIVATE unsigned numberOfThreadGroups();
+
+    uint32_t uid() const { return m_uid; }
 
 #if OS(WINDOWS)
     // Returns ThreadIdentifier directly. It is useful if the user only cares about identity
@@ -128,7 +149,7 @@ public:
 
     SpecificStorage& specificStorage() { return m_specificStorage; };
 
-    class ThreadHolder;
+    struct ThreadHolder;
 #endif
 
     WTF_EXPORT_PRIVATE void changePriority(int);
@@ -148,6 +169,10 @@ public:
     WTF_EXPORT_PRIVATE size_t getRegisters(PlatformRegisters&);
 
 #if USE(PTHREADS)
+#if OS(LINUX)
+    WTF_EXPORT_PRIVATE static ThreadIdentifier currentID();
+    ThreadIdentifier id() const { return m_id; }
+#endif
     WTF_EXPORT_PRIVATE bool signal(int signalNumber);
 #endif
 
@@ -158,7 +183,6 @@ public:
 
 #if HAVE(QOS_CLASSES)
     WTF_EXPORT_PRIVATE static void setGlobalMaxQOSClass(qos_class_t);
-    WTF_EXPORT_PRIVATE static qos_class_t adjustedQOSClass(qos_class_t);
 #endif
 
     // Called in the thread during initialization.
@@ -235,7 +259,7 @@ protected:
     void initializeInThread();
 
     // Internal platform-specific Thread establishment implementation.
-    bool establishHandle(NewThreadContext*);
+    bool establishHandle(NewThreadContext*, Optional<size_t> stackSize, QOS);
 
 #if USE(PTHREADS)
     void establishPlatformSpecificHandle(PlatformThreadHandle);
@@ -245,6 +269,10 @@ protected:
 
 #if USE(PTHREADS) && !OS(DARWIN)
     static void signalHandlerSuspendResume(int, siginfo_t*, void* ucontext);
+#endif
+
+#if HAVE(QOS_CLASSES)
+    static qos_class_t adjustedQOSClass(qos_class_t);
 #endif
 
     static const char* normalizeThreadName(const char* threadName);
@@ -307,17 +335,23 @@ protected:
     bool m_isCompilationThread: 1;
     unsigned m_gcThreadType : 2;
 
+    bool m_didUnregisterFromAllThreads { false };
+
     // Lock & ParkingLot rely on ThreadSpecific. But Thread object can be destroyed even after ThreadSpecific things are destroyed.
     // Use WordLock since WordLock does not depend on ThreadSpecific and this "Thread".
     WordLock m_mutex;
     StackBounds m_stack { StackBounds::emptyBounds() };
     HashMap<ThreadGroup*, std::weak_ptr<ThreadGroup>> m_threadGroupMap;
     PlatformThreadHandle m_handle;
+    uint32_t m_uid;
 #if OS(WINDOWS)
     ThreadIdentifier m_id { 0 };
 #elif OS(DARWIN)
     mach_port_t m_platformThread { MACH_PORT_NULL };
 #elif USE(PTHREADS)
+#if OS(LINUX)
+    ThreadIdentifier m_id { 0 };
+#endif
     PlatformRegisters* m_platformRegisters { nullptr };
     unsigned m_suspendCount { 0 };
 #endif
@@ -344,6 +378,7 @@ inline Thread::Thread()
     , m_isDestroyedOnce(false)
     , m_isCompilationThread(false)
     , m_gcThreadType(static_cast<unsigned>(GCThreadType::None))
+    , m_uid(++s_uid)
 {
 }
 
@@ -365,11 +400,11 @@ inline Thread& Thread::current()
     //    Thread::current() is used on main thread before it could possibly be used
     //    on secondary ones, so there is no need for synchronization here.
     // WRT JavaScriptCore:
-    //    Thread::initializeTLSKey() is initially called from initializeThreading(), ensuring
+    //    Thread::initializeTLSKey() is initially called from initialize(), ensuring
     //    this is initially called in a std::call_once locked context.
 #if !HAVE(FAST_TLS) && !OS(WINDOWS)
     if (UNLIKELY(Thread::s_key == InvalidThreadSpecificKey))
-        WTF::initializeThreading();
+        WTF::initialize();
 #endif
     if (auto* thread = currentMayBeNull())
         return *thread;
@@ -379,4 +414,5 @@ inline Thread& Thread::current()
 } // namespace WTF
 
 using WTF::Thread;
+using WTF::ThreadType;
 using WTF::GCThreadType;

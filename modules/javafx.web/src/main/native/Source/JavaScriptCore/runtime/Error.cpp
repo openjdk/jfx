@@ -24,58 +24,48 @@
 #include "config.h"
 #include "Error.h"
 
-#include "ConstructData.h"
-#include "ErrorConstructor.h"
-#include "ExceptionHelpers.h"
-#include "FunctionPrototype.h"
 #include "Interpreter.h"
-#include "JSArray.h"
-#include "JSCInlines.h"
-#include "JSFunction.h"
+#include "JSCJSValueInlines.h"
 #include "JSGlobalObject.h"
-#include "JSObject.h"
-#include "JSString.h"
-#include "NativeErrorConstructor.h"
 #include "SourceCode.h"
 #include "StackFrame.h"
-#include "SuperSampler.h"
 
 namespace JSC {
 
 JSObject* createError(JSGlobalObject* globalObject, const String& message, ErrorInstance::SourceAppender appender)
 {
     ASSERT(!message.isEmpty());
-    return ErrorInstance::create(globalObject, globalObject->vm(), globalObject->errorStructure(), message, appender, TypeNothing, true);
+    return ErrorInstance::create(globalObject, globalObject->vm(), globalObject->errorStructure(), message, appender, TypeNothing, ErrorType::Error, true);
 }
 
 JSObject* createEvalError(JSGlobalObject* globalObject, const String& message, ErrorInstance::SourceAppender appender)
 {
     ASSERT(!message.isEmpty());
-    return ErrorInstance::create(globalObject, globalObject->vm(), globalObject->errorStructure(ErrorType::EvalError), message, appender, TypeNothing, true);
+    return ErrorInstance::create(globalObject, globalObject->vm(), globalObject->errorStructure(ErrorType::EvalError), message, appender, TypeNothing, ErrorType::EvalError, true);
 }
 
 JSObject* createRangeError(JSGlobalObject* globalObject, const String& message, ErrorInstance::SourceAppender appender)
 {
     ASSERT(!message.isEmpty());
-    return ErrorInstance::create(globalObject, globalObject->vm(), globalObject->errorStructure(ErrorType::RangeError), message, appender, TypeNothing, true);
+    return ErrorInstance::create(globalObject, globalObject->vm(), globalObject->errorStructure(ErrorType::RangeError), message, appender, TypeNothing, ErrorType::RangeError, true);
 }
 
 JSObject* createReferenceError(JSGlobalObject* globalObject, const String& message, ErrorInstance::SourceAppender appender)
 {
     ASSERT(!message.isEmpty());
-    return ErrorInstance::create(globalObject, globalObject->vm(), globalObject->errorStructure(ErrorType::ReferenceError), message, appender, TypeNothing, true);
+    return ErrorInstance::create(globalObject, globalObject->vm(), globalObject->errorStructure(ErrorType::ReferenceError), message, appender, TypeNothing, ErrorType::ReferenceError, true);
 }
 
 JSObject* createSyntaxError(JSGlobalObject* globalObject, const String& message, ErrorInstance::SourceAppender appender)
 {
     ASSERT(!message.isEmpty());
-    return ErrorInstance::create(globalObject, globalObject->vm(), globalObject->errorStructure(ErrorType::SyntaxError), message, appender, TypeNothing, true);
+    return ErrorInstance::create(globalObject, globalObject->vm(), globalObject->errorStructure(ErrorType::SyntaxError), message, appender, TypeNothing, ErrorType::SyntaxError, true);
 }
 
 JSObject* createTypeError(JSGlobalObject* globalObject, const String& message, ErrorInstance::SourceAppender appender, RuntimeType type)
 {
     ASSERT(!message.isEmpty());
-    return ErrorInstance::create(globalObject, globalObject->vm(), globalObject->errorStructure(ErrorType::TypeError), message, appender, type, true);
+    return ErrorInstance::create(globalObject, globalObject->vm(), globalObject->errorStructure(ErrorType::TypeError), message, appender, type, ErrorType::TypeError, true);
 }
 
 JSObject* createNotEnoughArgumentsError(JSGlobalObject* globalObject, ErrorInstance::SourceAppender appender)
@@ -86,26 +76,35 @@ JSObject* createNotEnoughArgumentsError(JSGlobalObject* globalObject, ErrorInsta
 JSObject* createURIError(JSGlobalObject* globalObject, const String& message, ErrorInstance::SourceAppender appender)
 {
     ASSERT(!message.isEmpty());
-    return ErrorInstance::create(globalObject, globalObject->vm(), globalObject->errorStructure(ErrorType::URIError), message, appender, TypeNothing, true);
+    return ErrorInstance::create(globalObject, globalObject->vm(), globalObject->errorStructure(ErrorType::URIError), message, appender, TypeNothing, ErrorType::URIError, true);
 }
 
 JSObject* createError(JSGlobalObject* globalObject, ErrorType errorType, const String& message)
 {
+    return createError(globalObject, static_cast<ErrorTypeWithExtension>(errorType), message);
+}
+
+JSObject* createError(JSGlobalObject* globalObject, ErrorTypeWithExtension errorType, const String& message)
+{
     switch (errorType) {
-    case ErrorType::Error:
+    case ErrorTypeWithExtension::Error:
         return createError(globalObject, message);
-    case ErrorType::EvalError:
+    case ErrorTypeWithExtension::EvalError:
         return createEvalError(globalObject, message);
-    case ErrorType::RangeError:
+    case ErrorTypeWithExtension::RangeError:
         return createRangeError(globalObject, message);
-    case ErrorType::ReferenceError:
+    case ErrorTypeWithExtension::ReferenceError:
         return createReferenceError(globalObject, message);
-    case ErrorType::SyntaxError:
+    case ErrorTypeWithExtension::SyntaxError:
         return createSyntaxError(globalObject, message);
-    case ErrorType::TypeError:
+    case ErrorTypeWithExtension::TypeError:
         return createTypeError(globalObject, message);
-    case ErrorType::URIError:
+    case ErrorTypeWithExtension::URIError:
         return createURIError(globalObject, message);
+    case ErrorTypeWithExtension::AggregateError:
+        break;
+    case ErrorTypeWithExtension::OutOfMemoryError:
+        return createOutOfMemoryError(globalObject, message);
     }
     ASSERT_NOT_REACHED();
     return nullptr;
@@ -114,7 +113,7 @@ JSObject* createError(JSGlobalObject* globalObject, ErrorType errorType, const S
 JSObject* createGetterTypeError(JSGlobalObject* globalObject, const String& message)
 {
     ASSERT(!message.isEmpty());
-    auto* error = ErrorInstance::create(globalObject, globalObject->vm(), globalObject->errorStructure(ErrorType::TypeError), message);
+    auto* error = ErrorInstance::create(globalObject, globalObject->vm(), globalObject->errorStructure(ErrorType::TypeError), message, nullptr, TypeNothing, ErrorType::TypeError);
     error->setNativeGetterTypeError();
     return error;
 }
@@ -231,7 +230,7 @@ void addErrorInfo(JSGlobalObject* globalObject, JSObject* obj, bool useCurrentFr
 
 JSObject* addErrorInfo(VM& vm, JSObject* error, int line, const SourceCode& source)
 {
-    const String& sourceURL = source.provider()->url();
+    const String& sourceURL = source.provider()->sourceURL();
 
     // The putDirect() calls below should really be put() so that they trigger materialization of
     // the line/sourceURL properties. Otherwise, what we set here will just be overwritten later.
@@ -275,7 +274,7 @@ Exception* throwTypeError(JSGlobalObject* globalObject, ThrowScope& scope, const
 
 Exception* throwSyntaxError(JSGlobalObject* globalObject, ThrowScope& scope)
 {
-    return throwException(globalObject, scope, createSyntaxError(globalObject, "Syntax error"_s));
+    return throwException(globalObject, scope, createSyntaxError(globalObject));
 }
 
 Exception* throwSyntaxError(JSGlobalObject* globalObject, ThrowScope& scope, const String& message)
@@ -318,6 +317,11 @@ JSObject* createSyntaxError(JSGlobalObject* globalObject, const String& message)
     return createSyntaxError(globalObject, message, nullptr);
 }
 
+JSObject* createSyntaxError(JSGlobalObject* globalObject)
+{
+    return createSyntaxError(globalObject, "Syntax error"_s, nullptr);
+}
+
 JSObject* createTypeError(JSGlobalObject* globalObject)
 {
     return createTypeError(globalObject, "Type error"_s);
@@ -340,15 +344,16 @@ JSObject* createURIError(JSGlobalObject* globalObject, const String& message)
 
 JSObject* createOutOfMemoryError(JSGlobalObject* globalObject)
 {
-    auto* error = createError(globalObject, "Out of memory"_s, nullptr);
+    auto* error = createRangeError(globalObject, "Out of memory"_s, nullptr);
     jsCast<ErrorInstance*>(error)->setOutOfMemoryError();
     return error;
 }
 
 JSObject* createOutOfMemoryError(JSGlobalObject* globalObject, const String& message)
 {
-
-    auto* error = createError(globalObject, makeString("Out of memory: ", message), nullptr);
+    if (message.isEmpty())
+        return createOutOfMemoryError(globalObject);
+    auto* error = createRangeError(globalObject, makeString("Out of memory: ", message), nullptr);
     jsCast<ErrorInstance*>(error)->setOutOfMemoryError();
     return error;
 }

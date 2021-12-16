@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -225,7 +225,7 @@ import com.sun.javafx.logging.PlatformLogger.Level;
  * an UnsupportedOperationException being thrown.
  * </p>
  *
- * <h2>String ID</h2>
+ * <h2><a id="StringID">String ID</a></h2>
  * <p>
  * Each node in the scene graph can be given a unique {@link #idProperty id}. This id is
  * much like the "id" attribute of an HTML tag in that it is up to the designer
@@ -235,7 +235,7 @@ import com.sun.javafx.logging.PlatformLogger.Level;
  * scene graph. The id can also be used identify nodes for applying styles; see
  * the CSS section below.
  *
- * <h2>Coordinate System</h2>
+ * <h2><a id="CoordinateSystem">Coordinate System</a></h2>
  * <p>
  * The {@code Node} class defines a traditional computer graphics "local"
  * coordinate system in which the {@code x} axis increases to the right and the
@@ -268,7 +268,7 @@ import com.sun.javafx.logging.PlatformLogger.Level;
  * important context-specific information about coordinate mapping and how
  * it can affect rendering.
  *
- * <h2>Transformations</h2>
+ * <h2><a id="Transformations">Transformations</a></h2>
  * <p>
  * Any {@code Node} can have transformations applied to it. These include
  * translation, rotation, scaling, or shearing.
@@ -321,11 +321,22 @@ import com.sun.javafx.logging.PlatformLogger.Level;
  * A <b>shearing</b> transformation, sometimes called a skew, effectively
  * rotates one axis so that the x and y axes are no longer perpendicular.
  * <p>
- * Multiple transformations may be applied to a node by specifying an ordered
- * chain of transforms.  The order in which the transforms are applied is
- * defined by the ObservableList specified in the {@link #getTransforms transforms} variable.
+ * Multiple transformations may be applied to a node. Custom transforms are applied using the
+ * {@link #getTransforms transforms} list. Predefined transforms are applied using the properties specified below.
+ * The matrices that represent the transforms are multiplied in this order:
+ * <ol>
+ * <li> Layout ({@link #layoutXProperty layoutX}, {@link #layoutYProperty layoutY}) and translate
+ * ({@link #translateXProperty translateX}, {@link #translateYProperty translateY}, {@link #translateZProperty translateZ})</li>
+ * <li> Rotate ({@link #rotateProperty rotate})</li>
+ * <li> Scale ({@link #scaleXProperty scaleX}, {@link #scaleYProperty scaleY}, {@link #scaleZProperty scaleZ})</li>
+ * <li> Transforms list ({@link #getTransforms transforms}) starting from element 0</li>
+ * </ol>
+ * The transforms are applied in the reverse order of the matrix multiplication outlined above: last element of the transforms list
+ * to 0th element, scale, rotate, and layout and translate. By applying the transforms in this order, the bounds in the local
+ * coordinates of the node are transformed to the bounds in the parent coordinate of the node (see the
+ * <a href="#BoundingRectangles">Bounding Rectangles</a> section).
  *
- * <h2>Bounding Rectangles</h2>
+ * <h2><a id="BoundingRectangles">Bounding Rectangles</a></h2>
  * <p>
  * Since every {@code Node} has transformations, every Node's geometric
  * bounding rectangle can be described differently depending on whether
@@ -340,9 +351,7 @@ import com.sun.javafx.logging.PlatformLogger.Level;
  * <p>
  * Each {@code Node} also has a read-only {@link #boundsInParentProperty boundsInParent} variable which
  * specifies the bounding rectangle of the {@code Node} after all transformations
- * have been applied, including those set in {@link #getTransforms transforms},
- * {@link #scaleXProperty scaleX}/{@link #scaleYProperty scaleY}, {@link #rotateProperty rotate},
- * {@link #translateXProperty translateX}/{@link #translateYProperty translateY}, and {@link #layoutXProperty layoutX}/{@link #layoutYProperty layoutY}.
+ * have been applied as specified in the <a href="#Transformations">Transformations</a> section.
  * It is called "boundsInParent" because the rectangle will be relative to the
  * parent's coordinate system.  This is the 'visual' bounds of the node.
  * <p>
@@ -380,8 +389,7 @@ import com.sun.javafx.logging.PlatformLogger.Level;
  * <p> <img src="doc-files/bounds.png" alt="The rectangles are enclosed by their
  * respective bounds"> </p>
  *
- *
- * <h2>CSS</h2>
+ * <h2><a id="CSS">CSS</a></h2>
  * <p>
  * The {@code Node} class contains {@code id}, {@code styleClass}, and
  * {@code style} variables that are used in styling this node from
@@ -393,6 +401,7 @@ import com.sun.javafx.logging.PlatformLogger.Level;
  * For further information about CSS and how to apply CSS styles
  * to nodes, see the <a href="doc-files/cssref.html">CSS Reference
  * Guide</a>.
+ *
  * @since JavaFX 2.0
  */
 @IDProperty("id")
@@ -580,6 +589,11 @@ public abstract class Node implements EventTarget, Styleable {
             }
 
             @Override
+            public void recalculateRelativeSizeProperties(Node node, Font fontForRelativeSizes) {
+                node.recalculateRelativeSizeProperties(fontForRelativeSizes);
+            }
+
+            @Override
             public boolean isTreeVisible(Node node) {
                 return node.isTreeVisible();
             }
@@ -592,11 +606,6 @@ public abstract class Node implements EventTarget, Styleable {
             @Override
             public boolean isTreeShowing(Node node) {
                 return node.isTreeShowing();
-            }
-
-            @Override
-            public BooleanExpression treeShowingProperty(Node node) {
-                return node.treeShowingProperty();
             }
 
             @Override
@@ -613,7 +622,7 @@ public abstract class Node implements EventTarget, Styleable {
         });
     }
 
-    /**************************************************************************
+    /* ************************************************************************
      *                                                                        *
      * Methods and state for managing the dirty bits of a Node. The dirty     *
      * bits are flags used to keep track of what things are dirty on the      *
@@ -683,7 +692,7 @@ public abstract class Node implements EventTarget, Styleable {
         return dirtyBits.isEmpty();
     }
 
-    /**************************************************************************
+    /* ************************************************************************
      *                                                                        *
      * Methods for synchronizing state from this Node to its PG peer. This    *
      * should only *ever* be called during synchronization initialized as a   *
@@ -851,7 +860,7 @@ public abstract class Node implements EventTarget, Styleable {
         }
     }
 
-    /*************************************************************************
+    /* ***********************************************************************
     *                                                                        *
     *                                                                        *
     *                                                                        *
@@ -908,7 +917,7 @@ public abstract class Node implements EventTarget, Styleable {
         return getProperties().get(USER_DATA_KEY);
     }
 
-    /**************************************************************************
+    /* ************************************************************************
      *                                                                        *
      *
      *                                                                        *
@@ -997,20 +1006,6 @@ public abstract class Node implements EventTarget, Styleable {
 
     private final InvalidationListener parentTreeVisibleChangedListener = valueModel -> updateTreeVisible(true);
 
-    private final ChangeListener<Boolean> windowShowingChangedListener
-            = (win, oldVal, newVal) -> updateTreeShowing();
-
-    private final ChangeListener<Window> sceneWindowChangedListener = (scene, oldWindow, newWindow) -> {
-        // Replace the windowShowingListener and call updateTreeShowing()
-        if (oldWindow != null) {
-            oldWindow.showingProperty().removeListener(windowShowingChangedListener);
-        }
-        if (newWindow != null) {
-            newWindow.showingProperty().addListener(windowShowingChangedListener);
-        }
-        updateTreeShowing();
-    };
-
     private SubScene subScene = null;
 
     /**
@@ -1071,26 +1066,6 @@ public abstract class Node implements EventTarget, Styleable {
             focusSetDirty(newScene);
         }
         scenesChanged(newScene, newSubScene, oldScene, oldSubScene);
-
-        // isTreeShowing needs to take into account of Window's showing
-        if (oldScene != null) {
-            oldScene.windowProperty().removeListener(sceneWindowChangedListener);
-
-            Window window = oldScene.windowProperty().get();
-            if (window != null) {
-                window.showingProperty().removeListener(windowShowingChangedListener);
-            }
-        }
-        if (newScene != null) {
-            newScene.windowProperty().addListener(sceneWindowChangedListener);
-
-            Window window = newScene.windowProperty().get();
-            if (window != null) {
-                window.showingProperty().addListener(windowShowingChangedListener);
-            }
-
-        }
-        updateTreeShowing();
 
         if (sceneChanged) reapplyCSS();
 
@@ -1856,7 +1831,7 @@ public abstract class Node implements EventTarget, Styleable {
 //    private ObjectProperty<InputMap<?>> inputMap;
 
 
-    /**************************************************************************
+    /* ************************************************************************
      *                                                                        *
      *
      *                                                                        *
@@ -2602,7 +2577,7 @@ public abstract class Node implements EventTarget, Styleable {
         return (P) peer;
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      *                              Initialization                             *
      *                                                                         *
@@ -2625,7 +2600,7 @@ public abstract class Node implements EventTarget, Styleable {
         //}
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Layout related APIs.                                                    *
      *                                                                         *
@@ -2662,12 +2637,12 @@ public abstract class Node implements EventTarget, Styleable {
     }
 
     public final boolean isManaged() {
-        return managed == null ? true : managed.get();
+        return managed == null || managed.get();
     }
 
     public final BooleanProperty managedProperty() {
         if (managed == null) {
-            managed = new BooleanPropertyBase(true) {
+            managed = new StyleableBooleanProperty(true) {
 
                 @Override
                 protected void invalidated() {
@@ -2676,6 +2651,11 @@ public abstract class Node implements EventTarget, Styleable {
                         parent.managedChildChanged();
                     }
                     notifyManagedChanged();
+                }
+
+                @Override
+                public CssMetaData<Node, Boolean> getCssMetaData() {
+                    return StyleableProperties.MANAGED;
                 }
 
                 @Override
@@ -3388,21 +3368,12 @@ public abstract class Node implements EventTarget, Styleable {
     }
 
     /**
-     * The rectangular bounds of this {@code Node} which include its transforms.
-     * {@code boundsInParent} is calculated by
-     * taking the local bounds (defined by {@link #boundsInLocalProperty boundsInLocal}) and applying
-     * the transform created by setting the following additional variables
-     * <ol>
-     * <li>{@link #getTransforms transforms} ObservableList</li>
-     * <li>{@link #scaleXProperty scaleX}, {@link #scaleYProperty scaleY}, {@link #scaleZProperty scaleZ}</li>
-     * <li>{@link #rotateProperty rotate}</li>
-     * <li>{@link #layoutXProperty layoutX}, {@link #layoutYProperty layoutY}</li>
-     * <li>{@link #translateXProperty translateX}, {@link #translateYProperty translateY},
-     * {@link #translateZProperty translateZ}</li>
-     * </ol>
+     * The rectangular bounds of this {@code Node} in the parent coordinate system.
+     * {@code boundsInParent} is calculated by taking the {@linkplain #boundsInLocalProperty local bounds} and applying
+     * the node transforms as specified in the <a href="#Transformations">Transformations</a> section of the class doc.
      * <p>
      * The resulting bounds will be conceptually in the coordinate space of the
-     * {@code Node}'s parent, however the node need not have a parent to calculate
+     * {@code Node}'s parent, however, the node need not have a parent to calculate
      * these bounds.
      * <p>
      * Note that this method does not take the node's visibility into account;
@@ -3418,7 +3389,10 @@ public abstract class Node implements EventTarget, Styleable {
      * this variable. For example, the x or y variables of a shape, or
      * {@code translateX}, {@code translateY} should never be bound to
      * {@code boundsInParent} for the purpose of positioning the node.
-     * @return the boundsInParent for this {@code Node}
+     * <p>
+     * See also the <a href="#BoundingRectangles">Bounding Rectangles</a> section.
+     *
+     * @return the {@code boundsInParent} property for this {@code Node}
      */
     public final ReadOnlyObjectProperty<Bounds> boundsInParentProperty() {
         return getMiscProperties().boundsInParentProperty();
@@ -4102,7 +4076,7 @@ public abstract class Node implements EventTarget, Styleable {
         }
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Geometry and coordinate system related APIs. For example, methods       *
      * related to containment, intersection, coordinate space conversion, etc. *
@@ -5136,7 +5110,7 @@ public abstract class Node implements EventTarget, Styleable {
         }
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Mouse event related APIs                                                *
      *                                                                         *
@@ -5464,7 +5438,7 @@ public abstract class Node implements EventTarget, Styleable {
         return ((a < EPSILON_ABSOLUTE) && (a > -EPSILON_ABSOLUTE));
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      *                      viewOrder property handling                        *
      *                                                                         *
@@ -5513,16 +5487,16 @@ public abstract class Node implements EventTarget, Styleable {
                 : miscProperties.getViewOrder();
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      *                             Transformations                             *
      *                                                                         *
      **************************************************************************/
     /**
-     * Defines the ObservableList of {@link javafx.scene.transform.Transform} objects
-     * to be applied to this {@code Node}. This ObservableList of transforms is applied
-     * before {@link #translateXProperty translateX}, {@link #translateYProperty translateY}, {@link #scaleXProperty scaleX}, and
-     * {@link #scaleYProperty scaleY}, {@link #rotateProperty rotate} transforms.
+     * The {@code ObservableList} of custom {@link javafx.scene.transform.Transform}s
+     * to be applied to this {@code Node}. These transforms are applied before the predefined transforms.
+     * <p>
+     * See also the <a href="#Transformations">Transformations</a> section.
      *
      * @return the transforms for this {@code Node}
      * @defaultValue empty
@@ -6407,7 +6381,7 @@ public abstract class Node implements EventTarget, Styleable {
     //  Private Implementation
     ////////////////////////////
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      *                        Event Handler Properties                         *
      *                                                                         *
@@ -6426,7 +6400,7 @@ public abstract class Node implements EventTarget, Styleable {
         return eventHandlerProperties;
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      *                       Component Orientation Properties                  *
      *                                                                         *
@@ -6704,7 +6678,7 @@ public abstract class Node implements EventTarget, Styleable {
         }
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      *                       Misc Seldom Used Properties                       *
      *                                                                         *
@@ -8120,7 +8094,7 @@ public abstract class Node implements EventTarget, Styleable {
         return getMiscProperties().inputMethodRequestsProperty();
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      *                             Focus Traversal                             *
      *                                                                         *
@@ -8420,69 +8394,8 @@ public abstract class Node implements EventTarget, Styleable {
         return w != null && w.isShowing();
     }
 
-    private void updateTreeShowing() {
-        setTreeShowing(isTreeVisible() && isWindowShowing());
-    }
-
-    private boolean treeShowing;
-    private TreeShowingPropertyReadOnly treeShowingRO;
-
-    final void setTreeShowing(boolean value) {
-        if (treeShowing != value) {
-            treeShowing = value;
-            ((TreeShowingPropertyReadOnly) treeShowingProperty()).invalidate();
-        }
-    }
-
     final boolean isTreeShowing() {
-        return treeShowingProperty().get();
-    }
-
-    final BooleanExpression treeShowingProperty() {
-        if (treeShowingRO == null) {
-            treeShowingRO = new TreeShowingPropertyReadOnly();
-        }
-        return treeShowingRO;
-    }
-
-    class TreeShowingPropertyReadOnly extends BooleanExpression {
-
-        private ExpressionHelper<Boolean> helper;
-        private boolean valid;
-
-        @Override
-        public void addListener(InvalidationListener listener) {
-            helper = ExpressionHelper.addListener(helper, this, listener);
-        }
-
-        @Override
-        public void removeListener(InvalidationListener listener) {
-            helper = ExpressionHelper.removeListener(helper, listener);
-        }
-
-        @Override
-        public void addListener(ChangeListener<? super Boolean> listener) {
-            helper = ExpressionHelper.addListener(helper, this, listener);
-        }
-
-        @Override
-        public void removeListener(ChangeListener<? super Boolean> listener) {
-            helper = ExpressionHelper.removeListener(helper, listener);
-        }
-
-        protected void invalidate() {
-            if (valid) {
-                valid = false;
-                ExpressionHelper.fireValueChangedEvent(helper);
-            }
-        }
-
-        @Override
-        public boolean get() {
-            valid = true;
-            return Node.this.treeShowing;
-        }
-
+        return isTreeVisible() && isWindowShowing();
     }
 
     private void updateTreeVisible(boolean parentChanged) {
@@ -8501,8 +8414,6 @@ public abstract class Node implements EventTarget, Styleable {
             addToSceneDirtyList();
         }
         setTreeVisible(isTreeVisible);
-
-        updateTreeShowing();
     }
 
     private boolean treeVisible;
@@ -8653,7 +8564,7 @@ public abstract class Node implements EventTarget, Styleable {
     private Node labeledBy = null;
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      *                         Event Dispatch                                  *
      *                                                                         *
@@ -8886,7 +8797,7 @@ public abstract class Node implements EventTarget, Styleable {
         Event.fireEvent(this, event);
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      *                         Stylesheet Handling                             *
      *                                                                         *
@@ -9195,6 +9106,20 @@ public abstract class Node implements EventTarget, Styleable {
                     return (StyleableProperty<Boolean>)node.visibleProperty();
                 }
             };
+        private static final CssMetaData<Node,Boolean> MANAGED =
+            new CssMetaData<Node,Boolean>("-fx-managed",
+                    BooleanConverter.getInstance(), Boolean.TRUE) {
+
+                @Override
+                public boolean isSettable(Node node) {
+                    return node.managed == null || !node.managed.isBound();
+                }
+
+                @Override
+                public StyleableProperty<Boolean> getStyleableProperty(Node node) {
+                    return (StyleableProperty<Boolean>)node.managedProperty();
+                }
+            };
 
          private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
 
@@ -9216,14 +9141,16 @@ public abstract class Node implements EventTarget, Styleable {
              styleables.add(TRANSLATE_Y);
              styleables.add(TRANSLATE_Z);
              styleables.add(VISIBILITY);
+             styleables.add(MANAGED);
              STYLEABLES = Collections.unmodifiableList(styleables);
 
          }
     }
 
     /**
-     * @return The CssMetaData associated with this class, which may include the
-     * CssMetaData of its superclasses.
+     * Gets the {@code CssMetaData} associated with this class, which may include the
+     * {@code CssMetaData} of its superclasses.
+     * @return the {@code CssMetaData}
      * @since JavaFX 8.0
      */
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
@@ -9408,6 +9335,12 @@ public abstract class Node implements EventTarget, Styleable {
             } else {
                 _parent = null;
             }
+        }
+    }
+
+    final void recalculateRelativeSizeProperties(Font fontForRelativeSizes) {
+        if (styleHelper != null) {
+            styleHelper.recalculateRelativeSizeProperties(this, fontForRelativeSizes);
         }
     }
 
@@ -10054,7 +9987,7 @@ public abstract class Node implements EventTarget, Styleable {
         if (accessible == null) {
             accessible = Application.GetApplication().createAccessible();
             accessible.setEventHandler(new Accessible.EventHandler() {
-                @SuppressWarnings("deprecation")
+                @SuppressWarnings("removal")
                 @Override public AccessControlContext getAccessControlContext() {
                     Scene scene = getScene();
                     if (scene == null) {

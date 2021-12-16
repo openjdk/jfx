@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -168,10 +168,10 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
     };
 
     // Addition of doPrivileged added due to RT-19580
+    @SuppressWarnings("removal")
     private static final ThreadGroup THREAD_GROUP = AccessController.doPrivileged((PrivilegedAction<ThreadGroup>) () -> new ThreadGroup("javafx concurrent thread pool"));
     private static final Thread.UncaughtExceptionHandler UNCAUGHT_HANDLER = (thread, throwable) -> {
-        // Ignore IllegalMonitorStateException, these are thrown from the ThreadPoolExecutor
-        // when a browser navigates away from a page hosting an applet that uses
+        // Ignore IllegalMonitorStateException which could be thrown from the ThreadPoolExecutor in certain cases when there are
         // asynchronous tasks. These exceptions generally do not cause loss of functionality.
         if (!(throwable instanceof IllegalMonitorStateException)) {
             LOG.warning("Uncaught throwable in " + THREAD_GROUP.getName(), throwable);
@@ -179,6 +179,7 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
     };
 
     // Addition of doPrivileged added due to RT-19580
+    @SuppressWarnings("removal")
     private static final ThreadFactory THREAD_FACTORY = run -> AccessController.doPrivileged((PrivilegedAction<Thread>) () -> {
         final Thread th = new Thread(THREAD_GROUP, run);
         th.setUncaughtExceptionHandler(UNCAUGHT_HANDLER);
@@ -717,6 +718,7 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
      * @param task a non-null task to execute
      * @since JavaFX 2.1
      */
+    @SuppressWarnings("removal")
     protected void executeTask(final Task<V> task) {
         final AccessControlContext acc = AccessController.getContext();
         final Executor e = getExecutor() != null ? getExecutor() : EXECUTOR;
@@ -728,7 +730,7 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
         });
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      *                         Event Dispatch                                  *
      *                                                                         *

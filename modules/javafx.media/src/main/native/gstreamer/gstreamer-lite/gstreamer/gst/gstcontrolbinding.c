@@ -145,7 +145,7 @@ gst_control_binding_constructor (GType type, guint n_construct_params,
               binding->name))) {
     GST_DEBUG_OBJECT (object, "  psec->flags : 0x%08x", pspec->flags);
 
-    /* check if this param is witable && controlable && !construct-only */
+    /* check if this param is writeable && controllable && !construct-only */
     if ((pspec->flags & (G_PARAM_WRITABLE | GST_PARAM_CONTROLLABLE |
                 G_PARAM_CONSTRUCT_ONLY)) ==
         (G_PARAM_WRITABLE | GST_PARAM_CONTROLLABLE)) {
@@ -153,7 +153,7 @@ gst_control_binding_constructor (GType type, guint n_construct_params,
     } else {
       GST_WARNING_OBJECT (object,
           "property '%s' on class '%s' needs to "
-          "be writeable, controlable and not construct_only", binding->name,
+          "be writeable, controllable and not construct_only", binding->name,
           G_OBJECT_TYPE_NAME (object));
     }
   } else {

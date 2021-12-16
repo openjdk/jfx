@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -75,7 +75,7 @@ const char* IDBObjectStore::activeDOMObjectName() const
     return "IDBObjectStore";
 }
 
-bool IDBObjectStore::hasPendingActivity() const
+bool IDBObjectStore::virtualHasPendingActivity() const
 {
     return m_transaction.hasPendingActivity();
 }
@@ -158,7 +158,7 @@ ExceptionOr<Ref<IDBRequest>> IDBObjectStore::doOpenCursor(JSGlobalObject& execSt
     auto keyRange = function();
     if (keyRange.hasException())
         return keyRange.releaseException();
-    auto* keyRangePointer = keyRange.returnValue() ? keyRange.releaseReturnValue().get() : nullptr;
+    auto* keyRangePointer = keyRange.returnValue().get();
 
     auto info = IDBCursorInfo::objectStoreCursor(m_transaction, m_info.identifier(), keyRangePointer, direction, IndexedDB::CursorType::KeyAndValue);
     return m_transaction.requestOpenCursor(execState, *this, info);
@@ -197,7 +197,7 @@ ExceptionOr<Ref<IDBRequest>> IDBObjectStore::doOpenKeyCursor(JSGlobalObject& exe
     if (keyRange.hasException())
         return keyRange.releaseException();
 
-    auto* keyRangePointer = keyRange.returnValue() ? keyRange.releaseReturnValue().get() : nullptr;
+    auto* keyRangePointer = keyRange.returnValue().get();
     auto info = IDBCursorInfo::objectStoreCursor(m_transaction, m_info.identifier(), keyRangePointer, direction, IndexedDB::CursorType::KeyOnly);
     return m_transaction.requestOpenCursor(execState, *this, info);
 }
@@ -409,7 +409,7 @@ ExceptionOr<Ref<IDBRequest>> IDBObjectStore::doDelete(JSGlobalObject& execState,
     if (keyRange.hasException())
         return keyRange.releaseException();
 
-    IDBKeyRangeData keyRangeData = keyRange.returnValue() ? keyRange.releaseReturnValue().get() : nullptr;
+    IDBKeyRangeData keyRangeData = keyRange.returnValue().get();
     if (!keyRangeData.isValid())
         return Exception { DataError, "Failed to execute 'delete' on 'IDBObjectStore': The parameter is not a valid key range."_s };
 
@@ -610,7 +610,7 @@ ExceptionOr<Ref<IDBRequest>> IDBObjectStore::doGetAll(JSGlobalObject& execState,
     if (keyRange.hasException())
         return keyRange.releaseException();
 
-    auto* keyRangePointer = keyRange.returnValue() ? keyRange.releaseReturnValue().get() : nullptr;
+    auto* keyRangePointer = keyRange.returnValue().get();
     return m_transaction.requestGetAllObjectStoreRecords(execState, *this, keyRangePointer, IndexedDB::GetAllType::Values, count);
 }
 
@@ -647,7 +647,7 @@ ExceptionOr<Ref<IDBRequest>> IDBObjectStore::doGetAllKeys(JSGlobalObject& execSt
     if (keyRange.hasException())
         return keyRange.releaseException();
 
-    auto* keyRangePointer = keyRange.returnValue() ? keyRange.releaseReturnValue().get() : nullptr;
+    auto* keyRangePointer = keyRange.returnValue().get();
     return m_transaction.requestGetAllObjectStoreRecords(execState, *this, keyRangePointer, IndexedDB::GetAllType::Keys, count);
 }
 
@@ -703,10 +703,14 @@ void IDBObjectStore::rollbackForVersionChangeAbort()
     Locker<Lock> locker(m_referencedIndexLock);
 
     Vector<uint64_t> identifiersToRemove;
+    Vector<std::unique_ptr<IDBIndex>> indexesToDelete;
     for (auto& iterator : m_deletedIndexes) {
         if (m_info.hasIndex(iterator.key)) {
             auto name = iterator.value->info().name();
-            m_referencedIndexes.set(name, WTFMove(iterator.value));
+            auto result = m_referencedIndexes.add(name, nullptr);
+            if (!result.isNewEntry)
+                indexesToDelete.append(std::exchange(result.iterator->value, nullptr));
+            result.iterator->value = std::exchange(iterator.value, nullptr);
             identifiersToRemove.append(iterator.key);
         }
     }
@@ -716,9 +720,16 @@ void IDBObjectStore::rollbackForVersionChangeAbort()
 
     for (auto& index : m_referencedIndexes.values())
         index->rollbackInfoForVersionChangeAbort();
+
+    for (auto& index : indexesToDelete) {
+        index->rollbackInfoForVersionChangeAbort();
+        auto indexIdentifier = index->info().identifier();
+        m_deletedIndexes.set(indexIdentifier, std::exchange(index, nullptr));
+    }
 }
 
-void IDBObjectStore::visitReferencedIndexes(SlotVisitor& visitor) const
+template<typename Visitor>
+void IDBObjectStore::visitReferencedIndexes(Visitor& visitor) const
 {
     Locker<Lock> locker(m_referencedIndexLock);
     for (auto& index : m_referencedIndexes.values())
@@ -726,6 +737,9 @@ void IDBObjectStore::visitReferencedIndexes(SlotVisitor& visitor) const
     for (auto& index : m_deletedIndexes.values())
         visitor.addOpaqueRoot(index.get());
 }
+
+template void IDBObjectStore::visitReferencedIndexes(AbstractSlotVisitor&) const;
+template void IDBObjectStore::visitReferencedIndexes(SlotVisitor&) const;
 
 void IDBObjectStore::renameReferencedIndex(IDBIndex& index, const String& newName)
 {

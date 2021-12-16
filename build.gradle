@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -292,6 +292,7 @@ ext.MODULESOURCEPATH = "modulesourcepath.args"
 ext.OS_NAME = System.getProperty("os.name").toLowerCase()
 ext.OS_ARCH = System.getProperty("os.arch")
 ext.IS_64 = OS_ARCH.toLowerCase().contains("64")
+ext.IS_AARCH64 = OS_ARCH.toLowerCase().contains("aarch64")
 ext.IS_MAC = OS_NAME.contains("mac") || OS_NAME.contains("darwin")
 ext.IS_WINDOWS = OS_NAME.contains("windows")
 ext.IS_LINUX = OS_NAME.contains("linux")
@@ -305,9 +306,9 @@ ext.MAVEN_GROUP_ID = "org.openjfx"
 if (!IS_MAC && !IS_WINDOWS && !IS_LINUX) fail("Unsupported build OS ${OS_NAME}")
 if (IS_WINDOWS && OS_ARCH != "x86" && OS_ARCH != "amd64") {
     fail("Unknown and unsupported build architecture: $OS_ARCH")
-} else if (IS_MAC && OS_ARCH != "x86_64") {
+} else if (IS_MAC && OS_ARCH != "x86_64" && OS_ARCH != "aarch64") {
     fail("Unknown and unsupported build architecture: $OS_ARCH")
-} else if (IS_LINUX && OS_ARCH != "i386" && OS_ARCH != "amd64") {
+} else if (IS_LINUX && OS_ARCH != "i386" && OS_ARCH != "amd64" && OS_ARCH != "aarch64") {
     fail("Unknown and unsupported build architecture: $OS_ARCH")
 }
 
@@ -336,7 +337,7 @@ defineProperty("JAVA", cygpathExe("$JDK_HOME/bin/java"))
 defineProperty("JAVAC", cygpathExe("$JDK_HOME/bin/javac"))
 defineProperty("JAVADOC", cygpathExe("$JDK_HOME/bin/javadoc"))
 defineProperty("JMOD", cygpathExe("$JDK_HOME/bin/jmod"))
-defineProperty("JDK_DOCS", "https://docs.oracle.com/en/java/javase/12/docs/api/")
+defineProperty("JDK_DOCS", "https://docs.oracle.com/en/java/javase/17/docs/api/")
 defineProperty("JDK_JMODS", cygpath(System.getenv("JDK_JMODS")) ?: cygpath(System.getenv("JDK_HOME") + "/jmods"))
 
 defineProperty("javaRuntimeVersion", System.getProperty("java.runtime.version"))
@@ -346,6 +347,9 @@ defineProperty("javaBuildNumber", javaVersionInfo[1])
 
 defineProperty("libAVRepositoryURL", "https://libav.org/releases/")
 defineProperty("FFmpegRepositoryURL", "https://www.ffmpeg.org/releases/")
+defineProperty("icuRepositoryURL", "https://github.com/unicode-org/icu/releases/")
+
+defineProperty("icuVersion", "68.2")
 
 loadProperties("$projectDir/build.properties")
 
@@ -403,6 +407,11 @@ if (IS_STATIC_BUILD && IS_COMPILE_MEDIA) {
     throw new GradleException("Can not have COMPILE_MEDIA when STATIC_BUILD is enabled");
 }
 
+// By default, target architecture = host architecture, but we allow different ones.
+// On Apple Silicon, default architecture must be "arm64", because clang does not accept
+// aarch64 as -arch parameter.
+defineProperty("TARGET_ARCH", (IS_MAC && IS_AARCH64) ? "arm64" : OS_ARCH)
+
 // BUILD_TOOLS_DOWNLOAD_SCRIPT specifies a path of a gradle script which downloads
 // required build tools.
 defineProperty("BUILD_TOOLS_DOWNLOAD_SCRIPT", "")
@@ -452,6 +461,7 @@ ext.IS_WORKER_DEBUG = Boolean.parseBoolean(WORKER_DEBUG);
 defineProperty("CONF", "Debug")
 ext.IS_DEBUG_JAVA = CONF == "Debug" || CONF == "DebugNative"
 ext.IS_DEBUG_NATIVE = CONF == "DebugNative"
+ext.IS_RELEASE = !ext.IS_DEBUG_JAVA
 
 // Specifies whether to enable the Maven publishing tasks
 defineProperty("MAVEN_PUBLISH", "false")
@@ -615,6 +625,10 @@ try {
             def jdkVersionInfo = parseJavaVersion(ver)
             defineProperty("jdkVersion", jdkVersionInfo[0])
             defineProperty("jdkBuildNumber", jdkVersionInfo[1])
+
+            // Define global properties based on the version of Java
+            def status = compareJdkVersion(jdkVersion, "12")
+            ext.jdk12OrLater = (status >= 0)
         }
     }
 } finally {
@@ -686,7 +700,7 @@ void fetchExternalTools(String configName, List packages, File destdir, boolean 
         }
 
         //fetch all the missing packages
-        if (fetchedPackages.size > 0) {
+        if (fetchedPackages.size() > 0) {
             destdir.mkdirs()
 
             logger.quiet "fetching missing packages $fetchedPackages"
@@ -745,7 +759,7 @@ void fetchExternalTools(String configName, List packages, File destdir, boolean 
                 errors.add(pkgname)
             }
         }
-        if (errors.size > 0) {
+        if (errors.size() > 0) {
             throw new GradleException("Error: missing tool packages: $errors")
         } else {
             logger.quiet "all tool packages are present $packages"
@@ -1812,7 +1826,7 @@ void addJCov(p, test) {
                 "exclude=\"**.*Test\"," +
                 "file=build/reports/jcov/report.xml," +
                 "merge=merge";
-        test.jvmArgs("-javaagent:${p.configurations.testCompile.files.find { it.name.startsWith('jcov') }}=$jcovJVMArgument");
+        test.jvmArgs("-javaagent:${p.configurations.testClasspath.files.find { it.name.startsWith('jcov') }}=$jcovJVMArgument");
         p.mkdir p.file("build/reports/jcov")
     }
     test.doLast {
@@ -1820,7 +1834,7 @@ void addJCov(p, test) {
         if (reportFile.exists()) {
             p.javaexec {
                 workingDir = p.file("build/reports/jcov")
-                classpath = p.files(p.configurations.testCompile.files.find { it.name.startsWith('jcov') })
+                classpath = p.files(p.configurations.testClasspath.files.find { it.name.startsWith('jcov') })
                 main = "com.sun.tdk.jcov.Helper"
                 args = [
                         "RepGen",
@@ -1899,6 +1913,21 @@ allprojects {
         }
     }
 
+    if (JFX_DEPS_URL == "" && IS_COMPILE_WEBKIT) {
+        def icuReleaseVersion = icuVersion.replaceAll('\\.', '-')
+        repositories {
+            ivy {
+                url icuRepositoryURL
+                metadataSources {
+                    artifact()
+                }
+                patternLayout {
+                    artifact "download/release-$icuReleaseVersion/[artifact].[ext]"
+                }
+            }
+        }
+    }
+
     // We want to configure all projects as java projects and use the same compile settings
     // etc, except for the root project which we just want to ignore (and for now media)
     if (project == rootProject) {
@@ -1918,9 +1947,20 @@ allprojects {
     // By default all of our projects require junit for testing so we can just
     // setup this dependency here.
     dependencies {
-        testCompile group: "junit", name: "junit", version: "4.8.2"
+        testImplementation group: "junit", name: "junit", version: "4.13.2"
+        testImplementation group: "org.hamcrest", name: "hamcrest-core", version: "1.3"
+        testImplementation group: "org.junit.jupiter", name: "junit-jupiter", version: "5.8.1"
+        testImplementation group: "org.junit.jupiter", name: "junit-jupiter-api", version: "5.8.1"
+        testRuntimeOnly group: "org.apiguardian", name: "apiguardian-api", version: "1.1.2"
+        testRuntimeOnly group: "org.junit.jupiter", name: "junit-jupiter-engine", version: "5.8.1"
+        testRuntimeOnly group: "org.junit.jupiter", name: "junit-jupiter-params", version: "5.8.1"
+        testRuntimeOnly group: "org.junit.platform", name: "junit-platform-commons", version: "1.8.1"
+        testRuntimeOnly group: "org.junit.platform", name: "junit-platform-engine", version: "1.8.1"
+        testRuntimeOnly group: "org.junit.vintage", name: "junit-vintage-engine", version: "5.8.1"
+        testRuntimeOnly group: "org.opentest4j", name: "opentest4j", version: "1.2.0"
+
         if (BUILD_CLOSED && DO_JCOV)  {
-            testCompile name: "jcov"
+            testImplementation name: "jcov"
         }
     }
 
@@ -1933,11 +1973,13 @@ allprojects {
     // Java 7 but when we switch to 8 this will be needed, and probably again when
     // we start building with Java 9.
     test {
+        useJUnitPlatform();
+
         executable = JAVA;
         enableAssertions = true;
         testLogging.exceptionFormat = "full";
-        scanForTestClasses = false;
-        include("**/*Test.*");
+        scanForTestClasses = true;
+        include("**/*.*");
         if (BUILD_CLOSED && DO_JCOV) {
             addJCov(project, test)
         }
@@ -2007,9 +2049,8 @@ project(":base") {
     }
 
     dependencies {
-        testCompile group: "junit", name: "junit", version: "4.8.2"
-        testCompile sourceSets.main.output
-        testCompile sourceSets.shims.output
+        testImplementation sourceSets.main.output
+        testImplementation sourceSets.shims.output
     }
 
     commonModuleSetup(project, [ 'base' ])
@@ -2083,10 +2124,9 @@ project(":graphics") {
     }
 
     dependencies {
-        stubCompile group: "junit", name: "junit", version: "4.8.2"
-
         antlr group: "org.antlr", name: "antlr4", version: "4.7.2", classifier: "complete"
-        compile project(':base')
+        testImplementation project(":base").sourceSets.test.output
+        implementation project(':base')
     }
 
     project.ext.moduleSourcePath = defaultModuleSourcePath_GraphicsOne
@@ -2168,7 +2208,7 @@ project(":graphics") {
     project.task("compileFullJava", type: JavaCompile, dependsOn: processShaders) {
         description = "Compile all of the graphics java classes - main and shaders"
 
-        classpath = configurations.compile
+        classpath = configurations.compileClasspath
 
         source = project.sourceSets.main.java.srcDirs
         source += "$buildDir/gensrc/java"
@@ -2178,6 +2218,7 @@ project(":graphics") {
         options.compilerArgs.addAll([
             '-h', "$buildDir/gensrc/headers/",  // Note: this creates the native headers
             '-implicit:none',
+            '--module-version', "$RELEASE_VERSION_SHORT",
             '--module-source-path', defaultModuleSourcePath
             ] )
     }
@@ -2199,7 +2240,9 @@ project(":graphics") {
     addNative(project, "prismSW")
     addNative(project, "font")
     addNative(project, "iio")
-    addNative(project, "prismES2")
+    if (IS_INCLUDE_ES2) {
+        addNative(project, "prismES2")
+    }
 
     if (IS_COMPILE_PANGO) {
         addNative(project, "fontFreetype")
@@ -2335,7 +2378,7 @@ project(":graphics") {
                 executable = JAVA
                 workingDir = project.projectDir
                 main = settings.generator
-                classpath = configurations.compile + configurations.antlr
+                classpath = configurations.compileClasspath + configurations.antlr
                 classpath += files(project.sourceSets.jslc.java.outputDir)
 
                 classpath += files("${project.projectDir}/src/jslc/resources")
@@ -2424,7 +2467,7 @@ project(":graphics") {
                 executable = JAVA
                 workingDir = project.projectDir
                 main = "CompileJSL"
-                classpath = configurations.compile + configurations.antlr
+                classpath = configurations.compileClasspath + configurations.antlr
                 classpath += files(project.sourceSets.jslc.java.outputDir)
                 classpath += files(project.sourceSets.jslc.resources)
                 classpath += files("$buildDir/classes/jsl-compilers/prism",
@@ -2447,8 +2490,8 @@ project(":graphics") {
             "-DCSS_META_DATA_TEST_DIR=$cssDir"
         enableAssertions = true
         testLogging.exceptionFormat = "full"
-        scanForTestClasses = false
-        include "**/*Test.*"
+        scanForTestClasses = true
+        include "**/*.*"
         if (BUILD_CLOSED && DO_JCOV) {
             addJCov(project, test)
         }
@@ -2479,7 +2522,7 @@ project(":graphics") {
             }
             if (allLibsPresent) return;
 
-            for (File f : [configurations.compile.files, configurations.antlr.files].flatten()) {
+            for (File f : [configurations.compileClasspath.files, configurations.antlr.files].flatten()) {
                 copy {
                     into libsDir
                     from f.getParentFile()
@@ -2523,10 +2566,10 @@ project(":controls") {
     commonModuleSetup(project, [ 'base', 'graphics', 'controls' ])
 
     dependencies {
-        testCompile project(":graphics").sourceSets.test.output
-        testCompile project(":base").sourceSets.test.output
-        compile project(':base')
-        compile project(':graphics')
+        testImplementation project(":graphics").sourceSets.test.output
+        testImplementation project(":base").sourceSets.test.output
+        implementation project(':base')
+        implementation project(':graphics')
     }
 
     test {
@@ -2602,8 +2645,8 @@ project(":swing") {
     commonModuleSetup(project, [ 'base', 'graphics', 'swing' ])
 
     dependencies {
-        compile project(":base")
-        compile project(":graphics")
+        implementation project(":base")
+        implementation project(":graphics")
     }
 
     test {
@@ -2628,7 +2671,7 @@ project(":swt") {
     commonModuleSetup(project, [ 'base', 'graphics' ])
 
     dependencies {
-        compile name: SWT_FILE_NAME
+        implementation name: SWT_FILE_NAME
     }
 
     classes {
@@ -2641,7 +2684,7 @@ project(":swt") {
             // Skip copy if file is present.
             if (swtLib.exists()) return;
 
-            for (File f : configurations.compile.files) {
+            for (File f : configurations.compileClasspath.files) {
                 // Have to rename the swt jar because it is some platform specific name but
                 // for the sake of the IDEs we need to have a single stable name that works
                 // on every platform
@@ -2707,10 +2750,10 @@ project(":fxml") {
 
 
     dependencies {
-        testCompile project(":graphics").sourceSets.test.output
-        testCompile project(":base").sourceSets.test.output
-        compile project(":base")
-        compile project(":graphics")
+        testImplementation project(":graphics").sourceSets.test.output
+        testImplementation project(":base").sourceSets.test.output
+        implementation project(":base")
+        implementation project(":graphics")
     }
 
     test {
@@ -2759,8 +2802,8 @@ project(":media") {
             media name: "ffmpeg-3.3.3", ext: "tar.gz"
             media name: "ffmpeg-4.0.2", ext: "tar.gz"
         }
-        compile project(":base")
-        compile project(":graphics")
+        implementation project(":base")
+        implementation project(":graphics")
     }
 
     compileJava.dependsOn updateCacheIfNeeded
@@ -2839,7 +2882,7 @@ project(":media") {
                     args("JAVA_HOME=${JDK_HOME}", "GENERATED_HEADERS_DIR=${generatedHeadersDir}",
                          "OUTPUT_DIR=${nativeOutputDir}", "BUILD_TYPE=${buildType}", "BASE_NAME=jfxmedia",
                          "COMPILE_PARFAIT=${compileParfait}",
-                         IS_64 ? "ARCH=x64" : "ARCH=x32",
+                         IS_64 ? IS_AARCH64 ? "ARCH=aarch64" : "ARCH=x64" : "ARCH=x32",
                         "CC=${mediaProperties.compiler}", "LINKER=${mediaProperties.linker}")
 
                     if (t.name == "win") {
@@ -2866,7 +2909,7 @@ project(":media") {
                     exec {
                         commandLine ("make", "${makeJobsFlag}", "-C", "${nativeSrcDir}/gstreamer/projects/${projectDir}/gstreamer-lite")
                         args("OUTPUT_DIR=${nativeOutputDir}", "BUILD_TYPE=${buildType}", "BASE_NAME=gstreamer-lite",
-                             IS_64 ? "ARCH=x64" : "ARCH=x32", "CC=${mediaProperties.compiler}",
+                             IS_64 ? IS_AARCH64 ? "ARCH=aarch64" : "ARCH=x64" : "ARCH=x32", "CC=${mediaProperties.compiler}",
                              "AR=${mediaProperties.ar}", "LINKER=${mediaProperties.linker}")
 
                         if (t.name == "win") {
@@ -2884,7 +2927,7 @@ project(":media") {
                     exec {
                         commandLine ("make", "${makeJobsFlag}", "-C", "${nativeSrcDir}/gstreamer/projects/${projectDir}/fxplugins")
                         args("OUTPUT_DIR=${nativeOutputDir}", "BUILD_TYPE=${buildType}", "BASE_NAME=fxplugins",
-                             IS_64 ? "ARCH=x64" : "ARCH=x32",
+                             IS_64 ? IS_AARCH64 ? "ARCH=aarch64" : "ARCH=x64" : "ARCH=x32",
                              "CC=${mediaProperties.compiler}", "AR=${mediaProperties.ar}", "LINKER=${mediaProperties.linker}")
 
                         if (t.name == "win") {
@@ -3194,7 +3237,8 @@ project(":media") {
                                         args("CC=${mediaProperties.compiler}", "LINKER=${mediaProperties.linker}",
                                              "OUTPUT_DIR=${nativeOutputDir}", "BUILD_TYPE=${buildType}",
                                              "BASE_NAME=avplugin", "VERSION=${version}", "LIBAV_DIR=${libavDir}",
-                                             "SUFFIX=", IS_64 ? "ARCH=x64" : "ARCH=x32")
+                                             "SUFFIX=", IS_64 ? IS_AARCH64 ? "ARCH=aarch64" : "ARCH=x64" : "ARCH=x32",
+                                             "STATIC=${IS_STATIC_BUILD}")
                                     }
                                 }
                             }
@@ -3208,7 +3252,8 @@ project(":media") {
                                         args("CC=${mediaProperties.compiler}", "LINKER=${mediaProperties.linker}",
                                              "OUTPUT_DIR=${nativeOutputDir}", "BUILD_TYPE=${buildType}",
                                              "BASE_NAME=avplugin", "VERSION=${version}", "LIBAV_DIR=${libavDir}",
-                                             "SUFFIX=-ffmpeg", IS_64 ? "ARCH=x64" : "ARCH=x32")
+                                             "SUFFIX=-ffmpeg",
+                                             IS_64 ? IS_AARCH64 ? "ARCH=aarch64" : "ARCH=x64" : "ARCH=x32")
                                     }
                                 }
                             }
@@ -3222,7 +3267,8 @@ project(":media") {
                                         args("CC=${mediaProperties.compiler}", "LINKER=${mediaProperties.linker}",
                                              "OUTPUT_DIR=${nativeOutputDir}", "BUILD_TYPE=${buildType}",
                                              "BASE_NAME=avplugin", "VERSION=${version}", "LIBAV_DIR=${libavDir}",
-                                             "SUFFIX=-ffmpeg", IS_64 ? "ARCH=x64" : "ARCH=x32")
+                                             "SUFFIX=-ffmpeg",
+                                             IS_64 ? IS_AARCH64 ? "ARCH=aarch64" : "ARCH=x64" : "ARCH=x32")
                                     }
                                 }
                             }
@@ -3232,7 +3278,7 @@ project(":media") {
                                 commandLine ("make", "${makeJobsFlag}", "-C", "${nativeSrcDir}/gstreamer/projects/linux/avplugin")
                                 args("CC=${mediaProperties.compiler}", "LINKER=${mediaProperties.linker}",
                                      "OUTPUT_DIR=${nativeOutputDir}", "BUILD_TYPE=${buildType}",
-                                     "BASE_NAME=avplugin", IS_64 ? "ARCH=x64" : "ARCH=x32")
+                                     "BASE_NAME=avplugin", IS_64 ? IS_AARCH64 ? "ARCH=aarch64" : "ARCH=x64" : "ARCH=x32")
                             }
                         }
                     }
@@ -3295,13 +3341,13 @@ project(":media") {
                     doLast {
                         exec {
                             commandLine ("make", "${makeJobsFlag}", "-C", "${nativeSrcDir}/gstreamer/projects/${projectDir}/libffi")
-                            args("OUTPUT_DIR=${nativeOutputDir}", "BUILD_TYPE=${buildType}", "BASE_NAME=ffi")
+                            args("OUTPUT_DIR=${nativeOutputDir}", "BUILD_TYPE=${buildType}", "BASE_NAME=ffi", "ARCH=$TARGET_ARCH")
                             args ("CC=${mediaProperties.compiler}", "LINKER=${mediaProperties.linker}", "AR=${mediaProperties.ar}")
                         }
 
                         exec {
                             commandLine ("make", "${makeJobsFlag}", "-C", "${nativeSrcDir}/gstreamer/projects/${projectDir}/glib-lite")
-                            args("OUTPUT_DIR=${nativeOutputDir}", "BUILD_TYPE=${buildType}", "BASE_NAME=glib-lite")
+                            args("OUTPUT_DIR=${nativeOutputDir}", "BUILD_TYPE=${buildType}", "BASE_NAME=glib-lite", "ARCH=$TARGET_ARCH")
                             args ("CC=${mediaProperties.compiler}", "LINKER=${mediaProperties.linker}")
                         }
                     }
@@ -3336,6 +3382,8 @@ project(":web") {
     project.ext.moduleRuntime = true
     project.ext.moduleName = "javafx.web"
 
+    getConfigurations().create("icu");
+
     sourceSets {
         main
         shims {
@@ -3358,10 +3406,13 @@ project(":web") {
     commonModuleSetup(project, [ 'base', 'graphics', 'controls', 'media', 'web' ])
 
     dependencies {
-        compile project(":base")
-        compile project(":graphics")
-        compile project(":controls")
-        compile project(":media")
+        if (IS_COMPILE_WEBKIT) {
+            icu name: "icu4c-${icuVersion}-data-bin-l", ext: "zip"
+        }
+        implementation project(":base")
+        implementation project(":graphics")
+        implementation project(":controls")
+        implementation project(":media")
     }
 
     compileJava.dependsOn updateCacheIfNeeded
@@ -3370,8 +3421,8 @@ project(":web") {
         from (project.file("$projectDir/src/test/resources/test/html")) {
             include "**/archive-*.*"
         }
-        archiveName = "webArchiveJar.jar"
-        destinationDir = file("$buildDir/testing/resources")
+        archiveFileName = "webArchiveJar.jar"
+        destinationDirectory = file("$buildDir/testing/resources")
     }
 
     def gensrcDir = "${buildDir}/gensrc/java"
@@ -3423,6 +3474,9 @@ project(":web") {
         dependsOn webArchiveJar
         def testResourceDir = file("$buildDir/testing/resources")
         jvmArgs "-DWEB_ARCHIVE_JAR_TEST_DIR=$testResourceDir"
+        if (jdk12OrLater) {
+            systemProperty 'java.security.manager', 'allow'
+        }
     }
 
     task compileJavaDOMBinding()
@@ -3430,8 +3484,6 @@ project(":web") {
     compileTargets { t ->
         def targetProperties = project.rootProject.ext[t.upper]
         def webkitProperties = targetProperties.webkit
-        def classifier = (t.name != "linux" && t.name != "win") ? t.name :
-                          IS_64 ? "${t.name}-amd64" : "${t.name}-i586"
 
         def webkitOutputDir = cygpath("$buildDir/${t.name}")
         def webkitConfig = IS_DEBUG_NATIVE ? "Debug" : "Release"
@@ -3439,7 +3491,14 @@ project(":web") {
         File nativeBuildDir = new File("${webkitOutputDir}")
         nativeBuildDir.mkdirs()
 
-        def compileNativeTask = task("compileNative${t.capital}", dependsOn: [compileJava]) {
+        def getICUFile = task("copyICUFile", type: Copy) {
+            enabled = IS_COMPILE_WEBKIT
+
+            from configurations.icu.files
+            into "$webkitOutputDir/$webkitConfig/icu/data"
+        }
+
+        def compileNativeTask = task("compileNative${t.capital}", dependsOn: [compileJava, getICUFile]) {
             println "Building Webkit configuration /$webkitConfig/ into $webkitOutputDir"
             enabled =  (IS_COMPILE_WEBKIT)
 
@@ -3465,7 +3524,11 @@ project(":web") {
                     } else if (t.name == "linux") {
                         cmakeArgs = " $cmakeArgs -DCMAKE_SYSTEM_NAME=Linux"
                         if (IS_64) {
-                            cmakeArgs = "$cmakeArgs -DCMAKE_SYSTEM_PROCESSOR=x86_64"
+                            if (IS_AARCH64) {
+                                cmakeArgs = "$cmakeArgs -DCMAKE_SYSTEM_PROCESSOR=aarch64"
+                            } else {
+                                cmakeArgs = "$cmakeArgs -DCMAKE_SYSTEM_PROCESSOR=x86_64"
+                            }
                         } else {
                             cmakeArgs = "$cmakeArgs -DCMAKE_SYSTEM_PROCESSOR=i586"
                         }
@@ -3547,10 +3610,11 @@ project(":web") {
         def compileJavaDOMBindingTask = task("compileJavaDOMBinding${t.capital}", type: JavaCompile,
                 dependsOn: [compileJava, compileNativeTask, copyNativeTask]) {
             destinationDir = file("$buildDir/classes/java/main")
-            classpath = configurations.compile
+            classpath = configurations.compileClasspath
             source = project.sourceSets.main.java.srcDirs
             options.compilerArgs.addAll([
                 '-implicit:none',
+                '--module-version', "$RELEASE_VERSION_SHORT",
                 '--module-source-path', defaultModuleSourcePath
                 ])
         }
@@ -3565,8 +3629,8 @@ project(":web") {
 
     def drtClasses = "**/com/sun/javafx/webkit/drt/**"
     task drtJar(type: Jar, dependsOn: compileJava) {
-        archiveName = "drt.jar"
-        destinationDir = file("$buildDir/test")
+        archiveFileName = "drt.jar"
+        destinationDirectory = file("$buildDir/test")
         from "$buildDir/classes/java/main/javafx.web/"
         include drtClasses
         includeEmptyDirs = false
@@ -3600,6 +3664,7 @@ project(":systemTests") {
         testapp4
         testapp5
         testapp6
+        testapp7
         testscriptapp1
         testscriptapp2
     }
@@ -3615,6 +3680,7 @@ project(":systemTests") {
         sourceSets.testapp4,
         sourceSets.testapp5,
         sourceSets.testapp6,
+        sourceSets.testapp7,
         sourceSets.testscriptapp1,
         sourceSets.testscriptapp2
     ]
@@ -3624,10 +3690,10 @@ project(":systemTests") {
     project.ext.moduleName = "systemTests"
 
     dependencies {
-        testCompile project(":graphics").sourceSets.test.output
-        testCompile project(":base").sourceSets.test.output
-        testCompile project(":controls").sourceSets.test.output
-        testCompile project(":swing").sourceSets.test.output
+        testImplementation project(":graphics").sourceSets.test.output
+        testImplementation project(":base").sourceSets.test.output
+        testImplementation project(":controls").sourceSets.test.output
+        testImplementation project(":swing").sourceSets.test.output
     }
 
     def dependentProjects = [ 'base', 'graphics', 'controls', 'media', 'web', 'swing', 'fxml' ]
@@ -3682,8 +3748,8 @@ project(":systemTests") {
         dependsOn compileTestapp1Java
         enabled = IS_FULL_TEST
 
-        destinationDir = file("$buildDir/testapp1")
-        archiveName = testapp1JarName
+        destinationDirectory = file("$buildDir/testapp1")
+        archiveFileName = testapp1JarName
         includeEmptyDirs = false
         from project.sourceSets.testapp1.java.outputDir
         include("testapp/**")
@@ -3703,8 +3769,8 @@ project(":systemTests") {
         dependsOn compileTestapp1Java
         enabled = IS_FULL_TEST
 
-        destinationDir = file("$buildDir/testapp1")
-        archiveName = "jar2.jar";
+        destinationDirectory = file("$buildDir/testapp1")
+        archiveFileName = "jar2.jar";
         includeEmptyDirs = false
         from project.sourceSets.testapp1.java.outputDir
         include("pkg2/**")
@@ -3716,7 +3782,7 @@ project(":systemTests") {
     }
     test.dependsOn(createTestApps);
 
-    def modtestapps = [ "testapp2", "testapp3", "testapp4", "testapp5", "testapp6", "testscriptapp1", "testscriptapp2" ]
+    def modtestapps = [ "testapp2", "testapp3", "testapp4", "testapp5", "testapp6", "testapp7", "testscriptapp1", "testscriptapp2" ]
     modtestapps.each { testapp ->
         def testappCapital = testapp.capitalize()
         def copyTestAppTask = task("copy${testappCapital}", type: Copy) {
@@ -3788,12 +3854,16 @@ project(":systemTests") {
             systemProperty "ClipShapeTest.numTests", rootProject.getProperty("ClipShapeTest.numTests")
         }
 
+        if (jdk12OrLater) {
+            systemProperty 'java.security.manager', 'allow'
+        }
+
         if (!IS_USE_ROBOT) {
             // Disable all robot-based visual tests
             exclude("test/robot/**");
         }
         if (!IS_UNSTABLE_TEST) {
-            // JDK-8196607 Don't run monocle test cases 
+            // JDK-8196607 Don't run monocle test cases
             exclude("test/robot/com/sun/glass/ui/monocle/**");
         }
         if (!IS_AWT_TEST) {
@@ -3848,6 +3918,7 @@ allprojects {
         project.compileJava {
             options.compilerArgs.addAll([
                 '-implicit:none',
+                '--module-version', "$RELEASE_VERSION_SHORT",
                 '--module-source-path', project.moduleSourcePath
                 ])
         }
@@ -3870,6 +3941,7 @@ allprojects {
         project.compileShimsJava {
             options.compilerArgs.addAll([
                 '-implicit:none',
+                '--module-version', "$RELEASE_VERSION_SHORT",
                 '--module-source-path', project.moduleSourcePathShim
                 ])
         }
@@ -4023,6 +4095,10 @@ task javadoc(type: Javadoc, dependsOn: createMSPfile) {
     options.addBooleanOption("javafx").setValue(true);
     options.addBooleanOption("use").setValue(true);
 
+    // Suppress generating overridden methods with no additional documentation
+    // The leading '-' is necessary, since this option starts with '--' and gradle adds '-' when passing an option to javadoc
+    options.addBooleanOption("-override-methods=summary").setValue(true);
+
     options.setOptionFiles([
         new File(rootProject.buildDir,MODULESOURCEPATH)
         ]);
@@ -4144,8 +4220,8 @@ compileTargets { t ->
         enabled = COMPILE_SWT
         group = "Basic"
         description = "Creates the javafx-swt.jar for the $t.name target"
-        destinationDir = file("${project(":swt").buildDir}/libs")
-        archiveName = "javafx-swt.jar"
+        destinationDirectory = file("${project(":swt").buildDir}/libs")
+        archiveFileName = "javafx-swt.jar"
         includeEmptyDirs = false
         from("${project(":swt").buildDir}/classes/java/main");
         include("**/javafx/embed/swt/**")
@@ -4165,7 +4241,9 @@ compileTargets { t ->
         dependsOn(javafxSwtTask)
 
         doLast() {
-            ant.jar (update: true, index: true, destfile: "${javafxSwtTask.destinationDir}/${javafxSwtTask.archiveName}")
+            def destDir = javafxSwtTask.destinationDirectory.get()
+            def afName = javafxSwtTask.archiveFileName.get()
+            ant.jar (update: true, index: true, destfile: "${destDir}/${afName}")
         }
     }
 
@@ -4181,7 +4259,7 @@ project(":apps") {
     // The apps build is Ant based, we will exec ant from gradle.
 
     // Download the Lucene libraries needed for the Ensemble8 app
-    def luceneVersion = "7.7.2"
+    def luceneVersion = "7.7.3"
     getConfigurations().create("lucene");
     dependencies {
         lucene group: "org.apache.lucene", name: "lucene-core", version: luceneVersion
@@ -4332,8 +4410,8 @@ compileTargets { t ->
         zipsTask.dependsOn(zipSdkTask)
 
         def zipDocsTask = task("zipDocs$t.capital", type: Zip, dependsOn: zipSdkTask) {
-            destinationDir = file("${bundlesDir}")
-            archiveName = "${docsBundleName}.zip"
+            destinationDirectory = file("${bundlesDir}")
+            archiveFileName = "${docsBundleName}.zip"
             includeEmptyDirs = false
             from docsArtifactsDir
             into "${docsBundleName}"
@@ -4341,8 +4419,8 @@ compileTargets { t ->
         zipsTask.dependsOn(zipDocsTask)
 
         def zipJmodsTask = task("zipJmods$t.capital", type: Zip, dependsOn: zipDocsTask) {
-            destinationDir = file("${bundlesDir}")
-            archiveName = "${jmodsBundleName}.zip"
+            destinationDirectory = file("${bundlesDir}")
+            archiveFileName = "${jmodsBundleName}.zip"
             includeEmptyDirs = false
             from jmodsArtifactsDir
             into "${jmodsBundleName}"
@@ -4640,8 +4718,8 @@ compileTargets { t ->
         def dstModularJarDir = "${standaloneLibDir}"
         def modularJarName = "${moduleName}.jar"
         def modularJarTask = project.task("modularJarStandalone$t.capital", type: Jar, dependsOn: project.assemble) {
-            destinationDir = file("${dstModularJarDir}")
-            archiveName = modularJarName
+            destinationDirectory = file("${dstModularJarDir}")
+            archiveFileName = modularJarName
             includeEmptyDirs = false
             from srcClassesDir
         }
@@ -4697,8 +4775,8 @@ compileTargets { t ->
     // and the standalone sdk should be independent of one another, but seems
     // better than the alternatives.
     def zipSourceFilesTask = project.task("zipSourceFilesStandalone$t.capital", type: Zip, dependsOn: buildModulesTask) {
-        destinationDir = file("${standaloneLibDir}")
-        archiveName = standaloneSrcZipName
+        destinationDirectory = file("${standaloneSdkDir}")
+        archiveFileName = standaloneSrcZipName
         includeEmptyDirs = false
         from modulesSrcDir
         include "**/*.java"
@@ -4711,8 +4789,8 @@ compileTargets { t ->
     def publicationDirName = "${platformPrefix}publications"
     def publicationDir = "${rootProject.buildDir}/${publicationDirName}"
 
-    moduleProjList.each { project -> 
-        // Create publications to be uploaded 
+    moduleProjList.each { project ->
+        // Create publications to be uploaded
 
         def moduleName = project.ext.moduleName
         def buildDir = project.buildDir
@@ -4723,19 +4801,19 @@ compileTargets { t ->
 
         def modularEmptyPublicationJarName = "${moduleName}.jar"
         def modularEmptyPublicationJarTask = project.task("moduleEmptyPublicationJar${t.capital}", type: Jar) {
-            destinationDir = file("${dstModularJarDir}")
-            archiveName = modularEmptyPublicationJarName
+            destinationDirectory = file("${dstModularJarDir}")
+            archiveFileName = modularEmptyPublicationJarName
             manifest {
                 attributes(
-                    'Automatic-Module-Name':"${moduleName}Empty"
+                        'Automatic-Module-Name':"${moduleName}Empty"
                 )
             }
         }
 
         def modularPublicationJarName = "${moduleName}-${t.name}.jar"
         def modularPublicationJarTask = project.task("modularPublicationJar${t.capital}", type: Jar, dependsOn: modularEmptyPublicationJarTask) {
-            destinationDir = file("${dstModularJarDir}")
-            archiveName = modularPublicationJarName
+            destinationDirectory = file("${dstModularJarDir}")
+            archiveFileName = modularPublicationJarName
             from srcLibsDir
             from srcClassesDir
         }
@@ -4900,6 +4978,9 @@ compileTargets { t ->
 
         def library = targetProperties.library
 
+        def doStrip = targetProperties.containsKey('strip') && IS_RELEASE
+        def strip = doStrip ? targetProperties.strip : null
+        def stripArgs = doStrip ? targetProperties.stripArgs : null
         def useLipo = targetProperties.containsKey('useLipo') ? targetProperties.useLipo : false
         def modLibDest = targetProperties.modLibDest
         def moduleNativeDirName = "${platformPrefix}module-$modLibDest"
@@ -4948,7 +5029,8 @@ compileTargets { t ->
             group = "Basic"
             description = "copies javafx.graphics native libraries"
 
-            into "${graphicsProject.buildDir}/${moduleNativeDirName}"
+            def destDirName = "${graphicsProject.buildDir}/${moduleNativeDirName}"
+            into destDirName
 
             from("${graphicsProject.buildDir}/libs/jsl-decora/${t.name}/${library(targetProperties.decora.lib)}")
             def libs = ['font', 'prism', 'prismSW', 'glass', 'iio']
@@ -4974,13 +5056,32 @@ compileTargets { t ->
                     from ("$winsdklib");
                 }
             }
+
+            if (doStrip) {
+                doLast {
+                    def inputFiles = fileTree(dir: destDirName)
+                    inputFiles.include("*.dll")
+                    inputFiles.include("*.dylib")
+                    inputFiles.include("*.so")
+                    // FIXME: if we ever need to strip on Windows platforms, we must
+                    // exclude the Microsoft DLLs (VS2017DLLNames and WinSDKDLLNames)
+
+                    inputFiles.each { file ->
+                        exec {
+                            def cmd = [ strip, stripArgs, file ].flatten()
+                            commandLine(cmd)
+                        }
+                    }
+                }
+            }
         }
 
         def buildModuleMediaTask = task("buildModuleMedia$t.capital", type: Copy, dependsOn: [mediaProject.assemble, prepOpenJfxStubs]) {
             group = "Basic"
             description = "copies javafx.media native libraries"
 
-            into "${mediaProject.buildDir}/${moduleNativeDirName}"
+            def destDirName = "${mediaProject.buildDir}/${moduleNativeDirName}"
+            into destDirName
 
             def mediaBuildType = project(":media").ext.buildType
             if (IS_COMPILE_MEDIA) {
@@ -5011,19 +5112,52 @@ compileTargets { t ->
                     from ("$MEDIA_STUB/${library("glib-lite")}")
                 }
             }
+
+            if (doStrip && IS_COMPILE_MEDIA) {
+                doLast {
+                    def inputFiles = fileTree(dir: destDirName)
+                    inputFiles.include("*.dll")
+                    inputFiles.include("*.dylib")
+                    inputFiles.include("*.so")
+
+                    inputFiles.each { file ->
+                        exec {
+                            def cmd = [ strip, stripArgs, file ].flatten()
+                            commandLine(cmd)
+                        }
+                    }
+                }
+            }
         }
 
         def buildModuleWeb = task("buildModuleWeb$t.capital", type: Copy, dependsOn: [webProject.assemble, prepOpenJfxStubs]) {
             group = "Basic"
             description = "copies javafx.web native libraries"
 
-            into "${webProject.buildDir}/${moduleNativeDirName}"
+            def destDirName = "${webProject.buildDir}/${moduleNativeDirName}"
+            into destDirName
 
             if (IS_COMPILE_WEBKIT) {
                 from ("${webProject.buildDir}/libs/${t.name}/${library('jfxwebkit')}")
             } else {
                 if (t.name != "android" && t.name != "ios" && t.name != "dalvik") {
                     from ("$WEB_STUB/${library('jfxwebkit')}")
+                }
+            }
+
+            if (doStrip && IS_COMPILE_WEBKIT) {
+                doLast {
+                    def inputFiles = fileTree(dir: destDirName)
+                    inputFiles.include("*.dll")
+                    inputFiles.include("*.dylib")
+                    inputFiles.include("*.so")
+
+                    inputFiles.each { file ->
+                        exec {
+                            def cmd = [ strip, stripArgs, file ].flatten()
+                            commandLine(cmd)
+                        }
+                    }
                 }
             }
         }
@@ -5069,8 +5203,8 @@ compileTargets { t ->
             file("${rootProject.buildDir}/${jfxBundle}").delete()
         }
 
-        archiveName = jfxBundle
-        destinationDir = file("${rootProject.buildDir}")
+        archiveFileName = jfxBundle
+        destinationDirectory = file("${rootProject.buildDir}")
         includeEmptyDirs = false
         from "${bundledSdkDir}"
     }
@@ -5223,6 +5357,7 @@ compileTargets { t ->
                         args("create")
                         args("--class-path")
                         args(srcClassesDir)
+                        args("--module-version", "$RELEASE_VERSION_SHORT")
                         // Not all modules have a "lib" dir
                         if (file(srcLibDir).isDirectory()) {
                             args("--libs")

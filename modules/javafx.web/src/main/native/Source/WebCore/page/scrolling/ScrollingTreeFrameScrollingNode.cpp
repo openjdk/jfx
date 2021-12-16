@@ -51,42 +51,39 @@ void ScrollingTreeFrameScrollingNode::commitStateBeforeChildren(const ScrollingS
 
     const ScrollingStateFrameScrollingNode& state = downcast<ScrollingStateFrameScrollingNode>(stateNode);
 
-    if (state.hasChangedProperty(ScrollingStateFrameScrollingNode::FrameScaleFactor))
+    if (state.hasChangedProperty(ScrollingStateNode::Property::FrameScaleFactor))
         m_frameScaleFactor = state.frameScaleFactor();
 
-    if (state.hasChangedProperty(ScrollingStateFrameScrollingNode::ReasonsForSynchronousScrolling))
-        m_synchronousScrollingReasons = state.synchronousScrollingReasons();
-
-    if (state.hasChangedProperty(ScrollingStateFrameScrollingNode::HeaderHeight))
+    if (state.hasChangedProperty(ScrollingStateNode::Property::HeaderHeight))
         m_headerHeight = state.headerHeight();
 
-    if (state.hasChangedProperty(ScrollingStateFrameScrollingNode::FooterHeight))
+    if (state.hasChangedProperty(ScrollingStateNode::Property::FooterHeight))
         m_footerHeight = state.footerHeight();
 
-    if (state.hasChangedProperty(ScrollingStateFrameScrollingNode::BehaviorForFixedElements))
+    if (state.hasChangedProperty(ScrollingStateNode::Property::BehaviorForFixedElements))
         m_behaviorForFixed = state.scrollBehaviorForFixedElements();
 
-    if (state.hasChangedProperty(ScrollingStateFrameScrollingNode::TopContentInset))
+    if (state.hasChangedProperty(ScrollingStateNode::Property::TopContentInset))
         m_topContentInset = state.topContentInset();
 
-    if (state.hasChangedProperty(ScrollingStateFrameScrollingNode::VisualViewportIsSmallerThanLayoutViewport))
+    if (state.hasChangedProperty(ScrollingStateNode::Property::VisualViewportIsSmallerThanLayoutViewport))
         m_visualViewportIsSmallerThanLayoutViewport = state.visualViewportIsSmallerThanLayoutViewport();
 
-    if (state.hasChangedProperty(ScrollingStateFrameScrollingNode::FixedElementsLayoutRelativeToFrame))
+    if (state.hasChangedProperty(ScrollingStateNode::Property::FixedElementsLayoutRelativeToFrame))
         m_fixedElementsLayoutRelativeToFrame = state.fixedElementsLayoutRelativeToFrame();
 
-    if (state.hasChangedProperty(ScrollingStateFrameScrollingNode::LayoutViewport)) {
+    if (state.hasChangedProperty(ScrollingStateNode::Property::LayoutViewport)) {
         m_layoutViewport = state.layoutViewport();
         updateViewportForCurrentScrollPosition({ });
     }
 
-    if (state.hasChangedProperty(ScrollingStateFrameScrollingNode::MinLayoutViewportOrigin))
+    if (state.hasChangedProperty(ScrollingStateNode::Property::MinLayoutViewportOrigin))
         m_minLayoutViewportOrigin = state.minLayoutViewportOrigin();
 
-    if (state.hasChangedProperty(ScrollingStateFrameScrollingNode::MaxLayoutViewportOrigin))
+    if (state.hasChangedProperty(ScrollingStateNode::Property::MaxLayoutViewportOrigin))
         m_maxLayoutViewportOrigin = state.maxLayoutViewportOrigin();
 
-    if (state.hasChangedProperty(ScrollingStateFrameScrollingNode::OverrideVisualViewportSize))
+    if (state.hasChangedProperty(ScrollingStateNode::Property::OverrideVisualViewportSize))
         m_overrideVisualViewportSize = state.overrideVisualViewportSize();
 }
 
@@ -135,17 +132,6 @@ FloatSize ScrollingTreeFrameScrollingNode::viewToContentsOffset(const FloatPoint
     return toFloatSize(scrollPosition) - FloatSize(0, headerHeight() + topContentInset());
 }
 
-LayoutPoint ScrollingTreeFrameScrollingNode::parentToLocalPoint(LayoutPoint point) const
-{
-    return point - LayoutSize(0, headerHeight() + topContentInset());
-}
-
-LayoutPoint ScrollingTreeFrameScrollingNode::localToContentsPoint(LayoutPoint point) const
-{
-    auto scrolledPoint = point + LayoutPoint(currentScrollPosition());
-    return scrolledPoint.scaled(1 / frameScaleFactor());
-}
-
 void ScrollingTreeFrameScrollingNode::dumpProperties(TextStream& ts, ScrollingStateTreeAsTextBehavior behavior) const
 {
     ts << "frame scrolling node";
@@ -167,8 +153,6 @@ void ScrollingTreeFrameScrollingNode::dumpProperties(TextStream& ts, ScrollingSt
         ts.dumpProperty("header height", m_headerHeight);
     if (m_footerHeight)
         ts.dumpProperty("footer height", m_footerHeight);
-    if (m_synchronousScrollingReasons)
-        ts.dumpProperty("synchronous scrolling reasons", ScrollingCoordinator::synchronousScrollingReasonsAsText(m_synchronousScrollingReasons));
 
     ts.dumpProperty("behavior for fixed", m_behaviorForFixed);
     if (m_fixedElementsLayoutRelativeToFrame)

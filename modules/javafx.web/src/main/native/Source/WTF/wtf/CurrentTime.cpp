@@ -34,7 +34,6 @@
 #include "config.h"
 #include <wtf/MonotonicTime.h>
 
-#include <time.h>
 #include <wtf/WallTime.h>
 
 #if OS(DARWIN)
@@ -51,8 +50,10 @@
 #include <windows.h>
 #include <math.h>
 #include <stdint.h>
+#include <time.h>
 #else
 #include <sys/time.h>
+#include <time.h>
 #endif
 
 #if OS(FUCHSIA)
@@ -249,11 +250,9 @@ WallTime WallTime::now()
     return fromRawSeconds(currentTime());
 }
 
-MonotonicTime MonotonicTime::now()
+#if OS(DARWIN)
+MonotonicTime MonotonicTime::fromMachAbsoluteTime(uint64_t machAbsoluteTime)
 {
-#if USE(GLIB)
-    return fromRawSeconds(static_cast<double>(g_get_monotonic_time() / 1000000.0));
-#elif OS(DARWIN)
     // Based on listing #2 from Apple QA 1398, but modified to be thread-safe.
     static mach_timebase_info_data_t timebaseInfo;
     static std::once_flag initializeTimerOnceFlag;
@@ -262,8 +261,16 @@ MonotonicTime MonotonicTime::now()
         ASSERT_UNUSED(kr, kr == KERN_SUCCESS);
         ASSERT(timebaseInfo.denom);
     });
+    return fromRawSeconds((machAbsoluteTime * timebaseInfo.numer) / (1.0e9 * timebaseInfo.denom));
+}
+#endif
 
-    return fromRawSeconds((mach_absolute_time() * timebaseInfo.numer) / (1.0e9 * timebaseInfo.denom));
+MonotonicTime MonotonicTime::now()
+{
+#if USE(GLIB)
+    return fromRawSeconds(static_cast<double>(g_get_monotonic_time() / 1000000.0));
+#elif OS(DARWIN)
+    return fromMachAbsoluteTime(mach_absolute_time());
 #elif OS(FUCHSIA)
     return fromRawSeconds(zx_clock_get_monotonic() / static_cast<double>(ZX_SEC(1)));
 #elif OS(LINUX) || OS(FREEBSD) || OS(OPENBSD) || OS(NETBSD)

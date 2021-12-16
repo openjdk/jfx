@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -79,7 +79,7 @@ import java.security.PrivilegedAction;
  */
 public abstract class TableViewSkinBase<M, S, C extends Control, I extends IndexedCell<M>, TC extends TableColumnBase<S,?>> extends VirtualContainerBase<C, I> {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Static Fields                                                           *
      *                                                                         *
@@ -92,12 +92,13 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
     // is set to true. This is done in order to make TableView functional
     // on embedded systems with touch screens which do not generate scroll
     // events for touch drag gestures.
+    @SuppressWarnings("removal")
     private static final boolean IS_PANNABLE =
             AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> Boolean.getBoolean("javafx.scene.control.skin.TableViewSkin.pannable"));
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Internal Fields                                                         *
      *                                                                         *
@@ -154,7 +155,7 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Listeners                                                               *
      *                                                                         *
@@ -241,14 +242,14 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
      **************************************************************************/
 
     /**
-     *
+     * Constructs a {@code TableViewSkinBase} for the given control.
      * @param control the control
      */
     public TableViewSkinBase(final C control) {
@@ -339,7 +340,7 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Abstract Methods                                                        *
      *                                                                         *
@@ -349,7 +350,7 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *
@@ -501,7 +502,7 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private implementation                                                  *
      *                                                                         *
@@ -553,14 +554,11 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
         // optimised in the future when time permits.
         flow.setCellCount(newCount);
 
-        if (newCount != oldCount) {
-            // FIXME updateItemCount is called _a lot_. Perhaps we can make rebuildCells
-            // smarter. Imagine if items has one million items added - do we really
-            // need to rebuildCells a million times? Maybe this is better now that
-            // we do rebuildCells instead of recreateCells.
-            requestRebuildCells();
-        } else {
+        if (newCount == oldCount) {
             needCellsReconfigured = true;
+        } else if (oldCount == 0) {
+            // see comments above, this is used as an alternative to flow.setDirtyCell(int)
+            requestRebuildCells();
         }
     }
 
@@ -1004,7 +1002,7 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * A11y                                                                    *
      *                                                                         *

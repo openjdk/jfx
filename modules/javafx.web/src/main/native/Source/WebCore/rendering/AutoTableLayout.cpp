@@ -23,6 +23,8 @@
 #include "AutoTableLayout.h"
 
 #include "RenderChildIterator.h"
+#include "RenderFlexibleBox.h"
+#include "RenderGrid.h"
 #include "RenderTable.h"
 #include "RenderTableCell.h"
 #include "RenderTableCol.h"
@@ -69,8 +71,8 @@ void AutoTableLayout::recalcColumn(unsigned effCol)
 
                 // A cell originates in this column. Ensure we have
                 // a min/max width of at least 1px for this column now.
-                columnLayout.minLogicalWidth = std::max<float>(columnLayout.minLogicalWidth, cellHasContent ? 1 : 0);
-                columnLayout.maxLogicalWidth = std::max<float>(columnLayout.maxLogicalWidth, 1);
+                columnLayout.minLogicalWidth = std::max(columnLayout.minLogicalWidth, 0.f);
+                columnLayout.maxLogicalWidth = std::max(columnLayout.maxLogicalWidth, 0.f);
 
                 if (cell->colSpan() == 1) {
                     columnLayout.minLogicalWidth = std::max(cell->minPreferredLogicalWidth().ceilToFloat(), columnLayout.minLogicalWidth);
@@ -86,33 +88,33 @@ void AutoTableLayout::recalcColumn(unsigned effCol)
                     const float cCellMaxWidth = 32760;
                     Length cellLogicalWidth = cell->styleOrColLogicalWidth();
                     if (cellLogicalWidth.value() > cCellMaxWidth)
-                        cellLogicalWidth.setValue(Fixed, cCellMaxWidth);
+                        cellLogicalWidth.setValue(LengthType::Fixed, cCellMaxWidth);
                     if (cellLogicalWidth.isNegative())
-                        cellLogicalWidth.setValue(Fixed, 0);
+                        cellLogicalWidth.setValue(LengthType::Fixed, 0);
                     switch (cellLogicalWidth.type()) {
-                    case Fixed:
+                    case LengthType::Fixed:
                         // ignore width=0
                         if (cellLogicalWidth.isPositive() && !columnLayout.logicalWidth.isPercentOrCalculated()) {
-                            float logicalWidth = cell->adjustBorderBoxLogicalWidthForBoxSizing(cellLogicalWidth.value());
+                            float logicalWidth = cell->adjustBorderBoxLogicalWidthForBoxSizing(cellLogicalWidth);
                             if (columnLayout.logicalWidth.isFixed()) {
                                 // Nav/IE weirdness
                                 if ((logicalWidth > columnLayout.logicalWidth.value())
                                     || ((columnLayout.logicalWidth.value() == logicalWidth) && (maxContributor == cell))) {
-                                    columnLayout.logicalWidth.setValue(Fixed, logicalWidth);
+                                    columnLayout.logicalWidth.setValue(LengthType::Fixed, logicalWidth);
                                     fixedContributor = cell;
                                 }
                             } else {
-                                columnLayout.logicalWidth.setValue(Fixed, logicalWidth);
+                                columnLayout.logicalWidth.setValue(LengthType::Fixed, logicalWidth);
                                 fixedContributor = cell;
                             }
                         }
                         break;
-                    case Percent:
+                    case LengthType::Percent:
                         m_hasPercent = true;
                         if (cellLogicalWidth.isPositive() && (!columnLayout.logicalWidth.isPercent() || cellLogicalWidth.percent() > columnLayout.logicalWidth.percent()))
                             columnLayout.logicalWidth = cellLogicalWidth;
                         break;
-                    case Relative:
+                    case LengthType::Relative:
                         // FIXME: Need to understand this case and whether it makes sense to compare values
                         // which are not necessarily of the same type.
                         if (cellLogicalWidth.value() > columnLayout.logicalWidth.value())
@@ -188,6 +190,13 @@ static bool shouldScaleColumnsForParent(const RenderTable& table)
         // scale. Fixed doesn't care if we do or not because it doesn't depend
         // on the cell contents' preferred widths.
         if (is<RenderTableCell>(containingBlock))
+            return false;
+        // The max logical width of a table may be "infinity" (or tableMaxWidth, to be more exact) if the sum if the
+        // columns' percentages is 100% or more, AND there is at least one column that has a non-percentage-based positive
+        // logical width. In such situations no table logical width will be large enough to satisfy the constraint
+        // set by the contents. So the idea is to use ~infinity to make sure we use all available size in the containing
+        // block. However, this just doesn't work if this is a flex or grid item, so disallow scaling in that case.
+        if (is<RenderFlexibleBox>(containingBlock) || is<RenderGrid>(containingBlock))
             return false;
         containingBlock = containingBlock->containingBlock();
     }
@@ -319,11 +328,11 @@ float AutoTableLayout::calcEffectiveLogicalWidth()
         while (lastCol < nEffCols && span > 0) {
             Layout& columnLayout = m_layoutStruct[lastCol];
             switch (columnLayout.logicalWidth.type()) {
-            case Percent:
+            case LengthType::Percent:
                 totalPercent += columnLayout.logicalWidth.percent();
                 allColsAreFixed = false;
                 break;
-            case Fixed:
+            case LengthType::Fixed:
                 if (columnLayout.logicalWidth.value() > 0) {
                     fixedWidth += columnLayout.logicalWidth.value();
                     allColsArePercent = false;
@@ -332,7 +341,7 @@ float AutoTableLayout::calcEffectiveLogicalWidth()
                     break;
                 }
                 FALLTHROUGH;
-            case Auto:
+            case LengthType::Auto:
                 haveAuto = true;
                 FALLTHROUGH;
             default:
@@ -376,16 +385,19 @@ float AutoTableLayout::calcEffectiveLogicalWidth()
                         totalWidth += m_layoutStruct[pos].effectiveMaxLogicalWidth;
                 }
 
-                for (unsigned pos = effCol; pos < lastCol && totalWidth > 0; ++pos) {
+                for (unsigned pos = effCol; pos < lastCol; ++pos) {
                     if (!m_layoutStruct[pos].effectiveLogicalWidth.isPercentOrCalculated()) {
-                        float percent = percentMissing * m_layoutStruct[pos].effectiveMaxLogicalWidth / totalWidth;
+                        // Handle the case when there's only one cell with 'width: percent' and it's empty.
+                        auto percent = percentMissing * (totalWidth ? m_layoutStruct[pos].effectiveMaxLogicalWidth / totalWidth : 1);
                         totalWidth -= m_layoutStruct[pos].effectiveMaxLogicalWidth;
                         percentMissing -= percent;
                         if (percent > 0)
-                            m_layoutStruct[pos].effectiveLogicalWidth.setValue(Percent, percent);
+                            m_layoutStruct[pos].effectiveLogicalWidth.setValue(LengthType::Percent, percent);
                         else
                             m_layoutStruct[pos].effectiveLogicalWidth = Length();
                     }
+                    if (totalWidth <= 0)
+                        break;
                 }
             }
         }
@@ -517,9 +529,9 @@ void AutoTableLayout::layout()
 
     bool havePercent = false;
     float totalRelative = 0;
-    int numAuto = 0;
     int numFixed = 0;
-    float totalAuto = 0;
+    size_t numberOfNonEmptyAuto = 0;
+    Optional<float> totalAuto;
     float totalFixed = 0;
     float totalPercent = 0;
     float allocAuto = 0;
@@ -532,23 +544,23 @@ void AutoTableLayout::layout()
         available -= cellLogicalWidth;
         Length& logicalWidth = m_layoutStruct[i].effectiveLogicalWidth;
         switch (logicalWidth.type()) {
-        case Percent:
+        case LengthType::Percent:
             havePercent = true;
             totalPercent += logicalWidth.percent();
             break;
-        case Relative:
+        case LengthType::Relative:
             totalRelative += logicalWidth.value();
             break;
-        case Fixed:
+        case LengthType::Fixed:
             numFixed++;
             totalFixed += m_layoutStruct[i].effectiveMaxLogicalWidth;
             break;
-        case Auto:
+        case LengthType::Auto:
             if (m_layoutStruct[i].emptyCellsOnly)
                 numAutoEmptyCellsOnly++;
             else {
-                numAuto++;
-                totalAuto += m_layoutStruct[i].effectiveMaxLogicalWidth;
+                ++numberOfNonEmptyAuto;
+                totalAuto = totalAuto.valueOr(0.f) + m_layoutStruct[i].effectiveMaxLogicalWidth;
                 allocAuto += cellLogicalWidth;
             }
             break;
@@ -610,15 +622,25 @@ void AutoTableLayout::layout()
     }
 
     // now satisfy variable
-    if (available > 0 && numAuto) {
-        available += allocAuto; // this gets redistributed
+    if (available > 0 && numberOfNonEmptyAuto) {
+        ASSERT(totalAuto);
+        available += allocAuto; // this gets redistributed.
+        auto equalWidthForZeroLengthColumns = Optional<float> { };
+        if (!*totalAuto) {
+            // All columns in this table are (non-empty)zero length with 'width: auto'.
+            equalWidthForZeroLengthColumns = available / numberOfNonEmptyAuto;
+        }
         for (size_t i = 0; i < nEffCols; ++i) {
-            Length& logicalWidth = m_layoutStruct[i].effectiveLogicalWidth;
-            if (logicalWidth.isAuto() && totalAuto && !m_layoutStruct[i].emptyCellsOnly) {
-                float cellLogicalWidth = std::max(m_layoutStruct[i].computedLogicalWidth, available * m_layoutStruct[i].effectiveMaxLogicalWidth / totalAuto);
-                available -= cellLogicalWidth;
-                totalAuto -= m_layoutStruct[i].effectiveMaxLogicalWidth;
-                m_layoutStruct[i].computedLogicalWidth = cellLogicalWidth;
+            auto& column = m_layoutStruct[i];
+            if (!column.effectiveLogicalWidth.isAuto() || column.emptyCellsOnly)
+                continue;
+            auto columnWidthCandidate = equalWidthForZeroLengthColumns ? *equalWidthForZeroLengthColumns : available * column.effectiveMaxLogicalWidth / *totalAuto;
+            column.computedLogicalWidth = std::max(column.computedLogicalWidth, columnWidthCandidate);
+            available -= column.computedLogicalWidth;
+            if (!equalWidthForZeroLengthColumns) {
+                *totalAuto -= column.effectiveMaxLogicalWidth;
+                if (*totalAuto <= 0)
+                    break;
             }
         }
     }

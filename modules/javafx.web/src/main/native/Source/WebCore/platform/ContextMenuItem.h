@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006 Apple Inc.  All rights reserved.
+ * Copyright (C) 2006-2020 Apple Inc.  All rights reserved.
  * Copyright (C) 2010 Igalia S.L
  *
  * Redistribution and use in source and binary forms, with or without
@@ -24,9 +24,9 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef ContextMenuItem_h
-#define ContextMenuItem_h
+#pragma once
 
+#include <wtf/EnumTraits.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
@@ -54,6 +54,7 @@ enum ContextMenuAction {
     ContextMenuItemTagCut,
     ContextMenuItemTagPaste,
 #if PLATFORM(GTK)
+    ContextMenuItemTagPasteAsPlainText,
     ContextMenuItemTagDelete,
     ContextMenuItemTagSelectAll,
     ContextMenuItemTagInputMethods,
@@ -144,6 +145,11 @@ enum ContextMenuAction {
     ContextMenuItemTagToggleVideoFullscreen,
     ContextMenuItemTagShareMenu,
     ContextMenuItemTagToggleVideoEnhancedFullscreen,
+#if ENABLE(APP_HIGHLIGHTS)
+    ContextMenuItemTagAddHighlightToCurrentGroup,
+    ContextMenuItemTagAddHighlightToNewGroup,
+#endif
+    ContextMenuItemTagRevealImage,
     ContextMenuItemBaseCustomTag = 5000,
     ContextMenuItemLastCustomTag = 5999,
     ContextMenuItemBaseApplicationTag = 10000
@@ -196,6 +202,29 @@ private:
     Vector<ContextMenuItem> m_subMenuItems;
 };
 
-}
+WEBCORE_EXPORT bool isValidContextMenuAction(ContextMenuAction);
 
-#endif // ContextMenuItem_h
+} // namespace WebCore
+
+namespace WTF {
+
+template<>
+struct EnumTraits<WebCore::ContextMenuAction> {
+    template<typename T>
+    static std::enable_if_t<sizeof(T) == sizeof(WebCore::ContextMenuAction), bool> isValidEnum(T action)
+    {
+        return WebCore::isValidContextMenuAction(static_cast<WebCore::ContextMenuAction>(action));
+    };
+};
+
+template<> struct EnumTraits<WebCore::ContextMenuItemType> {
+    using values = EnumValues<
+        WebCore::ContextMenuItemType,
+        WebCore::ContextMenuItemType::ActionType,
+        WebCore::ContextMenuItemType::CheckableActionType,
+        WebCore::ContextMenuItemType::SeparatorType,
+        WebCore::ContextMenuItemType::SubmenuType
+    >;
+};
+
+} // namespace WTF

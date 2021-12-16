@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -41,6 +41,10 @@ WIN.modLibDest = "lib"
 
 def CPU_BITS = IS_64 ? "x64" : "x86"
 
+def HOST_ARCH = getWinArch(ext.OS_ARCH)
+def TARGET_ARCH = getWinArch(ext.TARGET_ARCH)
+def IS_CROSS = HOST_ARCH != TARGET_ARCH
+
 setupTools("windows_tools",
     { propFile ->
         if (project.hasProperty('setupWinTools')) {
@@ -53,8 +57,8 @@ setupTools("windows_tools",
                 environment([
                         "WINSDKPATH" : winsdkDir == null ? "" : winsdkDir,
                         "CONF"       : "/$CONF", // TODO does this mean the generated properties must be reset when in a different configuration?
-                        "VCARCH"     : IS_64 ? "amd64" : "x86",
-                        "SDKARCH"    : IS_64 ? "/x64" : "/x86",
+                        "VCARCH"     : IS_CROSS ? "${HOST_ARCH}_${TARGET_ARCH}" : TARGET_ARCH,
+                        "SDKARCH"    : "/$TARGET_ARCH",
                 ]);
                 commandLine("cmd", "/q", "/c", "buildSrc\\genVSproperties.bat");
                 setStandardOutput(results);
@@ -78,6 +82,8 @@ setupTools("windows_tools",
         defineProperty("WINDOWS_VS_DEVENVDIR", properties, "$WINDOWS_VS_VSINSTALLDIR/Common7/IDE")
         defineProperty("WINDOWS_VS_DEVENVCMD", properties, "$WINDOWS_VS_DEVENVDIR/VCExpress.exe")
         defineProperty("WINDOWS_VS_MSVCDIR", properties, WINDOWS_VS_VCINSTALLDIR)
+        defineProperty("WINDOWS_VS_VC_TOOLS_INSTALL_DIR", properties, "")
+        defineProperty("WINDOWS_VS_VC_TOOLS_REDIST_DIR", properties, "")
         defineProperty("WINDOWS_DXSDK_DIR", properties, System.getenv().get("DXSDK_DIR"))
         defineProperty("WINDOWS_VS_INCLUDE", properties, "$WINDOWS_VS_VCINSTALLDIR/INCLUDE;" + "$WINDOWS_SDK_DIR/include;")
         defineProperty("WINDOWS_VS_VER", properties, "150")
@@ -142,12 +148,18 @@ ext.WINDOWS_NATIVE_COMPILE_ENVIRONMENT = [
         "LIBPATH"              : WINDOWS_VS_LIBPATH,
         "DXSDK_DIR"            : WINDOWS_DXSDK_DIR
 ];
-def msvcVer = System.getenv("MSVC_VER") ?: "14.10.25017"
+def msvcVer = System.getenv("MSVC_VER")
 def msvcBinDir = ""
 if (hasProperty('toolchainDir')) {
-    msvcBinDir = "$WINDOWS_VS_VSINSTALLDIR/VC/bin/$CPU_BITS"
+    msvcBinDir = "$WINDOWS_VS_VSINSTALLDIR/VC/bin/$TARGET_ARCH"
 } else if (winVsVer == 150) {
-    msvcBinDir = "$WINDOWS_VS_VSINSTALLDIR/VC/Tools/MSVC/$msvcVer/bin/Host${CPU_BITS}/$CPU_BITS"
+    def msvcInstallDir = ""
+    if (msvcVer) {
+        msvcInstallDir = "$WINDOWS_VS_VSINSTALLDIR/VC/Tools/MSVC/$msvcVer"
+    } else {
+        msvcInstallDir = "$WINDOWS_VS_VC_TOOLS_INSTALL_DIR"
+    }
+    msvcBinDir = "$msvcInstallDir/bin/Host${CPU_BITS}/$TARGET_ARCH"
 } else if (winVsVer <= 120) {
     msvcBinDir = (IS_64
                       ? "$WINDOWS_VS_VSINSTALLDIR/VC/BIN/amd64"
@@ -157,17 +169,20 @@ def compiler = IS_COMPILE_PARFAIT ? "cl.exe" : cygpath("$msvcBinDir/cl.exe")
 def linker = IS_STATIC_BUILD ? (IS_COMPILE_PARFAIT ? "lib.exe" : cygpath("$msvcBinDir/lib.exe")) : (IS_COMPILE_PARFAIT ? "link.exe" : cygpath("$msvcBinDir/link.exe"))
 def winSdkBinDir = "$WINDOWS_SDK_DIR/Bin"
 if (WINDOWS_VS_VER != "100") {
-    winSdkBinDir += "/$CPU_BITS"
+    winSdkBinDir += "/$TARGET_ARCH"
 }
 
 if (!file(cygpath("$winSdkBinDir/RC.Exe")).exists()) {
     winSdkBinDir = "$WINDOWS_SDK_DIR/Bin/$WINDOWS_SDK_VERSION"
     if (WINDOWS_VS_VER != "100") {
-        winSdkBinDir += "/$CPU_BITS"
+        winSdkBinDir += "/$TARGET_ARCH"
     }
 }
 
 ext.RC = cygpath("$winSdkBinDir/rc.exe")
+// Use rc from host system if it is not possible to run it from target system
+def hostWinSdkBinDir = "$WINDOWS_SDK_DIR/Bin/$WINDOWS_SDK_VERSION/$HOST_ARCH"
+ext.RC = !isExecutable(RC) ? cygpath("$hostWinSdkBinDir/rc.exe") : RC
 def rcCompiler = RC
 ext.FXC = cygpath("$winSdkBinDir/fxc.exe")
 
@@ -178,20 +193,25 @@ if (!file(FXC).exists()) {
     ext.FXC = cygpath("$WINDOWS_DXSDK_DIR/utilities/bin/x86/fxc.exe")
 }
 
-ext.MC = cygpath("$winSdkBinDir/mt.exe")
+// Use fxc from host system if it is not possible to run it from target system
+ext.FXC = !isExecutable(FXC) ? cygpath("$hostWinSdkBinDir/fxc.exe") : FXC
 
 if (!file(RC).exists()) throw new GradleException("FAIL: cannot find RC: " + RC)
 if (!file(FXC).exists()) throw new GradleException("FAIL: cannot find FXC: " + FXC)
 
 def msvcRedstDir
 if (hasProperty('toolchainDir')) {
-    msvcRedstDir = "$WINDOWS_VS_VSINSTALLDIR/VC/Redist/$CPU_BITS"
+    msvcRedstDir = "$WINDOWS_VS_VSINSTALLDIR/VC/Redist/$TARGET_ARCH"
 } else {
-    def msvcRedistVer = System.getenv("MSVC_REDIST_VER") ?: "14.10.25008"
-    msvcRedstDir = "$WINDOWS_VS_VSINSTALLDIR/VC/Redist/MSVC/$msvcRedistVer/$CPU_BITS"
+    def msvcRedistVer = System.getenv("MSVC_REDIST_VER")
+    if (msvcRedistVer) {
+        msvcRedstDir = "$WINDOWS_VS_VSINSTALLDIR/VC/Redist/MSVC/$msvcRedistVer/$TARGET_ARCH"
+    } else {
+        msvcRedstDir = "$WINDOWS_VS_VC_TOOLS_REDIST_DIR/$TARGET_ARCH"
+    }
 }
 
-def winSdkDllDir = "$WINDOWS_VS_WINSDKDLLINSTALLDIR/$CPU_BITS"
+def winSdkDllDir = "$WINDOWS_VS_WINSDKDLLINSTALLDIR/$TARGET_ARCH"
 
 def WINDOWS_DLL_VER = WINDOWS_VS_VER
 
@@ -214,9 +234,9 @@ if (file(vs2017DllPath).exists()) {
 }
 else {
     ext.WIN.VS2017DLLNames = [
-	];
+    ];
     ext.WIN.VS2017DLLs = [
-	];
+    ];
 }
 
 def WinSDKDLLsPath = cygpath("${winSdkDllDir}")
@@ -440,3 +460,20 @@ WIN.webkit.linker = linker
 WIN.webkit.rcCompiler = rcCompiler
 WIN.webkit.rcSource = defaultRcSource
 WIN.webkit.rcFlags = ["/d", "JFX_FNAME=jfxwebkit.dll", "/d", "JFX_INTERNAL_NAME=webkit", rcFlags].flatten();
+
+String getWinArch(String arch) {
+    switch (arch) {
+        case "aarch64" : return "arm64"
+        case "amd64" : return "x64"
+        default: return arch
+    }
+}
+
+boolean isExecutable(String file) {
+    try {
+        Runtime.runtime.exec(file)
+        return true
+    } catch (IOException e) {
+        return false
+    }
+}

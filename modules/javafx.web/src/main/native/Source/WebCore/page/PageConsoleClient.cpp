@@ -127,14 +127,6 @@ void PageConsoleClient::addMessage(std::unique_ptr<Inspector::ConsoleMessage>&& 
         } else
             message = consoleMessage->message();
         m_page.chrome().client().addMessageToConsole(consoleMessage->source(), consoleMessage->level(), message, consoleMessage->line(), consoleMessage->column(), consoleMessage->url());
-
-        if (UNLIKELY(m_page.settings().logsPageMessagesToSystemConsoleEnabled() || shouldPrintExceptions())) {
-            if (consoleMessage->type() == MessageType::Image) {
-                ASSERT(consoleMessage->arguments());
-                ConsoleClient::printConsoleMessageWithArguments(MessageSource::ConsoleAPI, MessageType::Log, consoleMessage->level(), consoleMessage->arguments()->globalObject(), *consoleMessage->arguments());
-            } else
-                ConsoleClient::printConsoleMessage(MessageSource::ConsoleAPI, MessageType::Log, consoleMessage->level(), consoleMessage->message(), consoleMessage->url(), consoleMessage->line(), consoleMessage->column());
-        }
     }
 
     InspectorInstrumentation::addMessageToConsole(m_page, WTFMove(consoleMessage));
@@ -324,7 +316,7 @@ void PageConsoleClient::screenshot(JSC::JSGlobalObject* lexicalGlobalObject, Ref
         if (auto* node = JSNode::toWrapped(vm, possibleTarget)) {
             target = possibleTarget;
             if (UNLIKELY(InspectorInstrumentation::hasFrontends())) {
-                std::unique_ptr<ImageBuffer> snapshot;
+                RefPtr<ImageBuffer> snapshot;
 
                 // Only try to do something special for subclasses of Node if they're detached from the DOM tree.
                 if (!node->document().contains(node)) {
@@ -376,7 +368,7 @@ void PageConsoleClient::screenshot(JSC::JSGlobalObject* lexicalGlobalObject, Ref
                 auto sourceSize = imageData->size();
                 if (auto imageBuffer = ImageBuffer::create(sourceSize, RenderingMode::Unaccelerated)) {
                     IntRect sourceRect(IntPoint(), sourceSize);
-                    imageBuffer->putByteArray(*imageData->data(), AlphaPremultiplication::Unpremultiplied, sourceSize, sourceRect, IntPoint());
+                    imageBuffer->putImageData(AlphaPremultiplication::Unpremultiplied, *imageData, sourceRect);
                     dataURL = imageBuffer->toDataURL("image/png"_s, WTF::nullopt, PreserveResolution::Yes);
                 }
             }

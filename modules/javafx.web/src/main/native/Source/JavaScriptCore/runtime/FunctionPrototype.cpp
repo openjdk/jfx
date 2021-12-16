@@ -1,6 +1,6 @@
 /*
  *  Copyright (C) 1999-2001 Harri Porten (porten@kde.org)
- *  Copyright (C) 2003-2019 Apple Inc. All rights reserved.
+ *  Copyright (C) 2003-2020 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -21,15 +21,10 @@
 #include "config.h"
 #include "FunctionPrototype.h"
 
-#include "BuiltinExecutables.h"
 #include "BuiltinNames.h"
-#include "Error.h"
-#include "GetterSetter.h"
-#include "JSAsyncFunction.h"
+#include "FunctionExecutable.h"
+#include "IntegrityInlines.h"
 #include "JSCInlines.h"
-#include "JSFunction.h"
-#include "JSStringInlines.h"
-#include "Lexer.h"
 
 namespace JSC {
 
@@ -37,10 +32,11 @@ STATIC_ASSERT_IS_TRIVIALLY_DESTRUCTIBLE(FunctionPrototype);
 
 const ClassInfo FunctionPrototype::s_info = { "Function", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(FunctionPrototype) };
 
-static EncodedJSValue JSC_HOST_CALL functionProtoFuncToString(JSGlobalObject*, CallFrame*);
+static JSC_DECLARE_HOST_FUNCTION(functionProtoFuncToString);
+static JSC_DECLARE_HOST_FUNCTION(callFunctionPrototype);
 
-// ECMA 15.3.4
-static EncodedJSValue JSC_HOST_CALL callFunctionPrototype(JSGlobalObject*, CallFrame*)
+// https://tc39.es/ecma262/#sec-properties-of-the-function-prototype-object
+JSC_DEFINE_HOST_FUNCTION(callFunctionPrototype, (JSGlobalObject*, CallFrame*))
 {
     return JSValue::encode(jsUndefined());
 }
@@ -52,8 +48,8 @@ FunctionPrototype::FunctionPrototype(VM& vm, Structure* structure)
 
 void FunctionPrototype::finishCreation(VM& vm, const String& name)
 {
-    Base::finishCreation(vm, name, NameAdditionMode::WithoutStructureTransition);
-    putDirectWithoutTransition(vm, vm.propertyNames->length, jsNumber(0), PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly | PropertyAttribute::DontEnum);
+    Base::finishCreation(vm, 0, name, PropertyAdditionMode::WithoutStructureTransition);
+    ASSERT(inherits(vm, info()));
 }
 
 void FunctionPrototype::addFunctionProperties(VM& vm, JSGlobalObject* globalObject, JSFunction** callFunction, JSFunction** applyFunction, JSFunction** hasInstanceSymbolFunction)
@@ -76,7 +72,7 @@ void FunctionPrototype::initRestrictedProperties(VM& vm, JSGlobalObject* globalO
     putDirectNonIndexAccessorWithoutTransition(vm, vm.propertyNames->arguments, errorGetterSetter, PropertyAttribute::DontEnum | PropertyAttribute::Accessor);
 }
 
-EncodedJSValue JSC_HOST_CALL functionProtoFuncToString(JSGlobalObject* globalObject, CallFrame* callFrame)
+JSC_DEFINE_HOST_FUNCTION(functionProtoFuncToString, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
@@ -84,6 +80,7 @@ EncodedJSValue JSC_HOST_CALL functionProtoFuncToString(JSGlobalObject* globalObj
     JSValue thisValue = callFrame->thisValue();
     if (thisValue.inherits<JSFunction>(vm)) {
         JSFunction* function = jsCast<JSFunction*>(thisValue);
+        Integrity::auditStructureID(vm, function->structureID());
         if (function->isHostOrBuiltinFunction())
             RELEASE_AND_RETURN(scope, JSValue::encode(jsMakeNontrivialString(globalObject, "function ", function->name(vm), "() {\n    [native code]\n}")));
 
@@ -113,7 +110,7 @@ EncodedJSValue JSC_HOST_CALL functionProtoFuncToString(JSGlobalObject* globalObj
             break;
 
         case SourceParseMode::ArrowFunctionMode:
-        case SourceParseMode::InstanceFieldInitializerMode:
+        case SourceParseMode::ClassFieldInitializerMode:
             functionHeader = "";
             break;
 
@@ -140,12 +137,14 @@ EncodedJSValue JSC_HOST_CALL functionProtoFuncToString(JSGlobalObject* globalObj
 
     if (thisValue.inherits<InternalFunction>(vm)) {
         InternalFunction* function = jsCast<InternalFunction*>(thisValue);
+        Integrity::auditStructureID(vm, function->structureID());
         RELEASE_AND_RETURN(scope, JSValue::encode(jsMakeNontrivialString(globalObject, "function ", function->name(), "() {\n    [native code]\n}")));
     }
 
     if (thisValue.isObject()) {
         JSObject* object = asObject(thisValue);
-        if (object->isFunction(vm))
+        Integrity::auditStructureID(vm, object->structureID());
+        if (object->isCallable(vm))
             RELEASE_AND_RETURN(scope, JSValue::encode(jsMakeNontrivialString(globalObject, "function ", object->classInfo(vm)->className, "() {\n    [native code]\n}")));
     }
 

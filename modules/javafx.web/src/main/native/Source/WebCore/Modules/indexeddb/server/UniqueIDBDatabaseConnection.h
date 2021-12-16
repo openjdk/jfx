@@ -46,15 +46,15 @@ class ServerOpenDBRequest;
 class UniqueIDBDatabase;
 class UniqueIDBDatabaseTransaction;
 
-class UniqueIDBDatabaseConnection : public RefCounted<UniqueIDBDatabaseConnection>, public Identified<UniqueIDBDatabaseConnection> {
+class UniqueIDBDatabaseConnection : public RefCounted<UniqueIDBDatabaseConnection>, public Identified<UniqueIDBDatabaseConnection>, public CanMakeWeakPtr<UniqueIDBDatabaseConnection> {
 public:
     static Ref<UniqueIDBDatabaseConnection> create(UniqueIDBDatabase&, ServerOpenDBRequest&);
 
     ~UniqueIDBDatabaseConnection();
 
     const IDBResourceIdentifier& openRequestIdentifier() { return m_openRequestIdentifier; }
-    UniqueIDBDatabase* database() { return m_database; }
-    IDBServer* server() { return &m_database->server(); }
+    UniqueIDBDatabase* database() { return m_database.get(); }
+    IDBServer* server() { return &m_server; }
     IDBConnectionToClient& connectionToClient() { return m_connectionToClient; }
 
     void connectionPendingCloseFromClient();
@@ -89,7 +89,8 @@ public:
 private:
     UniqueIDBDatabaseConnection(UniqueIDBDatabase&, ServerOpenDBRequest&);
 
-    UniqueIDBDatabase* m_database;
+    WeakPtr<UniqueIDBDatabase> m_database;
+    IDBServer& m_server;
     Ref<IDBConnectionToClient> m_connectionToClient;
     IDBResourceIdentifier m_openRequestIdentifier;
 

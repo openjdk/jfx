@@ -47,13 +47,14 @@
 #include <sys/resource.h>
 #endif /* HAVE_SYS_RESOURCE_H */
 
-#ifdef __linux__
+#if defined(__linux__) || defined(__DragonFly__)
 #include <sys/syscall.h>  /* for syscall and SYS_getdents64 */
 #endif
 
 #include "gspawn.h"
 #include "gspawn-private.h"
 #include "gthread.h"
+#include "gtrace-private.h"
 #include "glib/gstdio.h"
 
 #include "genviron.h"
@@ -155,12 +156,16 @@ extern char **environ;
  */
 
 
+static gint safe_close (gint fd);
 
 static gint g_execute (const gchar  *file,
-                       gchar **argv,
-                       gchar **envp,
-                       gboolean search_path,
-                       gboolean search_path_from_envp);
+                       gchar       **argv,
+                       gchar       **argv_buffer,
+                       gsize         argv_buffer_len,
+                       gchar       **envp,
+                       const gchar  *search_path,
+                       gchar        *search_path_buffer,
+                       gsize         search_path_buffer_len);
 
 static gboolean fork_exec_with_pipes (gboolean              intermediate_child,
                                       const gchar          *working_directory,
@@ -262,6 +267,9 @@ g_spawn_async (const gchar          *working_directory,
 /* Avoids a danger in threaded situations (calling close()
  * on a file descriptor twice, and another thread has
  * re-opened it since the first close)
+ *
+ * This function is called between fork() and exec() and hence must be
+ * async-signal-safe (see signal-safety(7)).
  */
 static void
 close_and_invalidate (gint *fd)
@@ -270,7 +278,7 @@ close_and_invalidate (gint *fd)
     return;
   else
     {
-      (void) g_close (*fd, NULL);
+      safe_close (*fd);
       *fd = -1;
     }
 }
@@ -372,7 +380,6 @@ g_spawn_sync (const gchar          *working_directory,
   gint outpipe = -1;
   gint errpipe = -1;
   GPid pid;
-  fd_set fds;
   gint ret;
   GString *outstr = NULL;
   GString *errstr = NULL;
@@ -435,18 +442,16 @@ g_spawn_sync (const gchar          *working_directory,
          (outpipe >= 0 ||
           errpipe >= 0))
     {
-      ret = 0;
+      /* Any negative FD in the array is ignored, so we can use a fixed length.
+       * We can use UNIX FDs here without worrying about Windows HANDLEs because
+       * the Windows implementation is entirely in gspawn-win32.c. */
+      GPollFD fds[] =
+        {
+          { outpipe, G_IO_IN | G_IO_HUP | G_IO_ERR, 0 },
+          { errpipe, G_IO_IN | G_IO_HUP | G_IO_ERR, 0 },
+        };
 
-      FD_ZERO (&fds);
-      if (outpipe >= 0)
-        FD_SET (outpipe, &fds);
-      if (errpipe >= 0)
-        FD_SET (errpipe, &fds);
-
-      ret = select (MAX (outpipe, errpipe) + 1,
-                    &fds,
-                    NULL, NULL,
-                    NULL /* no timeout */);
+      ret = g_poll (fds, G_N_ELEMENTS (fds), -1  /* no timeout */);
 
       if (ret < 0)
         {
@@ -460,13 +465,13 @@ g_spawn_sync (const gchar          *working_directory,
           g_set_error (error,
                        G_SPAWN_ERROR,
                        G_SPAWN_ERROR_READ,
-                       _("Unexpected error in select() reading data from a child process (%s)"),
+                       _("Unexpected error in reading data from a child process (%s)"),
                        g_strerror (errsv));
 
           break;
         }
 
-      if (outpipe >= 0 && FD_ISSET (outpipe, &fds))
+      if (outpipe >= 0 && fds[0].revents != 0)
         {
           switch (read_data (outstr, outpipe, error))
             {
@@ -485,7 +490,7 @@ g_spawn_sync (const gchar          *working_directory,
             break;
         }
 
-      if (errpipe >= 0 && FD_ISSET (errpipe, &fds))
+      if (errpipe >= 0 && fds[1].revents != 0)
         {
           switch (read_data (errstr, errpipe, error))
             {
@@ -1084,6 +1089,8 @@ g_spawn_check_exit_status (gint      exit_status,
   return ret;
 }
 
+/* This function is called between fork() and exec() and hence must be
+ * async-signal-safe (see signal-safety(7)). */
 static gssize
 write_all (gint fd, gconstpointer vbuf, gsize to_write)
 {
@@ -1107,6 +1114,8 @@ write_all (gint fd, gconstpointer vbuf, gsize to_write)
   return TRUE;
 }
 
+/* This function is called between fork() and exec() and hence must be
+ * async-signal-safe (see signal-safety(7)). */
 G_GNUC_NORETURN
 static void
 write_err_and_exit (gint fd, gint msg)
@@ -1119,6 +1128,8 @@ write_err_and_exit (gint fd, gint msg)
   _exit (1);
 }
 
+/* This function is called between fork() and exec() and hence must be
+ * async-signal-safe (see signal-safety(7)). */
 static int
 set_cloexec (void *data, gint fd)
 {
@@ -1128,7 +1139,31 @@ set_cloexec (void *data, gint fd)
   return 0;
 }
 
-#ifndef HAVE_FDWALK
+/* This function is called between fork() and exec() and hence must be
+ * async-signal-safe (see signal-safety(7)). */
+static gint
+safe_close (gint fd)
+{
+  gint ret;
+
+  do
+    ret = close (fd);
+  while (ret < 0 && errno == EINTR);
+
+  return ret;
+}
+
+/* This function is called between fork() and exec() and hence must be
+ * async-signal-safe (see signal-safety(7)). */
+G_GNUC_UNUSED static int
+close_func (void *data, int fd)
+{
+  if (fd >= GPOINTER_TO_INT (data))
+    (void) safe_close (fd);
+
+  return 0;
+}
+
 #ifdef __linux__
 struct linux_dirent64
 {
@@ -1139,6 +1174,8 @@ struct linux_dirent64
   char           d_name[]; /* Filename (null-terminated) */
 };
 
+/* This function is called between fork() and exec() and hence must be
+ * async-signal-safe (see signal-safety(7)). */
 static gint
 filename_to_fd (const char *p)
 {
@@ -1152,7 +1189,7 @@ filename_to_fd (const char *p)
 
   while ((c = *p++) != '\0')
     {
-      if (!g_ascii_isdigit (c))
+      if (c < '0' || c > '9')
         return -1;
       c -= '0';
 
@@ -1167,14 +1204,29 @@ filename_to_fd (const char *p)
 }
 #endif
 
+/* This function is called between fork() and exec() and hence must be
+ * async-signal-safe (see signal-safety(7)). */
 static int
-fdwalk (int (*cb)(void *data, int fd), void *data)
+safe_fdwalk (int (*cb)(void *data, int fd), void *data)
 {
-  gint open_max;
+#if 0
+  /* Use fdwalk function provided by the system if it is known to be
+   * async-signal safe.
+   *
+   * Currently there are no operating systems known to provide a safe
+   * implementation, so this section is not used for now.
+   */
+  return fdwalk (cb, data);
+#else
+  /* Fallback implementation of fdwalk. It should be async-signal safe, but it
+   * may be slow on non-Linux operating systems, especially on systems allowing
+   * very high number of open file descriptors.
+   */
+  gint open_max = -1;
   gint fd;
   gint res = 0;
 
-#ifdef HAVE_SYS_RESOURCE_H
+#if 0 && defined(HAVE_SYS_RESOURCE_H)
   struct rlimit rl;
 #endif
 
@@ -1202,53 +1254,108 @@ fdwalk (int (*cb)(void *data, int fd), void *data)
             }
         }
 
-      close (dir_fd);
+      safe_close (dir_fd);
       return res;
     }
 
   /* If /proc is not mounted or not accessible we fall back to the old
-   * rlimit trick */
+   * rlimit trick. */
 
 #endif
 
-#ifdef HAVE_SYS_RESOURCE_H
-
-  if (getrlimit(RLIMIT_NOFILE, &rl) == 0 && rl.rlim_max != RLIM_INFINITY)
-      open_max = rl.rlim_max;
-  else
+#if 0 && defined(HAVE_SYS_RESOURCE_H)
+  /* Use getrlimit() function provided by the system if it is known to be
+   * async-signal safe.
+   *
+   * Currently there are no operating systems known to provide a safe
+   * implementation, so this section is not used for now.
+   */
+  if (getrlimit (RLIMIT_NOFILE, &rl) == 0 && rl.rlim_max != RLIM_INFINITY)
+    open_max = rl.rlim_max;
 #endif
-      open_max = sysconf (_SC_OPEN_MAX);
+#if defined(__FreeBSD__) || defined(__OpenBSD__)
+  /* Use sysconf() function provided by the system if it is known to be
+   * async-signal safe.
+   *
+   * FreeBSD: sysconf() is included in the list of async-signal safe functions
+   * found in https://man.freebsd.org/sigaction(2).
+   *
+   * OpenBSD: sysconf() is included in the list of async-signal safe functions
+   * found in https://man.openbsd.org/sigaction.2.
+   */
+  if (open_max < 0)
+    open_max = sysconf (_SC_OPEN_MAX);
+#endif
+  /* Hardcoded fallback: the default process hard limit in Linux as of 2020 */
+  if (open_max < 0)
+    open_max = 4096;
 
   for (fd = 0; fd < open_max; fd++)
       if ((res = cb (data, fd)) != 0)
           break;
 
   return res;
-}
 #endif
+}
 
+/* This function is called between fork() and exec() and hence must be
+ * async-signal-safe (see signal-safety(7)). */
+static void
+safe_closefrom (int lowfd)
+{
+#if defined(__FreeBSD__) || defined(__OpenBSD__)
+  /* Use closefrom function provided by the system if it is known to be
+   * async-signal safe.
+   *
+   * FreeBSD: closefrom is included in the list of async-signal safe functions
+   * found in https://man.freebsd.org/sigaction(2).
+   *
+   * OpenBSD: closefrom is not included in the list, but a direct system call
+   * should be safe to use.
+   */
+  (void) closefrom (lowfd);
+#elif defined(__DragonFly__)
+  /* It is unclear whether closefrom function included in DragonFlyBSD libc_r
+   * is safe to use because it calls a lot of library functions. It is also
+   * unclear whether libc_r itself is still being used. Therefore, we do a
+   * direct system call here ourselves to avoid possible issues.
+   */
+  (void) syscall (SYS_closefrom, lowfd);
+#elif defined(F_CLOSEM)
+  /* NetBSD and AIX have a special fcntl command which does the same thing as
+   * closefrom. NetBSD also includes closefrom function, which seems to be a
+   * simple wrapper of the fcntl command.
+   */
+  (void) fcntl (lowfd, F_CLOSEM);
+#else
+  (void) safe_fdwalk (close_func, GINT_TO_POINTER (lowfd));
+#endif
+}
+
+/* This function is called between fork() and exec() and hence must be
+ * async-signal-safe (see signal-safety(7)). */
 static gint
-sane_dup2 (gint fd1, gint fd2)
+safe_dup2 (gint fd1, gint fd2)
 {
   gint ret;
 
- retry:
-  ret = dup2 (fd1, fd2);
-  if (ret < 0 && errno == EINTR)
-    goto retry;
+  do
+    ret = dup2 (fd1, fd2);
+  while (ret < 0 && (errno == EINTR || errno == EBUSY));
 
   return ret;
 }
 
+/* This function is called between fork() and exec() and hence must be
+ * async-signal-safe (see signal-safety(7)). */
 static gint
-sane_open (const char *path, gint mode)
+safe_open (const char *path, gint mode)
 {
   gint ret;
 
- retry:
-  ret = open (path, mode);
-  if (ret < 0 && errno == EINTR)
-    goto retry;
+  do
+    ret = open (path, mode);
+  while (ret < 0 && errno == EINTR);
 
   return ret;
 }
@@ -1261,6 +1368,8 @@ enum
   CHILD_FORK_FAILED
 };
 
+/* This function is called between fork() and exec() and hence must be
+ * async-signal-safe (see signal-safety(7)) until it calls exec(). */
 static void
 do_exec (gint                  child_err_report_fd,
          gint                  stdin_fd,
@@ -1268,10 +1377,13 @@ do_exec (gint                  child_err_report_fd,
          gint                  stderr_fd,
          const gchar          *working_directory,
          gchar               **argv,
+         gchar               **argv_buffer,
+         gsize                 argv_buffer_len,
          gchar               **envp,
          gboolean              close_descriptors,
-         gboolean              search_path,
-         gboolean              search_path_from_envp,
+         const gchar          *search_path,
+         gchar                *search_path_buffer,
+         gsize                 search_path_buffer_len,
          gboolean              stdout_to_null,
          gboolean              stderr_to_null,
          gboolean              child_inherits_stdin,
@@ -1283,28 +1395,13 @@ do_exec (gint                  child_err_report_fd,
     write_err_and_exit (child_err_report_fd,
                         CHILD_CHDIR_FAILED);
 
-  /* Close all file descriptors but stdin stdout and stderr as
-   * soon as we exec. Note that this includes
-   * child_err_report_fd, which keeps the parent from blocking
-   * forever on the other end of that pipe.
-   */
-  if (close_descriptors)
-    {
-      fdwalk (set_cloexec, GINT_TO_POINTER(3));
-    }
-  else
-    {
-      /* We need to do child_err_report_fd anyway */
-      set_cloexec (GINT_TO_POINTER(0), child_err_report_fd);
-    }
-
   /* Redirect pipes as required */
 
   if (stdin_fd >= 0)
     {
       /* dup2 can't actually fail here I don't think */
 
-      if (sane_dup2 (stdin_fd, 0) < 0)
+      if (safe_dup2 (stdin_fd, 0) < 0)
         write_err_and_exit (child_err_report_fd,
                             CHILD_DUP2_FAILED);
 
@@ -1313,9 +1410,11 @@ do_exec (gint                  child_err_report_fd,
   else if (!child_inherits_stdin)
     {
       /* Keep process from blocking on a read of stdin */
-      gint read_null = sane_open ("/dev/null", O_RDONLY);
-      g_assert (read_null != -1);
-      sane_dup2 (read_null, 0);
+      gint read_null = safe_open ("/dev/null", O_RDONLY);
+      if (read_null < 0)
+        write_err_and_exit (child_err_report_fd,
+                            CHILD_DUP2_FAILED);
+      safe_dup2 (read_null, 0);
       close_and_invalidate (&read_null);
     }
 
@@ -1323,7 +1422,7 @@ do_exec (gint                  child_err_report_fd,
     {
       /* dup2 can't actually fail here I don't think */
 
-      if (sane_dup2 (stdout_fd, 1) < 0)
+      if (safe_dup2 (stdout_fd, 1) < 0)
         write_err_and_exit (child_err_report_fd,
                             CHILD_DUP2_FAILED);
 
@@ -1331,9 +1430,11 @@ do_exec (gint                  child_err_report_fd,
     }
   else if (stdout_to_null)
     {
-      gint write_null = sane_open ("/dev/null", O_WRONLY);
-      g_assert (write_null != -1);
-      sane_dup2 (write_null, 1);
+      gint write_null = safe_open ("/dev/null", O_WRONLY);
+      if (write_null < 0)
+        write_err_and_exit (child_err_report_fd,
+                            CHILD_DUP2_FAILED);
+      safe_dup2 (write_null, 1);
       close_and_invalidate (&write_null);
     }
 
@@ -1341,7 +1442,7 @@ do_exec (gint                  child_err_report_fd,
     {
       /* dup2 can't actually fail here I don't think */
 
-      if (sane_dup2 (stderr_fd, 2) < 0)
+      if (safe_dup2 (stderr_fd, 2) < 0)
         write_err_and_exit (child_err_report_fd,
                             CHILD_DUP2_FAILED);
 
@@ -1349,9 +1450,34 @@ do_exec (gint                  child_err_report_fd,
     }
   else if (stderr_to_null)
     {
-      gint write_null = sane_open ("/dev/null", O_WRONLY);
-      sane_dup2 (write_null, 2);
+      gint write_null = safe_open ("/dev/null", O_WRONLY);
+      safe_dup2 (write_null, 2);
       close_and_invalidate (&write_null);
+    }
+
+  /* Close all file descriptors but stdin, stdout and stderr
+   * before we exec. Note that this includes
+   * child_err_report_fd, which keeps the parent from blocking
+   * forever on the other end of that pipe.
+   */
+  if (close_descriptors)
+    {
+      if (child_setup == NULL)
+        {
+          safe_dup2 (child_err_report_fd, 3);
+          set_cloexec (GINT_TO_POINTER (0), 3);
+          safe_closefrom (4);
+          child_err_report_fd = 3;
+        }
+      else
+        {
+          safe_fdwalk (set_cloexec, GINT_TO_POINTER (3));
+        }
+    }
+  else
+    {
+      /* We need to do child_err_report_fd anyway */
+      set_cloexec (GINT_TO_POINTER (0), child_err_report_fd);
     }
 
   /* Call user function just before we exec */
@@ -1362,7 +1488,8 @@ do_exec (gint                  child_err_report_fd,
 
   g_execute (argv[0],
              file_and_argv_zero ? argv + 1 : argv,
-             envp, search_path, search_path_from_envp);
+             argv_buffer, argv_buffer_len,
+             envp, search_path, search_path_buffer, search_path_buffer_len);
 
   /* Exec failed */
   write_err_and_exit (child_err_report_fd,
@@ -1495,7 +1622,7 @@ do_posix_spawn (gchar     **argv,
   else if (!child_inherits_stdin)
     {
       /* Keep process from blocking on a read of stdin */
-      gint read_null = sane_open ("/dev/null", O_RDONLY | O_CLOEXEC);
+      gint read_null = safe_open ("/dev/null", O_RDONLY | O_CLOEXEC);
       g_assert (read_null != -1);
       parent_close_fds[num_parent_close_fds++] = read_null;
 
@@ -1519,7 +1646,7 @@ do_posix_spawn (gchar     **argv,
     }
   else if (stdout_to_null)
     {
-      gint write_null = sane_open ("/dev/null", O_WRONLY | O_CLOEXEC);
+      gint write_null = safe_open ("/dev/null", O_WRONLY | O_CLOEXEC);
       g_assert (write_null != -1);
       parent_close_fds[num_parent_close_fds++] = write_null;
 
@@ -1543,7 +1670,7 @@ do_posix_spawn (gchar     **argv,
     }
   else if (stderr_to_null)
     {
-      gint write_null = sane_open ("/dev/null", O_WRONLY | O_CLOEXEC);
+      gint write_null = safe_open ("/dev/null", O_WRONLY | O_CLOEXEC);
       g_assert (write_null != -1);
       parent_close_fds[num_parent_close_fds++] = write_null;
 
@@ -1624,12 +1751,22 @@ fork_exec_with_fds (gboolean              intermediate_child,
   gint child_pid_report_pipe[2] = { -1, -1 };
   guint pipe_flags = cloexec_pipes ? FD_CLOEXEC : 0;
   gint status;
+  const gchar *chosen_search_path;
+  gchar *search_path_buffer = NULL;
+  gchar *search_path_buffer_heap = NULL;
+  gsize search_path_buffer_len = 0;
+  gchar **argv_buffer = NULL;
+  gchar **argv_buffer_heap = NULL;
+  gsize argv_buffer_len = 0;
 
 #ifdef POSIX_SPAWN_AVAILABLE
   if (!intermediate_child && working_directory == NULL && !close_descriptors &&
       !search_path_from_envp && child_setup == NULL)
     {
-      g_debug ("Launching with posix_spawn");
+      g_trace_mark (G_TRACE_CURRENT_TIME, 0,
+                    "GLib", "posix_spawn",
+                    "%s", argv[0]);
+
       status = do_posix_spawn (argv,
                                envp,
                                search_path,
@@ -1665,17 +1802,94 @@ fork_exec_with_fds (gboolean              intermediate_child,
     }
   else
     {
-      g_debug ("posix_spawn avoided %s%s%s%s%s",
-               !intermediate_child ? "" : "(automatic reaping requested) ",
-               working_directory == NULL ? "" : "(workdir specified) ",
-               !close_descriptors ? "" : "(fd close requested) ",
-               !search_path_from_envp ? "" : "(using envp for search path) ",
-               child_setup == NULL ? "" : "(child_setup specified) ");
+      g_trace_mark (G_TRACE_CURRENT_TIME, 0,
+                    "GLib", "fork",
+                    "posix_spawn avoided %s%s%s%s%s",
+                    !intermediate_child ? "" : "(automatic reaping requested) ",
+                    working_directory == NULL ? "" : "(workdir specified) ",
+                    !close_descriptors ? "" : "(fd close requested) ",
+                    !search_path_from_envp ? "" : "(using envp for search path) ",
+                    child_setup == NULL ? "" : "(child_setup specified) ");
     }
 #endif /* POSIX_SPAWN_AVAILABLE */
 
+  /* Choose a search path. This has to be done before calling fork()
+   * as getenv() isn’t async-signal-safe (see `man 7 signal-safety`). */
+  chosen_search_path = NULL;
+  if (search_path_from_envp)
+    chosen_search_path = g_environ_getenv (envp, "PATH");
+  if (search_path && chosen_search_path == NULL)
+    chosen_search_path = g_getenv ("PATH");
+
+  if ((search_path || search_path_from_envp) && chosen_search_path == NULL)
+    {
+      /* There is no 'PATH' in the environment.  The default
+       * * search path in libc is the current directory followed by
+       * * the path 'confstr' returns for '_CS_PATH'.
+       * */
+
+      /* In GLib we put . last, for security, and don't use the
+       * * unportable confstr(); UNIX98 does not actually specify
+       * * what to search if PATH is unset. POSIX may, dunno.
+       * */
+
+      chosen_search_path = "/bin:/usr/bin:.";
+    }
+
+  if (search_path || search_path_from_envp)
+    g_assert (chosen_search_path != NULL);
+  else
+    g_assert (chosen_search_path == NULL);
+
+  /* Allocate a buffer which the fork()ed child can use to assemble potential
+   * paths for the binary to exec(), combining the argv[0] and elements from
+   * the chosen_search_path. This can’t be done in the child because malloc()
+   * (or alloca()) are not async-signal-safe (see `man 7 signal-safety`).
+   *
+   * Add 2 for the nul terminator and a leading `/`. */
+  if (chosen_search_path != NULL)
+    {
+      search_path_buffer_len = strlen (chosen_search_path) + strlen (argv[0]) + 2;
+      if (search_path_buffer_len < 4000)
+        {
+          /* Prefer small stack allocations to avoid valgrind leak warnings
+           * in forked child. The 4000B cutoff is arbitrary. */
+          search_path_buffer = g_alloca (search_path_buffer_len);
+        }
+      else
+        {
+          search_path_buffer_heap = g_malloc (search_path_buffer_len);
+          search_path_buffer = search_path_buffer_heap;
+        }
+    }
+
+  if (search_path || search_path_from_envp)
+    g_assert (search_path_buffer != NULL);
+  else
+    g_assert (search_path_buffer == NULL);
+
+  /* And allocate a buffer which is 2 elements longer than @argv, so that if
+   * script_execute() has to be called later on, it can build a wrapper argv
+   * array in this buffer. */
+  argv_buffer_len = g_strv_length (argv) + 2;
+  if (argv_buffer_len < 4000 / sizeof (gchar *))
+    {
+      /* Prefer small stack allocations to avoid valgrind leak warnings
+       * in forked child. The 4000B cutoff is arbitrary. */
+      argv_buffer = g_newa (gchar *, argv_buffer_len);
+    }
+  else
+    {
+      argv_buffer_heap = g_new (gchar *, argv_buffer_len);
+      argv_buffer = argv_buffer_heap;
+    }
+
   if (!g_unix_open_pipe (child_err_report_pipe, pipe_flags, error))
-    return FALSE;
+    {
+      g_free (search_path_buffer_heap);
+      g_free (argv_buffer_heap);
+      return FALSE;
+    }
 
   if (intermediate_child && !g_unix_open_pipe (child_pid_report_pipe, pipe_flags, error))
     goto cleanup_and_fail;
@@ -1753,10 +1967,13 @@ fork_exec_with_fds (gboolean              intermediate_child,
                        stderr_fd,
                        working_directory,
                        argv,
+                       argv_buffer,
+                       argv_buffer_len,
                        envp,
                        close_descriptors,
-                       search_path,
-                       search_path_from_envp,
+                       chosen_search_path,
+                       search_path_buffer,
+                       search_path_buffer_len,
                        stdout_to_null,
                        stderr_to_null,
                        child_inherits_stdin,
@@ -1783,10 +2000,13 @@ fork_exec_with_fds (gboolean              intermediate_child,
                    stderr_fd,
                    working_directory,
                    argv,
+                   argv_buffer,
+                   argv_buffer_len,
                    envp,
                    close_descriptors,
-                   search_path,
-                   search_path_from_envp,
+                   chosen_search_path,
+                   search_path_buffer,
+                   search_path_buffer_len,
                    stdout_to_null,
                    stderr_to_null,
                    child_inherits_stdin,
@@ -1914,6 +2134,9 @@ fork_exec_with_fds (gboolean              intermediate_child,
       close_and_invalidate (&child_err_report_pipe[0]);
       close_and_invalidate (&child_pid_report_pipe[0]);
 
+      g_free (search_path_buffer_heap);
+      g_free (argv_buffer_heap);
+
       if (child_pid)
         *child_pid = pid;
 
@@ -1945,6 +2168,9 @@ fork_exec_with_fds (gboolean              intermediate_child,
   close_and_invalidate (&child_err_report_pipe[1]);
   close_and_invalidate (&child_pid_report_pipe[0]);
   close_and_invalidate (&child_pid_report_pipe[1]);
+
+  g_free (search_path_buffer_heap);
+  g_free (argv_buffer_heap);
 
   return FALSE;
 }
@@ -2043,40 +2269,43 @@ cleanup_and_fail:
 
 /* Based on execvp from GNU C Library */
 
-static void
+/* This function is called between fork() and exec() and hence must be
+ * async-signal-safe (see signal-safety(7)) until it calls exec(). */
+static gboolean
 script_execute (const gchar *file,
                 gchar      **argv,
+                gchar      **argv_buffer,
+                gsize        argv_buffer_len,
                 gchar      **envp)
 {
   /* Count the arguments.  */
-  int argc = 0;
+  gsize argc = 0;
   while (argv[argc])
     ++argc;
 
-  /* Construct an argument list for the shell.  */
-  {
-    gchar **new_argv;
+  /* Construct an argument list for the shell. */
+  if (argc + 2 > argv_buffer_len)
+    return FALSE;
 
-    new_argv = g_new0 (gchar*, argc + 2); /* /bin/sh and NULL */
-
-    new_argv[0] = (char *) "/bin/sh";
-    new_argv[1] = (char *) file;
-    while (argc > 0)
-      {
-  new_argv[argc + 1] = argv[argc];
-  --argc;
-      }
+  argv_buffer[0] = (char *) "/bin/sh";
+  argv_buffer[1] = (char *) file;
+  while (argc > 0)
+    {
+      argv_buffer[argc + 1] = argv[argc];
+      --argc;
+    }
 
     /* Execute the shell. */
-    if (envp)
-      execve (new_argv[0], new_argv, envp);
-    else
-      execv (new_argv[0], new_argv);
+  if (envp)
+    execve (argv_buffer[0], argv_buffer, envp);
+  else
+    execv (argv_buffer[0], argv_buffer);
 
-    g_free (new_argv);
-  }
+  return TRUE;
 }
 
+/* This function is called between fork() and exec() and hence must be
+ * async-signal-safe (see signal-safety(7)). */
 static gchar*
 my_strchrnul (const gchar *str, gchar c)
 {
@@ -2087,12 +2316,17 @@ my_strchrnul (const gchar *str, gchar c)
   return p;
 }
 
+/* This function is called between fork() and exec() and hence must be
+ * async-signal-safe (see signal-safety(7)) until it calls exec(). */
 static gint
-g_execute (const gchar *file,
-           gchar      **argv,
-           gchar      **envp,
-           gboolean     search_path,
-           gboolean     search_path_from_envp)
+g_execute (const gchar  *file,
+           gchar       **argv,
+           gchar       **argv_buffer,
+           gsize         argv_buffer_len,
+           gchar       **envp,
+           const gchar  *search_path,
+           gchar        *search_path_buffer,
+           gsize         search_path_buffer_len)
 {
   if (*file == '\0')
     {
@@ -2101,7 +2335,7 @@ g_execute (const gchar *file,
       return -1;
     }
 
-  if (!(search_path || search_path_from_envp) || strchr (file, '/') != NULL)
+  if (search_path == NULL || strchr (file, '/') != NULL)
     {
       /* Don't search when it contains a slash. */
       if (envp)
@@ -2109,41 +2343,31 @@ g_execute (const gchar *file,
       else
         execv (file, argv);
 
-      if (errno == ENOEXEC)
-  script_execute (file, argv, envp);
+      if (errno == ENOEXEC &&
+          !script_execute (file, argv, argv_buffer, argv_buffer_len, envp))
+        {
+          errno = ENOMEM;
+          return -1;
+        }
     }
   else
     {
       gboolean got_eacces = 0;
       const gchar *path, *p;
-      gchar *name, *freeme;
+      gchar *name;
       gsize len;
       gsize pathlen;
 
-      path = NULL;
-      if (search_path_from_envp)
-        path = g_environ_getenv (envp, "PATH");
-      if (search_path && path == NULL)
-        path = g_getenv ("PATH");
-
-      if (path == NULL)
-  {
-    /* There is no 'PATH' in the environment.  The default
-     * search path in libc is the current directory followed by
-     * the path 'confstr' returns for '_CS_PATH'.
-           */
-
-          /* In GLib we put . last, for security, and don't use the
-           * unportable confstr(); UNIX98 does not actually specify
-           * what to search if PATH is unset. POSIX may, dunno.
-           */
-
-          path = "/bin:/usr/bin:.";
-  }
-
+      path = search_path;
       len = strlen (file) + 1;
       pathlen = strlen (path);
-      freeme = name = g_malloc (pathlen + len + 1);
+      name = search_path_buffer;
+
+      if (search_path_buffer_len < pathlen + len + 1)
+        {
+          errno = ENOMEM;
+          return -1;
+        }
 
       /* Copy the file name at the top, including '\0'  */
       memcpy (name + pathlen + 1, file, len);
@@ -2173,8 +2397,12 @@ g_execute (const gchar *file,
           else
             execv (startp, argv);
 
-    if (errno == ENOEXEC)
-      script_execute (startp, argv, envp);
+          if (errno == ENOEXEC &&
+              !script_execute (startp, argv, argv_buffer, argv_buffer_len, envp))
+            {
+              errno = ENOMEM;
+              return -1;
+            }
 
     switch (errno)
       {
@@ -2185,8 +2413,7 @@ g_execute (const gchar *file,
                */
         got_eacces = TRUE;
 
-              /* FALL THRU */
-
+        G_GNUC_FALLTHROUGH;
       case ENOENT:
 #ifdef ESTALE
       case ESTALE:
@@ -2213,7 +2440,6 @@ g_execute (const gchar *file,
                * something went wrong executing it; return the error to our
                * caller.
                */
-              g_free (freeme);
         return -1;
       }
   }
@@ -2225,8 +2451,6 @@ g_execute (const gchar *file,
          * error.
          */
         errno = EACCES;
-
-      g_free (freeme);
     }
 
   /* Return the error from the last attempt (probably ENOENT).  */

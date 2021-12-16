@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -56,10 +56,20 @@ final class GtkApplication extends Application implements
     private static final String SWT_INTERNAL_CLASS =
             "org.eclipse.swt.internal.gtk.OS";
     private static final int forcedGtkVersion;
+    private static boolean gtk2WarningIssued = false;
+    private static final String GTK2_ALREADY_LOADED_WARNING =
+        "WARNING: Found GTK 2 library already loaded";
+    private static final String GTK2_SPECIFIED_WARNING =
+        "WARNING: A command line option has enabled the GTK 2 library";
+    private static final String GTK2_FALLBACK_WARNING =
+        "WARNING: Using GTK 2 library because GTK 3 cannot be loaded ";
+    private static final String GTK2_DEPRECATION_WARNING =
+        "WARNING: The JavaFX GTK 2 library is deprecated and will be removed in a future release";
 
 
     static  {
         //check for SWT-GTK lib presence
+        @SuppressWarnings("removal")
         Class<?> OS = AccessController.
                 doPrivileged((PrivilegedAction<Class<?>>) () -> {
                     try {
@@ -75,6 +85,7 @@ final class GtkApplication extends Application implements
         if (OS != null) {
             PlatformLogger logger = Logging.getJavaFXLogger();
             logger.fine("SWT-GTK library found. Try to obtain GTK version.");
+            @SuppressWarnings("removal")
             Method method = AccessController.
                     doPrivileged((PrivilegedAction<Method>) () -> {
                         try {
@@ -101,11 +112,17 @@ final class GtkApplication extends Application implements
                 ver = 3;
             }
             forcedGtkVersion = ver;
+            if (ver == 2 && !gtk2WarningIssued) {
+                System.err.println(GTK2_ALREADY_LOADED_WARNING);
+                System.err.println(GTK2_DEPRECATION_WARNING);
+                gtk2WarningIssued = true;
+            }
         } else {
             forcedGtkVersion = 0;
         }
 
-        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+        @SuppressWarnings("removal")
+        var dummy = AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
             Application.loadNativeLibrary();
             return null;
         });
@@ -144,6 +161,7 @@ final class GtkApplication extends Application implements
 
     GtkApplication() {
 
+        @SuppressWarnings("removal")
         final int gtkVersion = forcedGtkVersion == 0 ?
             AccessController.doPrivileged((PrivilegedAction<Integer>) () -> {
                 String v = System.getProperty("jdk.gtk.version","3");
@@ -155,20 +173,31 @@ final class GtkApplication extends Application implements
                 }
                 return ret;
             }) : forcedGtkVersion;
+
+        if (gtkVersion == 2 && !gtk2WarningIssued) {
+            System.err.println(GTK2_SPECIFIED_WARNING);
+            System.err.println(GTK2_DEPRECATION_WARNING);
+            gtk2WarningIssued = true;
+        }
+
+        @SuppressWarnings("removal")
         boolean gtkVersionVerbose =
                 AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> {
             return Boolean.getBoolean("jdk.gtk.verbose");
         });
         if (PrismSettings.allowHiDPIScaling) {
-            overrideUIScale = AccessController.doPrivileged((PrivilegedAction<Float>) () ->
+            @SuppressWarnings("removal")
+            float tmp = AccessController.doPrivileged((PrivilegedAction<Float>) () ->
                     getFloat("glass.gtk.uiScale", -1.0f, "Forcing UI scaling factor: "));
+            overrideUIScale = tmp;
         } else {
             overrideUIScale = -1.0f;
         }
 
         int libraryToLoad = _queryLibrary(gtkVersion, gtkVersionVerbose);
 
-        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+        @SuppressWarnings("removal")
+        var dummy = AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
             if (libraryToLoad == QUERY_NO_DISPLAY) {
                 throw new UnsupportedOperationException("Unable to open DISPLAY");
             } else if (libraryToLoad == QUERY_USE_CURRENT) {
@@ -180,6 +209,11 @@ final class GtkApplication extends Application implements
                     System.out.println("Glass GTK library to load is glassgtk2");
                 }
                 NativeLibLoader.loadLibrary("glassgtk2");
+                if (!gtk2WarningIssued) {
+                    System.err.println(GTK2_FALLBACK_WARNING);
+                    System.err.println(GTK2_DEPRECATION_WARNING);
+                    gtk2WarningIssued = true;
+                }
             } else if (libraryToLoad == QUERY_LOAD_GTK3) {
                 if (gtkVersionVerbose) {
                     System.out.println("Glass GTK library to load is glassgtk3");
@@ -198,6 +232,7 @@ final class GtkApplication extends Application implements
         }
 
         // Embedded in SWT, with shared event thread
+        @SuppressWarnings("removal")
         boolean isEventThread = AccessController
                 .doPrivileged((PrivilegedAction<Boolean>) () -> Boolean.getBoolean("javafx.embed.isEventThread"));
         if (!isEventThread) {
@@ -249,6 +284,7 @@ final class GtkApplication extends Application implements
             eventProc = result == null ? 0 : result;
         }
 
+        @SuppressWarnings("removal")
         final boolean disableGrab = AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> Boolean.getBoolean("sun.awt.disablegrab") ||
                Boolean.getBoolean("glass.disableGrab"));
 
@@ -258,6 +294,7 @@ final class GtkApplication extends Application implements
     @Override
     protected void runLoop(final Runnable launchable) {
         // Embedded in SWT, with shared event thread
+        @SuppressWarnings("removal")
         final boolean isEventThread = AccessController
             .doPrivileged((PrivilegedAction<Boolean>) () -> Boolean.getBoolean("javafx.embed.isEventThread"));
 
@@ -268,9 +305,11 @@ final class GtkApplication extends Application implements
             return;
         }
 
+        @SuppressWarnings("removal")
         final boolean noErrorTrap = AccessController
             .doPrivileged((PrivilegedAction<Boolean>) () -> Boolean.getBoolean("glass.noErrorTrap"));
 
+        @SuppressWarnings("removal")
         final Thread toolkitThread =
             AccessController.doPrivileged((PrivilegedAction<Thread>) () -> new Thread(() -> {
                 init();
@@ -367,11 +406,6 @@ final class GtkApplication extends Application implements
     @Override
     public Window createWindow(Window owner, Screen screen, int styleMask) {
         return new GtkWindow(owner, screen, styleMask);
-    }
-
-    @Override
-    public Window createWindow(long parent) {
-        return new GtkChildWindow(parent);
     }
 
     @Override
@@ -477,5 +511,8 @@ final class GtkApplication extends Application implements
 
     @Override
     protected native int _getKeyCodeForChar(char c);
+
+    @Override
+    protected native int _isKeyLocked(int keyCode);
 
 }

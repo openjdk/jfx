@@ -35,14 +35,14 @@ namespace WebCore {
 
 class PlatformWheelEvent;
 
-class ScrollAnimationKinetic final {
-    WTF_MAKE_FAST_ALLOCATED;
+class ScrollAnimationKinetic final : public ScrollAnimation {
 private:
     class PerAxisData {
     public:
         PerAxisData(double lower, double upper, double initialPosition, double initialVelocity);
 
         double position() { return m_position; }
+        double velocity() { return m_velocity; }
 
         bool animateScroll(Seconds timeDelta);
 
@@ -59,11 +59,6 @@ private:
     };
 
 public:
-    struct ScrollExtents {
-        IntPoint minimumScrollPosition;
-        IntPoint maximumScrollPosition;
-    };
-
     using ScrollExtentsCallback = WTF::Function<ScrollExtents(void)>;
     using NotifyPositionChangedCallback = WTF::Function<void(FloatPoint&&)>;
 
@@ -75,10 +70,12 @@ public:
     FloatPoint computeVelocity();
 
     void start(const FloatPoint& initialPosition, const FloatPoint& velocity, bool mayHScroll, bool mayVScroll);
-    void stop();
+    void stop() override;
+    bool isActive() const override;
 
 private:
     void animationTimerFired();
+    Seconds deltaToNextFrame();
 
     ScrollExtentsCallback m_scrollExtentsFunction;
     NotifyPositionChangedCallback m_notifyPositionChangedFunction;

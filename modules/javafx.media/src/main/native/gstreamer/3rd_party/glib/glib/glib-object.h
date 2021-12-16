@@ -19,10 +19,10 @@
 
 #define __GLIB_GOBJECT_H_INSIDE__
 
-/* topmost include file for GObject header files */
 #include <gobject/gbinding.h>
 #include <gobject/gboxed.h>
 #include <gobject/genums.h>
+#include <gobject/glib-enumtypes.h>
 #include <gobject/gobject.h>
 #include <gobject/gparam.h>
 #include <gobject/gparamspecs.h>
@@ -31,8 +31,8 @@
 #include <gobject/gtype.h>
 #include <gobject/gtypemodule.h>
 #include <gobject/gtypeplugin.h>
-#include <gobject/gvalue.h>
 #include <gobject/gvaluearray.h>
+#include <gobject/gvalue.h>
 #include <gobject/gvaluetypes.h>
 #ifndef GSTREAMER_LITE
 #include <gobject/glib-enumtypes.h>

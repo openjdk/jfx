@@ -40,14 +40,13 @@ KeyframeEffectStack::KeyframeEffectStack()
 
 KeyframeEffectStack::~KeyframeEffectStack()
 {
-    ASSERT(m_effects.isEmpty());
 }
 
 bool KeyframeEffectStack::addEffect(KeyframeEffect& effect)
 {
     // To qualify for membership in an effect stack, an effect must have a target, an animation, a timeline and be relevant.
     // This method will be called in WebAnimation and KeyframeEffect as those properties change.
-    if (!effect.target() || !effect.animation() || !effect.animation()->timeline() || !effect.animation()->isRelevant())
+    if (!effect.targetStyleable() || !effect.animation() || !effect.animation()->timeline() || !effect.animation()->isRelevant())
         return false;
 
     m_effects.append(makeWeakPtr(&effect));
@@ -58,6 +57,24 @@ bool KeyframeEffectStack::addEffect(KeyframeEffect& effect)
 void KeyframeEffectStack::removeEffect(KeyframeEffect& effect)
 {
     m_effects.removeFirst(&effect);
+}
+
+bool KeyframeEffectStack::requiresPseudoElement() const
+{
+    for (auto& effect : m_effects) {
+        if (effect->requiresPseudoElement())
+            return true;
+    }
+    return false;
+}
+
+bool KeyframeEffectStack::hasEffectWithImplicitKeyframes() const
+{
+    for (auto& effect : m_effects) {
+        if (effect->hasImplicitKeyframes())
+            return true;
+    }
+    return false;
 }
 
 bool KeyframeEffectStack::isCurrentlyAffectingProperty(CSSPropertyID property) const
@@ -81,13 +98,16 @@ void KeyframeEffectStack::ensureEffectsAreSorted()
         return;
 
     std::stable_sort(m_effects.begin(), m_effects.end(), [&](auto& lhs, auto& rhs) {
+        RELEASE_ASSERT(lhs.get());
+        RELEASE_ASSERT(rhs.get());
+
         auto* lhsAnimation = lhs->animation();
         auto* rhsAnimation = rhs->animation();
 
-        ASSERT(lhsAnimation);
-        ASSERT(rhsAnimation);
+        RELEASE_ASSERT(lhsAnimation);
+        RELEASE_ASSERT(rhsAnimation);
 
-        return compareAnimationsByCompositeOrder(*lhsAnimation, *rhsAnimation, m_cssAnimationList.get());
+        return compareAnimationsByCompositeOrder(*lhsAnimation, *rhsAnimation);
     });
 
     m_isSorted = true;
@@ -98,6 +118,40 @@ void KeyframeEffectStack::setCSSAnimationList(RefPtr<const AnimationList>&& cssA
     m_cssAnimationList = WTFMove(cssAnimationList);
     // Since the list of animation names has changed, the sorting order of the animation effects may have changed as well.
     m_isSorted = false;
+}
+
+OptionSet<AnimationImpact> KeyframeEffectStack::applyKeyframeEffects(RenderStyle& targetStyle, const RenderStyle& previousLastStyleChangeEventStyle, const RenderStyle* parentElementStyle)
+{
+    OptionSet<AnimationImpact> impact;
+
+    auto transformRelatedPropertyChanged = [&]() -> bool {
+        return !arePointingToEqualData(targetStyle.translate(), previousLastStyleChangeEventStyle.translate())
+            || !arePointingToEqualData(targetStyle.scale(), previousLastStyleChangeEventStyle.scale())
+            || !arePointingToEqualData(targetStyle.rotate(), previousLastStyleChangeEventStyle.rotate())
+            || targetStyle.transform() != previousLastStyleChangeEventStyle.transform();
+    }();
+
+    for (const auto& effect : sortedEffects()) {
+        ASSERT(effect->animation());
+        effect->animation()->resolve(targetStyle, parentElementStyle);
+
+        if (effect->isRunningAccelerated() || effect->isAboutToRunAccelerated())
+            impact.add(AnimationImpact::RequiresRecomposite);
+
+        if (effect->triggersStackingContext())
+            impact.add(AnimationImpact::ForcesStackingContext);
+
+        if (transformRelatedPropertyChanged && effect->isRunningAcceleratedTransformRelatedAnimation())
+            effect->transformRelatedPropertyDidChange();
+    }
+
+    return impact;
+}
+
+void KeyframeEffectStack::stopAcceleratingTransformRelatedProperties(UseAcceleratedAction useAcceleratedAction)
+{
+    for (auto& effect : m_effects)
+        effect->stopAcceleratingTransformRelatedProperties(useAcceleratedAction);
 }
 
 } // namespace WebCore

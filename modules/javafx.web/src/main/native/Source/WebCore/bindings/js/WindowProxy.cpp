@@ -53,7 +53,7 @@ static void collectGarbageAfterWindowProxyDestruction()
 }
 
 WindowProxy::WindowProxy(AbstractFrame& frame)
-    : m_frame(&frame)
+    : m_frame(makeWeakPtr(frame))
     , m_jsWindowProxies(makeUniqueRef<ProxyMap>())
 {
 }
@@ -62,6 +62,11 @@ WindowProxy::~WindowProxy()
 {
     ASSERT(!m_frame);
     ASSERT(m_jsWindowProxies->isEmpty());
+}
+
+AbstractFrame* WindowProxy::frame() const
+{
+    return m_frame.get();
 }
 
 void WindowProxy::detachFromFrame()
@@ -98,7 +103,6 @@ JSWindowProxy& WindowProxy::createJSWindowProxy(DOMWrapperWorld& world)
     VM& vm = world.vm();
 
     Strong<JSWindowProxy> jsWindowProxy(vm, &JSWindowProxy::create(vm, *m_frame->window(), world));
-    Strong<JSWindowProxy> jsWindowProxy2(jsWindowProxy);
     m_jsWindowProxies->add(&world, jsWindowProxy);
     world.didCreateWindowProxy(this);
     return *jsWindowProxy.get();
@@ -184,7 +188,7 @@ void WindowProxy::setDOMWindow(AbstractDOMWindow* newDOMWindow)
         windowProxy->attachDebugger(page ? page->debugger() : nullptr);
         if (page)
             windowProxy->window()->setProfileGroup(page->group().identifier());
-        windowProxy->window()->setConsoleClient(page ? &page->console() : nullptr);
+        windowProxy->window()->setConsoleClient(page ? makeWeakPtr(page->console()) : nullptr);
     }
 }
 

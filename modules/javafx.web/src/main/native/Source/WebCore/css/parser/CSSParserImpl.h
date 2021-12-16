@@ -1,5 +1,5 @@
 // Copyright 2014 The Chromium Authors. All rights reserved.
-// Copyright (C) 2016 Apple Inc. All rights reserved.
+// Copyright (C) 2016-2020 Apple Inc. All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
@@ -90,9 +90,10 @@ public:
     static void parseStyleSheet(const String&, const CSSParserContext&, StyleSheetContents*, CSSParser::RuleParsing);
     static CSSSelectorList parsePageSelector(CSSParserTokenRange, StyleSheetContents*);
 
-    static std::unique_ptr<Vector<double>> parseKeyframeKeyList(const String&);
+    static Vector<double> parseKeyframeKeyList(const String&);
 
     bool supportsDeclaration(CSSParserTokenRange&);
+    const CSSParserContext& context() const { return m_context; }
 
     static void parseDeclarationListForInspector(const String&, const CSSParserContext&, CSSParserObserver&);
     static void parseStyleSheetForInspector(const String&, const CSSParserContext&, StyleSheetContents*, CSSParserObserver&);
@@ -143,7 +144,9 @@ private:
     void consumeDeclarationValue(CSSParserTokenRange, CSSPropertyID, bool important, StyleRuleType);
     void consumeCustomPropertyValue(CSSParserTokenRange, const AtomString& propertyName, bool important);
 
-    static std::unique_ptr<Vector<double>> consumeKeyframeKeyList(CSSParserTokenRange);
+    bool isPropertyRuntimeDisabled(CSSPropertyID) const;
+
+    static Vector<double> consumeKeyframeKeyList(CSSParserTokenRange);
 
     Ref<DeferredStyleProperties> createDeferredStyleProperties(const CSSParserTokenRange& propertyRange);
 

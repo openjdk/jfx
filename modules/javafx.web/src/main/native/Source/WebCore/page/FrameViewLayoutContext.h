@@ -45,7 +45,7 @@ class RenderView;
 #if ENABLE(LAYOUT_FORMATTING_CONTEXT)
 namespace Layout {
 class LayoutState;
-class LayoutTreeContent;
+class LayoutTree;
 }
 #endif
 
@@ -118,8 +118,6 @@ public:
 
 #if ENABLE(LAYOUT_FORMATTING_CONTEXT)
     const Layout::LayoutState* layoutFormattingState() const { return m_layoutState.get(); }
-    Layout::LayoutTreeContent* layoutTreeContent() const { return m_layoutTreeContent.get(); }
-    void invalidateLayoutTreeContent();
 #endif
 
 private:
@@ -177,7 +175,6 @@ private:
     WeakPtr<RenderElement> m_subtreeLayoutRoot;
 
     bool m_layoutSchedulingIsEnabled { true };
-    bool m_delayedLayout { false };
     bool m_firstLayout { true };
     bool m_needsFullRepaint { true };
     bool m_inAsynchronousTasks { false };
@@ -192,7 +189,7 @@ private:
     LayoutStateStack m_layoutStateStack;
 #if ENABLE(LAYOUT_FORMATTING_CONTEXT)
     std::unique_ptr<Layout::LayoutState> m_layoutState;
-    std::unique_ptr<Layout::LayoutTreeContent> m_layoutTreeContent;
+    std::unique_ptr<Layout::LayoutTree> m_layoutTree;
 #endif
 };
 

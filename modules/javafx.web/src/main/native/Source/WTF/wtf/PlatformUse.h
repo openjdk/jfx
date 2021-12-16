@@ -55,7 +55,15 @@
 #endif
 
 #if PLATFORM(COCOA)
+#define USE_CORE_TEXT 1
+#endif
+
+#if PLATFORM(COCOA)
 #define USE_CA 1
+#endif
+
+#if PLATFORM(COCOA)
+#define USE_CORE_IMAGE 1
 #endif
 
 #if PLATFORM(GTK) || PLATFORM(WPE)
@@ -131,18 +139,26 @@
 #define USE_SYSTEM_MALLOC 1
 #endif
 
-#if !defined(USE_JSVALUE64) && !defined(USE_JSVALUE32_64)
-#if CPU(ADDRESS64) || CPU(ARM64)
+#if CPU(REGISTER64)
 #define USE_JSVALUE64 1
 #else
 #define USE_JSVALUE32_64 1
 #endif
-#endif /* !defined(USE_JSVALUE64) && !defined(USE_JSVALUE32_64) */
+
+#if USE(JSVALUE64)
+/* FIXME: Enable BIGINT32 optimization again after we ensure Speedometer2 and JetStream2 regressions are fixed. */
+/* https://bugs.webkit.org/show_bug.cgi?id=214777 */
+#define USE_BIGINT32 0
+#endif
 
 /* FIXME: This name should be more specific if it is only for use with CallFrame* */
 /* Use __builtin_frame_address(1) to get CallFrame* */
 #if COMPILER(GCC_COMPATIBLE) && (CPU(ARM64) || CPU(X86_64))
 #define USE_BUILTIN_FRAME_ADDRESS 1
+#endif
+
+#if PLATFORM(IOS_FAMILY) && CPU(ARM64) && HAVE(REMAP_JIT)
+#define USE_EXECUTE_ONLY_JIT_WRITE_FUNCTION 1
 #endif
 
 #if PLATFORM(IOS)
@@ -169,10 +185,6 @@
 #define USE_METAL 1
 #endif
 
-#if !defined(USE_EXPORT_MACROS) && (PLATFORM(COCOA) || OS(WINDOWS))
-#define USE_EXPORT_MACROS 1
-#endif
-
 #if PLATFORM(GTK) || PLATFORM(WPE)
 #define USE_UNIX_DOMAIN_SOCKETS 1
 #endif
@@ -181,27 +193,9 @@
 #define USE_IMLANG_FONT_LINK2 1
 #endif
 
-#if PLATFORM(COCOA)
-#define USE_COREMEDIA 1
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MAX_ALLOWED < 101500
+#define USE_AV_SAMPLE_BUFFER_DISPLAY_LAYER 1
 #endif
-
-#if PLATFORM(COCOA)
-#define USE_VIDEOTOOLBOX 1
-#endif
-
-#if !PLATFORM(WIN) && !PLATFORM(JAVA)
-#define USE_REQUEST_ANIMATION_FRAME_DISPLAY_MONITOR 1
-#endif
-
-#if PLATFORM(MAC)
-#define USE_COREAUDIO 1
-#endif
-
-#if !defined(USE_ZLIB) && !PLATFORM(JAVA)
-#define USE_ZLIB 1
-#endif
-
-#define USE_GRAMMAR_CHECKING 1
 
 #if PLATFORM(COCOA) || PLATFORM(GTK)
 #define USE_UNIFIED_TEXT_CHECKING 1
@@ -266,10 +260,6 @@
 #endif
 
 #if PLATFORM(COCOA)
-#define USE_MEDIAREMOTE 1
-#endif
-
-#if PLATFORM(MAC)
 #define USE_DICTATION_ALTERNATIVES 1
 #endif
 
@@ -282,12 +272,11 @@
 #endif
 
 /* The override isn't needed on iOS family, as the default behavior is to not sniff. */
-/* FIXME: This should probably be enabled on 10.13.2 and newer, not just 10.14 and newer. */
-#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 101400
+#if PLATFORM(MAC)
 #define USE_CFNETWORK_CONTENT_ENCODING_SNIFFING_OVERRIDE 1
 #endif
 
-#if PLATFORM(MAC) || PLATFORM(WPE)
+#if PLATFORM(MAC) || PLATFORM(WPE) || PLATFORM(GTK)
 /* FIXME: This really needs a descriptive name, this "new theme" was added in 2008. */
 #define USE_NEW_THEME 1
 #endif
@@ -300,14 +289,44 @@
 #define USE_UICONTEXTMENU 1
 #endif
 
-#if PLATFORM(COCOA)
-#define USE_PLATFORM_SYSTEM_FALLBACK_LIST 1
-#endif
-
 #if PLATFORM(IOS_FAMILY) || (!(defined(USE_SYSTEM_MALLOC) && USE_SYSTEM_MALLOC) && (OS(LINUX) && (PLATFORM(GTK) || PLATFORM(WPE))))
 #define USE_BMALLOC_MEMORY_FOOTPRINT_API 1
 #endif
 
+#if !defined(USE_PLATFORM_REGISTERS_WITH_PROFILE) && OS(DARWIN) && CPU(ARM64) && defined(__LP64__)
+#define USE_PLATFORM_REGISTERS_WITH_PROFILE 1
+#endif
+
 #if OS(DARWIN) && !USE(PLATFORM_REGISTERS_WITH_PROFILE) && CPU(ARM64)
 #define USE_DARWIN_REGISTER_MACROS 1
+#endif
+
+#if PLATFORM(COCOA) && !(PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED < 110000)
+#define USE_CTFONTSHAPEGLYPHS 1
+#endif
+
+#if PLATFORM(COCOA) && (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED < 110000)
+#define USE_CTFONTGETADVANCES_WORKAROUND 1
+#endif
+
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED < 101500
+#define USE_LEGACY_CFNETWORK_DOWNLOADS 1
+#endif
+
+#if ((PLATFORM(MAC) || PLATFORM(JAVA) && OS(MAC_OS_X)) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 110000) \
+    || (PLATFORM(MACCATALYST) && __IPHONE_OS_VERSION_MIN_REQUIRED >= 140000)
+#if USE(APPLE_INTERNAL_SDK)
+/* Always use the macro on internal builds */
+#define USE_PTHREAD_JIT_PERMISSIONS_API 0
+#else
+#define USE_PTHREAD_JIT_PERMISSIONS_API 1
+#endif
+#endif
+
+#if PLATFORM(COCOA)
+#define USE_OPENXR 0
+#endif
+
+#if PLATFORM(IOS_FAMILY)
+#define USE_SANDBOX_EXTENSIONS_FOR_CACHE_AND_TEMP_DIRECTORY_ACCESS 1
 #endif

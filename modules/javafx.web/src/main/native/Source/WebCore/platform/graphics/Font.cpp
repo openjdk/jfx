@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005, 2008, 2010, 2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2005-2021 Apple Inc. All rights reserved.
  * Copyright (C) 2006 Alexey Proskuryakov
  *
  * Redistribution and use in source and binary forms, with or without
@@ -31,8 +31,9 @@
 #include "Font.h"
 
 #if PLATFORM(COCOA)
-#include <pal/spi/cocoa/CoreTextSPI.h>
+#include <pal/spi/cf/CoreTextSPI.h>
 #endif
+
 #include "CachedFont.h"
 #include "CharacterProperties.h"
 #include "FontCache.h"
@@ -57,8 +58,18 @@ const float emphasisMarkFontSizeMultiplier = 0.5f;
 
 DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(Font);
 
-Font::Font(const FontPlatformData& platformData, Origin origin, Interstitial interstitial, Visibility visibility, OrientationFallback orientationFallback)
+Ref<Font> Font::create(Ref<SharedBuffer>&& fontFaceData, Font::Origin origin, float fontSize, bool syntheticBold, bool syntheticItalic)
+{
+    bool wrapping;
+    auto customFontData = CachedFont::createCustomFontData(fontFaceData.get(), { }, wrapping);
+    FontDescription description;
+    description.setComputedSize(fontSize);
+    return Font::create(CachedFont::platformDataFromCustomData(*customFontData, description, syntheticBold, syntheticItalic, { }, { }), origin);
+}
+
+Font::Font(const FontPlatformData& platformData, Origin origin, Interstitial interstitial, Visibility visibility, OrientationFallback orientationFallback, Optional<RenderingResourceIdentifier> renderingResourceIdentifier)
     : m_platformData(platformData)
+    , m_renderingResourceIdentifier(renderingResourceIdentifier)
     , m_origin(origin)
     , m_visibility(visibility)
     , m_treatAsFixedPitch(false)
@@ -137,6 +148,9 @@ void Font::platformGlyphInit()
     float width = widthForGlyph(m_spaceGlyph);
     m_spaceWidth = width;
     m_fontMetrics.setZeroWidth(widthForGlyph(m_zeroGlyph));
+    auto amountToAdjustLineGap = std::min(m_fontMetrics.floatLineGap(), 0.0f);
+    m_fontMetrics.setLineGap(m_fontMetrics.floatLineGap() - amountToAdjustLineGap);
+    m_fontMetrics.setLineSpacing(m_fontMetrics.floatLineSpacing() - amountToAdjustLineGap);
     determinePitch();
     m_adjustedSpaceWidth = m_treatAsFixedPitch ? ceilf(width) : roundf(width);
 }
@@ -144,6 +158,13 @@ void Font::platformGlyphInit()
 Font::~Font()
 {
     removeFromSystemFallbackCache();
+}
+
+RenderingResourceIdentifier Font::renderingResourceIdentifier() const
+{
+    if (!m_renderingResourceIdentifier)
+        m_renderingResourceIdentifier = RenderingResourceIdentifier::generate();
+    return *m_renderingResourceIdentifier;
 }
 
 static bool fillGlyphPage(GlyphPage& pageToFill, UChar* buffer, unsigned bufferLength, const Font& font)
@@ -298,7 +319,6 @@ static void overrideControlCharacters(Vector<UChar>& buffer, unsigned start, uns
     overwriteCodePoint('\n', space);
     overwriteCodePoint('\t', space);
     overwriteCodePoint(noBreakSpace, space);
-    overwriteCodePoint(narrowNoBreakSpace, zeroWidthSpace);
     overwriteCodePoint(leftToRightMark, zeroWidthSpace);
     overwriteCodePoint(rightToLeftMark, zeroWidthSpace);
     overwriteCodePoint(leftToRightEmbed, zeroWidthSpace);
@@ -472,6 +492,16 @@ const Font& Font::brokenIdeographFont() const
     return *derivedFontData.brokenIdeographFont;
 }
 
+#if !USE(CORE_TEXT)
+
+bool Font::isProbablyOnlyUsedToRenderIcons() const
+{
+    // FIXME: Not implemented yet.
+    return false;
+}
+
+#endif
+
 #if !LOG_DISABLED
 String Font::description() const
 {
@@ -499,8 +529,8 @@ RefPtr<Font> Font::createScaledFont(const FontDescription& fontDescription, floa
     return platformCreateScaledFont(fontDescription, scaleFactor);
 }
 
-#if !PLATFORM(COCOA)
-void Font::applyTransforms(GlyphBuffer&, unsigned, bool, bool, const AtomString&) const
+#if !USE(CORE_TEXT)
+void Font::applyTransforms(GlyphBuffer&, unsigned, unsigned, bool, bool, const AtomString&, StringView, TextDirection) const
 {
 }
 #endif
@@ -578,7 +608,7 @@ RefPtr<Font> Font::systemFallbackFontForCharacter(UChar32 character, const FontD
         return FontCache::singleton().systemFallbackForCharacters(description, this, isForPlatformFont, FontCache::PreferColoredFont::No, &codeUnit, 1);
     }
 
-    auto key = CharacterFallbackMapKey(description.locale(), character, isForPlatformFont);
+    auto key = CharacterFallbackMapKey(description.computedLocale(), character, isForPlatformFont);
     auto characterAddResult = fontAddResult.iterator->value.add(WTFMove(key), nullptr);
 
     Font*& fallbackFont = characterAddResult.iterator->value;
@@ -634,11 +664,6 @@ bool Font::variantCapsSupportsCharacterForSynthesis(FontVariantCaps fontVariantC
         // Synthesis only supports the variant-caps values listed above.
         return true;
     }
-}
-
-bool Font::platformSupportsCodePoint(UChar32 character, Optional<UChar32> variation) const
-{
-    return variation ? false : glyphForCharacter(character);
 }
 #endif
 
@@ -697,20 +722,6 @@ const Path& Font::pathForGlyph(Glyph glyph) const
     auto path = platformPathForGlyph(glyph);
     m_glyphPathMap.setMetricsForGlyph(glyph, path);
     return *m_glyphPathMap.existingMetricsForGlyph(glyph);
-}
-
-void Font::setFontFaceData(RefPtr<SharedBuffer>&& fontFaceData)
-{
-    m_fontFaceData = WTFMove(fontFaceData);
-}
-
-FontHandle::FontHandle(Ref<SharedBuffer>&& fontFaceData, Font::Origin origin, float fontSize, bool syntheticBold, bool syntheticItalic)
-{
-    bool wrapping;
-    auto customFontData = CachedFont::createCustomFontData(fontFaceData.get(), { }, wrapping);
-    FontDescription description;
-    description.setComputedSize(fontSize);
-    font = Font::create(CachedFont::platformDataFromCustomData(*customFontData, description, syntheticBold, syntheticItalic, { }, { }), origin);
 }
 
 } // namespace WebCore

@@ -106,11 +106,6 @@ void ActiveDOMObject::assertSuspendIfNeededWasCalled() const
 
 #endif // ASSERT_ENABLED
 
-bool ActiveDOMObject::hasPendingActivity() const
-{
-    return m_pendingActivityCount;
-}
-
 void ActiveDOMObject::suspend(ReasonForSuspension)
 {
 }
@@ -149,16 +144,22 @@ public:
         , m_target(target)
         , m_event(WTFMove(event))
     {
-        ++m_object.m_pendingActivityCount;
+        ++m_object.m_pendingActivityInstanceCount;
     }
 
     ~ActiveDOMObjectEventDispatchTask()
     {
-        ASSERT(m_object.m_pendingActivityCount);
-        --m_object.m_pendingActivityCount;
+        ASSERT(m_object.m_pendingActivityInstanceCount);
+        --m_object.m_pendingActivityInstanceCount;
     }
 
-    void execute() final { m_target->dispatchEvent(m_event.get()); }
+    void execute() final
+    {
+        // If this task executes after the script execution context has been stopped, don't
+        // actually dispatch the event.
+        if (m_object.isAllowedToRunScript())
+            m_target->dispatchEvent(m_event.get());
+    }
 
 private:
     ActiveDOMObject& m_object;

@@ -40,6 +40,10 @@
 #include <stdio.h>
 #include <thread>
 
+#if BPLATFORM(PLAYSTATION)
+#include <pthread_np.h>
+#endif
+
 namespace bmalloc {
 
 static constexpr bool verbose = false;
@@ -200,6 +204,9 @@ void Scavenger::enableMiniMode()
 
 void Scavenger::scavenge()
 {
+    if (!m_isEnabled)
+        return;
+
     UniqueLockHolder lock(m_scavengingMutex);
 
     if (verbose) {
@@ -216,7 +223,7 @@ void Scavenger::scavenge()
 #if !BUSE(PARTIAL_SCAVENGE)
             size_t deferredDecommits = 0;
 #endif
-            LockHolder lock(Heap::mutex());
+            UniqueLockHolder lock(Heap::mutex());
             for (unsigned i = numHeaps; i--;) {
                 if (!isActiveHeapKind(static_cast<HeapKind>(i)))
                     continue;
@@ -275,6 +282,9 @@ void Scavenger::scavenge()
 #if BUSE(PARTIAL_SCAVENGE)
 void Scavenger::partialScavenge()
 {
+    if (!m_isEnabled)
+        return;
+
     UniqueLockHolder lock(m_scavengingMutex);
 
     if (verbose) {
@@ -287,7 +297,7 @@ void Scavenger::partialScavenge()
         BulkDecommit decommitter;
         {
             PrintTime printTime("\npartialScavenge under lock time");
-            LockHolder lock(Heap::mutex());
+            UniqueLockHolder lock(Heap::mutex());
             for (unsigned i = numHeaps; i--;) {
                 if (!isActiveHeapKind(static_cast<HeapKind>(i)))
                     continue;
@@ -345,7 +355,7 @@ size_t Scavenger::freeableMemory()
 {
     size_t result = 0;
     {
-        LockHolder lock(Heap::mutex());
+        UniqueLockHolder lock(Heap::mutex());
         for (unsigned i = numHeaps; i--;) {
             if (!isActiveHeapKind(static_cast<HeapKind>(i)))
                 continue;
@@ -513,7 +523,7 @@ void Scavenger::threadRunLoop()
 void Scavenger::setThreadName(const char* name)
 {
     BUNUSED(name);
-#if BOS(DARWIN)
+#if BOS(DARWIN) || BPLATFORM(PLAYSTATION)
     pthread_setname_np(name);
 #elif BOS(LINUX)
     // Truncate the given name since Linux limits the size of the thread name 16 including null terminator.

@@ -60,7 +60,6 @@ ExceptionOr<RefPtr<PaintRenderingContext2D>> CustomPaintCanvas::getContext()
 
     m_context = PaintRenderingContext2D::create(*this);
     downcast<PaintRenderingContext2D>(*m_context).setUsesDisplayListDrawing(true);
-    downcast<PaintRenderingContext2D>(*m_context).setTracksDisplayListReplay(false);
 
     return { RefPtr<PaintRenderingContext2D> { &downcast<PaintRenderingContext2D>(*m_context) } };
 }
@@ -93,7 +92,7 @@ Image* CustomPaintCanvas::copiedImage() const
     if (!width() || !height())
         return nullptr;
 
-    m_copiedBuffer = ImageBuffer::create(size(), RenderingMode::Unaccelerated, 1, ColorSpace::SRGB, nullptr);
+    m_copiedBuffer = ImageBuffer::create(size(), RenderingMode::Unaccelerated, 1, DestinationColorSpace::SRGB, PixelFormat::BGRA8, nullptr);
     if (!m_copiedBuffer)
         return nullptr;
 
@@ -104,6 +103,11 @@ Image* CustomPaintCanvas::copiedImage() const
 
     m_copiedImage = m_copiedBuffer->copyImage(DontCopyBackingStore, PreserveResolution::Yes);
     return m_copiedImage.get();
+}
+
+void CustomPaintCanvas::clearCopiedImage() const
+{
+    m_copiedImage = nullptr;
 }
 
 GraphicsContext* CustomPaintCanvas::drawingContext() const

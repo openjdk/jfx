@@ -73,30 +73,15 @@
 #include <wtf/DateMath.h>
 
 #include <algorithm>
-#include <limits.h>
 #include <limits>
 #include <stdint.h>
 #include <time.h>
 #include <wtf/Assertions.h>
 #include <wtf/ASCIICType.h>
-#include <wtf/MathExtras.h>
-#include <wtf/StdLibExtras.h>
 #include <wtf/text/StringBuilder.h>
 
 #if OS(WINDOWS)
 #include <windows.h>
-#endif
-
-#if HAVE(ERRNO_H)
-#include <errno.h>
-#endif
-
-#if HAVE(SYS_TIME_H)
-#include <sys/time.h>
-#endif
-
-#if HAVE(SYS_TIMEB_H)
-#include <sys/timeb.h>
 #endif
 
 namespace WTF {
@@ -386,19 +371,19 @@ void initializeDates()
     equivalentYearForDST(2000); // Need to call once to initialize a static used in this function.
 }
 
-static inline double ymdhmsToSeconds(int year, long mon, long day, long hour, long minute, double second)
+static inline double ymdhmsToMilliseconds(int year, long mon, long day, long hour, long minute, long second, double milliseconds)
 {
     int mday = firstDayOfMonth[isLeapYear(year)][mon - 1];
     double ydays = daysFrom1970ToYear(year);
 
-    double dateSeconds = second + minute * secondsPerMinute + hour * secondsPerHour + (mday + day - 1 + ydays) * secondsPerDay;
+    double dateMilliseconds = milliseconds + second * msPerSecond + minute * (secondsPerMinute * msPerSecond) + hour * (secondsPerHour * msPerSecond) + (mday + day - 1 + ydays) * (secondsPerDay * msPerSecond);
 
     // Clamp to EcmaScript standard (ecma262/#sec-time-values-and-time-range) of
     //  +/- 100,000,000 days from 01 January, 1970.
-    if (dateSeconds < -8640000000000.0 || dateSeconds > 8640000000000.0)
+    if (dateMilliseconds < -8640000000000000.0 || dateMilliseconds > 8640000000000000.0)
         return std::numeric_limits<double>::quiet_NaN();
 
-    return dateSeconds;
+    return dateMilliseconds;
 }
 
 // We follow the recommendation of RFC 2822 to consider all
@@ -490,7 +475,7 @@ static char* parseES5DatePortion(const char* currentPosition, int& year, long& m
     // instead of restricting to 4 digits (or 6 digits with mandatory +/-),
     // it accepts any integer value. Consider this an implementation fallback.
     if (!parseInt(currentPosition, &postParsePosition, 10, &year))
-        return 0;
+        return nullptr;
 
     // Check for presence of -MM portion.
     if (*postParsePosition != '-')
@@ -498,11 +483,11 @@ static char* parseES5DatePortion(const char* currentPosition, int& year, long& m
     currentPosition = postParsePosition + 1;
 
     if (!isASCIIDigit(*currentPosition))
-        return 0;
+        return nullptr;
     if (!parseLong(currentPosition, &postParsePosition, 10, &month))
-        return 0;
+        return nullptr;
     if ((postParsePosition - currentPosition) != 2)
-        return 0;
+        return nullptr;
 
     // Check for presence of -DD portion.
     if (*postParsePosition != '-')
@@ -510,50 +495,48 @@ static char* parseES5DatePortion(const char* currentPosition, int& year, long& m
     currentPosition = postParsePosition + 1;
 
     if (!isASCIIDigit(*currentPosition))
-        return 0;
+        return nullptr;
     if (!parseLong(currentPosition, &postParsePosition, 10, &day))
-        return 0;
+        return nullptr;
     if ((postParsePosition - currentPosition) != 2)
-        return 0;
+        return nullptr;
     return postParsePosition;
 }
 
 // Parses a time with the format HH:mm[:ss[.sss]][Z|(+|-)(00:00|0000|00)].
 // Fractional seconds parsing is lenient, allows any number of digits.
 // Returns 0 if a parse error occurs, else returns the end of the parsed portion of the string.
-static char* parseES5TimePortion(char* currentPosition, long& hours, long& minutes, double& seconds, bool& isLocalTime, long& timeZoneSeconds)
+static char* parseES5TimePortion(char* currentPosition, long& hours, long& minutes, long& seconds, double& milliseconds, bool& isLocalTime, long& timeZoneSeconds)
 {
     isLocalTime = false;
 
     char* postParsePosition;
     if (!isASCIIDigit(*currentPosition))
-        return 0;
+        return nullptr;
     if (!parseLong(currentPosition, &postParsePosition, 10, &hours))
-        return 0;
+        return nullptr;
     if (*postParsePosition != ':' || (postParsePosition - currentPosition) != 2)
-        return 0;
+        return nullptr;
     currentPosition = postParsePosition + 1;
 
     if (!isASCIIDigit(*currentPosition))
-        return 0;
+        return nullptr;
     if (!parseLong(currentPosition, &postParsePosition, 10, &minutes))
-        return 0;
+        return nullptr;
     if ((postParsePosition - currentPosition) != 2)
-        return 0;
+        return nullptr;
     currentPosition = postParsePosition;
 
     // Seconds are optional.
     if (*currentPosition == ':') {
         ++currentPosition;
 
-        long intSeconds;
         if (!isASCIIDigit(*currentPosition))
-            return 0;
-        if (!parseLong(currentPosition, &postParsePosition, 10, &intSeconds))
-            return 0;
+            return nullptr;
+        if (!parseLong(currentPosition, &postParsePosition, 10, &seconds))
+            return nullptr;
         if ((postParsePosition - currentPosition) != 2)
-            return 0;
-        seconds = intSeconds;
+            return nullptr;
         if (*postParsePosition == '.') {
             currentPosition = postParsePosition + 1;
 
@@ -561,15 +544,15 @@ static char* parseES5TimePortion(char* currentPosition, long& hours, long& minut
             // a reasonable interpretation guided by the given examples and RFC 3339 says "no".
             // We check the next character to avoid reading +/- timezone hours after an invalid decimal.
             if (!isASCIIDigit(*currentPosition))
-                return 0;
+                return nullptr;
 
             // We are more lenient than ES5 by accepting more or less than 3 fraction digits.
             long fracSeconds;
             if (!parseLong(currentPosition, &postParsePosition, 10, &fracSeconds))
-                return 0;
+                return nullptr;
 
             long numFracDigits = postParsePosition - currentPosition;
-            seconds += fracSeconds * pow(10.0, static_cast<double>(-numFracDigits));
+            milliseconds = fracSeconds * pow(10.0, static_cast<double>(-numFracDigits + 3));
         }
         currentPosition = postParsePosition;
     }
@@ -594,9 +577,9 @@ static char* parseES5TimePortion(char* currentPosition, long& hours, long& minut
     long tzMinutes = 0;
 
     if (!isASCIIDigit(*currentPosition))
-        return 0;
+        return nullptr;
     if (!parseLong(currentPosition, &postParsePosition, 10, &tzHours))
-        return 0;
+        return nullptr;
     if (*postParsePosition != ':') {
         if ((postParsePosition - currentPosition) == 2) {
             // "00" case.
@@ -607,27 +590,27 @@ static char* parseES5TimePortion(char* currentPosition, long& hours, long& minut
             tzMinutes = tzHoursAbs % 100;
             tzHoursAbs = tzHoursAbs / 100;
         } else
-            return 0;
+            return nullptr;
     } else {
         // "00:00" case.
         if ((postParsePosition - currentPosition) != 2)
-            return 0;
+            return nullptr;
         tzHoursAbs = labs(tzHours);
         currentPosition = postParsePosition + 1; // Skip ":".
 
         if (!isASCIIDigit(*currentPosition))
-            return 0;
+            return nullptr;
         if (!parseLong(currentPosition, &postParsePosition, 10, &tzMinutes))
-            return 0;
+            return nullptr;
         if ((postParsePosition - currentPosition) != 2)
-            return 0;
+            return nullptr;
     }
     currentPosition = postParsePosition;
 
     if (tzHoursAbs > 24)
-        return 0;
+        return nullptr;
     if (tzMinutes < 0 || tzMinutes > 59)
-        return 0;
+        return nullptr;
 
     timeZoneSeconds = 60 * (tzMinutes + (60 * tzHoursAbs));
     if (tzNegative)
@@ -652,7 +635,8 @@ double parseES5DateFromNullTerminatedCharacters(const char* dateString, bool& is
     long day = 1;
     long hours = 0;
     long minutes = 0;
-    double seconds = 0;
+    long seconds = 0;
+    double milliseconds = 0;
     long timeZoneSeconds = 0;
 
     // Parse the date YYYY[-MM[-DD]]
@@ -663,7 +647,7 @@ double parseES5DateFromNullTerminatedCharacters(const char* dateString, bool& is
     // Note: As of ES2016, when a UTC offset is missing, date-time forms are local time while date-only forms are UTC.
     if (*currentPosition == 'T') {
         // Parse the time HH:mm[:ss[.sss]][Z|(+|-)(00:00|0000|00)]
-        currentPosition = parseES5TimePortion(currentPosition + 1, hours, minutes, seconds, isLocalTime, timeZoneSeconds);
+        currentPosition = parseES5TimePortion(currentPosition + 1, hours, minutes, seconds, milliseconds, isLocalTime, timeZoneSeconds);
         if (!currentPosition)
             return std::numeric_limits<double>::quiet_NaN();
     }
@@ -687,13 +671,12 @@ double parseES5DateFromNullTerminatedCharacters(const char* dateString, bool& is
         return std::numeric_limits<double>::quiet_NaN();
     if (seconds < 0 || seconds >= 61)
         return std::numeric_limits<double>::quiet_NaN();
-    if (seconds > 60) {
+    if (seconds == 60) {
         // Discard leap seconds by clamping to the end of a minute.
-        seconds = 60;
+        milliseconds = 0;
     }
 
-    double dateSeconds = ymdhmsToSeconds(year, month, day, hours, minutes, seconds) - timeZoneSeconds;
-    return dateSeconds * msPerSecond;
+    return ymdhmsToMilliseconds(year, month, day, hours, minutes, seconds, milliseconds) - (timeZoneSeconds * msPerSecond);
 }
 
 // Odd case where 'exec' is allowed to be 0, to accomodate a caller in WebCore.
@@ -998,8 +981,7 @@ double parseDateFromNullTerminatedCharacters(const char* dateString, bool& isLoc
     }
     ASSERT(year);
 
-    double dateSeconds = ymdhmsToSeconds(year.value(), month + 1, day, hour, minute, second) - offset * secondsPerMinute;
-    return dateSeconds * msPerSecond;
+    return ymdhmsToMilliseconds(year.value(), month + 1, day, hour, minute, second, 0) - offset * (secondsPerMinute * msPerSecond);
 }
 
 double parseDateFromNullTerminatedCharacters(const char* dateString)

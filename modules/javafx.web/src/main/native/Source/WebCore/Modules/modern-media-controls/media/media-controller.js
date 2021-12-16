@@ -113,6 +113,29 @@ class MediaController
             this.media.pause();
     }
 
+    get canShowMediaControlsContextMenu()
+    {
+        return !!this.host?.showMediaControlsContextMenu;
+    }
+
+    showMediaControlsContextMenu(button)
+    {
+        if (!this.canShowMediaControlsContextMenu)
+            return false;
+
+        let autoHideController = this.controls.autoHideController;
+
+        let willShowContextMenu = this.host.showMediaControlsContextMenu(button.element, button.contextMenuOptions, () => {
+            button.on = false;
+            autoHideController.hasSecondaryUIAttached = false;
+        });
+        if (willShowContextMenu) {
+            button.on = true;
+            autoHideController.hasSecondaryUIAttached = true;
+        }
+        return willShowContextMenu;
+    }
+
     // Protected
 
     set pageScaleFactor(pageScaleFactor)
@@ -173,8 +196,6 @@ class MediaController
                 this.hasPlayed = true;
             this._updateControlsIfNeeded();
             this._updateControlsAvailability();
-            if (event.type === "webkitpresentationmodechanged")
-                this._returnMediaLayerToInlineIfNeeded();
         } else if (event.type === "keydown" && this.isFullscreen && event.key === " ") {
             this.togglePlayback();
             event.preventDefault();
@@ -188,7 +209,7 @@ class MediaController
         if (this.layoutTraits & LayoutTraits.Compact)
             return [CompactMediaControlsSupport];
 
-        return [AirplaySupport, AudioSupport, ControlsVisibilitySupport, FullscreenSupport, MuteSupport, PiPSupport, PlacardSupport, PlaybackSupport, ScrubbingSupport, SeekBackwardSupport, SeekForwardSupport, SkipBackSupport, SkipForwardSupport, StartSupport, StatusSupport, TimeControlSupport, TracksSupport, VolumeSupport, VolumeDownSupport, VolumeUpSupport];
+        return [AirplaySupport, AudioSupport, ControlsVisibilitySupport, FullscreenSupport, MuteSupport, OverflowSupport, PiPSupport, PlacardSupport, PlaybackSupport, ScrubbingSupport, SeekBackwardSupport, SeekForwardSupport, SkipBackSupport, SkipForwardSupport, StartSupport, StatusSupport, TimeControlSupport, TracksSupport, VolumeSupport];
     }
 
     _updateControlsIfNeeded()
@@ -279,12 +300,6 @@ class MediaController
         this.controls.height = Math.round((maxY - minY) * this.controls.scaleFactor);
 
         this.controls.shouldCenterControlsVertically = this.isAudio;
-    }
-
-    _returnMediaLayerToInlineIfNeeded()
-    {
-        if (this.host)
-            this.host.setPreparedToReturnVideoLayerToInline(this.media.webkitPresentationMode !== PiPMode);
     }
 
     _controlsClassForLayoutTraits(layoutTraits)

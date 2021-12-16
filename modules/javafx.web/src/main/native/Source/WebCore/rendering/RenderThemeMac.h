@@ -41,6 +41,8 @@ class RenderThemeMac final : public RenderThemeCocoa {
 public:
     friend NeverDestroyed<RenderThemeMac>;
 
+    CFStringRef contentSizeCategory() const final;
+
     // A method asking if the control changes its tint when the window has focus or not.
     bool controlSupportsTints(const RenderObject&) const final;
 
@@ -63,10 +65,12 @@ public:
     Color platformInactiveListBoxSelectionBackgroundColor(OptionSet<StyleColor::Options>) const final;
     Color platformInactiveListBoxSelectionForegroundColor(OptionSet<StyleColor::Options>) const final;
     Color platformFocusRingColor(OptionSet<StyleColor::Options>) const final;
-    Color platformActiveTextSearchHighlightColor(OptionSet<StyleColor::Options>) const final;
-    Color platformInactiveTextSearchHighlightColor(OptionSet<StyleColor::Options>) const final;
+    Color platformTextSearchHighlightColor(OptionSet<StyleColor::Options>) const final;
+#if ENABLE(APP_HIGHLIGHTS)
+    Color platformAppHighlightColor(OptionSet<StyleColor::Options>) const final;
+#endif
 
-    ScrollbarControlSize scrollbarControlSizeForPart(ControlPart) final { return SmallScrollbar; }
+    ScrollbarControlSize scrollbarControlSizeForPart(ControlPart) final { return ScrollbarControlSize::Small; }
 
     int minimumMenuListSize(const RenderStyle&) const final;
 
@@ -77,21 +81,17 @@ public:
     int sliderTickOffsetFromTrackCenter() const final;
 #endif
 
-    LengthBox popupInternalPaddingBox(const RenderStyle&) const final;
+    LengthBox popupInternalPaddingBox(const RenderStyle&, const Settings&) const final;
     PopupMenuStyle::PopupMenuSize popupMenuSize(const RenderStyle&, IntRect&) const final;
 
     bool popsMenuByArrowKeys() const final { return true; }
 
-#if ENABLE(METER_ELEMENT)
     IntSize meterSizeForBounds(const RenderMeter&, const IntRect&) const final;
     bool paintMeter(const RenderObject&, const PaintInfo&, const IntRect&) final;
-    bool supportsMeter(ControlPart) const final;
-#endif
+    bool supportsMeter(ControlPart, const HTMLMeterElement&) const final;
 
     // Returns the repeat interval of the animation for the progress bar.
-    Seconds animationRepeatIntervalForProgressBar(RenderProgress&) const final;
-    // Returns the duration of the animation for the progress bar.
-    Seconds animationDurationForProgressBar(RenderProgress&) const final;
+    Seconds animationRepeatIntervalForProgressBar(const RenderProgress&) const final;
     IntRect progressBarRectForBounds(const RenderObject&, const IntRect&) const final;
 
     // Controls color values returned from platformFocusRingColor(). systemColor() will be used when false.
@@ -102,8 +102,7 @@ public:
 private:
     RenderThemeMac();
 
-    // System fonts.
-    void updateCachedSystemFontDescription(CSSValueID, FontCascadeDescription&) const final;
+    bool canPaint(const PaintInfo&, const Settings&) const final;
 
 #if ENABLE(VIDEO)
     // Media controls
@@ -111,10 +110,6 @@ private:
     String modernMediaControlsStyleSheet() final;
     String mediaControlsScript() final;
     String mediaControlsBase64StringForIconNameAndType(const String&, const String&) final;
-#endif
-
-#if ENABLE(SERVICE_CONTROLS)
-    String imageControlsStyleSheet() const final;
 #endif
 
     bool paintTextField(const RenderObject&, const PaintInfo&, const FloatRect&) final;
@@ -126,7 +121,7 @@ private:
     bool paintMenuList(const RenderObject&, const PaintInfo&, const FloatRect&) final;
     void adjustMenuListStyle(RenderStyle&, const Element*) const final;
 
-    bool paintMenuListButtonDecorations(const RenderBox&, const PaintInfo&, const FloatRect&) final;
+    void paintMenuListButtonDecorations(const RenderBox&, const PaintInfo&, const FloatRect&) final;
     void adjustMenuListButtonStyle(RenderStyle&, const Element*) const final;
 
     void adjustProgressBarStyle(RenderStyle&, const Element*) const final;
@@ -161,8 +156,6 @@ private:
 #if ENABLE(VIDEO)
     bool supportsClosedCaptioning() const final { return true; }
 #endif
-
-    bool paintSnapshottedPluginOverlay(const RenderObject&, const PaintInfo&, const IntRect&) final;
 
 #if ENABLE(ATTACHMENT_ELEMENT)
     LayoutSize attachmentIntrinsicSize(const RenderAttachment&) const final;
@@ -218,22 +211,12 @@ private:
     NSCell *listButton() const;
 #endif
 
-#if ENABLE(METER_ELEMENT)
     NSLevelIndicatorStyle levelIndicatorStyleFor(ControlPart) const;
     NSLevelIndicatorCell *levelIndicatorFor(const RenderMeter&) const;
-#endif
 
     int minimumProgressBarHeight(const RenderStyle&) const;
     const IntSize* progressBarSizes() const;
     const int* progressBarMargins(NSControlSize) const;
-
-#if ENABLE(SERVICE_CONTROLS)
-    bool paintImageControlsButton(const RenderObject&, const PaintInfo&, const IntRect&) final;
-    IntSize imageControlsButtonSize(const RenderObject&) const final;
-    IntSize imageControlsButtonPositionOffset() const final;
-
-    NSServicesRolloverButtonCell *servicesRolloverButtonCell() const;
-#endif
 
     mutable RetainPtr<NSPopUpButtonCell> m_popupButton;
     mutable RetainPtr<NSSearchFieldCell> m_search;

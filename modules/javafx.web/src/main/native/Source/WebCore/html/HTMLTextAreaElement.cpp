@@ -103,15 +103,19 @@ Ref<HTMLTextAreaElement> HTMLTextAreaElement::create(const QualifiedName& tagNam
     return textArea;
 }
 
+Ref<HTMLTextAreaElement> HTMLTextAreaElement::create(Document& document)
+{
+    return create(textareaTag, document, nullptr);
+}
+
 void HTMLTextAreaElement::didAddUserAgentShadowRoot(ShadowRoot& root)
 {
-    root.appendChild(TextControlInnerTextElement::create(document()));
-    updateInnerTextElementEditability();
+    root.appendChild(TextControlInnerTextElement::create(document(), isInnerTextElementEditable()));
 }
 
 const AtomString& HTMLTextAreaElement::formControlType() const
 {
-    static NeverDestroyed<const AtomString> textarea("textarea", AtomString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> textarea("textarea", AtomString::ConstructFromLiteral);
     return textarea;
 }
 
@@ -263,13 +267,14 @@ bool HTMLTextAreaElement::isMouseFocusable() const
 
 void HTMLTextAreaElement::updateFocusAppearance(SelectionRestorationMode restorationMode, SelectionRevealMode revealMode)
 {
-    if (restorationMode == SelectionRestorationMode::SetDefault || !hasCachedSelection()) {
+    if (restorationMode == SelectionRestorationMode::RestoreOrSelectAll && hasCachedSelection())
+        restoreCachedSelection(revealMode, Element::defaultFocusTextStateChangeIntent());
+    else {
         // If this is the first focus, set a caret at the beginning of the text.
         // This matches some browsers' behavior; see bug 11746 Comment #15.
         // http://bugs.webkit.org/show_bug.cgi?id=11746#c15
         setSelectionRange(0, 0, SelectionHasNoDirection, revealMode, Element::defaultFocusTextStateChangeIntent());
-    } else
-        restoreCachedSelection(revealMode, Element::defaultFocusTextStateChangeIntent());
+    }
 }
 
 void HTMLTextAreaElement::defaultEventHandler(Event& event)
@@ -318,7 +323,8 @@ void HTMLTextAreaElement::handleBeforeTextInsertedEvent(BeforeTextInsertedEvent&
     // If the text field has no focus, we don't need to take account of the
     // selection length. The selection is the source of text drag-and-drop in
     // that case, and nothing in the text field will be removed.
-    unsigned selectionLength = focused() ? computeLengthForSubmission(plainText(document().frame()->selection().selection().toNormalizedRange().get())) : 0;
+    auto selectionRange = focused() ? document().frame()->selection().selection().toNormalizedRange() : WTF::nullopt;
+    unsigned selectionLength = selectionRange ? computeLengthForSubmission(plainText(*selectionRange)) : 0;
     ASSERT(currentLength >= selectionLength);
     unsigned baseLength = currentLength - selectionLength;
     unsigned appendableLength = unsignedMaxLength > baseLength ? unsignedMaxLength - baseLength : 0;
@@ -499,9 +505,10 @@ bool HTMLTextAreaElement::isValidValue(const String& candidate) const
     return !valueMissing(candidate) && !tooShort(candidate, IgnoreDirtyFlag) && !tooLong(candidate, IgnoreDirtyFlag);
 }
 
-void HTMLTextAreaElement::accessKeyAction(bool)
+bool HTMLTextAreaElement::accessKeyAction(bool)
 {
     focus();
+    return false;
 }
 
 void HTMLTextAreaElement::setCols(unsigned cols)

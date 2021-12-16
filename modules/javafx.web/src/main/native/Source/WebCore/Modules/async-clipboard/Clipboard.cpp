@@ -26,13 +26,16 @@
 #include "config.h"
 #include "Clipboard.h"
 
+#include "ClipboardImageReader.h"
 #include "ClipboardItem.h"
 #include "Document.h"
+#include "Editor.h"
 #include "Frame.h"
 #include "JSBlob.h"
 #include "JSClipboardItem.h"
 #include "JSDOMPromiseDeferred.h"
 #include "Navigator.h"
+#include "PagePasteboardContext.h"
 #include "Pasteboard.h"
 #include "Settings.h"
 #include "SharedBuffer.h"
@@ -48,7 +51,7 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(Clipboard);
 static bool shouldProceedWithClipboardWrite(const Frame& frame)
 {
     auto& settings = frame.settings();
-    if (settings.javaScriptCanAccessClipboard())
+    if (settings.javaScriptCanAccessClipboard() || frame.editor().isCopyingFromMenuOrKeyBinding())
         return true;
 
     switch (settings.clipboardAccessPolicy()) {
@@ -103,7 +106,7 @@ void Clipboard::readText(Ref<DeferredPromise>&& promise)
         return;
     }
 
-    auto pasteboard = Pasteboard::createForCopyAndPaste();
+    auto pasteboard = Pasteboard::createForCopyAndPaste(PagePasteboardContext::create(frame->pageID()));
     auto changeCountAtStart = pasteboard->changeCount();
     if (!frame->requestDOMPasteAccess()) {
         promise->reject(NotAllowedError);
@@ -144,7 +147,7 @@ void Clipboard::writeText(const String& data, Ref<DeferredPromise>&& promise)
     PasteboardCustomData customData;
     customData.writeString("text/plain"_s, data);
     customData.setOrigin(document->originIdentifierForPasteboard());
-    Pasteboard::createForCopyAndPaste()->writeCustomData({ WTFMove(customData) });
+    Pasteboard::createForCopyAndPaste(PagePasteboardContext::create(frame->pageID()))->writeCustomData({ WTFMove(customData) });
     promise->resolve();
 }
 
@@ -161,7 +164,7 @@ void Clipboard::read(Ref<DeferredPromise>&& promise)
         return;
     }
 
-    auto pasteboard = Pasteboard::createForCopyAndPaste();
+    auto pasteboard = Pasteboard::createForCopyAndPaste(PagePasteboardContext::create(frame->pageID()));
     auto changeCountAtStart = pasteboard->changeCount();
 
     if (!frame->requestDOMPasteAccess()) {
@@ -214,6 +217,17 @@ void Clipboard::getType(ClipboardItem& item, const String& type, Ref<DeferredPro
         return;
     }
 
+    if (type == "image/png"_s) {
+        ClipboardImageReader imageReader { frame->document(), type };
+        activePasteboard().read(imageReader, itemIndex);
+        auto imageBlob = imageReader.takeResult();
+        if (updateSessionValidity() == SessionIsValid::Yes && imageBlob)
+            promise->resolve<IDLInterface<Blob>>(imageBlob.releaseNonNull());
+        else
+            promise->reject(NotAllowedError);
+        return;
+    }
+
     String resultAsString;
 
     if (type == "text/uri-list"_s) {
@@ -233,19 +247,26 @@ void Clipboard::getType(ClipboardItem& item, const String& type, Ref<DeferredPro
         resultAsString = WTFMove(markupReader.markup);
     }
 
-    // FIXME: Support reading "image/png" as well as custom data.
-    // FIXME: Instead of checking changeCount here, we should send the changeCount over to the UI process to be vetted
-    // when attempting to read the data in the first place.
-    if (m_activeSession->changeCount != activePasteboard().changeCount()) {
-        m_activeSession = WTF::nullopt;
+    // FIXME: Support reading custom data.
+    if (updateSessionValidity() == SessionIsValid::No || resultAsString.isNull()) {
         promise->reject(NotAllowedError);
         return;
     }
 
-    if (!resultAsString.isNull())
-        promise->resolve<IDLInterface<Blob>>(ClipboardItem::blobFromString(resultAsString, type));
-    else
-        promise->reject(NotAllowedError);
+    promise->resolve<IDLInterface<Blob>>(ClipboardItem::blobFromString(frame->document(), resultAsString, type));
+}
+
+Clipboard::SessionIsValid Clipboard::updateSessionValidity()
+{
+    if (!m_activeSession)
+        return SessionIsValid::No;
+
+    if (m_activeSession->changeCount != activePasteboard().changeCount()) {
+        m_activeSession = WTF::nullopt;
+        return SessionIsValid::No;
+    }
+
+    return SessionIsValid::Yes;
 }
 
 void Clipboard::write(const Vector<RefPtr<ClipboardItem>>& items, Ref<DeferredPromise>&& promise)
@@ -283,7 +304,7 @@ Pasteboard& Clipboard::activePasteboard()
 Clipboard::ItemWriter::ItemWriter(Clipboard& clipboard, Ref<DeferredPromise>&& promise)
     : m_clipboard(makeWeakPtr(clipboard))
     , m_promise(WTFMove(promise))
-    , m_pasteboard(Pasteboard::createForCopyAndPaste())
+    , m_pasteboard(Pasteboard::createForCopyAndPaste(PagePasteboardContext::create(clipboard.frame()->pageID())))
 {
 }
 

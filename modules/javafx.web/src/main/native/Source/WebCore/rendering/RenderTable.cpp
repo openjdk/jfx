@@ -238,6 +238,13 @@ void RenderTable::updateLogicalWidth()
 {
     recalcSectionsIfNeeded();
 
+    if (isGridItem()) {
+        // FIXME: Investigate whether the grid layout algorithm provides all the logic
+        // needed and that we're not skipping anything essential due to the early return here.
+        RenderBlock::updateLogicalWidth();
+        return;
+    }
+
     if (isOutOfFlowPositioned()) {
         LogicalExtentComputedValues computedValues;
         computePositionedLogicalWidth(computedValues);
@@ -280,9 +287,10 @@ void RenderTable::updateLogicalWidth()
         setLogicalWidth(std::min(availableContentLogicalWidth, maxWidth));
     }
 
-    // Ensure we aren't smaller than our min preferred width.
-    setLogicalWidth(std::max(logicalWidth(), minPreferredLogicalWidth()));
-
+    // Our parent might have set an override content logical width on us, so we must respect it. This
+    // is how flexbox containers flex or stretch us.
+    if (hasOverridingLogicalWidth())
+        setLogicalWidth(std::max(logicalWidth(), overridingLogicalWidth()));
 
     // Ensure we aren't bigger than our max-width style.
     Length styleMaxLogicalWidth = style().logicalMaxWidth();
@@ -290,6 +298,9 @@ void RenderTable::updateLogicalWidth()
         LayoutUnit computedMaxLogicalWidth = convertStyleLogicalWidthToComputedWidth(styleMaxLogicalWidth, availableLogicalWidth);
         setLogicalWidth(std::min(logicalWidth(), computedMaxLogicalWidth));
     }
+
+    // Ensure we aren't smaller than our min preferred width.
+    setLogicalWidth(std::max(logicalWidth(), minPreferredLogicalWidth()));
 
     // Ensure we aren't smaller than our min-width style.
     Length styleMinLogicalWidth = style().logicalMinWidth();
@@ -324,7 +335,7 @@ LayoutUnit RenderTable::convertStyleLogicalWidthToComputedWidth(const Length& st
     if (styleLogicalWidth.isIntrinsic())
         return computeIntrinsicLogicalWidthUsing(styleLogicalWidth, availableWidth, bordersPaddingAndSpacingInRowDirection());
 
-    // HTML tables' width styles already include borders and paddings, but CSS tables' width styles do not.
+    // HTML tables' width styles already include borders and padding, but CSS tables' width styles do not.
     LayoutUnit borders;
     bool isCSSTable = !is<HTMLTableElement>(element());
     if (isCSSTable && styleLogicalWidth.isSpecified() && styleLogicalWidth.isPositive() && style().boxSizing() == BoxSizing::ContentBox)
@@ -820,14 +831,14 @@ void RenderTable::computePreferredLogicalWidths()
     auto& styleToUse = style();
     // FIXME: This should probably be checking for isSpecified since you should be able to use percentage or calc values for min-width.
     if (styleToUse.logicalMinWidth().isFixed() && styleToUse.logicalMinWidth().value() > 0) {
-        m_maxPreferredLogicalWidth = std::max(m_maxPreferredLogicalWidth, adjustContentBoxLogicalWidthForBoxSizing(styleToUse.logicalMinWidth().value()));
-        m_minPreferredLogicalWidth = std::max(m_minPreferredLogicalWidth, adjustContentBoxLogicalWidthForBoxSizing(styleToUse.logicalMinWidth().value()));
+        m_maxPreferredLogicalWidth = std::max(m_maxPreferredLogicalWidth, adjustContentBoxLogicalWidthForBoxSizing(styleToUse.logicalMinWidth()));
+        m_minPreferredLogicalWidth = std::max(m_minPreferredLogicalWidth, adjustContentBoxLogicalWidthForBoxSizing(styleToUse.logicalMinWidth()));
     }
 
     // FIXME: This should probably be checking for isSpecified since you should be able to use percentage or calc values for maxWidth.
     if (styleToUse.logicalMaxWidth().isFixed()) {
-        m_maxPreferredLogicalWidth = std::min(m_maxPreferredLogicalWidth, adjustContentBoxLogicalWidthForBoxSizing(styleToUse.logicalMaxWidth().value()));
-        m_minPreferredLogicalWidth = std::min(m_minPreferredLogicalWidth, adjustContentBoxLogicalWidthForBoxSizing(styleToUse.logicalMaxWidth().value()));
+        m_maxPreferredLogicalWidth = std::min(m_maxPreferredLogicalWidth, adjustContentBoxLogicalWidthForBoxSizing(styleToUse.logicalMaxWidth()));
+        m_maxPreferredLogicalWidth = std::max(m_maxPreferredLogicalWidth, m_minPreferredLogicalWidth);
     }
 
     // FIXME: We should be adding borderAndPaddingLogicalWidth here, but m_tableLayout->computePreferredLogicalWidths already does,
@@ -1493,7 +1504,7 @@ Optional<int> RenderTable::firstLineBaseline() const
     return Optional<int>();
 }
 
-LayoutRect RenderTable::overflowClipRect(const LayoutPoint& location, RenderFragmentContainer* fragment, OverlayScrollbarSizeRelevancy relevancy, PaintPhase phase)
+LayoutRect RenderTable::overflowClipRect(const LayoutPoint& location, RenderFragmentContainer* fragment, OverlayScrollbarSizeRelevancy relevancy, PaintPhase phase) const
 {
     LayoutRect rect;
     // Don't clip out the table's side of the collapsed borders if we're in the paint phase that will ask the sections to paint them.
@@ -1544,7 +1555,7 @@ bool RenderTable::nodeAtPoint(const HitTestRequest& request, HitTestResult& resu
     LayoutRect boundsRect(adjustedLocation, size());
     if (visibleToHitTesting() && (action == HitTestBlockBackground || action == HitTestChildBlockBackground) && locationInContainer.intersects(boundsRect)) {
         updateHitTestResult(result, flipForWritingMode(locationInContainer.point() - toLayoutSize(adjustedLocation)));
-        if (result.addNodeToListBasedTestResult(element(), request, locationInContainer, boundsRect) == HitTestProgress::Stop)
+        if (result.addNodeToListBasedTestResult(nodeForHitTest(), request, locationInContainer, boundsRect) == HitTestProgress::Stop)
             return true;
     }
 

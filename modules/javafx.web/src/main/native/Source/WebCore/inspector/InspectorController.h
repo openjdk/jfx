@@ -32,7 +32,7 @@
 #pragma once
 
 #include "InspectorOverlay.h"
-#include "PageScriptDebugServer.h"
+#include "PageDebugger.h"
 #include <JavaScriptCore/InspectorAgentRegistry.h>
 #include <JavaScriptCore/InspectorEnvironment.h>
 #include <wtf/Forward.h>
@@ -90,8 +90,9 @@ public:
     WEBCORE_EXPORT void disconnectAllFrontends();
 
     void inspect(Node*);
+    WEBCORE_EXPORT bool shouldShowOverlay() const;
     WEBCORE_EXPORT void drawHighlight(GraphicsContext&) const;
-    WEBCORE_EXPORT void getHighlight(Highlight&, InspectorOverlay::CoordinateSystem) const;
+    WEBCORE_EXPORT void getHighlight(InspectorOverlay::Highlight&, InspectorOverlay::CoordinateSystem) const;
     void hideHighlight();
     Node* highlightedNode() const;
 
@@ -100,9 +101,11 @@ public:
     WEBCORE_EXPORT void willComposite(Frame&);
     WEBCORE_EXPORT void didComposite(Frame&);
 
+    // Testing support.
     bool isUnderTest() const { return m_isUnderTest; }
     void setIsUnderTest(bool isUnderTest) { m_isUnderTest = isUnderTest; }
     WEBCORE_EXPORT void evaluateForTestInFrontend(const String& script);
+    WEBCORE_EXPORT unsigned gridOverlayCount() const;
 
     InspectorClient* inspectorClient() const { return m_inspectorClient; }
     InspectorFrontendClient* inspectorFrontendClient() const { return m_inspectorFrontendClient; }
@@ -117,8 +120,8 @@ public:
     Inspector::InspectorFunctionCallHandler functionCallHandler() const override;
     Inspector::InspectorEvaluateHandler evaluateHandler() const override;
     void frontendInitialized() override;
-    Ref<WTF::Stopwatch> executionStopwatch() override;
-    PageScriptDebugServer& scriptDebugServer() override;
+    WTF::Stopwatch& executionStopwatch() const final;
+    PageDebugger& debugger() override;
     JSC::VM& vm() override;
 
 private:
@@ -133,7 +136,7 @@ private:
     Ref<Inspector::BackendDispatcher> m_backendDispatcher;
     std::unique_ptr<InspectorOverlay> m_overlay;
     Ref<WTF::Stopwatch> m_executionStopwatch;
-    PageScriptDebugServer m_scriptDebugServer;
+    PageDebugger m_debugger;
     Inspector::AgentRegistry m_agents;
 
     Page& m_page;
@@ -142,8 +145,8 @@ private:
 
     // Lazy, but also on-demand agents.
     Inspector::InspectorAgent* m_inspectorAgent { nullptr };
-    InspectorDOMAgent* m_inspectorDOMAgent { nullptr };
-    InspectorPageAgent* m_inspectorPageAgent { nullptr };
+    InspectorDOMAgent* m_domAgent { nullptr };
+    InspectorPageAgent* m_pageAgent { nullptr };
 
     bool m_isUnderTest { false };
     bool m_isAutomaticInspection { false };

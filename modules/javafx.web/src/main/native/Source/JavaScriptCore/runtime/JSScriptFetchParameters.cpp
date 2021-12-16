@@ -26,7 +26,7 @@
 #include "config.h"
 #include "JSScriptFetchParameters.h"
 
-#include "JSCInlines.h"
+#include "JSCellInlines.h"
 
 namespace JSC {
 

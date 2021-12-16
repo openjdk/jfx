@@ -24,7 +24,6 @@
 #include "Document.h"
 #include "Element.h"
 #include "FloatQuad.h"
-#include "FloatingObjects.h"
 #include "Frame.h"
 #include "FrameView.h"
 #include "GraphicsContext.h"
@@ -138,7 +137,7 @@ LayoutUnit RenderView::availableLogicalHeight(AvailableLogicalHeightType) const
     if (document().isPluginDocument() && frameView().useFixedLayout())
         return frameView().fixedLayoutSize().height();
 #endif
-    return isHorizontalWritingMode() ? frameView().visibleHeight() : frameView().visibleWidth();
+    return isHorizontalWritingMode() ? frameView().layoutSize().height() : frameView().layoutSize().width();
 }
 
 bool RenderView::isChildAllowed(const RenderObject& child, const RenderStyle&) const
@@ -238,17 +237,17 @@ LayoutUnit RenderView::clientLogicalHeightForFixedPosition() const
     return clientLogicalHeight();
 }
 
-void RenderView::mapLocalToContainer(const RenderLayerModelObject* repaintContainer, TransformState& transformState, MapCoordinatesFlags mode, bool* wasFixed) const
+void RenderView::mapLocalToContainer(const RenderLayerModelObject* ancestorContainer, TransformState& transformState, MapCoordinatesFlags mode, bool* wasFixed) const
 {
     // If a container was specified, and was not nullptr or the RenderView,
     // then we should have found it by now.
-    ASSERT_ARG(repaintContainer, !repaintContainer || repaintContainer == this);
+    ASSERT_ARG(ancestorContainer, !ancestorContainer || ancestorContainer == this);
     ASSERT_UNUSED(wasFixed, !wasFixed || *wasFixed == (mode & IsFixed));
 
     if (mode & IsFixed)
         transformState.move(toLayoutSize(frameView().scrollPositionRespectingCustomFixedPosition()));
 
-    if (!repaintContainer && mode & UseTransforms && shouldUseTransformFromContainer(nullptr)) {
+    if (!ancestorContainer && mode & UseTransforms && shouldUseTransformFromContainer(nullptr)) {
         TransformationMatrix t;
         getTransformFromContainer(nullptr, LayoutSize(), t);
         transformState.applyTransform(t);
@@ -533,7 +532,7 @@ Optional<LayoutRect> RenderView::computeVisibleRectInContainer(const LayoutRect&
             adjustedRect.setX(viewWidth() - adjustedRect.maxX());
     }
 
-    if (context.m_hasPositionFixedDescendant)
+    if (context.hasPositionFixedDescendant)
         adjustedRect.moveBy(frameView().scrollPositionRespectingCustomFixedPosition());
 
     // Apply our transform if we have one (because of full page zooming).
@@ -662,6 +661,11 @@ IntSize RenderView::viewportSizeForCSSViewportUnits() const
     return frameView().viewportSizeForCSSViewportUnits();
 }
 
+Node* RenderView::nodeForHitTest() const
+{
+    return document().documentElement();
+}
+
 void RenderView::updateHitTestResult(HitTestResult& result, const LayoutPoint& point)
 {
     if (result.innerNode())
@@ -670,8 +674,7 @@ void RenderView::updateHitTestResult(HitTestResult& result, const LayoutPoint& p
     if (multiColumnFlow() && multiColumnFlow()->firstMultiColumnSet())
         return multiColumnFlow()->firstMultiColumnSet()->updateHitTestResult(result, point);
 
-    Node* node = document().documentElement();
-    if (node) {
+    if (auto* node = nodeForHitTest()) {
         result.setInnerNode(node);
         if (!result.innerNonSharedNode())
             result.setInnerNonSharedNode(node);
@@ -725,13 +728,6 @@ void RenderView::setIsInWindow(bool isInWindow)
 {
     if (m_compositor)
         m_compositor->setIsInWindow(isInWindow);
-}
-
-void RenderView::styleDidChange(StyleDifference diff, const RenderStyle* oldStyle)
-{
-    RenderBlockFlow::styleDidChange(diff, oldStyle);
-
-    frameView().styleDidChange();
 }
 
 ImageQualityController& RenderView::imageQualityController()

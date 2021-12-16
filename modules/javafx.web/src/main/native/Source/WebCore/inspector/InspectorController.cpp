@@ -65,11 +65,11 @@
 #include "PageAuditAgent.h"
 #include "PageConsoleAgent.h"
 #include "PageDOMDebuggerAgent.h"
+#include "PageDebugger.h"
 #include "PageDebuggerAgent.h"
 #include "PageHeapAgent.h"
 #include "PageNetworkAgent.h"
 #include "PageRuntimeAgent.h"
-#include "PageScriptDebugServer.h"
 #include "Settings.h"
 #include "SharedBuffer.h"
 #include "WebInjectedScriptHost.h"
@@ -100,7 +100,7 @@ InspectorController::InspectorController(Page& page, InspectorClient* inspectorC
     , m_backendDispatcher(BackendDispatcher::create(m_frontendRouter.copyRef()))
     , m_overlay(makeUnique<InspectorOverlay>(page, inspectorClient))
     , m_executionStopwatch(Stopwatch::create())
-    , m_scriptDebugServer(page)
+    , m_debugger(page)
     , m_page(page)
     , m_inspectorClient(inspectorClient)
 {
@@ -175,7 +175,7 @@ void InspectorController::createLazyAgents()
 #endif
 
     auto scriptProfilerAgentPtr = makeUnique<InspectorScriptProfilerAgent>(pageContext);
-    m_instrumentingAgents->setInspectorScriptProfilerAgent(scriptProfilerAgentPtr.get());
+    m_instrumentingAgents->setPersistentScriptProfilerAgent(scriptProfilerAgentPtr.get());
     m_agents.append(WTFMove(scriptProfilerAgentPtr));
 
 #if ENABLE(RESOURCE_USAGE)
@@ -356,9 +356,19 @@ void InspectorController::drawHighlight(GraphicsContext& context) const
     m_overlay->paint(context);
 }
 
-void InspectorController::getHighlight(Highlight& highlight, InspectorOverlay::CoordinateSystem coordinateSystem) const
+void InspectorController::getHighlight(InspectorOverlay::Highlight& highlight, InspectorOverlay::CoordinateSystem coordinateSystem) const
 {
     m_overlay->getHighlight(highlight, coordinateSystem);
+}
+
+unsigned InspectorController::gridOverlayCount() const
+{
+    return m_overlay->gridOverlayCount();
+}
+
+bool InspectorController::shouldShowOverlay() const
+{
+    return m_overlay->shouldShowOverlay();
 }
 
 void InspectorController::inspect(Node* node)
@@ -415,7 +425,7 @@ InspectorAgent& InspectorController::ensureInspectorAgent()
         auto pageContext = pageAgentContext();
         auto inspectorAgent = makeUnique<InspectorAgent>(pageContext);
         m_inspectorAgent = inspectorAgent.get();
-        m_instrumentingAgents->setInspectorAgent(m_inspectorAgent);
+        m_instrumentingAgents->setPersistentInspectorAgent(m_inspectorAgent);
         m_agents.append(WTFMove(inspectorAgent));
     }
     return *m_inspectorAgent;
@@ -423,24 +433,24 @@ InspectorAgent& InspectorController::ensureInspectorAgent()
 
 InspectorDOMAgent& InspectorController::ensureDOMAgent()
 {
-    if (!m_inspectorDOMAgent) {
+    if (!m_domAgent) {
         auto pageContext = pageAgentContext();
         auto domAgent = makeUnique<InspectorDOMAgent>(pageContext, m_overlay.get());
-        m_inspectorDOMAgent = domAgent.get();
+        m_domAgent = domAgent.get();
         m_agents.append(WTFMove(domAgent));
     }
-    return *m_inspectorDOMAgent;
+    return *m_domAgent;
 }
 
 InspectorPageAgent& InspectorController::ensurePageAgent()
 {
-    if (!m_inspectorPageAgent) {
+    if (!m_pageAgent) {
         auto pageContext = pageAgentContext();
         auto pageAgent = makeUnique<InspectorPageAgent>(pageContext, m_inspectorClient, m_overlay.get());
-        m_inspectorPageAgent = pageAgent.get();
+        m_pageAgent = pageAgent.get();
         m_agents.append(WTFMove(pageAgent));
     }
-    return *m_inspectorPageAgent;
+    return *m_pageAgent;
 }
 
 bool InspectorController::developerExtrasEnabled() const
@@ -473,10 +483,8 @@ void InspectorController::frontendInitialized()
 {
     if (m_pauseAfterInitialization) {
         m_pauseAfterInitialization = false;
-        if (PageDebuggerAgent* debuggerAgent = m_instrumentingAgents->pageDebuggerAgent()) {
-            ErrorString ignored;
-            debuggerAgent->pause(ignored);
-        }
+        if (auto* debuggerAgent = m_instrumentingAgents->enabledPageDebuggerAgent())
+            debuggerAgent->pause();
     }
 
 #if ENABLE(REMOTE_INSPECTOR)
@@ -485,14 +493,14 @@ void InspectorController::frontendInitialized()
 #endif
 }
 
-Ref<Stopwatch> InspectorController::executionStopwatch()
+Stopwatch& InspectorController::executionStopwatch() const
 {
-    return m_executionStopwatch.copyRef();
+    return m_executionStopwatch;
 }
 
-PageScriptDebugServer& InspectorController::scriptDebugServer()
+PageDebugger& InspectorController::debugger()
 {
-    return m_scriptDebugServer;
+    return m_debugger;
 }
 
 JSC::VM& InspectorController::vm()

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -37,11 +37,7 @@ namespace JSC {
 #define MAXIMUM_NUMBER_OF_FTL_COMPILER_THREADS 8
 #endif
 
-#if ENABLE(WEBASSEMBLY_STREAMING_API)
-constexpr bool enableWebAssemblyStreamingApi = true;
-#else
-constexpr bool enableWebAssemblyStreamingApi = false;
-#endif
+JS_EXPORT_PRIVATE bool canUseJITCage();
 
 // How do JSC VM options work?
 // ===========================
@@ -76,7 +72,7 @@ constexpr bool enableWebAssemblyStreamingApi = false;
 // and cannot be modified thereafter.
 
 #define FOR_EACH_JSC_OPTION(v)                                          \
-    v(Bool, useKernTCSM, true, Normal, "Note: this needs to go before other options since they depend on this value.") \
+    v(Bool, useKernTCSM, defaultTCSMValue(), Normal, "Note: this needs to go before other options since they depend on this value.") \
     v(Bool, validateOptions, false, Normal, "crashes if mis-typed JSC options were passed to the VM") \
     v(Unsigned, dumpOptions, 0, Normal, "dumps JSC options (0 = None, 1 = Overridden only, 2 = All, 3 = Verbose)") \
     v(OptionString, configFile, nullptr, Normal, "file to configure JSC options and logging location") \
@@ -94,9 +90,9 @@ constexpr bool enableWebAssemblyStreamingApi = false;
     v(Unsigned, softReservedZoneSize, 128 * KB, Normal, "A buffer greater than reservedZoneSize that reserves space for stringifying exceptions.") \
     v(Unsigned, reservedZoneSize, 64 * KB, Normal, "The amount of stack space we guarantee to our clients (and to interal VM code that does not call out to clients).") \
     \
+    v(Bool, crashOnDisallowedVMEntry, ASSERT_ENABLED, Normal, "Forces a crash if we attempt to enter the VM when disallowed") \
     v(Bool, crashIfCantAllocateJITMemory, false, Normal, nullptr) \
     v(Unsigned, jitMemoryReservationSize, 0, Normal, "Set this number to change the executable allocation size in ExecutableAllocatorFixedVMPool. (In bytes.)") \
-    v(Bool, useSeparatedWXHeap, false, Normal, nullptr) \
     \
     v(Bool, forceCodeBlockLiveness, false, Normal, nullptr) \
     v(Bool, forceICFailure, false, Normal, nullptr) \
@@ -110,6 +106,7 @@ constexpr bool enableWebAssemblyStreamingApi = false;
     v(Bool, dumpBytecodeLivenessResults, false, Normal, nullptr) \
     v(Bool, validateBytecode, false, Normal, nullptr) \
     v(Bool, forceDebuggerBytecodeGeneration, false, Normal, nullptr) \
+    v(Bool, debuggerTriggersBreakpointException, false, Normal, "Using the debugger statement will trigger an breakpoint exception (Useful when lldbing)") \
     v(Bool, dumpBytecodesBeforeGeneratorification, false, Normal, nullptr) \
     \
     v(Bool, useFunctionDotArguments, true, Normal, nullptr) \
@@ -119,6 +116,9 @@ constexpr bool enableWebAssemblyStreamingApi = false;
     v(Unsigned, shadowChickenLogSize, 1000, Normal, nullptr) \
     v(Unsigned, shadowChickenMaxTailDeletedFramesSize, 128, Normal, nullptr) \
     \
+    v(Bool, useIterationIntrinsics, true, Normal, nullptr) \
+    \
+    v(Bool, useOSLog, false, Normal, "Log dataLog()s to os_log instead of stderr") \
     /* dumpDisassembly implies dumpDFGDisassembly. */ \
     v(Bool, dumpDisassembly, false, Normal, "dumps disassembly of all JIT compiled code upon compilation") \
     v(Bool, asyncDisassembly, false, Normal, nullptr) \
@@ -132,9 +132,9 @@ constexpr bool enableWebAssemblyStreamingApi = false;
     v(OptionRange, bytecodeRangeToJITCompile, 0, Normal, "bytecode size range to allow compilation on, e.g. 1:100") \
     v(OptionRange, bytecodeRangeToDFGCompile, 0, Normal, "bytecode size range to allow DFG compilation on, e.g. 1:100") \
     v(OptionRange, bytecodeRangeToFTLCompile, 0, Normal, "bytecode size range to allow FTL compilation on, e.g. 1:100") \
-    v(OptionString, jitWhitelist, nullptr, Normal, "file with list of function signatures to allow compilation on") \
-    v(OptionString, dfgWhitelist, nullptr, Normal, "file with list of function signatures to allow DFG compilation on") \
-    v(OptionString, ftlWhitelist, nullptr, Normal, "file with list of function signatures to allow FTL compilation on") \
+    v(OptionString, jitAllowlist, nullptr, Normal, "file with newline separated list of function signatures to allow compilation on or, if no such file exists, the function signature to allow") \
+    v(OptionString, dfgAllowlist, nullptr, Normal, "file with newline separated list of function signatures to allow DFG compilation on or, if no such file exists, the function signature to allow") \
+    v(OptionString, ftlAllowlist, nullptr, Normal, "file with newline separated list of function signatures to allow FTL compilation on or, if no such file exists, the function signature to allow") \
     v(Bool, dumpSourceAtDFGTime, false, Normal, "dumps source code of JS function being DFG compiled") \
     v(Bool, dumpBytecodeAtDFGTime, false, Normal, "dumps bytecode of JS function being DFG compiled") \
     v(Bool, dumpGraphAfterParsing, false, Normal, nullptr) \
@@ -150,6 +150,7 @@ constexpr bool enableWebAssemblyStreamingApi = false;
     v(Bool, logCompilationChanges, false, Normal, nullptr) \
     v(Bool, useProbeOSRExit, false, Normal, nullptr) \
     v(Bool, printEachOSRExit, false, Normal, nullptr) \
+    v(Bool, validateDoesGC, ASSERT_ENABLED, Normal, nullptr) \
     v(Bool, validateGraph, false, Normal, nullptr) \
     v(Bool, validateGraphAtEachPhase, false, Normal, nullptr) \
     v(Bool, verboseValidationFailure, false, Normal, nullptr) \
@@ -236,7 +237,6 @@ constexpr bool enableWebAssemblyStreamingApi = false;
     v(Unsigned, frequentCallThreshold, 2, Normal, nullptr) \
     v(Double, minimumCallToKnownRate, 0.51, Normal, nullptr) \
     v(Bool, createPreHeaders, true, Normal, nullptr) \
-    v(Bool, useMovHintRemoval, true, Normal, nullptr) \
     v(Bool, usePutStackSinking, true, Normal, nullptr) \
     v(Bool, useObjectAllocationSinking, true, Normal, nullptr) \
     v(Bool, useValueRepElimination, true, Normal, nullptr) \
@@ -363,12 +363,14 @@ constexpr bool enableWebAssemblyStreamingApi = false;
     v(Bool, collectSamplingProfilerDataForJSCShell, false, Normal, "This corresponds to the JSC shell's --sample option.") \
     v(Unsigned, samplingProfilerTopFunctionsCount, 12, Normal, "Number of top functions to report when using the command line interface.") \
     v(Unsigned, samplingProfilerTopBytecodesCount, 40, Normal, "Number of top bytecodes to report when using the command line interface.") \
-    v(OptionString, samplingProfilerPath, nullptr, Normal, "The path to the directory to write sampiling profiler output to. This probably will not work with WK2 unless the path is in the whitelist.") \
+    v(OptionString, samplingProfilerPath, nullptr, Normal, "The path to the directory to write sampiling profiler output to. This probably will not work with WK2 unless the path is in the sandbox.") \
     v(Bool, sampleCCode, false, Normal, "Causes the sampling profiler to record profiling data for C frames.") \
     \
     v(Bool, alwaysGeneratePCToCodeOriginMap, false, Normal, "This will make sure we always generate a PCToCodeOriginMap for JITed code.") \
     \
     v(Double, randomIntegrityAuditRate, 0.05, Normal, "Probability of random integrity audits [0.0 - 1.0]") \
+    v(Bool, verifyGC, false, Normal, nullptr) \
+    v(Bool, verboseVerifyGC, false, Normal, nullptr) \
     v(Bool, verifyHeap, false, Normal, nullptr) \
     v(Unsigned, numberOfGCCyclesToRecordForVerification, 3, Normal, nullptr) \
     \
@@ -381,6 +383,9 @@ constexpr bool enableWebAssemblyStreamingApi = false;
     v(Bool, validateExceptionChecks, false, Normal, "Verifies that needed exception checks are performed.") \
     v(Unsigned, unexpectedExceptionStackTraceLimit, 100, Normal, "Stack trace limit for debugging unexpected exceptions observed in the VM") \
     \
+    v(Bool, validateDFGClobberize, false, Normal, "Emits code in the DFG/FTL to validate the Clobberize phase")\
+    v(Bool, validateBoundsCheckElimination, false, Normal, "Emits code in the DFG/FTL to validate bounds check elimination")\
+    \
     v(Bool, useExecutableAllocationFuzz, false, Normal, nullptr) \
     v(Unsigned, fireExecutableAllocationFuzzAt, 0, Normal, nullptr) \
     v(Unsigned, fireExecutableAllocationFuzzAtOrAfter, 0, Normal, nullptr) \
@@ -390,6 +395,7 @@ constexpr bool enableWebAssemblyStreamingApi = false;
     v(Unsigned, fireOSRExitFuzzAtStatic, 0, Normal, nullptr) \
     v(Unsigned, fireOSRExitFuzzAt, 0, Normal, nullptr) \
     v(Unsigned, fireOSRExitFuzzAtOrAfter, 0, Normal, nullptr) \
+    v(Bool, verboseOSRExitFuzz, true, Normal, nullptr) \
     \
     v(Unsigned, seedOfVMRandomForFuzzer, 0, Normal, "0 means not fuzzing this; use a cryptographically random seed") \
     v(Bool, useRandomizingFuzzerAgent, false, Normal, nullptr) \
@@ -405,6 +411,7 @@ constexpr bool enableWebAssemblyStreamingApi = false;
     \
     v(Bool, logPhaseTimes, false, Normal, nullptr) \
     v(Double, rareBlockPenalty, 0.001, Normal, nullptr) \
+    v(Unsigned, maximumTmpsForGraphColoring, 25000, Normal, "The maximum number of tmps an Air program can have before always register allocating with Linear Scan") \
     v(Bool, airLinearScanVerbose, false, Normal, nullptr) \
     v(Bool, airLinearScanSpillsEverything, false, Normal, nullptr) \
     v(Bool, airForceBriggsAllocator, false, Normal, nullptr) \
@@ -416,6 +423,7 @@ constexpr bool enableWebAssemblyStreamingApi = false;
     v(Bool, useB3TailDup, true, Normal, nullptr) \
     v(Unsigned, maxB3TailDupBlockSize, 3, Normal, nullptr) \
     v(Unsigned, maxB3TailDupBlockSuccessors, 3, Normal, nullptr) \
+    v(Bool, useB3HoistLoopInvariantValues, false, Normal, nullptr) \
     \
     v(Bool, useDollarVM, false, Restricted, "installs the $vm debugging tool in global objects") \
     v(OptionString, functionOverrides, nullptr, Restricted, "file with debugging overrides for function bodies") \
@@ -467,14 +475,15 @@ constexpr bool enableWebAssemblyStreamingApi = false;
     v(Bool, useFastTLSForWasmContext, true, Normal, "If true, we will store context in fast TLS. If false, we will pin it to a register.") \
     v(Bool, wasmBBQUsesAir, true, Normal, nullptr) \
     v(Bool, useWasmLLInt, true, Normal, nullptr) \
+    v(Bool, useBBQJIT, true, Normal, "allows the BBQ JIT to be used if true") \
+    v(Bool, useOMGJIT, true, Normal, "allows the OMG JIT to be used if true") \
+    v(Bool, useWasmLLIntPrologueOSR, true, Normal, "allows prologue OSR from Wasm LLInt if true") \
+    v(Bool, useWasmLLIntLoopOSR, true, Normal, "allows loop OSR from Wasm LLInt if true") \
+    v(Bool, useWasmLLIntEpilogueOSR, true, Normal, "allows epilogue OSR from Wasm LLInt if true") \
+    v(OptionRange, wasmFunctionIndexRangeToCompile, 0, Normal, "wasm function index range to allow compilation on, e.g. 1:100") \
     v(Bool, wasmLLIntTiersUpToBBQ, true, Normal, nullptr) \
     v(Size, webAssemblyBBQAirModeThreshold, isIOS() ? (10 * MB) : 0, Normal, "If 0, we always use BBQ Air. If Wasm module code size hits this threshold, we compile Wasm module with B3 BBQ mode.") \
-    v(Bool, useWebAssemblyStreamingApi, enableWebAssemblyStreamingApi, Normal, "Allow to run WebAssembly's Streaming API") \
     v(Bool, useEagerWebAssemblyModuleHashing, false, Normal, "Unnamed WebAssembly modules are identified in backtraces through their hash, if available.") \
-    v(Bool, useWebAssemblyReferences, true, Normal, "Allow types from the wasm references spec.") \
-    v(Bool, useWebAssemblyMultiValues, true, Normal, "Allow types from the wasm mulit-values spec.") \
-    v(Bool, useWeakRefs, false, Normal, "Expose the WeakRef constructor.") \
-    v(Bool, useBigInt, false, Normal, "If true, we will enable BigInt support.") \
     v(Bool, useArrayAllocationProfiling, true, Normal, "If true, we will use our normal array allocation profiling. If false, the allocation profile will always claim to be undecided.") \
     v(Bool, forcePolyProto, false, Normal, "If true, create_this will always create an object with a poly proto structure.") \
     v(Bool, forceMiniVMMode, false, Normal, "If true, it will force mini VM mode on.") \
@@ -492,7 +501,34 @@ constexpr bool enableWebAssemblyStreamingApi = false;
     v(Bool, useUnlinkedCodeBlockJettisoning, false, Normal, "If true, UnlinkedCodeBlock can be jettisoned.") \
     v(Bool, forceOSRExitToLLInt, false, Normal, "If true, we always exit to the LLInt. If false, we exit to whatever is most convenient.") \
     v(Unsigned, getByValICMaxNumberOfIdentifiers, 4, Normal, "Number of identifiers we see in the LLInt that could cause us to bail on generating an IC for get_by_val.") \
-    v(Bool, useClassFields, false, Normal, "If true, the parser will understand data fields inside classes.") \
+    v(Bool, useRandomizingExecutableIslandAllocation, false, Normal, "For the arm64 ExecutableAllocator, if true, select which region to use randomly. This is useful for testing that jump islands work.") \
+    v(Bool, exposeProfilersOnGlobalObject, false, Normal, "If true, we will expose functions to enable/disable both the sampling profiler and the super sampler") \
+    v(Bool, allowUnsupportedTiers, false, Normal, "If true, we will not disable DFG or FTL when an experimental feature is enabled.") \
+    v(Bool, returnEarlyFromInfiniteLoopsForFuzzing, false, Normal, nullptr) \
+    v(Size, earlyReturnFromInfiniteLoopsLimit, 1300000000, Normal, "When returnEarlyFromInfiniteLoopsForFuzzing is true, this determines the number of executions a loop can run for before just returning. This is helpful for the fuzzer so it doesn't get stuck in infinite loops.") \
+    v(Bool, useLICMFuzzing, false, Normal, nullptr) \
+    v(Unsigned, seedForLICMFuzzer, 424242, Normal, nullptr) \
+    v(Double, allowHoistingLICMProbability, 0.5, Normal, nullptr) \
+    v(Bool, exposeCustomSettersOnGlobalObjectForTesting, false, Normal, nullptr) \
+    v(Bool, useJITCage, canUseJITCage(), Normal, nullptr) \
+    \
+    /* Feature Flags */\
+    \
+    v(Bool, usePublicStaticClassFields, true, Normal, "If true, the parser will understand public static data fields inside classes.") \
+    v(Bool, usePrivateStaticClassFields, true, Normal, "If true, the parser will understand private static data fields inside classes.") \
+    v(Bool, usePrivateClassFields, true, Normal, "If true, the parser will understand private data fields inside classes.") \
+    v(Bool, usePrivateMethods, true, Normal, "If true, the parser will understand private methods inside classes.") \
+    v(Bool, useWebAssemblyStreaming, true, Normal, "Allow to run WebAssembly's Streaming API") \
+    v(Bool, useWebAssemblyReferences, true, Normal, "Allow types from the wasm references spec.") \
+    v(Bool, useWebAssemblyMultiValues, true, Normal, "Allow types from the wasm mulit-values spec.") \
+    v(Bool, useWebAssemblyThreading, true, Normal, "Allow instructions from the wasm threading spec.") \
+    v(Bool, useWeakRefs, true, Normal, "Expose the WeakRef constructor.") \
+    v(Bool, useIntlDateTimeFormatDayPeriod, true, Normal, "Expose the Intl.DateTimeFormat dayPeriod feature.") \
+    v(Bool, useIntlDateTimeFormatRangeToParts, true, Normal, "Expose the Intl.DateTimeFormat#formatRangeToParts feature.") \
+    v(Bool, useAtMethod, false, Normal, "Expose the at() method on Array, %TypedArray%, and String.") \
+    v(Bool, useSharedArrayBuffer, false, Normal, nullptr) \
+    v(Bool, useTopLevelAwait, true, Normal, "allow the await keyword at the top level of a module.") \
+
 
 enum OptionEquivalence {
     SameOption,
@@ -512,15 +548,11 @@ enum OptionEquivalence {
     v(enablePolyvariantDevirtualization, usePolyvariantDevirtualization, SameOption) \
     v(enablePolymorphicAccessInlining, usePolymorphicAccessInlining, SameOption) \
     v(enablePolymorphicCallInlining, usePolymorphicCallInlining, SameOption) \
-    v(enableMovHintRemoval, useMovHintRemoval, SameOption) \
     v(enableObjectAllocationSinking, useObjectAllocationSinking, SameOption) \
     v(enableConcurrentJIT, useConcurrentJIT, SameOption) \
     v(enableProfiler, useProfiler, SameOption) \
     v(enableArchitectureSpecificOptimizations, useArchitectureSpecificOptimizations, SameOption) \
-    v(enablePolyvariantCallInlining, usePolyvariantCallInlining, SameOption) \
-    v(enablePolyvariantByIdInlining, usePolyvariantByIdInlining, SameOption) \
     v(objectsAreImmortal, useImmortalObjects, SameOption) \
-    v(showObjectStatistics, dumpObjectStatistics, SameOption) \
     v(disableGC, useGC, InvertedOption) \
     v(enableTypeProfiler, useTypeProfiler, SameOption) \
     v(enableControlFlowProfiler, useControlFlowProfiler, SameOption) \
@@ -529,14 +561,21 @@ enum OptionEquivalence {
     v(enableOSRExitFuzz, useOSRExitFuzz, SameOption) \
     v(enableDollarVM, useDollarVM, SameOption) \
     v(enableWebAssembly, useWebAssembly, SameOption) \
-    v(verboseDFGByteCodeParsing, verboseDFGBytecodeParsing, SameOption) \
     v(maximumOptimizationCandidateInstructionCount, maximumOptimizationCandidateBytecodeCost, SameOption) \
     v(maximumFunctionForCallInlineCandidateInstructionCount, maximumFunctionForCallInlineCandidateBytecodeCost, SameOption) \
     v(maximumFunctionForClosureCallInlineCandidateInstructionCount, maximumFunctionForClosureCallInlineCandidateBytecodeCost, SameOption) \
     v(maximumFunctionForConstructInlineCandidateInstructionCount, maximumFunctionForConstructInlineCandidateBytecoodeCost, SameOption) \
     v(maximumFTLCandidateInstructionCount, maximumFTLCandidateBytecodeCost, SameOption) \
     v(maximumInliningCallerSize, maximumInliningCallerBytecodeCost, SameOption) \
+    v(validateBCE, validateBoundsCheckElimination, SameOption)
 
+enum ExperimentalOptionFlags {
+    LLIntAndBaselineOnly = 0,
+    SupportsDFG = 1 << 0,
+    SupportsFTL = 1 << 1,
+};
+
+#define FOR_EACH_JSC_EXPERIMENTAL_OPTION(v) \
 
 constexpr size_t countNumberOfJSCOptions()
 {
@@ -560,7 +599,7 @@ public:
         RELEASE_ASSERT(!value);
 
         m_state = Uninitialized;
-        m_rangeString = 0;
+        m_rangeString = nullptr;
         m_lowLimit = 0;
         m_highLimit = 0;
         return *this;
@@ -590,6 +629,9 @@ struct OptionsStorage {
     using OptionRange = JSC::OptionRange;
     using OptionString = const char*;
     using GCLogLevel = GCLogging::Level;
+
+    bool allowUnfinalizedAccess;
+    bool isFinalized;
 
 #define DECLARE_OPTION(type_, name_, defaultValue_, availability_, description_) \
     type_ name_; \

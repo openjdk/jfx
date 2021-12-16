@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,17 +26,18 @@
 #include "config.h"
 #include "ObjectInitializationScope.h"
 
-#include "JSCInlines.h"
+#include "HeapInlines.h"
+#include "JSCJSValueInlines.h"
+#include "JSCellInlines.h"
 #include "JSObject.h"
-#include "Operations.h"
+#include "Scribble.h"
 
 namespace JSC {
 
-#ifndef NDEBUG
+#if ASSERT_ENABLED
+
 ObjectInitializationScope::ObjectInitializationScope(VM& vm)
     : m_vm(vm)
-    , m_disallowGC(false)
-    , m_disallowVMReentry(false)
 {
 }
 
@@ -48,21 +49,20 @@ ObjectInitializationScope::~ObjectInitializationScope()
     verifyPropertiesAreInitialized(m_object);
 }
 
-void ObjectInitializationScope::notifyAllocated(JSObject* object, bool wasCreatedUninitialized)
+void ObjectInitializationScope::notifyAllocated(JSObject* object)
 {
-    if (wasCreatedUninitialized) {
-        m_disallowGC.enable();
-        m_disallowVMReentry.enable();
-        m_object = object;
-    } else
-        verifyPropertiesAreInitialized(object);
+    ASSERT(!m_disallowGC);
+    ASSERT(!m_disallowVMEntry);
+    m_disallowGC.emplace();
+    m_disallowVMEntry.emplace(m_vm);
+    m_object = object;
 }
 
 void ObjectInitializationScope::notifyInitialized(JSObject* object)
 {
     if (m_object) {
-        m_disallowGC.disable();
-        m_disallowVMReentry.disable();
+        m_disallowGC.reset();
+        m_disallowVMEntry.reset();
         m_object = nullptr;
     }
     verifyPropertiesAreInitialized(object);
@@ -112,6 +112,7 @@ void ObjectInitializationScope::verifyPropertiesAreInitialized(JSObject* object)
         }
     }
 }
-#endif
+
+#endif // ASSERT_ENABLED
 
 } // namespace JSC

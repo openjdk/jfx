@@ -37,7 +37,7 @@ namespace WebCore {
 // Base of checkbox and radio types.
 class BaseCheckableInputType : public InputType {
 protected:
-    explicit BaseCheckableInputType(HTMLInputElement& element) : InputType(element) { }
+    explicit BaseCheckableInputType(Type type, HTMLInputElement& element) : InputType(type, element) { }
     ShouldCallBaseEventHandler handleKeydownEvent(KeyboardEvent&) override;
     void fireInputAndChangeEvents();
 
@@ -47,11 +47,10 @@ private:
     bool appendFormData(DOMFormData&, bool) const override;
     void handleKeypressEvent(KeyboardEvent&) override;
     bool canSetStringValue() const override;
-    void accessKeyAction(bool sendMouseEvents) override;
+    bool accessKeyAction(bool sendMouseEvents) override;
     String fallbackValue() const override;
     bool storesValueSeparateFromAttribute() override;
     void setValue(const String&, bool, TextFieldEventBehavior) override;
-    bool isCheckable() override;
 };
 
 } // namespace WebCore

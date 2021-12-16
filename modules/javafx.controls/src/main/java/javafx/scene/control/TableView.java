@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -360,7 +360,7 @@ import javafx.scene.control.skin.TableViewSkin;
 @DefaultProperty("items")
 public class TableView<S> extends Control {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Static properties and methods                                           *
      *                                                                         *
@@ -495,7 +495,7 @@ public class TableView<S> extends Control {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -559,12 +559,14 @@ public class TableView<S> extends Control {
             }
         });
 
+        pseudoClassStateChanged(PseudoClass.getPseudoClass(getColumnResizePolicy().toString()), true);
+
         isInited = true;
     }
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Instance Variables                                                      *
      *                                                                         *
@@ -595,7 +597,7 @@ public class TableView<S> extends Control {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Callbacks and Events                                                    *
      *                                                                         *
@@ -823,7 +825,7 @@ public class TableView<S> extends Control {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Properties                                                              *
      *                                                                         *
@@ -1300,7 +1302,7 @@ public class TableView<S> extends Control {
     }
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *
@@ -1630,7 +1632,7 @@ public class TableView<S> extends Control {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private Implementation                                                  *
      *                                                                         *
@@ -1699,7 +1701,7 @@ public class TableView<S> extends Control {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Stylesheet Handling                                                     *
      *                                                                         *
@@ -1741,8 +1743,9 @@ public class TableView<S> extends Control {
     }
 
     /**
-     * @return The CssMetaData associated with this class, which may include the
-     * CssMetaData of its superclasses.
+     * Gets the {@code CssMetaData} associated with this class, which may include the
+     * {@code CssMetaData} of its superclasses.
+     * @return the {@code CssMetaData}
      * @since JavaFX 8.0
      */
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
@@ -1760,7 +1763,7 @@ public class TableView<S> extends Control {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Accessibility handling                                                  *
      *                                                                         *
@@ -1806,7 +1809,7 @@ public class TableView<S> extends Control {
     }
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Support Interfaces                                                      *
      *                                                                         *
@@ -1857,7 +1860,7 @@ public class TableView<S> extends Control {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Support Classes                                                         *
      *                                                                         *
@@ -1871,7 +1874,7 @@ public class TableView<S> extends Control {
      */
     public static abstract class TableViewSelectionModel<S> extends TableSelectionModel<S> {
 
-        /***********************************************************************
+        /* *********************************************************************
          *                                                                     *
          * Private fields                                                      *
          *                                                                     *
@@ -1883,7 +1886,7 @@ public class TableView<S> extends Control {
 
 
 
-        /***********************************************************************
+        /* *********************************************************************
          *                                                                     *
          * Constructors                                                        *
          *                                                                     *
@@ -1906,7 +1909,7 @@ public class TableView<S> extends Control {
 
 
 
-        /***********************************************************************
+        /* *********************************************************************
          *                                                                     *
          * Abstract API                                                        *
          *                                                                     *
@@ -1922,7 +1925,7 @@ public class TableView<S> extends Control {
         public abstract ObservableList<TablePosition> getSelectedCells();
 
 
-        /***********************************************************************
+        /* *********************************************************************
          *                                                                     *
          * Generic (type erasure) bridging                                     *
          *                                                                     *
@@ -2002,7 +2005,7 @@ public class TableView<S> extends Control {
 
 
 
-        /***********************************************************************
+        /* *********************************************************************
          *                                                                     *
          * Public API                                                          *
          *                                                                     *
@@ -2047,7 +2050,7 @@ public class TableView<S> extends Control {
 
 
 
-        /***********************************************************************
+        /* *********************************************************************
          *                                                                     *
          * Private implementation                                              *
          *                                                                     *
@@ -2086,7 +2089,7 @@ public class TableView<S> extends Control {
 
         private final MappingChange.Map<TablePosition<S,?>,Integer> cellToIndicesMap = f -> f.getRow();
 
-        /***********************************************************************
+        /* *********************************************************************
          *                                                                     *
          * Constructors                                                        *
          *                                                                     *
@@ -2217,7 +2220,7 @@ public class TableView<S> extends Control {
 
 
 
-        /***********************************************************************
+        /* *********************************************************************
          *                                                                     *
          * Observable properties (and getters/setters)                         *
          *                                                                     *
@@ -2236,7 +2239,7 @@ public class TableView<S> extends Control {
 
 
 
-        /***********************************************************************
+        /* *********************************************************************
          *                                                                     *
          * Internal properties                                                 *
          *                                                                     *
@@ -2387,7 +2390,7 @@ public class TableView<S> extends Control {
             previousModelSize = getItemCount();
         }
 
-        /***********************************************************************
+        /* *********************************************************************
          *                                                                     *
          * Public selection API                                                *
          *                                                                     *
@@ -2463,7 +2466,8 @@ public class TableView<S> extends Control {
              *   return the same number - the place where the removed elements were positioned in the list.
              */
             if (wasSelected) {
-                change = ControlUtils.buildClearAndSelectChange(selectedCellsSeq, previousSelection, row);
+                change = ControlUtils.buildClearAndSelectChange(
+                        selectedCellsSeq, previousSelection, newTablePosition, Comparator.comparing(TablePosition::getRow));
             } else {
                 final int changeIndex = isCellSelectionEnabled ? 0 : Math.max(0, selectedCellsSeq.indexOf(newTablePosition));
                 final int changeSize = isCellSelectionEnabled ? getSelectedCells().size() : 1;
@@ -2954,7 +2958,7 @@ public class TableView<S> extends Control {
 
 
 
-        /***********************************************************************
+        /* *********************************************************************
          *                                                                     *
          * Support code                                                        *
          *                                                                     *
@@ -3228,7 +3232,7 @@ public class TableView<S> extends Control {
         }
 
 
-        /***********************************************************************
+        /* *********************************************************************
          *                                                                     *
          * Public API                                                          *
          *                                                                     *
@@ -3324,7 +3328,7 @@ public class TableView<S> extends Control {
             }
         }
 
-        /***********************************************************************
+        /* *********************************************************************
          *                                                                     *
          * Private Implementation                                              *
          *                                                                     *

@@ -70,6 +70,7 @@ static inline bool shouldApplyPropertyInParseOrder(CSSPropertyID propertyID)
 }
 
 // https://www.w3.org/TR/css-pseudo-4/#marker-pseudo (Editor's Draft, 25 July 2017)
+// FIXME: this is outdated, see https://bugs.webkit.org/show_bug.cgi?id=218791.
 static inline bool isValidMarkerStyleProperty(CSSPropertyID id)
 {
     switch (id) {
@@ -91,6 +92,18 @@ static inline bool isValidMarkerStyleProperty(CSSPropertyID id)
     case CSSPropertyFontOpticalSizing:
     case CSSPropertyFontVariationSettings:
 #endif
+    case CSSPropertyAnimationDuration:
+    case CSSPropertyAnimationTimingFunction:
+    case CSSPropertyAnimationDelay:
+    case CSSPropertyAnimationIterationCount:
+    case CSSPropertyAnimationDirection:
+    case CSSPropertyAnimationFillMode:
+    case CSSPropertyAnimationPlayState:
+    case CSSPropertyAnimationName:
+    case CSSPropertyTransitionDuration:
+    case CSSPropertyTransitionTimingFunction:
+    case CSSPropertyTransitionDelay:
+    case CSSPropertyTransitionProperty:
         return true;
     default:
         break;
@@ -98,7 +111,7 @@ static inline bool isValidMarkerStyleProperty(CSSPropertyID id)
     return false;
 }
 
-#if ENABLE(VIDEO_TRACK)
+#if ENABLE(VIDEO)
 static inline bool isValidCueStyleProperty(CSSPropertyID id)
 {
     switch (id) {
@@ -148,7 +161,7 @@ static inline bool isValidCueStyleProperty(CSSPropertyID id)
 PropertyCascade::PropertyCascade(const MatchResult& matchResult, OptionSet<CascadeLevel> cascadeLevels, IncludedProperties includedProperties, Direction direction)
     : m_matchResult(matchResult)
     , m_includedProperties(includedProperties)
-    , m_direction(resolveDirectionAndWritingMode(direction))
+    , m_direction(direction)
 {
     buildCascade(cascadeLevels);
 }
@@ -156,7 +169,8 @@ PropertyCascade::PropertyCascade(const MatchResult& matchResult, OptionSet<Casca
 PropertyCascade::PropertyCascade(const PropertyCascade& parent, OptionSet<CascadeLevel> cascadeLevels)
     : m_matchResult(parent.m_matchResult)
     , m_includedProperties(parent.m_includedProperties)
-    , m_direction(parent.m_direction)
+    , m_direction(parent.direction())
+    , m_directionIsUnresolved(false)
 {
     buildCascade(cascadeLevels);
 }
@@ -196,8 +210,10 @@ void PropertyCascade::setPropertyInternal(Property& property, CSSPropertyID id, 
 
 void PropertyCascade::set(CSSPropertyID id, CSSValue& cssValue, unsigned linkMatchType, CascadeLevel cascadeLevel, ScopeOrdinal styleScopeOrdinal)
 {
-    if (CSSProperty::isDirectionAwareProperty(id))
-        id = CSSProperty::resolveDirectionAwareProperty(id, m_direction.textDirection, m_direction.writingMode);
+    if (CSSProperty::isDirectionAwareProperty(id)) {
+        auto direction = this->direction();
+        id = CSSProperty::resolveDirectionAwareProperty(id, direction.textDirection, direction.writingMode);
+    }
 
     ASSERT(!shouldApplyPropertyInParseOrder(id));
 
@@ -242,7 +258,7 @@ void PropertyCascade::setDeferred(CSSPropertyID id, CSSValue& cssValue, unsigned
 bool PropertyCascade::addMatch(const MatchedProperties& matchedProperties, CascadeLevel cascadeLevel, bool important)
 {
     auto& styleProperties = *matchedProperties.properties;
-    auto propertyWhitelistType = static_cast<PropertyWhitelistType>(matchedProperties.whitelistType);
+    auto propertyAllowlistType = static_cast<PropertyAllowlistType>(matchedProperties.allowlistType);
     bool hasImportantProperties = false;
 
     for (unsigned i = 0, count = styleProperties.propertyCount(); i < count; ++i) {
@@ -261,11 +277,11 @@ bool PropertyCascade::addMatch(const MatchedProperties& matchedProperties, Casca
         }
         CSSPropertyID propertyID = current.id();
 
-#if ENABLE(VIDEO_TRACK)
-        if (propertyWhitelistType == PropertyWhitelistCue && !isValidCueStyleProperty(propertyID))
+#if ENABLE(VIDEO)
+        if (propertyAllowlistType == PropertyAllowlistCue && !isValidCueStyleProperty(propertyID))
             continue;
 #endif
-        if (propertyWhitelistType == PropertyWhitelistMarker && !isValidMarkerStyleProperty(propertyID))
+        if (propertyAllowlistType == PropertyAllowlistMarker && !isValidMarkerStyleProperty(propertyID))
             continue;
 
         if (shouldApplyPropertyInParseOrder(propertyID))
@@ -402,6 +418,15 @@ PropertyCascade::Direction PropertyCascade::resolveDirectionAndWritingMode(Direc
     }
 
     return result;
+}
+
+PropertyCascade::Direction PropertyCascade::direction() const
+{
+    if (m_directionIsUnresolved) {
+        m_direction = resolveDirectionAndWritingMode(m_direction);
+        m_directionIsUnresolved = false;
+    }
+    return m_direction;
 }
 
 }

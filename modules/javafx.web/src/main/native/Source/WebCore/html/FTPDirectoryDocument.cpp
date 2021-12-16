@@ -61,9 +61,6 @@ private:
     void append(RefPtr<StringImpl>&&) override;
     void finish() override;
 
-    // FIXME: Why do we need this?
-    bool isWaitingForScripts() const override { return false; }
-
     void checkBuffer(int len = 10)
     {
         if ((m_dest - m_buffer) > m_size - len) {
@@ -135,6 +132,7 @@ void FTPDirectoryDocumentParser::appendEntry(const String& filename, const Strin
     sizeElement->appendChild(Text::create(document, size));
     sizeElement->setAttributeWithoutSynchronization(HTMLNames::classAttr, AtomString("ftpDirectoryFileSize", AtomString::ConstructFromLiteral));
     rowElement->appendChild(sizeElement);
+    document.setHasVisuallyNonEmptyCustomContent();
 }
 
 Ref<Element> FTPDirectoryDocumentParser::createTDForFilename(const String& filename)
@@ -154,7 +152,7 @@ Ref<Element> FTPDirectoryDocumentParser::createTDForFilename(const String& filen
     auto tdElement = HTMLTableCellElement::create(tdTag, document);
     tdElement->appendChild(anchorElement);
 
-    return WTFMove(tdElement);
+    return tdElement;
 }
 
 static String processFilesizeString(const String& size, bool isDirectory)
@@ -421,8 +419,8 @@ void FTPDirectoryDocumentParser::finish()
     HTMLDocumentParser::finish();
 }
 
-FTPDirectoryDocument::FTPDirectoryDocument(Frame* frame, const URL& url)
-    : HTMLDocument(frame, url)
+FTPDirectoryDocument::FTPDirectoryDocument(Frame* frame, const Settings& settings, const URL& url)
+    : HTMLDocument(frame, settings, url)
 {
 #if !LOG_DISABLED
     LogFTP.state = WTFLogChannelState::On;

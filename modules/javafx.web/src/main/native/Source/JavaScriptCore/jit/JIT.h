@@ -37,6 +37,7 @@
 
 #define ASSERT_JIT_OFFSET(actual, expected) ASSERT_WITH_MESSAGE(actual == expected, "JIT Offset \"%s\" should be %d, not %d.\n", #expected, static_cast<int>(expected), static_cast<int>(actual));
 
+#include "ByValInfo.h"
 #include "CodeBlock.h"
 #include "CommonSlowPaths.h"
 #include "JITDisassembler.h"
@@ -70,24 +71,29 @@ namespace JSC {
 
     struct OpPutByVal;
     struct OpPutByValDirect;
+    struct OpPutPrivateName;
     struct OpPutToScope;
 
+    template<PtrTag tag>
     struct CallRecord {
         MacroAssembler::Call from;
         BytecodeIndex bytecodeIndex;
-        FunctionPtr<OperationPtrTag> callee;
+        FunctionPtr<tag> callee;
 
         CallRecord()
         {
         }
 
-        CallRecord(MacroAssembler::Call from, BytecodeIndex bytecodeIndex, FunctionPtr<OperationPtrTag> callee)
+        CallRecord(MacroAssembler::Call from, BytecodeIndex bytecodeIndex, FunctionPtr<tag> callee)
             : from(from)
             , bytecodeIndex(bytecodeIndex)
             , callee(callee)
         {
         }
     };
+
+    using FarCallRecord = CallRecord<OperationPtrTag>;
+    using NearCallRecord = CallRecord<JSInternalPtrTag>;
 
     struct JumpTable {
         MacroAssembler::Jump from;
@@ -160,6 +166,15 @@ namespace JSC {
         {
         }
 
+        ByValCompilationInfo(ByValInfo* byValInfo, BytecodeIndex bytecodeIndex, MacroAssembler::PatchableJump notIndexJump, MacroAssembler::Label doneTarget, MacroAssembler::Label nextHotPathTarget)
+            : byValInfo(byValInfo)
+            , bytecodeIndex(bytecodeIndex)
+            , notIndexJump(notIndexJump)
+            , doneTarget(doneTarget)
+            , nextHotPathTarget(nextHotPathTarget)
+        {
+        }
+
         ByValInfo* byValInfo;
         BytecodeIndex bytecodeIndex;
         MacroAssembler::PatchableJump notIndexJump;
@@ -226,11 +241,18 @@ namespace JSC {
         }
 
         template<typename Op>
-        static void compilePutByValWithCachedId(VM& vm, CodeBlock* codeBlock, ByValInfo* byValInfo, ReturnAddressPtr returnAddress, PutKind putKind, const Identifier& propertyName)
+        static void compilePutByValWithCachedId(VM& vm, CodeBlock* codeBlock, ByValInfo* byValInfo, ReturnAddressPtr returnAddress, PutKind putKind, CacheableIdentifier propertyName)
         {
             JIT jit(vm, codeBlock);
             jit.m_bytecodeIndex = byValInfo->bytecodeIndex;
             jit.privateCompilePutByValWithCachedId<Op>(byValInfo, returnAddress, putKind, propertyName);
+        }
+
+        static void compilePutPrivateNameWithCachedId(VM& vm, CodeBlock* codeBlock, ByValInfo* byValInfo, ReturnAddressPtr returnAddress, CacheableIdentifier propertyName)
+        {
+            JIT jit(vm, codeBlock);
+            jit.m_bytecodeIndex = byValInfo->bytecodeIndex;
+            jit.privateCompilePutPrivateNameWithCachedId(byValInfo, returnAddress, propertyName);
         }
 
         static void compileHasIndexedProperty(VM& vm, CodeBlock* codeBlock, ByValInfo* byValInfo, ReturnAddressPtr returnAddress, JITArrayMode arrayMode)
@@ -253,11 +275,12 @@ namespace JSC {
         CompilationResult privateCompile(JITCompilationEffort);
 
         void privateCompileGetByVal(const ConcurrentJSLocker&, ByValInfo*, ReturnAddressPtr, JITArrayMode);
-        void privateCompileGetByValWithCachedId(ByValInfo*, ReturnAddressPtr, const Identifier&);
         template<typename Op>
         void privateCompilePutByVal(const ConcurrentJSLocker&, ByValInfo*, ReturnAddressPtr, JITArrayMode);
         template<typename Op>
-        void privateCompilePutByValWithCachedId(ByValInfo*, ReturnAddressPtr, PutKind, const Identifier&);
+        void privateCompilePutByValWithCachedId(ByValInfo*, ReturnAddressPtr, PutKind, CacheableIdentifier);
+
+        void privateCompilePutPrivateNameWithCachedId(ByValInfo*, ReturnAddressPtr, CacheableIdentifier);
 
         void privateCompileHasIndexedProperty(ByValInfo*, ReturnAddressPtr, JITArrayMode);
 
@@ -267,7 +290,7 @@ namespace JSC {
         Call appendCall(const FunctionPtr<CFunctionPtrTag> function)
         {
             Call functionCall = call(OperationPtrTag);
-            m_calls.append(CallRecord(functionCall, m_bytecodeIndex, function.retagged<OperationPtrTag>()));
+            m_farCalls.append(FarCallRecord(functionCall, m_bytecodeIndex, function.retagged<OperationPtrTag>()));
             return functionCall;
         }
 
@@ -275,7 +298,7 @@ namespace JSC {
         Call appendCallWithSlowPathReturnType(const FunctionPtr<CFunctionPtrTag> function)
         {
             Call functionCall = callWithSlowPathReturnType(OperationPtrTag);
-            m_calls.append(CallRecord(functionCall, m_bytecodeIndex, function.retagged<OperationPtrTag>()));
+            m_farCalls.append(FarCallRecord(functionCall, m_bytecodeIndex, function.retagged<OperationPtrTag>()));
             return functionCall;
         }
 #endif
@@ -296,6 +319,9 @@ namespace JSC {
         }
 
         void privateCompileExceptionHandlers();
+
+        void advanceToNextCheckpoint();
+        void emitJumpSlowToHotForCheckpoint(Jump);
 
         void addSlowCase(Jump);
         void addSlowCase(const JumpList&);
@@ -340,14 +366,23 @@ namespace JSC {
         enum WriteBarrierMode { UnconditionalWriteBarrier, ShouldFilterBase, ShouldFilterValue, ShouldFilterBaseAndValue };
         // value register in write barrier is used before any scratch registers
         // so may safely be the same as either of the scratch registers.
+        void emitWriteBarrier(VirtualRegister owner, WriteBarrierMode);
         void emitWriteBarrier(VirtualRegister owner, VirtualRegister value, WriteBarrierMode);
         void emitWriteBarrier(JSCell* owner, VirtualRegister value, WriteBarrierMode);
         void emitWriteBarrier(JSCell* owner);
 
         // This assumes that the value to profile is in regT0 and that regT3 is available for
         // scratch.
-        void emitValueProfilingSite(ValueProfile&);
-        template<typename Metadata> void emitValueProfilingSite(Metadata&);
+#if USE(JSVALUE64)
+        void emitValueProfilingSite(ValueProfile&, GPRReg);
+        void emitValueProfilingSite(ValueProfile&, JSValueRegs);
+        template<typename Metadata> void emitValueProfilingSite(Metadata&, GPRReg);
+        template<typename Metadata> void emitValueProfilingSite(Metadata&, JSValueRegs);
+#else
+        void emitValueProfilingSite(ValueProfile&, JSValueRegs);
+        template<typename Metadata> void emitValueProfilingSite(Metadata&, JSValueRegs);
+#endif
+
         void emitValueProfilingSiteIfProfiledOpcode(...);
         template<typename Op>
         std::enable_if_t<std::is_same<decltype(Op::Metadata::m_profile), ValueProfile>::value, void>
@@ -397,11 +432,20 @@ namespace JSC {
         template<typename Op>
         JumpList emitFloatTypedArrayPutByVal(Op, PatchableJump& badType, TypedArrayType);
 
+        template<typename Op>
+        ECMAMode ecmaMode(Op);
+
+        // Determines the type of private field access for a bytecode.
+        template<typename Op>
+        PrivateFieldPutKind privateFieldPutKind(Op);
+
         // Identifier check helper for GetByVal and PutByVal.
-        void emitByValIdentifierCheck(ByValInfo*, RegisterID cell, RegisterID scratch, const Identifier&, JumpList& slowCases);
+        void emitByValIdentifierCheck(RegisterID cell, RegisterID scratch, CacheableIdentifier, JumpList& slowCases);
+
+        JITPutByIdGenerator emitPutPrivateNameWithCachedId(OpPutPrivateName, CacheableIdentifier, JumpList& doneCases, JumpList& slowCases);
 
         template<typename Op>
-        JITPutByIdGenerator emitPutByValWithCachedId(ByValInfo*, Op, PutKind, const Identifier&, JumpList& doneCases, JumpList& slowCases);
+        JITPutByIdGenerator emitPutByValWithCachedId(Op, PutKind, CacheableIdentifier, JumpList& doneCases, JumpList& slowCases);
 
         enum FinalObjectMode { MayBeFinal, KnownNotFinal };
 
@@ -432,6 +476,7 @@ namespace JSC {
 
         void emitJumpSlowCaseIfNotJSCell(VirtualRegister);
         void emitJumpSlowCaseIfNotJSCell(VirtualRegister, RegisterID tag);
+        void emitJumpSlowCaseIfNotJSCell(RegisterID);
 
         void compileGetByIdHotPath(const Identifier*);
 
@@ -471,9 +516,10 @@ namespace JSC {
         template<typename Op>
         void emit_compareUnsignedAndJump(const Instruction*, RelationalCondition);
         void emit_compareUnsignedAndJumpImpl(VirtualRegister op1, VirtualRegister op2, unsigned target, RelationalCondition);
-        template<typename Op>
-        void emit_compareAndJumpSlow(const Instruction*, DoubleCondition, size_t (JIT_OPERATION *operation)(JSGlobalObject*, EncodedJSValue, EncodedJSValue), bool invert, Vector<SlowCaseEntry>::iterator&);
-        void emit_compareAndJumpSlowImpl(VirtualRegister op1, VirtualRegister op2, unsigned target, size_t instructionSize, DoubleCondition, size_t (JIT_OPERATION *operation)(JSGlobalObject*, EncodedJSValue, EncodedJSValue), bool invert, Vector<SlowCaseEntry>::iterator&);
+        template<typename Op, typename SlowOperation>
+        void emit_compareAndJumpSlow(const Instruction*, DoubleCondition, SlowOperation, bool invert, Vector<SlowCaseEntry>::iterator&);
+        template<typename SlowOperation>
+        void emit_compareAndJumpSlowImpl(VirtualRegister op1, VirtualRegister op2, unsigned target, size_t instructionSize, DoubleCondition, SlowOperation, bool invert, Vector<SlowCaseEntry>::iterator&);
 
         void assertStackPointerOffset();
 
@@ -500,7 +546,9 @@ namespace JSC {
         void emit_op_identity_with_profile(const Instruction*);
         void emit_op_debug(const Instruction*);
         void emit_op_del_by_id(const Instruction*);
+        void emitSlow_op_del_by_id(const Instruction*, Vector<SlowCaseEntry>::iterator&);
         void emit_op_del_by_val(const Instruction*);
+        void emitSlow_op_del_by_val(const Instruction*, Vector<SlowCaseEntry>::iterator&);
         void emit_op_div(const Instruction*);
         void emit_op_end(const Instruction*);
         void emit_op_enter(const Instruction*);
@@ -514,17 +562,26 @@ namespace JSC {
         void emit_op_get_by_id_with_this(const Instruction*);
         void emit_op_get_by_id_direct(const Instruction*);
         void emit_op_get_by_val(const Instruction*);
+        void emit_op_get_private_name(const Instruction*);
+        void emit_op_set_private_brand(const Instruction*);
+        void emit_op_check_private_brand(const Instruction*);
         void emit_op_get_argument_by_val(const Instruction*);
+        void emit_op_get_prototype_of(const Instruction*);
         void emit_op_in_by_id(const Instruction*);
         void emit_op_init_lazy_reg(const Instruction*);
         void emit_op_overrides_has_instance(const Instruction*);
         void emit_op_instanceof(const Instruction*);
         void emit_op_instanceof_custom(const Instruction*);
         void emit_op_is_empty(const Instruction*);
-        void emit_op_is_undefined(const Instruction*);
+        void emit_op_typeof_is_undefined(const Instruction*);
         void emit_op_is_undefined_or_null(const Instruction*);
         void emit_op_is_boolean(const Instruction*);
         void emit_op_is_number(const Instruction*);
+#if USE(BIGINT32)
+        void emit_op_is_big_int(const Instruction*);
+#else
+        NO_RETURN void emit_op_is_big_int(const Instruction*);
+#endif
         void emit_op_is_object(const Instruction*);
         void emit_op_is_cell_with_type(const Instruction*);
         void emit_op_jeq_null(const Instruction*);
@@ -584,6 +641,7 @@ namespace JSC {
         template<typename Op = OpPutByVal>
         void emit_op_put_by_val(const Instruction*);
         void emit_op_put_by_val_direct(const Instruction*);
+        void emit_op_put_private_name(const Instruction*);
         void emit_op_put_getter_by_id(const Instruction*);
         void emit_op_put_setter_by_id(const Instruction*);
         void emit_op_put_getter_setter_by_id(const Instruction*);
@@ -607,8 +665,12 @@ namespace JSC {
         void emit_op_unexpected_load(const Instruction*);
         void emit_op_unsigned(const Instruction*);
         void emit_op_urshift(const Instruction*);
-        void emit_op_has_structure_property(const Instruction*);
-        void emit_op_has_indexed_property(const Instruction*);
+        template <typename OpCodeType>
+        void emit_op_has_structure_propertyImpl(const Instruction*);
+        void emit_op_has_enumerable_indexed_property(const Instruction*);
+        void emit_op_has_enumerable_structure_property(const Instruction*);
+        void emit_op_has_own_structure_property(const Instruction*);
+        void emit_op_in_structure_property(const Instruction*);
         void emit_op_get_direct_pname(const Instruction*);
         void emit_op_enumerator_structure_pname(const Instruction*);
         void emit_op_enumerator_generic_pname(const Instruction*);
@@ -634,6 +696,9 @@ namespace JSC {
         void emitSlow_op_get_by_id_with_this(const Instruction*, Vector<SlowCaseEntry>::iterator&);
         void emitSlow_op_get_by_id_direct(const Instruction*, Vector<SlowCaseEntry>::iterator&);
         void emitSlow_op_get_by_val(const Instruction*, Vector<SlowCaseEntry>::iterator&);
+        void emitSlow_op_get_private_name(const Instruction*, Vector<SlowCaseEntry>::iterator&);
+        void emitSlow_op_set_private_brand(const Instruction*, Vector<SlowCaseEntry>::iterator&);
+        void emitSlow_op_check_private_brand(const Instruction*, Vector<SlowCaseEntry>::iterator&);
         void emitSlow_op_get_argument_by_val(const Instruction*, Vector<SlowCaseEntry>::iterator&);
         void emitSlow_op_in_by_id(const Instruction*, Vector<SlowCaseEntry>::iterator&);
         void emitSlow_op_instanceof(const Instruction*, Vector<SlowCaseEntry>::iterator&);
@@ -660,8 +725,9 @@ namespace JSC {
         void emitSlow_op_new_object(const Instruction*, Vector<SlowCaseEntry>::iterator&);
         void emitSlow_op_put_by_id(const Instruction*, Vector<SlowCaseEntry>::iterator&);
         void emitSlow_op_put_by_val(const Instruction*, Vector<SlowCaseEntry>::iterator&);
+        void emitSlow_op_put_private_name(const Instruction*, Vector<SlowCaseEntry>::iterator&);
         void emitSlow_op_sub(const Instruction*, Vector<SlowCaseEntry>::iterator&);
-        void emitSlow_op_has_indexed_property(const Instruction*, Vector<SlowCaseEntry>::iterator&);
+        void emitSlow_op_has_enumerable_indexed_property(const Instruction*, Vector<SlowCaseEntry>::iterator&);
 
         void emit_op_resolve_scope(const Instruction*);
         void emit_op_get_from_scope(const Instruction*);
@@ -672,6 +738,11 @@ namespace JSC {
         void emitSlow_op_put_to_scope(const Instruction*, Vector<SlowCaseEntry>::iterator&);
 
         void emitSlowCaseCall(const Instruction*, Vector<SlowCaseEntry>::iterator&, SlowPathFunction);
+
+        void emit_op_iterator_open(const Instruction*);
+        void emitSlow_op_iterator_open(const Instruction*, Vector<SlowCaseEntry>::iterator&);
+        void emit_op_iterator_next(const Instruction*);
+        void emitSlow_op_iterator_next(const Instruction*, Vector<SlowCaseEntry>::iterator&);
 
         void emitRightShift(const Instruction*, bool isUnsigned);
         void emitRightShiftSlowCase(const Instruction*, Vector<SlowCaseEntry>::iterator&, bool isUnsigned);
@@ -845,8 +916,8 @@ namespace JSC {
 
         void updateTopCallFrame();
 
-        Call emitNakedCall(CodePtr<NoPtrTag> function = CodePtr<NoPtrTag>());
-        Call emitNakedTailCall(CodePtr<NoPtrTag> function = CodePtr<NoPtrTag>());
+        Call emitNakedNearCall(CodePtr<NoPtrTag> function = CodePtr<NoPtrTag>());
+        Call emitNakedNearTailCall(CodePtr<NoPtrTag> function = CodePtr<NoPtrTag>());
 
         // Loads the character value of a single character string into dst.
         void emitLoadCharacterString(RegisterID src, RegisterID dst, JumpList& failures);
@@ -906,14 +977,19 @@ namespace JSC {
 
         Interpreter* m_interpreter;
 
-        Vector<CallRecord> m_calls;
+        Vector<FarCallRecord> m_farCalls;
+        Vector<NearCallRecord> m_nearCalls;
         Vector<Label> m_labels;
+        HashMap<BytecodeIndex, Label> m_checkpointLabels;
         Vector<JITGetByIdGenerator> m_getByIds;
         Vector<JITGetByValGenerator> m_getByVals;
         Vector<JITGetByIdWithThisGenerator> m_getByIdsWithThis;
         Vector<JITPutByIdGenerator> m_putByIds;
         Vector<JITInByIdGenerator> m_inByIds;
+        Vector<JITDelByIdGenerator> m_delByIds;
+        Vector<JITDelByValGenerator> m_delByVals;
         Vector<JITInstanceOfGenerator> m_instanceOfs;
+        Vector<JITPrivateBrandAccessGenerator> m_privateBrandAccesses;
         Vector<ByValCompilationInfo> m_byValCompilationInfo;
         Vector<CallCompilationInfo> m_callCompilationInfo;
         Vector<JumpTable> m_jmpTable;
@@ -934,7 +1010,10 @@ namespace JSC {
         unsigned m_getByIdWithThisIndex { UINT_MAX };
         unsigned m_putByIdIndex { UINT_MAX };
         unsigned m_inByIdIndex { UINT_MAX };
+        unsigned m_delByValIndex { UINT_MAX };
+        unsigned m_delByIdIndex { UINT_MAX };
         unsigned m_instanceOfIndex { UINT_MAX };
+        unsigned m_privateBrandAccessIndex { UINT_MAX };
         unsigned m_byValInstructionIndex { UINT_MAX };
         unsigned m_callLinkInfoIndex { UINT_MAX };
         unsigned m_bytecodeCountHavingSlowCase { 0 };

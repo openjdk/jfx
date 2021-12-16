@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2009-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,25 +25,17 @@
 
 #include "config.h"
 
-#include "BatchedTransitionOptimizer.h"
 #include "CodeBlock.h"
-#include "Debugger.h"
 #include "FunctionCodeBlock.h"
 #include "FunctionOverrides.h"
-#include "JIT.h"
-#include "JSCInlines.h"
-#include "LLIntEntrypoint.h"
-#include "Parser.h"
-#include "TypeProfiler.h"
-#include "VMInlines.h"
-#include <wtf/CommaPrinter.h>
+#include "JSCJSValueInlines.h"
 
 namespace JSC {
 
 const ClassInfo FunctionExecutable::s_info = { "FunctionExecutable", &ScriptExecutable::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(FunctionExecutable) };
 
-FunctionExecutable::FunctionExecutable(VM& vm, const SourceCode& source, UnlinkedFunctionExecutable* unlinkedExecutable, Intrinsic intrinsic)
-    : ScriptExecutable(vm.functionExecutableStructure.get(), vm, source, unlinkedExecutable->isInStrictContext(), unlinkedExecutable->derivedContextType(), false, EvalContextType::None, intrinsic)
+FunctionExecutable::FunctionExecutable(VM& vm, const SourceCode& source, UnlinkedFunctionExecutable* unlinkedExecutable, Intrinsic intrinsic, bool isInsideOrdinaryFunction)
+    : ScriptExecutable(vm.functionExecutableStructure.get(), vm, source, unlinkedExecutable->isInStrictContext(), unlinkedExecutable->derivedContextType(), false, isInsideOrdinaryFunction || !unlinkedExecutable->isArrowFunction(), EvalContextType::None, intrinsic)
     , m_unlinkedExecutable(vm, this, unlinkedExecutable)
 {
     RELEASE_ASSERT(!source.isNull());
@@ -71,11 +63,12 @@ FunctionCodeBlock* FunctionExecutable::baselineCodeBlockFor(CodeSpecializationKi
         edge = m_codeBlockForConstruct.get();
     }
     if (!edge)
-        return 0;
+        return nullptr;
     return static_cast<FunctionCodeBlock*>(edge->codeBlock()->baselineAlternative());
 }
 
-void FunctionExecutable::visitChildren(JSCell* cell, SlotVisitor& visitor)
+template<typename Visitor>
+void FunctionExecutable::visitChildrenImpl(JSCell* cell, Visitor& visitor)
 {
     FunctionExecutable* thisObject = jsCast<FunctionExecutable*>(cell);
     ASSERT_GC_OBJECT_INHERITS(thisObject, info());
@@ -93,6 +86,8 @@ void FunctionExecutable::visitChildren(JSCell* cell, SlotVisitor& visitor)
         }
     }
 }
+
+DEFINE_VISIT_CHILDREN(FunctionExecutable);
 
 FunctionExecutable* FunctionExecutable::fromGlobalCode(
     const Identifier& name, JSGlobalObject* globalObject, const SourceCode& source,

@@ -60,10 +60,10 @@ inline bool RadioButtonGroup::isValid() const
 Vector<Ref<HTMLInputElement>> RadioButtonGroup::members() const
 {
     Vector<Ref<HTMLInputElement>> sortedMembers;
-    for (auto& memeber : m_members)
-        sortedMembers.append(memeber);
+    for (auto& member : m_members)
+        sortedMembers.append(member);
     std::sort(sortedMembers.begin(), sortedMembers.end(), [](auto& a, auto& b) {
-        return documentOrderComparator(a.ptr(), b.ptr());
+        return is_lt(treeOrder<ComposedTree>(a, b));
     });
     return sortedMembers;
 }
@@ -228,7 +228,8 @@ void RadioButtonGroups::updateCheckedState(HTMLInputElement& element)
     ASSERT(element.isRadioButton());
     if (element.name().isEmpty())
         return;
-    m_nameToGroupMap.get(element.name().impl())->updateCheckedState(element);
+    if (auto* group = m_nameToGroupMap.get(element.name().impl()))
+        group->updateCheckedState(element);
 }
 
 void RadioButtonGroups::requiredStateChanged(HTMLInputElement& element)
@@ -237,7 +238,8 @@ void RadioButtonGroups::requiredStateChanged(HTMLInputElement& element)
     if (element.name().isEmpty())
         return;
     auto* group = m_nameToGroupMap.get(element.name().impl());
-    ASSERT(group);
+    if (!group)
+        return;
     group->requiredStateChanged(element);
 }
 

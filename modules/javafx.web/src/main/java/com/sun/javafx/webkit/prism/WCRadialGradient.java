@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package com.sun.javafx.webkit.prism;
 
+import com.sun.prism.paint.Color;
 import com.sun.prism.paint.RadialGradient;
 import com.sun.prism.paint.Stop;
 import com.sun.webkit.graphics.WCGradient;
@@ -70,12 +71,12 @@ final class WCRadialGradient extends WCGradient<RadialGradient> {
     }
 
     @Override
-    protected void addStop(int argb, float offset) {
+    protected void addStop(Color color, float offset) {
         if (this.reverse) {
             offset = 1.0f - offset;
         }
         offset = 1.0f - offset + offset * this.r2 * this.r1over;
-        this.stops.add(new Stop(WCGraphicsPrismContext.createColor(argb), offset));
+        this.stops.add(new Stop(color, offset));
     }
 
     public RadialGradient getPlatformGradient() {

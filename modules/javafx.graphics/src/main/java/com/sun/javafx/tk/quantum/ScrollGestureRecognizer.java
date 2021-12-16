@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -50,7 +50,8 @@ class ScrollGestureRecognizer implements GestureRecognizer {
     private static double MAX_INITIAL_VELOCITY = 1000;
     private static double SCROLL_INERTIA_MILLIS = 1500;
     static {
-        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+        @SuppressWarnings("removal")
+        var dummy = AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
             String s = System.getProperty("com.sun.javafx.gestures.scroll.threshold");
             if (s != null) {
                 SCROLL_THRESHOLD = Double.valueOf(s);
@@ -262,7 +263,8 @@ class ScrollGestureRecognizer implements GestureRecognizer {
         }
     }
 
-    private void sendScrollStartedEvent(double centerX, double centerY, int touchCount) {
+    @SuppressWarnings("removal")
+    private void sendScrollStartedEvent(double xAbs, double yAbs, int touchCount) {
         AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
             if (scene.sceneListener != null) {
                 scene.sceneListener.scrollEvent(ScrollEvent.SCROLL_STARTED,
@@ -272,7 +274,7 @@ class ScrollGestureRecognizer implements GestureRecognizer {
                     touchCount,
                     0 /*scrollTextX*/, 0 /*scrollTextY*/,
                     0 /*defaultTextX*/, 0 /*defaultTextY*/,
-                    centerX, centerY, centerAbsX, centerAbsY,
+                    centerX, centerY, xAbs, yAbs,
                     (modifiers & KeyEvent.MODIFIER_SHIFT) != 0,
                     (modifiers & KeyEvent.MODIFIER_CONTROL) != 0,
                     (modifiers & KeyEvent.MODIFIER_ALT) != 0,
@@ -283,7 +285,8 @@ class ScrollGestureRecognizer implements GestureRecognizer {
         }, scene.getAccessControlContext());
     }
 
-    private void sendScrollEvent(boolean isInertia, double centerX, double centerY, int touchCount) {
+    @SuppressWarnings("removal")
+    private void sendScrollEvent(boolean isInertia, double xAbs, double yAbs, int touchCount) {
         AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
             if (scene.sceneListener != null) {
                 scene.sceneListener.scrollEvent(ScrollEvent.SCROLL,
@@ -293,7 +296,7 @@ class ScrollGestureRecognizer implements GestureRecognizer {
                     touchCount,
                     0 /*scrollTextX*/, 0 /*scrollTextY*/,
                     0 /*defaultTextX*/, 0 /*defaultTextY*/,
-                    centerX, centerY, centerAbsX, centerAbsY,
+                    centerX, centerY, xAbs, yAbs,
                     (modifiers & KeyEvent.MODIFIER_SHIFT) != 0,
                     (modifiers & KeyEvent.MODIFIER_CONTROL) != 0,
                     (modifiers & KeyEvent.MODIFIER_ALT) != 0,
@@ -304,7 +307,8 @@ class ScrollGestureRecognizer implements GestureRecognizer {
         }, scene.getAccessControlContext());
     }
 
-    private void sendScrollFinishedEvent(double centerX, double centerY, int touchCount) {
+    @SuppressWarnings("removal")
+    private void sendScrollFinishedEvent(double xAbs, double yAbs, int touchCount) {
         AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
             if (scene.sceneListener != null) {
                 scene.sceneListener.scrollEvent(ScrollEvent.SCROLL_FINISHED,
@@ -314,7 +318,7 @@ class ScrollGestureRecognizer implements GestureRecognizer {
                     touchCount,
                     0 /*scrollTextX*/, 0 /*scrollTextY*/,
                     0 /*defaultTextX*/, 0 /*defaultTextY*/,
-                    centerX, centerY, centerAbsX, centerAbsY,
+                    centerX, centerY, xAbs, yAbs,
                     (modifiers & KeyEvent.MODIFIER_SHIFT) != 0,
                     (modifiers & KeyEvent.MODIFIER_CONTROL) != 0,
                     (modifiers & KeyEvent.MODIFIER_ALT) != 0,

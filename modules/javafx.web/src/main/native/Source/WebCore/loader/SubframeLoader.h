@@ -30,17 +30,13 @@
 
 #pragma once
 
-#include "FrameLoaderTypes.h"
-#include <wtf/Forward.h>
-#include <wtf/Noncopyable.h>
-#include <wtf/text/WTFString.h>
+#include "FrameLoader.h"
 
 namespace WebCore {
 
 class Document;
 class Frame;
 class FrameLoaderClient;
-class HTMLAppletElement;
 class HTMLFrameOwnerElement;
 class HTMLMediaElement;
 class HTMLPlugInImageElement;
@@ -48,7 +44,7 @@ class IntSize;
 class Widget;
 
 // This is a slight misnomer. It handles the higher level logic of loading both subframes and plugins.
-class SubframeLoader {
+class FrameLoader::SubframeLoader {
     WTF_MAKE_NONCOPYABLE(SubframeLoader); WTF_MAKE_FAST_ALLOCATED;
 public:
     explicit SubframeLoader(Frame&);
@@ -58,10 +54,6 @@ public:
     bool requestFrame(HTMLFrameOwnerElement&, const String& url, const AtomString& frameName, LockHistory = LockHistory::Yes, LockBackForwardList = LockBackForwardList::Yes);
     bool requestObject(HTMLPlugInImageElement&, const String& url, const AtomString& frameName,
         const String& serviceType, const Vector<String>& paramNames, const Vector<String>& paramValues);
-
-    RefPtr<Widget> createJavaAppletWidget(const IntSize&, HTMLAppletElement&, const Vector<String>& paramNames, const Vector<String>& paramValues);
-
-    WEBCORE_EXPORT bool allowPlugins();
 
     bool containsPlugins() const { return m_containsPlugins; }
 
@@ -80,7 +72,7 @@ private:
 
     bool shouldConvertInvalidURLsToBlank() const;
 
-    bool m_containsPlugins;
+    bool m_containsPlugins { false };
     Frame& m_frame;
 };
 

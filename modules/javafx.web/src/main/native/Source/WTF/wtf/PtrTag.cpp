@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,15 +26,15 @@
 #include "config.h"
 #include <wtf/PtrTag.h>
 
+#include <wtf/WTFConfig.h>
+
 namespace WTF {
 
-#if CPU(ARM64E)
-
-static PtrTagLookup* s_ptrTagLookup = nullptr;
+#if CPU(ARM64E) && ENABLE(PTRTAG_DEBUGGING)
 
 static const char* tagForPtr(const void* ptr)
 {
-    PtrTagLookup* lookup = s_ptrTagLookup;
+    PtrTagLookup* lookup = g_wtfConfig.ptrTagLookupHead;
     while (lookup) {
         const char* tagName = lookup->tagForPtr(ptr);
         if (tagName)
@@ -46,7 +46,7 @@ static const char* tagForPtr(const void* ptr)
         return "NoPtrTag";
 
 #define RETURN_NAME_IF_TAG_MATCHES(tag) \
-    if (ptr == tagCodePtrImpl<PtrTagAction::NoAssert>(removeCodePtrTag(ptr), tag)) \
+    if (ptr == tagCodePtrImpl<PtrTagAction::NoAssert, tag>(removeCodePtrTag(ptr))) \
         return #tag;
     FOR_EACH_WTF_PTRTAG(RETURN_NAME_IF_TAG_MATCHES)
 #undef RETURN_NAME_IF_TAG_MATCHES
@@ -56,7 +56,7 @@ static const char* tagForPtr(const void* ptr)
 
 static const char* ptrTagName(PtrTag tag)
 {
-    PtrTagLookup* lookup = s_ptrTagLookup;
+    PtrTagLookup* lookup = g_wtfConfig.ptrTagLookupHead;
     while (lookup) {
         const char* tagName = lookup->ptrTagName(tag);
         if (tagName)
@@ -74,8 +74,8 @@ static const char* ptrTagName(PtrTag tag)
 
 void registerPtrTagLookup(PtrTagLookup* lookup)
 {
-    lookup->next = s_ptrTagLookup;
-    s_ptrTagLookup = lookup;
+    lookup->next = g_wtfConfig.ptrTagLookupHead;
+    g_wtfConfig.ptrTagLookupHead = lookup;
 }
 
 void reportBadTag(const void* ptr, PtrTag expectedTag)
@@ -87,6 +87,6 @@ void reportBadTag(const void* ptr, PtrTag expectedTag)
         dataLogLn(", expected tag = ", ptrTagName(expectedTag));
 }
 
-#endif // CPU(ARM64E)
+#endif // CPU(ARM64E) && ENABLE(PTRTAG_DEBUGGING)
 
 } // namespace WTF

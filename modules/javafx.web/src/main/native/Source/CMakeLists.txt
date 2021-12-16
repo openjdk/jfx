@@ -13,7 +13,7 @@ endif ()
 
 add_subdirectory(JavaScriptCore)
 
-if (ENABLE_GRAPHICS_CONTEXT_GL)
+if (ENABLE_WEBGL)
     add_subdirectory(ThirdParty/ANGLE)
 endif ()
 
@@ -27,6 +27,10 @@ endif ()
 
 if (USE_LIBWEBRTC)
     add_subdirectory(ThirdParty/libwebrtc)
+endif ()
+
+if (ENABLE_WEBINSPECTORUI)
+    add_subdirectory(WebInspectorUI)
 endif ()
 
 if (ENABLE_WEBCORE)

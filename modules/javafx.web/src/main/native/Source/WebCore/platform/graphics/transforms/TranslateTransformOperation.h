@@ -35,7 +35,7 @@ class TranslateTransformOperation final : public TransformOperation {
 public:
     static Ref<TranslateTransformOperation> create(const Length& tx, const Length& ty, OperationType type)
     {
-        return adoptRef(*new TranslateTransformOperation(tx, ty, Length(0, Fixed), type));
+        return adoptRef(*new TranslateTransformOperation(tx, ty, Length(0, LengthType::Fixed), type));
     }
 
     static Ref<TranslateTransformOperation> create(const Length& tx, const Length& ty, const Length& tz, OperationType type)
@@ -48,28 +48,29 @@ public:
         return adoptRef(*new TranslateTransformOperation(m_x, m_y, m_z, type()));
     }
 
-    double x(const FloatSize& borderBoxSize) const { return floatValueForLength(m_x, borderBoxSize.width()); }
-    double y(const FloatSize& borderBoxSize) const { return floatValueForLength(m_y, borderBoxSize.height()); }
-    double z(const FloatSize&) const { return floatValueForLength(m_z, 1); }
+    float xAsFloat(const FloatSize& borderBoxSize) const { return floatValueForLength(m_x, borderBoxSize.width()); }
+    float yAsFloat(const FloatSize& borderBoxSize) const { return floatValueForLength(m_y, borderBoxSize.height()); }
+    float zAsFloat() const { return floatValueForLength(m_z, 1); }
 
     Length x() const { return m_x; }
     Length y() const { return m_y; }
     Length z() const { return m_z; }
 
-private:
-    bool isIdentity() const override { return !floatValueForLength(m_x, 1) && !floatValueForLength(m_y, 1) && !floatValueForLength(m_z, 1); }
-
-    bool isRepresentableIn2D() const final { return m_z.isZero(); }
-
-    bool operator==(const TransformOperation&) const override;
-
-    bool apply(TransformationMatrix& transform, const FloatSize& borderBoxSize) const override
+    bool apply(TransformationMatrix& transform, const FloatSize& borderBoxSize) const final
     {
-        transform.translate3d(x(borderBoxSize), y(borderBoxSize), z(borderBoxSize));
+        transform.translate3d(xAsFloat(borderBoxSize), yAsFloat(borderBoxSize), zAsFloat());
         return m_x.isPercent() || m_y.isPercent();
     }
 
-    Ref<TransformOperation> blend(const TransformOperation* from, double progress, bool blendToIdentity = false) override;
+    bool isIdentity() const final { return !floatValueForLength(m_x, 1) && !floatValueForLength(m_y, 1) && !floatValueForLength(m_z, 1); }
+
+    bool operator==(const TransformOperation&) const final;
+
+    Ref<TransformOperation> blend(const TransformOperation* from, double progress, bool blendToIdentity = false) final;
+
+    bool isRepresentableIn2D() const final { return m_z.isZero(); }
+
+private:
 
     void dump(WTF::TextStream&) const final;
 

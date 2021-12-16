@@ -48,6 +48,7 @@ option(SHOW_BINDINGS_GENERATION_PROGRESS "Show progress of generating bindings" 
 #   target is a new target name to be added
 #   OUTPUT_SOURCE is a list name which will contain generated sources.(eg. WebCore_SOURCES)
 #   INPUT_FILES are IDL files to generate.
+#   PP_INPUT_FILES are IDL files to preprocess.
 #   BASE_DIR is base directory where script is called.
 #   IDL_INCLUDES is value of --include argument. (eg. ${WEBCORE_DIR}/bindings/js)
 #   FEATURES is a value of --defines argument.
@@ -59,11 +60,12 @@ option(SHOW_BINDINGS_GENERATION_PROGRESS "Show progress of generating bindings" 
 function(GENERATE_BINDINGS target)
     set(options)
     set(oneValueArgs OUTPUT_SOURCE BASE_DIR FEATURES DESTINATION GENERATOR SUPPLEMENTAL_DEPFILE)
-    set(multiValueArgs INPUT_FILES IDL_INCLUDES PP_EXTRA_OUTPUT PP_EXTRA_ARGS)
+    set(multiValueArgs INPUT_FILES PP_INPUT_FILES IDL_INCLUDES PP_EXTRA_OUTPUT PP_EXTRA_ARGS)
     cmake_parse_arguments(arg "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
     set(binding_generator ${WEBCORE_DIR}/bindings/scripts/generate-bindings-all.pl)
     set(idl_attributes_file ${WEBCORE_DIR}/bindings/scripts/IDLAttributes.json)
     set(idl_files_list ${CMAKE_CURRENT_BINARY_DIR}/idl_files_${target}.tmp)
+    set(pp_idl_files_list ${CMAKE_CURRENT_BINARY_DIR}/pp_idl_files_${target}.tmp)
     set(idl_include_list ${CMAKE_CURRENT_BINARY_DIR}/idl_include_${target}.tmp)
     set(_supplemental_dependency)
 
@@ -76,11 +78,21 @@ function(GENERATE_BINDINGS target)
     endforeach ()
     file(WRITE ${idl_files_list} ${content})
 
+    set(pp_content)
+    foreach (f ${arg_PP_INPUT_FILES})
+        if (NOT IS_ABSOLUTE ${f})
+            set(f ${CMAKE_CURRENT_SOURCE_DIR}/${f})
+        endif ()
+        set(pp_content "${pp_content}${f}\n")
+    endforeach ()
+    file(WRITE ${pp_idl_files_list} ${pp_content})
+
     set(args
         --defines ${arg_FEATURES}
         --generator ${arg_GENERATOR}
         --outputDir ${arg_DESTINATION}
         --idlFilesList ${idl_files_list}
+        --ppIDLFilesList ${pp_idl_files_list}
         --includeDirsList ${idl_include_list}
         --preprocessor "${CODE_GENERATOR_PREPROCESSOR}"
         --idlAttributesFile ${idl_attributes_file}
@@ -145,6 +157,7 @@ function(GENERATE_BINDINGS target)
     endif ()
     add_custom_target(${target}
         COMMAND ${PERL_EXECUTABLE} ${binding_generator} ${args}
+        DEPENDS ${arg_INPUT_FILES} ${arg_PP_INPUT_FILES}
         WORKING_DIRECTORY ${arg_BASE_DIR}
         COMMENT "Generate bindings (${target})"
         VERBATIM ${act_args})
@@ -181,9 +194,6 @@ endmacro()
 macro(GENERATE_SETTINGS_MACROS _infile _outfile)
     set(NAMES_GENERATOR ${WEBCORE_DIR}/Scripts/GenerateSettings.rb)
 
-    # Do not list the output in more than one independent target that may
-    # build in parallel or the two instances of the rule may conflict.
-    # <https://cmake.org/cmake/help/v3.0/command/add_custom_command.html>
     set(_extra_output
         ${WebCore_DERIVED_SOURCES_DIR}/Settings.cpp
         ${WebCore_DERIVED_SOURCES_DIR}/InternalSettingsGenerated.h
@@ -199,43 +209,41 @@ macro(GENERATE_SETTINGS_MACROS _infile _outfile)
         ${WEBCORE_DIR}/Scripts/SettingsTemplates/Settings.h.erb
     )
 
-    set(_args BYPRODUCTS ${_extra_output})
+    set(WTF_WEB_PREFERENCES
+        ${WTF_SCRIPTS_DIR}/Preferences/WebPreferences.yaml
+        ${WTF_SCRIPTS_DIR}/Preferences/WebPreferencesDebug.yaml
+        ${WTF_SCRIPTS_DIR}/Preferences/WebPreferencesExperimental.yaml
+        ${WTF_SCRIPTS_DIR}/Preferences/WebPreferencesInternal.yaml
+    )
+
+    set_source_files_properties(${WTF_WEB_PREFERENCES} PROPERTIES GENERATED TRUE)
+
     add_custom_command(
-        OUTPUT ${WebCore_DERIVED_SOURCES_DIR}/${_outfile}
+        OUTPUT ${WebCore_DERIVED_SOURCES_DIR}/${_outfile} ${_extra_output}
         MAIN_DEPENDENCY ${_infile}
-        DEPENDS ${NAMES_GENERATOR} ${GENERATE_SETTINGS_SCRIPTS} ${SCRIPTS_BINDINGS}
-        COMMAND ${RUBY_EXECUTABLE} ${NAMES_GENERATOR} --input ${_infile} --outputDir ${WebCore_DERIVED_SOURCES_DIR}
+        DEPENDS ${NAMES_GENERATOR} ${GENERATE_SETTINGS_SCRIPTS} ${SCRIPTS_BINDINGS} ${WTF_WEB_PREFERENCES} WTF_CopyPreferences
+        COMMAND ${RUBY_EXECUTABLE} ${NAMES_GENERATOR} --additionalSettings ${_infile} --base ${WTF_SCRIPTS_DIR}/Preferences/WebPreferences.yaml --debug ${WTF_SCRIPTS_DIR}/Preferences/WebPreferencesDebug.yaml --experimental ${WTF_SCRIPTS_DIR}/Preferences/WebPreferencesExperimental.yaml --internal ${WTF_SCRIPTS_DIR}/Preferences/WebPreferencesInternal.yaml --outputDir ${WebCore_DERIVED_SOURCES_DIR} --template ${WEBCORE_DIR}/Scripts/SettingsTemplates/InternalSettingsGenerated.cpp.erb --template ${WEBCORE_DIR}/Scripts/SettingsTemplates/InternalSettingsGenerated.idl.erb --template ${WEBCORE_DIR}/Scripts/SettingsTemplates/InternalSettingsGenerated.h.erb --template ${WEBCORE_DIR}/Scripts/SettingsTemplates/Settings.cpp.erb --template ${WEBCORE_DIR}/Scripts/SettingsTemplates/Settings.h.erb
         VERBATIM ${_args})
 endmacro()
 
 
-macro(GENERATE_DOM_NAMES _namespace _attrs)
+function(GENERATE_DOM_NAMES _namespace _attrs)
+    if (ARGN)
+        list(GET ARGN 0 _tags)
+        list(REMOVE_AT ARGN 0)
+    endif ()
     set(NAMES_GENERATOR ${WEBCORE_DIR}/dom/make_names.pl)
     set(_arguments  --attrs ${_attrs})
     set(_outputfiles ${WebCore_DERIVED_SOURCES_DIR}/${_namespace}Names.cpp ${WebCore_DERIVED_SOURCES_DIR}/${_namespace}Names.h)
-    set(_extradef)
-    set(_tags)
-
-    foreach (f ${ARGN})
-        if (_tags)
-            set(_extradef "${_extradef} ${f}")
-        else ()
-            set(_tags ${f})
-        endif ()
-    endforeach ()
 
     if (_tags)
         set(_arguments "${_arguments}" --tags ${_tags} --factory --wrapperFactory)
         set(_outputfiles "${_outputfiles}" ${WebCore_DERIVED_SOURCES_DIR}/${_namespace}ElementFactory.cpp ${WebCore_DERIVED_SOURCES_DIR}/${_namespace}ElementFactory.h ${WebCore_DERIVED_SOURCES_DIR}/${_namespace}ElementTypeHelpers.h ${WebCore_DERIVED_SOURCES_DIR}/JS${_namespace}ElementWrapperFactory.cpp ${WebCore_DERIVED_SOURCES_DIR}/JS${_namespace}ElementWrapperFactory.h)
     endif ()
 
-    if (_extradef)
-        set(_additionArguments "${_additionArguments}" --extraDefines=${_extradef})
-    endif ()
-
     add_custom_command(
         OUTPUT  ${_outputfiles}
         DEPENDS ${MAKE_NAMES_DEPENDENCIES} ${NAMES_GENERATOR} ${SCRIPTS_BINDINGS} ${_attrs} ${_tags}
-        COMMAND ${PERL_EXECUTABLE} ${NAMES_GENERATOR} --preprocessor "${CODE_GENERATOR_PREPROCESSOR_WITH_LINEMARKERS}" --outputDir ${WebCore_DERIVED_SOURCES_DIR} ${_arguments} ${_additionArguments}
+        COMMAND ${PERL_EXECUTABLE} ${NAMES_GENERATOR} --outputDir ${WebCore_DERIVED_SOURCES_DIR} ${_arguments} ${_additionArguments}
         VERBATIM)
-endmacro()
+endfunction()

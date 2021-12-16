@@ -64,7 +64,7 @@ Ref<Element> JSCustomElementInterface::constructElementWithFallback(Document& do
 
     auto element = HTMLUnknownElement::create(QualifiedName(nullAtom(), localName, HTMLNames::xhtmlNamespaceURI), document);
     element->setIsCustomElementUpgradeCandidate();
-    element->setIsFailedCustomElement(*this);
+    element->setIsFailedCustomElement();
 
     return element;
 }
@@ -79,7 +79,7 @@ Ref<Element> JSCustomElementInterface::constructElementWithFallback(Document& do
 
     auto element = HTMLUnknownElement::create(name, document);
     element->setIsCustomElementUpgradeCandidate();
-    element->setIsFailedCustomElement(*this);
+    element->setIsFailedCustomElement();
 
     return element;
 }
@@ -99,7 +99,7 @@ RefPtr<Element> JSCustomElementInterface::tryToConstructCustomElement(Document& 
         return nullptr;
 
     ASSERT(&document == scriptExecutionContext());
-    auto& lexicalGlobalObject = *document.execState();
+    auto& lexicalGlobalObject = *document.globalObject();
     auto element = constructCustomElementSynchronously(document, vm, lexicalGlobalObject, m_constructor.get(), localName);
     EXCEPTION_ASSERT(!!scope.exception() == !element);
     if (!element) {
@@ -117,17 +117,16 @@ RefPtr<Element> JSCustomElementInterface::tryToConstructCustomElement(Document& 
 static RefPtr<Element> constructCustomElementSynchronously(Document& document, VM& vm, JSGlobalObject& lexicalGlobalObject, JSObject* constructor, const AtomString& localName)
 {
     auto scope = DECLARE_THROW_SCOPE(vm);
-    ConstructData constructData;
-    ConstructType constructType = constructor->methodTable(vm)->getConstructData(constructor, constructData);
-    if (constructType == ConstructType::None) {
+    auto constructData = getConstructData(vm, constructor);
+    if (constructData.type == CallData::Type::None) {
         ASSERT_NOT_REACHED();
         return nullptr;
     }
 
-    JSExecState::instrumentFunctionConstruct(&document, constructType, constructData);
+    JSExecState::instrumentFunction(&document, constructData);
     MarkedArgumentBuffer args;
     ASSERT(!args.hasOverflowed());
-    JSValue newElement = construct(&lexicalGlobalObject, constructor, constructType, constructData, args);
+    JSValue newElement = construct(&lexicalGlobalObject, constructor, constructData, args);
     InspectorInstrumentation::didCallFunction(&document);
     RETURN_IF_EXCEPTION(scope, nullptr);
 
@@ -163,9 +162,14 @@ static RefPtr<Element> constructCustomElementSynchronously(Document& document, V
     return wrappedElement;
 }
 
+// https://html.spec.whatwg.org/multipage/custom-elements.html#concept-upgrade-an-element
 void JSCustomElementInterface::upgradeElement(Element& element)
 {
     ASSERT(element.tagQName() == name());
+
+    if (element.isDefinedCustomElement() || element.isFailedCustomElement())
+        return; // If element's custom element state is not "undefined" or "uncustomized", then return.
+
     ASSERT(element.isCustomElementUpgradeCandidate());
     if (!canInvokeCallback())
         return;
@@ -186,34 +190,37 @@ void JSCustomElementInterface::upgradeElement(Element& element)
         return;
     JSGlobalObject* lexicalGlobalObject = globalObject;
 
-    ConstructData constructData;
-    ConstructType constructType = m_constructor->methodTable(vm)->getConstructData(m_constructor.get(), constructData);
-    if (constructType == ConstructType::None) {
+    auto constructData = getConstructData(vm, m_constructor.get());
+    if (constructData.type == CallData::Type::None) {
         ASSERT_NOT_REACHED();
         return;
     }
 
     CustomElementReactionQueue::enqueuePostUpgradeReactions(element);
 
+    // Unlike spec, set element's custom element state to "failed" after enqueueing post-upgrade reactions
+    // to avoid hitting debug assertions in enqueuePostUpgradeReactions.
+    element.setIsFailedCustomElementWithoutClearingReactionQueue();
+
     m_constructionStack.append(&element);
 
     MarkedArgumentBuffer args;
     ASSERT(!args.hasOverflowed());
-    JSExecState::instrumentFunctionConstruct(context, constructType, constructData);
-    JSValue returnedElement = construct(lexicalGlobalObject, m_constructor.get(), constructType, constructData, args);
+    JSExecState::instrumentFunction(context, constructData);
+    JSValue returnedElement = construct(lexicalGlobalObject, m_constructor.get(), constructData, args);
     InspectorInstrumentation::didCallFunction(context);
 
     m_constructionStack.removeLast();
 
     if (UNLIKELY(scope.exception())) {
-        element.setIsFailedCustomElement(*this);
+        element.clearReactionQueueFromFailedCustomElement();
         reportException(lexicalGlobalObject, scope.exception());
         return;
     }
 
     Element* wrappedElement = JSElement::toWrapped(vm, returnedElement);
     if (!wrappedElement || wrappedElement != &element) {
-        element.setIsFailedCustomElement(*this);
+        element.clearReactionQueueFromFailedCustomElement();
         reportException(lexicalGlobalObject, createDOMException(lexicalGlobalObject, TypeError, "Custom element constructor returned a wrong element"));
         return;
     }
@@ -240,18 +247,17 @@ void JSCustomElementInterface::invokeCallback(Element& element, JSObject* callba
 
     JSObject* jsElement = asObject(toJS(lexicalGlobalObject, globalObject, element));
 
-    CallData callData;
-    CallType callType = callback->methodTable(vm)->getCallData(callback, callData);
-    ASSERT(callType != CallType::None);
+    auto callData = getCallData(vm, callback);
+    ASSERT(callData.type != CallData::Type::None);
 
     MarkedArgumentBuffer args;
     addArguments(lexicalGlobalObject, globalObject, args);
     RELEASE_ASSERT(!args.hasOverflowed());
 
-    JSExecState::instrumentFunctionCall(context, callType, callData);
+    JSExecState::instrumentFunction(context, callData);
 
     NakedPtr<JSC::Exception> exception;
-    JSExecState::call(lexicalGlobalObject, callback, callType, callData, jsElement, args, exception);
+    JSExecState::call(lexicalGlobalObject, callback, callData, jsElement, args, exception);
 
     InspectorInstrumentation::didCallFunction(context);
 

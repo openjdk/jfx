@@ -27,12 +27,9 @@
 #include "MapPrototype.h"
 
 #include "BuiltinNames.h"
-#include "Error.h"
-#include "ExceptionHelpers.h"
-#include "IteratorOperations.h"
 #include "JSCInlines.h"
 #include "JSMap.h"
-#include "Lookup.h"
+#include "JSMapIterator.h"
 
 #include "MapPrototype.lut.h"
 
@@ -43,18 +40,19 @@ const ClassInfo MapPrototype::s_info = { "Map", &Base::s_info, &mapPrototypeTabl
 /* Source for MapPrototype.lut.h
 @begin mapPrototypeTable
   forEach   JSBuiltin  DontEnum|Function 0
-  values    JSBuiltin  DontEnum|Function 0
-  keys      JSBuiltin  DontEnum|Function 0
 @end
 */
 
-static EncodedJSValue JSC_HOST_CALL mapProtoFuncClear(JSGlobalObject*, CallFrame*);
-static EncodedJSValue JSC_HOST_CALL mapProtoFuncDelete(JSGlobalObject*, CallFrame*);
-static EncodedJSValue JSC_HOST_CALL mapProtoFuncGet(JSGlobalObject*, CallFrame*);
-static EncodedJSValue JSC_HOST_CALL mapProtoFuncHas(JSGlobalObject*, CallFrame*);
-static EncodedJSValue JSC_HOST_CALL mapProtoFuncSet(JSGlobalObject*, CallFrame*);
+static JSC_DECLARE_HOST_FUNCTION(mapProtoFuncClear);
+static JSC_DECLARE_HOST_FUNCTION(mapProtoFuncDelete);
+static JSC_DECLARE_HOST_FUNCTION(mapProtoFuncGet);
+static JSC_DECLARE_HOST_FUNCTION(mapProtoFuncHas);
+static JSC_DECLARE_HOST_FUNCTION(mapProtoFuncSet);
+static JSC_DECLARE_HOST_FUNCTION(mapProtoFuncValues);
+static JSC_DECLARE_HOST_FUNCTION(mapProtoFuncKeys);
+static JSC_DECLARE_HOST_FUNCTION(mapProtoFuncEntries);
 
-static EncodedJSValue JSC_HOST_CALL mapProtoFuncSize(JSGlobalObject*, CallFrame*);
+static JSC_DECLARE_HOST_FUNCTION(mapProtoFuncSize);
 
 void MapPrototype::finishCreation(VM& vm, JSGlobalObject* globalObject)
 {
@@ -66,14 +64,16 @@ void MapPrototype::finishCreation(VM& vm, JSGlobalObject* globalObject)
     JSC_NATIVE_INTRINSIC_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->get, mapProtoFuncGet, static_cast<unsigned>(PropertyAttribute::DontEnum), 1, JSMapGetIntrinsic);
     JSC_NATIVE_INTRINSIC_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->has, mapProtoFuncHas, static_cast<unsigned>(PropertyAttribute::DontEnum), 1, JSMapHasIntrinsic);
     JSC_NATIVE_INTRINSIC_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->set, mapProtoFuncSet, static_cast<unsigned>(PropertyAttribute::DontEnum), 2, JSMapSetIntrinsic);
+    JSC_NATIVE_INTRINSIC_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->builtinNames().keysPublicName(), mapProtoFuncKeys, static_cast<unsigned>(PropertyAttribute::DontEnum), 0, JSMapKeysIntrinsic);
+    JSC_NATIVE_INTRINSIC_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->builtinNames().valuesPublicName(), mapProtoFuncValues, static_cast<unsigned>(PropertyAttribute::DontEnum), 0, JSMapValuesIntrinsic);
 
     JSC_NATIVE_INTRINSIC_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->builtinNames().getPrivateName(), mapProtoFuncGet, static_cast<unsigned>(PropertyAttribute::DontEnum), 1, JSMapGetIntrinsic);
     JSC_NATIVE_INTRINSIC_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->builtinNames().setPrivateName(), mapProtoFuncSet, static_cast<unsigned>(PropertyAttribute::DontEnum), 2, JSMapSetIntrinsic);
 
-    JSFunction* entries = JSFunction::create(vm, mapPrototypeEntriesCodeGenerator(vm), globalObject);
+    JSFunction* entries = JSFunction::create(vm, globalObject, 0, vm.propertyNames->builtinNames().entriesPublicName().string(), mapProtoFuncEntries, JSMapEntriesIntrinsic);
     putDirectWithoutTransition(vm, vm.propertyNames->builtinNames().entriesPublicName(), entries, static_cast<unsigned>(PropertyAttribute::DontEnum));
     putDirectWithoutTransition(vm, vm.propertyNames->iteratorSymbol, entries, static_cast<unsigned>(PropertyAttribute::DontEnum));
-    putDirectWithoutTransition(vm, vm.propertyNames->toStringTagSymbol, jsNontrivialString(vm, "Map"_s), PropertyAttribute::DontEnum | PropertyAttribute::ReadOnly);
+    JSC_TO_STRING_TAG_WITHOUT_TRANSITION();
 
     JSC_NATIVE_GETTER_WITHOUT_TRANSITION(vm.propertyNames->size, mapProtoFuncSize, PropertyAttribute::DontEnum | PropertyAttribute::Accessor);
 
@@ -97,7 +97,7 @@ ALWAYS_INLINE static JSMap* getMap(JSGlobalObject* globalObject, JSValue thisVal
     return nullptr;
 }
 
-EncodedJSValue JSC_HOST_CALL mapProtoFuncClear(JSGlobalObject* globalObject, CallFrame* callFrame)
+JSC_DEFINE_HOST_FUNCTION(mapProtoFuncClear, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     JSMap* map = getMap(globalObject, callFrame->thisValue());
     if (!map)
@@ -106,7 +106,7 @@ EncodedJSValue JSC_HOST_CALL mapProtoFuncClear(JSGlobalObject* globalObject, Cal
     return JSValue::encode(jsUndefined());
 }
 
-EncodedJSValue JSC_HOST_CALL mapProtoFuncDelete(JSGlobalObject* globalObject, CallFrame* callFrame)
+JSC_DEFINE_HOST_FUNCTION(mapProtoFuncDelete, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     JSMap* map = getMap(globalObject, callFrame->thisValue());
     if (!map)
@@ -114,7 +114,7 @@ EncodedJSValue JSC_HOST_CALL mapProtoFuncDelete(JSGlobalObject* globalObject, Ca
     return JSValue::encode(jsBoolean(map->remove(globalObject, callFrame->argument(0))));
 }
 
-EncodedJSValue JSC_HOST_CALL mapProtoFuncGet(JSGlobalObject* globalObject, CallFrame* callFrame)
+JSC_DEFINE_HOST_FUNCTION(mapProtoFuncGet, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     JSMap* map = getMap(globalObject, callFrame->thisValue());
     if (!map)
@@ -122,7 +122,7 @@ EncodedJSValue JSC_HOST_CALL mapProtoFuncGet(JSGlobalObject* globalObject, CallF
     return JSValue::encode(map->get(globalObject, callFrame->argument(0)));
 }
 
-EncodedJSValue JSC_HOST_CALL mapProtoFuncHas(JSGlobalObject* globalObject, CallFrame* callFrame)
+JSC_DEFINE_HOST_FUNCTION(mapProtoFuncHas, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     JSMap* map = getMap(globalObject, callFrame->thisValue());
     if (!map)
@@ -130,7 +130,7 @@ EncodedJSValue JSC_HOST_CALL mapProtoFuncHas(JSGlobalObject* globalObject, CallF
     return JSValue::encode(jsBoolean(map->has(globalObject, callFrame->argument(0))));
 }
 
-EncodedJSValue JSC_HOST_CALL mapProtoFuncSet(JSGlobalObject* globalObject, CallFrame* callFrame)
+JSC_DEFINE_HOST_FUNCTION(mapProtoFuncSet, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     JSValue thisValue = callFrame->thisValue();
     JSMap* map = getMap(globalObject, thisValue);
@@ -140,7 +140,32 @@ EncodedJSValue JSC_HOST_CALL mapProtoFuncSet(JSGlobalObject* globalObject, CallF
     return JSValue::encode(thisValue);
 }
 
-EncodedJSValue JSC_HOST_CALL mapProtoFuncSize(JSGlobalObject* globalObject, CallFrame* callFrame)
+inline JSValue createMapIteratorObject(JSGlobalObject* globalObject, CallFrame* callFrame, IterationKind kind)
+{
+    VM& vm = globalObject->vm();
+    JSValue thisValue = callFrame->thisValue();
+    JSMap* map = getMap(globalObject, thisValue);
+    if (!map)
+        return jsUndefined();
+    return JSMapIterator::create(vm, globalObject->mapIteratorStructure(), map, kind);
+}
+
+JSC_DEFINE_HOST_FUNCTION(mapProtoFuncValues, (JSGlobalObject* globalObject, CallFrame* callFrame))
+{
+    return JSValue::encode(createMapIteratorObject(globalObject, callFrame, IterationKind::Values));
+}
+
+JSC_DEFINE_HOST_FUNCTION(mapProtoFuncKeys, (JSGlobalObject* globalObject, CallFrame* callFrame))
+{
+    return JSValue::encode(createMapIteratorObject(globalObject, callFrame, IterationKind::Keys));
+}
+
+JSC_DEFINE_HOST_FUNCTION(mapProtoFuncEntries, (JSGlobalObject* globalObject, CallFrame* callFrame))
+{
+    return JSValue::encode(createMapIteratorObject(globalObject, callFrame, IterationKind::Entries));
+}
+
+JSC_DEFINE_HOST_FUNCTION(mapProtoFuncSize, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     JSMap* map = getMap(globalObject, callFrame->thisValue());
     if (!map)

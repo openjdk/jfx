@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -81,7 +81,9 @@ public class LauncherImpl {
     private static final boolean trace = false;
 
     // set system property javafx.verbose to true to make the launcher noisy
-    private static final boolean verbose;
+    @SuppressWarnings("removal")
+    private static final boolean verbose = AccessController.doPrivileged((PrivilegedAction<Boolean>) () ->
+        Boolean.getBoolean("javafx.verbose"));
 
     private static final String MF_MAIN_CLASS = "Main-Class";
     private static final String MF_JAVAFX_MAIN = "JavaFX-Application-Class";
@@ -117,11 +119,6 @@ public class LauncherImpl {
     // is started.
     private static ClassLoader savedMainCcl = null;
 
-    static {
-        verbose = AccessController.doPrivileged((PrivilegedAction<Boolean>) () ->
-                Boolean.getBoolean("javafx.verbose"));
-    }
-
     /**
      * This method is called by the Application.launch method.
      * It must not be called more than once or an exception will be thrown.
@@ -139,6 +136,7 @@ public class LauncherImpl {
         Class<? extends Preloader> preloaderClass = savedPreloaderClass;
 
         if (preloaderClass == null) {
+            @SuppressWarnings("removal")
             String preloaderByProperty = AccessController.doPrivileged((PrivilegedAction<String>) () ->
                     System.getProperty("javafx.preloader"));
             if (preloaderByProperty != null) {
@@ -171,6 +169,9 @@ public class LauncherImpl {
             final Class<? extends Preloader> preloaderClass,
             final String[] args) {
 
+        if (com.sun.glass.ui.Application.isEventThread()) {
+            throw new IllegalStateException("Application launch must not be called on the JavaFX Application Thread");
+        }
         if (launchCalled.getAndSet(true)) {
             throw new IllegalStateException("Application launch must not be called more than once");
         }

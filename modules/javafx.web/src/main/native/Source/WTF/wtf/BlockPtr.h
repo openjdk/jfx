@@ -36,10 +36,22 @@
 #define WTF_COPY_FUNCTION_POINTER_QUALIFIER __ptrauth_block_copy_helper
 #define WTF_DISPOSE_FUNCTION_POINTER_QUALIFIER __ptrauth_block_destroy_helper
 #define WTF_INVOKE_FUNCTION_POINTER_QUALIFIER __ptrauth_block_invocation_pointer
+#ifdef __ptrauth_objc_isa_pointer
+#define WTF_ISA_POINTER_QUALIFIER __ptrauth_objc_isa_pointer
+#else
+#define WTF_ISA_POINTER_QUALIFIER
+#endif
 #else
 #define WTF_COPY_FUNCTION_POINTER_QUALIFIER
 #define WTF_DISPOSE_FUNCTION_POINTER_QUALIFIER
 #define WTF_INVOKE_FUNCTION_POINTER_QUALIFIER
+#define WTF_ISA_POINTER_QUALIFIER
+#endif
+
+// Because ARC enablement is a compile-time choice, and we compile this header
+// both ways, we need a separate copy of our code when ARC is enabled.
+#if __has_feature(objc_arc)
+#define BlockPtr BlockPtrArc
 #endif
 
 namespace WTF {
@@ -62,7 +74,7 @@ public:
         };
 
         struct Block {
-            void* isa;
+            void* WTF_ISA_POINTER_QUALIFIER isa;
             int32_t flags;
             int32_t reserved;
             R (*WTF_INVOKE_FUNCTION_POINTER_QUALIFIER invoke)(void *, Args...);

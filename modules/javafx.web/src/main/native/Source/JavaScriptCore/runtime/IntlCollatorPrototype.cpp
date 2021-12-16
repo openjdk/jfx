@@ -27,17 +27,15 @@
 #include "config.h"
 #include "IntlCollatorPrototype.h"
 
-#if ENABLE(INTL)
-
-#include "Error.h"
 #include "IntlCollator.h"
 #include "JSBoundFunction.h"
 #include "JSCInlines.h"
 
 namespace JSC {
 
-static EncodedJSValue JSC_HOST_CALL IntlCollatorPrototypeGetterCompare(JSGlobalObject*, CallFrame*);
-static EncodedJSValue JSC_HOST_CALL IntlCollatorPrototypeFuncResolvedOptions(JSGlobalObject*, CallFrame*);
+static JSC_DECLARE_HOST_FUNCTION(IntlCollatorPrototypeGetterCompare);
+static JSC_DECLARE_HOST_FUNCTION(IntlCollatorPrototypeFuncResolvedOptions);
+static JSC_DECLARE_HOST_FUNCTION(IntlCollatorFuncCompare);
 
 }
 
@@ -45,7 +43,7 @@ static EncodedJSValue JSC_HOST_CALL IntlCollatorPrototypeFuncResolvedOptions(JSG
 
 namespace JSC {
 
-const ClassInfo IntlCollatorPrototype::s_info = { "Object", &Base::s_info, &collatorPrototypeTable, nullptr, CREATE_METHOD_TABLE(IntlCollatorPrototype) };
+const ClassInfo IntlCollatorPrototype::s_info = { "Intl.Collator", &Base::s_info, &collatorPrototypeTable, nullptr, CREATE_METHOD_TABLE(IntlCollatorPrototype) };
 
 /* Source for IntlCollatorPrototype.lut.h
 @begin collatorPrototypeTable
@@ -74,11 +72,11 @@ IntlCollatorPrototype::IntlCollatorPrototype(VM& vm, Structure* structure)
 void IntlCollatorPrototype::finishCreation(VM& vm)
 {
     Base::finishCreation(vm);
-
-    putDirectWithoutTransition(vm, vm.propertyNames->toStringTagSymbol, jsNontrivialString(vm, "Object"_s), PropertyAttribute::DontEnum | PropertyAttribute::ReadOnly);
+    ASSERT(inherits(vm, info()));
+    JSC_TO_STRING_TAG_WITHOUT_TRANSITION();
 }
 
-static EncodedJSValue JSC_HOST_CALL IntlCollatorFuncCompare(JSGlobalObject* globalObject, CallFrame* callFrame)
+JSC_DEFINE_HOST_FUNCTION(IntlCollatorFuncCompare, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
@@ -107,7 +105,7 @@ static EncodedJSValue JSC_HOST_CALL IntlCollatorFuncCompare(JSGlobalObject* glob
     RELEASE_AND_RETURN(scope, JSValue::encode(collator->compareStrings(globalObject, xViewWithString.view, yViewWithString.view)));
 }
 
-EncodedJSValue JSC_HOST_CALL IntlCollatorPrototypeGetterCompare(JSGlobalObject* globalObject, CallFrame* callFrame)
+JSC_DEFINE_HOST_FUNCTION(IntlCollatorPrototypeGetterCompare, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
@@ -136,7 +134,7 @@ EncodedJSValue JSC_HOST_CALL IntlCollatorPrototypeGetterCompare(JSGlobalObject* 
     return JSValue::encode(boundCompare);
 }
 
-EncodedJSValue JSC_HOST_CALL IntlCollatorPrototypeFuncResolvedOptions(JSGlobalObject* globalObject, CallFrame* callFrame)
+JSC_DEFINE_HOST_FUNCTION(IntlCollatorPrototypeFuncResolvedOptions, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
@@ -150,5 +148,3 @@ EncodedJSValue JSC_HOST_CALL IntlCollatorPrototypeFuncResolvedOptions(JSGlobalOb
 }
 
 } // namespace JSC
-
-#endif // ENABLE(INTL)

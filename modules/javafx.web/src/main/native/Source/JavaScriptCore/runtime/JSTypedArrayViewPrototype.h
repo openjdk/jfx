@@ -31,24 +31,34 @@ namespace JSC {
 
 class JSTypedArrayViewPrototype final : public JSNonFinalObject {
 public:
-    typedef JSNonFinalObject Base;
+    using Base = JSNonFinalObject;
 
-protected:
-    JSTypedArrayViewPrototype(VM&, Structure*);
-    void finishCreation(VM&, JSGlobalObject*);
+    template<typename CellType, SubspaceAccess>
+    static IsoSubspace* subspaceFor(VM& vm)
+    {
+        STATIC_ASSERT_ISO_SUBSPACE_SHARABLE(JSTypedArrayViewPrototype, Base);
+        return &vm.plainObjectSpace;
+    }
 
-public:
     static JSTypedArrayViewPrototype* create(VM&, JSGlobalObject*, Structure*);
 
     DECLARE_INFO;
 
     static Structure* createStructure(VM&, JSGlobalObject*, JSValue prototype);
+
+private:
+    JSTypedArrayViewPrototype(VM&, Structure*);
+    void finishCreation(VM&, JSGlobalObject*);
 };
 
-EncodedJSValue JSC_HOST_CALL typedArrayViewPrivateFuncIsTypedArrayView(JSGlobalObject*, CallFrame*);
-EncodedJSValue JSC_HOST_CALL typedArrayViewPrivateFuncSort(JSGlobalObject*, CallFrame*);
-EncodedJSValue JSC_HOST_CALL typedArrayViewPrivateFuncLength(JSGlobalObject*, CallFrame*);
-EncodedJSValue JSC_HOST_CALL typedArrayViewPrivateFuncGetOriginalConstructor(JSGlobalObject*, CallFrame*);
-EncodedJSValue JSC_HOST_CALL typedArrayViewPrivateFuncSubarrayCreate(JSGlobalObject*, CallFrame*);
+JSC_DECLARE_HOST_FUNCTION(typedArrayViewPrivateFuncIsTypedArrayView);
+JSC_DECLARE_HOST_FUNCTION(typedArrayViewPrivateFuncIsSharedTypedArrayView);
+JSC_DECLARE_HOST_FUNCTION(typedArrayViewPrivateFuncIsDetached);
+JSC_DECLARE_HOST_FUNCTION(typedArrayViewPrivateFuncDefaultComparator);
+JSC_DECLARE_HOST_FUNCTION(typedArrayViewPrivateFuncSort);
+JSC_DECLARE_HOST_FUNCTION(typedArrayViewPrivateFuncLength);
+JSC_DECLARE_HOST_FUNCTION(typedArrayViewPrivateFuncContentType);
+JSC_DECLARE_HOST_FUNCTION(typedArrayViewPrivateFuncGetOriginalConstructor);
+JSC_DECLARE_HOST_FUNCTION(typedArrayViewPrivateFuncSubarrayCreate);
 
 } // namespace JSC

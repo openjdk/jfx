@@ -25,13 +25,11 @@
 #include "config.h"
 #include <wtf/text/StringImpl.h>
 
-#include <wtf/ProcessID.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/text/AtomString.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/ExternalStringImpl.h>
 #include <wtf/text/StringBuffer.h>
-#include <wtf/text/StringHash.h>
 #include <wtf/text/StringView.h>
 #include <wtf/text/SymbolImpl.h>
 #include <wtf/text/SymbolRegistry.h>
@@ -182,7 +180,7 @@ Ref<StringImpl> StringImpl::createWithoutCopying(const LChar* characters, unsign
 template<typename CharacterType> inline Ref<StringImpl> StringImpl::createUninitializedInternal(unsigned length, CharacterType*& data)
 {
     if (!length) {
-        data = 0;
+        data = nullptr;
         return *empty();
     }
     return createUninitializedInternalNonEmpty(length, data);
@@ -218,7 +216,7 @@ template<typename CharacterType> inline Expected<Ref<StringImpl>, UTF8Conversion
     ASSERT(originalString->bufferOwnership() == BufferInternal);
 
     if (!length) {
-        data = 0;
+        data = nullptr;
         return Ref<StringImpl>(*empty());
     }
 
@@ -763,43 +761,6 @@ Ref<StringImpl> StringImpl::stripLeadingAndTrailingCharacters(CodeUnitMatchFunct
     return stripMatchedCharacters(predicate);
 }
 
-template<typename CharacterType> ALWAYS_INLINE Ref<StringImpl> StringImpl::removeCharacters(const CharacterType* characters, CodeUnitMatchFunction findMatch)
-{
-    auto* from = characters;
-    auto* fromEnd = from + m_length;
-
-    // Assume the common case will not remove any characters
-    while (from != fromEnd && !findMatch(*from))
-        ++from;
-    if (from == fromEnd)
-        return *this;
-
-    StringBuffer<CharacterType> data(m_length);
-    auto* to = data.characters();
-    unsigned outc = from - characters;
-
-    if (outc)
-        copyCharacters(to, characters, outc);
-
-    do {
-        while (from != fromEnd && findMatch(*from))
-            ++from;
-        while (from != fromEnd && !findMatch(*from))
-            to[outc++] = *from++;
-    } while (from != fromEnd);
-
-    data.shrink(outc);
-
-    return adopt(WTFMove(data));
-}
-
-Ref<StringImpl> StringImpl::removeCharacters(CodeUnitMatchFunction findMatch)
-{
-    if (is8Bit())
-        return removeCharacters(characters8(), findMatch);
-    return removeCharacters(characters16(), findMatch);
-}
-
 template<typename CharacterType, class UCharPredicate> inline Ref<StringImpl> StringImpl::simplifyMatchedCharactersToSpace(UCharPredicate predicate)
 {
     StringBuffer<CharacterType> data(m_length);
@@ -1183,7 +1144,7 @@ ALWAYS_INLINE static bool equalInner(const StringImpl& string, unsigned startOff
 
 bool StringImpl::startsWith(const StringImpl* string) const
 {
-    return string && ::WTF::startsWith(*this, *string);
+    return !string || ::WTF::startsWith(*this, *string);
 }
 
 bool StringImpl::startsWith(const StringImpl& string) const
@@ -1302,11 +1263,12 @@ Ref<StringImpl> StringImpl::replace(UChar target, UChar replacement)
     UChar* data;
     auto newImpl = createUninitializedInternalNonEmpty(m_length, data);
 
-    for (i = 0; i != m_length; ++i) {
-        UChar character = m_data16[i];
+    copyCharacters(data, m_data16, i);
+    for (unsigned j = i; j != m_length; ++j) {
+        UChar character = m_data16[j];
         if (character == target)
             character = replacement;
-        data[i] = character;
+        data[j] = character;
     }
     return newImpl;
 }
@@ -1709,8 +1671,8 @@ bool equalIgnoringASCIICaseNonNull(const StringImpl* a, const StringImpl* b)
 
 UCharDirection StringImpl::defaultWritingDirection(bool* hasStrongDirectionality)
 {
-    for (unsigned i = 0; i < m_length; ++i) {
-        auto charDirection = u_charDirection(is8Bit() ? m_data8[i] : m_data16[i]);
+    for (auto codePoint : StringView(this).codePoints()) {
+        auto charDirection = u_charDirection(codePoint);
         if (charDirection == U_LEFT_TO_RIGHT) {
             if (hasStrongDirectionality)
                 *hasStrongDirectionality = true;
@@ -1722,6 +1684,7 @@ UCharDirection StringImpl::defaultWritingDirection(bool* hasStrongDirectionality
             return U_RIGHT_TO_LEFT;
         }
     }
+
     if (hasStrongDirectionality)
         *hasStrongDirectionality = false;
     return U_LEFT_TO_RIGHT;

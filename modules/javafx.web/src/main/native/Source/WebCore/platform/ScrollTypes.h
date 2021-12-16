@@ -25,8 +25,11 @@
 
 #pragma once
 
+#include "FloatPoint.h"
+#include "IntPoint.h"
 #include <cstdint>
 #include <wtf/Assertions.h>
+#include <wtf/EnumTraits.h>
 
 namespace WTF {
 class TextStream;
@@ -34,9 +37,20 @@ class TextStream;
 
 namespace WebCore {
 
-enum class ScrollType : uint8_t {
+// scrollPosition is in content coordinates (0,0 is at scrollOrigin), so may have negative components.
+using ScrollPosition = IntPoint;
+// scrollOffset() is the value used by scrollbars (min is 0,0), and should never have negative components.
+using ScrollOffset = IntPoint;
+
+enum class ScrollType : bool {
     User,
     Programmatic
+};
+
+enum class OverscrollBehavior : uint8_t {
+    Auto,
+    Contain,
+    None
 };
 
 enum ScrollDirection : uint8_t {
@@ -51,6 +65,18 @@ enum ScrollLogicalDirection : uint8_t {
     ScrollBlockDirectionForward,
     ScrollInlineDirectionBackward,
     ScrollInlineDirectionForward
+};
+
+// FIXME: Add another status InNativeAnimation to indicate native scrolling is in progress.
+// See: https://bugs.webkit.org/show_bug.cgi?id=204936
+enum class ScrollBehaviorStatus : uint8_t {
+    NotInAnimation,
+    InNonNativeAnimation,
+};
+
+enum class AnimatedScroll : uint8_t {
+    No,
+    Yes
 };
 
 inline ScrollDirection logicalToPhysical(ScrollLogicalDirection direction, bool isVertical, bool isFlipped)
@@ -135,9 +161,9 @@ enum ScrollbarMode : uint8_t {
     ScrollbarAlwaysOn
 };
 
-enum ScrollbarControlSize : uint8_t {
-    RegularScrollbar,
-    SmallScrollbar
+enum class ScrollbarControlSize : uint8_t {
+    Regular,
+    Small
 };
 
 enum class ScrollbarExpansionState : uint8_t {
@@ -195,12 +221,12 @@ enum ScrollPinningBehavior : uint8_t {
     PinToBottom
 };
 
-enum class ScrollClamping : uint8_t {
+enum class ScrollClamping : bool {
     Unclamped,
     Clamped
 };
 
-enum ScrollBehaviorForFixedElements : uint8_t {
+enum ScrollBehaviorForFixedElements : bool {
     StickToDocumentBounds,
     StickToViewportBounds
 };
@@ -224,11 +250,80 @@ enum class ScrollPositioningBehavior : uint8_t {
     Stationary
 };
 
+// This value controls the method used to select snap points during scrolling. This may either
+// be "directional" or "closest." The directional method only chooses snap points that are at or
+// beyond the scroll destination in the direction of the scroll. The "closest" method does not
+// have this constraint.
+enum class ScrollSnapPointSelectionMethod : uint8_t {
+    Directional,
+    Closest,
+};
+
 using ScrollbarControlState = unsigned;
 using ScrollbarControlPartMask = unsigned;
 using ScrollingNodeID = uint64_t;
 
 WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, ScrollType);
 WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, ScrollClamping);
+WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, ScrollBehaviorForFixedElements);
+
+struct ScrollPositionChangeOptions {
+    ScrollType type;
+    ScrollClamping clamping = ScrollClamping::Clamped;
+    AnimatedScroll animated = AnimatedScroll::No;
+    ScrollSnapPointSelectionMethod snapPointSelectionMethod = ScrollSnapPointSelectionMethod::Closest;
+
+    static ScrollPositionChangeOptions createProgrammatic()
+    {
+        return { ScrollType::Programmatic };
+    }
+
+    static ScrollPositionChangeOptions createProgrammaticWithOptions(ScrollClamping clamping, AnimatedScroll animated, ScrollSnapPointSelectionMethod snapPointSelectionMethod)
+    {
+        return { ScrollType::Programmatic, clamping, animated, snapPointSelectionMethod };
+    }
+
+    static ScrollPositionChangeOptions createUser()
+    {
+        return { ScrollType::User };
+    }
+
+    static ScrollPositionChangeOptions createProgrammaticUnclamped()
+    {
+        return { ScrollType::Programmatic, ScrollClamping::Unclamped };
+    }
+};
 
 } // namespace WebCore
+
+namespace WTF {
+
+template<> struct EnumTraits<WebCore::ScrollbarMode> {
+    using values = EnumValues<
+        WebCore::ScrollbarMode,
+        WebCore::ScrollbarMode::ScrollbarAuto,
+        WebCore::ScrollbarMode::ScrollbarAlwaysOff,
+        WebCore::ScrollbarMode::ScrollbarAlwaysOn
+    >;
+};
+
+template<> struct EnumTraits<WebCore::ScrollElasticity> {
+    using values = EnumValues<
+        WebCore::ScrollElasticity,
+        WebCore::ScrollElasticity::ScrollElasticityAutomatic,
+        WebCore::ScrollElasticity::ScrollElasticityNone,
+        WebCore::ScrollElasticity::ScrollElasticityAllowed
+    >;
+};
+
+
+template<> struct EnumTraits<WebCore::ScrollPinningBehavior> {
+    using values = EnumValues<
+        WebCore::ScrollPinningBehavior,
+        WebCore::ScrollPinningBehavior::DoNotPin,
+        WebCore::ScrollPinningBehavior::PinToTop,
+        WebCore::ScrollPinningBehavior::PinToBottom
+    >;
+};
+
+} // namespace WTF

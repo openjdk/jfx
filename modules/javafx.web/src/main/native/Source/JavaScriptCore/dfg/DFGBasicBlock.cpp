@@ -28,7 +28,7 @@
 
 #if ENABLE(DFG_JIT)
 
-#include "JSCInlines.h"
+#include "JSCJSValueInlines.h"
 
 namespace JSC { namespace DFG {
 
@@ -149,6 +149,15 @@ BasicBlock::SSAData::SSAData(BasicBlock* block)
 BasicBlock::SSAData::~SSAData() { }
 
 } } // namespace JSC::DFG
+
+namespace WTF {
+
+void printInternal(PrintStream& out, JSC::DFG::BasicBlock* block)
+{
+    out.print(*block);
+}
+
+}
 
 #endif // ENABLE(DFG_JIT)
 

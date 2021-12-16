@@ -30,10 +30,7 @@
 #include "APICast.h"
 #include "APIUtils.h"
 #include "ClassInfo.h"
-#include "Error.h"
-#include "JSArrayBufferViewInlines.h"
 #include "JSCInlines.h"
-#include "JSDataView.h"
 #include "JSGenericTypedArrayViewInlines.h"
 #include "JSTypedArrays.h"
 #include "TypedArrayController.h"
@@ -67,6 +64,10 @@ inline JSTypedArrayType toJSTypedArrayType(TypedArrayType type)
         return kJSTypedArrayTypeFloat32Array;
     case TypeFloat64:
         return kJSTypedArrayTypeFloat64Array;
+    case TypeBigInt64:
+        return kJSTypedArrayTypeBigInt64Array;
+    case TypeBigUint64:
+        return kJSTypedArrayTypeBigUint64Array;
     }
     RELEASE_ASSERT_NOT_REACHED();
 }
@@ -95,6 +96,10 @@ inline TypedArrayType toTypedArrayType(JSTypedArrayType type)
         return TypeFloat32;
     case kJSTypedArrayTypeFloat64Array:
         return TypeFloat64;
+    case kJSTypedArrayTypeBigInt64Array:
+        return TypeBigInt64;
+    case kJSTypedArrayTypeBigUint64Array:
+        return TypeBigUint64;
     }
     RELEASE_ASSERT_NOT_REACHED();
 }
@@ -126,6 +131,10 @@ static JSObject* createTypedArray(JSGlobalObject* globalObject, JSTypedArrayType
         return JSFloat32Array::create(globalObject, globalObject->typedArrayStructure(TypeFloat32), WTFMove(buffer), offset, length);
     case kJSTypedArrayTypeFloat64Array:
         return JSFloat64Array::create(globalObject, globalObject->typedArrayStructure(TypeFloat64), WTFMove(buffer), offset, length);
+    case kJSTypedArrayTypeBigInt64Array:
+        return JSBigInt64Array::create(globalObject, globalObject->typedArrayStructure(TypeBigInt64), WTFMove(buffer), offset, length);
+    case kJSTypedArrayTypeBigUint64Array:
+        return JSBigUint64Array::create(globalObject, globalObject->typedArrayStructure(TypeBigUint64), WTFMove(buffer), offset, length);
     case kJSTypedArrayTypeArrayBuffer:
     case kJSTypedArrayTypeNone:
         RELEASE_ASSERT_NOT_REACHED();
@@ -241,7 +250,7 @@ JSObjectRef JSObjectMakeTypedArrayWithArrayBufferAndOffset(JSContextRef ctx, JST
     return toRef(result);
 }
 
-void* JSObjectGetTypedArrayBytesPtr(JSContextRef ctx, JSObjectRef objectRef, JSValueRef*)
+void* JSObjectGetTypedArrayBytesPtr(JSContextRef ctx, JSObjectRef objectRef, JSValueRef* exception)
 {
     JSGlobalObject* globalObject = toJS(ctx);
     VM& vm = globalObject->vm();
@@ -249,9 +258,12 @@ void* JSObjectGetTypedArrayBytesPtr(JSContextRef ctx, JSObjectRef objectRef, JSV
     JSObject* object = toJS(objectRef);
 
     if (JSArrayBufferView* typedArray = jsDynamicCast<JSArrayBufferView*>(vm, object)) {
-        ArrayBuffer* buffer = typedArray->possiblySharedBuffer();
-        buffer->pinAndLock();
-        return buffer->data();
+        if (ArrayBuffer* buffer = typedArray->possiblySharedBuffer()) {
+            buffer->pinAndLock();
+            return buffer->data();
+        }
+
+        setException(ctx, exception, createOutOfMemoryError(globalObject));
     }
     return nullptr;
 }
@@ -292,15 +304,20 @@ size_t JSObjectGetTypedArrayByteOffset(JSContextRef ctx, JSObjectRef objectRef, 
     return 0;
 }
 
-JSObjectRef JSObjectGetTypedArrayBuffer(JSContextRef ctx, JSObjectRef objectRef, JSValueRef*)
+JSObjectRef JSObjectGetTypedArrayBuffer(JSContextRef ctx, JSObjectRef objectRef, JSValueRef* exception)
 {
     JSGlobalObject* globalObject = toJS(ctx);
     VM& vm = globalObject->vm();
     JSLockHolder locker(vm);
     JSObject* object = toJS(objectRef);
 
-    if (JSArrayBufferView* typedArray = jsDynamicCast<JSArrayBufferView*>(vm, object))
-        return toRef(vm.m_typedArrayController->toJS(globalObject, typedArray->globalObject(vm), typedArray->possiblySharedBuffer()));
+
+    if (JSArrayBufferView* typedArray = jsDynamicCast<JSArrayBufferView*>(vm, object)) {
+        if (ArrayBuffer* buffer = typedArray->possiblySharedBuffer())
+            return toRef(vm.m_typedArrayController->toJS(globalObject, typedArray->globalObject(vm), buffer));
+
+        setException(ctx, exception, createOutOfMemoryError(globalObject));
+    }
 
     return nullptr;
 }

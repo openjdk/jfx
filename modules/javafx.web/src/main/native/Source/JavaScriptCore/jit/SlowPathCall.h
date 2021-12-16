@@ -58,12 +58,13 @@ public:
         m_jit->move(JIT::callFrameRegister, JIT::argumentGPR0);
         m_jit->move(JIT::TrustedImmPtr(m_pc), JIT::argumentGPR1);
 #endif
-        JIT::Call call = m_jit->call(OperationPtrTag);
-        m_jit->m_calls.append(CallRecord(call, m_jit->m_bytecodeIndex, FunctionPtr<OperationPtrTag>(m_slowPathFunction)));
+        JIT::Call call = m_jit->appendCall(m_slowPathFunction);
 
 #if CPU(X86_64) && OS(WINDOWS)
         m_jit->pop(JIT::regT0); // vPC
         m_jit->pop(JIT::regT1); // callFrame register
+        static_assert(JIT::regT0 == GPRInfo::returnValueGPR);
+        static_assert(JIT::regT1 == GPRInfo::returnValueGPR2);
 #endif
 
 #if ENABLE(OPCODE_SAMPLING)

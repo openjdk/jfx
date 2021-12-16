@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,9 +25,24 @@
 
 package javafx.scene.control.skin;
 
+import java.lang.ref.WeakReference;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.scene.control.Properties;
+import com.sun.javafx.scene.control.behavior.TextInputControlBehavior;
 import com.sun.javafx.scene.control.skin.FXVK;
 import com.sun.javafx.scene.input.ExtendedInputMethodRequests;
+import com.sun.javafx.tk.FontMetrics;
+import com.sun.javafx.tk.Toolkit;
+
+import static com.sun.javafx.PlatformUtil.*;
+
+import javafx.animation.Animation.Status;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.application.ConditionalFeature;
@@ -45,6 +60,9 @@ import javafx.css.Styleable;
 import javafx.css.StyleableBooleanProperty;
 import javafx.css.StyleableObjectProperty;
 import javafx.css.StyleableProperty;
+import javafx.css.converter.BooleanConverter;
+import javafx.css.converter.PaintConverter;
+import javafx.event.EventHandler;
 import javafx.geometry.NodeOrientation;
 import javafx.geometry.Point2D;
 import javafx.geometry.Rectangle2D;
@@ -69,22 +87,8 @@ import javafx.scene.shape.Path;
 import javafx.scene.shape.PathElement;
 import javafx.scene.shape.Shape;
 import javafx.scene.shape.VLineTo;
-import javafx.scene.text.HitInfo;
 import javafx.stage.Window;
 import javafx.util.Duration;
-import java.lang.ref.WeakReference;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import com.sun.javafx.PlatformUtil;
-import javafx.css.converter.BooleanConverter;
-import javafx.css.converter.PaintConverter;
-import com.sun.javafx.scene.control.behavior.TextInputControlBehavior;
-import com.sun.javafx.tk.FontMetrics;
-import com.sun.javafx.tk.Toolkit;
-import static com.sun.javafx.PlatformUtil.isWindows;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 
 /**
  * Abstract base class for text input skins.
@@ -95,7 +99,7 @@ import java.security.PrivilegedAction;
  */
 public abstract class TextInputControlSkin<T extends TextInputControl> extends SkinBase<T> {
 
-    /**************************************************************************
+    /* ************************************************************************
      *
      * Static fields / blocks
      *
@@ -106,18 +110,43 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
      *
      * @see #moveCaret(TextUnit, Direction, boolean)
      */
-    public static enum TextUnit { CHARACTER, WORD, LINE, PARAGRAPH, PAGE };
+    public static enum TextUnit {
+        /** Character unit */
+        CHARACTER,
+        /** Word unit */
+        WORD,
+        /** Line unit */
+        LINE,
+        /** Paragraph unit */
+        PARAGRAPH,
+        /** Page unit */
+        PAGE
+    };
 
     /**
      * Direction names for caret movement.
      *
      * @see #moveCaret(TextUnit, Direction, boolean)
      */
-    public static enum Direction { LEFT, RIGHT, UP, DOWN, BEGINNING, END };
+    public static enum Direction {
+        /** Left Direction */
+        LEFT,
+        /** Right Direction */
+        RIGHT,
+        /** Up Direction */
+        UP,
+        /** Down Direction */
+        DOWN,
+        /** Beginning */
+        BEGINNING,
+        /** End */
+        END
+    };
 
     static boolean preload = false;
     static {
-        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+        @SuppressWarnings("removal")
+        var dummy = AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
             String s = System.getProperty("com.sun.javafx.virtualKeyboard.preload");
             if (s != null) {
                 if (s.equalsIgnoreCase("PRERENDER")) {
@@ -135,7 +164,7 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
 
     private final static boolean IS_FXVK_SUPPORTED = Platform.isSupported(ConditionalFeature.VIRTUAL_KEYBOARD);
 
-    /**************************************************************************
+    /* ************************************************************************
      *
      * Private fields
      *
@@ -163,9 +192,10 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
     // Holds concrete attributes for the composition runs
     private List<Shape> imattrs = new java.util.ArrayList<Shape>();
 
+    private EventHandler<InputMethodEvent> inputMethodTextChangedHandler;
 
 
-    /**************************************************************************
+    /* ************************************************************************
      *
      * Constructors
      *
@@ -279,7 +309,7 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
                     }
                 }
             }
-            control.focusedProperty().addListener(observable -> {
+            registerInvalidationListener(control.focusedProperty(), observable -> {
                 if (FXVK.useFXVK()) {
                     Scene scene = getSkinnable().getScene();
                     if (control.isEditable() && control.isFocused()) {
@@ -295,10 +325,10 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
             });
         }
 
+        // FIXME: JDK-8268877 - incorrectly wired handler on replacing skin
         if (control.getOnInputMethodTextChanged() == null) {
-            control.setOnInputMethodTextChanged(event -> {
-                handleInputMethodEvent(event);
-            });
+            inputMethodTextChangedHandler = this::handleInputMethodEvent;
+            control.setOnInputMethodTextChanged(inputMethodTextChangedHandler);
         }
 
         control.setInputMethodRequests(new ExtendedInputMethodRequests() {
@@ -358,9 +388,21 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
         });
     }
 
+    @Override
+    public void dispose() {
+        if (getSkinnable() == null) return;
+        // the inputMethodEvent handler installed by this skin must be removed to prevent a memory leak
+        // while a handler installed by the control must not be removed
+        if (getSkinnable().getOnInputMethodTextChanged() == inputMethodTextChangedHandler) {
+            getSkinnable().setOnInputMethodTextChanged(null);
+        }
+        // cleanup to guard against potential NPE
+        getSkinnable().setInputMethodRequests(null);
+        super.dispose();
+    }
 
 
-    /**************************************************************************
+    /* ************************************************************************
      *
      * Properties
      *
@@ -417,7 +459,9 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
         return textFill;
     }
 
-    // --- prompt text fill
+    /**
+     * The fill {@code Paint} used for the foreground of prompt text.
+     */
     private final ObjectProperty<Paint> promptTextFill = new StyleableObjectProperty<Paint>(Color.GRAY) {
         @Override public Object getBean() {
             return TextInputControlSkin.this;
@@ -482,7 +526,9 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
         return highlightFill;
     }
 
-    // --- highlight text fill
+    /**
+     * The fill {@code Paint} used for the foreground of selected text.
+     */
     private final ObjectProperty<Paint> highlightTextFill = new StyleableObjectProperty<Paint>(Color.WHITE) {
         @Override protected void invalidated() {
             updateHighlightTextFill();
@@ -559,30 +605,34 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
 
 
 
-    /**************************************************************************
+    /* ************************************************************************
      *
      * Abstract API
      *
      **************************************************************************/
 
     /**
+     * Gets the path elements describing the shape of the underline for the given range.
      * @param start the start
      * @param end the end
-     * @return the path elements describing the shape of the underline for the given range.
+     * @return the path elements describing the shape of the underline for the given range
      */
     protected abstract PathElement[] getUnderlineShape(int start, int end);
-    /**
+
+    /** Gets the path elements describing the bounding rectangles for the given range of text.
      * @param start the start
      * @param end the end
-     * @return the path elements describing the bounding rectangles for the given range of text.
+     * @return the path elements describing the bounding rectangles for the given range of text
      */
     protected abstract PathElement[] getRangeShape(int start, int end);
+
     /**
      * Adds highlight for composed text from Input Method.
      * @param nodes the list of nodes
      * @param start the start
      */
     protected abstract void addHighlight(List<? extends Node> nodes, int start);
+
     /**
      * Removes highlight for composed text from Input Method.
      * @param nodes the list of nodes
@@ -601,7 +651,7 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
      */
     public abstract void moveCaret(TextUnit unit, Direction dir, boolean select);
 
-    /**************************************************************************
+    /* ************************************************************************
      *
      * Public API
      *
@@ -690,6 +740,10 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
      */
     protected void updateHighlightTextFill() {};
 
+    /**
+     * Handles an input method event.
+     * @param event the {@code InputMethodEvent} to be handled
+     */
     protected void handleInputMethodEvent(InputMethodEvent event) {
         final TextInputControl textInput = getSkinnable();
         if (textInput.isEditable() && !textInput.textProperty().isBound() && !textInput.isDisabled()) {
@@ -751,7 +805,7 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
 
 
 
-    /**************************************************************************
+    /* ************************************************************************
      *
      * Private implementation
      *
@@ -763,6 +817,11 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
 
     ObservableBooleanValue caretVisibleProperty() {
         return caretVisible;
+    }
+
+    // for testing only!
+    boolean isCaretBlinking() {
+        return caretBlinking.caretTimeline.getStatus() == Status.RUNNING;
     }
 
     boolean isRTL() {
@@ -835,7 +894,7 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
 
 
 
-    /**************************************************************************
+    /* ************************************************************************
      *
      * Support classes
      *

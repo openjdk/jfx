@@ -92,9 +92,7 @@ public:
     bool isCustomPropertyValue() const { return m_classType == CustomPropertyClass; }
     bool isFunctionValue() const { return m_classType == FunctionClass; }
     bool isFontFeatureValue() const { return m_classType == FontFeatureClass; }
-#if ENABLE(VARIATION_FONTS)
     bool isFontVariationValue() const { return m_classType == FontVariationClass; }
-#endif
     bool isFontFaceSrcValue() const { return m_classType == FontFaceSrcClass; }
     bool isFontValue() const { return m_classType == FontClass; }
     bool isFontStyleValue() const { return m_classType == FontStyleClass; }
@@ -182,9 +180,7 @@ protected:
         AspectRatioClass,
         BorderImageSliceClass,
         FontFeatureClass,
-#if ENABLE(VARIATION_FONTS)
         FontVariationClass,
-#endif
         FontClass,
         FontStyleClass,
         FontStyleRangeClass,
@@ -237,7 +233,6 @@ protected:
     explicit CSSValue(ClassType classType)
         : m_primitiveUnitType(0)
         , m_hasCachedCSSText(false)
-        , m_isQuirkValue(false)
         , m_valueListSeparator(SpaceSeparator)
         , m_classType(classType)
     {
@@ -263,7 +258,6 @@ protected:
     // CSSPrimitiveValue bits:
     unsigned m_primitiveUnitType : 7; // CSSUnitType
     mutable unsigned m_hasCachedCSSText : 1;
-    unsigned m_isQuirkValue : 1;
 
     unsigned m_valueListSeparator : ValueListSeparatorBits;
 

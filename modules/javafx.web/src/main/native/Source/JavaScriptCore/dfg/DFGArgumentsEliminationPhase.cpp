@@ -29,10 +29,8 @@
 #if ENABLE(DFG_JIT)
 
 #include "ArrayPrototype.h"
-#include "BytecodeLivenessAnalysisInlines.h"
 #include "ClonedArguments.h"
 #include "DFGArgumentsUtilities.h"
-#include "DFGBasicBlockInlines.h"
 #include "DFGBlockMapInlines.h"
 #include "DFGClobberize.h"
 #include "DFGCombinedLiveness.h"
@@ -407,6 +405,9 @@ private:
                 case FilterPutByIdStatus:
                 case FilterCallLinkStatus:
                 case FilterInByIdStatus:
+                case FilterDeleteByStatus:
+                case FilterCheckPrivateBrandStatus:
+                case FilterSetPrivateBrandStatus:
                     break;
 
                 case CheckArrayOrEmpty:
@@ -506,7 +507,7 @@ private:
             }
         }
 
-        using InlineCallFrames = HashSet<InlineCallFrame*, WTF::DefaultHash<InlineCallFrame*>::Hash, WTF::NullableHashTraits<InlineCallFrame*>>;
+        using InlineCallFrames = HashSet<InlineCallFrame*, WTF::DefaultHash<InlineCallFrame*>, WTF::NullableHashTraits<InlineCallFrame*>>;
         using InlineCallFramesForCanditates = HashMap<Node*, InlineCallFrames>;
         InlineCallFramesForCanditates inlineCallFramesForCandidate;
         auto forEachDependentNode = recursableLambda([&](auto self, Node* node, const auto& functor) -> void {
@@ -1266,7 +1267,10 @@ private:
                 case FilterGetByStatus:
                 case FilterPutByIdStatus:
                 case FilterCallLinkStatus:
-                case FilterInByIdStatus: {
+                case FilterInByIdStatus:
+                case FilterDeleteByStatus:
+                case FilterCheckPrivateBrandStatus:
+                case FilterSetPrivateBrandStatus: {
                     if (!isEliminatedAllocation(node->child1().node()))
                         break;
                     node->remove(m_graph);

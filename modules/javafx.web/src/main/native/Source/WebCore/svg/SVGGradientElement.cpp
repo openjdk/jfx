@@ -91,29 +91,22 @@ void SVGGradientElement::childrenChanged(const ChildChange& change)
 {
     SVGElement::childrenChanged(change);
 
-    if (change.source == ChildChangeSource::Parser)
+    if (change.source == ChildChange::Source::Parser)
         return;
 
     if (RenderObject* object = renderer())
         object->setNeedsLayout();
 }
 
-Vector<Gradient::ColorStop> SVGGradientElement::buildStops()
+Gradient::ColorStopVector SVGGradientElement::buildStops()
 {
-    Vector<Gradient::ColorStop> stops;
+    Gradient::ColorStopVector stops;
     float previousOffset = 0.0f;
-
     for (auto& stop : childrenOfType<SVGStopElement>(*this)) {
-        const Color& color = stop.stopColorIncludingOpacity();
-
-        // Figure out right monotonic offset.
-        float offset = stop.offset();
-        offset = std::min(std::max(previousOffset, offset), 1.0f);
-        previousOffset = offset;
-
-        stops.append(Gradient::ColorStop(offset, color));
+        auto monotonicallyIncreasingOffset = std::clamp(stop.offset(), previousOffset, 1.0f);
+        previousOffset = monotonicallyIncreasingOffset;
+        stops.append({ monotonicallyIncreasingOffset, stop.stopColorIncludingOpacity() });
     }
-
     return stops;
 }
 

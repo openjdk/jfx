@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009, 2010, 2013, 2015-2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2009-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,25 +25,15 @@
 
 #include "config.h"
 
-#include "BatchedTransitionOptimizer.h"
-#include "CodeBlock.h"
 #include "CodeCache.h"
 #include "Debugger.h"
-#include "JIT.h"
-#include "JSCInlines.h"
-#include "LLIntEntrypoint.h"
-#include "ModuleProgramCodeBlock.h"
-#include "Parser.h"
-#include "TypeProfiler.h"
-#include "VMInlines.h"
-#include <wtf/CommaPrinter.h>
 
 namespace JSC {
 
 const ClassInfo ModuleProgramExecutable::s_info = { "ModuleProgramExecutable", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(ModuleProgramExecutable) };
 
 ModuleProgramExecutable::ModuleProgramExecutable(JSGlobalObject* globalObject, const SourceCode& source)
-    : Base(globalObject->vm().moduleProgramExecutableStructure.get(), globalObject->vm(), source, false, DerivedContextType::None, false, EvalContextType::None, NoIntrinsic)
+    : Base(globalObject->vm().moduleProgramExecutableStructure.get(), globalObject->vm(), source, false, DerivedContextType::None, false, false, EvalContextType::None, NoIntrinsic)
 {
     ASSERT(source.provider()->sourceType() == SourceProviderSourceType::Module);
     VM& vm = globalObject->vm();
@@ -89,7 +79,8 @@ auto ModuleProgramExecutable::ensureTemplateObjectMap(VM&) -> TemplateObjectMap&
     return ensureTemplateObjectMapImpl(m_templateObjectMap);
 }
 
-void ModuleProgramExecutable::visitChildren(JSCell* cell, SlotVisitor& visitor)
+template<typename Visitor>
+void ModuleProgramExecutable::visitChildrenImpl(JSCell* cell, Visitor& visitor)
 {
     ModuleProgramExecutable* thisObject = jsCast<ModuleProgramExecutable*>(cell);
     ASSERT_GC_OBJECT_INHERITS(thisObject, info());
@@ -103,5 +94,7 @@ void ModuleProgramExecutable::visitChildren(JSCell* cell, SlotVisitor& visitor)
             visitor.append(entry.value);
     }
 }
+
+DEFINE_VISIT_CHILDREN(ModuleProgramExecutable);
 
 } // namespace JSC

@@ -27,14 +27,15 @@
 #include "CommonVM.h"
 
 #include "DOMWindow.h"
-#include "DeprecatedGlobalSettings.h"
 #include "Frame.h"
+#include "RuntimeApplicationChecks.h"
 #include "ScriptController.h"
 #include "WebCoreJSClientData.h"
 #include <JavaScriptCore/HeapInlines.h>
 #include <JavaScriptCore/MachineStackMarker.h>
 #include <JavaScriptCore/VM.h>
 #include <wtf/MainThread.h>
+#include <wtf/RunLoop.h>
 #include <wtf/text/AtomString.h>
 
 #if PLATFORM(IOS_FAMILY)
@@ -43,6 +44,18 @@
 
 namespace WebCore {
 
+// FIXME: <rdar://problem/25965028> This should be removed or replaced with a Setting that iBooks can use if it is still needed.
+static bool globalConstRedeclarationShouldThrow()
+{
+#if PLATFORM(MAC)
+    return !MacApplication::isIBooks();
+#elif PLATFORM(IOS_FAMILY)
+    return !IOSApplication::isIBooks();
+#else
+    return true;
+#endif
+}
+
 JSC::VM* g_commonVMOrNull;
 
 JSC::VM& commonVMSlow()
@@ -50,9 +63,18 @@ JSC::VM& commonVMSlow()
     ASSERT(isMainThread());
     ASSERT(!g_commonVMOrNull);
 
-    ScriptController::initializeThreading();
+    // FIXME: Remove this call to ScriptController::initializeMainThread(). The
+    // main thread should have been initialized by a WebKit entrypoint already.
+    // Also, initializeMainThread() does nothing on iOS.
+    ScriptController::initializeMainThread();
 
-    auto& vm = JSC::VM::create(JSC::LargeHeap).leakRef();
+#if PLATFORM(IOS_FAMILY)
+    RunLoop* runLoop = RunLoop::webIfExists();
+#else
+    RunLoop* runLoop = nullptr;
+#endif
+
+    auto& vm = JSC::VM::create(JSC::LargeHeap, runLoop).leakRef();
 
     g_commonVMOrNull = &vm;
 
@@ -61,13 +83,12 @@ JSC::VM& commonVMSlow()
 #if PLATFORM(IOS_FAMILY)
     if (WebThreadIsEnabled())
         vm.apiLock().makeWebThreadAware();
-    vm.setRunLoop(WebThreadRunLoop());
     vm.heap.machineThreads().addCurrentThread();
 #endif
 
-    vm.setGlobalConstRedeclarationShouldThrow(DeprecatedGlobalSettings::globalConstRedeclarationShouldThrow());
+    vm.setGlobalConstRedeclarationShouldThrow(globalConstRedeclarationShouldThrow());
 
-    JSVMClientData::initNormalWorld(&vm);
+    JSVMClientData::initNormalWorld(&vm, WorkerThreadType::Main);
 
     return vm;
 }

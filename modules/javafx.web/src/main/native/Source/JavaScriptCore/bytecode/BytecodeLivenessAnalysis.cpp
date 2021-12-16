@@ -26,14 +26,11 @@
 #include "config.h"
 #include "BytecodeLivenessAnalysis.h"
 
-#include "BytecodeKills.h"
 #include "BytecodeLivenessAnalysisInlines.h"
 #include "BytecodeUseDef.h"
 #include "CodeBlock.h"
 #include "FullBytecodeLiveness.h"
-#include "HeapInlines.h"
-#include "InterpreterInlines.h"
-#include "PreciseJumpTargets.h"
+#include "JSCJSValueInlines.h"
 
 namespace JSC {
 
@@ -46,29 +43,13 @@ BytecodeLivenessAnalysis::BytecodeLivenessAnalysis(CodeBlock* codeBlock)
         dumpResults(codeBlock);
 }
 
-void BytecodeLivenessAnalysis::getLivenessInfoAtBytecodeIndex(CodeBlock* codeBlock, BytecodeIndex bytecodeIndex, FastBitVector& result)
-{
-    BytecodeBasicBlock* block = m_graph.findBasicBlockForBytecodeOffset(bytecodeIndex.offset());
-    ASSERT(block);
-    ASSERT(!block->isEntryBlock());
-    ASSERT(!block->isExitBlock());
-    result.resize(block->out().numBits());
-    computeLocalLivenessForBytecodeIndex(codeBlock, codeBlock->instructions(), m_graph, *block, bytecodeIndex, result);
-}
-
-FastBitVector BytecodeLivenessAnalysis::getLivenessInfoAtBytecodeIndex(CodeBlock* codeBlock, BytecodeIndex bytecodeIndex)
-{
-    FastBitVector out;
-    getLivenessInfoAtBytecodeIndex(codeBlock, bytecodeIndex, out);
-    return out;
-}
-
 void BytecodeLivenessAnalysis::computeFullLiveness(CodeBlock* codeBlock, FullBytecodeLiveness& result)
 {
     FastBitVector out;
 
-    result.m_beforeUseVector.resize(codeBlock->instructions().size());
-    result.m_afterUseVector.resize(codeBlock->instructions().size());
+    size_t size = codeBlock->instructions().size();
+    result.m_usesBefore.resize(size);
+    result.m_usesAfter.resize(size);
 
     for (BytecodeBasicBlock& block : m_graph.basicBlocksInReverseOrder()) {
         if (block.isEntryBlock() || block.isExitBlock())
@@ -91,47 +72,17 @@ void BytecodeLivenessAnalysis::computeFullLiveness(CodeBlock* codeBlock, FullByt
         for (unsigned i = block.delta().size(); i--;) {
             cursor -= block.delta()[i];
             BytecodeIndex bytecodeIndex = BytecodeIndex(block.leaderOffset() + cursor);
+            auto instruction = instructions.at(bytecodeIndex);
+            for (Checkpoint checkpoint = instruction->numberOfCheckpoints(); checkpoint--;) {
+                ASSERT(checkpoint < instruction->size());
+                bytecodeIndex = bytecodeIndex.withCheckpoint(checkpoint);
 
-            stepOverInstructionDef(codeBlock, instructions, m_graph, bytecodeIndex, def);
-            stepOverInstructionUseInExceptionHandler(codeBlock, instructions, m_graph, bytecodeIndex, use);
-            result.m_afterUseVector[bytecodeIndex.offset()] = out; // AfterUse point.
-            stepOverInstructionUse(codeBlock, instructions, m_graph, bytecodeIndex, use);
-            result.m_beforeUseVector[bytecodeIndex.offset()] = out; // BeforeUse point.
-        }
-    }
-}
-
-void BytecodeLivenessAnalysis::computeKills(CodeBlock* codeBlock, BytecodeKills& result)
-{
-    UNUSED_PARAM(result);
-    FastBitVector out;
-
-    result.m_codeBlock = codeBlock;
-    result.m_killSets = makeUniqueArray<BytecodeKills::KillSet>(codeBlock->instructions().size());
-
-    for (BytecodeBasicBlock& block : m_graph.basicBlocksInReverseOrder()) {
-        if (block.isEntryBlock() || block.isExitBlock())
-            continue;
-
-        out = block.out();
-
-        unsigned cursor = block.totalLength();
-        for (unsigned i = block.delta().size(); i--;) {
-            cursor -= block.delta()[i];
-            BytecodeIndex bytecodeIndex = BytecodeIndex(block.leaderOffset() + cursor);
-            stepOverInstruction(
-                codeBlock, codeBlock->instructions(), m_graph, bytecodeIndex,
-                [&] (unsigned index) {
-                    // This is for uses.
-                    if (out[index])
-                        return;
-                    result.m_killSets[bytecodeIndex.offset()].add(index);
-                    out[index] = true;
-                },
-                [&] (unsigned index) {
-                    // This is for defs.
-                    out[index] = false;
-                });
+                stepOverBytecodeIndexDef(codeBlock, instructions, m_graph, bytecodeIndex, def);
+                stepOverBytecodeIndexUseInExceptionHandler(codeBlock, instructions, m_graph, bytecodeIndex, use);
+                result.m_usesAfter[result.toIndex(bytecodeIndex)] = out; // AfterUse point.
+                stepOverBytecodeIndexUse(codeBlock, instructions, m_graph, bytecodeIndex, use);
+                result.m_usesBefore[result.toIndex(bytecodeIndex)] = out; // BeforeUse point.
+            }
         }
     }
 }
@@ -187,7 +138,7 @@ void BytecodeLivenessAnalysis::dumpResults(CodeBlock* codeBlock)
             const auto currentInstruction = instructions.at(bytecodeOffset);
 
             dataLogF("Live variables:");
-            FastBitVector liveBefore = getLivenessInfoAtBytecodeIndex(codeBlock, BytecodeIndex(bytecodeOffset));
+            FastBitVector liveBefore = getLivenessInfoAtInstruction(codeBlock, BytecodeIndex(bytecodeOffset));
             dumpBitVector(liveBefore);
             dataLogF("\n");
             codeBlock->dumpBytecode(WTF::dataFile(), currentInstruction);
@@ -216,7 +167,7 @@ constexpr bool enumValuesEqualAsIntegral(EnumType1 v1, EnumType2 v2)
 Bitmap<maxNumCheckpointTmps> tmpLivenessForCheckpoint(const CodeBlock& codeBlock, BytecodeIndex bytecodeIndex)
 {
     Bitmap<maxNumCheckpointTmps> result;
-    uint8_t checkpoint = bytecodeIndex.checkpoint();
+    Checkpoint checkpoint = bytecodeIndex.checkpoint();
 
     if (!checkpoint)
         return result;
@@ -229,6 +180,13 @@ Bitmap<maxNumCheckpointTmps> tmpLivenessForCheckpoint(const CodeBlock& codeBlock
         static_assert(enumValuesEqualAsIntegral(OpCallVarargs::makeCall, OpConstructVarargs::makeCall) && enumValuesEqualAsIntegral(OpCallVarargs::argCountIncludingThis, OpConstructVarargs::argCountIncludingThis));
         if (checkpoint == OpCallVarargs::makeCall)
             result.set(OpCallVarargs::argCountIncludingThis);
+        return result;
+    }
+    case op_iterator_open: {
+        return result;
+    }
+    case op_iterator_next: {
+        result.set(OpIteratorNext::nextResult);
         return result;
     }
     default:

@@ -26,9 +26,8 @@
 #include "config.h"
 #include "TypeSet.h"
 
+#include "HeapInlines.h"
 #include "InspectorProtocolObjects.h"
-#include "JSCInlines.h"
-#include <wtf/text/CString.h>
 #include <wtf/text/WTFString.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/Vector.h>
@@ -502,14 +501,14 @@ Ref<Inspector::Protocol::Runtime::StructureDescription> StructureShape::inspecto
         for (const auto& field : currentShape->m_optionalFields)
             optionalFields->addItem(field.get());
 
-        currentObject->setFields(&fields.get());
-        currentObject->setOptionalFields(&optionalFields.get());
+        currentObject->setFields(WTFMove(fields));
+        currentObject->setOptionalFields(WTFMove(optionalFields));
         currentObject->setConstructorName(currentShape->m_constructorName);
         currentObject->setIsImprecise(currentShape->m_isInDictionaryMode);
 
         if (currentShape->m_proto) {
             auto nextObject = Inspector::Protocol::Runtime::StructureDescription::create().release();
-            currentObject->setPrototypeStructure(&nextObject.get());
+            currentObject->setPrototypeStructure(nextObject.copyRef());
             currentObject = WTFMove(nextObject);
         }
 

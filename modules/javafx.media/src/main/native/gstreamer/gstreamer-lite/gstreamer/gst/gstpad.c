@@ -43,7 +43,7 @@
  * then a guaranteed unique name will be assigned to it.
  *
  * A #GstElement creating a pad will typically use the various
- * gst_pad_set_*_function() calls to register callbacks for events, queries or
+ * gst_pad_set_*_function\() calls to register callbacks for events, queries or
  * dataflow on the pads.
  *
  * gst_pad_get_parent() will retrieve the #GstElement that owns the pad.
@@ -344,7 +344,7 @@ gst_pad_class_init (GstPadClass * klass)
   gst_pad_signals[PAD_LINKED] =
       g_signal_new ("linked", G_TYPE_FROM_CLASS (klass), G_SIGNAL_RUN_LAST,
       G_STRUCT_OFFSET (GstPadClass, linked), NULL, NULL,
-      g_cclosure_marshal_generic, G_TYPE_NONE, 1, GST_TYPE_PAD);
+      NULL, G_TYPE_NONE, 1, GST_TYPE_PAD);
   /**
    * GstPad::unlinked:
    * @pad: the pad that emitted the signal
@@ -355,7 +355,7 @@ gst_pad_class_init (GstPadClass * klass)
   gst_pad_signals[PAD_UNLINKED] =
       g_signal_new ("unlinked", G_TYPE_FROM_CLASS (klass), G_SIGNAL_RUN_LAST,
       G_STRUCT_OFFSET (GstPadClass, unlinked), NULL, NULL,
-      g_cclosure_marshal_generic, G_TYPE_NONE, 1, GST_TYPE_PAD);
+      NULL, G_TYPE_NONE, 1, GST_TYPE_PAD);
 
   pspec_caps = g_param_spec_boxed ("caps", "Caps",
       "The capabilities of the pad", GST_TYPE_CAPS,
@@ -2851,6 +2851,72 @@ no_peer:
 }
 
 /**
+ * gst_pad_get_single_internal_link:
+ * @pad: the #GstPad to get the internal link of.
+ *
+ * If there is a single internal link of the given pad, this function will
+ * return it. Otherwise, it will return NULL.
+ *
+ * Returns: (transfer full) (nullable): a #GstPad, or %NULL if @pad has none
+ * or more than one internal links. Unref returned pad with
+ * gst_object_unref().
+ *
+ * Since: 1.18
+ */
+GstPad *
+gst_pad_get_single_internal_link (GstPad * pad)
+{
+  GstIterator *iter;
+  gboolean done = FALSE;
+  GValue item = { 0, };
+  GstPad *ret = NULL;
+
+  g_return_val_if_fail (GST_IS_PAD (pad), NULL);
+
+  iter = gst_pad_iterate_internal_links (pad);
+
+  if (!iter)
+    return NULL;
+
+  while (!done) {
+    switch (gst_iterator_next (iter, &item)) {
+      case GST_ITERATOR_OK:
+      {
+        if (ret == NULL) {
+          ret = g_value_dup_object (&item);
+        } else {
+          /* More than one internal link found - don't bother reffing */
+          gst_clear_object (&ret);
+          GST_DEBUG_OBJECT (pad,
+              "Requested single internally linked pad, multiple found");
+          done = TRUE;
+        }
+        g_value_reset (&item);
+        break;
+      }
+      case GST_ITERATOR_RESYNC:
+        gst_clear_object (&ret);
+        gst_iterator_resync (iter);
+        break;
+      case GST_ITERATOR_ERROR:
+        GST_ERROR_OBJECT (pad, "Could not iterate over internally linked pads");
+        return NULL;
+      case GST_ITERATOR_DONE:
+        if (ret == NULL) {
+          GST_DEBUG_OBJECT (pad,
+              "Requested single internally linked pad, none found");
+        }
+        done = TRUE;
+        break;
+    }
+  }
+  g_value_unset (&item);
+  gst_iterator_free (iter);
+
+  return ret;
+}
+
+/**
  * gst_pad_iterate_internal_links_default:
  * @pad: the #GstPad to get the internal links of.
  * @parent: (allow-none): the parent of @pad or %NULL
@@ -3160,11 +3226,17 @@ gst_pad_query_accept_caps_default (GstPad * pad, GstQuery * query)
           GST_PTR_FORMAT, allowed, caps);
       result = gst_caps_is_subset (caps, allowed);
     }
+    if (!result) {
+      GST_CAT_WARNING_OBJECT (GST_CAT_CAPS, pad, "caps: %" GST_PTR_FORMAT
+          " were not compatible with: %" GST_PTR_FORMAT, caps, allowed);
+    }
     gst_caps_unref (allowed);
   } else {
-    GST_DEBUG_OBJECT (pad, "no compatible caps allowed on the pad");
+    GST_CAT_DEBUG_OBJECT (GST_CAT_CAPS, pad,
+        "no compatible caps allowed on the pad");
     result = FALSE;
   }
+
   gst_query_set_accept_caps_result (query, result);
 
 done:
@@ -4806,6 +4878,10 @@ probed_data:
 
   GST_PAD_STREAM_UNLOCK (pad);
 
+  /* If the caller provided a buffer it must be filled by the getrange
+   * function instead of it returning a new buffer */
+  g_return_val_if_fail (!*buffer || res_buf == *buffer, GST_FLOW_ERROR);
+
   *buffer = res_buf;
 
   return ret;
@@ -5144,7 +5220,7 @@ store_sticky_event (GstPad * pad, GstEvent * event)
   GstEventType type;
   GArray *events;
   gboolean res = FALSE;
-  const gchar *name = NULL;
+  GQuark name_id = 0;
   gboolean insert = TRUE;
 
   type = GST_EVENT_TYPE (event);
@@ -5161,9 +5237,10 @@ store_sticky_event (GstPad * pad, GstEvent * event)
   /* Unset the EOS flag when received STREAM_START event, so pad can
    * store sticky event and then push it later */
   if (type == GST_EVENT_STREAM_START) {
-    GST_LOG_OBJECT (pad, "Removing pending EOS and StreamGroupDone events");
+    GST_LOG_OBJECT (pad, "Removing pending EOS, StreamGroupDone, TAG events");
     remove_event_by_type (pad, GST_EVENT_EOS);
     remove_event_by_type (pad, GST_EVENT_STREAM_GROUP_DONE);
+    remove_event_by_type (pad, GST_EVENT_TAG);
     GST_OBJECT_FLAG_UNSET (pad, GST_PAD_FLAG_EOS);
   }
 
@@ -5171,7 +5248,7 @@ store_sticky_event (GstPad * pad, GstEvent * event)
     goto eos;
 
   if (type & GST_EVENT_TYPE_STICKY_MULTI)
-    name = gst_structure_get_name (gst_event_get_structure (event));
+    name_id = gst_structure_get_name_id (gst_event_get_structure (event));
 
   events = pad->priv->events;
   len = events->len;
@@ -5184,7 +5261,7 @@ store_sticky_event (GstPad * pad, GstEvent * event)
 
     if (type == GST_EVENT_TYPE (ev->event)) {
       /* matching types, check matching name if needed */
-      if (name && !gst_event_has_name (ev->event, name))
+      if (name_id && !gst_event_has_name_id (ev->event, name_id))
         continue;
 
       /* overwrite */
@@ -5621,7 +5698,7 @@ pre_eventfunc_check (GstPad * pad, GstEvent * event)
   /* ERRORS */
 not_accepted:
   {
-    GST_CAT_DEBUG_OBJECT (GST_CAT_CAPS, pad,
+    GST_CAT_WARNING_OBJECT (GST_CAT_CAPS, pad,
         "caps %" GST_PTR_FORMAT " not accepted", caps);
     return GST_FLOW_NOT_NEGOTIATED;
   }
@@ -5706,6 +5783,7 @@ gst_pad_send_event_unchecked (GstPad * pad, GstEvent * event,
           GST_LOG_OBJECT (pad, "Removing pending EOS events");
           remove_event_by_type (pad, GST_EVENT_EOS);
           remove_event_by_type (pad, GST_EVENT_STREAM_GROUP_DONE);
+          remove_event_by_type (pad, GST_EVENT_TAG);
           GST_OBJECT_FLAG_UNSET (pad, GST_PAD_FLAG_EOS);
           break;
         default:
@@ -6081,14 +6159,12 @@ do_stream_status (GstPad * pad, GstStreamStatusType type,
       GValue value = { 0 };
 
       if (type == GST_STREAM_STATUS_TYPE_ENTER) {
-        gchar *tname, *ename, *pname;
+        gchar *tname;
 
-        /* create a good task name */
-        ename = gst_element_get_name (parent);
-        pname = gst_pad_get_name (pad);
-        tname = g_strdup_printf ("%s:%s", ename, pname);
-        g_free (ename);
-        g_free (pname);
+        /* create a good task name (we can directly grab the parent and pad
+         * names since they both exist at this point, and changing the name of
+         * parent and pad when a pad is activating is a big no-no). */
+        tname = g_strdup_printf ("%s:%s", GST_DEBUG_PAD_NAME (pad));
 
         gst_object_set_name (GST_OBJECT_CAST (task), tname);
         g_free (tname);

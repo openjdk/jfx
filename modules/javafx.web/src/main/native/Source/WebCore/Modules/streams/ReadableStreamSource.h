@@ -28,14 +28,12 @@
 
 #pragma once
 
-#if ENABLE(STREAMS_API)
-
+#include "JSDOMPromiseDeferred.h"
 #include "ReadableStreamDefaultController.h"
 #include <wtf/Optional.h>
+#include <wtf/WeakPtr.h>
 
 namespace WebCore {
-
-template<typename IDLType> class DOMPromiseDeferred;
 
 class ReadableStreamSource : public RefCounted<ReadableStreamSource> {
 public:
@@ -68,6 +66,24 @@ private:
     Optional<ReadableStreamDefaultController> m_controller;
 };
 
-} // namespace WebCore
+class SimpleReadableStreamSource
+    : public ReadableStreamSource
+    , public CanMakeWeakPtr<SimpleReadableStreamSource> {
+public:
+    static Ref<SimpleReadableStreamSource> create() { return adoptRef(*new SimpleReadableStreamSource); }
 
-#endif // ENABLE(STREAMS_API)
+    void close() { controller().close(); }
+    void enqueue(JSC::JSValue value) { controller().enqueue(value); }
+
+private:
+    SimpleReadableStreamSource() = default;
+
+    // ReadableStreamSource
+    void setActive() final { }
+    void setInactive() final { }
+    void doStart() final { }
+    void doPull() final { }
+    void doCancel() final { }
+};
+
+} // namespace WebCore

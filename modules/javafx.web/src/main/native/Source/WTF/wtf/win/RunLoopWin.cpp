@@ -66,7 +66,7 @@ LRESULT RunLoop::wndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 void RunLoop::run()
 {
     MSG message;
-    while (BOOL result = ::GetMessage(&message, 0, 0, 0)) {
+    while (BOOL result = ::GetMessage(&message, nullptr, 0, 0)) {
         if (result == -1)
             break;
         ::TranslateMessage(&message);
@@ -77,10 +77,15 @@ void RunLoop::run()
 void RunLoop::iterate()
 {
     MSG message;
-    while (::PeekMessage(&message, 0, 0, 0, PM_REMOVE)) {
+    while (::PeekMessage(&message, nullptr, 0, 0, PM_REMOVE)) {
         ::TranslateMessage(&message);
         ::DispatchMessage(&message);
     }
+}
+
+void RunLoop::setWakeUpCallback(WTF::Function<void()>&& function)
+{
+    RunLoop::current().m_wakeUpCallback = WTFMove(function);
 }
 
 void RunLoop::stop()
@@ -94,19 +99,23 @@ void RunLoop::stop()
 
 void RunLoop::registerRunLoopMessageWindowClass()
 {
-    WNDCLASS windowClass = { };
-    windowClass.lpfnWndProc     = RunLoop::RunLoopWndProc;
-    windowClass.cbWndExtra      = sizeof(RunLoop*);
-    windowClass.lpszClassName   = kRunLoopMessageWindowClassName;
-    bool result = ::RegisterClass(&windowClass);
-    RELEASE_ASSERT(result);
+    static std::once_flag onceKey;
+    std::call_once(onceKey, [&] {
+        WNDCLASS windowClass = { };
+        windowClass.lpfnWndProc     = RunLoop::RunLoopWndProc;
+        windowClass.cbWndExtra      = sizeof(RunLoop*);
+        windowClass.lpszClassName   = kRunLoopMessageWindowClassName;
+        bool result = ::RegisterClass(&windowClass);
+        RELEASE_ASSERT(result);
+    });
 }
 
 RunLoop::RunLoop()
 {
-    m_runLoopMessageWindow = ::CreateWindow(kRunLoopMessageWindowClassName, 0, 0,
-        CW_USEDEFAULT, 0, CW_USEDEFAULT, 0, HWND_MESSAGE, 0, 0, this);
-    ASSERT(::IsWindow(m_runLoopMessageWindow));
+    registerRunLoopMessageWindowClass();
+    m_runLoopMessageWindow = ::CreateWindow(kRunLoopMessageWindowClassName, nullptr, 0,
+        CW_USEDEFAULT, 0, CW_USEDEFAULT, 0, HWND_MESSAGE, nullptr, nullptr, this);
+    RELEASE_ASSERT(::IsWindow(m_runLoopMessageWindow));
 }
 
 RunLoop::~RunLoop()
@@ -118,12 +127,15 @@ void RunLoop::wakeUp()
     // FIXME: No need to wake up the run loop if we've already called dispatch
     // before the run loop has had the time to respond.
     ::PostMessage(m_runLoopMessageWindow, PerformWorkMessage, reinterpret_cast<WPARAM>(this), 0);
+
+    if (m_wakeUpCallback)
+        m_wakeUpCallback();
 }
 
 RunLoop::CycleResult RunLoop::cycle(RunLoopMode)
 {
     MSG message;
-    if (!::GetMessage(&message, 0, 0, 0))
+    if (!::GetMessage(&message, nullptr, 0, 0))
         return CycleResult::Stop;
 
     ::TranslateMessage(&message);
@@ -162,14 +174,14 @@ RunLoop::TimerBase::~TimerBase()
     stop();
 }
 
-void RunLoop::TimerBase::start(Seconds nextFireInterval, bool repeat)
+void RunLoop::TimerBase::start(Seconds interval, bool repeat)
 {
     LockHolder locker(m_runLoop->m_loopLock);
     m_isRepeating = repeat;
     m_isActive = true;
-    m_interval = nextFireInterval;
+    m_interval = interval;
     m_nextFireDate = MonotonicTime::now() + m_interval;
-    ::SetTimer(m_runLoop->m_runLoopMessageWindow, bitwise_cast<uintptr_t>(this), nextFireInterval.millisecondsAs<UINT>(), 0);
+    ::SetTimer(m_runLoop->m_runLoopMessageWindow, bitwise_cast<uintptr_t>(this), interval.millisecondsAs<UINT>(), nullptr);
 }
 
 void RunLoop::TimerBase::stop()

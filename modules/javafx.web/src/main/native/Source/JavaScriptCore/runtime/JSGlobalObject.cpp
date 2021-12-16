@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2007-2021 Apple Inc. All rights reserved.
  * Copyright (C) 2008 Cameron Zwarich (cwzwarich@uwaterloo.ca)
  *
  * Redistribution and use in source and binary forms, with or without
@@ -30,17 +30,20 @@
 #include "config.h"
 #include "JSGlobalObject.h"
 
+#include "AggregateError.h"
+#include "AggregateErrorConstructor.h"
+#include "AggregateErrorPrototype.h"
 #include "ArrayConstructor.h"
 #include "ArrayIteratorPrototype.h"
 #include "ArrayPrototype.h"
 #include "AsyncFromSyncIteratorPrototype.h"
-#include "AtomicsObject.h"
 #include "AsyncFunctionConstructor.h"
 #include "AsyncFunctionPrototype.h"
 #include "AsyncGeneratorFunctionConstructor.h"
 #include "AsyncGeneratorFunctionPrototype.h"
 #include "AsyncGeneratorPrototype.h"
 #include "AsyncIteratorPrototype.h"
+#include "AtomicsObject.h"
 #include "BigIntConstructor.h"
 #include "BigIntObject.h"
 #include "BigIntPrototype.h"
@@ -51,19 +54,17 @@
 #include "ClonedArguments.h"
 #include "CodeBlock.h"
 #include "CodeBlockSetInlines.h"
-#include "CodeCache.h"
+#include "ConsoleClient.h"
 #include "ConsoleObject.h"
 #include "DateConstructor.h"
 #include "DatePrototype.h"
 #include "Debugger.h"
 #include "DebuggerScope.h"
 #include "DirectArguments.h"
-#include "DirectEvalExecutable.h"
-#include "ECMAScriptSpecInternalFunctions.h"
-#include "Error.h"
 #include "ErrorConstructor.h"
 #include "ErrorPrototype.h"
-#include "Exception.h"
+#include "FinalizationRegistryConstructor.h"
+#include "FinalizationRegistryPrototype.h"
 #include "FunctionConstructor.h"
 #include "FunctionPrototype.h"
 #include "GeneratorFunctionConstructor.h"
@@ -71,9 +72,31 @@
 #include "GeneratorPrototype.h"
 #include "GetterSetter.h"
 #include "HeapIterationScope.h"
-#include "IndirectEvalExecutable.h"
-#include "InspectorInstrumentationObject.h"
-#include "Interpreter.h"
+#include "IntlCollator.h"
+#include "IntlCollatorPrototype.h"
+#include "IntlDateTimeFormat.h"
+#include "IntlDateTimeFormatConstructor.h"
+#include "IntlDateTimeFormatPrototype.h"
+#include "IntlDisplayNames.h"
+#include "IntlDisplayNamesPrototype.h"
+#include "IntlListFormat.h"
+#include "IntlListFormatPrototype.h"
+#include "IntlLocale.h"
+#include "IntlLocalePrototype.h"
+#include "IntlNumberFormat.h"
+#include "IntlNumberFormatConstructor.h"
+#include "IntlNumberFormatPrototype.h"
+#include "IntlObject.h"
+#include "IntlPluralRules.h"
+#include "IntlPluralRulesPrototype.h"
+#include "IntlRelativeTimeFormat.h"
+#include "IntlRelativeTimeFormatPrototype.h"
+#include "IntlSegmentIterator.h"
+#include "IntlSegmentIteratorPrototype.h"
+#include "IntlSegmenter.h"
+#include "IntlSegmenterPrototype.h"
+#include "IntlSegments.h"
+#include "IntlSegmentsPrototype.h"
 #include "IteratorPrototype.h"
 #include "JSAPIWrapperObject.h"
 #include "JSArrayBuffer.h"
@@ -83,16 +106,16 @@
 #include "JSAsyncFunction.h"
 #include "JSAsyncGenerator.h"
 #include "JSAsyncGeneratorFunction.h"
-#include "JSBigInt.h"
 #include "JSBoundFunction.h"
-#include "JSCInlines.h"
 #include "JSCallbackConstructor.h"
 #include "JSCallbackFunction.h"
 #include "JSCallbackObject.h"
-#include "JSCustomGetterSetterFunction.h"
+#include "JSCustomGetterFunction.h"
+#include "JSCustomSetterFunction.h"
 #include "JSDataView.h"
 #include "JSDataViewPrototype.h"
 #include "JSDollarVM.h"
+#include "JSFinalizationRegistry.h"
 #include "JSFunction.h"
 #include "JSGenerator.h"
 #include "JSGeneratorFunction.h"
@@ -104,8 +127,8 @@
 #include "JSInternalPromiseConstructor.h"
 #include "JSInternalPromisePrototype.h"
 #include "JSLexicalEnvironment.h"
-#include "JSLock.h"
 #include "JSMap.h"
+#include "JSMapIterator.h"
 #include "JSMicrotask.h"
 #include "JSModuleEnvironment.h"
 #include "JSModuleLoader.h"
@@ -117,6 +140,7 @@
 #include "JSPromiseConstructor.h"
 #include "JSPromisePrototype.h"
 #include "JSSet.h"
+#include "JSSetIterator.h"
 #include "JSStringIterator.h"
 #include "JSTypedArrayConstructors.h"
 #include "JSTypedArrayPrototypes.h"
@@ -139,13 +163,11 @@
 #include "LazyClassStructureInlines.h"
 #include "LazyPropertyInlines.h"
 #include "LinkTimeConstant.h"
-#include "Lookup.h"
 #include "MapConstructor.h"
 #include "MapIteratorPrototype.h"
 #include "MapPrototype.h"
 #include "MarkedSpaceInlines.h"
 #include "MathObject.h"
-#include "Microtask.h"
 #include "NativeErrorConstructor.h"
 #include "NativeErrorPrototype.h"
 #include "NullGetterFunction.h"
@@ -157,17 +179,16 @@
 #include "ObjectPropertyChangeAdaptiveWatchpoint.h"
 #include "ObjectPropertyConditionSet.h"
 #include "ObjectPrototype.h"
-#include "ParserError.h"
 #include "ProxyConstructor.h"
 #include "ProxyObject.h"
 #include "ProxyRevoke.h"
 #include "ReflectObject.h"
-#include "RegExpCache.h"
 #include "RegExpConstructor.h"
 #include "RegExpMatchesArray.h"
 #include "RegExpObject.h"
 #include "RegExpPrototype.h"
 #include "RegExpStringIteratorPrototype.h"
+#include "SamplingProfiler.h"
 #include "ScopedArguments.h"
 #include "SetConstructor.h"
 #include "SetIteratorPrototype.h"
@@ -176,13 +197,10 @@
 #include "StringConstructor.h"
 #include "StringIteratorPrototype.h"
 #include "StringPrototype.h"
-#include "Symbol.h"
 #include "SymbolConstructor.h"
 #include "SymbolObject.h"
 #include "SymbolPrototype.h"
-#include "VariableWriteFireDetail.h"
 #include "WasmCapabilities.h"
-#include "WeakGCMapInlines.h"
 #include "WeakMapConstructor.h"
 #include "WeakMapPrototype.h"
 #include "WeakObjectRefConstructor.h"
@@ -209,18 +227,6 @@
 #include "WebAssemblyTablePrototype.h"
 #include <wtf/RandomNumber.h>
 
-#if ENABLE(INTL)
-#include "IntlCollator.h"
-#include "IntlCollatorPrototype.h"
-#include "IntlDateTimeFormat.h"
-#include "IntlDateTimeFormatPrototype.h"
-#include "IntlNumberFormat.h"
-#include "IntlNumberFormatPrototype.h"
-#include "IntlObject.h"
-#include "IntlPluralRules.h"
-#include "IntlPluralRulesPrototype.h"
-#endif // ENABLE(INTL)
-
 #if ENABLE(REMOTE_INSPECTOR)
 #include "JSGlobalObjectDebuggable.h"
 #include "JSGlobalObjectInspectorController.h"
@@ -239,6 +245,20 @@ static_assert(std::is_same_v<std::remove_cv_t<decltype(featureFlag)>, bool> || s
 FOR_EACH_SIMPLE_BUILTIN_TYPE(CHECK_FEATURE_FLAG_TYPE)
 FOR_EACH_BUILTIN_DERIVED_ITERATOR_TYPE(CHECK_FEATURE_FLAG_TYPE)
 FOR_EACH_LAZY_BUILTIN_TYPE(CHECK_FEATURE_FLAG_TYPE)
+
+static JSC_DECLARE_HOST_FUNCTION(makeBoundFunction);
+static JSC_DECLARE_HOST_FUNCTION(hasOwnLengthProperty);
+static JSC_DECLARE_HOST_FUNCTION(createPrivateSymbol);
+static JSC_DECLARE_HOST_FUNCTION(enableSuperSampler);
+static JSC_DECLARE_HOST_FUNCTION(disableSuperSampler);
+static JSC_DECLARE_HOST_FUNCTION(enqueueJob);
+#if ASSERT_ENABLED
+static JSC_DECLARE_HOST_FUNCTION(assertCall);
+#endif
+#if ENABLE(SAMPLING_PROFILER)
+static JSC_DECLARE_HOST_FUNCTION(enableSamplingProfiler);
+static JSC_DECLARE_HOST_FUNCTION(disableSamplingProfiler);
+#endif
 
 static JSValue createProxyProperty(VM& vm, JSObject* object)
 {
@@ -270,7 +290,7 @@ static JSValue createConsoleProperty(VM& vm, JSObject* object)
     return ConsoleObject::create(vm, global, ConsoleObject::createStructure(vm, global, constructEmptyObject(global)));
 }
 
-static EncodedJSValue JSC_HOST_CALL makeBoundFunction(JSGlobalObject* globalObject, CallFrame* callFrame)
+JSC_DEFINE_HOST_FUNCTION(makeBoundFunction, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
@@ -278,28 +298,40 @@ static EncodedJSValue JSC_HOST_CALL makeBoundFunction(JSGlobalObject* globalObje
     JSObject* target = asObject(callFrame->uncheckedArgument(0));
     JSValue boundThis = callFrame->uncheckedArgument(1);
     JSValue boundArgs = callFrame->uncheckedArgument(2);
-    JSValue lengthValue = callFrame->uncheckedArgument(3);
+    double length = callFrame->uncheckedArgument(3).asNumber();
     JSString* nameString = asString(callFrame->uncheckedArgument(4));
-
-    ASSERT(lengthValue.isInt32AsAnyInt());
-    int32_t length = lengthValue.asInt32AsAnyInt();
 
     RELEASE_AND_RETURN(scope, JSValue::encode(JSBoundFunction::create(vm, globalObject, target, boundThis, boundArgs.isCell() ? jsCast<JSImmutableButterfly*>(boundArgs) : nullptr, length, nameString)));
 }
 
-static EncodedJSValue JSC_HOST_CALL hasOwnLengthProperty(JSGlobalObject* globalObject, CallFrame* callFrame)
+JSC_DEFINE_HOST_FUNCTION(hasOwnLengthProperty, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
 
     JSObject* target = asObject(callFrame->uncheckedArgument(0));
     JSFunction* function = jsDynamicCast<JSFunction*>(vm, target);
-    if (function)
-        return JSValue::encode(jsBoolean(function->areNameAndLengthOriginal(vm)));
-    return JSValue::encode(jsBoolean(target->hasOwnProperty(globalObject, vm.propertyNames->length)));
+    if (function && function->canAssumeNameAndLengthAreOriginal(vm)) {
+#if ASSERT_ENABLED
+        bool result = target->hasOwnProperty(globalObject, vm.propertyNames->length);
+        RETURN_IF_EXCEPTION(scope, { });
+        ASSERT(result);
+#endif
+        return JSValue::encode(jsBoolean(true));
+    }
+    RELEASE_AND_RETURN(scope, JSValue::encode(jsBoolean(target->hasOwnProperty(globalObject, vm.propertyNames->length))));
+}
+
+// FIXME: use a bytecode or intrinsic for creating a private symbol.
+// https://bugs.webkit.org/show_bug.cgi?id=212782
+JSC_DEFINE_HOST_FUNCTION(createPrivateSymbol, (JSGlobalObject* globalObject, CallFrame*))
+{
+    VM& vm = globalObject->vm();
+    return JSValue::encode(Symbol::create(vm, PrivateSymbolImpl::createNullSymbol().get()));
 }
 
 #if ASSERT_ENABLED
-static EncodedJSValue JSC_HOST_CALL assertCall(JSGlobalObject* globalObject, CallFrame* callFrame)
+JSC_DEFINE_HOST_FUNCTION(assertCall, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     RELEASE_ASSERT(callFrame->argument(0).isBoolean());
     if (callFrame->argument(0).asBoolean())
@@ -326,6 +358,43 @@ static EncodedJSValue JSC_HOST_CALL assertCall(JSGlobalObject* globalObject, Cal
 }
 #endif // ASSERT_ENABLED
 
+#if ENABLE(SAMPLING_PROFILER)
+JSC_DEFINE_HOST_FUNCTION(enableSamplingProfiler, (JSGlobalObject* globalObject, CallFrame*))
+{
+    SamplingProfiler* profiler = globalObject->vm().samplingProfiler();
+    if (!profiler)
+        profiler = &globalObject->vm().ensureSamplingProfiler(Stopwatch::create());
+    profiler->start();
+    return JSValue::encode(jsUndefined());
+}
+
+JSC_DEFINE_HOST_FUNCTION(disableSamplingProfiler, (JSGlobalObject* globalObject, CallFrame*))
+{
+    SamplingProfiler* profiler = globalObject->vm().samplingProfiler();
+    if (!profiler)
+        profiler = &globalObject->vm().ensureSamplingProfiler(Stopwatch::create());
+
+    {
+        auto locker = holdLock(profiler->getLock());
+        profiler->pause(locker);
+    }
+
+    return JSValue::encode(jsUndefined());
+}
+#endif
+
+JSC_DEFINE_HOST_FUNCTION(enableSuperSampler, (JSGlobalObject*, CallFrame*))
+{
+    enableSuperSampler();
+    return JSValue::encode(jsUndefined());
+}
+
+JSC_DEFINE_HOST_FUNCTION(disableSuperSampler, (JSGlobalObject*, CallFrame*))
+{
+    disableSuperSampler();
+    return JSValue::encode(jsUndefined());
+}
+
 } // namespace JSC
 
 #include "JSGlobalObject.lut.h"
@@ -346,6 +415,9 @@ const GlobalObjectMethodTable JSGlobalObject::s_globalObjectMethodTable = {
     nullptr, // moduleLoaderCreateImportMetaProperties
     nullptr, // moduleLoaderEvaluate
     nullptr, // promiseRejectionTracker
+    &reportUncaughtExceptionAtEventLoop,
+    &currentScriptExecutionOwner,
+    &scriptExecutionStatus,
     nullptr, // defaultLanguage
     nullptr, // compileStreaming
     nullptr, // instantiateStreaming
@@ -372,6 +444,7 @@ const GlobalObjectMethodTable JSGlobalObject::s_globalObjectMethodTable = {
   SyntaxError           JSGlobalObject::m_syntaxErrorStructure       DontEnum|ClassStructure
   TypeError             JSGlobalObject::m_typeErrorStructure         DontEnum|ClassStructure
   URIError              JSGlobalObject::m_URIErrorStructure          DontEnum|ClassStructure
+  AggregateError        JSGlobalObject::m_aggregateErrorStructure    DontEnum|ClassStructure
   Proxy                 createProxyProperty                          DontEnum|PropertyCallback
   Reflect               createReflectProperty                        DontEnum|PropertyCallback
   JSON                  createJSONProperty                           DontEnum|PropertyCallback
@@ -386,6 +459,8 @@ const GlobalObjectMethodTable JSGlobalObject::s_globalObjectMethodTable = {
   Uint32Array           JSGlobalObject::m_typedArrayUint32           DontEnum|ClassStructure
   Float32Array          JSGlobalObject::m_typedArrayFloat32          DontEnum|ClassStructure
   Float64Array          JSGlobalObject::m_typedArrayFloat64          DontEnum|ClassStructure
+  BigInt64Array         JSGlobalObject::m_typedArrayBigInt64         DontEnum|ClassStructure
+  BigUint64Array        JSGlobalObject::m_typedArrayBigUint64        DontEnum|ClassStructure
   DataView              JSGlobalObject::m_typedArrayDataView         DontEnum|ClassStructure
   Date                  JSGlobalObject::m_dateStructure              DontEnum|ClassStructure
   Error                 JSGlobalObject::m_errorStructure             DontEnum|ClassStructure
@@ -399,7 +474,7 @@ const GlobalObjectMethodTable JSGlobalObject::s_globalObjectMethodTable = {
 @end
 */
 
-static EncodedJSValue JSC_HOST_CALL enqueueJob(JSGlobalObject* globalObject, CallFrame* callFrame)
+JSC_DEFINE_HOST_FUNCTION(enqueueJob, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     VM& vm = globalObject->vm();
 
@@ -414,12 +489,12 @@ static EncodedJSValue JSC_HOST_CALL enqueueJob(JSGlobalObject* globalObject, Cal
 }
 
 JSGlobalObject::JSGlobalObject(VM& vm, Structure* structure, const GlobalObjectMethodTable* globalObjectMethodTable)
-    : Base(vm, structure, 0)
+    : Base(vm, structure, nullptr)
     , m_vm(&vm)
     , m_linkTimeConstants(numberOfLinkTimeConstants)
-    , m_masqueradesAsUndefinedWatchpoint(adoptRef(new WatchpointSet(IsWatched)))
-    , m_havingABadTimeWatchpoint(adoptRef(new WatchpointSet(IsWatched)))
-    , m_varInjectionWatchpoint(adoptRef(new WatchpointSet(IsWatched)))
+    , m_masqueradesAsUndefinedWatchpoint(WatchpointSet::create(IsWatched))
+    , m_havingABadTimeWatchpoint(WatchpointSet::create(IsWatched))
+    , m_varInjectionWatchpoint(WatchpointSet::create(IsWatched))
     , m_weakRandom(Options::forceWeakRandomSeed() ? Options::forcedWeakRandomSeed() : static_cast<unsigned>(randomNumber() * (std::numeric_limits<unsigned>::max() + 1.0)))
     , m_arrayIteratorProtocolWatchpointSet(IsWatched)
     , m_mapIteratorProtocolWatchpointSet(IsWatched)
@@ -427,11 +502,12 @@ JSGlobalObject::JSGlobalObject(VM& vm, Structure* structure, const GlobalObjectM
     , m_stringIteratorProtocolWatchpointSet(IsWatched)
     , m_mapSetWatchpointSet(IsWatched)
     , m_setAddWatchpointSet(IsWatched)
-    , m_arraySpeciesWatchpointSet(ClearWatchpoint)
     , m_arrayJoinWatchpointSet(IsWatched)
     , m_numberToStringWatchpointSet(IsWatched)
     , m_runtimeFlags()
     , m_stackTraceLimit(Options::defaultErrorStackTraceLimit())
+    , m_customGetterFunctionMap(vm)
+    , m_customSetterFunctionMap(vm)
     , m_globalObjectMethodTable(globalObjectMethodTable ? globalObjectMethodTable : &s_globalObjectMethodTable)
 {
 }
@@ -458,8 +534,9 @@ void JSGlobalObject::setGlobalThis(VM& vm, JSObject* globalThis)
 
 static GetterSetter* getGetterById(JSGlobalObject* globalObject, JSObject* base, const Identifier& ident)
 {
+    VM& vm = globalObject->vm();
     JSValue baseValue = JSValue(base);
-    PropertySlot slot(baseValue, PropertySlot::InternalMethodType::VMInquiry);
+    PropertySlot slot(baseValue, PropertySlot::InternalMethodType::VMInquiry, &vm);
     baseValue.getPropertySlot(globalObject, ident, slot);
     return jsCast<GetterSetter*>(slot.getPureResult());
 }
@@ -495,6 +572,13 @@ void JSGlobalObject::initializeErrorConstructor(LazyClassStructure::Initializer&
     init.setConstructor(NativeErrorConstructor<errorType>::create(init.vm, NativeErrorConstructor<errorType>::createStructure(init.vm, this, m_errorStructure.constructor(this)), jsCast<NativeErrorPrototype*>(init.prototype)));
 }
 
+void JSGlobalObject::initializeAggregateErrorConstructor(LazyClassStructure::Initializer& init)
+{
+    init.setPrototype(AggregateErrorPrototype::create(init.vm, AggregateErrorPrototype::createStructure(init.vm, this, m_errorStructure.prototype(this))));
+    init.setStructure(AggregateError::createStructure(init.vm, this, init.prototype));
+    init.setConstructor(AggregateErrorConstructor::create(init.vm, AggregateErrorConstructor::createStructure(init.vm, this, m_errorStructure.constructor(this)), jsCast<AggregateErrorPrototype*>(init.prototype)));
+}
+
 void JSGlobalObject::init(VM& vm)
 {
     ASSERT(vm.currentThreadIsHoldingAPILock());
@@ -502,7 +586,7 @@ void JSGlobalObject::init(VM& vm)
 
     Base::setStructure(vm, Structure::toCacheableDictionaryTransition(vm, structure(vm)));
 
-    m_debugger = 0;
+    m_debugger = nullptr;
 
 #if ENABLE(REMOTE_INSPECTOR)
     m_inspectorController = makeUnique<Inspector::JSGlobalObjectInspectorController>(*this);
@@ -535,9 +619,13 @@ void JSGlobalObject::init(VM& vm)
     initFunctionStructures(m_builtinFunctions);
     initFunctionStructures(m_ordinaryFunctions);
 
-    m_customGetterSetterFunctionStructure.initLater(
+    m_customGetterFunctionStructure.initLater(
         [] (const Initializer<Structure>& init) {
-            init.set(JSCustomGetterSetterFunction::createStructure(init.vm, init.owner, init.owner->m_functionPrototype.get()));
+            init.set(JSCustomGetterFunction::createStructure(init.vm, init.owner, init.owner->m_functionPrototype.get()));
+        });
+    m_customSetterFunctionStructure.initLater(
+        [] (const Initializer<Structure>& init) {
+            init.set(JSCustomSetterFunction::createStructure(init.vm, init.owner, init.owner->m_functionPrototype.get()));
         });
     m_boundFunctionStructure.initLater(
         [] (const Initializer<Structure>& init) {
@@ -551,13 +639,17 @@ void JSGlobalObject::init(VM& vm)
     JSFunction* applyFunction = nullptr;
     JSFunction* hasInstanceSymbolFunction = nullptr;
     m_functionPrototype->addFunctionProperties(vm, this, &callFunction, &applyFunction, &hasInstanceSymbolFunction);
+    m_objectProtoToStringFunction.initLater(
+        [] (const Initializer<JSFunction>& init) {
+            init.set(JSFunction::create(init.vm, init.owner, 0, init.vm.propertyNames->toString.string(), objectProtoFuncToString, NoIntrinsic));
+        });
     m_arrayProtoToStringFunction.initLater(
         [] (const Initializer<JSFunction>& init) {
             init.set(JSFunction::create(init.vm, init.owner, 0, init.vm.propertyNames->toString.string(), arrayProtoFuncToString, NoIntrinsic));
         });
     m_arrayProtoValuesFunction.initLater(
         [] (const Initializer<JSFunction>& init) {
-            init.set(JSFunction::create(init.vm, init.owner, 0, init.vm.propertyNames->values.string(), arrayProtoFuncValues, ArrayValuesIntrinsic));
+            init.set(JSFunction::create(init.vm, init.owner, 0, init.vm.propertyNames->builtinNames().valuesPublicName().string(), arrayProtoFuncValues, ArrayValuesIntrinsic));
         });
 
     m_iteratorProtocolFunction.initLater(
@@ -584,7 +676,9 @@ void JSGlobalObject::init(VM& vm)
         });
 
     m_nullGetterFunction.set(vm, this, NullGetterFunction::create(vm, NullGetterFunction::createStructure(vm, this, m_functionPrototype.get())));
-    m_nullSetterFunction.set(vm, this, NullSetterFunction::create(vm, NullSetterFunction::createStructure(vm, this, m_functionPrototype.get())));
+    Structure* nullSetterFunctionStructure = NullSetterFunction::createStructure(vm, this, m_functionPrototype.get());
+    m_nullSetterFunction.set(vm, this, NullSetterFunction::create(vm, nullSetterFunctionStructure, ECMAMode::sloppy()));
+    m_nullSetterStrictFunction.set(vm, this, NullSetterFunction::create(vm, nullSetterFunctionStructure, ECMAMode::strict()));
     m_objectPrototype.set(vm, this, ObjectPrototype::create(vm, this, ObjectPrototype::createStructure(vm, this, jsNull())));
     // We have to manually set this here because we make it a prototype without transition below.
     m_objectPrototype.get()->didBecomePrototype();
@@ -596,7 +690,8 @@ void JSGlobalObject::init(VM& vm)
     m_objectStructureForObjectConstructor.set(vm, this, vm.structureCache.emptyObjectStructureForPrototype(this, m_objectPrototype.get(), JSFinalObject::defaultInlineCapacity()));
     m_objectProtoValueOfFunction.set(vm, this, jsCast<JSFunction*>(objectPrototype()->getDirect(vm, vm.propertyNames->valueOf)));
 
-    JSFunction* thrower = JSFunction::create(vm, this, 0, String(), globalFuncThrowTypeErrorArgumentsCalleeAndCaller);
+    JSFunction* thrower = JSFunction::create(vm, this, 0, emptyString(), globalFuncThrowTypeErrorArgumentsCalleeAndCaller);
+    thrower->freeze(vm);
     GetterSetter* getterSetter = GetterSetter::create(vm, this, thrower, thrower);
     m_throwTypeErrorArgumentsCalleeAndCallerGetterSetter.set(vm, this, getterSetter);
 
@@ -624,7 +719,7 @@ void JSGlobalObject::init(VM& vm)
         [] (LazyClassStructure::Initializer& init) { \
             init.setPrototype(JS ## type ## ArrayPrototype::create(init.vm, init.global, JS ## type ## ArrayPrototype::createStructure(init.vm, init.global, init.global->m_typedArrayProto.get(init.global)))); \
             init.setStructure(JS ## type ## Array::createStructure(init.vm, init.global, init.prototype)); \
-            init.setConstructor(JS ## type ## ArrayConstructor::create(init.vm, init.global, JS ## type ## ArrayConstructor::createStructure(init.vm, init.global, init.global->m_typedArraySuperConstructor.get(init.global)), init.prototype, #type "Array"_s, typedArrayConstructorAllocate ## type ## ArrayCodeGenerator(init.vm))); \
+            init.setConstructor(JS ## type ## ArrayConstructor::create(init.vm, init.global, JS ## type ## ArrayConstructor::createStructure(init.vm, init.global, init.global->m_typedArraySuperConstructor.get(init.global)), init.prototype, #type "Array"_s)); \
             init.global->putDirect(init.vm, init.vm.propertyNames->builtinNames().type ## ArrayPrivateName(), init.constructor, static_cast<unsigned>(PropertyAttribute::DontEnum)); \
         });
     FOR_EACH_TYPED_ARRAY_TYPE_EXCLUDING_DATA_VIEW(INIT_TYPED_ARRAY_LATER)
@@ -634,7 +729,7 @@ void JSGlobalObject::init(VM& vm)
         [] (LazyClassStructure::Initializer& init) {
             init.setPrototype(JSDataViewPrototype::create(init.vm, JSDataViewPrototype::createStructure(init.vm, init.global, init.global->m_objectPrototype.get())));
             init.setStructure(JSDataView::createStructure(init.vm, init.global, init.prototype));
-            init.setConstructor(JSDataViewConstructor::create(init.vm, init.global, JSDataViewConstructor::createStructure(init.vm, init.global, init.global->m_functionPrototype.get()), init.prototype, "DataView"_s, nullptr));
+            init.setConstructor(JSDataViewConstructor::create(init.vm, init.global, JSDataViewConstructor::createStructure(init.vm, init.global, init.global->m_functionPrototype.get()), init.prototype, "DataView"_s));
         });
 
     m_lexicalEnvironmentStructure.set(vm, this, JSLexicalEnvironment::createStructure(vm, this));
@@ -710,6 +805,8 @@ void JSGlobalObject::init(VM& vm)
     m_regExpPrototype.set(vm, this, RegExpPrototype::create(vm, this, RegExpPrototype::createStructure(vm, this, m_objectPrototype.get())));
     m_regExpStructure.set(vm, this, RegExpObject::createStructure(vm, this, m_regExpPrototype.get()));
     m_regExpMatchesArrayStructure.set(vm, this, createRegExpMatchesArrayStructure(vm, this));
+    m_regExpMatchesArrayWithIndicesStructure.set(vm, this, createRegExpMatchesArrayWithIndicesStructure(vm, this));
+    m_regExpMatchesIndicesArrayStructure.set(vm, this, createRegExpMatchesIndicesArrayStructure(vm, this));
 
     m_moduleRecordStructure.initLater(
         [] (const Initializer<Structure>& init) {
@@ -743,10 +840,14 @@ void JSGlobalObject::init(VM& vm)
             init.set(JSFunction::create(init.vm, init.owner, 1, init.vm.propertyNames->parseFloat.string(), globalFuncParseFloat, NoIntrinsic));
         });
 
-#if ENABLE(SHARED_ARRAY_BUFFER)
-    m_sharedArrayBufferPrototype.set(vm, this, JSArrayBufferPrototype::create(vm, this, JSArrayBufferPrototype::createStructure(vm, this, m_objectPrototype.get()), ArrayBufferSharingMode::Shared));
-    m_sharedArrayBufferStructure.set(vm, this, JSArrayBuffer::createStructure(vm, this, m_sharedArrayBufferPrototype.get()));
-#endif
+    if (Options::useSharedArrayBuffer()) {
+        m_sharedArrayBufferStructure.initLater(
+            [] (LazyClassStructure::Initializer& init) {
+                init.setPrototype(JSArrayBufferPrototype::create(init.vm, init.global, JSArrayBufferPrototype::createStructure(init.vm, init.global, init.global->m_objectPrototype.get()), ArrayBufferSharingMode::Shared));
+                init.setStructure(JSArrayBuffer::createStructure(init.vm, init.global, init.prototype));
+                init.setConstructor(JSSharedArrayBufferConstructor::create(init.vm, JSSharedArrayBufferConstructor::createStructure(init.vm, init.global, init.global->m_functionPrototype.get()), jsCast<JSArrayBufferPrototype*>(init.prototype), init.global->m_speciesGetterSetter.get()));
+            });
+    }
 
     m_iteratorPrototype.set(vm, this, IteratorPrototype::create(vm, this, IteratorPrototype::createStructure(vm, this, m_objectPrototype.get())));
     m_asyncIteratorPrototype.set(vm, this, AsyncIteratorPrototype::create(vm, this, AsyncIteratorPrototype::createStructure(vm, this, m_objectPrototype.get())));
@@ -757,6 +858,14 @@ void JSGlobalObject::init(VM& vm)
     auto* arrayIteratorPrototype = ArrayIteratorPrototype::create(vm, this, ArrayIteratorPrototype::createStructure(vm, this, m_iteratorPrototype.get()));
     m_arrayIteratorPrototype.set(vm, this, arrayIteratorPrototype);
     m_arrayIteratorStructure.set(vm, this, JSArrayIterator::createStructure(vm, this, arrayIteratorPrototype));
+
+    auto* mapIteratorPrototype = MapIteratorPrototype::create(vm, this, MapIteratorPrototype::createStructure(vm, this, m_iteratorPrototype.get()));
+    m_mapIteratorPrototype.set(vm, this, mapIteratorPrototype);
+    m_mapIteratorStructure.set(vm, this, JSMapIterator::createStructure(vm, this, mapIteratorPrototype));
+
+    auto* setIteratorPrototype = SetIteratorPrototype::create(vm, this, SetIteratorPrototype::createStructure(vm, this, m_iteratorPrototype.get()));
+    m_setIteratorPrototype.set(vm, this, setIteratorPrototype);
+    m_setIteratorStructure.set(vm, this, JSSetIterator::createStructure(vm, this, setIteratorPrototype));
 
     JSFunction* defaultPromiseThen = JSFunction::create(vm, promisePrototypeThenCodeGenerator(vm), this);
     m_linkTimeConstants[static_cast<unsigned>(LinkTimeConstant::defaultPromiseThen)].set(vm, this, defaultPromiseThen);
@@ -803,13 +912,9 @@ void JSGlobalObject::init(VM& vm)
     m_linkTimeConstants[static_cast<unsigned>(LinkTimeConstant::RegExp)].set(vm, this, regExpConstructor);
     m_regExpGlobalData.cachedResult().record(vm, this, nullptr, jsEmptyString(vm), MatchResult(0, 0));
 
-#if ENABLE(SHARED_ARRAY_BUFFER)
-    JSSharedArrayBufferConstructor* sharedArrayBufferConstructor = nullptr;
-    sharedArrayBufferConstructor = JSSharedArrayBufferConstructor::create(vm, JSSharedArrayBufferConstructor::createStructure(vm, this, m_functionPrototype.get()), m_sharedArrayBufferPrototype.get(), m_speciesGetterSetter.get());
-    m_sharedArrayBufferPrototype->putDirectWithoutTransition(vm, vm.propertyNames->constructor, sharedArrayBufferConstructor, static_cast<unsigned>(PropertyAttribute::DontEnum));
-
-    AtomicsObject* atomicsObject = AtomicsObject::create(vm, this, AtomicsObject::createStructure(vm, this, m_objectPrototype.get()));
-#endif
+    AtomicsObject* atomicsObject = nullptr;
+    if (Options::useSharedArrayBuffer())
+        atomicsObject = AtomicsObject::create(vm, this, AtomicsObject::createStructure(vm, this, m_objectPrototype.get()));
 
 #define CREATE_CONSTRUCTOR_FOR_SIMPLE_TYPE(capitalName, lowerName, properName, instanceType, jsName, prototypeBase, featureFlag) \
 capitalName ## Constructor* lowerName ## Constructor = featureFlag ? capitalName ## Constructor::create(vm, capitalName ## Constructor::createStructure(vm, this, m_functionPrototype.get()), m_ ## lowerName ## Prototype.get(), m_speciesGetterSetter.get()) : nullptr; \
@@ -849,6 +954,10 @@ capitalName ## Constructor* lowerName ## Constructor = featureFlag ? capitalName
         [] (LazyClassStructure::Initializer& init) {
             init.global->initializeErrorConstructor<ErrorType::URIError>(init);
         });
+    m_aggregateErrorStructure.initLater(
+        [] (LazyClassStructure::Initializer& init) {
+            init.global->initializeAggregateErrorConstructor(init);
+        });
 
     m_generatorFunctionPrototype.set(vm, this, GeneratorFunctionPrototype::create(vm, GeneratorFunctionPrototype::createStructure(vm, this, m_functionPrototype.get())));
     GeneratorFunctionConstructor* generatorFunctionConstructor = GeneratorFunctionConstructor::create(vm, GeneratorFunctionConstructor::createStructure(vm, this, functionConstructor), m_generatorFunctionPrototype.get());
@@ -883,10 +992,10 @@ capitalName ## Constructor* lowerName ## Constructor = featureFlag ? capitalName
     putDirectWithoutTransition(vm, vm.propertyNames->Array, arrayConstructor, static_cast<unsigned>(PropertyAttribute::DontEnum));
     putDirectWithoutTransition(vm, vm.propertyNames->RegExp, regExpConstructor, static_cast<unsigned>(PropertyAttribute::DontEnum));
 
-#if ENABLE(SHARED_ARRAY_BUFFER)
-    putDirectWithoutTransition(vm, vm.propertyNames->SharedArrayBuffer, sharedArrayBufferConstructor, static_cast<unsigned>(PropertyAttribute::DontEnum));
-    putDirectWithoutTransition(vm, Identifier::fromString(vm, "Atomics"), atomicsObject, static_cast<unsigned>(PropertyAttribute::DontEnum));
-#endif
+    if (Options::useSharedArrayBuffer()) {
+        putDirectWithoutTransition(vm, vm.propertyNames->SharedArrayBuffer, m_sharedArrayBufferStructure.constructor(this), static_cast<unsigned>(PropertyAttribute::DontEnum));
+        putDirectWithoutTransition(vm, vm.propertyNames->Atomics, atomicsObject, static_cast<unsigned>(PropertyAttribute::DontEnum));
+    }
 
 #define PUT_CONSTRUCTOR_FOR_SIMPLE_TYPE(capitalName, lowerName, properName, instanceType, jsName, prototypeBase, featureFlag) \
     if (featureFlag) \
@@ -900,30 +1009,43 @@ capitalName ## Constructor* lowerName ## Constructor = featureFlag ? capitalName
         [] (const Initializer<Structure>& init) {
             init.set(createIteratorResultObjectStructure(init.vm, *init.owner));
         });
+    m_dataPropertyDescriptorObjectStructure.initLater(
+        [] (const Initializer<Structure>& init) {
+            init.set(createDataPropertyDescriptorObjectStructure(init.vm, *init.owner));
+        });
+    m_accessorPropertyDescriptorObjectStructure.initLater(
+        [] (const Initializer<Structure>& init) {
+            init.set(createAccessorPropertyDescriptorObjectStructure(init.vm, *init.owner));
+        });
 
     m_evalFunction.initLater(
         [] (const Initializer<JSFunction>& init) {
             init.set(JSFunction::create(init.vm, init.owner, 1, init.vm.propertyNames->eval.string(), globalFuncEval, NoIntrinsic));
         });
 
-#if ENABLE(INTL)
     m_collatorStructure.initLater(
         [] (const Initializer<Structure>& init) {
             JSGlobalObject* globalObject = jsCast<JSGlobalObject*>(init.owner);
             IntlCollatorPrototype* collatorPrototype = IntlCollatorPrototype::create(init.vm, globalObject, IntlCollatorPrototype::createStructure(init.vm, globalObject, globalObject->objectPrototype()));
             init.set(IntlCollator::createStructure(init.vm, globalObject, collatorPrototype));
         });
-    m_numberFormatStructure.initLater(
+    m_displayNamesStructure.initLater(
         [] (const Initializer<Structure>& init) {
             JSGlobalObject* globalObject = jsCast<JSGlobalObject*>(init.owner);
-            IntlNumberFormatPrototype* numberFormatPrototype = IntlNumberFormatPrototype::create(init.vm, globalObject, IntlNumberFormatPrototype::createStructure(init.vm, globalObject, globalObject->objectPrototype()));
-            init.set(IntlNumberFormat::createStructure(init.vm, globalObject, numberFormatPrototype));
+            IntlDisplayNamesPrototype* displayNamesPrototype = IntlDisplayNamesPrototype::create(init.vm, IntlDisplayNamesPrototype::createStructure(init.vm, globalObject, globalObject->objectPrototype()));
+            init.set(IntlDisplayNames::createStructure(init.vm, globalObject, displayNamesPrototype));
         });
-    m_dateTimeFormatStructure.initLater(
+    m_listFormatStructure.initLater(
         [] (const Initializer<Structure>& init) {
             JSGlobalObject* globalObject = jsCast<JSGlobalObject*>(init.owner);
-            IntlDateTimeFormatPrototype* dateTimeFormatPrototype = IntlDateTimeFormatPrototype::create(init.vm, globalObject, IntlDateTimeFormatPrototype::createStructure(init.vm, globalObject, globalObject->objectPrototype()));
-            init.set(IntlDateTimeFormat::createStructure(init.vm, globalObject, dateTimeFormatPrototype));
+            IntlListFormatPrototype* listFormatPrototype = IntlListFormatPrototype::create(init.vm, IntlListFormatPrototype::createStructure(init.vm, globalObject, globalObject->objectPrototype()));
+            init.set(IntlListFormat::createStructure(init.vm, globalObject, listFormatPrototype));
+        });
+    m_localeStructure.initLater(
+        [] (const Initializer<Structure>& init) {
+            JSGlobalObject* globalObject = jsCast<JSGlobalObject*>(init.owner);
+            IntlLocalePrototype* localePrototype = IntlLocalePrototype::create(init.vm, IntlLocalePrototype::createStructure(init.vm, globalObject, globalObject->objectPrototype()));
+            init.set(IntlLocale::createStructure(init.vm, globalObject, localePrototype));
         });
     m_pluralRulesStructure.initLater(
         [] (const Initializer<Structure>& init) {
@@ -931,6 +1053,44 @@ capitalName ## Constructor* lowerName ## Constructor = featureFlag ? capitalName
             IntlPluralRulesPrototype* pluralRulesPrototype = IntlPluralRulesPrototype::create(init.vm, globalObject, IntlPluralRulesPrototype::createStructure(init.vm, globalObject, globalObject->objectPrototype()));
             init.set(IntlPluralRules::createStructure(init.vm, globalObject, pluralRulesPrototype));
         });
+    m_relativeTimeFormatStructure.initLater(
+        [] (const Initializer<Structure>& init) {
+            JSGlobalObject* globalObject = jsCast<JSGlobalObject*>(init.owner);
+            IntlRelativeTimeFormatPrototype* relativeTimeFormatPrototype = IntlRelativeTimeFormatPrototype::create(init.vm, IntlRelativeTimeFormatPrototype::createStructure(init.vm, globalObject, globalObject->objectPrototype()));
+            init.set(IntlRelativeTimeFormat::createStructure(init.vm, globalObject, relativeTimeFormatPrototype));
+        });
+    m_segmentIteratorStructure.initLater(
+        [] (const Initializer<Structure>& init) {
+            JSGlobalObject* globalObject = jsCast<JSGlobalObject*>(init.owner);
+            IntlSegmentIteratorPrototype* segmentIteratorPrototype = IntlSegmentIteratorPrototype::create(init.vm, IntlSegmentIteratorPrototype::createStructure(init.vm, globalObject, globalObject->iteratorPrototype()));
+            init.set(IntlSegmentIterator::createStructure(init.vm, globalObject, segmentIteratorPrototype));
+        });
+    m_segmenterStructure.initLater(
+        [] (const Initializer<Structure>& init) {
+            JSGlobalObject* globalObject = jsCast<JSGlobalObject*>(init.owner);
+            IntlSegmenterPrototype* segmenterPrototype = IntlSegmenterPrototype::create(init.vm, IntlSegmenterPrototype::createStructure(init.vm, globalObject, globalObject->objectPrototype()));
+            init.set(IntlSegmenter::createStructure(init.vm, globalObject, segmenterPrototype));
+        });
+    m_segmentsStructure.initLater(
+        [] (const Initializer<Structure>& init) {
+            JSGlobalObject* globalObject = jsCast<JSGlobalObject*>(init.owner);
+            IntlSegmentsPrototype* segmentsPrototype = IntlSegmentsPrototype::create(init.vm, globalObject, IntlSegmentsPrototype::createStructure(init.vm, globalObject, globalObject->objectPrototype()));
+            init.set(IntlSegments::createStructure(init.vm, globalObject, segmentsPrototype));
+        });
+
+    m_dateTimeFormatStructure.initLater(
+        [] (LazyClassStructure::Initializer& init) {
+            init.setPrototype(IntlDateTimeFormatPrototype::create(init.vm, init.global, IntlDateTimeFormatPrototype::createStructure(init.vm, init.global, init.global->objectPrototype())));
+            init.setStructure(IntlDateTimeFormat::createStructure(init.vm, init.global, init.prototype));
+            init.setConstructor(IntlDateTimeFormatConstructor::create(init.vm, IntlDateTimeFormatConstructor::createStructure(init.vm, init.global, init.global->functionPrototype()), jsCast<IntlDateTimeFormatPrototype*>(init.prototype)));
+        });
+    m_numberFormatStructure.initLater(
+        [] (LazyClassStructure::Initializer& init) {
+            init.setPrototype(IntlNumberFormatPrototype::create(init.vm, init.global, IntlNumberFormatPrototype::createStructure(init.vm, init.global, init.global->objectPrototype())));
+            init.setStructure(IntlNumberFormat::createStructure(init.vm, init.global, init.prototype));
+            init.setConstructor(IntlNumberFormatConstructor::create(init.vm, IntlNumberFormatConstructor::createStructure(init.vm, init.global, init.global->functionPrototype()), jsCast<IntlNumberFormatPrototype*>(init.prototype)));
+        });
+
     m_defaultCollator.initLater(
         [] (const Initializer<IntlCollator>& init) {
             JSGlobalObject* globalObject = jsCast<JSGlobalObject*>(init.owner);
@@ -942,9 +1102,8 @@ capitalName ## Constructor* lowerName ## Constructor = featureFlag ? capitalName
             init.set(collator);
         });
 
-    IntlObject* intl = IntlObject::create(vm, IntlObject::createStructure(vm, this, m_objectPrototype.get()));
+    IntlObject* intl = IntlObject::create(vm, this, IntlObject::createStructure(vm, this, m_objectPrototype.get()));
     putDirectWithoutTransition(vm, vm.propertyNames->Intl, intl, static_cast<unsigned>(PropertyAttribute::DontEnum));
-#endif // ENABLE(INTL)
 
     m_moduleLoader.initLater(
         [] (const Initializer<JSModuleLoader>& init) {
@@ -979,11 +1138,19 @@ capitalName ## Constructor* lowerName ## Constructor = featureFlag ? capitalName
     JSFunction* regExpSymbolReplace = jsCast<JSFunction*>(m_regExpPrototype->getDirect(vm, vm.propertyNames->replaceSymbol));
     m_regExpProtoSymbolReplace.set(vm, this, regExpSymbolReplace);
     m_linkTimeConstants[static_cast<unsigned>(LinkTimeConstant::regExpBuiltinExec)].set(vm, this, jsCast<JSFunction*>(m_regExpPrototype->getDirect(vm, vm.propertyNames->exec)));
+    m_linkTimeConstants[static_cast<unsigned>(LinkTimeConstant::regExpPrototypeSymbolMatch)].set(vm, this, m_regExpPrototype->getDirect(vm, vm.propertyNames->matchSymbol).asCell());
     m_linkTimeConstants[static_cast<unsigned>(LinkTimeConstant::regExpPrototypeSymbolReplace)].set(vm, this, m_regExpPrototype->getDirect(vm, vm.propertyNames->replaceSymbol).asCell());
 
     m_linkTimeConstants[static_cast<unsigned>(LinkTimeConstant::isArray)].set(vm, this, arrayConstructor->getDirect(vm, vm.propertyNames->isArray).asCell());
     m_linkTimeConstants[static_cast<unsigned>(LinkTimeConstant::callFunction)].set(vm, this, callFunction);
     m_linkTimeConstants[static_cast<unsigned>(LinkTimeConstant::applyFunction)].set(vm, this, applyFunction);
+
+    {
+        JSValue hasOwnPropertyFunction = jsCast<JSFunction*>(objectPrototype()->get(this, vm.propertyNames->hasOwnProperty));
+        catchScope.assertNoException();
+        RELEASE_ASSERT(!!jsDynamicCast<JSFunction*>(vm, hasOwnPropertyFunction));
+        m_linkTimeConstants[static_cast<unsigned>(LinkTimeConstant::hasOwnPropertyFunction)].set(vm, this, jsCast<JSFunction*>(hasOwnPropertyFunction));
+    }
 
 #define INIT_PRIVATE_GLOBAL(funcName, code) \
     m_linkTimeConstants[static_cast<unsigned>(LinkTimeConstant::funcName)].initLater([] (const Initializer<JSCell>& init) { \
@@ -998,14 +1165,8 @@ capitalName ## Constructor* lowerName ## Constructor = featureFlag ? capitalName
     JSObject* asyncFromSyncIteratorPrototype = AsyncFromSyncIteratorPrototype::create(vm, this, AsyncFromSyncIteratorPrototype::createStructure(vm, this, m_iteratorPrototype.get()));
     jsCast<JSObject*>(linkTimeConstant(LinkTimeConstant::AsyncFromSyncIterator))->putDirect(vm, vm.propertyNames->prototype, asyncFromSyncIteratorPrototype);
 
-    JSObject* mapIteratorPrototype = MapIteratorPrototype::create(vm, this, MapIteratorPrototype::createStructure(vm, this, m_iteratorPrototype.get()));
-    jsCast<JSObject*>(linkTimeConstant(LinkTimeConstant::MapIterator))->putDirect(vm, vm.propertyNames->prototype, mapIteratorPrototype);
-
     JSObject* regExpStringIteratorPrototype = RegExpStringIteratorPrototype::create(vm, this, RegExpStringIteratorPrototype::createStructure(vm, this, m_iteratorPrototype.get()));
     jsCast<JSObject*>(linkTimeConstant(LinkTimeConstant::RegExpStringIterator))->putDirect(vm, vm.propertyNames->prototype, regExpStringIteratorPrototype);
-
-    JSObject* setIteratorPrototype = SetIteratorPrototype::create(vm, this, SetIteratorPrototype::createStructure(vm, this, m_iteratorPrototype.get()));
-    jsCast<JSObject*>(linkTimeConstant(LinkTimeConstant::SetIterator))->putDirect(vm, vm.propertyNames->prototype, setIteratorPrototype);
 
     // Map and Set helpers.
     m_linkTimeConstants[static_cast<unsigned>(LinkTimeConstant::Set)].initLater([] (const Initializer<JSCell>& init) {
@@ -1036,11 +1197,8 @@ capitalName ## Constructor* lowerName ## Constructor = featureFlag ? capitalName
     m_linkTimeConstants[static_cast<unsigned>(LinkTimeConstant::importModule)].initLater([] (const Initializer<JSCell>& init) {
             init.set(JSFunction::create(init.vm, jsCast<JSGlobalObject*>(init.owner), 0, String(), globalFuncImportModule));
         });
-    m_linkTimeConstants[static_cast<unsigned>(LinkTimeConstant::propertyIsEnumerable)].initLater([] (const Initializer<JSCell>& init) {
-            init.set(JSFunction::create(init.vm, jsCast<JSGlobalObject*>(init.owner), 0, String(), globalFuncPropertyIsEnumerable));
-        });
-    m_linkTimeConstants[static_cast<unsigned>(LinkTimeConstant::ownKeys)].initLater([] (const Initializer<JSCell>& init) {
-            init.set(JSFunction::create(init.vm, jsCast<JSGlobalObject*>(init.owner), 0, String(), globalFuncOwnKeys));
+    m_linkTimeConstants[static_cast<unsigned>(LinkTimeConstant::copyDataProperties)].initLater([] (const Initializer<JSCell>& init) {
+            init.set(JSFunction::create(init.vm, jsCast<JSGlobalObject*>(init.owner), 2, String(), globalFuncCopyDataProperties));
         });
     m_linkTimeConstants[static_cast<unsigned>(LinkTimeConstant::enqueueJob)].initLater([] (const Initializer<JSCell>& init) {
             init.set(JSFunction::create(init.vm, jsCast<JSGlobalObject*>(init.owner), 0, "enqueueJob"_s, enqueueJob));
@@ -1048,17 +1206,33 @@ capitalName ## Constructor* lowerName ## Constructor = featureFlag ? capitalName
     m_linkTimeConstants[static_cast<unsigned>(LinkTimeConstant::makeTypeError)].initLater([] (const Initializer<JSCell>& init) {
             init.set(JSFunction::create(init.vm, jsCast<JSGlobalObject*>(init.owner), 0, String(), globalFuncMakeTypeError));
         });
+    m_linkTimeConstants[static_cast<unsigned>(LinkTimeConstant::AggregateError)].initLater([] (const Initializer<JSCell>& init) {
+            JSGlobalObject* globalObject = jsCast<JSGlobalObject*>(init.owner);
+            init.set(globalObject->m_aggregateErrorStructure.constructor(globalObject));
+        });
     m_linkTimeConstants[static_cast<unsigned>(LinkTimeConstant::typedArrayLength)].initLater([] (const Initializer<JSCell>& init) {
             init.set(JSFunction::create(init.vm, jsCast<JSGlobalObject*>(init.owner), 0, String(), typedArrayViewPrivateFuncLength));
         });
     m_linkTimeConstants[static_cast<unsigned>(LinkTimeConstant::typedArrayGetOriginalConstructor)].initLater([] (const Initializer<JSCell>& init) {
             init.set(JSFunction::create(init.vm, jsCast<JSGlobalObject*>(init.owner), 0, String(), typedArrayViewPrivateFuncGetOriginalConstructor));
         });
+    m_linkTimeConstants[static_cast<unsigned>(LinkTimeConstant::typedArrayContentType)].initLater([] (const Initializer<JSCell>& init) {
+            init.set(JSFunction::create(init.vm, jsCast<JSGlobalObject*>(init.owner), 0, String(), typedArrayViewPrivateFuncContentType));
+        });
     m_linkTimeConstants[static_cast<unsigned>(LinkTimeConstant::typedArraySort)].initLater([] (const Initializer<JSCell>& init) {
             init.set(JSFunction::create(init.vm, jsCast<JSGlobalObject*>(init.owner), 0, String(), typedArrayViewPrivateFuncSort));
         });
     m_linkTimeConstants[static_cast<unsigned>(LinkTimeConstant::isTypedArrayView)].initLater([] (const Initializer<JSCell>& init) {
             init.set(JSFunction::create(init.vm, jsCast<JSGlobalObject*>(init.owner), 0, String(), typedArrayViewPrivateFuncIsTypedArrayView, IsTypedArrayViewIntrinsic));
+        });
+    m_linkTimeConstants[static_cast<unsigned>(LinkTimeConstant::isSharedTypedArrayView)].initLater([] (const Initializer<JSCell>& init) {
+            init.set(JSFunction::create(init.vm, jsCast<JSGlobalObject*>(init.owner), 0, String(), typedArrayViewPrivateFuncIsSharedTypedArrayView));
+        });
+    m_linkTimeConstants[static_cast<unsigned>(LinkTimeConstant::isDetached)].initLater([] (const Initializer<JSCell>& init) {
+            init.set(JSFunction::create(init.vm, jsCast<JSGlobalObject*>(init.owner), 1, String(), typedArrayViewPrivateFuncIsDetached));
+        });
+    m_linkTimeConstants[static_cast<unsigned>(LinkTimeConstant::typedArrayDefaultComparator)].initLater([] (const Initializer<JSCell>& init) {
+            init.set(JSFunction::create(init.vm, jsCast<JSGlobalObject*>(init.owner), 0, String(), typedArrayViewPrivateFuncDefaultComparator));
         });
     m_linkTimeConstants[static_cast<unsigned>(LinkTimeConstant::typedArraySubarrayCreate)].initLater([] (const Initializer<JSCell>& init) {
             init.set(JSFunction::create(init.vm, jsCast<JSGlobalObject*>(init.owner), 0, String(), typedArrayViewPrivateFuncSubarrayCreate));
@@ -1077,6 +1251,9 @@ capitalName ## Constructor* lowerName ## Constructor = featureFlag ? capitalName
         });
     m_linkTimeConstants[static_cast<unsigned>(LinkTimeConstant::BuiltinDescribe)].initLater([] (const Initializer<JSCell>& init) {
             init.set(JSFunction::create(init.vm, jsCast<JSGlobalObject*>(init.owner), 1, String(), globalFuncBuiltinDescribe));
+        });
+    m_linkTimeConstants[static_cast<unsigned>(LinkTimeConstant::min)].initLater([] (const Initializer<JSCell>& init) {
+            init.set(JSFunction::create(init.vm, jsCast<JSGlobalObject*>(init.owner), 0, String(), mathProtoFuncMin, MinIntrinsic));
         });
     m_linkTimeConstants[static_cast<unsigned>(LinkTimeConstant::trunc)].initLater([] (const Initializer<JSCell>& init) {
             init.set(JSFunction::create(init.vm, jsCast<JSGlobalObject*>(init.owner), 0, String(), mathProtoFuncTrunc, TruncIntrinsic));
@@ -1099,15 +1276,14 @@ capitalName ## Constructor* lowerName ## Constructor = featureFlag ? capitalName
     m_linkTimeConstants[static_cast<unsigned>(LinkTimeConstant::hostPromiseRejectionTracker)].initLater([] (const Initializer<JSCell>& init) {
             init.set(JSFunction::create(init.vm, jsCast<JSGlobalObject*>(init.owner), 2, String(), globalFuncHostPromiseRejectionTracker));
         });
-    m_linkTimeConstants[static_cast<unsigned>(LinkTimeConstant::InspectorInstrumentation)].initLater([] (const Initializer<JSCell>& init) {
-            JSGlobalObject* globalObject = jsCast<JSGlobalObject*>(init.owner);
-            init.set(InspectorInstrumentationObject::create(init.vm, globalObject, InspectorInstrumentationObject::createStructure(init.vm, globalObject, globalObject->m_objectPrototype.get())));
-        });
     m_linkTimeConstants[static_cast<unsigned>(LinkTimeConstant::thisTimeValue)].initLater([] (const Initializer<JSCell>& init) {
             init.set(JSFunction::create(init.vm, jsCast<JSGlobalObject*>(init.owner), 0, String(), dateProtoFuncGetTime, DatePrototypeGetTimeIntrinsic));
         });
-    m_linkTimeConstants[static_cast<unsigned>(LinkTimeConstant::isConstructor)].initLater([] (const Initializer<JSCell>& init) {
-            init.set(JSFunction::create(init.vm, jsCast<JSGlobalObject*>(init.owner), 1, String(), esSpecIsConstructor, NoIntrinsic));
+    m_linkTimeConstants[static_cast<unsigned>(LinkTimeConstant::sameValue)].initLater([] (const Initializer<JSCell>& init) {
+            init.set(JSFunction::create(init.vm, jsCast<JSGlobalObject*>(init.owner), 2, String(), objectConstructorIs, ObjectIsIntrinsic));
+        });
+    m_linkTimeConstants[static_cast<unsigned>(LinkTimeConstant::setPrototypeDirect)].initLater([] (const Initializer<JSCell>& init) {
+            init.set(JSFunction::create(init.vm, jsCast<JSGlobalObject*>(init.owner), 2, String(), globalFuncSetPrototypeDirect));
         });
 
     // RegExp.prototype helpers.
@@ -1134,11 +1310,14 @@ capitalName ## Constructor* lowerName ## Constructor = featureFlag ? capitalName
     m_linkTimeConstants[static_cast<unsigned>(LinkTimeConstant::stringIncludesInternal)].initLater([] (const Initializer<JSCell>& init) {
             init.set(JSFunction::create(init.vm, jsCast<JSGlobalObject*>(init.owner), 1, String(), builtinStringIncludesInternal));
         });
+    m_linkTimeConstants[static_cast<unsigned>(LinkTimeConstant::stringIndexOfInternal)].initLater([] (const Initializer<JSCell>& init) {
+            init.set(JSFunction::create(init.vm, jsCast<JSGlobalObject*>(init.owner), 1, String(), builtinStringIndexOfInternal));
+        });
     m_linkTimeConstants[static_cast<unsigned>(LinkTimeConstant::stringSplitFast)].initLater([] (const Initializer<JSCell>& init) {
             init.set(JSFunction::create(init.vm, jsCast<JSGlobalObject*>(init.owner), 2, String(), stringProtoFuncSplitFast));
         });
-    m_linkTimeConstants[static_cast<unsigned>(LinkTimeConstant::stringSubstrInternal)].initLater([] (const Initializer<JSCell>& init) {
-            init.set(JSFunction::create(init.vm, jsCast<JSGlobalObject*>(init.owner), 2, String(), builtinStringSubstrInternal));
+    m_linkTimeConstants[static_cast<unsigned>(LinkTimeConstant::stringSubstringInternal)].initLater([] (const Initializer<JSCell>& init) {
+            init.set(JSFunction::create(init.vm, jsCast<JSGlobalObject*>(init.owner), 2, String(), builtinStringSubstringInternal));
         });
 
     // Function prototype helpers.
@@ -1149,12 +1328,16 @@ capitalName ## Constructor* lowerName ## Constructor = featureFlag ? capitalName
             init.set(JSFunction::create(init.vm, jsCast<JSGlobalObject*>(init.owner), 1, String(), hasOwnLengthProperty));
         });
 
-#if ENABLE(INTL)
     m_linkTimeConstants[static_cast<unsigned>(LinkTimeConstant::dateTimeFormat)].initLater([] (const Initializer<JSCell>& init) {
             init.set(JSFunction::create(init.vm, jsCast<JSGlobalObject*>(init.owner), 0, String(), globalFuncDateTimeFormat));
         });
-#endif // ENABLE(INTL)
-#if ENABLE(WEBASSEMBLY) && ENABLE(WEBASSEMBLY_STREAMING_API)
+
+    // PrivateSymbols / PrivateNames
+    m_linkTimeConstants[static_cast<unsigned>(LinkTimeConstant::createPrivateSymbol)].initLater([] (const Initializer<JSCell>& init) {
+            init.set(JSFunction::create(init.vm, jsCast<JSGlobalObject*>(init.owner), 0, String(), createPrivateSymbol));
+        });
+
+#if ENABLE(WEBASSEMBLY)
     // WebAssembly Streaming API
     m_linkTimeConstants[static_cast<unsigned>(LinkTimeConstant::webAssemblyCompileStreamingInternal)].initLater([] (const Initializer<JSCell>& init) {
             init.set(JSFunction::create(init.vm, jsCast<JSGlobalObject*>(init.owner), 1, String(), webAssemblyCompileStreamingInternal));
@@ -1163,6 +1346,15 @@ capitalName ## Constructor* lowerName ## Constructor = featureFlag ? capitalName
             init.set(JSFunction::create(init.vm, jsCast<JSGlobalObject*>(init.owner), 1, String(), webAssemblyInstantiateStreamingInternal));
         });
 #endif
+
+    if (Options::exposeProfilersOnGlobalObject()) {
+#if ENABLE(SAMPLING_PROFILER)
+        putDirectWithoutTransition(vm, Identifier::fromString(vm, "__enableSamplingProfiler"), JSFunction::create(vm, this, 1, String(), enableSamplingProfiler), PropertyAttribute::DontEnum | PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly);
+        putDirectWithoutTransition(vm, Identifier::fromString(vm, "__disableSamplingProfiler"), JSFunction::create(vm, this, 1, String(), disableSamplingProfiler), PropertyAttribute::DontEnum | PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly);
+#endif
+        putDirectWithoutTransition(vm, Identifier::fromString(vm, "__enableSuperSampler"), JSFunction::create(vm, this, 1, String(), enableSuperSampler), PropertyAttribute::DontEnum | PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly);
+        putDirectWithoutTransition(vm, Identifier::fromString(vm, "__disableSuperSampler"), JSFunction::create(vm, this, 1, String(), disableSuperSampler), PropertyAttribute::DontEnum | PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly);
+    }
 
     GlobalPropertyInfo staticGlobals[] = {
         GlobalPropertyInfo(vm.propertyNames->NaN, jsNaN(), PropertyAttribute::DontEnum | PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly),
@@ -1204,7 +1396,8 @@ capitalName ## Constructor* lowerName ## Constructor = featureFlag ? capitalName
             [] (LazyClassStructure::Initializer& init) { \
                 init.setPrototype(capitalName##Prototype::create(init.vm, init.global, capitalName##Prototype::createStructure(init.vm, init.global, init.global->prototypeBase ## Prototype()))); \
                 init.setStructure(instanceType::createStructure(init.vm, init.global, init.prototype)); \
-                init.setConstructor(capitalName ## Constructor::create(init.vm, capitalName ## Constructor::createStructure(init.vm, init.global, init.global->functionPrototype()), jsCast<capitalName ## Prototype*>(init.prototype))); \
+                auto* constructorPrototype = strcmp(#prototypeBase, "error") == 0 ? init.global->m_errorStructure.constructor(init.global) : init.global->functionPrototype(); \
+                init.setConstructor(capitalName ## Constructor::create(init.vm, capitalName ## Constructor::createStructure(init.vm, init.global, constructorPrototype), jsCast<capitalName ## Prototype*>(init.prototype))); \
             }); \
     }
 
@@ -1255,7 +1448,7 @@ capitalName ## Constructor* lowerName ## Constructor = featureFlag ? capitalName
     }
 
     // Unfortunately, the prototype objects of the builtin objects can be touched from concurrent compilers. So eagerly initialize them only if we use JIT.
-    if (VM::canUseJIT()) {
+    if (Options::useJIT()) {
         this->booleanPrototype();
         this->numberPrototype();
         this->symbolPrototype();
@@ -1286,11 +1479,13 @@ bool JSGlobalObject::put(JSCell* cell, JSGlobalObject* globalObject, PropertyNam
 
 bool JSGlobalObject::defineOwnProperty(JSObject* object, JSGlobalObject* globalObject, PropertyName propertyName, const PropertyDescriptor& descriptor, bool shouldThrow)
 {
+    VM& vm = globalObject->vm();
     JSGlobalObject* thisObject = jsCast<JSGlobalObject*>(object);
-    PropertySlot slot(thisObject, PropertySlot::InternalMethodType::VMInquiry);
+    PropertySlot slot(thisObject, PropertySlot::InternalMethodType::VMInquiry, &vm);
     // silently ignore attempts to add accessors aliasing vars.
     if (descriptor.isAccessorDescriptor() && symbolTableGet(thisObject, propertyName, slot))
         return false;
+    slot.disallowVMEntry.reset();
     return Base::defineOwnProperty(thisObject, globalObject, propertyName, descriptor, shouldThrow);
 }
 
@@ -1314,7 +1509,7 @@ void JSGlobalObject::addFunction(JSGlobalObject* globalObject, const Identifier&
 {
     VM& vm = globalObject->vm();
     VM::DeletePropertyModeScope scope(vm, VM::DeletePropertyMode::IgnoreConfigurable);
-    methodTable(vm)->deleteProperty(this, globalObject, propertyName);
+    JSCell::deleteProperty(this, globalObject, propertyName);
     addGlobalVar(propertyName);
 }
 
@@ -1556,6 +1751,10 @@ void JSGlobalObject::fireWatchpointAndMakeAllArrayStructuresSlowPut(VM& vm)
     Structure* slowPutStructure;
     slowPutStructure = createRegExpMatchesArraySlowPutStructure(vm, this);
     m_regExpMatchesArrayStructure.set(vm, this, slowPutStructure);
+    slowPutStructure = createRegExpMatchesArrayWithIndicesSlowPutStructure(vm, this);
+    m_regExpMatchesArrayWithIndicesStructure.set(vm, this, slowPutStructure);
+    slowPutStructure = createRegExpMatchesIndicesArraySlowPutStructure(vm, this);
+    m_regExpMatchesIndicesArrayStructure.set(vm, this, slowPutStructure);
     slowPutStructure = ClonedArguments::createSlowPutStructure(vm, this, m_objectPrototype.get());
     m_clonedArgumentsStructure.set(vm, this, slowPutStructure);
 
@@ -1707,7 +1906,8 @@ void JSGlobalObject::resetPrototype(VM& vm, JSValue prototype)
     setGlobalThis(vm, JSProxy::create(vm, JSProxy::createStructure(vm, this, prototype, PureForwardingProxyType), this));
 }
 
-void JSGlobalObject::visitChildren(JSCell* cell, SlotVisitor& visitor)
+template<typename Visitor>
+void JSGlobalObject::visitChildrenImpl(JSCell* cell, Visitor& visitor)
 {
     JSGlobalObject* thisObject = jsCast<JSGlobalObject*>(cell);
     ASSERT_GC_OBJECT_INHERITS(thisObject, info());
@@ -1725,6 +1925,7 @@ void JSGlobalObject::visitChildren(JSCell* cell, SlotVisitor& visitor)
     thisObject->m_syntaxErrorStructure.visit(visitor);
     thisObject->m_typeErrorStructure.visit(visitor);
     thisObject->m_URIErrorStructure.visit(visitor);
+    thisObject->m_aggregateErrorStructure.visit(visitor);
     visitor.append(thisObject->m_arrayConstructor);
     visitor.append(thisObject->m_regExpConstructor);
     visitor.append(thisObject->m_objectConstructor);
@@ -1732,18 +1933,26 @@ void JSGlobalObject::visitChildren(JSCell* cell, SlotVisitor& visitor)
     visitor.append(thisObject->m_promiseConstructor);
     visitor.append(thisObject->m_internalPromiseConstructor);
 
-#if ENABLE(INTL)
     thisObject->m_defaultCollator.visit(visitor);
     thisObject->m_collatorStructure.visit(visitor);
-    thisObject->m_numberFormatStructure.visit(visitor);
-    thisObject->m_dateTimeFormatStructure.visit(visitor);
+    thisObject->m_displayNamesStructure.visit(visitor);
+    thisObject->m_listFormatStructure.visit(visitor);
+    thisObject->m_localeStructure.visit(visitor);
     thisObject->m_pluralRulesStructure.visit(visitor);
-#endif
+    thisObject->m_relativeTimeFormatStructure.visit(visitor);
+    thisObject->m_segmentIteratorStructure.visit(visitor);
+    thisObject->m_segmenterStructure.visit(visitor);
+    thisObject->m_segmentsStructure.visit(visitor);
+    thisObject->m_dateTimeFormatStructure.visit(visitor);
+    thisObject->m_numberFormatStructure.visit(visitor);
+
     visitor.append(thisObject->m_nullGetterFunction);
     visitor.append(thisObject->m_nullSetterFunction);
+    visitor.append(thisObject->m_nullSetterStrictFunction);
 
     thisObject->m_parseIntFunction.visit(visitor);
     thisObject->m_parseFloatFunction.visit(visitor);
+    thisObject->m_objectProtoToStringFunction.visit(visitor);
     thisObject->m_arrayProtoToStringFunction.visit(visitor);
     thisObject->m_arrayProtoValuesFunction.visit(visitor);
     thisObject->m_evalFunction.visit(visitor);
@@ -1764,6 +1973,8 @@ void JSGlobalObject::visitChildren(JSCell* cell, SlotVisitor& visitor)
     visitor.append(thisObject->m_generatorFunctionPrototype);
     visitor.append(thisObject->m_generatorPrototype);
     visitor.append(thisObject->m_arrayIteratorPrototype);
+    visitor.append(thisObject->m_mapIteratorPrototype);
+    visitor.append(thisObject->m_setIteratorPrototype);
     visitor.append(thisObject->m_asyncFunctionPrototype);
     visitor.append(thisObject->m_asyncGeneratorPrototype);
     visitor.append(thisObject->m_asyncIteratorPrototype);
@@ -1805,7 +2016,8 @@ void JSGlobalObject::visitChildren(JSCell* cell, SlotVisitor& visitor)
     visitFunctionStructures(thisObject->m_builtinFunctions);
     visitFunctionStructures(thisObject->m_ordinaryFunctions);
 
-    thisObject->m_customGetterSetterFunctionStructure.visit(visitor);
+    thisObject->m_customGetterFunctionStructure.visit(visitor);
+    thisObject->m_customSetterFunctionStructure.visit(visitor);
     thisObject->m_boundFunctionStructure.visit(visitor);
     thisObject->m_nativeStdFunctionStructure.visit(visitor);
     visitor.append(thisObject->m_regExpStructure);
@@ -1815,21 +2027,23 @@ void JSGlobalObject::visitChildren(JSCell* cell, SlotVisitor& visitor)
     visitor.append(thisObject->m_generatorStructure);
     visitor.append(thisObject->m_asyncGeneratorStructure);
     visitor.append(thisObject->m_arrayIteratorStructure);
+    visitor.append(thisObject->m_mapIteratorStructure);
+    visitor.append(thisObject->m_setIteratorStructure);
     thisObject->m_iteratorResultObjectStructure.visit(visitor);
+    thisObject->m_dataPropertyDescriptorObjectStructure.visit(visitor);
+    thisObject->m_accessorPropertyDescriptorObjectStructure.visit(visitor);
     visitor.append(thisObject->m_regExpMatchesArrayStructure);
+    visitor.append(thisObject->m_regExpMatchesArrayWithIndicesStructure);
+    visitor.append(thisObject->m_regExpMatchesIndicesArrayStructure);
     thisObject->m_moduleRecordStructure.visit(visitor);
     thisObject->m_moduleNamespaceObjectStructure.visit(visitor);
     thisObject->m_proxyObjectStructure.visit(visitor);
     thisObject->m_callableProxyObjectStructure.visit(visitor);
     thisObject->m_proxyRevokeStructure.visit(visitor);
+    thisObject->m_sharedArrayBufferStructure.visit(visitor);
 
     for (auto& property : thisObject->m_linkTimeConstants)
         property.visit(visitor);
-
-#if ENABLE(SHARED_ARRAY_BUFFER)
-    visitor.append(thisObject->m_sharedArrayBufferPrototype);
-    visitor.append(thisObject->m_sharedArrayBufferStructure);
-#endif
 
 #define VISIT_SIMPLE_TYPE(CapitalName, lowerName, properName, instanceType, jsName, prototypeBase, featureFlag) if (featureFlag) { \
         visitor.append(thisObject->m_ ## lowerName ## Prototype); \
@@ -1863,6 +2077,8 @@ void JSGlobalObject::visitChildren(JSCell* cell, SlotVisitor& visitor)
     thisObject->m_typedArraySuperConstructor.visit(visitor);
     thisObject->m_regExpGlobalData.visitAggregate(visitor);
 }
+
+DEFINE_VISIT_CHILDREN_WITH_MODIFIER(JS_EXPORT_PRIVATE, JSGlobalObject);
 
 CallFrame* JSGlobalObject::deprecatedCallFrameForDebugger()
 {
@@ -1925,48 +2141,45 @@ void JSGlobalObject::clearRareData(JSCell* cell)
     jsCast<JSGlobalObject*>(cell)->m_rareData = nullptr;
 }
 
-void JSGlobalObject::tryInstallArraySpeciesWatchpoint()
+void JSGlobalObject::tryInstallSpeciesWatchpoint(JSObject* prototype, JSObject* constructor, std::unique_ptr<ObjectPropertyChangeAdaptiveWatchpoint<InlineWatchpointSet>>& constructorWatchpoint, std::unique_ptr<ObjectPropertyChangeAdaptiveWatchpoint<InlineWatchpointSet>>& speciesWatchpoint, InlineWatchpointSet& speciesWatchpointSet)
 {
-    RELEASE_ASSERT(!m_arrayPrototypeConstructorWatchpoint);
-    RELEASE_ASSERT(!m_arrayConstructorSpeciesWatchpoint);
+    RELEASE_ASSERT(!constructorWatchpoint);
+    RELEASE_ASSERT(!speciesWatchpoint);
 
     VM& vm = this->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    // First we need to make sure that the Array.prototype.constructor property points to Array
-    // and that Array[Symbol.species] is the primordial GetterSetter.
-    ArrayPrototype* arrayPrototype = this->arrayPrototype();
+    // First we need to make sure that the %prototype%.constructor property points to a %constructor%
+    // and that %constructor%[Symbol.species] is the primordial GetterSetter.
 
     // We only initialize once so flattening the structures does not have any real cost.
-    Structure* prototypeStructure = arrayPrototype->structure(vm);
+    Structure* prototypeStructure = prototype->structure(vm);
     if (prototypeStructure->isDictionary())
-        prototypeStructure = prototypeStructure->flattenDictionaryStructure(vm, arrayPrototype);
+        prototypeStructure = prototypeStructure->flattenDictionaryStructure(vm, prototype);
     RELEASE_ASSERT(!prototypeStructure->isDictionary());
 
-    ArrayConstructor* arrayConstructor = this->arrayConstructor();
-
     auto invalidateWatchpoint = [&] {
-        m_arraySpeciesWatchpointSet.invalidate(vm, StringFireDetail("Was not able to set up array species watchpoint."));
+        speciesWatchpointSet.invalidate(vm, StringFireDetail("Was not able to set up species watchpoint."));
     };
 
-    PropertySlot constructorSlot(arrayPrototype, PropertySlot::InternalMethodType::VMInquiry);
-    arrayPrototype->getOwnPropertySlot(arrayPrototype, this, vm.propertyNames->constructor, constructorSlot);
+    PropertySlot constructorSlot(prototype, PropertySlot::InternalMethodType::VMInquiry, &vm);
+    prototype->getOwnPropertySlot(prototype, this, vm.propertyNames->constructor, constructorSlot);
     scope.assertNoException();
-    if (constructorSlot.slotBase() != arrayPrototype
+    if (constructorSlot.slotBase() != prototype
         || !constructorSlot.isCacheableValue()
-        || constructorSlot.getValue(this, vm.propertyNames->constructor) != arrayConstructor) {
+        || constructorSlot.getValue(this, vm.propertyNames->constructor) != constructor) {
         invalidateWatchpoint();
         return;
     }
 
-    Structure* constructorStructure = arrayConstructor->structure(vm);
+    Structure* constructorStructure = constructor->structure(vm);
     if (constructorStructure->isDictionary())
-        constructorStructure = constructorStructure->flattenDictionaryStructure(vm, arrayConstructor);
+        constructorStructure = constructorStructure->flattenDictionaryStructure(vm, constructor);
 
-    PropertySlot speciesSlot(arrayConstructor, PropertySlot::InternalMethodType::VMInquiry);
-    arrayConstructor->getOwnPropertySlot(arrayConstructor, this, vm.propertyNames->speciesSymbol, speciesSlot);
+    PropertySlot speciesSlot(constructor, PropertySlot::InternalMethodType::VMInquiry, &vm);
+    constructor->getOwnPropertySlot(constructor, this, vm.propertyNames->speciesSymbol, speciesSlot);
     scope.assertNoException();
-    if (speciesSlot.slotBase() != arrayConstructor
+    if (speciesSlot.slotBase() != constructor
         || !speciesSlot.isCacheableGetter()
         || speciesSlot.getterSetter() != speciesGetterSetter()) {
         invalidateWatchpoint();
@@ -1977,8 +2190,8 @@ void JSGlobalObject::tryInstallArraySpeciesWatchpoint()
     prototypeStructure->startWatchingPropertyForReplacements(vm, constructorSlot.cachedOffset());
     constructorStructure->startWatchingPropertyForReplacements(vm, speciesSlot.cachedOffset());
 
-    ObjectPropertyCondition constructorCondition = ObjectPropertyCondition::equivalence(vm, arrayPrototype, arrayPrototype, vm.propertyNames->constructor.impl(), arrayConstructor);
-    ObjectPropertyCondition speciesCondition = ObjectPropertyCondition::equivalence(vm, arrayPrototype, arrayConstructor, vm.propertyNames->speciesSymbol.impl(), speciesGetterSetter());
+    ObjectPropertyCondition constructorCondition = ObjectPropertyCondition::equivalence(vm, prototype, prototype, vm.propertyNames->constructor.impl(), constructor);
+    ObjectPropertyCondition speciesCondition = ObjectPropertyCondition::equivalence(vm, prototype, constructor, vm.propertyNames->speciesSymbol.impl(), speciesGetterSetter());
 
     if (!constructorCondition.isWatchable() || !speciesCondition.isWatchable()) {
         invalidateWatchpoint();
@@ -1986,14 +2199,30 @@ void JSGlobalObject::tryInstallArraySpeciesWatchpoint()
     }
 
     // We only watch this from the DFG, and the DFG makes sure to only start watching if the watchpoint is in the IsWatched state.
-    RELEASE_ASSERT(!m_arraySpeciesWatchpointSet.isBeingWatched());
-    m_arraySpeciesWatchpointSet.touch(vm, "Set up array species watchpoint.");
+    RELEASE_ASSERT(!speciesWatchpointSet.isBeingWatched());
+    speciesWatchpointSet.touch(vm, "Set up species watchpoint.");
 
-    m_arrayPrototypeConstructorWatchpoint = makeUnique<ObjectPropertyChangeAdaptiveWatchpoint<InlineWatchpointSet>>(this, constructorCondition, m_arraySpeciesWatchpointSet);
-    m_arrayPrototypeConstructorWatchpoint->install(vm);
+    constructorWatchpoint = makeUnique<ObjectPropertyChangeAdaptiveWatchpoint<InlineWatchpointSet>>(this, constructorCondition, speciesWatchpointSet);
+    constructorWatchpoint->install(vm);
 
-    m_arrayConstructorSpeciesWatchpoint = makeUnique<ObjectPropertyChangeAdaptiveWatchpoint<InlineWatchpointSet>>(this, speciesCondition, m_arraySpeciesWatchpointSet);
-    m_arrayConstructorSpeciesWatchpoint->install(vm);
+    speciesWatchpoint = makeUnique<ObjectPropertyChangeAdaptiveWatchpoint<InlineWatchpointSet>>(this, speciesCondition, speciesWatchpointSet);
+    speciesWatchpoint->install(vm);
+}
+
+void JSGlobalObject::tryInstallArraySpeciesWatchpoint()
+{
+    RELEASE_ASSERT(!m_arrayPrototypeConstructorWatchpoint);
+    RELEASE_ASSERT(!m_arrayConstructorSpeciesWatchpoint);
+
+    tryInstallSpeciesWatchpoint(arrayPrototype(), arrayConstructor(), m_arrayPrototypeConstructorWatchpoint, m_arrayConstructorSpeciesWatchpoint, m_arraySpeciesWatchpointSet);
+}
+
+void JSGlobalObject::tryInstallArrayBufferSpeciesWatchpoint(ArrayBufferSharingMode sharingMode)
+{
+    static_assert(static_cast<unsigned>(ArrayBufferSharingMode::Default) == 0);
+    static_assert(static_cast<unsigned>(ArrayBufferSharingMode::Shared) == 1);
+    unsigned index = static_cast<unsigned>(sharingMode);
+    tryInstallSpeciesWatchpoint(arrayBufferPrototype(sharingMode), arrayBufferConstructor(sharingMode), m_arrayBufferPrototypeConstructorWatchpoints[index], m_arrayBufferConstructorSpeciesWatchpoints[index], arrayBufferSpeciesWatchpointSet(sharingMode));
 }
 
 void JSGlobalObject::installNumberPrototypeWatchpoint(NumberPrototype* numberPrototype)
@@ -2057,6 +2286,13 @@ bool JSGlobalObject::remoteDebuggingEnabled() const
 #endif
 }
 
+void JSGlobalObject::setIsITML()
+{
+#if ENABLE(REMOTE_INSPECTOR)
+    m_inspectorDebuggable->setIsITML();
+#endif
+}
+
 void JSGlobalObject::setName(const String& name)
 {
     m_name = name;
@@ -2087,6 +2323,16 @@ void JSGlobalObject::queueMicrotask(Ref<Microtask>&& task)
     }
 
     vm().queueMicrotask(*this, WTFMove(task));
+}
+
+void JSGlobalObject::reportUncaughtExceptionAtEventLoop(JSGlobalObject*, Exception* exception)
+{
+    dataLogLn("Uncaught Exception at run loop: ", exception->value());
+}
+
+void JSGlobalObject::setConsoleClient(WeakPtr<ConsoleClient>&& consoleClient)
+{
+    m_consoleClient = WTFMove(consoleClient);
 }
 
 void JSGlobalObject::setDebugger(Debugger* debugger)

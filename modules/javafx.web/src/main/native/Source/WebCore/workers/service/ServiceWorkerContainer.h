@@ -28,8 +28,10 @@
 #if ENABLE(SERVICE_WORKER)
 
 #include "ActiveDOMObject.h"
+#include "AddEventListenerOptions.h"
 #include "EventTarget.h"
 #include "IDLTypes.h"
+#include "JSDOMPromiseDeferred.h"
 #include "SWClientConnection.h"
 #include "SWServer.h"
 #include "ServiceWorkerJobClient.h"
@@ -45,7 +47,7 @@ class NavigatorBase;
 class ServiceWorker;
 
 enum class ServiceWorkerUpdateViaCache : uint8_t;
-enum class WorkerType;
+enum class WorkerType : uint8_t;
 
 template<typename IDLType> class DOMPromiseProxy;
 
@@ -63,7 +65,7 @@ public:
 
     using RegistrationOptions = ServiceWorkerRegistrationOptions;
     void addRegistration(const String& scriptURL, const RegistrationOptions&, Ref<DeferredPromise>&&);
-    void removeRegistration(const URL& scopeURL, Ref<DeferredPromise>&&);
+    void unregisterRegistration(ServiceWorkerRegistrationIdentifier, DOMPromiseDeferred<IDLBoolean>&&);
     void updateRegistration(const URL& scopeURL, const URL& scriptURL, WorkerType, RefPtr<DeferredPromise>&&);
 
     void getRegistration(const String& clientURL, Ref<DeferredPromise>&&);
@@ -100,7 +102,7 @@ private:
     void jobResolvedWithRegistration(ServiceWorkerJob&, ServiceWorkerRegistrationData&&, ShouldNotifyWhenResolved) final;
     void jobResolvedWithUnregistrationResult(ServiceWorkerJob&, bool unregistrationResult) final;
     void startScriptFetchForJob(ServiceWorkerJob&, FetchOptions::Cache) final;
-    void jobFinishedLoadingScript(ServiceWorkerJob&, const String& script, const ContentSecurityPolicyResponseHeaders&, const String& referrerPolicy) final;
+    void jobFinishedLoadingScript(ServiceWorkerJob&, const String& script, const CertificateInfo&, const ContentSecurityPolicyResponseHeaders&, const String& referrerPolicy) final;
     void jobFailedLoadingScript(ServiceWorkerJob&, const ResourceError&, Exception&&) final;
 
     void notifyFailedFetchingScript(ServiceWorkerJob&, const ResourceError&);

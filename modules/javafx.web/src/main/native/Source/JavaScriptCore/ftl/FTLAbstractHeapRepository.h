@@ -41,7 +41,8 @@
 namespace JSC { namespace FTL {
 
 #define FOR_EACH_ABSTRACT_HEAP(macro) \
-    macro(typedArrayProperties)
+    macro(typedArrayProperties) \
+    macro(JSCellHeaderAndNamedProperties) \
 
 #define FOR_EACH_ABSTRACT_FIELD(macro) \
     macro(ArrayBuffer_data, ArrayBuffer::offsetOfData()) \
@@ -97,7 +98,6 @@ namespace JSC { namespace FTL {
     macro(JSCell_typeInfoFlags, JSCell::typeInfoFlagsOffset()) \
     macro(JSCell_typeInfoType, JSCell::typeInfoTypeOffset()) \
     macro(JSCell_usefulBytes, JSCell::indexingTypeAndMiscOffset()) \
-    macro(JSDestructibleObject_classInfo, JSDestructibleObject::classInfoOffset()) \
     macro(JSFunction_executableOrRareData, JSFunction::offsetOfExecutableOrRareData()) \
     macro(JSFunction_scope, JSFunction::offsetOfScopeChain()) \
     macro(JSGlobalObject_regExpGlobalData_cachedResult_lastRegExp, JSGlobalObject::regExpGlobalDataOffset() + RegExpGlobalData::offsetOfCachedResult() + RegExpCachedResult::offsetOfLastRegExp()) \
@@ -119,7 +119,6 @@ namespace JSC { namespace FTL {
     macro(JSRopeString_fiber2, JSRopeString::offsetOfFiber2()) \
     macro(JSScope_next, JSScope::offsetOfNext()) \
     macro(JSSymbolTableObject_symbolTable, JSSymbolTableObject::offsetOfSymbolTable()) \
-    macro(JSWrapperObject_internalValue, JSWrapperObject::internalValueOffset()) \
     macro(RegExpObject_regExpAndLastIndexIsNotWritableFlag, RegExpObject::offsetOfRegExpAndLastIndexIsNotWritableFlag()) \
     macro(RegExpObject_lastIndex, RegExpObject::offsetOfLastIndex()) \
     macro(ShadowChicken_Packet_callee, OBJECT_OFFSETOF(ShadowChicken::Packet, callee)) \
@@ -143,10 +142,12 @@ namespace JSC { namespace FTL {
     macro(Structure_globalObject, Structure::globalObjectOffset()) \
     macro(Structure_indexingModeIncludingHistory, Structure::indexingModeIncludingHistoryOffset()) \
     macro(Structure_inlineCapacity, Structure::inlineCapacityOffset()) \
+    macro(Structure_outOfLineTypeFlags, Structure::outOfLineTypeFlagsOffset()) \
     macro(Structure_previousOrRareData, Structure::previousOrRareDataOffset()) \
     macro(Structure_prototype, Structure::prototypeOffset()) \
     macro(Structure_structureID, Structure::structureIDOffset()) \
-    macro(StructureRareData_cachedOwnKeys, StructureRareData::offsetOfCachedOwnKeys()) \
+    macro(StructureRareData_cachedKeys, StructureRareData::offsetOfCachedPropertyNames(CachedPropertyNamesKind::Keys)) \
+    macro(StructureRareData_cachedGetOwnPropertyNames, StructureRareData::offsetOfCachedPropertyNames(CachedPropertyNamesKind::GetOwnPropertyNames)) \
     macro(HashMapImpl_capacity, HashMapImpl<HashMapBucket<HashMapBucketDataKey>>::offsetOfCapacity()) \
     macro(HashMapImpl_buffer,  HashMapImpl<HashMapBucket<HashMapBucketDataKey>>::offsetOfBuffer()) \
     macro(HashMapImpl_head,  HashMapImpl<HashMapBucket<HashMapBucketDataKey>>::offsetOfHead()) \
@@ -214,6 +215,7 @@ public:
 #undef NUMBERED_ABSTRACT_HEAP_DECLARATION
 
     AbstractHeap& JSString_value;
+    AbstractHeap& JSWrapperObject_internalValue;
 
     AbsoluteAbstractHeap absolute;
 
@@ -222,7 +224,7 @@ public:
         switch (indexingType) {
         case ALL_BLANK_INDEXING_TYPES:
         case ALL_UNDECIDED_INDEXING_TYPES:
-            return 0;
+            return nullptr;
 
         case ALL_INT32_INDEXING_TYPES:
             return &indexedInt32Properties;
@@ -238,7 +240,7 @@ public:
 
         default:
             RELEASE_ASSERT_NOT_REACHED();
-            return 0;
+            return nullptr;
         }
     }
 

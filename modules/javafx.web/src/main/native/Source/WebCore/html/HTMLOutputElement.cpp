@@ -57,7 +57,7 @@ Ref<HTMLOutputElement> HTMLOutputElement::create(const QualifiedName& tagName, D
 
 const AtomString& HTMLOutputElement::formControlType() const
 {
-    static NeverDestroyed<const AtomString> output("output", AtomString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> output("output", AtomString::ConstructFromLiteral);
     return output;
 }
 
@@ -79,7 +79,7 @@ void HTMLOutputElement::childrenChanged(const ChildChange& change)
 {
     HTMLFormControlElement::childrenChanged(change);
 
-    if (change.source == ChildChangeSource::Parser || m_isSetTextContentInProgress) {
+    if (change.source == ChildChange::Source::Parser || m_isSetTextContentInProgress) {
         m_isSetTextContentInProgress = false;
         return;
     }

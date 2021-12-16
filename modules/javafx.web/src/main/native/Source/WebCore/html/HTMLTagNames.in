@@ -8,7 +8,7 @@ a interfaceName=HTMLAnchorElement
 abbr interfaceName=HTMLElement
 acronym interfaceName=HTMLElement
 address interfaceName=HTMLElement
-applet
+applet interfaceName=HTMLUnknownElement
 area
 article interfaceName=HTMLElement
 aside interfaceName=HTMLElement
@@ -68,7 +68,7 @@ html
 i interfaceName=HTMLElement
 iframe interfaceName=HTMLIFrameElement
 image interfaceName=HTMLUnknownElement
-img interfaceName=HTMLImageElement, constructorNeedsFormElement, constructorNeedsCreatedByParser
+img interfaceName=HTMLImageElement, constructorNeedsFormElement
 input constructorNeedsFormElement, constructorNeedsCreatedByParser
 ins interfaceName=HTMLModElement
 kbd interfaceName=HTMLElement
@@ -86,7 +86,8 @@ marquee
 menu
 menuitem interfaceName=HTMLMenuItemElement, runtimeEnabled=menuItemElement
 meta
-meter interfaceName=HTMLMeterElement, conditional=METER_ELEMENT
+meter interfaceName=HTMLMeterElement
+model interfaceName=HTMLModelElement, conditional=MODEL_ELEMENT, settingsConditional=modelElementEnabled
 nav interfaceName=HTMLElement
 nobr interfaceName=HTMLElement
 noembed interfaceName=HTMLElement
@@ -135,7 +136,7 @@ thead interfaceName=HTMLTableSectionElement
 time
 title
 tr interfaceName=HTMLTableRowElement
-track wrapperOnlyIfMediaIsAvailable, conditional=VIDEO_TRACK
+track wrapperOnlyIfMediaIsAvailable, conditional=VIDEO
 tt interfaceName=HTMLElement
 u interfaceName=HTMLElement
 ul interfaceName=HTMLUListElement

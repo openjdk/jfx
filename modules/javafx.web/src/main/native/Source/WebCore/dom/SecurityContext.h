@@ -92,6 +92,8 @@ public:
         Active = 1 << 1,
     };
 
+    bool usedLegacyTLS() const { return m_usedLegacyTLS; }
+    void setUsedLegacyTLS(bool used) { m_usedLegacyTLS = used; }
     const OptionSet<MixedContentType>& foundMixedContent() const { return m_mixedContentTypes; }
     void setFoundMixedContent(MixedContentType type) { m_mixedContentTypes.add(type); }
     bool geolocationAccessed() const { return m_geolocationAccessed; }
@@ -106,6 +108,8 @@ public:
     // the Secure Context spec: https://w3c.github.io/webappsec-secure-contexts/#settings-object (Editor's Draft, 17 November 2016)
     virtual bool isSecureContext() const = 0;
 
+    bool haveInitializedSecurityOrigin() const { return m_haveInitializedSecurityOrigin; }
+
 protected:
     SecurityContext();
     virtual ~SecurityContext();
@@ -115,7 +119,6 @@ protected:
     void disableSandboxFlags(SandboxFlags mask) { m_sandboxFlags &= ~mask; }
 
     void didFailToInitializeSecurityOrigin() { m_haveInitializedSecurityOrigin = false; }
-    bool haveInitializedSecurityOrigin() const { return m_haveInitializedSecurityOrigin; }
 
 private:
     RefPtr<SecurityOriginPolicy> m_securityOriginPolicy;
@@ -126,6 +129,7 @@ private:
     bool m_geolocationAccessed { false };
     bool m_secureCookiesAccessed { false };
     bool m_isStrictMixedContentMode { false };
+    bool m_usedLegacyTLS { false };
 };
 
 } // namespace WebCore

@@ -50,18 +50,18 @@ class KeygenSelectElement final : public HTMLSelectElement {
 public:
     static Ref<KeygenSelectElement> create(Document& document)
     {
-        return adoptRef(*new KeygenSelectElement(document));
-    }
-
-protected:
-    KeygenSelectElement(Document& document)
-        : HTMLSelectElement(selectTag, document, 0)
-    {
-        static NeverDestroyed<AtomString> pseudoId("-webkit-keygen-select", AtomString::ConstructFromLiteral);
-        setPseudo(pseudoId);
+        auto element = adoptRef(*new KeygenSelectElement(document));
+        static MainThreadNeverDestroyed<const AtomString> pseudoId("-webkit-keygen-select", AtomString::ConstructFromLiteral);
+        element->setPseudo(pseudoId);
+        return element;
     }
 
 private:
+    KeygenSelectElement(Document& document)
+        : HTMLSelectElement(selectTag, document, 0)
+    {
+    }
+
     Ref<Element> cloneElementWithoutAttributesAndChildren(Document& targetDocument) override
     {
         return create(targetDocument);
@@ -131,7 +131,7 @@ bool HTMLKeygenElement::appendFormData(DOMFormData& formData, bool)
 
 const AtomString& HTMLKeygenElement::formControlType() const
 {
-    static NeverDestroyed<const AtomString> keygen("keygen", AtomString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> keygen("keygen", AtomString::ConstructFromLiteral);
     return keygen;
 }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -65,7 +65,7 @@ public:
 
     static Structure* createStructure(VM&, JSGlobalObject*, JSValue prototype);
 
-    static void visitChildren(JSCell*, SlotVisitor&);
+    DECLARE_VISIT_CHILDREN;
 
     DECLARE_INFO;
 
@@ -123,27 +123,26 @@ public:
     bool hasReifiedName() const { return m_hasReifiedName; }
     void setHasReifiedName() { m_hasReifiedName = true; }
 
-    bool hasModifiedLength() const { return m_hasModifiedLength; }
-    void setHasModifiedLength()
+    bool hasModifiedLengthForNonHostFunction() const { return m_hasModifiedLengthForNonHostFunction; }
+    void setHasModifiedLengthForNonHostFunction()
     {
-        m_hasModifiedLength = true;
+        m_hasModifiedLengthForNonHostFunction = true;
     }
-    bool hasModifiedName() const { return m_hasModifiedName; }
-    void setHasModifiedName()
+    bool hasModifiedNameForNonHostFunction() const { return m_hasModifiedNameForNonHostFunction; }
+    void setHasModifiedNameForNonHostFunction()
     {
-        m_hasModifiedName = true;
+        m_hasModifiedNameForNonHostFunction = true;
     }
 
     bool hasAllocationProfileClearingWatchpoint() const { return !!m_allocationProfileClearingWatchpoint; }
     Watchpoint* createAllocationProfileClearingWatchpoint();
     class AllocationProfileClearingWatchpoint;
 
-protected:
-    explicit FunctionRareData(VM&, ExecutableBase*);
-    ~FunctionRareData();
-
 private:
     friend class LLIntOffsetsExtractor;
+
+    explicit FunctionRareData(VM&, ExecutableBase*);
+    ~FunctionRareData();
 
     // Ideally, there would only be one allocation profile for subclassing but due to Reflect.construct we
     // have two. There are some pros and cons in comparison to our current system to using the same profile
@@ -166,8 +165,8 @@ private:
     std::unique_ptr<AllocationProfileClearingWatchpoint> m_allocationProfileClearingWatchpoint;
     bool m_hasReifiedLength : 1;
     bool m_hasReifiedName : 1;
-    bool m_hasModifiedLength : 1;
-    bool m_hasModifiedName : 1;
+    bool m_hasModifiedLengthForNonHostFunction : 1;
+    bool m_hasModifiedNameForNonHostFunction : 1;
 };
 
 class FunctionRareData::AllocationProfileClearingWatchpoint final : public Watchpoint {

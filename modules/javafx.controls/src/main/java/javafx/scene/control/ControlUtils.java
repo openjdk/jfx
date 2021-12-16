@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,7 +33,8 @@ import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 
-import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -70,7 +71,7 @@ class ControlUtils {
     }
 
     static <T> ListChangeListener.Change<T> buildClearAndSelectChange(
-            ObservableList<T> list, List<T> removed, int retainedRow) {
+            ObservableList<T> list, List<T> removed, T retainedRow, Comparator<T> rowComparator) {
         return new ListChangeListener.Change<T>(list) {
             private final int[] EMPTY_PERM = new int[0];
 
@@ -85,11 +86,15 @@ class ControlUtils {
             private int from = -1;
 
             {
-                int midIndex = retainedRow >= removedSize ? removedSize :
-                               retainedRow < 0 ? 0 :
-                               retainedRow;
-                firstRemovedRange = removed.subList(0, midIndex);
-                secondRemovedRange = removed.subList(midIndex, removedSize);
+                int insertionPoint = Collections.binarySearch(removed, retainedRow, rowComparator);
+                if (insertionPoint >= 0) {
+                    firstRemovedRange = removed;
+                    secondRemovedRange = Collections.emptyList();
+                } else {
+                    int midIndex = -insertionPoint - 1;
+                    firstRemovedRange = removed.subList(0, midIndex);
+                    secondRemovedRange = removed.subList(midIndex, removedSize);
+                }
             }
 
             @Override public int getFrom() {
@@ -107,6 +112,7 @@ class ControlUtils {
             }
 
             @Override public int getRemovedSize() {
+                checkState();
                 return atFirstRange ? firstRemovedRange.size() : secondRemovedRange.size();
             }
 
@@ -116,12 +122,12 @@ class ControlUtils {
             }
 
             @Override public boolean next() {
-                if (invalid && atFirstRange) {
+                if (invalid) {
                     invalid = false;
 
                     // point 'from' to the first position, relative to
                     // the underlying selectedCells index.
-                    from = 0;
+                    from = atFirstRange ? 0 : 1;
                     return true;
                 }
 
@@ -139,7 +145,7 @@ class ControlUtils {
 
             @Override public void reset() {
                 invalid = true;
-                atFirstRange = true;
+                atFirstRange = !firstRemovedRange.isEmpty();
             }
 
             private void checkState() {
@@ -200,29 +206,5 @@ class ControlUtils {
         }
 
         sm.selectedIndices._endChange();
-    }
-
-    // Given a listen of removed elements, we create the minimal number of changes by coalescing elements that are
-    // adjacent
-    static void reducingChange(MultipleSelectionModelBase<?>.SelectedIndicesList selectedIndices, List<Integer> removed) {
-        if (removed.isEmpty()) return;
-
-        int startPos = 0;
-        int endPos = 1;
-        boolean firedOnce = false;
-        while (endPos < removed.size()) {
-            if (removed.get(startPos) == removed.get(endPos) - 1) {
-                endPos++;
-                continue;
-            }
-            selectedIndices._nextRemove(selectedIndices.indexOf(removed.get(startPos)), removed.subList(startPos, endPos));
-            startPos = endPos;
-            endPos = startPos + 1;
-            firedOnce = true;
-        }
-
-        if (!firedOnce) {
-            selectedIndices._nextRemove(selectedIndices.indexOf(removed.get(0)), removed);
-        }
     }
 }

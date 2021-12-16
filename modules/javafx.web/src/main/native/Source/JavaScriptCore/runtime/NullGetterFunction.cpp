@@ -26,7 +26,6 @@
 #include "config.h"
 #include "NullGetterFunction.h"
 
-#include "JSCJSValueInlines.h"
 #include "JSCInlines.h"
 
 namespace JSC {
@@ -34,7 +33,10 @@ namespace JSC {
 const ClassInfo NullGetterFunction::s_info = { "Function", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(NullGetterFunction) };
 
 namespace NullGetterFunctionInternal {
-static EncodedJSValue JSC_HOST_CALL callReturnUndefined(JSGlobalObject*, CallFrame*)
+
+static JSC_DECLARE_HOST_FUNCTION(callReturnUndefined);
+
+JSC_DEFINE_HOST_FUNCTION(callReturnUndefined, (JSGlobalObject*, CallFrame*))
 {
     return JSValue::encode(jsUndefined());
 }

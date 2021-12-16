@@ -34,10 +34,12 @@
 
 #include "InspectorWebAgentBase.h"
 #include "LayoutRect.h"
+#include <JavaScriptCore/Debugger.h>
+#include <JavaScriptCore/DebuggerPrimitives.h>
 #include <JavaScriptCore/InspectorBackendDispatchers.h>
 #include <JavaScriptCore/InspectorFrontendDispatchers.h>
-#include <JavaScriptCore/ScriptDebugListener.h>
 #include <wtf/JSONValues.h>
+#include <wtf/RunLoop.h>
 #include <wtf/Vector.h>
 
 namespace WebCore {
@@ -47,8 +49,6 @@ class FloatQuad;
 class Frame;
 class RenderObject;
 class RunLoopObserver;
-
-typedef String ErrorString;
 
 enum class TimelineRecordType {
     EventDispatch,
@@ -81,35 +81,27 @@ enum class TimelineRecordType {
     ObserverCallback,
 };
 
-class InspectorTimelineAgent final : public InspectorAgentBase , public Inspector::TimelineBackendDispatcherHandler , public Inspector::ScriptDebugListener {
+class InspectorTimelineAgent final : public InspectorAgentBase , public Inspector::TimelineBackendDispatcherHandler , public JSC::Debugger::Observer {
     WTF_MAKE_NONCOPYABLE(InspectorTimelineAgent);
     WTF_MAKE_FAST_ALLOCATED;
 public:
     InspectorTimelineAgent(PageAgentContext&);
-    ~InspectorTimelineAgent() override;
+    ~InspectorTimelineAgent();
 
     // InspectorAgentBase
-    void didCreateFrontendAndBackend(Inspector::FrontendRouter*, Inspector::BackendDispatcher*) override;
-    void willDestroyFrontendAndBackend(Inspector::DisconnectReason) override;
+    void didCreateFrontendAndBackend(Inspector::FrontendRouter*, Inspector::BackendDispatcher*);
+    void willDestroyFrontendAndBackend(Inspector::DisconnectReason);
 
     // TimelineBackendDispatcherHandler
-    void enable(ErrorString&) override;
-    void disable(ErrorString&) override;
-    void start(ErrorString&, const int* maxCallStackDepth = nullptr) override;
-    void stop(ErrorString&) override;
-    void setAutoCaptureEnabled(ErrorString&, bool) override;
-    void setInstruments(ErrorString&, const JSON::Array&) override;
+    Inspector::Protocol::ErrorStringOr<void> enable();
+    Inspector::Protocol::ErrorStringOr<void> disable();
+    Inspector::Protocol::ErrorStringOr<void> start(Optional<int>&& maxCallStackDepth);
+    Inspector::Protocol::ErrorStringOr<void> stop();
+    Inspector::Protocol::ErrorStringOr<void> setAutoCaptureEnabled(bool);
+    Inspector::Protocol::ErrorStringOr<void> setInstruments(Ref<JSON::Array>&&);
 
-    // ScriptDebugListener
-    void didParseSource(JSC::SourceID, const Script&) override { }
-    void failedToParseSource(const String&, const String&, int, int, const String&) override { }
-    void willRunMicrotask() override { }
-    void didRunMicrotask() override { }
-    void didPause(JSC::JSGlobalObject*, JSC::JSValue, JSC::JSValue) override { }
-    void didContinue() override { }
-    void breakpointActionLog(JSC::JSGlobalObject*, const String&) override { }
-    void breakpointActionSound(int) override { }
-    void breakpointActionProbe(JSC::JSGlobalObject*, const Inspector::ScriptBreakpointAction&, unsigned batchId, unsigned sampleId, JSC::JSValue result) override;
+    // JSC::Debugger::Observer
+    void breakpointActionProbe(JSC::JSGlobalObject*, JSC::BreakpointActionID, unsigned batchId, unsigned sampleId, JSC::JSValue result);
 
     // InspectorInstrumentation
     void didInstallTimer(int timerId, Seconds timeout, bool singleShot, Frame*);
@@ -166,9 +158,7 @@ private:
     friend class TimelineRecordStack;
 
     struct TimelineRecordEntry {
-        TimelineRecordEntry()
-            : type(TimelineRecordType::EventDispatch) { }
-        TimelineRecordEntry(RefPtr<JSON::Object>&& record, RefPtr<JSON::Object>&& data, RefPtr<JSON::Array>&& children, TimelineRecordType type)
+        TimelineRecordEntry(Ref<JSON::Object>&& record, Ref<JSON::Object>&& data, RefPtr<JSON::Array>&& children, TimelineRecordType type)
             : record(WTFMove(record))
             , data(WTFMove(data))
             , children(WTFMove(children))
@@ -176,29 +166,29 @@ private:
         {
         }
 
-        RefPtr<JSON::Object> record;
-        RefPtr<JSON::Object> data;
+        Ref<JSON::Object> record;
+        Ref<JSON::Object> data;
         RefPtr<JSON::Array> children;
         TimelineRecordType type;
     };
 
-    void internalStart(const int* maxCallStackDepth = nullptr);
+    void internalStart(Optional<int>&& maxCallStackDepth);
     void internalStop();
     double timestamp();
 
-    void sendEvent(RefPtr<JSON::Object>&&);
-    void appendRecord(RefPtr<JSON::Object>&& data, TimelineRecordType, bool captureCallStack, Frame*);
-    void pushCurrentRecord(RefPtr<JSON::Object>&&, TimelineRecordType, bool captureCallStack, Frame*);
+    void sendEvent(Ref<JSON::Object>&&);
+    void appendRecord(Ref<JSON::Object>&& data, TimelineRecordType, bool captureCallStack, Frame*);
+    void pushCurrentRecord(Ref<JSON::Object>&&, TimelineRecordType, bool captureCallStack, Frame*);
     void pushCurrentRecord(const TimelineRecordEntry& record) { m_recordStack.append(record); }
 
-    TimelineRecordEntry createRecordEntry(RefPtr<JSON::Object>&& data, TimelineRecordType, bool captureCallStack, Frame*);
+    TimelineRecordEntry createRecordEntry(Ref<JSON::Object>&& data, TimelineRecordType, bool captureCallStack, Frame*);
 
     void setFrameIdentifier(JSON::Object* record, Frame*);
 
     void didCompleteRecordEntry(const TimelineRecordEntry&);
     void didCompleteCurrentRecord(TimelineRecordType);
 
-    void addRecordToTimeline(RefPtr<JSON::Object>&&, TimelineRecordType);
+    void addRecordToTimeline(Ref<JSON::Object>&&, TimelineRecordType);
 
     void localToPageQuad(const RenderObject&, const LayoutRect&, FloatQuad*);
 
@@ -223,8 +213,10 @@ private:
 #if PLATFORM(COCOA)
     std::unique_ptr<WebCore::RunLoopObserver> m_frameStartObserver;
     std::unique_ptr<WebCore::RunLoopObserver> m_frameStopObserver;
-#endif
     int m_runLoopNestingLevel { 0 };
+#elif USE(GLIB_EVENT_LOOP)
+    std::unique_ptr<RunLoop::Observer> m_runLoopObserver;
+#endif
     bool m_startedComposite { false };
 };
 

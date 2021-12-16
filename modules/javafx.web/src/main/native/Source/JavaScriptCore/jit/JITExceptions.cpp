@@ -29,14 +29,10 @@
 #include "CallFrame.h"
 #include "CatchScope.h"
 #include "CodeBlock.h"
-#include "Disassembler.h"
-#include "EntryFrame.h"
 #include "Interpreter.h"
-#include "JSCInlines.h"
-#include "JSCJSValue.h"
+#include "JSCJSValueInlines.h"
 #include "LLIntData.h"
-#include "LLIntOpcode.h"
-#include "LLIntThunks.h"
+#include "LLIntExceptions.h"
 #include "Opcode.h"
 #include "ShadowChicken.h"
 #include "VMInlines.h"
@@ -82,11 +78,11 @@ void genericUnwind(VM& vm, CallFrame* callFrame)
             catchRoutine = LLInt::getCodePtr(catchPCForInterpreter->opcodeID());
 #endif
     } else
-        catchRoutine = LLInt::getCodePtr<ExceptionHandlerPtrTag>(handleUncaughtException).executableAddress();
+        catchRoutine = LLInt::handleUncaughtException(vm).code().executableAddress();
 
     ASSERT(bitwise_cast<uintptr_t>(callFrame) < bitwise_cast<uintptr_t>(vm.topEntryFrame));
 
-    assertIsTaggedWith(catchRoutine, ExceptionHandlerPtrTag);
+    assertIsTaggedWith<ExceptionHandlerPtrTag>(catchRoutine);
     vm.callFrameForCatch = callFrame;
     vm.targetMachinePCForThrow = catchRoutine;
     vm.targetInterpreterPCForThrow = catchPCForInterpreter;

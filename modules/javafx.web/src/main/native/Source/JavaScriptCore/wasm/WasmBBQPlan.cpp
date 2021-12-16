@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,26 +26,20 @@
 #include "config.h"
 #include "WasmBBQPlan.h"
 
-#if ENABLE(WEBASSEMBLY)
+#if ENABLE(WEBASSEMBLY_B3JIT)
 
-#include "B3Compilation.h"
+#include "JITCompilation.h"
 #include "JSToWasm.h"
+#include "LinkBuffer.h"
 #include "WasmAirIRGenerator.h"
 #include "WasmB3IRGenerator.h"
-#include "WasmBinding.h"
 #include "WasmCallee.h"
-#include "WasmCallingConvention.h"
-#include "WasmFaultSignalHandler.h"
-#include "WasmMachineThreads.h"
-#include "WasmMemory.h"
+#include "WasmCodeBlock.h"
 #include "WasmSignatureInlines.h"
 #include "WasmTierUpCount.h"
 #include <wtf/DataLog.h>
 #include <wtf/Locker.h>
-#include <wtf/MonotonicTime.h>
 #include <wtf/StdLibExtras.h>
-#include <wtf/SystemTracing.h>
-#include <wtf/text/StringConcatenateNumbers.h>
 
 namespace JSC { namespace Wasm {
 
@@ -54,11 +48,13 @@ static constexpr bool verbose = false;
 }
 
 BBQPlan::BBQPlan(Context* context, Ref<ModuleInformation> moduleInformation, uint32_t functionIndex, CodeBlock* codeBlock, CompletionTask&& completionTask)
-    : EntryPlan(context, WTFMove(moduleInformation), AsyncWork::FullCompile, WTFMove(completionTask))
+    : EntryPlan(context, WTFMove(moduleInformation), CompilerMode::FullCompile, WTFMove(completionTask))
     , m_codeBlock(codeBlock)
     , m_functionIndex(functionIndex)
 {
+    ASSERT(Options::useBBQJIT());
     setMode(m_codeBlock->mode());
+    dataLogLnIf(WasmBBQPlanInternal::verbose, "Starting BBQ plan for ", functionIndex);
 }
 
 bool BBQPlan::prepareImpl()
@@ -114,8 +110,8 @@ void BBQPlan::work(CompilationEffort effort)
     size_t functionIndexSpace = m_functionIndex + m_moduleInformation->importFunctionCount();
     SignatureIndex signatureIndex = m_moduleInformation->internalFunctionSignatureIndices[m_functionIndex];
     const Signature& signature = SignatureInformation::get(signatureIndex);
-    function->entrypoint.compilation = makeUnique<B3::Compilation>(
-        FINALIZE_WASM_CODE_FOR_MODE(CompilationMode::BBQMode, linkBuffer, B3CompilationPtrTag, "WebAssembly BBQ function[%i] %s name %s", m_functionIndex, signature.toString().ascii().data(), makeString(IndexOrName(functionIndexSpace, m_moduleInformation->nameSection->get(functionIndexSpace))).ascii().data()),
+    function->entrypoint.compilation = makeUnique<Compilation>(
+        FINALIZE_WASM_CODE_FOR_MODE(CompilationMode::BBQMode, linkBuffer, JITCompilationPtrTag, "WebAssembly BBQ function[%i] %s name %s", m_functionIndex, signature.toString().ascii().data(), makeString(IndexOrName(functionIndexSpace, m_moduleInformation->nameSection->get(functionIndexSpace))).ascii().data()),
         WTFMove(context.wasmEntrypointByproducts));
 
     MacroAssemblerCodePtr<WasmEntryPtrTag> entrypoint;
@@ -130,13 +126,9 @@ void BBQPlan::work(CompilationEffort effort)
         // will update. It's also ok if they publish their code before we reset the instruction caches because after we release
         // the lock our code is ready to be published too.
         LockHolder holder(m_codeBlock->m_lock);
+
         m_codeBlock->m_bbqCallees[m_functionIndex] = callee.copyRef();
-        {
-            LLIntCallee& llintCallee = m_codeBlock->m_llintCallees->at(m_functionIndex).get();
-            auto locker = holdLock(llintCallee.tierUpCounter().m_lock);
-            llintCallee.setReplacement(callee.copyRef());
-            llintCallee.tierUpCounter().m_compilationStatus = LLIntTierUpCounter::CompilationStatus::Compiled;
-        }
+
         for (auto& call : callee->wasmToWasmCallsites()) {
             MacroAssemblerCodePtr<WasmEntryPtrTag> entrypoint;
             if (call.functionIndexSpace < m_moduleInformation->importFunctionCount())
@@ -146,48 +138,18 @@ void BBQPlan::work(CompilationEffort effort)
 
             MacroAssembler::repatchNearCall(call.callLocation, CodeLocationLabel<WasmEntryPtrTag>(entrypoint));
         }
-    }
 
-    // It's important to make sure we do this before we make any of the code we just compiled visible. If we didn't, we could end up
-    // where we are tiering up some function A to A' and we repatch some function B to call A' instead of A. Another CPU could see
-    // the updates to B but still not have reset its cache of A', which would lead to all kinds of badness.
-    resetInstructionCacheOnAllThreads();
-    WTF::storeStoreFence(); // This probably isn't necessary but it's good to be paranoid.
+        Plan::updateCallSitesToCallUs(*m_codeBlock, CodeLocationLabel<WasmEntryPtrTag>(entrypoint), m_functionIndex, functionIndexSpace);
 
-    m_codeBlock->m_wasmIndirectCallEntryPoints[m_functionIndex] = entrypoint;
-    {
-        LockHolder holder(m_codeBlock->m_lock);
-
-        auto repatchCalls = [&] (const Vector<UnlinkedWasmToWasmCall>& callsites) {
-            for (auto& call : callsites) {
-                dataLogLnIf(WasmBBQPlanInternal::verbose, "Considering repatching call at: ", RawPointer(call.callLocation.dataLocation()), " that targets ", call.functionIndexSpace);
-                if (call.functionIndexSpace == functionIndexSpace) {
-                    dataLogLnIf(WasmBBQPlanInternal::verbose, "Repatching call at: ", RawPointer(call.callLocation.dataLocation()), " to ", RawPointer(entrypoint.executableAddress()));
-                    MacroAssembler::repatchNearCall(call.callLocation, CodeLocationLabel<WasmEntryPtrTag>(entrypoint));
-                }
-            }
-        };
-
-        for (unsigned i = 0; i < m_codeBlock->m_wasmToWasmCallsites.size(); ++i) {
-            repatchCalls(m_codeBlock->m_wasmToWasmCallsites[i]);
-            if (m_codeBlock->m_llintCallees) {
-                LLIntCallee& llintCallee = m_codeBlock->m_llintCallees->at(i).get();
-                if (JITCallee* replacementCallee = llintCallee.replacement())
-                    repatchCalls(replacementCallee->wasmToWasmCallsites());
-                if (OMGForOSREntryCallee* osrEntryCallee = llintCallee.osrEntryCallee())
-                    repatchCalls(osrEntryCallee->wasmToWasmCallsites());
-            }
-            if (BBQCallee* bbqCallee = m_codeBlock->m_bbqCallees[i].get()) {
-                if (OMGCallee* replacementCallee = bbqCallee->replacement())
-                    repatchCalls(replacementCallee->wasmToWasmCallsites());
-                if (OMGForOSREntryCallee* osrEntryCallee = bbqCallee->osrEntryCallee())
-                    repatchCalls(osrEntryCallee->wasmToWasmCallsites());
-            }
+        {
+            LLIntCallee& llintCallee = m_codeBlock->m_llintCallees->at(m_functionIndex).get();
+            auto locker = holdLock(llintCallee.tierUpCounter().m_lock);
+            llintCallee.setReplacement(callee.copyRef());
+            llintCallee.tierUpCounter().m_compilationStatus = LLIntTierUpCounter::CompilationStatus::Compiled;
         }
     }
 
     dataLogLnIf(WasmBBQPlanInternal::verbose, "Finished BBQ ", m_functionIndex);
-
 
     auto locker = holdLock(m_lock);
     moveToState(State::Completed);
@@ -264,8 +226,8 @@ void BBQPlan::didCompleteCompilation(const AbstractLocker& locker)
                 return;
             }
 
-            m_wasmInternalFunctions[functionIndex]->entrypoint.compilation = makeUnique<B3::Compilation>(
-                FINALIZE_CODE(linkBuffer, B3CompilationPtrTag, "WebAssembly BBQ function[%i] %s name %s", functionIndex, signature.toString().ascii().data(), makeString(IndexOrName(functionIndexSpace, m_moduleInformation->nameSection->get(functionIndexSpace))).ascii().data()),
+            m_wasmInternalFunctions[functionIndex]->entrypoint.compilation = makeUnique<Compilation>(
+                FINALIZE_CODE(linkBuffer, JITCompilationPtrTag, "WebAssembly BBQ function[%i] %s name %s", functionIndex, signature.toString().ascii().data(), makeString(IndexOrName(functionIndexSpace, m_moduleInformation->nameSection->get(functionIndexSpace))).ascii().data()),
                 WTFMove(context.wasmEntrypointByproducts));
         }
 
@@ -276,9 +238,9 @@ void BBQPlan::didCompleteCompilation(const AbstractLocker& locker)
                 return;
             }
 
-            embedderToWasmInternalFunction->entrypoint.compilation = makeUnique<B3::Compilation>(
-                FINALIZE_CODE(linkBuffer, B3CompilationPtrTag, "Embedder->WebAssembly entrypoint[%i] %s name %s", functionIndex, signature.toString().ascii().data(), makeString(IndexOrName(functionIndexSpace, m_moduleInformation->nameSection->get(functionIndexSpace))).ascii().data()),
-                WTFMove(context.embedderEntrypointByproducts));
+            embedderToWasmInternalFunction->entrypoint.compilation = makeUnique<Compilation>(
+                FINALIZE_CODE(linkBuffer, JITCompilationPtrTag, "Embedder->WebAssembly entrypoint[%i] %s name %s", functionIndex, signature.toString().ascii().data(), makeString(IndexOrName(functionIndexSpace, m_moduleInformation->nameSection->get(functionIndexSpace))).ascii().data()),
+                nullptr);
         }
     }
 
@@ -322,4 +284,4 @@ bool BBQPlan::didReceiveFunctionData(unsigned, const FunctionData&)
 
 } } // namespace JSC::Wasm
 
-#endif // ENABLE(WEBASSEMBLY)
+#endif // ENABLE(WEBASSEMBLY_B3JIT)

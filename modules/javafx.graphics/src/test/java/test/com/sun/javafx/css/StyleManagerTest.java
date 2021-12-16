@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,6 +29,7 @@ import com.sun.javafx.css.CascadingStyle;
 import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.css.StyleManagerShim;
 import com.sun.javafx.css.StyleMap;
+import javafx.application.Application;
 import javafx.css.CssParser;
 import javafx.css.StyleOrigin;
 import javafx.css.StyleableProperty;
@@ -38,6 +39,7 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.SubScene;
 import javafx.scene.layout.Pane;
+import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 import javafx.scene.shape.Rectangle;
@@ -47,6 +49,7 @@ import org.junit.Test;
 
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -1109,4 +1112,62 @@ public class StyleManagerTest {
         assertFalse("Exception during CSS processing on BG thread", err.get());
     }
 
+    @Test
+    public void testCalculateCheckSum() {
+        StyleManagerShim sm = StyleManagerShim.getInstance();
+        byte[] checksum = sm.calculateCheckSum(getClass().getResource("checksum.css").toExternalForm());
+
+        byte[] expectedChecksum = {60, 26, 67, 14, 103, -63, -62, 42, 14, 40, -44, -103, 1, -60, -90, 18};
+        // "3c1a430e67c1c22a0e28d49901c4a612" // Generated using command 'md5sum checksum.css'
+
+        assertTrue(Arrays.equals(expectedChecksum, checksum));
+    }
+
+    @Test
+    public void testSetSceneUserAgentStylesheetFromDataURI() {
+        var rect = new Rectangle();
+        var root = new StackPane(rect);
+        rect.getStyleClass().add("rect");
+
+        // Stylesheet content: .rect { -fx-fill: blue; }
+        Scene scene = new Scene(root);
+        scene.setUserAgentStylesheet("data:base64,LnJlY3QgeyAtZngtZmlsbDogYmx1ZTsgfQ==");
+        scene.getRoot().applyCss();
+
+        assertEquals(Color.BLUE, rect.getFill());
+    }
+
+    @Test
+    public void testSetSubSceneUserAgentStylesheetFromDataURI() {
+        var rect = new Rectangle();
+        var root = new StackPane(rect);
+        rect.getStyleClass().add("rect");
+
+        // Stylesheet content: .rect { -fx-fill: blue; }
+        var subScene = new SubScene(root, 100, 100);
+        subScene.setUserAgentStylesheet("data:base64,LnJlY3QgeyAtZngtZmlsbDogYmx1ZTsgfQ==");
+
+        Scene scene = new Scene(new StackPane(subScene));
+        scene.getRoot().applyCss();
+
+        assertEquals(Color.BLUE, rect.getFill());
+    }
+
+    @Test
+    public void testSetApplicationUserAgentStylesheetFromDataURI() {
+        var rect = new Rectangle();
+        var root = new StackPane(rect);
+        rect.getStyleClass().add("rect");
+
+        try {
+            // Stylesheet content: .rect { -fx-fill: blue; }
+            Application.setUserAgentStylesheet("data:base64,LnJlY3QgeyAtZngtZmlsbDogYmx1ZTsgfQ==");
+            Scene scene = new Scene(root);
+            scene.getRoot().applyCss();
+
+            assertEquals(Color.BLUE, rect.getFill());
+        } finally {
+            Application.setUserAgentStylesheet("data:,");
+        }
+    }
 }

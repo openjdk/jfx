@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -549,13 +549,15 @@ void generateLoopNotBackwardsDominant(Procedure& proc, std::array<int, 100>& arr
     end->appendNew<Value>(proc, Return, Origin());
 }
 
-static int oneFunction(int* callCount)
+static JSC_DECLARE_JIT_OPERATION_WITHOUT_WTF_INTERNAL(oneFunction, int, (int* callCount));
+JSC_DEFINE_JIT_OPERATION(oneFunction, int, (int* callCount))
 {
     (*callCount)++;
     return 1;
 }
 
-static void noOpFunction()
+static JSC_DECLARE_JIT_OPERATION_WITHOUT_WTF_INTERNAL(noOpFunction, void, ());
+JSC_DEFINE_JIT_OPERATION(noOpFunction, void, ())
 {
 }
 
@@ -571,7 +573,7 @@ void testLICMPure()
         [&] (BasicBlock* loop, Value*) -> Value* {
             return loop->appendNew<CCallValue>(
                 proc, Int32, Origin(), Effects::none(),
-                loop->appendNew<ConstPtrValue>(proc, Origin(), tagCFunctionPtr<void*>(oneFunction, B3CCallPtrTag)),
+                loop->appendNew<ConstPtrValue>(proc, Origin(), tagCFunction<OperationPtrTag>(oneFunction)),
                 loop->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0));
         });
 
@@ -592,11 +594,11 @@ void testLICMPureSideExits()
             effects.exitsSideways = true;
             loop->appendNew<CCallValue>(
                 proc, Void, Origin(), effects,
-                loop->appendNew<ConstPtrValue>(proc, Origin(), tagCFunctionPtr<void*>(noOpFunction, B3CCallPtrTag)));
+                loop->appendNew<ConstPtrValue>(proc, Origin(), tagCFunction<OperationPtrTag>(noOpFunction)));
 
             return loop->appendNew<CCallValue>(
                 proc, Int32, Origin(), Effects::none(),
-                loop->appendNew<ConstPtrValue>(proc, Origin(), tagCFunctionPtr<void*>(oneFunction, B3CCallPtrTag)),
+                loop->appendNew<ConstPtrValue>(proc, Origin(), tagCFunction<OperationPtrTag>(oneFunction)),
                 loop->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0));
         });
 
@@ -617,11 +619,11 @@ void testLICMPureWritesPinned()
             effects.writesPinned = true;
             loop->appendNew<CCallValue>(
                 proc, Void, Origin(), effects,
-                loop->appendNew<ConstPtrValue>(proc, Origin(), tagCFunctionPtr<void*>(noOpFunction, B3CCallPtrTag)));
+                loop->appendNew<ConstPtrValue>(proc, Origin(), tagCFunction<OperationPtrTag>(noOpFunction)));
 
             return loop->appendNew<CCallValue>(
                 proc, Int32, Origin(), Effects::none(),
-                loop->appendNew<ConstPtrValue>(proc, Origin(), tagCFunctionPtr<void*>(oneFunction, B3CCallPtrTag)),
+                loop->appendNew<ConstPtrValue>(proc, Origin(), tagCFunction<OperationPtrTag>(oneFunction)),
                 loop->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0));
         });
 
@@ -642,11 +644,11 @@ void testLICMPureWrites()
             effects.writes = HeapRange(63479);
             loop->appendNew<CCallValue>(
                 proc, Void, Origin(), effects,
-                loop->appendNew<ConstPtrValue>(proc, Origin(), tagCFunctionPtr<void*>(noOpFunction, B3CCallPtrTag)));
+                loop->appendNew<ConstPtrValue>(proc, Origin(), tagCFunction<OperationPtrTag>(noOpFunction)));
 
             return loop->appendNew<CCallValue>(
                 proc, Int32, Origin(), Effects::none(),
-                loop->appendNew<ConstPtrValue>(proc, Origin(), tagCFunctionPtr<void*>(oneFunction, B3CCallPtrTag)),
+                loop->appendNew<ConstPtrValue>(proc, Origin(), tagCFunction<OperationPtrTag>(oneFunction)),
                 loop->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0));
         });
 
@@ -665,7 +667,7 @@ void testLICMReadsLocalState()
             effects.readsLocalState = true;
             return loop->appendNew<CCallValue>(
                 proc, Int32, Origin(), effects,
-                loop->appendNew<ConstPtrValue>(proc, Origin(), tagCFunctionPtr<void*>(oneFunction, B3CCallPtrTag)),
+                loop->appendNew<ConstPtrValue>(proc, Origin(), tagCFunction<OperationPtrTag>(oneFunction)),
                 loop->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0));
         });
 
@@ -686,7 +688,7 @@ void testLICMReadsPinned()
             effects.readsPinned = true;
             return loop->appendNew<CCallValue>(
                 proc, Int32, Origin(), effects,
-                loop->appendNew<ConstPtrValue>(proc, Origin(), tagCFunctionPtr<void*>(oneFunction, B3CCallPtrTag)),
+                loop->appendNew<ConstPtrValue>(proc, Origin(), tagCFunction<OperationPtrTag>(oneFunction)),
                 loop->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0));
         });
 
@@ -707,7 +709,7 @@ void testLICMReads()
             effects.reads = HeapRange::top();
             return loop->appendNew<CCallValue>(
                 proc, Int32, Origin(), effects,
-                loop->appendNew<ConstPtrValue>(proc, Origin(), tagCFunctionPtr<void*>(oneFunction, B3CCallPtrTag)),
+                loop->appendNew<ConstPtrValue>(proc, Origin(), tagCFunction<OperationPtrTag>(oneFunction)),
                 loop->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0));
         });
 
@@ -727,7 +729,7 @@ void testLICMPureNotBackwardsDominant()
         [&] (BasicBlock* loop, Value*) -> Value* {
             return loop->appendNew<CCallValue>(
                 proc, Int32, Origin(), Effects::none(),
-                loop->appendNew<ConstPtrValue>(proc, Origin(), tagCFunctionPtr<void*>(oneFunction, B3CCallPtrTag)),
+                loop->appendNew<ConstPtrValue>(proc, Origin(), tagCFunction<OperationPtrTag>(oneFunction)),
                 loop->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0));
         });
 
@@ -744,7 +746,7 @@ void testLICMPureFoiledByChild()
         [&] (BasicBlock* loop, Value* index) -> Value* {
             return loop->appendNew<CCallValue>(
                 proc, Int32, Origin(), Effects::none(),
-                loop->appendNew<ConstPtrValue>(proc, Origin(), tagCFunctionPtr<void*>(oneFunction, B3CCallPtrTag)),
+                loop->appendNew<ConstPtrValue>(proc, Origin(), tagCFunction<OperationPtrTag>(oneFunction)),
                 loop->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0),
                 index);
         });
@@ -765,7 +767,7 @@ void testLICMPureNotBackwardsDominantFoiledByChild()
         [&] (BasicBlock* loop, Value* index) -> Value* {
             return loop->appendNew<CCallValue>(
                 proc, Int32, Origin(), Effects::none(),
-                loop->appendNew<ConstPtrValue>(proc, Origin(), tagCFunctionPtr<void*>(oneFunction, B3CCallPtrTag)),
+                loop->appendNew<ConstPtrValue>(proc, Origin(), tagCFunction<OperationPtrTag>(oneFunction)),
                 loop->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0),
                 index);
         });
@@ -785,7 +787,7 @@ void testLICMExitsSideways()
             effects.exitsSideways = true;
             return loop->appendNew<CCallValue>(
                 proc, Int32, Origin(), effects,
-                loop->appendNew<ConstPtrValue>(proc, Origin(), tagCFunctionPtr<void*>(oneFunction, B3CCallPtrTag)),
+                loop->appendNew<ConstPtrValue>(proc, Origin(), tagCFunction<OperationPtrTag>(oneFunction)),
                 loop->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0));
         });
 
@@ -804,7 +806,7 @@ void testLICMWritesLocalState()
             effects.writesLocalState = true;
             return loop->appendNew<CCallValue>(
                 proc, Int32, Origin(), effects,
-                loop->appendNew<ConstPtrValue>(proc, Origin(), tagCFunctionPtr<void*>(oneFunction, B3CCallPtrTag)),
+                loop->appendNew<ConstPtrValue>(proc, Origin(), tagCFunction<OperationPtrTag>(oneFunction)),
                 loop->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0));
         });
 
@@ -823,7 +825,7 @@ void testLICMWrites()
             effects.writes = HeapRange(666);
             return loop->appendNew<CCallValue>(
                 proc, Int32, Origin(), effects,
-                loop->appendNew<ConstPtrValue>(proc, Origin(), tagCFunctionPtr<void*>(oneFunction, B3CCallPtrTag)),
+                loop->appendNew<ConstPtrValue>(proc, Origin(), tagCFunction<OperationPtrTag>(oneFunction)),
                 loop->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0));
         });
 
@@ -842,7 +844,7 @@ void testLICMFence()
             effects.fence = true;
             return loop->appendNew<CCallValue>(
                 proc, Int32, Origin(), effects,
-                loop->appendNew<ConstPtrValue>(proc, Origin(), tagCFunctionPtr<void*>(oneFunction, B3CCallPtrTag)),
+                loop->appendNew<ConstPtrValue>(proc, Origin(), tagCFunction<OperationPtrTag>(oneFunction)),
                 loop->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0));
         });
 
@@ -861,7 +863,7 @@ void testLICMWritesPinned()
             effects.writesPinned = true;
             return loop->appendNew<CCallValue>(
                 proc, Int32, Origin(), effects,
-                loop->appendNew<ConstPtrValue>(proc, Origin(), tagCFunctionPtr<void*>(oneFunction, B3CCallPtrTag)),
+                loop->appendNew<ConstPtrValue>(proc, Origin(), tagCFunction<OperationPtrTag>(oneFunction)),
                 loop->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0));
         });
 
@@ -882,7 +884,7 @@ void testLICMControlDependent()
             effects.controlDependent = true;
             return loop->appendNew<CCallValue>(
                 proc, Int32, Origin(), effects,
-                loop->appendNew<ConstPtrValue>(proc, Origin(), tagCFunctionPtr<void*>(oneFunction, B3CCallPtrTag)),
+                loop->appendNew<ConstPtrValue>(proc, Origin(), tagCFunction<OperationPtrTag>(oneFunction)),
                 loop->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0));
         });
 
@@ -904,7 +906,7 @@ void testLICMControlDependentNotBackwardsDominant()
             effects.controlDependent = true;
             return loop->appendNew<CCallValue>(
                 proc, Int32, Origin(), effects,
-                loop->appendNew<ConstPtrValue>(proc, Origin(), tagCFunctionPtr<void*>(oneFunction, B3CCallPtrTag)),
+                loop->appendNew<ConstPtrValue>(proc, Origin(), tagCFunction<OperationPtrTag>(oneFunction)),
                 loop->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0));
         });
 
@@ -923,13 +925,13 @@ void testLICMControlDependentSideExits()
             effects.exitsSideways = true;
             loop->appendNew<CCallValue>(
                 proc, Void, Origin(), effects,
-                loop->appendNew<ConstPtrValue>(proc, Origin(), tagCFunctionPtr<void*>(noOpFunction, B3CCallPtrTag)));
+                loop->appendNew<ConstPtrValue>(proc, Origin(), tagCFunction<OperationPtrTag>(noOpFunction)));
 
             effects = Effects::none();
             effects.controlDependent = true;
             return loop->appendNew<CCallValue>(
                 proc, Int32, Origin(), effects,
-                loop->appendNew<ConstPtrValue>(proc, Origin(), tagCFunctionPtr<void*>(oneFunction, B3CCallPtrTag)),
+                loop->appendNew<ConstPtrValue>(proc, Origin(), tagCFunction<OperationPtrTag>(oneFunction)),
                 loop->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0));
         });
 
@@ -948,13 +950,13 @@ void testLICMReadsPinnedWritesPinned()
             effects.writesPinned = true;
             loop->appendNew<CCallValue>(
                 proc, Void, Origin(), effects,
-                loop->appendNew<ConstPtrValue>(proc, Origin(), tagCFunctionPtr<void*>(noOpFunction, B3CCallPtrTag)));
+                loop->appendNew<ConstPtrValue>(proc, Origin(), tagCFunction<OperationPtrTag>(noOpFunction)));
 
             effects = Effects::none();
             effects.readsPinned = true;
             return loop->appendNew<CCallValue>(
                 proc, Int32, Origin(), effects,
-                loop->appendNew<ConstPtrValue>(proc, Origin(), tagCFunctionPtr<void*>(oneFunction, B3CCallPtrTag)),
+                loop->appendNew<ConstPtrValue>(proc, Origin(), tagCFunction<OperationPtrTag>(oneFunction)),
                 loop->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0));
         });
 
@@ -975,13 +977,13 @@ void testLICMReadsWritesDifferentHeaps()
             effects.writes = HeapRange(6436);
             loop->appendNew<CCallValue>(
                 proc, Void, Origin(), effects,
-                loop->appendNew<ConstPtrValue>(proc, Origin(), tagCFunctionPtr<void*>(noOpFunction, B3CCallPtrTag)));
+                loop->appendNew<ConstPtrValue>(proc, Origin(), tagCFunction<OperationPtrTag>(noOpFunction)));
 
             effects = Effects::none();
             effects.reads = HeapRange(4886);
             return loop->appendNew<CCallValue>(
                 proc, Int32, Origin(), effects,
-                loop->appendNew<ConstPtrValue>(proc, Origin(), tagCFunctionPtr<void*>(oneFunction, B3CCallPtrTag)),
+                loop->appendNew<ConstPtrValue>(proc, Origin(), tagCFunction<OperationPtrTag>(oneFunction)),
                 loop->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0));
         });
 
@@ -1000,13 +1002,13 @@ void testLICMReadsWritesOverlappingHeaps()
             effects.writes = HeapRange(6436, 74458);
             loop->appendNew<CCallValue>(
                 proc, Void, Origin(), effects,
-                loop->appendNew<ConstPtrValue>(proc, Origin(), tagCFunctionPtr<void*>(noOpFunction, B3CCallPtrTag)));
+                loop->appendNew<ConstPtrValue>(proc, Origin(), tagCFunction<OperationPtrTag>(noOpFunction)));
 
             effects = Effects::none();
             effects.reads = HeapRange(48864, 78239);
             return loop->appendNew<CCallValue>(
                 proc, Int32, Origin(), effects,
-                loop->appendNew<ConstPtrValue>(proc, Origin(), tagCFunctionPtr<void*>(oneFunction, B3CCallPtrTag)),
+                loop->appendNew<ConstPtrValue>(proc, Origin(), tagCFunction<OperationPtrTag>(oneFunction)),
                 loop->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0));
         });
 
@@ -1023,7 +1025,7 @@ void testLICMDefaultCall()
         [&] (BasicBlock* loop, Value*) -> Value* {
             return loop->appendNew<CCallValue>(
                 proc, Int32, Origin(),
-                loop->appendNew<ConstPtrValue>(proc, Origin(), tagCFunctionPtr<void*>(oneFunction, B3CCallPtrTag)),
+                loop->appendNew<ConstPtrValue>(proc, Origin(), tagCFunction<OperationPtrTag>(oneFunction)),
                 loop->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0));
         });
 
@@ -1340,7 +1342,10 @@ void testFloatEqualOrUnorderedDontFold()
     }
 }
 
-static void functionNineArgs(int32_t, void*, void*, void*, void*, void*, void*, void*, void*) { }
+static JSC_DECLARE_JIT_OPERATION_WITHOUT_WTF_INTERNAL(functionNineArgs, void, (int32_t, void*, void*, void*, void*, void*, void*, void*, void*));
+JSC_DEFINE_JIT_OPERATION(functionNineArgs, void, (int32_t, void*, void*, void*, void*, void*, void*, void*, void*))
+{
+}
 
 void testShuffleDoesntTrashCalleeSaves()
 {
@@ -1410,7 +1415,7 @@ void testShuffleDoesntTrashCalleeSaves()
 
     unlikely->appendNew<CCallValue>(
         proc, Void, Origin(),
-        unlikely->appendNew<ConstPtrValue>(proc, Origin(), tagCFunctionPtr<void*>(functionNineArgs, B3CCallPtrTag)),
+        unlikely->appendNew<ConstPtrValue>(proc, Origin(), tagCFunction<OperationPtrTag>(functionNineArgs)),
         constNumber, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
 
     PatchpointValue* voidPatch = unlikely->appendNew<PatchpointValue>(proc, Void, Origin());
@@ -1468,16 +1473,16 @@ void testReportUsedRegistersLateUseFollowedByEarlyDefDoesNotMarkUseAsDead()
 
     {
         // Make every reg 42 (just needs to be a value other than 10).
-        PatchpointValue* patchpoint = root->appendNew<PatchpointValue>(proc, Void, Origin());
         Value* const42 = root->appendNew<Const32Value>(proc, Origin(), 42);
+        PatchpointValue* patchpoint = root->appendNew<PatchpointValue>(proc, Void, Origin());
         for (Reg reg : allRegs)
             patchpoint->append(const42, ValueRep::reg(reg));
         patchpoint->setGenerator([&] (CCallHelpers&, const StackmapGenerationParams&) { });
     }
 
     {
-        PatchpointValue* patchpoint = root->appendNew<PatchpointValue>(proc, Void, Origin());
         Value* const10 = root->appendNew<Const32Value>(proc, Origin(), 10);
+        PatchpointValue* patchpoint = root->appendNew<PatchpointValue>(proc, Void, Origin());
         for (Reg reg : allRegs)
             patchpoint->append(const10, ValueRep::lateReg(reg));
         patchpoint->setGenerator([&] (CCallHelpers& jit, const StackmapGenerationParams&) {
@@ -1609,6 +1614,55 @@ static void testSimpleTuplePairStack(unsigned first, int64_t second)
     root->appendNew<Value>(proc, Return, Origin(), root->appendNew<Value>(proc, Add, Origin(), i32, i64));
 
     CHECK_EQ(compileAndRun<int64_t>(proc), first + second);
+}
+
+template<B3::TypeKind kind, typename ResultType>
+static void testBottomTupleValue()
+{
+    Procedure proc;
+    BasicBlock* root = proc.addBlock();
+
+    auto* tuple = root->appendNew<BottomTupleValue>(proc, Origin(), proc.addTuple({
+        kind, kind, kind, kind, kind,
+        kind, kind, kind, kind, kind,
+        kind, kind, kind, kind, kind,
+        kind, kind, kind, kind, kind,
+        kind, kind, kind, kind, kind,
+        kind, kind, kind, kind, kind,
+        kind, kind, kind, kind, kind,
+        kind, kind, kind, kind, kind,
+        kind, kind, kind, kind, kind,
+        kind, kind, kind, kind, kind,
+    }));
+    Value* result = root->appendNew<ExtractValue>(proc, Origin(), kind, tuple, 0);
+    root->appendNew<Value>(proc, Return, Origin(), result);
+    CHECK_EQ(compileAndRun<ResultType>(proc), 0);
+}
+
+template<B3::TypeKind kind, typename ResultType>
+static void testTouchAllBottomTupleValue()
+{
+    Procedure proc;
+    BasicBlock* root = proc.addBlock();
+
+    Type tupleType = proc.addTuple({
+        kind, kind, kind, kind, kind,
+        kind, kind, kind, kind, kind,
+        kind, kind, kind, kind, kind,
+        kind, kind, kind, kind, kind,
+        kind, kind, kind, kind, kind,
+        kind, kind, kind, kind, kind,
+        kind, kind, kind, kind, kind,
+        kind, kind, kind, kind, kind,
+        kind, kind, kind, kind, kind,
+        kind, kind, kind, kind, kind,
+    });
+    auto* tuple = root->appendNew<BottomTupleValue>(proc, Origin(), tupleType);
+    Value* result = root->appendNew<ExtractValue>(proc, Origin(), kind, tuple, 0);
+    for (unsigned index = 1; index < proc.resultCount(tupleType); ++index)
+        result = root->appendNew<Value>(proc, Add, Origin(), result, root->appendNew<ExtractValue>(proc, Origin(), kind, tuple, index));
+    root->appendNew<Value>(proc, Return, Origin(), result);
+    CHECK_EQ(compileAndRun<ResultType>(proc), 0);
 }
 
 template<bool shouldFixSSA>
@@ -1811,6 +1865,14 @@ void addTupleTests(const char* filter, Deque<RefPtr<SharedTask<void()>>>& tasks)
     RUN_BINARY(testSimpleTuplePair, int32Operands(), int64Operands());
     RUN_BINARY(testSimpleTuplePairUnused, int32Operands(), int64Operands());
     RUN_BINARY(testSimpleTuplePairStack, int32Operands(), int64Operands());
+    RUN((testBottomTupleValue<Int32, int32_t>)());
+    RUN((testBottomTupleValue<Int64, int64_t>)());
+    RUN((testBottomTupleValue<Float, float>)());
+    RUN((testBottomTupleValue<Double, double>)());
+    RUN((testTouchAllBottomTupleValue<Int32, int32_t>)());
+    RUN((testTouchAllBottomTupleValue<Int64, int64_t>)());
+    RUN((testTouchAllBottomTupleValue<Float, float>)());
+    RUN((testTouchAllBottomTupleValue<Double, double>)());
     // use int64 as second argument because checking for NaN is annoying and doesn't really matter for this test.
     RUN_BINARY(tailDupedTuplePair<true>, int32Operands(), int64Operands());
     RUN_BINARY(tailDupedTuplePair<false>, int32Operands(), int64Operands());

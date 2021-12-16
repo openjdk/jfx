@@ -49,17 +49,15 @@ public:
         return Structure::create(vm, globalObject, prototype, TypeInfo(InternalFunctionType, StructureFlags), info());
     }
 
-protected:
-    void finishCreation(VM&, JSGlobalObject*, ArrayPrototype*, GetterSetter* speciesSymbol);
-
 private:
     ArrayConstructor(VM&, Structure*);
+    void finishCreation(VM&, JSGlobalObject*, ArrayPrototype*, GetterSetter* speciesSymbol);
 };
 STATIC_ASSERT_ISO_SUBSPACE_SHARABLE(ArrayConstructor, InternalFunction);
 
 JSArray* constructArrayWithSizeQuirk(JSGlobalObject*, ArrayAllocationProfile*, JSValue length, JSValue prototype = JSValue());
 
-EncodedJSValue JSC_HOST_CALL arrayConstructorPrivateFuncIsArraySlow(JSGlobalObject*, CallFrame*);
+JSC_DECLARE_HOST_FUNCTION(arrayConstructorPrivateFuncIsArraySlow);
 bool isArraySlow(JSGlobalObject*, ProxyObject* argument);
 
 // ES6 7.2.2

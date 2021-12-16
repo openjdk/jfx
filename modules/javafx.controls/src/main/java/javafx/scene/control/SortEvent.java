@@ -32,6 +32,7 @@ import javafx.event.EventType;
 
 /**
  * Event related to {@link TableView} and {@link TreeTableView} sorting.
+ * @param <C> the type of control
  * @since JavaFX 8.0
  */
 public class SortEvent<C> extends Event {
@@ -42,6 +43,11 @@ public class SortEvent<C> extends Event {
     public static final EventType<SortEvent> ANY =
             new EventType<SortEvent> (Event.ANY, "SORT");
 
+    /**
+     * Gets the default singleton {@code SortEvent}.
+     * @param <C> the type of control
+     * @return the default singleton {@code SortEvent}
+     */
     @SuppressWarnings("unchecked")
     public static <C> EventType<SortEvent<C>> sortEvent() {
         return (EventType<SortEvent<C>>) SORT_EVENT;
@@ -49,19 +55,16 @@ public class SortEvent<C> extends Event {
 
     private static final EventType<?> SORT_EVENT = new EventType<>(SortEvent.ANY, "SORT_EVENT");
 
-//    /**
-//     * Construct a new {@code Event} with the specified event source, target
-//     * and type. If the source or target is set to {@code null}, it is replaced
-//     * by the {@code NULL_SOURCE_TARGET} value.
-//     *
-//     * @param source the event source which sent the event
-//     * @param target the event source which sent the event
-//     * @param type the event type
-//     * @param target the target of the scroll to operation
-//     */
+    /**
+     * Constructs a new {@code SortEvent} with the specified event source and target.
+     * If the source or target is set to {@code null}, it is replaced by
+     * the {@code NULL_SOURCE_TARGET} value.
+     *
+     * @param source the event source which sent the event
+     * @param target the target of the event
+     */
     public SortEvent(@NamedArg("source") C source, @NamedArg("target") EventTarget target) {
         super(source, target, sortEvent());
-
     }
 
     @SuppressWarnings("unchecked")

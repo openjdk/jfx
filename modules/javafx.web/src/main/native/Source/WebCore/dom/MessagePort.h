@@ -45,7 +45,7 @@ namespace WebCore {
 
 class Frame;
 
-class MessagePort final : public ActiveDOMObject, public EventTargetWithInlineData, public CanMakeWeakPtr<MessagePort, WeakPtrFactoryInitialization::Eager> {
+class MessagePort final : public ActiveDOMObject, public EventTargetWithInlineData {
     WTF_MAKE_NONCOPYABLE(MessagePort);
     WTF_MAKE_ISO_ALLOCATED(MessagePort);
 public:
@@ -82,12 +82,6 @@ public:
     WEBCORE_EXPORT void ref() const;
     WEBCORE_EXPORT void deref() const;
 
-    // ActiveDOMObject
-    const char* activeDOMObjectName() const final;
-    void contextDestroyed() final;
-    void stop() final { close(); }
-    bool hasPendingActivity() const final;
-
     WEBCORE_EXPORT bool isLocallyReachable() const;
 
     // EventTargetWithInlineData.
@@ -98,13 +92,20 @@ public:
 
     void dispatchEvent(Event&) final;
 
+    TransferredMessagePort disentangle();
+    static Ref<MessagePort> entangle(ScriptExecutionContext&, TransferredMessagePort&&);
+
 private:
     explicit MessagePort(ScriptExecutionContext&, const MessagePortIdentifier& local, const MessagePortIdentifier& remote);
 
     bool addEventListener(const AtomString& eventType, Ref<EventListener>&&, const AddEventListenerOptions&) final;
-    bool removeEventListener(const AtomString& eventType, EventListener&, const ListenerOptions&) final;
+    bool removeEventListener(const AtomString& eventType, EventListener&, const EventListenerOptions&) final;
 
-    void disentangle();
+    // ActiveDOMObject
+    const char* activeDOMObjectName() const final;
+    void contextDestroyed() final;
+    void stop() final { close(); }
+    bool virtualHasPendingActivity() const final;
 
     void registerLocalActivity();
 

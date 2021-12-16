@@ -82,7 +82,7 @@ private:
     bool processingData() const final;
     void prepareToStopParsing() final;
     void stopParsing() final;
-    bool isWaitingForScripts() const override;
+    bool isWaitingForScripts() const;
     bool isExecutingScript() const final;
     bool hasScriptsWaitingForStylesheets() const final;
     void executeScriptsWaitingForStylesheets() final;
@@ -143,6 +143,7 @@ private:
 
     bool m_endWasDelayed { false };
     unsigned m_pumpSessionNestingLevel { 0 };
+    bool m_shouldEmitTracePoints { false };
 };
 
 inline HTMLTokenizer& HTMLDocumentParser::tokenizer()

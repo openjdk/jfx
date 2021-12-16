@@ -105,9 +105,9 @@ Optional<FloatRect> RenderSVGText::computeFloatVisibleRectInContainer(const Floa
     return SVGRenderSupport::computeFloatVisibleRectInContainer(*this, rect, container, context);
 }
 
-void RenderSVGText::mapLocalToContainer(const RenderLayerModelObject* repaintContainer, TransformState& transformState, MapCoordinatesFlags, bool* wasFixed) const
+void RenderSVGText::mapLocalToContainer(const RenderLayerModelObject* ancestorContainer, TransformState& transformState, MapCoordinatesFlags, bool* wasFixed) const
 {
-    SVGRenderSupport::mapLocalToContainer(*this, repaintContainer, transformState, wasFixed);
+    SVGRenderSupport::mapLocalToContainer(*this, ancestorContainer, transformState, wasFixed);
 }
 
 const RenderObject* RenderSVGText::pushMappingToContainer(const RenderLayerModelObject* ancestorToStopAt, RenderGeometryMap& geometryMap) const
@@ -440,6 +440,8 @@ bool RenderSVGText::nodeAtFloatPoint(const HitTestRequest& request, HitTestResul
             if (!SVGRenderSupport::pointInClippingArea(*this, localPoint))
                 return false;
 
+            SVGHitTestCycleDetectionScope hitTestScope(*this);
+
             HitTestLocation hitTestLocation(LayoutPoint(flooredIntPoint(localPoint)));
             return RenderBlock::nodeAtPoint(request, result, hitTestLocation, LayoutPoint(), hitTestAction);
         }
@@ -458,14 +460,14 @@ VisiblePosition RenderSVGText::positionForPoint(const LayoutPoint& pointInConten
 {
     RootInlineBox* rootBox = firstRootBox();
     if (!rootBox)
-        return createVisiblePosition(0, DOWNSTREAM);
+        return createVisiblePosition(0, Affinity::Downstream);
 
     ASSERT(!rootBox->nextRootBox());
     ASSERT(childrenInline());
 
     InlineBox* closestBox = downcast<SVGRootInlineBox>(*rootBox).closestLeafChildForPosition(pointInContents);
     if (!closestBox)
-        return createVisiblePosition(0, DOWNSTREAM);
+        return createVisiblePosition(0, Affinity::Downstream);
 
     return closestBox->renderer().positionForPoint({ pointInContents.x(), LayoutUnit(closestBox->y()) }, fragment);
 }

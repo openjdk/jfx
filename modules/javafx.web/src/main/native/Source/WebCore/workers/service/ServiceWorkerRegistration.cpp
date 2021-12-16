@@ -49,7 +49,7 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(ServiceWorkerRegistration);
 Ref<ServiceWorkerRegistration> ServiceWorkerRegistration::getOrCreate(ScriptExecutionContext& context, Ref<ServiceWorkerContainer>&& container, ServiceWorkerRegistrationData&& data)
 {
     if (auto* registration = container->registration(data.identifier)) {
-        ASSERT(!registration->m_isStopped);
+        ASSERT(!registration->isContextStopped());
         return *registration;
     }
 
@@ -71,7 +71,7 @@ ServiceWorkerRegistration::ServiceWorkerRegistration(ScriptExecutionContext& con
     if (m_registrationData.activeWorker)
         m_activeWorker = ServiceWorker::getOrCreate(context, WTFMove(*m_registrationData.activeWorker));
 
-    REGISTRATION_RELEASE_LOG_IF_ALLOWED("ServiceWorkerRegistration: ID %llu, installing: %llu, waiting: %llu, active: %llu", identifier().toUInt64(), m_installingWorker ? m_installingWorker->identifier().toUInt64() : 0, m_waitingWorker ? m_waitingWorker->identifier().toUInt64() : 0, m_activeWorker ? m_activeWorker->identifier().toUInt64() : 0);
+    REGISTRATION_RELEASE_LOG_IF_ALLOWED("ServiceWorkerRegistration: ID %llu, installing=%llu, waiting=%llu, active=%llu", identifier().toUInt64(), m_installingWorker ? m_installingWorker->identifier().toUInt64() : 0, m_waitingWorker ? m_waitingWorker->identifier().toUInt64() : 0, m_activeWorker ? m_activeWorker->identifier().toUInt64() : 0);
 
     m_container->addRegistration(*this);
 
@@ -112,7 +112,7 @@ ServiceWorker* ServiceWorkerRegistration::getNewestWorker() const
 
 const String& ServiceWorkerRegistration::scope() const
 {
-    return m_registrationData.scopeURL;
+    return m_registrationData.scopeURL.string();
 }
 
 ServiceWorkerUpdateViaCache ServiceWorkerRegistration::updateViaCache() const
@@ -137,7 +137,7 @@ void ServiceWorkerRegistration::setUpdateViaCache(ServiceWorkerUpdateViaCache up
 
 void ServiceWorkerRegistration::update(Ref<DeferredPromise>&& promise)
 {
-    if (m_isStopped) {
+    if (isContextStopped()) {
         promise->reject(Exception(InvalidStateError));
         return;
     }
@@ -148,18 +148,17 @@ void ServiceWorkerRegistration::update(Ref<DeferredPromise>&& promise)
         return;
     }
 
-    // FIXME: Support worker types.
-    m_container->updateRegistration(m_registrationData.scopeURL, newestWorker->scriptURL(), WorkerType::Classic, WTFMove(promise));
+    m_container->updateRegistration(m_registrationData.scopeURL, newestWorker->scriptURL(), newestWorker->workerType(), WTFMove(promise));
 }
 
 void ServiceWorkerRegistration::unregister(Ref<DeferredPromise>&& promise)
 {
-    if (m_isStopped) {
+    if (isContextStopped()) {
         promise->reject(Exception(InvalidStateError));
         return;
     }
 
-    m_container->removeRegistration(m_registrationData.scopeURL, WTFMove(promise));
+    m_container->unregisterRegistration(identifier(), WTFMove(promise));
 }
 
 void ServiceWorkerRegistration::updateStateFromServer(ServiceWorkerRegistrationState state, RefPtr<ServiceWorker>&& serviceWorker)
@@ -182,7 +181,7 @@ void ServiceWorkerRegistration::updateStateFromServer(ServiceWorkerRegistrationS
 
 void ServiceWorkerRegistration::queueTaskToFireUpdateFoundEvent()
 {
-    if (m_isStopped)
+    if (isContextStopped())
         return;
 
     REGISTRATION_RELEASE_LOG_IF_ALLOWED("fireUpdateFoundEvent: Firing updatefound event for registration %llu", identifier().toUInt64());
@@ -207,16 +206,12 @@ const char* ServiceWorkerRegistration::activeDOMObjectName() const
 
 void ServiceWorkerRegistration::stop()
 {
-    m_isStopped = true;
     removeAllEventListeners();
 }
 
-bool ServiceWorkerRegistration::hasPendingActivity() const
+bool ServiceWorkerRegistration::virtualHasPendingActivity() const
 {
-    if (!m_isStopped && getNewestWorker() && hasEventListeners())
-        return true;
-
-    return ActiveDOMObject::hasPendingActivity();
+    return getNewestWorker() && hasEventListeners();
 }
 
 } // namespace WebCore

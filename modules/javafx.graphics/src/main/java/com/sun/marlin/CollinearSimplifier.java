@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,26 +25,26 @@
 
 package com.sun.marlin;
 
-import com.sun.javafx.geom.PathConsumer2D;
 
-public final class CollinearSimplifier implements PathConsumer2D {
+
+public final class CollinearSimplifier implements DPathConsumer2D {
 
     enum SimplifierState {
 
         Empty, PreviousPoint, PreviousLine
     };
     // slope precision threshold
-    static final float EPS = 1e-4f; // aaime proposed 1e-3f
+    static final double EPS = 1e-4d; // aaime proposed 1e-3d
 
-    PathConsumer2D delegate;
+    DPathConsumer2D delegate;
     SimplifierState state;
-    float px1, py1, px2, py2;
-    float pslope;
+    double px1, py1, px2, py2;
+    double pslope;
 
     CollinearSimplifier() {
     }
 
-    public CollinearSimplifier init(PathConsumer2D delegate) {
+    public CollinearSimplifier init(DPathConsumer2D delegate) {
         this.delegate = delegate;
         this.state = SimplifierState.Empty;
 
@@ -66,7 +66,7 @@ public final class CollinearSimplifier implements PathConsumer2D {
     }
 
     @Override
-    public void quadTo(float x1, float y1, float x2, float y2) {
+    public void quadTo(double x1, double y1, double x2, double y2) {
         emitStashedLine();
         delegate.quadTo(x1, y1, x2, y2);
         // final end point:
@@ -76,8 +76,8 @@ public final class CollinearSimplifier implements PathConsumer2D {
     }
 
     @Override
-    public void curveTo(float x1, float y1, float x2, float y2,
-                        float x3, float y3) {
+    public void curveTo(double x1, double y1, double x2, double y2,
+                        double x3, double y3) {
         emitStashedLine();
         delegate.curveTo(x1, y1, x2, y2, x3, y3);
         // final end point:
@@ -87,7 +87,7 @@ public final class CollinearSimplifier implements PathConsumer2D {
     }
 
     @Override
-    public void moveTo(float x, float y) {
+    public void moveTo(double x, double y) {
         emitStashedLine();
         delegate.moveTo(x, y);
         state = SimplifierState.PreviousPoint;
@@ -96,7 +96,7 @@ public final class CollinearSimplifier implements PathConsumer2D {
     }
 
     @Override
-    public void lineTo(final float x, final float y) {
+    public void lineTo(final double x, final double y) {
         switch (state) {
             case Empty:
                 delegate.lineTo(x, y);
@@ -113,7 +113,7 @@ public final class CollinearSimplifier implements PathConsumer2D {
                 return;
 
             case PreviousLine:
-                final float slope = getSlope(px2, py2, x, y);
+                final double slope = getSlope(px2, py2, x, y);
                 // test for collinearity
                 if ((slope == pslope) || (Math.abs(pslope - slope) < EPS)) {
                     // merge segments
@@ -139,11 +139,11 @@ public final class CollinearSimplifier implements PathConsumer2D {
         }
     }
 
-    private static float getSlope(float x1, float y1, float x2, float y2) {
-        float dy = y2 - y1;
-        if (dy == 0.0f) {
-            return (x2 > x1) ? Float.POSITIVE_INFINITY
-                   : Float.NEGATIVE_INFINITY;
+    private static double getSlope(double x1, double y1, double x2, double y2) {
+        double dy = y2 - y1;
+        if (dy == 0.0d) {
+            return (x2 > x1) ? Double.POSITIVE_INFINITY
+                   : Double.NEGATIVE_INFINITY;
         }
         return (x2 - x1) / dy;
     }

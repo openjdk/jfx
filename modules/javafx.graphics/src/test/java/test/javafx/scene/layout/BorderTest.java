@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -560,5 +560,19 @@ public class BorderTest {
     @Test public void notEqualWithRandom() {
         Border a = new Border((BorderStroke[])null, null);
         assertFalse(a.equals("Some random String"));
+    }
+
+    @Test
+    public void testSingleStroke() {
+        var border1 = Border.stroke(Color.BEIGE);
+        var border2 = new Border(new BorderStroke(Color.BEIGE, BorderStrokeStyle.SOLID, null, null));
+        assertEquals("The factory method should give the same result as the constructor", border2, border1);
+    }
+
+    @Test
+    public void testSingleStrokeWithNullPaint() {
+        var border1 = Border.stroke(null);
+        var border2 = new Border(new BorderStroke(null, BorderStrokeStyle.SOLID, null, null));
+        assertEquals("The factory method should give the same result as the constructor", border2, border1);
     }
 }

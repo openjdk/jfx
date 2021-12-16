@@ -206,6 +206,7 @@ public:
     size_t reverseFind(const String& string, unsigned start = MaxLength) const { return m_impl ? m_impl->reverseFind(string.impl(), start) : notFound; }
 
     WTF_EXPORT_PRIVATE Vector<UChar> charactersWithNullTermination() const;
+    WTF_EXPORT_PRIVATE Vector<UChar> charactersWithoutNullTermination() const;
 
     WTF_EXPORT_PRIVATE UChar32 characterStartingAt(unsigned) const;
 
@@ -263,7 +264,7 @@ public:
     WTF_EXPORT_PRIVATE String simplifyWhiteSpace(CodeUnitMatchFunction) const;
 
     WTF_EXPORT_PRIVATE String stripLeadingAndTrailingCharacters(CodeUnitMatchFunction) const;
-    WTF_EXPORT_PRIVATE String removeCharacters(CodeUnitMatchFunction) const;
+    template<typename Predicate> String removeCharacters(const Predicate&) const;
 
     // Returns the string with case folded for case insensitive comparison.
     // Use convertToASCIILowercase instead if ASCII case insensitive comparison is desired.
@@ -322,7 +323,12 @@ public:
 #endif
 
 #ifdef __OBJC__
+#if HAVE(SAFARI_FOR_WEBKIT_DEVELOPMENT_REQUIRING_EXTRA_SYMBOLS)
     WTF_EXPORT_PRIVATE String(NSString *);
+#else
+    String(NSString *string)
+        : String((__bridge CFStringRef)string) { }
+#endif
 
     // This conversion converts the null string to an empty NSString rather than to nil.
     // Given Cocoa idioms, this is a more useful default. Clients that need to preserve the
@@ -336,14 +342,12 @@ public:
     WTF_EXPORT_PRIVATE static String fromJavaString(JNIEnv *, jstring);
 #endif
 
-#if OS(WINDOWS) && !PLATFORM(JAVA)
-#if U_ICU_VERSION_MAJOR_NUM >= 59
+#if OS(WINDOWS)
     String(const wchar_t* characters, unsigned length)
         : String(ucharFrom(characters), length) { }
 
     String(const wchar_t* characters)
         : String(ucharFrom(characters)) { }
-#endif
 
     WTF_EXPORT_PRIVATE Vector<wchar_t> wideCharacters() const;
 #endif
@@ -361,10 +365,13 @@ public:
     static String fromUTF8(const char* string) { return fromUTF8(reinterpret_cast<const LChar*>(string)); };
     WTF_EXPORT_PRIVATE static String fromUTF8(const CString&);
     static String fromUTF8(const Vector<LChar>& characters);
+    static String fromUTF8ReplacingInvalidSequences(const LChar*, size_t);
 
     // Tries to convert the passed in string to UTF-8, but will fall back to Latin-1 if the string is not valid UTF-8.
     WTF_EXPORT_PRIVATE static String fromUTF8WithLatin1Fallback(const LChar*, size_t);
     static String fromUTF8WithLatin1Fallback(const char* characters, size_t length) { return fromUTF8WithLatin1Fallback(reinterpret_cast<const LChar*>(characters), length); };
+
+    WTF_EXPORT_PRIVATE static String fromCodePoint(UChar32 codePoint);
 
     // Determines the writing direction using the Unicode Bidi Algorithm rules P2 and P3.
     UCharDirection defaultWritingDirection(bool* hasStrongDirectionality = nullptr) const;
@@ -452,7 +459,7 @@ WTF_EXPORT_PRIVATE const String& emptyString();
 WTF_EXPORT_PRIVATE const String& nullString();
 
 template<typename> struct DefaultHash;
-template<> struct DefaultHash<String> { using Hash = StringHash; };
+template<> struct DefaultHash<String>;
 template<> struct VectorTraits<String> : VectorTraitsBase<false, void> {
     static constexpr bool canInitializeWithMemset = true;
     static constexpr bool canMoveWithMemcpy = true;
@@ -463,6 +470,13 @@ template<> struct IntegerToStringConversionTrait<String> {
     using AdditionalArgumentType = void;
     static String flush(LChar* characters, unsigned length, void*) { return { characters, length }; }
 };
+
+#ifdef __OBJC__
+
+WTF_EXPORT_PRIVATE RetainPtr<id> makeNSArrayElement(const String&);
+WTF_EXPORT_PRIVATE Optional<String> makeVectorElement(const String*, id);
+
+#endif
 
 // Definitions of string operations
 
@@ -634,6 +648,12 @@ inline String String::fromUTF8(const Vector<LChar>& characters)
     if (characters.isEmpty())
         return emptyString();
     return fromUTF8(characters.data(), characters.size());
+}
+
+template<typename Predicate>
+String String::removeCharacters(const Predicate& findMatch) const
+{
+    return m_impl ? m_impl->removeCharacters(findMatch) : String { };
 }
 
 template<unsigned length> inline bool equalLettersIgnoringASCIICase(const String& string, const char (&lowercaseLetters)[length])

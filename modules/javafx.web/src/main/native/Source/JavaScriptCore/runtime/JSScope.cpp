@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2017 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2012-2021 Apple Inc. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,12 +27,10 @@
 #include "JSScope.h"
 
 #include "AbstractModuleRecord.h"
-#include "Exception.h"
-#include "JSGlobalObject.h"
+#include "JSCInlines.h"
 #include "JSLexicalEnvironment.h"
 #include "JSModuleEnvironment.h"
 #include "JSWithScope.h"
-#include "JSCInlines.h"
 #include "VariableEnvironment.h"
 
 namespace JSC {
@@ -41,13 +39,16 @@ STATIC_ASSERT_IS_TRIVIALLY_DESTRUCTIBLE(JSScope);
 
 const ClassInfo JSScope::s_info = { "Scope", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSScope) };
 
-void JSScope::visitChildren(JSCell* cell, SlotVisitor& visitor)
+template<typename Visitor>
+void JSScope::visitChildrenImpl(JSCell* cell, Visitor& visitor)
 {
     JSScope* thisObject = jsCast<JSScope*>(cell);
     ASSERT_GC_OBJECT_INHERITS(thisObject, info());
     Base::visitChildren(thisObject, visitor);
     visitor.append(thisObject->m_next);
 }
+
+DEFINE_VISIT_CHILDREN(JSScope);
 
 // Returns true if we found enough information to terminate optimization.
 static inline bool abstractAccess(JSGlobalObject* globalObject, JSScope* scope, const Identifier& ident, GetOrPut getOrPut, size_t depth, bool& needsVarInjectionChecks, ResolveOp& op, InitializationMode initializationMode)
@@ -67,11 +68,11 @@ static inline bool abstractAccess(JSGlobalObject* globalObject, JSScope* scope, 
                 ASSERT(!entry.isNull());
                 if (entry.isReadOnly() && getOrPut == Put) {
                     // We know the property will be at this lexical environment scope, but we don't know how to cache it.
-                    op = ResolveOp(Dynamic, 0, 0, 0, 0, 0);
+                    op = ResolveOp(Dynamic, 0, nullptr, nullptr, nullptr, 0);
                     return true;
                 }
 
-                op = ResolveOp(makeType(ClosureVar, needsVarInjectionChecks), depth, 0, lexicalEnvironment, entry.watchpointSet(), entry.scopeOffset().offset());
+                op = ResolveOp(makeType(ClosureVar, needsVarInjectionChecks), depth, nullptr, lexicalEnvironment, entry.watchpointSet(), entry.scopeOffset().offset());
                 return true;
             }
         }
@@ -90,7 +91,7 @@ static inline bool abstractAccess(JSGlobalObject* globalObject, JSScope* scope, 
                 ASSERT(iter != symbolTable->end(locker));
                 SymbolTableEntry& entry = iter->value;
                 ASSERT(!entry.isNull());
-                op = ResolveOp(makeType(ModuleVar, needsVarInjectionChecks), depth, 0, importedEnvironment, entry.watchpointSet(), entry.scopeOffset().offset(), resolution.localName.impl());
+                op = ResolveOp(makeType(ModuleVar, needsVarInjectionChecks), depth, nullptr, importedEnvironment, entry.watchpointSet(), entry.scopeOffset().offset(), resolution.localName.impl());
                 return true;
             }
         }
@@ -110,7 +111,7 @@ static inline bool abstractAccess(JSGlobalObject* globalObject, JSScope* scope, 
             ASSERT(!entry.isNull());
             if (getOrPut == Put && entry.isReadOnly() && !isInitialization(initializationMode)) {
                 // We know the property will be at global lexical environment, but we don't know how to cache it.
-                op = ResolveOp(Dynamic, 0, 0, 0, 0, 0);
+                op = ResolveOp(Dynamic, 0, nullptr, nullptr, nullptr, 0);
                 return true;
             }
 
@@ -124,7 +125,7 @@ static inline bool abstractAccess(JSGlobalObject* globalObject, JSScope* scope, 
             // We still need to make the slow path correct for when we need to fire a watchpoint.
             ResolveType resolveType = initializationMode == InitializationMode::ConstInitialization ? GlobalLexicalVar : makeType(GlobalLexicalVar, needsVarInjectionChecks);
             op = ResolveOp(
-                resolveType, depth, 0, 0, entry.watchpointSet(),
+                resolveType, depth, nullptr, nullptr, entry.watchpointSet(),
                 reinterpret_cast<uintptr_t>(globalLexicalEnvironment->variableAt(entry.scopeOffset()).slot()));
             return true;
         }
@@ -143,21 +144,22 @@ static inline bool abstractAccess(JSGlobalObject* globalObject, JSScope* scope, 
                 ASSERT(!entry.isNull());
                 if (getOrPut == Put && entry.isReadOnly()) {
                     // We know the property will be at global scope, but we don't know how to cache it.
-                    op = ResolveOp(Dynamic, 0, 0, 0, 0, 0);
+                    op = ResolveOp(Dynamic, 0, nullptr, nullptr, nullptr, 0);
                     return true;
                 }
 
                 op = ResolveOp(
-                    makeType(GlobalVar, needsVarInjectionChecks), depth, 0, 0, entry.watchpointSet(),
+                    makeType(GlobalVar, needsVarInjectionChecks), depth, nullptr, nullptr, entry.watchpointSet(),
                     reinterpret_cast<uintptr_t>(globalObject->variableAt(entry.scopeOffset()).slot()));
                 return true;
             }
         }
 
-        PropertySlot slot(globalObject, PropertySlot::InternalMethodType::VMInquiry);
+        PropertySlot slot(globalObject, PropertySlot::InternalMethodType::VMInquiry, &vm);
         bool hasOwnProperty = globalObject->getOwnPropertySlot(globalObject, globalObject, ident, slot);
+        slot.disallowVMEntry.reset();
         if (!hasOwnProperty) {
-            op = ResolveOp(makeType(UnresolvedProperty, needsVarInjectionChecks), 0, 0, 0, 0, 0);
+            op = ResolveOp(makeType(UnresolvedProperty, needsVarInjectionChecks), 0, nullptr, nullptr, nullptr, 0);
             return true;
         }
 
@@ -167,7 +169,7 @@ static inline bool abstractAccess(JSGlobalObject* globalObject, JSScope* scope, 
             || (structure->hasReadOnlyOrGetterSetterPropertiesExcludingProto() && getOrPut == Put)) {
             // We know the property will be at global scope, but we don't know how to cache it.
             ASSERT(!scope->next());
-            op = ResolveOp(makeType(GlobalProperty, needsVarInjectionChecks), 0, 0, 0, 0, 0);
+            op = ResolveOp(makeType(GlobalProperty, needsVarInjectionChecks), 0, nullptr, nullptr, nullptr, 0);
             return true;
         }
 
@@ -181,13 +183,13 @@ static inline bool abstractAccess(JSGlobalObject* globalObject, JSScope* scope, 
             // 2) Have the invalidation happen at run-time. All we have to do is leave the code
             //    uncached. The only downside is slightly more work when this does execute.
             // We go with option (2) here because it seems less evil.
-            op = ResolveOp(makeType(GlobalProperty, needsVarInjectionChecks), depth, 0, 0, 0, 0);
+            op = ResolveOp(makeType(GlobalProperty, needsVarInjectionChecks), depth, nullptr, nullptr, nullptr, 0);
         } else
-            op = ResolveOp(makeType(GlobalProperty, needsVarInjectionChecks), depth, structure, 0, 0, slot.cachedOffset());
+            op = ResolveOp(makeType(GlobalProperty, needsVarInjectionChecks), depth, structure, nullptr, nullptr, slot.cachedOffset());
         return true;
     }
 
-    op = ResolveOp(Dynamic, 0, 0, 0, 0, 0);
+    op = ResolveOp(Dynamic, 0, nullptr, nullptr, nullptr, 0);
     return true;
 }
 
@@ -305,7 +307,7 @@ ResolveOp JSScope::abstractResolve(JSGlobalObject* globalObject, size_t depthOff
     VM& vm = globalObject->vm();
     auto throwScope = DECLARE_THROW_SCOPE(vm);
 
-    ResolveOp op(Dynamic, 0, 0, 0, 0, 0);
+    ResolveOp op(Dynamic, 0, nullptr, nullptr, nullptr, 0);
     if (unlinkedType == Dynamic)
         return op;
 
@@ -313,7 +315,7 @@ ResolveOp JSScope::abstractResolve(JSGlobalObject* globalObject, size_t depthOff
     size_t depth = depthOffset;
     for (; scope; scope = scope->next()) {
         bool success = abstractAccess(globalObject, scope, ident, getOrPut, depth, needsVarInjectionChecks, op, initializationMode);
-        RETURN_IF_EXCEPTION(throwScope, ResolveOp(Dynamic, 0, 0, 0, 0, 0));
+        RETURN_IF_EXCEPTION(throwScope, ResolveOp(Dynamic, 0, nullptr, nullptr, nullptr, 0));
         if (success)
             break;
         ++depth;
@@ -322,7 +324,7 @@ ResolveOp JSScope::abstractResolve(JSGlobalObject* globalObject, size_t depthOff
     return op;
 }
 
-void JSScope::collectClosureVariablesUnderTDZ(JSScope* scope, VariableEnvironment& result)
+void JSScope::collectClosureVariablesUnderTDZ(JSScope* scope, TDZEnvironment& result, PrivateNameEnvironment& privateNameEnvironment)
 {
     for (; scope; scope = scope->next()) {
         if (!scope->isLexicalScope() && !scope->isCatchScope())
@@ -339,6 +341,12 @@ void JSScope::collectClosureVariablesUnderTDZ(JSScope* scope, VariableEnvironmen
         ConcurrentJSLocker locker(symbolTable->m_lock);
         for (auto end = symbolTable->end(locker), iter = symbolTable->begin(locker); iter != end; ++iter)
             result.add(iter->key);
+
+        if (symbolTable->hasPrivateNames()) {
+            auto privateNames = symbolTable->privateNames();
+            for (auto end = privateNames.end(), iter = privateNames.begin(); iter != end; ++iter)
+                privateNameEnvironment.add(iter->key, iter->value);
+        }
     }
 }
 
@@ -411,7 +419,7 @@ SymbolTable* JSScope::symbolTable(VM& vm)
 
 JSValue JSScope::toThis(JSCell*, JSGlobalObject* globalObject, ECMAMode ecmaMode)
 {
-    if (ecmaMode == StrictMode)
+    if (ecmaMode.isStrict())
         return jsUndefined();
     return globalObject->globalThis();
 }

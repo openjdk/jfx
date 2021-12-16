@@ -30,6 +30,8 @@ import javafx.beans.property.ReadOnlyIntegerWrapper;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 
 public class Person {
     private final SimpleBooleanProperty invited;
@@ -106,5 +108,15 @@ public class Person {
 
     @Override public String toString() {
         return getFirstName() + " " + getLastName();
+    }
+
+    public static ObservableList<Person> persons() {
+        return FXCollections.observableArrayList(
+                new Person("Jacob", "Smith", "jacob.smith@example.com"),
+                new Person("Isabella", "Johnson", "isabella.johnson@example.com"),
+                new Person("Ethan", "Williams", "ethan.williams@example.com"),
+                new Person("Emma", "Jones", "emma.jones@example.com"),
+                new Person("Michael", "Brown", "michael.brown@example.com")
+                );
     }
 }

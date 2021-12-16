@@ -100,6 +100,9 @@ GType     gst_type_find_get_type   (void);
 
 /* typefind function interface */
 
+/**
+ * gst_type_find_get_type: (attributes doc.skip=true)
+ */
 GST_API
 const guint8 *  gst_type_find_peek       (GstTypeFind   * find,
                                           gint64          offset,

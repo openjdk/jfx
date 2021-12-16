@@ -30,16 +30,20 @@
 #include "config.h"
 #include "StyleAdjuster.h"
 
-#include "AnimationBase.h"
 #include "CSSFontSelector.h"
+#include "DOMTokenList.h"
+#include "DOMWindow.h"
 #include "Element.h"
+#include "EventNames.h"
 #include "FrameView.h"
+#include "HTMLDivElement.h"
 #include "HTMLInputElement.h"
 #include "HTMLMarqueeElement.h"
 #include "HTMLNames.h"
 #include "HTMLSlotElement.h"
 #include "HTMLTableElement.h"
 #include "HTMLTextAreaElement.h"
+#include "HTMLVideoElement.h"
 #include "MathMLElement.h"
 #include "Page.h"
 #include "Quirks.h"
@@ -47,12 +51,12 @@
 #include "RenderStyle.h"
 #include "RenderTheme.h"
 #include "RuntimeEnabledFeatures.h"
-#include "SVGDocument.h"
 #include "SVGElement.h"
 #include "SVGNames.h"
 #include "SVGURIReference.h"
 #include "Settings.h"
 #include "Text.h"
+#include "WebAnimationTypes.h"
 
 namespace WebCore {
 namespace Style {
@@ -76,16 +80,16 @@ static void addIntrinsicMargins(RenderStyle& style)
     // FIXME: Using "hasQuirk" to decide the margin wasn't set is kind of lame.
     if (style.width().isIntrinsicOrAuto()) {
         if (style.marginLeft().hasQuirk())
-            style.setMarginLeft(Length(intrinsicMargin, Fixed));
+            style.setMarginLeft(Length(intrinsicMargin, LengthType::Fixed));
         if (style.marginRight().hasQuirk())
-            style.setMarginRight(Length(intrinsicMargin, Fixed));
+            style.setMarginRight(Length(intrinsicMargin, LengthType::Fixed));
     }
 
     if (style.height().isAuto()) {
         if (style.marginTop().hasQuirk())
-            style.setMarginTop(Length(intrinsicMargin, Fixed));
+            style.setMarginTop(Length(intrinsicMargin, LengthType::Fixed));
         if (style.marginBottom().hasQuirk())
-            style.setMarginBottom(Length(intrinsicMargin, Fixed));
+            style.setMarginBottom(Length(intrinsicMargin, LengthType::Fixed));
     }
 }
 
@@ -154,14 +158,11 @@ static bool doesNotInheritTextDecoration(const RenderStyle& style, const Element
         || style.isFloating() || style.hasOutOfFlowPosition();
 }
 
-#if ENABLE(OVERFLOW_SCROLLING_TOUCH) || ENABLE(POINTER_EVENTS)
 static bool isScrollableOverflow(Overflow overflow)
 {
     return overflow == Overflow::Scroll || overflow == Overflow::Auto;
 }
-#endif
 
-#if ENABLE(POINTER_EVENTS)
 static OptionSet<TouchAction> computeEffectiveTouchActions(const RenderStyle& style, OptionSet<TouchAction> effectiveTouchActions)
 {
     // https://w3c.github.io/pointerevents/#determining-supported-touch-behavior
@@ -192,7 +193,53 @@ static OptionSet<TouchAction> computeEffectiveTouchActions(const RenderStyle& st
 
     return sharedTouchActions;
 }
+
+void Adjuster::adjustEventListenerRegionTypesForRootStyle(RenderStyle& rootStyle, const Document& document)
+{
+    auto regionTypes = computeEventListenerRegionTypes(document, { });
+    if (auto* window = document.domWindow())
+        regionTypes.add(computeEventListenerRegionTypes(*window, { }));
+
+    rootStyle.setEventListenerRegionTypes(regionTypes);
+}
+
+OptionSet<EventListenerRegionType> Adjuster::computeEventListenerRegionTypes(const EventTarget& eventTarget, OptionSet<EventListenerRegionType> parentTypes)
+{
+#if ENABLE(WHEEL_EVENT_REGIONS)
+    if (!eventTarget.hasEventListeners())
+        return parentTypes;
+
+    auto types = parentTypes;
+
+    auto findListeners = [&](auto& eventName, auto type, auto nonPassiveType) {
+        auto* eventListenerVector = eventTarget.eventTargetData()->eventListenerMap.find(eventName);
+        if (!eventListenerVector)
+            return;
+
+        types.add(type);
+
+        auto isPassiveOnly = [&] {
+            for (auto& listener : *eventListenerVector) {
+                if (!listener->isPassive())
+                    return false;
+            }
+            return true;
+        }();
+
+        if (!isPassiveOnly)
+            types.add(nonPassiveType);
+    };
+
+    findListeners(eventNames().wheelEvent, EventListenerRegionType::Wheel, EventListenerRegionType::NonPassiveWheel);
+    findListeners(eventNames().mousewheelEvent, EventListenerRegionType::Wheel, EventListenerRegionType::NonPassiveWheel);
+
+    return types;
+#else
+    UNUSED_PARAM(eventTarget);
+    UNUSED_PARAM(parentTypes);
+    return { };
 #endif
+}
 
 void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearanceStyle) const
 {
@@ -281,10 +328,10 @@ void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearance
             style.setWritingMode(m_parentStyle.writingMode());
 
         // FIXME: Since we don't support block-flow on flexible boxes yet, disallow setting
-        // of block-flow to anything other than TopToBottomWritingMode.
+        // of block-flow to anything other than WritingMode::TopToBottom.
         // https://bugs.webkit.org/show_bug.cgi?id=46418 - Flexible box support.
-        if (style.writingMode() != TopToBottomWritingMode && (style.display() == DisplayType::Box || style.display() == DisplayType::InlineBox))
-            style.setWritingMode(TopToBottomWritingMode);
+        if (style.writingMode() != WritingMode::TopToBottom && (style.display() == DisplayType::Box || style.display() == DisplayType::InlineBox))
+            style.setWritingMode(WritingMode::TopToBottom);
 
         // https://www.w3.org/TR/css-display/#transformations
         // "A parent with a grid or flex display value blockifies the box’s display type."
@@ -346,7 +393,7 @@ void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearance
             }
             // Apparently this is the expected legacy behavior.
             if (isVertical && style.height().isAuto())
-                style.setHeight(Length(200, Fixed));
+                style.setHeight(Length(200, LengthType::Fixed));
         }
     }
 
@@ -437,12 +484,13 @@ void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearance
     if (m_parentBoxStyle.justifyItems().positionType() == ItemPositionType::Legacy && style.justifyItems().position() == ItemPosition::Legacy)
         style.setJustifyItems(m_parentBoxStyle.justifyItems());
 
-#if ENABLE(POINTER_EVENTS)
     style.setEffectiveTouchActions(computeEffectiveTouchActions(style, m_parentStyle.effectiveTouchActions()));
-#endif
+
+    if (m_element)
+        style.setEventListenerRegionTypes(computeEventListenerRegionTypes(*m_element, m_parentStyle.eventListenerRegionTypes()));
 
 #if ENABLE(TEXT_AUTOSIZING)
-    if (m_element)
+    if (m_element && m_document.settings().textAutosizingUsesIdempotentMode())
         adjustForTextAutosizing(style, *m_element);
 #endif
 
@@ -526,36 +574,67 @@ void Adjuster::adjustSVGElementStyle(RenderStyle& style, const SVGElement& svgEl
         style.setDisplay(DisplayType::Block);
 }
 
-void Adjuster::adjustAnimatedStyle(RenderStyle& style, const RenderStyle* parentBoxStyle, OptionSet<AnimationImpact> impact)
+void Adjuster::adjustAnimatedStyle(RenderStyle& style, OptionSet<AnimationImpact> impact) const
 {
+    adjust(style, nullptr);
+
     // Set an explicit used z-index in two cases:
     // 1. When the element respects z-index, and the style has an explicit z-index set (for example, the animation
     //    itself may animate z-index).
     // 2. When we want the stacking context side-effets of explicit z-index, via forceStackingContext.
     // It's important to not clobber an existing used z-index, since an earlier animation may have set it, but we
     // may still need to update the used z-index value from the specified value.
-    bool elementRespectsZIndex = style.position() != PositionType::Static || (parentBoxStyle && parentBoxStyle->isDisplayFlexibleOrGridBox());
 
-    if (elementRespectsZIndex && !style.hasAutoSpecifiedZIndex())
-        style.setUsedZIndex(style.specifiedZIndex());
-    else if (impact.contains(AnimationImpact::ForcesStackingContext))
+    if (style.hasAutoUsedZIndex() && impact.contains(AnimationImpact::ForcesStackingContext))
         style.setUsedZIndex(0);
 }
 
 void Adjuster::adjustForSiteSpecificQuirks(RenderStyle& style) const
 {
-    if (m_document.quirks().needsGMailOverflowScrollQuirk() && m_element) {
+    if (!m_element)
+        return;
+
+    if (m_document.quirks().needsGMailOverflowScrollQuirk()) {
         // This turns sidebar scrollable without mouse move event.
-        static NeverDestroyed<AtomString> roleValue("navigation", AtomString::ConstructFromLiteral);
+        static MainThreadNeverDestroyed<const AtomString> roleValue("navigation", AtomString::ConstructFromLiteral);
         if (style.overflowY() == Overflow::Hidden && m_element->attributeWithoutSynchronization(roleAttr) == roleValue)
             style.setOverflowY(Overflow::Auto);
     }
-    if (m_document.quirks().needsYouTubeOverflowScrollQuirk() && m_element) {
+    if (m_document.quirks().needsYouTubeOverflowScrollQuirk()) {
         // This turns sidebar scrollable without hover.
-        static NeverDestroyed<AtomString> idValue("guide-inner-content", AtomString::ConstructFromLiteral);
+        static MainThreadNeverDestroyed<const AtomString> idValue("guide-inner-content", AtomString::ConstructFromLiteral);
         if (style.overflowY() == Overflow::Hidden && m_element->idForStyleResolution() == idValue)
             style.setOverflowY(Overflow::Auto);
     }
+    if (m_document.quirks().needsWeChatScrollingQuirk()) {
+        static MainThreadNeverDestroyed<const AtomString> class1("tree-select", AtomString::ConstructFromLiteral);
+        static MainThreadNeverDestroyed<const AtomString> class2("v-tree-select", AtomString::ConstructFromLiteral);
+        const auto& flexBasis = style.flexBasis();
+        if (style.minHeight().isAuto()
+            && style.display() == DisplayType::Flex
+            && style.flexGrow() == 1
+            && style.flexShrink() == 1
+            && (flexBasis.isPercent() || flexBasis.isFixed())
+            && flexBasis.value() == 0
+            && const_cast<Element*>(m_element)->classList().contains(class1)
+            && const_cast<Element*>(m_element)->classList().contains(class2))
+            style.setMinHeight(Length(0, LengthType::Fixed));
+    }
+#if ENABLE(VIDEO)
+    if (m_document.quirks().needsFullscreenDisplayNoneQuirk()) {
+        if (is<HTMLDivElement>(m_element) && style.display() == DisplayType::None) {
+            static MainThreadNeverDestroyed<const AtomString> instreamNativeVideoDivClass("instream-native-video--mobile", AtomString::ConstructFromLiteral);
+            static MainThreadNeverDestroyed<const AtomString> videoElementID("vjs_video_3_html5_api", AtomString::ConstructFromLiteral);
+
+            auto& div = downcast<HTMLDivElement>(*m_element);
+            if (div.hasClass() && div.classNames().contains(instreamNativeVideoDivClass)) {
+                auto* video = div.treeScope().getElementById(videoElementID);
+                if (is<HTMLVideoElement>(video) && downcast<HTMLVideoElement>(*video).isFullscreen())
+                    style.setDisplay(DisplayType::Block);
+            }
+        }
+    }
+#endif
 }
 
 #if ENABLE(TEXT_AUTOSIZING)
@@ -568,17 +647,24 @@ static bool hasTextChild(const Element& element)
     return false;
 }
 
-bool Adjuster::adjustForTextAutosizing(RenderStyle& style, const Element& element)
+auto Adjuster::adjustmentForTextAutosizing(const RenderStyle& style, const Element& element) -> AdjustmentForTextAutosizing
 {
+    AdjustmentForTextAutosizing adjustmentForTextAutosizing;
+
     auto& document = element.document();
-    if (!document.settings().textAutosizingEnabled() || !document.settings().textAutosizingUsesIdempotentMode())
-        return false;
+    if (!document.settings().textAutosizingEnabled()
+        || !document.settings().textAutosizingUsesIdempotentMode()
+        || document.settings().idempotentModeAutosizingOnlyHonorsPercentages())
+        return adjustmentForTextAutosizing;
 
-    AutosizeStatus::updateStatus(style);
+    auto newStatus = AutosizeStatus::computeStatus(style);
+    if (newStatus != style.autosizeStatus())
+        adjustmentForTextAutosizing.newStatus = newStatus;
+
     if (style.textSizeAdjust().isNone())
-        return false;
+        return adjustmentForTextAutosizing;
 
-    float initialScale = document.page() ? document.page()->initialScale() : 1;
+    float initialScale = document.page() ? document.page()->initialScaleIgnoringContentSize() : 1;
     auto adjustLineHeightIfNeeded = [&](auto computedFontSize) {
         auto lineHeight = style.specifiedLineHeight();
         constexpr static unsigned eligibleFontSize = 12;
@@ -593,26 +679,24 @@ bool Adjuster::adjustForTextAutosizing(RenderStyle& style, const Element& elemen
         if (AutosizeStatus::probablyContainsASmallFixedNumberOfLines(style))
             return;
 
-        style.setLineHeight({ minimumLineHeight, Fixed });
+        adjustmentForTextAutosizing.newLineHeight = minimumLineHeight;
     };
 
     auto fontDescription = style.fontDescription();
     auto initialComputedFontSize = fontDescription.computedSize();
     auto specifiedFontSize = fontDescription.specifiedSize();
-    bool isCandidate = style.isIdempotentTextAutosizingCandidate();
+    bool isCandidate = style.isIdempotentTextAutosizingCandidate(newStatus);
     if (!isCandidate && WTF::areEssentiallyEqual(initialComputedFontSize, specifiedFontSize))
-        return false;
+        return adjustmentForTextAutosizing;
 
     auto adjustedFontSize = AutosizeStatus::idempotentTextSize(fontDescription.specifiedSize(), initialScale);
     if (isCandidate && WTF::areEssentiallyEqual(initialComputedFontSize, adjustedFontSize))
-        return false;
+        return adjustmentForTextAutosizing;
 
     if (!hasTextChild(element))
-        return false;
+        return adjustmentForTextAutosizing;
 
-    fontDescription.setComputedSize(isCandidate ? adjustedFontSize : specifiedFontSize);
-    style.setFontDescription(WTFMove(fontDescription));
-    style.fontCascade().update(&document.fontSelector());
+    adjustmentForTextAutosizing.newFontSize = isCandidate ? adjustedFontSize : specifiedFontSize;
 
     // FIXME: We should restore computed line height to its original value in the case where the element is not
     // an idempotent text autosizing candidate; otherwise, if an element that is a text autosizing candidate contains
@@ -620,7 +704,28 @@ bool Adjuster::adjustForTextAutosizing(RenderStyle& style, const Element& elemen
     if (isCandidate)
         adjustLineHeightIfNeeded(adjustedFontSize);
 
-    return true;
+    return adjustmentForTextAutosizing;
+}
+
+bool Adjuster::adjustForTextAutosizing(RenderStyle& style, const Element& element, AdjustmentForTextAutosizing adjustment)
+{
+    AutosizeStatus::updateStatus(style);
+    if (auto newFontSize = adjustment.newFontSize) {
+        auto fontDescription = style.fontDescription();
+        fontDescription.setComputedSize(*newFontSize);
+        style.setFontDescription(WTFMove(fontDescription));
+        style.fontCascade().update(&element.document().fontSelector());
+    }
+    if (auto newLineHeight = adjustment.newLineHeight)
+        style.setLineHeight({ *newLineHeight, LengthType::Fixed });
+    if (auto newStatus = adjustment.newStatus)
+        style.setAutosizeStatus(*newStatus);
+    return adjustment.newFontSize || adjustment.newLineHeight;
+}
+
+bool Adjuster::adjustForTextAutosizing(RenderStyle& style, const Element& element)
+{
+    return adjustForTextAutosizing(style, element, adjustmentForTextAutosizing(style, element));
 }
 #endif
 

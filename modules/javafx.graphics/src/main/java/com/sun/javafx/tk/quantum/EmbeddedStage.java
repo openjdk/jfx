@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -48,7 +48,7 @@ final class EmbeddedStage extends GlassStage implements EmbeddedStageInterface {
     // TKStage methods
 
     @Override
-    public TKScene createTKScene(boolean depthBuffer, boolean msaa, AccessControlContext acc) {
+    public TKScene createTKScene(boolean depthBuffer, boolean msaa, @SuppressWarnings("removal") AccessControlContext acc) {
         EmbeddedScene scene = new EmbeddedScene(host, depthBuffer, msaa);
         scene.setSecurityContext(acc);
         return scene;
@@ -220,6 +220,7 @@ final class EmbeddedStage extends GlassStage implements EmbeddedStageInterface {
         host.ungrabFocus();
     }
 
+    @SuppressWarnings("removal")
     private void notifyStageListener(final Runnable r) {
         AccessControlContext acc = getAccessControlContext();
         AccessController.doPrivileged((PrivilegedAction<Void>) () -> {

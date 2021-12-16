@@ -27,7 +27,7 @@
 
 #pragma once
 
-#if ENABLE(VIDEO_TRACK)
+#if ENABLE(VIDEO)
 
 #include <wtf/LoggerHelper.h>
 #include <wtf/MediaTime.h>
@@ -63,6 +63,8 @@ public:
     virtual AtomString language() const { return emptyAtom(); }
 
     virtual int trackIndex() const { return 0; }
+    virtual Optional<uint64_t> trackUID() const;
+    virtual Optional<bool> defaultEnabled() const;
 
     virtual MediaTime startTimeVariance() const { return MediaTime::zeroTime(); }
 

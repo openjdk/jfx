@@ -28,12 +28,11 @@
 
 #include "WaveShaperDSPKernel.h"
 
+#include "AudioUtilities.h"
 #include "WaveShaperProcessor.h"
 #include <algorithm>
 #include <wtf/MainThread.h>
 #include <wtf/Threading.h>
-
-const unsigned RenderingQuantum = 128;
 
 namespace WebCore {
 
@@ -49,12 +48,12 @@ void WaveShaperDSPKernel::lazyInitializeOversampling()
     ASSERT(isMainThread());
 
     if (!m_tempBuffer) {
-        m_tempBuffer = makeUnique<AudioFloatArray>(RenderingQuantum * 2);
-        m_tempBuffer2 = makeUnique<AudioFloatArray>(RenderingQuantum * 4);
-        m_upSampler = makeUnique<UpSampler>(RenderingQuantum);
-        m_downSampler = makeUnique<DownSampler>(RenderingQuantum * 2);
-        m_upSampler2 = makeUnique<UpSampler>(RenderingQuantum * 2);
-        m_downSampler2 = makeUnique<DownSampler>(RenderingQuantum * 4);
+        m_tempBuffer = makeUnique<AudioFloatArray>(AudioUtilities::renderQuantumSize * 2);
+        m_tempBuffer2 = makeUnique<AudioFloatArray>(AudioUtilities::renderQuantumSize * 4);
+        m_upSampler = makeUnique<UpSampler>(AudioUtilities::renderQuantumSize);
+        m_downSampler = makeUnique<DownSampler>(AudioUtilities::renderQuantumSize * 2);
+        m_upSampler2 = makeUnique<UpSampler>(AudioUtilities::renderQuantumSize * 2);
+        m_downSampler2 = makeUnique<DownSampler>(AudioUtilities::renderQuantumSize * 4);
     }
 }
 
@@ -101,31 +100,23 @@ void WaveShaperDSPKernel::processCurve(const float* source, float* destination, 
     for (unsigned i = 0; i < framesToProcess; ++i) {
         const float input = source[i];
 
-        // Calculate a virtual index based on input -1 -> +1 with 0 being at the center of the curve data.
-        // Then linearly interpolate between the two points in the curve.
-        double virtualIndex = 0.5 * (input + 1) * curveLength;
-        int index1 = static_cast<int>(virtualIndex);
-        int index2 = index1 + 1;
-        double interpolationFactor = virtualIndex - index1;
-
-        // Clip index to the input range of the curve.
-        // This takes care of input outside of nominal range -1 -> +1
-        index1 = std::max(index1, 0);
-        index1 = std::min(index1, curveLength - 1);
-        index2 = std::max(index2, 0);
-        index2 = std::min(index2, curveLength - 1);
-
-        double value1 = curveData[index1];
-        double value2 = curveData[index2];
-
-        double output = (1.0 - interpolationFactor) * value1 + interpolationFactor * value2;
-        destination[i] = output;
+        float v = (curveLength - 1) * 0.5f * (input + 1);
+        if (v < 0)
+            destination[i] = curveData[0];
+        else if (v >= curveLength - 1)
+            destination[i] = curveData[curveLength - 1];
+        else {
+            float k = std::floor(v);
+            float f = v - k;
+            unsigned kIndex = k;
+            destination[i] = (1 - f) * curveData[kIndex] + f * curveData[kIndex + 1];
+        }
     }
 }
 
 void WaveShaperDSPKernel::processCurve2x(const float* source, float* destination, size_t framesToProcess)
 {
-    bool isSafe = framesToProcess == RenderingQuantum;
+    bool isSafe = framesToProcess == AudioUtilities::renderQuantumSize;
     ASSERT(isSafe);
     if (!isSafe)
         return;
@@ -142,7 +133,7 @@ void WaveShaperDSPKernel::processCurve2x(const float* source, float* destination
 
 void WaveShaperDSPKernel::processCurve4x(const float* source, float* destination, size_t framesToProcess)
 {
-    bool isSafe = framesToProcess == RenderingQuantum;
+    bool isSafe = framesToProcess == AudioUtilities::renderQuantumSize;
     ASSERT(isSafe);
     if (!isSafe)
         return;
@@ -199,6 +190,12 @@ double WaveShaperDSPKernel::latencyTime() const
     }
 
     return static_cast<double>(latencyFrames) / sampleRate();
+}
+
+bool WaveShaperDSPKernel::requiresTailProcessing() const
+{
+    // Always return true even if the tail time and latency might both be zero.
+    return true;
 }
 
 } // namespace WebCore

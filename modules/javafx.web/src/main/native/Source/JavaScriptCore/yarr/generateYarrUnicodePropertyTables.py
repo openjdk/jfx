@@ -35,7 +35,7 @@ import re
 from hasher import stringHash
 
 header = """/*
-* Copyright (C) 2017-2019 Apple Inc. All rights reserved.
+* Copyright (C) 2017-2020 Apple Inc. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions
@@ -551,7 +551,7 @@ class PropertyData:
         for propertyData in cls.allPropertyData:
             propertyData.dump(file, propertyData != cls.allPropertyData[-1])
 
-        file.write("typedef std::unique_ptr<CharacterClass> (*CreateCharacterClass)();\n")
+        file.write("using CreateCharacterClass = std::unique_ptr<CharacterClass> (*)();\n")
         file.write("static CreateCharacterClass createFunctions[{}] = {{\n   ".format(len(cls.allPropertyData)))
         functionsOnThisLine = 0
         for propertyData in cls.allPropertyData:

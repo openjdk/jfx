@@ -25,12 +25,15 @@
 #pragma once
 
 #include "Color.h"
-#include "DataRef.h"
 #include "Length.h"
+#include "RenderStyleConstants.h"
 #include "StyleCustomPropertyData.h"
 #include "TabSize.h"
 #include "TextDecorationThickness.h"
 #include "TextUnderlineOffset.h"
+#include "TouchAction.h"
+#include <wtf/DataRef.h>
+#include <wtf/OptionSet.h>
 #include <wtf/RefCounted.h>
 #include <wtf/text/AtomString.h>
 
@@ -70,6 +73,7 @@ public:
     bool hasColorFilters() const;
 
     RefPtr<StyleImage> listStyleImage;
+    AtomString listStyleStringValue;
 
     Color textStrokeColor;
     float textStrokeWidth;
@@ -154,9 +158,10 @@ public:
     unsigned hasSetStrokeWidth : 1;
     unsigned hasSetStrokeColor : 1;
 
-#if ENABLE(POINTER_EVENTS)
-    unsigned effectiveTouchActions : 6; // OptionSet<TouchAction>
-#endif
+    unsigned mathStyle : 1;
+
+    OptionSet<TouchAction> effectiveTouchActions;
+    OptionSet<EventListenerRegionType> eventListenerRegionTypes;
 
     Length strokeWidth;
     Color strokeColor;

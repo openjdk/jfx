@@ -30,8 +30,10 @@
 #include "ServiceWorkerContextData.h"
 #include "ServiceWorkerFetch.h"
 #include "ServiceWorkerIdentifier.h"
+#include "Settings.h"
 #include "Timer.h"
 #include "WorkerThread.h"
+#include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
@@ -44,7 +46,7 @@ class WorkerObjectProxy;
 struct MessageWithMessagePorts;
 struct ServiceWorkerClientIdentifier;
 
-class ServiceWorkerThread : public WorkerThread {
+class ServiceWorkerThread : public WorkerThread, public CanMakeWeakPtr<ServiceWorkerThread, WeakPtrFactoryInitialization::Eager> {
 public:
     template<typename... Args> static Ref<ServiceWorkerThread> create(Args&&... args)
     {
@@ -78,7 +80,7 @@ protected:
     void runEventLoop() override;
 
 private:
-    WEBCORE_EXPORT ServiceWorkerThread(const ServiceWorkerContextData&, String&& userAgent, WorkerLoaderProxy&, WorkerDebuggerProxy&, IDBClient::IDBConnectionProxy*, SocketProvider*);
+    WEBCORE_EXPORT ServiceWorkerThread(const ServiceWorkerContextData&, String&& userAgent, const Settings::Values&, WorkerLoaderProxy&, WorkerDebuggerProxy&, IDBClient::IDBConnectionProxy*, SocketProvider*);
 
     bool isServiceWorkerThread() const final { return true; }
     void finishedEvaluatingScript() final;

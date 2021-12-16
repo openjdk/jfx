@@ -32,9 +32,11 @@
 #include "FloatSize.h"
 #include "GraphicsTypes.h"
 #include "ImageOrientation.h"
+#include "ImagePaintingOptions.h"
 #include "ImageTypes.h"
 #include "NativeImage.h"
 #include "Timer.h"
+#include <wtf/EnumTraits.h>
 #include <wtf/Optional.h>
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
@@ -58,6 +60,9 @@ typedef struct HBITMAP__ *HBITMAP;
 
 #if PLATFORM(GTK)
 typedef struct _GdkPixbuf GdkPixbuf;
+#if USE(GTK4)
+typedef struct _GdkTexture GdkTexture;
+#endif
 #endif
 
 namespace WebCore {
@@ -68,7 +73,6 @@ class FloatSize;
 class GraphicsContext;
 class GraphicsContextImpl;
 class SharedBuffer;
-struct ImagePaintingOptions;
 struct Length;
 
 // This class gets notified when an image creates or destroys decoded frames and when it advances animation frames.
@@ -112,6 +116,8 @@ public:
     virtual void computeIntrinsicDimensions(Length& intrinsicWidth, Length& intrinsicHeight, FloatSize& intrinsicRatio);
 
     virtual FloatSize size(ImageOrientation = ImageOrientation::FromImage) const = 0;
+    virtual FloatSize sourceSize(ImageOrientation orientation = ImageOrientation::FromImage) const { return size(orientation); }
+    virtual bool hasDensityCorrectedSize() const { return false; }
     FloatRect rect() const { return FloatRect(FloatPoint(), size()); }
     float width() const { return size().width(); }
     float height() const { return size().height(); }
@@ -123,6 +129,7 @@ public:
 
     virtual String uti() const { return String(); } // null string if unknown
     virtual String filenameExtension() const { return String(); } // null string if unknown
+    virtual String accessibilityDescription() const { return String(); } // null string if unknown
 
     virtual void destroyDecodedData(bool destroyAll = true) = 0;
 
@@ -147,10 +154,10 @@ public:
 
     enum TileRule { StretchTile, RoundTile, SpaceTile, RepeatTile };
 
-    virtual NativeImagePtr nativeImage(const GraphicsContext* = nullptr) { return nullptr; }
-    virtual NativeImagePtr nativeImageForCurrentFrame(const GraphicsContext* = nullptr) { return nullptr; }
-    virtual NativeImagePtr nativeImageForCurrentFrameRespectingOrientation(const GraphicsContext* = nullptr) { return nullptr; }
-    virtual NativeImagePtr nativeImageOfSize(const IntSize&, const GraphicsContext* = nullptr) { return nullptr; }
+    virtual RefPtr<NativeImage> nativeImage(const GraphicsContext* = nullptr) { return nullptr; }
+    virtual RefPtr<NativeImage> nativeImageForCurrentFrame(const GraphicsContext* = nullptr) { return nullptr; }
+    virtual RefPtr<NativeImage> preTransformedNativeImageForCurrentFrame(bool = true, const GraphicsContext* = nullptr) { return nullptr; }
+    virtual RefPtr<NativeImage> nativeImageOfSize(const IntSize&, const GraphicsContext* = nullptr) { return nullptr; }
 
     // Accessors for native image formats.
 
@@ -170,10 +177,13 @@ public:
 
 #if PLATFORM(GTK)
     virtual GdkPixbuf* getGdkPixbuf() { return nullptr; }
+#if USE(GTK4)
+    virtual GdkTexture* gdkTexture() { return nullptr; }
+#endif
 #endif
 
 #if PLATFORM(JAVA)
-    virtual NativeImagePtr javaImage() { return nativeImageForCurrentFrame(); }
+    virtual RefPtr<NativeImage> javaImage() { return nativeImageForCurrentFrame(); }
     virtual void drawImage(GraphicsContext&, const FloatRect& dstRect, const FloatRect& srcRect, CompositeOperator, BlendMode);
 #endif
 
@@ -206,11 +216,6 @@ private:
     std::unique_ptr<Timer> m_animationStartTimer;
 };
 
-class ImageHandle {
-public:
-    RefPtr<Image> image;
-};
-
 WTF::TextStream& operator<<(WTF::TextStream&, const Image&);
 
 } // namespace WebCore
@@ -220,3 +225,17 @@ SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::ToClassName) \
     static bool isType(const WebCore::Image& image) { return image.is##ToClassName(); } \
 SPECIALIZE_TYPE_TRAITS_END()
 
+
+namespace WTF {
+
+template<> struct EnumTraits<WebCore::Image::TileRule> {
+    using values = EnumValues<
+        WebCore::Image::TileRule,
+        WebCore::Image::TileRule::StretchTile,
+        WebCore::Image::TileRule::RoundTile,
+        WebCore::Image::TileRule::SpaceTile,
+        WebCore::Image::TileRule::RepeatTile
+    >;
+};
+
+} // namespace WTF

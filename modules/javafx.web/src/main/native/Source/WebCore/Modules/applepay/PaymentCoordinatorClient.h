@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,21 +28,24 @@
 #if ENABLE(APPLE_PAY)
 
 #include "ApplePaySessionPaymentRequest.h"
+#include "ApplePaySetupFeatureWebCore.h"
+#include <wtf/CompletionHandler.h>
 #include <wtf/Forward.h>
 #include <wtf/Function.h>
-
-#if USE(APPLE_INTERNAL_SDK)
-#import <WebKitAdditions/PaymentCoordinatorClientAdditions.h>
-#endif
+#include <wtf/Optional.h>
 
 namespace WebCore {
 
 class Document;
 class PaymentMerchantSession;
-class PaymentMethodUpdate;
+#if ENABLE(APPLE_PAY_PAYMENT_METHOD_MODE)
+struct ApplePayPaymentMethodModeUpdate;
+#endif // ENABLE(APPLE_PAY_PAYMENT_METHOD_MODE)
+struct ApplePayPaymentMethodUpdate;
+struct ApplePaySetupConfiguration;
+struct ApplePayShippingContactUpdate;
+struct ApplePayShippingMethodUpdate;
 struct PaymentAuthorizationResult;
-struct ShippingContactUpdate;
-struct ShippingMethodUpdate;
 
 class PaymentCoordinatorClient {
 public:
@@ -55,9 +58,12 @@ public:
 
     virtual bool showPaymentUI(const URL& originatingURL, const Vector<URL>& linkIconURLs, const ApplePaySessionPaymentRequest&) = 0;
     virtual void completeMerchantValidation(const PaymentMerchantSession&) = 0;
-    virtual void completeShippingMethodSelection(Optional<ShippingMethodUpdate>&&) = 0;
-    virtual void completeShippingContactSelection(Optional<ShippingContactUpdate>&&) = 0;
-    virtual void completePaymentMethodSelection(Optional<PaymentMethodUpdate>&&) = 0;
+    virtual void completeShippingMethodSelection(Optional<ApplePayShippingMethodUpdate>&&) = 0;
+    virtual void completeShippingContactSelection(Optional<ApplePayShippingContactUpdate>&&) = 0;
+    virtual void completePaymentMethodSelection(Optional<ApplePayPaymentMethodUpdate>&&) = 0;
+#if ENABLE(APPLE_PAY_PAYMENT_METHOD_MODE)
+    virtual void completePaymentMethodModeChange(Optional<ApplePayPaymentMethodModeUpdate>&&) = 0;
+#endif // ENABLE(APPLE_PAY_PAYMENT_METHOD_MODE)
     virtual void completePaymentSession(Optional<PaymentAuthorizationResult>&&) = 0;
     virtual void abortPaymentSession() = 0;
     virtual void cancelPaymentSession() = 0;
@@ -71,13 +77,12 @@ public:
 
     virtual bool isAlwaysOnLoggingAllowed() const { return false; }
 
+    virtual void getSetupFeatures(const ApplePaySetupConfiguration&, const URL&, CompletionHandler<void(Vector<Ref<ApplePaySetupFeature>>&&)>&& completionHandler) { completionHandler({ }); }
+    virtual void beginApplePaySetup(const ApplePaySetupConfiguration&, const URL&, Vector<RefPtr<ApplePaySetupFeature>>&&, CompletionHandler<void(bool)>&& completionHandler) { completionHandler(false); }
+    virtual void endApplePaySetup() { }
+
 protected:
     virtual ~PaymentCoordinatorClient() = default;
-
-#if defined(PAYMENTCOORDINATORCLIENT_ADDITIONS)
-PAYMENTCOORDINATORCLIENT_ADDITIONS
-#undef PAYMENTCOORDINATORCLIENT_ADDITIONS
-#endif
 };
 
 }

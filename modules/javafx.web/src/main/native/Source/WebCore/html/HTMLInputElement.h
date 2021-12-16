@@ -26,26 +26,22 @@
 
 #include "FileChooser.h"
 #include "HTMLTextFormControlElement.h"
-#include "StepRange.h"
 #include <memory>
 #include <wtf/WeakPtr.h>
 
-#if PLATFORM(IOS_FAMILY)
-#include "DateComponents.h"
-#endif
-
 namespace WebCore {
 
+class Decimal;
 class DragData;
 class FileList;
 class HTMLDataListElement;
 class HTMLImageLoader;
+class HTMLOptionElement;
 class Icon;
 class InputType;
 class ListAttributeTargetObserver;
 class RadioButtonGroups;
-
-struct DateTimeChooserParameters;
+class StepRange;
 
 struct InputElementClickState {
     bool stateful { false };
@@ -53,6 +49,9 @@ struct InputElementClickState {
     bool indeterminate { false };
     RefPtr<HTMLInputElement> checkedRadioButton;
 };
+
+enum class AnyStepHandling : bool;
+enum class DateComponentsType : uint8_t;
 
 class HTMLInputElement : public HTMLTextFormControlElement {
     WTF_MAKE_ISO_ALLOCATED(HTMLInputElement);
@@ -87,6 +86,7 @@ public:
 
 #if ENABLE(DATALIST_ELEMENT)
     Optional<Decimal> findClosestTickMarkValue(const Decimal&);
+    Optional<double> listOptionValueAsDouble(const HTMLOptionElement&);
 #endif
 
     WEBCORE_EXPORT ExceptionOr<void> stepUp(int = 1);
@@ -125,15 +125,12 @@ public:
     WEBCORE_EXPORT bool isTelephoneField() const;
     WEBCORE_EXPORT bool isURLField() const;
     WEBCORE_EXPORT bool isDateField() const;
-    WEBCORE_EXPORT bool isDateTimeField() const;
     WEBCORE_EXPORT bool isDateTimeLocalField() const;
     WEBCORE_EXPORT bool isMonthField() const;
     WEBCORE_EXPORT bool isTimeField() const;
     WEBCORE_EXPORT bool isWeekField() const;
 
-#if PLATFORM(IOS_FAMILY)
-    DateComponents::Type dateType() const;
-#endif
+    DateComponentsType dateType() const;
 
     HTMLElement* containerElement() const;
 
@@ -275,8 +272,9 @@ public:
 
 #if ENABLE(DATALIST_ELEMENT)
     WEBCORE_EXPORT RefPtr<HTMLElement> list() const;
+    WEBCORE_EXPORT bool isFocusingWithDataListDropdown() const;
     RefPtr<HTMLDataListElement> dataList() const;
-    void listAttributeTargetChanged();
+    void dataListMayHaveChanged();
 #endif
 
     Vector<Ref<HTMLInputElement>> radioButtonGroup() const;
@@ -294,7 +292,7 @@ public:
 
     void cacheSelectionInResponseToSetValue(int caretOffset) { cacheSelection(caretOffset, caretOffset, SelectionHasNoDirection); }
 
-    Color valueAsColor() const; // Returns transparent color if not type=color.
+    WEBCORE_EXPORT Color valueAsColor() const; // Returns transparent color if not type=color.
     WEBCORE_EXPORT void selectColor(StringView); // Does nothing if not type=color. Simulates user selection of color; intended for testing.
     WEBCORE_EXPORT Vector<Color> suggestedColors() const;
 
@@ -329,10 +327,6 @@ public:
 
     HTMLImageLoader* imageLoader() { return m_imageLoader.get(); }
     HTMLImageLoader& ensureImageLoader();
-
-#if ENABLE(DATE_AND_TIME_INPUT_TYPES)
-    bool setupDateTimeChooserParameters(DateTimeChooserParameters&);
-#endif
 
     void capsLockStateMayHaveChanged();
 
@@ -391,7 +385,7 @@ private:
 
     bool canStartSelection() const final;
 
-    void accessKeyAction(bool sendMouseEvents) final;
+    bool accessKeyAction(bool sendMouseEvents) final;
 
     void parseAttribute(const QualifiedName&, const AtomString&) final;
     bool isPresentationAttribute(const QualifiedName&) const final;
@@ -458,7 +452,7 @@ private:
     void addToRadioButtonGroup();
     void removeFromRadioButtonGroup();
 
-    void setDefaultSelectionAfterFocus(SelectionRevealMode);
+    void setDefaultSelectionAfterFocus(SelectionRestorationMode, SelectionRevealMode);
 
     AtomString m_name;
     String m_valueIfDirty;

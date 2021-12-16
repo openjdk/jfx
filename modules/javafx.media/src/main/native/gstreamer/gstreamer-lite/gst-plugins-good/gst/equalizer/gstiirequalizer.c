@@ -298,6 +298,8 @@ gst_iir_equalizer_band_class_init (GstIirEqualizerBandClass * klass)
           "Filter type", GST_TYPE_IIR_EQUALIZER_BAND_TYPE,
           BAND_TYPE_PEAK,
           G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS | GST_PARAM_CONTROLLABLE));
+
+  gst_type_mark_as_plugin_api (GST_TYPE_IIR_EQUALIZER, 0);
 }
 
 static void

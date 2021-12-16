@@ -89,42 +89,33 @@ class ObjCConfigurationImplementationGenerator(ObjCGenerator):
         lines.append('    return self;')
         lines.append('}')
         lines.append('')
-        lines.extend(self._generate_dealloc(domains))
-        lines.append('')
         for domain in domains:
+            domain_lines = []
             if self.should_generate_commands_for_domain(domain):
-                lines.append(self._generate_handler_setter_for_domain(domain))
-                lines.append('')
+                domain_lines.append(self._generate_handler_setter_for_domain(domain))
+                domain_lines.append('')
             if self.should_generate_events_for_domain(domain):
-                lines.append(self._generate_event_dispatcher_getter_for_domain(domain))
-                lines.append('')
+                domain_lines.append(self._generate_event_dispatcher_getter_for_domain(domain))
+                domain_lines.append('')
+            if len(domain_lines):
+                lines.append(self.wrap_with_guard_for_condition(domain.condition, '\n'.join(domain_lines)))
         lines.append('@end')
         return '\n'.join(lines)
 
     def _generate_ivars(self, domains):
         lines = []
         for domain in domains:
+            domain_lines = []
             if self.should_generate_commands_for_domain(domain):
                 objc_class_name = '%s%sDomainHandler' % (self.objc_prefix(), domain.domain_name)
                 ivar_name = '_%sHandler' % ObjCGenerator.variable_name_prefix_for_domain(domain)
-                lines.append('    id<%s> %s;' % (objc_class_name, ivar_name))
+                domain_lines.append('    RetainPtr<id<%s>> %s;' % (objc_class_name, ivar_name))
             if self.should_generate_events_for_domain(domain):
                 objc_class_name = '%s%sDomainEventDispatcher' % (self.objc_prefix(), domain.domain_name)
                 ivar_name = '_%sEventDispatcher' % ObjCGenerator.variable_name_prefix_for_domain(domain)
-                lines.append('    %s *%s;' % (objc_class_name, ivar_name))
-        return lines
-
-    def _generate_dealloc(self, domains):
-        lines = []
-        lines.append('- (void)dealloc')
-        lines.append('{')
-        for domain in domains:
-            if self.should_generate_commands_for_domain(domain):
-                lines.append('    [_%sHandler release];' % ObjCGenerator.variable_name_prefix_for_domain(domain))
-            if self.should_generate_events_for_domain(domain):
-                lines.append('    [_%sEventDispatcher release];' % ObjCGenerator.variable_name_prefix_for_domain(domain))
-        lines.append('    [super dealloc];')
-        lines.append('}')
+                domain_lines.append('    RetainPtr<%s> %s;' % (objc_class_name, ivar_name))
+            if len(domain_lines):
+                lines.append(self.wrap_with_guard_for_condition(domain.condition, '\n'.join(domain_lines)))
         return lines
 
     def _generate_handler_setter_for_domain(self, domain):
@@ -142,11 +133,3 @@ class ObjCConfigurationImplementationGenerator(ObjCGenerator):
             'variableNamePrefix': ObjCGenerator.variable_name_prefix_for_domain(domain),
         }
         return Template(ObjCTemplates.ConfigurationGetterImplementation).substitute(None, **getter_args)
-
-    def _variable_name_prefix_for_domain(self, domain):
-        domain_name = domain.domain_name
-        if domain_name.startswith('DOM'):
-            return 'dom' + domain_name[3:]
-        if domain_name.startswith('CSS'):
-            return 'css' + domain_name[3:]
-        return domain_name[:1].lower() + domain_name[1:]

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -263,7 +263,7 @@ public class ScrollBarTest {
     /*********************************************************************
      * CSS related Tests                                                 *
      ********************************************************************/
-    @Test public void whenOrientationIsBound_impl_cssSettable_ReturnsFalse() {
+    @Test public void whenOrientationIsBound_CssMetaData_isSettable_ReturnsFalse() {
         CssMetaData styleable = ((StyleableProperty)scrollBar.orientationProperty()).getCssMetaData();
         assertTrue(styleable.isSettable(scrollBar));
         ObjectProperty<Orientation> other = new SimpleObjectProperty<Orientation>(Orientation.VERTICAL);
@@ -271,7 +271,7 @@ public class ScrollBarTest {
         assertFalse(styleable.isSettable(scrollBar));
     }
 
-    @Test public void whenOrientationIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
+    @Test public void whenOrientationIsSpecifiedViaCSSAndIsNotBound_CssMetaData_isSettable_ReturnsTrue() {
         CssMetaData styleable = ((StyleableProperty)scrollBar.orientationProperty()).getCssMetaData();
         assertTrue(styleable.isSettable(scrollBar));
     }
@@ -281,7 +281,7 @@ public class ScrollBarTest {
         assertSame(Orientation.VERTICAL, scrollBar.getOrientation());
     }
 
-    @Test public void whenUnitIncIsBound_impl_cssSettable_ReturnsFalse() {
+    @Test public void whenUnitIncIsBound_CssMetaData_isSettable_ReturnsFalse() {
         CssMetaData styleable = ((StyleableProperty)scrollBar.unitIncrementProperty()).getCssMetaData();
         assertTrue(styleable.isSettable(scrollBar));
         DoubleProperty other = new SimpleDoubleProperty(2.0);
@@ -289,7 +289,7 @@ public class ScrollBarTest {
         assertFalse(styleable.isSettable(scrollBar));
     }
 
-    @Test public void whenUnitIncIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
+    @Test public void whenUnitIncIsSpecifiedViaCSSAndIsNotBound_CssMetaData_isSettable_ReturnsTrue() {
         CssMetaData styleable = ((StyleableProperty)scrollBar.unitIncrementProperty()).getCssMetaData();
         assertTrue(styleable.isSettable(scrollBar));
     }
@@ -299,7 +299,7 @@ public class ScrollBarTest {
         assertEquals(6.0, scrollBar.getUnitIncrement(), 0.0);
     }
 
-    @Test public void whenBlockIncIsBound_impl_cssSettable_ReturnsFalse() {
+    @Test public void whenBlockIncIsBound_CssMetaData_isSettable_ReturnsFalse() {
         CssMetaData styleable = ((StyleableProperty)scrollBar.blockIncrementProperty()).getCssMetaData();
         assertTrue(styleable.isSettable(scrollBar));
         DoubleProperty other = new SimpleDoubleProperty(2.0);
@@ -307,7 +307,7 @@ public class ScrollBarTest {
         assertFalse(styleable.isSettable(scrollBar));
     }
 
-    @Test public void whenBlockIncIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
+    @Test public void whenBlockIncIsSpecifiedViaCSSAndIsNotBound_CssMetaData_isSettable_ReturnsTrue() {
         CssMetaData styleable = ((StyleableProperty)scrollBar.blockIncrementProperty()).getCssMetaData();
         assertTrue(styleable.isSettable(scrollBar));
     }
@@ -413,6 +413,34 @@ public class ScrollBarTest {
         assertEquals(scrollBar.getValue(), 50.0, 0.0);
         scrollBar.adjustValue(0.5);//This should not further change because position*(max-min) is now eqauls to the value so no more decrements
         assertEquals(scrollBar.getValue(), 50.0, 0.0);
+    }
+
+    /**
+     * @test
+     * @bug 8090158
+     * Adjusting the scrollbar value close to the max value should use the block increment and reach the max value.
+     */
+    @Test
+    public void incrementCloseToMax() {
+        scrollBar.setMin(0.0);
+        scrollBar.setMax(100.0);
+        scrollBar.setValue(90.0);
+        scrollBar.adjustValue(0.95); //This should block increment to the max value
+        assertEquals(100.0, scrollBar.getValue(), 0.0);
+    }
+
+    /**
+     * @test
+     * @bug 8090158
+     * Adjusting the scrollbar value close to the min value should use the block increment and reach the min value.
+     */
+    @Test
+    public void incrementCloseToMin() {
+        scrollBar.setMin(0.0);
+        scrollBar.setMax(100.0);
+        scrollBar.setValue(10.0);
+        scrollBar.adjustValue(0.05); //This should block decrement to the min value
+        assertEquals(0.0, scrollBar.getValue(), 0.0);
     }
 
     @Test public void incrementWhenValueIsNegativeAndSeeIfValueIsClampedToMin() {

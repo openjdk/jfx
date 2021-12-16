@@ -29,9 +29,12 @@
 #if ENABLE(APPLE_PAY)
 
 #include "ApplePayCancelEvent.h"
+#include "ApplePayErrorCode.h"
+#include "ApplePayErrorContactField.h"
 #include "ApplePayLineItem.h"
 #include "ApplePayPaymentAuthorizationResult.h"
 #include "ApplePayPaymentAuthorizedEvent.h"
+#include "ApplePayPaymentMethodModeUpdate.h"
 #include "ApplePayPaymentMethodSelectedEvent.h"
 #include "ApplePayPaymentMethodUpdate.h"
 #include "ApplePayPaymentRequest.h"
@@ -41,7 +44,6 @@
 #include "ApplePayShippingMethodSelectedEvent.h"
 #include "ApplePayShippingMethodUpdate.h"
 #include "ApplePayValidateMerchantEvent.h"
-#include "CustomHeaderFields.h"
 #include "DOMWindow.h"
 #include "Document.h"
 #include "DocumentLoader.h"
@@ -57,19 +59,15 @@
 #include "PaymentCoordinator.h"
 #include "PaymentMerchantSession.h"
 #include "PaymentMethod.h"
-#include "PaymentMethodUpdate.h"
 #include "PaymentRequestValidator.h"
 #include "SecurityOrigin.h"
 #include "Settings.h"
 #include "UserGestureIndicator.h"
 #include <wtf/IsoMallocInlines.h>
+#include <wtf/RunLoop.h>
 
 #if USE(APPLE_INTERNAL_SDK)
 #include <WebKitAdditions/ApplePaySessionAdditions.cpp>
-#else
-namespace WebCore {
-static void finishConverting(PaymentMethodUpdate&, ApplePayPaymentMethodUpdate&&) { }
-}
 #endif
 
 namespace WebCore {
@@ -143,41 +141,34 @@ static bool validateAmount(const String& amountString)
     return state == State::Digit || state == State::DotDigit || state == State::End;
 }
 
-static ExceptionOr<ApplePaySessionPaymentRequest::LineItem> convertAndValidateTotal(ApplePayLineItem&& lineItem)
+static ExceptionOr<ApplePayLineItem> convertAndValidateTotal(ApplePayLineItem&& lineItem)
 {
     if (!validateAmount(lineItem.amount))
         return Exception { TypeError, makeString("\"" + lineItem.amount, "\" is not a valid amount.") };
 
-    ApplePaySessionPaymentRequest::LineItem total { lineItem.type, lineItem.amount, lineItem.label };
-
-    auto validatedTotal = PaymentRequestValidator::validateTotal(total);
+    auto validatedTotal = PaymentRequestValidator::validateTotal(lineItem);
     if (validatedTotal.hasException())
         return validatedTotal.releaseException();
 
-    return WTFMove(total);
+    return WTFMove(lineItem);
 }
 
-static ExceptionOr<ApplePaySessionPaymentRequest::LineItem> convertAndValidate(ApplePayLineItem&& lineItem)
+static ExceptionOr<ApplePayLineItem> convertAndValidate(ApplePayLineItem&& lineItem)
 {
-    ApplePaySessionPaymentRequest::LineItem result;
-
-    // It is OK for pending types to not have an amount.
-    if (lineItem.type != ApplePaySessionPaymentRequest::LineItem::Type::Pending) {
+    if (lineItem.type == ApplePayLineItem::Type::Pending) {
+        // It is OK for pending types to not have an amount.
+        lineItem.amount = nullString();
+    } else {
         if (!validateAmount(lineItem.amount))
             return Exception { TypeError, makeString("\"" + lineItem.amount, "\" is not a valid amount.") };
-
-        result.amount = lineItem.amount;
     }
 
-    result.type = lineItem.type;
-    result.label = lineItem.label;
-
-    return WTFMove(result);
+    return WTFMove(lineItem);
 }
 
-static ExceptionOr<Vector<ApplePaySessionPaymentRequest::LineItem>> convertAndValidate(Optional<Vector<ApplePayLineItem>>&& lineItems)
+static ExceptionOr<Vector<ApplePayLineItem>> convertAndValidate(Optional<Vector<ApplePayLineItem>>&& lineItems)
 {
-    Vector<ApplePaySessionPaymentRequest::LineItem> result;
+    Vector<ApplePayLineItem> result;
     if (!lineItems)
         return WTFMove(result);
 
@@ -193,23 +184,17 @@ static ExceptionOr<Vector<ApplePaySessionPaymentRequest::LineItem>> convertAndVa
     return WTFMove(result);
 }
 
-static ExceptionOr<ApplePaySessionPaymentRequest::ShippingMethod> convertAndValidate(ApplePayShippingMethod&& shippingMethod)
+static ExceptionOr<ApplePayShippingMethod> convertAndValidate(ApplePayShippingMethod&& shippingMethod)
 {
     if (!validateAmount(shippingMethod.amount))
         return Exception { TypeError, makeString("\"" + shippingMethod.amount, "\" is not a valid amount.") };
 
-    ApplePaySessionPaymentRequest::ShippingMethod result;
-    result.amount = shippingMethod.amount;
-    result.label = shippingMethod.label;
-    result.detail = shippingMethod.detail;
-    result.identifier = shippingMethod.identifier;
-
-    return WTFMove(result);
+    return WTFMove(shippingMethod);
 }
 
-static ExceptionOr<Vector<ApplePaySessionPaymentRequest::ShippingMethod>> convertAndValidate(Vector<ApplePayShippingMethod>&& shippingMethods)
+static ExceptionOr<Vector<ApplePayShippingMethod>> convertAndValidate(Vector<ApplePayShippingMethod>&& shippingMethods)
 {
-    Vector<ApplePaySessionPaymentRequest::ShippingMethod> result;
+    Vector<ApplePayShippingMethod> result;
     result.reserveInitialCapacity(shippingMethods.size());
 
     for (auto& shippingMethod : shippingMethods) {
@@ -221,6 +206,10 @@ static ExceptionOr<Vector<ApplePaySessionPaymentRequest::ShippingMethod>> conver
 
     return WTFMove(result);
 }
+
+#if defined(ApplePaySessionAdditions_convertAndValidate)
+ApplePaySessionAdditions_convertAndValidate
+#endif
 
 static ExceptionOr<ApplePaySessionPaymentRequest> convertAndValidate(Document& document, unsigned version, ApplePayPaymentRequest&& paymentRequest, const PaymentCoordinator& paymentCoordinator)
 {
@@ -251,30 +240,16 @@ static ExceptionOr<ApplePaySessionPaymentRequest> convertAndValidate(Document& d
         result.setShippingMethods(shippingMethods.releaseReturnValue());
     }
 
+#if defined(ApplePaySessionAdditions_convertAndValidate_request)
+    ApplePaySessionAdditions_convertAndValidate_request
+#endif
+
     // FIXME: Merge this validation into the validation we are doing above.
     auto validatedPaymentRequest = PaymentRequestValidator::validate(result);
     if (validatedPaymentRequest.hasException())
         return validatedPaymentRequest.releaseException();
 
     return WTFMove(result);
-}
-
-
-static Vector<PaymentError> convert(const Vector<RefPtr<ApplePayError>>& errors)
-{
-    Vector<PaymentError> convertedErrors;
-
-    for (auto& error : errors) {
-        PaymentError convertedError;
-
-        convertedError.code = error->code();
-        convertedError.message = error->message();
-        convertedError.contactField = error->contactField();
-
-        convertedErrors.append(convertedError);
-    }
-
-    return convertedErrors;
 }
 
 static ExceptionOr<PaymentAuthorizationResult> convertAndValidate(ApplePayPaymentAuthorizationResult&& result)
@@ -292,17 +267,17 @@ static ExceptionOr<PaymentAuthorizationResult> convertAndValidate(ApplePayPaymen
 
     case ApplePaySession::STATUS_INVALID_BILLING_POSTAL_ADDRESS:
         convertedResult.status = PaymentAuthorizationStatus::Failure;
-        convertedResult.errors.append({ PaymentError::Code::BillingContactInvalid, { }, WTF::nullopt });
+        convertedResult.errors.append(ApplePayError::create(ApplePayErrorCode::BillingContactInvalid, WTF::nullopt, nullString()));
         break;
 
     case ApplePaySession::STATUS_INVALID_SHIPPING_POSTAL_ADDRESS:
         convertedResult.status = PaymentAuthorizationStatus::Failure;
-        convertedResult.errors.append({ PaymentError::Code::ShippingContactInvalid, { }, PaymentError::ContactField::PostalAddress });
+        convertedResult.errors.append(ApplePayError::create(ApplePayErrorCode::ShippingContactInvalid, ApplePayErrorContactField::PostalAddress, nullString()));
         break;
 
     case ApplePaySession::STATUS_INVALID_SHIPPING_CONTACT:
         convertedResult.status = PaymentAuthorizationStatus::Failure;
-        convertedResult.errors.append({ PaymentError::Code::ShippingContactInvalid, { }, WTF::nullopt });
+        convertedResult.errors.append(ApplePayError::create(ApplePayErrorCode::ShippingContactInvalid, WTF::nullopt, nullString()));
         break;
 
     case ApplePaySession::STATUS_PIN_REQUIRED:
@@ -321,69 +296,84 @@ static ExceptionOr<PaymentAuthorizationResult> convertAndValidate(ApplePayPaymen
         return Exception { InvalidAccessError };
     }
 
-    convertedResult.errors.appendVector(convert(result.errors));
+    convertedResult.errors.appendVector(WTFMove(result.errors));
 
     return WTFMove(convertedResult);
 }
 
-static ExceptionOr<PaymentMethodUpdate> convertAndValidate(ApplePayPaymentMethodUpdate&& update)
+static ExceptionOr<ApplePayPaymentMethodUpdate> convertAndValidate(ApplePayPaymentMethodUpdate&& update)
 {
     auto convertedNewTotal = convertAndValidateTotal(WTFMove(update.newTotal));
     if (convertedNewTotal.hasException())
         return convertedNewTotal.releaseException();
+    update.newTotal = convertedNewTotal.releaseReturnValue();
 
     auto convertedNewLineItems = convertAndValidate(WTFMove(update.newLineItems));
     if (convertedNewLineItems.hasException())
         return convertedNewLineItems.releaseException();
+    update.newLineItems = convertedNewLineItems.releaseReturnValue();
 
-    PaymentMethodUpdate convertedUpdate { convertedNewTotal.releaseReturnValue(), convertedNewLineItems.releaseReturnValue() };
-    finishConverting(convertedUpdate, WTFMove(update));
-
-    return WTFMove(convertedUpdate);
+    return WTFMove(update);
 }
 
-static ExceptionOr<ShippingContactUpdate> convertAndValidate(ApplePayShippingContactUpdate&& update)
+static ExceptionOr<ApplePayShippingContactUpdate> convertAndValidate(ApplePayShippingContactUpdate&& update)
 {
-    ShippingContactUpdate convertedUpdate;
-
-    convertedUpdate.errors = convert(update.errors);
-
     auto convertedNewShippingMethods = convertAndValidate(WTFMove(update.newShippingMethods));
     if (convertedNewShippingMethods.hasException())
         return convertedNewShippingMethods.releaseException();
-    convertedUpdate.newShippingMethods = convertedNewShippingMethods.releaseReturnValue();
+    update.newShippingMethods = convertedNewShippingMethods.releaseReturnValue();
 
     auto convertedNewTotal = convertAndValidateTotal(WTFMove(update.newTotal));
     if (convertedNewTotal.hasException())
         return convertedNewTotal.releaseException();
-    convertedUpdate.newTotalAndLineItems.total = convertedNewTotal.releaseReturnValue();
+    update.newTotal = convertedNewTotal.releaseReturnValue();
 
     auto convertedNewLineItems = convertAndValidate(WTFMove(update.newLineItems));
     if (convertedNewLineItems.hasException())
         return convertedNewLineItems.releaseException();
-    convertedUpdate.newTotalAndLineItems.lineItems = convertedNewLineItems.releaseReturnValue();
+    update.newLineItems = convertedNewLineItems.releaseReturnValue();
 
-    return WTFMove(convertedUpdate);
+    return WTFMove(update);
 }
 
-static ExceptionOr<ShippingMethodUpdate> convertAndValidate(ApplePayShippingMethodUpdate&& update)
+static ExceptionOr<ApplePayShippingMethodUpdate> convertAndValidate(ApplePayShippingMethodUpdate&& update)
 {
-    ShippingMethodUpdate convertedUpdate;
-
     auto convertedNewTotal = convertAndValidateTotal(WTFMove(update.newTotal));
     if (convertedNewTotal.hasException())
         return convertedNewTotal.releaseException();
-
-    convertedUpdate.newTotalAndLineItems.total = convertedNewTotal.releaseReturnValue();
+    update.newTotal = convertedNewTotal.releaseReturnValue();
 
     auto convertedNewLineItems = convertAndValidate(WTFMove(update.newLineItems));
     if (convertedNewLineItems.hasException())
         return convertedNewLineItems.releaseException();
+    update.newLineItems = convertedNewLineItems.releaseReturnValue();
 
-    convertedUpdate.newTotalAndLineItems.lineItems = convertedNewLineItems.releaseReturnValue();
-
-    return WTFMove(convertedUpdate);
+    return WTFMove(update);
 }
+
+#if ENABLE(APPLE_PAY_PAYMENT_METHOD_MODE)
+
+static ExceptionOr<ApplePayPaymentMethodModeUpdate> convertAndValidate(ApplePayPaymentMethodModeUpdate&& update)
+{
+    auto convertedNewShippingMethods = convertAndValidate(WTFMove(update.newShippingMethods));
+    if (convertedNewShippingMethods.hasException())
+        return convertedNewShippingMethods.releaseException();
+    update.newShippingMethods = convertedNewShippingMethods.releaseReturnValue();
+
+    auto convertedNewTotal = convertAndValidateTotal(WTFMove(update.newTotal));
+    if (convertedNewTotal.hasException())
+        return convertedNewTotal.releaseException();
+    update.newTotal = convertedNewTotal.releaseReturnValue();
+
+    auto convertedNewLineItems = convertAndValidate(WTFMove(update.newLineItems));
+    if (convertedNewLineItems.hasException())
+        return convertedNewLineItems.releaseException();
+    update.newLineItems = convertedNewLineItems.releaseReturnValue();
+
+    return WTFMove(update);
+}
+
+#endif // ENABLE(APPLE_PAY_PAYMENT_METHOD_MODE)
 
 ExceptionOr<Ref<ApplePaySession>> ApplePaySession::create(Document& document, unsigned version, ApplePayPaymentRequest&& paymentRequest)
 {
@@ -668,8 +658,8 @@ ExceptionOr<void> ApplePaySession::completeShippingContactSelection(unsigned sho
 {
     ApplePayShippingContactUpdate update;
 
-    Optional<ApplePayError::Code> errorCode;
-    Optional<ApplePayError::ContactField> contactField;
+    Optional<ApplePayErrorCode> errorCode;
+    Optional<ApplePayErrorContactField> contactField;
 
     switch (status) {
     case ApplePaySession::STATUS_SUCCESS:
@@ -679,20 +669,20 @@ ExceptionOr<void> ApplePaySession::completeShippingContactSelection(unsigned sho
     case ApplePaySession::STATUS_PIN_REQUIRED:
     case ApplePaySession::STATUS_PIN_INCORRECT:
     case ApplePaySession::STATUS_PIN_LOCKOUT:
-        errorCode = ApplePayError::Code::Unknown;
+        errorCode = ApplePayErrorCode::Unknown;
         break;
 
     case ApplePaySession::STATUS_INVALID_BILLING_POSTAL_ADDRESS:
-        errorCode = ApplePayError::Code::BillingContactInvalid;
+        errorCode = ApplePayErrorCode::BillingContactInvalid;
         break;
 
     case ApplePaySession::STATUS_INVALID_SHIPPING_POSTAL_ADDRESS:
-        errorCode = ApplePayError::Code::ShippingContactInvalid;
-        contactField = ApplePayError::ContactField::PostalAddress;
+        errorCode = ApplePayErrorCode::ShippingContactInvalid;
+        contactField = ApplePayErrorContactField::PostalAddress;
         break;
 
     case ApplePaySession::STATUS_INVALID_SHIPPING_CONTACT:
-        errorCode = ApplePayError::Code::ShippingContactInvalid;
+        errorCode = ApplePayErrorCode::ShippingContactInvalid;
         break;
 
     default:
@@ -764,7 +754,7 @@ void ApplePaySession::didAuthorizePayment(const Payment& payment)
     dispatchEvent(event.get());
 }
 
-void ApplePaySession::didSelectShippingMethod(const ApplePaySessionPaymentRequest::ShippingMethod& shippingMethod)
+void ApplePaySession::didSelectShippingMethod(const ApplePayShippingMethod& shippingMethod)
 {
     ASSERT(m_state == State::Active);
 
@@ -806,6 +796,19 @@ void ApplePaySession::didSelectPaymentMethod(const PaymentMethod& paymentMethod)
     dispatchEvent(event.get());
 }
 
+#if ENABLE(APPLE_PAY_PAYMENT_METHOD_MODE)
+
+void ApplePaySession::didChangePaymentMethodMode(String&& paymentMethodMode)
+{
+    ASSERT(m_state == State::Active);
+
+#if defined(ApplePaySessionAdditions_didChangePaymentMethodMode)
+    ApplePaySessionAdditions_didChangePaymentMethodMode
+#endif
+}
+
+#endif // ENABLE(APPLE_PAY_PAYMENT_METHOD_MODE)
+
 void ApplePaySession::didCancelPaymentSession(PaymentSessionError&& error)
 {
     ASSERT(canCancel());
@@ -837,6 +840,9 @@ bool ApplePaySession::canSuspendWithoutCanceling() const
     case State::ShippingMethodSelected:
     case State::ShippingContactSelected:
     case State::PaymentMethodSelected:
+#if ENABLE(APPLE_PAY_PAYMENT_METHOD_MODE)
+    case State::PaymentMethodModeChanged:
+#endif // ENABLE(APPLE_PAY_PAYMENT_METHOD_MODE)
     case State::CancelRequested:
         return false;
     }
@@ -887,6 +893,9 @@ bool ApplePaySession::canBegin() const
     case State::ShippingMethodSelected:
     case State::ShippingContactSelected:
     case State::PaymentMethodSelected:
+#if ENABLE(APPLE_PAY_PAYMENT_METHOD_MODE)
+    case State::PaymentMethodModeChanged:
+#endif // ENABLE(APPLE_PAY_PAYMENT_METHOD_MODE)
     case State::CancelRequested:
         return false;
     }
@@ -906,6 +915,9 @@ bool ApplePaySession::canAbort() const
     case State::ShippingMethodSelected:
     case State::ShippingContactSelected:
     case State::PaymentMethodSelected:
+#if ENABLE(APPLE_PAY_PAYMENT_METHOD_MODE)
+    case State::PaymentMethodModeChanged:
+#endif // ENABLE(APPLE_PAY_PAYMENT_METHOD_MODE)
     case State::CancelRequested:
         return true;
     }
@@ -925,6 +937,9 @@ bool ApplePaySession::canCancel() const
     case State::ShippingMethodSelected:
     case State::ShippingContactSelected:
     case State::PaymentMethodSelected:
+#if ENABLE(APPLE_PAY_PAYMENT_METHOD_MODE)
+    case State::PaymentMethodModeChanged:
+#endif // ENABLE(APPLE_PAY_PAYMENT_METHOD_MODE)
     case State::CancelRequested:
         return true;
     }
@@ -952,6 +967,9 @@ bool ApplePaySession::canCompleteShippingMethodSelection() const
     case State::Authorized:
     case State::PaymentMethodSelected:
     case State::ShippingContactSelected:
+#if ENABLE(APPLE_PAY_PAYMENT_METHOD_MODE)
+    case State::PaymentMethodModeChanged:
+#endif // ENABLE(APPLE_PAY_PAYMENT_METHOD_MODE)
     case State::CancelRequested:
         return false;
 
@@ -971,6 +989,9 @@ bool ApplePaySession::canCompleteShippingContactSelection() const
     case State::Authorized:
     case State::PaymentMethodSelected:
     case State::ShippingMethodSelected:
+#if ENABLE(APPLE_PAY_PAYMENT_METHOD_MODE)
+    case State::PaymentMethodModeChanged:
+#endif // ENABLE(APPLE_PAY_PAYMENT_METHOD_MODE)
     case State::CancelRequested:
         return false;
 
@@ -990,6 +1011,9 @@ bool ApplePaySession::canCompletePaymentMethodSelection() const
     case State::Authorized:
     case State::ShippingMethodSelected:
     case State::ShippingContactSelected:
+#if ENABLE(APPLE_PAY_PAYMENT_METHOD_MODE)
+    case State::PaymentMethodModeChanged:
+#endif // ENABLE(APPLE_PAY_PAYMENT_METHOD_MODE)
     case State::CancelRequested:
         return false;
 
@@ -997,6 +1021,30 @@ bool ApplePaySession::canCompletePaymentMethodSelection() const
         return true;
     }
 }
+
+#if ENABLE(APPLE_PAY_PAYMENT_METHOD_MODE)
+
+bool ApplePaySession::canCompletePaymentMethodModeChange() const
+{
+    switch (m_state) {
+    case State::Idle:
+    case State::Aborted:
+    case State::Active:
+    case State::Completed:
+    case State::Canceled:
+    case State::Authorized:
+    case State::ShippingMethodSelected:
+    case State::ShippingContactSelected:
+    case State::CancelRequested:
+    case State::PaymentMethodSelected:
+        return false;
+
+    case State::PaymentMethodModeChanged:
+        return true;
+    }
+}
+
+#endif // ENABLE(APPLE_PAY_PAYMENT_METHOD_MODE)
 
 bool ApplePaySession::canCompletePayment() const
 {
@@ -1009,6 +1057,9 @@ bool ApplePaySession::canCompletePayment() const
     case State::ShippingMethodSelected:
     case State::ShippingContactSelected:
     case State::PaymentMethodSelected:
+#if ENABLE(APPLE_PAY_PAYMENT_METHOD_MODE)
+    case State::PaymentMethodModeChanged:
+#endif // ENABLE(APPLE_PAY_PAYMENT_METHOD_MODE)
     case State::CancelRequested:
         return false;
 
@@ -1025,6 +1076,9 @@ bool ApplePaySession::isFinalState() const
     case State::ShippingMethodSelected:
     case State::ShippingContactSelected:
     case State::PaymentMethodSelected:
+#if ENABLE(APPLE_PAY_PAYMENT_METHOD_MODE)
+    case State::PaymentMethodModeChanged:
+#endif // ENABLE(APPLE_PAY_PAYMENT_METHOD_MODE)
     case State::Authorized:
     case State::CancelRequested:
         return false;
@@ -1041,6 +1095,10 @@ void ApplePaySession::didReachFinalState()
     ASSERT(isFinalState());
     unsetPendingActivity(*this);
 }
+
+#if defined(ApplePaySessionAdditions_definitions)
+ApplePaySessionAdditions_definitions
+#endif
 
 }
 

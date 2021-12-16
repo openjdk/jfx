@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -195,14 +195,15 @@ public class PickResult {
                 .append(", point = ").append(getIntersectedPoint())
                 .append(", distance = ").append(getIntersectedDistance());
         if (getIntersectedFace() != FACE_UNDEFINED) {
-                sb.append(", face = ").append(getIntersectedFace());
+            sb.append(", face = ").append(getIntersectedFace());
         }
         if (getIntersectedNormal() != null) {
-                sb.append(", normal = ").append(getIntersectedNormal());
+            sb.append(", normal = ").append(getIntersectedNormal());
         }
         if (getIntersectedTexCoord() != null) {
-                sb.append(", texCoord = ").append(getIntersectedTexCoord());
+            sb.append(", texCoord = ").append(getIntersectedTexCoord());
         }
+        sb.append("]");
         return sb.toString();
     }
 }

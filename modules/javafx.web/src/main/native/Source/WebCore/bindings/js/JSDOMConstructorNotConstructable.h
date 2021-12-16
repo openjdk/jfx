@@ -46,18 +46,20 @@ private:
     // Usually defined for each specialization class.
     void initializeProperties(JSC::VM&, JSDOMGlobalObject&) { }
 
-    static JSC::EncodedJSValue JSC_HOST_CALL callThrowTypeError(JSC::JSGlobalObject* globalObject, JSC::CallFrame*)
+    static JSC::CallData getCallData(JSC::JSCell*)
     {
-        JSC::VM& vm = globalObject->vm();
-        auto scope = DECLARE_THROW_SCOPE(vm);
-        JSC::throwTypeError(globalObject, scope, "Illegal constructor"_s);
-        return JSC::JSValue::encode(JSC::jsNull());
+        JSC::CallData callData;
+        callData.type = JSC::CallData::Type::Native;
+        callData.native.function = callThrowTypeErrorForJSDOMConstructorNotConstructable;
+        return callData;
     }
 
-    static JSC::CallType getCallData(JSC::JSCell*, JSC::CallData& callData)
+    static JSC::CallData getConstructData(JSC::JSCell*)
     {
-        callData.native.function = callThrowTypeError;
-        return JSC::CallType::Host;
+        JSC::CallData callData;
+        callData.type = JSC::CallData::Type::Native;
+        callData.native.function = callThrowTypeErrorForJSDOMConstructorNotConstructable;
+        return callData;
     }
 };
 

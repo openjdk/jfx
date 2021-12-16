@@ -29,20 +29,13 @@
 #include "JSBasePrivate.h"
 
 #include "APICast.h"
-#include "CallFrame.h"
 #include "Completion.h"
-#include "Exception.h"
 #include "GCActivityCallback.h"
-#include "Identifier.h"
-#include "InitializeThreading.h"
-#include "JSGlobalObject.h"
+#include "JSCInlines.h"
 #include "JSLock.h"
-#include "JSObject.h"
 #include "ObjectConstructor.h"
 #include "OpaqueJSString.h"
-#include "JSCInlines.h"
 #include "SourceCode.h"
-#include <wtf/text/StringHash.h>
 
 #if ENABLE(REMOTE_INSPECTOR)
 #include "JSGlobalObjectInspectorController.h"
@@ -80,7 +73,7 @@ JSValueRef JSEvaluateScriptInternal(const JSLockHolder&, JSContextRef ctx, JSObj
     return toRef(globalObject, jsUndefined());
 }
 
-JSValueRef JSEvaluateScript(JSContextRef ctx, JSStringRef script, JSObjectRef thisObject, JSStringRef sourceURL, int startingLineNumber, JSValueRef* exception)
+JSValueRef JSEvaluateScript(JSContextRef ctx, JSStringRef script, JSObjectRef thisObject, JSStringRef sourceURLString, int startingLineNumber, JSValueRef* exception)
 {
     if (!ctx) {
         ASSERT_NOT_REACHED();
@@ -92,13 +85,13 @@ JSValueRef JSEvaluateScript(JSContextRef ctx, JSStringRef script, JSObjectRef th
 
     startingLineNumber = std::max(1, startingLineNumber);
 
-    auto sourceURLString = sourceURL ? sourceURL->string() : String();
-    SourceCode source = makeSource(script->string(), SourceOrigin { sourceURLString }, URL({ }, sourceURLString), TextPosition(OrdinalNumber::fromOneBasedInt(startingLineNumber), OrdinalNumber()));
+    auto sourceURL = sourceURLString ? URL({ }, sourceURLString->string()) : URL();
+    SourceCode source = makeSource(script->string(), SourceOrigin { sourceURL }, sourceURL.string(), TextPosition(OrdinalNumber::fromOneBasedInt(startingLineNumber), OrdinalNumber()));
 
     return JSEvaluateScriptInternal(locker, ctx, thisObject, source, exception);
 }
 
-bool JSCheckScriptSyntax(JSContextRef ctx, JSStringRef script, JSStringRef sourceURL, int startingLineNumber, JSValueRef* exception)
+bool JSCheckScriptSyntax(JSContextRef ctx, JSStringRef script, JSStringRef sourceURLString, int startingLineNumber, JSValueRef* exception)
 {
     if (!ctx) {
         ASSERT_NOT_REACHED();
@@ -110,8 +103,8 @@ bool JSCheckScriptSyntax(JSContextRef ctx, JSStringRef script, JSStringRef sourc
 
     startingLineNumber = std::max(1, startingLineNumber);
 
-    auto sourceURLString = sourceURL ? sourceURL->string() : String();
-    SourceCode source = makeSource(script->string(), SourceOrigin { sourceURLString }, URL({ }, sourceURLString), TextPosition(OrdinalNumber::fromOneBasedInt(startingLineNumber), OrdinalNumber()));
+    auto sourceURL = sourceURLString ? URL({ }, sourceURLString->string()) : URL();
+    SourceCode source = makeSource(script->string(), SourceOrigin { sourceURL }, sourceURL.string(), TextPosition(OrdinalNumber::fromOneBasedInt(startingLineNumber), OrdinalNumber()));
 
     JSValue syntaxException;
     bool isValidSyntax = checkSyntax(globalObject, source, &syntaxException);
@@ -189,11 +182,22 @@ void JSDisableGCTimer(void)
     GCActivityCallback::s_shouldCreateGCTimer = false;
 }
 
+#if !OS(DARWIN) && !OS(WINDOWS)
+bool JSConfigureSignalForGC(int signal)
+{
+    if (g_wtfConfig.isThreadSuspendResumeSignalConfigured)
+        return false;
+    g_wtfConfig.sigThreadSuspendResume = signal;
+    g_wtfConfig.isUserSpecifiedThreadSuspendResumeSignalConfigured = true;
+    return true;
+}
+#endif
+
 JSObjectRef JSGetMemoryUsageStatistics(JSContextRef ctx)
 {
     if (!ctx) {
         ASSERT_NOT_REACHED();
-        return 0;
+        return nullptr;
     }
 
     JSGlobalObject* globalObject = toJS(ctx);
@@ -211,20 +215,3 @@ JSObjectRef JSGetMemoryUsageStatistics(JSContextRef ctx)
 
     return toRef(object);
 }
-
-#if PLATFORM(IOS_FAMILY) && TARGET_OS_IOS
-// FIXME: Expose symbols to tell dyld where to find JavaScriptCore on older versions of
-// iOS (< 7.0). We should remove these symbols once we no longer need to support such
-// versions of iOS. See <rdar://problem/13696872> for more details.
-JS_EXPORT extern const char iosInstallName43 __asm("$ld$install_name$os4.3$/System/Library/PrivateFrameworks/JavaScriptCore.framework/JavaScriptCore");
-JS_EXPORT extern const char iosInstallName50 __asm("$ld$install_name$os5.0$/System/Library/PrivateFrameworks/JavaScriptCore.framework/JavaScriptCore");
-JS_EXPORT extern const char iosInstallName51 __asm("$ld$install_name$os5.1$/System/Library/PrivateFrameworks/JavaScriptCore.framework/JavaScriptCore");
-JS_EXPORT extern const char iosInstallName60 __asm("$ld$install_name$os6.0$/System/Library/PrivateFrameworks/JavaScriptCore.framework/JavaScriptCore");
-JS_EXPORT extern const char iosInstallName61 __asm("$ld$install_name$os6.1$/System/Library/PrivateFrameworks/JavaScriptCore.framework/JavaScriptCore");
-
-const char iosInstallName43 = 0;
-const char iosInstallName50 = 0;
-const char iosInstallName51 = 0;
-const char iosInstallName60 = 0;
-const char iosInstallName61 = 0;
-#endif

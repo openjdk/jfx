@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -68,7 +68,7 @@ import com.sun.javafx.scene.control.skin.resources.ControlResources;
  */
 public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListCell<T>> {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Static Fields                                                           *
      *                                                                         *
@@ -79,12 +79,13 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListCell<
     // is set to true. This is done in order to make ListView functional
     // on embedded systems with touch screens which do not generate scroll
     // events for touch drag gestures.
+    @SuppressWarnings("removal")
     private static final boolean IS_PANNABLE =
             AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> Boolean.getBoolean("javafx.scene.control.skin.ListViewSkin.pannable"));
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Internal Fields                                                         *
      *                                                                         *
@@ -114,7 +115,7 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListCell<
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Listeners                                                               *
      *                                                                         *
@@ -174,9 +175,7 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListCell<
     private WeakInvalidationListener
                 weakItemsChangeListener = new WeakInvalidationListener(itemsChangeListener);
 
-    private EventHandler<MouseEvent> ml;
-
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -217,14 +216,7 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListCell<
         flow.setFixedCellSize(control.getFixedCellSize());
         getChildren().add(flow);
 
-        ml = event -> {
-            // RT-15127: cancel editing on scroll. This is a bit extreme
-            // (we are cancelling editing on touching the scrollbars).
-            // This can be improved at a later date.
-            if (control.getEditingIndex() > -1) {
-                control.edit(-1);
-            }
-
+        EventHandler<MouseEvent> ml = event -> {
             // This ensures that the list maintains the focus, even when the vbar
             // and hbar controls inside the flow are clicked. Without this, the
             // focus border will not be shown when the user interacts with the
@@ -264,7 +256,7 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListCell<
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *
@@ -280,12 +272,7 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListCell<
             listViewItems.removeListener(weakListViewItemsListener);
             listViewItems = null;
         }
-        // flow related cleanup
-        // leaking without nulling factory
-        flow.setCellFactory(null);
-        // for completeness - but no effect with/out?
-        flow.getVbar().removeEventFilter(MouseEvent.MOUSE_PRESSED, ml);
-        flow.getHbar().removeEventFilter(MouseEvent.MOUSE_PRESSED, ml);
+        getChildren().remove(flow);
         super.dispose();
 
         if (behavior != null) {
@@ -356,10 +343,10 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListCell<
         flow.setCellCount(newCount);
 
         updatePlaceholderRegionVisibility();
-        if (newCount != oldCount) {
-            requestRebuildCells();
-        } else {
+        if (newCount == oldCount) {
             needCellsReconfigured = true;
+        } else if (oldCount == 0) {
+            requestRebuildCells();
         }
     }
 
@@ -442,7 +429,7 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListCell<
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private implementation                                                  *
      *                                                                         *

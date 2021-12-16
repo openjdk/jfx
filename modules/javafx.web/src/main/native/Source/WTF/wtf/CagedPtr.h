@@ -25,9 +25,9 @@
 
 #pragma once
 
-#include <wtf/DumbPtrTraits.h>
 #include <wtf/Gigacage.h>
 #include <wtf/PtrTag.h>
+#include <wtf/RawPtrTraits.h>
 
 #include <climits>
 
@@ -35,7 +35,7 @@ namespace WTF {
 
 constexpr bool tagCagedPtr = true;
 
-template<Gigacage::Kind passedKind, typename T, bool shouldTag = false, typename PtrTraits = DumbPtrTraits<T>>
+template<Gigacage::Kind passedKind, typename T, bool shouldTag = false, typename PtrTraits = RawPtrTraits<T>>
 class CagedPtr {
 public:
     static constexpr Gigacage::Kind kind = passedKind;
@@ -126,6 +126,11 @@ public:
     explicit operator bool() const
     {
         return getUnsafe() != nullptr;
+    }
+
+    T* rawBits() const
+    {
+        return bitwise_cast<T*>(m_ptr);
     }
 
 protected:

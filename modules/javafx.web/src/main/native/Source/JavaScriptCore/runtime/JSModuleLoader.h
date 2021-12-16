@@ -36,11 +36,16 @@ class JSModuleRecord;
 class SourceCode;
 
 class JSModuleLoader final : public JSNonFinalObject {
-private:
-    JSModuleLoader(VM&, Structure*);
 public:
     using Base = JSNonFinalObject;
     static constexpr unsigned StructureFlags = Base::StructureFlags | HasStaticPropertyTable;
+
+    template<typename CellType, SubspaceAccess>
+    static IsoSubspace* subspaceFor(VM& vm)
+    {
+        STATIC_ASSERT_ISO_SUBSPACE_SHARABLE(JSModuleLoader, Base);
+        return &vm.plainObjectSpace;
+    }
 
     enum Status {
         Fetch = 1,
@@ -79,14 +84,15 @@ public:
     JSObject* createImportMetaProperties(JSGlobalObject*, JSValue key, JSModuleRecord*, JSValue scriptFetcher);
 
     // Additional platform dependent hooked APIs.
-    JSValue evaluate(JSGlobalObject*, JSValue key, JSValue moduleRecord, JSValue scriptFetcher);
-    JSValue evaluateNonVirtual(JSGlobalObject*, JSValue key, JSValue moduleRecord, JSValue scriptFetcher);
+    JSValue evaluate(JSGlobalObject*, JSValue key, JSValue moduleRecord, JSValue scriptFetcher, JSValue sentValue, JSValue resumeMode);
+    JSValue evaluateNonVirtual(JSGlobalObject*, JSValue key, JSValue moduleRecord, JSValue scriptFetcher, JSValue sentValue, JSValue resumeMode);
 
     // Utility functions.
     JSModuleNamespaceObject* getModuleNamespaceObject(JSGlobalObject*, JSValue moduleRecord);
     JSArray* dependencyKeysIfEvaluated(JSGlobalObject*, JSValue key);
 
-protected:
+private:
+    JSModuleLoader(VM&, Structure*);
     void finishCreation(JSGlobalObject*, VM&);
 };
 

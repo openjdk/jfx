@@ -26,8 +26,6 @@
 #include "config.h"
 #include "JITCode.h"
 
-#include "JSCInlines.h"
-#include "ProtoCallFrame.h"
 #include <wtf/PrintStream.h>
 
 namespace JSC {
@@ -72,25 +70,25 @@ void JITCode::validateReferences(const TrackedReferences&)
 DFG::CommonData* JITCode::dfgCommon()
 {
     RELEASE_ASSERT_NOT_REACHED();
-    return 0;
+    return nullptr;
 }
 
 DFG::JITCode* JITCode::dfg()
 {
     RELEASE_ASSERT_NOT_REACHED();
-    return 0;
+    return nullptr;
 }
 
 FTL::JITCode* JITCode::ftl()
 {
     RELEASE_ASSERT_NOT_REACHED();
-    return 0;
+    return nullptr;
 }
 
 FTL::ForOSREntryJITCode* JITCode::ftlForOSREntry()
 {
     RELEASE_ASSERT_NOT_REACHED();
-    return 0;
+    return nullptr;
 }
 
 void JITCode::shrinkToFit(const ConcurrentJSLocker&)
@@ -118,7 +116,7 @@ JITCodeWithCodeRef::~JITCodeWithCodeRef()
 void* JITCodeWithCodeRef::executableAddressAtOffset(size_t offset)
 {
     RELEASE_ASSERT(m_ref);
-    assertIsTaggedWith(m_ref.code().executableAddress(), JSEntryPtrTag);
+    assertIsTaggedWith<JSEntryPtrTag>(m_ref.code().executableAddress());
     if (!offset)
         return m_ref.code().executableAddress();
 

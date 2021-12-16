@@ -37,6 +37,8 @@ public:
     // Usually defined for each specialization class.
     static JSC::JSValue prototypeForStructure(JSC::VM&, const JSDOMGlobalObject&);
 
+    static JSC::EncodedJSValue JSC_HOST_CALL_ATTRIBUTES construct(JSC::JSGlobalObject*, JSC::CallFrame*);
+
 private:
     JSDOMBuiltinConstructor(JSC::Structure* structure, JSDOMGlobalObject& globalObject)
         : Base(structure, globalObject)
@@ -44,8 +46,7 @@ private:
     }
 
     void finishCreation(JSC::VM&, JSDOMGlobalObject&);
-    static JSC::ConstructType getConstructData(JSC::JSCell*, JSC::ConstructData&);
-    static JSC::EncodedJSValue JSC_HOST_CALL construct(JSC::JSGlobalObject*, JSC::CallFrame*);
+    static JSC::CallData getConstructData(JSC::JSCell*);
 
     JSC::EncodedJSValue callConstructor(JSC::JSGlobalObject&, JSC::CallFrame&, JSC::JSObject&);
     JSC::EncodedJSValue callConstructor(JSC::JSGlobalObject&, JSC::CallFrame&, JSC::JSObject*);
@@ -111,17 +112,19 @@ typename std::enable_if<JSDOMObjectInspector<JSClass>::isComplexWrapper, JSC::JS
     return context ? createWrapper<typename JSClass::DOMWrapped>(constructor.globalObject(), JSClass::DOMWrapped::create(*context)) : nullptr;
 }
 
-template<typename JSClass> inline JSC::EncodedJSValue JSC_HOST_CALL JSDOMBuiltinConstructor<JSClass>::construct(JSC::JSGlobalObject* lexicalGlobalObject, JSC::CallFrame* callFrame)
+template<typename JSClass> inline JSC::EncodedJSValue JSC_HOST_CALL_ATTRIBUTES JSDOMBuiltinConstructor<JSClass>::construct(JSC::JSGlobalObject* lexicalGlobalObject, JSC::CallFrame* callFrame)
 {
     ASSERT(callFrame);
     auto* castedThis = JSC::jsCast<JSDOMBuiltinConstructor*>(callFrame->jsCallee());
     return castedThis->callConstructor(*lexicalGlobalObject, *callFrame, createJSObject(*castedThis));
 }
 
-template<typename JSClass> inline JSC::ConstructType JSDOMBuiltinConstructor<JSClass>::getConstructData(JSC::JSCell*, JSC::ConstructData& constructData)
+template<typename JSClass> inline JSC::CallData JSDOMBuiltinConstructor<JSClass>::getConstructData(JSC::JSCell*)
 {
+    JSC::CallData constructData;
+    constructData.type = JSC::CallData::Type::Native;
     constructData.native.function = construct;
-    return JSC::ConstructType::Host;
+    return constructData;
 }
 
 } // namespace WebCore

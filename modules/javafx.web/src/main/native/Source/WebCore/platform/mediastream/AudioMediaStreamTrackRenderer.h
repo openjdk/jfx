@@ -25,8 +25,9 @@
 
 #pragma once
 
-#if ENABLE(VIDEO_TRACK) && ENABLE(MEDIA_STREAM)
+#if ENABLE(MEDIA_STREAM)
 
+#include <wtf/Function.h>
 #include <wtf/LoggerHelper.h>
 
 namespace WTF {
@@ -47,12 +48,13 @@ public:
     virtual void start() = 0;
     virtual void stop() = 0;
     virtual void clear() = 0;
-    // May be called on a background thread.
+    // May be called on a background thread. It should only be called after start/before stop is called.
     virtual void pushSamples(const WTF::MediaTime&, const PlatformAudioData&, const AudioStreamDescription&, size_t) = 0;
 
-    virtual void setMuted(bool);
     virtual void setVolume(float);
     float volume() const;
+
+    virtual void setAudioOutputDevice(const String&);
 
 #if !RELEASE_LOG_DISABLED
     void setLogger(const Logger&, const void*);
@@ -60,6 +62,8 @@ public:
 
     using RendererCreator = std::unique_ptr<AudioMediaStreamTrackRenderer> (*)();
     static void setCreator(RendererCreator);
+
+    void setCrashCallback(Function<void()>&& callback) { m_crashCallback = WTFMove(callback); }
 
 protected:
 #if !RELEASE_LOG_DISABLED
@@ -70,25 +74,20 @@ protected:
     WTFLogChannel& logChannel() const final;
 #endif
 
-    bool isMuted() const;
+    void crashed();
 
 private:
     static RendererCreator m_rendererCreator;
 
     // Main thread writable members
-    bool m_muted { false };
     float m_volume { 1 };
+    Function<void()> m_crashCallback;
 
 #if !RELEASE_LOG_DISABLED
     RefPtr<const Logger> m_logger;
     const void* m_logIdentifier;
 #endif
 };
-
-inline void AudioMediaStreamTrackRenderer::setMuted(bool value)
-{
-    m_muted = value;
-}
 
 inline void AudioMediaStreamTrackRenderer::setVolume(float volume)
 {
@@ -100,10 +99,10 @@ inline float AudioMediaStreamTrackRenderer::volume() const
     return m_volume;
 }
 
-
-inline bool AudioMediaStreamTrackRenderer::isMuted() const
+inline void AudioMediaStreamTrackRenderer::crashed()
 {
-    return m_muted;
+    if (m_crashCallback)
+        m_crashCallback();
 }
 
 #if !RELEASE_LOG_DISABLED
@@ -124,6 +123,10 @@ inline const char* AudioMediaStreamTrackRenderer::logClassName() const
 }
 #endif
 
+inline void AudioMediaStreamTrackRenderer::setAudioOutputDevice(const String&)
+{
 }
 
-#endif // ENABLE(VIDEO_TRACK) && ENABLE(MEDIA_STREAM)
+}
+
+#endif // ENABLE(MEDIA_STREAM)

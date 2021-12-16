@@ -366,6 +366,8 @@ bool RenderSVGShape::nodeAtFloatPoint(const HitTestRequest& request, HitTestResu
     if (!SVGRenderSupport::pointInClippingArea(*this, localPoint))
         return false;
 
+    SVGHitTestCycleDetectionScope hitTestScope(*this);
+
     PointerEventsHitRules hitRules(PointerEventsHitRules::SVG_PATH_HITTESTING, request, style().pointerEvents());
     bool isVisible = (style().visibility() == Visibility::Visible);
     if (isVisible || !hitRules.requireVisible) {
@@ -377,7 +379,7 @@ bool RenderSVGShape::nodeAtFloatPoint(const HitTestRequest& request, HitTestResu
             || (hitRules.canHitFill && (svgStyle.hasFill() || !hitRules.requireFill) && fillContains(localPoint, hitRules.requireFill, fillRule))
             || (hitRules.canHitBoundingBox && objectBoundingBox().contains(localPoint))) {
             updateHitTestResult(result, LayoutPoint(localPoint));
-            if (result.addNodeToListBasedTestResult(&graphicsElement(), request, localPoint) == HitTestProgress::Stop)
+            if (result.addNodeToListBasedTestResult(nodeForHitTest(), request, localPoint) == HitTestProgress::Stop)
                 return true;
         }
     }

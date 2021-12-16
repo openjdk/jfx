@@ -53,6 +53,7 @@
 .media-controls-container {
     all: initial;
     display: block;
+    cursor: inherit;
     visibility: inherit;
     pointer-events: inherit;
     -webkit-cursor-visibility: inherit;
@@ -85,7 +86,6 @@
     -webkit-user-select: none;
     white-space: nowrap;
     text-align: initial;
-    cursor: default;
     transform-origin: 0 0;
 }
 
@@ -128,7 +128,7 @@
     to   { opacity: 1 }
 }
 
-/* Default support for "Smart Invert" where all content color except media is inverted. */ 
+/* Default support for "Smart Invert" where all content color except media is inverted. */
 @media (inverted-colors) {
     :host { filter: invert(100%); } /* WebKit native audio and video. */
     picture { filter: none; } /* Don't invert the control buttons. */

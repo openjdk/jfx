@@ -26,10 +26,7 @@
 * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-[
-    NoInterfaceObject,
-    Conditional=POINTER_EVENTS,
-    EnabledAtRuntime=PointerEvents
-] interface MaxTouchPoints {
+// https://w3c.github.io/pointerevents/#extensions-to-the-navigator-interface
+interface mixin NavigatorMaxTouchPoints {
     readonly attribute long maxTouchPoints;
 };

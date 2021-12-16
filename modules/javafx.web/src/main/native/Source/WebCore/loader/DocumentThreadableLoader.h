@@ -36,6 +36,7 @@
 #include "ResourceResponse.h"
 #include "SecurityOrigin.h"
 #include "ThreadableLoader.h"
+#include <wtf/WeakPtr.h>
 
 namespace WebCore {
     class CachedRawResource;
@@ -43,7 +44,7 @@ namespace WebCore {
     class Document;
     class ThreadableLoaderClient;
 
-    class DocumentThreadableLoader : public RefCounted<DocumentThreadableLoader>, public ThreadableLoader, private CachedRawResourceClient  {
+    class DocumentThreadableLoader : public RefCounted<DocumentThreadableLoader>, public ThreadableLoader, public CanMakeWeakPtr<DocumentThreadableLoader>, private CachedRawResourceClient {
         WTF_MAKE_FAST_ALLOCATED;
     public:
         static void loadResourceSynchronously(Document&, ResourceRequest&&, ThreadableLoaderClient&, const ThreadableLoaderOptions&, RefPtr<SecurityOrigin>&&, std::unique_ptr<ContentSecurityPolicy>&&);
@@ -57,6 +58,8 @@ namespace WebCore {
 
         void cancel() override;
         virtual void setDefersLoading(bool);
+        void computeIsDone() final;
+        void clearClient() { m_client = nullptr; }
 
         friend CrossOriginPreflightChecker;
         friend class InspectorInstrumentation;
@@ -86,7 +89,7 @@ namespace WebCore {
         void redirectReceived(CachedResource&, ResourceRequest&&, const ResourceResponse&, CompletionHandler<void(ResourceRequest&&)>&&) override;
         void finishedTimingForWorkerLoad(CachedResource&, const ResourceTiming&) override;
         void finishedTimingForWorkerLoad(const ResourceTiming&);
-        void notifyFinished(CachedResource&) override;
+        void notifyFinished(CachedResource&, const NetworkLoadMetrics&) override;
 
         void didReceiveResponse(unsigned long identifier, const ResourceResponse&);
         void didReceiveData(unsigned long identifier, const char* data, int dataLength);
@@ -123,6 +126,7 @@ namespace WebCore {
         ThreadableLoaderClient* m_client;
         Document& m_document;
         ThreadableLoaderOptions m_options;
+        bool m_responsesCanBeOpaque { true };
         RefPtr<SecurityOrigin> m_origin;
         String m_referrer;
         bool m_sameOriginRequest;

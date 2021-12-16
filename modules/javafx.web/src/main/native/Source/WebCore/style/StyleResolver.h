@@ -87,7 +87,7 @@ public:
 
     ElementStyle styleForElement(const Element&, const RenderStyle* parentStyle, const RenderStyle* parentBoxStyle = nullptr, RuleMatchingBehavior = RuleMatchingBehavior::MatchAllRules, const SelectorFilter* = nullptr);
 
-    void keyframeStylesForAnimation(const Element&, const RenderStyle*, KeyframeList&);
+    void keyframeStylesForAnimation(const Element&, const RenderStyle* elementStyle, const RenderStyle* parentElementStyle, KeyframeList&);
 
     WEBCORE_EXPORT std::unique_ptr<RenderStyle> pseudoStyleForElement(const Element&, const PseudoElementRequest&, const RenderStyle& parentStyle, const RenderStyle* parentBoxStyle = nullptr, const SelectorFilter* = nullptr);
 
@@ -105,12 +105,12 @@ public:
 
     const MediaQueryEvaluator& mediaQueryEvaluator() const { return m_mediaQueryEvaluator; }
 
-    RenderStyle* overrideDocumentElementStyle() const { return m_overrideDocumentElementStyle; }
-    void setOverrideDocumentElementStyle(RenderStyle* style) { m_overrideDocumentElementStyle = style; }
+    const RenderStyle* overrideDocumentElementStyle() const { return m_overrideDocumentElementStyle; }
+    void setOverrideDocumentElementStyle(const RenderStyle* style) { m_overrideDocumentElementStyle = style; }
 
     void addCurrentSVGFontFaceRules();
 
-    std::unique_ptr<RenderStyle> styleForKeyframe(const Element&, const RenderStyle*, const StyleRuleKeyframe*, KeyframeValue&);
+    std::unique_ptr<RenderStyle> styleForKeyframe(const Element&, const RenderStyle* elementStyle, const RenderStyle* parentElementStyle, const StyleRuleKeyframe*, KeyframeValue&);
     bool isAnimationNameValid(const String&);
 
     // These methods will give back the set of rules that matched for a given element (or a pseudo-element).
@@ -126,10 +126,6 @@ public:
 
     bool hasSelectorForId(const AtomString&) const;
     bool hasSelectorForAttribute(const Element&, const AtomString&) const;
-
-#if ENABLE(CSS_DEVICE_ADAPTATION)
-    ViewportStyleResolver* viewportStyleResolver() { return m_viewportStyleResolver.get(); }
-#endif
 
     bool hasViewportDependentMediaQueries() const;
     Optional<DynamicMediaQueryEvaluationChanges> evaluateDynamicMediaQueries();
@@ -191,11 +187,7 @@ private:
 
     Document& m_document;
 
-    RenderStyle* m_overrideDocumentElementStyle { nullptr };
-
-#if ENABLE(CSS_DEVICE_ADAPTATION)
-    RefPtr<ViewportStyleResolver> m_viewportStyleResolver;
-#endif
+    const RenderStyle* m_overrideDocumentElementStyle { nullptr };
 
     InspectorCSSOMWrappers m_inspectorCSSOMWrappers;
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -49,7 +49,7 @@ static JSObject* getCustomElementCallback(JSGlobalObject& lexicalGlobalObject, J
     RETURN_IF_EXCEPTION(scope, nullptr);
     if (callback.isUndefined())
         return nullptr;
-    if (!callback.isFunction(vm)) {
+    if (!callback.isCallable(vm)) {
         throwTypeError(&lexicalGlobalObject, scope, "A custom element callback must be a function"_s);
         return nullptr;
     }
@@ -169,7 +169,8 @@ JSValue JSCustomElementRegistry::define(JSGlobalObject& lexicalGlobalObject, Cal
     addToGlobalObjectWithPrivateName(adoptedCallback);
     addToGlobalObjectWithPrivateName(attributeChangedCallback);
 
-    registry.addElementDefinition(WTFMove(elementInterface));
+    if (auto promise = registry.addElementDefinition(WTFMove(elementInterface)))
+        promise->resolveWithJSValue(constructor);
 
     return jsUndefined();
 }
@@ -190,8 +191,8 @@ static JSValue whenDefinedPromise(JSGlobalObject& lexicalGlobalObject, CallFrame
         return jsUndefined();
     }
 
-    if (registry.findInterface(localName)) {
-        DeferredPromise::create(globalObject, promise)->resolve();
+    if (auto* elementInterface = registry.findInterface(localName)) {
+        DeferredPromise::create(globalObject, promise)->resolveWithJSValue(elementInterface->constructor());
         return &promise;
     }
 
@@ -204,19 +205,21 @@ static JSValue whenDefinedPromise(JSGlobalObject& lexicalGlobalObject, CallFrame
 
 JSValue JSCustomElementRegistry::whenDefined(JSGlobalObject& lexicalGlobalObject, CallFrame& callFrame)
 {
-    auto scope = DECLARE_CATCH_SCOPE(lexicalGlobalObject.vm());
+    auto catchScope = DECLARE_CATCH_SCOPE(lexicalGlobalObject.vm());
 
     ASSERT(globalObject());
     auto* result = JSPromise::create(lexicalGlobalObject.vm(), lexicalGlobalObject.promiseStructure());
     JSValue promise = whenDefinedPromise(lexicalGlobalObject, callFrame, *globalObject(), wrapped(), *result);
 
-    if (UNLIKELY(scope.exception())) {
-        rejectPromiseWithExceptionIfAny(lexicalGlobalObject, *globalObject(), *result);
-        scope.assertNoException();
+    if (UNLIKELY(catchScope.exception())) {
+        rejectPromiseWithExceptionIfAny(lexicalGlobalObject, *globalObject(), *result, catchScope);
+        // FIXME: We could have error since any JS call can throw stack-overflow errors.
+        // https://bugs.webkit.org/show_bug.cgi?id=203402
+        RETURN_IF_EXCEPTION(catchScope, JSC::jsUndefined());
         return result;
     }
 
     return promise;
 }
 
-}
+} // namespace WebCore

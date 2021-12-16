@@ -106,6 +106,8 @@ void IndentOutdentCommand::indentIntoBlockquote(const Position& start, const Pos
 
     RefPtr<Node> nodeAfterStart = start.computeNodeAfterPosition();
     RefPtr<Node> outerBlock = (start.containerNode() == nodeToSplitTo) ? start.containerNode() : splitTreeToNode(*start.containerNode(), *nodeToSplitTo);
+    if (!outerBlock)
+        return;
 
     VisiblePosition startOfContents = start;
     if (!targetBlockquote) {
@@ -118,6 +120,9 @@ void IndentOutdentCommand::indentIntoBlockquote(const Position& start, const Pos
             insertNodeBefore(*targetBlockquote, *outerBlock);
         startOfContents = positionInParentAfterNode(targetBlockquote.get());
     }
+
+    if (startOfContents.deepEquivalent().containerNode() && !startOfContents.deepEquivalent().containerNode()->isDescendantOf(outerBlock.get()) && startOfContents.deepEquivalent().containerNode()->parentNode() != outerBlock->parentNode())
+        return;
 
     moveParagraphWithClones(startOfContents, end, targetBlockquote.get(), outerBlock.get());
 }
@@ -186,9 +191,9 @@ void IndentOutdentCommand::outdentParagraph()
         splitElement(*enclosingNode, highestInlineNode ? *highestInlineNode : *visibleStartOfParagraph.deepEquivalent().deprecatedNode());
     }
     auto placeholder = HTMLBRElement::create(document());
-    auto* placeholderPtr = placeholder.ptr();
-    insertNodeBefore(WTFMove(placeholder), *splitBlockquoteNode);
-    moveParagraph(startOfParagraph(visibleStartOfParagraph), endOfParagraph(visibleEndOfParagraph), positionBeforeNode(placeholderPtr), true);
+    insertNodeBefore(placeholder, *splitBlockquoteNode);
+    if (placeholder->isConnected())
+        moveParagraph(startOfParagraph(visibleStartOfParagraph), endOfParagraph(visibleEndOfParagraph), positionBeforeNode(placeholder.ptr()), true);
 }
 
 // FIXME: We should merge this function with ApplyBlockElementCommand::formatSelection
@@ -208,7 +213,7 @@ void IndentOutdentCommand::outdentRegion(const VisiblePosition& startOfSelection
     while (endOfCurrentParagraph != endAfterSelection) {
         VisiblePosition endOfNextParagraph = endOfParagraph(endOfCurrentParagraph.next());
         if (endOfCurrentParagraph == endOfLastParagraph)
-            setEndingSelection(VisibleSelection(originalSelectionEnd, DOWNSTREAM));
+            setEndingSelection(VisibleSelection(originalSelectionEnd));
         else
             setEndingSelection(endOfCurrentParagraph);
 

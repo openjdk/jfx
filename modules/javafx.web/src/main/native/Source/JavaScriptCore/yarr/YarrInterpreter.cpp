@@ -35,7 +35,6 @@
 #include <wtf/CheckedArithmetic.h>
 #include <wtf/DataLog.h>
 #include <wtf/StackCheck.h>
-#include <wtf/text/CString.h>
 #include <wtf/text/WTFString.h>
 
 namespace JSC { namespace Yarr {
@@ -46,6 +45,7 @@ public:
     struct ParenthesesDisjunctionContext;
 
     struct BackTrackInfoParentheses {
+        uintptr_t begin;
         uintptr_t matchAmount;
         ParenthesesDisjunctionContext* lastContext;
     };
@@ -1016,8 +1016,9 @@ public:
         BackTrackInfoParentheses* backTrack = reinterpret_cast<BackTrackInfoParentheses*>(context->frame + term.frameLocation);
         ByteDisjunction* disjunctionBody = term.atom.parenthesesDisjunction;
 
+        backTrack->begin = input.getPos();
         backTrack->matchAmount = 0;
-        backTrack->lastContext = 0;
+        backTrack->lastContext = nullptr;
 
         ASSERT(term.atom.quantityType != QuantifierFixedCount || term.atom.quantityMinCount == term.atom.quantityMaxCount);
 
@@ -1109,7 +1110,7 @@ public:
         case QuantifierFixedCount: {
             ASSERT(backTrack->matchAmount == term.atom.quantityMaxCount);
 
-            ParenthesesDisjunctionContext* context = 0;
+            ParenthesesDisjunctionContext* context = nullptr;
             JSRegExpResult result = parenthesesDoBacktrack(term, backTrack);
 
             if (result != JSRegExpMatch)
@@ -1169,7 +1170,19 @@ public:
                 popParenthesesDisjunctionContext(backTrack);
                 freeParenthesesDisjunctionContext(context);
 
-                if (result != JSRegExpNoMatch || backTrack->matchAmount < term.atom.quantityMinCount)
+                if (backTrack->matchAmount < term.atom.quantityMinCount) {
+                    while (backTrack->matchAmount) {
+                        context = backTrack->lastContext;
+                        resetMatches(term, context);
+                        popParenthesesDisjunctionContext(backTrack);
+                        freeParenthesesDisjunctionContext(context);
+                    }
+
+                    input.setPos(backTrack->begin);
+                    return result;
+                }
+
+                if (result != JSRegExpNoMatch)
                     return result;
             }
 
@@ -1272,6 +1285,9 @@ public:
 #define currentTerm() (disjunction->terms[context->term])
     JSRegExpResult matchDisjunction(ByteDisjunction* disjunction, DisjunctionContext* context, bool btrack = false)
     {
+        if (UNLIKELY(!isSafeToRecurse()))
+            return JSRegExpErrorNoMemory;
+
         if (!--remainingMatchCount)
             return JSRegExpErrorHitLimit;
 
@@ -1667,10 +1683,13 @@ public:
     }
 
 private:
+    inline bool isSafeToRecurse() { return m_stackCheck.isSafeToRecurse(); }
+
     BytecodePattern* pattern;
     bool unicode;
     unsigned* output;
     InputStream input;
+    StackCheck m_stackCheck;
     WTF::BumpPointerPool* allocatorPool { nullptr };
     unsigned startOffset;
     unsigned remainingMatchCount;

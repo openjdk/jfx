@@ -60,8 +60,12 @@ void HTMLButtonElement::setType(const AtomString& type)
     setAttributeWithoutSynchronization(typeAttr, type);
 }
 
-RenderPtr<RenderElement> HTMLButtonElement::createElementRenderer(RenderStyle&& style, const RenderTreePosition&)
+RenderPtr<RenderElement> HTMLButtonElement::createElementRenderer(RenderStyle&& style, const RenderTreePosition& position)
 {
+    // https://html.spec.whatwg.org/multipage/rendering.html#button-layout
+    DisplayType display = style.display();
+    if (display == DisplayType::InlineGrid || display == DisplayType::Grid || display == DisplayType::InlineFlex || display == DisplayType::Flex)
+        return HTMLFormControlElement::createElementRenderer(WTFMove(style), position);
     return createRenderer<RenderButton>(*this, WTFMove(style));
 }
 
@@ -74,15 +78,15 @@ const AtomString& HTMLButtonElement::formControlType() const
 {
     switch (m_type) {
         case SUBMIT: {
-            static NeverDestroyed<const AtomString> submit("submit", AtomString::ConstructFromLiteral);
+            static MainThreadNeverDestroyed<const AtomString> submit("submit", AtomString::ConstructFromLiteral);
             return submit;
         }
         case BUTTON: {
-            static NeverDestroyed<const AtomString> button("button", AtomString::ConstructFromLiteral);
+            static MainThreadNeverDestroyed<const AtomString> button("button", AtomString::ConstructFromLiteral);
             return button;
         }
         case RESET: {
-            static NeverDestroyed<const AtomString> reset("reset", AtomString::ConstructFromLiteral);
+            static MainThreadNeverDestroyed<const AtomString> reset("reset", AtomString::ConstructFromLiteral);
             return reset;
         }
     }
@@ -113,7 +117,7 @@ void HTMLButtonElement::parseAttribute(const QualifiedName& name, const AtomStri
         else
             m_type = SUBMIT;
         if (oldType != m_type) {
-            setNeedsWillValidateCheck();
+            updateWillValidateAndValidity();
             if (form() && (oldType == SUBMIT || m_type == SUBMIT))
                 form()->resetDefaultButton();
         }
@@ -211,11 +215,11 @@ bool HTMLButtonElement::appendFormData(DOMFormData& formData, bool)
     return true;
 }
 
-void HTMLButtonElement::accessKeyAction(bool sendMouseEvents)
+bool HTMLButtonElement::accessKeyAction(bool sendMouseEvents)
 {
     focus();
 
-    dispatchSimulatedClick(0, sendMouseEvents ? SendMouseUpDownEvents : SendNoEvents);
+    return dispatchSimulatedClick(0, sendMouseEvents ? SendMouseUpDownEvents : SendNoEvents);
 }
 
 bool HTMLButtonElement::isURLAttribute(const Attribute& attribute) const

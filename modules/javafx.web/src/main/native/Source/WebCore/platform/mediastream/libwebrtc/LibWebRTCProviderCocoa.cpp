@@ -28,11 +28,18 @@
 
 #if USE(LIBWEBRTC)
 
+#include "RuntimeEnabledFeatures.h"
+
 ALLOW_UNUSED_PARAMETERS_BEGIN
-#include <webrtc/sdk/WebKit/WebKitUtilities.h>
+#include <webrtc/sdk/WebKit/WebKitDecoder.h>
+#include <webrtc/sdk/WebKit/WebKitEncoder.h>
 ALLOW_UNUSED_PARAMETERS_END
+#include <webrtc/sdk/WebKit/WebKitVP8Decoder.h>
+#include <webrtc/sdk/WebKit/WebKitVP9Decoder.h>
 #include <wtf/MainThread.h>
 #include <wtf/darwin/WeakLinking.h>
+
+WTF_WEAK_LINK_FORCE_IMPORT(webrtc::setApplicationStatus);
 
 namespace WebCore {
 
@@ -41,39 +48,63 @@ UniqueRef<LibWebRTCProvider> LibWebRTCProvider::create()
     return makeUniqueRef<LibWebRTCProviderCocoa>();
 }
 
-LibWebRTCProviderCocoa::~LibWebRTCProviderCocoa()
+void LibWebRTCProvider::setH264HardwareEncoderAllowed(bool allowed)
 {
+    if (webRTCAvailable())
+        webrtc::setH264HardwareEncoderAllowed(allowed);
 }
 
-void LibWebRTCProviderCocoa::setH264HardwareEncoderAllowed(bool allowed)
+LibWebRTCProviderCocoa::~LibWebRTCProviderCocoa()
 {
-    webrtc::setH264HardwareEncoderAllowed(allowed);
 }
 
 std::unique_ptr<webrtc::VideoDecoderFactory> LibWebRTCProviderCocoa::createDecoderFactory()
 {
     ASSERT(isMainThread());
 
-    auto codecSupport = m_supportsVP8 ? webrtc::WebKitCodecSupport::H264AndVP8 : webrtc::WebKitCodecSupport::H264;
-    return webrtc::createWebKitDecoderFactory(codecSupport);
+    if (!webRTCAvailable())
+        return nullptr;
+
+    auto vp9Support = isSupportingVP9Profile2() ? webrtc::WebKitVP9::Profile0And2 : isSupportingVP9Profile0() ? webrtc::WebKitVP9::Profile0 : webrtc::WebKitVP9::Off;
+    return webrtc::createWebKitDecoderFactory(isSupportingH265() ? webrtc::WebKitH265::On : webrtc::WebKitH265::Off, vp9Support, isSupportingVP9VTB() ? webrtc::WebKitVP9VTB::On : webrtc::WebKitVP9VTB::Off);
 }
 
 std::unique_ptr<webrtc::VideoEncoderFactory> LibWebRTCProviderCocoa::createEncoderFactory()
 {
     ASSERT(isMainThread());
 
-    auto codecSupport = m_supportsVP8 ? webrtc::WebKitCodecSupport::H264AndVP8 : webrtc::WebKitCodecSupport::H264;
-    return webrtc::createWebKitEncoderFactory(codecSupport);
+    if (!webRTCAvailable())
+        return nullptr;
+
+    auto vp9Support = isSupportingVP9Profile2() ? webrtc::WebKitVP9::Profile0And2 : isSupportingVP9Profile0() ? webrtc::WebKitVP9::Profile0 : webrtc::WebKitVP9::Off;
+    return webrtc::createWebKitEncoderFactory(isSupportingH265() ? webrtc::WebKitH265::On : webrtc::WebKitH265::Off, vp9Support, RuntimeEnabledFeatures::sharedFeatures().webRTCH264LowLatencyEncoderEnabled() ? webrtc::WebKitH264LowLatency::On : webrtc::WebKitH264LowLatency::Off);
 }
 
 void LibWebRTCProviderCocoa::setActive(bool value)
 {
-    webrtc::setApplicationStatus(value);
+    if (webRTCAvailable())
+        webrtc::setApplicationStatus(value);
 }
 
 bool LibWebRTCProvider::webRTCAvailable()
 {
-    return !isNullFunctionPointer(rtc::LogMessage::LogToDebug);
+#if PLATFORM(IOS)
+    return true;
+#else
+    return !!webrtc::setApplicationStatus;
+#endif
+}
+
+void LibWebRTCProvider::registerWebKitVP9Decoder()
+{
+    if (webRTCAvailable())
+        webrtc::registerWebKitVP9Decoder();
+}
+
+void LibWebRTCProvider::registerWebKitVP8Decoder()
+{
+    if (webRTCAvailable())
+        webrtc::registerWebKitVP8Decoder();
 }
 
 } // namespace WebCore

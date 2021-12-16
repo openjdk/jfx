@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,6 +33,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 
 /**
+ * This class serves as a container of a CSS property and its value.
  * @since 9
  */
 final public class Declaration {
@@ -42,6 +43,12 @@ final public class Declaration {
     // The Rule to which this Declaration belongs.
     Rule rule;
 
+    /**
+     * Constructs a {@code Declaration} object.
+     * @param propertyName name of the CSS property
+     * @param parsedValue value of the CSS property
+     * @param important importance of the Declaration
+     */
     Declaration(final String propertyName, final ParsedValue parsedValue,
                 final boolean important) {
         this.property = propertyName;
@@ -55,26 +62,41 @@ final public class Declaration {
         }
     }
 
-    /** @return ParsedValue contains the parsed declaration. */
+    /**
+     * Gets the parsed value.
+     * @return the parsed value
+     */
     public ParsedValue getParsedValue() {
         return parsedValue;
     }
 
-    /** @return The CSS property name */
+    /**
+     * Gets the CSS property name.
+     * @return the CSS property
+     */
     public String getProperty() {
         return property;
     }
 
-    /** @return The Rule to which this Declaration belongs. */
+    /**
+     * Gets the {@code Rule} to which this {@code Declaration} belongs.
+     * @return the {@code Rule}
+     */
     public Rule getRule() {
         return rule;
     }
 
+    /**
+     * Gets the importance of this {@code Declaration}.
+     * @return the important flag
+     */
     public final boolean isImportant() {
         return important;
     }
 
-    /** Helper */
+    /**
+     * Gets the {@code StyleOrigin} of this {@code Declaration}.
+     */
     private StyleOrigin getOrigin() {
         Rule rule = getRule();
         if (rule != null)  {
@@ -83,9 +105,14 @@ final public class Declaration {
         return null;
     }
     /**
-     * One declaration is the equal to another regardless of the Rule to which
-     * the Declaration belongs. Only the property, value and importance are
+     * Indicates whether some other {@code Object} is "equal to" this one.
+     * <p>
+     * One {@code Declaration} is equal to another regardless of the {@code Rule} to which
+     * the {@code Declaration} belongs. Only the property, value and importance are
      * considered.
+     *
+     * @param obj an {@code Object} to compare
+     * @return {@code true} if this object is the same as the {@code obj} argument; {@code false} otherwise
      */
     @Override public boolean equals(Object obj) {
         if (this == obj) {

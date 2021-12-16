@@ -42,6 +42,9 @@
 #include "Logging.h"
 #include "MediaSourcePrivate.h"
 #include "MediaSourceRegistry.h"
+#include "Quirks.h"
+#include "RuntimeEnabledFeatures.h"
+#include "Settings.h"
 #include "SourceBuffer.h"
 #include "SourceBufferList.h"
 #include "SourceBufferPrivate.h"
@@ -122,6 +125,7 @@ void MediaSource::setPrivateAndOpen(Ref<MediaSourcePrivate>&& mediaSourcePrivate
     ASSERT(!m_private);
     ASSERT(m_mediaElement);
     m_private = WTFMove(mediaSourcePrivate);
+    m_private->setTimeFudgeFactor(currentTimeFudgeFactor());
 
     // 2.4.1 Attaching to a media element
     // https://rawgit.com/w3c/media-source/45627646344eea0170dd1cbc5a3d508ca751abb8/media-source-respec.html#mediasource-attach
@@ -162,12 +166,6 @@ void MediaSource::removedFromRegistry()
 MediaTime MediaSource::duration() const
 {
     return m_duration;
-}
-
-void MediaSource::durationChanged(const MediaTime& duration)
-{
-    ALWAYS_LOG(LOGIDENTIFIER, duration);
-    m_duration = duration;
 }
 
 MediaTime MediaSource::currentTime() const
@@ -235,6 +233,7 @@ void MediaSource::seekToTime(const MediaTime& time)
     // https://rawgit.com/w3c/media-source/45627646344eea0170dd1cbc5a3d508ca751abb8/media-source-respec.html#mediasource-seeking
 
     m_pendingSeekTime = time;
+    m_private->setIsSeeking(true);
 
     // Run the following steps as part of the "Wait until the user agent has established whether or not the
     // media data for the new playback position is available, and, if it is, until it has decoded enough data
@@ -279,6 +278,7 @@ void MediaSource::completeSeek()
     // with the closest random access point before the new playback position.
     MediaTime pendingSeekTime = m_pendingSeekTime;
     m_pendingSeekTime = MediaTime::invalidTime();
+    m_private->setIsSeeking(false);
     for (auto& sourceBuffer : *m_activeSourceBuffers)
         sourceBuffer->seekToTime(pendingSeekTime);
 
@@ -558,7 +558,7 @@ ExceptionOr<void> MediaSource::setDurationInternal(const MediaTime& duration)
     ALWAYS_LOG(LOGIDENTIFIER, duration);
 
     // 6. Update the media duration to new duration and run the HTMLMediaElement duration change algorithm.
-    m_private->durationChanged();
+    m_private->durationChanged(duration);
 
     return { };
 }
@@ -627,9 +627,10 @@ void MediaSource::streamEndedWithError(Optional<EndOfStreamError> error)
 
         // 2. Notify the media element that it now has all of the media data.
         for (auto& sourceBuffer : *m_sourceBuffers)
-            sourceBuffer->trySignalAllSamplesEnqueued();
+            sourceBuffer->setMediaSourceEnded(true);
         m_private->markEndOfStream(MediaSourcePrivate::EosNoError);
     } else if (error == EndOfStreamError::Network) {
+        m_private->markEndOfStream(MediaSourcePrivate::EosNetworkError);
         // ↳ If error is set to "network"
         ASSERT(m_mediaElement);
         if (m_mediaElement->readyState() == HTMLMediaElement::HAVE_NOTHING) {
@@ -648,6 +649,8 @@ void MediaSource::streamEndedWithError(Optional<EndOfStreamError> error)
     } else {
         // ↳ If error is set to "decode"
         ASSERT(error == EndOfStreamError::Decode);
+        m_private->markEndOfStream(MediaSourcePrivate::EosDecodeError);
+
         ASSERT(m_mediaElement);
         if (m_mediaElement->readyState() == HTMLMediaElement::HAVE_NOTHING) {
             //  ↳ If the HTMLMediaElement.readyState attribute equals HAVE_NOTHING
@@ -664,6 +667,36 @@ void MediaSource::streamEndedWithError(Optional<EndOfStreamError> error)
     }
 }
 
+static ContentType addVP9FullRangeVideoFlagToContentType(const ContentType& type)
+{
+    auto countPeriods = [] (const String& codec) {
+        unsigned count = 0;
+        unsigned position = 0;
+
+        while (codec.find('.', position) != notFound) {
+            ++count;
+            ++position;
+        }
+
+        return count;
+    };
+
+    for (auto codec : type.codecs()) {
+        if (!codec.startsWith("vp09") || countPeriods(codec) != 7)
+            continue;
+
+        auto rawType = type.raw();
+        auto position = rawType.find(codec);
+        ASSERT(position != notFound);
+        if (position == notFound)
+            continue;
+
+        rawType.insert(".00", position + codec.length());
+        return ContentType(rawType);
+    }
+    return type;
+}
+
 ExceptionOr<Ref<SourceBuffer>> MediaSource::addSourceBuffer(const String& type)
 {
     DEBUG_LOG(LOGIDENTIFIER, type);
@@ -677,7 +710,15 @@ ExceptionOr<Ref<SourceBuffer>> MediaSource::addSourceBuffer(const String& type)
 
     // 2. If type contains a MIME type that is not supported ..., then throw a
     // NotSupportedError exception and abort these steps.
-    if (!isTypeSupported(type))
+    Vector<ContentType> mediaContentTypesRequiringHardwareSupport;
+    if (m_mediaElement)
+        mediaContentTypesRequiringHardwareSupport.appendVector(m_mediaElement->document().settings().mediaContentTypesRequiringHardwareSupport());
+
+    auto context = scriptExecutionContext();
+    if (!context)
+        return Exception { NotAllowedError };
+
+    if (!isTypeSupported(*context, type, WTFMove(mediaContentTypesRequiringHardwareSupport)))
         return Exception { NotSupportedError };
 
     // 4. If the readyState attribute is not in the "open" state then throw an
@@ -687,6 +728,9 @@ ExceptionOr<Ref<SourceBuffer>> MediaSource::addSourceBuffer(const String& type)
 
     // 5. Create a new SourceBuffer object and associated resources.
     ContentType contentType(type);
+    if (context->isDocument() && downcast<Document>(context)->quirks().needsVP9FullRangeFlagQuirk())
+        contentType = addVP9FullRangeVideoFlagToContentType(contentType);
+
     auto sourceBufferPrivate = createSourceBufferPrivate(contentType);
 
     if (sourceBufferPrivate.hasException()) {
@@ -869,7 +913,18 @@ ExceptionOr<void> MediaSource::removeSourceBuffer(SourceBuffer& buffer)
     return { };
 }
 
-bool MediaSource::isTypeSupported(const String& type)
+bool MediaSource::isTypeSupported(ScriptExecutionContext& context, const String& type)
+{
+    Vector<ContentType> mediaContentTypesRequiringHardwareSupport;
+    if (context.isDocument()) {
+        auto& document = downcast<Document>(context);
+        mediaContentTypesRequiringHardwareSupport.appendVector(document.settings().mediaContentTypesRequiringHardwareSupport());
+    }
+
+    return isTypeSupported(context, type, WTFMove(mediaContentTypesRequiringHardwareSupport));
+}
+
+bool MediaSource::isTypeSupported(ScriptExecutionContext& context, const String& type, Vector<ContentType>&& contentTypesRequiringHardwareSupport)
 {
     // Section 2.2 isTypeSupported() method steps.
     // https://dvcs.w3.org/hg/html-media/raw-file/tip/media-source/media-source.html#widl-MediaSource-isTypeSupported-boolean-DOMString-type
@@ -878,6 +933,9 @@ bool MediaSource::isTypeSupported(const String& type)
         return false;
 
     ContentType contentType(type);
+    if (context.isDocument() && downcast<Document>(context).quirks().needsVP9FullRangeFlagQuirk())
+        contentType = addVP9FullRangeVideoFlagToContentType(contentType);
+
     String codecs = contentType.parameter("codecs");
 
     // 2. If type does not contain a valid MIME type string, then return false.
@@ -891,6 +949,8 @@ bool MediaSource::isTypeSupported(const String& type)
     MediaEngineSupportParameters parameters;
     parameters.type = contentType;
     parameters.isMediaSource = true;
+    parameters.contentTypesRequiringHardwareSupport = WTFMove(contentTypesRequiringHardwareSupport);
+
     MediaPlayer::SupportsType supported = MediaPlayer::supportsType(parameters);
 
     if (codecs.isEmpty())
@@ -969,12 +1029,13 @@ void MediaSource::openIfInEndedState()
 
     setReadyState(ReadyState::Open);
     m_private->unmarkEndOfStream();
+    for (auto& sourceBuffer : *m_sourceBuffers)
+        sourceBuffer->setMediaSourceEnded(false);
 }
 
-bool MediaSource::hasPendingActivity() const
+bool MediaSource::virtualHasPendingActivity() const
 {
-    return m_private || m_asyncEventQueue->hasPendingEvents()
-        || ActiveDOMObject::hasPendingActivity();
+    return m_private || m_asyncEventQueue->hasPendingActivity();
 }
 
 void MediaSource::stop()
@@ -1021,19 +1082,25 @@ Vector<PlatformTimeRanges> MediaSource::activeRanges() const
     return activeRanges;
 }
 
-ExceptionOr<Ref<SourceBufferPrivate>> MediaSource::createSourceBufferPrivate(const ContentType& type)
+ExceptionOr<Ref<SourceBufferPrivate>> MediaSource::createSourceBufferPrivate(const ContentType& incomingType)
 {
+    ContentType type { incomingType };
+
+    auto context = scriptExecutionContext();
+    if (context && context->isDocument() && downcast<Document>(context)->quirks().needsVP9FullRangeFlagQuirk())
+        type = addVP9FullRangeVideoFlagToContentType(incomingType);
+
     RefPtr<SourceBufferPrivate> sourceBufferPrivate;
-    switch (m_private->addSourceBuffer(type, sourceBufferPrivate)) {
-    case MediaSourcePrivate::Ok:
+    switch (m_private->addSourceBuffer(type, RuntimeEnabledFeatures::sharedFeatures().webMParserEnabled(), sourceBufferPrivate)) {
+    case MediaSourcePrivate::AddStatus::Ok:
         return sourceBufferPrivate.releaseNonNull();
-    case MediaSourcePrivate::NotSupported:
+    case MediaSourcePrivate::AddStatus::NotSupported:
         // 2.2 https://dvcs.w3.org/hg/html-media/raw-file/default/media-source/media-source.html#widl-MediaSource-addSourceBuffer-SourceBuffer-DOMString-type
         // Step 2: If type contains a MIME type ... that is not supported with the types
         // specified for the other SourceBuffer objects in sourceBuffers, then throw
         // a NotSupportedError exception and abort these steps.
         return Exception { NotSupportedError };
-    case MediaSourcePrivate::ReachedIdLimit:
+    case MediaSourcePrivate::AddStatus::ReachedIdLimit:
         // 2.2 https://dvcs.w3.org/hg/html-media/raw-file/default/media-source/media-source.html#widl-MediaSource-addSourceBuffer-SourceBuffer-DOMString-type
         // Step 3: If the user agent can't handle any more SourceBuffer objects then throw
         // a QuotaExceededError exception and abort these steps.
@@ -1093,6 +1160,12 @@ WTFLogChannel& MediaSource::logChannel() const
     return LogMediaSource;
 }
 #endif
+
+void MediaSource::failedToCreateRenderer(RendererType type)
+{
+    if (auto context = scriptExecutionContext())
+        context->addConsoleMessage(MessageSource::JS, MessageLevel::Error, makeString("MediaSource ", type == RendererType::Video ? "video" : "audio", " renderer creation failed."));
+}
 
 }
 

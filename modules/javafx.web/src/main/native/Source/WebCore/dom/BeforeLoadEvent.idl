@@ -25,8 +25,11 @@
  */
 
 [
-    Constructor(DOMString type, optional BeforeLoadEventInit eventInitDict)
+    EnabledBySetting=LegacyBeforeLoadEvent,
+    Exposed=Window
 ] interface BeforeLoadEvent : Event {
+    constructor(DOMString type, optional BeforeLoadEventInit eventInitDict);
+
     readonly attribute DOMString url;
 };
 

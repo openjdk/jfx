@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -56,13 +56,10 @@ public:
     WasmToWasmImportableFunction importableFunction() const { return m_importableFunction; }
     JSObject* function() { return m_function.get(); }
 
-protected:
-    static void visitChildren(JSCell*, SlotVisitor&);
-
-    void finishCreation(VM&, NativeExecutable*, unsigned length, const String& name, JSObject*, JSWebAssemblyInstance*);
-
 private:
     WebAssemblyWrapperFunction(VM&, NativeExecutable*, JSGlobalObject*, Structure*, WasmToWasmImportableFunction);
+    void finishCreation(VM&, NativeExecutable*, unsigned length, const String& name, JSObject*, JSWebAssemblyInstance*);
+    DECLARE_VISIT_CHILDREN;
 
     WriteBarrier<JSObject> m_function;
     // It's safe to just hold the raw WasmToWasmImportableFunction because we have a reference

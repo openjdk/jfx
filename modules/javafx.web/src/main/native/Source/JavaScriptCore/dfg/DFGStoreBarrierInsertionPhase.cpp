@@ -266,11 +266,29 @@ private:
                 break;
             }
 
+            case PutPrivateNameById: {
+                // We emit IC code when we have a non-null cacheableIdentifier and we need to introduce a
+                // barrier for it. On PutPrivateName, we perform store barrier during slow path execution.
+                considerBarrier(m_node->child1());
+                break;
+            }
+
+            case SetPrivateBrand:
             case PutById:
             case PutByIdFlush:
             case PutByIdDirect:
             case PutStructure: {
                 considerBarrier(m_node->child1());
+                break;
+            }
+
+            case DeleteById:
+            case DeleteByVal: {
+                // If child1 is not a cell-speculated, we call a generic implementation which emits write-barrier in C++ side.
+                // FIXME: We should consider accept base:UntypedUse.
+                // https://bugs.webkit.org/show_bug.cgi?id=209396
+                if (isCell(m_node->child1().useKind()))
+                    considerBarrier(m_node->child1());
                 break;
             }
 
@@ -287,7 +305,8 @@ private:
                 break;
             }
 
-            case MultiPutByOffset: {
+            case MultiPutByOffset:
+            case MultiDeleteByOffset: {
                 considerBarrier(m_node->child1());
                 break;
             }
@@ -321,13 +340,12 @@ private:
 
             switch (m_node->op()) {
             case NewObject:
-            case NewPromise:
             case NewGenerator:
             case NewAsyncGenerator:
             case NewArray:
             case NewArrayWithSize:
             case NewArrayBuffer:
-            case NewArrayIterator:
+            case NewInternalFieldObject:
             case NewTypedArray:
             case NewRegexp:
             case NewStringObject:
@@ -473,6 +491,7 @@ private:
 
         // FIXME: We could support StoreBarrier(UntypedUse:). That would be sort of cool.
         // But right now we don't need it.
+        // https://bugs.webkit.org/show_bug.cgi?id=209396
 
         DFG_ASSERT(m_graph, m_node, isCell(base.useKind()), m_node->op(), base.useKind());
 

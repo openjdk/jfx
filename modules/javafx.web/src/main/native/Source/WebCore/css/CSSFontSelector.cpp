@@ -62,24 +62,27 @@ namespace WebCore {
 static unsigned fontSelectorId;
 
 CSSFontSelector::CSSFontSelector(Document& document)
-    : m_document(makeWeakPtr(document))
+    : ActiveDOMObject(document)
+    , m_document(makeWeakPtr(document))
     , m_cssFontFaceSet(CSSFontFaceSet::create(this))
-    , m_beginLoadingTimer(*this, &CSSFontSelector::beginLoadTimerFired)
+    , m_fontModifiedObserver([this] { fontModified(); })
+    , m_fontLoadingTimer(*this, &CSSFontSelector::fontLoadingTimerFired)
     , m_uniqueId(++fontSelectorId)
     , m_version(0)
 {
     ASSERT(m_document);
     FontCache::singleton().addClient(*this);
-    m_cssFontFaceSet->addClient(*this);
+    m_cssFontFaceSet->addFontModifiedObserver(m_fontModifiedObserver);
     LOG(Fonts, "CSSFontSelector %p ctor", this);
+
+    suspendIfNeeded();
 }
 
 CSSFontSelector::~CSSFontSelector()
 {
     LOG(Fonts, "CSSFontSelector %p dtor", this);
 
-    clearDocument();
-    m_cssFontFaceSet->removeClient(*this);
+    stopLoadingAndClearFonts();
     FontCache::singleton().removeClient(*this);
 }
 
@@ -245,7 +248,7 @@ void CSSFontSelector::opportunisticallyStartFontDataURLLoading(const FontCascade
         face->opportunisticallyStartFontDataURLLoading(*this);
 }
 
-void CSSFontSelector::fontLoaded()
+void CSSFontSelector::fontLoaded(CSSFontFace&)
 {
     dispatchInvalidationCallbacks();
 }
@@ -256,6 +259,12 @@ void CSSFontSelector::fontModified()
         dispatchInvalidationCallbacks();
 }
 
+void CSSFontSelector::fontStyleUpdateNeeded(CSSFontFace&)
+{
+    if (document())
+        document()->updateStyleIfNeeded();
+}
+
 void CSSFontSelector::fontCacheInvalidated()
 {
     dispatchInvalidationCallbacks();
@@ -263,7 +272,7 @@ void CSSFontSelector::fontCacheInvalidated()
 
 static Optional<AtomString> resolveGenericFamily(Document* document, const FontDescription& fontDescription, const AtomString& familyName)
 {
-    auto platformResult = FontDescription::platformResolveGenericFamily(fontDescription.script(), fontDescription.locale(), familyName);
+    auto platformResult = FontDescription::platformResolveGenericFamily(fontDescription.script(), fontDescription.computedLocale(), familyName);
     if (!platformResult.isNull())
         return platformResult;
 
@@ -274,19 +283,19 @@ static Optional<AtomString> resolveGenericFamily(Document* document, const FontD
 
     UScriptCode script = fontDescription.script();
     if (familyName == serifFamily)
-        return settings.serifFontFamily(script);
+        return AtomString(settings.serifFontFamily(script));
     if (familyName == sansSerifFamily)
-        return settings.sansSerifFontFamily(script);
+        return AtomString(settings.sansSerifFontFamily(script));
     if (familyName == cursiveFamily)
-        return settings.cursiveFontFamily(script);
+        return AtomString(settings.cursiveFontFamily(script));
     if (familyName == fantasyFamily)
-        return settings.fantasyFontFamily(script);
+        return AtomString(settings.fantasyFontFamily(script));
     if (familyName == monospaceFamily)
-        return settings.fixedFontFamily(script);
+        return AtomString(settings.fixedFontFamily(script));
     if (familyName == pictographFamily)
-        return settings.pictographFontFamily(script);
+        return AtomString(settings.pictographFontFamily(script));
     if (familyName == standardFamily)
-        return settings.standardFontFamily(script);
+        return AtomString(settings.standardFontFamily(script));
 
     return WTF::nullopt;
 }
@@ -328,15 +337,16 @@ FontRanges CSSFontSelector::fontRangesForFamily(const FontDescription& fontDescr
     return FontRanges { WTFMove(font) };
 }
 
-void CSSFontSelector::clearDocument()
+void CSSFontSelector::stopLoadingAndClearFonts()
 {
-    if (!m_document) {
-        ASSERT(!m_beginLoadingTimer.isActive());
+    if (m_isStopped) {
+        ASSERT(!m_fontLoadingTimer.isActive());
         ASSERT(m_fontsToBeginLoading.isEmpty());
         return;
     }
 
-    m_beginLoadingTimer.stop();
+    m_isStopped = true;
+    m_fontLoadingTimer.stop();
 
     CachedResourceLoader& cachedResourceLoader = m_document->cachedResourceLoader();
     for (auto& fontHandle : m_fontsToBeginLoading) {
@@ -345,28 +355,35 @@ void CSSFontSelector::clearDocument()
     }
     m_fontsToBeginLoading.clear();
 
-    m_document = nullptr;
-
     m_cssFontFaceSet->clear();
     m_clients.clear();
 }
 
 void CSSFontSelector::beginLoadingFontSoon(CachedFont& font)
 {
-    if (!m_document)
+    if (m_isStopped)
         return;
 
     m_fontsToBeginLoading.append(&font);
     // Increment the request count now, in order to prevent didFinishLoad from being dispatched
     // after this font has been requested but before it began loading. Balanced by
-    // decrementRequestCount() in beginLoadTimerFired() and in clearDocument().
+    // decrementRequestCount() in fontLoadingTimerFired() and in stopLoadingAndClearFonts().
     m_document->cachedResourceLoader().incrementRequestCount(font);
 
-    m_beginLoadingTimer.startOneShot(0_s);
+    if (!m_isFontLoadingSuspended && !m_fontLoadingTimer.isActive())
+        m_fontLoadingTimer.startOneShot(0_s);
 }
 
-void CSSFontSelector::beginLoadTimerFired()
+void CSSFontSelector::suspendFontLoadingTimer()
 {
+    suspend(ReasonForSuspension::PageWillBeSuspended);
+}
+
+void CSSFontSelector::loadPendingFonts()
+{
+    if (m_isFontLoadingSuspended)
+        return;
+
     Vector<CachedResourceHandle<CachedFont>> fontsToBeginLoading;
     fontsToBeginLoading.swap(m_fontsToBeginLoading);
 
@@ -379,9 +396,17 @@ void CSSFontSelector::beginLoadTimerFired()
         // Balances incrementRequestCount() in beginLoadingFontSoon().
         cachedResourceLoader.decrementRequestCount(*fontHandle);
     }
+}
+
+void CSSFontSelector::fontLoadingTimerFired()
+{
+    Ref<CSSFontSelector> protectedThis(*this);
+
+    loadPendingFonts();
+
     // FIXME: Use SubresourceLoader instead.
     // Call FrameLoader::loadDone before FrameLoader::subresourceLoadDone to match the order in SubresourceLoader::notifyDone.
-    cachedResourceLoader.loadDone(LoadCompletionType::Finish);
+    m_document->cachedResourceLoader().loadDone(LoadCompletionType::Finish);
     // Ensure that if the request count reaches zero, the frame loader will know about it.
     // New font loads may be triggered by layout after the document load is complete but before we have dispatched
     // didFinishLoading for the frame. Make sure the delegate is always dispatched by checking explicitly.
@@ -389,10 +414,9 @@ void CSSFontSelector::beginLoadTimerFired()
         m_document->frame()->loader().checkLoadComplete();
 }
 
-
 size_t CSSFontSelector::fallbackFontCount()
 {
-    if (!m_document)
+    if (m_isStopped)
         return 0;
 
     return m_document->settings().fontFallbackPrefersPictographs() ? 1 : 0;
@@ -402,7 +426,7 @@ RefPtr<Font> CSSFontSelector::fallbackFontAt(const FontDescription& fontDescript
 {
     ASSERT_UNUSED(index, !index);
 
-    if (!m_document)
+    if (m_isStopped)
         return nullptr;
 
     if (!m_document->settings().fontFallbackPrefersPictographs())
@@ -410,9 +434,34 @@ RefPtr<Font> CSSFontSelector::fallbackFontAt(const FontDescription& fontDescript
     auto& pictographFontFamily = m_document->settings().pictographFontFamily();
     auto font = FontCache::singleton().fontForFamily(fontDescription, pictographFontFamily);
     if (RuntimeEnabledFeatures::sharedFeatures().webAPIStatisticsEnabled())
-        ResourceLoadObserver::shared().logFontLoad(*m_document, pictographFontFamily.string(), !!font);
+        ResourceLoadObserver::shared().logFontLoad(*m_document, pictographFontFamily, !!font);
 
     return font;
+}
+
+void CSSFontSelector::stop()
+{
+    m_fontLoadingTimer.stop();
+}
+
+void CSSFontSelector::suspend(ReasonForSuspension)
+{
+    if (m_isFontLoadingSuspended)
+        return;
+
+    m_isFontLoadingSuspended = true;
+    m_fontLoadingTimer.stop();
+}
+
+void CSSFontSelector::resume()
+{
+    if (!m_isFontLoadingSuspended)
+        return;
+
+    if (!m_fontsToBeginLoading.isEmpty())
+        m_fontLoadingTimer.startOneShot(0_s);
+
+    m_isFontLoadingSuspended = false;
 }
 
 }

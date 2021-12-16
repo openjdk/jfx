@@ -26,7 +26,6 @@
 #include "config.h"
 #include "JSTypedArrayPrototypes.h"
 
-#include "JSGenericTypedArrayViewPrototypeInlines.h"
 #include "JSCInlines.h"
 #include "JSTypedArrayViewPrototype.h"
 
@@ -48,6 +47,8 @@ MAKE_S_INFO(Uint16Array);
 MAKE_S_INFO(Uint32Array);
 MAKE_S_INFO(Float32Array);
 MAKE_S_INFO(Float64Array);
+MAKE_S_INFO(BigInt64Array);
+MAKE_S_INFO(BigUint64Array);
 
 } // namespace JSC
 

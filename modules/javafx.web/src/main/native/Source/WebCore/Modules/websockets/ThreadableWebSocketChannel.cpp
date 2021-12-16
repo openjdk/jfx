@@ -33,6 +33,7 @@
 
 #include "ContentRuleListResults.h"
 #include "Document.h"
+#include "FrameLoader.h"
 #include "HTTPHeaderValues.h"
 #include "Page.h"
 #include "RuntimeEnabledFeatures.h"
@@ -79,13 +80,20 @@ Ref<ThreadableWebSocketChannel> ThreadableWebSocketChannel::create(ScriptExecuti
     return create(downcast<Document>(context), client, provider);
 }
 
+ThreadableWebSocketChannel::ThreadableWebSocketChannel()
+    : m_identifier(WebSocketIdentifier::generateThreadSafe())
+{
+}
+
 Optional<ThreadableWebSocketChannel::ValidatedURL> ThreadableWebSocketChannel::validateURL(Document& document, const URL& requestedURL)
 {
     ValidatedURL validatedURL { requestedURL, true };
-#if ENABLE(CONTENT_EXTENSIONS)
     if (auto* page = document.page()) {
+        if (!page->loadsFromNetwork())
+            return { };
+#if ENABLE(CONTENT_EXTENSIONS)
         if (auto* documentLoader = document.loader()) {
-            auto results = page->userContentProvider().processContentRuleListsForLoad(validatedURL.url, ContentExtensions::ResourceType::Raw, *documentLoader);
+            auto results = page->userContentProvider().processContentRuleListsForLoad(*page, validatedURL.url, ContentExtensions::ResourceType::Raw, *documentLoader);
             if (results.summary.blockedLoad)
                 return { };
             if (results.summary.madeHTTPS) {
@@ -94,10 +102,10 @@ Optional<ThreadableWebSocketChannel::ValidatedURL> ThreadableWebSocketChannel::v
             }
             validatedURL.areCookiesAllowed = !results.summary.blockedCookies;
         }
-    }
 #else
-    UNUSED_PARAM(document);
+        UNUSED_PARAM(document);
 #endif
+    }
     return validatedURL;
 }
 
@@ -113,6 +121,7 @@ Optional<ResourceRequest> ThreadableWebSocketChannel::webSocketConnectRequest(Do
     request.setAllowCookies(validatedURL->areCookiesAllowed);
     request.setFirstPartyForCookies(document.firstPartyForCookies());
     request.setHTTPHeaderField(HTTPHeaderName::Origin, document.securityOrigin().toString());
+    FrameLoader::addSameSiteInfoToRequestIfNeeded(request, &document);
 
     // Add no-cache headers to avoid compatibility issue.
     // There are some proxies that rewrite "Connection: upgrade"

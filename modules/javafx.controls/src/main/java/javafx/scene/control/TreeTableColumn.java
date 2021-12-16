@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -127,7 +127,7 @@ import javafx.css.Styleable;
  */
 public class TreeTableColumn<S,T> extends TableColumnBase<TreeItem<S>,T> implements EventTarget {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Static properties and methods                                           *
      *                                                                         *
@@ -227,7 +227,7 @@ public class TreeTableColumn<S,T> extends TableColumnBase<TreeItem<S>,T> impleme
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -277,7 +277,7 @@ public class TreeTableColumn<S,T> extends TableColumnBase<TreeItem<S>,T> impleme
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Listeners                                                               *
      *                                                                         *
@@ -285,7 +285,9 @@ public class TreeTableColumn<S,T> extends TableColumnBase<TreeItem<S>,T> impleme
 
     private EventHandler<TreeTableColumn.CellEditEvent<S,T>> DEFAULT_EDIT_COMMIT_HANDLER =
             t -> {
-                ObservableValue<T> ov = getCellObservableValue(t.getRowValue());
+                TreeItem<S> rowValue = t.getRowValue();
+                if (rowValue == null) return;
+                ObservableValue<T> ov = getCellObservableValue(rowValue);
                 if (ov instanceof WritableValue) {
                     ((WritableValue)ov).setValue(t.getNewValue());
                 }
@@ -321,7 +323,7 @@ public class TreeTableColumn<S,T> extends TableColumnBase<TreeItem<S>,T> impleme
             new WeakListChangeListener<>(columnsListener);
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Instance Variables                                                      *
      *                                                                         *
@@ -332,7 +334,7 @@ public class TreeTableColumn<S,T> extends TableColumnBase<TreeItem<S>,T> impleme
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Properties                                                              *
      *                                                                         *
@@ -537,7 +539,7 @@ public class TreeTableColumn<S,T> extends TableColumnBase<TreeItem<S>,T> impleme
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *
@@ -578,7 +580,7 @@ public class TreeTableColumn<S,T> extends TableColumnBase<TreeItem<S>,T> impleme
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private Implementation                                                  *
      *                                                                         *
@@ -586,7 +588,7 @@ public class TreeTableColumn<S,T> extends TableColumnBase<TreeItem<S>,T> impleme
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Stylesheet Handling                                                     *
      *                                                                         *
@@ -617,6 +619,11 @@ public class TreeTableColumn<S,T> extends TableColumnBase<TreeItem<S>,T> impleme
         return getClassCssMetaData();
     }
 
+    /**
+     * Gets the {@code CssMetaData} associated with this class, which may include the
+     * {@code CssMetaData} of its superclasses. It is currently an empty list.
+     * @return an empty list
+     */
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return Collections.emptyList();
     }
@@ -665,7 +672,7 @@ public class TreeTableColumn<S,T> extends TableColumnBase<TreeItem<S>,T> impleme
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Support Interfaces                                                      *
      *                                                                         *
@@ -760,9 +767,6 @@ public class TreeTableColumn<S,T> extends TableColumnBase<TreeItem<S>,T> impleme
                 EventType<TreeTableColumn.CellEditEvent<S,T>> eventType, T newValue) {
             super(table, Event.NULL_SOURCE_TARGET, eventType);
 
-            if (table == null) {
-                throw new NullPointerException("TableView can not be null");
-            }
             this.pos = pos;
             this.newValue = newValue;
         }
@@ -772,7 +776,7 @@ public class TreeTableColumn<S,T> extends TableColumnBase<TreeItem<S>,T> impleme
          * @return The TableView control upon which this event occurred.
          */
         public TreeTableView<S> getTreeTableView() {
-            return pos.getTreeTableView();
+            return pos != null ? pos.getTreeTableView() : null;
         }
 
         /**
@@ -781,7 +785,7 @@ public class TreeTableColumn<S,T> extends TableColumnBase<TreeItem<S>,T> impleme
          * @return The TreeTableColumn that the edit occurred in.
          */
         public TreeTableColumn<S,T> getTableColumn() {
-            return pos.getTableColumn();
+            return pos != null ? pos.getTableColumn() : null;
         }
 
         /**
@@ -830,12 +834,10 @@ public class TreeTableColumn<S,T> extends TableColumnBase<TreeItem<S>,T> impleme
          * @return the row value
          */
         public TreeItem<S> getRowValue() {
-//            List<S> items = getTreeTableView().getItems();
-//            if (items == null) return null;
-
             TreeTableView<S> treeTable = getTreeTableView();
-            int row = pos.getRow();
-            if (row < 0 || row >= treeTable.getExpandedItemCount()) return null;
+            int row = pos != null ? pos.getRow() : -1;
+            int expandedItemCount = treeTable != null ? treeTable.getExpandedItemCount() : 0;
+            if (row < 0 || row >= expandedItemCount) return null;
 
             return treeTable.getTreeItem(row);
         }

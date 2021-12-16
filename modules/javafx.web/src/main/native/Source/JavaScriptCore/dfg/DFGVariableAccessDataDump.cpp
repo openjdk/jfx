@@ -30,7 +30,7 @@
 
 #include "DFGGraph.h"
 #include "DFGVariableAccessData.h"
-#include "JSCInlines.h"
+#include "JSCJSValueInlines.h"
 
 namespace JSC { namespace DFG {
 
@@ -52,15 +52,10 @@ void VariableAccessDataDump::dump(PrintStream& out) const
 
     ASSERT(index != std::numeric_limits<unsigned>::max());
 
-    if (!index) {
-        out.print("a");
-        return;
-    }
-
-    while (index) {
+    do {
         out.print(CharacterDump('A' + (index % 26)));
         index /= 26;
-    }
+    } while (index);
 
     if (m_data->shouldNeverUnbox())
         out.print("!");

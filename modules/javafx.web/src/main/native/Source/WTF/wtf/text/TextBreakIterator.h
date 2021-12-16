@@ -21,6 +21,7 @@
 
 #pragma once
 
+#include <mutex>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/Variant.h>
 #include <wtf/text/StringView.h>
@@ -82,7 +83,7 @@ private:
     friend class TextBreakIteratorCache;
 
     // Use CachedTextBreakIterator instead of constructing one of these directly.
-    WTF_EXPORT TextBreakIterator(StringView, Mode, const AtomString& locale);
+    WTF_EXPORT_PRIVATE TextBreakIterator(StringView, Mode, const AtomString& locale);
 
     void setText(StringView string)
     {
@@ -112,14 +113,10 @@ class TextBreakIteratorCache {
     WTF_MAKE_FAST_ALLOCATED;
 // Use CachedTextBreakIterator instead of dealing with the cache directly.
 private:
-    friend class NeverDestroyed<TextBreakIteratorCache>;
+    friend class LazyNeverDestroyed<TextBreakIteratorCache>;
     friend class CachedTextBreakIterator;
 
-    static TextBreakIteratorCache& singleton()
-    {
-        static NeverDestroyed<TextBreakIteratorCache> cache;
-        return cache.get();
-    }
+    WTF_EXPORT_PRIVATE static TextBreakIteratorCache& singleton();
 
     TextBreakIteratorCache(const TextBreakIteratorCache&) = delete;
     TextBreakIteratorCache(TextBreakIteratorCache&&) = delete;
@@ -285,7 +282,7 @@ public:
     UBreakIterator* get(unsigned priorContextLength)
     {
         ASSERT(priorContextLength <= priorContextCapacity);
-        const UChar* priorContext = priorContextLength ? &m_priorContext[priorContextCapacity - priorContextLength] : 0;
+        const UChar* priorContext = priorContextLength ? &m_priorContext[priorContextCapacity - priorContextLength] : nullptr;
         if (!m_iterator) {
             m_iterator = acquireLineBreakIterator(m_stringView, m_locale, priorContext, priorContextLength, m_mode);
             m_cachedPriorContext = priorContext;

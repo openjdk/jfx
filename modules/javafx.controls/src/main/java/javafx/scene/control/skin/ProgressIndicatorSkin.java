@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,6 +26,7 @@
 package javafx.scene.control.skin;
 
 import com.sun.javafx.scene.NodeHelper;
+import com.sun.javafx.scene.TreeShowingExpression;
 import com.sun.javafx.scene.control.skin.Utils;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -78,7 +79,7 @@ import javafx.css.Styleable;
  */
 public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator> {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Static fields                                                           *
      *                                                                         *
@@ -86,7 +87,7 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private fields                                                          *
      *                                                                         *
@@ -104,12 +105,13 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator> {
     private IndeterminateSpinner spinner;
     private DeterminateIndicator determinateIndicator;
     private ProgressIndicator control;
+    private TreeShowingExpression treeShowingExpression;
 
     Animation indeterminateTransition;
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -125,12 +127,13 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator> {
         super(control);
 
         this.control = control;
+        this.treeShowingExpression = new TreeShowingExpression(control);
 
         // register listeners
         registerChangeListener(control.indeterminateProperty(), e -> initialize());
         registerChangeListener(control.progressProperty(), e -> updateProgress());
-        registerChangeListener(NodeHelper.treeShowingProperty(control), e -> updateAnimation());
         registerChangeListener(control.sceneProperty(), e->updateAnimation());
+        registerChangeListener(treeShowingExpression, e -> updateAnimation());
 
         initialize();
         updateAnimation();
@@ -138,7 +141,7 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Properties                                                              *
      *                                                                         *
@@ -222,7 +225,7 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *
@@ -231,6 +234,8 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator> {
     /** {@inheritDoc} */
     @Override public void dispose() {
         super.dispose();
+
+        treeShowingExpression.dispose();
 
         if (indeterminateTransition != null) {
             indeterminateTransition.stop();
@@ -315,7 +320,7 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator> {
     }
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private implementation                                                  *
      *                                                                         *
@@ -391,7 +396,7 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Stylesheet Handling                                                     *
      *                                                                         *
@@ -473,7 +478,7 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Support classes                                                         *
      *                                                                         *
@@ -588,15 +593,15 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator> {
             final double radiusW = areaW / 2;
             final double radiusH = areaH / 2;
             final double radius = Math.floor(Math.min(radiusW, radiusH));
-            final double centerX = snapPosition(left + radiusW);
-            final double centerY = snapPosition(top + radius);
+            final double centerX = snapPositionX(left + radiusW);
+            final double centerY = snapPositionY(top + radius);
 
             // find radius that fits inside radius - insetsPadding
             final double iLeft = indicator.snappedLeftInset();
             final double iRight = indicator.snappedRightInset();
             final double iTop = indicator.snappedTopInset();
             final double iBottom = indicator.snappedBottomInset();
-            final double progressRadius = snapSize(Math.min(
+            final double progressRadius = snapSizeX(Math.min(
                     Math.min(radius - iLeft, radius - iRight),
                     Math.min(radius - iTop, radius - iBottom)));
 
@@ -614,7 +619,7 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator> {
             final double pRight = progress.snappedRightInset();
             final double pTop = progress.snappedTopInset();
             final double pBottom = progress.snappedBottomInset();
-            final double indicatorRadius = snapSize(Math.min(
+            final double indicatorRadius = snapSizeX(Math.min(
                     Math.min(progressRadius - pLeft, progressRadius - pRight),
                     Math.min(progressRadius - pTop, progressRadius - pBottom)));
 
@@ -631,8 +636,8 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator> {
             double textHeight = text.getLayoutBounds().getHeight();
             if (control.getWidth() >= textWidth && control.getHeight() >= textHeight) {
                 if (!text.isVisible()) text.setVisible(true);
-                text.setLayoutY(snapPosition(centerY + radius + textGap));
-                text.setLayoutX(snapPosition(centerX - (textWidth/2)));
+                text.setLayoutY(snapPositionY(centerY + radius + textGap));
+                text.setLayoutX(snapPositionX(centerX - (textWidth/2)));
             } else {
                 if (text.isVisible()) text.setVisible(false);
             }
@@ -645,12 +650,12 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator> {
             final double iRight = indicator.snappedRightInset();
             final double iTop = indicator.snappedTopInset();
             final double iBottom = indicator.snappedBottomInset();
-            final double indicatorMax = snapSize(Math.max(Math.max(iLeft, iRight), Math.max(iTop, iBottom)));
+            final double indicatorMax = snapSizeX(Math.max(Math.max(iLeft, iRight), Math.max(iTop, iBottom)));
             final double pLeft = progress.snappedLeftInset();
             final double pRight = progress.snappedRightInset();
             final double pTop = progress.snappedTopInset();
             final double pBottom = progress.snappedBottomInset();
-            final double progressMax = snapSize(Math.max(Math.max(pLeft, pRight), Math.max(pTop, pBottom)));
+            final double progressMax = snapSizeX(Math.max(Math.max(pLeft, pRight), Math.max(pTop, pBottom)));
             final double tLeft = tick.snappedLeftInset();
             final double tRight = tick.snappedRightInset();
             final double indicatorWidth = indicatorMax + progressMax + tLeft + tRight + progressMax + indicatorMax;
@@ -664,12 +669,12 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator> {
             final double iRight = indicator.snappedRightInset();
             final double iTop = indicator.snappedTopInset();
             final double iBottom = indicator.snappedBottomInset();
-            final double indicatorMax = snapSize(Math.max(Math.max(iLeft, iRight), Math.max(iTop, iBottom)));
+            final double indicatorMax = snapSizeY(Math.max(Math.max(iLeft, iRight), Math.max(iTop, iBottom)));
             final double pLeft = progress.snappedLeftInset();
             final double pRight = progress.snappedRightInset();
             final double pTop = progress.snappedTopInset();
             final double pBottom = progress.snappedBottomInset();
-            final double progressMax = snapSize(Math.max(Math.max(pLeft, pRight), Math.max(pTop, pBottom)));
+            final double progressMax = snapSizeY(Math.max(Math.max(pLeft, pRight), Math.max(pTop, pBottom)));
             final double tTop = tick.snappedTopInset();
             final double tBottom = tick.snappedBottomInset();
             final double indicatorHeight = indicatorMax + progressMax + tTop + tBottom + progressMax + indicatorMax;
@@ -737,7 +742,12 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator> {
                 }
 
                 ((Timeline)indeterminateTransition).getKeyFrames().setAll(keyFrames);
-                indeterminateTransition.playFromStart();
+
+                if (NodeHelper.isTreeShowing(control)) {
+                    indeterminateTransition.playFromStart();
+                } else {
+                    indeterminateTransition.jumpTo(Duration.ZERO);
+                }
             } else {
                 if (indeterminateTransition != null) {
                     indeterminateTransition.stop();

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,12 +28,12 @@
 
 #if ENABLE(DFG_JIT)
 
-#include "CodeBlockWithJITType.h"
+#include "ButterflyInlines.h"
 #include "DFGClobberize.h"
 #include "DFGClobbersExitState.h"
 #include "DFGDominators.h"
 #include "DFGMayExit.h"
-#include "JSCInlines.h"
+#include "DFGOSRAvailabilityAnalysisPhase.h"
 #include <wtf/Assertions.h>
 
 namespace JSC { namespace DFG {
@@ -71,6 +71,8 @@ public:
             dataLogF(") == (%s = ", #right); \
             dataLog(right); \
             dataLogF(") (%s:%d).\n", __FILE__, __LINE__); \
+            dataLog("\n\n\n"); \
+            m_graph.baselineCodeBlockFor(nullptr)->dumpBytecode(); \
             dumpGraphIfAppropriate(); \
             WTFReportAssertionFailure(__FILE__, __LINE__, WTF_PRETTY_FUNCTION, #left " == " #right); \
             CRASH(); \
@@ -81,6 +83,11 @@ public:
 
     void validate()
     {
+        if (m_graph.m_isValidating)
+            return;
+
+        auto isValidating = SetForScope(m_graph.m_isValidating, true);
+
         // NB. This code is not written for performance, since it is not intended to run
         // in release builds.
 
@@ -311,6 +318,12 @@ public:
                         VALIDATE((node), !variant.oldStructureForTransition()->dfgShouldWatch());
                     }
                     break;
+                case MultiDeleteByOffset:
+                    for (unsigned i = node->multiDeleteByOffsetData().variants.size(); i--;) {
+                        const DeleteByIdVariant& variant = node->multiDeleteByOffsetData().variants[i];
+                        VALIDATE((node), !variant.newStructure() || !variant.oldStructure()->dfgShouldWatch());
+                    }
+                    break;
                 case MaterializeNewObject:
                     for (RegisteredStructure structure : node->structureSet()) {
                         // This only supports structures that are JSFinalObject or JSArray.
@@ -368,6 +381,20 @@ public:
                     break;
                 case NewArrayBuffer:
                     VALIDATE((node), node->vectorLengthHint() >= node->castOperand<JSImmutableButterfly*>()->length());
+                    break;
+                case GetByVal:
+                    switch (node->arrayMode().type()) {
+                    case Array::Int32:
+                    case Array::Double:
+                    case Array::Contiguous:
+                        // We rely on being an original array structure because we are SaneChain, and we need
+                        // Array.prototype to be our prototype, so we can return undefined when we go OOB.
+                        if (node->arrayMode().isOutOfBoundsSaneChain())
+                            VALIDATE((node), node->arrayMode().isJSArrayWithOriginalStructure());
+                        break;
+                    default:
+                        break;
+                    }
                     break;
                 default:
                     break;
@@ -562,6 +589,14 @@ private:
             Operands<size_t> getLocalPositions(OperandsLike, block->variablesAtHead);
             Operands<size_t> setLocalPositions(OperandsLike, block->variablesAtHead);
 
+            for (size_t i = 0; i < block->variablesAtHead.numberOfTmps(); ++i) {
+                VALIDATE((Operand::tmp(i), block), !block->variablesAtHead.tmp(i) || block->variablesAtHead.tmp(i)->accessesStack(m_graph));
+                if (m_graph.m_form == ThreadedCPS)
+                    VALIDATE((Operand::tmp(i), block), !block->variablesAtTail.tmp(i) || block->variablesAtTail.tmp(i)->accessesStack(m_graph));
+
+                getLocalPositions.tmp(i) = notSet;
+                setLocalPositions.tmp(i) = notSet;
+            }
             for (size_t i = 0; i < block->variablesAtHead.numberOfArguments(); ++i) {
                 VALIDATE((virtualRegisterForArgumentIncludingThis(i), block), !block->variablesAtHead.argument(i) || block->variablesAtHead.argument(i)->accessesStack(m_graph));
                 if (m_graph.m_form == ThreadedCPS)
@@ -603,6 +638,7 @@ private:
                 switch (node->op()) {
                 case Phi:
                 case Upsilon:
+                case AssertInBounds:
                 case CheckInBounds:
                 case PhantomNewObject:
                 case PhantomNewFunction:
@@ -710,6 +746,11 @@ private:
             if (m_graph.m_form == LoadStore)
                 continue;
 
+            for (size_t i = 0; i < block->variablesAtHead.numberOfTmps(); ++i) {
+                checkOperand(
+                    block, getLocalPositions, setLocalPositions, Operand::tmp(i));
+            }
+
             for (size_t i = 0; i < block->variablesAtHead.numberOfArguments(); ++i) {
                 checkOperand(
                     block, getLocalPositions, setLocalPositions, virtualRegisterForArgumentIncludingThis(i));
@@ -781,32 +822,25 @@ private:
 
         auto& dominators = m_graph.ensureSSADominators();
 
+        if (Options::validateFTLOSRExitLiveness())
+            validateOSRExitAvailability(m_graph);
+
         for (unsigned entrypointIndex : m_graph.m_entrypointIndexToCatchBytecodeIndex.keys())
             VALIDATE((), entrypointIndex > 0); // By convention, 0 is the entrypoint index for the op_enter entrypoint, which can not be in a catch.
 
-        for (BlockIndex blockIndex = 0; blockIndex < m_graph.numBlocks(); ++blockIndex) {
-            BasicBlock* block = m_graph.block(blockIndex);
-            if (!block)
-                continue;
-
+        for (BasicBlock* block : m_graph.blocksInNaturalOrder()) {
             VALIDATE((block), block->phis.isEmpty());
 
-            bool didSeeExitOK = false;
             bool isOSRExited = false;
 
             HashSet<Node*> nodesInThisBlock;
 
             for (auto* node : *block) {
-                didSeeExitOK |= node->origin.exitOK;
                 switch (node->op()) {
                 case Phi:
                     // Phi cannot exit, and it would be wrong to hoist anything to the Phi that could
                     // exit.
                     VALIDATE((node), !node->origin.exitOK);
-
-                    // It never makes sense to have exitOK anywhere in the block before a Phi. It's only
-                    // OK to exit after all Phis are done.
-                    VALIDATE((node), !didSeeExitOK);
                     break;
 
                 case GetLocal:
@@ -938,7 +972,7 @@ private:
 
     void checkOperand(
         BasicBlock* block, Operands<size_t>& getLocalPositions,
-        Operands<size_t>& setLocalPositions, VirtualRegister operand)
+        Operands<size_t>& setLocalPositions, Operand operand)
     {
         if (getLocalPositions.operand(operand) == notSet)
             return;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -45,10 +45,13 @@ void setCopyKeyState(bool _copyKeyIsDown)
     copyKeyIsDown = _copyKeyIsDown;
 }
 
-DragOperation DragController::dragOperation(const DragData& dragData)
+Optional<DragOperation> DragController::dragOperation(const DragData& dragData)
 {
     //Protects the page from opening URL by fake anchor drag.
-    return dragData.containsURL() && !m_didInitiateDrag ? DragOperationCopy : DragOperationNone;
+    if (dragData.containsURL() && !m_didInitiateDrag)
+        return DragOperation::Copy;
+
+    return WTF::nullopt;
 }
 
 //uta: need to be fixed with usage of DragData pointer

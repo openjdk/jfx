@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -63,17 +63,18 @@
 
 namespace WebCore {
 
-
-static void setGradient(Gradient &gradient, PlatformGraphicsContext* context, jint id)
+static void setGradient(Gradient &gradient,
+    AffineTransform& gradientSpaceTransformation, PlatformGraphicsContext* context, jint id)
 {
     const Vector<Gradient::ColorStop, 2> stops = gradient.stops();
     int nStops = stops.size();
 
-    AffineTransform gt = gradient.gradientSpaceTransform();
     FloatPoint p0, p1;
     float startRadius, endRadius;
+    bool isRadialGradient = true;
     WTF::switchOn(gradient.data(),
             [&] (const Gradient::LinearData& data) -> void {
+                isRadialGradient = false;
                 p0 = data.point0;
                 p1 = data.point1;
             },
@@ -88,21 +89,21 @@ static void setGradient(Gradient &gradient, PlatformGraphicsContext* context, ji
             }
     );
 
-    p0 = gt.mapPoint(p0);
-    p1 = gt.mapPoint(p1);
+    p0 = gradientSpaceTransformation.mapPoint(p0);
+    p1 = gradientSpaceTransformation.mapPoint(p1);
 
-    context->rq().freeSpace(4 * 11 + 8 * nStops)
+    context->rq().freeSpace(4 * 11 + 20 * nStops)
     << id
     << (jfloat)p0.x()
     << (jfloat)p0.y()
     << (jfloat)p1.x()
     << (jfloat)p1.y()
-    << (jint)(gradient.type() == Gradient::Type::Radial);
+    << (jint)isRadialGradient;
 
-    if (gradient.type() == Gradient::Type::Radial) {
+    if (isRadialGradient) {
         context->rq()
-        << (jfloat)(gt.xScale() * startRadius)
-        << (jfloat)(gt.xScale() * endRadius);
+        << (jfloat)(gradientSpaceTransformation.xScale() * startRadius)
+        << (jfloat)(gradientSpaceTransformation.xScale() * endRadius);
     }
     context->rq()
     << (jint)0 //is not proportional
@@ -110,9 +111,27 @@ static void setGradient(Gradient &gradient, PlatformGraphicsContext* context, ji
     << (jint)nStops;
 
     for (const auto& cs : stops) {
-        int rgba = (int)cs.color.rgb().value();
+        auto [r, g, b, a] = cs.color.toSRGBALossy<float>();
         context->rq()
-        << (jint)rgba << (jfloat)cs.offset;
+        << r << g << b << a << (jfloat)cs.offset;
+    }
+}
+
+static void flushImageRQ(PlatformGraphicsContext* context, const PlatformImagePtr& image)
+{
+    if (!image || !image->getRenderingQueue())
+        return;
+
+    auto rq = image->getRenderingQueue();
+
+    if (!rq->isEmpty()) {
+        // 1. Drawing is flushed to the buffered image's RenderQueue.
+        rq->flushBuffer();
+
+        // 2. The buffered image's RenderQueue is to be decoded.
+        context->rq().freeSpace(8)
+        << (jint)com_sun_webkit_graphics_GraphicsDecoder_DECODERQ
+        << rq->getRQRenderingQueue();
     }
 }
 
@@ -202,11 +221,12 @@ void GraphicsContext::fillRect(const FloatRect& rect, const Color& color)
     if (paintingDisabled())
         return;
 
-    platformContext()->rq().freeSpace(24)
+    auto [r, g, b, a] = color.toSRGBALossy<float>();
+    platformContext()->rq().freeSpace(36)
     << (jint)com_sun_webkit_graphics_GraphicsDecoder_FILLRECT_FFFFI
     << rect.x() << rect.y()
     << rect.width() << rect.height()
-    << (jint)color.rgb().value();
+    << r << g << b << a;
 }
 
 void GraphicsContext::fillRect(const FloatRect& rect)
@@ -215,24 +235,19 @@ void GraphicsContext::fillRect(const FloatRect& rect)
         return;
 
     if (m_state.fillPattern) {
-        Image& img = m_state.fillPattern->tileImage();
-        FloatRect destRect(
-            rect.x(),
-            rect.y(),
-            m_state.fillPattern->repeatX() ? rect.width() : img.width(),
-            m_state.fillPattern->repeatY() ? rect.height() : img.height());
-        img.drawPattern(
-            *this,
-            destRect,
-            FloatRect(0., 0., img.width(), img.height()),
-            m_state.fillPattern->getPatternSpaceTransform(),
-            FloatPoint(),
-            FloatSize(),
-            CompositeOperator::Copy);
+        auto image = m_state.fillPattern->tileImage().platformImage();
+
+        FloatRect destRect(rect.x(), rect.y(),
+            m_state.fillPattern->repeatX() ? rect.width() : image->size().width(),
+            m_state.fillPattern->repeatY() ? rect.height() : image->size().height());
+        drawPlatformPattern(image, FloatSize(), destRect,
+            FloatRect(0., 0., image->size().width(), image->size().height()),
+            m_state.fillPattern->patternSpaceTransform(), FloatPoint(), FloatSize(), CompositeOperator::Copy);
     } else {
         if (m_state.fillGradient) {
             setGradient(
                 *m_state.fillGradient,
+                m_state.fillGradientSpaceTransform,
                 platformContext(),
                 com_sun_webkit_graphics_GraphicsDecoder_SET_FILL_GRADIENT);
         }
@@ -253,11 +268,6 @@ void GraphicsContext::clip(const FloatRect& rect)
     platformContext()->rq().freeSpace(20)
     << (jint)com_sun_webkit_graphics_GraphicsDecoder_SETCLIP_IIII
     << (jint)rect.x() << (jint)rect.y() << (jint)rect.width() << (jint)rect.height();
-}
-
-void GraphicsContext::clipToImageBuffer(ImageBuffer&, const FloatRect&)
-{
-    notImplemented();
 }
 
 IntRect GraphicsContext::clipBounds() const
@@ -310,13 +320,14 @@ void GraphicsContext::drawFocusRing(const Vector<FloatRect>& rects, float, float
         }
     }
 
-    platformContext()->rq().freeSpace(24 * toDraw.size());
+    platformContext()->rq().freeSpace(36 * toDraw.size());
     for (size_t i = 0; i < toDraw.size(); i++) {
         IntRect focusRect = toDraw[i];
+        auto [r, g, b, a] = color.toSRGBALossy<float>();
         platformContext()->rq() << (jint)com_sun_webkit_graphics_GraphicsDecoder_DRAWFOCUSRING
         << (jint)focusRect.x() << (jint)focusRect.y()
         << (jint)focusRect.width() << (jint)focusRect.height()
-        << (jint)color.rgb().value();
+        << r << g << b << a;
     }
 }
 
@@ -428,13 +439,13 @@ void GraphicsContext::drawDotsForDocumentMarker(const FloatRect& rect, DocumentM
     switch (style.mode) { // TODO-java: DocumentMarkerAutocorrectionReplacementLineStyle not handled in switch
         case DocumentMarkerLineStyle::Mode::Spelling:
         {
-            static Color red(255, 0, 0);
+            static Color red = SRGBA<uint8_t> { 255, 0, 0 };
             setStrokeColor(red);
         }
         break;
         case DocumentMarkerLineStyle::Mode::Grammar:
         {
-            static Color green(0, 255, 0);
+            static Color green = SRGBA<uint8_t> { 0, 255, 0 };
             setStrokeColor(green);
         }
         break;
@@ -467,14 +478,15 @@ void GraphicsContext::translate(float x, float y)
     << x << y;
 }
 
-void GraphicsContext::setPlatformFillColor(const Color& col)
+void GraphicsContext::setPlatformFillColor(const Color& color)
 {
     if (paintingDisabled())
         return;
 
-    platformContext()->rq().freeSpace(8)
+    auto [r, g, b, a] = color.toSRGBALossy<float>();
+    platformContext()->rq().freeSpace(20)
     << (jint)com_sun_webkit_graphics_GraphicsDecoder_SETFILLCOLOR
-    << (jint)col.rgb().value();
+    << r << g << b << a;
 }
 
 void GraphicsContext::setPlatformTextDrawingMode(TextDrawingModeFlags mode)
@@ -484,8 +496,8 @@ void GraphicsContext::setPlatformTextDrawingMode(TextDrawingModeFlags mode)
 
     platformContext()->rq().freeSpace(16)
     << (jint)com_sun_webkit_graphics_GraphicsDecoder_SET_TEXT_MODE
-    << (jint)(mode & TextModeFill)
-    << (jint)(mode & TextModeStroke)
+    << (jint)(mode.contains(TextDrawingMode::Fill))
+    << (jint)(mode.contains(TextDrawingMode::Stroke))
     << (jint)0;
     //utatodo:
     //<< (jint)(mode & TextModeClip);
@@ -501,14 +513,15 @@ void GraphicsContext::setPlatformStrokeStyle(StrokeStyle style)
     << (jint)style;
 }
 
-void GraphicsContext::setPlatformStrokeColor(const Color& col)
+void GraphicsContext::setPlatformStrokeColor(const Color& color)
 {
     if (paintingDisabled())
         return;
 
-    platformContext()->rq().freeSpace(8)
+    auto [r, g, b, a] = color.toSRGBALossy<float>();
+    platformContext()->rq().freeSpace(20)
     << (jint)com_sun_webkit_graphics_GraphicsDecoder_SETSTROKECOLOR
-    << (jint)col.rgb().value();
+    << r << g << b << a;
 }
 
 void GraphicsContext::setPlatformStrokeThickness(float strokeThickness)
@@ -573,9 +586,10 @@ void GraphicsContext::setPlatformShadow(const FloatSize& s, float blur, const Co
         height = -height;
     }
 
-    platformContext()->rq().freeSpace(20)
+    auto [r, g, b, a] = color.toSRGBALossy<float>();
+    platformContext()->rq().freeSpace(32)
     << (jint)com_sun_webkit_graphics_GraphicsDecoder_SETSHADOW
-    << width << height << blur << (jint)color.rgb().value();
+    << width << height << blur << r << g << b << a;;
 }
 
 void GraphicsContext::clearPlatformShadow()
@@ -626,6 +640,7 @@ void GraphicsContext::strokeRect(const FloatRect& rect, float lineWidth)
     if (m_state.strokeGradient) {
         setGradient(
             *m_state.strokeGradient,
+            m_state.strokeGradientSpaceTransform,
             platformContext(),
             com_sun_webkit_graphics_GraphicsDecoder_SET_STROKE_GRADIENT);
     }
@@ -718,6 +733,7 @@ void GraphicsContext::strokePath(const Path& path)
     if (m_state.strokeGradient) {
         setGradient(
             *m_state.strokeGradient,
+            m_state.strokeGradientSpaceTransform,
             platformContext(),
             com_sun_webkit_graphics_GraphicsDecoder_SET_STROKE_GRADIENT);
     }
@@ -769,26 +785,52 @@ void GraphicsContext::clipOut(const FloatRect& rect)
     path.addRoundedRect(rect, FloatSize());
     clipOut(path);
 }
-void GraphicsContext::drawPattern(Image& image, const FloatRect& destRect, const FloatRect& srcRect, const AffineTransform& patternTransform, const FloatPoint& phase, const FloatSize& spacing, const ImagePaintingOptions& options)
+
+void GraphicsContext::drawPlatformImage(const PlatformImagePtr& image, const FloatSize&, const FloatRect& destRect, const FloatRect& srcRect, const ImagePaintingOptions& options)
 {
-    if (paintingDisabled())
+    if (!image || !image->getImage())
         return;
 
-    if (m_impl) {
-        m_impl->drawPattern(image, destRect, srcRect, patternTransform, phase, spacing, options);
-        return;
+    savePlatformState();
+    setCompositeOperation(options.compositeOperator(), options.blendMode());
+
+    FloatRect adjustedSrcRect(srcRect);
+    FloatRect adjustedDestRect(destRect);
+
+    if (options.orientation() != ImageOrientation::None) {
+        // ImageOrientation expects the origin to be at (0, 0).
+        translate(destRect.x(), destRect.y());
+        adjustedDestRect.setLocation(FloatPoint());
+        concatCTM(options.orientation().transformFromDefault(adjustedDestRect.size()));
+        if (options.orientation().usesWidthAsHeight()) {
+            // The destination rectangle will have it's width and height already reversed for the orientation of
+            // the image, as it was needed for page layout, so we need to reverse it back here.
+            adjustedDestRect.setSize(adjustedDestRect.size().transposedSize());
+        }
     }
+
+    platformContext()->rq().freeSpace(72)
+        << (jint)com_sun_webkit_graphics_GraphicsDecoder_DRAWIMAGE
+        << image->getImage()
+        << adjustedDestRect.x() << adjustedDestRect.y()
+        << adjustedDestRect.width() << adjustedDestRect.height()
+        << adjustedSrcRect.x() << adjustedSrcRect.y()
+        << adjustedSrcRect.width() << adjustedSrcRect.height();
+    restorePlatformState();
+}
+
+void GraphicsContext::drawPlatformPattern(const PlatformImagePtr& image, const FloatSize&, const FloatRect& destRect, const FloatRect& tileRect, const AffineTransform& patternTransform, const FloatPoint& phase, const FloatSize&, const ImagePaintingOptions&)
+{
+    if (paintingDisabled() || !patternTransform.isInvertible())
+        return;
 
     JNIEnv* env = WTF::GetJavaEnv();
 
-    if (srcRect.isEmpty()) {
+    if (tileRect.isEmpty()) {
         return;
     }
 
-    NativeImagePtr currFrame = image.nativeImageForCurrentFrame();
-    if (!currFrame) {
-        return;
-    }
+    flushImageRQ(platformContext(), image);
 
     TransformationMatrix tm = patternTransform.toTransformationMatrix();
 
@@ -803,8 +845,8 @@ void GraphicsContext::drawPattern(Image& image, const FloatRect& destRect, const
 
     platformContext()->rq().freeSpace(13 * 4)
         << (jint)com_sun_webkit_graphics_GraphicsDecoder_DRAWPATTERN
-        << currFrame
-        << srcRect.x() << srcRect.y() << srcRect.width() << srcRect.height()
+        << image->getImage()
+        << tileRect.x() << tileRect.y() << tileRect.width() << tileRect.height()
         << RQRef::create(transform)
         << phase.x() << phase.y()
         << destRect.x() << destRect.y() << destRect.width() << destRect.height();
@@ -820,25 +862,21 @@ void GraphicsContext::fillPath(const Path& path)
         clipPath(path, m_state.fillRule);
         FloatRect rect(path.boundingRect());
 
-        Image& img = m_state.fillPattern->tileImage();
-        FloatRect destRect(
-            rect.x(),
-            rect.y(),
-            m_state.fillPattern->repeatX() ? rect.width() : img.width(),
-            m_state.fillPattern->repeatY() ? rect.height() : img.height());
-        img.drawPattern(
-            *this,
-            destRect,
-            FloatRect(0., 0., img.width(), img.height()),
-            m_state.fillPattern->getPatternSpaceTransform(),
-            FloatPoint(),
-            FloatSize(),
-            CompositeOperator::Copy);
+        auto image = m_state.fillPattern->tileImage().platformImage();
+
+        FloatRect destRect(rect.x(), rect.y(),
+            m_state.fillPattern->repeatX() ? rect.width() : image->size().width(),
+            m_state.fillPattern->repeatY() ? rect.height() : image->size().height());
+        drawPlatformPattern(image, FloatSize(), destRect,
+            FloatRect(0., 0., image->size().width(), image->size().height()),
+            m_state.fillPattern->patternSpaceTransform(), FloatPoint(), FloatSize(), CompositeOperator::Copy);
+
         restorePlatformState();
     } else {
         if (m_state.fillGradient) {
             setGradient(
                 *m_state.fillGradient,
+                m_state.fillGradientSpaceTransform,
                 platformContext(),
                 com_sun_webkit_graphics_GraphicsDecoder_SET_FILL_GRADIENT);
         }
@@ -884,7 +922,8 @@ void GraphicsContext::fillRoundedRect(const FloatRoundedRect& rect, const Color&
         rect.radii().topLeft().height() == rect.radii().topRight().height() &&
         rect.radii().topRight().height() == rect.radii().bottomRight().height() &&
         rect.radii().bottomRight().height() == rect.radii().bottomLeft().height()) {
-        platformContext()->rq().freeSpace(56)
+        auto [r, g, b, a] = color.toSRGBALossy<float>();
+        platformContext()->rq().freeSpace(68)
         << (jint)com_sun_webkit_graphics_GraphicsDecoder_FILL_ROUNDED_RECT
         << (jfloat)rect.rect().x() << (jfloat)rect.rect().y()
         << (jfloat)rect.rect().width() << (jfloat)rect.rect().height()
@@ -892,7 +931,7 @@ void GraphicsContext::fillRoundedRect(const FloatRoundedRect& rect, const Color&
         << (jfloat)rect.radii().topRight().width() << (jfloat)rect.radii().topRight().height()
         << (jfloat)rect.radii().bottomLeft().width() << (jfloat)rect.radii().bottomLeft().height()
         << (jfloat)rect.radii().bottomRight().width() << (jfloat)rect.radii().bottomRight().height()
-        << (jint)color.rgb().value();
+        << r << g << b << a;
     }
     else {
         WindRule oldFillRule = fillRule();
@@ -942,7 +981,6 @@ AffineTransform GraphicsContext::getCTM(IncludeDeviceScale) const
     return m_state.transform;
 }
 
-
 void GraphicsContext::setCTM(const AffineTransform& tm)
 {
     if (paintingDisabled())
@@ -954,7 +992,7 @@ void GraphicsContext::setCTM(const AffineTransform& tm)
     << (float)tm.a() << (float)tm.b() << (float)tm.c() << (float)tm.d() << (float)tm.e() << (float)tm.f();
 }
 
-void Gradient::platformDestroy()
+void Gradient::stopsChanged()
 {
 }
 

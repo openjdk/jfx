@@ -78,10 +78,10 @@ static RenderStyle createFullScreenStyle()
     fullscreenStyle.setFlexDirection(FlexDirection::Column);
 
     fullscreenStyle.setPosition(PositionType::Fixed);
-    fullscreenStyle.setWidth(Length(100.0, Percent));
-    fullscreenStyle.setHeight(Length(100.0, Percent));
-    fullscreenStyle.setLeft(Length(0, WebCore::Fixed));
-    fullscreenStyle.setTop(Length(0, WebCore::Fixed));
+    fullscreenStyle.setWidth(Length(100.0, LengthType::Percent));
+    fullscreenStyle.setHeight(Length(100.0, LengthType::Percent));
+    fullscreenStyle.setLeft(Length(0, LengthType::Fixed));
+    fullscreenStyle.setTop(Length(0, LengthType::Fixed));
 
     fullscreenStyle.setBackgroundColor(Color::black);
 
@@ -171,7 +171,7 @@ void RenderFullScreen::unwrapRenderer(bool& requiresRenderTreeRebuild)
             // may have set one on the child, and we don't want to leave that
             // lying around on the child.
             if (is<RenderBox>(*child))
-                downcast<RenderBox>(*child).clearOverrideContentSize();
+                downcast<RenderBox>(*child).clearOverridingContentSize();
             auto childToMove = builder.detach(*child->parent(), *child);
             builder.attach(*parent(), WTFMove(childToMove), this);
             parent()->setNeedsLayoutAndPrefWidthsRecalc();

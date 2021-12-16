@@ -25,7 +25,7 @@
 
 #pragma once
 
-#if ENABLE(WEBGPU)
+#if ENABLE(WHLSL_COMPILER)
 
 #include "WHLSLUnnamedType.h"
 #include <wtf/HashTraits.h>
@@ -77,10 +77,8 @@ private:
 namespace WTF {
 
 template<> struct HashTraits<WebCore::WHLSL::UnnamedTypeKey> : WebCore::WHLSL::UnnamedTypeKey::Traits { };
-template<> struct DefaultHash<WebCore::WHLSL::UnnamedTypeKey> {
-    typedef WebCore::WHLSL::UnnamedTypeKey::Hash Hash;
-};
+template<> struct DefaultHash<WebCore::WHLSL::UnnamedTypeKey> : WebCore::WHLSL::UnnamedTypeKey::Hash { };
 
 } // namespace WTF
 
-#endif
+#endif // ENABLE(WHLSL_COMPILER)

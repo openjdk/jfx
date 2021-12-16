@@ -27,8 +27,14 @@
 
 #if ENABLE(APPLE_PAY)
 
+#include "ApplePayError.h"
+#include "ApplePayLineItem.h"
+#include "ApplePayShippingMethod.h"
 #include "PaymentContact.h"
+#include "PaymentInstallmentConfigurationWebCore.h"
+#include <wtf/EnumTraits.h>
 #include <wtf/Optional.h>
+#include <wtf/RefPtr.h>
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
 
@@ -87,16 +93,6 @@ public:
     const MerchantCapabilities& merchantCapabilities() const { return m_merchantCapabilities; }
     void setMerchantCapabilities(const MerchantCapabilities& merchantCapabilities) { m_merchantCapabilities = merchantCapabilities; }
 
-    struct LineItem {
-        enum class Type {
-            Pending,
-            Final,
-        } type { Type::Final };
-
-        String amount;
-        String label;
-    };
-
     enum class ShippingType {
         Shipping,
         Delivery,
@@ -106,26 +102,14 @@ public:
     ShippingType shippingType() const { return m_shippingType; }
     void setShippingType(ShippingType shippingType) { m_shippingType = shippingType; }
 
-    struct ShippingMethod {
-        String label;
-        String detail;
-        String amount;
+    const Vector<ApplePayShippingMethod>& shippingMethods() const { return m_shippingMethods; }
+    void setShippingMethods(const Vector<ApplePayShippingMethod>& shippingMethods) { m_shippingMethods = shippingMethods; }
 
-        String identifier;
-    };
-    const Vector<ShippingMethod>& shippingMethods() const { return m_shippingMethods; }
-    void setShippingMethods(const Vector<ShippingMethod>& shippingMethods) { m_shippingMethods = shippingMethods; }
+    const Vector<ApplePayLineItem>& lineItems() const { return m_lineItems; }
+    void setLineItems(const Vector<ApplePayLineItem>& lineItems) { m_lineItems = lineItems; }
 
-    const Vector<LineItem>& lineItems() const { return m_lineItems; }
-    void setLineItems(const Vector<LineItem>& lineItems) { m_lineItems = lineItems; }
-
-    const LineItem& total() const { return m_total; };
-    void setTotal(const LineItem& total) { m_total = total; }
-
-    struct TotalAndLineItems {
-        ApplePaySessionPaymentRequest::LineItem total;
-        Vector<ApplePaySessionPaymentRequest::LineItem> lineItems;
-    };
+    const ApplePayLineItem& total() const { return m_total; };
+    void setTotal(const ApplePayLineItem& total) { m_total = total; }
 
     const String& applicationData() const { return m_applicationData; }
     void setApplicationData(const String& applicationData) { m_applicationData = applicationData; }
@@ -133,7 +117,7 @@ public:
     const Vector<String>& supportedCountries() const { return m_supportedCountries; }
     void setSupportedCountries(Vector<String>&& supportedCountries) { m_supportedCountries = WTFMove(supportedCountries); }
 
-    enum class Requester {
+    enum class Requester : bool {
         ApplePayJS,
         PaymentRequest,
     };
@@ -141,9 +125,9 @@ public:
     Requester requester() const { return m_requester; }
     void setRequester(Requester requester) { m_requester = requester; }
 
-#if defined(APPLEPAYSESSIONPAYMENTREQUEST_PUBLIC_ADDITIONS)
-APPLEPAYSESSIONPAYMENTREQUEST_PUBLIC_ADDITIONS
-#undef APPLEPAYSESSIONPAYMENTREQUEST_PUBLIC_ADDITIONS
+#if HAVE(PASSKIT_INSTALLMENTS)
+    const PaymentInstallmentConfiguration& installmentConfiguration() const { return m_installmentConfiguration; }
+    void setInstallmentConfiguration(PaymentInstallmentConfiguration&& installmentConfiguration) { m_installmentConfiguration = WTFMove(installmentConfiguration); }
 #endif
 
 private:
@@ -162,102 +146,46 @@ private:
     MerchantCapabilities m_merchantCapabilities;
 
     ShippingType m_shippingType { ShippingType::Shipping };
-    Vector<ShippingMethod> m_shippingMethods;
+    Vector<ApplePayShippingMethod> m_shippingMethods;
 
-    Vector<LineItem> m_lineItems;
-    LineItem m_total;
+    Vector<ApplePayLineItem> m_lineItems;
+    ApplePayLineItem m_total;
 
     String m_applicationData;
     Vector<String> m_supportedCountries;
 
     Requester m_requester { Requester::ApplePayJS };
 
-#if defined(APPLEPAYSESSIONPAYMENTREQUEST_PRIVATE_ADDITIONS)
-APPLEPAYSESSIONPAYMENTREQUEST_PRIVATE_ADDITIONS
-#undef APPLEPAYSESSIONPAYMENTREQUEST_PRIVATE_ADDITIONS
+#if HAVE(PASSKIT_INSTALLMENTS)
+    PaymentInstallmentConfiguration m_installmentConfiguration;
 #endif
-};
 
-struct PaymentError {
-    enum class Code {
-        Unknown,
-        ShippingContactInvalid,
-        BillingContactInvalid,
-        AddressUnserviceable,
-    };
-
-    enum class ContactField {
-        PhoneNumber,
-        EmailAddress,
-        Name,
-        PhoneticName,
-        PostalAddress,
-        AddressLines,
-        SubLocality,
-        Locality,
-        PostalCode,
-        SubAdministrativeArea,
-        AdministrativeArea,
-        Country,
-        CountryCode,
-    };
-
-    Code code;
-    String message;
-    Optional<ContactField> contactField;
+#if defined(ApplePaySessionPaymentRequestAdditions_members)
+    ApplePaySessionPaymentRequestAdditions_members
+#endif
 };
 
 struct PaymentAuthorizationResult {
     PaymentAuthorizationStatus status;
-    Vector<PaymentError> errors;
-};
-
-struct ShippingContactUpdate {
-    Vector<PaymentError> errors;
-
-    Vector<ApplePaySessionPaymentRequest::ShippingMethod> newShippingMethods;
-    ApplePaySessionPaymentRequest::TotalAndLineItems newTotalAndLineItems;
-};
-
-struct ShippingMethodUpdate {
-    ApplePaySessionPaymentRequest::TotalAndLineItems newTotalAndLineItems;
+    Vector<RefPtr<ApplePayError>> errors;
 };
 
 WEBCORE_EXPORT bool isFinalStateResult(const Optional<PaymentAuthorizationResult>&);
 
-}
+} // namespace WebCore
 
 namespace WTF {
 
-template<> struct EnumTraits<WebCore::PaymentError::Code> {
+template<> struct EnumTraits<WebCore::ApplePaySessionPaymentRequest::ShippingType> {
     using values = EnumValues<
-        WebCore::PaymentError::Code,
-        WebCore::PaymentError::Code::Unknown,
-        WebCore::PaymentError::Code::ShippingContactInvalid,
-        WebCore::PaymentError::Code::BillingContactInvalid,
-        WebCore::PaymentError::Code::AddressUnserviceable
+        WebCore::ApplePaySessionPaymentRequest::ShippingType,
+        WebCore::ApplePaySessionPaymentRequest::ShippingType::Shipping,
+        WebCore::ApplePaySessionPaymentRequest::ShippingType::Delivery,
+        WebCore::ApplePaySessionPaymentRequest::ShippingType::StorePickup,
+        WebCore::ApplePaySessionPaymentRequest::ShippingType::ServicePickup
     >;
 };
 
-template<> struct EnumTraits<WebCore::PaymentError::ContactField> {
-    using values = EnumValues<
-        WebCore::PaymentError::ContactField,
-        WebCore::PaymentError::ContactField::PhoneNumber,
-        WebCore::PaymentError::ContactField::EmailAddress,
-        WebCore::PaymentError::ContactField::Name,
-        WebCore::PaymentError::ContactField::PhoneticName,
-        WebCore::PaymentError::ContactField::PostalAddress,
-        WebCore::PaymentError::ContactField::AddressLines,
-        WebCore::PaymentError::ContactField::SubLocality,
-        WebCore::PaymentError::ContactField::Locality,
-        WebCore::PaymentError::ContactField::PostalCode,
-        WebCore::PaymentError::ContactField::SubAdministrativeArea,
-        WebCore::PaymentError::ContactField::AdministrativeArea,
-        WebCore::PaymentError::ContactField::Country,
-        WebCore::PaymentError::ContactField::CountryCode
-    >;
-};
-
-}
+} // namespace WTF
 
 #endif

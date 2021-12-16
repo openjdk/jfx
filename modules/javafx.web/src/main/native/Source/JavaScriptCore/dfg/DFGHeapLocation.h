@@ -49,13 +49,19 @@ enum LocationKind {
     HasIndexedPropertyLoc,
     IndexedPropertyDoubleLoc,
     IndexedPropertyDoubleSaneChainLoc,
+    IndexedPropertyDoubleOutOfBoundsSaneChainLoc,
+    IndexedPropertyDoubleOrOtherOutOfBoundsSaneChainLoc,
     IndexedPropertyInt32Loc,
+    IndexedPropertyInt32OutOfBoundsSaneChainLoc,
     IndexedPropertyInt52Loc,
+    IndexedPropertyJSOutOfBoundsSaneChainLoc,
     IndexedPropertyJSLoc,
     IndexedPropertyStorageLoc,
     InvalidationPointLoc,
-    IsFunctionLoc,
-    IsObjectOrNullLoc,
+    IsCallableLoc,
+    IsConstructorLoc,
+    TypeOfIsObjectLoc,
+    TypeOfIsFunctionLoc,
     NamedPropertyLoc,
     RegExpObjectLastIndexLoc,
     SetterLoc,
@@ -185,9 +191,7 @@ namespace WTF {
 void printInternal(PrintStream&, JSC::DFG::LocationKind);
 
 template<typename T> struct DefaultHash;
-template<> struct DefaultHash<JSC::DFG::HeapLocation> {
-    typedef JSC::DFG::HeapLocationHash Hash;
-};
+template<> struct DefaultHash<JSC::DFG::HeapLocation> : JSC::DFG::HeapLocationHash { };
 
 template<typename T> struct HashTraits;
 template<> struct HashTraits<JSC::DFG::HeapLocation> : SimpleClassHashTraits<JSC::DFG::HeapLocation> {

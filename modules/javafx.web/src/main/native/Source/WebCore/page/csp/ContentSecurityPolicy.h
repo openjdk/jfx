@@ -138,7 +138,7 @@ public:
     void reportDirectiveAsSourceExpression(const String& directiveName, const String& sourceExpression) const;
     void reportInvalidPathCharacter(const String& directiveName, const String& value, const char) const;
     void reportInvalidSourceExpression(const String& directiveName, const String& source) const;
-    bool urlMatchesSelf(const URL&) const;
+    bool urlMatchesSelf(const URL&, bool forFrameSrc) const;
     bool allowContentSecurityPolicySourceStarToMatchAnyProtocol() const;
 
     // Used by ContentSecurityPolicyDirectiveList
@@ -174,6 +174,8 @@ public:
 
     void setClient(ContentSecurityPolicyClient* client) { m_client = client; }
     void updateSourceSelf(const SecurityOrigin&);
+
+    void setDocumentURL(URL& documentURL) { m_documentURL = documentURL; }
 
 private:
     void logToConsole(const String& message, const String& contextURL = String(), const WTF::OrdinalNumber& contextLine = WTF::OrdinalNumber::beforeFirst(), const WTF::OrdinalNumber& contextColumn = WTF::OrdinalNumber::beforeFirst(), JSC::JSGlobalObject* = nullptr) const;
@@ -216,6 +218,7 @@ private:
     ScriptExecutionContext* m_scriptExecutionContext { nullptr };
     ContentSecurityPolicyClient* m_client { nullptr };
     URL m_protectedURL;
+    Optional<URL> m_documentURL;
     std::unique_ptr<ContentSecurityPolicySource> m_selfSource;
     String m_selfSourceProtocol;
     CSPDirectiveListVector m_policies;

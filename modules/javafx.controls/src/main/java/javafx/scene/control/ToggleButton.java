@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -91,7 +91,7 @@ import javafx.css.StyleableProperty;
 
  public class ToggleButton extends ButtonBase implements Toggle {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -136,7 +136,7 @@ import javafx.css.StyleableProperty;
         ((StyleableProperty<Pos>)(WritableValue<Pos>)alignmentProperty()).applyStyle(null, Pos.CENTER);
         setMnemonicParsing(true);     // enable mnemonic auto-parsing by default
     }
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Properties                                                              *
      *                                                                         *
@@ -243,7 +243,7 @@ import javafx.css.StyleableProperty;
         return toggleGroup;
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Methods                                                                 *
      *                                                                         *
@@ -264,7 +264,7 @@ import javafx.css.StyleableProperty;
     }
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Stylesheet Handling                                                     *
      *                                                                         *
@@ -286,7 +286,7 @@ import javafx.css.StyleableProperty;
     }
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Accessibility handling                                                  *
      *                                                                         *

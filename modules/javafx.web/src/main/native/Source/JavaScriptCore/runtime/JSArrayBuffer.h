@@ -41,11 +41,6 @@ public:
         return vm.arrayBufferSpace<mode>();
     }
 
-protected:
-    JSArrayBuffer(VM&, Structure*, RefPtr<ArrayBuffer>&&);
-    void finishCreation(VM&, JSGlobalObject*);
-
-public:
     // This function will register the new wrapper with the vm's TypedArrayController.
     JS_EXPORT_PRIVATE static JSArrayBuffer* create(VM&, Structure*, RefPtr<ArrayBuffer>&&);
 
@@ -60,11 +55,14 @@ public:
 
     // This is the default DOM unwrapping. It calls toUnsharedArrayBuffer().
     static ArrayBuffer* toWrapped(VM&, JSValue);
-
-protected:
-    static size_t estimatedSize(JSCell*, VM&);
+    static ArrayBuffer* toWrappedAllowShared(VM&, JSValue);
 
 private:
+    JSArrayBuffer(VM&, Structure*, RefPtr<ArrayBuffer>&&);
+    void finishCreation(VM&, JSGlobalObject*);
+
+    static size_t estimatedSize(JSCell*, VM&);
+
     ArrayBuffer* m_impl;
 };
 
@@ -87,6 +85,11 @@ inline ArrayBuffer* toUnsharedArrayBuffer(VM& vm, JSValue value)
 inline ArrayBuffer* JSArrayBuffer::toWrapped(VM& vm, JSValue value)
 {
     return toUnsharedArrayBuffer(vm, value);
+}
+
+inline ArrayBuffer* JSArrayBuffer::toWrappedAllowShared(VM& vm, JSValue value)
+{
+    return toPossiblySharedArrayBuffer(vm, value);
 }
 
 } // namespace JSC

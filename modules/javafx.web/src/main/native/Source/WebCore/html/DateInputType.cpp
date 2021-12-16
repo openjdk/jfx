@@ -32,9 +32,13 @@
 #if ENABLE(INPUT_TYPE_DATE)
 #include "DateInputType.h"
 
+#include "DateComponents.h"
+#include "DateTimeFieldsState.h"
 #include "HTMLInputElement.h"
 #include "HTMLNames.h"
 #include "InputTypeNames.h"
+#include "PlatformLocale.h"
+#include "StepRange.h"
 
 namespace WebCore {
 
@@ -46,7 +50,7 @@ static const int dateStepScaleFactor = 86400000;
 static const StepRange::StepDescription dateStepDescription { dateDefaultStep, dateDefaultStepBase, dateStepScaleFactor, StepRange::ParsedStepValueShouldBeInteger };
 
 DateInputType::DateInputType(HTMLInputElement& element)
-    : BaseChooserOnlyDateAndTimeInputType(element)
+    : BaseDateAndTimeInputType(Type::Date, element)
 {
 }
 
@@ -55,9 +59,9 @@ const AtomString& DateInputType::formControlType() const
     return InputTypeNames::date();
 }
 
-DateComponents::Type DateInputType::dateType() const
+DateComponentsType DateInputType::dateType() const
 {
-    return DateComponents::Date;
+    return DateComponentsType::Date;
 }
 
 StepRange DateInputType::createStepRange(AnyStepHandling anyStepHandling) const
@@ -70,22 +74,33 @@ StepRange DateInputType::createStepRange(AnyStepHandling anyStepHandling) const
     return StepRange(stepBase, RangeLimitations::Valid, minimum, maximum, step, dateStepDescription);
 }
 
-bool DateInputType::parseToDateComponentsInternal(const UChar* characters, unsigned length, DateComponents* out) const
+Optional<DateComponents> DateInputType::parseToDateComponents(const StringView& source) const
 {
-    ASSERT(out);
-    unsigned end;
-    return out->parseDate(characters, length, 0, end) && end == length;
+    return DateComponents::fromParsingDate(source);
 }
 
-bool DateInputType::setMillisecondToDateComponents(double value, DateComponents* date) const
+Optional<DateComponents> DateInputType::setMillisecondToDateComponents(double value) const
 {
-    ASSERT(date);
-    return date->setMillisecondsSinceEpochForDate(value);
+    return DateComponents::fromMillisecondsSinceEpochForDate(value);
 }
 
-bool DateInputType::isDateField() const
+bool DateInputType::isValidFormat(OptionSet<DateTimeFormatValidationResults> results) const
 {
-    return true;
+    return results.containsAll({ DateTimeFormatValidationResults::HasYear, DateTimeFormatValidationResults::HasMonth, DateTimeFormatValidationResults::HasDay });
+}
+
+String DateInputType::formatDateTimeFieldsState(const DateTimeFieldsState& state) const
+{
+    if (!state.dayOfMonth || !state.month || !state.year)
+        return emptyString();
+
+    return makeString(pad('0', 4, *state.year), '-', pad('0', 2, *state.month), '-', pad('0', 2, *state.dayOfMonth));
+}
+
+void DateInputType::setupLayoutParameters(DateTimeEditElement::LayoutParameters& layoutParameters, const DateComponents&) const
+{
+    layoutParameters.dateTimeFormat = layoutParameters.locale.dateFormat();
+    layoutParameters.fallbackDateTimeFormat = "yyyy-MM-dd"_s;
 }
 
 } // namespace WebCore

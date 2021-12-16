@@ -24,10 +24,11 @@
  */
 
 [
-    Conditional=VIDEO_TRACK,
+    Conditional=VIDEO,
     JSGenerateToJSObject,
     JSGenerateToNativeObject,
-    NoInterfaceObject,
+    LegacyNoInterfaceObject,
     ExportMacro=WEBCORE_EXPORT,
+    Exposed=Window
 ] interface TextTrackCueGeneric : VTTCue {
 };

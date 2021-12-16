@@ -140,9 +140,9 @@ Ref<FontFace> FontFace::create(Document& document, const String& family, Source&
     return result;
 }
 
-Ref<FontFace> FontFace::create(CSSFontFace& face)
+Ref<FontFace> FontFace::create(ScriptExecutionContext* context, CSSFontFace& face)
 {
-    auto fontFace = adoptRef(*new FontFace(face));
+    auto fontFace = adoptRef(*new FontFace(context, face));
     fontFace->suspendIfNeeded();
     return fontFace;
 }
@@ -155,8 +155,8 @@ FontFace::FontFace(CSSFontSelector& fontSelector)
     m_backing->addClient(*this);
 }
 
-FontFace::FontFace(CSSFontFace& face)
-    : ActiveDOMObject(face.document())
+FontFace::FontFace(ScriptExecutionContext* context, CSSFontFace& face)
+    : ActiveDOMObject(context)
     , m_backing(face)
     , m_loadedPromise(makeUniqueRef<LoadedPromise>(*this, &FontFace::loadedPromiseResolve))
 {
@@ -486,11 +486,9 @@ const char* FontFace::activeDOMObjectName() const
     return "FontFace";
 }
 
-bool FontFace::hasPendingActivity() const
+bool FontFace::virtualHasPendingActivity() const
 {
-    if (ActiveDOMObject::hasPendingActivity())
-        return true;
-    return !isContextStopped() && m_mayLoadedPromiseBeScriptObservable && !m_loadedPromise->isFulfilled();
+    return m_mayLoadedPromiseBeScriptObservable && !m_loadedPromise->isFulfilled();
 }
 
 }

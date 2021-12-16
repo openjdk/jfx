@@ -40,12 +40,17 @@ namespace WebCore {
 
 static Optional<std::pair<ChangeListTypeCommand::Type, Ref<HTMLElement>>> listConversionTypeForSelection(const VisibleSelection& selection)
 {
+    auto startNode = selection.start().containerNode();
+    auto endNode = selection.end().containerNode();
+    if (!startNode || !endNode)
+        return { };
+    auto commonAncestor = commonInclusiveAncestor<ComposedTree>(*startNode, *endNode);
+
     RefPtr<HTMLElement> listToReplace;
-    auto commonAncestor = makeRefPtr(Range::commonAncestorContainer(selection.start().containerNode(), selection.end().containerNode()));
     if (is<HTMLUListElement>(commonAncestor) || is<HTMLOListElement>(commonAncestor))
-        listToReplace = downcast<HTMLElement>(commonAncestor.get());
+        listToReplace = downcast<HTMLElement>(commonAncestor);
     else
-        listToReplace = enclosingList(commonAncestor.get());
+        listToReplace = enclosingList(commonAncestor);
 
     if (is<HTMLUListElement>(listToReplace))
         return {{ ChangeListTypeCommand::Type::ConvertToOrderedList, listToReplace.releaseNonNull() }};

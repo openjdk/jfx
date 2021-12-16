@@ -55,45 +55,10 @@ void WorkQueue::dispatchAfter(Seconds duration, Function<void()>&& function)
     }).get());
 }
 
-#if HAVE(QOS_CLASSES)
-static dispatch_qos_class_t dispatchQOSClass(WorkQueue::QOS qos)
-{
-    switch (qos) {
-    case WorkQueue::QOS::UserInteractive:
-        return Thread::adjustedQOSClass(QOS_CLASS_USER_INTERACTIVE);
-    case WorkQueue::QOS::UserInitiated:
-        return Thread::adjustedQOSClass(QOS_CLASS_USER_INITIATED);
-    case WorkQueue::QOS::Default:
-        return Thread::adjustedQOSClass(QOS_CLASS_DEFAULT);
-    case WorkQueue::QOS::Utility:
-        return Thread::adjustedQOSClass(QOS_CLASS_UTILITY);
-    case WorkQueue::QOS::Background:
-        return Thread::adjustedQOSClass(QOS_CLASS_BACKGROUND);
-    }
-}
-#else
-static dispatch_queue_t targetQueueForQOSClass(WorkQueue::QOS qos)
-{
-    switch (qos) {
-    case WorkQueue::QOS::UserInteractive:
-    case WorkQueue::QOS::UserInitiated:
-        return dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH, 0);
-    case WorkQueue::QOS::Utility:
-        return dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_LOW, 0);
-    case WorkQueue::QOS::Background:
-        return dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_BACKGROUND, 0);
-    case WorkQueue::QOS::Default:
-        ASSERT_NOT_REACHED();
-        return nullptr;
-    }
-    ASSERT_NOT_REACHED();
-}
-#endif
-
 void WorkQueue::platformInitialize(const char* name, Type type, QOS qos)
 {
     dispatch_queue_attr_t attr = type == Type::Concurrent ? DISPATCH_QUEUE_CONCURRENT : DISPATCH_QUEUE_SERIAL;
-    attr = dispatch_queue_attr_make_with_qos_class(attr, dispatchQOSClass(qos), 0);
+    attr = dispatch_queue_attr_make_with_qos_class(attr, Thread::dispatchQOSClass(qos), 0);
     m_dispatchQueue = dispatch_queue_create(name, attr);
     dispatch_set_context(m_dispatchQueue, this);
 }

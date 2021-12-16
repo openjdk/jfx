@@ -25,6 +25,7 @@
     JSCustomHeader,
     JSCustomMarkFunction,
     SkipVTableValidation,
+    Exposed=Window
 ] interface CSSStyleDeclaration {
     [CEReactions] attribute DOMString cssText;
 
@@ -33,24 +34,23 @@
     [CEReactions, MayThrowException] DOMString removeProperty(DOMString propertyName);
     DOMString? getPropertyPriority(DOMString propertyName);
 
-    [CEReactions, MayThrowException] void setProperty(DOMString propertyName, [TreatNullAs=EmptyString] DOMString value, optional [TreatNullAs=EmptyString] DOMString priority = "");
+    [CEReactions, MayThrowException] undefined setProperty(DOMString propertyName, [LegacyNullToEmptyString] DOMString value, optional [LegacyNullToEmptyString] DOMString priority = "");
 
     readonly attribute unsigned long length;
     getter DOMString item(unsigned long index);
     readonly attribute CSSRule? parentRule;
 
-    [CEReactions] attribute [TreatNullAs=EmptyString] DOMString cssFloat;
+    [CEReactions] attribute [LegacyNullToEmptyString] DOMString cssFloat;
 
-    // FIXME: Using "undefined" as default parameter value is wrong.
-    DOMString? getPropertyShorthand(optional DOMString propertyName = "undefined");
-    boolean isPropertyImplicit(optional DOMString propertyName = "undefined");
+    DOMString? getPropertyShorthand(optional DOMString propertyName);
+    boolean isPropertyImplicit(optional DOMString propertyName);
 
     // Use named getters/setters for all support CSS property names. The spec says
     // these should be normal attributes, but there are too many combinations with
     // prefixes for this to be practical. If we remove legacy aliases, we should
     // reconsider this decision.
     getter (DOMString or double) (DOMString name);
-    [CEReactions, MayThrowException, CallNamedSetterOnlyForSupportedProperties] setter void (DOMString name, [TreatNullAs=EmptyString] DOMString value);
+    [CEReactions, CallNamedSetterOnlyForSupportedProperties] setter undefined (DOMString name, [LegacyNullToEmptyString] DOMString value);
 
     // This method is deprecated, and we would like to drop support for it someday
     DeprecatedCSSOMValue? getPropertyCSSValue(DOMString propertyName);

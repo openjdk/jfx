@@ -30,14 +30,15 @@
 
 #include "BlockFormattingContext.h"
 #include "BlockFormattingState.h"
-#include "DisplayBox.h"
-#include "DisplayPainter.h"
+#include "FlexFormattingContext.h"
+#include "FlexFormattingState.h"
 #include "InlineFormattingContext.h"
 #include "InlineFormattingState.h"
 #include "InvalidationContext.h"
 #include "InvalidationState.h"
 #include "LayoutBox.h"
-#include "LayoutContainer.h"
+#include "LayoutBoxGeometry.h"
+#include "LayoutContainerBox.h"
 #include "LayoutPhase.h"
 #include "LayoutTreeBuilder.h"
 #include "RenderStyleConstants.h"
@@ -45,6 +46,7 @@
 #include "RuntimeEnabledFeatures.h"
 #include "TableFormattingContext.h"
 #include "TableFormattingState.h"
+#include "TableWrapperBlockFormattingContext.h"
 #include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
@@ -63,15 +65,14 @@ void LayoutContext::layout(const LayoutSize& rootContentBoxSize, InvalidationSta
     // Note that we never layout the root box. It has to have an already computed geometry (in case of ICB, it's the view geometry).
     // ICB establishes the initial BFC, but it does not live in a formatting context and while a non-ICB root(subtree layout) has to have a formatting context,
     // we could not lay it out even if we wanted to since it's outside of this LayoutContext.
-    auto& displayBox = layoutState().displayBoxForRootLayoutBox();
-    displayBox.setHorizontalMargin({ });
-    displayBox.setHorizontalComputedMargin({ });
-    displayBox.setVerticalMargin({ });
-    displayBox.setBorder({ });
-    displayBox.setPadding({ });
-    displayBox.setTopLeft({ });
-    displayBox.setContentBoxHeight(rootContentBoxSize.height());
-    displayBox.setContentBoxWidth(rootContentBoxSize.width());
+    auto& boxGeometry = layoutState().geometryForRootBox();
+    boxGeometry.setHorizontalMargin({ });
+    boxGeometry.setVerticalMargin({ });
+    boxGeometry.setBorder({ });
+    boxGeometry.setPadding({ });
+    boxGeometry.setLogicalTopLeft({ });
+    boxGeometry.setContentBoxHeight(rootContentBoxSize.height());
+    boxGeometry.setContentBoxWidth(rootContentBoxSize.width());
 
     layoutWithPreparedRootGeometry(invalidationState);
 }
@@ -89,27 +90,31 @@ void LayoutContext::layoutWithPreparedRootGeometry(InvalidationState& invalidati
         layoutFormattingContextSubtree(formattingContextRoot, invalidationState);
 }
 
-void LayoutContext::layoutFormattingContextSubtree(const Container& formattingContextRoot, InvalidationState& invalidationState)
+void LayoutContext::layoutFormattingContextSubtree(const ContainerBox& formattingContextRoot, InvalidationState& invalidationState)
 {
     RELEASE_ASSERT(formattingContextRoot.establishesFormattingContext());
-    auto formattingContext = createFormattingContext(formattingContextRoot, layoutState());
-    auto& displayBox = layoutState().displayBoxForLayoutBox(formattingContextRoot);
+    if (!formattingContextRoot.hasChild())
+        return;
 
-    auto horizontalConstraints = HorizontalConstraints { displayBox.contentBoxLeft(), displayBox.contentBoxWidth() };
-    auto verticalConstraints = VerticalConstraints { displayBox.contentBoxTop(), { } };
-    formattingContext->layoutInFlowContent(invalidationState, horizontalConstraints, verticalConstraints);
+    auto formattingContext = createFormattingContext(formattingContextRoot, layoutState());
+    auto& boxGeometry = layoutState().geometryForBox(formattingContextRoot);
+
+    if (formattingContextRoot.hasInFlowOrFloatingChild()) {
+        auto constraintsForInFlowContent = FormattingContext::ConstraintsForInFlowContent { { boxGeometry.contentBoxLeft(), boxGeometry.contentBoxWidth() }, { boxGeometry.contentBoxTop(), { } } };
+        formattingContext->layoutInFlowContent(invalidationState, constraintsForInFlowContent);
+    }
 
     // FIXME: layoutFormattingContextSubtree() does not perform layout on the root, rather it lays out the root's content.
     // It constructs an FC for descendant boxes and runs layout on them. The formattingContextRoot is laid out in the FC in which it lives (parent formatting context).
     // It also means that the formattingContextRoot has to have a valid/clean geometry at this point.
     {
-        auto horizontalConstraints = HorizontalConstraints { displayBox.paddingBoxLeft(), displayBox.paddingBoxWidth() };
-        auto verticalConstraints = VerticalConstraints { displayBox.paddingBoxTop(), displayBox.paddingBoxHeight() };
-        formattingContext->layoutOutOfFlowContent(invalidationState, horizontalConstraints, verticalConstraints);
+        auto constraints = FormattingContext::ConstraintsForOutOfFlowContent { { boxGeometry.paddingBoxLeft(), boxGeometry.paddingBoxWidth() },
+            { boxGeometry.paddingBoxTop(), boxGeometry.paddingBoxHeight() }, boxGeometry.contentBoxWidth() };
+        formattingContext->layoutOutOfFlowContent(invalidationState, constraints);
     }
 }
 
-std::unique_ptr<FormattingContext> LayoutContext::createFormattingContext(const Container& formattingContextRoot, LayoutState& layoutState)
+std::unique_ptr<FormattingContext> LayoutContext::createFormattingContext(const ContainerBox& formattingContextRoot, LayoutState& layoutState)
 {
     ASSERT(formattingContextRoot.establishesFormattingContext());
     if (formattingContextRoot.establishesInlineFormattingContext()) {
@@ -120,7 +125,14 @@ std::unique_ptr<FormattingContext> LayoutContext::createFormattingContext(const 
     if (formattingContextRoot.establishesBlockFormattingContext()) {
         ASSERT(!formattingContextRoot.establishesInlineFormattingContext());
         auto& blockFormattingState = layoutState.ensureBlockFormattingState(formattingContextRoot);
+        if (formattingContextRoot.isTableWrapperBox())
+            return makeUnique<TableWrapperBlockFormattingContext>(formattingContextRoot, blockFormattingState);
         return makeUnique<BlockFormattingContext>(formattingContextRoot, blockFormattingState);
+    }
+
+    if (formattingContextRoot.establishesFlexFormattingContext()) {
+        auto& flexFormattingState = layoutState.ensureFlexFormattingState(formattingContextRoot);
+        return makeUnique<FlexFormattingContext>(formattingContextRoot, flexFormattingState);
     }
 
     if (formattingContextRoot.establishesTableFormattingContext()) {
@@ -129,11 +141,6 @@ std::unique_ptr<FormattingContext> LayoutContext::createFormattingContext(const 
     }
 
     CRASH();
-}
-
-void LayoutContext::paint(const LayoutState& layoutState, GraphicsContext& context, const IntRect& dirtyRect)
-{
-    Display::Painter::paint(layoutState, context, dirtyRect);
 }
 
 }

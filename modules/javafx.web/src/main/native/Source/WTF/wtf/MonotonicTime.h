@@ -52,6 +52,10 @@ public:
         return MonotonicTime(value);
     }
 
+#if OS(DARWIN)
+    WTF_EXPORT_PRIVATE static MonotonicTime fromMachAbsoluteTime(uint64_t);
+#endif
+
     WTF_EXPORT_PRIVATE static MonotonicTime now();
 
     static constexpr MonotonicTime infinity() { return fromRawSeconds(std::numeric_limits<double>::infinity()); }
@@ -155,7 +159,7 @@ public:
     }
 
     template<class Decoder>
-    static bool decode(Decoder& decoder, MonotonicTime& time)
+    static WARN_UNUSED_RETURN bool decode(Decoder& decoder, MonotonicTime& time)
     {
         double value;
         if (!decoder.decode(value))

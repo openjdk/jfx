@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,8 +31,10 @@ import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.tk.TKListener;
 import com.sun.javafx.tk.TKStage;
 import com.sun.javafx.tk.Toolkit;
+import com.sun.javafx.util.Logging;
 import com.sun.javafx.util.ModuleHelper;
 
+import java.lang.module.ModuleDescriptor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.security.AccessControlContext;
@@ -48,6 +50,7 @@ import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Function;
 import java.util.function.Predicate;
 
 import javafx.application.Application;
@@ -93,10 +96,12 @@ public class PlatformImpl {
     private static BooleanProperty accessibilityActive = new SimpleBooleanProperty();
     private static CountDownLatch allNestedLoopsExitedLatch = new CountDownLatch(1);
 
+    @SuppressWarnings("removal")
     private static final boolean verbose
             = AccessController.doPrivileged((PrivilegedAction<Boolean>) () ->
                 Boolean.getBoolean("javafx.verbose"));
 
+    @SuppressWarnings("removal")
     private static final boolean DEBUG
             = AccessController.doPrivileged((PrivilegedAction<Boolean>) ()
                     -> Boolean.getBoolean("com.sun.javafx.application.debug"));
@@ -187,7 +192,25 @@ public class PlatformImpl {
             return;
         }
 
-        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+        final Module module = PlatformImpl.class.getModule();
+        final ModuleDescriptor moduleDesc = module.getDescriptor();
+        if (!module.isNamed()
+                || !"javafx.graphics".equals(module.getName())
+                || moduleDesc == null
+                || moduleDesc.isAutomatic()
+                || moduleDesc.isOpen()) {
+
+            String warningStr = "Unsupported JavaFX configuration: "
+                + "classes were loaded from '" + module + "'";
+            if (moduleDesc != null) {
+                warningStr += ", isAutomatic: " + moduleDesc.isAutomatic();
+                warningStr += ", isOpen: " + moduleDesc.isOpen();
+            }
+            Logging.getJavaFXLogger().warning(warningStr);
+        }
+
+        @SuppressWarnings("removal")
+        var dummy = AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
             applicationType = System.getProperty("com.sun.javafx.application.type");
             if (applicationType == null) applicationType = "";
 
@@ -242,7 +265,8 @@ public class PlatformImpl {
         }
 
         if (!taskbarApplication) {
-            AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+            @SuppressWarnings("removal")
+            var dummy2 = AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
                 System.setProperty("glass.taskbarApplication", "false");
                 return null;
             });
@@ -282,6 +306,7 @@ public class PlatformImpl {
         // Read the javafx.embed.eventProc system property and store
         // it in an entry in the glass Application device details map
         final String eventProcProperty = "javafx.embed.eventProc";
+        @SuppressWarnings("removal")
         final long eventProc = AccessController.doPrivileged((PrivilegedAction<Long>) () ->
                 Long.getLong(eventProcProperty, 0));
         if (eventProc != 0L) {
@@ -325,6 +350,7 @@ public class PlatformImpl {
     // FXCanvas-specific initialization
     private static void initFXCanvas() {
         // Verify that we have the appropriate permission
+        @SuppressWarnings("removal")
         final SecurityManager sm = System.getSecurityManager();
         if (sm != null) {
             try {
@@ -341,6 +367,7 @@ public class PlatformImpl {
                 !f.getClassName().startsWith("javafx.application.")
                         && !f.getClassName().startsWith("com.sun.javafx.application.");
 
+        @SuppressWarnings("removal")
         final StackWalker walker = AccessController.doPrivileged((PrivilegedAction<StackWalker>) () ->
                 StackWalker.getInstance(StackWalker.Option.RETAIN_CLASS_REFERENCE));
         Optional<StackWalker.StackFrame> frame = walker.walk(
@@ -420,11 +447,13 @@ public class PlatformImpl {
                 return;
             }
 
+            @SuppressWarnings("removal")
             final AccessControlContext acc = AccessController.getContext();
             // Don't catch exceptions, they are handled by Toolkit.defer()
             Toolkit.getToolkit().defer(() -> {
                 try {
-                    AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+                    @SuppressWarnings("removal")
+                    var dummy = AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
                         r.run();
                         return null;
                     }, acc);
@@ -629,6 +658,7 @@ public class PlatformImpl {
             // some features require the application to have the corresponding
             // permissions, if the application doesn't have them, the platform
             // will behave as if the feature wasn't supported
+            @SuppressWarnings("removal")
             final SecurityManager securityManager =
                     System.getSecurityManager();
             if (securityManager != null) {
@@ -696,6 +726,55 @@ public class PlatformImpl {
         }
     }
 
+    /**
+     * Enumeration of possible high contrast scheme values.
+     *
+     * For each scheme, a theme key is defined. These keys can be
+     * used, for instance, in a resource bundle that defines the theme name values
+     * for supported locales.
+     *
+     * The high contrast feature may not be available on all platforms.
+     */
+    public enum HighContrastScheme {
+        HIGH_CONTRAST_BLACK("high.contrast.black.theme"),
+        HIGH_CONTRAST_WHITE("high.contrast.white.theme"),
+        HIGH_CONTRAST_1("high.contrast.1.theme"),
+        HIGH_CONTRAST_2("high.contrast.2.theme");
+
+        private final String themeKey;
+        HighContrastScheme(String themeKey) {
+            this.themeKey = themeKey;
+        }
+
+        public String getThemeKey() {
+            return themeKey;
+        }
+
+        /**
+         * Given a theme name string, this method finds the possible enum constant
+         * for which the result of a function, applying its theme key, matches the theme name.
+         *
+         * An example of such function can be {@code ResourceBundle::getString},
+         * as {@link java.util.ResourceBundle#getString(String)} returns a string for
+         * the given key.
+         *
+         * @param keyFunction a {@link Function} that returns a string for a given theme key string.
+         * @param themeName a string with the theme name
+         * @return the name of the enum constant or null if not found
+         */
+        public static String fromThemeName(Function<String, String> keyFunction, String themeName) {
+            if (keyFunction == null || themeName == null) {
+                return null;
+            }
+            for (HighContrastScheme item : values()) {
+                if (themeName.equalsIgnoreCase(keyFunction.apply(item.getThemeKey()))) {
+                    return item.toString();
+                }
+            }
+            return null;
+        }
+    }
+
     private static String accessibilityTheme;
     public static boolean setAccessibilityTheme(String platformTheme) {
 
@@ -717,6 +796,7 @@ public class PlatformImpl {
     private static void _setAccessibilityTheme(String platformTheme) {
 
         // check to see if there is an override to enable a high-contrast theme
+        @SuppressWarnings("removal")
         final String userTheme = AccessController.doPrivileged(
                 (PrivilegedAction<String>) () -> System.getProperty("com.sun.javafx.highContrastTheme"));
 
@@ -743,15 +823,15 @@ public class PlatformImpl {
             } else {
                 if (platformTheme != null) {
                     // The following names are Platform specific (Windows 7 and 8)
-                    switch (platformTheme) {
-                        case "High Contrast White":
+                    switch (HighContrastScheme.valueOf(platformTheme)) {
+                        case HIGH_CONTRAST_WHITE:
                             accessibilityTheme = "com/sun/javafx/scene/control/skin/modena/blackOnWhite.css";
                             break;
-                        case "High Contrast Black":
+                        case HIGH_CONTRAST_BLACK:
                             accessibilityTheme = "com/sun/javafx/scene/control/skin/modena/whiteOnBlack.css";
                             break;
-                        case "High Contrast #1":
-                        case "High Contrast #2": //TODO #2 should be green on black
+                        case HIGH_CONTRAST_1:
+                        case HIGH_CONTRAST_2: //TODO #2 should be green on black
                             accessibilityTheme = "com/sun/javafx/scene/control/skin/modena/yellowOnBlack.css";
                             break;
                         default:
@@ -764,6 +844,7 @@ public class PlatformImpl {
     private static void _setPlatformUserAgentStylesheet(String stylesheetUrl) {
         isModena = isCaspian = false;
         // check for command line override
+        @SuppressWarnings("removal")
         final String overrideStylesheetUrl = AccessController.doPrivileged(
                 (PrivilegedAction<String>) () -> System.getProperty("javafx.userAgentStylesheetUrl"));
 
@@ -845,13 +926,15 @@ public class PlatformImpl {
             uaStylesheets.add(accessibilityTheme);
         }
 
-        AccessController.doPrivileged((PrivilegedAction) () -> {
+        @SuppressWarnings("removal")
+        var dummy = AccessController.doPrivileged((PrivilegedAction) () -> {
             StyleManager.getInstance().setUserAgentStylesheets(uaStylesheets);
             return null;
         });
 
     }
 
+    @SuppressWarnings("removal")
     public static void addNoTransparencyStylesheetToScene(final Scene scene) {
         if (PlatformImpl.isCaspian()) {
             AccessController.doPrivileged((PrivilegedAction) () -> {
@@ -886,7 +969,8 @@ public class PlatformImpl {
                     isMediaSupported = checkForClass(
                             "javafx.scene.media.MediaView");
                     if (isMediaSupported && PlatformUtil.isEmbedded()) {
-                        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+                        @SuppressWarnings("removal")
+                        var dummy = AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
                             String s = System.getProperty(
                                     "com.sun.javafx.experimental.embedded.media",
                                     "false");
@@ -901,7 +985,8 @@ public class PlatformImpl {
                 if (isWebSupported == null) {
                     isWebSupported = checkForClass("javafx.scene.web.WebView");
                     if (isWebSupported && PlatformUtil.isEmbedded()) {
-                        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+                        @SuppressWarnings("removal")
+                        var dummy = AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
                             String s = System.getProperty(
                                     "com.sun.javafx.experimental.embedded.web",
                                     "false");

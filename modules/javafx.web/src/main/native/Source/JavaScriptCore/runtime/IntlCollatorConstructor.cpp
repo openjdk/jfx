@@ -28,20 +28,16 @@
 #include "config.h"
 #include "IntlCollatorConstructor.h"
 
-#if ENABLE(INTL)
-
-#include "Error.h"
 #include "IntlCollator.h"
 #include "IntlCollatorPrototype.h"
 #include "IntlObject.h"
 #include "JSCInlines.h"
-#include "Lookup.h"
 
 namespace JSC {
 
 STATIC_ASSERT_IS_TRIVIALLY_DESTRUCTIBLE(IntlCollatorConstructor);
 
-static EncodedJSValue JSC_HOST_CALL IntlCollatorConstructorFuncSupportedLocalesOf(JSGlobalObject*, CallFrame*);
+static JSC_DECLARE_HOST_FUNCTION(IntlCollatorConstructorFuncSupportedLocalesOf);
 
 }
 
@@ -49,8 +45,8 @@ static EncodedJSValue JSC_HOST_CALL IntlCollatorConstructorFuncSupportedLocalesO
 
 namespace JSC {
 
-static EncodedJSValue JSC_HOST_CALL callIntlCollator(JSGlobalObject*, CallFrame*);
-static EncodedJSValue JSC_HOST_CALL constructIntlCollator(JSGlobalObject*, CallFrame*);
+static JSC_DECLARE_HOST_FUNCTION(callIntlCollator);
+static JSC_DECLARE_HOST_FUNCTION(constructIntlCollator);
 
 const ClassInfo IntlCollatorConstructor::s_info = { "Function", &InternalFunction::s_info, &collatorConstructorTable, nullptr, CREATE_METHOD_TABLE(IntlCollatorConstructor) };
 
@@ -79,13 +75,12 @@ IntlCollatorConstructor::IntlCollatorConstructor(VM& vm, Structure* structure)
 
 void IntlCollatorConstructor::finishCreation(VM& vm, IntlCollatorPrototype* collatorPrototype)
 {
-    Base::finishCreation(vm, "Collator"_s, NameAdditionMode::WithoutStructureTransition);
+    Base::finishCreation(vm, 0, "Collator"_s, PropertyAdditionMode::WithoutStructureTransition);
     putDirectWithoutTransition(vm, vm.propertyNames->prototype, collatorPrototype, PropertyAttribute::DontEnum | PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly);
-    putDirectWithoutTransition(vm, vm.propertyNames->length, jsNumber(0), PropertyAttribute::ReadOnly | PropertyAttribute::DontEnum);
     collatorPrototype->putDirectWithoutTransition(vm, vm.propertyNames->constructor, this, static_cast<unsigned>(PropertyAttribute::DontEnum));
 }
 
-static EncodedJSValue JSC_HOST_CALL constructIntlCollator(JSGlobalObject* globalObject, CallFrame* callFrame)
+JSC_DEFINE_HOST_FUNCTION(constructIntlCollator, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
@@ -93,8 +88,12 @@ static EncodedJSValue JSC_HOST_CALL constructIntlCollator(JSGlobalObject* global
     // 1. If NewTarget is undefined, let newTarget be the active function object, else let newTarget be NewTarget.
     // 2. Let collator be OrdinaryCreateFromConstructor(newTarget, %CollatorPrototype%).
     // 3. ReturnIfAbrupt(collator).
-    Structure* structure = InternalFunction::createSubclassStructure(globalObject, callFrame->jsCallee(), callFrame->newTarget(), jsCast<IntlCollatorConstructor*>(callFrame->jsCallee())->collatorStructure(vm));
-    RETURN_IF_EXCEPTION(scope, encodedJSValue());
+    JSObject* newTarget = asObject(callFrame->newTarget());
+    Structure* structure = newTarget == callFrame->jsCallee()
+        ? globalObject->collatorStructure()
+        : InternalFunction::createSubclassStructure(globalObject, newTarget, getFunctionRealm(vm, newTarget)->collatorStructure());
+    RETURN_IF_EXCEPTION(scope, { });
+
     IntlCollator* collator = IntlCollator::create(vm, structure);
     ASSERT(collator);
 
@@ -104,21 +103,19 @@ static EncodedJSValue JSC_HOST_CALL constructIntlCollator(JSGlobalObject* global
     return JSValue::encode(collator);
 }
 
-static EncodedJSValue JSC_HOST_CALL callIntlCollator(JSGlobalObject* globalObject, CallFrame* callFrame)
+JSC_DEFINE_HOST_FUNCTION(callIntlCollator, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     // 10.1.2 Intl.Collator ([locales [, options]]) (ECMA-402 2.0)
     // 1. If NewTarget is undefined, let newTarget be the active function object, else let newTarget be NewTarget.
     // NewTarget is always undefined when called as a function.
 
     VM& vm = globalObject->vm();
-    IntlCollatorConstructor* callee = jsCast<IntlCollatorConstructor*>(callFrame->jsCallee());
-
-    // FIXME: Collator does not get the workaround for ECMA-402 1.0 compatibility.
+    // Collator does not require the workaround for ECMA-402 1.0 compatibility.
     // https://bugs.webkit.org/show_bug.cgi?id=153679
 
     // 2. Let collator be OrdinaryCreateFromConstructor(newTarget, %CollatorPrototype%).
     // 3. ReturnIfAbrupt(collator).
-    IntlCollator* collator = IntlCollator::create(vm, callee->collatorStructure(vm));
+    IntlCollator* collator = IntlCollator::create(vm, globalObject->collatorStructure());
     ASSERT(collator);
 
     // 4. Return InitializeCollator(collator, locales, options).
@@ -126,7 +123,7 @@ static EncodedJSValue JSC_HOST_CALL callIntlCollator(JSGlobalObject* globalObjec
     return JSValue::encode(collator);
 }
 
-EncodedJSValue JSC_HOST_CALL IntlCollatorConstructorFuncSupportedLocalesOf(JSGlobalObject* globalObject, CallFrame* callFrame)
+JSC_DEFINE_HOST_FUNCTION(IntlCollatorConstructorFuncSupportedLocalesOf, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
@@ -143,5 +140,3 @@ EncodedJSValue JSC_HOST_CALL IntlCollatorConstructorFuncSupportedLocalesOf(JSGlo
 }
 
 } // namespace JSC
-
-#endif // ENABLE(INTL)

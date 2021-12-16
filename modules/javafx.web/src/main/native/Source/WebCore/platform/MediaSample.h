@@ -30,11 +30,13 @@
 #include <JavaScriptCore/TypedArrays.h>
 #include <wtf/EnumTraits.h>
 #include <wtf/MediaTime.h>
-#include <wtf/RefCounted.h>
+#include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/text/AtomString.h>
 
 typedef struct opaqueCMSampleBuffer *CMSampleBufferRef;
 typedef struct _GstSample GstSample;
+typedef struct OpaqueMTPluginByteSource *MTPluginByteSourceRef;
+typedef const struct opaqueCMFormatDescription *CMFormatDescriptionRef;
 
 namespace WebCore {
 
@@ -46,23 +48,23 @@ struct PlatformSample {
         MockSampleBoxType,
         CMSampleBufferType,
         GStreamerSampleType,
+        ByteRangeSampleType,
     } type;
     union {
         MockSampleBox* mockSampleBox;
         CMSampleBufferRef cmSampleBuffer;
         GstSample* gstSample;
+        std::pair<MTPluginByteSourceRef, CMFormatDescriptionRef> byteRangeSample;
     } sample;
 };
 
-class MediaSample : public RefCounted<MediaSample> {
+class WEBCORE_EXPORT MediaSample : public ThreadSafeRefCounted<MediaSample> {
 public:
     virtual ~MediaSample() = default;
 
     virtual MediaTime presentationTime() const = 0;
-    virtual MediaTime outputPresentationTime() const { return presentationTime(); }
     virtual MediaTime decodeTime() const = 0;
     virtual MediaTime duration() const = 0;
-    virtual MediaTime outputDuration() const { return duration(); }
     virtual AtomString trackID() const = 0;
     virtual void setTrackID(const String&) = 0;
     virtual size_t sizeInBytes() const = 0;
@@ -81,9 +83,16 @@ public:
         IsSync = 1 << 0,
         IsNonDisplaying = 1 << 1,
         HasAlpha = 1 << 2,
+        HasSyncInfo = 1 << 3,
     };
     virtual SampleFlags flags() const = 0;
     virtual PlatformSample platformSample() = 0;
+
+    struct ByteRange {
+        size_t byteOffset { 0 };
+        size_t byteLength { 0 };
+    };
+    virtual Optional<ByteRange> byteRange() const = 0;
 
     enum class VideoRotation {
         None = 0,
@@ -98,9 +107,21 @@ public:
     bool isSync() const { return flags() & IsSync; }
     bool isNonDisplaying() const { return flags() & IsNonDisplaying; }
     bool hasAlpha() const { return flags() & HasAlpha; }
+    bool hasSyncInfo() const { return flags() & HasSyncInfo; }
 
     virtual void dump(PrintStream&) const = 0;
-    virtual String toJSONString() const { return { }; }
+    String toJSONString() const
+    {
+        auto object = JSON::Object::create();
+
+        object->setObject("pts"_s, presentationTime().toJSONObject());
+        object->setObject("dts"_s, decodeTime().toJSONObject());
+        object->setObject("duration"_s, duration().toJSONObject());
+        object->setInteger("flags"_s, static_cast<unsigned>(flags()));
+        object->setObject("presentationSize"_s, presentationSize().toJSONObject());
+
+        return object->toJSONString();
+    }
 };
 
 } // namespace WebCore

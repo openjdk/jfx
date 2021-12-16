@@ -43,8 +43,10 @@ outputFlnm = ARGV.shift
 validBackends = canonicalizeBackendNames(ARGV.shift.split(/[,\s]+/))
 includeOnlyBackends(validBackends)
 
+variants = ARGV.shift.split(/[,\s]+/)
+
 begin
-    configurationList = configurationIndices(settingsFlnm)
+    configurationList = configurationIndicesForVariants(settingsFlnm, variants)
 rescue MissingMagicValuesException
     $stderr.puts "OffsetExtractor: No magic values found. Skipping offsets extractor file generation."
     exit 1
@@ -65,7 +67,7 @@ if FileTest.exist? outputFlnm
         | inp |
         firstLine = inp.gets
         if firstLine and firstLine.chomp == inputHash
-            $stderr.puts "OffsetExtractor: Nothing changed."
+            # Nothing changed.
             exit 0
         end
     }

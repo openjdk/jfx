@@ -28,7 +28,7 @@
 
 #if ENABLE(WEBASSEMBLY)
 
-#include "FunctionPrototype.h"
+#include "AuxiliaryBarrierInlines.h"
 #include "JSCInlines.h"
 
 #include "WebAssemblyCompileErrorPrototype.lut.h"
@@ -57,6 +57,9 @@ Structure* WebAssemblyCompileErrorPrototype::createStructure(VM& vm, JSGlobalObj
 void WebAssemblyCompileErrorPrototype::finishCreation(VM& vm)
 {
     Base::finishCreation(vm);
+    ASSERT(inherits(vm, info()));
+    putDirectWithoutTransition(vm, vm.propertyNames->name, jsNontrivialString(vm, "CompileError"_s), static_cast<unsigned>(PropertyAttribute::DontEnum));
+    putDirectWithoutTransition(vm, vm.propertyNames->message, jsEmptyString(vm), static_cast<unsigned>(PropertyAttribute::DontEnum));
 }
 
 WebAssemblyCompileErrorPrototype::WebAssemblyCompileErrorPrototype(VM& vm, Structure* structure)

@@ -27,24 +27,54 @@
 
 #if ENABLE(APPLE_PAY)
 
-#include "ApplePayLineItem.h"
-
-#if USE(APPLE_INTERNAL_SDK)
-#include <WebKitAdditions/ApplePayPaymentMethodUpdateAdditions.h>
-#endif
+#include "ApplePayDetailsUpdateBase.h"
+#include <wtf/Optional.h>
+#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
-struct ApplePayPaymentMethodUpdate {
-    ApplePayLineItem newTotal;
-    Vector<ApplePayLineItem> newLineItems;
+struct ApplePayPaymentMethodUpdate final : public ApplePayDetailsUpdateBase {
+#if ENABLE(APPLE_PAY_INSTALLMENTS)
+    String installmentGroupIdentifier;
+#endif // ENABLE(APPLE_PAY_INSTALLMENTS)
 
-#if defined(APPLEPAYPAYMENTMETHODUPDATE_ADDITIONS)
-APPLEPAYPAYMENTMETHODUPDATE_ADDITIONS
-#undef APPLEPAYPAYMENTMETHODUPDATE_ADDITIONS
-#endif
+    template<class Encoder> void encode(Encoder&) const;
+    template<class Decoder> static Optional<ApplePayPaymentMethodUpdate> decode(Decoder&);
 };
 
+template<class Encoder>
+void ApplePayPaymentMethodUpdate::encode(Encoder& encoder) const
+{
+    ApplePayDetailsUpdateBase::encode(encoder);
+#if ENABLE(APPLE_PAY_INSTALLMENTS)
+    encoder << installmentGroupIdentifier;
+#endif // ENABLE(APPLE_PAY_INSTALLMENTS)
 }
+
+template<class Decoder>
+Optional<ApplePayPaymentMethodUpdate> ApplePayPaymentMethodUpdate::decode(Decoder& decoder)
+{
+    ApplePayPaymentMethodUpdate result;
+
+    if (!result.decodeBase(decoder))
+        return WTF::nullopt;
+
+#define DECODE(name, type) \
+    Optional<type> name; \
+    decoder >> name; \
+    if (!name) \
+        return WTF::nullopt; \
+    result.name = WTFMove(*name); \
+
+#if ENABLE(APPLE_PAY_INSTALLMENTS)
+    DECODE(installmentGroupIdentifier, String)
+#endif // ENABLE(APPLE_PAY_INSTALLMENTS)
+
+#undef DECODE
+
+    return result;
+}
+
+} // namespace WebCore
 
 #endif

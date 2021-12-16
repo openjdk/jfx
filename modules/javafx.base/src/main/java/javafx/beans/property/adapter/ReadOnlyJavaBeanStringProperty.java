@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -85,6 +85,7 @@ public final class ReadOnlyJavaBeanStringProperty extends ReadOnlyStringProperty
     private final ReadOnlyPropertyDescriptor descriptor;
     private final ReadOnlyPropertyDescriptor.ReadOnlyListener<String> listener;
 
+    @SuppressWarnings("removal")
     private final AccessControlContext acc = AccessController.getContext();
 
     ReadOnlyJavaBeanStringProperty(ReadOnlyPropertyDescriptor descriptor, Object bean) {
@@ -101,6 +102,7 @@ public final class ReadOnlyJavaBeanStringProperty extends ReadOnlyStringProperty
      * property throws an {@code IllegalAccessException} or an
      * {@code InvocationTargetException}.
      */
+    @SuppressWarnings("removal")
     @Override
     public String get() {
         return AccessController.doPrivileged((PrivilegedAction<String>) () -> {

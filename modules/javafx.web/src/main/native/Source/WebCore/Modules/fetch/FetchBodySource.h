@@ -26,8 +26,7 @@
 
 #pragma once
 
-#if ENABLE(STREAMS_API)
-
+#include "ActiveDOMObject.h"
 #include "ReadableStreamSource.h"
 
 namespace JSC {
@@ -58,13 +57,13 @@ private:
     void setActive() final;
     void setInactive() final;
 
-    FetchBodyOwner* m_bodyOwner;
+    WeakPtr<FetchBodyOwner> m_bodyOwner;
+
     bool m_isCancelling { false };
 #if ASSERT_ENABLED
     bool m_isClosed { false };
 #endif
+    RefPtr<ActiveDOMObject::PendingActivity<FetchBodyOwner>> m_pendingActivity;
 };
 
 } // namespace WebCore
-
-#endif // ENABLE(STREAMS_API)

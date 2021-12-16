@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -68,6 +68,7 @@ class GlassSceneDnDEventHandler {
         return 1.0;
     }
 
+    @SuppressWarnings("removal")
     public TransferMode handleDragEnter(final int x, final int y, final int xAbs, final int yAbs,
                                         final TransferMode recommendedTransferMode,
                                         final ClipboardAssistance dropTargetAssistant)
@@ -86,6 +87,7 @@ class GlassSceneDnDEventHandler {
         }, scene.getAccessControlContext());
     }
 
+    @SuppressWarnings("removal")
     public void handleDragLeave(final ClipboardAssistance dropTargetAssistant) {
         assert Platform.isFxApplicationThread();
         AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
@@ -96,6 +98,7 @@ class GlassSceneDnDEventHandler {
         }, scene.getAccessControlContext());
     }
 
+    @SuppressWarnings("removal")
     public TransferMode handleDragDrop(final int x, final int y, final int xAbs, final int yAbs,
                                        final TransferMode recommendedTransferMode,
                                        final ClipboardAssistance dropTargetAssistant)
@@ -112,6 +115,7 @@ class GlassSceneDnDEventHandler {
         }, scene.getAccessControlContext());
     }
 
+    @SuppressWarnings("removal")
     public TransferMode handleDragOver(final int x, final int y, final int xAbs, final int yAbs,
                                        final TransferMode recommendedTransferMode,
                                        final ClipboardAssistance dropTargetAssistant)
@@ -134,6 +138,7 @@ class GlassSceneDnDEventHandler {
     // detected. This mechanism is currently not used in FX, as we have
     // a custom gesture recognizer in Scene, and DnD is started with
     // Toolkit.startDrag().
+    @SuppressWarnings("removal")
     public void handleDragStart(final int button, final int x, final int y, final int xAbs, final int yAbs,
                                 final ClipboardAssistance dragSourceAssistant)
     {
@@ -154,6 +159,7 @@ class GlassSceneDnDEventHandler {
     // This is a callback from the native platform, when the drag was started
     // from handleDragStart() above, or when FX as a drag source is embedded
     // to Swing/SWT.
+    @SuppressWarnings("removal")
     public void handleDragEnd(final TransferMode performedTransferMode,
                               final ClipboardAssistance dragSourceAssistant)
     {

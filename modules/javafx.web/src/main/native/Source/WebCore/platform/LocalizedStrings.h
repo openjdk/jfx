@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2003, 2006, 2009, 2011, 2012, 2013 Apple Inc.  All rights reserved.
+ * Copyright (C) 2003-2020 Apple Inc. All rights reserved.
  * Copyright (C) 2010 Igalia S.L
  *
  * Redistribution and use in source and binary forms, with or without
@@ -50,6 +50,10 @@ namespace WebCore {
 #if PLATFORM(COCOA)
     String copyImageUnknownFileLabel();
 #endif
+#if ENABLE(APP_HIGHLIGHTS)
+    WEBCORE_EXPORT String contextMenuItemTagAddHighlightToCurrentGroup();
+    WEBCORE_EXPORT String contextMenuItemTagAddHighlightToNewGroup();
+#endif
 
 #if ENABLE(CONTEXT_MENUS)
     WEBCORE_EXPORT String contextMenuItemTagOpenLinkInNewWindow();
@@ -70,6 +74,7 @@ namespace WebCore {
     String contextMenuItemTagCut();
     WEBCORE_EXPORT String contextMenuItemTagPaste();
 #if PLATFORM(GTK)
+    String contextMenuItemTagPasteAsPlainText();
     String contextMenuItemTagDelete();
     String contextMenuItemTagInputMethods();
     String contextMenuItemTagUnicode();
@@ -200,17 +205,10 @@ namespace WebCore {
     String AXLinkActionVerb();
     String AXListItemActionVerb();
 
-#if ENABLE(INPUT_TYPE_WEEK)
-    // weekFormatInLDML() returns week and year format in LDML, Unicode
-    // technical standard 35, Locale Data Markup Language, e.g. "'Week' ww, yyyy"
-    String weekFormatInLDML();
-#endif
 #if PLATFORM(COCOA)
-#if ENABLE(METER_ELEMENT)
     String AXMeterGaugeRegionOptimumText();
     String AXMeterGaugeRegionSuboptimalText();
     String AXMeterGaugeRegionLessGoodText();
-#endif
 #endif
 #if ENABLE(APPLE_PAY)
     String AXApplePayPlainLabel();
@@ -220,6 +218,16 @@ namespace WebCore {
     String AXApplePayCheckOutLabel();
     String AXApplePayBookLabel();
     String AXApplePaySubscribeLabel();
+#if ENABLE(APPLE_PAY_NEW_BUTTON_TYPES)
+    String AXApplePayReloadLabel();
+    String AXApplePayAddMoneyLabel();
+    String AXApplePayTopUpLabel();
+    String AXApplePayOrderLabel();
+    String AXApplePayRentLabel();
+    String AXApplePaySupportLabel();
+    String AXApplePayContributeLabel();
+    String AXApplePayTipLabel();
+#endif
 #endif
 
     String AXAutoFillCredentialsLabel();
@@ -290,8 +298,6 @@ namespace WebCore {
 
     String clickToExitFullScreenText();
 
-#if ENABLE(VIDEO_TRACK)
-    String textTrackSubtitlesText();
     String textTrackOffMenuItemText();
     String textTrackAutomaticMenuItemText();
     String textTrackNoLabelText();
@@ -304,7 +310,6 @@ namespace WebCore {
     String easyReaderTrackMenuItemText(const String&);
     String forcedTrackMenuItemText(const String&);
     String audioDescriptionTrackSuffixText(const String&);
-#endif
 #endif
 
     String snapshottedPlugInLabelTitle();
@@ -337,6 +342,16 @@ namespace WebCore {
     WEBCORE_EXPORT String datePickerDayLabelTitle();
     WEBCORE_EXPORT String datePickerMonthLabelTitle();
     WEBCORE_EXPORT String datePickerYearLabelTitle();
+#endif
+
+#if ENABLE(WEB_AUTHN)
+    WEBCORE_EXPORT String makeCredentialTouchIDPromptTitle(const String& bundleName, const String& domain);
+    WEBCORE_EXPORT String getAssertionTouchIDPromptTitle(const String& bundleName, const String& domain);
+    WEBCORE_EXPORT String genericTouchIDPromptTitle();
+#endif
+
+#if ENABLE(IMAGE_EXTRACTION)
+    WEBCORE_EXPORT String contextMenuItemTagRevealImage();
 #endif
 
 #if USE(GLIB) && defined(GETTEXT_PACKAGE)

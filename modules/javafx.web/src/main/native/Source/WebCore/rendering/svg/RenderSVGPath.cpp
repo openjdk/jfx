@@ -28,6 +28,7 @@
 #include "config.h"
 #include "RenderSVGPath.h"
 
+#include "Gradient.h"
 #include "SVGPathElement.h"
 #include "SVGSubpathData.h"
 #include <wtf/IsoMallocInlines.h>
@@ -68,7 +69,7 @@ FloatRect RenderSVGPath::calculateUpdatedStrokeBoundingBox() const
 static void useStrokeStyleToFill(GraphicsContext& context)
 {
     if (auto gradient = context.strokeGradient())
-        context.setFillGradient(*gradient);
+        context.setFillGradient(*gradient, context.state().strokeGradientSpaceTransform);
     else if (Pattern* pattern = context.strokePattern())
         context.setFillPattern(*pattern);
     else

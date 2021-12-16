@@ -34,16 +34,11 @@
 #include "DFGJITCode.h"
 #include "DFGJITFinalizer.h"
 #include "DFGOSRExit.h"
-#include "DFGOperations.h"
-#include "DFGRegisterBank.h"
-#include "DFGSlowPathGenerator.h"
 #include "DFGSpeculativeJIT.h"
 #include "DFGThunks.h"
-#include "JSCInlines.h"
 #include "JSCJSValueInlines.h"
 #include "LinkBuffer.h"
 #include "MaxFrameExtentForSlowPathCall.h"
-#include "StructureStubInfo.h"
 #include "ThunkGenerators.h"
 #include "VM.h"
 
@@ -146,7 +141,7 @@ void JITCompiler::compileExceptionHandlers()
         prepareCallOperation(vm());
         addPtr(TrustedImm32(m_graph.stackPointerOffset() * sizeof(Register)), GPRInfo::callFrameRegister, stackPointerRegister);
 
-        m_calls.append(CallLinkRecord(call(OperationPtrTag), FunctionPtr<OperationPtrTag>(operationLookupExceptionHandlerFromCallerFrame)));
+        appendCall(operationLookupExceptionHandlerFromCallerFrame);
 
         jumpToExceptionHandler(vm());
     }
@@ -160,7 +155,7 @@ void JITCompiler::compileExceptionHandlers()
         move(TrustedImmPtr(&vm()), GPRInfo::argumentGPR0);
         prepareCallOperation(vm());
 
-        m_calls.append(CallLinkRecord(call(OperationPtrTag), FunctionPtr<OperationPtrTag>(operationLookupExceptionHandler)));
+        appendCall(operationLookupExceptionHandler);
 
         jumpToExceptionHandler(vm());
     }
@@ -246,8 +241,11 @@ void JITCompiler::link(LinkBuffer& linkBuffer)
     finalizeInlineCaches(m_getByIdsWithThis, linkBuffer);
     finalizeInlineCaches(m_getByVals, linkBuffer);
     finalizeInlineCaches(m_putByIds, linkBuffer);
+    finalizeInlineCaches(m_delByIds, linkBuffer);
+    finalizeInlineCaches(m_delByVals, linkBuffer);
     finalizeInlineCaches(m_inByIds, linkBuffer);
     finalizeInlineCaches(m_instanceOfs, linkBuffer);
+    finalizeInlineCaches(m_privateBrandAccesses, linkBuffer);
 
     auto linkCallThunk = FunctionPtr<NoPtrTag>(vm().getCTIStub(linkCallThunkGenerator).retaggedCode<NoPtrTag>());
     for (auto& record : m_jsCalls) {
@@ -629,7 +627,7 @@ void JITCompiler::exceptionCheck()
         unsigned streamIndex = m_speculative->m_outOfLineStreamIndex ? *m_speculative->m_outOfLineStreamIndex : m_speculative->m_stream->size();
         MacroAssembler::Jump hadException = emitNonPatchableExceptionCheck(vm());
         // We assume here that this is called after callOpeartion()/appendCall() is called.
-        appendExceptionHandlingOSRExit(ExceptionCheck, streamIndex, opCatchOrigin, exceptionHandler, m_jitCode->common.lastCallSite(), hadException);
+        appendExceptionHandlingOSRExit(ExceptionCheck, streamIndex, opCatchOrigin, exceptionHandler, m_jitCode->common.codeOrigins->lastCallSite(), hadException);
     } else
         m_exceptionChecks.append(emitExceptionCheck(vm()));
 }

@@ -89,7 +89,8 @@ public:
     WEBCORE_EXPORT void didFireVersionChangeEvent(uint64_t databaseConnectionIdentifier, const IDBResourceIdentifier& requestIdentifier, IndexedDB::ConnectionClosedOnBehalfOfServer);
     WEBCORE_EXPORT void openDBRequestCancelled(const IDBRequestData&);
 
-    WEBCORE_EXPORT void getAllDatabaseNames(IDBConnectionIdentifier serverConnectionIdentifier, const SecurityOriginData& mainFrameOrigin, const SecurityOriginData& openingOrigin, uint64_t callbackID);
+    WEBCORE_EXPORT void getAllDatabaseNamesAndVersions(IDBConnectionIdentifier, const IDBResourceIdentifier&, const ClientOrigin&);
+
 
     void registerDatabaseConnection(UniqueIDBDatabaseConnection&);
     void unregisterDatabaseConnection(UniqueIDBDatabaseConnection&);
@@ -100,8 +101,11 @@ public:
 
     std::unique_ptr<IDBBackingStore> createBackingStore(const IDBDatabaseIdentifier&);
 
+    WEBCORE_EXPORT HashSet<SecurityOriginData> getOrigins() const;
     WEBCORE_EXPORT void closeAndDeleteDatabasesModifiedSince(WallTime);
     WEBCORE_EXPORT void closeAndDeleteDatabasesForOrigins(const Vector<SecurityOriginData>&);
+    void closeDatabasesForOrigins(const Vector<SecurityOriginData>&, Function<bool(const SecurityOriginData&, const ClientOrigin&)>&&);
+    WEBCORE_EXPORT void renameOrigin(const WebCore::SecurityOriginData&, const WebCore::SecurityOriginData&);
 
     StorageQuotaManager::Decision requestSpace(const ClientOrigin&, uint64_t taskSize);
     WEBCORE_EXPORT static uint64_t diskUsage(const String& rootDirectory, const ClientOrigin&);
@@ -110,13 +114,8 @@ public:
 
     Lock& lock() { return m_lock; };
 
-    void addDatabase(UniqueIDBDatabase& database) { m_allUniqueIDBDatabases.add(database); }
-    void removeDatabase(UniqueIDBDatabase& database) { m_allUniqueIDBDatabases.remove(database); }
-
 private:
     UniqueIDBDatabase& getOrCreateUniqueIDBDatabase(const IDBDatabaseIdentifier&);
-
-    String databaseDirectoryPathIsolatedCopy() const { return m_databaseDirectoryPath.isolatedCopy(); }
 
     void upgradeFilesIfNecessary();
     void removeDatabasesModifiedSinceForVersion(WallTime, const String&);
@@ -125,7 +124,6 @@ private:
     PAL::SessionID m_sessionID;
     HashMap<IDBConnectionIdentifier, RefPtr<IDBConnectionToClient>> m_connectionMap;
     HashMap<IDBDatabaseIdentifier, std::unique_ptr<UniqueIDBDatabase>> m_uniqueIDBDatabaseMap;
-    WeakHashSet<UniqueIDBDatabase> m_allUniqueIDBDatabases;
 
     HashMap<uint64_t, UniqueIDBDatabaseConnection*> m_databaseConnections;
     HashMap<IDBResourceIdentifier, UniqueIDBDatabaseTransaction*> m_transactions;

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2017 Apple, Inc. All rights reserved.
+ * Copyright (C) 2013-2021 Apple, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,27 +27,45 @@
 #include "JSMapIterator.h"
 
 #include "JSCInlines.h"
+#include "JSInternalFieldObjectImplInlines.h"
 #include "JSMap.h"
 
 namespace JSC {
 
-const ClassInfo JSMapIterator::s_info = { "Map Iterator", nullptr, nullptr, nullptr, CREATE_METHOD_TABLE(JSMapIterator) };
+const ClassInfo JSMapIterator::s_info = { "Map Iterator", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSMapIterator) };
 
-void JSMapIterator::finishCreation(VM& vm, JSMap* iteratedObject)
+JSMapIterator* JSMapIterator::createWithInitialValues(VM& vm, Structure* structure)
+{
+    JSMapIterator* iterator = new (NotNull, allocateCell<JSMapIterator>(vm.heap)) JSMapIterator(vm, structure);
+    iterator->finishCreation(vm);
+    return iterator;
+}
+
+void JSMapIterator::finishCreation(VM& vm, JSMap* iteratedObject, IterationKind kind)
 {
     Base::finishCreation(vm);
-    m_map.set(vm, this, iteratedObject);
-    setIterator(vm, m_map->head());
+    internalField(Field::MapBucket).set(vm, this, iteratedObject->head());
+    internalField(Field::IteratedObject).set(vm, this, iteratedObject);
+    internalField(Field::Kind).set(vm, this, jsNumber(static_cast<int32_t>(kind)));
 }
 
-void JSMapIterator::visitChildren(JSCell* cell, SlotVisitor& visitor)
+void JSMapIterator::finishCreation(VM& vm)
 {
-    JSMapIterator* thisObject = jsCast<JSMapIterator*>(cell);
+    Base::finishCreation(vm);
+    auto values = initialValues();
+    for (unsigned index = 0; index < values.size(); ++index)
+        Base::internalField(index).set(vm, this, values[index]);
+}
+
+template<typename Visitor>
+void JSMapIterator::visitChildrenImpl(JSCell* cell, Visitor& visitor)
+{
+    auto* thisObject = jsCast<JSMapIterator*>(cell);
     ASSERT_GC_OBJECT_INHERITS(thisObject, info());
     Base::visitChildren(thisObject, visitor);
-    visitor.append(thisObject->m_map);
-    visitor.append(thisObject->m_iter);
 }
+
+DEFINE_VISIT_CHILDREN(JSMapIterator);
 
 JSValue JSMapIterator::createPair(JSGlobalObject* globalObject, JSValue key, JSValue value)
 {

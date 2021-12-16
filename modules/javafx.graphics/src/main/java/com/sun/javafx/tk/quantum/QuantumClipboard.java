@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -85,6 +85,7 @@ final class QuantumClipboard implements TKClipboard {
      *      javafx.scene.input.Clipboard
      *          ... user code ...
      */
+    @SuppressWarnings("removal")
     private AccessControlContext accessContext = null;
 
     /**
@@ -126,13 +127,14 @@ final class QuantumClipboard implements TKClipboard {
     private QuantumClipboard() {
     }
 
-    @Override public void setSecurityContext(AccessControlContext acc) {
+    @Override public void setSecurityContext(@SuppressWarnings("removal") AccessControlContext acc) {
         if (accessContext != null) {
             throw new RuntimeException("Clipboard security context has been already set!");
         }
         accessContext = acc;
     }
 
+    @SuppressWarnings("removal")
     private AccessControlContext getAccessControlContext() {
         if (accessContext == null) {
             throw new RuntimeException("Clipboard security context has not been set!");
@@ -371,8 +373,10 @@ final class QuantumClipboard implements TKClipboard {
                 String url = parseIMG(htmlData);
                 if (url != null) {
                     try {
+                        @SuppressWarnings("removal")
                         SecurityManager sm = System.getSecurityManager();
                         if (sm != null) {
+                            @SuppressWarnings("removal")
                             AccessControlContext context = getAccessControlContext();
                             URL u = new URL(url);
                             String protocol = u.getProtocol();

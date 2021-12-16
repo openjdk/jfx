@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2011, 2015 Google Inc. All rights reserved.
- * Copyright (C) 2016-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,6 +27,7 @@
 #include "config.h"
 #include "WebCoreTestSupport.h"
 
+#include "DeprecatedGlobalSettings.h"
 #include "Frame.h"
 #include "InternalSettings.h"
 #include "Internals.h"
@@ -43,11 +44,14 @@
 #include <JavaScriptCore/APICast.h>
 #include <JavaScriptCore/CallFrame.h>
 #include <JavaScriptCore/IdentifierInlines.h>
+#include <JavaScriptCore/JITOperationList.h>
 #include <JavaScriptCore/JSValueRef.h>
 #include <wtf/URLParser.h>
 
 #if PLATFORM(COCOA)
 #include "UTIRegistry.h"
+#include "VersionChecks.h"
+#include <wtf/cocoa/RuntimeApplicationChecksCocoa.h>
 #endif
 
 namespace WebCoreTestSupport {
@@ -58,6 +62,7 @@ void injectInternalsObject(JSContextRef context)
 {
     JSGlobalObject* lexicalGlobalObject = toJS(context);
     VM& vm = lexicalGlobalObject->vm();
+    auto scope = DECLARE_CATCH_SCOPE(vm);
     JSLockHolder lock(vm);
     JSDOMGlobalObject* globalObject = jsCast<JSDOMGlobalObject*>(lexicalGlobalObject);
     ScriptExecutionContext* scriptContext = globalObject->scriptExecutionContext();
@@ -66,6 +71,7 @@ void injectInternalsObject(JSContextRef context)
         Options::useDollarVM() = true;
         globalObject->exposeDollarVM(vm);
     }
+    EXCEPTION_ASSERT_UNUSED(scope, !scope.exception());
 }
 
 void resetInternalsObject(JSContextRef context)
@@ -79,16 +85,16 @@ void resetInternalsObject(JSContextRef context)
     InternalSettings::from(page)->resetToConsistentState();
 }
 
-void monitorWheelEvents(WebCore::Frame& frame)
+void monitorWheelEvents(WebCore::Frame& frame, bool clearLatchingState)
 {
     Page* page = frame.page();
     if (!page)
         return;
 
-    page->ensureWheelEventTestMonitor();
+    page->startMonitoringWheelEvents(clearLatchingState);
 }
 
-void setTestCallbackAndStartNotificationTimer(WebCore::Frame& frame, JSContextRef context, JSObjectRef jsCallbackFunction)
+void setWheelEventMonitorTestCallbackAndStartMonitoring(bool expectWheelEndOrCancel, bool expectMomentumEnd, WebCore::Frame& frame, JSContextRef context, JSObjectRef jsCallbackFunction)
 {
     Page* page = frame.page();
     if (!page || !page->isMonitoringWheelEvents())
@@ -96,10 +102,12 @@ void setTestCallbackAndStartNotificationTimer(WebCore::Frame& frame, JSContextRe
 
     JSValueProtect(context, jsCallbackFunction);
 
-    page->ensureWheelEventTestMonitor().setTestCallbackAndStartNotificationTimer([=](void) {
-        JSObjectCallAsFunction(context, jsCallbackFunction, nullptr, 0, nullptr, nullptr);
-        JSValueUnprotect(context, jsCallbackFunction);
-    });
+    if (auto wheelEventTestMonitor = page->wheelEventTestMonitor()) {
+        wheelEventTestMonitor->setTestCallbackAndStartMonitoring(expectWheelEndOrCancel, expectMomentumEnd, [=](void) {
+            JSObjectCallAsFunction(context, jsCallbackFunction, nullptr, 0, nullptr, nullptr);
+            JSValueUnprotect(context, jsCallbackFunction);
+        });
+    }
 }
 
 void clearWheelEventTestMonitor(WebCore::Frame& frame)
@@ -136,7 +144,14 @@ void initializeLogChannelsIfNecessary()
 
 void setAllowsAnySSLCertificate(bool allowAnySSLCertificate)
 {
-    InternalSettings::setAllowsAnySSLCertificate(allowAnySSLCertificate);
+    DeprecatedGlobalSettings::setAllowsAnySSLCertificate(allowAnySSLCertificate);
+}
+
+void setLinkedOnOrAfterEverythingForTesting()
+{
+#if PLATFORM(COCOA)
+    setApplicationSDKVersion(std::numeric_limits<uint32_t>::max());
+#endif
 }
 
 void installMockGamepadProvider()
@@ -164,13 +179,14 @@ void disconnectMockGamepad(unsigned gamepadIndex)
 #endif
 }
 
-void setMockGamepadDetails(unsigned gamepadIndex, const WTF::String& gamepadID, unsigned axisCount, unsigned buttonCount)
+void setMockGamepadDetails(unsigned gamepadIndex, const WTF::String& gamepadID, const WTF::String& mapping, unsigned axisCount, unsigned buttonCount)
 {
 #if ENABLE(GAMEPAD)
-    MockGamepadProvider::singleton().setMockGamepadDetails(gamepadIndex, gamepadID, axisCount, buttonCount);
+    MockGamepadProvider::singleton().setMockGamepadDetails(gamepadIndex, gamepadID, mapping, axisCount, buttonCount);
 #else
     UNUSED_PARAM(gamepadIndex);
     UNUSED_PARAM(gamepadID);
+    UNUSED_PARAM(mapping);
     UNUSED_PARAM(axisCount);
     UNUSED_PARAM(buttonCount);
 #endif
@@ -207,11 +223,11 @@ void setupNewlyCreatedServiceWorker(uint64_t serviceWorkerIdentifier)
         if (!script)
             return;
 
-        auto& state = *globalScope.execState();
-        auto& vm = state.vm();
+        auto& globalObject = *globalScope.globalObject();
+        auto& vm = globalObject.vm();
         JSLockHolder locker(vm);
-        auto* contextWrapper = script->workerGlobalScopeWrapper();
-        contextWrapper->putDirect(vm, Identifier::fromString(vm, Internals::internalsId), toJS(&state, contextWrapper, ServiceWorkerInternals::create(identifier)));
+        auto* contextWrapper = script->globalScopeWrapper();
+        contextWrapper->putDirect(vm, Identifier::fromString(vm, Internals::internalsId), toJS(&globalObject, contextWrapper, ServiceWorkerInternals::create(identifier)));
     });
 #else
     UNUSED_PARAM(serviceWorkerIdentifier);
@@ -224,5 +240,20 @@ void setAdditionalSupportedImageTypesForTesting(const WTF::String& imageTypes)
     WebCore::setAdditionalSupportedImageTypesForTesting(imageTypes);
 }
 #endif
+
+#if ENABLE(JIT_OPERATION_VALIDATION)
+extern const uintptr_t startOfJITOperationsInWebCoreTestSupport __asm("section$start$__DATA_CONST$__jsc_ops");
+extern const uintptr_t endOfJITOperationsInWebCoreTestSupport __asm("section$end$__DATA_CONST$__jsc_ops");
+#endif
+
+void populateJITOperations()
+{
+#if ENABLE(JIT_OPERATION_VALIDATION)
+    static std::once_flag onceKey;
+    std::call_once(onceKey, [] {
+        JSC::JITOperationList::populatePointersInEmbedder(&startOfJITOperationsInWebCoreTestSupport, &endOfJITOperationsInWebCoreTestSupport);
+    });
+#endif
+}
 
 }

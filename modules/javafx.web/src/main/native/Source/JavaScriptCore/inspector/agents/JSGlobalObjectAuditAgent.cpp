@@ -28,11 +28,6 @@
 
 #include "InjectedScript.h"
 #include "InjectedScriptManager.h"
-#include "JSCInlines.h"
-#include "JSGlobalObject.h"
-#include <wtf/Ref.h>
-#include <wtf/RefPtr.h>
-#include <wtf/text/WTFString.h>
 
 namespace Inspector {
 
@@ -46,7 +41,7 @@ JSGlobalObjectAuditAgent::JSGlobalObjectAuditAgent(JSAgentContext& context)
 
 JSGlobalObjectAuditAgent::~JSGlobalObjectAuditAgent() = default;
 
-InjectedScript JSGlobalObjectAuditAgent::injectedScriptForEval(ErrorString& errorString, const int* executionContextId)
+InjectedScript JSGlobalObjectAuditAgent::injectedScriptForEval(Protocol::ErrorString& errorString, Optional<Protocol::Runtime::ExecutionContextId>&& executionContextId)
 {
     if (executionContextId) {
         errorString = "executionContextId is not supported for JSContexts as there is only one execution context"_s;

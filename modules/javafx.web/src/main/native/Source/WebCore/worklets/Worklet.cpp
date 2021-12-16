@@ -26,38 +26,80 @@
 #include "config.h"
 #include "Worklet.h"
 
-#if ENABLE(CSS_PAINTING_API)
-
 #include "Document.h"
-#include "PaintWorkletGlobalScope.h"
 #include "ScriptSourceCode.h"
+#include "SecurityOrigin.h"
+#include "WorkerRunLoop.h"
+#include "WorkletGlobalScope.h"
+#include "WorkletGlobalScopeProxy.h"
+#include "WorkletPendingTasks.h"
+#include <JavaScriptCore/IdentifiersFactory.h>
+#include <wtf/CrossThreadCopier.h>
 #include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(Worklet);
 
-Ref<Worklet> Worklet::create()
-{
-    return adoptRef(*new Worklet());
-}
-
-Worklet::Worklet()
+Worklet::Worklet(Document& document)
+    : ActiveDOMObject(&document)
+    , m_identifier("worklet:" + Inspector::IdentifiersFactory::createIdentifier())
 {
 }
 
-void Worklet::addModule(Document& document, const String& moduleURL)
-{
-    // FIXME: We should download the source from the URL
-    // https://bugs.webkit.org/show_bug.cgi?id=191136
-    auto context = PaintWorkletGlobalScope::create(document, ScriptSourceCode(moduleURL));
-    context->evaluate();
+Worklet::~Worklet() = default;
 
-    auto locker = holdLock(context->paintDefinitionLock());
-    for (auto& name : context->paintDefinitionMap().keys())
-        document.setPaintWorkletGlobalScopeForName(name, makeRef(context.get()));
+Document* Worklet::document()
+{
+    return downcast<Document>(scriptExecutionContext());
+}
+
+// https://www.w3.org/TR/worklets-1/#dom-worklet-addmodule
+void Worklet::addModule(const String& moduleURLString, WorkletOptions&& options, DOMPromiseDeferred<void>&& promise)
+{
+    auto* document = this->document();
+    if (!document) {
+        promise.reject(Exception { InvalidStateError, "This frame is detached"_s });
+        return;
+    }
+
+    URL moduleURL = document->completeURL(moduleURLString);
+    if (!moduleURL.isValid()) {
+        promise.reject(Exception { SyntaxError, "Module URL is invalid"_s });
+        return;
+    }
+
+    if (m_proxies.isEmpty())
+        m_proxies.appendVector(createGlobalScopes());
+
+    auto pendingTasks = WorkletPendingTasks::create(*this, WTFMove(promise), m_proxies.size());
+    m_pendingTasksSet.add(pendingTasks.copyRef());
+
+    for (auto& proxy : m_proxies) {
+        proxy->postTaskForModeToWorkletGlobalScope([pendingTasks = pendingTasks.copyRef(), moduleURL = moduleURL.isolatedCopy(), credentials = options.credentials, pendingActivity = makePendingActivity(*this)](ScriptExecutionContext& context) mutable {
+            downcast<WorkletGlobalScope>(context).fetchAndInvokeScript(moduleURL, credentials, [pendingTasks = WTFMove(pendingTasks), pendingActivity = WTFMove(pendingActivity)](Optional<Exception>&& exception) mutable {
+                callOnMainThread([pendingTasks = WTFMove(pendingTasks), exception = crossThreadCopy(exception), pendingActivity = WTFMove(pendingActivity)]() mutable {
+                    if (exception)
+                        pendingTasks->abort(WTFMove(*exception));
+                    else
+                        pendingTasks->decrementCounter();
+                });
+            });
+        }, WorkerRunLoop::defaultMode());
+    }
+}
+
+void Worklet::finishPendingTasks(WorkletPendingTasks& tasks)
+{
+    ASSERT(isMainThread());
+    ASSERT(m_pendingTasksSet.contains(&tasks));
+
+    m_pendingTasksSet.remove(&tasks);
+}
+
+const char* Worklet::activeDOMObjectName() const
+{
+    return "Worklet";
 }
 
 } // namespace WebCore
-
-#endif

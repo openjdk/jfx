@@ -1,7 +1,7 @@
 /*
  *  Copyright (C) 1999-2002 Harri Porten (porten@kde.org)
  *  Copyright (C) 2001 Peter Kelly (pmk@post.com)
- *  Copyright (C) 2004-2017 Apple Inc. All rights reserved.
+ *  Copyright (C) 2004-2021 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Library General Public
@@ -23,10 +23,8 @@
 #include "config.h"
 #include "GetterSetter.h"
 
-#include "Error.h"
 #include "Exception.h"
-#include "JSObject.h"
-#include "JSCInlines.h"
+#include "JSObjectInlines.h"
 #include <wtf/Assertions.h>
 
 namespace JSC {
@@ -35,7 +33,8 @@ STATIC_ASSERT_IS_TRIVIALLY_DESTRUCTIBLE(GetterSetter);
 
 const ClassInfo GetterSetter::s_info = { "GetterSetter", nullptr, nullptr, nullptr, CREATE_METHOD_TABLE(GetterSetter) };
 
-void GetterSetter::visitChildren(JSCell* cell, SlotVisitor& visitor)
+template<typename Visitor>
+void GetterSetter::visitChildrenImpl(JSCell* cell, Visitor& visitor)
 {
     GetterSetter* thisObject = jsCast<GetterSetter*>(cell);
     ASSERT_GC_OBJECT_INHERITS(thisObject, info());
@@ -44,6 +43,8 @@ void GetterSetter::visitChildren(JSCell* cell, SlotVisitor& visitor)
     visitor.append(thisObject->m_getter);
     visitor.append(thisObject->m_setter);
 }
+
+DEFINE_VISIT_CHILDREN(GetterSetter);
 
 JSValue callGetter(JSGlobalObject* globalObject, JSValue base, JSValue getterSetter)
 {
@@ -55,9 +56,8 @@ JSValue callGetter(JSGlobalObject* globalObject, JSValue base, JSValue getterSet
 
     JSObject* getter = jsCast<GetterSetter*>(getterSetter)->getter();
 
-    CallData callData;
-    CallType callType = getter->methodTable(vm)->getCallData(getter, callData);
-    RELEASE_AND_RETURN(scope, call(globalObject, getter, callType, callData, base, ArgList()));
+    auto callData = getCallData(vm, getter);
+    RELEASE_AND_RETURN(scope, call(globalObject, getter, callData, base, ArgList()));
 }
 
 bool callSetter(JSGlobalObject* globalObject, JSValue base, JSValue getterSetter, JSValue value, ECMAMode ecmaMode)
@@ -68,7 +68,7 @@ bool callSetter(JSGlobalObject* globalObject, JSValue base, JSValue getterSetter
     GetterSetter* getterSetterObj = jsCast<GetterSetter*>(getterSetter);
 
     if (getterSetterObj->isSetterNull())
-        return typeError(globalObject, scope, ecmaMode == StrictMode, ReadonlyPropertyWriteError);
+        return typeError(globalObject, scope, ecmaMode.isStrict(), ReadonlyPropertyWriteError);
 
     JSObject* setter = getterSetterObj->setter();
 
@@ -76,10 +76,9 @@ bool callSetter(JSGlobalObject* globalObject, JSValue base, JSValue getterSetter
     args.append(value);
     ASSERT(!args.hasOverflowed());
 
-    CallData callData;
-    CallType callType = setter->methodTable(vm)->getCallData(setter, callData);
+    auto callData = getCallData(vm, setter);
     scope.release();
-    call(globalObject, setter, callType, callData, base, args);
+    call(globalObject, setter, callData, base, args);
     return true;
 }
 

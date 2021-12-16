@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -40,8 +40,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
-/*
- * A selector is a collection of selectors and declarations.
+/**
+ * A Rule is a collection of CSS {@code Selector}s and {@code Declaration}s.
  *
  * @since 9
  */
@@ -135,8 +135,12 @@ final public class Rule {
         return observables.getSelectors();
     }
 
-    /** The stylesheet this selector belongs to */
     private Stylesheet stylesheet;
+
+    /**
+     * Gets the {@code Stylesheet} this {@code Rule} belongs to.
+     * @return the stylesheet
+     */
     public Stylesheet getStylesheet() {
         return stylesheet;
     }
@@ -156,6 +160,10 @@ final public class Rule {
         }
     }
 
+    /**
+     * Get the {@code StyleOrigin} of this {@code Stylesheet}.
+     * @return the origin of the stylesheet
+     */
     public StyleOrigin getOrigin() {
         return stylesheet != null ? stylesheet.getOrigin() : null;
     }
@@ -211,8 +219,9 @@ final public class Rule {
         return mask;
     }
 
-    /** Converts this object to a string.
-     * @return the converted string
+    /**
+     * Converts this object to a {@code String}.
+     * @return the converted {@code String}
      */
     @Override public String toString() {
         StringBuilder sb = new StringBuilder();

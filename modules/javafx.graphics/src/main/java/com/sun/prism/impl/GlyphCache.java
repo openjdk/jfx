@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -397,4 +397,19 @@ public class GlyphCache {
             return rect;
         }
     }
+
+    private static void disposePackerForContext(BaseContext ctx,
+            WeakHashMap<BaseContext, RectanglePacker> packerMap) {
+
+        RectanglePacker packer = packerMap.remove(ctx);
+        if (packer != null) {
+            packer.dispose();
+        }
+    }
+
+    public static void disposeForContext(BaseContext ctx) {
+        disposePackerForContext(ctx, greyPackerMap);
+        disposePackerForContext(ctx, lcdPackerMap);
+    }
+
 }

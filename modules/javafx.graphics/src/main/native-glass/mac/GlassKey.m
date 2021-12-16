@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -396,3 +396,25 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_mac_MacApplication__1getKeyCodeForC
     return [GlassApplication getKeyCodeForChar:c];
 }
 
+/*
+ * Class:     com_sun_glass_ui_mac_MacApplication
+ * Method:    _isKeyLocked
+ * Signature: (I)I
+ */
+JNIEXPORT jint JNICALL Java_com_sun_glass_ui_mac_MacApplication__1isKeyLocked
+  (JNIEnv * env, jobject obj, jint keyCode)
+{
+    NSUInteger mask = 0;
+    switch (keyCode) {
+        case com_sun_glass_events_KeyEvent_VK_CAPS_LOCK:
+            mask = NSEventModifierFlagCapsLock;
+            break;
+
+        // Caps lock is the only locking key supported on macOS
+        default:
+            return com_sun_glass_events_KeyEvent_KEY_LOCK_UNKNOWN;
+    }
+    NSUInteger modifierFlags = [NSEvent modifierFlags];
+    return (modifierFlags & mask) ? com_sun_glass_events_KeyEvent_KEY_LOCK_ON
+                                  : com_sun_glass_events_KeyEvent_KEY_LOCK_OFF;
+}

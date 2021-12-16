@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -40,7 +40,6 @@
 #include "B3MemoryValueInlines.h"
 #include "B3PatchpointValue.h"
 #include "B3PhaseScope.h"
-#include "B3ProcedureInlines.h"
 #include "B3StackmapGenerationParams.h"
 #include "B3SwitchValue.h"
 #include "B3UpsilonValue.h"
@@ -128,9 +127,8 @@ private:
                     break;
                 }
 
-                auto* fmodDouble = tagCFunctionPtr<double (*)(double, double)>(fmod, B3CCallPtrTag);
                 if (m_value->type() == Double) {
-                    Value* functionAddress = m_insertionSet.insert<ConstPtrValue>(m_index, m_origin, fmodDouble);
+                    Value* functionAddress = m_insertionSet.insert<ConstPtrValue>(m_index, m_origin, tagCFunction<OperationPtrTag>(Math::fmodDouble));
                     Value* result = m_insertionSet.insert<CCallValue>(m_index, Double, m_origin,
                         Effects::none(),
                         functionAddress,
@@ -141,7 +139,7 @@ private:
                 } else if (m_value->type() == Float) {
                     Value* numeratorAsDouble = m_insertionSet.insert<Value>(m_index, FloatToDouble, m_origin, m_value->child(0));
                     Value* denominatorAsDouble = m_insertionSet.insert<Value>(m_index, FloatToDouble, m_origin, m_value->child(1));
-                    Value* functionAddress = m_insertionSet.insert<ConstPtrValue>(m_index, m_origin, fmodDouble);
+                    Value* functionAddress = m_insertionSet.insert<ConstPtrValue>(m_index, m_origin, tagCFunction<OperationPtrTag>(Math::fmodDouble));
                     Value* doubleMod = m_insertionSet.insert<CCallValue>(m_index, Double, m_origin,
                         Effects::none(),
                         functionAddress,
@@ -307,6 +305,14 @@ private:
                     }
                     if (exempt)
                         break;
+                }
+
+                if (isARM64E()) {
+                    if (m_value->opcode() == AtomicXchgSub) {
+                        m_value->setOpcodeUnsafely(AtomicXchgAdd);
+                        m_value->child(0) = m_insertionSet.insert<Value>(
+                            m_index, Neg, m_origin, m_value->child(0));
+                    }
                 }
 
                 AtomicValue* atomic = m_value->as<AtomicValue>();
@@ -539,7 +545,7 @@ private:
                         GPRReg scratch = params.gpScratch(0);
 
                         jit.move(CCallHelpers::TrustedImmPtr(jumpTable), scratch);
-                        jit.load64(CCallHelpers::BaseIndex(scratch, index, CCallHelpers::timesPtr()), scratch);
+                        jit.load64(CCallHelpers::BaseIndex(scratch, index, CCallHelpers::ScalePtr), scratch);
                         jit.farJump(scratch, JSSwitchPtrTag);
 
                         // These labels are guaranteed to be populated before either late paths or

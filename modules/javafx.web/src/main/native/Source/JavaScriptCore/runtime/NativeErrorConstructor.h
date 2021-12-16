@@ -60,11 +60,9 @@ public:
         return constructor;
     }
 
-    Structure* errorStructure(VM&) { return globalObject()->errorStructure(errorType); }
+    static EncodedJSValue callImpl(JSGlobalObject*, CallFrame*);
+    static EncodedJSValue constructImpl(JSGlobalObject*, CallFrame*);
 private:
-    static EncodedJSValue JSC_HOST_CALL callNativeErrorConstructor(JSGlobalObject*, CallFrame*);
-    static EncodedJSValue JSC_HOST_CALL constructNativeErrorConstructor(JSGlobalObject*, CallFrame*);
-
     NativeErrorConstructor(VM&, Structure*);
 };
 

@@ -90,7 +90,8 @@ public:
     String getResponseHeader(const String& name) const;
     ExceptionOr<OwnedString> responseText();
     String responseTextIgnoringResponseType() const { return m_responseBuilder.toStringPreserveCapacity(); }
-    String responseMIMEType() const;
+    enum class FinalMIMEType { Yes, No };
+    String responseMIMEType(FinalMIMEType = FinalMIMEType::No) const;
 
     Document* optionalResponseXML() const { return m_responseDocument.get(); }
     ExceptionOr<Document*> responseXML();
@@ -128,10 +129,14 @@ public:
 
     size_t memoryCost() const;
 
-    WEBCORE_EXPORT void setMaximumIntervalForUserGestureForwarding(double);
+    using EventTarget::dispatchEvent;
+    void dispatchEvent(Event&) override;
 
 private:
     explicit XMLHttpRequest(ScriptExecutionContext&);
+
+    // EventTarget.
+    void eventListenersDidChange() final;
 
     TextEncoding finalResponseCharset() const;
 
@@ -141,6 +146,7 @@ private:
     void resume() override;
     void stop() override;
     const char* activeDOMObjectName() const override;
+    bool virtualHasPendingActivity() const final;
 
     void refEventTarget() override { ref(); }
     void derefEventTarget() override { deref(); }
@@ -154,8 +160,7 @@ private:
     void didReceiveData(const char* data, int dataLength) override;
     void didFinishLoading(unsigned long identifier) override;
     void didFail(const ResourceError&) override;
-
-    bool responseIsXML() const;
+    void notifyIsDone(bool) final;
 
     Optional<ExceptionOr<void>> prepareToSend();
     ExceptionOr<void> send(Document&);
@@ -179,18 +184,15 @@ private:
 
     ExceptionOr<void> createRequest();
 
+    void timeoutTimerFired();
+
     void genericError();
     void networkError();
     void abortError();
 
     void dispatchErrorEvents(const AtomString&);
 
-    using EventTarget::dispatchEvent;
-    void dispatchEvent(Event&) override;
-
     Ref<TextResourceDecoder> createDecoder() const;
-
-    void networkErrorTimerFired();
 
     unsigned m_async : 1;
     unsigned m_includeCredentials : 1;
@@ -214,7 +216,11 @@ private:
     RefPtr<FormData> m_requestEntityBody;
     String m_mimeTypeOverride;
 
-    RefPtr<ThreadableLoader> m_loader;
+    struct LoadingActivity {
+        Ref<XMLHttpRequest> protectedThis; // Keep object alive while loading even if there is no longer a JS wrapper.
+        Ref<ThreadableLoader> loader;
+    };
+    Optional<LoadingActivity> m_loadingActivity;
 
     String m_responseEncoding;
 
@@ -235,14 +241,13 @@ private:
 
     mutable String m_allResponseHeaders;
 
-    Timer m_networkErrorTimer;
     Timer m_timeoutTimer;
 
     MonotonicTime m_sendingTime;
 
     Optional<ExceptionCode> m_exceptionCode;
     RefPtr<UserGestureToken> m_userGestureToken;
-    Seconds m_maximumIntervalForUserGestureForwarding;
+    bool m_hasRelevantEventListener { false };
 };
 
 inline auto XMLHttpRequest::responseType() const -> ResponseType

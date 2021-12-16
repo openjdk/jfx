@@ -25,14 +25,14 @@
 
 #pragma once
 
-#if ENABLE(WEB_AUDIO) && ENABLE(MEDIA_STREAM)
+#if ENABLE(WEB_AUDIO)
 
 #include "AudioSourceProvider.h"
 #include <wtf/ThreadSafeRefCounted.h>
 
 namespace WebCore {
 
-class WebAudioSourceProvider : public ThreadSafeRefCounted<WebAudioSourceProvider>, public AudioSourceProvider {
+class WebAudioSourceProvider : public ThreadSafeRefCounted<WebAudioSourceProvider, WTF::DestructionThread::Main>, public AudioSourceProvider {
 };
 
 }

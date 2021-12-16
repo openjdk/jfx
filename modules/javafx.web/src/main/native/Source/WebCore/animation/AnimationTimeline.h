@@ -29,6 +29,7 @@
 #include "CSSValue.h"
 #include "ComputedEffectTiming.h"
 #include "RenderStyle.h"
+#include "Styleable.h"
 #include "WebAnimation.h"
 #include <wtf/Forward.h>
 #include <wtf/HashMap.h>
@@ -44,11 +45,14 @@ namespace WebCore {
 class CSSAnimation;
 class CSSTransition;
 class DeclarativeAnimation;
-class Element;
 
 class AnimationTimeline : public RefCounted<AnimationTimeline>, public CanMakeWeakPtr<AnimationTimeline> {
 public:
+    virtual ~AnimationTimeline();
+
     virtual bool isDocumentTimeline() const { return false; }
+
+    const AnimationCollection& relevantAnimations() const { return m_animations; }
 
     void forgetAnimation(WebAnimation*);
     virtual void animationTimingDidChange(WebAnimation&);
@@ -57,51 +61,29 @@ public:
     Optional<double> bindingsCurrentTime();
     virtual Optional<Seconds> currentTime() { return m_currentTime; }
 
-    enum class Ordering : uint8_t { Sorted, Unsorted };
-    Vector<RefPtr<WebAnimation>> animationsForElement(Element&, Ordering ordering = Ordering::Unsorted) const;
+    void elementWasRemoved(const Styleable&);
 
-    void elementWasRemoved(Element&);
-    void removeAnimationsForElement(Element&);
+    void willChangeRendererForStyleable(const Styleable&);
+    void cancelDeclarativeAnimationsForStyleable(const Styleable&, WebAnimation::Silently);
 
-    void willChangeRendererForElement(Element&);
-    void willDestroyRendererForElement(Element&);
-    void cancelDeclarativeAnimationsForElement(Element&);
+    void animationWasAddedToStyleable(WebAnimation&, const Styleable&);
+    void animationWasRemovedFromStyleable(WebAnimation&, const Styleable&);
 
-    virtual void animationWasAddedToElement(WebAnimation&, Element&);
-    virtual void animationWasRemovedFromElement(WebAnimation&, Element&);
+    void removeDeclarativeAnimationFromListsForOwningElement(WebAnimation&, const Styleable&);
 
-    void removeDeclarativeAnimationFromListsForOwningElement(WebAnimation&, Element&);
-
-    void updateCSSAnimationsForElement(Element&, const RenderStyle* currentStyle, const RenderStyle& afterChangeStyle);
-    void updateCSSTransitionsForElement(Element&, const RenderStyle& currentStyle, const RenderStyle& afterChangeStyle);
-
-    using AnimationCollection = ListHashSet<RefPtr<WebAnimation>>;
-    using ElementToAnimationsMap = HashMap<Element*, AnimationCollection>;
-    using PropertyToTransitionMap = HashMap<CSSPropertyID, RefPtr<CSSTransition>>;
-
-    virtual ~AnimationTimeline();
+    void updateCSSAnimationsForStyleable(const Styleable&, const RenderStyle* currentStyle, const RenderStyle& afterChangeStyle, const RenderStyle* parentElementStyle);
+    void updateCSSTransitionsForStyleable(const Styleable&, const RenderStyle& currentStyle, const RenderStyle& newStyle);
 
 protected:
     explicit AnimationTimeline();
 
     Vector<WeakPtr<WebAnimation>> m_allAnimations;
     AnimationCollection m_animations;
-    HashMap<Element*, PropertyToTransitionMap> m_elementToCompletedCSSTransitionByCSSPropertyID;
 
 private:
-    using CSSAnimationCollection = ListHashSet<RefPtr<CSSAnimation>>;
-    using ElementToCSSAnimationsMap = HashMap<Element*, CSSAnimationCollection>;
-
     void updateGlobalPosition(WebAnimation&);
-    PropertyToTransitionMap& ensureRunningTransitionsByProperty(Element&);
-    void updateCSSTransitionsForElementAndProperty(Element&, CSSPropertyID, const RenderStyle& currentStyle, const RenderStyle& afterChangeStyle, PropertyToTransitionMap&, PropertyToTransitionMap&, const MonotonicTime);
-    void removeCSSAnimationCreatedByMarkup(Element&, CSSAnimation&);
-
-    ElementToAnimationsMap m_elementToAnimationsMap;
-    ElementToAnimationsMap m_elementToCSSAnimationsMap;
-    ElementToAnimationsMap m_elementToCSSTransitionsMap;
-    ElementToCSSAnimationsMap m_elementToCSSAnimationsCreatedByMarkupMap;
-    HashMap<Element*, PropertyToTransitionMap> m_elementToRunningCSSTransitionByCSSPropertyID;
+    void updateCSSTransitionsForStyleableAndProperty(const Styleable&, CSSPropertyID, const RenderStyle& currentStyle, const RenderStyle& afterChangeStyle, const MonotonicTime);
+    void removeCSSAnimationCreatedByMarkup(const Styleable&, CSSAnimation&);
 
     Markable<Seconds, Seconds::MarkableTraits> m_currentTime;
 };

@@ -28,11 +28,13 @@
 [
     ActiveDOMObject,
     Conditional=RESIZE_OBSERVER,
-    Constructor(ResizeObserverCallback callback),
-    ConstructorCallWith=Document,
-    EnabledBySetting=ResizeObserver
+    EnabledBySetting=ResizeObserver,
+    Exposed=Window,
+    JSCustomMarkFunction,
 ] interface ResizeObserver {
-    void observe(Element target);
-    void unobserve(Element target);
-    void disconnect();
+    [CallWith=Document] constructor(ResizeObserverCallback callback);
+
+    undefined observe(Element target);
+    undefined unobserve(Element target);
+    undefined disconnect();
 };

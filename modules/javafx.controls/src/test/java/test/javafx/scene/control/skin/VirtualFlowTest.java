@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -39,15 +39,23 @@ import java.util.LinkedList;
 import javafx.beans.InvalidationListener;
 import javafx.event.Event;
 import javafx.scene.control.IndexedCell;
+import javafx.scene.Node;
+import javafx.scene.Scene;
+import javafx.scene.shape.Circle;
+
 import test.javafx.scene.control.SkinStub;
 import javafx.scene.input.ScrollEvent;
+import javafx.scene.layout.HBox;
 
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 
+
+import java.util.ArrayList;
 import java.util.List;
 import javafx.scene.control.IndexedCellShim;
+import javafx.scene.control.ScrollBar;
 import javafx.scene.control.skin.VirtualFlowShim;
 import javafx.scene.control.skin.VirtualFlowShim.ArrayLinkedListShim;
 
@@ -66,7 +74,7 @@ public class VirtualFlowTest {
     // and each cell is 100 wide and 25 tall, except for the 30th cell, which
     // is 200 wide and 100 tall.
     private VirtualFlowShim<IndexedCell> flow;
-//    private Scene scene;
+
 
     @Before public void setUp() {
         list = new ArrayLinkedListShim<CellStub>();
@@ -776,8 +784,7 @@ public class VirtualFlowTest {
     }
 
 
-    @Test
-    public void testCellLayout_BiasedCellAndLengthBar() {
+    @Test public void testCellLayout_BiasedCellAndLengthBar() {
         flow.setCellFactory(param -> new CellStub(flow) {
             @Override
             protected double computeMinWidth(double height) {
@@ -837,21 +844,6 @@ public class VirtualFlowTest {
         assertTrue("The cells didn't get created", VirtualFlowShim.cells_size(flow.cells) > 0);
     }
 
-//    /**
-//     * During layout the order and contents of cells will change. We need
-//     * to make sure that CSS for cells is applied at this time. To test this,
-//     * I just set the position and perform a new pulse. Since layout happens
-//     * after the CSS updates are applied, if the test fails, then there will
-//     * be cells left in a state where they need their CSS applied.
-//     */
-//    @Test public void testCellLifeCycle_CSSUpdatesHappenDuringLayout() {
-//        flow.setPosition(.35);
-//        pulse();
-//        for (int i = 0; i < VirtualFlowShim.cells_size(flow.cells); i++) {
-//            IndexedCell cell = VirtualFlowShim.<T>cells_get(flow.cells, i);
-//            assertEquals(CssFlags.CLEAN, cell.impl_getCSSFlags());
-//        }
-//    }
 
     ////////////////////////////////////////////////////////////////////////////
     //
@@ -1020,8 +1012,7 @@ public class VirtualFlowTest {
         assertTrue(originalValue != flow.getPosition());
     }
 
-    @Test
-    public void test_RT_36507() {
+    @Test public void test_RT_36507() {
         flow = new VirtualFlowShim();
         flow.setVertical(true);
         // Worst case scenario is that the cells have height = 0.
@@ -1056,8 +1047,7 @@ public class VirtualFlowTest {
     }
 
     private int rt36556_instanceCount;
-    @Test
-    public void test_rt36556() {
+    @Test public void test_rt36556() {
         rt36556_instanceCount = 0;
         flow = new VirtualFlowShim();
         flow.setVertical(true);
@@ -1076,8 +1066,7 @@ public class VirtualFlowTest {
         assertMinimalNumberOfCellsAreUsed(flow);
     }
 
-    @Test
-    public void test_rt36556_scrollto() {
+    @Test public void test_rt36556_scrollto() {
         rt36556_instanceCount = 0;
         flow = new VirtualFlowShim();
         flow.setVertical(true);
@@ -1096,8 +1085,7 @@ public class VirtualFlowTest {
         assertMinimalNumberOfCellsAreUsed(flow);
     }
 
-    @Test
-    public void test_RT39035() {
+    @Test public void test_RT39035() {
         flow.scrollPixels(250);
         pulse();
         flow.scrollPixels(500);
@@ -1106,8 +1094,7 @@ public class VirtualFlowTest {
         assertMinimalNumberOfCellsAreUsed(flow);
     }
 
-    @Test
-    public void test_RT37421() {
+    @Test public void test_RT37421() {
         flow.setPosition(0.98);
         pulse();
         flow.scrollPixels(100);
@@ -1116,8 +1103,7 @@ public class VirtualFlowTest {
         assertMinimalNumberOfCellsAreUsed(flow);
     }
 
-    @Test
-    public void test_RT39568() {
+    @Test public void test_RT39568() {
         flow.shim_getHbar().setPrefHeight(16);
         flow.resize(50, flow.getHeight());
         flow.setPosition(1);
@@ -1158,6 +1144,52 @@ public class VirtualFlowTest {
     }
 
     @Test
+    public void testScrollToTopOfLastLargeCell() {
+        double flowHeight = 150;
+        int cellCount = 2;
+
+        flow = new VirtualFlowShim<>();
+        flow.setCellFactory(p -> new CellStub(flow) {
+            @Override
+            protected double computePrefHeight(double width) {
+                return getIndex() == cellCount -1 ? 200 : 100;
+            }
+
+            @Override
+            protected double computeMinHeight(double width) {
+                return computePrefHeight(width);
+            }
+
+            @Override
+            protected double computeMaxHeight(double width) {
+                return computePrefHeight(width);
+            }
+        });
+        flow.setVertical(true);
+
+        flow.resize(50,flowHeight);
+        flow.setCellCount(cellCount);
+        pulse();
+
+        flow.scrollToTop(cellCount - 1);
+        pulse();
+
+        IndexedCell<?> cell = flow.getCell(cellCount - 1);
+        double cellPosition = flow.getCellPosition(cell);
+
+        assertEquals("Last cell must be aligned to top of the viewport", 0, cellPosition, 0.1);
+    }
+
+    @Test
+    public void testImmediateScrollTo() {
+        flow.setCellCount(100);
+        flow.scrollTo(90);
+        pulse();
+        IndexedCell vc = flow.getVisibleCell(90);
+        assertNotNull(vc);
+    }
+
+    @Test
     // see JDK-8197536
     public void testScrollOneCell() {
         assertLastCellInsideViewport(true);
@@ -1168,17 +1200,266 @@ public class VirtualFlowTest {
     public void testScrollOneCellHorizontal() {
         assertLastCellInsideViewport(false);
     }
+
+    @Test
+    // see JDK-8178297
+    public void testPositionCellRemainsConstant() {
+        flow.setVertical(true);
+        flow.setCellCount(20);
+        flow.resize(300, 300);
+        flow.scrollPixels(10);
+        pulse();
+
+        IndexedCell vc = flow.getCell(0);
+        double cellPosition = flow.getCellPosition(vc);
+        assertEquals("Wrong first cell position", -10d, cellPosition, 0d);
+
+        for (int i = 1; i < 10; i++) {
+            flow.setCellCount(20 + i);
+            pulse();
+            vc = flow.getCell(0);
+            cellPosition = flow.getCellPosition(vc);
+            assertEquals("Wrong first cell position after inserting " + i + " cells", -10d, cellPosition, 0d);
+        }
+    }
+
+    @Test
+    // see JDK-8252811
+    public void testSheetChildrenRemainsConstant() {
+        flow.setVertical(true);
+        flow.setCellCount(20);
+        flow.resize(300, 300);
+        pulse();
+
+        int sheetChildrenSize = flow.sheetChildren.size();
+        assertEquals("Wrong number of sheet children", 12, sheetChildrenSize);
+
+        for (int i = 1; i < 50; i++) {
+            flow.setCellCount(20 + i);
+            pulse();
+            sheetChildrenSize = flow.sheetChildren.size();
+            assertEquals("Wrong number of sheet children after inserting " + i + " items", 12, sheetChildrenSize);
+        }
+
+        for (int i = 1; i < 50; i++) {
+            flow.setCellCount(70 - i);
+            pulse();
+            sheetChildrenSize = flow.sheetChildren.size();
+            assertEquals("Wrong number of sheet children after removing " + i + " items", 12, sheetChildrenSize);
+        }
+
+        flow.setCellCount(0);
+        pulse();
+        sheetChildrenSize = flow.sheetChildren.size();
+        assertEquals("Wrong number of sheet children after removing all items", 12, sheetChildrenSize);
+    }
+
+    private ArrayLinkedListShim<GraphicalCellStub> circlelist = new ArrayLinkedListShim<GraphicalCellStub>();
+
+    private VirtualFlowShim createCircleFlow() {
+        // The second VirtualFlow we are going to test, with 7 cells. Each cell
+        // contains a Circle with a radius that varies between cells.
+        VirtualFlowShim<IndexedCell> circleFlow;
+        circleFlow = new VirtualFlowShim();
+
+        circleFlow.setVertical(true);
+        circleFlow.setCellFactory(p -> new GraphicalCellStub() {
+            @Override
+            protected double computeMinWidth(double height) {
+                return computePrefWidth(height);
+            }
+
+            @Override
+            protected double computeMaxWidth(double height) {
+                return computePrefWidth(height);
+            }
+
+            @Override
+            protected double computePrefWidth(double height) {
+                return super.computePrefWidth(height);
+            }
+
+            @Override
+            protected double computeMinHeight(double width) {
+                return computePrefHeight(width);
+            }
+
+            @Override
+            protected double computeMaxHeight(double width) {
+                return computePrefHeight(width);
+            }
+
+        });
+        circleFlow.setCellCount(7);
+        circleFlow.resize(300, 300);
+        circleFlow.layout();
+        circleFlow.layout();
+        return circleFlow;
+    }
+
+    // when moving the flow in one direction, the position of the flow
+    // should not increase in the opposite direction
+    @Test public void testReverseOrder() {
+        double orig = flow.getPosition();
+        flow.scrollPixels(10);
+        double pos = flow.getPosition();
+        assertFalse("Moving in positive direction should not decrease position", pos < orig);
+        flow.scrollPixels(-50);
+        double neg = flow.getPosition();
+        assertFalse("Moving in negative direction should not increase position", neg > pos);
+    }
+
+    @Test public void testReverseOrderForCircleFlow() {
+        VirtualFlowShim vf = createCircleFlow();
+        double orig = vf.getPosition();
+        vf.scrollPixels(10);
+        double pos = vf.getPosition();
+        assertFalse("Moving in positive direction should not decrease position", pos < orig);
+        vf.scrollPixels(-50);
+        double neg = vf.getPosition();
+        assertFalse("Moving in negative direction should not increase position", neg > pos);
+    }
+
+    @Test public void testGradualMoveForCircleFlow() {
+        VirtualFlowShim vf = createCircleFlow();
+        vf.resize(600,400);
+        ScrollBar sb = vf.shim_getVbar();
+        double s0 = sb.getLayoutY();
+        double s1 = s0;
+        double position = vf.getPosition();
+        double newPosition = 0d;
+        double delta = 0;
+        double newDelta = 0;
+        vf.layout();
+        for (int i = 0; i < 50; i++) {
+            vf.scrollPixels(10);
+            vf.layout();
+            newPosition = vf.getPosition();
+            s1 = sb.getLayoutY();
+            newDelta = newPosition - position;
+            // System.err.println("s0 = "+s0+", s1 = "+s1);
+            // System.err.println("newDelta = "+newDelta+", delta = "+delta);
+            if (i > 0) {
+                double diff = Math.abs((newDelta-delta)/newDelta);
+                // System.err.println("diff = "+diff);
+                // maximum 10% difference allowed
+                assertTrue("Too much variation while scrolling (from "+s0+" to "+s1+")", diff < 0.1);
+            }
+            // System.err.println("S1 = "+s1);
+            // System.err.println("pos = "+vf.getPosition());
+            assertFalse("Thumb moving in the wrong direction at index ", s1 < s0);
+            s0 = s1;
+            delta = newDelta;
+            position = newPosition;
+        }
+    }
+
+    @Test public void testAccumCellInvisible() {
+        VirtualFlowShim vf = createCircleFlow();
+        Node cell = vf.get_accumCell();
+        if (cell != null) assertFalse(cell.isVisible());
+        vf.resize(600,400);
+        for (int i = 0; i < 50; i++) {
+            vf.scrollPixels(1);
+            cell = vf.get_accumCell();
+            if (cell != null) assertFalse(cell.isVisible());
+        }
+    }
+
+    @Test public void testScrollBarClipSyncWhileInvisibleOrNoScene() {
+        flow.setCellCount(3);
+        flow.resize(50, flow.getHeight());
+        pulse();
+
+        flow.setVisible(true);
+        Scene scene = new Scene(flow);
+        // sync works with both scene in place and flow visible
+        assertEquals(flow.shim_getHbar().getValue(), flow.get_clipView_getX(), 0);
+        flow.shim_getHbar().setValue(42);
+        assertEquals(flow.shim_getHbar().getValue(), flow.get_clipView_getX(), 0);
+
+        // sync works with flow invisible
+        flow.setVisible(false);
+        flow.shim_getHbar().setValue(21);
+        flow.setVisible(true);
+        assertEquals(flow.shim_getHbar().getValue(), flow.get_clipView_getX(), 0);
+
+        // sync works with no scene
+        scene.setRoot(new HBox());
+        assertEquals(null, flow.getScene());
+        flow.shim_getHbar().setValue(10);
+        scene.setRoot(flow);
+        assertEquals(flow.shim_getHbar().getValue(), flow.get_clipView_getX(), 0);
+    }
+}
+
+class GraphicalCellStub extends IndexedCellShim<Node> {
+    static List<Circle> circleList = List.of(
+        new Circle(10),
+        new Circle(20),
+        new Circle(100),
+        new Circle(30),
+        new Circle(50),
+        new Circle(200),
+        new Circle(60)
+    );
+
+    private int idx = -1;
+    Node myItem = null;
+
+    public GraphicalCellStub() { init(); }
+
+    private void init() {
+        // System.err.println("Init vf cell "+this);
+        setSkin(new SkinStub<GraphicalCellStub>(this));
+    }
+
+    @Override
+    public void updateItem(Node item, boolean empty) {
+        super.updateItem(item, empty);
+        if (empty || item == null) {
+            setText(null);
+            setGraphic(null);
+        } else {
+            setGraphic(item);
+        }
+    }
+
+    @Override
+    public void updateIndex(int i) {
+        super.updateIndex(i);
+        if ((i > -1) && (circleList.size() > i)) {
+            this.idx = i;
+            updateItem(circleList.get(i), false);
+        } else {
+            updateItem(null, true);
+        }
+    }
+
+    @Override
+    protected double computePrefHeight(double width) {
+        double answer = super.computePrefHeight(width);
+        if ((idx > -1) && (idx < circleList.size())) {
+            answer = 2 * circleList.get(idx).getRadius() + 6;
+        }
+        return answer;
+    }
+
+    @Override
+    public String toString() {
+        return "GraphicCell with item = "+myItem+" at "+super.toString();
+    }
 }
 
 class CellStub extends IndexedCellShim {
     String s;
-    VirtualFlowShim flow;
+   // VirtualFlowShim flow;
 
     public CellStub(VirtualFlowShim flow) { init(flow); }
     public CellStub(VirtualFlowShim flow, String s) { init(flow); this.s = s; }
 
     private void init(VirtualFlowShim flow) {
-        this.flow = flow;
+     //   this.flow = flow;
         setSkin(new SkinStub<CellStub>(this));
         updateItem(this, false);
     }

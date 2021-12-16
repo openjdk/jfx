@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2018 Yusuke Suzuki <utatane.tea@gmail.com>.
- * Copyright (C) 2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,9 +26,6 @@
 
 #include "config.h"
 #include "InByIdVariant.h"
-
-#include "JSCInlines.h"
-#include <wtf/ListDump.h>
 
 namespace JSC {
 
@@ -67,10 +64,14 @@ bool InByIdVariant::attemptToMerge(const InByIdVariant& other)
     return true;
 }
 
-void InByIdVariant::markIfCheap(SlotVisitor& visitor)
+template<typename Visitor>
+void InByIdVariant::markIfCheap(Visitor& visitor)
 {
     m_structureSet.markIfCheap(visitor);
 }
+
+template void InByIdVariant::markIfCheap(AbstractSlotVisitor&);
+template void InByIdVariant::markIfCheap(SlotVisitor&);
 
 bool InByIdVariant::finalize(VM& vm)
 {
@@ -83,7 +84,7 @@ bool InByIdVariant::finalize(VM& vm)
 
 void InByIdVariant::dump(PrintStream& out) const
 {
-    dumpInContext(out, 0);
+    dumpInContext(out, nullptr);
 }
 
 void InByIdVariant::dumpInContext(PrintStream& out, DumpContext* context) const

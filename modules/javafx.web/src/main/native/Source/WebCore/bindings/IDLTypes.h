@@ -31,7 +31,7 @@
 #include <wtf/Brigand.h>
 #include <wtf/HashMap.h>
 #include <wtf/StdLibExtras.h>
-#include <wtf/text/WTFString.h>
+#include <wtf/URL.h>
 
 #if ENABLE(WEBGL)
 #include "WebGLAny.h"
@@ -62,6 +62,7 @@ template<typename T>
 struct IDLType {
     using ImplementationType = T;
     using StorageType = T;
+    using SequenceStorageType = T;
 
     using ParameterType = T;
     using NullableParameterType = Optional<ImplementationType>;
@@ -82,6 +83,7 @@ struct IDLUnsupportedType : IDLType<void> { };
 struct IDLNull : IDLType<std::nullptr_t> { };
 
 struct IDLAny : IDLType<JSC::Strong<JSC::Unknown>> {
+    using SequenceStorageType = JSC::JSValue;
     using ParameterType = JSC::JSValue;
     using NullableParameterType = JSC::JSValue;
 
@@ -91,7 +93,7 @@ struct IDLAny : IDLType<JSC::Strong<JSC::Unknown>> {
     template<typename U> static inline U&& extractValueFromNullable(U&& value) { return std::forward<U>(value); }
 };
 
-struct IDLVoid : IDLType<void> { };
+struct IDLUndefined : IDLType<void> { };
 
 struct IDLBoolean : IDLType<bool> { };
 
@@ -130,13 +132,14 @@ template<typename StringType> struct IDLString : IDLType<StringType> {
     static bool isNullValue(const StringType& value) { return value.isNull(); }
     static bool isNullValue(const UncachedString& value) { return value.string.isNull(); }
     static bool isNullValue(const OwnedString& value) { return value.string.isNull(); }
+    static bool isNullValue(const URL& value) { return value.isNull(); }
     template <typename U> static U&& extractValueFromNullable(U&& value) { return std::forward<U>(value); }
 };
 struct IDLDOMString : IDLString<String> { };
 struct IDLByteString : IDLString<String> { };
 struct IDLUSVString : IDLString<String> { };
 
-template<typename T> struct IDLTreatNullAsEmptyAdaptor : IDLString<String> {
+template<typename T> struct IDLLegacyNullToEmptyStringAdaptor : IDLString<String> {
     using InnerType = T;
 };
 
@@ -145,6 +148,10 @@ template<typename T> struct IDLAtomStringAdaptor : IDLString<AtomString> {
 };
 
 template<typename T> struct IDLRequiresExistingAtomStringAdaptor : IDLString<AtomString> {
+    using InnerType = T;
+};
+
+template<typename T> struct IDLAllowSharedAdaptor : T {
     using InnerType = T;
 };
 
@@ -272,7 +279,6 @@ struct IDLJSON : IDLType<String> {
 struct IDLScheduledAction : IDLType<std::unique_ptr<ScheduledAction>> { };
 template<typename T> struct IDLSerializedScriptValue : IDLWrapper<T> { };
 template<typename T> struct IDLEventListener : IDLWrapper<T> { };
-template<typename T> struct IDLXPathNSResolver : IDLWrapper<T> { };
 
 struct IDLIDBKey : IDLWrapper<IDBKey> { };
 struct IDLIDBKeyData : IDLWrapper<IDBKeyData> { };
@@ -320,5 +326,18 @@ struct IsIDLFloatingPoint : public std::integral_constant<bool, WTF::IsBaseOfTem
 
 template<typename T>
 struct IsIDLTypedArray : public std::integral_constant<bool, WTF::IsBaseOfTemplate<IDLTypedArray, T>::value> { };
+
+template<typename T>
+struct IsIDLArrayBuffer : public std::integral_constant<bool, std::is_base_of<IDLArrayBuffer, T>::value> { };
+
+template<typename T>
+struct IsIDLArrayBufferView : public std::integral_constant<bool, std::is_base_of<IDLArrayBufferView, T>::value> { };
+
+template<typename T>
+struct IsIDLArrayBufferAllowShared : public std::integral_constant<bool, std::is_base_of<IDLAllowSharedAdaptor<IDLArrayBuffer>, T>::value> { };
+
+template<typename T>
+struct IsIDLArrayBufferViewAllowShared : public std::integral_constant<bool, std::is_base_of<IDLAllowSharedAdaptor<IDLArrayBufferView>, T>::value> { };
+
 
 } // namespace WebCore

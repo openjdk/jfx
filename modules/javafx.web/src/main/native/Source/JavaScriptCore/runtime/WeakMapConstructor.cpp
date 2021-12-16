@@ -26,11 +26,8 @@
 #include "config.h"
 #include "WeakMapConstructor.h"
 
-#include "Error.h"
 #include "IteratorOperations.h"
 #include "JSCInlines.h"
-#include "JSGlobalObject.h"
-#include "JSObjectInlines.h"
 #include "JSWeakMap.h"
 #include "WeakMapPrototype.h"
 
@@ -40,33 +37,36 @@ const ClassInfo WeakMapConstructor::s_info = { "Function", &Base::s_info, nullpt
 
 void WeakMapConstructor::finishCreation(VM& vm, WeakMapPrototype* prototype)
 {
-    Base::finishCreation(vm, "WeakMap"_s, NameAdditionMode::WithoutStructureTransition);
+    Base::finishCreation(vm, 0, "WeakMap"_s, PropertyAdditionMode::WithoutStructureTransition);
     putDirectWithoutTransition(vm, vm.propertyNames->prototype, prototype, PropertyAttribute::DontEnum | PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly);
-    putDirectWithoutTransition(vm, vm.propertyNames->length, jsNumber(0), PropertyAttribute::DontEnum | PropertyAttribute::ReadOnly);
 }
 
-static EncodedJSValue JSC_HOST_CALL callWeakMap(JSGlobalObject*, CallFrame*);
-static EncodedJSValue JSC_HOST_CALL constructWeakMap(JSGlobalObject*, CallFrame*);
+static JSC_DECLARE_HOST_FUNCTION(callWeakMap);
+static JSC_DECLARE_HOST_FUNCTION(constructWeakMap);
 
 WeakMapConstructor::WeakMapConstructor(VM& vm, Structure* structure)
     : Base(vm, structure, callWeakMap, constructWeakMap)
 {
 }
 
-static EncodedJSValue JSC_HOST_CALL callWeakMap(JSGlobalObject* globalObject, CallFrame*)
+JSC_DEFINE_HOST_FUNCTION(callWeakMap, (JSGlobalObject* globalObject, CallFrame*))
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
     return JSValue::encode(throwConstructorCannotBeCalledAsFunctionTypeError(globalObject, scope, "WeakMap"));
 }
 
-static EncodedJSValue JSC_HOST_CALL constructWeakMap(JSGlobalObject* globalObject, CallFrame* callFrame)
+JSC_DEFINE_HOST_FUNCTION(constructWeakMap, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    Structure* weakMapStructure = InternalFunction::createSubclassStructure(globalObject, callFrame->jsCallee(), callFrame->newTarget(), globalObject->weakMapStructure());
-    RETURN_IF_EXCEPTION(scope, encodedJSValue());
+    JSObject* newTarget = asObject(callFrame->newTarget());
+    Structure* weakMapStructure = newTarget == callFrame->jsCallee()
+        ? globalObject->weakMapStructure()
+        : InternalFunction::createSubclassStructure(globalObject, newTarget, getFunctionRealm(vm, newTarget)->weakMapStructure());
+    RETURN_IF_EXCEPTION(scope, { });
+
     JSWeakMap* weakMap = JSWeakMap::create(vm, weakMapStructure);
     JSValue iterable = callFrame->argument(0);
     if (iterable.isUndefinedOrNull())
@@ -75,9 +75,8 @@ static EncodedJSValue JSC_HOST_CALL constructWeakMap(JSGlobalObject* globalObjec
     JSValue adderFunction = weakMap->JSObject::get(globalObject, vm.propertyNames->set);
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
 
-    CallData adderFunctionCallData;
-    CallType adderFunctionCallType = getCallData(vm, adderFunction, adderFunctionCallData);
-    if (adderFunctionCallType == CallType::None)
+    auto adderFunctionCallData = getCallData(vm, adderFunction);
+    if (adderFunctionCallData.type == CallData::Type::None)
         return JSValue::encode(throwTypeError(globalObject, scope));
 
     scope.release();
@@ -99,7 +98,7 @@ static EncodedJSValue JSC_HOST_CALL constructWeakMap(JSGlobalObject* globalObjec
         arguments.append(value);
         ASSERT(!arguments.hasOverflowed());
         scope.release();
-        call(globalObject, adderFunction, adderFunctionCallType, adderFunctionCallData, weakMap, arguments);
+        call(globalObject, adderFunction, adderFunctionCallData, weakMap, arguments);
     });
 
     return JSValue::encode(weakMap);

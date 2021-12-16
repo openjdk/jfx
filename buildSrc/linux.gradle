@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -211,6 +211,10 @@ setupTools("linux_freetype_tools",
 def compiler = IS_COMPILE_PARFAIT ? "parfait-gcc" : "${toolchainDir}gcc";
 def linker = IS_STATIC_BUILD ? "ar" : IS_COMPILE_PARFAIT ? "parfait-g++" : "${toolchainDir}g++";
 
+// Strip native .so shared libraries as a postprocess step when copying them
+LINUX.strip = "${toolchainDir}strip"
+LINUX.stripArgs = [ "-x" ]
+
 LINUX.glass = [:]
 LINUX.glass.variants = ["glass", "glassgtk2", "glassgtk3"]
 
@@ -278,8 +282,8 @@ LINUX.iio.nativeSource = [
     file("${project("graphics").projectDir}/src/main/native-iio"),
     file("${project("graphics").projectDir}/src/main/native-iio/libjpeg")]
 LINUX.iio.compiler = compiler
-LINUX.iio.ccFlags = [cFlags].flatten()
-LINUX.iio.linker = linker
+LINUX.iio.ccFlags = [cFlags, "-fvisibility=hidden"].flatten()
+LINUX.iio.linker = IS_STATIC_BUILD ? "ld" : linker
 LINUX.iio.linkFlags = [linkFlags].flatten()
 LINUX.iio.lib = "javafx_iio"
 

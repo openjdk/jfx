@@ -27,7 +27,7 @@
 #include "Nodes.h"
 #include "NodeConstructors.h"
 
-#include "JSCInlines.h"
+#include "ExecutableInfo.h"
 #include "ModuleScopeData.h"
 #include <wtf/Assertions.h>
 
@@ -126,7 +126,7 @@ ScopeNode::ScopeNode(ParserArena& parserArena, const JSTokenLocation& startLocat
     , m_features(inStrictContext ? StrictModeFeature : NoFeatures)
     , m_innerArrowFunctionCodeFeatures(NoInnerArrowFunctionFeatures)
     , m_numConstants(0)
-    , m_statements(0)
+    , m_statements(nullptr)
 {
 }
 
@@ -177,6 +177,7 @@ ModuleProgramNode::ModuleProgramNode(ParserArena& parserArena, const JSTokenLoca
     : ScopeNode(parserArena, startLocation, endLocation, source, children, varEnvironment, WTFMove(funcStack), lexicalVariables, WTFMove(sloppyModeHoistedFunctions), features, innerArrowFunctionCodeFeatures, numConstants)
     , m_startColumn(startColumn)
     , m_endColumn(endColumn)
+    , m_usesAwait(features & AwaitFeature)
     , m_moduleScopeData(*WTFMove(moduleScopeData))
 {
 }
@@ -202,6 +203,7 @@ FunctionMetadataNode::FunctionMetadataNode(
         , m_constructorKind(static_cast<unsigned>(constructorKind))
         , m_needsClassFieldInitializer(static_cast<unsigned>(NeedsClassFieldInitializer::No))
         , m_isArrowFunctionBodyExpression(isArrowFunctionBodyExpression)
+        , m_privateBrandRequirement(static_cast<unsigned>(PrivateBrandRequirement::None))
         , m_parseMode(mode)
         , m_startColumn(startColumn)
         , m_endColumn(endColumn)
@@ -226,6 +228,7 @@ FunctionMetadataNode::FunctionMetadataNode(
         , m_constructorKind(static_cast<unsigned>(constructorKind))
         , m_needsClassFieldInitializer(static_cast<unsigned>(NeedsClassFieldInitializer::No))
         , m_isArrowFunctionBodyExpression(isArrowFunctionBodyExpression)
+        , m_privateBrandRequirement(static_cast<unsigned>(PrivateBrandRequirement::None))
         , m_parseMode(mode)
         , m_startColumn(startColumn)
         , m_endColumn(endColumn)
@@ -335,7 +338,7 @@ bool PropertyListNode::hasStaticallyNamedProperty(const Identifier& propName)
 bool PropertyListNode::shouldCreateLexicalScopeForClass(PropertyListNode* list)
 {
     while (list) {
-        if (list->m_node->isComputedClassField())
+        if (list->m_node->isComputedClassField() || list->m_node->isPrivate())
             return true;
         list = list->m_next;
     }

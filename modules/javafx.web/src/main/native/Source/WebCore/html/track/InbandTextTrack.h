@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,7 +25,7 @@
 
 #pragma once
 
-#if ENABLE(VIDEO_TRACK)
+#if ENABLE(VIDEO)
 
 #include "InbandTextTrackPrivateClient.h"
 #include "TextTrack.h"
@@ -35,7 +35,7 @@ namespace WebCore {
 class InbandTextTrack : public TextTrack, private InbandTextTrackPrivateClient {
     WTF_MAKE_ISO_ALLOCATED(InbandTextTrack);
 public:
-    static Ref<InbandTextTrack> create(ScriptExecutionContext&, TextTrackClient&, InbandTextTrackPrivate&);
+    static Ref<InbandTextTrack> create(Document&, TextTrackClient&, InbandTextTrackPrivate&);
     virtual ~InbandTextTrack();
 
     bool isClosedCaptions() const override;
@@ -50,9 +50,12 @@ public:
 
     void setPrivate(InbandTextTrackPrivate&);
     void setMediaElement(WeakPtr<HTMLMediaElement>) override;
+#if !RELEASE_LOG_DISABLED
+    void setLogger(const Logger&, const void*) final;
+#endif
 
 protected:
-    InbandTextTrack(ScriptExecutionContext&, TextTrackClient&, InbandTextTrackPrivate&);
+    InbandTextTrack(Document&, TextTrackClient&, InbandTextTrackPrivate&);
 
     void setModeInternal(Mode);
     void updateKindFromPrivate();
@@ -69,18 +72,18 @@ private:
     void addDataCue(const MediaTime&, const MediaTime&, const void*, unsigned) override { ASSERT_NOT_REACHED(); }
 
 #if ENABLE(DATACUE_VALUE)
-    void addDataCue(const MediaTime&, const MediaTime&, Ref<SerializedPlatformRepresentation>&&, const String&) override { ASSERT_NOT_REACHED(); }
-    void updateDataCue(const MediaTime&, const MediaTime&, SerializedPlatformRepresentation&) override  { ASSERT_NOT_REACHED(); }
-    void removeDataCue(const MediaTime&, const MediaTime&, SerializedPlatformRepresentation&) override  { ASSERT_NOT_REACHED(); }
+    void addDataCue(const MediaTime&, const MediaTime&, Ref<SerializedPlatformDataCue>&&, const String&) override { ASSERT_NOT_REACHED(); }
+    void updateDataCue(const MediaTime&, const MediaTime&, SerializedPlatformDataCue&) override { ASSERT_NOT_REACHED(); }
+    void removeDataCue(const MediaTime&, const MediaTime&, SerializedPlatformDataCue&) override { ASSERT_NOT_REACHED(); }
 #endif
 
-    void addGenericCue(GenericCueData&) override { ASSERT_NOT_REACHED(); }
-    void updateGenericCue(GenericCueData&) override { ASSERT_NOT_REACHED(); }
-    void removeGenericCue(GenericCueData&) override { ASSERT_NOT_REACHED(); }
+    void addGenericCue(InbandGenericCue&) override { ASSERT_NOT_REACHED(); }
+    void updateGenericCue(InbandGenericCue&) override { ASSERT_NOT_REACHED(); }
+    void removeGenericCue(InbandGenericCue&) override { ASSERT_NOT_REACHED(); }
 
     void parseWebVTTFileHeader(String&&) override { ASSERT_NOT_REACHED(); }
     void parseWebVTTCueData(const char*, unsigned) override { ASSERT_NOT_REACHED(); }
-    void parseWebVTTCueData(const ISOWebVTTCue&) override { ASSERT_NOT_REACHED(); }
+    void parseWebVTTCueData(ISOWebVTTCue&&) override { ASSERT_NOT_REACHED(); }
 
     MediaTime startTimeVariance() const override;
 };
@@ -91,4 +94,4 @@ SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::InbandTextTrack)
     static bool isType(const WebCore::TextTrack& track) { return track.isInband(); }
 SPECIALIZE_TYPE_TRAITS_END()
 
-#endif // ENABLE(VIDEO_TRACK)
+#endif // ENABLE(VIDEO)

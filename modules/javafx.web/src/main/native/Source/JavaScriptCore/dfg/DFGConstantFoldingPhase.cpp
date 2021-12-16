@@ -147,15 +147,14 @@ private:
                     JSValue child1Constant = m_state.forNode(node->child1().node()).value();
                     JSValue child2Constant = m_state.forNode(node->child2().node()).value();
 
-                    // FIXME: Revisit this condition when introducing BigInt to JSC.
-                    auto isNonStringOrBigIntCellConstant = [] (JSValue value) {
-                        return value && value.isCell() && !value.isString() && !value.isBigInt();
+                    auto isNonStringAndNonBigIntCellConstant = [] (JSValue value) {
+                        return value && value.isCell() && !value.isString() && !value.isHeapBigInt();
                     };
 
-                    if (isNonStringOrBigIntCellConstant(child1Constant)) {
+                    if (isNonStringAndNonBigIntCellConstant(child1Constant)) {
                         node->convertToCompareEqPtr(m_graph.freezeStrong(child1Constant.asCell()), node->child2());
                         changed = true;
-                    } else if (isNonStringOrBigIntCellConstant(child2Constant)) {
+                    } else if (isNonStringAndNonBigIntCellConstant(child2Constant)) {
                         node->convertToCompareEqPtr(m_graph.freezeStrong(child2Constant.asCell()), node->child1());
                         changed = true;
                     }
@@ -195,7 +194,7 @@ private:
                 break;
             }
 
-            case CheckSubClass: {
+            case CheckJSCast: {
                 JSValue constant = m_state.forNode(node->child1()).value();
                 if (constant) {
                     if (constant.isCell() && constant.asCell()->inherits(m_graph.m_vm, node->classInfo())) {
@@ -209,6 +208,28 @@ private:
                 AbstractValue& value = m_state.forNode(node->child1());
 
                 if (value.m_structure.isSubClassOf(node->classInfo())) {
+                    m_interpreter.execute(indexInBlock);
+                    node->remove(m_graph);
+                    eliminated = true;
+                    break;
+                }
+                break;
+            }
+
+            case CheckNotJSCast: {
+                JSValue constant = m_state.forNode(node->child1()).value();
+                if (constant) {
+                    if (constant.isCell() && !constant.asCell()->inherits(m_graph.m_vm, node->classInfo())) {
+                        m_interpreter.execute(indexInBlock);
+                        node->remove(m_graph);
+                        eliminated = true;
+                        break;
+                    }
+                }
+
+                AbstractValue& value = m_state.forNode(node->child1());
+
+                if (value.m_structure.isNotSubClassOf(node->classInfo())) {
                     m_interpreter.execute(indexInBlock);
                     node->remove(m_graph);
                     eliminated = true;
@@ -307,8 +328,8 @@ private:
                 break;
             }
 
-            case CheckCell: {
-                if (m_state.forNode(node->child1()).value() != node->cellOperand()->value())
+            case CheckIsConstant: {
+                if (m_state.forNode(node->child1()).value() != node->constant()->value())
                     break;
                 node->remove(m_graph);
                 eliminated = true;
@@ -510,6 +531,36 @@ private:
                 break;
             }
 
+            case MultiDeleteByOffset: {
+                Edge baseEdge = node->child1();
+                Node* base = baseEdge.node();
+                MultiDeleteByOffsetData& data = node->multiDeleteByOffsetData();
+
+                AbstractValue baseValue = m_state.forNode(base);
+
+                m_interpreter.execute(indexInBlock); // Push CFA over this node after we get the state before.
+                alreadyHandled = true; // Don't allow the default constant folder to do things to this.
+
+                for (unsigned i = 0; i < data.variants.size(); ++i) {
+                    DeleteByIdVariant& variant = data.variants[i];
+
+                    if (!baseValue.contains(m_graph.registerStructure(variant.oldStructure()))) {
+                        data.variants[i--] = data.variants.last();
+                        data.variants.removeLast();
+                        changed = true;
+                        continue;
+                    }
+                }
+
+                if (data.variants.size() != 1)
+                    break;
+
+                emitDeleteByOffset(
+                    indexInBlock, node, baseValue, data.variants[0], data.identifierNumber);
+                changed = true;
+                break;
+            }
+
             case MatchStructure: {
                 Edge baseEdge = node->child1();
                 Node* base = baseEdge.node();
@@ -548,10 +599,11 @@ private:
             case GetByIdDirect:
             case GetByIdDirectFlush:
             case GetById:
-            case GetByIdFlush: {
+            case GetByIdFlush:
+            case GetPrivateNameById: {
                 Edge childEdge = node->child1();
                 Node* child = childEdge.node();
-                unsigned identifierNumber = node->identifierNumber();
+                UniquedStringImpl* uid = node->cacheableIdentifier().uid();
 
                 AbstractValue baseValue = m_state.forNode(child);
 
@@ -562,8 +614,7 @@ private:
                     || (node->child1().useKind() == UntypedUse || (baseValue.m_type & ~SpecCell)))
                     break;
 
-                GetByStatus status = GetByStatus::computeFor(
-                    baseValue.m_structure.toStructureSet(), m_graph.identifiers()[identifierNumber]);
+                GetByStatus status = GetByStatus::computeFor(baseValue.m_structure.toStructureSet(), uid);
                 if (!status.isSimple())
                     break;
 
@@ -583,6 +634,7 @@ private:
                 };
 
                 if (status.numVariants() == 1) {
+                    unsigned identifierNumber = m_graph.identifiers().ensure(uid);
                     addFilterStatus();
                     emitGetByOffset(indexInBlock, node, baseValue, status[0], identifierNumber);
                     changed = true;
@@ -592,6 +644,7 @@ private:
                 if (!m_graph.m_plan.isFTL())
                     break;
 
+                unsigned identifierNumber = m_graph.identifiers().ensure(uid);
                 addFilterStatus();
                 MultiGetByOffsetData* data = m_graph.m_multiGetByOffsetData.add();
                 for (const GetByIdVariant& variant : status.variants()) {
@@ -606,101 +659,17 @@ private:
                 break;
             }
 
+            case PutPrivateNameById: {
+                bool isDirect = true;
+                tryFoldAsPutByOffset(node, indexInBlock, node->child1(), node->child2(), isDirect, node->privateFieldPutKind(), changed, alreadyHandled);
+                break;
+            }
+
             case PutById:
             case PutByIdDirect:
             case PutByIdFlush: {
-                NodeOrigin origin = node->origin;
-                Edge childEdge = node->child1();
-                Node* child = childEdge.node();
-                unsigned identifierNumber = node->identifierNumber();
-
-                ASSERT(childEdge.useKind() == CellUse);
-
-                AbstractValue baseValue = m_state.forNode(child);
-                AbstractValue valueValue = m_state.forNode(node->child2());
-
-                if (!baseValue.m_structure.isFinite())
-                    break;
-
-                PutByIdStatus status = PutByIdStatus::computeFor(
-                    m_graph.globalObjectFor(origin.semantic),
-                    baseValue.m_structure.toStructureSet(),
-                    m_graph.identifiers()[identifierNumber],
-                    node->op() == PutByIdDirect);
-
-                if (!status.isSimple())
-                    break;
-
-                ASSERT(status.numVariants());
-
-                if (status.numVariants() > 1 && !m_graph.m_plan.isFTL())
-                    break;
-
-                changed = true;
-
-                bool allGood = true;
-                RegisteredStructureSet newSet;
-                TransitionVector transitions;
-                for (const PutByIdVariant& variant : status.variants()) {
-                    for (const ObjectPropertyCondition& condition : variant.conditionSet()) {
-                        if (m_graph.watchCondition(condition))
-                            continue;
-
-                        Structure* structure = condition.object()->structure(m_graph.m_vm);
-                        if (!condition.structureEnsuresValidity(structure)) {
-                            allGood = false;
-                            break;
-                        }
-
-                        m_insertionSet.insertNode(
-                            indexInBlock, SpecNone, CheckStructure, node->origin,
-                            OpInfo(m_graph.addStructureSet(structure)),
-                            m_insertionSet.insertConstantForUse(
-                                indexInBlock, node->origin, condition.object(), KnownCellUse));
-                    }
-
-                    if (!allGood)
-                        break;
-
-                    if (variant.kind() == PutByIdVariant::Transition) {
-                        RegisteredStructure newStructure = m_graph.registerStructure(variant.newStructure());
-                        transitions.append(
-                            Transition(
-                                m_graph.registerStructure(variant.oldStructureForTransition()), newStructure));
-                        newSet.add(newStructure);
-                    } else {
-                        ASSERT(variant.kind() == PutByIdVariant::Replace);
-                        newSet.merge(*m_graph.addStructureSet(variant.oldStructure()));
-                    }
-                }
-
-                if (!allGood)
-                    break;
-
-                // Push CFA over this node after we get the state before.
-                m_interpreter.didFoldClobberWorld();
-                m_interpreter.observeTransitions(indexInBlock, transitions);
-                if (m_state.forNode(node->child1()).changeStructure(m_graph, newSet) == Contradiction)
-                    m_state.setIsValid(false);
-
-                alreadyHandled = true; // Don't allow the default constant folder to do things to this.
-
-                m_insertionSet.insertNode(
-                    indexInBlock, SpecNone, FilterPutByIdStatus, node->origin,
-                    OpInfo(m_graph.m_plan.recordedStatuses().addPutByIdStatus(node->origin.semantic, status)),
-                    Edge(child));
-
-                if (status.numVariants() == 1) {
-                    emitPutByOffset(indexInBlock, node, baseValue, status[0], identifierNumber);
-                    break;
-                }
-
-                ASSERT(m_graph.m_plan.isFTL());
-
-                MultiPutByOffsetData* data = m_graph.m_multiPutByOffsetData.add();
-                data->variants = status.variants();
-                data->identifierNumber = identifierNumber;
-                node->convertToMultiPutByOffset(data);
+                bool isDirect = node->op() == PutByIdDirect;
+                tryFoldAsPutByOffset(node, indexInBlock, node->child1(), node->child2(), isDirect, PrivateFieldPutKind::none(), changed, alreadyHandled);
                 break;
             }
 
@@ -709,10 +678,12 @@ private:
                 if (JSValue constant = property.value()) {
                     if (constant.isString()) {
                         JSString* string = asString(constant);
-                        const StringImpl* impl = string->tryGetValueImpl();
-                        if (impl && impl->isAtom()) {
-                            unsigned identifierNumber = m_graph.identifiers().ensure(const_cast<UniquedStringImpl*>(static_cast<const UniquedStringImpl*>(impl)));
-                            node->convertToInById(identifierNumber);
+                        if (CacheableIdentifier::isCacheableIdentifierCell(string)) {
+                            const StringImpl* impl = string->tryGetValueImpl();
+                            RELEASE_ASSERT(impl);
+                            m_graph.freezeStrong(string);
+                            m_graph.identifiers().ensure(const_cast<UniquedStringImpl*>(static_cast<const UniquedStringImpl*>(impl)));
+                            node->convertToInById(CacheableIdentifier::createFromCell(string));
                             changed = true;
                             break;
                         }
@@ -740,7 +711,7 @@ private:
             }
 
             case ToThis: {
-                ToThisResult result = isToThisAnIdentity(m_graph.m_vm, m_graph.isStrictModeFor(node->origin.semantic), m_state.forNode(node->child1()));
+                ToThisResult result = isToThisAnIdentity(m_graph.m_vm, node->ecmaMode(), m_state.forNode(node->child1()));
                 if (result == ToThisResult::Identity) {
                     node->convertToIdentity();
                     changed = true;
@@ -797,7 +768,7 @@ private:
                 JSGlobalObject* globalObject = m_graph.globalObjectFor(node->origin.semantic);
                 if (JSValue base = m_state.forNode(node->child1()).m_value) {
                     if (base == (node->isInternalPromise() ? globalObject->internalPromiseConstructor() : globalObject->promiseConstructor())) {
-                        node->convertToNewPromise(m_graph.registerStructure(node->isInternalPromise() ? globalObject->internalPromiseStructure() : globalObject->promiseStructure()));
+                        node->convertToNewInternalFieldObject(m_graph.registerStructure(node->isInternalPromise() ? globalObject->internalPromiseStructure() : globalObject->promiseStructure()));
                         changed = true;
                         break;
                     }
@@ -811,7 +782,7 @@ private:
                                     && rareData->allocationProfileWatchpointSet().isStillValid()) {
                                     m_graph.freeze(rareData);
                                     m_graph.watchpoints().addLazily(rareData->allocationProfileWatchpointSet());
-                                    node->convertToNewPromise(m_graph.registerStructure(structure));
+                                    node->convertToNewInternalFieldObject(m_graph.registerStructure(structure));
                                     changed = true;
                                     break;
                                 }
@@ -837,7 +808,7 @@ private:
                                         && rareData->allocationProfileWatchpointSet().isStillValid()) {
                                         m_graph.freeze(rareData);
                                         m_graph.watchpoints().addLazily(rareData->allocationProfileWatchpointSet());
-                                        node->convertToNewInternalFieldObject(newOp, m_graph.registerStructure(structure));
+                                        node->convertToNewInternalFieldObjectWithInlineFields(newOp, m_graph.registerStructure(structure));
                                         changed = true;
                                         return;
                                     }
@@ -879,13 +850,14 @@ private:
                 break;
             }
 
+            case ObjectGetOwnPropertyNames:
             case ObjectKeys: {
                 if (node->child1().useKind() == ObjectUse) {
                     auto& structureSet = m_state.forNode(node->child1()).m_structure;
                     if (structureSet.isFinite() && structureSet.size() == 1) {
                         RegisteredStructure structure = structureSet.onlyStructure();
                         if (auto* rareData = structure->rareDataConcurrently()) {
-                            if (auto* immutableButterfly = rareData->cachedOwnKeysConcurrently()) {
+                            if (auto* immutableButterfly = rareData->cachedPropertyNamesConcurrently(node->op() == ObjectGetOwnPropertyNames ? CachedPropertyNamesKind::GetOwnPropertyNames : CachedPropertyNamesKind::Keys)) {
                                 if (m_graph.isWatchingHavingABadTimeWatchpoint(node)) {
                                     node->convertToNewArrayBuffer(m_graph.freeze(immutableButterfly));
                                     changed = true;
@@ -918,7 +890,8 @@ private:
                 break;
             }
 
-            case ToNumber: {
+            case ToNumber:
+            case CallNumberConstructor: {
                 if (m_state.forNode(node->child1()).m_type & ~SpecBytecodeNumber)
                     break;
 
@@ -937,8 +910,8 @@ private:
             }
 
             case NormalizeMapKey: {
-                SpeculatedType typeMaybeNormalized = (SpecFullNumber & ~SpecInt32Only);
-                if (m_state.forNode(node->child1()).m_type & typeMaybeNormalized)
+                SpeculatedType typesNeedingNormalization = (SpecFullNumber & ~SpecInt32Only) | SpecHeapBigInt;
+                if (m_state.forNode(node->child1()).m_type & typesNeedingNormalization)
                     break;
 
                 node->convertToIdentity();
@@ -1096,7 +1069,7 @@ private:
             case PhantomNewGeneratorFunction:
             case PhantomNewAsyncGeneratorFunction:
             case PhantomNewAsyncFunction:
-            case PhantomNewArrayIterator:
+            case PhantomNewInternalFieldObject:
             case PhantomCreateActivation:
             case PhantomDirectArguments:
             case PhantomClonedArguments:
@@ -1247,7 +1220,7 @@ private:
         node->child1().setUseKind(KnownCellUse);
         childEdge.setUseKind(KnownCellUse);
 
-        Transition* transition = 0;
+        Transition* transition = nullptr;
         if (variant.kind() == PutByIdVariant::Transition) {
             transition = m_graph.m_transitions.add(
                 m_graph.registerStructure(variant.oldStructureForTransition()), m_graph.registerStructure(variant.newStructure()));
@@ -1307,6 +1280,45 @@ private:
                 indexInBlock + 1, SpecNone, PutStructure, origin.withInvalidExit(), OpInfo(transition),
                 childEdge);
         }
+    }
+
+    void emitDeleteByOffset(unsigned indexInBlock, Node* node, const AbstractValue& baseValue, const DeleteByIdVariant& variant, unsigned identifierNumber)
+    {
+        NodeOrigin origin = node->origin;
+        DFG_ASSERT(m_graph, node, origin.exitOK);
+        addBaseCheck(indexInBlock, node, baseValue, m_graph.registerStructure(variant.oldStructure()));
+        node->child1().setUseKind(KnownCellUse);
+
+        if (!variant.newStructure()) {
+            m_graph.convertToConstant(node, jsBoolean(variant.result()));
+            node->origin = node->origin.withInvalidExit();
+            return;
+        }
+
+        Transition* transition = m_graph.m_transitions.add(
+            m_graph.registerStructure(variant.oldStructure()), m_graph.registerStructure(variant.newStructure()));
+
+        Edge propertyStorage;
+
+        if (isInlineOffset(variant.offset()))
+            propertyStorage = node->child1();
+        else
+            propertyStorage = Edge(m_insertionSet.insertNode(
+                indexInBlock, SpecNone, GetButterfly, origin, node->child1()));
+
+        StorageAccessData& data = *m_graph.m_storageAccessData.add();
+        data.offset = variant.offset();
+        data.identifierNumber = identifierNumber;
+
+        Node* clearValue = m_insertionSet.insertNode(indexInBlock, SpecNone, JSConstant, origin, OpInfo(m_graph.freezeStrong(JSValue())));
+        m_insertionSet.insertNode(
+            indexInBlock, SpecNone, PutByOffset, origin, OpInfo(&data), propertyStorage, node->child1(), Edge(clearValue));
+        origin = origin.withInvalidExit();
+        m_insertionSet.insertNode(
+            indexInBlock, SpecNone, PutStructure, origin, OpInfo(transition),
+            node->child1());
+        m_graph.convertToConstant(node, jsBoolean(variant.result()));
+        node->origin = origin;
     }
 
     void addBaseCheck(
@@ -1372,6 +1384,101 @@ private:
                 break;
             }
         }
+    }
+
+    void tryFoldAsPutByOffset(Node* node, unsigned indexInBlock, Edge baseEdge, Edge valueEdge, bool isDirect, PrivateFieldPutKind privateFieldPutKind, bool& changed, bool& alreadyHandled)
+    {
+        NodeOrigin origin = node->origin;
+        Node* baseNode = baseEdge.node();
+        UniquedStringImpl* uid = node->cacheableIdentifier().uid();
+
+        ASSERT(baseEdge.useKind() == CellUse);
+
+        AbstractValue baseValue = m_state.forNode(baseNode);
+        AbstractValue valueValue = m_state.forNode(valueEdge);
+
+        if (!baseValue.m_structure.isFinite())
+            return;
+
+        PutByIdStatus status = PutByIdStatus::computeFor(
+            m_graph.globalObjectFor(origin.semantic),
+            baseValue.m_structure.toStructureSet(),
+            node->cacheableIdentifier().uid(),
+            isDirect, privateFieldPutKind);
+
+        if (!status.isSimple())
+            return;
+
+        ASSERT(status.numVariants());
+
+        if (status.numVariants() > 1 && !m_graph.m_plan.isFTL())
+            return;
+
+        changed = true;
+
+        RegisteredStructureSet newSet;
+        TransitionVector transitions;
+        for (const PutByIdVariant& variant : status.variants()) {
+            for (const ObjectPropertyCondition& condition : variant.conditionSet()) {
+                if (m_graph.watchCondition(condition))
+                    continue;
+
+                Structure* structure = condition.object()->structure(m_graph.m_vm);
+                if (!condition.structureEnsuresValidity(structure))
+                    return;
+
+                if (variant.kind() == PutByIdVariant::Replace) {
+                    auto* watchpoints = structure->propertyReplacementWatchpointSet(condition.offset());
+                    if (!watchpoints || watchpoints->isStillValid())
+                        return;
+                }
+
+                m_insertionSet.insertNode(
+                    indexInBlock, SpecNone, CheckStructure, node->origin,
+                    OpInfo(m_graph.addStructureSet(structure)),
+                    m_insertionSet.insertConstantForUse(
+                        indexInBlock, node->origin, condition.object(), KnownCellUse));
+            }
+
+            if (variant.kind() == PutByIdVariant::Transition) {
+                ASSERT(privateFieldPutKind.isNone() || privateFieldPutKind.isDefine());
+                RegisteredStructure newStructure = m_graph.registerStructure(variant.newStructure());
+                transitions.append(
+                    Transition(
+                        m_graph.registerStructure(variant.oldStructureForTransition()), newStructure));
+                newSet.add(newStructure);
+            } else {
+                ASSERT(variant.kind() == PutByIdVariant::Replace);
+                ASSERT(privateFieldPutKind.isNone() || privateFieldPutKind.isSet());
+                newSet.merge(*m_graph.addStructureSet(variant.oldStructure()));
+            }
+        }
+
+        // Push CFA over this node after we get the state before.
+        m_interpreter.didFoldClobberWorld();
+        m_interpreter.observeTransitions(indexInBlock, transitions);
+        if (m_state.forNode(baseEdge).changeStructure(m_graph, newSet) == Contradiction)
+            m_state.setIsValid(false);
+
+        alreadyHandled = true; // Don't allow the default constant folder to do things to this.
+
+        m_insertionSet.insertNode(
+            indexInBlock, SpecNone, FilterPutByIdStatus, node->origin,
+            OpInfo(m_graph.m_plan.recordedStatuses().addPutByIdStatus(node->origin.semantic, status)),
+            Edge(baseNode));
+
+        unsigned identifierNumber = m_graph.identifiers().ensure(uid);
+        if (status.numVariants() == 1) {
+            emitPutByOffset(indexInBlock, node, baseValue, status[0], identifierNumber);
+            return;
+        }
+
+        ASSERT(m_graph.m_plan.isFTL());
+
+        MultiPutByOffsetData* data = m_graph.m_multiPutByOffsetData.add();
+        data->variants = status.variants();
+        data->identifierNumber = identifierNumber;
+        node->convertToMultiPutByOffset(data);
     }
 
     InPlaceAbstractState m_state;

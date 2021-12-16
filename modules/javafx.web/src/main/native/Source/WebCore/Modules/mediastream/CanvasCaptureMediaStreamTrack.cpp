@@ -61,7 +61,7 @@ Ref<CanvasCaptureMediaStreamTrack::Source> CanvasCaptureMediaStreamTrack::Source
     auto source = adoptRef(*new Source(canvas, WTFMove(frameRequestRate)));
     source->start();
 
-    callOnMainThread([source = source.copyRef()] {
+    callOnMainThread([source] {
         if (!source->m_canvas)
             return;
         source->captureCanvas();
@@ -79,7 +79,7 @@ CanvasCaptureMediaStreamTrack::Source::Source(HTMLCanvasElement& canvas, Optiona
     : RealtimeMediaSource(Type::Video, "CanvasCaptureMediaStreamTrack"_s)
     , m_frameRequestRate(WTFMove(frameRequestRate))
     , m_requestFrameTimer(*this, &Source::requestFrameTimerFired)
-    , m_canvasChangedTimer(*this, &Source::captureCanvas)
+    , m_captureCanvasTimer(*this, &Source::captureCanvas)
     , m_canvas(&canvas)
 {
 }
@@ -161,15 +161,15 @@ void CanvasCaptureMediaStreamTrack::Source::canvasChanged(CanvasBase& canvas, co
         auto& context = downcast<WebGLRenderingContextBase>(*canvas.renderingContext());
         if (!context.isPreservingDrawingBuffer()) {
             canvas.scriptExecutionContext()->addConsoleMessage(MessageSource::JS, MessageLevel::Warning, "Turning drawing buffer preservation for the WebGL canvas being captured"_s);
-            context.setPreserveDrawingBuffer(true);
+            context.enablePreserveDrawingBuffer();
         }
     }
 #endif
 
     // FIXME: We should try to generate the frame at the time the screen is being updated.
-    if (m_canvasChangedTimer.isActive())
+    if (m_captureCanvasTimer.isActive())
         return;
-    m_canvasChangedTimer.startOneShot(0_s);
+    m_captureCanvasTimer.startOneShot(0_s);
 }
 
 void CanvasCaptureMediaStreamTrack::Source::captureCanvas()

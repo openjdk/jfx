@@ -38,7 +38,22 @@ class FeaturePolicy {
 public:
     static FeaturePolicy parse(Document&, const HTMLIFrameElement&, StringView);
 
-    enum class Type { Camera, Microphone, DisplayCapture, SyncXHR, Fullscreen };
+    enum class Type {
+        Camera,
+        Microphone,
+        SpeakerSelection,
+        DisplayCapture,
+        SyncXHR,
+        Fullscreen,
+#if ENABLE(DEVICE_ORIENTATION)
+        Gyroscope,
+        Accelerometer,
+        Magnetometer,
+#endif
+#if ENABLE(WEBXR)
+        XRSpatialTracking,
+#endif
+    };
     bool allows(Type, const SecurityOriginData&) const;
 
     struct AllowRule {
@@ -50,9 +65,18 @@ public:
 private:
     AllowRule m_cameraRule;
     AllowRule m_microphoneRule;
+    AllowRule m_speakerSelectionRule;
     AllowRule m_displayCaptureRule;
     AllowRule m_syncXHRRule;
     AllowRule m_fullscreenRule;
+#if ENABLE(DEVICE_ORIENTATION)
+    AllowRule m_gyroscopeRule;
+    AllowRule m_accelerometerRule;
+    AllowRule m_magnetometerRule;
+#endif
+#if ENABLE(WEBXR)
+    AllowRule m_xrSpatialTrackingRule;
+#endif
 };
 
 enum class LogFeaturePolicyFailure { No, Yes };

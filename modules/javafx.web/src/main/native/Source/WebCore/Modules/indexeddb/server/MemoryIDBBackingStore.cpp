@@ -35,6 +35,7 @@
 #include "IDBIndexInfo.h"
 #include "IDBIterateCursorData.h"
 #include "IDBKeyRangeData.h"
+#include "IDBSerializationContext.h"
 #include "Logging.h"
 #include "MemoryIndexCursor.h"
 #include "MemoryObjectStore.h"
@@ -49,6 +50,7 @@ constexpr uint64_t maxGeneratedKeyValue = 0x20000000000000;
 MemoryIDBBackingStore::MemoryIDBBackingStore(PAL::SessionID sessionID, const IDBDatabaseIdentifier& identifier)
     : m_identifier(identifier)
     , m_sessionID(sessionID)
+    , m_serializationContext(IDBSerializationContext::getOrCreateIDBSerializationContext(sessionID))
 {
 }
 
@@ -355,7 +357,7 @@ IDBError MemoryIDBBackingStore::deleteRange(const IDBResourceIdentifier& transac
     return IDBError { };
 }
 
-IDBError MemoryIDBBackingStore::addRecord(const IDBResourceIdentifier& transactionIdentifier, const IDBObjectStoreInfo& objectStoreInfo, const IDBKeyData& keyData, const IDBValue& value)
+IDBError MemoryIDBBackingStore::addRecord(const IDBResourceIdentifier& transactionIdentifier, const IDBObjectStoreInfo& objectStoreInfo, const IDBKeyData& keyData, const IndexIDToIndexKeyMap& indexKeys, const IDBValue& value)
 {
     LOG(IndexedDB, "MemoryIDBBackingStore::addRecord");
 
@@ -369,7 +371,7 @@ IDBError MemoryIDBBackingStore::addRecord(const IDBResourceIdentifier& transacti
     if (!objectStore)
         return IDBError { UnknownError, "No backing store object store found to put record"_s };
 
-    return objectStore->addRecord(*transaction, keyData, value);
+    return objectStore->addRecord(*transaction, keyData, indexKeys, value);
 }
 
 IDBError MemoryIDBBackingStore::getRecord(const IDBResourceIdentifier& transactionIdentifier, uint64_t objectStoreIdentifier, const IDBKeyRangeData& range, IDBGetRecordDataType type, IDBGetResult& outValue)
@@ -582,8 +584,8 @@ IDBError MemoryIDBBackingStore::iterateCursor(const IDBResourceIdentifier& trans
 
 void MemoryIDBBackingStore::registerObjectStore(Ref<MemoryObjectStore>&& objectStore)
 {
-    ASSERT(!m_objectStoresByIdentifier.contains(objectStore->info().identifier()));
-    ASSERT(!m_objectStoresByName.contains(objectStore->info().name()));
+    RELEASE_ASSERT(!m_objectStoresByIdentifier.contains(objectStore->info().identifier()));
+    RELEASE_ASSERT(!m_objectStoresByName.contains(objectStore->info().name()));
 
     auto identifier = objectStore->info().identifier();
     m_objectStoresByName.set(objectStore->info().name(), &objectStore.get());
@@ -609,6 +611,11 @@ RefPtr<MemoryObjectStore> MemoryIDBBackingStore::takeObjectStoreByIdentifier(uin
     ASSERT_UNUSED(objectStore, objectStore);
 
     return objectStoreByIdentifier;
+}
+
+IDBSerializationContext& MemoryIDBBackingStore::serializationContext()
+{
+    return m_serializationContext.get();
 }
 
 IDBObjectStoreInfo* MemoryIDBBackingStore::infoForObjectStore(uint64_t objectStoreIdentifier)

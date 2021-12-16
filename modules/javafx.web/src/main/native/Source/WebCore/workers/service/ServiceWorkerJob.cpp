@@ -37,6 +37,7 @@
 #include "SecurityOrigin.h"
 #include "ServiceWorkerJobData.h"
 #include "ServiceWorkerRegistration.h"
+#include "WorkerRunLoop.h"
 
 namespace WebCore {
 
@@ -110,7 +111,8 @@ void ServiceWorkerJob::fetchScriptWithContext(ScriptExecutionContext& context, F
     options.cache = cachePolicy;
     options.redirect = FetchOptions::Redirect::Error;
     options.destination = FetchOptions::Destination::Serviceworker;
-    m_scriptLoader->loadAsynchronously(context, WTFMove(request), WTFMove(options), ContentSecurityPolicyEnforcement::DoNotEnforce, ServiceWorkersMode::None, *this);
+    options.credentials = FetchOptions::Credentials::SameOrigin;
+    m_scriptLoader->loadAsynchronously(context, WTFMove(request), WTFMove(options), ContentSecurityPolicyEnforcement::DoNotEnforce, ServiceWorkersMode::None, *this, WorkerRunLoop::defaultMode());
 }
 
 ResourceError ServiceWorkerJob::validateServiceWorkerResponse(const ServiceWorkerJobData& jobData, const ResourceResponse& response)
@@ -119,20 +121,20 @@ ResourceError ServiceWorkerJob::validateServiceWorkerResponse(const ServiceWorke
     if (!MIMETypeRegistry::isSupportedJavaScriptMIMEType(response.mimeType()))
         return { errorDomainWebKitInternal, 0, response.url(), "MIME Type is not a JavaScript MIME type"_s };
 
-    String serviceWorkerAllowed = response.httpHeaderField(HTTPHeaderName::ServiceWorkerAllowed);
+    auto serviceWorkerAllowed = response.httpHeaderField(HTTPHeaderName::ServiceWorkerAllowed);
     String maxScopeString;
     if (serviceWorkerAllowed.isNull()) {
-        String path = jobData.scriptURL.path();
+        auto path = jobData.scriptURL.path();
         // Last part of the path is the script's filename.
-        maxScopeString = path.substring(0, path.reverseFind('/') + 1);
+        maxScopeString = path.substring(0, path.reverseFind('/') + 1).toString();
     } else {
         auto maxScope = URL(jobData.scriptURL, serviceWorkerAllowed);
         if (SecurityOrigin::create(maxScope)->isSameOriginAs(SecurityOrigin::create(jobData.scriptURL)))
-            maxScopeString = maxScope.path();
+            maxScopeString = maxScope.path().toString();
     }
 
-    String scopeString = jobData.scopeURL.path();
-    if (!scopeString.startsWith(maxScopeString))
+    auto scopeString = jobData.scopeURL.path();
+    if (maxScopeString.isNull() || !scopeString.startsWith(maxScopeString))
         return { errorDomainWebKitInternal, 0, response.url(), "Scope URL should start with the given script URL"_s };
 
     return { };
@@ -163,7 +165,7 @@ void ServiceWorkerJob::notifyFinished()
     auto scriptLoader = WTFMove(m_scriptLoader);
 
     if (!scriptLoader->failed()) {
-        m_client.jobFinishedLoadingScript(*this, scriptLoader->script(), scriptLoader->contentSecurityPolicy(), scriptLoader->referrerPolicy());
+        m_client.jobFinishedLoadingScript(*this, scriptLoader->script(), scriptLoader->certificateInfo(), scriptLoader->contentSecurityPolicy(), scriptLoader->referrerPolicy());
         return;
     }
 

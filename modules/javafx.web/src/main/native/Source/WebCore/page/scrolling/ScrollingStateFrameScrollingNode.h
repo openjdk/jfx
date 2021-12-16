@@ -45,38 +45,11 @@ public:
 
     virtual ~ScrollingStateFrameScrollingNode();
 
-    enum ChangedProperty {
-        FrameScaleFactor = NumScrollingStateNodeBits,
-        EventTrackingRegion,
-        ReasonsForSynchronousScrolling,
-        RootContentsLayer,
-        ScrolledContentsLayer,
-        CounterScrollingLayer,
-        InsetClipLayer,
-        ContentShadowLayer,
-        HeaderHeight,
-        FooterHeight,
-        HeaderLayer,
-        FooterLayer,
-        BehaviorForFixedElements,
-        TopContentInset,
-        FixedElementsLayoutRelativeToFrame,
-        VisualViewportIsSmallerThanLayoutViewport,
-        AsyncFrameOrOverflowScrollingEnabled,
-        LayoutViewport,
-        MinLayoutViewportOrigin,
-        MaxLayoutViewportOrigin,
-        OverrideVisualViewportSize,
-    };
-
     float frameScaleFactor() const { return m_frameScaleFactor; }
     WEBCORE_EXPORT void setFrameScaleFactor(float);
 
     const EventTrackingRegions& eventTrackingRegions() const { return m_eventTrackingRegions; }
     WEBCORE_EXPORT void setEventTrackingRegions(const EventTrackingRegions&);
-
-    SynchronousScrollingReasons synchronousScrollingReasons() const { return m_synchronousScrollingReasons; }
-    WEBCORE_EXPORT void setSynchronousScrollingReasons(SynchronousScrollingReasons);
 
     ScrollBehaviorForFixedElements scrollBehaviorForFixedElements() const { return m_behaviorForFixed; }
     WEBCORE_EXPORT void setScrollBehaviorForFixedElements(ScrollBehaviorForFixedElements);
@@ -138,13 +111,19 @@ public:
     bool asyncFrameOrOverflowScrollingEnabled() const { return m_asyncFrameOrOverflowScrollingEnabled; }
     void setAsyncFrameOrOverflowScrollingEnabled(bool);
 
+    bool scrollingPerformanceTestingEnabled() const { return m_scrollingPerformanceTestingEnabled; }
+    WEBCORE_EXPORT void setScrollingPerformanceTestingEnabled(bool);
+
+    bool wheelEventGesturesBecomeNonBlocking() const { return m_wheelEventGesturesBecomeNonBlocking; }
+    WEBCORE_EXPORT void setWheelEventGesturesBecomeNonBlocking(bool);
+
     void dumpProperties(WTF::TextStream&, ScrollingStateTreeAsTextBehavior) const override;
 
 private:
     ScrollingStateFrameScrollingNode(ScrollingStateTree&, ScrollingNodeType, ScrollingNodeID);
     ScrollingStateFrameScrollingNode(const ScrollingStateFrameScrollingNode&, ScrollingStateTree&);
 
-    void setPropertyChangedBitsAfterReattach() override;
+    OptionSet<ScrollingStateNode::Property> applicableProperties() const final;
 
     LayerRepresentation m_rootContentsLayer;
     LayerRepresentation m_counterScrollingLayer;
@@ -164,11 +143,12 @@ private:
     float m_topContentInset { 0 };
     int m_headerHeight { 0 };
     int m_footerHeight { 0 };
-    SynchronousScrollingReasons m_synchronousScrollingReasons { 0 };
     ScrollBehaviorForFixedElements m_behaviorForFixed { StickToDocumentBounds };
     bool m_fixedElementsLayoutRelativeToFrame { false };
     bool m_visualViewportIsSmallerThanLayoutViewport { false };
     bool m_asyncFrameOrOverflowScrollingEnabled { false };
+    bool m_wheelEventGesturesBecomeNonBlocking { false };
+    bool m_scrollingPerformanceTestingEnabled { false };
 };
 
 } // namespace WebCore

@@ -27,8 +27,7 @@
 #include "config.h"
 #include "Symbol.h"
 
-#include "Error.h"
-#include "JSCInlines.h"
+#include "JSCJSValueInlines.h"
 #include "SymbolObject.h"
 
 namespace JSC {
@@ -71,13 +70,6 @@ inline SymbolObject* SymbolObject::create(VM& vm, JSGlobalObject* globalObject, 
 JSValue Symbol::toPrimitive(JSGlobalObject*, PreferredPrimitiveType) const
 {
     return const_cast<Symbol*>(this);
-}
-
-bool Symbol::getPrimitiveNumber(JSGlobalObject* globalObject, double& number, JSValue& result) const
-{
-    result = this;
-    number = toNumber(globalObject);
-    return true;
 }
 
 JSObject* Symbol::toObject(JSGlobalObject* globalObject) const

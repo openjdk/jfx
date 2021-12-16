@@ -1,7 +1,7 @@
 /*
  *  Copyright (C) 1999-2001 Harri Porten (porten@kde.org)
  *  Copyright (C) 2001 Peter Kelly (pmk@post.com)
- *  Copyright (C) 2003-2019 Apple Inc. All rights reserved.
+ *  Copyright (C) 2003-2020 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Library General Public
@@ -45,7 +45,7 @@ public:
 
     static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
     {
-        return Structure::create(vm, globalObject, prototype, TypeInfo(APIValueWrapperType, OverridesGetPropertyNames), info());
+        return Structure::create(vm, globalObject, prototype, TypeInfo(APIValueWrapperType, StructureFlags), info());
     }
 
     DECLARE_EXPORT_INFO;
@@ -57,7 +57,7 @@ public:
         return wrapper;
     }
 
-protected:
+private:
     void finishCreation(VM& vm, JSValue value)
     {
         Base::finishCreation(vm);
@@ -65,7 +65,6 @@ protected:
         ASSERT(!value.isCell());
     }
 
-private:
     JSAPIValueWrapper(VM& vm)
         : JSCell(vm, vm.apiWrapperStructure.get())
     {

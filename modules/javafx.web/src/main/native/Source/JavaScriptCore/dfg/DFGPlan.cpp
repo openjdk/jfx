@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -51,7 +51,6 @@
 #include "DFGLiveCatchVariablePreservationPhase.h"
 #include "DFGLivenessAnalysisPhase.h"
 #include "DFGLoopPreHeaderCreationPhase.h"
-#include "DFGMovHintRemovalPhase.h"
 #include "DFGOSRAvailabilityAnalysisPhase.h"
 #include "DFGOSREntrypointCreationPhase.h"
 #include "DFGObjectAllocationSinkingPhase.h"
@@ -74,7 +73,7 @@
 #include "DFGVarargsForwardingPhase.h"
 #include "DFGVirtualRegisterAllocationPhase.h"
 #include "DFGWatchpointCollectionPhase.h"
-#include "JSCInlines.h"
+#include "JSCJSValueInlines.h"
 #include "OperandsInlines.h"
 #include "ProfilerDatabase.h"
 #include "TrackedReferences.h"
@@ -365,6 +364,7 @@ Plan::CompilationPath Plan::compileInThreadImpl()
     if (changed) {
         RUN_PHASE(performCFA);
         RUN_PHASE(performConstantFolding);
+        RUN_PHASE(performCFGSimplification);
     }
 
     // If we're doing validation, then run some analyses, to give them an opportunity
@@ -430,6 +430,7 @@ Plan::CompilationPath Plan::compileInThreadImpl()
         RUN_PHASE(performLivenessAnalysis);
         RUN_PHASE(performCFA);
         RUN_PHASE(performConstantFolding);
+        RUN_PHASE(performCFGSimplification);
         RUN_PHASE(performCleanUp); // Reduce the graph size a lot.
         changed = false;
         RUN_PHASE(performStrengthReduction);
@@ -445,6 +446,7 @@ Plan::CompilationPath Plan::compileInThreadImpl()
             RUN_PHASE(performLivenessAnalysis);
             RUN_PHASE(performCFA);
             RUN_PHASE(performConstantFolding);
+            RUN_PHASE(performCFGSimplification);
         }
 
         // Currently, this relies on pre-headers still being valid. That precludes running CFG
@@ -478,8 +480,6 @@ Plan::CompilationPath Plan::compileInThreadImpl()
         RUN_PHASE(performCFA);
         RUN_PHASE(performGlobalStoreBarrierInsertion);
         RUN_PHASE(performStoreBarrierClustering);
-        if (Options::useMovHintRemoval())
-            RUN_PHASE(performMovHintRemoval);
         RUN_PHASE(performCleanUp);
         RUN_PHASE(performDCE); // We rely on this to kill dead code that won't be recognized as dead by B3.
         RUN_PHASE(performStackLayout);
@@ -569,12 +569,16 @@ bool Plan::isStillValid()
 
 void Plan::reallyAdd(CommonData* commonData)
 {
+    ASSERT(m_vm->heap.isDeferred());
     m_watchpoints.reallyAdd(m_codeBlock, *commonData);
     m_identifiers.reallyAdd(*m_vm, commonData);
     m_weakReferences.reallyAdd(*m_vm, commonData);
     m_transitions.reallyAdd(*m_vm, commonData);
     m_globalProperties.reallyAdd(m_codeBlock, m_identifiers, *commonData);
+    {
+        ConcurrentJSLocker locker(m_codeBlock->m_lock);
     commonData->recordedStatuses = WTFMove(m_recordedStatuses);
+    }
 }
 
 void Plan::notifyCompiling()
@@ -623,6 +627,12 @@ CompilationResult Plan::finalizeWithoutNotifyingCallback()
             m_codeBlock->shrinkToFit(locker, CodeBlock::ShrinkMode::LateShrink);
         }
 
+        // Since Plan::reallyAdd could fire watchpoints (see ArrayBufferViewWatchpointAdaptor::add), it is possible that the current CodeBlock is now invalidated.
+        if (!m_codeBlock->jitCode()->dfgCommon()->isStillValid) {
+            CODEBLOCK_LOG_EVENT(m_codeBlock, "dfgFinalize", ("invalidated"));
+            return CompilationInvalidated;
+        }
+
         if (validationEnabled()) {
             TrackedReferences trackedReferences;
 
@@ -662,9 +672,10 @@ CompilationKey Plan::key()
     return CompilationKey(m_codeBlock->alternative(), m_mode);
 }
 
-void Plan::checkLivenessAndVisitChildren(SlotVisitor& visitor)
+template<typename Visitor>
+void Plan::checkLivenessAndVisitChildren(Visitor& visitor)
 {
-    if (!isKnownToBeLiveDuringGC())
+    if (!isKnownToBeLiveDuringGC(visitor))
         return;
 
     cleanMustHandleValuesIfNecessary();
@@ -692,13 +703,33 @@ void Plan::checkLivenessAndVisitChildren(SlotVisitor& visitor)
     m_transitions.visitChildren(visitor);
 }
 
+template void Plan::checkLivenessAndVisitChildren(AbstractSlotVisitor&);
+template void Plan::checkLivenessAndVisitChildren(SlotVisitor&);
+
 void Plan::finalizeInGC()
 {
     ASSERT(m_vm);
     m_recordedStatuses.finalizeWithoutDeleting(*m_vm);
 }
 
-bool Plan::isKnownToBeLiveDuringGC()
+template<typename Visitor>
+bool Plan::isKnownToBeLiveDuringGC(Visitor& visitor)
+{
+    if (m_stage == Cancelled)
+        return false;
+    if (!visitor.isMarked(m_codeBlock->ownerExecutable()))
+        return false;
+    if (!visitor.isMarked(m_codeBlock->alternative()))
+        return false;
+    if (!!m_profiledDFGCodeBlock && !visitor.isMarked(m_profiledDFGCodeBlock))
+        return false;
+    return true;
+}
+
+template bool Plan::isKnownToBeLiveDuringGC(AbstractSlotVisitor&);
+template bool Plan::isKnownToBeLiveDuringGC(SlotVisitor&);
+
+bool Plan::isKnownToBeLiveAfterGC()
 {
     if (m_stage == Cancelled)
         return false;
@@ -748,7 +779,7 @@ void Plan::cleanMustHandleValuesIfNecessary()
         return;
 
     CodeBlock* alternative = m_codeBlock->alternative();
-    FastBitVector liveness = alternative->livenessAnalysis().getLivenessInfoAtBytecodeIndex(alternative, m_osrEntryBytecodeIndex);
+    FastBitVector liveness = alternative->livenessAnalysis().getLivenessInfoAtInstruction(alternative, m_osrEntryBytecodeIndex);
 
     for (unsigned local = m_mustHandleValues.numberOfLocals(); local--;) {
         if (!liveness[local])

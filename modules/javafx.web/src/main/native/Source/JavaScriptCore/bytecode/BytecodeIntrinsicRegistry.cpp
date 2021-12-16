@@ -27,18 +27,21 @@
 #include "config.h"
 #include "BytecodeIntrinsicRegistry.h"
 
-#include "ArrayIteratorPrototype.h"
+#include "AbstractModuleRecord.h"
 #include "BuiltinNames.h"
 #include "BytecodeGenerator.h"
+#include "IdentifierInlines.h"
 #include "IterationKind.h"
 #include "JSArrayIterator.h"
 #include "JSAsyncGenerator.h"
-#include "JSCInlines.h"
 #include "JSGenerator.h"
 #include "JSGlobalObject.h"
+#include "JSMapIterator.h"
 #include "JSModuleLoader.h"
 #include "JSPromise.h"
+#include "JSSetIterator.h"
 #include "JSStringIterator.h"
+#include "LinkTimeConstant.h"
 #include "Nodes.h"
 #include "StrongInlines.h"
 
@@ -84,14 +87,18 @@ BytecodeIntrinsicRegistry::BytecodeIntrinsicRegistry(VM& vm)
     m_generatorFieldNext.set(m_vm, jsNumber(static_cast<unsigned>(JSGenerator::Field::Next)));
     m_generatorFieldThis.set(m_vm, jsNumber(static_cast<unsigned>(JSGenerator::Field::This)));
     m_generatorFieldFrame.set(m_vm, jsNumber(static_cast<unsigned>(JSGenerator::Field::Frame)));
-    m_GeneratorResumeModeNormal.set(m_vm, jsNumber(static_cast<int32_t>(JSGenerator::GeneratorResumeMode::NormalMode)));
-    m_GeneratorResumeModeThrow.set(m_vm, jsNumber(static_cast<int32_t>(JSGenerator::GeneratorResumeMode::ThrowMode)));
-    m_GeneratorResumeModeReturn.set(m_vm, jsNumber(static_cast<int32_t>(JSGenerator::GeneratorResumeMode::ReturnMode)));
-    m_GeneratorStateCompleted.set(m_vm, jsNumber(static_cast<int32_t>(JSGenerator::GeneratorState::Completed)));
-    m_GeneratorStateExecuting.set(m_vm, jsNumber(static_cast<int32_t>(JSGenerator::GeneratorState::Executing)));
+    m_GeneratorResumeModeNormal.set(m_vm, jsNumber(static_cast<int32_t>(JSGenerator::ResumeMode::NormalMode)));
+    m_GeneratorResumeModeThrow.set(m_vm, jsNumber(static_cast<int32_t>(JSGenerator::ResumeMode::ThrowMode)));
+    m_GeneratorResumeModeReturn.set(m_vm, jsNumber(static_cast<int32_t>(JSGenerator::ResumeMode::ReturnMode)));
+    m_GeneratorStateCompleted.set(m_vm, jsNumber(static_cast<int32_t>(JSGenerator::State::Completed)));
+    m_GeneratorStateExecuting.set(m_vm, jsNumber(static_cast<int32_t>(JSGenerator::State::Executing)));
     m_arrayIteratorFieldIteratedObject.set(m_vm, jsNumber(static_cast<int32_t>(JSArrayIterator::Field::IteratedObject)));
     m_arrayIteratorFieldIndex.set(m_vm, jsNumber(static_cast<int32_t>(JSArrayIterator::Field::Index)));
     m_arrayIteratorFieldKind.set(m_vm, jsNumber(static_cast<int32_t>(JSArrayIterator::Field::Kind)));
+    m_mapIteratorFieldMapBucket.set(m_vm, jsNumber(static_cast<int32_t>(JSMapIterator::Field::MapBucket)));
+    m_mapIteratorFieldKind.set(m_vm, jsNumber(static_cast<int32_t>(JSMapIterator::Field::Kind)));
+    m_setIteratorFieldSetBucket.set(m_vm, jsNumber(static_cast<int32_t>(JSSetIterator::Field::SetBucket)));
+    m_setIteratorFieldKind.set(m_vm, jsNumber(static_cast<int32_t>(JSSetIterator::Field::Kind)));
     m_stringIteratorFieldIndex.set(m_vm, jsNumber(static_cast<int32_t>(JSStringIterator::Field::Index)));
     m_stringIteratorFieldIteratedString.set(m_vm, jsNumber(static_cast<int32_t>(JSStringIterator::Field::IteratedString)));
     m_asyncGeneratorFieldSuspendReason.set(m_vm, jsNumber(static_cast<unsigned>(JSAsyncGenerator::Field::SuspendReason)));
@@ -105,6 +112,8 @@ BytecodeIntrinsicRegistry::BytecodeIntrinsicRegistry(VM& vm)
     m_AsyncGeneratorSuspendReasonYield.set(m_vm, jsNumber(static_cast<int32_t>(JSAsyncGenerator::AsyncGeneratorSuspendReason::Yield)));
     m_AsyncGeneratorSuspendReasonAwait.set(m_vm, jsNumber(static_cast<int32_t>(JSAsyncGenerator::AsyncGeneratorSuspendReason::Await)));
     m_AsyncGeneratorSuspendReasonNone.set(m_vm, jsNumber(static_cast<int32_t>(JSAsyncGenerator::AsyncGeneratorSuspendReason::None)));
+    m_useIntlDateTimeFormatDayPeriod.set(m_vm, jsBoolean(Options::useIntlDateTimeFormatDayPeriod()));
+    m_abstractModuleRecordFieldState.set(m_vm, jsNumber(static_cast<int32_t>(AbstractModuleRecord::Field::State)));
 }
 
 Optional<BytecodeIntrinsicRegistry::Entry> BytecodeIntrinsicRegistry::lookup(const Identifier& ident) const

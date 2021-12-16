@@ -28,15 +28,18 @@
 
 #if ENABLE(WEBASSEMBLY)
 
-#include "FunctionPrototype.h"
+#include "AuxiliaryBarrierInlines.h"
 #include "JSArrayBuffer.h"
-#include "JSCInlines.h"
-#include "JSWebAssemblyMemory.h"
+#include "JSCJSValueInlines.h"
+#include "JSGlobalObjectInlines.h"
+#include "JSObjectInlines.h"
 #include "JSWebAssemblyHelpers.h"
+#include "JSWebAssemblyMemory.h"
+#include "StructureInlines.h"
 
 namespace JSC {
-static EncodedJSValue JSC_HOST_CALL webAssemblyMemoryProtoFuncGrow(JSGlobalObject*, CallFrame*);
-static EncodedJSValue JSC_HOST_CALL webAssemblyMemoryProtoFuncBuffer(JSGlobalObject*, CallFrame*);
+static JSC_DECLARE_HOST_FUNCTION(webAssemblyMemoryProtoFuncGrow);
+static JSC_DECLARE_HOST_FUNCTION(webAssemblyMemoryProtoFuncBuffer);
 }
 
 #include "WebAssemblyMemoryPrototype.lut.h"
@@ -66,7 +69,7 @@ ALWAYS_INLINE JSWebAssemblyMemory* getMemory(JSGlobalObject* globalObject, VM& v
     return memory;
 }
 
-EncodedJSValue JSC_HOST_CALL webAssemblyMemoryProtoFuncGrow(JSGlobalObject* globalObject, CallFrame* callFrame)
+JSC_DEFINE_HOST_FUNCTION(webAssemblyMemoryProtoFuncGrow, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     VM& vm = globalObject->vm();
     auto throwScope = DECLARE_THROW_SCOPE(vm);
@@ -83,14 +86,14 @@ EncodedJSValue JSC_HOST_CALL webAssemblyMemoryProtoFuncGrow(JSGlobalObject* glob
     return JSValue::encode(jsNumber(result.pageCount()));
 }
 
-EncodedJSValue JSC_HOST_CALL webAssemblyMemoryProtoFuncBuffer(JSGlobalObject* globalObject, CallFrame* callFrame)
+JSC_DEFINE_HOST_FUNCTION(webAssemblyMemoryProtoFuncBuffer, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     VM& vm = globalObject->vm();
     auto throwScope = DECLARE_THROW_SCOPE(vm);
 
     JSWebAssemblyMemory* memory = getMemory(globalObject, vm, callFrame->thisValue());
     RETURN_IF_EXCEPTION(throwScope, { });
-    return JSValue::encode(memory->buffer(globalObject->vm(), globalObject));
+    RELEASE_AND_RETURN(throwScope, JSValue::encode(memory->buffer(globalObject)));
 }
 
 WebAssemblyMemoryPrototype* WebAssemblyMemoryPrototype::create(VM& vm, JSGlobalObject*, Structure* structure)
@@ -109,6 +112,7 @@ void WebAssemblyMemoryPrototype::finishCreation(VM& vm)
 {
     Base::finishCreation(vm);
     ASSERT(inherits(vm, info()));
+    JSC_TO_STRING_TAG_WITHOUT_TRANSITION();
 }
 
 WebAssemblyMemoryPrototype::WebAssemblyMemoryPrototype(VM& vm, Structure* structure)

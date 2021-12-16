@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -41,13 +41,16 @@ using namespace JSC;
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(PaintWorkletGlobalScope);
 
-Ref<PaintWorkletGlobalScope> PaintWorkletGlobalScope::create(Document& document, ScriptSourceCode&& code)
+RefPtr<PaintWorkletGlobalScope> PaintWorkletGlobalScope::tryCreate(Document& document, ScriptSourceCode&& code)
 {
-    return adoptRef(*new PaintWorkletGlobalScope(document, WTFMove(code)));
+    RefPtr<VM> vm = VM::tryCreate();
+    if (!vm)
+        return nullptr;
+    return adoptRef(*new PaintWorkletGlobalScope(document, vm.releaseNonNull(), WTFMove(code)));
 }
 
-PaintWorkletGlobalScope::PaintWorkletGlobalScope(Document& document, ScriptSourceCode&& code)
-    : WorkletGlobalScope(document, WTFMove(code))
+PaintWorkletGlobalScope::PaintWorkletGlobalScope(Document& document, Ref<VM>&& vm, ScriptSourceCode&& code)
+    : WorkletGlobalScope(document, WTFMove(vm), WTFMove(code))
 {
 }
 
@@ -75,8 +78,7 @@ ExceptionOr<void> PaintWorkletGlobalScope::registerPaint(JSC::JSGlobalObject& gl
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     // Validate that paintConstructor is a VoidFunction
-    CallData callData;
-    if (JSC::getCallData(vm, paintConstructor.get(), callData) == JSC::CallType::None)
+    if (!paintConstructor->isCallable(vm))
         return Exception { TypeError, "paintConstructor must be callable" };
 
     if (name.isEmpty())

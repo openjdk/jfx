@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -149,7 +149,7 @@ public class NumberAxisTest {
      * CSS related Tests                                                 *
      ********************************************************************/
 
-    @Test public void whenTickUnitIsBound_impl_cssSettable_ReturnsFalse() {
+    @Test public void whenTickUnitIsBound_CssMetaData_isSettable_ReturnsFalse() {
         CssMetaData styleable = ((StyleableProperty)axis.tickUnitProperty()).getCssMetaData();
         assertTrue(styleable.isSettable(axis));
         DoubleProperty other = new SimpleDoubleProperty();
@@ -157,7 +157,7 @@ public class NumberAxisTest {
         assertFalse(styleable.isSettable(axis));
     }
 
-    @Test public void whenTickUnitIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
+    @Test public void whenTickUnitIsSpecifiedViaCSSAndIsNotBound_CssMetaData_isSettable_ReturnsTrue() {
         CssMetaData styleable = ((StyleableProperty)axis.tickUnitProperty()).getCssMetaData();
         assertTrue(styleable.isSettable(axis));
     }

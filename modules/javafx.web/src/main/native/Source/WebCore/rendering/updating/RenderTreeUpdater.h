@@ -28,6 +28,7 @@
 #include "RenderTreeBuilder.h"
 #include "RenderTreePosition.h"
 #include "StyleChange.h"
+#include "StyleTreeResolver.h"
 #include "StyleUpdate.h"
 #include <wtf/HashSet.h>
 #include <wtf/Vector.h>
@@ -43,12 +44,13 @@ class Text;
 
 class RenderTreeUpdater {
 public:
-    RenderTreeUpdater(Document&);
+    RenderTreeUpdater(Document&, Style::PostResolutionCallbackDisabler&);
     ~RenderTreeUpdater();
 
     void commit(std::unique_ptr<const Style::Update>);
 
     static void tearDownRenderers(Element&);
+    static void tearDownRenderersAfterSlotChange(Element& host);
     static void tearDownRenderer(Text&);
 
 private:
@@ -57,7 +59,7 @@ private:
     void updateRenderTree(ContainerNode& root);
     void updateTextRenderer(Text&, const Style::TextUpdate*);
     void createTextRenderer(Text&, const Style::TextUpdate*);
-    void updateElementRenderer(Element&, const Style::ElementUpdate&);
+    void updateElementRenderer(Element&, const Style::ElementUpdates&);
     void updateRendererStyle(RenderElement&, RenderStyle&&, StyleDifference);
     void createRenderer(Element&, RenderStyle&&);
     void updateBeforeDescendants(Element&, const Style::ElementUpdates*);
@@ -86,7 +88,8 @@ private:
     void popParent();
     void popParentsToDepth(unsigned depth);
 
-    enum class TeardownType { Full, RendererUpdate, RendererUpdateCancelingAnimations };
+    // FIXME: Use OptionSet.
+    enum class TeardownType { Full, FullAfterSlotChange, RendererUpdate, RendererUpdateCancelingAnimations };
     static void tearDownRenderers(Element&, TeardownType, RenderTreeBuilder&);
     static void tearDownTextRenderer(Text&, RenderTreeBuilder&);
     static void tearDownLeftoverShadowHostChildren(Element&, RenderTreeBuilder&);

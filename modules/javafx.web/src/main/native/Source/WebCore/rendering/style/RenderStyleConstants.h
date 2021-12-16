@@ -2,7 +2,7 @@
  * Copyright (C) 2000 Lars Knoll (knoll@kde.org)
  *           (C) 2000 Antti Koivisto (koivisto@kde.org)
  *           (C) 2000 Dirk Mueller (mueller@kde.org)
- * Copyright (C) 2003, 2005, 2006, 2007, 2008, 2009, 2010 Apple Inc. All rights reserved.
+ * Copyright (C) 2003-2020 Apple Inc. All rights reserved.
  * Copyright (C) 2006 Graham Dennis (graham.dennis@gmail.com)
  * Copyright (C) 2009 Torch Mobile Inc. All rights reserved. (http://www.torchmobile.com/)
  *
@@ -26,6 +26,7 @@
 #pragma once
 
 #include <initializer_list>
+#include <wtf/EnumTraits.h>
 
 namespace WTF {
 class TextStream;
@@ -518,9 +519,9 @@ enum class ObjectFit : uint8_t {
 
 enum class AspectRatioType : uint8_t {
     Auto,
-    FromIntrinsic,
-    FromDimensions,
-    Specified
+    Ratio,
+    AutoAndRatio,
+    AutoZero
 };
 
 enum class WordBreak : uint8_t {
@@ -638,6 +639,7 @@ enum class ListStyleType : uint8_t {
     Katakana,
     HiraganaIroha,
     KatakanaIroha,
+    String,
     None
 };
 
@@ -918,7 +920,10 @@ enum class PointerEvents : uint8_t {
 
 enum class TransformStyle3D : uint8_t {
     Flat,
-    Preserve3D
+    Preserve3D,
+#if ENABLE(CSS_TRANSFORM_STYLE_OPTIMIZED_3D)
+    Optimized3D
+#endif
 };
 
 enum class BackfaceVisibility : uint8_t {
@@ -1126,6 +1131,11 @@ enum class ScrollSnapAxisAlignType : uint8_t {
     Center,
     End
 };
+
+enum class ScrollSnapStop : uint8_t {
+    Normal,
+    Always,
+};
 #endif
 
 #if ENABLE(CSS_TRAILING_WORD)
@@ -1147,10 +1157,18 @@ enum class ApplePayButtonType : uint8_t {
     Buy,
     SetUp,
     Donate,
-#if ENABLE(APPLE_PAY_SESSION_V4)
     CheckOut,
     Book,
     Subscribe,
+#if ENABLE(APPLE_PAY_NEW_BUTTON_TYPES)
+    Reload,
+    AddMoney,
+    TopUp,
+    Order,
+    Rent,
+    Support,
+    Contribute,
+    Tip,
 #endif
 };
 #endif
@@ -1178,6 +1196,16 @@ enum class FontLoadingBehavior : uint8_t {
     Swap,
     Fallback,
     Optional
+};
+
+enum class EventListenerRegionType : uint8_t {
+    Wheel           = 1 << 0,
+    NonPassiveWheel = 1 << 1,
+};
+
+enum class MathStyle : uint8_t {
+    Normal,
+    Compact,
 };
 
 extern const float defaultMiterLimit;
@@ -1222,6 +1250,7 @@ WTF::TextStream& operator<<(WTF::TextStream&, CursorVisibility);
 WTF::TextStream& operator<<(WTF::TextStream&, DisplayType);
 WTF::TextStream& operator<<(WTF::TextStream&, Edge);
 WTF::TextStream& operator<<(WTF::TextStream&, EmptyCell);
+WTF::TextStream& operator<<(WTF::TextStream&, EventListenerRegionType);
 WTF::TextStream& operator<<(WTF::TextStream&, FillAttachment);
 WTF::TextStream& operator<<(WTF::TextStream&, FillBox);
 WTF::TextStream& operator<<(WTF::TextStream&, FillRepeat);
@@ -1264,6 +1293,7 @@ WTF::TextStream& operator<<(WTF::TextStream&, RubyPosition);
 #if ENABLE(CSS_SCROLL_SNAP)
 WTF::TextStream& operator<<(WTF::TextStream&, ScrollSnapAxis);
 WTF::TextStream& operator<<(WTF::TextStream&, ScrollSnapAxisAlignType);
+WTF::TextStream& operator<<(WTF::TextStream&, ScrollSnapStop);
 WTF::TextStream& operator<<(WTF::TextStream&, ScrollSnapStrictness);
 #endif
 WTF::TextStream& operator<<(WTF::TextStream&, SpeakAs);
@@ -1292,5 +1322,18 @@ WTF::TextStream& operator<<(WTF::TextStream&, VerticalAlign);
 WTF::TextStream& operator<<(WTF::TextStream&, Visibility);
 WTF::TextStream& operator<<(WTF::TextStream&, WhiteSpace);
 WTF::TextStream& operator<<(WTF::TextStream&, WordBreak);
+WTF::TextStream& operator<<(WTF::TextStream&, MathStyle);
 
 } // namespace WebCore
+
+#if ENABLE(CSS_SCROLL_SNAP)
+namespace WTF {
+template<> struct EnumTraits<WebCore::ScrollSnapStop> {
+    using values = EnumValues<
+        WebCore::ScrollSnapStop,
+        WebCore::ScrollSnapStop::Normal,
+        WebCore::ScrollSnapStop::Always
+    >;
+};
+}
+#endif

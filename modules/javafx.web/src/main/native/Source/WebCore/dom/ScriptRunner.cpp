@@ -96,10 +96,8 @@ void ScriptRunner::notifyFinished(PendingScript& pendingScript)
 {
     if (pendingScript.element().willExecuteInOrder())
         ASSERT(!m_scriptsToExecuteInOrder.isEmpty());
-    else {
-        ASSERT(m_pendingAsyncScripts.contains(pendingScript));
-        m_scriptsToExecuteSoon.append(m_pendingAsyncScripts.take(pendingScript)->ptr());
-    }
+    else
+        m_scriptsToExecuteSoon.append(m_pendingAsyncScripts.take(pendingScript).releaseNonNull());
     pendingScript.clearClient();
 
     if (!m_document.hasActiveParserYieldToken())
@@ -112,7 +110,16 @@ void ScriptRunner::timerFired()
 
     Vector<RefPtr<PendingScript>> scripts;
 
-    if (!m_document.shouldDeferAsynchronousScriptsUntilParsingFinishes())
+    if (m_document.shouldDeferAsynchronousScriptsUntilParsingFinishes()) {
+        // Scripts not added by the parser are executed asynchronously and yet do not have the 'async' attribute set.
+        // We only want to delay scripts that were explicitly marked as 'async' by the developer.
+        m_scriptsToExecuteSoon.removeAllMatching([&](auto& pendingScript) {
+            if (pendingScript->element().hasAsyncAttribute())
+                return false;
+            scripts.append(WTFMove(pendingScript));
+            return true;
+        });
+    } else
         scripts.swap(m_scriptsToExecuteSoon);
 
     size_t numInOrderScriptsToExecute = 0;

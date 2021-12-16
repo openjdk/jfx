@@ -80,6 +80,8 @@ static CalculationCategory calcUnitCategory(CSSUnitType type)
     case CSSUnitType::CSS_PT:
     case CSSUnitType::CSS_PC:
     case CSSUnitType::CSS_Q:
+    case CSSUnitType::CSS_LHS:
+    case CSSUnitType::CSS_RLHS:
     case CSSUnitType::CSS_REMS:
     case CSSUnitType::CSS_CHS:
     case CSSUnitType::CSS_VW:
@@ -133,7 +135,9 @@ static CalculationCategory calculationCategoryForCombination(CSSUnitType type)
         return CalculationCategory::Frequency;
     case CSSUnitType::CSS_EMS:
     case CSSUnitType::CSS_EXS:
+    case CSSUnitType::CSS_LHS:
     case CSSUnitType::CSS_REMS:
+    case CSSUnitType::CSS_RLHS:
     case CSSUnitType::CSS_CHS:
     case CSSUnitType::CSS_VW:
     case CSSUnitType::CSS_VH:
@@ -195,6 +199,8 @@ static bool hasDoubleValue(CSSUnitType type)
     case CSSUnitType::CSS_DPCM:
     case CSSUnitType::CSS_FR:
     case CSSUnitType::CSS_Q:
+    case CSSUnitType::CSS_LHS:
+    case CSSUnitType::CSS_RLHS:
         return true;
     case CSSUnitType::CSS_UNKNOWN:
     case CSSUnitType::CSS_STRING:
@@ -414,7 +420,7 @@ std::unique_ptr<CalcExpressionNode> CSSCalcPrimitiveValueNode::createCalcExpress
     case CalculationCategory::Number:
         return makeUnique<CalcExpressionNumber>(m_value->floatValue());
     case CalculationCategory::Length:
-        return makeUnique<CalcExpressionLength>(Length(m_value->computeLength<float>(conversionData), WebCore::Fixed));
+        return makeUnique<CalcExpressionLength>(Length(m_value->computeLength<float>(conversionData), LengthType::Fixed));
     case CalculationCategory::Percent:
     case CalculationCategory::PercentLength: {
         return makeUnique<CalcExpressionLength>(m_value->convertToLength<FixedFloatConversion | PercentConversion>(conversionData));
@@ -1339,7 +1345,16 @@ std::unique_ptr<CalcExpressionNode> CSSCalcOperationNode::createCalcExpression(c
             return nullptr;
         nodes.uncheckedAppend(WTFMove(node));
     }
-    return makeUnique<CalcExpressionOperation>(WTFMove(nodes), m_operator);
+
+    // Reverse the operation we did when creating this node, recovering a suitable destination category for otherwise-ambiguous min/max/clamp nodes.
+    // Note that this category is really only good enough for that purpose and is not accurate for other node types; we could use a boolean instead.
+    auto destinationCategory = CalculationCategory::Other;
+    if (category() == CalculationCategory::PercentLength)
+        destinationCategory = CalculationCategory::Length;
+    else if (category() == CalculationCategory::PercentNumber)
+        destinationCategory = CalculationCategory::Number;
+
+    return makeUnique<CalcExpressionOperation>(WTFMove(nodes), m_operator, destinationCategory);
 }
 
 double CSSCalcOperationNode::doubleValue(CSSUnitType unitType) const
@@ -1948,7 +1963,8 @@ static RefPtr<CSSCalcExpressionNode> createCSS(const CalcExpressionNode& node, c
             if (children.isEmpty())
                 return nullptr;
             return CSSCalcOperationNode::createSum(WTFMove(children));
-        } case CalcOperator::Subtract: {
+        }
+        case CalcOperator::Subtract: {
             ASSERT(operationChildren.size() == 2);
 
             Vector<Ref<CSSCalcExpressionNode>> values;
@@ -2000,7 +2016,7 @@ static RefPtr<CSSCalcExpressionNode> createCSS(const CalcExpressionNode& node, c
             auto children = createCSS(operationChildren, style);
             if (children.isEmpty())
                 return nullptr;
-            return CSSCalcOperationNode::createMinOrMaxOrClamp(op, WTFMove(children), CalculationCategory::Other);
+            return CSSCalcOperationNode::createMinOrMaxOrClamp(op, WTFMove(children), operationNode.destinationCategory());
         }
         }
         return nullptr;
@@ -2020,20 +2036,20 @@ static RefPtr<CSSCalcExpressionNode> createCSS(const CalcExpressionNode& node, c
 static RefPtr<CSSCalcExpressionNode> createCSS(const Length& length, const RenderStyle& style)
 {
     switch (length.type()) {
-    case Percent:
-    case Fixed:
+    case LengthType::Percent:
+    case LengthType::Fixed:
         return CSSCalcPrimitiveValueNode::create(CSSPrimitiveValue::create(length, style));
-    case Calculated:
+    case LengthType::Calculated:
         return createCSS(length.calculationValue().expression(), style);
-    case Auto:
-    case Intrinsic:
-    case MinIntrinsic:
-    case MinContent:
-    case MaxContent:
-    case FillAvailable:
-    case FitContent:
-    case Relative:
-    case Undefined:
+    case LengthType::Auto:
+    case LengthType::Intrinsic:
+    case LengthType::MinIntrinsic:
+    case LengthType::MinContent:
+    case LengthType::MaxContent:
+    case LengthType::FillAvailable:
+    case LengthType::FitContent:
+    case LengthType::Relative:
+    case LengthType::Undefined:
         ASSERT_NOT_REACHED();
     }
     return nullptr;

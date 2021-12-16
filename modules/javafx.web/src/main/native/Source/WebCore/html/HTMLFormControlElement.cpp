@@ -2,7 +2,7 @@
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
  *           (C) 2001 Dirk Mueller (mueller@kde.org)
- * Copyright (C) 2004-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2020 Apple Inc. All rights reserved.
  *           (C) 2006 Alexey Proskuryakov (ap@nypop.com)
  *
  * This library is free software; you can redistribute it and/or
@@ -33,10 +33,12 @@
 #include "EventNames.h"
 #include "Frame.h"
 #include "FrameView.h"
+#include "HTMLDataListElement.h"
 #include "HTMLFieldSetElement.h"
 #include "HTMLFormElement.h"
 #include "HTMLInputElement.h"
 #include "HTMLLegendElement.h"
+#include "HTMLParserIdioms.h"
 #include "HTMLTextAreaElement.h"
 #include "Quirks.h"
 #include "RenderBox.h"
@@ -47,6 +49,7 @@
 #include "ValidationMessage.h"
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/Ref.h>
+#include <wtf/SetForScope.h>
 #include <wtf/Vector.h>
 
 namespace WebCore {
@@ -75,9 +78,7 @@ HTMLFormControlElement::HTMLFormControlElement(const QualifiedName& tagName, Doc
 
 HTMLFormControlElement::~HTMLFormControlElement()
 {
-    // The calls willChangeForm() and didChangeForm() are virtual, we want the
-    // form to be reset while this object still exists.
-    setForm(nullptr);
+    clearForm();
 }
 
 String HTMLFormControlElement::formEnctype() const
@@ -115,8 +116,8 @@ String HTMLFormControlElement::formAction() const
 {
     const AtomString& value = attributeWithoutSynchronization(formactionAttr);
     if (value.isEmpty())
-        return document().url();
-    return getURLAttribute(formactionAttr);
+        return document().url().string();
+    return document().completeURL(stripLeadingAndTrailingHTMLSpaces(value)).string();
 }
 
 void HTMLFormControlElement::setFormAction(const AtomString& value)
@@ -179,7 +180,7 @@ void HTMLFormControlElement::disabledAttributeChanged()
 
 void HTMLFormControlElement::disabledStateChanged()
 {
-    setNeedsWillValidateCheck();
+    updateWillValidateAndValidity();
     invalidateStyleForSubtree();
     if (renderer() && renderer()->style().hasAppearance())
         renderer()->theme().stateChanged(*renderer(), ControlStates::EnabledState);
@@ -187,7 +188,7 @@ void HTMLFormControlElement::disabledStateChanged()
 
 void HTMLFormControlElement::readOnlyStateChanged()
 {
-    setNeedsWillValidateCheck();
+    updateWillValidateAndValidity();
     invalidateStyleForSubtree();
 }
 
@@ -214,7 +215,7 @@ static bool shouldAutofocus(HTMLFormControlElement* element)
     }
 
     auto& document = element->document();
-    if (!document.frame()->isMainFrame() && !document.topDocument().securityOrigin().canAccess(document.securityOrigin())) {
+    if (!document.frame()->isMainFrame() && !document.topDocument().securityOrigin().isSameOriginDomain(document.securityOrigin())) {
         document.addConsoleMessage(MessageSource::Security, MessageLevel::Error, "Blocked autofocusing on a form control in a cross-origin subframe."_s);
         return false;
     }
@@ -253,11 +254,11 @@ void HTMLFormControlElement::didAttachRenderers()
         auto frameView = makeRefPtr(document().view());
         if (frameView && frameView->layoutContext().isInLayout()) {
             frameView->queuePostLayoutCallback([element] {
-                element->focus();
+                element->focus(SelectionRestorationMode::PlaceCaretAtStart);
             });
         } else {
             Style::queuePostResolutionCallback([element] {
-                element->focus();
+                element->focus(SelectionRestorationMode::PlaceCaretAtStart);
             });
         }
     }
@@ -292,7 +293,7 @@ Node::InsertedIntoAncestorResult HTMLFormControlElement::insertedIntoAncestor(In
     if (m_dataListAncestorState == NotInsideDataList)
         m_dataListAncestorState = Unknown;
 
-    setNeedsWillValidateCheck();
+    updateWillValidateAndValidity();
     if (willValidate() && !isValidFormControlElement())
         addInvalidElementToAncestorFromInsertionPoint(*this, &parentOfInsertedTree);
     if (document().hasDisabledFieldsetElement())
@@ -328,7 +329,7 @@ void HTMLFormControlElement::removedFromAncestor(RemovalType removalType, Contai
         removeInvalidElementToAncestorFromInsertionPoint(*this, &oldParentOfRemovedTree);
 
     if (wasInsideDataList)
-        setNeedsWillValidateCheck();
+        updateWillValidateAndValidity();
 }
 
 void HTMLFormControlElement::setChangedSinceLastFormControlChangeEvent(bool changed)
@@ -390,7 +391,7 @@ bool HTMLFormControlElement::isKeyboardFocusable(KeyboardEvent* event) const
 
 bool HTMLFormControlElement::isMouseFocusable() const
 {
-#if PLATFORM(GTK)
+#if (PLATFORM(GTK) || PLATFORM(WPE))
     return HTMLElement::isMouseFocusable();
 #else
     if (needsMouseFocusableQuirk())
@@ -409,17 +410,21 @@ bool HTMLFormControlElement::matchesInvalidPseudoClass() const
     return willValidate() && !isValidFormControlElement();
 }
 
+void HTMLFormControlElement::endDelayingUpdateValidity()
+{
+    ASSERT(m_delayedUpdateValidityCount);
+    if (!--m_delayedUpdateValidityCount)
+        updateValidity();
+}
+
 bool HTMLFormControlElement::computeWillValidate() const
 {
     if (m_dataListAncestorState == Unknown) {
-        for (ContainerNode* ancestor = parentNode(); ancestor; ancestor = ancestor->parentNode()) {
-            if (ancestor->hasTagName(datalistTag)) {
-                m_dataListAncestorState = InsideDataList;
-                break;
-            }
-        }
-        if (m_dataListAncestorState == Unknown)
-            m_dataListAncestorState = NotInsideDataList;
+#if ENABLE(DATALIST_ELEMENT)
+        m_dataListAncestorState = (document().hasDataListElements() && ancestorsOfType<HTMLDataListElement>(*this).first()) ? InsideDataList : NotInsideDataList;
+#else
+        m_dataListAncestorState = NotInsideDataList;
+#endif
     }
     return m_dataListAncestorState == NotInsideDataList && !isDisabledOrReadOnly();
 }
@@ -432,7 +437,7 @@ bool HTMLFormControlElement::willValidate() const
         if (m_willValidate != newWillValidate)
             m_willValidate = newWillValidate;
     } else {
-        // If the following assertion fails, setNeedsWillValidateCheck() is not
+        // If the following assertion fails, updateWillValidateAndValidity() is not
         // called correctly when something which changes computeWillValidate() result
         // is updated.
         ASSERT(m_willValidate == computeWillValidate());
@@ -440,7 +445,7 @@ bool HTMLFormControlElement::willValidate() const
     return m_willValidate;
 }
 
-void HTMLFormControlElement::setNeedsWillValidateCheck()
+void HTMLFormControlElement::updateWillValidateAndValidity()
 {
     // We need to recalculate willValidate immediately because willValidate change can causes style change.
     bool newWillValidate = computeWillValidate();
@@ -498,6 +503,11 @@ bool HTMLFormControlElement::checkValidity(Vector<RefPtr<HTMLFormControlElement>
     return false;
 }
 
+bool HTMLFormControlElement::isFocusingWithValidationMessage() const
+{
+    return m_isFocusingWithValidationMessage;
+}
+
 bool HTMLFormControlElement::isShowingValidationMessage() const
 {
     return m_validationMessage && m_validationMessage->isVisible();
@@ -531,6 +541,8 @@ bool HTMLFormControlElement::reportValidity()
 
 void HTMLFormControlElement::focusAndShowValidationMessage()
 {
+    SetForScope<bool> isFocusingWithValidationMessageScope(m_isFocusingWithValidationMessage, true);
+
     // Calling focus() will scroll the element into view.
     focus();
 
@@ -570,6 +582,9 @@ void HTMLFormControlElement::didChangeForm()
 
 void HTMLFormControlElement::updateValidity()
 {
+    if (m_delayedUpdateValidityCount)
+        return;
+
     bool willValidate = this->willValidate();
     bool wasValid = m_isValid;
 
@@ -580,11 +595,13 @@ void HTMLFormControlElement::updateValidity()
         invalidateStyleForSubtree();
 
         if (!m_isValid) {
-            addInvalidElementToAncestorFromInsertionPoint(*this, parentNode());
+            if (isConnected())
+                addInvalidElementToAncestorFromInsertionPoint(*this, parentNode());
             if (HTMLFormElement* form = this->form())
                 form->registerInvalidAssociatedFormControl(*this);
         } else {
-            removeInvalidElementToAncestorFromInsertionPoint(*this, parentNode());
+            if (isConnected())
+                removeInvalidElementToAncestorFromInsertionPoint(*this, parentNode());
             if (HTMLFormElement* form = this->form())
                 form->removeInvalidAssociatedFormControlIfNeeded(*this);
         }
@@ -636,7 +653,7 @@ bool HTMLFormControlElement::shouldAutocorrect() const
 AutocapitalizeType HTMLFormControlElement::autocapitalizeType() const
 {
     AutocapitalizeType type = HTMLElement::autocapitalizeType();
-    if (type == AutocapitalizeTypeDefault) {
+    if (type == AutocapitalizeType::Default) {
         if (RefPtr<HTMLFormElement> form = this->form())
             return form->autocapitalizeType();
     }
@@ -644,15 +661,6 @@ AutocapitalizeType HTMLFormControlElement::autocapitalizeType() const
 }
 
 #endif
-
-HTMLFormControlElement* HTMLFormControlElement::enclosingFormControlElement(Node* node)
-{
-    for (; node; node = node->parentNode()) {
-        if (is<HTMLFormControlElement>(*node))
-            return downcast<HTMLFormControlElement>(node);
-    }
-    return nullptr;
-}
 
 String HTMLFormControlElement::autocomplete() const
 {

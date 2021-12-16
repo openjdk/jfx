@@ -37,7 +37,7 @@ class TextControlInnerContainer final : public HTMLDivElement {
     WTF_MAKE_ISO_ALLOCATED(TextControlInnerContainer);
 public:
     static Ref<TextControlInnerContainer> create(Document&);
-protected:
+private:
     TextControlInnerContainer(Document&);
     RenderPtr<RenderElement> createElementRenderer(RenderStyle&&, const RenderTreePosition&) override;
     Optional<Style::ElementStyle> resolveCustomStyle(const RenderStyle& parentStyle, const RenderStyle* shadowHostStyle) override;
@@ -48,24 +48,31 @@ class TextControlInnerElement final : public HTMLDivElement {
 public:
     static Ref<TextControlInnerElement> create(Document&);
 
-protected:
+private:
     TextControlInnerElement(Document&);
     Optional<Style::ElementStyle> resolveCustomStyle(const RenderStyle& parentStyle, const RenderStyle* shadowHostStyle) override;
 
-private:
     bool isMouseFocusable() const override { return false; }
 };
 
 class TextControlInnerTextElement final : public HTMLDivElement {
     WTF_MAKE_ISO_ALLOCATED(TextControlInnerTextElement);
 public:
-    static Ref<TextControlInnerTextElement> create(Document&);
+    static Ref<TextControlInnerTextElement> create(Document&, bool isEditable);
 
     void defaultEventHandler(Event&) override;
 
     RenderTextControlInnerBlock* renderer() const;
 
+    inline void updateInnerTextElementEditability(bool isEditable)
+    {
+        constexpr bool initialization = false;
+        updateInnerTextElementEditabilityImpl(isEditable, initialization);
+    }
+
 private:
+    void updateInnerTextElementEditabilityImpl(bool isEditable, bool initialization);
+
     TextControlInnerTextElement(Document&);
     RenderPtr<RenderElement> createElementRenderer(RenderStyle&&, const RenderTreePosition&) override;
     Optional<Style::ElementStyle> resolveCustomStyle(const RenderStyle& parentStyle, const RenderStyle* shadowHostStyle) override;
@@ -112,6 +119,7 @@ public:
 private:
     SearchFieldCancelButtonElement(Document&);
     bool isMouseFocusable() const override { return false; }
+    Optional<Style::ElementStyle> resolveCustomStyle(const RenderStyle& parentStyle, const RenderStyle* shadowHostStyle) override;
 };
 
 } // namespace WebCore

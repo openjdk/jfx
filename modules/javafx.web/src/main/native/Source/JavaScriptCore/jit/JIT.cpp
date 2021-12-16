@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,16 +30,11 @@
 #include "JIT.h"
 
 #include "BytecodeGraph.h"
-#include "BytecodeLivenessAnalysis.h"
 #include "CodeBlock.h"
 #include "CodeBlockWithJITType.h"
 #include "DFGCapabilities.h"
-#include "InterpreterInlines.h"
 #include "JITInlines.h"
 #include "JITOperations.h"
-#include "JSArray.h"
-#include "JSCInlines.h"
-#include "JSFunction.h"
 #include "LinkBuffer.h"
 #include "MaxFrameExtentForSlowPathCall.h"
 #include "ModuleProgramCodeBlock.h"
@@ -47,12 +42,10 @@
 #include "ProbeContext.h"
 #include "ProfilerDatabase.h"
 #include "ProgramCodeBlock.h"
-#include "ResultType.h"
 #include "SlowPathCall.h"
 #include "StackAlignment.h"
 #include "ThunkGenerators.h"
 #include "TypeProfilerLog.h"
-#include <wtf/CryptographicallyRandomNumber.h>
 #include <wtf/GraphNodeWorklist.h>
 #include <wtf/SimpleStats.h>
 
@@ -70,7 +63,7 @@ Seconds totalFTLB3CompileTime;
 void ctiPatchCallByReturnAddress(ReturnAddressPtr returnAddress, FunctionPtr<CFunctionPtrTag> newCalleeFunction)
 {
     MacroAssembler::repatchCall(
-        CodeLocationCall<NoPtrTag>(MacroAssemblerCodePtr<NoPtrTag>(returnAddress)),
+        CodeLocationCall<ReturnAddressPtrTag>(MacroAssemblerCodePtr<ReturnAddressPtrTag>(returnAddress)),
         newCalleeFunction.retagged<OperationPtrTag>());
 }
 
@@ -261,7 +254,7 @@ void JIT::privateCompileMainPass()
         m_labels[m_bytecodeIndex.offset()] = label();
 
         if (JITInternal::verbose)
-            dataLogLn("Old JIT emitting code for ", m_bytecodeIndex, " at offset ", (long)debugOffset());
+            dataLogLn("Baseline JIT emitting code for ", m_bytecodeIndex, " at offset ", (long)debugOffset());
 
         OpcodeID opcodeID = currentInstruction->opcodeID();
 
@@ -291,9 +284,11 @@ void JIT::privateCompileMainPass()
         DEFINE_SLOW_OP(lesseq)
         DEFINE_SLOW_OP(greater)
         DEFINE_SLOW_OP(greatereq)
-        DEFINE_SLOW_OP(is_function)
-        DEFINE_SLOW_OP(is_object_or_null)
+        DEFINE_SLOW_OP(is_callable)
+        DEFINE_SLOW_OP(is_constructor)
         DEFINE_SLOW_OP(typeof)
+        DEFINE_SLOW_OP(typeof_is_object)
+        DEFINE_SLOW_OP(typeof_is_function)
         DEFINE_SLOW_OP(strcat)
         DEFINE_SLOW_OP(push_with_scope)
         DEFINE_SLOW_OP(create_lexical_environment)
@@ -309,7 +304,7 @@ void JIT::privateCompileMainPass()
         DEFINE_SLOW_OP(new_array_buffer)
         DEFINE_SLOW_OP(spread)
         DEFINE_SLOW_OP(get_enumerable_length)
-        DEFINE_SLOW_OP(has_generic_property)
+        DEFINE_SLOW_OP(has_enumerable_property)
         DEFINE_SLOW_OP(get_property_enumerator)
         DEFINE_SLOW_OP(to_index_string)
         DEFINE_SLOW_OP(create_direct_arguments)
@@ -362,14 +357,19 @@ void JIT::privateCompileMainPass()
         DEFINE_OP(op_get_by_id_with_this)
         DEFINE_OP(op_get_by_id_direct)
         DEFINE_OP(op_get_by_val)
+        DEFINE_OP(op_get_private_name)
+        DEFINE_OP(op_set_private_brand)
+        DEFINE_OP(op_check_private_brand)
+        DEFINE_OP(op_get_prototype_of)
         DEFINE_OP(op_overrides_has_instance)
         DEFINE_OP(op_instanceof)
         DEFINE_OP(op_instanceof_custom)
         DEFINE_OP(op_is_empty)
-        DEFINE_OP(op_is_undefined)
+        DEFINE_OP(op_typeof_is_undefined)
         DEFINE_OP(op_is_undefined_or_null)
         DEFINE_OP(op_is_boolean)
         DEFINE_OP(op_is_number)
+        DEFINE_OP(op_is_big_int)
         DEFINE_OP(op_is_object)
         DEFINE_OP(op_is_cell_with_type)
         DEFINE_OP(op_jeq_null)
@@ -428,6 +428,7 @@ void JIT::privateCompileMainPass()
         DEFINE_OP(op_put_by_id)
         DEFINE_OP(op_put_by_val_direct)
         DEFINE_OP(op_put_by_val)
+        DEFINE_OP(op_put_private_name)
         DEFINE_OP(op_put_getter_by_id)
         DEFINE_OP(op_put_setter_by_id)
         DEFINE_OP(op_put_getter_setter_by_id)
@@ -437,6 +438,9 @@ void JIT::privateCompileMainPass()
 
         DEFINE_OP(op_get_internal_field)
         DEFINE_OP(op_put_internal_field)
+
+        DEFINE_OP(op_iterator_open)
+        DEFINE_OP(op_iterator_next)
 
         DEFINE_OP(op_ret)
         DEFINE_OP(op_rshift)
@@ -461,14 +465,17 @@ void JIT::privateCompileMainPass()
         DEFINE_OP(op_get_from_arguments)
         DEFINE_OP(op_put_to_arguments)
 
-        DEFINE_OP(op_has_structure_property)
-        DEFINE_OP(op_has_indexed_property)
+        DEFINE_OP(op_has_enumerable_indexed_property)
+        DEFINE_OP(op_has_enumerable_structure_property)
+        DEFINE_OP(op_has_own_structure_property)
+        DEFINE_OP(op_in_structure_property)
         DEFINE_OP(op_get_direct_pname)
         DEFINE_OP(op_enumerator_structure_pname)
         DEFINE_OP(op_enumerator_generic_pname)
 
         DEFINE_OP(op_log_shadow_chicken_prologue)
         DEFINE_OP(op_log_shadow_chicken_tail)
+
         default:
             RELEASE_ASSERT_NOT_REACHED();
         }
@@ -500,7 +507,10 @@ void JIT::privateCompileSlowCases()
     m_getByIdWithThisIndex = 0;
     m_putByIdIndex = 0;
     m_inByIdIndex = 0;
+    m_delByValIndex = 0;
+    m_delByIdIndex = 0;
     m_instanceOfIndex = 0;
+    m_privateBrandAccessIndex = 0;
     m_byValInstructionIndex = 0;
     m_callLinkInfoIndex = 0;
 
@@ -523,7 +533,7 @@ void JIT::privateCompileSlowCases()
             rareCaseProfile = &rareCaseProfiles.at(bytecodeCountHavingSlowCase);
 
         if (JITInternal::verbose)
-            dataLogLn("Old JIT emitting slow code for ", m_bytecodeIndex, " at offset ", (long)debugOffset());
+            dataLogLn("Baseline JIT emitting slow code for ", m_bytecodeIndex, " at offset ", (long)debugOffset());
 
         if (m_disassembler)
             m_disassembler->setForBytecodeSlowPath(m_bytecodeIndex.offset(), label());
@@ -556,6 +566,9 @@ void JIT::privateCompileSlowCases()
         DEFINE_SLOWCASE_OP(op_get_by_id_with_this)
         DEFINE_SLOWCASE_OP(op_get_by_id_direct)
         DEFINE_SLOWCASE_OP(op_get_by_val)
+        DEFINE_SLOWCASE_OP(op_get_private_name)
+        DEFINE_SLOWCASE_OP(op_set_private_brand)
+        DEFINE_SLOWCASE_OP(op_check_private_brand)
         DEFINE_SLOWCASE_OP(op_instanceof)
         DEFINE_SLOWCASE_OP(op_instanceof_custom)
         DEFINE_SLOWCASE_OP(op_jless)
@@ -580,10 +593,16 @@ void JIT::privateCompileSlowCases()
         DEFINE_SLOWCASE_OP(op_put_by_id)
         case op_put_by_val_direct:
         DEFINE_SLOWCASE_OP(op_put_by_val)
+        DEFINE_SLOWCASE_OP(op_put_private_name)
+        DEFINE_SLOWCASE_OP(op_del_by_val)
+        DEFINE_SLOWCASE_OP(op_del_by_id)
         DEFINE_SLOWCASE_OP(op_sub)
-        DEFINE_SLOWCASE_OP(op_has_indexed_property)
+        DEFINE_SLOWCASE_OP(op_has_enumerable_indexed_property)
         DEFINE_SLOWCASE_OP(op_get_from_scope)
         DEFINE_SLOWCASE_OP(op_put_to_scope)
+
+        DEFINE_SLOWCASE_OP(op_iterator_open)
+        DEFINE_SLOWCASE_OP(op_iterator_next)
 
         DEFINE_SLOWCASE_SLOW_OP(unsigned)
         DEFINE_SLOWCASE_SLOW_OP(inc)
@@ -610,11 +629,13 @@ void JIT::privateCompileSlowCases()
         DEFINE_SLOWCASE_SLOW_OP(stricteq)
         DEFINE_SLOWCASE_SLOW_OP(nstricteq)
         DEFINE_SLOWCASE_SLOW_OP(get_direct_pname)
-        DEFINE_SLOWCASE_SLOW_OP(has_structure_property)
+        DEFINE_SLOWCASE_SLOW_OP(get_prototype_of)
+        DEFINE_SLOWCASE_SLOW_OP(has_enumerable_structure_property)
+        DEFINE_SLOWCASE_SLOW_OP(has_own_structure_property)
+        DEFINE_SLOWCASE_SLOW_OP(in_structure_property)
         DEFINE_SLOWCASE_SLOW_OP(resolve_scope)
         DEFINE_SLOWCASE_SLOW_OP(check_tdz)
         DEFINE_SLOWCASE_SLOW_OP(to_property_key)
-
         default:
             RELEASE_ASSERT_NOT_REACHED();
         }
@@ -622,8 +643,8 @@ void JIT::privateCompileSlowCases()
         if (JITInternal::verbose)
             dataLog("At ", firstTo, " slow: ", iter - m_slowCases.begin(), "\n");
 
-        RELEASE_ASSERT_WITH_MESSAGE(iter == m_slowCases.end() || firstTo != iter->to, "Not enough jumps linked in slow case codegen.");
-        RELEASE_ASSERT_WITH_MESSAGE(firstTo == (iter - 1)->to, "Too many jumps linked in slow case codegen.");
+        RELEASE_ASSERT_WITH_MESSAGE(iter == m_slowCases.end() || firstTo.offset() != iter->to.offset(), "Not enough jumps linked in slow case codegen.");
+        RELEASE_ASSERT_WITH_MESSAGE(firstTo.offset() == (iter - 1)->to.offset(), "Too many jumps linked in slow case codegen.");
 
         if (shouldEmitProfiling())
             add32(TrustedImm32(1), AbsoluteAddress(&rareCaseProfile->m_counter));
@@ -638,6 +659,7 @@ void JIT::privateCompileSlowCases()
     RELEASE_ASSERT(m_putByIdIndex == m_putByIds.size());
     RELEASE_ASSERT(m_inByIdIndex == m_inByIds.size());
     RELEASE_ASSERT(m_instanceOfIndex == m_instanceOfs.size());
+    RELEASE_ASSERT(m_privateBrandAccessIndex == m_privateBrandAccesses.size());
     RELEASE_ASSERT(m_callLinkInfoIndex == m_callCompilationInfo.size());
 
     if (shouldEmitProfiling())
@@ -733,19 +755,21 @@ void JIT::compileWithoutLinking(JITCompilationEffort effort)
     if (m_codeBlock->codeType() == FunctionCode) {
         ASSERT(!m_bytecodeIndex);
         if (shouldEmitProfiling()) {
-            for (int argument = 0; argument < m_codeBlock->numParameters(); ++argument) {
+            for (unsigned argument = 0; argument < m_codeBlock->numParameters(); ++argument) {
                 // If this is a constructor, then we want to put in a dummy profiling site (to
                 // keep things consistent) but we don't actually want to record the dummy value.
                 if (m_codeBlock->isConstructor() && !argument)
                     continue;
                 int offset = CallFrame::argumentOffsetIncludingThis(argument) * static_cast<int>(sizeof(Register));
 #if USE(JSVALUE64)
-                load64(Address(callFrameRegister, offset), regT0);
+                JSValueRegs resultRegs = JSValueRegs(regT0);
+                load64(Address(callFrameRegister, offset), resultRegs.payloadGPR());
 #elif USE(JSVALUE32_64)
-                load32(Address(callFrameRegister, offset + OBJECT_OFFSETOF(JSValue, u.asBits.payload)), regT0);
-                load32(Address(callFrameRegister, offset + OBJECT_OFFSETOF(JSValue, u.asBits.tag)), regT1);
+                JSValueRegs resultRegs = JSValueRegs(regT1, regT0);
+                load32(Address(callFrameRegister, offset + OBJECT_OFFSETOF(JSValue, u.asBits.payload)), resultRegs.payloadGPR());
+                load32(Address(callFrameRegister, offset + OBJECT_OFFSETOF(JSValue, u.asBits.tag)), resultRegs.tagGPR());
 #endif
-                emitValueProfilingSite(m_codeBlock->valueProfileForArgument(argument));
+                emitValueProfilingSite(m_codeBlock->valueProfileForArgument(argument), resultRegs);
             }
         }
     }
@@ -786,7 +810,7 @@ void JIT::compileWithoutLinking(JITCompilationEffort effort)
             addPtr(TrustedImm32(maxFrameExtentForSlowPathCall), stackPointerRegister);
         branchTest32(Zero, returnValueGPR).linkTo(beginLabel, this);
         move(returnValueGPR, GPRInfo::argumentGPR0);
-        emitNakedCall(m_vm->getCTIStub(arityFixupGenerator).retaggedCode<NoPtrTag>());
+        emitNakedNearCall(m_vm->getCTIStub(arityFixupGenerator).retaggedCode<NoPtrTag>());
 
 #if ASSERT_ENABLED
         m_bytecodeIndex = BytecodeIndex(); // Reset this, in order to guard its use with ASSERTs.
@@ -866,7 +890,12 @@ CompilationResult JIT::link()
         handler.nativeCode = patchBuffer.locationOf<ExceptionHandlerPtrTag>(m_labels[handler.target]);
     }
 
-    for (auto& record : m_calls) {
+
+    for (auto& record : m_nearCalls) {
+        if (record.callee)
+            patchBuffer.link(record.from, record.callee);
+    }
+    for (auto& record : m_farCalls) {
         if (record.callee)
             patchBuffer.link(record.from, record.callee);
     }
@@ -875,8 +904,11 @@ CompilationResult JIT::link()
     finalizeInlineCaches(m_getByVals, patchBuffer);
     finalizeInlineCaches(m_getByIdsWithThis, patchBuffer);
     finalizeInlineCaches(m_putByIds, patchBuffer);
+    finalizeInlineCaches(m_delByIds, patchBuffer);
+    finalizeInlineCaches(m_delByVals, patchBuffer);
     finalizeInlineCaches(m_inByIds, patchBuffer);
     finalizeInlineCaches(m_instanceOfs, patchBuffer);
+    finalizeInlineCaches(m_privateBrandAccesses, patchBuffer);
 
     if (m_byValCompilationInfo.size()) {
         CodeLocationLabel<ExceptionHandlerPtrTag> exceptionHandler = patchBuffer.locationOf<ExceptionHandlerPtrTag>(m_exceptionHandler);
@@ -886,13 +918,17 @@ CompilationResult JIT::link()
             auto notIndexJump = CodeLocationJump<JSInternalPtrTag>();
             if (Jump(patchableNotIndexJump).isSet())
                 notIndexJump = CodeLocationJump<JSInternalPtrTag>(patchBuffer.locationOf<JSInternalPtrTag>(patchableNotIndexJump));
-            auto badTypeJump = CodeLocationJump<JSInternalPtrTag>(patchBuffer.locationOf<JSInternalPtrTag>(byValCompilationInfo.badTypeJump));
+
+            PatchableJump patchableBadTypeJump = byValCompilationInfo.badTypeJump;
+            auto badTypeJump = CodeLocationJump<JSInternalPtrTag>();
+            if (Jump(patchableBadTypeJump).isSet())
+                badTypeJump = CodeLocationJump<JSInternalPtrTag>(patchBuffer.locationOf<JSInternalPtrTag>(byValCompilationInfo.badTypeJump));
+
             auto doneTarget = CodeLocationLabel<JSInternalPtrTag>(patchBuffer.locationOf<JSInternalPtrTag>(byValCompilationInfo.doneTarget));
             auto nextHotPathTarget = CodeLocationLabel<JSInternalPtrTag>(patchBuffer.locationOf<JSInternalPtrTag>(byValCompilationInfo.nextHotPathTarget));
             auto slowPathTarget = CodeLocationLabel<JSInternalPtrTag>(patchBuffer.locationOf<JSInternalPtrTag>(byValCompilationInfo.slowPathTarget));
 
-            *byValCompilationInfo.byValInfo = ByValInfo(
-                byValCompilationInfo.bytecodeIndex,
+            byValCompilationInfo.byValInfo->setUp(
                 notIndexJump,
                 badTypeJump,
                 exceptionHandler,
@@ -974,7 +1010,7 @@ void JIT::privateCompileExceptionHandlers()
         // operationLookupExceptionHandlerFromCallerFrame is passed one argument, the VM*.
         move(TrustedImmPtr(&vm()), GPRInfo::argumentGPR0);
         prepareCallOperation(vm());
-        m_calls.append(CallRecord(call(OperationPtrTag), BytecodeIndex(), FunctionPtr<OperationPtrTag>(operationLookupExceptionHandlerFromCallerFrame)));
+        m_farCalls.append(FarCallRecord(call(OperationPtrTag), BytecodeIndex(), FunctionPtr<OperationPtrTag>(operationLookupExceptionHandlerFromCallerFrame)));
         jumpToExceptionHandler(vm());
     }
 
@@ -987,7 +1023,7 @@ void JIT::privateCompileExceptionHandlers()
         // operationLookupExceptionHandler is passed one argument, the VM*.
         move(TrustedImmPtr(&vm()), GPRInfo::argumentGPR0);
         prepareCallOperation(vm());
-        m_calls.append(CallRecord(call(OperationPtrTag), BytecodeIndex(), FunctionPtr<OperationPtrTag>(operationLookupExceptionHandler)));
+        m_farCalls.append(FarCallRecord(call(OperationPtrTag), BytecodeIndex(), FunctionPtr<OperationPtrTag>(operationLookupExceptionHandler)));
         jumpToExceptionHandler(vm());
     }
 }

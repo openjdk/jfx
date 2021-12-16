@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -133,7 +133,7 @@ public class PaginationTest {
     /*********************************************************************
      * CSS related Tests                                                 *
      ********************************************************************/
-    @Test public void whenMaxPageIndicatorCountIsBound_impl_cssSettable_ReturnsFalse() {
+    @Test public void whenMaxPageIndicatorCountIsBound_CssMetaData_isSettable_ReturnsFalse() {
         CssMetaData styleable = ((StyleableProperty)pagination.maxPageIndicatorCountProperty()).getCssMetaData();
         assertTrue(styleable.isSettable(pagination));
         IntegerProperty intPr = new SimpleIntegerProperty(10);
@@ -141,7 +141,7 @@ public class PaginationTest {
         assertFalse(styleable.isSettable(pagination));
     }
 
-    @Test public void whenMaxPageIndicatorCountIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
+    @Test public void whenMaxPageIndicatorCountIsSpecifiedViaCSSAndIsNotBound_CssMetaData_isSettable_ReturnsTrue() {
         CssMetaData styleable = ((StyleableProperty)pagination.maxPageIndicatorCountProperty()).getCssMetaData();
         assertTrue(styleable.isSettable(pagination));
     }

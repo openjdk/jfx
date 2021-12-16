@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2003, 2004, 2005, 2006, 2009, 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2003-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,6 +33,8 @@
 #include "GraphicsContextImpl.h"
 #include "ImageBuffer.h"
 #include "IntRect.h"
+#include "MediaPlayer.h"
+#include "MediaPlayerPrivate.h"
 #include "RoundedRect.h"
 #include "TextRun.h"
 #include <wtf/text/TextStream.h>
@@ -74,6 +76,29 @@ private:
 #define CHECK_FOR_CHANGED_PROPERTY(flag, property) \
     if (m_changeFlags.contains(GraphicsContextState::flag) && (m_state.property != state.property)) \
         changeFlags.add(GraphicsContextState::flag);
+
+GraphicsContextState::GraphicsContextState()
+    : shouldAntialias(true)
+    , shouldSmoothFonts(true)
+    , shouldSubpixelQuantizeFonts(true)
+    , shadowsIgnoreTransforms(false)
+#if USE(CG)
+    // Core Graphics incorrectly renders shadows with radius > 8px (<rdar://problem/8103442>),
+    // but we need to preserve this buggy behavior for canvas and -webkit-box-shadow.
+    , shadowsUseLegacyRadius(false)
+#endif
+#if PLATFORM(JAVA)
+    , clipBounds(FloatRect::infiniteRect())
+#endif
+    , drawLuminanceMask(false)
+{
+}
+
+GraphicsContextState::~GraphicsContextState() = default;
+GraphicsContextState::GraphicsContextState(const GraphicsContextState&) = default;
+GraphicsContextState::GraphicsContextState(GraphicsContextState&&) = default;
+GraphicsContextState& GraphicsContextState::operator=(const GraphicsContextState&) = default;
+GraphicsContextState& GraphicsContextState::operator=(GraphicsContextState&&) = default;
 
 GraphicsContextState::StateChangeFlags GraphicsContextStateChange::changesFromState(const GraphicsContextState& state) const
 {
@@ -121,17 +146,21 @@ GraphicsContextState::StateChangeFlags GraphicsContextStateChange::changesFromSt
 void GraphicsContextStateChange::accumulate(const GraphicsContextState& state, GraphicsContextState::StateChangeFlags flags)
 {
     // FIXME: This code should move to GraphicsContextState.
-    if (flags.contains(GraphicsContextState::StrokeGradientChange))
+    auto strokeFlags = { GraphicsContextState::StrokeColorChange, GraphicsContextState::StrokeGradientChange, GraphicsContextState::StrokePatternChange };
+    if (flags.containsAny(strokeFlags)) {
+        m_state.strokeColor = state.strokeColor;
         m_state.strokeGradient = state.strokeGradient;
-
-    if (flags.contains(GraphicsContextState::StrokePatternChange))
         m_state.strokePattern = state.strokePattern;
+        m_changeFlags.remove(strokeFlags);
+    }
 
-    if (flags.contains(GraphicsContextState::FillGradientChange))
+    auto fillFlags = { GraphicsContextState::FillColorChange, GraphicsContextState::FillGradientChange, GraphicsContextState::FillPatternChange };
+    if (flags.containsAny(fillFlags)) {
+        m_state.fillColor = state.fillColor;
         m_state.fillGradient = state.fillGradient;
-
-    if (flags.contains(GraphicsContextState::FillPatternChange))
         m_state.fillPattern = state.fillPattern;
+        m_changeFlags.remove(fillFlags);
+    }
 
     if (flags.contains(GraphicsContextState::ShadowChange)) {
         // FIXME: Deal with state.shadowsUseLegacyRadius.
@@ -145,12 +174,6 @@ void GraphicsContextStateChange::accumulate(const GraphicsContextState& state, G
 
     if (flags.contains(GraphicsContextState::TextDrawingModeChange))
         m_state.textDrawingMode = state.textDrawingMode;
-
-    if (flags.contains(GraphicsContextState::StrokeColorChange))
-        m_state.strokeColor = state.strokeColor;
-
-    if (flags.contains(GraphicsContextState::FillColorChange))
-        m_state.fillColor = state.fillColor;
 
     if (flags.contains(GraphicsContextState::StrokeStyleChange))
         m_state.strokeStyle = state.strokeStyle;
@@ -195,16 +218,19 @@ void GraphicsContextStateChange::accumulate(const GraphicsContextState& state, G
 void GraphicsContextStateChange::apply(GraphicsContext& context) const
 {
     if (m_changeFlags.contains(GraphicsContextState::StrokeGradientChange))
-        context.setStrokeGradient(*m_state.strokeGradient);
+        context.setStrokeGradient(*m_state.strokeGradient, m_state.strokeGradientSpaceTransform);
 
     if (m_changeFlags.contains(GraphicsContextState::StrokePatternChange))
         context.setStrokePattern(*m_state.strokePattern);
 
     if (m_changeFlags.contains(GraphicsContextState::FillGradientChange))
-        context.setFillGradient(*m_state.fillGradient);
+        context.setFillGradient(*m_state.fillGradient, m_state.fillGradientSpaceTransform);
 
     if (m_changeFlags.contains(GraphicsContextState::FillPatternChange))
         context.setFillPattern(*m_state.fillPattern);
+
+    if (m_changeFlags.contains(GraphicsContextState::ShadowsIgnoreTransformsChange))
+        context.setShadowsIgnoreTransforms(m_state.shadowsIgnoreTransforms);
 
     if (m_changeFlags.contains(GraphicsContextState::ShadowChange)) {
 #if USE(CG)
@@ -248,9 +274,6 @@ void GraphicsContextStateChange::apply(GraphicsContext& context) const
     if (m_changeFlags.contains(GraphicsContextState::ShouldSubpixelQuantizeFontsChange))
         context.setShouldSubpixelQuantizeFonts(m_state.shouldSubpixelQuantizeFonts);
 
-    if (m_changeFlags.contains(GraphicsContextState::ShadowsIgnoreTransformsChange))
-        context.setShadowsIgnoreTransforms(m_state.shadowsIgnoreTransforms);
-
     if (m_changeFlags.contains(GraphicsContextState::DrawLuminanceMaskChange))
         context.setDrawLuminanceMask(m_state.drawLuminanceMask);
 
@@ -291,7 +314,7 @@ void GraphicsContextStateChange::dump(TextStream& ts) const
         ts.dumpProperty("stroke-thickness", m_state.strokeThickness);
 
     if (m_changeFlags.contains(GraphicsContextState::TextDrawingModeChange))
-        ts.dumpProperty("text-drawing-mode", m_state.textDrawingMode);
+        ts.dumpProperty("text-drawing-mode", m_state.textDrawingMode.toRaw());
 
     if (m_changeFlags.contains(GraphicsContextState::StrokeColorChange))
         ts.dumpProperty("stroke-color", m_state.strokeColor);
@@ -588,6 +611,7 @@ void GraphicsContext::setImageInterpolationQuality(InterpolationQuality imageInt
 
 void GraphicsContext::setStrokePattern(Ref<Pattern>&& pattern)
 {
+    m_state.strokeColor = { };
     m_state.strokeGradient = nullptr;
     m_state.strokePattern = WTFMove(pattern);
     if (m_impl)
@@ -596,15 +620,18 @@ void GraphicsContext::setStrokePattern(Ref<Pattern>&& pattern)
 
 void GraphicsContext::setFillPattern(Ref<Pattern>&& pattern)
 {
+    m_state.fillColor = { };
     m_state.fillGradient = nullptr;
     m_state.fillPattern = WTFMove(pattern);
     if (m_impl)
         m_impl->updateState(m_state, GraphicsContextState::FillPatternChange);
 }
 
-void GraphicsContext::setStrokeGradient(Ref<Gradient>&& gradient)
+void GraphicsContext::setStrokeGradient(Ref<Gradient>&& gradient, const AffineTransform& strokeGradientSpaceTransform)
 {
+    m_state.strokeColor = { };
     m_state.strokeGradient = WTFMove(gradient);
+    m_state.strokeGradientSpaceTransform = strokeGradientSpaceTransform;
     m_state.strokePattern = nullptr;
     if (m_impl)
         m_impl->updateState(m_state, GraphicsContextState::StrokeGradientChange);
@@ -617,9 +644,11 @@ void GraphicsContext::setFillRule(WindRule fillRule)
         m_impl->updateState(m_state, GraphicsContextState::FillRuleChange);
 }
 
-void GraphicsContext::setFillGradient(Ref<Gradient>&& gradient)
+void GraphicsContext::setFillGradient(Ref<Gradient>&& gradient, const AffineTransform& fillGradientSpaceTransform)
 {
+    m_state.fillColor = { };
     m_state.fillGradient = WTFMove(gradient);
+    m_state.fillGradientSpaceTransform = fillGradientSpaceTransform;
     m_state.fillPattern = nullptr;
     if (m_impl)
         m_impl->updateState(m_state, GraphicsContextState::FillGradientChange); // FIXME: also fill pattern?
@@ -646,26 +675,26 @@ void GraphicsContext::endTransparencyLayer()
     --m_transparencyCount;
 }
 
-float GraphicsContext::drawText(const FontCascade& font, const TextRun& run, const FloatPoint& point, unsigned from, Optional<unsigned> to)
+FloatSize GraphicsContext::drawText(const FontCascade& font, const TextRun& run, const FloatPoint& point, unsigned from, Optional<unsigned> to)
 {
     if (paintingDisabled())
-        return 0;
+        return FloatSize();
 
     // Display list recording for text content is done at glyphs level. See GraphicsContext::drawGlyphs.
     return font.drawText(*this, run, point, from, to);
 }
 
-void GraphicsContext::drawGlyphs(const Font& font, const GlyphBuffer& buffer, unsigned from, unsigned numGlyphs, const FloatPoint& point, FontSmoothingMode fontSmoothingMode)
+void GraphicsContext::drawGlyphs(const Font& font, const GlyphBufferGlyph* glyphs, const GlyphBufferAdvance* advances, unsigned numGlyphs, const FloatPoint& point, FontSmoothingMode fontSmoothingMode)
 {
     if (paintingDisabled())
         return;
 
     if (m_impl) {
-        m_impl->drawGlyphs(font, buffer, from, numGlyphs, point, fontSmoothingMode);
+        m_impl->drawGlyphs(font, glyphs, advances, numGlyphs, point, fontSmoothingMode);
         return;
     }
 
-    FontCascade::drawGlyphs(*this, font, buffer, from, numGlyphs, point, fontSmoothingMode);
+    FontCascade::drawGlyphs(*this, font, glyphs, advances, numGlyphs, point, fontSmoothingMode);
 }
 
 void GraphicsContext::drawEmphasisMarks(const FontCascade& font, const TextRun& run, const AtomString& mark, const FloatPoint& point, unsigned from, Optional<unsigned> to)
@@ -701,13 +730,26 @@ void GraphicsContext::drawBidiText(const FontCascade& font, const TextRun& run, 
         subrun.setDirection(isRTL ? TextDirection::RTL : TextDirection::LTR);
         subrun.setDirectionalOverride(bidiRun->dirOverride(false));
 
-        float width = font.drawText(*this, subrun, currPoint, 0, WTF::nullopt, customFontNotReadyAction);
-        currPoint.move(width, 0);
+        auto advance = font.drawText(*this, subrun, currPoint, 0, WTF::nullopt, customFontNotReadyAction);
+        currPoint.move(advance);
 
         bidiRun = bidiRun->next();
     }
 
     bidiRuns.clear();
+}
+
+void GraphicsContext::drawNativeImage(NativeImage& image, const FloatSize& imageSize, const FloatRect& destRect, const FloatRect& srcRect, const ImagePaintingOptions& options)
+{
+    if (paintingDisabled())
+        return;
+
+    if (m_impl) {
+        m_impl->drawNativeImage(image, imageSize, destRect, srcRect, options);
+        return;
+    }
+
+    drawPlatformImage(image.platformImage(), imageSize, destRect, srcRect, options);
 }
 
 ImageDrawResult GraphicsContext::drawImage(Image& image, const FloatPoint& destination, const ImagePaintingOptions& imagePaintingOptions)
@@ -717,7 +759,7 @@ ImageDrawResult GraphicsContext::drawImage(Image& image, const FloatPoint& desti
 
 ImageDrawResult GraphicsContext::drawImage(Image& image, const FloatRect& destination, const ImagePaintingOptions& imagePaintingOptions)
 {
-    FloatRect srcRect(FloatPoint(), image.size());
+    FloatRect srcRect(FloatPoint(), image.size(imagePaintingOptions.orientation()));
     return drawImage(image, destination, srcRect, imagePaintingOptions);
 }
 
@@ -725,9 +767,6 @@ ImageDrawResult GraphicsContext::drawImage(Image& image, const FloatRect& destin
 {
     if (paintingDisabled())
         return ImageDrawResult::DidNothing;
-
-    if (m_impl)
-        return m_impl->drawImage(image, destination, source, options);
 
     InterpolationQualityMaintainer interpolationQualityForThisScope(*this, options.interpolationQuality());
     return image.draw(*this, destination, source, options);
@@ -738,9 +777,6 @@ ImageDrawResult GraphicsContext::drawTiledImage(Image& image, const FloatRect& d
     if (paintingDisabled())
         return ImageDrawResult::DidNothing;
 
-    if (m_impl)
-        return m_impl->drawTiledImage(image, destination, source, tileSize, spacing, options);
-
     InterpolationQualityMaintainer interpolationQualityForThisScope(*this, options.interpolationQuality());
     return image.drawTiled(*this, destination, source, tileSize, spacing, options);
 }
@@ -750,9 +786,6 @@ ImageDrawResult GraphicsContext::drawTiledImage(Image& image, const FloatRect& d
 {
     if (paintingDisabled())
         return ImageDrawResult::DidNothing;
-
-    if (m_impl)
-        return m_impl->drawTiledImage(image, destination, source, tileScaleFactor, hRule, vRule, options);
 
     if (hRule == Image::StretchTile && vRule == Image::StretchTile) {
         // Just do a scale.
@@ -778,11 +811,16 @@ void GraphicsContext::drawImageBuffer(ImageBuffer& image, const FloatRect& desti
     if (paintingDisabled())
         return;
 
+    if (m_impl && m_impl->canDrawImageBuffer(image)) {
+        m_impl->drawImageBuffer(image, destination, source, options);
+        return;
+    }
+
     InterpolationQualityMaintainer interpolationQualityForThisScope(*this, options.interpolationQuality());
     image.draw(*this, destination, source, options);
 }
 
-void GraphicsContext::drawConsumingImageBuffer(std::unique_ptr<ImageBuffer> image, const FloatPoint& destination, const ImagePaintingOptions& imagePaintingOptions)
+void GraphicsContext::drawConsumingImageBuffer(RefPtr<ImageBuffer> image, const FloatPoint& destination, const ImagePaintingOptions& imagePaintingOptions)
 {
     if (!image)
         return;
@@ -790,7 +828,7 @@ void GraphicsContext::drawConsumingImageBuffer(std::unique_ptr<ImageBuffer> imag
     drawConsumingImageBuffer(WTFMove(image), FloatRect(destination, imageLogicalSize), FloatRect(FloatPoint(), imageLogicalSize), imagePaintingOptions);
 }
 
-void GraphicsContext::drawConsumingImageBuffer(std::unique_ptr<ImageBuffer> image, const FloatRect& destination, const ImagePaintingOptions& imagePaintingOptions)
+void GraphicsContext::drawConsumingImageBuffer(RefPtr<ImageBuffer> image, const FloatRect& destination, const ImagePaintingOptions& imagePaintingOptions)
 {
     if (!image)
         return;
@@ -798,13 +836,31 @@ void GraphicsContext::drawConsumingImageBuffer(std::unique_ptr<ImageBuffer> imag
     drawConsumingImageBuffer(WTFMove(image), destination, FloatRect(FloatPoint(), FloatSize(imageLogicalSize)), imagePaintingOptions);
 }
 
-void GraphicsContext::drawConsumingImageBuffer(std::unique_ptr<ImageBuffer> image, const FloatRect& destination, const FloatRect& source, const ImagePaintingOptions& options)
+void GraphicsContext::drawConsumingImageBuffer(RefPtr<ImageBuffer> image, const FloatRect& destination, const FloatRect& source, const ImagePaintingOptions& options)
 {
     if (paintingDisabled() || !image)
         return;
 
+    if (m_impl) {
+        m_impl->drawImageBuffer(*image, destination, source, options);
+        return;
+    }
+
     InterpolationQualityMaintainer interpolationQualityForThisScope(*this, options.interpolationQuality());
     ImageBuffer::drawConsuming(WTFMove(image), *this, destination, source, options);
+}
+
+void GraphicsContext::drawPattern(NativeImage& image, const FloatSize& imageSize, const FloatRect& destRect, const FloatRect& tileRect, const AffineTransform& patternTransform, const FloatPoint& phase, const FloatSize& spacing, const ImagePaintingOptions& options)
+{
+    if (paintingDisabled() || !patternTransform.isInvertible())
+        return;
+
+    if (m_impl) {
+        m_impl->drawPattern(image, imageSize, destRect, tileRect, patternTransform, phase, spacing, options);
+        return;
+    }
+
+    drawPlatformPattern(image.platformImage(), imageSize, destRect, tileRect, patternTransform, phase, spacing, options);
 }
 
 void GraphicsContext::clipRoundedRect(const FloatRoundedRect& rect)
@@ -830,6 +886,38 @@ void GraphicsContext::clipOutRoundedRect(const FloatRoundedRect& rect)
     Path path;
     path.addRoundedRect(rect);
     clipOut(path);
+}
+
+GraphicsContext::ClipToDrawingCommandsResult GraphicsContext::clipToDrawingCommands(const FloatRect& destination, DestinationColorSpace colorSpace, Function<void(GraphicsContext&)>&& drawingFunction)
+{
+    if (paintingDisabled())
+        return ClipToDrawingCommandsResult::Success;
+
+    if (m_impl) {
+        m_impl->clipToDrawingCommands(destination, colorSpace, WTFMove(drawingFunction));
+        return ClipToDrawingCommandsResult::Success;
+    }
+
+    auto imageBuffer = ImageBuffer::createCompatibleBuffer(destination.size(), colorSpace, *this);
+    if (!imageBuffer)
+        return ClipToDrawingCommandsResult::FailedToCreateImageBuffer;
+
+    drawingFunction(imageBuffer->context());
+    clipToImageBuffer(*imageBuffer, destination);
+    return ClipToDrawingCommandsResult::Success;
+}
+
+void GraphicsContext::clipToImageBuffer(ImageBuffer& imageBuffer, const FloatRect& destinationRect)
+{
+    if (paintingDisabled())
+        return;
+
+    if (m_impl) {
+        m_impl->clipToImageBuffer(imageBuffer, destinationRect);
+        return;
+    }
+
+    imageBuffer.clipToMask(*this, destinationRect);
 }
 
 #if !USE(CG) && !USE(DIRECT2D) && !USE(CAIRO) && !PLATFORM(JAVA)
@@ -1203,6 +1291,7 @@ Vector<FloatPoint> GraphicsContext::centerLineAndCutOffCorners(bool isVerticalLi
 }
 
 #if !USE(CG)
+
 bool GraphicsContext::supportsInternalLinks() const
 {
     return false;
@@ -1214,6 +1303,22 @@ void GraphicsContext::setDestinationForRect(const String&, const FloatRect&)
 
 void GraphicsContext::addDestinationAtPoint(const String&, const FloatPoint&)
 {
+}
+
+#endif
+
+#if ENABLE(VIDEO)
+void GraphicsContext::paintFrameForMedia(MediaPlayer& player, const FloatRect& destination)
+{
+    if (paintingDisabled())
+        return;
+
+    if (m_impl && m_impl->canPaintFrameForMedia(player)) {
+        m_impl->paintFrameForMedia(player, destination);
+        return;
+    }
+
+    player.playerPrivate()->paintCurrentFrameInContext(*this, destination);
 }
 #endif
 

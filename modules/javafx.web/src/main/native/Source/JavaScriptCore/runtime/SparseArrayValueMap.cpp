@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,13 +26,11 @@
 #include "config.h"
 #include "SparseArrayValueMap.h"
 
-#include "ClassInfo.h"
 #include "GetterSetter.h"
-#include "JSObject.h"
-#include "JSCInlines.h"
+#include "JSCJSValueInlines.h"
+#include "JSObjectInlines.h"
 #include "PropertySlot.h"
-#include "SlotVisitor.h"
-#include "Structure.h"
+#include "StructureInlines.h"
 #include "TypeError.h"
 
 namespace JSC {
@@ -203,7 +201,7 @@ bool SparseArrayEntry::put(JSGlobalObject* globalObject, JSValue thisValue, Spar
         return true;
     }
 
-    RELEASE_AND_RETURN(scope, callSetter(globalObject, thisValue, Base::get(), value, shouldThrow ? StrictMode : NotStrictMode));
+    RELEASE_AND_RETURN(scope, callSetter(globalObject, thisValue, Base::get(), value, shouldThrow ? ECMAMode::strict() : ECMAMode::sloppy()));
 }
 
 JSValue SparseArrayEntry::getNonSparseMode() const
@@ -212,7 +210,8 @@ JSValue SparseArrayEntry::getNonSparseMode() const
     return Base::get();
 }
 
-void SparseArrayValueMap::visitChildren(JSCell* cell, SlotVisitor& visitor)
+template<typename Visitor>
+void SparseArrayValueMap::visitChildrenImpl(JSCell* cell, Visitor& visitor)
 {
     SparseArrayValueMap* thisObject = jsCast<SparseArrayValueMap*>(cell);
     ASSERT_GC_OBJECT_INHERITS(thisObject, info());
@@ -224,6 +223,8 @@ void SparseArrayValueMap::visitChildren(JSCell* cell, SlotVisitor& visitor)
     }
     visitor.reportExtraMemoryVisited(thisObject->m_reportedCapacity * sizeof(Map::KeyValuePairType));
 }
+
+DEFINE_VISIT_CHILDREN(SparseArrayValueMap);
 
 } // namespace JSC
 

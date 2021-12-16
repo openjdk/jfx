@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,16 +28,16 @@
 
 #if ENABLE(WEBASSEMBLY)
 
-#include "FunctionPrototype.h"
+#include "AuxiliaryBarrierInlines.h"
 #include "GetterSetter.h"
+#include "IntegrityInlines.h"
 #include "JSCInlines.h"
 #include "JSWebAssemblyGlobal.h"
-#include "JSWebAssemblyHelpers.h"
 
 namespace JSC {
-static EncodedJSValue JSC_HOST_CALL webAssemblyGlobalProtoFuncValueOf(JSGlobalObject*, CallFrame*);
-static EncodedJSValue JSC_HOST_CALL webAssemblyGlobalProtoGetterFuncValue(JSGlobalObject*, CallFrame*);
-static EncodedJSValue JSC_HOST_CALL webAssemblyGlobalProtoSetterFuncValue(JSGlobalObject*, CallFrame*);
+static JSC_DECLARE_HOST_FUNCTION(webAssemblyGlobalProtoFuncValueOf);
+static JSC_DECLARE_HOST_FUNCTION(webAssemblyGlobalProtoGetterFuncValue);
+static JSC_DECLARE_HOST_FUNCTION(webAssemblyGlobalProtoSetterFuncValue);
 }
 
 #include "WebAssemblyGlobalPrototype.lut.h"
@@ -61,10 +61,11 @@ static ALWAYS_INLINE JSWebAssemblyGlobal* getGlobal(JSGlobalObject* globalObject
             createTypeError(globalObject, "expected |this| value to be an instance of WebAssembly.Global"_s));
         return nullptr;
     }
+    Integrity::auditStructureID(vm, result->structureID());
     return result;
 }
 
-static EncodedJSValue JSC_HOST_CALL webAssemblyGlobalProtoFuncValueOf(JSGlobalObject* globalObject, CallFrame* callFrame)
+JSC_DEFINE_HOST_FUNCTION(webAssemblyGlobalProtoFuncValueOf, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     VM& vm = globalObject->vm();
     auto throwScope = DECLARE_THROW_SCOPE(vm);
@@ -72,15 +73,10 @@ static EncodedJSValue JSC_HOST_CALL webAssemblyGlobalProtoFuncValueOf(JSGlobalOb
     JSWebAssemblyGlobal* global = getGlobal(globalObject, vm, callFrame->thisValue());
     RETURN_IF_EXCEPTION(throwScope, encodedJSValue());
 
-    switch (global->global()->type()) {
-    case Wasm::Type::I64:
-        return JSValue::encode(throwException(globalObject, throwScope, createTypeError(globalObject, "WebAssembly.Global.prototype.valueOf does not work with i64 type"_s)));
-    default:
-        return JSValue::encode(global->global()->get());
-    }
+    RELEASE_AND_RETURN(throwScope, JSValue::encode(global->global()->get(globalObject)));
 }
 
-static EncodedJSValue JSC_HOST_CALL webAssemblyGlobalProtoGetterFuncValue(JSGlobalObject* globalObject, CallFrame* callFrame)
+JSC_DEFINE_HOST_FUNCTION(webAssemblyGlobalProtoGetterFuncValue, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     VM& vm = globalObject->vm();
     auto throwScope = DECLARE_THROW_SCOPE(vm);
@@ -88,15 +84,10 @@ static EncodedJSValue JSC_HOST_CALL webAssemblyGlobalProtoGetterFuncValue(JSGlob
     JSWebAssemblyGlobal* global = getGlobal(globalObject, vm, callFrame->thisValue());
     RETURN_IF_EXCEPTION(throwScope, encodedJSValue());
 
-    switch (global->global()->type()) {
-    case Wasm::Type::I64:
-        return JSValue::encode(throwException(globalObject, throwScope, createTypeError(globalObject, "WebAssembly.Global.prototype.value does not work with i64 type"_s)));
-    default:
-        return JSValue::encode(global->global()->get());
-    }
+    RELEASE_AND_RETURN(throwScope, JSValue::encode(global->global()->get(globalObject)));
 }
 
-static EncodedJSValue JSC_HOST_CALL webAssemblyGlobalProtoSetterFuncValue(JSGlobalObject* globalObject, CallFrame* callFrame)
+JSC_DEFINE_HOST_FUNCTION(webAssemblyGlobalProtoSetterFuncValue, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     VM& vm = globalObject->vm();
     auto throwScope = DECLARE_THROW_SCOPE(vm);
@@ -110,14 +101,9 @@ static EncodedJSValue JSC_HOST_CALL webAssemblyGlobalProtoSetterFuncValue(JSGlob
     if (global->global()->mutability() == Wasm::GlobalInformation::Mutability::Immutable)
         return JSValue::encode(throwException(globalObject, throwScope, createTypeError(globalObject, "WebAssembly.Global.prototype.value attempts to modify immutable global value"_s)));
 
-    switch (global->global()->type()) {
-    case Wasm::Type::I64:
-        return JSValue::encode(throwException(globalObject, throwScope, createTypeError(globalObject, "WebAssembly.Global.prototype.value does not work with i64 type"_s)));
-    default:
-        global->global()->set(globalObject, callFrame->argument(0));
-        RETURN_IF_EXCEPTION(throwScope, encodedJSValue());
-        return JSValue::encode(jsUndefined());
-    }
+    global->global()->set(globalObject, callFrame->argument(0));
+    RETURN_IF_EXCEPTION(throwScope, encodedJSValue());
+    return JSValue::encode(jsUndefined());
 }
 
 WebAssemblyGlobalPrototype* WebAssemblyGlobalPrototype::create(VM& vm, JSGlobalObject* globalObject, Structure* structure)
@@ -141,6 +127,7 @@ void WebAssemblyGlobalPrototype::finishCreation(VM& vm, JSGlobalObject* globalOb
     JSFunction* valueSetterFunction = JSFunction::create(vm, globalObject, 1, "set value"_s, webAssemblyGlobalProtoSetterFuncValue, NoIntrinsic);
     GetterSetter* valueAccessor = GetterSetter::create(vm, globalObject, valueGetterFunction, valueSetterFunction);
     putDirectNonIndexAccessorWithoutTransition(vm, Identifier::fromString(vm, "value"_s), valueAccessor, static_cast<unsigned>(PropertyAttribute::Accessor));
+    JSC_TO_STRING_TAG_WITHOUT_TRANSITION();
 }
 
 WebAssemblyGlobalPrototype::WebAssemblyGlobalPrototype(VM& vm, Structure* structure)

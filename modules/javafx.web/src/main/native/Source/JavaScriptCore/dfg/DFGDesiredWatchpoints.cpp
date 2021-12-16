@@ -44,10 +44,14 @@ void ArrayBufferViewWatchpointAdaptor::add(
         watchpoint = common.watchpoints.add(codeBlock);
     }
     ArrayBuffer* arrayBuffer = view->possiblySharedBuffer();
-    RELEASE_ASSERT(arrayBuffer);
+    if (!arrayBuffer) {
+        watchpoint->fire(codeBlock->vm(), StringFireDetail("ArrayBuffer could not be allocated, probably because of OOM."));
+        return;
+    }
+
     // FIXME: We don't need to set this watchpoint at all for shared buffers.
     // https://bugs.webkit.org/show_bug.cgi?id=164108
-    arrayBuffer->neuteringWatchpointSet().add(WTFMove(watchpoint));
+    arrayBuffer->detachingWatchpointSet().add(WTFMove(watchpoint));
 }
 
 void SymbolTableAdaptor::add(

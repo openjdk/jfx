@@ -238,6 +238,25 @@ void LegacySchemeRegistry::removeURLSchemeRegisteredAsLocal(const String& scheme
     localURLSchemes().remove(scheme);
 }
 
+static HashSet<String>& schemesHandledBySchemeHandler()
+{
+    ASSERT(schemeRegistryLock.isHeld());
+    static NeverDestroyed<HashSet<String>> set;
+    return set.get();
+}
+
+void LegacySchemeRegistry::registerURLSchemeAsHandledBySchemeHandler(const String& scheme)
+{
+    Locker<Lock> locker(schemeRegistryLock);
+    schemesHandledBySchemeHandler().add(scheme);
+}
+
+bool LegacySchemeRegistry::schemeIsHandledBySchemeHandler(StringView scheme)
+{
+    Locker<Lock> locker(schemeRegistryLock);
+    return schemesHandledBySchemeHandler().contains(scheme.toString());
+}
+
 static URLSchemesMap& schemesAllowingDatabaseAccessInPrivateBrowsing()
 {
     ASSERT(isMainThread());
@@ -268,13 +287,6 @@ static URLSchemesMap& ContentSecurityPolicyBypassingSchemes()
 }
 
 static URLSchemesMap& cachePartitioningSchemes()
-{
-    ASSERT(schemeRegistryLock.isHeld());
-    static NeverDestroyed<URLSchemesMap> schemes;
-    return schemes;
-}
-
-static URLSchemesMap& serviceWorkerSchemes()
 {
     ASSERT(schemeRegistryLock.isHeld());
     static NeverDestroyed<URLSchemesMap> schemes;
@@ -498,37 +510,6 @@ bool LegacySchemeRegistry::shouldPartitionCacheForURLScheme(const String& scheme
 
     Locker<Lock> locker(schemeRegistryLock);
     return cachePartitioningSchemes().contains(scheme);
-}
-
-void LegacySchemeRegistry::registerURLSchemeServiceWorkersCanHandle(const String& scheme)
-{
-    if (scheme.isNull())
-        return;
-
-    Locker<Lock> locker(schemeRegistryLock);
-    serviceWorkerSchemes().add(scheme);
-}
-
-bool LegacySchemeRegistry::canServiceWorkersHandleURLScheme(const String& scheme)
-{
-    if (scheme.isNull())
-        return false;
-
-    if (scheme.startsWithIgnoringASCIICase("http"_s)) {
-        if (scheme.length() == 4)
-            return true;
-        if (scheme.length() == 5 && isASCIIAlphaCaselessEqual(scheme[4], 's'))
-            return true;
-    }
-
-    Locker<Lock> locker(schemeRegistryLock);
-    return serviceWorkerSchemes().contains(scheme);
-}
-
-bool LegacySchemeRegistry::isServiceWorkerContainerCustomScheme(const String& scheme)
-{
-    Locker<Lock> locker(schemeRegistryLock);
-    return !scheme.isNull() && serviceWorkerSchemes().contains(scheme);
 }
 
 bool LegacySchemeRegistry::isUserExtensionScheme(const String& scheme)

@@ -33,9 +33,8 @@
 #include "CodeBlock.h"
 #include "DFGJITCode.h"
 #include "DFGNode.h"
-#include "InterpreterInlines.h"
-#include "JIT.h"
-#include "JSCInlines.h"
+#include "JSCJSValueInlines.h"
+#include "RegisterAtOffsetList.h"
 #include "VMInlines.h"
 #include <wtf/CommaPrinter.h>
 
@@ -257,7 +256,7 @@ void* prepareOSREntry(VM& vm, CallFrame* callFrame, CodeBlock* codeBlock, Byteco
     RELEASE_ASSERT(codeBlock->jitCode()->contains(entry->m_machineCode.untaggedExecutableAddress()));
     dataLogLnIf(Options::verboseOSR(), "    OSR using target PC ", RawPointer(targetPC));
     RELEASE_ASSERT(targetPC);
-    *bitwise_cast<void**>(scratch + 1) = retagCodePtr(targetPC, OSREntryPtrTag, bitwise_cast<PtrTag>(callFrame));
+    *bitwise_cast<void**>(scratch + 1) = tagCodePtrWithStackPointerForJITCall(untagCodePtr<OSREntryPtrTag>(targetPC), callFrame);
 
     Register* pivot = scratch + 2 + CallFrame::headerSizeInRegisters;
 

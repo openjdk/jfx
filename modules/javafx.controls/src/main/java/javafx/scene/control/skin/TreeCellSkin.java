@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,18 +32,16 @@ import java.util.Map;
 import java.util.WeakHashMap;
 
 import com.sun.javafx.scene.control.behavior.BehaviorBase;
-import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.value.WritableValue;
 import javafx.geometry.HPos;
 import javafx.geometry.VPos;
 import javafx.scene.Node;
 import javafx.scene.control.Control;
-import javafx.scene.control.ListView;
 import javafx.scene.control.TreeCell;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeView;
+import javafx.scene.layout.Region;
 import javafx.css.StyleableDoubleProperty;
 import javafx.css.StyleableProperty;
 import javafx.css.CssMetaData;
@@ -61,7 +59,7 @@ import javafx.css.Styleable;
  */
 public class TreeCellSkin<T> extends CellSkinBase<TreeCell<T>> {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Static fields                                                           *
      *                                                                         *
@@ -85,8 +83,7 @@ public class TreeCellSkin<T> extends CellSkinBase<TreeCell<T>> {
     private static final Map<TreeView<?>, Double> maxDisclosureWidthMap = new WeakHashMap<TreeView<?>, Double>();
 
 
-
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private fields                                                          *
      *                                                                         *
@@ -96,12 +93,8 @@ public class TreeCellSkin<T> extends CellSkinBase<TreeCell<T>> {
     private TreeItem<?> treeItem;
     private final BehaviorBase<TreeCell<T>> behavior;
 
-    private double fixedCellSize;
-    private boolean fixedCellSizeEnabled;
 
-
-
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -129,32 +122,10 @@ public class TreeCellSkin<T> extends CellSkinBase<TreeCell<T>> {
             getSkinnable().requestLayout();
         });
         registerChangeListener(control.textProperty(), e -> getSkinnable().requestLayout());
-
-        setupTreeViewListeners();
-    }
-
-    private void setupTreeViewListeners() {
-        TreeView<T> treeView = getSkinnable().getTreeView();
-        if (treeView == null) {
-            getSkinnable().treeViewProperty().addListener(new InvalidationListener() {
-                @Override public void invalidated(Observable observable) {
-                    getSkinnable().treeViewProperty().removeListener(this);
-                    setupTreeViewListeners();
-                }
-            });
-        } else {
-            this.fixedCellSize = treeView.getFixedCellSize();
-            this.fixedCellSizeEnabled = fixedCellSize > 0;
-            registerChangeListener(treeView.fixedCellSizeProperty(), e -> {
-                this.fixedCellSize = getSkinnable().getTreeView().getFixedCellSize();
-                this.fixedCellSizeEnabled = fixedCellSize > 0;
-            });
-        }
     }
 
 
-
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Properties                                                              *
      *                                                                         *
@@ -188,7 +159,7 @@ public class TreeCellSkin<T> extends CellSkinBase<TreeCell<T>> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *
@@ -277,7 +248,8 @@ public class TreeCellSkin<T> extends CellSkinBase<TreeCell<T>> {
 
     /** {@inheritDoc} */
     @Override protected double computeMinHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
-        if (fixedCellSizeEnabled) {
+        double fixedCellSize = getFixedCellSize();
+        if (fixedCellSize > 0) {
             return fixedCellSize;
         }
 
@@ -288,7 +260,8 @@ public class TreeCellSkin<T> extends CellSkinBase<TreeCell<T>> {
 
     /** {@inheritDoc} */
     @Override protected double computePrefHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
-        if (fixedCellSizeEnabled) {
+        double fixedCellSize = getFixedCellSize();
+        if (fixedCellSize > 0) {
             return fixedCellSize;
         }
 
@@ -305,7 +278,8 @@ public class TreeCellSkin<T> extends CellSkinBase<TreeCell<T>> {
 
     /** {@inheritDoc} */
     @Override protected double computeMaxHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
-        if (fixedCellSizeEnabled) {
+        double fixedCellSize = getFixedCellSize();
+        if (fixedCellSize > 0) {
             return fixedCellSize;
         }
 
@@ -340,9 +314,13 @@ public class TreeCellSkin<T> extends CellSkinBase<TreeCell<T>> {
         return pw;
     }
 
+    private double getFixedCellSize() {
+        TreeView<?> treeView = getSkinnable().getTreeView();
+        return treeView != null ? treeView.getFixedCellSize() : Region.USE_COMPUTED_SIZE;
+    }
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private implementation                                                  *
      *                                                                         *
@@ -379,7 +357,7 @@ public class TreeCellSkin<T> extends CellSkinBase<TreeCell<T>> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      *                         Stylesheet Handling                             *
      *                                                                         *

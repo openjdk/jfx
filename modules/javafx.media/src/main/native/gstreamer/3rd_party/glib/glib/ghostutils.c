@@ -685,6 +685,8 @@ g_hostname_is_ascii_encoded (const gchar *hostname)
  * Tests if @hostname is the string form of an IPv4 or IPv6 address.
  * (Eg, "192.168.0.1".)
  *
+ * Since 2.66, IPv6 addresses with a zone-id are accepted (RFC6874).
+ *
  * Returns: %TRUE if @hostname is an IP address
  *
  * Since: 2.22
@@ -716,7 +718,7 @@ g_hostname_is_ip_address (const gchar *hostname)
 
       nsegments = 0;
       skipped = FALSE;
-      while (*p && nsegments < 8)
+      while (*p && *p != '%' && nsegments < 8)
         {
           /* Each segment after the first must be preceded by a ':'.
            * (We also handle half of the "string starts with ::" case
@@ -760,7 +762,7 @@ g_hostname_is_ip_address (const gchar *hostname)
           p = end;
         }
 
-      return !*p && (nsegments == 8 || skipped);
+      return (!*p || (p[0] == '%' && p[1])) && (nsegments == 8 || skipped);
     }
 
  parse_ipv4:

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,6 +28,8 @@ package com.sun.webkit.graphics;
 import java.lang.annotation.Native;
 import java.util.HashMap;
 import java.util.Map;
+
+import com.sun.prism.paint.Color;
 
 final class RenderMediaControls {
     /**
@@ -127,9 +129,9 @@ final class RenderMediaControls {
         }
     }
 
-    private static final int TimeSliderTrackUnbufferedColor =
+    private static final Color TimeSliderTrackUnbufferedColor =
             rgba(0xec, 0x87, 0x7d);
-    private static final int TimeSliderTrackBufferedColor =
+    private static final Color TimeSliderTrackBufferedColor =
             rgba(0xf9, 0x1a, 0x02);
     private static final int TimeSliderTrackThickness = 3;
 
@@ -197,7 +199,7 @@ final class RenderMediaControls {
         }
     }
 
-    private static final int VolumeTrackColor = rgba(0xd0, 0xd0, 0xd0, 0x80);
+    private static final Color VolumeTrackColor = rgba(0xd0, 0xd0, 0xd0, 0x80);
     private static final int VolumeTrackThickness = 1;
 
     static void paintVolumeTrack(WCGraphicsContext gc,
@@ -277,10 +279,13 @@ final class RenderMediaControls {
         }
     }
 
-    private static int rgba(int r, int g, int b, int a) {
-        return ((a & 0xFF) << 24) |((r & 0xFF) << 16) | ((g & 0xFF) << 8) | (b & 0xFF);
+    private static Color rgba(int r, int g, int b, int a) {
+        return new Color((r & 0xFF) / 255.0f,
+                         (g & 0xFF) / 255.0f,
+                         (b & 0xFF) / 255.0f,
+                         (a & 0xFF) / 255.0f);
     }
-    private static int rgba(int r, int g, int b) {
+    private static Color rgba(int r, int g, int b) {
         return rgba(r, g, b, 0xFF);
     }
 

@@ -46,8 +46,8 @@ class PerformanceResourceTiming final : public PerformanceEntry {
 public:
     static Ref<PerformanceResourceTiming> create(MonotonicTime timeOrigin, ResourceTiming&&);
 
-    AtomString initiatorType() const { return m_initiatorType; }
-    String nextHopProtocol() const;
+    const AtomString& initiatorType() const { return m_initiatorType; }
+    const String& nextHopProtocol() const;
 
     double workerStart() const;
     double redirectStart() const;
@@ -63,6 +63,9 @@ public:
     double responseEnd() const;
     const Vector<Ref<PerformanceServerTiming>>& serverTiming() const { return m_serverTiming; }
 
+    Type type() const final { return Type::Resource; }
+    ASCIILiteral entryType() const final { return "resource"_s; }
+
 private:
     PerformanceResourceTiming(MonotonicTime timeOrigin, ResourceTiming&&);
     ~PerformanceResourceTiming();
@@ -72,7 +75,7 @@ private:
     AtomString m_initiatorType;
     MonotonicTime m_timeOrigin;
     LoadTiming m_loadTiming;
-    NetworkLoadMetrics m_networkLoadMetrics;
+    NetworkLoadMetricsWithoutNonTimingData m_networkLoadMetrics;
     bool m_shouldReportDetails;
     Vector<Ref<PerformanceServerTiming>> m_serverTiming;
 };

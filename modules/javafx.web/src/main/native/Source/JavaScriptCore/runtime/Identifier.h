@@ -20,6 +20,7 @@
 
 #pragma once
 
+#include "ArrayConventions.h"
 #include "PrivateName.h"
 #include "VM.h"
 #include <wtf/Optional.h>
@@ -33,7 +34,7 @@ class CallFrame;
 
 ALWAYS_INLINE bool isIndex(uint32_t index)
 {
-    return index != 0xFFFFFFFFU;
+    return index <= MAX_ARRAY_INDEX;
 }
 
 template <typename CharType>
@@ -130,7 +131,14 @@ public:
 
     JS_EXPORT_PRIVATE static Identifier from(VM&, unsigned y);
     JS_EXPORT_PRIVATE static Identifier from(VM&, int y);
-    static Identifier from(VM&, double y);
+    JS_EXPORT_PRIVATE static Identifier from(VM&, double y);
+    ALWAYS_INLINE static Identifier from(VM& vm, uint64_t y)
+    {
+        if (static_cast<uint32_t>(y) == y)
+            return from(vm, static_cast<uint32_t>(y));
+        ASSERT(static_cast<uint64_t>(static_cast<double>(y)) == y);
+        return from(vm, static_cast<double>(y));
+    }
 
     bool isNull() const { return m_string.isNull(); }
     bool isEmpty() const { return m_string.isEmpty(); }

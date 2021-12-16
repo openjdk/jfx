@@ -1,6 +1,6 @@
 /*
  *  Copyright (c) 2015, Canon Inc. All rights reserved.
- *  Copyright (C) 2018-2019 Apple Inc. All rights reserved.
+ *  Copyright (C) 2018-2020 Apple Inc. All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -40,16 +40,29 @@ namespace WebCore {
 #endif
 
 #define WEBCORE_COMMON_PRIVATE_IDENTIFIERS_EACH_PROPERTY_NAME(macro) \
+    macro(AbortSignal) \
+    macro(AbstractRange) \
     macro(Animation) \
     macro(AnimationEffect) \
     macro(AnimationPlaybackEvent) \
     macro(AnimationTimeline) \
     macro(ApplePaySession) \
+    macro(ApplePaySetup) \
+    macro(ApplePaySetupFeature) \
     macro(AttachmentElement) \
     macro(Audio) \
+    macro(AudioBufferSourceNode) \
+    macro(AudioContext) \
+    macro(AudioListener) \
+    macro(AudioParamMap) \
+    macro(AudioWorklet) \
+    macro(AudioWorkletGlobalScope) \
+    macro(AudioWorkletNode) \
     macro(AuthenticatorAssertionResponse) \
     macro(AuthenticatorAttestationResponse) \
     macro(AuthenticatorResponse) \
+    macro(BaseAudioContext) \
+    macro(BeforeLoadEvent) \
     macro(BlobEvent) \
     macro(Cache) \
     macro(CacheStorage) \
@@ -57,6 +70,8 @@ namespace WebCore {
     macro(Clients) \
     macro(Clipboard) \
     macro(ClipboardItem) \
+    macro(ConstantSourceNode) \
+    macro(ContactsManager) \
     macro(Credential) \
     macro(CredentialsContainer) \
     macro(CSSAnimation) \
@@ -75,6 +90,8 @@ namespace WebCore {
     macro(EnterPictureInPictureEvent) \
     macro(ExtendableEvent) \
     macro(ExtendableMessageEvent) \
+    macro(FakeXRDevice) \
+    macro(FakeXRInputController) \
     macro(FetchEvent) \
     macro(FileSystem) \
     macro(FileSystemDirectoryEntry) \
@@ -112,13 +129,14 @@ namespace WebCore {
     macro(GPUTextureView) \
     macro(GPUUncapturedErrorEvent) \
     macro(GPUValidationError) \
-    macro(HighlightMap) \
-    macro(HighlightRangeGroup) \
+    macro(HighlightRegister) \
+    macro(Highlight) \
     macro(HTMLAttachmentElement) \
     macro(HTMLAudioElement) \
     macro(HTMLDialogElement) \
     macro(HTMLDataListElement) \
     macro(HTMLMenuItemElement) \
+    macro(HTMLModelElement) \
     macro(HTMLKeygenElement) \
     macro(HTMLSlotElement) \
     macro(Headers) \
@@ -133,6 +151,7 @@ namespace WebCore {
     macro(IDBRequest) \
     macro(IDBTransaction) \
     macro(IDBVersionChangeEvent) \
+    macro(IIRFilterNode) \
     macro(ImageBitmap) \
     macro(ImageBitmapRenderingContext) \
     macro(IdleDeadline) \
@@ -149,19 +168,24 @@ namespace WebCore {
     macro(MediaKeyStatusMap) \
     macro(MediaKeySystemAccess) \
     macro(MediaKeys) \
+    macro(MediaQueryListEvent) \
     macro(MediaRecorder) \
     macro(MediaRecorderErrorEvent) \
     macro(MediaSource) \
     macro(MediaStream) \
     macro(MediaStreamTrack) \
     macro(MerchantValidationEvent) \
+    macro(MockRTCRtpTransform) \
     macro(ModernMediaControls) \
     macro(NavigatorCredentials) \
     macro(NavigatorMediaDevices) \
     macro(NavigatorUserMedia) \
+    macro(OfflineAudioContext) \
     macro(OffscreenCanvas) \
     macro(OffscreenCanvasRenderingContext2D) \
+    macro(OscillatorNode) \
     macro(PaintRenderingContext2D) \
+    macro(PannerNode) \
     macro(PaymentAddress) \
     macro(PaymentMethodChangeEvent) \
     macro(PaymentRequest) \
@@ -179,6 +203,7 @@ namespace WebCore {
     macro(PerformanceMeasure) \
     macro(PerformanceObserver) \
     macro(PerformanceObserverEntryList) \
+    macro(PerformancePaintTiming) \
     macro(PerformanceResourceTiming) \
     macro(PerformanceServerTiming) \
     macro(PointerEvent) \
@@ -190,13 +215,20 @@ namespace WebCore {
     macro(RTCDTMFToneChangeEvent) \
     macro(RTCDataChannel) \
     macro(RTCDataChannelEvent) \
+    macro(RTCEncodedAudioFrame) \
+    macro(RTCEncodedVideoFrame) \
     macro(RTCIceCandidate) \
     macro(RTCIceTransport) \
     macro(RTCPeerConnection) \
     macro(RTCPeerConnectionIceEvent) \
+    macro(RTCPeerConnectionIceErrorEvent) \
     macro(RTCRtpReceiver) \
+    macro(RTCRtpScriptTransform) \
+    macro(RTCRtpScriptTransformer) \
+    macro(RTCRtpScriptTransformerContext) \
     macro(RTCRtpSender) \
     macro(RTCRtpTransceiver) \
+    macro(RTCRtpTransform) \
     macro(RTCSessionDescription) \
     macro(RTCStatsReport) \
     macro(RTCTrackEvent) \
@@ -209,21 +241,37 @@ namespace WebCore {
     macro(RemotePlayback) \
     macro(Request) \
     macro(Response) \
+    macro(SFrameTransform) \
     macro(ScreenLuminance) \
     macro(ServiceWorker) \
     macro(ServiceWorkerContainer) \
     macro(ServiceWorkerGlobalScope) \
     macro(ServiceWorkerRegistration) \
     macro(ShadowRoot) \
+    macro(SpeechRecognition) \
+    macro(SpeechRecognitionAlternative) \
+    macro(SpeechRecognitionErrorEvent) \
+    macro(SpeechRecognitionEvent) \
+    macro(SpeechRecognitionResult) \
+    macro(SpeechRecognitionResultList) \
     macro(StaticRange) \
+    macro(StereoPannerNode) \
     macro(StylePropertyMapReadOnly) \
     macro(StylePropertyMap) \
+    macro(TextDecoderStream) \
+    macro(TextDecoderStreamDecoder) \
+    macro(TextEncoderStream) \
+    macro(TextEncoderStreamEncoder) \
     macro(TextTrackCue) \
+    macro(TextTrackCueGeneric) \
+    macro(TransformStream) \
+    macro(TransformStreamDefaultController) \
     macro(UndoItem) \
     macro(UndoManager) \
     macro(VisualViewport) \
     macro(WebGL2RenderingContext) \
     macro(WebGLVertexArrayObject) \
+    macro(WebGLTransformFeedback) \
     macro(WebKitMediaKeyError) \
     macro(WebKitMediaKeyMessageEvent) \
     macro(WebKitMediaKeyNeededEvent) \
@@ -234,23 +282,54 @@ namespace WebCore {
     macro(Worklet) \
     macro(WorkletGlobalScope) \
     macro(WritableStream) \
+    macro(WritableStreamDefaultController) \
+    macro(WritableStreamDefaultWriter) \
     macro(XMLHttpRequest) \
+    macro(XRBoundedReferenceSpace) \
+    macro(XRFrame) \
+    macro(XRInputSource) \
+    macro(XRInputSourceArray) \
+    macro(XRInputSourceEvent) \
+    macro(XRInputSourcesChangeEvent) \
+    macro(XRLayer) \
+    macro(XRPose) \
+    macro(XRReferenceSpace) \
+    macro(XRReferenceSpaceEvent) \
+    macro(XRRenderState) \
+    macro(XRRigidTransform) \
+    macro(XRSession) \
+    macro(XRSessionEvent) \
+    macro(XRSpace) \
+    macro(XRSystem) \
+    macro(XRTest) \
+    macro(XRView) \
+    macro(XRViewerPose) \
+    macro(XRViewport) \
+    macro(XRWebGLLayer) \
+    macro(abortAlgorithm) \
+    macro(abortSteps) \
     macro(appendFromJS) \
     macro(associatedReadableByteStreamController) \
     macro(autoAllocateChunkSize) \
     macro(backingMap) \
     macro(backingSet) \
+    macro(backpressure) \
+    macro(backpressureChangePromise) \
     macro(blur) \
     macro(body) \
     macro(byobRequest) \
     macro(caches) \
     macro(cancel) \
     macro(cancelAlgorithm) \
+    macro(cancelAnimationFrame) \
     macro(cancelIdleCallback) \
     macro(cloneArrayBuffer) \
     macro(close) \
+    macro(closeAlgorithm) \
+    macro(closeRequest) \
     macro(closeRequested) \
     macro(closed) \
+    macro(closedPromise) \
     macro(closedPromiseCapability) \
     macro(collectMatchingElementsInFlatTree) \
     macro(consume) \
@@ -260,20 +339,31 @@ namespace WebCore {
     macro(createImageBitmap) \
     macro(createReadableStream) \
     macro(customElements) \
+    macro(decode) \
     macro(disturbed) \
     macro(document) \
+    macro(encode) \
+    macro(encoding) \
+    macro(errorSteps) \
     macro(failureKind) \
+    macro(fatal) \
     macro(fetch) \
     macro(fetchRequest) \
     macro(fillFromJS) \
     macro(finishConsumingStream) \
+    macro(flush) \
+    macro(flushAlgorithm) \
     macro(focus) \
     macro(frames) \
     macro(getTracks) \
     macro(getUserMedia) \
     macro(gpu) \
     macro(header) \
+    macro(highWaterMark) \
     macro(href) \
+    macro(ignoreBOM) \
+    macro(inFlightCloseRequest) \
+    macro(inFlightWriteRequest) \
     macro(indexedDB) \
     macro(initializeWith) \
     macro(isDisturbed) \
@@ -281,6 +371,7 @@ namespace WebCore {
     macro(isSecureContext) \
     macro(localStreams) \
     macro(location) \
+    macro(makeDOMException) \
     macro(makeGetterTypeError) \
     macro(makeThisTypeError) \
     macro(matchingElementInFlatTree) \
@@ -316,12 +407,16 @@ namespace WebCore {
     macro(queuedCreateOffer) \
     macro(queuedSetLocalDescription) \
     macro(queuedSetRemoteDescription) \
+    macro(readable) \
     macro(readIntoRequests) \
     macro(readRequests) \
     macro(readableByteStreamAPIEnabled) \
     macro(readableStreamController) \
     macro(reader) \
+    macro(readyPromise) \
     macro(readyPromiseCapability) \
+    macro(registerRTCRtpScriptTransformer) \
+    macro(requestAnimationFrame) \
     macro(requestIdleCallback) \
     macro(response) \
     macro(responseCacheIsValid) \
@@ -331,6 +426,7 @@ namespace WebCore {
     macro(setBodyFromInputRequest) \
     macro(setStatus) \
     macro(showModalDialog) \
+    macro(size) \
     macro(start) \
     macro(startConsumingStream) \
     macro(started) \
@@ -339,6 +435,8 @@ namespace WebCore {
     macro(storedError) \
     macro(strategy) \
     macro(strategyHWM) \
+    macro(strategySizeAlgorithm) \
+    macro(stream) \
     macro(streamClosed) \
     macro(streamClosing) \
     macro(streamErrored) \
@@ -349,6 +447,11 @@ namespace WebCore {
     macro(structuredCloneArrayBufferView) \
     macro(timeline) \
     macro(top) \
+    macro(textDecoderStreamDecoder) \
+    macro(textDecoderStreamTransform) \
+    macro(textEncoderStreamEncoder) \
+    macro(textEncoderStreamTransform) \
+    macro(transformAlgorithm) \
     macro(underlyingByteSource) \
     macro(underlyingSink) \
     macro(underlyingSource) \
@@ -356,6 +459,7 @@ namespace WebCore {
     macro(visualViewport) \
     macro(webkit) \
     macro(webkitAudioContext) \
+    macro(webkitAudioPannerNode) \
     macro(webkitIDBCursor) \
     macro(webkitIDBDatabase) \
     macro(webkitIDBFactory) \
@@ -365,12 +469,26 @@ namespace WebCore {
     macro(webkitIDBRequest) \
     macro(webkitIDBTransaction) \
     macro(webkitIndexedDB) \
+    macro(webkitOfflineAudioContext) \
+    macro(webkitOscillatorNode) \
+    macro(webkitSpeechRecognition) \
+    macro(whenSignalAborted) \
     macro(window) \
+    macro(writable) \
+    macro(writableStreamAPIEnabled) \
+    macro(writeAlgorithm) \
     macro(writing) \
+    macro(writer) \
+    macro(pendingAbortRequest) \
+    macro(writeRequests) \
     WEBCORE_ADDITIONAL_PRIVATE_IDENTIFIERS(macro) \
 
 class WebCoreBuiltinNames {
 public:
+    // FIXME: Remove the __attribute__((nodebug)) when <rdar://68246686> is fixed.
+#if COMPILER(CLANG)
+    __attribute__((nodebug))
+#endif
     explicit WebCoreBuiltinNames(JSC::VM& vm)
         : m_vm(vm)
         WEBCORE_COMMON_PRIVATE_IDENTIFIERS_EACH_PROPERTY_NAME(INITIALIZE_BUILTIN_NAMES)

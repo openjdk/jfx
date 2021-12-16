@@ -31,8 +31,11 @@
 #include "config.h"
 #include "FileReader.h"
 
+#include "DOMException.h"
 #include "EventLoop.h"
 #include "EventNames.h"
+#include "Exception.h"
+#include "ExceptionCode.h"
 #include "File.h"
 #include "Logging.h"
 #include "ProgressEvent.h"
@@ -81,9 +84,9 @@ void FileReader::stop()
     m_state = DONE;
 }
 
-bool FileReader::hasPendingActivity() const
+bool FileReader::virtualHasPendingActivity() const
 {
-    return m_state == LOADING || ActiveDOMObject::hasPendingActivity();
+    return m_state == LOADING;
 }
 
 ExceptionOr<void> FileReader::readAsArrayBuffer(Blob* blob)
@@ -149,25 +152,16 @@ ExceptionOr<void> FileReader::readInternal(Blob& blob, FileReaderLoader::ReadTyp
 void FileReader::abort()
 {
     LOG(FileAPI, "FileReader: aborting\n");
-
-    if (m_aborting || m_state != LOADING)
+    if (m_state != LOADING || m_finishedLoading)
         return;
-    m_aborting = true;
 
-    // Schedule to have the abort done later since abort() might be called from the event handler and we do not want the resource loading code to be in the stack.
     m_pendingTasks.clear();
-    enqueueTask([this] {
-        ASSERT(m_state != DONE);
+    stop();
+    m_error = DOMException::create(Exception { AbortError });
 
-        stop();
-        m_aborting = false;
-
-        m_error = FileError::create(FileError::ABORT_ERR);
-
-        fireEvent(eventNames().errorEvent);
-        fireEvent(eventNames().abortEvent);
-        fireEvent(eventNames().loadendEvent);
-    });
+    auto protectedThis = makeRef(*this);
+    fireEvent(eventNames().abortEvent);
+    fireEvent(eventNames().loadendEvent);
 }
 
 void FileReader::didStartLoading()
@@ -194,30 +188,28 @@ void FileReader::didReceiveData()
 
 void FileReader::didFinishLoading()
 {
-    if (m_aborting)
-        return;
-
     enqueueTask([this] {
-        ASSERT(m_state != DONE);
-        m_state = DONE;
-
+        if (m_state == DONE)
+            return;
+        m_finishedLoading = true;
         fireEvent(eventNames().progressEvent);
+        if (m_state == DONE)
+            return;
+        m_state = DONE;
         fireEvent(eventNames().loadEvent);
         fireEvent(eventNames().loadendEvent);
     });
 }
 
-void FileReader::didFail(int errorCode)
+void FileReader::didFail(ExceptionCode errorCode)
 {
-    // If we're aborting, do not proceed with normal error handling since it is covered in aborting code.
-    if (m_aborting)
-        return;
-
     enqueueTask([this, errorCode] {
-        ASSERT(m_state != DONE);
+        if (m_state == DONE)
+            return;
         m_state = DONE;
 
-        m_error = FileError::create(static_cast<FileError::ErrorCode>(errorCode));
+        m_error = DOMException::create(Exception { errorCode });
+
         fireEvent(eventNames().errorEvent);
         fireEvent(eventNames().loadendEvent);
     });
@@ -231,7 +223,7 @@ void FileReader::fireEvent(const AtomString& type)
 
 Optional<Variant<String, RefPtr<JSC::ArrayBuffer>>> FileReader::result() const
 {
-    if (!m_loader || m_error)
+    if (!m_loader || m_error || m_state != DONE)
         return WTF::nullopt;
     if (m_readType == FileReaderLoader::ReadAsArrayBuffer) {
         auto result = m_loader->arrayBufferResult();

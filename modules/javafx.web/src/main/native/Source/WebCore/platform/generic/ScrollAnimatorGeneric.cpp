@@ -51,8 +51,8 @@ ScrollAnimatorGeneric::ScrollAnimatorGeneric(ScrollableArea& scrollableArea)
     , m_overlayScrollbarAnimationTimer(*this, &ScrollAnimatorGeneric::overlayScrollbarAnimationTimerFired)
 {
     m_kineticAnimation = makeUnique<ScrollAnimationKinetic>(
-        [this]() -> ScrollAnimationKinetic::ScrollExtents {
-            return { m_scrollableArea.minimumScrollPosition(), m_scrollableArea.maximumScrollPosition() };
+        [this]() -> ScrollExtents {
+            return { m_scrollableArea.minimumScrollPosition(), m_scrollableArea.maximumScrollPosition(), m_scrollableArea.visibleSize() };
         },
         [this](FloatPoint&& position) {
 #if ENABLE(SMOOTH_SCROLLING)
@@ -73,38 +73,52 @@ ScrollAnimatorGeneric::~ScrollAnimatorGeneric() = default;
 #if ENABLE(SMOOTH_SCROLLING)
 void ScrollAnimatorGeneric::ensureSmoothScrollingAnimation()
 {
-    if (m_smoothAnimation)
+    if (m_smoothAnimation) {
+        if (!m_smoothAnimation->isActive())
+            m_smoothAnimation->setCurrentPosition(m_currentPosition);
         return;
+    }
 
-    m_smoothAnimation = makeUnique<ScrollAnimationSmooth>(m_scrollableArea, m_currentPosition, [this](FloatPoint&& position) {
-        updatePosition(WTFMove(position));
-    });
+    m_smoothAnimation = makeUnique<ScrollAnimationSmooth>(
+        [this]() -> ScrollExtents {
+            return { m_scrollableArea.minimumScrollPosition(), m_scrollableArea.maximumScrollPosition(), m_scrollableArea.visibleSize() };
+        },
+        m_currentPosition,
+        [this](FloatPoint&& position) {
+            updatePosition(WTFMove(position));
+        },
+        [this] {
+            m_scrollableArea.setScrollBehaviorStatus(ScrollBehaviorStatus::NotInAnimation);
+        });
 }
 #endif
 
 #if ENABLE(SMOOTH_SCROLLING)
-bool ScrollAnimatorGeneric::scroll(ScrollbarOrientation orientation, ScrollGranularity granularity, float step, float multiplier)
+bool ScrollAnimatorGeneric::scroll(ScrollbarOrientation orientation, ScrollGranularity granularity, float step, float multiplier, ScrollBehavior behavior)
 {
     if (!m_scrollableArea.scrollAnimatorEnabled())
-        return ScrollAnimator::scroll(orientation, granularity, step, multiplier);
+        return ScrollAnimator::scroll(orientation, granularity, step, multiplier, behavior);
+
+    // This method doesn't do directional snapping, but our base class does. It will call into
+    // ScrollAnimatorGeneric::scroll again with the snapped positions and ScrollBehavior::Default.
+    if (behavior == ScrollBehavior::DoDirectionalSnapping)
+        return ScrollAnimator::scroll(orientation, granularity, step, multiplier, behavior);
 
     ensureSmoothScrollingAnimation();
     return m_smoothAnimation->scroll(orientation, granularity, step, multiplier);
 }
 #endif
 
-void ScrollAnimatorGeneric::scrollToOffsetWithoutAnimation(const FloatPoint& offset, ScrollClamping)
+bool ScrollAnimatorGeneric::scrollToPositionWithoutAnimation(const FloatPoint& position, ScrollClamping clamping)
 {
-    FloatPoint position = ScrollableArea::scrollPositionFromOffset(offset, toFloatSize(m_scrollableArea.scrollOrigin()));
     m_kineticAnimation->stop();
-    m_kineticAnimation->clearScrollHistory();
 
 #if ENABLE(SMOOTH_SCROLLING)
     if (m_smoothAnimation)
         m_smoothAnimation->setCurrentPosition(position);
 #endif
 
-    updatePosition(WTFMove(position));
+    return ScrollAnimator::scrollToPositionWithoutAnimation(position, clamping);
 }
 
 bool ScrollAnimatorGeneric::handleWheelEvent(const PlatformWheelEvent& event)
@@ -141,6 +155,7 @@ void ScrollAnimatorGeneric::updatePosition(FloatPoint&& position)
     FloatSize delta = position - m_currentPosition;
     m_currentPosition = WTFMove(position);
     notifyPositionChanged(delta);
+    updateActiveScrollSnapIndexForOffset();
 }
 
 void ScrollAnimatorGeneric::didAddVerticalScrollbar(Scrollbar* scrollbar)

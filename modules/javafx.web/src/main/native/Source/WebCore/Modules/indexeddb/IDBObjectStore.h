@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -109,10 +109,8 @@ public:
     void ref();
     void deref();
 
-    void visitReferencedIndexes(JSC::SlotVisitor&) const;
+    template<typename Visitor> void visitReferencedIndexes(Visitor&) const;
     void renameReferencedIndex(IDBIndex&, const String& newName);
-
-    bool hasPendingActivity() const final;
 
 private:
     enum class InlineKeyCheck { Perform, DoNotPerform };
@@ -124,7 +122,9 @@ private:
     ExceptionOr<Ref<IDBRequest>> doGetAll(JSC::JSGlobalObject&, Optional<uint32_t> count, WTF::Function<ExceptionOr<RefPtr<IDBKeyRange>>()> &&);
     ExceptionOr<Ref<IDBRequest>> doGetAllKeys(JSC::JSGlobalObject&, Optional<uint32_t> count, WTF::Function<ExceptionOr<RefPtr<IDBKeyRange>>()> &&);
 
+    // ActiveDOMObject.
     const char* activeDOMObjectName() const final;
+    bool virtualHasPendingActivity() const final;
 
     IDBObjectStoreInfo m_info;
     IDBObjectStoreInfo m_originalInfo;

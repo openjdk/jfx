@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,7 +27,7 @@ package com.sun.marlin;
 
 public final class Version {
 
-    private static final String VERSION = "marlinFX-0.9.3.1-Unsafe-OpenJDK";
+    private static final String VERSION = "marlinFX-0.9.3.2-Unsafe-OpenJFX";
 
     public static String getVersion() {
         return VERSION;

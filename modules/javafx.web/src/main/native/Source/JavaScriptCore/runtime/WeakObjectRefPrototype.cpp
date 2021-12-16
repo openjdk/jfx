@@ -26,7 +26,6 @@
 #include "config.h"
 #include "WeakObjectRefPrototype.h"
 
-#include "Error.h"
 #include "JSCInlines.h"
 #include "JSWeakObjectRef.h"
 
@@ -34,7 +33,7 @@ namespace JSC {
 
 const ClassInfo WeakObjectRefPrototype::s_info = { "WeakRef", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(WeakObjectRefPrototype) };
 
-static EncodedJSValue JSC_HOST_CALL protoFuncWeakRefDeref(JSGlobalObject*, CallFrame*);
+static JSC_DECLARE_HOST_FUNCTION(protoFuncWeakRefDeref);
 
 void WeakObjectRefPrototype::finishCreation(VM& vm, JSGlobalObject* globalObject)
 {
@@ -44,7 +43,7 @@ void WeakObjectRefPrototype::finishCreation(VM& vm, JSGlobalObject* globalObject
     // FIXME: It wouldn't be hard to make this an intrinsic.
     JSC_NATIVE_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->deref, protoFuncWeakRefDeref, static_cast<unsigned>(PropertyAttribute::DontEnum), 0);
 
-    putDirectWithoutTransition(vm, vm.propertyNames->toStringTagSymbol, jsNontrivialString(vm, "WeakRef"_s), PropertyAttribute::DontEnum | PropertyAttribute::ReadOnly);
+    JSC_TO_STRING_TAG_WITHOUT_TRANSITION();
 }
 
 ALWAYS_INLINE static JSWeakObjectRef* getWeakRef(JSGlobalObject* globalObject, JSValue value)
@@ -65,7 +64,7 @@ ALWAYS_INLINE static JSWeakObjectRef* getWeakRef(JSGlobalObject* globalObject, J
     return nullptr;
 }
 
-EncodedJSValue JSC_HOST_CALL protoFuncWeakRefDeref(JSGlobalObject* globalObject, CallFrame* callFrame)
+JSC_DEFINE_HOST_FUNCTION(protoFuncWeakRefDeref, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     VM& vm = globalObject->vm();
     auto* ref = getWeakRef(globalObject, callFrame->thisValue());

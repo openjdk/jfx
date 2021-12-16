@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,8 +27,7 @@
 #include "PutByIdVariant.h"
 
 #include "CallLinkStatus.h"
-#include "JSCInlines.h"
-#include <wtf/ListDump.h>
+#include "HeapInlines.h"
 
 namespace JSC {
 
@@ -263,12 +262,16 @@ bool PutByIdVariant::attemptToMergeTransitionWithReplace(const PutByIdVariant& r
     return true;
 }
 
-void PutByIdVariant::markIfCheap(SlotVisitor& visitor)
+template<typename Visitor>
+void PutByIdVariant::markIfCheap(Visitor& visitor)
 {
     m_oldStructure.markIfCheap(visitor);
     if (m_newStructure)
         m_newStructure->markIfCheap(visitor);
 }
+
+template void PutByIdVariant::markIfCheap(AbstractSlotVisitor&);
+template void PutByIdVariant::markIfCheap(SlotVisitor&);
 
 bool PutByIdVariant::finalize(VM& vm)
 {
@@ -285,7 +288,7 @@ bool PutByIdVariant::finalize(VM& vm)
 
 void PutByIdVariant::dump(PrintStream& out) const
 {
-    dumpInContext(out, 0);
+    dumpInContext(out, nullptr);
 }
 
 void PutByIdVariant::dumpInContext(PrintStream& out, DumpContext* context) const

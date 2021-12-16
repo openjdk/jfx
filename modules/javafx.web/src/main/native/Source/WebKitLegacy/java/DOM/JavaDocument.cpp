@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -192,7 +192,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_DocumentImpl_getDomainImpl(JNI
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_DocumentImpl_getURLImpl(JNIEnv* env, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, IMPL->urlForBindings());
+    return JavaReturn<String>(env, IMPL->urlForBindings().string());
 }
 
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_DocumentImpl_getCookieImpl(JNIEnv* env, jclass, jlong peer)
@@ -366,9 +366,6 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_DocumentImpl_getVisibilityStat
     case WebCore::VisibilityState::Visible:
         visibility = "visible";
         break;
-    case WebCore::VisibilityState::Prerender:
-        visibility = "prerender";
-        break;
     }
     return JavaReturn<String>(env, String(visibility));
 }
@@ -382,7 +379,10 @@ JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_DocumentImpl_getHiddenImpl(JN
 JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_DocumentImpl_getCurrentScriptImpl(JNIEnv* env, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<HTMLScriptElement>(env, WTF::getPtr(IMPL->currentScript()));
+    WebCore::Element* element = IMPL->currentScript();
+    if (!is<WebCore::HTMLScriptElement>(element))
+        return 0;
+    return JavaReturn<HTMLScriptElement>(env, WTF::getPtr(downcast<WebCore::HTMLScriptElement>(element)));
 }
 
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_DocumentImpl_getOriginImpl(JNIEnv* env, jclass, jlong peer)

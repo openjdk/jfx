@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -63,6 +63,8 @@ struct _HLSProgressBuffer
     gboolean      is_eos;
 
     GstFlowReturn srcresult;
+
+    GstClockTime buffer_pts;
 };
 
 struct _HLSProgressBufferClass
@@ -191,6 +193,8 @@ static void hls_progress_buffer_init(HLSProgressBuffer *element)
     element->is_eos = FALSE;
 
     element->srcresult = GST_FLOW_OK;
+
+    element->buffer_pts = GST_CLOCK_TIME_NONE;
 }
 
 /**
@@ -419,6 +423,13 @@ static void hls_progress_buffer_loop(void *data)
             g_cond_signal(&element->del_cond);
         }
 
+        if (element->buffer_pts != GST_CLOCK_TIME_NONE)
+        {
+            GST_BUFFER_TIMESTAMP(buffer) = element->buffer_pts;
+            GST_BUFFER_DTS(buffer) = element->buffer_pts;
+            element->buffer_pts = GST_CLOCK_TIME_NONE;
+        }
+
         g_mutex_unlock(&element->lock);
 
         // Send the data to the hls progressbuffer source pad
@@ -494,10 +505,12 @@ static gboolean hls_progress_buffer_sink_event(GstPad *pad, GstObject *parent, G
                 gst_segment_init (&new_segment, GST_FORMAT_TIME);
                 new_segment.flags = segment.flags;
                 new_segment.rate = segment.rate;
-                new_segment.start = 0;
+                new_segment.start = segment.position;
                 new_segment.stop = -1;
                 new_segment.position = segment.position;
                 new_segment.time = segment.position;
+
+                element->buffer_pts = segment.position;
 
                 event = gst_event_new_segment (&new_segment);
                 element->send_new_segment = FALSE;

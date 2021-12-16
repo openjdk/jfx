@@ -46,4 +46,20 @@ public class TabPaneSkinShim {
         StackPane headersRegion = (StackPane) tabPane.lookup(".headers-region");
         return headersRegion.getChildren();
     }
+
+    public static double getHeaderAreaScrollOffset(TabPane tabPane) {
+        TabPaneSkin skin = (TabPaneSkin) tabPane.getSkin();
+        return skin.test_getHeaderAreaScrollOffset();
+    }
+
+    public static void setHeaderAreaScrollOffset(TabPane tabPane, double offset) {
+        TabPaneSkin skin = (TabPaneSkin) tabPane.getSkin();
+        skin.test_setHeaderAreaScrollOffset(offset);
+    }
+
+    public static boolean isTabsFit(TabPane tabPane) {
+        TabPaneSkin skin = (TabPaneSkin) tabPane.getSkin();
+        return skin.test_isTabsFit();
+    }
+
 }

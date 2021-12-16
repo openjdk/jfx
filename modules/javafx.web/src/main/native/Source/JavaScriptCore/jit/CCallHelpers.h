@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -49,7 +49,7 @@ class RegisteredStructure;
 
 class CCallHelpers : public AssemblyHelpers {
 public:
-    CCallHelpers(CodeBlock* codeBlock = 0)
+    CCallHelpers(CodeBlock* codeBlock = nullptr)
         : AssemblyHelpers(codeBlock)
     {
     }
@@ -99,9 +99,16 @@ private:
         typedef std::pair<RegType, RegType> RegPair;
         Vector<RegPair, NumberOfRegisters> pairs;
 
-        for (unsigned i = 0; i < NumberOfRegisters; ++i) {
-            if (sources[i] != destinations[i])
-                pairs.append(std::make_pair(sources[i], destinations[i]));
+        // if constexpr avoids warnings when NumberOfRegisters is 0.
+        if constexpr (NumberOfRegisters > 0) {
+            for (unsigned i = 0; i < NumberOfRegisters; ++i) {
+                if (sources[i] != destinations[i])
+                    pairs.append(std::make_pair(sources[i], destinations[i]));
+            }
+        } else {
+            // Silence some older compilers (GCC up to 9.X) about unused but set parameters.
+            UNUSED_PARAM(sources);
+            UNUSED_PARAM(destinations);
         }
 
 #if ASSERT_ENABLED
@@ -313,9 +320,12 @@ private:
 
         std::array<RegType, TargetSize> result { };
 
-        for (unsigned i = 0; i < TargetSize; i++) {
-            ASSERT(sourceArray[i] != static_cast<int32_t>(InfoTypeForReg<RegType>::InvalidIndex));
-            result[i] = sourceArray[i];
+        // if constexpr avoids warnings when TargetSize is 0.
+        if constexpr (TargetSize > 0) {
+            for (unsigned i = 0; i < TargetSize; i++) {
+                ASSERT(sourceArray[i] != static_cast<int32_t>(InfoTypeForReg<RegType>::InvalidIndex));
+                result[i] = sourceArray[i];
+            }
         }
 
         return result;
@@ -772,6 +782,7 @@ public:
 #if CPU(ARM64E)
         addPtr(TrustedImm32(sizeof(CallerFrameAndPC)), MacroAssembler::framePointerRegister, tempGPR);
         untagPtr(tempGPR, linkRegister);
+        validateUntaggedPtr(linkRegister, tempGPR);
 #endif
 #elif CPU(MIPS)
         loadPtr(Address(framePointerRegister, sizeof(void*)), returnAddressRegister);

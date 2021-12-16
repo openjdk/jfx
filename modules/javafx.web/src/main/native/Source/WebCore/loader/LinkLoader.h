@@ -36,6 +36,7 @@
 #include "CachedResourceHandle.h"
 #include "LinkLoaderClient.h"
 #include "LinkRelAttribute.h"
+#include "ReferrerPolicy.h"
 
 #include <wtf/WeakPtr.h>
 
@@ -53,6 +54,7 @@ struct LinkLoadParameters {
     String crossOrigin;
     String imageSrcSet;
     String imageSizes;
+    ReferrerPolicy referrerPolicy { ReferrerPolicy::EmptyString };
 };
 
 class LinkLoader : private CachedResourceClient, public CanMakeWeakPtr<LinkLoader> {
@@ -61,17 +63,17 @@ public:
     virtual ~LinkLoader();
 
     void loadLink(const LinkLoadParameters&, Document&);
-    static Optional<CachedResource::Type> resourceTypeFromAsAttribute(const String& as);
+    static Optional<CachedResource::Type> resourceTypeFromAsAttribute(const String&, Document&);
 
     enum class MediaAttributeCheck { MediaAttributeEmpty, MediaAttributeNotEmpty, SkipMediaAttributeCheck };
     static void loadLinksFromHeader(const String& headerValue, const URL& baseURL, Document&, MediaAttributeCheck);
-    static bool isSupportedType(CachedResource::Type, const String& mimeType);
+    static bool isSupportedType(CachedResource::Type, const String& mimeType, Document&);
 
     void triggerEvents(const CachedResource&);
     void cancelLoad();
 
 private:
-    void notifyFinished(CachedResource&) override;
+    void notifyFinished(CachedResource&, const NetworkLoadMetrics&) override;
     static void preconnectIfNeeded(const LinkLoadParameters&, Document&);
     static std::unique_ptr<LinkPreloadResourceClient> preloadIfNeeded(const LinkLoadParameters&, Document&, LinkLoader*);
     void prefetchIfNeeded(const LinkLoadParameters&, Document&);
