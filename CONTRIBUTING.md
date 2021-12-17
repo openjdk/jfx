@@ -16,7 +16,7 @@ Feature requests
 ----------------
 
 All new feature requests, including any API changes, need prior discussion on the [openjfx-dev](https://mail.openjdk.java.net/mailman/listinfo/openjfx-dev) mailing list, even if there is already an open
-[JBS issue](https://bugs.openjdk.java.net). See the [New features / API additions](#new-features--api-additions) section at the end of this guide for more information.
+[JBS issue](https://bugs.openjdk.java.net). See the [New features / API additions](#new-features--api-additions) section below for more information.
 
 Contributing code and documentation changes
 -------------------------------------------
@@ -49,7 +49,7 @@ If you are a first time contributor to OpenJFX, welcome! Please do the following
 
 * File a bug in JBS for every pull request
 
-    A [JBS](https://bugs.openjdk.java.net) bug ID is needed for every
+    A unique [JBS](https://bugs.openjdk.java.net) bug ID is needed for every
     pull request. If there isn't already a bug filed in JBS, then please
     file one at [bugreport.java.com](https://bugreport.java.com/).
     A developer with an active OpenJDK ID can file a bug directly in JBS.
@@ -72,10 +72,10 @@ Once your changes and tests are ready to submit for review:
 
     Push your local changes to your forked copy of the repository and
     [submit a pull request](https://help.github.com/articles/using-pull-requests).
-    The title of the pull request must start with the 7-digit JBS bug id
-    (without the `JDK-` prefix), followed by a colon (`:`), then a space,
-    and finally the bug title as taken from JBS. This title should _exactly_ match
-    the JBS bug, else the Skara bot will warn about the mismatch.
+    The title of the pull request must start with the 7-digit JBS bug id,
+    followed by a colon (`:`), then a space,
+    and finally the bug title as taken from JBS. This title must _exactly_ match
+    the JBS bug, else the Skara bot will warn about the mismatch and block integration.
     You should include
     additional details about your change in the Description of the pull
     request. For example, the following is a valid pull request title:
