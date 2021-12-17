@@ -64,7 +64,7 @@ public class PlatformUtil {
         embedded = bool1;
 
         @SuppressWarnings("removal")
-        String str2 = AccessController.doPrivileged((PrivilegedAction<String>) () -> System.getProperty("glass.platform","").toLowerCase(Locale.ROOT));
+        String str2 = AccessController.doPrivileged((PrivilegedAction<String>) () -> System.getProperty("glass.platform", "").toLowerCase(Locale.ROOT));
         embeddedType = str2;
 
         @SuppressWarnings("removal")
