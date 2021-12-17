@@ -15,7 +15,8 @@ Provide as much information as you can. The easier it is for us to recreate your
 Feature requests
 ----------------
 
-All new feature requests, including any API changes, need prior discussion on the [openjfx-dev](https://mail.openjdk.java.net/mailman/listinfo/openjfx-dev) mailing list, even if there is already an open
+If you find yourself wishing for a feature that doesn't exist in OpenJFX, you are probably not alone. There are bound to be others out there with similar needs. Many of the features that OpenJFX has today have been added because our users saw the need. Please be aware that
+all new feature requests, including any API changes, need prior discussion on the [openjfx-dev](https://mail.openjdk.java.net/mailman/listinfo/openjfx-dev) mailing list, even if there is already an open
 [JBS issue](https://bugs.openjdk.java.net). See the [New features / API additions](#new-features--api-additions) section below for more information.
 
 Contributing code and documentation changes
@@ -202,6 +203,7 @@ then it's time to focus on the implementation.
 section of the Code Review Policies doc, we also need a [CSR](https://wiki.openjdk.java.net/display/csr/Main), which documents the API change and its approval.
 The CSR can be reviewed in parallel. Changes in the API that arise during the review need to be reflected in the CSR, meaning
 that the final review / approval of the CSR usually happens late in the review cycle.
+You can avoid extra work by waiting to submit the CSR until the API is agreed upon and the code review for the documentation is reasonably far along.
 
 TIP: a pull request is _not_ the starting point, since that skips the first two important steps and jumps right into
 "given this new feature, and an API definition that specifies it, please review my proposed implementation".
