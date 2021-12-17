@@ -174,6 +174,7 @@ New features / API additions
 
 Adding a new feature to OpenJFX requires us to consider what it means to support that API forever; we take compatibility seriously.
 The main idea is to think in terms of "stewardship" when evolving the JavaFX API. This will require significant effort on your part.
+It begins before you submit a pull request for review, and continues after the new feature is integrated.
 With that in mind, here are the needed steps to get a new feature into JavaFX.
 
 1. Discuss the proposed feature on the [openjfx-dev](https://mail.openjdk.java.net/mailman/listinfo/openjfx-dev) mailing list.
