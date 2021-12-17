@@ -54,7 +54,7 @@ If you are a first time contributor to OpenJFX, welcome! Please do the following
     file one at [bugreport.java.com](https://bugreport.java.com/).
     A developer with an active OpenJDK ID can file a bug directly in JBS.
 
-TIP: A GitHub pull request (PR) should not be the first time we hear about your proposed change to OpenJFX. Unless clearly identified as a Draft or work-in-progress (WIP), we will usually close a pull request that isn't associated with an existing bug report. Reading the policies below will help you in getting your change approved.
+TIP: A GitHub pull request (PR) should not be the first time we hear about your proposed change to OpenJFX. Unless clearly identified as a `Draft` or work-in-progress (WIP), as described in the following section, we will usually close a pull request that isn't associated with an existing bug report. Reading the policies below will help you in getting your change approved.
 
 ### Submitting your changes via a pull request
 
@@ -169,52 +169,6 @@ Once your changes and tests are ready to submit for review:
     so there is no need to manually resolve it.
 
 
-Contributing to the OpenJFX codebase
-------------------------------------------
-
-JDK 11 (at a minimum) is required to build OpenJFX. You must have the JDK
-installed on your system
-with the environment variable `JAVA_HOME` referencing the path to Java home for
-your JDK installation. By default, tests use the same runtime as `JAVA_HOME`.
-Currently OpenJFX builds are running on JDK 11 through JDK 15. JDK 14 is recommended.
-
-It is possible to develop in any major Java IDE (Eclipse, IntelliJ, NetBeans). IDEs can automatically configure projects based on Gradle setup.
-
-The following formatting rules are enforced for source code files by
-`git jcheck`, which is run by the Skara bot:
-
-* Use Unix-style (LF) line endings, not DOS-style (CRLF)
-* Do not use TAB characters (exception: Makefiles can have TABS)
-* No trailing spaces
-* No files with execute permission
-
-Please also follow these formatting guidelines:
-
-* Java indent is 4 spaces
-* Line width is no more than 120 characters
-* The rest is left to Java coding standards
-* Avoid making changes that are unrelated to the bug you are fixing. This includes fixing minor errors such as warnings, spacing / indentation, spelling errors, etc, in code that you aren't otherwise modifying as part of your fix.
-* Disable &ldquo;auto-format on save&rdquo; to prevent your IDE from making unnecessary formatting changes. This makes reviews much harder as it generates unnecessary diffs. If your IDE supports formatting only modified chunks, that is fine to do.
-* Wildcard imports &ndash; for example, `import java.util.*;` &ndash; are forbidden and may cause the build to fail. Please attempt to configure your IDE so it doesn't generate wildcard imports. An exception to this rule is that wildcard static imports in test classes are allowed, for example, `import static org.junit.Assert.*;`.
-* Don't worry too much about import order. Try not to change it but don't worry about fighting your IDE to stop it from doing so.
-
-OpenJFX uses Gradle for its build. Before submitting your changes, run the test suite to make sure that nothing is broken, with:
-
-```sh
-bash ./gradlew all test
-```
-
-If you are changing anything that might possibly affect rendering, you should run a full test with robot enabled:
-
-```sh
-bash ./gradlew -PFULL_TEST=true -PUSE_ROBOT=true all test
-```
-
-If you don't build WebKit (using the `-PCOMPILE_WEBKIT=true` option), you are likely to get test failures when running the web tests. See the [Web Testing](WEBKIT-MEDIA-STUBS.md) page for information on how to address this.
-
-Even more documentation on OpenJFX projects and its build system can be found on the
-[OpenJFX Wiki](https://wiki.openjdk.java.net/display/OpenJFX/).
-
 New features / API additions
 ----------------------------
 
@@ -250,3 +204,51 @@ that the final review / approval of the CSR usually happens late in the review c
 
 TIP: a pull request is _not_ the starting point, since that skips the first two important steps and jumps right into
 "given this new feature, and an API definition that specifies it, please review my proposed implementation".
+
+Coding style and testing guidelines
+------------------------------------------
+
+The following formatting rules are enforced for source code files by
+`git jcheck`, which is run by the Skara bot:
+
+* Use Unix-style (LF) line endings, not DOS-style (CRLF)
+* Do not use TAB characters (exception: Makefiles can have TABS)
+* No trailing spaces
+* No files with execute permission
+
+Please also follow these formatting guidelines:
+
+* Java indent is 4 spaces
+* Line width is no more than 120 characters
+* The rest is left to Java coding standards
+* Avoid making changes that are unrelated to the bug you are fixing. This includes fixing minor errors such as warnings, spacing / indentation, spelling errors, etc, in code that you aren't otherwise modifying as part of your fix.
+* Disable &ldquo;auto-format on save&rdquo; to prevent your IDE from making unnecessary formatting changes. This makes reviews much harder as it generates unnecessary diffs. If your IDE supports formatting only modified chunks, that is fine to do.
+* Wildcard imports &ndash; for example, `import java.util.*;` &ndash; are forbidden and may cause the build to fail. Please attempt to configure your IDE so it doesn't generate wildcard imports. An exception to this rule is that wildcard static imports in test classes are allowed, for example, `import static org.junit.Assert.*;`.
+* Don't worry too much about import order. Try not to change it but don't worry about fighting your IDE to stop it from doing so.
+
+### Building and testing
+
+JDK 11 (at a minimum) is required to build OpenJFX. You must have the JDK
+installed on your system
+with the environment variable `JAVA_HOME` referencing the path to Java home for
+your JDK installation. By default, tests use the same runtime as `JAVA_HOME`.
+Currently OpenJFX will build and run on JDK 11 through JDK 18. JDK 17 is recommended.
+
+It is possible to develop in any major Java IDE (Eclipse, IntelliJ, NetBeans). IDEs can automatically configure projects based on Gradle setup.
+
+OpenJFX uses Gradle for its build. Before submitting your changes, run the test suite to make sure that nothing is broken, with:
+
+```sh
+bash ./gradlew all test
+```
+
+If you are changing anything that might possibly affect rendering, you should run a full test with robot enabled:
+
+```sh
+bash ./gradlew -PFULL_TEST=true -PUSE_ROBOT=true all test
+```
+
+If you don't build WebKit (using the `-PCOMPILE_WEBKIT=true` option), you are likely to get test failures when running the web tests. See the [Web Testing](WEBKIT-MEDIA-STUBS.md) page for information on how to address this.
+
+Even more documentation on OpenJFX projects and its build system can be found on the
+[OpenJFX Wiki](https://wiki.openjdk.java.net/display/OpenJFX/).
