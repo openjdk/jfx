@@ -32,7 +32,7 @@ import javafx.scene.DirectionalLight;
 import javafx.scene.Node;
 
 /**
- * Used to access internal methods of SpotLight.
+ * Used to access internal methods of DirectionalLight.
  */
 public class DirectionalLightHelper extends LightBaseHelper {
 

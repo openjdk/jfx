@@ -83,6 +83,9 @@ class Environment extends CameraScene3D {
         pointLight2.setTranslateX(-LIGHT_X_DIST);
         spotLight2.setTranslateX(-LIGHT_X_DIST);
 
+        directionalLight1.setDirection(new Point3D(-LIGHT_X_DIST, 0, LIGHT_Z_DIST));
+        directionalLight2.setDirection(new Point3D(LIGHT_X_DIST, 0, LIGHT_Z_DIST));
+
         directionalLight1.setUserData("RED");
         directionalLight2.setUserData("BLUE");
         directionalLight3.setUserData("MAGENTA");

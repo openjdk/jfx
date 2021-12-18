@@ -68,7 +68,7 @@ public class DirectionalLightTest extends LightingTest {
     }
 
     @Test
-    public void testSpotlightAttenuation() {
+    public void testDirectionalLight() {
         Util.runAndWait(() -> {
             for (Point3D direction : DIRECTIONS) {
                 LIGHT.setDirection(direction);

@@ -40,9 +40,9 @@ import javafx.scene.paint.PhongMaterial;
 /**
  * A light that illuminates an object from a specific direction.
  * The direction is defined by the {@link #directionProperty() direction} vector property of the light. The direction
- * can be rotated by setting a rotation transform on the {@code SpotLight}. For example, if the direction vector is
- * {@code (1, 1, 1)} and the light is not rotated, it will point in the {@code (1, 1, 1)} direction, and if the light is
- * rotated 90 degrees on the y axis, it will point in the {@code (1, 1, -1)} direction.
+ * can be rotated by setting a rotation transform on the {@code DirectionalLight}. For example, if the direction vector
+ * is {@code (1, 1, 1)} and the light is not rotated, it will point in the {@code (1, 1, 1)} direction, and if the light
+ * is rotated 90 degrees on the y axis, it will point in the {@code (1, 1, -1)} direction.
  * <p>
  * {@code DirectionalLight}s can represent strong light sources that are far enough from the objects they illuminate
  * that their light rays appear to be parallel. Because these light sources are considered to be infinitely far, they
