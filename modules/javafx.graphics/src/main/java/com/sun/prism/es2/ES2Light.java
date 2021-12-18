@@ -65,7 +65,7 @@ class ES2Light {
     }
 
     boolean isDirectionalLight() {
-     // testing if w is 0 or 1 using <0.5 since equality check for floating points might not work well
+        // testing if w is 0 or 1 using <0.5 since equality check for floating points might not work well
         return isAttenuated < 0.5;
     }
 }
