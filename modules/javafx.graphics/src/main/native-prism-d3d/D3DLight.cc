@@ -51,6 +51,7 @@ bool D3DLight::isPointLight() {
 }
 
 bool D3DLight::isDirectionalLight() {
+    // testing if w is 0 or 1 using <0.5 since equality check for floating points might not work well
     return attenuation[3] < 0.5;
 }
 

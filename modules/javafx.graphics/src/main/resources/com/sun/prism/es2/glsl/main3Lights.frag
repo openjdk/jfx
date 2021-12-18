@@ -119,6 +119,7 @@ float computeSpotlightFactor3(vec3 l, vec3 lightDir, float cosOuter, float denom
 void computeLight(int i, vec3 n, vec3 refl, float specPower, inout vec3 d, inout vec3 s) {
     Light light = lights[i];
     vec3 lightDir = lightTangentSpaceDirections[i].xyz;
+    // testing if w is 0 or 1 using <0.5 since equality check for floating points might not work well
     if (light.attn.w < 0.5) {
         d += clamp(dot(n, -lightDir), 0.0, 1.0) * light.color.rgb;
         s += pow(clamp(dot(-refl, -lightDir), 0.0, 1.0), specPower) * light.color.rgb;
