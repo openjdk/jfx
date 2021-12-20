@@ -28,6 +28,7 @@ package attenuation;
 import java.util.ArrayList;
 import java.util.List;
 
+import javafx.geometry.Point3D;
 import javafx.scene.AmbientLight;
 import javafx.scene.DirectionalLight;
 import javafx.scene.Group;
