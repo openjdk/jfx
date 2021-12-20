@@ -2944,7 +2944,7 @@ project(":media") {
                 // Pre-defined command line arguments
                 def cfgCMDArgs = ["sh", "configure"]
                 def commonCfgArgs = ["--enable-shared", "--disable-debug", "--disable-static", "--disable-yasm", "--disable-doc", "--disable-programs", "--disable-everything"]
-                def codecsCfgArgs = ["--enable-decoder=aac,mp3,mp3float,h264", "--enable-parser=aac,h264", "--enable-demuxer=aac,h264,mpegts,mpegtsraw"]
+                def codecsCfgArgs = ["--enable-decoder=aac,mp3,mp3float,h264,hevc", "--enable-parser=aac,h264,hevc", "--enable-demuxer=aac,h264,hevc,mpegts,mpegtsraw"]
 
                 def copyLibAVStubs = {String fromDir, String toDir ->
                     FileCollection config = files("config.h")

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,16 +33,26 @@
 #include <sys/stat.h>
 
 #include "videodecoder.h"
+#include "fxplugins_common.h"
 #include <libavformat/avformat.h>
+#include <libavutil/pixfmt.h>
 
 GST_DEBUG_CATEGORY_STATIC(videodecoder_debug);
 #define GST_CAT_DEFAULT videodecoder_debug
 
+enum
+{
+    PROP_0,
+    PROP_CODEC_ID,
+    PROP_IS_SUPPORTED,
+};
+
 /*
  * The input capabilities.
  */
-#define SINK_CAPS                     \
-    "video/x-h264"
+#define SINK_CAPS    \
+    "video/x-h264; " \
+    "video/x-h265"
 
 static GstStaticPadTemplate sink_template =
     GST_STATIC_PAD_TEMPLATE ("sink",
@@ -111,9 +121,14 @@ static void                 videodecoder_state_reset(VideoDecoder *decoder);
 
 static gboolean videodecoder_configure(VideoDecoder *decoder, GstCaps *sink_caps);
 
+static void videodecoder_dispose(GObject* object);
+static void videodecoder_set_property(GObject *object, guint property_id, const GValue *value, GParamSpec *pspec);
+static void videodecoder_get_property(GObject *object, guint property_id, GValue *value, GParamSpec *pspec);
+
 static void videodecoder_class_init(VideoDecoderClass *klass)
 {
     GstElementClass *element_class = GST_ELEMENT_CLASS(klass);
+    GObjectClass *gobject_class = (GObjectClass*)klass;
 
     gst_element_class_set_metadata(element_class,
                 "Videodecoder",
@@ -127,6 +142,18 @@ static void videodecoder_class_init(VideoDecoderClass *klass)
             gst_static_pad_template_get(&sink_template));
 
     element_class->change_state = videodecoder_change_state;
+
+    gobject_class->dispose = videodecoder_dispose;
+    gobject_class->set_property = videodecoder_set_property;
+    gobject_class->get_property = videodecoder_get_property;
+
+    g_object_class_install_property (gobject_class, PROP_CODEC_ID,
+        g_param_spec_int ("codec-id", "Codec ID", "Codec ID", -1, G_MAXINT, 0,
+        (GParamFlags)(G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_STRINGS)));
+
+    g_object_class_install_property (gobject_class, PROP_IS_SUPPORTED,
+        g_param_spec_boolean ("is-supported", "Is supported", "Is codec ID supported", FALSE,
+        (GParamFlags)(G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_STRINGS)));
 }
 
 static void videodecoder_init(VideoDecoder *decoder)
@@ -145,6 +172,82 @@ static void videodecoder_init(VideoDecoder *decoder)
     gst_element_add_pad(GST_ELEMENT(decoder), base->srcpad);
 }
 
+static void videodecoder_dispose(GObject* object)
+{
+    VideoDecoder *decoder = VIDEODECODER(object);
+
+#if HEVC_SUPPORT
+    if (decoder->dest_frame)
+    {
+        av_frame_free(&decoder->dest_frame);
+        decoder->dest_frame = NULL;
+    }
+
+    if (decoder->sws_context)
+    {
+        decoder->sws_freeContext_func(decoder->sws_context);
+        decoder->sws_context = NULL;
+    }
+
+    if (decoder->swscale_module)
+    {
+        dlclose(decoder->swscale_module);
+        decoder->swscale_module = NULL;
+    }
+#endif // HEVC_SUPPORT
+
+    G_OBJECT_CLASS(parent_class)->dispose(object);
+}
+
+static gboolean videodecoder_is_decoder_by_codec_id_supported(gint codec_id)
+{
+    switch(codec_id)
+    {
+    case JFX_CODEC_ID_H265:
+#if HEVC_SUPPORT
+        return TRUE;
+#else // HEVC_SUPPORT
+        return FALSE;
+#endif // HEVC_SUPPORT
+        break;
+    case JFX_CODEC_ID_AVC1:
+        return TRUE;
+        break;
+    case JFX_CODEC_ID_H264:
+        return TRUE;
+        break;
+    }
+
+    return FALSE;
+}
+
+static void videodecoder_set_property(GObject *object, guint property_id, const GValue *value, GParamSpec *pspec)
+{
+    VideoDecoder *decoder = VIDEODECODER(object);
+    switch (property_id)
+    {
+    case PROP_CODEC_ID:
+        decoder->codec_id = g_value_get_int(value);
+        break;
+    default:
+        break;
+    }
+}
+
+static void videodecoder_get_property(GObject *object, guint property_id, GValue *value, GParamSpec *pspec)
+{
+    VideoDecoder *decoder = VIDEODECODER(object);
+    gboolean is_supported = FALSE;
+    switch (property_id)
+    {
+    case PROP_IS_SUPPORTED:
+        is_supported = videodecoder_is_decoder_by_codec_id_supported(decoder->codec_id);
+        g_value_set_boolean(value, is_supported);
+        break;
+    default:
+        break;
+    }
+}
 
 /***********************************************************************************
  * State change handler
@@ -226,16 +329,13 @@ static gboolean videodecoder_sink_event(GstPad *pad, GstObject *parent, GstEvent
         }
 
 #ifdef DEBUG_OUTPUT
-        case GST_EVENT_NEWSEGMENT:
+        case GST_EVENT_SEGMENT:
         {
-            GstFormat format;
-            gboolean update;
-            gdouble rate, applied_rate;
-            gint64 start, stop, time;
+            GstSegment segment;
+            gst_event_copy_segment(event, &segment);
 
-            gst_event_parse_new_segment_full (event, &update, &rate, &applied_rate, &format, &start, &stop, &time);
-            g_print("videodecoder_sink_event: NEW_SEGMENT update=%s, rate=%.1f, format=%d, start=%.3f, stop=%.3f, time=%.3f\n",
-                    update ? "TRUE" : "FALSE", rate, format, (double)start/GST_SECOND, (double)stop/GST_SECOND, (double)time/GST_SECOND);
+            g_print("videodecoder_sink_event: NEW_SEGMENT rate=%.1f, format=%d, start=%.3f, stop=%.3f, time=%.3f\n",
+                    segment.rate, segment.format, (double)segment.start/GST_SECOND, (double)segment.stop/GST_SECOND, (double)segment.time/GST_SECOND);
 
             break;
         }
@@ -262,6 +362,15 @@ static void videodecoder_init_state(VideoDecoder *decoder)
     decoder->uv_blocksize = 0;
     decoder->frame_size = 0;
     decoder->discont = FALSE;
+    decoder->codec_id = JFX_CODEC_ID_UNKNOWN;
+#if HEVC_SUPPORT
+    decoder->sws_context = NULL;
+    decoder->dest_frame = NULL;
+    decoder->swscale_module = NULL;
+    decoder->sws_getContext_func = NULL;
+    decoder->sws_freeContext_func = NULL;
+    decoder->sws_scale_func = NULL;
+#endif // HEVC_SUPPORT
 
     basedecoder_init_state(BASEDECODER(decoder));
 }
@@ -269,6 +378,7 @@ static void videodecoder_init_state(VideoDecoder *decoder)
 static gboolean videodecoder_configure(VideoDecoder *decoder, GstCaps *sink_caps)
 {
     BaseDecoder *base = BASEDECODER(decoder);
+    const gchar *mimetype = NULL;
 
     if (base->is_initialized)
         return TRUE;
@@ -281,11 +391,30 @@ static gboolean videodecoder_configure(VideoDecoder *decoder, GstCaps *sink_caps
     // Pass stencil context to init against if there is one.
     basedecoder_set_codec_data(base, s);
 
+    if (s != NULL)
+    {
+        mimetype = gst_structure_get_name(s);
+        if (mimetype != NULL)
+        {
+            if (strstr(mimetype, "video/x-h264") != NULL)
+            {
 #if NEW_CODEC_ID
-    base->is_initialized = basedecoder_open_decoder(BASEDECODER(decoder), AV_CODEC_ID_H264);
+                base->is_initialized = basedecoder_open_decoder(BASEDECODER(decoder), AV_CODEC_ID_H264);
 #else
-    base->is_initialized = basedecoder_open_decoder(BASEDECODER(decoder), CODEC_ID_H264);
+                base->is_initialized = basedecoder_open_decoder(BASEDECODER(decoder), CODEC_ID_H264);
 #endif
+            }
+            else if (strstr(mimetype, "video/x-h265") != NULL)
+            {
+#if HEVC_SUPPORT
+                base->is_initialized = basedecoder_open_decoder(BASEDECODER(decoder), AV_CODEC_ID_HEVC);
+#else
+                return FALSE;
+#endif
+            }
+        }
+    }
+
     return base->is_initialized;
 }
 
@@ -295,9 +424,129 @@ static void videodecoder_state_reset(VideoDecoder *decoder)
     basedecoder_flush(BASEDECODER(decoder));
 }
 
+#if HEVC_SUPPORT
+static gboolean videodecoder_init_converter(VideoDecoder *decoder)
+{
+    BaseDecoder *base = BASEDECODER(decoder);
+
+    // Load libswscale
+    if (decoder->swscale_module == NULL)
+    {
+        decoder->swscale_module = dlopen("libswscale.so", RTLD_LAZY);
+        if (decoder->swscale_module == NULL)
+        {
+            // Halt playback, since we cannot continue and post user
+            // friendly error message that libswscale is required
+            gst_element_message_full(GST_ELEMENT(decoder), GST_MESSAGE_ERROR,
+                    JFX_GST_ERROR, JFX_GST_MISSING_LIBSWSCALE,
+                    g_strdup("Error: libswscale is required for H.265/HEVC 10/12-bit decoding"), NULL,
+                    ("videodecoder.c"), ("videodecoder_init_converter"), 0);
+            return FALSE;
+        }
+
+        decoder->sws_getContext_func = dlsym(decoder->swscale_module, "sws_getContext");
+        if (!decoder->sws_getContext_func)
+        {
+            gst_element_message_full(GST_ELEMENT(decoder), GST_MESSAGE_ERROR,
+                    JFX_GST_ERROR, JFX_GST_INVALID_LIBSWSCALE,
+                    g_strdup("Error: Failed to find \"sws_getContext()\" in libswscale"), NULL,
+                    ("videodecoder.c"), ("videodecoder_init_converter"), 0);
+            return FALSE;
+        }
+
+        decoder->sws_freeContext_func = dlsym(decoder->swscale_module, "sws_freeContext");
+        if (!decoder->sws_freeContext_func)
+        {
+            gst_element_message_full(GST_ELEMENT(decoder), GST_MESSAGE_ERROR,
+                    JFX_GST_ERROR, JFX_GST_INVALID_LIBSWSCALE,
+                    g_strdup("Error: Failed to find \"sws_freeContext()\" in libswscale"), NULL,
+                    ("videodecoder.c"), ("videodecoder_init_converter"), 0);
+            return FALSE;
+        }
+
+        decoder->sws_scale_func = dlsym(decoder->swscale_module, "sws_scale");
+        if (!decoder->sws_scale_func)
+        {
+            gst_element_message_full(GST_ELEMENT(decoder), GST_MESSAGE_ERROR,
+                    JFX_GST_ERROR, JFX_GST_INVALID_LIBSWSCALE,
+                    g_strdup("Error: Failed to find \"sws_scale()\" in libswscale"), NULL,
+                    ("videodecoder.c"), ("videodecoder_init_converter"), 0);
+            return FALSE;
+        }
+    }
+
+    if (decoder->dest_frame)
+    {
+        av_frame_free(&decoder->dest_frame);
+        decoder->dest_frame = NULL;
+    }
+
+    if (decoder->sws_context)
+    {
+        decoder->sws_freeContext_func(decoder->sws_context);
+        decoder->sws_context = NULL;
+    }
+
+    decoder->sws_context =
+            decoder->sws_getContext_func(decoder->width, decoder->height,
+                                         base->frame->format, decoder->width,
+                                         decoder->height, AV_PIX_FMT_YUV420P,
+                                         SWS_BILINEAR, NULL, NULL, NULL);
+
+    if (decoder->sws_context == NULL)
+        return FALSE;
+
+    decoder->dest_frame = av_frame_alloc();
+    if (decoder->dest_frame == NULL)
+        return FALSE;
+
+    decoder->dest_frame->format = AV_PIX_FMT_YUV420P;
+    decoder->dest_frame->width  = decoder->width;
+    decoder->dest_frame->height = decoder->height;
+    int ret = av_frame_get_buffer(decoder->dest_frame, 32);
+    if (ret < 0)
+    {
+        av_frame_free(&decoder->dest_frame);
+        decoder->dest_frame = NULL;
+        decoder->sws_freeContext_func(decoder->sws_context);
+        decoder->sws_context = NULL;
+        return FALSE;
+    }
+
+    return TRUE;
+}
+
+static gboolean videodecoder_convert_frame(VideoDecoder *decoder)
+{
+    BaseDecoder *base = BASEDECODER(decoder);
+
+    if (decoder->sws_context == NULL || decoder->dest_frame == NULL ||
+            decoder->sws_scale_func == NULL)
+        return FALSE;
+
+    int ret = decoder->sws_scale_func(decoder->sws_context,
+                                      base->frame->data,
+                                      base->frame->linesize,
+                                      0,
+                                      base->frame->height,
+                                      decoder->dest_frame->data,
+                                      decoder->dest_frame->linesize);
+    if (ret < 0)
+        return FALSE;
+
+    decoder->dest_frame->reordered_opaque = base->frame->reordered_opaque;
+
+    return TRUE;
+}
+#endif // HEVC_SUPPORT
+
 static gboolean videodecoder_configure_sourcepad(VideoDecoder *decoder)
 {
     BaseDecoder *base = BASEDECODER(decoder);
+    gboolean set_linesize = TRUE;
+    int linesize0 = 0;
+    int linesize1 = 0;
+    int linesize2 = 0;
 
     GstCaps *caps = gst_pad_get_current_caps(base->srcpad);
 
@@ -315,21 +564,61 @@ static gboolean videodecoder_configure_sourcepad(VideoDecoder *decoder)
         decoder->width = width;
         decoder->height = height;
 
+#if HEVC_SUPPORT
+    // Setup scaler and color converter if pixel format is not AV_PIX_FMT_YUV420P.
+    // We will get different pixel format for H.265 10-bit such as
+    // AV_PIX_FMT_YUV422P10LE. Scaling should not happen if resolution is same.
+    if (base->frame->format != AV_PIX_FMT_YUV420P)
+    {
+        if (!videodecoder_init_converter(decoder))
+        {
+            gst_element_message_full(GST_ELEMENT(decoder), GST_MESSAGE_ERROR,
+                                             GST_STREAM_ERROR, GST_STREAM_ERROR_DECODE,
+                                             g_strdup("videodecoder_init_convert() failed"), NULL,
+                                             ("videodecoder.c"), ("videodecoder_configure_sourcepad"), 0);
+            return FALSE;
+        }
+
+        if (!videodecoder_convert_frame(decoder))
+        {
+            gst_element_message_full(GST_ELEMENT(decoder), GST_MESSAGE_ERROR,
+                                             GST_STREAM_ERROR, GST_STREAM_ERROR_DECODE,
+                                             g_strdup("videodecoder_convert_frame() failed"), NULL,
+                                             ("videodecoder.c"), ("videodecoder_configure_sourcepad"), 0);
+
+            return FALSE;
+        }
+
+        linesize0 = decoder->dest_frame->linesize[0];
+        linesize1 = decoder->dest_frame->linesize[1];
+        linesize2 = decoder->dest_frame->linesize[2];
+
+        set_linesize = FALSE;
+    }
+#endif // HEVC_SUPPORT
+
         decoder->discont = (caps != NULL);
 
-        decoder->u_offset = base->frame->linesize[0] * decoder->height;
-        decoder->uv_blocksize = base->frame->linesize[1] * decoder->height / 2;
+        if (set_linesize)
+        {
+            linesize0 = base->frame->linesize[0];
+            linesize1 = base->frame->linesize[1];
+            linesize2 = base->frame->linesize[2];
+        }
+
+        decoder->u_offset = linesize0 * decoder->height;
+        decoder->uv_blocksize = linesize1 * decoder->height / 2;
 
         decoder->v_offset = decoder->u_offset + decoder->uv_blocksize;
-        decoder->frame_size = (base->frame->linesize[0] + base->frame->linesize[1]) * decoder->height;
+        decoder->frame_size = (linesize0 + linesize1) * decoder->height;
 
         GstCaps *src_caps = gst_caps_new_simple("video/x-raw-yuv",
                                                 "format", G_TYPE_STRING, "YV12",
                                                 "width", G_TYPE_INT, decoder->width,
                                                 "height", G_TYPE_INT, decoder->height,
-                                                "stride-y", G_TYPE_INT, base->frame->linesize[0],
-                                                "stride-u", G_TYPE_INT, base->frame->linesize[1],
-                                                "stride-v", G_TYPE_INT, base->frame->linesize[2],
+                                                "stride-y", G_TYPE_INT, linesize0,
+                                                "stride-u", G_TYPE_INT, linesize1,
+                                                "stride-v", G_TYPE_INT, linesize2,
                                                 "offset-y", G_TYPE_INT, 0,
                                                 "offset-u", G_TYPE_INT, decoder->u_offset,
                                                 "offset-v", G_TYPE_INT, decoder->v_offset,
@@ -369,6 +658,11 @@ static GstFlowReturn videodecoder_chain(GstPad *pad, GstObject *parent, GstBuffe
     GstMapInfo     info;
     GstMapInfo     info2;
     gboolean       unmap_buf = FALSE;
+    gboolean       set_frame_values = TRUE;
+    int64_t        reordered_opaque = AV_NOPTS_VALUE;
+    uint8_t*       data0 = NULL;
+    uint8_t*       data1 = NULL;
+    uint8_t*       data2 = NULL;
 
     if (base->is_flushing)  // Reject buffers in flushing state.
     {
@@ -436,6 +730,37 @@ static GstFlowReturn videodecoder_chain(GstPad *pad, GstObject *parent, GstBuffe
             result = GST_FLOW_ERROR;
         else
         {
+#if HEVC_SUPPORT
+            // Check to see if we need to convert frame to YUV420p
+            if (base->frame->format != AV_PIX_FMT_YUV420P)
+            {
+                if (!videodecoder_convert_frame(decoder))
+                {
+                    gst_element_message_full(GST_ELEMENT(decoder), GST_MESSAGE_ERROR,
+                                             GST_STREAM_ERROR, GST_STREAM_ERROR_DECODE,
+                                             g_strdup("Video frame conversion failed"), NULL,
+                                             ("videodecoder.c"), ("videodecoder_chain"), 0);
+
+                    result = GST_FLOW_ERROR;
+                    goto _exit;
+                }
+
+                reordered_opaque = decoder->dest_frame->reordered_opaque;
+                data0 = decoder->dest_frame->data[0];
+                data1 = decoder->dest_frame->data[1];
+                data2 = decoder->dest_frame->data[2];
+                set_frame_values = FALSE;
+            }
+#endif // HEVC_SUPPORTf
+
+            if (set_frame_values)
+            {
+                reordered_opaque = base->frame->reordered_opaque;
+                data0 = base->frame->data[0];
+                data1 = base->frame->data[1];
+                data2 = base->frame->data[2];
+            }
+
             GstBuffer *outbuf = gst_buffer_new_allocate(NULL, decoder->frame_size, NULL);
             if (outbuf == NULL)
             {
@@ -443,16 +768,16 @@ static GstFlowReturn videodecoder_chain(GstPad *pad, GstObject *parent, GstBuffe
                 {
                     gst_element_message_full(GST_ELEMENT(decoder), GST_MESSAGE_ERROR,
                                              GST_STREAM_ERROR, GST_STREAM_ERROR_DECODE,
-                                             ("Decoded video buffer allocation failed"), NULL,
+                                             g_strdup("Decoded video buffer allocation failed"), NULL,
                                              ("videodecoder.c"), ("videodecoder_chain"), 0);
                 }
             }
             else
             {
                 GST_BUFFER_OFFSET(outbuf) = base->context->frame_number;
-                if (base->frame->reordered_opaque != AV_NOPTS_VALUE)
+                if (reordered_opaque != AV_NOPTS_VALUE)
                 {
-                    GST_BUFFER_TIMESTAMP(outbuf) = base->frame->reordered_opaque;
+                    GST_BUFFER_TIMESTAMP(outbuf) = reordered_opaque;
                     GST_BUFFER_DURATION(outbuf) = GST_BUFFER_DURATION(buf); // Duration for video usually same
                 }
 
@@ -466,9 +791,9 @@ static GstFlowReturn videodecoder_chain(GstPad *pad, GstObject *parent, GstBuffe
                 }
 
                 // Copy image by parts from different arrays.
-                memcpy(info2.data,                     base->frame->data[0], decoder->u_offset);
-                memcpy(info2.data + decoder->u_offset, base->frame->data[1], decoder->uv_blocksize);
-                memcpy(info2.data + decoder->v_offset, base->frame->data[2], decoder->uv_blocksize);
+                memcpy(info2.data,                     data0, decoder->u_offset);
+                memcpy(info2.data + decoder->u_offset, data1, decoder->uv_blocksize);
+                memcpy(info2.data + decoder->v_offset, data2, decoder->uv_blocksize);
 
                 gst_buffer_unmap(outbuf, &info2);
 

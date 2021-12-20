@@ -482,6 +482,9 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
             }
             fcc = CMFormatDescriptionGetMediaSubType(desc);
             switch (fcc) {
+                case 'hvc1':
+                    encoding = CTrack::H265;
+                    break;
                 case 'avc1':
                     encoding = CTrack::H264;
                     break;
