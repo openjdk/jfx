@@ -435,15 +435,6 @@ static void process_events(GdkEvent* event, gpointer data)
 
     glass_evloop_call_hooks(event);
 
-    if (ctx != NULL && dynamic_cast<WindowContextPlug*>(ctx) && ctx->get_gtk_window()) {
-        WindowContextPlug* ctx_plug = dynamic_cast<WindowContextPlug*>(ctx);
-        if (!ctx_plug->embedded_children.empty()) {
-            // forward to child
-            ctx = (WindowContext*) ctx_plug->embedded_children.back();
-            window = ctx->get_gdk_window();
-        }
-    }
-
     if (ctx != NULL) {
         EventsCounterHelper helper(ctx);
         try {

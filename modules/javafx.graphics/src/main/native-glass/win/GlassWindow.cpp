@@ -62,7 +62,7 @@ HHOOK GlassWindow::sm_hCBTFilter = NULL;
 HWND GlassWindow::sm_grabWindow = NULL;
 static HWND activeTouchWindow = NULL;
 
-GlassWindow::GlassWindow(jobject jrefThis, bool isTransparent, bool isDecorated, bool isUnified, bool isChild, HWND parentOrOwner)
+GlassWindow::GlassWindow(jobject jrefThis, bool isTransparent, bool isDecorated, bool isUnified, HWND parentOrOwner)
     : BaseWnd(parentOrOwner),
     ViewContainer(),
     m_winChangingReason(Unknown),
@@ -77,7 +77,6 @@ GlassWindow::GlassWindow(jobject jrefThis, bool isTransparent, bool isDecorated,
     m_hMenu(NULL),
     m_alpha(255),
     m_isEnabled(true),
-    m_parent(isChild ? parentOrOwner : NULL),
     m_delegateWindow(NULL),
     m_isInFullScreen(false),
     m_beforeFullScreenStyle(0),
@@ -99,9 +98,6 @@ GlassWindow::GlassWindow(jobject jrefThis, bool isTransparent, bool isDecorated,
                     (HOOKPROC)GlassWindow::CBTFilter,
                     0, GlassApplication::GetMainThreadId());
     }
-    if (isChild) {
-        GlassApplication::InstallMouseLLHook();
-    }
 }
 
 GlassWindow::~GlassWindow()
@@ -112,10 +108,6 @@ GlassWindow::~GlassWindow()
 
     if (m_grefThis) {
         GetEnv()->DeleteGlobalRef(m_grefThis);
-    }
-
-    if (IsChild()) {
-        GlassApplication::UninstallMouseLLHook();
     }
 
     if (--GlassWindow::sm_instanceCounter == 0) {
@@ -440,20 +432,11 @@ LRESULT GlassWindow::WindowProc(UINT msg, WPARAM wParam, LPARAM lParam)
         case WM_SETFOCUS:
             if (!GetDelegateWindow()) {
                 SetFocused(true);
-                if (IsChild()) {
-                    // Synthesize the event
-                    HandleActivateEvent(m_focusEvent ? m_focusEvent : com_sun_glass_events_WindowEvent_FOCUS_GAINED);
-                    m_focusEvent = 0;
-                }
             }
             break;
         case WM_KILLFOCUS:
             if (!GetDelegateWindow()) {
                 SetFocused(false);
-                if (IsChild()) {
-                    // Synthesize the event
-                    HandleActivateEvent(com_sun_glass_events_WindowEvent_FOCUS_LOST);
-                }
             }
             break;
         case WM_GETMINMAXINFO:
@@ -504,9 +487,6 @@ LRESULT GlassWindow::WindowProc(UINT msg, WPARAM wParam, LPARAM lParam)
         case WM_MBUTTONDOWN:
         case WM_XBUTTONDOWN:
             CheckUngrab(); // check if other owned windows hierarchy holds the grab
-            if (IsChild() && !IsFocused() && IsFocusable()) {
-                RequestFocus(com_sun_glass_events_WindowEvent_FOCUS_GAINED);
-            }
             // ... and fall through for other mouse events
         case WM_LBUTTONUP:
         case WM_LBUTTONDBLCLK:
@@ -979,34 +959,9 @@ void GlassWindow::CheckUngrab()
 
 bool GlassWindow::RequestFocus(jint event)
 {
-    if (!IsChild()) {
-        ASSERT(event == com_sun_glass_events_WindowEvent_FOCUS_GAINED);
-        // The event will be delivered as a part of WM_ACTIVATE message handling
-        return ::SetForegroundWindow(GetHWND()) != FALSE;
-    }
-
-    if (event == com_sun_glass_events_WindowEvent_FOCUS_LOST) {
-        if (IsFocused()) {
-            ::SetFocus(NULL);
-        }
-
-        return true;
-    }
-
-    // First try to activate the toplevel window
-    HWND toplevel = ::GetAncestor(GetHWND(), GA_ROOT);
-    if (::GetForegroundWindow() != toplevel && !::SetForegroundWindow(toplevel)) {
-        // We're unable to bring our top-level window to foreground.
-        // But since it anyway becomes active, we (or the plugin) won't receive
-        // any subsequent notifications. So let's pretend we got the focus -
-        //IGNORE: return false;
-        //We'll anyway get a reasonable response from the ::SetFocus() later
-    }
-
-    m_focusEvent = event; // reset upon WM_SETFOCUS
-
-    // If we request focus from 'nowhere', the SetFocus may still return NULL I guess
-    return ::SetFocus(GetHWND()) != NULL || ::GetLastError() == 0;
+    ASSERT(event == com_sun_glass_events_WindowEvent_FOCUS_GAINED);
+    // The event will be delivered as a part of WM_ACTIVATE message handling
+    return ::SetForegroundWindow(GetHWND()) != FALSE;
 }
 
 static BOOL CALLBACK EnumChildWndProc(HWND hwnd, LPARAM lParam)
@@ -1066,9 +1021,6 @@ void GlassWindow::SetDelegateWindow(HWND hWnd)
 
 BOOL GlassWindow::EnterFullScreenMode(GlassView * view, BOOL animate, BOOL keepRatio)
 {
-    if (IsChild()) {
-        return FALSE;
-    }
     if (IsInFullScreenMode()) {
         return TRUE;
     }
@@ -1113,7 +1065,7 @@ BOOL GlassWindow::EnterFullScreenMode(GlassView * view, BOOL animate, BOOL keepR
 
 void GlassWindow::ExitFullScreenMode(BOOL animate)
 {
-    if (IsChild() || !IsInFullScreenMode()) {
+    if (!IsInFullScreenMode()) {
         return;
     }
 
@@ -1277,7 +1229,6 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_win_WinWindow__1createWindow
                 (mask & com_sun_glass_ui_Window_TRANSPARENT) != 0,
                 (mask & com_sun_glass_ui_Window_TITLED) != 0,
                 (mask & com_sun_glass_ui_Window_UNIFIED) != 0,
-                false,
                 owner);
 
         HWND hWnd = pWindow->Create(dwStyle, dwExStyle, hMonitor, owner);
@@ -1310,55 +1261,6 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_win_WinWindow__1createWindow
     return PERFORM_AND_RETURN();
 }
 
-/*
- * Class:     com_sun_glass_ui_win_WinWindow
- * Method:    _createChildWindow
- * Signature: (J)J
- */
-JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_win_WinWindow__1createChildWindow
-    (JNIEnv *env, jobject jThis, jlong parentPtr)
-{
-    ENTER_MAIN_THREAD_AND_RETURN(jlong)
-    {
-        // Check that the 'parent' isn't a garbage value
-        if (!::IsWindow((HWND)parent)) {
-            return (jlong)0;
-        }
-
-        DWORD dwStyle;
-        DWORD dwExStyle;
-
-        dwStyle = WS_CLIPCHILDREN | WS_CLIPSIBLINGS | WS_CHILD;
-        dwExStyle = WS_EX_NOINHERITLAYOUT;
-
-        GlassWindow *pWindow =
-            new GlassWindow(jThis, false, false, false, true, parent);
-
-        HWND hWnd = pWindow->Create(dwStyle, dwExStyle, NULL, parent);
-
-        if (!hWnd) {
-            delete pWindow;
-        } else {
-            HMONITOR toMonitor = ::MonitorFromWindow(hWnd, MONITOR_DEFAULTTOPRIMARY);
-            env->CallVoidMethod(jThis, midNotifyMoveToAnotherScreen,
-                                GlassScreen::GetJavaMonitor(env, toMonitor));
-            CheckAndClearException(env);
-            pWindow->SetMonitor(toMonitor);
-        }
-
-        return (jlong)hWnd;
-    }
-    DECL_jobject(jThis);
-    JNIEnv *env;
-    HWND parent;
-    LEAVE_MAIN_THREAD;
-
-    ARG(jThis) = jThis;
-    ARG(env) = env;
-    ARG(parent) = (HWND)parentPtr;
-
-    return PERFORM_AND_RETURN();
-}
 /*
  * Class:     com_sun_glass_ui_win_WinWindow
  * Method:    _close
@@ -1969,48 +1871,6 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinWindow__1toBack
     LEAVE_MAIN_THREAD_WITH_hWnd;
 
     PERFORM();
-}
-
-/*
- * Class:     com_sun_glass_ui_win_WinWindow
- * Method:    _getEmbeddedX
- * Signature: (J)I
- */
-JNIEXPORT jint JNICALL Java_com_sun_glass_ui_win_WinWindow__1getEmbeddedX
-    (JNIEnv *env, jobject jThis, jlong ptr)
-{
-    ENTER_MAIN_THREAD_AND_RETURN(jint)
-    {
-        GlassWindow *pWindow = GlassWindow::FromHandle(hWnd);
-        HWND delegateHWnd = pWindow ? pWindow->GetDelegateWindow() : 0;
-        RECT rect = {0};
-        ::MapWindowPoints(delegateHWnd ? delegateHWnd : hWnd, (HWND)NULL, (LPPOINT)&rect, (sizeof(RECT)/sizeof(POINT)));
-        return rect.left;
-    }
-    LEAVE_MAIN_THREAD_WITH_hWnd;
-
-    return PERFORM_AND_RETURN();
-}
-
-/*
- * Class:     com_sun_glass_ui_win_WinWindow
- * Method:    _getEmbeddedY
- * Signature: (J)I
- */
-JNIEXPORT jint JNICALL Java_com_sun_glass_ui_win_WinWindow__1getEmbeddedY
-    (JNIEnv *env, jobject jThis, jlong ptr)
-{
-    ENTER_MAIN_THREAD_AND_RETURN(jint)
-    {
-        GlassWindow *pWindow = GlassWindow::FromHandle(hWnd);
-        HWND delegateHWnd = pWindow ? pWindow->GetDelegateWindow() : 0;
-        RECT rect = {0};
-        ::MapWindowPoints(delegateHWnd ? delegateHWnd : hWnd, (HWND)NULL, (LPPOINT)&rect, (sizeof(RECT)/sizeof(POINT)));
-        return rect.top;
-    }
-    LEAVE_MAIN_THREAD_WITH_hWnd;
-
-    return PERFORM_AND_RETURN();
 }
 
 /*

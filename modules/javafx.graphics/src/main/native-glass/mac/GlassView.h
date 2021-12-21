@@ -50,9 +50,4 @@
 
 - (void)notifyScaleFactorChanged:(CGFloat)scale;
 
-@optional
-
-- (uint32_t)getRemoteLayerIdForServer:(NSString*)serverName;
-- (void)hostRemoteLayerId:(uint32_t)layerId;
-
 @end

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,28 +23,39 @@
  * questions.
  */
 
-#import "common.h"
+package test.com.sun.glass.ui.gtk;
 
-#import "GlassNSEvent.h"
+import com.sun.javafx.PlatformUtil;
+import java.io.ByteArrayOutputStream;
 
-@implementation GlassNSEvent
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
-- (void) setNeedsKeyTyped:(BOOL)inNeedKeyTyped {
-    m_needsKeyTyped = inNeedKeyTyped;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assume.assumeTrue;
+
+public class Gtk2Deprecation2Test extends Gtk2DeprecationCommon {
+
+    @BeforeClass
+    public static void setup() throws Exception {
+        doSetup(false);
+    }
+
+    @AfterClass
+    public static void teardown() {
+        doTeardown();
+    }
+
+    @Test
+    public void testNoDeprecationMessage() throws Exception {
+        assumeTrue(PlatformUtil.isLinux());
+
+        final String output = out.toString();
+        System.err.println(output);
+        assertFalse("Unexpected warning message", output.contains("WARNING"));
+        assertFalse("Unexpected warning message", output.contains("deprecated"));
+        assertFalse("Unexpected warning message", output.contains("removed"));
+    }
+
 }
-
-- (BOOL) needsKeyTyped {
-    return m_needsKeyTyped;
-}
-
-- (void) setSyntheticKeyTyped:(BOOL)inSyntheticKeyTyped {
-    m_isSyntheticKeyTyped = inSyntheticKeyTyped;
-}
-
-- (BOOL) isSyntheticKeyTyped {
-    return m_isSyntheticKeyTyped;
-}
-
-@end
-
-

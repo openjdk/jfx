@@ -71,7 +71,7 @@ BOOL GlassView::Close()
 BOOL GlassView::EnterFullScreen(BOOL animate, BOOL keepRatio)
 {
     GlassWindow *pWindow = GlassWindow::FromHandle(GetHostHwnd());
-    if (pWindow && !pWindow->IsChild()) {
+    if (pWindow) {
         m_fullScreenWindow = pWindow;
     } else {
         // create new FullScreen window to handle "ownerless" views

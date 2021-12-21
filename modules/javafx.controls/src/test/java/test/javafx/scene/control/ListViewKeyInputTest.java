@@ -1861,11 +1861,11 @@ public class ListViewKeyInputTest {
         final int diff = 99 - leadSelectedIndex;
         assertEquals(99 - diff, leadSelectedIndex);
         assertEquals(99 - diff, fm.getFocusedIndex());
-        assertEquals(7, selectedIndicesCount);
+        assertEquals(8, selectedIndicesCount);
 
         keyboard.doKeyPress(KeyCode.PAGE_UP, KeyModifier.SHIFT);
-        assertEquals(99 - diff * 2, sm.getSelectedIndex());
-        assertEquals(selectedIndicesCount * 2 - 1, sm.getSelectedIndices().size());
+        assertEquals(99 - diff * 2 + 1, sm.getSelectedIndex());
+        assertEquals(selectedIndicesCount * 2 - 2, sm.getSelectedIndices().size());
 
         keyboard.doKeyPress(KeyCode.PAGE_DOWN, KeyModifier.SHIFT);
         assertEquals(leadSelectedIndex, sm.getSelectedIndex());

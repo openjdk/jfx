@@ -35,7 +35,6 @@
 #import "GlassScreen.h"
 #import "GlassWindow.h"
 #import "GlassTouches.h"
-#import "RemoteLayerSupport.h"
 
 #import "ProcessInfo.h"
 #import <Security/SecRequirement.h>
@@ -608,11 +607,6 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
                         TransformProcessType(&psn, 4); // kProcessTransformToUIElementApplication
                     }
                 }
-                else
-                {
-                    // 10.6 or earlier: applets are not officially supported on 10.6 and earlier
-                    // so they will have limited applet functionality (no active windows)
-                }
                 [app setDelegate:self];
             }
 
@@ -1005,35 +999,6 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacApplication__1invokeAndWait
         GlassRunnable *runnable = [[GlassRunnable alloc] initWithRunnable:(*env)->NewGlobalRef(env, jRunnable)];
         [runnable performSelectorOnMainThread:@selector(run) withObject:nil waitUntilDone:YES];
     }
-}
-
-/*
- * Class:     com_sun_glass_ui_mac_MacApplication
- * Method:    _getRemoteLayerServerName
- * Signature: ()Ljava/lang/String;
- */
-JNIEXPORT jstring JNICALL Java_com_sun_glass_ui_mac_MacApplication__1getRemoteLayerServerName
-(JNIEnv *env, jobject japplication)
-{
-    LOG("Java_com_sun_glass_ui_mac_MacPasteboard__1getName");
-
-    jstring name = NULL;
-
-    GLASS_ASSERT_MAIN_JAVA_THREAD(env);
-    GLASS_POOL_ENTER;
-    {
-        static mach_port_t remoteLayerServerPort = MACH_PORT_NULL;
-        if (remoteLayerServerPort == MACH_PORT_NULL)
-        {
-            remoteLayerServerPort = RemoteLayerStartServer();
-        }
-        NSString *remoteLayerServerName = RemoteLayerGetServerName(remoteLayerServerPort);
-        name = (*env)->NewStringUTF(env, [remoteLayerServerName UTF8String]);
-    }
-    GLASS_POOL_EXIT;
-    GLASS_CHECK_EXCEPTION(env);
-
-    return name;
 }
 
 /*

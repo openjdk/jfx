@@ -171,8 +171,7 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
     @SuppressWarnings("removal")
     private static final ThreadGroup THREAD_GROUP = AccessController.doPrivileged((PrivilegedAction<ThreadGroup>) () -> new ThreadGroup("javafx concurrent thread pool"));
     private static final Thread.UncaughtExceptionHandler UNCAUGHT_HANDLER = (thread, throwable) -> {
-        // Ignore IllegalMonitorStateException, these are thrown from the ThreadPoolExecutor
-        // when a browser navigates away from a page hosting an applet that uses
+        // Ignore IllegalMonitorStateException which could be thrown from the ThreadPoolExecutor in certain cases when there are
         // asynchronous tasks. These exceptions generally do not cause loss of functionality.
         if (!(throwable instanceof IllegalMonitorStateException)) {
             LOG.warning("Uncaught throwable in " + THREAD_GROUP.getName(), throwable);

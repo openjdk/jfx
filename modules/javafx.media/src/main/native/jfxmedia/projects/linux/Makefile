@@ -60,6 +60,7 @@ BASE_INCLUDES = -I$(SRCBASE_DIR) \
 
 ifdef HOST_COMPILE
 	GSTREAMER_LITE_DIR = ../../../gstreamer/gstreamer-lite
+	PLUGINS_DIR = ../../../gstreamer/plugins
 
 	CFLAGS += -fPIC \
                   -Wformat \
@@ -82,6 +83,7 @@ ifdef HOST_COMPILE
 	           -I$(GSTREAMER_LITE_DIR)/gstreamer \
 		   -I$(GSTREAMER_LITE_DIR)/gst-plugins-base/gst-libs \
 	           -I$(GSTREAMER_LITE_DIR)/gstreamer/libs \
+	           -I$(PLUGINS_DIR) \
 		  $(PACKAGES_INCLUDES)
 
 	LDFLAGS = -Wl,-rpath,\$$ORIGIN -L$(BUILD_DIR) -lgstreamer-lite $(PACKAGES_LIBS) \
@@ -145,7 +147,7 @@ CPP_SOURCES = \
 C_SOURCES = Utils/ColorConverter.c
 
 
-OBJECTS  = $(patsubst %.cpp,$(OBJBASE_DIR)/%.o,$(CPP_SOURCES)) $(patsubst %.c,$(OBJBASE_DIR)/%.o,$(C_SOURCES)) 
+OBJECTS  = $(patsubst %.cpp,$(OBJBASE_DIR)/%.o,$(CPP_SOURCES)) $(patsubst %.c,$(OBJBASE_DIR)/%.o,$(C_SOURCES))
 DEPFILES = $(patsubst %.cpp,$(OBJBASE_DIR)/%.d,$(CPP_SOURCES))
 
 OBJ_DIRS = $(addprefix $(OBJBASE_DIR)/,$(DIRLIST))

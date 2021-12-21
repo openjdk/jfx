@@ -34,7 +34,6 @@
 #import "GlassWindow.h"
 #import "GlassWindow+Java.h"
 #import "GlassWindow+Overrides.h"
-#import "GlassEmbeddedWindow+Overrides.h"
 #import "GlassView.h"
 #import "GlassScreen.h"
 #import "GlassTouches.h"
@@ -82,8 +81,6 @@
 #else
     #define LOG(MSG, ...) GLASS_LOG(MSG, ## __VA_ARGS__);
 #endif
-
-#define BROWSER_PARENT_ID -1L
 
 #pragma mark --- Internal utilities
 
@@ -377,92 +374,10 @@ GLASS_NS_WINDOW_IMPLEMENTATION
 
 @end
 
-#pragma mark --- GlassEmbeddedWindow
-
-static NSMutableArray * embeddedWindowsList = nil;
-
-@implementation GlassEmbeddedWindow
-
-- (id)initWithDelegate:(GlassWindow*)delegate
-             frameRect:(NSRect)rect
-             styleMask:(NSUInteger)styleMask
-                screen:(NSScreen*)screen
-{
-    self = [super initWithDelegate:delegate frameRect:rect styleMask:styleMask screen:screen];
-    if (self == nil) {
-        return nil;
-    }
-
-    if (embeddedWindowsList == nil) {
-        embeddedWindowsList = [[NSMutableArray alloc] initWithCapacity: 4];
-    }
-    [embeddedWindowsList addObject:self]; // retains 'self'
-
-    return self;
-}
-
-- (void)close
-{
-    if (embeddedWindowsList) {
-        [embeddedWindowsList removeObject:self]; // releases 'self'
-        if ([embeddedWindowsList count] == 0) {
-            [embeddedWindowsList release];
-            embeddedWindowsList = nil;
-        }
-    }
-    [super close];
-}
-
-+ (BOOL)exists:(GlassEmbeddedWindow*)window
-{
-    if (embeddedWindowsList && window) {
-        return [embeddedWindowsList indexOfObjectIdenticalTo:window] != NSNotFound;
-    }
-    return NO;
-}
-
-- (void)setFullscreenWindow:(NSWindow*)fsWindow
-{
-    if (self->parent != nil)
-    {
-        BOOL fullscreen = (fsWindow != nil);
-
-        CALayer *layer = [self->gWindow->view layer];
-        if ([layer isKindOfClass:[GlassLayer3D class]] == YES)
-        {
-            [((CAOpenGLLayer*)layer) setAsynchronous:fullscreen];
-
-            layer = [self->parent->gWindow->view layer];
-            if ([layer isKindOfClass:[GlassLayer3D class]] == YES)
-            {
-                [((CAOpenGLLayer*)layer) setAsynchronous:!fullscreen];
-            }
-        }
-
-        self->fullscreenWindow = fsWindow;
-    }
-}
-
-- (void)sendEvent:(NSEvent *)theEvent
-{
-    BOOL fullscreen = (self->fullscreenWindow != nil);
-    if (fullscreen == NO)
-    {
-        [super sendEvent:theEvent];
-    }
-    else
-    {
-        [self->fullscreenWindow sendEvent:theEvent];
-    }
-}
-
-
-@end
-
 #pragma mark --- Dispatcher
 
 // TODO: re-implement using Obj-C blocks ?
-static jlong _createWindowCommonDo(JNIEnv *env, jobject jWindow, jlong jOwnerPtr, jlong jScreenPtr, jint jStyleMask, jboolean jIsChild)
+static jlong _createWindowCommonDo(JNIEnv *env, jobject jWindow, jlong jOwnerPtr, jlong jScreenPtr, jint jStyleMask)
 {
     GlassWindow *window = nil;
 
@@ -517,7 +432,7 @@ static jlong _createWindowCommonDo(JNIEnv *env, jobject jWindow, jlong jOwnerPtr
         CGFloat h = 0.0f;
 
         NSScreen *screen = (NSScreen*)jlong_to_ptr(jScreenPtr);
-        window = [[GlassWindow alloc] _initWithContentRect:NSMakeRect(x, y, w, h) styleMask:styleMask screen:screen jwindow:jWindow jIsChild:jIsChild];
+        window = [[GlassWindow alloc] _initWithContentRect:NSMakeRect(x, y, w, h) styleMask:styleMask screen:screen jwindow:jWindow];
 
         if ((jStyleMask & com_sun_glass_ui_Window_UNIFIED) != 0) {
             //Prevent the textured effect from disappearing on border thickness recalculation
@@ -532,23 +447,9 @@ static jlong _createWindowCommonDo(JNIEnv *env, jobject jWindow, jlong jOwnerPtr
             }
         }
 
-        if (jIsChild == JNI_FALSE)
+        if (jOwnerPtr != 0L)
         {
-            if (jOwnerPtr != 0L)
-            {
-                window->owner = getGlassWindow(env, jOwnerPtr)->nsWindow; // not retained (use weak reference?)
-            }
-        }
-        else
-        {
-            if ((jOwnerPtr != 0L) && (jOwnerPtr != BROWSER_PARENT_ID))
-            {
-                GlassEmbeddedWindow *parent = getGlassEmbeddedWindow(env, jOwnerPtr);
-                GlassEmbeddedWindow *ewindow = (GlassEmbeddedWindow*)window->nsWindow;
-                parent->child = ewindow; // not retained (use weak reference?)
-
-                ewindow->parent = parent; // not retained (use weak reference?)
-            }
+            window->owner = getGlassWindow(env, jOwnerPtr)->nsWindow; // not retained (use weak reference?)
         }
         window->isResizable = NO;
         window->isDecorated = (jStyleMask&com_sun_glass_ui_Window_TITLED) != 0;
@@ -587,22 +488,6 @@ static jlong _createWindowCommonDo(JNIEnv *env, jobject jWindow, jlong jOwnerPtr
         window->isSizeAssigned = NO;
         window->isLocationAssigned = NO;
 
-        if (jIsChild == JNI_TRUE && jOwnerPtr != 0L && jOwnerPtr != BROWSER_PARENT_ID
-            && [window->nsWindow isKindOfClass:[GlassEmbeddedWindow class]])
-        {
-            GlassEmbeddedWindow* parent = ((GlassEmbeddedWindow*)window->nsWindow)->parent;
-            if ([GlassEmbeddedWindow exists:parent])
-            {
-                window->isLocationAssigned = YES;
-                NSScreen *pscreen = [[NSScreen screens] objectAtIndex:0];
-                NSRect screenFrame = pscreen.frame;
-                NSRect frameRect = parent.frame;
-                int invy = (int)round(screenFrame.size.height - frameRect.size.height - frameRect.origin.y);
-                [window _setBounds:(int)round(frameRect.origin.x)
-                                 y:invy
-                              xSet:YES ySet:YES w:0 h:0 cw:0 ch:0];
-            }
-        }
     }
     [pool drain];
 
@@ -612,7 +497,7 @@ static jlong _createWindowCommonDo(JNIEnv *env, jobject jWindow, jlong jOwnerPtr
 }
 
 static jlong _createWindowCommon
-(JNIEnv *env, jobject jWindow, jlong jOwnerPtr, jlong jScreenPtr, jint jStyleMask, jboolean jIsChild)
+(JNIEnv *env, jobject jWindow, jlong jOwnerPtr, jlong jScreenPtr, jint jStyleMask)
 {
     LOG("_createWindowCommon");
 
@@ -622,7 +507,7 @@ static jlong _createWindowCommon
     GLASS_POOL_ENTER;
     {
         jobject jWindowRef = (*env)->NewGlobalRef(env, jWindow);
-        value = _createWindowCommonDo(env, jWindowRef, jOwnerPtr, jScreenPtr, jStyleMask, jIsChild);
+        value = _createWindowCommonDo(env, jWindowRef, jOwnerPtr, jScreenPtr, jStyleMask);
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
@@ -745,38 +630,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_mac_MacWindow__1createWindow
 {
     LOG("Java_com_sun_glass_ui_mac_MacWindow__1createWindow");
 
-    return _createWindowCommon(env, jWindow, jOwnerPtr, jScreenPtr, jStyleMask, JNI_FALSE);
-}
-
-/*
- * Class:     com_sun_glass_ui_mac_MacWindow
- * Method:    _createChildWindow
- * Signature: (J)J
- */
-JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_mac_MacWindow__1createChildWindow
-(JNIEnv *env, jobject jWindow, jlong jOwnerPtr)
-{
-    LOG("Java_com_sun_glass_ui_mac_MacWindow__1createChildWindow");
-    LOG("   owner: %p", jOwnerPtr);
-
-    jlong jScreenPtr = 0L;
-    jint jStyleMask = NSBorderlessWindowMask;
-    if (jOwnerPtr == BROWSER_PARENT_ID)
-    {
-        LOG("       case PARENT (PLUGIN)");
-        // special case: embedded window for plugin (the container which will hold the child window)
-    }
-    else
-    {
-        LOG("       case CHILD (EMBEDDED)");
-        // special case: embedded window for plugin (the actual plugin window with remote layer)
-        // jOwnerPtr must be a valid GlassEmbeddedWindow instance
-        if (![GlassEmbeddedWindow exists:(GlassEmbeddedWindow*)jlong_to_ptr(jOwnerPtr)]) {
-            return (jlong)0;
-        }
-    }
-
-    return _createWindowCommon(env, jWindow, jOwnerPtr, jScreenPtr, jStyleMask, JNI_TRUE);
+    return _createWindowCommon(env, jWindow, jOwnerPtr, jScreenPtr, jStyleMask);
 }
 
 /*
@@ -1585,59 +1439,4 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacWindow__1exitModal
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
-}
-
-/*
- * Class:     com_sun_glass_ui_mac_MacWindow
- * Method:    _getEmbeddedX
- * Signature: (J)I
- */
-JNIEXPORT jint JNICALL Java_com_sun_glass_ui_mac_MacWindow__1getEmbeddedX
-(JNIEnv *env, jobject jWindow, jlong jPtr)
-{
-    LOG("Java_com_sun_glass_ui_mac_MacWindow__1getEmbeddedX");
-    if (!jPtr) return 0;
-
-    jint x = 0;
-
-    GLASS_ASSERT_MAIN_JAVA_THREAD(env);
-    GLASS_POOL_ENTER;
-    {
-        GlassEmbeddedWindow *window = getGlassEmbeddedWindow(env, jPtr);
-        x = (int)round([window frame].origin.x);
-    }
-    GLASS_POOL_EXIT;
-    GLASS_CHECK_EXCEPTION(env);
-
-    return x;
-}
-
-/*
- * Class:     com_sun_glass_ui_mac_MacWindow
- * Method:    _getEmbeddedY
- * Signature: (J)I
- */
-JNIEXPORT jint JNICALL Java_com_sun_glass_ui_mac_MacWindow__1getEmbeddedY
-(JNIEnv *env, jobject jWindow, jlong jPtr)
-{
-    LOG("Java_com_sun_glass_ui_mac_MacWindow__1getEmbeddedY");
-    if (!jPtr) return 0;
-
-    jint y = 0;
-
-    GLASS_ASSERT_MAIN_JAVA_THREAD(env);
-    GLASS_POOL_ENTER;
-    {
-        GlassEmbeddedWindow *window = getGlassEmbeddedWindow(env, jPtr);
-        NSRect frameRect = [window frame];
-
-        // flip y coordinate
-        NSScreen *screen = [[NSScreen screens] objectAtIndex:0];
-        NSRect screenFrame = screen.frame;
-        y = (int)round(screenFrame.size.height - frameRect.size.height - frameRect.origin.y);
-    }
-    GLASS_POOL_EXIT;
-    GLASS_CHECK_EXCEPTION(env);
-
-    return y;
 }
