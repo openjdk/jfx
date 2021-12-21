@@ -49,6 +49,7 @@ public:
 
     virtual bool IsCodecSupported(GstCaps *pCaps);
     virtual bool CheckCodecSupport();
+    virtual bool LoadDecoder(GstCaps *pCaps);
 
     virtual void CheckQueueSize(GstElement *element);
 

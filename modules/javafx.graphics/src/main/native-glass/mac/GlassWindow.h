@@ -104,30 +104,5 @@
                 screen:(NSScreen*)screen;
 @end
 
-// invisible window for hosting another GlassEmbeddedWindow or remote View representing plugin content
-@interface GlassEmbeddedWindow : GlassWindow_Normal
-{
-@public
-
-    NSWindow            *fullscreenWindow;
-
-    BOOL                isKeyWindow;
-
-    GlassEmbeddedWindow *parent;
-    GlassEmbeddedWindow *child;
-}
-
-- (id)initWithDelegate:(GlassWindow*)delegate
-             frameRect:(NSRect)rect
-             styleMask:(NSUInteger)styleMask
-                screen:(NSScreen*)screen;
-
-+ (BOOL)exists:(GlassEmbeddedWindow*)window;
-
-- (void)setFullscreenWindow:(NSWindow*)fsWindow;
-
-@end
-
-extern GlassEmbeddedWindow *getGlassEmbeddedWindow(JNIEnv *env, jlong jPtr);
 
 extern NSImage* getImage(u_int8_t* data, int jWidth, int jHeight, int jOffset);

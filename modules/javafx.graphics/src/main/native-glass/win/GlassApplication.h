@@ -96,10 +96,6 @@ public:
     static void SetHInstance(HINSTANCE hInstace) { GlassApplication::hInstace = hInstace; }
     static HINSTANCE GetHInstance() { return GlassApplication::hInstace; }
 
-    /* Maintains a counter. Must be balanced with UninstallMouseLLHook. */
-    static void InstallMouseLLHook();
-    static void UninstallMouseLLHook();
-
     static ULONG IncrementAccessibility();
     static ULONG DecrementAccessibility();
     static ULONG GetAccessibilityCount();
@@ -136,9 +132,6 @@ private:
     static JGlobalRef<jobject> sm_nestedLoopReturnValue;
 
     static HINSTANCE hInstace;
-    static unsigned int sm_mouseLLHookCounter;
-    static HHOOK sm_hMouseLLHook;
-    static LRESULT CALLBACK MouseLLHook(int nCode, WPARAM wParam, LPARAM lParam);
     static ULONG s_accessibilityCount;
 };
 

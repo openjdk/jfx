@@ -1581,7 +1581,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
     public void scrollToTop(int index) {
         boolean posSet = false;
 
-        if (index >= getCellCount() - 1) {
+        if (index > getCellCount() - 1) {
             setPosition(1);
             posSet = true;
         } else if (index < 0) {

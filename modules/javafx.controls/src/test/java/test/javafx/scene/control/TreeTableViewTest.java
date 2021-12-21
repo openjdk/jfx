@@ -3660,7 +3660,7 @@ public class TreeTableViewTest {
         // However, for now, we'll test on the assumption that across all
         // platforms we only get one extra cell created, and we can loosen this
         // up if necessary.
-        assertEquals(cellCountAtStart + 13, rt36452_instanceCount);
+        assertEquals(cellCountAtStart + 14, rt36452_instanceCount);
 
         sl.dispose();
     }

@@ -971,19 +971,6 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_ios_IosWindow__1createWindow
 
 /*
  * Class:     com_sun_glass_ui_ios_IosWindow
- * Method:    _createChildWindow
- * Signature: (J)J
- */
-JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_ios_IosWindow__1createChildWindow
-(JNIEnv *env, jobject jwindow, jlong parent) {
-    GLASS_LOG("Java_com_sun_glass_ui_ios_IosWindow__1createChildWindow");
-    // implementation comes here
-    return 0L;
-}
-
-
-/*
- * Class:     com_sun_glass_ui_ios_IosWindow
  * Method:    _close
  * Signature: (J)Z
  */
