@@ -333,8 +333,6 @@ static jint getJavaCodeForMacKey(unsigned short keyCode)
             jint trial = getJavaCodeForMacKeyAndModifiers(keyboard, keyCode, optionKey);
             if (isLetterOrDigit(trial))
                 result = trial;
-            else if (result == com_sun_glass_events_KeyEvent_VK_UNDEFINED)
-                result = trial;
         }
     }
 
@@ -450,6 +448,9 @@ jcharArray GetJavaKeyChars(JNIEnv *env, NSEvent *event)
 
 BOOL GetMacKey(jint javaKeyCode, unsigned short *outMacKeyCode)
 {
+    if (javaKeyCode == com_sun_glass_events_KeyEvent_VK_UNDEFINED)
+        return NO;
+
     BOOL found = NO;
     // Find a key code based on the US QWERTY layout
     for (int index=0; index<gKeyMapSize; index++)
@@ -462,10 +463,9 @@ BOOL GetMacKey(jint javaKeyCode, unsigned short *outMacKeyCode)
         }
     }
 
-    if (!found)
-        return NO;
-
-    if (!macKeyCodeIsLayoutSensitive(*outMacKeyCode))
+    // The table only covers US QWERTY so it's missing entries like PLUS that
+    // don't appear on that layout.
+    if (found && !macKeyCodeIsLayoutSensitive(*outMacKeyCode))
         return YES;
 
     // If the QWERTY key is in the layout sensitive area search the other keys in that
