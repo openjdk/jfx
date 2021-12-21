@@ -62,7 +62,7 @@ public class SelectTableViewTest extends Application {
         for(int i = 0; i < ROW_COUNT; i++) {
             String[] rec = new String[COL_COUNT];
             for(int j = 0; j < rec.length; j++) {
-                rec[j] = i+":"+j;
+                rec[j] = i + ":" + j;
             }
             items.add(rec);
         }
