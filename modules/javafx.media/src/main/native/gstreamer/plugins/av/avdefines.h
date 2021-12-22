@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -35,6 +35,9 @@
 
 // New Frame alloc functions were introduced in 55.28.0
 #define NEW_ALLOC_FRAME        (LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(55,28,0))
+
+// HEVC/H.265 support should be available in 56 and up
+#define HEVC_SUPPORT           (LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(56,0,0))
 
 #endif  /* AVDEFINES_H */
 

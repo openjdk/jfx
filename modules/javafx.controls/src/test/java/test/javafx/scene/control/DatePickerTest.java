@@ -29,6 +29,8 @@ import java.time.LocalDate;
 import java.time.chrono.*;
 import java.util.*;
 
+import javafx.scene.control.Button;
+import javafx.scene.layout.HBox;
 import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import test.com.sun.javafx.scene.control.infrastructure.KeyModifier;
 import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
@@ -617,4 +619,94 @@ public class DatePickerTest {
 
         sl.dispose();
     }
+
+    @Test
+    public void testCommitValue() {
+        datePicker.setEditable(true);
+        datePicker.getEditor().setText("11/24/2021");
+        datePicker.commitValue();
+
+        assertEquals(LocalDate.of(2021, 11, 24), datePicker.getValue());
+        assertEquals("11/24/2021", datePicker.getEditor().getText());
+    }
+
+    @Test
+    public void testNotEditableCommitValue() {
+        datePicker.setEditable(false);
+        datePicker.getEditor().setText("11/24/2021");
+        datePicker.commitValue();
+
+        assertNull(datePicker.getValue());
+        assertEquals("11/24/2021", datePicker.getEditor().getText());
+    }
+
+    @Test(expected = RuntimeException.class)
+    public void testCommitValueWrongType() {
+        datePicker.setEditable(true);
+        datePicker.getEditor().setText("Some Date");
+        datePicker.commitValue();
+
+        assertNull(datePicker.getValue());
+        assertEquals("Some Date", datePicker.getEditor().getText());
+    }
+
+    @Test
+    public void testCancelEdit() {
+        LocalDate date = LocalDate.of(2021, 11, 24);
+        String dateString = "11/24/2021";
+
+        datePicker.setEditable(true);
+        datePicker.getEditor().setText(dateString);
+        datePicker.commitValue();
+
+        assertEquals(date, datePicker.getValue());
+        assertEquals(dateString, datePicker.getEditor().getText());
+
+        datePicker.getEditor().setText("12/26/2021");
+        datePicker.cancelEdit();
+
+        assertEquals(date, datePicker.getValue());
+        assertEquals(dateString, datePicker.getEditor().getText());
+    }
+
+    @Test
+    public void testNotEditableCancelEdit() {
+        LocalDate date = LocalDate.of(2021, 11, 24);
+
+        datePicker.getEditor().setText("11/24/2021");
+        datePicker.commitValue();
+
+        assertEquals(date, datePicker.getValue());
+        assertEquals("11/24/2021", datePicker.getEditor().getText());
+
+        datePicker.setEditable(false);
+        datePicker.getEditor().setText("12/26/2021");
+        datePicker.cancelEdit();
+
+        assertEquals(date, datePicker.getValue());
+        assertEquals("12/26/2021", datePicker.getEditor().getText());
+    }
+
+    @Test
+    public void testFocusLost() {
+        datePicker.setEditable(true);
+        assertNull(datePicker.getValue());
+
+        Button button = new Button();
+        StageLoader stageLoader = new StageLoader(new HBox(datePicker, button));
+
+        stageLoader.getStage().requestFocus();
+        datePicker.requestFocus();
+        datePicker.getEditor().setText("11/24/2021");
+
+        assertNull(datePicker.getValue());
+
+        button.requestFocus();
+
+        assertEquals(LocalDate.of(2021, 11, 24), datePicker.getValue());
+        assertEquals("11/24/2021", datePicker.getEditor().getText());
+
+        stageLoader.dispose();
+    }
+
 }

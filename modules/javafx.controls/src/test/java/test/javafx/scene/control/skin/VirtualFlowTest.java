@@ -1144,6 +1144,52 @@ public class VirtualFlowTest {
     }
 
     @Test
+    public void testScrollToTopOfLastLargeCell() {
+        double flowHeight = 150;
+        int cellCount = 2;
+
+        flow = new VirtualFlowShim<>();
+        flow.setCellFactory(p -> new CellStub(flow) {
+            @Override
+            protected double computePrefHeight(double width) {
+                return getIndex() == cellCount -1 ? 200 : 100;
+            }
+
+            @Override
+            protected double computeMinHeight(double width) {
+                return computePrefHeight(width);
+            }
+
+            @Override
+            protected double computeMaxHeight(double width) {
+                return computePrefHeight(width);
+            }
+        });
+        flow.setVertical(true);
+
+        flow.resize(50,flowHeight);
+        flow.setCellCount(cellCount);
+        pulse();
+
+        flow.scrollToTop(cellCount - 1);
+        pulse();
+
+        IndexedCell<?> cell = flow.getCell(cellCount - 1);
+        double cellPosition = flow.getCellPosition(cell);
+
+        assertEquals("Last cell must be aligned to top of the viewport", 0, cellPosition, 0.1);
+    }
+
+    @Test
+    public void testImmediateScrollTo() {
+        flow.setCellCount(100);
+        flow.scrollTo(90);
+        pulse();
+        IndexedCell vc = flow.getVisibleCell(90);
+        assertNotNull(vc);
+    }
+
+    @Test
     // see JDK-8197536
     public void testScrollOneCell() {
         assertLastCellInsideViewport(true);

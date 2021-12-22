@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,13 +23,26 @@
  * questions.
  */
 
-#import <Cocoa/Cocoa.h>
-#import <jni.h>
+package com.sun.glass.ui.mac;
 
-#import "GlassWindow.h"
-#import "GlassWindow+Java.h"
-#import "GlassWindow+Overrides.h"
+import com.sun.glass.ui.Clipboard;
 
-@interface GlassEmbeddedWindow (Overrides)
+import java.util.HashMap;
 
-@end
+public class MacPasteboardShim {
+
+    private static MacSystemClipboard dndClipboard;
+
+    public MacPasteboardShim() {
+        dndClipboard = new MacSystemClipboard(Clipboard.DND);
+    }
+
+    public void pushMacPasteboard(HashMap<String, Object> data) {
+        dndClipboard.pushToSystem(data, Clipboard.ACTION_ANY);
+    }
+
+    public Object popMacPasteboard(String mime) {
+        return dndClipboard.popFromSystem(mime);
+    }
+
+}

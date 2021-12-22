@@ -337,7 +337,7 @@ defineProperty("JAVA", cygpathExe("$JDK_HOME/bin/java"))
 defineProperty("JAVAC", cygpathExe("$JDK_HOME/bin/javac"))
 defineProperty("JAVADOC", cygpathExe("$JDK_HOME/bin/javadoc"))
 defineProperty("JMOD", cygpathExe("$JDK_HOME/bin/jmod"))
-defineProperty("JDK_DOCS", "https://docs.oracle.com/en/java/javase/12/docs/api/")
+defineProperty("JDK_DOCS", "https://docs.oracle.com/en/java/javase/17/docs/api/")
 defineProperty("JDK_JMODS", cygpath(System.getenv("JDK_JMODS")) ?: cygpath(System.getenv("JDK_HOME") + "/jmods"))
 
 defineProperty("javaRuntimeVersion", System.getProperty("java.runtime.version"))
@@ -408,7 +408,9 @@ if (IS_STATIC_BUILD && IS_COMPILE_MEDIA) {
 }
 
 // By default, target architecture = host architecture, but we allow different ones.
-defineProperty("TARGET_ARCH", OS_ARCH)
+// On Apple Silicon, default architecture must be "arm64", because clang does not accept
+// aarch64 as -arch parameter.
+defineProperty("TARGET_ARCH", (IS_MAC && IS_AARCH64) ? "arm64" : OS_ARCH)
 
 // BUILD_TOOLS_DOWNLOAD_SCRIPT specifies a path of a gradle script which downloads
 // required build tools.
@@ -459,6 +461,7 @@ ext.IS_WORKER_DEBUG = Boolean.parseBoolean(WORKER_DEBUG);
 defineProperty("CONF", "Debug")
 ext.IS_DEBUG_JAVA = CONF == "Debug" || CONF == "DebugNative"
 ext.IS_DEBUG_NATIVE = CONF == "DebugNative"
+ext.IS_RELEASE = !ext.IS_DEBUG_JAVA
 
 // Specifies whether to enable the Maven publishing tasks
 defineProperty("MAVEN_PUBLISH", "false")
@@ -1944,7 +1947,18 @@ allprojects {
     // By default all of our projects require junit for testing so we can just
     // setup this dependency here.
     dependencies {
-        testImplementation group: "junit", name: "junit", version: "4.8.2"
+        testImplementation group: "junit", name: "junit", version: "4.13.2"
+        testImplementation group: "org.hamcrest", name: "hamcrest-core", version: "1.3"
+        testImplementation group: "org.junit.jupiter", name: "junit-jupiter", version: "5.8.1"
+        testImplementation group: "org.junit.jupiter", name: "junit-jupiter-api", version: "5.8.1"
+        testRuntimeOnly group: "org.apiguardian", name: "apiguardian-api", version: "1.1.2"
+        testRuntimeOnly group: "org.junit.jupiter", name: "junit-jupiter-engine", version: "5.8.1"
+        testRuntimeOnly group: "org.junit.jupiter", name: "junit-jupiter-params", version: "5.8.1"
+        testRuntimeOnly group: "org.junit.platform", name: "junit-platform-commons", version: "1.8.1"
+        testRuntimeOnly group: "org.junit.platform", name: "junit-platform-engine", version: "1.8.1"
+        testRuntimeOnly group: "org.junit.vintage", name: "junit-vintage-engine", version: "5.8.1"
+        testRuntimeOnly group: "org.opentest4j", name: "opentest4j", version: "1.2.0"
+
         if (BUILD_CLOSED && DO_JCOV)  {
             testImplementation name: "jcov"
         }
@@ -1959,6 +1973,8 @@ allprojects {
     // Java 7 but when we switch to 8 this will be needed, and probably again when
     // we start building with Java 9.
     test {
+        useJUnitPlatform();
+
         executable = JAVA;
         enableAssertions = true;
         testLogging.exceptionFormat = "full";
@@ -2033,7 +2049,6 @@ project(":base") {
     }
 
     dependencies {
-        testImplementation group: "junit", name: "junit", version: "4.8.2"
         testImplementation sourceSets.main.output
         testImplementation sourceSets.shims.output
     }
@@ -2109,8 +2124,6 @@ project(":graphics") {
     }
 
     dependencies {
-        stubImplementation group: "junit", name: "junit", version: "4.8.2"
-
         antlr group: "org.antlr", name: "antlr4", version: "4.7.2", classifier: "complete"
         testImplementation project(":base").sourceSets.test.output
         implementation project(':base')
@@ -2931,7 +2944,7 @@ project(":media") {
                 // Pre-defined command line arguments
                 def cfgCMDArgs = ["sh", "configure"]
                 def commonCfgArgs = ["--enable-shared", "--disable-debug", "--disable-static", "--disable-yasm", "--disable-doc", "--disable-programs", "--disable-everything"]
-                def codecsCfgArgs = ["--enable-decoder=aac,mp3,mp3float,h264", "--enable-parser=aac,h264", "--enable-demuxer=aac,h264,mpegts,mpegtsraw"]
+                def codecsCfgArgs = ["--enable-decoder=aac,mp3,mp3float,h264,hevc", "--enable-parser=aac,h264,hevc", "--enable-demuxer=aac,h264,hevc,mpegts,mpegtsraw"]
 
                 def copyLibAVStubs = {String fromDir, String toDir ->
                     FileCollection config = files("config.h")
@@ -4965,6 +4978,9 @@ compileTargets { t ->
 
         def library = targetProperties.library
 
+        def doStrip = targetProperties.containsKey('strip') && IS_RELEASE
+        def strip = doStrip ? targetProperties.strip : null
+        def stripArgs = doStrip ? targetProperties.stripArgs : null
         def useLipo = targetProperties.containsKey('useLipo') ? targetProperties.useLipo : false
         def modLibDest = targetProperties.modLibDest
         def moduleNativeDirName = "${platformPrefix}module-$modLibDest"
@@ -5013,7 +5029,8 @@ compileTargets { t ->
             group = "Basic"
             description = "copies javafx.graphics native libraries"
 
-            into "${graphicsProject.buildDir}/${moduleNativeDirName}"
+            def destDirName = "${graphicsProject.buildDir}/${moduleNativeDirName}"
+            into destDirName
 
             from("${graphicsProject.buildDir}/libs/jsl-decora/${t.name}/${library(targetProperties.decora.lib)}")
             def libs = ['font', 'prism', 'prismSW', 'glass', 'iio']
@@ -5039,13 +5056,32 @@ compileTargets { t ->
                     from ("$winsdklib");
                 }
             }
+
+            if (doStrip) {
+                doLast {
+                    def inputFiles = fileTree(dir: destDirName)
+                    inputFiles.include("*.dll")
+                    inputFiles.include("*.dylib")
+                    inputFiles.include("*.so")
+                    // FIXME: if we ever need to strip on Windows platforms, we must
+                    // exclude the Microsoft DLLs (VS2017DLLNames and WinSDKDLLNames)
+
+                    inputFiles.each { file ->
+                        exec {
+                            def cmd = [ strip, stripArgs, file ].flatten()
+                            commandLine(cmd)
+                        }
+                    }
+                }
+            }
         }
 
         def buildModuleMediaTask = task("buildModuleMedia$t.capital", type: Copy, dependsOn: [mediaProject.assemble, prepOpenJfxStubs]) {
             group = "Basic"
             description = "copies javafx.media native libraries"
 
-            into "${mediaProject.buildDir}/${moduleNativeDirName}"
+            def destDirName = "${mediaProject.buildDir}/${moduleNativeDirName}"
+            into destDirName
 
             def mediaBuildType = project(":media").ext.buildType
             if (IS_COMPILE_MEDIA) {
@@ -5076,19 +5112,52 @@ compileTargets { t ->
                     from ("$MEDIA_STUB/${library("glib-lite")}")
                 }
             }
+
+            if (doStrip && IS_COMPILE_MEDIA) {
+                doLast {
+                    def inputFiles = fileTree(dir: destDirName)
+                    inputFiles.include("*.dll")
+                    inputFiles.include("*.dylib")
+                    inputFiles.include("*.so")
+
+                    inputFiles.each { file ->
+                        exec {
+                            def cmd = [ strip, stripArgs, file ].flatten()
+                            commandLine(cmd)
+                        }
+                    }
+                }
+            }
         }
 
         def buildModuleWeb = task("buildModuleWeb$t.capital", type: Copy, dependsOn: [webProject.assemble, prepOpenJfxStubs]) {
             group = "Basic"
             description = "copies javafx.web native libraries"
 
-            into "${webProject.buildDir}/${moduleNativeDirName}"
+            def destDirName = "${webProject.buildDir}/${moduleNativeDirName}"
+            into destDirName
 
             if (IS_COMPILE_WEBKIT) {
                 from ("${webProject.buildDir}/libs/${t.name}/${library('jfxwebkit')}")
             } else {
                 if (t.name != "android" && t.name != "ios" && t.name != "dalvik") {
                     from ("$WEB_STUB/${library('jfxwebkit')}")
+                }
+            }
+
+            if (doStrip && IS_COMPILE_WEBKIT) {
+                doLast {
+                    def inputFiles = fileTree(dir: destDirName)
+                    inputFiles.include("*.dll")
+                    inputFiles.include("*.dylib")
+                    inputFiles.include("*.so")
+
+                    inputFiles.each { file ->
+                        exec {
+                            def cmd = [ strip, stripArgs, file ].flatten()
+                            commandLine(cmd)
+                        }
+                    }
                 }
             }
         }

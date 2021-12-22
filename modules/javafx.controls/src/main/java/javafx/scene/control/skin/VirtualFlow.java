@@ -856,6 +856,8 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
 
         @Override protected void invalidated() {
             int cellCount = get();
+            resetSizeEstimates();
+            recalculateEstimatedSize();
 
             boolean countChanged = oldCount != cellCount;
             oldCount = cellCount;
@@ -888,6 +890,8 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
 
                 Parent parent = getParent();
                 if (parent != null) parent.requestLayout();
+
+                adjustAbsoluteOffset();
             }
             // TODO suppose I had 100 cells and I added 100 more. Further
             // suppose I was scrolled to the bottom when that happened. I
@@ -897,9 +901,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
     };
     public final int getCellCount() { return cellCount.get(); }
     public final void setCellCount(int value) {
-        resetSizeEstimates();
         cellCount.set(value);
-        adjustAbsoluteOffset();
     }
     public final IntegerProperty cellCountProperty() { return cellCount; }
 
@@ -1579,7 +1581,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
     public void scrollToTop(int index) {
         boolean posSet = false;
 
-        if (index >= getCellCount() - 1) {
+        if (index > getCellCount() - 1) {
             setPosition(1);
             posSet = true;
         } else if (index < 0) {

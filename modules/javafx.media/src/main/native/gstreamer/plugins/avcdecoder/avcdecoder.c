@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -47,7 +47,9 @@ static GstStaticPadTemplate sink_factory =
 GST_STATIC_PAD_TEMPLATE ("sink",
                          GST_PAD_SINK,
                          GST_PAD_ALWAYS,
-                         GST_STATIC_CAPS ("video/x-h264")
+                         GST_STATIC_CAPS (
+                         "video/x-h264; "
+                         "video/x-h265") // Fake caps, so we can connect and post error
                          );
 
 /*
@@ -536,6 +538,29 @@ avcdecoder_init_decoder (AvcDecoder *decode, GstCaps* videoSpecificCaps)
 {
     GstFlowReturn ret = GST_FLOW_OK;
     OSStatus status = kVDADecoderNoErr;
+    GstStructure *s = NULL;
+    const gchar *mimetype = NULL;
+
+    // Post error to halt playback if we asked to decode HEVC, so we can
+    // fallback to OSXPlatform. With soft error we will play audio only for MP4
+    // with HEVC and AAC.
+    s = gst_caps_get_structure(videoSpecificCaps, 0);
+    if (s != NULL)
+    {
+        mimetype = gst_structure_get_name(s);
+        if (mimetype != NULL)
+        {
+            if (strstr(mimetype, "video/x-h265") != NULL)
+            {
+                gst_element_message_full(GST_ELEMENT(decode), GST_MESSAGE_ERROR,
+                        GST_STREAM_ERROR, GST_STREAM_ERROR_DECODE,
+                        g_strdup("GSTPlatform does not support HEVC on macOS, use OSXPlatform instead."),
+                        NULL, ("avcdecoder.c"), ("avcdecoder_init_decoder"), 0);
+
+                return GST_FLOW_ERROR;
+            }
+        }
+    }
 
     // Initialize the element structure.
     if (FALSE == decode->is_initialized)
