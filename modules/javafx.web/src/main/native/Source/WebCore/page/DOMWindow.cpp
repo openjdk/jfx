@@ -845,21 +845,17 @@ ExceptionOr<Storage*> DOMWindow::localStorage()
         return Exception { SecurityError };
 
     auto* page = document->page();
-    // FIXME: We should consider supporting access/modification to local storage
-    // after calling window.close(). See <https://bugs.webkit.org/show_bug.cgi?id=135330>.
-    if (!page || !page->isClosing()) {
-        if (m_localStorage)
-            return m_localStorage.get();
-    }
-
     if (!page)
         return nullptr;
 
-    if (page->isClosing())
-        return nullptr;
-
+    // Check if localstorage setting is disabled, then return nullptr
     if (!page->settings().localStorageEnabled())
         return nullptr;
+
+    // FIXME: We should consider supporting access/modification to local storage
+    // after calling window.close(). See <https://bugs.webkit.org/show_bug.cgi?id=135330>.
+    if (page->isClosing() && m_localStorage)
+            return m_localStorage.get();
 
     auto storageArea = page->storageNamespaceProvider().localStorageArea(*document);
     m_localStorage = Storage::create(*this, WTFMove(storageArea));
