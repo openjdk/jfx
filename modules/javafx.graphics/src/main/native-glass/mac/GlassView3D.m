@@ -502,7 +502,6 @@
             return YES;
         }
     }
-    [self->_delegate sendJavaKeyEvent:theEvent isDown:YES];
     [fsWindow release];
     return NO; // return NO to allow system-default processing of Cmd+Q, etc.
 }

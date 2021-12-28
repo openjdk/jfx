@@ -63,9 +63,6 @@ typedef enum GestureMaskType {
 
     NSEvent                 *lastEvent;
 
-    // The last processed key event
-    NSEvent                 *s_lastKeyEvent;
-
     NSDragOperation         dragOperation;
     NSInteger               lastTrackingNumber;
 

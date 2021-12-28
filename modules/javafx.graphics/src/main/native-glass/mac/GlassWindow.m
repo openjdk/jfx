@@ -154,15 +154,6 @@ static inline NSView<GlassView> *getMacView(JNIEnv *env, jobject jview)
     [super close];                                                                      \
     LOG("super close");                                                                 \
 }                                                                                       \
-/* super calls NSWindow on the next run-loop pass when NSWindow could be released */    \
-- (BOOL)performKeyEquivalent:(NSEvent *)theEvent                                        \
-{                                                                                       \
-    [self retain];                                                                      \
-    BOOL result = [super performKeyEquivalent:theEvent];                                \
-    result = result || self->gWindow->isClosed;                                         \
-    [self release];                                                                     \
-    return result;                                                                      \
-}                                                                                       \
 - (BOOL)canBecomeMainWindow                                                             \
 {                                                                                       \
     return [self->gWindow canBecomeMainWindow];                                         \
