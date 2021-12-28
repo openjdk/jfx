@@ -58,9 +58,7 @@ import javafx.scene.control.Skin;
 import javafx.scene.control.Spinner;
 import javafx.scene.control.SplitMenuButton;
 import javafx.scene.control.SplitPane;
-import javafx.scene.control.TableRow;
 import javafx.scene.control.TableView;
-import javafx.scene.control.TreeTableRow;
 import javafx.scene.control.TreeTableView;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
@@ -144,9 +142,7 @@ public class SkinMemoryLeakTest {
                 Spinner.class,
                 SplitMenuButton.class,
                 SplitPane.class,
-                TableRow.class,
                 TableView.class,
-                TreeTableRow.class,
                 TreeTableView.class
         );
         // remove the known issues to make the test pass

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,6 +31,7 @@
 #include <MediaManagement/Media.h>
 #include <Common/VSMemory.h>
 #include <Utils/LowLevelPerf.h>
+#include <fxplugins_common.h>
 
 #define AUDIO_RESUME_DELTA_TIME   10.0 // seconds
 #define VIDEO_RESUME_DELTA_TIME   10.0 // seconds
@@ -971,7 +972,7 @@ bool CGstAudioPlaybackPipeline::IsCodecSupported(GstCaps *pCaps)
                         if (mpegversion == 4)
                         {
                             gboolean is_supported = FALSE;
-                            g_object_set(m_Elements[AUDIO_DECODER], "codec-id", (gint)CODEC_ID_AAC, NULL);
+                            g_object_set(m_Elements[AUDIO_DECODER], "codec-id", (gint)JFX_CODEC_ID_AAC, NULL);
                             g_object_get(m_Elements[AUDIO_DECODER], "is-supported", &is_supported, NULL);
                             if (is_supported)
                             {
@@ -1031,6 +1032,11 @@ bool CGstAudioPlaybackPipeline::CheckCodecSupport()
     }
 
     return TRUE;
+}
+
+bool CGstAudioPlaybackPipeline::LoadDecoder(GstCaps *pCaps)
+{
+    return TRUE; // Nothing to do for audio yet
 }
 
 /**
@@ -1187,6 +1193,23 @@ gboolean CGstAudioPlaybackPipeline::BusCallback(GstBus* bus, GstMessage* msg, sB
                     if (debug)
                         g_free(debug);
                     break;
+                }
+                else if (pPipeline != NULL && pPipeline->m_pEventDispatcher != NULL && error->domain == JFX_GST_ERROR)
+                {
+                    if (error->code == JFX_GST_MISSING_LIBSWSCALE)
+                    {
+                        if (!pPipeline->m_pEventDispatcher->SendPlayerMediaErrorEvent(ERROR_MISSING_LIBSWSCALE))
+                        {
+                            LOGGER_LOGMSG(LOGGER_ERROR, "Cannot send media error event.\n");
+                        }
+                    }
+                    else if (error->code == JFX_GST_INVALID_LIBSWSCALE)
+                    {
+                        if (!pPipeline->m_pEventDispatcher->SendPlayerMediaErrorEvent(ERROR_INVALID_LIBSWSCALE))
+                        {
+                            LOGGER_LOGMSG(LOGGER_ERROR, "Cannot send media error event.\n");
+                        }
+                    }
                 }
             }
 

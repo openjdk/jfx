@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,7 +32,7 @@
 
 class GlassWindow : public BaseWnd, public ViewContainer {
 public:
-    GlassWindow(jobject jrefThis, bool isTransparent, bool isDecorated, bool isUnified, bool isChild, HWND parentOrOwner);
+    GlassWindow(jobject jrefThis, bool isTransparent, bool isDecorated, bool isUnified, HWND parentOrOwner);
     virtual ~GlassWindow();
 
     static GlassWindow* FromHandle(HWND hWnd) {
@@ -97,8 +97,6 @@ public:
     void HandleActivateEvent(jint event);
     void HandleCloseEvent();
 
-    bool IsChild() { return m_parent != NULL; }
-
     virtual BOOL EnterFullScreenMode(GlassView * view, BOOL animate, BOOL keepRatio);
     virtual void ExitFullScreenMode(BOOL animate);
 
@@ -146,7 +144,6 @@ private:
     const bool m_isTransparent;
     const bool m_isDecorated;
     const bool m_isUnified;
-    const HWND m_parent; // != NULL for child windows only
 
     bool m_isResizable;
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -91,48 +91,6 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_gtk_GtkWindow__1createWindow
             glass_mask_to_window_type(mask),
             glass_mask_to_wm_function(mask)
             );
-
-    return PTR_TO_JLONG(ctx);
-}
-
-/*
- * Class:     com_sun_glass_ui_gtk_GtkWindow
- * Method:    _createChildWindow
- * Signature: (J)J
- */
-JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_gtk_GtkWindow__1createChildWindow
-  (JNIEnv * env, jobject obj , jlong owner)
-{
-    (void)env;
-
-    GdkWindow *parent_window = NULL;
-    GtkWidget *parent_widget = NULL;
-    WindowContextPlug *parent_ctx = NULL;
-    WindowContext *ctx = NULL;
-
-    parent_window = gdk_x11_window_lookup_for_display(
-                        gdk_display_get_default(),
-                        (Window)PTR_TO_JLONG(owner));
-
-    if (parent_window != NULL) {
-        parent_ctx = (WindowContextPlug *)g_object_get_data(G_OBJECT(parent_window), GDK_WINDOW_DATA_CONTEXT);
-        // HACK: do not use get_gtk_window()
-        // the method is intended to return GtkWindow that can be used for FileChooser
-        // (OK, that's also a hack, but still...)
-        if (parent_ctx != NULL) {
-            parent_widget = GTK_WIDGET(parent_ctx->get_gtk_window());
-        }
-    }
-
-    if (parent_widget == NULL) {
-        // If 'owner' is a bad handle, then the child window is created unparented
-        ctx = new WindowContextPlug(obj, JLONG_TO_PTR(owner));
-    } else {
-        ctx = new WindowContextChild(obj,
-                        JLONG_TO_PTR(owner),
-                        parent_ctx->gtk_container,
-                        parent_ctx);
-    }
 
     return PTR_TO_JLONG(ctx);
 }
@@ -623,41 +581,6 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkWindow__1setGravity
     WindowContext* ctx = JLONG_TO_WINDOW_CTX(ptr);
     ctx->set_gravity(xGravity, yGravity);
 
-}
-
-
-/*
- * Class:     com_sun_glass_ui_gtk_GtkWindow
- * Method:    _getEmbeddedX
- * Signature: (J)I
- */
-JNIEXPORT jint JNICALL Java_com_sun_glass_ui_gtk_GtkWindow__1getEmbeddedX
-  (JNIEnv *env, jobject obj, jlong ptr) {
-    (void)env;
-    (void)obj;
-
-    if (ptr) {
-        WindowContext* ctx = JLONG_TO_WINDOW_CTX(ptr);
-        return (jint) ctx->getEmbeddedX();
-    }
-    return 0;
-}
-
-/*
- * Class:     com_sun_glass_ui_gtk_GtkWindow
- * Method:    _getEmbeddedY
- * Signature: (J)I
- */
-JNIEXPORT jint JNICALL Java_com_sun_glass_ui_gtk_GtkWindow__1getEmbeddedY
-  (JNIEnv *env, jobject obj, jlong ptr) {
-    (void)env;
-    (void)obj;
-
-    if (ptr) {
-        WindowContext* ctx = JLONG_TO_WINDOW_CTX(ptr);
-        return (jint) ctx->getEmbeddedY();
-    }
-    return 0;
 }
 
 } // extern "C"

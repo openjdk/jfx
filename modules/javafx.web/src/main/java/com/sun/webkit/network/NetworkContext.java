@@ -238,7 +238,7 @@ final class NetworkContext {
         // Need to assert the modifyThread and modifyThreadGroup permission when
         // creating the thread from the URLLoaderThreadFactory, so we can
         // create the thread with the desired ThreadGroup.
-        // Note that this is needed when running as an applet or a web start app.
+        // Note that this is needed when running with a security manager
         private static final Permission modifyThreadGroupPerm = new RuntimePermission("modifyThreadGroup");
         private static final Permission modifyThreadPerm = new RuntimePermission("modifyThread");
 
