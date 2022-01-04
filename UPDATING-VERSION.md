@@ -10,6 +10,9 @@ for a recent example.
 Here are the steps to increment the JavaFX release version number to a new
 feature version (for example, from 13 to 14).
 
+* In `.jcheck/conf`, modify the `version` property in the `[general]`
+section to increment the version number from `openjfx$N` to `openjfx$N+1`.
+
 * In `build.properties`, modify the following properties to increment the
 feature version number from `N` to `N+1`:
 
@@ -28,6 +31,10 @@ from `N` to `N+1`.
 
 Here are the steps to increment the JavaFX release version number to a new
 security version (for example, from 13 to 13.0.1).
+
+* In `.jcheck/conf`, modify the `version` property in the `[general]`
+section to increment the version number from `openjfx$N` to `openjfx$N.0.1`
+or from `openjfx$N.0.M` to `openjfx$N.0.$M+1`.
 
 * In `build.properties`, modify the `jfx.release.security.version` property
 to increment the security version number from `M` to `M+1`.
