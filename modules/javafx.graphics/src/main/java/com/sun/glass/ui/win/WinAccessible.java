@@ -565,6 +565,7 @@ final class WinAccessible extends Accessible {
     private long GetPatternProvider(int patternId) {
         if (isDisposed()) return 0;
         AccessibleRole role = (AccessibleRole)getAttribute(ROLE);
+        if (role == null) return 0;
         boolean impl = false;
         switch (role) {
             case MENU:

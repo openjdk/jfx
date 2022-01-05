@@ -217,13 +217,6 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListCell<
         getChildren().add(flow);
 
         EventHandler<MouseEvent> ml = event -> {
-            // RT-15127: cancel editing on scroll. This is a bit extreme
-            // (we are cancelling editing on touching the scrollbars).
-            // This can be improved at a later date.
-            if (control.getEditingIndex() > -1) {
-                control.edit(-1);
-            }
-
             // This ensures that the list maintains the focus, even when the vbar
             // and hbar controls inside the flow are clicked. Without this, the
             // focus border will not be shown when the user interacts with the

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -745,7 +745,56 @@ public class ScrollPaneSkinTest {
         assertTrue(scrollPaneInner.getHvalue() > 0.0);
     }
 
+    @Test
+    public void testScrollDeltaIsIndependentOfScrollPaneHeight() {
+        var content = new Rectangle();
+        content.setHeight(200);
+        content.setWidth(100);
 
+        var scrollPane = new ScrollPane();
+        scrollPane.setSkin(new ScrollPaneSkinMock(scrollPane));
+        scrollPane.setContent(content);
+        scrollPane.setPrefWidth(100);
+        scrollPane.setPrefHeight(100);
+
+        Stage stage = new Stage();
+        stage.setScene(new Scene(new Group(scrollPane), 500, 500));
+        stage.show();
+
+        Event.fireEvent(content, new ScrollEvent(
+            ScrollEvent.SCROLL,
+            50, 50,
+            50, 50,
+            false, false, false, false, true, false,
+            0.0, -10.0, 0.0, -10.0,
+            ScrollEvent.HorizontalTextScrollUnits.NONE, 0.0,
+            ScrollEvent.VerticalTextScrollUnits.NONE, 0.0,
+            0, null));
+
+        double firstY = content.getLocalToSceneTransform().transform(0, 0).getY();
+        scrollPane.setPrefHeight(150);
+        scrollPane.setVvalue(0);
+
+        stage.close();
+        stage = new Stage();
+        stage.setScene(new Scene(new Group(scrollPane), 500, 500));
+        stage.show();
+
+        Event.fireEvent(content, new ScrollEvent(
+            ScrollEvent.SCROLL,
+            50, 50,
+            50, 50,
+            false, false, false, false, true, false,
+            0.0, -10.0, 0.0, -10.0,
+            ScrollEvent.HorizontalTextScrollUnits.NONE, 0.0,
+            ScrollEvent.VerticalTextScrollUnits.NONE, 0.0,
+            0, null));
+
+        double secondY = content.getLocalToSceneTransform().transform(0, 0).getY();
+        stage.close();
+
+        assertEquals(firstY, secondY, 0.001);
+    }
 
     public static final class ScrollPaneSkinMock extends ScrollPaneSkinShim {
         boolean propertyChanged = false;

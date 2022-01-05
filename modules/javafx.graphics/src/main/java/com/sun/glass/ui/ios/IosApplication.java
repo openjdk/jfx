@@ -83,14 +83,6 @@ public final class IosApplication extends Application {
      * @inheritDoc
      */
     @Override
-    public Window createWindow(long parent) {
-        return new IosWindow(parent);
-    }
-
-    /**
-     * @inheritDoc
-     */
-    @Override
     public View createView() {
         return new IosView();
     }

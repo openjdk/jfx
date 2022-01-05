@@ -60,7 +60,7 @@ ifneq ($(strip $(LIBAV_DIR)),)
 INCLUDES += -I$(LIBAV_DIR)/include
 LDFLAGS  += -L$(LIBAV_DIR)/lib/ -lavcodec -lavformat
 else
-INCLUDES += $(shell pkg-config --cflags libavcodec libavformat)
+INCLUDES += $(shell pkg-config --cflags libavcodec libavformat libswscale)
 LDFLAGS  += $(shell pkg-config --libs libavcodec libavformat)
 endif
 

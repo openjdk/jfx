@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,17 +23,39 @@
  * questions.
  */
 
-#ifndef RemoteLayerSupport_h
-#define RemoteLayerSupport_h
+package test.com.sun.glass.ui.gtk;
 
-#import <Foundation/Foundation.h>
-#import <objc/runtime.h>            // neeeded for objc_getClass
+import com.sun.javafx.PlatformUtil;
+import java.io.ByteArrayOutputStream;
 
-mach_port_t RemoteLayerStartServer(void);
-NSString* RemoteLayerGetServerName(mach_port_t serverPort);
-mach_port_t RemoteLayerGetServerPort(NSString *theServerName);
-id RemoteLayerGetRemoteFromLocal(mach_port_t renderServerPort, id localLayer);
-uint32_t RemoteLayerGetIdForRemote(id remoteLayer);
-void RemoteLayerHostRemoteIdInLocal(uint32_t remoteId, id localLayer);
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
-#endif
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assume.assumeTrue;
+
+public class Gtk2Deprecation1Test extends Gtk2DeprecationCommon {
+
+    @BeforeClass
+    public static void setup() throws Exception {
+        doSetup(true);
+    }
+
+    @AfterClass
+    public static void teardown() {
+        doTeardown();
+    }
+
+    @Test
+    public void testDeprecationMessage() throws Exception {
+        assumeTrue(PlatformUtil.isLinux());
+
+        final String output = out.toString();
+        System.err.println(output);
+        assertTrue("Missing warning message", output.contains("WARNING"));
+        assertTrue("Missing warning message", output.contains("deprecated"));
+        assertTrue("Missing warning message", output.contains("removed"));
+    }
+
+}

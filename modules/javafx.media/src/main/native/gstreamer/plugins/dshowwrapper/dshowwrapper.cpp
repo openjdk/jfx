@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -36,6 +36,8 @@
 #include "Src.h"
 #include "Sink.h"
 
+#include "fxplugins_common.h"
+
 #include <Bdaiface.h>
 #include <Dvdmedia.h>
 #include <Ks.h>
@@ -53,14 +55,6 @@ using namespace std;
 #define H264_PTS_DEBUG 0
 #define AAC_PTS_DEBUG 0
 #define EOS_DEBUG 0
-
-enum CODEC_ID
-{
-    CODEC_ID_UNKNOWN = 0,
-    CODEC_ID_AAC,
-    CODEC_ID_H264, // HLS
-    CODEC_ID_AVC1, // MP4
-};
 
 #define MAX_HEADER_SIZE 256
 #define INPUT_BUFFERS_BEFORE_ERROR 500
@@ -337,7 +331,7 @@ static void gst_dshowwrapper_init (GstDShowWrapper *decoder)
     decoder->mp3_duration = -1;
     decoder->mp3_id3_size = -1;
 
-    decoder->codec_id = CODEC_ID_UNKNOWN;
+    decoder->codec_id = JFX_CODEC_ID_UNKNOWN;
 
     decoder->is_data_produced = FALSE;
     decoder->input_buffers_count = 0;
@@ -1294,7 +1288,7 @@ static gboolean dshowwrapper_is_decoder_by_codec_id_supported(gint codec_id)
 
     switch(codec_id)
     {
-    case CODEC_ID_AAC:
+    case JFX_CODEC_ID_AAC:
         count = sizeof(szAACDecoders)/sizeof(WCHAR*);
         decoderCLSID = GUID_NULL;
         for (int i = 0; i < count; i++)
@@ -1313,7 +1307,7 @@ static gboolean dshowwrapper_is_decoder_by_codec_id_supported(gint codec_id)
             }
         }
         break;
-    case CODEC_ID_AVC1:
+    case JFX_CODEC_ID_AVC1:
         count = sizeof(szAACDecoders)/sizeof(WCHAR*);
         decoderCLSID = GUID_NULL;
         for (int i = 0; i < count; i++)
@@ -1332,7 +1326,7 @@ static gboolean dshowwrapper_is_decoder_by_codec_id_supported(gint codec_id)
             }
         }
         break;
-    case CODEC_ID_H264:
+    case JFX_CODEC_ID_H264:
         decoderCLSID = GUID_NULL;
         hr = CLSIDFromString(L"{212690FB-83E5-4526-8FD7-74478B7939CD}", &decoderCLSID);
         if (SUCCEEDED(hr))
@@ -1837,12 +1831,12 @@ exit:
     return ret;
 }
 
-static void dshowwrapper_load_decoder_h264(GstDShowWrapper *decoder, CODEC_ID codecID)
+static void dshowwrapper_load_decoder_h264(GstDShowWrapper *decoder, JFX_CODEC_ID codecID)
 {
     HRESULT hr = S_OK;
     CLSID decoderCLSID = GUID_NULL;
 
-    if (codecID == CODEC_ID_H264)
+    if (codecID == JFX_CODEC_ID_H264)
     {
         hr = CLSIDFromString(L"{212690FB-83E5-4526-8FD7-74478B7939CD}", &decoderCLSID);
         if (SUCCEEDED(hr))
@@ -1855,7 +1849,7 @@ static void dshowwrapper_load_decoder_h264(GstDShowWrapper *decoder, CODEC_ID co
             }
         }
     }
-    else if (codecID == CODEC_ID_AVC1)
+    else if (codecID == JFX_CODEC_ID_AVC1)
     {
         int count = sizeof(szAACDecoders)/sizeof(WCHAR*);
         for (int i = 0; i < count; i++)
@@ -1957,7 +1951,7 @@ static gboolean dshowwrapper_load_decoder_h264(GstStructure *s, GstDShowWrapper 
     if (gst_structure_get_int(s, "width", &width) && gst_structure_get_int(s, "height", &height))
     {
         // Load AVC1 decoder
-        dshowwrapper_load_decoder_h264(decoder, CODEC_ID_AVC1);
+        dshowwrapper_load_decoder_h264(decoder, JFX_CODEC_ID_AVC1);
         if (decoder->pDecoder == NULL)
             return FALSE;
 
@@ -2040,7 +2034,7 @@ static gboolean dshowwrapper_load_decoder_h264(GstStructure *s, GstDShowWrapper 
     else
     {
         // Load H.264 decoder
-        dshowwrapper_load_decoder_h264(decoder, CODEC_ID_H264);
+        dshowwrapper_load_decoder_h264(decoder, JFX_CODEC_ID_H264);
         if (decoder->pDecoder == NULL)
             goto exit;
 
@@ -2458,7 +2452,7 @@ static gboolean dshowwrapper_load_decoder_mp2t(GstStructure *s, GstDShowWrapper 
         goto exit;
 
     // Check if we support H.264
-    if (!dshowwrapper_is_decoder_by_codec_id_supported(CODEC_ID_H264))
+    if (!dshowwrapper_is_decoder_by_codec_id_supported(JFX_CODEC_ID_H264))
     {
         if (decoder->pDecoder != NULL)
         {
