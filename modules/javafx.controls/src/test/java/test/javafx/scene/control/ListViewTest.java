@@ -2185,4 +2185,62 @@ public class ListViewTest {
             }
         }
     }
+
+    @Test public void testUnfixedCellScrollResize() {
+        final ObservableList<Integer> items = FXCollections.observableArrayList(300,300,70,20);
+        final ListView<Integer> listView = new ListView(items);
+        listView.setPrefHeight(400);
+        double viewportLength = 398; // it would be better to calculate this from listView but there is no API for this
+        listView.setCellFactory(lv -> new ListCell<Integer>() {
+            @Override
+            public void updateItem(Integer item, boolean empty) {
+                super.updateItem(item, empty);
+                if (!empty && (item!=null)) {
+                    this.setPrefHeight(item);
+                }
+            }
+        });
+        StageLoader sl = new StageLoader(listView);
+        Toolkit.getToolkit().firePulse();
+        listView.scrollTo(2);
+        Toolkit.getToolkit().firePulse();
+        int cc = VirtualFlowTestUtils.getCellCount(listView);
+        boolean got70 = false;
+        boolean got20 = false;
+        for (int i = 0; i < cc; i++) {
+            IndexedCell<Integer> cell = VirtualFlowTestUtils.getCell(listView, i);
+            if ((cell != null) && (cell.getItem() == 20)) {
+                assertEquals("Last cell doesn't end at listview end", cell.getLayoutY(), viewportLength - 20,1.);
+                got20 = true;
+            }
+            if ((cell != null) && (cell.getItem() == 70)) {
+                assertEquals("Secondlast cell doesn't end properly", cell.getLayoutY(), viewportLength - 20 - 70,1.);
+                got70 = true;
+            }
+        }
+        assertTrue (got20);
+        assertTrue (got70);
+        // resize cells and make sure they align after scrolling
+        ObservableList<Integer> list = FXCollections.observableArrayList();
+        list.addAll(300,300,20,21);
+        listView.setItems(list);
+        listView.scrollTo(4);
+        Toolkit.getToolkit().firePulse();
+        got20 = false;
+        boolean got21 = false;
+        for (int i = 0; i < cc; i++) {
+            IndexedCell<Integer> cell = VirtualFlowTestUtils.getCell(listView, i);
+            if ((cell != null) && (cell.getItem() == 21)) {
+                assertEquals("Last cell doesn't end at listview end", cell.getLayoutY(), viewportLength - 21,1.);
+                got21 = true;
+            }
+            if ((cell != null) && (cell.getItem() == 20)) {
+                assertEquals("Secondlast cell doesn't end properly", cell.getLayoutY(), viewportLength - 21 - 20,1.);
+                got20 = true;
+            }
+        }
+        assertTrue (got20);
+        assertTrue (got21);
+    }
+
 }

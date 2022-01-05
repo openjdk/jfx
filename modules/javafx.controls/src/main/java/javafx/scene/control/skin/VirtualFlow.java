@@ -1334,6 +1334,8 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         }
         computeBarVisiblity();
 
+        recalculateAndImproveEstimatedSize(0);
+
         recreatedOrRebuilt = recreatedOrRebuilt || rebuild;
         updateScrollBarsAndCells(recreatedOrRebuilt);
 
@@ -1764,6 +1766,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
                 // to a severe performance decrease. This seems to be OK, as
                 // getCell() is only used for cell measurement purposes.
                 // pile.remove(i);
+                resizeCell(cell);
                 return cell;
             }
         }
@@ -1996,6 +1999,8 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
             double height = Math.max(getMaxPrefBreadth(), getViewportBreadth());
             cell.resize(fixedCellSizeEnabled ? getFixedCellSize() : Utils.boundedSize(cell.prefWidth(height), cell.minWidth(height), cell.maxWidth(height)), height);
         }
+        // when a cell is resized, our estimate needs to be updated.
+        recalculateAndImproveEstimatedSize(0);
     }
 
     /**
