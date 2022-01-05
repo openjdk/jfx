@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2022 Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -37,6 +37,7 @@ import javafx.beans.binding.ObjectBinding;
  * @param <T> the type of the wrapped {@code Object}
  */
 abstract class LazyObjectBinding<T> extends ObjectBinding<T> {
+
     private Subscription subscription;
     private boolean wasObserved;
 
@@ -74,7 +75,7 @@ abstract class LazyObjectBinding<T> extends ObjectBinding<T> {
     }
 
     /**
-     * Called after a listener was added to start observing inputs, if they're not observed already.
+     * Called after a listener was added to start observing inputs if they're not observed already.
      */
     private void updateSubcriptionAfterAdd() {
         if (!wasObserved) { // was first observer registered?
@@ -96,7 +97,7 @@ abstract class LazyObjectBinding<T> extends ObjectBinding<T> {
     }
 
     /**
-     * Called after a listener was removed to stop observing inputs, if this was the last listener
+     * Called after a listener was removed to stop observing inputs if this was the last listener
      * observing this binding.
      */
     private void updateSubcriptionAfterRemove() {

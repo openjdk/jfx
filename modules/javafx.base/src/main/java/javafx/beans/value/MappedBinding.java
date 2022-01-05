@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2022 Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,6 +31,7 @@ import java.util.function.Function;
 import com.sun.javafx.binding.Subscription;
 
 class MappedBinding<S, T> extends LazyObjectBinding<T> {
+
     private final ObservableValue<S> source;
     private final Function<? super S, ? extends T> mapper;
 
@@ -40,14 +41,14 @@ class MappedBinding<S, T> extends LazyObjectBinding<T> {
     }
 
     @Override
-    protected Subscription observeInputs() {
-        return Subscription.subscribeInvalidations(source, this::invalidate); // start observing source
-    }
-
-    @Override
     protected T computeValue() {
         S value = source.getValue();
 
         return value == null ? null : mapper.apply(value);
+    }
+
+    @Override
+    protected Subscription observeInputs() {
+        return Subscription.subscribeInvalidations(source, this::invalidate); // start observing source
     }
 }

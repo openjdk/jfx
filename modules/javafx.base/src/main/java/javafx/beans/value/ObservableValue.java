@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -141,51 +141,99 @@ public interface ObservableValue<T> extends Observable {
     T getValue();
 
     /**
-     * Returns an {@link ObservableValue} which provides a mapping of the value
-     * held by this {@code ObservableValue}, and provides {@code null} when this
-     * {@code ObservableValue} holds {@code null}.
+     * Creates an {@code ObservableValue} that holds the result of applying a
+     * mapping on the value held by this {@code ObservableValue}. The result is
+     * updated when the value held by this {@code ObservableValue} changes. If
+     * this value is {@code null}, no mapping is applied and the resulting value
+     * is also {@code null}.
+     * <p>
+     * For example, mapping a string to an upper case string:
+     * <pre>
+     * var text = new SimpleStringProperty("abcd");
+     * ObservableValue&lt;String&gt; upperCase = text.map(String::toUpperCase);
+     *
+     * upperCase.getValue();  // Returns "ABCD"
+     * text.set("xyz");
+     * upperCase.getValue();  // Returns "XYZ"
+     * text.set(null);
+     * upperCase.getValue();  // Returns null</pre>
      *
      * @param <U> the type of values held by the resulting {@code ObservableValue}
-     * @param mapper a {@link Function} which converts a given value to a new value, cannot be null
-     * @return an {@link ObservableValue} which provides a mapping of the value
-     *     held by this {@code ObservableValue}, and provides {@code null} when
-     *     this {@code ObservableValue} holds {@code null}, never null
+     * @param mapper a {@code Function} which converts a given value to a new value, cannot be null
+     * @return an {@code ObservableValue} holding a mapping of this {@code ObservableValue}'s value
+     *     or holds {@code null} when the value is {@code null}; never returns {@code null}
      */
     default <U> ObservableValue<U> map(Function<? super T, ? extends U> mapper) {
         return new MappedBinding<>(this, mapper);
     }
 
     /**
-     * Returns an {@link ObservableValue} which provides a mapping of the value
-     * held by this {@code ObservableValue}, or {@code constant} when this
-     * {@code ObservableValue} holds {@code null}.
+     * Creates an {@code ObservableValue} that holds the value held by this
+     * {@code ObservableValue}, or a given value if this value is {@code null}.
+     * The result is updated when the value held by this {@code ObservableValue}
+     * changes. This method, when combined with {@link #map(Function)}, allows
+     * handling of all values including {@code null} values.
+     * <p>
+     * For example, mapping a string to an upper case string but leaving it blank
+     * if the input was {@code null}:
+     * <pre>
+     * var text = new SimpleStringProperty("abcd");
+     * ObservableValue&lt;String&gt; upperCase = text.map(String::toUpperCase).orElse("");
+     *
+     * upperCase.getValue();  // Returns "ABCD"
+     * text.set(null);
+     * upperCase.getValue();  // Returns ""</pre>
      *
      * @param constant an alternative value to use when this {@code ObservableValue}
-     *     holds {@code null}, can be null
-     * @return an {@link ObservableValue} which provides a mapping of the value
-     *     held by this {@code ObservableValue}, or {@code constant} when this
-     *     {@code ObservableValue} holds {@code null}, never null
+     *     holds {@code null}; can be {@code null}
+     * @return an {@code ObservableValue} holding this {@code ObservableValue}'s value
+     *     or the given value when the value is {@code null}; never returns {@code null}
      */
     default ObservableValue<T> orElse(T constant) {
         return new OrElseBinding<>(this, constant);
     }
 
     /**
-     * Returns an {@link ObservableValue} which provides the value in the {@code
-     * ObservableValue} given by applying {@code mapper} on the value held by this
-     * {@code ObservableValue}, and is {@code null} when this
-     * {@code ObservableValue} holds {@code null}.<p>
+     * Creates an {@code ObservableValue} that holds the value of an {@code ObservableValue}
+     * resulting from applying a mapping on the value held by this {@code ObservableValue}.
+     * The result is updated when either this {@code ObservableValue} or the {@code ObservableValue}
+     * resulting from the mapping changes. If this value is {@code null}, no mapping is applied
+     * and the resulting value is {@code null}. If the mapping resulted in {@code null} then
+     * the resulting value is also {@code null}.
+     * <p>
+     * For example, a property which is only true when a UI element is part of a {@code Scene}
+     * which is part of a {@code Window} that is currently shown on screen:
+     * <pre>
+     * ObservableValue&lt;Boolean&gt; isShowing = listView.sceneProperty()
+     *     .flatMap(Scene::windowProperty)
+     *     .flatMap(Window::showingProperty)
+     *     .orElse(false);
      *
-     * Returning {@code null} from {@code mapper} will result in an
-     * {@code ObservableValue} which holds {@code null}.
+     * // Assuming the listView is currently shown to the user then:
+     *
+     * isShowing().getValue();  // Returns true
+     *
+     * listView.getScene().getWindow().hide();
+     * isShowing().getValue();  // Returns false
+     *
+     * listView.getScene().getWindow().show();
+     * isShowing().getValue();  // Returns true
+     *
+     * listView.getParent().getChildren().remove(listView);
+     * isShowing().getValue();  // Returns false
+     * </pre>
+     * Changes in the values of any of: the scene of {@code listView}, the window of that scene, or
+     * the showing of that window, will update the boolean value {@code isShowing}.
+     * <p>
+     * This method is preferred over {@link javafx.beans.binding.Bindings Bindings#select} methods
+     * since it is type safe.
      *
      * @param <U> the type of values held by the resulting {@code ObservableValue}
-     * @param mapper a {@link Function} which converts a given value to an
-     *     {@code ObservableValue}, cannot be null
-     * @return an {@link ObservableValue} which provides the value in the
-     *     {@code ObservableValue} given by applying {@code mapper} on the value
-     *     held by this {@code ObservableValue}, and is {@code null} when this
-     *     {@code ObservableValue} holds {@code null}, never null
+     * @param mapper a {@code Function} which converts a given value to an
+     *     {@code ObservableValue}; cannot be {@code null}
+     * @return an {@code ObservableValue} holding the value of an {@code ObservableValue}
+     *     resulting from a mapping of this {@code ObservableValue}'s value or
+     *     holds {@code null} when the value is {@code null}; never returns {@code null}
      */
     default <U> ObservableValue<U> flatMap(Function<? super T, ? extends ObservableValue<? extends U>> mapper) {
         return new FlatMappedBinding<>(this, mapper);

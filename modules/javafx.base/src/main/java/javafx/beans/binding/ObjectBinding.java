@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -154,11 +154,14 @@ public abstract class ObjectBinding<T> extends ObjectExpression<T> implements
     @Override
     public final T get() {
         if (!valid) {
-            value = computeValue();
+            T computed = computeValue();
 
-            if (allowValidation()) {
-                valid = true;
+            if (!allowValidation()) {
+                return computed;
             }
+
+            value = computed;
+            valid = true;
         }
         return value;
     }
@@ -177,6 +180,7 @@ public abstract class ObjectBinding<T> extends ObjectExpression<T> implements
             valid = false;
             onInvalidating();
             ExpressionHelper.fireValueChangedEvent(helper);
+            value = null;  // clear cached value to avoid hard reference to stale data
         }
     }
 
@@ -186,19 +190,24 @@ public abstract class ObjectBinding<T> extends ObjectExpression<T> implements
     }
 
     /**
-     * Returns {@code true} when this binding currently has one or more
-     * listeners, otherwise {@code false}.
+     * Checks if the binding has at least one listener registered on it. This
+     * is useful for subclasses which want to conserve resources when not observed.
      *
-     * @return {@code true} when this binding currently has one or more
-     *     listeners, otherwise {@code false}
+     * @return {@code true} if this binding currently has one or more
+     *     listeners registered on it, otherwise {@code false}
      */
     protected final boolean isObserved() {
         return helper != null;
     }
 
     /**
-     * Can be overriden in extending classes to prevent a binding from becoming
-     * valid. The default implementation always allows bindings to become valid.
+     * Checks if the binding is allowed to become valid. Overriding classes can
+     * prevent a binding from becoming valid. This is useful in subclasses which
+     * do not always listen for invalidations of their dependencies and prefer to
+     * recompute the current value instead. This can also be useful if caching of
+     * the current computed value is not desirable.
+     * <p>
+     * The default implementation always allows bindings to become valid.
      *
      * @return {@code true} if this binding is allowed to become valid, otherwise
      *     {@code false}

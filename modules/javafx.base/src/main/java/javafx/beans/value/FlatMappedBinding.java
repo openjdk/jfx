@@ -31,6 +31,7 @@ import java.util.function.Function;
 import com.sun.javafx.binding.Subscription;
 
 class FlatMappedBinding<S, T> extends LazyObjectBinding<T> {
+
     private final ObservableValue<S> source;
     private final Function<? super S, ? extends ObservableValue<? extends T>> mapper;
 

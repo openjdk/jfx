@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2022 Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,6 +30,7 @@ import java.util.Objects;
 import com.sun.javafx.binding.Subscription;
 
 class OrElseBinding<T> extends LazyObjectBinding<T> {
+
     private final ObservableValue<T> source;
     private final T constant;
 
@@ -39,14 +40,14 @@ class OrElseBinding<T> extends LazyObjectBinding<T> {
     }
 
     @Override
-    protected Subscription observeInputs() {
-        return Subscription.subscribeInvalidations(source, this::invalidate); // start observing source
-    }
-
-    @Override
     protected T computeValue() {
         T value = source.getValue();
 
         return value == null ? constant : value;
+    }
+
+    @Override
+    protected Subscription observeInputs() {
+        return Subscription.subscribeInvalidations(source, this::invalidate); // start observing source
     }
 }
