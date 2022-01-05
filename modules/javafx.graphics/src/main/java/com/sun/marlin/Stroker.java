@@ -40,9 +40,12 @@ public final class Stroker implements StartFlagPathConsumer2D, MarlinConst {
     private static final int DRAWING_OP_TO = 1; // ie. curve, line, or quad
     private static final int CLOSE = 2;
 
-    // round join threshold = 1 subpixel
-    private static final double ERR_JOIN = (1.0f / MIN_SUBPIXELS);
-    private static final double ROUND_JOIN_THRESHOLD = ERR_JOIN * ERR_JOIN;
+    // join threshold = 1 subpixel (1/8th pixel):
+    private static final double JOIN_ERROR = MarlinProperties.getStrokerJoinError();
+
+    private static final double ROUND_JOIN_ERROR = 8.0 * JOIN_ERROR; // (8 h)
+
+    private static final int JOIN_STYLE = MarlinProperties.getStrokerJoinStyle();
 
     // kappa = (4/3) * (SQRT(2) - 1)
     private static final double C = (4.0d * (Math.sqrt(2.0d) - 1.0d) / 3.0d);
@@ -50,6 +53,7 @@ public final class Stroker implements StartFlagPathConsumer2D, MarlinConst {
     // SQRT(2)
     private static final double SQRT_2 = Math.sqrt(2.0d);
 
+    // members:
     private DPathConsumer2D out;
 
     private int capStyle;
@@ -63,6 +67,7 @@ public final class Stroker implements StartFlagPathConsumer2D, MarlinConst {
     private final double[] offset2 = new double[2];
     private final double[] miter = new double[2];
     private double miterLimitSq;
+    private double joinLimitMinSq;
 
     private int prev;
 
@@ -157,11 +162,34 @@ public final class Stroker implements StartFlagPathConsumer2D, MarlinConst {
         this.monotonize = subdivideCurves;
 
         this.capStyle = capStyle;
-        this.joinStyle = joinStyle;
+        this.joinStyle = (JOIN_STYLE != -1) ? JOIN_STYLE : joinStyle;
 
-        final double limit = miterLimit * lineWidth2;
-        this.miterLimitSq = limit * limit;
+        double miterScaledLimit = 0.0;
 
+        if (joinStyle == JOIN_MITER) {
+            miterScaledLimit = miterLimit * lineWidth2;
+            this.miterLimitSq = miterScaledLimit * miterScaledLimit;
+
+            final double limitMin = ((this.rdrCtx.clipInvScale == 0.0d) ? JOIN_ERROR
+                    : (JOIN_ERROR * this.rdrCtx.clipInvScale))
+                    + lineWidth2;
+
+            this.joinLimitMinSq = limitMin * limitMin;
+
+        } else if (joinStyle == JOIN_ROUND) {
+            // chord:  s = 2 r * sin( phi / 2)
+            // height: h = 2 r * sin( phi / 4)^2
+            // small angles (phi < 90):
+            // h = s² / (8 r)
+            // so s² = (8 h * r)
+
+            // height max (note ROUND_JOIN_ERROR = 8 * JOIN_ERROR)
+            final double limitMin = ((this.rdrCtx.clipInvScale == 0.0d) ? ROUND_JOIN_ERROR
+                    : (ROUND_JOIN_ERROR * this.rdrCtx.clipInvScale));
+
+            // chord limit (s²):
+            this.joinLimitMinSq = limitMin * this.lineWidth2;
+        }
         this.prev = CLOSE;
 
         rdrCtx.stroking = 1;
@@ -173,8 +201,8 @@ public final class Stroker implements StartFlagPathConsumer2D, MarlinConst {
             if (capStyle == CAP_SQUARE) {
                 margin *= SQRT_2;
             }
-            if ((joinStyle == JOIN_MITER) && (margin < limit)) {
-                margin = limit;
+            if ((joinStyle == JOIN_MITER) && (margin < miterScaledLimit)) {
+                margin = miterScaledLimit;
             }
 
             // bounds as half-open intervals: minX <= x < maxX and minY <= y < maxY
@@ -270,15 +298,13 @@ public final class Stroker implements StartFlagPathConsumer2D, MarlinConst {
         if ((omx == 0.0d && omy == 0.0d) || (mx == 0.0d && my == 0.0d)) {
             return;
         }
-
         final double domx = omx - mx;
         final double domy = omy - my;
-        final double lenSq = domx*domx + domy*domy;
+        final double lenSq = domx * domx + domy * domy;
 
-        if (lenSq < ROUND_JOIN_THRESHOLD) {
+        if (lenSq < joinLimitMinSq) {
             return;
         }
-
         if (rev) {
             omx = -omx;
             omy = -omy;
@@ -300,7 +326,7 @@ public final class Stroker implements StartFlagPathConsumer2D, MarlinConst {
         // If it is >=0, we know that abs(ext) is <= 90 degrees, so we only
         // need 1 curve to approximate the circle section that joins omx,omy
         // and mx,my.
-        if (cosext >= 0.0d) {
+        if (cosext >= 0.0) {
             drawBezApproxForArc(cx, cy, omx, omy, mx, my, rev);
         } else {
             // we need to split the arc into 2 arcs spanning the same angle.
@@ -317,9 +343,10 @@ public final class Stroker implements StartFlagPathConsumer2D, MarlinConst {
             // have numerical problems because we know that lineWidth2 divided by
             // this normal's length is at least 0.5 and at most sqrt(2)/2 (because
             // we know the angle of the arc is > 90 degrees).
-            double nx = my - omy, ny = omx - mx;
-            double nlen = Math.sqrt(nx*nx + ny*ny);
-            double scale = lineWidth2/nlen;
+            final double nx = my - omy;
+            final double ny = omx - mx;
+            final double nlen = Math.sqrt(nx * nx + ny * ny);
+            final double scale = lineWidth2 / nlen;
             double mmx = nx * scale, mmy = ny * scale;
 
             // if (isCW(omx, omy, mx, my) != isCW(mmx, mmy, mx, my)) then we've
@@ -473,14 +500,14 @@ public final class Stroker implements StartFlagPathConsumer2D, MarlinConst {
 
         final double miterX = miter[0];
         final double miterY = miter[1];
-        double lenSq = (miterX-x0)*(miterX-x0) + (miterY-y0)*(miterY-y0);
+        final double lenSq = (miterX - x0) * (miterX - x0) + (miterY - y0) * (miterY - y0);
 
         // If the lines are parallel, lenSq will be either NaN or +inf
         // (actually, I'm not sure if the latter is possible. The important
         // thing is that -inf is not possible, because lenSq is a square).
         // For both of those values, the comparison below will fail and
         // no miter will be drawn, which is correct.
-        if (lenSq < miterLimitSq) {
+        if ((lenSq < miterLimitSq) && (lenSq >= joinLimitMinSq)) {
             emitLineTo(miterX, miterY, rev);
         }
     }

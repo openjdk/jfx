@@ -44,7 +44,7 @@ public final class Monitor extends StatLong {
 
     public void stop() {
         final long elapsed = System.nanoTime() - start;
-        if (start != INVALID && elapsed > 0l) {
+        if (start != INVALID && elapsed > 0L) {
             add(elapsed);
         }
         start = INVALID;

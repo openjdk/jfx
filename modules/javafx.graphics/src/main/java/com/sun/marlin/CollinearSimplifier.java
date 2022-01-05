@@ -32,7 +32,8 @@ public final class CollinearSimplifier implements DPathConsumer2D {
     enum SimplifierState {
 
         Empty, PreviousPoint, PreviousLine
-    };
+    }
+
     // slope precision threshold
     static final double EPS = 1e-4d; // aaime proposed 1e-3d
 

@@ -30,7 +30,7 @@ import sun.misc.Unsafe;
 
 public final class Renderer implements MarlinRenderer, MarlinConst {
 
-    static final boolean DISABLE_RENDER = false;
+    static final boolean DISABLE_RENDER = MarlinProperties.isSkipRenderer();
 
     private static final int ALL_BUT_LSB = 0xFFFFFFFE;
     private static final int ERR_STEP_MAX = 0x7FFFFFFF; // = 2^31 - 1

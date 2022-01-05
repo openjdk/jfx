@@ -169,6 +169,19 @@ public final class MarlinProperties {
                 10.0f);
     }
 
+    public static float getStrokerJoinError() {
+        final float def = (1.0f / MarlinConst.MIN_SUBPIXELS);
+        float err = getFloat("prism.marlin.stroker.joinError",
+                def,
+                -1.0f,
+                10.0f);
+        return (err < 0.0f) ? def : err;
+    }
+
+    public static int getStrokerJoinStyle() {
+        return getInteger("prism.marlin.stroker.joinStyle", -1, -1, 2);
+    }
+
     public static boolean isDoClip() {
         return getBoolean("prism.marlin.clip", "true");
     }
@@ -205,6 +218,14 @@ public final class MarlinProperties {
 
     public static boolean isDoChecks() {
         return getBoolean("prism.marlin.doChecks", "false");
+    }
+
+    public static boolean isSkipRenderer() {
+        return getBoolean("prism.marlin.skip_rdr", "false");
+    }
+
+    public static boolean isSkipRenderTiles() {
+        return getBoolean("prism.marlin.skip_pipe", "false");
     }
 
     // logging parameters

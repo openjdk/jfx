@@ -866,7 +866,7 @@ final class Helpers implements MarlinConst {
 
         @Override
         public String toString() {
-            String ret = "";
+            StringBuilder ret = new StringBuilder();
             int nc = numCurves;
             int last = end;
             int len;
@@ -874,24 +874,23 @@ final class Helpers implements MarlinConst {
                 switch(curveTypes[--nc]) {
                 case TYPE_LINETO:
                     len = 2;
-                    ret += "line: ";
+                    ret.append("line: ");
                     break;
                 case TYPE_QUADTO:
                     len = 4;
-                    ret += "quad: ";
+                    ret.append("quad: ");
                     break;
                 case TYPE_CUBICTO:
                     len = 6;
-                    ret += "cubic: ";
+                    ret.append("cubic: ");
                     break;
                 default:
                     len = 0;
                 }
                 last -= len;
-                ret += Arrays.toString(Arrays.copyOfRange(curves, last, last+len))
-                                       + "\n";
+                ret.append(Arrays.toString(Arrays.copyOfRange(curves, last, last + len))).append("\n");
             }
-            return ret;
+            return ret.toString();
         }
     }
 

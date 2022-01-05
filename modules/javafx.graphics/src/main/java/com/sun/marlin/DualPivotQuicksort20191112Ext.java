@@ -113,7 +113,7 @@ public final class DualPivotQuicksort20191112Ext {
      * @param low the index of the first element, inclusive, to be sorted
      * @param high the index of the last element, exclusive, to be sorted
      */
-    static void sort(DPQSSorterContext sorter, int[] a, int[] auxA, int b[], int[] auxB, int low, int high) {
+    static void sort(DPQSSorterContext sorter, int[] a, int[] auxA, int[] b, int[] auxB, int low, int high) {
         /*
          * LBO Shortcut: Invoke insertion sort on the leftmost part.
          */
@@ -565,7 +565,7 @@ public final class DualPivotQuicksort20191112Ext {
      * @param low the index of the first element, inclusive, to be sorted
      * @param high the index of the last element, exclusive, to be sorted
      */
-    static void insertionSort(int[] a, int b[], int low, int high) {
+    static void insertionSort(int[] a, int[] b, int low, int high) {
         for (int i, k = low; ++k < high; ) {
             int ai = a[i = k];
 
@@ -589,7 +589,7 @@ public final class DualPivotQuicksort20191112Ext {
      * @param low the index of the first element, inclusive, to be sorted
      * @param high the index of the last element, exclusive, to be sorted
      */
-    private static void heapSort(int[] a, int b[], int low, int high) {
+    private static void heapSort(int[] a, int[] b, int low, int high) {
         for (int k = (low + high) >>> 1; k > low; ) {
             pushDown(a, b, --k, a[k], b[k], low, high);
         }
@@ -611,7 +611,7 @@ public final class DualPivotQuicksort20191112Ext {
      * @param low the index of the first element, inclusive, to be sorted
      * @param high the index of the last element, exclusive, to be sorted
      */
-    private static void pushDown(int[] a, int b[], int p, int valueA, int valueB, int low, int high) {
+    private static void pushDown(int[] a, int[] b, int p, int valueA, int valueB, int low, int high) {
         for (int k;; a[p] = a[k], b[p] = b[p = k]) {
             k = (p << 1) - low + 2; // Index of the right child
 
@@ -739,11 +739,9 @@ public final class DualPivotQuicksort20191112Ext {
             }
             run[count] = (last = k);
 
-            if (true) {
-                // fix ALMOST_CONTIGUOUS ie consecutive (ascending / descending runs)
-                if (k < high - 1) {
-                    k++; // LBO
-                }
+            // fix ALMOST_CONTIGUOUS ie consecutive (ascending / descending runs)
+            if (k < high - 1) {
+                k++; // LBO
             }
         }
 

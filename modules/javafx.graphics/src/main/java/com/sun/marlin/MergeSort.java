@@ -70,7 +70,7 @@ final class MergeSort {
                 || (toIndex > auxX.length) || (toIndex > auxY.length)) {
             // explicit check to avoid bound checks within hot loops (below):
             throw new ArrayIndexOutOfBoundsException("bad arguments: toIndex="
-                                                     + toIndex);
+                    + toIndex);
         }
         if (skipISort) {
             if (useDPQS) {
@@ -95,9 +95,12 @@ final class MergeSort {
             }
         }
 
+        // final pass to merge both
+        // Merge sorted parts (auxX/auxY) into x/y arrays
+
         for (int i = 0, p = 0, q = insertionSortIndex; i < toIndex; i++) {
             if ((q >= toIndex) || ((p < insertionSortIndex)
-                                   && (auxX[p] <= auxX[q]))) {
+                    && (auxX[p] <= auxX[q]))) {
                 x[i] = auxX[p];
                 y[i] = auxY[p];
                 p++;
