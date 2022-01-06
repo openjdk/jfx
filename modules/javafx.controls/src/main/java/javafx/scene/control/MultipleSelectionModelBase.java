@@ -355,6 +355,7 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
         BitSet selectedIndicesCopy = new BitSet();
         selectedIndicesCopy.or(selectedIndices.bitset);
         selectedIndicesCopy.clear(row);
+        // No modifications should be made to 'selectedIndicesCopy' to honour the constructor.
         List<Integer> previousSelectedIndices = new SelectedIndicesList(selectedIndicesCopy);
 
         // RT-32411 We used to call quietClearSelection() here, but this
@@ -649,10 +650,18 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
 //            throw new RuntimeException("callObservers unavailable");
 //        }
 
+        /**
+         * Constructs a new instance of SelectedIndicesList
+         */
         public SelectedIndicesList() {
             this(new BitSet());
         }
 
+        /**
+         * Constructs a new instance of SelectedIndicesList from the provided BitSet.
+         * The underlying source BitSet shouldn't be modified once it has been passed to the constructor.
+         * @param bitset Bitset to be used.
+         */
         public SelectedIndicesList(BitSet bitset) {
             this.bitset = bitset;
         }
@@ -821,46 +830,6 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
             _nextRemove(indicesIndex, index);
             _endChange();
         }
-
-//        public void clearAndSelect(int index) {
-//            if (index < 0 || index >= getItemCount()) {
-//                clearSelection();
-//                return;
-//            }
-//
-//            final boolean wasSelected = isSelected(index);
-//
-//            // RT-33558 if this method has been called with a given row, and that
-//            // row is the only selected row currently, then this method becomes a no-op.
-//            if (wasSelected && getSelectedIndices().size() == 1) {
-//                // before we return, we double-check that the selected item
-//                // is equal to the item in the given index
-//                if (getSelectedItem() == getModelItem(index)) {
-//                    return;
-//                }
-//            }
-//
-//            List<Integer> removed = bitset.stream().boxed().collect(Collectors.toList());
-//            boolean isSelected = removed.contains(index);
-//            if (isSelected) {
-//                removed.remove((Object)index);
-//            }
-//
-//            if (removed.isEmpty()) {
-//                set(index);
-//            }
-//
-//            bitset.clear();
-//            bitset.set(index);
-//            _beginChange();
-//            if (isSelected) {
-//                _nextRemove(0, removed);
-//            } else {
-//                _nextAdd(0, 1);
-//                _nextRemove(0, removed);
-//            }
-//            _endChange();
-//        }
 
         public boolean isSelected(int index) {
             return bitset.get(index);
