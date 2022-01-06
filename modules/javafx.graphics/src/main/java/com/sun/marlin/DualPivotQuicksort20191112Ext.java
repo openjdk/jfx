@@ -56,7 +56,7 @@ public final class DualPivotQuicksort20191112Ext {
     8226297: Dual-pivot quicksort improvements
         Reviewed-by: dl, lbourges
         Contributed-by: Vladimir Yaroslavskiy <vlv.spb.ru@mail.ru>
-     	Tue, 12 Nov 2019 13:49:40 -0800
+        Tue, 12 Nov 2019 13:49:40 -0800
      */
     /**
      * Prevents instantiation.
