@@ -30,7 +30,7 @@ static const int numMaxLights = 5;
 float4 gDiffuseColor : register(c0);
 float4 gSpecularColor : register(c1); // specular power is in the alpha
 float4 gLightColor[numMaxLights] : register(c4);
-float4 gLightAttenuation[numMaxLights] : register(c9);
+float4 gLightAttenuation[numMaxLights] : register(c9);  // {constant, linear, quadratic, on == 1 / off == 0}
 float4 gLightRange[numMaxLights] : register(c14);       // {max range, reserved min range, _, _}
 float4 gSpotLightFactors[numMaxLights] : register(c19); // {cos(outer), cos(inner) - cos(outer), falloff, _}
 
