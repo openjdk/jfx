@@ -1424,7 +1424,7 @@ public class MultipleSelectionModelImplTest {
         assertTrue(model.isSelected(1));
         assertTrue(model.isSelected(2));
         assertTrue(model.isSelected(5));
-        assertFalse(model.isSelected(0));
+        assertEquals(3, model.getSelectedIndices().size());
     }
 
     // Test for MultipleSelectionModelBase.SelectedIndicesList#clear()
