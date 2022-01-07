@@ -72,9 +72,13 @@ import javafx.beans.value.ObservableValue;
  * the {@link Platform#startup(Runnable)} method for more information.
  * </p>
  * <p>
- * Many of the {@code Stage} properties are read only because they can
- * be changed externally by the underlying platform and therefore must
- * not be bindable.
+ * Some {@code Stage} properties are read-only, even though they have
+ * corresponding set methods, because they can be changed externally by the
+ * underlying platform, and therefore must not be bindable.
+ * Further, these properties might be ignored on some platforms, depending on
+ * whether or not there is a window manager and how it is configured.
+ * For example, a platform without a window manager might ignore the
+ * {@code iconified} property.
  * </p>
  *
  * <p><b>Style</b></p>
@@ -614,8 +618,9 @@ public class Stage extends Window {
      * strongest to weakest).
      * </p>
      * <p>
-     * The property is read only because it can be changed externally
-     * by the underlying platform and therefore must not be bindable.
+     * This property is read-only because it can be changed externally
+     * by the underlying platform. A value set by the application might be
+     * ignored on some platforms.
      * </p>
      *
      * The user can unconditionally exit full-screen mode
@@ -763,8 +768,9 @@ public class Stage extends Window {
      * hide the {@code Stage} but not show an icon for it.
      * </p>
      * <p>
-     * The property is read only because it can be changed externally
-     * by the underlying platform and therefore must not be bindable.
+     * This property is read-only because it can be changed externally
+     * by the underlying platform. A value set by the application might be
+     * ignored on some platforms.
      * </p>
      *
      * @defaultValue false
@@ -800,8 +806,9 @@ public class Stage extends Window {
      * strongest to weakest).
      * </p>
      * <p>
-     * The property is read only because it can be changed externally
-     * by the underlying platform and therefore must not be bindable.
+     * This property is read-only because it can be changed externally
+     * by the underlying platform. A value set by the application might be
+     * ignored on some platforms.
      * </p>
      *
      * @defaultValue false
@@ -846,8 +853,9 @@ public class Stage extends Window {
      * and the property value will be restored to {@code false}.
      * </p>
      * <p>
-     * The property is read only because it can be changed externally
-     * by the underlying platform and therefore must not be bindable.
+     * This property is read-only because it can be changed externally
+     * by the underlying platform. A value set by the application might be
+     * ignored on some platforms.
      * </p>
      *
      * @defaultValue false
