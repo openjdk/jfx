@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -37,7 +37,7 @@ import javafx.stage.Stage;
 
 public class SelectTableViewTest extends Application {
 
-    final int ROW_COUNT = 700_000;
+    final int ROW_COUNT = 70_000;
     //  final int ROW_COUNT = 80_000;
     //  final int ROW_COUNT = 50_000;
     //  final int ROW_COUNT = 8_000;
@@ -98,37 +98,37 @@ public class SelectTableViewTest extends Application {
     private void selectAll(TableView tableView) {
         long t = System.currentTimeMillis();
         tableView.getSelectionModel().selectAll();
-        System.out.println("time:"+ (System.currentTimeMillis() - t));
+        System.out.println("time:" + (System.currentTimeMillis() - t));
     }
 
     private void clearSelection(TableView tableView) {
         long t = System.currentTimeMillis();
         tableView.getSelectionModel().clearSelection();
-        System.out.println("time:"+ (System.currentTimeMillis() - t));
+        System.out.println("time:" + (System.currentTimeMillis() - t));
     }
 
     private void selectToStart(TableView tableView) {
         long t = System.currentTimeMillis();
         tableView.getSelectionModel().selectRange(0, tableView.getSelectionModel().getFocusedIndex());
-        System.out.println("time:"+ (System.currentTimeMillis() - t));
+        System.out.println("time:" + (System.currentTimeMillis() - t));
     }
 
     private void selectToLast(TableView tableView) {
         long t = System.currentTimeMillis();
         tableView.getSelectionModel().selectRange(tableView.getSelectionModel().getFocusedIndex(), tableView.getItems().size());
-        System.out.println("time:"+ (System.currentTimeMillis() - t));
+        System.out.println("time:" + (System.currentTimeMillis() - t));
     }
 
     private void selectPrevious(TableView tableView) {
         long t = System.currentTimeMillis();
         tableView.getSelectionModel().selectPrevious();
-        System.out.println("time:"+ (System.currentTimeMillis() - t));
+        System.out.println("time:" + (System.currentTimeMillis() - t));
     }
 
     private void selectNext(TableView tableView) {
         long t = System.currentTimeMillis();
         tableView.getSelectionModel().selectNext();
-        System.out.println("time:"+ (System.currentTimeMillis() - t));
+        System.out.println("time:" + (System.currentTimeMillis() - t));
     }
 
     public static void main(String[] args) {

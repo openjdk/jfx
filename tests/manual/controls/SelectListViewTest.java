@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -82,37 +82,37 @@ public class SelectListViewTest extends Application {
     private void selectAll(ListView listView) {
         long t = System.currentTimeMillis();
         listView.getSelectionModel().selectAll();
-        System.out.println("time:"+ (System.currentTimeMillis() - t));
+        System.out.println("time:" + (System.currentTimeMillis() - t));
     }
 
     private void clearSelection(ListView listView) {
         long t = System.currentTimeMillis();
         listView.getSelectionModel().clearSelection();
-        System.out.println("time:"+ (System.currentTimeMillis() - t));
+        System.out.println("time:" + (System.currentTimeMillis() - t));
     }
 
     private void selectToStart(ListView listView) {
         long t = System.currentTimeMillis();
         listView.getSelectionModel().selectRange(0, listView.getSelectionModel().getSelectedIndex());
-        System.out.println("time:"+ (System.currentTimeMillis() - t));
+        System.out.println("time:" + (System.currentTimeMillis() - t));
     }
 
     private void selectToLast(ListView listView) {
         long t = System.currentTimeMillis();
         listView.getSelectionModel().selectRange(listView.getSelectionModel().getSelectedIndex(), listView.getItems().size());
-        System.out.println("time:"+ (System.currentTimeMillis() - t));
+        System.out.println("time:" + (System.currentTimeMillis() - t));
     }
 
     private void selectPrevious(ListView listView) {
         long t = System.currentTimeMillis();
         listView.getSelectionModel().selectPrevious();
-        System.out.println("time:"+ (System.currentTimeMillis() - t));
+        System.out.println("time:" + (System.currentTimeMillis() - t));
     }
 
     private void selectNext(ListView listView) {
         long t = System.currentTimeMillis();
         listView.getSelectionModel().selectNext();
-        System.out.println("time:"+ (System.currentTimeMillis() - t));
+        System.out.println("time:" + (System.currentTimeMillis() - t));
     }
     public static void main(String[] args) {
         Application.launch(args);
