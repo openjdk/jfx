@@ -36,6 +36,7 @@ import javafx.scene.Scene;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 class ControlUtils {
@@ -156,7 +157,7 @@ class ControlUtils {
         };
     }
 
-    public static <S> void updateSelectedIndices(MultipleSelectionModelBase<S> sm, ListChangeListener.Change<? extends TablePositionBase<?>> c) {
+    public static <S> void updateSelectedIndices(MultipleSelectionModelBase<S> sm, ListChangeListener.Change<? extends TablePositionBase<?>> c, Predicate<Integer> removeRowFilter) {
         sm.selectedIndices._beginChange();
 
         while (c.next()) {
@@ -167,6 +168,7 @@ class ControlUtils {
             sm.startAtomic();
             final List<Integer> removed = c.getRemoved().stream()
                     .map(TablePositionBase::getRow)
+                    .filter(removeRowFilter)
                     .distinct()
                     .peek(sm.selectedIndices::clear)
                     .collect(Collectors.toList());

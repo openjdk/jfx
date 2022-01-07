@@ -5586,4 +5586,53 @@ public class TableViewTest {
 
         sl.dispose();
     }
+
+    @Test
+    public void test_clearAndSelectChangeMultipleSelectionCellMode() {
+        TableColumn<Person, String> firstNameCol = new TableColumn<>("First Name");
+        firstNameCol.setCellValueFactory(new PropertyValueFactory<>("firstName"));
+
+        TableColumn<Person, String> lastNameCol = new TableColumn<>("Last Name");
+        lastNameCol.setCellValueFactory(new PropertyValueFactory<>("lastName"));
+
+        TableView<Person> table = new TableView<>();
+        table.setItems(personTestData);
+        table.getColumns().addAll(firstNameCol, lastNameCol);
+
+        sm = table.getSelectionModel();
+        sm.setCellSelectionEnabled(true);
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+
+        StageLoader sl = new StageLoader(table);
+        KeyEventFirer keyboard = new KeyEventFirer(table);
+
+        assertEquals(0, sm.getSelectedItems().size());
+
+        sm.select(0, firstNameCol);
+        assertEquals(1, sm.getSelectedCells().size());
+        assertEquals(1, sm.getSelectedItems().size());
+
+        keyboard.doKeyPress(KeyCode.RIGHT, KeyModifier.SHIFT);
+        assertEquals(2, sm.getSelectedCells().size());
+        assertEquals(1, sm.getSelectedItems().size());
+
+        keyboard.doKeyPress(KeyCode.LEFT);
+        assertTrue(VirtualFlowTestUtils.getCell(table, 0, 0).isSelected());
+        assertFalse(VirtualFlowTestUtils.getCell(table, 0, 1).isSelected());
+        assertEquals(1, sm.getSelectedCells().size());
+        assertEquals(1, sm.getSelectedItems().size());
+
+        sm.clearSelection();
+
+        sm.selectRange(0, firstNameCol, 1, lastNameCol);
+        assertEquals(4, sm.getSelectedCells().size());
+        assertEquals(2, sm.getSelectedItems().size());
+
+        sm.clearAndSelect(0, firstNameCol);
+        assertEquals(1, sm.getSelectedCells().size());
+        assertEquals(1, sm.getSelectedItems().size());
+
+        sl.dispose();
+    }
+
 }

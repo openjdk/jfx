@@ -6666,4 +6666,53 @@ public class TreeTableViewTest {
         observer.check1();
         observer.checkAddRemove(0, treeTableView.getSelectionModel().getSelectedItems(), List.of(c1, c2, c3), 1, 1);
     }
+
+    @Test
+    public void test_clearAndSelectChangeMultipleSelectionCellMode() {
+        TreeItem<Person> root = new TreeItem<>(new Person("root", "",""));
+        root.getChildren().setAll(
+                new TreeItem<>(new Person("Jacob", "Smith", "jacob.smith@example.com")),
+                new TreeItem<>(new Person("Isabella", "Johnson", "isabella.johnson@example.com")),
+                new TreeItem<>(new Person("Ethan", "Williams", "ethan.williams@example.com")),
+                new TreeItem<>(new Person("Emma", "Jones", "emma.jones@example.com")),
+                new TreeItem<>(new Person("Michael", "Brown", "michael.brown@example.com")));
+        root.setExpanded(true);
+
+        TreeTableColumn<Person, String> firstNameCol = new TreeTableColumn<>("First Name");
+        firstNameCol.setCellValueFactory(new TreeItemPropertyValueFactory<>("firstName"));
+
+        TreeTableColumn<Person, String> lastNameCol = new TreeTableColumn<>("Last Name");
+        lastNameCol.setCellValueFactory(new TreeItemPropertyValueFactory<>("lastName"));
+
+        TreeTableColumn<Person, String> emailCol = new TreeTableColumn<>("Email");
+        emailCol.setCellValueFactory(new TreeItemPropertyValueFactory<>("email"));
+
+        TreeTableView<Person> table = new TreeTableView<>(root);
+        table.getColumns().addAll(firstNameCol, lastNameCol, emailCol);
+        sm = table.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        sm.setCellSelectionEnabled(true);
+
+        assertEquals(0, sm.getSelectedItems().size());
+
+        sm.select(1, firstNameCol);
+        assertTrue(sm.isSelected(1, firstNameCol));
+        assertEquals(1, sm.getSelectedCells().size());
+        assertEquals(1, sm.getSelectedItems().size());
+
+        TreeTableCell<Person, String> cell_1_1 = (TreeTableCell<Person, String>) VirtualFlowTestUtils.getCell(table, 1, 1);
+        new MouseEventFirer(cell_1_1).fireMousePressAndRelease(KeyModifier.getShortcutKey());
+        assertTrue(sm.isSelected(1, firstNameCol));
+        assertTrue(sm.isSelected(1, lastNameCol));
+        assertEquals(2, sm.getSelectedCells().size());
+        assertEquals(1, sm.getSelectedItems().size());
+
+        TreeTableCell<Person, String> cell_1_0 = (TreeTableCell<Person, String>) VirtualFlowTestUtils.getCell(table, 1, 0);
+        new MouseEventFirer(cell_1_0).fireMousePressAndRelease();
+        assertTrue(sm.isSelected(1, firstNameCol));
+        assertFalse(sm.isSelected(1, lastNameCol));
+        assertEquals(1, sm.getSelectedCells().size());
+        assertEquals(1, sm.getSelectedItems().size());
+    }
+
 }
