@@ -780,6 +780,33 @@ void ant(String conf,   // platform configuration
     String antHome = antHomeEnv != null ? cygpath(antHomeEnv) : null;
     String ant = (antHome != null && !antHome.equals("")) ? "$antHome/bin/ant" : "ant";
 
+    List<String> cmdArgs = new ArrayList<String>()
+    if (IS_WINDOWS) {
+        cmdArgs += !ant.matches("\\s+") ? '"' + ant + '"' : ant
+    }
+
+    cmdArgs += "-Dbuild.compiler=javac1.7"
+
+    if ((conf != null) && !rootProject.defaultHostTarget.equals(conf)) {
+        def targetProperties = rootProject.ext[conf.trim().toUpperCase()]
+        cmdArgs += "-Dcross.platform=$conf"
+        if (targetProperties.containsKey('arch')) {
+            cmdArgs += "-Dcross.platform.arch=${targetProperties.arch}"
+        }
+    }
+
+    if (params != null) {
+        params.each() { s->
+            cmdArgs += IS_WINDOWS && !s.matches("\\s+") ? '"' + s + '"' : s
+        }
+    }
+
+    if (IS_MILESTONE_FCS) {
+        cmdArgs += '-Djfx.release.suffix=""'
+    }
+
+    cmdArgs += target
+
     exec {
         workingDir = dir
         environment("JDK_HOME", JDK_HOME)
@@ -796,26 +823,11 @@ void ant(String conf,   // platform configuration
                     "DXSDK_DIR"            : WINDOWS_DXSDK_DIR,
                     "PATH"                 : WINDOWS_VS_PATH
             ]);
-            commandLine "cmd", "/c", ant, "-Dbuild.compiler=javac1.7"
+            commandLine "cmd", "/s", "/c", '"' + String.join(" ", cmdArgs) + '"'
         } else {
-            commandLine ant, "-Dbuild.compiler=javac1.7"
+            commandLine ant
+            args(cmdArgs)
         }
-        if ((conf != null) && !rootProject.defaultHostTarget.equals(conf)) {
-            def targetProperties = rootProject.ext[conf.trim().toUpperCase()]
-            args("-Dcross.platform=$conf")
-            if (targetProperties.containsKey('arch')) {
-                args("-Dcross.platform.arch=${targetProperties.arch}")
-            }
-        }
-        if (params != null) {
-            params.each() { s->
-                args(s)
-            }
-        }
-        if (IS_MILESTONE_FCS) {
-            args('-Djfx.release.suffix=""')
-        }
-        args(target);
     }
 }
 
