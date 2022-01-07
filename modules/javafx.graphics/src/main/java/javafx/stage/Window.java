@@ -542,8 +542,8 @@ public class Window implements EventTarget {
      * becomes false.
      * <p>
      * This property is read-only because it can be changed externally
-     * by the underlying platform. A value set by the application might be
-     * ignored on some platforms.
+     * by the underlying platform.
+     * Further, setting this property might be ignored on some platforms.
      * </p>
      */
     private ReadOnlyDoubleWrapper x =
@@ -573,8 +573,8 @@ public class Window implements EventTarget {
      * becomes false.
      * <p>
      * This property is read-only because it can be changed externally
-     * by the underlying platform. A value set by the application might be
-     * ignored on some platforms.
+     * by the underlying platform.
+     * Further, setting this property might be ignored on some platforms.
      * </p>
      */
     private ReadOnlyDoubleWrapper y =
@@ -621,8 +621,8 @@ public class Window implements EventTarget {
      * becomes false.
      * <p>
      * This property is read-only because it can be changed externally
-     * by the underlying platform. A value set by the application might be
-     * ignored on some platforms.
+     * by the underlying platform.
+     * Further, setting this property might be ignored on some platforms.
      * </p>
      */
     private ReadOnlyDoubleWrapper width =
@@ -653,8 +653,8 @@ public class Window implements EventTarget {
      * becomes false.
      * <p>
      * This property is read-only because it can be changed externally
-     * by the underlying platform. A value set by the application might be
-     * ignored on some platforms.
+     * by the underlying platform.
+     * Further, setting this property might be ignored on some platforms.
      * </p>
      */
     private ReadOnlyDoubleWrapper height =
