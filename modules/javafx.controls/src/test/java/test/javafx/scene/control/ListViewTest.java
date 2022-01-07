@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -77,8 +77,12 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertStyleClassContains;
 import static javafx.collections.FXCollections.*;
 
@@ -99,6 +103,19 @@ public class ListViewTest {
         listView = new ListView<>();
         sm = listView.getSelectionModel();
         fm = listView.getFocusModel();
+
+        Thread.currentThread().setUncaughtExceptionHandler((thread, throwable) -> {
+            if (throwable instanceof RuntimeException) {
+                throw (RuntimeException)throwable;
+            } else {
+                Thread.currentThread().getThreadGroup().uncaughtException(thread, throwable);
+            }
+        });
+    }
+
+    @After
+    public void cleanup() {
+        Thread.currentThread().setUncaughtExceptionHandler(null);
     }
 
 
@@ -2168,6 +2185,31 @@ public class ListViewTest {
         items.clear();
         attemptGC(itemRef, 10);
         assertNull("ListView item is not GCed.", itemRef.get());
+    }
+
+    @Test
+    public void testSelectWithNullFocusModelDoesNotThrowNPE() {
+        listView.getItems().addAll("1", "2");
+        listView.setFocusModel(null);
+
+        StageLoader stageLoader = new StageLoader(listView);
+
+        assertDoesNotThrow(() -> listView.getSelectionModel().select(1));
+
+        stageLoader.dispose();
+    }
+
+    @Test
+    public void testItemChangeWithNullFocusModelDoesNotThrowNPE() {
+        listView.getItems().addAll("1", "2");
+        listView.setFocusModel(null);
+
+        StageLoader stageLoader = new StageLoader(listView);
+
+        listView.getSelectionModel().clearAndSelect(1);
+        assertDoesNotThrow(() -> listView.getItems().add("3"));
+
+        stageLoader.dispose();
     }
 
     private void attemptGC(WeakReference<? extends Object> weakRef, int n) {

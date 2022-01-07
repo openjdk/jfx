@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -50,6 +50,7 @@ import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
 import test.com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
 
 import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 
 //@Ignore("Disabling tests as they fail with OOM in continuous builds")
 public class ListViewMouseInputTest {
@@ -384,4 +385,15 @@ public class ListViewMouseInputTest {
         assertNotNull(sm.getSelectedItems().get(0));
         assertNotNull(sm.getSelectedItem());
     }
+
+    @Test public void testClickWithNullSelectionModelDoesNotThrowNPE() {
+        listView.setSelectionModel(null);
+
+        StageLoader loader = new StageLoader(listView);
+
+        assertDoesNotThrow(()  -> VirtualFlowTestUtils.clickOnRow(listView, 2));
+
+        loader.dispose();
+    }
+
 }
