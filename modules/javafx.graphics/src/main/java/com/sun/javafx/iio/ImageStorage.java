@@ -38,6 +38,7 @@ import com.sun.javafx.util.DataURI;
 import com.sun.javafx.util.Logging;
 
 import java.io.ByteArrayInputStream;
+import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.SequenceInputStream;
@@ -485,7 +486,12 @@ public class ImageStorage {
 
     private ImageLoader getLoaderBySignature(InputStream stream, ImageLoadListener listener) throws IOException {
         byte[] header = new byte[getMaxSignatureLength()];
-        ImageTools.readFully(stream, header);
+
+        try {
+            ImageTools.readFully(stream, header);
+        } catch (EOFException ignored) {
+            return null;
+        }
 
         for (final Entry<Signature, ImageLoaderFactory> factoryRegistration:
                  loaderFactoriesBySignature.entrySet()) {
