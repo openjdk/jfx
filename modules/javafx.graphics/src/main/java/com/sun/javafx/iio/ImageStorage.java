@@ -485,9 +485,7 @@ public class ImageStorage {
 
     private ImageLoader getLoaderBySignature(InputStream stream, ImageLoadListener listener) throws IOException {
         byte[] header = new byte[getMaxSignatureLength()];
-        if (stream.read(header) <= 0) {
-            return null;
-        }
+        ImageTools.readFully(stream, header);
 
         for (final Entry<Signature, ImageLoaderFactory> factoryRegistration:
                  loaderFactoriesBySignature.entrySet()) {
