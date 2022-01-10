@@ -284,6 +284,63 @@ gint find_gdk_keyval_for_glass_keycode(jint code) {
     return result;
 }
 
+static int search_keys(GdkKeymapKey* keys, gint n_keys, int search_group)
+{
+    int result = -1;
+    for (gint i = 0; i < n_keys; ++i)
+    {
+        if (keys[i].group == search_group &&
+            keys[i].level == 0)
+        {
+            result = keys[i].keycode;
+            break;
+        }
+    }
+    return result;
+}
+
+extern "C" {
+    static int get_current_keyboard_group();
+}
+
+int find_gdk_keycode_for_keyval(gint keyval)
+{
+    Display *xdisplay = gdk_x11_get_default_xdisplay();
+    GdkKeymapKey *keys = nullptr;
+    gint n_keys = 0;
+    GdkKeymap* keymap = gdk_keymap_get_default();
+
+    // GDK assigns different keyvals to upper and lower case
+    // letters. We're looking for the level 0 character that
+    // was originally used to assign the code in get_glass_key.
+    keyval = gdk_keyval_to_lower(keyval);
+    if (!gdk_keymap_get_entries_for_keyval(keymap, keyval, &keys, &n_keys))
+        return -1;
+
+    int result = -1;
+    if (n_keys == 1)
+    {
+        result = keys[0].keycode;
+    }
+    else
+    {
+        int group = get_current_keyboard_group();
+        result = search_keys(keys, n_keys, group);
+
+        // Java VK codes are Latin which means we might not be able
+        // to find them on non-Latin layouts. The equivalent logic
+        // in get_glass_key just assumes the first layout is Latin.
+        // And for fixed-function keys like Space the GDK API is
+        // likely to return results on group 0 even if it's not the
+        // current group.
+        if (result < 0 && group != 0)
+            result = search_keys(keys, n_keys, 0);
+    }
+
+    g_free(keys);
+    return result;
+}
+
 jint gdk_modifier_mask_to_glass(guint mask)
 {
     jint glass_mask = 0;
@@ -364,6 +421,22 @@ static Bool isXkbAvailable(Display *display) {
     }
     return xkbAvailable;
 }
+
+/*
+  * Determine which keyboard layout is active. This is the group
+  * number in the Xkb state. There is no direct way to query this
+  * in Gdk.
+  */
+ static gint get_current_keyboard_group()
+ {
+     Display* display = gdk_x11_display_get_xdisplay(gdk_display_get_default());
+     if (isXkbAvailable(display)) {
+         XkbStateRec xkbState;
+         XkbGetState(display, XkbUseCoreKbd, &xkbState);
+         return xkbState.group;
+     }
+     return -1;
+ }
 
 /*
  * Class:     com_sun_glass_ui_gtk_GtkApplication
