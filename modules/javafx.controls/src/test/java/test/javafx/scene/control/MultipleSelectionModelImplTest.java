@@ -1400,6 +1400,11 @@ public class MultipleSelectionModelImplTest {
 
     @Test
     public void test_8256397() throws InterruptedException {
+        testFactory_8256397(0, new int[]{2,3}, new Integer[]{0, 2, 3});
+        testFactory_8256397(1, new int[]{0,3}, new Integer[]{0, 1, 3});
+        testFactory_8256397(3, new int[]{0}, new Integer[]{0, 3});
+    }
+    public void testFactory_8256397(int selected, int[] selectedI, Integer[] added) throws InterruptedException {
         ListView<String> listView = new ListView<>();
         listView.getItems().add("item-0");
         listView.getItems().add("item-1");
@@ -1410,13 +1415,13 @@ public class MultipleSelectionModelImplTest {
         selectionModel.getSelectedIndices().addListener((ListChangeListener<? super Integer>) c -> {
             while (c.next()) {
                 try {
-                    c.getAddedSubList(); // --> java.lang.IndexOutOfBoundsException: [ fromIndex: 0, toIndex: 5, size: 3 ]
+                    assertEquals(added, c.getAddedSubList().toArray());
                 } catch (IndexOutOfBoundsException e) {
                     fail(e.getMessage());
                 }
             }
         });
-        selectionModel.selectIndices(0, /*1, IMPORTANT: remove some index */ 2, 3);
+        selectionModel.selectIndices(selected, selectedI);
     }
 
 }
