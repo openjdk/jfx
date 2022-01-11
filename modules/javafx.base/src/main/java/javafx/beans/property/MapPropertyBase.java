@@ -336,7 +336,7 @@ public abstract class MapPropertyBase<K, V> extends MapProperty<K, V> {
         @Override
         public void onChanged(Change<? extends K, ? extends V> change) {
             MapPropertyBase<K,V> ref = get();
-            if(ref != null) {
+            if (ref != null) {
                 ref.invalidateProperties();
                 ref.invalidated();
                 ref.fireValueChangedEvent(change);

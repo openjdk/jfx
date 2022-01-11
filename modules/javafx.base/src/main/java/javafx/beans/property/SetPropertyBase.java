@@ -338,7 +338,7 @@ public abstract class SetPropertyBase<E> extends SetProperty<E> {
         @Override
         public void onChanged(Change<? extends E> change) {
             SetPropertyBase<E> ref = get();
-            if(ref != null) {
+            if (ref != null) {
                 ref.invalidateProperties();
                 ref.invalidated();
                 ref.fireValueChangedEvent(change);

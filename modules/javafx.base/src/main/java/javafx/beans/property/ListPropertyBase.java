@@ -335,7 +335,7 @@ public abstract class ListPropertyBase<E> extends ListProperty<E> {
         @Override
         public void onChanged(Change<? extends E> change) {
             ListPropertyBase<E> ref = get();
-            if(ref != null) {
+            if (ref != null) {
                 ref.invalidateProperties();
                 ref.invalidated();
                 ref.fireValueChangedEvent(change);
