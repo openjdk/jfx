@@ -300,6 +300,7 @@ void JavaKeyToWindowsKey(jint jkey, UINT &vkey, UINT& modifiers)
         // characters they generate is not fixed even for US English
         // layouts. So in these instances we search through the OEM keys
         // looking for the Java code.
+        vkey = 0;
         for (size_t i = 0; i < numOEMKeys; ++i)
         {
             UINT ch = ::MapVirtualKey(oemKeys[i], 2);
