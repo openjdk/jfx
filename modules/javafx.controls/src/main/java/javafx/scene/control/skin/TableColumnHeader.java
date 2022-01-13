@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -56,6 +56,7 @@ import javafx.scene.control.Label;
 import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableColumnBase;
+import javafx.scene.control.TableRow;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TreeTableCell;
 import javafx.scene.control.TreeTableColumn;
@@ -645,11 +646,17 @@ public class TableColumnHeader extends Region {
             padding = r.snappedLeftInset() + r.snappedRightInset();
         }
 
+        TableRow<T> tableRow = new TableRow<>();
+        tableRow.updateTableView(tv);
+
         int rows = maxRows == -1 ? items.size() : Math.min(items.size(), maxRows);
         double maxWidth = 0;
         for (int row = 0; row < rows; row++) {
+            tableRow.updateIndex(row);
+
             cell.updateTableColumn(tc);
             cell.updateTableView(tv);
+            cell.updateTableRow(tableRow);
             cell.updateIndex(row);
 
             if ((cell.getText() != null && !cell.getText().isEmpty()) || cell.getGraphic() != null) {

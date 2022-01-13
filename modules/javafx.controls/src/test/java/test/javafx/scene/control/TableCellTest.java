@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -364,6 +364,25 @@ public class TableCellTest {
         cell.startEdit();
 
         assertFalse(cell.isEditing());
+    }
+
+    @Test
+    public void testRowIsNotNullWhenAutoSizing() {
+        TableColumn<String, String> tableColumn = new TableColumn<>();
+        tableColumn.setCellFactory(col -> new TableCell<>() {
+
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+
+                assertNotNull(getTableRow());
+            }
+        });
+        table.getColumns().add(tableColumn);
+
+        StageLoader loader = new StageLoader(table);
+
+        loader.dispose();
     }
 
     /**
