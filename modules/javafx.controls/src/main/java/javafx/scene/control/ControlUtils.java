@@ -156,7 +156,7 @@ class ControlUtils {
         };
     }
 
-    public static <S> void updateSelectedIndices(MultipleSelectionModelBase<S> sm, ListChangeListener.Change<? extends TablePositionBase<?>> c) {
+    public static <S> void updateSelectedIndices(MultipleSelectionModelBase<S> sm, boolean isCellSelectionEnabled, ListChangeListener.Change<? extends TablePositionBase<?>> c) {
         sm.selectedIndices._beginChange();
 
         while (c.next()) {
@@ -179,7 +179,7 @@ class ControlUtils {
             sm.stopAtomic();
 
             int from = c.getFrom();
-            if (0 < from && from < c.getList().size()) {
+            if (isCellSelectionEnabled && 0 < from && from < c.getList().size()) {
                 // convert origin of change of list of tablePositions
                 // into origin of change of list of rows
                 int tpRow = c.getList().get(from).getRow();

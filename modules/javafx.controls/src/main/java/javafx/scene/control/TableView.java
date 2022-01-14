@@ -3024,7 +3024,7 @@ public class TableView<S> extends Control {
         }
 
         private void fireCustomSelectedCellsListChangeEvent(ListChangeListener.Change<? extends TablePosition<S,?>> c) {
-            ControlUtils.updateSelectedIndices(this, c);
+            ControlUtils.updateSelectedIndices(this, this.isCellSelectionEnabled(), c);
 
             if (isAtomic()) {
                 return;

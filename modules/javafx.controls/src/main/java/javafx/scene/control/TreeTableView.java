@@ -3366,7 +3366,7 @@ public class TreeTableView<S> extends Control {
         }
 
         private void fireCustomSelectedCellsListChangeEvent(ListChangeListener.Change<? extends TreeTablePosition<S,?>> c) {
-            ControlUtils.updateSelectedIndices(this, c);
+            ControlUtils.updateSelectedIndices(this, this.isCellSelectionEnabled(), c);
 
             if (isAtomic()) {
                 return;
