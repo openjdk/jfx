@@ -26,15 +26,16 @@
 package javafx.scene;
 
 import com.sun.javafx.scene.AmbientLightHelper;
-import com.sun.javafx.scene.DirtyBits;
-import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.sg.prism.NGAmbientLight;
 import com.sun.javafx.sg.prism.NGNode;
 import javafx.scene.paint.Color;
 
 /**
- * Defines an ambient light source object. Ambient light is a light source
- * that seems to come from all directions.
+ * A light that illuminates an object from all directions equally.
+ * <p>
+ * {@code AmbientLight}s can represent strong light sources in an enclosed area where the lights bounces from many
+ * objects, causing them to be illuminated from many directions. A strong light in a room and moonlight are common light
+ * source that can be simulated with this light type.
  *
  * @since JavaFX 8.0
  */
