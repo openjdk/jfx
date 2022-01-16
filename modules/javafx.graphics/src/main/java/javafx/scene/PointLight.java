@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -37,7 +37,7 @@ import javafx.scene.paint.PhongMaterial;
 /**
  * A light source that radiates light equally in all directions away from itself. The location of the light
  * source is a single point in space. It is <a href="LightBase.html#Attenuation">attenuated</a> with the
- * {@link #constantAttenuationProperty() constantAttenuation}, {@link #linearAttenuationProperty() linearAttenuation}, 
+ * {@link #constantAttenuationProperty() constantAttenuation}, {@link #linearAttenuationProperty() linearAttenuation},
  * {@link #quadraticAttenuationProperty() quadraticAttenuation}, and {@link #maxRangeProperty() maxRange} properties.
  * <p>
  * {@code PointLight}s can represent point-like light sources with little to no directionality. Light bulbs and candles
