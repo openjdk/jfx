@@ -154,7 +154,7 @@ public class MenuButtonSkinBase<C extends MenuButton> extends SkinBase<C> {
                 ControlAcceleratorSupport.removeAcceleratorsFromScene(getSkinnable().getItems(), oldValue);
 
                 // We only need to remove the mnemonics from the old scene,
-                // they will be added to the new one as soon as the pop becomes visible again.
+                // they will be added to the new one as soon as the popup becomes visible again.
                 removeMnemonicsFromScene(mnemonics, oldValue);
             }
 
@@ -247,31 +247,31 @@ public class MenuButtonSkinBase<C extends MenuButton> extends SkinBase<C> {
     /** {@inheritDoc} */
     @Override protected double computeMinWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
         return leftInset
-               + label.minWidth(height)
-               + snapSizeX(arrowButton.minWidth(height))
-               + rightInset;
+                + label.minWidth(height)
+                + snapSizeX(arrowButton.minWidth(height))
+                + rightInset;
     }
 
     /** {@inheritDoc} */
     @Override protected double computeMinHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
         return topInset
-               + Math.max(label.minHeight(width), snapSizeY(arrowButton.minHeight(-1)))
-               + bottomInset;
+                + Math.max(label.minHeight(width), snapSizeY(arrowButton.minHeight(-1)))
+                + bottomInset;
     }
 
     /** {@inheritDoc} */
     @Override protected double computePrefWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
         return leftInset
-               + label.prefWidth(height)
-               + snapSizeX(arrowButton.prefWidth(height))
-               + rightInset;
+                + label.prefWidth(height)
+                + snapSizeX(arrowButton.prefWidth(height))
+                + rightInset;
     }
 
     /** {@inheritDoc} */
     @Override protected double computePrefHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
         return topInset
-               + Math.max(label.prefHeight(width), snapSizeY(arrowButton.prefHeight(-1)))
-               + bottomInset;
+                + Math.max(label.prefHeight(width), snapSizeY(arrowButton.prefHeight(-1)))
+                + bottomInset;
     }
 
     /** {@inheritDoc} */
