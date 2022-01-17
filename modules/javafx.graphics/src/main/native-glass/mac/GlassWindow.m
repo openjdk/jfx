@@ -843,7 +843,10 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setView
         }
         else
         {
-            [window->nsWindow performSelectorOnMainThread:@selector(setContentView:) withObject:nil waitUntilDone:YES];
+            // If the contentView is set to nil within performKeyEquivalent: the OS will crash.
+            NSView* dummy = [[NSView alloc] initWithFrame: NSMakeRect(0, 0, 10, 10)];
+            [window->nsWindow performSelectorOnMainThread:@selector(setContentView:) withObject:dummy waitUntilDone:YES];
+            [dummy release];
         }
     }
     GLASS_POOL_EXIT;
