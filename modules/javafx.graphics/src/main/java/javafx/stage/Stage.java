@@ -72,9 +72,13 @@ import javafx.beans.value.ObservableValue;
  * the {@link Platform#startup(Runnable)} method for more information.
  * </p>
  * <p>
- * Many of the {@code Stage} properties are read only because they can
- * be changed externally by the underlying platform and therefore must
- * not be bindable.
+ * Some {@code Stage} properties are read-only, even though they have
+ * corresponding set methods, because they can be changed externally by the
+ * underlying platform, and therefore must not be bindable.
+ * Further, these properties might be ignored on some platforms, depending on
+ * whether or not there is a window manager and how it is configured.
+ * For example, a platform without a window manager might ignore the
+ * {@code iconified} property.
  * </p>
  *
  * <p><b>Style</b></p>
@@ -614,8 +618,9 @@ public class Stage extends Window {
      * strongest to weakest).
      * </p>
      * <p>
-     * The property is read only because it can be changed externally
-     * by the underlying platform and therefore must not be bindable.
+     * This property is read-only because it can be changed externally
+     * by the underlying platform.
+     * Further, setting this property might be ignored on some platforms.
      * </p>
      *
      * The user can unconditionally exit full-screen mode
@@ -763,8 +768,9 @@ public class Stage extends Window {
      * hide the {@code Stage} but not show an icon for it.
      * </p>
      * <p>
-     * The property is read only because it can be changed externally
-     * by the underlying platform and therefore must not be bindable.
+     * This property is read-only because it can be changed externally
+     * by the underlying platform.
+     * Further, setting this property might be ignored on some platforms.
      * </p>
      *
      * @defaultValue false
@@ -800,8 +806,9 @@ public class Stage extends Window {
      * strongest to weakest).
      * </p>
      * <p>
-     * The property is read only because it can be changed externally
-     * by the underlying platform and therefore must not be bindable.
+     * This property is read-only because it can be changed externally
+     * by the underlying platform.
+     * Further, setting this property might be ignored on some platforms.
      * </p>
      *
      * @defaultValue false
@@ -846,8 +853,9 @@ public class Stage extends Window {
      * and the property value will be restored to {@code false}.
      * </p>
      * <p>
-     * The property is read only because it can be changed externally
-     * by the underlying platform and therefore must not be bindable.
+     * This property is read-only because it can be changed externally
+     * by the underlying platform.
+     * Further, setting this property might be ignored on some platforms.
      * </p>
      *
      * @defaultValue false
@@ -1195,8 +1203,22 @@ public class Stage extends Window {
     }
 
     /**
-     * Bring the {@code Window} to the foreground.  If the {@code Window} is
-     * already in the foreground there is no visible difference.
+     * Brings this {@code Stage} to the front if the stage is visible.
+     * This action places this {@code Stage} at the top of the stacking
+     * order and shows it in front of any other {@code Stage} created by this
+     * application.
+     * <p>
+     * Some platforms do not allow applications to control the stacking order
+     * at all, in which case this method does nothing.
+     * Other platforms have restrictions on stacking order, so might not
+     * place a window above another application's windows
+     * nor allow a window that owns other windows to appear on top of those
+     * owned windows.
+     * Every attempt will be made to move this {@code Stage} as high as
+     * possible in the stacking order; however, developers should not assume
+     * that this method will move this {@code Stage} above all other windows
+     * in every situation.
+     * </p>
      */
     public void toFront() {
         if (getPeer() != null) {
@@ -1205,10 +1227,22 @@ public class Stage extends Window {
     }
 
     /**
-     * Send the {@code Window} to the background.  If the {@code Window} is
-     * already in the background there is no visible difference.  This action
-     * places this {@code Window} at the bottom of the stacking order on
-     * platforms that support stacking.
+     * Sends this {@code Stage} to the back if the stage is visible.
+     * This action places this {@code Stage} at the bottom of the stacking
+     * order and shows it behind any other {@code Stage} created by this
+     * application.
+     * <p>
+     * Some platforms do not allow applications to control the stacking order
+     * at all, in which case this method does nothing.
+     * Other platforms have restrictions on stacking order, so might not
+     * place a window below another application's windows
+     * nor allow a window that is owned by another window to appear below their
+     * owner.
+     * Every attempt will be made to move this {@code Stage} as low as
+     * possible in the stacking order; however, developers should not assume
+     * that this method will move this {@code Stage} below all other windows
+     * in every situation.
+     * </p>
      */
     public void toBack() {
         if (getPeer() != null) {
