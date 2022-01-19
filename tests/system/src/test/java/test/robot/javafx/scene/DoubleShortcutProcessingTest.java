@@ -50,7 +50,7 @@ import javafx.stage.StageStyle;
 
 // When a key equivalent closes a window it can be passed
 // to the new key window and processed twice.
-public class DoubleShortcutProcessing {
+public class DoubleShortcutProcessingTest {
 
     static CountDownLatch startupLatch = new CountDownLatch(1);
     static CountDownLatch dialogLatch = new CountDownLatch(1);
@@ -59,8 +59,7 @@ public class DoubleShortcutProcessing {
     static volatile TestApp testApp;
 
     @Test
-    void testDoubleShortcut()
-    {
+    void testDoubleShortcut() {
         Assumptions.assumeTrue(PlatformUtil.isMac());
         testApp.startTest();
         waitForLatch(dialogLatch, 5, "Dialog never received shortcut");
@@ -76,9 +75,7 @@ public class DoubleShortcutProcessing {
 
     @AfterAll
     static void exit() {
-        Platform.runLater(() -> {
-            stage.hide();
-        });
+        Platform.runLater(stage::hide);
         Platform.exit();
     }
 
@@ -112,8 +109,7 @@ public class DoubleShortcutProcessing {
             stage.show();
         }
 
-        public void startTest()
-        {
+        public void startTest() {
             Platform.runLater(() -> {
                 // Need to ensure Cmd is present so this is handled
                 // as a key equivalent.
@@ -129,8 +125,7 @@ public class DoubleShortcutProcessing {
             });
         }
 
-        public boolean failed()
-        {
+        public boolean failed() {
             return failure;
         }
 
