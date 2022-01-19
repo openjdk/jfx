@@ -22,6 +22,7 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+
 package test.robot.javafx.scene;
 
 import com.sun.javafx.PlatformUtil;
@@ -63,8 +64,9 @@ public class DoubleShortcutProcessingTest {
         Assumptions.assumeTrue(PlatformUtil.isMac());
         testApp.startTest();
         waitForLatch(dialogLatch, 5, "Dialog never received shortcut");
-        if (testApp.failed())
+        if (testApp.failed()) {
             Assertions.fail("performKeyEquivalent was handled twice in separate windows");
+        }
     }
 
     @BeforeAll
