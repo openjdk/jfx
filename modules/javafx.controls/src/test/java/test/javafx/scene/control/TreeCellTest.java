@@ -867,6 +867,27 @@ public class TreeCellTest {
         assertNull("tree editing location must not be updated", tree.getEditingItem());
     }
 
+    @Test
+    public void testCommitEditMustNotFireCancel() {
+        tree.setEditable(true);
+        int editingIndex = 1;
+        TreeItem<String> editingItem = tree.getTreeItem(editingIndex);
+        // JDK-8187307: handler that resets control's editing state
+        tree.setOnEditCommit(e -> {
+            editingItem.setValue(e.getNewValue());
+            tree.edit(null);
+        });
+        cell.updateTreeView(tree);
+        cell.updateIndex(editingIndex);
+        List<EditEvent<String>> events = new ArrayList<>();
+        tree.setOnEditCancel(events::add);
+        tree.edit(editingItem);
+        String value = "edited";
+        cell.commitEdit(value);
+        assertEquals("sanity: value committed", value, tree.getTreeItem(editingIndex).getValue());
+        assertEquals("commit must not have fired editCancel", 0, events.size());
+    }
+
 
     // When the tree view item's change and affects a cell that is editing, then what?
     // When the tree cell's index is changed while it is editing, then what?

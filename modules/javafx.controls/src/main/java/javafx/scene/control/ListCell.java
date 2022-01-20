@@ -386,15 +386,6 @@ public class ListCell<T> extends IndexedCell<T> {
     /** {@inheritDoc} */
     @Override public void commitEdit(T newValue) {
         if (! isEditing()) return;
-        ListView<T> list = getListView();
-
-        if (list != null) {
-            // Inform the ListView of the edit being ready to be committed.
-            list.fireEvent(new ListView.EditEvent<T>(list,
-                    ListView.<T>editCommitEvent(),
-                    newValue,
-                    list.getEditingIndex()));
-        }
 
         // inform parent classes of the commit, so that they can switch us
         // out of the editing state.
@@ -402,6 +393,16 @@ public class ListCell<T> extends IndexedCell<T> {
         // call cancelEdit(), resulting in both commit and cancel events being
         // fired (as identified in RT-29650)
         super.commitEdit(newValue);
+
+        ListView<T> list = getListView();
+        // JDK-8187307: fire the commit after updating cell's editing state
+        if (list != null) {
+            // Inform the ListView of the edit being ready to be committed.
+            list.fireEvent(new ListView.EditEvent<T>(list,
+                    ListView.<T>editCommitEvent(),
+                    newValue,
+                    list.getEditingIndex()));
+        }
 
         // update the item within this cell, so that it represents the new value
         updateItem(newValue, false);

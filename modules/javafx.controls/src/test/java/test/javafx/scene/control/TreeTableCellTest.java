@@ -912,7 +912,28 @@ public class TreeTableCellTest {
     }
 
  //------------- commitEdit
- // fix of JDK-8271474 changed the implementation of how the editing location is evaluated
+
+    @Test
+    public void testCommitEditMustNotFireCancel() {
+        setupForEditing();
+        // JDK-8187307: handler that resets control's editing state
+        editingColumn.setOnEditCommit(e -> {
+            TreeItem<String> treeItem = tree.getTreeItem(e.getTreeTablePosition().getRow());
+            treeItem.setValue(e.getNewValue());
+            tree.edit(-1, null);
+        });
+        int editingRow = 1;
+        cell.updateIndex(editingRow);
+        tree.edit(editingRow, editingColumn);
+        List<CellEditEvent<?, ?>> events = new ArrayList<>();
+        editingColumn.setOnEditCancel(events::add);
+        String value = "edited";
+        cell.commitEdit(value);
+        assertEquals("sanity: value committed", value, tree.getTreeItem(editingRow).getValue());
+        assertEquals("commit must not have fired editCancel", 0, events.size());
+    }
+
+// fix of JDK-8271474 changed the implementation of how the editing location is evaluated
 
      @Test
      public void testEditCommitEvent() {
