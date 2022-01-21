@@ -898,6 +898,11 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1close
         // this call will always close the window
         // without calling the windowShouldClose
 
+        // If this window is closed from within performKeyEquivalent the OS might
+        // try to send the same event to the new key window. To prevent this we
+        // ensure that performKeyEquivalent returns YES.
+        window->isClosed = YES;
+
         // RT-39813 When closing a window as the result of a global right-click
         //          mouse event outside the bounds of the window, using an immediate
         //          [window->nsWindow close] crashes the JDK as the AppKit at this
