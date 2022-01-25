@@ -1301,9 +1301,13 @@ void WindowContextTop::window_configure(XWindowChanges *windowChanges,
     }
 }
 
+void WindowContextTop::process_key(GdkEventKey* event) {
+    WindowContextBase::process_key(event);
+    event_serial = event->time;
+}
+
 void WindowContextTop::process_mouse_button(GdkEventButton* event) {
     WindowContextBase::process_mouse_button(event);
-    //Saves the X11 event serial to prevent "focus stealing".
     event_serial = event->time;
 }
 
