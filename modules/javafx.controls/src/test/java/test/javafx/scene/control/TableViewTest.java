@@ -817,14 +817,15 @@ public class TableViewTest {
         Toolkit.getToolkit().firePulse();
 
         ScrollBar horizontalBar = VirtualFlowTestUtils.getVirtualFlowHorizontalScrollbar(table);
-        if (horizontalBar != null) {
-            double scrollbarPosition = horizontalBar.getMax();
-            horizontalBar.setValue(scrollbarPosition);
+        assertNotNull(horizontalBar);
 
-            assertEquals(scrollbarPosition, horizontalBar.getValue(), 0);
-            horizontalBar.setVisible(false);
-            assertEquals(scrollbarPosition, horizontalBar.getValue(), 0);
-        }
+        double scrollbarPosition = horizontalBar.getMax();
+        horizontalBar.setValue(scrollbarPosition);
+
+        assertEquals(scrollbarPosition, horizontalBar.getValue(), 0);
+        horizontalBar.setVisible(false);
+        assertEquals(scrollbarPosition, horizontalBar.getValue(), 0);
+
         sl.dispose();
     }
 
