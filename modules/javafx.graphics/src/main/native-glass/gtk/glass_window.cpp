@@ -776,6 +776,8 @@ WindowContextTop::WindowContextTop(jobject _jwindow, WindowContext* _owner, long
     if (frame_type == TITLED) {
         request_frame_extents();
     }
+
+    event_serial = 0;
 }
 
 // Applied to a temporary full screen window to prevent sending events to Java
@@ -1299,6 +1301,12 @@ void WindowContextTop::window_configure(XWindowChanges *windowChanges,
     }
 }
 
+void WindowContextTop::process_mouse_button(GdkEventButton* event) {
+    WindowContextBase::process_mouse_button(event);
+    //Saves the X11 event serial to prevent "focus stealing".
+    event_serial = event->time;
+}
+
 void WindowContextTop::applyShapeMask(void* data, uint width, uint height)
 {
     if (frame_type != TRANSPARENT) {
@@ -1372,16 +1380,10 @@ void WindowContextTop::request_focus() {
     //The WindowContextBase::set_visible will take care of showing the window.
     //The below code will only handle later request_focus.
     if (is_visible()) {
-        // gtk_get_current_event_time will most likely return 0 which means focus stealing may occur, causing
-        // activeWindows on WindowStage.java to be out of order which may cause the FOCUS_DISABLED event
+        // event_serial holds an event serial that will help X11 determine which window should have the focus and
+        // prevents activeWindows on WindowStage.java to be out of order which may cause the FOCUS_DISABLED event
         // to bring up the wrong window (it brings up the last which will not be the real "last" if out of order).
-        // The ideal solution would be to pass the "time" (not really a time, but a serial number) of X11 events
-        // or the "original" event to the below function.
-        gtk_window_present_with_time(GTK_WINDOW(gtk_widget), gtk_get_current_event_time());
-
-        // this call reorganizes the window order
-        mainEnv->CallVoidMethod(jwindow, jWindowNotifyFocus, com_sun_glass_events_WindowEvent_FOCUS_GAINED);
-        CHECK_JNI_EXCEPTION(mainEnv);
+        gtk_window_present_with_time(GTK_WINDOW(gtk_widget), event_serial);
     }
 }
 

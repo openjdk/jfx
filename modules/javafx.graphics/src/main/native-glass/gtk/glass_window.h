@@ -396,6 +396,9 @@ class WindowContextTop: public WindowContextBase {
 
     static WindowFrameExtents normal_extents;
     static WindowFrameExtents utility_extents;
+
+    long event_serial;
+
 public:
     WindowContextTop(jobject, WindowContext*, long, WindowFrameType, WindowType, GdkWMFunction);
     void process_map();
@@ -432,6 +435,7 @@ public:
 
     GtkWindow *get_gtk_window();
     void detach_from_java();
+    void process_mouse_button(GdkEventButton*);
 protected:
     void applyShapeMask(void*, uint width, uint height);
 private:
