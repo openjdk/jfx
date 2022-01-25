@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,6 +33,7 @@
 #include <jni/Logger.h>
 #include <Common/VSMemory.h>
 #include <Utils/LowLevelPerf.h>
+#include <fxplugins_common.h>
 
 #define MAX_SIZE_BUFFERS_LIMIT 25
 #define MAX_SIZE_BUFFERS_INC   5
@@ -154,7 +155,6 @@ void CGstAVPlaybackPipeline::Dispose()
 
 bool CGstAVPlaybackPipeline::IsCodecSupported(GstCaps *pCaps)
 {
-#if TARGET_OS_WIN32
     GstStructure *s = NULL;
     const gchar *mimetype = NULL;
 
@@ -166,10 +166,11 @@ bool CGstAVPlaybackPipeline::IsCodecSupported(GstCaps *pCaps)
             mimetype = gst_structure_get_name (s);
             if (mimetype != NULL)
             {
+#if TARGET_OS_WIN32 | TARGET_OS_LINUX
                 if (strstr(mimetype, "video/x-h264") != NULL) // H.264
                 {
                     gboolean is_supported = FALSE;
-                    g_object_set(m_Elements[VIDEO_DECODER], "codec-id", (gint)CODEC_ID_AVC1, NULL); // Check for AVC1 (MP4). For HLS we should get error early
+                    g_object_set(m_Elements[VIDEO_DECODER], "codec-id", (gint)JFX_CODEC_ID_AVC1, NULL); // Check for AVC1 (MP4). For HLS we should get error early
                     g_object_get(m_Elements[VIDEO_DECODER], "is-supported", &is_supported, NULL);
                     if (is_supported)
                     {
@@ -181,34 +182,33 @@ bool CGstAVPlaybackPipeline::IsCodecSupported(GstCaps *pCaps)
                         return FALSE;
                     }
                 }
-            }
-        }
-    }
-
-    return CGstAudioPlaybackPipeline::IsCodecSupported(pCaps);
-#else // TARGET_OS_WIN32
-    GstStructure *s = NULL;
-    const gchar *mimetype = NULL;
-
-    if (pCaps)
-    {
-        s = gst_caps_get_structure (pCaps, 0);
-        if (s != NULL)
-        {
-            mimetype = gst_structure_get_name (s);
-            if (mimetype != NULL)
-            {
+                else if (strstr(mimetype, "video/x-h265") != NULL) // H.265
+                {
+                    gboolean is_supported = FALSE;
+                    g_object_set(m_Elements[VIDEO_DECODER], "codec-id", (gint)JFX_CODEC_ID_H265, NULL); // Check for H265 (MP4)
+                    g_object_get(m_Elements[VIDEO_DECODER], "is-supported", &is_supported, NULL);
+                    if (is_supported)
+                    {
+                        return TRUE;
+                    }
+                    else
+                    {
+                        m_videoCodecErrorCode = ERROR_MEDIA_H265_FORMAT_UNSUPPORTED;
+                        return FALSE;
+                    }
+                }
+#else // TARGET_OS_WIN32 | TARGET_OS_LINUX
                 if (strstr(mimetype, "video/unsupported") != NULL)
                 {
                     m_videoCodecErrorCode = ERROR_MEDIA_VIDEO_FORMAT_UNSUPPORTED;
                     return FALSE;
                 }
+#endif // TARGET_OS_WIN32 | TARGET_OS_LINUX
             }
         }
     }
 
     return CGstAudioPlaybackPipeline::IsCodecSupported(pCaps);
-#endif // TRAGET_OS_WIN32
 }
 
 bool CGstAVPlaybackPipeline::CheckCodecSupport()
@@ -233,6 +233,54 @@ bool CGstAVPlaybackPipeline::CheckCodecSupport()
         return CGstAudioPlaybackPipeline::CheckCodecSupport();
     }
     return FALSE;
+}
+
+bool CGstAVPlaybackPipeline::LoadDecoder(GstCaps *pCaps)
+{
+#if TARGET_OS_WIN32
+    GstStructure *s = NULL;
+    const gchar *mimetype = NULL;
+    char* strVideoDecoderName = NULL;
+
+    if (m_Elements[VIDEO_BIN] == NULL)
+        return FALSE;
+
+    if (pCaps)
+    {
+        s = gst_caps_get_structure(pCaps, 0);
+        if (s != NULL)
+        {
+            mimetype = gst_structure_get_name(s);
+            if (mimetype != NULL)
+            {
+                if (strstr(mimetype, "video/x-h264") != NULL) // H.264
+                {
+                    strVideoDecoderName = "dshowwrapper";
+                }
+                else if (strstr(mimetype, "video/x-h265") != NULL) // H.265
+                {
+                    strVideoDecoderName = "mfwrapper";
+                }
+                else
+                {
+                    return FALSE;
+                }
+
+                GstElement *videodec = gst_element_factory_make(strVideoDecoderName, NULL);
+                if (videodec == NULL)
+                    return FALSE;
+
+                gst_bin_add_many(GST_BIN(m_Elements[VIDEO_BIN]), videodec, NULL);
+                if (!gst_element_link_many(m_Elements[VIDEO_QUEUE], videodec, m_Elements[VIDEO_SINK], NULL))
+                    return FALSE;
+
+                m_Elements.add(VIDEO_DECODER, videodec);
+            }
+        }
+    }
+#endif // TARGET_OS_WIN32
+
+    return CGstAudioPlaybackPipeline::LoadDecoder(pCaps);
 }
 
 /**
@@ -488,6 +536,13 @@ void CGstAVPlaybackPipeline::on_pad_added(GstElement *element, GstPad *pad, CGst
     }
     else if (g_str_has_prefix(pstrName, "video"))
     {
+#if TARGET_OS_WIN32
+        if (pPipeline->m_Elements[VIDEO_DECODER] == NULL)
+        {
+            if (!pPipeline->LoadDecoder(pCaps))
+                goto Error;
+        }
+#endif // TARGET_OS_WIN32
         if (pPipeline->IsCodecSupported(pCaps))
         {
             pPad = gst_element_get_static_pad(pPipeline->m_Elements[VIDEO_BIN], "sink");
@@ -786,6 +841,8 @@ GstPadProbeReturn CGstAVPlaybackPipeline::VideoDecoderSrcProbe(GstPad* pPad, Gst
 
         if (strMimeType.find("video/x-h264") != string::npos) {
             encoding = CTrack::H264;
+        } else if (strMimeType.find("video/x-h265") != string::npos) {
+            encoding = CTrack::H265;
         } else {
             encoding = CTrack::CUSTOM;
         }

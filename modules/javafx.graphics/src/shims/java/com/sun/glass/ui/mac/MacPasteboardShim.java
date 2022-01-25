@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,17 +23,26 @@
  * questions.
  */
 
-#import <Cocoa/Cocoa.h>
+package com.sun.glass.ui.mac;
 
-@interface GlassNSEvent : NSEvent {
-    BOOL m_needsKeyTyped;
-    BOOL m_isSyntheticKeyTyped;
+import com.sun.glass.ui.Clipboard;
+
+import java.util.HashMap;
+
+public class MacPasteboardShim {
+
+    private static MacSystemClipboard dndClipboard;
+
+    public MacPasteboardShim() {
+        dndClipboard = new MacSystemClipboard(Clipboard.DND);
+    }
+
+    public void pushMacPasteboard(HashMap<String, Object> data) {
+        dndClipboard.pushToSystem(data, Clipboard.ACTION_ANY);
+    }
+
+    public Object popMacPasteboard(String mime) {
+        return dndClipboard.popFromSystem(mime);
+    }
+
 }
-
-- (void) setNeedsKeyTyped:(BOOL)inNeedKeyTyped;
-- (BOOL) needsKeyTyped;
-- (void) setSyntheticKeyTyped:(BOOL)inSyntheticKeyTyped;
-- (BOOL) isSyntheticKeyTyped;
-
-@end
-

@@ -41,6 +41,10 @@ import javafx.scene.control.skin.DateCellSkin;
  * @since JavaFX 8.0
  */
 public class DateCell extends Cell<LocalDate> {
+
+    /**
+     * Creates a default {@code DateCell}.
+     */
     public DateCell() {
         getStyleClass().add(DEFAULT_STYLE_CLASS);
         setAccessibleRole(AccessibleRole.TEXT);

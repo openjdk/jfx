@@ -157,6 +157,12 @@ public class DatePicker extends ComboBoxBase<LocalDate> {
         getStyleClass().add(DEFAULT_STYLE_CLASS);
         setAccessibleRole(AccessibleRole.DATE_PICKER);
         setEditable(true);
+
+        focusedProperty().addListener(o -> {
+            if (!isFocused()) {
+                commitValue();
+            }
+        });
     }
 
 
@@ -425,6 +431,41 @@ public class DatePicker extends ComboBoxBase<LocalDate> {
         return new DatePickerSkin(this);
     }
 
+    /**
+     * If the {@link DatePicker} is {@link #editableProperty() editable}, calling this method will attempt to
+     * commit the current text and convert it to a {@link #valueProperty() value}.
+     * @since 18
+     */
+    public final void commitValue() {
+        if (!isEditable()) {
+            return;
+        }
+        String text = getEditor().getText();
+        StringConverter<LocalDate> converter = getConverter();
+        if (converter != null) {
+            LocalDate value = converter.fromString(text);
+            setValue(value);
+        }
+    }
+
+    /**
+     * If the {@link DatePicker} is {@link #editableProperty() editable}, calling this method will attempt to
+     * replace the editor text with the last committed {@link #valueProperty() value}.
+     * @since 18
+     */
+    public final void cancelEdit() {
+        if (!isEditable()) {
+            return;
+        }
+        LocalDate committedValue = getValue();
+        StringConverter<LocalDate> converter = getConverter();
+        if (converter != null) {
+            String valueString = converter.toString(committedValue);
+            getEditor().setText(valueString);
+        }
+    }
+
+
 
     /* *************************************************************************
      *                                                                         *
@@ -464,8 +505,9 @@ public class DatePicker extends ComboBoxBase<LocalDate> {
     }
 
     /**
-     * @return The CssMetaData associated with this class, which may include the
-     * CssMetaData of its superclasses.
+     * Gets the {@code CssMetaData} associated with this class, which may include the
+     * {@code CssMetaData} of its superclasses.
+     * @return the {@code CssMetaData}
      */
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;

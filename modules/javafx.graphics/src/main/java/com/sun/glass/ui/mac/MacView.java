@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -135,18 +135,6 @@ final class MacView extends View {
     native protected long _getNativeLayer(long ptr);
     public long getNativeLayer() {
         return _getNativeLayer(getNativeView());
-    }
-
-    native protected int _getNativeRemoteLayerId(long ptr, String serverName);
-    @Override public int getNativeRemoteLayerId(String serverName) {
-        // used when run inside plugin
-        return _getNativeRemoteLayerId(getNativeLayer(), serverName);
-    }
-
-    native protected void _hostRemoteLayerId(long ptr, int nativeLayerId);
-    public void hostRemoteLayerId(int nativeLayerId) {
-        // used when run inside plugin
-        _hostRemoteLayerId(getNativeLayer(), nativeLayerId);
     }
 
     protected void notifyInputMethodMac(String str, int attrib, int length,

@@ -155,8 +155,8 @@ static NEVER_INLINE HashMap<AtomStringImpl*, CSSPropertyID> createAttributeNameT
     return map;
 }
 
-SVGElement::SVGElement(const QualifiedName& tagName, Document& document)
-    : StyledElement(tagName, document, CreateSVGElement)
+SVGElement::SVGElement(const QualifiedName& tagName, Document& document, ConstructionType constructionType)
+    : StyledElement(tagName, document, constructionType)
     , m_propertyAnimatorFactory(makeUnique<SVGPropertyAnimatorFactory>())
 {
     static std::once_flag onceFlag;
@@ -293,6 +293,7 @@ const HashSet<SVGElement*>& SVGElement::instances() const
 
 bool SVGElement::getBoundingBox(FloatRect& rect, SVGLocatable::StyleUpdateStrategy styleUpdateStrategy)
 {
+    // FIXME: should retrieve the value from the associated RenderObject.
     if (is<SVGGraphicsElement>(*this)) {
         rect = downcast<SVGGraphicsElement>(*this).getBBox(styleUpdateStrategy);
         return true;

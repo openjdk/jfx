@@ -288,7 +288,8 @@ public class ChoiceBoxListCell<T> extends ListCell<T> {
 
     /** {@inheritDoc} */
     @Override public void startEdit() {
-        if (! isEditable() || ! getListView().isEditable()) {
+        super.startEdit();
+        if (!isEditing()) {
             return;
         }
 
@@ -298,12 +299,8 @@ public class ChoiceBoxListCell<T> extends ListCell<T> {
 
         choiceBox.getSelectionModel().select(getItem());
 
-        super.startEdit();
-
-        if (isEditing()) {
-            setText(null);
-            setGraphic(choiceBox);
-        }
+        setText(null);
+        setGraphic(choiceBox);
     }
 
     /** {@inheritDoc} */

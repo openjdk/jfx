@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,17 +23,33 @@
  * questions.
  */
 
-#ifndef RemoteLayerSupport_h
-#define RemoteLayerSupport_h
+package test.com.sun.javafx.application;
 
-#import <Foundation/Foundation.h>
-#import <objc/runtime.h>            // neeeded for objc_getClass
+import javafx.application.Platform;
+import org.junit.Test;
+import org.junit.AfterClass;
+import test.util.memory.JMemoryBuddy;
 
-mach_port_t RemoteLayerStartServer(void);
-NSString* RemoteLayerGetServerName(mach_port_t serverPort);
-mach_port_t RemoteLayerGetServerPort(NSString *theServerName);
-id RemoteLayerGetRemoteFromLocal(mach_port_t renderServerPort, id localLayer);
-uint32_t RemoteLayerGetIdForRemote(id remoteLayer);
-void RemoteLayerHostRemoteIdInLocal(uint32_t remoteId, id localLayer);
+public class PlatformStartupMemoryLeakTest {
 
-#endif
+    @Test
+    public void testStartupLeak() {
+        JMemoryBuddy.memoryTest((checker) -> {
+            // This Runnable must not turn into a lambda, because then the test wouldn't work anymore.
+            Runnable r = new Runnable() {
+                @Override
+                public void run() {
+                    System.out.println("Startup called!");
+                }
+            };
+            Platform.startup(r);
+            checker.assertCollectable(r);
+        });
+    }
+
+    @AfterClass
+    public static void tearDown() {
+        Platform.exit();
+    }
+
+}

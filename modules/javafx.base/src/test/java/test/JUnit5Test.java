@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,28 +23,20 @@
  * questions.
  */
 
-#import "common.h"
+package test;
 
-#import "GlassNSEvent.h"
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
-@implementation GlassNSEvent
+import org.junit.jupiter.api.Test;
 
-- (void) setNeedsKeyTyped:(BOOL)inNeedKeyTyped {
-    m_needsKeyTyped = inNeedKeyTyped;
+public class JUnit5Test {
+
+    @Test
+    void junit5ShouldWork() {
+        assumeTrue(this != null);
+
+        assertNotNull(this);
+        System.err.println("JUnit 5 test working!");
+    }
 }
-
-- (BOOL) needsKeyTyped {
-    return m_needsKeyTyped;
-}
-
-- (void) setSyntheticKeyTyped:(BOOL)inSyntheticKeyTyped {
-    m_isSyntheticKeyTyped = inSyntheticKeyTyped;
-}
-
-- (BOOL) isSyntheticKeyTyped {
-    return m_isSyntheticKeyTyped;
-}
-
-@end
-
-

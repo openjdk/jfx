@@ -430,7 +430,6 @@ IncrementalPDFLoadingEnabled:
     WebKit:
       default: WebKit::defaultIncrementalPDFEnabled()
 
-# FIXME: This is on by default in WebKit2. Perhaps we should consider turning it on for WebKitLegacy as well.
 IntersectionObserverEnabled:
   type: bool
   humanReadableName: "Intersection Observer"
@@ -438,11 +437,11 @@ IntersectionObserverEnabled:
   condition: ENABLE(INTERSECTION_OBSERVER)
   defaultValue:
     WebKitLegacy:
-      default: false
+      default: true
     WebKit:
       default: true
     WebCore:
-      default: false
+      default: true
 
 # FIXME: The 'Is' prefix is inconsistent with most other preferences and should be removed.
 IsFirstPartyWebsiteDataRemovalDisabled:

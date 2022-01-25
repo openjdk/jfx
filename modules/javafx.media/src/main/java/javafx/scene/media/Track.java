@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -81,7 +81,8 @@ public abstract class Track {
     }
 
     /**
-     * @return a Map containing all known metadata for this <code>Track</code>
+     * Gets the <code>Map</code> containing all known metadata for this <code>Track</code>.
+     * @return the <code>Map</code> containing all known metadata for this <code>Track</code>
      * @since JavaFX 8.0
      */
     public final Map<String,Object> getMetadata() {

@@ -233,7 +233,7 @@ public class NativeLibLoader {
     }
 
     private static String cacheLibrary(InputStream is, String name, Class caller) throws IOException {
-        String jfxVersion = System.getProperty("javafx.version", "versionless");
+        String jfxVersion = System.getProperty("javafx.runtime.version", "versionless");
         String userCache = System.getProperty("javafx.cachedir", "");
         if (userCache.isEmpty()) {
             userCache = System.getProperty("user.home") + "/.openjfx/cache/" + jfxVersion;
@@ -318,7 +318,7 @@ public class NativeLibLoader {
 
         } catch (IllegalArgumentException | NoSuchAlgorithmException | IOException | SecurityException e) {
             // IOException also covers MalformedURLException
-            // SecurityException means some untrusted applet
+            // SecurityException means some untrusted app
 
             // Fall through...
         }

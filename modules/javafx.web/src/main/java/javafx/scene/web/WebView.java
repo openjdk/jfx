@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -980,8 +980,9 @@ final public class WebView extends Parent {
     }
 
     /**
-     * @return The CssMetaData associated with this class, which may include the
-     * CssMetaData of its superclasses.
+     * Gets the {@code CssMetaData} associated with this class, which may include the
+     * {@code CssMetaData} of its superclasses.
+     * @return the {@code CssMetaData}
      * @since JavaFX 8.0
      */
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
@@ -1207,6 +1208,9 @@ final public class WebView extends Parent {
         return tms.toArray(new TransferMode[0]);
     }
 
+    private LinkedList<String> mimes;
+    private LinkedList<String> values;
+
     private void registerEventHandlers() {
         addEventHandler(KeyEvent.ANY,
                 event -> {
@@ -1235,16 +1239,18 @@ final public class WebView extends Parent {
         EventHandler<DragEvent> destHandler = event -> {
             try {
                 Dragboard db = event.getDragboard();
-                LinkedList<String> mimes = new LinkedList<String>();
-                LinkedList<String> values = new LinkedList<String>();
-                for (DataFormat df : db.getContentTypes()) {
-                    //TODO: extend to non-string serialized values.
-                    //Please, look at the native code.
-                    Object content = db.getContent(df);
-                    if (content != null) {
-                        for (String mime : df.getIdentifiers()) {
-                            mimes.add(mime);
-                            values.add(content.toString());
+                if (mimes == null || values == null) {
+                    mimes = new LinkedList<>();
+                    values = new LinkedList<>();
+                    for (DataFormat df : db.getContentTypes()) {
+                        //TODO: extend to non-string serialized values.
+                        //Please, look at the native code.
+                        Object content = db.getContent(df);
+                        if (content != null) {
+                            for (String mime : df.getIdentifiers()) {
+                                mimes.add(mime);
+                                values.add(content.toString());
+                            }
                         }
                     }
                 }
@@ -1276,11 +1282,15 @@ final public class WebView extends Parent {
         //Drag source implementation:
         setOnDragDetected(event -> {
                if (page.isDragConfirmed()) {
+                   mimes = null;
+                   values = null;
                    page.confirmStartDrag();
                    event.consume();
                }
            });
         setOnDragDone(event -> {
+                mimes = null;
+                values = null;
                 page.dispatchDragOperation(
                     WebPage.DND_SRC_DROP,
                     null, null,

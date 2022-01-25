@@ -599,7 +599,6 @@ public class TreeCellTest {
         assertNull(tree.getEditingItem());
     }
 
-    @Ignore // TODO file bug!
     @Test public void editCellWithTreeResultsInUpdatedEditingIndexProperty() {
         tree.setEditable(true);
         cell.updateTreeView(tree);
@@ -843,6 +842,52 @@ public class TreeCellTest {
         attemptGC(itemRef);
         assertEquals("treeItem must be gc'ed", null, itemRef.get());
     }
+
+    @Test
+    public void testStartEditOffRangeMustNotFireStartEdit() {
+        tree.setEditable(true);
+        cell.updateTreeView(tree);
+        // update cell's treeItem so there is something to update
+        cell.updateTreeItem(new TreeItem<>("not-contained"));
+        List<EditEvent<?>> events = new ArrayList<>();
+        tree.addEventHandler(TreeView.editStartEvent(), events::add);
+        cell.startEdit();
+        assertFalse("sanity: off-range cell must not be editing", cell.isEditing());
+        assertEquals("cell must not fire editStart if not editing", 0, events.size());
+    }
+
+    @Test
+    public void testStartEditOffRangeMustNotUpdateEditingLocation() {
+        tree.setEditable(true);
+        cell.updateTreeView(tree);
+        // update cell's treeItem so there is something to update
+        cell.updateTreeItem(new TreeItem<>("not-contained"));
+        cell.startEdit();
+        assertFalse("sanity: off-range cell must not be editing", cell.isEditing());
+        assertNull("tree editing location must not be updated", tree.getEditingItem());
+    }
+
+    @Test
+    public void testCommitEditMustNotFireCancel() {
+        tree.setEditable(true);
+        int editingIndex = 1;
+        TreeItem<String> editingItem = tree.getTreeItem(editingIndex);
+        // JDK-8187307: handler that resets control's editing state
+        tree.setOnEditCommit(e -> {
+            editingItem.setValue(e.getNewValue());
+            tree.edit(null);
+        });
+        cell.updateTreeView(tree);
+        cell.updateIndex(editingIndex);
+        List<EditEvent<String>> events = new ArrayList<>();
+        tree.setOnEditCancel(events::add);
+        tree.edit(editingItem);
+        String value = "edited";
+        cell.commitEdit(value);
+        assertEquals("sanity: value committed", value, tree.getTreeItem(editingIndex).getValue());
+        assertEquals("commit must not have fired editCancel", 0, events.size());
+    }
+
 
     // When the tree view item's change and affects a cell that is editing, then what?
     // When the tree cell's index is changed while it is editing, then what?

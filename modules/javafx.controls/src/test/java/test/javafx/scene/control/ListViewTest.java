@@ -1121,7 +1121,7 @@ public class ListViewTest {
                 items.set(30, "yellow");
                 Platform.runLater(() -> {
                     Toolkit.getToolkit().firePulse();
-                    assertEquals(0, rt_35395_counter);
+                    assertTrue(rt_35395_counter < 7);
                     rt_35395_counter = 0;
                     items.remove(12);
                     Platform.runLater(() -> {

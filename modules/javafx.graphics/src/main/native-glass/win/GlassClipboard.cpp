@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1302,7 +1302,10 @@ JNIEXPORT jobjectArray JNICALL Java_com_sun_glass_ui_win_WinSystemClipboard_popM
                         //LPFILEGROUPDESCRIPTORW for MS_FILE_DESCRIPTOR_UNICODE
                         //LPFILEGROUPDESCRIPTORA for MS_FILE_DESCRIPTOR
                         LPFILEGROUPDESCRIPTORW pdata = reinterpret_cast<LPFILEGROUPDESCRIPTORW>(me.getMem());
-                        if (pdata->cItems > 0) {
+                        jlong bufferSize = me.size() - sizeof(UINT);
+                        if ((pdata->cItems > 0) &&
+                            (bufferSize == (jlong)pdata->cItems * itemSize))
+                        {
                             mimes.erase(MS_FILE_CONTENT);
                             mimes.erase(MS_FILE_DESCRIPTOR_UNICODE);
                             mimes.erase(MS_FILE_DESCRIPTOR);

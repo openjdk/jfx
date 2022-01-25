@@ -229,10 +229,6 @@ final class WinApplication extends Application implements InvokeLaterDispatcher.
         return new WinWindow(owner, screen, styleMask);
     }
 
-    @Override public Window createWindow(long parent) {
-        return new WinChildWindow(parent);
-    }
-
     @Override public View createView() {
         return new WinView();
     }

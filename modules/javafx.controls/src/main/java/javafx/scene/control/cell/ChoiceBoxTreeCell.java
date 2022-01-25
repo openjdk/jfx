@@ -294,12 +294,13 @@ public class ChoiceBoxTreeCell<T> extends DefaultTreeCell<T> {
 
     /** {@inheritDoc} */
     @Override public void startEdit() {
-        if (! isEditable() || ! getTreeView().isEditable()) {
+        TreeItem<T> treeItem = getTreeItem();
+        if (treeItem == null) {
             return;
         }
 
-        TreeItem<T> treeItem = getTreeItem();
-        if (treeItem == null) {
+        super.startEdit();
+        if (!isEditing()) {
             return;
         }
 
@@ -312,18 +313,14 @@ public class ChoiceBoxTreeCell<T> extends DefaultTreeCell<T> {
 
         choiceBox.getSelectionModel().select(treeItem.getValue());
 
-        super.startEdit();
+        setText(null);
 
-        if (isEditing()) {
-            setText(null);
-
-            Node graphic = getTreeItemGraphic();
-            if (graphic != null) {
-                hbox.getChildren().setAll(graphic, choiceBox);
-                setGraphic(hbox);
-            } else {
-                setGraphic(choiceBox);
-            }
+        Node graphic = getTreeItemGraphic();
+        if (graphic != null) {
+            hbox.getChildren().setAll(graphic, choiceBox);
+            setGraphic(hbox);
+        } else {
+            setGraphic(choiceBox);
         }
     }
 

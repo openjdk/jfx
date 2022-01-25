@@ -828,11 +828,11 @@ void ReplaceSelectionCommand::removeUnrenderedTextNodesAtEnds(InsertedNodes& ins
 {
     document().updateLayoutIgnorePendingStylesheets();
 
-    Node* lastLeafInserted = insertedNodes.lastLeafInserted();
+    auto lastLeafInserted = makeRefPtr(insertedNodes.lastLeafInserted());
     if (is<Text>(lastLeafInserted) && !hasRenderedText(downcast<Text>(*lastLeafInserted))
-        && !enclosingElementWithTag(firstPositionInOrBeforeNode(lastLeafInserted), selectTag)
-        && !enclosingElementWithTag(firstPositionInOrBeforeNode(lastLeafInserted), scriptTag)) {
-        insertedNodes.willRemoveNode(lastLeafInserted);
+        && !enclosingElementWithTag(firstPositionInOrBeforeNode(lastLeafInserted.get()), selectTag)
+        && !enclosingElementWithTag(firstPositionInOrBeforeNode(lastLeafInserted.get()), scriptTag)) {
+        insertedNodes.willRemoveNode(lastLeafInserted.get());
         removeNode(*lastLeafInserted);
     }
 
@@ -840,9 +840,9 @@ void ReplaceSelectionCommand::removeUnrenderedTextNodesAtEnds(InsertedNodes& ins
 
     // We don't have to make sure that firstNodeInserted isn't inside a select or script element
     // because it is a top level node in the fragment and the user can't insert into those elements.
-    Node* firstNodeInserted = insertedNodes.firstNodeInserted();
+    auto firstNodeInserted = makeRefPtr(insertedNodes.firstNodeInserted());
     if (is<Text>(firstNodeInserted) && !hasRenderedText(downcast<Text>(*firstNodeInserted))) {
-        insertedNodes.willRemoveNode(firstNodeInserted);
+        insertedNodes.willRemoveNode(firstNodeInserted.get());
         removeNode(*firstNodeInserted);
     }
 }
@@ -967,9 +967,8 @@ void ReplaceSelectionCommand::mergeEndIfNeeded()
     // To avoid this, we add a placeholder node before the start of the paragraph.
     if (endOfParagraph(startOfParagraphToMove) == destination) {
         auto placeholder = HTMLBRElement::create(document());
-        auto* placeholderPtr = placeholder.ptr();
-        insertNodeBefore(WTFMove(placeholder), *startOfParagraphToMove.deepEquivalent().deprecatedNode());
-        destination = VisiblePosition(positionBeforeNode(placeholderPtr));
+        insertNodeBefore(placeholder, *startOfParagraphToMove.deepEquivalent().deprecatedNode());
+        destination = VisiblePosition(positionBeforeNode(placeholder.ptr()));
     }
 
     moveParagraph(startOfParagraphToMove, endOfParagraph(startOfParagraphToMove), destination);
@@ -1298,11 +1297,12 @@ void ReplaceSelectionCommand::doApply()
         insertNodeAt(HTMLBRElement::create(document()), startOfInsertedContent.deepEquivalent());
 
     if (endBR && (plainTextFragment || shouldRemoveEndBR(endBR.get(), originalVisPosBeforeEndBR))) {
-        RefPtr<Node> parent = endBR->parentNode();
+        auto parent = makeRefPtr(endBR->parentNode());
         insertedNodes.willRemoveNode(endBR.get());
         removeNode(*endBR);
-        if (Node* nodeToRemove = highestNodeToRemoveInPruning(parent.get())) {
-            insertedNodes.willRemoveNode(nodeToRemove);
+        document().updateLayoutIgnorePendingStylesheets();
+        if (auto nodeToRemove = makeRefPtr(highestNodeToRemoveInPruning(parent.get()))) {
+            insertedNodes.willRemoveNode(nodeToRemove.get());
             removeNode(*nodeToRemove);
         }
     }

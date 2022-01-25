@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -114,8 +114,6 @@ final public class WebView extends Parent {
             }
         });
     }
-
-    private static final Map<Object, Integer> idMap = new HashMap<Object, Integer>();
 
     private static final boolean DEFAULT_CONTEXT_MENU_ENABLED = true;
     private static final FontSmoothingType DEFAULT_FONT_SMOOTHING_TYPE = FontSmoothingType.LCD;

@@ -193,6 +193,11 @@ public:
     bool isSVGElement() const { return hasNodeFlag(NodeFlag::IsSVGElement); }
     bool isMathMLElement() const { return hasNodeFlag(NodeFlag::IsMathMLElement); }
 
+    bool isUnknownElement() const { return hasNodeFlag(NodeFlag::IsUnknownElement); }
+    bool isHTMLUnknownElement() const { return isHTMLElement() && isUnknownElement(); }
+    bool isSVGUnknownElement() const { return isSVGElement() && isUnknownElement(); }
+    bool isMathMLUnknownElement() const { return isMathMLElement() && isUnknownElement(); }
+
     bool isPseudoElement() const { return pseudoId() != PseudoId::None; }
     bool isBeforePseudoElement() const { return pseudoId() == PseudoId::Before; }
     bool isAfterPseudoElement() const { return pseudoId() == PseudoId::After; }
@@ -216,6 +221,9 @@ public:
 
     bool hasSyntheticAttrChildNodes() const { return hasNodeFlag(NodeFlag::HasSyntheticAttrChildNodes); }
     void setHasSyntheticAttrChildNodes(bool flag) { setNodeFlag(NodeFlag::HasSyntheticAttrChildNodes, flag); }
+
+    bool hasShadowRootContainingSlots() const { return hasNodeFlag(NodeFlag::HasShadowRootContainingSlots); }
+    void setHasShadowRootContainingSlots(bool flag) { setNodeFlag(NodeFlag::HasShadowRootContainingSlots, flag); }
 
     // If this node is in a shadow tree, returns its shadow host. Otherwise, returns null.
     WEBCORE_EXPORT Element* shadowHost() const;
@@ -535,8 +543,8 @@ protected:
         IsShadowRoot = 1 << 9,
         IsConnected = 1 << 10,
         IsInShadowTree = 1 << 11,
-        HasEventTargetData = 1 << 12,
-        // UnusedFlag = 1 << 13,
+        IsUnknownElement = 1 << 12,
+        HasEventTargetData = 1 << 13,
 
         // These bits are used by derived classes, pulled up here so they can
         // be stored in the same memory word as the Node bits above.
@@ -561,7 +569,8 @@ protected:
 
         InclusiveAncestorStateForForm = 1 << 28,
         InclusiveAncestorStateForCanvas = 1 << 29,
-        // Bits 30-31 are free.
+        HasShadowRootContainingSlots = 1 << 30,
+        // Bit 31 is free.
     };
 
     enum class TabIndexState : uint8_t {
@@ -723,8 +732,6 @@ private:
     static void moveShadowTreeToNewDocument(ShadowRoot&, Document& oldDocument, Document& newDocument);
     static void moveTreeToNewScope(Node&, TreeScope& oldScope, TreeScope& newScope);
     void moveNodeToNewDocument(Document& oldDocument, Document& newDocument);
-
-    virtual void didChangeRenderer(RenderObject*) { };
 
     struct NodeRareDataDeleter {
         void operator()(NodeRareData*) const;

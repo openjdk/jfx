@@ -28,7 +28,9 @@ package attenuation;
 import java.util.ArrayList;
 import java.util.List;
 
+import javafx.geometry.Point3D;
 import javafx.scene.AmbientLight;
+import javafx.scene.DirectionalLight;
 import javafx.scene.Group;
 import javafx.scene.LightBase;
 import javafx.scene.Node;
@@ -47,13 +49,17 @@ class Environment extends CameraScene3D {
     private final static double LIGHT_Z_DIST = 50;
     private final static double LIGHT_X_DIST = 50;
 
+    private final DirectionalLight directionalLight1 = new DirectionalLight(Color.RED);
+    private final DirectionalLight directionalLight2 = new DirectionalLight(Color.BLUE);
+    private final DirectionalLight directionalLight3 = new DirectionalLight(Color.MAGENTA);
     private final PointLight pointLight1 = new PointLight(Color.RED);
     private final PointLight pointLight2 = new PointLight(Color.BLUE);
     private final PointLight pointLight3 = new PointLight(Color.MAGENTA);
     private final SpotLight spotLight1 = new SpotLight(Color.RED);
     private final SpotLight spotLight2 = new SpotLight(Color.BLUE);
     private final SpotLight spotLight3 = new SpotLight(Color.MAGENTA);
-    final LightBase[] lights = {pointLight1, pointLight2, pointLight3, spotLight1, spotLight2, spotLight3};
+    final LightBase[] lights = {directionalLight1, directionalLight2, directionalLight3,
+            pointLight1, pointLight2, pointLight3, spotLight1, spotLight2, spotLight3};
 
     private Node currentShape;
 
@@ -78,6 +84,12 @@ class Environment extends CameraScene3D {
         pointLight2.setTranslateX(-LIGHT_X_DIST);
         spotLight2.setTranslateX(-LIGHT_X_DIST);
 
+        directionalLight1.setDirection(new Point3D(-LIGHT_X_DIST, 0, LIGHT_Z_DIST));
+        directionalLight2.setDirection(new Point3D(LIGHT_X_DIST, 0, LIGHT_Z_DIST));
+
+        directionalLight1.setUserData("RED");
+        directionalLight2.setUserData("BLUE");
+        directionalLight3.setUserData("MAGENTA");
         pointLight1.setUserData("RED");
         pointLight2.setUserData("BLUE");
         pointLight3.setUserData("MAGENTA");

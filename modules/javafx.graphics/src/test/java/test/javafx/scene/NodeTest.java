@@ -25,6 +25,7 @@
 
 package test.javafx.scene;
 
+import javafx.scene.effect.BlendMode;
 import test.javafx.scene.shape.TestUtils;
 import test.javafx.scene.shape.CircleTest;
 import com.sun.javafx.geom.PickRay;
@@ -1928,6 +1929,14 @@ public class NodeTest {
         Scene s = new Scene(node);
         node.applyCss();
         assertFalse(node.isManaged());
+    }
+
+    @Test public void testBlendModeSetFromCSS() {
+        final AnchorPane node = new AnchorPane();
+        node.setStyle("-fx-blend-mode: red");
+        new Scene(node);
+        node.applyCss();
+        assertEquals(BlendMode.RED, node.getBlendMode());
     }
 
     private Node createTestRect() {
