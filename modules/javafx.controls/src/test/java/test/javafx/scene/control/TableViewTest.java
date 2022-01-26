@@ -798,7 +798,11 @@ public class TableViewTest {
     /*********************************************************************
      * Tests for specific bugs                                           *
      ********************************************************************/
-    @Test public void test_jdk_8277853() {
+
+    /**
+     * JDK-8277853
+     */
+    @Test public void testInvisibleScrollbarDoesNotScrollTableToBeginning() {
         TableView<Person> table = new TableView<>(personTestData);
         StageLoader sl = new StageLoader(table);
 
