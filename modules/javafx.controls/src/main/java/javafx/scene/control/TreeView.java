@@ -337,6 +337,8 @@ public class TreeView<T> extends Control {
         MultipleSelectionModel<TreeItem<T>> sm = new TreeViewBitSetSelectionModel<T>(this);
         setSelectionModel(sm);
         setFocusModel(new TreeViewFocusModel<T>(this));
+
+        setOnEditCommit(DEFAULT_EDIT_COMMIT_HANDLER);
     }
 
 
@@ -845,6 +847,11 @@ public class TreeView<T> extends Control {
         return onEditCommit;
     }
 
+    private EventHandler<TreeView.EditEvent<T>> DEFAULT_EDIT_COMMIT_HANDLER = t -> {
+        TreeItem<T> editedItem = t.getTreeItem();
+        if (editedItem == null) return;
+        editedItem.setValue(t.getNewValue());
+    };
 
     // --- On Edit Cancel
     private ObjectProperty<EventHandler<EditEvent<T>>> onEditCancel;
