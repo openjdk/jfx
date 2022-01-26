@@ -1340,6 +1340,7 @@ public class SplitPaneTest {
      * Verifies that a divider position change of the {@link SplitPane} does not hang the layout.
      * Previously, this may happen when the divider position changed to a large number (>1),
      * which can hang the layout as it resulted in multiple layout requests (through SplitPaneSkin.layoutChildren).
+     * See also: JDK-8277122
      */
     @Test
     public void testDividerOverOneDoesNotHangLayout() {
@@ -1350,6 +1351,7 @@ public class SplitPaneTest {
      * Verifies that a divider position change of the {@link SplitPane} does not hang the layout.
      * Previously, this may happen when the divider position changed to a negative number (<1),
      * which can hang the layout as it resulted in multiple layout requests (through SplitPaneSkin.layoutChildren).
+     * See also: JDK-8277122
      */
     @Test
     public void testDividerUnderZeroDoesNotHangLayout() {

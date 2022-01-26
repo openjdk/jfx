@@ -68,6 +68,7 @@ public class SplitPaneSkin extends SkinBase<SplitPane> {
      * Flag which is used to determine whether we need to request layout when a divider position changed or not.
      * E.g. We don't want to request layout when we are changing the divider position in
      * {@link #layoutChildren(double, double, double, double)} since we are currently doing the layout.
+     * See also: JDK-8277122
      */
     private boolean duringLayout;
 
@@ -221,8 +222,8 @@ public class SplitPaneSkin extends SkinBase<SplitPane> {
             previousSize = horizontal ? sw : sh;
         }
 
-        // If the window is less than the min size we want to resize proportionally
         duringLayout = true;
+        // If the window is less than the min size we want to resize proportionally
         double minSize = totalMinSize();
         if (minSize > (horizontal ? w : h)) {
             double percentage = 0;
