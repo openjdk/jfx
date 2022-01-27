@@ -342,6 +342,29 @@ public class TableCellTest {
     }
 
     /**
+     * The {@link TableRow} should never be null inside the {@link TableCell} during auto sizing.
+     * Note: The autosizing is triggered as soon as the table has a scene - so when the {@link StageLoader} is created.
+     * See also: JDK-8251481
+     */
+    @Test
+    public void testRowIsNotNullWhenAutoSizing() {
+        TableColumn<String, String> tableColumn = new TableColumn<>();
+        tableColumn.setCellFactory(col -> new TableCell<>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+
+                assertNotNull(getTableRow());
+            }
+        });
+        table.getColumns().add(tableColumn);
+
+        StageLoader loader = new StageLoader(table);
+
+        loader.dispose();
+    }
+
+    /**
      * Table: Editable<br>
      * Row: Not editable<br>
      * Column: Editable<br>
@@ -364,25 +387,6 @@ public class TableCellTest {
         cell.startEdit();
 
         assertFalse(cell.isEditing());
-    }
-
-    @Test
-    public void testRowIsNotNullWhenAutoSizing() {
-        TableColumn<String, String> tableColumn = new TableColumn<>();
-        tableColumn.setCellFactory(col -> new TableCell<>() {
-
-            @Override
-            protected void updateItem(String item, boolean empty) {
-                super.updateItem(item, empty);
-
-                assertNotNull(getTableRow());
-            }
-        });
-        table.getColumns().add(tableColumn);
-
-        StageLoader loader = new StageLoader(table);
-
-        loader.dispose();
     }
 
     /**
