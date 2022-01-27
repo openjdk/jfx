@@ -74,22 +74,22 @@ import com.sun.javafx.logging.PlatformLogger;
  *     <th scope="col">Location and Attenuation</th>
  *   </tr>
  *   <tr>
- *     <td>{@link AmbientLight}</td>
+ *     <th scope="row">{@link AmbientLight}</th>
  *     <td style="text-align:center">&#10007;</td>
  *     <td style="text-align:center">&#10007;</td>
  *   </tr>
  *   <tr>
- *     <td>{@link DirectionalLight}</td>
+ *     <th scope="row">{@link DirectionalLight}</th>
  *     <td style="text-align:center">&#10003;</td>
  *     <td style="text-align:center">&#10007;</td>
  *   </tr>
  *   <tr>
- *     <td>{@link PointLight}</td>
+ *     <th scope="row">{@link PointLight}</th>
  *     <td style="text-align:center">&#10007;</td>
  *     <td style="text-align:center">&#10003;</td>
  *   </tr>
  *   <tr>
- *     <td>{@link SpotLight}*</td>
+ *     <th scope="row">{@link SpotLight}*</th>
  *     <td style="text-align:center">&#10003;</td>
  *     <td style="text-align:center">&#10003;</td>
  *   </tr>
