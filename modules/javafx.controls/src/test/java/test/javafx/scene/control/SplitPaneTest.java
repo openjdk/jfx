@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,6 +29,7 @@ import javafx.collections.FXCollections;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
+import org.junit.After;
 import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
 import javafx.css.CssMetaData;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.*;
@@ -71,6 +72,7 @@ public class SplitPaneTest {
     private Scene scene;
     private Stage stage;
     private StackPane root;
+    private StageLoader stageLoader;
 
     @Before public void setup() {
         tk = (StubToolkit)Toolkit.getToolkit();//This step is not needed (Just to make sure StubToolkit is loaded into VM)
@@ -83,6 +85,11 @@ public class SplitPaneTest {
         scene = new Scene(root);
         stage = new Stage();
         stage.setScene(scene);
+    }
+
+    @After
+    public void cleanup() {
+        if (stageLoader != null) stageLoader.dispose();
     }
 
     /*********************************************************************
@@ -1370,7 +1377,7 @@ public class SplitPaneTest {
         SplitPane pane = new SplitPane(new Label("AAAAA"), new TabPane(new Tab("Test", cbx)));
         StackPane root = new StackPane(pane);
 
-        StageLoader stageLoader = new StageLoader(root);
+        stageLoader = new StageLoader(root);
 
         Toolkit.getToolkit().firePulse();
 
@@ -1385,7 +1392,6 @@ public class SplitPaneTest {
         Toolkit.getToolkit().firePulse();
 
         assertTrue(layoutCounter.get() > 0);
-        stageLoader.dispose();
     }
 
 }
