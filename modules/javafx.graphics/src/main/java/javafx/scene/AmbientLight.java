@@ -50,7 +50,7 @@ public class AmbientLight extends LightBase {
     }
 
     {
-        // To initialize the class helper at the begining each constructor of this class
+        // To initialize the class helper at the beginning each constructor of this class
         AmbientLightHelper.initHelper(this);
     }
 

@@ -43,7 +43,7 @@ import javafx.scene.paint.PhongMaterial;
  * <p>
  * {@code DirectionalLight}s can represent strong light sources that are far enough from the objects they illuminate
  * that their light rays appear to be parallel. Because these light sources are considered to be infinitely far, they
- * cannot be attenuated. The sun's light on Earth is a common light source that can be simulated with this light type.
+ * cannot be attenuated. The sun is a common light source that can be simulated with this light type.
  *
  * @since 18
  * @see PhongMaterial

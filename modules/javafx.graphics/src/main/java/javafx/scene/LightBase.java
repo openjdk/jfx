@@ -66,13 +66,12 @@ import com.sun.javafx.logging.PlatformLogger;
  *
  * In addition to these, each light type supports a different set of properties, summarized in the following table:
  *
- * <div style="display:flex; flex-direction: column; justify-content: center; align-items: center">
  * <table border="1">
  *   <caption>Summary of Light types by attributes</caption>
  *   <tr>
- *     <th>Light type</th>
- *     <th>Rotation and Direction</th>
- *     <th>Location and Attenuation</th>
+ *     <th scope="col">Light type</th>
+ *     <th scope="col">Rotation and Direction</th>
+ *     <th scope="col">Location and Attenuation</th>
  *   </tr>
  *   <tr>
  *     <td>{@link AmbientLight}</td>
@@ -95,9 +94,8 @@ import com.sun.javafx.logging.PlatformLogger;
  *     <td style="text-align:center">&#10003;</td>
  *   </tr>
  * </table>
- *
  * * Supports spotlight attenuation factors as described in its class docs.
- * </div>
+ * 
  * <p>
  * An application cannot add its own light types. Extending {@code LightBase} directly may lead to an
  * {@code UnsupportedOperationException} being thrown.
@@ -130,7 +128,7 @@ import com.sun.javafx.logging.PlatformLogger;
  * scope. Instead, the scope can remain wide, and specific nodes can be excluded with the exclusion scope.
  *
  * <h2><a id="Direction">Direction</a></h2>
- * The direction the light is facing, defined by the {@code direction} vector property of the light. The light's
+ * The direction of the light is defined by the {@code direction} vector property of the light. The light's
  * direction can be rotated by setting a rotation transform on the light. For example, if the direction vector is
  * {@code (1, 1, 1)} and the light is not rotated, it will point in the {@code (1, 1, 1)} direction, and if the light is
  * rotated 90 degrees on the y axis, it will point in the {@code (1, 1, -1)} direction.
@@ -398,7 +396,7 @@ public abstract class LightBase extends Node {
     private void markChildrenDirty(Node node) {
         if (node instanceof Shape3D) {
             // Dirty using a lightweight DirtyBits.NODE_DRAWMODE bit
-            NodeHelper.markDirty(node, DirtyBits.NODE_DRAWMODE);
+            NodeHelper.markDirty(((Shape3D) node), DirtyBits.NODE_DRAWMODE);
         } else if (node instanceof Parent) {
             for (Node child : ((Parent) node).getChildren()) {
                 if ((scope != null && getScope().contains(child)) ||
