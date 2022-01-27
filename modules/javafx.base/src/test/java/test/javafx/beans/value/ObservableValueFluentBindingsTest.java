@@ -144,7 +144,7 @@ public class ObservableValueFluentBindingsTest {
             }
 
             @Nested
-            class When_orElse_Called {
+            class When_orElse_CalledReturns_ObservableValue_Which {
                 {
                     observableValue = observableValue.orElse("Empty");
                 }
@@ -167,7 +167,7 @@ public class ObservableValueFluentBindingsTest {
 
                     @Test
                     void shouldApplyMapThenOrElseOperation() {
-                        assertTrue(values.isEmpty());
+                        assertNothingIsObserved();
 
                         property.set("Left");
 
@@ -207,7 +207,7 @@ public class ObservableValueFluentBindingsTest {
             }
 
             @Nested
-            class When_map_CalledAgain {
+            class When_map_CalledAgainReturns_ObservableValue_Which {
                 {
                     observableValue = observableValue.map(v -> v + "+map2");
                 }
@@ -230,7 +230,7 @@ public class ObservableValueFluentBindingsTest {
 
                     @Test
                     void shouldApplyMapThenSecondMapOperation() {
-                        assertTrue(values.isEmpty());
+                        assertNothingIsObserved();
 
                         property.set("Left");
 
@@ -489,7 +489,7 @@ public class ObservableValueFluentBindingsTest {
             }
 
             @Nested
-            class When_map_Called {
+            class When_map_CalledReturns_ObservableValue_Which {
                 {
                     observableValue = observableValue.map(v -> v + "+map");
                 }
@@ -512,7 +512,7 @@ public class ObservableValueFluentBindingsTest {
 
                     @Test
                     void shouldApplyFlatMapThenMapOperation() {
-                        assertTrue(values.isEmpty());
+                        assertNothingIsObserved();
 
                         property.set("Left");
 
@@ -560,7 +560,7 @@ public class ObservableValueFluentBindingsTest {
             }
 
             @Nested
-            class When_orElse_Called {
+            class When_orElse_CalledReturns_ObservableValue_Which {
                 {
                     observableValue = observableValue.orElse("Empty");
                 }
@@ -583,7 +583,7 @@ public class ObservableValueFluentBindingsTest {
 
                     @Test
                     void shouldApplyFlatMapThenMapOperation() {
-                        assertTrue(values.isEmpty());
+                        assertNothingIsObserved();
 
                         property.set("Left");
 
