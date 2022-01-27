@@ -1296,15 +1296,11 @@ public class Scene implements EventTarget {
             peer.waitForRenderingToComplete();
             peer.waitForSynchronization();
             try {
-                syncLights();
-                scenePulseListener.synchronizeSceneProperties();
                 scenePulseListener.synchronizeSceneNodes();
             } finally {
                 peer.releaseSynchronization(false);
             }
         } else {
-            syncLights();
-            scenePulseListener.synchronizeSceneProperties();
             scenePulseListener.synchronizeSceneNodes();
         }
     }
