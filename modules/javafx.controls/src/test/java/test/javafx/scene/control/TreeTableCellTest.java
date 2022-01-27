@@ -699,9 +699,7 @@ public class TreeTableCellTest {
         });
         tree.getColumns().add(treeTableColumn);
 
-        StageLoader loader = new StageLoader(tree);
-
-        loader.dispose();
+        stageLoader = new StageLoader(tree);
     }
 
     /**

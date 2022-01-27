@@ -359,9 +359,7 @@ public class TableCellTest {
         });
         table.getColumns().add(tableColumn);
 
-        StageLoader loader = new StageLoader(table);
-
-        loader.dispose();
+        stageLoader = new StageLoader(table);
     }
 
     /**
