@@ -95,7 +95,7 @@ import com.sun.javafx.logging.PlatformLogger;
  *   </tr>
  * </table>
  * * Supports spotlight attenuation factors as described in its class docs.
- * 
+ *
  * <p>
  * An application cannot add its own light types. Extending {@code LightBase} directly may lead to an
  * {@code UnsupportedOperationException} being thrown.
@@ -109,12 +109,7 @@ import com.sun.javafx.logging.PlatformLogger;
  * "selects" only the blue component of the material color. The mathematical definition of the material-light
  * interaction is available in {@link javafx.scene.paint.PhongMaterial PhongMaterial}.
  * <p>
- * Notes about the current implementation:
- * <ol>
- *   <li> A black colored light is ignored since its contribution is 0.
- *   <li> The transparency (alpha) component of a light is ignored.
- * </ol>
- * There are no guarantee that these behaviors will not change.
+ * See also the implementation notes section.
  *
  * <h2><a id="Scopes">Scopes</a></h2>
  * A light has a {@code scope} list and an {@code exclusionScope} list that define which nodes are illuminated by it and
@@ -160,6 +155,14 @@ import com.sun.javafx.logging.PlatformLogger;
  * <p>
  * <b>Note</b>: this is a conditional feature. See
  * {@link javafx.application.ConditionalFeature#SCENE3D ConditionalFeature.SCENE3D} for more information.
+ *
+ * @implNote
+ * The following applies to the {@code color} property of the light:
+ * <ol>
+ *   <li> A black colored light is ignored since its contribution is 0.
+ *   <li> The transparency (alpha) component of a light is ignored.
+ * </ol>
+ * These behaviors are not specified and could change in the future.
  *
  * @since JavaFX 8.0
  */
