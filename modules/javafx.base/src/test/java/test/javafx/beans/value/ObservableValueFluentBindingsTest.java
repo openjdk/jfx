@@ -671,8 +671,9 @@ public class ObservableValueFluentBindingsTest {
     private void startObserving(ObservableValue<String> observableValue) {
         values.clear();
 
-        property.setValue("B");
-        property.setValue("A");
+        property.setValue("Left");
+        property.setValue("Right");
+        property.setValue("Initial");
 
         assertTrue(values.isEmpty());
 
