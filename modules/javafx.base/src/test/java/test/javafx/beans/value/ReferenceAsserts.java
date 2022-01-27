@@ -25,10 +25,9 @@
 
 package test.javafx.beans.value;
 
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-
 import java.lang.ref.WeakReference;
+
+import test.util.memory.JMemoryBuddy;
 
 public class ReferenceAsserts {
 
@@ -38,9 +37,7 @@ public class ReferenceAsserts {
         clearRefs.run();
         obj = null;
 
-        System.gc();
-
-        assertNotNull(ref.get());
+        JMemoryBuddy.assertNotCollectable(ref);
     }
 
     public static void testIfNotStronglyReferenced(Object obj, Runnable clearRefs) {
@@ -49,8 +46,6 @@ public class ReferenceAsserts {
         clearRefs.run();
         obj = null;
 
-        System.gc();
-
-        assertNull(ref.get());
+        JMemoryBuddy.assertCollectable(ref);
     }
 }

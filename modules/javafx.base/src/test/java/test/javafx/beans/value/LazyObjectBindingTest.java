@@ -84,6 +84,8 @@ public class LazyObjectBindingTest {
              * valid because it is not yet considered "observed" as the
              * computeValue call occurs in the middle of the listener
              * registration process.
+             *
+             * See also the explanation in LazyObjectBinding#updateSubcriptionAfterAdd
              */
 
             assertTrue(binding.computeValueCalls >= 1 && binding.computeValueCalls <= 2);

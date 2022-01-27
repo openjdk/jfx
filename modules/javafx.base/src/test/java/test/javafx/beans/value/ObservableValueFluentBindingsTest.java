@@ -47,7 +47,9 @@ import javafx.beans.value.ObservableValue;
 
 public class ObservableValueFluentBindingsTest {
 
-    private StringProperty property = new SimpleStringProperty("A");
+    private final StringProperty property = new SimpleStringProperty("Initial");
+    private final List<String> values = new ArrayList<>();
+    private final ChangeListener<String> changeListener = (obs, old, current) -> values.add(current);
 
     @Nested
     class When_map_Called {
@@ -61,7 +63,7 @@ public class ObservableValueFluentBindingsTest {
 
         @Nested
         class WithNotNullReturns_ObservableValue_Which {
-            private ObservableValue<String> observableValue = property.map(v -> v + "Z");
+            private ObservableValue<String> observableValue = property.map(v -> v + "+map");
 
             @Test
             void shouldNotBeNull() {
@@ -77,44 +79,41 @@ public class ObservableValueFluentBindingsTest {
             class When_getValue_Called {
                 @Test
                 void shouldReturnPropertyValuesWithOperationApplied() {
-                    assertEquals("AZ", observableValue.getValue());
+                    assertEquals("Initial+map", observableValue.getValue());
 
-                    property.set("B");
+                    property.set("Left");
 
-                    assertEquals("BZ", observableValue.getValue());
+                    assertEquals("Left+map", observableValue.getValue());
                 }
 
                 @Test
                 void shouldNotOperateOnNull() {
                     property.set(null);
 
-                    assertNull(observableValue.getValue());
+                    assertEquals((String) null, observableValue.getValue());
                 }
             }
 
             @Nested
             class WhenObserved {
-                private List<String> values = new ArrayList<>();
-                private ChangeListener<String> changeListener = (obs, old, current) -> values.add(current);
-
                 {
-                    observableValue.addListener(changeListener);
+                    startObserving(observableValue);
                 }
 
                 @Test
                 void shouldApplyOperation() {
-                    assertTrue(values.isEmpty());
+                    assertNothingIsObserved();
 
-                    property.set("C");
+                    property.set("Right");
 
-                    assertEquals(List.of("CZ"), values);
+                    assertObserved("Right+map");
                 }
 
                 @Test
                 void shouldNotOperateOnNull() {
                     property.set(null);
 
-                    assertEquals(Arrays.asList((String) null), values);
+                    assertObserved((String) null);  // map operation is skipped (as it would NPE otherwise) and the resulting value is null
                 }
 
                 @Test
@@ -125,23 +124,16 @@ public class ObservableValueFluentBindingsTest {
                 @Nested
                 class AndWhenUnobserved {
                     {
-                        property.setValue("B");
-                        property.setValue("A");
-
-                        assertEquals(List.of("BZ", "AZ"), values);
-
-                        values.clear();
-
-                        observableValue.removeListener(changeListener);
+                        stopObserving(observableValue);
                     }
 
                     @Test
                     void shouldNoLongerBeCalled() {
-                        assertTrue(values.isEmpty());
+                        assertNothingIsObserved();
 
-                        property.set("C");
+                        property.set("Right");
 
-                        assertTrue(values.isEmpty());
+                        assertNothingIsObserved();
                     }
 
                     @Test
@@ -150,12 +142,138 @@ public class ObservableValueFluentBindingsTest {
                     }
                 }
             }
+
+            @Nested
+            class When_orElse_Called {
+                {
+                    observableValue = observableValue.orElse("Empty");
+                }
+
+                @Test
+                void shouldNotBeNull() {
+                    assertNotNull(observableValue);
+                }
+
+                @Test
+                void shouldNotBeStronglyReferenced() {
+                    ReferenceAsserts.testIfNotStronglyReferenced(observableValue, () -> observableValue = null);
+                }
+
+                @Nested
+                class WhenObserved {
+                    {
+                        startObserving(observableValue);
+                    }
+
+                    @Test
+                    void shouldApplyMapThenOrElseOperation() {
+                        assertTrue(values.isEmpty());
+
+                        property.set("Left");
+
+                        assertObserved("Left+map");
+
+                        property.set(null);
+
+                        assertObserved("Empty");
+                    }
+
+                    @Test
+                    void shouldBeStronglyReferenced() {
+                        ReferenceAsserts.testIfStronglyReferenced(observableValue, () -> observableValue = null);
+                    }
+
+                    @Nested
+                    class AndWhenUnobserved {
+                        {
+                            stopObserving(observableValue);
+                        }
+
+                        @Test
+                        void shouldNoLongerBeCalled() {
+                            assertNothingIsObserved();
+
+                            property.set("Left");
+
+                            assertNothingIsObserved();
+                        }
+
+                        @Test
+                        void shouldNoLongerBeStronglyReferenced() {
+                            ReferenceAsserts.testIfNotStronglyReferenced(observableValue, () -> observableValue = null);
+                        }
+                    }
+                }
+            }
+
+            @Nested
+            class When_map_CalledAgain {
+                {
+                    observableValue = observableValue.map(v -> v + "+map2");
+                }
+
+                @Test
+                void shouldNotBeNull() {
+                    assertNotNull(observableValue);
+                }
+
+                @Test
+                void shouldNotBeStronglyReferenced() {
+                    ReferenceAsserts.testIfNotStronglyReferenced(observableValue, () -> observableValue = null);
+                }
+
+                @Nested
+                class WhenObserved {
+                    {
+                        startObserving(observableValue);
+                    }
+
+                    @Test
+                    void shouldApplyMapThenSecondMapOperation() {
+                        assertTrue(values.isEmpty());
+
+                        property.set("Left");
+
+                        assertObserved("Left+map+map2");
+
+                        property.set(null);
+
+                        assertObserved((String) null);
+                    }
+
+                    @Test
+                    void shouldBeStronglyReferenced() {
+                        ReferenceAsserts.testIfStronglyReferenced(observableValue, () -> observableValue = null);
+                    }
+
+                    @Nested
+                    class AndWhenUnobserved {
+                        {
+                            stopObserving(observableValue);
+                        }
+
+                        @Test
+                        void shouldNoLongerBeCalled() {
+                            assertNothingIsObserved();
+
+                            property.set("Left");
+
+                            assertNothingIsObserved();
+                        }
+
+                        @Test
+                        void shouldNoLongerBeStronglyReferenced() {
+                            ReferenceAsserts.testIfNotStronglyReferenced(observableValue, () -> observableValue = null);
+                        }
+                    }
+                }
+            }
         }
     }
 
     @Nested
     class When_orElse_CalledReturns_ObservableValue_Which {
-        private ObservableValue<String> observableValue = property.orElse("null");
+        private ObservableValue<String> observableValue = property.orElse("Empty");
 
         @Test
         void shouldNotBeNull() {
@@ -171,35 +289,31 @@ public class ObservableValueFluentBindingsTest {
         class When_getValue_Called {
             @Test
             void shouldReturnPropertyValuesWithOperationApplied() {
-                assertEquals("A", observableValue.getValue());
+                assertEquals("Initial", observableValue.getValue());
 
                 property.set(null);
 
-                assertEquals("null", observableValue.getValue());
+                assertEquals("Empty", observableValue.getValue());
             }
         }
 
         @Nested
         class WhenObserved {
-            private List<String> values = new ArrayList<>();
-            private ChangeListener<String> changeListener = (obs, old, current) -> values.add(current);
-
             {
-                observableValue.addListener(changeListener);
+                startObserving(observableValue);
             }
 
             @Test
             void shouldApplyOperation() {
-                assertTrue(values.isEmpty());
+                assertNothingIsObserved();
 
-                property.set("C");
+                property.set("Left");
 
-                assertEquals(List.of("C"), values);
+                assertObserved("Left");
 
-                values.clear();
                 property.set(null);
 
-                assertEquals(List.of("null"), values);
+                assertObserved("Empty");
             }
 
             @Test
@@ -210,23 +324,16 @@ public class ObservableValueFluentBindingsTest {
             @Nested
             class AndWhenUnobserved {
                 {
-                    property.setValue("B");
-                    property.setValue(null);
-
-                    assertEquals(List.of("B", "null"), values);
-
-                    values.clear();
-
-                    observableValue.removeListener(changeListener);
+                    stopObserving(observableValue);
                 }
 
                 @Test
                 void shouldNoLongerBeCalled() {
-                    assertTrue(values.isEmpty());
+                    assertNothingIsObserved();
 
-                    property.set("C");
+                    property.set("Left");
 
-                    assertTrue(values.isEmpty());
+                    assertNothingIsObserved();
                 }
 
                 @Test
@@ -250,9 +357,10 @@ public class ObservableValueFluentBindingsTest {
 
         @Nested
         class WithNotNullReturns_ObservableValue_Which {
-            private ObjectProperty<Integer> altA = new SimpleObjectProperty<>(65);
-            private ObjectProperty<Integer> altOther = new SimpleObjectProperty<>(0);
-            private ObservableValue<Integer> observableValue = property.flatMap(v -> "A".equals(v) ? altA : altOther);
+            private StringProperty left = new SimpleStringProperty("LEFT");
+            private StringProperty right = new SimpleStringProperty("RIGHT");
+            private StringProperty unknown = new SimpleStringProperty("UNKNOWN");
+            private ObservableValue<String> observableValue = property.flatMap(v -> "Left".equals(v) ? left : "Right".equals(v) ? right : unknown);
 
             @Test
             void shouldNotBeNull() {
@@ -268,23 +376,24 @@ public class ObservableValueFluentBindingsTest {
             class When_getValue_Called {
                 @Test
                 void shouldReturnPropertyValuesWithOperationApplied() {
-                    assertEquals((Integer) 65, observableValue.getValue());
+                    assertEquals("UNKNOWN", observableValue.getValue());  // initially it is not left or right, so unknown
 
-                    property.set("D");
+                    property.set("Right");
 
-                    assertEquals((Integer) 0, observableValue.getValue());
+                    assertEquals("RIGHT", observableValue.getValue());
 
-                    altOther.setValue(1);
+                    right.setValue("RIGHT+1");
 
-                    assertEquals((Integer) 1, observableValue.getValue());
+                    assertEquals("RIGHT+1", observableValue.getValue());
 
-                    altA.setValue(66);
+                    left.setValue("LEFT+1");
+                    unknown.setValue("UNKNOWN+1");
 
-                    assertEquals((Integer) 1, observableValue.getValue());
+                    assertEquals("RIGHT+1", observableValue.getValue());  // changing left or unknown value should have no effect
 
-                    property.set("A");
+                    property.set("Left");
 
-                    assertEquals((Integer) 66, observableValue.getValue());
+                    assertEquals("LEFT+1", observableValue.getValue());  // after switching to left, it switches to the left value
                 }
 
                 @Test
@@ -296,7 +405,7 @@ public class ObservableValueFluentBindingsTest {
 
                 @Test
                 void shouldIgnoreFlatMapsToNull() {
-                    altA = null;
+                    unknown = null;
 
                     assertNull(observableValue.getValue());
                 }
@@ -304,56 +413,50 @@ public class ObservableValueFluentBindingsTest {
 
             @Nested
             class WhenObserved {
-                private List<Integer> values = new ArrayList<>();
-                private ChangeListener<Integer> changeListener = (obs, old, current) -> values.add(current);
-
                 {
-                    observableValue.addListener(changeListener);
+                    startObserving(observableValue);
                 }
 
                 @Test
                 void shouldApplyOperation() {
-                    assertTrue(values.isEmpty());
+                    assertNothingIsObserved();
 
-                    altA.set(66);
+                    unknown.set("UNKNOWN+1");
 
-                    assertEquals(List.of(66), values);
+                    assertObserved("UNKNOWN+1");  // as it initially is unknown, changing the unknown property results in a change
 
-                    values.clear();
-                    property.set("D");
+                    property.set("Right");
 
-                    assertEquals(List.of(0), values);
+                    assertObserved("RIGHT");  // switching to right gives the value of the right property
 
-                    values.clear();
-                    altA.set(67);
+                    unknown.set("UNKNOWN+2");
+                    left.set("LEFT+1");
 
-                    assertEquals(List.of(), values);
+                    assertNothingIsObserved();  // changing left or unknown has no effect when currently observing right
 
-                    values.clear();
-                    altOther.set(1);
+                    right.set("RIGHT+1");
 
-                    assertEquals(List.of(1), values);
+                    assertObserved("RIGHT+1");  // changing right value has an effect as right is observed
 
-                    values.clear();
-                    property.set("A");
+                    property.set("Left");
 
-                    assertEquals(List.of(67), values);
+                    assertObserved("LEFT+1");  // switching to left sees latest left value
                 }
 
                 @Test
                 void shouldNotOperateOnNull() {
                     property.set(null);
 
-                    assertEquals(Arrays.asList((String) null), values);
+                    assertObserved((String)null);  // flatMap operation is skipped (as it would NPE otherwise) and the resulting value is null
                 }
 
                 @Test
                 void shouldIgnoreFlatMapsToNull() {
-                    altOther = null;
+                    right = null;
 
-                    property.set("D");
+                    property.set("Right");
 
-                    assertEquals(Arrays.asList((String) null), values);
+                    assertObserved((String)null);  // flatMap maps to right property which is now null, this results in null
                 }
 
                 @Test
@@ -364,23 +467,18 @@ public class ObservableValueFluentBindingsTest {
                 @Nested
                 class AndWhenUnobserved {
                     {
-                        property.setValue("B");
-                        property.setValue("A");
-
-                        assertEquals(List.of(0, 65), values);
-
-                        values.clear();
-
-                        observableValue.removeListener(changeListener);
+                        stopObserving(observableValue);
                     }
 
                     @Test
                     void shouldNoLongerBeCalled() {
-                        assertTrue(values.isEmpty());
+                        assertNothingIsObserved();
 
-                        property.set("C");
+                        property.set("Left");
+                        property.set("Right");
+                        property.set("Unknown");
 
-                        assertTrue(values.isEmpty());
+                        assertNothingIsObserved();
                     }
 
                     @Test
@@ -389,6 +487,213 @@ public class ObservableValueFluentBindingsTest {
                     }
                 }
             }
+
+            @Nested
+            class When_map_Called {
+                {
+                    observableValue = observableValue.map(v -> v + "+map");
+                }
+
+                @Test
+                void shouldNotBeNull() {
+                    assertNotNull(observableValue);
+                }
+
+                @Test
+                void shouldNotBeStronglyReferenced() {
+                    ReferenceAsserts.testIfNotStronglyReferenced(observableValue, () -> observableValue = null);
+                }
+
+                @Nested
+                class WhenObserved {
+                    {
+                        startObserving(observableValue);
+                    }
+
+                    @Test
+                    void shouldApplyFlatMapThenMapOperation() {
+                        assertTrue(values.isEmpty());
+
+                        property.set("Left");
+
+                        assertObserved("LEFT+map");
+
+                        property.set("Right");
+
+                        assertObserved("RIGHT+map");
+
+                        left.set("LEFT-LEFT");  // should have no effect
+
+                        assertNothingIsObserved();
+
+                        right.set("RIGHT-RIGHT");
+
+                        assertObserved("RIGHT-RIGHT+map");
+                    }
+
+                    @Test
+                    void shouldBeStronglyReferenced() {
+                        ReferenceAsserts.testIfStronglyReferenced(observableValue, () -> observableValue = null);
+                    }
+
+                    @Nested
+                    class AndWhenUnobserved {
+                        {
+                            stopObserving(observableValue);
+                        }
+
+                        @Test
+                        void shouldNoLongerBeCalled() {
+                            assertNothingIsObserved();
+
+                            property.set("Left");
+
+                            assertNothingIsObserved();
+                        }
+
+                        @Test
+                        void shouldNoLongerBeStronglyReferenced() {
+                            ReferenceAsserts.testIfNotStronglyReferenced(observableValue, () -> observableValue = null);
+                        }
+                    }
+                }
+            }
+
+            @Nested
+            class When_orElse_Called {
+                {
+                    observableValue = observableValue.orElse("Empty");
+                }
+
+                @Test
+                void shouldNotBeNull() {
+                    assertNotNull(observableValue);
+                }
+
+                @Test
+                void shouldNotBeStronglyReferenced() {
+                    ReferenceAsserts.testIfNotStronglyReferenced(observableValue, () -> observableValue = null);
+                }
+
+                @Nested
+                class WhenObserved {
+                    {
+                        startObserving(observableValue);
+                    }
+
+                    @Test
+                    void shouldApplyFlatMapThenMapOperation() {
+                        assertTrue(values.isEmpty());
+
+                        property.set("Left");
+
+                        assertObserved("LEFT");
+
+                        property.set("Right");
+
+                        assertObserved("RIGHT");
+
+                        left.set("LEFT-LEFT");  // should have no effect as right branch is observed
+
+                        assertNothingIsObserved();
+
+                        right.set("RIGHT-RIGHT");
+
+                        assertObserved("RIGHT-RIGHT");
+
+                        right.set(null);
+
+                        assertObserved("Empty");
+
+                        property.set("Left");
+
+                        assertObserved("LEFT-LEFT");
+
+                        property.set(null);
+
+                        assertObserved("Empty");
+                    }
+
+                    @Test
+                    void shouldBeStronglyReferenced() {
+                        ReferenceAsserts.testIfStronglyReferenced(observableValue, () -> observableValue = null);
+                    }
+
+                    @Nested
+                    class AndWhenUnobserved {
+                        {
+                            stopObserving(observableValue);
+                        }
+
+                        @Test
+                        void shouldNoLongerBeCalled() {
+                            assertNothingIsObserved();
+
+                            property.set("Left");
+
+                            assertNothingIsObserved();
+                        }
+
+                        @Test
+                        void shouldNoLongerBeStronglyReferenced() {
+                            ReferenceAsserts.testIfNotStronglyReferenced(observableValue, () -> observableValue = null);
+                        }
+                    }
+                }
+            }
         }
+    }
+
+    /**
+     * Ensures nothing has been observed.
+     */
+    private void assertNothingIsObserved() {
+        assertObserved();
+    }
+
+    /**
+     * Ensures that given values have been observed since last call.
+     *
+     * @param expectedValues an array of expected values
+     */
+    private void assertObserved(String... expectedValues) {
+        assertEquals(values, Arrays.asList(expectedValues));
+        values.clear();
+    }
+
+    /**
+     * Starts observing the given observable value. This will do
+     * a sanity check that the observer is currently not working
+     * before adding it.
+     *
+     * @param observableValue
+     */
+    private void startObserving(ObservableValue<String> observableValue) {
+        values.clear();
+
+        property.setValue("B");
+        property.setValue("A");
+
+        assertTrue(values.isEmpty());
+
+        observableValue.addListener(changeListener);
+    }
+
+    /**
+     * Stops observing the given observable value. This will do a
+     * sanity check that the observer is currently working before
+     * removing it.
+     */
+    private void stopObserving(ObservableValue<String> observableValue) {
+        values.clear();
+
+        property.setValue("Left");
+        property.setValue("Right");
+
+        assertEquals(2, values.size());
+
+        values.clear();
+
+        observableValue.removeListener(changeListener);
     }
 }

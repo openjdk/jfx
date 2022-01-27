@@ -186,7 +186,7 @@ public interface ObservableValue<T> extends Observable {
      * @param constant an alternative value to use when this {@code ObservableValue}
      *     holds {@code null}; can be {@code null}
      * @return an {@code ObservableValue} holding this {@code ObservableValue}'s value,
-     *     or the given value it is {@code null}; never returns {@code null}
+     *     or the given value if it is {@code null}; never returns {@code null}
      */
     default ObservableValue<T> orElse(T constant) {
         return new OrElseBinding<>(this, constant);

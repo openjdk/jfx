@@ -89,6 +89,14 @@ abstract class LazyObjectBinding<T> extends ObjectBinding<T> {
              *
              * As the binding must be valid after it becomes observed the first time
              * 'get' is called again.
+             *
+             * See com.sun.javafx.binding.ExpressionHelper (which is used
+             * by ObjectBinding) where it will do a call to ObservableValue#getValue
+             * BEFORE adding the actual listener. This results in ObjectBinding#get
+             * to be called in which the #allowValidation call will block it from
+             * becoming valid as the condition is "isObserved()"; this is technically
+             * correct as the listener wasn't added yet, but means we must call
+             * #get again to make this binding valid.
              */
 
             get(); // make binding valid as source wasn't tracked until now
