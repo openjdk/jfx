@@ -343,7 +343,7 @@ public class TableCellTest {
 
     /**
      * The {@link TableRow} should never be null inside the {@link TableCell} during auto sizing.
-     * Note: The autosizing is triggered as soon as the table has a scene - so when the {@link StageLoader} is created.
+     * Note: The auto sizing is triggered as soon as the table has a scene - so when the {@link StageLoader} is created.
      * See also: JDK-8251481
      */
     @Test
