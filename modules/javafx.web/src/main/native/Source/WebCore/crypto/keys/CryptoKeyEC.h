@@ -51,8 +51,9 @@ typedef std::unique_ptr<typename std::remove_pointer<gcry_sexp_t>::type, PAL::GC
 #endif
 
 #if USE(OPENSSL)
-typedef void* PlatformECKey;
-typedef std::unique_ptr<PlatformECKey> PlatformECKeyContainer;
+#include "crypto/openssl/OpenSSLCryptoUniquePtr.h"
+typedef EVP_PKEY* PlatformECKey;
+typedef WebCore::EvpPKeyPtr PlatformECKeyContainer;
 #endif
 
 namespace WebCore {
@@ -85,6 +86,7 @@ public:
     ExceptionOr<Vector<uint8_t>> exportPkcs8() const;
 
     size_t keySizeInBits() const;
+    size_t keySizeInBytes() const { return std::ceil(keySizeInBits() / 8.); }
     NamedCurve namedCurve() const { return m_curve; }
     String namedCurveString() const;
     PlatformECKey platformKey() const { return m_platformKey.get(); }
@@ -98,7 +100,7 @@ private:
     KeyAlgorithm algorithm() const final;
 
     static bool platformSupportedCurve(NamedCurve);
-    static Optional<CryptoKeyPair> platformGeneratePair(CryptoAlgorithmIdentifier, NamedCurve, bool extractable, CryptoKeyUsageBitmap);
+    static std::optional<CryptoKeyPair> platformGeneratePair(CryptoAlgorithmIdentifier, NamedCurve, bool extractable, CryptoKeyUsageBitmap);
     static RefPtr<CryptoKeyEC> platformImportRaw(CryptoAlgorithmIdentifier, NamedCurve, Vector<uint8_t>&& keyData, bool extractable, CryptoKeyUsageBitmap);
     static RefPtr<CryptoKeyEC> platformImportJWKPublic(CryptoAlgorithmIdentifier, NamedCurve, Vector<uint8_t>&& x, Vector<uint8_t>&& y, bool extractable, CryptoKeyUsageBitmap);
     static RefPtr<CryptoKeyEC> platformImportJWKPrivate(CryptoAlgorithmIdentifier, NamedCurve, Vector<uint8_t>&& x, Vector<uint8_t>&& y, Vector<uint8_t>&& d, bool extractable, CryptoKeyUsageBitmap);

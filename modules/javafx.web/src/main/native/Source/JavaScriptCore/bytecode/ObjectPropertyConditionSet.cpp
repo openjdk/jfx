@@ -105,7 +105,7 @@ ObjectPropertyConditionSet ObjectPropertyConditionSet::mergedWith(
     Vector<ObjectPropertyCondition> result;
 
     if (!isEmpty())
-        result.appendVector(m_data->vector);
+        result.append(m_data->m_vector.begin(), m_data->m_vector.size());
 
     for (const ObjectPropertyCondition& newCondition : other) {
         bool foundMatch = false;
@@ -121,7 +121,7 @@ ObjectPropertyConditionSet ObjectPropertyConditionSet::mergedWith(
             result.append(newCondition);
     }
 
-    return create(result);
+    return create(WTFMove(result));
 }
 
 bool ObjectPropertyConditionSet::structuresEnsureValidity() const
@@ -175,7 +175,7 @@ void ObjectPropertyConditionSet::dumpInContext(PrintStream& out, DumpContext* co
 
     out.print("[");
     if (m_data)
-        out.print(listDumpInContext(m_data->vector, context));
+        out.print(listDumpInContext(m_data->m_vector, context));
     out.print("]");
 }
 
@@ -189,7 +189,7 @@ bool ObjectPropertyConditionSet::isValidAndWatchable() const
     if (!isValid())
         return false;
 
-    for (ObjectPropertyCondition condition : m_data->vector) {
+    for (auto& condition : m_data->m_vector) {
         if (!condition.isWatchable())
             return false;
     }
@@ -329,7 +329,7 @@ ObjectPropertyConditionSet generateConditions(
 
     if (ObjectPropertyConditionSetInternal::verbose)
         dataLog("Returning conditions: ", listDump(conditions), "\n");
-    return ObjectPropertyConditionSet::create(conditions);
+    return ObjectPropertyConditionSet::create(WTFMove(conditions));
 }
 
 } // anonymous namespace
@@ -515,7 +515,7 @@ ObjectPropertyCondition generateConditionForSelfEquivalence(
 }
 
 // Current might be null. Structure can't be null.
-static Optional<PrototypeChainCachingStatus> prepareChainForCaching(JSGlobalObject* globalObject, JSCell* current, Structure* structure, JSObject* target)
+static std::optional<PrototypeChainCachingStatus> prepareChainForCaching(JSGlobalObject* globalObject, JSCell* current, Structure* structure, JSObject* target)
 {
     ASSERT(structure);
     VM& vm = globalObject->vm();
@@ -527,21 +527,21 @@ static Optional<PrototypeChainCachingStatus> prepareChainForCaching(JSGlobalObje
     while (true) {
         if (structure->isDictionary()) {
             if (!current)
-                return WTF::nullopt;
+                return std::nullopt;
 
             ASSERT(structure->isObject());
             if (structure->hasBeenFlattenedBefore())
-                return WTF::nullopt;
+                return std::nullopt;
 
             structure->flattenDictionaryStructure(vm, asObject(current));
             flattenedDictionary = true;
         }
 
         if (!structure->propertyAccessesAreCacheable())
-            return WTF::nullopt;
+            return std::nullopt;
 
         if (structure->isProxy())
-            return WTF::nullopt;
+            return std::nullopt;
 
         if (current && current == target) {
             found = true;
@@ -555,7 +555,7 @@ static Optional<PrototypeChainCachingStatus> prepareChainForCaching(JSGlobalObje
         JSValue prototype;
         if (structure->hasPolyProto()) {
             if (!current)
-                return WTF::nullopt;
+                return std::nullopt;
             usesPolyProto = true;
             prototype = structure->prototypeForLookup(globalObject, current);
         } else
@@ -568,7 +568,7 @@ static Optional<PrototypeChainCachingStatus> prepareChainForCaching(JSGlobalObje
     }
 
     if (!found && !!target)
-        return WTF::nullopt;
+        return std::nullopt;
 
     PrototypeChainCachingStatus result;
     result.usesPolyProto = usesPolyProto;
@@ -577,18 +577,18 @@ static Optional<PrototypeChainCachingStatus> prepareChainForCaching(JSGlobalObje
     return result;
 }
 
-Optional<PrototypeChainCachingStatus> prepareChainForCaching(JSGlobalObject* globalObject, JSCell* base, JSObject* target)
+std::optional<PrototypeChainCachingStatus> prepareChainForCaching(JSGlobalObject* globalObject, JSCell* base, JSObject* target)
 {
     return prepareChainForCaching(globalObject, base, base->structure(globalObject->vm()), target);
 }
 
-Optional<PrototypeChainCachingStatus> prepareChainForCaching(JSGlobalObject* globalObject, JSCell* base, const PropertySlot& slot)
+std::optional<PrototypeChainCachingStatus> prepareChainForCaching(JSGlobalObject* globalObject, JSCell* base, const PropertySlot& slot)
 {
     JSObject* target = slot.isUnset() ? nullptr : slot.slotBase();
     return prepareChainForCaching(globalObject, base, target);
 }
 
-Optional<PrototypeChainCachingStatus> prepareChainForCaching(JSGlobalObject* globalObject, Structure* baseStructure, JSObject* target)
+std::optional<PrototypeChainCachingStatus> prepareChainForCaching(JSGlobalObject* globalObject, Structure* baseStructure, JSObject* target)
 {
     return prepareChainForCaching(globalObject, nullptr, baseStructure, target);
 }

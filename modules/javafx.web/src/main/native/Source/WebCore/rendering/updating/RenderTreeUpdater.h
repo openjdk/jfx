@@ -30,7 +30,6 @@
 #include "StyleChange.h"
 #include "StyleTreeResolver.h"
 #include "StyleUpdate.h"
-#include <wtf/HashSet.h>
 #include <wtf/Vector.h>
 
 namespace WebCore {
@@ -70,7 +69,7 @@ private:
     struct Parent {
         Element* element { nullptr };
         const Style::ElementUpdates* updates { nullptr };
-        Optional<RenderTreePosition> renderTreePosition;
+        std::optional<RenderTreePosition> renderTreePosition;
 
         bool didCreateOrDestroyChildRenderer { false };
         RenderObject* previousChildRenderer { nullptr };

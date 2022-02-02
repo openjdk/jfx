@@ -51,7 +51,7 @@ public:
 
     bool containsNonRootSHA1SignedCertificate() const { notImplemented(); return false; }
 
-    Optional<CertificateSummary> summary() const { notImplemented(); return WTF::nullopt; }
+    std::optional<CertificateSummary> summary() const { notImplemented(); return std::nullopt; }
 
     bool isEmpty() const { return m_certificateChain.isEmpty(); }
 
@@ -78,10 +78,10 @@ template<> struct Coder<WebCore::CertificateInfo> {
         notImplemented();
     }
 
-    static Optional<WebCore::CertificateInfo> decode(Decoder&)
+    static std::optional<WebCore::CertificateInfo> decode(Decoder&)
     {
         notImplemented();
-        return WTF::nullopt;
+        return std::nullopt;
     }
 };
 

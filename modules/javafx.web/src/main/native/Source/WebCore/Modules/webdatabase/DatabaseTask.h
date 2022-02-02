@@ -57,8 +57,8 @@ public:
 #endif
 
 private:
-    bool m_taskCompleted { false };
-    Lock m_synchronousMutex;
+    bool m_taskCompleted WTF_GUARDED_BY_LOCK(m_synchronousLock) { false };
+    Lock m_synchronousLock;
     Condition m_synchronousCondition;
 #if ASSERT_ENABLED
     bool m_hasCheckedForTermination { false };

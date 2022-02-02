@@ -30,12 +30,11 @@
 
 #include "CSSAspectRatioValue.h"
 #include "CSSBorderImageSliceValue.h"
-#include "CSSCalculationValue.h"
+#include "CSSCalcValue.h"
 #include "CSSCanvasValue.h"
 #include "CSSContentDistributionValue.h"
 #include "CSSCrossfadeValue.h"
 #include "CSSCursorImageValue.h"
-#include "CSSCustomIdentValue.h"
 #include "CSSCustomPropertyValue.h"
 #include "CSSFilterImageValue.h"
 #include "CSSFontFaceSrcValue.h"
@@ -62,6 +61,7 @@
 #include "CSSUnicodeRangeValue.h"
 #include "CSSUnsetValue.h"
 #include "CSSValueList.h"
+#include "CSSValuePair.h"
 #include "CSSVariableReferenceValue.h"
 
 #include "CSSGridAutoRepeatValue.h"
@@ -312,6 +312,8 @@ String CSSValue::cssText() const
         return downcast<CSSUnicodeRangeValue>(*this).customCSSText();
     case ValueListClass:
         return downcast<CSSValueList>(*this).customCSSText();
+    case ValuePairClass:
+        return downcast<CSSValuePair>(*this).customCSSText();
     case LineBoxContainClass:
         return downcast<CSSLineBoxContainValue>(*this).customCSSText();
     case CalculationClass:
@@ -322,8 +324,6 @@ String CSSValue::cssText() const
         return downcast<CSSContentDistributionValue>(*this).customCSSText();
     case CustomPropertyClass:
         return downcast<CSSCustomPropertyValue>(*this).customCSSText();
-    case CustomIdentClass:
-        return downcast<CSSCustomIdentValue>(*this).customCSSText();
     case VariableReferenceClass:
         return downcast<CSSVariableReferenceValue>(*this).customCSSText();
     case PendingSubstitutionValueClass:
@@ -336,6 +336,21 @@ String CSSValue::cssText() const
 
     ASSERT_NOT_REACHED();
     return String();
+}
+
+ASCIILiteral CSSValue::separatorCSSText() const
+{
+    switch (m_valueSeparator) {
+    case SpaceSeparator:
+        return " "_s;
+    case CommaSeparator:
+        return ", "_s;
+    case SlashSeparator:
+        return " / "_s;
+    default:
+        ASSERT_NOT_REACHED();
+    }
+    return " "_s;
 }
 
 void CSSValue::destroy()
@@ -434,6 +449,9 @@ void CSSValue::destroy()
     case ValueListClass:
         delete downcast<CSSValueList>(this);
         return;
+    case ValuePairClass:
+        delete downcast<CSSValuePair>(this);
+        return;
     case LineBoxContainClass:
         delete downcast<CSSLineBoxContainValue>(this);
         return;
@@ -457,9 +475,6 @@ void CSSValue::destroy()
     case CustomPropertyClass:
         delete downcast<CSSCustomPropertyValue>(this);
         return;
-    case CustomIdentClass:
-        delete downcast<CSSCustomIdentValue>(this);
-        return;
     case VariableReferenceClass:
         delete downcast<CSSVariableReferenceValue>(this);
         return;
@@ -478,7 +493,7 @@ void CSSValue::destroy()
 
 Ref<DeprecatedCSSOMValue> CSSValue::createDeprecatedCSSOMWrapper(CSSStyleDeclaration& styleDeclaration) const
 {
-    if (isImageValue() || isCursorImageValue())
+    if (isImageValue())
         return downcast<CSSImageValue>(this)->createDeprecatedCSSOMWrapper(styleDeclaration);
     if (isPrimitiveValue())
         return DeprecatedCSSOMPrimitiveValue::create(downcast<CSSPrimitiveValue>(*this), styleDeclaration);

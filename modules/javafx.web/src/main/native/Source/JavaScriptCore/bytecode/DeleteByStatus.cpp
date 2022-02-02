@@ -35,9 +35,14 @@
 
 namespace JSC {
 
-bool DeleteByStatus::appendVariant(const DeleteByIdVariant& variant)
+bool DeleteByStatus::appendVariant(const DeleteByVariant& variant)
 {
     return appendICStatusVariant(m_variants, variant);
+}
+
+void DeleteByStatus::shrinkToFit()
+{
+    m_variants.shrinkToFit();
 }
 
 DeleteByStatus DeleteByStatus::computeForBaseline(CodeBlock* baselineBlock, ICStatusMap& map, BytecodeIndex bytecodeIndex, ExitFlag didExit)
@@ -106,7 +111,7 @@ DeleteByStatus DeleteByStatus::computeForStubInfoWithoutExitSiteFeedback(
             switch (access.type()) {
             case AccessCase::DeleteMiss:
             case AccessCase::DeleteNonConfigurable: {
-                DeleteByIdVariant variant(access.identifier(), access.type() == AccessCase::DeleteMiss ? true : false, structure, nullptr, invalidOffset);
+                DeleteByVariant variant(access.identifier(), access.type() == AccessCase::DeleteMiss ? true : false, structure, nullptr, invalidOffset);
                 if (!result.appendVariant(variant))
                     return DeleteByStatus(JSC::slowVersion(summary), *stubInfo);
                 break;
@@ -117,7 +122,7 @@ DeleteByStatus DeleteByStatus::computeForStubInfoWithoutExitSiteFeedback(
                 if (!newStructure)
                     return DeleteByStatus(JSC::slowVersion(summary), *stubInfo);
                 ASSERT_UNUSED(offset, offset == access.offset());
-                DeleteByIdVariant variant(access.identifier(), true, structure, newStructure, access.offset());
+                DeleteByVariant variant(access.identifier(), true, structure, newStructure, access.offset());
 
                 if (!result.appendVariant(variant))
                     return DeleteByStatus(JSC::slowVersion(summary), *stubInfo);
@@ -129,6 +134,7 @@ DeleteByStatus DeleteByStatus::computeForStubInfoWithoutExitSiteFeedback(
             }
         }
 
+        result.shrinkToFit();
         return result;
     }
 
@@ -214,6 +220,7 @@ void DeleteByStatus::merge(const DeleteByStatus& other)
             if (!appendVariant(otherVariant))
                 return mergeSlow();
         }
+        shrinkToFit();
         return;
 
     case LikelyTakesSlowPath:
@@ -238,26 +245,13 @@ void DeleteByStatus::filter(const StructureSet& set)
 
 CacheableIdentifier DeleteByStatus::singleIdentifier() const
 {
-    if (m_variants.isEmpty())
-        return nullptr;
-
-    CacheableIdentifier result = m_variants.first().identifier();
-    if (!result)
-        return nullptr;
-    for (size_t i = 1; i < m_variants.size(); ++i) {
-        CacheableIdentifier identifier = m_variants[i].identifier();
-        if (!identifier)
-            return nullptr;
-        if (identifier != result)
-            return nullptr;
-    }
-    return result;
+    return singleIdentifierForICStatus(m_variants);
 }
 
 template<typename Visitor>
 void DeleteByStatus::visitAggregateImpl(Visitor& visitor)
 {
-    for (DeleteByIdVariant& variant : m_variants)
+    for (DeleteByVariant& variant : m_variants)
         variant.visitAggregate(visitor);
 }
 
@@ -266,7 +260,7 @@ DEFINE_VISIT_AGGREGATE(DeleteByStatus);
 template<typename Visitor>
 void DeleteByStatus::markIfCheap(Visitor& visitor)
 {
-    for (DeleteByIdVariant& variant : m_variants)
+    for (DeleteByVariant& variant : m_variants)
         variant.markIfCheap(visitor);
 }
 

@@ -58,12 +58,14 @@ private:
 
     void parseAttribute(const QualifiedName&, const AtomString&) final;
 
+    void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) final;
+
     void errorEventTimerFired();
 
     Timer m_errorEventTimer;
     bool m_shouldRescheduleErrorEventOnResume { false };
     bool m_shouldCallSourcesChanged { false };
-    mutable Optional<RefPtr<const MediaQuerySet>> m_cachedParsedMediaAttribute;
+    mutable std::optional<RefPtr<const MediaQuerySet>> m_cachedParsedMediaAttribute;
 };
 
 } // namespace WebCore

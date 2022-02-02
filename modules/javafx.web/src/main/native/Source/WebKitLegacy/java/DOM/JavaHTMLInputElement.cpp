@@ -38,6 +38,7 @@
 
 #include <WebCore/JavaDOMUtils.h>
 #include <wtf/java/JavaEnv.h>
+#include <wtf/text/StringToIntegerConversion.h>
 
 using namespace WebCore;
 
@@ -350,7 +351,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLInputElementImpl_getSizeIm
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLInputElementImpl_setSizeImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setSize(String(env, value).toInt());
+    IMPL->setSize(parseIntegerAllowingTrailingJunk<int>(StringView(String(env, value))).value());
 }
 
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLInputElementImpl_getSrcImpl(JNIEnv* env, jclass, jlong peer)

@@ -36,6 +36,7 @@
 #include <libxml/uri.h>
 #include <libxslt/xsltutils.h>
 #include <wtf/CheckedArithmetic.h>
+#include <wtf/HexNumber.h>
 #include <wtf/unicode/CharacterNames.h>
 
 #if OS(DARWIN) && !PLATFORM(GTK)
@@ -143,12 +144,12 @@ bool XSLStyleSheet::parseString(const String& string)
 
     auto upconvertedCharacters = StringView(string).upconvertedCharacters();
     const char* buffer = reinterpret_cast<const char*>(upconvertedCharacters.get());
-    Checked<unsigned, RecordOverflow> unsignedSize = string.length();
+    CheckedUint32 unsignedSize = string.length();
     unsignedSize *= sizeof(UChar);
-    if (unsignedSize.hasOverflowed() || unsignedSize.unsafeGet() > static_cast<unsigned>(std::numeric_limits<int>::max()))
+    if (unsignedSize.hasOverflowed() || unsignedSize > static_cast<unsigned>(std::numeric_limits<int>::max()))
         return false;
 
-    int size = static_cast<int>(unsignedSize.unsafeGet());
+    int size = unsignedSize.value<int>();
     xmlParserCtxtPtr ctxt = xmlCreateMemoryParserCtxt(buffer, size);
     if (!ctxt)
         return false;
@@ -315,6 +316,11 @@ void XSLStyleSheet::markAsProcessed()
     ASSERT(!m_stylesheetDocTaken);
     m_processed = true;
     m_stylesheetDocTaken = true;
+}
+
+String XSLStyleSheet::debugDescription() const
+{
+    return makeString("XSLStyleSheet "_s, "0x"_s, hex(reinterpret_cast<uintptr_t>(this), Lowercase), ' ', href());
 }
 
 } // namespace WebCore

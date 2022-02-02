@@ -35,7 +35,6 @@
 #include "NFA.h"
 #include "SerializedNFA.h"
 #include <wtf/DataLog.h>
-#include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
 
 namespace WebCore {
@@ -59,10 +58,10 @@ static inline void epsilonClosureExcludingSelf(const SerializedNFA& nfa, unsigne
 
     do {
         unsigned unprocessedNodeId = unprocessedNodes.takeLast();
-        const auto& node = nfa.nodes()[unprocessedNodeId];
+        const auto* node = nfa.nodes().pointerAt(unprocessedNodeId);
 
-        for (uint32_t epsilonTargetIndex = node.epsilonTransitionTargetsStart; epsilonTargetIndex < node.epsilonTransitionTargetsEnd; ++epsilonTargetIndex) {
-            uint32_t targetNodeId = nfa.epsilonTransitionsTargets()[epsilonTargetIndex];
+        for (uint32_t epsilonTargetIndex = node->epsilonTransitionTargetsStart; epsilonTargetIndex < node->epsilonTransitionTargetsEnd; ++epsilonTargetIndex) {
+            uint32_t targetNodeId = nfa.epsilonTransitionsTargets().valueAt(epsilonTargetIndex);
             auto addResult = closure.add(targetNodeId);
             if (addResult.isNewEntry) {
                 unprocessedNodes.append(targetNodeId);
@@ -249,9 +248,9 @@ struct NodeIdSetToUniqueNodeIdSetTranslator {
         HashSet<uint64_t, DefaultHash<uint64_t>, WTF::UnsignedWithZeroKeyHashTraits<uint64_t>> actions;
 
         for (unsigned nfaNodeId : source.nodeIdSet) {
-            const auto& nfaNode = source.nfa.nodes()[nfaNodeId];
-            for (unsigned actionIndex = nfaNode.actionStart; actionIndex < nfaNode.actionEnd; ++actionIndex)
-                actions.add(source.nfa.actions()[actionIndex]);
+            const auto* nfaNode = source.nfa.nodes().pointerAt(nfaNodeId);
+            for (unsigned actionIndex = nfaNode->actionStart; actionIndex < nfaNode->actionEnd; ++actionIndex)
+                actions.add(source.nfa.actions().valueAt(actionIndex));
         }
 
         unsigned actionsStart = source.dfa.actions.size();
@@ -322,11 +321,11 @@ static ALWAYS_INLINE unsigned getOrCreateDFANode(const NodeIdSet& nfaNodeSet, co
     return uniqueNodeIdAddResult.iterator->impl()->m_dfaNodeId;
 }
 
-Optional<DFA> NFAToDFA::convert(NFA&& nfa)
+std::optional<DFA> NFAToDFA::convert(NFA&& nfa)
 {
     auto serializedNFA = SerializedNFA::serialize(WTFMove(nfa));
     if (!serializedNFA)
-        return WTF::nullopt;
+        return std::nullopt;
 
     NFANodeClosures nfaNodeClosures = resolveEpsilonClosures(*serializedNFA);
     DFA dfa;

@@ -28,6 +28,7 @@
 #include "CryptoAlgorithmIdentifier.h"
 #include <wtf/Forward.h>
 #include <wtf/HashMap.h>
+#include <wtf/Lock.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/text/StringHash.h>
 
@@ -39,12 +40,12 @@ class CryptoAlgorithm;
 
 class CryptoAlgorithmRegistry {
     WTF_MAKE_NONCOPYABLE(CryptoAlgorithmRegistry);
-    friend class NeverDestroyed<CryptoAlgorithmRegistry>;
+    friend class LazyNeverDestroyed<CryptoAlgorithmRegistry>;
 
 public:
     static CryptoAlgorithmRegistry& singleton();
 
-    Optional<CryptoAlgorithmIdentifier> identifier(const String&);
+    std::optional<CryptoAlgorithmIdentifier> identifier(const String&);
     String name(CryptoAlgorithmIdentifier);
 
     RefPtr<CryptoAlgorithm> create(CryptoAlgorithmIdentifier);
@@ -62,8 +63,9 @@ private:
 
     void registerAlgorithm(const String& name, CryptoAlgorithmIdentifier, CryptoAlgorithmConstructor);
 
-    HashMap<String, CryptoAlgorithmIdentifier, ASCIICaseInsensitiveHash> m_identifiers;
-    HashMap<unsigned, std::pair<String, CryptoAlgorithmConstructor>> m_constructors;
+    Lock m_lock;
+    HashMap<String, CryptoAlgorithmIdentifier, ASCIICaseInsensitiveHash> m_identifiers WTF_GUARDED_BY_LOCK(m_lock);
+    HashMap<unsigned, std::pair<String, CryptoAlgorithmConstructor>> m_constructors WTF_GUARDED_BY_LOCK(m_lock);
 };
 
 } // namespace WebCore

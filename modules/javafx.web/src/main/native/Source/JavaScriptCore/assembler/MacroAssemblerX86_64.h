@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -95,12 +95,6 @@ public:
     {
         move(TrustedImmPtr(address.m_ptr), scratchRegister());
         or16(imm, Address(scratchRegister()));
-    }
-
-    void or8(TrustedImm32 imm, AbsoluteAddress address)
-    {
-        move(TrustedImmPtr(address.m_ptr), scratchRegister());
-        or8(imm, Address(scratchRegister()));
     }
 
     void sub32(TrustedImm32 imm, AbsoluteAddress address)
@@ -587,6 +581,12 @@ public:
         }
     }
 
+    void rshift64(RegisterID src, TrustedImm32 imm, RegisterID dest)
+    {
+        move(src, dest);
+        rshift64(imm, dest);
+    }
+
     void urshift64(TrustedImm32 imm, RegisterID dest)
     {
         m_assembler.shrq_i8r(imm.m_value, dest);
@@ -788,6 +788,13 @@ public:
     void sub64(RegisterID src, RegisterID dest)
     {
         m_assembler.subq_rr(src, dest);
+    }
+
+    void sub64(RegisterID a, RegisterID b, RegisterID dest)
+    {
+        ASSERT(b != dest);
+        move(a, dest);
+        sub64(b, dest);
     }
 
     void sub64(TrustedImm32 imm, RegisterID dest)
@@ -1006,16 +1013,6 @@ public:
     {
         move(imm, scratchRegister());
         m_assembler.movq_rm(scratchRegister(), address.offset, address.base, address.index, address.scale);
-    }
-
-    void storeZero64(ImplicitAddress address)
-    {
-        store64(TrustedImm32(0), address);
-    }
-
-    void storeZero64(BaseIndex address)
-    {
-        store64(TrustedImm32(0), address);
     }
 
     DataLabel32 store64WithAddressOffsetPatch(RegisterID src, Address address)

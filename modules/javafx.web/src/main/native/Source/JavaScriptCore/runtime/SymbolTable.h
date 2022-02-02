@@ -264,9 +264,9 @@ public:
         return getFast().getAttributes();
     }
 
-    void setAttributes(unsigned attributes)
+    void setReadOnly()
     {
-        pack(varOffset(), isWatchable(), attributes & PropertyAttribute::ReadOnly, attributes & PropertyAttribute::DontEnum);
+        bits() |= ReadOnlyFlag;
     }
 
     bool isReadOnly() const

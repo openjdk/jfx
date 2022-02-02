@@ -90,31 +90,25 @@ int HTMLTableCellElement::cellIndex() const
     return index;
 }
 
-bool HTMLTableCellElement::isPresentationAttribute(const QualifiedName& name) const
+bool HTMLTableCellElement::hasPresentationalHintsForAttribute(const QualifiedName& name) const
 {
     if (name == nowrapAttr || name == widthAttr || name == heightAttr)
         return true;
-    return HTMLTablePartElement::isPresentationAttribute(name);
+    return HTMLTablePartElement::hasPresentationalHintsForAttribute(name);
 }
 
-void HTMLTableCellElement::collectStyleForPresentationAttribute(const QualifiedName& name, const AtomString& value, MutableStyleProperties& style)
+void HTMLTableCellElement::collectPresentationalHintsForAttribute(const QualifiedName& name, const AtomString& value, MutableStyleProperties& style)
 {
     if (name == nowrapAttr)
-        addPropertyToPresentationAttributeStyle(style, CSSPropertyWhiteSpace, CSSValueWebkitNowrap);
+        addPropertyToPresentationalHintStyle(style, CSSPropertyWhiteSpace, CSSValueWebkitNowrap);
     else if (name == widthAttr) {
-        if (!value.isEmpty()) {
-            int widthInt = value.toInt();
-            if (widthInt > 0) // width="0" is ignored for compatibility with WinIE.
-                addHTMLLengthToStyle(style, CSSPropertyWidth, value);
-        }
+        if (parseHTMLInteger(value).value_or(0) > 0) // width="0" is ignored for compatibility with WinIE.
+            addHTMLLengthToStyle(style, CSSPropertyWidth, value);
     } else if (name == heightAttr) {
-        if (!value.isEmpty()) {
-            int heightInt = value.toInt();
-            if (heightInt > 0) // height="0" is ignored for compatibility with WinIE.
-                addHTMLLengthToStyle(style, CSSPropertyHeight, value);
-        }
+        if (parseHTMLInteger(value).value_or(0) > 0) // height="0" is ignored for compatibility with WinIE.
+            addHTMLLengthToStyle(style, CSSPropertyHeight, value);
     } else
-        HTMLTablePartElement::collectStyleForPresentationAttribute(name, value, style);
+        HTMLTablePartElement::collectPresentationalHintsForAttribute(name, value, style);
 }
 
 void HTMLTableCellElement::parseAttribute(const QualifiedName& name, const AtomString& value)
@@ -129,7 +123,7 @@ void HTMLTableCellElement::parseAttribute(const QualifiedName& name, const AtomS
         HTMLTablePartElement::parseAttribute(name, value);
 }
 
-const StyleProperties* HTMLTableCellElement::additionalPresentationAttributeStyle() const
+const StyleProperties* HTMLTableCellElement::additionalPresentationalHintStyle() const
 {
     if (auto table = findParentTable())
         return table->additionalCellStyle();

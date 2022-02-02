@@ -180,7 +180,7 @@ void HTMLOptionElement::parseAttribute(const QualifiedName& name, const AtomStri
         if (oldDisabled != m_disabled) {
             invalidateStyleForSubtree();
             if (renderer() && renderer()->style().hasAppearance())
-                renderer()->theme().stateChanged(*renderer(), ControlStates::EnabledState);
+                renderer()->theme().stateChanged(*renderer(), ControlStates::States::Enabled);
         }
     } else if (name == selectedAttr) {
         invalidateStyleForSubtree();
@@ -234,9 +234,6 @@ void HTMLOptionElement::setSelectedState(bool selected)
 
     m_isSelected = selected;
     invalidateStyleForSubtree();
-
-    if (RefPtr<HTMLSelectElement> select = ownerSelectElement())
-        select->invalidateSelectedItems();
 }
 
 void HTMLOptionElement::childrenChanged(const ChildChange& change)

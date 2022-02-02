@@ -122,6 +122,38 @@ WTF_EXPORT_PRIVATE void fastEnableMiniMode();
 
 WTF_EXPORT_PRIVATE void fastDisableScavenger();
 
+class ForbidMallocUseForCurrentThreadScope {
+public:
+#if ASSERT_ENABLED
+    WTF_EXPORT_PRIVATE ForbidMallocUseForCurrentThreadScope();
+    WTF_EXPORT_PRIVATE ~ForbidMallocUseForCurrentThreadScope();
+#else
+    ForbidMallocUseForCurrentThreadScope() = default;
+    ~ForbidMallocUseForCurrentThreadScope() { }
+#endif
+
+    ForbidMallocUseForCurrentThreadScope(const ForbidMallocUseForCurrentThreadScope&) = delete;
+    ForbidMallocUseForCurrentThreadScope(ForbidMallocUseForCurrentThreadScope&&) = delete;
+    ForbidMallocUseForCurrentThreadScope& operator=(const ForbidMallocUseForCurrentThreadScope&) = delete;
+    ForbidMallocUseForCurrentThreadScope& operator=(ForbidMallocUseForCurrentThreadScope&&) = delete;
+};
+
+class DisableMallocRestrictionsForCurrentThreadScope {
+public:
+#if ASSERT_ENABLED
+    WTF_EXPORT_PRIVATE DisableMallocRestrictionsForCurrentThreadScope();
+    WTF_EXPORT_PRIVATE ~DisableMallocRestrictionsForCurrentThreadScope();
+#else
+    DisableMallocRestrictionsForCurrentThreadScope() = default;
+    ~DisableMallocRestrictionsForCurrentThreadScope() { }
+#endif
+
+    DisableMallocRestrictionsForCurrentThreadScope(const DisableMallocRestrictionsForCurrentThreadScope&) = delete;
+    DisableMallocRestrictionsForCurrentThreadScope(DisableMallocRestrictionsForCurrentThreadScope&&) = delete;
+    DisableMallocRestrictionsForCurrentThreadScope& operator=(const DisableMallocRestrictionsForCurrentThreadScope&) = delete;
+    DisableMallocRestrictionsForCurrentThreadScope& operator=(DisableMallocRestrictionsForCurrentThreadScope&&) = delete;
+};
+
 struct FastMallocStatistics {
     size_t reservedVMBytes;
     size_t committedVMBytes;
@@ -171,7 +203,7 @@ public:
 
     T* allocate(size_t count)
     {
-        return reinterpret_cast<T*>(fastMalloc(sizeof(T) * count));
+        return static_cast<T*>(fastMalloc(sizeof(T) * count));
     }
 
     void deallocate(T* pointer, size_t)
@@ -300,9 +332,11 @@ struct FastFree<T[]> {
 using WTF::fastSetMaxSingleAllocationSize;
 #endif
 
+using WTF::DisableMallocRestrictionsForCurrentThreadScope;
 using WTF::FastAllocator;
 using WTF::FastMalloc;
 using WTF::FastFree;
+using WTF::ForbidMallocUseForCurrentThreadScope;
 using WTF::isFastMallocEnabled;
 using WTF::fastCalloc;
 using WTF::fastFree;
@@ -366,11 +400,11 @@ using WTF::fastAlignedFree;
 public: \
     WTF_MAKE_FAST_ALLOCATED_IMPL \
 private: \
-using __thisIsHereToForceASemicolonAfterThisMacro = int
+using __thisIsHereToForceASemicolonAfterThisMacro UNUSED_TYPE_ALIAS = int
 
 #define WTF_MAKE_STRUCT_FAST_ALLOCATED \
     WTF_MAKE_FAST_ALLOCATED_IMPL \
-using __thisIsHereToForceASemicolonAfterThisMacro = int
+using __thisIsHereToForceASemicolonAfterThisMacro UNUSED_TYPE_ALIAS = int
 
 #if ENABLE(MALLOC_HEAP_BREAKDOWN)
 
@@ -409,14 +443,14 @@ public: \
     WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER_IMPL(classname) \
 private: \
     WTF_EXPORT_PRIVATE static WTF::DebugHeap& debugHeap(const char*); \
-using __thisIsHereToForceASemicolonAfterThisMacro = int
+using __thisIsHereToForceASemicolonAfterThisMacro UNUSED_TYPE_ALIAS = int
 
 #define WTF_MAKE_STRUCT_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(className) \
 private: \
     WTF_EXPORT_PRIVATE static WTF::DebugHeap& debugHeap(const char*); \
 public: \
     WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER_IMPL(className) \
-using __thisIsHereToForceASemicolonAfterThisMacro = int
+using __thisIsHereToForceASemicolonAfterThisMacro UNUSED_TYPE_ALIAS = int
 
 #else
 
@@ -427,11 +461,11 @@ using __thisIsHereToForceASemicolonAfterThisMacro = int
 public: \
     WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER_IMPL(classname) \
 private: \
-using __thisIsHereToForceASemicolonAfterThisMacro = int
+using __thisIsHereToForceASemicolonAfterThisMacro UNUSED_TYPE_ALIAS = int
 
 #define WTF_MAKE_STRUCT_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(className) \
 public: \
     WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER_IMPL(className) \
-using __thisIsHereToForceASemicolonAfterThisMacro = int
+using __thisIsHereToForceASemicolonAfterThisMacro UNUSED_TYPE_ALIAS = int
 
 #endif

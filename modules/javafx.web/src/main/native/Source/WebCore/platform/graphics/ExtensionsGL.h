@@ -281,22 +281,11 @@ public:
     // externally.
     virtual GCGLint getGraphicsResetStatusARB() = 0;
 
-    // GL_OES_vertex_array_object
-    virtual PlatformGLObject createVertexArrayOES() = 0;
-    virtual void deleteVertexArrayOES(PlatformGLObject) = 0;
-    virtual GCGLboolean isVertexArrayOES(PlatformGLObject) = 0;
-    virtual void bindVertexArrayOES(PlatformGLObject) = 0;
-
     // GL_ANGLE_translated_shader_source
     virtual String getTranslatedShaderSourceANGLE(PlatformGLObject) = 0;
 
     // GL_ARB_draw_buffers / GL_EXT_draw_buffers
     virtual void drawBuffersEXT(GCGLSpan<const GCGLenum> bufs) = 0;
-
-    // GL_ANGLE_instanced_arrays
-    virtual void drawArraysInstancedANGLE(GCGLenum mode, GCGLint first, GCGLsizei count, GCGLsizei primcount) = 0;
-    virtual void drawElementsInstancedANGLE(GCGLenum mode, GCGLsizei count, GCGLenum type, GCGLvoidptr offset, GCGLsizei primcount) = 0;
-    virtual void vertexAttribDivisorANGLE(GCGLuint index, GCGLuint divisor) = 0;
 
     // Other functions.
 #if !USE(ANGLE)

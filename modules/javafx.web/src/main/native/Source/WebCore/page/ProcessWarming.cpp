@@ -35,7 +35,6 @@
 #include "MediaFeatureNames.h"
 #include "QualifiedName.h"
 #include "SVGNames.h"
-#include "Settings.h"
 #include "TelephoneNumberDetector.h"
 #include "UserAgentStyle.h"
 #include "WebKitFontFamilyNames.h"
@@ -45,7 +44,6 @@
 
 #if ENABLE(GPU_DRIVER_PREWARMING)
 #include "GPUDevice.h"
-#include "GPURequestAdapterOptions.h"
 #endif
 
 namespace WebCore {
@@ -68,9 +66,6 @@ void ProcessWarming::prewarmGlobally()
 {
     initializeNames();
 
-    // Initializes default font families.
-    Settings::create(nullptr);
-
     // Prewarms user agent stylesheet.
     Style::UserAgentStyle::initDefaultStyleSheet();
 
@@ -81,11 +76,11 @@ void ProcessWarming::prewarmGlobally()
     FontCache::singleton().prewarmGlobally();
 
 #if ENABLE(TELEPHONE_NUMBER_DETECTION)
-    TelephoneNumberDetector::isSupported();
+    TelephoneNumberDetector::prewarm();
 #endif
 
 #if ENABLE(GPU_DRIVER_PREWARMING)
-    GPUDevice::tryCreate(WTF::nullopt);
+    prewarmGPU();
 #endif
 }
 

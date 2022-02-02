@@ -23,33 +23,40 @@
 #if ENABLE(WEBXR) && USE(OPENXR)
 
 #include "OpenXRExtensions.h"
+#include "OpenXRInput.h"
+#include "OpenXRInputSource.h"
 
 #include <wtf/NeverDestroyed.h>
-#include <wtf/Optional.h>
+#include <wtf/threads/BinarySemaphore.h>
 
 using namespace WebCore;
 
 namespace PlatformXR {
-
-
-static bool isSessionActive(XrSessionState state)
-{
-    return state == XR_SESSION_STATE_VISIBLE || state == XR_SESSION_STATE_FOCUSED;
-}
 
 static bool isSessionReady(XrSessionState state)
 {
     return state >= XR_SESSION_STATE_READY  && state < XR_SESSION_STATE_STOPPING;
 }
 
-OpenXRDevice::OpenXRDevice(XrInstance instance, XrSystemId system, WorkQueue& queue, const OpenXRExtensions& extensions, CompletionHandler<void()>&& callback)
+Ref<OpenXRDevice> OpenXRDevice::create(XrInstance instance, XrSystemId system, Ref<WorkQueue>&& queue, const OpenXRExtensions& extensions, CompletionHandler<void()>&& callback)
+{
+    auto device = adoptRef(*new OpenXRDevice(instance, system, WTFMove(queue), extensions));
+    device->initialize(WTFMove(callback));
+    return device;
+}
+
+OpenXRDevice::OpenXRDevice(XrInstance instance, XrSystemId system, Ref<WorkQueue>&& queue, const OpenXRExtensions& extensions)
     : m_instance(instance)
     , m_systemId(system)
-    , m_queue(queue)
+    , m_queue(WTFMove(queue))
     , m_extensions(extensions)
 {
+}
+
+void OpenXRDevice::initialize(CompletionHandler<void()>&& callback)
+{
     ASSERT(isMainThread());
-    m_queue.dispatch([this, callback = WTFMove(callback)]() mutable {
+    m_queue.dispatch([this, protectedThis = makeRef(*this), callback = WTFMove(callback)]() mutable {
         auto systemProperties = createStructure<XrSystemProperties, XR_TYPE_SYSTEM_PROPERTIES>();
         auto result = xrGetSystemProperties(m_instance, m_systemId, &systemProperties);
         if (XR_SUCCEEDED(result))
@@ -72,35 +79,72 @@ WebCore::IntSize OpenXRDevice::recommendedResolution(SessionMode mode)
     auto configType = toXrViewConfigurationType(mode);
     auto viewsIterator = m_configurationViews.find(configType);
     if (viewsIterator != m_configurationViews.end())
-        return { static_cast<int>(viewsIterator->value[0].recommendedImageRectWidth), static_cast<int>(viewsIterator->value[0].recommendedImageRectHeight) };
+        return { static_cast<int>(2 * viewsIterator->value[0].recommendedImageRectWidth), static_cast<int>(viewsIterator->value[0].recommendedImageRectHeight) };
     return Device::recommendedResolution(mode);
 }
 
 void OpenXRDevice::initializeTrackingAndRendering(SessionMode mode)
 {
-    m_queue.dispatch([this, mode]() {
+    m_queue.dispatch([this, protectedThis = makeRef(*this), mode]() {
         ASSERT(m_instance != XR_NULL_HANDLE);
         ASSERT(m_session == XR_NULL_HANDLE);
+        ASSERT(m_extensions.methods().xrGetOpenGLGraphicsRequirementsKHR);
 
         m_currentViewConfigurationType = toXrViewConfigurationType(mode);
         ASSERT(m_configurationViews.contains(m_currentViewConfigurationType));
 
+        // https://www.khronos.org/registry/OpenXR/specs/1.0/man/html/xrGetOpenGLGraphicsRequirementsKHR.html
+        // OpenXR requires to call xrGetOpenGLGraphicsRequirementsKHR before creating a session.
+        auto requirements = createStructure<XrGraphicsRequirementsOpenGLKHR, XR_TYPE_GRAPHICS_REQUIREMENTS_OPENGL_KHR>();
+        auto result = m_extensions.methods().xrGetOpenGLGraphicsRequirementsKHR(m_instance, m_systemId, &requirements);
+        RETURN_IF_FAILED(result, "xrGetOpenGLGraphicsRequirementsKHR", m_instance);
+
+        m_graphicsBinding = createStructure<XrGraphicsBindingEGLMNDX, XR_TYPE_GRAPHICS_BINDING_EGL_MNDX>();
+        m_egl = GLContextEGL::createSharingContext(PlatformDisplay::sharedDisplay());
+        if (!m_egl) {
+            LOG(XR, "Failed to create EGL context");
+            return;
+        }
+
+        auto& context = static_cast<GLContext&>(*m_egl);
+        context.makeContextCurrent();
+
+        GraphicsContextGLAttributes attributes;
+        attributes.depth = false;
+        attributes.stencil = false;
+        attributes.antialias = false;
+
+        m_gl = GraphicsContextGL::create(attributes, nullptr);
+        if (!m_gl) {
+            LOG(XR, "Failed to create a valid GraphicsContextGL");
+            return;
+        }
+
+        m_graphicsBinding.display = PlatformDisplay::sharedDisplay().eglDisplay();
+        m_graphicsBinding.context = context.platformContext();
+        m_graphicsBinding.config = m_egl->config();
+        m_graphicsBinding.getProcAddress = m_extensions.methods().getProcAddressFunc;
+
         // Create the session.
         auto sessionCreateInfo = createStructure<XrSessionCreateInfo, XR_TYPE_SESSION_CREATE_INFO>();
         sessionCreateInfo.systemId = m_systemId;
+        sessionCreateInfo.next = &m_graphicsBinding;
 
-        auto result = xrCreateSession(m_instance, &sessionCreateInfo, &m_session);
-        RETURN_IF_FAILED(result, "xrEnumerateInstanceExtensionProperties", m_instance);
+        result = xrCreateSession(m_instance, &sessionCreateInfo, &m_session);
+        RETURN_IF_FAILED(result, "xrCreateSession", m_instance);
 
         // Create the default reference spaces
         m_localSpace = createReferenceSpace(XR_REFERENCE_SPACE_TYPE_LOCAL);
         m_viewSpace = createReferenceSpace(XR_REFERENCE_SPACE_TYPE_VIEW);
+
+        // Initialize input tracking
+        m_input = OpenXRInput::create(m_instance, m_session, m_localSpace);
     });
 }
 
 void OpenXRDevice::shutDownTrackingAndRendering()
 {
-    m_queue.dispatch([this]() {
+    m_queue.dispatch([this, protectedThis = makeRef(*this)]() {
         if (m_session == XR_NULL_HANDLE)
             return;
 
@@ -120,11 +164,13 @@ void OpenXRDevice::initializeReferenceSpace(PlatformXR::ReferenceSpaceType space
 {
     if ((spaceType == ReferenceSpaceType::LocalFloor || spaceType == ReferenceSpaceType::BoundedFloor) && m_stageSpace == XR_NULL_HANDLE)
         m_stageSpace = createReferenceSpace(XR_REFERENCE_SPACE_TYPE_STAGE);
+    if (spaceType == ReferenceSpaceType::BoundedFloor)
+        updateStageParameters();
 }
 
 void OpenXRDevice::requestFrame(RequestFrameCallback&& callback)
 {
-    m_queue.dispatch([this, callback = WTFMove(callback)]() mutable {
+    m_queue.dispatch([this, protectedThis = makeRef(*this), callback = WTFMove(callback)]() mutable {
         pollEvents();
         if (!isSessionReady(m_sessionState)) {
             callOnMainThread([callback = WTFMove(callback)]() mutable {
@@ -134,33 +180,30 @@ void OpenXRDevice::requestFrame(RequestFrameCallback&& callback)
             return;
         }
 
-        auto frameState = createStructure<XrFrameState, XR_TYPE_FRAME_STATE>();
+        m_frameState = createStructure<XrFrameState, XR_TYPE_FRAME_STATE>();
         auto frameWaitInfo = createStructure<XrFrameWaitInfo, XR_TYPE_FRAME_WAIT_INFO>();
-        auto result = xrWaitFrame(m_session, &frameWaitInfo, &frameState);
+        auto result = xrWaitFrame(m_session, &frameWaitInfo, &m_frameState);
         RETURN_IF_FAILED(result, "xrWaitFrame", m_instance);
-        XrTime predictedTime = frameState.predictedDisplayTime;
 
         auto frameBeginInfo = createStructure<XrFrameBeginInfo, XR_TYPE_FRAME_BEGIN_INFO>();
         result = xrBeginFrame(m_session, &frameBeginInfo);
         RETURN_IF_FAILED(result, "xrBeginFrame", m_instance);
 
         Device::FrameData frameData;
-        frameData.predictedDisplayTime = frameState.predictedDisplayTime;
-
+        frameData.predictedDisplayTime = m_frameState.predictedDisplayTime;
+        frameData.shouldRender = m_frameState.shouldRender;
+        frameData.stageParameters = m_stageParameters;
 
         ASSERT(m_configurationViews.contains(m_currentViewConfigurationType));
         const auto& configurationView = m_configurationViews.get(m_currentViewConfigurationType);
 
         uint32_t viewCount = configurationView.size();
-        Vector<XrView> views(viewCount, [] {
-            return createStructure<XrView, XR_TYPE_VIEW>();
-        }());
+        m_frameViews.fill(createStructure<XrView, XR_TYPE_VIEW>(), viewCount);
 
-
-        if (isSessionActive(m_sessionState)) {
+        if (m_frameState.shouldRender) {
             // Query head location
             auto location = createStructure<XrSpaceLocation, XR_TYPE_SPACE_LOCATION>();
-            xrLocateSpace(m_viewSpace, m_localSpace, frameState.predictedDisplayTime, &location);
+            xrLocateSpace(m_viewSpace, m_localSpace, m_frameState.predictedDisplayTime, &location);
             frameData.isTrackingValid = location.locationFlags & XR_SPACE_LOCATION_ORIENTATION_VALID_BIT;
             frameData.isPositionValid = location.locationFlags & XR_SPACE_LOCATION_POSITION_VALID_BIT;
             frameData.isPositionEmulated = location.locationFlags & XR_SPACE_LOCATION_POSITION_TRACKED_BIT;
@@ -168,39 +211,81 @@ void OpenXRDevice::requestFrame(RequestFrameCallback&& callback)
             if (frameData.isTrackingValid)
                 frameData.origin = XrPosefToPose(location.pose);
 
-
             auto viewLocateInfo = createStructure<XrViewLocateInfo, XR_TYPE_VIEW_LOCATE_INFO>();
-            viewLocateInfo.displayTime = predictedTime;
-            viewLocateInfo.space = m_localSpace;
+            viewLocateInfo.displayTime = m_frameState.predictedDisplayTime;
+            viewLocateInfo.space = m_viewSpace;
 
             auto viewState = createStructure<XrViewState, XR_TYPE_VIEW_STATE>();
             uint32_t viewCountOutput;
-            result = xrLocateViews(m_session, &viewLocateInfo, &viewState, viewCount, &viewCountOutput, views.data());
+            result = xrLocateViews(m_session, &viewLocateInfo, &viewState, viewCount, &viewCountOutput, m_frameViews.data());
             if (!XR_FAILED(result)) {
-                for (auto& view : views)
+                for (auto& view : m_frameViews)
                     frameData.views.append(xrViewToPose(view));
             }
 
             // Query floor transform
             if (m_stageSpace != XR_NULL_HANDLE) {
                 auto floorLocation = createStructure<XrSpaceLocation, XR_TYPE_SPACE_LOCATION>();
-                xrLocateSpace(m_stageSpace, m_localSpace, frameState.predictedDisplayTime, &floorLocation);
+                xrLocateSpace(m_stageSpace, m_localSpace, m_frameState.predictedDisplayTime, &floorLocation);
                 frameData.floorTransform = { XrPosefToPose(floorLocation.pose) };
             }
+
+            for (auto& layer : m_layers) {
+                auto layerData = layer.value->startFrame();
+                if (layerData)
+                    frameData.layers.add(layer.key, *layerData);
+            }
+
+            if (m_input)
+                frameData.inputSources = m_input->collectInputSources(m_frameState);
+
+        } else {
+            // https://www.khronos.org/registry/OpenXR/specs/1.0/man/html/XrFrameState.html
+            // When shouldRender is false the application should avoid heavy GPU work where possible,
+            // for example by skipping layer rendering and then omitting those layers when calling xrEndFrame.
+            // In this case we don't need to wait for OpenXRDevice::submitFrame to finish the frame.
+            auto frameEndInfo = createStructure<XrFrameEndInfo, XR_TYPE_FRAME_END_INFO>();
+            frameEndInfo.displayTime = m_frameState.predictedDisplayTime;
+            frameEndInfo.environmentBlendMode = XR_ENVIRONMENT_BLEND_MODE_OPAQUE;
+            frameEndInfo.layerCount = 0;
+            frameEndInfo.layers = nullptr;
+            LOG_IF_FAILED(xrEndFrame(m_session, &frameEndInfo), "xrEndFrame", m_instance);
         }
 
         callOnMainThread([frameData = WTFMove(frameData), callback = WTFMove(callback)]() mutable {
             callback(WTFMove(frameData));
         });
+    });
+}
 
+void OpenXRDevice::submitFrame(Vector<Device::Layer>&& layers)
+{
+    m_queue.dispatch([this, protectedThis = makeRef(*this), layers = WTFMove(layers)]() mutable {
+        ASSERT(m_frameState.shouldRender);
+        Vector<const XrCompositionLayerBaseHeader*> frameEndLayers;
+        if (m_frameState.shouldRender) {
+            for (auto& layer : layers) {
+                auto it = m_layers.find(layer.handle);
+                if (it == m_layers.end()) {
+                    LOG(XR, "Didn't find a OpenXRLayer with %d handle", layer.handle);
+                    continue;
+                }
+                auto header = it->value->endFrame(layer, m_viewSpace, m_frameViews);
+                if (!header) {
+                    LOG(XR, "endFrame() call failed in OpenXRLayer with %d handle", layer.handle);
+                    continue;
+                }
 
-        Vector<const XrCompositionLayerBaseHeader*> layers;
+                frameEndLayers.append(header);
+            }
+        }
 
         auto frameEndInfo = createStructure<XrFrameEndInfo, XR_TYPE_FRAME_END_INFO>();
-        frameEndInfo.displayTime = predictedTime;
+        frameEndInfo.displayTime = m_frameState.predictedDisplayTime;
         frameEndInfo.environmentBlendMode = XR_ENVIRONMENT_BLEND_MODE_OPAQUE;
-        frameEndInfo.layerCount = layers.size();
-        result = xrEndFrame(m_session, &frameEndInfo);
+        frameEndInfo.layerCount = frameEndLayers.size();
+        frameEndInfo.layers = frameEndLayers.data();
+        auto result = xrEndFrame(m_session, &frameEndInfo);
         RETURN_IF_FAILED(result, "xrEndFrame", m_instance);
     });
 }
@@ -214,49 +299,64 @@ Vector<Device::ViewData> OpenXRDevice::views(SessionMode mode) const
         views.append({ .active = true, .eye = Eye::None });
     else {
         ASSERT(configurationType == XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO);
-        views.append({ .active = true, Eye::Left });
-        views.append({ .active = true, Eye::Right });
+        views.append({ .active = true, .eye = Eye::Left });
+        views.append({ .active = true, .eye = Eye::Right });
     }
     return views;
 }
 
-Device::ListOfEnabledFeatures OpenXRDevice::enumerateReferenceSpaces(XrSession session) const
+std::optional<LayerHandle> OpenXRDevice::createLayerProjection(uint32_t width, uint32_t height, bool alpha)
 {
-    uint32_t referenceSpacesCount;
-    auto result = xrEnumerateReferenceSpaces(session, 0, &referenceSpacesCount, nullptr);
-    RETURN_IF_FAILED(result, "xrEnumerateReferenceSpaces", m_instance, { });
+    std::optional<LayerHandle> handle;
 
-    Vector<XrReferenceSpaceType> referenceSpaces(referenceSpacesCount);
-    referenceSpaces.fill(XR_REFERENCE_SPACE_TYPE_VIEW, referenceSpacesCount);
-    result = xrEnumerateReferenceSpaces(session, referenceSpacesCount, &referenceSpacesCount, referenceSpaces.data());
-    RETURN_IF_FAILED(result, "xrEnumerateReferenceSpaces", m_instance, { });
+    BinarySemaphore semaphore;
+    m_queue.dispatch([this, width, height, alpha, &handle, &semaphore]() mutable {
+        auto format = alpha ? GL_RGBA8 : GL_RGB8;
+        int64_t sampleCount = 1;
 
-    ListOfEnabledFeatures enabledFeatures;
-    for (auto& referenceSpace : referenceSpaces) {
-        switch (referenceSpace) {
-        case XR_REFERENCE_SPACE_TYPE_VIEW:
-            enabledFeatures.append(ReferenceSpaceType::Viewer);
-            LOG(XR, "\tDevice supports VIEW reference space");
-            break;
-        case XR_REFERENCE_SPACE_TYPE_LOCAL:
-            enabledFeatures.append(ReferenceSpaceType::Local);
-            LOG(XR, "\tDevice supports LOCAL reference space");
-            break;
-        case XR_REFERENCE_SPACE_TYPE_STAGE:
-            enabledFeatures.append(ReferenceSpaceType::LocalFloor);
-            enabledFeatures.append(ReferenceSpaceType::BoundedFloor);
-            LOG(XR, "\tDevice supports STAGE reference space");
-            break;
-        case XR_REFERENCE_SPACE_TYPE_UNBOUNDED_MSFT:
-            enabledFeatures.append(ReferenceSpaceType::Unbounded);
-            LOG(XR, "\tDevice supports UNBOUNDED reference space");
-            break;
-        default:
-            continue;
+        auto it = m_configurationViews.find(m_currentViewConfigurationType);
+        if (it != m_configurationViews.end())
+            sampleCount = it->value[0].recommendedSwapchainSampleCount;
+
+        auto layer = OpenXRLayerProjection::create(m_instance, m_session, width, height, format, sampleCount);
+        if (layer) {
+            handle = generateLayerHandle();
+            m_layers.add(*handle, WTFMove(layer));
         }
-    }
 
-    return enabledFeatures;
+        semaphore.signal();
+    });
+    semaphore.wait();
+
+    return handle;
+}
+
+void OpenXRDevice::deleteLayer(LayerHandle handle)
+{
+    m_layers.remove(handle);
+}
+
+Device::FeatureList OpenXRDevice::collectSupportedFeatures() const
+{
+    Device::FeatureList features;
+
+    // https://www.khronos.org/registry/OpenXR/specs/1.0/man/html/XrReferenceSpaceType.html
+    // OpenXR runtimes must support Viewer and Local spaces.
+    features.append(ReferenceSpaceType::Viewer);
+    features.append(ReferenceSpaceType::Local);
+
+    // Mark LocalFloor as supported regardless if XR_REFERENCE_SPACE_TYPE_STAGE is available.
+    // The spec uses a estimated height if we don't provide a floor transform in frameData.
+    features.append(ReferenceSpaceType::LocalFloor);
+
+    // Mark BoundedFloor as supported regardless if XR_REFERENCE_SPACE_TYPE_STAGE is available.
+    // The spec allows reporting an empty array if xrGetReferenceSpaceBoundsRect fails.
+    features.append(ReferenceSpaceType::BoundedFloor);
+
+    if (m_extensions.isExtensionSupported(XR_MSFT_UNBOUNDED_REFERENCE_SPACE_EXTENSION_NAME))
+        features.append(ReferenceSpaceType::Unbounded);
+
+    return features;
 }
 
 void OpenXRDevice::collectSupportedSessionModes()
@@ -270,15 +370,7 @@ void OpenXRDevice::collectSupportedSessionModes()
     result = xrEnumerateViewConfigurations(m_instance, m_systemId, viewConfigurationCount, &viewConfigurationCount, viewConfigurations);
     RETURN_IF_FAILED(result, "xrEnumerateViewConfigurations", m_instance);
 
-    // Retrieving the supported reference spaces requires an initialized session. There is no need to initialize all the graphics
-    // stuff so we'll use a headless session that will be discarded after getting the info we need.
-    auto sessionCreateInfo = createStructure<XrSessionCreateInfo, XR_TYPE_SESSION_CREATE_INFO>();
-    sessionCreateInfo.systemId = m_systemId;
-    XrSession ephemeralSession;
-    result = xrCreateSession(m_instance, &sessionCreateInfo, &ephemeralSession);
-    RETURN_IF_FAILED(result, "xrCreateSession", m_instance);
-
-    ListOfEnabledFeatures features = enumerateReferenceSpaces(ephemeralSession);
+    FeatureList features = collectSupportedFeatures();
     for (uint32_t i = 0; i < viewConfigurationCount; ++i) {
         auto viewConfigurationProperties = createStructure<XrViewConfigurationProperties, XR_TYPE_VIEW_CONFIGURATION_PROPERTIES>();
         result = xrGetViewConfigurationProperties(m_instance, m_systemId, viewConfigurations[i], &viewConfigurationProperties);
@@ -289,17 +381,16 @@ void OpenXRDevice::collectSupportedSessionModes()
         auto configType = viewConfigurationProperties.viewConfigurationType;
         switch (configType) {
         case XR_VIEW_CONFIGURATION_TYPE_PRIMARY_MONO:
-            setEnabledFeatures(SessionMode::Inline, features);
+            setSupportedFeatures(SessionMode::Inline, features);
             break;
         case XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO:
-            setEnabledFeatures(SessionMode::ImmersiveVr, features);
+            setSupportedFeatures(SessionMode::ImmersiveVr, features);
             break;
         default:
             continue;
         };
         m_viewConfigurationProperties.add(configType, WTFMove(viewConfigurationProperties));
     }
-    xrDestroySession(ephemeralSession);
 }
 
 void OpenXRDevice::collectConfigurationViews()
@@ -357,15 +448,22 @@ void OpenXRDevice::pollEvents()
     while (xrPollEvent(m_instance, &runtimeEvent) == XR_SUCCESS) {
         switch (runtimeEvent.type) {
         case XR_TYPE_EVENT_DATA_SESSION_STATE_CHANGED: {
-            auto* event = (XrEventDataSessionStateChanged*)&runtimeEvent;
+            auto* event = reinterpret_cast<XrEventDataSessionStateChanged*>(&runtimeEvent);
             m_sessionState = event->state;
             handleSessionStateChange();
             break;
         }
         case XR_TYPE_EVENT_DATA_EVENTS_LOST:
         case XR_TYPE_EVENT_DATA_INSTANCE_LOSS_PENDING:
-        case XR_TYPE_EVENT_DATA_REFERENCE_SPACE_CHANGE_PENDING:
+        case XR_TYPE_EVENT_DATA_REFERENCE_SPACE_CHANGE_PENDING: {
+            auto* event = reinterpret_cast<XrEventDataReferenceSpaceChangePending*>(&runtimeEvent);
+            if (event->referenceSpaceType == XR_REFERENCE_SPACE_TYPE_STAGE)
+                updateStageParameters();
+            break;
+        }
         case XR_TYPE_EVENT_DATA_INTERACTION_PROFILE_CHANGED:
+            updateInteractionProfile();
+            break;
         case XR_TYPE_EVENT_DATA_MAIN_SESSION_VISIBILITY_CHANGED_EXTX:
         case XR_TYPE_EVENT_DATA_VISIBILITY_MASK_CHANGED_KHR:
         case XR_TYPE_EVENT_DATA_PERF_SETTINGS_EXT:
@@ -411,11 +509,21 @@ void OpenXRDevice::endSession()
 void OpenXRDevice::resetSession()
 {
     ASSERT(&RunLoop::current() == &m_queue.runLoop());
+    m_layers.clear();
+    m_input.reset();
     if (m_session != XR_NULL_HANDLE) {
         xrDestroySession(m_session);
         m_session = XR_NULL_HANDLE;
     }
     m_sessionState = XR_SESSION_STATE_UNKNOWN;
+    m_localSpace = XR_NULL_HANDLE;
+    m_viewSpace  = XR_NULL_HANDLE;
+    m_stageSpace = XR_NULL_HANDLE;
+    m_stageParameters = { };
+
+    // deallocate graphic resources
+    m_gl = nullptr;
+    m_egl.reset();
 }
 
 void OpenXRDevice::handleSessionStateChange()
@@ -430,15 +538,60 @@ void OpenXRDevice::handleSessionStateChange()
     }
 }
 
-
 void OpenXRDevice::waitUntilStopping()
 {
     ASSERT(&RunLoop::current() == &m_queue.runLoop());
     pollEvents();
     if (m_sessionState >= XR_SESSION_STATE_STOPPING)
         return;
-    m_queue.dispatch([this]() {
+    m_queue.dispatch([this, protectedThis = makeRef(*this)]() {
         waitUntilStopping();
+    });
+}
+
+void OpenXRDevice::updateStageParameters()
+{
+    ASSERT(&RunLoop::current() == &m_queue.runLoop());
+    if (m_stageSpace == XR_NULL_HANDLE)
+        return; // Stage space not requested.
+
+    m_stageParameters.id++;
+
+    XrExtent2Df bounds;
+    if (XR_SUCCEEDED(xrGetReferenceSpaceBoundsRect(m_session, XR_REFERENCE_SPACE_TYPE_STAGE, &bounds))) {
+        // https://immersive-web.github.io/webxr/#xrboundedreferencespace-native-bounds-geometry
+        // Points MUST be given in a clockwise order as viewed from above, looking towards the negative end of the Y axis.
+        m_stageParameters.bounds = Vector<WebCore::FloatPoint> {
+            { bounds.width * 0.5f, -bounds.height * 0.5f },
+            { bounds.width * 0.5f, bounds.height * 0.5f },
+            { -bounds.width * 0.5f, bounds.height * 0.5f },
+            { -bounds.width * 0.5f, -bounds.height * 0.5f }
+        };
+    } else {
+        // https://immersive-web.github.io/webxr/#dom-xrboundedreferencespace-boundsgeometry
+        // If the native bounds geometry is temporarily unavailable, which may occur for several reasons such as during XR device initialization,
+        // extended periods of tracking loss, or movement between pre-configured spaces, the boundsGeometry MUST report an empty array.
+        m_stageParameters.bounds.clear();
+    }
+}
+
+void OpenXRDevice::updateInteractionProfile()
+{
+    if (!m_input)
+        return;
+
+    m_input->updateInteractionProfile();
+
+    if (didNotifyInputInitialization)
+        return;
+
+    didNotifyInputInitialization = true;
+    auto inputSources = m_input->collectInputSources(m_frameState);
+    callOnMainThread([this, weakThis = makeWeakPtr(*this), inputSources = WTFMove(inputSources)]() mutable {
+        if (!weakThis)
+            return;
+        if (m_trackingAndRenderingClient)
+            m_trackingAndRenderingClient->sessionDidInitializeInputSources(WTFMove(inputSources));
     });
 }
 

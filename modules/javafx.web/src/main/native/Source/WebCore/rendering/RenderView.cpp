@@ -178,7 +178,7 @@ void RenderView::layout()
     if (!needsLayout())
         return;
 
-    LayoutStateMaintainer statePusher(*this, { }, false, m_pageLogicalSize.valueOr(LayoutSize()).height(), m_pageLogicalHeightChanged);
+    LayoutStateMaintainer statePusher(*this, { }, false, m_pageLogicalSize.value_or(LayoutSize()).height(), m_pageLogicalHeightChanged);
 
     m_pageLogicalHeightChanged = false;
 
@@ -237,17 +237,17 @@ LayoutUnit RenderView::clientLogicalHeightForFixedPosition() const
     return clientLogicalHeight();
 }
 
-void RenderView::mapLocalToContainer(const RenderLayerModelObject* ancestorContainer, TransformState& transformState, MapCoordinatesFlags mode, bool* wasFixed) const
+void RenderView::mapLocalToContainer(const RenderLayerModelObject* ancestorContainer, TransformState& transformState, OptionSet<MapCoordinatesMode> mode, bool* wasFixed) const
 {
     // If a container was specified, and was not nullptr or the RenderView,
     // then we should have found it by now.
     ASSERT_ARG(ancestorContainer, !ancestorContainer || ancestorContainer == this);
-    ASSERT_UNUSED(wasFixed, !wasFixed || *wasFixed == (mode & IsFixed));
+    ASSERT_UNUSED(wasFixed, !wasFixed || *wasFixed == (mode.contains(IsFixed)));
 
-    if (mode & IsFixed)
+    if (mode.contains(IsFixed))
         transformState.move(toLayoutSize(frameView().scrollPositionRespectingCustomFixedPosition()));
 
-    if (!ancestorContainer && mode & UseTransforms && shouldUseTransformFromContainer(nullptr)) {
+    if (!ancestorContainer && mode.contains(UseTransforms) && shouldUseTransformFromContainer(nullptr)) {
         TransformationMatrix t;
         getTransformFromContainer(nullptr, LayoutSize(), t);
         transformState.applyTransform(t);
@@ -272,7 +272,7 @@ const RenderObject* RenderView::pushMappingToContainer(const RenderLayerModelObj
     return nullptr;
 }
 
-void RenderView::mapAbsoluteToLocalPoint(MapCoordinatesFlags mode, TransformState& transformState) const
+void RenderView::mapAbsoluteToLocalPoint(OptionSet<MapCoordinatesMode> mode, TransformState& transformState) const
 {
     if (mode & UseTransforms && shouldUseTransformFromContainer(nullptr)) {
         TransformationMatrix t;
@@ -473,7 +473,7 @@ void RenderView::repaintViewRectangle(const LayoutRect& repaintRect) const
         // and the Renderer that contains the iframe. This transformation must account for a
         // left scrollbar (if one exists).
         FrameView& frameView = this->frameView();
-        if (frameView.shouldPlaceBlockDirectionScrollbarOnLeft() && frameView.verticalScrollbar())
+        if (frameView.shouldPlaceVerticalScrollbarOnLeft() && frameView.verticalScrollbar())
             adjustedRect.move(LayoutSize(frameView.verticalScrollbar()->occupiedWidth(), 0));
 
         ownerBox->repaintRectangle(adjustedRect);
@@ -513,7 +513,7 @@ void RenderView::repaintViewAndCompositedLayers()
         compositor.repaintCompositedLayers();
 }
 
-Optional<LayoutRect> RenderView::computeVisibleRectInContainer(const LayoutRect& rect, const RenderLayerModelObject* container, VisibleRectContext context) const
+std::optional<LayoutRect> RenderView::computeVisibleRectInContainer(const LayoutRect& rect, const RenderLayerModelObject* container, VisibleRectContext context) const
 {
     // If a container was specified, and was not nullptr or the RenderView,
     // then we should have found it by now.
@@ -754,7 +754,7 @@ void RenderView::updateVisibleViewportRect(const IntRect& visibleRect)
     resumePausedImageAnimationsIfNeeded(visibleRect);
 
     for (auto* renderer : m_visibleInViewportRenderers) {
-        auto state = visibleRect.intersects(enclosingIntRect(renderer->absoluteClippedOverflowRect())) ? VisibleInViewportState::Yes : VisibleInViewportState::No;
+        auto state = visibleRect.intersects(enclosingIntRect(renderer->absoluteClippedOverflowRectForRepaint())) ? VisibleInViewportState::Yes : VisibleInViewportState::No;
         renderer->setVisibleInViewportState(state);
     }
 }
@@ -891,7 +891,6 @@ RenderLayer* RenderView::takeStyleChangeLayerTreeMutationRoot()
     return result;
 }
 
-#if ENABLE(CSS_SCROLL_SNAP)
 void RenderView::registerBoxWithScrollSnapPositions(const RenderBox& box)
 {
     m_boxesWithScrollSnapPositions.add(&box);
@@ -901,6 +900,5 @@ void RenderView::unregisterBoxWithScrollSnapPositions(const RenderBox& box)
 {
     m_boxesWithScrollSnapPositions.remove(&box);
 }
-#endif
 
 } // namespace WebCore

@@ -29,11 +29,10 @@
     Conditional=CSS_PAINTING_API,
     JSCustomMarkFunction,
     JSGenerateToNativeObject,
-    ImplicitThis,
     IsImmutablePrototypeExoticObject,
     IsImmutablePrototypeExoticObjectOnPrototype,
     Global=(Worklet,PaintWorklet),
 ] interface PaintWorkletGlobalScope : WorkletGlobalScope {
-    [MayThrowException,CallWith=GlobalObject] undefined registerPaint(DOMString name, object paintConstructor);
+    [CallWith=GlobalObject] undefined registerPaint(DOMString name, object paintConstructor);
     readonly attribute unrestricted double devicePixelRatio;
 };

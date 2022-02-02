@@ -114,6 +114,7 @@ public:
     template<Concurrency> TriState isConstructorWithConcurrency(VM&);
     bool inherits(VM&, const ClassInfo*) const;
     template<typename Target> bool inherits(VM&) const;
+    JS_EXPORT_PRIVATE bool isValidCallee() const;
     bool isAPIValueWrapper() const;
 
     // Each cell has a built-in lock. Currently it's simply available for use if you need it. It's
@@ -122,7 +123,7 @@ public:
 
     // We use this abstraction to make it easier to grep for places where we lock cells.
     // to lock a cell you can just do:
-    // auto locker = holdLock(cell->cellLocker());
+    // Locker locker { cell->cellLocker() };
     JSCellLock& cellLock() { return *reinterpret_cast<JSCellLock*>(this); }
 
     JSType type() const;
@@ -244,23 +245,18 @@ protected:
     void finishCreation(VM&, Structure*, CreatingEarlyCellTag);
 
     // Dummy implementations of override-able static functions for classes to put in their MethodTable
-    static JSValue defaultValue(const JSObject*, JSGlobalObject*, PreferredPrimitiveType);
     static NO_RETURN_DUE_TO_CRASH void getOwnPropertyNames(JSObject*, JSGlobalObject*, PropertyNameArray&, DontEnumPropertiesMode);
     static NO_RETURN_DUE_TO_CRASH void getOwnSpecialPropertyNames(JSObject*, JSGlobalObject*, PropertyNameArray&, DontEnumPropertiesMode);
 
-    static uint32_t getEnumerableLength(JSGlobalObject*, JSObject*);
     static NO_RETURN_DUE_TO_CRASH bool preventExtensions(JSObject*, JSGlobalObject*);
     static NO_RETURN_DUE_TO_CRASH bool isExtensible(JSObject*, JSGlobalObject*);
     static NO_RETURN_DUE_TO_CRASH bool setPrototype(JSObject*, JSGlobalObject*, JSValue, bool);
     static NO_RETURN_DUE_TO_CRASH JSValue getPrototype(JSObject*, JSGlobalObject*);
 
-    static String className(const JSObject*, VM&);
-    static String toStringName(const JSObject*, JSGlobalObject*);
     JS_EXPORT_PRIVATE static bool customHasInstance(JSObject*, JSGlobalObject*, JSValue);
     static bool defineOwnProperty(JSObject*, JSGlobalObject*, PropertyName, const PropertyDescriptor&, bool shouldThrow);
     static bool getOwnPropertySlot(JSObject*, JSGlobalObject*, PropertyName, PropertySlot&);
     static bool getOwnPropertySlotByIndex(JSObject*, JSGlobalObject*, unsigned propertyName, PropertySlot&);
-    static NO_RETURN_DUE_TO_CRASH void doPutPropertySecurityCheck(JSObject*, JSGlobalObject*, PropertyName, PutPropertySlot&);
 
 private:
     friend class LLIntOffsetsExtractor;

@@ -188,7 +188,7 @@ void RealtimeVideoCaptureSource::updateCapabilities(RealtimeMediaSourceCapabilit
     capabilities.setFrameRate({ minimumFrameRate, maximumFrameRate });
 }
 
-bool RealtimeVideoCaptureSource::supportsSizeAndFrameRate(Optional<int> width, Optional<int> height, Optional<double> frameRate)
+bool RealtimeVideoCaptureSource::supportsSizeAndFrameRate(std::optional<int> width, std::optional<int> height, std::optional<double> frameRate)
 {
     if (!width && !height && !frameRate)
         return true;
@@ -212,7 +212,7 @@ bool RealtimeVideoCaptureSource::presetSupportsFrameRate(RefPtr<VideoPreset> pre
     return false;
 }
 
-bool RealtimeVideoCaptureSource::supportsCaptureSize(Optional<int> width, Optional<int> height, const Function<bool(const IntSize&)>&& function)
+bool RealtimeVideoCaptureSource::supportsCaptureSize(std::optional<int> width, std::optional<int> height, const Function<bool(const IntSize&)>&& function)
 {
     if (width && height)
         return function({ width.value(), height.value() });
@@ -246,7 +246,7 @@ static inline double frameRateFromPreset(const VideoPreset& preset, double curre
     return currentFrameRate >= minFrameRate && currentFrameRate <= maxFrameRate ? currentFrameRate : maxFrameRate;
 }
 
-Optional<RealtimeVideoCaptureSource::CaptureSizeAndFrameRate> RealtimeVideoCaptureSource::bestSupportedSizeAndFrameRate(Optional<int> requestedWidth, Optional<int> requestedHeight, Optional<double> requestedFrameRate)
+std::optional<RealtimeVideoCaptureSource::CaptureSizeAndFrameRate> RealtimeVideoCaptureSource::bestSupportedSizeAndFrameRate(std::optional<int> requestedWidth, std::optional<int> requestedHeight, std::optional<double> requestedFrameRate)
 {
     if (!requestedWidth && !requestedHeight && !requestedFrameRate)
         return { };
@@ -361,7 +361,7 @@ Optional<RealtimeVideoCaptureSource::CaptureSizeAndFrameRate> RealtimeVideoCaptu
     return CaptureSizeAndFrameRate { WTFMove(resizePreset), resizeSize, captureFrameRate };
 }
 
-void RealtimeVideoCaptureSource::setSizeAndFrameRate(Optional<int> width, Optional<int> height, Optional<double> frameRate)
+void RealtimeVideoCaptureSource::setSizeAndFrameRate(std::optional<int> width, std::optional<int> height, std::optional<double> frameRate)
 {
     ALWAYS_LOG_IF(loggerPtr(), LOGIDENTIFIER, SizeAndFrameRate { width, height, frameRate });
 
@@ -403,15 +403,15 @@ void RealtimeVideoCaptureSource::dispatchMediaSampleToObservers(MediaSample& sam
     videoSampleAvailable(sample);
 }
 
-void RealtimeVideoCaptureSource::clientUpdatedSizeAndFrameRate(Optional<int> width, Optional<int> height, Optional<double> frameRate)
+void RealtimeVideoCaptureSource::clientUpdatedSizeAndFrameRate(std::optional<int> width, std::optional<int> height, std::optional<double> frameRate)
 {
     // FIXME: We only change settings if capture resolution is below requested one. We should get the best preset for all clients.
     auto& settings = this->settings();
-    if (width && *width < static_cast<int>(settings.width()))
+    if (width && *width <= static_cast<int>(settings.width()))
         width = { };
-    if (height && *height < static_cast<int>(settings.height()))
+    if (height && *height <= static_cast<int>(settings.height()))
         height = { };
-    if (frameRate && *frameRate < static_cast<double>(settings.frameRate()))
+    if (frameRate && *frameRate <= static_cast<double>(settings.frameRate()))
         frameRate = { };
 
     if (!width && !height && !frameRate)
@@ -425,6 +425,33 @@ void RealtimeVideoCaptureSource::clientUpdatedSizeAndFrameRate(Optional<int> wid
     setFrameRateWithPreset(match->requestedFrameRate, match->encodingPreset);
     setSize(match->encodingPreset->size);
     setFrameRate(match->requestedFrameRate);
+}
+
+void RealtimeVideoCaptureSource::ensureIntrinsicSizeMaintainsAspectRatio()
+{
+    auto intrinsicSize = this->intrinsicSize();
+    auto frameSize = size();
+    if (!frameSize.height())
+        frameSize.setHeight(intrinsicSize.height());
+    if (!frameSize.width())
+        frameSize.setWidth(intrinsicSize.width());
+
+    auto maxHeight = std::min(frameSize.height(), intrinsicSize.height());
+    auto maxWidth = std::min(frameSize.width(), intrinsicSize.width());
+
+    auto heightForMaxWidth = maxWidth * intrinsicSize.height() / intrinsicSize.width();
+    auto widthForMaxHeight = maxHeight * intrinsicSize.width() / intrinsicSize.height();
+
+    if (heightForMaxWidth <= maxHeight) {
+        setSize({ maxWidth, heightForMaxWidth });
+        return;
+    }
+    if (widthForMaxHeight <= maxWidth) {
+        setSize({ widthForMaxHeight, maxHeight });
+        return;
+    }
+
+    setSize(intrinsicSize);
 }
 
 #if !RELEASE_LOG_DISABLED

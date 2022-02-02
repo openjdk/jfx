@@ -32,6 +32,7 @@
 #include "IntRect.h"
 #include "LayoutRect.h"
 #include "ScrollAlignment.h"
+#include "ScrollBehavior.h"
 #include "Timer.h"
 #include "VisibleSelection.h"
 #include <wtf/Noncopyable.h>
@@ -122,6 +123,9 @@ public:
         IsUserTriggered = 1 << 6,
         RevealSelection = 1 << 7,
         RevealSelectionUpToMainFrame = 1 << 8,
+        SmoothScroll = 1 << 9,
+        DelegateMainFrameScroll = 1 << 10,
+        RevealSelectionBounds = 1 << 11
     };
     static constexpr OptionSet<SetSelectionOption> defaultSetSelectionOptions(EUserTriggered = NotUserTriggered);
 
@@ -139,7 +143,7 @@ public:
     WEBCORE_EXPORT void setSelection(const VisibleSelection&, OptionSet<SetSelectionOption> = defaultSetSelectionOptions(), AXTextStateChangeIntent = AXTextStateChangeIntent(), CursorAlignOnScroll = AlignCursorOnScrollIfNeeded, TextGranularity = TextGranularity::CharacterGranularity);
 
     enum class ShouldCloseTyping : bool { No, Yes };
-    WEBCORE_EXPORT bool setSelectedRange(const Optional<SimpleRange>&, Affinity, ShouldCloseTyping, EUserTriggered = NotUserTriggered);
+    WEBCORE_EXPORT bool setSelectedRange(const std::optional<SimpleRange>&, Affinity, ShouldCloseTyping, EUserTriggered = NotUserTriggered);
     WEBCORE_EXPORT void selectAll();
     WEBCORE_EXPORT void clear();
     void willBeRemovedFromFrame();
@@ -186,7 +190,7 @@ public:
     void nodeWillBeRemoved(Node&);
     void textWasReplaced(CharacterData*, unsigned offset, unsigned oldLength, unsigned newLength);
 
-    void setCaretVisible(bool caretIsVisible) { setCaretVisibility(caretIsVisible ? Visible : Hidden); }
+    void setCaretVisible(bool caretIsVisible) { setCaretVisibility(caretIsVisible ? Visible : Hidden, ShouldUpdateAppearance::Yes); }
     void paintCaret(GraphicsContext&, const LayoutPoint&, const LayoutRect& clipRect);
 
     // Used to suspend caret blinking while the mouse is down.
@@ -207,15 +211,15 @@ public:
 
 #if PLATFORM(IOS_FAMILY)
     WEBCORE_EXPORT void expandSelectionToElementContainingCaretSelection();
-    WEBCORE_EXPORT Optional<SimpleRange> elementRangeContainingCaretSelection() const;
+    WEBCORE_EXPORT std::optional<SimpleRange> elementRangeContainingCaretSelection() const;
     WEBCORE_EXPORT void expandSelectionToWordContainingCaretSelection();
-    WEBCORE_EXPORT Optional<SimpleRange> wordRangeContainingCaretSelection();
+    WEBCORE_EXPORT std::optional<SimpleRange> wordRangeContainingCaretSelection();
     WEBCORE_EXPORT void expandSelectionToStartOfWordContainingCaretSelection();
     WEBCORE_EXPORT UChar characterInRelationToCaretSelection(int amount) const;
     WEBCORE_EXPORT bool selectionAtSentenceStart() const;
     WEBCORE_EXPORT bool selectionAtWordStart() const;
-    WEBCORE_EXPORT Optional<SimpleRange> rangeByMovingCurrentSelection(int amount) const;
-    WEBCORE_EXPORT Optional<SimpleRange> rangeByExtendingCurrentSelection(int amount) const;
+    WEBCORE_EXPORT std::optional<SimpleRange> rangeByMovingCurrentSelection(int amount) const;
+    WEBCORE_EXPORT std::optional<SimpleRange> rangeByExtendingCurrentSelection(int amount) const;
     WEBCORE_EXPORT void clearCurrentSelection();
     void setCaretBlinks(bool caretBlinks = true);
     WEBCORE_EXPORT void setCaretColor(const Color&);
@@ -245,7 +249,7 @@ public:
 
     WEBCORE_EXPORT HTMLFormElement* currentForm() const;
 
-    WEBCORE_EXPORT void revealSelection(SelectionRevealMode = SelectionRevealMode::Reveal, const ScrollAlignment& = ScrollAlignment::alignCenterIfNeeded, RevealExtentOption = DoNotRevealExtent);
+    WEBCORE_EXPORT void revealSelection(SelectionRevealMode = SelectionRevealMode::Reveal, const ScrollAlignment& = ScrollAlignment::alignCenterIfNeeded, RevealExtentOption = DoNotRevealExtent, ScrollBehavior = ScrollBehavior::Instant);
     WEBCORE_EXPORT void setSelectionFromNone();
 
     bool shouldShowBlockCursor() const { return m_shouldShowBlockCursor; }
@@ -260,7 +264,7 @@ public:
     void updateFromAssociatedLiveRange();
 
 private:
-    void updateAndRevealSelection(const AXTextStateChangeIntent&);
+    void updateAndRevealSelection(const AXTextStateChangeIntent&, ScrollBehavior = ScrollBehavior::Instant, RevealExtentOption = RevealExtentOption::RevealExtent);
     void updateDataDetectorsForSelection();
 
     bool setSelectionWithoutUpdatingAppearance(const VisibleSelection&, OptionSet<SetSelectionOption>, CursorAlignOnScroll, TextGranularity);
@@ -301,21 +305,23 @@ private:
     void updateAppearanceAfterLayoutOrStyleChange();
     void appearanceUpdateTimerFired();
 
-    WEBCORE_EXPORT void setCaretVisibility(CaretVisibility);
+    enum class ShouldUpdateAppearance : bool { No, Yes };
+    WEBCORE_EXPORT void setCaretVisibility(CaretVisibility, ShouldUpdateAppearance);
+
     bool recomputeCaretRect();
     void invalidateCaretRect();
 
     bool dispatchSelectStart();
 
 #if PLATFORM(IOS_FAMILY)
-    Optional<SimpleRange> rangeByAlteringCurrentSelection(EAlteration, int amount) const;
+    std::optional<SimpleRange> rangeByAlteringCurrentSelection(EAlteration, int amount) const;
 #endif
 
     void updateAssociatedLiveRange();
 
     WeakPtr<Document> m_document;
     RefPtr<Range> m_associatedLiveRange;
-    Optional<LayoutUnit> m_xPosForVerticalArrowNavigation;
+    std::optional<LayoutUnit> m_xPosForVerticalArrowNavigation;
     VisibleSelection m_selection;
     VisiblePosition m_originalBase; // Used to store base before the adjustment at bidi boundary.
     TextGranularity m_granularity { TextGranularity::CharacterGranularity };

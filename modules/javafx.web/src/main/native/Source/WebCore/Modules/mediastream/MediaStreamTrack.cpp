@@ -218,6 +218,8 @@ RefPtr<MediaStreamTrack> MediaStreamTrack::clone()
     if (!scriptExecutionContext())
         return nullptr;
 
+    ALWAYS_LOG(LOGIDENTIFIER);
+
     return MediaStreamTrack::create(*scriptExecutionContext(), m_private->clone());
 }
 
@@ -228,6 +230,8 @@ void MediaStreamTrack::stopTrack(StopMode mode)
 
     if (ended())
         return;
+
+    ALWAYS_LOG(LOGIDENTIFIER, static_cast<int>(mode));
 
     // An 'ended' event is not posted if m_ended is true when trackEnded is called, so set it now if we are
     // not supposed to post the event.
@@ -360,7 +364,7 @@ MediaStreamTrack::TrackCapabilities MediaStreamTrack::getCapabilities() const
     return result;
 }
 
-static MediaConstraints createMediaConstraints(const Optional<MediaTrackConstraints>& constraints)
+static MediaConstraints createMediaConstraints(const std::optional<MediaTrackConstraints>& constraints)
 {
     if (!constraints) {
         MediaConstraints validConstraints;
@@ -370,7 +374,7 @@ static MediaConstraints createMediaConstraints(const Optional<MediaTrackConstrai
     return createMediaConstraints(constraints.value());
 }
 
-void MediaStreamTrack::applyConstraints(const Optional<MediaTrackConstraints>& constraints, DOMPromiseDeferred<void>&& promise)
+void MediaStreamTrack::applyConstraints(const std::optional<MediaTrackConstraints>& constraints, DOMPromiseDeferred<void>&& promise)
 {
     m_promise = WTF::makeUnique<DOMPromiseDeferred<void>>(WTFMove(promise));
 
@@ -382,7 +386,7 @@ void MediaStreamTrack::applyConstraints(const Optional<MediaTrackConstraints>& c
             return;
         }
         m_promise->resolve();
-        m_constraints = constraints.valueOr(MediaTrackConstraints { });
+        m_constraints = constraints.value_or(MediaTrackConstraints { });
     };
     m_private->applyConstraints(createMediaConstraints(constraints), WTFMove(completionHandler));
 }
@@ -414,28 +418,28 @@ MediaProducer::MediaStateFlags sourceCaptureState(RealtimeMediaSource& source)
     switch (source.deviceType()) {
     case CaptureDevice::DeviceType::Microphone:
         if (source.muted())
-            return MediaProducer::HasMutedAudioCaptureDevice;
+            return MediaProducer::MediaState::HasMutedAudioCaptureDevice;
         if (source.interrupted())
-            return MediaProducer::HasInterruptedAudioCaptureDevice;
+            return MediaProducer::MediaState::HasInterruptedAudioCaptureDevice;
         if (source.isProducingData())
-            return MediaProducer::HasActiveAudioCaptureDevice;
+            return MediaProducer::MediaState::HasActiveAudioCaptureDevice;
         break;
     case CaptureDevice::DeviceType::Camera:
         if (source.muted())
-            return MediaProducer::HasMutedVideoCaptureDevice;
+            return MediaProducer::MediaState::HasMutedVideoCaptureDevice;
         if (source.interrupted())
-            return MediaProducer::HasInterruptedVideoCaptureDevice;
+            return MediaProducer::MediaState::HasInterruptedVideoCaptureDevice;
         if (source.isProducingData())
-            return MediaProducer::HasActiveVideoCaptureDevice;
+            return MediaProducer::MediaState::HasActiveVideoCaptureDevice;
         break;
     case CaptureDevice::DeviceType::Screen:
     case CaptureDevice::DeviceType::Window:
         if (source.muted())
-            return MediaProducer::HasMutedDisplayCaptureDevice;
+            return MediaProducer::MediaState::HasMutedDisplayCaptureDevice;
         if (source.interrupted())
-            return MediaProducer::HasInterruptedDisplayCaptureDevice;
+            return MediaProducer::MediaState::HasInterruptedDisplayCaptureDevice;
         if (source.isProducingData())
-            return MediaProducer::HasActiveDisplayCaptureDevice;
+            return MediaProducer::MediaState::HasActiveDisplayCaptureDevice;
         break;
     case CaptureDevice::DeviceType::Speaker:
     case CaptureDevice::DeviceType::Unknown:
@@ -447,11 +451,11 @@ MediaProducer::MediaStateFlags sourceCaptureState(RealtimeMediaSource& source)
 
 MediaProducer::MediaStateFlags MediaStreamTrack::captureState(Document& document)
 {
-    MediaProducer::MediaStateFlags state = MediaProducer::IsNotPlaying;
+    MediaProducer::MediaStateFlags state;
     for (auto* captureTrack : allCaptureTracks()) {
         if (captureTrack->document() != &document || captureTrack->ended())
             continue;
-        state |= sourceCaptureState(captureTrack->source());
+        state.add(sourceCaptureState(captureTrack->source()));
     }
     return state;
 }
@@ -479,13 +483,13 @@ void MediaStreamTrack::updateCaptureAccordingToMutedState(Document& document)
 
     auto* activeAudioSource = RealtimeMediaSourceCenter::singleton().audioCaptureFactory().activeSource();
     if (activeAudioSource && isSourceCapturingForTrackInDocument(*activeAudioSource, document)) {
-        bool pageMuted = page->mutedState() & MediaProducer::AudioAndVideoCaptureIsMuted;
+        bool pageMuted = page->mutedState().contains(MediaProducer::MutedState::AudioCaptureIsMuted);
         activeAudioSource->setMuted(pageMuted || (document.hidden() && document.settings().interruptAudioOnPageVisibilityChangeEnabled()));
     }
 
     auto* activeVideoSource = RealtimeMediaSourceCenter::singleton().videoCaptureFactory().activeSource();
     if (activeVideoSource && isSourceCapturingForTrackInDocument(*activeVideoSource, document)) {
-        bool pageMuted = page->mutedState() & MediaProducer::AudioAndVideoCaptureIsMuted;
+        bool pageMuted = page->mutedState().contains(MediaProducer::MutedState::VideoCaptureIsMuted);
         activeVideoSource->setMuted(pageMuted || document.hidden());
     }
 #else
@@ -505,12 +509,14 @@ void MediaStreamTrack::updateToPageMutedState()
 
     switch (source().deviceType()) {
     case CaptureDevice::DeviceType::Microphone:
+        m_private->setMuted(page->mutedState().contains(MediaProducer::MutedState::AudioCaptureIsMuted));
+        break;
     case CaptureDevice::DeviceType::Camera:
-        m_private->setMuted(page->mutedState() & MediaProducer::AudioAndVideoCaptureIsMuted);
+        m_private->setMuted(page->mutedState().contains(MediaProducer::MutedState::VideoCaptureIsMuted));
         break;
     case CaptureDevice::DeviceType::Screen:
     case CaptureDevice::DeviceType::Window:
-        m_private->setMuted(page->mutedState() & MediaProducer::ScreenCaptureIsMuted);
+        m_private->setMuted(page->mutedState().contains(MediaProducer::MutedState::ScreenCaptureIsMuted));
         break;
     case CaptureDevice::DeviceType::Speaker:
     case CaptureDevice::DeviceType::Unknown:
@@ -519,11 +525,24 @@ void MediaStreamTrack::updateToPageMutedState()
     }
 }
 
-void MediaStreamTrack::endCapture(Document& document)
+static inline bool trackMatchesKind(RealtimeMediaSource::Type type, MediaProducer::MediaCaptureKind kind)
+{
+    switch (kind) {
+    case MediaProducer::MediaCaptureKind::Audio:
+        return type == RealtimeMediaSource::Type::Audio;
+    case MediaProducer::MediaCaptureKind::AudioVideo:
+        return type != RealtimeMediaSource::Type::None;
+    case MediaProducer::MediaCaptureKind::Video:
+        return type == RealtimeMediaSource::Type::Video;
+    }
+    RELEASE_ASSERT_NOT_REACHED();
+}
+
+void MediaStreamTrack::endCapture(Document& document, MediaProducer::MediaCaptureKind kind)
 {
     bool didEndCapture = false;
     for (auto* captureTrack : allCaptureTracks()) {
-        if (captureTrack->document() != &document)
+        if (captureTrack->document() != &document || !trackMatchesKind(captureTrack->privateTrack().type(), kind))
             continue;
         captureTrack->stopTrack(MediaStreamTrack::StopMode::PostEvent);
         didEndCapture = true;
@@ -534,6 +553,7 @@ void MediaStreamTrack::endCapture(Document& document)
 
 void MediaStreamTrack::trackStarted(MediaStreamTrackPrivate&)
 {
+    ALWAYS_LOG(LOGIDENTIFIER);
     configureTrackRendering();
 }
 
@@ -548,6 +568,8 @@ void MediaStreamTrack::trackEnded(MediaStreamTrackPrivate&)
     if (m_ended)
         return;
 
+    ALWAYS_LOG(LOGIDENTIFIER);
+
     if (m_isCaptureTrack && m_private->source().captureDidFail())
         scriptExecutionContext()->addConsoleMessage(MessageSource::JS, MessageLevel::Error, "A MediaStreamTrack ended due to a capture failure"_s);
 
@@ -556,6 +578,8 @@ void MediaStreamTrack::trackEnded(MediaStreamTrackPrivate&)
 
     if (scriptExecutionContext()->activeDOMObjectsAreSuspended() || scriptExecutionContext()->activeDOMObjectsAreStopped())
         return;
+
+    ALWAYS_LOG(LOGIDENTIFIER, "firing 'ended' event");
 
     // 3. Notify track's source that track is ended so that the source may be stopped, unless other MediaStreamTrack objects depend on it.
     // 4. Fire a simple event named ended at the object.

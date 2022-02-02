@@ -30,6 +30,7 @@
 #import <mach/task_info.h>
 #import <malloc/malloc.h>
 #import <notify.h>
+#import <wtf/Logging.h>
 #import <wtf/ResourceUsage.h>
 #import <wtf/spi/darwin/DispatchSPI.h>
 
@@ -68,17 +69,12 @@ void MemoryPressureHandler::install()
     if (m_installed || timerEventSource)
         return;
 
-    dispatch_async(m_dispatchQueue, ^{
-#if PLATFORM(IOS_FAMILY)
+    dispatch_async(m_dispatchQueue.get(), ^{
         auto memoryStatusFlags = DISPATCH_MEMORYPRESSURE_NORMAL | DISPATCH_MEMORYPRESSURE_WARN | DISPATCH_MEMORYPRESSURE_CRITICAL | DISPATCH_MEMORYPRESSURE_PROC_LIMIT_WARN | DISPATCH_MEMORYPRESSURE_PROC_LIMIT_CRITICAL;
-#else // PLATFORM(MAC)
-        auto memoryStatusFlags = DISPATCH_MEMORYPRESSURE_CRITICAL;
-#endif
-        memoryPressureEventSource = dispatch_source_create(DISPATCH_SOURCE_TYPE_MEMORYPRESSURE, 0, memoryStatusFlags, m_dispatchQueue);
+        memoryPressureEventSource = dispatch_source_create(DISPATCH_SOURCE_TYPE_MEMORYPRESSURE, 0, memoryStatusFlags, m_dispatchQueue.get());
 
         dispatch_source_set_event_handler(memoryPressureEventSource, ^{
             auto status = dispatch_source_get_data(memoryPressureEventSource);
-#if PLATFORM(IOS_FAMILY)
             switch (status) {
             // VM pressure events.
             case DISPATCH_MEMORYPRESSURE_NORMAL:
@@ -100,17 +96,14 @@ void MemoryPressureHandler::install()
                 respondToMemoryPressure(Critical::Yes);
                 break;
             }
-#else // PLATFORM(MAC)
-            respondToMemoryPressure(Critical::Yes);
-#endif
             if (m_shouldLogMemoryMemoryPressureEvents)
-                WTFLogAlways("Received memory pressure event %lu vm pressure %d", status, isUnderMemoryPressure());
+                RELEASE_LOG(MemoryPressure, "Received memory pressure event %lu vm pressure %d", status, isUnderMemoryPressure());
         });
         dispatch_resume(memoryPressureEventSource);
     });
 
     // Allow simulation of memory pressure with "notifyutil -p org.WebKit.lowMemory"
-    notify_register_dispatch("org.WebKit.lowMemory", &notifyTokens[0], m_dispatchQueue, ^(int) {
+    notify_register_dispatch("org.WebKit.lowMemory", &notifyTokens[0], m_dispatchQueue.get(), ^(int) {
 #if ENABLE(FMW_FOOTPRINT_COMPARISON)
         auto footprintBefore = pagesPerVMTag();
 #endif
@@ -124,15 +117,15 @@ void MemoryPressureHandler::install()
         logFootprintComparison(footprintBefore, footprintAfter);
 #endif
 
-        dispatch_async(m_dispatchQueue, ^{
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 2 * NSEC_PER_SEC), m_dispatchQueue.get(), ^{
             endSimulatedMemoryPressure();
         });
     });
 
-    notify_register_dispatch("org.WebKit.lowMemory.begin", &notifyTokens[1], m_dispatchQueue, ^(int) {
+    notify_register_dispatch("org.WebKit.lowMemory.begin", &notifyTokens[1], m_dispatchQueue.get(), ^(int) {
         beginSimulatedMemoryPressure();
     });
-    notify_register_dispatch("org.WebKit.lowMemory.end", &notifyTokens[2], m_dispatchQueue, ^(int) {
+    notify_register_dispatch("org.WebKit.lowMemory.end", &notifyTokens[2], m_dispatchQueue.get(), ^(int) {
         endSimulatedMemoryPressure();
     });
 
@@ -144,7 +137,7 @@ void MemoryPressureHandler::uninstall()
     if (!m_installed)
         return;
 
-    dispatch_async(m_dispatchQueue, ^{
+    dispatch_async(m_dispatchQueue.get(), ^{
         if (memoryPressureEventSource) {
             dispatch_source_cancel(memoryPressureEventSource);
             memoryPressureEventSource = nullptr;
@@ -164,8 +157,8 @@ void MemoryPressureHandler::uninstall()
 
 void MemoryPressureHandler::holdOff(Seconds seconds)
 {
-    dispatch_async(m_dispatchQueue, ^{
-        timerEventSource = dispatch_source_create(DISPATCH_SOURCE_TYPE_TIMER, 0, 0, m_dispatchQueue);
+    dispatch_async(m_dispatchQueue.get(), ^{
+        timerEventSource = dispatch_source_create(DISPATCH_SOURCE_TYPE_TIMER, 0, 0, m_dispatchQueue.get());
         if (timerEventSource) {
             dispatch_set_context(timerEventSource, this);
             // FIXME: The final argument `s_minimumHoldOffTime.seconds()` seems wrong.
@@ -198,14 +191,14 @@ void MemoryPressureHandler::respondToMemoryPressure(Critical critical, Synchrono
 #endif
 }
 
-Optional<MemoryPressureHandler::ReliefLogger::MemoryUsage> MemoryPressureHandler::ReliefLogger::platformMemoryUsage()
+std::optional<MemoryPressureHandler::ReliefLogger::MemoryUsage> MemoryPressureHandler::ReliefLogger::platformMemoryUsage()
 {
 #if __MAC_OS_X_VERSION_MAX_ALLOWED >= 101100
     task_vm_info_data_t vmInfo;
     mach_msg_type_number_t count = TASK_VM_INFO_COUNT;
     kern_return_t err = task_info(mach_task_self(), TASK_VM_INFO, (task_info_t) &vmInfo, &count);
     if (err != KERN_SUCCESS)
-        return WTF::nullopt;
+        return std::nullopt;
 
     return MemoryUsage {static_cast<size_t>(vmInfo.internal), static_cast<size_t>(vmInfo.phys_footprint)};
 #else
@@ -214,3 +207,5 @@ Optional<MemoryPressureHandler::ReliefLogger::MemoryUsage> MemoryPressureHandler
 }
 
 } // namespace WTF
+
+#undef LOG_CHANNEL_PREFIX

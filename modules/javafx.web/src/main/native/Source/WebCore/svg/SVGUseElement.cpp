@@ -41,6 +41,7 @@
 #include "ShadowRoot.h"
 #include "XLinkNames.h"
 #include <wtf/IsoMallocInlines.h>
+#include <wtf/RobinHoodHashSet.h>
 
 namespace WebCore {
 
@@ -98,7 +99,7 @@ Node::InsertedIntoAncestorResult SVGUseElement::insertedIntoAncestor(InsertionTy
     SVGGraphicsElement::insertedIntoAncestor(insertionType, parentOfInsertedTree);
     if (insertionType.connectedToDocument) {
         if (m_shadowTreeNeedsUpdate)
-            document().addSVGUseElement(*this);
+            document().accessSVGExtensions().addUseElementWithPendingShadowTreeUpdate(*this);
         invalidateShadowTree();
         // FIXME: Move back the call to updateExternalDocument() here once notifyFinished is made always async.
         return InsertedIntoAncestorResult::NeedsPostInsertionCallback;
@@ -117,7 +118,7 @@ void SVGUseElement::removedFromAncestor(RemovalType removalType, ContainerNode& 
     // and SVGUseElement::updateExternalDocument which calls invalidateShadowTree().
     if (removalType.disconnectedFromDocument) {
         if (m_shadowTreeNeedsUpdate)
-            document().removeSVGUseElement(*this);
+            document().accessSVGExtensions().removeUseElementWithPendingShadowTreeUpdate(*this);
     }
     SVGGraphicsElement::removedFromAncestor(removalType, oldParentOfRemovedTree);
     if (removalType.disconnectedFromDocument) {
@@ -177,14 +178,14 @@ void SVGUseElement::svgAttributeChanged(const QualifiedName& attrName)
     SVGGraphicsElement::svgAttributeChanged(attrName);
 }
 
-static HashSet<AtomString> createAllowedElementSet()
+static MemoryCompactLookupOnlyRobinHoodHashSet<AtomString> createAllowedElementSet()
 {
     // Spec: "Any 'svg', 'symbol', 'g', graphics element or other 'use' is potentially a template object that can be re-used
     // (i.e., "instanced") in the SVG document via a 'use' element."
     // "Graphics Element" is defined as 'circle', 'ellipse', 'image', 'line', 'path', 'polygon', 'polyline', 'rect', 'text'
     // Excluded are anything that is used by reference or that only make sense to appear once in a document.
     using namespace SVGNames;
-    HashSet<AtomString> set;
+    MemoryCompactLookupOnlyRobinHoodHashSet<AtomString> set;
     for (auto& tag : { aTag.get(), circleTag.get(), descTag.get(), ellipseTag.get(), gTag.get(), imageTag.get(), lineTag.get(), metadataTag.get(), pathTag.get(), polygonTag.get(), polylineTag.get(), rectTag.get(), svgTag.get(), switchTag.get(), symbolTag.get(), textTag.get(), textPathTag.get(), titleTag.get(), trefTag.get(), tspanTag.get(), useTag.get() })
         set.add(tag.localName());
     return set;
@@ -192,7 +193,7 @@ static HashSet<AtomString> createAllowedElementSet()
 
 static inline bool isDisallowedElement(const SVGElement& element)
 {
-    static NeverDestroyed<HashSet<AtomString>> set = createAllowedElementSet();
+    static NeverDestroyed<MemoryCompactLookupOnlyRobinHoodHashSet<AtomString>> set = createAllowedElementSet();
     return !set.get().contains(element.localName());
 }
 
@@ -224,7 +225,7 @@ void SVGUseElement::updateShadowTree()
 
     if (!isConnected())
         return;
-    document().removeSVGUseElement(*this);
+    document().accessSVGExtensions().removeUseElementWithPendingShadowTreeUpdate(*this);
 
     String targetID;
     auto* target = findTarget(&targetID);
@@ -528,12 +529,12 @@ void SVGUseElement::invalidateShadowTree()
     invalidateStyleAndRenderersForSubtree();
     invalidateDependentShadowTrees();
     if (isConnected())
-        document().addSVGUseElement(*this);
+        document().accessSVGExtensions().addUseElementWithPendingShadowTreeUpdate(*this);
 }
 
 void SVGUseElement::invalidateDependentShadowTrees()
 {
-    for (auto* instance : instances()) {
+    for (auto& instance : copyToVectorOf<Ref<SVGElement>>(instances())) {
         if (auto element = instance->correspondingUseElement())
             element->invalidateShadowTree();
     }

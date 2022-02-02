@@ -98,15 +98,13 @@ static String prefixTreeVertexToString(const PrefixTreeVertex& vertex, const Has
 {
     StringBuilder builder;
     while (depth--)
-        builder.appendLiteral("  ");
-    builder.appendLiteral("vertex actions: ");
+        builder.append("  ");
+    builder.append("vertex actions: ");
 
     auto actionsSlot = actions.find(&vertex);
     if (actionsSlot != actions.end()) {
-        for (uint64_t action : actionsSlot->value) {
-            builder.appendNumber(action);
-            builder.append(',');
-        }
+        for (uint64_t action : actionsSlot->value)
+            builder.append(action, ',');
     }
     builder.append('\n');
     return builder.toString();

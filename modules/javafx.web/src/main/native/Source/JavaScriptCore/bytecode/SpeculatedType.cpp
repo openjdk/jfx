@@ -34,6 +34,8 @@
 #include "JSArray.h"
 #include "JSBigInt.h"
 #include "JSBoundFunction.h"
+#include "JSCJSValueInlines.h"
+#include "JSCellInlines.h"
 #include "JSDataView.h"
 #include "JSFunction.h"
 #include "JSMap.h"
@@ -684,7 +686,7 @@ TypedArrayType typedArrayTypeFromSpeculation(SpeculatedType type)
     return NotTypedArray;
 }
 
-Optional<SpeculatedType> speculationFromJSType(JSType type)
+std::optional<SpeculatedType> speculationFromJSType(JSType type)
 {
     switch (type) {
     case StringType:
@@ -716,7 +718,7 @@ Optional<SpeculatedType> speculationFromJSType(JSType type)
     case DataViewType:
         return SpecDataViewObject;
     default:
-        return WTF::nullopt;
+        return std::nullopt;
     }
 }
 

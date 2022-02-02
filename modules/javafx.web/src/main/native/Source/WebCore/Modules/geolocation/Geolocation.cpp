@@ -31,6 +31,8 @@
 #if ENABLE(GEOLOCATION)
 
 #include "Document.h"
+#include "EventLoop.h"
+#include "FeaturePolicy.h"
 #include "Frame.h"
 #include "GeoNotifier.h"
 #include "GeolocationController.h"
@@ -55,7 +57,7 @@ static const ASCIILiteral originCannotRequestGeolocationErrorMessage { "Origin d
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(Geolocation);
 
-static RefPtr<GeolocationPosition> createGeolocationPosition(Optional<GeolocationPositionData>&& position)
+static RefPtr<GeolocationPosition> createGeolocationPosition(std::optional<GeolocationPositionData>&& position)
 {
     if (!position)
         return nullptr;
@@ -298,8 +300,14 @@ GeolocationPosition* Geolocation::lastPosition()
 
 void Geolocation::getCurrentPosition(Ref<PositionCallback>&& successCallback, RefPtr<PositionErrorCallback>&& errorCallback, PositionOptions&& options)
 {
-    if (!frame())
+    if (!document() || !document()->isFullyActive()) {
+        if (errorCallback && errorCallback->scriptExecutionContext()) {
+            errorCallback->scriptExecutionContext()->eventLoop().queueTask(TaskSource::Geolocation, [errorCallback] {
+                errorCallback->handleEvent(GeolocationPositionError::create(GeolocationPositionError::POSITION_UNAVAILABLE, "Document is not fully active"_s));
+            });
+        }
         return;
+    }
 
     auto notifier = GeoNotifier::create(*this, WTFMove(successCallback), WTFMove(errorCallback), WTFMove(options));
     startRequest(notifier.ptr());
@@ -309,8 +317,14 @@ void Geolocation::getCurrentPosition(Ref<PositionCallback>&& successCallback, Re
 
 int Geolocation::watchPosition(Ref<PositionCallback>&& successCallback, RefPtr<PositionErrorCallback>&& errorCallback, PositionOptions&& options)
 {
-    if (!frame())
+    if (!document() || !document()->isFullyActive()) {
+        if (errorCallback && errorCallback->scriptExecutionContext()) {
+            errorCallback->scriptExecutionContext()->eventLoop().queueTask(TaskSource::Geolocation, [errorCallback] {
+                errorCallback->handleEvent(GeolocationPositionError::create(GeolocationPositionError::POSITION_UNAVAILABLE, "Document is not fully active"_s));
+            });
+        }
         return 0;
+    }
 
     auto notifier = GeoNotifier::create(*this, WTFMove(successCallback), WTFMove(errorCallback), WTFMove(options));
     startRequest(notifier.ptr());
@@ -343,17 +357,18 @@ static void logError(const String& target, const bool isSecure, const bool isMix
 // FIXME: remove this function when rdar://problem/32137821 is fixed.
 static bool isRequestFromIBooks()
 {
-#if PLATFORM(MAC)
-    return MacApplication::isIBooks();
-#elif PLATFORM(IOS_FAMILY)
-    return IOSApplication::isIBooks();
+#if PLATFORM(COCOA)
+    return CocoaApplication::isIBooks();
 #endif
     return false;
 }
 
 bool Geolocation::shouldBlockGeolocationRequests()
 {
-    bool isSecure = SecurityOrigin::isSecure(document()->url());
+    if (!isFeaturePolicyAllowedByDocumentAndAllOwners(FeaturePolicy::Type::Geolocation, *document(), LogFeaturePolicyFailure::Yes))
+        return true;
+
+    bool isSecure = SecurityOrigin::isSecure(document()->url()) || document()->isSecureContext();
     bool hasMixedContent = !document()->foundMixedContent().isEmpty();
     bool isLocalOrigin = securityOrigin()->isLocal();
     if (securityOrigin()->canRequestGeolocation()) {
@@ -691,10 +706,8 @@ void Geolocation::positionChanged()
         return;
     }
 
-    RefPtr<GeolocationPosition> position = lastPosition();
-    ASSERT(position);
-
-    makeSuccessCallbacks(*position);
+    if (RefPtr position = lastPosition())
+        makeSuccessCallbacks(*position);
 }
 
 void Geolocation::setError(GeolocationError& error)

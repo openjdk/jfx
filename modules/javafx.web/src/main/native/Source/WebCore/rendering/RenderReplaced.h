@@ -31,7 +31,7 @@ public:
     virtual ~RenderReplaced();
 
     LayoutUnit computeReplacedLogicalWidth(ShouldComputePreferred = ComputeActual) const override;
-    LayoutUnit computeReplacedLogicalHeight(Optional<LayoutUnit> estimatedUsedWidth = WTF::nullopt) const override;
+    LayoutUnit computeReplacedLogicalHeight(std::optional<LayoutUnit> estimatedUsedWidth = std::nullopt) const override;
 
     LayoutRect replacedContentRect(const LayoutSize& intrinsicSize) const;
     LayoutRect replacedContentRect() const { return replacedContentRect(intrinsicSize()); }
@@ -40,7 +40,12 @@ public:
     bool hasReplacedLogicalHeight() const;
     bool setNeedsLayoutIfNeededAfterIntrinsicSizeChange();
 
-    LayoutSize intrinsicSize() const final { return m_intrinsicSize; }
+    LayoutSize intrinsicSize() const final
+    {
+        if (shouldApplySizeContainment(*this))
+            return LayoutSize();
+        return m_intrinsicSize;
+    }
 
     RoundedRect roundedContentBoxRect() const;
 
@@ -85,7 +90,7 @@ private:
     void computePreferredLogicalWidths() final;
     virtual void paintReplaced(PaintInfo&, const LayoutPoint&) { }
 
-    LayoutRect clippedOverflowRectForRepaint(const RenderLayerModelObject* repaintContainer) const override;
+    LayoutRect clippedOverflowRect(const RenderLayerModelObject* repaintContainer, VisibleRectContext) const override;
 
     VisiblePosition positionForPoint(const LayoutPoint&, const RenderFragmentContainer*) final;
 

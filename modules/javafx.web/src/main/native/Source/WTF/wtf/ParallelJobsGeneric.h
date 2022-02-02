@@ -65,12 +65,12 @@ public:
         }
 
     private:
+        mutable Lock m_lock;
+        Condition m_threadCondition;
+
         RefPtr<Thread> m_thread;
         bool m_running { false };
-        ParallelEnvironment* m_parent { nullptr };
-
-        mutable Lock m_mutex;
-        Condition m_threadCondition;
+        ParallelEnvironment* m_parent WTF_GUARDED_BY_LOCK(m_lock) { nullptr };
 
         ThreadFunction m_threadFunction { nullptr };
         void* m_parameters { nullptr };

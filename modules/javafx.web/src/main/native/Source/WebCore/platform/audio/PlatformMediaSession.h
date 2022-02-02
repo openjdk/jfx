@@ -28,6 +28,7 @@
 #include "MediaSessionGroupIdentifier.h"
 #include "MediaSessionIdentifier.h"
 #include "Timer.h"
+#include <wtf/Logger.h>
 #include <wtf/LoggerHelper.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/WeakPtr.h>
@@ -61,6 +62,8 @@ public:
 
     virtual ~PlatformMediaSession();
 
+    void setActive(bool);
+
     enum class MediaType : uint8_t {
         None = 0,
         Video,
@@ -90,6 +93,7 @@ public:
         InvisibleAutoplay,
         ProcessInactive,
         PlaybackSuspended,
+        PageNotVisible,
     };
     InterruptionType interruptionType() const { return m_interruptionType; }
 
@@ -116,11 +120,11 @@ public:
     virtual void resumeBuffering() { }
 
     struct RemoteCommandArgument {
-        Optional<double> time;
-        Optional<bool> fastSeek;
+        std::optional<double> time;
+        std::optional<bool> fastSeek;
 
         template<class Encoder> void encode(Encoder&) const;
-        template<class Decoder> static Optional<RemoteCommandArgument> decode(Decoder&);
+        template<class Decoder> static std::optional<RemoteCommandArgument> decode(Decoder&);
     };
 
     enum RemoteControlCommandType : uint8_t {
@@ -138,8 +142,8 @@ public:
         SkipBackwardCommand,
         NextTrackCommand,
         PreviousTrackCommand,
-        BeginScrubbing,
-        EndScrubbing,
+        BeginScrubbingCommand,
+        EndScrubbingCommand,
     };
     bool canReceiveRemoteControlCommands() const;
     virtual void didReceiveRemoteControlCommand(RemoteControlCommandType, const RemoteCommandArgument&);
@@ -154,6 +158,7 @@ public:
 
     bool isHidden() const;
     bool isSuspended() const;
+    bool isPlaying() const;
 
     bool shouldOverrideBackgroundLoadingRestriction() const;
 
@@ -198,7 +203,7 @@ public:
         virtual bool isCapturingAudio() const = 0;
     };
 
-    virtual Optional<NowPlayingInfo> nowPlayingInfo() const;
+    virtual std::optional<NowPlayingInfo> nowPlayingInfo() const;
     virtual void updateMediaUsageIfChanged() { }
 
     MediaSessionIdentifier mediaSessionIdentifier() const { return m_mediaSessionIdentifier; }
@@ -207,18 +212,16 @@ protected:
     PlatformMediaSession(PlatformMediaSessionManager&, PlatformMediaSessionClient&);
     PlatformMediaSessionClient& client() const { return m_client; }
 
-    PlatformMediaSessionManager& manager();
-
 private:
     bool processClientWillPausePlayback(DelayCallingUpdateNowPlaying);
 
-    WeakPtr<PlatformMediaSessionManager> m_manager;
     PlatformMediaSessionClient& m_client;
     MediaSessionIdentifier m_mediaSessionIdentifier;
     State m_state { Idle };
     State m_stateToRestore { Idle };
     InterruptionType m_interruptionType { NoInterruption };
     int m_interruptionCount { 0 };
+    bool m_active { false };
     bool m_notifyingClient { false };
     bool m_isPlayingToWirelessPlaybackTarget { false };
     bool m_hasPlayedSinceLastInterruption { false };
@@ -250,6 +253,7 @@ public:
 
     virtual bool canProduceAudio() const { return false; }
     virtual bool isSuspended() const { return false; };
+    virtual bool isPlaying() const { return false; };
 
     virtual bool shouldOverrideBackgroundPlaybackRestriction(PlatformMediaSession::InterruptionType) const = 0;
     virtual bool shouldOverrideBackgroundLoadingRestriction() const { return false; }
@@ -280,20 +284,20 @@ protected:
 
 String convertEnumerationToString(PlatformMediaSession::State);
 String convertEnumerationToString(PlatformMediaSession::InterruptionType);
-String convertEnumerationToString(PlatformMediaSession::RemoteControlCommandType);
+WEBCORE_EXPORT String convertEnumerationToString(PlatformMediaSession::RemoteControlCommandType);
 
 template<class Encoder> inline void PlatformMediaSession::RemoteCommandArgument::encode(Encoder& encoder) const
 {
     encoder << time << fastSeek;
 }
 
-template<class Decoder> inline Optional<PlatformMediaSession::RemoteCommandArgument> PlatformMediaSession::RemoteCommandArgument::decode(Decoder& decoder)
+template<class Decoder> inline std::optional<PlatformMediaSession::RemoteCommandArgument> PlatformMediaSession::RemoteCommandArgument::decode(Decoder& decoder)
 {
 #define DECODE(name, type) \
-    Optional<Optional<type>> name; \
+    std::optional<std::optional<type>> name; \
     decoder >> name; \
     if (!name) \
-        return WTF::nullopt; \
+        return std::nullopt; \
 
     DECODE(time, double);
     DECODE(fastSeek, bool);
@@ -366,7 +370,8 @@ template <> struct EnumTraits<WebCore::PlatformMediaSession::InterruptionType> {
     WebCore::PlatformMediaSession::InterruptionType::SuspendedUnderLock,
     WebCore::PlatformMediaSession::InterruptionType::InvisibleAutoplay,
     WebCore::PlatformMediaSession::InterruptionType::ProcessInactive,
-    WebCore::PlatformMediaSession::InterruptionType::PlaybackSuspended
+    WebCore::PlatformMediaSession::InterruptionType::PlaybackSuspended,
+    WebCore::PlatformMediaSession::InterruptionType::PageNotVisible
     >;
 };
 
@@ -395,8 +400,8 @@ template <> struct EnumTraits<WebCore::PlatformMediaSession::RemoteControlComman
     WebCore::PlatformMediaSession::RemoteControlCommandType::SkipBackwardCommand,
     WebCore::PlatformMediaSession::RemoteControlCommandType::NextTrackCommand,
     WebCore::PlatformMediaSession::RemoteControlCommandType::PreviousTrackCommand,
-    WebCore::PlatformMediaSession::RemoteControlCommandType::BeginScrubbing,
-    WebCore::PlatformMediaSession::RemoteControlCommandType::EndScrubbing
+    WebCore::PlatformMediaSession::RemoteControlCommandType::BeginScrubbingCommand,
+    WebCore::PlatformMediaSession::RemoteControlCommandType::EndScrubbingCommand
     >;
 };
 

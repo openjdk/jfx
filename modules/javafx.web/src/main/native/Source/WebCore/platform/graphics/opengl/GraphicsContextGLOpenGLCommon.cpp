@@ -39,10 +39,10 @@
 #include "ANGLEWebKitBridge.h"
 #include "GraphicsContext.h"
 #include "ImageBuffer.h"
-#include "ImageData.h"
 #include "IntRect.h"
 #include "IntSize.h"
 #include "Logging.h"
+#include "PixelBuffer.h"
 #include "TemporaryOpenGLSetting.h"
 #include "WebGLRenderingContextBase.h"
 #include <JavaScriptCore/RegularExpression.h>
@@ -178,7 +178,7 @@ void GraphicsContextGLOpenGL::prepareTexture()
     ::glFlush();
 }
 
-RefPtr<ImageData> GraphicsContextGLOpenGL::readRenderingResults()
+std::optional<PixelBuffer> GraphicsContextGLOpenGL::readRenderingResults()
 {
     bool mustRestoreFBO = false;
     if (contextAttributes().antialias) {
@@ -337,14 +337,14 @@ bool GraphicsContextGLOpenGL::precisionsMatch(PlatformGLObject vertexShader, Pla
     HashMap<String, sh::GLenum> vertexSymbolPrecisionMap;
 
     for (const auto& entry : vertexEntry.uniformMap) {
-        const std::string& mappedName = entry.value.mappedName;
-        vertexSymbolPrecisionMap.add(String(mappedName.c_str(), mappedName.length()), entry.value.precision);
+        const std::string& mappedName = entry.value.get().mappedName;
+        vertexSymbolPrecisionMap.add(String(mappedName.c_str(), mappedName.length()), entry.value.get().precision);
     }
 
     for (const auto& entry : fragmentEntry.uniformMap) {
-        const std::string& mappedName = entry.value.mappedName;
+        const std::string& mappedName = entry.value.get().mappedName;
         const auto& vertexSymbol = vertexSymbolPrecisionMap.find(String(mappedName.c_str(), mappedName.length()));
-        if (vertexSymbol != vertexSymbolPrecisionMap.end() && vertexSymbol->value != entry.value.precision)
+        if (vertexSymbol != vertexSymbolPrecisionMap.end() && vertexSymbol->value != entry.value.get().precision)
             return false;
     }
 
@@ -915,18 +915,18 @@ static String generateHashedName(const String& name)
     return makeString("webgl_", hex(number, Lowercase));
 }
 
-Optional<String> GraphicsContextGLOpenGL::mappedSymbolInShaderSourceMap(PlatformGLObject shader, ANGLEShaderSymbolType symbolType, const String& name)
+std::optional<String> GraphicsContextGLOpenGL::mappedSymbolInShaderSourceMap(PlatformGLObject shader, ANGLEShaderSymbolType symbolType, const String& name)
 {
     auto result = m_shaderSourceMap.find(shader);
     if (result == m_shaderSourceMap.end())
-        return WTF::nullopt;
+        return std::nullopt;
 
     const auto& symbolMap = result->value.symbolMap(symbolType);
     auto symbolEntry = symbolMap.find(name);
     if (symbolEntry == symbolMap.end())
-        return WTF::nullopt;
+        return std::nullopt;
 
-    auto& mappedName = symbolEntry->value.mappedName;
+    auto& mappedName = symbolEntry->value.get().mappedName;
     return String(mappedName.c_str(), mappedName.length());
 }
 
@@ -973,18 +973,18 @@ String GraphicsContextGLOpenGL::mappedSymbolName(PlatformGLObject program, ANGLE
     return name;
 }
 
-Optional<String> GraphicsContextGLOpenGL::originalSymbolInShaderSourceMap(PlatformGLObject shader, ANGLEShaderSymbolType symbolType, const String& name)
+std::optional<String> GraphicsContextGLOpenGL::originalSymbolInShaderSourceMap(PlatformGLObject shader, ANGLEShaderSymbolType symbolType, const String& name)
 {
     auto result = m_shaderSourceMap.find(shader);
     if (result == m_shaderSourceMap.end())
-        return WTF::nullopt;
+        return std::nullopt;
 
     const auto& symbolMap = result->value.symbolMap(symbolType);
     for (const auto& symbolEntry : symbolMap) {
-        if (name == symbolEntry.value.mappedName.c_str())
+        if (name == symbolEntry.value.get().mappedName.c_str())
             return symbolEntry.key;
     }
-    return WTF::nullopt;
+    return std::nullopt;
 }
 
 String GraphicsContextGLOpenGL::originalSymbolName(PlatformGLObject program, ANGLEShaderSymbolType symbolType, const String& name)
@@ -1033,7 +1033,7 @@ String GraphicsContextGLOpenGL::mappedSymbolName(PlatformGLObject shaders[2], si
 
             const ShaderSymbolMap& symbolMap = result->value.symbolMap(static_cast<enum ANGLEShaderSymbolType>(symbolType));
             for (const auto& symbolEntry : symbolMap) {
-                if (name == symbolEntry.value.mappedName.c_str())
+                if (name == symbolEntry.value.get().mappedName.c_str())
                     return symbolEntry.key;
             }
         }
@@ -1263,7 +1263,7 @@ void GraphicsContextGLOpenGL::shaderSource(PlatformGLObject shader, const String
 
     entry.source = string;
 
-    m_shaderSourceMap.set(shader, entry);
+    m_shaderSourceMap.set(shader, WTFMove(entry));
 }
 
 void GraphicsContextGLOpenGL::stencilFunc(GCGLenum func, GCGLint ref, GCGLuint mask)
@@ -1591,53 +1591,22 @@ void GraphicsContextGLOpenGL::viewport(GCGLint x, GCGLint y, GCGLsizei width, GC
 
 PlatformGLObject GraphicsContextGLOpenGL::createVertexArray()
 {
-    if (!makeContextCurrent())
-        return 0;
-
-    GLuint array = 0;
-#if (!USE(OPENGL_ES) && (PLATFORM(GTK) || PLATFORM(WIN))) || PLATFORM(COCOA)
-    ::glGenVertexArrays(1, &array);
-#endif
-    return array;
+    return getExtensions().createVertexArrayOES();
 }
 
 void GraphicsContextGLOpenGL::deleteVertexArray(PlatformGLObject array)
 {
-    if (!array)
-        return;
-
-    if (!makeContextCurrent())
-        return;
-
-#if (!USE(OPENGL_ES) && (PLATFORM(GTK) || PLATFORM(WIN))) || PLATFORM(COCOA)
-    ::glDeleteVertexArrays(1, &array);
-#endif
+    getExtensions().deleteVertexArrayOES(array);
 }
 
 GCGLboolean GraphicsContextGLOpenGL::isVertexArray(PlatformGLObject array)
 {
-    if (!array)
-        return GL_FALSE;
-
-    if (!makeContextCurrent())
-        return GL_FALSE;
-
-#if (!USE(OPENGL_ES) && (PLATFORM(GTK) || PLATFORM(WIN))) || PLATFORM(COCOA)
-    return ::glIsVertexArray(array);
-#endif
-    return GL_FALSE;
+    return getExtensions().isVertexArrayOES(array);
 }
 
 void GraphicsContextGLOpenGL::bindVertexArray(PlatformGLObject array)
 {
-    if (!makeContextCurrent())
-        return;
-
-#if (!USE(OPENGL_ES) && (PLATFORM(GTK) || PLATFORM(WIN))) || PLATFORM(COCOA)
-    ::glBindVertexArray(array);
-#else
-    UNUSED_PARAM(array);
-#endif
+    getExtensions().bindVertexArrayOES(array);
 }
 
 void GraphicsContextGLOpenGL::getBooleanv(GCGLenum pname, GCGLSpan<GCGLboolean> value)

@@ -68,10 +68,10 @@ WEBCORE_EXPORT Expected<int, HTMLIntegerParsingError> parseHTMLInteger(StringVie
 WEBCORE_EXPORT Expected<unsigned, HTMLIntegerParsingError> parseHTMLNonNegativeInteger(StringView);
 
 // https://html.spec.whatwg.org/#valid-non-negative-integer
-Optional<int> parseValidHTMLNonNegativeInteger(StringView);
+std::optional<int> parseValidHTMLNonNegativeInteger(StringView);
 
 // https://html.spec.whatwg.org/#valid-floating-point-number
-Optional<double> parseValidHTMLFloatingPointNumber(StringView);
+std::optional<double> parseValidHTMLFloatingPointNumber(StringView);
 
 // https://html.spec.whatwg.org/multipage/infrastructure.html#rules-for-parsing-floating-point-number-values
 Vector<double> parseHTMLListOfOfFloatingPointNumberValues(StringView);
@@ -85,6 +85,15 @@ String parseCORSSettingsAttribute(const AtomString&);
 bool threadSafeMatch(const QualifiedName&, const QualifiedName&);
 
 AtomString parseHTMLHashNameReference(StringView);
+
+// https://html.spec.whatwg.org/#rules-for-parsing-dimension-values
+struct HTMLDimension {
+    enum class Type : bool { Percentage, Pixel };
+    double number;
+    Type type;
+};
+std::optional<HTMLDimension> parseHTMLDimension(StringView);
+std::optional<HTMLDimension> parseHTMLMultiLength(StringView);
 
 // Inline implementations of some of the functions declared above.
 

@@ -246,8 +246,8 @@ end
 
 macro reloadMemoryRegistersFromInstance(instance, scratch1, scratch2)
     loadp Wasm::Instance::m_cachedMemory[instance], memoryBase
-    loadi Wasm::Instance::m_cachedBoundsCheckingSize[instance], boundsCheckingSize
-    cagedPrimitive(memoryBase, boundsCheckingSize, scratch1, scratch2)
+    loadp Wasm::Instance::m_cachedBoundsCheckingSize[instance], boundsCheckingSize
+    cagedPrimitiveMayBeNull(memoryBase, boundsCheckingSize, scratch1, scratch2) # If boundsCheckingSize is 0, pointer can be a nullptr.
 end
 
 macro throwException(exception)
@@ -875,6 +875,14 @@ end)
 
 wasmOp(call_indirect_no_tls, WasmCallIndirectNoTls, macro(ctx)
     slowPathForWasmCall(ctx, _slow_path_wasm_call_indirect_no_tls, macro(targetInstance) move targetInstance, wasmInstance end)
+end)
+
+wasmOp(call_ref, WasmCallRef, macro(ctx)
+    slowPathForWasmCall(ctx, _slow_path_wasm_call_ref, storeWasmInstanceToTLS)
+end)
+
+wasmOp(call_ref_no_tls, WasmCallRefNoTls, macro(ctx)
+    slowPathForWasmCall(ctx, _slow_path_wasm_call_ref_no_tls, macro(targetInstance) move targetInstance, wasmInstance end)
 end)
 
 wasmOp(current_memory, WasmCurrentMemory, macro(ctx)

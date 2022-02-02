@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2003-2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2003-2021 Apple Inc. All rights reserved.
  *           (C) 2006 Graham Dennis (graham.dennis@gmail.com)
  *
  * Redistribution and use in source and binary forms, with or without
@@ -60,9 +60,6 @@ public:
     WEBCORE_EXPORT static void setUsesMockScrollAnimator(bool);
     static bool usesMockScrollAnimator();
 
-    WEBCORE_EXPORT static void setShouldRespectPriorityInCSSAttributeSetters(bool);
-    static bool shouldRespectPriorityInCSSAttributeSetters();
-
     static bool lowPowerVideoAudioBufferSizeEnabled() { return gLowPowerVideoAudioBufferSizeEnabled; }
     WEBCORE_EXPORT static void setLowPowerVideoAudioBufferSizeEnabled(bool);
 
@@ -81,18 +78,14 @@ public:
 
     static void setDisableScreenSizeOverride(bool flag) { gDisableScreenSizeOverride = flag; }
     static bool disableScreenSizeOverride() { return gDisableScreenSizeOverride; }
-#if HAVE(AVKIT)
-    static void setAVKitEnabled(bool flag) { gAVKitEnabled = flag; }
-#endif
-    static bool avKitEnabled() { return gAVKitEnabled; }
 
     static void setShouldOptOutOfNetworkStateObservation(bool flag) { gShouldOptOutOfNetworkStateObservation = flag; }
     static bool shouldOptOutOfNetworkStateObservation() { return gShouldOptOutOfNetworkStateObservation; }
 #endif
 
 #if USE(AUDIO_SESSION)
-    static void setShouldManageAudioSessionCategory(bool flag) { gManageAudioSession = flag; }
-    static bool shouldManageAudioSessionCategory() { return gManageAudioSession; }
+    WEBCORE_EXPORT static void setShouldManageAudioSessionCategory(bool flag);
+    WEBCORE_EXPORT static bool shouldManageAudioSessionCategory();
 #endif
 
     WEBCORE_EXPORT static void setAllowsAnySSLCertificate(bool);
@@ -115,10 +108,8 @@ private:
 #if PLATFORM(WIN)
     static bool gShouldUseHighResolutionTimers;
 #endif
-    static bool gShouldRespectPriorityInCSSAttributeSetters;
 #if PLATFORM(IOS_FAMILY)
     static bool gNetworkDataUsageTrackingEnabled;
-    WEBCORE_EXPORT static bool gAVKitEnabled;
     WEBCORE_EXPORT static bool gShouldOptOutOfNetworkStateObservation;
     WEBCORE_EXPORT static bool gDisableScreenSizeOverride;
 #endif

@@ -39,6 +39,7 @@
 #include "CachedResourceRequest.h"
 #include "ContainerNode.h"
 #include "CrossOriginAccessControl.h"
+#include "DefaultResourceLoadPriority.h"
 #include "Document.h"
 #include "Frame.h"
 #include "FrameLoader.h"
@@ -117,7 +118,7 @@ void LinkLoader::loadLinksFromHeader(const String& headerValue, const URL& baseU
     }
 }
 
-Optional<CachedResource::Type> LinkLoader::resourceTypeFromAsAttribute(const String& as, Document& document)
+std::optional<CachedResource::Type> LinkLoader::resourceTypeFromAsAttribute(const String& as, Document& document)
 {
     if (equalLettersIgnoringASCIICase(as, "fetch"))
         return CachedResource::Type::RawResource;
@@ -133,7 +134,7 @@ Optional<CachedResource::Type> LinkLoader::resourceTypeFromAsAttribute(const Str
         return CachedResource::Type::FontResource;
     if (equalLettersIgnoringASCIICase(as, "track"))
         return CachedResource::Type::TextTrackResource;
-    return WTF::nullopt;
+    return std::nullopt;
 }
 
 static std::unique_ptr<LinkPreloadResourceClient> createLinkPreloadResourceClient(CachedResource& resource, LinkLoader& loader, Document& document)
@@ -223,7 +224,7 @@ void LinkLoader::preconnectIfNeeded(const LinkLoadParameters& params, Document& 
         if (!error.isNull())
             weakDocument->addConsoleMessage(MessageSource::Network, MessageLevel::Error, makeString("Failed to preconnect to "_s, href.string(), ". Error: "_s, error.localizedDescription()));
         else
-            weakDocument->addConsoleMessage(MessageSource::Network, MessageLevel::Info, makeString("Successfuly preconnected to "_s, href.string()));
+            weakDocument->addConsoleMessage(MessageSource::Network, MessageLevel::Info, makeString("Successfully preconnected to "_s, href.string()));
     });
 }
 
@@ -261,7 +262,7 @@ std::unique_ptr<LinkPreloadResourceClient> LinkLoader::preloadIfNeeded(const Lin
     auto options = CachedResourceLoader::defaultCachedResourceOptions();
     options.referrerPolicy = params.referrerPolicy;
     auto linkRequest = createPotentialAccessControlRequest(url, WTFMove(options), document, params.crossOrigin);
-    linkRequest.setPriority(CachedResource::defaultPriorityForResourceType(type.value()));
+    linkRequest.setPriority(DefaultResourceLoadPriority::forResourceType(type.value()));
     linkRequest.setInitiator("link");
     linkRequest.setIgnoreForRequestCount(true);
     linkRequest.setIsLinkPreload();
@@ -282,7 +283,7 @@ void LinkLoader::prefetchIfNeeded(const LinkLoadParameters& params, Document& do
         return;
 
     ASSERT(document.settings().linkPrefetchEnabled());
-    Optional<ResourceLoadPriority> priority;
+    std::optional<ResourceLoadPriority> priority;
     CachedResource::Type type = CachedResource::Type::LinkPrefetch;
 
     if (m_cachedLinkResource) {

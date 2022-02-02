@@ -26,8 +26,6 @@
 #include "config.h"
 #include "IDBConnectionToServer.h"
 
-#if ENABLE(INDEXED_DATABASE)
-
 #include "IDBConnectionProxy.h"
 #include "IDBDatabase.h"
 #include "IDBDatabaseNameAndVersion.h"
@@ -39,10 +37,13 @@
 #include "Logging.h"
 #include "SecurityOrigin.h"
 #include "TransactionOperation.h"
+#include <wtf/IsoMallocInlines.h>
 #include <wtf/MainThread.h>
 
 namespace WebCore {
 namespace IDBClient {
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(IDBConnectionToServer);
 
 Ref<IDBConnectionToServer> IDBConnectionToServer::create(IDBConnectionToServerDelegate& delegate)
 {
@@ -355,13 +356,13 @@ void IDBConnectionToServer::establishTransaction(uint64_t databaseConnectionIden
         m_delegate->establishTransaction(databaseConnectionIdentifier, info);
 }
 
-void IDBConnectionToServer::commitTransaction(const IDBResourceIdentifier& transactionIdentifier)
+void IDBConnectionToServer::commitTransaction(const IDBResourceIdentifier& transactionIdentifier, uint64_t pendingRequestCount)
 {
     LOG(IndexedDB, "IDBConnectionToServer::commitTransaction");
     ASSERT(isMainThread());
 
     if (m_serverConnectionIsValid)
-        m_delegate->commitTransaction(transactionIdentifier);
+        m_delegate->commitTransaction(transactionIdentifier, pendingRequestCount);
     else {
         callOnMainThread([this, protectedThis = makeRef(*this), transactionIdentifier] {
             didCommitTransaction(transactionIdentifier, IDBError::serverConnectionLostError());
@@ -520,5 +521,3 @@ void IDBConnectionToServer::didGetAllDatabaseNamesAndVersions(const IDBResourceI
 
 } // namespace IDBClient
 } // namespace WebCore
-
-#endif // ENABLE(INDEXED_DATABASE)
