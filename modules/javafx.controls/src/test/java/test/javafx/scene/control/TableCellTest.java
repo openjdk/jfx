@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -339,6 +339,27 @@ public class TableCellTest {
     @Test public void test_jdk_8151524() {
         TableCell cell = new TableCell();
         cell.setSkin(new TableCellSkin(cell));
+    }
+
+    /**
+     * The {@link TableRow} should never be null inside the {@link TableCell} during auto sizing.
+     * Note: The auto sizing is triggered as soon as the table has a scene - so when the {@link StageLoader} is created.
+     * See also: JDK-8251481
+     */
+    @Test
+    public void testRowIsNotNullWhenAutoSizing() {
+        TableColumn<String, String> tableColumn = new TableColumn<>();
+        tableColumn.setCellFactory(col -> new TableCell<>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+
+                assertNotNull(getTableRow());
+            }
+        });
+        table.getColumns().add(tableColumn);
+
+        stageLoader = new StageLoader(table);
     }
 
     /**
