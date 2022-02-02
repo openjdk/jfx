@@ -41,6 +41,7 @@ class X11GLFactory extends GLFactory {
     // Limit es2 pipe qualification check to supported drivers and GPUs
     private GLGPUInfo preQualificationFilter[] = {
         new GLGPUInfo("advanced micro devices", null),
+        new GLGPUInfo("amd", null),
         new GLGPUInfo("ati", null),
         new GLGPUInfo("intel", null),
         new GLGPUInfo("nvidia", null),

@@ -2344,7 +2344,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         // Bring the clipView.clipX back to 0 if control is vertical or
         // the hbar isn't visible (fix for RT-11666)
         if (isVertical()) {
-            if (hbar.isVisible()) {
+            if (needBreadthBar) {
                 clipView.setClipX(hbar.getValue());
             } else {
                 // all cells are now less than the width of the flow,
