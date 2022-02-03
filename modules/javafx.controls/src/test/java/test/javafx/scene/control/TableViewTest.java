@@ -1915,7 +1915,7 @@ public class TableViewTest {
         first.setOnEditStart(t -> {
             rt_29650_start_count++;
         });
-        first.setOnEditCommit(t -> {
+        first.addEventHandler(TableColumn.editCommitEvent(), t -> {
             rt_29650_commit_count++;
         });
         first.setOnEditCancel(t -> {
@@ -1934,8 +1934,7 @@ public class TableViewTest {
         KeyEventFirer keyboard = new KeyEventFirer(textField);
         keyboard.doKeyPress(KeyCode.ENTER);
 
-        // TODO should the following assert be enabled?
-//        assertEquals("Testing!", listView.getItems().get(0));
+        assertEquals("Testing!", table.getItems().get(0).getFirstName());
         assertEquals(1, rt_29650_start_count);
         assertEquals(1, rt_29650_commit_count);
         assertEquals(0, rt_29650_cancel_count);

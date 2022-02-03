@@ -2818,13 +2818,13 @@ public class TreeTableViewTest {
         TreeTableColumn<String, String> col = new TreeTableColumn<>("column");
         Callback<TreeTableColumn<String, String>, TreeTableCell<String, String>> factory = TextFieldTreeTableCell.forTreeTableColumn();
         col.setCellFactory(factory);
-        col.setCellValueFactory(param -> new ReadOnlyObjectWrapper<>(param.getValue().getValue()));
+        col.setCellValueFactory(param -> param.getValue().valueProperty());
         treeTableView.getColumns().add(col);
 
         col.setOnEditStart(t -> {
             rt_29650_start_count++;
         });
-        col.setOnEditCommit(t -> {
+        col.addEventHandler(TreeTableColumn.editCommitEvent(), t -> {
             rt_29650_commit_count++;
         });
         col.setOnEditCancel(t -> {
@@ -2843,8 +2843,7 @@ public class TreeTableViewTest {
         KeyEventFirer keyboard = new KeyEventFirer(textField);
         keyboard.doKeyPress(KeyCode.ENTER);
 
-        // TODO should the following assert be enabled?
-//        assertEquals("Testing!", listView.getItems().get(0));
+        assertEquals("Testing!", treeTableView.getTreeItem(0).getValue());
         assertEquals(1, rt_29650_start_count);
         assertEquals(1, rt_29650_commit_count);
         assertEquals(0, rt_29650_cancel_count);
