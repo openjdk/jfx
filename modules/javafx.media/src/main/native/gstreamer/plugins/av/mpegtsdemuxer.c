@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -474,8 +474,6 @@ static gboolean mpegts_demuxer_sink_event(GstPad *pad, GstObject *parent, GstEve
                     g_print("MpegTS: Process_input thread created\n");
 #endif
                 }
-                else
-                    post_message(demuxer, "Demuxer thread is not null", GST_MESSAGE_ERROR, GST_CORE_ERROR, GST_CORE_ERROR_THREAD);
             }
             g_mutex_unlock(&demuxer->lock);
             break;

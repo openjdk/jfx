@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -46,7 +46,6 @@ virtual ~CJavaInputStreamCallbacks();
     int64_t Seek(int64_t position);
     void CloseConnection();
     int  Property(int prop, int value);
-    int  GetStreamSize();
 
 private:
     jobject          m_ConnectionHolder;
@@ -61,7 +60,6 @@ private:
     static jmethodID m_SeekMID;
     static jmethodID m_CloseConnectionMID;
     static jmethodID m_PropertyMID;
-    static jmethodID m_GetStreamSizeMID;
 };
 
 #endif // _JAVA_INPUT_STREAM_CALLBACKS_H_
