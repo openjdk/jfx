@@ -292,6 +292,7 @@ namespace JSC { namespace DFG {
     macro(CheckNotJSCast, NodeMustGenerate) \
     macro(ParseInt, NodeMustGenerate | NodeResultJS) \
     macro(GetPrototypeOf, NodeMustGenerate | NodeResultJS) \
+    macro(ObjectAssign, NodeMustGenerate) \
     macro(ObjectCreate, NodeMustGenerate | NodeResultJS) \
     macro(ObjectKeys, NodeMustGenerate | NodeResultJS) \
     macro(ObjectGetOwnPropertyNames, NodeMustGenerate | NodeResultJS) \
@@ -415,6 +416,7 @@ namespace JSC { namespace DFG {
     macro(IsConstructor, NodeResultBoolean) \
     macro(IsTypedArrayView, NodeResultBoolean) \
     macro(TypeOf, NodeResultJS) \
+    macro(ToBoolean, NodeResultBoolean) \
     macro(LogicalNot, NodeResultBoolean) \
     macro(ToPrimitive, NodeResultJS | NodeMustGenerate) \
     macro(ToPropertyKey, NodeResultJS | NodeMustGenerate) \
@@ -427,9 +429,12 @@ namespace JSC { namespace DFG {
     macro(CallNumberConstructor, NodeResultJS | NodeMustGenerate) \
     macro(NumberToStringWithRadix, NodeResultJS | NodeMustGenerate) \
     macro(NumberToStringWithValidRadixConstant, NodeResultJS) \
+    macro(FunctionToString, NodeResultJS) \
     macro(MakeRope, NodeResultJS) \
     macro(InByVal, NodeResultBoolean | NodeMustGenerate) \
     macro(InById, NodeResultBoolean | NodeMustGenerate) \
+    macro(HasPrivateName, NodeResultBoolean | NodeMustGenerate) \
+    macro(HasPrivateBrand, NodeResultBoolean | NodeMustGenerate) \
     macro(ProfileType, NodeMustGenerate) \
     macro(ProfileControlFlow, NodeMustGenerate) \
     macro(SetFunctionName, NodeMustGenerate) \
@@ -496,20 +501,17 @@ namespace JSC { namespace DFG {
     macro(StoreBarrier, NodeMustGenerate) \
     macro(FencedStoreBarrier, NodeMustGenerate) \
     \
-    /* For-in enumeration opcodes */\
-    macro(GetEnumerableLength, NodeMustGenerate | NodeResultJS) \
     /* Must generate because of Proxies on the prototype chain */ \
     macro(HasIndexedProperty, NodeMustGenerate | NodeResultBoolean | NodeHasVarArgs) \
-    macro(HasEnumerableIndexedProperty, NodeMustGenerate | NodeResultBoolean | NodeHasVarArgs) \
-    macro(HasEnumerableStructureProperty, NodeResultBoolean) \
-    macro(HasEnumerableProperty, NodeResultBoolean) \
-    macro(HasOwnStructureProperty, NodeResultBoolean | NodeMustGenerate) \
-    macro(InStructureProperty, NodeMustGenerate | NodeResultBoolean) \
-    macro(GetDirectPname, NodeMustGenerate | NodeHasVarArgs | NodeResultJS) \
+    /* For-in enumeration opcodes */\
     macro(GetPropertyEnumerator, NodeMustGenerate | NodeResultJS) \
-    macro(GetEnumeratorStructurePname, NodeMustGenerate | NodeResultJS) \
-    macro(GetEnumeratorGenericPname, NodeMustGenerate | NodeResultJS) \
-    macro(ToIndexString, NodeResultJS) \
+    macro(EnumeratorNextUpdateIndexAndMode, NodeResultJS | NodeHasVarArgs) \
+    macro(EnumeratorNextExtractMode, NodeResultInt32) \
+    macro(EnumeratorNextExtractIndex, NodeResultInt32) \
+    macro(EnumeratorNextUpdatePropertyName, NodeResultJS) \
+    macro(EnumeratorGetByVal, NodeResultJS | NodeHasVarArgs | NodeMustGenerate) \
+    macro(EnumeratorInByVal, NodeResultBoolean | NodeHasVarArgs | NodeMustGenerate) \
+    macro(EnumeratorHasOwnProperty, NodeResultBoolean | NodeHasVarArgs | NodeMustGenerate) \
     /* Nodes for JSMap and JSSet */ \
     macro(MapHash, NodeResultInt32) \
     macro(NormalizeMapKey, NodeResultJS) \
@@ -543,8 +545,8 @@ namespace JSC { namespace DFG {
     /* Used to provide feedback to the IC profiler. */ \
     macro(FilterCallLinkStatus, NodeMustGenerate) \
     macro(FilterGetByStatus, NodeMustGenerate) \
-    macro(FilterInByIdStatus, NodeMustGenerate) \
-    macro(FilterPutByIdStatus, NodeMustGenerate) \
+    macro(FilterInByStatus, NodeMustGenerate) \
+    macro(FilterPutByStatus, NodeMustGenerate) \
     macro(FilterDeleteByStatus, NodeMustGenerate) \
     macro(FilterCheckPrivateBrandStatus, NodeMustGenerate) \
     macro(FilterSetPrivateBrandStatus, NodeMustGenerate) \

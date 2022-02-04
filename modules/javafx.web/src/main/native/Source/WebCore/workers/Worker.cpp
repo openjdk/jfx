@@ -41,6 +41,7 @@
 #endif
 #include "ResourceResponse.h"
 #include "SecurityOrigin.h"
+#include "StructuredSerializeOptions.h"
 #include "WorkerGlobalScopeProxy.h"
 #include "WorkerScriptLoader.h"
 #include "WorkerThread.h"
@@ -105,9 +106,6 @@ ExceptionOr<Ref<Worker>> Worker::create(ScriptExecutionContext& context, JSC::Ru
 
     worker->m_shouldBypassMainWorldContentSecurityPolicy = shouldBypassMainWorldContentSecurityPolicy;
 
-    // The worker context does not exist while loading, so we must ensure that the worker object is not collected, nor are its event listeners.
-    worker->setPendingActivity(worker.get());
-
     // https://html.spec.whatwg.org/multipage/workers.html#official-moment-of-creation
     worker->m_workerCreationTime = MonotonicTime::now();
 
@@ -139,7 +137,7 @@ Worker::~Worker()
     m_contextProxy.workerObjectDestroyed();
 }
 
-ExceptionOr<void> Worker::postMessage(JSC::JSGlobalObject& state, JSC::JSValue messageValue, PostMessageOptions&& options)
+ExceptionOr<void> Worker::postMessage(JSC::JSGlobalObject& state, JSC::JSValue messageValue, StructuredSerializeOptions&& options)
 {
     Vector<RefPtr<MessagePort>> ports;
     auto message = SerializedScriptValue::create(state, messageValue, WTFMove(options.transfer), ports, SerializationContext::WorkerPostMessage);
@@ -189,7 +187,7 @@ void Worker::resume()
 
 bool Worker::virtualHasPendingActivity() const
 {
-    return m_contextProxy.hasPendingActivity();
+    return m_contextProxy.hasPendingActivity() || m_scriptLoader;
 }
 
 void Worker::notifyNetworkStateChange(bool isOnLine)
@@ -209,7 +207,6 @@ void Worker::notifyFinished()
 {
     auto clearLoader = makeScopeExit([this] {
         m_scriptLoader = nullptr;
-        unsetPendingActivity(*this);
     });
 
     auto* context = scriptExecutionContext();
@@ -232,8 +229,8 @@ void Worker::notifyFinished()
         if (m_scriptLoader->url().hasFragmentIdentifier())
             responseURL.setFragmentIdentifier(m_scriptLoader->url().fragmentIdentifier());
     }
-    m_contextProxy.startWorkerGlobalScope(responseURL, m_name, context->userAgent(responseURL), isOnline, m_scriptLoader->script(), contentSecurityPolicyResponseHeaders, m_shouldBypassMainWorldContentSecurityPolicy, m_workerCreationTime, referrerPolicy, m_type, m_credentials, m_runtimeFlags);
-    InspectorInstrumentation::scriptImported(*context, m_scriptLoader->identifier(), m_scriptLoader->script());
+    m_contextProxy.startWorkerGlobalScope(responseURL, m_name, context->userAgent(responseURL), isOnline, m_scriptLoader->script(), contentSecurityPolicyResponseHeaders, m_shouldBypassMainWorldContentSecurityPolicy, m_scriptLoader->crossOriginEmbedderPolicy(), m_workerCreationTime, referrerPolicy, m_type, m_credentials, m_runtimeFlags);
+    InspectorInstrumentation::scriptImported(*context, m_scriptLoader->identifier(), m_scriptLoader->script().toString());
 }
 
 void Worker::dispatchEvent(Event& event)
@@ -249,19 +246,14 @@ void Worker::dispatchEvent(Event& event)
 }
 
 #if ENABLE(WEB_RTC)
-void Worker::addRTCRtpScriptTransformer(String&& name)
-{
-    m_transformers.add(WTFMove(name));
-}
-
-void Worker::createRTCRtpScriptTransformer(const String& name, TransferredMessagePort port, RTCRtpScriptTransform& transform)
+void Worker::createRTCRtpScriptTransformer(RTCRtpScriptTransform& transform, MessageWithMessagePorts&& options)
 {
     if (!scriptExecutionContext())
         return;
 
-    m_contextProxy.postTaskToWorkerGlobalScope([name = name.isolatedCopy(), port, transform = makeRef(transform)](auto& context) mutable {
-        transform->setTransformer(downcast<DedicatedWorkerGlobalScope>(context).createRTCRtpScriptTransformer(WTFMove(name), port));
-        callOnMainThread([transform = WTFMove(transform)] { });
+    m_contextProxy.postTaskToWorkerGlobalScope([transform = makeRef(transform), options = WTFMove(options)](auto& context) mutable {
+        if (auto transformer = downcast<DedicatedWorkerGlobalScope>(context).createRTCRtpScriptTransformer(WTFMove(options)))
+            transform->setTransformer(*transformer);
     });
 
 }

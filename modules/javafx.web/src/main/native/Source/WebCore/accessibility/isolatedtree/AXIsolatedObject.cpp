@@ -191,7 +191,6 @@ void AXIsolatedObject::initializeAttributeData(AXCoreObject& object, bool isRoot
     setProperty(AXPropertyName::IsGrabbed, object.isGrabbed());
     setProperty(AXPropertyName::DropEffects, object.determineDropEffects());
     setObjectProperty(AXPropertyName::TitleUIElement, object.titleUIElement());
-    setProperty(AXPropertyName::ExposesTitleUIElement, object.exposesTitleUIElement());
     setObjectProperty(AXPropertyName::VerticalScrollBar, object.scrollBar(AccessibilityOrientation::Vertical));
     setObjectProperty(AXPropertyName::HorizontalScrollBar, object.scrollBar(AccessibilityOrientation::Horizontal));
     setProperty(AXPropertyName::ARIARoleAttribute, static_cast<int>(object.ariaRoleAttribute()));
@@ -966,11 +965,11 @@ void AXIsolatedObject::updateBackingStore()
             tree->applyPendingChanges();
 }
 
-Optional<SimpleRange> AXIsolatedObject::rangeForPlainTextRange(const PlainTextRange& axRange) const
+std::optional<SimpleRange> AXIsolatedObject::rangeForPlainTextRange(const PlainTextRange& axRange) const
 {
     ASSERT(isMainThread());
     auto* axObject = associatedAXObject();
-    return axObject ? axObject->rangeForPlainTextRange(axRange) : WTF::nullopt;
+    return axObject ? axObject->rangeForPlainTextRange(axRange) : std::nullopt;
 }
 
 String AXIsolatedObject::stringForRange(const SimpleRange& range) const
@@ -1142,11 +1141,11 @@ String AXIsolatedObject::textUnderElement(AccessibilityTextUnderElementMode) con
     return { };
 }
 
-Optional<SimpleRange> AXIsolatedObject::misspellingRange(const SimpleRange& range, AccessibilitySearchDirection direction) const
+std::optional<SimpleRange> AXIsolatedObject::misspellingRange(const SimpleRange& range, AccessibilitySearchDirection direction) const
 {
     ASSERT(isMainThread());
     auto* axObject = associatedAXObject();
-    return axObject ? axObject->misspellingRange(range, direction) : WTF::nullopt;
+    return axObject ? axObject->misspellingRange(range, direction) : std::nullopt;
 }
 
 FloatRect AXIsolatedObject::relativeFrame() const
@@ -1259,6 +1258,12 @@ bool AXIsolatedObject::isAccessibilityScrollViewInstance() const
     return false;
 }
 
+bool AXIsolatedObject::isAXImageInstance() const
+{
+    ASSERT_NOT_REACHED();
+    return false;
+}
+
 bool AXIsolatedObject::isAccessibilitySVGRoot() const
 {
     ASSERT_NOT_REACHED();
@@ -1337,6 +1342,15 @@ PlainTextRange AXIsolatedObject::selectedTextRange() const
         if (auto* object = associatedAXObject())
             return object->selectedTextRange();
         return { };
+    });
+}
+
+int AXIsolatedObject::insertionPointLineNumber() const
+{
+    return Accessibility::retrieveValueFromMainThread<int>([this] () -> int {
+        if (auto* axObject = associatedAXObject())
+            return axObject->insertionPointLineNumber();
+        return -1;
     });
 }
 
@@ -1421,6 +1435,15 @@ VisibleSelection AXIsolatedObject::selection() const
     return object ? object->selection() : VisibleSelection();
 }
 
+VisiblePositionRange AXIsolatedObject::selectedVisiblePositionRange() const
+{
+    ASSERT(isMainThread());
+
+    if (auto* axObject = associatedAXObject())
+        return axObject->selectedVisiblePositionRange();
+    return { };
+}
+
 void AXIsolatedObject::setSelectedVisiblePositionRange(const VisiblePositionRange& visiblePositionRange) const
 {
     ASSERT(isMainThread());
@@ -1429,29 +1452,11 @@ void AXIsolatedObject::setSelectedVisiblePositionRange(const VisiblePositionRang
         object->setSelectedVisiblePositionRange(visiblePositionRange);
 }
 
-Optional<SimpleRange> AXIsolatedObject::elementRange() const
+std::optional<SimpleRange> AXIsolatedObject::elementRange() const
 {
     ASSERT(isMainThread());
     auto* axObject = associatedAXObject();
-    return axObject ? axObject->elementRange() : WTF::nullopt;
-}
-
-unsigned AXIsolatedObject::selectionStart() const
-{
-    return Accessibility::retrieveValueFromMainThread<unsigned>([this] () -> unsigned {
-        if (auto* object = associatedAXObject())
-            return object->selectionStart();
-        return 0;
-    });
-}
-
-unsigned AXIsolatedObject::selectionEnd() const
-{
-    return Accessibility::retrieveValueFromMainThread<unsigned>([this] () -> unsigned {
-        if (auto* object = associatedAXObject())
-            return object->selectionEnd();
-        return 0;
-    });
+    return axObject ? axObject->elementRange() : std::nullopt;
 }
 
 String AXIsolatedObject::selectedText() const
@@ -2029,10 +2034,10 @@ Element* AXIsolatedObject::actionElement() const
     return nullptr;
 }
 
-TextIteratorBehavior AXIsolatedObject::textIteratorBehaviorForTextRange() const
+TextIteratorBehaviors AXIsolatedObject::textIteratorBehaviorForTextRange() const
 {
     ASSERT_NOT_REACHED();
-    return false;
+    return { };
 }
 
 Widget* AXIsolatedObject::widget() const
@@ -2126,11 +2131,6 @@ void AXIsolatedObject::childrenChanged()
     ASSERT_NOT_REACHED();
 }
 
-void AXIsolatedObject::textChanged()
-{
-    ASSERT_NOT_REACHED();
-}
-
 void AXIsolatedObject::updateAccessibilityRole()
 {
     ASSERT_NOT_REACHED();
@@ -2149,12 +2149,6 @@ void AXIsolatedObject::addChild(AXCoreObject*)
 void AXIsolatedObject::insertChild(AXCoreObject*, unsigned)
 {
     ASSERT_NOT_REACHED();
-}
-
-bool AXIsolatedObject::shouldIgnoreAttributeRole() const
-{
-    ASSERT_NOT_REACHED();
-    return false;
 }
 
 bool AXIsolatedObject::canHaveChildren() const

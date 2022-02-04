@@ -61,7 +61,10 @@ public:
 
     class TypedExpression {
     public:
-        TypedExpression() = default;
+        TypedExpression()
+            : m_type(Types::Void)
+        {
+        }
 
         TypedExpression(Type type, ExpressionType value)
             : m_type(type)
@@ -240,7 +243,8 @@ auto FunctionParser<Context>::parse() -> Result
         WASM_PARSER_FAIL_IF(!parseVarUInt32(numberOfLocals), "can't get Function's number of locals in group ", i);
         totalNumberOfLocals += numberOfLocals;
         WASM_PARSER_FAIL_IF(totalNumberOfLocals > maxFunctionLocals, "Function's number of locals is too big ", totalNumberOfLocals, " maximum ", maxFunctionLocals);
-        WASM_PARSER_FAIL_IF(!parseValueType(typeOfLocal), "can't get Function local's type in group ", i);
+        WASM_PARSER_FAIL_IF(!parseValueType(m_info, typeOfLocal), "can't get Function local's type in group ", i);
+        WASM_PARSER_FAIL_IF(!isDefaultableType(typeOfLocal), "Function locals must have a defaultable type");
 
         WASM_PARSER_FAIL_IF(!m_locals.tryReserveCapacity(totalNumberOfLocals), "can't allocate enough memory for function's ", totalNumberOfLocals, " locals");
         for (uint32_t i = 0; i < numberOfLocals; ++i)
@@ -332,7 +336,7 @@ auto FunctionParser<Context>::load(Type memoryType) -> PartialResult
     WASM_PARSER_FAIL_IF(!parseVarUInt32(offset), "can't get load offset");
     WASM_TRY_POP_EXPRESSION_STACK_INTO(pointer, "load pointer");
 
-    WASM_VALIDATOR_FAIL_IF(pointer.type() != I32, m_currentOpcode, " pointer type mismatch");
+    WASM_VALIDATOR_FAIL_IF(!pointer.type().isI32(), m_currentOpcode, " pointer type mismatch");
 
     ExpressionType result;
     WASM_TRY_ADD_TO_CONTEXT(load(static_cast<LoadOpType>(m_currentOpcode), pointer, result, offset));
@@ -355,7 +359,7 @@ auto FunctionParser<Context>::store(Type memoryType) -> PartialResult
     WASM_TRY_POP_EXPRESSION_STACK_INTO(value, "store value");
     WASM_TRY_POP_EXPRESSION_STACK_INTO(pointer, "store pointer");
 
-    WASM_VALIDATOR_FAIL_IF(pointer.type() != I32, m_currentOpcode, " pointer type mismatch");
+    WASM_VALIDATOR_FAIL_IF(!pointer.type().isI32(), m_currentOpcode, " pointer type mismatch");
     WASM_VALIDATOR_FAIL_IF(value.type() != memoryType, m_currentOpcode, " value type mismatch");
 
     WASM_TRY_ADD_TO_CONTEXT(store(static_cast<StoreOpType>(m_currentOpcode), pointer, value, offset));
@@ -389,7 +393,7 @@ auto FunctionParser<Context>::atomicLoad(ExtAtomicOpType op, Type memoryType) ->
     WASM_PARSER_FAIL_IF(!parseVarUInt32(offset), "can't get load offset");
     WASM_TRY_POP_EXPRESSION_STACK_INTO(pointer, "load pointer");
 
-    WASM_VALIDATOR_FAIL_IF(pointer.type() != I32, static_cast<unsigned>(op), " pointer type mismatch");
+    WASM_VALIDATOR_FAIL_IF(!pointer.type().isI32(), static_cast<unsigned>(op), " pointer type mismatch");
 
     ExpressionType result;
     WASM_TRY_ADD_TO_CONTEXT(atomicLoad(op, memoryType, pointer, result, offset));
@@ -412,7 +416,7 @@ auto FunctionParser<Context>::atomicStore(ExtAtomicOpType op, Type memoryType) -
     WASM_TRY_POP_EXPRESSION_STACK_INTO(value, "store value");
     WASM_TRY_POP_EXPRESSION_STACK_INTO(pointer, "store pointer");
 
-    WASM_VALIDATOR_FAIL_IF(pointer.type() != I32, m_currentOpcode, " pointer type mismatch");
+    WASM_VALIDATOR_FAIL_IF(!pointer.type().isI32(), m_currentOpcode, " pointer type mismatch");
     WASM_VALIDATOR_FAIL_IF(value.type() != memoryType, m_currentOpcode, " value type mismatch");
 
     WASM_TRY_ADD_TO_CONTEXT(atomicStore(op, memoryType, pointer, value, offset));
@@ -434,7 +438,7 @@ auto FunctionParser<Context>::atomicBinaryRMW(ExtAtomicOpType op, Type memoryTyp
     WASM_TRY_POP_EXPRESSION_STACK_INTO(value, "value");
     WASM_TRY_POP_EXPRESSION_STACK_INTO(pointer, "pointer");
 
-    WASM_VALIDATOR_FAIL_IF(pointer.type() != I32, static_cast<unsigned>(op), " pointer type mismatch");
+    WASM_VALIDATOR_FAIL_IF(!pointer.type().isI32(), static_cast<unsigned>(op), " pointer type mismatch");
     WASM_VALIDATOR_FAIL_IF(value.type() != memoryType, static_cast<unsigned>(op), " value type mismatch");
 
     ExpressionType result;
@@ -460,7 +464,7 @@ auto FunctionParser<Context>::atomicCompareExchange(ExtAtomicOpType op, Type mem
     WASM_TRY_POP_EXPRESSION_STACK_INTO(expected, "expected");
     WASM_TRY_POP_EXPRESSION_STACK_INTO(pointer, "pointer");
 
-    WASM_VALIDATOR_FAIL_IF(pointer.type() != I32, static_cast<unsigned>(op), " pointer type mismatch");
+    WASM_VALIDATOR_FAIL_IF(!pointer.type().isI32(), static_cast<unsigned>(op), " pointer type mismatch");
     WASM_VALIDATOR_FAIL_IF(expected.type() != memoryType, static_cast<unsigned>(op), " expected type mismatch");
     WASM_VALIDATOR_FAIL_IF(value.type() != memoryType, static_cast<unsigned>(op), " value type mismatch");
 
@@ -487,13 +491,13 @@ auto FunctionParser<Context>::atomicWait(ExtAtomicOpType op, Type memoryType) ->
     WASM_TRY_POP_EXPRESSION_STACK_INTO(value, "value");
     WASM_TRY_POP_EXPRESSION_STACK_INTO(pointer, "pointer");
 
-    WASM_VALIDATOR_FAIL_IF(pointer.type() != I32, static_cast<unsigned>(op), " pointer type mismatch");
+    WASM_VALIDATOR_FAIL_IF(!pointer.type().isI32(), static_cast<unsigned>(op), " pointer type mismatch");
     WASM_VALIDATOR_FAIL_IF(value.type() != memoryType, static_cast<unsigned>(op), " value type mismatch");
-    WASM_VALIDATOR_FAIL_IF(timeout.type() != I64, static_cast<unsigned>(op), " timeout type mismatch");
+    WASM_VALIDATOR_FAIL_IF(!timeout.type().isI64(), static_cast<unsigned>(op), " timeout type mismatch");
 
     ExpressionType result;
     WASM_TRY_ADD_TO_CONTEXT(atomicWait(op, pointer, value, timeout, result, offset));
-    m_expressionStack.constructAndAppend(I32, result);
+    m_expressionStack.constructAndAppend(Types::I32, result);
     return { };
 }
 
@@ -512,12 +516,12 @@ auto FunctionParser<Context>::atomicNotify(ExtAtomicOpType op) -> PartialResult
     WASM_TRY_POP_EXPRESSION_STACK_INTO(count, "count");
     WASM_TRY_POP_EXPRESSION_STACK_INTO(pointer, "pointer");
 
-    WASM_VALIDATOR_FAIL_IF(pointer.type() != I32, static_cast<unsigned>(op), " pointer type mismatch");
-    WASM_VALIDATOR_FAIL_IF(count.type() != I32, static_cast<unsigned>(op), " count type mismatch"); // The spec's definition is saying i64, but all implementations (including tests) are using i32. So looks like the spec is wrong.
+    WASM_VALIDATOR_FAIL_IF(!pointer.type().isI32(), static_cast<unsigned>(op), " pointer type mismatch");
+    WASM_VALIDATOR_FAIL_IF(!count.type().isI32(), static_cast<unsigned>(op), " count type mismatch"); // The spec's definition is saying i64, but all implementations (including tests) are using i32. So looks like the spec is wrong.
 
     ExpressionType result;
     WASM_TRY_ADD_TO_CONTEXT(atomicNotify(op, pointer, count, result, offset));
-    m_expressionStack.constructAndAppend(I32, result);
+    m_expressionStack.constructAndAppend(Types::I32, result);
     return { };
 }
 
@@ -641,7 +645,7 @@ auto FunctionParser<Context>::parseAnnotatedSelectImmediates(AnnotatedSelectImme
     WASM_PARSER_FAIL_IF(sizeOfAnnotationVector != 1, "select invalid result arity for");
 
     Type targetType;
-    WASM_PARSER_FAIL_IF(!parseValueType(targetType), "select can't parse annotations");
+    WASM_PARSER_FAIL_IF(!parseValueType(m_info, targetType), "select can't parse annotations");
 
     result.sizeOfAnnotationVector = sizeOfAnnotationVector;
     result.targetType = targetType;
@@ -696,7 +700,7 @@ auto FunctionParser<Context>::checkBranchTarget(const ControlType& target) -> Pa
 
     unsigned offset = m_expressionStack.size() - target.branchTargetArity();
     for (unsigned i = 0; i < target.branchTargetArity(); ++i)
-        WASM_VALIDATOR_FAIL_IF(target.branchTargetType(i) != m_expressionStack[offset + i].type(), "branch's stack type is not a block's type branch target type. Stack value has type", m_expressionStack[offset + i].type(), " but branch target expects a value of ", target.branchTargetType(i), " at index ", i);
+        WASM_VALIDATOR_FAIL_IF(!isSubtype(m_expressionStack[offset + i].type(), target.branchTargetType(i)), "branch's stack type is not a block's type branch target type. Stack value has type ", m_expressionStack[offset + i].type().kind, " but branch target expects a value of ", target.branchTargetType(i).kind, " at index ", i);
 
     return { };
 }
@@ -706,7 +710,7 @@ auto FunctionParser<Context>::unify(const ControlType& controlData) -> PartialRe
 {
     WASM_VALIDATOR_FAIL_IF(controlData.signature()->returnCount() != m_expressionStack.size(), " block with type: ", controlData.signature()->toString(), " returns: ", controlData.signature()->returnCount(), " but stack has: ", m_expressionStack.size(), " values");
     for (unsigned i = 0; i < controlData.signature()->returnCount(); ++i)
-        WASM_VALIDATOR_FAIL_IF(m_expressionStack[i].type() != controlData.signature()->returnType(i), "control flow returns with unexpected type. ", m_expressionStack[i].type(), " is not a ", controlData.signature()->returnType(i));
+        WASM_VALIDATOR_FAIL_IF(!isSubtype(m_expressionStack[i].type(), controlData.signature()->returnType(i)), "control flow returns with unexpected type. ", m_expressionStack[i].type().kind, " is not a ", controlData.signature()->returnType(i).kind);
 
     return { };
 }
@@ -715,11 +719,11 @@ template<typename Context>
 auto FunctionParser<Context>::parseExpression() -> PartialResult
 {
     switch (m_currentOpcode) {
-#define CREATE_CASE(name, id, b3op, inc, lhsType, rhsType, returnType) case OpType::name: return binaryCase<OpType::name>(returnType, lhsType, rhsType);
+#define CREATE_CASE(name, id, b3op, inc, lhsType, rhsType, returnType) case OpType::name: return binaryCase<OpType::name>(Types::returnType, Types::lhsType, Types::rhsType);
     FOR_EACH_WASM_BINARY_OP(CREATE_CASE)
 #undef CREATE_CASE
 
-#define CREATE_CASE(name, id, b3op, inc, operandType, returnType) case OpType::name: return unaryCase<OpType::name>(returnType, operandType);
+#define CREATE_CASE(name, id, b3op, inc, operandType, returnType) case OpType::name: return unaryCase<OpType::name>(Types::returnType, Types::operandType);
     FOR_EACH_WASM_UNARY_OP(CREATE_CASE)
 #undef CREATE_CASE
 
@@ -732,11 +736,10 @@ auto FunctionParser<Context>::parseExpression() -> PartialResult
         WASM_TRY_POP_EXPRESSION_STACK_INTO(zero, "select zero");
         WASM_TRY_POP_EXPRESSION_STACK_INTO(nonZero, "select non-zero");
 
-        if (Options::useWebAssemblyReferences())
-            WASM_PARSER_FAIL_IF(isRefType(nonZero.type()) || isRefType(nonZero.type()), "can't use ref-types with unannotated select");
+        WASM_PARSER_FAIL_IF(isRefType(nonZero.type()) || isRefType(nonZero.type()), "can't use ref-types with unannotated select");
 
-        WASM_VALIDATOR_FAIL_IF(condition.type() != I32, "select condition must be i32, got ", condition.type());
-        WASM_VALIDATOR_FAIL_IF(nonZero.type() != zero.type(), "select result types must match, got ", nonZero.type(), " and ", zero.type());
+        WASM_VALIDATOR_FAIL_IF(!condition.type().isI32(), "select condition must be i32, got ", condition.type().kind);
+        WASM_VALIDATOR_FAIL_IF(nonZero.type() != zero.type(), "select result types must match, got ", nonZero.type().kind, " and ", zero.type().kind);
 
         ExpressionType result;
         WASM_TRY_ADD_TO_CONTEXT(addSelect(condition, nonZero, zero, result));
@@ -746,8 +749,6 @@ auto FunctionParser<Context>::parseExpression() -> PartialResult
     }
 
     case AnnotatedSelect: {
-        WASM_PARSER_FAIL_IF(!Options::useWebAssemblyReferences(), "references are not enabled");
-
         AnnotatedSelectImmediates immediates;
         WASM_FAIL_IF_HELPER_FAILS(parseAnnotatedSelectImmediates(immediates));
 
@@ -759,9 +760,9 @@ auto FunctionParser<Context>::parseExpression() -> PartialResult
         WASM_TRY_POP_EXPRESSION_STACK_INTO(zero, "select zero");
         WASM_TRY_POP_EXPRESSION_STACK_INTO(nonZero, "select non-zero");
 
-        WASM_VALIDATOR_FAIL_IF(condition.type() != I32, "select condition must be i32, got ", condition.type());
-        WASM_VALIDATOR_FAIL_IF(nonZero.type() != immediates.targetType, "select result types must match, got ", nonZero.type(), " and ", immediates.targetType);
-        WASM_VALIDATOR_FAIL_IF(zero.type() != immediates.targetType, "select result types must match, got ", zero.type(), " and ", immediates.targetType);
+        WASM_VALIDATOR_FAIL_IF(!condition.type().isI32(), "select condition must be i32, got ", condition.type().kind);
+        WASM_VALIDATOR_FAIL_IF(nonZero.type() != immediates.targetType, "select result types must match, got ", nonZero.type().kind, " and ", immediates.targetType.kind);
+        WASM_VALIDATOR_FAIL_IF(zero.type() != immediates.targetType, "select result types must match, got ", zero.type().kind, " and ", immediates.targetType.kind);
 
         ExpressionType result;
         WASM_TRY_ADD_TO_CONTEXT(addSelect(condition, nonZero, zero, result));
@@ -770,51 +771,50 @@ auto FunctionParser<Context>::parseExpression() -> PartialResult
         return { };
     }
 
-#define CREATE_CASE(name, id, b3op, inc, memoryType) case OpType::name: return load(memoryType);
+#define CREATE_CASE(name, id, b3op, inc, memoryType) case OpType::name: return load(Types::memoryType);
 FOR_EACH_WASM_MEMORY_LOAD_OP(CREATE_CASE)
 #undef CREATE_CASE
 
-#define CREATE_CASE(name, id, b3op, inc, memoryType) case OpType::name: return store(memoryType);
+#define CREATE_CASE(name, id, b3op, inc, memoryType) case OpType::name: return store(Types::memoryType);
 FOR_EACH_WASM_MEMORY_STORE_OP(CREATE_CASE)
 #undef CREATE_CASE
 
     case F32Const: {
         uint32_t constant;
         WASM_PARSER_FAIL_IF(!parseUInt32(constant), "can't parse 32-bit floating-point constant");
-        m_expressionStack.constructAndAppend(F32, m_context.addConstant(F32, constant));
+        m_expressionStack.constructAndAppend(Types::F32, m_context.addConstant(Types::F32, constant));
         return { };
     }
 
     case I32Const: {
         int32_t constant;
         WASM_PARSER_FAIL_IF(!parseVarInt32(constant), "can't parse 32-bit constant");
-        m_expressionStack.constructAndAppend(I32, m_context.addConstant(I32, constant));
+        m_expressionStack.constructAndAppend(Types::I32, m_context.addConstant(Types::I32, constant));
         return { };
     }
 
     case F64Const: {
         uint64_t constant;
         WASM_PARSER_FAIL_IF(!parseUInt64(constant), "can't parse 64-bit floating-point constant");
-        m_expressionStack.constructAndAppend(F64, m_context.addConstant(F64, constant));
+        m_expressionStack.constructAndAppend(Types::F64, m_context.addConstant(Types::F64, constant));
         return { };
     }
 
     case I64Const: {
         int64_t constant;
         WASM_PARSER_FAIL_IF(!parseVarInt64(constant), "can't parse 64-bit constant");
-        m_expressionStack.constructAndAppend(I64, m_context.addConstant(I64, constant));
+        m_expressionStack.constructAndAppend(Types::I64, m_context.addConstant(Types::I64, constant));
         return { };
     }
 
     case TableGet: {
-        WASM_PARSER_FAIL_IF(!Options::useWebAssemblyReferences(), "references are not enabled");
         unsigned tableIndex;
         WASM_PARSER_FAIL_IF(!parseVarUInt32(tableIndex), "can't parse table index");
         WASM_VALIDATOR_FAIL_IF(tableIndex >= m_info.tableCount(), "table index ", tableIndex, " is invalid, limit is ", m_info.tableCount());
 
         TypedExpression index;
         WASM_TRY_POP_EXPRESSION_STACK_INTO(index, "table.get");
-        WASM_VALIDATOR_FAIL_IF(I32 != index.type(), "table.get index to type ", index.type(), " expected ", I32);
+        WASM_VALIDATOR_FAIL_IF(TypeKind::I32 != index.type().kind, "table.get index to type ", index.type().kind, " expected ", TypeKind::I32);
 
         ExpressionType result;
         WASM_TRY_ADD_TO_CONTEXT(addTableGet(tableIndex, index, result));
@@ -824,16 +824,15 @@ FOR_EACH_WASM_MEMORY_STORE_OP(CREATE_CASE)
     }
 
     case TableSet: {
-        WASM_PARSER_FAIL_IF(!Options::useWebAssemblyReferences(), "references are not enabled");
         unsigned tableIndex;
         WASM_PARSER_FAIL_IF(!parseVarUInt32(tableIndex), "can't parse table index");
         WASM_VALIDATOR_FAIL_IF(tableIndex >= m_info.tableCount(), "table index ", tableIndex, " is invalid, limit is ", m_info.tableCount());
         TypedExpression value, index;
         WASM_TRY_POP_EXPRESSION_STACK_INTO(value, "table.set");
         WASM_TRY_POP_EXPRESSION_STACK_INTO(index, "table.set");
-        WASM_VALIDATOR_FAIL_IF(I32 != index.type(), "table.set index to type ", index.type(), " expected ", I32);
+        WASM_VALIDATOR_FAIL_IF(TypeKind::I32 != index.type().kind, "table.set index to type ", index.type().kind, " expected ", TypeKind::I32);
         Type type = m_info.tables[tableIndex].wasmType();
-        WASM_VALIDATOR_FAIL_IF(value.type() != type, "table.set value to type ", value.type(), " expected ", type);
+        WASM_VALIDATOR_FAIL_IF(!isSubtype(value.type(), type), "table.set value to type ", value.type().kind, " expected ", type.kind);
         RELEASE_ASSERT(m_info.tables[tableIndex].type() == TableElementType::Externref || m_info.tables[tableIndex].type() == TableElementType::Funcref);
         WASM_TRY_ADD_TO_CONTEXT(addTableSet(tableIndex, index, value));
         return { };
@@ -846,8 +845,6 @@ FOR_EACH_WASM_MEMORY_STORE_OP(CREATE_CASE)
         Ext1OpType op = static_cast<Ext1OpType>(extOp);
         switch (op) {
         case Ext1OpType::TableInit: {
-            WASM_PARSER_FAIL_IF(!Options::useWebAssemblyReferences(), "references are not enabled");
-
             TableInitImmediates immediates;
             WASM_FAIL_IF_HELPER_FAILS(parseTableInitImmediates(immediates));
 
@@ -858,16 +855,14 @@ FOR_EACH_WASM_MEMORY_STORE_OP(CREATE_CASE)
             WASM_TRY_POP_EXPRESSION_STACK_INTO(srcOffset, "table.init");
             WASM_TRY_POP_EXPRESSION_STACK_INTO(dstOffset, "table.init");
 
-            WASM_VALIDATOR_FAIL_IF(I32 != dstOffset.type(), "table.init dst_offset to type ", dstOffset.type(), " expected ", I32);
-            WASM_VALIDATOR_FAIL_IF(I32 != srcOffset.type(), "table.init src_offset to type ", srcOffset.type(), " expected ", I32);
-            WASM_VALIDATOR_FAIL_IF(I32 != lenght.type(), "table.init length to type ", lenght.type(), " expected ", I32);
+            WASM_VALIDATOR_FAIL_IF(TypeKind::I32 != dstOffset.type().kind, "table.init dst_offset to type ", dstOffset.type().kind, " expected ", TypeKind::I32);
+            WASM_VALIDATOR_FAIL_IF(TypeKind::I32 != srcOffset.type().kind, "table.init src_offset to type ", srcOffset.type().kind, " expected ", TypeKind::I32);
+            WASM_VALIDATOR_FAIL_IF(TypeKind::I32 != lenght.type().kind, "table.init length to type ", lenght.type().kind, " expected ", TypeKind::I32);
 
             WASM_TRY_ADD_TO_CONTEXT(addTableInit(immediates.elementIndex, immediates.tableIndex, dstOffset, srcOffset, lenght));
             break;
         }
         case Ext1OpType::ElemDrop: {
-            WASM_PARSER_FAIL_IF(!Options::useWebAssemblyReferences(), "references are not enabled");
-
             unsigned elementIndex;
             WASM_FAIL_IF_HELPER_FAILS(parseElementIndex(elementIndex));
 
@@ -875,19 +870,15 @@ FOR_EACH_WASM_MEMORY_STORE_OP(CREATE_CASE)
             break;
         }
         case Ext1OpType::TableSize: {
-            WASM_PARSER_FAIL_IF(!Options::useWebAssemblyReferences(), "references are not enabled");
-
             unsigned tableIndex;
             WASM_FAIL_IF_HELPER_FAILS(parseTableIndex(tableIndex));
 
             ExpressionType result;
             WASM_TRY_ADD_TO_CONTEXT(addTableSize(tableIndex, result));
-            m_expressionStack.constructAndAppend(I32, result);
+            m_expressionStack.constructAndAppend(Types::I32, result);
             break;
         }
         case Ext1OpType::TableGrow: {
-            WASM_PARSER_FAIL_IF(!Options::useWebAssemblyReferences(), "references are not enabled");
-
             unsigned tableIndex;
             WASM_FAIL_IF_HELPER_FAILS(parseTableIndex(tableIndex));
 
@@ -896,17 +887,16 @@ FOR_EACH_WASM_MEMORY_STORE_OP(CREATE_CASE)
             WASM_TRY_POP_EXPRESSION_STACK_INTO(delta, "table.grow");
             WASM_TRY_POP_EXPRESSION_STACK_INTO(fill, "table.grow");
 
-            WASM_VALIDATOR_FAIL_IF(fill.type() != m_info.tables[tableIndex].wasmType(), "table.grow expects fill value of type ", m_info.tables[tableIndex].wasmType(), " got ", fill.type());
-            WASM_VALIDATOR_FAIL_IF(I32 != delta.type(), "table.grow expects an i32 delta value, got ", delta.type());
+            Type tableType = m_info.tables[tableIndex].wasmType();
+            WASM_VALIDATOR_FAIL_IF(!isSubtype(fill.type(), tableType), "table.grow expects fill value of type ", tableType.kind, " got ", fill.type().kind);
+            WASM_VALIDATOR_FAIL_IF(TypeKind::I32 != delta.type().kind, "table.grow expects an i32 delta value, got ", delta.type().kind);
 
             ExpressionType result;
             WASM_TRY_ADD_TO_CONTEXT(addTableGrow(tableIndex, fill, delta, result));
-            m_expressionStack.constructAndAppend(I32, result);
+            m_expressionStack.constructAndAppend(Types::I32, result);
             break;
         }
         case Ext1OpType::TableFill: {
-            WASM_PARSER_FAIL_IF(!Options::useWebAssemblyReferences(), "references are not enabled");
-
             unsigned tableIndex;
             WASM_FAIL_IF_HELPER_FAILS(parseTableIndex(tableIndex));
 
@@ -915,22 +905,21 @@ FOR_EACH_WASM_MEMORY_STORE_OP(CREATE_CASE)
             WASM_TRY_POP_EXPRESSION_STACK_INTO(fill, "table.fill");
             WASM_TRY_POP_EXPRESSION_STACK_INTO(offset, "table.fill");
 
-            WASM_VALIDATOR_FAIL_IF(fill.type() != m_info.tables[tableIndex].wasmType(), "table.fill expects fill value of type ", m_info.tables[tableIndex].wasmType(), " got ", fill.type());
-            WASM_VALIDATOR_FAIL_IF(I32 != offset.type(), "table.fill expects an i32 offset value, got ", offset.type());
-            WASM_VALIDATOR_FAIL_IF(I32 != count.type(), "table.fill expects an i32 count value, got ", count.type());
+            Type tableType = m_info.tables[tableIndex].wasmType();
+            WASM_VALIDATOR_FAIL_IF(!isSubtype(fill.type(), tableType), "table.fill expects fill value of type ", tableType.kind, " got ", fill.type().kind);
+            WASM_VALIDATOR_FAIL_IF(TypeKind::I32 != offset.type().kind, "table.fill expects an i32 offset value, got ", offset.type().kind);
+            WASM_VALIDATOR_FAIL_IF(TypeKind::I32 != count.type().kind, "table.fill expects an i32 count value, got ", count.type().kind);
 
             WASM_TRY_ADD_TO_CONTEXT(addTableFill(tableIndex, offset, fill, count));
             break;
         }
         case Ext1OpType::TableCopy: {
-            WASM_PARSER_FAIL_IF(!Options::useWebAssemblyReferences(), "references are not enabled");
-
             TableCopyImmediates immediates;
             WASM_FAIL_IF_HELPER_FAILS(parseTableCopyImmediates(immediates));
 
             const auto srcType = m_info.table(immediates.srcTableIndex).wasmType();
             const auto dstType = m_info.table(immediates.dstTableIndex).wasmType();
-            WASM_VALIDATOR_FAIL_IF(srcType != dstType, "type mismatch at table.copy. got ", srcType, " and ", dstType);
+            WASM_VALIDATOR_FAIL_IF(srcType != dstType, "type mismatch at table.copy. got ", srcType.kind, " and ", dstType.kind);
 
             TypedExpression dstOffset;
             TypedExpression srcOffset;
@@ -939,16 +928,14 @@ FOR_EACH_WASM_MEMORY_STORE_OP(CREATE_CASE)
             WASM_TRY_POP_EXPRESSION_STACK_INTO(srcOffset, "table.copy");
             WASM_TRY_POP_EXPRESSION_STACK_INTO(dstOffset, "table.copy");
 
-            WASM_VALIDATOR_FAIL_IF(I32 != dstOffset.type(), "table.copy dst_offset to type ", dstOffset.type(), " expected ", I32);
-            WASM_VALIDATOR_FAIL_IF(I32 != srcOffset.type(), "table.copy src_offset to type ", srcOffset.type(), " expected ", I32);
-            WASM_VALIDATOR_FAIL_IF(I32 != length.type(), "table.copy length to type ", length.type(), " expected ", I32);
+            WASM_VALIDATOR_FAIL_IF(TypeKind::I32 != dstOffset.type().kind, "table.copy dst_offset to type ", dstOffset.type().kind, " expected ", TypeKind::I32);
+            WASM_VALIDATOR_FAIL_IF(TypeKind::I32 != srcOffset.type().kind, "table.copy src_offset to type ", srcOffset.type().kind, " expected ", TypeKind::I32);
+            WASM_VALIDATOR_FAIL_IF(TypeKind::I32 != length.type().kind, "table.copy length to type ", length.type().kind, " expected ", TypeKind::I32);
 
             WASM_TRY_ADD_TO_CONTEXT(addTableCopy(immediates.dstTableIndex, immediates.srcTableIndex, dstOffset, srcOffset, length));
             break;
         }
         case Ext1OpType::MemoryFill: {
-            WASM_PARSER_FAIL_IF(!Options::useWebAssemblyReferences(), "references are not enabled");
-
             WASM_FAIL_IF_HELPER_FAILS(parseMemoryFillImmediate());
 
             WASM_VALIDATOR_FAIL_IF(!m_info.memoryCount(), "memory must be present");
@@ -961,16 +948,14 @@ FOR_EACH_WASM_MEMORY_STORE_OP(CREATE_CASE)
             WASM_TRY_POP_EXPRESSION_STACK_INTO(targetValue, "memory.fill");
             WASM_TRY_POP_EXPRESSION_STACK_INTO(dstAddress, "memory.fill");
 
-            WASM_VALIDATOR_FAIL_IF(I32 != dstAddress.type(), "memory.fill dstAddress to type ", dstAddress.type(), " expected ", I32);
-            WASM_VALIDATOR_FAIL_IF(I32 != targetValue.type(), "memory.fill targetValue to type ", targetValue.type(), " expected ", I32);
-            WASM_VALIDATOR_FAIL_IF(I32 != count.type(), "memory.fill size to type ", count.type(), " expected ", I32);
+            WASM_VALIDATOR_FAIL_IF(TypeKind::I32 != dstAddress.type().kind, "memory.fill dstAddress to type ", dstAddress.type().kind, " expected ", TypeKind::I32);
+            WASM_VALIDATOR_FAIL_IF(TypeKind::I32 != targetValue.type().kind, "memory.fill targetValue to type ", targetValue.type().kind, " expected ", TypeKind::I32);
+            WASM_VALIDATOR_FAIL_IF(TypeKind::I32 != count.type().kind, "memory.fill size to type ", count.type().kind, " expected ", TypeKind::I32);
 
             WASM_TRY_ADD_TO_CONTEXT(addMemoryFill(dstAddress, targetValue, count));
             break;
         }
         case Ext1OpType::MemoryCopy: {
-            WASM_PARSER_FAIL_IF(!Options::useWebAssemblyReferences(), "references are not enabled");
-
             WASM_FAIL_IF_HELPER_FAILS(parseMemoryCopyImmediates());
 
             WASM_VALIDATOR_FAIL_IF(!m_info.memoryCount(), "memory must be present");
@@ -983,16 +968,14 @@ FOR_EACH_WASM_MEMORY_STORE_OP(CREATE_CASE)
             WASM_TRY_POP_EXPRESSION_STACK_INTO(srcAddress, "memory.copy");
             WASM_TRY_POP_EXPRESSION_STACK_INTO(dstAddress, "memory.copy");
 
-            WASM_VALIDATOR_FAIL_IF(I32 != dstAddress.type(), "memory.copy dstAddress to type ", dstAddress.type(), " expected ", I32);
-            WASM_VALIDATOR_FAIL_IF(I32 != srcAddress.type(), "memory.copy targetValue to type ", srcAddress.type(), " expected ", I32);
-            WASM_VALIDATOR_FAIL_IF(I32 != count.type(), "memory.copy size to type ", count.type(), " expected ", I32);
+            WASM_VALIDATOR_FAIL_IF(TypeKind::I32 != dstAddress.type().kind, "memory.copy dstAddress to type ", dstAddress.type().kind, " expected ", TypeKind::I32);
+            WASM_VALIDATOR_FAIL_IF(TypeKind::I32 != srcAddress.type().kind, "memory.copy targetValue to type ", srcAddress.type().kind, " expected ", TypeKind::I32);
+            WASM_VALIDATOR_FAIL_IF(TypeKind::I32 != count.type().kind, "memory.copy size to type ", count.type().kind, " expected ", TypeKind::I32);
 
             WASM_TRY_ADD_TO_CONTEXT(addMemoryCopy(dstAddress, srcAddress, count));
             break;
         }
         case Ext1OpType::MemoryInit: {
-            WASM_PARSER_FAIL_IF(!Options::useWebAssemblyReferences(), "references are not enabled");
-
             MemoryInitImmediates immediates;
             WASM_FAIL_IF_HELPER_FAILS(parseMemoryInitImmediates(immediates));
 
@@ -1003,16 +986,14 @@ FOR_EACH_WASM_MEMORY_STORE_OP(CREATE_CASE)
             WASM_TRY_POP_EXPRESSION_STACK_INTO(srcAddress, "memory.init");
             WASM_TRY_POP_EXPRESSION_STACK_INTO(dstAddress, "memory.init");
 
-            WASM_VALIDATOR_FAIL_IF(I32 != dstAddress.type(), "memory.init dst address to type ", dstAddress.type(), " expected ", I32);
-            WASM_VALIDATOR_FAIL_IF(I32 != srcAddress.type(), "memory.init src address to type ", srcAddress.type(), " expected ", I32);
-            WASM_VALIDATOR_FAIL_IF(I32 != length.type(), "memory.init length to type ", length.type(), " expected ", I32);
+            WASM_VALIDATOR_FAIL_IF(TypeKind::I32 != dstAddress.type().kind, "memory.init dst address to type ", dstAddress.type().kind, " expected ", TypeKind::I32);
+            WASM_VALIDATOR_FAIL_IF(TypeKind::I32 != srcAddress.type().kind, "memory.init src address to type ", srcAddress.type().kind, " expected ", TypeKind::I32);
+            WASM_VALIDATOR_FAIL_IF(TypeKind::I32 != length.type().kind, "memory.init length to type ", length.type().kind, " expected ", TypeKind::I32);
 
             WASM_TRY_ADD_TO_CONTEXT(addMemoryInit(immediates.dataSegmentIndex, dstAddress, srcAddress, length));
             break;
         }
         case Ext1OpType::DataDrop: {
-            WASM_PARSER_FAIL_IF(!Options::useWebAssemblyReferences(), "references are not enabled");
-
             unsigned dataSegmentIndex;
             WASM_FAIL_IF_HELPER_FAILS(parseDataSegmentIndex(dataSegmentIndex));
 
@@ -1020,7 +1001,7 @@ FOR_EACH_WASM_MEMORY_STORE_OP(CREATE_CASE)
             break;
         }
 
-#define CREATE_CASE(name, id, b3op, inc, operandType, returnType) case Ext1OpType::name: return truncSaturated(op, returnType, operandType);
+#define CREATE_CASE(name, id, b3op, inc, operandType, returnType) case Ext1OpType::name: return truncSaturated(op, Types::returnType, Types::operandType);
         FOR_EACH_WASM_TRUNC_SATURATED_OP(CREATE_CASE)
 #undef CREATE_CASE
 
@@ -1038,19 +1019,19 @@ FOR_EACH_WASM_MEMORY_STORE_OP(CREATE_CASE)
 
         ExtAtomicOpType op = static_cast<ExtAtomicOpType>(extOp);
         switch (op) {
-#define CREATE_CASE(name, id, b3op, inc, memoryType) case ExtAtomicOpType::name: return atomicLoad(op, memoryType);
+#define CREATE_CASE(name, id, b3op, inc, memoryType) case ExtAtomicOpType::name: return atomicLoad(op, Types::memoryType);
         FOR_EACH_WASM_EXT_ATOMIC_LOAD_OP(CREATE_CASE)
 #undef CREATE_CASE
-#define CREATE_CASE(name, id, b3op, inc, memoryType) case ExtAtomicOpType::name: return atomicStore(op, memoryType);
+#define CREATE_CASE(name, id, b3op, inc, memoryType) case ExtAtomicOpType::name: return atomicStore(op, Types::memoryType);
         FOR_EACH_WASM_EXT_ATOMIC_STORE_OP(CREATE_CASE)
 #undef CREATE_CASE
-#define CREATE_CASE(name, id, b3op, inc, memoryType) case ExtAtomicOpType::name: return atomicBinaryRMW(op, memoryType);
+#define CREATE_CASE(name, id, b3op, inc, memoryType) case ExtAtomicOpType::name: return atomicBinaryRMW(op, Types::memoryType);
         FOR_EACH_WASM_EXT_ATOMIC_BINARY_RMW_OP(CREATE_CASE)
 #undef CREATE_CASE
         case ExtAtomicOpType::MemoryAtomicWait64:
-            return atomicWait(op, I64);
+            return atomicWait(op, Types::I64);
         case ExtAtomicOpType::MemoryAtomicWait32:
-            return atomicWait(op, I32);
+            return atomicWait(op, Types::I32);
         case ExtAtomicOpType::MemoryAtomicNotify:
             return atomicNotify(op);
         case ExtAtomicOpType::AtomicFence:
@@ -1058,12 +1039,12 @@ FOR_EACH_WASM_MEMORY_STORE_OP(CREATE_CASE)
         case ExtAtomicOpType::I32AtomicRmw8CmpxchgU:
         case ExtAtomicOpType::I32AtomicRmw16CmpxchgU:
         case ExtAtomicOpType::I32AtomicRmwCmpxchg:
-            return atomicCompareExchange(op, I32);
+            return atomicCompareExchange(op, Types::I32);
         case ExtAtomicOpType::I64AtomicRmw8CmpxchgU:
         case ExtAtomicOpType::I64AtomicRmw16CmpxchgU:
         case ExtAtomicOpType::I64AtomicRmw32CmpxchgU:
         case ExtAtomicOpType::I64AtomicRmwCmpxchg:
-            return atomicCompareExchange(op, I64);
+            return atomicCompareExchange(op, Types::I64);
         default:
             WASM_PARSER_FAIL_IF(true, "invalid extended atomic op ", extOp);
             break;
@@ -1072,27 +1053,23 @@ FOR_EACH_WASM_MEMORY_STORE_OP(CREATE_CASE)
     }
 
     case RefNull: {
-        WASM_PARSER_FAIL_IF(!Options::useWebAssemblyReferences(), "references are not enabled");
         Type typeOfNull;
-        WASM_PARSER_FAIL_IF(!parseRefType(typeOfNull), "ref.null type must be a reference type");
+        WASM_PARSER_FAIL_IF(!parseRefType(m_info, typeOfNull), "ref.null type must be a reference type");
         m_expressionStack.constructAndAppend(typeOfNull, m_context.addConstant(typeOfNull, JSValue::encode(jsNull())));
         return { };
     }
 
     case RefIsNull: {
-        WASM_PARSER_FAIL_IF(!Options::useWebAssemblyReferences(), "references are not enabled");
         TypedExpression value;
         WASM_TRY_POP_EXPRESSION_STACK_INTO(value, "ref.is_null");
-        WASM_VALIDATOR_FAIL_IF(!isRefType(value.type()), "ref.is_null to type ", value.type(), " expected a reference type");
+        WASM_VALIDATOR_FAIL_IF(!isRefType(value.type()), "ref.is_null to type ", value.type().kind, " expected a reference type");
         ExpressionType result;
         WASM_TRY_ADD_TO_CONTEXT(addRefIsNull(value, result));
-        m_expressionStack.constructAndAppend(I32, result);
+        m_expressionStack.constructAndAppend(Types::I32, result);
         return { };
     }
 
     case RefFunc: {
-        WASM_PARSER_FAIL_IF(!Options::useWebAssemblyReferences(), "references are not enabled");
-
         uint32_t index;
         WASM_PARSER_FAIL_IF(!parseVarUInt32(index), "can't get index for ref.func");
         WASM_VALIDATOR_FAIL_IF(index >= m_info.functionIndexSpaceSize(), "ref.func index ", index, " is too large, max is ", m_info.functionIndexSpaceSize());
@@ -1101,7 +1078,14 @@ FOR_EACH_WASM_MEMORY_STORE_OP(CREATE_CASE)
 
         ExpressionType result;
         WASM_TRY_ADD_TO_CONTEXT(addRefFunc(index, result));
-        m_expressionStack.constructAndAppend(Funcref, result);
+
+        if (Options::useWebAssemblyTypedFunctionReferences()) {
+            SignatureIndex signatureIndex = m_info.signatureIndexFromFunctionIndexSpace(index);
+            m_expressionStack.constructAndAppend(Type {TypeKind::TypeIdx, Nullable::No, signatureIndex}, result);
+            return { };
+        }
+
+        m_expressionStack.constructAndAppend(Types::Funcref, result);
         return { };
     }
 
@@ -1122,7 +1106,7 @@ FOR_EACH_WASM_MEMORY_STORE_OP(CREATE_CASE)
         TypedExpression value;
         WASM_TRY_POP_EXPRESSION_STACK_INTO(value, "set_local");
         WASM_VALIDATOR_FAIL_IF(index >= m_locals.size(), "attempt to set unknown local ", index, " last one is ", m_locals.size());
-        WASM_VALIDATOR_FAIL_IF(value.type() != m_locals[index], "set_local to type ", value.type(), " expected ", m_locals[index]);
+        WASM_VALIDATOR_FAIL_IF(!isSubtype(value.type(), m_locals[index]), "set_local to type ", value.type().kind, " expected ", m_locals[index].kind);
         WASM_TRY_ADD_TO_CONTEXT(setLocal(index, value));
         return { };
     }
@@ -1134,7 +1118,7 @@ FOR_EACH_WASM_MEMORY_STORE_OP(CREATE_CASE)
         WASM_PARSER_FAIL_IF(m_expressionStack.isEmpty(), "can't tee_local on empty expression stack");
         TypedExpression value = m_expressionStack.last();
         WASM_VALIDATOR_FAIL_IF(index >= m_locals.size(), "attempt to tee unknown local ", index, " last one is ", m_locals.size());
-        WASM_VALIDATOR_FAIL_IF(value.type() != m_locals[index], "set_local to type ", value.type(), " expected ", m_locals[index]);
+        WASM_VALIDATOR_FAIL_IF(!isSubtype(value.type(), m_locals[index]), "set_local to type ", value.type().kind, " expected ", m_locals[index].kind);
         WASM_TRY_ADD_TO_CONTEXT(setLocal(index, value));
         return { };
     }
@@ -1162,7 +1146,7 @@ FOR_EACH_WASM_MEMORY_STORE_OP(CREATE_CASE)
 
         Type globalType = m_info.globals[index].type;
         ASSERT(isValueType(globalType));
-        WASM_VALIDATOR_FAIL_IF(globalType != value.type(), "set_global ", index, " with type ", globalType, " with a variable of type ", value.type());
+        WASM_VALIDATOR_FAIL_IF(!isSubtype(value.type(), globalType), "set_global ", index, " with type ", globalType.kind, " with a variable of type ", value.type().kind);
 
         WASM_TRY_ADD_TO_CONTEXT(setGlobal(index, value));
         return { };
@@ -1181,7 +1165,7 @@ FOR_EACH_WASM_MEMORY_STORE_OP(CREATE_CASE)
         WASM_PARSER_FAIL_IF(!args.tryReserveCapacity(calleeSignature.argumentCount()), "can't allocate enough memory for call's ", calleeSignature.argumentCount(), " arguments");
         for (size_t i = firstArgumentIndex; i < m_expressionStack.size(); ++i) {
             TypedExpression arg = m_expressionStack.at(i);
-            WASM_VALIDATOR_FAIL_IF(arg.type() != calleeSignature.argument(i - firstArgumentIndex), "argument type mismatch in call, got ", arg.type(), ", expected ", calleeSignature.argument(i - firstArgumentIndex));
+            WASM_VALIDATOR_FAIL_IF(!isSubtype(arg.type(), calleeSignature.argument(i - firstArgumentIndex)), "argument type mismatch in call, got ", arg.type().kind, ", expected ", calleeSignature.argument(i - firstArgumentIndex).kind);
             args.uncheckedAppend(arg);
             m_context.didPopValueFromStack();
         }
@@ -1214,7 +1198,7 @@ FOR_EACH_WASM_MEMORY_STORE_OP(CREATE_CASE)
         size_t argumentCount = calleeSignature.argumentCount() + 1; // Add the callee's index.
         WASM_PARSER_FAIL_IF(argumentCount > m_expressionStack.size(), "call_indirect expects ", argumentCount, " arguments, but the expression stack currently holds ", m_expressionStack.size(), " values");
 
-        WASM_VALIDATOR_FAIL_IF(m_expressionStack.last().type() != I32, "non-i32 call_indirect index ", m_expressionStack.last().type());
+        WASM_VALIDATOR_FAIL_IF(!m_expressionStack.last().type().isI32(), "non-i32 call_indirect index ", m_expressionStack.last().type().kind);
 
         Vector<ExpressionType> args;
         WASM_PARSER_FAIL_IF(!args.tryReserveCapacity(argumentCount), "can't allocate enough memory for ", argumentCount, " call_indirect arguments");
@@ -1222,7 +1206,7 @@ FOR_EACH_WASM_MEMORY_STORE_OP(CREATE_CASE)
         for (size_t i = firstArgumentIndex; i < m_expressionStack.size(); ++i) {
             TypedExpression arg = m_expressionStack.at(i);
             if (i < m_expressionStack.size() - 1)
-                WASM_VALIDATOR_FAIL_IF(arg.type() != calleeSignature.argument(i - firstArgumentIndex), "argument type mismatch in call_indirect, got ", arg.type(), ", expected ", calleeSignature.argument(i - firstArgumentIndex));
+                WASM_VALIDATOR_FAIL_IF(!isSubtype(arg.type(), calleeSignature.argument(i - firstArgumentIndex)), "argument type mismatch in call_indirect, got ", arg.type().kind, ", expected ", calleeSignature.argument(i - firstArgumentIndex).kind);
             args.uncheckedAppend(arg);
             m_context.didPopValueFromStack();
         }
@@ -1230,6 +1214,36 @@ FOR_EACH_WASM_MEMORY_STORE_OP(CREATE_CASE)
 
         ResultList results;
         WASM_TRY_ADD_TO_CONTEXT(addCallIndirect(tableIndex, calleeSignature, args, results));
+
+        for (unsigned i = 0; i < calleeSignature.returnCount(); ++i)
+            m_expressionStack.constructAndAppend(calleeSignature.returnType(i), results[i]);
+
+        return { };
+    }
+
+    case CallRef: {
+        WASM_PARSER_FAIL_IF(!Options::useWebAssemblyTypedFunctionReferences(), "function references are not enabled");
+        WASM_VALIDATOR_FAIL_IF(!m_expressionStack.last().type().isTypeIdx(), "non-funcref call_ref value ", m_expressionStack.last().type().kind);
+
+        const SignatureIndex calleeSignatureIndex = m_expressionStack.last().type().index;
+        const Signature& calleeSignature = SignatureInformation::get(calleeSignatureIndex);
+        size_t argumentCount = calleeSignature.argumentCount() + 1; // Add the callee's value.
+        WASM_PARSER_FAIL_IF(argumentCount > m_expressionStack.size(), "call_ref expects ", argumentCount, " arguments, but the expression stack currently holds ", m_expressionStack.size(), " values");
+
+        Vector<ExpressionType> args;
+        WASM_PARSER_FAIL_IF(!args.tryReserveCapacity(argumentCount + 1), "can't allocate enough memory for ", argumentCount, " call_indirect arguments");
+        size_t firstArgumentIndex = m_expressionStack.size() - argumentCount;
+        for (size_t i = firstArgumentIndex; i < m_expressionStack.size(); ++i) {
+            TypedExpression arg = m_expressionStack.at(i);
+            if (i < m_expressionStack.size() - 1)
+                WASM_VALIDATOR_FAIL_IF(arg.type() != calleeSignature.argument(i - firstArgumentIndex), "argument type mismatch in call_indirect, got ", arg.type().kind, ", expected ", calleeSignature.argument(i - firstArgumentIndex).kind);
+            args.uncheckedAppend(arg);
+            m_context.didPopValueFromStack();
+        }
+        m_expressionStack.shrink(firstArgumentIndex);
+
+        ResultList results;
+        WASM_TRY_ADD_TO_CONTEXT(addCallRef(calleeSignature, args, results));
 
         for (unsigned i = 0; i < calleeSignature.returnCount(); ++i)
             m_expressionStack.constructAndAppend(calleeSignature.returnType(i), results[i]);
@@ -1245,7 +1259,7 @@ FOR_EACH_WASM_MEMORY_STORE_OP(CREATE_CASE)
         unsigned offset = m_expressionStack.size() - inlineSignature->argumentCount();
         for (unsigned i = 0; i < inlineSignature->argumentCount(); ++i) {
             Type type = m_expressionStack.at(offset + i).type();
-            WASM_VALIDATOR_FAIL_IF(type != inlineSignature->argument(i), "Block expects the argument at index", i, " to be ", inlineSignature->argument(i), " but argument has type ", type);
+            WASM_VALIDATOR_FAIL_IF(type != inlineSignature->argument(i), "Block expects the argument at index", i, " to be ", inlineSignature->argument(i).kind, " but argument has type ", type.kind);
         }
 
         int64_t oldSize = m_expressionStack.size();
@@ -1268,7 +1282,7 @@ FOR_EACH_WASM_MEMORY_STORE_OP(CREATE_CASE)
         unsigned offset = m_expressionStack.size() - inlineSignature->argumentCount();
         for (unsigned i = 0; i < inlineSignature->argumentCount(); ++i) {
             Type type = m_expressionStack.at(offset + i).type();
-            WASM_VALIDATOR_FAIL_IF(type != inlineSignature->argument(i), "Loop expects the argument at index", i, " to be ", inlineSignature->argument(i), " but argument has type ", type);
+            WASM_VALIDATOR_FAIL_IF(type != inlineSignature->argument(i), "Loop expects the argument at index", i, " to be ", inlineSignature->argument(i).kind, " but argument has type ", type.kind);
         }
 
         int64_t oldSize = m_expressionStack.size();
@@ -1289,11 +1303,11 @@ FOR_EACH_WASM_MEMORY_STORE_OP(CREATE_CASE)
         WASM_PARSER_FAIL_IF(!parseBlockSignature(m_info, inlineSignature), "can't get if's signature");
         WASM_TRY_POP_EXPRESSION_STACK_INTO(condition, "if condition");
 
-        WASM_VALIDATOR_FAIL_IF(condition.type() != I32, "if condition must be i32, got ", condition.type());
+        WASM_VALIDATOR_FAIL_IF(!condition.type().isI32(), "if condition must be i32, got ", condition.type().kind);
         WASM_VALIDATOR_FAIL_IF(m_expressionStack.size() < inlineSignature->argumentCount(), "Too few arguments on stack for if block. If expects ", inlineSignature->argumentCount(), ", but only ", m_expressionStack.size(), " were present. If block has signature: ", inlineSignature->toString());
         unsigned offset = m_expressionStack.size() - inlineSignature->argumentCount();
         for (unsigned i = 0; i < inlineSignature->argumentCount(); ++i)
-            WASM_VALIDATOR_FAIL_IF(m_expressionStack[offset + i].type() != inlineSignature->argument(i), "Loop expects the argument at index", i, " to be ", inlineSignature->argument(i), " but argument has type ", m_expressionStack[i].type());
+            WASM_VALIDATOR_FAIL_IF(m_expressionStack[offset + i].type() != inlineSignature->argument(i), "Loop expects the argument at index", i, " to be ", inlineSignature->argument(i).kind, " but argument has type ", m_expressionStack[i].type().kind);
 
         int64_t oldSize = m_expressionStack.size();
         Stack newStack;
@@ -1327,10 +1341,10 @@ FOR_EACH_WASM_MEMORY_STORE_OP(CREATE_CASE)
         TypedExpression condition;
         if (m_currentOpcode == BrIf) {
             WASM_TRY_POP_EXPRESSION_STACK_INTO(condition, "br / br_if condition");
-            WASM_VALIDATOR_FAIL_IF(condition.type() != I32, "conditional branch with non-i32 condition ", condition.type());
+            WASM_VALIDATOR_FAIL_IF(!condition.type().isI32(), "conditional branch with non-i32 condition ", condition.type().kind);
         } else {
             m_unreachableBlocks = 1;
-            condition = TypedExpression { Void, Context::emptyExpression() };
+            condition = TypedExpression { Types::Void, Context::emptyExpression() };
         }
 
         ControlType& data = m_controlStack[m_controlStack.size() - 1 - target].controlData;
@@ -1361,13 +1375,13 @@ FOR_EACH_WASM_MEMORY_STORE_OP(CREATE_CASE)
         ControlType& defaultTarget = m_controlStack[m_controlStack.size() - 1 - defaultTargetIndex].controlData;
 
         WASM_TRY_POP_EXPRESSION_STACK_INTO(condition, "br_table condition");
-        WASM_VALIDATOR_FAIL_IF(condition.type() != I32, "br_table with non-i32 condition ", condition.type());
+        WASM_VALIDATOR_FAIL_IF(!condition.type().isI32(), "br_table with non-i32 condition ", condition.type().kind);
 
         for (unsigned i = 0; i < targets.size(); ++i) {
             ControlType* target = targets[i];
             WASM_VALIDATOR_FAIL_IF(defaultTarget.branchTargetArity() != target->branchTargetArity(), "br_table target type size mismatch. Default has size: ", defaultTarget.branchTargetArity(), "but target: ", i, " has size: ", target->branchTargetArity());
             for (unsigned type = 0; type < defaultTarget.branchTargetArity(); ++type)
-                WASM_VALIDATOR_FAIL_IF(defaultTarget.branchTargetType(type) != target->branchTargetType(type), "br_table target type mismatch at offset ", type, " expected: ", defaultTarget.branchTargetType(type), " but saw: ", target->branchTargetType(type), " when targeting block: ", target->signature()->toString());
+                WASM_VALIDATOR_FAIL_IF(defaultTarget.branchTargetType(type) != target->branchTargetType(type), "br_table target type mismatch at offset ", type, " expected: ", defaultTarget.branchTargetType(type).kind, " but saw: ", target->branchTargetType(type).kind, " when targeting block: ", target->signature()->toString());
         }
 
         WASM_FAIL_IF_HELPER_FAILS(checkBranchTarget(defaultTarget));
@@ -1426,11 +1440,11 @@ FOR_EACH_WASM_MEMORY_STORE_OP(CREATE_CASE)
 
         TypedExpression delta;
         WASM_TRY_POP_EXPRESSION_STACK_INTO(delta, "expect an i32 argument to grow_memory on the stack");
-        WASM_VALIDATOR_FAIL_IF(delta.type() != I32, "grow_memory with non-i32 delta argument has type: ", delta.type());
+        WASM_VALIDATOR_FAIL_IF(!delta.type().isI32(), "grow_memory with non-i32 delta argument has type: ", delta.type().kind);
 
         ExpressionType result;
         WASM_TRY_ADD_TO_CONTEXT(addGrowMemory(delta, result));
-        m_expressionStack.constructAndAppend(I32, result);
+        m_expressionStack.constructAndAppend(Types::I32, result);
 
         return { };
     }
@@ -1444,7 +1458,7 @@ FOR_EACH_WASM_MEMORY_STORE_OP(CREATE_CASE)
 
         ExpressionType result;
         WASM_TRY_ADD_TO_CONTEXT(addCurrentMemory(result));
-        m_expressionStack.constructAndAppend(I32, result);
+        m_expressionStack.constructAndAppend(Types::I32, result);
 
         return { };
     }
@@ -1587,13 +1601,11 @@ auto FunctionParser<Context>::parseUnreachableExpression() -> PartialResult
 
         switch (static_cast<Ext1OpType>(extOp)) {
         case Ext1OpType::TableInit: {
-            WASM_PARSER_FAIL_IF(!Options::useWebAssemblyReferences(), "references are not enabled");
             TableInitImmediates immediates;
             WASM_FAIL_IF_HELPER_FAILS(parseTableInitImmediates(immediates));
             return { };
         }
         case Ext1OpType::ElemDrop: {
-            WASM_PARSER_FAIL_IF(!Options::useWebAssemblyReferences(), "references are not enabled");
             unsigned elementIndex;
             WASM_FAIL_IF_HELPER_FAILS(parseElementIndex(elementIndex));
             return { };
@@ -1601,35 +1613,29 @@ auto FunctionParser<Context>::parseUnreachableExpression() -> PartialResult
         case Ext1OpType::TableSize:
         case Ext1OpType::TableGrow:
         case Ext1OpType::TableFill: {
-            WASM_PARSER_FAIL_IF(!Options::useWebAssemblyReferences(), "references are not enabled");
             unsigned tableIndex;
             WASM_FAIL_IF_HELPER_FAILS(parseTableIndex(tableIndex));
             return { };
         }
         case Ext1OpType::TableCopy: {
-            WASM_PARSER_FAIL_IF(!Options::useWebAssemblyReferences(), "references are not enabled");
             TableCopyImmediates immediates;
             WASM_FAIL_IF_HELPER_FAILS(parseTableCopyImmediates(immediates));
             return { };
         }
         case Ext1OpType::MemoryFill: {
-            WASM_PARSER_FAIL_IF(!Options::useWebAssemblyReferences(), "references are not enabled");
             WASM_FAIL_IF_HELPER_FAILS(parseMemoryFillImmediate());
             return { };
         }
         case Ext1OpType::MemoryCopy: {
-            WASM_PARSER_FAIL_IF(!Options::useWebAssemblyReferences(), "references are not enabled");
             WASM_FAIL_IF_HELPER_FAILS(parseMemoryCopyImmediates());
             return { };
         }
         case Ext1OpType::MemoryInit: {
-            WASM_PARSER_FAIL_IF(!Options::useWebAssemblyReferences(), "references are not enabled");
             MemoryInitImmediates immediates;
             WASM_FAIL_IF_HELPER_FAILS(parseMemoryInitImmediates(immediates));
             return { };
         }
         case Ext1OpType::DataDrop: {
-            WASM_PARSER_FAIL_IF(!Options::useWebAssemblyReferences(), "references are not enabled");
             unsigned dataSegmentIndex;
             WASM_FAIL_IF_HELPER_FAILS(parseDataSegmentIndex(dataSegmentIndex));
             return { };
@@ -1647,8 +1653,6 @@ auto FunctionParser<Context>::parseUnreachableExpression() -> PartialResult
     }
 
     case AnnotatedSelect: {
-        WASM_PARSER_FAIL_IF(!Options::useWebAssemblyReferences(), "references are not enabled");
-
         AnnotatedSelectImmediates immediates;
         WASM_FAIL_IF_HELPER_FAILS(parseAnnotatedSelectImmediates(immediates));
         return { };
@@ -1662,14 +1666,12 @@ auto FunctionParser<Context>::parseUnreachableExpression() -> PartialResult
     }
     case RefIsNull:
     case RefNull: {
-        WASM_PARSER_FAIL_IF(!Options::useWebAssemblyReferences(), "references are not enabled");
         return { };
     }
 
     case RefFunc: {
         uint32_t unused;
         WASM_PARSER_FAIL_IF(!parseVarUInt32(unused), "can't get immediate for ", m_currentOpcode, " in unreachable context");
-        WASM_PARSER_FAIL_IF(!Options::useWebAssemblyReferences(), "references are not enabled");
         return { };
     }
 
@@ -1728,6 +1730,7 @@ auto FunctionParser<Context>::parseUnreachableExpression() -> PartialResult
     // no immediate cases
     FOR_EACH_WASM_BINARY_OP(CREATE_CASE)
     FOR_EACH_WASM_UNARY_OP(CREATE_CASE)
+    case CallRef:
     case Unreachable:
     case Nop:
     case Return:

@@ -275,8 +275,13 @@ windowtext
 #if defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY
 -apple-system-indigo
 -apple-system-teal
+-apple-system-opaque-fill
+-apple-system-opaque-secondary-fill
+-apple-system-opaque-secondary-fill-disabled
+-apple-system-opaque-tertiary-fill
+-apple-system-opaque-separator
 #endif
-#if defined(HAVE_OS_DARK_MODE_SUPPORT) && HAVE_OS_DARK_MODE_SUPPORT
+#if (defined(WTF_PLATFORM_MAC) && WTF_PLATFORM_MAC) || (defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY) || (defined(HAVE_OS_DARK_MODE_SUPPORT) && HAVE_OS_DARK_MODE_SUPPORT)
 -webkit-control-background
 #endif
 -webkit-focus-ring-color
@@ -344,6 +349,14 @@ justify
 //none
 inter-word
 distribute
+//
+// CSS_PROP_CLEAR:
+// CSS_PROP_FLOAT:
+// none
+// left
+// right
+inline-start
+inline-end
 //
 // CSS_PROP_LIST_STYLE_POSITION:
 //
@@ -433,6 +446,20 @@ hiragana
 katakana
 hiragana-iroha
 katakana-iroha
+cjk-decimal
+tamil
+disclosure-open
+disclosure-closed
+japanese-informal
+japanese-formal
+korean-hangul-formal
+korean-hanja-informal
+korean-hanja-formal
+simp-chinese-informal
+simp-chinese-formal
+trad-chinese-informal
+trad-chinese-formal
+ethiopic-numeric
 //none
 //
 // CSS_PROP_DISPLAY:
@@ -455,13 +482,14 @@ table-caption
 -webkit-box
 -webkit-inline-box
 flex
--webkit-flex
 inline-flex
--webkit-inline-flex
 contents
 grid
 inline-grid
 flow-root
+flow
+-webkit-inline-flex
+-webkit-flex
 //none
 //
 // CSS_PROP_CURSOR:
@@ -1131,7 +1159,6 @@ at
 // closest-side
 // farthest-side
 
-#if defined(ENABLE_CSS_SCROLL_SNAP)
 // -webkit-scroll-snap-points-x
 // -webkit-scroll-snap-points-y
 elements
@@ -1141,7 +1168,6 @@ mandatory
 proximity
 // x
 // y
-#endif
 
 break
 
@@ -1164,7 +1190,6 @@ fine
 // (hover:) media feature.
 // none
 hover
-on-demand
 
 // blend modes
 // normal
@@ -1353,11 +1378,9 @@ minmax
 auto-flow
 dense
 
-#if defined(ENABLE_CSS3_TEXT) && ENABLE_CSS3_TEXT
 // text-indent
--webkit-each-line
--webkit-hanging
-#endif
+each-line
+// hanging
 
 // -webkit-column-fill
 balance
@@ -1434,17 +1457,17 @@ prophoto-rgb
 // sRGB
 xyz
 
+// color-contast()
+color-contrast
+vs
+AA
+AA-large
+AAA
+AAA-large
+
 // color-mix()
 color-mix
-shorter
-longer
-increasing
-decreasing
-specified
-lightness
-chroma
-whiteness
-blackness
+in
 
 // prefers-default-appearance
 prefers
@@ -1455,7 +1478,6 @@ reduce
 no-preference
 
 // prefers-contrast
-forced
 more
 less
 // no-preference
@@ -1464,7 +1486,6 @@ less
 // prefers-color-scheme
 light
 dark
-// no-preference
 
 // color-scheme
 only
@@ -1497,6 +1518,24 @@ from-font
 standard
 high
 
+// @counter-style `system` descriptor values
+// https://www.w3.org/TR/css-counter-styles-3/#counter-style-system
+cyclic
+numeric
+// alphabetic
+symbolic
+additive
+// fixed
+extends
+
+// @counter-style `speak-as` descriptor values
+// https://www.w3.org/TR/css-counter-styles-3/#counter-style-speak-as
+// auto
+bullets
+numbers
+words
+// spell-out
+
 // @supports selector()
 // https://drafts.csswg.org/css-conditional-4/#typedef-supports-selector-fn
 selector
@@ -1509,3 +1548,13 @@ compact
 x
 y
 z
+
+// contain
+// none
+// strict
+// content
+size
+layout
+#if !(defined(ENABLE_CSS_PAINTING_API) && ENABLE_CSS_PAINTING_API)
+paint
+#endif

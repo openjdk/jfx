@@ -60,7 +60,7 @@ public:
     // To avoid multiple lock/release situation to update a single frame,
     // the implementation of TextureMapperPlatformLayerProxyProvider should
     // aquire / release the lock explicitly to use below methods.
-    Lock& lock() { return m_lock; }
+    Lock& lock() WTF_RETURNS_LOCK(m_lock) { return m_lock; }
     std::unique_ptr<TextureMapperPlatformLayerBuffer> getAvailableBuffer(const IntSize&, GLint internalFormat);
     void pushNextBuffer(std::unique_ptr<TextureMapperPlatformLayerBuffer>&&);
     bool isActive();
@@ -88,7 +88,7 @@ private:
 
     Lock m_wasBufferDroppedLock;
     Condition m_wasBufferDroppedCondition;
-    bool m_wasBufferDropped { false };
+    bool m_wasBufferDropped WTF_GUARDED_BY_LOCK(m_wasBufferDroppedLock) { false };
 
     Vector<std::unique_ptr<TextureMapperPlatformLayerBuffer>> m_usedBuffers;
     std::unique_ptr<RunLoop::Timer<TextureMapperPlatformLayerProxy>> m_releaseUnusedBuffersTimer;

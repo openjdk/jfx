@@ -30,7 +30,6 @@
 #include "DOMWrapperWorld.h"
 #include "JSDOMGlobalObjectTask.h"
 #include "JSDOMGuardedObject.h"
-#include "JSWorkletGlobalScope.h"
 #include "WorkerOrWorkletScriptController.h"
 #include "WorkletGlobalScope.h"
 #include <JavaScriptCore/JSCInlines.h>
@@ -58,7 +57,7 @@ const GlobalObjectMethodTable JSWorkletGlobalScopeBase::s_globalObjectMethodTabl
     &reportUncaughtExceptionAtEventLoop,
     &currentScriptExecutionOwner,
     &scriptExecutionStatus,
-    &defaultLanguage,
+    [] { return defaultLanguage(); },
 #if ENABLE(WEBASSEMBLY)
     &compileStreaming,
     &instantiateStreaming,
@@ -143,18 +142,6 @@ JSValue toJS(JSGlobalObject*, WorkletGlobalScope& workletGlobalScope)
     if (!contextWrapper)
         return jsUndefined();
     return &contextWrapper->proxy();
-}
-
-JSWorkletGlobalScope* toJSWorkletGlobalScope(VM& vm, JSValue value)
-{
-    if (!value.isObject())
-        return nullptr;
-    auto* classInfo = asObject(value)->classInfo(vm);
-
-    if (classInfo == JSProxy::info())
-        return jsDynamicCast<JSWorkletGlobalScope*>(vm, jsCast<JSProxy*>(asObject(value))->target());
-
-    return nullptr;
 }
 
 } // namespace WebCore

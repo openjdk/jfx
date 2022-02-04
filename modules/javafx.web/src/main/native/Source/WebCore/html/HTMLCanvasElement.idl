@@ -31,9 +31,6 @@ typedef (
 #if defined(ENABLE_WEBGL2) && ENABLE_WEBGL2
     WebGL2RenderingContext or
 #endif
-#if defined(ENABLE_WEBGPU) && ENABLE_WEBGPU
-    GPUCanvasContext or
-#endif
     ImageBitmapRenderingContext or 
     CanvasRenderingContext2D) RenderingContext;
 
@@ -45,14 +42,14 @@ typedef (
     ReportExternalMemoryCost,
     Exposed=Window
 ] interface HTMLCanvasElement : HTMLElement {
-    [CEReactions=NotNeeded, CallTracingCallback=recordCanvasAction] attribute unsigned long width;
-    [CEReactions=NotNeeded, CallTracingCallback=recordCanvasAction] attribute unsigned long height;
+    [CEReactions=NotNeeded, CallTracer=InspectorCanvasCallTracer] attribute unsigned long width;
+    [CEReactions=NotNeeded, CallTracer=InspectorCanvasCallTracer] attribute unsigned long height;
 
-    [CallWith=GlobalObject, MayThrowException] RenderingContext? getContext(DOMString contextId, any... arguments);
+    [CallWith=GlobalObject] RenderingContext? getContext(DOMString contextId, any... arguments);
 
-    [MayThrowException] DOMString toDataURL(optional DOMString type, optional any quality);
-    [CallWith=ScriptExecutionContext, MayThrowException] undefined toBlob(BlobCallback callback, optional DOMString type, optional any quality);
-    [Conditional=OFFSCREEN_CANVAS, CallWith=ScriptExecutionContext, MayThrowException] OffscreenCanvas transferControlToOffscreen();
+    DOMString toDataURL(optional DOMString type, optional any quality);
+    [CallWith=ScriptExecutionContext] undefined toBlob(BlobCallback callback, optional DOMString type, optional any quality);
+    [Conditional=OFFSCREEN_CANVAS, EnabledAtRuntime=OffscreenCanvas, CallWith=ScriptExecutionContext] OffscreenCanvas transferControlToOffscreen();
 
-    [Conditional=MEDIA_STREAM, CallWith=Document, MayThrowException, NewObject] MediaStream captureStream(optional double frameRequestRate);
+    [Conditional=MEDIA_STREAM, CallWith=Document, NewObject] MediaStream captureStream(optional double frameRequestRate);
 };

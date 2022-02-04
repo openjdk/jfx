@@ -33,10 +33,8 @@
     CustomGetPrototype,
     CustomHeapSnapshot,
     CustomPreventExtensions,
-    CustomProxyToJSObject,
     CustomPut,
     ExportMacro=WEBCORE_EXPORT,
-    ImplicitThis,
     InterfaceName=Window,
     IsImmutablePrototypeExoticObject,
     IsImmutablePrototypeExoticObjectOnPrototype,
@@ -62,11 +60,11 @@
     [Replaceable] readonly attribute BarProp statusbar;
     [Replaceable] readonly attribute BarProp toolbar;
     attribute DOMString status;
-    [DoNotCheckSecurity, CallWith=IncumbentDocument, ForwardDeclareInHeader] undefined close();
-    [DoNotCheckSecurity, ForwardDeclareInHeader] readonly attribute boolean closed;
+    [DoNotCheckSecurity, CallWith=IncumbentDocument] undefined close();
+    [DoNotCheckSecurity] readonly attribute boolean closed;
     undefined stop();
-    [DoNotCheckSecurity, CallWith=IncumbentWindow, ForwardDeclareInHeader] undefined focus();
-    [DoNotCheckSecurity, ForwardDeclareInHeader] undefined blur();
+    [DoNotCheckSecurity, CallWith=IncumbentWindow] undefined focus();
+    [DoNotCheckSecurity] undefined blur();
 
     // other browsing contexts
     [Replaceable, DoNotCheckSecurityOnGetter, CustomGetter] readonly attribute WindowProxy frames;
@@ -75,14 +73,12 @@
     [DoNotCheckSecurityOnGetter, CustomSetter] attribute WindowProxy? opener;
     [Replaceable, DoNotCheckSecurityOnGetter] readonly attribute WindowProxy? parent;
     [CheckSecurityForNode] readonly attribute Element? frameElement;
-    [CallWith=ActiveWindow&FirstWindow, MayThrowException] WindowProxy? open(optional USVString url = "", optional DOMString target = "_blank", optional [LegacyNullToEmptyString] DOMString features = "");
+    [CallWith=ActiveWindow&FirstWindow] WindowProxy? open(optional USVString url = "", optional DOMString target = "_blank", optional [LegacyNullToEmptyString] DOMString features = "");
 
     // the user agent
     readonly attribute Navigator navigator;
     // FIXME: This is specified to be [SecureContext]
     readonly attribute DOMApplicationCache applicationCache;
-    // FIXME: Implement 'originIsolated'
-    // readonly attribute boolean originIsolated;
 
     // user prompts
     undefined alert();
@@ -91,8 +87,8 @@
     DOMString? prompt(optional DOMString message = "", optional DOMString defaultValue = "");
     undefined print();
 
-    [CallWith=GlobalObject&IncumbentWindow, DoNotCheckSecurity, ForwardDeclareInHeader, MayThrowException] undefined postMessage(any message, USVString targetOrigin, optional sequence<object> transfer = []);
-    [CallWith=GlobalObject&IncumbentWindow, DoNotCheckSecurity, ForwardDeclareInHeader, MayThrowException] undefined postMessage(any message, optional WindowPostMessageOptions options);
+    [CallWith=GlobalObject&IncumbentWindow, DoNotCheckSecurity] undefined postMessage(any message, USVString targetOrigin, optional sequence<object> transfer = []);
+    [CallWith=GlobalObject&IncumbentWindow, DoNotCheckSecurity] undefined postMessage(any message, optional WindowPostMessageOptions options);
 
 
     // Obsolete: Still part of the HTML specification (https://html.spec.whatwg.org/#Window-partial).
@@ -119,7 +115,7 @@
     [NotEnumerable, Conditional=IOS_GESTURE_EVENTS] attribute EventHandler ongesturestart;
 
     // Non-standard: This has been dropped from the HTML specification and by other browsers.
-    [Custom, ForwardDeclareInHeader] any showModalDialog(DOMString url, optional any dialogArgs, optional DOMString featureArgs);
+    [Custom] any showModalDialog(DOMString url, optional any dialogArgs, optional DOMString featureArgs);
 
     // Non-standard: should probably deprecate this (https://bugs.webkit.org/show_bug.cgi?id=79653).
     // Blink already deprecated it (https://bugs.chromium.org/p/chromium/issues/detail?id=437569).
@@ -130,13 +126,13 @@
     WebKitPoint webkitConvertPointFromNodeToPage(optional Node? node = null, optional WebKitPoint? p = null);
 
     // Internal operations, not exposed to the Web.
-    [MayThrowException, EnabledForWorld=shadowRootIsAlwaysOpen] NodeList collectMatchingElementsInFlatTree(Node scope, DOMString selectors);
-    [MayThrowException, EnabledForWorld=shadowRootIsAlwaysOpen] Element? matchingElementInFlatTree(Node scope, DOMString selectors);
+    [EnabledForWorld=shadowRootIsAlwaysOpen] NodeList collectMatchingElementsInFlatTree(Node scope, DOMString selectors);
+    [EnabledForWorld=shadowRootIsAlwaysOpen] Element? matchingElementInFlatTree(Node scope, DOMString selectors);
 };
 
 [
     ImplementedAs=WindowPostMessageOptions
-] dictionary WindowPostMessageOptions : PostMessageOptions {
+] dictionary WindowPostMessageOptions : StructuredSerializeOptions {
     USVString targetOrigin = "/";
 };
 

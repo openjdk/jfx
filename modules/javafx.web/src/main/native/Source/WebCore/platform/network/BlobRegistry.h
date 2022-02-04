@@ -31,6 +31,7 @@
 
 #pragma once
 
+#include <optional>
 #include <wtf/Forward.h>
 
 namespace WebCore {
@@ -39,6 +40,8 @@ class BlobDataFileReference;
 class BlobPart;
 class BlobRegistry;
 class BlobRegistryImpl;
+
+struct PolicyContainer;
 
 WEBCORE_EXPORT BlobRegistry& blobRegistry();
 
@@ -53,15 +56,18 @@ public:
     virtual void registerBlobURL(const URL&, Vector<BlobPart>&&, const String& contentType) = 0;
 
     // Registers a new blob URL referring to the blob data identified by the specified srcURL.
-    virtual void registerBlobURL(const URL&, const URL& srcURL) = 0;
+    virtual void registerBlobURL(const URL&, const URL& srcURL, const PolicyContainer&) = 0;
 
     // Registers a new blob URL referring to the blob data identified by the specified srcURL or, if none found, referring to the file found at the given path.
     virtual void registerBlobURLOptionallyFileBacked(const URL&, const URL& srcURL, RefPtr<BlobDataFileReference>&&, const String& contentType) = 0;
 
     // Negative start and end values select from the end.
-    virtual void registerBlobURLForSlice(const URL&, const URL& srcURL, long long start, long long end) = 0;
+    virtual void registerBlobURLForSlice(const URL&, const URL& srcURL, long long start, long long end, const String& contentType) = 0;
 
     virtual void unregisterBlobURL(const URL&) = 0;
+
+    virtual void registerBlobURLHandle(const URL&) = 0;
+    virtual void unregisterBlobURLHandle(const URL&) = 0;
 
     virtual unsigned long long blobSize(const URL&) = 0;
 

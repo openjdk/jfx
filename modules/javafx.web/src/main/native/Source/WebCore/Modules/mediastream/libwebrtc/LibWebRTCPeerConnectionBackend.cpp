@@ -68,7 +68,7 @@ static std::unique_ptr<PeerConnectionBackend> createLibWebRTCPeerConnectionBacke
 
 CreatePeerConnectionBackend PeerConnectionBackend::create = createLibWebRTCPeerConnectionBackend;
 
-Optional<RTCRtpCapabilities> PeerConnectionBackend::receiverCapabilities(ScriptExecutionContext& context, const String& kind)
+std::optional<RTCRtpCapabilities> PeerConnectionBackend::receiverCapabilities(ScriptExecutionContext& context, const String& kind)
 {
     auto* page = downcast<Document>(context).page();
     if (!page)
@@ -76,7 +76,7 @@ Optional<RTCRtpCapabilities> PeerConnectionBackend::receiverCapabilities(ScriptE
     return page->libWebRTCProvider().receiverCapabilities(kind);
 }
 
-Optional<RTCRtpCapabilities> PeerConnectionBackend::senderCapabilities(ScriptExecutionContext& context, const String& kind)
+std::optional<RTCRtpCapabilities> PeerConnectionBackend::senderCapabilities(ScriptExecutionContext& context, const String& kind)
 {
     auto* page = downcast<Document>(context).page();
     if (!page)
@@ -100,6 +100,13 @@ void LibWebRTCPeerConnectionBackend::suspend()
 void LibWebRTCPeerConnectionBackend::resume()
 {
     m_endpoint->resume();
+}
+
+void LibWebRTCPeerConnectionBackend::disableICECandidateFiltering()
+{
+    PeerConnectionBackend::disableICECandidateFiltering();
+    if (auto* factory = m_endpoint->rtcSocketFactory())
+        factory->disableRelay();
 }
 
 static inline webrtc::PeerConnectionInterface::BundlePolicy bundlePolicyfromConfiguration(const MediaEndpointConfiguration& configuration)
@@ -455,6 +462,11 @@ void LibWebRTCPeerConnectionBackend::applyRotationForOutgoingVideoSources()
                 videoSource->applyRotation();
         }
     }
+}
+
+std::optional<bool> LibWebRTCPeerConnectionBackend::canTrickleIceCandidates() const
+{
+    return m_endpoint->canTrickleIceCandidates();
 }
 
 } // namespace WebCore

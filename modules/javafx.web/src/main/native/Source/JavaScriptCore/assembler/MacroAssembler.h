@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -50,15 +50,15 @@ namespace JSC { typedef MacroAssemblerARMv7 MacroAssemblerBase; };
 #define TARGET_MACROASSEMBLER MacroAssemblerMIPS
 #include "MacroAssemblerMIPS.h"
 
-#elif CPU(X86)
-#define TARGET_ASSEMBLER X86Assembler
-#define TARGET_MACROASSEMBLER MacroAssemblerX86
-#include "MacroAssemblerX86.h"
-
 #elif CPU(X86_64)
 #define TARGET_ASSEMBLER X86Assembler
 #define TARGET_MACROASSEMBLER MacroAssemblerX86_64
 #include "MacroAssemblerX86_64.h"
+
+#elif CPU(RISCV64)
+#define TARGET_ASSEMBLER RISCV64Assembler
+#define TARGET_MACROASSEMBLER MacroAssemblerRISCV64
+#include "MacroAssemblerRISCV64.h"
 
 #else
 #error "The MacroAssembler is not supported on this platform."
@@ -75,14 +75,12 @@ class ScopedLambda;
 
 namespace JSC {
 
-#if ENABLE(MASM_PROBE)
 namespace Probe {
 
 class Context;
 typedef void (*Function)(Context&);
 
 } // namespace Probe
-#endif // ENABLE(MASM_PROBE)
 
 namespace Printer {
 
@@ -139,7 +137,7 @@ public:
     using MacroAssemblerBase::and32;
     using MacroAssemblerBase::branchAdd32;
     using MacroAssemblerBase::branchMul32;
-#if CPU(ARM64) || CPU(ARM_THUMB2) || CPU(X86_64) || CPU(MIPS)
+#if CPU(ARM64) || CPU(ARM_THUMB2) || CPU(X86_64) || CPU(MIPS) || CPU(RISCV64)
     using MacroAssemblerBase::branchPtr;
 #endif
     using MacroAssemblerBase::branchSub32;
@@ -151,7 +149,7 @@ public:
     using MacroAssemblerBase::urshift32;
     using MacroAssemblerBase::xor32;
 
-#if CPU(ARM64) || CPU(X86_64)
+#if CPU(ARM64) || CPU(X86_64) || CPU(RISCV64)
     using MacroAssemblerBase::and64;
     using MacroAssemblerBase::convertInt32ToDouble;
     using MacroAssemblerBase::store64;
@@ -339,10 +337,10 @@ public:
         addPtr(TrustedImm32(sizeof(double)), stackPointerRegister);
     }
 
-    static ptrdiff_t pushToSaveByteOffset() { return sizeof(void*); }
+    static constexpr ptrdiff_t pushToSaveByteOffset() { return sizeof(void*); }
 #endif // !CPU(ARM64)
 
-#if CPU(X86_64) || CPU(ARM64)
+#if CPU(X86_64) || CPU(ARM64) || CPU(RISCV64)
     void peek64(RegisterID dest, int index = 0)
     {
         load64(Address(stackPointerRegister, (index * sizeof(void*))), dest);
@@ -1713,7 +1711,7 @@ public:
         storePtr(value, addressForPoke(index));
     }
 
-#if CPU(X86_64) || CPU(ARM64)
+#if CPU(X86_64) || CPU(ARM64) || CPU(RISCV64)
     void poke(Imm64 value, int index = 0)
     {
         store64(value, addressForPoke(index));
@@ -1763,6 +1761,16 @@ public:
             sub32(key.value2, dest);
         } else
             sub32(imm.asTrustedImm32(), dest);
+    }
+
+    void sub32(RegisterID src, Imm32 imm, RegisterID dest)
+    {
+        if (shouldBlind(imm)) {
+            BlindedImm32 key = additionBlindedConstant(imm);
+            sub32(src, key.value1, dest);
+            sub32(key.value2, dest);
+        } else
+            sub32(src, imm.asTrustedImm32(), dest);
     }
 
     void subPtr(Imm32 imm, RegisterID dest)
@@ -1927,7 +1935,6 @@ public:
     // If the result jump is taken that means the assert passed.
     void jitAssert(const WTF::ScopedLambda<Jump(void)>&);
 
-#if ENABLE(MASM_PROBE)
     // This function emits code to preserve the CPUState (e.g. registers),
     // call a user supplied probe function, and restore the CPUState before
     // continuing with other JIT generated code.
@@ -1979,7 +1986,8 @@ public:
     // MacroAssembler.
     void probe(Probe::Function, void* arg);
 
-    JS_EXPORT_PRIVATE void probe(Function<void(Probe::Context&)>);
+    // This leaks memory. Must not be used for production.
+    JS_EXPORT_PRIVATE void probeDebug(Function<void(Probe::Context&)>);
 
     // Let's you print from your JIT generated code.
     // See comments in MacroAssemblerPrinter.h for examples of how to use this.
@@ -1987,7 +1995,6 @@ public:
     void print(Arguments&&... args);
 
     void print(Printer::PrintRecordList*);
-#endif // ENABLE(MASM_PROBE)
 };
 
 } // namespace JSC

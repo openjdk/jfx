@@ -25,22 +25,18 @@
 
 #pragma once
 
-#if ENABLE(INDEXED_DATABASE)
-
 #include "IDBKeyRangeData.h"
-#include <wtf/Optional.h>
 
 namespace WebCore {
 
 namespace IndexedDB {
-enum class DataSource;
-enum class GetAllType;
+enum class GetAllType : uint8_t;
 }
 
 struct IDBGetAllRecordsData {
     IDBKeyRangeData keyRangeData;
     IndexedDB::GetAllType getAllType;
-    Optional<uint32_t> count;
+    std::optional<uint32_t> count;
     uint64_t objectStoreIdentifier;
     uint64_t indexIdentifier;
 
@@ -84,5 +80,3 @@ bool IDBGetAllRecordsData::decode(Decoder& decoder, IDBGetAllRecordsData& getAll
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(INDEXED_DATABASE)

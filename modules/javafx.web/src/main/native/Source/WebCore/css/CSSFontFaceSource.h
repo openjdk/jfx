@@ -25,8 +25,7 @@
 
 #pragma once
 
-#include "CachedFontClient.h"
-#include "CachedResourceHandle.h"
+#include "FontLoadRequest.h"
 #include <JavaScriptCore/ArrayBufferView.h>
 #include <wtf/WeakPtr.h>
 #include <wtf/text/AtomString.h>
@@ -35,6 +34,7 @@ namespace WebCore {
 
 class CSSFontFace;
 class CSSFontSelector;
+class Document;
 class Font;
 struct FontCustomPlatformData;
 class FontDescription;
@@ -46,10 +46,13 @@ class SharedBuffer;
 template <typename T> class FontTaggedSettings;
 typedef FontTaggedSettings<int> FontFeatureSettings;
 
-class CSSFontFaceSource final : public CachedFontClient {
+class CSSFontFaceSource final : public FontLoadRequestClient {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    CSSFontFaceSource(CSSFontFace& owner, const String& familyNameOrURI, CachedFont* = nullptr, SVGFontFaceElement* = nullptr, RefPtr<JSC::ArrayBufferView>&& = nullptr);
+    CSSFontFaceSource(CSSFontFace& owner, const String& familyNameOrURI);
+    CSSFontFaceSource(CSSFontFace& owner, const String& familyNameOrURI, CSSFontSelector&, UniqueRef<FontLoadRequest>&&);
+    CSSFontFaceSource(CSSFontFace& owner, const String& familyNameOrURI, SVGFontFaceElement&);
+    CSSFontFaceSource(CSSFontFace& owner, const String& familyNameOrURI, Ref<JSC::ArrayBufferView>&&);
     virtual ~CSSFontFaceSource();
 
     //                      => Success
@@ -67,26 +70,27 @@ public:
 
     const AtomString& familyNameOrURI() const { return m_familyNameOrURI; }
 
-    void opportunisticallyStartFontDataURLLoading(CSSFontSelector&);
+    void opportunisticallyStartFontDataURLLoading();
 
-    void load(CSSFontSelector*);
+    void load(Document* = nullptr);
     RefPtr<Font> font(const FontDescription&, bool syntheticBold, bool syntheticItalic, const FontFeatureSettings&, FontSelectionSpecifiedCapabilities);
 
-    CachedFont* cachedFont() const { return m_font.get(); }
-    bool requiresExternalResource() const { return m_font; }
+    FontLoadRequest* fontLoadRequest() const { return m_fontRequest.get(); }
+    bool requiresExternalResource() const { return m_fontRequest.get(); }
 
     bool isSVGFontFaceSource() const;
 
 private:
     bool shouldIgnoreFontLoadCompletions() const;
 
-    void fontLoaded(CachedFont&) override;
+    void fontLoaded(FontLoadRequest&) override;
 
     void setStatus(Status);
 
     AtomString m_familyNameOrURI; // URI for remote, built-in font name for local.
-    CachedResourceHandle<CachedFont> m_font; // For remote fonts, a pointer to our cached resource.
     CSSFontFace& m_face; // Our owning font face.
+    WeakPtr<CSSFontSelector> m_fontSelector; // For remote fonts, to orchestrate loading.
+    std::unique_ptr<FontLoadRequest> m_fontRequest; // Also for remote fonts, a pointer to the resource request.
 
     RefPtr<SharedBuffer> m_generatedOTFBuffer;
     RefPtr<JSC::ArrayBufferView> m_immediateSource;
@@ -96,7 +100,7 @@ private:
     std::unique_ptr<FontCustomPlatformData> m_inDocumentCustomPlatformData;
 
     Status m_status { Status::Pending };
-    bool m_hasSVGFontFaceElement;
+    bool m_hasSVGFontFaceElement { false };
 };
 
 } // namespace WebCore

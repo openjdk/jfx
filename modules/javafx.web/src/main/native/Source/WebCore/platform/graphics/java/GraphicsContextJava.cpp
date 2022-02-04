@@ -135,25 +135,27 @@ static void flushImageRQ(PlatformGraphicsContext* context, const PlatformImagePt
     }
 }
 
-class GraphicsContextPlatformPrivate : public PlatformGraphicsContext {
-};
-
-void GraphicsContext::platformInit(PlatformGraphicsContext* context) // TODO-java: , bool shouldUseContextColors) // todo tav new param
+GraphicsContextJava::GraphicsContextJava(PlatformGraphicsContext* context) // TODO-java: , bool shouldUseContextColors) // todo tav new param
 {
-    m_data = static_cast<GraphicsContextPlatformPrivate *>(context);
+    m_platformContext = context;
 }
 
-PlatformGraphicsContext* GraphicsContext::platformContext() const
+PlatformGraphicsContext* GraphicsContextJava::platformContext() const
 {
-    return m_data;
+    return m_platformContext;
 }
 
-void GraphicsContext::platformDestroy()
+GraphicsContextJava::~GraphicsContextJava()
 {
-    delete m_data;
+    delete m_platformContext;
 }
 
-void GraphicsContext::savePlatformState()
+void GraphicsContextJava::save() {
+    GraphicsContext::save();
+    savePlatformState();
+}
+
+void GraphicsContextJava::savePlatformState()
 {
     if (paintingDisabled())
         return;
@@ -162,7 +164,12 @@ void GraphicsContext::savePlatformState()
     << (jint)com_sun_webkit_graphics_GraphicsDecoder_SAVESTATE;
 }
 
-void GraphicsContext::restorePlatformState()
+void GraphicsContextJava::restore() {
+    GraphicsContext::restore();
+    restorePlatformState();
+}
+
+void GraphicsContextJava::restorePlatformState()
 {
     if (paintingDisabled())
         return;
@@ -172,7 +179,7 @@ void GraphicsContext::restorePlatformState()
 }
 
 // Draws a filled rectangle with a stroked border.
-void GraphicsContext::drawRect(const FloatRect& rect, float) // todo tav rect changed from IntRect to FloatRect
+void GraphicsContextJava::drawRect(const FloatRect& rect, float borderThickness = 1) // todo tav rect changed from IntRect to FloatRect
 {
     if (paintingDisabled())
         return;
@@ -183,7 +190,7 @@ void GraphicsContext::drawRect(const FloatRect& rect, float) // todo tav rect ch
 }
 
 // This is only used to draw borders.
-void GraphicsContext::drawLine(const FloatPoint& point1, const FloatPoint& point2) // todo tav points changed from IntPoint to FloatPoint
+void GraphicsContextJava::drawLine(const FloatPoint& point1, const FloatPoint& point2) // todo tav points changed from IntPoint to FloatPoint
 {
     if (paintingDisabled() || strokeStyle() == NoStroke)
         return;
@@ -194,7 +201,7 @@ void GraphicsContext::drawLine(const FloatPoint& point1, const FloatPoint& point
 }
 
 // This method is only used to draw the little circles used in lists.
-void GraphicsContext::drawEllipse(const FloatRect& rect)
+void GraphicsContextJava::drawEllipse(const FloatRect& rect)
 {
     if (paintingDisabled())
         return;
@@ -205,7 +212,7 @@ void GraphicsContext::drawEllipse(const FloatRect& rect)
 }
 
 // FIXME: This function needs to be adjusted to match the functionality on the Mac side.
-//void GraphicsContext::strokeArc(const IntRect& rect, int startAngle, int angleSpan)
+//void GraphicsContextJava::strokeArc(const IntRect& rect, int startAngle, int angleSpan)
 //{
 //    if (paintingDisabled() || strokeStyle() == NoStroke)
 //        return;
@@ -216,7 +223,7 @@ void GraphicsContext::drawEllipse(const FloatRect& rect)
 //    << (jint)startAngle << (jint)angleSpan;
 //}
 
-void GraphicsContext::fillRect(const FloatRect& rect, const Color& color)
+void GraphicsContextJava::fillRect(const FloatRect& rect, const Color& color)
 {
     if (paintingDisabled())
         return;
@@ -229,7 +236,7 @@ void GraphicsContext::fillRect(const FloatRect& rect, const Color& color)
     << r << g << b << a;
 }
 
-void GraphicsContext::fillRect(const FloatRect& rect)
+void GraphicsContextJava::fillRect(const FloatRect& rect)
 {
     if (paintingDisabled())
         return;
@@ -259,7 +266,7 @@ void GraphicsContext::fillRect(const FloatRect& rect)
     }
 }
 
-void GraphicsContext::clip(const FloatRect& rect)
+void GraphicsContextJava::clip(const FloatRect& rect)
 {
     if (paintingDisabled())
         return;
@@ -270,22 +277,22 @@ void GraphicsContext::clip(const FloatRect& rect)
     << (jint)rect.x() << (jint)rect.y() << (jint)rect.width() << (jint)rect.height();
 }
 
-IntRect GraphicsContext::clipBounds() const
+IntRect GraphicsContextJava::clipBounds() const
 {
     // Transformation has inverse effect on clip bounds.
     return enclosingIntRect(m_state
                                 .transform
                                 .inverse()
-                                .valueOr(AffineTransform())
+                                .value_or(AffineTransform())
                                 .mapRect(m_state.clipBounds));
 }
 
-void GraphicsContext::drawFocusRing(const Path&, float, float, const Color&)
+void GraphicsContextJava::drawFocusRing(const Path&, float, float, const Color&)
 {
     //utaTODO: IMPLEMENT!!!
 }
 
-void GraphicsContext::drawFocusRing(const Vector<FloatRect>& rects, float, float offset, const Color& color)
+void GraphicsContextJava::drawFocusRing(const Vector<FloatRect>& rects, float, float offset, const Color& color)
 {
     if (paintingDisabled())
         return;
@@ -331,7 +338,7 @@ void GraphicsContext::drawFocusRing(const Vector<FloatRect>& rects, float, float
     }
 }
 
-void GraphicsContext::drawLinesForText(const FloatPoint& origin, float thickness, const DashArray& widths, bool, bool, StrokeStyle stroke) {
+void GraphicsContextJava::drawLinesForText(const FloatPoint& origin, float thickness, const DashArray& widths, bool, bool, StrokeStyle stroke) {
 
     if (paintingDisabled())
         return;
@@ -350,7 +357,7 @@ void GraphicsContext::drawLinesForText(const FloatPoint& origin, float thickness
     }
 }
 
-void GraphicsContext::drawLineForText(const FloatRect& rect, bool printing, bool doubleLines, StrokeStyle stroke)
+void GraphicsContextJava::drawLineForText(const FloatRect& rect, bool printing, bool doubleLines, StrokeStyle stroke)
 {
     drawLinesForText(rect.location(), rect.height(), { rect.width() }, printing, doubleLines, stroke);
 }
@@ -433,7 +440,7 @@ static inline void drawErrorUnderline(GraphicsContext &gc, double x, double y, d
     }
 }
 
-void GraphicsContext::drawDotsForDocumentMarker(const FloatRect& rect, DocumentMarkerLineStyle style)
+void GraphicsContextJava::drawDotsForDocumentMarker(const FloatRect& rect, DocumentMarkerLineStyle style)
 {
     savePlatformState(); //fake stroke
     switch (style.mode) { // TODO-java: DocumentMarkerAutocorrectionReplacementLineStyle not handled in switch
@@ -457,7 +464,7 @@ void GraphicsContext::drawDotsForDocumentMarker(const FloatRect& rect, DocumentM
     restorePlatformState(); //fake stroke
 }
 
-FloatRect GraphicsContext::roundToDevicePixels(const FloatRect& frect, RoundingMode)
+FloatRect GraphicsContextJava::roundToDevicePixels(const FloatRect& frect, RoundingMode)
 {
     FloatRect result;
     result.setX(static_cast<float>(round(frect.x())));
@@ -467,7 +474,7 @@ FloatRect GraphicsContext::roundToDevicePixels(const FloatRect& frect, RoundingM
     return result;
 }
 
-void GraphicsContext::translate(float x, float y)
+void GraphicsContextJava::translate(float x, float y)
 {
     if (paintingDisabled())
         return;
@@ -478,7 +485,7 @@ void GraphicsContext::translate(float x, float y)
     << x << y;
 }
 
-void GraphicsContext::setPlatformFillColor(const Color& color)
+void GraphicsContextJava::setPlatformFillColor(const Color& color)
 {
     if (paintingDisabled())
         return;
@@ -489,7 +496,7 @@ void GraphicsContext::setPlatformFillColor(const Color& color)
     << r << g << b << a;
 }
 
-void GraphicsContext::setPlatformTextDrawingMode(TextDrawingModeFlags mode)
+void GraphicsContextJava::setPlatformTextDrawingMode(TextDrawingModeFlags mode)
 {
     if (paintingDisabled())
         return;
@@ -503,7 +510,7 @@ void GraphicsContext::setPlatformTextDrawingMode(TextDrawingModeFlags mode)
     //<< (jint)(mode & TextModeClip);
 }
 
-void GraphicsContext::setPlatformStrokeStyle(StrokeStyle style)
+void GraphicsContextJava::setPlatformStrokeStyle(StrokeStyle style)
 {
     if (paintingDisabled())
         return;
@@ -513,7 +520,7 @@ void GraphicsContext::setPlatformStrokeStyle(StrokeStyle style)
     << (jint)style;
 }
 
-void GraphicsContext::setPlatformStrokeColor(const Color& color)
+void GraphicsContextJava::setPlatformStrokeColor(const Color& color)
 {
     if (paintingDisabled())
         return;
@@ -524,7 +531,7 @@ void GraphicsContext::setPlatformStrokeColor(const Color& color)
     << r << g << b << a;
 }
 
-void GraphicsContext::setPlatformStrokeThickness(float strokeThickness)
+void GraphicsContextJava::setPlatformStrokeThickness(float strokeThickness)
 {
     if (paintingDisabled())
         return;
@@ -534,22 +541,22 @@ void GraphicsContext::setPlatformStrokeThickness(float strokeThickness)
     << strokeThickness;
 }
 
-void GraphicsContext::setPlatformImageInterpolationQuality(InterpolationQuality)
+void GraphicsContextJava::setPlatformImageInterpolationQuality(InterpolationQuality)
 {
     notImplemented();
 }
 
-void GraphicsContext::setPlatformShouldAntialias(bool)
+void GraphicsContextJava::setPlatformShouldAntialias(bool)
 {
     notImplemented();
 }
 
-void GraphicsContext::setURLForRect(const URL&, const FloatRect&)
+void GraphicsContextJava::setURLForRect(const URL&, const FloatRect&)
 {
     notImplemented();
 }
 
-void GraphicsContext::concatCTM(const AffineTransform& at)
+void GraphicsContextJava::concatCTM(const AffineTransform& at)
 {
     if (paintingDisabled())
         return;
@@ -560,7 +567,7 @@ void GraphicsContext::concatCTM(const AffineTransform& at)
     << (float)at.a() << (float)at.b() << (float)at.c() << (float)at.d() << (float)at.e() << (float)at.f();
 }
 
-//void GraphicsContext::addInnerRoundedRectClip(const IntRect& r, int thickness)
+//void GraphicsContextJava::addInnerRoundedRectClip(const IntRect& r, int thickness)
 //{
 //    if (paintingDisabled())
 //        return;
@@ -573,7 +580,7 @@ void GraphicsContext::concatCTM(const AffineTransform& at)
 //    clipPath(path, WindRule::EvenOdd);
 //}
 
-void GraphicsContext::setPlatformShadow(const FloatSize& s, float blur, const Color& color)
+void GraphicsContextJava::setPlatformShadow(const FloatSize& s, float blur, const Color& color)
 {
     if (paintingDisabled())
         return;
@@ -592,17 +599,12 @@ void GraphicsContext::setPlatformShadow(const FloatSize& s, float blur, const Co
     << width << height << blur << r << g << b << a;;
 }
 
-void GraphicsContext::clearPlatformShadow()
-{
-    setPlatformShadow(FloatSize(0, 0), 0, Color());
-}
-
-bool GraphicsContext::supportsTransparencyLayers()
+bool GraphicsContextJava::supportsTransparencyLayers() const
 {
     return true;
 }
 
-void GraphicsContext::beginPlatformTransparencyLayer(float opacity)
+void GraphicsContextJava::beginPlatformTransparencyLayer(float opacity)
 {
     if (paintingDisabled())
       return;
@@ -612,7 +614,7 @@ void GraphicsContext::beginPlatformTransparencyLayer(float opacity)
     << opacity;
 }
 
-void GraphicsContext::endPlatformTransparencyLayer()
+void GraphicsContextJava::endPlatformTransparencyLayer()
 {
     if (paintingDisabled())
       return;
@@ -621,7 +623,7 @@ void GraphicsContext::endPlatformTransparencyLayer()
     << (jint)com_sun_webkit_graphics_GraphicsDecoder_ENDTRANSPARENCYLAYER;
 }
 
-void GraphicsContext::clearRect(const FloatRect& rect)
+void GraphicsContextJava::clearRect(const FloatRect& rect)
 {
     if (paintingDisabled())
         return;
@@ -632,7 +634,7 @@ void GraphicsContext::clearRect(const FloatRect& rect)
     << rect.width() << rect.height();
 }
 
-void GraphicsContext::strokeRect(const FloatRect& rect, float lineWidth)
+void GraphicsContextJava::strokeRect(const FloatRect& rect, float lineWidth)
 {
     if (paintingDisabled())
         return;
@@ -650,7 +652,7 @@ void GraphicsContext::strokeRect(const FloatRect& rect, float lineWidth)
     << rect.x() << rect.y() << rect.width() << rect.height() << lineWidth;
 }
 
-void GraphicsContext::setLineDash(const DashArray& dashes, float dashOffset)
+void GraphicsContextJava::setLineDash(const DashArray& dashes, float dashOffset)
 {
     if (paintingDisabled()) {
       return;
@@ -670,7 +672,7 @@ void GraphicsContext::setLineDash(const DashArray& dashes, float dashOffset)
     platformContext()->setLineDash(dashes, dashOffset);
 }
 
-void GraphicsContext::setLineCap(LineCap cap)
+void GraphicsContextJava::setLineCap(LineCap cap)
 {
     if (paintingDisabled()) {
       return;
@@ -683,7 +685,7 @@ void GraphicsContext::setLineCap(LineCap cap)
     platformContext()->setLineCap(cap);
 }
 
-void GraphicsContext::setLineJoin(LineJoin join)
+void GraphicsContextJava::setLineJoin(LineJoin join)
 {
     if (paintingDisabled())
         return;
@@ -695,7 +697,7 @@ void GraphicsContext::setLineJoin(LineJoin join)
     platformContext()->setLineJoin(join);
 }
 
-void GraphicsContext::setMiterLimit(float limit)
+void GraphicsContextJava::setMiterLimit(float limit)
 {
     if (paintingDisabled())
         return;
@@ -707,14 +709,14 @@ void GraphicsContext::setMiterLimit(float limit)
     platformContext()->setMiterLimit(limit);
 }
 
-void GraphicsContext::setPlatformAlpha(float alpha)
+void GraphicsContextJava::setPlatformAlpha(float alpha)
 {
     platformContext()->rq().freeSpace(8)
     << (jint)com_sun_webkit_graphics_GraphicsDecoder_SETALPHA
     << alpha;
 }
 
-void GraphicsContext::setPlatformCompositeOperation(CompositeOperator op, BlendMode)
+void GraphicsContextJava::setPlatformCompositeOperation(CompositeOperator op, BlendMode)
 {
     if (paintingDisabled())
         return;
@@ -725,7 +727,7 @@ void GraphicsContext::setPlatformCompositeOperation(CompositeOperator op, BlendM
     //utatodo: add BlendMode
 }
 
-void GraphicsContext::strokePath(const Path& path)
+void GraphicsContextJava::strokePath(const Path& path)
 {
     if (paintingDisabled())
         return;
@@ -764,29 +766,29 @@ static void setClipPath(
     << jint(isOut);
 }
 
-void GraphicsContext::canvasClip(const Path& path, WindRule fillRule)
+void GraphicsContextJava::canvasClip(const Path& path, WindRule fillRule)
 {
     clipPath(path, fillRule);
 }
 
-void GraphicsContext::clipPath(const Path &path, WindRule wrule)
+void GraphicsContextJava::clipPath(const Path &path, WindRule wrule)
 {
     setClipPath(*this, m_state, path, wrule, false);
 }
 
-void GraphicsContext::clipOut(const Path& path)
+void GraphicsContextJava::clipOut(const Path& path)
 {
     setClipPath(*this, m_state, path, WindRule::EvenOdd, true);
 }
 
-void GraphicsContext::clipOut(const FloatRect& rect)
+void GraphicsContextJava::clipOut(const FloatRect& rect)
 {
     Path path;
     path.addRoundedRect(rect, FloatSize());
     clipOut(path);
 }
 
-void GraphicsContext::drawPlatformImage(const PlatformImagePtr& image, const FloatSize&, const FloatRect& destRect, const FloatRect& srcRect, const ImagePaintingOptions& options)
+void GraphicsContextJava::drawPlatformImage(const PlatformImagePtr& image, const FloatSize&, const FloatRect& destRect, const FloatRect& srcRect, const ImagePaintingOptions& options)
 {
     if (!image || !image->getImage())
         return;
@@ -819,7 +821,7 @@ void GraphicsContext::drawPlatformImage(const PlatformImagePtr& image, const Flo
     restorePlatformState();
 }
 
-void GraphicsContext::drawPlatformPattern(const PlatformImagePtr& image, const FloatSize&, const FloatRect& destRect, const FloatRect& tileRect, const AffineTransform& patternTransform, const FloatPoint& phase, const FloatSize&, const ImagePaintingOptions&)
+void GraphicsContextJava::drawPlatformPattern(const PlatformImagePtr& image, const FloatSize&, const FloatRect& destRect, const FloatRect& tileRect, const AffineTransform& patternTransform, const FloatPoint& phase, const FloatSize&, const ImagePaintingOptions&)
 {
     if (paintingDisabled() || !patternTransform.isInvertible())
         return;
@@ -852,7 +854,7 @@ void GraphicsContext::drawPlatformPattern(const PlatformImagePtr& image, const F
         << destRect.x() << destRect.y() << destRect.width() << destRect.height();
 }
 
-void GraphicsContext::fillPath(const Path& path)
+void GraphicsContextJava::fillPath(const Path& path)
 {
     if (paintingDisabled())
         return;
@@ -888,7 +890,7 @@ void GraphicsContext::fillPath(const Path& path)
     }
 }
 
-void GraphicsContext::rotate(float radians)
+void GraphicsContextJava::rotate(float radians)
 {
     if (paintingDisabled())
         return;
@@ -900,7 +902,7 @@ void GraphicsContext::rotate(float radians)
 
 }
 
-void GraphicsContext::scale(const FloatSize& size)
+void GraphicsContextJava::scale(const FloatSize& size)
 {
     if (paintingDisabled())
         return;
@@ -911,7 +913,7 @@ void GraphicsContext::scale(const FloatSize& size)
     << size.width() << size.height();
 }
 
-void GraphicsContext::fillRoundedRect(const FloatRoundedRect& rect, const Color& color, BlendMode) // todo tav Int to Float
+void GraphicsContextJava::fillRoundedRect(const FloatRoundedRect& rect, const Color& color, BlendMode blendMode) // todo tav Int to Float
 {
     if (paintingDisabled())
         return;
@@ -949,7 +951,7 @@ void GraphicsContext::fillRoundedRect(const FloatRoundedRect& rect, const Color&
     }
 }
 
-void GraphicsContext::fillRectWithRoundedHole(const FloatRect& frect, const FloatRoundedRect& roundedHoleRect, const Color& color)
+void GraphicsContextJava::fillRectWithRoundedHole(const FloatRect& frect, const FloatRoundedRect& roundedHoleRect, const Color& color)
 {
     if (paintingDisabled())
         return;
@@ -976,12 +978,65 @@ void GraphicsContext::fillRectWithRoundedHole(const FloatRect& frect, const Floa
 }
 
 //utatodo: do we need the Java-only m_state.transform?
-AffineTransform GraphicsContext::getCTM(IncludeDeviceScale) const
+AffineTransform GraphicsContextJava::getCTM(IncludeDeviceScale) const
 {
     return m_state.transform;
 }
 
-void GraphicsContext::setCTM(const AffineTransform& tm)
+void GraphicsContextJava::updateState(const GraphicsContextState& state, GraphicsContextState::StateChangeFlags flags)
+{
+    if (flags & GraphicsContextState::StrokeThicknessChange) {
+        setPlatformStrokeThickness(state.strokeThickness);
+    }
+
+    if (flags & GraphicsContextState::StrokeStyleChange) {
+        setPlatformStrokeStyle(state.strokeStyle);
+    }
+
+    if (flags & GraphicsContextState::TextDrawingModeChange){
+        setPlatformTextDrawingMode(state.textDrawingMode);
+    }
+
+    if (flags & GraphicsContextState::ShadowChange) {
+        setPlatformShadow(state.shadowOffset, state.shadowBlur, state.shadowColor);
+    }
+
+    if (flags & GraphicsContextState::CompositeOperationChange) {
+        setPlatformCompositeOperation(state.compositeOperator, state.blendMode);
+    }
+
+    if (flags & GraphicsContextState::StrokeColorChange) {
+        setPlatformStrokeColor(strokeColor());
+    }
+
+    if (flags & GraphicsContextState::AlphaChange) {
+        setPlatformAlpha(alpha());
+    }
+
+    if (flags & GraphicsContextState::FillColorChange) {
+        setPlatformFillColor(fillColor());
+    }
+}
+
+void GraphicsContextJava::fillRoundedRectImpl(const FloatRoundedRect& rect, const Color& color)
+{
+    fillRoundedRect(rect, color, BlendMode::Normal);
+}
+
+void GraphicsContextJava::drawNativeImage(NativeImage& image, const FloatSize& selfSize, const FloatRect& destRect,
+                            const FloatRect& srcRect, const ImagePaintingOptions& options)
+{
+    drawPlatformImage(image.platformImage(), selfSize, destRect, srcRect, options);
+}
+
+void GraphicsContextJava::drawPattern(NativeImage& image, const FloatSize& imageSize, const FloatRect& destRect, const FloatRect& tileRect,
+                            const AffineTransform& patternTransform, const FloatPoint& phase, const FloatSize& spacing,
+                            const ImagePaintingOptions& imagePaintingOptions)
+{
+    drawPlatformPattern(image.platformImage(), imageSize, destRect, tileRect, patternTransform, phase, spacing, imagePaintingOptions);
+}
+
+void GraphicsContextJava::setCTM(const AffineTransform& tm)
 {
     if (paintingDisabled())
         return;

@@ -28,12 +28,9 @@
 #if ENABLE(FULLSCREEN_API)
 
 #include "Document.h"
-#include "GenericTaskQueue.h"
 #include "LayoutRect.h"
 #include <wtf/Deque.h>
-#include <wtf/RefPtr.h>
-#include <wtf/Vector.h>
-#include <wtf/WeakHashSet.h>
+#include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
@@ -41,7 +38,7 @@ class RenderFullScreen;
 class RenderTreeBuilder;
 class RenderStyle;
 
-class FullscreenManager final {
+class FullscreenManager final : public CanMakeWeakPtr<FullscreenManager> {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     FullscreenManager(Document&);
@@ -74,10 +71,10 @@ public:
     };
     WEBCORE_EXPORT void requestFullscreenForElement(Element*, FullscreenCheckType);
 
-    WEBCORE_EXPORT void willEnterFullscreen(Element&);
-    WEBCORE_EXPORT void didEnterFullscreen();
-    WEBCORE_EXPORT void willExitFullscreen();
-    WEBCORE_EXPORT void didExitFullscreen();
+    WEBCORE_EXPORT bool willEnterFullscreen(Element&);
+    WEBCORE_EXPORT bool didEnterFullscreen();
+    WEBCORE_EXPORT bool willExitFullscreen();
+    WEBCORE_EXPORT bool didExitFullscreen();
 
     void setFullscreenRenderer(RenderTreeBuilder&, RenderFullScreen&);
     RenderFullScreen* fullscreenRenderer() const;
@@ -106,6 +103,13 @@ protected:
     void addDocumentToFullscreenChangeEventQueue(Document&);
 
 private:
+#if !RELEASE_LOG_DISABLED
+    const WTF::Logger& logger() const { return m_document.logger(); }
+    const void* logIdentifier() const { return m_logIdentifier; }
+    const char* logClassName() const { return "FullscreenManager"; }
+    WTFLogChannel& logChannel() const;
+#endif
+
     Document& m_document;
 
     RefPtr<Element> fullscreenOrPendingElement() const { return m_fullscreenElement ? m_fullscreenElement : m_pendingFullscreenElement; }
@@ -115,7 +119,6 @@ private:
     RefPtr<Element> m_fullscreenElement;
     Vector<RefPtr<Element>> m_fullscreenElementStack;
     WeakPtr<RenderFullScreen> m_fullscreenRenderer { nullptr };
-    GenericTaskQueue<Timer> m_fullscreenTaskQueue;
     Deque<RefPtr<Node>> m_fullscreenChangeEventTargetQueue;
     Deque<RefPtr<Node>> m_fullscreenErrorEventTargetQueue;
     LayoutRect m_savedPlaceholderFrameRect;
@@ -124,6 +127,10 @@ private:
     bool m_areKeysEnabledInFullscreen { false };
     bool m_isAnimatingFullscreen { false };
     bool m_areFullscreenControlsHidden { false };
+
+#if !RELEASE_LOG_DISABLED
+    const void* m_logIdentifier;
+#endif
 };
 
 }

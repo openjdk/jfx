@@ -44,17 +44,12 @@ namespace WebCore {
 
 class LibWebRTCPeerConnectionBackend;
 
-class LibWebRTCRtpSenderBackend final : public RTCRtpSenderBackend {
+class LibWebRTCRtpSenderBackend final : public RTCRtpSenderBackend, public CanMakeWeakPtr<LibWebRTCRtpSenderBackend> {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    LibWebRTCRtpSenderBackend(LibWebRTCPeerConnectionBackend& backend, rtc::scoped_refptr<webrtc::RtpSenderInterface>&& rtcSender)
-        : m_peerConnectionBackend(makeWeakPtr(&backend))
-        , m_rtcSender(WTFMove(rtcSender))
-    {
-    }
-
     using Source = Variant<std::nullptr_t, Ref<RealtimeOutgoingAudioSource>, Ref<RealtimeOutgoingVideoSource>>;
     LibWebRTCRtpSenderBackend(LibWebRTCPeerConnectionBackend&, rtc::scoped_refptr<webrtc::RtpSenderInterface>&&, Source&&);
+    LibWebRTCRtpSenderBackend(LibWebRTCPeerConnectionBackend&, rtc::scoped_refptr<webrtc::RtpSenderInterface>&&);
     ~LibWebRTCRtpSenderBackend();
 
     void setRTCSender(rtc::scoped_refptr<webrtc::RtpSenderInterface>&& rtcSender) { m_rtcSender = WTFMove(rtcSender); }
@@ -70,7 +65,8 @@ private:
     RTCRtpSendParameters getParameters() const final;
     void setParameters(const RTCRtpSendParameters&, DOMPromiseDeferred<void>&&) final;
     std::unique_ptr<RTCDTMFSenderBackend> createDTMFBackend() final;
-    Ref<RTCRtpTransformBackend> createRTCRtpTransformBackend() final;
+    Ref<RTCRtpTransformBackend> rtcRtpTransformBackend() final;
+    std::unique_ptr<RTCDtlsTransportBackend> dtlsTransportBackend() final;
     void setMediaStreamIds(const Vector<String>&) final;
 
     void startSource();
@@ -80,7 +76,8 @@ private:
     WeakPtr<LibWebRTCPeerConnectionBackend> m_peerConnectionBackend;
     rtc::scoped_refptr<webrtc::RtpSenderInterface> m_rtcSender;
     Source m_source;
-    mutable Optional<webrtc::RtpParameters> m_currentParameters;
+    RefPtr<RTCRtpTransformBackend> m_transformBackend;
+    mutable std::optional<webrtc::RtpParameters> m_currentParameters;
 };
 
 } // namespace WebCore

@@ -26,9 +26,7 @@
 #pragma once
 
 #include <functional>
-#include <wtf/Forward.h>
 #include <wtf/Function.h>
-#include <wtf/HashSet.h>
 #include <wtf/RefCounted.h>
 #include <wtf/WeakHashSet.h>
 #include <wtf/WeakPtr.h>
@@ -43,20 +41,10 @@ namespace WebCore {
 class DOMWrapperWorld;
 class DocumentLoader;
 class Page;
-class ResourceRequest;
+class UserContentProvider;
 class UserMessageHandlerDescriptor;
 class UserScript;
 class UserStyleSheet;
-
-#if ENABLE(CONTENT_EXTENSIONS)
-namespace ContentExtensions {
-class ContentExtensionsBackend;
-enum class ResourceType : uint16_t;
-struct ResourceLoadInfo;
-}
-#endif
-
-class UserContentProvider;
 
 class UserContentProviderInvalidationClient : public CanMakeWeakPtr<UserContentProviderInvalidationClient> {
 public:
@@ -88,7 +76,7 @@ public:
     void removePage(Page&);
 
 #if ENABLE(CONTENT_EXTENSIONS)
-    ContentRuleListResults processContentRuleListsForLoad(Page&, const URL&, OptionSet<ContentExtensions::ResourceType>, DocumentLoader& initiatingDocumentLoader);
+    ContentRuleListResults processContentRuleListsForLoad(Page&, const URL&, OptionSet<ContentExtensions::ResourceType>, DocumentLoader& initiatingDocumentLoader, const URL& redirectFrom = { });
 #endif
 
 protected:

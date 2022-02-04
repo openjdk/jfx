@@ -27,7 +27,7 @@
 #include "FETurbulence.h"
 
 #include "Filter.h"
-#include "ImageData.h"
+#include "PixelBuffer.h"
 #include <wtf/MathExtras.h>
 #include <wtf/ParallelJobs.h>
 #include <wtf/text/TextStream.h>
@@ -217,7 +217,7 @@ FETurbulence::StitchData FETurbulence::computeStitching(IntSize tileSize, float&
 }
 
 // This is taken 1:1 from SVG spec: http://www.w3.org/TR/SVG11/filters.html#feTurbulenceElement.
-ColorComponents<float> FETurbulence::noise2D(const PaintingData& paintingData, const StitchData& stitchData, const FloatPoint& noiseVector) const
+ColorComponents<float, 4> FETurbulence::noise2D(const PaintingData& paintingData, const StitchData& stitchData, const FloatPoint& noiseVector) const
 {
     struct NoisePosition {
         int index; // bx0, by0 in the spec text.
@@ -322,7 +322,8 @@ ColorComponents<float> FETurbulence::noise2D(const PaintingData& paintingData, c
 }
 
 // https://www.w3.org/TR/SVG/filters.html#feTurbulenceElement describes this conversion to color components.
-static inline ColorComponents<uint8_t> toIntBasedColorComponents(const ColorComponents<float>& floatComponents)
+// FIXME: This should use colorConvert<SRGBA<uint8>>(SRGBA<float>) to get the same behavior.
+static inline ColorComponents<uint8_t, 4> toIntBasedColorComponents(const ColorComponents<float, 4>& floatComponents)
 {
     return {
         std::clamp<uint8_t>(static_cast<int>(floatComponents[0] * 255), 0, 255),
@@ -332,9 +333,9 @@ static inline ColorComponents<uint8_t> toIntBasedColorComponents(const ColorComp
     };
 }
 
-ColorComponents<uint8_t> FETurbulence::calculateTurbulenceValueForPoint(const PaintingData& paintingData, StitchData stitchData, const FloatPoint& point) const
+ColorComponents<uint8_t, 4> FETurbulence::calculateTurbulenceValueForPoint(const PaintingData& paintingData, StitchData stitchData, const FloatPoint& point) const
 {
-    ColorComponents<float> turbulenceFunctionResult;
+    ColorComponents<float, 4> turbulenceFunctionResult;
     FloatPoint noiseVector(point.x() * paintingData.baseFrequencyX, point.y() * paintingData.baseFrequencyY);
     float ratio = 1;
     for (int octave = 0; octave < m_numOctaves; ++octave) {
@@ -373,7 +374,7 @@ void FETurbulence::fillRegion(Uint8ClampedArray& pixelArray, const PaintingData&
     filterRegion.scale(filter().filterScale());
     FloatPoint point(0, filterRegion.y() + startY);
     int indexOfPixelChannel = startY * (filterRegion.width() << 2);
-    AffineTransform inverseTransfrom = filter().absoluteTransform().inverse().valueOr(AffineTransform());
+    AffineTransform inverseTransfrom = filter().absoluteTransform().inverse().value_or(AffineTransform());
 
     for (int y = startY; y < endY; ++y) {
         point.setY(point.y() + 1);
@@ -395,16 +396,17 @@ void FETurbulence::fillRegionWorker(FillRegionParameters* parameters)
 
 void FETurbulence::platformApplySoftware()
 {
-    auto* resultImage = createUnmultipliedImageResult();
-    auto* pixelArray = resultImage ? resultImage->data() : nullptr;
-    if (!pixelArray)
+    auto& destinationPixelBuffer = createUnmultipliedImageResult();
+    if (!destinationPixelBuffer)
         return;
+
+    auto& destinationPixelArray = destinationPixelBuffer->data();
 
     IntSize resultSize(absolutePaintRect().size());
     resultSize.scale(filter().filterScale());
 
     if (resultSize.isEmpty()) {
-        pixelArray->zeroFill();
+        destinationPixelArray.zeroFill();
         return;
     }
 
@@ -424,7 +426,7 @@ void FETurbulence::platformApplySoftware()
     int height = resultSize.height();
 
     unsigned maxNumThreads = height / 8;
-    unsigned optimalThreadNumber = std::min<unsigned>(area.unsafeGet() / s_minimalRectDimension, maxNumThreads);
+    unsigned optimalThreadNumber = std::min<unsigned>(area / s_minimalRectDimension, maxNumThreads);
     if (optimalThreadNumber > 1) {
         WTF::ParallelJobs<FillRegionParameters> parallelJobs(&WebCore::FETurbulence::fillRegionWorker, optimalThreadNumber);
 
@@ -439,7 +441,7 @@ void FETurbulence::platformApplySoftware()
             for (unsigned i = 0; i < numJobs; ++i) {
                 FillRegionParameters& params = parallelJobs.parameter(i);
                 params.filter = this;
-                params.pixelArray = pixelArray;
+                params.pixelArray = &destinationPixelArray;
                 params.paintingData = &paintingData;
                 params.stitchData = stitchData;
                 params.startY = startY;
@@ -455,7 +457,7 @@ void FETurbulence::platformApplySoftware()
     }
 
     // Fallback to single threaded mode if there is no room for a new thread or the paint area is too small.
-    fillRegion(*pixelArray, paintingData, stitchData, 0, height);
+    fillRegion(destinationPixelArray, paintingData, stitchData, 0, height);
 }
 
 static TextStream& operator<<(TextStream& ts, TurbulenceType type)

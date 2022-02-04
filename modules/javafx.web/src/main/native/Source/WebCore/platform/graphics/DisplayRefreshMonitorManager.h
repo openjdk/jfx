@@ -34,6 +34,8 @@
 
 namespace WebCore {
 
+struct DisplayUpdate;
+
 class DisplayRefreshMonitorManager {
     friend class NeverDestroyed<DisplayRefreshMonitorManager>;
     friend class DisplayRefreshMonitor;
@@ -42,11 +44,14 @@ public:
 
     void unregisterClient(DisplayRefreshMonitorClient&);
 
-    void setPreferredFramesPerSecond(DisplayRefreshMonitorClient&, FramesPerSecond);
     bool scheduleAnimation(DisplayRefreshMonitorClient&);
     void windowScreenDidChange(PlatformDisplayID, DisplayRefreshMonitorClient&);
 
-    WEBCORE_EXPORT void displayWasUpdated(PlatformDisplayID);
+    std::optional<FramesPerSecond> nominalFramesPerSecondForDisplay(PlatformDisplayID, DisplayRefreshMonitorFactory*);
+
+    void clientPreferredFramesPerSecondChanged(DisplayRefreshMonitorClient&);
+
+    WEBCORE_EXPORT void displayWasUpdated(PlatformDisplayID, const DisplayUpdate&);
 
 private:
     DisplayRefreshMonitorManager() = default;
@@ -57,6 +62,8 @@ private:
     size_t findMonitorForDisplayID(PlatformDisplayID) const;
     DisplayRefreshMonitor* monitorForDisplayID(PlatformDisplayID) const;
     DisplayRefreshMonitor* monitorForClient(DisplayRefreshMonitorClient&);
+
+    DisplayRefreshMonitor* ensureMonitorForDisplayID(PlatformDisplayID, DisplayRefreshMonitorFactory*);
 
     struct DisplayRefreshMonitorWrapper {
         DisplayRefreshMonitorWrapper(DisplayRefreshMonitorWrapper&&) = default;

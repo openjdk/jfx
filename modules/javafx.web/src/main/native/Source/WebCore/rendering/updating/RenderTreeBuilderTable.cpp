@@ -247,38 +247,37 @@ bool RenderTreeBuilder::Table::childRequiresTable(const RenderElement& parent, c
     return false;
 }
 
-void RenderTreeBuilder::Table::collapseAndDestroyAnonymousSiblingRows(RenderTableRow& row)
+static inline bool canCollapseNextSibling(const RenderBox& previousSibling, const RenderBox& nextSibling)
 {
-    auto* section = row.section();
-    if (!section)
-        return;
+    if (!previousSibling.isAnonymous() || !nextSibling.isAnonymous())
+        return false;
+    auto* previousSiblingFirstInFlowChild = previousSibling.firstInFlowChild();
+    auto* nextSiblingFirstInFlowChild = nextSibling.firstInFlowChild();
+    // Do not try to collapse and move inline level boxes over to a container with block level boxes (and vice versa).
+    return !previousSiblingFirstInFlowChild || !nextSiblingFirstInFlowChild || previousSiblingFirstInFlowChild->isInline() == nextSiblingFirstInFlowChild->isInline();
+}
 
-    // All siblings generated?
-    for (auto* current = section->firstRow(); current; current = current->nextRow()) {
-        if (current == &row)
-            continue;
-        if (!current->isAnonymous())
-            return;
-    }
+template <typename Parent, typename Child>
+RenderPtr<RenderObject> RenderTreeBuilder::Table::collapseAndDetachAnonymousNextSibling(Parent* parent, Child* previousSibling, Child* nextSibling)
+{
+    if (!parent || !previousSibling || !nextSibling)
+        return { };
+    if (!canCollapseNextSibling(*previousSibling, *nextSibling))
+        return { };
+    m_builder.moveAllChildren(*nextSibling, *previousSibling, RenderTreeBuilder::NormalizeAfterInsertion::No);
+    previousSibling->setChildrenInline(!previousSibling->firstInFlowChild() || previousSibling->firstInFlowChild()->isInline());
+    return m_builder.detach(*parent, *nextSibling);
+}
 
-    RenderTableRow* rowToInsertInto = nullptr;
-    auto* currentRow = section->firstRow();
-    while (currentRow) {
-        if (currentRow == &row) {
-            currentRow = currentRow->nextRow();
-            continue;
-        }
-        if (!rowToInsertInto) {
-            rowToInsertInto = currentRow;
-            currentRow = currentRow->nextRow();
-            continue;
-        }
-        m_builder.moveAllChildren(*currentRow, *rowToInsertInto, RenderTreeBuilder::NormalizeAfterInsertion::No);
-        auto toDestroy = m_builder.detach(*section, *currentRow);
-        currentRow = currentRow->nextRow();
-    }
-    if (rowToInsertInto)
-        rowToInsertInto->setNeedsLayout();
+void RenderTreeBuilder::Table::collapseAndDestroyAnonymousSiblingCells(const RenderTableCell& willBeDestroyed)
+{
+    if (auto nextCellToDestroy = collapseAndDetachAnonymousNextSibling(willBeDestroyed.row(), willBeDestroyed.previousCell(), willBeDestroyed.nextCell()))
+        downcast<RenderTableCell>(*nextCellToDestroy).deleteLines();
+}
+
+void RenderTreeBuilder::Table::collapseAndDestroyAnonymousSiblingRows(const RenderTableRow& willBeDestroyed)
+{
+    auto toDestroy = collapseAndDetachAnonymousNextSibling(willBeDestroyed.section(), willBeDestroyed.previousRow(), willBeDestroyed.nextRow());
 }
 
 }

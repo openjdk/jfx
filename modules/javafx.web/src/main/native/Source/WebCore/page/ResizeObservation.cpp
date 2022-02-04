@@ -34,13 +34,13 @@
 
 namespace WebCore {
 
-Ref<ResizeObservation> ResizeObservation::create(Element* target)
+Ref<ResizeObservation> ResizeObservation::create(Element& target)
 {
     return adoptRef(*new ResizeObservation(target));
 }
 
-ResizeObservation::ResizeObservation(Element* element)
-    : m_target(element)
+ResizeObservation::ResizeObservation(Element& element)
+    : m_target { makeWeakPtr(element) }
 {
 }
 
@@ -56,9 +56,8 @@ void ResizeObservation::updateObservationSize(const LayoutSize& size)
 LayoutSize ResizeObservation::computeObservedSize() const
 {
     if (m_target->isSVGElement()) {
-        FloatRect svgRect;
-        if (downcast<SVGElement>(*m_target).getBoundingBox(svgRect))
-            return LayoutSize(svgRect.width(), svgRect.height());
+        if (auto svgRect = downcast<SVGElement>(*m_target).getBoundingBox())
+            return LayoutSize(svgRect->width(), svgRect->height());
     }
     auto* box = m_target->renderBox();
     if (box) {
@@ -93,7 +92,7 @@ bool ResizeObservation::elementSizeChanged(LayoutSize& currentSize) const
 size_t ResizeObservation::targetElementDepth() const
 {
     unsigned depth = 0;
-    for (Element* ownerElement  = m_target; ownerElement; ownerElement = ownerElement->document().ownerElement()) {
+    for (Element* ownerElement = m_target.get(); ownerElement; ownerElement = ownerElement->document().ownerElement()) {
         for (Element* parent = ownerElement; parent; parent = parent->parentElement())
             ++depth;
     }

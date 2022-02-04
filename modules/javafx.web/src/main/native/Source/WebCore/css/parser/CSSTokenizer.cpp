@@ -1,5 +1,5 @@
 // Copyright 2015 The Chromium Authors. All rights reserved.
-// Copyright (C) 2016-2020 Apple Inc. All rights reserved.
+// Copyright (C) 2016-2021 Apple Inc. All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
@@ -35,17 +35,20 @@
 #include "CSSParserTokenRange.h"
 #include "CSSTokenizerInputStream.h"
 #include "HTMLParserIdioms.h"
+#include "JSDOMConvertStrings.h"
 #include <wtf/text/StringBuilder.h>
+#include <wtf/text/StringToIntegerConversion.h>
 #include <wtf/unicode/CharacterNames.h>
 
 namespace WebCore {
 
-// See: http://dev.w3.org/csswg/css-syntax/#input-preprocessing
+// https://drafts.csswg.org/css-syntax/#input-preprocessing
 static String preprocessString(String string)
 {
-    // According to the specification, we should replace '\r' and '\f' with '\n' but we do not need to
-    // because our CSSTokenizer treats all of them as new lines.
-    return string.replace('\0', replacementCharacter);
+    // We don't replace '\r' and '\f' with '\n' as the specification suggests, instead
+    // we treat them all the same in the isNewLine function below.
+    string.replace('\0', replacementCharacter);
+    return replaceUnpairedSurrogatesWithReplacementCharacter(WTFMove(string));
 }
 
 std::unique_ptr<CSSTokenizer> CSSTokenizer::tryCreate(const String& string)
@@ -352,16 +355,6 @@ CSSParserToken CSSTokenizer::asciiDigit(UChar cc)
     return consumeNumericToken();
 }
 
-CSSParserToken CSSTokenizer::letterU(UChar cc)
-{
-    if (m_input.peek(0) == '+' && (isASCIIHexDigit(m_input.peek(1)) || m_input.peek(1) == '?')) {
-        m_input.advance();
-        return consumeUnicodeRange();
-    }
-    reconsume(cc);
-    return consumeIdentLikeToken();
-}
-
 CSSParserToken CSSTokenizer::nameStart(UChar cc)
 {
     reconsume(cc);
@@ -464,7 +457,7 @@ const CSSTokenizer::CodePoint CSSTokenizer::codePoints[128] = {
     &CSSTokenizer::nameStart,
     &CSSTokenizer::nameStart,
     &CSSTokenizer::nameStart,
-    &CSSTokenizer::letterU,
+    &CSSTokenizer::nameStart,
     &CSSTokenizer::nameStart,
     &CSSTokenizer::nameStart,
     &CSSTokenizer::nameStart,
@@ -496,7 +489,7 @@ const CSSTokenizer::CodePoint CSSTokenizer::codePoints[128] = {
     &CSSTokenizer::nameStart,
     &CSSTokenizer::nameStart,
     &CSSTokenizer::nameStart,
-    &CSSTokenizer::letterU,
+    &CSSTokenizer::nameStart,
     &CSSTokenizer::nameStart,
     &CSSTokenizer::nameStart,
     &CSSTokenizer::nameStart,
@@ -542,6 +535,8 @@ CSSParserToken CSSTokenizer::consumeNumber()
 {
     ASSERT(nextCharsAreNumber());
 
+    auto startOffset = m_input.offset();
+
     NumericValueType type = IntegerValueType;
     NumericSign sign = NoSign;
     unsigned numberLength = 0;
@@ -577,7 +572,7 @@ CSSParserToken CSSTokenizer::consumeNumber()
     double value = m_input.getDouble(0, numberLength);
     m_input.advance(numberLength);
 
-    return CSSParserToken(NumberToken, value, type, sign);
+    return CSSParserToken(value, type, sign, m_input.rangeAt(startOffset, m_input.offset() - startOffset));
 }
 
 // http://www.w3.org/TR/css3-syntax/#consume-a-numeric-token
@@ -647,37 +642,6 @@ CSSParserToken CSSTokenizer::consumeStringTokenUntil(UChar endingCodePoint)
         } else
             output.append(cc);
     }
-}
-
-CSSParserToken CSSTokenizer::consumeUnicodeRange()
-{
-    ASSERT(isASCIIHexDigit(m_input.peek(0)) || m_input.peek(0) == '?');
-    int lengthRemaining = 6;
-    UChar32 start = 0;
-
-    while (lengthRemaining && isASCIIHexDigit(m_input.peek(0))) {
-        start = start * 16 + toASCIIHexValue(consume());
-        --lengthRemaining;
-    }
-
-    UChar32 end = start;
-    if (lengthRemaining && consumeIfNext('?')) {
-        do {
-            start *= 16;
-            end = end * 16 + 0xF;
-            --lengthRemaining;
-        } while (lengthRemaining && consumeIfNext('?'));
-    } else if (m_input.peek(0) == '-' && isASCIIHexDigit(m_input.peek(1))) {
-        m_input.advance();
-        lengthRemaining = 6;
-        end = 0;
-        do {
-            end = end * 16 + toASCIIHexValue(consume());
-            --lengthRemaining;
-        } while (lengthRemaining && isASCIIHexDigit(m_input.peek(0)));
-    }
-
-    return CSSParserToken(UnicodeRangeToken, start, end);
 }
 
 // http://dev.w3.org/csswg/css-syntax/#non-printable-code-point
@@ -836,9 +800,7 @@ UChar32 CSSTokenizer::consumeEscape()
             consumedHexDigits++;
         };
         consumeSingleWhitespaceIfNext();
-        bool ok = false;
-        UChar32 codePoint = hexChars.toString().toUIntStrict(&ok, 16);
-        ASSERT(ok);
+        auto codePoint = parseInteger<uint32_t>(hexChars, 16).value();
         if (!codePoint || (0xD800 <= codePoint && codePoint <= 0xDFFF) || codePoint > 0x10FFFF)
             return replacementCharacter;
         return codePoint;

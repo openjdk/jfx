@@ -38,7 +38,7 @@ static const ASCIILiteral P256 { "P-256"_s };
 static const ASCIILiteral P384 { "P-384"_s };
 static const ASCIILiteral P521 { "P-521"_s };
 
-static Optional<CryptoKeyEC::NamedCurve> toNamedCurve(const String& curve)
+static std::optional<CryptoKeyEC::NamedCurve> toNamedCurve(const String& curve)
 {
     if (curve == P256)
         return CryptoKeyEC::NamedCurve::P256;
@@ -47,7 +47,7 @@ static Optional<CryptoKeyEC::NamedCurve> toNamedCurve(const String& curve)
     if (curve == P521)
         return CryptoKeyEC::NamedCurve::P521;
 
-    return WTF::nullopt;
+    return std::nullopt;
 }
 
 CryptoKeyEC::CryptoKeyEC(CryptoAlgorithmIdentifier identifier, NamedCurve curve, CryptoKeyType type, PlatformECKeyContainer&& platformKey, bool extractable, CryptoKeyUsageBitmap usages)
@@ -98,22 +98,22 @@ RefPtr<CryptoKeyEC> CryptoKeyEC::importJwk(CryptoAlgorithmIdentifier identifier,
 
     if (keyData.x.isNull() || keyData.y.isNull())
         return nullptr;
-    Vector<uint8_t> x;
-    if (!WTF::base64URLDecode(keyData.x, x))
+    auto x = base64URLDecode(keyData.x);
+    if (!x)
         return nullptr;
-    Vector<uint8_t> y;
-    if (!WTF::base64URLDecode(keyData.y, y))
+    auto y = base64URLDecode(keyData.y);
+    if (!y)
         return nullptr;
     if (keyData.d.isNull()) {
         // import public key
-        return platformImportJWKPublic(identifier, *namedCurve, WTFMove(x), WTFMove(y), extractable, usages);
+        return platformImportJWKPublic(identifier, *namedCurve, WTFMove(*x), WTFMove(*y), extractable, usages);
     }
 
-    Vector<uint8_t> d;
-    if (!WTF::base64URLDecode(keyData.d, d))
+    auto d = base64URLDecode(keyData.d);
+    if (!d)
         return nullptr;
     // import private key
-    return platformImportJWKPrivate(identifier, *namedCurve, WTFMove(x), WTFMove(y), WTFMove(d), extractable, usages);
+    return platformImportJWKPrivate(identifier, *namedCurve, WTFMove(*x), WTFMove(*y), WTFMove(*d), extractable, usages);
 }
 
 RefPtr<CryptoKeyEC> CryptoKeyEC::importSpki(CryptoAlgorithmIdentifier identifier, const String& curve, Vector<uint8_t>&& keyData, bool extractable, CryptoKeyUsageBitmap usages)

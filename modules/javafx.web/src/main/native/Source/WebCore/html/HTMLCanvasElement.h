@@ -31,7 +31,6 @@
 #include "CanvasBase.h"
 #include "FloatRect.h"
 #include "HTMLElement.h"
-#include "ImageBitmapRenderingContextSettings.h"
 #include <memory>
 #include <wtf/Forward.h>
 
@@ -53,6 +52,8 @@ class MediaStream;
 class OffscreenCanvas;
 class WebGLRenderingContextBase;
 class GPUCanvasContext;
+struct CanvasRenderingContext2DSettings;
+struct ImageBitmapRenderingContextSettings;
 struct UncachedString;
 
 namespace DisplayList {
@@ -72,13 +73,13 @@ public:
     void setSize(const IntSize& newSize) override;
 
     CanvasRenderingContext* renderingContext() const final { return m_context.get(); }
-    ExceptionOr<Optional<RenderingContext>> getContext(JSC::JSGlobalObject&, const String& contextId, Vector<JSC::Strong<JSC::Unknown>>&& arguments);
+    ExceptionOr<std::optional<RenderingContext>> getContext(JSC::JSGlobalObject&, const String& contextId, Vector<JSC::Strong<JSC::Unknown>>&& arguments);
 
     CanvasRenderingContext* getContext(const String&);
 
     static bool is2dType(const String&);
-    CanvasRenderingContext2D* createContext2d(const String& type);
-    CanvasRenderingContext2D* getContext2d(const String&);
+    CanvasRenderingContext2D* createContext2d(const String&, CanvasRenderingContext2DSettings&&);
+    CanvasRenderingContext2D* getContext2d(const String&, CanvasRenderingContext2DSettings&&);
 
 #if ENABLE(WEBGL)
     using WebGLVersion = GraphicsContextGLWebGLVersion;
@@ -88,15 +89,9 @@ public:
     WebGLRenderingContextBase* getContextWebGL(WebGLVersion type, WebGLContextAttributes&& = { });
 #endif
 
-#if ENABLE(WEBGPU)
-    static bool isWebGPUType(const String&);
-    GPUCanvasContext* createContextWebGPU(const String&);
-    GPUCanvasContext* getContextWebGPU(const String&);
-#endif
-
     static bool isBitmapRendererType(const String&);
-    ImageBitmapRenderingContext* createContextBitmapRenderer(const String&, ImageBitmapRenderingContextSettings&& = { });
-    ImageBitmapRenderingContext* getContextBitmapRenderer(const String&, ImageBitmapRenderingContextSettings&& = { });
+    ImageBitmapRenderingContext* createContextBitmapRenderer(const String&, ImageBitmapRenderingContextSettings&&);
+    ImageBitmapRenderingContext* getContextBitmapRenderer(const String&, ImageBitmapRenderingContextSettings&&);
 
     WEBCORE_EXPORT ExceptionOr<UncachedString> toDataURL(const String& mimeType, JSC::JSValue quality);
     WEBCORE_EXPORT ExceptionOr<UncachedString> toDataURL(const String& mimeType);
@@ -106,13 +101,13 @@ public:
 #endif
 
     // Used for rendering
-    void didDraw(const FloatRect&) final;
+    void didDraw(const std::optional<FloatRect>&) final;
 
     void paint(GraphicsContext&, const LayoutRect&);
 
 #if ENABLE(MEDIA_STREAM)
     RefPtr<MediaSample> toMediaSample();
-    ExceptionOr<Ref<MediaStream>> captureStream(Document&, Optional<double>&& frameRequestRate);
+    ExceptionOr<Ref<MediaStream>> captureStream(Document&, std::optional<double>&& frameRequestRate);
 #endif
 
     Image* copiedImage() const final;
@@ -122,6 +117,7 @@ public:
     SecurityOrigin* securityOrigin() const final;
 
     bool shouldAccelerate(const IntSize&) const;
+    bool shouldAccelerate(unsigned area) const;
 
     WEBCORE_EXPORT void setUsesDisplayListDrawing(bool);
     WEBCORE_EXPORT void setTracksDisplayListReplay(bool);
@@ -132,7 +128,8 @@ public:
     // It would be better to have the contexts own the buffers.
     void setImageBufferAndMarkDirty(RefPtr<ImageBuffer>&&);
 
-    WEBCORE_EXPORT static void setMaxPixelMemoryForTesting(size_t);
+    WEBCORE_EXPORT static void setMaxPixelMemoryForTesting(std::optional<size_t>);
+    WEBCORE_EXPORT static void setMaxCanvasAreaForTesting(std::optional<size_t>);
 
     bool needsPreparationForDisplay();
     void prepareForDisplay();
@@ -182,25 +179,20 @@ private:
     Node::InsertedIntoAncestorResult insertedIntoAncestor(InsertionType, ContainerNode&) final;
     void removedFromAncestor(RemovalType, ContainerNode& oldParentOfRemovedTree) final;
 
-    FloatRect m_dirtyRect;
+    std::unique_ptr<CanvasRenderingContext> m_context;
+    mutable RefPtr<Image> m_copiedImage; // FIXME: This is temporary for platforms that have to copy the image buffer to render (and for CSSCanvasValue).
 
-    bool m_ignoreReset { false };
-
-    Optional<bool> m_usesDisplayListDrawing;
+    std::optional<bool> m_usesDisplayListDrawing;
     bool m_tracksDisplayListReplay { false };
 
-    std::unique_ptr<CanvasRenderingContext> m_context;
-
+    bool m_ignoreReset { false };
     // m_hasCreatedImageBuffer means we tried to malloc the buffer. We didn't necessarily get it.
     mutable bool m_hasCreatedImageBuffer { false };
     mutable bool m_didClearImageBuffer { false };
 #if ENABLE(WEBGL)
     bool m_hasRelevantWebGLEventListener { false };
 #endif
-
     bool m_isSnapshotting { false };
-
-    mutable RefPtr<Image> m_copiedImage; // FIXME: This is temporary for platforms that have to copy the image buffer to render (and for CSSCanvasValue).
 };
 
 } // namespace WebCore

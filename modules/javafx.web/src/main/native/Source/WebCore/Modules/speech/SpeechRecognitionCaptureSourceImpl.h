@@ -29,6 +29,7 @@
 
 #include "RealtimeMediaSource.h"
 #include "SpeechRecognitionConnectionClientIdentifier.h"
+#include <wtf/Lock.h>
 
 #if PLATFORM(COCOA)
 #include "AudioSampleDataSource.h"
@@ -60,6 +61,11 @@ private:
     // RealtimeMediaSource::AudioSampleObserver
     void audioSamplesAvailable(const MediaTime&, const PlatformAudioData&, const AudioStreamDescription&, size_t) final;
 
+#if PLATFORM(COCOA)
+    bool updateDataSource(const CAAudioStreamDescription&);
+    void pullSamplesAndCallDataCallback(const MediaTime&, const CAAudioStreamDescription&, size_t sampleCount);
+#endif
+
     // RealtimeMediaSource::Observer
     void sourceStarted() final;
     void sourceStopped() final;
@@ -71,7 +77,7 @@ private:
     Ref<RealtimeMediaSource> m_source;
 
 #if PLATFORM(COCOA)
-    RefPtr<AudioSampleDataSource> m_dataSource;
+    RefPtr<AudioSampleDataSource> m_dataSource WTF_GUARDED_BY_LOCK(m_dataSourceLock);
     Lock m_dataSourceLock;
 #endif
 };

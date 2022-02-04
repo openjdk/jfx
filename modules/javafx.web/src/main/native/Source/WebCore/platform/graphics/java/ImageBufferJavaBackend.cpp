@@ -37,7 +37,7 @@ namespace WebCore {
 std::unique_ptr<ImageBufferJavaBackend> ImageBufferJavaBackend::create(
     const Parameters& parameters, const HostWindow*)
 {
-    IntSize backendSize = calculateBackendSize(parameters.logicalSize, parameters.resolutionScale);
+    IntSize backendSize = ImageBufferBackend::calculateBackendSize(parameters);
     if (backendSize.isEmpty())
         return nullptr;
 
@@ -77,7 +77,7 @@ std::unique_ptr<ImageBufferJavaBackend> ImageBufferJavaBackend::create(
         return nullptr;
     }
 
-    auto context = makeUnique<GraphicsContext>(new PlatformContextJava(wcRenderQueue, true));
+    auto context = makeUnique<GraphicsContextJava>(new PlatformContextJava(wcRenderQueue, true));
 
     auto platformImage = ImageJava::create(image, context->platformContext()->rq_ref(),
         backendSize.width(), backendSize.height());
@@ -182,7 +182,7 @@ void ImageBufferJavaBackend::drawPattern(GraphicsContext& context, const FloatRe
     imageCopy->drawPattern(context, destRect, srcRect, patternTransform, phase, spacing, options);
 }
 
-String ImageBufferJavaBackend::toDataURL(const String& mimeType, Optional<double>, PreserveResolution) const
+String ImageBufferJavaBackend::toDataURL(const String& mimeType, std::optional<double>, PreserveResolution) const
 {
     if (MIMETypeRegistry::isSupportedImageMIMETypeForEncoding(mimeType)) {
         // RenderQueue need to be processed before pixel buffer extraction.
@@ -209,7 +209,7 @@ String ImageBufferJavaBackend::toDataURL(const String& mimeType, Optional<double
     return "data:,";
 }
 
-Vector<uint8_t> ImageBufferJavaBackend::toData(const String& mimeType, Optional<double>) const
+Vector<uint8_t> ImageBufferJavaBackend::toData(const String& mimeType, std::optional<double>) const
 {
     if (MIMETypeRegistry::isSupportedImageMIMETypeForEncoding(mimeType)) {
         // RenderQueue need to be processed before pixel buffer extraction.
@@ -240,29 +240,54 @@ Vector<uint8_t> ImageBufferJavaBackend::toData(const String& mimeType, Optional<
     return { };
 }
 
-Vector<uint8_t> ImageBufferJavaBackend::toBGRAData() const
-{
-    return { };
-}
-
-RefPtr<ImageData> ImageBufferJavaBackend::getImageData(AlphaPremultiplication outputFormat, const IntRect& srcRect) const
+std::optional<PixelBuffer> ImageBufferJavaBackend::getPixelBuffer(const PixelBufferFormat& outputFormat, const IntRect& srcRect) const
 {
     void *data = getData();
     if (!data)
-        return nullptr;
+        return std::nullopt;
 
-    return ImageBufferBackend::getImageData(outputFormat, srcRect, data);
+    return getPixelBuffer(outputFormat, srcRect, data);
 }
 
-void ImageBufferJavaBackend::putImageData(AlphaPremultiplication inputFormat, const ImageData& imageData,
-    const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat)
+void ImageBufferJavaBackend::putPixelBuffer(const PixelBuffer& sourcePixelBuffer,
+    const IntRect& srcRect, const IntPoint& dstPoint, AlphaPremultiplication destFormat)
 {
     void *data = getData();
     if (!data)
         return;
 
-    ImageBufferBackend::putImageData(inputFormat, imageData, srcRect, destPoint, destFormat, data);
+    putPixelBuffer(sourcePixelBuffer, srcRect, dstPoint, destFormat, data);
     update();
+}
+
+std::optional<PixelBuffer> ImageBufferJavaBackend::getPixelBuffer(const PixelBufferFormat& outputFormat, const IntRect& srcRect, void* data) const
+{
+    return ImageBufferBackend::getPixelBuffer(outputFormat, srcRect, data);
+}
+
+void ImageBufferJavaBackend::putPixelBuffer(const PixelBuffer& sourcePixelBuffer,
+    const IntRect& srcRect, const IntPoint& dstPoint, AlphaPremultiplication destFormat, void* data)
+{
+    ImageBufferBackend::putPixelBuffer(sourcePixelBuffer, srcRect, dstPoint, destFormat, data);
+    update();
+}
+
+size_t ImageBufferJavaBackend::calculateMemoryCost(const Parameters& parameters)
+{
+    IntSize backendSize = calculateBackendSize(parameters);
+    return ImageBufferBackend::calculateMemoryCost(backendSize, calculateBytesPerRow(backendSize));
+}
+
+unsigned ImageBufferJavaBackend::calculateBytesPerRow(const IntSize& backendSize)
+{
+    ASSERT(!backendSize.isEmpty());
+    return CheckedUint32(backendSize.width()) * 4;
+}
+
+unsigned ImageBufferJavaBackend::bytesPerRow() const
+{
+    IntSize backendSize = calculateBackendSize(m_parameters);
+    return calculateBytesPerRow(backendSize);
 }
 
 } // namespace WebCore

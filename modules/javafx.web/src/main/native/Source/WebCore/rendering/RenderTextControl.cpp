@@ -156,6 +156,8 @@ float RenderTextControl::scaleEmToUnits(int x) const
 
 void RenderTextControl::computeIntrinsicLogicalWidths(LayoutUnit& minLogicalWidth, LayoutUnit& maxLogicalWidth) const
 {
+    if (shouldApplySizeContainment(*this))
+        return;
     // Use average character width. Matches IE.
     maxLogicalWidth = preferredContentLogicalWidth(const_cast<RenderTextControl*>(this)->getAverageCharWidth());
     if (RenderBox* innerTextRenderBox = innerTextElement()->renderBox())
@@ -209,7 +211,7 @@ void RenderTextControl::layoutExcludedChildren(bool relayoutChildren)
 bool RenderTextControl::canScroll() const
 {
     auto innerText = innerTextElement();
-    return innerText && innerText->renderer() && innerText->renderer()->hasOverflowClip();
+    return innerText && innerText->renderer() && innerText->renderer()->hasNonVisibleOverflow();
 }
 
 int RenderTextControl::innerLineHeight() const

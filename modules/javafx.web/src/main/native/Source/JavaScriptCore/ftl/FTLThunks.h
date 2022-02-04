@@ -81,15 +81,18 @@ public:
     Thunks() = default;
     MacroAssemblerCodeRef<JITThunkPtrTag> getSlowPathCallThunk(VM& vm, const SlowPathCallKey& key)
     {
+        Locker locker { m_lock };
         return generateIfNecessary(vm, m_slowPathCallThunks, key, slowPathCallThunkGenerator);
     }
 
     SlowPathCallKey keyForSlowPathCallThunk(MacroAssemblerCodePtr<JITThunkPtrTag> ptr)
     {
+        Locker locker { m_lock };
         return keyForThunk(m_slowPathCallThunks, ptr);
     }
 
 private:
+    Lock m_lock;
     ThunkMap<SlowPathCallKey> m_slowPathCallThunks;
 };
 

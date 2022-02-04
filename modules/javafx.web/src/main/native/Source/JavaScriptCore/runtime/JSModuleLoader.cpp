@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2019 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2015-2021 Apple Inc. All Rights Reserved.
  * Copyright (C) 2016 Yusuke Suzuki <utatane.tea@gmail.com>.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -41,6 +41,7 @@
 #include "ObjectConstructor.h"
 #include "Parser.h"
 #include "ParserError.h"
+#include "VMTrapsInlines.h"
 
 namespace JSC {
 
@@ -98,6 +99,7 @@ JSModuleLoader::JSModuleLoader(VM& vm, Structure* structure)
 
 void JSModuleLoader::finishCreation(JSGlobalObject* globalObject, VM& vm)
 {
+    DeferTerminationForAWhile deferScope(vm);
     auto scope = DECLARE_CATCH_SCOPE(vm);
 
     Base::finishCreation(vm);
@@ -115,7 +117,7 @@ static String printableModuleKey(JSGlobalObject* globalObject, JSValue key)
     auto scope = DECLARE_CATCH_SCOPE(vm);
     if (key.isString() || key.isSymbol()) {
         auto propertyName = key.toPropertyKey(globalObject);
-        scope.assertNoException(); // This is OK since this function is just for debugging purpose.
+        scope.assertNoExceptionExceptTermination(); // This is OK since this function is just for debugging purpose.
         return propertyName.impl();
     }
     return vm.propertyNames->emptyIdentifier.impl();
@@ -126,7 +128,7 @@ JSArray* JSModuleLoader::dependencyKeysIfEvaluated(JSGlobalObject* globalObject,
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    JSObject* function = jsCast<JSObject*>(get(globalObject, vm.propertyNames->builtinNames().dependencyKeysIfEvaluatedPublicName()));
+    JSObject* function = getAs<JSObject*>(globalObject, vm.propertyNames->builtinNames().dependencyKeysIfEvaluatedPublicName());
     RETURN_IF_EXCEPTION(scope, nullptr);
     auto callData = JSC::getCallData(vm, function);
     ASSERT(callData.type != CallData::Type::None);
@@ -145,7 +147,7 @@ JSValue JSModuleLoader::provideFetch(JSGlobalObject* globalObject, JSValue key, 
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    JSObject* function = jsCast<JSObject*>(get(globalObject, vm.propertyNames->builtinNames().provideFetchPublicName()));
+    JSObject* function = getAs<JSObject*>(globalObject, vm.propertyNames->builtinNames().provideFetchPublicName());
     RETURN_IF_EXCEPTION(scope, { });
     auto callData = JSC::getCallData(vm, function);
     ASSERT(callData.type != CallData::Type::None);
@@ -164,7 +166,7 @@ JSInternalPromise* JSModuleLoader::loadAndEvaluateModule(JSGlobalObject* globalO
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    JSObject* function = jsCast<JSObject*>(get(globalObject, vm.propertyNames->builtinNames().loadAndEvaluateModulePublicName()));
+    JSObject* function = getAs<JSObject*>(globalObject, vm.propertyNames->builtinNames().loadAndEvaluateModulePublicName());
     RETURN_IF_EXCEPTION(scope, nullptr);
     auto callData = JSC::getCallData(vm, function);
     ASSERT(callData.type != CallData::Type::None);
@@ -185,7 +187,7 @@ JSInternalPromise* JSModuleLoader::loadModule(JSGlobalObject* globalObject, JSVa
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    JSObject* function = jsCast<JSObject*>(get(globalObject, vm.propertyNames->builtinNames().loadModulePublicName()));
+    JSObject* function = getAs<JSObject*>(globalObject, vm.propertyNames->builtinNames().loadModulePublicName());
     RETURN_IF_EXCEPTION(scope, nullptr);
     auto callData = JSC::getCallData(vm, function);
     ASSERT(callData.type != CallData::Type::None);
@@ -206,7 +208,7 @@ JSValue JSModuleLoader::linkAndEvaluateModule(JSGlobalObject* globalObject, JSVa
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    JSObject* function = jsCast<JSObject*>(get(globalObject, vm.propertyNames->builtinNames().linkAndEvaluateModulePublicName()));
+    JSObject* function = getAs<JSObject*>(globalObject, vm.propertyNames->builtinNames().linkAndEvaluateModulePublicName());
     RETURN_IF_EXCEPTION(scope, { });
     auto callData = JSC::getCallData(vm, function);
     ASSERT(callData.type != CallData::Type::None);
@@ -224,7 +226,7 @@ JSInternalPromise* JSModuleLoader::requestImportModule(JSGlobalObject* globalObj
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    auto* function = jsCast<JSObject*>(get(globalObject, vm.propertyNames->builtinNames().requestImportModulePublicName()));
+    auto* function = getAs<JSObject*>(globalObject, vm.propertyNames->builtinNames().requestImportModulePublicName());
     RETURN_IF_EXCEPTION(scope, nullptr);
     auto callData = JSC::getCallData(vm, function);
     ASSERT(callData.type != CallData::Type::None);

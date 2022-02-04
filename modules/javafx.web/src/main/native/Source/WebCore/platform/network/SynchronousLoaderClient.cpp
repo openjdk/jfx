@@ -71,12 +71,12 @@ void SynchronousLoaderClient::didReceiveResponseAsync(ResourceHandle*, ResourceR
     completionHandler();
 }
 
-void SynchronousLoaderClient::didReceiveData(ResourceHandle*, const char* data, unsigned length, int /*encodedDataLength*/)
+void SynchronousLoaderClient::didReceiveData(ResourceHandle*, const uint8_t* data, unsigned length, int /*encodedDataLength*/)
 {
     m_data.append(data, length);
 }
 
-void SynchronousLoaderClient::didFinishLoading(ResourceHandle* handle)
+void SynchronousLoaderClient::didFinishLoading(ResourceHandle* handle, const NetworkLoadMetrics&)
 {
     m_messageQueue->kill();
 #if PLATFORM(COCOA)

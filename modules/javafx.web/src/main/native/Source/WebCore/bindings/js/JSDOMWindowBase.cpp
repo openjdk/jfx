@@ -1,7 +1,7 @@
 /*
  *  Copyright (C) 2000 Harri Porten (porten@kde.org)
  *  Copyright (C) 2006 Jon Shier (jshier@iastate.edu)
- *  Copyright (C) 2003-2020 Apple Inc. All rights reseved.
+ *  Copyright (C) 2003-2021 Apple Inc. All rights reseved.
  *  Copyright (C) 2006 Alexey Proskuryakov (ap@webkit.org)
  *  Copyright (c) 2015 Canon Inc. All rights reserved.
  *
@@ -83,7 +83,7 @@ const GlobalObjectMethodTable JSDOMWindowBase::s_globalObjectMethodTable = {
     &reportUncaughtExceptionAtEventLoop,
     &currentScriptExecutionOwner,
     &scriptExecutionStatus,
-    &defaultLanguage,
+    [] { return defaultLanguage(); },
 #if ENABLE(WEBASSEMBLY)
     &compileStreaming,
     &instantiateStreaming,
@@ -100,11 +100,8 @@ JSDOMWindowBase::JSDOMWindowBase(VM& vm, Structure* structure, RefPtr<DOMWindow>
     m_proxy.set(vm, this, proxy);
 }
 
-void JSDOMWindowBase::finishCreation(VM& vm, JSWindowProxy* proxy)
+SUPPRESS_ASAN inline void JSDOMWindowBase::initStaticGlobals(JSC::VM& vm)
 {
-    Base::finishCreation(vm, proxy);
-    ASSERT(inherits(vm, info()));
-
     auto& builtinNames = static_cast<JSVMClientData*>(vm.clientData)->builtinNames();
 
     GlobalPropertyInfo staticGlobals[] = {
@@ -113,6 +110,14 @@ void JSDOMWindowBase::finishCreation(VM& vm, JSWindowProxy* proxy)
     };
 
     addStaticGlobals(staticGlobals, WTF_ARRAY_LENGTH(staticGlobals));
+}
+
+void JSDOMWindowBase::finishCreation(VM& vm, JSWindowProxy* proxy)
+{
+    Base::finishCreation(vm, proxy);
+    ASSERT(inherits(vm, info()));
+
+    initStaticGlobals(vm);
 
     if (m_wrapped && m_wrapped->frame() && m_wrapped->frame()->settings().needsSiteSpecificQuirks())
         setNeedsSiteSpecificQuirks(true);
@@ -277,26 +282,19 @@ JSDOMWindow* toJSDOMWindow(Frame& frame, DOMWrapperWorld& world)
     return frame.script().globalObject(world);
 }
 
-JSDOMWindow* toJSDOMWindow(JSC::VM& vm, JSValue value)
+DOMWindow& incumbentDOMWindow(JSGlobalObject& fallbackGlobalObject, CallFrame& callFrame)
 {
-    if (!value.isObject())
-        return nullptr;
-
-    while (!value.isNull()) {
-        JSObject* object = asObject(value);
-        const ClassInfo* classInfo = object->classInfo(vm);
-        if (classInfo == JSDOMWindow::info())
-            return jsCast<JSDOMWindow*>(object);
-        if (classInfo == JSWindowProxy::info())
-            return jsDynamicCast<JSDOMWindow*>(vm, jsCast<JSWindowProxy*>(object)->window());
-        value = object->getPrototypeDirect(vm);
-    }
-    return nullptr;
+    if (auto* globalObject = CallFrame::globalObjectOfClosestCodeBlock(fallbackGlobalObject.vm(), &callFrame))
+        return asJSDOMWindow(globalObject)->wrapped();
+    return asJSDOMWindow(&fallbackGlobalObject)->wrapped();
 }
 
-DOMWindow& incumbentDOMWindow(JSGlobalObject& lexicalGlobalObject, CallFrame& callFrame)
+DOMWindow& incumbentDOMWindow(JSGlobalObject& fallbackGlobalObject)
 {
-    return asJSDOMWindow(&callerGlobalObject(lexicalGlobalObject, callFrame))->wrapped();
+    VM& vm = fallbackGlobalObject.vm();
+    if (auto* globalObject = CallFrame::globalObjectOfClosestCodeBlock(vm, vm.topCallFrame))
+        return asJSDOMWindow(globalObject)->wrapped();
+    return asJSDOMWindow(&fallbackGlobalObject)->wrapped();
 }
 
 DOMWindow& activeDOMWindow(JSGlobalObject& lexicalGlobalObject)

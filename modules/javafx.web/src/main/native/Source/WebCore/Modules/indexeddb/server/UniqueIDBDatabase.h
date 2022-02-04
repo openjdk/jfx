@@ -25,11 +25,10 @@
 
 #pragma once
 
-#if ENABLE(INDEXED_DATABASE)
-
 #include "IDBBackingStore.h"
 #include "IDBDatabaseIdentifier.h"
 #include "IDBDatabaseInfo.h"
+#include "IDBDatabaseNameAndVersion.h"
 #include "IDBGetResult.h"
 #include "ServerOpenDBRequest.h"
 #include "UniqueIDBDatabaseTransaction.h"
@@ -109,8 +108,12 @@ public:
     void handleDelete(IDBConnectionToClient&, const IDBRequestData&);
     void immediateClose();
 
+    bool hasActiveTransactions() const;
     void abortActiveTransactions();
     bool tryClose();
+
+    String filePath() const;
+    std::optional<IDBDatabaseNameAndVersion> nameAndVersion() const;
 
 private:
     void handleDatabaseOperations();
@@ -171,5 +174,3 @@ private:
 
 } // namespace IDBServer
 } // namespace WebCore
-
-#endif // ENABLE(INDEXED_DATABASE)

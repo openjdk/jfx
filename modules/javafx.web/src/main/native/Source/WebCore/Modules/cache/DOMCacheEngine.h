@@ -41,13 +41,14 @@ struct CacheQueryOptions;
 
 namespace DOMCacheEngine {
 
-enum class Error {
+enum class Error : uint8_t {
     NotImplemented,
     ReadDisk,
     WriteDisk,
     QuotaExceeded,
     Internal,
-    Stopped
+    Stopped,
+    CORP
 };
 
 Exception convertToException(Error);
@@ -61,6 +62,7 @@ ResponseBody isolatedResponseBody(const ResponseBody&);
 WEBCORE_EXPORT ResponseBody copyResponseBody(const ResponseBody&);
 
 struct Record {
+    WTF_MAKE_STRUCT_FAST_ALLOCATED;
     WEBCORE_EXPORT Record copy() const;
 
     uint64_t identifier;
@@ -86,7 +88,7 @@ struct CacheInfos {
     CacheInfos isolatedCopy();
 
     template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static Optional<CacheInfos> decode(Decoder&);
+    template<class Decoder> static std::optional<CacheInfos> decode(Decoder&);
 
     Vector<CacheInfo> infos;
     uint64_t updateCounter;
@@ -94,7 +96,7 @@ struct CacheInfos {
 
 struct CacheIdentifierOperationResult {
     template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static Optional<CacheIdentifierOperationResult> decode(Decoder&);
+    template<class Decoder> static std::optional<CacheIdentifierOperationResult> decode(Decoder&);
 
     uint64_t identifier { 0 };
     // True in case storing cache list on the filesystem failed.
@@ -114,7 +116,7 @@ using CacheInfosCallback = CompletionHandler<void(CacheInfosOrError&&)>;
 using RecordsOrError = Expected<Vector<Record>, Error>;
 using RecordsCallback = CompletionHandler<void(RecordsOrError&&)>;
 
-using CompletionCallback = CompletionHandler<void(Optional<Error>&&)>;
+using CompletionCallback = CompletionHandler<void(std::optional<Error>&&)>;
 
 template<class Encoder> inline void CacheInfos::encode(Encoder& encoder) const
 {
@@ -122,17 +124,17 @@ template<class Encoder> inline void CacheInfos::encode(Encoder& encoder) const
     encoder << updateCounter;
 }
 
-template<class Decoder> inline Optional<CacheInfos> CacheInfos::decode(Decoder& decoder)
+template<class Decoder> inline std::optional<CacheInfos> CacheInfos::decode(Decoder& decoder)
 {
-    Optional<Vector<CacheInfo>> infos;
+    std::optional<Vector<CacheInfo>> infos;
     decoder >> infos;
     if (!infos)
-        return WTF::nullopt;
+        return std::nullopt;
 
-    Optional<uint64_t> updateCounter;
+    std::optional<uint64_t> updateCounter;
     decoder >> updateCounter;
     if (!updateCounter)
-        return WTF::nullopt;
+        return std::nullopt;
 
     return {{ WTFMove(*infos), WTFMove(*updateCounter) }};
 }
@@ -143,17 +145,17 @@ template<class Encoder> inline void CacheIdentifierOperationResult::encode(Encod
     encoder << hadStorageError;
 }
 
-template<class Decoder> inline Optional<CacheIdentifierOperationResult> CacheIdentifierOperationResult::decode(Decoder& decoder)
+template<class Decoder> inline std::optional<CacheIdentifierOperationResult> CacheIdentifierOperationResult::decode(Decoder& decoder)
 {
-    Optional<uint64_t> identifier;
+    std::optional<uint64_t> identifier;
     decoder >> identifier;
     if (!identifier)
-        return WTF::nullopt;
+        return std::nullopt;
 
-    Optional<bool> hadStorageError;
+    std::optional<bool> hadStorageError;
     decoder >> hadStorageError;
     if (!hadStorageError)
-        return WTF::nullopt;
+        return std::nullopt;
     return {{ WTFMove(*identifier), WTFMove(*hadStorageError) }};
 }
 
@@ -169,7 +171,9 @@ template<> struct EnumTraits<WebCore::DOMCacheEngine::Error> {
         WebCore::DOMCacheEngine::Error::ReadDisk,
         WebCore::DOMCacheEngine::Error::WriteDisk,
         WebCore::DOMCacheEngine::Error::QuotaExceeded,
-        WebCore::DOMCacheEngine::Error::Internal
+        WebCore::DOMCacheEngine::Error::Internal,
+        WebCore::DOMCacheEngine::Error::Stopped,
+        WebCore::DOMCacheEngine::Error::CORP
     >;
 };
 }

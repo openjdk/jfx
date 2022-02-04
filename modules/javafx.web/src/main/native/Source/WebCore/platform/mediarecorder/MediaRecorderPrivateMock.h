@@ -50,10 +50,10 @@ private:
     void resumeRecording(CompletionHandler<void()>&&) final;
     const String& mimeType() const final;
 
-    void generateMockCounterString();
+    void generateMockCounterString() WTF_REQUIRES_LOCK(m_bufferLock);
 
     mutable Lock m_bufferLock;
-    StringBuilder m_buffer;
+    StringBuilder m_buffer WTF_GUARDED_BY_LOCK(m_bufferLock);
     unsigned m_counter { 0 };
     String m_audioTrackID;
     String m_videoTrackID;

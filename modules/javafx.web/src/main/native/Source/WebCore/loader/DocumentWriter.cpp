@@ -140,7 +140,7 @@ bool DocumentWriter::begin(const URL& urlReference, bool dispatch, Document* own
 
     bool shouldReuseDefaultView = m_frame->loader().stateMachine().isDisplayingInitialEmptyDocument()
         && m_frame->document()->isSecureTransitionTo(url)
-        && (!m_frame->window() || !m_frame->window()->wasWrappedWithoutInitializedSecurityOrigin());
+        && (m_frame->window() && !m_frame->window()->wasWrappedWithoutInitializedSecurityOrigin() && m_frame->window()->mayReuseForNavigation());
 
     // Temporarily extend the lifetime of the existing document so that FrameLoader::clear() doesn't destroy it as
     // we need to retain its ongoing set of upgraded requests in new navigation contexts per <http://www.w3.org/TR/upgrade-insecure-requests/>
@@ -175,6 +175,7 @@ bool DocumentWriter::begin(const URL& urlReference, bool dispatch, Document* own
         document->setCookieURL(ownerDocument->cookieURL());
         document->setSecurityOriginPolicy(ownerDocument->securityOriginPolicy());
         document->setStrictMixedContentMode(ownerDocument->isStrictMixedContentMode());
+        document->setCrossOriginEmbedderPolicy(ownerDocument->crossOriginEmbedderPolicy());
 
         document->setContentSecurityPolicy(makeUnique<ContentSecurityPolicy>(URL { url }, document));
         document->contentSecurityPolicy()->copyStateFrom(ownerDocument->contentSecurityPolicy());
@@ -183,6 +184,7 @@ bool DocumentWriter::begin(const URL& urlReference, bool dispatch, Document* own
         if (url.protocolIsData() || url.protocolIsBlob()) {
             document->setContentSecurityPolicy(makeUnique<ContentSecurityPolicy>(URL { url }, document));
             document->contentSecurityPolicy()->copyStateFrom(existingDocument->contentSecurityPolicy());
+            document->setCrossOriginEmbedderPolicy(existingDocument->crossOriginEmbedderPolicy());
 
             // Fix up 'self' for blob: and data:, which is inherited from its embedding document or opener.
             auto* parentFrame = m_frame->tree().parent();
@@ -251,7 +253,7 @@ void DocumentWriter::reportDataReceived()
     m_frame->document()->resolveStyle(Document::ResolveStyleType::Rebuild);
 }
 
-void DocumentWriter::addData(const char* bytes, size_t length)
+void DocumentWriter::addData(const uint8_t* bytes, size_t length)
 {
     // FIXME: Change these to ASSERT once https://bugs.webkit.org/show_bug.cgi?id=80427 has been resolved.
     RELEASE_ASSERT(m_state != State::NotStarted);

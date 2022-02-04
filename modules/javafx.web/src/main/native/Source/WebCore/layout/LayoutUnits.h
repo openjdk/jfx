@@ -33,9 +33,10 @@
 #include "MarginTypes.h"
 #include <wtf/HashFunctions.h>
 #include <wtf/HashTraits.h>
-#include <wtf/Optional.h>
 
 namespace WebCore {
+
+namespace Layout {
 
 #define USE_FLOAT_AS_INLINE_LAYOUT_UNIT 1
 
@@ -50,8 +51,6 @@ using InlineLayoutPoint = LayoutPoint;
 using InlineLayoutSize = LayoutSize;
 using InlineLayoutRect = LayoutRect;
 #endif
-
-namespace Layout {
 
 struct Position {
     operator LayoutUnit() const { return value; }
@@ -157,26 +156,14 @@ struct VerticalGeometry {
     ContentHeightAndMargin contentHeightAndMargin;
 };
 
-struct HorizontalConstraints {
-    LayoutUnit logicalRight() const { return logicalLeft + logicalWidth; }
-
-    LayoutUnit logicalLeft;
-    LayoutUnit logicalWidth;
-};
-
-struct VerticalConstraints {
-    LayoutUnit logicalTop;
-    Optional<LayoutUnit> logicalHeight;
-};
-
 struct OverriddenHorizontalValues {
-    Optional<LayoutUnit> width;
-    Optional<UsedHorizontalMargin> margin;
+    std::optional<LayoutUnit> width;
+    std::optional<UsedHorizontalMargin> margin;
 };
 
 struct OverriddenVerticalValues {
     // Consider collapsing it.
-    Optional<LayoutUnit> height;
+    std::optional<LayoutUnit> height;
 };
 
 inline LayoutUnit toLayoutUnit(InlineLayoutUnit value)
@@ -244,8 +231,8 @@ struct SlotPositionHash {
 template<> struct HashTraits<WebCore::Layout::SlotPosition> : GenericHashTraits<WebCore::Layout::SlotPosition> {
     static WebCore::Layout::SlotPosition emptyValue() { return WebCore::Layout::SlotPosition(0, std::numeric_limits<size_t>::max()); }
 
-    static void constructDeletedValue(WebCore::Layout::SlotPosition& slot) { slot = WebCore::Layout::SlotPosition(std::numeric_limits<size_t>::max(), 0); }
-    static bool isDeletedValue(const WebCore::Layout::SlotPosition& slot) { return slot == WebCore::Layout::SlotPosition(std::numeric_limits<size_t>::max(), 0); }
+    static void constructDeletedValue(WebCore::Layout::SlotPosition& slot) { slot.column = std::numeric_limits<size_t>::max(); }
+    static bool isDeletedValue(const WebCore::Layout::SlotPosition& slot) { return slot.column == std::numeric_limits<size_t>::max(); }
 };
 template<> struct DefaultHash<WebCore::Layout::SlotPosition> : SlotPositionHash { };
 }

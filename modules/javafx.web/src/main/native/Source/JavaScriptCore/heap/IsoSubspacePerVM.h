@@ -63,7 +63,7 @@ private:
     friend class AutoremovingIsoSubspace;
 
     Lock m_lock;
-    HashMap<VM*, IsoSubspace*> m_subspacePerVM;
+    HashMap<VM*, IsoSubspace*> m_subspacePerVM WTF_GUARDED_BY_LOCK(m_lock);
     Function<SubspaceParameters(VM&)> m_subspaceParameters;
 };
 

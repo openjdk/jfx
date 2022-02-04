@@ -213,15 +213,15 @@ bool HTMLAreaElement::isFocusable() const
     if (!image || !image->isVisibleWithoutResolvingFullStyle())
         return false;
 
-    return supportsFocus() && tabIndexSetExplicitly().valueOr(0) >= 0;
+    return supportsFocus() && tabIndexSetExplicitly().value_or(0) >= 0;
 }
 
-void HTMLAreaElement::setFocus(bool shouldBeFocused)
+void HTMLAreaElement::setFocus(bool shouldBeFocused, FocusVisibility visibility)
 {
     if (focused() == shouldBeFocused)
         return;
 
-    HTMLAnchorElement::setFocus(shouldBeFocused);
+    HTMLAnchorElement::setFocus(shouldBeFocused, visibility);
 
     RefPtr<HTMLImageElement> imageElement = this->imageElement();
     if (!imageElement)

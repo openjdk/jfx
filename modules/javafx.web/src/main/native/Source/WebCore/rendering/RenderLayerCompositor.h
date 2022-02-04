@@ -35,6 +35,7 @@
 
 namespace WebCore {
 
+class DisplayRefreshMonitorFactory;
 class FixedPositionViewportConstraints;
 class GraphicsLayer;
 class GraphicsLayerUpdater;
@@ -45,8 +46,6 @@ class RenderWidget;
 class ScrollingCoordinator;
 class StickyPositionViewportConstraints;
 class TiledBacking;
-
-typedef unsigned LayerTreeFlags;
 
 enum class CompositingUpdateType {
     AfterStyleChange,
@@ -83,6 +82,7 @@ enum class CompositingReason {
     WillChange                             = 1 << 24,
     Root                                   = 1 << 25,
     IsolatesCompositedBlendingDescendants  = 1 << 26,
+    Model                                  = 1 << 27,
 };
 
 enum class ScrollCoordinationRole {
@@ -314,7 +314,11 @@ public:
 
     void widgetDidChangeSize(RenderWidget&);
 
-    String layerTreeAsText(LayerTreeFlags);
+    WEBCORE_EXPORT String layerTreeAsText(OptionSet<LayerTreeAsTextOptions> = { }) const;
+    WEBCORE_EXPORT String trackedRepaintRectsAsText() const;
+
+    WEBCORE_EXPORT String layerTreeAsText(OptionSet<LayerTreeAsTextOptions> = { });
+    WEBCORE_EXPORT std::optional<String> platformLayerTreeAsText(Element&, OptionSet<PlatformLayerTreeAsTextFlags>);
 
     float deviceScaleFactor() const override;
     float contentsScaleMultiplierForNewTiles(const GraphicsLayer*) const override;
@@ -377,9 +381,7 @@ public:
 
     void updateRootContentLayerClipping();
 
-#if ENABLE(CSS_SCROLL_SNAP)
     void updateScrollSnapPropertiesWithFrameView(const FrameView&) const;
-#endif
 
     // For testing.
     void startTrackingLayerFlushes() { m_layerFlushCount = 0; }
@@ -403,7 +405,8 @@ private:
     bool isTrackingRepaints() const override { return m_isTrackingRepaints; }
 
     // GraphicsLayerUpdaterClient implementation
-    void flushLayersSoon(GraphicsLayerUpdater&) override;
+    void flushLayersSoon(GraphicsLayerUpdater&) final;
+    DisplayRefreshMonitorFactory* displayRefreshMonitorFactory() final;
 
     // Copy the accelerated compositing related flags from Settings
     void cacheAcceleratedCompositingFlags();
@@ -486,8 +489,6 @@ private:
     GraphicsLayerFactory* graphicsLayerFactory() const;
     ScrollingCoordinator* scrollingCoordinator() const;
 
-    RefPtr<DisplayRefreshMonitor> createDisplayRefreshMonitor(PlatformDisplayID) const override;
-
     // Non layout-dependent
     bool requiresCompositingForAnimation(RenderLayerModelObject&) const;
     bool requiresCompositingForTransform(RenderLayerModelObject&) const;
@@ -496,6 +497,7 @@ private:
     bool requiresCompositingForCanvas(RenderLayerModelObject&) const;
     bool requiresCompositingForFilters(RenderLayerModelObject&) const;
     bool requiresCompositingForWillChange(RenderLayerModelObject&) const;
+    bool requiresCompositingForModel(RenderLayerModelObject&) const;
 
     // Layout-dependent
     bool requiresCompositingForPlugin(RenderLayerModelObject&, RequiresCompositingData&) const;
@@ -563,14 +565,15 @@ private:
     bool shouldCompositeOverflowControls() const;
 
 #if !LOG_DISABLED
-    const char* logReasonsForCompositing(const RenderLayer&);
+    const char* logOneReasonForCompositing(const RenderLayer&);
     void logLayerInfo(const RenderLayer&, const char*, int depth);
 #endif
 
     bool documentUsesTiledBacking() const;
     bool isMainFrameCompositor() const;
 
-private:
+    void updateCompositingForLayerTreeAsTextDump();
+
     RenderView& m_renderView;
     Timer m_updateCompositingLayersTimer;
 
@@ -588,7 +591,6 @@ private:
     bool m_flushingLayers { false };
     bool m_shouldFlushOnReattach { false };
     bool m_forceCompositingMode { false };
-    bool m_inPostLayoutUpdate { false }; // true when it's OK to trust layout information (e.g. layer sizes and positions)
 
     bool m_isTrackingRepaints { false }; // Used for testing.
 
@@ -647,6 +649,7 @@ void paintScrollbar(Scrollbar*, GraphicsContext&, const IntRect& clip);
 
 WTF::TextStream& operator<<(WTF::TextStream&, CompositingUpdateType);
 WTF::TextStream& operator<<(WTF::TextStream&, CompositingPolicy);
+WTF::TextStream& operator<<(WTF::TextStream&, CompositingReason);
 
 } // namespace WebCore
 

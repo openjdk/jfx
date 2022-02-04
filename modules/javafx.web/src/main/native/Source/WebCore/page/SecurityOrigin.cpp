@@ -110,21 +110,17 @@ static bool shouldTreatAsUniqueOrigin(const URL& url)
     if (LegacySchemeRegistry::shouldTreatURLSchemeAsNoAccess(innerURL.protocol().toStringWithoutCopying()))
         return true;
 
-#if PLATFORM(COCOA)
-    if (!linkedOnOrAfter(SDKVersion::FirstWithNullOriginForNonSpecialSchemedURLs))
-        return false;
-#endif
-
     // https://url.spec.whatwg.org/#origin with some additions
     if (url.hasSpecialScheme()
 #if PLATFORM(COCOA)
+        || !linkedOnOrAfter(SDKVersion::FirstWithNullOriginForNonSpecialSchemedURLs)
         || url.protocolIs("applewebdata")
+        || url.protocolIs("x-apple-ql-id")
+        || url.protocolIs("x-apple-ql-id2")
+        || url.protocolIs("x-apple-ql-magic")
 #endif
 #if PLATFORM(GTK) || PLATFORM(WPE)
         || url.protocolIs("resource")
-#endif
-#if USE(QUICK_LOOK)
-        || url.protocolIs("x-apple-ql-id")
 #endif
         || url.protocolIs("blob"))
         return false;
@@ -154,7 +150,7 @@ static bool isLoopbackIPAddress(StringView host)
 }
 
 // https://w3c.github.io/webappsec-secure-contexts/#is-origin-trustworthy (Editor's Draft, 17 November 2016)
-static bool shouldTreatAsPotentiallyTrustworthy(const String& protocol, const String& host)
+static bool shouldTreatAsPotentiallyTrustworthy(const String& protocol, StringView host)
 {
     if (LegacySchemeRegistry::shouldTreatURLSchemeAsSecure(protocol))
         return true;
@@ -165,12 +161,15 @@ static bool shouldTreatAsPotentiallyTrustworthy(const String& protocol, const St
     if (LegacySchemeRegistry::shouldTreatURLSchemeAsLocal(protocol))
         return true;
 
+    if (LegacySchemeRegistry::schemeIsHandledBySchemeHandler(protocol))
+        return true;
+
     return false;
 }
 
 bool shouldTreatAsPotentiallyTrustworthy(const URL& url)
 {
-    return shouldTreatAsPotentiallyTrustworthy(url.protocol().toStringWithoutCopying(), url.host().toStringWithoutCopying());
+    return shouldTreatAsPotentiallyTrustworthy(url.protocol().toStringWithoutCopying(), url.host());
 }
 
 SecurityOrigin::SecurityOrigin(const URL& url)
@@ -181,19 +180,17 @@ SecurityOrigin::SecurityOrigin(const URL& url)
     m_domain = m_data.host;
 
     if (m_data.port && WTF::isDefaultPortForProtocol(m_data.port.value(), m_data.protocol))
-        m_data.port = WTF::nullopt;
+        m_data.port = std::nullopt;
 
     // By default, only local SecurityOrigins can load local resources.
     m_canLoadLocalResources = isLocal();
 
     if (m_canLoadLocalResources)
         m_filePath = url.fileSystemPath(); // In case enforceFilePathSeparation() is called.
-
-    m_isPotentiallyTrustworthy = shouldTreatAsPotentiallyTrustworthy(url);
 }
 
 SecurityOrigin::SecurityOrigin()
-    : m_data { emptyString(), emptyString(), WTF::nullopt }
+    : m_data { emptyString(), emptyString(), std::nullopt }
     , m_domain { emptyString() }
     , m_isUnique { true }
     , m_isPotentiallyTrustworthy { false }
@@ -489,6 +486,13 @@ bool SecurityOrigin::isMatchingRegistrableDomainSuffix(const String& domainSuffi
 #endif
 }
 
+bool SecurityOrigin::isPotentiallyTrustworthy() const
+{
+    if (!m_isPotentiallyTrustworthy)
+        m_isPotentiallyTrustworthy = shouldTreatAsPotentiallyTrustworthy(m_data.protocol, m_data.host);
+    return *m_isPotentiallyTrustworthy;
+}
+
 void SecurityOrigin::grantLoadLocalResources()
 {
     // Granting privileges to some, but not all, documents in a SecurityOrigin
@@ -584,7 +588,7 @@ Ref<SecurityOrigin> SecurityOrigin::createFromString(const String& originString)
     return SecurityOrigin::create(URL(URL(), originString));
 }
 
-Ref<SecurityOrigin> SecurityOrigin::create(const String& protocol, const String& host, Optional<uint16_t> port)
+Ref<SecurityOrigin> SecurityOrigin::create(const String& protocol, const String& host, std::optional<uint16_t> port)
 {
     String decodedHost = decodeURLEscapeSequences(host);
     auto origin = create(URL(URL(), protocol + "://" + host + "/"));

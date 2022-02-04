@@ -34,6 +34,7 @@
 #include "DFGClobberize.h"
 #include "DFGForAllKills.h"
 #include "DFGGraph.h"
+#include "DFGMayExit.h"
 #include "DFGPhase.h"
 #include <wtf/ListDump.h>
 
@@ -195,9 +196,9 @@ private:
             }
 
             case FilterGetByStatus:
-            case FilterPutByIdStatus:
+            case FilterPutByStatus:
             case FilterCallLinkStatus:
-            case FilterInByIdStatus:
+            case FilterInByStatus:
             case FilterDeleteByStatus:
             case FilterCheckPrivateBrandStatus:
             case FilterSetPrivateBrandStatus:
@@ -255,6 +256,9 @@ private:
         if (verbose)
             dataLog("Selected lastUserIndex = ", lastUserIndex, ", ", block->at(lastUserIndex), "\n");
 
+        InlineCallFrame* startingInlineCallFrame = block->at(candidateNodeIndex)->origin.forExit.inlineCallFrame();
+        HashSet<InlineCallFrame*, WTF::DefaultHash<InlineCallFrame*>, WTF::NullableHashTraits<InlineCallFrame*>> seenInlineCallFrames;
+
         // We're still in business. Determine if between the candidate and the last user there is any
         // effect that could interfere with sinking.
         for (unsigned nodeIndex = candidateNodeIndex + 1; nodeIndex <= lastUserIndex; ++nodeIndex) {
@@ -283,7 +287,6 @@ private:
                 break;
 
             case SetLocal:
-            case Flush:
                 if (argumentsInvolveStackSlot(candidate, node->operand())) {
                     if (verbose)
                         dataLog("    Interference at ", node, "\n");
@@ -311,6 +314,24 @@ private:
                     return;
                 }
             } }
+
+
+            if (startingInlineCallFrame) {
+                if (mayExit(m_graph, node) != DoesNotExit)
+                    seenInlineCallFrames.add(node->origin.forExit.inlineCallFrame());
+            }
+        }
+
+        for (InlineCallFrame* inlineCallFrame : seenInlineCallFrames) {
+            ASSERT(startingInlineCallFrame);
+
+            while (1) {
+                if (!inlineCallFrame)
+                    return;
+                if (inlineCallFrame == startingInlineCallFrame)
+                    break;
+                inlineCallFrame = inlineCallFrame->directCaller.inlineCallFrame();
+            }
         }
 
         // We can make this work.
@@ -400,9 +421,9 @@ private:
             }
 
             case FilterGetByStatus:
-            case FilterPutByIdStatus:
+            case FilterPutByStatus:
             case FilterCallLinkStatus:
-            case FilterInByIdStatus:
+            case FilterInByStatus:
             case FilterDeleteByStatus:
             case FilterCheckPrivateBrandStatus:
             case FilterSetPrivateBrandStatus:

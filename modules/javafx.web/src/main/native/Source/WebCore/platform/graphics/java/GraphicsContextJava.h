@@ -27,6 +27,7 @@
 
 #include <jni.h>
 #include "PlatformJavaClasses.h"
+#include "GraphicsContext.h"
 
 extern jmethodID WCGM_getWCFont_mID;
 extern jmethodID WCGM_createBufferedContext_mID;
@@ -66,3 +67,93 @@ extern jmethodID WCP_closeSubpath_mID;
 extern jmethodID WCP_addArc_mID;
 extern jmethodID WCP_addRect_mID;
 extern jmethodID WCP_addEllipse_mID;
+
+namespace WebCore {
+
+class WEBCORE_EXPORT GraphicsContextJava final : public GraphicsContext {
+
+public:
+    GraphicsContextJava(PlatformGraphicsContext* context);
+    virtual ~GraphicsContextJava();
+
+    bool hasPlatformContext() const override { return true; }
+    PlatformGraphicsContext* platformContext() const override;
+
+    void savePlatformState();
+    void restorePlatformState();
+    void save() override;
+    void restore() override;
+
+    void drawRect(const FloatRect& rect, float) override;
+    void drawLine(const FloatPoint& point1, const FloatPoint& point2) override;
+    void drawEllipse(const FloatRect& rect) override;
+    void drawFocusRing(const Path&, float width, float offset, const Color&) override;
+    void drawFocusRing(const Vector<FloatRect>& rects, float width, float offset, const Color& color) override;
+    void drawLinesForText(const FloatPoint& origin, float thickness, const DashArray& widths, bool printing, bool, StrokeStyle) override;
+    void drawLineForText(const FloatRect& rect, bool printing, bool doubleLines, StrokeStyle stroke) override;
+    void drawDotsForDocumentMarker(const FloatRect& rect, DocumentMarkerLineStyle style) override;
+    void drawPlatformImage(const PlatformImagePtr& image, const FloatSize&, const FloatRect& destRect, const FloatRect& srcRect,
+                            const ImagePaintingOptions& options); //-> Seems like renamed now to drawNativeImage
+    void drawPlatformPattern(const PlatformImagePtr& image, const FloatSize&, const FloatRect& destRect, const FloatRect& tileRect,
+                                const AffineTransform& patternTransform, const FloatPoint& phase, const FloatSize&, const ImagePaintingOptions&);
+                                // > Seems like renamed to drawPattern
+
+    void fillRect(const FloatRect& rect) override;
+    void fillRect(const FloatRect& rect, const Color& color) override;
+    void fillPath(const Path& path) override;
+    void fillRoundedRect(const FloatRoundedRect& rect, const Color& color, BlendMode) override;
+    void fillRectWithRoundedHole(const FloatRect& frect, const FloatRoundedRect& roundedHoleRect, const Color& color) override;
+
+    void strokeRect(const FloatRect& rect, float lineWidth) override;
+    void strokePath(const Path& path) override;
+
+    void clip(const FloatRect& rect) override;
+    IntRect clipBounds() const override;
+    void clipPath(const Path &path, WindRule) override;
+    void clipOut(const Path& path) override;
+    void clipOut(const FloatRect& rect) override;
+    void clearRect(const FloatRect& rect) override;
+    void canvasClip(const Path& path, WindRule fillRule);
+
+    FloatRect roundToDevicePixels(const FloatRect& frect, RoundingMode) override;
+
+    bool supportsTransparencyLayers() const override;
+    void beginPlatformTransparencyLayer(float opacity);
+    void endPlatformTransparencyLayer();
+
+    void translate(float x, float y) override;
+    void rotate(float radians) override;
+    void scale(const FloatSize& size) override;
+
+    void concatCTM(const AffineTransform& at) override;
+    void setCTM(const AffineTransform& tm) override;
+    AffineTransform getCTM(IncludeDeviceScale) const override;
+
+    void setLineDash(const DashArray& dashes, float dashOffset) override;
+    void setLineCap(LineCap cap) override;
+    void setLineJoin(LineJoin join) override;
+    void setMiterLimit(float limit) override;
+    void setPlatformFillColor(const Color& color);
+    void setPlatformTextDrawingMode(TextDrawingModeFlags mode);
+    void setPlatformShadow(const FloatSize& s, float blur, const Color& color);
+    void setPlatformStrokeStyle(StrokeStyle style);
+    void setPlatformStrokeColor(const Color& color);
+    void setPlatformStrokeThickness(float strokeThickness);
+    void setPlatformImageInterpolationQuality(InterpolationQuality);
+    void setPlatformShouldAntialias(bool);
+    void setPlatformAlpha(float alpha);
+    void setPlatformCompositeOperation(CompositeOperator op, BlendMode);
+    void setURLForRect(const URL&, const FloatRect&) override;
+
+    PlatformGraphicsContext* m_platformContext;
+
+    void updateState(const GraphicsContextState&, GraphicsContextState::StateChangeFlags) override;
+    void fillRoundedRectImpl(const FloatRoundedRect&, const Color&) override;
+    void drawNativeImage(NativeImage&, const FloatSize& selfSize, const FloatRect& destRect,
+                            const FloatRect& srcRect, const ImagePaintingOptions& = { }) override;
+    void drawPattern(NativeImage&, const FloatSize& imageSize, const FloatRect& destRect, const FloatRect& tileRect,
+                            const AffineTransform& patternTransform, const FloatPoint& phase, const FloatSize& spacing,
+                            const ImagePaintingOptions& = { }) override;
+};
+
+}

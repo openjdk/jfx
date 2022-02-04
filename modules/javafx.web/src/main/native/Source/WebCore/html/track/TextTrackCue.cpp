@@ -38,6 +38,7 @@
 #include "CSSValueKeywords.h"
 #include "DOMRect.h"
 #include "Event.h"
+#include "EventNames.h"
 #include "HTMLDivElement.h"
 #include "HTMLStyleElement.h"
 #include "Logging.h"
@@ -222,21 +223,25 @@ ExceptionOr<Ref<TextTrackCue>> TextTrackCue::create(Document& document, double s
     if (!nodeTypes.contains(RequiredNodes::CueBackground))
         return Exception { InvalidStateError, makeString("Missing required attribute: ", cueBackgroundAttributName().toString()) };
 
-    return adoptRef(*new TextTrackCue(document, MediaTime::createWithDouble(start), MediaTime::createWithDouble(end), WTFMove(fragment)));
+    auto textTrackCue = adoptRef(*new TextTrackCue(document, MediaTime::createWithDouble(start), MediaTime::createWithDouble(end), WTFMove(fragment)));
+    textTrackCue->suspendIfNeeded();
+    return textTrackCue;
 }
 
 TextTrackCue::TextTrackCue(Document& document, const MediaTime& start, const MediaTime& end, Ref<DocumentFragment>&& cueFragment)
-    : m_startTime(start)
+    : ActiveDOMObject(document)
+    , m_startTime(start)
     , m_endTime(end)
     , m_document(document)
     , m_cueNode(WTFMove(cueFragment))
 {
 }
 
-TextTrackCue::TextTrackCue(Document& context, const MediaTime& start, const MediaTime& end)
-    : m_startTime(start)
+TextTrackCue::TextTrackCue(Document& document, const MediaTime& start, const MediaTime& end)
+    : ActiveDOMObject(document)
+    , m_startTime(start)
     , m_endTime(end)
-    , m_document(context)
+    , m_document(document)
 {
 }
 
@@ -335,7 +340,7 @@ void TextTrackCue::dispatchEvent(Event& event)
     EventTarget::dispatchEvent(event);
 }
 
-bool TextTrackCue::isActive()
+bool TextTrackCue::isActive() const
 {
     return m_isActive && track() && track()->mode() != TextTrack::Mode::Disabled;
 }
@@ -509,22 +514,13 @@ void TextTrackCue::rebuildDisplayTree()
     m_cueNode->cloneChildNodes(clonedFragment);
     m_displayTree->appendChild(clonedFragment);
 
-    if (m_fontSize && ownerDocument().page()) {
-        StringBuilder builder;
-        builder.append(ownerDocument().page()->captionUserPreferencesStyleSheet());
-        builder.appendLiteral(" ::");
-        builder.append(TextTrackCue::cueShadowPseudoId());
-        builder.append('{');
-        builder.append(getPropertyNameString(CSSPropertyFontSize));
-        builder.append(':');
-        builder.append(makeString(m_fontSize, "px"));
-        if (m_fontSizeIsImportant)
-            builder.appendLiteral(" !important");
-        builder.appendLiteral("; }");
-
-        auto style = HTMLStyleElement::create(HTMLNames::styleTag, ownerDocument(), false);
-        style->setTextContent(builder.toString());
-        m_displayTree->appendChild(style);
+    if (m_fontSize) {
+        if (auto page = ownerDocument().page()) {
+            auto style = HTMLStyleElement::create(HTMLNames::styleTag, ownerDocument(), false);
+            style->setTextContent(makeString(page->captionUserPreferencesStyleSheet(),
+                " ::", TextTrackCue::cueShadowPseudoId(), "{font-size:", m_fontSize, m_fontSizeIsImportant ? "px !important}" : "px}"));
+            m_displayTree->appendChild(style);
+        }
     }
 
     if (track()) {
@@ -538,6 +534,11 @@ void TextTrackCue::rebuildDisplayTree()
     }
 
     m_displayTreeNeedsUpdate = false;
+}
+
+const char* TextTrackCue::activeDOMObjectName() const
+{
+    return "TextTrackCue";
 }
 
 } // namespace WebCore

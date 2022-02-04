@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2005-2021 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -69,6 +69,7 @@ public:
 #if ENABLE(APP_HIGHLIGHTS)
     Color platformAppHighlightColor(OptionSet<StyleColor::Options>) const final;
 #endif
+    Color platformDefaultButtonTextColor(OptionSet<StyleColor::Options>) const final;
 
     ScrollbarControlSize scrollbarControlSizeForPart(ControlPart) final { return ScrollbarControlSize::Small; }
 
@@ -103,14 +104,6 @@ private:
     RenderThemeMac();
 
     bool canPaint(const PaintInfo&, const Settings&) const final;
-
-#if ENABLE(VIDEO)
-    // Media controls
-    String mediaControlsStyleSheet() final;
-    String modernMediaControlsStyleSheet() final;
-    String mediaControlsScript() final;
-    String mediaControlsBase64StringForIconNameAndType(const String&, const String&) final;
-#endif
 
     bool paintTextField(const RenderObject&, const PaintInfo&, const FloatRect&) final;
     void adjustTextFieldStyle(RenderStyle&, const Element*) const final;
@@ -168,8 +161,6 @@ private:
 
     Color systemColor(CSSValueID, OptionSet<StyleColor::Options>) const final;
 
-    void purgeCaches() final;
-
     // Get the control size based off the font. Used by some of the controls (like buttons).
     NSControlSize controlSizeForFont(const RenderStyle&) const;
     NSControlSize controlSizeForSystemFont(const RenderStyle&) const;
@@ -182,7 +173,7 @@ private:
 
     void updateCheckedState(NSCell*, const RenderObject&);
     void updateEnabledState(NSCell*, const RenderObject&);
-    void updateFocusedState(NSCell*, const RenderObject&);
+    void updateFocusedState(NSCell *, const RenderObject*);
     void updatePressedState(NSCell*, const RenderObject&);
 
     // Helpers for adjusting appearance and for painting
@@ -236,11 +227,6 @@ private:
     bool m_isSliderThumbVerticalPressed { false };
 
     RetainPtr<WebCoreRenderThemeNotificationObserver> m_notificationObserver;
-
-    String m_legacyMediaControlsScript;
-    String m_mediaControlsScript;
-    String m_legacyMediaControlsStyleSheet;
-    String m_mediaControlsStyleSheet;
 };
 
 } // namespace WebCore
