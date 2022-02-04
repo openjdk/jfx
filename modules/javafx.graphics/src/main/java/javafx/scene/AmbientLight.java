@@ -31,11 +31,13 @@ import com.sun.javafx.sg.prism.NGNode;
 import javafx.scene.paint.Color;
 
 /**
- * A light that illuminates an object from all directions equally.
+ * A light that illuminates an object from all directions equally regardless of its position and orientation. An
+ * {@code AmbientLight} adds a constant term to the amount of light reflected by each point on the surface of an object,
+ * thereby increasing the brightness of the object uniformly.
  * <p>
- * {@code AmbientLight}s can represent strong light sources in an enclosed area where the lights bounces from many
- * objects, causing them to be illuminated from many directions. A strong light in a room and moonlight are common light
- * source that can be simulated with this light type.
+ * {@code AmbientLight}s are often used to represent the base amount of illumination in a scene. In the real world,
+ * light gets reflected off of surfaces, causing areas that are not in direct line-of-sight of the light to be lit (more
+ * dimly). Using a dark colored (weak) {@code AmbientLight} can achieve the effect of the lighting of those areas.
  *
  * @since JavaFX 8.0
  */
