@@ -47,6 +47,10 @@
 #include "MockRealtimeVideoSourceMac.h"
 #endif
 
+#if USE(GSTREAMER)
+#include "MockRealtimeVideoSourceGStreamer.h"
+#endif
+
 namespace WebCore {
 
 static inline Vector<MockMediaDevice> defaultDevices()
@@ -160,6 +164,8 @@ public:
         case CaptureDevice::DeviceType::Window:
 #if PLATFORM(MAC)
             return DisplayCaptureSourceCocoa::create(UniqueRef<DisplayCaptureSourceCocoa::Capturer>(makeUniqueRef<MockDisplayCapturer>(device)), device, constraints);
+#elif USE(GSTREAMER)
+            return MockDisplayCaptureSourceGStreamer::create(device, constraints);
 #else
             return MockRealtimeVideoSource::create(String { device.persistentId() }, String { device.label() }, String { }, constraints);
 #endif
@@ -336,26 +342,26 @@ void MockRealtimeMediaSourceCenter::removeDevice(const String& persistentId)
     RealtimeMediaSourceCenter::singleton().captureDevicesChanged();
 }
 
-Optional<MockMediaDevice> MockRealtimeMediaSourceCenter::mockDeviceWithPersistentID(const String& id)
+std::optional<MockMediaDevice> MockRealtimeMediaSourceCenter::mockDeviceWithPersistentID(const String& id)
 {
     ASSERT(!id.isEmpty());
 
     auto& map = deviceMap();
     auto iterator = map.find(id);
     if (iterator == map.end())
-        return WTF::nullopt;
+        return std::nullopt;
 
     return iterator->value;
 }
 
-Optional<CaptureDevice> MockRealtimeMediaSourceCenter::captureDeviceWithPersistentID(CaptureDevice::DeviceType type, const String& id)
+std::optional<CaptureDevice> MockRealtimeMediaSourceCenter::captureDeviceWithPersistentID(CaptureDevice::DeviceType type, const String& id)
 {
     ASSERT(!id.isEmpty());
 
     auto& map = deviceMap();
     auto iterator = map.find(id);
     if (iterator == map.end() || iterator->value.type() != type)
-        return WTF::nullopt;
+        return std::nullopt;
 
     return toCaptureDevice(iterator->value);
 }

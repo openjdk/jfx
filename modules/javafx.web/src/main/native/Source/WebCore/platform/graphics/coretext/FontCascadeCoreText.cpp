@@ -42,6 +42,18 @@
 
 namespace WebCore {
 
+FontCascade::FontCascade(const FontPlatformData& fontData, FontSmoothingMode fontSmoothingMode)
+    : m_fonts(FontCascadeFonts::createForPlatformFont(fontData))
+    , m_enableKerning(computeEnableKerning())
+    , m_requiresShaping(computeRequiresShaping())
+{
+    m_fontDescription.setFontSmoothing(fontSmoothingMode);
+    m_fontDescription.setSpecifiedSize(CTFontGetSize(fontData.ctFont()));
+    m_fontDescription.setComputedSize(CTFontGetSize(fontData.ctFont()));
+    m_fontDescription.setIsItalic(CTFontGetSymbolicTraits(fontData.ctFont()) & kCTFontTraitItalic);
+    m_fontDescription.setWeight((CTFontGetSymbolicTraits(fontData.ctFont()) & kCTFontTraitBold) ? boldWeightValue() : normalWeightValue());
+}
+
 static const AffineTransform& rotateLeftTransform()
 {
     static AffineTransform result(0, -1, 1, 0, 0, 0);
@@ -190,9 +202,12 @@ void FontCascade::drawGlyphs(GraphicsContext& context, const Font& font, const G
     if (!platformData.size())
         return;
 
-    CGContextRef cgContext = context.platformContext();
+    if (isInGPUProcess() && font.hasAnyComplexColorFormatGlyphs(glyphs, numGlyphs)) {
+        ASSERT_NOT_REACHED();
+        return;
+    }
 
-    RELEASE_ASSERT(!isInGPUProcess() || !font.findOTSVGGlyphs(glyphs, numGlyphs));
+    CGContextRef cgContext = context.platformContext();
 
     bool shouldAntialias = true;
     bool shouldSmoothFonts = true;

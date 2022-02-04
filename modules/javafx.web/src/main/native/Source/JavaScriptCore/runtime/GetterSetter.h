@@ -54,7 +54,7 @@ private:
 
 public:
 
-    static constexpr unsigned StructureFlags = Base::StructureFlags | OverridesGetOwnPropertySlot | StructureIsImmortal;
+    static constexpr unsigned StructureFlags = Base::StructureFlags | OverridesGetOwnPropertySlot | OverridesPut | StructureIsImmortal;
 
     template<typename CellType, SubspaceAccess>
     static IsoSubspace* subspaceFor(VM& vm)
@@ -89,7 +89,7 @@ public:
     JSObject* getterConcurrently() const
     {
         JSObject* result = getter();
-        WTF::loadLoadFence();
+        WTF::dependentLoadLoadFence();
         return result;
     }
 
@@ -104,6 +104,9 @@ public:
         WTF::loadLoadFence();
         return result;
     }
+
+    JSValue callGetter(JSGlobalObject*, JSValue thisValue);
+    bool callSetter(JSGlobalObject*, JSValue thisValue, JSValue, bool shouldThrow);
 
     static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
     {
@@ -133,8 +136,5 @@ private:
     WriteBarrier<JSObject> m_getter;
     WriteBarrier<JSObject> m_setter;
 };
-
-JSValue callGetter(JSGlobalObject*, JSValue base, JSValue getterSetter);
-JS_EXPORT_PRIVATE bool callSetter(JSGlobalObject*, JSValue base, JSValue getterSetter, JSValue, ECMAMode);
 
 } // namespace JSC

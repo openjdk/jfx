@@ -56,7 +56,7 @@ public:
 
     String title() const override;
     virtual bool supportsMarkers() const { return false; }
-    bool hasRelativeLengths() const { return !m_elementsWithRelativeLengths.isEmpty(); }
+    bool hasRelativeLengths() const { return !m_elementsWithRelativeLengths.computesEmpty(); }
     virtual bool needsPendingResourceHandling() const { return true; }
     bool instanceUpdatesBlocked() const;
     void setInstanceUpdatesBlocked(bool);
@@ -81,24 +81,29 @@ public:
     virtual AffineTransform* supplementalTransform() { return nullptr; }
 
     void invalidateSVGAttributes() { ensureUniqueElementData().setAnimatedSVGAttributesAreDirty(true); }
-    void invalidateSVGPresentationAttributeStyle()
+    void invalidateSVGPresentationalHintStyle()
     {
-        ensureUniqueElementData().setPresentationAttributeStyleIsDirty(true);
+        ensureUniqueElementData().setPresentationalHintStyleIsDirty(true);
         // Trigger style recalculation for "elements as resource" (e.g. referenced by feImage).
         invalidateStyle();
     }
 
     // The instances of an element are clones made in shadow trees to implement <use>.
-    const HashSet<SVGElement*>& instances() const;
+    const WeakHashSet<SVGElement>& instances() const;
 
-    bool getBoundingBox(FloatRect&, SVGLocatable::StyleUpdateStrategy = SVGLocatable::AllowStyleUpdate);
+    std::optional<FloatRect> getBoundingBox() const;
+
+    Vector<Ref<SVGElement>> referencingElements() const;
+    void addReferencingElement(SVGElement&);
+    void removeReferencingElement(SVGElement&);
+    void removeElementReference();
 
     SVGElement* correspondingElement() const;
     RefPtr<SVGUseElement> correspondingUseElement() const;
 
     void setCorrespondingElement(SVGElement*);
 
-    Optional<Style::ElementStyle> resolveCustomStyle(const RenderStyle& parentStyle, const RenderStyle* shadowHostStyle) override;
+    std::optional<Style::ElementStyle> resolveCustomStyle(const RenderStyle& parentStyle, const RenderStyle* shadowHostStyle) override;
 
     static QualifiedName animatableAttributeForName(const AtomString&);
 #ifndef NDEBUG
@@ -162,15 +167,15 @@ protected:
     void reportAttributeParsingError(SVGParsingError, const QualifiedName&, const AtomString&);
     static CSSPropertyID cssPropertyIdForSVGAttributeName(const QualifiedName&);
 
-    bool isPresentationAttribute(const QualifiedName&) const override;
-    void collectStyleForPresentationAttribute(const QualifiedName&, const AtomString&, MutableStyleProperties&) override;
+    bool hasPresentationalHintsForAttribute(const QualifiedName&) const override;
+    void collectPresentationalHintsForAttribute(const QualifiedName&, const AtomString&, MutableStyleProperties&) override;
     InsertedIntoAncestorResult insertedIntoAncestor(InsertionType, ContainerNode&) override;
     void didFinishInsertingNode() override;
     void removedFromAncestor(RemovalType, ContainerNode&) override;
     void childrenChanged(const ChildChange&) override;
     virtual bool selfHasRelativeLengths() const { return false; }
-    void updateRelativeLengthsInformation() { updateRelativeLengthsInformation(selfHasRelativeLengths(), this); }
-    void updateRelativeLengthsInformation(bool hasRelativeLengths, SVGElement*);
+    void updateRelativeLengthsInformation() { updateRelativeLengthsInformation(selfHasRelativeLengths(), *this); }
+    void updateRelativeLengthsInformation(bool hasRelativeLengths, SVGElement&);
 
     void willRecalcStyle(Style::Change) override;
 
@@ -188,7 +193,7 @@ private:
 
     std::unique_ptr<SVGElementRareData> m_svgRareData;
 
-    HashSet<SVGElement*> m_elementsWithRelativeLengths;
+    WeakHashSet<SVGElement> m_elementsWithRelativeLengths;
 
     std::unique_ptr<SVGPropertyAnimatorFactory> m_propertyAnimatorFactory;
 

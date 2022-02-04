@@ -78,9 +78,7 @@ static void serializeCharacter(UChar32 c, StringBuilder& appendTo)
 
 static void serializeCharacterAsCodePoint(UChar32 c, StringBuilder& appendTo)
 {
-    appendTo.append('\\');
-    appendTo.append(hex(c, Lowercase));
-    appendTo.append(' ');
+    appendTo.append('\\', hex(c, Lowercase), ' ');
 }
 
 void serializeIdentifier(const String& identifier, StringBuilder& appendTo, bool skipStartChecks)
@@ -148,16 +146,6 @@ String serializeString(const String& string)
 String serializeURL(const String& string)
 {
     return "url(" + serializeString(string) + ")";
-}
-
-String serializeAsStringOrCustomIdent(const String& string)
-{
-    if (isCSSTokenizerIdentifier(string)) {
-        StringBuilder builder;
-        serializeIdentifier(string, builder);
-        return builder.toString();
-    }
-    return serializeString(string);
 }
 
 String serializeFontFamily(const String& string)

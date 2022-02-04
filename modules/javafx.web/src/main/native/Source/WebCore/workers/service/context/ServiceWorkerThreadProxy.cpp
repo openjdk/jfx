@@ -29,17 +29,20 @@
 #if ENABLE(SERVICE_WORKER)
 
 #include "CacheStorageProvider.h"
+#include "DocumentLoader.h"
 #include "EventLoop.h"
 #include "EventNames.h"
 #include "FetchLoader.h"
 #include "Frame.h"
 #include "FrameLoader.h"
+#include "LibWebRTCProvider.h"
 #include "LoaderStrategy.h"
 #include "Logging.h"
 #include "MessageWithMessagePorts.h"
 #include "PlatformStrategies.h"
 #include "ServiceWorkerClientData.h"
 #include "ServiceWorkerClientIdentifier.h"
+#include "ServiceWorkerGlobalScope.h"
 #include "Settings.h"
 #include "WorkerGlobalScope.h"
 #include <wtf/MainThread.h>
@@ -81,11 +84,7 @@ static inline UniqueRef<Page> createPageForServiceWorker(PageConfiguration&& con
 
 static inline IDBClient::IDBConnectionProxy* idbConnectionProxy(Document& document)
 {
-#if ENABLE(INDEXED_DATABASE)
     return document.idbConnectionProxy();
-#else
-    return nullptr;
-#endif
 }
 
 static HashSet<ServiceWorkerThreadProxy*>& allServiceWorkerThreadProxies()
@@ -94,10 +93,13 @@ static HashSet<ServiceWorkerThreadProxy*>& allServiceWorkerThreadProxies()
     return set;
 }
 
-ServiceWorkerThreadProxy::ServiceWorkerThreadProxy(PageConfiguration&& pageConfiguration, const ServiceWorkerContextData& data, String&& userAgent, CacheStorageProvider& cacheStorageProvider, StorageBlockingPolicy storageBlockingPolicy)
+ServiceWorkerThreadProxy::ServiceWorkerThreadProxy(PageConfiguration&& pageConfiguration, ServiceWorkerContextData&& data, String&& userAgent, CacheStorageProvider& cacheStorageProvider, StorageBlockingPolicy storageBlockingPolicy)
     : m_page(createPageForServiceWorker(WTFMove(pageConfiguration), data, storageBlockingPolicy))
     , m_document(*m_page->mainFrame().document())
-    , m_serviceWorkerThread(ServiceWorkerThread::create(data, WTFMove(userAgent), m_document->settingsValues(), *this, *this, idbConnectionProxy(m_document), m_document->socketProvider()))
+#if ENABLE(REMOTE_INSPECTOR)
+    , m_remoteDebuggable(makeUnique<ServiceWorkerDebuggable>(*this, data))
+#endif
+    , m_serviceWorkerThread(ServiceWorkerThread::create(WTFMove(data), WTFMove(userAgent), m_document->settingsValues(), *this, *this, idbConnectionProxy(m_document), m_document->socketProvider()))
     , m_cacheStorageProvider(cacheStorageProvider)
     , m_inspectorProxy(*this)
 {
@@ -111,7 +113,6 @@ ServiceWorkerThreadProxy::ServiceWorkerThreadProxy(PageConfiguration&& pageConfi
     allServiceWorkerThreadProxies().add(this);
 
 #if ENABLE(REMOTE_INSPECTOR)
-    m_remoteDebuggable = makeUnique<ServiceWorkerDebuggable>(*this, data);
     m_remoteDebuggable->setRemoteDebuggingAllowed(true);
     m_remoteDebuggable->init();
 #endif
@@ -121,6 +122,17 @@ ServiceWorkerThreadProxy::~ServiceWorkerThreadProxy()
 {
     ASSERT(allServiceWorkerThreadProxies().contains(this));
     allServiceWorkerThreadProxies().remove(this);
+}
+
+void ServiceWorkerThreadProxy::setLastNavigationWasAppInitiated(bool wasAppInitiated)
+{
+    if (m_document->loader())
+        m_document->loader()->setLastNavigationWasAppInitiated(wasAppInitiated);
+}
+
+bool ServiceWorkerThreadProxy::lastNavigationWasAppInitiated()
+{
+    return m_document->loader() ? m_document->loader()->lastNavigationWasAppInitiated() : true;
 }
 
 bool ServiceWorkerThreadProxy::postTaskForModeToWorkerOrWorkletGlobalScope(ScriptExecutionContext::Task&& task, const String& mode)
@@ -163,6 +175,12 @@ RefPtr<CacheStorageConnection> ServiceWorkerThreadProxy::createCacheStorageConne
     return m_cacheStorageConnection;
 }
 
+RefPtr<RTCDataChannelRemoteHandlerConnection> ServiceWorkerThreadProxy::createRTCDataChannelRemoteHandlerConnection()
+{
+    ASSERT(isMainThread());
+    return m_page->libWebRTCProvider().createRTCDataChannelRemoteHandlerConnection();
+}
+
 std::unique_ptr<FetchLoader> ServiceWorkerThreadProxy::createBlobLoader(FetchLoaderClient& client, const URL& blobURL)
 {
     auto loader = makeUnique<FetchLoader>(client, nullptr);
@@ -192,7 +210,7 @@ void ServiceWorkerThreadProxy::notifyNetworkStateChange(bool isOnline)
     }, WorkerRunLoop::defaultMode());
 }
 
-void ServiceWorkerThreadProxy::startFetch(SWServerConnectionIdentifier connectionIdentifier, FetchIdentifier fetchIdentifier, Ref<ServiceWorkerFetch::Client>&& client, Optional<ServiceWorkerClientIdentifier>&& clientId, ResourceRequest&& request, String&& referrer, FetchOptions&& options)
+void ServiceWorkerThreadProxy::startFetch(SWServerConnectionIdentifier connectionIdentifier, FetchIdentifier fetchIdentifier, Ref<ServiceWorkerFetch::Client>&& client, std::optional<ServiceWorkerClientIdentifier>&& clientId, ResourceRequest&& request, String&& referrer, FetchOptions&& options)
 {
     RELEASE_LOG(ServiceWorker, "ServiceWorkerThreadProxy::startFetch %llu", fetchIdentifier.toUInt64());
 
@@ -266,6 +284,13 @@ void ServiceWorkerThreadProxy::fireActivateEvent()
     thread().willPostTaskToFireActivateEvent();
     thread().runLoop().postTask([this, protectedThis = makeRef(*this)](auto&) mutable {
         thread().queueTaskToFireActivateEvent();
+    });
+}
+
+void ServiceWorkerThreadProxy::didSaveScriptsToDisk(ScriptBuffer&& script, HashMap<URL, ScriptBuffer>&& importedScripts)
+{
+    thread().runLoop().postTask([script = WTFMove(script), importedScripts = WTFMove(importedScripts)](auto& context) mutable {
+        downcast<ServiceWorkerGlobalScope>(context).didSaveScriptsToDisk(WTFMove(script), WTFMove(importedScripts));
     });
 }
 

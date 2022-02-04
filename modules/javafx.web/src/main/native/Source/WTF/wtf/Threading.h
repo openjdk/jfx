@@ -38,6 +38,7 @@
 #include <wtf/Function.h>
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
+#include <wtf/Lock.h>
 #include <wtf/PlatformRegisters.h>
 #include <wtf/Ref.h>
 #include <wtf/RefPtr.h>
@@ -58,6 +59,12 @@
 
 #if HAVE(QOS_CLASSES)
 #include <dispatch/dispatch.h>
+#endif
+
+// X11 headers define a bunch of macros with common terms, interfering with WebCore and WTF enum values.
+// As a workaround, we explicitly undef them here.
+#if defined(None)
+#undef None
 #endif
 
 namespace WTF {
@@ -116,8 +123,8 @@ public:
     static Thread& current();
 
     // Set of all WTF::Thread created threads.
-    WTF_EXPORT_PRIVATE static HashSet<Thread*>& allThreads(const LockHolder&);
-    WTF_EXPORT_PRIVATE static Lock& allThreadsMutex();
+    WTF_EXPORT_PRIVATE static HashSet<Thread*>& allThreads() WTF_REQUIRES_LOCK(allThreadsLock());
+    WTF_EXPORT_PRIVATE static Lock& allThreadsLock() WTF_RETURNS_LOCK(s_allThreadsLock);
 
     WTF_EXPORT_PRIVATE unsigned numberOfThreadGroups();
 
@@ -259,7 +266,7 @@ protected:
     void initializeInThread();
 
     // Internal platform-specific Thread establishment implementation.
-    bool establishHandle(NewThreadContext*, Optional<size_t> stackSize, QOS);
+    bool establishHandle(NewThreadContext*, std::optional<size_t> stackSize, QOS);
 
 #if USE(PTHREADS)
     void establishPlatformSpecificHandle(PlatformThreadHandle);
@@ -327,6 +334,8 @@ protected:
 #else
     static Thread* currentMayBeNull();
 #endif
+
+    static Lock s_allThreadsLock;
 
     JoinableState m_joinableState { Joinable };
     bool m_isShuttingDown : 1;

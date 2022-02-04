@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,6 +27,9 @@
 #include "testb3.h"
 
 #if ENABLE(B3_JIT)
+
+static const char* const dmbIsh = "dmb      ish";
+static const char* const dmbIshst = "dmb      ishst";
 
 void testBitAndSExt32(int32_t value, int64_t mask)
 {
@@ -1674,19 +1677,19 @@ void testInterpreter()
             AllowMacroScratchRegisterUsage allowScratch(jit);
             Vector<Box<CCallHelpers::Label>> labels = params.successorLabels();
 
-            MacroAssemblerCodePtr<JITCompilationPtrTag>* jumpTable = bitwise_cast<MacroAssemblerCodePtr<JITCompilationPtrTag>*>(
-                params.proc().addDataSection(sizeof(MacroAssemblerCodePtr<JITCompilationPtrTag>) * labels.size()));
+            MacroAssemblerCodePtr<JSSwitchPtrTag>* jumpTable = bitwise_cast<MacroAssemblerCodePtr<JSSwitchPtrTag>*>(
+                params.proc().addDataSection(sizeof(MacroAssemblerCodePtr<JSSwitchPtrTag>) * labels.size()));
 
             GPRReg scratch = params.gpScratch(0);
 
             jit.move(CCallHelpers::TrustedImmPtr(jumpTable), scratch);
             jit.load64(CCallHelpers::BaseIndex(scratch, params[0].gpr(), CCallHelpers::ScalePtr), scratch);
-            jit.farJump(scratch, JITCompilationPtrTag);
+            jit.farJump(scratch, JSSwitchPtrTag);
 
             jit.addLinkTask(
                 [&, jumpTable, labels] (LinkBuffer& linkBuffer) {
                     for (unsigned i = labels.size(); i--;)
-                        jumpTable[i] = linkBuffer.locationOf<JITCompilationPtrTag>(*labels[i]);
+                        jumpTable[i] = linkBuffer.locationOf<JSSwitchPtrTag>(*labels[i]);
                 });
         });
 
@@ -2601,9 +2604,9 @@ void testMemoryFence()
     if (isX86())
         checkUsesInstruction(*code, "lock or $0x0, (%rsp)");
     if (isARM64())
-        checkUsesInstruction(*code, "dmb     ish");
+        checkUsesInstruction(*code, dmbIsh);
     checkDoesNotUseInstruction(*code, "mfence");
-    checkDoesNotUseInstruction(*code, "dmb     ishst");
+    checkDoesNotUseInstruction(*code, dmbIshst);
 }
 
 void testStoreFence()
@@ -2620,7 +2623,7 @@ void testStoreFence()
     checkDoesNotUseInstruction(*code, "lock");
     checkDoesNotUseInstruction(*code, "mfence");
     if (isARM64())
-        checkUsesInstruction(*code, "dmb     ishst");
+        checkUsesInstruction(*code, dmbIshst);
 }
 
 void testLoadFence()
@@ -2637,8 +2640,8 @@ void testLoadFence()
     checkDoesNotUseInstruction(*code, "lock");
     checkDoesNotUseInstruction(*code, "mfence");
     if (isARM64())
-        checkUsesInstruction(*code, "dmb     ish");
-    checkDoesNotUseInstruction(*code, "dmb     ishst");
+        checkUsesInstruction(*code, dmbIsh);
+    checkDoesNotUseInstruction(*code, dmbIshst);
 }
 
 void testTrappingLoad()
@@ -2764,6 +2767,8 @@ void testTrappingStoreElimination()
         root->appendNew<Const32Value>(proc, Origin(), 44),
         ptr);
     root->appendNew<Value>(proc, Return, Origin());
+    // We'll look at the values after compiling
+    proc.code().forcePreservationOfB3Origins();
     compileAndRun<int>(proc);
     unsigned storeCount = 0;
     for (Value* value : proc.values()) {

@@ -32,7 +32,6 @@
 
 #include "RenderBlockFlow.h"
 #include "ScrollableArea.h"
-#include <wtf/Optional.h>
 
 namespace WebCore {
 
@@ -87,7 +86,7 @@ private:
 
     void computeIntrinsicLogicalWidths(LayoutUnit& minLogicalWidth, LayoutUnit& maxLogicalWidth) const override;
     void computePreferredLogicalWidths() override;
-    int baselinePosition(FontBaseline, bool firstLine, LineDirectionMode, LinePositionMode = PositionOnContainingLine) const override;
+    LayoutUnit baselinePosition(FontBaseline, bool firstLine, LineDirectionMode, LinePositionMode = PositionOnContainingLine) const override;
     LogicalExtentComputedValues computeLogicalHeight(LayoutUnit logicalHeight, LayoutUnit logicalTop) const override;
 
     void layout() override;
@@ -172,7 +171,7 @@ private:
     void paintItemBackground(PaintInfo&, const LayoutPoint&, int listIndex);
     void scrollToRevealSelection();
 
-    bool shouldPlaceBlockDirectionScrollbarOnLeft() const final { return RenderBlockFlow::shouldPlaceBlockDirectionScrollbarOnLeft(); }
+    bool shouldPlaceVerticalScrollbarOnLeft() const final { return RenderBlockFlow::shouldPlaceVerticalScrollbarOnLeft(); }
 
     bool m_optionsChanged;
     bool m_scrollToRevealSelectionAfterLayout;
@@ -180,8 +179,8 @@ private:
     int m_optionsWidth;
     int m_indexOffset;
 
-    Optional<int> m_indexOfFirstVisibleItemInsidePaddingTopArea;
-    Optional<int> m_indexOfFirstVisibleItemInsidePaddingBottomArea;
+    std::optional<int> m_indexOfFirstVisibleItemInsidePaddingTopArea;
+    std::optional<int> m_indexOfFirstVisibleItemInsidePaddingBottomArea;
 
     RefPtr<Scrollbar> m_vBar;
 };

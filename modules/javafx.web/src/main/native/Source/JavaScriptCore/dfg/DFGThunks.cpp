@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,14 +28,15 @@
 
 #if ENABLE(DFG_JIT)
 
+#include "AssemblyHelpersSpoolers.h"
 #include "CCallHelpers.h"
 #include "DFGJITCode.h"
 #include "DFGOSRExit.h"
+#include "DFGOSRExitCompilerCommon.h"
 #include "FPRInfo.h"
 #include "GPRInfo.h"
 #include "LinkBuffer.h"
 #include "MacroAssembler.h"
-#include "DFGOSRExitCompilerCommon.h"
 
 namespace JSC { namespace DFG {
 
@@ -50,46 +51,78 @@ MacroAssemblerCodeRef<JITThunkPtrTag> osrExitGenerationThunkGenerator(VM& vm)
     ScratchBuffer* scratchBuffer = vm.scratchBufferForSize(scratchSize);
     EncodedJSValue* buffer = static_cast<EncodedJSValue*>(scratchBuffer->dataBuffer());
 
-    for (unsigned i = 0; i < GPRInfo::numberOfRegisters; ++i) {
-#if USE(JSVALUE64)
-        jit.store64(GPRInfo::toRegister(i), buffer + i);
+#if CPU(ARM64)
+    constexpr GPRReg bufferGPR = CCallHelpers::memoryTempRegister;
+    constexpr unsigned firstGPR = 0;
+#elif CPU(X86_64)
+    GPRReg bufferGPR = jit.scratchRegister();
+    constexpr unsigned firstGPR = 0;
 #else
-        jit.store32(GPRInfo::toRegister(i), buffer + i);
+    GPRReg bufferGPR = GPRInfo::toRegister(0);
+    constexpr unsigned firstGPR = 1;
+#endif
+
+    if constexpr (firstGPR) {
+        // We're using the firstGPR as the bufferGPR, and need to save it manually.
+        RELEASE_ASSERT(GPRInfo::numberOfRegisters >= 1);
+        RELEASE_ASSERT(bufferGPR == GPRInfo::toRegister(0));
+#if USE(JSVALUE64)
+        jit.store64(bufferGPR, buffer);
+#else
+        jit.store32(bufferGPR, buffer);
 #endif
     }
-    for (unsigned i = 0; i < FPRInfo::numberOfRegisters; ++i) {
-        jit.move(MacroAssembler::TrustedImmPtr(buffer + GPRInfo::numberOfRegisters + i), GPRInfo::regT0);
-        jit.storeDouble(FPRInfo::toRegister(i), MacroAssembler::Address(GPRInfo::regT0));
+
+    jit.move(CCallHelpers::TrustedImmPtr(buffer), bufferGPR);
+
+    CCallHelpers::StoreRegSpooler storeSpooler(jit, bufferGPR);
+
+    for (unsigned i = firstGPR; i < GPRInfo::numberOfRegisters; ++i) {
+        ptrdiff_t offset = i * sizeof(CPURegister);
+        storeSpooler.storeGPR({ GPRInfo::toRegister(i), offset });
     }
+    storeSpooler.finalizeGPR();
 
-    // Tell GC mark phase how much of the scratch buffer is active during call.
-    jit.move(MacroAssembler::TrustedImmPtr(scratchBuffer->addressOfActiveLength()), GPRInfo::regT0);
-    jit.storePtr(MacroAssembler::TrustedImmPtr(scratchSize), MacroAssembler::Address(GPRInfo::regT0));
+    for (unsigned i = 0; i < FPRInfo::numberOfRegisters; ++i) {
+        ptrdiff_t offset = (GPRInfo::numberOfRegisters + i) * sizeof(double);
+        storeSpooler.storeFPR({ FPRInfo::toRegister(i), offset });
+    }
+    storeSpooler.finalizeFPR();
 
-    // Set up one argument.
-    jit.move(GPRInfo::callFrameRegister, GPRInfo::argumentGPR0);
+    // This will implicitly pass GPRInfo::callFrameRegister as the first argument based on the operation type.
+    jit.setupArguments<decltype(operationCompileOSRExit)>(bufferGPR);
     jit.prepareCallOperation(vm);
 
     MacroAssembler::Call functionCall = jit.call(OperationPtrTag);
 
-    jit.move(MacroAssembler::TrustedImmPtr(scratchBuffer->addressOfActiveLength()), GPRInfo::regT0);
-    jit.storePtr(MacroAssembler::TrustedImmPtr(nullptr), MacroAssembler::Address(GPRInfo::regT0));
+    jit.move(CCallHelpers::TrustedImmPtr(buffer), bufferGPR);
+    CCallHelpers::LoadRegSpooler loadSpooler(jit, bufferGPR);
+
+    for (unsigned i = firstGPR; i < GPRInfo::numberOfRegisters; ++i) {
+        ptrdiff_t offset = i * sizeof(CPURegister);
+        loadSpooler.loadGPR({ GPRInfo::toRegister(i), offset });
+    }
+    loadSpooler.finalizeGPR();
 
     for (unsigned i = 0; i < FPRInfo::numberOfRegisters; ++i) {
-        jit.move(MacroAssembler::TrustedImmPtr(buffer + GPRInfo::numberOfRegisters + i), GPRInfo::regT0);
-        jit.loadDouble(MacroAssembler::Address(GPRInfo::regT0), FPRInfo::toRegister(i));
+        ptrdiff_t offset = (GPRInfo::numberOfRegisters + i) * sizeof(double);
+        loadSpooler.loadFPR({ FPRInfo::toRegister(i), offset });
     }
-    for (unsigned i = 0; i < GPRInfo::numberOfRegisters; ++i) {
+    loadSpooler.finalizeFPR();
+
+    if constexpr (firstGPR) {
+        // We're using the firstGPR as the bufferGPR, and need to restore it manually.
+        ASSERT(bufferGPR == GPRInfo::toRegister(0));
 #if USE(JSVALUE64)
-        jit.load64(buffer + i, GPRInfo::toRegister(i));
+        jit.load64(buffer, bufferGPR);
 #else
-        jit.load32(buffer + i, GPRInfo::toRegister(i));
+        jit.load32(buffer, bufferGPR);
 #endif
     }
 
     jit.farJump(MacroAssembler::AbsoluteAddress(&vm.osrExitJumpDestination), OSRExitPtrTag);
 
-    LinkBuffer patchBuffer(jit, GLOBAL_THUNK_ID);
+    LinkBuffer patchBuffer(jit, GLOBAL_THUNK_ID, LinkBuffer::Profile::DFGThunk);
 
     patchBuffer.link(functionCall, FunctionPtr<OperationPtrTag>(operationCompileOSRExit));
 
@@ -134,7 +167,7 @@ MacroAssemblerCodeRef<JITThunkPtrTag> osrEntryThunkGenerator(VM& vm)
 
     jit.farJump(GPRInfo::regT1, GPRInfo::callFrameRegister);
 
-    LinkBuffer patchBuffer(jit, GLOBAL_THUNK_ID);
+    LinkBuffer patchBuffer(jit, GLOBAL_THUNK_ID, LinkBuffer::Profile::DFGOSREntry);
     return FINALIZE_CODE(patchBuffer, JITThunkPtrTag, "DFG OSR entry thunk");
 }
 

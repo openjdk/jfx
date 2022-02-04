@@ -24,10 +24,19 @@
 #include "HTMLMetaElement.h"
 
 #include "Attribute.h"
+#include "Color.h"
 #include "Document.h"
+#include "Frame.h"
+#include "FrameView.h"
 #include "HTMLHeadElement.h"
 #include "HTMLNames.h"
+#include "HTMLParserIdioms.h"
+#include "MediaList.h"
+#include "MediaQueryEvaluator.h"
+#include "MediaQueryParser.h"
+#include "RenderStyle.h"
 #include "Settings.h"
+#include "StyleResolveForDocument.h"
 #include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
@@ -52,24 +61,72 @@ Ref<HTMLMetaElement> HTMLMetaElement::create(const QualifiedName& tagName, Docum
     return adoptRef(*new HTMLMetaElement(tagName, document));
 }
 
+bool HTMLMetaElement::mediaAttributeMatches()
+{
+    auto& document = this->document();
+
+    if (!m_media)
+        m_media = MediaQuerySet::create(attributeWithoutSynchronization(mediaAttr).convertToASCIILowercase(), MediaQueryParserContext(document));
+
+    std::optional<RenderStyle> documentStyle;
+    if (document.hasLivingRenderTree())
+        documentStyle = Style::resolveForDocument(document);
+
+    String mediaType;
+    if (auto* frame = document.frame()) {
+        if (auto* frameView = frame->view())
+            mediaType = frameView->mediaType();
+    }
+
+    return MediaQueryEvaluator(mediaType, document, documentStyle ? &*documentStyle : nullptr).evaluate(*m_media);
+}
+
+const Color& HTMLMetaElement::contentColor()
+{
+    if (!m_contentColor)
+        m_contentColor = CSSParser::parseColor(content());
+    return *m_contentColor;
+}
+
 void HTMLMetaElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason reason)
 {
     HTMLElement::attributeChanged(name, oldValue, newValue, reason);
 
-    if (name == nameAttr && equalLettersIgnoringASCIICase(oldValue, "theme-color") && !equalLettersIgnoringASCIICase(newValue, "theme-color"))
-        document().processThemeColor(emptyString());
+    if (!isInDocumentTree())
+        return;
+
+    if (name == nameAttr) {
+        if (equalLettersIgnoringASCIICase(oldValue, "theme-color") && !equalLettersIgnoringASCIICase(newValue, "theme-color"))
+            document().metaElementThemeColorChanged(*this);
+        return;
+    }
 }
 
 void HTMLMetaElement::parseAttribute(const QualifiedName& name, const AtomString& value)
 {
-    if (name == http_equivAttr)
+    if (name == nameAttr) {
         process();
-    else if (name == contentAttr)
+        return;
+    }
+
+    if (name == contentAttr) {
+        m_contentColor = std::nullopt;
         process();
-    else if (name == nameAttr)
+        return;
+    }
+
+    if (name == http_equivAttr) {
         process();
-    else
-        HTMLElement::parseAttribute(name, value);
+        return;
+    }
+
+    if (name == mediaAttr) {
+        m_media = nullptr;
+        process();
+        return;
+    }
+
+    HTMLElement::parseAttribute(name, value);
 }
 
 Node::InsertedIntoAncestorResult HTMLMetaElement::insertedIntoAncestor(InsertionType insertionType, ContainerNode& parentOfInsertedTree)
@@ -89,14 +146,14 @@ void HTMLMetaElement::removedFromAncestor(RemovalType removalType, ContainerNode
 {
     HTMLElement::removedFromAncestor(removalType, oldParentOfRemovedTree);
 
-    if (!isConnected() && equalLettersIgnoringASCIICase(name(), "theme-color"))
-        oldParentOfRemovedTree.document().processThemeColor(emptyString());
+    if (removalType.disconnectedFromDocument && equalLettersIgnoringASCIICase(name(), "theme-color"))
+        oldParentOfRemovedTree.document().metaElementThemeColorChanged(*this);
 }
 
 void HTMLMetaElement::process()
 {
-    // Changing a meta tag while it's not in the tree shouldn't have any effect on the document.
-    if (!isConnected())
+    // Changing a meta tag while it's not in the document tree shouldn't have any effect on the document.
+    if (!isInDocumentTree())
         return;
 
     const AtomString& contentValue = attributeWithoutSynchronization(contentAttr);
@@ -112,7 +169,7 @@ void HTMLMetaElement::process()
         document().processColorScheme(contentValue);
 #endif
     else if (equalLettersIgnoringASCIICase(name(), "theme-color"))
-        document().processThemeColor(contentValue);
+        document().metaElementThemeColorChanged(*this);
 #if PLATFORM(IOS_FAMILY)
     else if (equalLettersIgnoringASCIICase(name(), "format-detection"))
         document().processFormatDetection(contentValue);
@@ -124,7 +181,7 @@ void HTMLMetaElement::process()
 
     const AtomString& httpEquivValue = attributeWithoutSynchronization(http_equivAttr);
     if (!httpEquivValue.isNull())
-        document().processHttpEquiv(httpEquivValue, contentValue, isDescendantOf(document().head()));
+        document().processMetaHttpEquiv(httpEquivValue, contentValue, isDescendantOf(document().head()));
 }
 
 const AtomString& HTMLMetaElement::content() const

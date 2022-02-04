@@ -57,12 +57,26 @@ namespace ContentExtensions {
 #if USE(APPLE_INTERNAL_SDK)
 #import <WebKitAdditions/ContentRuleListAdditions.mm>
 #else
-static void makeSecureIfNecessary(ContentRuleListResults& results, const URL& url)
+static void makeSecureIfNecessary(ContentRuleListResults& results, const URL& url, const URL& redirectFrom = { })
 {
-    if (url.protocolIs("http") && (url.host() == "www.opengl.org" || url.host() == "download"))
+    if (redirectFrom.host() == url.host() && redirectFrom.protocolIs("https"))
+        return;
+
+    if (!url.protocolIs("http"))
+        return;
+    if (url.host() == "www.opengl.org"
+        || url.host() == "webkit.org"
+        || url.host() == "download")
         results.summary.madeHTTPS = true;
 }
 #endif
+
+bool ContentExtensionsBackend::shouldBeMadeSecure(const URL& url)
+{
+    ContentRuleListResults results;
+    makeSecureIfNecessary(results, url);
+    return results.summary.madeHTTPS;
+}
 
 void ContentExtensionsBackend::addContentExtension(const String& identifier, Ref<CompiledContentExtension> compiledContentExtension, ContentExtension::ShouldCompileCSS shouldCompileCSS)
 {
@@ -163,12 +177,14 @@ StyleSheetContents* ContentExtensionsBackend::globalDisplayNoneStyleSheet(const 
     return contentExtension ? contentExtension->globalDisplayNoneStyleSheet() : nullptr;
 }
 
-ContentRuleListResults ContentExtensionsBackend::processContentRuleListsForLoad(Page& page, const URL& url, OptionSet<ResourceType> resourceType, DocumentLoader& initiatingDocumentLoader)
+ContentRuleListResults ContentExtensionsBackend::processContentRuleListsForLoad(Page& page, const URL& url, OptionSet<ResourceType> resourceType, DocumentLoader& initiatingDocumentLoader, const URL& redirectFrom)
 {
     Document* currentDocument = nullptr;
     URL mainDocumentURL;
+    bool mainFrameContext = false;
 
     if (auto* frame = initiatingDocumentLoader.frame()) {
+        mainFrameContext = frame->isMainFrame();
         currentDocument = frame->document();
 
         if (initiatingDocumentLoader.isLoadingMainResource()
@@ -179,12 +195,12 @@ ContentRuleListResults ContentExtensionsBackend::processContentRuleListsForLoad(
             mainDocumentURL = mainDocument->url();
     }
 
-    ResourceLoadInfo resourceLoadInfo = { url, mainDocumentURL, resourceType };
+    ResourceLoadInfo resourceLoadInfo = { url, mainDocumentURL, resourceType, mainFrameContext };
     auto actions = actionsForResourceLoad(resourceLoadInfo);
 
     ContentRuleListResults results;
     if (page.httpsUpgradeEnabled())
-        makeSecureIfNecessary(results, url);
+        makeSecureIfNecessary(results, url, redirectFrom);
     results.results.reserveInitialCapacity(actions.size());
     for (const auto& actionsFromContentRuleList : actions) {
         const String& contentRuleListIdentifier = actionsFromContentRuleList.contentRuleListIdentifier;
@@ -259,7 +275,7 @@ ContentRuleListResults ContentExtensionsBackend::processContentRuleListsForLoad(
 
 ContentRuleListResults ContentExtensionsBackend::processContentRuleListsForPingLoad(const URL& url, const URL& mainDocumentURL)
 {
-    ResourceLoadInfo resourceLoadInfo = { url, mainDocumentURL, ResourceType::Raw };
+    ResourceLoadInfo resourceLoadInfo = { url, mainDocumentURL, ResourceType::Ping };
     auto actions = actionsForResourceLoad(resourceLoadInfo);
 
     ContentRuleListResults results;

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -45,15 +45,20 @@ void link(State& state)
     CodeBlock* codeBlock = graph.m_codeBlock;
     VM& vm = graph.m_vm;
 
-    // B3 will create its own jump tables as needed.
-    codeBlock->clearSwitchJumpTables();
-
     state.jitCode->common.requiredRegisterCountForExit = graph.requiredRegisterCountForExit();
 
     if (!graph.m_plan.inlineCallFrames()->isEmpty())
         state.jitCode->common.inlineCallFrames = graph.m_plan.inlineCallFrames();
 
     graph.registerFrozenValues();
+
+#if ASSERT_ENABLED
+    {
+        ConcurrentJSLocker locker(codeBlock->m_lock);
+        ASSERT(codeBlock->ensureJITData(locker).m_stringSwitchJumpTables.isEmpty());
+        ASSERT(codeBlock->ensureJITData(locker).m_switchJumpTables.isEmpty());
+    }
+#endif
 
     // Create the entrypoint. Note that we use this entrypoint totally differently
     // depending on whether we're doing OSR entry or not.
@@ -64,67 +69,8 @@ void link(State& state)
     CCallHelpers::Address frame = CCallHelpers::Address(
         CCallHelpers::stackPointerRegister, -static_cast<int32_t>(AssemblyHelpers::prologueStackPointerDelta()));
 
-    Profiler::Compilation* compilation = graph.compilation();
-    if (UNLIKELY(compilation)) {
-        compilation->addDescription(
-            Profiler::OriginStack(),
-            toCString("Generated FTL JIT code for ", CodeBlockWithJITType(codeBlock, JITType::FTLJIT), ", instructions size = ", graph.m_codeBlock->instructionsSize(), ":\n"));
-
-        graph.ensureSSADominators();
-        graph.ensureSSANaturalLoops();
-
-        const char* prefix = "    ";
-
-        DumpContext dumpContext;
-        StringPrintStream out;
-        Node* lastNode = nullptr;
-        for (size_t blockIndex = 0; blockIndex < graph.numBlocks(); ++blockIndex) {
-            BasicBlock* block = graph.block(blockIndex);
-            if (!block)
-                continue;
-
-            graph.dumpBlockHeader(out, prefix, block, Graph::DumpLivePhisOnly, &dumpContext);
-            compilation->addDescription(Profiler::OriginStack(), out.toCString());
-            out.reset();
-
-            for (size_t nodeIndex = 0; nodeIndex < block->size(); ++nodeIndex) {
-                Node* node = block->at(nodeIndex);
-
-                Profiler::OriginStack stack;
-
-                if (node->origin.semantic.isSet()) {
-                    stack = Profiler::OriginStack(
-                        *vm.m_perBytecodeProfiler, codeBlock, node->origin.semantic);
-                }
-
-                if (graph.dumpCodeOrigin(out, prefix, lastNode, node, &dumpContext)) {
-                    compilation->addDescription(stack, out.toCString());
-                    out.reset();
-                }
-
-                graph.dump(out, prefix, node, &dumpContext);
-                compilation->addDescription(stack, out.toCString());
-                out.reset();
-
-                if (node->origin.semantic.isSet())
-                    lastNode = node;
-            }
-        }
-
-        dumpContext.dump(out, prefix);
-        compilation->addDescription(Profiler::OriginStack(), out.toCString());
-        out.reset();
-
-        out.print("    Disassembly:\n");
-        out.print("        <not implemented yet>\n");
-        compilation->addDescription(Profiler::OriginStack(), out.toCString());
-        out.reset();
-
-        state.jitCode->common.compilation = compilation;
-    }
-
     switch (graph.m_plan.mode()) {
-    case FTLMode: {
+    case JITCompilationMode::FTL: {
         bool requiresArityFixup = codeBlock->numParameters() != 1;
         if (codeBlock->codeType() == FunctionCode && requiresArityFixup) {
             CCallHelpers::JumpList mainPathJumps;
@@ -140,6 +86,9 @@ void link(State& state)
             jit.storePtr(GPRInfo::callFrameRegister, &vm.topCallFrame);
             CCallHelpers::Call callArityCheck = jit.call(OperationPtrTag);
 
+#if ENABLE(EXTRA_CTI_THUNKS)
+            auto jumpToExceptionHandler = jit.branch32(CCallHelpers::LessThan, GPRInfo::returnValueGPR, CCallHelpers::TrustedImm32(0));
+#else
             auto noException = jit.branch32(CCallHelpers::GreaterThanOrEqual, GPRInfo::returnValueGPR, CCallHelpers::TrustedImm32(0));
             jit.copyCalleeSavesToEntryFrameCalleeSavesBuffer(vm.topEntryFrame);
             jit.move(CCallHelpers::TrustedImmPtr(&vm), GPRInfo::argumentGPR0);
@@ -147,6 +96,7 @@ void link(State& state)
             CCallHelpers::Call callLookupExceptionHandlerFromCallerFrame = jit.call(OperationPtrTag);
             jit.jumpToExceptionHandler(vm);
             noException.link(&jit);
+#endif // ENABLE(EXTRA_CTI_THUNKS)
 
             if (ASSERT_ENABLED) {
                 jit.load64(vm.addressOfException(), GPRInfo::regT1);
@@ -163,13 +113,17 @@ void link(State& state)
             jit.untagReturnAddress();
             mainPathJumps.append(jit.jump());
 
-            linkBuffer = makeUnique<LinkBuffer>(jit, codeBlock, JITCompilationCanFail);
+            linkBuffer = makeUnique<LinkBuffer>(jit, codeBlock, LinkBuffer::Profile::FTL, JITCompilationCanFail);
             if (linkBuffer->didFailToAllocate()) {
                 state.allocationFailed = true;
                 return;
             }
             linkBuffer->link(callArityCheck, FunctionPtr<OperationPtrTag>(codeBlock->isConstructor() ? operationConstructArityCheck : operationCallArityCheck));
+#if ENABLE(EXTRA_CTI_THUNKS)
+            linkBuffer->link(jumpToExceptionHandler, CodeLocationLabel(vm.getCTIStub(handleExceptionWithCallFrameRollbackGenerator).retaggedCode<NoPtrTag>()));
+#else
             linkBuffer->link(callLookupExceptionHandlerFromCallerFrame, FunctionPtr<OperationPtrTag>(operationLookupExceptionHandlerFromCallerFrame));
+#endif
             linkBuffer->link(callArityFixup, FunctionPtr<JITThunkPtrTag>(vm.getCTIStub(arityFixupGenerator).code()));
             linkBuffer->link(mainPathJumps, state.generatedFunction);
         }
@@ -178,7 +132,7 @@ void link(State& state)
         break;
     }
 
-    case FTLForOSREntryMode: {
+    case JITCompilationMode::FTLForOSREntry: {
         // We jump to here straight from DFG code, after having boxed up all of the
         // values into the scratch buffer. Everything should be good to go - at this
         // point we've even done the stack check. Basically we just have to make the
@@ -188,7 +142,7 @@ void link(State& state)
         jit.untagReturnAddress();
         CCallHelpers::Jump mainPathJump = jit.jump();
 
-        linkBuffer = makeUnique<LinkBuffer>(jit, codeBlock, JITCompilationCanFail);
+        linkBuffer = makeUnique<LinkBuffer>(jit, codeBlock, LinkBuffer::Profile::FTL, JITCompilationCanFail);
         if (linkBuffer->didFailToAllocate()) {
             state.allocationFailed = true;
             return;
@@ -202,6 +156,22 @@ void link(State& state)
     default:
         RELEASE_ASSERT_NOT_REACHED();
         break;
+    }
+
+    {
+        bool dumpDisassembly = shouldDumpDisassembly() || Options::asyncDisassembly();
+
+        MacroAssemblerCodeRef<JSEntryPtrTag> b3CodeRef =
+            FINALIZE_CODE_IF(dumpDisassembly, *state.finalizer->b3CodeLinkBuffer, JSEntryPtrTag,
+                "FTL B3 code for %s", toCString(CodeBlockWithJITType(codeBlock, JITType::FTLJIT)).data());
+
+        MacroAssemblerCodeRef<JSEntryPtrTag> arityCheckCodeRef = linkBuffer
+            ? FINALIZE_CODE_IF(dumpDisassembly, *linkBuffer, JSEntryPtrTag,
+                "FTL entrypoint thunk for %s with B3 generated code at %p", toCString(CodeBlockWithJITType(codeBlock, JITType::FTLJIT)).data(), state.generatedFunction)
+            : MacroAssemblerCodeRef<JSEntryPtrTag>::createSelfManagedCodeRef(b3CodeRef.code());
+
+        state.jitCode->initializeB3Code(b3CodeRef);
+        state.jitCode->initializeArityCheckEntrypoint(arityCheckCodeRef);
     }
 
     state.finalizer->entrypointLinkBuffer = WTFMove(linkBuffer);

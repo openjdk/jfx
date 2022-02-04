@@ -85,7 +85,7 @@ public:
         TemplateStringResult, TemplateStringListResult,
         TemplateExpressionListResult, TemplateExpr,
         TaggedTemplateExpr, YieldExpr, AwaitExpr,
-        ModuleNameResult,
+        ModuleNameResult, PrivateIdentifier,
         ImportSpecifierResult, ImportSpecifierListResult,
         ExportSpecifierResult, ExportSpecifierListResult,
 
@@ -168,6 +168,7 @@ public:
     ALWAYS_INLINE bool isNewTarget(ExpressionType type) { return type == NewTargetExpr; }
     ALWAYS_INLINE bool isImportMeta(ExpressionType type) { return type == ImportMetaExpr; }
     ExpressionType createResolve(const JSTokenLocation&, const Identifier&, int, int) { return ResolveExpr; }
+    ExpressionType createPrivateIdentifierNode(const JSTokenLocation&, const Identifier&) { return PrivateIdentifier; }
     ExpressionType createObjectLiteral(const JSTokenLocation&) { return ObjectLiteralExpr; }
     ExpressionType createObjectLiteral(const JSTokenLocation&, int) { return ObjectLiteralExpr; }
     ExpressionType createArray(const JSTokenLocation&, int) { return ArrayLiteralExpr; }
@@ -191,11 +192,11 @@ public:
     ExpressionType createYield(const JSTokenLocation&) { return YieldExpr; }
     ExpressionType createYield(const JSTokenLocation&, ExpressionType, bool, int, int, int) { return YieldExpr; }
     ExpressionType createAwait(const JSTokenLocation&, ExpressionType, int, int, int) { return AwaitExpr; }
-    ClassExpression createClassExpr(const JSTokenLocation&, const ParserClassInfo<SyntaxChecker>&, VariableEnvironment&, ExpressionType, ExpressionType, PropertyList) { return ClassExpr; }
+    ClassExpression createClassExpr(const JSTokenLocation&, const ParserClassInfo<SyntaxChecker>&, VariableEnvironment&&, VariableEnvironment&&, ExpressionType, ExpressionType, PropertyList, int, int, int) { return ClassExpr; }
     ExpressionType createFunctionExpr(const JSTokenLocation&, const ParserFunctionInfo<SyntaxChecker>&) { return FunctionExpr; }
     ExpressionType createGeneratorFunctionBody(const JSTokenLocation&, const ParserFunctionInfo<SyntaxChecker>&, const Identifier&) { return FunctionExpr; }
     ExpressionType createAsyncFunctionBody(const JSTokenLocation&, const ParserFunctionInfo<SyntaxChecker>&) { return FunctionExpr; }
-    int createFunctionMetadata(const JSTokenLocation&, const JSTokenLocation&, int, int, bool, int, int, int, ConstructorKind, SuperBinding, unsigned, SourceParseMode, bool, InnerArrowFunctionCodeFeatures = NoInnerArrowFunctionFeatures) { return FunctionBodyResult; }
+    int createFunctionMetadata(const JSTokenLocation&, const JSTokenLocation&, unsigned, unsigned, int, int, int, LexicalScopeFeatures, ConstructorKind, SuperBinding, unsigned, SourceParseMode, bool) { return FunctionBodyResult; }
     ExpressionType createArrowFunctionExpr(const JSTokenLocation&, const ParserFunctionInfo<SyntaxChecker>&) { return FunctionExpr; }
     ExpressionType createMethodDefinition(const JSTokenLocation&, const ParserFunctionInfo<SyntaxChecker>&) { return FunctionExpr; }
     void setFunctionNameStart(int, int) { }
@@ -250,13 +251,13 @@ public:
     int createDefineField(const JSTokenLocation&, const Identifier*, int, DefineFieldNode::Type) { return 0; }
     int createClassDeclStatement(const JSTokenLocation&, ClassExpression,
         const JSTextPosition&, const JSTextPosition&, int, int) { return StatementResult; }
-    int createBlockStatement(const JSTokenLocation&, int, int, int, VariableEnvironment&, DeclarationStacks::FunctionStack&&) { return StatementResult; }
+    int createBlockStatement(const JSTokenLocation&, int, int, int, VariableEnvironment&&, DeclarationStacks::FunctionStack&&) { return StatementResult; }
     int createExprStatement(const JSTokenLocation&, int, int, int) { return StatementResult; }
     int createIfStatement(const JSTokenLocation&, int, int, int, int) { return StatementResult; }
     int createIfStatement(const JSTokenLocation&, int, int, int, int, int) { return StatementResult; }
-    int createForLoop(const JSTokenLocation&, int, int, int, int, int, int, VariableEnvironment&) { return StatementResult; }
-    int createForInLoop(const JSTokenLocation&, int, int, int, const JSTokenLocation&, int, int, int, int, int, VariableEnvironment&) { return StatementResult; }
-    int createForOfLoop(bool, const JSTokenLocation&, int, int, int, const JSTokenLocation&, int, int, int, int, int, VariableEnvironment&) { return StatementResult; }
+    int createForLoop(const JSTokenLocation&, int, int, int, int, int, int, VariableEnvironment&&) { return StatementResult; }
+    int createForInLoop(const JSTokenLocation&, int, int, int, const JSTokenLocation&, int, int, int, int, int, VariableEnvironment&&) { return StatementResult; }
+    int createForOfLoop(bool, const JSTokenLocation&, int, int, int, const JSTokenLocation&, int, int, int, int, int, VariableEnvironment&&) { return StatementResult; }
     int createEmptyStatement(const JSTokenLocation&) { return StatementResult; }
     int createDeclarationStatement(const JSTokenLocation&, int, int, int) { return StatementResult; }
     int createReturnStatement(const JSTokenLocation&, int, int, int) { return StatementResult; }
@@ -264,8 +265,8 @@ public:
     int createBreakStatement(const JSTokenLocation&, const Identifier*, int, int) { return StatementResult; }
     int createContinueStatement(const JSTokenLocation&, int, int) { return StatementResult; }
     int createContinueStatement(const JSTokenLocation&, const Identifier*, int, int) { return StatementResult; }
-    int createTryStatement(const JSTokenLocation&, int, int, int, int, int, int, VariableEnvironment&) { return StatementResult; }
-    int createSwitchStatement(const JSTokenLocation&, int, int, int, int, int, int, VariableEnvironment&, DeclarationStacks::FunctionStack&&) { return StatementResult; }
+    int createTryStatement(const JSTokenLocation&, int, int, int, int, int, int, VariableEnvironment&&) { return StatementResult; }
+    int createSwitchStatement(const JSTokenLocation&, int, int, int, int, int, int, VariableEnvironment&&, DeclarationStacks::FunctionStack&&) { return StatementResult; }
     int createWhileStatement(const JSTokenLocation&, int, int, int, int) { return StatementResult; }
     int createWithStatement(const JSTokenLocation&, int, int, int, int, int, int) { return StatementResult; }
     int createDoWhileStatement(const JSTokenLocation&, int, int, int, int) { return StatementResult; }

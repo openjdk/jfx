@@ -30,7 +30,6 @@
 #include "MIMETypeRegistry.h"
 #include "ThreadableBlobRegistry.h"
 #include <wtf/DateMath.h>
-#include <wtf/FileMetadata.h>
 #include <wtf/FileSystem.h>
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/text/WTFString.h>
@@ -68,7 +67,7 @@ File::File(ScriptExecutionContext* context, URL&& url, String&& type, String&& p
 {
 }
 
-File::File(DeserializationContructor, ScriptExecutionContext* context, const String& path, const URL& url, const String& type, const String& name, const Optional<int64_t>& lastModified)
+File::File(DeserializationContructor, ScriptExecutionContext* context, const String& path, const URL& url, const String& type, const String& name, const std::optional<int64_t>& lastModified)
     : Blob(deserializationContructor, context, url, type, { }, path)
     , m_path(path)
     , m_name(name)
@@ -79,7 +78,7 @@ File::File(DeserializationContructor, ScriptExecutionContext* context, const Str
 File::File(ScriptExecutionContext& context, Vector<BlobPartVariant>&& blobPartVariants, const String& filename, const PropertyBag& propertyBag)
     : Blob(context, WTFMove(blobPartVariants), propertyBag)
     , m_name(filename)
-    , m_lastModifiedDateOverride(propertyBag.lastModified.valueOr(WallTime::now().secondsSinceEpoch().milliseconds()))
+    , m_lastModifiedDateOverride(propertyBag.lastModified.value_or(WallTime::now().secondsSinceEpoch().milliseconds()))
 {
 }
 
@@ -110,7 +109,7 @@ int64_t File::lastModified() const
     // FIXME: This does sync-i/o on the main thread and also recalculates every time the method is called.
     // The i/o should be performed on a background thread,
     // and the result should be cached along with an asynchronous monitor for changes to the file.
-    auto modificationTime = FileSystem::getFileModificationTime(m_path);
+    auto modificationTime = FileSystem::fileModificationTime(m_path);
     if (modificationTime)
         result = modificationTime->secondsSinceEpoch().millisecondsAs<int64_t>();
     else
@@ -127,7 +126,7 @@ void File::computeNameAndContentType(const String& path, const String& nameOverr
         return;
     }
 #endif
-    effectiveName = nameOverride.isEmpty() ? FileSystem::pathGetFileName(path) : nameOverride;
+    effectiveName = nameOverride.isEmpty() ? FileSystem::pathFileName(path) : nameOverride;
     size_t index = effectiveName.reverseFind('.');
     if (index != notFound) {
         callOnMainThreadAndWait([&effectiveContentType, &effectiveName, index] {
@@ -148,7 +147,7 @@ String File::contentTypeForFile(const String& path)
 bool File::isDirectory() const
 {
     if (!m_isDirectory)
-        m_isDirectory = FileSystem::fileIsDirectory(m_path, FileSystem::ShouldFollowSymbolicLinks::Yes);
+        m_isDirectory = FileSystem::fileTypeFollowingSymlinks(m_path) == FileSystem::FileType::Directory;
     return *m_isDirectory;
 }
 

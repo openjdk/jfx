@@ -86,6 +86,8 @@ my %bufferSourceTypes = (
     "Uint32Array" => 1,
     "Uint8Array" => 1,
     "Uint8ClampedArray" => 1,
+    "BigInt64Array" => 1,
+    "BigUint64Array" => 1,
 );
 
 my %primitiveTypeHash = ( 
@@ -562,7 +564,7 @@ sub IDLFileForInterface
         $idlFiles = { };
 
         my $wanted = sub {
-            $idlFiles->{$1} = $File::Find::name if /^([A-Z].*)\.idl$/;
+            $idlFiles->{$1} = $File::Find::name if /^([A-Z].*)\.idl$/ && !exists $idlFiles->{$1};
             $File::Find::prune = 1 if /^\../;
         };
         find($wanted, @directories);
@@ -1421,7 +1423,7 @@ sub GenerateCompileTimeCheckForEnumsIfNeeded
     my @checks = ();
     foreach my $constant (@{$interface->constants}) {
         my $scope = $constant->extendedAttributes->{"ImplementedBy"} || $baseScope;
-        my $name = $constant->extendedAttributes->{"Reflect"} || $constant->name;
+        my $name = $constant->extendedAttributes->{"ImplementedAs"} || $constant->name;
         my $value = $constant->value;
         my $conditional = $constant->extendedAttributes->{"Conditional"};
         push(@checks, "#if " . $generator->GenerateConditionalStringFromAttributeValue($conditional) . "\n") if $conditional;

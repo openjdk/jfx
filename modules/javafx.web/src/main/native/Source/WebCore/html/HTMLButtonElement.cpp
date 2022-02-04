@@ -95,7 +95,7 @@ const AtomString& HTMLButtonElement::formControlType() const
     return emptyAtom();
 }
 
-bool HTMLButtonElement::isPresentationAttribute(const QualifiedName& name) const
+bool HTMLButtonElement::hasPresentationalHintsForAttribute(const QualifiedName& name) const
 {
     if (name == alignAttr) {
         // Don't map 'align' attribute.  This matches what Firefox and IE do, but not Opera.
@@ -103,7 +103,7 @@ bool HTMLButtonElement::isPresentationAttribute(const QualifiedName& name) const
         return false;
     }
 
-    return HTMLFormControlElement::isPresentationAttribute(name);
+    return HTMLFormControlElement::hasPresentationalHintsForAttribute(name);
 }
 
 void HTMLButtonElement::parseAttribute(const QualifiedName& name, const AtomString& value)
@@ -138,7 +138,7 @@ void HTMLButtonElement::defaultEventHandler(Event& event)
             if (auto currentForm = form()) {
                 if (m_type == SUBMIT) {
                     SetForScope<bool> activatedSubmitState(m_isActivatedSubmit, true);
-                    currentForm->prepareForSubmission(event);
+                    currentForm->submitIfPossible(&event, this);
                 }
 
                 if (m_type == RESET)
@@ -235,6 +235,11 @@ const AtomString& HTMLButtonElement::value() const
 bool HTMLButtonElement::computeWillValidate() const
 {
     return m_type == SUBMIT && HTMLFormControlElement::computeWillValidate();
+}
+
+bool HTMLButtonElement::isSubmitButton() const
+{
+    return m_type == SUBMIT;
 }
 
 } // namespace

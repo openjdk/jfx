@@ -28,6 +28,7 @@
 
 #include "Identifier.h"
 #include <wtf/Noncopyable.h>
+#include <wtf/RobinHoodHashMap.h>
 
 namespace JSC {
 
@@ -152,7 +153,6 @@ enum class LinkTimeConstant : int32_t;
     macro(AsyncGeneratorSuspendReasonYield) \
     macro(AsyncGeneratorSuspendReasonAwait) \
     macro(AsyncGeneratorSuspendReasonNone) \
-    macro(useIntlDateTimeFormatDayPeriod) \
     macro(abstractModuleRecordFieldState) \
 
 #define JSC_COMMON_BYTECODE_INTRINSIC_CONSTANTS_CUSTOM_EACH_NAME(macro) \
@@ -204,7 +204,7 @@ public:
         Type m_type;
     };
 
-    Optional<Entry> lookup(const Identifier&) const;
+    std::optional<Entry> lookup(const Identifier&) const;
 
 #define JSC_DECLARE_BYTECODE_INTRINSIC_CONSTANT_GENERATORS(name) JSValue name##Value(BytecodeGenerator&);
     JSC_COMMON_BYTECODE_INTRINSIC_CONSTANTS_EACH_NAME(JSC_DECLARE_BYTECODE_INTRINSIC_CONSTANT_GENERATORS)
@@ -212,7 +212,7 @@ public:
 
 private:
     VM& m_vm;
-    HashMap<RefPtr<UniquedStringImpl>, Entry, IdentifierRepHash> m_bytecodeIntrinsicMap;
+    MemoryCompactLookupOnlyRobinHoodHashMap<RefPtr<UniquedStringImpl>, Entry, IdentifierRepHash> m_bytecodeIntrinsicMap;
 
 #define JSC_DECLARE_BYTECODE_INTRINSIC_CONSTANT_GENERATORS(name) Strong<Unknown> m_##name;
     JSC_COMMON_BYTECODE_INTRINSIC_CONSTANTS_SIMPLE_EACH_NAME(JSC_DECLARE_BYTECODE_INTRINSIC_CONSTANT_GENERATORS)

@@ -28,10 +28,7 @@
 #include "ColorTypes.h"
 #include <functional>
 #include <wtf/EnumTraits.h>
-
-namespace WTF {
-class TextStream;
-}
+#include <wtf/Forward.h>
 
 namespace WebCore {
 
@@ -47,13 +44,7 @@ enum class ColorSpace : uint8_t {
     XYZ_D50,
 };
 
-enum class DestinationColorSpace : uint8_t {
-    LinearSRGB,
-    SRGB,
-};
-
-WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, ColorSpace);
-WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, DestinationColorSpace);
+WEBCORE_EXPORT TextStream& operator<<(TextStream&, ColorSpace);
 
 
 template<typename> struct ColorSpaceMapping;
@@ -70,7 +61,7 @@ template<typename T> struct ColorSpaceMapping<XYZA<T, WhitePoint::D50>> { static
 template<typename ColorType> constexpr ColorSpace ColorSpaceFor = ColorSpaceMapping<ColorType>::colorSpace;
 
 
-template<typename T, typename Functor> constexpr decltype(auto) callWithColorType(const ColorComponents<T>& components, ColorSpace colorSpace, Functor&& functor)
+template<typename T, typename Functor> constexpr decltype(auto) callWithColorType(const ColorComponents<T, 4>& components, ColorSpace colorSpace, Functor&& functor)
 {
     switch (colorSpace) {
     case ColorSpace::A98RGB:
@@ -97,6 +88,7 @@ template<typename T, typename Functor> constexpr decltype(auto) callWithColorTyp
     return std::invoke(std::forward<Functor>(functor), makeFromComponents<SRGBA<T>>(components));
 }
 
+
 } // namespace WebCore
 
 namespace WTF {
@@ -113,14 +105,6 @@ template<> struct EnumTraits<WebCore::ColorSpace> {
         WebCore::ColorSpace::Rec2020,
         WebCore::ColorSpace::SRGB,
         WebCore::ColorSpace::XYZ_D50
-    >;
-};
-
-template<> struct EnumTraits<WebCore::DestinationColorSpace> {
-    using values = EnumValues<
-        WebCore::DestinationColorSpace,
-        WebCore::DestinationColorSpace::LinearSRGB,
-        WebCore::DestinationColorSpace::SRGB
     >;
 };
 

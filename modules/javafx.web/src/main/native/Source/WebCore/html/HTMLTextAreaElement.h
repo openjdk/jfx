@@ -24,6 +24,7 @@
 #pragma once
 
 #include "HTMLTextFormControlElement.h"
+#include "SelectionRestorationMode.h"
 
 namespace WebCore {
 
@@ -110,8 +111,8 @@ private:
 
     void childrenChanged(const ChildChange&) final;
     void parseAttribute(const QualifiedName&, const AtomString&) final;
-    bool isPresentationAttribute(const QualifiedName&) const final;
-    void collectStyleForPresentationAttribute(const QualifiedName&, const AtomString&, MutableStyleProperties&) final;
+    bool hasPresentationalHintsForAttribute(const QualifiedName&) const final;
+    void collectPresentationalHintsForAttribute(const QualifiedName&, const AtomString&, MutableStyleProperties&) final;
     RenderPtr<RenderElement> createElementRenderer(RenderStyle&&, const RenderTreePosition&) final;
     bool appendFormData(DOMFormData&, bool) final;
     void reset() final;

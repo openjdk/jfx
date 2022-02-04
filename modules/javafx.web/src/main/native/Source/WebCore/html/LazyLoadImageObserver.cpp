@@ -43,6 +43,8 @@ public:
     }
 
 private:
+    bool hasCallback() const final { return true; }
+
     CallbackResult<void> handleEvent(IntersectionObserver&, const Vector<Ref<IntersectionObserverEntry>>& entries, IntersectionObserver&) final
     {
         ASSERT(!entries.isEmpty());
@@ -84,7 +86,7 @@ IntersectionObserver* LazyLoadImageObserver::intersectionObserver(Document& docu
 {
     if (!m_observer) {
         auto callback = LazyImageLoadIntersectionObserverCallback::create(document);
-        IntersectionObserver::Init options { WTF::nullopt, emptyString(), { } };
+        IntersectionObserver::Init options { std::nullopt, emptyString(), { } };
         auto observer = IntersectionObserver::create(document, WTFMove(callback), WTFMove(options));
         if (observer.hasException())
             return nullptr;
@@ -95,7 +97,7 @@ IntersectionObserver* LazyLoadImageObserver::intersectionObserver(Document& docu
 
 bool LazyLoadImageObserver::isObserved(Element& element) const
 {
-    return m_observer && m_observer->observationTargets().contains(&element);
+    return m_observer && m_observer->isObserving(element);
 }
 
 }

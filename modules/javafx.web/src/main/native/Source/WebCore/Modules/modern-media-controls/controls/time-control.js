@@ -39,9 +39,11 @@ class TimeControl extends LayoutItem
             layoutDelegate
         });
 
+        this._shouldShowDurationTimeLabel = this.layoutTraits.supportsDurationTimeLabel();
+
         this.elapsedTimeLabel = new TimeLabel(TimeLabel.Type.Elapsed);
-        this.scrubber = new Slider("scrubber", this.layoutTraits & LayoutTraits.macOS ? Slider.KnobStyle.Bar : Slider.KnobStyle.Circle);
-        if (this.layoutTraits & LayoutTraits.macOS)
+        this.scrubber = new Slider("scrubber", this.layoutTraits.knobStyleForScrubber());
+        if (this._shouldShowDurationTimeLabel)
             this.durationTimeLabel = new TimeLabel(TimeLabel.Type.Duration);
         this.remainingTimeLabel = new TimeLabel(TimeLabel.Type.Remaining);
 
@@ -55,8 +57,7 @@ class TimeControl extends LayoutItem
         this._currentTime = 0;
         this._loading = false;
 
-        this._showDurationTimeLabel = this.layoutTraits & LayoutTraits.macOS;
-        if (this._showDurationTimeLabel) {
+        if (this._shouldShowDurationTimeLabel) {
             this.durationTimeLabel.element.addEventListener("click", this);
             this.remainingTimeLabel.element.addEventListener("click", this);
         }
@@ -100,13 +101,15 @@ class TimeControl extends LayoutItem
     get minimumWidth()
     {
         this._performIdealLayout();
-        return MinimumScrubberWidth + ScrubberMargin + this._durationOrRemainingTimeLabel().width;
+        const scrubberMargin = this.computedValueForStylePropertyInPx("--scrubber-margin");
+        return MinimumScrubberWidth + scrubberMargin + this._durationOrRemainingTimeLabel().width;
     }
 
     get idealMinimumWidth()
     {
         this._performIdealLayout();
-        return this.elapsedTimeLabel.width + ScrubberMargin + MinimumScrubberWidth + ScrubberMargin + this._durationOrRemainingTimeLabel().width;
+        const scrubberMargin = this.computedValueForStylePropertyInPx("--scrubber-margin");
+        return this.elapsedTimeLabel.width + MinimumScrubberWidth + (2 * scrubberMargin) + this._durationOrRemainingTimeLabel().width;
     }
 
     // Protected
@@ -129,8 +132,9 @@ class TimeControl extends LayoutItem
         // We drop the elapsed time label if width is constrained and we can't guarantee
         // the scrubber minimum size otherwise.
         this.scrubber.x = 0;
-        this.scrubber.width = this.width - ScrubberMargin - durationOrRemainingTimeLabel.width;
-        durationOrRemainingTimeLabel.x = this.scrubber.x + this.scrubber.width + ScrubberMargin;
+        const scrubberMargin = this.computedValueForStylePropertyInPx("--scrubber-margin");
+        this.scrubber.width = this.width - scrubberMargin - durationOrRemainingTimeLabel.width;
+        durationOrRemainingTimeLabel.x = this.scrubber.x + this.scrubber.width + scrubberMargin;
         this.elapsedTimeLabel.visible = false;
     }
 
@@ -140,13 +144,15 @@ class TimeControl extends LayoutItem
         case "click":
             switch (event.target) {
             case this.durationTimeLabel.element:
-                this._showDurationTimeLabel = false;
+                this._shouldShowDurationTimeLabel = false;
                 this.needsLayout = true;
                 break;
 
             case this.remainingTimeLabel.element:
-                this._showDurationTimeLabel = true;
-                this.needsLayout = true;
+                if (this._canShowDurationTimeLabel) {
+                    this._shouldShowDurationTimeLabel = true;
+                    this.needsLayout = true;
+                }
                 break;
             }
         }
@@ -154,9 +160,14 @@ class TimeControl extends LayoutItem
 
     // Private
 
+    get _canShowDurationTimeLabel()
+    {
+        return this.elapsedTimeLabel.visible;
+    }
+
     _durationOrRemainingTimeLabel()
     {
-        return this._showDurationTimeLabel ? this.durationTimeLabel : this.remainingTimeLabel;
+        return (this._canShowDurationTimeLabel && this._shouldShowDurationTimeLabel) ? this.durationTimeLabel : this.remainingTimeLabel;
     }
 
     _performIdealLayout()
@@ -177,7 +188,7 @@ class TimeControl extends LayoutItem
                 numberOfDigitsForTimeLabels = 6;
 
             this.elapsedTimeLabel.setValueWithNumberOfDigits(shouldShowZeroDurations ? 0 : this._currentTime, numberOfDigitsForTimeLabels);
-            if (this._showDurationTimeLabel)
+            if (this._canShowDurationTimeLabel && this._shouldShowDurationTimeLabel)
                 this.durationTimeLabel.setValueWithNumberOfDigits(shouldShowZeroDurations ? 0 : this._duration, numberOfDigitsForTimeLabels);
             else
                 this.remainingTimeLabel.setValueWithNumberOfDigits(shouldShowZeroDurations ? 0 : this._currentTime - this._duration, numberOfDigitsForTimeLabels);
@@ -188,9 +199,10 @@ class TimeControl extends LayoutItem
 
         let durationOrRemainingTimeLabel = this._durationOrRemainingTimeLabel();
 
-        this.scrubber.x = (this._loading ? this.activityIndicator.width : this.elapsedTimeLabel.width) + ScrubberMargin;
-        this.scrubber.width = this.width - this.scrubber.x - ScrubberMargin - durationOrRemainingTimeLabel.width;
-        durationOrRemainingTimeLabel.x = this.scrubber.x + this.scrubber.width + ScrubberMargin;
+        const scrubberMargin = this.computedValueForStylePropertyInPx("--scrubber-margin");
+        this.scrubber.x = (this._loading ? this.activityIndicator.width : this.elapsedTimeLabel.width) + scrubberMargin;
+        this.scrubber.width = this.width - this.scrubber.x - scrubberMargin - durationOrRemainingTimeLabel.width;
+        durationOrRemainingTimeLabel.x = this.scrubber.x + this.scrubber.width + scrubberMargin;
 
         this.children = [this._loading ? this.activityIndicator : this.elapsedTimeLabel, this.scrubber, durationOrRemainingTimeLabel];
     }

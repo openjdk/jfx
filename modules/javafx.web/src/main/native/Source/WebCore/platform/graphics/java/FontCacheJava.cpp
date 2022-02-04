@@ -71,10 +71,10 @@ bool FontCache::isSystemFontForbiddenForEditing(const String&)
     return false;
 }
 
-const AtomString& FontCache::platformAlternateFamilyName(const AtomString&)
+std::optional<ASCIILiteral> FontCache::platformAlternateFamilyName(const String&)
 {
     notImplemented();
-    return nullAtom();
+    return { };
 }
 
 Vector<FontSelectionCapabilities> FontCache::getFontSelectionCapabilitiesInFamily(const AtomString&, AllowUserInstalledFonts)

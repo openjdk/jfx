@@ -36,7 +36,7 @@
 
 namespace WebCore {
 
-CachedScript::CachedScript(CachedResourceRequest&& request, const PAL::SessionID& sessionID, const CookieJar* cookieJar)
+CachedScript::CachedScript(CachedResourceRequest&& request, PAL::SessionID sessionID, const CookieJar* cookieJar)
     : CachedResource(WTFMove(request), Type::Script, sessionID, cookieJar)
     , m_decoder(TextResourceDecoder::create("text/javascript"_s, request.charset()))
 {
@@ -62,7 +62,7 @@ StringView CachedScript::script()
     if (m_decodingState == NeverDecoded
         && TextEncoding(encoding()).isByteBasedEncoding()
         && m_data->size()
-        && charactersAreAllASCII(reinterpret_cast<const LChar*>(m_data->data()), m_data->size())) {
+        && charactersAreAllASCII(m_data->data(), m_data->size())) {
 
         m_decodingState = DataAndDecodedStringHaveSameBytes;
 
@@ -70,11 +70,11 @@ StringView CachedScript::script()
         setDecodedSize(0);
         m_decodedDataDeletionTimer.stop();
 
-        m_scriptHash = StringHasher::computeHashAndMaskTop8Bits(reinterpret_cast<const LChar*>(m_data->data()), m_data->size());
+        m_scriptHash = StringHasher::computeHashAndMaskTop8Bits(m_data->data(), m_data->size());
     }
 
     if (m_decodingState == DataAndDecodedStringHaveSameBytes)
-        return { reinterpret_cast<const LChar*>(m_data->data()), static_cast<unsigned>(m_data->size()) };
+        return { m_data->data(), static_cast<unsigned>(m_data->size()) };
 
     if (!m_script) {
         m_script = m_decoder->decodeAndFlush(m_data->data(), encodedSize());

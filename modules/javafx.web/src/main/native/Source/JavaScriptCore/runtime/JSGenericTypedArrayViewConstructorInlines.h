@@ -115,7 +115,7 @@ inline JSArrayBuffer* constructCustomArrayBufferIfNeeded(JSGlobalObject* globalO
     if (source->isShared())
         return nullptr;
 
-    Optional<JSValue> species = arrayBufferSpeciesConstructor(globalObject, source, ArrayBufferSharingMode::Default);
+    std::optional<JSValue> species = arrayBufferSpeciesConstructor(globalObject, source, ArrayBufferSharingMode::Default);
     RETURN_IF_EXCEPTION(scope, nullptr);
     if (!species)
         return nullptr;
@@ -134,14 +134,16 @@ inline JSArrayBuffer* constructCustomArrayBufferIfNeeded(JSGlobalObject* globalO
         return nullptr;
     }
 
-    auto result = JSArrayBuffer::create(vm, getFunctionRealm(vm, asObject(species.value()))->arrayBufferStructure(ArrayBufferSharingMode::Default), WTFMove(buffer));
+    JSGlobalObject* functionGlobalObject = getFunctionRealm(globalObject, asObject(species.value()));
+    RETURN_IF_EXCEPTION(scope, nullptr);
+    auto result = JSArrayBuffer::create(vm, functionGlobalObject->arrayBufferStructure(ArrayBufferSharingMode::Default), WTFMove(buffer));
     if (prototype.isObject())
         result->setPrototypeDirect(vm, prototype);
     return result;
 }
 
 template<typename ViewClass>
-inline JSObject* constructGenericTypedArrayViewWithArguments(JSGlobalObject* globalObject, Structure* structure, EncodedJSValue firstArgument, unsigned offset, Optional<unsigned> lengthOpt)
+inline JSObject* constructGenericTypedArrayViewWithArguments(JSGlobalObject* globalObject, Structure* structure, EncodedJSValue firstArgument, unsigned offset, std::optional<unsigned> lengthOpt)
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
@@ -260,9 +262,7 @@ ALWAYS_INLINE EncodedJSValue constructGenericTypedArrayViewImpl(JSGlobalObject* 
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     JSObject* newTarget = asObject(callFrame->newTarget());
-    Structure* structure = newTarget == callFrame->jsCallee()
-        ? globalObject->typedArrayStructure(ViewClass::TypedArrayStorageType)
-        : InternalFunction::createSubclassStructure(globalObject, newTarget, getFunctionRealm(vm, newTarget)->typedArrayStructure(ViewClass::TypedArrayStorageType));
+    Structure* structure = JSC_GET_DERIVED_STRUCTURE(vm, typedArrayStructureWithTypedArrayType<ViewClass::TypedArrayStorageType>, newTarget, callFrame->jsCallee());
     RETURN_IF_EXCEPTION(scope, { });
 
     size_t argCount = callFrame->argumentCount();
@@ -276,7 +276,7 @@ ALWAYS_INLINE EncodedJSValue constructGenericTypedArrayViewImpl(JSGlobalObject* 
 
     JSValue firstValue = callFrame->uncheckedArgument(0);
     unsigned offset = 0;
-    Optional<unsigned> length = WTF::nullopt;
+    std::optional<unsigned> length = std::nullopt;
     if (jsDynamicCast<JSArrayBuffer*>(vm, firstValue) && argCount > 1) {
         offset = callFrame->uncheckedArgument(1).toIndex(globalObject, "byteOffset");
         RETURN_IF_EXCEPTION(scope, encodedJSValue());

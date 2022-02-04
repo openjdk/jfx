@@ -29,6 +29,7 @@
 
 #include "LayoutIntegrationInlineContent.h"
 #include "LayoutIntegrationRunIteratorModernPath.h"
+#include "RenderBlockFlow.h"
 
 namespace WebCore {
 
@@ -54,19 +55,22 @@ public:
     LayoutUnit lineBoxTop() const { return LayoutUnit::fromFloatRound(line().lineBoxTop()); }
     LayoutUnit lineBoxBottom() const { return LayoutUnit::fromFloatRound(line().lineBoxBottom()); }
 
-    // FIXME: What should these really be?
-    LayoutUnit selectionTop() const { return top(); }
-    LayoutUnit selectionTopForHitTesting() const { return top(); }
+    LayoutUnit selectionTop() const { return !m_lineIndex ? top() : LineIteratorModernPath(*m_inlineContent, m_lineIndex - 1).selectionBottom(); }
+    // FIXME: Remove the containingBlock().borderAndPaddingBefore() offset after retiring legacy line layout. It also requires changes in RenderText::positionForPoint to find the first line with offset.
+    // - the "before" value is already factored in to the line offset
+    // - this logic negates the first line's natural offset (e.g. block has no border/padding but the first line has a computed offset).
+    LayoutUnit selectionTopForHitTesting() const { return !m_lineIndex ? containingBlock().borderAndPaddingBefore() : selectionTop(); };
     LayoutUnit selectionBottom() const { return bottom(); }
 
-    float contentLogicalLeft() const { return line().lineBoxLeft() + line().contentLeftOffset(); }
+    float contentLogicalLeft() const { return line().lineBoxLeft() + line().contentLeft(); }
     float contentLogicalRight() const { return contentLogicalLeft() + line().contentWidth(); }
     float y() const { return lineBoxTop(); }
     float logicalHeight() const { return lineBoxBottom() - lineBoxTop(); }
     bool isHorizontal() const { return true; }
+    FontBaseline baselineType() const { return AlphabeticBaseline; }
 
     const RenderBlockFlow& containingBlock() const { return m_inlineContent->containingBlock(); }
-    const RootInlineBox* legacyRootInlineBox() const { return nullptr; }
+    const LegacyRootInlineBox* legacyRootInlineBox() const { return nullptr; }
 
     void traverseNext()
     {
@@ -90,7 +94,6 @@ public:
     bool operator==(const LineIteratorModernPath& other) const { return m_inlineContent == other.m_inlineContent && m_lineIndex == other.m_lineIndex; }
 
     bool atEnd() const { return m_lineIndex == lines().size(); }
-    void setAtEnd() { m_lineIndex = lines().size(); }
 
     RunIteratorModernPath firstRun() const
     {
@@ -117,8 +120,9 @@ public:
         return lastRun();
     }
 
-
 private:
+    void setAtEnd() { m_lineIndex = lines().size(); }
+
     const InlineContent::Lines& lines() const { return m_inlineContent->lines; }
     const Line& line() const { return lines()[m_lineIndex]; }
 

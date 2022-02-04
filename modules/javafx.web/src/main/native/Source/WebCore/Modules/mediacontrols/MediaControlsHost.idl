@@ -34,6 +34,8 @@ enum DeviceType {
     ImplementationLacksVTable,
     LegacyNoInterfaceObject,
 ] interface MediaControlsHost {
+    readonly attribute DOMString layoutTraitsClassName;
+
     sequence<TextTrack> sortedTrackListForMenu(TextTrackList trackList);
     sequence<AudioTrack> sortedTrackListForMenu(AudioTrackList trackList);
     DOMString displayNameForTrack((TextTrack or AudioTrack)? track);
@@ -48,7 +50,6 @@ enum DeviceType {
     readonly attribute boolean userGestureRequired;
     readonly attribute boolean isInMediaDocument;
     readonly attribute boolean shouldForceControlsDisplay;
-    readonly attribute boolean compactMode;
 
     readonly attribute DOMString externalDeviceDisplayName;
     readonly attribute DeviceType externalDeviceType;
@@ -61,9 +62,8 @@ enum DeviceType {
 
     DOMString generateUUID();
 
-    [EnabledAtRuntime=ModernMediaControls] readonly attribute DOMString shadowRootCSSText;
-    [EnabledAtRuntime=ModernMediaControls] DOMString base64StringForIconNameAndType(DOMString iconName, DOMString iconType);
-    [EnabledAtRuntime=ModernMediaControls] DOMString formattedStringForDuration(unrestricted double durationInSeconds);
-
-    [Conditional=MEDIA_CONTROLS_CONTEXT_MENUS, EnabledBySetting=MediaControlsContextMenus, EnabledAtRuntime=ModernMediaControls] boolean showMediaControlsContextMenu(HTMLElement target, JSON options, VoidCallback callback);
+    [Conditional=MODERN_MEDIA_CONTROLS] readonly attribute DOMString shadowRootCSSText;
+    [Conditional=MODERN_MEDIA_CONTROLS] DOMString base64StringForIconNameAndType(DOMString iconName, DOMString iconType);
+    [Conditional=MODERN_MEDIA_CONTROLS] DOMString formattedStringForDuration(unrestricted double durationInSeconds);
+    [Conditional=MODERN_MEDIA_CONTROLS&MEDIA_CONTROLS_CONTEXT_MENUS, EnabledBySetting=MediaControlsContextMenus] boolean showMediaControlsContextMenu(HTMLElement target, JSON options, VoidCallback callback);
 };

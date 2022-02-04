@@ -37,7 +37,7 @@ private:
     String extraDefaultStyleSheet() final;
 #if ENABLE(VIDEO)
     String extraMediaControlsStyleSheet() final;
-    String mediaControlsScript() final;
+    Vector<String, 2> mediaControlsScripts() final;
 #endif
 
     bool supportsHover(const RenderStyle&) const final { return true; }
@@ -58,8 +58,13 @@ private:
     void platformColorsDidChange() final;
 
     bool paintTextField(const RenderObject&, const PaintInfo&, const FloatRect&) final;
+    void adjustTextFieldStyle(RenderStyle&, const Element*) const final;
+
     bool paintTextArea(const RenderObject&, const PaintInfo&, const FloatRect&) final;
+    void adjustTextAreaStyle(RenderStyle&, const Element*) const final;
+
     bool paintSearchField(const RenderObject&, const PaintInfo&, const IntRect&) final;
+    void adjustSearchFieldStyle(RenderStyle&, const Element*) const final;
 
     bool popsMenuBySpaceOrReturn() const final { return true; }
     void adjustMenuListStyle(RenderStyle&, const Element*) const override;
@@ -82,10 +87,16 @@ private:
     bool paintMediaVolumeSliderTrack(const RenderObject&, const PaintInfo&, const IntRect&) final;
 #endif
 
+    Color systemColor(CSSValueID, OptionSet<StyleColor::Options>) const final;
+
 #if ENABLE(DATALIST_ELEMENT)
     IntSize sliderTickSize() const final;
     int sliderTickOffsetFromTrackCenter() const final;
     void adjustListButtonStyle(RenderStyle&, const Element*) const final;
+#endif
+
+#if PLATFORM(GTK)
+    Seconds caretBlinkInterval() const override;
 #endif
 };
 

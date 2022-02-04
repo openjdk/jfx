@@ -86,11 +86,11 @@ void RenderMathMLSpace::layoutBlock(bool relayoutChildren, LayoutUnit)
     clearNeedsLayout();
 }
 
-Optional<int> RenderMathMLSpace::firstLineBaseline() const
+std::optional<LayoutUnit> RenderMathMLSpace::firstLineBaseline() const
 {
     LayoutUnit height, depth;
     getSpaceHeightAndDepth(height, depth);
-    return Optional<int>(height);
+    return height;
 }
 
 }

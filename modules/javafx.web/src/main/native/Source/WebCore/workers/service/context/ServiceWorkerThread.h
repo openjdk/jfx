@@ -62,14 +62,13 @@ public:
     void willPostTaskToFireActivateEvent();
     void willPostTaskToFireMessageEvent();
 
-    void queueTaskToFireFetchEvent(Ref<ServiceWorkerFetch::Client>&&, Optional<ServiceWorkerClientIdentifier>&&, ResourceRequest&&, String&& referrer, FetchOptions&&);
+    void queueTaskToFireFetchEvent(Ref<ServiceWorkerFetch::Client>&&, std::optional<ServiceWorkerClientIdentifier>&&, ResourceRequest&&, String&& referrer, FetchOptions&&);
     void queueTaskToPostMessage(MessageWithMessagePorts&&, ServiceWorkerOrClientData&& sourceData);
     void queueTaskToFireInstallEvent();
     void queueTaskToFireActivateEvent();
 
-    const ServiceWorkerContextData& contextData() const { return m_data; }
-
-    ServiceWorkerIdentifier identifier() const { return m_data.serviceWorkerIdentifier; }
+    ServiceWorkerIdentifier identifier() const { return m_serviceWorkerIdentifier; }
+    std::optional<ServiceWorkerJobDataIdentifier> jobDataIdentifier() const { return m_jobDataIdentifier; }
     bool doesHandleFetch() const { return m_doesHandleFetch; }
 
     void startFetchEventMonitoring();
@@ -80,7 +79,7 @@ protected:
     void runEventLoop() override;
 
 private:
-    WEBCORE_EXPORT ServiceWorkerThread(const ServiceWorkerContextData&, String&& userAgent, const Settings::Values&, WorkerLoaderProxy&, WorkerDebuggerProxy&, IDBClient::IDBConnectionProxy*, SocketProvider*);
+    WEBCORE_EXPORT ServiceWorkerThread(ServiceWorkerContextData&&, String&& userAgent, const Settings::Values&, WorkerLoaderProxy&, WorkerDebuggerProxy&, IDBClient::IDBConnectionProxy*, SocketProvider*);
 
     bool isServiceWorkerThread() const final { return true; }
     void finishedEvaluatingScript() final;
@@ -94,7 +93,9 @@ private:
     void heartBeatTimerFired();
     void installEventTimerFired();
 
-    ServiceWorkerContextData m_data;
+    ServiceWorkerIdentifier m_serviceWorkerIdentifier;
+    std::optional<ServiceWorkerJobDataIdentifier> m_jobDataIdentifier;
+    std::optional<ServiceWorkerContextData> m_data; // Becomes std::nullopt after the ServiceWorkerGlobalScope has been created.
     WorkerObjectProxy& m_workerObjectProxy;
     bool m_doesHandleFetch { false };
 

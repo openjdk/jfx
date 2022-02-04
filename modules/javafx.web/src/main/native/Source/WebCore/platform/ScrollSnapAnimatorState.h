@@ -25,8 +25,6 @@
 
 #pragma once
 
-#if ENABLE(CSS_SCROLL_SNAP)
-
 #include "FloatPoint.h"
 #include "FloatSize.h"
 #include "LayoutPoint.h"
@@ -57,33 +55,17 @@ public:
         return axis == ScrollEventAxis::Horizontal ? m_snapOffsetsInfo.horizontalSnapOffsets : m_snapOffsetsInfo.verticalSnapOffsets;
     }
 
-    const Vector<ScrollOffsetRange<LayoutUnit>>& snapOffsetRangesForAxis(ScrollEventAxis axis) const
-    {
-        return axis == ScrollEventAxis::Horizontal ? m_snapOffsetsInfo.horizontalSnapOffsetRanges : m_snapOffsetsInfo.verticalSnapOffsetRanges;
-    }
-
-    const ScrollSnapOffsetsInfo<LayoutUnit>& snapOffsetInfo() const { return m_snapOffsetsInfo; }
-    void setSnapOffsetInfo(const ScrollSnapOffsetsInfo<LayoutUnit>& newInfo) { m_snapOffsetsInfo = newInfo; }
-
-    void setSnapOffsetsAndPositionRangesForAxis(ScrollEventAxis axis, const Vector<SnapOffset<LayoutUnit>>& snapOffsets, const Vector<ScrollOffsetRange<LayoutUnit>>& snapOffsetRanges)
-    {
-        if (axis == ScrollEventAxis::Horizontal) {
-            m_snapOffsetsInfo.horizontalSnapOffsets = snapOffsets;
-            m_snapOffsetsInfo.horizontalSnapOffsetRanges = snapOffsetRanges;
-        } else {
-            m_snapOffsetsInfo.verticalSnapOffsets = snapOffsets;
-            m_snapOffsetsInfo.verticalSnapOffsetRanges = snapOffsetRanges;
-        }
-    }
+    const LayoutScrollSnapOffsetsInfo& snapOffsetInfo() const { return m_snapOffsetsInfo; }
+    void setSnapOffsetInfo(const LayoutScrollSnapOffsetsInfo& newInfo) { m_snapOffsetsInfo = newInfo; }
 
     ScrollSnapState currentState() const { return m_currentState; }
 
-    unsigned activeSnapIndexForAxis(ScrollEventAxis axis) const
+    std::optional<unsigned> activeSnapIndexForAxis(ScrollEventAxis axis) const
     {
         return axis == ScrollEventAxis::Horizontal ? m_activeSnapIndexX : m_activeSnapIndexY;
     }
 
-    void setActiveSnapIndexForAxis(ScrollEventAxis axis, unsigned index)
+    void setActiveSnapIndexForAxis(ScrollEventAxis axis, std::optional<unsigned> index)
     {
         if (axis == ScrollEventAxis::Horizontal)
             m_activeSnapIndexX = index;
@@ -91,7 +73,7 @@ public:
             m_activeSnapIndexY = index;
     }
 
-    FloatPoint currentAnimatedScrollOffset(bool& isAnimationComplete) const;
+    FloatPoint currentAnimatedScrollOffset(MonotonicTime, bool& isAnimationComplete) const;
 
     // State transition helpers.
     void transitionToSnapAnimationState(const FloatSize& contentSize, const FloatSize& viewportSize, float pageScale, const FloatPoint& initialOffset);
@@ -100,16 +82,16 @@ public:
     void transitionToDestinationReachedState();
 
 private:
-    float targetOffsetForStartOffset(ScrollEventAxis, float maxScrollOffset, float startOffset, float predictedOffset, float pageScale, float initialDelta, unsigned& outActiveSnapIndex) const;
+    std::pair<float, std::optional<unsigned>> targetOffsetForStartOffset(ScrollEventAxis, const FloatSize& viewportSize, float maxScrollOffset, float startOffset, FloatPoint predictedOffset, float pageScale, float initialDelta) const;
     void teardownAnimationForState(ScrollSnapState);
     void setupAnimationForState(ScrollSnapState, const FloatSize& contentSize, const FloatSize& viewportSize, float pageScale, const FloatPoint& initialOffset, const FloatSize& initialVelocity, const FloatSize& initialDelta);
 
     ScrollSnapState m_currentState { ScrollSnapState::UserInteraction };
 
-    ScrollSnapOffsetsInfo<LayoutUnit> m_snapOffsetsInfo;
+    LayoutScrollSnapOffsetsInfo m_snapOffsetsInfo;
 
-    unsigned m_activeSnapIndexX { 0 };
-    unsigned m_activeSnapIndexY { 0 };
+    std::optional<unsigned> m_activeSnapIndexX;
+    std::optional<unsigned> m_activeSnapIndexY;
 
     MonotonicTime m_startTime;
     std::unique_ptr<ScrollingMomentumCalculator> m_momentumCalculator;
@@ -118,5 +100,3 @@ private:
 WTF::TextStream& operator<<(WTF::TextStream&, const ScrollSnapAnimatorState&);
 
 } // namespace WebCore
-
-#endif // ENABLE(CSS_SCROLL_SNAP)

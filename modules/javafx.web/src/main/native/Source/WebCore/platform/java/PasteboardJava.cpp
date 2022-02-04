@@ -430,7 +430,7 @@ bool Pasteboard::hasData()
     return m_dataObject && m_dataObject->hasData();
 }
 
-void Pasteboard::read(PasteboardFileReader& reader, Optional<size_t>)
+void Pasteboard::read(PasteboardFileReader& reader, std::optional<size_t>)
 {
     if (m_dataObject) {
         for (const auto& filename : m_dataObject->asFilenames())
@@ -452,7 +452,7 @@ Pasteboard::FileContentState Pasteboard::fileContentState()
     return reader.count ? FileContentState::MayContainFilePaths : FileContentState::NoFileOrImageData;
 }
 
-void Pasteboard::read(PasteboardPlainText& text, PlainTextURLReadingPolicy, Optional<size_t>)
+void Pasteboard::read(PasteboardPlainText& text, PlainTextURLReadingPolicy, std::optional<size_t>)
 {
     if (m_copyPasteMode) {
         text.text = jGetPlainText();
@@ -508,7 +508,7 @@ RefPtr<DocumentFragment> Pasteboard::documentFragment(
     return nullptr;
 }
 
-void Pasteboard::read(PasteboardWebContentReader&, WebContentReadingPolicy, Optional<size_t>)
+void Pasteboard::read(PasteboardWebContentReader&, WebContentReadingPolicy, std::optional<size_t>)
 {
 }
 

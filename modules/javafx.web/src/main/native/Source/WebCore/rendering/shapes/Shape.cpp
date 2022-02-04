@@ -35,8 +35,8 @@
 #include "BoxShape.h"
 #include "GraphicsContext.h"
 #include "ImageBuffer.h"
-#include "ImageData.h"
 #include "LengthFunctions.h"
+#include "PixelBuffer.h"
 #include "PolygonShape.h"
 #include "RasterShape.h"
 #include "RectangleShape.h"
@@ -181,7 +181,7 @@ std::unique_ptr<Shape> Shape::createRasterShape(Image* image, float threshold, c
     IntRect marginRect = snappedIntRect(marginR);
     auto intervals = makeUnique<RasterShapeIntervals>(marginRect.height(), -marginRect.y());
     // FIXME (149420): This buffer should not be unconditionally unaccelerated.
-    auto imageBuffer = ImageBuffer::create(imageRect.size(), RenderingMode::Unaccelerated);
+    auto imageBuffer = ImageBuffer::create(imageRect.size(), RenderingMode::Unaccelerated, 1, DestinationColorSpace::SRGB(), PixelFormat::BGRA8);
 
     auto createShape = [&]() {
         auto rasterShape = makeUnique<RasterShape>(WTFMove(intervals), marginRect.size());
@@ -197,26 +197,27 @@ std::unique_ptr<Shape> Shape::createRasterShape(Image* image, float threshold, c
     if (image)
         graphicsContext.drawImage(*image, IntRect(IntPoint(), imageRect.size()));
 
-    auto imageData = imageBuffer->getImageData(AlphaPremultiplication::Unpremultiplied, { IntPoint(), imageRect.size() });
+    PixelBufferFormat format { AlphaPremultiplication::Unpremultiplied, PixelFormat::RGBA8, DestinationColorSpace::SRGB() };
+    auto pixelBuffer = imageBuffer->getPixelBuffer(format, { IntPoint(), imageRect.size() });
 
-    // We could get to a value where imageData could be nullptr. A case where ImageRect.size() is huge, imageData::create
-    // can return a nullptr because data size has overflowed. Refer rdar://problem/61793884
-    if (!imageData || !imageData->data())
+    // We could get to a value where PixelBuffer could be nullopt. A case where ImageRect.size() is huge, PixelBuffer::tryCreate
+    // can return a nullopt because data size has overflowed. Refer rdar://problem/61793884
+    if (!pixelBuffer)
         return createShape();
 
-    auto* pixelArray = imageData->data();
-    unsigned pixelArrayLength = pixelArray->length();
+    auto& pixelArray = pixelBuffer->data();
+    unsigned pixelArrayLength = pixelArray.length();
     unsigned pixelArrayOffset = 3; // Each pixel is four bytes: RGBA.
     uint8_t alphaPixelThreshold = static_cast<uint8_t>(lroundf(clampTo<float>(threshold, 0, 1) * 255.0f));
 
     int minBufferY = std::max(0, marginRect.y() - imageRect.y());
     int maxBufferY = std::min(imageRect.height(), marginRect.maxY() - imageRect.y());
 
-    if ((imageRect.area() * 4).unsafeGet() == pixelArrayLength) {
+    if ((imageRect.area() * 4) == pixelArrayLength) {
         for (int y = minBufferY; y < maxBufferY; ++y) {
             int startX = -1;
             for (int x = 0; x < imageRect.width(); ++x, pixelArrayOffset += 4) {
-                uint8_t alpha = pixelArray->item(pixelArrayOffset);
+                uint8_t alpha = pixelArray.item(pixelArrayOffset);
                 bool alphaAboveThreshold = alpha > alphaPixelThreshold;
                 if (startX == -1 && alphaAboveThreshold) {
                     startX = x;

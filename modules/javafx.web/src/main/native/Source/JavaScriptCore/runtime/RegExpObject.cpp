@@ -121,12 +121,12 @@ bool RegExpObject::defineOwnProperty(JSObject* object, JSGlobalObject* globalObj
     RELEASE_AND_RETURN(scope, Base::defineOwnProperty(object, globalObject, propertyName, descriptor, shouldThrow));
 }
 
-JSC_DEFINE_CUSTOM_SETTER(regExpObjectSetLastIndexStrict, (JSGlobalObject* globalObject, EncodedJSValue thisValue, EncodedJSValue value))
+JSC_DEFINE_CUSTOM_SETTER(regExpObjectSetLastIndexStrict, (JSGlobalObject* globalObject, EncodedJSValue thisValue, EncodedJSValue value, PropertyName))
 {
     return jsCast<RegExpObject*>(JSValue::decode(thisValue))->setLastIndex(globalObject, JSValue::decode(value), true);
 }
 
-JSC_DEFINE_CUSTOM_SETTER(regExpObjectSetLastIndexNonStrict, (JSGlobalObject* globalObject, EncodedJSValue thisValue, EncodedJSValue value))
+JSC_DEFINE_CUSTOM_SETTER(regExpObjectSetLastIndexNonStrict, (JSGlobalObject* globalObject, EncodedJSValue thisValue, EncodedJSValue value, PropertyName))
 {
     return jsCast<RegExpObject*>(JSValue::decode(thisValue))->setLastIndex(globalObject, JSValue::decode(value), false);
 }
@@ -134,24 +134,24 @@ JSC_DEFINE_CUSTOM_SETTER(regExpObjectSetLastIndexNonStrict, (JSGlobalObject* glo
 bool RegExpObject::put(JSCell* cell, JSGlobalObject* globalObject, PropertyName propertyName, JSValue value, PutPropertySlot& slot)
 {
     VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
     RegExpObject* thisObject = jsCast<RegExpObject*>(cell);
 
-    if (UNLIKELY(isThisValueAltered(slot, thisObject)))
-        return ordinarySetSlow(globalObject, thisObject, propertyName, value, slot.thisValue(), slot.isStrictMode());
-
     if (propertyName == vm.propertyNames->lastIndex) {
+        if (!thisObject->lastIndexIsWritable())
+            return typeError(globalObject, scope, slot.isStrictMode(), ReadonlyPropertyWriteError);
+
+        if (UNLIKELY(slot.thisValue() != thisObject))
+            RELEASE_AND_RETURN(scope, JSObject::definePropertyOnReceiver(globalObject, propertyName, value, slot));
+
         bool result = thisObject->setLastIndex(globalObject, value, slot.isStrictMode());
+        RETURN_IF_EXCEPTION(scope, false);
         slot.setCustomValue(thisObject, slot.isStrictMode()
             ? regExpObjectSetLastIndexStrict
             : regExpObjectSetLastIndexNonStrict);
         return result;
     }
-    return Base::put(cell, globalObject, propertyName, value, slot);
-}
-
-String RegExpObject::toStringName(const JSObject*, JSGlobalObject*)
-{
-    return "RegExp"_s;
+    RELEASE_AND_RETURN(scope, Base::put(cell, globalObject, propertyName, value, slot));
 }
 
 JSValue RegExpObject::exec(JSGlobalObject* globalObject, JSString* string)

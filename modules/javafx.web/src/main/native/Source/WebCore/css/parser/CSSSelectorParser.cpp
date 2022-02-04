@@ -30,10 +30,12 @@
 #include "config.h"
 #include "CSSSelectorParser.h"
 
+#include "RuntimeEnabledFeatures.h"
 #include <memory>
 #include <wtf/OptionSet.h>
 #include <wtf/SetForScope.h>
 #include <wtf/text/StringBuilder.h>
+#include <wtf/text/StringToIntegerConversion.h>
 
 namespace WebCore {
 
@@ -58,7 +60,7 @@ private:
 static AtomString serializeANPlusB(const std::pair<int, int>&);
 static bool consumeANPlusB(CSSParserTokenRange&, std::pair<int, int>&);
 
-Optional<CSSSelectorList> parseCSSSelector(CSSParserTokenRange range, const CSSParserContext& context, StyleSheetContents* styleSheet)
+std::optional<CSSSelectorList> parseCSSSelector(CSSParserTokenRange range, const CSSParserContext& context, StyleSheetContents* styleSheet)
 {
     CSSSelectorParser parser(context, styleSheet);
     range.consumeWhitespace();
@@ -96,7 +98,8 @@ CSSSelectorList CSSSelectorParser::consumeComplexSelectorList(CSSParserTokenRang
     return CSSSelectorList { WTFMove(selectorList) };
 }
 
-CSSSelectorList CSSSelectorParser::consumeComplexForgivingSelectorList(CSSParserTokenRange& range)
+template<typename ConsumeSelector>
+CSSSelectorList CSSSelectorParser::consumeForgivingSelectorList(CSSParserTokenRange& range, ConsumeSelector&& consumeSelector)
 {
     if (m_failedParsing)
         return { };
@@ -104,7 +107,7 @@ CSSSelectorList CSSSelectorParser::consumeComplexForgivingSelectorList(CSSParser
     Vector<std::unique_ptr<CSSParserSelector>> selectorList;
 
     auto consumeForgiving = [&] {
-        auto selector = consumeComplexSelector(range);
+        auto selector = consumeSelector(range);
 
         if (m_failedParsing) {
             selector = { };
@@ -130,6 +133,20 @@ CSSSelectorList CSSSelectorParser::consumeComplexForgivingSelectorList(CSSParser
         return { };
 
     return CSSSelectorList { WTFMove(selectorList) };
+}
+
+CSSSelectorList CSSSelectorParser::consumeForgivingComplexSelectorList(CSSParserTokenRange& range)
+{
+    return consumeForgivingSelectorList(range, [&](CSSParserTokenRange& range) {
+        return consumeComplexSelector(range);
+    });
+}
+
+CSSSelectorList CSSSelectorParser::consumeForgivingRelativeSelectorList(CSSParserTokenRange& range)
+{
+    return consumeForgivingSelectorList(range, [&](CSSParserTokenRange& range) {
+        return consumeRelativeSelector(range);
+    });
 }
 
 bool CSSSelectorParser::supportsComplexSelector(CSSParserTokenRange range, const CSSParserContext& context)
@@ -241,6 +258,43 @@ std::unique_ptr<CSSParserSelector> CSSSelectorParser::consumeComplexSelector(CSS
         end->setTagHistory(WTFMove(selector));
 
         selector = WTFMove(nextSelector);
+    }
+
+    return selector;
+}
+
+std::unique_ptr<CSSParserSelector> CSSSelectorParser::consumeRelativeSelector(CSSParserTokenRange& range)
+{
+    auto scopeCombinator = consumeCombinator(range);
+
+    if (scopeCombinator == CSSSelector::Subselector)
+        scopeCombinator = CSSSelector::DescendantSpace;
+
+    auto selector = consumeComplexSelector(range);
+    if (!selector)
+        return nullptr;
+
+    auto hasScopePseudoClass = [](auto& selector) {
+        return selector.match() == CSSSelector::PseudoClass && selector.pseudoClassType() == CSSSelector::PseudoClassScope;
+    };
+
+    bool hasExplicitScope = hasScopePseudoClass(*selector);
+
+    auto* end = selector.get();
+    while (end->tagHistory()) {
+        end = end->tagHistory();
+        if (hasScopePseudoClass(*end))
+            hasExplicitScope = true;
+    }
+
+    // If the selector doesn't have an explicit :scope on the left, add an implicit one.
+    if (!hasExplicitScope || scopeCombinator != CSSSelector::DescendantSpace) {
+        auto scopeSelector = makeUnique<CSSParserSelector>();
+        scopeSelector->setMatch(CSSSelector::PseudoClass);
+        scopeSelector->setPseudoClassType(CSSSelector::PseudoClassRelativeScope);
+
+        end->setRelation(scopeCombinator);
+        end->setTagHistory(WTFMove(scopeSelector));
     }
 
     return selector;
@@ -582,7 +636,11 @@ std::unique_ptr<CSSParserSelector> CSSSelectorParser::consumePseudo(CSSParserTok
         if (selector->match() == CSSSelector::PseudoClass) {
             if (m_context.mode != UASheetMode && selector->pseudoClassType() == CSSSelector::PseudoClassDirectFocus)
                 return nullptr;
+            if (m_context.mode != UASheetMode && selector->pseudoClassType() == CSSSelector::PseudoClassModalDialog)
+                return nullptr;
             if (!m_context.focusVisibleEnabled && selector->pseudoClassType() == CSSSelector::PseudoClassFocusVisible)
+                return nullptr;
+            if (!m_context.hasPseudoClassEnabled && selector->pseudoClassType() == CSSSelector::PseudoClassHas)
                 return nullptr;
 #if ENABLE(ATTACHMENT_ELEMENT)
             if (!m_context.attachmentEnabled && selector->pseudoClassType() == CSSSelector::PseudoClassHasAttachment)
@@ -669,7 +727,7 @@ std::unique_ptr<CSSParserSelector> CSSSelectorParser::consumePseudo(CSSParserTok
             SetForScope<bool> resistDefaultNamespace(m_resistDefaultNamespace, true);
             DisallowPseudoElementsScope scope(*this);
             auto selectorList = makeUnique<CSSSelectorList>();
-            *selectorList = consumeComplexForgivingSelectorList(block);
+            *selectorList = consumeForgivingComplexSelectorList(block);
             if (!block.atEnd())
                 return nullptr;
             selector->setSelectorList(WTFMove(selectorList));
@@ -679,6 +737,15 @@ std::unique_ptr<CSSParserSelector> CSSSelectorParser::consumePseudo(CSSParserTok
         case CSSSelector::PseudoClassHost: {
             auto selectorList = makeUnique<CSSSelectorList>();
             *selectorList = consumeCompoundSelectorList(block);
+            if (selectorList->isEmpty() || !block.atEnd())
+                return nullptr;
+            selector->setSelectorList(WTFMove(selectorList));
+            return selector;
+        }
+        case CSSSelector::PseudoClassHas: {
+            DisallowPseudoElementsScope scope(*this);
+            auto selectorList = makeUnique<CSSSelectorList>();
+            *selectorList = consumeForgivingRelativeSelectorList(block);
             if (selectorList->isEmpty() || !block.atEnd())
                 return nullptr;
             selector->setSelectorList(WTFMove(selectorList));
@@ -865,7 +932,7 @@ static bool consumeANPlusB(CSSParserTokenRange& range, std::pair<int, int>& resu
         nString = range.consume().value().toString();
     } else if (token.type() == DimensionToken && token.numericValueType() == IntegerValueType) {
         result.first = token.numericValue();
-        nString = token.value().toString();
+        nString = token.unitString().toString();
     } else if (token.type() == IdentToken) {
         if (token.value()[0] == '-') {
             result.first = -1;
@@ -884,9 +951,9 @@ static bool consumeANPlusB(CSSParserTokenRange& range, std::pair<int, int>& resu
         return false;
 
     if (nString.length() > 2) {
-        bool valid;
-        result.second = nString.substring(1).toIntStrict(&valid);
-        return valid;
+        auto parsedNumber = parseInteger<int>(StringView { nString }.substring(1));
+        result.second = parsedNumber.value_or(0);
+        return parsedNumber.has_value();
     }
 
     NumericSign sign = nString.length() == 1 ? NoSign : MinusSign;

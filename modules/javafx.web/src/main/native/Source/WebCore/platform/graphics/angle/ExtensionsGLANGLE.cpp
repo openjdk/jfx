@@ -107,46 +107,6 @@ void ExtensionsGLANGLE::initializeAvailableExtensions()
     m_initializedAvailableExtensions = true;
 }
 
-PlatformGLObject ExtensionsGLANGLE::createVertexArrayOES()
-{
-    if (!m_context->makeContextCurrent())
-        return 0;
-
-    GLuint array = 0;
-    gl::GenVertexArraysOES(1, &array);
-    return array;
-}
-
-void ExtensionsGLANGLE::deleteVertexArrayOES(PlatformGLObject array)
-{
-    if (!array)
-        return;
-
-    if (!m_context->makeContextCurrent())
-        return;
-
-    gl::DeleteVertexArraysOES(1, &array);
-}
-
-GCGLboolean ExtensionsGLANGLE::isVertexArrayOES(PlatformGLObject array)
-{
-    if (!array)
-        return GL_FALSE;
-
-    if (!m_context->makeContextCurrent())
-        return GL_FALSE;
-
-    return gl::IsVertexArrayOES(array);
-}
-
-void ExtensionsGLANGLE::bindVertexArrayOES(PlatformGLObject array)
-{
-    if (!m_context->makeContextCurrent())
-        return;
-
-    gl::BindVertexArrayOES(array);
-}
-
 bool ExtensionsGLANGLE::supportsExtension(const String& name)
 {
     return m_availableExtensions.contains(name) || m_requestableExtensions.contains(name);
@@ -158,30 +118,6 @@ void ExtensionsGLANGLE::drawBuffersEXT(GCGLSpan<const GCGLenum> bufs)
         return;
 
     gl::DrawBuffersEXT(bufs.bufSize, bufs.data);
-}
-
-void ExtensionsGLANGLE::drawArraysInstancedANGLE(GCGLenum mode, GCGLint first, GCGLsizei count, GCGLsizei primcount)
-{
-    if (!m_context->makeContextCurrent())
-        return;
-
-    gl::DrawArraysInstancedANGLE(mode, first, count, primcount);
-}
-
-void ExtensionsGLANGLE::drawElementsInstancedANGLE(GCGLenum mode, GCGLsizei count, GCGLenum type, GCGLvoidptr offset, GCGLsizei primcount)
-{
-    if (!m_context->makeContextCurrent())
-        return;
-
-    gl::DrawElementsInstancedANGLE(mode, count, type, reinterpret_cast<GLvoid*>(offset), primcount);
-}
-
-void ExtensionsGLANGLE::vertexAttribDivisorANGLE(GCGLuint index, GCGLuint divisor)
-{
-    if (!m_context->makeContextCurrent())
-        return;
-
-    gl::VertexAttribDivisorANGLE(index, divisor);
 }
 
 String ExtensionsGLANGLE::getExtensions()

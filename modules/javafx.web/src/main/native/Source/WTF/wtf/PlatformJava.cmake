@@ -21,6 +21,7 @@ list(APPEND WTF_SOURCES
     java/MainThreadJava.cpp
     java/StringJava.cpp
     java/TextBreakIteratorInternalICUJava.cpp
+    java/CPUTimeJava.cpp
 )
 
 list(APPEND WTF_LIBRARIES
@@ -64,7 +65,6 @@ if (APPLE)
         BlockObjCExceptions.mm
         cf/LanguageCF.cpp
         cf/RunLoopCF.cpp
-        cocoa/CPUTimeCocoa.cpp
         cocoa/MachSendRight.cpp
         cocoa/MemoryFootprintCocoa.cpp
         cocoa/MemoryPressureHandlerCocoa.mm
@@ -87,7 +87,6 @@ elseif (UNIX)
         linux/CurrentProcessMemoryStatus.cpp
         linux/MemoryFootprintLinux.cpp
         linux/MemoryPressureHandlerLinux.cpp
-        unix/CPUTimeUnix.cpp
         unix/LanguageUnix.cpp
     )
     list(APPEND WTF_LIBRARIES rt)

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,8 +25,6 @@
 
 #pragma once
 
-#if ENABLE(INDEXED_DATABASE)
-
 #include "IDBBackingStore.h"
 #include "IDBDatabaseIdentifier.h"
 #include "IDBResourceIdentifier.h"
@@ -38,7 +36,6 @@
 namespace WebCore {
 namespace IDBServer {
 
-class IDBSerializationContext;
 class MemoryObjectStore;
 
 class MemoryIDBBackingStore final : public IDBBackingStore {
@@ -48,12 +45,11 @@ public:
     ~MemoryIDBBackingStore();
 
     IDBError getOrEstablishDatabaseInfo(IDBDatabaseInfo&) final;
+    uint64_t databaseVersion() final;
     void setDatabaseInfo(const IDBDatabaseInfo&);
 
     void removeObjectStoreForVersionChangeAbort(MemoryObjectStore&);
     void restoreObjectStoreForVersionChangeAbort(Ref<MemoryObjectStore>&&);
-
-    IDBSerializationContext& serializationContext() final;
 
 private:
     IDBError beginTransaction(const IDBTransactionInfo&) final;
@@ -84,6 +80,7 @@ private:
 
     bool supportsSimultaneousTransactions() final { return true; }
     bool isEphemeral() final { return true; }
+    String fullDatabasePath() const final { return nullString(); }
 
     bool hasTransaction(const IDBResourceIdentifier& identifier) const final { return m_transactions.contains(identifier); }
 
@@ -96,7 +93,6 @@ private:
 
     IDBDatabaseIdentifier m_identifier;
     PAL::SessionID m_sessionID;
-    Ref<IDBSerializationContext> m_serializationContext;
     std::unique_ptr<IDBDatabaseInfo> m_databaseInfo;
 
     HashMap<IDBResourceIdentifier, std::unique_ptr<MemoryBackingStoreTransaction>> m_transactions;
@@ -107,5 +103,3 @@ private:
 
 } // namespace IDBServer
 } // namespace WebCore
-
-#endif // ENABLE(INDEXED_DATABASE)

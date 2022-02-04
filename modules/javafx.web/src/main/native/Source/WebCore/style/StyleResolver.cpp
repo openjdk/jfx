@@ -74,6 +74,7 @@
 #include "UserAgentStyle.h"
 #include "VisitedLinkState.h"
 #include "WebKitFontFamilyNames.h"
+#include <wtf/IsoMallocInlines.h>
 #include <wtf/Seconds.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/Vector.h>
@@ -83,6 +84,13 @@ namespace WebCore {
 namespace Style {
 
 using namespace HTMLNames;
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(Resolver);
+
+Ref<Resolver> Resolver::create(Document& document)
+{
+    return adoptRef(*new Resolver(document));
+}
 
 Resolver::Resolver(Document& document)
     : m_ruleSets(*this)
@@ -122,9 +130,9 @@ Resolver::Resolver(Document& document)
 void Resolver::addCurrentSVGFontFaceRules()
 {
     if (m_document.svgExtensions()) {
-        const HashSet<SVGFontFaceElement*>& svgFontFaceElements = m_document.svgExtensions()->svgFontFaceElements();
-        for (auto* svgFontFaceElement : svgFontFaceElements)
-            m_document.fontSelector().addFontFaceRule(svgFontFaceElement->fontFaceRule(), svgFontFaceElement->isInUserAgentShadowTree());
+        auto& svgFontFaceElements = m_document.svgExtensions()->svgFontFaceElements();
+        for (auto& svgFontFaceElement : svgFontFaceElements)
+            m_document.fontSelector().addFontFaceRule(svgFontFaceElement.fontFaceRule(), svgFontFaceElement.isInUserAgentShadowTree());
     }
 }
 
@@ -568,7 +576,7 @@ bool Resolver::hasViewportDependentMediaQueries() const
     return m_ruleSets.hasViewportDependentMediaQueries();
 }
 
-Optional<DynamicMediaQueryEvaluationChanges> Resolver::evaluateDynamicMediaQueries()
+std::optional<DynamicMediaQueryEvaluationChanges> Resolver::evaluateDynamicMediaQueries()
 {
     return m_ruleSets.evaluateDynamicMediaQueryRules(m_mediaQueryEvaluator);
 }
