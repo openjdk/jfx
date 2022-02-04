@@ -28,7 +28,12 @@
 #pragma once
 
 #include "ActiveDOMObject.h"
+#include "CrossOriginMode.h"
 #include "DOMTimer.h"
+#include "PermissionController.h"
+#include "RTCDataChannelRemoteHandlerConnection.h"
+#include "ResourceLoaderOptions.h"
+#include "ScriptExecutionContextIdentifier.h"
 #include "SecurityContext.h"
 #include "ServiceWorkerTypes.h"
 #include "Settings.h"
@@ -38,6 +43,7 @@
 #include <wtf/Function.h>
 #include <wtf/HashSet.h>
 #include <wtf/ObjectIdentifier.h>
+#include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>
 
 namespace JSC {
@@ -57,10 +63,14 @@ namespace WebCore {
 
 class EventLoop;
 class CachedScript;
+class CSSFontSelector;
+class CSSValuePool;
 class DatabaseContext;
 class EventQueue;
 class EventLoopTaskGroup;
 class EventTarget;
+class FontCache;
+class FontLoadRequest;
 class MessagePort;
 class PublicURLManager;
 class RejectedPromiseTracker;
@@ -79,10 +89,7 @@ namespace IDBClient {
 class IDBConnectionProxy;
 }
 
-enum ScriptExecutionContextIdentifierType { };
-using ScriptExecutionContextIdentifier = ObjectIdentifier<ScriptExecutionContextIdentifierType>;
-
-class ScriptExecutionContext : public SecurityContext {
+class ScriptExecutionContext : public SecurityContext, public CanMakeWeakPtr<ScriptExecutionContext> {
 public:
     ScriptExecutionContext();
     virtual ~ScriptExecutionContext();
@@ -109,10 +116,12 @@ public:
     virtual void disableEval(const String& errorMessage) = 0;
     virtual void disableWebAssembly(const String& errorMessage) = 0;
 
-#if ENABLE(INDEXED_DATABASE)
     virtual IDBClient::IDBConnectionProxy* idbConnectionProxy() = 0;
-#endif
+    virtual RefPtr<PermissionController> permissionController() { return nullptr; }
+
     virtual SocketProvider* socketProvider() = 0;
+
+    virtual RefPtr<RTCDataChannelRemoteHandlerConnection> createRTCDataChannelRemoteHandlerConnection() { return nullptr; }
 
     virtual String resourceRequestIdentifier() const { return String(); };
 
@@ -160,6 +169,15 @@ public:
 
     virtual void didLoadResourceSynchronously(const URL&);
 
+    virtual FontCache& fontCache();
+    virtual CSSFontSelector* cssFontSelector() { return nullptr; }
+    virtual CSSValuePool& cssValuePool();
+    virtual std::unique_ptr<FontLoadRequest> fontLoadRequest(String& url, bool isSVG, bool isInitiatingElementInUserAgentShadowTree, LoadedFromOpaqueSource);
+    virtual void beginLoadingFontSoon(FontLoadRequest&) { }
+
+    WEBCORE_EXPORT static void setCrossOriginMode(CrossOriginMode);
+    static CrossOriginMode crossOriginMode();
+
     void ref() { refScriptExecutionContext(); }
     void deref() { derefScriptExecutionContext(); }
 
@@ -196,7 +214,6 @@ public:
         bool m_isCleanupTask;
     };
 
-    void enqueueTaskForDispatcher(Function<void()>&& function) { postTask(WTFMove(function)); }
     virtual void postTask(Task&&) = 0; // Executes the task on context's thread asynchronously.
 
     template<typename... Arguments>

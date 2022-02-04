@@ -29,6 +29,7 @@
 #include "SVGNames.h"
 #include "SVGParserUtilities.h"
 #include <wtf/IsoMallocInlines.h>
+#include <wtf/text/StringToIntegerConversion.h>
 
 namespace WebCore {
 
@@ -105,12 +106,12 @@ void SVGFEConvolveMatrixElement::parseAttribute(const QualifiedName& name, const
     }
 
     if (name == SVGNames::targetXAttr) {
-        m_targetX->setBaseValInternal(value.string().toUIntStrict());
+        m_targetX->setBaseValInternal(parseInteger<unsigned>(value).value_or(0));
         return;
     }
 
     if (name == SVGNames::targetYAttr) {
-        m_targetY->setBaseValInternal(value.string().toUIntStrict());
+        m_targetY->setBaseValInternal(parseInteger<unsigned>(value).value_or(0));
         return;
     }
 
@@ -246,7 +247,7 @@ RefPtr<FilterEffect> SVGFEConvolveMatrixElement::build(SVGFilterBuilder* filterB
     }
 
     auto effect = FEConvolveMatrix::create(filter, IntSize(orderXValue, orderYValue), divisorValue, bias(), IntPoint(targetXValue, targetYValue), edgeMode(), FloatPoint(kernelUnitLengthXValue, kernelUnitLengthYValue), preserveAlpha(), kernelMatrix);
-    effect->inputEffects().append(input1);
+    effect->inputEffects() = { input1 };
     return effect;
 }
 

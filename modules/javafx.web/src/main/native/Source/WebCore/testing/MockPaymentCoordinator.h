@@ -30,6 +30,7 @@
 #include "ApplePayInstallmentConfigurationWebCore.h"
 #include "ApplePayLineItem.h"
 #include "ApplePaySetupConfiguration.h"
+#include "ApplePayShippingContactEditingMode.h"
 #include "ApplePayShippingMethod.h"
 #include "MockPaymentAddress.h"
 #include "MockPaymentContactFields.h"
@@ -37,6 +38,10 @@
 #include "PaymentCoordinatorClient.h"
 #include <wtf/HashSet.h>
 #include <wtf/text/StringHash.h>
+
+#if USE(APPLE_INTERNAL_SDK)
+#include <WebKitAdditions/MockPaymentCoordinatorAdditions.h>
+#endif
 
 namespace WebCore {
 
@@ -52,6 +57,9 @@ public:
     void setShippingAddress(MockPaymentAddress&& shippingAddress) { m_shippingAddress = WTFMove(shippingAddress); }
     void changeShippingOption(String&& shippingOption);
     void changePaymentMethod(ApplePayPaymentMethod&&);
+#if ENABLE(APPLE_PAY_COUPON_CODE)
+    void changeCouponCode(String&& couponCode);
+#endif
     void acceptPayment();
     void cancelPayment();
 
@@ -72,33 +80,42 @@ public:
     ApplePayInstallmentConfiguration installmentConfiguration() const { return m_installmentConfiguration; }
 #endif
 
+#if ENABLE(APPLE_PAY_COUPON_CODE)
+    std::optional<bool> supportsCouponCode() const { return m_supportsCouponCode; }
+    const String& couponCode() const { return m_couponCode; }
+#endif
+
+#if ENABLE(APPLE_PAY_SHIPPING_CONTACT_EDITING_MODE)
+    std::optional<ApplePayShippingContactEditingMode> shippingContactEditingMode() const { return m_shippingContactEditingMode; }
+#endif
+
     void ref() const { }
     void deref() const { }
 
 private:
-    Optional<String> validatedPaymentNetwork(const String&) final;
+    std::optional<String> validatedPaymentNetwork(const String&) final;
     bool canMakePayments() final;
     void canMakePaymentsWithActiveCard(const String&, const String&, CompletionHandler<void(bool)>&&) final;
     void openPaymentSetup(const String&, const String&, CompletionHandler<void(bool)>&&) final;
     bool showPaymentUI(const URL&, const Vector<URL>&, const ApplePaySessionPaymentRequest&) final;
     void completeMerchantValidation(const PaymentMerchantSession&) final;
-    void completeShippingMethodSelection(Optional<ApplePayShippingMethodUpdate>&&) final;
-    void completeShippingContactSelection(Optional<ApplePayShippingContactUpdate>&&) final;
-    void completePaymentMethodSelection(Optional<ApplePayPaymentMethodUpdate>&&) final;
-#if ENABLE(APPLE_PAY_PAYMENT_METHOD_MODE)
-    void completePaymentMethodModeChange(Optional<ApplePayPaymentMethodModeUpdate>&&) final;
-#endif // ENABLE(APPLE_PAY_PAYMENT_METHOD_MODE)
-    void completePaymentSession(Optional<PaymentAuthorizationResult>&&) final;
+    void completeShippingMethodSelection(std::optional<ApplePayShippingMethodUpdate>&&) final;
+    void completeShippingContactSelection(std::optional<ApplePayShippingContactUpdate>&&) final;
+    void completePaymentMethodSelection(std::optional<ApplePayPaymentMethodUpdate>&&) final;
+#if ENABLE(APPLE_PAY_COUPON_CODE)
+    void completeCouponCodeChange(std::optional<ApplePayCouponCodeUpdate>&&) final;
+#endif
+    void completePaymentSession(std::optional<PaymentAuthorizationResult>&&) final;
     void abortPaymentSession() final;
     void cancelPaymentSession() final;
     void paymentCoordinatorDestroyed() final;
 
     bool isMockPaymentCoordinator() const final { return true; }
 
-    bool isAlwaysOnLoggingAllowed() const final { return true; }
-
     void getSetupFeatures(const ApplePaySetupConfiguration&, const URL&, CompletionHandler<void(Vector<Ref<ApplePaySetupFeature>>&&)>&&) final;
     void beginApplePaySetup(const ApplePaySetupConfiguration&, const URL&, Vector<RefPtr<ApplePaySetupFeature>>&&, CompletionHandler<void(bool)>&&) final;
+
+    void dispatchIfShowing(Function<void()>&&);
 
     Page& m_page;
     bool m_canMakePayments { true };
@@ -115,8 +132,19 @@ private:
 #if ENABLE(APPLE_PAY_INSTALLMENTS)
     ApplePayInstallmentConfiguration m_installmentConfiguration;
 #endif
+#if ENABLE(APPLE_PAY_COUPON_CODE)
+    std::optional<bool> m_supportsCouponCode;
+    String m_couponCode;
+#endif
+#if ENABLE(APPLE_PAY_SHIPPING_CONTACT_EDITING_MODE)
+    std::optional<ApplePayShippingContactEditingMode> m_shippingContactEditingMode;
+#endif
     ApplePaySetupConfiguration m_setupConfiguration;
     Vector<Ref<ApplePaySetupFeature>> m_setupFeatures;
+
+#if defined(MockPaymentCoordinatorAdditions_members)
+    MockPaymentCoordinatorAdditions_members
+#endif
 };
 
 } // namespace WebCore

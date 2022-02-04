@@ -410,10 +410,10 @@ bool MediaPlayerPrivate::hasAudio() const
     return m_hasAudio;
 }
 
-void MediaPlayerPrivate::setVisible(bool visible)
+void MediaPlayerPrivate::setPageIsVisible(bool visible)
 {
     if (m_isVisible != visible) {
-        PLOG_TRACE2("MediaPlayerPrivate setVisible: %d => %d\n", m_isVisible ? 1 : 0, visible ? 1 : 0);
+        PLOG_TRACE2("MediaPlayerPrivate setPageIsVisible: %d => %d\n", m_isVisible ? 1 : 0, visible ? 1 : 0);
         m_isVisible = visible;
     }
 }

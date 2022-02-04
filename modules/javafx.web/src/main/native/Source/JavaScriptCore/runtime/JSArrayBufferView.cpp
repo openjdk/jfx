@@ -172,18 +172,6 @@ void JSArrayBufferView::visitChildrenImpl(JSCell* cell, Visitor& visitor)
 
 DEFINE_VISIT_CHILDREN(JSArrayBufferView);
 
-bool JSArrayBufferView::put(
-    JSCell* cell, JSGlobalObject* globalObject, PropertyName propertyName, JSValue value,
-    PutPropertySlot& slot)
-{
-    JSArrayBufferView* thisObject = jsCast<JSArrayBufferView*>(cell);
-
-    if (UNLIKELY(isThisValueAltered(slot, thisObject)))
-        return ordinarySetSlow(globalObject, thisObject, propertyName, value, slot.thisValue(), slot.isStrictMode());
-
-    return Base::put(thisObject, globalObject, propertyName, value, slot);
-}
-
 ArrayBuffer* JSArrayBufferView::unsharedBuffer()
 {
     ArrayBuffer* result = possiblySharedBuffer();
@@ -225,7 +213,7 @@ JSArrayBuffer* JSArrayBufferView::possiblySharedJSBuffer(JSGlobalObject* globalO
 
 void JSArrayBufferView::detach()
 {
-    auto locker = holdLock(cellLock());
+    Locker locker { cellLock() };
     RELEASE_ASSERT(hasArrayBuffer());
     RELEASE_ASSERT(!isShared());
     m_length = 0;
@@ -309,7 +297,7 @@ ArrayBuffer* JSArrayBufferView::slowDownAndWasteMemory()
         structure->outOfLineCapacity(), false, 0, 0));
 
     {
-        auto locker = holdLock(cellLock());
+        Locker locker { cellLock() };
         butterfly()->indexingHeader()->setArrayBuffer(buffer.get());
         m_vector.setWithoutBarrier(buffer->data(), m_length);
         WTF::storeStoreFence();

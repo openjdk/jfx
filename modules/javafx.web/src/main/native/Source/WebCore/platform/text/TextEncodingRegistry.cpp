@@ -95,10 +95,10 @@ struct TextEncodingNameHash {
 using TextEncodingNameMap = HashMap<const char*, const char*, TextEncodingNameHash>;
 using TextCodecMap = HashMap<const char*, NewTextCodecFunction>;
 
-static Lock encodingRegistryMutex;
+static Lock encodingRegistryLock;
 
-static TextEncodingNameMap* textEncodingNameMap;
-static TextCodecMap* textCodecMap;
+static TextEncodingNameMap* textEncodingNameMap WTF_GUARDED_BY_LOCK(encodingRegistryLock);
+static TextCodecMap* textCodecMap WTF_GUARDED_BY_LOCK(encodingRegistryLock);
 static bool didExtendTextCodecMaps;
 static HashSet<const char*>* japaneseEncodings;
 static HashSet<const char*>* nonBackslashEncodings;
@@ -119,7 +119,7 @@ static bool isUndesiredAlias(const char* alias)
     return false;
 }
 
-static void addToTextEncodingNameMap(const char* alias, const char* name)
+static void addToTextEncodingNameMap(const char* alias, const char* name) WTF_REQUIRES_LOCK(encodingRegistryLock)
 {
     ASSERT(strlen(alias) <= maxEncodingNameLength);
     if (isUndesiredAlias(alias))
@@ -134,14 +134,14 @@ static void addToTextEncodingNameMap(const char* alias, const char* name)
     textEncodingNameMap->add(alias, atomName);
 }
 
-static void addToTextCodecMap(const char* name, NewTextCodecFunction&& function)
+static void addToTextCodecMap(const char* name, NewTextCodecFunction&& function) WTF_REQUIRES_LOCK(encodingRegistryLock)
 {
     const char* atomName = textEncodingNameMap->get(name);
     ASSERT(atomName);
     textCodecMap->add(atomName, WTFMove(function));
 }
 
-static void pruneBlocklistedCodecs()
+static void pruneBlocklistedCodecs() WTF_REQUIRES_LOCK(encodingRegistryLock)
 {
     for (auto& nameFromBlocklist : textEncodingNameBlocklist) {
         auto* atomName = textEncodingNameMap->get(nameFromBlocklist);
@@ -161,7 +161,7 @@ static void pruneBlocklistedCodecs()
     }
 }
 
-static void buildBaseTextCodecMaps(const AbstractLocker&)
+static void buildBaseTextCodecMaps() WTF_REQUIRES_LOCK(encodingRegistryLock)
 {
     ASSERT(!textCodecMap);
     ASSERT(!textEncodingNameMap);
@@ -182,7 +182,7 @@ static void buildBaseTextCodecMaps(const AbstractLocker&)
     TextCodecUserDefined::registerCodecs(addToTextCodecMap);
 }
 
-static void addEncodingName(HashSet<const char*>* set, const char* name)
+static void addEncodingName(HashSet<const char*>* set, const char* name) WTF_REQUIRES_LOCK(encodingRegistryLock)
 {
     // We must not use atomCanonicalTextEncodingName() because this function is called in it.
     const char* atomName = textEncodingNameMap->get(name);
@@ -190,7 +190,7 @@ static void addEncodingName(HashSet<const char*>* set, const char* name)
         set->add(atomName);
 }
 
-static void buildQuirksSets()
+static void buildQuirksSets() WTF_REQUIRES_LOCK(encodingRegistryLock)
 {
     // FIXME: Having isJapaneseEncoding() and shouldShowBackslashAsCurrencySymbolIn()
     // and initializing the sets for them in TextEncodingRegistry.cpp look strange.
@@ -235,7 +235,7 @@ bool shouldShowBackslashAsCurrencySymbolIn(const char* canonicalEncodingName)
     return canonicalEncodingName && nonBackslashEncodings && nonBackslashEncodings->contains(canonicalEncodingName);
 }
 
-static void extendTextCodecMaps()
+static void extendTextCodecMaps() WTF_REQUIRES_LOCK(encodingRegistryLock)
 {
     TextCodecReplacement::registerEncodingNames(addToTextEncodingNameMap);
     TextCodecReplacement::registerCodecs(addToTextCodecMap);
@@ -260,7 +260,7 @@ static void extendTextCodecMaps()
 
 std::unique_ptr<TextCodec> newTextCodec(const TextEncoding& encoding)
 {
-    auto locker = holdLock(encodingRegistryMutex);
+    Locker locker { encodingRegistryLock };
 
     ASSERT(textCodecMap);
     auto result = textCodecMap->find(encoding.name());
@@ -273,10 +273,10 @@ const char* atomCanonicalTextEncodingName(const char* name)
     if (!name || !name[0])
         return nullptr;
 
-    auto locker = holdLock(encodingRegistryMutex);
+    Locker locker { encodingRegistryLock };
 
     if (!textEncodingNameMap)
-        buildBaseTextCodecMaps(locker);
+        buildBaseTextCodecMaps();
 
     if (const char* atomName = textEncodingNameMap->get(name))
         return atomName;

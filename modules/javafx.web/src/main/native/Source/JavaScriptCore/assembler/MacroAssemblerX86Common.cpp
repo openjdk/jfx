@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -36,8 +36,6 @@
 #endif
 
 namespace JSC {
-
-#if ENABLE(MASM_PROBE)
 
 extern "C" JSC_DECLARE_JIT_OPERATION(ctiMasmProbeTrampoline, void, ());
 JSC_ANNOTATE_JIT_OPERATION(ctiMasmProbeTrampolineId, ctiMasmProbeTrampoline);
@@ -107,7 +105,9 @@ JSC_ANNOTATE_JIT_OPERATION(ctiMasmProbeTrampolineId, ctiMasmProbeTrampoline);
 #define PROBE_SIZE (PROBE_CPU_XMM15_OFFSET + XMM_SIZE)
 #endif // CPU(X86_64)
 
-#define PROBE_EXECUTOR_OFFSET PROBE_SIZE // Stash the executeProbe function pointer at the end of the ProbeContext.
+#if COMPILER(MSVC) || CPU(X86)
+#define PROBE_EXECUTOR_OFFSET PROBE_SIZE // Stash the executeJSCJITProbe function pointer at the end of the ProbeContext.
+#endif
 
 // The outgoing record to be popped off the stack at the end consists of:
 // eflags, eax, ecx, ebp, eip.
@@ -167,7 +167,9 @@ static_assert(PROBE_OFFSETOF_REG(cpu.fprs, X86Registers::xmm15) == PROBE_CPU_XMM
 #endif // CPU(X86_64)
 
 static_assert(sizeof(Probe::State) == PROBE_SIZE, "Probe::State::size's matches ctiMasmProbeTrampoline");
+#if COMPILER(MSVC) || CPU(X86)
 static_assert((PROBE_EXECUTOR_OFFSET + PTR_SIZE) <= (PROBE_SIZE + OUT_SIZE), "Must have room after ProbeContext to stash the probe handler");
+#endif
 
 #undef PROBE_OFFSETOF
 
@@ -191,7 +193,7 @@ asm (
     //     esp[5 * ptrSize]: saved eax
     //
     // Incoming registers contain:
-    //     ecx: Probe::executeProbe
+    //     ecx: Probe::executeJSCJITProbe
     //     edx: probe function
     //     ebx: probe arg
     //     eax: scratch (was ctiMasmProbeTrampoline)
@@ -358,7 +360,7 @@ extern "C" __declspec(naked) void ctiMasmProbeTrampoline()
         //     esp[5 * ptrSize]: saved eax
         //
         // Incoming registers contain:
-        //     ecx: Probe::executeProbe
+        //     ecx: Probe::executeJSCJITProbe
         //     edx: probe function
         //     ebx: probe arg
         //     eax: scratch (was ctiMasmProbeTrampoline)
@@ -530,11 +532,9 @@ asm (
     //     rbp[1 * ptrSize]: return address / saved rip
     //     rbp[2 * ptrSize]: saved rbx
     //     rbp[3 * ptrSize]: saved rdx
-    //     rbp[4 * ptrSize]: saved rcx
-    //     rbp[5 * ptrSize]: saved rax
+    //     rbp[4 * ptrSize]: saved rax
     //
     // Incoming registers contain:
-    //     rcx: Probe::executeProbe
     //     rdx: probe function
     //     rbx: probe arg
     //     rax: scratch (was ctiMasmProbeTrampoline)
@@ -545,11 +545,12 @@ asm (
     "andq $~0x1f, %rsp" "\n"
     // Since sp points to the Probe::State, we've ensured that it's protected from interrupts before we initialize it.
 
-    "movq %rcx, " STRINGIZE_VALUE_OF(PROBE_EXECUTOR_OFFSET) "(%rsp)" "\n"
     "movq %rdx, " STRINGIZE_VALUE_OF(PROBE_PROBE_FUNCTION_OFFSET) "(%rsp)" "\n"
     "movq %rbx, " STRINGIZE_VALUE_OF(PROBE_ARG_OFFSET) "(%rsp)" "\n"
     "movq %rsi, " STRINGIZE_VALUE_OF(PROBE_CPU_ESI_OFFSET) "(%rsp)" "\n"
     "movq %rdi, " STRINGIZE_VALUE_OF(PROBE_CPU_EDI_OFFSET) "(%rsp)" "\n"
+
+    "movq %rcx, " STRINGIZE_VALUE_OF(PROBE_CPU_ECX_OFFSET) "(%rsp)" "\n"
 
     "movq -1 * " STRINGIZE_VALUE_OF(PTR_SIZE) "(%rbp), %rcx" "\n"
     "movq %rcx, " STRINGIZE_VALUE_OF(PROBE_CPU_EFLAGS_OFFSET) "(%rsp)" "\n"
@@ -562,8 +563,6 @@ asm (
     "movq 3 * " STRINGIZE_VALUE_OF(PTR_SIZE) "(%rbp), %rcx" "\n"
     "movq %rcx, " STRINGIZE_VALUE_OF(PROBE_CPU_EDX_OFFSET) "(%rsp)" "\n"
     "movq 4 * " STRINGIZE_VALUE_OF(PTR_SIZE) "(%rbp), %rcx" "\n"
-    "movq %rcx, " STRINGIZE_VALUE_OF(PROBE_CPU_ECX_OFFSET) "(%rsp)" "\n"
-    "movq 5 * " STRINGIZE_VALUE_OF(PTR_SIZE) "(%rbp), %rcx" "\n"
     "movq %rcx, " STRINGIZE_VALUE_OF(PROBE_CPU_EAX_OFFSET) "(%rsp)" "\n"
 
     "movq %rbp, %rcx" "\n"
@@ -597,7 +596,7 @@ asm (
     "movq %xmm15, " STRINGIZE_VALUE_OF(PROBE_CPU_XMM15_OFFSET) "(%rsp)" "\n"
 
     "movq %rsp, %rdi" "\n" // the Probe::State* arg.
-    "call *" STRINGIZE_VALUE_OF(PROBE_EXECUTOR_OFFSET) "(%rsp)" "\n"
+    "call " SYMBOL_STRING(executeJSCJITProbe) "\n"
 
     // Make sure the Probe::State is entirely below the result stack pointer so
     // that register values are still preserved when we call the initializeStack
@@ -753,17 +752,23 @@ asm (
 
 void MacroAssembler::probe(Probe::Function function, void* arg)
 {
+#if CPU(X86_64) && COMPILER(GCC_COMPATIBLE)
+    // Extra push so that the total number of pushes pad out to 32-bytes, and the
+    // stack pointer remains 32 byte aligned as required by the ABI.
+    push(RegisterID::eax);
+#endif
     push(RegisterID::eax);
     move(TrustedImmPtr(reinterpret_cast<void*>(ctiMasmProbeTrampoline)), RegisterID::eax);
+#if COMPILER(MSVC) || CPU(X86)
     push(RegisterID::ecx);
-    move(TrustedImmPtr(reinterpret_cast<void*>(Probe::executeProbe)), RegisterID::ecx);
+    move(TrustedImmPtr(reinterpret_cast<void*>(Probe::executeJSCJITProbe)), RegisterID::ecx);
+#endif
     push(RegisterID::edx);
     move(TrustedImmPtr(reinterpret_cast<void*>(function)), RegisterID::edx);
     push(RegisterID::ebx);
     move(TrustedImmPtr(arg), RegisterID::ebx);
     call(RegisterID::eax, CFunctionPtrTag);
 }
-#endif // ENABLE(MASM_PROBE)
 
 MacroAssemblerX86Common::CPUID MacroAssemblerX86Common::getCPUID(unsigned level)
 {

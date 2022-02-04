@@ -251,6 +251,17 @@ AnimatedImageAsyncDecodingEnabled:
       default: true
     WebCore:
       default: true
+      
+AppHighlightsEnabled:
+  type: bool
+  condition: ENABLE(APP_HIGHLIGHTS)
+  defaultValue:
+    WebKitLegacy:
+      default: false
+    WebKit:
+      default: false
+    WebCore:
+      default: false
 
 AppleMailPaginationQuirkEnabled:
   type: bool
@@ -449,7 +460,7 @@ ConstantPropertiesEnabled:
 
 ContentChangeObserverEnabled:
   type: bool
-  condition: PLATFORM(IOS_FAMILY)
+  condition: ENABLE(CONTENT_CHANGE_OBSERVER)
   defaultValue:
     WebKitLegacy:
       default: true
@@ -740,17 +751,6 @@ EncryptedMediaAPIEnabled:
     WebCore:
       default: false
 
-EnforceCSSMIMETypeInNoQuirksMode:
-  type: bool
-  defaultValue:
-    WebKitLegacy:
-      PLATFORM(MAC): WebKit::defaultEnforceCSSMIMETypeInNoQuirksMode()
-      default: true
-    WebKit:
-      default: true
-    WebCore:
-      default: true
-
 EnumeratingAllNetworkInterfacesEnabled:
   type: bool
   webcoreBinding: none
@@ -758,6 +758,16 @@ EnumeratingAllNetworkInterfacesEnabled:
   defaultValue:
     WebKit:
       default: false
+
+ExtensibleSSOEnabled:
+  type: bool
+  getter: isExtensibleSSOEnabled
+  webcoreBinding: none
+  condition: HAVE(APP_SSO)
+  exposed: [ WebKit ]
+  defaultValue:
+    WebKit:
+      default: true
 
 FTPDirectoryTemplatePath:
   type: String
@@ -1422,7 +1432,6 @@ MediaPreloadingEnabled:
 
 MediaSourceEnabled:
   type: bool
-  condition: ENABLE(MEDIA_SOURCE)
   defaultValue:
     WebKitLegacy:
       default: true
@@ -1520,18 +1529,6 @@ MockScrollbarsEnabled:
     WebKit:
       default: false
 
-ModernMediaControlsEnabled:
-  type: bool
-  humanReadableName: "Modern Media Controls"
-  humanReadableDescription: "Use modern media controls look"
-  webcoreBinding: RuntimeEnabledFeatures
-  defaultValue:
-    WebKitLegacy:
-      default: true
-    WebKit:
-      "PLATFORM(COCOA)": true
-      default: false
-
 NeedsAdobeFrameReloadingQuirk:
   comment: 'FIXME: This quirk is needed because of Radar 4674537 and 5211271. We need
     to phase it out once Adobe can fix the bug from their end.'
@@ -1551,18 +1548,6 @@ NeedsFrameNameFallbackToIdQuirk:
   defaultValue:
     WebKitLegacy:
       PLATFORM(MAC): WebKit::defaultNeedsFrameNameFallbackToIdQuirk()
-      default: false
-    WebKit:
-      default: false
-    WebCore:
-      default: false
-
-NeedsIsLoadingInAPISenseQuirk:
-  comment: Some apps needs isLoadingInAPISense to account for active subresource loaders.
-  type: bool
-  defaultValue:
-    WebKitLegacy:
-      PLATFORM(MAC): WebKit::defaultNeedsIsLoadingInAPISenseQuirk()
       default: false
     WebKit:
       default: false
@@ -1623,7 +1608,7 @@ OfflineWebApplicationCacheEnabled:
     WebKitLegacy:
       default: false
     WebKit:
-      default: true
+      default: WebKit::defaultOfflineWebApplicationCacheEnabled()
     WebCore:
       default: false
 
@@ -1694,13 +1679,14 @@ PasswordEchoEnabled:
 
 PeerConnectionEnabled:
   type: bool
-  webcoreBinding: RuntimeEnabledFeatures
   condition: ENABLE(WEB_RTC)
   defaultValue:
     WebKitLegacy:
       default: true
     WebKit:
       default: WebCore::LibWebRTCProvider::webRTCAvailable()
+    WebCore:
+      default: true
 
 PictographFontFamily:
   type: String
@@ -1784,6 +1770,16 @@ RequestAnimationFrameEnabled:
     WebCore:
       default: true
 
+RequiresPageVisibilityToPlayAudio:
+  type: bool
+  defaultValue:
+    WebKitLegacy:
+      default: false
+    WebKit:
+      default: false
+    WebCore:
+      default: false
+
 RequiresUserGestureForAudioPlayback:
   type: bool
   webKitLegacyPreferenceKey: WebKitAudioPlaybackRequiresUserGesture
@@ -1846,6 +1842,26 @@ SafeBrowsingEnabled:
   defaultValue:
     WebKit:
       default: true
+
+SampledPageTopColorMaxDifference:
+  type: double
+  defaultValue:
+    WebKitLegacy:
+      default: 0
+    WebKit:
+      default: 0
+    WebCore:
+      default: 0
+
+SampledPageTopColorMinHeight:
+  type: double
+  defaultValue:
+    WebKitLegacy:
+      default: 0
+    WebKit:
+      default: 0
+    WebCore:
+      default: 0
 
 SansSerifFontFamily:
   type: String

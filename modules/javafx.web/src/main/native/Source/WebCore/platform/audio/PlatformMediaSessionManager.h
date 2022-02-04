@@ -26,9 +26,9 @@
 #ifndef PlatformMediaSessionManager_h
 #define PlatformMediaSessionManager_h
 
-#include "GenericTaskQueue.h"
-#include "MediaSessionIdentifier.h"
+#include "MediaUniqueIdentifier.h"
 #include "PlatformMediaSession.h"
+#include "RemoteCommandListener.h"
 #include "Timer.h"
 #include <wtf/AggregateLogger.h>
 #include <wtf/Vector.h>
@@ -38,19 +38,16 @@
 namespace WebCore {
 
 class PlatformMediaSession;
-class RemoteCommandListener;
 
 class PlatformMediaSessionManager
-    : public CanMakeWeakPtr<PlatformMediaSessionManager>
 #if !RELEASE_LOG_DISABLED
-    , private LoggerHelper
+    : private LoggerHelper
 #endif
 {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     WEBCORE_EXPORT static PlatformMediaSessionManager* sharedManagerIfExists();
     WEBCORE_EXPORT static PlatformMediaSessionManager& sharedManager();
-    WEBCORE_EXPORT static std::unique_ptr<PlatformMediaSessionManager> create();
 
     static void updateNowPlayingInfoIfNecessary();
 
@@ -63,6 +60,15 @@ public:
     WEBCORE_EXPORT static bool vorbisDecoderEnabled();
     WEBCORE_EXPORT static void setOpusDecoderEnabled(bool);
     WEBCORE_EXPORT static bool opusDecoderEnabled();
+
+#if ENABLE(VP9)
+    WEBCORE_EXPORT static void setShouldEnableVP9Decoder(bool);
+    WEBCORE_EXPORT static bool shouldEnableVP9Decoder();
+    WEBCORE_EXPORT static void setShouldEnableVP8Decoder(bool);
+    WEBCORE_EXPORT static bool shouldEnableVP8Decoder();
+    WEBCORE_EXPORT static void setShouldEnableVP9SWDecoder(bool);
+    WEBCORE_EXPORT static bool shouldEnableVP9SWDecoder();
+#endif
 
     virtual ~PlatformMediaSessionManager() = default;
 
@@ -77,7 +83,7 @@ public:
     virtual String lastUpdatedNowPlayingTitle() const { return emptyString(); }
     virtual double lastUpdatedNowPlayingDuration() const { return NAN; }
     virtual double lastUpdatedNowPlayingElapsedTime() const { return NAN; }
-    virtual MediaSessionIdentifier lastUpdatedNowPlayingInfoUniqueIdentifier() const { return { }; }
+    virtual MediaUniqueIdentifier lastUpdatedNowPlayingInfoUniqueIdentifier() const { return { }; }
     virtual bool registeredAsNowPlayingApplication() const { return false; }
     virtual bool haveEverRegisteredAsNowPlayingApplication() const { return false; }
     virtual void prepareToSendUserMediaPermissionRequest() { }
@@ -156,12 +162,16 @@ public:
 
     virtual void addSupportedCommand(PlatformMediaSession::RemoteControlCommandType) { };
     virtual void removeSupportedCommand(PlatformMediaSession::RemoteControlCommandType) { };
+    virtual RemoteCommandListener::RemoteCommandsSet supportedCommands() const { return { }; };
 
     WEBCORE_EXPORT void processSystemWillSleep();
     WEBCORE_EXPORT void processSystemDidWake();
 
+    virtual void resetHaveEverRegisteredAsNowPlayingApplicationForTesting() { };
+
 protected:
     friend class PlatformMediaSession;
+    static std::unique_ptr<PlatformMediaSessionManager> create();
     PlatformMediaSessionManager();
 
     virtual void addSession(PlatformMediaSession&);
@@ -172,9 +182,8 @@ protected:
     bool anyOfSessions(const Function<bool(const PlatformMediaSession&)>&) const;
 
     bool isApplicationInBackground() const { return m_isApplicationInBackground; }
-#if USE(AUDIO_SESSION)
     void maybeDeactivateAudioSession();
-#endif
+    bool maybeActivateAudioSession();
 
 #if !RELEASE_LOG_DISABLED
     const Logger& logger() const final { return m_logger; }
@@ -209,7 +218,7 @@ private:
 #endif
 
     WeakHashSet<PlatformMediaSession::AudioCaptureSource> m_audioCaptureSources;
-    GenericTaskQueue<Timer> updateSessionStateQueue;
+    bool m_hasScheduledSessionStateUpdate { false };
 
 #if ENABLE(WEBM_FORMAT_READER)
     static bool m_webMFormatReaderEnabled;
@@ -219,6 +228,12 @@ private:
 #endif
 #if ENABLE(OPUS) && PLATFORM(MAC)
     static bool m_opusDecoderEnabled;
+#endif
+
+#if ENABLE(VP9)
+    static bool m_vp9DecoderEnabled;
+    static bool m_vp8DecoderEnabled;
+    static bool m_vp9SWDecoderEnabled;
 #endif
 
 #if !RELEASE_LOG_DISABLED

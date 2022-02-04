@@ -2,6 +2,7 @@
  * Copyright (C) 2008 Alex Mathews <possessedpenguinbob@gmail.com>
  * Copyright (C) 2009 Dirk Schulze <krit@webkit.org>
  * Copyright (C) Research In Motion Limited 2010. All rights reserved.
+ * Copyright (C) 2021 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -22,10 +23,11 @@
 #pragma once
 
 #include "AlphaPremultiplication.h"
-#include "ColorSpace.h"
+#include "DestinationColorSpace.h"
 #include "FloatRect.h"
 #include "IntRect.h"
 #include "IntRectExtent.h"
+#include "PixelBuffer.h"
 #include <JavaScriptCore/Uint8ClampedArray.h>
 #include <wtf/MathExtras.h>
 #include <wtf/RefCounted.h>
@@ -41,7 +43,6 @@ namespace WebCore {
 class Filter;
 class FilterEffect;
 class ImageBuffer;
-class ImageData;
 
 typedef Vector<RefPtr<FilterEffect>> FilterEffectVector;
 
@@ -82,10 +83,10 @@ public:
     void clearResultsRecursive();
 
     ImageBuffer* imageBufferResult();
-    RefPtr<Uint8ClampedArray> unmultipliedResult(const IntRect&, Optional<DestinationColorSpace> = WTF::nullopt);
-    RefPtr<Uint8ClampedArray> premultipliedResult(const IntRect&, Optional<DestinationColorSpace> = WTF::nullopt);
-    void copyUnmultipliedResult(Uint8ClampedArray& destination, const IntRect&, Optional<DestinationColorSpace> = WTF::nullopt);
-    void copyPremultipliedResult(Uint8ClampedArray& destination, const IntRect&, Optional<DestinationColorSpace> = WTF::nullopt);
+    RefPtr<Uint8ClampedArray> unmultipliedResult(const IntRect&, std::optional<DestinationColorSpace> = std::nullopt);
+    RefPtr<Uint8ClampedArray> premultipliedResult(const IntRect&, std::optional<DestinationColorSpace> = std::nullopt);
+    void copyUnmultipliedResult(Uint8ClampedArray& destination, const IntRect&, std::optional<DestinationColorSpace> = std::nullopt);
+    void copyPremultipliedResult(Uint8ClampedArray& destination, const IntRect&, std::optional<DestinationColorSpace> = std::nullopt);
     FilterEffectVector& inputEffects() { return m_inputEffects; }
     FilterEffect* inputEffect(unsigned) const;
     unsigned numberOfEffectInputs() const { return m_inputEffects.size(); }
@@ -100,7 +101,7 @@ public:
     }
 
     FloatRect drawingRegionOfInputImage(const IntRect&) const;
-    IntRect requestedRegionOfInputImageData(const IntRect&) const;
+    IntRect requestedRegionOfInputPixelBuffer(const IntRect&) const;
 
     // Recurses on inputs.
     FloatRect determineFilterPrimitiveSubregion();
@@ -163,13 +164,13 @@ public:
     bool clipsToBounds() const { return m_clipsToBounds; }
     void setClipsToBounds(bool value) { m_clipsToBounds = value; }
 
-    DestinationColorSpace operatingColorSpace() const { return m_operatingColorSpace; }
-    virtual void setOperatingColorSpace(DestinationColorSpace colorSpace) { m_operatingColorSpace = colorSpace; }
-    DestinationColorSpace resultColorSpace() const { return m_resultColorSpace; }
-    virtual void setResultColorSpace(DestinationColorSpace colorSpace) { m_resultColorSpace = colorSpace; }
+    const DestinationColorSpace& operatingColorSpace() const { return m_operatingColorSpace; }
+    virtual void setOperatingColorSpace(const DestinationColorSpace& colorSpace) { m_operatingColorSpace = colorSpace; }
+    const DestinationColorSpace& resultColorSpace() const { return m_resultColorSpace; }
+    virtual void setResultColorSpace(const DestinationColorSpace& colorSpace) { m_resultColorSpace = colorSpace; }
 
     virtual void transformResultColorSpace(FilterEffect* in, const int) { in->transformResultColorSpace(m_operatingColorSpace); }
-    void transformResultColorSpace(DestinationColorSpace);
+    void transformResultColorSpace(const DestinationColorSpace&);
 
     static Vector<float> normalizedFloats(const Vector<float>& values)
     {
@@ -185,8 +186,8 @@ protected:
     virtual const char* filterName() const = 0;
 
     ImageBuffer* createImageBufferResult();
-    ImageData* createUnmultipliedImageResult();
-    ImageData* createPremultipliedImageResult();
+    std::optional<PixelBuffer>& createUnmultipliedImageResult();
+    std::optional<PixelBuffer>& createPremultipliedImageResult();
 
     // Return true if the filter will only operate correctly on valid RGBA values, with
     // alpha in [0,255] and each color component in [0, alpha].
@@ -201,19 +202,19 @@ private:
     virtual void platformApplySoftware() = 0;
 
     void copyImageBytes(const Uint8ClampedArray& source, Uint8ClampedArray& destination, const IntRect&) const;
-    void copyConvertedImageBufferToDestination(Uint8ClampedArray&, DestinationColorSpace, AlphaPremultiplication, const IntRect&);
-    void copyConvertedImageDataToDestination(Uint8ClampedArray&, ImageData&, DestinationColorSpace, AlphaPremultiplication, const IntRect&);
-    bool requiresImageDataColorSpaceConversion(Optional<DestinationColorSpace>);
-    RefPtr<ImageData> convertImageDataToColorSpace(DestinationColorSpace, ImageData&, AlphaPremultiplication);
-    RefPtr<ImageData> convertImageBufferToColorSpace(DestinationColorSpace, ImageBuffer&, const IntRect&, AlphaPremultiplication);
+    void copyConvertedImageBufferToDestination(Uint8ClampedArray&, const DestinationColorSpace&, AlphaPremultiplication, const IntRect&);
+    void copyConvertedPixelBufferToDestination(Uint8ClampedArray&, PixelBuffer&, const DestinationColorSpace&, const IntRect&);
+    bool requiresPixelBufferColorSpaceConversion(std::optional<DestinationColorSpace>);
+    std::optional<PixelBuffer> convertImageBufferToColorSpace(const DestinationColorSpace&, ImageBuffer&, const IntRect&, AlphaPremultiplication);
+    std::optional<PixelBuffer> convertPixelBufferToColorSpace(const DestinationColorSpace&, PixelBuffer&);
 
 
     Filter& m_filter;
     FilterEffectVector m_inputEffects;
 
     RefPtr<ImageBuffer> m_imageBufferResult;
-    RefPtr<ImageData> m_unmultipliedImageResult;
-    RefPtr<ImageData> m_premultipliedImageResult;
+    std::optional<PixelBuffer> m_unmultipliedImageResult;
+    std::optional<PixelBuffer> m_premultipliedImageResult;
 
     IntRect m_absolutePaintRect;
 
@@ -241,8 +242,12 @@ private:
     // Should the effect clip to its primitive region, or expand to use the combined region of its inputs.
     bool m_clipsToBounds { true };
 
-    DestinationColorSpace m_operatingColorSpace { DestinationColorSpace::LinearSRGB };
-    DestinationColorSpace m_resultColorSpace { DestinationColorSpace::SRGB };
+#if ENABLE(DESTINATION_COLOR_SPACE_LINEAR_SRGB)
+    DestinationColorSpace m_operatingColorSpace { DestinationColorSpace::LinearSRGB() };
+#else
+    DestinationColorSpace m_operatingColorSpace { DestinationColorSpace::SRGB() };
+#endif
+    DestinationColorSpace m_resultColorSpace { DestinationColorSpace::SRGB() };
 
     const Type m_filterEffectClassType;
 };

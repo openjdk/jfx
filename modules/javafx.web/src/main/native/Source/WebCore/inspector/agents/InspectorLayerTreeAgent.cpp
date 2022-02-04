@@ -257,6 +257,8 @@ Protocol::ErrorStringOr<Ref<Protocol::LayerTree::CompositingReasons>> InspectorL
         compositingReasons->setPlugin(true);
     else if (reasons.contains(CompositingReason::IFrame))
         compositingReasons->setIFrame(true);
+    else if (reasons.contains(CompositingReason::Model))
+        compositingReasons->setModel(true);
 
     if (reasons.contains(CompositingReason::BackfaceVisibilityHidden))
         compositingReasons->setBackfaceVisibilityHidden(true);
@@ -349,16 +351,18 @@ String InspectorLayerTreeAgent::bindPseudoElement(PseudoElement* pseudoElement)
 {
     if (!pseudoElement)
         return emptyString();
-    return m_pseudoElementToIdMap.ensure(pseudoElement, [this, pseudoElement] {
+    return m_pseudoElementToIdMap.ensure(*pseudoElement, [this, pseudoElement] {
         auto identifier = IdentifiersFactory::createIdentifier();
-        m_idToPseudoElement.set(identifier, pseudoElement);
+        m_idToPseudoElement.set(identifier, makeWeakPtr(pseudoElement));
         return identifier;
     }).iterator->value;
 }
 
 void InspectorLayerTreeAgent::unbindPseudoElement(PseudoElement* pseudoElement)
 {
-    auto identifier = m_pseudoElementToIdMap.take(pseudoElement);
+    if (!pseudoElement)
+        return;
+    auto identifier = m_pseudoElementToIdMap.take(*pseudoElement);
     if (identifier.isNull())
         return;
     m_idToPseudoElement.remove(identifier);

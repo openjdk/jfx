@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,7 +28,7 @@
 #include "MacroAssembler.h"
 #include "ProbeStack.h"
 
-#if ENABLE(MASM_PROBE)
+#if ENABLE(ASSEMBLER)
 
 namespace JSC {
 namespace Probe {
@@ -116,6 +116,8 @@ inline void*& CPUState::pc()
     return *reinterpret_cast<void**>(&gpr(ARMRegisters::pc));
 #elif CPU(MIPS)
     return *reinterpret_cast<void**>(&spr(MIPSRegisters::pc));
+#elif CPU(RISCV64)
+    return *reinterpret_cast<void**>(&spr(RISCV64Registers::pc));
 #else
 #error "Unsupported CPU"
 #endif
@@ -131,6 +133,8 @@ inline void*& CPUState::fp()
     return *reinterpret_cast<void**>(&gpr(ARMRegisters::fp));
 #elif CPU(MIPS)
     return *reinterpret_cast<void**>(&gpr(MIPSRegisters::fp));
+#elif CPU(RISCV64)
+    return *reinterpret_cast<void**>(&gpr(RISCV64Registers::fp));
 #else
 #error "Unsupported CPU"
 #endif
@@ -146,6 +150,8 @@ inline void*& CPUState::sp()
     return *reinterpret_cast<void**>(&gpr(ARMRegisters::sp));
 #elif CPU(MIPS)
     return *reinterpret_cast<void**>(&gpr(MIPSRegisters::sp));
+#elif CPU(RISCV64)
+    return *reinterpret_cast<void**>(&gpr(RISCV64Registers::sp));
 #else
 #error "Unsupported CPU"
 #endif
@@ -243,9 +249,9 @@ private:
     friend JS_EXPORT_PRIVATE void* probeStateForContext(Context&); // Not for general use. This should only be for writing tests.
 };
 
-void executeProbe(State*);
+extern "C" void executeJSCJITProbe(State*);
 
 } // namespace Probe
 } // namespace JSC
 
-#endif // ENABLE(MASM_PROBE)
+#endif // ENABLE(ASSEMBLER)

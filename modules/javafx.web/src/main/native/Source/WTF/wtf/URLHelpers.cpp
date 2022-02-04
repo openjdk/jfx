@@ -34,15 +34,11 @@
 #include <mutex>
 #include <unicode/uidna.h>
 #include <unicode/uscript.h>
-#include <wtf/Optional.h>
 #include <wtf/text/WTFString.h>
 
 namespace WTF {
 namespace URLHelpers {
 
-// Needs to be big enough to hold an IDN-encoded name.
-// For host names bigger than this, we won't do IDN encoding, which is almost certainly OK.
-constexpr unsigned hostNameBufferLength = 2048;
 constexpr unsigned urlBytesBufferLength = 2048;
 
 // This needs to be higher than the UScriptCode for any of the scripts on the IDN allowed list.
@@ -131,7 +127,7 @@ template<typename CharacterType> inline bool isASCIIDigitOrValidHostCharacter(Ch
 }
 
 template <UScriptCode ScriptType>
-bool isLookalikeSequence(const Optional<UChar32>& previousCodePoint, UChar32 codePoint)
+bool isLookalikeSequence(const std::optional<UChar32>& previousCodePoint, UChar32 codePoint)
 {
     if (!previousCodePoint || *previousCodePoint == '/')
         return false;
@@ -143,7 +139,7 @@ bool isLookalikeSequence(const Optional<UChar32>& previousCodePoint, UChar32 cod
         || isLookalikePair(*previousCodePoint, codePoint);
 }
 
-static bool isLookalikeCharacter(const Optional<UChar32>& previousCodePoint, UChar32 codePoint)
+static bool isLookalikeCharacter(const std::optional<UChar32>& previousCodePoint, UChar32 codePoint)
 {
     // This function treats the following as unsafe, lookalike characters:
     // any non-printable character, any character considered as whitespace,
@@ -346,7 +342,7 @@ static bool allCharactersInAllowedIDNScriptList(const UChar* buffer, int32_t len
 {
     loadIDNAllowedScriptList();
     int32_t i = 0;
-    Optional<UChar32> previousCodePoint;
+    std::optional<UChar32> previousCodePoint;
     while (i < length) {
         UChar32 c;
         U16_NEXT(buffer, i, length, c);
@@ -574,9 +570,11 @@ static bool allCharactersAllowedByTLDRules(const UChar* buffer, int32_t length)
 }
 
 // Return value of null means no mapping is necessary.
-Optional<String> mapHostName(const String& hostName, URLDecodeFunction decodeFunction)
+std::optional<String> mapHostName(const String& hostName, URLDecodeFunction decodeFunction)
 {
-    if (hostName.length() > hostNameBufferLength)
+    // destinationBuffer needs to be big enough to hold an IDN-encoded name.
+    // For host names bigger than this, we won't do IDN encoding, which is almost certainly OK.
+    if (hostName.length() > URLParser::hostnameBufferLength)
         return String();
 
     if (!hostName.length())
@@ -592,13 +590,13 @@ Optional<String> mapHostName(const String& hostName, URLDecodeFunction decodeFun
 
     auto sourceBuffer = string.charactersWithNullTermination();
 
-    UChar destinationBuffer[hostNameBufferLength];
+    UChar destinationBuffer[URLParser::hostnameBufferLength];
     UErrorCode uerror = U_ZERO_ERROR;
     UIDNAInfo processingDetails = UIDNA_INFO_INITIALIZER;
-    int32_t numCharactersConverted = (decodeFunction ? uidna_nameToASCII : uidna_nameToUnicode)(&URLParser::internationalDomainNameTranscoder(), sourceBuffer.data(), length, destinationBuffer, hostNameBufferLength, &processingDetails, &uerror);
-    int allowedErrors = decodeFunction ? 0 : UIDNA_ERROR_EMPTY_LABEL | UIDNA_ERROR_LEADING_HYPHEN | UIDNA_ERROR_TRAILING_HYPHEN | UIDNA_ERROR_HYPHEN_3_4;
+    int32_t numCharactersConverted = (decodeFunction ? uidna_nameToASCII : uidna_nameToUnicode)(&URLParser::internationalDomainNameTranscoder(), sourceBuffer.data(), length, destinationBuffer, URLParser::hostnameBufferLength, &processingDetails, &uerror);
+    int allowedErrors = decodeFunction ? 0 : URLParser::allowedNameToASCIIErrors;
     if (length && (U_FAILURE(uerror) || processingDetails.errors & ~allowedErrors))
-        return nullopt;
+        return std::nullopt;
 
     if (numCharactersConverted == static_cast<int32_t>(length) && !memcmp(sourceBuffer.data(), destinationBuffer, length * sizeof(UChar)))
         return String();
@@ -609,7 +607,7 @@ Optional<String> mapHostName(const String& hostName, URLDecodeFunction decodeFun
     return String(destinationBuffer, numCharactersConverted);
 }
 
-using MappingRangesVector = Optional<Vector<std::tuple<unsigned, unsigned, String>>>;
+using MappingRangesVector = std::optional<Vector<std::tuple<unsigned, unsigned, String>>>;
 
 static void collectRangesThatNeedMapping(const String& string, unsigned location, unsigned length, MappingRangesVector& array, URLDecodeFunction decodeFunction)
 {
@@ -617,7 +615,7 @@ static void collectRangesThatNeedMapping(const String& string, unsigned location
     // Therefore, we use null to indicate no mapping here and an empty array to indicate error.
 
     String substring = string.substringSharingImpl(location, length);
-    Optional<String> host = mapHostName(substring, decodeFunction);
+    std::optional<String> host = mapHostName(substring, decodeFunction);
 
     if (host && !*host)
         return;
@@ -773,7 +771,7 @@ static String escapeUnsafeCharacters(const String& sourceBuffer)
 {
     unsigned length = sourceBuffer.length();
 
-    Optional<UChar32> previousCodePoint;
+    std::optional<UChar32> previousCodePoint;
 
     unsigned i;
     for (i = 0; i < length; ) {
@@ -823,7 +821,7 @@ static String escapeUnsafeCharacters(const String& sourceBuffer)
 
 String userVisibleURL(const CString& url)
 {
-    auto* before = reinterpret_cast<const unsigned char*>(url.data());
+    auto* before = url.dataAsUInt8Ptr();
     int length = url.length();
 
     if (!length)
@@ -831,11 +829,11 @@ String userVisibleURL(const CString& url)
 
     bool mayNeedHostNameDecoding = false;
 
-    Checked<int, RecordOverflow> bufferLength = length;
+    CheckedInt32 bufferLength = length;
     bufferLength = bufferLength * 3 + 1; // The buffer should be large enough to %-escape every character.
     if (bufferLength.hasOverflowed())
         return { };
-    Vector<char, urlBytesBufferLength> after(bufferLength.unsafeGet());
+    Vector<char, urlBytesBufferLength> after(bufferLength);
 
     char* q = after.data();
     {
@@ -875,7 +873,7 @@ String userVisibleURL(const CString& url)
         // then we will copy back bytes to the start of the buffer
         // as we convert.
         int afterlength = q - after.data();
-        char* p = after.data() + bufferLength.unsafeGet() - afterlength - 1;
+        char* p = after.data() + bufferLength.value() - afterlength - 1;
         memmove(p, after.data(), afterlength + 1); // copies trailing '\0'
         char* q = after.data();
         while (*p) {

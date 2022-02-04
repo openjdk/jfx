@@ -25,15 +25,16 @@
 
 #pragma once
 
-#include "InlineElementBox.h"
 #include "LayoutIntegrationRunIteratorLegacyPath.h"
 #include "LayoutIntegrationRunIteratorModernPath.h"
+#include "LegacyInlineElementBox.h"
 #include <wtf/Variant.h>
 
 namespace WebCore {
 
 class RenderLineBreak;
 class RenderObject;
+class RenderStyle;
 class RenderText;
 
 namespace LayoutIntegration {
@@ -79,13 +80,16 @@ public:
     bool isLeftToRightDirection() const { return direction() == TextDirection::LTR; }
 
     const RenderObject& renderer() const;
+    const RenderStyle& style() const;
 
     // For intermediate porting steps only.
-    InlineBox* legacyInlineBox() const;
+    LegacyInlineBox* legacyInlineBox() const;
 
 protected:
     friend class RunIterator;
     friend class TextRunIterator;
+
+    LineIterator line() const;
 
     // To help with debugging.
 #if ENABLE(LAYOUT_FORMATTING_CONTEXT)
@@ -113,7 +117,8 @@ public:
     bool isSelectable(unsigned start, unsigned end) const;
     LayoutRect selectionRect(unsigned start, unsigned end) const;
 
-    InlineTextBox* legacyInlineBox() const { return downcast<InlineTextBox>(PathRun::legacyInlineBox()); }
+    const RenderText& renderer() const { return downcast<RenderText>(PathRun::renderer()); }
+    LegacyInlineTextBox* legacyInlineBox() const { return downcast<LegacyInlineTextBox>(PathRun::legacyInlineBox()); }
 };
 
 class RunIterator {
@@ -149,8 +154,6 @@ public:
     LineIterator line() const;
 
 protected:
-    void setAtEnd();
-
     PathRun m_run;
 };
 
@@ -197,6 +200,7 @@ private:
 
 TextRunIterator firstTextRunFor(const RenderText&);
 TextRunIterator firstTextRunInTextOrderFor(const RenderText&);
+TextRunIterator textRunFor(const LegacyInlineTextBox*);
 TextRunRange textRunsFor(const RenderText&);
 RunIterator runFor(const RenderLineBreak&);
 RunIterator runFor(const RenderBox&);
@@ -271,7 +275,7 @@ inline const RenderObject& PathRun::renderer() const
     });
 }
 
-inline InlineBox* PathRun::legacyInlineBox() const
+inline LegacyInlineBox* PathRun::legacyInlineBox() const
 {
     return WTF::switchOn(m_pathVariant, [](auto& path) {
         return path.legacyInlineBox();

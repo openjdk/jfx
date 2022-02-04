@@ -35,7 +35,7 @@ typedef RTCRtpTransceiverDirection RtpTransceiverDirection;
 
 [
     Conditional=WEB_RTC,
-    EnabledAtRuntime=PeerConnection
+    EnabledBySetting=PeerConnection
 ] dictionary RTCDataChannelInit {
     boolean ordered = true;
     unsigned short maxPacketLifeTime;
@@ -47,8 +47,8 @@ typedef RTCRtpTransceiverDirection RtpTransceiverDirection;
 };
 
 [
-Conditional=WEB_RTC,
-EnabledAtRuntime=PeerConnection
+    Conditional=WEB_RTC,
+    EnabledBySetting=PeerConnection
 ] dictionary RTCCertificateParameters {
     DOMString name;
     DOMString hash;
@@ -62,7 +62,7 @@ typedef (object or DOMString) AlgorithmIdentifier;
 
 [
     Conditional=WEB_RTC,
-    EnabledAtRuntime=PeerConnection,
+    EnabledBySetting=PeerConnection,
     ImplementedAs=RTCRtpTransceiverInit
 ] dictionary RTCRtpTransceiverInit {
     RtpTransceiverDirection direction = "sendrecv";
@@ -73,7 +73,7 @@ typedef (object or DOMString) AlgorithmIdentifier;
 [
     ActiveDOMObject,
     Conditional=WEB_RTC,
-    EnabledAtRuntime=PeerConnection,
+    EnabledBySetting=PeerConnection,
     ExportMacro=WEBCORE_EXPORT,
     Exposed=Window
 ] interface RTCPeerConnection : EventTarget {
@@ -99,12 +99,11 @@ typedef (object or DOMString) AlgorithmIdentifier;
     readonly attribute RTCIceGatheringState iceGatheringState;
     readonly attribute RTCIceConnectionState iceConnectionState;
     readonly attribute RTCPeerConnectionState connectionState;
-    // FIXME 169644: missing canTrickleIceCandidates
-    // FIXME 169644: missing defaultIceServers
+    readonly attribute boolean? canTrickleIceCandidates;
 
     undefined restartIce();
     RTCConfiguration getConfiguration();
-    [MayThrowException] undefined setConfiguration(RTCConfiguration configuration);
+    undefined setConfiguration(RTCConfiguration configuration);
     undefined close();
 
     attribute EventHandler onnegotiationneeded;
@@ -124,24 +123,20 @@ typedef (object or DOMString) AlgorithmIdentifier;
     sequence<RTCRtpReceiver> getReceivers();
     sequence<RTCRtpTransceiver> getTransceivers();
 
-    [MayThrowException] RTCRtpSender addTrack(MediaStreamTrack track, MediaStream... streams);
-    [MayThrowException] undefined removeTrack(RTCRtpSender sender);
+    RTCRtpSender addTrack(MediaStreamTrack track, MediaStream... streams);
+    undefined removeTrack(RTCRtpSender sender);
 
-    [MayThrowException] RTCRtpTransceiver addTransceiver((MediaStreamTrack or DOMString) track, optional RTCRtpTransceiverInit init);
+    RTCRtpTransceiver addTransceiver((MediaStreamTrack or DOMString) track, optional RTCRtpTransceiverInit init);
 
     attribute EventHandler ontrack;
 
     // 6.1 Peer-to-peer data API
     // FIXME 169644: missing sctp
 
-    [MayThrowException] RTCDataChannel createDataChannel([LegacyNullToEmptyString] USVString label, optional RTCDataChannelInit options);
+    RTCDataChannel createDataChannel([LegacyNullToEmptyString] USVString label, optional RTCDataChannelInit options);
     attribute EventHandler ondatachannel;
 
 
     // 8.2 Statistics API
     Promise<RTCStatsReport> getStats(optional MediaStreamTrack? selector = null);
-
-
-    // 9.6 Identity Provider API
-    // FIXME 169644: missing IdP
 };

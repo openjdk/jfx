@@ -37,6 +37,7 @@
 namespace WebCore {
 
 class Blob;
+class DOMFormData;
 class FetchBodySource;
 class ReadableStream;
 
@@ -46,8 +47,7 @@ public:
 
     explicit FetchBodyConsumer(Type type) : m_type(type) { }
 
-    void append(const char* data, unsigned);
-    void append(const unsigned char* data, unsigned);
+    void append(const uint8_t* data, unsigned);
 
     bool hasData() const { return !!m_buffer; }
     const SharedBuffer* data() const { return m_buffer.get(); }
@@ -73,6 +73,8 @@ public:
     void setSource(Ref<FetchBodySource>&&);
 
     void setAsLoading() { m_isLoading = true; }
+
+    static RefPtr<DOMFormData> packageFormData(ScriptExecutionContext*, const String& contentType, const uint8_t* data, size_t length);
 
 private:
     Ref<Blob> takeAsBlob(ScriptExecutionContext*);

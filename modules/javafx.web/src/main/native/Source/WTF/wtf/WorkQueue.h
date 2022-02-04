@@ -34,13 +34,14 @@
 
 #if USE(COCOA_EVENT_LOOP)
 #include <dispatch/dispatch.h>
+#include <wtf/OSObjectPtr.h>
 #else
 #include <wtf/RunLoop.h>
 #endif
 
 namespace WTF {
 
-class WorkQueue final : public FunctionDispatcher {
+class WorkQueue : public FunctionDispatcher {
 
 public:
     enum class Type {
@@ -49,29 +50,40 @@ public:
     };
     using QOS = Thread::QOS;
 
-    WTF_EXPORT_PRIVATE static Ref<WorkQueue> create(const char* name, Type = Type::Serial, QOS = QOS::Default);
-    ~WorkQueue() final;
+    WTF_EXPORT_PRIVATE static WorkQueue& main();
 
-    WTF_EXPORT_PRIVATE void dispatch(Function<void()>&&) final;
-    WTF_EXPORT_PRIVATE void dispatchAfter(Seconds, Function<void()>&&);
+    WTF_EXPORT_PRIVATE static Ref<WorkQueue> create(const char* name, Type = Type::Serial, QOS = QOS::Default);
+    ~WorkQueue() override;
+
+    WTF_EXPORT_PRIVATE void dispatch(Function<void()>&&) override;
+    WTF_EXPORT_PRIVATE virtual void dispatchAfter(Seconds, Function<void()>&&);
+    WTF_EXPORT_PRIVATE virtual void dispatchSync(Function<void()>&&);
 
     WTF_EXPORT_PRIVATE static void concurrentApply(size_t iterations, WTF::Function<void(size_t index)>&&);
 
 #if USE(COCOA_EVENT_LOOP)
-    dispatch_queue_t dispatchQueue() const { return m_dispatchQueue; }
+    dispatch_queue_t dispatchQueue() const { return m_dispatchQueue.get(); }
 #else
     RunLoop& runLoop() const { return *m_runLoop; }
 #endif
 
+protected:
+    WorkQueue(const char* name, Type, QOS);
+
 private:
-    explicit WorkQueue(const char* name, Type, QOS);
+    static Ref<WorkQueue> constructMainWorkQueue();
+#if USE(COCOA_EVENT_LOOP)
+    explicit WorkQueue(OSObjectPtr<dispatch_queue_t>&&);
+#else
+    explicit WorkQueue(RunLoop&);
+#endif
 
     void platformInitialize(const char* name, Type, QOS);
     void platformInvalidate();
 
 #if USE(COCOA_EVENT_LOOP)
     static void executeFunction(void*);
-    dispatch_queue_t m_dispatchQueue;
+    OSObjectPtr<dispatch_queue_t> m_dispatchQueue;
 #else
     RunLoop* m_runLoop;
 #endif

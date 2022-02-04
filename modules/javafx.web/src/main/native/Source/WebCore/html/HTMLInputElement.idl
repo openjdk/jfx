@@ -33,7 +33,7 @@
     [CEReactions=NotNeeded, Reflect] attribute DOMString dirName;
     [CEReactions=NotNeeded, Reflect] attribute boolean disabled;
     readonly attribute HTMLFormElement form;
-    attribute FileList? files;
+    [ImplementedAs=filesForBindings] attribute FileList? files;
     [CEReactions=NotNeeded] attribute USVString formAction;
 
     [CEReactions=NotNeeded] attribute DOMString formEnctype;
@@ -64,8 +64,8 @@
     attribute Date? valueAsDate;
     attribute unrestricted double valueAsNumber;
 
-    [MayThrowException] undefined stepUp(optional long n = 1);
-    [MayThrowException] undefined stepDown(optional long n = 1);
+    undefined stepUp(optional long n = 1);
+    undefined stepDown(optional long n = 1);
 
     [CEReactions=NotNeeded] attribute unsigned long width;
     readonly attribute boolean willValidate;
@@ -82,10 +82,10 @@
     [ImplementedAs=selectionEndForBindings] attribute long selectionEnd;
     [ImplementedAs=selectionDirectionForBindings] attribute DOMString selectionDirection;
 
-    [MayThrowException] undefined setRangeText(DOMString replacement);
-    [MayThrowException] undefined setRangeText(DOMString replacement, unsigned long start, unsigned long end, optional DOMString selectionMode);
+    undefined setRangeText(DOMString replacement);
+    undefined setRangeText(DOMString replacement, unsigned long start, unsigned long end, optional DOMString selectionMode);
 
-    [ImplementedAs=setSelectionRangeForBindings, MayThrowException] undefined setSelectionRange(long start, long end, optional DOMString direction);
+    [ImplementedAs=setSelectionRangeForBindings] undefined setSelectionRange(long start, long end, optional DOMString direction);
 
     [CEReactions=NotNeeded, Reflect] attribute DOMString align;
     [CEReactions=NotNeeded, Reflect] attribute DOMString useMap;

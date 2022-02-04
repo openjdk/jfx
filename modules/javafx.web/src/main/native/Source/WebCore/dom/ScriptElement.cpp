@@ -53,10 +53,9 @@
 #include "ScriptableDocumentParser.h"
 #include "Settings.h"
 #include "TextNodeTraversal.h"
+#include <wtf/SortedArrayMap.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/SystemTracing.h>
-#include <wtf/text/StringBuilder.h>
-#include <wtf/text/StringHash.h>
 
 namespace WebCore {
 
@@ -110,7 +109,8 @@ void ScriptElement::handleAsyncAttribute()
 
 static bool isLegacySupportedJavaScriptLanguage(const String& language)
 {
-    static const auto languages = makeNeverDestroyed(HashSet<String, ASCIICaseInsensitiveHash> {
+    static constexpr ComparableLettersLiteral languageArray[] = {
+        "ecmascript",
         "javascript",
         "javascript1.0",
         "javascript1.1",
@@ -120,11 +120,11 @@ static bool isLegacySupportedJavaScriptLanguage(const String& language)
         "javascript1.5",
         "javascript1.6",
         "javascript1.7",
-        "livescript",
-        "ecmascript",
         "jscript",
-    });
-    return languages.get().contains(language);
+        "livescript",
+    };
+    static constexpr SortedArraySet languageSet { languageArray };
+    return languageSet.contains(language);
 }
 
 void ScriptElement::dispatchErrorEvent()
@@ -132,7 +132,7 @@ void ScriptElement::dispatchErrorEvent()
     m_element.dispatchEvent(Event::create(eventNames().errorEvent, Event::CanBubble::No, Event::IsCancelable::No));
 }
 
-Optional<ScriptElement::ScriptType> ScriptElement::determineScriptType(LegacyTypeSupport supportLegacyTypes) const
+std::optional<ScriptElement::ScriptType> ScriptElement::determineScriptType(LegacyTypeSupport supportLegacyTypes) const
 {
     // FIXME: isLegacySupportedJavaScriptLanguage() is not valid HTML5. It is used here to maintain backwards compatibility with existing layout tests. The specific violations are:
     // - Allowing type=javascript. type= should only support MIME types, such as text/javascript.
@@ -146,7 +146,7 @@ Optional<ScriptElement::ScriptType> ScriptElement::determineScriptType(LegacyTyp
             return ScriptType::Classic;
         if (isLegacySupportedJavaScriptLanguage(language))
             return ScriptType::Classic;
-        return WTF::nullopt;
+        return std::nullopt;
     }
     if (MIMETypeRegistry::isSupportedJavaScriptMIMEType(type.stripWhiteSpace()))
         return ScriptType::Classic;
@@ -158,13 +158,13 @@ Optional<ScriptElement::ScriptType> ScriptElement::determineScriptType(LegacyTyp
     // Once "defer" is implemented, we can reconsider enabling modules in XHTML.
     // https://bugs.webkit.org/show_bug.cgi?id=123387
     if (!m_element.document().isHTMLDocument())
-        return WTF::nullopt;
+        return std::nullopt;
 
     // https://html.spec.whatwg.org/multipage/scripting.html#attr-script-type
     // Setting the attribute to an ASCII case-insensitive match for the string "module" means that the script is a module script.
     if (equalLettersIgnoringASCIICase(type, "module"))
         return ScriptType::Module;
-    return WTF::nullopt;
+    return std::nullopt;
 }
 
 // http://dev.w3.org/html5/spec/Overview.html#prepare-a-script
@@ -191,7 +191,7 @@ bool ScriptElement::prepareScript(const TextPosition& scriptStartPosition, Legac
         return false;
 
     ScriptType scriptType = ScriptType::Classic;
-    if (Optional<ScriptType> result = determineScriptType(supportLegacyTypes))
+    if (std::optional<ScriptType> result = determineScriptType(supportLegacyTypes))
         scriptType = result.value();
     else
         return false;
@@ -215,6 +215,8 @@ bool ScriptElement::prepareScript(const TextPosition& scriptStartPosition, Legac
 
     if (scriptType == ScriptType::Classic && hasNoModuleAttribute())
         return false;
+
+    m_preparationTimeDocumentIdentifier = document.identifier();
 
     if (!document.frame()->script().canExecuteScripts(AboutToExecuteScript))
         return false;
@@ -368,7 +370,7 @@ bool ScriptElement::requestModuleScript(const TextPosition& scriptStartPosition)
     ASSERT(m_element.document().contentSecurityPolicy());
     const auto& contentSecurityPolicy = *m_element.document().contentSecurityPolicy();
     bool hasKnownNonce = contentSecurityPolicy.allowScriptWithNonce(nonce, m_element.isInUserAgentShadowTree());
-    if (!contentSecurityPolicy.allowInlineScript(m_element.document().url().string(), m_startLineNumber, sourceCode.source().toStringWithoutCopying(), hasKnownNonce))
+    if (!contentSecurityPolicy.allowInlineScript(m_element.document().url().string(), m_startLineNumber, sourceCode.source(), hasKnownNonce))
         return false;
 
     m_loadableScript = WTFMove(script);
@@ -389,7 +391,7 @@ void ScriptElement::executeClassicScript(const ScriptSourceCode& sourceCode)
         ASSERT(m_element.document().contentSecurityPolicy());
         const ContentSecurityPolicy& contentSecurityPolicy = *m_element.document().contentSecurityPolicy();
         bool hasKnownNonce = contentSecurityPolicy.allowScriptWithNonce(m_element.attributeWithoutSynchronization(HTMLNames::nonceAttr), m_element.isInUserAgentShadowTree());
-        if (!contentSecurityPolicy.allowInlineScript(m_element.document().url().string(), m_startLineNumber, sourceCode.source().toStringWithoutCopying(), hasKnownNonce))
+        if (!contentSecurityPolicy.allowInlineScript(m_element.document().url().string(), m_startLineNumber, sourceCode.source(), hasKnownNonce))
             return;
     }
 
@@ -398,7 +400,7 @@ void ScriptElement::executeClassicScript(const ScriptSourceCode& sourceCode)
     if (!frame)
         return;
 
-    IgnoreDestructiveWriteCountIncrementer ignoreDesctructiveWriteCountIncrementer(m_isExternalScript ? &document : nullptr);
+    IgnoreDestructiveWriteCountIncrementer ignoreDestructiveWriteCountIncrementer(m_isExternalScript ? &document : nullptr);
     CurrentScriptIncrementer currentScriptIncrementer(document, *this);
 
     WTFBeginSignpost(this, "Execute Script Element", "executing classic script from URL: %{public}s async: %d defer: %d", m_isExternalScript ? sourceCode.url().string().utf8().data() : "inline", hasAsyncAttribute(), hasDeferAttribute());
@@ -417,7 +419,7 @@ void ScriptElement::executeModuleScript(LoadableModuleScript& loadableModuleScri
     if (!frame)
         return;
 
-    IgnoreDestructiveWriteCountIncrementer ignoreDesctructiveWriteCountIncrementer(&document);
+    IgnoreDestructiveWriteCountIncrementer ignoreDestructiveWriteCountIncrementer(&document);
     CurrentScriptIncrementer currentScriptIncrementer(document, *this);
 
     WTFBeginSignpost(this, "Execute Script Element", "executing module script");
@@ -438,8 +440,8 @@ void ScriptElement::dispatchLoadEventRespectingUserGestureIndicator()
 
 void ScriptElement::executeScriptAndDispatchEvent(LoadableScript& loadableScript)
 {
-    if (Optional<LoadableScript::Error> error = loadableScript.error()) {
-        if (Optional<LoadableScript::ConsoleMessage> message = error->consoleMessage)
+    if (std::optional<LoadableScript::Error> error = loadableScript.error()) {
+        if (std::optional<LoadableScript::ConsoleMessage> message = error->consoleMessage)
             m_element.document().addConsoleMessage(message->source, message->level, message->message);
         dispatchErrorEvent();
     } else if (!loadableScript.wasCanceled()) {
@@ -451,6 +453,11 @@ void ScriptElement::executeScriptAndDispatchEvent(LoadableScript& loadableScript
 
 void ScriptElement::executePendingScript(PendingScript& pendingScript)
 {
+    if (m_element.document().identifier() != m_preparationTimeDocumentIdentifier) {
+        m_element.document().addConsoleMessage(MessageSource::Security, MessageLevel::Error, "Not executing script because it moved between documents during fetching"_s);
+        return;
+    }
+
     if (auto* loadableScript = pendingScript.loadableScript())
         executeScriptAndDispatchEvent(*loadableScript);
     else {

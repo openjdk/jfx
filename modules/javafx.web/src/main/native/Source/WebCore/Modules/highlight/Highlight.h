@@ -48,8 +48,8 @@ struct HighlightRangeData : RefCounted<HighlightRangeData>, public CanMakeWeakPt
         return adoptRef(*new HighlightRangeData(WTFMove(range)));
     }
     Ref<StaticRange> range;
-    Optional<Position> startPosition;
-    Optional<Position> endPosition;
+    std::optional<Position> startPosition;
+    std::optional<Position> endPosition;
 };
 
 class Highlight : public RefCounted<Highlight> {
@@ -59,6 +59,8 @@ public:
     bool addToSetLike(StaticRange&);
     bool removeFromSetLike(const StaticRange&);
     void initializeSetLike(DOMSetAdapter&);
+
+    void repaint();
     const Vector<Ref<HighlightRangeData>>& rangesData() const { return m_rangesData; }
 
     // FIXME: Add WEBCORE_EXPORT CSSStyleDeclaration& style();

@@ -46,7 +46,7 @@ static constexpr size_t smallTreeThreshold = 8;
 static RenderStyle rootBoxStyle(const RenderStyle& style)
 {
     auto clonedStyle = RenderStyle::clone(style);
-    clonedStyle.setDisplay(DisplayType::Block);
+    clonedStyle.setEffectiveDisplay(DisplayType::Block);
     return clonedStyle;
 }
 
@@ -66,13 +66,15 @@ void BoxTree::buildTree()
         if (is<RenderText>(childRenderer)) {
             auto& textRenderer = downcast<RenderText>(childRenderer);
             auto style = RenderStyle::createAnonymousStyleWithDisplay(textRenderer.style(), DisplayType::Inline);
-            return makeUnique<Layout::InlineTextBox>(textRenderer.text(), textRenderer.canUseSimplifiedTextMeasuring(), WTFMove(style));
+            return makeUnique<Layout::InlineTextBox>(
+                style.textSecurity() == TextSecurity::None ? textRenderer.text() : RenderBlock::updateSecurityDiscCharacters(style, textRenderer.text())
+                , textRenderer.canUseSimplifiedTextMeasuring(), WTFMove(style));
         }
 
         auto style = RenderStyle::clone(childRenderer.style());
         if (childRenderer.isLineBreak()) {
             style.setDisplay(DisplayType::Inline);
-            style.setFloating(Float::No);
+            style.setFloating(Float::None);
             style.setPosition(PositionType::Static);
             return makeUnique<Layout::LineBreakBox>(downcast<RenderLineBreak>(childRenderer).isWBR(), WTFMove(style));
         }

@@ -69,6 +69,14 @@ public:
     const String& numberingSystem();
     TriState numeric();
 
+    JSArray* calendars(JSGlobalObject*);
+    JSArray* collations(JSGlobalObject*);
+    JSArray* hourCycles(JSGlobalObject*);
+    JSArray* numberingSystems(JSGlobalObject*);
+    JSValue timeZones(JSGlobalObject*);
+    JSObject* textInfo(JSGlobalObject*);
+    JSObject* weekInfo(JSGlobalObject*);
+
 private:
     IntlLocale(VM&, Structure*);
     void finishCreation(VM&);
@@ -85,11 +93,11 @@ private:
     String m_language;
     String m_script;
     String m_region;
-    Optional<String> m_calendar;
-    Optional<String> m_caseFirst;
-    Optional<String> m_collation;
-    Optional<String> m_hourCycle;
-    Optional<String> m_numberingSystem;
+    std::optional<String> m_calendar;
+    std::optional<String> m_caseFirst;
+    std::optional<String> m_collation;
+    std::optional<String> m_hourCycle;
+    std::optional<String> m_numberingSystem;
     TriState m_numeric { TriState::Indeterminate };
 };
 

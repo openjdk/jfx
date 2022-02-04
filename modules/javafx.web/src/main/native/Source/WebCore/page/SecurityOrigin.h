@@ -48,7 +48,7 @@ public:
     WEBCORE_EXPORT static Ref<SecurityOrigin> createUnique();
 
     WEBCORE_EXPORT static Ref<SecurityOrigin> createFromString(const String&);
-    WEBCORE_EXPORT static Ref<SecurityOrigin> create(const String& protocol, const String& host, Optional<uint16_t> port);
+    WEBCORE_EXPORT static Ref<SecurityOrigin> create(const String& protocol, const String& host, std::optional<uint16_t> port);
 
     // QuickLook documents are in non-local origins even when loaded from file: URLs. They need to
     // be allowed to display their own file: URLs in order to perform reloads and same-document
@@ -82,14 +82,14 @@ public:
     const String& protocol() const { return m_data.protocol; }
     const String& host() const { return m_data.host; }
     const String& domain() const { return m_domain; }
-    Optional<uint16_t> port() const { return m_data.port; }
+    std::optional<uint16_t> port() const { return m_data.port; }
 
     static bool shouldIgnoreHost(const URL&);
 
     // Returns true if a given URL is secure, based either directly on its
     // own protocol, or, when relevant, on the protocol of its "inner URL"
     // Protocols like blob: and filesystem: fall into this latter category.
-    static bool isSecure(const URL&);
+    WEBCORE_EXPORT static bool isSecure(const URL&);
 
     // This method implements the "same origin-domain" algorithm from the HTML Standard:
     // https://html.spec.whatwg.org/#same-origin-domain
@@ -208,7 +208,7 @@ public:
     // https://html.spec.whatwg.org/multipage/origin.html#is-a-registrable-domain-suffix-of-or-is-equal-to
     WEBCORE_EXPORT bool isMatchingRegistrableDomainSuffix(const String&, bool treatIPAddressAsDomain = false) const;
 
-    bool isPotentiallyTrustworthy() const { return m_isPotentiallyTrustworthy; }
+    WEBCORE_EXPORT bool isPotentiallyTrustworthy() const;
     void setIsPotentiallyTrustworthy(bool value) { m_isPotentiallyTrustworthy = value; }
 
     WEBCORE_EXPORT static bool isLocalHostOrLoopbackIPAddress(StringView);
@@ -219,7 +219,7 @@ public:
     template<class Decoder> static RefPtr<SecurityOrigin> decode(Decoder&);
 
 private:
-    SecurityOrigin();
+    WEBCORE_EXPORT SecurityOrigin();
     explicit SecurityOrigin(const URL&);
     explicit SecurityOrigin(const SecurityOrigin*);
 
@@ -243,7 +243,7 @@ private:
     StorageBlockingPolicy m_storageBlockingPolicy { StorageBlockingPolicy::AllowAll };
     bool m_enforcesFilePathSeparation { false };
     bool m_needsStorageAccessFromFileURLsQuirk { false };
-    bool m_isPotentiallyTrustworthy { false };
+    mutable std::optional<bool> m_isPotentiallyTrustworthy;
     bool m_isLocal { false };
 };
 
@@ -271,12 +271,13 @@ template<class Encoder> inline void SecurityOrigin::encode(Encoder& encoder) con
 
 template<class Decoder> inline RefPtr<SecurityOrigin> SecurityOrigin::decode(Decoder& decoder)
 {
-    Optional<SecurityOriginData> data;
+    std::optional<SecurityOriginData> data;
     decoder >> data;
     if (!data)
         return nullptr;
 
-    auto origin = SecurityOrigin::create(data->protocol, data->host, data->port);
+    auto origin = adoptRef(*new SecurityOrigin);
+    origin->m_data = WTFMove(*data);
 
     if (!decoder.decode(origin->m_domain))
         return nullptr;

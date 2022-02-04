@@ -101,15 +101,15 @@ public:
     DataRef<StyleCustomPropertyData> customProperties;
 
     // Paged media properties.
-    short widows;
-    short orphans;
+    unsigned short widows;
+    unsigned short orphans;
     unsigned hasAutoWidows : 1;
     unsigned hasAutoOrphans : 1;
 
     unsigned textSecurity : 2; // TextSecurity
     unsigned userModify : 2; // UserModify (editing)
     unsigned wordBreak : 2; // WordBreak
-    unsigned overflowWrap : 1; // OverflowWrap
+    unsigned overflowWrap : 2; // OverflowWrap
     unsigned nbspMode : 1; // NBSPMode
     unsigned lineBreak : 3; // LineBreak
     unsigned userSelect : 2; // UserSelect
@@ -120,10 +120,8 @@ public:
     unsigned textEmphasisMark : 3; // TextEmphasisMark
     unsigned textEmphasisPosition : 4; // TextEmphasisPosition
     unsigned textOrientation : 2; // TextOrientation
-#if ENABLE(CSS3_TEXT)
     unsigned textIndentLine : 1; // TextIndentLine
     unsigned textIndentType : 1; // TextIndentType
-#endif
     unsigned lineBoxContain: 7; // OptionSet<LineBoxContain>
     // CSS Image Values Level 3
     unsigned imageOrientation : 1; // ImageOrientation
@@ -159,6 +157,11 @@ public:
     unsigned hasSetStrokeColor : 1;
 
     unsigned mathStyle : 1;
+
+    unsigned hasAutoCaretColor : 1;
+    unsigned hasVisitedLinkAutoCaretColor : 1;
+
+    unsigned isInSubtreeWithBlendMode : 1;
 
     OptionSet<TouchAction> effectiveTouchActions;
     OptionSet<EventListenerRegionType> eventListenerRegionTypes;

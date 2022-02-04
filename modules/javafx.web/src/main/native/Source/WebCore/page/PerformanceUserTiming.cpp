@@ -35,15 +35,16 @@
 #include "SerializedScriptValue.h"
 #include <JavaScriptCore/JSCJSValueInlines.h>
 #include <wtf/NeverDestroyed.h>
+#include <wtf/RobinHoodHashMap.h>
 
 namespace WebCore {
 
 using NavigationTimingFunction = unsigned long long (PerformanceTiming::*)() const;
-static const HashMap<String, NavigationTimingFunction>& restrictedMarkNamesToNavigationTimingFunctionMap()
+static const MemoryCompactLookupOnlyRobinHoodHashMap<String, NavigationTimingFunction>& restrictedMarkNamesToNavigationTimingFunctionMap()
 {
     ASSERT(isMainThread());
 
-    static auto map = makeNeverDestroyed<HashMap<String, NavigationTimingFunction>>({
+    static auto map = makeNeverDestroyed<MemoryCompactLookupOnlyRobinHoodHashMap<String, NavigationTimingFunction>>({
         { "connectEnd"_s, &PerformanceTiming::connectEnd },
         { "connectStart"_s, &PerformanceTiming::connectStart },
         { "domComplete"_s, &PerformanceTiming::domComplete },
@@ -112,7 +113,7 @@ static void addPerformanceEntry(PerformanceEntryMap& map, const String& name, Pe
     performanceEntryList.append(&entry);
 }
 
-ExceptionOr<Ref<PerformanceMark>> PerformanceUserTiming::mark(JSC::JSGlobalObject& globalObject, const String& markName, Optional<PerformanceMarkOptions>&& markOptions)
+ExceptionOr<Ref<PerformanceMark>> PerformanceUserTiming::mark(JSC::JSGlobalObject& globalObject, const String& markName, std::optional<PerformanceMarkOptions>&& markOptions)
 {
     auto mark = PerformanceMark::create(globalObject, *m_performance.scriptExecutionContext(), markName, WTFMove(markOptions));
     if (mark.hasException())
@@ -256,7 +257,7 @@ static bool isNonEmptyDictionary(const PerformanceMeasureOptions& measureOptions
     return !measureOptions.detail.isUndefined() || measureOptions.start || measureOptions.duration || measureOptions.end;
 }
 
-ExceptionOr<Ref<PerformanceMeasure>> PerformanceUserTiming::measure(JSC::JSGlobalObject& globalObject, const String& measureName, Optional<StartOrMeasureOptions>&& startOrMeasureOptions, const String& endMark)
+ExceptionOr<Ref<PerformanceMeasure>> PerformanceUserTiming::measure(JSC::JSGlobalObject& globalObject, const String& measureName, std::optional<StartOrMeasureOptions>&& startOrMeasureOptions, const String& endMark)
 {
     if (startOrMeasureOptions) {
         return WTF::switchOn(*startOrMeasureOptions,

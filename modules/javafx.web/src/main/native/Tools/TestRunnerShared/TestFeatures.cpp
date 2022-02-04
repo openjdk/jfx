@@ -246,7 +246,8 @@ bool parseTestHeaderFeature(TestFeatures& features, std::string key, std::string
 static TestFeatures parseTestHeader(std::filesystem::path path, const std::unordered_map<std::string, TestHeaderKeyType>& keyTypeMap)
 {
     TestFeatures features;
-    if (!std::filesystem::exists(path))
+    std::error_code ec;
+    if (!std::filesystem::exists(path, ec))
         return features;
 
     std::ifstream file(path);
@@ -282,7 +283,7 @@ static TestFeatures parseTestHeader(std::filesystem::path path, const std::unord
         auto value = pairString.substr(equalsLocation + 1, pairEnd - (equalsLocation + 1));
 
         if (!parseTestHeaderFeature(features, key, value, path, keyTypeMap))
-            LOG_ERROR("Unknown key, '%s, in test header in %s", key.c_str(), path.c_str());
+            LOG_ERROR("Unknown key, '%s', in test header in %s", key.c_str(), path.c_str());
 
         pairStart = pairEnd + 1;
     }

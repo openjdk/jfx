@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,8 +30,8 @@
 
 #include "AirCode.h"
 #include "AirDisassembler.h"
+#include "AirStackSlot.h"
 #include "B3Generate.h"
-#include "B3StackSlot.h"
 #include "B3Value.h"
 #include "B3ValueInlines.h"
 #include "CodeBlockWithJITType.h"
@@ -40,6 +40,7 @@
 #include "FTLJITCode.h"
 #include "LinkBuffer.h"
 #include "PCToCodeOriginMap.h"
+#include "ThunkGenerators.h"
 #include <wtf/RecursableLambda.h>
 
 namespace JSC { namespace FTL {
@@ -54,8 +55,11 @@ void compile(State& state, Safepoint::Result& safepointResult)
     CodeBlock* codeBlock = graph.m_codeBlock;
     VM& vm = graph.m_vm;
 
-    if (shouldDumpDisassembly())
+    if (shouldDumpDisassembly() || vm.m_perBytecodeProfiler)
         state.proc->code().setDisassembler(makeUnique<B3::Air::Disassembler>());
+
+    if (!shouldDumpDisassembly() && !Options::asyncDisassembly() && !graph.compilation() && !state.proc->needsPCToOriginMap())
+        graph.freeDFGIRAfterLowering();
 
     {
         GraphSafepoint safepoint(state.graph, safepointResult);
@@ -70,10 +74,9 @@ void compile(State& state, Safepoint::Result& safepointResult)
     if (state.allocationFailed)
         return;
 
-    std::unique_ptr<RegisterAtOffsetList> registerOffsets =
-        makeUnique<RegisterAtOffsetList>(state.proc->calleeSaveRegisterAtOffsetList());
+    RegisterAtOffsetList registerOffsets = state.proc->calleeSaveRegisterAtOffsetList();
     if (shouldDumpDisassembly())
-        dataLog(tierName, "Unwind info for ", CodeBlockWithJITType(codeBlock, JITType::FTLJIT), ": ", *registerOffsets, "\n");
+        dataLog(tierName, "Unwind info for ", CodeBlockWithJITType(codeBlock, JITType::FTLJIT), ": ", registerOffsets, "\n");
     codeBlock->setCalleeSaveRegisters(WTFMove(registerOffsets));
     ASSERT(!(state.proc->frameSize() % sizeof(EncodedJSValue)));
     state.jitCode->common.frameRegisterCount = state.proc->frameSize() / sizeof(EncodedJSValue);
@@ -92,9 +95,9 @@ void compile(State& state, Safepoint::Result& safepointResult)
         if (inlineCallFrame->argumentCountRegister.isValid())
             inlineCallFrame->argumentCountRegister += localsOffset;
 
-        for (unsigned argument = inlineCallFrame->argumentsWithFixup.size(); argument-- > 1;) {
-            inlineCallFrame->argumentsWithFixup[argument] =
-                inlineCallFrame->argumentsWithFixup[argument].withLocalsOffset(localsOffset);
+        for (unsigned argument = inlineCallFrame->m_argumentsWithFixup.size(); argument-- > 1;) {
+            inlineCallFrame->m_argumentsWithFixup[argument] =
+                inlineCallFrame->m_argumentsWithFixup[argument].withLocalsOffset(localsOffset);
         }
 
         if (inlineCallFrame->isClosureCall) {
@@ -125,6 +128,14 @@ void compile(State& state, Safepoint::Result& safepointResult)
 
     // Emit the exception handler.
     *state.exceptionHandler = jit.label();
+#if ENABLE(EXTRA_CTI_THUNKS)
+    CCallHelpers::Jump handler = jit.jump();
+    VM* vmPtr = &vm;
+    jit.addLinkTask(
+        [=] (LinkBuffer& linkBuffer) {
+            linkBuffer.link(handler, CodeLocationLabel(vmPtr->getCTIStub(handleExceptionGenerator).retaggedCode<NoPtrTag>()));
+        });
+#else
     jit.copyCalleeSavesToEntryFrameCalleeSavesBuffer(vm.topEntryFrame);
     jit.move(MacroAssembler::TrustedImmPtr(&vm), GPRInfo::argumentGPR0);
     jit.prepareCallOperation(vm);
@@ -134,17 +145,19 @@ void compile(State& state, Safepoint::Result& safepointResult)
         [=] (LinkBuffer& linkBuffer) {
             linkBuffer.link(call, FunctionPtr<OperationPtrTag>(operationLookupExceptionHandler));
         });
+#endif // ENABLE(EXTRA_CTI_THUNKS)
 
-    state.finalizer->b3CodeLinkBuffer = makeUnique<LinkBuffer>(jit, codeBlock, JITCompilationCanFail);
+    state.finalizer->b3CodeLinkBuffer = makeUnique<LinkBuffer>(jit, codeBlock, LinkBuffer::Profile::FTL, JITCompilationCanFail);
 
     if (state.finalizer->b3CodeLinkBuffer->didFailToAllocate()) {
         state.allocationFailed = true;
         return;
     }
 
-    B3::PCToOriginMap originMap = state.proc->releasePCToOriginMap();
-    if (vm.shouldBuilderPCToCodeOriginMapping())
+    if (vm.shouldBuilderPCToCodeOriginMapping()) {
+        B3::PCToOriginMap originMap = state.proc->releasePCToOriginMap();
         codeBlock->setPCToCodeOriginMap(makeUnique<PCToCodeOriginMap>(PCToCodeOriginMapBuilder(vm, WTFMove(originMap)), *state.finalizer->b3CodeLinkBuffer));
+    }
 
     CodeLocationLabel<JSEntryPtrTag> label = state.finalizer->b3CodeLinkBuffer->locationOf<JSEntryPtrTag>(state.proc->code().entrypointLabel(0));
     state.generatedFunction = label;
@@ -154,83 +167,78 @@ void compile(State& state, Safepoint::Result& safepointResult)
         BytecodeIndex catchBytecodeIndex = pair.value;
         unsigned entrypointIndex = pair.key;
         Vector<FlushFormat> argumentFormats = state.graph.m_argumentFormats[entrypointIndex];
-        state.jitCode->common.appendCatchEntrypoint(catchBytecodeIndex, state.finalizer->b3CodeLinkBuffer->locationOf<ExceptionHandlerPtrTag>(state.proc->code().entrypointLabel(entrypointIndex)), WTFMove(argumentFormats));
+        state.graph.appendCatchEntrypoint(catchBytecodeIndex, state.finalizer->b3CodeLinkBuffer->locationOf<ExceptionHandlerPtrTag>(state.proc->code().entrypointLabel(entrypointIndex)), WTFMove(argumentFormats));
     }
-    state.jitCode->common.finalizeCatchEntrypoints();
+    state.jitCode->common.finalizeCatchEntrypoints(WTFMove(state.graph.m_catchEntrypoints));
 
-    if (B3::Air::Disassembler* disassembler = state.proc->code().disassembler()) {
-        PrintStream& out = WTF::dataFile();
+    if (shouldDumpDisassembly())
+        state.dumpDisassembly(WTF::dataFile());
 
-        out.print("Generated ", state.graph.m_plan.mode(), " code for ", CodeBlockWithJITType(state.graph.m_codeBlock, JITType::FTLJIT), ", instructions size = ", state.graph.m_codeBlock->instructionsSize(), ":\n");
+    Profiler::Compilation* compilation = graph.compilation();
+    if (UNLIKELY(compilation)) {
+        compilation->addDescription(
+            Profiler::OriginStack(),
+            toCString("Generated FTL DFG IR for ", CodeBlockWithJITType(codeBlock, JITType::FTLJIT), ", instructions size = ", graph.m_codeBlock->instructionsSize(), ":\n"));
 
-        LinkBuffer& linkBuffer = *state.finalizer->b3CodeLinkBuffer;
-        B3::Value* currentB3Value = nullptr;
-        Node* currentDFGNode = nullptr;
+        graph.ensureSSADominators();
+        graph.ensureSSANaturalLoops();
 
-        HashSet<B3::Value*> printedValues;
-        HashSet<Node*> printedNodes;
-        const char* dfgPrefix = "DFG " "    ";
-        const char* b3Prefix  = "b3  " "          ";
-        const char* airPrefix = "Air " "              ";
-        const char* asmPrefix = "asm " "                ";
+        const char* prefix = "    ";
 
-        auto printDFGNode = [&] (Node* node) {
-            if (currentDFGNode == node)
-                return;
+        DumpContext dumpContext;
+        StringPrintStream out;
+        Node* lastNode = nullptr;
+        for (size_t blockIndex = 0; blockIndex < graph.numBlocks(); ++blockIndex) {
+            DFG::BasicBlock* block = graph.block(blockIndex);
+            if (!block)
+                continue;
 
-            currentDFGNode = node;
-            if (!currentDFGNode)
-                return;
+            graph.dumpBlockHeader(out, prefix, block, Graph::DumpLivePhisOnly, &dumpContext);
+            compilation->addDescription(Profiler::OriginStack(), out.toCString());
+            out.reset();
 
-            HashSet<Node*> localPrintedNodes;
-            WTF::Function<void(Node*)> printNodeRecursive = [&] (Node* node) {
-                if (printedNodes.contains(node) || localPrintedNodes.contains(node))
-                    return;
+            for (size_t nodeIndex = 0; nodeIndex < block->size(); ++nodeIndex) {
+                Node* node = block->at(nodeIndex);
 
-                localPrintedNodes.add(node);
-                graph.doToChildren(node, [&] (Edge child) {
-                    printNodeRecursive(child.node());
-                });
-                graph.dump(out, dfgPrefix, node);
-            };
-            printNodeRecursive(node);
-            printedNodes.add(node);
-        };
+                Profiler::OriginStack stack;
 
-        auto printB3Value = [&] (B3::Value* value) {
-            if (currentB3Value == value)
-                return;
+                if (node->origin.semantic.isSet()) {
+                    stack = Profiler::OriginStack(
+                        *vm.m_perBytecodeProfiler, codeBlock, node->origin.semantic);
+                }
 
-            currentB3Value = value;
-            if (!currentB3Value)
-                return;
+                if (graph.dumpCodeOrigin(out, prefix, lastNode, node, &dumpContext)) {
+                    compilation->addDescription(stack, out.toCString());
+                    out.reset();
+                }
 
-            printDFGNode(bitwise_cast<Node*>(value->origin().data()));
+                graph.dump(out, prefix, node, &dumpContext);
+                compilation->addDescription(stack, out.toCString());
+                out.reset();
 
-            HashSet<B3::Value*> localPrintedValues;
-            auto printValueRecursive = recursableLambda([&] (auto self, B3::Value* value) -> void {
-                if (printedValues.contains(value) || localPrintedValues.contains(value))
-                    return;
+                if (node->origin.semantic.isSet())
+                    lastNode = node;
+            }
+        }
 
-                localPrintedValues.add(value);
-                for (unsigned i = 0; i < value->numChildren(); i++)
-                    self(value->child(i));
-                out.print(b3Prefix);
-                value->deepDump(state.proc.get(), out);
-                out.print("\n");
-            });
+        dumpContext.dump(out, prefix);
+        compilation->addDescription(Profiler::OriginStack(), out.toCString());
+        out.reset();
 
-            printValueRecursive(currentB3Value);
-            printedValues.add(value);
-        };
+        out.print("\n\n\n    FTL B3/Air Disassembly:\n");
+        compilation->addDescription(Profiler::OriginStack(), out.toCString());
+        out.reset();
 
-        auto forEachInst = scopedLambda<void(B3::Air::Inst&)>([&] (B3::Air::Inst& inst) {
-            printB3Value(inst.origin);
-        });
+        state.dumpDisassembly(out, scopedLambda<void(Node*)>([&] (Node*) {
+            compilation->addDescription({ }, out.toCString());
+            out.reset();
+        }));
+        compilation->addDescription({ }, out.toCString());
+        out.reset();
 
-        disassembler->dump(state.proc->code(), out, linkBuffer, airPrefix, asmPrefix, forEachInst);
-        linkBuffer.didAlreadyDisassemble();
+        state.jitCode->common.compilation = compilation;
     }
+
 }
 
 } } // namespace JSC::FTL

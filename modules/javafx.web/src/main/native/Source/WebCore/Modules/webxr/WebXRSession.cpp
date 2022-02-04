@@ -45,24 +45,25 @@ namespace WebCore {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(WebXRSession);
 
-Ref<WebXRSession> WebXRSession::create(Document& document, WebXRSystem& system, XRSessionMode mode, PlatformXR::Device& device)
+Ref<WebXRSession> WebXRSession::create(Document& document, WebXRSystem& system, XRSessionMode mode, PlatformXR::Device& device, FeatureList&& requestedFeatures)
 {
-    return adoptRef(*new WebXRSession(document, system, mode, device));
+    return adoptRef(*new WebXRSession(document, system, mode, device, WTFMove(requestedFeatures)));
 }
 
-WebXRSession::WebXRSession(Document& document, WebXRSystem& system, XRSessionMode mode, PlatformXR::Device& device)
+WebXRSession::WebXRSession(Document& document, WebXRSystem& system, XRSessionMode mode, PlatformXR::Device& device, FeatureList&& requestedFeatures)
     : ActiveDOMObject(&document)
-    , m_inputSources(WebXRInputSourceArray::create())
+    , m_inputSources(WebXRInputSourceArray::create(*this))
     , m_xrSystem(system)
     , m_mode(mode)
     , m_device(makeWeakPtr(device))
+    , m_requestedFeatures(WTFMove(requestedFeatures))
     , m_activeRenderState(WebXRRenderState::create(mode))
     , m_viewerReferenceSpace(makeUnique<WebXRViewerSpace>(document, *this))
     , m_timeOrigin(MonotonicTime::now())
     , m_views(device.views(mode))
 {
-    m_device->initializeTrackingAndRendering(mode);
     m_device->setTrackingAndRenderingClient(makeWeakPtr(*this));
+    m_device->initializeTrackingAndRendering(mode);
 
     // https://immersive-web.github.io/webxr/#ref-for-dom-xrreferencespacetype-viewer%E2%91%A2
     // Every session MUST support viewer XRReferenceSpaces.
@@ -164,7 +165,7 @@ ExceptionOr<void> WebXRSession::updateRenderState(const XRRenderStateInit& newSt
 bool WebXRSession::referenceSpaceIsSupported(XRReferenceSpaceType type) const
 {
     // 1. If type is not contained in session’s XR device's list of enabled features for mode return false.
-    if (!m_device->enabledFeatures(m_mode).contains(type))
+    if (!m_requestedFeatures.contains(type))
         return false;
 
     // 2. If type is viewer, return true.
@@ -314,6 +315,11 @@ bool WebXRSession::supportsViewportScaling() const
     return m_mode == XRSessionMode::ImmersiveVr && m_device->supportsViewportScaling();
 }
 
+bool WebXRSession::isPositionEmulated() const
+{
+    return m_frameData.isPositionEmulated || !m_frameData.isPositionValid;
+}
+
 // https://immersive-web.github.io/webxr/#shut-down-the-session
 void WebXRSession::shutdown(InitiatedBySystem initiatedBySystem)
 {
@@ -336,6 +342,8 @@ void WebXRSession::shutdown(InitiatedBySystem initiatedBySystem)
     // 3. If the active immersive session is equal to session, set the active immersive session to null.
     // 4. Remove session from the list of inline sessions.
     m_xrSystem.sessionEnded(*this);
+
+    m_inputSources->clear();
 
     if (initiatedBySystem == InitiatedBySystem::Yes) {
         // If we get here, the session termination was triggered by the system rather than
@@ -368,7 +376,7 @@ void WebXRSession::didCompleteShutdown()
     // Resolve end promise from XRSession::end()
     if (m_endPromise) {
         m_endPromise->resolve();
-        m_endPromise = WTF::nullopt;
+        m_endPromise = std::nullopt;
     }
 
     // From https://immersive-web.github.io/webxr/#shut-down-the-session
@@ -408,6 +416,26 @@ const char* WebXRSession::activeDOMObjectName() const
 
 void WebXRSession::stop()
 {
+}
+
+void WebXRSession::sessionDidInitializeInputSources(Vector<PlatformXR::Device::FrameData::InputSource>&& inputSources)
+{
+    // https://immersive-web.github.io/webxr/#dom-xrsystem-requestsession
+    // 5.4.11 Queue a task to perform the following steps: NOTE: These steps ensure that initial inputsourceschange
+    // events occur after the initial session is resolved.
+    queueTaskKeepingObjectAlive(*this, TaskSource::WebXR, [this, inputSources = WTFMove(inputSources)]() mutable {
+        //  1. Set session's promise resolved flag to true.
+        m_inputInitialized = true;
+        //  2. Let sources be any existing input sources attached to session.
+        //  3. If sources is non-empty, perform the following steps:
+        if (!inputSources.isEmpty()) {
+            auto timestamp = (MonotonicTime::now() - m_timeOrigin).milliseconds();
+            //  3.1. Set session's list of active XR input sources to sources.
+            //  3.2. Fire an XRInputSourcesChangeEvent named inputsourceschange on session with added set to sources.
+            //  Note: 3.1 and 3.2 steps are handled inside the update() call.
+            m_inputSources->update(timestamp, inputSources);
+        }
+    });
 }
 
 void WebXRSession::sessionDidEnd()
@@ -494,14 +522,14 @@ void WebXRSession::onFrame(PlatformXR::Device::FrameData&& frameData)
         if (m_ended)
             return;
 
-        m_frameData = frameData;
+        m_frameData = WTFMove(frameData);
         //  1.Let now be the current high resolution time.
         auto now = (MonotonicTime::now() - m_timeOrigin).milliseconds();
 
-        auto frame = WebXRFrame::create(makeRef(*this), WebXRFrame::IsAnimationFrame::Yes);
+        auto frame = WebXRFrame::create(*this, WebXRFrame::IsAnimationFrame::Yes);
         //  2.Let frame be session’s animation frame.
         //  3.Set frame’s time to frameTime.
-        frame->setTime(static_cast<DOMHighResTimeStamp>(frameData.predictedDisplayTime));
+        frame->setTime(static_cast<DOMHighResTimeStamp>(m_frameData.predictedDisplayTime));
 
         // 4. For each view in list of views, set view’s viewport modifiable flag to true.
         // 5. If the active flag of any view in the list of views has changed since the last XR animation frame, update the viewports.
@@ -513,7 +541,11 @@ void WebXRSession::onFrame(PlatformXR::Device::FrameData&& frameData)
             applyPendingRenderState();
 
         // 6. If the frame should be rendered for session:
-        if (frameShouldBeRendered()) {
+        if (frameShouldBeRendered() && m_frameData.shouldRender) {
+            // Prepare all layers for render
+            if (m_mode == XRSessionMode::ImmersiveVr && m_activeRenderState->baseLayer())
+                m_activeRenderState->baseLayer()->startFrame(m_frameData);
+
             // 6.1.Set session’s list of currently running animation frame callbacks to be session’s list of animation frame callbacks.
             // 6.2.Set session’s list of animation frame callbacks to the empty list.
             auto callbacks = m_callbacks;
@@ -522,7 +554,8 @@ void WebXRSession::onFrame(PlatformXR::Device::FrameData&& frameData)
             frame->setActive(true);
 
             // 6.4.Apply frame updates for frame.
-            frame->setFrameData(WTFMove(frameData));
+            if (m_inputInitialized)
+                m_inputSources->update(now, m_frameData.inputSources);
 
             // 6.5.For each entry in session’s list of currently running animation frame callbacks, in order:
             for (auto& callback : callbacks) {
@@ -544,9 +577,17 @@ void WebXRSession::onFrame(PlatformXR::Device::FrameData&& frameData)
             // If the session is ended, m_animationFrame->setActive false is set in shutdown().
             frame->setActive(false);
 
-            if (!m_callbacks.isEmpty())
-                requestFrame();
+
+            // Submit current frame layers to the device.
+            Vector<PlatformXR::Device::Layer> frameLayers;
+            if (m_mode == XRSessionMode::ImmersiveVr && m_activeRenderState->baseLayer())
+                frameLayers.append(m_activeRenderState->baseLayer()->endFrame());
+
+            m_device->submitFrame(WTFMove(frameLayers));
         }
+
+        if (!m_callbacks.isEmpty())
+            requestFrame();
 
     });
 }

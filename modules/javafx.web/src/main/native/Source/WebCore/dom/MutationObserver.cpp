@@ -66,7 +66,7 @@ MutationObserver::MutationObserver(Ref<MutationCallback>&& callback)
 
 MutationObserver::~MutationObserver()
 {
-    ASSERT(m_registrations.isEmpty());
+    ASSERT(m_registrations.computesEmpty());
 }
 
 bool MutationObserver::validateOptions(MutationObserverOptions options)
@@ -85,9 +85,9 @@ ExceptionOr<void> MutationObserver::observe(Node& node, const Init& init)
         options |= ChildList;
     if (init.subtree)
         options |= Subtree;
-    if (init.attributeOldValue.valueOr(false))
+    if (init.attributeOldValue.value_or(false))
         options |= AttributeOldValue;
-    if (init.characterDataOldValue.valueOr(false))
+    if (init.characterDataOldValue.value_or(false))
         options |= CharacterDataOldValue;
 
     HashSet<AtomString> attributeFilter;
@@ -120,21 +120,23 @@ void MutationObserver::disconnect()
 {
     m_pendingTargets.clear();
     m_records.clear();
-    HashSet<MutationObserverRegistration*> registrations(m_registrations);
-    for (auto* registration : registrations)
-        registration->node().unregisterMutationObserver(*registration);
+    WeakHashSet registrations { m_registrations };
+    for (auto& registration : registrations) {
+        auto nodeRef = makeRefPtr(registration.node());
+        nodeRef->unregisterMutationObserver(registration);
+    }
 }
 
 void MutationObserver::observationStarted(MutationObserverRegistration& registration)
 {
-    ASSERT(!m_registrations.contains(&registration));
+    ASSERT(!m_registrations.contains(registration));
     m_registrations.add(&registration);
 }
 
 void MutationObserver::observationEnded(MutationObserverRegistration& registration)
 {
-    ASSERT(m_registrations.contains(&registration));
-    m_registrations.remove(&registration);
+    ASSERT(m_registrations.contains(registration));
+    m_registrations.remove(registration);
 }
 
 void MutationObserver::enqueueMutationRecord(Ref<MutationRecord>&& mutation)
@@ -169,12 +171,13 @@ void MutationObserver::setHasTransientRegistration(Document& document)
     eventLoop->queueMutationObserverCompoundMicrotask();
 }
 
-HashSet<Node*> MutationObserver::observedNodes() const
+bool MutationObserver::isReachableFromOpaqueRoots(JSC::AbstractSlotVisitor& visitor) const
 {
-    HashSet<Node*> observedNodes;
-    for (auto* registration : m_registrations)
-        registration->addRegistrationNodesToSet(observedNodes);
-    return observedNodes;
+    for (auto& registration : m_registrations) {
+        if (registration.isReachableFromOpaqueRoots(visitor))
+            return true;
+    }
+    return false;
 }
 
 bool MutationObserver::canDeliver()
@@ -192,9 +195,9 @@ void MutationObserver::deliver()
     Vector<std::unique_ptr<HashSet<GCReachableRef<Node>>>, 1> nodesToKeepAlive;
     HashSet<GCReachableRef<Node>> pendingTargets;
     pendingTargets.swap(m_pendingTargets);
-    for (auto* registration : m_registrations) {
-        if (registration->hasTransientRegistrations())
-            transientRegistrations.append(registration);
+    for (auto& registration : m_registrations) {
+        if (registration.hasTransientRegistrations())
+            transientRegistrations.append(&registration);
     }
     for (auto& registration : transientRegistrations)
         nodesToKeepAlive.append(registration->takeTransientRegistrations());

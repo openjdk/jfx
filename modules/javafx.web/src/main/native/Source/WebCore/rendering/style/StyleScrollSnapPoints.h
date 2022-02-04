@@ -25,8 +25,6 @@
 
 #pragma once
 
-#if ENABLE(CSS_SCROLL_SNAP)
-
 #include "LengthBox.h"
 #include "LengthSize.h"
 #include "RenderStyleConstants.h"
@@ -48,17 +46,15 @@ inline bool operator==(const ScrollSnapType& a, const ScrollSnapType& b)
 inline bool operator!=(const ScrollSnapType& a, const ScrollSnapType& b) { return !(a == b); }
 
 struct ScrollSnapAlign {
-    ScrollSnapAxisAlignType x { ScrollSnapAxisAlignType::None };
-    ScrollSnapAxisAlignType y { ScrollSnapAxisAlignType::None };
+    ScrollSnapAxisAlignType blockAlign { ScrollSnapAxisAlignType::None };
+    ScrollSnapAxisAlignType inlineAlign { ScrollSnapAxisAlignType::None };
 };
 
 inline bool operator==(const ScrollSnapAlign& a, const ScrollSnapAlign& b)
 {
-    return a.x == b.x && a.y == b.y;
+    return a.blockAlign == b.blockAlign && a.inlineAlign == b.inlineAlign;
 }
 
 inline bool operator!=(const ScrollSnapAlign& a, const ScrollSnapAlign& b) { return !(a == b); }
 
 } // namespace WebCore
-
-#endif // ENABLE(CSS_SCROLL_SNAP)

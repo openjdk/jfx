@@ -55,7 +55,7 @@ GraphicsContextGL& WebGLContextGroup::getAGraphicsContextGL()
     return *(*m_contexts.begin())->graphicsContextGL();
 }
 
-WTF::Lock& WebGLContextGroup::objectGraphLockForAContext()
+Lock& WebGLContextGroup::objectGraphLockForAContext()
 {
     ASSERT(!m_contexts.isEmpty());
     // Since the WEBGL_shared_objects extension never shipped, and is
@@ -100,7 +100,7 @@ void WebGLContextGroup::detachAndRemoveAllObjects()
         return;
     }
 
-    auto locker = holdLock(objectGraphLockForAContext());
+    Locker locker { objectGraphLockForAContext() };
     while (!m_groupObjects.isEmpty())
         (*m_groupObjects.begin())->detachContextGroup(locker);
 }

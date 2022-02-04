@@ -129,7 +129,7 @@ void loadConstantImpl(BasicBlock* block, T value, B3::Air::Opcode move, Tmp tmp,
     static Lock lock;
     static StdMap<T, T*>* map; // I'm not messing with HashMap's problems with integers.
 
-    LockHolder locker(lock);
+    Locker locker { lock };
     if (!map)
         map = new StdMap<T, T*>();
 
@@ -2145,7 +2145,7 @@ void testElideHandlesEarlyClobber()
     patch->clobber(RegisterSet(lastCalleeSave));
 
     patch->setGenerator([=] (CCallHelpers& jit, const JSC::B3::StackmapGenerationParams&) {
-        jit.probe([=] (Probe::Context& context) {
+        jit.probeDebug([=] (Probe::Context& context) {
             for (Reg reg : registers)
                 context.gpr(reg.gpr()) = 0;
         });
@@ -2469,7 +2469,7 @@ void run(const char* filter)
                     for (;;) {
                         RefPtr<SharedTask<void()>> task;
                         {
-                            LockHolder locker(lock);
+                            Locker locker { lock };
                             if (tasks.isEmpty())
                                 return;
                             task = tasks.takeFirst();

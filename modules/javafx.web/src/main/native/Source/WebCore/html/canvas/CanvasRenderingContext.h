@@ -30,18 +30,21 @@
 #include "ScriptWrappable.h"
 #include <wtf/Forward.h>
 #include <wtf/IsoMalloc.h>
+#include <wtf/Lock.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/text/StringHash.h>
 
 namespace WebCore {
 
 class CanvasPattern;
+class DestinationColorSpace;
 class HTMLCanvasElement;
 class HTMLImageElement;
 class HTMLVideoElement;
 class ImageBitmap;
-class TypedOMCSSImageValue;
+class CSSStyleImageValue;
 class WebGLObject;
+enum class PixelFormat : uint8_t;
 
 class CanvasRenderingContext : public ScriptWrappable {
     WTF_MAKE_NONCOPYABLE(CanvasRenderingContext);
@@ -49,8 +52,8 @@ class CanvasRenderingContext : public ScriptWrappable {
 public:
     virtual ~CanvasRenderingContext();
 
-    static HashSet<CanvasRenderingContext*>& instances(const LockHolder&);
-    static Lock& instancesMutex();
+    static HashSet<CanvasRenderingContext*>& instances() WTF_REQUIRES_LOCK(instancesLock());
+    static Lock& instancesLock() WTF_RETURNS_LOCK(s_instancesLock);
 
     void ref();
     WEBCORE_EXPORT void deref();
@@ -61,9 +64,6 @@ public:
     virtual bool isWebGL1() const { return false; }
     virtual bool isWebGL2() const { return false; }
     bool isWebGL() const { return isWebGL1() || isWebGL2(); }
-#if ENABLE(WEBGPU)
-    virtual bool isWebGPU() const { return false; }
-#endif
     virtual bool isGPUBased() const { return false; }
     virtual bool isAccelerated() const { return false; }
     virtual bool isBitmapRenderer() const { return false; }
@@ -71,18 +71,23 @@ public:
     virtual bool isOffscreen2d() const { return false; }
     virtual bool isPaint() const { return false; }
 
+    virtual void clearAccumulatedDirtyRect() { }
+
     // Called before paintRenderingResultsToCanvas if paintRenderingResultsToCanvas is
     // used for compositing purposes.
     virtual void prepareForDisplayWithPaint() { }
-    virtual void paintRenderingResultsToCanvas() {}
+    virtual void paintRenderingResultsToCanvas() { }
     virtual PlatformLayer* platformLayer() const { return 0; }
 
-    bool callTracingActive() const { return m_callTracingActive; }
-    void setCallTracingActive(bool callTracingActive) { m_callTracingActive = callTracingActive; }
+    bool hasActiveInspectorCanvasCallTracer() const { return m_hasActiveInspectorCanvasCallTracer; }
+    void setHasActiveInspectorCanvasCallTracer(bool hasActiveInspectorCanvasCallTracer) { m_hasActiveInspectorCanvasCallTracer = hasActiveInspectorCanvasCallTracer; }
 
     virtual bool compositingResultsNeedUpdating() const { return false; }
     virtual bool needsPreparationForDisplay() const { return false; }
     virtual void prepareForDisplay() { }
+
+    virtual PixelFormat pixelFormat() const;
+    virtual DestinationColorSpace colorSpace() const;
 
 protected:
     explicit CanvasRenderingContext(CanvasBase&);
@@ -99,11 +104,13 @@ protected:
             m_canvas.setOriginTainted();
     }
     void checkOrigin(const URL&);
-    void checkOrigin(const TypedOMCSSImageValue&);
+    void checkOrigin(const CSSStyleImageValue&);
 
-    bool m_callTracingActive { false };
+    bool m_hasActiveInspectorCanvasCallTracer { false };
 
 private:
+    static Lock s_instancesLock;
+
     CanvasBase& m_canvas;
 };
 
