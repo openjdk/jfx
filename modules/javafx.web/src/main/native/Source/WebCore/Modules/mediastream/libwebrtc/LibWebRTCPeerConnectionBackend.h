@@ -28,7 +28,6 @@
 
 #include "PeerConnectionBackend.h"
 #include "RealtimeMediaSource.h"
-#include <wtf/HashMap.h>
 
 namespace webrtc {
 class IceCandidateInterface;
@@ -80,6 +79,8 @@ private:
     RefPtr<RTCSessionDescription> currentRemoteDescription() const final;
     RefPtr<RTCSessionDescription> pendingRemoteDescription() const final;
 
+    std::optional<bool> canTrickleIceCandidates() const final;
+
     void emulatePlatformEvent(const String&) final { }
     void applyRotationForOutgoingVideoSources() final;
 
@@ -111,6 +112,7 @@ private:
 
     void suspend() final;
     void resume() final;
+    void disableICECandidateFiltering() final;
 
     Ref<LibWebRTCMediaEndpoint> m_endpoint;
     bool m_isLocalDescriptionSet { false };

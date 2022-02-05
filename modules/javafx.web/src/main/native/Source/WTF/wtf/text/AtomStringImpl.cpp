@@ -24,7 +24,6 @@
 #include "config.h"
 #include <wtf/text/AtomStringImpl.h>
 
-#include <wtf/HashSet.h>
 #include <wtf/Threading.h>
 #include <wtf/text/AtomStringTable.h>
 #include <wtf/text/StringHash.h>
@@ -46,7 +45,7 @@ class AtomStringTableLocker : public LockHolder {
     static Lock s_stringTableLock;
 public:
     AtomStringTableLocker()
-        : LockHolder(&s_stringTableLock)
+        : LockHolder(s_stringTableLock)
     {
     }
 };
@@ -63,7 +62,7 @@ public:
 
 #endif // USE(WEB_THREAD)
 
-using StringTableImpl = HashSet<PackedPtr<StringImpl>>;
+using StringTableImpl = AtomStringTable::StringTableImpl;
 
 static ALWAYS_INLINE StringTableImpl& stringTable()
 {

@@ -29,6 +29,7 @@ types [
     :DebugHookType,
     :ECMAMode,
     :ErrorTypeWithExtension,
+    :EnumeratorMetadata,
     :GetByIdMode,
     :GetByIdModeMetadata,
     :GetByValHistory,
@@ -454,6 +455,20 @@ op :in_by_id,
         property: unsigned,
     }
 
+op :has_private_name,
+    args: {
+        dst: VirtualRegister,
+        base: VirtualRegister,
+        property: VirtualRegister,
+    }
+
+op :has_private_brand,
+    args: {
+        dst: VirtualRegister,
+        base: VirtualRegister,
+        brand: VirtualRegister,
+    }
+
 op :get_by_id,
     args: {
         dst: VirtualRegister,
@@ -608,7 +623,6 @@ op :check_private_brand,
         structureID: StructureID,
         brand: WriteBarrier[JSCell],
     }
-
 
 op :put_by_val,
     args: {
@@ -1141,89 +1155,69 @@ op :profile_control_flow,
         basicBlockLocation: BasicBlockLocation.*,
     }
 
-op :get_enumerable_length,
-    args: {
-        dst: VirtualRegister,
-        base: VirtualRegister,
-    }
-
-op :has_enumerable_indexed_property,
-    args: {
-        dst: VirtualRegister,
-        base: VirtualRegister,
-        property: VirtualRegister,
-    },
-    metadata: {
-        arrayProfile: ArrayProfile,
-    }
-
-op :has_enumerable_structure_property,
-    args: {
-        dst: VirtualRegister,
-        base: VirtualRegister,
-        property: VirtualRegister,
-        enumerator: VirtualRegister,
-    }
-
-op :has_own_structure_property,
-    args: {
-        dst: VirtualRegister,
-        base: VirtualRegister,
-        property: VirtualRegister,
-        enumerator: VirtualRegister,
-    }
-
-op :in_structure_property,
-    args: {
-        dst: VirtualRegister,
-        base: VirtualRegister,
-        property: VirtualRegister,
-        enumerator: VirtualRegister,
-    }
-
-op :has_enumerable_property,
-    args: {
-        dst: VirtualRegister,
-        base: VirtualRegister,
-        property: VirtualRegister,
-    }
-
-op :get_direct_pname,
-    args: {
-        dst: VirtualRegister,
-        base: VirtualRegister,
-        property: VirtualRegister,
-        index: VirtualRegister,
-        enumerator: VirtualRegister,
-    },
-    metadata: {
-        profile: ValueProfile,
-    }
-
 op :get_property_enumerator,
     args: {
         dst: VirtualRegister,
         base: VirtualRegister,
     }
 
-op :enumerator_structure_pname,
+op :enumerator_next,
     args: {
-        dst: VirtualRegister,
+        # out
+        propertyName: VirtualRegister,
+        # in/out
+        mode: VirtualRegister, # Will always be a JS UInt32 representing a JSForInMode.
+        index: VirtualRegister, # Gets reset to zero every time mode changes.
+        # in
+        base: VirtualRegister,
         enumerator: VirtualRegister,
-        index: VirtualRegister,
+    },
+    metadata: {
+        arrayProfile: ArrayProfile,
+        enumeratorMetadata: EnumeratorMetadata,
     }
 
-op :enumerator_generic_pname,
+op :enumerator_get_by_val,
     args: {
         dst: VirtualRegister,
-        enumerator: VirtualRegister,
+        base: VirtualRegister,
+        mode: VirtualRegister,
+        propertyName: VirtualRegister,
         index: VirtualRegister,
+        enumerator: VirtualRegister,
+    },
+    metadata: {
+        profile: ValueProfile,
+        arrayProfile: ArrayProfile,
+        enumeratorMetadata: EnumeratorMetadata,
     }
 
-op :to_index_string,
+op :enumerator_in_by_val,
     args: {
         dst: VirtualRegister,
+        base: VirtualRegister,
+        mode: VirtualRegister,
+        propertyName: VirtualRegister,
         index: VirtualRegister,
+        enumerator: VirtualRegister,
+    },
+    metadata: {
+        arrayProfile: ArrayProfile,
+        enumeratorMetadata: EnumeratorMetadata,
+    }
+
+op :enumerator_has_own_property,
+    args: {
+        dst: VirtualRegister,
+        base: VirtualRegister,
+        mode: VirtualRegister,
+        propertyName: VirtualRegister,
+        index: VirtualRegister,
+        enumerator: VirtualRegister,
+    },
+    metadata: {
+        arrayProfile: ArrayProfile,
+        enumeratorMetadata: EnumeratorMetadata,
     }
 
 op :unreachable
@@ -1474,6 +1468,8 @@ op :wasm_trampoline_wasm_call
 op :wasm_trampoline_wasm_call_no_tls
 op :wasm_trampoline_wasm_call_indirect
 op :wasm_trampoline_wasm_call_indirect_no_tls
+op :wasm_trampoline_wasm_call_ref
+op :wasm_trampoline_wasm_call_ref_no_tls
 
 end_section :NativeHelpers
 
@@ -1495,6 +1491,8 @@ op :call_return_location
 op :call_no_tls_return_location
 op :call_indirect_return_location
 op :call_indirect_no_tls_return_location
+op :call_ref_return_location
+op :call_ref_no_tls_return_location
 
 # FIXME: Wasm and JS LLInt should share common opcodes
 # https://bugs.webkit.org/show_bug.cgi?id=203656
@@ -1684,6 +1682,22 @@ op :call_indirect_no_tls,
         stackOffset: unsigned,
         numberOfStackArgs: unsigned,
         tableIndex: unsigned,
+    }
+
+op :call_ref,
+    args: {
+        functionReference: VirtualRegister,
+        signatureIndex: unsigned,
+        stackOffset: unsigned,
+        numberOfStackArgs: unsigned,
+    }
+
+op :call_ref_no_tls,
+    args: {
+        functionReference: VirtualRegister,
+        signatureIndex: unsigned,
+        stackOffset: unsigned,
+        numberOfStackArgs: unsigned,
     }
 
 op :current_memory,

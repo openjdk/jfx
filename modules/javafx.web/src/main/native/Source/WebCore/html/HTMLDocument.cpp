@@ -78,6 +78,7 @@
 #include "ScriptController.h"
 #include "StyleResolver.h"
 #include <wtf/IsoMallocInlines.h>
+#include <wtf/RobinHoodHashSet.h>
 #include <wtf/text/CString.h>
 
 namespace WebCore {
@@ -119,10 +120,10 @@ Ref<DocumentParser> HTMLDocument::createParser()
 }
 
 // https://html.spec.whatwg.org/multipage/dom.html#dom-document-nameditem
-Optional<Variant<RefPtr<WindowProxy>, RefPtr<Element>, RefPtr<HTMLCollection>>> HTMLDocument::namedItem(const AtomString& name)
+std::optional<Variant<RefPtr<WindowProxy>, RefPtr<Element>, RefPtr<HTMLCollection>>> HTMLDocument::namedItem(const AtomString& name)
 {
     if (name.isNull() || !hasDocumentNamedItem(*name.impl()))
-        return WTF::nullopt;
+        return std::nullopt;
 
     if (UNLIKELY(documentNamedItemContainsMultipleElements(*name.impl()))) {
         auto collection = documentNamedItems(name);
@@ -225,7 +226,7 @@ bool HTMLDocument::isCaseSensitiveAttribute(const QualifiedName& attributeName)
             &valuetypeAttr.get(),
             &vlinkAttr.get(),
         };
-        HashSet<AtomString> set;
+        MemoryCompactLookupOnlyRobinHoodHashSet<AtomString> set;
         for (auto* name : names)
             set.add(name->localName());
         return set;

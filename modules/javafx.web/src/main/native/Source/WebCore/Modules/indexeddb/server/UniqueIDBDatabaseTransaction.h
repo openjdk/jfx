@@ -25,10 +25,9 @@
 
 #pragma once
 
-#if ENABLE(INDEXED_DATABASE)
-
 #include "IDBError.h"
 #include "IDBTransactionInfo.h"
+#include <wtf/Deque.h>
 #include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
 
@@ -67,7 +66,7 @@ public:
 
     void abort();
     void abortWithoutCallback();
-    void commit();
+    void commit(uint64_t pendingRequestCount);
 
     void createObjectStore(const IDBRequestData&, const IDBObjectStoreInfo&);
     void deleteObjectStore(const IDBRequestData&, const String& objectStoreName);
@@ -89,7 +88,7 @@ public:
     const Vector<uint64_t>& objectStoreIdentifiers();
 
     void setMainThreadAbortResult(const IDBError& error) { m_mainThreadAbortResult = { error }; }
-    const Optional<IDBError>& mainThreadAbortResult() const { return m_mainThreadAbortResult; }
+    const std::optional<IDBError>& mainThreadAbortResult() const { return m_mainThreadAbortResult; }
 
 private:
     UniqueIDBDatabaseTransaction(UniqueIDBDatabaseConnection&, const IDBTransactionInfo&);
@@ -101,10 +100,9 @@ private:
 
     Vector<uint64_t> m_objectStoreIdentifiers;
 
-    Optional<IDBError> m_mainThreadAbortResult;
+    std::optional<IDBError> m_mainThreadAbortResult;
+    Deque<IDBError> m_requestResults;
 };
 
 } // namespace IDBServer
 } // namespace WebCore
-
-#endif // ENABLE(INDEXED_DATABASE)

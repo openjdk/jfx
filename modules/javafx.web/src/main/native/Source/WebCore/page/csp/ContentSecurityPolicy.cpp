@@ -68,26 +68,11 @@ using namespace Inspector;
 
 static String consoleMessageForViolation(const char* effectiveViolatedDirective, const ContentSecurityPolicyDirective& violatedDirective, const URL& blockedURL, const char* prefix, const char* subject = "it")
 {
-    StringBuilder result;
-    if (violatedDirective.directiveList().isReportOnly())
-        result.appendLiteral("[Report Only] ");
-    result.append(prefix);
-    if (!blockedURL.isEmpty()) {
-        result.append(' ');
-        result.append(blockedURL.stringCenterEllipsizedToLength());
-    }
-    result.appendLiteral(" because ");
-    result.append(subject);
-    if (violatedDirective.isDefaultSrc()) {
-        result.appendLiteral(" appears in neither the ");
-        result.append(effectiveViolatedDirective);
-        result.appendLiteral(" directive nor the default-src directive of the Content Security Policy.");
-    } else {
-        result.appendLiteral(" does not appear in the ");
-        result.append(effectiveViolatedDirective);
-        result.appendLiteral(" directive of the Content Security Policy.");
-    }
-    return result.toString();
+    return makeString(violatedDirective.directiveList().isReportOnly() ? "[Report Only] " : "",
+        prefix, blockedURL.isEmpty() ? "" : " ", blockedURL.stringCenterEllipsizedToLength(), " because ", subject,
+        violatedDirective.isDefaultSrc() ? " appears in neither the " : " does not appear in the ",
+        effectiveViolatedDirective,
+        violatedDirective.isDefaultSrc() ? " directive nor the default-src directive of the Content Security Policy." : " directive of the Content Security Policy.");
 }
 
 ContentSecurityPolicy::ContentSecurityPolicy(URL&& protectedURL, ContentSecurityPolicyClient* client)
@@ -138,22 +123,14 @@ void ContentSecurityPolicy::copyUpgradeInsecureRequestStateFrom(const ContentSec
 bool ContentSecurityPolicy::allowRunningOrDisplayingInsecureContent(const URL& url)
 {
     bool allow = true;
-    bool isReportOnly = false;
     for (auto& policy : m_policies) {
         if (!policy->hasBlockAllMixedContentDirective())
             continue;
-
-        isReportOnly = policy->isReportOnly();
-
-        StringBuilder consoleMessage;
-        if (isReportOnly)
-            consoleMessage.appendLiteral("[Report Only] ");
-        consoleMessage.append("Blocked mixed content ");
-        consoleMessage.append(url.stringCenterEllipsizedToLength());
-        consoleMessage.appendLiteral(" because ");
-        consoleMessage.append("'block-all-mixed-content' appears in the Content Security Policy.");
-        reportViolation(ContentSecurityPolicyDirectiveNames::blockAllMixedContent, ContentSecurityPolicyDirectiveNames::blockAllMixedContent, *policy, url, consoleMessage.toString());
-
+        bool isReportOnly = policy->isReportOnly();
+        auto message = makeString(isReportOnly ? "[Report Only] " : "", "Blocked mixed content ",
+            url.stringCenterEllipsizedToLength(), " because 'block-all-mixed-content' appears in the Content Security Policy.");
+        reportViolation(ContentSecurityPolicyDirectiveNames::blockAllMixedContent,
+            ContentSecurityPolicyDirectiveNames::blockAllMixedContent, *policy, url, message);
         if (!isReportOnly)
             allow = false;
     }
@@ -209,7 +186,7 @@ void ContentSecurityPolicy::didReceiveHeader(const String& header, ContentSecuri
         m_hasAPIPolicy = true;
     }
 
-    m_cachedResponseHeaders = WTF::nullopt;
+    m_cachedResponseHeaders = std::nullopt;
 
     // RFC2616, section 4.2 specifies that headers appearing multiple times can
     // be combined with a comma. Walk the header string, and parse each comma
@@ -268,7 +245,7 @@ void ContentSecurityPolicy::applyPolicyToScriptExecutionContext()
     if (!m_lastPolicyWebAssemblyDisabledErrorMessage.isNull())
         m_scriptExecutionContext->disableWebAssembly(m_lastPolicyWebAssemblyDisabledErrorMessage);
     if (m_sandboxFlags != SandboxNone && is<Document>(m_scriptExecutionContext))
-        m_scriptExecutionContext->enforceSandboxFlags(m_sandboxFlags);
+        m_scriptExecutionContext->enforceSandboxFlags(m_sandboxFlags, SecurityContext::SandboxFlagsSource::CSP);
     if (enableStrictMixedContentMode)
         m_scriptExecutionContext->setStrictMixedContentMode(true);
 }
@@ -345,7 +322,7 @@ bool ContentSecurityPolicy::allPoliciesAllow(ViolatedDirectiveCallback&& callbac
 }
 
 template<typename Predicate>
-ContentSecurityPolicy::HashInEnforcedAndReportOnlyPoliciesPair ContentSecurityPolicy::findHashOfContentInPolicies(Predicate&& predicate, const String& content, OptionSet<ContentSecurityPolicyHashAlgorithm> algorithms) const
+ContentSecurityPolicy::HashInEnforcedAndReportOnlyPoliciesPair ContentSecurityPolicy::findHashOfContentInPolicies(Predicate&& predicate, StringView content, OptionSet<ContentSecurityPolicyHashAlgorithm> algorithms) const
 {
     if (algorithms.isEmpty() || content.isEmpty())
         return { false, false };
@@ -427,7 +404,7 @@ bool ContentSecurityPolicy::allowStyleWithNonce(const String& nonce, bool overri
     return allPoliciesWithDispositionAllow(ContentSecurityPolicy::Disposition::Enforce, &ContentSecurityPolicyDirectiveList::violatedDirectiveForStyleNonce, strippedNonce);
 }
 
-bool ContentSecurityPolicy::allowInlineScript(const String& contextURL, const WTF::OrdinalNumber& contextLine, const String& scriptContent, bool overrideContentSecurityPolicy) const
+bool ContentSecurityPolicy::allowInlineScript(const String& contextURL, const WTF::OrdinalNumber& contextLine, StringView scriptContent, bool overrideContentSecurityPolicy) const
 {
     if (overrideContentSecurityPolicy)
         return true;
@@ -450,7 +427,7 @@ bool ContentSecurityPolicy::allowInlineScript(const String& contextURL, const WT
     return foundHashInEnforcedPolicies || allPoliciesWithDispositionAllow(ContentSecurityPolicy::Disposition::Enforce, handleViolatedDirective, &ContentSecurityPolicyDirectiveList::violatedDirectiveForUnsafeInlineScript);
 }
 
-bool ContentSecurityPolicy::allowInlineStyle(const String& contextURL, const WTF::OrdinalNumber& contextLine, const String& styleContent, bool overrideContentSecurityPolicy) const
+bool ContentSecurityPolicy::allowInlineStyle(const String& contextURL, const WTF::OrdinalNumber& contextLine, StringView styleContent, bool overrideContentSecurityPolicy) const
 {
     if (overrideContentSecurityPolicy)
         return true;
@@ -623,7 +600,7 @@ bool ContentSecurityPolicy::allowMediaFromSource(const URL& url, RedirectRespons
     return allowResourceFromSource(url, redirectResponseReceived, ContentSecurityPolicyDirectiveNames::mediaSrc, &ContentSecurityPolicyDirectiveList::violatedDirectiveForMedia);
 }
 
-bool ContentSecurityPolicy::allowConnectToSource(const URL& url, RedirectResponseReceived redirectResponseReceived) const
+bool ContentSecurityPolicy::allowConnectToSource(const URL& url, RedirectResponseReceived redirectResponseReceived, const URL& preRedirectURL) const
 {
     if (LegacySchemeRegistry::schemeShouldBypassContentSecurityPolicy(url.protocol().toStringWithoutCopying()))
         return true;
@@ -631,7 +608,7 @@ bool ContentSecurityPolicy::allowConnectToSource(const URL& url, RedirectRespons
     TextPosition sourcePosition(WTF::OrdinalNumber::beforeFirst(), WTF::OrdinalNumber());
     auto handleViolatedDirective = [&] (const ContentSecurityPolicyDirective& violatedDirective) {
         String consoleMessage = consoleMessageForViolation(ContentSecurityPolicyDirectiveNames::connectSrc, violatedDirective, url, "Refused to connect to");
-        reportViolation(ContentSecurityPolicyDirectiveNames::connectSrc, violatedDirective, url, consoleMessage, sourceURL, sourcePosition);
+        reportViolation(ContentSecurityPolicyDirectiveNames::connectSrc, violatedDirective, url, consoleMessage, sourceURL, sourcePosition, preRedirectURL);
     };
     return allPoliciesAllow(WTFMove(handleViolatedDirective), &ContentSecurityPolicyDirectiveList::violatedDirectiveForConnectSource, url, redirectResponseReceived == RedirectResponseReceived::Yes);
 }
@@ -682,12 +659,12 @@ void ContentSecurityPolicy::reportViolation(const String& effectiveViolatedDirec
     return reportViolation(effectiveViolatedDirective, violatedDirective, violatedDirectiveList, blockedURL, consoleMessage, String(), TextPosition(WTF::OrdinalNumber::beforeFirst(), WTF::OrdinalNumber::beforeFirst()), state);
 }
 
-void ContentSecurityPolicy::reportViolation(const String& effectiveViolatedDirective, const ContentSecurityPolicyDirective& violatedDirective, const URL& blockedURL, const String& consoleMessage, const String& sourceURL, const TextPosition& sourcePosition, JSC::JSGlobalObject* state) const
+void ContentSecurityPolicy::reportViolation(const String& effectiveViolatedDirective, const ContentSecurityPolicyDirective& violatedDirective, const URL& blockedURL, const String& consoleMessage, const String& sourceURL, const TextPosition& sourcePosition, const URL& preRedirectURL, JSC::JSGlobalObject* state) const
 {
-    return reportViolation(effectiveViolatedDirective, violatedDirective.text(), violatedDirective.directiveList(), blockedURL, consoleMessage, sourceURL, sourcePosition, state);
+    return reportViolation(effectiveViolatedDirective, violatedDirective.text(), violatedDirective.directiveList(), blockedURL, consoleMessage, sourceURL, sourcePosition, state, preRedirectURL);
 }
 
-void ContentSecurityPolicy::reportViolation(const String& effectiveViolatedDirective, const String& violatedDirective, const ContentSecurityPolicyDirectiveList& violatedDirectiveList, const URL& blockedURL, const String& consoleMessage, const String& sourceURL, const TextPosition& sourcePosition, JSC::JSGlobalObject* state) const
+void ContentSecurityPolicy::reportViolation(const String& effectiveViolatedDirective, const String& violatedDirective, const ContentSecurityPolicyDirectiveList& violatedDirectiveList, const URL& blockedURL, const String& consoleMessage, const String& sourceURL, const TextPosition& sourcePosition, JSC::JSGlobalObject* state, const URL& preRedirectURL) const
 {
     logToConsole(consoleMessage, sourceURL, sourcePosition.m_line, sourcePosition.m_column, state);
 
@@ -722,7 +699,12 @@ void ContentSecurityPolicy::reportViolation(const String& effectiveViolatedDirec
     }
     ASSERT(m_client || is<Document>(m_scriptExecutionContext));
 
-    String blockedURI = deprecatedURLForReporting(blockedURL);
+    String blockedURI;
+    if (preRedirectURL.isNull())
+        blockedURI = deprecatedURLForReporting(blockedURL);
+    else
+        blockedURI = deprecatedURLForReporting(preRedirectURL);
+
     // FIXME: Is it policy to not use the status code for HTTPS, or is that a bug?
     unsigned short httpStatusCode = m_selfSourceProtocol == "http" ? m_httpStatusCode : 0;
 
@@ -735,6 +717,7 @@ void ContentSecurityPolicy::reportViolation(const String& effectiveViolatedDirec
     violationEventInit.effectiveDirective = effectiveViolatedDirective;
     violationEventInit.originalPolicy = violatedDirectiveList.header();
     violationEventInit.sourceFile = info.sourceFile;
+    violationEventInit.disposition = violatedDirectiveList.isReportOnly() ? SecurityPolicyViolationEvent::Disposition::Report : SecurityPolicyViolationEvent::Disposition::Enforce;
     violationEventInit.statusCode = httpStatusCode;
     violationEventInit.lineNumber =  info.lineNumber;
     violationEventInit.columnNumber = info.columnNumber;
@@ -839,30 +822,25 @@ void ContentSecurityPolicy::reportInvalidDirectiveInHTTPEquivMeta(const String& 
 
 void ContentSecurityPolicy::reportInvalidDirectiveValueCharacter(const String& directiveName, const String& value) const
 {
-    String message = makeString("The value for Content Security Policy directive '", directiveName, "' contains an invalid character: '", value, "'. Non-whitespace characters outside ASCII 0x21-0x7E must be percent-encoded, as described in RFC 3986, section 2.1: http://tools.ietf.org/html/rfc3986#section-2.1.");
-    logToConsole(message);
+    logToConsole(makeString("The value for Content Security Policy directive '", directiveName, "' contains an invalid character: '", value, "'. Non-whitespace characters outside ASCII 0x21-0x7E must be percent-encoded, as described in RFC 3986, section 2.1: http://tools.ietf.org/html/rfc3986#section-2.1."));
 }
 
 void ContentSecurityPolicy::reportInvalidPathCharacter(const String& directiveName, const String& value, const char invalidChar) const
 {
     ASSERT(invalidChar == '#' || invalidChar == '?');
 
-    String ignoring;
+    const char* ignoring;
     if (invalidChar == '?')
         ignoring = "The query component, including the '?', will be ignored.";
     else
         ignoring = "The fragment identifier, including the '#', will be ignored.";
-
-    String message = makeString("The source list for Content Security Policy directive '", directiveName, "' contains a source with an invalid path: '", value, "'. ", ignoring);
-    logToConsole(message);
+    logToConsole(makeString("The source list for Content Security Policy directive '", directiveName, "' contains a source with an invalid path: '", value, "'. ", ignoring));
 }
 
 void ContentSecurityPolicy::reportInvalidSourceExpression(const String& directiveName, const String& source) const
 {
-    String message = makeString("The source list for Content Security Policy directive '", directiveName, "' contains an invalid source: '", source, "'. It will be ignored.");
-    if (equalLettersIgnoringASCIICase(source, "'none'"))
-        message = makeString(message, " Note that 'none' has no effect unless it is the only expression in the source list.");
-    logToConsole(message);
+    logToConsole(makeString("The source list for Content Security Policy directive '", directiveName, "' contains an invalid source: '", source, "'. It will be ignored.",
+        equalLettersIgnoringASCIICase(source, "'none'") ? " Note that 'none' has no effect unless it is the only expression in the source list." : ""));
 }
 
 void ContentSecurityPolicy::reportMissingReportURI(const String& policy) const

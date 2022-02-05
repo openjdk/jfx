@@ -90,6 +90,10 @@ interface UIScriptController {
     undefined rawKeyDown(DOMString key);
     undefined rawKeyUp(DOMString key);
 
+    readonly attribute boolean isAnimatingDragCancel;
+    readonly attribute DOMString selectionCaretBackgroundColor;
+    readonly attribute object tapHighlightViewRect;
+
     // eventsJSON describes a series of user events in JSON form. For the keys, see HIDEventGenerator.mm.
     // For example, this JSON describes a touch down followed by a touch up (i.e. a single tap).
     //  {
@@ -203,6 +207,7 @@ interface UIScriptController {
     // Equivalent of pressing the Done button in the form accessory bar.
     undefined dismissFormAccessoryView();
 
+    readonly attribute object filePickerAcceptedTypeIdentifiers;
     undefined dismissFilePicker(object callback);
 
     readonly attribute DOMString textContentType;
@@ -251,7 +256,9 @@ interface UIScriptController {
     attribute object didHideKeyboardCallback;
     readonly attribute boolean isShowingKeyboard;
     readonly attribute boolean hasInputSession;
+    attribute object willStartInputSessionCallback;
 
+    attribute double suppressSoftwareKeyboard;
     attribute boolean windowIsKey;
 
     attribute object didShowMenuCallback;
@@ -325,6 +332,7 @@ interface UIScriptController {
     undefined replaceTextAtRange(DOMString text, long location, long length);
 
     readonly attribute DOMString scrollingTreeAsText;
+    readonly attribute DOMString uiViewTreeAsText;
 
     boolean mayContainEditableElementsInRect(unsigned long x, unsigned long y, unsigned long width, unsigned long height);
 

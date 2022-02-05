@@ -1396,4 +1396,53 @@ public class MultipleSelectionModelImplTest {
         assertEquals(2, model.getSelectedItems().size());
         assertEquals(1, counter.get());
     }
+
+    // Test for MultipleSelectionModelBase.SelectedIndicesList#set(int index)
+    @Test public void testSelectedIndicesList_SetMethod() {
+        model.clearSelection();
+        model.setSelectionMode(SelectionMode.MULTIPLE);
+        model.select(1);
+
+        assertTrue(model.isSelected(1));
+    }
+
+    // Test for MultipleSelectionModelBase.SelectedIndicesList#set(int index, int end, boolean isSet)
+    @Test public void testSelectedIndicesList_SetRangeMethod() {
+        model.clearSelection();
+        model.setSelectionMode(SelectionMode.MULTIPLE);
+        model.selectAll();
+
+        assertEquals(data.size(), model.getSelectedItems().size());
+    }
+
+    // Test for MultipleSelectionModelBase.SelectedIndicesList#set(int index, int... indices)
+    @Test public void testSelectedIndicesList_SetIndicesMethod() {
+        model.clearSelection();
+        model.setSelectionMode(SelectionMode.MULTIPLE);
+        model.selectIndices(1, 2, 5);
+
+        assertTrue(model.isSelected(1));
+        assertTrue(model.isSelected(2));
+        assertTrue(model.isSelected(5));
+        assertEquals(3, model.getSelectedIndices().size());
+    }
+
+    // Test for MultipleSelectionModelBase.SelectedIndicesList#clear()
+    @Test public void testSelectedIndicesList_ClearMethod() {
+        model.setSelectionMode(SelectionMode.MULTIPLE);
+        model.selectIndices(1, 2, 5);
+        model.clearSelection();
+
+        assertTrue(model.getSelectedIndices().isEmpty());
+    }
+
+    // Test for MultipleSelectionModelBase.SelectedIndicesList#clear()
+    @Test public void testSelectedIndicesList_ClearIndexMethod() {
+        model.clearSelection();
+        model.setSelectionMode(SelectionMode.MULTIPLE);
+        model.selectIndices(1, 2, 5);
+        model.clearSelection(2);
+
+        assertEquals(2, model.getSelectedIndices().size());
+    }
 }

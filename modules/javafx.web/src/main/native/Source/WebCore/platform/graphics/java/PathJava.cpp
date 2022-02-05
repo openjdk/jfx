@@ -27,7 +27,6 @@
 
 #include "Path.h"
 #include "FloatRect.h"
-#include "StrokeStyleApplier.h"
 #include "PlatformContextJava.h"
 #include "PlatformJavaClasses.h"
 #include "NotImplemented.h"
@@ -46,7 +45,7 @@ namespace WebCore {
 
 static GraphicsContext& scratchContext()
 {
-    static auto img = ImageBuffer::create(FloatSize(1.f, 1.f), RenderingMode::Unaccelerated);
+    static auto img = ImageBuffer::create(FloatSize(1.f, 1.f), RenderingMode::Unaccelerated, 1, DestinationColorSpace::SRGB(), PixelFormat::BGRA8);
     static GraphicsContext &context = img->context();
     return context;
 }
@@ -142,7 +141,7 @@ bool Path::contains(const FloatPoint& p, WindRule rule) const
 
 FloatRect Path::boundingRectSlowCase() const
 {
-    return strokeBoundingRect(0);
+    return strokeBoundingRect(nullptr);
 }
 
 FloatRect Path::fastBoundingRectSlowCase() const
@@ -150,7 +149,7 @@ FloatRect Path::fastBoundingRectSlowCase() const
     return boundingRect();
 }
 
-FloatRect Path::strokeBoundingRect(StrokeStyleApplier *applier) const
+FloatRect Path::strokeBoundingRect(const Function<void(GraphicsContext&)>& strokeStyleApplier) const
 {
     ASSERT(m_path);
 
@@ -180,10 +179,10 @@ FloatRect Path::strokeBoundingRect(StrokeStyleApplier *applier) const
         WTF::CheckAndClearException(env);
 
         float thickness;
-        if (applier) {
+        if (strokeStyleApplier) {
             GraphicsContext& gc = scratchContext();
             gc.save();
-            applier->strokeStyle(&gc);
+            strokeStyleApplier(gc);
             thickness = gc.strokeThickness();
             gc.restore();
             bounds.inflate(thickness / 2);
@@ -481,10 +480,10 @@ void Path::applySlowCase(const PathApplierFunction& function) const
         WTF::CheckAndClearException(env);
     }
 }
-
-bool Path::strokeContains(StrokeStyleApplier& applier, const FloatPoint& p) const
+bool Path::strokeContains(const FloatPoint& p, const Function<void(GraphicsContext&)>& strokeStyleApplier) const
 {
     ASSERT(m_path);
+    ASSERT(strokeStyleApplier);
 
     GraphicsContext& gc = scratchContext();
     gc.save();
@@ -492,7 +491,7 @@ bool Path::strokeContains(StrokeStyleApplier& applier, const FloatPoint& p) cons
     // Stroke style is set to SolidStroke if the path is not dashed, else it
     // is unchanged. Setting it to NoStroke enables us to detect the switch.
     gc.setStrokeStyle(NoStroke);
-    applier.strokeStyle(&gc);
+    strokeStyleApplier(gc);
 
     float thickness = gc.strokeThickness();
     StrokeStyle strokeStyle = gc.strokeStyle();

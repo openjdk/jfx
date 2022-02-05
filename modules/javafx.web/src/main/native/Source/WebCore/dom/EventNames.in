@@ -19,6 +19,7 @@ ExtendableMessageEvent conditional=SERVICE_WORKER
 ErrorEvent
 FetchEvent conditional=SERVICE_WORKER
 FocusEvent
+FormDataEvent
 HashChangeEvent
 InputEvent
 InputEvents interfaceName=InputEvent
@@ -35,6 +36,7 @@ PageTransitionEvent
 PopStateEvent
 ProgressEvent
 PromiseRejectionEvent
+SubmitEvent
 TextEvent
 TransitionEvent
 UIEvent
@@ -44,6 +46,7 @@ WebKitTransitionEvent
 WheelEvent
 XMLHttpRequestProgressEvent
 ApplePayCancelEvent conditional=APPLE_PAY
+ApplePayCouponCodeChangedEvent conditional=APPLE_PAY_COUPON_CODE
 ApplePayPaymentAuthorizedEvent conditional=APPLE_PAY
 ApplePayPaymentMethodSelectedEvent conditional=APPLE_PAY
 ApplePayShippingContactSelectedEvent conditional=APPLE_PAY
@@ -61,7 +64,9 @@ RTCPeerConnectionIceErrorEvent conditional=WEB_RTC
 RTCPeerConnectionIceEvent conditional=WEB_RTC
 RTCDataChannelEvent conditional=WEB_RTC
 RTCDTMFToneChangeEvent conditional=WEB_RTC
+RTCRtpSFrameTransformErrorEvent conditional=WEB_RTC
 RTCTrackEvent conditional=WEB_RTC
+RTCTransformEvent conditional=WEB_RTC
 SpeechRecognitionErrorEvent
 SpeechRecognitionEvent
 SpeechSynthesisEvent conditional=SPEECH_SYNTHESIS
@@ -70,7 +75,7 @@ StorageEvent
 SVGEvents interfaceName=Event
 SVGZoomEvent
 SVGZoomEvents interfaceName=SVGZoomEvent
-IDBVersionChangeEvent conditional=INDEXED_DATABASE
+IDBVersionChangeEvent
 TouchEvent conditional=TOUCH_EVENTS
 DeviceMotionEvent conditional=DEVICE_ORIENTATION
 DeviceOrientationEvent conditional=DEVICE_ORIENTATION
@@ -86,7 +91,6 @@ OverconstrainedErrorEvent conditional=MEDIA_STREAM
 MediaEncryptedEvent conditional=ENCRYPTED_MEDIA
 MediaKeyMessageEvent conditional=ENCRYPTED_MEDIA
 PointerEvent
-GPUUncapturedErrorEvent conditional=WEBGPU
 EnterPictureInPictureEvent conditional=PICTURE_IN_PICTURE_API
 XRInputSourceEvent conditional=WEBXR
 XRInputSourcesChangeEvent conditional=WEBXR

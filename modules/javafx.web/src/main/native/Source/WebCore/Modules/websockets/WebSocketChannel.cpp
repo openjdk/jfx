@@ -55,9 +55,7 @@
 #include "WebSocketHandshake.h"
 #include <JavaScriptCore/ArrayBuffer.h>
 #include <wtf/FastMalloc.h>
-#include <wtf/HashMap.h>
 #include <wtf/text/CString.h>
-#include <wtf/text/StringHash.h>
 
 namespace WebCore {
 
@@ -163,7 +161,7 @@ ThreadableWebSocketChannel::SendResult WebSocketChannel::send(const String& mess
 ThreadableWebSocketChannel::SendResult WebSocketChannel::send(const ArrayBuffer& binaryData, unsigned byteOffset, unsigned byteLength)
 {
     LOG(Network, "WebSocketChannel %p send() Sending ArrayBuffer %p byteOffset=%u byteLength=%u", this, &binaryData, byteOffset, byteLength);
-    enqueueRawFrame(WebSocketFrame::OpCodeBinary, static_cast<const char*>(binaryData.data()) + byteOffset, byteLength);
+    enqueueRawFrame(WebSocketFrame::OpCodeBinary, static_cast<const uint8_t*>(binaryData.data()) + byteOffset, byteLength);
     processOutgoingFrameQueue();
     return ThreadableWebSocketChannel::SendSuccess;
 }
@@ -176,9 +174,9 @@ ThreadableWebSocketChannel::SendResult WebSocketChannel::send(Blob& binaryData)
     return ThreadableWebSocketChannel::SendSuccess;
 }
 
-bool WebSocketChannel::send(const char* data, int length)
+bool WebSocketChannel::send(const uint8_t* data, int length)
 {
-    LOG(Network, "WebSocketChannel %p send() Sending char* data=%p length=%d", this, data, length);
+    LOG(Network, "WebSocketChannel %p send() Sending uint8_t* data=%p length=%d", this, data, length);
     enqueueRawFrame(WebSocketFrame::OpCodeBinary, data, length);
     processOutgoingFrameQueue();
     return true;
@@ -274,7 +272,7 @@ void WebSocketChannel::didOpenSocketStream(SocketStreamHandle& handle)
         InspectorInstrumentation::willSendWebSocketHandshakeRequest(m_document.get(), m_progressIdentifier, m_handshake->clientHandshakeRequest(WTFMove(cookieRequestHeaderFieldValue)));
     }
     auto handshakeMessage = m_handshake->clientHandshakeMessage();
-    Optional<CookieRequestHeaderFieldProxy> cookieRequestHeaderFieldProxy;
+    std::optional<CookieRequestHeaderFieldProxy> cookieRequestHeaderFieldProxy;
     if (m_allowCookies)
         cookieRequestHeaderFieldProxy = CookieJar::cookieRequestHeaderFieldProxy(*m_document, m_handshake->httpURLForAuthenticationAndCookies());
     handle.sendHandshake(WTFMove(handshakeMessage), WTFMove(cookieRequestHeaderFieldProxy), [this, protectedThis = makeRef(*this)] (bool success, bool didAccessSecureCookies) {
@@ -311,7 +309,7 @@ void WebSocketChannel::didCloseSocketStream(SocketStreamHandle& handle)
     deref();
 }
 
-void WebSocketChannel::didReceiveSocketStreamData(SocketStreamHandle& handle, const char* data, size_t length)
+void WebSocketChannel::didReceiveSocketStreamData(SocketStreamHandle& handle, const uint8_t* data, size_t length)
 {
     LOG(Network, "WebSocketChannel %p didReceiveSocketStreamData() Received %zu bytes", this, length);
     Ref<WebSocketChannel> protectedThis(*this); // The client can close the channel, potentially removing the last reference.
@@ -410,7 +408,7 @@ void WebSocketChannel::didFail(ExceptionCode errorCode)
     deref();
 }
 
-bool WebSocketChannel::appendToBuffer(const char* data, size_t len)
+bool WebSocketChannel::appendToBuffer(const uint8_t* data, size_t len)
 {
     size_t newBufferSize = m_buffer.size() + len;
     if (newBufferSize < m_buffer.size()) {
@@ -494,14 +492,14 @@ void WebSocketChannel::startClosingHandshake(int code, const String& reason)
         return;
     ASSERT(m_handle);
 
-    Vector<char> buf;
+    Vector<uint8_t> buf;
     if (!m_receivedClosingHandshake && code != CloseEventCodeNotSpecified) {
-        unsigned char highByte = code >> 8;
-        unsigned char lowByte = code;
-        buf.append(static_cast<char>(highByte));
-        buf.append(static_cast<char>(lowByte));
+        uint8_t highByte = code >> 8;
+        uint8_t lowByte = code;
+        buf.append(highByte);
+        buf.append(lowByte);
         auto reasonUTF8 = reason.utf8();
-        buf.append(reasonUTF8.data(), reasonUTF8.length());
+        buf.append(reasonUTF8.dataAsUInt8Ptr(), reasonUTF8.length());
     }
     enqueueRawFrame(WebSocketFrame::OpCodeClose, buf.data(), buf.size());
     Ref<WebSocketChannel> protectedThis(*this); // An attempt to send closing handshake may fail, which will get the channel closed and dereferenced.
@@ -530,7 +528,7 @@ bool WebSocketChannel::processFrame()
     ASSERT(!m_buffer.isEmpty());
 
     WebSocketFrame frame;
-    const char* frameEnd;
+    const uint8_t* frameEnd;
     String errorString;
     WebSocketFrame::ParseFrameResult result = WebSocketFrame::parseFrame(m_buffer.data(), m_buffer.size(), frame, frameEnd, errorString);
     if (result == WebSocketFrame::FrameIncomplete)
@@ -662,9 +660,7 @@ bool WebSocketChannel::processFrame()
             fail("Received a broken close frame containing an invalid size body.");
             return false;
         } else {
-            unsigned char highByte = static_cast<unsigned char>(frame.payload[0]);
-            unsigned char lowByte = static_cast<unsigned char>(frame.payload[1]);
-            m_closeEventCode = highByte << 8 | lowByte;
+            m_closeEventCode = frame.payload[0] << 8 | frame.payload[1];
             if (m_closeEventCode == CloseEventCodeNoStatusRcvd || m_closeEventCode == CloseEventCodeAbnormalClosure || m_closeEventCode == CloseEventCodeTLSHandshake) {
                 m_closeEventCode = CloseEventCodeAbnormalClosure;
                 fail("Received a broken close frame containing a reserved status code.");
@@ -703,7 +699,11 @@ bool WebSocketChannel::processFrame()
         break;
     }
 
-    return !m_buffer.isEmpty();
+    if (m_buffer.isEmpty()) {
+        m_buffer.clear();
+        return false;
+    }
+    return true;
 }
 
 void WebSocketChannel::enqueueTextFrame(const CString& string)
@@ -716,15 +716,13 @@ void WebSocketChannel::enqueueTextFrame(const CString& string)
     m_outgoingFrameQueue.append(WTFMove(frame));
 }
 
-void WebSocketChannel::enqueueRawFrame(WebSocketFrame::OpCode opCode, const char* data, size_t dataLength)
+void WebSocketChannel::enqueueRawFrame(WebSocketFrame::OpCode opCode, const uint8_t* data, size_t dataLength)
 {
     ASSERT(m_outgoingFrameQueueStatus == OutgoingFrameQueueOpen);
     auto frame = makeUnique<QueuedFrame>();
     frame->opCode = opCode;
     frame->frameType = QueuedFrameTypeVector;
-    frame->vectorData.resize(dataLength);
-    if (dataLength)
-        memcpy(frame->vectorData.data(), data, dataLength);
+    frame->vectorData = { data, dataLength };
     m_outgoingFrameQueue.append(WTFMove(frame));
 }
 
@@ -749,7 +747,7 @@ void WebSocketChannel::processOutgoingFrameQueue()
         auto frame = m_outgoingFrameQueue.takeFirst();
         switch (frame->frameType) {
         case QueuedFrameTypeString: {
-            sendFrame(frame->opCode, frame->stringData.data(), frame->stringData.length(), [this, protectedThis = makeRef(*this)] (bool success) {
+            sendFrame(frame->opCode, frame->stringData.dataAsUInt8Ptr(), frame->stringData.length(), [this, protectedThis = makeRef(*this)] (bool success) {
                 if (!success)
                     fail("Failed to send WebSocket frame.");
             });
@@ -784,7 +782,7 @@ void WebSocketChannel::processOutgoingFrameQueue()
                 RefPtr<ArrayBuffer> result = m_blobLoader->arrayBufferResult();
                 m_blobLoader = nullptr;
                 m_blobLoaderStatus = BlobLoaderNotStarted;
-                sendFrame(frame->opCode, static_cast<const char*>(result->data()), result->byteLength(), [this, protectedThis = makeRef(*this)] (bool success) {
+                sendFrame(frame->opCode, static_cast<const uint8_t*>(result->data()), result->byteLength(), [this, protectedThis = makeRef(*this)] (bool success) {
                     if (!success)
                         fail("Failed to send WebSocket frame.");
                 });
@@ -817,7 +815,7 @@ void WebSocketChannel::abortOutgoingFrameQueue()
     }
 }
 
-void WebSocketChannel::sendFrame(WebSocketFrame::OpCode opCode, const char* data, size_t dataLength, WTF::Function<void(bool)> completionHandler)
+void WebSocketChannel::sendFrame(WebSocketFrame::OpCode opCode, const uint8_t* data, size_t dataLength, WTF::Function<void(bool)> completionHandler)
 {
     ASSERT(m_handle);
     ASSERT(!m_suspended);
@@ -831,7 +829,7 @@ void WebSocketChannel::sendFrame(WebSocketFrame::OpCode opCode, const char* data
         return completionHandler(false);
     }
 
-    Vector<char> frameData;
+    Vector<uint8_t> frameData;
     frame.makeFrameData(frameData);
 
     m_handle->sendData(frameData.data(), frameData.size(), WTFMove(completionHandler));

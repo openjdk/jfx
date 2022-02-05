@@ -85,6 +85,16 @@ import com.sun.javafx.scene.SceneHelper;
  * the JavaFX runtime. See the {@link javafx.application.Application} class and
  * the {@link Platform#startup(Runnable)} method for more information.
  * </p>
+ * <p>
+ * Some {@code Window} properties are read-only, even though they have
+ * corresponding set methods, because they can be changed externally by the
+ * underlying platform, and therefore must not be bindable.
+ * Further, these properties might be ignored on some platforms, depending on
+ * whether or not there is a window manager and how it is configured.
+ * For example, a tiling window manager might ignore the {@code x} and {@code y}
+ * properties, or treat them as hints, placing the window in a location of its
+ * choosing.
+ * </p>
  *
  * @since JavaFX 2.0
  */
@@ -521,6 +531,7 @@ public class Window implements EventTarget {
     }
 
     private boolean xExplicit = false;
+
     /**
      * The horizontal location of this {@code Window} on the screen. Changing
      * this attribute will move the {@code Window} horizontally. If this
@@ -529,6 +540,11 @@ public class Window implements EventTarget {
      * {@link Stage#fullScreenProperty() fullScreen} is true, but will be honored
      * by the {@code Window} once {@link Stage#fullScreenProperty() fullScreen}
      * becomes false.
+     * <p>
+     * This property is read-only because it can be changed externally
+     * by the underlying platform.
+     * Further, setting this property might be ignored on some platforms.
+     * </p>
      */
     private ReadOnlyDoubleWrapper x =
             new ReadOnlyDoubleWrapper(this, "x", Double.NaN);
@@ -546,6 +562,7 @@ public class Window implements EventTarget {
     }
 
     private boolean yExplicit = false;
+
     /**
      * The vertical location of this {@code Window} on the screen. Changing this
      * attribute will move the {@code Window} vertically. If this
@@ -554,6 +571,11 @@ public class Window implements EventTarget {
      * {@link Stage#fullScreenProperty() fullScreen} is true, but will be honored
      * by the {@code Window} once {@link Stage#fullScreenProperty() fullScreen}
      * becomes false.
+     * <p>
+     * This property is read-only because it can be changed externally
+     * by the underlying platform.
+     * Further, setting this property might be ignored on some platforms.
+     * </p>
      */
     private ReadOnlyDoubleWrapper y =
             new ReadOnlyDoubleWrapper(this, "y", Double.NaN);
@@ -598,8 +620,9 @@ public class Window implements EventTarget {
      * by the {@code Window} once {@link Stage#fullScreenProperty() fullScreen}
      * becomes false.
      * <p>
-     * The property is read only because it can be changed externally
-     * by the underlying platform and therefore must not be bindable.
+     * This property is read-only because it can be changed externally
+     * by the underlying platform.
+     * Further, setting this property might be ignored on some platforms.
      * </p>
      */
     private ReadOnlyDoubleWrapper width =
@@ -614,6 +637,7 @@ public class Window implements EventTarget {
     public final ReadOnlyDoubleProperty widthProperty() { return width.getReadOnlyProperty(); }
 
     private boolean heightExplicit = false;
+
     /**
      * The height of this {@code Window}. Changing this attribute will shrink
      * or heighten the height of the {@code Window}. This value includes any and all
@@ -628,8 +652,9 @@ public class Window implements EventTarget {
      * by the {@code Window} once {@link Stage#fullScreenProperty() fullScreen}
      * becomes false.
      * <p>
-     * The property is read only because it can be changed externally
-     * by the underlying platform and therefore must not be bindable.
+     * This property is read-only because it can be changed externally
+     * by the underlying platform.
+     * Further, setting this property might be ignored on some platforms.
      * </p>
      */
     private ReadOnlyDoubleWrapper height =
@@ -657,10 +682,6 @@ public class Window implements EventTarget {
 
     /**
      * Whether or not this {@code Window} has the keyboard or input focus.
-     * <p>
-     * The property is read only because it can be changed externally
-     * by the underlying platform and therefore must not be bindable.
-     * </p>
      */
     private ReadOnlyBooleanWrapper focused = new ReadOnlyBooleanWrapper() {
         @Override protected void invalidated() {

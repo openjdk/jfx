@@ -73,14 +73,14 @@ void AudioBus::setChannelMemory(unsigned channelIndex, float* storage, size_t le
     }
 }
 
-void AudioBus::resizeSmaller(size_t newLength)
+void AudioBus::setLength(size_t newLength)
 {
-    ASSERT(newLength <= m_length);
-    if (newLength <= m_length)
-        m_length = newLength;
-
+    RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(newLength <= m_length);
+    if (newLength == m_length)
+        return;
     for (unsigned i = 0; i < m_channels.size(); ++i)
-        m_channels[i]->resizeSmaller(newLength);
+        m_channels[i]->setLength(newLength);
+    m_length = newLength;
 }
 
 void AudioBus::zero()

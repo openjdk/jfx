@@ -43,11 +43,11 @@ public:
 
     // It's easiest to read lock like this:
     //
-    //     auto locker = holdLock(rwLock.read());
+    //     Locker locker { rwLock.read() };
     //
     // It's easiest to write lock like this:
     //
-    //     auto locker = holdLock(rwLock.write());
+    //     Locker locker { rwLock.write() };
     //
     WTF_EXPORT_PRIVATE void readLock();
     WTF_EXPORT_PRIVATE void readUnlock();
@@ -63,9 +63,9 @@ public:
 private:
     Lock m_lock;
     Condition m_cond;
-    bool m_isWriteLocked { false };
-    unsigned m_numReaders { 0 };
-    unsigned m_numWaitingWriters { 0 };
+    bool m_isWriteLocked WTF_GUARDED_BY_LOCK(m_lock) { false };
+    unsigned m_numReaders WTF_GUARDED_BY_LOCK(m_lock) { 0 };
+    unsigned m_numWaitingWriters WTF_GUARDED_BY_LOCK(m_lock) { 0 };
 };
 
 class ReadWriteLock::ReadLock : public ReadWriteLock {

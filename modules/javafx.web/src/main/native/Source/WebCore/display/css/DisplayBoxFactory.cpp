@@ -88,7 +88,7 @@ std::unique_ptr<ContainerBox> BoxFactory::displayBoxForRootBox(const Layout::Con
 
     auto style = Style { rootLayoutBox.style(), styleForBackground };
 
-    auto rootBox = makeUnique<ContainerBox>(m_treeBuilder.tree(), snapRectToDevicePixels(borderBoxRect, m_pixelSnappingFactor), WTFMove(style));
+    auto rootBox = makeUnique<ContainerBox>(m_treeBuilder.tree(), UnadjustedAbsoluteFloatRect { snapRectToDevicePixels(borderBoxRect, m_pixelSnappingFactor) }, WTFMove(style));
     // We pass rootBox as its own containingBlockBox here to allow it to be a reference everywhere else.
     setupBoxModelBox(*rootBox, rootLayoutBox, geometry, { *rootBox, { 0, 0 } }, styleForBackground);
     return rootBox;
@@ -116,17 +116,14 @@ std::unique_ptr<Box> BoxFactory::displayBoxForLayoutBox(const Layout::Box& layou
     // FIXME: Need to map logical to physical rects.
     auto borderBoxRect = LayoutRect { Layout::BoxGeometry::borderBoxRect(geometry) };
     borderBoxRect.move(containingBlockContext.offsetFromRoot);
-    auto pixelSnappedBorderBoxRect = snapRectToDevicePixels(borderBoxRect, m_pixelSnappingFactor);
+    auto pixelSnappedBorderBoxRect = UnadjustedAbsoluteFloatRect { snapRectToDevicePixels(borderBoxRect, m_pixelSnappingFactor) };
 
     // FIXME: Handle isAnonymous()
 
     if (is<Layout::ReplacedBox>(layoutBox)) {
         // FIXME: Don't assume it's an image.
-        RefPtr<Image> image;
-        if (auto* cachedImage = downcast<Layout::ReplacedBox>(layoutBox).cachedImage())
-            image = cachedImage->image();
-
-        auto imageBox = makeUnique<ImageBox>(m_treeBuilder.tree(), pixelSnappedBorderBoxRect, WTFMove(style), WTFMove(image));
+        CachedResourceHandle<CachedImage> cachedImageHandle = downcast<Layout::ReplacedBox>(layoutBox).cachedImage();
+        auto imageBox = makeUnique<ImageBox>(m_treeBuilder.tree(), pixelSnappedBorderBoxRect, WTFMove(style), WTFMove(cachedImageHandle));
         setupBoxModelBox(*imageBox, layoutBox, geometry, containingBlockContext, styleForBackground);
         return imageBox;
     }
@@ -143,21 +140,19 @@ std::unique_ptr<Box> BoxFactory::displayBoxForLayoutBox(const Layout::Box& layou
     if (layoutBox.isLineBreakBox())
         flags.add(Box::TypeFlags::LineBreakBox);
 
-    return makeUnique<Box>(m_treeBuilder.tree(), snapRectToDevicePixels(borderBoxRect, m_pixelSnappingFactor), WTFMove(style), flags);
+    return makeUnique<Box>(m_treeBuilder.tree(), pixelSnappedBorderBoxRect, WTFMove(style), flags);
 }
 
-std::unique_ptr<Box> BoxFactory::displayBoxForTextRun(const Layout::LineRun& run, const Layout::InlineLineGeometry& lineGeometry, const ContainingBlockContext& containingBlockContext) const
+std::unique_ptr<Box> BoxFactory::displayBoxForTextRun(const Layout::Run& run, const Layout::LineGeometry& lineGeometry, const ContainingBlockContext& containingBlockContext) const
 {
+    UNUSED_PARAM(lineGeometry);
     ASSERT(run.text());
-    auto lineRect = lineGeometry.lineBoxLogicalRect();
-    auto lineLayoutRect = LayoutRect { lineRect.left(), lineRect.top(), lineRect.width(), lineRect.height() };
 
     auto runRect = LayoutRect { run.logicalLeft(), run.logicalTop(), run.logicalWidth(), run.logicalHeight() };
-    runRect.moveBy(lineLayoutRect.location());
     runRect.move(containingBlockContext.offsetFromRoot);
 
     auto style = Style { run.layoutBox().style() };
-    return makeUnique<TextBox>(m_treeBuilder.tree(), snapRectToDevicePixels(runRect, m_pixelSnappingFactor), WTFMove(style), run);
+    return makeUnique<TextBox>(m_treeBuilder.tree(), UnadjustedAbsoluteFloatRect { snapRectToDevicePixels(runRect, m_pixelSnappingFactor) }, WTFMove(style), run);
 }
 
 void BoxFactory::setupBoxGeometry(BoxModelBox& box, const Layout::Box&, const Layout::BoxGeometry& layoutGeometry, const ContainingBlockContext& containingBlockContext) const
@@ -167,18 +162,18 @@ void BoxFactory::setupBoxGeometry(BoxModelBox& box, const Layout::Box&, const La
 
     auto paddingBoxRect = LayoutRect { layoutGeometry.paddingBox() };
     paddingBoxRect.moveBy(borderBoxRect.location());
-    box.setAbsolutePaddingBoxRect(snapRectToDevicePixels(paddingBoxRect, m_pixelSnappingFactor));
+    box.setAbsolutePaddingBoxRect(UnadjustedAbsoluteFloatRect { snapRectToDevicePixels(paddingBoxRect, m_pixelSnappingFactor) });
 
     auto contentBoxRect = LayoutRect { layoutGeometry.contentBox() };
     contentBoxRect.moveBy(borderBoxRect.location());
-    box.setAbsoluteContentBoxRect(snapRectToDevicePixels(contentBoxRect, m_pixelSnappingFactor));
+    box.setAbsoluteContentBoxRect(UnadjustedAbsoluteFloatRect { snapRectToDevicePixels(contentBoxRect, m_pixelSnappingFactor) });
 
     if (is<ReplacedBox>(box)) {
         auto& replacedBox = downcast<ReplacedBox>(box);
         // FIXME: Need to get the correct rect taking object-fit etc into account.
         auto replacedContentRect = LayoutRect { layoutGeometry.contentBoxLeft(), layoutGeometry.contentBoxTop(), layoutGeometry.contentBoxWidth(), layoutGeometry.contentBoxHeight() };
         replacedContentRect.moveBy(borderBoxRect.location());
-        auto pixelSnappedReplacedContentRect = snapRectToDevicePixels(replacedContentRect, m_pixelSnappingFactor);
+        auto pixelSnappedReplacedContentRect = UnadjustedAbsoluteFloatRect { snapRectToDevicePixels(replacedContentRect, m_pixelSnappingFactor) };
         replacedBox.setReplacedContentRect(pixelSnappedReplacedContentRect);
     }
 }
@@ -255,8 +250,10 @@ std::unique_ptr<BoxRareGeometry> BoxFactory::constructBoxRareGeometry(const BoxM
         boxRareGeometry->setBorderRadii(WTFMove(borderRadii));
     }
 
-    auto transformationMatrix = computeTransformationMatrix(box, layoutGeometry, layoutBox.style(), offsetFromRoot);
-    boxRareGeometry->setTransform(WTFMove(transformationMatrix));
+    if (box.style().hasTransform()) {
+        auto transformationMatrix = computeTransformationMatrix(box, layoutGeometry, layoutBox.style(), offsetFromRoot);
+        boxRareGeometry->setTransform(WTFMove(transformationMatrix));
+    }
 
     return boxRareGeometry;
 }
@@ -267,6 +264,8 @@ void BoxFactory::setupBoxModelBox(BoxModelBox& box, const Layout::Box& layoutBox
 
     auto boxRareGeometry = constructBoxRareGeometry(box, layoutBox, layoutGeometry, containingBlockContext.offsetFromRoot);
     box.setBoxRareGeometry(WTFMove(boxRareGeometry));
+
+    box.setHasTransform(box.style().hasTransform());
 
     auto& renderStyle = layoutBox.style();
     if (!(styleForBackground && styleForBackground->hasBackground()) && !renderStyle.hasBorder()) // FIXME: Misses border-radius.

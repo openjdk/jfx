@@ -25,9 +25,11 @@
 
 #pragma once
 
+#include "ContextDestructionObserver.h"
 #include "ExceptionCode.h"
 #include <wtf/Deque.h>
 #include <wtf/Function.h>
+#include <wtf/Span.h>
 #include <wtf/UniqueRef.h>
 #include <wtf/Variant.h>
 #include <wtf/WeakPtr.h>
@@ -41,16 +43,15 @@ namespace WebCore {
 
 class Blob;
 class BlobLoader;
-class Document;
 class SharedBuffer;
 
-class WEBCORE_EXPORT NetworkSendQueue {
+class WEBCORE_EXPORT NetworkSendQueue : public ContextDestructionObserver {
 public:
     using WriteString = Function<void(const CString& utf8)>;
-    using WriteRawData = Function<void(const char*, size_t)>;
+    using WriteRawData = Function<void(const Span<const uint8_t>&)>;
     enum class Continue { No, Yes };
     using ProcessError = Function<Continue(ExceptionCode)>;
-    NetworkSendQueue(Document&, WriteString&&, WriteRawData&&, ProcessError&&);
+    NetworkSendQueue(ScriptExecutionContext&, WriteString&&, WriteRawData&&, ProcessError&&);
     ~NetworkSendQueue();
 
     void enqueue(CString&& utf8);
@@ -64,8 +65,6 @@ private:
 
     using Message = Variant<CString, Ref<SharedBuffer>, UniqueRef<BlobLoader>>;
     Deque<Message> m_queue;
-
-    WTF::WeakPtr<Document> m_document;
 
     WriteString m_writeString;
     WriteRawData m_writeRawData;

@@ -23,6 +23,7 @@
 
 #include "CSSValueKeywords.h"
 #include "ColorBlending.h"
+#include "ColorLuminance.h"
 #include "ControlStates.h"
 #include "Document.h"
 #include "FileList.h"
@@ -82,9 +83,9 @@ void RenderTheme::adjustStyle(RenderStyle& style, const Element* element, const 
         || style.display() == DisplayType::TableHeaderGroup || style.display() == DisplayType::TableFooterGroup
         || style.display() == DisplayType::TableRow || style.display() == DisplayType::TableColumnGroup || style.display() == DisplayType::TableColumn
         || style.display() == DisplayType::TableCell || style.display() == DisplayType::TableCaption)
-        style.setDisplay(DisplayType::InlineBlock);
+        style.setEffectiveDisplay(DisplayType::InlineBlock);
     else if (style.display() == DisplayType::ListItem || style.display() == DisplayType::Table)
-        style.setDisplay(DisplayType::Block);
+        style.setEffectiveDisplay(DisplayType::Block);
 
     if (userAgentAppearanceStyle && isControlStyled(style, *userAgentAppearanceStyle)) {
         switch (part) {
@@ -92,9 +93,6 @@ void RenderTheme::adjustStyle(RenderStyle& style, const Element* element, const 
             style.setAppearance(MenulistButtonPart);
             part = MenulistButtonPart;
             break;
-        case TextFieldPart:
-            adjustTextFieldStyle(style, element);
-            FALLTHROUGH;
         default:
             style.setAppearance(NoControlPart);
             break;
@@ -168,7 +166,7 @@ void RenderTheme::adjustStyle(RenderStyle& style, const Element* element, const 
             style.setHeight(WTFMove(controlSize.height));
 
         // Min-Width / Min-Height
-        LengthSize minControlSize = Theme::singleton().minimumControlSize(part, style.fontCascade(), { style.minWidth(), style.minHeight() }, style.effectiveZoom());
+        LengthSize minControlSize = Theme::singleton().minimumControlSize(part, style.fontCascade(), { style.minWidth(), style.minHeight() }, { style.width(), style.height() }, style.effectiveZoom());
         if (minControlSize.width != style.minWidth())
             style.setMinWidth(WTFMove(minControlSize.width));
         if (minControlSize.height != style.minHeight())
@@ -241,11 +239,9 @@ void RenderTheme::adjustStyle(RenderStyle& style, const Element* element, const 
     case SearchFieldCancelButtonPart:
         return adjustSearchFieldCancelButtonStyle(style, element);
     case SearchFieldDecorationPart:
-        return adjustSearchFieldDecorationPartStyle(style, element);
     case SearchFieldResultsDecorationPart:
-        return adjustSearchFieldResultsDecorationPartStyle(style, element);
     case SearchFieldResultsButtonPart:
-        return adjustSearchFieldResultsButtonStyle(style, element);
+        return adjustSearchFieldDecorationStyle(style, element);
     case ProgressBarPart:
         return adjustProgressBarStyle(style, element);
     case MeterPart:
@@ -269,6 +265,25 @@ void RenderTheme::adjustStyle(RenderStyle& style, const Element* element, const 
     case ListButtonPart:
         return adjustListButtonStyle(style, element);
 #endif
+    default:
+        break;
+    }
+}
+
+void RenderTheme::adjustSearchFieldDecorationStyle(RenderStyle& style, const Element* element) const
+{
+    if (is<SearchFieldResultsButtonElement>(element) && !downcast<SearchFieldResultsButtonElement>(*element).canAdjustStyleForAppearance()) {
+        style.setAppearance(NoControlPart);
+        return;
+    }
+
+    switch (style.appearance()) {
+    case SearchFieldDecorationPart:
+        return adjustSearchFieldDecorationPartStyle(style, element);
+    case SearchFieldResultsDecorationPart:
+        return adjustSearchFieldResultsDecorationPartStyle(style, element);
+    case SearchFieldResultsButtonPart:
+        return adjustSearchFieldResultsButtonStyle(style, element);
     default:
         break;
     }
@@ -485,6 +500,9 @@ void RenderTheme::paintDecorations(const RenderBox& box, const PaintInfo& paintI
     if (paintInfo.context().paintingDisabled())
         return;
 
+    // FIXME: Investigate whether all controls can use a device-pixel-snapped rect
+    // rather than an integral-snapped rect.
+
     IntRect integralSnappedRect = snappedIntRect(rect);
     FloatRect devicePixelSnappedRect = snapRectToDevicePixels(rect, box.document().deviceScaleFactor());
 
@@ -513,7 +531,7 @@ void RenderTheme::paintDecorations(const RenderBox& box, const PaintInfo& paintI
         break;
 #if ENABLE(INPUT_TYPE_COLOR)
     case ColorWellPart:
-        paintColorWellDecorations(box, paintInfo, integralSnappedRect);
+        paintColorWellDecorations(box, paintInfo, devicePixelSnappedRect);
         break;
 #endif
     case ButtonPart:
@@ -577,7 +595,7 @@ String RenderTheme::formatMediaControlsRemainingTime(float currentTime, float du
 LayoutPoint RenderTheme::volumeSliderOffsetFromMuteButton(const RenderBox& muteButtonBox, const LayoutSize& size) const
 {
     LayoutUnit y = -size.height();
-    FloatPoint absPoint = muteButtonBox.localToAbsolute(FloatPoint(muteButtonBox.offsetLeft(), y), IsFixed | UseTransforms);
+    FloatPoint absPoint = muteButtonBox.localToAbsolute(FloatPoint(muteButtonBox.offsetLeft(), y), { IsFixed, UseTransforms });
     if (absPoint.y() < 0)
         y = muteButtonBox.height();
     return LayoutPoint(0_lu, y);
@@ -764,11 +782,11 @@ bool RenderTheme::supportsFocusRing(const RenderStyle& style) const
 bool RenderTheme::stateChanged(const RenderObject& o, ControlStates::States state) const
 {
     // Default implementation assumes the controls don't respond to changes in :hover state
-    if (state == ControlStates::HoverState && !supportsHover(o.style()))
+    if (state == ControlStates::States::Hovered && !supportsHover(o.style()))
         return false;
 
     // Assume pressed state is only responded to if the control is enabled.
-    if (state == ControlStates::PressedState && !isEnabled(o))
+    if (state == ControlStates::States::Pressed && !isEnabled(o))
         return false;
 
     // Repaint the control.
@@ -784,33 +802,33 @@ void RenderTheme::updateControlStatesForRenderer(const RenderBox& box, ControlSt
         controlStates.setTimeSinceControlWasFocused(box.page().focusController().timeSinceFocusWasSet());
 }
 
-ControlStates::States RenderTheme::extractControlStatesForRenderer(const RenderObject& o) const
+OptionSet<ControlStates::States> RenderTheme::extractControlStatesForRenderer(const RenderObject& o) const
 {
-    ControlStates::States states = 0;
+    OptionSet<ControlStates::States> states;
     if (isHovered(o)) {
-        states |= ControlStates::HoverState;
+        states.add(ControlStates::States::Hovered);
         if (isSpinUpButtonPartHovered(o))
-            states |= ControlStates::SpinUpState;
+            states.add(ControlStates::States::SpinUp);
     }
     if (isPressed(o)) {
-        states |= ControlStates::PressedState;
+        states.add(ControlStates::States::Pressed);
         if (isSpinUpButtonPartPressed(o))
-            states |= ControlStates::SpinUpState;
+            states.add(ControlStates::States::SpinUp);
     }
     if (isFocused(o) && o.style().outlineStyleIsAuto() == OutlineIsAuto::On)
-        states |= ControlStates::FocusState;
+        states.add(ControlStates::States::Focused);
     if (isEnabled(o))
-        states |= ControlStates::EnabledState;
+        states.add(ControlStates::States::Enabled);
     if (isChecked(o))
-        states |= ControlStates::CheckedState;
+        states.add(ControlStates::States::Checked);
     if (isDefault(o))
-        states |= ControlStates::DefaultState;
+        states.add(ControlStates::States::Default);
     if (!isActive(o))
-        states |= ControlStates::WindowInactiveState;
+        states.add(ControlStates::States::WindowInactive);
     if (isIndeterminate(o))
-        states |= ControlStates::IndeterminateState;
+        states.add(ControlStates::States::Indeterminate);
     if (isPresenting(o))
-        states |= ControlStates::PresentingState;
+        states.add(ControlStates::States::Presenting);
     return states;
 }
 
@@ -1002,9 +1020,9 @@ bool RenderTheme::paintMeter(const RenderObject&, const PaintInfo&, const IntRec
 }
 
 #if ENABLE(INPUT_TYPE_COLOR)
-void RenderTheme::paintColorWellDecorations(const RenderObject& box, const PaintInfo& paintInfo, const IntRect& rect)
+void RenderTheme::paintColorWellDecorations(const RenderObject& box, const PaintInfo& paintInfo, const FloatRect& rect)
 {
-    paintButtonDecorations(box, paintInfo, rect);
+    paintButtonDecorations(box, paintInfo, snappedIntRect(LayoutRect(rect)));
 }
 #endif
 
@@ -1379,6 +1397,19 @@ Color RenderTheme::platformAppHighlightColor(OptionSet<StyleColor::Options>) con
 }
 #endif
 
+Color RenderTheme::defaultButtonTextColor(OptionSet<StyleColor::Options> options) const
+{
+    auto& cache = colorCache(options);
+    if (!cache.defaultButtonTextColor.isValid())
+        cache.defaultButtonTextColor = platformDefaultButtonTextColor(options);
+    return cache.defaultButtonTextColor;
+}
+
+Color RenderTheme::platformDefaultButtonTextColor(OptionSet<StyleColor::Options> options) const
+{
+    return systemColor(CSSValueActivebuttontext, options);
+}
+
 #if ENABLE(TOUCH_EVENTS)
 
 Color RenderTheme::tapHighlightColor()
@@ -1389,7 +1420,7 @@ Color RenderTheme::tapHighlightColor()
 #endif
 
 // Value chosen by observation. This can be tweaked.
-constexpr float minColorContrastValue = 1.195f;
+constexpr double minColorContrastValue = 1.195;
 
 // For transparent or translucent background color, use lightening.
 constexpr float minDisabledColorAlphaValue = 0.5f;
@@ -1407,7 +1438,7 @@ Color RenderTheme::disabledTextColor(const Color& textColor, const Color& backgr
     // If there's not very much contrast between the disabled color and the background color,
     // just leave the text color alone. We don't want to change a good contrast color scheme so that it has really bad contrast.
     // If the contrast was already poor, then it doesn't do any good to change it to a different poor contrast color scheme.
-    if (contrastRatio(disabledColor.toSRGBALossy<float>(), backgroundColor.toSRGBALossy<float>()) < minColorContrastValue)
+    if (contrastRatio(disabledColor, backgroundColor) < minColorContrastValue)
         return textColor;
 
     return disabledColor;

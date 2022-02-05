@@ -43,21 +43,21 @@ Buffer::Buffer(const WebCore::IntSize& size, Flags flags)
     , m_flags(flags)
 {
     auto checkedArea = size.area() * 4;
-    m_data = MallocPtr<unsigned char>::tryZeroedMalloc(checkedArea.unsafeGet());
+    m_data = MallocPtr<unsigned char>::tryZeroedMalloc(checkedArea);
 }
 
 Buffer::~Buffer() = default;
 
 void Buffer::beginPainting()
 {
-    LockHolder locker(m_painting.lock);
+    Locker locker { m_painting.lock };
     ASSERT(m_painting.state == PaintingState::Complete);
     m_painting.state = PaintingState::InProgress;
 }
 
 void Buffer::completePainting()
 {
-    LockHolder locker(m_painting.lock);
+    Locker locker { m_painting.lock };
     ASSERT(m_painting.state == PaintingState::InProgress);
     m_painting.state = PaintingState::Complete;
     m_painting.condition.notifyOne();
@@ -65,7 +65,7 @@ void Buffer::completePainting()
 
 void Buffer::waitUntilPaintingComplete()
 {
-    LockHolder locker(m_painting.lock);
+    Locker locker { m_painting.lock };
     m_painting.condition.wait(m_painting.lock,
         [this] { return m_painting.state == PaintingState::Complete; });
 }

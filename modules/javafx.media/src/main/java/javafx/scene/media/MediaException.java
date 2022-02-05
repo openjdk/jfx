@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -111,6 +111,7 @@ public final class MediaException extends RuntimeException {
                 errorCode == MediaError.ERROR_MEDIA_MP3_FORMAT_UNSUPPORTED.code() ||
                 errorCode == MediaError.ERROR_MEDIA_AAC_FORMAT_UNSUPPORTED.code() ||
                 errorCode == MediaError.ERROR_MEDIA_H264_FORMAT_UNSUPPORTED.code() ||
+                errorCode == MediaError.ERROR_MEDIA_H265_FORMAT_UNSUPPORTED.code() ||
                 errorCode == MediaError.ERROR_MEDIA_HLS_FORMAT_UNSUPPORTED.code()) {
             errorType = Type.MEDIA_UNSUPPORTED;
         } else if(errorCode == MediaError.ERROR_MEDIA_CORRUPTED.code()) {

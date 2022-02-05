@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2011, 2013 Google Inc. All rights reserved.
- * Copyright (C) 2011-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -100,7 +100,7 @@ TextTrack& TextTrack::captionMenuAutomaticItem()
 
 TextTrack::TextTrack(ScriptExecutionContext* context, TextTrackClient* client, const AtomString& kind, const AtomString& id, const AtomString& label, const AtomString& language, TextTrackType type)
     : TrackBase(TrackBase::TextTrack, id, label, language)
-    , ContextDestructionObserver(context)
+    , ActiveDOMObject(context)
     , m_client(client)
     , m_trackType(type)
 {
@@ -118,7 +118,9 @@ TextTrack::TextTrack(ScriptExecutionContext* context, TextTrackClient* client, c
 
 Ref<TextTrack> TextTrack::create(Document* document, TextTrackClient* client, const AtomString& kind, const AtomString& id, const AtomString& label, const AtomString& language)
 {
-    return adoptRef(*new TextTrack(document, client, kind, id, label, language, AddTrack));
+    auto textTrack = adoptRef(*new TextTrack(document, client, kind, id, label, language, AddTrack));
+    textTrack->suspendIfNeeded();
+    return textTrack;
 }
 
 TextTrack::~TextTrack()
@@ -370,6 +372,33 @@ ExceptionOr<void> TextTrack::removeCue(TextTrackCue& cue)
     return { };
 }
 
+void TextTrack::removeCuesNotInTimeRanges(PlatformTimeRanges& buffered)
+{
+    ASSERT(shouldPurgeCuesFromUnbufferedRanges());
+
+    if (!m_cues)
+        return;
+
+    Vector<Ref<TextTrackCue>> toPurge;
+    for (size_t i = 0; i < m_cues->length(); ++i) {
+        auto cue = m_cues->item(i);
+        ASSERT(cue->track() == this);
+
+        PlatformTimeRanges activeCueRange { cue->startMediaTime(), cue->endMediaTime() };
+        activeCueRange.intersectWith(buffered);
+        if (!activeCueRange.length())
+            toPurge.append(*cue);
+    }
+
+    if (!toPurge.size())
+        return;
+
+    INFO_LOG(LOGIDENTIFIER, "purging ", toPurge.size());
+
+    for (auto& cue : toPurge)
+        removeCue(cue);
+}
+
 VTTRegionList& TextTrack::ensureVTTRegionList()
 {
     if (!m_regions)
@@ -463,8 +492,8 @@ int TextTrack::trackIndex()
 
 void TextTrack::invalidateTrackIndex()
 {
-    m_trackIndex = WTF::nullopt;
-    m_renderedTrackIndex = WTF::nullopt;
+    m_trackIndex = std::nullopt;
+    m_renderedTrackIndex = std::nullopt;
 }
 
 bool TextTrack::isRendered()
@@ -561,6 +590,11 @@ bool TextTrack::isMainProgramContent() const
 bool TextTrack::containsOnlyForcedSubtitles() const
 {
     return m_kind == Kind::Forced;
+}
+
+const char* TextTrack::activeDOMObjectName() const
+{
+    return "TextTrack";
 }
 
 #if ENABLE(MEDIA_SOURCE)

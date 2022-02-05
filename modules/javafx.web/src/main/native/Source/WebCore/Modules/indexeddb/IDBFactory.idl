@@ -24,20 +24,18 @@
  */
 
 [
-    Conditional=INDEXED_DATABASE,
     SkipVTableValidation,
     Exposed=(Window,Worker)
 ] interface IDBFactory {
-    [NewObject, CallWith=ScriptExecutionContext, MayThrowException] IDBOpenDBRequest open(DOMString name, optional [EnforceRange] unsigned long long version);
-    [NewObject, CallWith=ScriptExecutionContext, MayThrowException] IDBOpenDBRequest deleteDatabase(DOMString name);
+    [NewObject, CallWith=ScriptExecutionContext] IDBOpenDBRequest open(DOMString name, optional [EnforceRange] unsigned long long version);
+    [NewObject, CallWith=ScriptExecutionContext] IDBOpenDBRequest deleteDatabase(DOMString name);
 
     [CallWith=ScriptExecutionContext] Promise<sequence<IDBDatabaseInfo>> databases();
 
-    [CallWith=GlobalObject, MayThrowException] short cmp(any first, any second);
+    [CallWith=GlobalObject] short cmp(any first, any second);
 };
 
 [
-    Conditional=INDEXED_DATABASE,
     JSGenerateToJSObject,
 ] dictionary IDBDatabaseInfo {
     DOMString name;

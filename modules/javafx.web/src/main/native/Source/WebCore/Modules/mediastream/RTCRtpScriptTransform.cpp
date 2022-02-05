@@ -30,6 +30,7 @@
 
 #include "ErrorEvent.h"
 #include "EventNames.h"
+#include "JSDOMGlobalObject.h"
 #include "MessageChannel.h"
 #include "RTCRtpScriptTransformer.h"
 #include "RTCRtpTransformBackend.h"
@@ -41,55 +42,53 @@ namespace WebCore {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(RTCRtpScriptTransform);
 
-ExceptionOr<Ref<RTCRtpScriptTransform>> RTCRtpScriptTransform::create(ScriptExecutionContext& context, Worker& worker, String&& name)
+ExceptionOr<Ref<RTCRtpScriptTransform>> RTCRtpScriptTransform::create(JSC::JSGlobalObject& state, Worker& worker, JSC::JSValue options, Vector<JSC::Strong<JSC::JSObject>>&& transfer)
 {
-    if (!worker.hasRTCRtpScriptTransformer(name))
-        return Exception { InvalidStateError, "No RTCRtpScriptTransformer was registered with this name"_s };
-
     if (!worker.scriptExecutionContext())
         return Exception { InvalidStateError, "Worker frame is detached"_s };
 
-    auto messageChannel = MessageChannel::create(*worker.scriptExecutionContext());
-    auto transformMessagePort = messageChannel->port1();
-    auto transformerMessagePort = messageChannel->port2();
+    auto* context = JSC::jsCast<JSDOMGlobalObject*>(&state)->scriptExecutionContext();
+    if (!context)
+        return Exception { InvalidStateError, "Invalid context"_s };
 
-    auto transform = adoptRef(*new RTCRtpScriptTransform(context, makeRef(worker), makeRef(*transformMessagePort)));
+    Vector<RefPtr<MessagePort>> transferredPorts;
+    auto serializedOptions = SerializedScriptValue::create(state, options, WTFMove(transfer), transferredPorts);
+    if (serializedOptions.hasException())
+        return serializedOptions.releaseException();
+
+    auto channels = MessagePort::disentanglePorts(WTFMove(transferredPorts));
+    if (channels.hasException())
+        return channels.releaseException();
+
+    auto transform = adoptRef(*new RTCRtpScriptTransform(*context, makeRef(worker)));
     transform->suspendIfNeeded();
 
-    worker.createRTCRtpScriptTransformer(name, transformerMessagePort->disentangle(), transform);
+    worker.createRTCRtpScriptTransformer(transform, { serializedOptions.releaseReturnValue(), channels.releaseReturnValue() });
 
     return transform;
 }
 
-RTCRtpScriptTransform::RTCRtpScriptTransform(ScriptExecutionContext& context, Ref<Worker>&& worker, Ref<MessagePort>&& port)
+RTCRtpScriptTransform::RTCRtpScriptTransform(ScriptExecutionContext& context, Ref<Worker>&& worker)
     : ActiveDOMObject(&context)
     , m_worker(WTFMove(worker))
-    , m_port(WTFMove(port))
 {
 }
 
 RTCRtpScriptTransform::~RTCRtpScriptTransform()
 {
-    clear();
+    clear(RTCRtpScriptTransformer::ClearCallback::Yes);
 }
 
-void RTCRtpScriptTransform::setTransformer(RefPtr<RTCRtpScriptTransformer>&& transformer)
+void RTCRtpScriptTransform::setTransformer(RTCRtpScriptTransformer& transformer)
 {
     ASSERT(!isMainThread());
-    if (!transformer) {
-        callOnMainThread([this, protectedThis = makeRef(*this)]() mutable {
-            queueTaskToDispatchEvent(*this, TaskSource::MediaElement, ErrorEvent::create(eventNames().errorEvent, "An error was thrown from RTCRtpScriptTransformer constructor"_s, { }, 0, 0, { }));
-        });
-        return;
-    }
-
     {
-        auto locker = holdLock(m_transformerLock);
+        Locker locker { m_transformerLock };
         ASSERT(!m_isTransformerInitialized);
         m_isTransformerInitialized = true;
-        m_transformer = makeWeakPtr(transformer.get());
+        m_transformer = makeWeakPtr(transformer);
     }
-    transformer->startPendingActivity();
+    transformer.startPendingActivity();
     callOnMainThread([this, protectedThis = makeRef(*this)]() mutable {
         if (m_backend)
             setupTransformer(m_backend.releaseNonNull());
@@ -108,7 +107,7 @@ void RTCRtpScriptTransform::initializeBackendForSender(RTCRtpTransformBackend& b
 
 void RTCRtpScriptTransform::willClearBackend(RTCRtpTransformBackend&)
 {
-    clear();
+    clear(RTCRtpScriptTransformer::ClearCallback::Yes);
 }
 
 void RTCRtpScriptTransform::initializeTransformer(RTCRtpTransformBackend& backend)
@@ -120,7 +119,7 @@ void RTCRtpScriptTransform::initializeTransformer(RTCRtpTransformBackend& backen
 
 bool RTCRtpScriptTransform::setupTransformer(Ref<RTCRtpTransformBackend>&& backend)
 {
-    auto locker = holdLock(m_transformerLock);
+    Locker locker { m_transformerLock };
     if (!m_isTransformerInitialized)
         return false;
 
@@ -131,15 +130,15 @@ bool RTCRtpScriptTransform::setupTransformer(Ref<RTCRtpTransformBackend>&& backe
     return true;
 }
 
-void RTCRtpScriptTransform::clear()
+void RTCRtpScriptTransform::clear(RTCRtpScriptTransformer::ClearCallback clearCallback)
 {
     m_isAttached = false;
 
-    auto locker = holdLock(m_transformerLock);
+    Locker locker { m_transformerLock };
     m_isTransformerInitialized = false;
-    m_worker->postTaskToWorkerGlobalScope([transformer = WTFMove(m_transformer)](auto&) mutable {
+    m_worker->postTaskToWorkerGlobalScope([transformer = WTFMove(m_transformer), clearCallback](auto&) mutable {
         if (transformer)
-            transformer->clear();
+            transformer->clear(clearCallback);
     });
 }
 

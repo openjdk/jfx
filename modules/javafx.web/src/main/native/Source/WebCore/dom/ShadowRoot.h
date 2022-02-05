@@ -62,7 +62,7 @@ public:
 
     using TreeScope::rootNode;
 
-    Style::Scope& styleScope();
+    WEBCORE_EXPORT Style::Scope& styleScope();
     StyleSheetList& styleSheets();
 
     bool resetStyleInheritance() const { return m_resetStyleInheritance; }
@@ -139,7 +139,7 @@ private:
 
     std::unique_ptr<Style::Scope> m_styleScope;
     std::unique_ptr<SlotAssignment> m_slotAssignment;
-    mutable Optional<PartMappings> m_partMappings;
+    mutable std::optional<PartMappings> m_partMappings;
 };
 
 inline Element* ShadowRoot::activeElement() const
@@ -152,6 +152,11 @@ inline ShadowRoot* Node::shadowRoot() const
     if (!is<Element>(*this))
         return nullptr;
     return downcast<Element>(*this).shadowRoot();
+}
+
+inline bool Node::isUserAgentShadowRoot() const
+{
+    return isShadowRoot() && downcast<ShadowRoot>(*this).mode() == ShadowRootMode::UserAgent;
 }
 
 inline ContainerNode* Node::parentOrShadowHostNode() const

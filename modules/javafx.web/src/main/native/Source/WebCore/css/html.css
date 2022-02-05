@@ -44,10 +44,10 @@ body {
 
 p {
     display: block;
-    -webkit-margin-before: 1__qem;
-    -webkit-margin-after: 1__qem;
-    -webkit-margin-start: 0;
-    -webkit-margin-end: 0;
+    margin-block-start: 1__qem;
+    margin-block-end: 1__qem;
+    margin-inline-start: 0;
+    margin-inline-end: 0;
 }
 
 address, article, aside, div, footer, header, hgroup, layer, main, nav, section {
@@ -60,10 +60,10 @@ marquee {
 
 blockquote {
     display: block;
-    -webkit-margin-before: 1__qem;
-    -webkit-margin-after: 1em;
-    -webkit-margin-start: 40px;
-    -webkit-margin-end: 40px;
+    margin-block-start: 1__qem;
+    margin-block-end: 1em;
+    margin-inline-start: 40px;
+    margin-inline-end: 40px;
 }
 
 figcaption {
@@ -72,10 +72,10 @@ figcaption {
 
 figure {
     display: block;
-    -webkit-margin-before: 1em;
-    -webkit-margin-after: 1em;
-    -webkit-margin-start: 40px;
-    -webkit-margin-end: 40px;
+    margin-block-start: 1em;
+    margin-block-end: 1em;
+    margin-inline-start: 40px;
+    margin-inline-end: 40px;
 }
 
 q {
@@ -98,10 +98,10 @@ center {
 
 hr {
     display: block;
-    -webkit-margin-before: 0.5em;
-    -webkit-margin-after: 0.5em;
-    -webkit-margin-start: auto;
-    -webkit-margin-end: auto;
+    margin-block-start: 0.5em;
+    margin-block-end: 0.5em;
+    margin-inline-start: auto;
+    margin-inline-end: auto;
     border-style: inset;
     border-width: 1px;
 }
@@ -129,89 +129,89 @@ audio {
 h1 {
     display: block;
     font-size: 2em;
-    -webkit-margin-before: 0.67__qem;
-    -webkit-margin-after: 0.67em;
-    -webkit-margin-start: 0;
-    -webkit-margin-end: 0;
+    margin-block-start: 0.67__qem;
+    margin-block-end: 0.67em;
+    margin-inline-start: 0;
+    margin-inline-end: 0;
     font-weight: bold;
 }
 
-:matches(article, aside, nav, section) h1 {
+:is(article, aside, nav, section) h1 {
     font-size: 1.5em;
-    -webkit-margin-before: 0.83__qem;
-    -webkit-margin-after: 0.83em;
+    margin-block-start: 0.83__qem;
+    margin-block-end: 0.83em;
 }
 
-:matches(article, aside, nav, section) :matches(article, aside, nav, section) h1 {
+:is(article, aside, nav, section) :is(article, aside, nav, section) h1 {
     font-size: 1.17em;
-    -webkit-margin-before: 1__qem;
-    -webkit-margin-after: 1em;
+    margin-block-start: 1__qem;
+    margin-block-end: 1em;
 }
 
-:matches(article, aside, nav, section) :matches(article, aside, nav, section) :matches(article, aside, nav, section) h1 {
+:is(article, aside, nav, section) :is(article, aside, nav, section) :is(article, aside, nav, section) h1 {
     font-size: 1.00em;
-    -webkit-margin-before: 1.33__qem;
-    -webkit-margin-after: 1.33em;
+    margin-block-start: 1.33__qem;
+    margin-block-end: 1.33em;
 }
 
-:matches(article, aside, nav, section) :matches(article, aside, nav, section) :matches(article, aside, nav, section) :matches(article, aside, nav, section) h1 {
+:is(article, aside, nav, section) :is(article, aside, nav, section) :is(article, aside, nav, section) :is(article, aside, nav, section) h1 {
     font-size: .83em;
-    -webkit-margin-before: 1.67__qem;
-    -webkit-margin-after: 1.67em;
+    margin-block-start: 1.67__qem;
+    margin-block-end: 1.67em;
 }
 
-:matches(article, aside, nav, section) :matches(article, aside, nav, section) :matches(article, aside, nav, section) :matches(article, aside, nav, section) :matches(article, aside, nav, section) h1 {
+:is(article, aside, nav, section) :is(article, aside, nav, section) :is(article, aside, nav, section) :is(article, aside, nav, section) :is(article, aside, nav, section) h1 {
     font-size: .67em;
-    -webkit-margin-before: 2.33__qem;
-    -webkit-margin-after: 2.33em;
+    margin-block-start: 2.33__qem;
+    margin-block-end: 2.33em;
 }
 
 h2 {
     display: block;
     font-size: 1.5em;
-    -webkit-margin-before: 0.83__qem;
-    -webkit-margin-after: 0.83em;
-    -webkit-margin-start: 0;
-    -webkit-margin-end: 0;
+    margin-block-start: 0.83__qem;
+    margin-block-end: 0.83em;
+    margin-inline-start: 0;
+    margin-inline-end: 0;
     font-weight: bold;
 }
 
 h3 {
     display: block;
     font-size: 1.17em;
-    -webkit-margin-before: 1__qem;
-    -webkit-margin-after: 1em;
-    -webkit-margin-start: 0;
-    -webkit-margin-end: 0;
+    margin-block-start: 1__qem;
+    margin-block-end: 1em;
+    margin-inline-start: 0;
+    margin-inline-end: 0;
     font-weight: bold;
 }
 
 h4 {
     display: block;
-    -webkit-margin-before: 1.33__qem;
-    -webkit-margin-after: 1.33em;
-    -webkit-margin-start: 0;
-    -webkit-margin-end: 0;
+    margin-block-start: 1.33__qem;
+    margin-block-end: 1.33em;
+    margin-inline-start: 0;
+    margin-inline-end: 0;
     font-weight: bold;
 }
 
 h5 {
     display: block;
     font-size: .83em;
-    -webkit-margin-before: 1.67__qem;
-    -webkit-margin-after: 1.67em;
-    -webkit-margin-start: 0;
-    -webkit-margin-end: 0;
+    margin-block-start: 1.67__qem;
+    margin-block-end: 1.67em;
+    margin-inline-start: 0;
+    margin-inline-end: 0;
     font-weight: bold;
 }
 
 h6 {
     display: block;
     font-size: .67em;
-    -webkit-margin-before: 2.33__qem;
-    -webkit-margin-after: 2.33em;
-    -webkit-margin-start: 0;
-    -webkit-margin-end: 0;
+    margin-block-start: 2.33__qem;
+    margin-block-end: 2.33em;
+    margin-inline-start: 0;
+    margin-inline-end: 0;
     font-weight: bold;
 }
 
@@ -280,21 +280,21 @@ caption {
 ul, menu, dir {
     display: block;
     list-style-type: disc;
-    -webkit-margin-before: 1__qem;
-    -webkit-margin-after: 1em;
-    -webkit-margin-start: 0;
-    -webkit-margin-end: 0;
-    -webkit-padding-start: 40px;
+    margin-block-start: 1__qem;
+    margin-block-end: 1em;
+    margin-inline-start: 0;
+    margin-inline-end: 0;
+    padding-inline-start: 40px;
 }
 
 ol {
     display: block;
     list-style-type: decimal;
-    -webkit-margin-before: 1__qem;
-    -webkit-margin-after: 1em;
-    -webkit-margin-start: 0;
-    -webkit-margin-end: 0;
-    -webkit-padding-start: 40px;
+    margin-block-start: 1__qem;
+    margin-block-end: 1em;
+    margin-inline-start: 0;
+    margin-inline-end: 0;
+    padding-inline-start: 40px;
 }
 
 li {
@@ -322,15 +322,15 @@ ol ol ul, ol ul ul, ul ol ul, ul ul ul {
 
 dd {
     display: block;
-    -webkit-margin-start: 40px;
+    margin-inline-start: 40px;
 }
 
 dl {
     display: block;
-    -webkit-margin-before: 1__qem;
-    -webkit-margin-after: 1em;
-    -webkit-margin-start: 0;
-    -webkit-margin-end: 0;
+    margin-block-start: 1__qem;
+    margin-block-end: 1em;
+    margin-inline-start: 0;
+    margin-inline-end: 0;
 }
 
 dt {
@@ -338,8 +338,8 @@ dt {
 }
 
 ol ul, ul ol, ul ul, ol ol {
-    -webkit-margin-before: 0;
-    -webkit-margin-after: 0;
+    margin-block-start: 0;
+    margin-block-end: 0;
 }
 
 /* form elements */
@@ -355,19 +355,19 @@ label {
 
 legend {
     display: block;
-    -webkit-padding-start: 2px;
-    -webkit-padding-end: 2px;
+    padding-inline-start: 2px;
+    padding-inline-end: 2px;
     border: none;
 }
 
 fieldset {
     display: block;
-    -webkit-margin-start: 2px;
-    -webkit-margin-end: 2px;
-    -webkit-padding-before: 0.35em;
-    -webkit-padding-start: 0.75em;
-    -webkit-padding-end: 0.75em;
-    -webkit-padding-after: 0.625em;
+    margin-inline-start: 2px;
+    margin-inline-end: 2px;
+    padding-block-start: 0.35em;
+    padding-inline-start: 0.75em;
+    padding-inline-end: 0.75em;
+    padding-block-end: 0.625em;
     border: 2px groove ThreeDFace;
     min-width: min-content;
 }
@@ -414,8 +414,8 @@ input {
 #endif
 #if defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY
     border-radius: 5px;
-    font: 11px Helvetica, -webkit-pictograph;
-    border: 1px solid #4c4c4c;
+    border: 1px solid -apple-system-secondary-label;
+    font: 11px system-ui;
     padding: 0.2em 0.5em 0.3em 0.5em;
 #else
     border: 2px inset;
@@ -437,6 +437,10 @@ input {
 input[type="search"] {
     -webkit-appearance: searchfield;
     box-sizing: border-box;
+#if defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY
+    border: 1px solid -webkit-control-background;
+    background-color: -apple-system-opaque-tertiary-fill;
+#endif
 }
 
 input::-webkit-textfield-decoration-container {
@@ -480,16 +484,25 @@ input[type="search"]::-webkit-search-results-button {
     -webkit-appearance: searchfield-results-button;
     display: block;
     flex: none;
+#if defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY
+    align-self: flex-start;
+    margin: auto 0;
+#endif
 }
 
 #if defined(ENABLE_DATE_AND_TIME_INPUT_TYPES) && ENABLE_DATE_AND_TIME_INPUT_TYPES
-input:matches([type="date"], [type="time"], [type="datetime-local"], [type="month"], [type="week"]) {
+input:is([type="date"], [type="time"], [type="datetime-local"], [type="month"], [type="week"]) {
     -webkit-appearance: textfield;
     align-items: center;
     display: -webkit-inline-flex;
     overflow: hidden;
 #if defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY
     -webkit-appearance: menulist-button;
+    border: 1px solid -webkit-control-background;
+    background-color: -apple-system-opaque-secondary-fill;
+    font-family: system-ui;
+    color: -apple-system-blue;
+    padding: 0.2em 0.5em;
 #else
     -webkit-appearance: textfield;
     outline: none;
@@ -499,11 +512,22 @@ input:matches([type="date"], [type="time"], [type="datetime-local"], [type="mont
     font-feature-settings: "ss03";
 #endif
 }
+
+#if defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY
+input:is([type="date"], [type="time"], [type="datetime-local"], [type="month"], [type="week"]):disabled {
+    background-color: -apple-system-opaque-secondary-fill-disabled;
+    color: -apple-system-tertiary-label;
+    opacity: initial;
+}
+#endif
+
 #endif
 
 input::-webkit-date-and-time-value {
 #if defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY
-    margin-right: 18px;
+    margin: 0px;
+    text-align: center;
+    width: 100%;
 #else
     margin: 1px 24px 1px 4px;
     white-space: pre;
@@ -664,6 +688,7 @@ input::-webkit-credit-card-auto-fill-button:active {
 input::-webkit-caps-lock-indicator {
     -webkit-appearance: caps-lock-indicator;
     content: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="17" height="17"><path fill="black" fill-opacity="0.4" d="M12.5 0.5A 4 4 0 0 1 16.5 4.5L 16.5 12.5A 4 4 0 0 1 12.5 16.5L 4.5 16.5A 4 4 0 0 1 0.5 12.5L 0.5 4.5A 4 4 0 0 1 4.5 0.5L 12.5 0.5M 8.5 2L 4 7L 6.25 7L 6.25 10.25L 10.75 10.25L 10.75 7L 13 7L 8.5 2M 10.75 12L 6.25 12L 6.25 14.25L 10.75 14.25L 10.75 12"/></svg>');
+    max-width: 17px;
     align-self: stretch;
     flex: none;
     -webkit-user-select: none;
@@ -678,13 +703,14 @@ input::-webkit-list-button {
     align-self: stretch;
     flex: none;
     -webkit-user-select: none;
-    width: 16px;
 #if defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY
-    content: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" stroke="black" fill="black" width="16" height="16"><polygon points="8 11.031, 4.5 4.969, 11.5 4.969"/></svg>');
+    width: 11px;
+    content: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 71 42"><path fill="-apple-system-blue" d="M35.48 38.029c1.424 0 2.645-.529 3.743-1.668L63.352 11.987c.854-.895 1.343-1.994 1.343-3.296C64.695 6.046 62.579 3.971 59.975 3.971c-1.261 0-2.482.529-3.418 1.465L35.52 26.839 14.443 5.436C13.507 4.5 12.327 3.971 10.984 3.971c-2.604 0-4.679 2.075-4.679 4.72 0 1.302.448 2.401 1.343 3.296l24.129 24.373c1.139 1.139 2.319 1.668 3.703 1.668z"/></svg>');
     /* Make it easier to hit the button on iOS */
     padding: 7px;
     margin: -7px;
 #else
+    width: 16px;
     height: 100%;
 #endif
 }
@@ -745,7 +771,7 @@ input[type="password"] {
     -webkit-text-security: disc !important;
 }
 
-input:matches([type="hidden"], [type="image"], [type="file"]) {
+input:is([type="hidden"], [type="image"], [type="file"]) {
     -webkit-appearance: initial;
     padding: initial;
     background-color: initial;
@@ -774,10 +800,10 @@ input:-webkit-autofill, input:-webkit-autofill-strong-password, input:-webkit-au
     color: #000000 !important;
 }
 
-input:matches([type="radio"], [type="checkbox"]) {
+input:is([type="radio"], [type="checkbox"]) {
     margin: 3px 2px;
 #if defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY
-    border: 1px solid #4c4c4c;
+    border: initial;
     box-sizing: border-box;
 #else
     padding: initial;
@@ -786,7 +812,7 @@ input:matches([type="radio"], [type="checkbox"]) {
 #endif
 }
 
-input:matches([type="button"], [type="submit"], [type="reset"]) {
+input:is([type="button"], [type="submit"], [type="reset"]) {
     -webkit-appearance: push-button;
     white-space: pre;
 }
@@ -798,28 +824,44 @@ input[type="file"]::file-selector-button {
     font-size: inherit;
 }
 
-input:matches([type="button"], [type="submit"], [type="reset"]), input[type="file"]::file-selector-button, button {
+input:is([type="button"], [type="submit"], [type="reset"]), input[type="file"]::file-selector-button, button {
     align-items: flex-start;
     text-align: center;
     cursor: default;
-    color: ButtonText;
 #if !(defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY)
+    color: ButtonText;
     padding: 2px 6px 3px 6px;
     border: 2px outset ButtonFace;
     background-color: ButtonFace;
 #else
     padding: 0 1.0em;
-    border: 1px solid #4c4c4c;
-    /* We want to be as close to background-color:transparent as possible without actually being transparent. */
-    background-color: rgba(255, 255, 255, 0.01);
-    font: 11px Helvetica;
+    border: 1px solid -webkit-control-background;
+    font: 11px system-ui;
+    background-color: -apple-system-opaque-secondary-fill;
+    color: -apple-system-blue;
 #endif
     box-sizing: border-box;
 }
 
-input:matches([type="button"], [type="submit"], [type="reset"]):active, input[type="file"]::file-selector-button:active, button:active {
+input:is([type="button"], [type="submit"], [type="reset"]):active, input[type="file"]::file-selector-button:active, button:active {
+#if !(defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY)
     color: ActiveButtonText;
+#else
+    color: -apple-system-blue;
+#endif
 }
+
+#if defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY
+
+input[type="submit"], input[type="submit"]:active,
+button[type="submit"], button[type="submit"]:active,
+button[type="menu"], button[type="menu"]:active {
+    background-color: -apple-system-blue;
+    color: white;
+    font-weight: bold;
+}
+
+#endif
 
 input[type="range"] {
     -webkit-appearance: slider-horizontal;
@@ -849,16 +891,19 @@ input[type="range"]::-webkit-slider-thumb, input[type="range"]::-webkit-media-sl
     -webkit-appearance: sliderthumb-horizontal;
     box-sizing: border-box;
     display: block;
-#if defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY
-    background-color: white;
-    border: 1px solid rgb(66, 66, 66);
-    padding: 0px;
-#endif
 }
 
 #if defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY
-input[type="range"]::-webkit-slider-thumb:active {
-    background-color: black;
+input[type="range"]::-webkit-slider-thumb, input[type="range"]::-webkit-slider-thumb:active {
+    background-color: white;
+    border: initial;
+    box-shadow: 0px 6px 13px rgba(0, 0, 0, 0.2), 0px 0.5px 4px rgba(0, 0, 0, 0.2);
+}
+
+input[type="range"]::-webkit-media-slider-thumb {
+    background-color: white;
+    border: 1px solid rgb(66, 66, 66);
+    padding: 0px;
 }
 
 input:disabled, textarea:disabled {
@@ -870,22 +915,40 @@ input[readonly], textarea[readonly] {
 }
 #endif
 
-input:matches([type="button"], [type="submit"], [type="reset"]):disabled,
+#if !(defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY)
+
+input:is([type="button"], [type="submit"], [type="reset"]):disabled,
 input[type="file"]:disabled::file-selector-button, button:disabled,
 select:disabled, keygen:disabled, optgroup:disabled, option:disabled,
 select[disabled]>option {
     color: GrayText;
 }
 
-#if !(defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY)
-input:matches([type="button"], [type="submit"], [type="reset"]):active, input[type="file"]:active::file-selector-button, button:active {
+input:is([type="button"], [type="submit"], [type="reset"]):active, input[type="file"]:active::file-selector-button, button:active {
     border-style: inset;
 }
 
-input:matches([type="button"], [type="submit"], [type="reset"]):active:disabled,
+input:is([type="button"], [type="submit"], [type="reset"]):active:disabled,
 input[type="file"]:active:disabled::file-selector-button, button:active:disabled {
     border-style: outset;
 }
+
+#else
+
+input[type="file"]:disabled {
+    color: rgba(60, 60, 67, 0.3);
+    opacity: initial;
+}
+
+input:is([type="button"], [type="submit"], [type="reset"]):disabled,
+input[type="file"]:disabled::file-selector-button,
+button:disabled,
+select:disabled {
+    background-color: -apple-system-opaque-secondary-fill-disabled;
+    color: -apple-system-tertiary-label;
+    opacity: initial;
+}
+
 #endif
 
 area, param {
@@ -922,16 +985,20 @@ input[type="checkbox"]:indeterminate {
 }
 
 input[type="checkbox"]:indeterminate:disabled {
-    opacity: 0.4;
+    opacity: initial;
     background: rgba(0, 0, 0, 0.8);
 }
 
-input:matches([type="checkbox"], [type="radio"]):checked {
+input:is([type="checkbox"], [type="radio"]):checked {
     border-color: rgba(255, 255, 255, 0.0);
 }
 
-input:matches([type="checkbox"], [type="radio"]):checked:disabled {
-    opacity: 0.4;
+input:is([type="checkbox"], [type="radio"]):disabled {
+    opacity: initial;
+}
+
+input:is([type="checkbox"], [type="radio"]):checked:disabled {
+    opacity: initial;
     background: rgba(0, 0, 0, 0.8);
 }
 #endif
@@ -943,24 +1010,19 @@ input[type="radio"] {
 }
 #endif
 
-#if defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY
-select:focus {
-    border-color: rgb(17, 46, 135);
-}
-#endif
-
 #if defined(ENABLE_INPUT_TYPE_COLOR) && ENABLE_INPUT_TYPE_COLOR
 
 #if defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY
 input[type="color"] {
-    padding: 0.3em;
+    padding: 3px;
 }
 #endif
 
 input[type="color"]::-webkit-color-swatch-wrapper {
     display: flex;
 #if defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY
-    padding: 0;
+    border-radius: inherit;
+    padding: 2px;
 #else
     padding: 4px 2px 5px;
 #endif
@@ -971,7 +1033,11 @@ input[type="color"]::-webkit-color-swatch-wrapper {
 
 input[type="color"]::-webkit-color-swatch {
     background-color: #000000;
+#if defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY
+    border-radius: inherit;
+#else
     border-radius: 2px;
+#endif
     flex: 1;
 }
 
@@ -984,11 +1050,12 @@ select {
     letter-spacing: normal;
     word-spacing: normal;
     line-height: normal;
-    border: 1px solid #4c4c4c;
-    /* We want to be as close to background:transparent as possible without actually being transparent */
-    background-color: rgba(255, 255, 255, 0.01);
-    font: 11px Helvetica;
     padding: 0 0.4em 0 0.4em;
+    color: -apple-system-blue;
+    font: 11px system-ui;
+    border: 1px solid -webkit-control-background;
+    border-radius: initial;
+    background-color: -apple-system-opaque-secondary-fill;
 #else
     -webkit-appearance: menulist;
     border: 1px solid;
@@ -1200,7 +1267,7 @@ nobr {
 
 /* states */
 
-:-webkit-direct-focus {
+:-internal-direct-focus {
 #if defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY
     outline: auto 3px -webkit-focus-ring-color;
 #else
@@ -1219,7 +1286,7 @@ input:focus, textarea:focus, keygen:focus, select:focus {
 }
 #endif
 
-input:matches([type="button"], [type="checkbox"], [type="file"], [type="hidden"], [type="image"], [type="radio"], [type="reset"], [type="search"], [type="submit"]):focus,
+input:is([type="button"], [type="checkbox"], [type="file"], [type="hidden"], [type="image"], [type="radio"], [type="reset"], [type="search"], [type="submit"]):focus,
 input[type="file"]:focus::file-selector-button {
     outline-offset: 0;
 }

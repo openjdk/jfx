@@ -45,6 +45,7 @@
 #include <wtf/RunLoop.h>
 #include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/Threading.h>
+#include <wtf/URLHash.h>
 #include <wtf/UniqueRef.h>
 #include <wtf/WeakPtr.h>
 
@@ -82,7 +83,7 @@ public:
         void resolveRegistrationReadyRequests(SWServerRegistration&);
 
         // Messages to the client WebProcess
-        virtual void updateRegistrationStateInClient(ServiceWorkerRegistrationIdentifier, ServiceWorkerRegistrationState, const Optional<ServiceWorkerData>&) = 0;
+        virtual void updateRegistrationStateInClient(ServiceWorkerRegistrationIdentifier, ServiceWorkerRegistrationState, const std::optional<ServiceWorkerData>&) = 0;
         virtual void updateWorkerStateInClient(ServiceWorkerIdentifier, ServiceWorkerState) = 0;
         virtual void fireUpdateFoundEvent(ServiceWorkerRegistrationIdentifier) = 0;
         virtual void setRegistrationLastUpdateTime(ServiceWorkerRegistrationIdentifier, WallTime) = 0;
@@ -149,14 +150,14 @@ public:
     void rejectJob(const ServiceWorkerJobData&, const ExceptionData&);
     void resolveRegistrationJob(const ServiceWorkerJobData&, const ServiceWorkerRegistrationData&, ShouldNotifyWhenResolved);
     void resolveUnregistrationJob(const ServiceWorkerJobData&, const ServiceWorkerRegistrationKey&, bool unregistrationResult);
-    void startScriptFetch(const ServiceWorkerJobData&, bool shouldRefreshCache);
+    void startScriptFetch(const ServiceWorkerJobData&, SWServerRegistration&);
 
-    void updateWorker(const ServiceWorkerJobDataIdentifier&, SWServerRegistration&, const URL&, const String& script, const CertificateInfo&, const ContentSecurityPolicyResponseHeaders&, const String& referrerPolicy, WorkerType, HashMap<URL, ServiceWorkerContextData::ImportedScript>&&);
+    void updateWorker(const ServiceWorkerJobDataIdentifier&, SWServerRegistration&, const URL&, const ScriptBuffer&, const CertificateInfo&, const ContentSecurityPolicyResponseHeaders&, const CrossOriginEmbedderPolicy&, const String& referrerPolicy, WorkerType, HashMap<URL, ServiceWorkerContextData::ImportedScript>&&);
     void fireInstallEvent(SWServerWorker&);
     void fireActivateEvent(SWServerWorker&);
 
     WEBCORE_EXPORT SWServerWorker* workerByID(ServiceWorkerIdentifier) const;
-    WEBCORE_EXPORT Optional<ServiceWorkerClientData> serviceWorkerClientWithOriginByID(const ClientOrigin&, const ServiceWorkerClientIdentifier&) const;
+    WEBCORE_EXPORT std::optional<ServiceWorkerClientData> serviceWorkerClientWithOriginByID(const ClientOrigin&, const ServiceWorkerClientIdentifier&) const;
     String serviceWorkerClientUserAgent(const ClientOrigin&) const;
     WEBCORE_EXPORT SWServerWorker* activeWorkerFromRegistrationID(ServiceWorkerRegistrationIdentifier);
 
@@ -171,17 +172,17 @@ public:
 
     SWOriginStore& originStore() { return m_originStore; }
 
-    void scriptContextFailedToStart(const Optional<ServiceWorkerJobDataIdentifier>&, SWServerWorker&, const String& message);
-    void scriptContextStarted(const Optional<ServiceWorkerJobDataIdentifier>&, SWServerWorker&);
-    void didFinishInstall(const Optional<ServiceWorkerJobDataIdentifier>&, SWServerWorker&, bool wasSuccessful);
+    void scriptContextFailedToStart(const std::optional<ServiceWorkerJobDataIdentifier>&, SWServerWorker&, const String& message);
+    void scriptContextStarted(const std::optional<ServiceWorkerJobDataIdentifier>&, SWServerWorker&);
+    void didFinishInstall(const std::optional<ServiceWorkerJobDataIdentifier>&, SWServerWorker&, bool wasSuccessful);
     void didFinishActivation(SWServerWorker&);
     void workerContextTerminated(SWServerWorker&);
     void matchAll(SWServerWorker&, const ServiceWorkerClientQueryOptions&, ServiceWorkerClientsMatchAllCallback&&);
-    Optional<ExceptionData> claim(SWServerWorker&);
+    std::optional<ExceptionData> claim(SWServerWorker&);
 
     WEBCORE_EXPORT static HashSet<SWServer*>& allServers();
 
-    WEBCORE_EXPORT void registerServiceWorkerClient(ClientOrigin&&, ServiceWorkerClientData&&, const Optional<ServiceWorkerRegistrationIdentifier>&, String&& userAgent);
+    WEBCORE_EXPORT void registerServiceWorkerClient(ClientOrigin&&, ServiceWorkerClientData&&, const std::optional<ServiceWorkerRegistrationIdentifier>&, String&& userAgent);
     WEBCORE_EXPORT void unregisterServiceWorkerClient(const ClientOrigin&, ServiceWorkerClientIdentifier);
 
     using RunServiceWorkerCallback = WTF::Function<void(SWServerToContextConnection*)>;
@@ -190,6 +191,7 @@ public:
     void resolveRegistrationReadyRequests(SWServerRegistration&);
 
     void addRegistrationFromStore(ServiceWorkerContextData&&);
+    void didSaveWorkerScriptsToDisk(ServiceWorkerIdentifier, ScriptBuffer&& mainScript, HashMap<URL, ScriptBuffer>&& importedScripts);
     void registrationStoreImportComplete();
     void registrationStoreDatabaseFailedToOpen();
 
@@ -215,8 +217,10 @@ public:
 
     static constexpr Seconds defaultTerminationDelay = 10_s;
 
+    LastNavigationWasAppInitiated clientIsAppInitiatedForRegistrableDomain(const RegistrableDomain&);
+
 private:
-    void validateRegistrationDomain(WebCore::RegistrableDomain, CompletionHandler<void(bool)>&&);
+    void validateRegistrationDomain(WebCore::RegistrableDomain, ServiceWorkerJobType, CompletionHandler<void(bool)>&&);
 
     void scriptFetchFinished(const ServiceWorkerFetchResult&);
 
@@ -239,6 +243,8 @@ private:
     void performGetOriginsWithRegistrationsCallbacks();
 
     void contextConnectionCreated(SWServerToContextConnection&);
+
+    void updateAppInitiatedValueForWorkers(const ClientOrigin&, LastNavigationWasAppInitiated);
 
     HashMap<SWServerConnectionIdentifier, std::unique_ptr<Connection>> m_connections;
     HashMap<ServiceWorkerRegistrationKey, WeakPtr<SWServerRegistration>> m_scopeToRegistrationMap;
@@ -277,6 +283,7 @@ private:
     HashSet<WebCore::RegistrableDomain> m_appBoundDomains;
     bool m_hasServiceWorkerEntitlement { false };
     bool m_hasReceivedAppBoundDomains { false };
+    unsigned m_uniqueRegistrationCount { 0 };
 };
 
 } // namespace WebCore

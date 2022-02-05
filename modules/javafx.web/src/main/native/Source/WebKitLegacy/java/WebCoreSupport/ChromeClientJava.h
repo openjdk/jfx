@@ -89,7 +89,7 @@ public:
 
     bool hoverSupportedByPrimaryPointingDevice() const override { return true; }
     bool hoverSupportedByAnyAvailablePointingDevice() const override { return true; }
-    Optional<PointerCharacteristics> pointerCharacteristicsOfPrimaryPointingDevice() const override { return PointerCharacteristics::Fine; }
+    std::optional<PointerCharacteristics> pointerCharacteristicsOfPrimaryPointingDevice() const override { return PointerCharacteristics::Fine; }
     OptionSet<PointerCharacteristics> pointerCharacteristicsOfAllAvailablePointingDevices() const override { return PointerCharacteristics::Fine; }
 
     // Methods used by HostWindow.
@@ -109,6 +109,7 @@ public:
     PlatformPageClient platformPageClient() const override;
     void setCursor(const Cursor&) override;
     void setCursorHiddenUntilMouseMoves(bool) override;
+    void setTextIndicator(const TextIndicatorData&) const override {}
     // End methods used by HostWindow.
 
     void contentsSizeChanged(Frame&, const IntSize&) const override;

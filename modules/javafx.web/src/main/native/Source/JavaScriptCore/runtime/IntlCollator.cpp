@@ -90,23 +90,17 @@ Vector<String> IntlCollator::sortLocaleData(const String& locale, RelevantExtens
         UErrorCode status = U_ZERO_ERROR;
         auto enumeration = std::unique_ptr<UEnumeration, ICUDeleter<uenum_close>>(ucol_getKeywordValuesForLocale("collation", locale.utf8().data(), false, &status));
         if (U_SUCCESS(status)) {
-            const char* collation;
-            while ((collation = uenum_next(enumeration.get(), nullptr, &status)) && U_SUCCESS(status)) {
+            const char* pointer;
+            int32_t length = 0;
+            while ((pointer = uenum_next(enumeration.get(), &length, &status)) && U_SUCCESS(status)) {
                 // 10.2.3 "The values "standard" and "search" must not be used as elements in any [[sortLocaleData]][locale].co and [[searchLocaleData]][locale].co array."
-                if (!strcmp(collation, "standard") || !strcmp(collation, "search"))
+                String collation(pointer, length);
+                if (collation == "standard"_s || collation == "search"_s)
                     continue;
-
-                // Map keyword values to BCP 47 equivalents.
-                if (!strcmp(collation, "dictionary"))
-                    keyLocaleData.append("dict"_s);
-                else if (!strcmp(collation, "gb2312han"))
-                    keyLocaleData.append("gb2312"_s);
-                else if (!strcmp(collation, "phonebook"))
-                    keyLocaleData.append("phonebk"_s);
-                else if (!strcmp(collation, "traditional"))
-                    keyLocaleData.append("trad"_s);
+                if (auto mapped = mapICUCollationKeywordToBCP47(collation))
+                    keyLocaleData.append(WTFMove(mapped.value()));
                 else
-                    keyLocaleData.append(collation);
+                    keyLocaleData.append(WTFMove(collation));
             }
         }
         break;
@@ -164,7 +158,7 @@ void IntlCollator::initializeCollator(JSGlobalObject* globalObject, JSValue loca
     auto requestedLocales = canonicalizeLocaleList(globalObject, locales);
     RETURN_IF_EXCEPTION(scope, void());
 
-    Optional<JSObject&> options = intlCoerceOptionsToObject(globalObject, optionsValue);
+    JSObject* options = intlCoerceOptionsToObject(globalObject, optionsValue);
     RETURN_IF_EXCEPTION(scope, void());
 
     m_usage = intlOption<Usage>(globalObject, options, vm.propertyNames->usage, { { "sort"_s, Usage::Sort }, { "search"_s, Usage::Search } }, "usage must be either \"sort\" or \"search\""_s, Usage::Sort);
@@ -199,7 +193,7 @@ void IntlCollator::initializeCollator(JSGlobalObject* globalObject, JSValue loca
     if (!caseFirstOption.isNull())
         localeOptions[static_cast<unsigned>(RelevantExtensionKey::Kf)] = caseFirstOption;
 
-    auto& availableLocales = intlCollatorAvailableLocales();
+    const auto& availableLocales = intlCollatorAvailableLocales();
     auto resolved = resolveLocale(globalObject, availableLocales, requestedLocales, localeMatcher, localeOptions, { RelevantExtensionKey::Co, RelevantExtensionKey::Kf, RelevantExtensionKey::Kn }, localeData);
 
     m_locale = resolved.locale;
@@ -444,7 +438,7 @@ bool IntlCollator::updateCanDoASCIIUCADUCETComparison() const
 }
 
 #if ASSERT_ENABLED
-void IntlCollator::checkICULocaleInvariants(const HashSet<String>& locales)
+void IntlCollator::checkICULocaleInvariants(const LocaleSet& locales)
 {
     for (auto& locale : locales) {
         auto checkASCIIOrderingWithDUCET = [](const String& locale, UCollator& collator) {

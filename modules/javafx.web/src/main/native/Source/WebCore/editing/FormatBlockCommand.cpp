@@ -33,6 +33,7 @@
 #include "HTMLNames.h"
 #include "VisibleUnits.h"
 #include <wtf/NeverDestroyed.h>
+#include <wtf/RobinHoodHashSet.h>
 
 namespace WebCore {
 
@@ -94,11 +95,12 @@ void FormatBlockCommand::formatRange(const Position& start, const Position& end,
 
     moveParagraphWithClones(start, end, blockNode.get(), outerBlock.get());
 
-    if (wasEndOfParagraph && !isEndOfParagraph(lastParagraphInBlockNode) && !isStartOfParagraph(lastParagraphInBlockNode))
+    if (wasEndOfParagraph && lastParagraphInBlockNode.anchorNode()->isConnected()
+        && !isEndOfParagraph(lastParagraphInBlockNode) && !isStartOfParagraph(lastParagraphInBlockNode))
         insertBlockPlaceholder(lastParagraphInBlockNode);
 }
 
-Element* FormatBlockCommand::elementForFormatBlockCommand(const Optional<SimpleRange>& range)
+Element* FormatBlockCommand::elementForFormatBlockCommand(const std::optional<SimpleRange>& range)
 {
     if (!range)
         return nullptr;
@@ -118,7 +120,7 @@ Element* FormatBlockCommand::elementForFormatBlockCommand(const Optional<SimpleR
 
 bool isElementForFormatBlock(const QualifiedName& tagName)
 {
-    static const auto blockTags = makeNeverDestroyed(HashSet<QualifiedName> {
+    static const auto blockTags = makeNeverDestroyed(MemoryCompactLookupOnlyRobinHoodHashSet<QualifiedName> {
         addressTag,
         articleTag,
         asideTag,

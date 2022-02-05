@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2010 Google Inc. All rights reserved.
- * Copyright (C) 2011-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2010-2021 Google Inc. All rights reserved.
+ * Copyright (C) 2011-2021 Apple Inc. All rights reserved.
  * Copyright (C) 2012 Samsung Electronics. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -144,6 +144,16 @@ public:
         Type::Reset,
     };
 
+    static constexpr OptionSet<Type> nonShadowRootTypes = {
+        Type::Button,
+        Type::Checkbox,
+        Type::Hidden,
+        Type::Image,
+        Type::Radio,
+        Type::Reset,
+        Type::Submit,
+    };
+
     static Ref<InputType> create(HTMLInputElement&, const AtomString&);
     static Ref<InputType> createText(HTMLInputElement&);
     virtual ~InputType();
@@ -177,7 +187,7 @@ public:
     bool isRadioButton() const { return m_type == Type::Radio; }
     bool isRangeControl() const { return m_type == Type::Range; }
     bool isSearchField() const { return m_type == Type::Search; }
-    bool isSubmitButton() const { return m_type == Type::Submit; }
+    bool isSubmitButton() const { return m_type == Type::Submit || m_type == Type::Image; }
     bool isTelephoneField() const { return m_type == Type::Telephone; }
     bool isTimeField() const { return m_type == Type::Time; }
     bool isURLField() const { return m_type == Type::URL; }
@@ -195,6 +205,7 @@ public:
     bool isInteractiveContent() const;
     bool supportLabels() const;
     bool isEnumeratable() const;
+    bool needsShadowSubtree() const { return !nonShadowRootTypes.contains(m_type); }
 
     // Form value functions.
 
@@ -322,7 +333,7 @@ public:
     virtual void detach();
     virtual bool shouldRespectAlignAttribute();
     virtual FileList* files();
-    virtual void setFiles(RefPtr<FileList>&&);
+    virtual void setFiles(RefPtr<FileList>&&, WasSetByJavaScript);
     virtual Icon* icon() const;
     virtual bool shouldSendChangeEventAfterCheckedChanged();
     virtual bool canSetValue(const String&);
@@ -375,7 +386,7 @@ public:
 
 #if ENABLE(DATALIST_ELEMENT)
     virtual void dataListMayHaveChanged();
-    virtual Optional<Decimal> findClosestTickMarkValue(const Decimal&);
+    virtual std::optional<Decimal> findClosestTickMarkValue(const Decimal&);
 #endif
 
 #if ENABLE(DRAG_SUPPORT)
@@ -385,6 +396,8 @@ public:
     virtual DateComponentsType dateType() const;
 
     virtual String displayString() const;
+
+    virtual String resultForDialogSubmit() const;
 
 protected:
     explicit InputType(Type type, HTMLInputElement& element)

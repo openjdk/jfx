@@ -821,7 +821,7 @@ public class ListViewTest {
         listView.setOnEditStart(t -> {
             rt_29650_start_count++;
         });
-        listView.setOnEditCommit(t -> {
+        listView.addEventHandler(ListView.editCommitEvent(), t -> {
             rt_29650_commit_count++;
         });
         listView.setOnEditCancel(t -> {
@@ -844,8 +844,7 @@ public class ListViewTest {
         KeyEventFirer keyboard = new KeyEventFirer(textField);
         keyboard.doKeyPress(KeyCode.ENTER);
 
-        // TODO should the following assert be enabled?
-//        assertEquals("Testing!", listView.getItems().get(0));
+        assertEquals("Testing!", listView.getItems().get(0));
         assertEquals(1, rt_29650_start_count);
         assertEquals(1, rt_29650_commit_count);
         assertEquals(0, rt_29650_cancel_count);

@@ -26,17 +26,11 @@
 #include "config.h"
 #include "IDBGetResult.h"
 
-#if ENABLE(INDEXED_DATABASE)
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 
-void IDBGetResult::dataFromBuffer(SharedBuffer& buffer)
-{
-    Vector<uint8_t> data(buffer.size());
-    memcpy(data.data(), buffer.data(), buffer.size());
-
-    m_value = ThreadSafeDataBuffer::create(WTFMove(data));
-}
+WTF_MAKE_ISO_ALLOCATED_IMPL(IDBGetResult);
 
 IDBGetResult::IDBGetResult(const IDBGetResult& that, IsolatedCopyTag)
 {
@@ -64,5 +58,3 @@ void IDBGetResult::setValue(IDBValue&& value)
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(INDEXED_DATABASE)

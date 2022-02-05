@@ -119,7 +119,7 @@ public:
     bool canHaveGeneratedChildren() const override { return true; }
     VisiblePosition positionForPoint(const LayoutPoint&, const RenderFragmentContainer*) override;
 
-    virtual void absoluteQuadsForBoxInFragment(Vector<FloatQuad>&, bool*, const RenderBox*, float, float) { }
+    virtual Vector<LayoutRect> fragmentRectsForFlowContentRect(const LayoutRect&);
 
 protected:
     RenderFragmentContainer(Element&, RenderStyle&&, RenderFragmentedFlow*);
@@ -138,14 +138,16 @@ protected:
     LayoutRect overflowRectForFragmentedFlowPortion(const LayoutRect& fragmentedFlowPortionRect, bool isFirstPortion, bool isLastPortion, OverflowType);
     void repaintFragmentedFlowContentRectangle(const LayoutRect& repaintRect, const LayoutRect& fragmentedFlowPortionRect, const LayoutPoint& fragmentLocation, const LayoutRect* fragmentedFlowPortionClipRect = 0);
 
+    LayoutRect fragmentedFlowContentRectangle(const LayoutRect&, const LayoutRect& fragmentedFlowPortionRect, const LayoutPoint& fragmentLocation, const LayoutRect* fragmentedFlowPortionClipRect = 0);
+
     void computeOverflowFromFragmentedFlow();
 
 private:
     bool isRenderFragmentContainer() const final { return true; }
     const char* renderName() const override { return "RenderFragmentContainer"; }
 
-    void insertedIntoTree() override;
-    void willBeRemovedFromTree() override;
+    void insertedIntoTree(IsInternalMove) override;
+    void willBeRemovedFromTree(IsInternalMove) override;
 
     virtual void installFragmentedFlow();
 
@@ -164,7 +166,7 @@ private:
     typedef HashMap<const RenderBox*, std::unique_ptr<RenderBoxFragmentInfo>> RenderBoxFragmentInfoMap;
     RenderBoxFragmentInfoMap m_renderBoxFragmentInfo;
 
-    bool m_isValid : 1;
+    bool m_isValid { false };
 };
 
 class CurrentRenderFragmentContainerMaintainer {

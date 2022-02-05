@@ -50,7 +50,7 @@ private:
     explicit MockSourceBufferPrivate(MockMediaSourcePrivate*);
 
     // SourceBufferPrivate overrides
-    void append(Vector<unsigned char>&&) final;
+    void append(Vector<uint8_t>&&) final;
     void abort() final;
     void resetParserState() final;
     void removedFromMediaSource() final;
@@ -70,7 +70,7 @@ private:
     void setActive(bool) final;
     bool isActive() const final;
 
-    Vector<String> enqueuedSamplesForTrackID(const AtomString&) final;
+    void enqueuedSamplesForTrackID(const AtomString&, CompletionHandler<void(Vector<String>&&)>&&) final;
     MediaTime minimumUpcomingPresentationTimeForTrackID(const AtomString&) final;
     void setMaximumQueueDepthForTrackID(const AtomString&, uint64_t) final;
 
@@ -91,8 +91,8 @@ private:
     bool m_isActive { false };
     MediaTime m_minimumUpcomingPresentationTime;
     Vector<String> m_enqueuedSamples;
-    Optional<uint64_t> m_maxQueueDepth;
-    Vector<char> m_inputBuffer;
+    std::optional<uint64_t> m_maxQueueDepth;
+    Vector<uint8_t> m_inputBuffer;
 
 #if !RELEASE_LOG_DISABLED
     Ref<const Logger> m_logger;

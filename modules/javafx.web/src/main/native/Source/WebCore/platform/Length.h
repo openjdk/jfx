@@ -44,11 +44,12 @@ enum class LengthType : uint8_t {
     Undefined
 };
 
-enum ValueRange {
-    ValueRangeAll,
-    ValueRangeNonNegative
+enum class ValueRange : uint8_t {
+    All,
+    NonNegative
 };
 
+struct BlendingContext;
 class CalculationValue;
 
 struct Length {
@@ -116,11 +117,11 @@ public:
     bool isSpecified() const;
     bool isSpecifiedOrIntrinsic() const;
 
-    float nonNanCalculatedValue(int maxValue) const;
+    float nonNanCalculatedValue(float maxValue) const;
 
-private:
     bool isLegacyIntrinsic() const;
 
+private:
     bool isCalculatedEqual(const Length&) const;
 
     WEBCORE_EXPORT void ref() const;
@@ -137,7 +138,8 @@ private:
 };
 
 // Blend two lengths to produce a new length that is in between them. Used for animation.
-Length blend(const Length& from, const Length& to, double progress);
+Length blend(const Length& from, const Length& to, const BlendingContext&);
+Length blend(const Length& from, const Length& to, const BlendingContext&, ValueRange);
 
 UniqueArray<Length> newCoordsArray(const String&, int& length);
 UniqueArray<Length> newLengthArray(const String&, int& length);
@@ -374,7 +376,7 @@ inline bool Length::isPositive() const
 inline bool Length::isZero() const
 {
     ASSERT(!isUndefined());
-    if (isCalculated())
+    if (isCalculated() || isAuto())
         return false;
     return m_isFloat ? !m_floatValue : !m_intValue;
 }

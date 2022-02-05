@@ -394,8 +394,17 @@ public class TreeCell<T> extends IndexedCell<T> {
      /** {@inheritDoc} */
     @Override public void commitEdit(T newValue) {
         if (! isEditing()) return;
+
+        // inform parent classes of the commit, so that they can switch us
+        // out of the editing state.
+        // This MUST come before the updateItem call below, otherwise it will
+        // call cancelEdit(), resulting in both commit and cancel events being
+        // fired (as identified in RT-29650)
+        super.commitEdit(newValue);
+
         final TreeItem<T> treeItem = getTreeItem();
         final TreeView<T> tree = getTreeView();
+        // JDK-8187307: fire the commit after updating cell's editing state
         if (tree != null) {
             // Inform the TreeView of the edit being ready to be committed.
             tree.fireEvent(new TreeView.EditEvent<T>(tree,
@@ -404,13 +413,6 @@ public class TreeCell<T> extends IndexedCell<T> {
                     getItem(),
                     newValue));
         }
-
-        // inform parent classes of the commit, so that they can switch us
-        // out of the editing state.
-        // This MUST come before the updateItem call below, otherwise it will
-        // call cancelEdit(), resulting in both commit and cancel events being
-        // fired (as identified in RT-29650)
-        super.commitEdit(newValue);
 
         // update the item within this cell, so that it represents the new value
         if (treeItem != null) {

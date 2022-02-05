@@ -42,8 +42,8 @@ namespace JSC {
 
 STATIC_ASSERT_IS_TRIVIALLY_DESTRUCTIBLE(JSONObject);
 
-static JSC_DECLARE_HOST_FUNCTION(JSONProtoFuncParse);
-static JSC_DECLARE_HOST_FUNCTION(JSONProtoFuncStringify);
+static JSC_DECLARE_HOST_FUNCTION(jsonProtoFuncParse);
+static JSC_DECLARE_HOST_FUNCTION(jsonProtoFuncStringify);
 
 }
 
@@ -231,28 +231,22 @@ Stringifier::Stringifier(JSGlobalObject* globalObject, JSValue replacer, JSValue
             RETURN_IF_EXCEPTION(scope, );
             if (isArrayReplacer) {
                 m_usingArrayReplacer = true;
-                uint64_t length = static_cast<uint64_t>(toLength(globalObject, replacerObject));
-                RETURN_IF_EXCEPTION(scope, );
-                for (uint64_t index = 0; index < length; ++index) {
-                    JSValue name;
-                    if (isJSArray(replacerObject) && replacerObject->canGetIndexQuickly(index))
-                        name = replacerObject->getIndexQuickly(static_cast<uint32_t>(index));
-                    else {
-                        name = replacerObject->get(globalObject, index);
-                        RETURN_IF_EXCEPTION(scope, );
-                    }
+                forEachInArrayLike(globalObject, replacerObject, [&] (JSValue name) -> bool {
                     if (name.isObject()) {
                         auto* nameObject = jsCast<JSObject*>(name);
                         if (!nameObject->inherits<NumberObject>(vm) && !nameObject->inherits<StringObject>(vm))
-                            continue;
+                            return true;
                     } else if (!name.isNumber() && !name.isString())
-                        continue;
+                        return true;
+
                     JSString* propertyNameString = name.toString(globalObject);
-                    RETURN_IF_EXCEPTION(scope, );
+                    RETURN_IF_EXCEPTION(scope, false);
                     auto propertyName = propertyNameString->toIdentifier(globalObject);
-                    RETURN_IF_EXCEPTION(scope, );
+                    RETURN_IF_EXCEPTION(scope, false);
                     m_arrayReplacerPropertyNames.add(WTFMove(propertyName));
-                }
+                    return true;
+                });
+                RETURN_IF_EXCEPTION(scope, );
             }
         }
     }
@@ -344,7 +338,7 @@ Stringifier::StringifyResult Stringifier::appendStringifiedValue(StringBuilder& 
         return StringifyFailedDueToUndefinedOrSymbolValue;
 
     if (value.isNull()) {
-        builder.appendLiteral("null");
+        builder.append("null");
         return StringifySucceeded;
     }
 
@@ -354,9 +348,9 @@ Stringifier::StringifyResult Stringifier::appendStringifiedValue(StringBuilder& 
 
     if (value.isBoolean()) {
         if (value.isTrue())
-            builder.appendLiteral("true");
+            builder.append("true");
         else
-            builder.appendLiteral("false");
+            builder.append("false");
         return StringifySucceeded;
     }
 
@@ -369,13 +363,13 @@ Stringifier::StringifyResult Stringifier::appendStringifiedValue(StringBuilder& 
 
     if (value.isNumber()) {
         if (value.isInt32())
-            builder.appendNumber(value.asInt32());
+            builder.append(value.asInt32());
         else {
             double number = value.asNumber();
             if (!std::isfinite(number))
-                builder.appendLiteral("null");
+                builder.append("null");
             else
-                builder.appendNumber(number);
+                builder.append(number);
         }
         return StringifySucceeded;
     }
@@ -391,7 +385,7 @@ Stringifier::StringifyResult Stringifier::appendStringifiedValue(StringBuilder& 
     JSObject* object = asObject(value);
     if (object->isCallable(vm)) {
         if (holder.isArray()) {
-            builder.appendLiteral("null");
+            builder.append("null");
             return StringifySucceeded;
         }
         return StringifyFailedDueToUndefinedOrSymbolValue;
@@ -573,7 +567,7 @@ bool Stringifier::Holder::appendNextProperty(Stringifier& stringifier, StringBui
 
     switch (stringifyResult) {
         case StringifyFailed:
-            builder.appendLiteral("null");
+            builder.append("null");
             break;
         case StringifySucceeded:
             break;
@@ -581,7 +575,7 @@ bool Stringifier::Holder::appendNextProperty(Stringifier& stringifier, StringBui
             // This only occurs when get an undefined value or a symbol value for
             // an object property. In this case we don't want the separator and
             // property name that we already appended, so roll back.
-            builder.resize(rollBackPoint);
+            builder.shrink(rollBackPoint);
             break;
     }
 
@@ -594,8 +588,8 @@ const ClassInfo JSONObject::s_info = { "JSON", &JSNonFinalObject::s_info, &jsonT
 
 /* Source for JSONObject.lut.h
 @begin jsonTable
-  parse         JSONProtoFuncParse             DontEnum|Function 2
-  stringify     JSONProtoFuncStringify         DontEnum|Function 3
+  parse         jsonProtoFuncParse             DontEnum|Function 2
+  stringify     jsonProtoFuncStringify         DontEnum|Function 3
 @end
 */
 
@@ -759,9 +753,8 @@ NEVER_INLINE JSValue Walker::walk(JSValue unfiltered)
                     if (LIKELY(offset != invalidOffset && attributes == static_cast<unsigned>(PropertyAttribute::None)))
                         object->putDirect(vm, offset, filteredValue);
                     else {
-                        PropertyDescriptor descriptor(filteredValue, static_cast<unsigned>(PropertyAttribute::None));
                         bool shouldThrow = false;
-                        object->methodTable(vm)->defineOwnProperty(object, m_globalObject, prop, descriptor, shouldThrow);
+                        object->createDataProperty(m_globalObject, prop, filteredValue, shouldThrow);
                     }
                 }
                 RETURN_IF_EXCEPTION(scope, { });
@@ -792,7 +785,7 @@ NEVER_INLINE JSValue Walker::walk(JSValue unfiltered)
 }
 
 // ECMA-262 v5 15.12.2
-JSC_DEFINE_HOST_FUNCTION(JSONProtoFuncParse, (JSGlobalObject* globalObject, CallFrame* callFrame))
+JSC_DEFINE_HOST_FUNCTION(jsonProtoFuncParse, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
@@ -834,7 +827,7 @@ JSC_DEFINE_HOST_FUNCTION(JSONProtoFuncParse, (JSGlobalObject* globalObject, Call
 }
 
 // ECMA-262 v5 15.12.3
-JSC_DEFINE_HOST_FUNCTION(JSONProtoFuncStringify, (JSGlobalObject* globalObject, CallFrame* callFrame))
+JSC_DEFINE_HOST_FUNCTION(jsonProtoFuncStringify, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);

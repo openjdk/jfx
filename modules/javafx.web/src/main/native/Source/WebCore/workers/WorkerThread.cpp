@@ -59,6 +59,7 @@ WorkerParameters WorkerParameters::isolatedCopy() const
         isOnline,
         contentSecurityPolicyResponseHeaders,
         shouldBypassMainWorldContentSecurityPolicy,
+        crossOriginEmbedderPolicy.isolatedCopy(),
         timeOrigin,
         referrerPolicy,
         workerType,
@@ -70,16 +71,16 @@ WorkerParameters WorkerParameters::isolatedCopy() const
 struct WorkerThreadStartupData {
     WTF_MAKE_NONCOPYABLE(WorkerThreadStartupData); WTF_MAKE_FAST_ALLOCATED;
 public:
-    WorkerThreadStartupData(const WorkerParameters& params, const String& sourceCode, WorkerThreadStartMode, const SecurityOrigin& topOrigin);
+    WorkerThreadStartupData(const WorkerParameters& params, const ScriptBuffer& sourceCode, WorkerThreadStartMode, const SecurityOrigin& topOrigin);
 
     WorkerParameters params;
     Ref<SecurityOrigin> origin;
-    String sourceCode;
+    ScriptBuffer sourceCode;
     WorkerThreadStartMode startMode;
     Ref<SecurityOrigin> topOrigin;
 };
 
-WorkerThreadStartupData::WorkerThreadStartupData(const WorkerParameters& other, const String& sourceCode, WorkerThreadStartMode startMode, const SecurityOrigin& topOrigin)
+WorkerThreadStartupData::WorkerThreadStartupData(const WorkerParameters& other, const ScriptBuffer& sourceCode, WorkerThreadStartMode startMode, const SecurityOrigin& topOrigin)
     : params(other.isolatedCopy())
     , origin(SecurityOrigin::create(other.scriptURL)->isolatedCopy())
     , sourceCode(sourceCode.isolatedCopy())
@@ -88,21 +89,16 @@ WorkerThreadStartupData::WorkerThreadStartupData(const WorkerParameters& other, 
 {
 }
 
-WorkerThread::WorkerThread(const WorkerParameters& params, const String& sourceCode, WorkerLoaderProxy& workerLoaderProxy, WorkerDebuggerProxy& workerDebuggerProxy, WorkerReportingProxy& workerReportingProxy, WorkerThreadStartMode startMode, const SecurityOrigin& topOrigin, IDBClient::IDBConnectionProxy* connectionProxy, SocketProvider* socketProvider, JSC::RuntimeFlags runtimeFlags)
+WorkerThread::WorkerThread(const WorkerParameters& params, const ScriptBuffer& sourceCode, WorkerLoaderProxy& workerLoaderProxy, WorkerDebuggerProxy& workerDebuggerProxy, WorkerReportingProxy& workerReportingProxy, WorkerThreadStartMode startMode, const SecurityOrigin& topOrigin, IDBClient::IDBConnectionProxy* connectionProxy, SocketProvider* socketProvider, JSC::RuntimeFlags runtimeFlags)
     : WorkerOrWorkletThread(params.identifier.isolatedCopy())
     , m_workerLoaderProxy(workerLoaderProxy)
     , m_workerDebuggerProxy(workerDebuggerProxy)
     , m_workerReportingProxy(workerReportingProxy)
     , m_runtimeFlags(runtimeFlags)
     , m_startupData(makeUnique<WorkerThreadStartupData>(params, sourceCode, startMode, topOrigin))
-#if ENABLE(INDEXED_DATABASE)
     , m_idbConnectionProxy(connectionProxy)
-#endif
     , m_socketProvider(socketProvider)
 {
-#if !ENABLE(INDEXED_DATABASE)
-    UNUSED_PARAM(connectionProxy);
-#endif
     ++workerThreadCounter;
 }
 
@@ -137,16 +133,20 @@ void WorkerThread::evaluateScriptIfNecessary(String& exceptionMessage)
     // We are currently holding only the initial script code. If the WorkerType is Module, we should fetch the entire graph before executing the rest of this.
     // We invoke module loader as if we are executing inline module script tag in Document.
 
+    WeakPtr<ScriptBufferSourceProvider> sourceProvider;
     if (m_startupData->params.workerType == WorkerType::Classic) {
-        globalScope()->script()->evaluate(ScriptSourceCode(m_startupData->sourceCode, URL(m_startupData->params.scriptURL)), &exceptionMessage);
+        ScriptSourceCode sourceCode(m_startupData->sourceCode, URL(m_startupData->params.scriptURL));
+        sourceProvider = makeWeakPtr(static_cast<ScriptBufferSourceProvider&>(sourceCode.provider()));
+        globalScope()->script()->evaluate(sourceCode, &exceptionMessage);
         finishedEvaluatingScript();
     } else {
         auto scriptFetcher = WorkerScriptFetcher::create(globalScope()->credentials(), globalScope()->destination(), globalScope()->referrerPolicy());
         ScriptSourceCode sourceCode(m_startupData->sourceCode, URL(m_startupData->params.scriptURL), { }, JSC::SourceProviderSourceType::Module, scriptFetcher.copyRef());
+        sourceProvider = makeWeakPtr(static_cast<ScriptBufferSourceProvider&>(sourceCode.provider()));
         MessageQueueWaitResult result = globalScope()->script()->loadModuleSynchronously(scriptFetcher.get(), sourceCode);
         if (result != MessageQueueTerminated) {
-            if (Optional<LoadableScript::Error> error = scriptFetcher->error()) {
-                if (Optional<LoadableScript::ConsoleMessage> message = error->consoleMessage)
+            if (std::optional<LoadableScript::Error> error = scriptFetcher->error()) {
+                if (std::optional<LoadableScript::ConsoleMessage> message = error->consoleMessage)
                     exceptionMessage = message->message;
                 else
                     exceptionMessage = "Importing a module script failed."_s;
@@ -157,6 +157,8 @@ void WorkerThread::evaluateScriptIfNecessary(String& exceptionMessage)
             }
         }
     }
+    if (sourceProvider)
+        globalScope()->setMainScriptSourceProvider(*sourceProvider);
 
     // Free the startup data to cause its member variable deref's happen on the worker's thread (since
     // all ref/derefs of these objects are happening on the thread at this point). Note that
@@ -166,11 +168,7 @@ void WorkerThread::evaluateScriptIfNecessary(String& exceptionMessage)
 
 IDBClient::IDBConnectionProxy* WorkerThread::idbConnectionProxy()
 {
-#if ENABLE(INDEXED_DATABASE)
     return m_idbConnectionProxy.get();
-#else
-    return nullptr;
-#endif
 }
 
 SocketProvider* WorkerThread::socketProvider()

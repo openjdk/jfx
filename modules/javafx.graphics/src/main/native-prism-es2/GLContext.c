@@ -2125,6 +2125,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_GLContext_nCreateES2MeshView
     meshViewInfo->lightAttenuation[0] = 1;
     meshViewInfo->lightAttenuation[1] = 0;
     meshViewInfo->lightAttenuation[2] = 0;
+    meshViewInfo->lightAttenuation[3] = 1;
     meshViewInfo->lightMaxRange = 0;
     meshViewInfo->lightDir[0] = 1;
     meshViewInfo->lightDir[1] = 0;
@@ -2271,12 +2272,12 @@ JNIEXPORT void JNICALL Java_com_sun_prism_es2_GLContext_nSetAmbientLight
 /*
  * Class:     com_sun_prism_es2_GLContext
  * Method:    nSetLight
- * Signature: (JJIFFFFFFFFFFFFFFFFF)V
+ * Signature: (JJIFFFFFFFFFFFFFFFFFF)V
  */
 JNIEXPORT void JNICALL Java_com_sun_prism_es2_GLContext_nSetLight
   (JNIEnv *env, jclass class, jlong nativeCtxInfo, jlong nativeMeshViewInfo,
         jint index, jfloat x, jfloat y, jfloat z, jfloat r, jfloat g, jfloat b, jfloat w,
-        jfloat ca, jfloat la, jfloat qa, jfloat maxRange, jfloat dirX, jfloat dirY, jfloat dirZ,
+        jfloat ca, jfloat la, jfloat qa, jfloat isAttenuated, jfloat maxRange, jfloat dirX, jfloat dirY, jfloat dirZ,
         jfloat innerAngle, jfloat outerAngle, jfloat falloff)
 {
     ContextInfo *ctxInfo = (ContextInfo *) jlong_to_ptr(nativeCtxInfo);
@@ -2296,6 +2297,7 @@ JNIEXPORT void JNICALL Java_com_sun_prism_es2_GLContext_nSetLight
     meshViewInfo->lightAttenuation[0] = ca;
     meshViewInfo->lightAttenuation[1] = la;
     meshViewInfo->lightAttenuation[2] = qa;
+    meshViewInfo->lightAttenuation[3] = isAttenuated;
     meshViewInfo->lightMaxRange = maxRange;
     meshViewInfo->lightDir[0] = dirX;
     meshViewInfo->lightDir[1] = dirY;

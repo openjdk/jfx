@@ -106,7 +106,7 @@ ClonedArguments* ClonedArguments::createWithInlineFrame(JSGlobalObject* globalOb
             result = createEmpty(globalObject, callee, length);
 
             for (unsigned i = length; i--;)
-                result->putDirectIndex(globalObject, i, inlineCallFrame->argumentsWithFixup[i + 1].recover(targetFrame));
+                result->putDirectIndex(globalObject, i, inlineCallFrame->m_argumentsWithFixup[i + 1].recover(targetFrame));
         } else {
             length = targetFrame->argumentCount();
             result = createEmpty(globalObject, callee, length);
@@ -181,7 +181,7 @@ bool ClonedArguments::getOwnPropertySlot(JSObject* object, JSGlobalObject* globa
 
         if (ident == vm.propertyNames->callee) {
             if (isStrictMode || executable->usesNonSimpleParameterList()) {
-                slot.setGetterSlot(thisObject, PropertyAttribute::DontDelete | PropertyAttribute::DontEnum | PropertyAttribute::Accessor, thisObject->globalObject(vm)->throwTypeErrorArgumentsCalleeAndCallerGetterSetter());
+                slot.setGetterSlot(thisObject, PropertyAttribute::DontDelete | PropertyAttribute::DontEnum | PropertyAttribute::Accessor, thisObject->globalObject(vm)->throwTypeErrorArgumentsCalleeGetterSetter());
                 return true;
             }
             slot.setValue(thisObject, 0, thisObject->m_callee.get());
@@ -252,7 +252,7 @@ void ClonedArguments::materializeSpecials(JSGlobalObject* globalObject)
     bool isStrictMode = executable->isInStrictContext();
 
     if (isStrictMode || executable->usesNonSimpleParameterList())
-        putDirectAccessor(globalObject, vm.propertyNames->callee, this->globalObject(vm)->throwTypeErrorArgumentsCalleeAndCallerGetterSetter(), PropertyAttribute::DontDelete | PropertyAttribute::DontEnum | PropertyAttribute::Accessor);
+        putDirectAccessor(globalObject, vm.propertyNames->callee, this->globalObject(vm)->throwTypeErrorArgumentsCalleeGetterSetter(), PropertyAttribute::DontDelete | PropertyAttribute::DontEnum | PropertyAttribute::Accessor);
     else
         putDirect(vm, vm.propertyNames->callee, JSValue(m_callee.get()));
 

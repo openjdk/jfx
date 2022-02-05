@@ -34,6 +34,7 @@
 #include "ServiceWorkerThreadProxy.h"
 #include <wtf/CompletionHandler.h>
 #include <wtf/HashMap.h>
+#include <wtf/URLHash.h>
 
 namespace WebCore {
 
@@ -51,16 +52,16 @@ public:
 
         virtual void establishConnection(CompletionHandler<void()>&&) = 0;
         virtual void postMessageToServiceWorkerClient(const ServiceWorkerClientIdentifier& destinationIdentifier, const MessageWithMessagePorts&, ServiceWorkerIdentifier source, const String& sourceOrigin) = 0;
-        virtual void serviceWorkerStarted(Optional<ServiceWorkerJobDataIdentifier>, ServiceWorkerIdentifier, bool doesHandleFetch) = 0;
-        virtual void serviceWorkerFailedToStart(Optional<ServiceWorkerJobDataIdentifier>, ServiceWorkerIdentifier, const String& message) = 0;
-        virtual void didFinishInstall(Optional<ServiceWorkerJobDataIdentifier>, ServiceWorkerIdentifier, bool wasSuccessful) = 0;
+        virtual void serviceWorkerStarted(std::optional<ServiceWorkerJobDataIdentifier>, ServiceWorkerIdentifier, bool doesHandleFetch) = 0;
+        virtual void serviceWorkerFailedToStart(std::optional<ServiceWorkerJobDataIdentifier>, ServiceWorkerIdentifier, const String& message) = 0;
+        virtual void didFinishInstall(std::optional<ServiceWorkerJobDataIdentifier>, ServiceWorkerIdentifier, bool wasSuccessful) = 0;
         virtual void didFinishActivation(ServiceWorkerIdentifier) = 0;
         virtual void setServiceWorkerHasPendingEvents(ServiceWorkerIdentifier, bool) = 0;
         virtual void workerTerminated(ServiceWorkerIdentifier) = 0;
         virtual void skipWaiting(ServiceWorkerIdentifier, CompletionHandler<void()>&&) = 0;
         virtual void setScriptResource(ServiceWorkerIdentifier, const URL&, const ServiceWorkerContextData::ImportedScript&) = 0;
 
-        using FindClientByIdentifierCallback = CompletionHandler<void(ExceptionOr<Optional<ServiceWorkerClientData>>&&)>;
+        using FindClientByIdentifierCallback = CompletionHandler<void(ExceptionOr<std::optional<ServiceWorkerClientData>>&&)>;
         virtual void findClientByIdentifier(ServiceWorkerIdentifier, ServiceWorkerClientIdentifier, FindClientByIdentifierCallback&&) = 0;
         virtual void matchAll(ServiceWorkerIdentifier, const ServiceWorkerClientQueryOptions&, ServiceWorkerClientsMatchAllCallback&&) = 0;
         virtual void claim(ServiceWorkerIdentifier, CompletionHandler<void(ExceptionOr<void>&&)>&&) = 0;
@@ -90,6 +91,7 @@ public:
     WEBCORE_EXPORT void fireInstallEvent(ServiceWorkerIdentifier);
     WEBCORE_EXPORT void fireActivateEvent(ServiceWorkerIdentifier);
     WEBCORE_EXPORT void terminateWorker(ServiceWorkerIdentifier, Seconds timeout, Function<void()>&&);
+    WEBCORE_EXPORT void didSaveScriptsToDisk(ServiceWorkerIdentifier, ScriptBuffer&&, HashMap<URL, ScriptBuffer>&& importedScripts);
 
     void forEachServiceWorkerThread(const WTF::Function<void(ServiceWorkerThreadProxy&)>&);
 
@@ -108,7 +110,7 @@ public:
 private:
     SWContextManager() = default;
 
-    void startedServiceWorker(Optional<ServiceWorkerJobDataIdentifier>, ServiceWorkerIdentifier, const String& exceptionMessage, bool doesHandleFetch);
+    void startedServiceWorker(std::optional<ServiceWorkerJobDataIdentifier>, ServiceWorkerIdentifier, const String& exceptionMessage, bool doesHandleFetch);
     NO_RETURN_DUE_TO_CRASH void serviceWorkerFailedToTerminate(ServiceWorkerIdentifier);
 
     void stopWorker(ServiceWorkerThreadProxy&, Seconds, Function<void()>&&);

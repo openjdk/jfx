@@ -40,10 +40,10 @@ namespace LayoutIntegration {
 
 struct Run {
     WTF_MAKE_STRUCT_FAST_ALLOCATED;
-    struct TextContent {
+    struct Text {
         WTF_MAKE_STRUCT_FAST_ALLOCATED;
     public:
-        TextContent(size_t position, size_t length, const String&, String adjustedContentToRender, bool hasHyphen);
+        Text(size_t position, size_t length, const String&, String adjustedContentToRender, bool hasHyphen);
 
         size_t start() const { return m_start; }
         size_t end() const { return start() + length(); }
@@ -61,25 +61,23 @@ struct Run {
     };
 
     struct Expansion;
-    Run(size_t lineIndex, const Layout::Box&, const FloatRect&, const FloatRect& inkOverflow, Expansion, Optional<TextContent> = WTF::nullopt);
+    Run(size_t lineIndex, const Layout::Box&, const FloatRect&, const FloatRect& inkOverflow, Expansion, std::optional<Text> = std::nullopt);
 
-    const FloatRect& rect() const { return m_rect; }
+    const FloatRect& logicalRect() const { return m_rect; }
     const FloatRect& inkOverflow() const { return m_inkOverflow; }
 
-    Optional<TextContent>& textContent() { return m_textContent; }
-    const Optional<TextContent>& textContent() const { return m_textContent; }
+    void setVerticalPositionIntegral();
+
+    std::optional<Text>& text() { return m_text; }
+    const std::optional<Text>& text() const { return m_text; }
     // FIXME: This information should be preserved at Run construction time.
-    bool isLineBreak() const { return layoutBox().isLineBreakBox() || (textContent() && textContent()->originalContent() == "\n" && style().preserveNewline()); }
+    bool isLineBreak() const { return layoutBox().isLineBreakBox() || (text() && text()->originalContent() == "\n" && style().preserveNewline()); }
 
     struct Expansion {
         ExpansionBehavior behavior { DefaultExpansion };
-        InlineLayoutUnit horizontalExpansion { 0 };
+        Layout::InlineLayoutUnit horizontalExpansion { 0 };
     };
     Expansion expansion() const { return m_expansion; }
-
-    CachedImage* image() const { return m_cachedImage; }
-
-    bool hasUnderlyingLayout() const { return !!m_layoutBox; }
 
     const Layout::Box& layoutBox() const { return *m_layoutBox; }
     const RenderStyle& style() const { return m_layoutBox->style(); }
@@ -90,30 +88,35 @@ private:
     // FIXME: Find out the Display::Run <-> paint style setup.
     const size_t m_lineIndex;
     WeakPtr<const Layout::Box> m_layoutBox;
-    CachedImage* m_cachedImage { nullptr };
     FloatRect m_rect;
     FloatRect m_inkOverflow;
     Expansion m_expansion;
-    Optional<TextContent> m_textContent;
+    std::optional<Text> m_text;
 };
 
-inline Run::Run(size_t lineIndex, const Layout::Box& layoutBox, const FloatRect& rect, const FloatRect& inkOverflow, Expansion expansion, Optional<TextContent> textContent)
+inline Run::Run(size_t lineIndex, const Layout::Box& layoutBox, const FloatRect& rect, const FloatRect& inkOverflow, Expansion expansion, std::optional<Text> text)
     : m_lineIndex(lineIndex)
     , m_layoutBox(makeWeakPtr(layoutBox))
     , m_rect(rect)
     , m_inkOverflow(inkOverflow)
     , m_expansion(expansion)
-    , m_textContent(textContent)
+    , m_text(text)
 {
 }
 
-inline Run::TextContent::TextContent(size_t start, size_t length, const String& originalContent, String adjustedContentToRender, bool hasHyphen)
+inline Run::Text::Text(size_t start, size_t length, const String& originalContent, String adjustedContentToRender, bool hasHyphen)
     : m_start(start)
     , m_length(length)
     , m_hasHyphen(hasHyphen)
     , m_originalContent(originalContent)
     , m_adjustedContentToRender(adjustedContentToRender)
 {
+}
+
+inline void Run::setVerticalPositionIntegral()
+{
+    m_rect.setY(roundToInt(m_rect.y()));
+    m_inkOverflow.setY(roundToInt(m_inkOverflow.y()));
 }
 
 }

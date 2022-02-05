@@ -24,6 +24,7 @@
 
 #include "CSSParserTokenRange.h"
 #include "CSSPropertyParserHelpers.h"
+#include "CSSPropertyParserWorkerSafe.h"
 #include "StyleRule.h"
 #include <wtf/text/StringView.h>
 
@@ -31,6 +32,7 @@ namespace WebCore {
 
 class CSSProperty;
 class CSSValue;
+class CSSValueList;
 class StylePropertyShorthand;
 class StyleSheetContents;
 
@@ -54,6 +56,8 @@ public:
     static RefPtr<CSSCustomPropertyValue> parseTypedCustomPropertyValue(const String& name, const String& syntax, const CSSParserTokenRange&, const Style::BuilderState&, const CSSParserContext&);
     static void collectParsedCustomPropertyValueDependencies(const String& syntax, bool isRoot, HashSet<CSSPropertyID>& dependencies, const CSSParserTokenRange&, const CSSParserContext&);
 
+    static RefPtr<CSSValue> parseCounterStyleDescriptor(CSSPropertyID, CSSParserTokenRange&, const CSSParserContext&);
+
 private:
     CSSPropertyParser(const CSSParserTokenRange&, const CSSParserContext&, Vector<CSSProperty, 256>*, bool consumeWhitespace = true);
 
@@ -69,6 +73,7 @@ private:
 
     bool parseViewportDescriptor(CSSPropertyID propId, bool important);
     bool parseFontFaceDescriptor(CSSPropertyID);
+    bool parseCounterStyleDescriptor(CSSPropertyID, const CSSParserContext&);
 
     void addProperty(CSSPropertyID, CSSPropertyID, Ref<CSSValue>&&, bool important, bool implicit = false);
     void addExpandedPropertyForValue(CSSPropertyID propId, Ref<CSSValue>&&, bool);
@@ -127,9 +132,5 @@ private:
 CSSPropertyID cssPropertyID(StringView);
 WEBCORE_EXPORT CSSValueID cssValueKeywordID(StringView);
 bool isCustomPropertyName(const String&);
-
-#if PLATFORM(IOS_FAMILY)
-void cssPropertyNameIOSAliasing(const char* propertyName, const char*& propertyNameAlias, unsigned& newLength);
-#endif
 
 } // namespace WebCore

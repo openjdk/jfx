@@ -331,6 +331,10 @@ const Vector<WeakPtr<Node>>* SlotAssignment::assignedNodesForSlot(const HTMLSlot
     ASSERT(slotElement.containingShadowRoot() == &shadowRoot);
     const AtomString& slotName = slotNameFromAttributeValue(slotElement.attributeWithoutSynchronization(nameAttr));
     auto* slot = m_slots.get(slotName);
+
+    bool hasNotAddedSlotInInsertedIntoAncestorYet = shadowRoot.isConnected() && (!slotElement.isConnected() || slotElement.isInInsertedIntoAncestor());
+    if (hasNotAddedSlotInInsertedIntoAncestorYet)
+        return nullptr;
     RELEASE_ASSERT(slot);
 
     if (!m_slotAssignmentsIsValid)
