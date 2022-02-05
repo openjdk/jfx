@@ -27,14 +27,15 @@
 
 #if ENABLE(APPLE_PAY)
 
-#include "ApplePayLineItemData.h"
-#include <wtf/Forward.h>
-#include <wtf/Optional.h>
+#include "ApplePayPaymentTiming.h"
+#include "ApplePayRecurringPaymentDateUnit.h"
+#include <limits>
+#include <optional>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
-struct ApplePayLineItem final : public ApplePayLineItemData {
+struct ApplePayLineItem final {
     enum class Type : bool {
         Pending,
         Final,
@@ -44,46 +45,89 @@ struct ApplePayLineItem final : public ApplePayLineItemData {
     String label;
     String amount;
 
+#if ENABLE(APPLE_PAY_RECURRING_LINE_ITEM) || ENABLE(APPLE_PAY_DEFERRED_LINE_ITEM)
+    ApplePayPaymentTiming paymentTiming { ApplePayPaymentTiming::Immediate };
+#endif
+
+#if ENABLE(APPLE_PAY_RECURRING_LINE_ITEM)
+    double recurringPaymentStartDate { std::numeric_limits<double>::quiet_NaN() };
+    ApplePayRecurringPaymentDateUnit recurringPaymentIntervalUnit { ApplePayRecurringPaymentDateUnit::Month };
+    unsigned recurringPaymentIntervalCount = 1;
+    double recurringPaymentEndDate { std::numeric_limits<double>::quiet_NaN() };
+#endif
+
+#if ENABLE(APPLE_PAY_DEFERRED_LINE_ITEM)
+    double deferredPaymentDate { std::numeric_limits<double>::quiet_NaN() };
+#endif
+
     template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static Optional<ApplePayLineItem> decode(Decoder&);
+    template<class Decoder> static std::optional<ApplePayLineItem> decode(Decoder&);
 };
 
 template<class Encoder>
 void ApplePayLineItem::encode(Encoder& encoder) const
 {
-    ApplePayLineItemData::encode(encoder);
     encoder << type;
     encoder << label;
     encoder << amount;
+#if ENABLE(APPLE_PAY_RECURRING_LINE_ITEM) || ENABLE(APPLE_PAY_DEFERRED_LINE_ITEM)
+    encoder << paymentTiming;
+#endif
+#if ENABLE(APPLE_PAY_RECURRING_LINE_ITEM)
+    encoder << recurringPaymentStartDate;
+    encoder << recurringPaymentIntervalUnit;
+    encoder << recurringPaymentIntervalCount;
+    encoder << recurringPaymentEndDate;
+#endif
+#if ENABLE(APPLE_PAY_DEFERRED_LINE_ITEM)
+    encoder << deferredPaymentDate;
+#endif
 }
 
 template<class Decoder>
-Optional<ApplePayLineItem> ApplePayLineItem::decode(Decoder& decoder)
+std::optional<ApplePayLineItem> ApplePayLineItem::decode(Decoder& decoder)
 {
-    ApplePayLineItem result;
+#define DECODE(name, type) \
+    std::optional<type> name; \
+    decoder >> name; \
+    if (!name) \
+        return std::nullopt; \
 
-    if (!result.decodeData(decoder))
-        return WTF::nullopt;
+    DECODE(type, Type)
+    DECODE(label, String)
+    DECODE(amount, String)
+#if ENABLE(APPLE_PAY_RECURRING_LINE_ITEM) || ENABLE(APPLE_PAY_DEFERRED_LINE_ITEM)
+    DECODE(paymentTiming, ApplePayPaymentTiming)
+#endif
+#if ENABLE(APPLE_PAY_RECURRING_LINE_ITEM)
+    DECODE(recurringPaymentStartDate, double)
+    DECODE(recurringPaymentIntervalUnit, ApplePayRecurringPaymentDateUnit)
+    DECODE(recurringPaymentIntervalCount, unsigned)
+    DECODE(recurringPaymentEndDate, double)
+#endif
+#if ENABLE(APPLE_PAY_DEFERRED_LINE_ITEM)
+    DECODE(deferredPaymentDate, double)
+#endif
 
-    Optional<Type> type;
-    decoder >> type;
-    if (!type)
-        return WTF::nullopt;
-    result.type = WTFMove(*type);
+#undef DECODE
 
-    Optional<String> label;
-    decoder >> label;
-    if (!label)
-        return WTF::nullopt;
-    result.label = WTFMove(*label);
-
-    Optional<String> amount;
-    decoder >> amount;
-    if (!amount)
-        return WTF::nullopt;
-    result.amount = WTFMove(*amount);
-
-    return result;
+    return { {
+        WTFMove(*type),
+        WTFMove(*label),
+        WTFMove(*amount),
+#if ENABLE(APPLE_PAY_RECURRING_LINE_ITEM) || ENABLE(APPLE_PAY_DEFERRED_LINE_ITEM)
+        WTFMove(*paymentTiming),
+#endif
+#if ENABLE(APPLE_PAY_RECURRING_LINE_ITEM)
+        WTFMove(*recurringPaymentStartDate),
+        WTFMove(*recurringPaymentIntervalUnit),
+        WTFMove(*recurringPaymentIntervalCount),
+        WTFMove(*recurringPaymentEndDate),
+#endif
+#if ENABLE(APPLE_PAY_DEFERRED_LINE_ITEM)
+        WTFMove(*deferredPaymentDate),
+#endif
+    } };
 }
 
 } // namespace WebCore

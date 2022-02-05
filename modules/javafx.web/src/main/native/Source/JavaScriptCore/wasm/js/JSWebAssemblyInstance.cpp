@@ -84,8 +84,8 @@ void JSWebAssemblyInstance::visitChildrenImpl(JSCell* cell, Visitor& visitor)
     visitor.append(thisObject->m_codeBlock);
     visitor.append(thisObject->m_moduleRecord);
     visitor.append(thisObject->m_memory);
-    for (unsigned i = 0; i < thisObject->instance().module().moduleInformation().tableCount(); ++i)
-        visitor.append(thisObject->m_tables[i]);
+    for (auto& table : thisObject->m_tables)
+        visitor.append(table);
     visitor.reportExtraMemoryVisited(thisObject->m_instance->extraMemoryAllocated());
     for (unsigned i = 0; i < thisObject->instance().numImportFunctions(); ++i)
         visitor.append(*thisObject->instance().importFunction<WriteBarrier<JSObject>>(i)); // This also keeps the functions' JSWebAssemblyInstance alive.
@@ -98,7 +98,7 @@ void JSWebAssemblyInstance::visitChildrenImpl(JSCell* cell, Visitor& visitor)
     for (size_t i : thisObject->instance().globalsToMark())
         visitor.appendUnbarriered(JSValue::decode(thisObject->instance().loadI64Global(i)));
 
-    auto locker = holdLock(cell->cellLock());
+    Locker locker { cell->cellLock() };
     for (auto& wrapper : thisObject->instance().functionWrappers())
         visitor.appendUnbarriered(wrapper.get());
 }
@@ -112,7 +112,7 @@ void JSWebAssemblyInstance::finalizeCreation(VM& vm, JSGlobalObject* globalObjec
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     if (!wasmCodeBlock->runnable()) {
-        throwException(globalObject, scope, JSWebAssemblyLinkError::create(globalObject, vm, this->globalObject()->webAssemblyLinkErrorStructure(), wasmCodeBlock->errorMessage()));
+        throwException(globalObject, scope, createJSWebAssemblyLinkError(globalObject, vm, wasmCodeBlock->errorMessage()));
         return;
     }
 
@@ -128,7 +128,7 @@ void JSWebAssemblyInstance::finalizeCreation(VM& vm, JSGlobalObject* globalObjec
     } else {
         jsCodeBlock = JSWebAssemblyCodeBlock::create(vm, WTFMove(wasmCodeBlock), module()->module().moduleInformation());
         if (UNLIKELY(!jsCodeBlock->runnable())) {
-            throwException(globalObject, scope, JSWebAssemblyLinkError::create(globalObject, vm, this->globalObject()->webAssemblyLinkErrorStructure(), jsCodeBlock->errorMessage()));
+            throwException(globalObject, scope, createJSWebAssemblyLinkError(globalObject, vm, jsCodeBlock->errorMessage()));
             return;
         }
         m_codeBlock.set(vm, this, jsCodeBlock);

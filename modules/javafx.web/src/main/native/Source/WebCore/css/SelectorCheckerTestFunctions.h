@@ -30,6 +30,7 @@
 #include "Frame.h"
 #include "FrameSelection.h"
 #include "FullscreenManager.h"
+#include "HTMLDialogElement.h"
 #include "HTMLFrameElement.h"
 #include "HTMLIFrameElement.h"
 #include "HTMLImageElement.h"
@@ -46,6 +47,7 @@
 #endif
 
 #if ENABLE(VIDEO)
+#include "HTMLMediaElement.h"
 #include "WebVTTElement.h"
 #endif
 
@@ -441,6 +443,40 @@ ALWAYS_INLINE bool matchesPastCuePseudoClass(const Element& element)
     return is<WebVTTElement>(element) && downcast<WebVTTElement>(element).isPastNode();
 }
 
+ALWAYS_INLINE bool matchesPlayingPseudoClass(const Element& element)
+{
+    return is<HTMLMediaElement>(element) && !downcast<HTMLMediaElement>(element).paused();
+}
+
+ALWAYS_INLINE bool matchesPausedPseudoClass(const Element& element)
+{
+    return is<HTMLMediaElement>(element) && downcast<HTMLMediaElement>(element).paused();
+}
+
+ALWAYS_INLINE bool matchesSeekingPseudoClass(const Element& element)
+{
+    return is<HTMLMediaElement>(element) && downcast<HTMLMediaElement>(element).seeking();
+}
+
+ALWAYS_INLINE bool matchesBufferingPseudoClass(const Element& element)
+{
+    return is<HTMLMediaElement>(element) && downcast<HTMLMediaElement>(element).buffering();
+}
+
+ALWAYS_INLINE bool matchesStalledPseudoClass(const Element& element)
+{
+    return is<HTMLMediaElement>(element) && downcast<HTMLMediaElement>(element).stalled();
+}
+
+ALWAYS_INLINE bool matchesMutedPseudoClass(const Element& element)
+{
+    return is<HTMLMediaElement>(element) && downcast<HTMLMediaElement>(element).muted();
+}
+
+ALWAYS_INLINE bool matchesVolumeLockedPseudoClass(const Element& element)
+{
+    return is<HTMLMediaElement>(element) && downcast<HTMLMediaElement>(element).volumeLocked();
+}
 #endif
 
 ALWAYS_INLINE bool isFrameFocused(const Element& element)
@@ -474,7 +510,25 @@ ALWAYS_INLINE bool matchesFocusPseudoClass(const Element& element)
 
 ALWAYS_INLINE bool matchesFocusVisiblePseudoClass(const Element& element)
 {
-    return InspectorInstrumentation::forcePseudoState(element, CSSSelector::PseudoClassFocusVisible);
+    if (InspectorInstrumentation::forcePseudoState(element, CSSSelector::PseudoClassFocusVisible))
+        return true;
+
+    return element.hasFocusVisible() && isFrameFocused(element);
+}
+
+ALWAYS_INLINE bool matchesFocusWithinPseudoClass(const Element& element)
+{
+    if (InspectorInstrumentation::forcePseudoState(element, CSSSelector::PseudoClassFocusWithin))
+        return true;
+
+    return element.hasFocusWithin() && isFrameFocused(element);
+}
+
+ALWAYS_INLINE bool matchesModalDialogPseudoClass(const Element& element)
+{
+    if (is<HTMLDialogElement>(element))
+        return downcast<HTMLDialogElement>(element).isModal();
+    return false;
 }
 
 } // namespace WebCore

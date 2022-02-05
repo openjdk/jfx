@@ -135,7 +135,7 @@ static Ref<InlineContent> makeAdjustedContent(const InlineContent& inlineContent
             moveVertically(line.scrollableOverflow(), offset),
             moveVertically(line.inkOverflow(), offset),
             line.baseline(),
-            line.contentLeftOffset(),
+            line.contentLeft(),
             line.contentWidth()
         };
     };
@@ -145,10 +145,10 @@ static Ref<InlineContent> makeAdjustedContent(const InlineContent& inlineContent
         return Run {
             run.lineIndex(),
             run.layoutBox(),
-            moveVertically(run.rect(), offset),
+            moveVertically(run.logicalRect(), offset),
             moveVertically(run.inkOverflow(), offset),
             run.expansion(),
-            run.textContent()
+            run.text()
         };
     };
 

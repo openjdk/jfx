@@ -35,7 +35,7 @@ class AbstractDOMWindow;
 class WindowProxy;
 
 // FIXME: Rename Frame to LocalFrame and AbstractFrame to Frame.
-class AbstractFrame : public ThreadSafeRefCounted<AbstractFrame>, public CanMakeWeakPtr<AbstractFrame> {
+class AbstractFrame : public ThreadSafeRefCounted<AbstractFrame, WTF::DestructionThread::Main>, public CanMakeWeakPtr<AbstractFrame> {
 public:
     virtual ~AbstractFrame();
 
@@ -49,6 +49,8 @@ public:
 
 protected:
     AbstractFrame();
+
+    void resetWindowProxy();
 
 private:
     virtual AbstractDOMWindow* virtualWindow() const = 0;

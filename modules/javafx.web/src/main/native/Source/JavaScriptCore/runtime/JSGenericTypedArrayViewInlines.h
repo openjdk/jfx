@@ -175,7 +175,7 @@ bool JSGenericTypedArrayView<Adaptor>::setWithSpecificType(
 
     RELEASE_ASSERT(other->canAccessRangeQuickly(otherOffset, length));
     bool success = validateRange(globalObject, offset, length);
-    EXCEPTION_ASSERT(!scope.exception() == success);
+    EXCEPTION_ASSERT_UNUSED(scope, !scope.exception() == success);
     if (!success)
         return false;
 
@@ -355,7 +355,7 @@ bool JSGenericTypedArrayView<Adaptor>::getOwnPropertySlot(
 {
     JSGenericTypedArrayView* thisObject = jsCast<JSGenericTypedArrayView*>(object);
 
-    if (Optional<uint32_t> index = parseIndex(propertyName)) {
+    if (std::optional<uint32_t> index = parseIndex(propertyName)) {
         static_assert(std::is_final_v<JSGenericTypedArrayView<Adaptor>>, "getOwnPropertySlotByIndex must not be overridden");
         return getOwnPropertySlotByIndex(thisObject, globalObject, index.value(), slot);
     }
@@ -373,7 +373,7 @@ bool JSGenericTypedArrayView<Adaptor>::put(
 {
     JSGenericTypedArrayView* thisObject = jsCast<JSGenericTypedArrayView*>(cell);
 
-    if (Optional<uint32_t> index = parseIndex(propertyName)) {
+    if (std::optional<uint32_t> index = parseIndex(propertyName)) {
         static_assert(std::is_final_v<JSGenericTypedArrayView<Adaptor>>, "putByIndex must not be overridden");
         return putByIndex(thisObject, globalObject, index.value(), value, slot.isStrictMode());
     }
@@ -396,15 +396,18 @@ bool JSGenericTypedArrayView<Adaptor>::defineOwnProperty(
     auto scope = DECLARE_THROW_SCOPE(vm);
     JSGenericTypedArrayView* thisObject = jsCast<JSGenericTypedArrayView*>(object);
 
-    if (Optional<uint32_t> index = parseIndex(propertyName)) {
+    if (std::optional<uint32_t> index = parseIndex(propertyName)) {
         auto throwTypeErrorIfNeeded = [&] (const char* errorMessage) -> bool {
             if (shouldThrow)
                 throwTypeError(globalObject, scope, makeString(errorMessage, *index));
             return false;
         };
 
-        if (index.value() >= thisObject->m_length)
-            return false;
+        if (thisObject->isDetached())
+            return typeError(globalObject, scope, shouldThrow, typedArrayBufferHasBeenDetachedErrorMessage);
+
+        if (!thisObject->inBounds(index.value()))
+            return throwTypeErrorIfNeeded("Attempting to store out-of-bounds property on a typed array at index: ");
 
         if (descriptor.isAccessorDescriptor())
             return throwTypeErrorIfNeeded("Attempting to store accessor property on a typed array at index: ");
@@ -418,14 +421,15 @@ bool JSGenericTypedArrayView<Adaptor>::defineOwnProperty(
         if (descriptor.writablePresent() && !descriptor.writable())
             return throwTypeErrorIfNeeded("Attempting to store non-writable property on a typed array at index: ");
 
+        scope.release();
         if (descriptor.value())
-            RELEASE_AND_RETURN(scope, thisObject->setIndex(globalObject, index.value(), descriptor.value()));
+            thisObject->setIndex(globalObject, index.value(), descriptor.value());
 
         return true;
     }
 
     if (isCanonicalNumericIndexString(propertyName))
-        return false;
+        return typeError(globalObject, scope, shouldThrow, "Attempting to store canonical numeric string property on a typed array"_s);
 
     RELEASE_AND_RETURN(scope, Base::defineOwnProperty(thisObject, globalObject, propertyName, descriptor, shouldThrow));
 }
@@ -436,7 +440,7 @@ bool JSGenericTypedArrayView<Adaptor>::deleteProperty(
 {
     JSGenericTypedArrayView* thisObject = jsCast<JSGenericTypedArrayView*>(cell);
 
-    if (Optional<uint32_t> index = parseIndex(propertyName)) {
+    if (std::optional<uint32_t> index = parseIndex(propertyName)) {
         static_assert(std::is_final_v<JSGenericTypedArrayView<Adaptor>>, "deletePropertyByIndex must not be overridden");
         return deletePropertyByIndex(thisObject, globalObject, index.value());
     }
@@ -459,9 +463,10 @@ bool JSGenericTypedArrayView<Adaptor>::getOwnPropertySlotByIndex(
         return false;
 
     JSValue value;
-    if constexpr (Adaptor::canConvertToJSQuickly)
+    if constexpr (Adaptor::canConvertToJSQuickly) {
+        UNUSED_VARIABLE(scope);
         value = thisObject->getIndexQuickly(propertyName);
-    else {
+    } else {
         auto nativeValue = thisObject->getIndexQuicklyAsNativeValue(propertyName);
         value = Adaptor::toJSValue(globalObject, nativeValue);
         RETURN_IF_EXCEPTION(scope, false);
@@ -529,7 +534,7 @@ void JSGenericTypedArrayView<Adaptor>::visitChildrenImpl(JSCell* cell, Visitor& 
     size_t byteSize;
 
     {
-        auto locker = holdLock(thisObject->cellLock());
+        Locker locker { thisObject->cellLock() };
         mode = thisObject->m_mode;
         vector = thisObject->vector();
         byteSize = thisObject->byteSize();

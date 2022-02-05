@@ -29,10 +29,15 @@
 #if ENABLE(WEBXR)
 
 #include "DOMPointReadOnly.h"
+#include "GraphicsContextGL.h"
 #include "JSDOMPromiseDeferred.h"
 #include "WebFakeXRInputController.h"
 #include <wtf/CompletionHandler.h>
 #include <wtf/MathExtras.h>
+
+#if USE(IOSURFACE_FOR_XR_LAYER_DATA)
+#include "IOSurface.h"
+#endif
 
 namespace WebCore {
 
@@ -59,6 +64,33 @@ SimulatedXRDevice::~SimulatedXRDevice()
     stopTimer();
 }
 
+void SimulatedXRDevice::setViews(Vector<FrameData::View>&& views)
+{
+    m_frameData.views = WTFMove(views);
+}
+
+void SimulatedXRDevice::setNativeBoundsGeometry(const Vector<FakeXRBoundsPoint>& geometry)
+{
+    m_frameData.stageParameters.id++;
+    m_frameData.stageParameters.bounds.clear();
+    for (auto& point : geometry)
+        m_frameData.stageParameters.bounds.append({ static_cast<float>(point.x), static_cast<float>(point.z) });
+}
+
+void SimulatedXRDevice::setViewerOrigin(const std::optional<FrameData::Pose>& origin)
+{
+    if (origin) {
+        m_frameData.origin = *origin;
+        m_frameData.isPositionValid = true;
+        m_frameData.isTrackingValid = true;
+        return;
+    }
+
+    m_frameData.origin = Device::FrameData::Pose();
+    m_frameData.isPositionValid = false;
+    m_frameData.isTrackingValid = false;
+}
+
 void SimulatedXRDevice::simulateShutdownCompleted()
 {
     if (m_trackingAndRenderingClient)
@@ -67,8 +99,30 @@ void SimulatedXRDevice::simulateShutdownCompleted()
 
 WebCore::IntSize SimulatedXRDevice::recommendedResolution(PlatformXR::SessionMode)
 {
-    // Return at least a 2 pixel size so we can have different viewports for left and right eyes
-    return IntSize(2, 2);
+    // Return at least a valid size for a framebuffer.
+    return IntSize(32, 32);
+}
+
+void SimulatedXRDevice::initializeTrackingAndRendering(PlatformXR::SessionMode)
+{
+    GraphicsContextGLAttributes attributes;
+    attributes.depth = false;
+    attributes.stencil = false;
+    attributes.antialias = false;
+    m_gl = GraphicsContextGL::create(attributes, nullptr);
+
+    if (m_trackingAndRenderingClient) {
+        // WebXR FakeDevice waits for simulateInputConnection calls to add input sources-
+        // There is no way to know how many simulateInputConnection calls will the device receive,
+        // so notify the input sources have been initialized with an empty list. This is not a problem because
+        // WPT tests rely on requestAnimationFrame updates to test the input sources.
+        callOnMainThread([this, weakThis = makeWeakPtr(*this)]() {
+            if (!weakThis)
+                return;
+            if (m_trackingAndRenderingClient)
+                m_trackingAndRenderingClient->sessionDidInitializeInputSources({ });
+        });
+    }
 }
 
 void SimulatedXRDevice::shutDownTrackingAndRendering()
@@ -76,6 +130,12 @@ void SimulatedXRDevice::shutDownTrackingAndRendering()
     if (m_supportsShutdownNotification)
         simulateShutdownCompleted();
     stopTimer();
+    if (m_gl) {
+        for (auto layer : m_layers)
+            m_gl->deleteTexture(layer.value);
+        m_gl = nullptr;
+    }
+    m_layers.clear();
 }
 
 void SimulatedXRDevice::stopTimer()
@@ -86,29 +146,20 @@ void SimulatedXRDevice::stopTimer()
 
 void SimulatedXRDevice::frameTimerFired()
 {
-    auto updates = WTFMove(m_pendingUpdates);
-    for (auto& update : updates)
-        update();
+    FrameData data = m_frameData.copy();
+    data.shouldRender = true;
 
-    FrameData data;
-    if (m_viewerOrigin) {
-        data.origin = *m_viewerOrigin;
-        data.isTrackingValid = true;
-        data.isPositionValid = true;
+    for (auto& layer : m_layers) {
+#if USE(IOSURFACE_FOR_XR_LAYER_DATA)
+        data.layers.add(layer.key, FrameData::LayerData { .surface = IOSurface::create(recommendedResolution(PlatformXR::SessionMode::ImmersiveVr), DestinationColorSpace::SRGB()) });
+#else
+        data.layers.add(layer.key, FrameData::LayerData { .opaqueTexture = layer.value });
+#endif
     }
 
-    if (m_floorOrigin)
-        data.floorTransform = { *m_floorOrigin };
-
-    for (auto& fakeView : m_views) {
-        FrameData::View view;
-        view.offset = fakeView->offset();
-        if (fakeView->fieldOfView().hasValue())
-            view.projection = { *fakeView->fieldOfView() };
-        else
-            view.projection = { fakeView->projection() };
-
-        data.views.append(view);
+    for (auto& input : m_inputConnections) {
+        if (input->isConnected())
+            data.inputSources.append(input->getFrameData());
     }
 
     if (m_FrameCallback)
@@ -122,34 +173,66 @@ void SimulatedXRDevice::requestFrame(RequestFrameCallback&& callback)
         m_frameTimer.startOneShot(FakeXRFrameTime);
 }
 
+std::optional<PlatformXR::LayerHandle> SimulatedXRDevice::createLayerProjection(uint32_t width, uint32_t height, bool alpha)
+{
+    using GL = GraphicsContextGL;
+    if (!m_gl)
+        return std::nullopt;
+    PlatformXR::LayerHandle handle = ++m_layerIndex;
+    auto texture = m_gl->createTexture();
+    auto colorFormat = alpha ? GL::RGBA8 : GL::RGB8;
+
+    m_gl->bindTexture(GL::TEXTURE_2D, texture);
+    m_gl->texParameteri(GL::TEXTURE_2D, GL::TEXTURE_WRAP_S, GL::CLAMP_TO_EDGE);
+    m_gl->texParameteri(GL::TEXTURE_2D, GL::TEXTURE_WRAP_T, GL::CLAMP_TO_EDGE);
+    m_gl->texParameteri(GL::TEXTURE_2D, GL::TEXTURE_MIN_FILTER, GL::LINEAR);
+    m_gl->texParameteri(GL::TEXTURE_2D, GL::TEXTURE_MAG_FILTER, GL::LINEAR);
+    m_gl->texStorage2D(GL::TEXTURE_2D, 1, colorFormat, width, height);
+
+    m_layers.add(handle, texture);
+    return handle;
+}
+
+void SimulatedXRDevice::deleteLayer(PlatformXR::LayerHandle handle)
+{
+    auto it = m_layers.find(handle);
+    if (it != m_layers.end()) {
+        if (m_gl)
+            m_gl->deleteTexture(it->value);
+        m_layers.remove(it);
+    }
+}
+
 Vector<PlatformXR::Device::ViewData> SimulatedXRDevice::views(PlatformXR::SessionMode mode) const
 {
     if (mode == PlatformXR::SessionMode::ImmersiveVr)
-        return { { .active = true, PlatformXR::Eye::Left }, { .active = true, PlatformXR::Eye::Right } };
+        return { { .active = true, .eye = PlatformXR::Eye::Left }, { .active = true, .eye = PlatformXR::Eye::Right } };
 
-    return { { .active = true, PlatformXR::Eye::None } };
-}
-
-void SimulatedXRDevice::scheduleOnNextFrame(Function<void()>&& func)
-{
-    m_pendingUpdates.append(WTFMove(func));
+    return { { .active = true, .eye = PlatformXR::Eye::None } };
 }
 
 WebFakeXRDevice::WebFakeXRDevice() = default;
 
 void WebFakeXRDevice::setViews(const Vector<FakeXRViewInit>& views)
 {
-    m_device.scheduleOnNextFrame([this, views]() {
-        Vector<Ref<FakeXRView>> deviceViews;
+    Vector<PlatformXR::Device::FrameData::View> deviceViews;
 
-        for (auto& viewInit : views) {
-            auto view = parseView(viewInit);
-            if (!view.hasException())
-                deviceViews.append(view.releaseReturnValue());
+    for (auto& viewInit : views) {
+        auto parsedView = parseView(viewInit);
+        if (!parsedView.hasException()) {
+            auto fakeView = parsedView.releaseReturnValue();
+            PlatformXR::Device::FrameData::View view;
+            view.offset = fakeView->offset();
+            if (fakeView->fieldOfView())
+                view.projection = { *fakeView->fieldOfView() };
+            else
+                view.projection = { fakeView->projection() };
+
+            deviceViews.append(view);
         }
+    }
 
-        m_device.setViews(WTFMove(deviceViews));
-    });
+    m_device.setViews(WTFMove(deviceViews));
 }
 
 void WebFakeXRDevice::disconnect(DOMPromiseDeferred<void>&& promise)
@@ -159,60 +242,37 @@ void WebFakeXRDevice::disconnect(DOMPromiseDeferred<void>&& promise)
 
 void WebFakeXRDevice::setViewerOrigin(FakeXRRigidTransformInit origin, bool emulatedPosition)
 {
-    auto result = parseRigidTransform(origin);
-    if (result.hasException())
+    auto pose = parseRigidTransform(origin);
+    if (pose.hasException())
         return;
 
-    auto pose = result.releaseReturnValue();
-
-    m_device.scheduleOnNextFrame([this, pose = WTFMove(pose), emulatedPosition]() mutable {
-        m_device.setViewerOrigin(WTFMove(pose));
-        m_device.setEmulatedPosition(emulatedPosition);
-    });
-}
-
-void WebFakeXRDevice::clearViewerOrigin()
-{
-    m_device.scheduleOnNextFrame([this]() {
-        m_device.setViewerOrigin(WTF::nullopt);
-    });
+    m_device.setViewerOrigin(pose.releaseReturnValue());
+    m_device.setEmulatedPosition(emulatedPosition);
 }
 
 void WebFakeXRDevice::simulateVisibilityChange(XRVisibilityState)
 {
 }
 
-void WebFakeXRDevice::setBoundsGeometry(Vector<FakeXRBoundsPoint>&&)
-{
-}
-
 void WebFakeXRDevice::setFloorOrigin(FakeXRRigidTransformInit origin)
 {
-    auto result = parseRigidTransform(origin);
-    if (result.hasException())
+    auto pose = parseRigidTransform(origin);
+    if (pose.hasException())
         return;
 
-    auto pose = result.releaseReturnValue();
-
-    m_device.scheduleOnNextFrame([this, pose = WTFMove(pose)]() mutable {
-        m_device.setFloorOrigin(WTFMove(pose));
-    });
-}
-
-void WebFakeXRDevice::clearFloorOrigin()
-{
-    m_device.scheduleOnNextFrame([this]() {
-        m_device.setFloorOrigin(WTF::nullopt);
-    });
+    m_device.setFloorOrigin(pose.releaseReturnValue());
 }
 
 void WebFakeXRDevice::simulateResetPose()
 {
 }
 
-Ref<WebFakeXRInputController> WebFakeXRDevice::simulateInputSourceConnection(FakeXRInputSourceInit)
+Ref<WebFakeXRInputController> WebFakeXRDevice::simulateInputSourceConnection(const FakeXRInputSourceInit& init)
 {
-    return WebFakeXRInputController::create();
+    auto handle = ++mInputSourceHandleIndex;
+    auto input = WebFakeXRInputController::create(handle, init);
+    m_device.addInputConnection(input.copyRef());
+    return input;
 }
 
 ExceptionOr<PlatformXR::Device::FrameData::Pose> WebFakeXRDevice::parseRigidTransform(const FakeXRRigidTransformInit& init)

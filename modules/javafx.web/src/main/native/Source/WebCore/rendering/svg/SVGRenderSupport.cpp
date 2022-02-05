@@ -59,13 +59,10 @@ LayoutRect SVGRenderSupport::clippedOverflowRectForRepaint(const RenderElement& 
     // Pass our local paint rect to computeFloatVisibleRectInContainer() which will
     // map to parent coords and recurse up the parent chain.
     FloatRect repaintRect = renderer.repaintRectInLocalCoordinates();
-    const SVGRenderStyle& svgStyle = renderer.style().svgStyle();
-    if (const ShadowData* shadow = svgStyle.shadow())
-        shadow->adjustRectForShadow(repaintRect);
     return enclosingLayoutRect(renderer.computeFloatRectForRepaint(repaintRect, repaintContainer));
 }
 
-Optional<FloatRect> SVGRenderSupport::computeFloatVisibleRectInContainer(const RenderElement& renderer, const FloatRect& rect, const RenderLayerModelObject* container, RenderObject::VisibleRectContext context)
+std::optional<FloatRect> SVGRenderSupport::computeFloatVisibleRectInContainer(const RenderElement& renderer, const FloatRect& rect, const RenderLayerModelObject* container, RenderObject::VisibleRectContext context)
 {
     // Ensure our parent is an SVG object.
     ASSERT(renderer.parent());
@@ -74,9 +71,6 @@ Optional<FloatRect> SVGRenderSupport::computeFloatVisibleRectInContainer(const R
         return FloatRect();
 
     FloatRect adjustedRect = rect;
-    const SVGRenderStyle& svgStyle = renderer.style().svgStyle();
-    if (const ShadowData* shadow = svgStyle.shadow())
-        shadow->adjustRectForShadow(adjustedRect);
     adjustedRect.inflate(renderer.style().outlineWidth());
 
     // Translate to coords in our parent renderer, and then call computeFloatVisibleRectInContainer() on our parent.
@@ -107,7 +101,7 @@ void SVGRenderSupport::mapLocalToContainer(const RenderElement& renderer, const 
 
     transformState.applyTransform(transform);
 
-    MapCoordinatesFlags mode = UseTransforms;
+    OptionSet<MapCoordinatesMode> mode = UseTransforms;
     parent.mapLocalToContainer(ancestorContainer, transformState, mode, wasFixed);
 }
 
@@ -401,7 +395,7 @@ void SVGRenderSupport::clipContextToCSSClippingArea(GraphicsContext& context, co
         referenceBox = localToParentTransform.mapRect(referenceBox);
 
         auto path = clipPath.pathForReferenceRect(referenceBox);
-        path.transform(localToParentTransform.inverse().valueOr(AffineTransform()));
+        path.transform(localToParentTransform.inverse().value_or(AffineTransform()));
 
         context.clipPath(path, clipPath.windRule());
     }
@@ -433,10 +427,8 @@ bool SVGRenderSupport::pointInClippingArea(const RenderElement& renderer, const 
     return true;
 }
 
-void SVGRenderSupport::applyStrokeStyleToContext(GraphicsContext* context, const RenderStyle& style, const RenderElement& renderer)
+void SVGRenderSupport::applyStrokeStyleToContext(GraphicsContext& context, const RenderStyle& style, const RenderElement& renderer)
 {
-    ASSERT(context);
-
     Element* element = renderer.element();
     if (!is<SVGElement>(element)) {
         ASSERT_NOT_REACHED();
@@ -446,15 +438,15 @@ void SVGRenderSupport::applyStrokeStyleToContext(GraphicsContext* context, const
     const SVGRenderStyle& svgStyle = style.svgStyle();
 
     SVGLengthContext lengthContext(downcast<SVGElement>(renderer.element()));
-    context->setStrokeThickness(lengthContext.valueForLength(style.strokeWidth()));
-    context->setLineCap(style.capStyle());
-    context->setLineJoin(style.joinStyle());
+    context.setStrokeThickness(lengthContext.valueForLength(style.strokeWidth()));
+    context.setLineCap(style.capStyle());
+    context.setLineJoin(style.joinStyle());
     if (style.joinStyle() == MiterJoin)
-        context->setMiterLimit(style.strokeMiterLimit());
+        context.setMiterLimit(style.strokeMiterLimit());
 
     const Vector<SVGLengthValue>& dashes = svgStyle.strokeDashArray();
     if (dashes.isEmpty())
-        context->setStrokeStyle(SolidStroke);
+        context.setStrokeStyle(SolidStroke);
     else {
         DashArray dashArray;
         dashArray.reserveInitialCapacity(dashes.size());
@@ -475,9 +467,9 @@ void SVGRenderSupport::applyStrokeStyleToContext(GraphicsContext* context, const
         }
 
         if (canSetLineDash)
-            context->setLineDash(dashArray, lengthContext.valueForLength(svgStyle.strokeDashOffset()) * scaleFactor);
+            context.setLineDash(dashArray, lengthContext.valueForLength(svgStyle.strokeDashOffset()) * scaleFactor);
         else
-            context->setStrokeStyle(SolidStroke);
+            context.setStrokeStyle(SolidStroke);
     }
 }
 

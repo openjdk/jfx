@@ -239,7 +239,7 @@ static TextStream& writePositionAndStyle(TextStream& ts, const RenderElement& re
         ts << " clipped";
     }
 
-    ts << " " << enclosingIntRect(renderer.absoluteClippedOverflowRect());
+    ts << " " << enclosingIntRect(renderer.absoluteClippedOverflowRectForRepaint());
 
     writeStyle(ts, renderer);
     return ts;
@@ -362,7 +362,7 @@ static inline void writeSVGInlineTextBox(TextStream& ts, SVGInlineTextBox* textB
 
 static inline void writeSVGInlineTextBoxes(TextStream& ts, const RenderText& text)
 {
-    for (InlineTextBox* box = text.firstTextBox(); box; box = box->nextTextBox()) {
+    for (auto* box = text.firstTextBox(); box; box = box->nextTextBox()) {
         if (!is<SVGInlineTextBox>(*box))
             continue;
 
@@ -383,7 +383,7 @@ static void writeStandardPrefix(TextStream& ts, const RenderObject& object, Opti
     ts << object.renderName();
 
     if (behavior.contains(RenderAsTextFlag::ShowAddresses))
-        ts << " " << static_cast<const void*>(&object);
+        ts << " " << &object;
 
     if (object.node())
         ts << " {" << object.node()->nodeName() << "}";

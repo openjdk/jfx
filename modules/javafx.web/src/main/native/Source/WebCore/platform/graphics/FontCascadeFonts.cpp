@@ -102,8 +102,12 @@ FontCascadeFonts::FontCascadeFonts(RefPtr<FontSelector>&& fontSelector)
     : m_cachedPrimaryFont(nullptr)
     , m_fontSelector(fontSelector)
     , m_fontSelectorVersion(m_fontSelector ? m_fontSelector->version() : 0)
-    , m_generation(FontCache::singleton().generation())
+    , m_generation(FontCache::fontCacheFallingBackToSingleton(m_fontSelector).generation())
 {
+#if ASSERT_ENABLED
+    if (!isMainThread())
+        m_thread = makeRef(Thread::current());
+#endif
 }
 
 FontCascadeFonts::FontCascadeFonts(const FontPlatformData& platformData)
@@ -140,7 +144,7 @@ static FontRanges realizeNextFallback(const FontCascadeDescription& description,
 {
     ASSERT(index < description.effectiveFamilyCount());
 
-    auto& fontCache = FontCache::singleton();
+    auto& fontCache = FontCache::fontCacheFallingBackToSingleton(fontSelector);
     while (index < description.effectiveFamilyCount()) {
         auto visitor = WTF::makeVisitor([&](const AtomString& family) -> FontRanges {
             if (family.isEmpty())
@@ -177,7 +181,7 @@ const FontRanges& FontCascadeFonts::realizeFallbackRangesAt(const FontCascadeDes
         return m_realizedFallbackRanges[index];
 
     ASSERT(index == m_realizedFallbackRanges.size());
-    ASSERT(FontCache::singleton().generation() == m_generation);
+    ASSERT(FontCache::fontCacheFallingBackToSingleton(m_fontSelector).generation() == m_generation);
 
     m_realizedFallbackRanges.append(FontRanges());
     auto& fontRanges = m_realizedFallbackRanges.last();
@@ -185,9 +189,9 @@ const FontRanges& FontCascadeFonts::realizeFallbackRangesAt(const FontCascadeDes
     if (!index) {
         fontRanges = realizeNextFallback(description, m_lastRealizedFallbackIndex, m_fontSelector.get());
         if (fontRanges.isNull() && m_fontSelector)
-            fontRanges = m_fontSelector->fontRangesForFamily(description, standardFamily);
+            fontRanges = m_fontSelector->fontRangesForFamily(description, familyNamesData->at(FamilyNamesIndex::StandardFamily));
         if (fontRanges.isNull())
-            fontRanges = FontRanges(FontCache::singleton().lastResortFallbackFont(description));
+            fontRanges = FontRanges(FontCache::fontCacheFallingBackToSingleton(m_fontSelector).lastResortFallbackFont(description));
         return fontRanges;
     }
 
@@ -347,7 +351,7 @@ GlyphData FontCascadeFonts::glyphDataForSystemFallback(UChar32 character, const 
     if (!font)
         font = &realizeFallbackRangesAt(description, 0).fontForFirstRange();
 
-    auto systemFallbackFont = font->systemFallbackFontForCharacter(character, description, m_isForPlatformFont ? IsForPlatformFont::Yes : IsForPlatformFont::No);
+    auto systemFallbackFont = font->systemFallbackFontForCharacter(character, description, m_isForPlatformFont ? IsForPlatformFont::Yes : IsForPlatformFont::No, FontCache::fontCacheFallingBackToSingleton(m_fontSelector));
     if (!systemFallbackFont)
         return GlyphData();
 
@@ -488,7 +492,7 @@ static RefPtr<GlyphPage> glyphPageFromFontRanges(unsigned pageNumber, const Font
 
 GlyphData FontCascadeFonts::glyphDataForCharacter(UChar32 c, const FontCascadeDescription& description, FontVariant variant)
 {
-    ASSERT(isMainThread());
+    ASSERT(m_thread ? m_thread->ptr() == &Thread::current() : isMainThread());
     ASSERT(variant != AutoVariant);
 
     if (variant != NormalVariant)

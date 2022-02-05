@@ -41,7 +41,7 @@
 
 namespace WebCore {
 
-CachedRawResource::CachedRawResource(CachedResourceRequest&& request, Type type, const PAL::SessionID& sessionID, const CookieJar* cookieJar)
+CachedRawResource::CachedRawResource(CachedResourceRequest&& request, Type type, PAL::SessionID sessionID, const CookieJar* cookieJar)
     : CachedResource(WTFMove(request), type, sessionID, cookieJar)
     , m_identifier(0)
     , m_allowEncodedDataReplacement(true)
@@ -49,11 +49,11 @@ CachedRawResource::CachedRawResource(CachedResourceRequest&& request, Type type,
     ASSERT(isMainOrMediaOrIconOrRawResource());
 }
 
-Optional<SharedBufferDataView> CachedRawResource::calculateIncrementalDataChunk(const SharedBuffer* data) const
+std::optional<SharedBufferDataView> CachedRawResource::calculateIncrementalDataChunk(const SharedBuffer* data) const
 {
     size_t previousDataLength = encodedSize();
     if (!data || data->size() <= previousDataLength)
-        return WTF::nullopt;
+        return std::nullopt;
     return data->getSomeData(previousDataLength);
 }
 
@@ -85,12 +85,12 @@ void CachedRawResource::updateBuffer(SharedBuffer& data)
         CachedResource::updateBuffer(data);
 
     if (m_delayedFinishLoading) {
-        auto delayedFinishLoading = std::exchange(m_delayedFinishLoading, WTF::nullopt);
+        auto delayedFinishLoading = std::exchange(m_delayedFinishLoading, std::nullopt);
         finishLoading(delayedFinishLoading->buffer.get(), { });
     }
 }
 
-void CachedRawResource::updateData(const char* data, unsigned length)
+void CachedRawResource::updateData(const uint8_t* data, unsigned length)
 {
     ASSERT(dataBufferingPolicy() == DataBufferingPolicy::DoNotBufferData);
     notifyClientsDataWasReceived(data, length);
@@ -102,7 +102,7 @@ void CachedRawResource::finishLoading(SharedBuffer* data, const NetworkLoadMetri
     if (m_inIncrementalDataNotify) {
         // We may get here synchronously from updateBuffer() if the callback there ends up spinning a runloop.
         // In that case delay the call.
-        m_delayedFinishLoading = makeOptional(DelayedFinishLoading { data });
+        m_delayedFinishLoading = std::make_optional(DelayedFinishLoading { data });
         return;
     };
     CachedResourceHandle<CachedRawResource> protectedThis(this);
@@ -128,7 +128,7 @@ void CachedRawResource::finishLoading(SharedBuffer* data, const NetworkLoadMetri
     }
 }
 
-void CachedRawResource::notifyClientsDataWasReceived(const char* data, unsigned length)
+void CachedRawResource::notifyClientsDataWasReceived(const uint8_t* data, unsigned length)
 {
     if (!length)
         return;
@@ -167,8 +167,12 @@ void CachedRawResource::didAddClient(CachedResourceClient& c)
         auto responseProcessedHandler = [this, protectedThis = WTFMove(protectedThis), client] {
             if (!hasClient(*client))
                 return;
-            if (m_data)
-                client->dataReceived(*this, m_data->data(), m_data->size());
+            if (auto data = m_data) {
+                data->forEachSegment([&](auto& segment) {
+                    if (hasClient(*client))
+                        client->dataReceived(*this, segment.data(), segment.size());
+                });
+            }
             if (!hasClient(*client))
                 return;
             CachedResource::didAddClient(*client);

@@ -68,9 +68,9 @@ aria-valuenow
 aria-valuetext
 as
 async
+attributiondestination
 attributionsourceid
 attributionsourcenonce
-attributeon
 autocomplete
 autofocus
 autopictureinpicture
@@ -157,6 +157,7 @@ imagesizes
 imagesrcset
 incremental
 indeterminate
+inert
 inputmode
 integrity
 is
@@ -220,10 +221,12 @@ onbeforepaste
 onbeforeprint
 onbeforeunload
 onblur
+oncancel
 oncanplay
 oncanplaythrough
 onchange
 onclick
+onclose
 oncontextmenu
 oncopy
 oncut
@@ -243,6 +246,7 @@ onerror
 onfocus
 onfocusin
 onfocusout
+onformdata
 onhashchange
 oninput
 oninvalid
@@ -292,6 +296,7 @@ onreset
 onresize
 onscroll
 onsearch
+onsecuritypolicyviolation
 onseeked
 onseeking
 onselect

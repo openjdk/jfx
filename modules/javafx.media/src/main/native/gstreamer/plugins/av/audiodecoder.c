@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -329,16 +329,13 @@ audiodecoder_sink_event(GstPad * pad, GstObject *parent, GstEvent * event) {
         }
 
 #ifdef DEBUG_OUTPUT
-        case GST_EVENT_NEWSEGMENT:
+        case GST_EVENT_SEGMENT:
         {
-            GstFormat format;
-            gboolean update;
-            gdouble rate, applied_rate;
-            gint64 start, stop, time;
+            GstSegment segment;
+            gst_event_copy_segment(event, &segment);
 
-            gst_event_parse_new_segment_full (event, &update, &rate, &applied_rate, &format, &start, &stop, &time);
-            g_print("audiodecoder_sink_event: NEW_SEGMENT update=%s, rate=%f, format=%d, start=%ld, stop=%ld, time=%ld\n",
-                    update ? "TRUE" : "FALSE", rate, format, start, stop, time);
+            g_print("audiodecoder_sink_event: NEW_SEGMENT rate=%.1f, format=%d, start=%.3f, stop=%.3f, time=%.3f\n",
+                    segment.rate, segment.format, (double)segment.start/GST_SECOND, (double)segment.stop/GST_SECOND, (double)segment.time/GST_SECOND);
 
             break;
         }

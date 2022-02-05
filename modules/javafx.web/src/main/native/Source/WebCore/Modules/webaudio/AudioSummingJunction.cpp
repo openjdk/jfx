@@ -35,55 +35,71 @@
 namespace WebCore {
 
 AudioSummingJunction::AudioSummingJunction(BaseAudioContext& context)
-    : m_context(context)
+    : m_context(makeWeakPtr(context, EnableWeakPtrThreadingAssertions::No)) // WebAudio code uses locking when accessing the context.
 {
 }
 
 AudioSummingJunction::~AudioSummingJunction()
 {
-    if (m_renderingStateNeedUpdating)
-        context().removeMarkedSummingJunction(this);
+    if (m_renderingStateNeedUpdating && context())
+        context()->removeMarkedSummingJunction(this);
 }
 
 void AudioSummingJunction::markRenderingStateAsDirty()
 {
-    ASSERT(context().isGraphOwner());
+    ASSERT(context());
+    ASSERT(context()->isGraphOwner());
     if (!m_renderingStateNeedUpdating && canUpdateState()) {
-        context().markSummingJunctionDirty(this);
+        context()->markSummingJunctionDirty(this);
         m_renderingStateNeedUpdating = true;
     }
 }
 
 bool AudioSummingJunction::addOutput(AudioNodeOutput& output)
 {
-    ASSERT(context().isGraphOwner());
+    ASSERT(context());
+    ASSERT(context()->isGraphOwner());
     if (!m_outputs.add(&output).isNewEntry)
         return false;
+
+    if (m_pendingRenderingOutputs.isEmpty())
+        m_pendingRenderingOutputs = copyToVector(m_outputs);
+    else
+        m_pendingRenderingOutputs.append(&output);
+
     markRenderingStateAsDirty();
     return true;
 }
 
 bool AudioSummingJunction::removeOutput(AudioNodeOutput& output)
 {
-    ASSERT(context().isGraphOwner());
+    ASSERT(context());
+    ASSERT(context()->isGraphOwner());
     if (!m_outputs.remove(&output))
         return false;
+
+    if (m_pendingRenderingOutputs.isEmpty()) {
+        // Heap allocations are forbidden on the audio thread for performance reasons so we need to
+        // explicitly allow the following allocation(s).
+        DisableMallocRestrictionsForCurrentThreadScope disableMallocRestrictions;
+        m_pendingRenderingOutputs = copyToVector(m_outputs);
+    } else
+        m_pendingRenderingOutputs.removeFirst(&output);
+
     markRenderingStateAsDirty();
     return true;
 }
 
 void AudioSummingJunction::updateRenderingState()
 {
-    ASSERT(context().isAudioThread() && context().isGraphOwner());
+    ASSERT(context());
+    ASSERT(context()->isAudioThread() && context()->isGraphOwner());
 
     if (m_renderingStateNeedUpdating && canUpdateState()) {
         // Copy from m_outputs to m_renderingOutputs.
-        m_renderingOutputs.resize(m_outputs.size());
-        unsigned i = 0;
-        for (auto& output : m_outputs) {
-            m_renderingOutputs[i++] = output;
+        m_renderingOutputs = std::exchange(m_pendingRenderingOutputs, { });
+        for (auto& output : m_renderingOutputs)
             output->updateRenderingState();
-        }
 
         didUpdate();
 

@@ -36,7 +36,7 @@ namespace JSC {
 class Structure;
 
 #if USE(JSVALUE64)
-typedef uint32_t StructureID;
+using StructureID = uint32_t;
 
 inline StructureID nukedStructureIDBit()
 {
@@ -58,7 +58,7 @@ inline StructureID decontaminate(StructureID id)
     return id & ~nukedStructureIDBit();
 }
 #else // not USE(JSVALUE64)
-typedef Structure* StructureID;
+using StructureID = Structure*;
 
 inline StructureID nukedStructureIDBit()
 {
@@ -140,7 +140,7 @@ public:
     // 1. StructureID is encoded as:
     //
     //    ----------------------------------------------------------------
-    //    | 1 Nuke Bit | 24 StructureIDTable index bits | 7 entropy bits |
+    //    | 1 Nuke Bit | 26 StructureIDTable index bits | 5 entropy bits |
     //    ----------------------------------------------------------------
     //
     //    The entropy bits are chosen at random and assigned when a StructureID
@@ -149,15 +149,15 @@ public:
     // 2. For each StructureID, the StructureIDTable stores encodedStructureBits
     //    which are encoded from the structure pointer as such:
     //
-    //    -----------------------------------------------------------------
-    //    | 9 low index bits | 7 entropy bits | 48 structure pointer bits |
-    //    -----------------------------------------------------------------
+    //    ------------------------------------------------------------------
+    //    | 11 low index bits | 5 entropy bits | 48 structure pointer bits |
+    //    ------------------------------------------------------------------
     //
-    //    The entropy bits here are the same 7 bits used in the encoding of the
+    //    The entropy bits here are the same 5 bits used in the encoding of the
     //    StructureID for this structure entry in the StructureIDTable.
 
     static constexpr uint32_t s_numberOfNukeBits = 1;
-    static constexpr uint32_t s_numberOfEntropyBits = 7;
+    static constexpr uint32_t s_numberOfEntropyBits = 5;
     static constexpr uint32_t s_entropyBitsShiftForStructurePointer = (sizeof(EncodedStructureBits) * 8) - 16;
 
     static constexpr uint32_t s_maximumNumberOfStructures = 1 << (32 - s_numberOfEntropyBits - s_numberOfNukeBits);

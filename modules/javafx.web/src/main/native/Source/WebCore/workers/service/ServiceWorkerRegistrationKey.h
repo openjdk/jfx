@@ -56,16 +56,18 @@ public:
     ServiceWorkerRegistrationKey isolatedCopy() const;
 
     template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static Optional<ServiceWorkerRegistrationKey> decode(Decoder&);
+    template<class Decoder> static std::optional<ServiceWorkerRegistrationKey> decode(Decoder&);
 
     String toDatabaseKey() const;
-    static Optional<ServiceWorkerRegistrationKey> fromDatabaseKey(const String&);
+    static std::optional<ServiceWorkerRegistrationKey> fromDatabaseKey(const String&);
 
 #if !LOG_DISABLED
     String loggingString() const;
 #endif
 
 private:
+    friend struct HashTraits<ServiceWorkerRegistrationKey>;
+
     SecurityOriginData m_topOrigin;
     URL m_scope;
 };
@@ -79,16 +81,16 @@ void ServiceWorkerRegistrationKey::encode(Encoder& encoder) const
 }
 
 template<class Decoder>
-Optional<ServiceWorkerRegistrationKey> ServiceWorkerRegistrationKey::decode(Decoder& decoder)
+std::optional<ServiceWorkerRegistrationKey> ServiceWorkerRegistrationKey::decode(Decoder& decoder)
 {
-    Optional<SecurityOriginData> topOrigin;
+    std::optional<SecurityOriginData> topOrigin;
     decoder >> topOrigin;
     if (!topOrigin)
-        return WTF::nullopt;
+        return std::nullopt;
 
     URL scope;
     if (!decoder.decode(scope))
-        return WTF::nullopt;
+        return std::nullopt;
 
     return ServiceWorkerRegistrationKey { WTFMove(*topOrigin), WTFMove(scope) };
 }
@@ -106,8 +108,8 @@ struct ServiceWorkerRegistrationKeyHash {
 template<> struct HashTraits<WebCore::ServiceWorkerRegistrationKey> : GenericHashTraits<WebCore::ServiceWorkerRegistrationKey> {
     static WebCore::ServiceWorkerRegistrationKey emptyValue() { return WebCore::ServiceWorkerRegistrationKey::emptyKey(); }
 
-    static void constructDeletedValue(WebCore::ServiceWorkerRegistrationKey& slot) { slot.setScope(URL(HashTableDeletedValue)); }
-    static bool isDeletedValue(const WebCore::ServiceWorkerRegistrationKey& slot) { return slot.scope().isHashTableDeletedValue(); }
+    static void constructDeletedValue(WebCore::ServiceWorkerRegistrationKey& slot) { new (NotNull, &slot.m_topOrigin) WebCore::SecurityOriginData(HashTableDeletedValue); }
+    static bool isDeletedValue(const WebCore::ServiceWorkerRegistrationKey& slot) { return slot.m_topOrigin.isHashTableDeletedValue(); }
 };
 
 template<> struct DefaultHash<WebCore::ServiceWorkerRegistrationKey> : ServiceWorkerRegistrationKeyHash { };

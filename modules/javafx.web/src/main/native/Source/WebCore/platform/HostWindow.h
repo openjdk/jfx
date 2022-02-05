@@ -31,12 +31,14 @@
 namespace WebCore {
 
 class Cursor;
+class DestinationColorSpace;
 class ImageBuffer;
 
 enum class PixelFormat : uint8_t;
-enum class DestinationColorSpace : uint8_t;
 enum class RenderingMode : bool;
 enum class RenderingPurpose : uint8_t;
+
+using FramesPerSecond = unsigned;
 
 class HostWindow {
     WTF_MAKE_NONCOPYABLE(HostWindow); WTF_MAKE_FAST_ALLOCATED;
@@ -62,7 +64,7 @@ public:
     virtual IntPoint accessibilityScreenToRootView(const IntPoint&) const = 0;
     virtual IntRect rootViewToAccessibilityScreen(const IntRect&) const = 0;
 
-    virtual RefPtr<ImageBuffer> createImageBuffer(const FloatSize&, RenderingMode, RenderingPurpose, float resolutionScale, DestinationColorSpace, PixelFormat) const = 0;
+    virtual RefPtr<ImageBuffer> createImageBuffer(const FloatSize&, RenderingMode, RenderingPurpose, float resolutionScale, const DestinationColorSpace&, PixelFormat) const = 0;
 
 #if ENABLE(WEBGL)
     virtual RefPtr<GraphicsContextGL> createGraphicsContextGL(const GraphicsContextGLAttributes&) const = 0;
@@ -77,7 +79,7 @@ public:
     virtual void setCursorHiddenUntilMouseMoves(bool) = 0;
 
     virtual PlatformDisplayID displayID() const = 0;
-    virtual void windowScreenDidChange(PlatformDisplayID, Optional<unsigned> nominalFramesPerSecond) = 0;
+    virtual void windowScreenDidChange(PlatformDisplayID, std::optional<FramesPerSecond> nominalFramesPerSecond) = 0;
 
     virtual FloatSize screenSize() const = 0;
     virtual FloatSize availableScreenSize() const = 0;

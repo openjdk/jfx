@@ -62,13 +62,13 @@ private:
     size_t sizeInBytes() const override { return sizeof(m_box); }
     SampleFlags flags() const override;
     PlatformSample platformSample() override;
-    Optional<ByteRange> byteRange() const override { return WTF::nullopt; }
+    std::optional<ByteRange> byteRange() const override { return std::nullopt; }
     FloatSize presentationSize() const override { return FloatSize(); }
     void dump(PrintStream&) const override;
     void offsetTimestampsBy(const MediaTime& offset) override { m_box.offsetTimestampsBy(offset); }
     void setTimestamps(const MediaTime& presentationTimestamp, const MediaTime& decodeTimestamp) override { m_box.setTimestamps(presentationTimestamp, decodeTimestamp); }
     bool isDivisable() const override { return false; }
-    std::pair<RefPtr<MediaSample>, RefPtr<MediaSample>> divide(const MediaTime&) override { return {nullptr, nullptr}; }
+    std::pair<RefPtr<MediaSample>, RefPtr<MediaSample>> divide(const MediaTime&, UseEndTime) override { return {nullptr, nullptr}; }
     Ref<MediaSample> createNonDisplayingCopy() const override;
 
     unsigned generation() const { return m_box.generation(); }
@@ -136,7 +136,7 @@ MockSourceBufferPrivate::MockSourceBufferPrivate(MockMediaSourcePrivate* parent)
 
 MockSourceBufferPrivate::~MockSourceBufferPrivate() = default;
 
-void MockSourceBufferPrivate::append(Vector<unsigned char>&& data)
+void MockSourceBufferPrivate::append(Vector<uint8_t>&& data)
 {
     m_inputBuffer.appendVector(data);
     SourceBufferPrivateClient::AppendResult result = SourceBufferPrivateClient::AppendResult::AppendSucceeded;
@@ -244,9 +244,9 @@ bool MockSourceBufferPrivate::isActive() const
     return m_isActive;
 }
 
-Vector<String> MockSourceBufferPrivate::enqueuedSamplesForTrackID(const AtomString&)
+void MockSourceBufferPrivate::enqueuedSamplesForTrackID(const AtomString&, CompletionHandler<void(Vector<String>&&)>&& completionHandler)
 {
-    return m_enqueuedSamples;
+    completionHandler(copyToVector(m_enqueuedSamples));
 }
 
 MediaTime MockSourceBufferPrivate::minimumUpcomingPresentationTimeForTrackID(const AtomString&)

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2009-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -83,24 +83,62 @@ class LinkBuffer {
 #endif
 
 public:
-    LinkBuffer(MacroAssembler& macroAssembler, void* ownerUID, JITCompilationEffort effort = JITCompilationMustSucceed)
+
+#define FOR_EACH_LINKBUFFER_PROFILE(v) \
+    v(BaselineJIT) \
+    v(DFG) \
+    v(FTL) \
+    v(DFGOSREntry) \
+    v(DFGOSRExit) \
+    v(FTLOSRExit) \
+    v(InlineCache) \
+    v(JumpIsland) \
+    v(Thunk) \
+    v(LLIntThunk) \
+    v(DFGThunk) \
+    v(FTLThunk) \
+    v(BoundFunctionThunk) \
+    v(SpecializedThunk) \
+    v(VirtualThunk) \
+    v(WasmThunk) \
+    v(ExtraCTIThunk) \
+    v(Wasm) \
+    v(YarrJIT) \
+    v(CSSJIT) \
+    v(Uncategorized) \
+    v(Total) \
+
+#define DECLARE_LINKBUFFER_PROFILE(name) name,
+    enum class Profile {
+        FOR_EACH_LINKBUFFER_PROFILE(DECLARE_LINKBUFFER_PROFILE)
+    };
+#undef DECLARE_LINKBUFFER_PROFILE
+
+#define COUNT_LINKBUFFER_PROFILE(name) + 1
+    static constexpr unsigned numberOfProfiles = FOR_EACH_LINKBUFFER_PROFILE(COUNT_LINKBUFFER_PROFILE);
+#undef COUNT_LINKBUFFER_PROFILE
+    static constexpr unsigned numberOfProfilesExcludingTotal = numberOfProfiles - 1;
+
+    LinkBuffer(MacroAssembler& macroAssembler, void* ownerUID, Profile profile = Profile::Uncategorized, JITCompilationEffort effort = JITCompilationMustSucceed)
         : m_size(0)
         , m_didAllocate(false)
 #ifndef NDEBUG
         , m_completed(false)
 #endif
+        , m_profile(profile)
     {
         UNUSED_PARAM(ownerUID);
         linkCode(macroAssembler, effort);
     }
 
     template<PtrTag tag>
-    LinkBuffer(MacroAssembler& macroAssembler, MacroAssemblerCodePtr<tag> code, size_t size, JITCompilationEffort effort = JITCompilationMustSucceed, bool shouldPerformBranchCompaction = true)
+    LinkBuffer(MacroAssembler& macroAssembler, MacroAssemblerCodePtr<tag> code, size_t size, Profile profile = Profile::Uncategorized, JITCompilationEffort effort = JITCompilationMustSucceed, bool shouldPerformBranchCompaction = true)
         : m_size(size)
         , m_didAllocate(false)
 #ifndef NDEBUG
         , m_completed(false)
 #endif
+        , m_profile(profile)
         , m_code(code.template retagged<LinkBufferPtrTag>())
     {
 #if ENABLE(BRANCH_COMPACTION)
@@ -114,6 +152,8 @@ public:
     ~LinkBuffer()
     {
     }
+
+    void runMainThreadFinalizationTasks();
 
     bool didFailToAllocate() const
     {
@@ -298,6 +338,15 @@ public:
     bool wasAlreadyDisassembled() const { return m_alreadyDisassembled; }
     void didAlreadyDisassemble() { m_alreadyDisassembled = true; }
 
+    JS_EXPORT_PRIVATE static void clearProfileStatistics();
+    JS_EXPORT_PRIVATE static void dumpProfileStatistics(std::optional<PrintStream*> = std::nullopt);
+
+    template<typename Functor>
+    void addMainThreadFinalizationTask(const Functor& functor)
+    {
+        m_mainThreadFinalizationTasks.append(createSharedTask<void()>(functor));
+    }
+
 private:
     JS_EXPORT_PRIVATE CodeRef<LinkBufferPtrTag> finalizeCodeWithoutDisassemblyImpl();
     JS_EXPORT_PRIVATE CodeRef<LinkBufferPtrTag> finalizeCodeWithDisassemblyImpl(bool dumpDisassembly, const char* format, ...) WTF_ATTRIBUTE_PRINTF(3, 4);
@@ -373,21 +422,27 @@ private:
     bool m_isJumpIsland { false };
 #endif
     bool m_alreadyDisassembled { false };
+    Profile m_profile { Profile::Uncategorized };
     MacroAssemblerCodePtr<LinkBufferPtrTag> m_code;
     Vector<RefPtr<SharedTask<void(LinkBuffer&)>>> m_linkTasks;
+    Vector<RefPtr<SharedTask<void(LinkBuffer&)>>> m_lateLinkTasks;
+    Vector<RefPtr<SharedTask<void()>>> m_mainThreadFinalizationTasks;
+
+    static size_t s_profileCummulativeLinkedSizes[numberOfProfiles];
+    static size_t s_profileCummulativeLinkedCounts[numberOfProfiles];
 };
 
 #if OS(LINUX)
-#define FINALIZE_CODE_IF(condition, linkBufferReference, resultPtrTag, ...)  \
-    (UNLIKELY((condition))                                              \
-        ? (linkBufferReference).finalizeCodeWithDisassembly<resultPtrTag>(true, __VA_ARGS__) \
+#define FINALIZE_CODE_IF(condition, linkBufferReference, resultPtrTag, ...) \
+    (UNLIKELY((condition) || JSC::Options::logJIT()) \
+        ? (linkBufferReference).finalizeCodeWithDisassembly<resultPtrTag>((condition), __VA_ARGS__) \
         : (UNLIKELY(JSC::Options::logJITCodeForPerf()) \
             ? (linkBufferReference).finalizeCodeWithDisassembly<resultPtrTag>(false, __VA_ARGS__) \
             : (linkBufferReference).finalizeCodeWithoutDisassembly<resultPtrTag>()))
 #else
-#define FINALIZE_CODE_IF(condition, linkBufferReference, resultPtrTag, ...)  \
-    (UNLIKELY((condition))                                              \
-        ? (linkBufferReference).finalizeCodeWithDisassembly<resultPtrTag>(true, __VA_ARGS__) \
+#define FINALIZE_CODE_IF(condition, linkBufferReference, resultPtrTag, ...) \
+    (UNLIKELY((condition) || JSC::Options::logJIT()) \
+        ? (linkBufferReference).finalizeCodeWithDisassembly<resultPtrTag>((condition), __VA_ARGS__) \
         : (linkBufferReference).finalizeCodeWithoutDisassembly<resultPtrTag>())
 #endif
 

@@ -41,9 +41,12 @@
 #include "HTMLNames.h"
 #include "HTMLParserIdioms.h"
 #include "LayoutDisallowedScope.h"
+#include "LayoutIntegrationLineIterator.h"
+#include "LayoutIntegrationRunIterator.h"
 #include "Logging.h"
 #include "NodeTraversal.h"
 #include "Page.h"
+#include "RenderLineBreak.h"
 #include "RenderTextControlSingleLine.h"
 #include "RenderTheme.h"
 #include "ScriptDisallowedScope.h"
@@ -452,10 +455,10 @@ static void setContainerAndOffsetForRange(Node* node, unsigned offset, Node*& co
     }
 }
 
-Optional<SimpleRange> HTMLTextFormControlElement::selection() const
+std::optional<SimpleRange> HTMLTextFormControlElement::selection() const
 {
     if (!renderer() || !isTextField() || !hasCachedSelection())
-        return WTF::nullopt;
+        return std::nullopt;
 
     unsigned start = m_cachedSelectionStart;
     unsigned end = m_cachedSelectionEnd;
@@ -463,7 +466,7 @@ Optional<SimpleRange> HTMLTextFormControlElement::selection() const
     ASSERT(start <= end);
     auto innerText = innerTextElement();
     if (!innerText)
-        return WTF::nullopt;
+        return std::nullopt;
 
     if (!innerText->firstChild())
         return SimpleRange { { *innerText, 0 }, { *innerText, 0 } };
@@ -489,7 +492,7 @@ Optional<SimpleRange> HTMLTextFormControlElement::selection() const
     }
 
     if (!startNode || !endNode)
-        return WTF::nullopt;
+        return std::nullopt;
 
     return SimpleRange { { *startNode, start }, { *endNode, end } };
 }
@@ -556,7 +559,7 @@ static void stripTrailingNewline(StringBuilder& result)
     // Remove one trailing newline; there's always one that's collapsed out by rendering.
     size_t size = result.length();
     if (size && result[size - 1] == newlineCharacter)
-        result.resize(size - 1);
+        result.shrink(size - 1);
 }
 
 static String innerTextValueFrom(TextControlInnerTextElement& innerText)
@@ -681,23 +684,6 @@ unsigned HTMLTextFormControlElement::indexForPosition(const Position& passedPosi
     return index;
 }
 
-static void getNextSoftBreak(RootInlineBox*& line, Node*& breakNode, unsigned& breakOffset)
-{
-    RootInlineBox* next;
-    for (; line; line = next) {
-        next = line->nextRootBox();
-        if (next && !line->endsWithBreak()) {
-            ASSERT(line->lineBreakObj());
-            breakNode = line->lineBreakObj()->node();
-            breakOffset = line->lineBreakPos();
-            line = next;
-            return;
-        }
-    }
-    breakNode = 0;
-    breakOffset = 0;
-}
-
 String HTMLTextFormControlElement::valueWithHardLineBreaks() const
 {
     // FIXME: It's not acceptable to ignore the HardWrap setting when there is no renderer.
@@ -713,13 +699,30 @@ String HTMLTextFormControlElement::valueWithHardLineBreaks() const
     if (!renderer)
         return value();
 
-    Node* breakNode;
-    unsigned breakOffset;
-    RootInlineBox* line = renderer->firstRootBox();
-    if (!line)
+    Node* softLineBreakNode = nullptr;
+    unsigned softLineBreakOffset = 0;
+    auto currentLine = LayoutIntegration::firstLineFor(*renderer);
+    if (!currentLine)
         return value();
 
-    getNextSoftBreak(line, breakNode, breakOffset);
+    auto skipToNextSoftLineBreakPosition = [&] {
+        for (; currentLine; currentLine.traverseNext()) {
+            auto lastRun = currentLine.lastRun();
+            ASSERT(lastRun);
+            auto& renderer = lastRun->renderer();
+            auto lineEndsWithBR = is<RenderLineBreak>(renderer) && !downcast<RenderLineBreak>(renderer).isWBR();
+            if (!lineEndsWithBR) {
+                softLineBreakNode = renderer.node();
+                softLineBreakOffset = lastRun->maximumCaretOffset();
+                currentLine.traverseNext();
+                return;
+            }
+        }
+        softLineBreakNode = nullptr;
+        softLineBreakOffset = 0;
+    };
+
+    skipToNextSoftLineBreakPosition();
 
     StringBuilder result;
     for (RefPtr<Node> node = innerText->firstChild(); node; node = NodeTraversal::next(*node, innerText.get())) {
@@ -729,18 +732,18 @@ String HTMLTextFormControlElement::valueWithHardLineBreaks() const
             String data = downcast<Text>(*node).data();
             unsigned length = data.length();
             unsigned position = 0;
-            while (breakNode == node && breakOffset <= length) {
-                if (breakOffset > position) {
-                    result.appendSubstring(data, position, breakOffset - position);
-                    position = breakOffset;
+            while (softLineBreakNode == node && softLineBreakOffset <= length) {
+                if (softLineBreakOffset > position) {
+                    result.appendSubstring(data, position, softLineBreakOffset - position);
+                    position = softLineBreakOffset;
                     result.append(newlineCharacter);
                 }
-                getNextSoftBreak(line, breakNode, breakOffset);
+                skipToNextSoftLineBreakPosition();
             }
             result.appendSubstring(data, position, length - position);
         }
-        while (breakNode == node)
-            getNextSoftBreak(line, breakNode, breakOffset);
+        while (softLineBreakNode == node)
+            skipToNextSoftLineBreakPosition();
     }
     stripTrailingNewline(result);
     return result.toString();
@@ -803,7 +806,7 @@ void HTMLTextFormControlElement::adjustInnerTextStyle(const RenderStyle& parentS
     textBlockStyle.setUnicodeBidi(parentStyle.unicodeBidi());
 
     if (auto innerText = innerTextElement()) {
-        if (const StyleProperties* properties = innerText->presentationAttributeStyle()) {
+        if (const StyleProperties* properties = innerText->presentationalHintStyle()) {
             RefPtr<CSSValue> value = properties->getPropertyCSSValue(CSSPropertyWebkitUserModify);
             if (is<CSSPrimitiveValue>(value))
                 textBlockStyle.setUserModify(downcast<CSSPrimitiveValue>(*value));

@@ -25,7 +25,7 @@
 
 #include "Filter.h"
 #include "GraphicsContext.h"
-#include "ImageData.h"
+#include "PixelBuffer.h"
 #include <wtf/MathExtras.h>
 #include <wtf/text/TextStream.h>
 
@@ -35,16 +35,16 @@
 
 namespace WebCore {
 
-FEColorMatrix::FEColorMatrix(Filter& filter, ColorMatrixType type, const Vector<float>& values)
+FEColorMatrix::FEColorMatrix(Filter& filter, ColorMatrixType type, Vector<float>&& values)
     : FilterEffect(filter, Type::ColorMatrix)
     , m_type(type)
-    , m_values(values)
+    , m_values(WTFMove(values))
 {
 }
 
-Ref<FEColorMatrix> FEColorMatrix::create(Filter& filter, ColorMatrixType type, const Vector<float>& values)
+Ref<FEColorMatrix> FEColorMatrix::create(Filter& filter, ColorMatrixType type, Vector<float>&& values)
 {
-    return adoptRef(*new FEColorMatrix(filter, type, values));
+    return adoptRef(*new FEColorMatrix(filter, type, WTFMove(values)));
 }
 
 bool FEColorMatrix::setType(ColorMatrixType type)
@@ -87,7 +87,7 @@ inline void saturateAndHueRotate(float& red, float& green, float& blue, const fl
     blue    = r * components[6] + g * components[7] + b * components[8];
 }
 
-// FIXME: this should use luminance(const ColorComponents<float>& sRGBCompontents).
+// FIXME: this should use the luminance(...) function in ColorLuminance.h.
 inline void luminance(float& red, float& green, float& blue, float& alpha)
 {
     alpha = 0.2125 * red + 0.7154 * green + 0.0721 * blue;
@@ -100,7 +100,7 @@ inline void luminance(float& red, float& green, float& blue, float& alpha)
 template<ColorMatrixType filterType>
 bool effectApplyAccelerated(Uint8ClampedArray& pixelArray, const Vector<float>& values, float components[9], IntSize bufferSize)
 {
-    ASSERT(pixelArray.length() == bufferSize.area().unsafeGet() * 4);
+    ASSERT(pixelArray.length() == bufferSize.area() * 4);
 
     if (filterType == FECOLORMATRIX_TYPE_MATRIX) {
         // vImageMatrixMultiply_ARGB8888 takes a 4x4 matrix, if any value in the last column of the FEColorMatrix 5x4 matrix
@@ -285,13 +285,14 @@ void FEColorMatrix::platformApplySoftware()
     if (inBuffer)
         resultImage->context().drawImageBuffer(*inBuffer, drawingRegionOfInputImage(in->absolutePaintRect()));
 
+    PixelBufferFormat format { AlphaPremultiplication::Unpremultiplied, PixelFormat::RGBA8, resultColorSpace() };
     IntRect imageRect(IntPoint(), resultImage->logicalSize());
-    auto imageData = resultImage->getImageData(AlphaPremultiplication::Unpremultiplied, imageRect);
-    if (!imageData)
+    auto pixelBuffer = resultImage->getPixelBuffer(format, imageRect);
+    if (!pixelBuffer)
         return;
 
-    auto* pixelArray = imageData->data();
-    IntSize pixelArrayDimensions = imageData->size();
+    auto& pixelArray = pixelBuffer->data();
+    auto pixelArrayDimensions = pixelBuffer->size();
 
     Vector<float> values = normalizedFloats(m_values);
 
@@ -299,21 +300,21 @@ void FEColorMatrix::platformApplySoftware()
     case FECOLORMATRIX_TYPE_UNKNOWN:
         break;
     case FECOLORMATRIX_TYPE_MATRIX:
-        effectType<FECOLORMATRIX_TYPE_MATRIX>(*pixelArray, values, pixelArrayDimensions);
+        effectType<FECOLORMATRIX_TYPE_MATRIX>(pixelArray, values, pixelArrayDimensions);
         break;
     case FECOLORMATRIX_TYPE_SATURATE:
-        effectType<FECOLORMATRIX_TYPE_SATURATE>(*pixelArray, values, pixelArrayDimensions);
+        effectType<FECOLORMATRIX_TYPE_SATURATE>(pixelArray, values, pixelArrayDimensions);
         break;
     case FECOLORMATRIX_TYPE_HUEROTATE:
-        effectType<FECOLORMATRIX_TYPE_HUEROTATE>(*pixelArray, values, pixelArrayDimensions);
+        effectType<FECOLORMATRIX_TYPE_HUEROTATE>(pixelArray, values, pixelArrayDimensions);
         break;
     case FECOLORMATRIX_TYPE_LUMINANCETOALPHA:
-        effectType<FECOLORMATRIX_TYPE_LUMINANCETOALPHA>(*pixelArray, values, pixelArrayDimensions);
+        effectType<FECOLORMATRIX_TYPE_LUMINANCETOALPHA>(pixelArray, values, pixelArrayDimensions);
         setIsAlphaImage(true);
         break;
     }
 
-    resultImage->putImageData(AlphaPremultiplication::Unpremultiplied, *imageData, imageRect);
+    resultImage->putPixelBuffer(*pixelBuffer, imageRect);
 }
 
 static TextStream& operator<<(TextStream& ts, const ColorMatrixType& type)

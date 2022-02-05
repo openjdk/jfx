@@ -43,6 +43,7 @@ namespace JSC {
     macro(GetBySelfPatch) \
     macro(InAddAccessCase) \
     macro(InReplaceWithJump) \
+    macro(InReplaceWithGeneric) \
     macro(InstanceOfAddAccessCase) \
     macro(InstanceOfReplaceWithJump) \
     macro(OperationGetById) \
@@ -52,7 +53,7 @@ namespace JSC {
     macro(OperationGetByValOptimize) \
     macro(OperationGetByIdWithThisOptimize) \
     macro(OperationGenericIn) \
-    macro(OperationInById) \
+    macro(OperationInByIdGeneric) \
     macro(OperationInByIdOptimize) \
     macro(OperationPutByIdStrict) \
     macro(OperationPutByIdNonStrict) \
@@ -66,10 +67,10 @@ namespace JSC {
     macro(OperationPutByIdNonStrictBuildList) \
     macro(OperationPutByIdDefinePrivateFieldFieldStrictOptimize) \
     macro(OperationPutByIdPutPrivateFieldFieldStrictOptimize) \
-    macro(PutByIdAddAccessCase) \
-    macro(PutByIdReplaceWithJump) \
-    macro(PutByIdSelfPatch) \
-    macro(InByIdSelfPatch) \
+    macro(PutByAddAccessCase) \
+    macro(PutByReplaceWithJump) \
+    macro(PutBySelfPatch) \
+    macro(InBySelfPatch) \
     macro(DelByReplaceWithJump) \
     macro(DelByReplaceWithGeneric) \
     macro(OperationGetPrivateNameOptimize) \

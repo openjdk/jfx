@@ -72,7 +72,7 @@ ExceptionOr<Ref<OscillatorNode>> OscillatorNode::create(BaseAudioContext& contex
     if (options.periodicWave)
         oscillator->setPeriodicWave(*options.periodicWave);
     else {
-        result = oscillator->setType(options.type);
+        result = oscillator->setTypeForBindings(options.type);
         if (result.hasException())
             return result.releaseException();
     }
@@ -97,9 +97,10 @@ OscillatorNode::~OscillatorNode()
     uninitialize();
 }
 
-ExceptionOr<void> OscillatorNode::setType(OscillatorType type)
+ExceptionOr<void> OscillatorNode::setTypeForBindings(OscillatorType type)
 {
     ALWAYS_LOG(LOGIDENTIFIER, type);
+    ASSERT(isMainThread());
 
     if (type == OscillatorType::Custom) {
         if (m_type != OscillatorType::Custom)
@@ -349,13 +350,13 @@ void OscillatorNode::process(size_t framesToProcess)
     if (framesToProcess > m_phaseIncrements.size())
         return;
 
-    // The audio thread can't block on this lock, so we use tryHoldLock() instead.
-    auto locker = tryHoldLock(m_processLock);
-    if (!locker) {
-        // Too bad - tryHoldLock() failed. We must be in the middle of changing wave-tables.
+    // The audio thread can't block on this lock, so we use tryLock() instead.
+    if (!m_processLock.tryLock()) {
+        // Too bad - tryLock() failed. We must be in the middle of changing wave-tables.
         outputBus.zero();
         return;
     }
+    Locker locker { AdoptLock, m_processLock };
 
     // We must access m_periodicWave only inside the lock.
     if (!m_periodicWave.get()) {
@@ -431,14 +432,20 @@ void OscillatorNode::setPeriodicWave(PeriodicWave& periodicWave)
     ASSERT(isMainThread());
 
     // This synchronizes with process().
-    auto locker = holdLock(m_processLock);
+    Locker locker { m_processLock };
     m_periodicWave = &periodicWave;
     m_type = OscillatorType::Custom;
 }
 
 bool OscillatorNode::propagatesSilence() const
 {
-    return !isPlayingOrScheduled() || hasFinished() || !m_periodicWave.get();
+    ASSERT(context().isAudioThread());
+    if (!isPlayingOrScheduled() || hasFinished())
+        return true;
+    if (!m_processLock.tryLock())
+        return false; // Assume we have a periodic wave if we are unable to grab the lock.
+    Locker locker { AdoptLock, m_processLock };
+    return !m_periodicWave.get();
 }
 
 } // namespace WebCore

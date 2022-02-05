@@ -70,6 +70,8 @@ SVGSVGElement& RenderSVGRoot::svgSVGElement() const
 
 void RenderSVGRoot::computeIntrinsicRatioInformation(FloatSize& intrinsicSize, double& intrinsicRatio) const
 {
+    ASSERT(!shouldApplySizeContainment(*this));
+
     // Spec: http://www.w3.org/TR/SVG/coords.html#IntrinsicSizing
     // SVG needs to specify how to calculate some intrinsic sizing properties to enable inclusion within other languages.
 
@@ -80,6 +82,8 @@ void RenderSVGRoot::computeIntrinsicRatioInformation(FloatSize& intrinsicSize, d
     // - If the ‘width’ and ‘height’ of the rootmost ‘svg’ element are both specified with unit identifiers (in, mm, cm, pt, pc,
     //   px, em, ex) or in user units, then the aspect ratio is calculated from the ‘width’ and ‘height’ attributes after
     //   resolving both values to user units.
+    intrinsicSize.hasIntrinsicWidth = svgSVGElement().hasIntrinsicWidth();
+    intrinsicSize.hasIntrinsicHeight = svgSVGElement().hasIntrinsicHeight();
     intrinsicSize.setWidth(floatValueForLength(svgSVGElement().intrinsicWidth(), 0));
     intrinsicSize.setHeight(floatValueForLength(svgSVGElement().intrinsicHeight(), 0));
 
@@ -88,7 +92,7 @@ void RenderSVGRoot::computeIntrinsicRatioInformation(FloatSize& intrinsicSize, d
         return;
     }
 
-    Optional<double> intrinsicRatioValue;
+    std::optional<double> intrinsicRatioValue;
     if (!intrinsicSize.isEmpty())
         intrinsicRatioValue = intrinsicSize.width() / static_cast<double>(intrinsicSize.height());
     else {
@@ -136,7 +140,7 @@ LayoutUnit RenderSVGRoot::computeReplacedLogicalWidth(ShouldComputePreferred sho
     return RenderReplaced::computeReplacedLogicalWidth(shouldComputePreferred);
 }
 
-LayoutUnit RenderSVGRoot::computeReplacedLogicalHeight(Optional<LayoutUnit> estimatedUsedWidth) const
+LayoutUnit RenderSVGRoot::computeReplacedLogicalHeight(std::optional<LayoutUnit> estimatedUsedWidth) const
 {
     // When we're embedded through SVGImage (border-image/background-image/<html:img>/...) we're forced to resize to a specific size.
     if (!m_containerSize.isEmpty())
@@ -300,16 +304,16 @@ void RenderSVGRoot::willBeDestroyed()
     RenderReplaced::willBeDestroyed();
 }
 
-void RenderSVGRoot::insertedIntoTree()
+void RenderSVGRoot::insertedIntoTree(IsInternalMove isInternalMove)
 {
-    RenderReplaced::insertedIntoTree();
+    RenderReplaced::insertedIntoTree(isInternalMove);
     SVGResourcesCache::clientWasAddedToTree(*this);
 }
 
-void RenderSVGRoot::willBeRemovedFromTree()
+void RenderSVGRoot::willBeRemovedFromTree(IsInternalMove isInternalMove)
 {
     SVGResourcesCache::clientWillBeRemovedFromTree(*this);
-    RenderReplaced::willBeRemovedFromTree();
+    RenderReplaced::willBeRemovedFromTree(isInternalMove);
 }
 
 void RenderSVGRoot::styleDidChange(StyleDifference diff, const RenderStyle* oldStyle)
@@ -349,7 +353,7 @@ const AffineTransform& RenderSVGRoot::localToParentTransform() const
     return m_localToParentTransform;
 }
 
-LayoutRect RenderSVGRoot::clippedOverflowRectForRepaint(const RenderLayerModelObject* repaintContainer) const
+LayoutRect RenderSVGRoot::clippedOverflowRect(const RenderLayerModelObject* repaintContainer, VisibleRectContext context) const
 {
     if (style().visibility() != Visibility::Visible && !enclosingLayer()->hasVisibleContent())
         return LayoutRect();
@@ -361,24 +365,20 @@ LayoutRect RenderSVGRoot::clippedOverflowRectForRepaint(const RenderLayerModelOb
     if (m_hasBoxDecorations || hasRenderOverflow())
         repaintRect.unite(unionRect(localSelectionRect(false), visualOverflowRect()));
 
-    return RenderReplaced::computeRectForRepaint(enclosingIntRect(repaintRect), repaintContainer);
+    return RenderReplaced::computeRect(enclosingIntRect(repaintRect), repaintContainer, context);
 }
 
-Optional<FloatRect> RenderSVGRoot::computeFloatVisibleRectInContainer(const FloatRect& rect, const RenderLayerModelObject* container, VisibleRectContext context) const
+std::optional<FloatRect> RenderSVGRoot::computeFloatVisibleRectInContainer(const FloatRect& rect, const RenderLayerModelObject* container, VisibleRectContext context) const
 {
-    // Apply our local transforms (except for x/y translation), then our shadow,
-    // and then call RenderBox's method to handle all the normal CSS Box model bits
+    // Apply our local transforms (except for x/y translation) and then call
+    // RenderBox's method to handle all the normal CSS Box model bits
     FloatRect adjustedRect = m_localToBorderBoxTransform.mapRect(rect);
-
-    const SVGRenderStyle& svgStyle = style().svgStyle();
-    if (const ShadowData* shadow = svgStyle.shadow())
-        shadow->adjustRectForShadow(adjustedRect);
 
     // Apply initial viewport clip
     if (shouldApplyViewportClip()) {
         if (context.options.contains(VisibleRectContextOption::UseEdgeInclusiveIntersection)) {
             if (!adjustedRect.edgeInclusiveIntersect(snappedIntRect(borderBoxRect())))
-                return WTF::nullopt;
+                return std::nullopt;
         } else
             adjustedRect.intersect(snappedIntRect(borderBoxRect()));
     }
@@ -390,18 +390,18 @@ Optional<FloatRect> RenderSVGRoot::computeFloatVisibleRectInContainer(const Floa
         adjustedRect.unite(decoratedRepaintRect);
     }
 
-    if (Optional<LayoutRect> rectInContainer = RenderReplaced::computeVisibleRectInContainer(enclosingIntRect(adjustedRect), container, context))
+    if (std::optional<LayoutRect> rectInContainer = RenderReplaced::computeVisibleRectInContainer(enclosingIntRect(adjustedRect), container, context))
         return FloatRect(*rectInContainer);
-    return WTF::nullopt;
+    return std::nullopt;
 }
 
 // This method expects local CSS box coordinates.
 // Callers with local SVG viewport coordinates should first apply the localToBorderBoxTransform
 // to convert from SVG viewport coordinates to local CSS box coordinates.
-void RenderSVGRoot::mapLocalToContainer(const RenderLayerModelObject* ancestorContainer, TransformState& transformState, MapCoordinatesFlags mode, bool* wasFixed) const
+void RenderSVGRoot::mapLocalToContainer(const RenderLayerModelObject* ancestorContainer, TransformState& transformState, OptionSet<MapCoordinatesMode> mode, bool* wasFixed) const
 {
-    ASSERT(mode & ~IsFixed); // We should have no fixed content in the SVG rendering tree.
-    ASSERT(mode & UseTransforms); // mapping a point through SVG w/o respecting trasnforms is useless.
+    ASSERT(!mode.contains(IsFixed)); // We should have no fixed content in the SVG rendering tree.
+    ASSERT(mode.contains(UseTransforms)); // mapping a point through SVG w/o respecting transforms is useless.
 
     RenderReplaced::mapLocalToContainer(ancestorContainer, transformState, mode | ApplyContainerFlip, wasFixed);
 }
@@ -413,11 +413,9 @@ const RenderObject* RenderSVGRoot::pushMappingToContainer(const RenderLayerModel
 
 void RenderSVGRoot::updateCachedBoundaries()
 {
-    SVGRenderSupport::computeContainerBoundingBoxes(*this, m_objectBoundingBox, m_objectBoundingBoxValid, m_strokeBoundingBox, m_repaintBoundingBoxExcludingShadow);
-    SVGRenderSupport::intersectRepaintRectWithResources(*this, m_repaintBoundingBoxExcludingShadow);
-    m_repaintBoundingBoxExcludingShadow.inflate(horizontalBorderAndPaddingExtent());
-
-    m_repaintBoundingBox = m_repaintBoundingBoxExcludingShadow;
+    SVGRenderSupport::computeContainerBoundingBoxes(*this, m_objectBoundingBox, m_objectBoundingBoxValid, m_strokeBoundingBox, m_repaintBoundingBox);
+    SVGRenderSupport::intersectRepaintRectWithResources(*this, m_repaintBoundingBox);
+    m_repaintBoundingBox.inflate(horizontalBorderAndPaddingExtent());
 }
 
 bool RenderSVGRoot::nodeAtPoint(const HitTestRequest& request, HitTestResult& result, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, HitTestAction hitTestAction)
@@ -430,7 +428,7 @@ bool RenderSVGRoot::nodeAtPoint(const HitTestRequest& request, HitTestResult& re
     // Test SVG content if the point is in our content box or it is inside the visualOverflowRect and the overflow is visible.
     // FIXME: This should be an intersection when rect-based hit tests are supported by nodeAtFloatPoint.
     if (contentBoxRect().contains(pointInBorderBox) || (!shouldApplyViewportClip() && visualOverflowRect().contains(pointInParent))) {
-        FloatPoint localPoint = localToParentTransform().inverse().valueOr(AffineTransform()).mapPoint(FloatPoint(pointInParent));
+        FloatPoint localPoint = localToParentTransform().inverse().value_or(AffineTransform()).mapPoint(FloatPoint(pointInParent));
 
         for (RenderObject* child = lastChild(); child; child = child->previousSibling()) {
             // FIXME: nodeAtFloatPoint() doesn't handle rect-based hit tests yet.
@@ -445,7 +443,7 @@ bool RenderSVGRoot::nodeAtPoint(const HitTestRequest& request, HitTestResult& re
     }
 
     // If we didn't early exit above, we've just hit the container <svg> element. Unlike SVG 1.1, 2nd Edition allows container elements to be hit.
-    if ((hitTestAction == HitTestBlockBackground || hitTestAction == HitTestChildBlockBackground) && visibleToHitTesting()) {
+    if ((hitTestAction == HitTestBlockBackground || hitTestAction == HitTestChildBlockBackground) && visibleToHitTesting(request)) {
         // Only return true here, if the last hit testing phase 'BlockBackground' is executed. If we'd return true in the 'Foreground' phase,
         // hit testing would stop immediately. For SVG only trees this doesn't matter. Though when we have a <foreignObject> subtree we need
         // to be able to detect hits on the background of a <div> element. If we'd return true here in the 'Foreground' phase, we are not able

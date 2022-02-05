@@ -28,14 +28,13 @@
 
 #if ENABLE(WIRELESS_PLAYBACK_TARGET) && !PLATFORM(IOS_FAMILY)
 
-#include "GenericTaskQueue.h"
 #include "MediaPlaybackTargetContext.h"
 #include "MediaPlaybackTargetPicker.h"
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
-class MediaPlaybackTargetPickerMock final : public MediaPlaybackTargetPicker {
+class MediaPlaybackTargetPickerMock final : public MediaPlaybackTargetPicker, public CanMakeWeakPtr<MediaPlaybackTargetPickerMock> {
     WTF_MAKE_FAST_ALLOCATED;
     WTF_MAKE_NONCOPYABLE(MediaPlaybackTargetPickerMock);
 public:
@@ -48,7 +47,7 @@ public:
     void stopMonitoringPlaybackTargets() override;
     void invalidatePlaybackTargets() override;
 
-    void setState(const String&, MediaPlaybackTargetContext::State);
+    void setState(const String&, MediaPlaybackTargetContext::MockState);
     void dismissPopup();
 
 private:
@@ -56,8 +55,7 @@ private:
     Ref<MediaPlaybackTarget> playbackTarget() override;
 
     String m_deviceName;
-    GenericTaskQueue<Timer> m_taskQueue;
-    MediaPlaybackTargetContext::State m_state { MediaPlaybackTargetContext::Unknown };
+    MediaPlaybackTargetContext::MockState m_state { MediaPlaybackTargetContext::MockState::Unknown };
     bool m_showingMenu { false };
 };
 

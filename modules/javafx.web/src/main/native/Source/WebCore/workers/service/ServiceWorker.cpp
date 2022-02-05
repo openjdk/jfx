@@ -40,13 +40,14 @@
 #include "ServiceWorkerGlobalScope.h"
 #include "ServiceWorkerProvider.h"
 #include "ServiceWorkerThread.h"
+#include "StructuredSerializeOptions.h"
 #include "WorkerSWClientConnection.h"
 #include <JavaScriptCore/JSCJSValueInlines.h>
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/NeverDestroyed.h>
 
-#define WORKER_RELEASE_LOG_IF_ALLOWED(fmt, ...) RELEASE_LOG_IF(isAlwaysOnLoggingAllowed(), ServiceWorker, "%p - ServiceWorker::" fmt, this, ##__VA_ARGS__)
-#define WORKER_RELEASE_LOG_ERROR_IF_ALLOWED(fmt, ...) RELEASE_LOG_ERROR_IF(isAlwaysOnLoggingAllowed(), ServiceWorker, "%p - ServiceWorker::" fmt, this, ##__VA_ARGS__)
+#define WORKER_RELEASE_LOG(fmt, ...) RELEASE_LOG(ServiceWorker, "%p - ServiceWorker::" fmt, this, ##__VA_ARGS__)
+#define WORKER_RELEASE_LOG_ERROR(fmt, ...) RELEASE_LOG_ERROR(ServiceWorker, "%p - ServiceWorker::" fmt, this, ##__VA_ARGS__)
 
 namespace WebCore {
 
@@ -70,7 +71,7 @@ ServiceWorker::ServiceWorker(ScriptExecutionContext& context, ServiceWorkerData&
     relaxAdoptionRequirement();
     updatePendingActivityForEventDispatch();
 
-    WORKER_RELEASE_LOG_IF_ALLOWED("serviceWorkerID=%llu, state=%hhu", identifier().toUInt64(), m_data.state);
+    WORKER_RELEASE_LOG("serviceWorkerID=%llu, state=%hhu", identifier().toUInt64(), m_data.state);
 }
 
 ServiceWorker::~ServiceWorker()
@@ -81,7 +82,7 @@ ServiceWorker::~ServiceWorker()
 
 void ServiceWorker::updateState(State state)
 {
-    WORKER_RELEASE_LOG_IF_ALLOWED("updateState: Updating service worker %llu state from %hhu to %hhu. registrationID=%llu", identifier().toUInt64(), m_data.state, state, registrationIdentifier().toUInt64());
+    WORKER_RELEASE_LOG("updateState: Updating service worker %llu state from %hhu to %hhu. registrationID=%llu", identifier().toUInt64(), m_data.state, state, registrationIdentifier().toUInt64());
     m_data.state = state;
     if (state != State::Installing && !m_isStopped) {
         ASSERT(m_pendingActivityForEventDispatch);
@@ -99,7 +100,7 @@ SWClientConnection& ServiceWorker::swConnection()
     return ServiceWorkerProvider::singleton().serviceWorkerConnection();
 }
 
-ExceptionOr<void> ServiceWorker::postMessage(JSC::JSGlobalObject& globalObject, JSC::JSValue messageValue, PostMessageOptions&& options)
+ExceptionOr<void> ServiceWorker::postMessage(JSC::JSGlobalObject& globalObject, JSC::JSValue messageValue, StructuredSerializeOptions&& options)
 {
     if (m_isStopped)
         return Exception { InvalidStateError };
@@ -161,19 +162,6 @@ void ServiceWorker::updatePendingActivityForEventDispatch()
     if (m_pendingActivityForEventDispatch)
         return;
     m_pendingActivityForEventDispatch = makePendingActivity(*this);
-}
-
-bool ServiceWorker::isAlwaysOnLoggingAllowed() const
-{
-    auto* context = scriptExecutionContext();
-    if (!context)
-        return false;
-
-    auto* container = context->serviceWorkerContainer();
-    if (!container)
-        return false;
-
-    return container->isAlwaysOnLoggingAllowed();
 }
 
 } // namespace WebCore

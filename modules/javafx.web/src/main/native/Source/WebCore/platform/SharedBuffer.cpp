@@ -36,14 +36,14 @@
 
 namespace WebCore {
 
-SharedBuffer::SharedBuffer(const char* data, size_t size)
+SharedBuffer::SharedBuffer(const uint8_t* data, size_t size)
 {
     append(data, size);
 }
 
-SharedBuffer::SharedBuffer(const unsigned char* data, size_t size)
+SharedBuffer::SharedBuffer(const char* data, size_t size)
 {
-    append(reinterpret_cast<const char*>(data), size);
+    append(reinterpret_cast<const uint8_t*>(data), size);
 }
 
 SharedBuffer::SharedBuffer(FileSystem::MappedFileData&& fileData)
@@ -52,7 +52,7 @@ SharedBuffer::SharedBuffer(FileSystem::MappedFileData&& fileData)
     m_segments.append({0, DataSegment::create(WTFMove(fileData))});
 }
 
-SharedBuffer::SharedBuffer(Vector<char>&& data)
+SharedBuffer::SharedBuffer(Vector<uint8_t>&& data)
 {
     append(WTFMove(data));
 }
@@ -70,26 +70,30 @@ SharedBuffer::SharedBuffer(GstMappedOwnedBuffer& mappedBuffer)
 }
 #endif
 
-RefPtr<SharedBuffer> SharedBuffer::createWithContentsOfFile(const String& filePath)
+RefPtr<SharedBuffer> SharedBuffer::createWithContentsOfFile(const String& filePath, FileSystem::MappedFileMode mappedFileMode, MayUseFileMapping mayUseFileMapping)
 {
-    bool mappingSuccess;
-    FileSystem::MappedFileData mappedFileData(filePath, FileSystem::MappedFileMode::Shared, mappingSuccess);
-
-    if (!mappingSuccess)
-        return SharedBuffer::createFromReadingFile(filePath);
-
-    return adoptRef(new SharedBuffer(WTFMove(mappedFileData)));
+    if (mayUseFileMapping == MayUseFileMapping::Yes) {
+        bool mappingSuccess;
+        FileSystem::MappedFileData mappedFileData(filePath, mappedFileMode, mappingSuccess);
+        if (mappingSuccess)
+            return adoptRef(new SharedBuffer(WTFMove(mappedFileData)));
+    }
+    return SharedBuffer::createFromReadingFile(filePath);
 }
 
-Ref<SharedBuffer> SharedBuffer::create(Vector<char>&& vector)
+Ref<SharedBuffer> SharedBuffer::create(Vector<uint8_t>&& vector)
 {
     return adoptRef(*new SharedBuffer(WTFMove(vector)));
 }
 
-// FIXME: Move the whole class from Vector<char> to Vector<uint8_t> and make this efficient, replacing the Vector<char> version above.
-Ref<SharedBuffer> SharedBuffer::create(Vector<uint8_t>&& vector)
+static Vector<uint8_t> combineSegmentsData(const SharedBuffer::DataSegmentVector& segments, size_t size)
 {
-    return adoptRef(*new SharedBuffer { vector.data(), vector.size() });
+    Vector<uint8_t> combinedData;
+    combinedData.reserveInitialCapacity(size);
+    for (auto& segment : segments)
+        combinedData.append(segment.segment->data(), segment.segment->size());
+    ASSERT(combinedData.size() == size);
+    return combinedData;
 }
 
 void SharedBuffer::combineIntoOneSegment() const
@@ -102,29 +106,45 @@ void SharedBuffer::combineIntoOneSegment() const
     if (m_segments.size() <= 1)
         return;
 
-    Vector<char> combinedData;
-    combinedData.reserveInitialCapacity(m_size);
-    for (const auto& segment : m_segments)
-        combinedData.append(segment.segment->data(), segment.segment->size());
-    ASSERT(combinedData.size() == m_size);
+    auto combinedData = combineSegmentsData(m_segments, m_size);
     m_segments.clear();
     m_segments.append({0, DataSegment::create(WTFMove(combinedData))});
     ASSERT(m_segments.size() == 1);
     ASSERT(internallyConsistent());
 }
 
-const char* SharedBuffer::data() const
+const uint8_t* SharedBuffer::data() const
 {
-    if (!m_segments.size())
+    if (m_segments.isEmpty())
         return nullptr;
     combineIntoOneSegment();
     ASSERT(internallyConsistent());
     return m_segments[0].segment->data();
 }
 
-const uint8_t* SharedBuffer::dataAsUInt8Ptr() const
+Vector<uint8_t> SharedBuffer::copyData() const
 {
-    return reinterpret_cast<const uint8_t*>(data());
+    Vector<uint8_t> data;
+    data.reserveInitialCapacity(size());
+    forEachSegment([&data](auto& span) {
+        data.uncheckedAppend(span);
+    });
+    return data;
+}
+
+Vector<uint8_t> SharedBuffer::takeData()
+{
+    if (m_segments.isEmpty())
+        return { };
+
+    Vector<uint8_t> combinedData;
+    if (hasOneSegment() && WTF::holds_alternative<Vector<uint8_t>>(m_segments[0].segment->m_immutableData))
+        combinedData = std::exchange(WTF::get<Vector<uint8_t>>(m_segments[0].segment->m_immutableData), Vector<uint8_t>());
+    else
+        combinedData = combineSegmentsData(m_segments, m_size);
+
+    clear();
+    return combinedData;
 }
 
 SharedBufferDataView SharedBuffer::getSomeData(size_t position) const
@@ -141,16 +161,16 @@ SharedBufferDataView SharedBuffer::getSomeData(size_t position) const
 String SharedBuffer::toHexString() const
 {
     StringBuilder stringBuilder;
-    for (unsigned byteOffset = 0; byteOffset < size(); byteOffset++) {
-        const uint8_t byte = data()[byteOffset];
-        stringBuilder.append(pad('0', 2, hex(byte)));
-    }
+    forEachSegment([&](auto& segment) {
+        for (unsigned i = 0; i < segment.size(); ++i)
+            stringBuilder.append(pad('0', 2, hex(segment[i])));
+    });
     return stringBuilder.toString();
 }
 
 RefPtr<ArrayBuffer> SharedBuffer::tryCreateArrayBuffer() const
 {
-    auto arrayBuffer = ArrayBuffer::tryCreateUninitialized(static_cast<unsigned>(size()), sizeof(char));
+    auto arrayBuffer = ArrayBuffer::tryCreateUninitialized(static_cast<unsigned>(size()), 1);
     if (!arrayBuffer) {
         WTFLogAlways("SharedBuffer::tryCreateArrayBuffer Unable to create buffer. Requested size was %zu\n", size());
         return nullptr;
@@ -158,7 +178,7 @@ RefPtr<ArrayBuffer> SharedBuffer::tryCreateArrayBuffer() const
 
     size_t position = 0;
     for (const auto& segment : m_segments) {
-        memcpy(static_cast<char*>(arrayBuffer->data()) + position, segment.segment->data(), segment.segment->size());
+        memcpy(static_cast<uint8_t*>(arrayBuffer->data()) + position, segment.segment->data(), segment.segment->size());
         position += segment.segment->size();
     }
 
@@ -178,17 +198,17 @@ void SharedBuffer::append(const SharedBuffer& data)
     ASSERT(internallyConsistent());
 }
 
-void SharedBuffer::append(const char* data, size_t length)
+void SharedBuffer::append(const uint8_t* data, size_t length)
 {
     ASSERT(!m_hasBeenCombinedIntoOneSegment);
-    Vector<char> vector;
+    Vector<uint8_t> vector;
     vector.append(data, length);
     m_segments.append({m_size, DataSegment::create(WTFMove(vector))});
     m_size += length;
     ASSERT(internallyConsistent());
 }
 
-void SharedBuffer::append(Vector<char>&& data)
+void SharedBuffer::append(Vector<uint8_t>&& data)
 {
     ASSERT(!m_hasBeenCombinedIntoOneSegment);
     auto dataSize = data.size();
@@ -216,6 +236,55 @@ Ref<SharedBuffer> SharedBuffer::copy() const
     return clone;
 }
 
+void SharedBuffer::forEachSegment(const Function<void(const Span<const uint8_t>&)>& apply) const
+{
+    for (auto& segment : m_segments)
+        apply(Span { segment.segment->data(), segment.segment->size() });
+}
+
+bool SharedBuffer::startsWith(const Span<const uint8_t>& prefix) const
+{
+    if (prefix.empty())
+        return true;
+
+    if (size() < prefix.size())
+        return false;
+
+    const uint8_t* prefixPtr = prefix.data();
+    size_t remaining = prefix.size();
+    for (auto& segment : m_segments) {
+        size_t amountToCompareThisTime = std::min(remaining, segment.segment->size());
+        if (memcmp(prefixPtr, segment.segment->data(), amountToCompareThisTime))
+            return false;
+        remaining -= amountToCompareThisTime;
+        if (!remaining)
+            return true;
+        prefixPtr += amountToCompareThisTime;
+    }
+    return false;
+}
+
+void SharedBuffer::copyTo(void* destination, size_t length) const
+{
+    ASSERT(length <= size());
+    auto destinationPtr = static_cast<uint8_t*>(destination);
+    auto remaining = std::min(length, size());
+    for (auto& segment : m_segments) {
+        size_t amountToCopyThisTime = std::min(remaining, segment.segment->size());
+        memcpy(destinationPtr, segment.segment->data(), amountToCopyThisTime);
+        remaining -= amountToCopyThisTime;
+        if (!remaining)
+            return;
+        destinationPtr += amountToCopyThisTime;
+    }
+}
+
+bool SharedBuffer::hasOneSegment() const
+{
+    auto it = begin();
+    return it != end() && ++it == end();
+}
+
 #if ASSERT_ENABLED
 bool SharedBuffer::internallyConsistent() const
 {
@@ -229,22 +298,27 @@ bool SharedBuffer::internallyConsistent() const
 }
 #endif // ASSERT_ENABLED
 
-const char* SharedBuffer::DataSegment::data() const
+const uint8_t* SharedBuffer::DataSegment::data() const
 {
     auto visitor = WTF::makeVisitor(
-        [](const Vector<char>& data) { return data.data(); },
+        [](const Vector<uint8_t>& data) { return data.data(); },
 #if USE(CF)
-        [](const RetainPtr<CFDataRef>& data) { return reinterpret_cast<const char*>(CFDataGetBytePtr(data.get())); },
+        [](const RetainPtr<CFDataRef>& data) { return CFDataGetBytePtr(data.get()); },
 #endif
 #if USE(GLIB)
-        [](const GRefPtr<GBytes>& data) { return reinterpret_cast<const char*>(g_bytes_get_data(data.get(), nullptr)); },
+        [](const GRefPtr<GBytes>& data) { return static_cast<const uint8_t*>(g_bytes_get_data(data.get(), nullptr)); },
 #endif
 #if USE(GSTREAMER)
-        [](const RefPtr<GstMappedOwnedBuffer>& data) { return reinterpret_cast<const char*>(data->data()); },
+        [](const RefPtr<GstMappedOwnedBuffer>& data) { return data->data(); },
 #endif
-        [](const FileSystem::MappedFileData& data) { return reinterpret_cast<const char*>(data.data()); }
+        [](const FileSystem::MappedFileData& data) { return static_cast<const uint8_t*>(data.data()); }
     );
     return WTF::visit(visitor, m_immutableData);
+}
+
+bool SharedBuffer::DataSegment::containsMappedFileData() const
+{
+    return WTF::holds_alternative<FileSystem::MappedFileData>(m_immutableData);
 }
 
 #if !USE(CF)
@@ -255,7 +329,7 @@ void SharedBuffer::hintMemoryNotNeededSoon() const
 
 WTF::Persistence::Decoder SharedBuffer::decoder() const
 {
-    return { reinterpret_cast<const uint8_t*>(data()), size() };
+    return {{ reinterpret_cast<const uint8_t*>(data()), size() }};
 }
 
 bool SharedBuffer::operator==(const SharedBuffer& other) const
@@ -281,8 +355,8 @@ bool SharedBuffer::operator==(const SharedBuffer& other) const
             continue;
         }
 
-        ASSERT(thisOffset < thisSegment.size());
-        ASSERT(otherOffset < otherSegment.size());
+        ASSERT(thisOffset <= thisSegment.size());
+        ASSERT(otherOffset <= otherSegment.size());
 
         size_t thisRemaining = thisSegment.size() - thisOffset;
         size_t otherRemaining = otherSegment.size() - otherOffset;
@@ -310,7 +384,7 @@ bool SharedBuffer::operator==(const SharedBuffer& other) const
 size_t SharedBuffer::DataSegment::size() const
 {
     auto visitor = WTF::makeVisitor(
-        [](const Vector<char>& data) { return data.size(); },
+        [](const Vector<uint8_t>& data) { return data.size(); },
 #if USE(CF)
         [](const RetainPtr<CFDataRef>& data) { return CFDataGetLength(data.get()); },
 #endif
@@ -329,7 +403,7 @@ SharedBufferDataView::SharedBufferDataView(Ref<SharedBuffer::DataSegment>&& segm
     : m_positionWithinSegment(positionWithinSegment)
     , m_segment(WTFMove(segment))
 {
-    ASSERT(positionWithinSegment < m_segment->size());
+    RELEASE_ASSERT(positionWithinSegment < m_segment->size());
 }
 
 size_t SharedBufferDataView::size() const
@@ -337,7 +411,7 @@ size_t SharedBufferDataView::size() const
     return m_segment->size() - m_positionWithinSegment;
 }
 
-const char* SharedBufferDataView::data() const
+const uint8_t* SharedBufferDataView::data() const
 {
     return m_segment->data() + m_positionWithinSegment;
 }
@@ -351,10 +425,10 @@ RefPtr<SharedBuffer> utf8Buffer(const String& string)
             return nullptr;
     }
 
-    Vector<char> buffer(length * 3);
+    Vector<uint8_t> buffer(length * 3);
 
     // Convert to runs of 8-bit characters.
-    char* p = buffer.data();
+    char* p = reinterpret_cast<char*>(buffer.data());
     if (length) {
         if (string.is8Bit()) {
             const LChar* d = string.characters8();
@@ -367,7 +441,7 @@ RefPtr<SharedBuffer> utf8Buffer(const String& string)
         }
     }
 
-    buffer.shrink(p - buffer.data());
+    buffer.shrink(p - reinterpret_cast<char*>(buffer.data()));
     return SharedBuffer::create(WTFMove(buffer));
 }
 

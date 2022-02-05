@@ -59,9 +59,6 @@ JITCode* JITCode::dfg()
 void JITCode::shrinkToFit(const ConcurrentJSLocker&)
 {
     common.shrinkToFit();
-    osrEntry.shrinkToFit();
-    osrExit.shrinkToFit();
-    speculationRecovery.shrinkToFit();
     minifiedDFG.prepareAndShrink();
     variableEventStream.shrinkToFit();
 }
@@ -74,19 +71,19 @@ void JITCode::reconstruct(
         codeBlock, codeOrigin, minifiedDFG, streamIndex, result);
 }
 
-void JITCode::reconstruct(CallFrame* callFrame, CodeBlock* codeBlock, CodeOrigin codeOrigin, unsigned streamIndex, Operands<Optional<JSValue>>& result)
+void JITCode::reconstruct(CallFrame* callFrame, CodeBlock* codeBlock, CodeOrigin codeOrigin, unsigned streamIndex, Operands<std::optional<JSValue>>& result)
 {
     Operands<ValueRecovery> recoveries;
     reconstruct(codeBlock, codeOrigin, streamIndex, recoveries);
 
-    result = Operands<Optional<JSValue>>(OperandsLike, recoveries);
+    result = Operands<std::optional<JSValue>>(OperandsLike, recoveries);
     for (size_t i = result.size(); i--;)
         result[i] = recoveries[i].recover(callFrame);
 }
 
 RegisterSet JITCode::liveRegistersToPreserveAtExceptionHandlingCallSite(CodeBlock* codeBlock, CallSiteIndex callSiteIndex)
 {
-    for (OSRExit& exit : osrExit) {
+    for (OSRExit& exit : m_osrExit) {
         if (exit.isExceptionHandler() && exit.m_exceptionHandlerCallSiteIndex.bits() == callSiteIndex.bits()) {
             Operands<ValueRecovery> valueRecoveries;
             reconstruct(codeBlock, exit.m_codeOrigin, exit.m_streamIndex, valueRecoveries);
@@ -219,7 +216,7 @@ void JITCode::validateReferences(const TrackedReferences& trackedReferences)
 {
     common.validateReferences(trackedReferences);
 
-    for (OSREntryData& entry : osrEntry) {
+    for (OSREntryData& entry : m_osrEntry) {
         for (unsigned i = entry.m_expectedValues.size(); i--;)
             entry.m_expectedValues[i].validateReferences(trackedReferences);
     }
@@ -227,19 +224,19 @@ void JITCode::validateReferences(const TrackedReferences& trackedReferences)
     minifiedDFG.validateReferences(trackedReferences);
 }
 
-Optional<CodeOrigin> JITCode::findPC(CodeBlock*, void* pc)
+std::optional<CodeOrigin> JITCode::findPC(CodeBlock*, void* pc)
 {
-    for (OSRExit& exit : osrExit) {
+    for (OSRExit& exit : m_osrExit) {
         if (ExecutableMemoryHandle* handle = exit.m_code.executableMemory()) {
             if (handle->start().untaggedPtr() <= pc && pc < handle->end().untaggedPtr())
-                return Optional<CodeOrigin>(exit.m_codeOriginForExitProfile);
+                return std::optional<CodeOrigin>(exit.m_codeOriginForExitProfile);
         }
     }
 
-    return WTF::nullopt;
+    return std::nullopt;
 }
 
-void JITCode::finalizeOSREntrypoints()
+void JITCode::finalizeOSREntrypoints(Vector<OSREntryData>&& osrEntry)
 {
     auto comparator = [] (const auto& a, const auto& b) {
         return a.m_bytecodeIndex < b.m_bytecodeIndex;
@@ -253,6 +250,7 @@ void JITCode::finalizeOSREntrypoints()
     };
     verifyIsSorted(osrEntry);
 #endif
+    m_osrEntry = WTFMove(osrEntry);
 }
 
 } } // namespace JSC::DFG

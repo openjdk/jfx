@@ -72,7 +72,7 @@ namespace WebCore {
         virtual bool hasVideo() const;
         virtual bool hasAudio() const;
 
-        virtual void setVisible(bool);
+        virtual void setPageIsVisible(bool);
 
         virtual float duration() const;
 
