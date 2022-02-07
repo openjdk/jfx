@@ -169,54 +169,34 @@ public class TabPane extends Control {
         return tabs;
     }
 
-    private ObjectProperty<SingleSelectionModel<Tab>> selectionModel = new SimpleObjectProperty<SingleSelectionModel<Tab>>(this, "selectionModel");
-
     /**
      * <p>Sets the model used for tab selection.  By changing the model you can alter
      * how the tabs are selected and which tabs are first or last.</p>
-     * @param value the selection model
      */
+    private ObjectProperty<SingleSelectionModel<Tab>> selectionModel = new SimpleObjectProperty<SingleSelectionModel<Tab>>(this, "selectionModel");
+
     public final void setSelectionModel(SingleSelectionModel<Tab> value) { selectionModel.set(value); }
 
-    /**
-     * <p>Gets the model used for tab selection.</p>
-     * @return the model used for tab selection
-     */
     public final SingleSelectionModel<Tab> getSelectionModel() { return selectionModel.get(); }
 
-    /**
-     * The selection model used for selecting tabs.
-     * @return selection model property
-     */
     public final ObjectProperty<SingleSelectionModel<Tab>> selectionModelProperty() { return selectionModel; }
-
-    private ObjectProperty<Side> side;
 
     /**
      * <p>The position to place the tabs in this TabPane. Whenever this changes
      * the TabPane will immediately update the location of the tabs to reflect
      * this.</p>
-     *
-     * @param value the side
+     * The default position for the tabs is {@code Side.Top}.
      */
+    private ObjectProperty<Side> side;
+
     public final void setSide(Side value) {
         sideProperty().set(value);
     }
 
-    /**
-     * The current position of the tabs in the TabPane.  The default position
-     * for the tabs is Side.Top.
-     *
-     * @return The current position of the tabs in the TabPane.
-     */
     public final Side getSide() {
         return side == null ? Side.TOP : side.get();
     }
 
-    /**
-     * The position of the tabs in the TabPane.
-     * @return the side property
-     */
     public final ObjectProperty<Side> sideProperty() {
         if (side == null) {
             side = new ObjectPropertyBase<Side>(Side.TOP) {
@@ -245,8 +225,6 @@ public class TabPane extends Control {
         return side;
     }
 
-    private ObjectProperty<TabClosingPolicy> tabClosingPolicy;
-
     /**
      * <p>Specifies how the TabPane handles tab closing from an end-users
      * perspective. The options are:</p>
@@ -264,33 +242,23 @@ public class TabPane extends Control {
      * <p>Refer to the {@link TabClosingPolicy} enumeration for further details.</p>
      *
      * The default closing policy is TabClosingPolicy.SELECTED_TAB
-     * @param value the closing policy
      */
+    private ObjectProperty<TabClosingPolicy> tabClosingPolicy;
+
     public final void setTabClosingPolicy(TabClosingPolicy value) {
         tabClosingPolicyProperty().set(value);
     }
 
-    /**
-     * The closing policy for the tabs.
-     *
-     * @return The closing policy for the tabs.
-     */
     public final TabClosingPolicy getTabClosingPolicy() {
         return tabClosingPolicy == null ? TabClosingPolicy.SELECTED_TAB : tabClosingPolicy.get();
     }
 
-    /**
-     * The closing policy for the tabs.
-     * @return the closing policy property
-     */
     public final ObjectProperty<TabClosingPolicy> tabClosingPolicyProperty() {
         if (tabClosingPolicy == null) {
             tabClosingPolicy = new SimpleObjectProperty<TabClosingPolicy>(this, "tabClosingPolicy", TabClosingPolicy.SELECTED_TAB);
         }
         return tabClosingPolicy;
     }
-
-    private BooleanProperty rotateGraphic;
 
     /**
      * <p>Specifies whether the graphic inside a Tab is rotated or not, such
@@ -300,27 +268,17 @@ public class TabPane extends Control {
      * the graphic isn't rotated, resulting in it always appearing upright. If
      * rotateGraphic is set to {@code true}, the graphic will rotate such that it
      * rotates with the tab text.</p>
-     *
-     * @param value a flag indicating whether to rotate the graphic
      */
+    private BooleanProperty rotateGraphic;
+
     public final void setRotateGraphic(boolean value) {
         rotateGraphicProperty().set(value);
     }
 
-    /**
-     * Returns {@code true} if the graphic inside a Tab is rotated. The
-     * default is {@code false}
-     *
-     * @return the rotatedGraphic state.
-     */
     public final boolean isRotateGraphic() {
         return rotateGraphic == null ? false : rotateGraphic.get();
     }
 
-    /**
-     * The rotateGraphic state of the tabs in the TabPane.
-     * @return the rotateGraphic property
-     */
     public final BooleanProperty rotateGraphicProperty() {
         if (rotateGraphic == null) {
             rotateGraphic = new SimpleBooleanProperty(this, "rotateGraphic", false);
@@ -328,35 +286,24 @@ public class TabPane extends Control {
         return rotateGraphic;
     }
 
-    private DoubleProperty tabMinWidth;
-
     /**
      * <p>The minimum width of the tabs in the TabPane.  This can be used to limit
      * the length of text in tabs to prevent truncation.  Setting the min equal
      * to the max will fix the width of the tab.  By default the min equals to the max.
      *
-     * This value can also be set via CSS using {@code -fx-tab-min-width}
-     *
+     * This value can also be set via CSS using {@code -fx-tab-min-width}.
      * </p>
-     * @param value the minimum width of the tabs
      */
+    private DoubleProperty tabMinWidth;
+
     public final void setTabMinWidth(double value) {
         tabMinWidthProperty().setValue(value);
     }
 
-    /**
-     * The minimum width of the tabs in the TabPane.
-     *
-     * @return The minimum width of the tabs
-     */
     public final double getTabMinWidth() {
         return tabMinWidth == null ? DEFAULT_TAB_MIN_WIDTH : tabMinWidth.getValue();
     }
 
-    /**
-     * The minimum width of the tabs in the TabPane.
-     * @return the minimum width property
-     */
     public final DoubleProperty tabMinWidthProperty() {
         if (tabMinWidth == null) {
             tabMinWidth = new StyleableDoubleProperty(DEFAULT_TAB_MIN_WIDTH) {
@@ -381,31 +328,24 @@ public class TabPane extends Control {
     }
 
     /**
-     * <p>Specifies the maximum width of a tab.  This can be used to limit
+     * <p>The maximum width of the tabs in the TabPane.  This can be used to limit
      * the length of text in tabs.  If the tab text is longer than the maximum
      * width the text will be truncated.  Setting the max equal
-     * to the min will fix the width of the tab.  By default the min equals to the max
+     * to the min will fix the width of the tab.  By default the min equals to the max.
      *
-     * This value can also be set via CSS using {@code -fx-tab-max-width}.</p>
+     * This value can also be set via CSS using {@code -fx-tab-max-width}.
+     * </p>
      */
     private DoubleProperty tabMaxWidth;
+
     public final void setTabMaxWidth(double value) {
         tabMaxWidthProperty().setValue(value);
     }
 
-    /**
-     * The maximum width of the tabs in the TabPane.
-     *
-     * @return The maximum width of the tabs
-     */
     public final double getTabMaxWidth() {
         return tabMaxWidth == null ? DEFAULT_TAB_MAX_WIDTH : tabMaxWidth.getValue();
     }
 
-    /**
-     * The maximum width of the tabs in the TabPane.
-     * @return the maximum width property
-     */
     public final DoubleProperty tabMaxWidthProperty() {
         if (tabMaxWidth == null) {
             tabMaxWidth = new StyleableDoubleProperty(DEFAULT_TAB_MAX_WIDTH) {
@@ -429,34 +369,24 @@ public class TabPane extends Control {
         return tabMaxWidth;
     }
 
-    private DoubleProperty tabMinHeight;
-
     /**
      * <p>The minimum height of the tabs in the TabPane.  This can be used to limit
      * the height in tabs. Setting the min equal to the max will fix the height
      * of the tab.  By default the min equals to the max.
      *
-     * This value can also be set via CSS using {@code -fx-tab-min-height}
+     * This value can also be set via CSS using {@code -fx-tab-min-height}.
      * </p>
-     * @param value the minimum height of the tabs
      */
+    private DoubleProperty tabMinHeight;
+
     public final void setTabMinHeight(double value) {
         tabMinHeightProperty().setValue(value);
     }
 
-    /**
-     * The minimum height of the tabs in the TabPane.
-     *
-     * @return the minimum height of the tabs
-     */
     public final double getTabMinHeight() {
         return tabMinHeight == null ? DEFAULT_TAB_MIN_HEIGHT : tabMinHeight.getValue();
     }
 
-    /**
-     * The minimum height of the tab.
-     * @return the minimum height property
-     */
     public final DoubleProperty tabMinHeightProperty() {
         if (tabMinHeight == null) {
             tabMinHeight = new StyleableDoubleProperty(DEFAULT_TAB_MIN_HEIGHT) {
@@ -481,31 +411,23 @@ public class TabPane extends Control {
     }
 
     /**
-     * <p>The maximum height if the tabs in the TabPane.  This can be used to limit
+     * <p>The maximum height of the tabs in the TabPane.  This can be used to limit
      * the height in tabs. Setting the max equal to the min will fix the height
      * of the tab.  By default the min equals to the max.
      *
-     * This value can also be set via CSS using -fx-tab-max-height
+     * This value can also be set via CSS using {@code -fx-tab-max-height}.
      * </p>
      */
     private DoubleProperty tabMaxHeight;
+
     public final void setTabMaxHeight(double value) {
         tabMaxHeightProperty().setValue(value);
     }
 
-    /**
-     * The maximum height of the tabs in the TabPane.
-     *
-     * @return The maximum height of the tabs
-     */
     public final double getTabMaxHeight() {
         return tabMaxHeight == null ? DEFAULT_TAB_MAX_HEIGHT : tabMaxHeight.getValue();
     }
 
-    /**
-     * <p>The maximum height of the tabs in the TabPane.</p>
-     * @return the maximum height of the tabs
-     */
     public final DoubleProperty tabMaxHeightProperty() {
         if (tabMaxHeight == null) {
             tabMaxHeight = new StyleableDoubleProperty(DEFAULT_TAB_MAX_HEIGHT) {
@@ -851,16 +773,14 @@ public class TabPane extends Control {
     }
 
 
-    // TabDragPolicy //
-    private ObjectProperty<TabDragPolicy> tabDragPolicy;
-
     /**
      * The drag policy for the tabs. The policy can be changed dynamically.
      *
      * @defaultValue TabDragPolicy.FIXED
-     * @return The tab drag policy property
      * @since 10
      */
+    private ObjectProperty<TabDragPolicy> tabDragPolicy;
+
     public final ObjectProperty<TabDragPolicy> tabDragPolicyProperty() {
         if (tabDragPolicy == null) {
             tabDragPolicy = new SimpleObjectProperty<TabDragPolicy>(this, "tabDragPolicy", TabDragPolicy.FIXED);
