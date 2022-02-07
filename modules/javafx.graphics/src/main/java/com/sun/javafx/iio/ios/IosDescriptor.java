@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -48,10 +48,12 @@ public class IosDescriptor extends ImageDescriptor {
         new Signature(new byte[] {'G', 'I', 'F', '8', '9', 'a'})  // GIF89
     };
 
+    private static final String[] mimeSubtypes = { "bmp", "png", "x-png", "jpeg", "gif"};
+
     private static ImageDescriptor theInstance = null;
 
     private IosDescriptor() {
-        super(formatName, extensions, signatures);
+        super(formatName, extensions, signatures, mimeSubtypes);
     }
 
     /**
