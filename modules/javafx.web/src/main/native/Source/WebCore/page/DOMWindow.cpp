@@ -857,7 +857,7 @@ ExceptionOr<Storage*> DOMWindow::localStorage()
 
     // FIXME: We should consider supporting access/modification to local storage
     // after calling window.close(). See <https://bugs.webkit.org/show_bug.cgi?id=135330>.
-    if (page->isClosing() && m_localStorage)
+    if (m_localStorage)
             return m_localStorage.get();
 
     auto storageArea = page->storageNamespaceProvider().localStorageArea(*document);
