@@ -168,8 +168,8 @@ class ControlUtils {
             sm.startAtomic();
             final List<Integer> removed = c.getRemoved().stream()
                     .map(TablePositionBase::getRow)
-                    .filter(removeRowFilter)
                     .distinct()
+                    .filter(removeRowFilter)
                     .peek(sm.selectedIndices::clear)
                     .collect(Collectors.toList());
 
