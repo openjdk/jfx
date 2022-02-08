@@ -35,6 +35,7 @@ import org.junit.Test;
 
 import static javafx.concurrent.Worker.State.SUCCEEDED;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 
 public class HTMLEditingTest extends TestBase {
@@ -50,19 +51,25 @@ public class HTMLEditingTest extends TestBase {
         String defaultText = "Default";
         loadContent(
                 "<input id='srcInput' value=" + defaultText + " autofocus>" +
-                "<input id='pasteTarget'></input>" +
+                "<input id='pasteTarget' numOfMimeTypes=''></input>" +
                 "<script>"+
                 "srcInput.onpaste = function(e) {" +
                 "pasteTarget.value = e.clipboardData.getData('text/plain');}" +
+                "pasteTarget.numOfMimeTypes = (e.clipboardData.types).length;}" +
                 "</script>");
 
         submit(() -> {
             assertTrue("LoadContent completed successfully",
                     getEngine().getLoadWorker().getState() == SUCCEEDED);
+
+            assertEquals("Target onpaste data", getEngine().
+                    executeScript("pasteTarget.numOfMimeTypes").toString(), "undefined");
+
             String clipboardData = "Clipboard text";
             ClipboardContent content = new ClipboardContent();
             content.putString(clipboardData);
             Clipboard.getSystemClipboard().setContent(content);
+
 
             Event.fireEvent(getView(),
                     new KeyEvent(null,getView(),
@@ -76,9 +83,11 @@ public class HTMLEditingTest extends TestBase {
                     defaultText);
             assertEquals("Source clipboard onpaste data", getEngine().
                     executeScript("srcInput.value").toString(), clipboardData + defaultText);
-            assertEquals("Target onpaste data", getEngine().
+            assertNotEquals("Target onpaste data", getEngine().
                     executeScript("pasteTarget.value").toString(),
                     clipboardData);
+            assertNotEquals("Target onpaste data", getEngine().
+                            executeScript("pasteTarget.numOfMimeTypes").toString(), "2");
         });
     }
 }
