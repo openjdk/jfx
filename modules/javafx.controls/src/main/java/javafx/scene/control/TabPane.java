@@ -170,8 +170,8 @@ public class TabPane extends Control {
     }
 
     /**
-     * <p>Sets the model used for tab selection.  By changing the model you can alter
-     * how the tabs are selected and which tabs are first or last.</p>
+     * The selection model used for selecting tabs. Changing the model alters
+     * how the tabs are selected and which tabs are first or last.
      */
     private ObjectProperty<SingleSelectionModel<Tab>> selectionModel = new SimpleObjectProperty<SingleSelectionModel<Tab>>(this, "selectionModel");
 
@@ -182,10 +182,9 @@ public class TabPane extends Control {
     public final ObjectProperty<SingleSelectionModel<Tab>> selectionModelProperty() { return selectionModel; }
 
     /**
-     * <p>The position to place the tabs in this TabPane. Whenever this changes
-     * the TabPane will immediately update the location of the tabs to reflect
-     * this.</p>
-     * The default position for the tabs is {@code Side.Top}.
+     * The position to place the tabs in this {@code TabPane}. Changes to the value of this property
+     * immediately updates the location of the tabs.
+     * @defaultValue {@code Side.Top}
      */
     private ObjectProperty<Side> side;
 
@@ -226,22 +225,12 @@ public class TabPane extends Control {
     }
 
     /**
-     * <p>Specifies how the TabPane handles tab closing from an end-users
-     * perspective. The options are:</p>
-     *
-     * <ul>
-     *   <li> TabClosingPolicy.UNAVAILABLE: Tabs can not be closed by the user
-     *   <li> TabClosingPolicy.SELECTED_TAB: Only the currently selected tab will
-     *          have the option to be closed, with a graphic next to the tab
-     *          text being shown. The graphic will disappear when a tab is no
-     *          longer selected.
-     *   <li> TabClosingPolicy.ALL_TABS: All tabs will have the option to be
-     *          closed.
-     * </ul>
+     * <p>Specifies how the {@code TabPane} handles tab closing from an end-user's
+     * perspective.
      *
      * <p>Refer to the {@link TabClosingPolicy} enumeration for further details.</p>
      *
-     * The default closing policy is TabClosingPolicy.SELECTED_TAB
+     * @defaultValue {@code TabClosingPolicy.SELECTED_TAB}
      */
     private ObjectProperty<TabClosingPolicy> tabClosingPolicy;
 
@@ -261,13 +250,13 @@ public class TabPane extends Control {
     }
 
     /**
-     * <p>Specifies whether the graphic inside a Tab is rotated or not, such
-     * that it is always upright, or rotated in the same way as the Tab text is.</p>
+     * <p>Specifies whether the graphic inside a {@code Tab} is rotated or not, such
+     * that it is always upright, or rotated in the same way as the {@code Tab} text is.</p>
      *
-     * <p>By default rotateGraphic is set to false, to represent the fact that
-     * the graphic isn't rotated, resulting in it always appearing upright. If
-     * rotateGraphic is set to {@code true}, the graphic will rotate such that it
-     * rotates with the tab text.</p>
+     * <p>If the value is {@code false}, the graphic isn't rotated, resulting in it always appearing upright.
+     * If the value is {@code true}, the graphic is rotated with the {@code Tab} text.</p>
+     *
+     * @defaultValue {@code false}
      */
     private BooleanProperty rotateGraphic;
 
@@ -287,12 +276,14 @@ public class TabPane extends Control {
     }
 
     /**
-     * <p>The minimum width of the tabs in the TabPane.  This can be used to limit
-     * the length of text in tabs to prevent truncation.  Setting the min equal
-     * to the max will fix the width of the tab.  By default the min equals to the max.
-     *
+     * <p>The minimum width of a {@code Tab} in the {@code TabPane}.
+     * This can be used to limit the length of text in tabs to prevent truncation.
+     * Setting the same minimum and maximum widths will fix the width of the {@code Tab}.
+     * <p>
      * This value can also be set via CSS using {@code -fx-tab-min-width}.
      * </p>
+     *
+     * @defaultValue 0
      */
     private DoubleProperty tabMinWidth;
 
@@ -328,13 +319,15 @@ public class TabPane extends Control {
     }
 
     /**
-     * <p>The maximum width of the tabs in the TabPane.  This can be used to limit
-     * the length of text in tabs.  If the tab text is longer than the maximum
-     * width the text will be truncated.  Setting the max equal
-     * to the min will fix the width of the tab.  By default the min equals to the max.
-     *
+     * <p>The maximum width of a {@code Tab} in the {@code TabPane}.
+     * This can be used to limit the length of text in tabs to prevent truncation.
+     * If the {@code Tab} text is longer than the maximum width, the text will be truncated.
+     * Setting the same minimum and maximum widths will fix the width of the {@code Tab}.
+     * <p>
      * This value can also be set via CSS using {@code -fx-tab-max-width}.
      * </p>
+     *
+     * @defaultValue {@code Double.MAX_VALUE}
      */
     private DoubleProperty tabMaxWidth;
 
@@ -370,12 +363,14 @@ public class TabPane extends Control {
     }
 
     /**
-     * <p>The minimum height of the tabs in the TabPane.  This can be used to limit
-     * the height in tabs. Setting the min equal to the max will fix the height
-     * of the tab.  By default the min equals to the max.
-     *
+     * <p>The minimum height of a {@code Tab} in the {@code TabPane}.
+     * This can be used to limit the height of tabs.
+     * Setting the same minimum and maximum heights will fix the height of the {@code Tab}.
+     * <p>
      * This value can also be set via CSS using {@code -fx-tab-min-height}.
      * </p>
+     *
+     * @defaultValue 0
      */
     private DoubleProperty tabMinHeight;
 
@@ -411,12 +406,14 @@ public class TabPane extends Control {
     }
 
     /**
-     * <p>The maximum height of the tabs in the TabPane.  This can be used to limit
-     * the height in tabs. Setting the max equal to the min will fix the height
-     * of the tab.  By default the min equals to the max.
-     *
+     * <p>The maximum height of a {@code Tab} in the {@code TabPane}.
+     * This can be used to limit the height of tabs.
+     * Setting the same minimum and maximum heights will fix the height of the {@code Tab}.
+     * <p>
      * This value can also be set via CSS using {@code -fx-tab-max-height}.
      * </p>
+     *
+     * @defaultValue {@code Double.MAX_VALUE}
      */
     private DoubleProperty tabMaxHeight;
 
@@ -738,16 +735,16 @@ public class TabPane extends Control {
     }
 
     /**
-     * <p>This specifies how the TabPane handles tab closing from an end-users
+     * <p>This specifies how the {@code TabPane} handles tab closing from an end-user's
      * perspective. The options are:</p>
      *
      * <ul>
-     *   <li> TabClosingPolicy.UNAVAILABLE: Tabs can not be closed by the user
-     *   <li> TabClosingPolicy.SELECTED_TAB: Only the currently selected tab will
+     *   <li> {@code TabClosingPolicy.UNAVAILABLE}: Tabs can not be closed by the user
+     *   <li> {@code TabClosingPolicy.SELECTED_TAB}: Only the currently selected tab will
      *          have the option to be closed, with a graphic next to the tab
      *          text being shown. The graphic will disappear when a tab is no
      *          longer selected.
-     *   <li> TabClosingPolicy.ALL_TABS: All tabs will have the option to be
+     *   <li> {@code TabClosingPolicy.ALL_TABS}: All tabs will have the option to be
      *          closed.
      * </ul>
      * @since JavaFX 2.0
@@ -774,9 +771,9 @@ public class TabPane extends Control {
 
 
     /**
-     * The drag policy for the tabs. The policy can be changed dynamically.
+     * The drag policy for the tabs. It specifies if tabs can be reordered or not.
      *
-     * @defaultValue TabDragPolicy.FIXED
+     * @defaultValue {@code TabDragPolicy.FIXED}
      * @since 10
      */
     private ObjectProperty<TabDragPolicy> tabDragPolicy;
