@@ -58,8 +58,8 @@ import javafx.css.StyleableProperty;
 import javafx.scene.Node;
 
 /**
- * <p>A control that allows switching between a group of {@link Tab Tabs}.  Only one tab
- * is visible at a time. Tabs are added to the TabPane by using the {@link #getTabs}.</p>
+ * A control that allows switching between a group of {@link Tab Tabs}.  Only one tab
+ * is visible at a time. Tabs are added to the TabPane by using the {@link #getTabs}.
  *
  * <p>Tabs in a TabPane can be positioned at any of the four sides by specifying the
  * {@link Side}. </p>
@@ -155,9 +155,9 @@ public class TabPane extends Control {
     private ObservableList<Tab> tabs = new TabObservableList<>(new ArrayList<>());
 
     /**
-     * <p>The tabs to display in this TabPane. Changing this ObservableList will
+     * The tabs to display in this TabPane. Changing this ObservableList will
      * immediately result in the TabPane updating to display the new contents
-     * of this ObservableList.</p>
+     * of this ObservableList.
      *
      * <p>If the tabs ObservableList changes, the selected tab will remain the previously
      * selected tab, if it remains within this ObservableList. If the previously
@@ -225,7 +225,7 @@ public class TabPane extends Control {
     }
 
     /**
-     * <p>Specifies how the {@code TabPane} handles tab closing from an end-user's
+     * Specifies how the {@code TabPane} handles tab closing from an end-user's
      * perspective.
      *
      * <p>Refer to the {@link TabClosingPolicy} enumeration for further details.</p>
@@ -250,8 +250,8 @@ public class TabPane extends Control {
     }
 
     /**
-     * <p>Specifies whether the graphic inside a {@code Tab} is rotated or not, such
-     * that it is always upright, or rotated in the same way as the {@code Tab} text is.</p>
+     * Specifies whether the graphic inside a {@code Tab} is rotated or not, such
+     * that it is always upright, or rotated in the same way as the {@code Tab} text is.
      *
      * <p>If the value is {@code false}, the graphic isn't rotated, resulting in it always appearing upright.
      * If the value is {@code true}, the graphic is rotated with the {@code Tab} text.</p>
@@ -276,12 +276,11 @@ public class TabPane extends Control {
     }
 
     /**
-     * <p>The minimum width of a {@code Tab} in the {@code TabPane}.
+     * The minimum width of a {@code Tab} in the {@code TabPane}.
      * This can be used to limit the length of text in tabs to prevent truncation.
      * Setting the same minimum and maximum widths will fix the width of the {@code Tab}.
-     * <p>
-     * This value can also be set via CSS using {@code -fx-tab-min-width}.
-     * </p>
+     *
+     * <p>This value can also be set via CSS using {@code -fx-tab-min-width}.</p>
      *
      * @defaultValue 0
      */
@@ -319,13 +318,12 @@ public class TabPane extends Control {
     }
 
     /**
-     * <p>The maximum width of a {@code Tab} in the {@code TabPane}.
+     * The maximum width of a {@code Tab} in the {@code TabPane}.
      * This can be used to limit the length of text in tabs to prevent truncation.
      * If the {@code Tab} text is longer than the maximum width, the text will be truncated.
      * Setting the same minimum and maximum widths will fix the width of the {@code Tab}.
-     * <p>
-     * This value can also be set via CSS using {@code -fx-tab-max-width}.
-     * </p>
+     *
+     * <p>This value can also be set via CSS using {@code -fx-tab-max-width}.</p>
      *
      * @defaultValue {@code Double.MAX_VALUE}
      */
@@ -363,12 +361,11 @@ public class TabPane extends Control {
     }
 
     /**
-     * <p>The minimum height of a {@code Tab} in the {@code TabPane}.
+     * The minimum height of a {@code Tab} in the {@code TabPane}.
      * This can be used to limit the height of tabs.
      * Setting the same minimum and maximum heights will fix the height of the {@code Tab}.
-     * <p>
-     * This value can also be set via CSS using {@code -fx-tab-min-height}.
-     * </p>
+     *
+     * <p>This value can also be set via CSS using {@code -fx-tab-min-height}.</p>
      *
      * @defaultValue 0
      */
@@ -406,12 +403,11 @@ public class TabPane extends Control {
     }
 
     /**
-     * <p>The maximum height of a {@code Tab} in the {@code TabPane}.
+     * The maximum height of a {@code Tab} in the {@code TabPane}.
      * This can be used to limit the height of tabs.
      * Setting the same minimum and maximum heights will fix the height of the {@code Tab}.
-     * <p>
-     * This value can also be set via CSS using {@code -fx-tab-max-height}.
-     * </p>
+     *
+     * <p>This value can also be set via CSS using {@code -fx-tab-max-height}.</p>
      *
      * @defaultValue {@code Double.MAX_VALUE}
      */
@@ -735,8 +731,8 @@ public class TabPane extends Control {
     }
 
     /**
-     * <p>This specifies how the {@code TabPane} handles tab closing from an end-user's
-     * perspective. The options are:</p>
+     * Specifies how the {@code TabPane} handles tab closing from an end-user's
+     * perspective. The options are:
      *
      * <ul>
      *   <li> {@code TabClosingPolicy.UNAVAILABLE}: Tabs can not be closed by the user
