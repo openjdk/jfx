@@ -402,9 +402,9 @@ private:
                     break;
 
                 case FilterGetByStatus:
-                case FilterPutByIdStatus:
+                case FilterPutByStatus:
                 case FilterCallLinkStatus:
-                case FilterInByIdStatus:
+                case FilterInByStatus:
                 case FilterDeleteByStatus:
                 case FilterCheckPrivateBrandStatus:
                 case FilterSetPrivateBrandStatus:
@@ -1265,9 +1265,9 @@ private:
                 case CheckArray:
                 case GetButterfly:
                 case FilterGetByStatus:
-                case FilterPutByIdStatus:
+                case FilterPutByStatus:
                 case FilterCallLinkStatus:
-                case FilterInByIdStatus:
+                case FilterInByStatus:
                 case FilterDeleteByStatus:
                 case FilterCheckPrivateBrandStatus:
                 case FilterSetPrivateBrandStatus: {

@@ -157,6 +157,10 @@ WTF_EXPORT_PRIVATE void registerPtrTagLookup(PtrTagLookup*);
 WTF_EXPORT_PRIVATE void reportBadTag(const void*, PtrTag expectedTag);
 
 #if ENABLE(PTRTAG_DEBUGGING)
+
+WTF_EXPORT_PRIVATE const char* ptrTagName(PtrTag);
+WTF_EXPORT_PRIVATE const char* tagForPtr(const void*);
+
 constexpr bool enablePtrTagDebugAssert = true;
 #define REPORT_BAD_TAG(success, ptr, expectedTag) do { \
         if (UNLIKELY(!success)) \
@@ -318,20 +322,6 @@ void assertIsNotTagged(PtrType value)
     WTF_PTRTAG_ASSERT(PtrTagAction::DebugAssert, ptr, NoPtrTag, ptr == removeCodePtrTag(ptr));
 }
 
-template<typename PtrType>
-void assertIsTagged(PtrType value)
-{
-    void* ptr = bitwise_cast<void*>(value);
-    WTF_PTRTAG_ASSERT(PtrTagAction::DebugAssert, ptr, AnyPtrTag, ptr != removeCodePtrTag(ptr));
-}
-
-template<typename PtrType>
-void assertIsNullOrTagged(PtrType ptr)
-{
-    if (ptr)
-        assertIsTagged(ptr);
-}
-
 template<PtrTag tag, typename PtrType>
 bool isTaggedWith(PtrType value)
 {
@@ -411,6 +401,13 @@ inline PtrType untagCFunctionPtr(PtrType ptr) { return untagCFunctionPtrImpl<Ptr
 
 #if CPU(ARM64E)
 
+inline const void* untagReturnPC(const void* pc, const void* sp)
+{
+    auto ptr = __builtin_ptrauth_auth(pc, ptrauth_key_return_address, sp);
+    assertIsNotTagged(ptr);
+    return ptr;
+}
+
 template <typename IntType>
 inline IntType untagInt(IntType ptrInt, PtrTag tag)
 {
@@ -475,6 +472,11 @@ inline bool usesPointerTagging() { return true; }
     __ptrauth(ptrauth_key_process_independent_code, 1, ptrauth_string_discriminator(discriminatorStr))
 
 #else // not CPU(ARM64E)
+
+inline const void* untagReturnPC(const void* pc, const void*)
+{
+    return pc;
+}
 
 template<typename T>
 inline T* tagArrayPtr(std::nullptr_t, size_t size)
@@ -547,6 +549,7 @@ using WTF::PtrTagCalleeType;
 
 using WTF::reportBadTag;
 
+using WTF::untagReturnPC;
 using WTF::tagArrayPtr;
 using WTF::untagArrayPtr;
 using WTF::retagArrayPtr;
@@ -565,8 +568,6 @@ using WTF::untagInt;
 using WTF::assertIsCFunctionPtr;
 using WTF::assertIsNullOrCFunctionPtr;
 using WTF::assertIsNotTagged;
-using WTF::assertIsTagged;
-using WTF::assertIsNullOrTagged;
 using WTF::isTaggedWith;
 using WTF::assertIsTaggedWith;
 using WTF::assertIsNullOrTaggedWith;

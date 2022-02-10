@@ -26,25 +26,24 @@
 #include "config.h"
 #include <wtf/MemoryPressureHandler.h>
 
+#include <wtf/Logging.h>
 #include <wtf/MemoryFootprint.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/RAMSize.h>
 
-#define LOG_CHANNEL_PREFIX Log
-
 namespace WTF {
 
-#if RELEASE_LOG_DISABLED
-WTFLogChannel LogMemoryPressure = { WTFLogChannelState::On, "MemoryPressure", WTFLogLevel::Error };
-#endif
-#if USE(OS_LOG) && !RELEASE_LOG_DISABLED
-WTFLogChannel LogMemoryPressure = { WTFLogChannelState::On, "MemoryPressure", WTFLogLevel::Error, LOG_CHANNEL_WEBKIT_SUBSYSTEM, OS_LOG_DEFAULT };
-#endif
-#if USE(JOURNALD) && !RELEASE_LOG_DISABLED
-WTFLogChannel LogMemoryPressure = { WTFLogChannelState::On, "MemoryPressure", WTFLogLevel::Error, LOG_CHANNEL_WEBKIT_SUBSYSTEM };
-#endif
-
 WTF_EXPORT_PRIVATE bool MemoryPressureHandler::ReliefLogger::s_loggingEnabled = false;
+
+#if PLATFORM(IOS_FAMILY)
+static const double s_conservativeThresholdFraction = 0.5;
+static const double s_strictThresholdFraction = 0.65;
+#else
+static const double s_conservativeThresholdFraction = 0.33;
+static const double s_strictThresholdFraction = 0.5;
+#endif
+static const std::optional<double> s_killThresholdFraction;
+static const Seconds s_pollInterval = 30_s;
 
 MemoryPressureHandler& MemoryPressureHandler::singleton()
 {
@@ -78,7 +77,7 @@ void MemoryPressureHandler::setShouldUsePeriodicMemoryMonitor(bool use)
 
     if (use) {
         m_measurementTimer = makeUnique<RunLoop::Timer<MemoryPressureHandler>>(RunLoop::main(), this, &MemoryPressureHandler::measurementTimerFired);
-        m_measurementTimer->startRepeating(30_s);
+        m_measurementTimer->startRepeating(m_configuration.pollInterval);
     } else
         m_measurementTimer = nullptr;
 }
@@ -99,9 +98,7 @@ static const char* toString(MemoryUsagePolicy policy)
 static size_t thresholdForMemoryKillOfInactiveProcess(unsigned tabCount)
 {
 #if CPU(X86_64) || CPU(ARM64)
-    size_t baseThreshold = 4 * GB;
-    if (tabCount > 1)
-        baseThreshold += std::min(tabCount - 1, 4u) * 1 * GB;
+    size_t baseThreshold = 3 * GB + tabCount * GB;
 #else
     size_t baseThreshold = tabCount > 1 ? 3 * GB : 2 * GB;
 #endif
@@ -115,43 +112,36 @@ void MemoryPressureHandler::setPageCount(unsigned pageCount)
     singleton().m_pageCount = pageCount;
 }
 
-Optional<size_t> MemoryPressureHandler::thresholdForMemoryKill()
+std::optional<size_t> MemoryPressureHandler::thresholdForMemoryKill()
 {
+    if (m_configuration.killThresholdFraction)
+        return m_configuration.baseThreshold * (*m_configuration.killThresholdFraction);
+
     switch (m_processState) {
     case WebsamProcessState::Inactive:
         return thresholdForMemoryKillOfInactiveProcess(m_pageCount);
     case WebsamProcessState::Active:
         break;
     }
-    return WTF::nullopt;
+    return std::nullopt;
 }
 
-static size_t thresholdForPolicy(MemoryUsagePolicy policy)
+size_t MemoryPressureHandler::thresholdForPolicy(MemoryUsagePolicy policy)
 {
-    const size_t baseThresholdForPolicy = std::min(3 * GB, ramSize());
-
-#if PLATFORM(IOS_FAMILY)
-    const double conservativeThresholdFraction = 0.5;
-    const double strictThresholdFraction = 0.65;
-#else
-    const double conservativeThresholdFraction = 0.33;
-    const double strictThresholdFraction = 0.5;
-#endif
-
     switch (policy) {
     case MemoryUsagePolicy::Unrestricted:
         return 0;
     case MemoryUsagePolicy::Conservative:
-        return baseThresholdForPolicy * conservativeThresholdFraction;
+        return m_configuration.baseThreshold * m_configuration.conservativeThresholdFraction;
     case MemoryUsagePolicy::Strict:
-        return baseThresholdForPolicy * strictThresholdFraction;
+        return m_configuration.baseThreshold * m_configuration.strictThresholdFraction;
     default:
         ASSERT_NOT_REACHED();
         return 0;
     }
 }
 
-static MemoryUsagePolicy policyForFootprint(size_t footprint)
+MemoryUsagePolicy MemoryPressureHandler::policyForFootprint(size_t footprint)
 {
     if (footprint >= thresholdForPolicy(MemoryUsagePolicy::Strict))
         return MemoryUsagePolicy::Strict;
@@ -316,14 +306,29 @@ void MemoryPressureHandler::platformInitialize() { }
 #endif
 
 #if PLATFORM(COCOA) || PLATFORM(JAVA) && OS(DARWIN)
-void MemoryPressureHandler::setDispatchQueue(dispatch_queue_t queue)
+void MemoryPressureHandler::setDispatchQueue(OSObjectPtr<dispatch_queue_t>&& queue)
 {
     RELEASE_ASSERT(!m_installed);
-    dispatch_retain(queue);
-    if (m_dispatchQueue)
-        dispatch_release(m_dispatchQueue);
-    m_dispatchQueue = queue;
+    m_dispatchQueue = WTFMove(queue);
 }
 #endif
+
+MemoryPressureHandler::Configuration::Configuration()
+    : baseThreshold(std::min(3 * GB, ramSize()))
+    , conservativeThresholdFraction(s_conservativeThresholdFraction)
+    , strictThresholdFraction(s_strictThresholdFraction)
+    , killThresholdFraction(s_killThresholdFraction)
+    , pollInterval(s_pollInterval)
+{
+}
+
+MemoryPressureHandler::Configuration::Configuration(size_t base, double conservative, double strict, std::optional<double> kill, Seconds interval)
+    : baseThreshold(base)
+    , conservativeThresholdFraction(conservative)
+    , strictThresholdFraction(strict)
+    , killThresholdFraction(kill)
+    , pollInterval(interval)
+{
+}
 
 } // namespace WebCore

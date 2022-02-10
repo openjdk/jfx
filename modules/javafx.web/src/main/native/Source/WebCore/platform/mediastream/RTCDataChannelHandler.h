@@ -27,19 +27,77 @@
 
 #if ENABLE(WEB_RTC)
 
-#include <wtf/Optional.h>
+#include "RTCPriorityType.h"
+#include "ScriptExecutionContextIdentifier.h"
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
 struct RTCDataChannelInit {
-    Optional<bool> ordered;
-    Optional<unsigned short> maxPacketLifeTime;
-    Optional<unsigned short> maxRetransmits;
+    std::optional<bool> ordered;
+    std::optional<unsigned short> maxPacketLifeTime;
+    std::optional<unsigned short> maxRetransmits;
     String protocol;
-    Optional<bool> negotiated;
-    Optional<unsigned short> id;
+    std::optional<bool> negotiated;
+    std::optional<unsigned short> id;
+    RTCPriorityType priority { RTCPriorityType::Low };
+
+    RTCDataChannelInit isolatedCopy() const;
+
+    template<class Encoder> void encode(Encoder&) const;
+    template<class Decoder> static std::optional<RTCDataChannelInit> decode(Decoder&);
 };
+
+inline RTCDataChannelInit RTCDataChannelInit::isolatedCopy() const
+{
+    auto copy = *this;
+    copy.protocol = protocol.isolatedCopy();
+    return copy;
+}
+
+template<class Encoder> void RTCDataChannelInit::encode(Encoder& encoder) const
+{
+    encoder << ordered << maxPacketLifeTime << maxRetransmits << protocol << negotiated << id << priority;
+}
+
+template<class Decoder> std::optional<RTCDataChannelInit> RTCDataChannelInit::decode(Decoder& decoder)
+{
+    std::optional<std::optional<bool>> ordered;
+    decoder >> ordered;
+    if (!ordered)
+        return { };
+
+    std::optional<std::optional<unsigned short>> maxPacketLifeTime;
+    decoder >> maxPacketLifeTime;
+    if (!maxPacketLifeTime)
+        return { };
+
+    std::optional<std::optional<unsigned short>> maxRetransmits;
+    decoder >> maxRetransmits;
+    if (!maxRetransmits)
+        return { };
+
+    String protocol;
+    if (!decoder.decode(protocol))
+        return { };
+
+    std::optional<std::optional<bool>> negotiated;
+    decoder >> negotiated;
+    if (!negotiated)
+        return { };
+
+    std::optional<std::optional<unsigned short>> id;
+    decoder >> id;
+    if (!id)
+        return { };
+
+    std::optional<RTCPriorityType> priority;
+    decoder >> priority;
+    if (!priority)
+        return { };
+
+    return RTCDataChannelInit { *ordered, *maxPacketLifeTime, *maxRetransmits, WTFMove(protocol), *negotiated, *id, *priority };
+}
 
 class RTCDataChannelHandlerClient;
 
@@ -47,10 +105,10 @@ class RTCDataChannelHandler {
 public:
     virtual ~RTCDataChannelHandler() = default;
 
-    virtual void setClient(RTCDataChannelHandlerClient&) = 0;
+    virtual void setClient(RTCDataChannelHandlerClient&, ScriptExecutionContextIdentifier) = 0;
 
     virtual bool sendStringData(const CString&) = 0;
-    virtual bool sendRawData(const char*, size_t) = 0;
+    virtual bool sendRawData(const uint8_t*, size_t) = 0;
     virtual void close() = 0;
 };
 

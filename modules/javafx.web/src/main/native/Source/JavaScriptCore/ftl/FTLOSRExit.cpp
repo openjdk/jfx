@@ -82,21 +82,20 @@ Ref<OSRExitHandle> OSRExitDescriptor::prepareOSRExitHandle(
     State& state, ExitKind exitKind, const NodeOrigin& nodeOrigin,
     const StackmapGenerationParams& params, uint32_t dfgNodeIndex, unsigned offset)
 {
-    unsigned index = state.jitCode->osrExit.size();
-    OSRExit& exit = state.jitCode->osrExit.alloc(
-        this, exitKind, nodeOrigin.forExit, nodeOrigin.semantic, nodeOrigin.wasHoisted, dfgNodeIndex);
-    Ref<OSRExitHandle> handle = adoptRef(*new OSRExitHandle(index, exit));
-    for (unsigned i = offset; i < params.size(); ++i)
-        exit.m_valueReps.append(params[i]);
-    exit.m_valueReps.shrinkToFit();
-    return handle;
+    FixedVector<B3::ValueRep> valueReps(params.size() - offset);
+    for (unsigned i = offset, indexInValueReps = 0; i < params.size(); ++i, ++indexInValueReps)
+        valueReps[indexInValueReps] = params[i];
+    unsigned index = state.jitCode->m_osrExit.size();
+    state.jitCode->m_osrExit.append(OSRExit(this, exitKind, nodeOrigin.forExit, nodeOrigin.semantic, nodeOrigin.wasHoisted, dfgNodeIndex, WTFMove(valueReps)));
+    return adoptRef(*new OSRExitHandle(index, state.jitCode.get()));
 }
 
 OSRExit::OSRExit(
     OSRExitDescriptor* descriptor, ExitKind exitKind, CodeOrigin codeOrigin,
-    CodeOrigin codeOriginForExitProfile, bool wasHoisted, uint32_t dfgNodeIndex)
+    CodeOrigin codeOriginForExitProfile, bool wasHoisted, uint32_t dfgNodeIndex, FixedVector<B3::ValueRep>&& valueReps)
     : OSRExitBase(exitKind, codeOrigin, codeOriginForExitProfile, wasHoisted, dfgNodeIndex)
     , m_descriptor(descriptor)
+    , m_valueReps(WTFMove(valueReps))
 {
 }
 

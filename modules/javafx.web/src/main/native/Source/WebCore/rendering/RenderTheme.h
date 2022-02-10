@@ -85,12 +85,13 @@ public:
     virtual String extraPlugInsStyleSheet() { return String(); }
 #if ENABLE(VIDEO)
     virtual String mediaControlsStyleSheet() { return String(); }
-    virtual String modernMediaControlsStyleSheet() { return String(); }
     virtual String extraMediaControlsStyleSheet() { return String(); }
-    virtual String mediaControlsScript() { return String(); }
+    virtual Vector<String, 2> mediaControlsScripts() { return { }; }
+#if ENABLE(MODERN_MEDIA_CONTROLS)
     virtual String mediaControlsBase64StringForIconNameAndType(const String&, const String&) { return String(); }
     virtual String mediaControlsFormattedStringForDuration(double) { return String(); }
-#endif
+#endif // ENABLE(MODERN_MEDIA_CONTROLS)
+#endif // ENABLE(VIDEO)
 #if ENABLE(FULLSCREEN_API)
     virtual String extraFullScreenStyleSheet() { return String(); }
 #endif
@@ -164,6 +165,8 @@ public:
     // Default highlighting color for app highlights.
     Color appHighlightColor(OptionSet<StyleColor::Options>) const;
 #endif
+
+    Color defaultButtonTextColor(OptionSet<StyleColor::Options>) const;
 
     Color datePlaceholderTextColor(const Color& textColor, const Color& backgroundColor) const;
 
@@ -283,6 +286,9 @@ protected:
 #if ENABLE(APP_HIGHLIGHTS)
     virtual Color platformAppHighlightColor(OptionSet<StyleColor::Options>) const;
 #endif
+
+    virtual Color platformDefaultButtonTextColor(OptionSet<StyleColor::Options>) const;
+
     virtual bool supportsSelectionForegroundColors(OptionSet<StyleColor::Options>) const { return true; }
     virtual bool supportsListBoxSelectionForegroundColors(OptionSet<StyleColor::Options>) const { return true; }
 
@@ -312,7 +318,7 @@ protected:
     virtual void paintRadioDecorations(const RenderObject&, const PaintInfo&, const IntRect&) { }
     virtual void paintButtonDecorations(const RenderObject&, const PaintInfo&, const IntRect&) { }
 #if ENABLE(INPUT_TYPE_COLOR)
-    virtual void paintColorWellDecorations(const RenderObject&, const PaintInfo&, const IntRect&);
+    virtual void paintColorWellDecorations(const RenderObject&, const PaintInfo&, const FloatRect&);
 #endif
 
     virtual void adjustTextFieldStyle(RenderStyle&, const Element*) const;
@@ -402,7 +408,7 @@ protected:
 
 public:
     void updateControlStatesForRenderer(const RenderBox&, ControlStates&) const;
-    ControlStates::States extractControlStatesForRenderer(const RenderObject&) const;
+    OptionSet<ControlStates::States> extractControlStatesForRenderer(const RenderObject&) const;
     bool isActive(const RenderObject&) const;
     bool isChecked(const RenderObject&) const;
     bool isIndeterminate(const RenderObject&) const;
@@ -441,11 +447,15 @@ protected:
 #if ENABLE(APP_HIGHLIGHTS)
         Color appHighlightColor;
 #endif
+
+        Color defaultButtonTextColor;
     };
 
     virtual ColorCache& colorCache(OptionSet<StyleColor::Options>) const;
 
 private:
+    void adjustSearchFieldDecorationStyle(RenderStyle&, const Element*) const;
+
     mutable HashMap<uint8_t, ColorCache, DefaultHash<uint8_t>, WTF::UnsignedWithZeroKeyHashTraits<uint8_t>> m_colorCacheMap;
 };
 

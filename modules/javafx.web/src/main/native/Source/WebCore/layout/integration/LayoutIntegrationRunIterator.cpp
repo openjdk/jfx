@@ -52,13 +52,6 @@ bool RunIterator::atEnd() const
     });
 }
 
-void RunIterator::setAtEnd()
-{
-    WTF::switchOn(m_run.m_pathVariant, [](auto& path) {
-        path.setAtEnd();
-    });
-}
-
 RunIterator RunIterator::nextOnLine() const
 {
     return RunIterator(*this).traverseNextOnLine();
@@ -81,7 +74,12 @@ RunIterator RunIterator::previousOnLineIgnoringLineBreak() const
 
 LineIterator RunIterator::line() const
 {
-    return WTF::switchOn(m_run.m_pathVariant, [](const RunIteratorLegacyPath& path) {
+    return m_run.line();
+}
+
+LineIterator PathRun::line() const
+{
+    return WTF::switchOn(m_pathVariant, [](const RunIteratorLegacyPath& path) {
         return LineIterator(LineIteratorLegacyPath(&path.rootInlineBox()));
     }
 #if ENABLE(LAYOUT_FORMATTING_CONTEXT)
@@ -90,6 +88,11 @@ LineIterator RunIterator::line() const
     }
 #endif
     );
+}
+
+const RenderStyle& PathRun::style() const
+{
+    return line().isFirst() ? renderer().firstLineStyle() : renderer().style();
 }
 
 TextRunIterator::TextRunIterator(PathRun::PathVariant&& pathVariant)
@@ -131,17 +134,17 @@ RunIterator& RunIterator::traversePreviousOnLine()
 
 RunIterator& RunIterator::traverseNextOnLineIgnoringLineBreak()
 {
-    traverseNextOnLine();
-    if (!atEnd() && m_run.isLineBreak())
-        setAtEnd();
+    do {
+        traverseNextOnLine();
+    } while (!atEnd() && m_run.isLineBreak());
     return *this;
 }
 
 RunIterator& RunIterator::traversePreviousOnLineIgnoringLineBreak()
 {
-    traversePreviousOnLine();
-    if (!atEnd() && m_run.isLineBreak())
-        setAtEnd();
+    do {
+        traversePreviousOnLine();
+    } while (!atEnd() && m_run.isLineBreak());
     return *this;
 }
 
@@ -174,17 +177,22 @@ TextRunIterator firstTextRunFor(const RenderText& text)
 TextRunIterator firstTextRunInTextOrderFor(const RenderText& text)
 {
     if (text.firstTextBox() && text.containsReversedText()) {
-        Vector<const InlineBox*> sortedTextBoxes;
+        Vector<const LegacyInlineBox*> sortedTextBoxes;
         for (auto* textBox = text.firstTextBox(); textBox; textBox = textBox->nextTextBox())
             sortedTextBoxes.append(textBox);
         std::sort(sortedTextBoxes.begin(), sortedTextBoxes.end(), [](auto* a, auto* b) {
-            return InlineTextBox::compareByStart(downcast<InlineTextBox>(a), downcast<InlineTextBox>(b));
+            return LegacyInlineTextBox::compareByStart(downcast<LegacyInlineTextBox>(a), downcast<LegacyInlineTextBox>(b));
         });
         auto* first = sortedTextBoxes[0];
         return { RunIteratorLegacyPath { first, WTFMove(sortedTextBoxes), 0 } };
     }
 
     return firstTextRunFor(text);
+}
+
+TextRunIterator textRunFor(const LegacyInlineTextBox* legacyInlineTextBox)
+{
+    return { RunIteratorLegacyPath { legacyInlineTextBox } };
 }
 
 TextRunRange textRunsFor(const RenderText& text)

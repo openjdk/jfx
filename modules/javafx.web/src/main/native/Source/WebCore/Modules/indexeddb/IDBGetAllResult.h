@@ -25,25 +25,24 @@
 
 #pragma once
 
-#if ENABLE(INDEXED_DATABASE)
-
 #include "IDBKeyData.h"
 #include "IDBKeyPath.h"
 #include "IDBValue.h"
 #include "IndexedDB.h"
 
+#include <wtf/IsoMalloc.h>
 #include <wtf/Variant.h>
 
 namespace WebCore {
 
 class IDBGetAllResult {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_ISO_ALLOCATED_EXPORT(IDBGetAllResult, WEBCORE_EXPORT);
 public:
     IDBGetAllResult()
     {
     }
 
-    IDBGetAllResult(IndexedDB::GetAllType type, const Optional<IDBKeyPath>& keyPath)
+    IDBGetAllResult(IndexedDB::GetAllType type, const std::optional<IDBKeyPath>& keyPath)
         : m_type(type)
         , m_keyPath(keyPath)
     {
@@ -54,7 +53,7 @@ public:
     IDBGetAllResult isolatedCopy() const;
 
     IndexedDB::GetAllType type() const { return m_type; }
-    const Optional<IDBKeyPath>& keyPath() const { return m_keyPath; }
+    const std::optional<IDBKeyPath>& keyPath() const { return m_keyPath; }
     const Vector<IDBKeyData>& keys() const;
     const Vector<IDBValue>& values() const;
 
@@ -72,7 +71,7 @@ private:
     IndexedDB::GetAllType m_type { IndexedDB::GetAllType::Keys };
     Vector<IDBKeyData> m_keys;
     Vector<IDBValue> m_values;
-    Optional<IDBKeyPath> m_keyPath;
+    std::optional<IDBKeyPath> m_keyPath;
 };
 
 template<class Encoder>
@@ -100,5 +99,3 @@ bool IDBGetAllResult::decode(Decoder& decoder, IDBGetAllResult& result)
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(INDEXED_DATABASE)

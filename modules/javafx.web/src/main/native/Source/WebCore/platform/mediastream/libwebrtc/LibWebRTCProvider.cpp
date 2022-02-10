@@ -143,19 +143,10 @@ static void doReleaseLogging(rtc::LoggingSeverity severity, const char* message)
 #endif
 }
 
-static void setLogging(rtc::LoggingSeverity level)
+static rtc::LoggingSeverity computeLogLevel(WTFLogLevel level)
 {
-    rtc::LogMessage::SetLogOutput(level, (level == rtc::LS_NONE) ? nullptr : doReleaseLogging);
-}
-
-static rtc::LoggingSeverity computeLogLevel()
-{
-#if defined(NDEBUG)
-#if !LOG_DISABLED || !RELEASE_LOG_DISABLED
-    if (LogWebRTC.state != WTFLogChannelState::On)
-        return rtc::LS_ERROR;
-
-    switch (LogWebRTC.level) {
+#if !RELEASE_LOG_DISABLED
+    switch (level) {
     case WTFLogLevel::Always:
     case WTFLogLevel::Error:
         return rtc::LS_ERROR;
@@ -166,14 +157,17 @@ static rtc::LoggingSeverity computeLogLevel()
     case WTFLogLevel::Debug:
         return rtc::LS_VERBOSE;
     }
-    RELEASE_ASSERT_NOT_REACHED();
-    return rtc::LS_NONE;
+    ASSERT_NOT_REACHED();
 #else
+    UNUSED_PARAM(level);
+#endif
     return rtc::LS_NONE;
-#endif
-#else
-    return (LogWebRTC.state != WTFLogChannelState::On) ? rtc::LS_WARNING : rtc::LS_INFO;
-#endif
+}
+
+void LibWebRTCProvider::setRTCLogging(WTFLogLevel level)
+{
+    auto rtcLevel = computeLogLevel(level);
+    rtc::LogMessage::SetLogOutput(rtcLevel, (rtcLevel == rtc::LS_NONE) ? nullptr : doReleaseLogging);
 }
 
 static void initializePeerConnectionFactoryAndThreads(PeerConnectionFactoryAndThreads& factoryAndThreads)
@@ -244,12 +238,15 @@ void LibWebRTCProvider::callOnWebRTCSignalingThread(Function<void()>&& callback)
     threads.signalingThread->Post(RTC_FROM_HERE, &threads, 1, new ThreadMessageData(WTFMove(callback)));
 }
 
-void LibWebRTCProvider::setEnableLogging(bool enableLogging)
+rtc::Thread& LibWebRTCProvider::signalingThread()
 {
-    if (!m_enableLogging)
-        return;
-    m_enableLogging = enableLogging;
-    setLogging(enableLogging ? computeLogLevel() : rtc::LS_NONE);
+    PeerConnectionFactoryAndThreads& threads = staticFactoryAndThreads();
+    return *threads.signalingThread;
+}
+
+void LibWebRTCProvider::setLoggingLevel(WTFLogLevel level)
+{
+    setRTCLogging(level);
 }
 
 webrtc::PeerConnectionFactoryInterface* LibWebRTCProvider::factory()
@@ -273,7 +270,7 @@ rtc::scoped_refptr<webrtc::PeerConnectionFactoryInterface> LibWebRTCProvider::cr
 {
     auto audioModule = rtc::scoped_refptr<webrtc::AudioDeviceModule>(new rtc::RefCountedObject<LibWebRTCAudioModule>());
 
-    return webrtc::CreatePeerConnectionFactory(networkThread, signalingThread, signalingThread, WTFMove(audioModule), webrtc::CreateBuiltinAudioEncoderFactory(), webrtc::CreateBuiltinAudioDecoderFactory(), createEncoderFactory(), createDecoderFactory(), nullptr, nullptr);
+    return webrtc::CreatePeerConnectionFactory(networkThread, signalingThread, signalingThread, WTFMove(audioModule), webrtc::CreateBuiltinAudioEncoderFactory(), webrtc::CreateBuiltinAudioDecoderFactory(), createEncoderFactory(), createDecoderFactory(), nullptr, nullptr, nullptr);
 }
 
 std::unique_ptr<webrtc::VideoDecoderFactory> LibWebRTCProvider::createDecoderFactory()
@@ -288,7 +285,8 @@ std::unique_ptr<webrtc::VideoEncoderFactory> LibWebRTCProvider::createEncoderFac
 
 void LibWebRTCProvider::setPeerConnectionFactory(rtc::scoped_refptr<webrtc::PeerConnectionFactoryInterface>&& factory)
 {
-    m_factory = webrtc::PeerConnectionFactoryProxy::Create(getStaticFactoryAndThreads(m_useNetworkThreadWithSocketServer).signalingThread.get(), WTFMove(factory));
+    auto* thread = getStaticFactoryAndThreads(m_useNetworkThreadWithSocketServer).signalingThread.get();
+    m_factory = webrtc::PeerConnectionFactoryProxy::Create(thread, thread, WTFMove(factory));
 }
 
 void LibWebRTCProvider::disableEnumeratingAllNetworkInterfaces()
@@ -349,8 +347,8 @@ rtc::scoped_refptr<webrtc::PeerConnectionInterface> LibWebRTCProvider::createPee
     std::unique_ptr<cricket::BasicPortAllocator> portAllocator;
     factoryAndThreads.signalingThread->Invoke<void>(RTC_FROM_HERE, [&]() {
         auto basicPortAllocator = makeUniqueWithoutFastMallocCheck<cricket::BasicPortAllocator>(&networkManager, &packetSocketFactory);
-        if (!m_enableEnumeratingAllNetworkInterfaces)
-            basicPortAllocator->set_flags(basicPortAllocator->flags() | cricket::PORTALLOCATOR_DISABLE_ADAPTER_ENUMERATION);
+
+        basicPortAllocator->set_allow_tcp_listen(false);
         portAllocator = WTFMove(basicPortAllocator);
     });
 
@@ -362,7 +360,11 @@ rtc::scoped_refptr<webrtc::PeerConnectionInterface> LibWebRTCProvider::createPee
     dependencies.allocator = WTFMove(portAllocator);
     dependencies.async_resolver_factory = WTFMove(asyncResolveFactory);
 
-    return m_factory->CreatePeerConnection(configuration, WTFMove(dependencies));
+    auto peerConnectionOrError = m_factory->CreatePeerConnectionOrError(configuration, WTFMove(dependencies));
+    if (!peerConnectionOrError.ok())
+        return nullptr;
+
+    return peerConnectionOrError.MoveValue();
 }
 
 void LibWebRTCProvider::prepareCertificateGenerator(Function<void(rtc::RTCCertificateGenerator&)>&& callback)
@@ -377,7 +379,7 @@ void LibWebRTCProvider::prepareCertificateGenerator(Function<void(rtc::RTCCertif
     });
 }
 
-static inline Optional<cricket::MediaType> typeFromKind(const String& kind)
+static inline std::optional<cricket::MediaType> typeFromKind(const String& kind)
 {
     if (kind == "audio"_s)
         return cricket::MediaType::MEDIA_TYPE_AUDIO;
@@ -391,7 +393,7 @@ static inline String fromStdString(const std::string& value)
     return String::fromUTF8(value.data(), value.length());
 }
 
-static inline Optional<uint16_t> toChannels(absl::optional<int> numChannels)
+static inline std::optional<uint16_t> toChannels(absl::optional<int> numChannels)
 {
     if (!numChannels)
         return { };
@@ -423,7 +425,7 @@ static inline RTCRtpCapabilities toRTCRtpCapabilities(const webrtc::RtpCapabilit
     return capabilities;
 }
 
-Optional<RTCRtpCapabilities> LibWebRTCProvider::receiverCapabilities(const String& kind)
+std::optional<RTCRtpCapabilities> LibWebRTCProvider::receiverCapabilities(const String& kind)
 {
     auto mediaType = typeFromKind(kind);
     if (!mediaType)
@@ -436,7 +438,7 @@ Optional<RTCRtpCapabilities> LibWebRTCProvider::receiverCapabilities(const Strin
     return toRTCRtpCapabilities(factory->GetRtpReceiverCapabilities(*mediaType));
 }
 
-Optional<RTCRtpCapabilities> LibWebRTCProvider::senderCapabilities(const String& kind)
+std::optional<RTCRtpCapabilities> LibWebRTCProvider::senderCapabilities(const String& kind)
 {
     auto mediaType = typeFromKind(kind);
     if (!mediaType)

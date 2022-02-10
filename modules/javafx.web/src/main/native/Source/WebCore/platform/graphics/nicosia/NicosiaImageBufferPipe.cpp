@@ -89,13 +89,13 @@ void NicosiaImageBufferPipeSource::handle(RefPtr<ImageBuffer>&& buffer)
     if (!buffer)
         return;
 
-    auto locker = holdLock(m_imageBufferLock);
+    Locker locker { m_imageBufferLock };
 
     if (!m_imageBuffer) {
         auto proxyOperation = [this] (TextureMapperPlatformLayerProxy& proxy) mutable {
             return proxy.scheduleUpdateOnCompositorThread([this] () mutable {
                 auto& proxy = downcast<Nicosia::ContentLayerTextureMapperImpl>(m_nicosiaLayer->impl()).proxy();
-                LockHolder holder(proxy.lock());
+                Locker locker { proxy.lock() };
 
                 if (!proxy.isActive())
                     return;
@@ -103,7 +103,7 @@ void NicosiaImageBufferPipeSource::handle(RefPtr<ImageBuffer>&& buffer)
                 auto texture = BitmapTextureGL::create(TextureMapperContextAttributes::get());
 
                 {
-                    auto locker = holdLock(m_imageBufferLock);
+                    Locker locker { m_imageBufferLock };
 
                     if (!m_imageBuffer)
                         return;
@@ -117,7 +117,7 @@ void NicosiaImageBufferPipeSource::handle(RefPtr<ImageBuffer>&& buffer)
                     texture->reset(size, nativeImage->hasAlpha() ? BitmapTexture::SupportsAlpha : BitmapTexture::NoFlag);
 #if USE(CAIRO)
                     auto* surface = nativeImage->platformImage().get();
-                    auto* imageData = reinterpret_cast<const char*>(cairo_image_surface_get_data(surface));
+                    auto* imageData = cairo_image_surface_get_data(surface);
                     texture->updateContents(imageData, IntRect(IntPoint(), size), IntPoint(), cairo_image_surface_get_stride(surface));
 #else
                     notImplemented();

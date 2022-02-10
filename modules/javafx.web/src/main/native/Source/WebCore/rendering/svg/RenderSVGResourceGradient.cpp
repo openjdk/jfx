@@ -60,7 +60,7 @@ static inline bool createMaskAndSwapContextForTextGradient(GraphicsContext*& con
     AffineTransform absoluteTransform = SVGRenderingContext::calculateTransformationToOutermostCoordinateSystem(*textRootBlock);
     FloatRect repaintRect = textRootBlock->repaintRectInLocalCoordinates();
 
-    auto maskImage = SVGRenderingContext::createImageBuffer(repaintRect, absoluteTransform, DestinationColorSpace::SRGB, context->renderingMode());
+    auto maskImage = SVGRenderingContext::createImageBuffer(repaintRect, absoluteTransform, DestinationColorSpace::SRGB(), context->renderingMode());
     if (!maskImage)
         return false;
 
@@ -173,7 +173,7 @@ bool RenderSVGResourceGradient::applyResource(RenderElement& renderer, const Ren
             userspaceTransform = transformOnNonScalingStroke(&renderer, gradientData.userspaceTransform);
         context->setAlpha(svgStyle.strokeOpacity());
         context->setStrokeGradient(*gradientData.gradient, userspaceTransform);
-        SVGRenderSupport::applyStrokeStyleToContext(context, style, renderer);
+        SVGRenderSupport::applyStrokeStyleToContext(*context, style, renderer);
     }
 
     return true;

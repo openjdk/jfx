@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -40,6 +40,7 @@
 #include "StackAlignment.h"
 #include <wtf/HashSet.h>
 #include <wtf/IndexMap.h>
+#include <wtf/SmallSet.h>
 #include <wtf/WeakRandom.h>
 
 namespace JSC {
@@ -111,9 +112,7 @@ public:
     // Note that you can rely on stack slots always getting indices that are larger than the index
     // of any prior stack slot. In fact, all stack slots you create in the future will have an index
     // that is >= stackSlots().size().
-    JS_EXPORT_PRIVATE StackSlot* addStackSlot(
-        unsigned byteSize, StackSlotKind, B3::StackSlot* = nullptr);
-    StackSlot* addStackSlot(B3::StackSlot*);
+    JS_EXPORT_PRIVATE StackSlot* addStackSlot(uint64_t byteSize, StackSlotKind);
 
     JS_EXPORT_PRIVATE Special* addSpecial(std::unique_ptr<Special>);
 
@@ -179,7 +178,7 @@ public:
     const FrequentedBlock& entrypoint(unsigned index) const { return m_entrypoints[index]; }
     bool isEntrypoint(BasicBlock*) const;
     // Note: It is only valid to call this function after LowerEntrySwitch.
-    Optional<unsigned> entrypointIndex(BasicBlock*) const;
+    std::optional<unsigned> entrypointIndex(BasicBlock*) const;
 
     // Note: We allow this to be called even before we set m_entrypoints just for convenience to users of this API.
     // However, if you call this before setNumEntrypoints, setNumEntrypoints will overwrite this value.
@@ -311,7 +310,13 @@ public:
     }
 
     void addFastTmp(Tmp);
-    bool isFastTmp(Tmp tmp) const { return m_fastTmps.contains(tmp); }
+
+    template<typename Functor>
+    void forEachFastTmp(const Functor& functor) const
+    {
+        for (Tmp tmp : m_fastTmps)
+            functor(tmp);
+    }
 
     CFG& cfg() const { return *m_cfg; }
 
@@ -336,7 +341,14 @@ public:
     // it's mainly for validating the results from JSAir.
     unsigned jsHash() const;
 
-    void setDisassembler(std::unique_ptr<Disassembler>&& disassembler) { m_disassembler = WTFMove(disassembler); }
+    bool shouldPreserveB3Origins() const { return m_preserveB3Origins; }
+    void forcePreservationOfB3Origins() { m_preserveB3Origins = true; }
+
+    void setDisassembler(std::unique_ptr<Disassembler>&& disassembler)
+    {
+        m_disassembler = WTFMove(disassembler);
+        forcePreservationOfB3Origins();
+    }
     Disassembler* disassembler() { return m_disassembler.get(); }
 
     RegisterSet mutableGPRs();
@@ -379,13 +391,15 @@ private:
     Vector<std::unique_ptr<BasicBlock>> m_blocks;
     SparseCollection<Special> m_specials;
     std::unique_ptr<CFG> m_cfg;
-    HashSet<Tmp> m_fastTmps;
+    SmallSet<Tmp, TmpHash, 2> m_fastTmps;
     CCallSpecial* m_cCallSpecial { nullptr };
     unsigned m_numGPTmps { 0 };
     unsigned m_numFPTmps { 0 };
     unsigned m_frameSize { 0 };
     unsigned m_callArgAreaSize { 0 };
+    unsigned m_optLevel { defaultOptLevel() };
     bool m_stackIsAllocated { false };
+    bool m_preserveB3Origins { true };
     RegisterAtOffsetList m_uncorrectedCalleeSaveRegisterAtOffsetList;
     RegisterSet m_calleeSaveRegisters;
     StackSlot* m_calleeSaveStackSlot { nullptr };
@@ -395,7 +409,6 @@ private:
     RefPtr<WasmBoundsCheckGenerator> m_wasmBoundsCheckGenerator;
     const char* m_lastPhaseName;
     std::unique_ptr<Disassembler> m_disassembler;
-    unsigned m_optLevel { defaultOptLevel() };
     Ref<PrologueGenerator> m_defaultPrologueGenerator;
 };
 

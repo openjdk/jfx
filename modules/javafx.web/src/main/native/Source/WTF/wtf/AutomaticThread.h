@@ -38,7 +38,7 @@ namespace WTF {
 //
 //     for (;;) {
 //         {
-//             LockHolder locker(m_lock);
+//             Locker locker { m_lock };
 //             for (;;) {
 //  [1]            stuff that could break, return, or fall through;
 //                 m_condition.wait(m_lock);
@@ -81,8 +81,8 @@ public:
     // One known-good case for one-true-condition is when the communication involves just two
     // threads. In such cases, the thread doing the notifyAll() can wake up at most one thread -
     // its partner.
-    WTF_EXPORT_PRIVATE void wait(Lock&);
-    WTF_EXPORT_PRIVATE bool waitFor(Lock&, Seconds);
+    WTF_EXPORT_PRIVATE void wait(Lock& lock) WTF_REQUIRES_LOCK(lock);
+    WTF_EXPORT_PRIVATE bool waitFor(Lock& lock, Seconds) WTF_REQUIRES_LOCK(lock);
 
 private:
     friend class AutomaticThread;
@@ -142,7 +142,7 @@ protected:
     // {
     //     for (;;) {
     //         {
-    //             LockHolder locker(m_lock);
+    //             Locker locker { m_lock };
     //             for (;;) {
     //                 PollResult result = poll();
     //                 if (result == PollResult::Work)

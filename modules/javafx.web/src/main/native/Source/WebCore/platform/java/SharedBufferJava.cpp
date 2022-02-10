@@ -70,13 +70,13 @@ JNIEXPORT jint JNICALL Java_com_sun_webkit_SharedBuffer_twkGetSomeData
     }
 
     const auto& dataView = p->getSomeData(position);
-    const char* segment = dataView.data();
+    const uint8_t* segment = dataView.data();
     int len = dataView.size();
     if (len) {
         if (len > length) {
             len = length;
         }
-        char* bufferBody = static_cast<char*>(
+        uint8_t* bufferBody = static_cast<uint8_t*>(
                 env->GetPrimitiveArrayCritical(buffer, NULL));
         memcpy(bufferBody + offset, segment, len);
         env->ReleasePrimitiveArrayCritical(buffer, bufferBody, 0);

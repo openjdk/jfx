@@ -31,6 +31,7 @@
 #include "HTMLHeadElement.h"
 #include "HTMLLinkElement.h"
 #include "LinkIconType.h"
+#include <wtf/text/StringToIntegerConversion.h>
 
 namespace WebCore {
 
@@ -95,14 +96,9 @@ auto LinkIconCollector::iconsOfTypes(OptionSet<LinkIconType> iconTypes) -> Vecto
         // This icon size parsing is a little wonky - it only parses the first
         // part of the size, "60x70" becomes "60". This is for compatibility reasons
         // and is probably good enough for now.
-        Optional<unsigned> iconSize;
-
-        if (linkElement.sizes().length()) {
-            bool ok;
-            unsigned size = linkElement.sizes().item(0).string().stripWhiteSpace().toUInt(&ok);
-            if (ok)
-                iconSize = size;
-        }
+        std::optional<unsigned> iconSize;
+        if (linkElement.sizes().length())
+            iconSize = parseIntegerAllowingTrailingJunk<unsigned>(linkElement.sizes().item(0));
 
         Vector<std::pair<String, String>> attributes;
         if (linkElement.hasAttributes()) {

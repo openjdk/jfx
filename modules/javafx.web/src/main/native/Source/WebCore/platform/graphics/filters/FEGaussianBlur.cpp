@@ -30,7 +30,7 @@
 #endif
 #include "Filter.h"
 #include "GraphicsContext.h"
-#include "ImageData.h"
+#include "PixelBuffer.h"
 #include <wtf/text/TextStream.h>
 
 #if USE(ACCELERATE)
@@ -524,15 +524,16 @@ void FEGaussianBlur::platformApplySoftware()
 {
     FilterEffect* in = inputEffect(0);
 
-    auto* resultImage = createPremultipliedImageResult();
-    auto* dstPixelArray = resultImage ? resultImage->data() : nullptr;
-    if (!dstPixelArray)
+    auto& destinationPixelBuffer = createPremultipliedImageResult();
+    if (!destinationPixelBuffer)
         return;
+
+    auto& destinationPixelArray = destinationPixelBuffer->data();
 
     setIsAlphaImage(in->isAlphaImage());
 
-    IntRect effectDrawingRect = requestedRegionOfInputImageData(in->absolutePaintRect());
-    in->copyPremultipliedResult(*dstPixelArray, effectDrawingRect, operatingColorSpace());
+    IntRect effectDrawingRect = requestedRegionOfInputPixelBuffer(in->absolutePaintRect());
+    in->copyPremultipliedResult(destinationPixelArray, effectDrawingRect, operatingColorSpace());
     if (!m_stdX && !m_stdY)
         return;
 
@@ -541,11 +542,11 @@ void FEGaussianBlur::platformApplySoftware()
 
     IntSize paintSize = absolutePaintRect().size();
     paintSize.scale(filter().filterScale());
-    auto tmpImageData = Uint8ClampedArray::tryCreateUninitialized((paintSize.area() * 4).unsafeGet());
+    auto tmpImageData = Uint8ClampedArray::tryCreateUninitialized(paintSize.area() * 4);
     if (!tmpImageData)
         return;
 
-    platformApply(*dstPixelArray, *tmpImageData, kernelSize.width(), kernelSize.height(), paintSize);
+    platformApply(destinationPixelArray, *tmpImageData, kernelSize.width(), kernelSize.height(), paintSize);
 }
 
 IntOutsets FEGaussianBlur::outsets() const

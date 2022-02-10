@@ -76,7 +76,7 @@ inline ArrayBuffer* JSArrayBufferView::existingBufferInButterfly()
 inline RefPtr<ArrayBufferView> JSArrayBufferView::unsharedImpl()
 {
     RefPtr<ArrayBufferView> result = possiblySharedImpl();
-    RELEASE_ASSERT(!result->isShared());
+    RELEASE_ASSERT(!result || !result->isShared());
     return result;
 }
 
@@ -97,7 +97,7 @@ inline ResultType JSArrayBufferView::byteOffsetImpl()
     }
 
     ptrdiff_t delta =
-        bitwise_cast<uint8_t*>(vector()) - static_cast<uint8_t*>(buffer->data());
+        bitwise_cast<uint8_t*>(vectorWithoutPACValidation()) - static_cast<uint8_t*>(buffer->data());
 
     unsigned result = static_cast<unsigned>(delta);
     if (requester == Mutator)
@@ -115,9 +115,9 @@ inline unsigned JSArrayBufferView::byteOffset()
     return byteOffsetImpl<Mutator, unsigned>();
 }
 
-inline Optional<unsigned> JSArrayBufferView::byteOffsetConcurrently()
+inline std::optional<unsigned> JSArrayBufferView::byteOffsetConcurrently()
 {
-    return byteOffsetImpl<ConcurrentThread, Optional<unsigned>>();
+    return byteOffsetImpl<ConcurrentThread, std::optional<unsigned>>();
 }
 
 inline RefPtr<ArrayBufferView> JSArrayBufferView::toWrapped(VM& vm, JSValue value)

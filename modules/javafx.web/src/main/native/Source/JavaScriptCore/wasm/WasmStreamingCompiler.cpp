@@ -94,14 +94,14 @@ bool StreamingCompiler::didReceiveFunctionData(unsigned functionIndex, const Was
 
 void StreamingCompiler::didCompileFunction(StreamingPlan& plan)
 {
-    auto locker = holdLock(m_lock);
+    Locker locker { m_lock };
     ASSERT(m_threadedCompilationStarted);
     if (plan.failed())
         m_plan->didFailInStreaming(plan.errorMessage());
     m_remainingCompilationRequests--;
     if (!m_remainingCompilationRequests)
         m_plan->didCompileFunctionInStreaming();
-    completeIfNecessary(locker);
+    completeIfNecessary();
 }
 
 void StreamingCompiler::didFinishParsing()
@@ -115,18 +115,18 @@ void StreamingCompiler::didFinishParsing()
     }
 }
 
-void StreamingCompiler::completeIfNecessary(const AbstractLocker& locker)
+void StreamingCompiler::completeIfNecessary()
 {
     if (m_eagerFailed)
         return;
 
     if (!m_remainingCompilationRequests && m_finalized) {
         m_plan->completeInStreaming();
-        didComplete(locker);
+        didComplete();
     }
 }
 
-void StreamingCompiler::didComplete(const AbstractLocker&)
+void StreamingCompiler::didComplete()
 {
 
     auto makeValidationResult = [](JSC::Wasm::LLIntPlan& plan) -> Module::ValidationResult {
@@ -191,16 +191,16 @@ void StreamingCompiler::finalize(JSGlobalObject* globalObject)
         return;
     }
     {
-        auto locker = holdLock(m_lock);
+        Locker locker { m_lock };
         m_finalized = true;
-        completeIfNecessary(locker);
+        completeIfNecessary();
     }
 }
 
 void StreamingCompiler::fail(JSGlobalObject* globalObject, JSValue error)
 {
     {
-        auto locker = holdLock(m_lock);
+        Locker locker { m_lock };
         ASSERT(!m_finalized);
         if (m_eagerFailed)
             return;
@@ -214,7 +214,7 @@ void StreamingCompiler::fail(JSGlobalObject* globalObject, JSValue error)
 void StreamingCompiler::cancel()
 {
     {
-        auto locker = holdLock(m_lock);
+        Locker locker { m_lock };
         ASSERT(!m_finalized);
         if (m_eagerFailed)
             return;

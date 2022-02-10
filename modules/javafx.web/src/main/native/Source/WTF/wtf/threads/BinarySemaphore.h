@@ -52,7 +52,7 @@ public:
     }
 
 private:
-    bool m_isSet { false };
+    bool m_isSet WTF_GUARDED_BY_LOCK(m_lock) { false };
     Lock m_lock;
     Condition m_condition;
 };

@@ -30,7 +30,7 @@
 
 #include "ColorConversion.h"
 #include "FELightingNEON.h"
-#include "ImageData.h"
+#include "PixelBuffer.h"
 #include <wtf/ParallelJobs.h>
 
 namespace WebCore {
@@ -404,13 +404,9 @@ bool FELighting::drawLighting(Uint8ClampedArray& pixels, int width, int height)
     data.widthDecreasedByOne = width - 1;
     data.heightDecreasedByOne = height - 1;
 
-    if (operatingColorSpace() == DestinationColorSpace::LinearSRGB) {
-        auto [r, g, b, a] = m_lightingColor.toColorTypeLossy<LinearSRGBA<float>>();
-        paintingData.initialLightingData.colorVector = FloatPoint3D(r, g, b);
-    } else {
-        auto [r, g, b, a] = m_lightingColor.toSRGBALossy<float>();
-        paintingData.initialLightingData.colorVector = FloatPoint3D(r, g, b);
-    }
+    auto [r, g, b, a] = m_lightingColor.toColorComponentsInColorSpace(operatingColorSpace());
+    paintingData.initialLightingData.colorVector = FloatPoint3D(r, g, b);
+
     m_lightSource->initPaintingData(*this, paintingData);
 
     // Top left.
@@ -479,22 +475,23 @@ void FELighting::platformApplySoftware()
 {
     FilterEffect* in = inputEffect(0);
 
-    auto* resultImage = createPremultipliedImageResult();
-    auto* resutPixelArray = resultImage ? resultImage->data() : nullptr;
-    if (!resutPixelArray)
+    auto& destinationPixelBuffer = createPremultipliedImageResult();
+    if (!destinationPixelBuffer)
         return;
+
+    auto& destinationPixelArray = destinationPixelBuffer->data();
 
     setIsAlphaImage(false);
 
-    IntRect effectDrawingRect = requestedRegionOfInputImageData(in->absolutePaintRect());
-    in->copyPremultipliedResult(*resutPixelArray, effectDrawingRect, operatingColorSpace());
+    IntRect effectDrawingRect = requestedRegionOfInputPixelBuffer(in->absolutePaintRect());
+    in->copyPremultipliedResult(destinationPixelArray, effectDrawingRect, operatingColorSpace());
     // FIXME: support kernelUnitLengths other than (1,1). The issue here is that the W3
     // standard has no test case for them, and other browsers (like Firefox) has strange
     // output for various kernelUnitLengths, and I am not sure they are reliable.
     // Anyway, feConvolveMatrix should also use the implementation
 
     IntSize absolutePaintSize = absolutePaintRect().size();
-    drawLighting(*resutPixelArray, absolutePaintSize.width(), absolutePaintSize.height());
+    drawLighting(destinationPixelArray, absolutePaintSize.width(), absolutePaintSize.height());
 }
 
 } // namespace WebCore

@@ -22,6 +22,7 @@
 
 #include <initializer_list>
 #include <limits>
+#include <optional>
 #include <string.h>
 #include <type_traits>
 #include <utility>
@@ -33,6 +34,7 @@
 #include <wtf/MathExtras.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/NotFound.h>
+#include <wtf/Span.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/ValueCheck.h>
 #include <wtf/VectorTraits.h>
@@ -611,7 +613,9 @@ private:
     friend class JSC::LLIntOffsetsExtractor;
 
 public:
+    // FIXME: Remove uses of ValueType and standardize on value_type, which is required for std::span.
     typedef T ValueType;
+    typedef T value_type;
 
     typedef T* iterator;
     typedef const T* const_iterator;
@@ -639,6 +643,15 @@ public:
 
         if (begin())
             TypeOperations::uninitializedFill(begin(), end(), val);
+    }
+
+    Vector(const T* data, size_t dataSize)
+        : Base(dataSize, dataSize)
+    {
+        asanSetInitialBufferSizeTo(dataSize);
+
+        if (begin())
+            TypeOperations::uninitializedCopy(data, data + dataSize, begin());
     }
 
     Vector(std::initializer_list<T> initializerList)
@@ -707,21 +720,9 @@ public:
             OverflowHandler::overflowed();
         return Base::buffer()[i];
     }
-    T& at(Checked<size_t> i)
-    {
-        RELEASE_ASSERT(i < size());
-        return Base::buffer()[i];
-    }
-    const T& at(Checked<size_t> i) const
-    {
-        RELEASE_ASSERT(i < size());
-        return Base::buffer()[i];
-    }
 
     T& operator[](size_t i) { return at(i); }
     const T& operator[](size_t i) const { return at(i); }
-    T& operator[](Checked<size_t> i) { return at(i); }
-    const T& operator[](Checked<size_t> i) const { return at(i); }
 
     T* data() { return Base::buffer(); }
     const T* data() const { return Base::buffer(); }
@@ -784,8 +785,10 @@ public:
 
     template<typename U> ALWAYS_INLINE void append(const U* u, size_t size) { append<FailureAction::Crash>(u, size); }
     template<typename U> ALWAYS_INLINE bool tryAppend(const U* u, size_t size) { return append<FailureAction::Report>(u, size); }
-    template<typename U, size_t otherCapacity> void appendVector(const Vector<U, otherCapacity>&);
-    template<typename U, size_t otherCapacity> void appendVector(Vector<U, otherCapacity>&&);
+    template<typename U> ALWAYS_INLINE void append(Span<const U> span) { append(span.data(), span.size()); }
+    template<typename U> ALWAYS_INLINE void uncheckedAppend(Span<const U> span) { uncheckedAppend<FailureAction::Crash>(span.data(), span.size()); }
+    template<typename U, size_t otherCapacity, typename OtherOverflowHandler, size_t otherMinCapacity, typename OtherMalloc> void appendVector(const Vector<U, otherCapacity, OtherOverflowHandler, otherMinCapacity, OtherMalloc>&);
+    template<typename U, size_t otherCapacity, typename OtherOverflowHandler, size_t otherMinCapacity, typename OtherMalloc> void appendVector(Vector<U, otherCapacity, OtherOverflowHandler, otherMinCapacity, OtherMalloc>&&);
 
     void insert(size_t position, ValueType&& value) { insert<ValueType>(position, std::forward<ValueType>(value)); }
     template<typename U> void insert(size_t position, const U*, size_t);
@@ -852,6 +855,7 @@ private:
 
     template<FailureAction, typename U> bool append(U&&);
     template<FailureAction, typename U> bool append(const U*, size_t);
+    template<FailureAction, typename U> bool uncheckedAppend(const U*, size_t);
 
     template<size_t position, typename U, typename... Items>
     void uncheckedInitialize(U&& item, Items&&... items)
@@ -891,7 +895,7 @@ private:
 
 template<typename T, size_t inlineCapacity, typename OverflowHandler, size_t minCapacity, typename Malloc>
 Vector<T, inlineCapacity, OverflowHandler, minCapacity, Malloc>::Vector(const Vector& other)
-    : Base(other.capacity(), other.size())
+    : Base(other.size(), other.size())
 {
     asanSetInitialBufferSizeTo(other.size());
 
@@ -902,7 +906,7 @@ Vector<T, inlineCapacity, OverflowHandler, minCapacity, Malloc>::Vector(const Ve
 template<typename T, size_t inlineCapacity, typename OverflowHandler, size_t minCapacity, typename Malloc>
 template<size_t otherCapacity, typename otherOverflowBehaviour, size_t otherMinimumCapacity, typename OtherMalloc>
 Vector<T, inlineCapacity, OverflowHandler, minCapacity, Malloc>::Vector(const Vector<T, otherCapacity, otherOverflowBehaviour, otherMinimumCapacity, OtherMalloc>& other)
-    : Base(other.capacity(), other.size())
+    : Base(other.size(), other.size())
 {
     asanSetInitialBufferSizeTo(other.size());
 
@@ -1067,6 +1071,7 @@ NEVER_INLINE T* Vector<T, inlineCapacity, OverflowHandler, minCapacity, Malloc>:
             if (UNLIKELY(!success))
                 return nullptr;
         }
+        UNUSED_PARAM(success);
         return ptr;
     }
     size_t index = ptr - begin();
@@ -1075,6 +1080,7 @@ NEVER_INLINE T* Vector<T, inlineCapacity, OverflowHandler, minCapacity, Malloc>:
         if (UNLIKELY(!success))
             return nullptr;
     }
+    UNUSED_PARAM(success);
     return begin() + index;
 }
 
@@ -1088,6 +1094,7 @@ inline U* Vector<T, inlineCapacity, OverflowHandler, minCapacity, Malloc>::expan
         if (UNLIKELY(!success))
             return nullptr;
     }
+    UNUSED_PARAM(success);
     return ptr;
 }
 
@@ -1199,6 +1206,7 @@ bool Vector<T, inlineCapacity, OverflowHandler, minCapacity, Malloc>::reserveCap
             return false;
         }
     }
+    UNUSED_PARAM(success);
     ASSERT(begin());
 
     asanSetInitialBufferSizeTo(size());
@@ -1256,6 +1264,9 @@ template<FailureAction action, typename U>
 ALWAYS_INLINE bool Vector<T, inlineCapacity, OverflowHandler, minCapacity, Malloc>::append(const U* data, size_t dataSize)
 {
     static_assert(action == FailureAction::Crash || action == FailureAction::Report);
+    if (!dataSize)
+        return true;
+
     size_t newSize = m_size + dataSize;
     if (newSize > capacity()) {
         data = expandCapacity<action>(newSize, data);
@@ -1271,6 +1282,24 @@ ALWAYS_INLINE bool Vector<T, inlineCapacity, OverflowHandler, minCapacity, Mallo
         else
             return false;
     }
+    asanBufferSizeWillChangeTo(newSize);
+    T* dest = end();
+    VectorCopier<std::is_trivial<T>::value, U>::uninitializedCopy(data, std::addressof(data[dataSize]), dest);
+    m_size = newSize;
+    return true;
+}
+
+template<typename T, size_t inlineCapacity, typename OverflowHandler, size_t minCapacity, typename Malloc>
+template<FailureAction action, typename U>
+ALWAYS_INLINE bool Vector<T, inlineCapacity, OverflowHandler, minCapacity, Malloc>::uncheckedAppend(const U* data, size_t dataSize)
+{
+    static_assert(action == FailureAction::Crash || action == FailureAction::Report);
+    if (!dataSize)
+        return true;
+
+    ASSERT(size() < capacity());
+
+    size_t newSize = m_size + dataSize;
     asanBufferSizeWillChangeTo(newSize);
     T* dest = end();
     VectorCopier<std::is_trivial<T>::value, U>::uninitializedCopy(data, std::addressof(data[dataSize]), dest);
@@ -1339,6 +1368,7 @@ bool Vector<T, inlineCapacity, OverflowHandler, minCapacity, Malloc>::constructA
         if (UNLIKELY(!success))
             return false;
     }
+    UNUSED_PARAM(success);
     ASSERT(begin());
 
     asanBufferSizeWillChangeTo(m_size + 1);
@@ -1375,15 +1405,15 @@ ALWAYS_INLINE void Vector<T, inlineCapacity, OverflowHandler, minCapacity, Mallo
 }
 
 template<typename T, size_t inlineCapacity, typename OverflowHandler, size_t minCapacity, typename Malloc>
-template<typename U, size_t otherCapacity>
-inline void Vector<T, inlineCapacity, OverflowHandler, minCapacity, Malloc>::appendVector(const Vector<U, otherCapacity>& val)
+template<typename U, size_t otherCapacity, typename OtherOverflowHandler, size_t otherMinCapacity, typename OtherMalloc>
+inline void Vector<T, inlineCapacity, OverflowHandler, minCapacity, Malloc>::appendVector(const Vector<U, otherCapacity, OtherOverflowHandler, otherMinCapacity, OtherMalloc>& val)
 {
     append(val.begin(), val.size());
 }
 
 template<typename T, size_t inlineCapacity, typename OverflowHandler, size_t minCapacity, typename Malloc>
-template<typename U, size_t otherCapacity>
-inline void Vector<T, inlineCapacity, OverflowHandler, minCapacity, Malloc>::appendVector(Vector<U, otherCapacity>&& val)
+template<typename U, size_t otherCapacity, typename OtherOverflowHandler, size_t otherMinCapacity, typename OtherMalloc>
+inline void Vector<T, inlineCapacity, OverflowHandler, minCapacity, Malloc>::appendVector(Vector<U, otherCapacity, OtherOverflowHandler, otherMinCapacity, OtherMalloc>&& val)
 {
     size_t newSize = m_size + val.size();
     if (newSize > capacity())
@@ -1688,10 +1718,10 @@ struct CompactMapTraits {
 };
 
 template<typename T>
-struct CompactMapTraits<Optional<T>> {
+struct CompactMapTraits<std::optional<T>> {
     using ItemType = T;
-    static bool hasValue(const Optional<T>& returnValue) { return !!returnValue; }
-    static ItemType extractValue(Optional<T>&& returnValue) { return WTFMove(*returnValue); }
+    static bool hasValue(const std::optional<T>& returnValue) { return !!returnValue; }
+    static ItemType extractValue(std::optional<T>&& returnValue) { return WTFMove(*returnValue); }
 };
 
 template<typename T>
@@ -1759,7 +1789,9 @@ inline auto copyToVectorSpecialization(const Collection& collection) -> Destinat
 template<typename DestinationItemType, typename Collection>
 inline auto copyToVectorOf(const Collection& collection) -> Vector<DestinationItemType>
 {
-    return WTF::map(collection, [] (const auto& v) -> DestinationItemType { return v; });
+    return WTF::map(collection, [] (auto&& v) -> DestinationItemType {
+        return v;
+    });
 }
 
 template<typename Collection>

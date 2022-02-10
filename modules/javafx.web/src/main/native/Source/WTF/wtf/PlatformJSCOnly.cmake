@@ -11,6 +11,7 @@ if (WIN32)
         win/DbgHelperWin.cpp
         win/FileSystemWin.cpp
         win/LanguageWin.cpp
+        win/LoggingWin.cpp
         win/MainThreadWin.cpp
         win/OSAllocatorWin.cpp
         win/PathWalker.cpp
@@ -37,6 +38,7 @@ else ()
         text/unix/TextBreakIteratorInternalICUUnix.cpp
 
         unix/LanguageUnix.cpp
+        unix/LoggingUnix.cpp
     )
     if (WTF_OS_FUCHSIA)
         list(APPEND WTF_SOURCES
@@ -44,7 +46,7 @@ else ()
         )
     else ()
         list(APPEND WTF_SOURCES
-            unix/CPUTimeUnix.cpp
+            posix/CPUTimePOSIX.cpp
         )
     endif ()
 
@@ -84,6 +86,9 @@ elseif (APPLE)
         VERBATIM)
     list(APPEND WTF_SOURCES
         cocoa/MemoryFootprintCocoa.cpp
+
+        generic/MemoryPressureHandlerGeneric.cpp
+
         ${WTF_DERIVED_SOURCES_DIR}/mach_excServer.c
         ${WTF_DERIVED_SOURCES_DIR}/mach_excUser.c
     )

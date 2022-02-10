@@ -28,6 +28,7 @@
 
 #include "JSDOMPromise.h"
 #include "JSFetchResponse.h"
+#include "Logging.h"
 #include <wtf/IsoMallocInlines.h>
 
 #if ENABLE(SERVICE_WORKER)
@@ -54,13 +55,15 @@ FetchEvent::FetchEvent(const AtomString& type, Init&& initializer, IsTrusted isT
 
 FetchEvent::~FetchEvent()
 {
-    if (auto callback = WTFMove(m_onResponse))
-        callback(makeUnexpected(ResourceError { errorDomainWebKitServiceWorker, 0, m_request->url(), "Fetch event is destroyed."_s, ResourceError::Type::Cancellation }));
+    if (auto callback = WTFMove(m_onResponse)) {
+        RELEASE_LOG_ERROR_IF(m_respondWithEntered, ServiceWorker, "Fetch event is destroyed without a response, respondWithEntered=%d, waitToRespond=%d, respondWithError=%d, respondPromise=%d", m_respondWithEntered, m_waitToRespond, m_respondWithError, !!m_respondPromise);
+        callback(makeUnexpected(std::optional<ResourceError> { }));
+    }
 }
 
-ResourceError FetchEvent::createResponseError(const URL& url, const String& errorMessage)
+ResourceError FetchEvent::createResponseError(const URL& url, const String& errorMessage, ResourceError::IsSanitized isSanitized)
 {
-    return ResourceError { errorDomainWebKitServiceWorker, 0, url, makeString("FetchEvent.respondWith received an error: ", errorMessage), ResourceError::Type::General };
+    return ResourceError { errorDomainWebKitServiceWorker, 0, url, makeString("FetchEvent.respondWith received an error: ", errorMessage), ResourceError::Type::General, isSanitized };
 
 }
 
@@ -86,7 +89,7 @@ ExceptionOr<void> FetchEvent::respondWith(Ref<DOMPromise>&& promise)
     m_waitToRespond = true;
 
     if (isRegistered == DOMPromise::IsCallbackRegistered::No)
-        respondWithError(createResponseError(m_request->url(), "FetchEvent unable to handle respondWith promise."_s));
+        respondWithError(createResponseError(m_request->url(), "FetchEvent unable to handle respondWith promise."_s, ResourceError::IsSanitized::Yes));
 
     return { };
 }
@@ -103,7 +106,7 @@ void FetchEvent::respondWithError(ResourceError&& error)
     processResponse(makeUnexpected(WTFMove(error)));
 }
 
-void FetchEvent::processResponse(Expected<Ref<FetchResponse>, ResourceError>&& result)
+void FetchEvent::processResponse(Expected<Ref<FetchResponse>, std::optional<ResourceError>>&& result)
 {
     m_respondPromise = nullptr;
     m_waitToRespond = false;
@@ -115,19 +118,19 @@ void FetchEvent::promiseIsSettled()
 {
     if (m_respondPromise->status() == DOMPromise::Status::Rejected) {
         auto reason = m_respondPromise->result().toWTFString(m_respondPromise->globalObject());
-        respondWithError(createResponseError(m_request->url(), reason));
+        respondWithError(createResponseError(m_request->url(), reason, ResourceError::IsSanitized::Yes));
         return;
     }
 
     ASSERT(m_respondPromise->status() == DOMPromise::Status::Fulfilled);
     auto response = JSFetchResponse::toWrapped(m_respondPromise->globalObject()->vm(), m_respondPromise->result());
     if (!response) {
-        respondWithError(createResponseError(m_request->url(), "Returned response is null."_s));
+        respondWithError(createResponseError(m_request->url(), "Returned response is null."_s, ResourceError::IsSanitized::Yes));
         return;
     }
 
     if (response->isDisturbedOrLocked()) {
-        respondWithError(createResponseError(m_request->url(), "Response is disturbed or locked."_s));
+        respondWithError(createResponseError(m_request->url(), "Response is disturbed or locked."_s, ResourceError::IsSanitized::Yes));
         return;
     }
 

@@ -56,6 +56,8 @@ public:
     float runWidthSoFar() const { return m_runWidthSoFar; }
     unsigned currentCharacterIndex() const { return m_currentCharacterIndex; }
 
+    static bool characterCanUseSimplifiedTextMeasuring(UChar, bool whitespaceIsCollapsed);
+
 private:
     GlyphData glyphDataForCharacter(UChar32, bool mirror);
     template <typename TextIterator>
@@ -63,11 +65,19 @@ private:
 
     enum class TransformsType { None, Forced, NotForced };
     TransformsType shouldApplyFontTransforms(const GlyphBuffer&, unsigned lastGlyphCount, unsigned currentCharacterIndex) const;
-    float applyFontTransforms(GlyphBuffer&, unsigned lastGlyphCount, unsigned currentCharacterIndex, const Font&, bool force, CharactersTreatedAsSpace&);
-    void commitCurrentFontRange(GlyphBuffer&, unsigned lastGlyphCount, unsigned currentCharacterIndex, const Font&, const Font& primaryFont, UChar32 character, float widthOfCurrentFontRange, CharactersTreatedAsSpace&);
+    struct ApplyFontTransformsResult {
+        float additionalAdvance;
+        GlyphBufferAdvance initialAdvance;
+    };
+    ApplyFontTransformsResult applyFontTransforms(GlyphBuffer&, unsigned lastGlyphCount, const Font&, CharactersTreatedAsSpace&);
+    void commitCurrentFontRange(GlyphBuffer&, unsigned& lastGlyphCount, unsigned currentCharacterIndex, const Font*&, const Font& newFont, const Font& primaryFont, UChar32 character, float& widthOfCurrentFontRange, float nextCharacterWidth, CharactersTreatedAsSpace&);
+    void applyInitialAdvance(GlyphBuffer&, GlyphBufferAdvance initialAdvance, unsigned lastGlyphCount);
 
     bool hasExtraSpacing() const;
     void applyExtraSpacingAfterShaping(GlyphBuffer&, unsigned characterStartIndex, unsigned glyphBufferStartIndex, unsigned characterDestinationIndex, float startingRunWidth);
+    void applyCSSVisibilityRules(GlyphBuffer&, unsigned glyphBufferStartIndex);
+    void adjustForSyntheticBold(GlyphBuffer&, unsigned index);
+
     struct AdditionalWidth {
         float left;
         float right;
@@ -81,7 +91,8 @@ private:
     const TextRun& m_run;
     HashSet<const Font*>* m_fallbackFonts { nullptr };
 
-    Optional<unsigned> m_lastCharacterIndex;
+    std::optional<unsigned> m_lastCharacterIndex;
+    GlyphBufferAdvance m_leftoverInitialAdvance { makeGlyphBufferAdvance() };
     unsigned m_currentCharacterIndex { 0 };
     float m_leftoverJustificationWidth { 0 };
     float m_runWidthSoFar { 0 };

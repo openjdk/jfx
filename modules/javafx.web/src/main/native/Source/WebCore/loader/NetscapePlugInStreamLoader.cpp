@@ -60,7 +60,7 @@ NetscapePlugInStreamLoader::NetscapePlugInStreamLoader(Frame& frame, NetscapePlu
     , m_client(makeWeakPtr(client))
 {
 #if ENABLE(CONTENT_EXTENSIONS)
-    m_resourceType = ContentExtensions::ResourceType::PlugInStream;
+    m_resourceType = { ContentExtensions::ResourceType::Other };
 #endif
 }
 
@@ -141,7 +141,7 @@ void NetscapePlugInStreamLoader::didReceiveResponse(const ResourceResponse& resp
     });
 }
 
-void NetscapePlugInStreamLoader::didReceiveData(const char* data, unsigned length, long long encodedDataLength, DataPayloadType dataPayloadType)
+void NetscapePlugInStreamLoader::didReceiveData(const uint8_t* data, unsigned length, long long encodedDataLength, DataPayloadType dataPayloadType)
 {
     didReceiveDataOrBuffer(data, length, nullptr, encodedDataLength, dataPayloadType);
 }
@@ -151,12 +151,18 @@ void NetscapePlugInStreamLoader::didReceiveBuffer(Ref<SharedBuffer>&& buffer, lo
     didReceiveDataOrBuffer(nullptr, 0, WTFMove(buffer), encodedDataLength, dataPayloadType);
 }
 
-void NetscapePlugInStreamLoader::didReceiveDataOrBuffer(const char* data, int length, RefPtr<SharedBuffer>&& buffer, long long encodedDataLength, DataPayloadType dataPayloadType)
+void NetscapePlugInStreamLoader::didReceiveDataOrBuffer(const uint8_t* data, int length, RefPtr<SharedBuffer>&& buffer, long long encodedDataLength, DataPayloadType dataPayloadType)
 {
     Ref<NetscapePlugInStreamLoader> protectedThis(*this);
 
-    if (m_client)
-        m_client->didReceiveData(this, buffer ? buffer->data() : data, buffer ? buffer->size() : length);
+    if (m_client) {
+        if (buffer) {
+            buffer->forEachSegment([&](auto& segment) {
+                m_client->didReceiveData(this, segment.data(), segment.size());
+            });
+        } else
+            m_client->didReceiveData(this, data, length);
+    }
 
     ResourceLoader::didReceiveDataOrBuffer(data, length, WTFMove(buffer), encodedDataLength, dataPayloadType);
 }

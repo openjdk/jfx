@@ -59,6 +59,7 @@ class Animation;
 class GraphicsContext;
 class GraphicsLayerFactory;
 class Image;
+class Model;
 class TiledBacking;
 class TimingFunction;
 class TransformationMatrix;
@@ -339,7 +340,7 @@ public:
 
     // The position of the layer (the location of its top-left corner in its parent)
     const FloatPoint& position() const { return m_position; }
-    virtual void setPosition(const FloatPoint& p) { m_approximatePosition = WTF::nullopt; m_position = p; }
+    virtual void setPosition(const FloatPoint& p) { m_approximatePosition = std::nullopt; m_position = p; }
 
     // approximatePosition, if set, overrides position() and is used during coverage rect computation.
     FloatPoint approximatePosition() const { return m_approximatePosition ? m_approximatePosition.value() : m_position; }
@@ -394,8 +395,13 @@ public:
     virtual void setUsesDisplayListDrawing(bool b) { m_usesDisplayListDrawing = b; }
 
 #if HAVE(CORE_ANIMATION_SEPARATED_LAYERS)
-    bool isSeparated() const { return m_separated; }
-    virtual void setSeparated(bool b) { m_separated = b; }
+    bool isIsSeparated() const { return m_isSeparated; }
+    virtual void setIsSeparated(bool b) { m_isSeparated = b; }
+
+#if HAVE(CORE_ANIMATION_SEPARATED_PORTALS)
+    bool isSeparatedPortal() const { return m_isSeparatedPortal; }
+    virtual void setIsSeparatedPortal(bool b) { m_isSeparatedPortal = b; }
+#endif
 #endif
 
     bool needsBackdrop() const { return !m_backdropFilters.isEmpty(); }
@@ -509,12 +515,17 @@ public:
         Media,
         Canvas,
         BackgroundColor,
-        Plugin
+        Plugin,
+        Model
     };
 
     // Pass an invalid color to remove the contents layer.
     virtual void setContentsToSolidColor(const Color&) { }
     virtual void setContentsToPlatformLayer(PlatformLayer*, ContentsLayerPurpose) { }
+#if ENABLE(MODEL_ELEMENT)
+    virtual void setContentsToModel(RefPtr<Model>&&) { }
+    virtual PlatformLayerID contentsLayerIDForModel() const { return 0; }
+#endif
     virtual bool usesContentsLayer() const { return false; }
 
     // Callback from the underlying graphics system to draw layer contents.
@@ -529,7 +540,7 @@ public:
     virtual void setContentsOrientation(CompositingCoordinatesOrientation orientation) { m_contentsOrientation = orientation; }
     CompositingCoordinatesOrientation contentsOrientation() const { return m_contentsOrientation; }
 
-    void dumpLayer(WTF::TextStream&, LayerTreeAsTextBehavior = LayerTreeAsTextBehaviorNormal) const;
+    void dumpLayer(WTF::TextStream&, OptionSet<LayerTreeAsTextOptions> = { }) const;
 
     virtual void setShowDebugBorder(bool show) { m_showDebugBorder = show; }
     bool isShowingDebugBorder() const { return m_showDebugBorder; }
@@ -557,9 +568,6 @@ public:
     // z-position is the z-equivalent of position(). It's only used for debugging purposes.
     virtual float zPosition() const { return m_zPosition; }
     WEBCORE_EXPORT virtual void setZPosition(float);
-
-    WEBCORE_EXPORT virtual void distributeOpacity(float);
-    WEBCORE_EXPORT virtual float accumulatedOpacity() const;
 
     virtual FloatSize pixelAlignmentOffset() const { return FloatSize(); }
 
@@ -592,10 +600,12 @@ public:
 
     // Return a string with a human readable form of the layer tree, If debug is true
     // pointers for the layers and timing data will be included in the returned string.
-    WEBCORE_EXPORT String layerTreeAsText(LayerTreeAsTextBehavior = LayerTreeAsTextBehaviorNormal) const;
+    WEBCORE_EXPORT String layerTreeAsText(OptionSet<LayerTreeAsTextOptions> = { }) const;
 
     // For testing.
     virtual String displayListAsText(DisplayList::AsTextFlags) const { return String(); }
+
+    virtual String platformLayerTreeAsText(OptionSet<PlatformLayerTreeAsTextFlags>) const { return String(); }
 
     virtual void setIsTrackingDisplayListReplay(bool isTracking) { m_isTrackingDisplayListReplay = isTracking; }
     virtual bool isTrackingDisplayListReplay() const { return m_isTrackingDisplayListReplay; }
@@ -625,8 +635,8 @@ public:
     virtual bool isGraphicsLayerTextureMapper() const { return false; }
     virtual bool isCoordinatedGraphicsLayer() const { return false; }
 
-    const Optional<FloatRect>& animationExtent() const { return m_animationExtent; }
-    void setAnimationExtent(Optional<FloatRect> animationExtent) { m_animationExtent = animationExtent; }
+    const std::optional<FloatRect>& animationExtent() const { return m_animationExtent; }
+    void setAnimationExtent(std::optional<FloatRect> animationExtent) { m_animationExtent = animationExtent; }
 
     static void traverse(GraphicsLayer&, const WTF::Function<void (GraphicsLayer&)>&);
 
@@ -634,7 +644,7 @@ protected:
     WEBCORE_EXPORT explicit GraphicsLayer(Type, GraphicsLayerClient&);
 
     // Should be called from derived class destructors. Should call willBeDestroyed() on super.
-    WEBCORE_EXPORT virtual void willBeDestroyed();
+    WEBCORE_EXPORT void willBeDestroyed();
     bool beingDestroyed() const { return m_beingDestroyed; }
 
     // This method is used by platform GraphicsLayer classes to clear the filters
@@ -655,14 +665,22 @@ protected:
 
     virtual bool shouldRepaintOnSizeChange() const { return drawsContent(); }
 
-    virtual void setOpacityInternal(float) { }
+    void removeFromParentInternal();
 
     // The layer being replicated.
     GraphicsLayer* replicatedLayer() const { return m_replicatedLayer; }
     virtual void setReplicatedLayer(GraphicsLayer* layer) { m_replicatedLayer = layer; }
 
-    void dumpProperties(WTF::TextStream&, LayerTreeAsTextBehavior) const;
-    virtual void dumpAdditionalProperties(WTF::TextStream&, LayerTreeAsTextBehavior) const { }
+#if HAVE(CORE_ANIMATION_SEPARATED_LAYERS)
+#if HAVE(CORE_ANIMATION_SEPARATED_PORTALS)
+    bool isDescendentOfSeparatedPortal() const { return m_isDescendentOfSeparatedPortal; }
+    virtual void setIsDescendentOfSeparatedPortal(bool b) { m_isDescendentOfSeparatedPortal = b; }
+#endif
+#endif
+
+
+    void dumpProperties(WTF::TextStream&, OptionSet<LayerTreeAsTextOptions>) const;
+    virtual void dumpAdditionalProperties(WTF::TextStream&, OptionSet<LayerTreeAsTextOptions>) const { }
 
     WEBCORE_EXPORT virtual void getDebugBorderInfo(Color&, float& width) const;
 
@@ -679,7 +697,7 @@ protected:
     FloatPoint m_position;
 
     // If set, overrides m_position. Only used for coverage computation.
-    Optional<FloatPoint> m_approximatePosition;
+    std::optional<FloatPoint> m_approximatePosition;
 
     FloatPoint3D m_anchorPoint { 0.5f, 0.5f, 0 };
     FloatSize m_size;
@@ -727,7 +745,11 @@ protected:
     bool m_userInteractionEnabled : 1;
     bool m_canDetachBackingStore : 1;
 #if HAVE(CORE_ANIMATION_SEPARATED_LAYERS)
-    bool m_separated : 1;
+    bool m_isSeparated : 1;
+#if HAVE(CORE_ANIMATION_SEPARATED_PORTALS)
+    bool m_isSeparatedPortal : 1;
+    bool m_isDescendentOfSeparatedPortal : 1;
+#endif
 #endif
 
     int m_repaintCount { 0 };
@@ -748,7 +770,7 @@ protected:
     FloatSize m_contentsTilePhase;
     FloatSize m_contentsTileSize;
     FloatRoundedRect m_backdropFiltersRect;
-    Optional<FloatRect> m_animationExtent;
+    std::optional<FloatRect> m_animationExtent;
 
     EventRegion m_eventRegion;
 #if USE(CA)

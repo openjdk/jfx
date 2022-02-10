@@ -48,7 +48,7 @@ public:
                                   const ResourceRequest& request,
                                   ResourceError& error,
                                   ResourceResponse& response,
-                                  Vector<char>& data);
+                                  Vector<uint8_t>& data);
     ~URLLoader();
 
     class Target {
@@ -57,7 +57,7 @@ public:
                                  long totalBytesToBeSent) = 0;
         virtual bool willSendRequest(const ResourceResponse& response) = 0;
         virtual void didReceiveResponse(const ResourceResponse& response) = 0;
-        virtual void didReceiveData(const char* data, int length) = 0;
+        virtual void didReceiveData(const uint8_t* data, int length) = 0;
         virtual void didFinishLoading() = 0;
         virtual void didFail(const ResourceError& error) = 0;
         virtual ~Target();
@@ -79,7 +79,7 @@ private:
         void didSendData(long totalBytesSent, long totalBytesToBeSent) final;
         bool willSendRequest(const ResourceResponse& response) final;
         void didReceiveResponse(const ResourceResponse& response) final;
-        void didReceiveData(const char* data, int length) final;
+        void didReceiveData(const uint8_t* data, int length) final;
         void didFinishLoading() final;
         void didFail(const ResourceError& error) final;
     private:
@@ -91,19 +91,19 @@ private:
         SynchronousTarget(const ResourceRequest& request,
                           ResourceError& error,
                           ResourceResponse& response,
-                          Vector<char>& data);
+                          Vector<uint8_t>& data);
 
         void didSendData(long totalBytesSent, long totalBytesToBeSent) final;
         bool willSendRequest(const ResourceResponse& response) final;
         void didReceiveResponse(const ResourceResponse& response) final;
-        void didReceiveData(const char* data, int length) final;
+        void didReceiveData(const uint8_t* data, int length) final;
         void didFinishLoading() final;
         void didFail(const ResourceError& error) final;
     private:
         const ResourceRequest& m_request;
         ResourceError& m_error;
         ResourceResponse& m_response;
-        Vector<char>& m_data;
+        Vector<uint8_t>& m_data;
     };
 
     JGObject m_ref;

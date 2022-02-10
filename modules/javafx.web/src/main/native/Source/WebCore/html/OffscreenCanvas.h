@@ -112,6 +112,8 @@ public:
         Webgl2
     };
 
+    static bool enabledForContext(ScriptExecutionContext&);
+
     static Ref<OffscreenCanvas> create(ScriptExecutionContext&, unsigned width, unsigned height);
     static Ref<OffscreenCanvas> create(ScriptExecutionContext&, std::unique_ptr<DetachedOffscreenCanvas>&&);
     static Ref<OffscreenCanvas> create(ScriptExecutionContext&, HTMLCanvasElement&);
@@ -124,11 +126,11 @@ public:
 
     CanvasRenderingContext* renderingContext() const final { return m_context.get(); }
 
-    ExceptionOr<Optional<OffscreenRenderingContext>> getContext(JSC::JSGlobalObject&, RenderingContextType, Vector<JSC::Strong<JSC::Unknown>>&& arguments);
+    ExceptionOr<std::optional<OffscreenRenderingContext>> getContext(JSC::JSGlobalObject&, RenderingContextType, Vector<JSC::Strong<JSC::Unknown>>&& arguments);
     ExceptionOr<RefPtr<ImageBitmap>> transferToImageBitmap();
     void convertToBlob(ImageEncodeOptions&&, Ref<DeferredPromise>&&);
 
-    void didDraw(const FloatRect&) final;
+    void didDraw(const std::optional<FloatRect>&) final;
 
     Image* copiedImage() const final;
     void clearCopiedImage() const final;

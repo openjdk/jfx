@@ -62,7 +62,7 @@ static inline void setAttributes(Element& element, Vector<Attribute>& attributes
     element.parserSetAttributes(attributes);
 }
 
-static inline void setAttributes(Element& element, AtomicHTMLToken& token, ParserContentPolicy parserContentPolicy)
+static inline void setAttributes(Element& element, AtomHTMLToken& token, ParserContentPolicy parserContentPolicy)
 {
     setAttributes(element, token.attributes(), parserContentPolicy);
 }
@@ -234,6 +234,7 @@ HTMLConstructionSite::HTMLConstructionSite(Document& document, ParserContentPoli
     , m_redirectAttachToFosterParent(false)
     , m_maximumDOMTreeDepth(maximumDOMTreeDepth)
     , m_inQuirksMode(document.inQuirksMode())
+    , m_whitespaceCache(document.whitespaceCache())
 {
     ASSERT(m_document.isHTMLDocument() || m_document.isXHTMLDocument());
 }
@@ -246,6 +247,7 @@ HTMLConstructionSite::HTMLConstructionSite(DocumentFragment& fragment, ParserCon
     , m_redirectAttachToFosterParent(false)
     , m_maximumDOMTreeDepth(maximumDOMTreeDepth)
     , m_inQuirksMode(fragment.document().inQuirksMode())
+    , m_whitespaceCache(fragment.document().whitespaceCache())
 {
     ASSERT(m_document.isHTMLDocument() || m_document.isXHTMLDocument());
 }
@@ -273,7 +275,7 @@ void HTMLConstructionSite::dispatchDocumentElementAvailableIfNeeded()
         frame->injectUserScripts(UserScriptInjectionTime::DocumentStart);
 }
 
-void HTMLConstructionSite::insertHTMLHtmlStartTagBeforeHTML(AtomicHTMLToken&& token)
+void HTMLConstructionSite::insertHTMLHtmlStartTagBeforeHTML(AtomHTMLToken&& token)
 {
     auto element = HTMLHtmlElement::create(m_document);
     setAttributes(element, token, m_parserContentPolicy);
@@ -285,7 +287,7 @@ void HTMLConstructionSite::insertHTMLHtmlStartTagBeforeHTML(AtomicHTMLToken&& to
     dispatchDocumentElementAvailableIfNeeded();
 }
 
-void HTMLConstructionSite::mergeAttributesFromTokenIntoElement(AtomicHTMLToken&& token, Element& element)
+void HTMLConstructionSite::mergeAttributesFromTokenIntoElement(AtomHTMLToken&& token, Element& element)
 {
     if (token.attributes().isEmpty())
         return;
@@ -296,7 +298,7 @@ void HTMLConstructionSite::mergeAttributesFromTokenIntoElement(AtomicHTMLToken&&
     }
 }
 
-void HTMLConstructionSite::insertHTMLHtmlStartTagInBody(AtomicHTMLToken&& token)
+void HTMLConstructionSite::insertHTMLHtmlStartTagInBody(AtomHTMLToken&& token)
 {
     // Fragments do not have a root HTML element, so any additional HTML elements
     // encountered during fragment parsing should be ignored.
@@ -306,7 +308,7 @@ void HTMLConstructionSite::insertHTMLHtmlStartTagInBody(AtomicHTMLToken&& token)
     mergeAttributesFromTokenIntoElement(WTFMove(token), m_openElements.htmlElement());
 }
 
-void HTMLConstructionSite::insertHTMLBodyStartTagInBody(AtomicHTMLToken&& token)
+void HTMLConstructionSite::insertHTMLBodyStartTagInBody(AtomHTMLToken&& token)
 {
     mergeAttributesFromTokenIntoElement(WTFMove(token), m_openElements.bodyElement());
 }
@@ -419,7 +421,7 @@ void HTMLConstructionSite::finishedParsing()
     m_document.finishedParsing();
 }
 
-void HTMLConstructionSite::insertDoctype(AtomicHTMLToken&& token)
+void HTMLConstructionSite::insertDoctype(AtomHTMLToken&& token)
 {
     ASSERT(token.type() == HTMLToken::DOCTYPE);
 
@@ -443,26 +445,26 @@ void HTMLConstructionSite::insertDoctype(AtomicHTMLToken&& token)
         setCompatibilityModeFromDoctype(token.name(), publicId, systemId);
 }
 
-void HTMLConstructionSite::insertComment(AtomicHTMLToken&& token)
+void HTMLConstructionSite::insertComment(AtomHTMLToken&& token)
 {
     ASSERT(token.type() == HTMLToken::Comment);
     attachLater(currentNode(), Comment::create(ownerDocumentForCurrentNode(), token.comment()));
 }
 
-void HTMLConstructionSite::insertCommentOnDocument(AtomicHTMLToken&& token)
+void HTMLConstructionSite::insertCommentOnDocument(AtomHTMLToken&& token)
 {
     ASSERT(token.type() == HTMLToken::Comment);
     attachLater(m_attachmentRoot, Comment::create(m_document, token.comment()));
 }
 
-void HTMLConstructionSite::insertCommentOnHTMLHtmlElement(AtomicHTMLToken&& token)
+void HTMLConstructionSite::insertCommentOnHTMLHtmlElement(AtomHTMLToken&& token)
 {
     ASSERT(token.type() == HTMLToken::Comment);
     ContainerNode& parent = m_openElements.rootNode();
     attachLater(parent, Comment::create(parent.document(), token.comment()));
 }
 
-void HTMLConstructionSite::insertHTMLHeadElement(AtomicHTMLToken&& token)
+void HTMLConstructionSite::insertHTMLHeadElement(AtomHTMLToken&& token)
 {
     ASSERT(!shouldFosterParent());
     m_head = HTMLStackItem::create(createHTMLElement(token), WTFMove(token));
@@ -470,7 +472,7 @@ void HTMLConstructionSite::insertHTMLHeadElement(AtomicHTMLToken&& token)
     m_openElements.pushHTMLHeadElement(*m_head);
 }
 
-void HTMLConstructionSite::insertHTMLBodyElement(AtomicHTMLToken&& token)
+void HTMLConstructionSite::insertHTMLBodyElement(AtomHTMLToken&& token)
 {
     ASSERT(!shouldFosterParent());
     auto body = createHTMLElement(token);
@@ -478,7 +480,7 @@ void HTMLConstructionSite::insertHTMLBodyElement(AtomicHTMLToken&& token)
     m_openElements.pushHTMLBodyElement(HTMLStackItem::create(WTFMove(body), WTFMove(token)));
 }
 
-void HTMLConstructionSite::insertHTMLFormElement(AtomicHTMLToken&& token, bool isDemoted)
+void HTMLConstructionSite::insertHTMLFormElement(AtomHTMLToken&& token, bool isDemoted)
 {
     auto element = createHTMLElement(token);
     auto& formElement = downcast<HTMLFormElement>(element.get());
@@ -491,14 +493,14 @@ void HTMLConstructionSite::insertHTMLFormElement(AtomicHTMLToken&& token, bool i
     m_openElements.push(HTMLStackItem::create(formElement, WTFMove(token)));
 }
 
-void HTMLConstructionSite::insertHTMLElement(AtomicHTMLToken&& token)
+void HTMLConstructionSite::insertHTMLElement(AtomHTMLToken&& token)
 {
     auto element = createHTMLElement(token);
     attachLater(currentNode(), element.copyRef());
     m_openElements.push(HTMLStackItem::create(WTFMove(element), WTFMove(token)));
 }
 
-std::unique_ptr<CustomElementConstructionData> HTMLConstructionSite::insertHTMLElementOrFindCustomElementInterface(AtomicHTMLToken&& token)
+std::unique_ptr<CustomElementConstructionData> HTMLConstructionSite::insertHTMLElementOrFindCustomElementInterface(AtomHTMLToken&& token)
 {
     JSCustomElementInterface* elementInterface = nullptr;
     RefPtr<Element> element = createHTMLElementOrFindCustomElementInterface(token, &elementInterface);
@@ -517,7 +519,7 @@ void HTMLConstructionSite::insertCustomElement(Ref<Element>&& element, const Ato
     executeQueuedTasks();
 }
 
-void HTMLConstructionSite::insertSelfClosingHTMLElement(AtomicHTMLToken&& token)
+void HTMLConstructionSite::insertSelfClosingHTMLElement(AtomHTMLToken&& token)
 {
     ASSERT(token.type() == HTMLToken::StartTag);
     // Normally HTMLElementStack is responsible for calling finishParsingChildren,
@@ -528,7 +530,7 @@ void HTMLConstructionSite::insertSelfClosingHTMLElement(AtomicHTMLToken&& token)
     // http://www.whatwg.org/specs/web-apps/current-work/multipage/tokenization.html#acknowledge-self-closing-flag
 }
 
-void HTMLConstructionSite::insertFormattingElement(AtomicHTMLToken&& token)
+void HTMLConstructionSite::insertFormattingElement(AtomHTMLToken&& token)
 {
     // http://www.whatwg.org/specs/web-apps/current-work/multipage/parsing.html#the-stack-of-open-elements
     // Possible active formatting elements include:
@@ -538,7 +540,7 @@ void HTMLConstructionSite::insertFormattingElement(AtomicHTMLToken&& token)
     m_activeFormattingElements.append(currentStackItem());
 }
 
-void HTMLConstructionSite::insertScriptElement(AtomicHTMLToken&& token)
+void HTMLConstructionSite::insertScriptElement(AtomHTMLToken&& token)
 {
     // http://www.whatwg.org/specs/web-apps/current-work/multipage/scripting-1.html#already-started
     // http://html5.org/specs/dom-parsing.html#dom-range-createcontextualfragment
@@ -554,7 +556,7 @@ void HTMLConstructionSite::insertScriptElement(AtomicHTMLToken&& token)
     m_openElements.push(HTMLStackItem::create(WTFMove(element), WTFMove(token)));
 }
 
-void HTMLConstructionSite::insertForeignElement(AtomicHTMLToken&& token, const AtomString& namespaceURI)
+void HTMLConstructionSite::insertForeignElement(AtomHTMLToken&& token, const AtomString& namespaceURI)
 {
     ASSERT(token.type() == HTMLToken::StartTag);
     notImplemented(); // parseError when xmlns or xmlns:xlink are wrong.
@@ -574,10 +576,6 @@ void HTMLConstructionSite::insertTextNode(const String& characters, WhitespaceMo
     if (shouldFosterParent())
         findFosterSite(task);
 
-    // Strings composed entirely of whitespace are likely to be repeated.
-    // Turn them into AtomString so we share a single string for each.
-    bool shouldUseAtomString = whitespaceMode == AllWhitespace || (whitespaceMode == WhitespaceUnknown && isAllWhitespace(characters));
-
     unsigned currentPosition = 0;
     unsigned lengthLimit = shouldUseLengthLimit(*task.parent) ? Text::defaultLengthLimit : std::numeric_limits<unsigned>::max();
 
@@ -592,11 +590,13 @@ void HTMLConstructionSite::insertTextNode(const String& characters, WhitespaceMo
     }
 
     while (currentPosition < characters.length()) {
-        auto textNode = Text::createWithLengthLimit(task.parent->document(), shouldUseAtomString ? AtomString(characters).string() : characters, currentPosition, lengthLimit);
+        AtomString charactersAtom = m_whitespaceCache.lookup(characters, whitespaceMode);
+        auto textNode = Text::createWithLengthLimit(task.parent->document(), charactersAtom.isNull() ? characters : charactersAtom.string(), currentPosition, lengthLimit);
         // If we have a whole string of unbreakable characters the above could lead to an infinite loop. Exceeding the length limit is the lesser evil.
         if (!textNode->length()) {
             String substring = characters.substring(currentPosition);
-            textNode = Text::create(task.parent->document(), shouldUseAtomString ? AtomString(substring).string() : substring);
+            AtomString substringAtom = m_whitespaceCache.lookup(substring, whitespaceMode);
+            textNode = Text::create(task.parent->document(), substringAtom.isNull() ? substring : substringAtom.string());
         }
 
         currentPosition += textNode->length();
@@ -635,7 +635,7 @@ void HTMLConstructionSite::takeAllChildrenAndReparent(HTMLStackItem& newParent, 
     m_taskQueue.append(WTFMove(task));
 }
 
-Ref<Element> HTMLConstructionSite::createElement(AtomicHTMLToken& token, const AtomString& namespaceURI)
+Ref<Element> HTMLConstructionSite::createElement(AtomHTMLToken& token, const AtomString& namespaceURI)
 {
     QualifiedName tagName(nullAtom(), token.name(), namespaceURI);
     auto element = ownerDocumentForCurrentNode().createElement(tagName, true);
@@ -663,7 +663,7 @@ static inline JSCustomElementInterface* findCustomElementInterface(Document& own
     return registry->findInterface(localName);
 }
 
-RefPtr<Element> HTMLConstructionSite::createHTMLElementOrFindCustomElementInterface(AtomicHTMLToken& token, JSCustomElementInterface** customElementInterface)
+RefPtr<Element> HTMLConstructionSite::createHTMLElementOrFindCustomElementInterface(AtomHTMLToken& token, JSCustomElementInterface** customElementInterface)
 {
     auto& localName = token.name();
     // FIXME: This can't use HTMLConstructionSite::createElement because we
@@ -695,7 +695,9 @@ RefPtr<Element> HTMLConstructionSite::createHTMLElementOrFindCustomElementInterf
 
     // FIXME: This is a hack to connect images to pictures before the image has
     // been inserted into the document. It can be removed once asynchronous image
-    // loading is working.
+    // loading is working. When this hack is removed, the assertion just before
+    // the setPictureElement() call in HTMLImageElement::insertedIntoAncestor
+    // can be simplified.
     if (is<HTMLPictureElement>(currentNode()) && is<HTMLImageElement>(*element))
         downcast<HTMLImageElement>(*element).setPictureElement(&downcast<HTMLPictureElement>(currentNode()));
 
@@ -704,7 +706,7 @@ RefPtr<Element> HTMLConstructionSite::createHTMLElementOrFindCustomElementInterf
     return element;
 }
 
-Ref<Element> HTMLConstructionSite::createHTMLElement(AtomicHTMLToken& token)
+Ref<Element> HTMLConstructionSite::createHTMLElement(AtomHTMLToken& token)
 {
     RefPtr<Element> element = createHTMLElementOrFindCustomElementInterface(token, nullptr);
     ASSERT(element);
@@ -714,23 +716,23 @@ Ref<Element> HTMLConstructionSite::createHTMLElement(AtomicHTMLToken& token)
 Ref<HTMLStackItem> HTMLConstructionSite::createElementFromSavedToken(HTMLStackItem& item)
 {
     // NOTE: Moving from item -> token -> item copies the Attribute vector twice!
-    AtomicHTMLToken fakeToken(HTMLToken::StartTag, item.localName(), Vector<Attribute>(item.attributes()));
+    AtomHTMLToken fakeToken(HTMLToken::StartTag, item.localName(), Vector<Attribute>(item.attributes()));
     ASSERT(item.namespaceURI() == HTMLNames::xhtmlNamespaceURI);
     ASSERT(isFormattingTag(item.localName()));
     return HTMLStackItem::create(createHTMLElement(fakeToken), WTFMove(fakeToken), item.namespaceURI());
 }
 
-Optional<unsigned> HTMLConstructionSite::indexOfFirstUnopenFormattingElement() const
+std::optional<unsigned> HTMLConstructionSite::indexOfFirstUnopenFormattingElement() const
 {
     if (m_activeFormattingElements.isEmpty())
-        return WTF::nullopt;
+        return std::nullopt;
     unsigned index = m_activeFormattingElements.size();
     do {
         --index;
         const auto& entry = m_activeFormattingElements.at(index);
         if (entry.isMarker() || m_openElements.contains(entry.element())) {
             unsigned firstUnopenElementIndex = index + 1;
-            return firstUnopenElementIndex < m_activeFormattingElements.size() ? firstUnopenElementIndex : Optional<unsigned>(WTF::nullopt);
+            return firstUnopenElementIndex < m_activeFormattingElements.size() ? firstUnopenElementIndex : std::optional<unsigned>(std::nullopt);
         }
     } while (index);
 
@@ -739,7 +741,7 @@ Optional<unsigned> HTMLConstructionSite::indexOfFirstUnopenFormattingElement() c
 
 void HTMLConstructionSite::reconstructTheActiveFormattingElements()
 {
-    Optional<unsigned> firstUnopenElementIndex = indexOfFirstUnopenFormattingElement();
+    std::optional<unsigned> firstUnopenElementIndex = indexOfFirstUnopenFormattingElement();
     if (!firstUnopenElementIndex)
         return;
 
@@ -807,6 +809,109 @@ void HTMLConstructionSite::fosterParent(Ref<Node>&& node)
     ASSERT(task.parent);
 
     m_taskQueue.append(WTFMove(task));
+}
+
+// Compute a 64 bit code that represents a whitespace-only string's contents.
+//
+// The code format is a sequence of four pairs of an 8 bit whitespace character
+// and an 8 bit count of that character. For example, 0x0A_02_20_08 represents
+// two newlines followed by eight space characters.
+//
+// Returns 0 if any non-whitespace characters are found.
+//
+// Returns -1 if the code would overflow due to finding more than four
+// whitespace character runs.
+template<WhitespaceMode whitespaceMode>
+uint64_t WhitespaceCache::codeForString(const String& string)
+{
+    ASSERT(whitespaceMode != NotAllWhitespace);
+    ASSERT(string.is8Bit());
+    ASSERT(!string.isEmpty());
+    ASSERT(string.length() <= maximumCachedStringLength);
+    static_assert(maximumCachedStringLength <= 0xFF, "Code format requires whitespace run length fit in one byte");
+
+    auto startOfRun = string.characters8();
+
+    if constexpr (whitespaceMode == WhitespaceUnknown) {
+        if (!isHTMLSpace(*startOfRun))
+            return 0;
+    }
+
+    LChar currentWhitespaceCharacter = *startOfRun;
+    auto character = startOfRun + 1;
+    auto end = startOfRun + string.length();
+
+    uint64_t code = 0;
+    int runsRemaining = 4;
+
+    for (;;) {
+        while (character != end && *character == currentWhitespaceCharacter)
+            ++character;
+
+        if constexpr (whitespaceMode == WhitespaceUnknown) {
+            if (character != end && !isHTMLSpace(*character))
+                return 0;
+        }
+
+        code <<= 16;
+        code |= (currentWhitespaceCharacter << 8);
+        code |= (character - startOfRun);
+
+        if (character == end)
+            return code;
+
+        if (!--runsRemaining)
+            return overflowWhitespaceCode;
+
+        startOfRun = character;
+        currentWhitespaceCharacter = *character;
+        ++character;
+
+        ASSERT(isHTMLSpace(currentWhitespaceCharacter));
+    }
+
+    return code;
+}
+
+AtomString WhitespaceCache::lookup(const String& string, WhitespaceMode whitespaceMode)
+{
+    if (whitespaceMode == NotAllWhitespace || !string.is8Bit() || string.isEmpty())
+        return AtomString();
+
+    size_t length = string.length();
+    if (length > maximumCachedStringLength)
+        return whitespaceMode == AllWhitespace || isAllWhitespace(string) ? AtomString(string) : AtomString();
+
+    uint64_t code;
+    if (whitespaceMode == AllWhitespace)
+        code = codeForString<AllWhitespace>(string);
+    else
+        code = codeForString<WhitespaceUnknown>(string);
+
+    if (!code)
+        return AtomString();
+
+    size_t lengthIndex = length - 1;
+    if (m_codes[lengthIndex] == code) {
+        ASSERT(m_atoms[m_indexes[lengthIndex]] == string);
+        return m_atoms[m_indexes[lengthIndex]];
+    }
+
+    if (code == overflowWhitespaceCode)
+        return AtomString(string);
+
+    if (m_codes[lengthIndex]) {
+        AtomString whitespaceAtom(string);
+        m_codes[lengthIndex] = code;
+        m_atoms[m_indexes[lengthIndex]] = whitespaceAtom;
+        return whitespaceAtom;
+    }
+
+    AtomString whitespaceAtom(string);
+    m_codes[lengthIndex] = code;
+    m_indexes[lengthIndex] = m_atoms.size();
+    m_atoms.append(whitespaceAtom);
+    return whitespaceAtom;
 }
 
 }

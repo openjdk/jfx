@@ -96,7 +96,6 @@ public:
     AccessibilityObject* parentObjectIfExists() const override;
     AccessibilityObject* observableObject() const override;
     void linkedUIElements(AccessibilityChildrenVector&) const override;
-    bool exposesTitleUIElement() const override;
     AccessibilityObject* titleUIElement() const override;
     AccessibilityObject* correspondingControlForLabelElement() const override;
     AccessibilityObject* correspondingLabelForControlElement() const override;
@@ -127,6 +126,7 @@ public:
 
     URL url() const override;
     PlainTextRange selectedTextRange() const override;
+    int insertionPointLineNumber() const override;
     VisibleSelection selection() const override;
     String stringValue() const override;
     String helpText() const override;
@@ -150,7 +150,6 @@ public:
     void setSelectedRows(AccessibilityChildrenVector&) override;
     AccessibilityOrientation orientation() const override;
 
-    void textChanged() override;
     void addChildren() override;
     bool canHaveChildren() const override;
     bool canHaveSelectedChildren() const override;
@@ -166,6 +165,7 @@ public:
     VisiblePositionRange visiblePositionRangeForLine(unsigned) const override;
     IntRect boundsForVisiblePositionRange(const VisiblePositionRange&) const override;
     IntRect boundsForRange(const SimpleRange&) const override;
+    VisiblePositionRange selectedVisiblePositionRange() const override;
     void setSelectedVisiblePositionRange(const VisiblePositionRange&) const override;
     bool isVisiblePositionRangeInDifferentDocument(const VisiblePositionRange&) const;
     bool hasPopup() const override;
@@ -207,8 +207,11 @@ protected:
 
     bool isDetached() const override { return !m_renderer; }
 
+    bool shouldIgnoreAttributeRole() const override;
     AccessibilityRole determineAccessibilityRole() override;
     bool computeAccessibilityIsIgnored() const override;
+
+    bool exposesTitleUIElement() const override;
 
 #if ENABLE(MATHML)
     virtual bool isIgnoredElementWithinMathTree() const;
