@@ -23,12 +23,4 @@ Updating SQLite in OpenJFX:
 
 6. Perform build and sanity testing.
 
-7. Helper commands for removing tabs and trailing whitespaces from source files(.h and .c).
-   7.1 > cd modules/javafx.web/src/main/native/Source/ThirdParty/sqlite
-   7.2 Remove tabs from source files:
-     > sudo apt install moreutils
-     > find . -name "*.c" -type f -exec bash -c 'expand -t 4 "$0" | sponge "$0"' {} \;
-     > find . -name "*.h" -type f -exec bash -c 'expand -t 4 "$0" | sponge "$0"' {} \;
-   7.3 Remove trailing whitespaces from source files:
-     > find . -name “*.c” -type f -exec sed --in-place 's/[[:space:]]\+$//' {} \+
-     > find . -name “*.h” -type f -exec sed --in-place 's/[[:space:]]\+$//' {} \+
+7. Expand tabs and remove trailing white spaces from source files.
