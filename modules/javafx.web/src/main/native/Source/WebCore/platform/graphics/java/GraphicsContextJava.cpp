@@ -348,7 +348,8 @@ void GraphicsContextJava::drawLinesForText(const FloatPoint& origin, float thick
         StrokeStyle savedStrokeStyle = strokeStyle();
         setStrokeStyle(stroke);
 
-        FloatPoint endPoint = origin + FloatPoint(width, thickness);
+        // do not add thickness to y position of end point , as line should be straight to the origin
+        FloatPoint endPoint = origin + FloatPoint(width, 0);
         drawLine(
             IntPoint(origin.x(), origin.y()),
             IntPoint(endPoint.x(), endPoint.y()));
