@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -39,14 +39,12 @@ import javafx.scene.paint.Color;
 import javafx.scene.paint.PhongMaterial;
 
 /**
- * A {@code SpotLight} is a {@code PointLight} that radiates light in a cone in a specific direction.
- * The direction is defined by the {@link #directionProperty() direction} vector property of the light. The direction
- * can be rotated by setting a rotation transform on the {@code SpotLight}. For example, if the direction vector is
- * {@code (1, 1, 1)} and the light is not rotated, it will point in the {@code (1, 1, 1)} direction, and if the light is
- * rotated 90 degrees on the y axis, it will point in the {@code (1, 1, -1)} direction.
+ * A light source that radiates light in a cone in a specific direction away from itself. The
+ * <a href="LightBase.html#Direction">direction</a> is defined by the {@link #directionProperty() direction} vector
+ * property.
  * <p>
- * In addition to the factors that control the light intensity of a {@code PointLight}, a {@code SpotLight} has a
- * light-cone attenuation factor, {@code spot}, that is determined by 3 properties:
+ * In addition to the <a href="LightBase.html#Attenuation">attenuation</a> factors that control the light intensity over
+ * distance, a {@code SpotLight} has a light-cone attenuation factor, {@code spot}, that is determined by 3 properties:
  * <ul>
  * <li> {@link #innerAngleProperty() innerAngle}: the angle of the inner cone (see image below)
  * <li> {@link #outerAngleProperty() outerAngle}: the angle of the outer cone (see image below)
@@ -67,6 +65,9 @@ import javafx.scene.paint.PhongMaterial;
  * which represents a drop in intensity from the inner angle to the outer angle.
  * </ul>
  * As a result, {@code 0 <= spot <= 1}. The overall intensity of the light is {@code I = lambert * atten * spot}.
+ * <p>
+ * {@code SpotLight}s can represent point-like light sources with directionality. Flashlights and floodlights are
+ * common light sources that can be simulated with this light type.
  * <p>
  * <img src="doc-files/spotlight.png" alt="Image of the Spotlight">
  *
