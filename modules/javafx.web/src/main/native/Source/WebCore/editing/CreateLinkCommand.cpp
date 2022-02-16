@@ -40,7 +40,7 @@ CreateLinkCommand::CreateLinkCommand(Document& document, const String& url)
 
 void CreateLinkCommand::doApply()
 {
-    if (endingSelection().isNone())
+    if (endingSelection().isNoneOrOrphaned())
         return;
 
     auto anchorElement = HTMLAnchorElement::create(document());
