@@ -85,12 +85,18 @@ class LinuxStatefulMultiTouchProcessor extends LinuxTouchProcessor {
                             }
                             break;
                         case LinuxInput.ABS_X:
+                            if (currentSlot != 0) {
+                                break;
+                            }
                         case LinuxInput.ABS_MT_POSITION_X:
                             if (x == COORD_UNDEFINED) {
                                 x = value;
                             }
                             break;
                         case LinuxInput.ABS_Y:
+                            if (currentSlot != 0) {
+                                break;
+                            }
                         case LinuxInput.ABS_MT_POSITION_Y:
                             if (y == COORD_UNDEFINED) {
                                 y = value;
