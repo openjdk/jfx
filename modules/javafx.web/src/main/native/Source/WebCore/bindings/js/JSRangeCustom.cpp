@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Igalia S.L. All rights reserved.
+ * Copyright (C) 2021 Igalia S.L. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -24,43 +24,18 @@
  */
 
 #include "config.h"
-#include "XRReferenceSpaceEvent.h"
+#include "JSRange.h"
 
-#if ENABLE(WEBXR)
-
-#include "WebXRReferenceSpace.h"
-#include "WebXRRigidTransform.h"
-#include <wtf/IsoMallocInlines.h>
+#include "Range.h"
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(XRReferenceSpaceEvent);
-
-Ref<XRReferenceSpaceEvent> XRReferenceSpaceEvent::create(const AtomString& type, const Init& initializer, IsTrusted isTrusted)
+template<typename Visitor>
+void JSRange::visitAdditionalChildren(Visitor& visitor)
 {
-    return adoptRef(*new XRReferenceSpaceEvent(type, initializer, isTrusted));
+    wrapped().visitNodesConcurrently(visitor);
 }
 
-XRReferenceSpaceEvent::XRReferenceSpaceEvent(const AtomString& type, const Init& initializer, IsTrusted isTrusted)
-    : Event(type, initializer, isTrusted)
-    , m_referenceSpace(initializer.referenceSpace)
-    , m_transform(initializer.transform)
-{
-    ASSERT(m_referenceSpace);
-}
-
-XRReferenceSpaceEvent::~XRReferenceSpaceEvent() = default;
-
-const WebXRReferenceSpace& XRReferenceSpaceEvent::referenceSpace() const
-{
-    return *m_referenceSpace;
-}
-
-WebXRRigidTransform* XRReferenceSpaceEvent::transform() const
-{
-    return m_transform.get();
-}
+DEFINE_VISIT_ADDITIONAL_CHILDREN(JSRange);
 
 } // namespace WebCore
-
-#endif // ENABLE(WEBXR)

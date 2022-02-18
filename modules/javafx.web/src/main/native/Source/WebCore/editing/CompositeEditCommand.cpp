@@ -551,12 +551,13 @@ bool CompositeEditCommand::isRemovableBlock(const Node* node)
     return false;
 }
 
-void CompositeEditCommand::insertNodeBefore(Ref<Node>&& insertChild, Node& refChild, ShouldAssumeContentIsAlwaysEditable shouldAssumeContentIsAlwaysEditable)
+bool CompositeEditCommand::insertNodeBefore(Ref<Node>&& insertChild, Node& refChild, ShouldAssumeContentIsAlwaysEditable shouldAssumeContentIsAlwaysEditable)
 {
     auto parent = makeRefPtr(refChild.parentNode());
     if (!parent || (!parent->hasEditableStyle() && parent->renderer()))
-        return;
+        return false;
     applyCommandToComposite(InsertNodeBeforeCommand::create(WTFMove(insertChild), refChild, shouldAssumeContentIsAlwaysEditable, editingAction()));
+    return true;
 }
 
 void CompositeEditCommand::insertNodeAfter(Ref<Node>&& insertChild, Node& refChild)
@@ -1748,14 +1749,16 @@ RefPtr<Node> CompositeEditCommand::splitTreeToNode(Node& start, Node& end, bool 
 
     ASSERT(adjustedEnd);
     RefPtr<Node> node;
-    for (node = &start; node && node->parentNode() != adjustedEnd; node = node->parentNode()) {
-        if (!node->parentNode() || !is<Element>(*node->parentNode()))
+    for (node = &start; node && node->parentNode() != adjustedEnd;) {
+        RefPtr parentNode = node->parentNode();
+        if (!parentNode || !is<Element>(*parentNode) || editingIgnoresContent(*parentNode))
             break;
         // Do not split a node when doing so introduces an empty node.
-        VisiblePosition positionInParent = firstPositionInNode(node->parentNode());
+        VisiblePosition positionInParent = firstPositionInNode(parentNode.get());
         VisiblePosition positionInNode = firstPositionInOrBeforeNode(node.get());
         if (positionInParent != positionInNode)
-            splitElement(downcast<Element>(*node->parentNode()), *node);
+            splitElement(downcast<Element>(*parentNode), *node);
+        node = parentNode;
     }
 
     return node;

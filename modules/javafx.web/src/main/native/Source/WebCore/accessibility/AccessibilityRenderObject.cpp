@@ -489,7 +489,7 @@ AccessibilityObject* AccessibilityRenderObject::parentObjectIfExists() const
         return nullptr;
 
     // WebArea's parent should be the scroll view containing it.
-    if (isWebArea())
+    if (m_renderer && isWebArea())
         return cache->get(&m_renderer->view().frameView());
 
     return cache->get(renderParentObject());
@@ -1358,6 +1358,11 @@ bool AccessibilityRenderObject::computeAccessibilityIsIgnored() const
     if (is<RenderText>(*m_renderer)) {
         // static text beneath MenuItems and MenuButtons are just reported along with the menu item, so it's ignored on an individual level
         AXCoreObject* parent = parentObjectUnignored();
+
+        // Walking up the parent chain might reset the m_renderer.
+        if (!m_renderer)
+            return true;
+
         if (parent && (parent->isMenuItem() || parent->ariaRoleAttribute() == AccessibilityRole::MenuButton))
             return true;
         auto& renderText = downcast<RenderText>(*m_renderer);
@@ -1642,7 +1647,7 @@ String AccessibilityRenderObject::accessKey() const
 
 VisibleSelection AccessibilityRenderObject::selection() const
 {
-    return m_renderer->frame().selection().selection();
+    return m_renderer ? m_renderer->frame().selection().selection() : VisibleSelection();
 }
 
 PlainTextRange AccessibilityRenderObject::selectedTextRange() const
@@ -1712,13 +1717,14 @@ void AccessibilityRenderObject::setSelectedTextRange(const PlainTextRange& range
 {
     setTextSelectionIntent(axObjectCache(), range.length ? AXTextStateChangeTypeSelectionExtend : AXTextStateChangeTypeSelectionMove);
 
-    if (auto client = m_renderer->document().editor().client())
+    auto* client = m_renderer ? m_renderer->document().editor().client() : nullptr;
+    if (client)
         client->willChangeSelectionForAccessibility();
 
     if (isNativeTextControl()) {
         HTMLTextFormControlElement& textControl = downcast<RenderTextControl>(*m_renderer).textFormControlElement();
         textControl.setSelectionRange(range.start, range.start + range.length);
-    } else {
+    } else if (m_renderer) {
         ASSERT(node());
         auto& node = *this->node();
         auto elementRange = this->elementRange();
@@ -1733,7 +1739,7 @@ void AccessibilityRenderObject::setSelectedTextRange(const PlainTextRange& range
 
     clearTextSelectionIntent(axObjectCache());
 
-    if (auto client = m_renderer->document().editor().client())
+    if (client)
         client->didChangeSelectionForAccessibility();
 }
 
@@ -2010,6 +2016,9 @@ AccessibilityObject* AccessibilityRenderObject::accessibilityParentForImageMap(H
 
 AXCoreObject::AccessibilityChildrenVector AccessibilityRenderObject::documentLinks()
 {
+    if (!m_renderer)
+        return { };
+
     AccessibilityChildrenVector result;
     Document& document = m_renderer->document();
     Ref<HTMLCollection> links = document.links();
@@ -2288,7 +2297,8 @@ void AccessibilityRenderObject::setSelectedVisiblePositionRange(const VisiblePos
         && isVisiblePositionRangeInDifferentDocument(range))
             return;
 
-    if (auto client = m_renderer->document().editor().client())
+    auto* client = m_renderer ? m_renderer->document().editor().client() : nullptr;
+    if (client)
         client->willChangeSelectionForAccessibility();
 
     if (isNativeTextControl()) {
@@ -2317,7 +2327,7 @@ void AccessibilityRenderObject::setSelectedVisiblePositionRange(const VisiblePos
 
         setTextSelectionIntent(axObjectCache(), start == end ? AXTextStateChangeTypeSelectionMove : AXTextStateChangeTypeSelectionExtend);
         textControl->setSelectionRange(start, end);
-    } else {
+    } else if (m_renderer) {
         // Make selection and tell the document to use it. If it's zero length, then move to that position.
         if (range.start == range.end) {
             setTextSelectionIntent(axObjectCache(), AXTextStateChangeTypeSelectionMove);
@@ -2339,7 +2349,7 @@ void AccessibilityRenderObject::setSelectedVisiblePositionRange(const VisiblePos
 
     clearTextSelectionIntent(axObjectCache());
 
-    if (auto client = m_renderer->document().editor().client())
+    if (client)
         client->didChangeSelectionForAccessibility();
 }
 
