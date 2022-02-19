@@ -16,13 +16,13 @@
 #endif
 
 #if defined(__ELF__) && defined(__PIC__)
-# define PLT(X)   X@PLT
+# define PLT(X)	  X@PLT
 #else
-# define PLT(X)   X
+# define PLT(X)	  X
 #endif
 
 #ifdef __ELF__
-# define ENDF(X)  .type X,@function; .size X, . - X
+# define ENDF(X)  .type	X,@function; .size X, . - X
 #else
 # define ENDF(X)
 #endif
