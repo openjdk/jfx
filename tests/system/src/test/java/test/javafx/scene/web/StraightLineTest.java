@@ -76,6 +76,7 @@ public class StraightLineTest {
             launchLatch.countDown();
         }
     }
+
     private static String colorToString(Color c) {
         int r = (int)(c.getRed() * 255.0);
         int g = (int)(c.getGreen() * 255.0);
@@ -83,7 +84,6 @@ public class StraightLineTest {
         int a = (int)(c.getOpacity() * 255.0);
         return "rgba(" + r + "," + g + "," + b + "," + a + ")";
     }
-
 
     @BeforeClass
     public static void setupOnce() {
@@ -102,7 +102,7 @@ public class StraightLineTest {
     public void setupTestObjects() {
         Platform.runLater(() -> {
             webView = new WebView();
-            Scene scene = new Scene(webView,80,60);
+            Scene scene = new Scene(webView);
             straightLineTestApp.primaryStage.setScene(scene);
             straightLineTestApp.primaryStage.show();
         });
@@ -162,15 +162,18 @@ public class StraightLineTest {
             // buttom start x position of underline ( startx + font size + thickness -1)
             int line_start_x = start_x + height + 20 - 1;
             // buttom start y position of underline ( startx + height)
-            int line_start_y = start_y + height;
-            String line_color = "rgba(0,0,0,255)"; // color of line
-            for (int i = line_start_y; i < snapshot.getHeight(); i++) {
-                String expected = colorToString(pr.getColor(line_start_x, i));
-                if(expected.equals(line_color))
+            int line_start_y = start_y + height + 3;
+            String expected_line_color = "rgba(0,0,0,255)"; // color of line
+            for (int i = line_start_y; i <= (width - line_start_y -6); i++) {
+                String actual_line_color = colorToString(pr.getColor(line_start_x, i));
+                if (actual_line_color.equals(expected_line_color)) {
                     continue;
-                else
-                    fail("Each pixel color of line should be" + line_color + " but was:" + expected);
+                }
+                else {
+                    fail("Each pixel color of line should be" + expected_line_color + " but was:" + actual_line_color);
+                }
             }
+            // right edge case test
         });
     }
 }
