@@ -102,7 +102,7 @@ public class TextInputControlSkinTest {
         // Check that no NullPointerException is thrown if the TextField is not in scene
         // and that the default point is returned.
         Point2D point = textField.getInputMethodRequests().getTextLocation(0);
-        assertEquals(new Point2D(0,0), point);
+        assertEquals(new Point2D(0, 0), point);
     }
 
     public class FocusableTextField extends TextField {
