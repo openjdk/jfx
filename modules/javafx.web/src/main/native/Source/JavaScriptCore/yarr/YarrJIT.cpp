@@ -2135,7 +2135,7 @@ class YarrGenerator final : public YarrJITInfo, private MacroAssembler {
 
         if (!nonGreedyFailuresDecrementIndex.empty()) {
             nonGreedyFailuresDecrementIndex.link(this);
-            breakpoint();
+            sub32(TrustedImm32(1), index);
         }
         nonGreedyFailures.link(this);
         sub32(countRegister, index);
