@@ -25,13 +25,20 @@
 #include <wtf/ThreadSpecific.h>
 #include <wtf/text/StringToIntegerConversion.h>
 
+#if USE(LIBEPOXY)
+#include <epoxy/gl.h>
+#elif USE(OPENGL_ES)
+#include <GLES2/gl2.h>
+#else
+#include "OpenGLShims.h"
+#endif
+
 #if USE(EGL)
 #include "GLContextEGL.h"
 #endif
 
 #if USE(GLX)
 #include "GLContextGLX.h"
-#include "OpenGLShims.h"
 #endif
 
 using WTF::ThreadSpecific;
