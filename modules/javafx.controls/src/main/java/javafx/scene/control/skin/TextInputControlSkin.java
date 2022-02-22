@@ -334,7 +334,10 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
         control.setInputMethodRequests(new ExtendedInputMethodRequests() {
             @Override public Point2D getTextLocation(int offset) {
                 Scene scene = getSkinnable().getScene();
-                Window window = scene.getWindow();
+                Window window = scene != null ? scene.getWindow() : null;
+                if (window == null) {
+                    return new Point2D(0, 0);
+                }
                 // Don't use imstart here because it isn't initialized yet.
                 Rectangle2D characterBounds = getCharacterBounds(control.getSelection().getStart() + offset);
                 Point2D p = getSkinnable().localToScene(characterBounds.getMinX(), characterBounds.getMaxY());
