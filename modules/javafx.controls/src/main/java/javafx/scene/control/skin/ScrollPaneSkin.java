@@ -25,6 +25,7 @@
 
 package javafx.scene.control.skin;
 
+import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.ParentHelper;
 import com.sun.javafx.scene.control.Properties;
 import com.sun.javafx.scene.control.behavior.BehaviorBase;
@@ -1200,7 +1201,7 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane> {
             sbTouchTimeline = new Timeline();
             sbTouchKF1 = new KeyFrame(Duration.millis(0), event -> {
                 tempVisibility = true;
-                if (touchDetected == true || mouseDown == true) {
+                if ((touchDetected == true || mouseDown == true) && NodeHelper.isTreeShowing(getSkinnable())) {
                     sbTouchTimeline.playFromStart();
                 }
             });
