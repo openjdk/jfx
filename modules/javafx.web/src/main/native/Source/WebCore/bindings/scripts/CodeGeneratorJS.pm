@@ -5984,6 +5984,11 @@ sub GenerateCallWith
         AddToImplIncludes("JSDOMWindowBase.h");
         push(@callWithArgs, "incumbentDOMWindow(*$globalObject" . ($callFrameReference ? ", " . $callFrameReference : "") . ")");
     }
+    if ($codeGenerator->ExtendedAttributeContains($callWith, "LegacyActiveWindowForAccessor")) {
+        AddToImplIncludes("DOMWindow.h");
+        AddToImplIncludes("JSDOMWindowBase.h");
+        push(@callWithArgs, "legacyActiveDOMWindowForAccessor(*$globalObject" . ($callFrameReference ? ", " . $callFrameReference : "") . ")");
+    }
     if ($codeGenerator->ExtendedAttributeContains($callWith, "FirstWindow")) {
         AddToImplIncludes("DOMWindow.h");
         AddToImplIncludes("JSDOMWindowBase.h");

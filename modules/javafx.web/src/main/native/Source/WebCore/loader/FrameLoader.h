@@ -241,7 +241,7 @@ public:
     void forceSandboxFlags(SandboxFlags flags) { m_forcedSandboxFlags |= flags; }
     SandboxFlags effectiveSandboxFlags() const;
 
-    bool checkIfFormActionAllowedByCSP(const URL&, bool didReceiveRedirectResponse) const;
+    bool checkIfFormActionAllowedByCSP(const URL&, bool didReceiveRedirectResponse, const URL& preRedirectURL) const;
 
     WEBCORE_EXPORT Frame* opener();
     WEBCORE_EXPORT const Frame* opener() const;
@@ -391,7 +391,7 @@ private:
     WEBCORE_EXPORT void detachChildren();
     void closeAndRemoveChild(Frame&);
 
-    void loadInSameDocument(const URL&, SerializedScriptValue* stateObject, bool isNewNavigation);
+    void loadInSameDocument(URL, RefPtr<SerializedScriptValue> stateObject, bool isNewNavigation);
 
     void prepareForLoadStart();
     void provisionalLoadStarted();

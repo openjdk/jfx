@@ -414,12 +414,9 @@ public class TreeCell<T> extends IndexedCell<T> {
                     newValue));
         }
 
+        // FIXME: JDK-8187314 must respect actual committed value
         // update the item within this cell, so that it represents the new value
-        if (treeItem != null) {
-            treeItem.setValue(newValue);
-            updateTreeItem(treeItem);
-            updateItem(newValue, false);
-        }
+        updateItem(newValue, false);
 
         if (tree != null) {
             // reset the editing item in the TreetView

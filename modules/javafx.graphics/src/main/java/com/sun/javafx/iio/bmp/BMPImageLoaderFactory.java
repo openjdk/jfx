@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,12 +33,13 @@ import java.nio.ByteBuffer;
 final class BMPDescriptor extends ImageDescriptor {
 
     static final String formatName = "BMP";
-    static final String extensions[] = { "bmp" };
-    static final Signature signatures[] = {new Signature((byte)0x42, (byte)0x4D)};
+    static final String[] extensions = { "bmp" };
+    static final Signature[] signatures = {new Signature((byte)0x42, (byte)0x4D)};
+    static final String[] mimeSubtypes = { "bmp" };
     static final ImageDescriptor theInstance = new BMPDescriptor();
 
     private BMPDescriptor() {
-        super(formatName, extensions, signatures);
+        super(formatName, extensions, signatures, mimeSubtypes);
     }
 }
 

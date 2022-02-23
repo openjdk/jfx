@@ -103,6 +103,8 @@ void RenderWidget::willBeDestroyed()
         cache->remove(this);
     }
 
+    if (renderTreeBeingDestroyed() && document().backForwardCacheState() == Document::NotInBackForwardCache && m_widget)
+        m_widget->willBeDestroyed();
     setWidget(nullptr);
 
     RenderReplaced::willBeDestroyed();

@@ -749,7 +749,11 @@ void FrameLoader::didBeginDocument(bool dispatch)
         if (!dnsPrefetchControl.isEmpty())
             m_frame.document()->parseDNSPrefetchControlHeader(dnsPrefetchControl);
 
-        m_frame.document()->contentSecurityPolicy()->didReceiveHeaders(ContentSecurityPolicyResponseHeaders(m_documentLoader->response()), referrer(), ContentSecurityPolicy::ReportParsingErrors::No);
+        // The DocumentLoader may have already parsed the CSP header to do some checks. If so, reuse the already parsed version instead of parsing again.
+        if (auto* contentSecurityPolicy = m_documentLoader->contentSecurityPolicy())
+            m_frame.document()->contentSecurityPolicy()->didReceiveHeaders(*contentSecurityPolicy, ContentSecurityPolicy::ReportParsingErrors::No);
+        else
+            m_frame.document()->contentSecurityPolicy()->didReceiveHeaders(ContentSecurityPolicyResponseHeaders(m_documentLoader->response()), referrer(), ContentSecurityPolicy::ReportParsingErrors::No);
 
         if (m_frame.document()->url().protocolIsInHTTPFamily() || m_frame.document()->url().protocolIsBlob())
             m_frame.document()->setCrossOriginEmbedderPolicy(obtainCrossOriginEmbedderPolicy(m_documentLoader->response(), *m_frame.document()));
@@ -1031,13 +1035,13 @@ String FrameLoader::outgoingOrigin() const
     return m_frame.document()->securityOrigin().toString();
 }
 
-bool FrameLoader::checkIfFormActionAllowedByCSP(const URL& url, bool didReceiveRedirectResponse) const
+bool FrameLoader::checkIfFormActionAllowedByCSP(const URL& url, bool didReceiveRedirectResponse, const URL& preRedirectURL) const
 {
     if (m_submittedFormURL.isEmpty())
         return true;
 
     auto redirectResponseReceived = didReceiveRedirectResponse ? ContentSecurityPolicy::RedirectResponseReceived::Yes : ContentSecurityPolicy::RedirectResponseReceived::No;
-    return m_frame.document()->contentSecurityPolicy()->allowFormAction(url, redirectResponseReceived);
+    return m_frame.document()->contentSecurityPolicy()->allowFormAction(url, redirectResponseReceived, preRedirectURL);
 }
 
 void FrameLoader::setOpener(Frame* opener)
@@ -1103,7 +1107,7 @@ void FrameLoader::setFirstPartyForCookies(const URL& url)
 
 // This does the same kind of work that didOpenURL does, except it relies on the fact
 // that a higher level already checked that the URLs match and the scrolling is the right thing to do.
-void FrameLoader::loadInSameDocument(const URL& url, SerializedScriptValue* stateObject, bool isNewNavigation)
+void FrameLoader::loadInSameDocument(URL url, RefPtr<SerializedScriptValue> stateObject, bool isNewNavigation)
 {
     FRAMELOADER_RELEASE_LOG(ResourceLoading, "loadInSameDocument: frame load started");
 
@@ -1165,7 +1169,7 @@ void FrameLoader::loadInSameDocument(const URL& url, SerializedScriptValue* stat
 
     m_client->dispatchDidNavigateWithinPage();
 
-    m_frame.document()->statePopped(stateObject ? Ref<SerializedScriptValue> { *stateObject } : SerializedScriptValue::nullValue());
+    m_frame.document()->statePopped(stateObject ? stateObject.releaseNonNull() : SerializedScriptValue::nullValue());
     m_client->dispatchDidPopStateWithinPage();
 
     if (hashChange) {
@@ -1999,7 +2003,8 @@ void FrameLoader::clearProvisionalLoad()
 {
     FRAMELOADER_RELEASE_LOG(ResourceLoading, "clearProvisionalLoad: Clearing provisional document loader (m_provisionalDocumentLoader=%p)", m_provisionalDocumentLoader.get());
     setProvisionalDocumentLoader(nullptr);
-    m_progressTracker->progressCompleted();
+    if (m_progressTracker)
+        m_progressTracker->progressCompleted();
     setState(FrameState::Complete);
 }
 
@@ -2585,7 +2590,8 @@ void FrameLoader::checkLoadCompleteForThisFrame()
         if (auto domWindow = makeRefPtr(m_frame.document() ? m_frame.document()->domWindow() : nullptr))
             domWindow->performance().scheduleNavigationObservationTaskIfNeeded();
 
-        const ResourceError& error = m_documentLoader->mainDocumentError();
+        Ref protector = *m_documentLoader;
+        const ResourceError& error = protector->mainDocumentError();
 
         AXObjectCache::AXLoadingEvent loadingEvent;
         if (!error.isNull()) {
@@ -3217,7 +3223,7 @@ void FrameLoader::continueFragmentScrollAfterNavigationPolicy(const ResourceRequ
     }
 
     bool isRedirect = m_quickRedirectComing || policyChecker().loadType() == FrameLoadType::RedirectWithLockedBackForwardList;
-    loadInSameDocument(request.url(), 0, !isRedirect);
+    loadInSameDocument(request.url(), nullptr, !isRedirect);
 }
 
 bool FrameLoader::shouldPerformFragmentNavigation(bool isFormSubmission, const String& httpMethod, FrameLoadType loadType, const URL& url)

@@ -51,6 +51,7 @@ import javafx.scene.control.TreeCell;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeView;
 import javafx.scene.control.TreeView.EditEvent;
+import javafx.scene.control.cell.TextFieldTreeCell;
 import javafx.scene.control.skin.TreeCellSkin;
 import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
 import test.com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
@@ -886,6 +887,85 @@ public class TreeCellTest {
         cell.commitEdit(value);
         assertEquals("sanity: value committed", value, tree.getTreeItem(editingIndex).getValue());
         assertEquals("commit must not have fired editCancel", 0, events.size());
+    }
+
+//------------- JDK-8187309: fix editing mechanics to comply to specification
+
+    @Test
+    public void testTreeHasDefaultCommitHandler() {
+        assertNotNull("treeView must have default commit handler", tree.getOnEditCommit());
+    }
+
+    @Test
+    public void testDefaultCommitUpdatesData() {
+        TreeItem<String> editingItem = setupForEditing(cell);
+        tree.edit(editingItem);
+        String value = "edited";
+        cell.commitEdit(value);
+        assertEquals("value committed", value, editingItem.getValue());
+    }
+
+    @Test
+    public void testDefaultCommitUpdatesCell() {
+        TreeCell<String> cell = TextFieldTreeCell.forTreeView().call(tree);
+        TreeItem<String> editingItem = setupForEditing(cell);
+        tree.edit(editingItem);
+        String value = "edited";
+        cell.commitEdit(value);
+        assertEquals("cell text updated to committed value", value, cell.getText());
+    }
+
+    @Test
+    public void testDoNothingCommitHandlerDoesNotUpdateData() {
+        TreeItem<String> editingItem = setupForEditing(cell);
+        String oldValue = editingItem.getValue();
+        // do nothing handler
+        tree.setOnEditCommit(e -> {});
+        tree.edit(editingItem);
+        String value = "edited";
+        cell.commitEdit(value);
+        assertEquals("edited value must not be committed", oldValue, editingItem.getValue());
+    }
+
+    @Ignore("JDK-8187314")
+    @Test
+    public void testDoNothingCommitHandlerDoesNotUpdateCell() {
+        TreeCell<String> cell = TextFieldTreeCell.forTreeView().call(tree);
+        TreeItem<String> editingItem = setupForEditing(cell);
+        String oldValue = editingItem.getValue();
+        // do nothing handler
+        tree.setOnEditCommit(e -> {});
+        tree.edit(editingItem);
+        String value = "edited";
+        cell.commitEdit(value);
+        assertEquals("cell text must not have changed", oldValue, cell.getText());
+    }
+
+
+    /**
+     * Sets tree editable, configures the given cell for editing in tree at index 1
+     * and returns the treeItem at that index.
+     */
+    private TreeItem<String> setupForEditing(TreeCell<String> editingCell) {
+        tree.setEditable(true);
+        editingCell.updateTreeView(tree);
+        editingCell.updateIndex(1);
+        return editingCell.getTreeItem();
+    }
+
+    /**
+     * Test test setup.
+     */
+    @Test
+    public void testSetupForEditing() {
+        TreeCell<String> cell = new TreeCell<>();
+        TreeItem<String> cellTreeItem = setupForEditing(cell);
+        assertTrue("sanity: tree must be editable", tree.isEditable());
+        assertEquals("sanity: returned treeItem", cellTreeItem, cell.getTreeItem());
+        assertEquals(1, cell.getIndex());
+        assertEquals("sanity: cell configured with tree's treeItem at index",
+                tree.getTreeItem(cell.getIndex()), cell.getTreeItem());
+        assertNull("sanity: config doesn't change tree state", tree.getEditingItem());
     }
 
 

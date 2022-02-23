@@ -1654,16 +1654,6 @@ public:
         loadDouble(Address(src, offset.m_value + 8), dest2);
     }
 
-    void loadPair64(RegisterID src, FPRegisterID dest1, FPRegisterID dest2)
-    {
-        loadPair64(src, TrustedImm32(0), dest1, dest2);
-    }
-
-    void loadPair64(RegisterID src, TrustedImm32 offset, FPRegisterID dest1, FPRegisterID dest2)
-    {
-        m_assembler.ldp<64>(dest1, dest2, src, offset.m_value);
-    }
-
     void abortWithReason(AbortReason reason)
     {
         // It is safe to use dataTempRegister directly since this is a crashing JIT Assert.
@@ -2043,16 +2033,6 @@ public:
         }
         storeDouble(src1, Address(dest, offset.m_value));
         storeDouble(src2, Address(dest, offset.m_value + 8));
-    }
-
-    void storePair64(FPRegisterID src1, FPRegisterID src2, RegisterID dest)
-    {
-        storePair64(src1, src2, dest, TrustedImm32(0));
-    }
-
-    void storePair64(FPRegisterID src1, FPRegisterID src2, RegisterID dest, TrustedImm32 offset)
-    {
-        m_assembler.stp<64>(src1, src2, dest, offset.m_value);
     }
 
     void store32(RegisterID src, ImplicitAddress address)
