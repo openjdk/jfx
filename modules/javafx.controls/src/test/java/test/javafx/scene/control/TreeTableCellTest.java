@@ -25,6 +25,7 @@
 
 package test.javafx.scene.control;
 
+import javafx.beans.property.SimpleStringProperty;
 import javafx.scene.control.skin.TreeTableCellSkin;
 import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
 import test.com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
@@ -701,6 +702,33 @@ public class TreeTableCellTest {
         tree.getColumns().add(treeTableColumn);
 
         stageLoader = new StageLoader(tree);
+    }
+
+    /**
+     * The item of the {@link TreeTableRow} should not be null, when the {@link TreeTableCell} is not empty.
+     * See also: JDK-8251483
+     */
+    @Test
+    public void testRowItemIsNotNullForNonEmptyCell() {
+        TreeTableColumn<String, String> treeTableColumn = new TreeTableColumn<>();
+        treeTableColumn.setCellValueFactory(cc -> new SimpleStringProperty(cc.getValue().getValue()));
+        treeTableColumn.setCellFactory(col -> new TreeTableCell<>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+
+                if (!empty) {
+                    assertNotNull(getTableRow().getItem());
+                }
+            }
+        });
+        tree.getColumns().add(treeTableColumn);
+
+        stageLoader = new StageLoader(tree);
+
+        // Will create a new row and cell.
+        tree.getRoot().getChildren().add(new TreeItem<>("newItem"));
+        Toolkit.getToolkit().firePulse();
     }
 
     /**
