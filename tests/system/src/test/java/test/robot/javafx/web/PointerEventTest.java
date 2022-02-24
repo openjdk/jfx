@@ -65,14 +65,14 @@ import static org.junit.Assert.fail;
  * testLeftButtonDrag           - Press the Mouse Left Button and drag
  * testRightButtonDrag          - Press the Mouse Right Button and drag
  * testMiddleButtonDrag         - Press the Mouse Middle Button and drag
- * testLeftMiddleButtonDrag     - Press Left and Middle Buttons and drag 
+ * testLeftMiddleButtonDrag     - Press Left and Middle Buttons and drag
  * testMiddleRightButtonDrag    - Press Middle and Right Buttons and drag
- * testLeftRightButtonDrag      - Press Left and Right Buttons and drag 
+ * testLeftRightButtonDrag      - Press Left and Right Buttons and drag
  * testLeftMiddleRightButtonDrag- Press Left, Middle and Right Buttons and drag
  */
 
 public class PointerEventTest {
-    
+
     private static final int LEFT_BUTTON_DRAG = 1;
     private static final int MIDDLE_BUTTON_DRAG = 4;
     private static final int RIGHT_BUTTON_DRAG = 2;
@@ -93,7 +93,7 @@ public class PointerEventTest {
     static Robot robot;
     static WebView webView;
     static WebEngine webEngine;
-       
+
     static volatile Stage stage;
     static volatile Scene scene;
 
@@ -107,7 +107,7 @@ public class PointerEventTest {
             stage = primaryStage;
             stage.setTitle("Mouse Drag Test");
             webView = new WebView();
-            webEngine = webView.getEngine();            
+            webEngine = webView.getEngine();
             String URL =  this.getClass().getResource("pointerEvent.html").toString();
             webEngine.load( URL);
             webView.getEngine().getLoadWorker().stateProperty().addListener((ov, o, n) -> {
@@ -124,14 +124,14 @@ public class PointerEventTest {
             stage.show();
         }
     }
-     
+
     public String mouseButtonDrag(MouseButton... button) {
         Util.runAndWait(() -> {
             robot.mouseMove((int)(scene.getWindow().getX() + scene.getX() + DX),
                         (int)(scene.getWindow().getY() + scene.getY() + DY ));
             robot.mousePress(button);
         });
-        
+
         for (int i = 0; i < DRAG_DISTANCE; i++) {
                 final int c = i;
                 Util.runAndWait(() -> {
@@ -149,7 +149,7 @@ public class PointerEventTest {
 
         return buttonMask;
     }
-   
+
     @Test
     public void testLeftButtonDrag() {
         int result = Integer.parseInt(mouseButtonDrag(MouseButton.PRIMARY));
@@ -175,23 +175,23 @@ public class PointerEventTest {
     }
 
     @Test
-    public void testMiddleRightButtonDrag() {        
+    public void testMiddleRightButtonDrag() {
         int result = Integer.parseInt(mouseButtonDrag(MouseButton.MIDDLE,MouseButton.SECONDARY));
         Assert.assertEquals((MIDDLE_BUTTON_DRAG|RIGHT_BUTTON_DRAG),result);
     }
 
     @Test
-    public void testLeftRightButtonDrag() {        
+    public void testLeftRightButtonDrag() {
         int result = Integer.parseInt(mouseButtonDrag(MouseButton.PRIMARY, MouseButton.SECONDARY));
         Assert.assertEquals((LEFT_BUTTON_DRAG|RIGHT_BUTTON_DRAG),result);
     }
 
     @Test
-    public void testLeftMiddleRightButtonDrag() {        
+    public void testLeftMiddleRightButtonDrag() {
         int result = Integer.parseInt(mouseButtonDrag(MouseButton.PRIMARY, MouseButton.MIDDLE, MouseButton.SECONDARY));
         Assert.assertEquals((LEFT_BUTTON_DRAG|MIDDLE_BUTTON_DRAG|RIGHT_BUTTON_DRAG),result);
     }
-    
+
     @BeforeClass
     public static void initFX() {
         startupLatch = new CountDownLatch(1);
@@ -211,7 +211,7 @@ public class PointerEventTest {
 
     @After
     public void resetTest() {
-        Util.runAndWait(() -> {            
+        Util.runAndWait(() -> {
             robot.mouseRelease(MouseButton.PRIMARY,MouseButton.MIDDLE,MouseButton.SECONDARY);
             robot.mouseClick(MouseButton.PRIMARY);
         });
