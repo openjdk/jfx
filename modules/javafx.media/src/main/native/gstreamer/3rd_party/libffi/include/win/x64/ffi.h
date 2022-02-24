@@ -251,7 +251,7 @@ typedef struct {
 typedef union {
   ffi_sarg  sint;
   ffi_arg   uint;
-  float	    flt;
+  float     flt;
   char      data[FFI_SIZEOF_ARG];
   void*     ptr;
 } ffi_raw;
@@ -260,11 +260,11 @@ typedef union {
 /* This is a special case for mips64/n32 ABI (and perhaps others) where
    sizeof(void *) is 4 and FFI_SIZEOF_ARG is 8.  */
 typedef union {
-  signed int	sint;
-  unsigned int	uint;
-  float		flt;
-  char		data[FFI_SIZEOF_JAVA_RAW];
-  void*		ptr;
+  signed int    sint;
+  unsigned int  uint;
+  float         flt;
+  char          data[FFI_SIZEOF_JAVA_RAW];
+  void*         ptr;
 } ffi_java_raw;
 #else
 typedef ffi_raw ffi_java_raw;

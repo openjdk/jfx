@@ -65,8 +65,8 @@ struct register_args
   /* Registers for argument passing.  */
   UINT64 gpr[MAX_GPR_REGS];
   union big_int_union sse[MAX_SSE_REGS];
-  UINT64 rax;	/* ssecount */
-  UINT64 r10;	/* static chain */
+  UINT64 rax;   /* ssecount */
+  UINT64 r10;   /* static chain */
 };
 
 extern void ffi_call_unix64 (void *args, unsigned long bytes, unsigned flags,
@@ -100,7 +100,7 @@ enum x86_64_reg_class
 
 #define MAX_CLASSES 4
 
-#define SSE_CLASS_P(X)	((X) >= X86_64_SSE_CLASS && X <= X86_64_SSEUP_CLASS)
+#define SSE_CLASS_P(X) ((X) >= X86_64_SSE_CLASS && X <= X86_64_SSEUP_CLASS)
 
 /* x86-64 register passing implementation.  See x86-64 ABI for details.  Goal
    of this code is to classify each 8bytes of incoming argument by the register
@@ -243,7 +243,7 @@ classify_argument (ffi_type *type, enum x86_64_reg_class classes[],
     /* Merge the fields of structure.  */
     for (ptr = type->elements; *ptr != NULL; ptr++)
       {
-	    size_t num, pos;
+        size_t num, pos;
 
         byte_offset = FFI_ALIGN (byte_offset, (*ptr)->alignment);
 

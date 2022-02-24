@@ -217,19 +217,19 @@ extend_basic_type(void *arg, int type)
 
 struct call_frame
 {
-  void *ebp;		/* 0 */
-  void *retaddr;	/* 4 */
-  void (*fn)(void);	/* 8 */
-  int flags;		/* 12 */
-  void *rvalue;		/* 16 */
-  unsigned regs[3];	/* 20-28 */
+  void *ebp;            /* 0 */
+  void *retaddr;        /* 4 */
+  void (*fn)(void);     /* 8 */
+  int flags;            /* 12 */
+  void *rvalue;         /* 16 */
+  unsigned regs[3];     /* 20-28 */
 };
 
 struct abi_params
 {
-  int dir;		/* parameter growth direction */
-  int static_chain;	/* the static chain register used by gcc */
-  int nregs;		/* number of register parameters */
+  int dir;              /* parameter growth direction */
+  int static_chain;     /* the static chain register used by gcc */
+  int nregs;            /* number of register parameters */
   int regs[3];
 };
 
@@ -361,7 +361,7 @@ ffi_call_int (ffi_cif *cif, void (*fn)(void), void *rvalue,
       size_t align = FFI_SIZEOF_ARG;
 
       /* Issue 434: For thiscall and fastcall, if the paramter passed
-	 as 64-bit integer or struct, all following integer parameters
+         as 64-bit integer or struct, all following integer parameters
          will be passed on stack.  */
       if ((cabi == FFI_THISCALL || cabi == FFI_FASTCALL)
           && (t == FFI_TYPE_SINT64
@@ -430,11 +430,11 @@ void FFI_HIDDEN ffi_closure_REGISTER_alt(void);
 
 struct closure_frame
 {
-  unsigned rettemp[4];				/* 0 */
-  unsigned regs[3];				/* 16-24 */
-  ffi_cif *cif;					/* 28 */
-  void (*fun)(ffi_cif*,void*,void**,void*);	/* 32 */
-  void *user_data;				/* 36 */
+  unsigned rettemp[4];                          /* 0 */
+  unsigned regs[3];                             /* 16-24 */
+  ffi_cif *cif;                                 /* 28 */
+  void (*fun)(ffi_cif*,void*,void**,void*);     /* 32 */
+  void *user_data;                              /* 36 */
 };
 
 int FFI_HIDDEN FFI_DECLARE_FASTCALL
@@ -510,7 +510,7 @@ ffi_closure_inner (struct closure_frame *frame, char *stack)
         align = 16;
 
       /* Issue 434: For thiscall and fastcall, if the paramter passed
-	 as 64-bit integer or struct, all following integer parameters
+         as 64-bit integer or struct, all following integer parameters
          will be passed on stack.  */
       if ((cabi == FFI_THISCALL || cabi == FFI_FASTCALL)
           && (t == FFI_TYPE_SINT64
@@ -787,17 +787,17 @@ ffi_raw_call(ffi_cif *cif, void (*fn)(void), void *rvalue, ffi_raw *avalue)
       int t = ty->type;
 
       if (z <= FFI_SIZEOF_ARG && t != FFI_TYPE_STRUCT && t != FFI_TYPE_FLOAT)
-	{
-	  ffi_arg val = extend_basic_type (avalue, t);
-	  frame->regs[pabi->regs[narg_reg++]] = val;
-	  z = FFI_SIZEOF_ARG;
-	}
+        {
+          ffi_arg val = extend_basic_type (avalue, t);
+          frame->regs[pabi->regs[narg_reg++]] = val;
+          z = FFI_SIZEOF_ARG;
+        }
       else
-	{
-	  memcpy (argp, avalue, z);
-	  z = FFI_ALIGN (z, FFI_SIZEOF_ARG);
-	  argp += z;
-	}
+        {
+          memcpy (argp, avalue, z);
+          z = FFI_ALIGN (z, FFI_SIZEOF_ARG);
+          argp += z;
+        }
       avalue += z;
       bytes -= z;
     }

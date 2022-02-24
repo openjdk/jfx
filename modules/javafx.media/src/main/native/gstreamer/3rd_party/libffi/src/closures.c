@@ -249,7 +249,7 @@ ffi_trampoline_table_alloc (void)
     {
       ffi_trampoline_table_entry *entry = &table->free_list_pool[i];
       entry->trampoline =
-	(void *) (trampoline_page + (i * FFI_TRAMPOLINE_SIZE));
+        (void *) (trampoline_page + (i * FFI_TRAMPOLINE_SIZE));
 #ifdef HAVE_PTRAUTH
       entry->trampoline = ptrauth_sign_unauthenticated(entry->trampoline, ptrauth_key_function_pointer, 0);
 #endif

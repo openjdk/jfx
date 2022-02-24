@@ -40,11 +40,11 @@
 
 struct win64_call_frame
 {
-  UINT64 rbp;		/* 0 */
-  UINT64 retaddr;	/* 8 */
-  UINT64 fn;		/* 16 */
-  UINT64 flags;		/* 24 */
-  UINT64 rvalue;	/* 32 */
+  UINT64 rbp;           /* 0 */
+  UINT64 retaddr;       /* 8 */
+  UINT64 fn;            /* 16 */
+  UINT64 flags;         /* 24 */
+  UINT64 rvalue;        /* 32 */
 };
 
 extern void ffi_call_win64 (void *stack, struct win64_call_frame *,
