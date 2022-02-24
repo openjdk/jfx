@@ -73,7 +73,7 @@ public class HTMLEditingTest extends TestBase {
             Event.fireEvent(getView(),
                     new KeyEvent(null,getView(),
                             KeyEvent.KEY_PRESSED,
-                            "", "", KeyCode.V,
+                            "", "", KeyCode.PASTE,
                             false, !PlatformUtil.isMac(),// Ctrl+V(Non Mac)
                             false, PlatformUtil.isMac()));// Cmd+V (Mac)
 
@@ -81,7 +81,7 @@ public class HTMLEditingTest extends TestBase {
                     executeScript("srcInput.defaultValue").toString(),
                     defaultText);
             assertEquals("Source clipboard onpaste data", getEngine().
-                    executeScript("srcInput.value").toString(), clipboardData + defaultText);
+                    executeScript("srcInput.value").toString() + clipboardData, defaultText + clipboardData);
             assertNotEquals("Target onpaste data", getEngine().
                     executeScript("pasteTarget.value").toString(),
                     clipboardData);
