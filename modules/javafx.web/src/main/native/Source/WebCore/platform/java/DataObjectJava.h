@@ -130,8 +130,7 @@ public:
     Vector<String> types() {
         Vector<String> types;
         types.appendRange(m_availMimeTypes.begin(), m_availMimeTypes.end());
-        //returns MIME Types available in clipboard.z
-        return types;
+        return types; //returns MIME Types available in clipboard
     }
 
     String getData(const String& mimeType) {

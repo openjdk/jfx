@@ -70,7 +70,6 @@ public class HTMLEditingTest extends TestBase {
             content.putString(clipboardData);
             Clipboard.getSystemClipboard().setContent(content);
 
-
             Event.fireEvent(getView(),
                     new KeyEvent(null,getView(),
                             KeyEvent.KEY_PRESSED,
