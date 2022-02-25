@@ -35,7 +35,6 @@ import org.junit.Test;
 
 import static javafx.concurrent.Worker.State.SUCCEEDED;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 
 public class HTMLEditingTest extends TestBase {
@@ -51,24 +50,11 @@ public class HTMLEditingTest extends TestBase {
         String defaultText = "Default";
         loadContent(
                 "<input id='srcInput' value=" + defaultText + " autofocus>" +
-                        "<input id='pasteTarget'></input>" +
-                        "<div id=\"clipboardData\"></div>" +
-                        "<script>"+
-                        "document.addEventListener('paste', e => {\n" +
-                        "            let messages = [];\n" +
-                        "            if (e.clipboardData.types) {\n" +
-                        "                let message_index = 0;\n" +
-                        "                e.clipboardData.types.forEach(type => {\n" +
-                        "                    messages.push( type + \": \" + e.clipboardData.getData(type));\n" +
-                        "                    const para = document.createElement(\"p\");\n" +
-                        "                    para.innerText = type + \": \" + e.clipboardData.getData(type);\n" +
-                        "                    document.getElementById(\"clipboardData\").innerText = ++message_index;\n" +
-                        "                });\n" +
-                        "            }\n" +
-                        "        });\n" +
-                        "srcInput.onpaste = function(e) {" +
-                        "pasteTarget.value = e.clipboardData.getData('text/plain');}" +
-                        "</script>");
+                "<input id='pasteTarget'></input>" +
+                "<script>"+
+                "srcInput.onpaste = function(e) {" +
+                "pasteTarget.value = e.clipboardData.getData('text/plain');}" +
+                "</script>");
 
         submit(() -> {
             assertTrue("LoadContent completed successfully",
@@ -86,14 +72,13 @@ public class HTMLEditingTest extends TestBase {
                             false, PlatformUtil.isMac()));// Cmd+V (Mac)
 
             assertEquals("Source Default value",getEngine().
-                    executeScript("srcInput.defaultValue").toString(), defaultText);
-            assertEquals("Source clipboard onpaste data", getEngine().executeScript("srcInput.value").
-                    toString(), clipboardData + defaultText);
+                    executeScript("srcInput.defaultValue").toString(),
+                    defaultText);
+            assertEquals("Source clipboard onpaste data", getEngine().
+                    executeScript("srcInput.value").toString(), clipboardData + defaultText);
             assertEquals("Target onpaste data", getEngine().
-                     executeScript("pasteTarget.value").toString(), clipboardData);
-            assertEquals("Target onpaste data size", getEngine().
-                            executeScript("document.getElementById(\"clipboardData\").innerText").toString(),
-                    "2");
+                    executeScript("pasteTarget.value").toString(),
+                    clipboardData);
         });
     }
 }
