@@ -37,6 +37,7 @@ import javafx.scene.robot.Robot;
 import javafx.scene.Scene;
 import javafx.scene.web.WebEngine;
 import javafx.scene.web.WebView;
+import javafx.scene.input.KeyCode;
 import javafx.stage.Stage;
 import javafx.stage.WindowEvent;
 
@@ -209,7 +210,7 @@ public class PointerEventTest {
     public void resetTest() {
         Util.runAndWait(() -> {
             robot.mouseRelease(MouseButton.PRIMARY, MouseButton.MIDDLE, MouseButton.SECONDARY);
-            robot.mouseClick(MouseButton.PRIMARY);
+            robot.keyType(KeyCode.ESCAPE);
         });
     }
 
