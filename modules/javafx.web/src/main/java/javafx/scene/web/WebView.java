@@ -1085,8 +1085,9 @@ final public class WebView extends Parent {
             // not supported by webkit
             return;
         }
-        final int buttonMask = ((ev.isPrimaryButtonDown() ? WCMouseEvent.BUTTON1 : WCMouseEvent.NOBUTTON) | (ev.isMiddleButtonDown() ? WCMouseEvent.BUTTON2 : WCMouseEvent.NOBUTTON) |
-                                    (ev.isSecondaryButtonDown() ? WCMouseEvent.BUTTON3 : WCMouseEvent.NOBUTTON));
+        final int buttonMask = ((ev.isPrimaryButtonDown()   ? WCMouseEvent.BUTTON1 : WCMouseEvent.NOBUTTON) |
+                                (ev.isMiddleButtonDown()    ? WCMouseEvent.BUTTON2 : WCMouseEvent.NOBUTTON) |
+                                (ev.isSecondaryButtonDown() ? WCMouseEvent.BUTTON3 : WCMouseEvent.NOBUTTON));
         WCMouseEvent mouseEvent =
                 new WCMouseEvent(id, button,
                     ev.getClickCount(), (int) x, (int) y,

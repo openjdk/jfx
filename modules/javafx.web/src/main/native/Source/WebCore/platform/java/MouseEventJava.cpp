@@ -47,15 +47,15 @@ MouseButton getWebCoreMouseButton(jint javaButton)
 
 unsigned short getWebCoreMouseButtons(jint javaButton)
 {
-    unsigned short buttons = NoButtonPress;
+    unsigned short buttons = NoButtonMask;
     if (javaButton & com_sun_webkit_event_WCMouseEvent_BUTTON1) {
-        buttons |= LeftButtonPress;
+        buttons |= LeftButtonMask;
     }
     if (javaButton & com_sun_webkit_event_WCMouseEvent_BUTTON2) {
-        buttons |= MiddleButtonPress;
+        buttons |= MiddleButtonMask;
     }
     if (javaButton & com_sun_webkit_event_WCMouseEvent_BUTTON3) {
-        buttons |= RightButtonPress;
+        buttons |= RightButtonMask;
     }
     return buttons;
 }

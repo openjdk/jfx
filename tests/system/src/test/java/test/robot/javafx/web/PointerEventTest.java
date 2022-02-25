@@ -57,7 +57,7 @@ import org.junit.Test;
 
 import test.util.Util;
 
-import static org.junit.Assert.fail;
+import static org.junit.Assert.*;
 
 /*
  * Tests for validating the buttons property received in "pointermove" event,
@@ -85,7 +85,6 @@ public class PointerEventTest {
     private final int DX = 125;
     private final int DY = 125;
 
-    private static CountDownLatch loadLatch;
     private static CountDownLatch startupLatch;
 
     static Document document;
@@ -114,7 +113,7 @@ public class PointerEventTest {
                 if (n == Worker.State.SUCCEEDED) {
                     document = webEngine.getDocument();
                     element = document.getElementById("buttonPressed");
-                    loadLatch.countDown();
+                    startupLatch.countDown();
                 }
             });
             scene = new Scene(new StackPane(webView), SCENE_WIDTH, SCENE_HEIGHT);
@@ -125,79 +124,76 @@ public class PointerEventTest {
         }
     }
 
-    public String mouseButtonDrag(MouseButton... button) {
+    public int mouseButtonDrag(MouseButton... buttons) {
         Util.runAndWait(() -> {
             robot.mouseMove((int)(scene.getWindow().getX() + scene.getX() + DX),
-                        (int)(scene.getWindow().getY() + scene.getY() + DY ));
-            robot.mousePress(button);
+                            (int)(scene.getWindow().getY() + scene.getY() + DY));
+            robot.mousePress(buttons);
         });
 
-        for (int i = 0; i < DRAG_DISTANCE; i++) {
-                final int c = i;
-                Util.runAndWait(() -> {
-                    // Move the mouse backwards so that the pointer does not stay on the popup,if any.
-                    robot.mouseMove((int)(scene.getWindow().getX() + scene.getX() + DX - c),
-                        (int)(scene.getWindow().getY() + scene.getY() + DY) );
-            });
-        }
+        Util.runAndWait(() -> {
+            for (int i = 0; i < DRAG_DISTANCE; i++) {
+                // Move the mouse backwards so that the pointer does not stay on the popup, if any.
+                robot.mouseMove((int)(scene.getWindow().getX() + scene.getX() + DX - i),
+                                (int)(scene.getWindow().getY() + scene.getY() + DY));
+            }
+        });
 
         Util.sleep(SLEEP_TIME);
         Util.runAndWait(()  -> {
             buttonMask = element.getTextContent();
-            robot.mouseRelease(button);
+            robot.mouseRelease(buttons);
         });
 
-        return buttonMask;
+        return Integer.parseInt(buttonMask);
     }
 
     @Test
     public void testLeftButtonDrag() {
-        int result = Integer.parseInt(mouseButtonDrag(MouseButton.PRIMARY));
-        Assert.assertEquals(LEFT_BUTTON_DRAG,result);
+        int result = mouseButtonDrag(MouseButton.PRIMARY);
+        assertEquals(LEFT_BUTTON_DRAG, result);
     }
 
     @Test
     public void testRightButtonDrag() {
-        int result = Integer.parseInt(mouseButtonDrag(MouseButton.SECONDARY));
-        Assert.assertEquals(RIGHT_BUTTON_DRAG,result);
+        int result = mouseButtonDrag(MouseButton.SECONDARY);
+        assertEquals(RIGHT_BUTTON_DRAG, result);
     }
 
     @Test
     public void testMiddleButtonDrag() {
-        int result = Integer.parseInt(mouseButtonDrag(MouseButton.MIDDLE));
-        Assert.assertEquals(MIDDLE_BUTTON_DRAG,result);
+        int result = mouseButtonDrag(MouseButton.MIDDLE);
+        assertEquals(MIDDLE_BUTTON_DRAG, result);
     }
 
     @Test
     public void testLeftMiddleButtonDrag() {
-        int result = Integer.parseInt(mouseButtonDrag(MouseButton.PRIMARY, MouseButton.MIDDLE));
-        Assert.assertEquals((LEFT_BUTTON_DRAG|MIDDLE_BUTTON_DRAG),result);
+        int result = mouseButtonDrag(MouseButton.PRIMARY, MouseButton.MIDDLE);
+        assertEquals((LEFT_BUTTON_DRAG | MIDDLE_BUTTON_DRAG), result);
     }
 
     @Test
     public void testMiddleRightButtonDrag() {
-        int result = Integer.parseInt(mouseButtonDrag(MouseButton.MIDDLE,MouseButton.SECONDARY));
-        Assert.assertEquals((MIDDLE_BUTTON_DRAG|RIGHT_BUTTON_DRAG),result);
+        int result = mouseButtonDrag(MouseButton.MIDDLE, MouseButton.SECONDARY);
+        assertEquals((MIDDLE_BUTTON_DRAG | RIGHT_BUTTON_DRAG), result);
     }
 
     @Test
     public void testLeftRightButtonDrag() {
-        int result = Integer.parseInt(mouseButtonDrag(MouseButton.PRIMARY, MouseButton.SECONDARY));
-        Assert.assertEquals((LEFT_BUTTON_DRAG|RIGHT_BUTTON_DRAG),result);
+        int result = mouseButtonDrag(MouseButton.PRIMARY, MouseButton.SECONDARY);
+        assertEquals((LEFT_BUTTON_DRAG | RIGHT_BUTTON_DRAG), result);
     }
 
     @Test
     public void testLeftMiddleRightButtonDrag() {
-        int result = Integer.parseInt(mouseButtonDrag(MouseButton.PRIMARY, MouseButton.MIDDLE, MouseButton.SECONDARY));
-        Assert.assertEquals((LEFT_BUTTON_DRAG|MIDDLE_BUTTON_DRAG|RIGHT_BUTTON_DRAG),result);
+        int result = mouseButtonDrag(MouseButton.PRIMARY, MouseButton.MIDDLE, MouseButton.SECONDARY);
+        assertEquals((LEFT_BUTTON_DRAG | MIDDLE_BUTTON_DRAG | RIGHT_BUTTON_DRAG), result);
     }
 
     @BeforeClass
     public static void initFX() {
-        startupLatch = new CountDownLatch(1);
-        loadLatch  = new CountDownLatch(1);
+        startupLatch = new CountDownLatch(2);
         new Thread(() -> Application.launch(TestApp.class, (String[])null)).start();
-        waitForLatch(loadLatch, 10, "Timeout waiting for loading webpage().");
         waitForLatch(startupLatch, 15, "Timeout waiting for FX runtime to start");
     }
 
@@ -212,7 +208,7 @@ public class PointerEventTest {
     @After
     public void resetTest() {
         Util.runAndWait(() -> {
-            robot.mouseRelease(MouseButton.PRIMARY,MouseButton.MIDDLE,MouseButton.SECONDARY);
+            robot.mouseRelease(MouseButton.PRIMARY, MouseButton.MIDDLE, MouseButton.SECONDARY);
             robot.mouseClick(MouseButton.PRIMARY);
         });
     }

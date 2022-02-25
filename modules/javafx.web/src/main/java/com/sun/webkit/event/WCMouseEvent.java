@@ -46,7 +46,7 @@ public final class WCMouseEvent {
     private final long when;
 
     private final int button;
-    private final int buttons;
+    private final int buttonMask;
     private final int clickCount;
 
     private final int x;
@@ -62,7 +62,7 @@ public final class WCMouseEvent {
     private final boolean popupTrigger;
 
     public WCMouseEvent(int id, int button, int clickCount, int x, int y, int screenX, int screenY,
-                        long when, boolean shift, boolean control, boolean alt, boolean meta, boolean popupTrigger, int buttons) {
+                        long when, boolean shift, boolean control, boolean alt, boolean meta, boolean popupTrigger, int buttonMask) {
         this.id = id;
         this.button = button;
         this.clickCount = clickCount;
@@ -76,7 +76,7 @@ public final class WCMouseEvent {
         this.alt = alt;
         this.meta = meta;
         this.popupTrigger = popupTrigger;
-        this.buttons = buttons;
+        this.buttonMask = buttonMask;
     }
 
     public WCMouseEvent(int id, int button, int clickCount, int x, int y, int screenX, int screenY,
@@ -102,5 +102,5 @@ public final class WCMouseEvent {
 
     public boolean isPopupTrigger() { return popupTrigger; }
 
-    public int getButtons() { return buttons; }
+    public int getButtonMask() { return buttonMask; }
 }

@@ -45,13 +45,26 @@ const double ForceAtForceClick = 2;
     enum MouseButton : int8_t { LeftButton = 0, MiddleButton, RightButton, NoButton = -2 };
     enum SyntheticClickType : int8_t { NoTap, OneFingerTap, TwoFingerTap };
 #if PLATFORM(JAVA)
-    enum MouseButtonPressed : uint8_t { NoButtonPress = 0, LeftButtonPress, RightButtonPress, MiddleButtonPress = 4 };
+    enum MouseButtonMask : uint8_t { NoButtonMask = 0, LeftButtonMask, RightButtonMask, MiddleButtonMask = 4 };
 #endif
 
     class PlatformMouseEvent : public PlatformEvent {
     public:
         PlatformMouseEvent()
             : PlatformEvent(PlatformEvent::MouseMoved)
+        {
+        }
+
+        PlatformMouseEvent(const IntPoint& position, const IntPoint& globalPosition, MouseButton button, PlatformEvent::Type type,
+                           int clickCount, bool shiftKey, bool ctrlKey, bool altKey, bool metaKey, WallTime timestamp, double force, SyntheticClickType syntheticClickType, PointerID pointerId = mousePointerID)
+            : PlatformEvent(type, shiftKey, ctrlKey, altKey, metaKey, timestamp)
+            , m_button(button)
+            , m_syntheticClickType(syntheticClickType)
+            , m_position(position)
+            , m_globalPosition(globalPosition)
+            , m_force(force)
+            , m_pointerId(pointerId)
+            , m_clickCount(clickCount)
         {
         }
 
@@ -71,19 +84,6 @@ const double ForceAtForceClick = 2;
         {
         }
 #endif
-       PlatformMouseEvent(const IntPoint& position, const IntPoint& globalPosition, MouseButton button, PlatformEvent::Type type,
-                           int clickCount, bool shiftKey, bool ctrlKey, bool altKey, bool metaKey, WallTime timestamp, double force,
-                           SyntheticClickType syntheticClickType, PointerID pointerId = mousePointerID)
-            : PlatformEvent(type, shiftKey, ctrlKey, altKey, metaKey, timestamp)
-            , m_button(button)
-            , m_syntheticClickType(syntheticClickType)
-            , m_position(position)
-            , m_globalPosition(globalPosition)
-            , m_force(force)
-            , m_pointerId(pointerId)
-            , m_clickCount(clickCount)
-        {
-        }
 
         // This position is relative to the enclosing NSWindow in WebKit1, and is WKWebView-relative in WebKit2.
         // Use ScrollView::windowToContents() to convert it to into the contents of a given view.
