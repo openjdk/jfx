@@ -51,20 +51,28 @@ public class HTMLEditingTest extends TestBase {
         String defaultText = "Default";
         loadContent(
                 "<input id='srcInput' value=" + defaultText + " autofocus>" +
-                "<input id='pasteTarget' numOfMimeTypes=''></input>" +
-                "<script>"+
-                "srcInput.onpaste = function(e) {" +
-                "pasteTarget.value = e.clipboardData.getData('text/plain');}" +
-                "pasteTarget.numOfMimeTypes = (e.clipboardData.types).length;}" +
-                "</script>");
+                        "<input id='pasteTarget'></input>" +
+                        "<div id=\"clipboardData\"></div>" +
+                        "<script>"+
+                        "document.addEventListener('paste', e => {\n" +
+                        "            let messages = [];\n" +
+                        "            if (e.clipboardData.types) {\n" +
+                        "                let message_index = 0;\n" +
+                        "                e.clipboardData.types.forEach(type => {\n" +
+                        "                    messages.push( type + \": \" + e.clipboardData.getData(type));\n" +
+                        "                    const para = document.createElement(\"p\");\n" +
+                        "                    para.innerText = type + \": \" + e.clipboardData.getData(type);\n" +
+                        "                    document.getElementById(\"clipboardData\").innerText = ++message_index;\n" +
+                        "                });\n" +
+                        "            }\n" +
+                        "        });\n" +
+                        "srcInput.onpaste = function(e) {" +
+                        "pasteTarget.value = e.clipboardData.getData('text/plain');}" +
+                        "</script>");
 
         submit(() -> {
             assertTrue("LoadContent completed successfully",
                     getEngine().getLoadWorker().getState() == SUCCEEDED);
-
-            assertEquals("Target onpaste data", getEngine().
-                    executeScript("pasteTarget.numOfMimeTypes").toString(), "undefined");
-
             String clipboardData = "Clipboard text";
             ClipboardContent content = new ClipboardContent();
             content.putString(clipboardData);
@@ -73,20 +81,21 @@ public class HTMLEditingTest extends TestBase {
             Event.fireEvent(getView(),
                     new KeyEvent(null,getView(),
                             KeyEvent.KEY_PRESSED,
-                            "", "", KeyCode.PASTE,
+                            "", "", KeyCode.V,
                             false, !PlatformUtil.isMac(),// Ctrl+V(Non Mac)
                             false, PlatformUtil.isMac()));// Cmd+V (Mac)
 
             assertEquals("Source Default value",getEngine().
-                    executeScript("srcInput.defaultValue").toString(),
+                            executeScript("srcInput.defaultValue").toString(),
                     defaultText);
             assertEquals("Source clipboard onpaste data", getEngine().
-                    executeScript("srcInput.value").toString() + clipboardData, defaultText + clipboardData);
-            assertNotEquals("Target onpaste data", getEngine().
-                    executeScript("pasteTarget.value").toString(),
+                    executeScript("srcInput.value").toString(), clipboardData + defaultText);
+            assertEquals("Target onpaste data", getEngine().
+                            executeScript("pasteTarget.value").toString(),
                     clipboardData);
-            assertNotEquals("Target onpaste data", getEngine().
-                            executeScript("pasteTarget.numOfMimeTypes").toString(), "2");
+            assertEquals("Target onpaste data size", getEngine().
+                            executeScript("document.getElementById(\"clipboardData\").innerText").toString(),
+                    "2");
         });
     }
 }
