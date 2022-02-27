@@ -116,6 +116,9 @@ public class LocalStorageTest extends TestBase {
     /* test localstorage set data before window.close and check data after window.close */
     @Test
     public void testLocalStorageData() {
+        final WebEngine webEngine = getEngine();
+        webEngine.setJavaScriptEnabled(true);
+        webEngine.setUserDataDirectory(LOCAL_STORAGE_DIR);
         load(new File("src/test/resources/test/html/localstorage.html"));
         submit(() -> {
             WebView view = getView();
@@ -123,23 +126,29 @@ public class LocalStorageTest extends TestBase {
             getEngine().executeScript("window.close();");
             //get data
             String s = (String) view.getEngine().executeScript("document.getElementById('key').innerText;");
-            assertEquals(s, "1001");
+            assertEquals("1001", s);
         });
     }
 
     @Test
     public void testLocalStorageSet() {
+        final WebEngine webEngine = getEngine();
+        webEngine.setJavaScriptEnabled(true);
+        webEngine.setUserDataDirectory(LOCAL_STORAGE_DIR);
         load(new File("src/test/resources/test/html/localstorage.html"));
         submit(() -> {
             WebView view = getView();
             view.getEngine().executeScript("test_local_storage_set();");
             String s = (String) view.getEngine().executeScript("document.getElementById('key').innerText;");
-            assertEquals(s, "1001");
+            assertEquals("1001", s);
         });
     }
 
     @Test
     public void testLocalStoargeClear() {
+        final WebEngine webEngine = getEngine();
+        webEngine.setJavaScriptEnabled(true);
+        webEngine.setUserDataDirectory(LOCAL_STORAGE_DIR);
         load(new File("src/test/resources/test/html/localstorage.html"));
         submit(() -> {
             WebView view = getView();
