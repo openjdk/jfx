@@ -52,7 +52,6 @@ import javafx.scene.web.WebEngine;
 public class LocalStorageTest extends TestBase {
 
     private static final File LOCAL_STORAGE_DIR = new File("LocalStorageDir");
-    private static final File PRE_LOCKED = new File("zoo_local_storage");
 
     private static void deleteRecursively(File file) throws IOException {
         if (file.isDirectory()) {
@@ -81,15 +80,9 @@ public class LocalStorageTest extends TestBase {
         });
     }
 
-    @BeforeClass
-    public static void beforeClass() throws IOException {
-        PRE_LOCKED.mkdirs();
-    }
-
     @AfterClass
     public static void afterClass() throws IOException {
         deleteRecursively(LOCAL_STORAGE_DIR);
-        deleteRecursively(PRE_LOCKED);
     }
 
     @Test
