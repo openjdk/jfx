@@ -262,6 +262,22 @@ static jfieldID  jDelegateMenuField = 0;
         (*env)->CallVoidMethod(env, pixels, jPixelsAttachData, ptr_to_jlong(&image));
         if (image != NULL)
         {
+            jclass pixelsClass = (*env)->FindClass(env, "com/sun/glass/ui/mac/MacPixels");
+
+            jfieldID jPixelsWidthField = (*env)->GetFieldID(env, pixelsClass, "width", "I");
+            jfieldID jPixelsHeightField = (*env)->GetFieldID(env, pixelsClass, "height", "I");
+            jfieldID jPixelsScaleXField = (*env)->GetFieldID(env, pixelsClass, "scalex", "F");
+            jfieldID jPixelsScaleYField = (*env)->GetFieldID(env, pixelsClass, "scaley", "F");
+
+            jint width = (*env)->GetIntField(env, pixels, jPixelsWidthField);
+            jint height = (*env)->GetIntField(env, pixels, jPixelsHeightField);
+            jfloat sx = (*env)->GetFloatField(env, pixels, jPixelsScaleXField);
+            jfloat sy = (*env)->GetFloatField(env, pixels, jPixelsScaleYField);
+
+            if ((sx > 1) && (sy > 1) && (width > 1) && (height > 1)) {
+                NSSize imgSize = {width / sx, height / sy};
+                [image setSize: imgSize];
+            }
             [self->item setImage: image];
             [image release];
         }
