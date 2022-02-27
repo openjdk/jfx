@@ -54,10 +54,6 @@ public class LocalStorageTest extends TestBase {
     private static final File LOCAL_STORAGE_DIR = new File("LocalStorageDir");
     private static final File PRE_LOCKED = new File("zoo_local_storage");
 
-    private static RandomAccessFile preLockedRaf;
-    private static FileLock preLockedLock;
-    private static final Random random = new Random();
-
     private static void deleteRecursively(File file) throws IOException {
         if (file.isDirectory()) {
             for (File f : file.listFiles()) {
@@ -88,19 +84,10 @@ public class LocalStorageTest extends TestBase {
     @BeforeClass
     public static void beforeClass() throws IOException {
         PRE_LOCKED.mkdirs();
-        File preLockedFile = new File(PRE_LOCKED, ".lock");
-        preLockedRaf = new RandomAccessFile(preLockedFile, "rw");
-        preLockedLock = preLockedRaf.getChannel().tryLock();
-        if (preLockedLock == null) {
-            fail(format("Directory [%s] is already locked "
-                    + "externally", PRE_LOCKED));
-        }
     }
 
     @AfterClass
     public static void afterClass() throws IOException {
-        preLockedLock.release();
-        preLockedRaf.close();
         deleteRecursively(LOCAL_STORAGE_DIR);
         deleteRecursively(PRE_LOCKED);
     }
