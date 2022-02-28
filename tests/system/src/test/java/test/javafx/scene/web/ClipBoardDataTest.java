@@ -161,6 +161,10 @@ public class ClipBoardDataTest {
                         PlatformUtil.isMac()? KeyModifier.META : KeyModifier.CTRL);
                 Util.sleep(500);
 
+            keyboard.doKeyPress(KeyCode.C,
+                    PlatformUtil.isMac()? KeyModifier.META : KeyModifier.CTRL);
+            Util.sleep(500);
+
                 keyboard.doKeyPress(KeyCode.V,
                     PlatformUtil.isMac()? KeyModifier.META : KeyModifier.CTRL);
                 Util.sleep(500);
