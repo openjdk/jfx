@@ -229,7 +229,7 @@ public class AreaChartTest extends XYChartTestBase {
 
         assertArrayEquals(convertSeriesDataToPoint2D(expectedSeries).toArray(), findDataPointsFromPathLine(ac).toArray());
     }
-    
+
     @Test public void testPathOutsideXUpperBoundsWithDuplicateXAndLowerY() {
         startApp();
         series1.getData().add(new XYChart.Data<>(100d, 20d)); // upper bound is 90
