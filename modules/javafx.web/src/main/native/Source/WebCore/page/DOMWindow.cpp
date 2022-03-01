@@ -847,8 +847,6 @@ ExceptionOr<Storage*> DOMWindow::localStorage()
     if (!document->securityOrigin().canAccessLocalStorage(nullptr))
         return Exception { SecurityError };
 
-    // FIXME: We should consider supporting access/modification to local storage
-    // after calling window.close(). See <https://bugs.webkit.org/show_bug.cgi?id=135330>.
     if (m_localStorage)
         return m_localStorage.get();
 
