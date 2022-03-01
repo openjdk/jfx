@@ -28,17 +28,21 @@ import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.geometry.HPos;
+import javafx.geometry.Insets;
 import javafx.geometry.Point2D;
+import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.chart.LineChart;
 import javafx.scene.chart.NumberAxis;
 import javafx.scene.chart.XYChart;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
+import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
-import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
 import java.util.ArrayList;
@@ -98,19 +102,29 @@ public class LineGraphBoundsSample extends Application {
         });
 
         final TextField lowerBoundTextField = new TextField();
+        lowerBoundTextField.setEditable(false);
         lowerBoundTextField.textProperty().bind(lowerBound.asString("%.2f"));
 
         final TextField upperBoundTextField = new TextField();
+        upperBoundTextField.setEditable(false);
         upperBoundTextField.textProperty().bind(upperBound.asString("%.2f"));
 
         final BorderPane root = new BorderPane();
-        root.setTop(
-                new HBox(
-                        axisSelection,
-                        new VBox(decrement, increment),
-                        new VBox(lowerBoundTextField, upperBoundTextField)
-                )
-        );
+        final GridPane gridPane = new GridPane();
+        gridPane.setVgap(5);
+        gridPane.setHgap(5);
+        gridPane.setPadding(new Insets(10));
+        gridPane.add(new Label("Sorting Policy: "), 0, 0);
+        gridPane.add(axisSelection, 1, 0);
+        gridPane.add(new Label("Lower Bound: "), 2, 0);
+        gridPane.add(new Label("Upper Bound: "), 2, 1);
+        gridPane.add(lowerBoundTextField, 3, 0);
+        gridPane.add(upperBoundTextField, 3, 1);
+        final HBox buttons = new HBox(10, decrement, increment);
+        buttons.setAlignment(Pos.CENTER);
+        GridPane.setHalignment(buttons, HPos.CENTER);
+        gridPane.add(buttons, 0, 2, 4,1);
+        root.setTop(gridPane);
         root.setCenter(lineChart);
 
         Scene scene = new Scene(root);
