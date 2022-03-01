@@ -1748,7 +1748,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_webkit_WebPage_twkProcessKeyEvent
 
 JNIEXPORT jboolean JNICALL Java_com_sun_webkit_WebPage_twkProcessMouseEvent
     (JNIEnv* env, jobject self, jlong pPage,
-     jint id, jint button, jint clickCount,
+     jint id, jint button, jint buttonMask, jint clickCount,
      jint x, jint y, jint screenX, jint screenY,
      jboolean shift, jboolean ctrl, jboolean alt, jboolean meta,
      jboolean popupTrigger, jdouble timestamp)
@@ -1774,6 +1774,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_webkit_WebPage_twkProcessMouseEvent
     PlatformMouseEvent mouseEvent = PlatformMouseEvent(loc,
                                                        IntPoint(screenX, screenY),
                                                        getWebCoreMouseButton(button),
+                                                       getWebCoreMouseButtons(buttonMask),
                                                        getWebCoreMouseEventType(id),
                                                        clickCount,
                                                        shift, ctrl, alt, meta,
