@@ -144,7 +144,7 @@ public class StraightLineTest {
                     "height:20px;\n"+
                     "margin:0px;\n"+
                     "text-decoration: underline;\n" +
-                    "text-decoration-thickness: 30px;\n" +
+                    "text-decoration-thickness: 20px;\n" +
                     "font-size: 16px; \n" +
                     "}\n" +
                     "</style>\n" +
@@ -162,10 +162,10 @@ public class StraightLineTest {
             PixelReader pr = snapshot.getPixelReader();
             int start_x = (int)webView.getEngine().executeScript("document.getElementsByTagName('div')[0].getBoundingClientRect().x");
             int start_y = (int)webView.getEngine().executeScript("document.getElementsByTagName('div')[0].getBoundingClientRect().y");
-            int height = (int)webView.getEngine().executeScript("document.getElementsByTagName('div')[0].getBoundingClientRect().height");
             int width = (int)webView.getEngine().executeScript("document.getElementsByTagName('div')[0].getBoundingClientRect().width");
+            int height = (int)webView.getEngine().executeScript("document.getElementsByTagName('div')[0].getBoundingClientRect().height");
 
-            int line_start_x = start_x;
+            int line_start_x = start_x + DELTA;
             int line_end_x = start_x + width - SKIP_TEXT_BOUNDARY;
             int line_start_y = start_y + height + LINE_THICKNESS/2;
             String line_color = "rgba(0,0,0,255)"; // color of line
@@ -174,7 +174,7 @@ public class StraightLineTest {
 
             for (int x = line_start_x; x < line_end_x; x++) {
                 String color = colorToString(pr.getColor(x, line_start_y));
-                assertEquals(color, line_color);
+                assertEquals(line_color, color);
             }
         });
     }
