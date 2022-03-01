@@ -39,7 +39,6 @@ import javafx.scene.web.WebEngine;
 import javafx.scene.web.WebView;
 import javafx.scene.input.KeyCode;
 import javafx.stage.Stage;
-import javafx.stage.WindowEvent;
 
 import java.lang.Integer;
 import java.lang.Number;
@@ -109,7 +108,6 @@ public class PointerEventTest {
             webView = new WebView();
             webEngine = webView.getEngine();
             String URL =  this.getClass().getResource("pointerEvent.html").toString();
-            webEngine.load( URL);
             webView.getEngine().getLoadWorker().stateProperty().addListener((ov, o, n) -> {
                 if (n == Worker.State.SUCCEEDED) {
                     document = webEngine.getDocument();
@@ -117,10 +115,11 @@ public class PointerEventTest {
                     startupLatch.countDown();
                 }
             });
+            webEngine.load(URL);
             scene = new Scene(new StackPane(webView), SCENE_WIDTH, SCENE_HEIGHT);
             stage.setScene(scene);
             stage.setAlwaysOnTop(true);
-            Platform.runLater(startupLatch::countDown);
+            stage.setOnShown(e -> startupLatch.countDown());
             stage.show();
         }
     }
