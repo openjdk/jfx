@@ -26,25 +26,14 @@
 package test.javafx.scene.web;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.fail;
 import org.junit.AfterClass;
-import org.junit.BeforeClass;
 import org.junit.Test;
 
-import static java.lang.String.format;
-import java.io.RandomAccessFile;
-import java.nio.channels.FileLock;
-import java.util.concurrent.FutureTask;
 import java.io.File;
 import java.io.IOException;
-import java.util.Random;
 
-
-import javafx.scene.web.WebEngineShim;
-import javafx.concurrent.Worker;
 import javafx.scene.web.WebView;
 import javafx.scene.web.WebEngine;
 
