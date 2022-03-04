@@ -167,8 +167,6 @@ public class StraightLineTest {
             int line_end_x = start_x + width - SKIP_TEXT_BOUNDARY;
             int line_start_y = start_y + height + LINE_THICKNESS/2;
             String line_color = "rgba(0,0,0,255)"; // color of line
-            System.out.println(line_end_x);
-            System.out.println(line_start_y);
 
             for (int x = line_start_x; x < line_end_x; x++) {
                 String color = colorToString(pr.getColor(x, line_start_y));
