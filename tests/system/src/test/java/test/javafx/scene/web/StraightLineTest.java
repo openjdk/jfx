@@ -74,8 +74,6 @@ public class StraightLineTest {
         public void start(Stage primaryStage) throws Exception {
             Platform.setImplicitExit(false);
             this.primaryStage = primaryStage;
-            this.primaryStage.setWidth(80);
-            this.primaryStage.setHeight(60);
             launchLatch.countDown();
         }
     }
@@ -105,7 +103,7 @@ public class StraightLineTest {
     public void setupTestObjects() {
         Platform.runLater(() -> {
             webView = new WebView();
-            Scene scene = new Scene(webView);
+            Scene scene = new Scene(webView, 150, 100);
             straightLineTestApp.primaryStage.setScene(scene);
             straightLineTestApp.primaryStage.show();
         });
