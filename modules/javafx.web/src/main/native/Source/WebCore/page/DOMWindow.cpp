@@ -853,12 +853,14 @@ ExceptionOr<Storage*> DOMWindow::localStorage()
 #endif
 
     auto* page = document->page();
+#if !PLATFORM(JAVA)
     // FIXME: We should consider supporting access/modification to local storage
     // after calling window.close(). See <https://bugs.webkit.org/show_bug.cgi?id=135330>.
     if (!page || !page->isClosing()) {
         if (m_localStorage)
             return m_localStorage.get();
     }
+#endif
 
     if (!page)
         return nullptr;
