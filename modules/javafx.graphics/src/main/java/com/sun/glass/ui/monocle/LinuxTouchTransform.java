@@ -117,6 +117,7 @@ class LinuxTouchTransform {
     private void initTransform(int axis, int index) {
         double range;
         String axisName;
+        axes[index] = axis;
         switch (axis) {
             case LinuxInput.ABS_X:
             case LinuxInput.ABS_MT_POSITION_X:
