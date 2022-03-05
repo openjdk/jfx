@@ -62,6 +62,18 @@ class LinuxTouchTransform {
                                         + product + ".flipXY");
             return null;
         });
+
+        int index = 0;
+
+        if(device.isTouch()) {
+            initTransform(LinuxInput.ABS_X, index++);
+            initTransform(LinuxInput.ABS_Y, index++);
+        }
+
+        if (device.isMultiTouch()) {
+            initTransform(LinuxInput.ABS_MT_POSITION_X, index++);
+            initTransform(LinuxInput.ABS_MT_POSITION_Y, index++);
+        }
     }
 
     /** Gets the transformed pixel coordinate of the current event in the buffer
@@ -78,14 +90,6 @@ class LinuxTouchTransform {
             if (axes[i] == axis) {
                 return transform(i, value);
             }
-        }
-        if (i == axes.length) {
-            axes = Arrays.copyOf(axes, axes.length * 2);
-            Arrays.fill(axes, i + 1, axes.length - 1, -1);
-            translates = Arrays.copyOf(translates, translates.length * 2);
-            scalars = Arrays.copyOf(scalars, scalars.length * 2);
-            mins = Arrays.copyOf(mins, mins.length * 2);
-            maxs = Arrays.copyOf(maxs, maxs.length * 2);
         }
         initTransform(axis, i);
         return transform(i, value);
@@ -115,6 +119,16 @@ class LinuxTouchTransform {
     }
 
     private void initTransform(int axis, int index) {
+
+        if (index == axes.length) {
+            axes = Arrays.copyOf(axes, axes.length * 2);
+            Arrays.fill(axes, index + 1, axes.length - 1, -1);
+            translates = Arrays.copyOf(translates, translates.length * 2);
+            scalars = Arrays.copyOf(scalars, scalars.length * 2);
+            mins = Arrays.copyOf(mins, mins.length * 2);
+            maxs = Arrays.copyOf(maxs, maxs.length * 2);
+        }
+
         double range;
         String axisName;
         axes[index] = axis;
