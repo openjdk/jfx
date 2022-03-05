@@ -37,6 +37,7 @@ class LinuxStatefulMultiTouchProcessor extends LinuxTouchProcessor {
     private static final int COORD_UNDEFINED = Integer.MIN_VALUE;
     private int currentID = ID_UNASSIGNED;
     private int currentSlot = 0;
+    private TouchState pipelineState = new TouchState();
 
     private final Map<Integer, Integer> slotToIDMap =
             new HashMap<Integer, Integer>();
@@ -137,7 +138,8 @@ class LinuxStatefulMultiTouchProcessor extends LinuxTouchProcessor {
                             } else if (allPointsReleased) {
                                 state.clear();
                             }
-                            pipeline.pushState(state);
+                            state.copyTo(pipelineState);
+                            pipeline.pushState(pipelineState);
                             x = y = COORD_UNDEFINED;
                             allPointsReleased = false;
                             break;
