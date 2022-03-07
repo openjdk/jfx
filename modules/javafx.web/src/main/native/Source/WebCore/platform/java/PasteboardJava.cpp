@@ -237,6 +237,7 @@ std::unique_ptr<Pasteboard> Pasteboard::createForCopyAndPaste(std::unique_ptr<Pa
     static RefPtr<DataObjectJava> data = DataObjectJava::create();
     // TODO: setURL, setFiles, setData, setHtml (needs URL)
     data->setPlainText(jGetPlainText());
+    data->setData(DataObjectJava::mimeHTML(), jGetPlainText());
     return std::unique_ptr<Pasteboard>(new Pasteboard(data, true));
 }
 
