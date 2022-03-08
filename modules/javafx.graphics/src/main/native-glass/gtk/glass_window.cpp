@@ -777,7 +777,7 @@ WindowContextTop::WindowContextTop(jobject _jwindow, WindowContext* _owner, long
         request_frame_extents();
     }
 
-    event_serial = 0;
+    event_serial = GDK_CURRENT_TIME;
 }
 
 // Applied to a temporary full screen window to prevent sending events to Java
@@ -1388,6 +1388,7 @@ void WindowContextTop::request_focus() {
         // prevents activeWindows on WindowStage.java to be out of order which may cause the FOCUS_DISABLED event
         // to bring up the wrong window (it brings up the last which will not be the real "last" if out of order).
         gtk_window_present_with_time(GTK_WINDOW(gtk_widget), event_serial);
+        event_serial = GDK_CURRENT_TIME;
     }
 }
 
