@@ -25,6 +25,7 @@
 
 package com.sun.glass.ui.monocle;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -37,13 +38,16 @@ class LinuxStatefulMultiTouchProcessor extends LinuxTouchProcessor {
     private static final int COORD_UNDEFINED = Integer.MIN_VALUE;
     private int currentID = ID_UNASSIGNED;
     private int currentSlot = 0;
-
-    private final Map<Integer, Integer> slotToIDMap =
-            new HashMap<Integer, Integer>();
+    private final int[] slotToID;
 
     LinuxStatefulMultiTouchProcessor(LinuxInputDevice device) {
         super(device);
         pipeline.addFilter(new LookaheadTouchFilter(false));
+        int maxSlots = device
+                .getAbsoluteInputCapabilities(LinuxInput.ABS_MT_SLOT)
+                .getMaximum();
+        slotToID = new int[maxSlots];
+        Arrays.fill(slotToID, ID_UNASSIGNED);
     }
 
     @Override
@@ -70,19 +74,14 @@ class LinuxStatefulMultiTouchProcessor extends LinuxTouchProcessor {
                             // We expect ABS_MT_SLOT and ABS_MT_TRACKING_ID
                             // to precede the coordinates they describe
                             currentSlot = value;
-                            currentID = slotToIDMap.getOrDefault(currentSlot,
-                                                                 ID_UNASSIGNED);
+                            currentID = slotToID[currentSlot];
                             break;
                         case LinuxInput.ABS_MT_TRACKING_ID:
                             if (value == ID_UNASSIGNED && currentID != ID_UNASSIGNED) {
                                 state.removePointForID(currentID);
                             }
                             currentID = value;
-                            if (currentID == ID_UNASSIGNED) {
-                                slotToIDMap.remove(currentSlot);
-                            } else {
-                                slotToIDMap.put(currentSlot, currentID);
-                            }
+                            slotToID[currentSlot] = currentID;
                             break;
                         case LinuxInput.ABS_X:
                         case LinuxInput.ABS_MT_POSITION_X:
