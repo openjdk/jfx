@@ -403,7 +403,6 @@ final class HLSConnectionHolder extends ConnectionHolder {
                 if (isFragmentedMP4()) {
                     mediaFileIndex = 0;
                 }
-            } catch (Exception e) {
             } finally {
                 readySignal.countDown();
             }

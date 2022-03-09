@@ -1945,13 +1945,16 @@ static gboolean dshowwrapper_reload_decoder_h264_fragmented(GstDShowWrapper *dec
     OAFilterState fs = 0;
     IPin *pOutput = NULL;
 
+    if (decoder->pGraph == NULL)
+        return FALSE;
+
     if (decoder->pMediaControl)
     {
         decoder->pMediaControl->Stop();
         decoder->pMediaControl->GetState(5000, &fs);
     }
 
-    if (decoder->pDecoder != NULL && decoder->pGraph != NULL)
+    if (decoder->pDecoder != NULL)
     {
         decoder->pGraph->RemoveFilter(decoder->pDecoder);
         decoder->pDecoder->Release();
@@ -1973,19 +1976,13 @@ static gboolean dshowwrapper_reload_decoder_h264_fragmented(GstDShowWrapper *dec
     // Add decoder
     hr = decoder->pGraph->AddFilter(decoder->pDecoder, L"Decoder");
     if (FAILED(hr))
-    {
         return FALSE;
-    }
 
     if (!dshowwrapper_connect_filters(decoder, decoder->pISrc, decoder->pDecoder))
-    {
         return FALSE;
-    }
 
     if (!dshowwrapper_connect_filters(decoder, decoder->pDecoder, decoder->pISink[0]))
-    {
         return FALSE;
-    }
 
     if (decoder->pMediaControl)
         decoder->pMediaControl->Run();
