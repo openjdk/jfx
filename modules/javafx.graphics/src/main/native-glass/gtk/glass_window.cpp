@@ -154,6 +154,7 @@ void WindowContextBase::process_focus(GdkEventFocus* event) {
                     event->in ? com_sun_glass_events_WindowEvent_FOCUS_GAINED : com_sun_glass_events_WindowEvent_FOCUS_LOST);
             CHECK_JNI_EXCEPTION(mainEnv)
         } else {
+            // when the user tries to activate a disabled window, send FOCUS_DISABLED
             mainEnv->CallVoidMethod(jwindow, jWindowNotifyFocusDisabled);
             CHECK_JNI_EXCEPTION(mainEnv)
         }
@@ -775,6 +776,8 @@ WindowContextTop::WindowContextTop(jobject _jwindow, WindowContext* _owner, long
     if (frame_type == TITLED) {
         request_frame_extents();
     }
+
+    event_serial = GDK_CURRENT_TIME;
 }
 
 // Applied to a temporary full screen window to prevent sending events to Java
@@ -1298,6 +1301,16 @@ void WindowContextTop::window_configure(XWindowChanges *windowChanges,
     }
 }
 
+void WindowContextTop::process_key(GdkEventKey* event) {
+    WindowContextBase::process_key(event);
+    event_serial = event->time;
+}
+
+void WindowContextTop::process_mouse_button(GdkEventButton* event) {
+    WindowContextBase::process_mouse_button(event);
+    event_serial = event->time;
+}
+
 void WindowContextTop::applyShapeMask(void* data, uint width, uint height)
 {
     if (frame_type != TRANSPARENT) {
@@ -1371,7 +1384,11 @@ void WindowContextTop::request_focus() {
     //The WindowContextBase::set_visible will take care of showing the window.
     //The below code will only handle later request_focus.
     if (is_visible()) {
-        gtk_window_present(GTK_WINDOW(gtk_widget));
+        // event_serial holds an event serial that will help X11 determine which window should have the focus and
+        // prevents activeWindows on WindowStage.java to be out of order which may cause the FOCUS_DISABLED event
+        // to bring up the wrong window (it brings up the last which will not be the real "last" if out of order).
+        gtk_window_present_with_time(GTK_WINDOW(gtk_widget), event_serial);
+        event_serial = GDK_CURRENT_TIME;
     }
 }
 
