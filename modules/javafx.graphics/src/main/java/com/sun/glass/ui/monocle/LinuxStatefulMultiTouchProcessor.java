@@ -39,6 +39,8 @@ class LinuxStatefulMultiTouchProcessor extends LinuxTouchProcessor {
     private int currentID = ID_UNASSIGNED;
     private int currentSlot = 0;
     private final int[] slotToID;
+    private final int[] slotToX;
+    private final int[] slotToY;
 
     LinuxStatefulMultiTouchProcessor(LinuxInputDevice device) {
         super(device);
@@ -47,7 +49,11 @@ class LinuxStatefulMultiTouchProcessor extends LinuxTouchProcessor {
                 .getAbsoluteInputCapabilities(LinuxInput.ABS_MT_SLOT)
                 .getMaximum();
         slotToID = new int[maxSlots];
+        slotToX = new int[maxSlots];
+        slotToY = new int[maxSlots];
         Arrays.fill(slotToID, ID_UNASSIGNED);
+        Arrays.fill(slotToX, COORD_UNDEFINED);
+        Arrays.fill(slotToY, COORD_UNDEFINED);
     }
 
     @Override
@@ -157,12 +163,12 @@ class LinuxStatefulMultiTouchProcessor extends LinuxTouchProcessor {
             p.id = currentID;
             p = state.addPoint(p);
         }
-        if (x != COORD_UNDEFINED) {
-            p.x = x;
-        }
-        if (y != COORD_UNDEFINED) {
-            p.y = y;
-        }
+
+        p.x = (x != COORD_UNDEFINED) ? x : slotToX[currentSlot];
+        p.y = (y != COORD_UNDEFINED) ? y : slotToY[currentSlot];
+
+        slotToX[currentSlot] = p.x;
+        slotToY[currentSlot] = p.y;
     }
 
 }
