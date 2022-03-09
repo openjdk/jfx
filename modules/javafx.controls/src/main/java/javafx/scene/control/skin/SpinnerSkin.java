@@ -336,7 +336,7 @@ public class SpinnerSkin<T> extends SkinBase<Spinner<T>> {
 
             // decrement is at the bottom
             decrementArrowButton.resize(w, tallestArrowButton);
-            positionInArea(decrementArrowButton, x, h - tallestArrowButton,
+            positionInArea(decrementArrowButton, x, y + h - tallestArrowButton,
                     w, tallestArrowButton, 0, HPos.CENTER, VPos.CENTER);
         } else if (layoutMode == SPLIT_ARROWS_HORIZONTAL) {
             // decrement is on the left-hand side
@@ -349,7 +349,7 @@ public class SpinnerSkin<T> extends SkinBase<Spinner<T>> {
 
             // increment is on the right-hand side
             incrementArrowButton.resize(widestArrowButton, h);
-            positionInArea(incrementArrowButton, w - widestArrowButton, y,
+            positionInArea(incrementArrowButton, x + w - widestArrowButton, y,
                     widestArrowButton, h, 0, HPos.CENTER, VPos.CENTER);
         }
     }
