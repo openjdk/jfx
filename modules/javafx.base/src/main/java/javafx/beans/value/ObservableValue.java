@@ -208,7 +208,7 @@ public interface ObservableValue<T> extends Observable {
      *     .flatMap(Window::showingProperty)
      *     .orElse(false);
      *
-     * // Assuming the listView is currently shown to the user then:
+     * // Assuming the listView is currently shown to the user, then:
      *
      * isShowing().getValue();  // Returns true
      *

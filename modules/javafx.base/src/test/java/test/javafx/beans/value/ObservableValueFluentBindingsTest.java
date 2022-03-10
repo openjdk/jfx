@@ -54,6 +54,7 @@ public class ObservableValueFluentBindingsTest {
 
         @Nested
         class WithNull {
+
             @Test
             void shouldThrowNullPointerException() {
                 assertThrows(NullPointerException.class, () -> property.map(null));
@@ -76,6 +77,7 @@ public class ObservableValueFluentBindingsTest {
 
             @Nested
             class When_getValue_Called {
+
                 @Test
                 void shouldReturnPropertyValuesWithOperationApplied() {
                     assertEquals("Initial+map", observableValue.getValue());
@@ -286,6 +288,7 @@ public class ObservableValueFluentBindingsTest {
 
         @Nested
         class When_getValue_Called {
+
             @Test
             void shouldReturnPropertyValuesWithOperationApplied() {
                 assertEquals("Initial", observableValue.getValue());
@@ -348,6 +351,7 @@ public class ObservableValueFluentBindingsTest {
 
         @Nested
         class WithNull {
+
             @Test
             void shouldThrowNullPointerException() {
                 assertThrows(NullPointerException.class, () -> property.flatMap(null));
@@ -374,6 +378,7 @@ public class ObservableValueFluentBindingsTest {
 
             @Nested
             class When_getValue_Called {
+
                 @Test
                 void shouldReturnPropertyValuesWithOperationApplied() {
                     assertEquals("UNKNOWN", observableValue.getValue());  // initially it is not left or right, so unknown
@@ -656,7 +661,7 @@ public class ObservableValueFluentBindingsTest {
     }
 
     /**
-     * Ensures nothing has been observed.
+     * Ensures nothing has been observed since the last check.
      */
     private void assertNothingIsObserved() {
         assertObserved();
