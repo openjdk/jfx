@@ -38,8 +38,6 @@ import java.util.List;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-import javafx.beans.property.ObjectProperty;
-import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 import javafx.beans.value.ChangeListener;
@@ -53,6 +51,7 @@ public class ObservableValueFluentBindingsTest {
 
     @Nested
     class When_map_Called {
+
         @Nested
         class WithNull {
             @Test
@@ -346,6 +345,7 @@ public class ObservableValueFluentBindingsTest {
 
     @Nested
     class When_flatMap_Called {
+
         @Nested
         class WithNull {
             @Test
@@ -353,14 +353,14 @@ public class ObservableValueFluentBindingsTest {
                 assertThrows(NullPointerException.class, () -> property.flatMap(null));
             }
         }
-        // TODO test for when something is flatMapped to null in getValue call
 
         @Nested
         class WithNotNullReturns_ObservableValue_Which {
             private StringProperty left = new SimpleStringProperty("LEFT");
             private StringProperty right = new SimpleStringProperty("RIGHT");
             private StringProperty unknown = new SimpleStringProperty("UNKNOWN");
-            private ObservableValue<String> observableValue = property.flatMap(v -> "Left".equals(v) ? left : "Right".equals(v) ? right : unknown);
+            private ObservableValue<String> observableValue =
+                    property.flatMap(v -> "Left".equals(v) ? left : "Right".equals(v) ? right : unknown);
 
             @Test
             void shouldNotBeNull() {
@@ -457,6 +457,17 @@ public class ObservableValueFluentBindingsTest {
                     property.set("Right");
 
                     assertObserved((String)null);  // flatMap maps to right property which is now null, this results in null
+                }
+
+                @Test
+                void shouldObserveNullWhenFlatMappedPropertyIsSetToNull() {
+                    property.set("Right");
+
+                    assertObserved("RIGHT");
+
+                    property.set(null);
+
+                    assertObserved((String)null);
                 }
 
                 @Test
