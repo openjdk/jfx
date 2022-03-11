@@ -74,10 +74,7 @@ public:
     }
 
     void clearData(const String& mimeType) {
-        size_t pos = m_availMimeTypes.find(mimeType);
-        if (pos != WTF::notFound) {
-            m_availMimeTypes.remove(pos);
-        }
+        m_availMimeTypes.remove(mimeType);
     }
 
     bool hasData() const {
@@ -86,15 +83,15 @@ public:
 
     //setters
     void setURL(const URL &url, const String &urlTitle) {
-        m_availMimeTypes.append(mimeURIList());
-        m_availMimeTypes.append(mimeShortcutName());
+        m_availMimeTypes.add(mimeURIList());
+        m_availMimeTypes.add(mimeShortcutName());
         m_url = url;
         m_urlTitle = urlTitle;
         m_filenames.clear();
     }
 
     void setFiles(const Vector<String> &filenames) {
-        m_availMimeTypes.append(mimeURIList());
+        m_availMimeTypes.add(mimeURIList());
         clearData(mimeShortcutName());
         m_url = emptyURL();
         m_urlTitle = emptyString();
@@ -102,12 +99,12 @@ public:
     }
 
     void setPlainText(const String &plainText){
-        m_availMimeTypes.append(mimePlainText());
+        m_availMimeTypes.add(mimePlainText());
         m_plainText = plainText;
     }
 
     void setHTML(const String &textHtml, const URL &htmlBaseUrl) {
-        m_availMimeTypes.append(mimeHTML());
+        m_availMimeTypes.add(mimeHTML());
         m_textHtml = textHtml;
         m_htmlBaseUrl = htmlBaseUrl;
     }
@@ -131,8 +128,9 @@ public:
     //getters
     //URL
     Vector<String> types() {
-        //returns MIME Types available in clipboard.
-        return m_availMimeTypes;
+        Vector<String> types;
+        types.appendRange(m_availMimeTypes.begin(), m_availMimeTypes.end());
+        return types; //returns MIME Types available in clipboard
     }
 
     String getData(const String& mimeType) {
@@ -216,7 +214,7 @@ public:
     }
 
 private:
-    Vector<String> m_availMimeTypes;
+    ListHashSet<String> m_availMimeTypes;
 
     //URL
     URL m_url;
