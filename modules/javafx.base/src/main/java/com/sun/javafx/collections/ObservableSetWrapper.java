@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -348,6 +348,16 @@ public class ObservableSetWrapper<E> implements ObservableSet<E> {
     }
 
     private boolean removeRetain(Collection<?> c, boolean remove) {
+        if (c.isEmpty()) {
+            // Retaining an empty set is equivalent to clearing the set.
+            if (!remove && !backingSet.isEmpty()) {
+                clear();
+                return true;
+            }
+
+            return false;
+        }
+
         boolean removed = false;
         for (Iterator<E> i = backingSet.iterator(); i.hasNext();) {
             E element = i.next();

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -325,6 +325,16 @@ public class ObservableMapWrapper<K, V> implements ObservableMap<K, V>{
         }
 
         private boolean removeRetain(Collection<?> c, boolean remove) {
+            if (c.isEmpty()) {
+                // Retaining an empty key set is equivalent to clearing the map.
+                if (!remove && !backingMap.isEmpty()) {
+                    clear();
+                    return true;
+                }
+
+                return false;
+            }
+
             boolean removed = false;
             for (Iterator<Entry<K, V>> i = backingMap.entrySet().iterator(); i.hasNext();) {
                 Entry<K, V> e = i.next();
@@ -454,6 +464,16 @@ public class ObservableMapWrapper<K, V> implements ObservableMap<K, V>{
         }
 
         private boolean removeRetain(Collection<?> c, boolean remove) {
+            if (c.isEmpty()) {
+                // Retaining an empty value set is equivalent to clearing the map.
+                if (!remove && !backingMap.isEmpty()) {
+                    clear();
+                    return true;
+                }
+
+                return false;
+            }
+
             boolean removed = false;
             for (Iterator<Entry<K, V>> i = backingMap.entrySet().iterator(); i.hasNext();) {
                 Entry<K, V> e = i.next();
@@ -651,6 +671,16 @@ public class ObservableMapWrapper<K, V> implements ObservableMap<K, V>{
         }
 
         private boolean removeRetain(Collection<?> c, boolean remove) {
+            if (c.isEmpty()) {
+                // Retaining an empty entry set is equivalent to clearing the map.
+                if (!remove && !backingMap.isEmpty()) {
+                    clear();
+                    return true;
+                }
+
+                return false;
+            }
+
             boolean removed = false;
             for (Iterator<Entry<K, V>> i = backingMap.entrySet().iterator(); i.hasNext();) {
                 Entry<K, V> e = i.next();
