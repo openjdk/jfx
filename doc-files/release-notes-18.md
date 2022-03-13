@@ -15,7 +15,7 @@ The JavaFX runtime also issues a warning if the GTK 2 library is selected as a f
 
 See [JDK-8273089](https://bugs.openjdk.java.net/browse/JDK-8273089) for more information.
 
-## List of Enhancement
+## List of Enhancements
 
 Issue key|Summary|Subcomponent
 ---------|-------|------------
