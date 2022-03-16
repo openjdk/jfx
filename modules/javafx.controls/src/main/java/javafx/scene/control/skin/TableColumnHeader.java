@@ -53,6 +53,7 @@ import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Label;
+import javafx.scene.control.SkinBase;
 import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableColumnBase;
@@ -645,9 +646,11 @@ public class TableColumnHeader extends Region {
             Region r = (Region) n;
             padding = r.snappedLeftInset() + r.snappedRightInset();
         }
-
-        TableRow<T> tableRow = new TableRow<>();
-        tableRow.updateTableView(tv);
+        Callback<TableView<T>, TableRow<T>> rowFactory = tv.getRowFactory();
+        TableRow<T> tableRow = rowFactory != null ? rowFactory.call(tv) : new TableRow<>();
+        tableSkin.getChildren().add(tableRow);
+        tableRow.applyCss();
+        ((SkinBase<?>) tableRow.getSkin()).getChildren().add(cell);
 
         int rows = maxRows == -1 ? items.size() : Math.min(items.size(), maxRows);
         double maxWidth = 0;
@@ -660,7 +663,7 @@ public class TableColumnHeader extends Region {
             cell.updateIndex(row);
 
             if ((cell.getText() != null && !cell.getText().isEmpty()) || cell.getGraphic() != null) {
-                tableSkin.getChildren().add(cell);
+                tableRow.applyCss();
                 cell.applyCss();
                 maxWidth = Math.max(maxWidth, cell.prefWidth(-1));
                 tableSkin.getChildren().remove(cell);

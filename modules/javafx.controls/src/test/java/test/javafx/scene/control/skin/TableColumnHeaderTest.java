@@ -30,6 +30,7 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.Event;
 import javafx.scene.control.TableColumn;
+import javafx.scene.control.TableRow;
 import javafx.scene.control.TableView;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.control.skin.TableColumnHeader;
@@ -252,4 +253,34 @@ public class TableColumnHeaderTest {
         assertEquals("Width must be equal to initial value",
                 width, column.getWidth(), 0.001);
     }
+
+    /**
+     * @test
+     * @bug 8251480 Row style must affect the required column width
+     */
+    @Test
+    public void test_resizeColumnToFitContentRowStyle() {
+        TableColumn column = tableView.getColumns().get(0);
+
+        tableView.setRowFactory(this::createSmallRow);
+        TableColumnHeaderShim.resizeColumnToFitContent(firstColumnHeader, -1);
+        double width = column.getWidth();
+
+        tableView.setRowFactory(this::createLargeRow);
+        TableColumnHeaderShim.resizeColumnToFitContent(firstColumnHeader, -1);
+        assertTrue("Column width must be greater", width < column.getWidth());
+    }
+
+    private TableRow<Person> createSmallRow(TableView<Person> param) {
+        TableRow<Person> row = new TableRow<>();
+        row.setStyle("-fx-font: 24 Amble");
+        return row;
+    }
+
+    private TableRow<Person> createLargeRow(TableView<Person> param) {
+        TableRow<Person> row = new TableRow<>();
+        row.setStyle("-fx-font: 48 Amble");
+        return row;
+    }
+
 }
