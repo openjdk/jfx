@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -347,7 +347,7 @@ public class FXCollections {
      * @see #observableArrayList()
      */
     public static <E> ObservableList<E> observableArrayList(E... items) {
-        ObservableList<E> list = observableArrayList();
+        ObservableList<E> list = observableList(new ArrayList<>(items.length));
         list.addAll(items);
         return list;
     }
@@ -360,9 +360,7 @@ public class FXCollections {
      * @return a newly created observableArrayList
      */
     public static <E> ObservableList<E> observableArrayList(Collection<? extends E> col) {
-        ObservableList<E> list = observableArrayList();
-        list.addAll(col);
-        return list;
+        return observableList(new ArrayList<>(col));
     }
 
     /**
