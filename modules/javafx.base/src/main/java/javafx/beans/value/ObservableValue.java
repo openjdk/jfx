@@ -148,15 +148,16 @@ public interface ObservableValue<T> extends Observable {
      * {@code null}.
      * <p>
      * For example, mapping a string to an upper case string:
-     * <pre>
+     * <pre>{@code
      * var text = new SimpleStringProperty("abcd");
-     * ObservableValue&lt;String&gt; upperCase = text.map(String::toUpperCase);
+     * ObservableValue<String> upperCase = text.map(String::toUpperCase);
      *
      * upperCase.getValue();  // Returns "ABCD"
      * text.set("xyz");
      * upperCase.getValue();  // Returns "XYZ"
      * text.set(null);
-     * upperCase.getValue();  // Returns null</pre>
+     * upperCase.getValue();  // Returns null
+     * }</pre>
      *
      * @param <U> the type of values held by the resulting {@code ObservableValue}
      * @param mapper a {@code Function} that converts a given value to a new value, cannot be {@code null}
@@ -175,13 +176,14 @@ public interface ObservableValue<T> extends Observable {
      * <p>
      * For example, mapping a string to an upper case string, but leaving it blank
      * if the input is {@code null}:
-     * <pre>
+     * <pre>{@code
      * var text = new SimpleStringProperty("abcd");
-     * ObservableValue&lt;String&gt; upperCase = text.map(String::toUpperCase).orElse("");
+     * ObservableValue<String> upperCase = text.map(String::toUpperCase).orElse("");
      *
      * upperCase.getValue();  // Returns "ABCD"
      * text.set(null);
-     * upperCase.getValue();  // Returns ""</pre>
+     * upperCase.getValue();  // Returns ""
+     * }</pre>
      *
      * @param constant an alternative value to use when this {@code ObservableValue}
      *     holds {@code null}; can be {@code null}
@@ -202,8 +204,8 @@ public interface ObservableValue<T> extends Observable {
      * <p>
      * For example, a property that is only {@code true} when a UI element is part of a {@code Scene}
      * that is part of a {@code Window} that is currently shown on screen:
-     * <pre>
-     * ObservableValue&lt;Boolean&gt; isShowing = listView.sceneProperty()
+     * <pre>{@code
+     * ObservableValue<Boolean> isShowing = listView.sceneProperty()
      *     .flatMap(Scene::windowProperty)
      *     .flatMap(Window::showingProperty)
      *     .orElse(false);
@@ -220,7 +222,7 @@ public interface ObservableValue<T> extends Observable {
      *
      * listView.getParent().getChildren().remove(listView);
      * isShowing().getValue();  // Returns false
-     * </pre>
+     * }</pre>
      * Changes in the values of any of: the scene of {@code listView}, the window of that scene, or
      * the showing of that window, will update the boolean value {@code isShowing}.
      * <p>

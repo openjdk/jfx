@@ -34,11 +34,13 @@ import javafx.beans.value.ObservableValue;
 
 /**
  * A subscription encapsulates how to cancel it without having
- * to keep track of how it was created.<p>
+ * to keep track of how it was created.
  *
- * For example:<p>
- * <pre>Subscription s = property.subscribe(System.out::println)</pre>
- * The function passed in to {@code subscribe} does not need to be stored
+ * <p>For example:
+ *
+ * <p>{@code Subscription s = property.subscribe(System.out::println)}
+ *
+ * <p>The function passed in to {@code subscribe} does not need to be stored
  * in order to clean up the subscription later.
  */
 @FunctionalInterface
