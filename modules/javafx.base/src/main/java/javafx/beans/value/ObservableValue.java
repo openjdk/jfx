@@ -195,8 +195,8 @@ public interface ObservableValue<T> extends Observable {
     }
 
     /**
-     * Creates an {@code ObservableValue} that holds the value of an {@code ObservableValue}
-     * resulting from applying a mapping on this {@code ObservableValue}'s value. The result
+     * Creates a new {@code ObservableValue} that holds the value of a nested {@code ObservableValue}
+     * by applying a mapping function to extract the nested {@code ObservableValue}. The result
      * is updated when either this {@code ObservableValue} or the {@code ObservableValue}
      * resulting from the mapping changes. If this value is {@code null}, no mapping is applied
      * and the resulting value is {@code null}. If the mapping resulted in {@code null}, then
@@ -226,7 +226,7 @@ public interface ObservableValue<T> extends Observable {
      * Changes in the values of any of: the scene of {@code listView}, the window of that scene, or
      * the showing of that window, will update the boolean value {@code isShowing}.
      * <p>
-     * This method is preferred over {@link javafx.beans.binding.Bindings Bindings#select} methods
+     * This method is preferred over {@link javafx.beans.binding.Bindings#select Bindings} methods
      * since it is type safe.
      *
      * @param <U> the type of values held by the resulting {@code ObservableValue}
