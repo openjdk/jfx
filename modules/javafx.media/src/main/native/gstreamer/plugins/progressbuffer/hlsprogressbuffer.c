@@ -39,18 +39,9 @@ GST_DEBUG_CATEGORY (hls_progress_buffer_debug);
  ***********************************************************************************/
 #define NUM_OF_CACHED_SEGMENTS 3
 
-enum
-{
-    HLS_FORMAT_UNKNOWN = 0x0,
-    HLS_FORMAT_MP2T,
-    HLS_FORMAT_FMP4
-};
-
 struct _HLSProgressBuffer
 {
     GstElement    parent;
-
-    gint          hls_format;
 
     GstPad*       sinkpad;
     GstPad*       srcpad;
@@ -171,8 +162,6 @@ static void hls_progress_buffer_class_init (HLSProgressBufferClass *klass)
  */
 static void hls_progress_buffer_init(HLSProgressBuffer *element)
 {
-    element->hls_format = HLS_FORMAT_FMP4;
-
     element->sinkpad = gst_pad_new_from_template (gst_element_class_get_pad_template (GST_ELEMENT_GET_CLASS(element), "sink"), "sink");
     gst_pad_set_chain_function(element->sinkpad, hls_progress_buffer_chain);
     gst_pad_set_event_function(element->sinkpad, hls_progress_buffer_sink_event);
@@ -528,10 +517,9 @@ static gboolean hls_progress_buffer_sink_event(GstPad *pad, GstObject *parent, G
                 new_segment.time = segment.time;
 
                 element->buffer_pts = segment.position;
+                element->send_new_segment = FALSE;
 
                 event = gst_event_new_segment(&new_segment);
-                if (segment.start != 0)
-                  element->send_new_segment = FALSE;
                 ret = gst_pad_push_event(element->srcpad, event);
              }
 

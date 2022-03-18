@@ -223,7 +223,7 @@ static void java_source_class_init (JavaSourceClass *klass)
 
     klass->signals[SIGNAL_SEEK_DATA] = g_signal_new ("seek-data",
         G_TYPE_FROM_CLASS (klass),
-        G_SIGNAL_RUN_LAST | G_SIGNAL_NO_RECURSE | G_SIGNAL_NO_HOOKS,
+        G_SIGNAL_RUN_LAST | G_SIGNAL_NO_HOOKS,
         0,
         NULL /* accumulator */,
         NULL /* accu_data */,
@@ -234,7 +234,7 @@ static void java_source_class_init (JavaSourceClass *klass)
 
     klass->signals[SIGNAL_READ_NEXT_BLOCK] = g_signal_new ("read-next-block",
         G_TYPE_FROM_CLASS (klass),
-        G_SIGNAL_RUN_LAST | G_SIGNAL_NO_RECURSE | G_SIGNAL_NO_HOOKS,
+        G_SIGNAL_RUN_LAST | G_SIGNAL_NO_HOOKS,
         0,
         NULL, /* accumulator */
         NULL, /* accu_data */
@@ -244,7 +244,7 @@ static void java_source_class_init (JavaSourceClass *klass)
 
     klass->signals[SIGNAL_READ_BLOCK] = g_signal_new ("read-block",
         G_TYPE_FROM_CLASS (klass),
-        G_SIGNAL_RUN_LAST | G_SIGNAL_NO_RECURSE | G_SIGNAL_NO_HOOKS,
+        G_SIGNAL_RUN_LAST | G_SIGNAL_NO_HOOKS,
         0,
         NULL, /* accumulator */
         NULL, /* accu_data */
@@ -255,7 +255,7 @@ static void java_source_class_init (JavaSourceClass *klass)
 
     klass->signals[SIGNAL_COPY_BLOCK] = g_signal_new ("copy-block",
         G_TYPE_FROM_CLASS (klass),
-        G_SIGNAL_RUN_LAST | G_SIGNAL_NO_RECURSE | G_SIGNAL_NO_HOOKS,
+        G_SIGNAL_RUN_LAST | G_SIGNAL_NO_HOOKS,
         0,
         NULL, /* accumulator */
         NULL, /* accu_data */
@@ -266,7 +266,7 @@ static void java_source_class_init (JavaSourceClass *klass)
 
     klass->signals[SIGNAL_CLOSE_CONNECTION] = g_signal_new ("close-connection",
         G_TYPE_FROM_CLASS (klass),
-        G_SIGNAL_RUN_LAST | G_SIGNAL_NO_RECURSE | G_SIGNAL_NO_HOOKS,
+        G_SIGNAL_RUN_LAST | G_SIGNAL_NO_HOOKS,
         0,
         NULL, /* accumulator */
         NULL, /* accu_data */
@@ -276,7 +276,7 @@ static void java_source_class_init (JavaSourceClass *klass)
 
     klass->signals[SIGNAL_PROPERTY] = g_signal_new ("property",
         G_TYPE_FROM_CLASS (klass),
-        G_SIGNAL_RUN_LAST | G_SIGNAL_NO_RECURSE | G_SIGNAL_NO_HOOKS,
+        G_SIGNAL_RUN_LAST | G_SIGNAL_NO_HOOKS,
         0,
         NULL, /* accumulator */
         NULL, /* accu_data */

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -61,6 +61,7 @@ CGstAVPlaybackPipeline::CGstAVPlaybackPipeline(const GstElementContainer& elemen
     m_FrameHeight = 0;
     m_videoCodecErrorCode = ERROR_NONE;
     m_bStaticPipeline = false; // For now all video pipelines are dynamic
+    m_FirstPTS = GST_CLOCK_TIME_NONE;
 }
 
 /**
@@ -320,6 +321,18 @@ GstFlowReturn CGstAVPlaybackPipeline::OnAppSinkHaveFrame(GstElement* pElem, CGst
     if (pPipeline->m_SendFrameSizeEvent || GST_BUFFER_IS_DISCONT(pBuffer))
         OnAppSinkVideoFrameDiscont(pPipeline, pSample);
 
+    // Update PTS in pBuffer, so first buffer starts with 0. Our rendering
+    // code expects PTS between 0 and duration and will not render anything
+    // beyond duration. For fragmented MP4 PTS starts with N value (usually 10
+    // seconds) and last PTS will be duration + N.
+    if (pPipeline->m_FirstPTS != GST_CLOCK_TIME_NONE &&
+            GST_BUFFER_TIMESTAMP_IS_VALID (pBuffer) &&
+            GST_BUFFER_TIMESTAMP(pBuffer) >= pPipeline->m_FirstPTS)
+    {
+        GST_BUFFER_TIMESTAMP(pBuffer) =
+            GST_BUFFER_TIMESTAMP(pBuffer) - pPipeline->m_FirstPTS;
+    }
+
     //***** Create a VideoFrame object
     CGstVideoFrame* pVideoFrame = new CGstVideoFrame();
     if (!pVideoFrame->Init(pSample))
@@ -379,12 +392,26 @@ GstFlowReturn CGstAVPlaybackPipeline::OnAppSinkPreroll(GstElement* pElem, CGstAV
         return GST_FLOW_OK;
     }
 
+    if (pPipeline->m_FirstPTS == GST_CLOCK_TIME_NONE &&
+            GST_BUFFER_TIMESTAMP_IS_VALID(pBuffer))
+    {
+        pPipeline->m_FirstPTS = GST_BUFFER_TIMESTAMP(pBuffer);
+    }
+
     if (pPipeline->m_SendFrameSizeEvent || GST_BUFFER_IS_DISCONT(pBuffer))
         OnAppSinkVideoFrameDiscont(pPipeline, pSample);
 
     // Send frome 0 up to use as poster frame.
     if(pPipeline->m_pEventDispatcher != NULL)
     {
+        if (pPipeline->m_FirstPTS != GST_CLOCK_TIME_NONE &&
+                GST_BUFFER_TIMESTAMP_IS_VALID (pBuffer) &&
+                GST_BUFFER_TIMESTAMP(pBuffer) >= pPipeline->m_FirstPTS)
+        {
+            GST_BUFFER_TIMESTAMP(pBuffer) =
+                GST_BUFFER_TIMESTAMP(pBuffer) - pPipeline->m_FirstPTS;
+        }
+
         CGstVideoFrame* pVideoFrame = new CGstVideoFrame();
         if (!pVideoFrame->Init(pSample))
         {

@@ -58,7 +58,7 @@ final class HLSConnectionHolder extends ConnectionHolder {
     private boolean isPlaylistClosed = false;
     private boolean isBitrateAdjustable = false;
     private long startTime = -1;
-    private boolean sendHeader = true;
+    private boolean sendHeader = false;
     private static final long HLS_VALUE_FLOAT_MULTIPLIER = 1000;
     private static final int HLS_PROP_GET_DURATION = 1;
     private static final int HLS_PROP_GET_HLS_MODE = 2;
@@ -227,7 +227,7 @@ final class HLSConnectionHolder extends ConnectionHolder {
 
         mediaFile = currentPlaylist.getNextMediaFile();
         if (mediaFile == null) {
-            if (isFragmentedMP4()) {
+            if (currentPlaylist.isFragmentedMP4()) {
                 sendHeader = true;
             }
             return -1;
@@ -268,14 +268,10 @@ final class HLSConnectionHolder extends ConnectionHolder {
 
             playlist.setForceDiscontinuity(true);
             currentPlaylist = playlist;
-            if (isFragmentedMP4()) {
+            if (currentPlaylist.isFragmentedMP4()) {
                 sendHeader = true;
             }
         }
-    }
-
-    private boolean isFragmentedMP4() {
-        return (currentPlaylist.getMimeType() == HLS_VALUE_MIMETYPE_FMP4);
     }
 
     private static String stripParameters(String mediaFile) {
@@ -400,7 +396,10 @@ final class HLSConnectionHolder extends ConnectionHolder {
                     putState(STATE_RELOAD_PLAYLIST);
                 }
 
-                if (isFragmentedMP4()) {
+                // If we have playlist with fMP4, set flag to add header
+                // to first data segment and adjust index to 0
+                if (currentPlaylist.isFragmentedMP4()) {
+                    sendHeader = true;
                     mediaFileIndex = 0;
                 }
             } finally {
@@ -754,6 +753,7 @@ final class HLSConnectionHolder extends ConnectionHolder {
         private final List<Boolean> mediaFilesDiscontinuities = new ArrayList<>();
         private boolean needBaseURI = true;
         private String baseURI = null;
+        private double startTime = 0.0;
         private double duration = 0.0;
         private int sequenceNumber = -1;
         private int sequenceNumberStart = -1;
@@ -808,6 +808,10 @@ final class HLSConnectionHolder extends ConnectionHolder {
             return isLive;
         }
 
+        private boolean isFragmentedMP4() {
+            return (getMimeType() == HLS_VALUE_MIMETYPE_FMP4);
+        }
+
         private long getTargetDuration() {
             return targetDuration;
         }
@@ -854,8 +858,18 @@ final class HLSConnectionHolder extends ConnectionHolder {
                         liveSemaphore.release();
                     }
                 } else {
-                    mediaFilesStartTimes.add(this.duration);
-                    this.duration += duration;
+                    mediaFilesStartTimes.add(this.startTime);
+                    this.startTime += duration;
+
+                    // For fragmented MP4 we should not add duration of first
+                    // segment, since it is header without actuall data.
+                    if (mediaFiles.size() == 1) {
+                        if (!isFragmentedMP4()) {
+                            this.duration += duration;
+                        }
+                    } else {
+                        this.duration += duration;
+                    }
                 }
             }
         }
@@ -885,7 +899,7 @@ final class HLSConnectionHolder extends ConnectionHolder {
 
             synchronized (lock) {
                 mediaFileIndex++;
-                if ((mediaFileIndex) < mediaFiles.size()) {
+                if (mediaFileIndex < mediaFiles.size()) {
                     if (baseURI != null) {
                         return baseURI + mediaFiles.get(mediaFileIndex);
                     } else {
@@ -912,7 +926,11 @@ final class HLSConnectionHolder extends ConnectionHolder {
         }
 
         private double getMediaFileStartTime() {
-            return mediaFilesStartTimes.get(mediaFileIndex);
+            if (mediaFileIndex < mediaFiles.size()) {
+                return mediaFilesStartTimes.get(mediaFileIndex);
+            }
+
+            return 0.0;
         }
 
         private double getDuration() {
