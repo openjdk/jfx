@@ -61,9 +61,10 @@ public interface Subscription {
      * and returns a new {@code Subscription} which will cancel both when
      * cancelled.
      *
-     * @param other another {@link Subscription}, cannot be null
+     * @param other another {@link Subscription}, cannot be {@code null}
      * @return a combined {@link Subscription} which will cancel both when
-     *     cancelled, never null
+     *     cancelled, never {@code null}
+     * @throws NullPointerException when {@code other} is {@code null}
      */
     default Subscription and(Subscription other) {
         Objects.requireNonNull(other);
@@ -80,9 +81,10 @@ public interface Subscription {
      * followed by any subsequent changes in value.
      *
      * @param subscriber a {@link Consumer} to supply with the values of this
-     *     {@link ObservableValue}, cannot be null
+     *     {@link ObservableValue}, cannot be {@code null}
      * @return a {@link Subscription} which can be used to cancel this
-     *     subscription, never null
+     *     subscription, never {@code null}
+     * @throws NullPointerException when {@code observableValue} or {@code subscriber} is {@code null}
      */
     static <T> Subscription subscribe(ObservableValue<T> observableValue, Consumer<? super T> subscriber) {
         ChangeListener<T> listener = (obs, old, current) -> subscriber.accept(current);
@@ -99,11 +101,14 @@ public interface Subscription {
      * becomes invalid.
      *
      * @param runnable a {@link Runnable} to call whenever this
-     *     {@link ObservableValue} becomes invalid, cannot be null
+     *     {@link ObservableValue} becomes invalid, cannot be @{code null}
      * @return a {@link Subscription} which can be used to cancel this
-     *     subscription, never null
+     *     subscription, never @{code null}
+     * @throws NullPointerException when {@code observableValue} or {@code runnable} is {@code null}
      */
     static Subscription subscribeInvalidations(ObservableValue<?> observableValue, Runnable runnable) {
+        Objects.requireNonNull(runnable);
+
         InvalidationListener listener = obs -> runnable.run();
 
         observableValue.addListener(listener);
