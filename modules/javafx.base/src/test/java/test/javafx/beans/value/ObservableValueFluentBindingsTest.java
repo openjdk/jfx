@@ -682,7 +682,7 @@ public class ObservableValueFluentBindingsTest {
      * a sanity check that the observer is currently not working
      * before adding it.
      *
-     * @param observableValue
+     * @param observableValue an {@code ObservableValue}, cannot be {@code null}
      */
     private void startObserving(ObservableValue<String> observableValue) {
         values.clear();
@@ -700,6 +700,8 @@ public class ObservableValueFluentBindingsTest {
      * Stops observing the given observable value. This will do a
      * sanity check that the observer is currently working before
      * removing it.
+     *
+     * @param observableValue an {@code ObservableValue}, cannot be {@code null}
      */
     private void stopObserving(ObservableValue<String> observableValue) {
         values.clear();
