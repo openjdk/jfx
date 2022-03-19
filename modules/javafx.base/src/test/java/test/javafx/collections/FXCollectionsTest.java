@@ -53,7 +53,7 @@ public class FXCollectionsTest {
     }
 
     @Test
-    public void testCreateObservableArrayListFromList() {
+    public void testCreateObservableArrayListFromCollection() {
         List<String> list = List.of("1", "2", "3");
         ObservableList<String> observableList = FXCollections.observableArrayList(list);
 
