@@ -74,7 +74,7 @@ public class FXCollectionsTest {
     }
 
     @Test
-    public void testCreateObservableArrayListDoesNotModifyBackingCollection() {
+    public void testCreateObservableArrayListDoesNotModifyOriginalCollection() {
         List<String> list = List.of("1", "2", "3");
         ObservableList<String> observableList = FXCollections.observableArrayList(list);
         observableList.add("4");
