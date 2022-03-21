@@ -141,11 +141,10 @@ public interface ObservableValue<T> extends Observable {
     T getValue();
 
     /**
-     * Creates an {@code ObservableValue} that holds the result of applying a
-     * mapping on this {@code ObservableValue}'s value. The result is updated
-     * when this {@code ObservableValue}'s value changes. If this value is
-     * {@code null}, no mapping is applied and the resulting value is also
-     * {@code null}.
+     * Returns an {@code ObservableValue} that holds the result of applying the
+     * given mapping function on this {@code ObservableValue}. The result is updated
+     * when this {@code ObservableValue} changes. If this value is {@code null},
+     * no mapping is applied and the resulting value is also {@code null}.
      * <p>
      * For example, mapping a string to an upper case string:
      * <pre>{@code
@@ -160,19 +159,21 @@ public interface ObservableValue<T> extends Observable {
      * }</pre>
      *
      * @param <U> the type of values held by the resulting {@code ObservableValue}
-     * @param mapper a {@code Function} that converts a given value to a new value, cannot be {@code null}
-     * @return an {@code ObservableValue} holding the result of mapping this {@code ObservableValue}'s
-     *     value, or {@code null} when it is {@code null}; never returns {@code null}
+     * @param mapper the mapping function to apply to a value, cannot be {@code null}
+     * @return an {@code ObservableValue} that holds the result of applying the given
+     *     mapping function on this {@code ObservableValue}, or {@code null} when it
+     *     is {@code null}; never returns {@code null}
+     * @throws NullPointerException if the mapping function is {@code null}
      */
     default <U> ObservableValue<U> map(Function<? super T, ? extends U> mapper) {
         return new MappedBinding<>(this, mapper);
     }
 
     /**
-     * Creates an {@code ObservableValue} that holds this {@code ObservableValue}'s
-     * value, or the given value if it is {@code null}. The result is updated when
-     * this {@code ObservableValue}'s value changes. This method, when combined with
-     * {@link #map(Function)}, allows handling of all values including {@code null} values.
+     * Returns an {@code ObservableValue} that holds this value, or the given constant if
+     * it is {@code null}. The result is updated when this {@code ObservableValue} changes. This
+     * method, when combined with {@link #map(Function)}, allows handling of all values
+     * including {@code null} values.
      * <p>
      * For example, mapping a string to an upper case string, but leaving it blank
      * if the input is {@code null}:
@@ -185,20 +186,20 @@ public interface ObservableValue<T> extends Observable {
      * upperCase.getValue();  // Returns ""
      * }</pre>
      *
-     * @param constant an alternative value to use when this {@code ObservableValue}
+     * @param constant the value to use when this {@code ObservableValue}
      *     holds {@code null}; can be {@code null}
-     * @return an {@code ObservableValue} holding this {@code ObservableValue}'s value,
-     *     or the given value if it is {@code null}; never returns {@code null}
+     * @return an {@code ObservableValue} that holds this value, or the given constant if
+     *     it is {@code null}; never returns {@code null}
      */
     default ObservableValue<T> orElse(T constant) {
         return new OrElseBinding<>(this, constant);
     }
 
     /**
-     * Creates a new {@code ObservableValue} that holds the value of a nested {@code ObservableValue}
-     * by applying a mapping function to extract the nested {@code ObservableValue}. The result
+     * Returns an {@code ObservableValue} that holds the value of an {@code ObservableValue}
+     * produced by applying the given mapping function to this {@ObservableValue}. The result
      * is updated when either this {@code ObservableValue} or the {@code ObservableValue}
-     * resulting from the mapping changes. If this value is {@code null}, no mapping is applied
+     * produced by the mapping changes. If this value is {@code null}, no mapping is applied
      * and the resulting value is {@code null}. If the mapping resulted in {@code null}, then
      * the resulting value is also {@code null}.
      * <p>
@@ -223,18 +224,18 @@ public interface ObservableValue<T> extends Observable {
      * listView.getParent().getChildren().remove(listView);
      * isShowing().getValue();  // Returns false
      * }</pre>
-     * Changes in the values of any of: the scene of {@code listView}, the window of that scene, or
+     * Changes in any of the values of: the scene of {@code listView}, the window of that scene, or
      * the showing of that window, will update the boolean value {@code isShowing}.
      * <p>
      * This method is preferred over {@link javafx.beans.binding.Bindings#select Bindings} methods
      * since it is type safe.
      *
      * @param <U> the type of values held by the resulting {@code ObservableValue}
-     * @param mapper a {@code Function} that converts a given value to an
-     *     {@code ObservableValue}; cannot be {@code null}
-     * @return an {@code ObservableValue} holding the value of an {@code ObservableValue}
-     *     resulting from mapping this {@code ObservableValue}'s value, or {@code null} when
-     *     the value is {@code null}; never returns {@code null}
+     * @param mapper the mapping function to apply to a value, cannot be {@code null}
+     * @return an {@code ObservableValue} that holds the value of an {@code ObservableValue}
+     *     produced by applying the given mapping function to this {@ObservableValue}, or
+     *     {@code null} when the value is {@code null}; never returns {@code null}
+     * @throws NullPointerException if the mapping function is {@code null}
      */
     default <U> ObservableValue<U> flatMap(Function<? super T, ? extends ObservableValue<? extends U>> mapper) {
         return new FlatMappedBinding<>(this, mapper);
