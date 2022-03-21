@@ -142,9 +142,9 @@ public interface ObservableValue<T> extends Observable {
 
     /**
      * Returns an {@code ObservableValue} that holds the result of applying the
-     * given mapping function on this {@code ObservableValue}. The result is updated
-     * when this {@code ObservableValue} changes. If this value is {@code null},
-     * no mapping is applied and the resulting value is also {@code null}.
+     * given mapping function on this value. The result is updated when this
+     * {@code ObservableValue} changes. If this value is {@code null}, no
+     * mapping is applied and the resulting value is also {@code null}.
      * <p>
      * For example, mapping a string to an upper case string:
      * <pre>{@code
@@ -161,7 +161,7 @@ public interface ObservableValue<T> extends Observable {
      * @param <U> the type of values held by the resulting {@code ObservableValue}
      * @param mapper the mapping function to apply to a value, cannot be {@code null}
      * @return an {@code ObservableValue} that holds the result of applying the given
-     *     mapping function on this {@code ObservableValue}, or {@code null} when it
+     *     mapping function on its value, or {@code null} when it
      *     is {@code null}; never returns {@code null}
      * @throws NullPointerException if the mapping function is {@code null}
      */
@@ -197,11 +197,11 @@ public interface ObservableValue<T> extends Observable {
 
     /**
      * Returns an {@code ObservableValue} that holds the value of an {@code ObservableValue}
-     * produced by applying the given mapping function to this {@ObservableValue}. The result
-     * is updated when either this {@code ObservableValue} or the {@code ObservableValue}
-     * produced by the mapping changes. If this value is {@code null}, no mapping is applied
-     * and the resulting value is {@code null}. If the mapping resulted in {@code null}, then
-     * the resulting value is also {@code null}.
+     * produced by applying the given mapping function on this value. The result is updated
+     * when either this {@code ObservableValue} or the {@code ObservableValue} produced by
+     * the mapping changes. If this value is {@code null}, no mapping is applied and the
+     * resulting value is {@code null}. If the mapping resulted in {@code null}, then the
+     * resulting value is also {@code null}.
      * <p>
      * For example, a property that is only {@code true} when a UI element is part of a {@code Scene}
      * that is part of a {@code Window} that is currently shown on screen:
@@ -233,7 +233,7 @@ public interface ObservableValue<T> extends Observable {
      * @param <U> the type of values held by the resulting {@code ObservableValue}
      * @param mapper the mapping function to apply to a value, cannot be {@code null}
      * @return an {@code ObservableValue} that holds the value of an {@code ObservableValue}
-     *     produced by applying the given mapping function to this {@ObservableValue}, or
+     *     produced by applying the given mapping function on this value, or
      *     {@code null} when the value is {@code null}; never returns {@code null}
      * @throws NullPointerException if the mapping function is {@code null}
      */
