@@ -161,7 +161,7 @@ public interface ObservableValue<T> extends Observable {
      * @param <U> the type of values held by the resulting {@code ObservableValue}
      * @param mapper the mapping function to apply to a value, cannot be {@code null}
      * @return an {@code ObservableValue} that holds the result of applying the given
-     *     mapping function on its value, or {@code null} when it
+     *     mapping function on this value, or {@code null} when it
      *     is {@code null}; never returns {@code null}
      * @throws NullPointerException if the mapping function is {@code null}
      */
