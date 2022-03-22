@@ -2447,6 +2447,18 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         lengthBar.setVirtual(true);
     }
 
+    private void shiftDown() {
+        T lastNonEmptyCell = getLastVisibleCell();
+        double end = getCellPosition(lastNonEmptyCell) + getCellLength(lastNonEmptyCell);
+        double delta = viewportLength - end;
+        if (delta > 0) {
+            for (int i = 0; i < cells.size(); i++) {
+                T cell = cells.get(i);
+                positionCell(cell, getCellPosition(cell) + delta);
+            }
+        }
+    }
+
     private void updateScrollBarsAndCells(boolean recreate) {
         // Assign the hbar and vbar to the breadthBar and lengthBar so as
         // to make some subsequent calculations easier.
@@ -2491,6 +2503,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
 
                 offset += getCellLength(cell);
             }
+            shiftDown();
         }
 
         // Toggle visibility on the corner
