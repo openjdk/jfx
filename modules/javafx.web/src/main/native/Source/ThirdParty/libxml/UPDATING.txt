@@ -49,3 +49,13 @@ Updating libxml in OpenJFX:
 8.3 Remove trailing whitespaces from source files:
     > find src/ -name “*.c” -type f -exec sed --in-place 's/[[:space:]]\+$//' {} \+
     > find src/ -name “*.h” -type f -exec sed --in-place 's/[[:space:]]\+$//' {} \+
+
+You must have autoconf installed to compile libxml.
+Download the appropriate package for your distribution,
+or see http://www.gnu.org/software/autoconf
+You must have libtool installed to compile libxml.
+Download the appropriate package for your distribution,
+or see http://www.gnu.org/software/libtool
+You must have automake installed to compile libxml.
+Download the appropriate package for your distribution,
+or see http://www.gnu.org/software/automake
