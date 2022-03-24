@@ -30,6 +30,9 @@ G_BEGIN_DECLS
 /* copies */
 
 /* adaptations */
+#if !GLIB_CHECK_VERSION(2, 67, 4)
+#define g_memdup2(ptr,sz) ((G_LIKELY(((guint64)(sz)) < G_MAXUINT)) ? g_memdup(ptr,sz) : (g_abort(),NULL))
+#endif
 
 G_END_DECLS
 

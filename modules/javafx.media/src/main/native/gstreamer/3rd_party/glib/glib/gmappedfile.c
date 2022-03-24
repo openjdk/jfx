@@ -232,7 +232,7 @@ mapped_file_new_from_fd (int           fd,
  * If @filename is the name of an empty, regular file, the function
  * will successfully return an empty #GMappedFile. In other cases of
  * size 0 (e.g. device files such as /dev/null), @error will be set
- * to the #GFileError value #G_FILE_ERROR_INVAL.
+ * to the #GFileError value %G_FILE_ERROR_INVAL.
  *
  * Returns: a newly allocated #GMappedFile which must be unref'd
  *    with g_mapped_file_unref(), or %NULL if the mapping failed.

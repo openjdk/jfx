@@ -1564,7 +1564,7 @@ unicode_unescape (const gchar  *src,
 {
   gchar buffer[9];
   guint64 value = 0;
-  gchar *end;
+  gchar *end = NULL;
   gsize n_valid_chars;
 
   (*src_ofs)++;

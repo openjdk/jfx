@@ -30,7 +30,7 @@
 #include "video-orc-dist.h"
 #endif // GSTREAMER_LITE
 #include "video-format.h"
-
+#include <gst/video/video-enumtypes.h>
 
 /**
  * SECTION:gstvideochroma
@@ -76,7 +76,9 @@ typedef struct
 static const ChromaSiteInfo chromasite[] = {
   {"jpeg", GST_VIDEO_CHROMA_SITE_JPEG},
   {"mpeg2", GST_VIDEO_CHROMA_SITE_MPEG2},
-  {"dv", GST_VIDEO_CHROMA_SITE_DV}
+  {"dv", GST_VIDEO_CHROMA_SITE_DV},
+  {"alt-line", GST_VIDEO_CHROMA_SITE_ALT_LINE},
+  {"cosited", GST_VIDEO_CHROMA_SITE_COSITED},
 };
 
 /**
@@ -85,18 +87,66 @@ static const ChromaSiteInfo chromasite[] = {
  *
  * Convert @s to a #GstVideoChromaSite
  *
+ * Deprecated: 1.20: Use gst_video_chroma_site_from_string() instead.
+ *
  * Returns: a #GstVideoChromaSite or %GST_VIDEO_CHROMA_SITE_UNKNOWN when @s does
  * not contain a valid chroma description.
  */
 GstVideoChromaSite
 gst_video_chroma_from_string (const gchar * s)
 {
+  return gst_video_chroma_site_from_string (s);
+}
+
+/**
+ * gst_video_chroma_site_from_string:
+ * @s: a chromasite string
+ *
+ * Convert @s to a #GstVideoChromaSite
+ *
+ * Returns: a #GstVideoChromaSite or %GST_VIDEO_CHROMA_SITE_UNKNOWN when @s does
+ * not contain a valid chroma-site description.
+ *
+ * Since: 1.20
+ */
+GstVideoChromaSite
+gst_video_chroma_site_from_string (const gchar * s)
+{
   gint i;
+  gchar **split;
+  gchar **iter;
+  GstVideoChromaSite ret = GST_VIDEO_CHROMA_SITE_UNKNOWN;
+  GFlagsClass *klass;
+
   for (i = 0; i < G_N_ELEMENTS (chromasite); i++) {
     if (g_str_equal (chromasite[i].name, s))
       return chromasite[i].site;
   }
-  return GST_VIDEO_CHROMA_SITE_UNKNOWN;
+
+  klass = (GFlagsClass *) g_type_class_ref (GST_TYPE_VIDEO_CHROMA_SITE);
+  split = g_strsplit (s, "+", 0);
+  for (iter = split; *iter; iter++) {
+    GFlagsValue *value;
+
+    value = g_flags_get_value_by_nick (klass, *iter);
+    if (!value) {
+      ret = GST_VIDEO_CHROMA_SITE_UNKNOWN;
+      goto out;
+    }
+
+    ret |= value->value;
+  }
+
+out:
+  g_type_class_unref (klass);
+  g_strfreev (split);
+
+  /* Doesn't make sense */
+  if ((ret & GST_VIDEO_CHROMA_SITE_NONE) != 0 &&
+      ret != GST_VIDEO_CHROMA_SITE_NONE)
+    return GST_VIDEO_CHROMA_SITE_UNKNOWN;
+
+  return ret;
 }
 
 /**
@@ -104,6 +154,8 @@ gst_video_chroma_from_string (const gchar * s)
  * @site: a #GstVideoChromaSite
  *
  * Converts @site to its string representation.
+ *
+ * Deprecated: 1.20: Use gst_video_chroma_site_to_string() instead.
  *
  * Returns: a string describing @site.
  */
@@ -116,6 +168,60 @@ gst_video_chroma_to_string (GstVideoChromaSite site)
       return chromasite[i].name;
   }
   return NULL;
+}
+
+/**
+ * gst_video_chroma_site_to_string:
+ * @site: a #GstVideoChromaSite
+ *
+ * Converts @site to its string representation.
+ *
+ * Returns: (transfer full) (nullable): a string representation of @site
+ *          or %NULL if @site contains undefined value or
+ *          is equal to %GST_VIDEO_CHROMA_SITE_UNKNOWN
+ *
+ * Since: 1.20
+ */
+gchar *
+gst_video_chroma_site_to_string (GstVideoChromaSite site)
+{
+  gint i;
+  GString *str;
+  GFlagsValue *value;
+  GFlagsClass *klass;
+
+  /* return null string for GST_VIDEO_CHROMA_SITE_UNKNOWN */
+  if (site == 0)
+    return NULL;
+
+  for (i = 0; i < G_N_ELEMENTS (chromasite); i++) {
+    if (chromasite[i].site == site)
+      return g_strdup (chromasite[i].name);
+  }
+
+  /* Doesn't make sense */
+  if ((site & GST_VIDEO_CHROMA_SITE_NONE) != 0 &&
+      site != GST_VIDEO_CHROMA_SITE_NONE)
+    return NULL;
+
+  /* Construct new string */
+  klass = (GFlagsClass *) g_type_class_ref (GST_TYPE_VIDEO_CHROMA_SITE);
+  str = g_string_new (NULL);
+  while (site != GST_VIDEO_CHROMA_SITE_UNKNOWN &&
+      (value = g_flags_get_first_value (klass, site))) {
+    if (str->len > 0)
+      g_string_append (str, "+");
+
+    g_string_append (str, value->value_nick);
+    site &= ~value->value;
+  }
+  g_type_class_unref (klass);
+
+  /* This means given chroma-site has unknown value */
+  if (site != 0)
+    return g_string_free (str, TRUE);
+
+  return g_string_free (str, FALSE);
 }
 
 struct _GstVideoChromaResample

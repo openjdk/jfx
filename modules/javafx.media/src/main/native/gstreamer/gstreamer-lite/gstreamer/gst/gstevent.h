@@ -378,6 +378,21 @@ typedef enum {
   GST_QOS_TYPE_THROTTLE        = 2
 } GstQOSType;
 
+#ifndef GSTREAMER_LITE
+/**
+ * GstGapFlags:
+ * @GST_GAP_FLAG_MISSING_DATA: The #GST_EVENT_GAP signals missing data,
+ *    for example because of packet loss.
+ *
+ * The different flags that can be set on #GST_EVENT_GAP events. See
+ * gst_event_set_gap_flags() for details.
+ *
+ * Since: 1.20
+ */
+typedef enum {
+  GST_GAP_FLAG_MISSING_DATA = (1<<0),
+} GstGapFlags;
+#endif // GSTREAMER_LITE
 
 /**
  * GstEvent:
@@ -560,6 +575,16 @@ GST_API
 void            gst_event_parse_gap             (GstEvent     * event,
                                                  GstClockTime * timestamp,
                                                  GstClockTime * duration);
+
+#ifndef GSTREAMER_LITE
+GST_API
+void            gst_event_set_gap_flags           (GstEvent    * event,
+                                                   GstGapFlags   flags);
+
+GST_API
+void            gst_event_parse_gap_flags         (GstEvent    * event,
+                                                   GstGapFlags * flags);
+#endif // GSTREAMER_LITE
 
 /* Caps events */
 

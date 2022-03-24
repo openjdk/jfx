@@ -232,14 +232,20 @@ SOURCES = gstreamer/gst/gst.c \
           gst-plugins-base/gst/audioconvert/gstaudioconvert.c \
           gst-plugins-bad/gst/aiff/aiff.c \
           gst-plugins-bad/gst/aiff/aiffparse.c \
+          gst-plugins-bad/gst/aiff/gstaiffelement.c \
           gst-plugins-base/gst/app/gstapp.c \
+          gst-plugins-base/gst/app/gstappsink.c \
           gst-plugins-base/gst/typefind/gsttypefindfunctions.c \
+          gst-plugins-base/gst/typefind/gsttypefindfunctionsplugin.c \
           gst-plugins-good/gst/audioparsers/gstmpegaudioparse.c \
           gst-plugins-good/gst/audioparsers/gstaacparse.c \
           gst-plugins-good/gst/audioparsers/parsersplugin.c \
           gst-plugins-good/gst/equalizer/gstiirequalizer.c \
           gst-plugins-good/gst/equalizer/gstiirequalizernbands.c \
+          gst-plugins-good/gst/equalizer/gstiirequalizerplugin.c \
           gst-plugins-good/gst/isomp4/isomp4-plugin.c \
+          gst-plugins-good/gst/isomp4/gstisomp4element.c \
+          gst-plugins-good/gst/isomp4/qtdemux-webvtt.c \
           gst-plugins-good/gst/isomp4/qtdemux.c \
           gst-plugins-good/gst/isomp4/gstisoff.c \
           gst-plugins-good/gst/isomp4/qtdemux_dump.c \
@@ -249,7 +255,7 @@ SOURCES = gstreamer/gst/gst.c \
           gst-plugins-good/gst/isomp4/qtdemux_types.c \
           gst-plugins-good/gst/spectrum/gstspectrum.c \
           gst-plugins-good/gst/wavparse/gstwavparse.c \
-          gstreamer/plugins/elements/gstelements.c \
+          gstreamer/plugins/elements/gstcoreelementsplugin.c \
           gstreamer/plugins/elements/gstqueue.c \
           gstreamer/plugins/elements/gsttypefindelement.c \
           gst-plugins-base/gst/volume/gstvolume.c \
@@ -258,6 +264,7 @@ SOURCES = gstreamer/gst/gst.c \
           gst-plugins-base/ext/alsa/gstalsa.c \
           gst-plugins-base/ext/alsa/gstalsadeviceprobe.c \
           gst-plugins-base/ext/alsa/gstalsasink.c \
+          gst-plugins-base/ext/alsa/gstalsaelement.c \
           projects/plugins/gstplugins-lite.c
 
 OBJ_DIRS = $(addprefix $(OBJBASE_DIR)/,$(DIRLIST))
