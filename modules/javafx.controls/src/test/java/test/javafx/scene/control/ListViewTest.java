@@ -2243,4 +2243,39 @@ public class ListViewTest {
         assertTrue (got21);
     }
 
+
+    @Test public void testNoEmptyEnd() {
+        final ObservableList<Integer> items = FXCollections.observableArrayList(200, 200, 200, 200, 200, 200, 200, 200, 20, 20, 20, 20, 20, 20, 20);
+        final ListView<Integer> listView = new ListView(items);
+        listView.setPrefHeight(400);
+        double viewportLength = 398;
+        listView.setCellFactory(lv -> new ListCell<Integer>() {
+            @Override
+            public void updateItem(Integer item, boolean empty) {
+                super.updateItem(item, empty);
+                if (!empty && (item!=null)) {
+                    this.setPrefHeight(item);
+                }
+            }
+        });
+        StageLoader sl = new StageLoader(listView);
+        Toolkit.getToolkit().firePulse();
+        listView.scrollTo(14);
+        Toolkit.getToolkit().firePulse();
+        int cc = VirtualFlowTestUtils.getCellCount(listView);
+        assertEquals(cc, 15);
+        boolean got70 = false;
+        for (int i = 0; i < cc; i++) {
+            IndexedCell<Integer> cell = VirtualFlowTestUtils.getCell(listView, i);
+            int tens = Math.min(15-i,7);
+            int hundreds = Math.max(8-i,0);
+            double exp = 398 - 20 * tens - 200 * hundreds;
+            double real = cell.getLayoutY();
+            if (cell.isVisible()) {
+                assertEquals(exp, real, 0.1);
+            }
+        }
+    }
+
+
 }
