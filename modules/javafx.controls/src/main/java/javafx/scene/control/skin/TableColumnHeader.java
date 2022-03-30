@@ -712,7 +712,6 @@ public class TableColumnHeader extends Region {
             // have a SkinBase-derived skin
             tableRow = createMeasureRow(tv, tableSkin, null);
         }
-        assert tableRow.getSkin() instanceof SkinBase<?>;
         return tableRow;
     }
 
