@@ -1118,7 +1118,7 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
         int i = 0;
         int nextIndex = 0;
 
-        // Traverse all menus in menubar to find nextIndex
+        // Traverse all visible menus in menubar to find nextIndex
         while (i < totalMenus) {
             i++;
 
