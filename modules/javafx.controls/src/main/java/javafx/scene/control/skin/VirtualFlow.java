@@ -2449,9 +2449,11 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
 
     private void shiftDown() {
         T lastNonEmptyCell = getLastVisibleCell();
+        T firstCell = cells.getFirst();
+        int index = getCellIndex(firstCell);
         double end = getCellPosition(lastNonEmptyCell) + getCellLength(lastNonEmptyCell);
         double delta = viewportLength - end;
-        if (delta > 0) {
+        if ((index > 0) && (delta > 0)) {
             for (int i = 0; i < cells.size(); i++) {
                 T cell = cells.get(i);
                 positionCell(cell, getCellPosition(cell) + delta);
