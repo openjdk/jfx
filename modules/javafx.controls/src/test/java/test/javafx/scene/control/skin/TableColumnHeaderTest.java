@@ -273,12 +273,6 @@ public class TableColumnHeaderTest {
         assertTrue("Column width must be greater", width < column.getWidth());
     }
 
-    private TableRow<Person> createSmallRow(TableView<Person> tableView) {
-        TableRow<Person> row = new TableRow<>();
-        row.setStyle("-fx-font: 24 Amble");
-        return row;
-    }
-
     /** Test resizeColumnToFitContent in the presence of a non-standard row skin */
     @Test
     public void test_resizeColumnToFitContentCustomRowSkin() {
@@ -292,7 +286,7 @@ public class TableColumnHeaderTest {
 
     private TableRow<Person> createCustomRow(TableView<Person> tableView) {
         TableRow<Person> row = new TableRow<>() {
-            protected javafx.scene.control.Skin<?> createDefaultSkin() {
+            protected Skin<?> createDefaultSkin() {
                 return new CustomSkin(this);
             };
         };
@@ -322,6 +316,12 @@ public class TableColumnHeaderTest {
         public void dispose() {
             node = null;
         }
+    }
+
+    private TableRow<Person> createSmallRow(TableView<Person> tableView) {
+        TableRow<Person> row = new TableRow<>();
+        row.setStyle("-fx-font: 24 Amble");
+        return row;
     }
 
     private TableRow<Person> createLargeRow(TableView<Person> param) {
