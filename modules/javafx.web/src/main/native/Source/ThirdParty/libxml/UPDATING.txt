@@ -21,6 +21,7 @@ Updating libxml in OpenJFX:
 
 - For Mac
 6. Prerequisites to compile libxml: libtool, autoconf, automake
+
 7. Configure libxml.
         > cd modules/javafx.web/src/main/native/Source/ThirdParty/libxml/src
         > ./configure
@@ -31,6 +32,7 @@ Updating libxml in OpenJFX:
 
 - For Linux
 8. Prerequisites to compile libxml: libtool, autoconf, automake
+
 9. Configure libxml.
         > cd modules/javafx.web/src/main/native/Source/ThirdParty/libxml/src
         > ./configure
@@ -45,8 +47,8 @@ Updating libxml in OpenJFX:
 
 10.2 Remove tabs from source files:
     > sudo apt install moreutils
-    > find src/ -name "*.c" -type f -exec bash -c 'expand -t 4 "$0" | sponge "$0"' {} \;
-    > find src/ -name "*.h" -type f -exec bash -c 'expand -t 4 "$0" | sponge "$0"' {} \;
+    > find src/ -name "*.c" -type f -exec bash -c 'expand -t 8 "$0" | sponge "$0"' {} \;
+    > find src/ -name "*.h" -type f -exec bash -c 'expand -t 8 "$0" | sponge "$0"' {} \;
 
 10.3 Remove trailing whitespaces from source files:
     > find src/ -name “*.c” -type f -exec sed --in-place 's/[[:space:]]\+$//' {} \+
