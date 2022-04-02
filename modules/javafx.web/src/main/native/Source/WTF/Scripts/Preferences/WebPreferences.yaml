@@ -1579,7 +1579,7 @@ NeedsSiteSpecificQuirks:
     WebKit:
       default: true
     WebCore:
-      default: false
+      default: true
 
 NeedsStorageAccessFromFileURLsQuirk:
   type: bool

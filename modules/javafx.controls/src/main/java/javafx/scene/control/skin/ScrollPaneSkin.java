@@ -1172,7 +1172,10 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane> {
         final ScrollPane sp = getSkinnable();
         double x = isReverseNodeOrientation() ? (hsb.getMax() - (posX - hsb.getMin())) : posX;
         double hsbRange = hsb.getMax() - hsb.getMin();
-        double minX = hsbRange > 0 ? Math.min(-x / hsbRange * (nodeWidth - contentWidth), 0) : 0;
+        double minX = hsbRange > 0 ? -x / hsbRange * (nodeWidth - contentWidth) : 0;
+        if (!Properties.IS_TOUCH_SUPPORTED) {
+            minX = Math.min(minX, 0);
+        }
         viewContent.setLayoutX(snapPositionX(minX));
         if (!sp.hvalueProperty().isBound()) sp.setHvalue(Utils.clamp(sp.getHmin(), posX, sp.getHmax()));
         return posX;
@@ -1181,7 +1184,10 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane> {
     private double updatePosY() {
         final ScrollPane sp = getSkinnable();
         double vsbRange = vsb.getMax() - vsb.getMin();
-        double minY = vsbRange > 0 ? Math.min(-posY / vsbRange * (nodeHeight - contentHeight), 0) : 0;
+        double minY = vsbRange > 0 ? -posY / vsbRange * (nodeHeight - contentHeight) : 0;
+        if (!Properties.IS_TOUCH_SUPPORTED) {
+            minY = Math.min(minY, 0);
+        }
         viewContent.setLayoutY(snapPositionY(minY));
         if (!sp.vvalueProperty().isBound()) sp.setVvalue(Utils.clamp(sp.getVmin(), posY, sp.getVmax()));
         return posY;

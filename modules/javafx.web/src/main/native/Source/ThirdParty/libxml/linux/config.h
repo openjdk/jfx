@@ -22,14 +22,15 @@
 /* Define to 1 if you have the <ctype.h> header file. */
 #define HAVE_CTYPE_H 1
 
-/* Define to 1 if you have the <dirent.h> header file. */
+/* Define to 1 if you have the <dirent.h> header file, and it defines `DIR'.
+   */
 #define HAVE_DIRENT_H 1
 
 /* Define to 1 if you have the <dlfcn.h> header file. */
 #define HAVE_DLFCN_H 1
 
 /* Have dlopen based dso */
-/* #undef HAVE_DLOPEN */
+#define HAVE_DLOPEN /**/
 
 /* Define to 1 if you have the <dl.h> header file. */
 /* #undef HAVE_DL_H */
@@ -61,17 +62,8 @@
 /* Define to 1 if you have the `isascii' function. */
 #define HAVE_ISASCII 1
 
-/* Define if isinf is there */
-#define HAVE_ISINF /**/
-
-/* Define if isnan is there */
-#define HAVE_ISNAN /**/
-
 /* Define if history library is there (-lhistory) */
 /* #undef HAVE_LIBHISTORY */
-
-/* Define if pthread library is there (-lpthread) */
-#define HAVE_LIBPTHREAD /**/
 
 /* Define if readline library is there (-lreadline) */
 /* #undef HAVE_LIBREADLINE */
@@ -130,7 +122,7 @@
 #define HAVE_RAND 1
 
 /* Define to 1 if you have the `rand_r' function. */
-/* #undef HAVE_RAND_R 1 */
+#define HAVE_RAND_R 1
 
 /* Define to 1 if you have the <resolv.h> header file. */
 #define HAVE_RESOLV_H 1
@@ -234,7 +226,7 @@
 /* #undef HAVE___VA_COPY */
 
 /* Define as const if the declaration of iconv() needs const. */
-/* #undef ICONV_CONST */
+#define ICONV_CONST
 
 /* Define to the sub-directory where libtool stores uninstalled libraries. */
 #define LT_OBJDIR ".libs/"
@@ -246,19 +238,19 @@
 #define PACKAGE_BUGREPORT ""
 
 /* Define to the full name of this package. */
-#define PACKAGE_NAME ""
+#define PACKAGE_NAME "libxml2"
 
 /* Define to the full name and version of this package. */
-#define PACKAGE_STRING ""
+#define PACKAGE_STRING "libxml2 2.9.13"
 
 /* Define to the one symbol short name of this package. */
-#define PACKAGE_TARNAME ""
+#define PACKAGE_TARNAME "libxml2"
 
 /* Define to the home page for this package. */
 #define PACKAGE_URL ""
 
 /* Define to the version of this package. */
-#define PACKAGE_VERSION ""
+#define PACKAGE_VERSION "2.9.13"
 
 /* Type cast for the send() function 2nd arg */
 #define SEND_ARG2_CAST /**/
@@ -273,7 +265,7 @@
 #define VA_LIST_IS_ARRAY 1
 
 /* Version number of package */
-#define VERSION "2.9.12"
+#define VERSION "2.9.13"
 
 /* Determine what socket length (socklen_t) data type is */
 #define XML_SOCKLEN_T socklen_t

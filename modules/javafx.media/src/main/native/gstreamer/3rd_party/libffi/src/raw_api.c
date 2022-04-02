@@ -212,7 +212,7 @@ void ffi_raw_call (ffi_cif *cif, void (*fn)(void), void *rvalue, ffi_raw *raw)
   ffi_call (cif, fn, rvalue, avalue);
 }
 
-#if FFI_CLOSURES        /* base system provides closures */
+#if FFI_CLOSURES            /* base system provides closures */
 
 static void
 ffi_translate_args (ffi_cif *cif, void *rvalue,

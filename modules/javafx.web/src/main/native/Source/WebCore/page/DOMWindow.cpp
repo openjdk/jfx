@@ -847,19 +847,28 @@ ExceptionOr<Storage*> DOMWindow::localStorage()
     if (!document->securityOrigin().canAccessLocalStorage(nullptr))
         return Exception { SecurityError };
 
+#if PLATFORM(JAVA)
+     if (m_localStorage)
+         return m_localStorage.get();
+#endif
+
     auto* page = document->page();
+#if !PLATFORM(JAVA)
     // FIXME: We should consider supporting access/modification to local storage
     // after calling window.close(). See <https://bugs.webkit.org/show_bug.cgi?id=135330>.
     if (!page || !page->isClosing()) {
         if (m_localStorage)
             return m_localStorage.get();
     }
+#endif
 
     if (!page)
         return nullptr;
 
+#if !PLATFORM(JAVA)
     if (page->isClosing())
         return nullptr;
+#endif
 
     if (!page->settings().localStorageEnabled())
         return nullptr;

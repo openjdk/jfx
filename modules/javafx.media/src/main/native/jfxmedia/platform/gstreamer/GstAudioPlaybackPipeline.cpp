@@ -986,6 +986,21 @@ bool CGstAudioPlaybackPipeline::IsCodecSupported(GstCaps *pCaps)
                         }
                     }
                 }
+                else if (strstr(mimetype, CONTENT_TYPE_AAC) != NULL)
+                {
+                    gboolean is_supported = FALSE;
+                    g_object_set(m_Elements[AUDIO_DECODER], "codec-id", (gint)JFX_CODEC_ID_AAC, NULL);
+                    g_object_get(m_Elements[AUDIO_DECODER], "is-supported", &is_supported, NULL);
+                    if (is_supported)
+                    {
+                        return TRUE;
+                    }
+                    else
+                    {
+                        m_audioCodecErrorCode = ERROR_MEDIA_AAC_FORMAT_UNSUPPORTED;
+                        return FALSE;
+                    }
+                }
             }
         }
     }
@@ -1819,6 +1834,10 @@ void CGstAudioPlaybackPipeline::SendTrackEvent()
                 encoding = CTrack::AAC;
             else
                 encoding = CTrack::CUSTOM;
+        }
+        else if (m_AudioTrackInfo.mimeType.find(CONTENT_TYPE_AAC))
+        {
+            encoding = CTrack::AAC;
         }
         else
             encoding = CTrack::CUSTOM;
