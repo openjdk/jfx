@@ -467,8 +467,8 @@ public class AreaChart<X,Y> extends XYChart<X,Y> {
             if (x < dataXMin || y < dataYMin) {
                 if (prevDataPoint == null) {
                     prevDataPoint = new LineTo(x, y);
-                } else if ((sortX && prevDataPoint.getX() < x) ||
-                           (sortY && prevDataPoint.getY() < y))
+                } else if ((sortX && prevDataPoint.getX() <= x) ||
+                           (sortY && prevDataPoint.getY() <= y))
                 {
                     prevDataPoint.setX(x);
                     prevDataPoint.setY(y);

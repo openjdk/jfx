@@ -235,6 +235,7 @@ SOURCES = gstreamer/gst/gst.c \
           gst-plugins-base/gst/app/gstapp.c \
           gst-plugins-base/gst/typefind/gsttypefindfunctions.c \
           gst-plugins-good/gst/audioparsers/gstmpegaudioparse.c \
+          gst-plugins-good/gst/audioparsers/gstaacparse.c \
           gst-plugins-good/gst/audioparsers/parsersplugin.c \
           gst-plugins-good/gst/equalizer/gstiirequalizer.c \
           gst-plugins-good/gst/equalizer/gstiirequalizernbands.c \

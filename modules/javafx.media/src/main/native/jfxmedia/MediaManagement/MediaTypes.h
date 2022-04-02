@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -40,5 +40,7 @@
 #define CONTENT_TYPE_M3U8   "application/vnd.apple.mpegurl"
 #define CONTENT_TYPE_M3U    "audio/mpegurl"
 #define CONTENT_TYPE_MP2T   "video/MP2T"
+#define CONTENT_TYPE_FMP4   "video/quicktime"
+#define CONTENT_TYPE_AAC    "audio/aac"
 
 #endif

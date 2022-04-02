@@ -7076,9 +7076,17 @@ gst_qtdemux_process_adapter (GstQTDemux * demux, gboolean force)
         if (fourcc == FOURCC_moov) {
           /* in usual fragmented setup we could try to scan for more
            * and end up at the the moov (after mdat) again */
+#ifdef GSTREAMER_LITE
+if (demux->got_moov && QTDEMUX_N_STREAMS (demux) > 0 &&
+              !demux->fragmented) { // Do not skip moov for fMP4, otherwise
+              // downstream will not receive header during stream switch.
+              // Might need better solution, but fine for our current use
+              // case.
+#else // GSTREAMER_LITE
           if (demux->got_moov && QTDEMUX_N_STREAMS (demux) > 0 &&
               (!demux->fragmented
                   || demux->last_moov_offset == demux->offset)) {
+#endif // GSTREAMER_LITE
             GST_DEBUG_OBJECT (demux,
                 "Skipping moov atom as we have (this) one already");
           } else {
@@ -14320,6 +14328,9 @@ qtdemux_video_caps (GstQTDemux * qtdemux, QtDemuxStream * stream,
     case FOURCC_dva1:
       _codec ("H.264 / AVC");
       caps = gst_caps_new_simple ("video/x-h264",
+#ifdef GSTREAMER_LITE
+          "fragmented", G_TYPE_BOOLEAN, qtdemux->fragmented,
+#endif // GSTREAMER_LITE
           "stream-format", G_TYPE_STRING, "avc",
           "alignment", G_TYPE_STRING, "au", NULL);
       break;
