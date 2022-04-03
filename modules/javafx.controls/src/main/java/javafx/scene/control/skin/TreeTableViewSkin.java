@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -144,13 +144,6 @@ public class TreeTableViewSkin<T> extends TableViewSkinBase<T, TreeItem<T>, Tree
         setRoot(getSkinnable().getRoot());
 
         EventHandler<MouseEvent> ml = event -> {
-            // RT-15127: cancel editing on scroll. This is a bit extreme
-            // (we are cancelling editing on touching the scrollbars).
-            // This can be improved at a later date.
-            if (control.getEditingCell() != null) {
-                control.edit(-1, null);
-            }
-
             // This ensures that the table maintains the focus, even when the vbar
             // and hbar controls inside the flow are clicked. Without this, the
             // focus border will not be shown when the user interacts with the

@@ -68,7 +68,7 @@ ExceptionOr<Ref<AudioWorkletNode>> AudioWorkletNode::create(JSC::JSGlobalObject&
             return Exception { IndexSizeError, "Length of specified outputChannelCount does not match the given number of outputs"_s };
 
         for (auto& channelCount : *options.outputChannelCount) {
-            if (channelCount < 1 || channelCount > AudioContext::maxNumberOfChannels())
+            if (channelCount < 1 || channelCount > AudioContext::maxNumberOfChannels)
                 return Exception { NotSupportedError, "Provided number of channels for output is outside supported range"_s };
         }
     }
@@ -113,7 +113,7 @@ ExceptionOr<Ref<AudioWorkletNode>> AudioWorkletNode::create(JSC::JSGlobalObject&
 
     {
         // The node should be manually added to the automatic pull node list, even without a connect() call.
-        BaseAudioContext::AutoLocker contextLocker(context);
+        Locker contextLocker { context.graphLock() };
         node->updatePullStatus();
     }
 
@@ -144,7 +144,7 @@ AudioWorkletNode::~AudioWorkletNode()
 {
     ASSERT(isMainThread());
     {
-        auto locker = holdLock(m_processLock);
+        Locker locker { m_processLock };
         if (m_processor) {
             if (auto* workletProxy = context().audioWorklet().proxy())
                 workletProxy->postTaskForModeToWorkletGlobalScope([m_processor = WTFMove(m_processor)](ScriptExecutionContext&) { }, WorkerRunLoop::defaultMode());
@@ -153,12 +153,12 @@ AudioWorkletNode::~AudioWorkletNode()
     uninitialize();
 }
 
-void AudioWorkletNode::initializeAudioParameters(const Vector<AudioParamDescriptor>& descriptors, const Optional<Vector<WTF::KeyValuePair<String, double>>>& paramValues)
+void AudioWorkletNode::initializeAudioParameters(const Vector<AudioParamDescriptor>& descriptors, const std::optional<Vector<WTF::KeyValuePair<String, double>>>& paramValues)
 {
     ASSERT(isMainThread());
     ASSERT(m_parameters->map().isEmpty());
 
-    auto locker = holdLock(m_processLock);
+    Locker locker { m_processLock };
 
     for (auto& descriptor : descriptors) {
         auto parameter = AudioParam::create(context(), descriptor.name, descriptor.defaultValue, descriptor.minValue, descriptor.maxValue, descriptor.automationRate);
@@ -173,14 +173,14 @@ void AudioWorkletNode::initializeAudioParameters(const Vector<AudioParamDescript
     }
 
     for (auto& parameterName : m_parameters->map().keys())
-        m_paramValuesMap.add(parameterName, makeUnique<AudioFloatArray>());
+        m_paramValuesMap.add(parameterName, makeUnique<AudioFloatArray>(AudioUtilities::renderQuantumSize));
 }
 
 void AudioWorkletNode::setProcessor(RefPtr<AudioWorkletProcessor>&& processor)
 {
     ASSERT(!isMainThread());
     if (processor) {
-        auto locker = holdLock(m_processLock);
+        Locker locker { m_processLock };
         m_processor = WTFMove(processor);
         m_workletThread = &Thread::current();
     } else
@@ -191,11 +191,19 @@ void AudioWorkletNode::process(size_t framesToProcess)
 {
     ASSERT(!isMainThread());
 
-    auto locker = tryHoldLock(m_processLock);
-    if (!locker || !m_processor || &Thread::current() != m_workletThread) {
-        // We're not ready yet or we are getting destroyed. In this case, we output silence.
+    auto zeroOutput = [&] {
         for (unsigned i = 0; i < numberOfOutputs(); ++i)
             output(i)->bus()->zero();
+    };
+
+    if (!m_processLock.tryLock()) {
+        zeroOutput();
+        return;
+    }
+    Locker locker { AdoptLock, m_processLock };
+    if (!m_processor || &Thread::current() != m_workletThread) {
+        // We're not ready yet or we are getting destroyed. In this case, we output silence.
+        zeroOutput();
         return;
     }
 
@@ -208,15 +216,11 @@ void AudioWorkletNode::process(size_t framesToProcess)
     for (auto& audioParam : m_parameters->map().values()) {
         auto* paramValues = m_paramValuesMap.get(audioParam->name());
         ASSERT(paramValues);
-        if (audioParam->hasSampleAccurateValues() && audioParam->automationRate() == AutomationRate::ARate) {
-            paramValues->resize(framesToProcess);
+        RELEASE_ASSERT(paramValues->size() >= framesToProcess);
+        if (audioParam->hasSampleAccurateValues() && audioParam->automationRate() == AutomationRate::ARate)
             audioParam->calculateSampleAccurateValues(paramValues->data(), framesToProcess);
-        } else {
-            // If no automation is scheduled during this render quantum, the array may have length 1
-            // with the array element being the constant value of the AudioParam for the render quantum.
-            paramValues->resize(1);
-            *paramValues->data() = audioParam->finalValue();
-        }
+        else
+            std::fill_n(paramValues->data(), framesToProcess, audioParam->finalValue());
     }
 
     bool threwException = false;
@@ -280,6 +284,9 @@ void AudioWorkletNode::fireProcessorErrorOnMainThread(ProcessorError error)
 {
     ASSERT(!isMainThread());
 
+    // Heap allocations are forbidden on the audio thread for performance reasons so we need to
+    // explicitly allow the following allocation(s).
+    DisableMallocRestrictionsForCurrentThreadScope disableMallocRestrictions;
     callOnMainThread([this, protectedThis = makeRef(*this), error]() mutable {
         String errorMessage;
         switch (error) {

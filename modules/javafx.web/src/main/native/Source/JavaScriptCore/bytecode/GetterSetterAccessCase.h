@@ -46,38 +46,38 @@ public:
     // GCAwareJITStubRoutine is destroyed.
     CallLinkInfo* callLinkInfo() const { return m_callLinkInfo; }
     JSObject* customSlotBase() const { return m_customSlotBase.get(); }
-    Optional<DOMAttributeAnnotation> domAttribute() const { return m_domAttribute; }
+    std::optional<DOMAttributeAnnotation> domAttribute() const { return m_domAttribute; }
 
     bool hasAlternateBase() const final;
     JSObject* alternateBase() const final;
 
     void emitDOMJITGetter(AccessGenerationState&, const DOMJIT::GetterSetter*, GPRReg baseForGetGPR);
 
-    static std::unique_ptr<AccessCase> create(
+    static Ref<AccessCase> create(
         VM&, JSCell* owner, AccessType, CacheableIdentifier, PropertyOffset, Structure*,
         const ObjectPropertyConditionSet&, bool viaProxy, WatchpointSet* additionalSet, FunctionPtr<CustomAccessorPtrTag> customGetter,
-        JSObject* customSlotBase, Optional<DOMAttributeAnnotation>, std::unique_ptr<PolyProtoAccessChain>);
+        JSObject* customSlotBase, std::optional<DOMAttributeAnnotation>, RefPtr<PolyProtoAccessChain>&&);
 
-    static std::unique_ptr<AccessCase> create(VM&, JSCell* owner, AccessType, Structure*, CacheableIdentifier, PropertyOffset,
-        const ObjectPropertyConditionSet&, std::unique_ptr<PolyProtoAccessChain>, bool viaProxy = false,
+    static Ref<AccessCase> create(VM&, JSCell* owner, AccessType, Structure*, CacheableIdentifier, PropertyOffset,
+        const ObjectPropertyConditionSet&, RefPtr<PolyProtoAccessChain>&&, bool viaProxy = false,
         FunctionPtr<CustomAccessorPtrTag> customSetter = nullptr, JSObject* customSlotBase = nullptr);
 
     void dumpImpl(PrintStream&, CommaPrinter&) const final;
-    std::unique_ptr<AccessCase> clone() const final;
+    Ref<AccessCase> clone() const final;
 
     ~GetterSetterAccessCase() final;
 
     FunctionPtr<CustomAccessorPtrTag> customAccessor() const { return m_customAccessor; }
 
 private:
-    GetterSetterAccessCase(VM&, JSCell*, AccessType, CacheableIdentifier, PropertyOffset, Structure*, const ObjectPropertyConditionSet&, bool viaProxy, WatchpointSet* additionalSet, JSObject* customSlotBase, std::unique_ptr<PolyProtoAccessChain>);
+    GetterSetterAccessCase(VM&, JSCell*, AccessType, CacheableIdentifier, PropertyOffset, Structure*, const ObjectPropertyConditionSet&, bool viaProxy, WatchpointSet* additionalSet, JSObject* customSlotBase, RefPtr<PolyProtoAccessChain>&&);
 
     GetterSetterAccessCase(const GetterSetterAccessCase&);
 
     WriteBarrier<JSObject> m_customSlotBase;
     CallLinkInfo* m_callLinkInfo { nullptr };
     FunctionPtr<CustomAccessorPtrTag> m_customAccessor;
-    Optional<DOMAttributeAnnotation> m_domAttribute;
+    std::optional<DOMAttributeAnnotation> m_domAttribute;
 };
 
 } // namespace JSC

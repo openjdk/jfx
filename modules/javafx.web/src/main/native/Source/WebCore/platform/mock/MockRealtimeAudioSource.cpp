@@ -130,7 +130,7 @@ const RealtimeMediaSourceCapabilities& MockRealtimeAudioSource::capabilities()
 
 void MockRealtimeAudioSource::settingsDidChange(OptionSet<RealtimeMediaSourceSettings::Flag>)
 {
-    m_currentSettings = WTF::nullopt;
+    m_currentSettings = std::nullopt;
 }
 
 void MockRealtimeAudioSource::startProducingData()
@@ -138,7 +138,7 @@ void MockRealtimeAudioSource::startProducingData()
 #if PLATFORM(IOS_FAMILY)
     RealtimeMediaSourceCenter::singleton().audioCaptureFactory().setActiveSource(*this);
     PlatformMediaSessionManager::sharedManager().sessionCanProduceAudioChanged();
-    ASSERT(AudioSession::sharedSession().category() == AudioSession::PlayAndRecord);
+    ASSERT(AudioSession::sharedSession().category() == AudioSession::CategoryType::PlayAndRecord);
 #endif
 
     if (!sampleRate())

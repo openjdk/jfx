@@ -48,6 +48,7 @@ import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Control;
 import javafx.scene.control.ListView;
+import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeView;
@@ -67,6 +68,17 @@ public class BehaviorCleanupTest {
     private Stage stage;
     private Pane root;
 
+//---------- TextAera
+
+    @Test
+    public void testTextAreaFocusListener() {
+        TextArea control = new TextArea("some text");
+        showControl(control, true);
+        assertTrue("caret must be blinking if focused", isCaretBlinking(control));
+        Button button = new Button("dummy");
+        showControl(button, true);
+        assertFalse("caret must not be blinking if not focused", isCaretBlinking(control));
+    }
 
 //---------- TextField
 

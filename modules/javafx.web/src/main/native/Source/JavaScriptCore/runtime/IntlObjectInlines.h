@@ -120,7 +120,7 @@ InstanceType* unwrapForLegacyIntlConstructor(JSGlobalObject* globalObject, JSVal
 }
 
 template<typename ResultType>
-ResultType intlOption(JSGlobalObject* globalObject, Optional<JSObject&> options, PropertyName property, std::initializer_list<std::pair<ASCIILiteral, ResultType>> values, ASCIILiteral notFoundMessage, ResultType fallback)
+ResultType intlOption(JSGlobalObject* globalObject, JSObject* options, PropertyName property, std::initializer_list<std::pair<ASCIILiteral, ResultType>> values, ASCIILiteral notFoundMessage, ResultType fallback)
 {
     // GetOption (options, property, type="string", values, fallback)
     // https://tc39.github.io/ecma402/#sec-getoption
@@ -154,53 +154,93 @@ ResultType intlOption(JSGlobalObject* globalObject, Optional<JSObject&> options,
 
 ALWAYS_INLINE bool canUseASCIIUCADUCETComparison(UChar character)
 {
-    return isASCII(character) && ducetWeights[character];
+    return isASCII(character) && ducetLevel1Weights[character];
+}
+
+template<typename CharacterType1, typename CharacterType2>
+UCollationResult compareASCIIWithUCADUCETLevel3(const CharacterType1* characters1, const CharacterType2* characters2, unsigned length)
+{
+    for (unsigned position = 0; position < length; ++position) {
+        auto lhs = characters1[position];
+        auto rhs = characters2[position];
+        uint8_t leftWeight = ducetLevel3Weights[lhs];
+        uint8_t rightWeight = ducetLevel3Weights[rhs];
+        if (leftWeight == rightWeight)
+            continue;
+        return leftWeight > rightWeight ? UCOL_GREATER : UCOL_LESS;
+    }
+    return UCOL_EQUAL;
 }
 
 template<typename CharacterType1, typename CharacterType2>
 inline UCollationResult compareASCIIWithUCADUCET(const CharacterType1* characters1, unsigned length1, const CharacterType2* characters2, unsigned length2)
 {
+    bool notSameCharacters = false;
     unsigned commonLength = std::min(length1, length2);
     for (unsigned position = 0; position < commonLength; ++position) {
         auto lhs = characters1[position];
         auto rhs = characters2[position];
         ASSERT(canUseASCIIUCADUCETComparison(lhs));
         ASSERT(canUseASCIIUCADUCETComparison(rhs));
-        uint8_t leftWeight = ducetWeights[lhs];
-        uint8_t rightWeight = ducetWeights[rhs];
+        if (lhs == rhs)
+            continue;
+        notSameCharacters = true;
+        uint8_t leftWeight = ducetLevel1Weights[lhs];
+        uint8_t rightWeight = ducetLevel1Weights[rhs];
         if (leftWeight == rightWeight)
             continue;
         return leftWeight > rightWeight ? UCOL_GREATER : UCOL_LESS;
     }
 
-    if (length1 == length2)
+    if (length1 == length2) {
+        if (notSameCharacters)
+            return compareASCIIWithUCADUCETLevel3(characters1, characters2, length1);
         return UCOL_EQUAL;
+    }
     return length1 > length2 ? UCOL_GREATER : UCOL_LESS;
 }
 
 // https://tc39.es/ecma402/#sec-getoptionsobject
-inline Optional<JSObject&> intlGetOptionsObject(JSGlobalObject* globalObject, JSValue options)
+inline JSObject* intlGetOptionsObject(JSGlobalObject* globalObject, JSValue options)
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
     if (options.isUndefined())
-        return WTF::nullopt;
+        return nullptr;
     if (LIKELY(options.isObject()))
-        return *asObject(options);
+        return asObject(options);
     throwTypeError(globalObject, scope, "options argument is not an object or undefined"_s);
-    return WTF::nullopt;
+    return nullptr;
 }
 
 // https://tc39.es/ecma402/#sec-coerceoptionstoobject
-inline Optional<JSObject&> intlCoerceOptionsToObject(JSGlobalObject* globalObject, JSValue optionsValue)
+inline JSObject* intlCoerceOptionsToObject(JSGlobalObject* globalObject, JSValue optionsValue)
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
     if (optionsValue.isUndefined())
-        return WTF::nullopt;
+        return nullptr;
     JSObject* options = optionsValue.toObject(globalObject);
-    RETURN_IF_EXCEPTION(scope, WTF::nullopt);
-    return *options;
+    RETURN_IF_EXCEPTION(scope, nullptr);
+    return options;
+}
+
+template<typename Container>
+JSArray* createArrayFromStringVector(JSGlobalObject* globalObject, const Container& elements)
+{
+    VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    JSArray* result = JSArray::tryCreate(vm, globalObject->arrayStructureForIndexingTypeDuringAllocation(ArrayWithContiguous), elements.size());
+    if (!result) {
+        throwOutOfMemoryError(globalObject, scope);
+        return nullptr;
+    }
+    for (unsigned index = 0; index < elements.size(); ++index) {
+        result->putDirectIndex(globalObject, index, jsString(vm, elements[index]));
+        RETURN_IF_EXCEPTION(scope, { });
+    }
+    return result;
 }
 
 } // namespace JSC

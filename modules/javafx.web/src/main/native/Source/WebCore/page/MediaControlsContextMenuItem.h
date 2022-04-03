@@ -25,9 +25,8 @@
 
 #pragma once
 
-#if ENABLE(MEDIA_CONTROLS_CONTEXT_MENUS)
+#if ENABLE(MEDIA_CONTROLS_CONTEXT_MENUS) && USE(UICONTEXTMENU)
 
-#include <wtf/Optional.h>
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
 
@@ -40,11 +39,11 @@ struct MediaControlsContextMenuItem {
     ID id { invalidID };
     String title;
     String icon;
-    bool isChecked { false };
+    bool checked { false };
     Vector<MediaControlsContextMenuItem> children;
 
     template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static Optional<MediaControlsContextMenuItem> decode(Decoder&);
+    template<class Decoder> static std::optional<MediaControlsContextMenuItem> decode(Decoder&);
 };
 
 template<class Encoder>
@@ -53,30 +52,30 @@ void MediaControlsContextMenuItem::encode(Encoder& encoder) const
     encoder << id;
     encoder << title;
     encoder << icon;
-    encoder << isChecked;
+    encoder << checked;
     encoder << children;
 }
 
 template<class Decoder>
-Optional<MediaControlsContextMenuItem> MediaControlsContextMenuItem::decode(Decoder& decoder)
+std::optional<MediaControlsContextMenuItem> MediaControlsContextMenuItem::decode(Decoder& decoder)
 {
 #define DECODE(name, type) \
-    Optional<type> name; \
+    std::optional<type> name; \
     decoder >> name; \
     if (!name) \
-        return WTF::nullopt; \
+        return std::nullopt; \
 
     DECODE(id, ID);
     DECODE(title, String);
     DECODE(icon, String);
-    DECODE(isChecked, bool);
+    DECODE(checked, bool);
     DECODE(children, Vector<MediaControlsContextMenuItem>);
 
 #undef DECODE
 
-    return {{ WTFMove(*id), WTFMove(*title), WTFMove(*icon), WTFMove(*isChecked), WTFMove(*children) }};
+    return {{ WTFMove(*id), WTFMove(*title), WTFMove(*icon), WTFMove(*checked), WTFMove(*children) }};
 }
 
 } // namespace WebCore
 
-#endif // ENABLE(MEDIA_CONTROLS_CONTEXT_MENUS)
+#endif // ENABLE(MEDIA_CONTROLS_CONTEXT_MENUS) && USE(UICONTEXTMENU)

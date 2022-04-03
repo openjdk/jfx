@@ -34,10 +34,6 @@
 
 namespace WebCore {
 
-float lightness(const SRGBA<float>&);
-float luminance(const SRGBA<float>&);
-float contrastRatio(const SRGBA<float>&, const SRGBA<float>&);
-
 SRGBA<float> premultiplied(const SRGBA<float>&);
 SRGBA<float> unpremultiplied(const SRGBA<float>&);
 
@@ -55,8 +51,8 @@ template<typename ColorType, typename Functor> ColorType colorByModifingEachNonA
 template<typename ColorType> constexpr ColorType colorWithOverriddenAlpha(const ColorType&, uint8_t overrideAlpha);
 template<typename ColorType> ColorType colorWithOverriddenAlpha(const ColorType&, float overrideAlpha);
 
-template<typename ColorType> constexpr ColorType invertedcolorWithOverriddenAlpha(const ColorType&, uint8_t overrideAlpha);
-template<typename ColorType> ColorType invertedcolorWithOverriddenAlpha(const ColorType&, float overrideAlpha);
+template<typename ColorType> constexpr ColorType invertedColorWithOverriddenAlpha(const ColorType&, uint8_t overrideAlpha);
+template<typename ColorType> ColorType invertedColorWithOverriddenAlpha(const ColorType&, float overrideAlpha);
 
 template<typename ColorType, typename std::enable_if_t<std::is_same_v<typename ColorType::Model, RGBModel<typename ColorType::ComponentType>>>* = nullptr> constexpr bool isBlack(const ColorType&);
 template<WhitePoint W> constexpr bool isBlack(const XYZA<float, W>&);
@@ -121,7 +117,7 @@ template<typename ColorType> ColorType colorWithOverriddenAlpha(const ColorType&
     return copy;
 }
 
-template<typename ColorType> constexpr ColorType invertedcolorWithOverriddenAlpha(const ColorType& color, uint8_t overrideAlpha)
+template<typename ColorType> constexpr ColorType invertedColorWithOverriddenAlpha(const ColorType& color, uint8_t overrideAlpha)
 {
     static_assert(ColorType::Model::isInvertible);
 
@@ -129,13 +125,13 @@ template<typename ColorType> constexpr ColorType invertedcolorWithOverriddenAlph
     auto copy = components;
 
     for (unsigned i = 0; i < 3; ++i)
-        copy[i] = ColorType::Model::ranges[i].max - components[i];
+        copy[i] = ColorType::Model::componentInfo[i].max - components[i];
     copy[3] = convertByteAlphaTo<typename ColorType::ComponentType>(overrideAlpha);
 
     return makeFromComponents<ColorType>(copy);
 }
 
-template<typename ColorType> ColorType invertedcolorWithOverriddenAlpha(const ColorType& color, float overrideAlpha)
+template<typename ColorType> ColorType invertedColorWithOverriddenAlpha(const ColorType& color, float overrideAlpha)
 {
     static_assert(ColorType::Model::isInvertible);
 
@@ -143,7 +139,7 @@ template<typename ColorType> ColorType invertedcolorWithOverriddenAlpha(const Co
     auto copy = components;
 
     for (unsigned i = 0; i < 3; ++i)
-        copy[i] = ColorType::Model::ranges[i].max - components[i];
+        copy[i] = ColorType::Model::componentInfo[i].max - components[i];
     copy[3] = convertFloatAlphaTo<typename ColorType::ComponentType>(overrideAlpha);
 
     return makeFromComponents<ColorType>(copy);
@@ -168,8 +164,8 @@ template<typename ColorType, typename std::enable_if_t<std::is_same_v<typename C
 constexpr bool isBlack(const ColorType& color)
 {
     auto [c1, c2, c3, alpha] = color;
-    constexpr auto ranges = ColorType::Model::ranges;
-    return c1 == ranges[0].min && c2 == ranges[1].min && c3 == ranges[2].min && alpha == AlphaTraits<typename ColorType::ComponentType>::opaque;
+    constexpr auto componentInfo = ColorType::Model::componentInfo;
+    return c1 == componentInfo[0].min && c2 == componentInfo[1].min && c3 == componentInfo[2].min && alpha == AlphaTraits<typename ColorType::ComponentType>::opaque;
 }
 
 template<WhitePoint W> constexpr bool isWhite(const XYZA<float, W>& color)
@@ -191,8 +187,8 @@ template<typename ColorType, typename std::enable_if_t<std::is_same_v<typename C
 constexpr bool isWhite(const ColorType& color)
 {
     auto [c1, c2, c3, alpha] = color;
-    constexpr auto ranges = ColorType::Model::ranges;
-    return c1 == ranges[0].max && c2 == ranges[1].max && c3 == ranges[2].max && alpha == AlphaTraits<typename ColorType::ComponentType>::opaque;
+    constexpr auto componentInfo = ColorType::Model::componentInfo;
+    return c1 == componentInfo[0].max && c2 == componentInfo[1].max && c3 == componentInfo[2].max && alpha == AlphaTraits<typename ColorType::ComponentType>::opaque;
 }
 
 constexpr uint16_t fastMultiplyBy255(uint16_t value)

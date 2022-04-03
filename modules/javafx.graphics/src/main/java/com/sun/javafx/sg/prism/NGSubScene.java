@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -206,6 +206,10 @@ public class NGSubScene extends NGNode {
                                               msaa);
             }
             Graphics rttGraphics = rtt.createGraphics();
+            // The pixel scale factors must be copied to the rttGraphics, otherwise the position
+            // of the lights will not be scaled correctly on HiDPI displays like MacBooks' retina
+            // displays.
+            rttGraphics.setPixelScaleFactors(g.getPixelScaleFactorX(), g.getPixelScaleFactorY());
             rttGraphics.scale((float) scaleX, (float) scaleY);
             rttGraphics.setLights(lights);
 

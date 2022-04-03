@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -337,6 +337,8 @@ public class TreeView<T> extends Control {
         MultipleSelectionModel<TreeItem<T>> sm = new TreeViewBitSetSelectionModel<T>(this);
         setSelectionModel(sm);
         setFocusModel(new TreeViewFocusModel<T>(this));
+
+        setOnEditCommit(DEFAULT_EDIT_COMMIT_HANDLER);
     }
 
 
@@ -845,6 +847,11 @@ public class TreeView<T> extends Control {
         return onEditCommit;
     }
 
+    private EventHandler<TreeView.EditEvent<T>> DEFAULT_EDIT_COMMIT_HANDLER = t -> {
+        TreeItem<T> editedItem = t.getTreeItem();
+        if (editedItem == null) return;
+        editedItem.setValue(t.getNewValue());
+    };
 
     // --- On Edit Cancel
     private ObjectProperty<EventHandler<EditEvent<T>>> onEditCancel;
@@ -1132,8 +1139,9 @@ public class TreeView<T> extends Control {
     }
 
     /**
-     * @return The CssMetaData associated with this class, which may include the
-     * CssMetaData of its superclasses.
+     * Gets the {@code CssMetaData} associated with this class, which may include the
+     * {@code CssMetaData} of its superclasses.
+     * @return the {@code CssMetaData}
      * @since JavaFX 8.0
      */
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {

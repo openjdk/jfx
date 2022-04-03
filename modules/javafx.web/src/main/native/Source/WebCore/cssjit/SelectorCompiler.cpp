@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2021 Apple Inc. All rights reserved.
  * Copyright (C) 2014 Yusuke Suzuki <utatane.tea@gmail.com>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -56,7 +56,6 @@
 #include <JavaScriptCore/VM.h>
 #include <limits>
 #include <wtf/Deque.h>
-#include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
 #include <wtf/Vector.h>
 #include <wtf/text/CString.h>
@@ -86,6 +85,7 @@ static JSC_DECLARE_JIT_OPERATION_WITHOUT_WTF_INTERNAL(operationIsDefinedElement,
 static JSC_DECLARE_JIT_OPERATION_WITHOUT_WTF_INTERNAL(operationMatchesDirectFocusPseudoClass, bool, (const Element&));
 static JSC_DECLARE_JIT_OPERATION_WITHOUT_WTF_INTERNAL(operationMatchesFocusPseudoClass, bool, (const Element&));
 static JSC_DECLARE_JIT_OPERATION_WITHOUT_WTF_INTERNAL(operationMatchesFocusVisiblePseudoClass, bool, (const Element&));
+static JSC_DECLARE_JIT_OPERATION_WITHOUT_WTF_INTERNAL(operationMatchesFocusWithinPseudoClass, bool, (const Element&));
 static JSC_DECLARE_JIT_OPERATION_WITHOUT_WTF_INTERNAL(operationIsMediaDocument, bool, (const Element&));
 static JSC_DECLARE_JIT_OPERATION_WITHOUT_WTF_INTERNAL(operationIsInRange, bool, (const Element&));
 static JSC_DECLARE_JIT_OPERATION_WITHOUT_WTF_INTERNAL(operationMatchesIndeterminatePseudoClass, bool, (const Element&));
@@ -111,10 +111,18 @@ static JSC_DECLARE_JIT_OPERATION_WITHOUT_WTF_INTERNAL(operationMatchesPictureInP
 #if ENABLE(VIDEO)
 static JSC_DECLARE_JIT_OPERATION_WITHOUT_WTF_INTERNAL(operationMatchesFutureCuePseudoClass, bool, (const Element&));
 static JSC_DECLARE_JIT_OPERATION_WITHOUT_WTF_INTERNAL(operationMatchesPastCuePseudoClass, bool, (const Element&));
+static JSC_DECLARE_JIT_OPERATION_WITHOUT_WTF_INTERNAL(operationMatchesPlayingPseudoClass, bool, (const Element&));
+static JSC_DECLARE_JIT_OPERATION_WITHOUT_WTF_INTERNAL(operationMatchesPausedPseudoClass, bool, (const Element&));
+static JSC_DECLARE_JIT_OPERATION_WITHOUT_WTF_INTERNAL(operationMatchesSeekingPseudoClass, bool, (const Element&));
+static JSC_DECLARE_JIT_OPERATION_WITHOUT_WTF_INTERNAL(operationMatchesBufferingPseudoClass, bool, (const Element&));
+static JSC_DECLARE_JIT_OPERATION_WITHOUT_WTF_INTERNAL(operationMatchesStalledPseudoClass, bool, (const Element&));
+static JSC_DECLARE_JIT_OPERATION_WITHOUT_WTF_INTERNAL(operationMatchesMutedPseudoClass, bool, (const Element&));
+static JSC_DECLARE_JIT_OPERATION_WITHOUT_WTF_INTERNAL(operationMatchesVolumeLockedPseudoClass, bool, (const Element&));
 #endif
 #if ENABLE(ATTACHMENT_ELEMENT)
 static JSC_DECLARE_JIT_OPERATION_WITHOUT_WTF_INTERNAL(operationHasAttachment, bool, (const Element&));
 #endif
+static JSC_DECLARE_JIT_OPERATION_WITHOUT_WTF_INTERNAL(operationMatchesModalDialogPseudoClass, bool, (const Element&));
 
 static JSC_DECLARE_JIT_OPERATION_WITHOUT_WTF_INTERNAL(operationAttributeValueBeginsWithCaseSensitive, bool, (const Attribute* attribute, AtomStringImpl* expectedString));
 static JSC_DECLARE_JIT_OPERATION_WITHOUT_WTF_INTERNAL(operationAttributeValueBeginsWithCaseInsensitive, bool, (const Attribute* attribute, AtomStringImpl* expectedString));
@@ -387,11 +395,10 @@ private:
     void generateElementIsRoot(Assembler::JumpList& failureCases);
     void generateElementIsScopeRoot(Assembler::JumpList& failureCases);
     void generateElementIsTarget(Assembler::JumpList& failureCases);
-    void generateElementHasFocusWithin(Assembler::JumpList& failureCases);
 
     // Helpers.
-    void generateAddStyleRelationIfResolvingStyle(Assembler::RegisterID element, Style::Relation::Type, Optional<Assembler::RegisterID> value = { });
-    void generateAddStyleRelation(Assembler::RegisterID checkingContext, Assembler::RegisterID element, Style::Relation::Type, Optional<Assembler::RegisterID> value = { });
+    void generateAddStyleRelationIfResolvingStyle(Assembler::RegisterID element, Style::Relation::Type, std::optional<Assembler::RegisterID> value = { });
+    void generateAddStyleRelation(Assembler::RegisterID checkingContext, Assembler::RegisterID element, Style::Relation::Type, std::optional<Assembler::RegisterID> value = { });
     Assembler::Jump branchOnResolvingModeWithCheckingContext(Assembler::RelationalCondition, SelectorChecker::Mode, Assembler::RegisterID checkingContext);
     Assembler::Jump branchOnResolvingMode(Assembler::RelationalCondition, SelectorChecker::Mode, Assembler::RegisterID checkingContext);
     void generateElementIsFirstLink(Assembler::JumpList& failureCases, Assembler::RegisterID element);
@@ -637,6 +644,11 @@ JSC_DEFINE_JIT_OPERATION(operationMatchesFocusVisiblePseudoClass, bool, (const E
     return matchesFocusVisiblePseudoClass(element);
 }
 
+JSC_DEFINE_JIT_OPERATION(operationMatchesFocusWithinPseudoClass, bool, (const Element& element))
+{
+    return matchesFocusWithinPseudoClass(element);
+}
+
 JSC_DEFINE_JIT_OPERATION(operationIsMediaDocument, bool, (const Element& element))
 {
     return isMediaDocument(element);
@@ -736,6 +748,41 @@ JSC_DEFINE_JIT_OPERATION(operationMatchesPastCuePseudoClass, bool, (const Elemen
 {
     return matchesPastCuePseudoClass(element);
 }
+
+JSC_DEFINE_JIT_OPERATION(operationMatchesPlayingPseudoClass, bool, (const Element& element))
+{
+    return matchesPlayingPseudoClass(element);
+}
+
+JSC_DEFINE_JIT_OPERATION(operationMatchesPausedPseudoClass, bool, (const Element& element))
+{
+    return matchesPausedPseudoClass(element);
+}
+
+JSC_DEFINE_JIT_OPERATION(operationMatchesSeekingPseudoClass, bool, (const Element& element))
+{
+    return matchesSeekingPseudoClass(element);
+}
+
+JSC_DEFINE_JIT_OPERATION(operationMatchesBufferingPseudoClass, bool, (const Element& element))
+{
+    return matchesBufferingPseudoClass(element);
+}
+
+JSC_DEFINE_JIT_OPERATION(operationMatchesStalledPseudoClass, bool, (const Element& element))
+{
+    return matchesStalledPseudoClass(element);
+}
+
+JSC_DEFINE_JIT_OPERATION(operationMatchesMutedPseudoClass, bool, (const Element& element))
+{
+    return matchesMutedPseudoClass(element);
+}
+
+JSC_DEFINE_JIT_OPERATION(operationMatchesVolumeLockedPseudoClass, bool, (const Element& element))
+{
+    return matchesVolumeLockedPseudoClass(element);
+}
 #endif
 
 #if ENABLE(ATTACHMENT_ELEMENT)
@@ -748,6 +795,11 @@ JSC_DEFINE_JIT_OPERATION(operationHasAttachment, bool, (const Element& element))
 JSC_DEFINE_JIT_OPERATION(operationMatchesLangPseudoClass, bool, (const Element& element, const Vector<AtomString>& argumentList))
 {
     return matchesLangPseudoClass(element, argumentList);
+}
+
+JSC_DEFINE_JIT_OPERATION(operationMatchesModalDialogPseudoClass, bool, (const Element& element))
+{
+    return matchesModalDialogPseudoClass(element);
 }
 
 static inline FunctionType addPseudoClassType(const CSSSelector& selector, SelectorFragment& fragment, SelectorContext selectorContext, FragmentsLevel fragmentLevel, FragmentPositionInRootFragments positionInRootFragments, bool visitedMatchEnabled, VisitedMode& visitedMode, PseudoElementMatchingBehavior pseudoElementMatchingBehavior)
@@ -787,6 +839,9 @@ static inline FunctionType addPseudoClassType(const CSSSelector& selector, Selec
         return FunctionType::SimpleSelectorChecker;
     case CSSSelector::PseudoClassFocusVisible:
         fragment.unoptimizedPseudoClasses.append(JSC::FunctionPtr<JSC::OperationPtrTag>(operationMatchesFocusVisiblePseudoClass));
+        return FunctionType::SimpleSelectorChecker;
+    case CSSSelector::PseudoClassFocusWithin:
+        fragment.unoptimizedPseudoClasses.append(JSC::FunctionPtr<JSC::OperationPtrTag>(operationMatchesFocusWithinPseudoClass));
         return FunctionType::SimpleSelectorChecker;
     case CSSSelector::PseudoClassFullPageMedia:
         fragment.unoptimizedPseudoClasses.append(JSC::FunctionPtr<JSC::OperationPtrTag>(operationIsMediaDocument));
@@ -854,6 +909,27 @@ static inline FunctionType addPseudoClassType(const CSSSelector& selector, Selec
     case CSSSelector::PseudoClassPast:
         fragment.unoptimizedPseudoClasses.append(JSC::FunctionPtr<JSC::OperationPtrTag>(operationMatchesPastCuePseudoClass));
         return FunctionType::SimpleSelectorChecker;
+    case CSSSelector::PseudoClassPlaying:
+        fragment.unoptimizedPseudoClasses.append(JSC::FunctionPtr<JSC::OperationPtrTag>(operationMatchesPlayingPseudoClass));
+        return FunctionType::SimpleSelectorChecker;
+    case CSSSelector::PseudoClassPaused:
+        fragment.unoptimizedPseudoClasses.append(JSC::FunctionPtr<JSC::OperationPtrTag>(operationMatchesPausedPseudoClass));
+        return FunctionType::SimpleSelectorChecker;
+    case CSSSelector::PseudoClassSeeking:
+        fragment.unoptimizedPseudoClasses.append(JSC::FunctionPtr<JSC::OperationPtrTag>(operationMatchesSeekingPseudoClass));
+        return FunctionType::SimpleSelectorChecker;
+    case CSSSelector::PseudoClassBuffering:
+        fragment.unoptimizedPseudoClasses.append(JSC::FunctionPtr<JSC::OperationPtrTag>(operationMatchesBufferingPseudoClass));
+        return FunctionType::SimpleSelectorChecker;
+    case CSSSelector::PseudoClassStalled:
+        fragment.unoptimizedPseudoClasses.append(JSC::FunctionPtr<JSC::OperationPtrTag>(operationMatchesStalledPseudoClass));
+        return FunctionType::SimpleSelectorChecker;
+    case CSSSelector::PseudoClassMuted:
+        fragment.unoptimizedPseudoClasses.append(JSC::FunctionPtr<JSC::OperationPtrTag>(operationMatchesMutedPseudoClass));
+        return FunctionType::SimpleSelectorChecker;
+    case CSSSelector::PseudoClassVolumeLocked:
+        fragment.unoptimizedPseudoClasses.append(JSC::FunctionPtr<JSC::OperationPtrTag>(operationMatchesVolumeLockedPseudoClass));
+        return FunctionType::SimpleSelectorChecker;
 #endif
 
 #if ENABLE(ATTACHMENT_ELEMENT)
@@ -861,6 +937,10 @@ static inline FunctionType addPseudoClassType(const CSSSelector& selector, Selec
         fragment.unoptimizedPseudoClasses.append(JSC::FunctionPtr<JSC::OperationPtrTag>(operationHasAttachment));
         return FunctionType::SimpleSelectorChecker;
 #endif
+
+    case CSSSelector::PseudoClassModalDialog:
+        fragment.unoptimizedPseudoClasses.append(JSC::FunctionPtr<JSC::OperationPtrTag>(operationMatchesModalDialogPseudoClass));
+        return FunctionType::SimpleSelectorChecker;
 
     // These pseudo-classes only have meaning with scrollbars.
     case CSSSelector::PseudoClassHorizontal:
@@ -882,6 +962,8 @@ static inline FunctionType addPseudoClassType(const CSSSelector& selector, Selec
     case CSSSelector::PseudoClassNthOfType:
     case CSSSelector::PseudoClassNthLastOfType:
     case CSSSelector::PseudoClassDrag:
+    case CSSSelector::PseudoClassHas:
+    case CSSSelector::PseudoClassRelativeScope:
 #if ENABLE(CSS_SELECTORS_LEVEL4)
     case CSSSelector::PseudoClassDir:
     case CSSSelector::PseudoClassRole:
@@ -928,7 +1010,6 @@ static inline FunctionType addPseudoClassType(const CSSSelector& selector, Selec
     case CSSSelector::PseudoClassLastChild:
     case CSSSelector::PseudoClassOnlyChild:
     case CSSSelector::PseudoClassPlaceholderShown:
-    case CSSSelector::PseudoClassFocusWithin:
         fragment.pseudoClasses.add(type);
         if (selectorContext == SelectorContext::QuerySelector)
             return FunctionType::SimpleSelectorChecker;
@@ -1465,7 +1546,7 @@ inline SelectorCompilationStatus SelectorCodeGenerator::compile(JSC::MacroAssemb
         return SelectorCompilationStatus::CannotCompile;
     }
 
-    JSC::LinkBuffer linkBuffer(m_assembler, CSS_CODE_ID, JSC::JITCompilationCanFail);
+    JSC::LinkBuffer linkBuffer(m_assembler, CSS_CODE_ID, JSC::LinkBuffer::Profile::CSSJIT, JSC::JITCompilationCanFail);
     if (!linkBuffer.isValid()) {
         // This could be SelectorCompilationStatus::NotCompiled but that would cause us to re-enter
         // the CSS JIT every time we evaluate that selector.
@@ -2439,7 +2520,7 @@ void SelectorCodeGenerator::generateIndirectAdjacentTreeWalker(Assembler::JumpLi
     localFailureCases.linkTo(loopStart, &m_assembler);
 }
 
-void SelectorCodeGenerator::generateAddStyleRelationIfResolvingStyle(Assembler::RegisterID element, Style::Relation::Type relationType, Optional<Assembler::RegisterID> value)
+void SelectorCodeGenerator::generateAddStyleRelationIfResolvingStyle(Assembler::RegisterID element, Style::Relation::Type relationType, std::optional<Assembler::RegisterID> value)
 {
     if (m_selectorContext == SelectorContext::QuerySelector)
         return;
@@ -2465,7 +2546,7 @@ JSC_DEFINE_JIT_OPERATION(operationModuloHelper, int, (int dividend, int divisor)
 }
 #endif
 
-void SelectorCodeGenerator::generateAddStyleRelation(Assembler::RegisterID checkingContext, Assembler::RegisterID element, Style::Relation::Type relationType, Optional<Assembler::RegisterID> value)
+void SelectorCodeGenerator::generateAddStyleRelation(Assembler::RegisterID checkingContext, Assembler::RegisterID element, Style::Relation::Type relationType, std::optional<Assembler::RegisterID> value)
 {
     ASSERT(m_selectorContext != SelectorContext::QuerySelector);
 
@@ -2843,9 +2924,6 @@ void SelectorCodeGenerator::generateElementMatching(Assembler::JumpList& matchin
 
     if (fragment.pseudoClasses.contains(CSSSelector::PseudoClassTarget))
         generateElementIsTarget(matchingPostTagNameFailureCases);
-
-    if (fragment.pseudoClasses.contains(CSSSelector::PseudoClassFocusWithin))
-        generateElementHasFocusWithin(matchingPostTagNameFailureCases);
 
     for (unsigned i = 0; i < fragment.unoptimizedPseudoClasses.size(); ++i)
         generateElementFunctionCallTest(matchingPostTagNameFailureCases, fragment.unoptimizedPseudoClasses[i]);
@@ -4139,11 +4217,6 @@ void SelectorCodeGenerator::generateElementIsTarget(Assembler::JumpList& failure
     LocalRegister document(m_registerAllocator);
     DOMJIT::loadDocument(m_assembler, elementAddressRegister, document);
     failureCases.append(m_assembler.branchPtr(Assembler::NotEqual, Assembler::Address(document, Document::cssTargetMemoryOffset()), elementAddressRegister));
-}
-
-void SelectorCodeGenerator::generateElementHasFocusWithin(Assembler::JumpList& failureCases)
-{
-    failureCases.append(m_assembler.branchTest32(Assembler::Zero, Assembler::Address(elementAddressRegister, Node::nodeFlagsMemoryOffset()), Assembler::TrustedImm32(Node::flagHasFocusWithin())));
 }
 
 void SelectorCodeGenerator::generateElementIsFirstLink(Assembler::JumpList& failureCases, Assembler::RegisterID element)

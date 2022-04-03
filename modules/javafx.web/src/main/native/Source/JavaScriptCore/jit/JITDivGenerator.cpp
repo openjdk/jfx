@@ -55,7 +55,7 @@ void JITDivGenerator::loadOperand(CCallHelpers& jit, SnippetOperand& opr, JSValu
         jit.convertInt32ToDouble(oprRegs.payloadGPR(), destFPR);
         CCallHelpers::Jump oprIsLoaded = jit.jump();
         notInt32.link(&jit);
-        jit.unboxDoubleNonDestructive(oprRegs, destFPR, m_scratchGPR, m_scratchFPR);
+        jit.unboxDoubleNonDestructive(oprRegs, destFPR, m_scratchGPR);
         oprIsLoaded.link(&jit);
     }
 }
@@ -82,7 +82,7 @@ void JITDivGenerator::generateFastPath(CCallHelpers& jit)
     loadOperand(jit, m_leftOperand, m_left, m_leftFPR);
 
 #if USE(JSVALUE64)
-    Optional<double> safeReciprocal;
+    std::optional<double> safeReciprocal;
     if (m_rightOperand.isConst()) {
         double constant = m_rightOperand.asConstNumber();
         safeReciprocal = safeReciprocalForDivByConst(constant);

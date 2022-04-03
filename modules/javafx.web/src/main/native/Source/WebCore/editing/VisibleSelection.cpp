@@ -106,7 +106,7 @@ Position VisibleSelection::uncanonicalizedEnd() const
     return m_anchorIsFirst ? m_focus : m_anchor;
 }
 
-Optional<SimpleRange> VisibleSelection::range() const
+std::optional<SimpleRange> VisibleSelection::range() const
 {
     return makeSimpleRange(uncanonicalizedStart().parentAnchoredEquivalent(), uncanonicalizedEnd().parentAnchoredEquivalent());
 }
@@ -144,18 +144,33 @@ bool VisibleSelection::isOrphan() const
     return false;
 }
 
-Optional<SimpleRange> VisibleSelection::firstRange() const
+RefPtr<Document> VisibleSelection::document() const
+{
+    auto baseDocument = makeRefPtr(m_base.document());
+    if (!baseDocument)
+        return nullptr;
+
+    if (m_extent.document() != baseDocument.get() || m_start.document() != baseDocument.get() || m_end.document() != baseDocument.get())
+        return nullptr;
+
+    if (baseDocument->settings().liveRangeSelectionEnabled() && (m_anchor.document() != baseDocument.get() || m_focus.document() != baseDocument.get()))
+        return nullptr;
+
+    return baseDocument;
+}
+
+std::optional<SimpleRange> VisibleSelection::firstRange() const
 {
     if (isNoneOrOrphaned())
-        return WTF::nullopt;
+        return std::nullopt;
     // FIXME: Seems likely we don't need to call parentAnchoredEquivalent here.
     return makeSimpleRange(m_start.parentAnchoredEquivalent(), m_end.parentAnchoredEquivalent());
 }
 
-Optional<SimpleRange> VisibleSelection::toNormalizedRange() const
+std::optional<SimpleRange> VisibleSelection::toNormalizedRange() const
 {
     if (isNoneOrOrphaned())
-        return WTF::nullopt;
+        return std::nullopt;
 
     // Make sure we have an updated layout since this function is called
     // in the course of running edit commands which modify the DOM.
@@ -165,7 +180,7 @@ Optional<SimpleRange> VisibleSelection::toNormalizedRange() const
 
     // Check again, because updating layout can clear the selection.
     if (isNoneOrOrphaned())
-        return WTF::nullopt;
+        return std::nullopt;
 
     Position s, e;
     if (isCaret()) {
@@ -218,7 +233,7 @@ void VisibleSelection::appendTrailingWhitespace()
     if (!scope)
         return;
 
-    CharacterIterator charIt(*makeSimpleRange(m_end, makeBoundaryPointAfterNodeContents(*scope)), TextIteratorEmitsCharactersBetweenAllVisiblePositions);
+    CharacterIterator charIt(*makeSimpleRange(m_end, makeBoundaryPointAfterNodeContents(*scope)), TextIteratorBehavior::EmitsCharactersBetweenAllVisiblePositions);
     for (; !charIt.atEnd() && charIt.text().length(); charIt.advance(1)) {
         UChar c = charIt.text()[0];
         if ((!isSpaceOrNewline(c) && c != noBreakSpace) || c == '\n')
@@ -236,7 +251,7 @@ void VisibleSelection::setBaseAndExtentToDeepEquivalents()
     if (m_focus.isNull())
         m_focus = m_anchor;
 
-    m_anchorIsFirst = m_anchor <= m_focus;
+    m_anchorIsFirst = is_lteq(treeOrder<ShadowIncludingTree>(m_anchor, m_focus));
 
     m_base = VisiblePosition(m_anchor, m_affinity).deepEquivalent();
     if (m_anchor == m_focus)
@@ -446,7 +461,7 @@ void VisibleSelection::setWithoutValidation(const Position& anchor, const Positi
     ASSERT(m_affinity == Affinity::Downstream);
     m_anchor = anchor;
     m_focus = focus;
-    m_anchorIsFirst = m_anchor <= m_focus;
+    m_anchorIsFirst = is_lteq(treeOrder<ShadowIncludingTree>(m_anchor, m_focus));
     m_base = anchor;
     m_extent = focus;
     m_start = m_anchorIsFirst ? anchor : focus;

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -100,7 +100,7 @@ public:
 
     LValue framePointer();
 
-    B3::SlotBaseValue* lockedStackSlot(size_t bytes);
+    B3::SlotBaseValue* lockedStackSlot(uint64_t bytes);
 
     LValue constBool(bool value);
     LValue constInt32(int32_t value);
@@ -145,6 +145,8 @@ public:
     void addIncomingToPhi(LValue phi, ValueFromBlock);
     template<typename... Params>
     void addIncomingToPhi(LValue phi, ValueFromBlock, Params... theRest);
+    template<typename... Params>
+    void addIncomingToPhiIfSet(LValue phi, Params... theRest);
 
     LValue opaque(LValue);
 

@@ -26,6 +26,11 @@
 #pragma once
 
 #include "GCLogging.h"
+#include <wtf/MathExtras.h>
+
+#if OS(DARWIN)
+#include <mach/vm_param.h>
+#endif
 
 using WTF::PrintStream;
 
@@ -38,6 +43,7 @@ namespace JSC {
 #endif
 
 JS_EXPORT_PRIVATE bool canUseJITCage();
+bool canUseWebAssemblyFastMemory();
 
 // How do JSC VM options work?
 // ===========================
@@ -122,6 +128,7 @@ JS_EXPORT_PRIVATE bool canUseJITCage();
     /* dumpDisassembly implies dumpDFGDisassembly. */ \
     v(Bool, dumpDisassembly, false, Normal, "dumps disassembly of all JIT compiled code upon compilation") \
     v(Bool, asyncDisassembly, false, Normal, nullptr) \
+    v(Bool, logJIT, false, Normal, nullptr) \
     v(Bool, dumpDFGDisassembly, false, Normal, "dumps disassembly of DFG function upon compilation") \
     v(Bool, dumpFTLDisassembly, false, Normal, "dumps disassembly of FTL function upon compilation") \
     v(Bool, dumpRegExpDisassembly, false, Normal, "dumps disassembly of RegExp upon compilation") \
@@ -192,6 +199,7 @@ JS_EXPORT_PRIVATE bool canUseJITCage();
     v(Double, largeHeapGrowthFactor, 1.24, Normal, nullptr) \
     v(Double, miniVMHeapGrowthFactor, 1.27, Normal, nullptr) \
     v(Double, criticalGCMemoryThreshold, 0.80, Normal, "percent memory in use the GC considers critical.  The collector is much more aggressive above this threshold") \
+    v(Double, customFullGCCallbackBailThreshold, -1.0, Normal, "percent of memory paged out before we bail out of timer based Full GCs. -1.0 means use (maxHeapGrowthFactor - 1)") \
     v(Double, minimumMutatorUtilization, 0, Normal, nullptr) \
     v(Double, maximumMutatorUtilization, 0.7, Normal, nullptr) \
     v(Double, epsilonMutatorUtilization, 0.01, Normal, nullptr) \
@@ -245,6 +253,7 @@ JS_EXPORT_PRIVATE bool canUseJITCage();
     v(Unsigned, maxDFGNodesInBasicBlockForPreciseAnalysis, 20000, Normal, "Disable precise but costly analysis and give conservative results if the number of DFG nodes in a block exceeds this threshold") \
     \
     v(Bool, useConcurrentJIT, true, Normal, "allows the DFG / FTL compilation in threads other than the executing JS thread") \
+    v(Unsigned, numberOfWorklistThreads, computeNumberOfWorkerThreads(3, 2), Normal, nullptr) \
     v(Unsigned, numberOfDFGCompilerThreads, computeNumberOfWorkerThreads(3, 2) - 1, Normal, nullptr) \
     v(Unsigned, numberOfFTLCompilerThreads, computeNumberOfWorkerThreads(MAXIMUM_NUMBER_OF_FTL_COMPILER_THREADS, 2) - 1, Normal, nullptr) \
     v(Int32, priorityDeltaOfDFGCompilerThreads, computePriorityDeltaOfWorkerThreads(-1, 0), Normal, nullptr) \
@@ -360,9 +369,10 @@ JS_EXPORT_PRIVATE bool canUseJITCage();
     \
     v(Bool, useSamplingProfiler, false, Normal, nullptr) \
     v(Unsigned, sampleInterval, 1000, Normal, "Time between stack traces in microseconds.") \
-    v(Bool, collectSamplingProfilerDataForJSCShell, false, Normal, "This corresponds to the JSC shell's --sample option.") \
+    v(Bool, collectExtraSamplingProfilerData, false, Normal, "This corresponds to the JSC shell's --sample option, or if we're wanting to use the sampling profiler via the Debug menu in the browser.") \
     v(Unsigned, samplingProfilerTopFunctionsCount, 12, Normal, "Number of top functions to report when using the command line interface.") \
     v(Unsigned, samplingProfilerTopBytecodesCount, 40, Normal, "Number of top bytecodes to report when using the command line interface.") \
+    v(Bool, samplingProfilerIgnoreExternalSourceID, false, Normal, "Ignore external source ID when aggregating results from sampling profiler") \
     v(OptionString, samplingProfilerPath, nullptr, Normal, "The path to the directory to write sampiling profiler output to. This probably will not work with WK2 unless the path is in the sandbox.") \
     v(Bool, sampleCCode, false, Normal, "Causes the sampling profiler to record profiling data for C frames.") \
     \
@@ -376,6 +386,7 @@ JS_EXPORT_PRIVATE bool canUseJITCage();
     \
     v(Unsigned, exceptionStackTraceLimit, 100, Normal, "Stack trace limit for internal Exception object") \
     v(Unsigned, defaultErrorStackTraceLimit, 100, Normal, "The default value for Error.stackTraceLimit") \
+    v(Bool, exitOnResourceExhaustion, false, Normal, nullptr) \
     v(Bool, useExceptionFuzz, false, Normal, nullptr) \
     v(Unsigned, fireExceptionFuzzAt, 0, Normal, nullptr) \
     v(Bool, validateDFGExceptionHandling, false, Normal, "Causes the DFG to emit code validating exception handling for each node that can exit") /* This is true by default on Debug builds */\
@@ -389,6 +400,8 @@ JS_EXPORT_PRIVATE bool canUseJITCage();
     v(Bool, useExecutableAllocationFuzz, false, Normal, nullptr) \
     v(Unsigned, fireExecutableAllocationFuzzAt, 0, Normal, nullptr) \
     v(Unsigned, fireExecutableAllocationFuzzAtOrAfter, 0, Normal, nullptr) \
+    v(Bool, fireExecutableAllocationFuzzRandomly, false, Normal, nullptr) \
+    v(Double, fireExecutableAllocationFuzzRandomlyProbability, 0.1, Normal, nullptr) \
     v(Bool, verboseExecutableAllocationFuzz, false, Normal, nullptr) \
     \
     v(Bool, useOSRExitFuzz, false, Normal, nullptr) \
@@ -424,6 +437,7 @@ JS_EXPORT_PRIVATE bool canUseJITCage();
     v(Unsigned, maxB3TailDupBlockSize, 3, Normal, nullptr) \
     v(Unsigned, maxB3TailDupBlockSuccessors, 3, Normal, nullptr) \
     v(Bool, useB3HoistLoopInvariantValues, false, Normal, nullptr) \
+    v(Bool, useB3CanonicalizePrePostIncrements, false, Normal, nullptr) \
     \
     v(Bool, useDollarVM, false, Restricted, "installs the $vm debugging tool in global objects") \
     v(OptionString, functionOverrides, nullptr, Restricted, "file with debugging overrides for function bodies") \
@@ -439,6 +453,7 @@ JS_EXPORT_PRIVATE bool canUseJITCage();
     v(Unsigned, prototypeHitCountForLLIntCaching, 2, Normal, "Number of prototype property hits before caching a prototype in the LLInt. A count of 0 means never cache.") \
     \
     v(Bool, dumpCompiledRegExpPatterns, false, Normal, nullptr) \
+    v(Bool, verboseRegExpCompilation, false, Normal, nullptr) \
     \
     v(Bool, dumpModuleRecord, false, Normal, nullptr) \
     v(Bool, dumpModuleLoadingState, false, Normal, nullptr) \
@@ -466,7 +481,7 @@ JS_EXPORT_PRIVATE bool canUseJITCage();
     v(Int32, omgTierUpCounterIncrementForLoop, 1, Normal, "The amount the tier up counter is incremented on each loop backedge.") \
     v(Int32, omgTierUpCounterIncrementForEntry, 15, Normal, "The amount the tier up counter is incremented on each function entry.") \
     /* FIXME: enable fast memories on iOS and pre-allocate them. https://bugs.webkit.org/show_bug.cgi?id=170774 */ \
-    v(Bool, useWebAssemblyFastMemory, OS_CONSTANT(EFFECTIVE_ADDRESS_WIDTH) >= 48, Normal, "If true, we will try to use a 32-bit address space with a signal handler to bounds check wasm memory.") \
+    v(Bool, useWebAssemblyFastMemory, canUseWebAssemblyFastMemory(), Normal, "If true, we will try to use a 32-bit address space with a signal handler to bounds check wasm memory.") \
     v(Bool, logWebAssemblyMemory, false, Normal, nullptr) \
     v(Unsigned, webAssemblyFastMemoryRedzonePages, 128, Normal, "WebAssembly fast memories use 4GiB virtual allocations, plus a redzone (counted as multiple of 64KiB WebAssembly pages) at the end to catch reg+imm accesses which exceed 32-bit, anything beyond the redzone is explicitly bounds-checked") \
     v(Bool, crashIfWebAssemblyCantFastMemory, false, Normal, "If true, we will crash if we can't obtain fast memory for wasm.") \
@@ -511,23 +526,23 @@ JS_EXPORT_PRIVATE bool canUseJITCage();
     v(Double, allowHoistingLICMProbability, 0.5, Normal, nullptr) \
     v(Bool, exposeCustomSettersOnGlobalObjectForTesting, false, Normal, nullptr) \
     v(Bool, useJITCage, canUseJITCage(), Normal, nullptr) \
+    v(Bool, dumpBaselineJITSizeStatistics, false, Normal, nullptr) \
+    v(Bool, dumpDFGJITSizeStatistics, false, Normal, nullptr) \
+    v(Bool, verboseExecutablePoolAllocation, false, Normal, nullptr) \
+    v(Bool, useDataIC, false, Normal, nullptr) \
+    v(Bool, useDataICInOptimizingJIT, false, Normal, nullptr) \
+    v(Bool, useDataICSharing, false, Normal, nullptr) \
     \
     /* Feature Flags */\
     \
-    v(Bool, usePublicStaticClassFields, true, Normal, "If true, the parser will understand public static data fields inside classes.") \
-    v(Bool, usePrivateStaticClassFields, true, Normal, "If true, the parser will understand private static data fields inside classes.") \
-    v(Bool, usePrivateClassFields, true, Normal, "If true, the parser will understand private data fields inside classes.") \
-    v(Bool, usePrivateMethods, true, Normal, "If true, the parser will understand private methods inside classes.") \
-    v(Bool, useWebAssemblyStreaming, true, Normal, "Allow to run WebAssembly's Streaming API") \
-    v(Bool, useWebAssemblyReferences, true, Normal, "Allow types from the wasm references spec.") \
-    v(Bool, useWebAssemblyMultiValues, true, Normal, "Allow types from the wasm mulit-values spec.") \
-    v(Bool, useWebAssemblyThreading, true, Normal, "Allow instructions from the wasm threading spec.") \
-    v(Bool, useWeakRefs, true, Normal, "Expose the WeakRef constructor.") \
-    v(Bool, useIntlDateTimeFormatDayPeriod, true, Normal, "Expose the Intl.DateTimeFormat dayPeriod feature.") \
-    v(Bool, useIntlDateTimeFormatRangeToParts, true, Normal, "Expose the Intl.DateTimeFormat#formatRangeToParts feature.") \
-    v(Bool, useAtMethod, false, Normal, "Expose the at() method on Array, %TypedArray%, and String.") \
+    v(Bool, useArrayFindLastMethod, true, Normal, "Expose the findLast() and findLastIndex() methods on Array and %TypedArray%.") \
+    v(Bool, useAtMethod, true, Normal, "Expose the at() method on Array, %TypedArray%, and String.") \
+    v(Bool, useHasOwn, true, Normal, "Expose the Object.hasOwn method") \
+    v(Bool, useIntlEnumeration, true, Normal, "Expose the Intl enumeration APIs.") \
     v(Bool, useSharedArrayBuffer, false, Normal, nullptr) \
-    v(Bool, useTopLevelAwait, true, Normal, "allow the await keyword at the top level of a module.") \
+    v(Bool, useTemporal, false, Normal, "Expose the Temporal object.") \
+    v(Bool, useWebAssemblyThreading, true, Normal, "Allow instructions from the wasm threading spec.") \
+    v(Bool, useWebAssemblyTypedFunctionReferences, false, Normal, "Allow function types from the wasm typed function references spec.") \
 
 
 enum OptionEquivalence {
@@ -541,6 +556,10 @@ enum OptionEquivalence {
     v(showDisassembly, dumpDisassembly, SameOption) \
     v(showDFGDisassembly, dumpDFGDisassembly, SameOption) \
     v(showFTLDisassembly, dumpFTLDisassembly, SameOption) \
+    v(dumpGraphAtEachDFGFTLPhase, dumpDFGFTLGraphAtEachPhase, SameOption) \
+    v(dumpGraphAtEachDFGPhase, dumpDFGGraphAtEachPhase, SameOption) \
+    v(dumpGraphAtEachB3Phase, dumpB3GraphAtEachPhase, SameOption) \
+    v(dumpGraphAtEachAirPhase, dumpAirGraphAtEachPhase, SameOption) \
     v(alwaysDoFullCollection, useGenerationalGC, InvertedOption) \
     v(enableOSREntryToDFG, useOSREntryToDFG, SameOption) \
     v(enableOSREntryToFTL, useOSREntryToFTL, SameOption) \

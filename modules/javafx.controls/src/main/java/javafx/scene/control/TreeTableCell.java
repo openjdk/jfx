@@ -317,6 +317,10 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
 
     // editing location at start of edit - fix for JDK-8187229
     private TreeTablePosition<S, T> editingCellAtStartEdit = null;
+    // test-only
+    TreeTablePosition<S, T> getEditingCellAtStartEdit() {
+        return editingCellAtStartEdit;
+    }
 
     /** {@inheritDoc} */
     @Override public void startEdit() {
@@ -344,38 +348,27 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
         // by calling super.startEdit().
         super.startEdit();
 
+        if (!isEditing()) return;
+
+        editingCellAtStartEdit = new TreeTablePosition<>(table, getIndex(), column);
         if (column != null) {
-            CellEditEvent editEvent = new CellEditEvent(
+            CellEditEvent<S, T> editEvent = new CellEditEvent<>(
                 table,
-                table.getEditingCell(),
+                editingCellAtStartEdit,
                 TreeTableColumn.<S,T>editStartEvent(),
                 null
             );
 
             Event.fireEvent(column, editEvent);
         }
-        editingCellAtStartEdit = new TreeTablePosition<>(table, getIndex(), column);
+        if (table != null) {
+            table.edit(editingCellAtStartEdit.getRow(), editingCellAtStartEdit.getTableColumn());
+        }
     }
 
     /** {@inheritDoc} */
     @Override public void commitEdit(T newValue) {
-        if (! isEditing()) return;
-
-        final TreeTableView<S> table = getTreeTableView();
-        if (table != null) {
-            @SuppressWarnings("unchecked")
-            TreeTablePosition<S,T> editingCell = (TreeTablePosition<S,T>) table.getEditingCell();
-
-            // Inform the TableView of the edit being ready to be committed.
-            CellEditEvent<S,T> editEvent = new CellEditEvent<S,T>(
-                table,
-                editingCell,
-                TreeTableColumn.<S,T>editCommitEvent(),
-                newValue
-            );
-
-            Event.fireEvent(getTableColumn(), editEvent);
-        }
+        if (!isEditing()) return;
 
         // inform parent classes of the commit, so that they can switch us
         // out of the editing state.
@@ -383,6 +376,20 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
         // call cancelEdit(), resulting in both commit and cancel events being
         // fired (as identified in RT-29650)
         super.commitEdit(newValue);
+
+        final TreeTableView<S> table = getTreeTableView();
+        // JDK-8187307: fire the commit after updating cell's editing state
+        if (getTableColumn() != null) {
+            // Inform the TreeTableColumn of the edit being ready to be committed.
+            CellEditEvent<S,T> editEvent = new CellEditEvent<S,T>(
+                    table,
+                    editingCellAtStartEdit,
+                    TreeTableColumn.<S,T>editCommitEvent(),
+                    newValue
+                    );
+
+            Event.fireEvent(getTableColumn(), editEvent);
+        }
 
         // update the item within this cell, so that it represents the new value
         updateItem(newValue, false);
@@ -401,28 +408,28 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
 
     /** {@inheritDoc} */
     @Override public void cancelEdit() {
-        if (! isEditing()) return;
-
-        final TreeTableView<S> table = getTreeTableView();
+        if (!isEditing()) return;
 
         super.cancelEdit();
 
-        // reset the editing index on the TableView
+        final TreeTableView<S> table = getTreeTableView();
         if (table != null) {
+            // reset the editing index on the TableView
             if (updateEditingIndex) table.edit(-1, null);
-
             // request focus back onto the table, only if the current focus
             // owner has the table as a parent (otherwise the user might have
             // clicked out of the table entirely and given focus to something else.
             // It would be rude of us to request it back again.
             ControlUtils.requestFocusOnControlOnlyIfCurrentFocusOwnerIsChild(table);
+        }
 
+        if (getTableColumn() != null) {
             CellEditEvent<S,T> editEvent = new CellEditEvent<S,T>(
-                table,
-                editingCellAtStartEdit,
-                TreeTableColumn.<S,T>editCancelEvent(),
-                null
-            );
+                    table,
+                    editingCellAtStartEdit,
+                    TreeTableColumn.<S,T>editCancelEvent(),
+                    null
+                    );
 
             Event.fireEvent(getTableColumn(), editEvent);
         }

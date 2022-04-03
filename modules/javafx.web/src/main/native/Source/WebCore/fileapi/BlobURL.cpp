@@ -31,9 +31,11 @@
 #include "config.h"
 
 #include "BlobURL.h"
+#include "Document.h"
+#include "SecurityOrigin.h"
+#include "ThreadableBlobRegistry.h"
 
 #include <wtf/URL.h>
-#include "SecurityOrigin.h"
 #include <wtf/UUID.h>
 #include <wtf/text/WTFString.h>
 
@@ -52,13 +54,39 @@ URL BlobURL::createInternalURL()
     return createBlobURL("blobinternal://");
 }
 
-String BlobURL::getOrigin(const URL& url)
+static const Document* blobOwner(const SecurityOrigin& blobOrigin)
+{
+    if (!isMainThread())
+        return nullptr;
+
+    for (const auto* document : Document::allDocuments()) {
+        if (&document->securityOrigin() == &blobOrigin)
+            return document;
+    }
+    return nullptr;
+}
+
+URL BlobURL::getOriginURL(const URL& url)
 {
     ASSERT(url.protocolIs(kBlobProtocol));
 
-    unsigned startIndex = url.pathStart();
-    unsigned endIndex = url.pathAfterLastSlash();
-    return url.string().substring(startIndex, endIndex - startIndex - 1);
+    if (auto blobOrigin = ThreadableBlobRegistry::getCachedOrigin(url)) {
+        if (auto* document = blobOwner(*blobOrigin))
+            return document->url();
+    }
+    return SecurityOrigin::extractInnerURL(url);
+}
+
+bool BlobURL::isSecureBlobURL(const URL& url)
+{
+    ASSERT(url.protocolIs(kBlobProtocol));
+
+    // As per https://github.com/w3c/webappsec-mixed-content/issues/41, Blob URL is secure if the document that created it is secure.
+    if (auto origin = ThreadableBlobRegistry::getCachedOrigin(url)) {
+        if (auto* document = blobOwner(*origin))
+            return document->isSecureContext();
+    }
+    return SecurityOrigin::isSecure(url);
 }
 
 URL BlobURL::createBlobURL(const String& originString)
@@ -66,6 +94,70 @@ URL BlobURL::createBlobURL(const String& originString)
     ASSERT(!originString.isEmpty());
     String urlString = "blob:" + originString + '/' + createCanonicalUUIDString();
     return URL({ }, urlString);
+}
+
+BlobURLHandle::BlobURLHandle(const BlobURLHandle& other)
+    : m_url(other.m_url.isolatedCopy())
+{
+    registerBlobURLHandleIfNecessary();
+}
+
+BlobURLHandle::BlobURLHandle(const URL& url)
+    : m_url(url.isolatedCopy())
+{
+    ASSERT(m_url.protocolIsBlob());
+    registerBlobURLHandleIfNecessary();
+}
+
+BlobURLHandle::~BlobURLHandle()
+{
+    unregisterBlobURLHandleIfNecessary();
+}
+
+void BlobURLHandle::registerBlobURLHandleIfNecessary()
+{
+    if (m_url.protocolIsBlob())
+        ThreadableBlobRegistry::registerBlobURLHandle(m_url);
+}
+
+void BlobURLHandle::unregisterBlobURLHandleIfNecessary()
+{
+    if (m_url.protocolIsBlob())
+        ThreadableBlobRegistry::unregisterBlobURLHandle(m_url);
+}
+
+BlobURLHandle& BlobURLHandle::operator=(const BlobURLHandle& other)
+{
+    if (this == &other)
+        return *this;
+
+    unregisterBlobURLHandleIfNecessary();
+    m_url = other.m_url.isolatedCopy();
+    registerBlobURLHandleIfNecessary();
+
+    return *this;
+}
+
+void BlobURLHandle::clear()
+{
+    unregisterBlobURLHandleIfNecessary();
+    m_url = { };
+}
+
+BlobURLHandle& BlobURLHandle::operator=(BlobURLHandle&& other)
+{
+    unregisterBlobURLHandleIfNecessary();
+    m_url = std::exchange(other.m_url, { });
+    return *this;
+}
+
+BlobURLHandle& BlobURLHandle::operator=(const URL& url)
+{
+    ASSERT(url.protocolIsBlob());
+    unregisterBlobURLHandleIfNecessary();
+    m_url = url.isolatedCopy();
+    registerBlobURLHandleIfNecessary();
+    return *this;
 }
 
 } // namespace WebCore

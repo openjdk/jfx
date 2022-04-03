@@ -26,6 +26,7 @@
 #include "config.h"
 #include "LoadableClassicScript.h"
 
+#include "DefaultResourceLoadPriority.h"
 #include "FetchIdioms.h"
 #include "ScriptElement.h"
 #include "ScriptSourceCode.h"
@@ -52,16 +53,16 @@ bool LoadableClassicScript::isLoaded() const
     return m_cachedScript->isLoaded();
 }
 
-Optional<LoadableScript::Error> LoadableClassicScript::error() const
+std::optional<LoadableScript::Error> LoadableClassicScript::error() const
 {
     ASSERT(m_cachedScript);
     if (m_error)
         return m_error;
 
     if (m_cachedScript->errorOccurred())
-        return Error { ErrorType::CachedScript, WTF::nullopt };
+        return Error { ErrorType::CachedScript, std::nullopt };
 
-    return WTF::nullopt;
+    return std::nullopt;
 }
 
 bool LoadableClassicScript::wasCanceled() const
@@ -127,9 +128,9 @@ bool LoadableClassicScript::load(Document& document, const URL& sourceURL)
 {
     ASSERT(!m_cachedScript);
 
-    auto priority = [&]() -> Optional<ResourceLoadPriority> {
+    auto priority = [&]() -> std::optional<ResourceLoadPriority> {
         if (m_isAsync)
-            return ResourceLoadPriority::Low;
+            return DefaultResourceLoadPriority::asyncScript;
         // Use default.
         return { };
     };

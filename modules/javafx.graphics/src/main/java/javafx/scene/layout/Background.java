@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -118,8 +118,9 @@ public final class Background {
                             BACKGROUND_SIZE));
 
     /**
-     * @return The CssMetaData associated with this class, which may include the
-     * CssMetaData of its superclasses.
+     * Gets the {@code CssMetaData} associated with this class, which may include the
+     * {@code CssMetaData} of its superclasses.
+     * @return the {@code CssMetaData}
      */
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return STYLEABLES;
@@ -351,6 +352,20 @@ public final class Background {
         int result = this.fills.hashCode();
         result = 31 * result + this.images.hashCode();
         hash = result;
+    }
+
+    /**
+     * A convenience factory method for creating a {@code Background} with a single {@code Paint}.
+     *
+     * @implSpec
+     * This call is equivalent to {@link BackgroundFill#BackgroundFill(Paint, CornerRadii, Insets)
+     * new Background(new BackgroundFill(fill, null, null));}.
+     * @param fill the fill of the background. If {@code null}, {@code Color.TRANSPARENT} will be used.
+     * @return a new background of the given fill
+     * @since 18
+     */
+    public static Background fill(Paint fill) {
+        return new Background(new BackgroundFill(fill, null, null));
     }
 
     /**

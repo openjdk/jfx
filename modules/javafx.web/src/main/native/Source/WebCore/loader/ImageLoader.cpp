@@ -34,6 +34,7 @@
 #include "EventSender.h"
 #include "Frame.h"
 #include "FrameLoader.h"
+#include "HTMLImageElement.h"
 #include "HTMLNames.h"
 #include "HTMLObjectElement.h"
 #include "HTMLParserIdioms.h"
@@ -552,6 +553,7 @@ void ImageLoader::dispatchPendingErrorEvent()
     if (!m_hasPendingErrorEvent)
         return;
     m_hasPendingErrorEvent = false;
+    errorEventSender().cancelEvent(*this);
     if (element().document().hasLivingRenderTree())
         element().dispatchEvent(Event::create(eventNames().errorEvent, Event::CanBubble::No, Event::IsCancelable::No));
 

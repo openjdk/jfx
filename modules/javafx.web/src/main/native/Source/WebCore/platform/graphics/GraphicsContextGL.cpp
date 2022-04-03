@@ -35,237 +35,177 @@
 #include "GraphicsContextGLOpenGL.h"
 #include "HostWindow.h"
 #include "Image.h"
-#include "ImageData.h"
 #include "ImageObserver.h"
+#include "PixelBuffer.h"
 
 namespace WebCore {
 
 static GraphicsContextGL::DataFormat getDataFormat(GCGLenum destinationFormat, GCGLenum destinationType)
 {
-    GraphicsContextGL::DataFormat dstFormat = GraphicsContextGL::DataFormat::RGBA8;
     switch (destinationType) {
     case GraphicsContextGL::BYTE:
         switch (destinationFormat) {
         case GraphicsContextGL::RED:
         case GraphicsContextGL::RED_INTEGER:
-            dstFormat = GraphicsContextGL::DataFormat::R8_S;
-            break;
+            return GraphicsContextGL::DataFormat::R8_S;
         case GraphicsContextGL::RG:
         case GraphicsContextGL::RG_INTEGER:
-            dstFormat = GraphicsContextGL::DataFormat::RG8_S;
-            break;
+            return GraphicsContextGL::DataFormat::RG8_S;
         case GraphicsContextGL::RGB:
         case GraphicsContextGL::RGB_INTEGER:
-            dstFormat = GraphicsContextGL::DataFormat::RGB8_S;
-            break;
+            return GraphicsContextGL::DataFormat::RGB8_S;
         case GraphicsContextGL::RGBA:
         case GraphicsContextGL::RGBA_INTEGER:
-            dstFormat = GraphicsContextGL::DataFormat::RGBA8_S;
-            break;
+            return GraphicsContextGL::DataFormat::RGBA8_S;
         default:
-            ASSERT_NOT_REACHED();
+            return GraphicsContextGL::DataFormat::Invalid;
         }
-        break;
     case GraphicsContextGL::UNSIGNED_BYTE:
         switch (destinationFormat) {
         case GraphicsContextGL::RGB:
         case GraphicsContextGL::RGB_INTEGER:
         case GraphicsContextGL::SRGB:
-            dstFormat = GraphicsContextGL::GraphicsContextGL::DataFormat::RGB8;
-            break;
+            return GraphicsContextGL::GraphicsContextGL::DataFormat::RGB8;
         case GraphicsContextGL::RGBA:
         case GraphicsContextGL::RGBA_INTEGER:
         case GraphicsContextGL::SRGB_ALPHA:
-            dstFormat = GraphicsContextGL::DataFormat::RGBA8;
-            break;
+            return GraphicsContextGL::DataFormat::RGBA8;
         case GraphicsContextGL::ALPHA:
-            dstFormat = GraphicsContextGL::DataFormat::A8;
-            break;
+            return GraphicsContextGL::DataFormat::A8;
         case GraphicsContextGL::LUMINANCE:
         case GraphicsContextGL::RED:
         case GraphicsContextGL::RED_INTEGER:
-            dstFormat = GraphicsContextGL::DataFormat::R8;
-            break;
+            return GraphicsContextGL::DataFormat::R8;
         case GraphicsContextGL::RG:
         case GraphicsContextGL::RG_INTEGER:
-            dstFormat = GraphicsContextGL::DataFormat::RG8;
-            break;
+            return GraphicsContextGL::DataFormat::RG8;
         case GraphicsContextGL::LUMINANCE_ALPHA:
-            dstFormat = GraphicsContextGL::DataFormat::RA8;
-            break;
+            return GraphicsContextGL::DataFormat::RA8;
         default:
-            ASSERT_NOT_REACHED();
+            return GraphicsContextGL::DataFormat::Invalid;
         }
-        break;
     case GraphicsContextGL::SHORT:
         switch (destinationFormat) {
         case GraphicsContextGL::RED_INTEGER:
-            dstFormat = GraphicsContextGL::DataFormat::R16_S;
-            break;
+            return GraphicsContextGL::DataFormat::R16_S;
         case GraphicsContextGL::RG_INTEGER:
-            dstFormat = GraphicsContextGL::DataFormat::RG16_S;
-            break;
+            return GraphicsContextGL::DataFormat::RG16_S;
         case GraphicsContextGL::RGB_INTEGER:
-            dstFormat = GraphicsContextGL::DataFormat::RGB16_S;
-            break;
+            return GraphicsContextGL::DataFormat::RGB16_S;
         case GraphicsContextGL::RGBA_INTEGER:
-            dstFormat = GraphicsContextGL::DataFormat::RGBA16_S;
-            break;
+            return GraphicsContextGL::DataFormat::RGBA16_S;
         default:
-            ASSERT_NOT_REACHED();
+            return GraphicsContextGL::DataFormat::Invalid;
         }
-        break;
     case GraphicsContextGL::UNSIGNED_SHORT:
         switch (destinationFormat) {
         case GraphicsContextGL::RED_INTEGER:
-            dstFormat = GraphicsContextGL::DataFormat::R16;
-            break;
+            return GraphicsContextGL::DataFormat::R16;
         case GraphicsContextGL::DEPTH_COMPONENT:
-            dstFormat = GraphicsContextGL::DataFormat::D16;
-            break;
+            return GraphicsContextGL::DataFormat::D16;
         case GraphicsContextGL::RG_INTEGER:
-            dstFormat = GraphicsContextGL::DataFormat::RG16;
-            break;
+            return GraphicsContextGL::DataFormat::RG16;
         case GraphicsContextGL::RGB_INTEGER:
-            dstFormat = GraphicsContextGL::DataFormat::RGB16;
-            break;
+            return GraphicsContextGL::DataFormat::RGB16;
         case GraphicsContextGL::RGBA_INTEGER:
-            dstFormat = GraphicsContextGL::DataFormat::RGBA16;
-            break;
+            return GraphicsContextGL::DataFormat::RGBA16;
         default:
-            ASSERT_NOT_REACHED();
+            return GraphicsContextGL::DataFormat::Invalid;
         }
-        break;
     case GraphicsContextGL::INT:
         switch (destinationFormat) {
         case GraphicsContextGL::RED_INTEGER:
-            dstFormat = GraphicsContextGL::DataFormat::R32_S;
-            break;
+            return GraphicsContextGL::DataFormat::R32_S;
         case GraphicsContextGL::RG_INTEGER:
-            dstFormat = GraphicsContextGL::DataFormat::RG32_S;
-            break;
+            return GraphicsContextGL::DataFormat::RG32_S;
         case GraphicsContextGL::RGB_INTEGER:
-            dstFormat = GraphicsContextGL::DataFormat::RGB32_S;
-            break;
+            return GraphicsContextGL::DataFormat::RGB32_S;
         case GraphicsContextGL::RGBA_INTEGER:
-            dstFormat = GraphicsContextGL::DataFormat::RGBA32_S;
-            break;
+            return GraphicsContextGL::DataFormat::RGBA32_S;
         default:
-            ASSERT_NOT_REACHED();
+            return GraphicsContextGL::DataFormat::Invalid;
         }
-        break;
     case GraphicsContextGL::UNSIGNED_INT:
         switch (destinationFormat) {
         case GraphicsContextGL::RED_INTEGER:
-            dstFormat = GraphicsContextGL::DataFormat::R32;
-            break;
+            return GraphicsContextGL::DataFormat::R32;
         case GraphicsContextGL::DEPTH_COMPONENT:
-            dstFormat = GraphicsContextGL::DataFormat::D32;
-            break;
+            return GraphicsContextGL::DataFormat::D32;
         case GraphicsContextGL::RG_INTEGER:
-            dstFormat = GraphicsContextGL::DataFormat::RG32;
-            break;
+            return GraphicsContextGL::DataFormat::RG32;
         case GraphicsContextGL::RGB_INTEGER:
-            dstFormat = GraphicsContextGL::DataFormat::RGB32;
-            break;
+            return GraphicsContextGL::DataFormat::RGB32;
         case GraphicsContextGL::RGBA_INTEGER:
-            dstFormat = GraphicsContextGL::DataFormat::RGBA32;
-            break;
+            return GraphicsContextGL::DataFormat::RGBA32;
         default:
-            ASSERT_NOT_REACHED();
+            return GraphicsContextGL::DataFormat::Invalid;
         }
-        break;
     case GraphicsContextGL::HALF_FLOAT_OES: // OES_texture_half_float
     case GraphicsContextGL::HALF_FLOAT:
         switch (destinationFormat) {
         case GraphicsContextGL::RGBA:
-            dstFormat = GraphicsContextGL::DataFormat::RGBA16F;
-            break;
+            return GraphicsContextGL::DataFormat::RGBA16F;
         case GraphicsContextGL::RGB:
-            dstFormat = GraphicsContextGL::DataFormat::RGB16F;
-            break;
+            return GraphicsContextGL::DataFormat::RGB16F;
         case GraphicsContextGL::RG:
-            dstFormat = GraphicsContextGL::DataFormat::RG16F;
-            break;
+            return GraphicsContextGL::DataFormat::RG16F;
         case GraphicsContextGL::ALPHA:
-            dstFormat = GraphicsContextGL::DataFormat::A16F;
-            break;
+            return GraphicsContextGL::DataFormat::A16F;
         case GraphicsContextGL::LUMINANCE:
         case GraphicsContextGL::RED:
-            dstFormat = GraphicsContextGL::DataFormat::R16F;
-            break;
+            return GraphicsContextGL::DataFormat::R16F;
         case GraphicsContextGL::LUMINANCE_ALPHA:
-            dstFormat = GraphicsContextGL::DataFormat::RA16F;
-            break;
+            return GraphicsContextGL::DataFormat::RA16F;
         case GraphicsContextGL::SRGB:
-            dstFormat = GraphicsContextGL::DataFormat::RGB16F;
-            break;
+            return GraphicsContextGL::DataFormat::RGB16F;
         case GraphicsContextGL::SRGB_ALPHA:
-            dstFormat = GraphicsContextGL::DataFormat::RGBA16F;
-            break;
+            return GraphicsContextGL::DataFormat::RGBA16F;
         default:
-            ASSERT_NOT_REACHED();
+            return GraphicsContextGL::DataFormat::Invalid;
         }
-        break;
     case GraphicsContextGL::FLOAT: // OES_texture_float
         switch (destinationFormat) {
         case GraphicsContextGL::RGBA:
-            dstFormat = GraphicsContextGL::DataFormat::RGBA32F;
-            break;
+            return GraphicsContextGL::DataFormat::RGBA32F;
         case GraphicsContextGL::RGB:
-            dstFormat = GraphicsContextGL::DataFormat::RGB32F;
-            break;
+            return GraphicsContextGL::DataFormat::RGB32F;
         case GraphicsContextGL::RG:
-            dstFormat = GraphicsContextGL::DataFormat::RG32F;
-            break;
+            return GraphicsContextGL::DataFormat::RG32F;
         case GraphicsContextGL::ALPHA:
-            dstFormat = GraphicsContextGL::DataFormat::A32F;
-            break;
+            return GraphicsContextGL::DataFormat::A32F;
         case GraphicsContextGL::LUMINANCE:
         case GraphicsContextGL::RED:
-            dstFormat = GraphicsContextGL::DataFormat::R32F;
-            break;
+            return GraphicsContextGL::DataFormat::R32F;
         case GraphicsContextGL::DEPTH_COMPONENT:
-            dstFormat = GraphicsContextGL::DataFormat::D32F;
-            break;
+            return GraphicsContextGL::DataFormat::D32F;
         case GraphicsContextGL::LUMINANCE_ALPHA:
-            dstFormat = GraphicsContextGL::DataFormat::RA32F;
-            break;
+            return GraphicsContextGL::DataFormat::RA32F;
         case GraphicsContextGL::SRGB:
-            dstFormat = GraphicsContextGL::DataFormat::RGB32F;
-            break;
+            return GraphicsContextGL::DataFormat::RGB32F;
         case GraphicsContextGL::SRGB_ALPHA:
-            dstFormat = GraphicsContextGL::DataFormat::RGBA32F;
-            break;
+            return GraphicsContextGL::DataFormat::RGBA32F;
         default:
-            ASSERT_NOT_REACHED();
+            return GraphicsContextGL::DataFormat::Invalid;
         }
-        break;
     case GraphicsContextGL::UNSIGNED_SHORT_4_4_4_4:
-        dstFormat = GraphicsContextGL::DataFormat::RGBA4444;
-        break;
+        return GraphicsContextGL::DataFormat::RGBA4444;
     case GraphicsContextGL::UNSIGNED_SHORT_5_5_5_1:
-        dstFormat = GraphicsContextGL::DataFormat::RGBA5551;
-        break;
+        return GraphicsContextGL::DataFormat::RGBA5551;
     case GraphicsContextGL::UNSIGNED_SHORT_5_6_5:
-        dstFormat = GraphicsContextGL::DataFormat::RGB565;
-        break;
+        return GraphicsContextGL::DataFormat::RGB565;
     case GraphicsContextGL::UNSIGNED_INT_5_9_9_9_REV:
-        dstFormat = GraphicsContextGL::DataFormat::RGB5999;
-        break;
+        return GraphicsContextGL::DataFormat::RGB5999;
     case GraphicsContextGL::UNSIGNED_INT_24_8:
-        dstFormat = GraphicsContextGL::DataFormat::DS24_8;
-        break;
+        return GraphicsContextGL::DataFormat::DS24_8;
     case GraphicsContextGL::UNSIGNED_INT_10F_11F_11F_REV:
-        dstFormat = GraphicsContextGL::DataFormat::RGB10F11F11F;
-        break;
+        return GraphicsContextGL::DataFormat::RGB10F11F11F;
     case GraphicsContextGL::UNSIGNED_INT_2_10_10_10_REV:
-        dstFormat = GraphicsContextGL::DataFormat::RGBA2_10_10_10;
-        break;
+        return GraphicsContextGL::DataFormat::RGBA2_10_10_10;
     default:
-        ASSERT_NOT_REACHED();
+        return GraphicsContextGL::DataFormat::Invalid;
     }
-    return dstFormat;
+    ASSERT_NOT_REACHED();
+    return GraphicsContextGL::DataFormat::Invalid;
 }
 
 ALWAYS_INLINE static unsigned texelBytesForFormat(GraphicsContextGL::DataFormat format)
@@ -355,6 +295,8 @@ static bool packPixels(const uint8_t* sourceData, GraphicsContextGL::DataFormat 
     int srcRowOffset = sourceDataSubRectangle.x() * texelBytesForFormat(sourceDataFormat);
 
     GraphicsContextGL::DataFormat dstDataFormat = getDataFormat(destinationFormat, destinationType);
+    if (dstDataFormat == GraphicsContextGL::DataFormat::Invalid)
+        return false;
     int dstStride = sourceDataSubRectangle.width() * texelBytesForFormat(dstDataFormat);
     if (flipY) {
         destinationData = static_cast<uint8_t*>(destinationData) + dstStride * ((depth * sourceDataSubRectangle.height()) - 1);
@@ -425,143 +367,6 @@ void GraphicsContextGL::enablePreserveDrawingBuffer()
     // Canvas capture should not call this unless necessary.
     ASSERT(!m_attrs.preserveDrawingBuffer);
     m_attrs.preserveDrawingBuffer = true;
-}
-
-unsigned GraphicsContextGL::getClearBitsByAttachmentType(GCGLenum attachment)
-{
-    switch (attachment) {
-    case GraphicsContextGL::COLOR_ATTACHMENT0:
-    case ExtensionsGL::COLOR_ATTACHMENT1_EXT:
-    case ExtensionsGL::COLOR_ATTACHMENT2_EXT:
-    case ExtensionsGL::COLOR_ATTACHMENT3_EXT:
-    case ExtensionsGL::COLOR_ATTACHMENT4_EXT:
-    case ExtensionsGL::COLOR_ATTACHMENT5_EXT:
-    case ExtensionsGL::COLOR_ATTACHMENT6_EXT:
-    case ExtensionsGL::COLOR_ATTACHMENT7_EXT:
-    case ExtensionsGL::COLOR_ATTACHMENT8_EXT:
-    case ExtensionsGL::COLOR_ATTACHMENT9_EXT:
-    case ExtensionsGL::COLOR_ATTACHMENT10_EXT:
-    case ExtensionsGL::COLOR_ATTACHMENT11_EXT:
-    case ExtensionsGL::COLOR_ATTACHMENT12_EXT:
-    case ExtensionsGL::COLOR_ATTACHMENT13_EXT:
-    case ExtensionsGL::COLOR_ATTACHMENT14_EXT:
-    case ExtensionsGL::COLOR_ATTACHMENT15_EXT:
-        return GraphicsContextGL::COLOR_BUFFER_BIT;
-    case GraphicsContextGL::DEPTH_ATTACHMENT:
-        return GraphicsContextGL::DEPTH_BUFFER_BIT;
-    case GraphicsContextGL::STENCIL_ATTACHMENT:
-        return GraphicsContextGL::STENCIL_BUFFER_BIT;
-    case GraphicsContextGL::DEPTH_STENCIL_ATTACHMENT:
-        return GraphicsContextGL::DEPTH_BUFFER_BIT | GraphicsContextGL::STENCIL_BUFFER_BIT;
-    default:
-        return 0;
-    }
-}
-
-unsigned GraphicsContextGL::getClearBitsByFormat(GCGLenum format)
-{
-    switch (format) {
-    case GraphicsContextGL::RGB:
-    case GraphicsContextGL::RGBA:
-    case GraphicsContextGL::LUMINANCE_ALPHA:
-    case GraphicsContextGL::LUMINANCE:
-    case GraphicsContextGL::ALPHA:
-    case GraphicsContextGL::R8:
-    case GraphicsContextGL::R8_SNORM:
-    case GraphicsContextGL::R16F:
-    case GraphicsContextGL::R32F:
-    case GraphicsContextGL::R8UI:
-    case GraphicsContextGL::R8I:
-    case GraphicsContextGL::R16UI:
-    case GraphicsContextGL::R16I:
-    case GraphicsContextGL::R32UI:
-    case GraphicsContextGL::R32I:
-    case GraphicsContextGL::RG8:
-    case GraphicsContextGL::RG8_SNORM:
-    case GraphicsContextGL::RG16F:
-    case GraphicsContextGL::RG32F:
-    case GraphicsContextGL::RG8UI:
-    case GraphicsContextGL::RG8I:
-    case GraphicsContextGL::RG16UI:
-    case GraphicsContextGL::RG16I:
-    case GraphicsContextGL::RG32UI:
-    case GraphicsContextGL::RG32I:
-    case GraphicsContextGL::RGB8:
-    case GraphicsContextGL::SRGB8:
-    case GraphicsContextGL::RGB565:
-    case GraphicsContextGL::RGB8_SNORM:
-    case GraphicsContextGL::R11F_G11F_B10F:
-    case GraphicsContextGL::RGB9_E5:
-    case GraphicsContextGL::RGB16F:
-    case GraphicsContextGL::RGB32F:
-    case GraphicsContextGL::RGB8UI:
-    case GraphicsContextGL::RGB8I:
-    case GraphicsContextGL::RGB16UI:
-    case GraphicsContextGL::RGB16I:
-    case GraphicsContextGL::RGB32UI:
-    case GraphicsContextGL::RGB32I:
-    case GraphicsContextGL::RGBA8:
-    case GraphicsContextGL::SRGB8_ALPHA8:
-    case GraphicsContextGL::RGBA8_SNORM:
-    case GraphicsContextGL::RGB5_A1:
-    case GraphicsContextGL::RGBA4:
-    case GraphicsContextGL::RGB10_A2:
-    case GraphicsContextGL::RGBA16F:
-    case GraphicsContextGL::RGBA32F:
-    case GraphicsContextGL::RGBA8UI:
-    case GraphicsContextGL::RGBA8I:
-    case GraphicsContextGL::RGB10_A2UI:
-    case GraphicsContextGL::RGBA16UI:
-    case GraphicsContextGL::RGBA16I:
-    case GraphicsContextGL::RGBA32I:
-    case GraphicsContextGL::RGBA32UI:
-    case ExtensionsGL::SRGB_EXT:
-    case ExtensionsGL::SRGB_ALPHA_EXT:
-        return GraphicsContextGL::COLOR_BUFFER_BIT;
-    case GraphicsContextGL::DEPTH_COMPONENT16:
-    case GraphicsContextGL::DEPTH_COMPONENT24:
-    case GraphicsContextGL::DEPTH_COMPONENT32F:
-    case GraphicsContextGL::DEPTH_COMPONENT:
-        return GraphicsContextGL::DEPTH_BUFFER_BIT;
-    case GraphicsContextGL::STENCIL_INDEX8:
-        return GraphicsContextGL::STENCIL_BUFFER_BIT;
-    case GraphicsContextGL::DEPTH_STENCIL:
-    case GraphicsContextGL::DEPTH24_STENCIL8:
-    case GraphicsContextGL::DEPTH32F_STENCIL8:
-        return GraphicsContextGL::DEPTH_BUFFER_BIT | GraphicsContextGL::STENCIL_BUFFER_BIT;
-    default:
-        return 0;
-    }
-}
-
-uint8_t GraphicsContextGL::getChannelBitsByFormat(GCGLenum format)
-{
-    switch (format) {
-    case GraphicsContextGL::ALPHA:
-        return static_cast<uint8_t>(ChannelBits::Alpha);
-    case GraphicsContextGL::LUMINANCE:
-        return static_cast<uint8_t>(ChannelBits::RGB);
-    case GraphicsContextGL::LUMINANCE_ALPHA:
-        return static_cast<uint8_t>(ChannelBits::RGBA);
-    case GraphicsContextGL::RGB:
-    case GraphicsContextGL::RGB565:
-    case ExtensionsGL::SRGB_EXT:
-        return static_cast<uint8_t>(ChannelBits::RGB);
-    case GraphicsContextGL::RGBA:
-    case GraphicsContextGL::RGBA4:
-    case GraphicsContextGL::RGB5_A1:
-    case ExtensionsGL::SRGB_ALPHA_EXT:
-        return static_cast<uint8_t>(ChannelBits::RGBA);
-    case GraphicsContextGL::DEPTH_COMPONENT16:
-    case GraphicsContextGL::DEPTH_COMPONENT:
-        return static_cast<uint8_t>(ChannelBits::Depth);
-    case GraphicsContextGL::STENCIL_INDEX8:
-        return static_cast<uint8_t>(ChannelBits::Stencil);
-    case GraphicsContextGL::DEPTH_STENCIL:
-        return static_cast<uint8_t>(ChannelBits::DepthStencil);
-    default:
-        return 0;
-    }
 }
 
 bool GraphicsContextGL::computeFormatAndTypeParameters(GCGLenum format, GCGLenum type, unsigned* componentsPerPixel, unsigned* bytesPerComponent)
@@ -670,32 +475,32 @@ GCGLenum GraphicsContextGL::computeImageSizeInBytes(GCGLenum format, GCGLenum ty
     if (!computeFormatAndTypeParameters(format, type, &componentsPerPixel, &bytesPerComponent))
         return GraphicsContextGL::INVALID_ENUM;
     unsigned bytesPerGroup = bytesPerComponent * componentsPerPixel;
-    Checked<uint32_t, RecordOverflow> checkedValue = static_cast<uint32_t>(rowLength);
+    CheckedUint32 checkedValue = static_cast<uint32_t>(rowLength);
     checkedValue *= bytesPerGroup;
     if (checkedValue.hasOverflowed())
         return GraphicsContextGL::INVALID_VALUE;
 
     unsigned lastRowSize;
     if (params.rowLength > 0 && params.rowLength != width) {
-        Checked<uint32_t, RecordOverflow> tmp = width;
+        CheckedUint32 tmp = width;
         tmp *= bytesPerGroup;
         if (tmp.hasOverflowed())
             return GraphicsContextGL::INVALID_VALUE;
-        lastRowSize = tmp.unsafeGet();
+        lastRowSize = tmp;
     } else
-        lastRowSize = checkedValue.unsafeGet();
+        lastRowSize = checkedValue;
 
     unsigned padding = 0;
-    unsigned residual = checkedValue.unsafeGet() % params.alignment;
+    unsigned residual = checkedValue.value() % params.alignment;
     if (residual) {
         padding = params.alignment - residual;
         checkedValue += padding;
     }
     if (checkedValue.hasOverflowed())
         return GraphicsContextGL::INVALID_VALUE;
-    unsigned paddedRowSize = checkedValue.unsafeGet();
+    unsigned paddedRowSize = checkedValue;
 
-    Checked<uint32_t, RecordOverflow> rows = imageHeight;
+    CheckedUint32 rows = imageHeight;
     rows *= (depth - 1);
     // Last image is not affected by IMAGE_HEIGHT parameter.
     rows += height;
@@ -706,39 +511,39 @@ GCGLenum GraphicsContextGL::computeImageSizeInBytes(GCGLenum format, GCGLenum ty
     checkedValue += lastRowSize;
     if (checkedValue.hasOverflowed())
         return GraphicsContextGL::INVALID_VALUE;
-    *imageSizeInBytes = checkedValue.unsafeGet();
+    *imageSizeInBytes = checkedValue;
     if (paddingInBytes)
         *paddingInBytes = padding;
 
-    Checked<uint32_t, RecordOverflow> skipSize = 0;
+    CheckedUint32 skipSize = 0;
     if (params.skipImages > 0) {
-        Checked<uint32_t, RecordOverflow> tmp = paddedRowSize;
+        CheckedUint32 tmp = paddedRowSize;
         tmp *= imageHeight;
         tmp *= params.skipImages;
         if (tmp.hasOverflowed())
             return GraphicsContextGL::INVALID_VALUE;
-        skipSize += tmp.unsafeGet();
+        skipSize += tmp;
     }
     if (params.skipRows > 0) {
-        Checked<uint32_t, RecordOverflow> tmp = paddedRowSize;
+        CheckedUint32 tmp = paddedRowSize;
         tmp *= params.skipRows;
         if (tmp.hasOverflowed())
             return GraphicsContextGL::INVALID_VALUE;
-        skipSize += tmp.unsafeGet();
+        skipSize += tmp;
     }
     if (params.skipPixels > 0) {
-        Checked<uint32_t, RecordOverflow> tmp = bytesPerGroup;
+        CheckedUint32 tmp = bytesPerGroup;
         tmp *= params.skipPixels;
         if (tmp.hasOverflowed())
             return GraphicsContextGL::INVALID_VALUE;
-        skipSize += tmp.unsafeGet();
+        skipSize += tmp;
     }
     if (skipSize.hasOverflowed())
         return GraphicsContextGL::INVALID_VALUE;
     if (skipSizeInBytes)
-        *skipSizeInBytes = skipSize.unsafeGet();
+        *skipSizeInBytes = skipSize;
 
-    checkedValue += skipSize.unsafeGet();
+    checkedValue += skipSize;
     if (checkedValue.hasOverflowed())
         return GraphicsContextGL::INVALID_VALUE;
     return GraphicsContextGL::NO_ERROR;
@@ -757,19 +562,17 @@ bool GraphicsContextGL::packImageData(Image* image, const void* pixels, GCGLenum
         return false;
     data.resize(packedSize);
 
-    if (!packPixels(reinterpret_cast<const uint8_t*>(pixels), sourceFormat, sourceImageWidth, sourceImageHeight, sourceImageSubRectangle, depth, sourceUnpackAlignment, unpackImageHeight, format, type, alphaOp, data.data(), flipY))
+    if (!packPixels(static_cast<const uint8_t*>(pixels), sourceFormat, sourceImageWidth, sourceImageHeight, sourceImageSubRectangle, depth, sourceUnpackAlignment, unpackImageHeight, format, type, alphaOp, data.data(), flipY))
         return false;
     if (ImageObserver* observer = image->imageObserver())
         observer->didDraw(*image);
     return true;
 }
 
-bool GraphicsContextGL::extractImageData(ImageData* imageData, DataFormat sourceDataFormat, const IntRect& sourceImageSubRectangle, int depth, int unpackImageHeight, GCGLenum format, GCGLenum type, bool flipY, bool premultiplyAlpha, Vector<uint8_t>& data)
+bool GraphicsContextGL::extractPixelBuffer(const PixelBuffer& pixelBuffer, DataFormat sourceDataFormat, const IntRect& sourceImageSubRectangle, int depth, int unpackImageHeight, GCGLenum format, GCGLenum type, bool flipY, bool premultiplyAlpha, Vector<uint8_t>& data)
 {
-    if (!imageData)
-        return false;
-    int width = imageData->width();
-    int height = imageData->height();
+    int width = pixelBuffer.size().width();
+    int height = pixelBuffer.size().height();
 
     unsigned packedSize;
     // Output data is tightly packed (alignment == 1).
@@ -779,7 +582,7 @@ bool GraphicsContextGL::extractImageData(ImageData* imageData, DataFormat source
         return false;
     data.resize(packedSize);
 
-    if (!packPixels(imageData->data()->data(), sourceDataFormat, width, height, sourceImageSubRectangle, depth, 0, unpackImageHeight, format, type, premultiplyAlpha ? AlphaOp::DoPremultiply : AlphaOp::DoNothing, data.data(), flipY))
+    if (!packPixels(pixelBuffer.data().data(), sourceDataFormat, width, height, sourceImageSubRectangle, depth, 0, unpackImageHeight, format, type, premultiplyAlpha ? AlphaOp::DoPremultiply : AlphaOp::DoNothing, data.data(), flipY))
         return false;
 
     return true;
@@ -789,7 +592,8 @@ bool GraphicsContextGL::extractTextureData(unsigned width, unsigned height, GCGL
 {
     // Assumes format, type, etc. have already been validated.
     DataFormat sourceDataFormat = getDataFormat(format, type);
-
+    if (sourceDataFormat == GraphicsContextGL::DataFormat::Invalid)
+        return false;
     // Resize the output buffer.
     unsigned componentsPerPixel, bytesPerComponent;
     if (!computeFormatAndTypeParameters(format, type, &componentsPerPixel, &bytesPerComponent))

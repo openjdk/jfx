@@ -55,8 +55,9 @@ private:
     bool shouldRespectHeightAndWidthAttributes() final;
     unsigned height() const final;
     unsigned width() const final;
+    String resultForDialogSubmit() const final;
 
-    IntPoint m_clickLocation; // Valid only during HTMLFormElement::prepareForSubmission().
+    IntPoint m_clickLocation; // Valid only during HTMLFormElement::submitIfPossible().
 };
 
 } // namespace WebCore

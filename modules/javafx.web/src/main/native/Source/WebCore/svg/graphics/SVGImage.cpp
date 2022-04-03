@@ -86,9 +86,8 @@ SVGImage::~SVGImage()
 {
     if (m_page) {
         ScriptDisallowedScope::DisableAssertionsInScope disabledScope;
-        // Store m_page in a local variable, clearing m_page, so that SVGImageChromeClient knows we're destructed.
-        std::unique_ptr<Page> currentPage = WTFMove(m_page);
-        currentPage->mainFrame().loader().frameDetached(); // Break both the loader and view references to the frame
+        // Clear m_page, so that SVGImageChromeClient knows we're destructed.
+        m_page = nullptr;
     }
 
     // Verify that page teardown destroyed the Chrome
@@ -215,18 +214,25 @@ RefPtr<NativeImage> SVGImage::nativeImageForCurrentFrame(const GraphicsContext* 
 
 RefPtr<NativeImage> SVGImage::nativeImage(const GraphicsContext*)
 {
+    return nativeImage(size(), FloatRect(FloatPoint(), size()));
+}
+
+RefPtr<NativeImage> SVGImage::nativeImage(const FloatSize& imageSize, const FloatRect& sourceRect)
+{
     if (!m_page)
         return nullptr;
 
-    auto imageBuffer = ImageBuffer::create(size(), RenderingMode::Unaccelerated);
+    auto imageBuffer = ImageBuffer::create(imageSize, RenderingMode::Unaccelerated, 1, DestinationColorSpace::SRGB(), PixelFormat::BGRA8);
     if (!imageBuffer)
         return nullptr;
 
     ImageObserver* observer = imageObserver();
-
     setImageObserver(nullptr);
     setContainerSize(size());
 
+    auto scaleFactor = imageSize / sourceRect.size();
+    imageBuffer->context().scale(scaleFactor);
+    imageBuffer->context().translate(-sourceRect.location());
     imageBuffer->context().drawImage(*this, FloatPoint(0, 0));
 
     setImageObserver(observer);
@@ -248,7 +254,7 @@ void SVGImage::drawPatternForContainer(GraphicsContext& context, const FloatSize
     FloatRect imageBufferSize = zoomedContainerRect;
     imageBufferSize.scale(imageBufferScale.width(), imageBufferScale.height());
 
-    auto buffer = ImageBuffer::createCompatibleBuffer(expandedIntSize(imageBufferSize.size()), 1, DestinationColorSpace::SRGB, context);
+    auto buffer = ImageBuffer::createCompatibleBuffer(expandedIntSize(imageBufferSize.size()), 1, DestinationColorSpace::SRGB(), context);
     if (!buffer) // Failed to allocate buffer.
         return;
     drawForContainer(buffer->context(), containerSize, containerZoom, initialFragmentURL, imageBufferSize, zoomedContainerRect);
@@ -273,6 +279,12 @@ ImageDrawResult SVGImage::draw(GraphicsContext& context, const FloatRect& dstRec
 {
     if (!m_page)
         return ImageDrawResult::DidNothing;
+
+    if (!context.hasPlatformContext()) {
+        // Display list drawing can't handle arbitrary DOM content.
+        // FIXME https://bugs.webkit.org/show_bug.cgi?id=227748: Remove this when it can.
+        return drawAsNativeImage(context, dstRect, srcRect, options);
+    }
 
     auto view = makeRefPtr(frameView());
     ASSERT(view);
@@ -316,6 +328,29 @@ ImageDrawResult SVGImage::draw(GraphicsContext& context, const FloatRect& dstRec
         context.endTransparencyLayer();
 
     stateSaver.restore();
+
+    if (imageObserver())
+        imageObserver()->didDraw(*this);
+
+    return ImageDrawResult::DidDraw;
+}
+
+
+ImageDrawResult SVGImage::drawAsNativeImage(GraphicsContext& context, const FloatRect& destination, const FloatRect& source, const ImagePaintingOptions& options)
+{
+    ASSERT(!context.hasPlatformContext());
+
+    auto rectInNativeImage = FloatRect { { }, destination.size() };
+    auto nativeImage = this->nativeImage(rectInNativeImage.size(), source);
+    if (!nativeImage)
+        return ImageDrawResult::DidNothing;
+
+    auto localImagePaintingOptions = options;
+    ImageOrientation::Orientation orientation = options.orientation();
+    if (orientation == ImageOrientation::Orientation::FromImage)
+        localImagePaintingOptions = ImagePaintingOptions(options, ImageOrientation::Orientation::None);
+
+    context.drawNativeImage(*nativeImage, rectInNativeImage.size(), destination, rectInNativeImage, localImagePaintingOptions);
 
     if (imageObserver())
         imageObserver()->didDraw(*this);
@@ -467,7 +502,9 @@ EncodedDataStatus SVGImage::dataChanged(bool allDataReceived)
         ASSERT(loader.activeDocumentLoader()); // DocumentLoader should have been created by frame->init().
         loader.activeDocumentLoader()->writer().setMIMEType("image/svg+xml");
         loader.activeDocumentLoader()->writer().begin(URL()); // create the empty document
-        loader.activeDocumentLoader()->writer().addData(data()->data(), data()->size());
+        data()->forEachSegment([&](auto& segment) {
+            loader.activeDocumentLoader()->writer().addData(segment.data(), segment.size());
+        });
         loader.activeDocumentLoader()->writer().end();
 
         frame.document()->updateLayoutIgnorePendingStylesheets();

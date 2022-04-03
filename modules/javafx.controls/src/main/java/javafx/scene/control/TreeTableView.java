@@ -62,6 +62,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.WeakHashMap;
+import java.util.function.IntPredicate;
 
 import javafx.application.Platform;
 import javafx.beans.DefaultProperty;
@@ -2062,8 +2063,9 @@ public class TreeTableView<S> extends Control {
     }
 
     /**
-     * @return The CssMetaData associated with this class, which may include the
-     * CssMetaData of its superclasses.
+     * Gets the {@code CssMetaData} associated with this class, which may include the
+     * {@code CssMetaData} of its superclasses.
+     * @return the {@code CssMetaData}
      */
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
@@ -3365,7 +3367,11 @@ public class TreeTableView<S> extends Control {
         }
 
         private void fireCustomSelectedCellsListChangeEvent(ListChangeListener.Change<? extends TreeTablePosition<S,?>> c) {
-            ControlUtils.updateSelectedIndices(this, c);
+            // Allow removing the row index if cell selection is not enabled or
+            // if such row doesn't have any selected cells
+            IntPredicate removeRowFilter = row -> !isCellSelectionEnabled() ||
+                    getSelectedCells().stream().noneMatch(tp -> tp.getRow() == row);
+            ControlUtils.updateSelectedIndices(this, c, removeRowFilter);
 
             if (isAtomic()) {
                 return;

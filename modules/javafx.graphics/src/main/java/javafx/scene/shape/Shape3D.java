@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -97,6 +97,9 @@ public abstract class Shape3D extends Node {
 
     private static final PhongMaterial DEFAULT_MATERIAL = new PhongMaterial();
 
+    /**
+     * Constructor for subclasses to call.
+     */
     protected Shape3D() {
         if (!Platform.isSupported(ConditionalFeature.SCENE3D)) {
             String logname = Shape3D.class.getName();

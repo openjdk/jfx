@@ -285,6 +285,83 @@ public class ComboBoxTest {
         assertNull(comboBox.getSelectionModel());
     }
 
+    @Test public void testNullSelectionModelDoesNotThrowNPEInSkinOnValueChange() {
+        ObservableList<String> items = FXCollections.observableArrayList("ITEM1", "ITEM2");
+
+        ListCell<String> buttonCell = new ListCell<>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                setText(item);
+            }
+        };
+        comboBox.setButtonCell(buttonCell);
+        comboBox.setItems(items);
+        comboBox.setSelectionModel(null);
+
+        // Should not throw an NPE.
+        comboBox.setValue(items.get(1));
+
+        assertEquals(items.get(1), comboBox.getValue());
+        assertEquals(items.get(1), comboBox.getButtonCell().getText());
+    }
+
+    @Test public void testNullSelectionModelDoesNotThrowNPEInSkinOnLayout() {
+        ObservableList<String> items = FXCollections.observableArrayList("ITEM1", "ITEM2");
+
+        comboBox.setItems(items);
+
+        comboBox.setValue(items.get(1));
+        comboBox.setSelectionModel(null);
+
+        // Should not throw an NPE.
+        comboBox.layout();
+    }
+
+    @Test public void testNullSelectionModelDoesNotThrowNPEOnEditableChange() {
+        ObservableList<String> items = FXCollections.observableArrayList("ITEM1", "ITEM2");
+
+        comboBox.setEditable(true);
+        comboBox.setItems(items);
+        comboBox.setSelectionModel(null);
+
+        // Should not throw an NPE.
+        comboBox.setEditable(false);
+    }
+
+    @Test public void testNullSelectionModelDoesNotThrowNPEOnValueChange() {
+        ObservableList<String> items = FXCollections.observableArrayList("ITEM1", "ITEM2");
+
+        ComboBox<String> comboBox = new ComboBox<>();
+        comboBox.setItems(items);
+        comboBox.setSelectionModel(null);
+
+        // Should not throw an NPE.
+        comboBox.setValue(items.get(1));
+
+        assertEquals(items.get(1), comboBox.getValue());
+    }
+
+    @Test public void testNullSelectionModelDoesNotThrowNPEOnListViewSelect() {
+        ObservableList<String> items = FXCollections.observableArrayList("ITEM1", "ITEM2");
+
+        comboBox.setItems(items);
+        comboBox.setSelectionModel(null);
+        ListView<String> listView = (ListView<String>) ((ComboBoxListViewSkin<String>) comboBox.getSkin())
+                .getPopupContent();
+
+        // Should not throw an NPE.
+        listView.getSelectionModel().select(1);
+    }
+
+    @Test public void testNullSelectionModelDoesNotThrowNPEOnSkinCreation() {
+        ComboBox<String> comboBox = new ComboBox<>();
+        comboBox.setSelectionModel(null);
+
+        // Should not throw an NPE.
+        comboBox.setSkin(new ComboBoxListViewSkin<>(comboBox));
+    }
+
     @Test public void selectionModelCanBeBound() {
         SingleSelectionModel<String> sm = ComboBoxShim.<String>get_ComboBoxSelectionModel(comboBox);
         ObjectProperty<SingleSelectionModel<String>> other = new SimpleObjectProperty<SingleSelectionModel<String>>(sm);

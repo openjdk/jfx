@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -422,5 +422,13 @@ public class LoadTest extends TestBase {
         } catch (InterruptedException ex) {
             throw new AssertionError(ex);
         }
+    }
+
+    // JDK-8282134 Certain regex can cause a JS trap in WebView
+    @Test public void jsRegexpTrapTest() {
+        final String FILE = "src/test/resources/test/html/unicode.html";
+        load(new File(FILE));
+        WebEngine web = getEngine();
+        assertTrue("Load task completed successfully", getLoadState() == SUCCEEDED);
     }
 }

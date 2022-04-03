@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -35,7 +35,7 @@ attribute vec4 tangent;
 struct Light {
     vec4 pos;
     vec3 color;
-    vec3 attn;
+    vec4 attn;
     vec3 dir;
     float range;
     float cosOuter;

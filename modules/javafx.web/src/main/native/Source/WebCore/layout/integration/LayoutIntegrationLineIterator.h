@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include "FontBaseline.h"
 #include "LayoutIntegrationLineIteratorLegacyPath.h"
 #include "LayoutIntegrationLineIteratorModernPath.h"
 #include <wtf/Variant.h>
@@ -70,8 +71,10 @@ public:
 
     bool isHorizontal() const;
 
+    FontBaseline baselineType() const;
+
     const RenderBlockFlow& containingBlock() const;
-    const RootInlineBox* legacyRootInlineBox() const;
+    const LegacyRootInlineBox* legacyRootInlineBox() const;
 
 protected:
     friend class LineIterator;
@@ -82,7 +85,7 @@ protected:
 class LineIterator {
 public:
     LineIterator() : m_line(LineIteratorLegacyPath { nullptr }) { };
-    LineIterator(const RootInlineBox* rootInlineBox) : m_line(LineIteratorLegacyPath { rootInlineBox }) { };
+    LineIterator(const LegacyRootInlineBox* rootInlineBox) : m_line(LineIteratorLegacyPath { rootInlineBox }) { };
     LineIterator(PathLine::PathVariant&&);
 
     LineIterator& operator++() { return traverseNext(); }
@@ -91,6 +94,8 @@ public:
 
     LineIterator next() const;
     LineIterator previous() const;
+
+    bool isFirst() const { return !previous(); }
 
     explicit operator bool() const { return !atEnd(); }
 
@@ -224,6 +229,13 @@ inline bool PathLine::isHorizontal() const
     });
 }
 
+inline FontBaseline PathLine::baselineType() const
+{
+    return WTF::switchOn(m_pathVariant, [](const auto& path) {
+        return path.baselineType();
+    });
+}
+
 inline const RenderBlockFlow& PathLine::containingBlock() const
 {
     return WTF::switchOn(m_pathVariant, [](const auto& path) -> const RenderBlockFlow& {
@@ -231,7 +243,7 @@ inline const RenderBlockFlow& PathLine::containingBlock() const
     });
 }
 
-inline const RootInlineBox* PathLine::legacyRootInlineBox() const
+inline const LegacyRootInlineBox* PathLine::legacyRootInlineBox() const
 {
     return WTF::switchOn(m_pathVariant, [](const auto& path) {
         return path.legacyRootInlineBox();

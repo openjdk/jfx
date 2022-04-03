@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -821,7 +821,7 @@ public class ListViewTest {
         listView.setOnEditStart(t -> {
             rt_29650_start_count++;
         });
-        listView.setOnEditCommit(t -> {
+        listView.addEventHandler(ListView.editCommitEvent(), t -> {
             rt_29650_commit_count++;
         });
         listView.setOnEditCancel(t -> {
@@ -844,8 +844,7 @@ public class ListViewTest {
         KeyEventFirer keyboard = new KeyEventFirer(textField);
         keyboard.doKeyPress(KeyCode.ENTER);
 
-        // TODO should the following assert be enabled?
-//        assertEquals("Testing!", listView.getItems().get(0));
+        assertEquals("Testing!", listView.getItems().get(0));
         assertEquals(1, rt_29650_start_count);
         assertEquals(1, rt_29650_commit_count);
         assertEquals(0, rt_29650_cancel_count);
@@ -1121,7 +1120,7 @@ public class ListViewTest {
                 items.set(30, "yellow");
                 Platform.runLater(() -> {
                     Toolkit.getToolkit().firePulse();
-                    assertEquals(0, rt_35395_counter);
+                    assertTrue(rt_35395_counter < 7);
                     rt_35395_counter = 0;
                     items.remove(12);
                     Platform.runLater(() -> {

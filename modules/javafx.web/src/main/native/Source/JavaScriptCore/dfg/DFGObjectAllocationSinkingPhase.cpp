@@ -1258,8 +1258,8 @@ private:
 
         case FilterCallLinkStatus:
         case FilterGetByStatus:
-        case FilterPutByIdStatus:
-        case FilterInByIdStatus:
+        case FilterPutByStatus:
+        case FilterInByStatus:
         case FilterDeleteByStatus:
         case FilterCheckPrivateBrandStatus:
         case FilterSetPrivateBrandStatus:
@@ -1579,23 +1579,26 @@ private:
         // Nodes without remaining unmaterialized fields will be
         // materialized first - amongst the remaining unmaterialized
         // nodes
-        StdList<Allocation> toMaterialize;
-        auto firstPos = toMaterialize.begin();
+        Vector<Allocation> toMaterialize;
+        toMaterialize.resize(escapees.size());
+        size_t firstIndex = 0;
+        size_t lastIndex = toMaterialize.size();
         auto materializeFirst = [&] (Allocation&& allocation) {
+            RELEASE_ASSERT(firstIndex < lastIndex);
             materialize(allocation.identifier());
-            // We need to insert *after* the current position
-            if (firstPos != toMaterialize.end())
-                ++firstPos;
-            firstPos = toMaterialize.insert(firstPos, WTFMove(allocation));
+            toMaterialize[firstIndex] = WTFMove(allocation);
+            ++firstIndex;
         };
 
         // Nodes that no other unmaterialized node points to will be
         // materialized last - amongst the remaining unmaterialized
         // nodes
-        auto lastPos = toMaterialize.end();
         auto materializeLast = [&] (Allocation&& allocation) {
             materialize(allocation.identifier());
-            lastPos = toMaterialize.insert(lastPos, WTFMove(allocation));
+            RELEASE_ASSERT(firstIndex < lastIndex);
+            RELEASE_ASSERT(lastIndex);
+            --lastIndex;
+            toMaterialize[lastIndex] = WTFMove(allocation);
         };
 
         // These are the promoted locations that contains some of the
@@ -1653,6 +1656,8 @@ private:
             for (Node* identifier : materialized)
                 escapees.remove(identifier);
         }
+
+        RELEASE_ASSERT(firstIndex == lastIndex);
 
         materialized.clear();
 
@@ -2549,15 +2554,13 @@ private:
                         // nodes. Those nodes were guarded by the appropriate type checks. This means that
                         // at this point, we can simply trust that the incoming value has the right type
                         // for whatever structure we are using.
-                        data->variants.append(
-                            PutByIdVariant::replace(currentSet, currentOffset));
+                        data->variants.append(PutByVariant::replace(nullptr, currentSet, currentOffset));
                         currentOffset = offset;
                         currentSet.clear();
                     }
                     currentSet.add(structure.get());
                 }
-                data->variants.append(
-                    PutByIdVariant::replace(currentSet, currentOffset));
+                data->variants.append(PutByVariant::replace(nullptr, currentSet, currentOffset));
             }
 
             return m_graph.addNode(
@@ -2610,8 +2613,8 @@ private:
                 switch (node->op()) {
                 case FilterCallLinkStatus:
                 case FilterGetByStatus:
-                case FilterPutByIdStatus:
-                case FilterInByIdStatus:
+                case FilterPutByStatus:
+                case FilterInByStatus:
                 case FilterDeleteByStatus:
                 case FilterCheckPrivateBrandStatus:
                 case FilterSetPrivateBrandStatus:

@@ -57,8 +57,8 @@ public:
         if (__asan_address_is_poisoned(this))
             __asan_unpoison_memory_region(this, sizeof(*this));
 #endif
-        if (m_ptr)
-            PtrTraits::unwrap(m_ptr)->deref();
+        if (auto* ptr = PtrTraits::exchange(m_ptr, nullptr))
+            ptr->deref();
     }
 
     Ref(T& object)
@@ -287,6 +287,42 @@ template<typename ExpectedType, typename ArgType, typename PtrTraits>
 inline bool is(const Ref<ArgType, PtrTraits>& source)
 {
     return is<ExpectedType>(source.get());
+}
+
+template<typename T, typename U, typename V, typename W>
+inline bool operator==(const Ref<T, U>& a, const Ref<V, W>& b)
+{
+    return a.ptr() == b.ptr();
+}
+
+template<typename T, typename U, typename V>
+inline bool operator==(const Ref<T, U>& a, V& b)
+{
+    return a.ptr() == &b;
+}
+
+template<typename T, typename U, typename V>
+inline bool operator==(T& a, const Ref<U, V>& b)
+{
+    return &a == b.ptr();
+}
+
+template<typename T, typename U, typename V, typename W>
+inline bool operator!=(const Ref<T, U>& a, const Ref<V, W>& b)
+{
+    return a.ptr() != b.ptr();
+}
+
+template<typename T, typename U, typename V>
+inline bool operator!=(const Ref<T, U>& a, V& b)
+{
+    return a.ptr() != &b;
+}
+
+template<typename T, typename U, typename V>
+inline bool operator!=(T& a, const Ref<U, V>& b)
+{
+    return &a != b.ptr();
 }
 
 } // namespace WTF

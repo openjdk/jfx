@@ -33,6 +33,9 @@
 #include "gstdcaparse.h"
 #include "gstflacparse.h"
 #endif // GSTREAMER_LITE
+#ifdef LINUX
+#include "gstaacparse.h"
+#endif // LINUX
 #include "gstmpegaudioparse.h"
 #ifndef GSTREAMER_LITE
 #include "gstsbcparse.h"
@@ -69,8 +72,15 @@ plugin_init (GstPlugin * plugin)
 
   return ret;
 #else // GSTREAMER_LITE
+#ifdef LINUX
+  return gst_element_register (plugin, "aacparse",
+      GST_RANK_PRIMARY + 1, GST_TYPE_AAC_PARSE) &
+         gst_element_register (plugin, "mpegaudioparse",
+      GST_RANK_PRIMARY + 2, GST_TYPE_MPEG_AUDIO_PARSE);
+#else // LINUX
   return gst_element_register (plugin, "mpegaudioparse",
       GST_RANK_PRIMARY + 2, GST_TYPE_MPEG_AUDIO_PARSE);
+#endif // LINUX
 #endif // GSTREAMER_LITE
 }
 

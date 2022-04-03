@@ -30,7 +30,6 @@
 #include "StyleChange.h"
 #include "StyleTreeResolver.h"
 #include "StyleUpdate.h"
-#include <wtf/HashSet.h>
 #include <wtf/Vector.h>
 
 namespace WebCore {
@@ -50,6 +49,7 @@ public:
     void commit(std::unique_ptr<const Style::Update>);
 
     static void tearDownRenderers(Element&);
+    static void tearDownRenderersAfterSlotChange(Element& host);
     static void tearDownRenderer(Text&);
 
 private:
@@ -69,7 +69,7 @@ private:
     struct Parent {
         Element* element { nullptr };
         const Style::ElementUpdates* updates { nullptr };
-        Optional<RenderTreePosition> renderTreePosition;
+        std::optional<RenderTreePosition> renderTreePosition;
 
         bool didCreateOrDestroyChildRenderer { false };
         RenderObject* previousChildRenderer { nullptr };
@@ -87,7 +87,8 @@ private:
     void popParent();
     void popParentsToDepth(unsigned depth);
 
-    enum class TeardownType { Full, RendererUpdate, RendererUpdateCancelingAnimations };
+    // FIXME: Use OptionSet.
+    enum class TeardownType { Full, FullAfterSlotChange, RendererUpdate, RendererUpdateCancelingAnimations };
     static void tearDownRenderers(Element&, TeardownType, RenderTreeBuilder&);
     static void tearDownTextRenderer(Text&, RenderTreeBuilder&);
     static void tearDownLeftoverShadowHostChildren(Element&, RenderTreeBuilder&);

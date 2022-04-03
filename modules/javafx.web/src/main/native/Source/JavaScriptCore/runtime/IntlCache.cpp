@@ -26,6 +26,7 @@
 #include "config.h"
 #include "IntlCache.h"
 
+#include "IntlDisplayNames.h"
 #include <wtf/Vector.h>
 
 namespace JSC {
@@ -52,5 +53,19 @@ Vector<UChar, 32> IntlCache::getBestDateTimePattern(const CString& locale, const
         return { };
     return patternBuffer;
 }
+
+#if HAVE(ICU_U_LOCALE_DISPLAY_NAMES)
+Vector<UChar, 32> IntlCache::getFieldDisplayName(const CString& locale, UDateTimePatternField field, UDateTimePGDisplayWidth width, UErrorCode& status)
+{
+    auto sharedGenerator = getSharedPatternGenerator(locale, status);
+    if (U_FAILURE(status))
+        return { };
+    Vector<UChar, 32> buffer;
+    status = callBufferProducingFunction(udatpg_getFieldDisplayName, sharedGenerator, field, width, buffer);
+    if (U_FAILURE(status))
+        return { };
+    return buffer;
+}
+#endif
 
 } // namespace JSC

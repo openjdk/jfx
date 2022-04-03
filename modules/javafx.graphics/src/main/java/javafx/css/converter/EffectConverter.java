@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -38,6 +38,7 @@ import javafx.scene.text.Font;
 import java.util.Map;
 
 /**
+ * Converter to convert a string representation of an {@code Effect} to an {@code Effect}.
  * @since 9
  */
 public class EffectConverter extends StyleConverter<ParsedValue[], Effect> {
@@ -52,6 +53,10 @@ public class EffectConverter extends StyleConverter<ParsedValue[], Effect> {
                 new InnerShadowConverter();
     }
 
+    /**
+     * Gets the {@code EffectConverter} instance.
+     * @return the {@code EffectConverter} instance
+     */
     public static StyleConverter<ParsedValue[], Effect> getInstance() {
         return Holder.EFFECT_CONVERTER;
     }
@@ -61,6 +66,9 @@ public class EffectConverter extends StyleConverter<ParsedValue[], Effect> {
         throw new IllegalArgumentException("Parsed value is not an Effect");
     }
 
+    /**
+     * Constructs an EffectConverter.
+     */
     protected EffectConverter() {
         super();
     }
@@ -70,8 +78,16 @@ public class EffectConverter extends StyleConverter<ParsedValue[], Effect> {
         return "EffectConverter";
     }
 
+    /**
+     * Converter to convert a {@code DropShadow} effect.
+     * @since 9
+     */
     public static final class DropShadowConverter extends EffectConverter {
 
+        /**
+         * Gets the {@code DropShadowConverter} instance.
+         * @return the {@code DropShadowConverter} instance
+         */
         public static DropShadowConverter getInstance() {
             return Holder.DROP_SHADOW_INSTANCE;
         }
@@ -141,8 +157,16 @@ public class EffectConverter extends StyleConverter<ParsedValue[], Effect> {
         }
     }
 
+    /**
+     * Converter to convert an {@code InnerShadow} effect.
+     * @since 9
+     */
     public static final class InnerShadowConverter extends EffectConverter {
 
+        /**
+         * Gets the {@code InnerShadowConverter} instance.
+         * @return the {@code InnerShadowConverter} instance
+         */
         public static InnerShadowConverter getInstance() {
             return Holder.INNER_SHADOW_INSTANCE;
         }
@@ -214,6 +238,9 @@ public class EffectConverter extends StyleConverter<ParsedValue[], Effect> {
 
     private static Map<ParsedValue<ParsedValue[], Effect>, Effect> cache;
 
+    /**
+     * Clears the InnerShadowConverter cache.
+     */
     public static void clearCache() { if (cache != null) cache.clear(); }
 
 }

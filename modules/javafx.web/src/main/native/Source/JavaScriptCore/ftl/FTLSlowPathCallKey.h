@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,8 +27,8 @@
 
 #if ENABLE(FTL_JIT)
 
+#include "HashableRegisterSet.h"
 #include "MacroAssemblerCodeRef.h"
-#include "RegisterSet.h"
 
 namespace JSC { namespace FTL {
 
@@ -51,11 +51,12 @@ public:
 
     SlowPathCallKey(
         const RegisterSet& set, FunctionPtr<CFunctionPtrTag> callTarget, const RegisterSet& argumentRegisters,
-        ptrdiff_t offset)
+        ptrdiff_t offset, int32_t indirectOffset)
         : m_usedRegisters(set)
         , m_callTarget(callTarget.retagged<OperationPtrTag>())
         , m_argumentRegisters(argumentRegisters)
         , m_offset(offset)
+        , m_indirectOffset(indirectOffset)
     {
     }
 
@@ -63,10 +64,11 @@ public:
     FunctionPtr<OperationPtrTag> callTarget() const { return m_callTarget; }
     const RegisterSet& argumentRegisters() const { return m_argumentRegisters; }
     ptrdiff_t offset() const { return m_offset; }
+    int32_t indirectOffset() const { return m_indirectOffset; }
 
     SlowPathCallKey withCallTarget(FunctionPtr<CFunctionPtrTag> callTarget)
     {
-        return SlowPathCallKey(usedRegisters(), callTarget, argumentRegisters(), offset());
+        return SlowPathCallKey(usedRegisters(), callTarget, argumentRegisters(), offset(), indirectOffset());
     }
 
     void dump(PrintStream&) const;
@@ -75,14 +77,12 @@ public:
     enum DeletedValueTag { DeletedValue };
 
     SlowPathCallKey(EmptyValueTag)
-        : m_usedRegisters(RegisterSet::EmptyValue)
-        , m_offset(0)
+        : m_usedRegisters(HashableRegisterSet::EmptyValue)
     {
     }
 
     SlowPathCallKey(DeletedValueTag)
-        : m_usedRegisters(RegisterSet::DeletedValue)
-        , m_offset(0)
+        : m_usedRegisters(HashableRegisterSet::DeletedValue)
     {
     }
 
@@ -93,18 +93,20 @@ public:
     {
         return m_usedRegisters == other.m_usedRegisters
             && m_callTarget == other.m_callTarget
-            && m_offset == other.m_offset;
+            && m_offset == other.m_offset
+            && m_indirectOffset == other.m_indirectOffset;
     }
     unsigned hash() const
     {
-        return m_usedRegisters.hash() + PtrHash<void*>::hash(m_callTarget.executableAddress()) + m_offset;
+        return m_usedRegisters.hash() + PtrHash<void*>::hash(m_callTarget.executableAddress()) + m_offset + m_indirectOffset;
     }
 
 private:
-    RegisterSet m_usedRegisters;
+    HashableRegisterSet m_usedRegisters;
     FunctionPtr<OperationPtrTag> m_callTarget;
     RegisterSet m_argumentRegisters;
-    ptrdiff_t m_offset;
+    ptrdiff_t m_offset { 0 };
+    int32_t m_indirectOffset { 0 };
 };
 
 struct SlowPathCallKeyHash {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -97,7 +97,6 @@ import com.sun.javafx.runtime.async.AbstractRemoteResource;
 import com.sun.javafx.runtime.async.AsyncOperationListener;
 import com.sun.javafx.scene.text.TextLayoutFactory;
 import com.sun.javafx.sg.prism.NGNode;
-import com.sun.javafx.tk.AppletWindow;
 import com.sun.javafx.tk.CompletionListener;
 import com.sun.javafx.tk.FileChooserType;
 import com.sun.javafx.tk.FontLoader;
@@ -376,6 +375,7 @@ public final class QuantumToolkit extends Toolkit {
         launchLatch.countDown();
         try {
             Application.invokeAndWait(this.userRunnable);
+            this.userRunnable = null;
 
             if (getPrimaryTimer().isFullspeed()) {
                 /*
@@ -588,22 +588,6 @@ public final class QuantumToolkit extends Toolkit {
                 System.err.println("QT.vsyncHint: postPulse: " + System.nanoTime());
             }
             postPulse();
-        }
-    }
-
-    @Override  public AppletWindow createAppletWindow(long parent, String serverName) {
-        GlassAppletWindow parentWindow = new GlassAppletWindow(parent, serverName);
-        // Make this the parent window for all future Stages
-        WindowStage.setAppletWindow(parentWindow);
-        return parentWindow;
-    }
-
-    @Override public void closeAppletWindow() {
-        GlassAppletWindow gaw = WindowStage.getAppletWindow();
-        if (null != gaw) {
-            gaw.dispose();
-            WindowStage.setAppletWindow(null);
-            // any further strong refs will be in the applet itself
         }
     }
 

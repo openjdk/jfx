@@ -26,6 +26,9 @@
 #include "config.h"
 #include "ColorConversion.h"
 
+#include "Color.h"
+#include "ColorSpace.h"
+#include "DestinationColorSpace.h"
 #include <wtf/MathExtras.h>
 
 namespace WebCore {
@@ -270,20 +273,60 @@ Lab<float> ColorConversion<Lab<float>, LCHA<float>>::convert(const LCHA<float>& 
     };
 }
 
-// MARK: SRGBA<uint8_t> conversions.
+// MARK: Conversion functions for raw color components with associated color spaces.
 
-SRGBA<float> ColorConversion<SRGBA<float>, SRGBA<uint8_t>>::convert(const SRGBA<uint8_t>& color)
+ColorComponents<float, 4> converColorComponents(ColorSpace inputColorSpace, ColorComponents<float, 4> inputColorComponents, ColorSpace outputColorSpace)
 {
-    return makeFromComponents<SRGBA<float>>(asColorComponents(color).map([](uint8_t value) -> float {
-        return value / 255.0f;
-    }));
+    return callWithColorType(inputColorComponents, inputColorSpace, [outputColorSpace] (const auto& inputColor) {
+        switch (outputColorSpace) {
+        case ColorSpace::A98RGB:
+            return asColorComponents(convertColor<A98RGB<float>>(inputColor));
+        case ColorSpace::DisplayP3:
+            return asColorComponents(convertColor<DisplayP3<float>>(inputColor));
+        case ColorSpace::LCH:
+            return asColorComponents(convertColor<LCHA<float>>(inputColor));
+        case ColorSpace::Lab:
+            return asColorComponents(convertColor<Lab<float>>(inputColor));
+        case ColorSpace::LinearSRGB:
+            return asColorComponents(convertColor<LinearSRGBA<float>>(inputColor));
+        case ColorSpace::ProPhotoRGB:
+            return asColorComponents(convertColor<ProPhotoRGB<float>>(inputColor));
+        case ColorSpace::Rec2020:
+            return asColorComponents(convertColor<Rec2020<float>>(inputColor));
+        case ColorSpace::SRGB:
+            return asColorComponents(convertColor<SRGBA<float>>(inputColor));
+        case ColorSpace::XYZ_D50:
+            return asColorComponents(convertColor<XYZA<float, WhitePoint::D50>>(inputColor));
+        }
+
+        ASSERT_NOT_REACHED();
+        return asColorComponents(convertColor<SRGBA<float>>(inputColor));
+    });
 }
 
-SRGBA<uint8_t> ColorConversion<SRGBA<uint8_t>, SRGBA<float>>::convert(const SRGBA<float>& color)
+ColorComponents<float, 4> converColorComponents(ColorSpace inputColorSpace, ColorComponents<float, 4> inputColorComponents, const DestinationColorSpace& outputColorSpace)
 {
-    return makeFromComponents<SRGBA<uint8_t>>(asColorComponents(color).map([](float value) -> uint8_t {
-        return std::clamp(std::lround(value * 255.0f), 0l, 255l);
-    }));
+#if USE(CG)
+    return platformConvertColorComponents(inputColorSpace, inputColorComponents, outputColorSpace);
+#else
+    return callWithColorType(inputColorComponents, inputColorSpace, [outputColorSpace] (const auto& inputColor) {
+        switch (outputColorSpace.platformColorSpace()) {
+        case PlatformColorSpace::Name::SRGB:
+            return asColorComponents(convertColor<SRGBA<float>>(inputColor));
+#if ENABLE(DESTINATION_COLOR_SPACE_LINEAR_SRGB)
+        case PlatformColorSpace::Name::LinearSRGB:
+            return asColorComponents(convertColor<LinearSRGBA<float>>(inputColor));
+#endif
+#if ENABLE(DESTINATION_COLOR_SPACE_DISPLAY_P3)
+        case PlatformColorSpace::Name::DisplayP3:
+            return asColorComponents(convertColor<DisplayP3<float>>(inputColor));
+#endif
+        }
+
+        ASSERT_NOT_REACHED();
+        return asColorComponents(convertColor<SRGBA<float>>(inputColor));
+    });
+#endif
 }
 
 } // namespace WebCore

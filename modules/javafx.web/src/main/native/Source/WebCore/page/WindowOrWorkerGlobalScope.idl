@@ -36,7 +36,7 @@ typedef (HTMLImageElement
     or OffscreenCanvas
 #endif
 #if defined(ENABLE_CSS_TYPED_OM) && ENABLE_CSS_TYPED_OM
-    or TypedOMCSSImageValue
+    or CSSStyleImageValue
 #endif
 ) CanvasImageSource;
 
@@ -46,19 +46,21 @@ typedef (CanvasImageSource or Blob or ImageData) ImageBitmapSource;
 interface mixin WindowOrWorkerGlobalScope {
     [Replaceable] readonly attribute USVString origin;
     readonly attribute boolean isSecureContext;
-    // FIXME: Implement 'crossOriginIsolated'.
-    // readonly attribute boolean crossOriginIsolated;
+
+    [EnabledBySetting=CrossOriginOpenerPolicy] readonly attribute boolean crossOriginIsolated;
+
+    [CallWith=GlobalObject] undefined reportError(any error);
 
     // Base64 utility methods.
-    [MayThrowException] DOMString atob(DOMString string);
-    [MayThrowException] DOMString btoa(DOMString string);
+    DOMString atob(DOMString string);
+    DOMString btoa(DOMString string);
 
     // Timers.
     // FIXME: This should take a TimerHandler (a.k.a. (DOMString or Function)) rather than a ScheduledAction.
-    [CallWith=GlobalObject, MayThrowException] long setTimeout(ScheduledAction handler, optional long timeout = 0, any... arguments);
+    [CallWith=GlobalObject] long setTimeout(ScheduledAction handler, optional long timeout = 0, any... arguments);
     undefined clearTimeout(optional long handle = 0);
     // FIXME: This should take a TimerHandler (a.k.a. (DOMString or Function)) rather than a ScheduledAction.
-    [CallWith=GlobalObject, MayThrowException] long setInterval(ScheduledAction handler, optional long timeout = 0, any... arguments);
+    [CallWith=GlobalObject] long setInterval(ScheduledAction handler, optional long timeout = 0, any... arguments);
     undefined clearInterval(optional long handle = 0);
 
     // microtask queuing.
@@ -67,4 +69,7 @@ interface mixin WindowOrWorkerGlobalScope {
     // ImageBitmap.
     [EnabledAtRuntime=ImageBitmap] Promise<ImageBitmap> createImageBitmap(ImageBitmapSource image, optional ImageBitmapOptions options);
     [EnabledAtRuntime=ImageBitmap] Promise<ImageBitmap> createImageBitmap(ImageBitmapSource image, long sx, long sy, long sw, long sh, optional ImageBitmapOptions options);
+
+    // structured cloning
+    [CallWith=GlobalObject] any structuredClone(any value, optional StructuredSerializeOptions options);
 };

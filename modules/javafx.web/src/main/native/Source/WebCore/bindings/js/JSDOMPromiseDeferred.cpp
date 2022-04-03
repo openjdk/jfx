@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,6 +31,8 @@
 #include "JSDOMExceptionHandling.h"
 #include "JSDOMPromise.h"
 #include "JSDOMWindow.h"
+#include "ScriptController.h"
+#include "WorkerGlobalScope.h"
 #include <JavaScriptCore/BuiltinNames.h>
 #include <JavaScriptCore/Exception.h>
 #include <JavaScriptCore/JSONObject.h>
@@ -129,29 +131,30 @@ void DeferredPromise::reject(Exception exception, RejectAsHandled rejectAsHandle
     ASSERT(deferred());
     ASSERT(m_globalObject);
     auto& lexicalGlobalObject = *m_globalObject;
-    JSC::JSLockHolder locker(&lexicalGlobalObject);
+    JSC::VM& vm = lexicalGlobalObject.vm();
+    JSC::JSLockHolder locker(vm);
+    auto scope = DECLARE_CATCH_SCOPE(vm);
 
     if (exception.code() == ExistingExceptionError) {
-        auto scope = DECLARE_CATCH_SCOPE(lexicalGlobalObject.vm());
-
         EXCEPTION_ASSERT(scope.exception());
-
         auto error = scope.exception()->value();
+        bool isTerminating = handleTerminationExceptionIfNeeded(scope, lexicalGlobalObject);
         scope.clearException();
 
-        reject<IDLAny>(error, rejectAsHandled);
+        if (!isTerminating)
+            reject<IDLAny>(error, rejectAsHandled);
         return;
     }
 
-    auto scope = DECLARE_THROW_SCOPE(lexicalGlobalObject.vm());
     auto error = createDOMException(lexicalGlobalObject, WTFMove(exception));
     if (UNLIKELY(scope.exception())) {
-        ASSERT(isTerminatedExecutionException(lexicalGlobalObject.vm(), scope.exception()));
+        handleUncaughtException(scope, lexicalGlobalObject);
         return;
     }
 
-    scope.release();
     reject(lexicalGlobalObject, error, rejectAsHandled);
+    if (UNLIKELY(scope.exception()))
+        handleUncaughtException(scope, lexicalGlobalObject);
 }
 
 void DeferredPromise::reject(ExceptionCode ec, const String& message, RejectAsHandled rejectAsHandled)
@@ -162,29 +165,30 @@ void DeferredPromise::reject(ExceptionCode ec, const String& message, RejectAsHa
     ASSERT(deferred());
     ASSERT(m_globalObject);
     auto& lexicalGlobalObject = *m_globalObject;
-    JSC::JSLockHolder locker(&lexicalGlobalObject);
+    JSC::VM& vm = lexicalGlobalObject.vm();
+    JSC::JSLockHolder locker(vm);
+    auto scope = DECLARE_CATCH_SCOPE(vm);
 
     if (ec == ExistingExceptionError) {
-        auto scope = DECLARE_CATCH_SCOPE(lexicalGlobalObject.vm());
-
         EXCEPTION_ASSERT(scope.exception());
-
         auto error = scope.exception()->value();
+        bool isTerminating = handleTerminationExceptionIfNeeded(scope, lexicalGlobalObject);
         scope.clearException();
 
-        reject<IDLAny>(error, rejectAsHandled);
+        if (!isTerminating)
+            reject<IDLAny>(error, rejectAsHandled);
         return;
     }
 
-    auto scope = DECLARE_THROW_SCOPE(lexicalGlobalObject.vm());
     auto error = createDOMException(&lexicalGlobalObject, ec, message);
     if (UNLIKELY(scope.exception())) {
-        ASSERT(isTerminatedExecutionException(lexicalGlobalObject.vm(), scope.exception()));
+        handleUncaughtException(scope, lexicalGlobalObject);
         return;
     }
 
-    scope.release();
     reject(lexicalGlobalObject, error, rejectAsHandled);
+    if (UNLIKELY(scope.exception()))
+        handleUncaughtException(scope, lexicalGlobalObject);
 }
 
 void DeferredPromise::reject(const JSC::PrivateName& privateName, RejectAsHandled rejectAsHandled)
@@ -209,13 +213,6 @@ void rejectPromiseWithExceptionIfAny(JSC::JSGlobalObject& lexicalGlobalObject, J
     catchScope.clearException();
 
     DeferredPromise::create(globalObject, promise)->reject<IDLAny>(error);
-}
-
-Ref<DeferredPromise> createDeferredPromise(JSC::JSGlobalObject&, JSDOMWindow& domWindow)
-{
-    auto* promise = JSPromise::create(domWindow.vm(), domWindow.promiseStructure());
-    RELEASE_ASSERT(promise);
-    return DeferredPromise::create(domWindow, *promise);
 }
 
 JSC::EncodedJSValue createRejectedPromiseWithTypeError(JSC::JSGlobalObject& lexicalGlobalObject, const String& errorMessage, RejectedPromiseWithTypeErrorCause cause)
@@ -270,4 +267,28 @@ void fulfillPromiseWithArrayBuffer(Ref<DeferredPromise>&& promise, const void* d
     fulfillPromiseWithArrayBuffer(WTFMove(promise), ArrayBuffer::tryCreate(data, length).get());
 }
 
+bool DeferredPromise::handleTerminationExceptionIfNeeded(CatchScope& scope, JSDOMGlobalObject& lexicalGlobalObject)
+{
+    auto* exception = scope.exception();
+    VM& vm = scope.vm();
+
+    auto& scriptExecutionContext = *lexicalGlobalObject.scriptExecutionContext();
+    if (is<WorkerGlobalScope>(scriptExecutionContext)) {
+        auto& scriptController = *downcast<WorkerGlobalScope>(scriptExecutionContext).script();
+        bool terminatorCausedException = vm.isTerminationException(exception);
+        if (terminatorCausedException || scriptController.isTerminatingExecution()) {
+            scriptController.forbidExecution();
+            return true;
+        }
+    }
+    return false;
 }
+
+void DeferredPromise::handleUncaughtException(CatchScope& scope, JSDOMGlobalObject& lexicalGlobalObject)
+{
+    auto* exception = scope.exception();
+    handleTerminationExceptionIfNeeded(scope, lexicalGlobalObject);
+    reportException(&lexicalGlobalObject, exception);
+};
+
+} // namespace WebCore

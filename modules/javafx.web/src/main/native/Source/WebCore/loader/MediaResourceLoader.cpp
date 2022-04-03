@@ -112,6 +112,7 @@ RefPtr<PlatformMediaResource> MediaResourceLoader::requestResource(ResourceReque
         contentSecurityPolicyImposition,
         DefersLoadingPolicy::AllowDefersLoading,
         cachingPolicy };
+    loaderOptions.sameOriginDataURLFlag = SameOriginDataURLFlag::Set;
     loaderOptions.destination = m_destination;
     auto cachedRequest = createPotentialAccessControlRequest(WTFMove(request), WTFMove(loaderOptions), *m_document, m_crossOriginMode);
     if (m_element)
@@ -230,7 +231,7 @@ void MediaResource::dataSent(CachedResource& resource, unsigned long long bytesS
         m_client->dataSent(*this, bytesSent, totalBytesToBeSent);
 }
 
-void MediaResource::dataReceived(CachedResource& resource, const char* data, int dataLength)
+void MediaResource::dataReceived(CachedResource& resource, const uint8_t* data, int dataLength)
 {
     ASSERT_UNUSED(resource, &resource == m_resource);
 

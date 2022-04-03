@@ -54,7 +54,6 @@
 #include <JavaScriptCore/InspectorEnvironment.h>
 #include <JavaScriptCore/ScriptCallStackFactory.h>
 #include <wtf/HashMap.h>
-#include <wtf/Optional.h>
 #include <wtf/Seconds.h>
 #include <wtf/Stopwatch.h>
 #include <wtf/Vector.h>
@@ -65,14 +64,14 @@ namespace WebCore {
 
 using namespace Inspector;
 
-static Optional<double> protocolValueForSeconds(const Seconds& seconds)
+static std::optional<double> protocolValueForSeconds(const Seconds& seconds)
 {
     if (seconds == Seconds::infinity() || seconds == Seconds::nan())
-        return WTF::nullopt;
+        return std::nullopt;
     return seconds.milliseconds();
 }
 
-static Optional<Protocol::Animation::PlaybackDirection> protocolValueForPlaybackDirection(PlaybackDirection playbackDirection)
+static std::optional<Protocol::Animation::PlaybackDirection> protocolValueForPlaybackDirection(PlaybackDirection playbackDirection)
 {
     switch (playbackDirection) {
     case PlaybackDirection::Normal:
@@ -86,10 +85,10 @@ static Optional<Protocol::Animation::PlaybackDirection> protocolValueForPlayback
     }
 
     ASSERT_NOT_REACHED();
-    return WTF::nullopt;
+    return std::nullopt;
 }
 
-static Optional<Protocol::Animation::FillMode> protocolValueForFillMode(FillMode fillMode)
+static std::optional<Protocol::Animation::FillMode> protocolValueForFillMode(FillMode fillMode)
 {
     switch (fillMode) {
     case FillMode::None:
@@ -105,7 +104,7 @@ static Optional<Protocol::Animation::FillMode> protocolValueForFillMode(FillMode
     }
 
     ASSERT_NOT_REACHED();
-    return WTF::nullopt;
+    return std::nullopt;
 }
 
 static Ref<JSON::ArrayOf<Protocol::Animation::Keyframe>> buildObjectForKeyframes(KeyframeEffect& keyframeEffect)
@@ -378,12 +377,12 @@ void InspectorAnimationAgent::willApplyKeyframeEffect(Element& target, KeyframeE
     if (!is<DeclarativeAnimation>(animation))
         return;
 
-    auto ensureResult = m_trackedDeclarativeAnimationData.ensure(downcast<DeclarativeAnimation>(animation), [&] () -> TrackedDeclarativeAnimationData {
-        return { makeString("animation:"_s, IdentifiersFactory::createIdentifier()), computedTiming };
+    auto ensureResult = m_trackedDeclarativeAnimationData.ensure(downcast<DeclarativeAnimation>(animation), [&] () -> UniqueRef<TrackedDeclarativeAnimationData> {
+        return makeUniqueRef<TrackedDeclarativeAnimationData>(TrackedDeclarativeAnimationData { makeString("animation:"_s, IdentifiersFactory::createIdentifier()), computedTiming });
     });
-    auto& trackingData = ensureResult.iterator->value;
+    auto& trackingData = ensureResult.iterator->value.get();
 
-    Optional<Protocol::Animation::AnimationState> animationAnimationState;
+    std::optional<Protocol::Animation::AnimationState> animationAnimationState;
 
     if ((ensureResult.isNewEntry || !isDelayed(trackingData.lastComputedTiming)) && isDelayed(computedTiming))
         animationAnimationState = Protocol::Animation::AnimationState::Delayed;
@@ -600,19 +599,17 @@ void InspectorAnimationAgent::reset()
 
 void InspectorAnimationAgent::stopTrackingDeclarativeAnimation(DeclarativeAnimation& animation)
 {
-    auto it = m_trackedDeclarativeAnimationData.find(&animation);
-    if (it == m_trackedDeclarativeAnimationData.end())
+    auto data = m_trackedDeclarativeAnimationData.take(&animation);
+    if (!data)
         return;
 
-    if (it->value.lastComputedTiming.phase != AnimationEffectPhase::After && it->value.lastComputedTiming.phase != AnimationEffectPhase::Idle) {
+    if (data->lastComputedTiming.phase != AnimationEffectPhase::After && data->lastComputedTiming.phase != AnimationEffectPhase::Idle) {
         auto event = Protocol::Animation::TrackingUpdate::create()
-            .setTrackingAnimationId(it->value.trackingAnimationId)
+            .setTrackingAnimationId(data->trackingAnimationId)
             .setAnimationState(Protocol::Animation::AnimationState::Canceled)
             .release();
         m_frontendDispatcher->trackingUpdate(m_environment.executionStopwatch().elapsedTime().seconds(), WTFMove(event));
     }
-
-    m_trackedDeclarativeAnimationData.remove(it);
 }
 
 } // namespace WebCore

@@ -27,7 +27,7 @@
 
 #include "LayoutIntegrationInlineContent.h"
 #include "LayoutIntegrationRunIteratorLegacyPath.h"
-#include "RootInlineBox.h"
+#include "LegacyRootInlineBox.h"
 
 namespace WebCore {
 
@@ -35,7 +35,7 @@ namespace LayoutIntegration {
 
 class LineIteratorLegacyPath {
 public:
-    LineIteratorLegacyPath(const RootInlineBox* rootInlineBox)
+    LineIteratorLegacyPath(const LegacyRootInlineBox* rootInlineBox)
         : m_rootInlineBox(rootInlineBox)
     {
     }
@@ -47,7 +47,7 @@ public:
     LayoutUnit top() const { return m_rootInlineBox->lineTop(); }
     LayoutUnit bottom() const { return m_rootInlineBox->lineBottom(); }
     LayoutUnit selectionTop() const { return m_rootInlineBox->selectionTop(); }
-    LayoutUnit selectionTopForHitTesting() const { return m_rootInlineBox->selectionTop(RootInlineBox::ForHitTesting::Yes); }
+    LayoutUnit selectionTopForHitTesting() const { return m_rootInlineBox->selectionTop(LegacyRootInlineBox::ForHitTesting::Yes); }
     LayoutUnit selectionBottom() const { return m_rootInlineBox->selectionBottom(); }
     LayoutUnit lineBoxTop() const { return m_rootInlineBox->lineBoxTop(); }
     LayoutUnit lineBoxBottom() const { return m_rootInlineBox->lineBoxBottom(); }
@@ -57,9 +57,10 @@ public:
     float contentLogicalRight() const { return m_rootInlineBox->logicalRight(); }
     float logicalHeight() const { return m_rootInlineBox->logicalHeight(); }
     bool isHorizontal() const { return m_rootInlineBox->isHorizontal(); }
+    FontBaseline baselineType() const { return m_rootInlineBox->baselineType(); }
 
     const RenderBlockFlow& containingBlock() const { return m_rootInlineBox->blockFlow(); }
-    const RootInlineBox* legacyRootInlineBox() const { return m_rootInlineBox; }
+    const LegacyRootInlineBox* legacyRootInlineBox() const { return m_rootInlineBox; }
 
     void traverseNext()
     {
@@ -74,7 +75,6 @@ public:
     bool operator==(const LineIteratorLegacyPath& other) const { return m_rootInlineBox == other.m_rootInlineBox; }
 
     bool atEnd() const { return !m_rootInlineBox; }
-    void setAtEnd() { m_rootInlineBox = nullptr; }
 
     RunIteratorLegacyPath firstRun() const
     {
@@ -98,7 +98,7 @@ public:
     }
 
 private:
-    const RootInlineBox* m_rootInlineBox;
+    const LegacyRootInlineBox* m_rootInlineBox;
 };
 
 }

@@ -442,36 +442,34 @@ static void normalizeJsonWebKey(JsonWebKey& webKey)
     webKey.usages = webKey.key_ops ? toCryptoKeyUsageBitmap(webKey.key_ops.value()) : 0;
 }
 
-// FIXME: This returns an Optional<KeyData> and takes a promise, rather than returning an
+// FIXME: This returns an std::optional<KeyData> and takes a promise, rather than returning an
 // ExceptionOr<KeyData> and letting the caller handle the promise, to work around an issue where
 // Variant types (which KeyData is) in ExceptionOr<> cause compile issues on some platforms. This
 // should be resolved by adopting a standards compliant std::variant (see https://webkit.org/b/175583)
-static Optional<KeyData> toKeyData(SubtleCrypto::KeyFormat format, SubtleCrypto::KeyDataVariant&& keyDataVariant, Ref<DeferredPromise>& promise)
+static std::optional<KeyData> toKeyData(SubtleCrypto::KeyFormat format, SubtleCrypto::KeyDataVariant&& keyDataVariant, Ref<DeferredPromise>& promise)
 {
     switch (format) {
     case SubtleCrypto::KeyFormat::Spki:
     case SubtleCrypto::KeyFormat::Pkcs8:
     case SubtleCrypto::KeyFormat::Raw:
         return WTF::switchOn(keyDataVariant,
-            [&promise] (JsonWebKey&) -> Optional<KeyData> {
+            [&promise] (JsonWebKey&) -> std::optional<KeyData> {
                 promise->reject(Exception { TypeError });
-                return WTF::nullopt;
+                return std::nullopt;
             },
-            [] (auto& bufferSource) -> Optional<KeyData> {
-                Vector<uint8_t> result;
-                result.append(static_cast<const uint8_t*>(bufferSource->data()), bufferSource->byteLength());
-                return KeyData { result };
+            [] (auto& bufferSource) -> std::optional<KeyData> {
+                return KeyData { Vector { static_cast<const uint8_t*>(bufferSource->data()), bufferSource->byteLength() } };
             }
         );
     case SubtleCrypto::KeyFormat::Jwk:
         return WTF::switchOn(keyDataVariant,
-            [] (JsonWebKey& webKey) -> Optional<KeyData> {
+            [] (JsonWebKey& webKey) -> std::optional<KeyData> {
                 normalizeJsonWebKey(webKey);
                 return KeyData { webKey };
             },
-            [&promise] (auto&) -> Optional<KeyData> {
+            [&promise] (auto&) -> std::optional<KeyData> {
                 promise->reject(Exception { TypeError });
-                return WTF::nullopt;
+                return std::nullopt;
             }
         );
     }
@@ -481,9 +479,7 @@ static Optional<KeyData> toKeyData(SubtleCrypto::KeyFormat format, SubtleCrypto:
 
 static Vector<uint8_t> copyToVector(BufferSource&& data)
 {
-    Vector<uint8_t> dataVector;
-    dataVector.append(data.data(), data.length());
-    return dataVector;
+    return { data.data(), data.length() };
 }
 
 static bool isSupportedExportKey(CryptoAlgorithmIdentifier identifier)
@@ -534,10 +530,18 @@ static std::unique_ptr<CryptoAlgorithmParameters> crossThreadCopyImportParams(co
     }
 }
 
+void SubtleCrypto::addAuthenticatedEncryptionWarningIfNecessary(CryptoAlgorithmIdentifier algorithmIdentifier)
+{
+    if (algorithmIdentifier == CryptoAlgorithmIdentifier::AES_CBC || algorithmIdentifier == CryptoAlgorithmIdentifier::AES_CTR)
+        scriptExecutionContext()->addConsoleMessage(MessageSource::Security, MessageLevel::Warning, "AES-CBC and AES-CTR do not provide authentication by default, and implementing it manually can result in minor, but serious mistakes. We recommended using authenticated encryption like AES-GCM to protect against chosen-ciphertext attacks.");
+}
+
 // MARK: - Exposed functions.
 
 void SubtleCrypto::encrypt(JSC::JSGlobalObject& state, AlgorithmIdentifier&& algorithmIdentifier, CryptoKey& key, BufferSource&& dataBufferSource, Ref<DeferredPromise>&& promise)
 {
+    addAuthenticatedEncryptionWarningIfNecessary(key.algorithmIdentifier());
+
     auto paramsOrException = normalizeCryptoAlgorithmParameters(state, WTFMove(algorithmIdentifier), Operations::Encrypt);
     if (paramsOrException.hasException()) {
         promise->reject(paramsOrException.releaseException());
@@ -576,6 +580,8 @@ void SubtleCrypto::encrypt(JSC::JSGlobalObject& state, AlgorithmIdentifier&& alg
 
 void SubtleCrypto::decrypt(JSC::JSGlobalObject& state, AlgorithmIdentifier&& algorithmIdentifier, CryptoKey& key, BufferSource&& dataBufferSource, Ref<DeferredPromise>&& promise)
 {
+    addAuthenticatedEncryptionWarningIfNecessary(key.algorithmIdentifier());
+
     auto paramsOrException = normalizeCryptoAlgorithmParameters(state, WTFMove(algorithmIdentifier), Operations::Decrypt);
     if (paramsOrException.hasException()) {
         promise->reject(paramsOrException.releaseException());
@@ -1068,8 +1074,6 @@ void SubtleCrypto::unwrapKey(JSC::JSGlobalObject& state, KeyFormat format, Buffe
 
     auto unwrapParamsOrException = normalizeCryptoAlgorithmParameters(state, unwrapAlgorithmIdentifier, Operations::UnwrapKey);
     if (unwrapParamsOrException.hasException()) {
-        ASSERT(unwrapParamsOrException.exception().code() != ExistingExceptionError);
-
         unwrapParamsOrException = normalizeCryptoAlgorithmParameters(state, unwrapAlgorithmIdentifier, Operations::Decrypt);
         if (unwrapParamsOrException.hasException()) {
             promise->reject(unwrapParamsOrException.releaseException());
@@ -1129,7 +1133,7 @@ void SubtleCrypto::unwrapKey(JSC::JSGlobalObject& state, KeyFormat format, Buffe
                     auto& vm = state.vm();
                     auto scope = DECLARE_THROW_SCOPE(vm);
 
-                    String jwkString(reinterpret_cast_ptr<const char*>(bytes.data()), bytes.size());
+                    String jwkString(bytes.data(), bytes.size());
                     JSLockHolder locker(vm);
                     auto jwkObject = JSONParse(&state, jwkString);
                     if (!jwkObject) {

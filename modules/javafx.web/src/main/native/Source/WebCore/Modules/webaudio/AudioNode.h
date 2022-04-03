@@ -42,7 +42,6 @@ struct AudioNodeOptions;
 class AudioNodeOutput;
 class AudioParam;
 class BaseAudioContext;
-class WebKitAudioContext;
 
 // An AudioNode is the basic building block for handling audio within an AudioContext.
 // It may be an audio source, an intermediate processing module, or an audio destination.
@@ -87,22 +86,19 @@ public:
     AudioNode(BaseAudioContext&, NodeType);
     virtual ~AudioNode();
 
-    BaseAudioContext& context() { return m_context.get(); }
-    const BaseAudioContext& context() const { return m_context.get(); }
-
-    Variant<RefPtr<BaseAudioContext>, RefPtr<WebKitAudioContext>> contextForBindings() const;
+    BaseAudioContext& context();
+    const BaseAudioContext& context() const;
 
     NodeType nodeType() const { return m_nodeType; }
 
     // Can be called from main thread or context's audio thread.
-    void ref();
-    void deref();
+    virtual void ref();
+    virtual void deref();
     void incrementConnectionCount();
     void decrementConnectionCount();
 
     // Can be called from main thread or context's audio thread.  It must be called while the context's graph lock is held.
     void decrementConnectionCountWithLock();
-    virtual void didBecomeMarkedForDeletion() { }
 
     // The AudioNodeInput(s) (if any) will already have their input data available when process() is called.
     // Subclasses will take this input data and put the results in the AudioBus(s) of its AudioNodeOutput(s) (if any).
@@ -191,6 +187,14 @@ public:
     ChannelInterpretation channelInterpretation() const { return m_channelInterpretation; }
     virtual ExceptionOr<void> setChannelInterpretation(ChannelInterpretation);
 
+    bool isFinishedSourceNode() const { return m_isFinishedSourceNode; }
+    void setIsFinishedSourceNode() { m_isFinishedSourceNode = true; }
+
+    // Flag indicating the node is in the context's m_tailProcessingNodes or m_finishTailProcessingNodes.
+    // We rely on this flag to avoid unnecessary linear searches in those vectors.
+    bool isTailProcessing() const { return m_isTailProcessing; }
+    void setIsTailProcessing(bool isTailProcessing) { m_isTailProcessing = isTailProcessing; }
+
 protected:
     // Inputs and outputs must be created before the AudioNode is initialized.
     void addInput();
@@ -227,13 +231,17 @@ protected:
     virtual void updatePullStatus() { }
 
 private:
+    using WeakOrStrongContext = Variant<Ref<BaseAudioContext>, WeakPtr<BaseAudioContext>>;
+    static WeakOrStrongContext toWeakOrStrongContext(BaseAudioContext&, NodeType);
+
     // EventTarget
     EventTargetInterface eventTargetInterface() const override;
     ScriptExecutionContext* scriptExecutionContext() const final;
 
     volatile bool m_isInitialized { false };
     NodeType m_nodeType;
-    Ref<BaseAudioContext> m_context;
+
+    WeakOrStrongContext m_context;
 
     Vector<std::unique_ptr<AudioNodeInput>> m_inputs;
     Vector<std::unique_ptr<AudioNodeOutput>> m_outputs;
@@ -248,6 +256,8 @@ private:
 
     bool m_isMarkedForDeletion { false };
     bool m_isDisabled { false };
+    bool m_isFinishedSourceNode { false };
+    bool m_isTailProcessing { false };
 
 #if DEBUG_AUDIONODE_REFERENCES
     static bool s_isNodeCountInitialized;

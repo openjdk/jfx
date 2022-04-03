@@ -136,9 +136,16 @@ if (COMPILER_IS_GCC_OR_CLANG)
         WEBKIT_PREPEND_GLOBAL_CXX_FLAGS(-Wno-attributes)
     endif ()
 
+    # Since GCC 11, these warnings produce too many false positives to be useful. We'll rely on
+    # developers who build with Clang to notice these warnings.
+    if (CMAKE_CXX_COMPILER_ID MATCHES "GNU" AND ${CMAKE_CXX_COMPILER_VERSION} VERSION_GREATER_EQUAL "11.0")
+        WEBKIT_PREPEND_GLOBAL_CXX_FLAGS(-Wno-array-bounds)
+        WEBKIT_PREPEND_GLOBAL_CXX_FLAGS(-Wno-nonnull)
+    endif ()
+
     # -Wexpansion-to-defined produces false positives with GCC but not Clang
     # https://bugs.webkit.org/show_bug.cgi?id=167643#c13
-    if (CMAKE_COMPILER_IS_GNUCXX)
+    if (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
         WEBKIT_PREPEND_GLOBAL_COMPILER_FLAGS(-Wno-expansion-to-defined)
     endif ()
 
@@ -201,9 +208,10 @@ if (COMPILER_IS_GCC_OR_CLANG)
                 set(SANITIZER_LINK_FLAGS "-fsanitize=address ${SANITIZER_LINK_FLAGS}")
 
             elseif (${SANITIZER} MATCHES "undefined")
-                WEBKIT_PREPEND_GLOBAL_COMPILER_FLAGS("-fno-omit-frame-pointer -fno-optimize-sibling-calls")
-                # -fsanitize=vptr is incompatible with -fno-rtti
-                set(SANITIZER_COMPILER_FLAGS "-fsanitize=undefined -frtti ${SANITIZER_COMPILER_FLAGS}")
+                # Please keep these options synchronized with Tools/sanitizer/ubsan.xcconfig
+                WEBKIT_PREPEND_GLOBAL_COMPILER_FLAGS("-fno-omit-frame-pointer -fno-delete-null-pointer-checks -fno-optimize-sibling-calls")
+                # -fsanitize=vptr is disabled because incompatible with -fno-rtti
+                set(SANITIZER_COMPILER_FLAGS "-fsanitize=undefined -fno-sanitize=vptr ${SANITIZER_COMPILER_FLAGS}")
                 set(SANITIZER_LINK_FLAGS "-fsanitize=undefined ${SANITIZER_LINK_FLAGS}")
 
             elseif (${SANITIZER} MATCHES "thread" AND NOT MSVC)

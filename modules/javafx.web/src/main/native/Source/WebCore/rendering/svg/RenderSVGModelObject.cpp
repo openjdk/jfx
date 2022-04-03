@@ -47,17 +47,17 @@ RenderSVGModelObject::RenderSVGModelObject(SVGElement& element, RenderStyle&& st
 {
 }
 
-LayoutRect RenderSVGModelObject::clippedOverflowRectForRepaint(const RenderLayerModelObject* repaintContainer) const
+LayoutRect RenderSVGModelObject::clippedOverflowRect(const RenderLayerModelObject* repaintContainer, VisibleRectContext) const
 {
     return SVGRenderSupport::clippedOverflowRectForRepaint(*this, repaintContainer);
 }
 
-Optional<FloatRect> RenderSVGModelObject::computeFloatVisibleRectInContainer(const FloatRect& rect, const RenderLayerModelObject* container, VisibleRectContext context) const
+std::optional<FloatRect> RenderSVGModelObject::computeFloatVisibleRectInContainer(const FloatRect& rect, const RenderLayerModelObject* container, VisibleRectContext context) const
 {
     return SVGRenderSupport::computeFloatVisibleRectInContainer(*this, rect, container, context);
 }
 
-void RenderSVGModelObject::mapLocalToContainer(const RenderLayerModelObject* ancestorContainer, TransformState& transformState, MapCoordinatesFlags, bool* wasFixed) const
+void RenderSVGModelObject::mapLocalToContainer(const RenderLayerModelObject* ancestorContainer, TransformState& transformState, OptionSet<MapCoordinatesMode>, bool* wasFixed) const
 {
     SVGRenderSupport::mapLocalToContainer(*this, ancestorContainer, transformState, wasFixed);
 }
@@ -101,7 +101,7 @@ void RenderSVGModelObject::styleDidChange(StyleDifference diff, const RenderStyl
 {
     if (diff == StyleDifference::Layout) {
         setNeedsBoundariesUpdate();
-        if (style().hasTransform())
+        if (style().hasTransform() || (oldStyle && oldStyle->hasTransform()))
             setNeedsTransformUpdate();
     }
     RenderElement::styleDidChange(diff, oldStyle);

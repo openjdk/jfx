@@ -25,8 +25,6 @@
 
 #pragma once
 
-#if ENABLE(INDEXED_DATABASE)
-
 #include "IDBServer.h"
 #include "UniqueIDBDatabase.h"
 #include <wtf/HashMap.h>
@@ -46,7 +44,7 @@ class ServerOpenDBRequest;
 class UniqueIDBDatabase;
 class UniqueIDBDatabaseTransaction;
 
-class UniqueIDBDatabaseConnection : public RefCounted<UniqueIDBDatabaseConnection>, public Identified<UniqueIDBDatabaseConnection> {
+class UniqueIDBDatabaseConnection : public RefCounted<UniqueIDBDatabaseConnection>, public Identified<UniqueIDBDatabaseConnection>, public CanMakeWeakPtr<UniqueIDBDatabaseConnection> {
 public:
     static Ref<UniqueIDBDatabaseConnection> create(UniqueIDBDatabase&, ServerOpenDBRequest&);
 
@@ -101,5 +99,3 @@ private:
 
 } // namespace IDBServer
 } // namespace WebCore
-
-#endif // ENABLE(INDEXED_DATABASE)

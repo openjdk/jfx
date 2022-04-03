@@ -34,6 +34,7 @@ import javafx.scene.shape.Shape3D;
 import javafx.scene.shape.Sphere;
 
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import com.sun.javafx.scene.NodeHelper;
@@ -78,6 +79,7 @@ public class PredefinedMeshManagerTest {
         testShapeAddition(box1again, 2);
     }
 
+    @Ignore("JDK-8282449")
     @Test
     public void sphereCacheTest() {
         Sphere sphere1 = new Sphere(10, 1000);
@@ -93,6 +95,7 @@ public class PredefinedMeshManagerTest {
         testShapeAddition(sphere1again, 2);
     }
 
+    @Ignore("JDK-8282449")
     @Test
     public void cylinderCacheTest() {
         Cylinder cylinder1 = new Cylinder(10, 20, 1000);

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2020-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -69,6 +69,9 @@ struct Config {
     // as a global singleton.
 
     bool isPermanentlyFrozen;
+#if PLATFORM(COCOA)
+    bool disableForwardingVPrintfStdErrToOSLog;
+#endif
 
 #if USE(PTHREADS)
     bool isUserSpecifiedThreadSuspendResumeSignalConfigured;
@@ -95,9 +98,13 @@ constexpr size_t alignmentOfWTFConfig = std::alignment_of<WTF::Config>::value;
 static_assert(Gigacage::reservedBytesForGigacageConfig + sizeof(WTF::Config) <= ConfigSizeToProtect);
 static_assert(roundUpToMultipleOf<alignmentOfWTFConfig>(startOffsetOfWTFConfig) == startOffsetOfWTFConfig);
 
+WTF_EXPORT_PRIVATE void setPermissionsOfConfigPage();
+
 #define g_wtfConfig (*bitwise_cast<WTF::Config*>(&WebConfig::g_config[WTF::startSlotOfWTFConfig]))
 
 #else // not ENABLE(UNIFIED_AND_FREEZABLE_CONFIG_RECORD)
+
+inline void setPermissionsOfConfigPage() { }
 
 extern "C" WTF_EXPORT_PRIVATE Config g_wtfConfig;
 

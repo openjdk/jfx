@@ -27,12 +27,26 @@ div#image-overlay {
     position: relative;
     overflow: hidden;
     color: transparent;
+    text-shadow: none;
     text-align: center;
     white-space: nowrap;
     line-height: 100%;
+    font-family: system-ui;
+    font-size: 1024px; /* This large font size is chosen to minimize gaps when painting selection quads. */
 }
 
-div.image-overlay-text {
+div.image-overlay-line, .image-overlay-text {
     position: absolute;
     overflow: hidden;
+}
+
+.image-overlay-text::selection {
+    color: transparent;
+    background-color: highlight;
+}
+
+div.image-overlay-data-detector-result {
+    position: absolute;
+    -webkit-user-select: none;
+    pointer-events: none;
 }

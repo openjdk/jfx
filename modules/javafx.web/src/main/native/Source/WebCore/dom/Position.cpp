@@ -35,12 +35,11 @@
 #include "HTMLNames.h"
 #include "HTMLParserIdioms.h"
 #include "HTMLTableElement.h"
-#include "InlineElementBox.h"
 #include "InlineIterator.h"
 #include "InlineRunAndOffset.h"
-#include "InlineTextBox.h"
 #include "LayoutIntegrationLineIterator.h"
 #include "LayoutIntegrationRunIterator.h"
+#include "LegacyInlineTextBox.h"
 #include "Logging.h"
 #include "NodeTraversal.h"
 #include "PositionIterator.h"
@@ -195,6 +194,16 @@ Text* Position::containerText() const
     }
     ASSERT_NOT_REACHED();
     return nullptr;
+}
+
+Element* Position::containerOrParentElement() const
+{
+    auto* container = containerNode();
+    if (!container)
+        return nullptr;
+    if (is<Element>(container))
+        return downcast<Element>(container);
+    return container->parentElement();
 }
 
 int Position::computeOffsetInContainerNode() const
@@ -958,6 +967,7 @@ Node* Position::rootUserSelectAllForNode(Node* node)
     return candidateRoot;
 }
 
+// This function should be kept in sync with PositionIterator::isCandidate().
 bool Position::isCandidate() const
 {
     if (isNull())
@@ -988,7 +998,7 @@ bool Position::isCandidate() const
         return false;
 
     if (is<RenderBlockFlow>(*renderer) || is<RenderGrid>(*renderer) || is<RenderFlexibleBox>(*renderer)) {
-        RenderBlock& block = downcast<RenderBlock>(*renderer);
+        auto& block = downcast<RenderBlock>(*renderer);
         if (block.logicalHeight() || is<HTMLBodyElement>(*m_anchorNode) || m_anchorNode->isRootEditableElement()) {
             if (!Position::hasRenderedNonAnonymousDescendantsWithHeight(block))
                 return atFirstEditingPositionForNode() && !Position::nodeIsUserSelectNone(deprecatedNode());
@@ -1592,14 +1602,15 @@ Position makeDeprecatedLegacyPosition(const BoundaryPoint& point)
     return makeDeprecatedLegacyPosition(point.container.ptr(), point.offset);
 }
 
-Optional<BoundaryPoint> makeBoundaryPoint(const Position& position)
+std::optional<BoundaryPoint> makeBoundaryPoint(const Position& position)
 {
-    if (position.isNull())
-        return WTF::nullopt;
-    return BoundaryPoint { *position.containerNode(), static_cast<unsigned>(position.computeOffsetInContainerNode()) };
+    auto container = makeRefPtr(position.containerNode());
+    if (!container)
+        return std::nullopt;
+    return BoundaryPoint { container.releaseNonNull(), static_cast<unsigned>(position.computeOffsetInContainerNode()) };
 }
 
-PartialOrdering documentOrder(const Position& a, const Position& b)
+template<TreeType treeType> PartialOrdering treeOrder(const Position& a, const Position& b)
 {
     if (a.isNull() || b.isNull())
         return a.isNull() && b.isNull() ? PartialOrdering::equivalent : PartialOrdering::unordered;
@@ -1608,7 +1619,7 @@ PartialOrdering documentOrder(const Position& a, const Position& b)
     auto bContainer = b.containerNode();
 
     if (!aContainer || !bContainer) {
-        if (!commonInclusiveAncestor<ComposedTree>(*a.anchorNode(), *b.anchorNode()))
+        if (!commonInclusiveAncestor<treeType>(*a.anchorNode(), *b.anchorNode()))
             return PartialOrdering::unordered;
         if (!aContainer && !bContainer && a.anchorType() == b.anchorType())
             return PartialOrdering::equivalent;
@@ -1619,8 +1630,16 @@ PartialOrdering documentOrder(const Position& a, const Position& b)
 
     // FIXME: Avoid computing node offset for cases where we don't need to.
 
-    return treeOrder<ComposedTree>(*makeBoundaryPoint(a), *makeBoundaryPoint(b));
+    return treeOrder<treeType>(*makeBoundaryPoint(a), *makeBoundaryPoint(b));
 }
+
+PartialOrdering documentOrder(const Position& a, const Position& b)
+{
+    return treeOrder<ComposedTree>(a, b);
+}
+
+template PartialOrdering treeOrder<ComposedTree>(const Position&, const Position&);
+template PartialOrdering treeOrder<ShadowIncludingTree>(const Position&, const Position&);
 
 } // namespace WebCore
 

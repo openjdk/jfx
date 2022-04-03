@@ -31,10 +31,9 @@
 #include "NFA.h"
 #include <unicode/utypes.h>
 #include <wtf/ASCIICType.h>
-#include <wtf/HashMap.h>
+#include <wtf/Hasher.h>
 #include <wtf/Vector.h>
 #include <wtf/text/StringBuilder.h>
-#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
@@ -168,11 +167,12 @@ private:
 
         unsigned hash() const
         {
-            return WTF::pairIntHash(WTF::pairIntHash(WTF::intHash(m_characters[0]), WTF::intHash(m_characters[1])), m_inverted);
+            return computeHash(m_inverted, m_characters);
         }
+
     private:
         bool m_inverted { false };
-        uint64_t m_characters[2] { 0, 0 };
+        std::array<uint64_t, 2> m_characters { 0, 0 };
     };
 
     struct Group {
@@ -237,11 +237,8 @@ inline String Term::toString() const
             if (m_atomData.characterSet.get(c)) {
                 if (isASCIIPrintable(c) && !isASCIISpace(c))
                     builder.append(c);
-                else {
-                    builder.append('\\');
-                    builder.append('u');
-                    builder.appendNumber(c);
-                }
+                else
+                    builder.append("\\u", c);
             }
         }
         builder.append(']');

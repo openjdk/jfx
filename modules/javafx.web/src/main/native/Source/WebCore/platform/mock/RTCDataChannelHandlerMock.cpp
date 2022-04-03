@@ -40,7 +40,7 @@ RTCDataChannelHandlerMock::RTCDataChannelHandlerMock(const String& label, const 
 {
 }
 
-void RTCDataChannelHandlerMock::setClient(RTCDataChannelHandlerClient& client)
+void RTCDataChannelHandlerMock::setClient(RTCDataChannelHandlerClient& client, ScriptExecutionContextIdentifier)
 {
     ASSERT(!m_client);
     m_client = &client;
@@ -54,7 +54,7 @@ bool RTCDataChannelHandlerMock::sendStringData(const CString& string)
     return true;
 }
 
-bool RTCDataChannelHandlerMock::sendRawData(const char* data, size_t size)
+bool RTCDataChannelHandlerMock::sendRawData(const uint8_t* data, size_t size)
 {
     m_client->didReceiveRawData(data, size);
     return true;
