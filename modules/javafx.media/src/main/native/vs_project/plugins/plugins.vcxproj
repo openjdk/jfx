@@ -44,6 +44,9 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\gstreamer\plugins\progressbuffer\cache.h" />
+    <ClInclude Include="..\..\gstreamer\plugins\progressbuffer\hlsprogressbuffer.h" />
+    <ClInclude Include="..\..\gstreamer\plugins\progressbuffer\progressbuffer.h" />
     <ClInclude Include="..\..\gstreamer\plugins\dshowwrapper\Allocator.h" />
     <ClInclude Include="..\..\gstreamer\plugins\dshowwrapper\dshowwrapper.h" />
     <ClInclude Include="..\..\gstreamer\plugins\dshowwrapper\Sink.h" />
