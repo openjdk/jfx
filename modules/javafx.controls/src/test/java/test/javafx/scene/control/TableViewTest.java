@@ -5669,4 +5669,87 @@ public class TableViewTest {
         sl.dispose();
     }
 
+    @Test
+    public void test_ChangeToStringKeyboardMultipleSelectionCellMode() {
+        final Thread.UncaughtExceptionHandler exceptionHandler = Thread.currentThread().getUncaughtExceptionHandler();
+        Thread.currentThread().setUncaughtExceptionHandler((t, e) -> fail("We don't expect any exceptions in this test!"));
+
+        TableColumn<Person, String> firstNameCol = new TableColumn<>("First Name");
+        firstNameCol.setCellValueFactory(new PropertyValueFactory<>("firstName"));
+
+        TableColumn<Person, String> lastNameCol = new TableColumn<>("Last Name");
+        lastNameCol.setCellValueFactory(new PropertyValueFactory<>("lastName"));
+
+        TableView<Person> table = new TableView<>();
+        table.setItems(personTestData);
+        table.getColumns().addAll(firstNameCol, lastNameCol);
+
+        sm = table.getSelectionModel();
+        sm.setCellSelectionEnabled(true);
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+
+        // Call change::toString
+        table.getSelectionModel().getSelectedItems().addListener((ListChangeListener<Person>) Object::toString);
+
+        StageLoader sl = new StageLoader(table);
+
+        KeyEventFirer keyboard = new KeyEventFirer(table);
+
+        assertEquals(0, sm.getSelectedItems().size());
+
+        sm.select(0, firstNameCol);
+        assertEquals(1, sm.getSelectedCells().size());
+        assertEquals(1, sm.getSelectedItems().size());
+
+        keyboard.doKeyPress(KeyCode.RIGHT, KeyModifier.SHIFT);
+        assertEquals(2, sm.getSelectedCells().size());
+        assertEquals(1, sm.getSelectedItems().size());
+
+        sm.clearSelection();
+
+        sl.dispose();
+
+        // reset the exception handler
+        Thread.currentThread().setUncaughtExceptionHandler(exceptionHandler);
+    }
+
+    @Test
+    public void test_ChangeToStringMouseMultipleSelectionCellMode() {
+        final Thread.UncaughtExceptionHandler exceptionHandler = Thread.currentThread().getUncaughtExceptionHandler();
+        Thread.currentThread().setUncaughtExceptionHandler((t, e) -> fail("We don't expect any exceptions in this test!"));
+
+        TableColumn<Person, String> firstNameCol = new TableColumn<>("First Name");
+        firstNameCol.setCellValueFactory(new PropertyValueFactory<>("firstName"));
+
+        TableColumn<Person, String> lastNameCol = new TableColumn<>("Last Name");
+        lastNameCol.setCellValueFactory(new PropertyValueFactory<>("lastName"));
+
+        TableView<Person> table = new TableView<>();
+        table.setItems(personTestData);
+        table.getColumns().addAll(firstNameCol, lastNameCol);
+
+        sm = table.getSelectionModel();
+        sm.setCellSelectionEnabled(true);
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+
+        // Call change::toString
+        table.getSelectionModel().getSelectedItems().addListener((ListChangeListener<Person>) Object::toString);
+
+        assertEquals(0, sm.getSelectedItems().size());
+
+        sm.select(0, firstNameCol);
+        assertTrue(sm.isSelected(0, firstNameCol));
+        assertEquals(1, sm.getSelectedCells().size());
+        assertEquals(1, sm.getSelectedItems().size());
+
+        TableCell<Person, String> cell = (TableCell<Person, String>) VirtualFlowTestUtils.getCell(table, 0, 1);
+        new MouseEventFirer(cell).fireMousePressAndRelease(KeyModifier.getShortcutKey());
+        assertTrue(sm.isSelected(0, firstNameCol));
+        assertTrue(sm.isSelected(0, lastNameCol));
+        assertEquals(2, sm.getSelectedCells().size());
+        assertEquals(1, sm.getSelectedItems().size());
+
+        // reset the exception handler
+        Thread.currentThread().setUncaughtExceptionHandler(exceptionHandler);
+    }
 }
