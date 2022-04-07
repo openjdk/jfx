@@ -343,6 +343,9 @@ void GraphicsContextJava::drawLinesForText(const FloatPoint& origin, float thick
     if (paintingDisabled())
         return;
 
+    if (widths.size() == 0)
+        return;
+
     // This is a workaround for http://bugs.webkit.org/show_bug.cgi?id=15659
     StrokeStyle savedStrokeStyle = strokeStyle();
     setStrokeStyle(stroke);
@@ -350,13 +353,10 @@ void GraphicsContextJava::drawLinesForText(const FloatPoint& origin, float thick
     setStrokeThickness(thickness);
 
     FloatPoint startPoint = origin + FloatPoint(0, thickness / 2);
-    for (const auto& width : widths) {
-        FloatPoint endPoint = startPoint + FloatPoint(width, 0);
-        drawLine(
-            IntPoint(startPoint.x(), startPoint.y()),
-            IntPoint(endPoint.x(), endPoint.y()));
-        startPoint = endPoint;
-    }
+    FloatPoint endPoint = startPoint + FloatPoint(widths.last(), 0);
+    drawLine(
+        IntPoint(startPoint.x(), startPoint.y()),
+        IntPoint(endPoint.x(), endPoint.y()));
 
     setStrokeStyle(savedStrokeStyle);
     setStrokeThickness(savedStrokeThickness);
