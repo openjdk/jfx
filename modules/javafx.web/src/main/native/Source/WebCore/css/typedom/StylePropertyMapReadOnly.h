@@ -27,24 +27,24 @@
 
 #if ENABLE(CSS_TYPED_OM)
 
+#include "CSSValue.h"
 #include <wtf/RefCounted.h>
 #include <wtf/UniqueRef.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
-class CSSValue;
 class Document;
 class Element;
 class StyledElement;
-class TypedOMCSSStyleValue;
+class CSSStyleValue;
 
 class StylePropertyMapReadOnly : public RefCounted<StylePropertyMapReadOnly> {
 public:
     virtual ~StylePropertyMapReadOnly() = default;
-    virtual RefPtr<TypedOMCSSStyleValue> get(const String& property) const = 0;
+    virtual RefPtr<CSSStyleValue> get(const String& property) const = 0;
 
-    static RefPtr<TypedOMCSSStyleValue> reifyValue(CSSValue*, Document&, Element* = nullptr);
-    static RefPtr<TypedOMCSSStyleValue> customPropertyValueOrDefault(const String& name, Document&, CSSValue*, Element* = nullptr);
+    static RefPtr<CSSStyleValue> reifyValue(CSSValue*, Document&, Element* = nullptr);
+    static RefPtr<CSSStyleValue> customPropertyValueOrDefault(const String& name, Document&, CSSValue*, Element* = nullptr);
 };
 
 } // namespace WebCore

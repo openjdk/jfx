@@ -564,9 +564,9 @@ Color RenderThemeJava::platformInactiveSelectionForegroundColor(OptionSet<StyleC
 }
 
 #if ENABLE(VIDEO)
-String RenderThemeJava::mediaControlsScript()
+Vector<String, 2> RenderThemeJava::mediaControlsScripts()
 {
-    return String(mediaControlsAdwaitaJavaScript, sizeof(mediaControlsAdwaitaJavaScript));
+    return { String(mediaControlsAdwaitaJavaScript, sizeof(mediaControlsAdwaitaJavaScript)) };
 }
 
 String RenderThemeJava::extraMediaControlsStyleSheet()

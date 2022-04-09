@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,6 +29,7 @@
 #if ENABLE(DFG_JIT)
 
 #include "CodeBlock.h"
+#include "CodeBlockWithJITType.h"
 #include "DFGFailedFinalizer.h"
 #include "DFGInlineCacheWrapperInlines.h"
 #include "DFGJITCode.h"
@@ -66,21 +67,27 @@ JITCompiler::~JITCompiler()
 
 void JITCompiler::linkOSRExits()
 {
-    ASSERT(m_jitCode->osrExit.size() == m_exitCompilationInfo.size());
+    ASSERT(m_osrExit.size() == m_exitCompilationInfo.size());
     if (UNLIKELY(m_graph.compilation())) {
-        for (unsigned i = 0; i < m_jitCode->osrExit.size(); ++i) {
+        for (unsigned i = 0; i < m_osrExit.size(); ++i) {
             OSRExitCompilationInfo& info = m_exitCompilationInfo[i];
             Vector<Label> labels;
+
+            auto appendLabel = [&] (Label label) {
+                RELEASE_ASSERT(label.isSet());
+                labels.append(label);
+            };
+
             if (!info.m_failureJumps.empty()) {
                 for (unsigned j = 0; j < info.m_failureJumps.jumps().size(); ++j)
-                    labels.append(info.m_failureJumps.jumps()[j].label());
-            } else
-                labels.append(info.m_replacementSource);
+                    appendLabel(info.m_failureJumps.jumps()[j].label());
+            } else if (info.m_replacementSource.isSet())
+                appendLabel(info.m_replacementSource);
             m_exitSiteLabels.append(labels);
         }
     }
 
-    for (unsigned i = 0; i < m_jitCode->osrExit.size(); ++i) {
+    for (unsigned i = 0; i < m_osrExit.size(); ++i) {
         OSRExitCompilationInfo& info = m_exitCompilationInfo[i];
         JumpList& failureJumps = info.m_failureJumps;
         if (!failureJumps.empty())
@@ -131,6 +138,7 @@ void JITCompiler::compileBody()
 
 void JITCompiler::compileExceptionHandlers()
 {
+#if !ENABLE(EXTRA_CTI_THUNKS)
     if (!m_exceptionChecksWithCallFrameRollback.empty()) {
         m_exceptionChecksWithCallFrameRollback.link(this);
 
@@ -159,6 +167,7 @@ void JITCompiler::compileExceptionHandlers()
 
         jumpToExceptionHandler(vm());
     }
+#endif // ENABLE(EXTRA_CTI_THUNKS)
 }
 
 void JITCompiler::link(LinkBuffer& linkBuffer)
@@ -176,60 +185,62 @@ void JITCompiler::link(LinkBuffer& linkBuffer)
 
     m_graph.registerFrozenValues();
 
-    BitVector usedJumpTables;
+    if (!m_graph.m_stringSwitchJumpTables.isEmpty() || !m_graph.m_switchJumpTables.isEmpty()) {
+        ConcurrentJSLocker locker(m_codeBlock->m_lock);
+        if (!m_graph.m_stringSwitchJumpTables.isEmpty())
+            m_codeBlock->ensureJITData(locker).m_stringSwitchJumpTables = WTFMove(m_graph.m_stringSwitchJumpTables);
+        if (!m_graph.m_switchJumpTables.isEmpty())
+            m_codeBlock->ensureJITData(locker).m_switchJumpTables = WTFMove(m_graph.m_switchJumpTables);
+    }
+
     for (Bag<SwitchData>::iterator iter = m_graph.m_switchData.begin(); !!iter; ++iter) {
         SwitchData& data = **iter;
-        if (!data.didUseJumpTable)
-            continue;
+        switch (data.kind) {
+        case SwitchChar:
+        case SwitchImm: {
+            if (!data.didUseJumpTable) {
+                ASSERT(m_codeBlock->switchJumpTable(data.switchTableIndex).isEmpty());
+                continue;
+            }
 
-        if (data.kind == SwitchString)
-            continue;
-
-        RELEASE_ASSERT(data.kind == SwitchImm || data.kind == SwitchChar);
-
-        usedJumpTables.set(data.switchTableIndex);
-        SimpleJumpTable& table = m_codeBlock->switchJumpTable(data.switchTableIndex);
-        table.ctiDefault = linkBuffer.locationOf<JSSwitchPtrTag>(m_blockHeads[data.fallThrough.block->index]);
-        table.ctiOffsets.grow(table.branchOffsets.size());
-        for (unsigned j = table.ctiOffsets.size(); j--;)
-            table.ctiOffsets[j] = table.ctiDefault;
-        for (unsigned j = data.cases.size(); j--;) {
-            SwitchCase& myCase = data.cases[j];
-            table.ctiOffsets[myCase.value.switchLookupValue(data.kind) - table.min] =
-                linkBuffer.locationOf<JSSwitchPtrTag>(m_blockHeads[myCase.target.block->index]);
+            const UnlinkedSimpleJumpTable& unlinkedTable = m_graph.unlinkedSwitchJumpTable(data.switchTableIndex);
+            SimpleJumpTable& linkedTable = m_codeBlock->switchJumpTable(data.switchTableIndex);
+            linkedTable.m_ctiDefault = linkBuffer.locationOf<JSSwitchPtrTag>(m_blockHeads[data.fallThrough.block->index]);
+            RELEASE_ASSERT(linkedTable.m_ctiOffsets.size() == unlinkedTable.m_branchOffsets.size());
+            for (unsigned j = linkedTable.m_ctiOffsets.size(); j--;)
+                linkedTable.m_ctiOffsets[j] = linkedTable.m_ctiDefault;
+            for (unsigned j = data.cases.size(); j--;) {
+                SwitchCase& myCase = data.cases[j];
+                linkedTable.m_ctiOffsets[myCase.value.switchLookupValue(data.kind) - unlinkedTable.m_min] =
+                    linkBuffer.locationOf<JSSwitchPtrTag>(m_blockHeads[myCase.target.block->index]);
+            }
+            break;
         }
-    }
 
-    for (unsigned i = m_codeBlock->numberOfSwitchJumpTables(); i--;) {
-        if (usedJumpTables.get(i))
-            continue;
+        case SwitchString: {
+            if (!data.didUseJumpTable) {
+                ASSERT(m_codeBlock->stringSwitchJumpTable(data.switchTableIndex).isEmpty());
+                continue;
+            }
 
-        m_codeBlock->switchJumpTable(i).clear();
-    }
+            const UnlinkedStringJumpTable& unlinkedTable = m_graph.unlinkedStringSwitchJumpTable(data.switchTableIndex);
+            StringJumpTable& linkedTable = m_codeBlock->stringSwitchJumpTable(data.switchTableIndex);
+            auto ctiDefault = linkBuffer.locationOf<JSSwitchPtrTag>(m_blockHeads[data.fallThrough.block->index]);
+            RELEASE_ASSERT(linkedTable.m_ctiOffsets.size() == unlinkedTable.m_offsetTable.size() + 1);
+            for (auto& entry : linkedTable.m_ctiOffsets)
+                entry = ctiDefault;
+            for (unsigned j = data.cases.size(); j--;) {
+                SwitchCase& myCase = data.cases[j];
+                auto iter = unlinkedTable.m_offsetTable.find(myCase.value.stringImpl());
+                RELEASE_ASSERT(iter != unlinkedTable.m_offsetTable.end());
+                linkedTable.m_ctiOffsets[iter->value.m_indexInTable] = linkBuffer.locationOf<JSSwitchPtrTag>(m_blockHeads[myCase.target.block->index]);
+            }
+            break;
+        }
 
-    // NOTE: we cannot clear string switch tables because (1) we're running concurrently
-    // and we cannot deref StringImpl's and (2) it would be weird to deref those
-    // StringImpl's since we refer to them.
-    for (Bag<SwitchData>::iterator switchDataIter = m_graph.m_switchData.begin(); !!switchDataIter; ++switchDataIter) {
-        SwitchData& data = **switchDataIter;
-        if (!data.didUseJumpTable)
-            continue;
-
-        if (data.kind != SwitchString)
-            continue;
-
-        StringJumpTable& table = m_codeBlock->stringSwitchJumpTable(data.switchTableIndex);
-
-        table.ctiDefault = linkBuffer.locationOf<JSSwitchPtrTag>(m_blockHeads[data.fallThrough.block->index]);
-        StringJumpTable::StringOffsetTable::iterator iter;
-        StringJumpTable::StringOffsetTable::iterator end = table.offsetTable.end();
-        for (iter = table.offsetTable.begin(); iter != end; ++iter)
-            iter->value.ctiOffset = table.ctiDefault;
-        for (unsigned j = data.cases.size(); j--;) {
-            SwitchCase& myCase = data.cases[j];
-            iter = table.offsetTable.find(myCase.value.stringImpl());
-            RELEASE_ASSERT(iter != end);
-            iter->value.ctiOffset = linkBuffer.locationOf<JSSwitchPtrTag>(m_blockHeads[myCase.target.block->index]);
+        case SwitchCell:
+            RELEASE_ASSERT_NOT_REACHED();
+            break;
         }
     }
 
@@ -241,57 +252,53 @@ void JITCompiler::link(LinkBuffer& linkBuffer)
     finalizeInlineCaches(m_getByIdsWithThis, linkBuffer);
     finalizeInlineCaches(m_getByVals, linkBuffer);
     finalizeInlineCaches(m_putByIds, linkBuffer);
+    finalizeInlineCaches(m_putByVals, linkBuffer);
     finalizeInlineCaches(m_delByIds, linkBuffer);
     finalizeInlineCaches(m_delByVals, linkBuffer);
     finalizeInlineCaches(m_inByIds, linkBuffer);
+    finalizeInlineCaches(m_inByVals, linkBuffer);
     finalizeInlineCaches(m_instanceOfs, linkBuffer);
     finalizeInlineCaches(m_privateBrandAccesses, linkBuffer);
 
-    auto linkCallThunk = FunctionPtr<NoPtrTag>(vm().getCTIStub(linkCallThunkGenerator).retaggedCode<NoPtrTag>());
     for (auto& record : m_jsCalls) {
         CallLinkInfo& info = *record.info;
-        linkBuffer.link(record.slowCall, linkCallThunk);
-        info.setCallLocations(
-            CodeLocationLabel<JSInternalPtrTag>(linkBuffer.locationOfNearCall<JSInternalPtrTag>(record.slowCall)),
-            CodeLocationLabel<JSInternalPtrTag>(linkBuffer.locationOf<JSInternalPtrTag>(record.targetToCheck)),
-            linkBuffer.locationOfNearCall<JSInternalPtrTag>(record.fastCall));
+        info.setCodeLocations(
+            linkBuffer.locationOf<JSInternalPtrTag>(record.slowPathStart),
+            linkBuffer.locationOf<JSInternalPtrTag>(record.doneLocation));
     }
 
-    for (JSDirectCallRecord& record : m_jsDirectCalls) {
+    for (auto& record : m_jsDirectCalls) {
         CallLinkInfo& info = *record.info;
-        linkBuffer.link(record.call, linkBuffer.locationOf<NoPtrTag>(record.slowPath));
-        info.setCallLocations(
-            CodeLocationLabel<JSInternalPtrTag>(),
+        info.setCodeLocations(
             linkBuffer.locationOf<JSInternalPtrTag>(record.slowPath),
-            linkBuffer.locationOfNearCall<JSInternalPtrTag>(record.call));
+            CodeLocationLabel<JSInternalPtrTag>());
     }
 
-    for (JSDirectTailCallRecord& record : m_jsDirectTailCalls) {
-        CallLinkInfo& info = *record.info;
-        info.setCallLocations(
-            linkBuffer.locationOf<JSInternalPtrTag>(record.patchableJump),
-            linkBuffer.locationOf<JSInternalPtrTag>(record.slowPath),
-            linkBuffer.locationOfNearCall<JSInternalPtrTag>(record.call));
-    }
+#if ENABLE(EXTRA_CTI_THUNKS)
+    if (!m_exceptionChecks.empty())
+        linkBuffer.link(m_exceptionChecks, CodeLocationLabel(vm().getCTIStub(handleExceptionGenerator).retaggedCode<NoPtrTag>()));
+    if (!m_exceptionChecksWithCallFrameRollback.empty())
+        linkBuffer.link(m_exceptionChecksWithCallFrameRollback, CodeLocationLabel(vm().getCTIStub(handleExceptionWithCallFrameRollbackGenerator).retaggedCode<NoPtrTag>()));
+#endif // ENABLE(EXTRA_CTI_THUNKS)
 
     MacroAssemblerCodeRef<JITThunkPtrTag> osrExitThunk = vm().getCTIStub(osrExitGenerationThunkGenerator);
     auto target = CodeLocationLabel<JITThunkPtrTag>(osrExitThunk.code());
-    for (unsigned i = 0; i < m_jitCode->osrExit.size(); ++i) {
+    for (unsigned i = 0; i < m_osrExit.size(); ++i) {
         OSRExitCompilationInfo& info = m_exitCompilationInfo[i];
         if (!Options::useProbeOSRExit()) {
             linkBuffer.link(info.m_patchableJump.m_jump, target);
-            OSRExit& exit = m_jitCode->osrExit[i];
+            OSRExit& exit = m_osrExit[i];
             exit.m_patchableJumpLocation = linkBuffer.locationOf<JSInternalPtrTag>(info.m_patchableJump);
         }
         if (info.m_replacementSource.isSet()) {
-            m_jitCode->common.jumpReplacements.append(JumpReplacement(
+            m_jitCode->common.m_jumpReplacements.append(JumpReplacement(
                 linkBuffer.locationOf<JSInternalPtrTag>(info.m_replacementSource),
                 linkBuffer.locationOf<OSRExitPtrTag>(info.m_replacementDestination)));
         }
     }
 
     if (UNLIKELY(m_graph.compilation())) {
-        ASSERT(m_exitSiteLabels.size() == m_jitCode->osrExit.size());
+        ASSERT(m_exitSiteLabels.size() == m_osrExit.size());
         for (unsigned i = 0; i < m_exitSiteLabels.size(); ++i) {
             Vector<Label>& labels = m_exitSiteLabels[i];
             Vector<MacroAssemblerCodePtr<JSInternalPtrTag>> addresses;
@@ -303,6 +310,8 @@ void JITCompiler::link(LinkBuffer& linkBuffer)
         ASSERT(!m_exitSiteLabels.size());
 
     m_jitCode->common.compilation = m_graph.compilation();
+    m_jitCode->m_osrExit = WTFMove(m_osrExit);
+    m_jitCode->m_speculationRecovery = WTFMove(m_speculationRecovery);
 
     // Link new DFG exception handlers and remove baseline JIT handlers.
     m_codeBlock->clearExceptionHandlers();
@@ -381,7 +390,7 @@ void JITCompiler::compile()
     m_speculative->createOSREntries();
     setEndOfCode();
 
-    auto linkBuffer = makeUnique<LinkBuffer>(*this, m_codeBlock, JITCompilationCanFail);
+    auto linkBuffer = makeUnique<LinkBuffer>(*this, m_codeBlock, LinkBuffer::Profile::DFG, JITCompilationCanFail);
     if (linkBuffer->didFailToAllocate()) {
         m_graph.m_plan.setFinalizer(makeUnique<FailedFinalizer>(m_graph.m_plan));
         return;
@@ -392,8 +401,11 @@ void JITCompiler::compile()
 
     disassemble(*linkBuffer);
 
-    m_graph.m_plan.setFinalizer(makeUnique<JITFinalizer>(
-        m_graph.m_plan, m_jitCode.releaseNonNull(), WTFMove(linkBuffer)));
+    auto codeRef = FINALIZE_DFG_CODE(*linkBuffer, JSEntryPtrTag, "DFG JIT code for %s", toCString(CodeBlockWithJITType(m_codeBlock, JITType::DFGJIT)).data());
+    m_jitCode->initializeCodeRefForDFG(codeRef, codeRef.code());
+
+    auto finalizer = makeUnique<JITFinalizer>(m_graph.m_plan, m_jitCode.releaseNonNull(), WTFMove(linkBuffer));
+    m_graph.m_plan.setFinalizer(WTFMove(finalizer));
 }
 
 void JITCompiler::compileFunction()
@@ -481,7 +493,7 @@ void JITCompiler::compileFunction()
     setEndOfCode();
 
     // === Link ===
-    auto linkBuffer = makeUnique<LinkBuffer>(*this, m_codeBlock, JITCompilationCanFail);
+    auto linkBuffer = makeUnique<LinkBuffer>(*this, m_codeBlock, LinkBuffer::Profile::DFG, JITCompilationCanFail);
     if (linkBuffer->didFailToAllocate()) {
         m_graph.m_plan.setFinalizer(makeUnique<FailedFinalizer>(m_graph.m_plan));
         return;
@@ -496,8 +508,12 @@ void JITCompiler::compileFunction()
 
     MacroAssemblerCodePtr<JSEntryPtrTag> withArityCheck = linkBuffer->locationOf<JSEntryPtrTag>(arityCheck);
 
-    m_graph.m_plan.setFinalizer(makeUnique<JITFinalizer>(
-        m_graph.m_plan, m_jitCode.releaseNonNull(), WTFMove(linkBuffer), withArityCheck));
+    m_jitCode->initializeCodeRefForDFG(
+        FINALIZE_DFG_CODE(*linkBuffer, JSEntryPtrTag, "DFG JIT code for %s", toCString(CodeBlockWithJITType(m_codeBlock, JITType::DFGJIT)).data()),
+        withArityCheck);
+
+    auto finalizer = makeUnique<JITFinalizer>(m_graph.m_plan, m_jitCode.releaseNonNull(), WTFMove(linkBuffer), withArityCheck);
+    m_graph.m_plan.setFinalizer(WTFMove(finalizer));
 }
 
 void JITCompiler::disassemble(LinkBuffer& linkBuffer)
@@ -534,7 +550,7 @@ void JITCompiler::noticeCatchEntrypoint(BasicBlock& basicBlock, JITCompiler::Lab
 {
     RELEASE_ASSERT(basicBlock.isCatchEntrypoint);
     RELEASE_ASSERT(basicBlock.intersectionOfCFAHasVisited); // An entrypoint is reachable by definition.
-    m_jitCode->common.appendCatchEntrypoint(basicBlock.bytecodeBegin, linkBuffer.locationOf<ExceptionHandlerPtrTag>(blockHead), WTFMove(argumentFormats));
+    m_graph.appendCatchEntrypoint(basicBlock.bytecodeBegin, linkBuffer.locationOf<ExceptionHandlerPtrTag>(blockHead), WTFMove(argumentFormats));
 }
 
 void JITCompiler::noticeOSREntry(BasicBlock& basicBlock, JITCompiler::Label blockHead, LinkBuffer& linkBuffer)
@@ -545,9 +561,12 @@ void JITCompiler::noticeOSREntry(BasicBlock& basicBlock, JITCompiler::Label bloc
     if (!basicBlock.intersectionOfCFAHasVisited)
         return;
 
-    OSREntryData* entry = m_jitCode->appendOSREntryData(basicBlock.bytecodeBegin, linkBuffer.locationOf<OSREntryPtrTag>(blockHead));
+    OSREntryData entry;
+    entry.m_bytecodeIndex = basicBlock.bytecodeBegin;
+    entry.m_machineCode = linkBuffer.locationOf<OSREntryPtrTag>(blockHead);
 
-    entry->m_expectedValues = basicBlock.intersectionOfPastValuesAtHead;
+    FixedOperands<AbstractValue> expectedValues(basicBlock.intersectionOfPastValuesAtHead);
+    Vector<OSREntryReshuffling> reshufflings;
 
     // Fix the expected values: in our protocol, a dead variable will have an expected
     // value of (None, []). But the old JIT may stash some values there. So we really
@@ -555,22 +574,22 @@ void JITCompiler::noticeOSREntry(BasicBlock& basicBlock, JITCompiler::Label bloc
     for (size_t argument = 0; argument < basicBlock.variablesAtHead.numberOfArguments(); ++argument) {
         Node* node = basicBlock.variablesAtHead.argument(argument);
         if (!node || !node->shouldGenerate())
-            entry->m_expectedValues.argument(argument).makeBytecodeTop();
+            expectedValues.argument(argument).makeBytecodeTop();
     }
     for (size_t local = 0; local < basicBlock.variablesAtHead.numberOfLocals(); ++local) {
         Node* node = basicBlock.variablesAtHead.local(local);
         if (!node || !node->shouldGenerate())
-            entry->m_expectedValues.local(local).makeBytecodeTop();
+            expectedValues.local(local).makeBytecodeTop();
         else {
             VariableAccessData* variable = node->variableAccessData();
-            entry->m_machineStackUsed.set(variable->machineLocal().toLocal());
+            entry.m_machineStackUsed.set(variable->machineLocal().toLocal());
 
             switch (variable->flushFormat()) {
             case FlushedDouble:
-                entry->m_localsForcedDouble.set(local);
+                entry.m_localsForcedDouble.set(local);
                 break;
             case FlushedInt52:
-                entry->m_localsForcedAnyInt.set(local);
+                entry.m_localsForcedAnyInt.set(local);
                 break;
             default:
                 break;
@@ -578,14 +597,16 @@ void JITCompiler::noticeOSREntry(BasicBlock& basicBlock, JITCompiler::Label bloc
 
             ASSERT(!variable->operand().isTmp());
             if (variable->operand().virtualRegister() != variable->machineLocal()) {
-                entry->m_reshufflings.append(
+                reshufflings.append(
                     OSREntryReshuffling(
                         variable->operand().virtualRegister().offset(), variable->machineLocal().offset()));
             }
         }
     }
 
-    entry->m_reshufflings.shrinkToFit();
+    entry.m_expectedValues = WTFMove(expectedValues);
+    entry.m_reshufflings = WTFMove(reshufflings);
+    m_osrEntry.append(WTFMove(entry));
 }
 
 void JITCompiler::appendExceptionHandlingOSRExit(ExitKind kind, unsigned eventStreamIndex, CodeOrigin opCatchOrigin, HandlerInfo* exceptionHandler, CallSiteIndex callSite, MacroAssembler::JumpList jumpsToFail)
@@ -594,7 +615,7 @@ void JITCompiler::appendExceptionHandlingOSRExit(ExitKind kind, unsigned eventSt
     exit.m_codeOrigin = opCatchOrigin;
     exit.m_exceptionHandlerCallSiteIndex = callSite;
     OSRExitCompilationInfo& exitInfo = appendExitInfo(jumpsToFail);
-    jitCode()->appendOSRExit(exit);
+    m_osrExit.append(WTFMove(exit));
     m_exceptionHandlerOSRExitCallSites.append(ExceptionHandlingOSRExitInfo { exitInfo, *exceptionHandler, callSite });
 }
 

@@ -1195,7 +1195,8 @@ public class TreeViewTest {
         treeView.setOnEditStart(t -> {
             rt_29650_start_count++;
         });
-        treeView.setOnEditCommit(t -> {
+        // Note: must add a commit handler to not replace the default (saving) handler
+        treeView.addEventHandler(TreeView.editCommitEvent(), t -> {
             rt_29650_commit_count++;
         });
         treeView.setOnEditCancel(t -> {

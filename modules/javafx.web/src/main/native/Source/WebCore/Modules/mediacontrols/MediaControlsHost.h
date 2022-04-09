@@ -25,6 +25,8 @@
 
 #pragma once
 
+#if ENABLE(VIDEO)
+
 #include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
@@ -36,13 +38,14 @@ namespace WebCore {
 class AudioTrack;
 class AudioTrackList;
 class Element;
+class HTMLElement;
 class HTMLMediaElement;
 class MediaControlTextTrackContainerElement;
 class TextTrack;
 class TextTrackList;
 class VoidCallback;
 
-class MediaControlsHost : public RefCounted<MediaControlsHost> {
+class MediaControlsHost final : public RefCounted<MediaControlsHost>, public CanMakeWeakPtr<MediaControlsHost> {
     WTF_MAKE_FAST_ALLOCATED(MediaControlsHost);
 public:
     static Ref<MediaControlsHost> create(HTMLMediaElement&);
@@ -51,11 +54,13 @@ public:
     static const AtomString& automaticKeyword();
     static const AtomString& forcedOnlyKeyword();
 
+    String layoutTraitsClassName() const;
+
     Vector<RefPtr<TextTrack>> sortedTrackListForMenu(TextTrackList&);
     Vector<RefPtr<AudioTrack>> sortedTrackListForMenu(AudioTrackList&);
 
     using TextOrAudioTrack = WTF::Variant<RefPtr<TextTrack>, RefPtr<AudioTrack>>;
-    String displayNameForTrack(const Optional<TextOrAudioTrack>&);
+    String displayNameForTrack(const std::optional<TextOrAudioTrack>&);
 
     static TextTrack& captionMenuOffItem();
     static TextTrack& captionMenuAutomaticItem();
@@ -81,21 +86,19 @@ public:
     enum class DeviceType { None, Airplay, Tvout };
     DeviceType externalDeviceType() const;
 
-    bool compactMode() const;
-    void setSimulateCompactMode(bool value) { m_simulateCompactMode = value; }
-
     bool controlsDependOnPageScaleFactor() const;
     void setControlsDependOnPageScaleFactor(bool v);
 
     static String generateUUID();
 
+#if ENABLE(MODERN_MEDIA_CONTROLS)
     static String shadowRootCSSText();
     static String base64StringForIconNameAndType(const String& iconName, const String& iconType);
     static String formattedStringForDuration(double);
-
 #if ENABLE(MEDIA_CONTROLS_CONTEXT_MENUS)
     bool showMediaControlsContextMenu(HTMLElement&, String&& optionsJSONString, Ref<VoidCallback>&&);
 #endif // ENABLE(MEDIA_CONTROLS_CONTEXT_MENUS)
+#endif // ENABLE(MODERN_MEDIA_CONTROLS)
 
 private:
     explicit MediaControlsHost(HTMLMediaElement&);
@@ -106,9 +109,9 @@ private:
 #if ENABLE(MEDIA_CONTROLS_CONTEXT_MENUS)
     RefPtr<VoidCallback> m_showMediaControlsContextMenuCallback;
 #endif // ENABLE(MEDIA_CONTROLS_CONTEXT_MENUS)
-
-    bool m_simulateCompactMode { false };
 };
 
-}
+} // namespace WebCore
+
+#endif // ENABLE(VIDEO)
 

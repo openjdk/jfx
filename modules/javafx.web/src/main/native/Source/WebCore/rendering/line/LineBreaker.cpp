@@ -34,7 +34,7 @@ void LineBreaker::reset()
 {
     m_positionedObjects.clear();
     m_hyphenated = false;
-    m_clear = Clear::None;
+    m_clear = UsedClear::None;
 }
 
 // FIXME: The entire concept of the skipTrailingWhitespace function is flawed, since we really need to be building
@@ -66,7 +66,7 @@ void LineBreaker::skipLeadingWhitespace(InlineBidiResolver& resolver, LineInfo& 
                 lineInfo.incrementRunsFromLeadingWhitespace();
             }
         } else if (object.isFloating())
-            m_block.complexLineLayout()->positionNewFloatOnLine(*m_block.insertFloatingObject(downcast<RenderBox>(object)), lastFloatFromPreviousLine, lineInfo, width);
+            m_block.legacyLineLayout()->positionNewFloatOnLine(*m_block.insertFloatingObject(downcast<RenderBox>(object)), lastFloatFromPreviousLine, lineInfo, width);
         else if (object.style().hasTextCombine() && is<RenderCombineText>(object)) {
             downcast<RenderCombineText>(object).combineTextIfNeeded();
             if (downcast<RenderCombineText>(object).isCombined())

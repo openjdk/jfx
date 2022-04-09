@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2020-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,6 +26,7 @@
 #include "config.h"
 #include "DisplayListItemBuffer.h"
 
+#include "DisplayListItemBufferIdentifier.h"
 #include "DisplayListItems.h"
 #include <wtf/FastMalloc.h>
 
@@ -44,510 +45,426 @@ CString ItemHandle::description() const
 void ItemHandle::apply(GraphicsContext& context)
 {
     switch (type()) {
-    case ItemType::Save: {
+    case ItemType::Save:
         get<Save>().apply(context);
         return;
-    }
-    case ItemType::Restore: {
+    case ItemType::Restore:
         get<Restore>().apply(context);
         return;
-    }
-    case ItemType::Translate: {
+    case ItemType::Translate:
         get<Translate>().apply(context);
         return;
-    }
-    case ItemType::Rotate: {
+    case ItemType::Rotate:
         get<Rotate>().apply(context);
         return;
-    }
-    case ItemType::Scale: {
+    case ItemType::Scale:
         get<Scale>().apply(context);
         return;
-    }
-    case ItemType::ConcatenateCTM: {
+    case ItemType::ConcatenateCTM:
         get<ConcatenateCTM>().apply(context);
         return;
-    }
-    case ItemType::SetCTM: {
+    case ItemType::SetCTM:
         get<SetCTM>().apply(context);
         return;
-    }
-    case ItemType::SetInlineFillGradient: {
+    case ItemType::SetInlineFillGradient:
         get<SetInlineFillGradient>().apply(context);
         return;
-    }
-    case ItemType::SetInlineFillColor: {
+    case ItemType::SetInlineFillColor:
         get<SetInlineFillColor>().apply(context);
         return;
-    }
-    case ItemType::SetInlineStrokeColor: {
+    case ItemType::SetInlineStrokeColor:
         get<SetInlineStrokeColor>().apply(context);
         return;
-    }
-    case ItemType::SetStrokeThickness: {
+    case ItemType::SetStrokeThickness:
         get<SetStrokeThickness>().apply(context);
         return;
-    }
-    case ItemType::SetState: {
+    case ItemType::SetState:
         ASSERT_NOT_REACHED();
         return;
-    }
-    case ItemType::SetLineCap: {
+    case ItemType::SetLineCap:
         get<SetLineCap>().apply(context);
         return;
-    }
-    case ItemType::SetLineDash: {
+    case ItemType::SetLineDash:
         get<SetLineDash>().apply(context);
         return;
-    }
-    case ItemType::SetLineJoin: {
+    case ItemType::SetLineJoin:
         get<SetLineJoin>().apply(context);
         return;
-    }
-    case ItemType::SetMiterLimit: {
+    case ItemType::SetMiterLimit:
         get<SetMiterLimit>().apply(context);
         return;
-    }
-    case ItemType::ClearShadow: {
+    case ItemType::ClearShadow:
         get<ClearShadow>().apply(context);
         return;
-    }
-    case ItemType::Clip: {
+    case ItemType::Clip:
         get<Clip>().apply(context);
         return;
-    }
-    case ItemType::ClipOut: {
+    case ItemType::ClipOut:
         get<ClipOut>().apply(context);
         return;
-    }
-    case ItemType::ClipToImageBuffer: {
+    case ItemType::ClipToImageBuffer:
         get<ClipToImageBuffer>().apply(context);
         return;
-    }
-    case ItemType::ClipOutToPath: {
+    case ItemType::ClipOutToPath:
         get<ClipOutToPath>().apply(context);
         return;
-    }
-    case ItemType::ClipPath: {
+    case ItemType::ClipPath:
         get<ClipPath>().apply(context);
         return;
-    }
-    case ItemType::BeginClipToDrawingCommands: {
+    case ItemType::BeginClipToDrawingCommands:
         ASSERT_NOT_REACHED();
         return;
-    }
-    case ItemType::EndClipToDrawingCommands: {
+    case ItemType::EndClipToDrawingCommands:
         ASSERT_NOT_REACHED();
         return;
-    }
     case ItemType::DrawGlyphs:
         ASSERT_NOT_REACHED();
         return;
-    case ItemType::DrawImageBuffer: {
+    case ItemType::DrawImageBuffer:
         get<DrawImageBuffer>().apply(context);
         return;
-    }
-    case ItemType::DrawNativeImage: {
+    case ItemType::DrawNativeImage:
         get<DrawNativeImage>().apply(context);
         return;
-    }
-    case ItemType::DrawPattern: {
+    case ItemType::DrawPattern:
         get<DrawPattern>().apply(context);
         return;
-    }
-    case ItemType::DrawRect: {
+    case ItemType::DrawRect:
         get<DrawRect>().apply(context);
         return;
-    }
-    case ItemType::DrawLine: {
+    case ItemType::DrawLine:
         get<DrawLine>().apply(context);
         return;
-    }
-    case ItemType::DrawLinesForText: {
+    case ItemType::DrawLinesForText:
         get<DrawLinesForText>().apply(context);
         return;
-    }
-    case ItemType::DrawDotsForDocumentMarker: {
+    case ItemType::DrawDotsForDocumentMarker:
         get<DrawDotsForDocumentMarker>().apply(context);
         return;
-    }
-    case ItemType::DrawEllipse: {
+    case ItemType::DrawEllipse:
         get<DrawEllipse>().apply(context);
         return;
-    }
-    case ItemType::DrawPath: {
+    case ItemType::DrawPath:
         get<DrawPath>().apply(context);
         return;
-    }
-    case ItemType::DrawFocusRingPath: {
+    case ItemType::DrawFocusRingPath:
         get<DrawFocusRingPath>().apply(context);
         return;
-    }
-    case ItemType::DrawFocusRingRects: {
+    case ItemType::DrawFocusRingRects:
         get<DrawFocusRingRects>().apply(context);
         return;
-    }
-    case ItemType::FillRect: {
+    case ItemType::FillRect:
         get<FillRect>().apply(context);
         return;
-    }
-    case ItemType::FillRectWithColor: {
+    case ItemType::FillRectWithColor:
         get<FillRectWithColor>().apply(context);
         return;
-    }
-    case ItemType::FillRectWithGradient: {
+    case ItemType::FillRectWithGradient:
         get<FillRectWithGradient>().apply(context);
         return;
-    }
-    case ItemType::FillCompositedRect: {
+    case ItemType::FillCompositedRect:
         get<FillCompositedRect>().apply(context);
         return;
-    }
-    case ItemType::FillRoundedRect: {
+    case ItemType::FillRoundedRect:
         get<FillRoundedRect>().apply(context);
         return;
-    }
-    case ItemType::FillRectWithRoundedHole: {
+    case ItemType::FillRectWithRoundedHole:
         get<FillRectWithRoundedHole>().apply(context);
         return;
-    }
 #if ENABLE(INLINE_PATH_DATA)
-    case ItemType::FillInlinePath: {
-        get<FillInlinePath>().apply(context);
+    case ItemType::FillLine:
+        get<FillLine>().apply(context);
         return;
-    }
+    case ItemType::FillArc:
+        get<FillArc>().apply(context);
+        return;
+    case ItemType::FillQuadCurve:
+        get<FillQuadCurve>().apply(context);
+        return;
+    case ItemType::FillBezierCurve:
+        get<FillBezierCurve>().apply(context);
+        return;
 #endif
-    case ItemType::FillPath: {
+    case ItemType::FillPath:
         get<FillPath>().apply(context);
         return;
-    }
-    case ItemType::FillEllipse: {
+    case ItemType::FillEllipse:
         get<FillEllipse>().apply(context);
         return;
-    }
-    case ItemType::FlushContext: {
+    case ItemType::FlushContext:
         get<FlushContext>().apply(context);
         return;
-    }
     case ItemType::MetaCommandChangeDestinationImageBuffer:
     case ItemType::MetaCommandChangeItemBuffer:
         return;
-    case ItemType::PutImageData: {
-        get<PutImageData>().apply(context);
+    case ItemType::GetPixelBuffer:
+    case ItemType::PutPixelBuffer:
+        // Should already be handled by the delegate.
+        ASSERT_NOT_REACHED();
         return;
-    }
 #if ENABLE(VIDEO)
-    case ItemType::PaintFrameForMedia: {
+    case ItemType::PaintFrameForMedia:
         get<PaintFrameForMedia>().apply(context);
         return;
-    }
 #endif
-    case ItemType::StrokeRect: {
+    case ItemType::StrokeRect:
         get<StrokeRect>().apply(context);
         return;
-    }
-    case ItemType::StrokeLine: {
+    case ItemType::StrokeLine:
         get<StrokeLine>().apply(context);
         return;
-    }
 #if ENABLE(INLINE_PATH_DATA)
-    case ItemType::StrokeInlinePath: {
-        get<StrokeInlinePath>().apply(context);
+    case ItemType::StrokeArc:
+        get<StrokeArc>().apply(context);
         return;
-    }
+    case ItemType::StrokeQuadCurve:
+        get<StrokeQuadCurve>().apply(context);
+        return;
+    case ItemType::StrokeBezierCurve:
+        get<StrokeBezierCurve>().apply(context);
+        return;
 #endif
-    case ItemType::StrokePath: {
+    case ItemType::StrokePath:
         get<StrokePath>().apply(context);
         return;
-    }
-    case ItemType::StrokeEllipse: {
+    case ItemType::StrokeEllipse:
         get<StrokeEllipse>().apply(context);
         return;
-    }
-    case ItemType::ClearRect: {
+    case ItemType::ClearRect:
         get<ClearRect>().apply(context);
         return;
-    }
-    case ItemType::BeginTransparencyLayer: {
+    case ItemType::BeginTransparencyLayer:
         get<BeginTransparencyLayer>().apply(context);
         return;
-    }
-    case ItemType::EndTransparencyLayer: {
+    case ItemType::EndTransparencyLayer:
         get<EndTransparencyLayer>().apply(context);
         return;
-    }
 #if USE(CG)
-    case ItemType::ApplyStrokePattern: {
+    case ItemType::ApplyStrokePattern:
         get<ApplyStrokePattern>().apply(context);
         return;
-    }
-    case ItemType::ApplyFillPattern: {
+    case ItemType::ApplyFillPattern:
         get<ApplyFillPattern>().apply(context);
         return;
-    }
 #endif
-    case ItemType::ApplyDeviceScaleFactor: {
+    case ItemType::ApplyDeviceScaleFactor:
         get<ApplyDeviceScaleFactor>().apply(context);
         return;
-    }
     }
 }
 
 void ItemHandle::destroy()
 {
     switch (type()) {
-    case ItemType::ClipOutToPath: {
+    case ItemType::ClipOutToPath:
         get<ClipOutToPath>().~ClipOutToPath();
         return;
-    }
-    case ItemType::ClipPath: {
+    case ItemType::ClipPath:
         get<ClipPath>().~ClipPath();
         return;
-    }
-    case ItemType::DrawFocusRingPath: {
+    case ItemType::DrawFocusRingPath:
         get<DrawFocusRingPath>().~DrawFocusRingPath();
         return;
-    }
-    case ItemType::DrawFocusRingRects: {
+    case ItemType::DrawFocusRingRects:
         get<DrawFocusRingRects>().~DrawFocusRingRects();
         return;
-    }
-    case ItemType::DrawGlyphs: {
+    case ItemType::DrawGlyphs:
         get<DrawGlyphs>().~DrawGlyphs();
         return;
-    }
-    case ItemType::DrawLinesForText: {
+    case ItemType::DrawLinesForText:
         get<DrawLinesForText>().~DrawLinesForText();
         return;
-    }
-    case ItemType::DrawPath: {
+    case ItemType::DrawPath:
         get<DrawPath>().~DrawPath();
         return;
-    }
-    case ItemType::FillCompositedRect: {
+    case ItemType::FillCompositedRect:
         get<FillCompositedRect>().~FillCompositedRect();
         return;
-    }
-    case ItemType::FillPath: {
+    case ItemType::FillPath:
         get<FillPath>().~FillPath();
         return;
-    }
-    case ItemType::FillRectWithColor: {
+    case ItemType::FillRectWithColor:
         get<FillRectWithColor>().~FillRectWithColor();
         return;
-    }
-    case ItemType::FillRectWithGradient: {
+    case ItemType::FillRectWithGradient:
         get<FillRectWithGradient>().~FillRectWithGradient();
         return;
-    }
-    case ItemType::FillRectWithRoundedHole: {
+    case ItemType::FillRectWithRoundedHole:
         get<FillRectWithRoundedHole>().~FillRectWithRoundedHole();
         return;
-    }
-    case ItemType::FillRoundedRect: {
+    case ItemType::FillRoundedRect:
         get<FillRoundedRect>().~FillRoundedRect();
         return;
-    }
-    case ItemType::PutImageData: {
-        get<PutImageData>().~PutImageData();
+    case ItemType::GetPixelBuffer:
+        get<GetPixelBuffer>().~GetPixelBuffer();
         return;
-    }
-    case ItemType::SetLineDash: {
+    case ItemType::PutPixelBuffer:
+        get<PutPixelBuffer>().~PutPixelBuffer();
+        return;
+    case ItemType::SetLineDash:
         get<SetLineDash>().~SetLineDash();
         return;
-    }
-    case ItemType::SetState: {
+    case ItemType::SetState:
         get<SetState>().~SetState();
         return;
-    }
-    case ItemType::StrokePath: {
+    case ItemType::StrokePath:
         get<StrokePath>().~StrokePath();
         return;
-    }
-    case ItemType::ApplyDeviceScaleFactor: {
+    case ItemType::ApplyDeviceScaleFactor:
         static_assert(std::is_trivially_destructible<ApplyDeviceScaleFactor>::value);
         return;
-    }
 #if USE(CG)
-    case ItemType::ApplyFillPattern: {
+    case ItemType::ApplyFillPattern:
         static_assert(std::is_trivially_destructible<ApplyFillPattern>::value);
         return;
-    }
-    case ItemType::ApplyStrokePattern: {
+    case ItemType::ApplyStrokePattern:
         static_assert(std::is_trivially_destructible<ApplyStrokePattern>::value);
         return;
-    }
 #endif
-    case ItemType::BeginClipToDrawingCommands: {
-        static_assert(std::is_trivially_destructible<BeginClipToDrawingCommands>::value);
+    case ItemType::BeginClipToDrawingCommands:
+        get<BeginClipToDrawingCommands>().~BeginClipToDrawingCommands();
         return;
-    }
-    case ItemType::BeginTransparencyLayer: {
+    case ItemType::BeginTransparencyLayer:
         static_assert(std::is_trivially_destructible<BeginTransparencyLayer>::value);
         return;
-    }
-    case ItemType::ClearRect: {
+    case ItemType::ClearRect:
         static_assert(std::is_trivially_destructible<ClearRect>::value);
         return;
-    }
-    case ItemType::ClearShadow: {
+    case ItemType::ClearShadow:
         static_assert(std::is_trivially_destructible<ClearShadow>::value);
         return;
-    }
-    case ItemType::Clip: {
+    case ItemType::Clip:
         static_assert(std::is_trivially_destructible<Clip>::value);
         return;
-    }
-    case ItemType::ClipOut: {
+    case ItemType::ClipOut:
         static_assert(std::is_trivially_destructible<ClipOut>::value);
         return;
-    }
-    case ItemType::ClipToImageBuffer: {
+    case ItemType::ClipToImageBuffer:
         static_assert(std::is_trivially_destructible<ClipToImageBuffer>::value);
         return;
-    }
-    case ItemType::ConcatenateCTM: {
+    case ItemType::ConcatenateCTM:
         static_assert(std::is_trivially_destructible<ConcatenateCTM>::value);
         return;
-    }
-    case ItemType::DrawDotsForDocumentMarker: {
+    case ItemType::DrawDotsForDocumentMarker:
         static_assert(std::is_trivially_destructible<DrawDotsForDocumentMarker>::value);
         return;
-    }
-    case ItemType::DrawEllipse: {
+    case ItemType::DrawEllipse:
         static_assert(std::is_trivially_destructible<DrawEllipse>::value);
         return;
-    }
-    case ItemType::DrawImageBuffer: {
+    case ItemType::DrawImageBuffer:
         static_assert(std::is_trivially_destructible<DrawImageBuffer>::value);
         return;
-    }
-    case ItemType::DrawNativeImage: {
+    case ItemType::DrawNativeImage:
         static_assert(std::is_trivially_destructible<DrawNativeImage>::value);
         return;
-    }
-    case ItemType::DrawPattern: {
+    case ItemType::DrawPattern:
         static_assert(std::is_trivially_destructible<DrawPattern>::value);
         return;
-    }
-    case ItemType::DrawLine: {
+    case ItemType::DrawLine:
         static_assert(std::is_trivially_destructible<DrawLine>::value);
         return;
-    }
-    case ItemType::DrawRect: {
+    case ItemType::DrawRect:
         static_assert(std::is_trivially_destructible<DrawRect>::value);
         return;
-    }
-    case ItemType::EndClipToDrawingCommands: {
+    case ItemType::EndClipToDrawingCommands:
         static_assert(std::is_trivially_destructible<EndClipToDrawingCommands>::value);
         return;
-    }
-    case ItemType::EndTransparencyLayer: {
+    case ItemType::EndTransparencyLayer:
         static_assert(std::is_trivially_destructible<EndTransparencyLayer>::value);
         return;
-    }
-    case ItemType::FillEllipse: {
+    case ItemType::FillEllipse:
         static_assert(std::is_trivially_destructible<FillEllipse>::value);
         return;
-    }
 #if ENABLE(INLINE_PATH_DATA)
-    case ItemType::FillInlinePath: {
-        static_assert(std::is_trivially_destructible<FillInlinePath>::value);
+    case ItemType::FillLine:
+        static_assert(std::is_trivially_destructible<FillLine>::value);
         return;
-    }
+    case ItemType::FillArc:
+        static_assert(std::is_trivially_destructible<FillArc>::value);
+        return;
+    case ItemType::FillQuadCurve:
+        static_assert(std::is_trivially_destructible<FillQuadCurve>::value);
+        return;
+    case ItemType::FillBezierCurve:
+        static_assert(std::is_trivially_destructible<FillBezierCurve>::value);
+        return;
 #endif
-    case ItemType::FillRect: {
+    case ItemType::FillRect:
         static_assert(std::is_trivially_destructible<FillRect>::value);
         return;
-    }
-    case ItemType::FlushContext: {
+    case ItemType::FlushContext:
         static_assert(std::is_trivially_destructible<FlushContext>::value);
         return;
-    }
-    case ItemType::MetaCommandChangeDestinationImageBuffer: {
+    case ItemType::MetaCommandChangeDestinationImageBuffer:
         static_assert(std::is_trivially_destructible<MetaCommandChangeDestinationImageBuffer>::value);
         return;
-    }
-    case ItemType::MetaCommandChangeItemBuffer: {
+    case ItemType::MetaCommandChangeItemBuffer:
         static_assert(std::is_trivially_destructible<MetaCommandChangeItemBuffer>::value);
         return;
-    }
 #if ENABLE(VIDEO)
-    case ItemType::PaintFrameForMedia: {
+    case ItemType::PaintFrameForMedia:
         static_assert(std::is_trivially_destructible<PaintFrameForMedia>::value);
         return;
-    }
 #endif
-    case ItemType::Restore: {
+    case ItemType::Restore:
         static_assert(std::is_trivially_destructible<Restore>::value);
         return;
-    }
-    case ItemType::Rotate: {
+    case ItemType::Rotate:
         static_assert(std::is_trivially_destructible<Rotate>::value);
         return;
-    }
-    case ItemType::Save: {
+    case ItemType::Save:
         static_assert(std::is_trivially_destructible<Save>::value);
         return;
-    }
-    case ItemType::Scale: {
+    case ItemType::Scale:
         static_assert(std::is_trivially_destructible<Scale>::value);
         return;
-    }
-    case ItemType::SetCTM: {
+    case ItemType::SetCTM:
         static_assert(std::is_trivially_destructible<SetCTM>::value);
         return;
-    }
-    case ItemType::SetInlineFillColor: {
+    case ItemType::SetInlineFillColor:
         static_assert(std::is_trivially_destructible<SetInlineFillColor>::value);
         return;
-    }
-    case ItemType::SetInlineFillGradient: {
+    case ItemType::SetInlineFillGradient:
         static_assert(std::is_trivially_destructible<SetInlineFillGradient>::value);
         return;
-    }
-    case ItemType::SetInlineStrokeColor: {
+    case ItemType::SetInlineStrokeColor:
         static_assert(std::is_trivially_destructible<SetInlineStrokeColor>::value);
         return;
-    }
-    case ItemType::SetLineCap: {
+    case ItemType::SetLineCap:
         static_assert(std::is_trivially_destructible<SetLineCap>::value);
         return;
-    }
-    case ItemType::SetLineJoin: {
+    case ItemType::SetLineJoin:
         static_assert(std::is_trivially_destructible<SetLineJoin>::value);
         return;
-    }
-    case ItemType::SetMiterLimit: {
+    case ItemType::SetMiterLimit:
         static_assert(std::is_trivially_destructible<SetMiterLimit>::value);
         return;
-    }
-    case ItemType::SetStrokeThickness: {
+    case ItemType::SetStrokeThickness:
         static_assert(std::is_trivially_destructible<SetStrokeThickness>::value);
         return;
-    }
-    case ItemType::StrokeEllipse: {
+    case ItemType::StrokeEllipse:
         static_assert(std::is_trivially_destructible<StrokeEllipse>::value);
         return;
-    }
 #if ENABLE(INLINE_PATH_DATA)
-    case ItemType::StrokeInlinePath: {
-        static_assert(std::is_trivially_destructible<StrokeInlinePath>::value);
+    case ItemType::StrokeArc:
+        static_assert(std::is_trivially_destructible<StrokeArc>::value);
         return;
-    }
+    case ItemType::StrokeQuadCurve:
+        static_assert(std::is_trivially_destructible<StrokeQuadCurve>::value);
+        return;
+    case ItemType::StrokeBezierCurve:
+        static_assert(std::is_trivially_destructible<StrokeBezierCurve>::value);
+        return;
 #endif
-    case ItemType::StrokeRect: {
+    case ItemType::StrokeRect:
         static_assert(std::is_trivially_destructible<StrokeRect>::value);
         return;
-    }
-    case ItemType::StrokeLine: {
+    case ItemType::StrokeLine:
         static_assert(std::is_trivially_destructible<StrokeLine>::value);
         return;
-    }
-    case ItemType::Translate: {
+    case ItemType::Translate:
         static_assert(std::is_trivially_destructible<Translate>::value);
         return;
-    }
     }
 }
 
@@ -555,157 +472,191 @@ template<typename, typename = void> inline constexpr bool HasIsValid = false;
 template<typename T> inline constexpr bool HasIsValid<T, std::void_t<decltype(std::declval<T>().isValid())>> = true;
 
 template<typename Item>
-typename std::enable_if_t<!HasIsValid<Item>, bool> copyInto(const ItemHandle& itemHandle, uint8_t* destinationWithOffset)
+static inline typename std::enable_if_t<!HasIsValid<Item>, bool> isValid(const Item&)
 {
-    new (destinationWithOffset) Item(itemHandle.get<Item>());
     return true;
 }
 
 template<typename Item>
-typename std::enable_if_t<HasIsValid<Item>, bool> copyInto(const ItemHandle& itemHandle, uint8_t* destinationWithOffset)
+static inline typename std::enable_if_t<HasIsValid<Item>, bool> isValid(const Item& item)
 {
-    auto* newItem = new (destinationWithOffset) Item(itemHandle.get<Item>());
-    return newItem->isValid();
+    return item.isValid();
 }
 
-bool ItemHandle::safeCopy(ItemHandle destination) const
+template<typename Item>
+static inline bool copyInto(uint8_t* destinationWithOffset, const Item& item)
 {
-    auto itemType = type();
+    auto* newItem = new (destinationWithOffset) Item(item);
+    return isValid(*newItem);
+}
+
+template<typename Item>
+static inline bool copyInto(uint8_t* destinationWithOffset, const ItemHandle& itemHandle)
+{
+    return copyInto(destinationWithOffset, itemHandle.get<Item>());
+}
+
+bool ItemHandle::safeCopy(ItemType itemType, ItemHandle destination) const
+{
+    ASSERT(itemType == type());
     destination.data[0] = static_cast<uint8_t>(itemType);
     auto itemOffset = destination.data + sizeof(uint64_t);
     switch (itemType) {
     case ItemType::ClipOutToPath:
-        return copyInto<ClipOutToPath>(*this, itemOffset);
+        return copyInto<ClipOutToPath>(itemOffset, *this);
     case ItemType::ClipPath:
-        return copyInto<ClipPath>(*this, itemOffset);
+        return copyInto<ClipPath>(itemOffset, *this);
     case ItemType::DrawFocusRingPath:
-        return copyInto<DrawFocusRingPath>(*this, itemOffset);
+        return copyInto<DrawFocusRingPath>(itemOffset, *this);
     case ItemType::DrawFocusRingRects:
-        return copyInto<DrawFocusRingRects>(*this, itemOffset);
+        return copyInto<DrawFocusRingRects>(itemOffset, *this);
     case ItemType::DrawGlyphs:
-        return copyInto<DrawGlyphs>(*this, itemOffset);
+        return copyInto<DrawGlyphs>(itemOffset, *this);
     case ItemType::DrawImageBuffer:
-        return copyInto<DrawImageBuffer>(*this, itemOffset);
+        return copyInto<DrawImageBuffer>(itemOffset, *this);
     case ItemType::DrawLinesForText:
-        return copyInto<DrawLinesForText>(*this, itemOffset);
+        return copyInto<DrawLinesForText>(itemOffset, *this);
     case ItemType::DrawNativeImage:
-        return copyInto<DrawNativeImage>(*this, itemOffset);
+        return copyInto<DrawNativeImage>(itemOffset, *this);
     case ItemType::DrawPattern:
-        return copyInto<DrawPattern>(*this, itemOffset);
+        return copyInto<DrawPattern>(itemOffset, *this);
     case ItemType::DrawPath:
-        return copyInto<DrawPath>(*this, itemOffset);
+        return copyInto<DrawPath>(itemOffset, *this);
     case ItemType::FillCompositedRect:
-        return copyInto<FillCompositedRect>(*this, itemOffset);
+        return copyInto<FillCompositedRect>(itemOffset, *this);
     case ItemType::FillPath:
-        return copyInto<FillPath>(*this, itemOffset);
+        return copyInto<FillPath>(itemOffset, *this);
     case ItemType::FillRectWithColor:
-        return copyInto<FillRectWithColor>(*this, itemOffset);
+        return copyInto<FillRectWithColor>(itemOffset, *this);
     case ItemType::FillRectWithGradient:
-        return copyInto<FillRectWithGradient>(*this, itemOffset);
+        return copyInto<FillRectWithGradient>(itemOffset, *this);
     case ItemType::FillRectWithRoundedHole:
-        return copyInto<FillRectWithRoundedHole>(*this, itemOffset);
+        return copyInto<FillRectWithRoundedHole>(itemOffset, *this);
     case ItemType::FillRoundedRect:
-        return copyInto<FillRoundedRect>(*this, itemOffset);
-    case ItemType::PutImageData:
-        return copyInto<PutImageData>(*this, itemOffset);
+        return copyInto<FillRoundedRect>(itemOffset, *this);
+    case ItemType::GetPixelBuffer:
+        return copyInto<GetPixelBuffer>(itemOffset, *this);
+    case ItemType::PutPixelBuffer:
+        return copyInto<PutPixelBuffer>(itemOffset, *this);
     case ItemType::SetLineDash:
-        return copyInto<SetLineDash>(*this, itemOffset);
+        return copyInto<SetLineDash>(itemOffset, *this);
     case ItemType::SetState:
-        return copyInto<SetState>(*this, itemOffset);
+        return copyInto<SetState>(itemOffset, *this);
     case ItemType::StrokePath:
-        return copyInto<StrokePath>(*this, itemOffset);
+        return copyInto<StrokePath>(itemOffset, *this);
     case ItemType::ApplyDeviceScaleFactor:
-        return copyInto<ApplyDeviceScaleFactor>(*this, itemOffset);
+        return copyInto<ApplyDeviceScaleFactor>(itemOffset, *this);
 #if USE(CG)
     case ItemType::ApplyFillPattern:
-        return copyInto<ApplyFillPattern>(*this, itemOffset);
+        return copyInto<ApplyFillPattern>(itemOffset, *this);
     case ItemType::ApplyStrokePattern:
-        return copyInto<ApplyStrokePattern>(*this, itemOffset);
+        return copyInto<ApplyStrokePattern>(itemOffset, *this);
 #endif
     case ItemType::BeginClipToDrawingCommands:
-        return copyInto<BeginClipToDrawingCommands>(*this, itemOffset);
+        return copyInto<BeginClipToDrawingCommands>(itemOffset, *this);
     case ItemType::BeginTransparencyLayer:
-        return copyInto<BeginTransparencyLayer>(*this, itemOffset);
+        return copyInto<BeginTransparencyLayer>(itemOffset, *this);
     case ItemType::ClearRect:
-        return copyInto<ClearRect>(*this, itemOffset);
+        return copyInto<ClearRect>(itemOffset, *this);
     case ItemType::ClearShadow:
-        return copyInto<ClearShadow>(*this, itemOffset);
+        return copyInto<ClearShadow>(itemOffset, *this);
     case ItemType::Clip:
-        return copyInto<Clip>(*this, itemOffset);
+        return copyInto<Clip>(itemOffset, *this);
     case ItemType::ClipOut:
-        return copyInto<ClipOut>(*this, itemOffset);
+        return copyInto<ClipOut>(itemOffset, *this);
     case ItemType::ClipToImageBuffer:
-        return copyInto<ClipToImageBuffer>(*this, itemOffset);
+        return copyInto<ClipToImageBuffer>(itemOffset, *this);
     case ItemType::ConcatenateCTM:
-        return copyInto<ConcatenateCTM>(*this, itemOffset);
+        return copyInto<ConcatenateCTM>(itemOffset, *this);
     case ItemType::DrawDotsForDocumentMarker:
-        return copyInto<DrawDotsForDocumentMarker>(*this, itemOffset);
+        return copyInto<DrawDotsForDocumentMarker>(itemOffset, *this);
     case ItemType::DrawEllipse:
-        return copyInto<DrawEllipse>(*this, itemOffset);
+        return copyInto<DrawEllipse>(itemOffset, *this);
     case ItemType::DrawLine:
-        return copyInto<DrawLine>(*this, itemOffset);
+        return copyInto<DrawLine>(itemOffset, *this);
     case ItemType::DrawRect:
-        return copyInto<DrawRect>(*this, itemOffset);
+        return copyInto<DrawRect>(itemOffset, *this);
     case ItemType::EndClipToDrawingCommands:
-        return copyInto<EndClipToDrawingCommands>(*this, itemOffset);
+        return copyInto<EndClipToDrawingCommands>(itemOffset, *this);
     case ItemType::EndTransparencyLayer:
-        return copyInto<EndTransparencyLayer>(*this, itemOffset);
+        return copyInto<EndTransparencyLayer>(itemOffset, *this);
     case ItemType::FillEllipse:
-        return copyInto<FillEllipse>(*this, itemOffset);
+        return copyInto<FillEllipse>(itemOffset, *this);
 #if ENABLE(INLINE_PATH_DATA)
-    case ItemType::FillInlinePath:
-        return copyInto<FillInlinePath>(*this, itemOffset);
+    case ItemType::FillLine:
+        return copyInto<FillLine>(itemOffset, *this);
+    case ItemType::FillArc:
+        return copyInto<FillArc>(itemOffset, *this);
+    case ItemType::FillQuadCurve:
+        return copyInto<FillQuadCurve>(itemOffset, *this);
+    case ItemType::FillBezierCurve:
+        return copyInto<FillBezierCurve>(itemOffset, *this);
 #endif
     case ItemType::FillRect:
-        return copyInto<FillRect>(*this, itemOffset);
+        return copyInto<FillRect>(itemOffset, *this);
     case ItemType::FlushContext:
-        return copyInto<FlushContext>(*this, itemOffset);
+        return copyInto<FlushContext>(itemOffset, *this);
     case ItemType::MetaCommandChangeDestinationImageBuffer:
-        return copyInto<MetaCommandChangeDestinationImageBuffer>(*this, itemOffset);
+        return copyInto<MetaCommandChangeDestinationImageBuffer>(itemOffset, *this);
     case ItemType::MetaCommandChangeItemBuffer:
-        return copyInto<MetaCommandChangeItemBuffer>(*this, itemOffset);
+        return copyInto<MetaCommandChangeItemBuffer>(itemOffset, *this);
 #if ENABLE(VIDEO)
     case ItemType::PaintFrameForMedia:
-        return copyInto<PaintFrameForMedia>(*this, itemOffset);
+        return copyInto<PaintFrameForMedia>(itemOffset, *this);
 #endif
     case ItemType::Restore:
-        return copyInto<Restore>(*this, itemOffset);
+        return copyInto<Restore>(itemOffset, *this);
     case ItemType::Rotate:
-        return copyInto<Rotate>(*this, itemOffset);
+        return copyInto<Rotate>(itemOffset, *this);
     case ItemType::Save:
-        return copyInto<Save>(*this, itemOffset);
+        return copyInto<Save>(itemOffset, *this);
     case ItemType::Scale:
-        return copyInto<Scale>(*this, itemOffset);
+        return copyInto<Scale>(itemOffset, *this);
     case ItemType::SetCTM:
-        return copyInto<SetCTM>(*this, itemOffset);
+        return copyInto<SetCTM>(itemOffset, *this);
     case ItemType::SetInlineFillColor:
-        return copyInto<SetInlineFillColor>(*this, itemOffset);
+        return copyInto<SetInlineFillColor>(itemOffset, *this);
     case ItemType::SetInlineFillGradient:
-        return copyInto<SetInlineFillGradient>(*this, itemOffset);
+        return copyInto<SetInlineFillGradient>(itemOffset, *this);
     case ItemType::SetInlineStrokeColor:
-        return copyInto<SetInlineStrokeColor>(*this, itemOffset);
+        return copyInto<SetInlineStrokeColor>(itemOffset, *this);
     case ItemType::SetLineCap:
-        return copyInto<SetLineCap>(*this, itemOffset);
+        return copyInto<SetLineCap>(itemOffset, *this);
     case ItemType::SetLineJoin:
-        return copyInto<SetLineJoin>(*this, itemOffset);
+        return copyInto<SetLineJoin>(itemOffset, *this);
     case ItemType::SetMiterLimit:
-        return copyInto<SetMiterLimit>(*this, itemOffset);
+        return copyInto<SetMiterLimit>(itemOffset, *this);
     case ItemType::SetStrokeThickness:
-        return copyInto<SetStrokeThickness>(*this, itemOffset);
+        return copyInto<SetStrokeThickness>(itemOffset, *this);
     case ItemType::StrokeEllipse:
-        return copyInto<StrokeEllipse>(*this, itemOffset);
+        return copyInto<StrokeEllipse>(itemOffset, *this);
 #if ENABLE(INLINE_PATH_DATA)
-    case ItemType::StrokeInlinePath:
-        return copyInto<StrokeInlinePath>(*this, itemOffset);
+    case ItemType::StrokeArc:
+        return copyInto<StrokeArc>(itemOffset, *this);
+    case ItemType::StrokeQuadCurve:
+        return copyInto<StrokeQuadCurve>(itemOffset, *this);
+    case ItemType::StrokeBezierCurve:
+        return copyInto<StrokeBezierCurve>(itemOffset, *this);
 #endif
     case ItemType::StrokeRect:
-        return copyInto<StrokeRect>(*this, itemOffset);
+        return copyInto<StrokeRect>(itemOffset, *this);
     case ItemType::StrokeLine:
-        return copyInto<StrokeLine>(*this, itemOffset);
+        return copyInto<StrokeLine>(itemOffset, *this);
     case ItemType::Translate:
-        return copyInto<Translate>(*this, itemOffset);
+        return copyInto<Translate>(itemOffset, *this);
     }
     return false;
+}
+
+bool safeCopy(ItemHandle destination, const DisplayListItem& source)
+{
+    return WTF::visit([&](const auto& source) {
+        using DisplayListItemType = typename WTF::RemoveCVAndReference<decltype(source)>::type;
+        constexpr auto itemType = DisplayListItemType::itemType;
+        destination.data[0] = static_cast<uint8_t>(itemType);
+        auto itemOffset = destination.data + sizeof(uint64_t);
+        return copyInto<DisplayListItemType>(itemOffset, source);
+    }, source);
 }
 
 ItemBuffer::ItemBuffer(ItemBufferHandles&& handles)
@@ -723,7 +674,6 @@ ItemBuffer::~ItemBuffer()
 ItemBuffer::ItemBuffer(ItemBuffer&& other)
     : m_readingClient(std::exchange(other.m_readingClient, nullptr))
     , m_writingClient(std::exchange(other.m_writingClient, nullptr))
-    , m_itemsToDestroyInAllocatedBuffers(std::exchange(other.m_itemsToDestroyInAllocatedBuffers, { }))
     , m_allocatedBuffers(std::exchange(other.m_allocatedBuffers, { }))
     , m_readOnlyBuffers(std::exchange(other.m_readOnlyBuffers, { }))
     , m_writableBuffer(std::exchange(other.m_writableBuffer, { }))
@@ -735,7 +685,6 @@ ItemBuffer& ItemBuffer::operator=(ItemBuffer&& other)
 {
     m_readingClient = std::exchange(other.m_readingClient, nullptr);
     m_writingClient = std::exchange(other.m_writingClient, nullptr);
-    m_itemsToDestroyInAllocatedBuffers = std::exchange(other.m_itemsToDestroyInAllocatedBuffers, { });
     m_allocatedBuffers = std::exchange(other.m_allocatedBuffers, { });
     m_readOnlyBuffers = std::exchange(other.m_readOnlyBuffers, { });
     m_writableBuffer = std::exchange(other.m_writableBuffer, { });
@@ -753,7 +702,7 @@ ItemBufferHandle ItemBuffer::createItemBuffer(size_t capacity)
     constexpr size_t defaultItemBufferCapacity = 1 << 10;
 
     auto newBufferCapacity = std::max(capacity, defaultItemBufferCapacity);
-    auto* buffer = reinterpret_cast<uint8_t*>(fastMalloc(newBufferCapacity));
+    auto* buffer = static_cast<uint8_t*>(fastMalloc(newBufferCapacity));
     m_allocatedBuffers.append(buffer);
     return { ItemBufferIdentifier::generate(), buffer, newBufferCapacity };
 }
@@ -769,15 +718,17 @@ void ItemBuffer::forEachItemBuffer(Function<void(const ItemBufferHandle&)>&& map
 
 void ItemBuffer::clear()
 {
-    for (auto item : std::exchange(m_itemsToDestroyInAllocatedBuffers, { }))
-        item.destroy();
-
     for (auto* buffer : std::exchange(m_allocatedBuffers, { }))
         fastFree(buffer);
 
     m_readOnlyBuffers.clear();
     m_writableBuffer = { };
     m_writtenNumberOfBytes = 0;
+}
+
+void ItemBuffer::shrinkToFit()
+{
+    m_allocatedBuffers.shrinkToFit();
 }
 
 DidChangeItemBuffer ItemBuffer::swapWritableBufferIfNeeded(size_t numberOfBytes)
@@ -798,20 +749,32 @@ DidChangeItemBuffer ItemBuffer::swapWritableBufferIfNeeded(size_t numberOfBytes)
     return hadPreviousBuffer ? DidChangeItemBuffer::Yes : DidChangeItemBuffer::No;
 }
 
-void ItemBuffer::append(ItemHandle temporaryItem)
+void ItemBuffer::append(const DisplayListItem& temporaryItem)
 {
-    auto data = m_writingClient->encodeItem(temporaryItem);
-    if (!data)
-        return;
+    auto requiredSizeForItem = m_writingClient->requiredSizeForItem(temporaryItem);
+    RefPtr<SharedBuffer> outOfLineItem;
+    if (!requiredSizeForItem) {
+        outOfLineItem = m_writingClient->encodeItemOutOfLine(temporaryItem);
+        if (!outOfLineItem)
+            return;
+    }
 
-    auto dataLength = data->size();
+    auto dataLength = valueOrCompute(requiredSizeForItem, [&] {
+        ASSERT(outOfLineItem);
+        return outOfLineItem->size();
+    });
     auto additionalCapacityForEncodedItem = 2 * sizeof(uint64_t) + roundUpToMultipleOf(alignof(uint64_t), dataLength);
 
     auto bufferChanged = swapWritableBufferIfNeeded(additionalCapacityForEncodedItem);
 
-    m_writableBuffer.data[m_writtenNumberOfBytes] = static_cast<uint8_t>(temporaryItem.type());
+    m_writableBuffer.data[m_writtenNumberOfBytes] = static_cast<uint8_t>(displayListItemType(temporaryItem));
     reinterpret_cast<uint64_t*>(m_writableBuffer.data + m_writtenNumberOfBytes)[1] = dataLength;
-    memcpy(m_writableBuffer.data + m_writtenNumberOfBytes + 2 * sizeof(uint64_t), data->dataAsUInt8Ptr(), dataLength);
+    auto* location = m_writableBuffer.data + m_writtenNumberOfBytes + 2 * sizeof(uint64_t);
+
+    if (requiredSizeForItem)
+        m_writingClient->encodeItemInline(temporaryItem, location);
+    else
+        outOfLineItem->copyTo(location, dataLength);
 
     didAppendData(additionalCapacityForEncodedItem, bufferChanged);
 }

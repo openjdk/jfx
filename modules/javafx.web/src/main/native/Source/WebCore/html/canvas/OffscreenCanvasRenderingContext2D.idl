@@ -27,10 +27,12 @@
     CustomIsReachable,
     EnabledAtRuntime=OffscreenCanvas,
     Conditional=OFFSCREEN_CANVAS,
+    ConditionalForWorker=OFFSCREEN_CANVAS_IN_WORKERS,
+    EnabledForContext,
     Exposed=(Window,Worker),
     JSGenerateToJSObject,
     JSCustomMarkFunction,
-    // CallTracingCallback=recordCanvasAction, // FIXME: OffscreenCanvas.
+    // CallTracer=InspectorCanvasCallTracer, // FIXME: OffscreenCanvas.
 ] interface OffscreenCanvasRenderingContext2D {
     readonly attribute OffscreenCanvas canvas;
     undefined commit();

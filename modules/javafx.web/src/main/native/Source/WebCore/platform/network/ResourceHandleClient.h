@@ -44,6 +44,7 @@ OBJC_CLASS NSCachedURLResponse;
 namespace WebCore {
 class AuthenticationChallenge;
 class Credential;
+class NetworkLoadMetrics;
 class ProtectionSpace;
 class ResourceHandle;
 class ResourceError;
@@ -64,10 +65,10 @@ public:
 
     virtual void didSendData(ResourceHandle*, unsigned long long /*bytesSent*/, unsigned long long /*totalBytesToBeSent*/) { }
 
-    virtual void didReceiveData(ResourceHandle*, const char*, unsigned, int /*encodedDataLength*/) { }
+    virtual void didReceiveData(ResourceHandle*, const uint8_t*, unsigned, int /*encodedDataLength*/) { }
     WEBCORE_EXPORT virtual void didReceiveBuffer(ResourceHandle*, Ref<SharedBuffer>&&, int encodedDataLength);
 
-    virtual void didFinishLoading(ResourceHandle*) { }
+    virtual void didFinishLoading(ResourceHandle*, const NetworkLoadMetrics&) { }
     virtual void didFail(ResourceHandle*, const ResourceError&) { }
     virtual void wasBlocked(ResourceHandle*) { }
     virtual void cannotShowURL(ResourceHandle*) { }

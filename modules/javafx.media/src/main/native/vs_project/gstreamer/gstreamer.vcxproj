@@ -205,9 +205,11 @@
     <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-good\gst\equalizer\gstiirequalizernbands.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTELEMENTS_EXPORTS;HAVE_CONFIG_H;_WIN32_DCOM;COBJMACROS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-good\gst\isomp4\gstisoff.c" />
     <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-good\gst\isomp4\isomp4-plugin.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTELEMENTS_EXPORTS;HAVE_CONFIG_H;_WIN32_DCOM;COBJMACROS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-good\gst\isomp4\properties.c" />
     <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-good\gst\isomp4\qtdemux.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTELEMENTS_EXPORTS;HAVE_CONFIG_H;_WIN32_DCOM;COBJMACROS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
@@ -217,6 +219,8 @@
     <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-good\gst\isomp4\qtdemux_lang.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTELEMENTS_EXPORTS;HAVE_CONFIG_H;_WIN32_DCOM;COBJMACROS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-good\gst\isomp4\qtdemux_tags.c" />
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-good\gst\isomp4\qtdemux_tree.c" />
     <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-good\gst\isomp4\qtdemux_types.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTELEMENTS_EXPORTS;HAVE_CONFIG_H;_WIN32_DCOM;COBJMACROS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
@@ -519,6 +523,20 @@
     <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\video\video.h" />
     <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\video\videoorientation.h" />
     <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\video\videooverlay.h" />
+    <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-good\gst\audioparsers\gstmpegaudioparse.h" />
+    <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-good\gst\isomp4\descriptors.h" />
+    <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-good\gst\isomp4\fourcc.h" />
+    <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-good\gst\isomp4\gstisoff.h" />
+    <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-good\gst\isomp4\properties.h" />
+    <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-good\gst\isomp4\qtatomparser.h" />
+    <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-good\gst\isomp4\qtdemux.h" />
+    <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-good\gst\isomp4\qtdemux_debug.h" />
+    <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-good\gst\isomp4\qtdemux_dump.h" />
+    <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-good\gst\isomp4\qtdemux_lang.h" />
+    <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-good\gst\isomp4\qtdemux_tags.h" />
+    <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-good\gst\isomp4\qtdemux_tree.h" />
+    <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-good\gst\isomp4\qtdemux_types.h" />
+    <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-good\gst\isomp4\qtpalette.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\video\video-orc.orc" />

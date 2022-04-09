@@ -27,6 +27,8 @@
 
 #include "ObjectPropertyCondition.h"
 #include <wtf/FastMalloc.h>
+#include <wtf/FixedVector.h>
+#include <wtf/Hasher.h>
 #include <wtf/Vector.h>
 
 namespace JSC {
@@ -50,25 +52,25 @@ public:
         return result;
     }
 
-    static ObjectPropertyConditionSet create(const Vector<ObjectPropertyCondition>& vector)
+    static ObjectPropertyConditionSet create(Vector<ObjectPropertyCondition>&& vector)
     {
         if (vector.isEmpty())
             return ObjectPropertyConditionSet();
 
         ObjectPropertyConditionSet result;
         result.m_data = adoptRef(new Data());
-        result.m_data->vector = vector;
+        result.m_data->m_vector = FixedVector<ObjectPropertyCondition>(WTFMove(vector));
         return result;
     }
 
     bool isValid() const
     {
-        return !m_data || !m_data->vector.isEmpty();
+        return !m_data || !m_data->m_vector.isEmpty();
     }
 
     bool isValidAndWatchable() const;
 
-    size_t size() const { return m_data ? m_data->vector.size() : 0; }
+    size_t size() const { return m_data ? m_data->m_vector.size() : 0; }
     bool isEmpty() const
     {
         return !m_data;
@@ -80,13 +82,39 @@ public:
     {
         if (!m_data)
             return nullptr;
-        return m_data->vector.begin();
+        return m_data->m_vector.begin();
     }
     iterator end() const
     {
         if (!m_data)
             return nullptr;
-        return m_data->vector.end();
+        return m_data->m_vector.end();
+    }
+
+    unsigned hash() const
+    {
+        Hasher hasher;
+        for (auto& condition : *this)
+            add(hasher, condition.hash());
+        return hasher.hash();
+    }
+
+    friend bool operator==(const ObjectPropertyConditionSet& lhs, const ObjectPropertyConditionSet& rhs)
+    {
+        if (lhs.size() != rhs.size())
+            return false;
+        auto liter = lhs.begin();
+        auto riter = rhs.begin();
+        for (; liter != lhs.end(); ++liter, ++riter) {
+            if (!(*liter == *riter))
+                return false;
+        }
+        return true;
+    }
+
+    friend bool operator!=(const ObjectPropertyConditionSet& lhs, const ObjectPropertyConditionSet& rhs)
+    {
+        return !(lhs == rhs);
     }
 
     ObjectPropertyCondition forObject(JSObject*) const;
@@ -157,7 +185,7 @@ public:
     public:
         Data() { }
 
-        Vector<ObjectPropertyCondition> vector;
+        FixedVector<ObjectPropertyCondition> m_vector;
     };
 
 private:
@@ -194,8 +222,8 @@ struct PrototypeChainCachingStatus {
     bool flattenedDictionary;
 };
 
-Optional<PrototypeChainCachingStatus> prepareChainForCaching(JSGlobalObject*, JSCell* base, const PropertySlot&);
-Optional<PrototypeChainCachingStatus> prepareChainForCaching(JSGlobalObject*, JSCell* base, JSObject* target);
-Optional<PrototypeChainCachingStatus> prepareChainForCaching(JSGlobalObject*, Structure* base, JSObject* target);
+std::optional<PrototypeChainCachingStatus> prepareChainForCaching(JSGlobalObject*, JSCell* base, const PropertySlot&);
+std::optional<PrototypeChainCachingStatus> prepareChainForCaching(JSGlobalObject*, JSCell* base, JSObject* target);
+std::optional<PrototypeChainCachingStatus> prepareChainForCaching(JSGlobalObject*, Structure* base, JSObject* target);
 
 } // namespace JSC

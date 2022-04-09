@@ -64,17 +64,4 @@ TextStream& operator<<(TextStream& ts, ColorSpace colorSpace)
     return ts;
 }
 
-TextStream& operator<<(TextStream& ts, DestinationColorSpace colorSpace)
-{
-    switch (colorSpace) {
-    case DestinationColorSpace::LinearSRGB:
-        ts << "LinearSRGB";
-        break;
-    case DestinationColorSpace::SRGB:
-        ts << "sRGB";
-        break;
-    }
-    return ts;
-}
-
 }

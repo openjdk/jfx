@@ -27,13 +27,15 @@
 #include "DisplayRefreshMonitor.h"
 
 #include "DisplayRefreshMonitorClient.h"
+#include "DisplayRefreshMonitorFactory.h"
 #include "DisplayRefreshMonitorManager.h"
 #include "Logging.h"
+#include <wtf/text/TextStream.h>
 
 #if PLATFORM(IOS_FAMILY)
 #include "DisplayRefreshMonitorIOS.h"
 #elif PLATFORM(MAC)
-#include "DisplayRefreshMonitorMac.h"
+#include "LegacyDisplayRefreshMonitorMac.h"
 #elif PLATFORM(GTK)
 #include "DisplayRefreshMonitorGtk.h"
 #elif PLATFORM(WIN)
@@ -42,10 +44,12 @@
 
 namespace WebCore {
 
+constexpr unsigned maxUnscheduledFireCount { 1 };
+
 RefPtr<DisplayRefreshMonitor> DisplayRefreshMonitor::createDefaultDisplayRefreshMonitor(PlatformDisplayID displayID)
 {
 #if PLATFORM(MAC)
-    return DisplayRefreshMonitorMac::create(displayID);
+    return LegacyDisplayRefreshMonitorMac::create(displayID);
 #endif
 #if PLATFORM(IOS_FAMILY)
     return DisplayRefreshMonitorIOS::create(displayID);
@@ -60,9 +64,15 @@ RefPtr<DisplayRefreshMonitor> DisplayRefreshMonitor::createDefaultDisplayRefresh
     return nullptr;
 }
 
-RefPtr<DisplayRefreshMonitor> DisplayRefreshMonitor::create(DisplayRefreshMonitorClient& client)
+RefPtr<DisplayRefreshMonitor> DisplayRefreshMonitor::create(DisplayRefreshMonitorFactory* factory, PlatformDisplayID displayID)
 {
-    return client.createDisplayRefreshMonitor(client.displayID());
+    if (factory) {
+        auto monitor = factory->createDisplayRefreshMonitor(displayID);
+        if (monitor)
+            return monitor;
+    }
+
+    return createDefaultDisplayRefreshMonitor(displayID);
 }
 
 DisplayRefreshMonitor::DisplayRefreshMonitor(PlatformDisplayID displayID)
@@ -72,36 +82,120 @@ DisplayRefreshMonitor::DisplayRefreshMonitor(PlatformDisplayID displayID)
 
 DisplayRefreshMonitor::~DisplayRefreshMonitor() = default;
 
-void DisplayRefreshMonitor::handleDisplayRefreshedNotificationOnMainThread(void* data)
+void DisplayRefreshMonitor::stop()
 {
-    DisplayRefreshMonitor* monitor = static_cast<DisplayRefreshMonitor*>(data);
-    monitor->displayDidRefresh();
+    stopNotificationMechanism();
+    setIsScheduled(false);
 }
 
 void DisplayRefreshMonitor::addClient(DisplayRefreshMonitorClient& client)
 {
-    m_clients.add(&client);
+    auto addResult = m_clients.add(&client);
+    if (addResult.isNewEntry) {
+        LOG_WITH_STREAM(DisplayLink, stream << "[Web] DisplayRefreshMonitor " << this << " addedClient - displayID " << m_displayID << " client " << &client << " client preferred fps " << client.preferredFramesPerSecond());
+        computeMaxPreferredFramesPerSecond();
+    }
 }
 
 bool DisplayRefreshMonitor::removeClient(DisplayRefreshMonitorClient& client)
 {
     if (m_clientsToBeNotified)
         m_clientsToBeNotified->remove(&client);
-    return m_clients.remove(&client);
+
+    bool removed = m_clients.remove(&client);
+    if (removed) {
+        LOG_WITH_STREAM(DisplayLink, stream << "[Web] DisplayRefreshMonitor " << this << " removedClient " << &client);
+        computeMaxPreferredFramesPerSecond();
+    }
+
+    return removed;
 }
 
-void DisplayRefreshMonitor::displayDidRefresh()
+std::optional<FramesPerSecond> DisplayRefreshMonitor::maximumClientPreferredFramesPerSecond() const
+{
+    std::optional<FramesPerSecond> maxFramesPerSecond;
+    for (auto* client : m_clients)
+        maxFramesPerSecond = std::max<FramesPerSecond>(maxFramesPerSecond.value_or(0), client->preferredFramesPerSecond());
+
+    return maxFramesPerSecond;
+}
+
+void DisplayRefreshMonitor::computeMaxPreferredFramesPerSecond()
+{
+    auto maxFramesPerSecond = maximumClientPreferredFramesPerSecond();
+    LOG_WITH_STREAM(DisplayLink, stream << "[Web] DisplayRefreshMonitor " << this << " computeMaxPreferredFramesPerSecond - displayID " << m_displayID << " adjusting max fps to " << maxFramesPerSecond);
+    if (maxFramesPerSecond != m_maxClientPreferredFramesPerSecond) {
+        m_maxClientPreferredFramesPerSecond = maxFramesPerSecond;
+        if (m_maxClientPreferredFramesPerSecond)
+            adjustPreferredFramesPerSecond(*m_maxClientPreferredFramesPerSecond);
+    }
+}
+
+void DisplayRefreshMonitor::clientPreferredFramesPerSecondChanged(DisplayRefreshMonitorClient&)
+{
+    computeMaxPreferredFramesPerSecond();
+}
+
+bool DisplayRefreshMonitor::requestRefreshCallback()
+{
+    Locker locker { m_lock };
+
+    if (isScheduled())
+        return true;
+
+    if (!startNotificationMechanism())
+        return false;
+
+    setIsScheduled(true);
+    return true;
+}
+
+bool DisplayRefreshMonitor::firedAndReachedMaxUnscheduledFireCount()
+{
+    ASSERT(m_lock.isLocked());
+
+    if (isScheduled()) {
+        m_unscheduledFireCount = 0;
+        return false;
+    }
+
+    ++m_unscheduledFireCount;
+    return m_unscheduledFireCount > m_maxUnscheduledFireCount;
+}
+
+void DisplayRefreshMonitor::displayLinkFired(const DisplayUpdate& displayUpdate)
 {
     {
-        LockHolder lock(m_mutex);
-        LOG(RequestAnimationFrame, "DisplayRefreshMonitor::displayDidRefresh(%p) - m_scheduled(%d), m_unscheduledFireCount(%d)", this, m_scheduled, m_unscheduledFireCount);
-        if (!m_scheduled)
-            ++m_unscheduledFireCount;
-        else
-            m_unscheduledFireCount = 0;
+        Locker locker { m_lock };
 
-        m_scheduled = false;
+        // This may be off the main thread.
+        if (!isPreviousFrameDone())
+            return;
+
+        LOG_WITH_STREAM(DisplayLink, stream << "[Web] DisplayRefreshMonitor::displayLinkFired for display " << displayID() << " - scheduled " << isScheduled() << " unscheduledFireCount " << m_unscheduledFireCount << " of " << m_maxUnscheduledFireCount);
+        if (firedAndReachedMaxUnscheduledFireCount()) {
+            stopNotificationMechanism();
+            return;
+        }
+
+        setIsScheduled(false);
+        setIsPreviousFrameDone(false);
     }
+    dispatchDisplayDidRefresh(displayUpdate);
+}
+
+void DisplayRefreshMonitor::dispatchDisplayDidRefresh(const DisplayUpdate& displayUpdate)
+{
+    ASSERT(isMainThread());
+    displayDidRefresh(displayUpdate);
+}
+
+void DisplayRefreshMonitor::displayDidRefresh(const DisplayUpdate& displayUpdate)
+{
+    ASSERT(isMainThread());
+
+    UNUSED_PARAM(displayUpdate);
+    LOG_WITH_STREAM(DisplayLink, stream << "DisplayRefreshMonitor::displayDidRefresh for display " << displayID() << " update " << displayUpdate);
 
     // The call back can cause all our clients to be unregistered, so we need to protect
     // against deletion until the end of the method.
@@ -113,7 +207,7 @@ void DisplayRefreshMonitor::displayDidRefresh()
     m_clientsToBeNotified = &clientsToBeNotified;
     while (!clientsToBeNotified.isEmpty()) {
         DisplayRefreshMonitorClient* client = clientsToBeNotified.takeAny();
-        client->fireDisplayRefreshIfNeeded();
+        client->fireDisplayRefreshIfNeeded(displayUpdate);
 
         // This checks if this function was reentered. In that case, stop iterating
         // since it's not safe to use the set any more.
@@ -125,7 +219,7 @@ void DisplayRefreshMonitor::displayDidRefresh()
         m_clientsToBeNotified = nullptr;
 
     {
-        LockHolder lock(m_mutex);
+        Locker locker { m_lock };
         setIsPreviousFrameDone(true);
     }
 

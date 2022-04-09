@@ -43,15 +43,6 @@ bool RenderLayerModelObject::s_hadLayer = false;
 bool RenderLayerModelObject::s_hadTransform = false;
 bool RenderLayerModelObject::s_layerWasSelfPainting = false;
 
-typedef WTF::HashMap<const RenderLayerModelObject*, RepaintLayoutRects> RepaintLayoutRectsMap;
-static RepaintLayoutRectsMap* gRepaintLayoutRectsMap = nullptr;
-
-RepaintLayoutRects::RepaintLayoutRects(const RenderLayerModelObject& renderer, const RenderLayerModelObject* repaintContainer, const RenderGeometryMap* geometryMap)
-    : m_repaintRect(renderer.clippedOverflowRectForRepaint(repaintContainer))
-    , m_outlineBox(renderer.outlineBoundsForRepaint(repaintContainer, geometryMap))
-{
-}
-
 RenderLayerModelObject::RenderLayerModelObject(Element& element, RenderStyle&& style, BaseTypeFlags baseTypeFlags)
     : RenderElement(element, WTFMove(style), baseTypeFlags | RenderLayerModelObjectFlag)
 {
@@ -80,16 +71,12 @@ void RenderLayerModelObject::willBeDestroyed()
     }
 
     RenderElement::willBeDestroyed();
-
-    clearRepaintLayoutRects();
 }
 
 void RenderLayerModelObject::destroyLayer()
 {
     ASSERT(!hasLayer());
     ASSERT(m_layer);
-    if (m_layer->isSelfPaintingLayer())
-        clearRepaintLayoutRects();
     m_layer = nullptr;
 }
 
@@ -120,13 +107,6 @@ void RenderLayerModelObject::styleWillChange(StyleDifference diff, const RenderS
     RenderElement::styleWillChange(diff, newStyle);
 }
 
-#if ENABLE(CSS_SCROLL_SNAP)
-static bool scrollSnapContainerRequiresUpdateForStyleUpdate(const RenderStyle& oldStyle, const RenderStyle& newStyle)
-{
-    return oldStyle.scrollPadding() != newStyle.scrollPadding() || oldStyle.scrollSnapType() != newStyle.scrollSnapType();
-}
-#endif
-
 void RenderLayerModelObject::styleDidChange(StyleDifference diff, const RenderStyle* oldStyle)
 {
     RenderElement::styleDidChange(diff, oldStyle);
@@ -147,9 +127,10 @@ void RenderLayerModelObject::styleDidChange(StyleDifference diff, const RenderSt
 #endif
         setHasTransformRelatedProperty(false); // All transform-related properties force layers, so we know we don't have one or the object doesn't support them.
         setHasReflection(false);
+
         // Repaint the about to be destroyed self-painting layer when style change also triggers repaint.
-        if (layer()->isSelfPaintingLayer() && layer()->repaintStatus() == NeedsFullRepaint && hasRepaintLayoutRects())
-            repaintUsingContainer(containerForRepaint(), repaintLayoutRects().m_repaintRect);
+        if (layer()->isSelfPaintingLayer() && layer()->repaintStatus() == NeedsFullRepaint && layer()->repaintRects())
+            repaintUsingContainer(containerForRepaint(), layer()->repaintRects()->clippedOverflowRect);
 
         layer()->removeOnlyThisLayer(RenderLayer::LayerChangeTiming::StyleChange); // calls destroyLayer() which clears m_layer
         if (s_wasFloating && isFloating())
@@ -182,44 +163,16 @@ void RenderLayerModelObject::styleDidChange(StyleDifference diff, const RenderSt
             renderLayer->updateScrollbarSteps();
     }
 
-#if ENABLE(CSS_SCROLL_SNAP)
-    if (oldStyle && scrollSnapContainerRequiresUpdateForStyleUpdate(*oldStyle, newStyle)) {
-        if (RenderLayer* renderLayer = layer()) {
-            if (auto* scrollableArea = renderLayer->scrollableArea()) {
-                scrollableArea->updateSnapOffsets();
-                scrollableArea->updateScrollSnapState();
-            }
-        } else if (isBody() || isDocumentElementRenderer()) {
-            FrameView& frameView = view().frameView();
-            frameView.updateSnapOffsets();
-            frameView.updateScrollSnapState();
-            frameView.updateScrollingCoordinatorScrollSnapProperties();
-        }
-    }
-
     bool scrollMarginChanged = oldStyle && oldStyle->scrollMargin() != newStyle.scrollMargin();
     bool scrollAlignChanged = oldStyle && oldStyle->scrollSnapAlign() != newStyle.scrollSnapAlign();
     bool scrollSnapStopChanged = oldStyle && oldStyle->scrollSnapStop() != newStyle.scrollSnapStop();
     if (scrollMarginChanged || scrollAlignChanged || scrollSnapStopChanged) {
-        auto* scrollSnapBox = enclosingScrollableContainerForSnapping();
-        if (scrollSnapBox && scrollSnapBox->layer()) {
-            const RenderStyle& style = scrollSnapBox->style();
-            if (style.scrollSnapType().strictness != ScrollSnapStrictness::None) {
-                if (auto* scrollableArea = scrollSnapBox->layer()->scrollableArea()) {
-                    scrollableArea->updateSnapOffsets();
-                    scrollableArea->updateScrollSnapState();
-                }
-                if (scrollSnapBox->isBody() || scrollSnapBox->isDocumentElementRenderer())
-                    scrollSnapBox->view().frameView().updateSnapOffsets();
-                    scrollSnapBox->view().frameView().updateScrollSnapState();
-                    scrollSnapBox->view().frameView().updateScrollingCoordinatorScrollSnapProperties();
-            }
-        }
+        if (auto* scrollSnapBox = enclosingScrollableContainerForSnapping())
+            scrollSnapBox->setNeedsLayout();
     }
-#endif
 }
 
-bool RenderLayerModelObject::shouldPlaceBlockDirectionScrollbarOnLeft() const
+bool RenderLayerModelObject::shouldPlaceVerticalScrollbarOnLeft() const
 {
 // RTL Scrollbars require some system support, and this system support does not exist on certain versions of OS X. iOS uses a separate mechanism.
 #if PLATFORM(IOS_FAMILY)
@@ -227,46 +180,18 @@ bool RenderLayerModelObject::shouldPlaceBlockDirectionScrollbarOnLeft() const
 #else
     switch (settings().userInterfaceDirectionPolicy()) {
     case UserInterfaceDirectionPolicy::Content:
-        return style().shouldPlaceBlockDirectionScrollbarOnLeft();
+        return style().shouldPlaceVerticalScrollbarOnLeft();
     case UserInterfaceDirectionPolicy::System:
         return settings().systemLayoutDirection() == TextDirection::RTL;
     }
     ASSERT_NOT_REACHED();
-    return style().shouldPlaceBlockDirectionScrollbarOnLeft();
+    return style().shouldPlaceVerticalScrollbarOnLeft();
 #endif
 }
 
-bool RenderLayerModelObject::hasRepaintLayoutRects() const
+std::optional<LayerRepaintRects> RenderLayerModelObject::layerRepaintRects() const
 {
-    return gRepaintLayoutRectsMap && gRepaintLayoutRectsMap->contains(this);
-}
-
-void RenderLayerModelObject::setRepaintLayoutRects(const RepaintLayoutRects& rects)
-{
-    if (!gRepaintLayoutRectsMap)
-        gRepaintLayoutRectsMap = new RepaintLayoutRectsMap();
-    gRepaintLayoutRectsMap->set(this, rects);
-}
-
-void RenderLayerModelObject::clearRepaintLayoutRects()
-{
-    if (gRepaintLayoutRectsMap)
-        gRepaintLayoutRectsMap->remove(this);
-}
-
-RepaintLayoutRects RenderLayerModelObject::repaintLayoutRects() const
-{
-    if (!hasRepaintLayoutRects())
-        return RepaintLayoutRects();
-    return gRepaintLayoutRectsMap->get(this);
-}
-
-void RenderLayerModelObject::computeRepaintLayoutRects(const RenderLayerModelObject* repaintContainer, const RenderGeometryMap* geometryMap)
-{
-    if (!m_layer || !m_layer->isSelfPaintingLayer())
-        clearRepaintLayoutRects();
-    else
-        setRepaintLayoutRects(RepaintLayoutRects(*this, repaintContainer, geometryMap));
+    return hasLayer() ? layer()->repaintRects() : std::nullopt;
 }
 
 bool RenderLayerModelObject::startAnimation(double timeOffset, const Animation& animation, const KeyframeList& keyframes)

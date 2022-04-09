@@ -312,21 +312,21 @@ HTMLLabelElement* TreeScope::labelElementForId(const AtomString& forAttributeVal
     return m_labelsByForAttribute->getElementByLabelForAttribute(*forAttributeValue.impl(), *this);
 }
 
-static Optional<LayoutPoint> absolutePointIfNotClipped(Document& document, const LayoutPoint& clientPoint)
+static std::optional<LayoutPoint> absolutePointIfNotClipped(Document& document, const LayoutPoint& clientPoint)
 {
     if (!document.frame() || !document.view())
-        return WTF::nullopt;
+        return std::nullopt;
 
     const auto& settings = document.frame()->settings();
     if (settings.visualViewportEnabled() && settings.clientCoordinatesRelativeToLayoutViewport()) {
         document.updateLayout();
         if (!document.view() || !document.hasLivingRenderTree())
-            return WTF::nullopt;
+            return std::nullopt;
         auto* view = document.view();
         FloatPoint layoutViewportPoint = view->clientToLayoutViewportPoint(clientPoint);
         FloatRect layoutViewportBounds({ }, view->layoutViewportRect().size());
         if (!layoutViewportBounds.contains(layoutViewportPoint))
-            return WTF::nullopt;
+            return std::nullopt;
         return LayoutPoint(view->layoutViewportToAbsolutePoint(layoutViewportPoint));
     }
 
@@ -346,7 +346,7 @@ static Optional<LayoutPoint> absolutePointIfNotClipped(Document& document, const
 #endif
     if (visibleRect.contains(absolutePoint))
         return absolutePoint;
-    return WTF::nullopt;
+    return std::nullopt;
 }
 
 RefPtr<Node> TreeScope::nodeFromPoint(const LayoutPoint& clientPoint, LayoutPoint* localPoint)
@@ -395,7 +395,7 @@ Vector<RefPtr<Element>> TreeScope::elementsFromPoint(double clientX, double clie
     if (!absolutePoint)
         return elements;
 
-    constexpr OptionSet<HitTestRequest::RequestType> hitType { HitTestRequest::ReadOnly, HitTestRequest::Active, HitTestRequest::DisallowUserAgentShadowContent, HitTestRequest::CollectMultipleElements, HitTestRequest::IncludeAllElementsUnderPoint };
+    constexpr OptionSet<HitTestRequest::Type> hitType { HitTestRequest::Type::ReadOnly, HitTestRequest::Type::Active, HitTestRequest::Type::DisallowUserAgentShadowContent, HitTestRequest::Type::CollectMultipleElements, HitTestRequest::Type::IncludeAllElementsUnderPoint };
     HitTestResult result { absolutePoint.value() };
     documentScope().hitTest(hitType, result);
 
@@ -443,7 +443,7 @@ Vector<RefPtr<Element>> TreeScope::elementsFromPoint(const FloatPoint& p)
 
 // FIXME: Would be nice to change this to take a StringView, since that's what callers have
 // and there is no particular advantage to already having a String.
-Element* TreeScope::findAnchor(const String& name)
+Element* TreeScope::findAnchor(StringView name)
 {
     if (name.isEmpty())
         return nullptr;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -49,7 +49,7 @@ public class ImageLoaderScalingTest {
             throws Exception
     {
         ImageFrame[] imgFrames =
-            ImageStorage.loadAll(stream, null, width, height, false, 1.0f, false);
+            new ImageStorage().loadAll(stream, null, width, height, false, 1.0f, false);
         assertNotNull(imgFrames);
         assertTrue(imgFrames.length > 0);
         return Image.convertImageFrame(imgFrames[0]);

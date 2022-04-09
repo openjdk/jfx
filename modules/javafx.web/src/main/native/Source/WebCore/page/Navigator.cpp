@@ -110,16 +110,16 @@ bool Navigator::onLine() const
     return platformStrategies()->loaderStrategy()->isOnLine();
 }
 
-static Optional<URL> shareableURLForShareData(ScriptExecutionContext& context, const ShareData& data)
+static std::optional<URL> shareableURLForShareData(ScriptExecutionContext& context, const ShareData& data)
 {
     if (data.url.isNull())
-        return WTF::nullopt;
+        return std::nullopt;
 
     auto url = context.completeURL(data.url);
     if (!url.isValid())
-        return WTF::nullopt;
+        return std::nullopt;
     if (!url.protocolIsInHTTPFamily() && !url.protocolIsData())
-        return WTF::nullopt;
+        return std::nullopt;
 
     return url;
 }
@@ -143,19 +143,23 @@ bool Navigator::canShare(Document& document, const ShareData& data)
 
 void Navigator::share(Document& document, const ShareData& data, Ref<DeferredPromise>&& promise)
 {
+    if (m_hasPendingShare) {
+        promise->reject(NotAllowedError);
+        return;
+    }
+
+    auto* window = this->window();
+    if (!window || !window->consumeTransientActivation()) {
+        promise->reject(NotAllowedError);
+        return;
+    }
+
     if (!canShare(document, data)) {
         promise->reject(TypeError);
         return;
     }
 
-    auto* window = this->window();
-    // Note that the specification does not indicate we should consume user activation. We are intentionally stricter here.
-    if (!window || !window->consumeTransientActivation() || m_hasPendingShare) {
-        promise->reject(NotAllowedError);
-        return;
-    }
-
-    Optional<URL> url = shareableURLForShareData(document, data);
+    std::optional<URL> url = shareableURLForShareData(document, data);
     ShareDataWithParsedURL shareData = {
         data,
         url,
@@ -186,6 +190,11 @@ void Navigator::showShareData(ExceptionOr<ShareDataWithParsedURL&> readData, Ref
     auto* frame = this->frame();
     if (!frame || !frame->page())
         return;
+
+    if (frame->page()->isControlledByAutomation()) {
+        promise->resolve();
+        return;
+    }
 
     m_hasPendingShare = true;
     auto shareData = readData.returnValue();

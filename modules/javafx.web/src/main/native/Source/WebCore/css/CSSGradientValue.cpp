@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,7 +26,8 @@
 #include "config.h"
 #include "CSSGradientValue.h"
 
-#include "CSSCalculationValue.h"
+#include "AnimationUtilities.h"
+#include "CSSCalcValue.h"
 #include "CSSToLengthConversionData.h"
 #include "CSSValueKeywords.h"
 #include "ColorBlending.h"
@@ -68,9 +69,9 @@ RefPtr<Image> CSSGradientValue::image(RenderElement& renderer, const FloatSize& 
 
 struct GradientStop {
     Color color;
-    Optional<float> offset;
+    std::optional<float> offset;
 
-    bool isSpecified() const { return offset.hasValue(); }
+    bool isSpecified() const { return offset.has_value(); }
     bool isMidpoint() const { return !color.isValid(); }
 };
 
@@ -106,7 +107,7 @@ bool CSSGradientValue::hasColorDerivedFromElement() const
     return *m_hasColorDerivedFromElement;
 }
 
-Ref<CSSGradientValue> CSSGradientValue::gradientWithStylesResolved(Style::BuilderState& builderState)
+Ref<CSSGradientValue> CSSGradientValue::valueWithStylesResolved(Style::BuilderState& builderState)
 {
     auto result = hasColorDerivedFromElement() ? clone(*this) : makeRef(*this);
     resolveStopColors(result->m_stops, [&](const CSSPrimitiveValue& colorValue) {
@@ -205,7 +206,7 @@ public:
 
                 float interStopProportion = -prevOffset / (nextOffset - prevOffset);
                 // FIXME: when we interpolate gradients using premultiplied colors, this should do premultiplication.
-                Color blendedColor = blend(stops[firstZeroOrGreaterIndex - 1].color, stops[firstZeroOrGreaterIndex].color, interStopProportion);
+                Color blendedColor = blend(stops[firstZeroOrGreaterIndex - 1].color, stops[firstZeroOrGreaterIndex].color, { interStopProportion });
 
                 // Clamp the positions to 0 and set the color.
                 for (size_t i = 0; i < firstZeroOrGreaterIndex; ++i) {
@@ -237,9 +238,10 @@ public:
 
     void normalizeStopsAndEndpointsOutsideRange(Vector<GradientStop>& stops)
     {
-        auto numStops = stops.size();
+        size_t numStops = stops.size();
+        size_t lastStopIndex = numStops - 1;
 
-        size_t firstZeroOrGreaterIndex = numStops;
+        std::optional<size_t> firstZeroOrGreaterIndex;
         for (size_t i = 0; i < numStops; ++i) {
             if (*stops[i].offset >= 0) {
                 firstZeroOrGreaterIndex = i;
@@ -247,54 +249,56 @@ public:
             }
         }
 
-        if (firstZeroOrGreaterIndex > 0) {
-            if (firstZeroOrGreaterIndex < numStops && *stops[firstZeroOrGreaterIndex].offset > 0) {
-                float prevOffset = *stops[firstZeroOrGreaterIndex - 1].offset;
-                float nextOffset = *stops[firstZeroOrGreaterIndex].offset;
+        if (firstZeroOrGreaterIndex) {
+            size_t index = *firstZeroOrGreaterIndex;
+            if (index > 0) {
+                float previousOffset = *stops[index - 1].offset;
+                float nextOffset = *stops[index].offset;
 
-                float interStopProportion = -prevOffset / (nextOffset - prevOffset);
+                float interStopProportion = -previousOffset / (nextOffset - previousOffset);
                 // FIXME: when we interpolate gradients using premultiplied colors, this should do premultiplication.
-                Color blendedColor = blend(stops[firstZeroOrGreaterIndex - 1].color, stops[firstZeroOrGreaterIndex].color, interStopProportion);
+                Color blendedColor = blend(stops[index - 1].color, stops[index].color, { interStopProportion });
 
                 // Clamp the positions to 0 and set the color.
-                for (size_t i = 0; i < firstZeroOrGreaterIndex; ++i) {
+                for (size_t i = 0; i < index; ++i) {
                     stops[i].offset = 0;
                     stops[i].color = blendedColor;
                 }
-            } else {
-                // All stops are below 0; just clamp them.
-                for (size_t i = 0; i < firstZeroOrGreaterIndex; ++i)
-                    stops[i].offset = 0;
             }
+        } else {
+            // All stop offsets below 0, clamp them.
+            for (auto& stop : stops)
+                stop.offset = 0;
         }
 
-        size_t lastOneOrLessIndex = numStops;
-        for (int i = numStops - 1; i >= 0; --i) {
+        std::optional<size_t> lastOneOrLessIndex;
+        for (int i = lastStopIndex; i >= 0; --i) {
             if (*stops[i].offset <= 1) {
                 lastOneOrLessIndex = i;
                 break;
             }
         }
 
-        if (lastOneOrLessIndex < numStops - 1) {
-            if (lastOneOrLessIndex < numStops && *stops[lastOneOrLessIndex].offset < 1) {
-                float prevOffset = *stops[lastOneOrLessIndex].offset;
-                float nextOffset = *stops[lastOneOrLessIndex + 1].offset;
+        if (lastOneOrLessIndex) {
+            size_t index = *lastOneOrLessIndex;
+            if (index < lastStopIndex) {
+                float previousOffset = *stops[index].offset;
+                float nextOffset = *stops[index + 1].offset;
 
-                float interStopProportion = (1 - prevOffset) / (nextOffset - prevOffset);
+                float interStopProportion = (1 - previousOffset) / (nextOffset - previousOffset);
                 // FIXME: when we interpolate gradients using premultiplied colors, this should do premultiplication.
-                Color blendedColor = blend(stops[lastOneOrLessIndex].color, stops[lastOneOrLessIndex + 1].color, interStopProportion);
+                Color blendedColor = blend(stops[index].color, stops[index + 1].color, { interStopProportion });
 
                 // Clamp the positions to 1 and set the color.
-                for (size_t i = lastOneOrLessIndex + 1; i < numStops; ++i) {
+                for (size_t i = index + 1; i < numStops; ++i) {
                     stops[i].offset = 1;
                     stops[i].color = blendedColor;
                 }
-            } else {
-                // All stops are above 1; just clamp them.
-                for (size_t i = lastOneOrLessIndex; i < numStops; ++i)
-                    stops[i].offset = 1;
             }
+        } else {
+            // All stop offsets above 1, clamp them.
+            for (auto& stop : stops)
+                stop.offset = 1;
         }
     }
 };
@@ -482,7 +486,7 @@ Gradient::ColorStopVector CSSGradientValue::computeStops(GradientAdapter& gradie
             float relativeOffset = (*newStops[y].offset - offset1) / (offset2 - offset1);
             float multiplier = std::pow(relativeOffset, std::log(.5f) / std::log(midpoint));
             // FIXME: Why not premultiply here?
-            newStops[y].color = blendWithoutPremultiply(color1, color2, multiplier);
+            newStops[y].color = blendWithoutPremultiply(color1, color2, { multiplier });
         }
 
         stops.remove(x);
@@ -692,9 +696,9 @@ String CSSLinearGradientValue::customCSSText() const
         appendGradientStops(result, stops());
     } else if (gradientType() == CSSPrefixedLinearGradient) {
         if (isRepeating())
-            result.appendLiteral("-webkit-repeating-linear-gradient(");
+            result.append("-webkit-repeating-linear-gradient(");
         else
-            result.appendLiteral("-webkit-linear-gradient(");
+            result.append("-webkit-linear-gradient(");
 
         if (m_angle)
             result.append(m_angle->cssText());
@@ -702,29 +706,29 @@ String CSSLinearGradientValue::customCSSText() const
             appendSpaceSeparatedOptionalCSSPtrText(result, firstX(), firstY());
 
         for (auto& stop : stops()) {
-            result.appendLiteral(", ");
+            result.append(", ");
             writeColorStop(result, stop);
         }
     } else {
         if (isRepeating())
-            result.appendLiteral("repeating-linear-gradient(");
+            result.append("repeating-linear-gradient(");
         else
-            result.appendLiteral("linear-gradient(");
+            result.append("linear-gradient(");
 
         bool wroteSomething = false;
 
         if (m_angle && m_angle->computeDegrees() != 180) {
             result.append(m_angle->cssText());
             wroteSomething = true;
-        } else if ((firstX() || firstY()) && !(!firstX() && firstY() && firstY()->valueID() == CSSValueBottom)) {
-            result.appendLiteral("to ");
+        } else if (firstX() || (firstY() && firstY()->valueID() != CSSValueBottom)) {
+            result.append("to ");
             appendSpaceSeparatedOptionalCSSPtrText(result, firstX(), firstY());
             wroteSomething = true;
         }
 
         for (auto& stop : stops()) {
             if (wroteSomething)
-                result.appendLiteral(", ");
+                result.append(", ");
             wroteSomething = true;
             writeColorStop(result, stop);
         }
@@ -887,44 +891,44 @@ String CSSRadialGradientValue::customCSSText() const
         appendGradientStops(result, stops());
     } else if (gradientType() == CSSPrefixedRadialGradient) {
         if (isRepeating())
-            result.appendLiteral("-webkit-repeating-radial-gradient(");
+            result.append("-webkit-repeating-radial-gradient(");
         else
-            result.appendLiteral("-webkit-radial-gradient(");
+            result.append("-webkit-radial-gradient(");
 
         if (firstX() || firstY())
             appendSpaceSeparatedOptionalCSSPtrText(result, firstX(), firstY());
         else
-            result.appendLiteral("center");
+            result.append("center");
 
         if (m_shape || m_sizingBehavior) {
-            result.appendLiteral(", ");
+            result.append(", ");
             if (m_shape)
                 result.append(m_shape->cssText(), ' ');
             else
-                result.appendLiteral("ellipse ");
+                result.append("ellipse ");
             if (m_sizingBehavior)
                 result.append(m_sizingBehavior->cssText());
             else
-                result.appendLiteral("cover");
+                result.append("cover");
         } else if (m_endHorizontalSize && m_endVerticalSize)
             result.append(", ", m_endHorizontalSize->cssText(), ' ', m_endVerticalSize->cssText());
 
         for (auto& stop : stops()) {
-            result.appendLiteral(", ");
+            result.append(", ");
             writeColorStop(result, stop);
         }
     } else {
         if (isRepeating())
-            result.appendLiteral("repeating-radial-gradient(");
+            result.append("repeating-radial-gradient(");
         else
-            result.appendLiteral("radial-gradient(");
+            result.append("radial-gradient(");
 
         bool wroteSomething = false;
 
         // The only ambiguous case that needs an explicit shape to be provided
         // is when a sizing keyword is used (or all sizing is omitted).
         if (m_shape && m_shape->valueID() != CSSValueEllipse && (m_sizingBehavior || (!m_sizingBehavior && !m_endHorizontalSize))) {
-            result.appendLiteral("circle");
+            result.append("circle");
             wroteSomething = true;
         }
 
@@ -942,21 +946,21 @@ String CSSRadialGradientValue::customCSSText() const
             wroteSomething = true;
         }
 
-        if (firstX() || firstY()) {
+        if ((firstX() && !firstX()->isCenterPosition()) || (firstY() && !firstY()->isCenterPosition())) {
             if (wroteSomething)
                 result.append(' ');
-            result.appendLiteral("at ");
+            result.append("at ");
             appendSpaceSeparatedOptionalCSSPtrText(result, firstX(), firstY());
             wroteSomething = true;
         }
 
         if (wroteSomething)
-            result.appendLiteral(", ");
+            result.append(", ");
 
         bool wroteFirstStop = false;
         for (auto& stop : stops()) {
             if (wroteFirstStop)
-                result.appendLiteral(", ");
+                result.append(", ");
             wroteFirstStop = true;
             writeColorStop(result, stop);
         }
@@ -1215,33 +1219,30 @@ String CSSConicGradientValue::customCSSText() const
 {
     StringBuilder result;
 
-    if (isRepeating())
-        result.appendLiteral("repeating-conic-gradient(");
-    else
-        result.appendLiteral("conic-gradient(");
+    result.append(isRepeating() ? "repeating-conic-gradient(" : "conic-gradient(");
 
     bool wroteSomething = false;
 
-    if (m_angle) {
+    if (m_angle && m_angle->computeDegrees()) {
         result.append("from ", m_angle->cssText());
         wroteSomething = true;
     }
 
-    if (firstX() && firstY()) {
+    if ((firstX() && !firstX()->isCenterPosition()) || (firstY() && !firstY()->isCenterPosition())) {
         if (wroteSomething)
             result.append(' ');
-        result.appendLiteral("at ");
+        result.append("at ");
         appendSpaceSeparatedOptionalCSSPtrText(result, firstX(), firstY());
         wroteSomething = true;
     }
 
     if (wroteSomething)
-        result.appendLiteral(", ");
+        result.append(", ");
 
     bool wroteFirstStop = false;
     for (auto& stop : stops()) {
         if (wroteFirstStop)
-            result.appendLiteral(", ");
+            result.append(", ");
         wroteFirstStop = true;
         writeColorStop(result, stop);
     }

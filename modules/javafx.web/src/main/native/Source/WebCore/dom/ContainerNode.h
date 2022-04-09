@@ -45,7 +45,7 @@ public:
     Node* lastChild() const { return m_lastChild; }
     static ptrdiff_t lastChildMemoryOffset() { return OBJECT_OFFSETOF(ContainerNode, m_lastChild); }
     bool hasChildNodes() const { return m_firstChild; }
-    bool hasOneChild() const { return m_firstChild && !m_firstChild->nextSibling(); }
+    bool hasOneChild() const { return m_firstChild && m_firstChild == m_lastChild; }
 
     bool directChildNeedsStyleRecalc() const { return hasStyleFlag(NodeStyleFlag::DirectChildNeedsStyleResolution); }
     void setDirectChildNeedsStyleRecalc() { setStyleFlag(NodeStyleFlag::DirectChildNeedsStyleResolution); }
@@ -57,8 +57,8 @@ public:
     ExceptionOr<void> replaceChild(Node& newChild, Node& oldChild);
     WEBCORE_EXPORT ExceptionOr<void> removeChild(Node& child);
     WEBCORE_EXPORT ExceptionOr<void> appendChild(Node& newChild);
-    void replaceAllChildrenWithNewText(const String&);
-    void replaceAllChildren(std::nullptr_t);
+    void stringReplaceAll(const String&);
+    void replaceAll(Node*);
 
     // These methods are only used during parsing.
     // They don't send DOM mutation events or handle reparenting.

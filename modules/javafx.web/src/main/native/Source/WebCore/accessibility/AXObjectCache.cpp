@@ -32,6 +32,7 @@
 
 #include "AXObjectCache.h"
 
+#include "AXImage.h"
 #include "AXIsolatedObject.h"
 #include "AXIsolatedTree.h"
 #include "AXLogger.h"
@@ -84,12 +85,12 @@
 #include "HTMLParserIdioms.h"
 #include "HTMLSelectElement.h"
 #include "HTMLTextFormControlElement.h"
-#include "InlineElementBox.h"
 #include "InlineRunAndOffset.h"
 #include "MathMLElement.h"
 #include "Page.h"
 #include "Range.h"
 #include "RenderAttachment.h"
+#include "RenderImage.h"
 #include "RenderLayer.h"
 #include "RenderLineBreak.h"
 #include "RenderListBox.h"
@@ -512,6 +513,30 @@ bool nodeHasRole(Node* node, const String& role)
     return SpaceSplitString(roleValue, true).contains(role);
 }
 
+static bool isSimpleImage(const RenderObject& renderer)
+{
+    if (!is<RenderImage>(renderer))
+        return false;
+
+    // Exclude ImageButtons because they are treated as buttons, not as images.
+    auto* node = renderer.node();
+    if (is<HTMLInputElement>(node))
+        return false;
+
+    // ImageMaps are not simple images.
+    if (downcast<RenderImage>(renderer).imageMap()
+        || (is<HTMLImageElement>(node) && downcast<HTMLImageElement>(node)->hasAttributeWithoutSynchronization(usemapAttr)))
+        return false;
+
+#if ENABLE(VIDEO)
+    // Exclude video and audio elements.
+    if (is<HTMLMediaElement>(node))
+        return false;
+#endif // ENABLE(VIDEO)
+
+    return true;
+}
+
 static Ref<AccessibilityObject> createFromRenderer(RenderObject* renderer)
 {
     // FIXME: How could renderer->node() ever not be an Element?
@@ -550,6 +575,9 @@ static Ref<AccessibilityObject> createFromRenderer(RenderObject* renderer)
 
     if (is<SVGElement>(node))
         return AccessibilitySVGElement::create(renderer);
+
+    if (isSimpleImage(*renderer))
+        return AXImage::create(downcast<RenderImage>(renderer));
 
 #if ENABLE(MATHML)
     // The mfenced element creates anonymous RenderMathMLOperators which should be treated
@@ -979,16 +1007,31 @@ void AXObjectCache::textChanged(Node* node)
     textChanged(getOrCreate(node));
 }
 
-void AXObjectCache::textChanged(AccessibilityObject* obj)
+void AXObjectCache::textChanged(AccessibilityObject* object)
 {
-    if (!obj)
+    AXTRACE("AXObjectCache::textChanged");
+    AXLOG(object);
+
+    if (!object)
         return;
 
-    bool parentAlreadyExists = obj->parentObjectIfExists();
-    obj->textChanged();
-    postNotification(obj, obj->document(), AXObjectCache::AXTextChanged);
-    if (parentAlreadyExists)
-        obj->notifyIfIgnoredValueChanged();
+    // If this element supports ARIA live regions, or is part of a region with an ARIA editable role,
+    // then notify the AT of changes.
+    bool notifiedNonNativeTextControl = false;
+    for (auto* parent = object; parent; parent = parent->parentObject()) {
+        if (parent->supportsLiveRegion())
+            postLiveRegionChangeNotification(parent);
+
+        if (!notifiedNonNativeTextControl && parent->isNonNativeTextControl()) {
+            postNotification(parent, parent->document(), AXValueChanged);
+            notifiedNonNativeTextControl = true;
+        }
+    }
+
+    postNotification(object, object->document(), AXTextChanged);
+
+    if (object->parentObjectIfExists())
+        object->notifyIfIgnoredValueChanged();
 }
 
 void AXObjectCache::updateCacheAfterNodeIsAttached(Node* node)
@@ -1215,6 +1258,13 @@ void AXObjectCache::deferFocusedUIElementChangeIfNeeded(Node* oldNode, Node* new
         handleFocusedUIElementChanged(oldNode, newNode);
 }
 
+void AXObjectCache::deferMenuListValueChange(Element* element)
+{
+    m_deferredMenuListChange.add(element);
+    if (!m_performCacheUpdateTimer.isActive())
+        m_performCacheUpdateTimer.startOneShot(0_s);
+}
+
 void AXObjectCache::deferModalChange(Element* element)
 {
     m_deferredModalChangedList.add(element);
@@ -1249,6 +1299,17 @@ void AXObjectCache::selectedChildrenChanged(RenderObject* renderer)
     // postTarget is ObservableParent so that you can pass in any child of an element and it will go up the parent tree
     // to find the container which should send out the notification.
     postNotification(renderer, AXSelectedChildrenChanged, PostTarget::ObservableParent);
+}
+
+void AXObjectCache::selectedStateChanged(Node* node)
+{
+    // For a table cell, post AXSelectedStateChanged on the cell itself.
+    // For any other element, post AXSelectedChildrenChanged on the parent.
+    if (nodeHasRole(node, "gridcell") || nodeHasRole(node, "cell")
+        || nodeHasRole(node, "columnheader") || nodeHasRole(node, "rowheader"))
+        postNotification(node, AXSelectedStateChanged);
+    else
+        selectedChildrenChanged(node);
 }
 
 #ifndef NDEBUG
@@ -1758,7 +1819,7 @@ void AXObjectCache::handleAttributeChange(const QualifiedName& attrName, Element
     else if (attrName == aria_checkedAttr)
         checkedStateChanged(element);
     else if (attrName == aria_selectedAttr)
-        selectedChildrenChanged(element);
+        selectedStateChanged(element);
     else if (attrName == aria_expandedAttr)
         handleAriaExpandedChange(element);
     else if (attrName == aria_hiddenAttr) {
@@ -1848,23 +1909,24 @@ void AXObjectCache::stopCachingComputedObjectAttributes()
 
 VisiblePosition AXObjectCache::visiblePositionForTextMarkerData(TextMarkerData& textMarkerData)
 {
-    if (!isNodeInUse(textMarkerData.node))
-        return VisiblePosition();
+    if (!isNodeInUse(textMarkerData.node)
+        || textMarkerData.node->isPseudoElement())
+        return { };
 
-    VisiblePosition visiblePos = VisiblePosition(makeContainerOffsetPosition(textMarkerData.node, textMarkerData.offset), textMarkerData.affinity);
-    Position deepPos = visiblePos.deepEquivalent();
-    if (deepPos.isNull())
-        return VisiblePosition();
+    auto visiblePosition = VisiblePosition(makeContainerOffsetPosition(textMarkerData.node, textMarkerData.offset), textMarkerData.affinity);
+    auto deepPosition = visiblePosition.deepEquivalent();
+    if (deepPosition.isNull())
+        return { };
 
-    RenderObject* renderer = deepPos.deprecatedNode()->renderer();
+    auto* renderer = deepPosition.deprecatedNode()->renderer();
     if (!renderer)
-        return VisiblePosition();
+        return { };
 
-    AXObjectCache* cache = renderer->document().axObjectCache();
+    auto* cache = renderer->document().axObjectCache();
     if (cache && !cache->m_idsInUse.contains(textMarkerData.axID))
-        return VisiblePosition();
+        return { };
 
-    return visiblePos;
+    return visiblePosition;
 }
 
 CharacterOffset AXObjectCache::characterOffsetForTextMarkerData(TextMarkerData& textMarkerData)
@@ -1897,7 +1959,10 @@ CharacterOffset AXObjectCache::traverseToOffsetInRange(const SimpleRange& range,
     bool finished = false;
     int lastStartOffset = 0;
 
-    TextIterator iterator(range, doNotEnterTextControls ? TextIteratorDefaultBehavior : TextIteratorEntersTextControls);
+    TextIteratorBehaviors behaviors;
+    if (!doNotEnterTextControls)
+        behaviors.add(TextIteratorBehavior::EntersTextControls);
+    TextIterator iterator(range, behaviors);
 
     // When the range has zero length, there might be replaced node or brTag that we need to increment the characterOffset.
     if (iterator.atEnd()) {
@@ -2003,7 +2068,7 @@ CharacterOffset AXObjectCache::traverseToOffsetInRange(const SimpleRange& range,
     return CharacterOffset(currentNode, lastStartOffset, offsetInCharacter, remaining);
 }
 
-int AXObjectCache::lengthForRange(const Optional<SimpleRange>& range)
+int AXObjectCache::lengthForRange(const std::optional<SimpleRange>& range)
 {
     if (!range)
         return -1;
@@ -2031,22 +2096,31 @@ SimpleRange AXObjectCache::rangeForNodeContents(Node& node)
     return makeRangeSelectingNodeContents(node);
 }
 
-Optional<SimpleRange> AXObjectCache::rangeMatchesTextNearRange(const SimpleRange& originalRange, const String& matchText)
+std::optional<SimpleRange> AXObjectCache::rangeMatchesTextNearRange(const SimpleRange& originalRange, const String& matchText)
 {
-    // Create a large enough range for searching the text within.
+    // Create a large enough range to find the text within it that's being searched for.
     unsigned textLength = matchText.length();
-    auto startPosition = visiblePositionForPositionWithOffset(makeContainerOffsetPosition(originalRange.start), -textLength);
-    auto endPosition = visiblePositionForPositionWithOffset(makeContainerOffsetPosition(originalRange.start), 2 * textLength);
-    if (startPosition.isNull())
-        startPosition = firstPositionInOrBeforeNode(originalRange.start.container.ptr());
-    if (endPosition.isNull())
-        endPosition = lastPositionInOrAfterNode(originalRange.end.container.ptr());
+    auto startPosition = VisiblePosition(makeContainerOffsetPosition(originalRange.start));
+    for (unsigned k = 0; k < textLength; k++) {
+        auto testPosition = startPosition.previous();
+        if (testPosition.isNull())
+            break;
+        startPosition = testPosition;
+    }
+
+    auto endPosition = VisiblePosition(makeContainerOffsetPosition(originalRange.end));
+    for (unsigned k = 0; k < textLength; k++) {
+        auto testPosition = endPosition.next();
+        if (testPosition.isNull())
+            break;
+        endPosition = testPosition;
+    }
 
     auto searchRange = makeSimpleRange(startPosition, endPosition);
     if (!searchRange || searchRange->collapsed())
-        return WTF::nullopt;
+        return std::nullopt;
 
-    auto targetOffset = characterCount({ searchRange->start, originalRange.start }, TextIteratorEmitsCharactersBetweenAllVisiblePositions);
+    auto targetOffset = characterCount({ searchRange->start, originalRange.start }, TextIteratorBehavior::EmitsCharactersBetweenAllVisiblePositions);
     return findClosestPlainText(*searchRange, matchText, { }, targetOffset);
 }
 
@@ -2089,10 +2163,10 @@ static Node* resetNodeAndOffsetForReplacedNode(Node& replacedNode, int& offset, 
     return replacedNode.parentNode();
 }
 
-static Optional<BoundaryPoint> boundaryPoint(const CharacterOffset& characterOffset, bool isStart)
+static std::optional<BoundaryPoint> boundaryPoint(const CharacterOffset& characterOffset, bool isStart)
 {
     if (characterOffset.isNull())
-        return WTF::nullopt;
+        return std::nullopt;
 
     int offset = characterOffset.startIndex + characterOffset.offset;
     Node* node = characterOffset.node;
@@ -2108,7 +2182,7 @@ static Optional<BoundaryPoint> boundaryPoint(const CharacterOffset& characterOff
         node = resetNodeAndOffsetForReplacedNode(*node, offset, characterCount);
 
     if (!node)
-        return WTF::nullopt;
+        return std::nullopt;
 
     return { { *node, static_cast<unsigned>(offset) } };
 }
@@ -2125,13 +2199,13 @@ static bool setRangeStartOrEndWithCharacterOffset(SimpleRange& range, const Char
     return true;
 }
 
-Optional<SimpleRange> AXObjectCache::rangeForUnorderedCharacterOffsets(const CharacterOffset& characterOffset1, const CharacterOffset& characterOffset2)
+std::optional<SimpleRange> AXObjectCache::rangeForUnorderedCharacterOffsets(const CharacterOffset& characterOffset1, const CharacterOffset& characterOffset2)
 {
     bool alreadyInOrder = characterOffsetsInOrder(characterOffset1, characterOffset2);
     auto start = boundaryPoint(alreadyInOrder ? characterOffset1 : characterOffset2, true);
     auto end = boundaryPoint(alreadyInOrder ? characterOffset2 : characterOffset1, false);
     if (!start || !end)
-        return WTF::nullopt;
+        return std::nullopt;
     return { { *start, * end } };
 }
 
@@ -2417,19 +2491,19 @@ AccessibilityObject* AXObjectCache::accessibilityObjectForTextMarkerData(TextMar
     return this->getOrCreate(domNode);
 }
 
-Optional<TextMarkerData> AXObjectCache::textMarkerDataForVisiblePosition(const VisiblePosition& visiblePos)
+std::optional<TextMarkerData> AXObjectCache::textMarkerDataForVisiblePosition(const VisiblePosition& visiblePos)
 {
     if (visiblePos.isNull())
-        return WTF::nullopt;
+        return std::nullopt;
 
     Position deepPos = visiblePos.deepEquivalent();
     Node* domNode = deepPos.deprecatedNode();
     ASSERT(domNode);
     if (!domNode)
-        return WTF::nullopt;
+        return std::nullopt;
 
     if (is<HTMLInputElement>(*domNode) && downcast<HTMLInputElement>(*domNode).isPasswordField())
-        return WTF::nullopt;
+        return std::nullopt;
 
     // If the visible position has an anchor type referring to a node other than the anchored node, we should
     // set the text marker data with CharacterOffset so that the offset will correspond to the node.
@@ -2443,7 +2517,7 @@ Optional<TextMarkerData> AXObjectCache::textMarkerDataForVisiblePosition(const V
     // find or create an accessibility object for this node
     AXObjectCache* cache = domNode->document().axObjectCache();
     if (!cache)
-        return WTF::nullopt;
+        return std::nullopt;
     RefPtr<AccessibilityObject> obj = cache->getOrCreate(domNode);
 
     // This memory must be zero'd so instances of TextMarkerData can be tested for byte-equivalence.
@@ -2465,18 +2539,18 @@ Optional<TextMarkerData> AXObjectCache::textMarkerDataForVisiblePosition(const V
 }
 
 // This function exits as a performance optimization to avoid a synchronous layout.
-Optional<TextMarkerData> AXObjectCache::textMarkerDataForFirstPositionInTextControl(HTMLTextFormControlElement& textControl)
+std::optional<TextMarkerData> AXObjectCache::textMarkerDataForFirstPositionInTextControl(HTMLTextFormControlElement& textControl)
 {
     if (is<HTMLInputElement>(textControl) && downcast<HTMLInputElement>(textControl).isPasswordField())
-        return WTF::nullopt;
+        return std::nullopt;
 
     AXObjectCache* cache = textControl.document().axObjectCache();
     if (!cache)
-        return WTF::nullopt;
+        return std::nullopt;
 
     RefPtr<AccessibilityObject> obj = cache->getOrCreate(&textControl);
     if (!obj)
-        return WTF::nullopt;
+        return std::nullopt;
 
     // This memory must be zero'd so instances of TextMarkerData can be tested for byte-equivalence.
     // Warning: This is risky and bad because TextMarkerData is a nontrivial type.
@@ -2595,14 +2669,14 @@ CharacterOffset AXObjectCache::nextWordEndCharacterOffset(const CharacterOffset&
     return endCharacterOffsetOfWord(nextOffset, LeftWordIfOnBoundary);
 }
 
-Optional<SimpleRange> AXObjectCache::leftWordRange(const CharacterOffset& characterOffset)
+std::optional<SimpleRange> AXObjectCache::leftWordRange(const CharacterOffset& characterOffset)
 {
     CharacterOffset start = startCharacterOffsetOfWord(characterOffset, LeftWordIfOnBoundary);
     CharacterOffset end = endCharacterOffsetOfWord(start);
     return rangeForUnorderedCharacterOffsets(start, end);
 }
 
-Optional<SimpleRange> AXObjectCache::rightWordRange(const CharacterOffset& characterOffset)
+std::optional<SimpleRange> AXObjectCache::rightWordRange(const CharacterOffset& characterOffset)
 {
     CharacterOffset start = startCharacterOffsetOfWord(characterOffset, RightWordIfOnBoundary);
     CharacterOffset end = endCharacterOffsetOfWord(start);
@@ -2684,7 +2758,7 @@ CharacterOffset AXObjectCache::nextBoundary(const CharacterOffset& characterOffs
         return { };
     CharacterOffset end = startOrEndCharacterOffsetForRange(searchRange, false);
 
-    TextIterator it(searchRange, TextIteratorEmitsObjectReplacementCharacters);
+    TextIterator it(searchRange, TextIteratorBehavior::EmitsObjectReplacementCharacters);
     unsigned next = forwardSearchForBoundaryWithTextIterator(it, string, prefixLength, searchFunction);
 
     if (it.atEnd() && next == string.size())
@@ -2823,7 +2897,7 @@ CharacterOffset AXObjectCache::endCharacterOffsetOfParagraph(const CharacterOffs
     return startOrEndCharacterOffsetForRange(rangeForNodeContents(node), false);
 }
 
-Optional<SimpleRange> AXObjectCache::paragraphForCharacterOffset(const CharacterOffset& characterOffset)
+std::optional<SimpleRange> AXObjectCache::paragraphForCharacterOffset(const CharacterOffset& characterOffset)
 {
     CharacterOffset start = startCharacterOffsetOfParagraph(characterOffset);
     CharacterOffset end = endCharacterOffsetOfParagraph(start);
@@ -2864,7 +2938,7 @@ CharacterOffset AXObjectCache::endCharacterOffsetOfSentence(const CharacterOffse
     return nextBoundary(characterOffset, endSentenceBoundary);
 }
 
-Optional<SimpleRange> AXObjectCache::sentenceForCharacterOffset(const CharacterOffset& characterOffset)
+std::optional<SimpleRange> AXObjectCache::sentenceForCharacterOffset(const CharacterOffset& characterOffset)
 {
     CharacterOffset start = startCharacterOffsetOfSentence(characterOffset);
     CharacterOffset end = endCharacterOffsetOfSentence(start);
@@ -3055,14 +3129,14 @@ const Element* AXObjectCache::rootAXEditableElement(const Node* node)
     return result;
 }
 
-static void conditionallyAddNodeToFilterList(Node* node, const Document& document, HashSet<Node*>& nodesToRemove)
+static void conditionallyAddNodeToFilterList(Node* node, const Document& document, HashSet<Ref<Node>>& nodesToRemove)
 {
     if (node && (!node->isConnected() || &node->document() == &document))
-        nodesToRemove.add(node);
+        nodesToRemove.add(*node);
 }
 
 template<typename T>
-static void filterVectorPairForRemoval(const Vector<std::pair<T, T>>& list, const Document& document, HashSet<Node*>& nodesToRemove)
+static void filterVectorPairForRemoval(const Vector<std::pair<T, T>>& list, const Document& document, HashSet<Ref<Node>>& nodesToRemove)
 {
     for (auto& entry : list) {
         conditionallyAddNodeToFilterList(entry.first, document, nodesToRemove);
@@ -3071,14 +3145,14 @@ static void filterVectorPairForRemoval(const Vector<std::pair<T, T>>& list, cons
 }
 
 template<typename T, typename U>
-static void filterMapForRemoval(const HashMap<T, U>& list, const Document& document, HashSet<Node*>& nodesToRemove)
+static void filterMapForRemoval(const HashMap<T, U>& list, const Document& document, HashSet<Ref<Node>>& nodesToRemove)
 {
     for (auto& entry : list)
         conditionallyAddNodeToFilterList(entry.key, document, nodesToRemove);
 }
 
 template<typename T>
-static void filterListForRemoval(const ListHashSet<T>& list, const Document& document, HashSet<Node*>& nodesToRemove)
+static void filterListForRemoval(const ListHashSet<T>& list, const Document& document, HashSet<Ref<Node>>& nodesToRemove)
 {
     for (auto* node : list)
         conditionallyAddNodeToFilterList(node, document, nodesToRemove);
@@ -3086,7 +3160,7 @@ static void filterListForRemoval(const ListHashSet<T>& list, const Document& doc
 
 void AXObjectCache::prepareForDocumentDestruction(const Document& document)
 {
-    HashSet<Node*> nodesToRemove;
+    HashSet<Ref<Node>> nodesToRemove;
     filterListForRemoval(m_textMarkerNodes, document, nodesToRemove);
     filterListForRemoval(m_modalElementsSet, document, nodesToRemove);
     filterListForRemoval(m_deferredTextChangedList, document, nodesToRemove);
@@ -3095,8 +3169,8 @@ void AXObjectCache::prepareForDocumentDestruction(const Document& document)
     filterMapForRemoval(m_deferredAttributeChange, document, nodesToRemove);
     filterVectorPairForRemoval(m_deferredFocusedNodeChange, document, nodesToRemove);
 
-    for (auto* node : nodesToRemove)
-        remove(*node);
+    for (auto& node : nodesToRemove)
+        remove(node);
 }
 
 bool AXObjectCache::nodeIsTextControl(const Node* node)
@@ -3170,6 +3244,10 @@ void AXObjectCache::performDeferredCacheUpdate()
     for (auto& deferredModalChangedElement : m_deferredModalChangedList)
         handleModalChange(deferredModalChangedElement);
     m_deferredModalChangedList.clear();
+
+    for (auto& deferredMenuListChangeElement : m_deferredMenuListChange)
+        postNotification(&deferredMenuListChangeElement, AXObjectCache::AXMenuListValueChanged);
+    m_deferredMenuListChange.clear();
 
     platformPerformDeferredCacheUpdate();
 }

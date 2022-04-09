@@ -35,36 +35,62 @@ struct MediaMetadataInit {
     String title;
     String artist;
     String album;
+#if ENABLE(MEDIA_SESSION_PLAYLIST)
+    String trackIdentifier;
+#endif
     Vector<MediaImage> artwork;
 
     template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static Optional<MediaMetadataInit> decode(Decoder&);
+    template<class Decoder> static std::optional<MediaMetadataInit> decode(Decoder&);
 };
 
 template<class Encoder> inline void MediaMetadataInit::encode(Encoder& encoder) const
 {
-    encoder << title << artist << album << artwork;
+    encoder << title << artist << album
+#if ENABLE(MEDIA_SESSION_PLAYLIST)
+    << trackIdentifier
+#endif
+    << artwork;
 }
 
-template<class Decoder> inline Optional<MediaMetadataInit> MediaMetadataInit::decode(Decoder& decoder)
+template<class Decoder> inline std::optional<MediaMetadataInit> MediaMetadataInit::decode(Decoder& decoder)
 {
-    String title;
-    if (!decoder.decode(title))
+    std::optional<String> title;
+    decoder >> title;
+    if (!title)
         return { };
 
-    String artist;
-    if (!decoder.decode(artist))
+    std::optional<String> artist;
+    decoder >> artist;
+    if (!artist)
         return { };
 
-    String album;
-    if (!decoder.decode(album))
+    std::optional<String> album;
+    decoder >> album;
+    if (!album)
         return { };
 
-    Vector<MediaImage> artwork;
-    if (!decoder.decode(artwork))
+#if ENABLE(MEDIA_SESSION_PLAYLIST)
+    std::optional<String> trackIdentifier;
+    decoder >> trackIdentifier;
+    if (!trackIdentifier)
+        return { };
+#endif
+
+    std::optional<Vector<MediaImage>> artwork;
+    decoder >> artwork;
+    if (!artwork)
         return { };
 
-    return MediaMetadataInit { WTFMove(title), WTFMove(artist), WTFMove(album), WTFMove(artwork) };
+    return { {
+        WTFMove(*title),
+        WTFMove(*artist),
+        WTFMove(*album),
+#if ENABLE(MEDIA_SESSION_PLAYLIST)
+        WTFMove(*trackIdentifier),
+#endif
+        WTFMove(*artwork)
+    } };
 }
 
 }

@@ -41,7 +41,7 @@ struct AuthenticatorResponseData {
     RefPtr<ArrayBuffer> rawId;
 
     // Extensions
-    Optional<bool> appid;
+    std::optional<bool> appid;
 
     // AuthenticatorAttestationResponse
     RefPtr<ArrayBuffer> attestationObject;
@@ -52,20 +52,20 @@ struct AuthenticatorResponseData {
     RefPtr<ArrayBuffer> userHandle;
 
     template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static Optional<AuthenticatorResponseData> decode(Decoder&);
+    template<class Decoder> static std::optional<AuthenticatorResponseData> decode(Decoder&);
 };
 
 template<class Encoder>
 static void encodeArrayBuffer(Encoder& encoder, const ArrayBuffer& buffer)
 {
     encoder << static_cast<uint64_t>(buffer.byteLength());
-    encoder.encodeFixedLengthData(reinterpret_cast<const uint8_t*>(buffer.data()), buffer.byteLength(), 1);
+    encoder.encodeFixedLengthData(static_cast<const uint8_t*>(buffer.data()), buffer.byteLength(), 1);
 }
 
 template<class Decoder>
 RefPtr<ArrayBuffer> decodeArrayBuffer(Decoder& decoder)
 {
-    Optional<uint64_t> length;
+    std::optional<uint64_t> length;
     decoder >> length;
     if (!length)
         return nullptr;
@@ -75,7 +75,7 @@ RefPtr<ArrayBuffer> decodeArrayBuffer(Decoder& decoder)
     auto buffer = ArrayBuffer::tryCreate(length.value(), sizeof(uint8_t));
     if (!buffer)
         return nullptr;
-    if (!decoder.decodeFixedLengthData(reinterpret_cast<uint8_t*>(buffer->data()), length.value(), 1))
+    if (!decoder.decodeFixedLengthData(static_cast<uint8_t*>(buffer->data()), length.value(), 1))
         return nullptr;
     return buffer;
 }
@@ -114,58 +114,58 @@ void AuthenticatorResponseData::encode(Encoder& encoder) const
 }
 
 template<class Decoder>
-Optional<AuthenticatorResponseData> AuthenticatorResponseData::decode(Decoder& decoder)
+std::optional<AuthenticatorResponseData> AuthenticatorResponseData::decode(Decoder& decoder)
 {
     AuthenticatorResponseData result;
 
-    Optional<bool> isEmpty;
+    std::optional<bool> isEmpty;
     decoder >> isEmpty;
     if (!isEmpty)
-        return WTF::nullopt;
+        return std::nullopt;
     if (isEmpty.value())
         return result;
 
     result.rawId = decodeArrayBuffer(decoder);
     if (!result.rawId)
-        return WTF::nullopt;
+        return std::nullopt;
 
-    Optional<bool> isAuthenticatorAttestationResponse;
+    std::optional<bool> isAuthenticatorAttestationResponse;
     decoder >> isAuthenticatorAttestationResponse;
     if (!isAuthenticatorAttestationResponse)
-        return WTF::nullopt;
+        return std::nullopt;
     result.isAuthenticatorAttestationResponse = isAuthenticatorAttestationResponse.value();
 
     if (result.isAuthenticatorAttestationResponse) {
         result.attestationObject = decodeArrayBuffer(decoder);
         if (!result.attestationObject)
-            return WTF::nullopt;
+            return std::nullopt;
         return result;
     }
 
     result.authenticatorData = decodeArrayBuffer(decoder);
     if (!result.authenticatorData)
-        return WTF::nullopt;
+        return std::nullopt;
 
     result.signature = decodeArrayBuffer(decoder);
     if (!result.signature)
-        return WTF::nullopt;
+        return std::nullopt;
 
-    Optional<Optional<bool>> appid;
+    std::optional<std::optional<bool>> appid;
     decoder >> appid;
     if (!appid)
-        return WTF::nullopt;
+        return std::nullopt;
     result.appid = WTFMove(*appid);
 
-    Optional<bool> hasUserHandle;
+    std::optional<bool> hasUserHandle;
     decoder >> hasUserHandle;
     if (!hasUserHandle)
-        return WTF::nullopt;
+        return std::nullopt;
     if (!*hasUserHandle)
         return result;
 
     result.userHandle = decodeArrayBuffer(decoder);
     if (!result.userHandle)
-        return WTF::nullopt;
+        return std::nullopt;
 
     return result;
 }

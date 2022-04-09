@@ -30,17 +30,16 @@
 #include "BreakingContext.h"
 #include "CharacterProperties.h"
 #include "DocumentMarkerController.h"
-#include "EllipsisBox.h"
 #include "FloatQuad.h"
 #include "Frame.h"
 #include "FrameView.h"
 #include "HTMLParserIdioms.h"
 #include "Hyphenation.h"
 #include "InlineRunAndOffset.h"
-#include "InlineTextBox.h"
 #include "LayoutIntegrationLineIterator.h"
 #include "LayoutIntegrationLineLayout.h"
 #include "LayoutIntegrationRunIterator.h"
+#include "LegacyEllipsisBox.h"
 #include "Range.h"
 #include "RenderBlock.h"
 #include "RenderCombineText.h"
@@ -53,6 +52,7 @@
 #include "Text.h"
 #include "TextResourceDecoder.h"
 #include "VisiblePosition.h"
+#include "WidthIterator.h"
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/text/StringBuilder.h>
@@ -64,7 +64,7 @@
 #include "EditorClient.h"
 #include "LogicalSelectionOffsetCaches.h"
 #include "Page.h"
-#include "SelectionRect.h"
+#include "SelectionGeometry.h"
 #endif
 
 namespace WebCore {
@@ -324,7 +324,7 @@ Vector<IntRect> RenderText::absoluteRectsForRange(unsigned start, unsigned end, 
 // This function is similar in spirit to addLineBoxRects, but returns rectangles
 // which are annotated with additional state which helps the iPhone draw selections in its unique way.
 // Full annotations are added in this class.
-void RenderText::collectSelectionRects(Vector<SelectionRect>& rects, unsigned start, unsigned end)
+void RenderText::collectSelectionGeometries(Vector<SelectionGeometry>& rects, unsigned start, unsigned end)
 {
     for (auto run = LayoutIntegration::firstTextRunFor(*this); run; run = run.traverseNextTextRun()) {
         LayoutRect rect;
@@ -369,7 +369,7 @@ void RenderText::collectSelectionRects(Vector<SelectionRect>& rects, unsigned st
         bool containsEnd = run->start() <= end && run->end() >= end;
 
         bool isFixed = false;
-        IntRect absRect = localToAbsoluteQuad(FloatRect(rect), UseTransforms, &isFixed).enclosingBoundingBox();
+        auto absoluteQuad = localToAbsoluteQuad(FloatRect(rect), UseTransforms, &isFixed);
         bool boxIsHorizontal = !is<SVGInlineTextBox>(run->legacyInlineBox()) ? run->isHorizontal() : !style().isVerticalWritingMode();
         // If the containing block is an inline element, we want to check the inlineBoxWrapper orientation
         // to determine the orientation of the block. In this case we also use the inlineBoxWrapper to
@@ -381,7 +381,7 @@ void RenderText::collectSelectionRects(Vector<SelectionRect>& rects, unsigned st
             }
         }
 
-        rects.append(SelectionRect(absRect, run->direction(), extentsRect.x(), extentsRect.maxX(), extentsRect.maxY(), 0, run->isLineBreak(), isFirstOnLine, isLastOnLine, containsStart, containsEnd, boxIsHorizontal, isFixed, containingBlock->isRubyText(), view().pageNumberForBlockProgressionOffset(absRect.x())));
+        rects.append(SelectionGeometry(absoluteQuad, HTMLElement::selectionRenderingBehavior(textNode()), run->direction(), extentsRect.x(), extentsRect.maxX(), extentsRect.maxY(), 0, run->isLineBreak(), isFirstOnLine, isLastOnLine, containsStart, containsEnd, boxIsHorizontal, isFixed, containingBlock->isRubyText(), view().pageNumberForBlockProgressionOffset(absoluteQuad.enclosingBoundingBox().x())));
     }
 }
 #endif
@@ -480,7 +480,7 @@ static FloatRect localQuadForTextRun(const LayoutIntegration::PathTextRun& run, 
 Vector<FloatQuad> RenderText::absoluteQuadsForRange(unsigned start, unsigned end, bool useSelectionHeight, bool ignoreEmptyTextSelections, bool* wasFixed) const
 {
     // Work around signed/unsigned issues. This function takes unsigneds, and is often passed UINT_MAX
-    // to mean "all the way to the end". InlineTextBox coordinates are unsigneds, so changing this
+    // to mean "all the way to the end". LegacyInlineTextBox coordinates are unsigneds, so changing this
     // function to take ints causes various internal mismatches. But selectionRect takes ints, and
     // passing UINT_MAX to it causes trouble. Ideally we'd change selectionRect to take unsigneds, but
     // that would cause many ripple effects, so for now we'll just clamp our unsigned parameters to INT_MAX.
@@ -989,7 +989,7 @@ void RenderText::computePreferredLogicalWidths(float leadWidth, HashSet<const Fo
     bool isSpace = false;
     bool firstWord = true;
     bool firstLine = true;
-    Optional<unsigned> nextBreakable;
+    std::optional<unsigned> nextBreakable;
     unsigned lastWordBoundary = 0;
 
     WordTrailingSpace wordTrailingSpace(style);
@@ -1009,7 +1009,7 @@ void RenderText::computePreferredLogicalWidths(float leadWidth, HashSet<const Fo
         minimumSuffixLength = after < 0 ? 2 : after;
     }
 
-    Optional<int> firstGlyphLeftOverflow;
+    std::optional<LayoutUnit> firstGlyphLeftOverflow;
 
     bool breakNBSP = style.autoWrap() && style.nbspMode() == NBSPMode::Space;
 
@@ -1069,13 +1069,19 @@ void RenderText::computePreferredLogicalWidths(float leadWidth, HashSet<const Fo
         bool betweenWords = true;
         unsigned j = i;
         while (c != '\n' && !isSpaceAccordingToStyle(c, style) && c != '\t' && (c != softHyphen || style.hyphens() == Hyphens::None)) {
+            UChar previousCharacter = c;
             j++;
             if (j == length)
                 break;
             c = string[j];
+            if (U_IS_LEAD(previousCharacter) && U_IS_TRAIL(c))
+                continue;
             if (isBreakable(breakIterator, j, nextBreakable, breakNBSP, canUseLineBreakShortcut, keepAllWords, breakAnywhere) && characterAt(j - 1) != softHyphen)
                 break;
             if (breakAll) {
+                // FIXME: This code is ultra wrong.
+                // The spec says "word-break: break-all: Any typographic letter units are treated as ID(“ideographic characters”) for the purpose of line-breaking."
+                // The spec describes how a "typographic letter unit" is a cluster, not a code point: https://drafts.csswg.org/css-text-3/#typographic-character-unit
                 betweenWords = false;
                 break;
             }
@@ -1086,7 +1092,7 @@ void RenderText::computePreferredLogicalWidths(float leadWidth, HashSet<const Fo
             float currMinWidth = 0;
             bool isSpace = (j < length) && isSpaceAccordingToStyle(c, style);
             float w;
-            Optional<float> wordTrailingSpaceWidth;
+            std::optional<float> wordTrailingSpaceWidth;
             if (isSpace)
                 wordTrailingSpaceWidth = wordTrailingSpace.width(fallbackFonts);
             if (wordTrailingSpaceWidth)
@@ -1103,7 +1109,7 @@ void RenderText::computePreferredLogicalWidths(float leadWidth, HashSet<const Fo
 
                 if (suffixStart) {
                     float suffixWidth;
-                    Optional<float> wordTrailingSpaceWidth;
+                    std::optional<float> wordTrailingSpaceWidth;
                     if (isSpace)
                         wordTrailingSpaceWidth = wordTrailingSpace.width(fallbackFonts);
                     if (wordTrailingSpaceWidth)
@@ -1186,7 +1192,7 @@ void RenderText::computePreferredLogicalWidths(float leadWidth, HashSet<const Fo
         }
     }
 
-    glyphOverflow.left = firstGlyphLeftOverflow.valueOr(glyphOverflow.left);
+    glyphOverflow.left = firstGlyphLeftOverflow.value_or(glyphOverflow.left);
 
     if ((needsWordSpacing && length > 1) || (ignoringSpaces && !firstWord))
         currMaxWidth += wordSpacing;
@@ -1432,9 +1438,15 @@ bool RenderText::computeCanUseSimplifiedTextMeasuring() const
     if (font.codePath(run) != FontCascade::CodePath::Simple)
         return false;
 
+    auto& fontCascade = style().fontCascade();
+    auto& primaryFont = fontCascade.primaryFont();
     auto whitespaceIsCollapsed = style().collapseWhiteSpace();
     for (unsigned i = 0; i < text().length(); ++i) {
-        if ((!whitespaceIsCollapsed && text()[i] == '\t') || text()[i] == noBreakSpace || text()[i] == softHyphen || text()[i] >= HiraganaLetterSmallA)
+        auto character = text()[i];
+        if (!WidthIterator::characterCanUseSimplifiedTextMeasuring(character, whitespaceIsCollapsed))
+            return false;
+        auto glyphData = fontCascade.glyphDataForCharacter(character, false);
+        if (!glyphData.isValid() || glyphData.font != &primaryFont)
             return false;
     }
     return true;
@@ -1492,19 +1504,19 @@ void RenderText::deleteLineBoxes()
     m_lineBoxes.deleteAll();
 }
 
-std::unique_ptr<InlineTextBox> RenderText::createTextBox()
+std::unique_ptr<LegacyInlineTextBox> RenderText::createTextBox()
 {
-    return makeUnique<InlineTextBox>(*this);
+    return makeUnique<LegacyInlineTextBox>(*this);
 }
 
-void RenderText::positionLineBox(InlineTextBox& textBox)
+void RenderText::positionLineBox(LegacyInlineTextBox& textBox)
 {
     if (!textBox.hasTextContent())
         return;
     m_containsReversedText |= !textBox.isLeftToRightDirection();
 }
 
-bool RenderText::usesComplexLineLayoutPath() const
+bool RenderText::usesLegacyLineLayoutPath() const
 {
 #if ENABLE(LAYOUT_FORMATTING_CONTEXT)
     return !LayoutIntegration::LineLayout::containing(*this);
@@ -1577,7 +1589,7 @@ LayoutRect RenderText::linesVisualOverflowBoundingBox() const
     return m_lineBoxes.visualOverflowBoundingBox(*this);
 }
 
-LayoutRect RenderText::clippedOverflowRectForRepaint(const RenderLayerModelObject* repaintContainer) const
+LayoutRect RenderText::clippedOverflowRect(const RenderLayerModelObject* repaintContainer, VisibleRectContext context) const
 {
     RenderObject* rendererToRepaint = containingBlock();
 
@@ -1588,12 +1600,12 @@ LayoutRect RenderText::clippedOverflowRectForRepaint(const RenderLayerModelObjec
 
     // The renderer we chose to repaint may be an ancestor of repaintContainer, but we need to do a repaintContainer-relative repaint.
     if (repaintContainer && repaintContainer != rendererToRepaint && !rendererToRepaint->isDescendantOf(repaintContainer))
-        return repaintContainer->clippedOverflowRectForRepaint(repaintContainer);
+        return repaintContainer->clippedOverflowRect(repaintContainer, context);
 
-    return rendererToRepaint->clippedOverflowRectForRepaint(repaintContainer);
+    return rendererToRepaint->clippedOverflowRect(repaintContainer, context);
 }
 
-LayoutRect RenderText::collectSelectionRectsForLineBoxes(const RenderLayerModelObject* repaintContainer, bool clipToVisibleContent, Vector<LayoutRect>* rects)
+LayoutRect RenderText::collectSelectionGeometriesForLineBoxes(const RenderLayerModelObject* repaintContainer, bool clipToVisibleContent, Vector<FloatQuad>* quads)
 {
     ASSERT(!needsLayout());
 
@@ -1633,8 +1645,8 @@ LayoutRect RenderText::collectSelectionRectsForLineBoxes(const RenderLayerModelO
 
         resultRect.unite(rect);
 
-        if (rects)
-            rects->append(localToContainerQuad(FloatRect(rect), repaintContainer).enclosingBoundingBox());
+        if (quads)
+            quads->append(localToContainerQuad(FloatRect(rect), repaintContainer));
     }
 
     if (clipToVisibleContent)
@@ -1642,14 +1654,14 @@ LayoutRect RenderText::collectSelectionRectsForLineBoxes(const RenderLayerModelO
     return localToContainerQuad(FloatRect(resultRect), repaintContainer).enclosingBoundingBox();
 }
 
-LayoutRect RenderText::collectSelectionRectsForLineBoxes(const RenderLayerModelObject* repaintContainer, bool clipToVisibleContent, Vector<LayoutRect>& rects)
+LayoutRect RenderText::collectSelectionGeometriesForLineBoxes(const RenderLayerModelObject* repaintContainer, bool clipToVisibleContent, Vector<FloatQuad>& quads)
 {
-    return collectSelectionRectsForLineBoxes(repaintContainer, clipToVisibleContent, &rects);
+    return collectSelectionGeometriesForLineBoxes(repaintContainer, clipToVisibleContent, &quads);
 }
 
 LayoutRect RenderText::selectionRectForRepaint(const RenderLayerModelObject* repaintContainer, bool clipToVisibleContent)
 {
-    return collectSelectionRectsForLineBoxes(repaintContainer, clipToVisibleContent, nullptr);
+    return collectSelectionGeometriesForLineBoxes(repaintContainer, clipToVisibleContent, nullptr);
 }
 
 int RenderText::caretMinOffset() const
@@ -1740,13 +1752,13 @@ int RenderText::previousOffset(int current) const
         return current - 1;
 
     CachedTextBreakIterator iterator(text(), TextBreakIterator::Mode::Caret, nullAtom());
-    return iterator.preceding(current).valueOr(current - 1);
+    return iterator.preceding(current).value_or(current - 1);
 }
 
 int RenderText::previousOffsetForBackwardDeletion(int current) const
 {
     CachedTextBreakIterator iterator(text(), TextBreakIterator::Mode::Delete, nullAtom());
-    return iterator.preceding(current).valueOr(0);
+    return iterator.preceding(current).value_or(0);
 }
 
 int RenderText::nextOffset(int current) const
@@ -1755,7 +1767,7 @@ int RenderText::nextOffset(int current) const
         return current + 1;
 
     CachedTextBreakIterator iterator(text(), TextBreakIterator::Mode::Caret, nullAtom());
-    return iterator.following(current).valueOr(current + 1);
+    return iterator.following(current).value_or(current + 1);
 }
 
 bool RenderText::computeCanUseSimpleFontCodePath() const
@@ -1775,9 +1787,9 @@ void RenderText::momentarilyRevealLastTypedCharacter(unsigned offsetAfterLastTyp
     secureTextTimer->restart(offsetAfterLastTypedCharacter);
 }
 
-StringView RenderText::stringView(unsigned start, Optional<unsigned> stop) const
+StringView RenderText::stringView(unsigned start, std::optional<unsigned> stop) const
 {
-    unsigned destination = stop.valueOr(text().length());
+    unsigned destination = stop.value_or(text().length());
     ASSERT(start <= length());
     ASSERT(destination <= length());
     ASSERT(start <= destination);

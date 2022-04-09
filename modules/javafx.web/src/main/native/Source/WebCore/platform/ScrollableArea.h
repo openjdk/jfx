@@ -86,23 +86,19 @@ public:
     // expect it to happen sometime in the future.
     virtual bool requestScrollPositionUpdate(const ScrollPosition&, ScrollType = ScrollType::User, ScrollClamping = ScrollClamping::Clamped) { return false; }
 
-    WEBCORE_EXPORT virtual bool handleWheelEventForScrolling(const PlatformWheelEvent&, Optional<WheelScrollGestureState>);
+    WEBCORE_EXPORT virtual bool handleWheelEventForScrolling(const PlatformWheelEvent&, std::optional<WheelScrollGestureState>);
 
-    bool usesScrollSnap() const;
-
-#if ENABLE(CSS_SCROLL_SNAP)
-    WEBCORE_EXPORT const ScrollSnapOffsetsInfo<LayoutUnit>* snapOffsetInfo() const;
     virtual void updateSnapOffsets() { };
-    void setScrollSnapOffsetInfo(const ScrollSnapOffsetsInfo<LayoutUnit>&);
+    WEBCORE_EXPORT const LayoutScrollSnapOffsetsInfo* snapOffsetsInfo() const;
+    void setScrollSnapOffsetInfo(const LayoutScrollSnapOffsetsInfo&);
     void clearSnapOffsets();
-    unsigned currentHorizontalSnapPointIndex() const { return m_currentHorizontalSnapPointIndex; }
-    void setCurrentHorizontalSnapPointIndex(unsigned index) { m_currentHorizontalSnapPointIndex = index; }
-    unsigned currentVerticalSnapPointIndex() const { return m_currentVerticalSnapPointIndex; }
-    void setCurrentVerticalSnapPointIndex(unsigned index) { m_currentVerticalSnapPointIndex = index; }
-    IntPoint nearestActiveSnapPoint(const IntPoint&);
-#endif
+    WEBCORE_EXPORT std::optional<unsigned> currentHorizontalSnapPointIndex() const;
+    WEBCORE_EXPORT std::optional<unsigned> currentVerticalSnapPointIndex() const;
+    WEBCORE_EXPORT void setCurrentHorizontalSnapPointIndex(std::optional<unsigned>);
+    WEBCORE_EXPORT void setCurrentVerticalSnapPointIndex(std::optional<unsigned>);
 
-    void updateScrollSnapState();
+    void resnapAfterLayout();
+    void doPostThumbMoveSnapping(ScrollbarOrientation);
 
 #if ENABLE(TOUCH_EVENTS)
     virtual bool handleTouchEvent(const PlatformTouchEvent&);
@@ -341,7 +337,7 @@ public:
     virtual bool usesMockScrollAnimator() const { return false; }
     virtual void logMockScrollAnimatorMessage(const String&) const { };
 
-    virtual bool shouldPlaceBlockDirectionScrollbarOnLeft() const = 0;
+    virtual bool shouldPlaceVerticalScrollbarOnLeft() const = 0;
 
     virtual String debugDescription() const = 0;
 
@@ -382,13 +378,6 @@ private:
     virtual void setScrollOffset(const ScrollOffset&) = 0;
 
     mutable std::unique_ptr<ScrollAnimator> m_scrollAnimator;
-
-#if ENABLE(CSS_SCROLL_SNAP)
-    ScrollSnapOffsetsInfo<LayoutUnit>& ensureSnapOffsetsInfo();
-    std::unique_ptr<ScrollSnapOffsetsInfo<LayoutUnit>> m_snapOffsetsInfo;
-    unsigned m_currentHorizontalSnapPointIndex { 0 };
-    unsigned m_currentVerticalSnapPointIndex { 0 };
-#endif
 
     // There are 8 possible combinations of writing mode and direction. Scroll origin will be non-zero in the x or y axis
     // if there is any reversed direction or writing-mode. The combinations are:

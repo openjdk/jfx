@@ -30,6 +30,8 @@
 #include "JITStubRoutine.h"
 #include "JSObject.h"
 #include "WriteBarrier.h"
+#include <wtf/FixedVector.h>
+#include <wtf/Hasher.h>
 #include <wtf/Vector.h>
 
 namespace JSC {
@@ -37,6 +39,7 @@ namespace DFG {
 class CodeOriginPool;
 }
 
+class AccessCase;
 class CallLinkInfo;
 class JITStubRoutineSet;
 
@@ -53,12 +56,14 @@ class JITStubRoutineSet;
 // list which does not get reclaimed all at once).
 class GCAwareJITStubRoutine : public JITStubRoutine {
 public:
-    GCAwareJITStubRoutine(const MacroAssemblerCodeRef<JITStubRoutinePtrTag>&, VM&);
+    GCAwareJITStubRoutine(const MacroAssemblerCodeRef<JITStubRoutinePtrTag>&);
     ~GCAwareJITStubRoutine() override;
 
-    static Ref<JITStubRoutine> create(const MacroAssemblerCodeRef<JITStubRoutinePtrTag>& code, VM& vm)
+    static Ref<JITStubRoutine> create(VM& vm, const MacroAssemblerCodeRef<JITStubRoutinePtrTag>& code)
     {
-        return adoptRef(*new GCAwareJITStubRoutine(code, vm));
+        auto stub = adoptRef(*new GCAwareJITStubRoutine(code));
+        stub->makeGCAware(vm);
+        return stub;
     }
 
     template<typename Visitor>
@@ -68,6 +73,8 @@ public:
     }
 
     void deleteFromGC();
+
+    void makeGCAware(VM&);
 
 protected:
     void observeZeroRefCount() override;
@@ -80,14 +87,44 @@ private:
 
     bool m_mayBeExecuting { false };
     bool m_isJettisoned { false };
+    bool m_isGCAware { false };
+};
+
+class PolymorphicAccessJITStubRoutine : public GCAwareJITStubRoutine {
+public:
+    using Base = GCAwareJITStubRoutine;
+
+    PolymorphicAccessJITStubRoutine(const MacroAssemblerCodeRef<JITStubRoutinePtrTag>&, VM&, FixedVector<RefPtr<AccessCase>>&&, FixedVector<StructureID>&&);
+
+    const FixedVector<RefPtr<AccessCase>>& cases() const { return m_cases; }
+    const FixedVector<StructureID>& weakStructures() const { return m_weakStructures; }
+
+    unsigned hash() const
+    {
+        if (!m_hash)
+            m_hash = computeHash(m_cases, m_weakStructures);
+        return m_hash;
+    }
+
+    static unsigned computeHash(const FixedVector<RefPtr<AccessCase>>&, const FixedVector<StructureID>&);
+
+protected:
+    void observeZeroRefCount() override;
+
+private:
+    VM& m_vm;
+    FixedVector<RefPtr<AccessCase>> m_cases;
+    FixedVector<StructureID> m_weakStructures;
 };
 
 // Use this if you want to mark one additional object during GC if your stub
 // routine is known to be executing.
-class MarkingGCAwareJITStubRoutine : public GCAwareJITStubRoutine {
+class MarkingGCAwareJITStubRoutine : public PolymorphicAccessJITStubRoutine {
 public:
+    using Base = PolymorphicAccessJITStubRoutine;
+
     MarkingGCAwareJITStubRoutine(
-        const MacroAssemblerCodeRef<JITStubRoutinePtrTag>&, VM&, const JSCell* owner, const Vector<JSCell*>&, Bag<CallLinkInfo>&&);
+        const MacroAssemblerCodeRef<JITStubRoutinePtrTag>&, VM&, FixedVector<RefPtr<AccessCase>>&&, FixedVector<StructureID>&&, const JSCell* owner, const Vector<JSCell*>&, Bag<CallLinkInfo>&&);
     ~MarkingGCAwareJITStubRoutine() override;
 
 protected:
@@ -96,7 +133,7 @@ protected:
     void markRequiredObjectsInternal(SlotVisitor&) final;
 
 private:
-    Vector<WriteBarrier<JSCell>> m_cells;
+    FixedVector<WriteBarrier<JSCell>> m_cells;
     Bag<CallLinkInfo> m_callLinkInfos;
 };
 
@@ -106,9 +143,9 @@ private:
 // for new exception handlers to use the same DisposableCallSiteIndex.
 class GCAwareJITStubRoutineWithExceptionHandler final : public MarkingGCAwareJITStubRoutine {
 public:
-    typedef GCAwareJITStubRoutine Base;
+    using Base = MarkingGCAwareJITStubRoutine;
 
-    GCAwareJITStubRoutineWithExceptionHandler(const MacroAssemblerCodeRef<JITStubRoutinePtrTag>&, VM&, const JSCell* owner, const Vector<JSCell*>&, Bag<CallLinkInfo>&&, CodeBlock*, DisposableCallSiteIndex);
+    GCAwareJITStubRoutineWithExceptionHandler(const MacroAssemblerCodeRef<JITStubRoutinePtrTag>&, VM&, FixedVector<RefPtr<AccessCase>>&&, FixedVector<StructureID>&&, const JSCell* owner, const Vector<JSCell*>&, Bag<CallLinkInfo>&&, CodeBlock*, DisposableCallSiteIndex);
     ~GCAwareJITStubRoutineWithExceptionHandler() final;
 
     void aboutToDie() final;
@@ -128,9 +165,10 @@ private:
 // appropriate. Generally you only need to pass pointers that will be used
 // after the first call to C++ or JS.
 //
-// Ref<JITStubRoutine> createJITStubRoutine(
+// Ref<PolymorphicAccessJITStubRoutine> createICJITStubRoutine(
 //    const MacroAssemblerCodeRef<JITStubRoutinePtrTag>& code,
 //    VM& vm,
+//    FixedVector<RefPtr<AccessCase>>&& cases,
 //    const JSCell* owner,
 //    bool makesCalls,
 //    ...);
@@ -141,8 +179,8 @@ private:
 // this function using varargs, I ended up with more code than this simple
 // way.
 
-Ref<JITStubRoutine> createJITStubRoutine(
-    const MacroAssemblerCodeRef<JITStubRoutinePtrTag>&, VM&, const JSCell* owner, bool makesCalls,
+Ref<PolymorphicAccessJITStubRoutine> createICJITStubRoutine(
+    const MacroAssemblerCodeRef<JITStubRoutinePtrTag>&, FixedVector<RefPtr<AccessCase>>&& cases, FixedVector<StructureID>&& weakStructures, VM&, const JSCell* owner, bool makesCalls,
     const Vector<JSCell*>&, Bag<CallLinkInfo>&& callLinkInfos,
     CodeBlock* codeBlockForExceptionHandlers, DisposableCallSiteIndex exceptionHandlingCallSiteIndex);
 

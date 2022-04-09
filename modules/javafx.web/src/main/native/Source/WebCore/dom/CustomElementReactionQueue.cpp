@@ -38,7 +38,6 @@
 #include <JavaScriptCore/CatchScope.h>
 #include <JavaScriptCore/Heap.h>
 #include <wtf/NeverDestroyed.h>
-#include <wtf/Optional.h>
 #include <wtf/Ref.h>
 #include <wtf/SetForScope.h>
 
@@ -99,7 +98,7 @@ private:
     Type m_type;
     RefPtr<Document> m_oldDocument;
     RefPtr<Document> m_newDocument;
-    Optional<QualifiedName> m_attributeName;
+    std::optional<QualifiedName> m_attributeName;
     AtomString m_oldValue;
     AtomString m_newValue;
 };
@@ -172,10 +171,10 @@ void CustomElementReactionQueue::enqueueConnectedCallbackIfNeeded(Element& eleme
 
 void CustomElementReactionQueue::enqueueDisconnectedCallbackIfNeeded(Element& element)
 {
-    ASSERT(CustomElementReactionDisallowedScope::isReactionAllowed());
     ASSERT(element.isDefinedCustomElement());
     if (element.document().refCount() <= 0)
         return; // Don't enqueue disconnectedCallback if the entire document is getting destructed.
+    ASSERT(CustomElementReactionDisallowedScope::isReactionAllowed());
     ASSERT(element.reactionQueue());
     auto& queue = *element.reactionQueue();
     if (!queue.m_interface->hasDisconnectedCallback())

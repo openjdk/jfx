@@ -51,9 +51,10 @@ class SlotVisitor final : public AbstractSlotVisitor {
     friend class Heap;
 
 public:
-    class Context {
+    class ReferrerContext {
     public:
-        ALWAYS_INLINE Context(AbstractSlotVisitor&, HeapCell*) { }
+        ALWAYS_INLINE ReferrerContext(AbstractSlotVisitor&, ReferrerToken) { }
+        ALWAYS_INLINE ReferrerContext(AbstractSlotVisitor&, OpaqueRootTag) { }
     };
 
     class SuppressGCVerifierScope {
@@ -160,7 +161,7 @@ public:
 
     bool mutatorIsStopped() const final { return m_mutatorIsStopped; }
 
-    Lock& rightToRun() { return m_rightToRun; }
+    Lock& rightToRun() WTF_RETURNS_LOCK(m_rightToRun) { return m_rightToRun; }
 
     void updateMutatorIsStopped(const AbstractLocker&);
     void updateMutatorIsStopped();
@@ -219,8 +220,6 @@ private:
 
     MarkStackArray& correspondingGlobalStack(MarkStackArray&);
 
-    bool m_isInParallelMode { false };
-
     HeapVersion m_markingVersion;
 
     size_t m_bytesVisited { 0 };
@@ -232,6 +231,7 @@ private:
     bool m_isFirstVisit { false };
     bool m_mutatorIsStopped { false };
     bool m_canOptimizeForStoppedMutator { false };
+    bool m_isInParallelMode { false };
     Lock m_rightToRun;
 
     // Put padding here to mitigate false sharing between multiple SlotVisitors.

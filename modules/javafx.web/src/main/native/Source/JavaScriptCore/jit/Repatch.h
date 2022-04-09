@@ -34,38 +34,52 @@
 namespace JSC {
 
 enum class GetByKind {
-    Normal,
-    NormalByVal,
-    Try,
-    WithThis,
-    Direct,
+    ById,
+    ByVal,
+    TryById,
+    ByIdWithThis,
+    ByIdDirect,
     PrivateName,
     PrivateNameById,
 };
 
+enum class PutByKind {
+    ById,
+    ByVal,
+};
+
 enum class DelByKind {
-    Normal,
-    NormalByVal
+    ById,
+    ByVal
+};
+
+enum class InByKind {
+    ById,
+    ByVal,
+    PrivateName
 };
 
 void repatchArrayGetByVal(JSGlobalObject*, CodeBlock*, JSValue base, JSValue index, StructureStubInfo&);
 void repatchGetBy(JSGlobalObject*, CodeBlock*, JSValue, CacheableIdentifier, const PropertySlot&, StructureStubInfo&, GetByKind);
-void repatchPutByID(JSGlobalObject*, CodeBlock*, JSValue, Structure*, CacheableIdentifier, const PutPropertySlot&, StructureStubInfo&, PutKind);
+void repatchArrayPutByVal(JSGlobalObject*, CodeBlock*, JSValue base, JSValue index, StructureStubInfo&, PutKind, ECMAMode);
+void repatchPutBy(JSGlobalObject*, CodeBlock*, JSValue, Structure*, CacheableIdentifier, const PutPropertySlot&, StructureStubInfo&, PutByKind, PutKind);
 void repatchDeleteBy(JSGlobalObject*, CodeBlock*, DeletePropertySlot&, JSValue, Structure*, CacheableIdentifier, StructureStubInfo&, DelByKind, ECMAMode);
-void repatchInByID(JSGlobalObject*, CodeBlock*, JSObject*, CacheableIdentifier, bool wasFound, const PropertySlot&, StructureStubInfo&);
+void repatchInBy(JSGlobalObject*, CodeBlock*, JSObject*, CacheableIdentifier, bool wasFound, const PropertySlot&, StructureStubInfo&, InByKind);
+void repatchHasPrivateBrand(JSGlobalObject*, CodeBlock*, JSObject*, CacheableIdentifier, bool wasFound,  StructureStubInfo&);
 void repatchCheckPrivateBrand(JSGlobalObject*, CodeBlock*, JSObject*, CacheableIdentifier, StructureStubInfo&);
 void repatchSetPrivateBrand(JSGlobalObject*, CodeBlock*, JSObject*, Structure*, CacheableIdentifier, StructureStubInfo&);
 void repatchInstanceOf(JSGlobalObject*, CodeBlock*, JSValue value, JSValue prototype, StructureStubInfo&, bool wasFound);
-void linkFor(VM&, CallFrame*, CallLinkInfo&, CodeBlock*, JSObject* callee, MacroAssemblerCodePtr<JSEntryPtrTag>);
-void linkDirectFor(CallFrame*, CallLinkInfo&, CodeBlock*, MacroAssemblerCodePtr<JSEntryPtrTag>);
+void linkMonomorphicCall(VM&, CallFrame*, CallLinkInfo&, CodeBlock*, JSObject* callee, MacroAssemblerCodePtr<JSEntryPtrTag>);
+void linkDirectCall(CallFrame*, CallLinkInfo&, CodeBlock*, MacroAssemblerCodePtr<JSEntryPtrTag>);
 void linkSlowFor(CallFrame*, CallLinkInfo&);
-void unlinkFor(VM&, CallLinkInfo&);
+void unlinkCall(VM&, CallLinkInfo&);
 void linkPolymorphicCall(JSGlobalObject*, CallFrame*, CallLinkInfo&, CallVariant);
 void resetGetBy(CodeBlock*, StructureStubInfo&, GetByKind);
-void resetPutByID(CodeBlock*, StructureStubInfo&);
+void resetPutBy(CodeBlock*, StructureStubInfo&, PutByKind);
 void resetDelBy(CodeBlock*, StructureStubInfo&, DelByKind);
-void resetInByID(CodeBlock*, StructureStubInfo&);
-void resetInstanceOf(StructureStubInfo&);
+void resetInBy(CodeBlock*, StructureStubInfo&, InByKind);
+void resetHasPrivateBrand(CodeBlock*, StructureStubInfo&);
+void resetInstanceOf(CodeBlock*, StructureStubInfo&);
 void resetCheckPrivateBrand(CodeBlock*, StructureStubInfo&);
 void resetSetPrivateBrand(CodeBlock*, StructureStubInfo&);
 void ftlThunkAwareRepatchCall(CodeBlock*, CodeLocationCall<JSInternalPtrTag>, FunctionPtr<CFunctionPtrTag> newCalleeFunction);

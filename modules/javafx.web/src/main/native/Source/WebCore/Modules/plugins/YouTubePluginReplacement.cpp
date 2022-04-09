@@ -60,7 +60,7 @@ bool YouTubePluginReplacement::supportsFileExtension(const String& extension)
 }
 
 YouTubePluginReplacement::YouTubePluginReplacement(HTMLPlugInElement& plugin, const Vector<String>& paramNames, const Vector<String>& paramValues)
-    : m_parentElement(&plugin)
+    : m_parentElement(makeWeakPtr(plugin))
 {
     ASSERT(paramNames.size() == paramValues.size());
     for (size_t i = 0; i < paramNames.size(); ++i)
@@ -77,7 +77,7 @@ RenderPtr<RenderElement> YouTubePluginReplacement::createElementRenderer(HTMLPlu
     return m_embedShadowElement->createElementRenderer(WTFMove(style), insertionPosition);
 }
 
-bool YouTubePluginReplacement::installReplacement(ShadowRoot& root)
+auto YouTubePluginReplacement::installReplacement(ShadowRoot& root) -> InstallResult
 {
     m_embedShadowElement = YouTubeEmbedShadowElement::create(m_parentElement->document());
 
@@ -100,7 +100,7 @@ bool YouTubePluginReplacement::installReplacement(ShadowRoot& root)
     iframeElement->setAttributeWithoutSynchronization(HTMLNames::scrollingAttr, AtomString("no", AtomString::ConstructFromLiteral));
     m_embedShadowElement->appendChild(iframeElement);
 
-    return true;
+    return { true };
 }
 
 static URL createYouTubeURL(StringView videoID, StringView timeID)

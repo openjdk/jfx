@@ -27,6 +27,7 @@
 
 #if ENABLE(WEBXR)
 
+#include "JSValueInWrappedObject.h"
 #include "WebXRRigidTransform.h"
 #include "XREye.h"
 #include <JavaScriptCore/Float32Array.h>
@@ -52,12 +53,14 @@ public:
     const Float32Array& projectionMatrix() const { return m_projection.get(); }
     const WebXRRigidTransform& transform() const { return m_transform.get(); }
 
-    Optional<double> recommendedViewportScale() const;
-    void requestViewportScale(Optional<double>);
+    std::optional<double> recommendedViewportScale() const;
+    void requestViewportScale(std::optional<double>);
 
     double requestedViewportScale() const { return m_requestedViewportScale; }
     bool isViewportModifiable() const { return m_viewportModifiable; }
     void setViewportModifiable(bool modifiable) { m_viewportModifiable = modifiable; }
+
+    JSValueInWrappedObject& cachedProjectionMatrix() { return m_cachedProjectionMatrix; }
 
 private:
     WebXRView(Ref<WebXRFrame>&&, XREye, Ref<WebXRRigidTransform>&&, Ref<Float32Array>&&);
@@ -68,7 +71,7 @@ private:
     Ref<Float32Array> m_projection;
     bool m_viewportModifiable { false };
     double m_requestedViewportScale { 1.0 };
-
+    JSValueInWrappedObject m_cachedProjectionMatrix;
 };
 
 } // namespace WebCore
