@@ -3029,7 +3029,7 @@ public class TableView<S> extends Control {
             // if such row doesn't have any selected cells
             IntPredicate removeRowFilter = row -> !isCellSelectionEnabled() ||
                     getSelectedCells().stream().noneMatch(tp -> tp.getRow() == row);
-            ControlUtils.updateSelectedIndices(this, c, removeRowFilter);
+            ControlUtils.updateSelectedIndices(this, this.isCellSelectionEnabled(), c, removeRowFilter);
 
             if (isAtomic()) {
                 return;

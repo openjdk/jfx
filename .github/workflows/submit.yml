@@ -66,9 +66,9 @@ jobs:
       # BOOT_JDK_FILENAME: "${{ fromJson(needs.prerequisites.outputs.dependencies).LINUX_X64_BOOT_JDK_FILENAME }}"
       # BOOT_JDK_URL: "${{ fromJson(needs.prerequisites.outputs.dependencies).LINUX_X64_BOOT_JDK_URL }}"
       # BOOT_JDK_SHA256: "${{ fromJson(needs.prerequisites.outputs.dependencies).LINUX_X64_BOOT_JDK_SHA256 }}"
-      BOOT_JDK_VERSION: "17.0.2"
-      BOOT_JDK_FILENAME: "jdk-17.0.2_linux-x64_bin.tar.gz"
-      BOOT_JDK_URL: "https://download.oracle.com/java/17/archive/jdk-17.0.2_linux-x64_bin.tar.gz"
+      BOOT_JDK_VERSION: "18"
+      BOOT_JDK_FILENAME: "jdk-18_linux-x64_bin.tar.gz"
+      BOOT_JDK_URL: "https://download.oracle.com/java/18/archive/jdk-18_linux-x64_bin.tar.gz"
       ANT_DIR: "apache-ant-1.10.5"
       ANT_FILENAME: "apache-ant-1.10.5.tar.gz"
       ANT_URL: "https://archive.apache.org/dist/ant/binaries/apache-ant-1.10.5-bin.tar.gz"
@@ -148,9 +148,9 @@ jobs:
       # BOOT_JDK_FILENAME: "${{ fromJson(needs.prerequisites.outputs.dependencies).LINUX_X64_BOOT_JDK_FILENAME }}"
       # BOOT_JDK_URL: "${{ fromJson(needs.prerequisites.outputs.dependencies).LINUX_X64_BOOT_JDK_URL }}"
       # BOOT_JDK_SHA256: "${{ fromJson(needs.prerequisites.outputs.dependencies).LINUX_X64_BOOT_JDK_SHA256 }}"
-      BOOT_JDK_VERSION: "17.0.2"
-      BOOT_JDK_FILENAME: "jdk-17.0.2_macos-x64_bin.tar.gz"
-      BOOT_JDK_URL: "https://download.oracle.com/java/17/archive/jdk-17.0.2_macos-x64_bin.tar.gz"
+      BOOT_JDK_VERSION: "18"
+      BOOT_JDK_FILENAME: "jdk-18_macos-x64_bin.tar.gz"
+      BOOT_JDK_URL: "https://download.oracle.com/java/18/archive/jdk-18_macos-x64_bin.tar.gz"
       ANT_DIR: "apache-ant-1.10.5"
       ANT_FILENAME: "apache-ant-1.10.5.tar.gz"
       ANT_URL: "https://archive.apache.org/dist/ant/binaries/apache-ant-1.10.5-bin.tar.gz"
@@ -221,7 +221,7 @@ jobs:
   windows_x64_build:
     name: Windows x64
     needs: validation
-    runs-on: "windows-2019"
+    runs-on: "windows-2022"
 
     env:
       # FIXME: read this information from a property file
@@ -229,14 +229,14 @@ jobs:
       # BOOT_JDK_FILENAME: "${{ fromJson(needs.prerequisites.outputs.dependencies).LINUX_X64_BOOT_JDK_FILENAME }}"
       # BOOT_JDK_URL: "${{ fromJson(needs.prerequisites.outputs.dependencies).LINUX_X64_BOOT_JDK_URL }}"
       # BOOT_JDK_SHA256: "${{ fromJson(needs.prerequisites.outputs.dependencies).LINUX_X64_BOOT_JDK_SHA256 }}"
-      BOOT_JDK_VERSION: "17.0.2"
-      BOOT_JDK_FILENAME: "jdk-17.0.2_windows-x64_bin.zip"
-      BOOT_JDK_URL: "https://download.oracle.com/java/17/archive/jdk-17.0.2_windows-x64_bin.zip"
+      BOOT_JDK_VERSION: "18"
+      BOOT_JDK_FILENAME: "jdk-18_windows-x64_bin.zip"
+      BOOT_JDK_URL: "https://download.oracle.com/java/18/archive/jdk-18_windows-x64_bin.zip"
       ANT_DIR: "apache-ant-1.10.5"
       ANT_FILENAME: "apache-ant-1.10.5.tar.gz"
       ANT_URL: "https://archive.apache.org/dist/ant/binaries/apache-ant-1.10.5-bin.tar.gz"
-      # FIXME: hard-code the location of VS 2019 for now
-      VS150COMNTOOLS: "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Enterprise\\VC\\Auxiliary\\Build"
+      # FIXME: hard-code the location of VS 2022 for now
+      VS150COMNTOOLS: "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\VC\\Auxiliary\\Build"
 
     steps:
       - name: Checkout the source
@@ -283,11 +283,11 @@ jobs:
         run: |
           echo "VS150COMNTOOLS=$env:VS150COMNTOOLS"
           echo "dir ...\VC\Tools\MSVC"
-          dir "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Tools\MSVC"
+          dir "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Tools\MSVC"
           echo "dir VS150COMNTOOLS"
           dir "$env:VS150COMNTOOLS"
           # echo "dir ...\VC\Tools\MSVC"
-          # dir "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Tools\MSVC"
+          # dir "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Tools\MSVC"
           # echo "dir VS150COMNTOOLS"
           # dir "$env:VS150COMNTOOLS"
 

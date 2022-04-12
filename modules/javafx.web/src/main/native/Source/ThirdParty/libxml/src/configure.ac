@@ -3,7 +3,7 @@ AC_PREREQ([2.63])
 
 m4_define([MAJOR_VERSION], 2)
 m4_define([MINOR_VERSION], 9)
-m4_define([MICRO_VERSION], 12)
+m4_define([MICRO_VERSION], 13)
 
 AC_INIT([libxml2],[MAJOR_VERSION.MINOR_VERSION.MICRO_VERSION])
 AC_CONFIG_SRCDIR([entities.c])
@@ -21,21 +21,7 @@ LIBXML_VERSION_INFO=`expr $LIBXML_MAJOR_VERSION + $LIBXML_MINOR_VERSION`:$LIBXML
 
 LIBXML_VERSION_NUMBER=`expr $LIBXML_MAJOR_VERSION \* 10000 + $LIBXML_MINOR_VERSION \* 100 + $LIBXML_MICRO_VERSION`
 
-if test -f CVS/Entries ; then
-  extra=`grep ChangeLog CVS/Entries | grep -v LIBXML | sed -e s\%/ChangeLog/1\.%% -e s\%/.*$%%`
-  echo extra=$extra
-  if test "$extra" != ""
-  then
-      LIBXML_VERSION_EXTRA="-CVS$extra"
-  fi
-else if test -d .svn ; then
-  extra=`svn info | grep Revision | sed 's+Revision: ++'`
-  echo extra=$extra
-  if test "$extra" != ""
-  then
-      LIBXML_VERSION_EXTRA="-SVN$extra"
-  fi
-else if test -d .git ; then
+if test -d .git ; then
   extra=`git describe 2>/dev/null | sed 's+LIBXML[[0-9.]]*-++'`
   echo extra=$extra
   if test "$extra" != ""
@@ -43,8 +29,7 @@ else if test -d .git ; then
       LIBXML_VERSION_EXTRA="-GIT$extra"
   fi
 fi
-fi
-fi
+
 AC_SUBST(LIBXML_MAJOR_VERSION)
 AC_SUBST(LIBXML_MINOR_VERSION)
 AC_SUBST(LIBXML_MICRO_VERSION)
@@ -124,13 +109,12 @@ AC_ARG_WITH(html,
 [  --with-html             add the HTML support (on)])
 dnl Specific dir for HTML output ?
 AC_ARG_WITH(html-dir, AS_HELP_STRING([--with-html-dir=path],
-            [path to base html directory, default $datadir/doc/html]),
-            [HTML_DIR=$withval], [HTML_DIR='$(datadir)/doc'])
+            [path to base html directory, default $docdir/html]),
+            [HTML_DIR=$withval], [HTML_DIR='$(docdir)/html'])
 
 AC_ARG_WITH(html-subdir, AS_HELP_STRING([--with-html-subdir=path],
-            [directory used under html-dir, default $PACKAGE-$VERSION/html]),
-            [test "x$withval" != "x" && HTML_DIR="$HTML_DIR/$withval"],
-            [HTML_DIR="$HTML_DIR/\$(PACKAGE)-\$(VERSION)/html"])
+            [directory used under html-dir, default '']),
+            [test "x$withval" != "x" && HTML_DIR="$HTML_DIR/$withval"])
 AC_SUBST(HTML_DIR)
 AC_ARG_WITH(http,
 [  --with-http             add the HTTP support (on)])
@@ -475,7 +459,6 @@ AC_HEADER_STDC
 AC_CHECK_HEADERS([fcntl.h])
 AC_CHECK_HEADERS([unistd.h])
 AC_CHECK_HEADERS([ctype.h])
-AC_CHECK_HEADERS([dirent.h])
 AC_CHECK_HEADERS([errno.h])
 AC_CHECK_HEADERS([malloc.h])
 AC_CHECK_HEADERS([stdarg.h])
@@ -741,13 +724,6 @@ fi
 
 dnl ******************************End IPv6 checks******************************
 
-dnl Checks for isnan in libm if not in libc
-AC_CHECK_FUNC(isnan, AC_DEFINE([HAVE_ISNAN],[], [Define if isnan is there]) , AC_CHECK_LIB(m, isnan,
-  [AC_DEFINE([HAVE_ISNAN],[], [Define if isnan is there])]))
-
-AC_CHECK_FUNC(isinf, AC_DEFINE([HAVE_ISINF], [], [Define if isinf is there]) , AC_CHECK_LIB(m, isinf,
-  [AC_DEFINE([HAVE_ISINF], [], [Define if isinf is there])]))
-
 XML_LIBDIR='-L${libdir}'
 XML_INCLUDEDIR='-I${includedir}/libxml2'
 
@@ -900,7 +876,7 @@ if test "$with_python" != "no" ; then
 	    then
 		PYTHON_SITE_PACKAGES=$with_python/lib/site-packages
 	    else
-		PYTHON_SITE_PACKAGES=`$PYTHON -c "from distutils import sysconfig; print(sysconfig.get_python_lib())"`
+		PYTHON_SITE_PACKAGES=$($PYTHON -c 'from distutils import sysconfig; print(sysconfig.get_python_lib(True,False,"${exec_prefix}"))')
 	    fi
 	fi
     fi
@@ -1063,7 +1039,6 @@ else
             AC_CHECK_HEADER(pthread.h,
                 AC_CHECK_LIB(pthread, pthread_join,[
                 THREAD_LIBS="-lpthread"
-                AC_DEFINE([HAVE_LIBPTHREAD], [], [Define if pthread library is there (-lpthread)])
                 AC_DEFINE([HAVE_PTHREAD_H], [], [Define if <pthread.h> is there])
                 WITH_THREADS="1"]))
         fi
@@ -1701,8 +1676,6 @@ AC_SUBST(ICONV_LIBS)
 AC_SUBST(ICU_LIBS)
 AC_SUBST(XML_INCLUDEDIR)
 AC_SUBST(HTML_DIR)
-AC_SUBST(HAVE_ISNAN)
-AC_SUBST(HAVE_ISINF)
 AC_SUBST(PYTHON)
 AC_SUBST(PYTHON_VERSION)
 AC_SUBST(PYTHON_INCLUDES)
