@@ -631,7 +631,7 @@ void DocumentLoader::willSendRequest(ResourceRequest&& newRequest, const Resourc
         DOCUMENTLOADER_RELEASE_LOG("willSendRequest: With no provisional document loader");
 
     bool didReceiveRedirectResponse = !redirectResponse.isNull();
-    if (!frameLoader()->checkIfFormActionAllowedByCSP(newRequest.url(), didReceiveRedirectResponse)) {
+    if (!frameLoader()->checkIfFormActionAllowedByCSP(newRequest.url(), didReceiveRedirectResponse, redirectResponse.url())) {
         DOCUMENTLOADER_RELEASE_LOG("willSendRequest: canceling - form action not allowed by CSP");
         cancelMainResourceLoad(frameLoader()->cancelledError(newRequest));
         return completionHandler(WTFMove(newRequest));
@@ -758,7 +758,7 @@ static bool checkIfCOOPValuesRequireBrowsingContextGroupSwitch(bool isInitialAbo
     return true;
 }
 
-static std::tuple<Ref<SecurityOrigin>, CrossOriginOpenerPolicy> computeResponseOriginAndCOOP(const ResourceResponse& response, const Document& document, const std::optional<NavigationAction::Requester>& requester)
+static std::tuple<Ref<SecurityOrigin>, CrossOriginOpenerPolicy> computeResponseOriginAndCOOP(const ResourceResponse& response, const Document& document, const std::optional<NavigationAction::Requester>& requester, ContentSecurityPolicy* responseCSP)
 {
     // Non-initial empty documents (about:blank) should inherit their cross-origin-opener-policy from the navigation's initiator top level document,
     // if the initiator and its top level document are same-origin, or default (unsafe-none) otherwise.
@@ -766,7 +766,9 @@ static std::tuple<Ref<SecurityOrigin>, CrossOriginOpenerPolicy> computeResponseO
     if (SecurityPolicy::shouldInheritSecurityOriginFromOwner(response.url()) && requester)
         return std::make_tuple(makeRef(requester->securityOrigin()), requester->securityOrigin().isSameOriginAs(requester->topOrigin()) ? requester->crossOriginOpenerPolicy() : CrossOriginOpenerPolicy { });
 
-    return std::make_tuple(SecurityOrigin::create(response.url()), obtainCrossOriginOpenerPolicy(response, document));
+    // If the HTTP response contains a CSP header, it may set sandbox flags, which would cause the origin to become unique.
+    auto responseOrigin = responseCSP && responseCSP->sandboxFlags() != SandboxNone ? SecurityOrigin::createUnique() : SecurityOrigin::create(response.url());
+    return std::make_tuple(WTFMove(responseOrigin), obtainCrossOriginOpenerPolicy(response, document));
 }
 
 // https://html.spec.whatwg.org/multipage/browsing-the-web.html#process-a-navigate-fetch (Step 12.5.6)
@@ -779,7 +781,7 @@ bool DocumentLoader::doCrossOriginOpenerHandlingOfResponse(const ResourceRespons
     if (!m_frame->document() || !m_frame->document()->settings().crossOriginOpenerPolicyEnabled())
         return true;
 
-    auto [responseOrigin, responseCOOP] = computeResponseOriginAndCOOP(response, *m_frame->document(), m_triggeringAction.requester());
+    auto [responseOrigin, responseCOOP] = computeResponseOriginAndCOOP(response, *m_frame->document(), m_triggeringAction.requester(), m_contentSecurityPolicy.get());
 
     // https://html.spec.whatwg.org/multipage/browsing-the-web.html#process-a-navigate-fetch (Step 12.5.6.2)
     // If sandboxFlags is not empty and responseCOOP's value is not "unsafe-none", then set response to an appropriate network error and break.
@@ -915,6 +917,12 @@ static URL microsoftTeamsRedirectURL()
 void DocumentLoader::responseReceived(CachedResource& resource, const ResourceResponse& response, CompletionHandler<void()>&& completionHandler)
 {
     ASSERT_UNUSED(resource, m_mainResource == &resource);
+
+    if (!response.httpHeaderField(HTTPHeaderName::ContentSecurityPolicy).isNull()) {
+        m_contentSecurityPolicy = makeUnique<ContentSecurityPolicy>(URL { response.url() }, nullptr);
+        m_contentSecurityPolicy->didReceiveHeaders(ContentSecurityPolicyResponseHeaders { response }, m_request.httpReferrer(), ContentSecurityPolicy::ReportParsingErrors::No);
+    } else
+        m_contentSecurityPolicy = nullptr;
 
 #if ENABLE(RESOURCE_LOAD_STATISTICS)
     // FIXME(218779): Remove this quirk once microsoft.com completes their login flow redesign.

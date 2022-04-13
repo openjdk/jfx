@@ -2099,6 +2099,28 @@ bool RenderBlockFlow::containsFloat(RenderBox& renderer) const
     return m_floatingObjects && m_floatingObjects->set().contains<FloatingObjectHashTranslator>(renderer);
 }
 
+bool RenderBlockFlow::subtreeContainsFloat(RenderBox& renderer) const
+{
+    bool contains = m_floatingObjects && m_floatingObjects->set().contains<FloatingObjectHashTranslator>(renderer);
+    for (auto& block : childrenOfType<RenderBlock>(*this)) {
+        if (!is<RenderBlockFlow>(block))
+            continue;
+        auto& blockFlow = downcast<RenderBlockFlow>(block);
+        contains |= blockFlow.subtreeContainsFloat(renderer);
+    }
+    return contains;
+}
+bool RenderBlockFlow::subtreeContainsFloats() const
+{
+    bool contains = m_floatingObjects && !m_floatingObjects->set().isEmpty();
+    for (auto& block : childrenOfType<RenderBlock>(*this)) {
+        if (!is<RenderBlockFlow>(block))
+            continue;
+        auto& blockFlow = downcast<RenderBlockFlow>(block);
+        contains |= blockFlow.subtreeContainsFloats();
+    }
+    return contains;
+}
 void RenderBlockFlow::styleDidChange(StyleDifference diff, const RenderStyle* oldStyle)
 {
     RenderBlock::styleDidChange(diff, oldStyle);
@@ -2868,7 +2890,7 @@ void RenderBlockFlow::markAllDescendantsWithFloatsForLayout(RenderBox* floatToRe
             continue;
         }
         auto& blockFlow = downcast<RenderBlockFlow>(block);
-        if ((floatToRemove ? blockFlow.containsFloat(*floatToRemove) : blockFlow.containsFloats()) || blockFlow.shrinkToAvoidFloats())
+        if ((floatToRemove ? blockFlow.subtreeContainsFloat(*floatToRemove) : blockFlow.subtreeContainsFloats()) || blockFlow.shrinkToAvoidFloats())
             blockFlow.markAllDescendantsWithFloatsForLayout(floatToRemove, inLayout);
     }
 }
@@ -3674,7 +3696,7 @@ void RenderBlockFlow::invalidateLineLayoutPath()
 #endif
         m_lineLayout = WTF::Monostate();
         setLineLayoutPath(path);
-        if (needsLayout())
+        if (selfNeedsLayout() || normalChildNeedsLayout())
             return;
         // FIXME: We should just kick off a subtree layout here (if needed at all) see webkit.org/b/172947.
         setNeedsLayout();

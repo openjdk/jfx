@@ -3807,9 +3807,10 @@ void EventHandler::defaultKeyboardEventHandler(KeyboardEvent& event)
             defaultTabEventHandler(event);
         else if (event.keyIdentifier() == "U+0008")
             defaultBackspaceEventHandler(event);
-        else if (event.keyIdentifier() == "PageUp" || event.keyIdentifier() == "PageDown")
-            startKeyboardScrolling(event);
-        else {
+        else if (event.keyIdentifier() == "PageUp" || event.keyIdentifier() == "PageDown") {
+            if (startKeyboardScrolling(event))
+                event.setDefaultHandled();
+        } else {
             FocusDirection direction = focusDirectionForKey(event.keyIdentifier());
             if (direction != FocusDirection::None)
                 defaultArrowEventHandler(direction, event);
@@ -4288,6 +4289,9 @@ void EventHandler::stopKeyboardScrolling()
 
 bool EventHandler::startKeyboardScrolling(KeyboardEvent& event)
 {
+    if (!m_frame.settings().eventHandlerDrivenSmoothKeyboardScrollingEnabled())
+        return false;
+
     Ref protectedFrame = m_frame;
     FrameView* view = m_frame.view();
 
@@ -4303,8 +4307,8 @@ void EventHandler::defaultArrowEventHandler(FocusDirection focusDirection, Keybo
     ASSERT(event.type() == eventNames().keydownEvent);
 
     if (!isSpatialNavigationEnabled(&m_frame)) {
-        if (m_frame.settings().eventHandlerDrivenSmoothKeyboardScrollingEnabled())
-            startKeyboardScrolling(event);
+        if (startKeyboardScrolling(event))
+            event.setDefaultHandled();
         return;
     }
 

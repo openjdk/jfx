@@ -682,6 +682,7 @@ public:
 
     String debugDescription() const final;
 
+    void willBeDestroyed() final;
     // ScrollView
     void updateScrollbarSteps() override;
 
