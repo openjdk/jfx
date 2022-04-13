@@ -60,8 +60,8 @@ public:
     void prepareToRenderSVGContent(RenderElement&, PaintInfo&, NeedsGraphicsContextSave = DontSaveGraphicsContext);
     bool isRenderingPrepared() const { return m_renderingFlags & RenderingPrepared; }
 
-    static RefPtr<ImageBuffer> createImageBuffer(const FloatRect& targetRect, const AffineTransform& absoluteTransform, DestinationColorSpace, RenderingMode, const GraphicsContext* = nullptr);
-    static RefPtr<ImageBuffer> createImageBuffer(const FloatRect& targetRect, const FloatRect& clampedRect, DestinationColorSpace, RenderingMode, const GraphicsContext* = nullptr);
+    static RefPtr<ImageBuffer> createImageBuffer(const FloatRect& targetRect, const AffineTransform& absoluteTransform, const DestinationColorSpace&, RenderingMode, const GraphicsContext* = nullptr);
+    static RefPtr<ImageBuffer> createImageBuffer(const FloatRect& targetRect, const FloatRect& clampedRect, const DestinationColorSpace&, RenderingMode, const GraphicsContext* = nullptr);
 
     static void renderSubtreeToContext(GraphicsContext&, RenderElement&, const AffineTransform&);
     static void clipToImageBuffer(GraphicsContext&, const AffineTransform& absoluteTransform, const FloatRect& targetRect, RefPtr<ImageBuffer>&, bool safeToClear);
@@ -84,13 +84,12 @@ private:
         RenderingPrepared = 1,
         RestoreGraphicsContext = 1 << 1,
         EndOpacityLayer = 1 << 2,
-        EndShadowLayer = 1 << 3,
-        EndFilterLayer = 1 << 4,
-        PrepareToRenderSVGContentWasCalled = 1 << 5
+        EndFilterLayer = 1 << 3,
+        PrepareToRenderSVGContentWasCalled = 1 << 4
     };
 
     // List of those flags which require actions during the destructor.
-    static constexpr int ActionsNeeded = RestoreGraphicsContext | EndOpacityLayer | EndShadowLayer | EndFilterLayer;
+    static constexpr int ActionsNeeded = RestoreGraphicsContext | EndOpacityLayer | EndFilterLayer;
 
     RenderElement* m_renderer { nullptr };
     PaintInfo* m_paintInfo { nullptr };

@@ -49,7 +49,7 @@ RenderLayoutState::RenderLayoutState(RenderElement& renderer, IsPaginated isPagi
         FloatPoint absContentPoint = container->localToAbsolute(FloatPoint(), UseTransforms);
         m_paintOffset = LayoutSize(absContentPoint.x(), absContentPoint.y());
 
-        if (container->hasOverflowClip()) {
+        if (container->hasNonVisibleOverflow()) {
             m_clipped = true;
             auto& containerBox = downcast<RenderBox>(*container);
             m_clipRect = LayoutRect(toLayoutPoint(m_paintOffset), containerBox.cachedSizeForOverflowClip());
@@ -101,7 +101,7 @@ void RenderLayoutState::computeOffsets(const RenderLayoutState& ancestor, Render
     if (renderer.isInFlowPositioned() && renderer.hasLayer())
         m_paintOffset += renderer.layer()->offsetForInFlowPosition();
 
-    if (renderer.hasOverflowClip())
+    if (renderer.hasNonVisibleOverflow())
         m_paintOffset -= toLayoutSize(renderer.scrollPosition());
 
     m_layoutDelta = ancestor.layoutDelta();
@@ -116,7 +116,7 @@ void RenderLayoutState::computeClipRect(const RenderLayoutState& ancestor, Rende
     m_clipped = !renderer.isFixedPositioned() && ancestor.isClipped();
     if (m_clipped)
         m_clipRect = ancestor.clipRect();
-    if (!renderer.hasOverflowClip())
+    if (!renderer.hasNonVisibleOverflow())
         return;
 
     auto paintOffsetForClipRect = toLayoutPoint(m_paintOffset + toLayoutSize(renderer.scrollPosition()));
@@ -193,10 +193,6 @@ void RenderLayoutState::computeLineGridPaginationOrigin(const RenderMultiColumnF
     // as established by the line box.
     // FIXME: Need to handle crazy line-box-contain values that cause the root line box to not be considered. I assume
     // the grid should honor line-box-contain.
-    LayoutUnit gridLineHeight = lineGridBox->lineBoxBottom() - lineGridBox->lineBoxTop();
-    if (!gridLineHeight)
-        return;
-
     bool isHorizontalWritingMode = m_lineGrid->isHorizontalWritingMode();
     LayoutUnit lineGridBlockOffset = isHorizontalWritingMode ? m_lineGridOffset.height() : m_lineGridOffset.width();
     LayoutUnit firstLineTopWithLeading = lineGridBlockOffset + lineGridBox->lineBoxTop();
@@ -206,8 +202,11 @@ void RenderLayoutState::computeLineGridPaginationOrigin(const RenderMultiColumnF
 
     // Shift to the next highest line grid multiple past the page logical top. Cache the delta
     // between this new value and the page logical top as the pagination origin.
-    LayoutUnit remainder = roundToInt(pageLogicalTop - firstLineTopWithLeading) % roundToInt(gridLineHeight);
-    LayoutUnit paginationDelta = gridLineHeight - remainder;
+    auto lineBoxHeight = lineGridBox->lineBoxHeight();
+    if (!roundToInt(lineBoxHeight))
+        return;
+    LayoutUnit remainder = roundToInt(pageLogicalTop - firstLineTopWithLeading) % roundToInt(lineBoxHeight);
+    LayoutUnit paginationDelta = lineBoxHeight - remainder;
     if (isHorizontalWritingMode)
         m_lineGridPaginationOrigin.setHeight(paginationDelta);
     else
@@ -233,7 +232,7 @@ void RenderLayoutState::establishLineGrid(const FrameViewLayoutContext::LayoutSt
         if (m_lineGrid->style().lineGrid() == renderer.style().lineGrid())
             return;
         auto* currentGrid = m_lineGrid.get();
-        for (int i = layoutStateStack.size() - 1; i <= 0; --i) {
+        for (int i = layoutStateStack.size() - 1; i >= 0; --i) {
             auto& currentState = *layoutStateStack[i].get();
             if (currentState.m_lineGrid == currentGrid)
                 continue;

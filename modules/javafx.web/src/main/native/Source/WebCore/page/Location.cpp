@@ -34,9 +34,10 @@
 #include "Frame.h"
 #include "FrameLoader.h"
 #include "NavigationScheduler.h"
+#include "SecurityOrigin.h"
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/URL.h>
-#include "SecurityOrigin.h"
+#include <wtf/text/StringToIntegerConversion.h>
 
 namespace WebCore {
 
@@ -121,14 +122,14 @@ String Location::hash() const
     return url().fragmentIdentifier().isEmpty() ? emptyString() : url().fragmentIdentifierWithLeadingNumberSign().toString();
 }
 
-ExceptionOr<void> Location::setHref(DOMWindow& activeWindow, DOMWindow& firstWindow, const String& url)
+ExceptionOr<void> Location::setHref(DOMWindow& incumbentWindow, DOMWindow& firstWindow, const String& url)
 {
     if (!frame())
         return { };
-    return setLocation(activeWindow, firstWindow, url);
+    return setLocation(incumbentWindow, firstWindow, url);
 }
 
-ExceptionOr<void> Location::setProtocol(DOMWindow& activeWindow, DOMWindow& firstWindow, const String& protocol)
+ExceptionOr<void> Location::setProtocol(DOMWindow& incumbentWindow, DOMWindow& firstWindow, const String& protocol)
 {
     auto* frame = this->frame();
     if (!frame)
@@ -136,60 +137,60 @@ ExceptionOr<void> Location::setProtocol(DOMWindow& activeWindow, DOMWindow& firs
     URL url = frame->document()->url();
     if (!url.setProtocol(protocol))
         return Exception { SyntaxError };
-    return setLocation(activeWindow, firstWindow, url.string());
+    return setLocation(incumbentWindow, firstWindow, url.string());
 }
 
-ExceptionOr<void> Location::setHost(DOMWindow& activeWindow, DOMWindow& firstWindow, const String& host)
+ExceptionOr<void> Location::setHost(DOMWindow& incumbentWindow, DOMWindow& firstWindow, const String& host)
 {
     auto* frame = this->frame();
     if (!frame)
         return { };
     URL url = frame->document()->url();
     url.setHostAndPort(host);
-    return setLocation(activeWindow, firstWindow, url.string());
+    return setLocation(incumbentWindow, firstWindow, url.string());
 }
 
-ExceptionOr<void> Location::setHostname(DOMWindow& activeWindow, DOMWindow& firstWindow, const String& hostname)
+ExceptionOr<void> Location::setHostname(DOMWindow& incumbentWindow, DOMWindow& firstWindow, const String& hostname)
 {
     auto* frame = this->frame();
     if (!frame)
         return { };
     URL url = frame->document()->url();
     url.setHost(hostname);
-    return setLocation(activeWindow, firstWindow, url.string());
+    return setLocation(incumbentWindow, firstWindow, url.string());
 }
 
-ExceptionOr<void> Location::setPort(DOMWindow& activeWindow, DOMWindow& firstWindow, const String& portString)
+ExceptionOr<void> Location::setPort(DOMWindow& incumbentWindow, DOMWindow& firstWindow, const String& portString)
 {
     auto* frame = this->frame();
     if (!frame)
         return { };
     URL url = frame->document()->url();
-    url.setPort(parseUInt16(portString));
-    return setLocation(activeWindow, firstWindow, url.string());
+    url.setPort(parseInteger<uint16_t>(portString));
+    return setLocation(incumbentWindow, firstWindow, url.string());
 }
 
-ExceptionOr<void> Location::setPathname(DOMWindow& activeWindow, DOMWindow& firstWindow, const String& pathname)
+ExceptionOr<void> Location::setPathname(DOMWindow& incumbentWindow, DOMWindow& firstWindow, const String& pathname)
 {
     auto* frame = this->frame();
     if (!frame)
         return { };
     URL url = frame->document()->url();
     url.setPath(pathname);
-    return setLocation(activeWindow, firstWindow, url.string());
+    return setLocation(incumbentWindow, firstWindow, url.string());
 }
 
-ExceptionOr<void> Location::setSearch(DOMWindow& activeWindow, DOMWindow& firstWindow, const String& search)
+ExceptionOr<void> Location::setSearch(DOMWindow& incumbentWindow, DOMWindow& firstWindow, const String& search)
 {
     auto* frame = this->frame();
     if (!frame)
         return { };
     URL url = frame->document()->url();
     url.setQuery(search);
-    return setLocation(activeWindow, firstWindow, url.string());
+    return setLocation(incumbentWindow, firstWindow, url.string());
 }
 
-ExceptionOr<void> Location::setHash(DOMWindow& activeWindow, DOMWindow& firstWindow, const String& hash)
+ExceptionOr<void> Location::setHash(DOMWindow& incumbentWindow, DOMWindow& firstWindow, const String& hash)
 {
     auto* frame = this->frame();
     if (!frame)
@@ -206,7 +207,7 @@ ExceptionOr<void> Location::setHash(DOMWindow& activeWindow, DOMWindow& firstWin
     // cases where fragment identifiers are ignored or invalid.
     if (equalIgnoringNullity(oldFragmentIdentifier, url.fragmentIdentifier()))
         return { };
-    return setLocation(activeWindow, firstWindow, url.string());
+    return setLocation(incumbentWindow, firstWindow, url.string());
 }
 
 ExceptionOr<void> Location::assign(DOMWindow& activeWindow, DOMWindow& firstWindow, const String& url)
@@ -265,7 +266,7 @@ void Location::reload(DOMWindow& activeWindow)
     frame->navigationScheduler().scheduleRefresh(activeDocument);
 }
 
-ExceptionOr<void> Location::setLocation(DOMWindow& activeWindow, DOMWindow& firstWindow, const String& urlString)
+ExceptionOr<void> Location::setLocation(DOMWindow& incumbentWindow, DOMWindow& firstWindow, const String& urlString)
 {
     auto* frame = this->frame();
     ASSERT(frame);
@@ -275,16 +276,16 @@ ExceptionOr<void> Location::setLocation(DOMWindow& activeWindow, DOMWindow& firs
         return { };
 
     URL completedURL = firstFrame->document()->completeURL(urlString);
-    // FIXME: The specification says to throw a SyntaxError if the URL is not valid.
-    if (completedURL.isNull())
-        return { };
 
-    if (!activeWindow.document()->canNavigate(frame, completedURL))
+    if (!completedURL.isValid())
+        return Exception { TypeError, "Invalid URL"_s };
+
+    if (!incumbentWindow.document()->canNavigate(frame, completedURL))
         return Exception { SecurityError };
 
     ASSERT(frame->document());
     ASSERT(frame->document()->domWindow());
-    frame->document()->domWindow()->setLocation(activeWindow, completedURL);
+    frame->document()->domWindow()->setLocation(incumbentWindow, completedURL);
     return { };
 }
 

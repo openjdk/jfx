@@ -109,6 +109,7 @@ FileInputType::FileInputType(HTMLInputElement& element)
     : BaseClickableWithKeyInputType(Type::File, element)
     , m_fileList(FileList::create())
 {
+    ASSERT(needsShadowSubtree());
 }
 
 FileInputType::~FileInputType()
@@ -143,7 +144,7 @@ FormControlState FileInputType::saveFormControlState() const
     auto length = Checked<size_t>(m_fileList->files().size()) * Checked<size_t>(2);
 
     Vector<String> stateVector;
-    stateVector.reserveInitialCapacity(length.unsafeGet());
+    stateVector.reserveInitialCapacity(length);
     for (auto& file : m_fileList->files()) {
         stateVector.uncheckedAppend(file->path());
         stateVector.uncheckedAppend(file->name());
@@ -275,6 +276,7 @@ void FileInputType::setValue(const String&, bool, TextFieldEventBehavior)
 
 void FileInputType::createShadowSubtreeAndUpdateInnerTextElementEditability(ContainerNode::ChildChange::Source source, bool)
 {
+    ASSERT(needsShadowSubtree());
     ASSERT(element());
     ASSERT(element()->shadowRoot());
     element()->userAgentShadowRoot()->appendChild(source, element()->multiple() ? UploadButtonElement::createForMultiple(element()->document()): UploadButtonElement::create(element()->document()));
@@ -362,12 +364,12 @@ bool FileInputType::allowsDirectories() const
     return element()->hasAttributeWithoutSynchronization(webkitdirectoryAttr);
 }
 
-void FileInputType::setFiles(RefPtr<FileList>&& files)
+void FileInputType::setFiles(RefPtr<FileList>&& files, WasSetByJavaScript wasSetByJavaScript)
 {
-    setFiles(WTFMove(files), RequestIcon::Yes);
+    setFiles(WTFMove(files), RequestIcon::Yes, wasSetByJavaScript);
 }
 
-void FileInputType::setFiles(RefPtr<FileList>&& files, RequestIcon shouldRequestIcon)
+void FileInputType::setFiles(RefPtr<FileList>&& files, RequestIcon shouldRequestIcon, WasSetByJavaScript wasSetByJavaScript)
 {
     if (!files)
         return;
@@ -404,6 +406,9 @@ void FileInputType::setFiles(RefPtr<FileList>&& files, RequestIcon shouldRequest
 
     if (protectedInputElement->renderer())
         protectedInputElement->renderer()->repaint();
+
+    if (wasSetByJavaScript == WasSetByJavaScript::Yes)
+        return;
 
     if (pathsChanged) {
         // This call may cause destruction of this instance.
@@ -463,7 +468,7 @@ void FileInputType::didCreateFileList(Ref<FileList>&& fileList, RefPtr<Icon>&& i
     ASSERT(!allowsDirectories() || m_directoryFileListCreator);
     m_directoryFileListCreator = nullptr;
 
-    setFiles(WTFMove(fileList), icon ? RequestIcon::Yes : RequestIcon::No);
+    setFiles(WTFMove(fileList), icon ? RequestIcon::Yes : RequestIcon::No, WasSetByJavaScript::No);
     if (icon && !m_fileList->isEmpty() && element())
         iconLoaded(WTFMove(icon));
 }

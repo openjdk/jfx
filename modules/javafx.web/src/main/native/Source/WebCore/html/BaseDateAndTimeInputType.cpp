@@ -40,6 +40,7 @@
 #include "DateTimeChooserParameters.h"
 #include "Decimal.h"
 #include "FocusController.h"
+#include "FrameView.h"
 #include "HTMLDataListElement.h"
 #include "HTMLDivElement.h"
 #include "HTMLInputElement.h"
@@ -306,6 +307,7 @@ void BaseDateAndTimeInputType::handleDOMActivateEvent(Event&)
 
 void BaseDateAndTimeInputType::createShadowSubtreeAndUpdateInnerTextElementEditability(ContainerNode::ChildChange::Source source, bool)
 {
+    ASSERT(needsShadowSubtree());
     ASSERT(element());
 
     auto& element = *this->element();
@@ -544,7 +546,7 @@ bool BaseDateAndTimeInputType::setupDateTimeChooserParameters(DateTimeChooserPar
     parameters.isAnchorElementRTL = computedStyle->direction() == TextDirection::RTL;
     parameters.useDarkAppearance = document.useDarkAppearance(computedStyle);
 
-    auto date = parseToDateComponents(element.value()).valueOr(DateComponents());
+    auto date = parseToDateComponents(element.value()).value_or(DateComponents());
     parameters.hasSecondField = shouldHaveSecondField(date);
     parameters.hasMillisecondField = shouldHaveMillisecondField(date);
 

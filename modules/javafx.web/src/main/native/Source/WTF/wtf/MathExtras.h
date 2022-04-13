@@ -163,7 +163,8 @@ clampTo(SourceType value, TargetType min = defaultMinimumForClamp<TargetType>(),
 {
     if (value >= static_cast<SourceType>(max))
         return max;
-    if (value <= static_cast<SourceType>(min))
+    // This will return min if value is NaN.
+    if (!(value > static_cast<SourceType>(min)))
         return min;
     return static_cast<TargetType>(value);
 }
@@ -356,6 +357,7 @@ template<typename T> constexpr bool isLessThan(const T& a, const T& b) { return 
 template<typename T> constexpr bool isLessThanEqual(const T& a, const T& b) { return a <= b; }
 template<typename T> constexpr bool isGreaterThan(const T& a, const T& b) { return a > b; }
 template<typename T> constexpr bool isGreaterThanEqual(const T& a, const T& b) { return a >= b; }
+template<typename T> constexpr bool isInRange(const T& a, const T& min, const T& max) { return a >= min && a <= max; }
 
 #ifndef UINT64_C
 #if COMPILER(MSVC)
@@ -724,6 +726,28 @@ constexpr unsigned getMSBSetConstexpr(T t)
     constexpr unsigned bitSize = sizeof(T) * CHAR_BIT;
     ASSERT_UNDER_CONSTEXPR_CONTEXT(t);
     return bitSize - 1 - clzConstexpr(t);
+}
+
+inline size_t countTrailingZeros(uint32_t v)
+{
+    static const unsigned Mod37BitPosition[] = {
+        32, 0, 1, 26, 2, 23, 27, 0, 3, 16, 24, 30, 28, 11, 0, 13,
+        4, 7, 17, 0, 25, 22, 31, 15, 29, 10, 12, 6, 0, 21, 14, 9,
+        5, 20, 8, 19, 18
+    };
+    return Mod37BitPosition[((1 + ~v) & v) % 37];
+}
+
+inline size_t countTrailingZeros(uint64_t v)
+{
+    static const unsigned Mod67Position[] = {
+        64, 0, 1, 39, 2, 15, 40, 23, 3, 12, 16, 59, 41, 19, 24, 54,
+        4, 64, 13, 10, 17, 62, 60, 28, 42, 30, 20, 51, 25, 44, 55,
+        47, 5, 32, 65, 38, 14, 22, 11, 58, 18, 53, 63, 9, 61, 27,
+        29, 50, 43, 46, 31, 37, 21, 57, 52, 8, 26, 49, 45, 36, 56,
+        7, 48, 35, 6, 34, 33, 0
+    };
+    return Mod67Position[((1 + ~v) & v) % 67];
 }
 
 } // namespace WTF

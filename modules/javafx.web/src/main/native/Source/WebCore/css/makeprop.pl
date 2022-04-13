@@ -65,9 +65,38 @@ my @internalProprerties;
 my %runtimeFlags;
 my %settingsFlags;
 my $numPredefinedProperties = 2;
-my %nameIsInherited;
+my %nameIsColorProperty;
+my %nameIsDescriptorOnly;
 my %nameIsHighPriority;
+my %nameIsInherited;
 my %namePriorityShouldSink;
+my %logicalPropertyGroups;
+my %resolverKinds = (
+    "logical" => {
+        "block" => "axis",
+        "inline" => "axis",
+        "block-start" => "side",
+        "block-end" => "side",
+        "inline-start" => "side",
+        "inline-end" => "side",
+        "start-start" => "corner",
+        "start-end" => "corner",
+        "end-start" => "corner",
+        "end-end" => "corner",
+    },
+    "physical" => {
+        "horizontal" => "axis",
+        "vertical" => "axis",
+        "top" => "side",
+        "right" => "side",
+        "bottom" => "side",
+        "left" => "side",
+        "top-left" => "corner",
+        "top-right" => "corner",
+        "bottom-right" => "corner",
+        "bottom-left" => "corner",
+    },
+);
 my %propertiesWithStyleBuilderOptions;
 my %styleBuilderOptions = (
     "animatable" => 1, # Defined in Source/WebCore/style/StyleBuilderConverter.h
@@ -101,6 +130,22 @@ for my $name (@allNames) {
         }
     } else {
         die "$name does not have a supported value type. Only dictionary types are supported.";
+    }
+}
+
+while (my ($groupName, $logicalPropertyGroup) = each %logicalPropertyGroups) {
+    for my $logic (keys %resolverKinds) {
+        my $properties = $logicalPropertyGroup->{$logic};
+        if (!$properties) {
+            die "Logical property group \"$groupName\" has no \"$logic\" property.";
+        }
+        while (my ($resolver, $kind) = each %{ $resolverKinds{$logic} }) {
+            if ($kind eq $logicalPropertyGroup->{"kind"}) {
+                if (!$properties->{$resolver}) {
+                    die "Logical property group \"$groupName\" requires a \"$resolver\" property.";
+                }
+            }
+        }
     }
 }
 
@@ -220,15 +265,20 @@ sub isPropertyEnabled($$)
     return matchEnableFlags($codegen_properties->{"enable-if"});
 }
 
+sub nameToId
+{
+    my $name = shift;
+    $name =~ s/(^[^-])|-(.)/uc($1||$2)/ge;
+    return $name;
+}
+
 sub addProperty($$)
 {
     my ($name, $optionsHashRef) = @_;
 
     push @names, $name;
 
-    my $id = $name;
-    $id =~ s/(^[^-])|-(.)/uc($1||$2)/ge;
-    $nameToId{$name} = $id;
+    $nameToId{$name} = nameToId($name);
 
     for my $optionName (keys %{$optionsHashRef}) {
         if ($optionName eq "codegen-properties") {
@@ -257,6 +307,32 @@ sub addProperty($$)
                     $runtimeFlags{$name} = $codegenProperties->{"runtime-flag"};
                 } elsif ($codegenOptionName eq "settings-flag") {
                     $settingsFlags{$name} = $codegenProperties->{"settings-flag"};
+                } elsif ($codegenOptionName eq "color-property") {
+                    $nameIsColorProperty{$name} = 1;
+                } elsif ($codegenOptionName eq "logical-property-group") {
+                    my $groupName = $codegenProperties->{$codegenOptionName}{"name"};
+                    my $resolver = $codegenProperties->{$codegenOptionName}{"resolver"};
+                    my $kind;
+                    my $logic;
+                    if ($kind = $resolverKinds{"logical"}{$resolver}) {
+                        $logic = "logical";
+                    } elsif ($kind = $resolverKinds{"physical"}{$resolver}) {
+                        $logic = "physical";
+                    } else {
+                        die "Unrecognized resolver \"$resolver\" for codegen property \"$codegenOptionName\" for $name property.";
+                    }
+                    my $otherKind = $logicalPropertyGroups{$groupName}{"kind"};
+                    if ($otherKind && $otherKind ne $kind) {
+                        die "Logical property group \"$groupName\" has resolvers of different kinds: $kind and $otherKind.";
+                    }
+                    $logicalPropertyGroups{$groupName}{"kind"} = $kind;
+                    my $otherName = $logicalPropertyGroups{$groupName}{$logic}{$resolver};
+                    if ($otherName) {
+                        die "Logical property group \"$groupName\" has multiple \"$resolver\" properties: $name and $otherName.";
+                    }
+                    $logicalPropertyGroups{$groupName}{$logic}{$resolver} = $name;
+                } elsif ($codegenOptionName eq "descriptor-only") {
+                    $nameIsDescriptorOnly{$name} = 1;
                 } else {
                     die "Unrecognized codegen property \"$codegenOptionName\" for $name property.";
                 }
@@ -512,7 +588,7 @@ bool CSSProperty::isInheritedProperty(CSSPropertyID id)
 
 CSSPropertyID getRelatedPropertyId(CSSPropertyID id)
 {
-    switch(id) {
+    switch (id) {
 EOF
 for my $name (@names) {
     if (!$relatedProperty{$name}) {
@@ -544,6 +620,146 @@ for my $name (@names) {
 print GPERF << "EOF";
     default:
         return { };
+    }
+}
+
+bool CSSProperty::isColorProperty(CSSPropertyID id)
+{
+    switch (id) {
+EOF
+for my $name (@names) {
+    if (!$nameIsColorProperty{$name}) {
+        next;
+    }
+    print GPERF "    case CSSPropertyID::CSSProperty" . $nameToId{$name} . ":\n";
+}
+
+print GPERF << "EOF";
+        return true;
+    default:
+        return false;
+    }
+}
+
+bool CSSProperty::isDirectionAwareProperty(CSSPropertyID id)
+{
+    switch (id) {
+EOF
+for my $logicalPropertyGroup (values %logicalPropertyGroups) {
+    for my $name (values %{ $logicalPropertyGroup->{"logical"} }) {
+        print GPERF "    case CSSPropertyID::CSSProperty" . $nameToId{$name} . ":\n";
+    }
+}
+
+print GPERF << "EOF";
+        return true;
+    default:
+        return false;
+    }
+}
+
+bool CSSProperty::isInLogicalPropertyGroup(CSSPropertyID id)
+{
+    switch (id) {
+EOF
+
+for my $logicalPropertyGroup (values %logicalPropertyGroups) {
+    for my $kind ("logical", "physical") {
+        for my $name (values %{ $logicalPropertyGroup->{$kind} }) {
+            print GPERF "    case CSSPropertyID::CSSProperty" . $nameToId{$name} . ":\n";
+        }
+    }
+}
+
+print GPERF << "EOF";
+        return true;
+    default:
+        return false;
+    }
+}
+
+bool CSSProperty::areInSameLogicalPropertyGroupWithDifferentMappingLogic(CSSPropertyID id1, CSSPropertyID id2)
+{
+    switch (id1) {
+EOF
+
+for my $logicalPropertyGroup (values %logicalPropertyGroups) {
+    my $logical = $logicalPropertyGroup->{"logical"};
+    my $physical = $logicalPropertyGroup->{"physical"};
+    for my $first ($logical, $physical) {
+        my $second = $first eq $logical ? $physical : $logical;
+        while (my ($resolver, $name) = each %{ $first }) {
+            print GPERF "    case CSSPropertyID::CSSProperty" . $nameToId{$name} . ":\n";
+        }
+        print GPERF "        switch (id2) {\n";
+        while (my ($resolver, $name) = each %{ $second }) {
+            print GPERF "        case CSSPropertyID::CSSProperty" . $nameToId{$name} . ":\n";
+        }
+        print GPERF << "EOF";
+            return true;
+        default:
+            return false;
+        }
+EOF
+    }
+}
+
+print GPERF << "EOF";
+    default:
+        return false;
+    }
+}
+
+CSSPropertyID CSSProperty::resolveDirectionAwareProperty(CSSPropertyID propertyID, TextDirection direction, WritingMode writingMode)
+{
+    const TextFlow& textflow = makeTextFlow(writingMode, direction);
+    switch (propertyID) {
+EOF
+
+for my $logicalPropertyGroup (values %logicalPropertyGroups) {
+    while (my ($resolver, $name) = each %{ $logicalPropertyGroup->{"logical"} }) {
+        my $kind = $logicalPropertyGroup->{"kind"};
+        my $kindId = nameToId($kind);
+        my $resolverEnum = "LogicalBox" . $kindId . "::" . nameToId($resolver);
+        my @physicals;
+        if ($kind eq "side") {
+            @physicals = ("top", "right", "bottom", "left");
+        } elsif ($kind eq "corner") {
+            @physicals = ("top-left", "top-right", "bottom-right", "bottom-left");
+        } elsif ($kind eq "axis") {
+            @physicals = ("horizontal", "vertical");
+        } else {
+            die "Property \"$name\" belongs to a logical property group of unrecognized kind \"$kind\".";
+        }
+        my @properties = map { "CSSProperty" . $nameToId{$logicalPropertyGroup->{"physical"}{$_}} } @physicals;
+        print GPERF "    case CSSPropertyID::CSSProperty" . $nameToId{$name} . ": {\n";
+        print GPERF "        static constexpr CSSPropertyID properties[" . scalar(@properties) . "] = { " . join(", ", @properties) . " };\n";
+        print GPERF "        return properties[static_cast<size_t>(mapLogical" . $kindId . "ToPhysical" . $kindId . "(textflow, " . $resolverEnum . "))];\n";
+        print GPERF "    }\n";
+    }
+}
+
+print GPERF << "EOF";
+    default:
+        return propertyID;
+    }
+}
+
+bool CSSProperty::isDescriptorOnly(CSSPropertyID id)
+{
+    switch (id) {
+EOF
+for my $name (@names) {
+    if (!$nameIsDescriptorOnly{$name}) {
+        next;
+    }
+    print GPERF "    case CSSPropertyID::CSSProperty" . $nameToId{$name} . ":\n";
+}
+
+print GPERF << "EOF";
+        return true;
+    default:
+        return false;
     }
 }
 
@@ -797,7 +1013,7 @@ sub colorFromPrimitiveValue {
   my $primitiveValue = shift;
   my $forVisitedLink = @_ ? shift : NOT_FOR_VISITED_LINK;
 
-  return "builderState.colorFromPrimitiveValue(" . $primitiveValue . ", /* forVisitedLink */ " . ($forVisitedLink ? "true" : "false") . ")";
+  return "builderState.colorFromPrimitiveValue(" . $primitiveValue . ", ForVisitedLink::" . ($forVisitedLink ? "Yes" : "No") . ")";
 }
 
 use constant {
@@ -1358,3 +1574,151 @@ if (not $gperf) {
     $gperf = $ENV{GPERF} ? $ENV{GPERF} : "gperf";
 }
 system("\"$gperf\" --key-positions=\"*\" -D -n -s 2 CSSPropertyNames.gperf --output-file=CSSPropertyNames.cpp") == 0 || die "calling gperf failed: $?";
+
+# Generate CSSStyleDeclaration+PropertyNames.idl
+
+# https://drafts.csswg.org/cssom/#css-property-to-idl-attribute
+sub cssPropertyToIDLAttribute($$$)
+{
+    my $property = shift;
+    my $lowercaseFirst = shift;
+    my $uppercaseFirst = shift;
+
+    my $output = "";
+    my $uppercaseNext = $uppercaseFirst;
+
+    if ($lowercaseFirst) {
+        $property = substr($property, 1);
+    }
+
+    foreach my $character (split //, $property) {
+        if ($character eq "-") {
+            $uppercaseNext = 1;
+        } elsif ($uppercaseNext) {
+            $uppercaseNext = 0;
+            $output .= uc $character;
+        } else {
+            $output .= $character;
+        }
+    }
+
+    return $output;
+}
+
+my %namesAndAliasesToName;
+foreach my $name (@names) {
+    if (grep { $_ eq $name } @internalProprerties) {
+        next;
+    }
+    $namesAndAliasesToName{$name} = $name;
+    for my $alias (@{$nameToAliases{$name}}) {
+        $namesAndAliasesToName{$alias} = $name;
+    }
+}
+my @namesAndAliases = sort keys(%namesAndAliasesToName);
+
+open CSS_STYLE_DECLARATION_PROPERTY_NAMES_IDL, ">", "CSSStyleDeclaration+PropertyNames.idl" or die "Could not open CSSStyleDeclaration+PropertyNames.idl for writing\n";
+print CSS_STYLE_DECLARATION_PROPERTY_NAMES_IDL << "EOF";
+// This file is automatically generated from $inputFile by the makeprop.pl script. Do not edit it.
+
+typedef USVString CSSOMString;
+
+partial interface CSSStyleDeclaration {
+
+EOF
+
+print CSS_STYLE_DECLARATION_PROPERTY_NAMES_IDL << "EOF";
+    // For each CSS property property that is a supported CSS property, the following
+    // partial interface applies where camel-cased attribute is obtained by running the
+    // CSS property to IDL attribute algorithm for property.
+    // Example: font-size -> element.style.fontSize
+    // Example: -webkit-transform -> element.style.WebkitTransform
+    // [CEReactions] attribute [LegacyNullToEmptyString] CSSOMString _camel_cased_attribute;
+EOF
+
+foreach my $nameOrAlias (@namesAndAliases) {
+    my $camelCasedAttributeName = cssPropertyToIDLAttribute($nameOrAlias, 0, 0);
+    my $name = $namesAndAliasesToName{$nameOrAlias};
+    my $propertyId = $nameToId{$namesAndAliasesToName{$name}};
+
+    my @extendedAttributeValues = ("DelegateToSharedSyntheticAttribute=propertyValueForCamelCasedIDLAttribute", "CallWith=PropertyName");
+    push(@extendedAttributeValues, "EnabledBySetting=${settingsFlags{$name}}") if $settingsFlags{$name};
+    push(@extendedAttributeValues, "EnabledAtRuntime=${runtimeFlags{$name}}") if $runtimeFlags{$name};
+    my $extendedAttributes = join(", ", @extendedAttributeValues);
+
+    print CSS_STYLE_DECLARATION_PROPERTY_NAMES_IDL "    [CEReactions, ${extendedAttributes}] attribute [LegacyNullToEmptyString] CSSOMString ${camelCasedAttributeName};\n";
+}
+
+print CSS_STYLE_DECLARATION_PROPERTY_NAMES_IDL << "EOF";
+
+    // For each CSS property property that is a supported CSS property and that begins
+    // with the string -webkit-, the following partial interface applies where webkit-cased
+    // attribute is obtained by running the CSS property to IDL attribute algorithm for
+    // property, with the lowercase first flag set.
+    // Example: -webkit-transform -> element.style.webkitTransform
+    // [CEReactions] attribute [LegacyNullToEmptyString] CSSOMString _webkit_cased_attribute;
+EOF
+
+foreach my $nameOrAlias (grep { $_ =~ /^\-webkit\-/ } @namesAndAliases) {
+    my $webkitCasedAttributeName = cssPropertyToIDLAttribute($nameOrAlias, 1, 0);
+    my $name = $namesAndAliasesToName{$nameOrAlias};
+    my $propertyId = $nameToId{$namesAndAliasesToName{$name}};
+
+    my @extendedAttributeValues = ("DelegateToSharedSyntheticAttribute=propertyValueForWebKitCasedIDLAttribute", "CallWith=PropertyName");
+    push(@extendedAttributeValues, "EnabledBySetting=${settingsFlags{$name}}") if $settingsFlags{$name};
+    push(@extendedAttributeValues, "EnabledAtRuntime=${runtimeFlags{$name}}") if $runtimeFlags{$name};
+    my $extendedAttributes = join(", ", @extendedAttributeValues);
+
+    print CSS_STYLE_DECLARATION_PROPERTY_NAMES_IDL "    [CEReactions, ${extendedAttributes}] attribute [LegacyNullToEmptyString] CSSOMString ${webkitCasedAttributeName};\n";
+}
+
+print CSS_STYLE_DECLARATION_PROPERTY_NAMES_IDL << "EOF";
+
+    // For each CSS property property that is a supported CSS property, except for
+    // properties that have no "-" (U+002D) in the property name, the following partial
+    // interface applies where dashed attribute is property.
+    // Example: font-size -> element.style['font-size']
+    // Example: -webkit-transform -> element.style.['-webkit-transform']
+    // [CEReactions] attribute [LegacyNullToEmptyString] CSSOMString _dashed_attribute;
+EOF
+foreach my $nameOrAlias (grep { $_ =~ /\-/ } @namesAndAliases) {
+    my $dashedAttributeName = $nameOrAlias;
+    my $name = $namesAndAliasesToName{$nameOrAlias};
+    my $propertyId = $nameToId{$namesAndAliasesToName{$name}};
+
+    my @extendedAttributeValues = ("DelegateToSharedSyntheticAttribute=propertyValueForDashedIDLAttribute", "CallWith=PropertyName");
+    push(@extendedAttributeValues, "EnabledBySetting=${settingsFlags{$name}}") if $settingsFlags{$name};
+    push(@extendedAttributeValues, "EnabledAtRuntime=${runtimeFlags{$name}}") if $runtimeFlags{$name};
+    my $extendedAttributes = join(", ", @extendedAttributeValues);
+
+    print CSS_STYLE_DECLARATION_PROPERTY_NAMES_IDL "    [CEReactions, ${extendedAttributes}] attribute [LegacyNullToEmptyString] CSSOMString ${dashedAttributeName};\n";
+}
+
+# Everything below here is non-standard.
+
+print CSS_STYLE_DECLARATION_PROPERTY_NAMES_IDL << "EOF";
+
+    // Non-standard. Special case properties starting with -epub- like is done for
+    // -webkit-, where attribute is obtained by running the CSS property to IDL attribute
+    // algorithm for property, with the lowercase first flag set.
+    // Example: -epub-caption-side -> element.style.epubCaptionSide
+EOF
+foreach my $nameOrAlias (grep { $_ =~ /^\-epub\-/ } @namesAndAliases) {
+    my $epubCasedAttributeName = cssPropertyToIDLAttribute($nameOrAlias, 1, 0);
+    my $name = $namesAndAliasesToName{$nameOrAlias};
+    my $propertyId = $nameToId{$namesAndAliasesToName{$name}};
+
+    my @extendedAttributeValues = ("DelegateToSharedSyntheticAttribute=propertyValueForEpubCasedIDLAttribute", "CallWith=PropertyName");
+    push(@extendedAttributeValues, "EnabledBySetting=${settingsFlags{$name}}") if $settingsFlags{$name};
+    push(@extendedAttributeValues, "EnabledAtRuntime=${runtimeFlags{$name}}") if $runtimeFlags{$name};
+    my $extendedAttributes = join(", ", @extendedAttributeValues);
+
+    print CSS_STYLE_DECLARATION_PROPERTY_NAMES_IDL "    [CEReactions, ${extendedAttributes}] attribute [LegacyNullToEmptyString] CSSOMString ${epubCasedAttributeName};\n";
+}
+
+print CSS_STYLE_DECLARATION_PROPERTY_NAMES_IDL << "EOF";
+};
+
+EOF
+
+close CSS_STYLE_DECLARATION_PROPERTY_NAMES_IDL;

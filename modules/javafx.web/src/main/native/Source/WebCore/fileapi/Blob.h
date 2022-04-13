@@ -32,6 +32,7 @@
 #pragma once
 
 #include "BlobPropertyBag.h"
+#include "BlobURL.h"
 #include "FileReaderLoader.h"
 #include "ScriptExecutionContext.h"
 #include "ScriptWrappable.h"
@@ -75,13 +76,6 @@ public:
         return blob;
     }
 
-    static Ref<Blob> create(ScriptExecutionContext* context, const SharedBuffer& buffer, const String& contentType)
-    {
-        auto blob = adoptRef(*new Blob(context, buffer, contentType));
-        blob->suspendIfNeeded();
-        return blob;
-    }
-
     static Ref<Blob> create(ScriptExecutionContext* context, Vector<uint8_t>&& data, const String& contentType)
     {
         auto blob = adoptRef(*new Blob(context, WTFMove(data), contentType));
@@ -99,7 +93,7 @@ public:
 
     virtual ~Blob();
 
-    const URL& url() const { return m_internalURL; }
+    URL url() const { return m_internalURL; }
     const String& type() const { return m_type; }
 
     WEBCORE_EXPORT unsigned long long size() const;
@@ -117,21 +111,18 @@ public:
     // URLRegistrable
     URLRegistry& registry() const override;
 
-    Ref<Blob> slice(ScriptExecutionContext& context, long long start, long long end, const String& contentType) const
-    {
-        auto blob = adoptRef(*new Blob(&context, m_internalURL, start, end, contentType));
-        blob->suspendIfNeeded();
-        return blob;
-    }
+    Ref<Blob> slice(ScriptExecutionContext&, long long start, long long end, const String& contentType) const;
 
     void text(ScriptExecutionContext&, Ref<DeferredPromise>&&);
     void arrayBuffer(ScriptExecutionContext&, Ref<DeferredPromise>&&);
     ExceptionOr<Ref<ReadableStream>> stream(ScriptExecutionContext&);
 
+    // Keeping the handle alive will keep the Blob data alive (but not the Blob object).
+    BlobURLHandle handle() const;
+
 protected:
     WEBCORE_EXPORT explicit Blob(ScriptExecutionContext*);
     Blob(ScriptExecutionContext&, Vector<BlobPartVariant>&&, const BlobPropertyBag&);
-    Blob(ScriptExecutionContext*, const SharedBuffer&, const String& contentType);
     Blob(ScriptExecutionContext*, Vector<uint8_t>&&, const String& contentType);
 
     enum ReferencingExistingBlobConstructor { referencingExistingBlobConstructor };
@@ -141,7 +132,7 @@ protected:
     Blob(UninitializedContructor, ScriptExecutionContext*, URL&&, String&& type);
 
     enum DeserializationContructor { deserializationContructor };
-    Blob(DeserializationContructor, ScriptExecutionContext*, const URL& srcURL, const String& type, Optional<unsigned long long> size, const String& fileBackedPath);
+    Blob(DeserializationContructor, ScriptExecutionContext*, const URL& srcURL, const String& type, std::optional<unsigned long long> size, const String& fileBackedPath);
 
     // For slicing.
     Blob(ScriptExecutionContext*, const URL& srcURL, long long start, long long end, const String& contentType);
@@ -152,14 +143,14 @@ private:
     // ActiveDOMObject.
     const char* activeDOMObjectName() const override;
 
+    String m_type;
+    mutable std::optional<unsigned long long> m_size;
+
     // This is an internal URL referring to the blob data associated with this object. It serves
     // as an identifier for this blob. The internal URL is never used to source the blob's content
     // into an HTML or for FileRead'ing, public blob URLs must be used for those purposes.
     URL m_internalURL;
 
-    String m_type;
-
-    mutable Optional<unsigned long long> m_size;
     HashSet<std::unique_ptr<BlobLoader>> m_blobLoaders;
 };
 

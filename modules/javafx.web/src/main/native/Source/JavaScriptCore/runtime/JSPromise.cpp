@@ -119,11 +119,11 @@ JSPromise::DeferredData JSPromise::createDeferredData(JSGlobalObject* globalObje
     RETURN_IF_EXCEPTION(scope, { });
 
     DeferredData result;
-    result.promise = jsCast<JSPromise*>(deferred.get(globalObject, vm.propertyNames->builtinNames().promisePrivateName()));
+    result.promise = deferred.getAs<JSPromise*>(globalObject, vm.propertyNames->builtinNames().promisePrivateName());
     RETURN_IF_EXCEPTION(scope, { });
-    result.resolve = jsCast<JSFunction*>(deferred.get(globalObject, vm.propertyNames->builtinNames().resolvePrivateName()));
+    result.resolve = deferred.getAs<JSFunction*>(globalObject, vm.propertyNames->builtinNames().resolvePrivateName());
     RETURN_IF_EXCEPTION(scope, { });
-    result.reject = jsCast<JSFunction*>(deferred.get(globalObject, vm.propertyNames->builtinNames().rejectPrivateName()));
+    result.reject = deferred.getAs<JSFunction*>(globalObject, vm.propertyNames->builtinNames().rejectPrivateName());
     RETURN_IF_EXCEPTION(scope, { });
 
     return result;
@@ -228,7 +228,7 @@ JSPromise* JSPromise::rejectWithCaughtException(JSGlobalObject* globalObject, Th
     VM& vm = globalObject->vm();
     Exception* exception = scope.exception();
     ASSERT(exception);
-    if (UNLIKELY(isTerminatedExecutionException(vm, exception))) {
+    if (UNLIKELY(vm.isTerminationException(exception))) {
         scope.release();
         return this;
     }

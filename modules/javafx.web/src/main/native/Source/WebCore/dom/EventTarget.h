@@ -122,7 +122,7 @@ private:
 };
 
 class EventTargetWithInlineData : public EventTarget {
-    WTF_MAKE_ISO_ALLOCATED(EventTargetWithInlineData);
+    WTF_MAKE_ISO_ALLOCATED_EXPORT(EventTargetWithInlineData, WEBCORE_EXPORT);
 protected:
     EventTargetData* eventTargetData() final { return &m_eventTargetData; }
     EventTargetData* eventTargetDataConcurrently() final { return &m_eventTargetData; }

@@ -109,6 +109,7 @@ public:
         if (m_memory != nullptr) {
             m_cachedMemory = CagedPtr<Gigacage::Primitive, void, tagCagedPtr>(memory()->memory(), memory()->boundsCheckingSize());
             m_cachedBoundsCheckingSize = memory()->boundsCheckingSize();
+            ASSERT(memory()->memory() == cachedMemory());
         }
     }
 
@@ -214,7 +215,7 @@ private:
 
     static size_t allocationSize(Checked<size_t> numImportFunctions, Checked<size_t> numTables)
     {
-        return (offsetOfTail() + sizeof(ImportFunctionInfo) * numImportFunctions + sizeof(Table*) * numTables).unsafeGet();
+        return offsetOfTail() + sizeof(ImportFunctionInfo) * numImportFunctions + sizeof(Table*) * numTables;
     }
     void* m_owner { nullptr }; // In a JS embedding, this is a JSWebAssemblyInstance*.
     Context* m_context { nullptr };

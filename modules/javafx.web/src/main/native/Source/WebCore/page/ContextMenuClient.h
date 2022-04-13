@@ -32,6 +32,12 @@
 namespace WebCore {
 
 class Frame;
+class IntPoint;
+class IntRect;
+
+#if HAVE(TRANSLATION_UI_SERVICES)
+struct TranslationContextMenuInfo;
+#endif
 
 class ContextMenuClient {
 public:
@@ -44,6 +50,14 @@ public:
     virtual bool isSpeaking() = 0;
     virtual void speak(const String&) = 0;
     virtual void stopSpeaking() = 0;
+
+#if ENABLE(IMAGE_ANALYSIS)
+    virtual bool supportsLookUpInImages() = 0;
+#endif
+
+#if HAVE(TRANSLATION_UI_SERVICES)
+    virtual void handleTranslation(const TranslationContextMenuInfo&) = 0;
+#endif
 
 #if PLATFORM(COCOA)
     virtual void searchWithSpotlight() = 0;

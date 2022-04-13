@@ -335,7 +335,7 @@ void FrameLoaderClientJava::transitionToCommittedForNewPage()
 {
     FloatRect pageRect = frame()->page()->chrome().pageRect();
     Color bkColor(Color::white);
-    Optional<Color> backgroundColor;
+    std::optional<Color> backgroundColor;
     FrameView* fv = frame()->view();
     if (fv) {
         backgroundColor = fv->baseBackgroundColor();
@@ -357,13 +357,13 @@ void FrameLoaderClientJava::dispatchWillSubmitForm(FormState&, CompletionHandler
     function();
 }
 
-void FrameLoaderClientJava::committedLoad(DocumentLoader* loader, const char* data, int length)
+void FrameLoaderClientJava::committedLoad(DocumentLoader* loader, const uint8_t* data, int length)
 {
     //uta: for m_pluginWidget we need to do something different
     loader->commitData(data, length);
 }
 
-void FrameLoaderClientJava::dispatchDecidePolicyForResponse(const ResourceResponse& response, const ResourceRequest&, PolicyCheckIdentifier identifier, const String&, FramePolicyFunction&& policyFunction)
+void FrameLoaderClientJava::dispatchDecidePolicyForResponse(const ResourceResponse& response, const ResourceRequest&, PolicyCheckIdentifier identifier, const String&, BrowsingContextGroupSwitchDecision, FramePolicyFunction&& policyFunction)
 {
     using namespace FrameLoaderClientJavaInternal;
     PolicyAction action;
@@ -866,7 +866,7 @@ void FrameLoaderClientJava::dispatchDidReceiveServerRedirectForProvisionalLoad()
 void FrameLoaderClientJava::dispatchDidCancelClientRedirect() { notImplemented(); }
 void FrameLoaderClientJava::dispatchDidChangeLocationWithinPage() { notImplemented(); }
 void FrameLoaderClientJava::dispatchWillClose() { notImplemented(); }
-void FrameLoaderClientJava::dispatchDidCommitLoad(Optional<HasInsecureContent>, Optional<WebCore::UsedLegacyTLS>)
+void FrameLoaderClientJava::dispatchDidCommitLoad(std::optional<HasInsecureContent>, std::optional<WebCore::UsedLegacyTLS>)
 {
     // TODO: Look at GTK version
     notImplemented();
@@ -1126,14 +1126,14 @@ void FrameLoaderClientJava::sendH2Ping(const URL& url,
     completionHandler(makeUnexpected(WebCore::internalError(url)));
 }
 
-Optional<PageIdentifier> FrameLoaderClientJava::pageID() const
+std::optional<PageIdentifier> FrameLoaderClientJava::pageID() const
 {
-    return WTF::nullopt;
+    return std::nullopt;
 }
 
-Optional<FrameIdentifier> FrameLoaderClientJava::frameID() const
+std::optional<FrameIdentifier> FrameLoaderClientJava::frameID() const
 {
-    return WTF::nullopt;
+    return std::nullopt;
 }
 
 }

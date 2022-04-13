@@ -56,9 +56,7 @@ JSC_DEFINE_HOST_FUNCTION(constructJSWebAssemblyTable, (JSGlobalObject* globalObj
     auto throwScope = DECLARE_THROW_SCOPE(vm);
 
     JSObject* newTarget = asObject(callFrame->newTarget());
-    Structure* webAssemblyTableStructure = newTarget == callFrame->jsCallee()
-        ? globalObject->webAssemblyTableStructure()
-        : InternalFunction::createSubclassStructure(globalObject, newTarget, getFunctionRealm(vm, newTarget)->webAssemblyTableStructure());
+    Structure* webAssemblyTableStructure = JSC_GET_DERIVED_STRUCTURE(vm, webAssemblyTableStructure, newTarget, callFrame->jsCallee());
     RETURN_IF_EXCEPTION(throwScope, { });
 
     JSObject* memoryDescriptor;
@@ -101,7 +99,7 @@ JSC_DEFINE_HOST_FUNCTION(constructJSWebAssemblyTable, (JSGlobalObject* globalObj
 
     // In WebIDL, "present" means that [[Get]] result is undefined, not [[HasProperty]] result.
     // https://heycam.github.io/webidl/#idl-dictionaries
-    Optional<uint32_t> maximum;
+    std::optional<uint32_t> maximum;
     Identifier maximumIdent = Identifier::fromString(vm, "maximum");
     JSValue maxSizeValue = memoryDescriptor->get(globalObject, maximumIdent);
     RETURN_IF_EXCEPTION(throwScope, encodedJSValue());
@@ -120,21 +118,19 @@ JSC_DEFINE_HOST_FUNCTION(constructJSWebAssemblyTable, (JSGlobalObject* globalObj
     JSWebAssemblyTable* jsWebAssemblyTable = JSWebAssemblyTable::tryCreate(globalObject, vm, webAssemblyTableStructure, wasmTable.releaseNonNull());
     RETURN_IF_EXCEPTION(throwScope, encodedJSValue());
 
-    if (Options::useWebAssemblyReferences()) {
-        JSValue defaultValue = callFrame->argumentCount() < 2
-            ? defaultValueForReferenceType(jsWebAssemblyTable->table()->wasmType())
-            : callFrame->uncheckedArgument(1);
-        WebAssemblyFunction* wasmFunction = nullptr;
-        WebAssemblyWrapperFunction* wasmWrapperFunction = nullptr;
-        if (jsWebAssemblyTable->table()->isFuncrefTable() && !defaultValue.isNull() && !isWebAssemblyHostFunction(vm, defaultValue, wasmFunction, wasmWrapperFunction))
-            return throwVMTypeError(globalObject, throwScope, "WebAssembly.Table.prototype.constructor expects the second argument to be null or an instance of WebAssembly.Function"_s);
-        for (uint32_t tableIndex = 0; tableIndex < initial; ++tableIndex) {
-            if (jsWebAssemblyTable->table()->isFuncrefTable() && wasmFunction)
-                jsWebAssemblyTable->set(tableIndex, wasmFunction);
-            if (jsWebAssemblyTable->table()->isExternrefTable())
-                jsWebAssemblyTable->set(tableIndex, defaultValue);
-            RETURN_IF_EXCEPTION(throwScope, encodedJSValue());
-        }
+    JSValue defaultValue = callFrame->argumentCount() < 2
+        ? defaultValueForReferenceType(jsWebAssemblyTable->table()->wasmType())
+        : callFrame->uncheckedArgument(1);
+    WebAssemblyFunction* wasmFunction = nullptr;
+    WebAssemblyWrapperFunction* wasmWrapperFunction = nullptr;
+    if (jsWebAssemblyTable->table()->isFuncrefTable() && !defaultValue.isNull() && !isWebAssemblyHostFunction(vm, defaultValue, wasmFunction, wasmWrapperFunction))
+        return throwVMTypeError(globalObject, throwScope, "WebAssembly.Table.prototype.constructor expects the second argument to be null or an instance of WebAssembly.Function"_s);
+    for (uint32_t tableIndex = 0; tableIndex < initial; ++tableIndex) {
+        if (jsWebAssemblyTable->table()->isFuncrefTable() && wasmFunction)
+            jsWebAssemblyTable->set(tableIndex, wasmFunction);
+        if (jsWebAssemblyTable->table()->isExternrefTable())
+            jsWebAssemblyTable->set(tableIndex, defaultValue);
+        RETURN_IF_EXCEPTION(throwScope, encodedJSValue());
     }
 
     RELEASE_AND_RETURN(throwScope, JSValue::encode(jsWebAssemblyTable));

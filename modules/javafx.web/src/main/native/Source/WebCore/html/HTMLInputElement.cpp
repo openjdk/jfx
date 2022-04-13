@@ -2,10 +2,10 @@
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
  *           (C) 2001 Dirk Mueller (mueller@kde.org)
- * Copyright (C) 2004-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2021 Apple Inc. All rights reserved.
  *           (C) 2006 Alexey Proskuryakov (ap@nypop.com)
  * Copyright (C) 2007 Samuel Weinig (sam@webkit.org)
- * Copyright (C) 2010 Google Inc. All rights reserved.
+ * Copyright (C) 2010-2021 Google Inc. All rights reserved.
  * Copyright (C) 2008 Torch Mobile Inc. All rights reserved. (http://www.torchmobile.com/)
  * Copyright (C) 2012 Samsung Electronics. All rights reserved.
  *
@@ -56,6 +56,7 @@
 #include "KeyboardEvent.h"
 #include "LocalizedStrings.h"
 #include "MouseEvent.h"
+#include "NodeRenderStyle.h"
 #include "Page.h"
 #include "PlatformMouseEvent.h"
 #include "RenderTextControlSingleLine.h"
@@ -70,6 +71,7 @@
 #include <wtf/Language.h>
 #include <wtf/MathExtras.h>
 #include <wtf/Ref.h>
+#include <wtf/text/StringToIntegerConversion.h>
 
 #if ENABLE(TOUCH_EVENTS)
 #include "TouchEvent.h"
@@ -82,7 +84,7 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLInputElement);
 using namespace HTMLNames;
 
 #if ENABLE(DATALIST_ELEMENT)
-class ListAttributeTargetObserver : IdTargetObserver {
+class ListAttributeTargetObserver final : public IdTargetObserver {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     ListAttributeTargetObserver(const AtomString& id, HTMLInputElement*);
@@ -142,8 +144,11 @@ Ref<HTMLInputElement> HTMLInputElement::create(const QualifiedName& tagName, Doc
 {
     bool shouldCreateShadowRootLazily = createdByParser;
     Ref<HTMLInputElement> inputElement = adoptRef(*new HTMLInputElement(tagName, document, form, createdByParser));
-    if (!shouldCreateShadowRootLazily)
-        inputElement->ensureUserAgentShadowRoot();
+    if (!shouldCreateShadowRootLazily) {
+        ASSERT(inputElement->m_inputType->needsShadowSubtree());
+        inputElement->createUserAgentShadowRoot();
+        inputElement->createShadowSubtreeAndUpdateInnerTextElementEditability();
+    }
     return inputElement;
 }
 
@@ -154,7 +159,7 @@ HTMLImageLoader& HTMLInputElement::ensureImageLoader()
     return *m_imageLoader;
 }
 
-void HTMLInputElement::didAddUserAgentShadowRoot(ShadowRoot&)
+void HTMLInputElement::createShadowSubtreeAndUpdateInnerTextElementEditability()
 {
     Ref<InputType> protectedInputType(*m_inputType);
     protectedInputType->createShadowSubtreeAndUpdateInnerTextElementEditability(m_parsingInProgress ? ChildChange::Source::Parser : ChildChange::Source::API, isInnerTextElementEditable());
@@ -403,16 +408,16 @@ StepRange HTMLInputElement::createStepRange(AnyStepHandling anyStepHandling) con
 }
 
 #if ENABLE(DATALIST_ELEMENT)
-Optional<Decimal> HTMLInputElement::findClosestTickMarkValue(const Decimal& value)
+std::optional<Decimal> HTMLInputElement::findClosestTickMarkValue(const Decimal& value)
 {
     return m_inputType->findClosestTickMarkValue(value);
 }
 
-Optional<double> HTMLInputElement::listOptionValueAsDouble(const HTMLOptionElement& optionElement)
+std::optional<double> HTMLInputElement::listOptionValueAsDouble(const HTMLOptionElement& optionElement)
 {
     auto optionValue = optionElement.value();
     if (!isValidValue(optionValue))
-        return WTF::nullopt;
+        return std::nullopt;
 
     return parseToDoubleForNumberType(sanitizeValue(optionValue));
 }
@@ -520,11 +525,15 @@ bool HTMLInputElement::shouldUseInputMethod()
 void HTMLInputElement::handleFocusEvent(Node* oldFocusedNode, FocusDirection direction)
 {
     m_inputType->handleFocusEvent(oldFocusedNode, direction);
+
+    invalidateStyleOnFocusChangeIfNeeded();
 }
 
 void HTMLInputElement::handleBlurEvent()
 {
     m_inputType->handleBlurEvent();
+
+    invalidateStyleOnFocusChangeIfNeeded();
 }
 
 void HTMLInputElement::setType(const AtomString& type)
@@ -569,7 +578,10 @@ void HTMLInputElement::updateType()
     m_inputType->detachFromElement();
 
     m_inputType = WTFMove(newType);
-    m_inputType->createShadowSubtreeAndUpdateInnerTextElementEditability(m_parsingInProgress ? ChildChange::Source::Parser : ChildChange::Source::API, isInnerTextElementEditable());
+    if (m_inputType->needsShadowSubtree()) {
+        ensureUserAgentShadowRoot();
+        createShadowSubtreeAndUpdateInnerTextElementEditability();
+    }
 
     updateWillValidateAndValidity();
 
@@ -680,14 +692,14 @@ bool HTMLInputElement::accessKeyAction(bool sendMouseEvents)
     return protectedInputType->accessKeyAction(sendMouseEvents);
 }
 
-bool HTMLInputElement::isPresentationAttribute(const QualifiedName& name) const
+bool HTMLInputElement::hasPresentationalHintsForAttribute(const QualifiedName& name) const
 {
     if (name == vspaceAttr || name == hspaceAttr || name == widthAttr || name == heightAttr || (name == borderAttr && isImageButton()))
         return true;
-    return HTMLTextFormControlElement::isPresentationAttribute(name);
+    return HTMLTextFormControlElement::hasPresentationalHintsForAttribute(name);
 }
 
-void HTMLInputElement::collectStyleForPresentationAttribute(const QualifiedName& name, const AtomString& value, MutableStyleProperties& style)
+void HTMLInputElement::collectPresentationalHintsForAttribute(const QualifiedName& name, const AtomString& value, MutableStyleProperties& style)
 {
     if (name == vspaceAttr) {
         addHTMLLengthToStyle(style, CSSPropertyMarginTop, value);
@@ -701,13 +713,17 @@ void HTMLInputElement::collectStyleForPresentationAttribute(const QualifiedName&
     } else if (name == widthAttr) {
         if (m_inputType->shouldRespectHeightAndWidthAttributes())
             addHTMLLengthToStyle(style, CSSPropertyWidth, value);
+        if (isImageButton())
+            applyAspectRatioFromWidthAndHeightAttributesToStyle(value, attributeWithoutSynchronization(heightAttr), style);
     } else if (name == heightAttr) {
         if (m_inputType->shouldRespectHeightAndWidthAttributes())
             addHTMLLengthToStyle(style, CSSPropertyHeight, value);
+        if (isImageButton())
+            applyAspectRatioFromWidthAndHeightAttributesToStyle(attributeWithoutSynchronization(widthAttr), value, style);
     } else if (name == borderAttr && isImageButton())
         applyBorderAttributeToStyle(value, style);
     else
-        HTMLTextFormControlElement::collectStyleForPresentationAttribute(name, value, style);
+        HTMLTextFormControlElement::collectPresentationalHintsForAttribute(name, value, style);
 }
 
 inline void HTMLInputElement::initializeInputType()
@@ -718,14 +734,19 @@ inline void HTMLInputElement::initializeInputType()
     const AtomString& type = attributeWithoutSynchronization(typeAttr);
     if (type.isNull()) {
         m_inputType = InputType::createText(*this);
-        ensureUserAgentShadowRoot();
+        ASSERT(m_inputType->needsShadowSubtree());
+        createUserAgentShadowRoot();
+        createShadowSubtreeAndUpdateInnerTextElementEditability();
         updateWillValidateAndValidity();
         return;
     }
 
     m_hasType = true;
     m_inputType = InputType::create(*this, type);
-    ensureUserAgentShadowRoot();
+    if (m_inputType->needsShadowSubtree()) {
+        createUserAgentShadowRoot();
+        createShadowSubtreeAndUpdateInnerTextElementEditability();
+    }
     updateWillValidateAndValidity();
     registerForSuspensionCallbackIfNeeded();
     runPostTypeUpdateTasks();
@@ -796,7 +817,7 @@ void HTMLInputElement::parseAttribute(const QualifiedName& name, const AtomStrin
         if (m_size != oldSize && renderer())
             renderer()->setNeedsLayoutAndPrefWidthsRecalc();
     } else if (name == resultsAttr)
-        m_maxResults = !value.isNull() ? std::min(value.toInt(), maxSavedResults) : -1;
+        m_maxResults = value.isNull() ? -1 : std::min(parseHTMLInteger(value).value_or(0), maxSavedResults);
     else if (name == autosaveAttr || name == incrementalAttr)
         invalidateStyleForSubtree();
     else if (name == maxAttr || name == minAttr || name == multipleAttr || name == patternAttr || name == precisionAttr || name == stepAttr)
@@ -965,7 +986,7 @@ void HTMLInputElement::setChecked(bool nowChecked)
     if (RadioButtonGroups* buttons = radioButtonGroups())
         buttons->updateCheckedState(*this);
     if (renderer() && renderer()->style().hasAppearance())
-        renderer()->theme().stateChanged(*renderer(), ControlStates::CheckedState);
+        renderer()->theme().stateChanged(*renderer(), ControlStates::States::Checked);
     updateValidity();
 
     // Ideally we'd do this from the render tree (matching
@@ -989,7 +1010,7 @@ void HTMLInputElement::setIndeterminate(bool newValue)
     invalidateStyleForSubtree();
 
     if (renderer() && renderer()->style().hasAppearance())
-        renderer()->theme().stateChanged(*renderer(), ControlStates::CheckedState);
+        renderer()->theme().stateChanged(*renderer(), ControlStates::States::Checked);
 }
 
 unsigned HTMLInputElement::size() const
@@ -1392,9 +1413,9 @@ FileList* HTMLInputElement::files()
     return m_inputType->files();
 }
 
-void HTMLInputElement::setFiles(RefPtr<FileList>&& files)
+void HTMLInputElement::setFiles(RefPtr<FileList>&& files, WasSetByJavaScript wasSetByJavaScript)
 {
-    m_inputType->setFiles(WTFMove(files));
+    m_inputType->setFiles(WTFMove(files), wasSetByJavaScript);
 }
 
 #if ENABLE(DRAG_SUPPORT)
@@ -1661,10 +1682,14 @@ RefPtr<HTMLDataListElement> HTMLInputElement::dataList() const
 
 void HTMLInputElement::resetListAttributeTargetObserver()
 {
-    if (isConnected())
-        m_listAttributeTargetObserver = makeUnique<ListAttributeTargetObserver>(attributeWithoutSynchronization(listAttr), this);
-    else
-        m_listAttributeTargetObserver = nullptr;
+    if (isConnected()) {
+        if (auto& listAttrValue = attributeWithoutSynchronization(listAttr); !listAttrValue.isNull()) {
+            m_listAttributeTargetObserver = makeUnique<ListAttributeTargetObserver>(listAttrValue, this);
+            return;
+        }
+    }
+
+    m_listAttributeTargetObserver = nullptr;
 }
 
 void HTMLInputElement::dataListMayHaveChanged()
@@ -2004,6 +2029,15 @@ bool HTMLInputElement::shouldTruncateText(const RenderStyle& style) const
     return document().focusedElement() != this && style.textOverflow() == TextOverflow::Ellipsis;
 }
 
+void HTMLInputElement::invalidateStyleOnFocusChangeIfNeeded()
+{
+    if (!isTextField())
+        return;
+    // Focus change may affect the result of shouldTruncateText().
+    if (auto* style = renderStyle(); style && style->textOverflow() == TextOverflow::Ellipsis)
+        invalidateStyleForSubtreeInternal();
+}
+
 ExceptionOr<int> HTMLInputElement::selectionStartForBindings() const
 {
     if (!canHaveSelection())
@@ -2118,6 +2152,11 @@ RenderStyle HTMLInputElement::createInnerTextStyle(const RenderStyle& style)
 void HTMLInputElement::capsLockStateMayHaveChanged()
 {
     m_inputType->capsLockStateMayHaveChanged();
+}
+
+String HTMLInputElement::resultForDialogSubmit() const
+{
+    return m_inputType->resultForDialogSubmit();
 }
 
 } // namespace

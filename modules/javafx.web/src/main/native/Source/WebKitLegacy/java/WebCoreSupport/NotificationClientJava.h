@@ -47,10 +47,8 @@ public:
     void requestPermission(ScriptExecutionContext*, RefPtr<VoidCallback>&&) override {}
 #endif
 #if ENABLE(NOTIFICATIONS)
-    void requestPermission(ScriptExecutionContext*, RefPtr<NotificationPermissionCallback>&&) override {}
+    void requestPermission(ScriptExecutionContext&, PermissionHandler&&) override {}
 #endif
-    bool hasPendingPermissionRequests(ScriptExecutionContext*) const override { return false;};
-    void cancelRequestsForPermission(ScriptExecutionContext*) override {}
     Permission checkPermission(ScriptExecutionContext*) override { return NotificationPermission::Denied; }
     ~NotificationClientJava() override {}
 };

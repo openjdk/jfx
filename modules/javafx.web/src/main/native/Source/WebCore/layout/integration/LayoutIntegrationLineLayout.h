@@ -115,6 +115,8 @@ private:
     InlineContent& ensureInlineContent();
     void updateLayoutBoxDimensions(const RenderBox&);
 
+    void paintTextRunUsingPhysicalCoordinates(PaintInfo&, const LayoutPoint& paintOffset, const Line&, const Run&);
+
     const Layout::ContainerBox& rootLayoutBox() const;
     Layout::ContainerBox& rootLayoutBox();
     void releaseInlineItemCache();
@@ -123,7 +125,7 @@ private:
     Layout::LayoutState m_layoutState;
     Layout::InlineFormattingState& m_inlineFormattingState;
     RefPtr<InlineContent> m_inlineContent;
-    Optional<LayoutUnit> m_paginatedHeight;
+    std::optional<LayoutUnit> m_paginatedHeight;
 };
 
 }

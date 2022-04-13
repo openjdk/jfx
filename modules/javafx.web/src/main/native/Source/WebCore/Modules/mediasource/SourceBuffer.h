@@ -37,7 +37,6 @@
 #include "AudioTrack.h"
 #include "EventTarget.h"
 #include "ExceptionOr.h"
-#include "GenericEventQueue.h"
 #include "SourceBufferPrivate.h"
 #include "SourceBufferPrivateClient.h"
 #include "TextTrack.h"
@@ -96,7 +95,7 @@ public:
     ExceptionOr<void> remove(const MediaTime&, const MediaTime&);
     ExceptionOr<void> changeType(const String&);
 
-    const TimeRanges& bufferedInternal() const { ASSERT(m_buffered); return *m_buffered; }
+    const TimeRanges& bufferedInternal() const { ASSERT(m_private->buffered()); return *m_private->buffered(); }
 
     void abortIfUpdating();
     void removedFromMediaSource();
@@ -157,7 +156,6 @@ private:
     void sourceBufferPrivateDidParseSample(double sampleDuration) final;
     void sourceBufferPrivateDidDropSample() final;
     void sourceBufferPrivateBufferedDirtyChanged(bool) final;
-    void sourceBufferPrivateBufferedRangesChanged(const PlatformTimeRanges&) final;
     void sourceBufferPrivateDidReceiveRenderingError(int64_t errorCode) final;
     void sourceBufferPrivateReportExtraMemoryCost(uint64_t) final;
 
@@ -203,13 +201,12 @@ private:
 
     friend class Internals;
     WEBCORE_EXPORT void bufferedSamplesForTrackId(const AtomString&, CompletionHandler<void(Vector<String>&&)>&&);
-    WEBCORE_EXPORT Vector<String> enqueuedSamplesForTrackID(const AtomString&);
+    WEBCORE_EXPORT void enqueuedSamplesForTrackID(const AtomString&, CompletionHandler<void(Vector<String>&&)>&&);
     WEBCORE_EXPORT MediaTime minimumUpcomingPresentationTimeForTrackID(const AtomString&);
     WEBCORE_EXPORT void setMaximumQueueDepthForTrackID(const AtomString&, uint64_t);
 
     Ref<SourceBufferPrivate> m_private;
     MediaSource* m_source;
-    UniqueRef<MainThreadGenericEventQueue> m_asyncEventQueue;
     AppendMode m_mode { AppendMode::Segments };
 
     Vector<unsigned char> m_pendingAppendData;
@@ -234,7 +231,6 @@ private:
     double m_bufferedSinceLastMonitor { 0 };
     double m_averageBufferRate { 0 };
     bool m_bufferedDirty { true };
-    RefPtr<TimeRanges> m_buffered;
 
     uint64_t m_reportedExtraMemoryCost { 0 };
 

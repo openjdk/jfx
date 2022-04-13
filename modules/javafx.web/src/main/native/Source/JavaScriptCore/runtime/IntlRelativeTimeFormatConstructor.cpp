@@ -35,7 +35,7 @@ namespace JSC {
 
 STATIC_ASSERT_IS_TRIVIALLY_DESTRUCTIBLE(IntlRelativeTimeFormatConstructor);
 
-static JSC_DECLARE_HOST_FUNCTION(IntlRelativeTimeFormatConstructorFuncSupportedLocalesOf);
+static JSC_DECLARE_HOST_FUNCTION(intlRelativeTimeFormatConstructorFuncSupportedLocalesOf);
 
 }
 
@@ -47,7 +47,7 @@ const ClassInfo IntlRelativeTimeFormatConstructor::s_info = { "Function", &Inter
 
 /* Source for IntlRelativeTimeFormatConstructor.lut.h
 @begin relativeTimeFormatConstructorTable
-  supportedLocalesOf             IntlRelativeTimeFormatConstructorFuncSupportedLocalesOf             DontEnum|Function 1
+  supportedLocalesOf             intlRelativeTimeFormatConstructorFuncSupportedLocalesOf             DontEnum|Function 1
 @end
 */
 
@@ -85,9 +85,7 @@ JSC_DEFINE_HOST_FUNCTION(constructIntlRelativeTimeFormat, (JSGlobalObject* globa
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     JSObject* newTarget = asObject(callFrame->newTarget());
-    Structure* structure = newTarget == callFrame->jsCallee()
-        ? globalObject->relativeTimeFormatStructure()
-        : InternalFunction::createSubclassStructure(globalObject, newTarget, getFunctionRealm(vm, newTarget)->relativeTimeFormatStructure());
+    Structure* structure = JSC_GET_DERIVED_STRUCTURE(vm, relativeTimeFormatStructure, newTarget, callFrame->jsCallee());
     RETURN_IF_EXCEPTION(scope, { });
 
     IntlRelativeTimeFormat* relativeTimeFormat = IntlRelativeTimeFormat::create(vm, structure);
@@ -108,12 +106,12 @@ JSC_DEFINE_HOST_FUNCTION(callIntlRelativeTimeFormat, (JSGlobalObject* globalObje
 }
 
 // https://tc39.es/ecma402/#sec-Intl.RelativeTimeFormat.supportedLocalesOf
-JSC_DEFINE_HOST_FUNCTION(IntlRelativeTimeFormatConstructorFuncSupportedLocalesOf, (JSGlobalObject* globalObject, CallFrame* callFrame))
+JSC_DEFINE_HOST_FUNCTION(intlRelativeTimeFormatConstructorFuncSupportedLocalesOf, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    auto& availableLocales = intlRelativeTimeFormatAvailableLocales();
+    const auto& availableLocales = intlRelativeTimeFormatAvailableLocales();
 
     auto requestedLocales = canonicalizeLocaleList(globalObject, callFrame->argument(0));
     RETURN_IF_EXCEPTION(scope, encodedJSValue());

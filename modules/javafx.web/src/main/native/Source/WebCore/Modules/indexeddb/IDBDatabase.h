@@ -25,8 +25,6 @@
 
 #pragma once
 
-#if ENABLE(INDEXED_DATABASE)
-
 #include "EventTarget.h"
 #include "IDBActiveDOMObject.h"
 #include "IDBConnectionProxy.h"
@@ -58,14 +56,17 @@ public:
     Ref<DOMStringList> objectStoreNames() const;
 
     struct ObjectStoreParameters {
-        Optional<IDBKeyPath> keyPath;
+        std::optional<IDBKeyPath> keyPath;
         bool autoIncrement;
     };
 
     ExceptionOr<Ref<IDBObjectStore>> createObjectStore(const String& name, ObjectStoreParameters&&);
 
     using StringOrVectorOfStrings = WTF::Variant<String, Vector<String>>;
-    ExceptionOr<Ref<IDBTransaction>> transaction(StringOrVectorOfStrings&& storeNames, IDBTransactionMode);
+    struct TransactionOptions {
+        std::optional<IDBTransactionDurability> durability;
+    };
+    ExceptionOr<Ref<IDBTransaction>> transaction(StringOrVectorOfStrings&& storeNames, IDBTransactionMode, TransactionOptions = { });
     ExceptionOr<void> deleteObjectStore(const String& name);
     void close();
 
@@ -138,5 +139,3 @@ private:
 };
 
 } // namespace WebCore
-
-#endif // ENABLE(INDEXED_DATABASE)

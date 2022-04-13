@@ -73,12 +73,12 @@ void RealtimeVideoSource::stopProducingData()
     m_source->stop();
 }
 
-bool RealtimeVideoSource::supportsSizeAndFrameRate(Optional<int> width, Optional<int> height, Optional<double> frameRate)
+bool RealtimeVideoSource::supportsSizeAndFrameRate(std::optional<int> width, std::optional<int> height, std::optional<double> frameRate)
 {
     return m_source->supportsSizeAndFrameRate(width, height, frameRate);
 }
 
-void RealtimeVideoSource::setSizeAndFrameRate(Optional<int> width, Optional<int> height, Optional<double> frameRate)
+void RealtimeVideoSource::setSizeAndFrameRate(std::optional<int> width, std::optional<int> height, std::optional<double> frameRate)
 {
     if (!width && !height) {
         width = size().width();
@@ -115,6 +115,7 @@ void RealtimeVideoSource::sourceSettingsChanged()
     auto size = this->size();
     if (size.isEmpty())
         size = m_source->size();
+
     if (rotation == MediaSample::VideoRotation::Left || rotation == MediaSample::VideoRotation::Right)
         size = size.transposedSize();
 
@@ -183,7 +184,8 @@ void RealtimeVideoSource::videoSampleAvailable(MediaSample& sample)
     if (m_frameDecimation > 1 && ++m_frameDecimationCounter % m_frameDecimation)
         return;
 
-    m_frameDecimation = static_cast<size_t>(m_source->observedFrameRate() / frameRate());
+    auto frameRate = this->frameRate();
+    m_frameDecimation = frameRate ? static_cast<size_t>(m_source->observedFrameRate() / frameRate) : 1;
     if (!m_frameDecimation)
         m_frameDecimation = 1;
 

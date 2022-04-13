@@ -43,6 +43,7 @@
 #include "TinyBloomFilter.h"
 #include "Watchpoint.h"
 #include "WriteBarrierInlines.h"
+#include <wtf/Atomics.h>
 #include <wtf/PrintStream.h>
 
 namespace WTF {
@@ -54,6 +55,7 @@ class UniquedStringImpl;
 namespace JSC {
 
 class DeferGC;
+class DeferredStructureTransitionWatchpointFire;
 class LLIntOffsetsExtractor;
 class PropertyNameArray;
 class PropertyNameArrayData;
@@ -103,20 +105,6 @@ public:
     }
 
     void dump(PrintStream& out) const final;
-
-private:
-    const Structure* m_structure;
-};
-
-class DeferredStructureTransitionWatchpointFire final : public DeferredWatchpointFire {
-    WTF_MAKE_NONCOPYABLE(DeferredStructureTransitionWatchpointFire);
-public:
-    JS_EXPORT_PRIVATE DeferredStructureTransitionWatchpointFire(VM&, Structure*);
-    JS_EXPORT_PRIVATE ~DeferredStructureTransitionWatchpointFire() final;
-
-    void dump(PrintStream& out) const final;
-
-    const Structure* structure() const { return m_structure; }
 
 private:
     const Structure* m_structure;
@@ -183,7 +171,7 @@ public:
     bool isProxy() const
     {
         JSType type = m_blob.type();
-        return type == ImpureProxyType || type == PureForwardingProxyType || type == ProxyObjectType;
+        return type == PureForwardingProxyType || type == ProxyObjectType;
     }
 
     static void dumpStatistics();
@@ -191,7 +179,7 @@ public:
     JS_EXPORT_PRIVATE static Structure* addPropertyTransition(VM&, Structure*, PropertyName, unsigned attributes, PropertyOffset&);
     JS_EXPORT_PRIVATE static Structure* addNewPropertyTransition(VM&, Structure*, PropertyName, unsigned attributes, PropertyOffset&, PutPropertySlot::Context = PutPropertySlot::UnknownContext, DeferredStructureTransitionWatchpointFire* = nullptr);
     static Structure* addPropertyTransitionToExistingStructureConcurrently(Structure*, UniquedStringImpl* uid, unsigned attributes, PropertyOffset&);
-    JS_EXPORT_PRIVATE static Structure* addPropertyTransitionToExistingStructure(Structure*, PropertyName, unsigned attributes, PropertyOffset&);
+    static Structure* addPropertyTransitionToExistingStructure(Structure*, PropertyName, unsigned attributes, PropertyOffset&);
     static Structure* removeNewPropertyTransition(VM&, Structure*, PropertyName, PropertyOffset&, DeferredStructureTransitionWatchpointFire* = nullptr);
     static Structure* removePropertyTransition(VM&, Structure*, PropertyName, PropertyOffset&, DeferredStructureTransitionWatchpointFire* = nullptr);
     static Structure* removePropertyTransitionFromExistingStructure(Structure*, PropertyName, PropertyOffset&);
@@ -268,12 +256,23 @@ public:
         return typeInfo().getOwnPropertySlotIsImpure();
     }
 
+    bool hasNonReifiedStaticProperties() const
+    {
+        return typeInfo().hasStaticPropertyTable() && !staticPropertiesReified();
+    }
+
     // Type accessors.
     TypeInfo typeInfo() const { return m_blob.typeInfo(m_outOfLineTypeFlags); }
     bool isObject() const { return typeInfo().isObject(); }
 
     IndexingType indexingType() const { return m_blob.indexingModeIncludingHistory() & AllWritableArrayTypes; }
     IndexingType indexingMode() const  { return m_blob.indexingModeIncludingHistory() & AllArrayTypes; }
+    Dependency fencedIndexingMode(IndexingType& indexingType)
+    {
+        Dependency dependency = m_blob.fencedIndexingModeIncludingHistory(indexingType);
+        indexingType &= AllArrayTypes;
+        return dependency;
+    }
     IndexingType indexingModeIncludingHistory() const { return m_blob.indexingModeIncludingHistory(); }
 
     inline bool mayInterceptIndexedAccesses() const;
@@ -331,6 +330,15 @@ public:
     {
         ASSERT(hasRareData());
         return static_cast<StructureRareData*>(m_previousOrRareData.get());
+    }
+
+    StructureRareData* tryRareData()
+    {
+        JSCell* value = m_previousOrRareData.get();
+        WTF::dependentLoadLoadFence();
+        if (isRareData(value))
+            return static_cast<StructureRareData*>(value);
+        return nullptr;
     }
 
     const StructureRareData* rareData() const
@@ -677,7 +685,7 @@ public:
         const HashTable* table;
         const HashTableValue* value;
     };
-    Optional<PropertyHashEntry> findPropertyHashEntry(PropertyName) const;
+    std::optional<PropertyHashEntry> findPropertyHashEntry(PropertyName) const;
 
     DECLARE_EXPORT_INFO;
 
@@ -741,7 +749,7 @@ private:
     // and the list of structures that we visited before we got to it. If it returns a
     // non-null structure, it will also lock the structure that it returns; it is your job
     // to unlock it.
-    void findStructuresAndMapForMaterialization(Vector<Structure*, 8>& structures, Structure*&, PropertyTable*&);
+    bool findStructuresAndMapForMaterialization(Vector<Structure*, 8>& structures, Structure*& structure, PropertyTable*&) WTF_ACQUIRES_LOCK_IF(true, structure->m_lock);
 
     static Structure* toDictionaryTransition(VM&, Structure*, DictionaryKind, DeferredStructureTransitionWatchpointFire* = nullptr);
 

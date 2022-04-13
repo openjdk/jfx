@@ -58,7 +58,7 @@
 #include "LayoutTreeBuilder.h"
 #endif
 
-#if PLATFORM(IOS_FAMILY)
+#if ENABLE(CONTENT_CHANGE_OBSERVER)
 #include "ContentChangeObserver.h"
 #endif
 
@@ -73,7 +73,7 @@ RenderTreeUpdater::Parent::Parent(ContainerNode& root)
 RenderTreeUpdater::Parent::Parent(Element& element, const Style::ElementUpdates* updates)
     : element(&element)
     , updates(updates)
-    , renderTreePosition(element.renderer() ? makeOptional(RenderTreePosition(*element.renderer())) : WTF::nullopt)
+    , renderTreePosition(element.renderer() ? std::make_optional(RenderTreePosition(*element.renderer())) : std::nullopt)
 {
 }
 
@@ -102,7 +102,7 @@ static ContainerNode* findRenderingRoot(ContainerNode& node)
 static ListHashSet<ContainerNode*> findRenderingRoots(const Style::Update& update)
 {
     ListHashSet<ContainerNode*> renderingRoots;
-    for (auto* root : update.roots()) {
+    for (auto& root : update.roots()) {
         auto* renderingRoot = findRenderingRoot(*root);
         if (!renderingRoot)
             continue;
@@ -266,6 +266,7 @@ void RenderTreeUpdater::updateAfterDescendants(Element& element, const Style::El
     if (!renderer)
         return;
 
+    generatedContent().updateBackdropRenderer(*renderer);
     m_builder.updateAfterDescendants(*renderer);
 
     if (element.hasCustomStyleResolveCallbacks() && updates && updates->update.change == Style::Change::Renderer)
@@ -302,7 +303,7 @@ void RenderTreeUpdater::updateRendererStyle(RenderElement& renderer, RenderStyle
 
 void RenderTreeUpdater::updateElementRenderer(Element& element, const Style::ElementUpdates& updates)
 {
-#if PLATFORM(IOS_FAMILY)
+#if ENABLE(CONTENT_CHANGE_OBSERVER)
     ContentChangeObserver::StyleChangeScope observingScope(m_document, element);
 #endif
 
@@ -568,7 +569,6 @@ void RenderTreeUpdater::tearDownRenderers(Element& root, TeardownType teardownTy
     };
 
     auto& document = root.document();
-    auto* timeline = document.existingTimeline();
 
     auto pop = [&] (unsigned depth) {
         while (teardownStack.size() > depth) {
@@ -583,25 +583,20 @@ void RenderTreeUpdater::tearDownRenderers(Element& root, TeardownType teardownTy
             case TeardownType::FullAfterSlotChange:
                 if (&element == &root) {
                     // Keep animations going on the host.
-                    if (timeline)
-                        timeline->willChangeRendererForStyleable(styleable);
+                    styleable.willChangeRenderer();
                     break;
                 }
                 FALLTHROUGH;
             case TeardownType::Full:
-                if (timeline) {
-                    if (document.renderTreeBeingDestroyed())
-                        timeline->cancelDeclarativeAnimationsForStyleable(styleable, WebAnimation::Silently::Yes);
-                }
+                if (document.renderTreeBeingDestroyed())
+                    styleable.cancelDeclarativeAnimations();
                 element.clearHoverAndActiveStatusBeforeDetachingRenderer();
                 break;
             case TeardownType::RendererUpdateCancelingAnimations:
-                if (timeline)
-                    timeline->cancelDeclarativeAnimationsForStyleable(styleable, WebAnimation::Silently::No);
+                styleable.cancelDeclarativeAnimations();
                 break;
             case TeardownType::RendererUpdate:
-                if (timeline)
-                    timeline->willChangeRendererForStyleable(Styleable::fromElement(element));
+                styleable.willChangeRenderer();
                 break;
             }
 

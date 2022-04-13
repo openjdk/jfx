@@ -170,9 +170,7 @@ void InspectorController::createLazyAgents()
     m_agents.append(makeUnique<InspectorWorkerAgent>(pageContext));
     m_agents.append(makeUnique<InspectorDOMStorageAgent>(pageContext));
     m_agents.append(makeUnique<InspectorDatabaseAgent>(pageContext));
-#if ENABLE(INDEXED_DATABASE)
     m_agents.append(makeUnique<InspectorIndexedDBAgent>(pageContext));
-#endif
 
     auto scriptProfilerAgentPtr = makeUnique<InspectorScriptProfilerAgent>(pageContext);
     m_instrumentingAgents->setPersistentScriptProfilerAgent(scriptProfilerAgentPtr.get());
@@ -462,7 +460,7 @@ bool InspectorController::canAccessInspectedScriptState(JSC::JSGlobalObject* lex
 {
     JSLockHolder lock(lexicalGlobalObject);
 
-    JSDOMWindow* inspectedWindow = toJSDOMWindow(lexicalGlobalObject->vm(), lexicalGlobalObject);
+    auto* inspectedWindow = jsDynamicCast<JSDOMWindow*>(lexicalGlobalObject->vm(), lexicalGlobalObject);
     if (!inspectedWindow)
         return false;
 

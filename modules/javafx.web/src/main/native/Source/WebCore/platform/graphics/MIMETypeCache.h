@@ -28,7 +28,6 @@
 #include "MediaPlayerEnums.h"
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
-#include <wtf/Optional.h>
 #include <wtf/Vector.h>
 #include <wtf/text/StringHash.h>
 
@@ -43,8 +42,6 @@ public:
     virtual ~MIMETypeCache() = default;
 
     virtual bool isAvailable() const;
-    virtual const HashSet<String, ASCIICaseInsensitiveHash>& staticContainerTypeList();
-    virtual bool isUnsupportedContainerType(const String&);
     virtual MediaPlayerEnums::SupportsType canDecodeType(const String&);
     virtual HashSet<String, ASCIICaseInsensitiveHash>& supportedTypes();
 
@@ -55,13 +52,15 @@ protected:
     void addSupportedTypes(const Vector<String>&);
 
 private:
+    virtual bool isStaticContainerType(StringView);
+    virtual bool isUnsupportedContainerType(const String&);
     virtual void initializeCache(HashSet<String, ASCIICaseInsensitiveHash>&);
     virtual bool canDecodeExtendedType(const ContentType&);
 
     bool shouldOverrideExtendedType(const ContentType&);
 
-    Optional<HashSet<String, ASCIICaseInsensitiveHash>> m_supportedTypes;
-    Optional<HashMap<String, MediaPlayerEnums::SupportsType, ASCIICaseInsensitiveHash>> m_cachedResults;
+    std::optional<HashSet<String, ASCIICaseInsensitiveHash>> m_supportedTypes;
+    std::optional<HashMap<String, MediaPlayerEnums::SupportsType, ASCIICaseInsensitiveHash>> m_cachedResults;
 };
 
 } // namespace WebCore

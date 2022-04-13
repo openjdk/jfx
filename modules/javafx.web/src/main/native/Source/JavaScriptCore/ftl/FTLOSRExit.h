@@ -44,6 +44,7 @@
 #include "Reg.h"
 #include "ValueProfile.h"
 #include "VirtualRegister.h"
+#include <wtf/FixedVector.h>
 
 namespace JSC {
 
@@ -67,6 +68,9 @@ struct OSRExitDescriptorImpl;
 struct OSRExitHandle;
 
 struct OSRExitDescriptor {
+private:
+    WTF_MAKE_NONCOPYABLE(OSRExitDescriptor);
+public:
     OSRExitDescriptor(
         DataFormat profileDataFormat, MethodOfGettingAValueProfile,
         unsigned numberOfArguments, unsigned numberOfLocals, unsigned numberOfTmps);
@@ -79,7 +83,7 @@ struct OSRExitDescriptor {
     DataFormat m_profileDataFormat;
     MethodOfGettingAValueProfile m_valueProfile;
 
-    Operands<ExitValue> m_values;
+    FixedOperands<ExitValue> m_values;
     Bag<ExitTimeObjectMaterialization> m_materializations;
 
     void validateReferences(const TrackedReferences&);
@@ -116,13 +120,13 @@ private:
 };
 
 struct OSRExit : public DFG::OSRExitBase {
-    OSRExit(OSRExitDescriptor*, ExitKind, CodeOrigin, CodeOrigin codeOriginForExitProfile, bool wasHoisted, uint32_t dfgNodeIndex);
+    OSRExit(OSRExitDescriptor*, ExitKind, CodeOrigin, CodeOrigin codeOriginForExitProfile, bool wasHoisted, uint32_t dfgNodeIndex, FixedVector<B3::ValueRep>&&);
 
     OSRExitDescriptor* m_descriptor;
     MacroAssemblerCodeRef<OSRExitPtrTag> m_code;
     // This tells us where to place a jump.
     CodeLocationJump<JSInternalPtrTag> m_patchableJump;
-    Vector<B3::ValueRep> m_valueReps;
+    FixedVector<B3::ValueRep> m_valueReps;
 
     CodeLocationJump<JSInternalPtrTag> codeLocationForRepatch(CodeBlock* ftlCodeBlock) const;
     void considerAddingAsFrequentExitSite(CodeBlock* profiledCodeBlock)

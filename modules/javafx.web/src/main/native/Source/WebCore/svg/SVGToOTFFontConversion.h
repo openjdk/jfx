@@ -25,12 +25,13 @@
 
 #pragma once
 
+#include <optional>
 #include <wtf/Forward.h>
 
 namespace WebCore {
 
 class SVGFontElement;
 
-Optional<Vector<char>> convertSVGToOTFFont(const SVGFontElement&);
+std::optional<Vector<uint8_t>> convertSVGToOTFFont(const SVGFontElement&);
 
 } // namespace WebCore

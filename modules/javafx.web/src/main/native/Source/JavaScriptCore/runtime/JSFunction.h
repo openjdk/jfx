@@ -70,7 +70,7 @@ public:
     }
 
     typedef JSCallee Base;
-    static constexpr unsigned StructureFlags = Base::StructureFlags | OverridesGetOwnPropertySlot | OverridesGetOwnSpecialPropertyNames | OverridesGetCallData;
+    static constexpr unsigned StructureFlags = Base::StructureFlags | OverridesGetOwnPropertySlot | OverridesGetOwnSpecialPropertyNames | OverridesGetCallData | OverridesPut;
 
     static size_t allocationSize(Checked<size_t> inlineCapacity)
     {
@@ -90,6 +90,9 @@ public:
     JS_EXPORT_PRIVATE String name(VM&);
     JS_EXPORT_PRIVATE String displayName(VM&);
     JS_EXPORT_PRIVATE const String calculatedDisplayName(VM&);
+    JS_EXPORT_PRIVATE JSString* toString(JSGlobalObject*);
+
+    JSString* asStringConcurrently(VM&) const;
 
     ExecutableBase* executable() const
     {

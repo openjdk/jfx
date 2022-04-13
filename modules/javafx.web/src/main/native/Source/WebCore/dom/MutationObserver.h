@@ -37,6 +37,11 @@
 #include <wtf/HashSet.h>
 #include <wtf/IsoMalloc.h>
 #include <wtf/Vector.h>
+#include <wtf/WeakHashSet.h>
+
+namespace JSC {
+class AbstractSlotVisitor;
+}
 
 namespace WebCore {
 
@@ -78,12 +83,12 @@ public:
 
     struct Init {
         bool childList;
-        Optional<bool> attributes;
-        Optional<bool> characterData;
+        std::optional<bool> attributes;
+        std::optional<bool> characterData;
         bool subtree;
-        Optional<bool> attributeOldValue;
-        Optional<bool> characterDataOldValue;
-        Optional<Vector<String>> attributeFilter;
+        std::optional<bool> attributeOldValue;
+        std::optional<bool> characterDataOldValue;
+        std::optional<Vector<String>> attributeFilter;
     };
 
     ExceptionOr<void> observe(Node&, const Init&);
@@ -101,7 +106,7 @@ public:
     void setHasTransientRegistration(Document&);
     bool canDeliver();
 
-    HashSet<Node*> observedNodes() const;
+    bool isReachableFromOpaqueRoots(JSC::AbstractSlotVisitor&) const;
 
     MutationCallback& callback() const { return m_callback.get(); }
 
@@ -118,7 +123,7 @@ private:
     Ref<MutationCallback> m_callback;
     Vector<Ref<MutationRecord>> m_records;
     HashSet<GCReachableRef<Node>> m_pendingTargets;
-    HashSet<MutationObserverRegistration*> m_registrations;
+    WeakHashSet<MutationObserverRegistration> m_registrations;
     unsigned m_priority;
 };
 
