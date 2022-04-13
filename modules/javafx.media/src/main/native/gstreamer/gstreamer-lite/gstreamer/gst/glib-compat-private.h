@@ -27,6 +27,13 @@
 
 G_BEGIN_DECLS
 
+#ifdef GSTREAMER_LITE
+#if !defined(g_abort)
+#include <stdlib.h>
+#define g_abort() abort()
+#endif // g_abort
+#endif // GSTREAMER_LITE
+
 /* copies */
 
 /* adaptations */

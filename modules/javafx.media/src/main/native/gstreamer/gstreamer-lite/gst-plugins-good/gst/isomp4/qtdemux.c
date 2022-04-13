@@ -9021,11 +9021,12 @@ gst_qtdemux_add_stream (GstQTDemux * qtdemux,
 #ifdef GSTREAMER_LITE
     // Add track_id and track_enabled so we can find this pad later on by track ID
     if (CUR_STREAM (stream)->caps) {
+      CUR_STREAM (stream)->caps = gst_caps_make_writable(CUR_STREAM (stream)->caps);
       gst_caps_set_simple(CUR_STREAM (stream)->caps,
           "track_id", G_TYPE_INT, stream->track_id,
           "track_enabled", G_TYPE_BOOLEAN, stream->track_enabled,
           NULL);
-      GST_DEBUG_OBJECT (qtdemux, "setting caps %" GST_PTR_FORMAT, stream->caps);
+      GST_DEBUG_OBJECT (qtdemux, "setting caps %" GST_PTR_FORMAT, CUR_STREAM (stream)->caps);
     }
 #endif // GSTREAMER_LITE
 

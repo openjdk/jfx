@@ -95,7 +95,7 @@ void CGstAudioSpectrum::SetBands(int bands, CBandsHolder* holder)
     g_object_set(m_pSpectrum, "bands", bands, NULL);
 
     CBandsHolder *old_holder = (CBandsHolder*)g_atomic_pointer_get(&m_pHolder);
-    g_atomic_pointer_set(&m_pHolder, (gpointer)holder);
+    g_atomic_pointer_set((gpointer*)&m_pHolder, (gpointer)holder);
     CBandsHolder::ReleaseRef(old_holder);
 }
 
