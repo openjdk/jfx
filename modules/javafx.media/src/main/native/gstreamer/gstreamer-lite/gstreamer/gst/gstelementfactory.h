@@ -83,6 +83,7 @@ gboolean                gst_element_factory_has_interface       (GstElementFacto
 GST_API
 GstElement*             gst_element_factory_create              (GstElementFactory *factory,
                                                                  const gchar *name) G_GNUC_MALLOC;
+#if !defined(GSTREAMER_LITE) || (defined(GSTREAMER_LITE) && !defined(LINUX))
 GST_API
 GstElement*             gst_element_factory_create_full         (GstElementFactory * factory,
                                                                  const gchar * first, ...) G_GNUC_MALLOC;
@@ -92,9 +93,11 @@ GstElement *            gst_element_factory_create_valist       (GstElementFacto
 GST_API
 GstElement *            gst_element_factory_create_with_properties (GstElementFactory * factory,
                                                                  guint n, const gchar *names[], const GValue values[]) G_GNUC_MALLOC;
+#endif // GSTREAMER_LITE
 GST_API
 GstElement*             gst_element_factory_make                (const gchar *factoryname, const gchar *name) G_GNUC_MALLOC;
 
+#if !defined(GSTREAMER_LITE) || (defined(GSTREAMER_LITE) && !defined(LINUX))
 GST_API
 GstElement*             gst_element_factory_make_full           (const gchar *factoryname,
                                                                   const gchar *first, ...) G_GNUC_MALLOC;
@@ -104,6 +107,7 @@ GstElement*             gst_element_factory_make_valist         (const gchar *fa
 GST_API
 GstElement*             gst_element_factory_make_with_properties (const gchar *factoryname,
                                                                  guint n, const gchar *names[], const GValue values[]) G_GNUC_MALLOC;
+#endif // GSTREAMER_LITE
 GST_API
 gboolean                gst_element_register                    (GstPlugin *plugin, const gchar *name,
                                                                  guint rank, GType type);

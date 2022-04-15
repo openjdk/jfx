@@ -125,6 +125,10 @@
 #include "printf/printf.h"
 #include "printf/printf-extension.h"
 
+#ifdef GSTREAMER_LITE
+#include "gst/glib-compat-private.h"
+#endif // GSTREAMER_LITE
+
 static char *gst_info_printf_pointer_extension_func (const char *format,
     void *ptr);
 #else /* GST_DISABLE_GST_DEBUG */

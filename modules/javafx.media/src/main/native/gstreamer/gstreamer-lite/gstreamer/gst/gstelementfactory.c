@@ -452,6 +452,7 @@ cleanup:
   return FALSE;
 }
 
+#if !defined(GSTREAMER_LITE) || (defined(GSTREAMER_LITE) && !defined(LINUX))
 /**
  * gst_element_factory_create_with_properties:
  * @factory: factory to instantiate
@@ -631,6 +632,7 @@ gst_element_factory_create_full (GstElementFactory * factory,
 
   return element;
 }
+#endif // GSTREAMER_LITE
 
 /**
  * gst_element_factory_create:
@@ -645,6 +647,7 @@ gst_element_factory_create_full (GstElementFactory * factory,
  * Returns: (transfer floating) (nullable): new #GstElement or %NULL
  *     if the element couldn't be created
  */
+#if !defined(GSTREAMER_LITE) || (defined(GSTREAMER_LITE) && !defined(LINUX))
 GstElement *
 gst_element_factory_create (GstElementFactory * factory, const gchar * name)
 {
@@ -653,7 +656,95 @@ gst_element_factory_create (GstElementFactory * factory, const gchar * name)
   else
     return gst_element_factory_create_with_properties (factory, 0, NULL, NULL);
 }
+#else // GSTREAMER_LITE
+// Revert https://gitlab.freedesktop.org/gstreamer/gstreamer/-/commit/aadf84837b2c0397b02ffb39f704ef4649482a44,
+// so we can support older GLib
+GstElement *
+gst_element_factory_create (GstElementFactory * factory, const gchar * name)
+{
+  GstElement *element;
+  GstElementClass *oclass;
+  GstElementFactory *newfactory;
 
+  g_return_val_if_fail (factory != NULL, NULL);
+
+  newfactory =
+      GST_ELEMENT_FACTORY (gst_plugin_feature_load (GST_PLUGIN_FEATURE
+          (factory)));
+
+  if (newfactory == NULL)
+    goto load_failed;
+
+  factory = newfactory;
+
+  if (name)
+    GST_INFO ("creating element \"%s\" named \"%s\"",
+        GST_OBJECT_NAME (factory), GST_STR_NULL (name));
+  else
+    GST_INFO ("creating element \"%s\"", GST_OBJECT_NAME (factory));
+
+  if (factory->type == 0)
+    goto no_type;
+
+  /* create an instance of the element, cast so we don't assert on NULL
+   * also set name as early as we can
+   */
+  if (name)
+    element = g_object_new (factory->type, "name", name, NULL);
+  else
+    element = g_object_new (factory->type, NULL);
+  if (G_UNLIKELY (element == NULL))
+    goto no_element;
+
+  /* fill in the pointer to the factory in the element class. The
+   * class will not be unreffed currently.
+   * Be thread safe as there might be 2 threads creating the first instance of
+   * an element at the same moment
+   */
+  oclass = GST_ELEMENT_GET_CLASS (element);
+  if (!g_atomic_pointer_compare_and_exchange (&oclass->elementfactory,
+          (GstElementFactory *) NULL, factory))
+    gst_object_unref (factory);
+  else
+    /* This ref will never be dropped as the class is never destroyed */
+    GST_OBJECT_FLAG_SET (factory, GST_OBJECT_FLAG_MAY_BE_LEAKED);
+
+  if (!g_object_is_floating ((GObject *) element)) {
+    /* The reference we receive here should be floating, but we can't force
+     * it at our level. Simply raise a critical to make the issue obvious to bindings
+     * users / developers */
+    g_critical ("The created element should be floating, "
+        "this is probably caused by faulty bindings");
+  }
+
+
+  GST_DEBUG ("created element \"%s\"", GST_OBJECT_NAME (factory));
+
+  return element;
+
+  /* ERRORS */
+load_failed:
+  {
+    GST_WARNING_OBJECT (factory,
+        "loading plugin containing feature %s returned NULL!", name);
+    return NULL;
+  }
+no_type:
+  {
+    GST_WARNING_OBJECT (factory, "factory has no type");
+    gst_object_unref (factory);
+    return NULL;
+  }
+no_element:
+  {
+    GST_WARNING_OBJECT (factory, "could not create element");
+    gst_object_unref (factory);
+    return NULL;
+  }
+}
+#endif // !GSTREAMER_LITE and !LINUX
+
+#if !defined(GSTREAMER_LITE) || (defined(GSTREAMER_LITE) && !defined(LINUX))
 /**
  * gst_element_factory_make_with_properties:
  * @factoryname: a named factory to instantiate
@@ -790,6 +881,7 @@ gst_element_factory_make_full (const gchar * factoryname,
   va_end (properties);
   return element;
 }
+#endif // GSTREAMER_LITE
 
 /**
  * gst_element_factory_make:
@@ -805,6 +897,7 @@ gst_element_factory_make_full (const gchar * factoryname,
  * Returns: (transfer floating) (nullable): new #GstElement or %NULL
  * if unable to create element
  */
+#if !defined(GSTREAMER_LITE) || (defined(GSTREAMER_LITE) && !defined(LINUX))
 GstElement *
 gst_element_factory_make (const gchar * factoryname, const gchar * name)
 {
@@ -814,6 +907,48 @@ gst_element_factory_make (const gchar * factoryname, const gchar * name)
     return gst_element_factory_make_with_properties (factoryname, 0, NULL,
         NULL);
 }
+#else // GSTREAMER_LITE
+// Revert https://gitlab.freedesktop.org/gstreamer/gstreamer/-/commit/aadf84837b2c0397b02ffb39f704ef4649482a44,
+// so we can support older GLib.
+GstElement *
+gst_element_factory_make (const gchar * factoryname, const gchar * name)
+{
+  GstElementFactory *factory;
+  GstElement *element;
+
+  g_return_val_if_fail (factoryname != NULL, NULL);
+  g_return_val_if_fail (gst_is_initialized (), NULL);
+
+  GST_LOG ("gstelementfactory: make \"%s\" \"%s\"",
+      factoryname, GST_STR_NULL (name));
+
+  factory = gst_element_factory_find (factoryname);
+  if (factory == NULL)
+    goto no_factory;
+
+  GST_LOG_OBJECT (factory, "found factory %p", factory);
+  element = gst_element_factory_create (factory, name);
+  if (element == NULL)
+    goto create_failed;
+
+  gst_object_unref (factory);
+
+  return element;
+
+  /* ERRORS */
+no_factory:
+  {
+    GST_WARNING ("no such element factory \"%s\"!", factoryname);
+    return NULL;
+  }
+create_failed:
+  {
+    GST_INFO_OBJECT (factory, "couldn't create instance!");
+    gst_object_unref (factory);
+    return NULL;
+  }
+}
+#endif // GSTREAMER_LITE
 
 void
 __gst_element_factory_add_static_pad_template (GstElementFactory * factory,

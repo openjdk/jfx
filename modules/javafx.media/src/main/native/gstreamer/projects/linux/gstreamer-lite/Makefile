@@ -44,6 +44,7 @@ CFLAGS =-fPIC                   \
         -fstack-protector       \
         -Werror=implicit-function-declaration \
         -Werror=trampolines     \
+        -Werror=deprecated-declarations \
         -D_GNU_SOURCE           \
         -DGST_REMOVE_DEPRECATED \
         -DGSTREAMER_LITE        \
@@ -52,6 +53,8 @@ CFLAGS =-fPIC                   \
         -DLINUX                 \
         -DGST_DISABLE_GST_DEBUG \
         -DGST_DISABLE_LOADSAVE  \
+        -DGLIB_VERSION_MIN_REQUIRED=GLIB_VERSION_2_48 \
+        -DGLIB_VERSION_MAX_ALLOWED=GLIB_VERSION_2_48 \
         -ffunction-sections -fdata-sections
 
 ifeq ($(BUILD_TYPE), Release)

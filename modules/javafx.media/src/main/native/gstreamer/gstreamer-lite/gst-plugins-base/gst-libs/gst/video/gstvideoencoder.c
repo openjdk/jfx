@@ -107,6 +107,10 @@
 
 #include <string.h>
 
+#ifdef GSTREAMER_LITE
+#include "gst/glib-compat-private.h"
+#endif // GSTREAMER_LITE
+
 GST_DEBUG_CATEGORY (videoencoder_debug);
 #define GST_CAT_DEFAULT videoencoder_debug
 

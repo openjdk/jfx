@@ -13455,6 +13455,37 @@ qtdemux_reuse_and_configure_stream (GstQTDemux * qtdemux,
   return gst_qtdemux_configure_stream (qtdemux, newstream);
 }
 
+#if defined(GSTREAMER_LITE) && defined(LINUX)
+// Revert https://gitlab.freedesktop.org/gstreamer/gstreamer/-/commit/0429c24637f72eaa6b98c06f090d603f298e0f6a,
+// so we can run with older GLib versions.
+/* g_ptr_array_find_with_equal_func is available since 2.54,
+ * replacement until we can depend unconditionally on the real one in GLib */
+#ifndef g_ptr_array_find_with_equal_func
+#define g_ptr_array_find_with_equal_func qtdemux_ptr_array_find_with_equal_func
+static gboolean
+qtdemux_ptr_array_find_with_equal_func (GPtrArray * haystack,
+    gconstpointer needle, GEqualFunc equal_func, guint * index_)
+{
+  guint i;
+
+  g_return_val_if_fail (haystack != NULL, FALSE);
+
+  if (equal_func == NULL)
+    equal_func = g_direct_equal;
+
+  for (i = 0; i < haystack->len; i++) {
+    if (equal_func (g_ptr_array_index (haystack, i), needle)) {
+      if (index_ != NULL)
+        *index_ = i;
+      return TRUE;
+    }
+  }
+
+  return FALSE;
+}
+#endif // g_ptr_array_find_with_equal_func
+#endif // GSTREAMER_LITE and LINUX
+
 static gboolean
 qtdemux_update_streams (GstQTDemux * qtdemux)
 {
