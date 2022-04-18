@@ -24,6 +24,9 @@
 
 #include <gst/gst.h>
 #include <gst/base/base-prelude.h>
+#ifdef GSTREAMER_LITE
+#include <string.h>
+#endif // GSTREAMER_LITE
 
 G_BEGIN_DECLS
 
