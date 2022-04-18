@@ -6714,4 +6714,55 @@ public class TreeTableViewTest {
         assertEquals(1, sm.getSelectedItems().size());
     }
 
+    @Test
+    public void test_ChangeToStringMouseMultipleSelectionCellMode() {
+        final Thread.UncaughtExceptionHandler exceptionHandler = Thread.currentThread().getUncaughtExceptionHandler();
+        Thread.currentThread().setUncaughtExceptionHandler((t, e) -> fail("We don't expect any exceptions in this test!"));
+
+        TreeItem<Person> root = new TreeItem<>(new Person("root", "",""));
+        root.getChildren().setAll(
+                new TreeItem<>(new Person("Jacob", "Smith", "jacob.smith@example.com")),
+                new TreeItem<>(new Person("Isabella", "Johnson", "isabella.johnson@example.com")),
+                new TreeItem<>(new Person("Ethan", "Williams", "ethan.williams@example.com")),
+                new TreeItem<>(new Person("Emma", "Jones", "emma.jones@example.com")),
+                new TreeItem<>(new Person("Michael", "Brown", "michael.brown@example.com")));
+        root.setExpanded(true);
+
+        TreeTableColumn<Person, String> firstNameCol = new TreeTableColumn<>("First Name");
+        firstNameCol.setCellValueFactory(new TreeItemPropertyValueFactory<>("firstName"));
+
+        TreeTableColumn<Person, String> lastNameCol = new TreeTableColumn<>("Last Name");
+        lastNameCol.setCellValueFactory(new TreeItemPropertyValueFactory<>("lastName"));
+
+        TreeTableColumn<Person, String> emailCol = new TreeTableColumn<>("Email");
+        emailCol.setCellValueFactory(new TreeItemPropertyValueFactory<>("email"));
+
+        TreeTableView<Person> table = new TreeTableView<>(root);
+        table.getColumns().addAll(firstNameCol, lastNameCol, emailCol);
+        sm = table.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        sm.setCellSelectionEnabled(true);
+
+        // Call change::toString
+        table.getSelectionModel().getSelectedItems().addListener((ListChangeListener<TreeItem<Person>>) Object::toString);
+
+        assertEquals(0, sm.getSelectedItems().size());
+
+        sm.select(1, firstNameCol);
+        assertTrue(sm.isSelected(1, firstNameCol));
+        assertEquals(1, sm.getSelectedCells().size());
+        assertEquals(1, sm.getSelectedItems().size());
+
+        TreeTableCell<Person, String> cell = (TreeTableCell<Person, String>) VirtualFlowTestUtils.getCell(table, 1, 1);
+        MouseEventFirer mouse = new MouseEventFirer(cell);
+        mouse.fireMousePressAndRelease(KeyModifier.getShortcutKey());
+        assertTrue(sm.isSelected(1, firstNameCol));
+        assertTrue(sm.isSelected(1, lastNameCol));
+        assertEquals(2, sm.getSelectedCells().size());
+        assertEquals(1, sm.getSelectedItems().size());
+
+        // reset the exception handler
+        Thread.currentThread().setUncaughtExceptionHandler(exceptionHandler);
+    }
+
 }
