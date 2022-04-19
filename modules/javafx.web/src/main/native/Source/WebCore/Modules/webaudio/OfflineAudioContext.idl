@@ -24,17 +24,17 @@
 
 [
     Conditional=WEB_AUDIO,
-    EnabledBySetting=ModernUnprefixedWebAudio,
+    EnabledBySetting=WebAudio,
     JSGenerateToJSObject,
     Exposed=Window
 ] interface OfflineAudioContext : BaseAudioContext {
     [CallWith=ScriptExecutionContext] constructor(OfflineAudioContextOptions contextOptions);
     [CallWith=ScriptExecutionContext] constructor(unsigned long numberOfChannels, unsigned long length, float sampleRate);
 
-    [ImplementedAs=startOfflineRendering] Promise<AudioBuffer> startRendering();
+    Promise<AudioBuffer> startRendering();
 
-    [ImplementedAs=resumeOfflineRendering] Promise<undefined> resume();
-    [ImplementedAs=suspendOfflineRendering] Promise<undefined> suspend(double suspendTime);
+    [ImplementedAs=resumeRendering] Promise<undefined> resume();
+    [ImplementedAs=suspendRendering] Promise<undefined> suspend(double suspendTime);
 
     readonly attribute unsigned long length;
 

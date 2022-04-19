@@ -166,7 +166,7 @@ bool Quirks::shouldAutoplayWebAudioForArbitraryUserGesture() const
         return false;
 
     auto host = m_document->topDocument().url().host();
-    return equalLettersIgnoringASCIICase(host, "www.bing.com");
+    return equalLettersIgnoringASCIICase(host, "www.bing.com") || host.endsWithIgnoringASCIICase(".zoom.us");
 }
 
 bool Quirks::hasBrokenEncryptedMediaAPISupportQuirk() const
@@ -201,6 +201,29 @@ bool Quirks::shouldDisableContentChangeObserverTouchEventAdjustment() const
 
     auto host = m_document->topDocument().url().host();
     return host.endsWith(".youtube.com") || host == "youtube.com";
+}
+
+bool Quirks::shouldTooltipPreventFromProceedingWithClick(const Element& element) const
+{
+    if (!needsQuirks())
+        return false;
+
+    if (!equalLettersIgnoringASCIICase(m_document->topDocument().url().host(), "covid.cdc.gov"))
+        return false;
+    return element.hasClass() && element.classNames().contains("tooltip");
+}
+
+// FIXME: Remove after the site is fixed, <rdar://problem/75792913>
+bool Quirks::shouldHideSearchFieldResultsButton() const
+{
+#if ENABLE(IOS_FORM_CONTROL_REFRESH)
+    if (!needsQuirks())
+        return false;
+
+    if (topPrivatelyControlledDomain(m_document->topDocument().url().host().toString()).startsWith("google."))
+        return true;
+#endif
+    return false;
 }
 
 bool Quirks::needsMillisecondResolutionForHighResTimeStamp() const
@@ -338,7 +361,7 @@ bool Quirks::isGoogleMaps() const
     return topPrivatelyControlledDomain(url.host().toString()).startsWith("google.") && url.path().startsWithIgnoringASCIICase("/maps/");
 }
 
-bool Quirks::shouldDispatchSimulatedMouseEvents() const
+bool Quirks::shouldDispatchSimulatedMouseEvents(EventTarget* target) const
 {
     if (RuntimeEnabledFeatures::sharedFeatures().mouseEventsSimulationEnabled())
         return true;
@@ -346,70 +369,95 @@ bool Quirks::shouldDispatchSimulatedMouseEvents() const
     if (!needsQuirks())
         return false;
 
-    auto doShouldDispatchChecks = [this] () -> bool {
+    auto doShouldDispatchChecks = [this] () -> ShouldDispatchSimulatedMouseEvents {
         auto* loader = m_document->loader();
         if (!loader || loader->simulatedMouseEventsDispatchPolicy() != SimulatedMouseEventsDispatchPolicy::Allow)
-            return false;
+            return ShouldDispatchSimulatedMouseEvents::No;
 
         if (isAmazon())
-            return true;
+            return ShouldDispatchSimulatedMouseEvents::Yes;
         if (isGoogleMaps())
-            return true;
+            return ShouldDispatchSimulatedMouseEvents::Yes;
 
         auto& url = m_document->topDocument().url();
         auto host = url.host().convertToASCIILowercase();
 
         if (host == "wix.com" || host.endsWith(".wix.com")) {
             // Disable simulated mouse dispatching for template selection.
-            return !url.path().startsWithIgnoringASCIICase("/website/templates/");
+            return url.path().startsWithIgnoringASCIICase("/website/templates/") ? ShouldDispatchSimulatedMouseEvents::No : ShouldDispatchSimulatedMouseEvents::Yes;
         }
 
         if ((host == "desmos.com" || host.endsWith(".desmos.com")) && url.path().startsWithIgnoringASCIICase("/calculator/"))
-            return true;
+            return ShouldDispatchSimulatedMouseEvents::Yes;
         if (host == "figma.com" || host.endsWith(".figma.com"))
-            return true;
+            return ShouldDispatchSimulatedMouseEvents::Yes;
         if (host == "trello.com" || host.endsWith(".trello.com"))
-            return true;
+            return ShouldDispatchSimulatedMouseEvents::Yes;
         if (host == "airtable.com" || host.endsWith(".airtable.com"))
-            return true;
+            return ShouldDispatchSimulatedMouseEvents::Yes;
         if (host == "msn.com" || host.endsWith(".msn.com"))
-            return true;
+            return ShouldDispatchSimulatedMouseEvents::Yes;
         if (host == "flipkart.com" || host.endsWith(".flipkart.com"))
-            return true;
+            return ShouldDispatchSimulatedMouseEvents::Yes;
         if (host == "iqiyi.com" || host.endsWith(".iqiyi.com"))
-            return true;
+            return ShouldDispatchSimulatedMouseEvents::Yes;
         if (host == "trailers.apple.com")
-            return true;
+            return ShouldDispatchSimulatedMouseEvents::Yes;
         if (host == "soundcloud.com")
-            return true;
+            return ShouldDispatchSimulatedMouseEvents::Yes;
         if (host == "naver.com")
-            return true;
+            return ShouldDispatchSimulatedMouseEvents::Yes;
         if (host == "nba.com" || host.endsWith(".nba.com"))
-            return true;
+            return ShouldDispatchSimulatedMouseEvents::Yes;
         if (host.endsWith(".naver.com")) {
             // Disable the quirk for tv.naver.com subdomain to be able to simulate hover on videos.
             if (host == "tv.naver.com")
-                return false;
+                return ShouldDispatchSimulatedMouseEvents::No;
             // Disable the quirk for mail.naver.com subdomain to be able to tap on mail subjects.
             if (host == "mail.naver.com")
-                return false;
+                return ShouldDispatchSimulatedMouseEvents::No;
             // Disable the quirk on the mobile site.
             // FIXME: Maybe this quirk should be disabled for "m." subdomains on all sites? These are generally mobile sites that don't need mouse events.
             if (host == "m.naver.com")
-                return false;
-            return true;
+                return ShouldDispatchSimulatedMouseEvents::No;
+            return ShouldDispatchSimulatedMouseEvents::Yes;
         }
-        return false;
+        if (host == "mybinder.org" || host.endsWith(".mybinder.org"))
+            return ShouldDispatchSimulatedMouseEvents::DependingOnTargetFor_mybinder_org;
+        return ShouldDispatchSimulatedMouseEvents::No;
     };
 
-    if (!m_shouldDispatchSimulatedMouseEventsQuirk)
+    if (m_shouldDispatchSimulatedMouseEventsQuirk == ShouldDispatchSimulatedMouseEvents::Unknown)
         m_shouldDispatchSimulatedMouseEventsQuirk = doShouldDispatchChecks();
-    return *m_shouldDispatchSimulatedMouseEventsQuirk;
+
+    switch (m_shouldDispatchSimulatedMouseEventsQuirk) {
+    case ShouldDispatchSimulatedMouseEvents::Unknown:
+        ASSERT_NOT_REACHED();
+        return false;
+
+    case ShouldDispatchSimulatedMouseEvents::No:
+        return false;
+
+    case ShouldDispatchSimulatedMouseEvents::DependingOnTargetFor_mybinder_org:
+        if (is<Node>(target)) {
+            for (auto* node = downcast<Node>(target); node; node = node->parentNode()) {
+                if (is<Element>(node) && downcast<Element>(*node).classList().contains("lm-DockPanel-tabBar"))
+                    return true;
+            }
+        }
+        return false;
+
+    case ShouldDispatchSimulatedMouseEvents::Yes:
+        return true;
+    }
+
+    ASSERT_NOT_REACHED();
+    return false;
 }
 
 bool Quirks::shouldDispatchedSimulatedMouseEventsAssumeDefaultPrevented(EventTarget* target) const
 {
-    if (!needsQuirks() || !shouldDispatchSimulatedMouseEvents())
+    if (!needsQuirks() || !shouldDispatchSimulatedMouseEvents(target))
         return false;
 
     if (isAmazon() && is<Element>(target)) {
@@ -428,9 +476,9 @@ bool Quirks::shouldDispatchedSimulatedMouseEventsAssumeDefaultPrevented(EventTar
     return false;
 }
 
-Optional<Event::IsCancelable> Quirks::simulatedMouseEventTypeForTarget(EventTarget* target) const
+std::optional<Event::IsCancelable> Quirks::simulatedMouseEventTypeForTarget(EventTarget* target) const
 {
-    if (!shouldDispatchSimulatedMouseEvents())
+    if (!shouldDispatchSimulatedMouseEvents(target))
         return { };
 
     // On Google Maps, we want to limit simulated mouse events to dragging the little man that allows entering into Street View.
@@ -1002,13 +1050,11 @@ static bool isStorageAccessQuirkDomainAndElement(const URL& url, const Element& 
 {
     // Microsoft Teams login case.
     // FIXME(218779): Remove this quirk once microsoft.com completes their login flow redesign.
-    if (url.host() == "www.microsoft.com"_s || url.host() == "login.live.com"_s) {
+    if (url.host() == "www.microsoft.com"_s) {
         return element.hasClass()
         && (element.classNames().contains("glyph_signIn_circle")
         || element.classNames().contains("mectrl_headertext")
-        || element.classNames().contains("mectrl_header")
-        || element.classNames().contains("ext-button primary")
-        || element.classNames().contains("ext-primary"));
+        || element.classNames().contains("mectrl_header"));
     }
     // Skype case.
     // FIXME(220105): Remove this quirk once Skype under outlook.live.com completes their login flow redesign.
@@ -1022,6 +1068,7 @@ static bool isStorageAccessQuirkDomainAndElement(const URL& url, const Element& 
     if (url.host() == "www.playstation.com"_s || url.host() == "my.playstation.com"_s) {
         return element.hasClass()
         && (element.classNames().contains("web-toolbar__signin-button")
+        || element.classNames().contains("web-toolbar__signin-button-label")
         || element.classNames().contains("sb-signin-button"));
     }
 
@@ -1064,51 +1111,44 @@ static bool isBBCPopUpPlayerElement(const Element& element)
     return element.parentElement()->classNames().contains("p_audioButton_buttonInner") && parentElement->parentElement()->classNames().contains("hidden");
 }
 
-Quirks::StorageAccessResult Quirks::requestStorageAccessAndHandleClick(CompletionHandler<void(StorageAccessWasGranted)>&& completionHandler) const
+Quirks::StorageAccessResult Quirks::requestStorageAccessAndHandleClick(CompletionHandler<void(ShouldDispatchClick)>&& completionHandler) const
 {
-    auto firstPartyDomain = mapToTopDomain(m_document->topDocument().url());
+    auto firstPartyDomain = RegistrableDomain(m_document->topDocument().url());
     auto domainsInNeedOfStorageAccess = NetworkStorageSession::subResourceDomainsInNeedOfStorageAccessForFirstParty(firstPartyDomain);
     if (!domainsInNeedOfStorageAccess || domainsInNeedOfStorageAccess.value().isEmpty()) {
-        completionHandler(StorageAccessWasGranted::No);
+        completionHandler(ShouldDispatchClick::No);
         return Quirks::StorageAccessResult::ShouldNotCancelEvent;
     }
+
     if (hasStorageAccessForAllLoginDomains(*domainsInNeedOfStorageAccess, firstPartyDomain)) {
-        completionHandler(StorageAccessWasGranted::No);
+        completionHandler(ShouldDispatchClick::No);
         return Quirks::StorageAccessResult::ShouldNotCancelEvent;
     }
 
     auto domainInNeedOfStorageAccess = RegistrableDomain(*domainsInNeedOfStorageAccess.value().begin().get());
 
     if (!m_document) {
-        completionHandler(StorageAccessWasGranted::No);
+        completionHandler(ShouldDispatchClick::No);
         return Quirks::StorageAccessResult::ShouldNotCancelEvent;
     }
 
     DocumentStorageAccess::requestStorageAccessForNonDocumentQuirk(*m_document, WTFMove(domainInNeedOfStorageAccess), [firstPartyDomain, domainInNeedOfStorageAccess, completionHandler = WTFMove(completionHandler)](StorageAccessWasGranted storageAccessGranted) mutable {
         if (storageAccessGranted == StorageAccessWasGranted::No) {
-            completionHandler(storageAccessGranted);
+            completionHandler(ShouldDispatchClick::Yes);
             return;
         }
 
-        ResourceLoadObserver::shared().setDomainsWithCrossPageStorageAccess({{ firstPartyDomain, domainInNeedOfStorageAccess }}, [storageAccessGranted, completionHandler = WTFMove(completionHandler)] () mutable {
-            completionHandler(storageAccessGranted);
+        ResourceLoadObserver::shared().setDomainsWithCrossPageStorageAccess({{ firstPartyDomain, domainInNeedOfStorageAccess }}, [completionHandler = WTFMove(completionHandler)] () mutable {
+            completionHandler(ShouldDispatchClick::Yes);
         });
     });
     return Quirks::StorageAccessResult::ShouldCancelEvent;
 }
-
-RegistrableDomain Quirks::mapToTopDomain(const URL& urlToMap)
-{
-    if (urlToMap.host() == "login.live.com"_s)
-        return RegistrableDomain::uncheckedCreateFromRegistrableDomainString("microsoft.com"_s);
-
-    return RegistrableDomain(urlToMap);
-}
 #endif
 
-Quirks::StorageAccessResult Quirks::triggerOptionalStorageAccessQuirk(Element& element, const PlatformMouseEvent& platformEvent, const AtomString& eventType, int detail, Element* relatedTarget) const
+Quirks::StorageAccessResult Quirks::triggerOptionalStorageAccessQuirk(Element& element, const PlatformMouseEvent& platformEvent, const AtomString& eventType, int detail, Element* relatedTarget, bool isParentProcessAFullWebBrowser, IsSyntheticClick isSyntheticClick) const
 {
-    if (!DeprecatedGlobalSettings::resourceLoadStatisticsEnabled())
+    if (!DeprecatedGlobalSettings::resourceLoadStatisticsEnabled() || !isParentProcessAFullWebBrowser)
         return Quirks::StorageAccessResult::ShouldNotCancelEvent;
 
 #if ENABLE(RESOURCE_LOAD_STATISTICS)
@@ -1182,14 +1222,15 @@ Quirks::StorageAccessResult Quirks::triggerOptionalStorageAccessQuirk(Element& e
             }
         }
 
-        if (isStorageAccessQuirkDomainAndElement(m_document->url(), element)) {
-            return requestStorageAccessAndHandleClick([element = makeWeakPtr(element), platformEvent, eventType, detail, relatedTarget] (StorageAccessWasGranted storageAccessWasGranted) mutable {
+        // If the click is synthetic, the user has already gone through the storage access flow and we should not request again.
+        if (isStorageAccessQuirkDomainAndElement(m_document->url(), element) && isSyntheticClick == IsSyntheticClick::No) {
+            return requestStorageAccessAndHandleClick([element = makeWeakPtr(element), platformEvent, eventType, detail, relatedTarget] (ShouldDispatchClick shouldDispatchClick) mutable {
                 RefPtr protectedElement { element.get() };
                 if (!protectedElement)
                     return;
 
-                if (storageAccessWasGranted == StorageAccessWasGranted::Yes)
-                    protectedElement->dispatchMouseEvent(platformEvent, eventType, detail, relatedTarget);
+                if (shouldDispatchClick == ShouldDispatchClick::Yes)
+                    protectedElement->dispatchMouseEvent(platformEvent, eventType, detail, relatedTarget, IsSyntheticClick::Yes);
             });
         }
 
@@ -1198,8 +1239,8 @@ Quirks::StorageAccessResult Quirks::triggerOptionalStorageAccessQuirk(Element& e
 
         // BBC RadioPlayer case.
         if (isBBCDomain(domain) && isBBCPopUpPlayerElement(element)) {
-            return requestStorageAccessAndHandleClick([document = m_document] (StorageAccessWasGranted storageAccessWasGranted) mutable {
-                if (!document || storageAccessWasGranted == StorageAccessWasGranted::No)
+            return requestStorageAccessAndHandleClick([document = m_document] (ShouldDispatchClick shouldDispatchClick) mutable {
+                if (!document || shouldDispatchClick == ShouldDispatchClick::No)
                     return;
 
                 auto domWindow = document->domWindow();
@@ -1297,15 +1338,15 @@ bool Quirks::needsBlackFullscreenBackgroundQuirk() const
 bool Quirks::requiresUserGestureToPauseInPictureInPicture() const
 {
 #if ENABLE(VIDEO_PRESENTATION_MODE)
-    // Facebook and Twitter will naively pause a <video> element that has scrolled out of the viewport,
+    // Facebook, Twitter, and Reddit will naively pause a <video> element that has scrolled out of the viewport,
     // regardless of whether that element is currently in PiP mode.
-    // We should remove the quirk once <rdar://problem/67273166> and <rdar://problem/73369869> have been fixed.
+    // We should remove the quirk once <rdar://problem/67273166>, <rdar://problem/73369869>, and <rdar://problem/80645747> have been fixed.
     if (!needsQuirks())
         return false;
 
     if (!m_requiresUserGestureToPauseInPictureInPicture) {
         auto domain = RegistrableDomain(m_document->topDocument().url()).string();
-        m_requiresUserGestureToPauseInPictureInPicture = domain == "facebook.com"_s || domain == "twitter.com"_s;
+        m_requiresUserGestureToPauseInPictureInPicture = domain == "facebook.com"_s || domain == "twitter.com"_s || domain == "reddit.com"_s;
     }
 
     return *m_requiresUserGestureToPauseInPictureInPicture;
@@ -1337,16 +1378,16 @@ bool Quirks::requiresUserGestureToLoadInPictureInPicture() const
 bool Quirks::blocksReturnToFullscreenFromPictureInPictureQuirk() const
 {
 #if ENABLE(FULLSCREEN_API) && ENABLE(VIDEO_PRESENTATION_MODE)
-    // Some sites (e.g., wowhead.com and vimeo.com) do not set element's styles properly when a video
+    // Some sites (e.g., vimeo.com) do not set element's styles properly when a video
     // returns to fullscreen from picture-in-picture. This quirk disables the "return to fullscreen
-    // from picture-in-picture" feature for those sites. We should remove the quirk once rdar://problem/73167861
-    // and rdar://problem/73167931 have been fixed.
+    // from picture-in-picture" feature for those sites. We should remove the quirk once
+    // rdar://problem/73167931 has been fixed.
     if (!needsQuirks())
         return false;
 
     if (!m_blocksReturnToFullscreenFromPictureInPictureQuirk) {
         auto domain = RegistrableDomain { m_document->topDocument().url() };
-        m_blocksReturnToFullscreenFromPictureInPictureQuirk = domain == "vimeo.com"_s || domain == "wowhead.com"_s;
+        m_blocksReturnToFullscreenFromPictureInPictureQuirk = domain == "vimeo.com"_s;
     }
 
     return *m_blocksReturnToFullscreenFromPictureInPictureQuirk;
@@ -1366,7 +1407,9 @@ bool Quirks::shouldDisableEndFullscreenEventWhenEnteringPictureInPictureFromFull
 
     if (!m_shouldDisableEndFullscreenEventWhenEnteringPictureInPictureFromFullscreenQuirk) {
         auto host = m_document->topDocument().url().host();
-        m_shouldDisableEndFullscreenEventWhenEnteringPictureInPictureFromFullscreenQuirk = equalLettersIgnoringASCIICase(host, "trailers.apple.com");
+        auto domain = RegistrableDomain(m_document->topDocument().url());
+
+        m_shouldDisableEndFullscreenEventWhenEnteringPictureInPictureFromFullscreenQuirk = equalLettersIgnoringASCIICase(host, "trailers.apple.com") || domain == "espn.com"_s;
     }
 
     return *m_shouldDisableEndFullscreenEventWhenEnteringPictureInPictureFromFullscreenQuirk;
@@ -1400,5 +1443,21 @@ bool Quirks::shouldBypassUserGestureRequirementForWebAuthn() const
     return false;
 }
 #endif
+
+#if ENABLE(IMAGE_ANALYSIS)
+
+bool Quirks::needsToForceUserSelectWhenInstallingImageOverlay() const
+{
+    if (!needsQuirks())
+        return false;
+
+    auto& url = m_document->topDocument().url();
+    if (topPrivatelyControlledDomain(url.host().toString()).startsWith("google.") && url.path() == "/search")
+        return true;
+
+    return false;
+}
+
+#endif // ENABLE(IMAGE_ANALYSIS)
 
 }

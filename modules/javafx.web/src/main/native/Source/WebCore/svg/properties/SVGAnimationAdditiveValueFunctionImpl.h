@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018-2019 Apple Inc.  All rights reserved.
+ * Copyright (C) 2018-2021 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -45,13 +45,13 @@ public:
     using Base = SVGAnimationAdditiveValueFunction<SVGAngleValue>;
     using Base::Base;
 
-    void setFromAndToValues(SVGElement*, const String&, const String&) override
+    void setFromAndToValues(SVGElement&, const String&, const String&) override
     {
         // Values will be set by SVGAnimatedAngleOrientAnimator.
         ASSERT_NOT_REACHED();
     }
 
-    void animate(SVGElement*, float progress, unsigned repeatCount, SVGAngleValue& animated)
+    void animate(SVGElement&, float progress, unsigned repeatCount, SVGAngleValue& animated)
     {
         float number = animated.value();
         number = Base::animate(progress, repeatCount, m_from.value(), m_to.value(), toAtEndOfDuration().value(), number);
@@ -61,7 +61,7 @@ public:
 private:
     friend class SVGAnimatedAngleOrientAnimator;
 
-    void addFromAndToValues(SVGElement*) override
+    void addFromAndToValues(SVGElement&) override
     {
         m_to.setValue(m_to.value() + m_from.value());
     }
@@ -72,7 +72,7 @@ public:
     using Base = SVGAnimationAdditiveValueFunction<Color>;
     using Base::Base;
 
-    void setFromAndToValues(SVGElement* targetElement, const String& from, const String& to) override
+    void setFromAndToValues(SVGElement& targetElement, const String& from, const String& to) override
     {
         m_from = colorFromString(targetElement, from);
         m_to = colorFromString(targetElement, to);
@@ -83,7 +83,7 @@ public:
         m_toAtEndOfDuration = SVGPropertyTraits<Color>::fromString(toAtEndOfDuration);
     }
 
-    void animate(SVGElement*, float progress, unsigned repeatCount, Color& animated)
+    void animate(SVGElement&, float progress, unsigned repeatCount, Color& animated)
     {
         auto simpleAnimated = animated.toSRGBALossy<uint8_t>();
         auto simpleFrom = m_animationMode == AnimationMode::To ? simpleAnimated : m_from.toSRGBALossy<uint8_t>();
@@ -98,7 +98,7 @@ public:
         animated = makeFromComponentsClamping<SRGBA<uint8_t>>(std::lround(red), std::lround(green), std::lround(blue), std::lround(alpha));
     }
 
-    Optional<float> calculateDistance(SVGElement*, const String& from, const String& to) const override
+    std::optional<float> calculateDistance(SVGElement&, const String& from, const String& to) const override
     {
         Color fromColor = CSSParser::parseColor(from.stripWhiteSpace());
         if (!fromColor.isValid())
@@ -122,7 +122,7 @@ public:
     }
 
 private:
-    void addFromAndToValues(SVGElement*) override
+    void addFromAndToValues(SVGElement&) override
     {
         auto simpleFrom = m_from.toSRGBALossy<uint8_t>();
         auto simpleTo = m_to.toSRGBALossy<uint8_t>();
@@ -131,39 +131,36 @@ private:
         m_to = makeFromComponentsClamping<SRGBA<uint8_t>>(simpleTo.red + simpleFrom.red, simpleTo.green + simpleFrom.green, simpleTo.blue + simpleFrom.blue);
     }
 
-    static Color colorFromString(SVGElement*, const String&);
+    static Color colorFromString(SVGElement&, const String&);
 };
 
-class SVGAnimationIntegerFunction : public SVGAnimationAdditiveValueFunction<int> {
+class SVGAnimationIntegerFunction final : public SVGAnimationAdditiveValueFunction<int> {
     friend class SVGAnimatedIntegerPairAnimator;
 
 public:
     using Base = SVGAnimationAdditiveValueFunction<int>;
     using Base::Base;
 
-    void setFromAndToValues(SVGElement*, const String& from, const String& to) override
+    void setFromAndToValues(SVGElement&, const String& from, const String& to) override
     {
         m_from = SVGPropertyTraits<int>::fromString(from);
         m_to = SVGPropertyTraits<int>::fromString(to);
     }
 
-    void setToAtEndOfDurationValue(const String& toAtEndOfDuration) override
+    void setToAtEndOfDurationValue(const String& toAtEndOfDuration) final
     {
         m_toAtEndOfDuration = SVGPropertyTraits<int>::fromString(toAtEndOfDuration);
     }
 
-    void animate(SVGElement*, float progress, unsigned repeatCount, int& animated)
+    void animate(SVGElement&, float progress, unsigned repeatCount, int& animated)
     {
         animated = static_cast<int>(roundf(Base::animate(progress, repeatCount, m_from, m_to, toAtEndOfDuration(), animated)));
     }
 
-    Optional<float> calculateDistance(SVGElement*, const String& from, const String& to) const override
-    {
-        return std::abs(to.toIntStrict() - from.toIntStrict());
-    }
+    std::optional<float> calculateDistance(SVGElement&, const String&, const String&) const final;
 
 private:
-    void addFromAndToValues(SVGElement*) override
+    void addFromAndToValues(SVGElement&) final
     {
         m_to += m_from;
     }
@@ -179,7 +176,7 @@ public:
     {
     }
 
-    void setFromAndToValues(SVGElement*, const String& from, const String& to) override
+    void setFromAndToValues(SVGElement&, const String& from, const String& to) override
     {
         m_from = SVGLengthValue(m_lengthMode, from);
         m_to = SVGLengthValue(m_lengthMode, to);
@@ -190,9 +187,9 @@ public:
         m_toAtEndOfDuration = SVGLengthValue(m_lengthMode, toAtEndOfDuration);
     }
 
-    void animate(SVGElement* targetElement, float progress, unsigned repeatCount, SVGLengthValue& animated)
+    void animate(SVGElement& targetElement, float progress, unsigned repeatCount, SVGLengthValue& animated)
     {
-        SVGLengthContext lengthContext(targetElement);
+        SVGLengthContext lengthContext(&targetElement);
         SVGLengthType lengthType = progress < 0.5 ? m_from.lengthType() : m_to.lengthType();
 
         float from = (m_animationMode == AnimationMode::To ? animated : m_from).value(lengthContext);
@@ -204,18 +201,18 @@ public:
         animated = { lengthContext, value, lengthType, m_lengthMode };
     }
 
-    Optional<float> calculateDistance(SVGElement* targetElement, const String& from, const String& to) const override
+    std::optional<float> calculateDistance(SVGElement& targetElement, const String& from, const String& to) const override
     {
-        SVGLengthContext lengthContext(targetElement);
+        SVGLengthContext lengthContext(&targetElement);
         auto fromLength = SVGLengthValue(m_lengthMode, from);
         auto toLength = SVGLengthValue(m_lengthMode, to);
         return fabsf(toLength.value(lengthContext) - fromLength.value(lengthContext));
     }
 
 private:
-    void addFromAndToValues(SVGElement* targetElement) override
+    void addFromAndToValues(SVGElement& targetElement) override
     {
-        SVGLengthContext lengthContext(targetElement);
+        SVGLengthContext lengthContext(&targetElement);
         m_to.setValue(lengthContext, m_to.value(lengthContext) + m_from.value(lengthContext));
     }
 
@@ -229,7 +226,7 @@ public:
     using Base = SVGAnimationAdditiveValueFunction<float>;
     using Base::Base;
 
-    void setFromAndToValues(SVGElement*, const String& from, const String& to) override
+    void setFromAndToValues(SVGElement&, const String& from, const String& to) override
     {
         m_from = SVGPropertyTraits<float>::fromString(from);
         m_to = SVGPropertyTraits<float>::fromString(to);
@@ -240,19 +237,19 @@ public:
         m_toAtEndOfDuration = SVGPropertyTraits<float>::fromString(toAtEndOfDuration);
     }
 
-    void animate(SVGElement*, float progress, unsigned repeatCount, float& animated)
+    void animate(SVGElement&, float progress, unsigned repeatCount, float& animated)
     {
         float from = m_animationMode == AnimationMode::To ? animated : m_from;
         animated = Base::animate(progress, repeatCount, from, m_to, toAtEndOfDuration(), animated);
     }
 
-    Optional<float> calculateDistance(SVGElement*, const String& from, const String& to) const override
+    std::optional<float> calculateDistance(SVGElement&, const String& from, const String& to) const override
     {
-        return std::abs(parseNumber(to).valueOr(0) - parseNumber(from).valueOr(0));
+        return std::abs(parseNumber(to).value_or(0) - parseNumber(from).value_or(0));
     }
 
 private:
-    void addFromAndToValues(SVGElement*) override
+    void addFromAndToValues(SVGElement&) override
     {
         m_to += m_from;
     }
@@ -263,7 +260,7 @@ public:
     using Base = SVGAnimationAdditiveValueFunction<SVGPathByteStream>;
     using Base::Base;
 
-    void setFromAndToValues(SVGElement*, const String& from, const String& to) override
+    void setFromAndToValues(SVGElement&, const String& from, const String& to) override
     {
         m_from = SVGPathByteStream(from);
         m_to = SVGPathByteStream(to);
@@ -274,7 +271,7 @@ public:
         m_toAtEndOfDuration = SVGPathByteStream(toAtEndOfDuration);
     }
 
-    void animate(SVGElement*, float progress, unsigned repeatCount, SVGPathByteStream& animated)
+    void animate(SVGElement&, float progress, unsigned repeatCount, SVGPathByteStream& animated)
     {
         SVGPathByteStream underlyingPath;
         if (m_animationMode == AnimationMode::To)
@@ -299,7 +296,7 @@ public:
     }
 
 private:
-    void addFromAndToValues(SVGElement*) override
+    void addFromAndToValues(SVGElement&) override
     {
         if (!m_from.size() || m_from.size() != m_to.size())
             return;
@@ -312,7 +309,7 @@ public:
     using Base = SVGAnimationAdditiveValueFunction<FloatRect>;
     using Base::Base;
 
-    void setFromAndToValues(SVGElement*, const String& from, const String& to) override
+    void setFromAndToValues(SVGElement&, const String& from, const String& to) override
     {
         m_from = SVGPropertyTraits<FloatRect>::fromString(from);
         m_to = SVGPropertyTraits<FloatRect>::fromString(to);
@@ -323,7 +320,7 @@ public:
         m_toAtEndOfDuration = SVGPropertyTraits<FloatRect>::fromString(toAtEndOfDuration);
     }
 
-    void animate(SVGElement*, float progress, unsigned repeatCount, FloatRect& animated)
+    void animate(SVGElement&, float progress, unsigned repeatCount, FloatRect& animated)
     {
         FloatRect from = m_animationMode == AnimationMode::To ? animated : m_from;
 
@@ -336,10 +333,10 @@ public:
     }
 
 private:
-    void addFromAndToValues(SVGElement*) override
+    void addFromAndToValues(SVGElement&) override
     {
         m_to += m_from;
     }
 };
 
-}
+} // namespace WebCore

@@ -31,11 +31,14 @@
 #include <wtf/FastMalloc.h>
 #include <wtf/Forward.h>
 #include <wtf/Function.h>
-#include <wtf/Optional.h>
 #include <wtf/RunLoop.h>
 
 #if OS(WINDOWS)
 #include <wtf/win/Win32Handle.h>
+#endif
+
+#if PLATFORM(COCOA) || PLATFORM(JAVA) && OS(MAC_OS_X)
+#include <wtf/OSObjectPtr.h>
 #endif
 
 namespace WTF {
@@ -87,12 +90,13 @@ public:
 #endif
             || m_isSimulatingMemoryPressure;
     }
+    bool isSimulatingMemoryPressure() const { return m_isSimulatingMemoryPressure; }
     void setUnderMemoryPressure(bool);
 
-    WTF_EXPORT_PRIVATE static MemoryUsagePolicy currentMemoryUsagePolicy();
+    WTF_EXPORT_PRIVATE MemoryUsagePolicy currentMemoryUsagePolicy();
 
-#if PLATFORM(COCOA) || PLATFORM(JAVA) && OS(DARWIN)
-    WTF_EXPORT_PRIVATE void setDispatchQueue(dispatch_queue_t);
+#if PLATFORM(COCOA) || PLATFORM(JAVA) && OS(MAC_OS_X)
+    WTF_EXPORT_PRIVATE void setDispatchQueue(OSObjectPtr<dispatch_queue_t>&&);
 #endif
 
     class ReliefLogger {
@@ -134,14 +138,68 @@ public:
             size_t resident { 0 };
             size_t physical { 0 };
         };
-        Optional<MemoryUsage> platformMemoryUsage();
+        std::optional<MemoryUsage> platformMemoryUsage();
         void logMemoryUsageChange();
 
         const char* m_logString;
-        Optional<MemoryUsage> m_initialMemory;
+        std::optional<MemoryUsage> m_initialMemory;
 
         WTF_EXPORT_PRIVATE static bool s_loggingEnabled;
     };
+
+    struct Configuration {
+        WTF_MAKE_STRUCT_FAST_ALLOCATED;
+        WTF_EXPORT_PRIVATE Configuration();
+        WTF_EXPORT_PRIVATE Configuration(size_t, double, double, std::optional<double>, Seconds);
+
+        template<class Encoder> void encode(Encoder& encoder) const
+        {
+            encoder << baseThreshold;
+            encoder << conservativeThresholdFraction;
+            encoder << strictThresholdFraction;
+            encoder << killThresholdFraction;
+            encoder << pollInterval;
+        }
+
+        template<class Decoder>
+        static std::optional<Configuration> decode(Decoder& decoder)
+        {
+            std::optional<size_t> baseThreshold;
+            decoder >> baseThreshold;
+            if (!baseThreshold)
+                return std::nullopt;
+
+            std::optional<double> conservativeThresholdFraction;
+            decoder >> conservativeThresholdFraction;
+            if (!conservativeThresholdFraction)
+                return std::nullopt;
+
+            std::optional<double> strictThresholdFraction;
+            decoder >> strictThresholdFraction;
+            if (!strictThresholdFraction)
+                return std::nullopt;
+
+            std::optional<std::optional<double>> killThresholdFraction;
+            decoder >> killThresholdFraction;
+            if (!killThresholdFraction)
+                return std::nullopt;
+
+            std::optional<Seconds> pollInterval;
+            decoder >> pollInterval;
+            if (!pollInterval)
+                return std::nullopt;
+
+            return {{ *baseThreshold, *conservativeThresholdFraction, *strictThresholdFraction, *killThresholdFraction, *pollInterval }};
+        }
+
+        size_t baseThreshold;
+        double conservativeThresholdFraction;
+        double strictThresholdFraction;
+        std::optional<double> killThresholdFraction;
+        Seconds pollInterval;
+    };
+    void setConfiguration(Configuration&& configuration) { m_configuration = WTFMove(configuration); }
+    void setConfiguration(const Configuration& configuration) { m_configuration = configuration; }
 
     WTF_EXPORT_PRIVATE void releaseMemory(Critical, Synchronous = Synchronous::No);
 
@@ -156,7 +214,10 @@ public:
     void setShouldLogMemoryMemoryPressureEvents(bool shouldLog) { m_shouldLogMemoryMemoryPressureEvents = shouldLog; }
 
 private:
-    Optional<size_t> thresholdForMemoryKill();
+    std::optional<size_t> thresholdForMemoryKill();
+    size_t thresholdForPolicy(MemoryUsagePolicy);
+    MemoryUsagePolicy policyForFootprint(size_t);
+
     void memoryPressureStatusChanged();
 
     void uninstall();
@@ -194,6 +255,8 @@ private:
     WTF::Function<void()> m_didExceedInactiveLimitWhileActiveCallback;
     LowMemoryHandler m_lowMemoryHandler;
 
+    Configuration m_configuration;
+
 #if OS(WINDOWS)
     void windowsMeasurementTimerFired();
     RunLoop::Timer<MemoryPressureHandler> m_windowsMeasurementTimer;
@@ -205,12 +268,10 @@ private:
     void holdOffTimerFired();
 #endif
 
-#if PLATFORM(COCOA) || PLATFORM(JAVA) && OS(DARWIN)
-    dispatch_queue_t m_dispatchQueue { nullptr };
+#if PLATFORM(COCOA) || PLATFORM(JAVA) && OS(MAC_OS_X)
+    OSObjectPtr<dispatch_queue_t> m_dispatchQueue;
 #endif
 };
-
-extern WTFLogChannel LogMemoryPressure;
 
 } // namespace WTF
 

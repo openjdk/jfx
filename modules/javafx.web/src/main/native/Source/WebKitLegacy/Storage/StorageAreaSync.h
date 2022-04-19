@@ -29,6 +29,7 @@
 #include <WebCore/Timer.h>
 #include <wtf/Condition.h>
 #include <wtf/HashMap.h>
+#include <wtf/Lock.h>
 #include <wtf/text/StringHash.h>
 
 namespace WebCore {
@@ -98,7 +99,7 @@ private:
 
     mutable Lock m_importLock;
     Condition m_importCondition;
-    bool m_importComplete;
+    bool m_importComplete WTF_GUARDED_BY_LOCK(m_importLock);
     void markImported();
     void migrateItemTableIfNeeded();
 };

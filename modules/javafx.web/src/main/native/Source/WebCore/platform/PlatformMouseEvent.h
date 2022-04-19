@@ -69,9 +69,7 @@ const double ForceAtForceClick = 2;
         // Use ScrollView::windowToContents() to convert it to into the contents of a given view.
         const IntPoint& position() const { return m_position; }
         const IntPoint& globalPosition() const { return m_globalPosition; }
-#if ENABLE(POINTER_LOCK)
         const IntPoint& movementDelta() const { return m_movementDelta; }
-#endif
 
         MouseButton button() const { return m_button; }
         unsigned short buttons() const { return m_buttons; }
@@ -93,15 +91,19 @@ const double ForceAtForceClick = 2;
         bool didActivateWebView() const { return m_didActivateWebView; }
 #endif
 
+#if PLATFORM(GTK)
+        enum class IsTouch : bool { No, Yes };
+
+        bool isTouchEvent() const { return m_isTouchEvent == IsTouch::Yes; }
+#endif
+
     protected:
         MouseButton m_button { NoButton };
         SyntheticClickType m_syntheticClickType { NoTap };
 
         IntPoint m_position;
         IntPoint m_globalPosition;
-#if ENABLE(POINTER_LOCK)
         IntPoint m_movementDelta;
-#endif
         double m_force { 0 };
         PointerID m_pointerId { mousePointerID };
         String m_pointerType { "mouse"_s };
@@ -113,6 +115,8 @@ const double ForceAtForceClick = 2;
         int m_menuTypeForEvent { 0 };
 #elif PLATFORM(WIN)
         bool m_didActivateWebView { false };
+#elif PLATFORM(GTK)
+        IsTouch m_isTouchEvent { IsTouch::No };
 #endif
     };
 

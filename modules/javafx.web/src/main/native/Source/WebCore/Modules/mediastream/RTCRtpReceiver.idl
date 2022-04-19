@@ -31,13 +31,12 @@
 
 [
     Conditional=WEB_RTC,
-    EnabledAtRuntime=PeerConnection,
-    ImplementationLacksVTable,
+    EnabledBySetting=PeerConnection,
     Exposed=Window
 ] interface RTCRtpReceiver {
     readonly attribute MediaStreamTrack track;
-    // FIXME 169662: missing transport
-    // FIXME 169662: missing rtcpTransport
+    readonly attribute RTCDtlsTransport? transport;
+
     [CallWith=ScriptExecutionContext] static RTCRtpCapabilities? getCapabilities(DOMString kind);
     RTCRtpParameters getParameters();
     sequence<RTCRtpContributingSource> getContributingSources();

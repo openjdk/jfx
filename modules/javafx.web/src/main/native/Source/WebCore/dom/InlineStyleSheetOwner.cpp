@@ -58,7 +58,7 @@ static CSSParserContext parserContextForElement(const Element& element)
     return result;
 }
 
-static Optional<InlineStyleSheetCacheKey> makeInlineStyleSheetCacheKey(const String& text, const Element& element)
+static std::optional<InlineStyleSheetCacheKey> makeInlineStyleSheetCacheKey(const String& text, const Element& element)
 {
     // Only cache for shadow trees. Main document inline stylesheets are generally unique and can't be shared between documents.
     // FIXME: This could be relaxed when a stylesheet does not contain document-relative URLs (or #urls).
@@ -174,12 +174,6 @@ void InlineStyleSheetOwner::createSheet(Element& element, const String& text)
 
     auto mediaQueries = MediaQuerySet::create(m_media, MediaQueryParserContext(document));
 
-    MediaQueryEvaluator screenEval("screen"_s, true);
-    MediaQueryEvaluator printEval("print"_s, true);
-    LOG(MediaQueries, "InlineStyleSheetOwner::createSheet evaluating queries");
-    if (!screenEval.evaluate(mediaQueries.get()) && !printEval.evaluate(mediaQueries.get()))
-        return;
-
     if (m_styleScope)
         m_styleScope->addPendingSheet(element);
 
@@ -247,7 +241,7 @@ bool InlineStyleSheetOwner::sheetLoaded(Element& element)
 
 void InlineStyleSheetOwner::startLoadingDynamicSheet(Element& element)
 {
-    if (m_styleScope)
+    if (m_styleScope && !m_styleScope->hasPendingSheet(element))
         m_styleScope->addPendingSheet(element);
 }
 

@@ -56,7 +56,6 @@ using PtrTag = WTF::PtrTag;
     v(CustomAccessorPtrTag, PtrTagCalleeType::Native, PtrTagCallerType::Native) \
     v(HostFunctionPtrTag, PtrTagCalleeType::Native, PtrTagCallerType::Native) \
     v(JITProbePtrTag, PtrTagCalleeType::Native, PtrTagCallerType::Native) \
-    v(JITProbeExecutorPtrTag, PtrTagCalleeType::Native, PtrTagCallerType::Native) \
     v(JITProbePCPtrTag, PtrTagCalleeType::Native, PtrTagCallerType::Native) \
     v(JITProbeStackInitializationFunctionPtrTag, PtrTagCalleeType::Native, PtrTagCallerType::Native) \
     v(ReturnAddressPtrTag, PtrTagCalleeType::Native, PtrTagCallerType::Native) \
@@ -127,7 +126,7 @@ ALWAYS_INLINE static PtrType tagJSCCodePtrImpl(PtrType ptr)
     static_assert(callerType == PtrTagCallerType::JIT);
     if constexpr (calleeType == PtrTagCalleeType::Native) {
         static_assert(tag == OperationPtrTag);
-        JITOperationList::instance().assertIsJITOperation(ptr);
+        JITOperationList::assertIsJITOperation(ptr);
 #if ENABLE(JIT_CAGE)
         if (Options::useJITCage())
             return bitwise_cast<PtrType>(JITOperationList::instance().map(bitwise_cast<void*>(ptr)));
@@ -145,7 +144,7 @@ ALWAYS_INLINE static PtrType untagJSCCodePtrImpl(PtrType ptr)
     static_assert(callerType == PtrTagCallerType::JIT);
     if constexpr (calleeType == PtrTagCalleeType::Native) {
         static_assert(tag == OperationPtrTag);
-        JITOperationList::instance().assertIsJITOperation(ptr);
+        JITOperationList::assertIsJITOperation(ptr);
 #if ENABLE(JIT_CAGE)
         if (Options::useJITCage()) {
             RELEASE_ASSERT(bitwise_cast<PtrType>(JITOperationList::instance().map(bitwise_cast<void*>(ptr))) == ptr);

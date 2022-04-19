@@ -1,4 +1,4 @@
-# Copyright (C) 2005-2020 Apple Inc. All rights reserved.
+# Copyright (C) 2005-2021 Apple Inc. All rights reserved.
 # Copyright (C) 2009 Google Inc. All rights reserved.
 # Copyright (C) 2011 Research In Motion Limited. All rights reserved.
 # Copyright (C) 2013 Nokia Corporation and/or its subsidiary(-ies).
@@ -132,8 +132,9 @@ my $architecture;
 my %nativeArchitectureMap = ();
 my $asanIsEnabled;
 my $tsanIsEnabled;
-my $forceOptimizationLevel;
+my $ubsanIsEnabled;
 my $coverageIsEnabled;
+my $forceOptimizationLevel;
 my $ltoMode;
 my $numberOfCPUs;
 my $maxCPULoad;
@@ -141,6 +142,7 @@ my $baseProductDir;
 my @baseProductDirOption;
 my $configuration;
 my $xcodeSDK;
+my $xcodeSDKPlatformName;
 my $simulatorIdiom;
 my $configurationForVisualStudio;
 my $configurationProductDir;
@@ -356,18 +358,26 @@ sub determineConfiguration
     }
 }
 
-sub determineNativeArchitecture(;$$)
+sub determineNativeArchitecture($)
 {
-    my ($target, $port) = @_;
-    $target = '' if !defined $target;
-    $port = 0 if !defined $port;
-    return if defined $nativeArchitectureMap{"$target:$port"};
+    my ($remotes) = @_;
+    return if defined $nativeArchitectureMap{@{$remotes}};
 
     my $output;
-    if ($target eq "") {
+    if (@{$remotes} == 0) {
         $output = `uname -m` unless isWindows();
     } else {
-        $output = `ssh -o NoHostAuthenticationForLocalhost=yes -p $port $target 'uname  -m'`;
+        foreach my $remote (@{$remotes}) {
+            my @split = split(':', $remote->{"address"});
+            my $target = $split[0];
+            my $port = 22;
+            $port = $split[1] if scalar(@split) > 1;
+            $output = `ssh -o NoHostAuthenticationForLocalhost=yes -p $port $target 'uname  -m'`;
+            last if ($? == 0);
+        }
+        if (length($output) == 0) {
+            die "Could not determineNativeArchitecture";
+        }
     }
     chomp $output if defined $output;
     $output = "x86_64" if (not defined $output);
@@ -378,7 +388,7 @@ sub determineNativeArchitecture(;$$)
     }
 
     $output = "arm" if $output =~ m/^armv[78]l$/;
-    $nativeArchitectureMap{"$target:$port"} = $output;
+    $nativeArchitectureMap{@{$remotes}} = $output;
 }
 
 sub determineArchitecture
@@ -386,7 +396,7 @@ sub determineArchitecture
     return if defined $architecture;
 
     determineBaseProductDir();
-    $architecture = nativeArchitecture();
+    $architecture = nativeArchitecture([]);
     if (isAppleCocoaWebKit() && $architecture eq "arm64") {
     determineXcodeSDK();
         if ($xcodeSDK eq "macosx.internal") {
@@ -403,13 +413,13 @@ sub determineArchitecture
         if ($architecture) {
             chomp $architecture;
         } else {
-            if ($xcodeSDK =~ /^iphoneos/) {
+            if ($xcodeSDKPlatformName eq 'iphoneos') {
                 $architecture = 'arm64';
-            } elsif ($xcodeSDK =~ /^watchsimulator/) {
+            } elsif ($xcodeSDKPlatformName eq 'watchsimulator') {
                 $architecture = 'i386';
-            } elsif ($xcodeSDK =~ /^watchos/) {
+            } elsif ($xcodeSDKPlatformName eq 'watchos') {
                 $architecture = 'arm64_32 arm64e armv7k';
-            } elsif ($xcodeSDK =~ /^appletvos/) {
+            } elsif ($xcodeSDKPlatformName eq 'appletvos') {
                 $architecture = 'arm64';
             }
         }
@@ -435,36 +445,39 @@ sub determineArchitecture
     $architecture = 'arm64' if $architecture =~ /aarch64/i;
 }
 
+sub readSanitizerConfiguration($)
+{
+    my ($fileName) = @_;
+
+    if (open FILE, File::Spec->catfile($baseProductDir, $fileName)) {
+        my $value = <FILE>;
+        close FILE;
+        chomp $value;
+        return ($value eq "YES");
+    }
+
+    return 0;
+}
+
 sub determineASanIsEnabled
 {
     return if defined $asanIsEnabled;
     determineBaseProductDir();
-
-    $asanIsEnabled = 0;
-    my $asanConfigurationValue;
-
-    if (open ASAN, "$baseProductDir/ASan") {
-        $asanConfigurationValue = <ASAN>;
-        close ASAN;
-        chomp $asanConfigurationValue;
-        $asanIsEnabled = 1 if $asanConfigurationValue eq "YES";
-    }
+    $asanIsEnabled = readSanitizerConfiguration("ASan");
 }
 
 sub determineTSanIsEnabled
 {
     return if defined $tsanIsEnabled;
     determineBaseProductDir();
+    $tsanIsEnabled = readSanitizerConfiguration("TSan");
+}
 
-    $tsanIsEnabled = 0;
-    my $tsanConfigurationValue;
-
-    if (open TSAN, "$baseProductDir/TSan") {
-        $tsanConfigurationValue = <TSAN>;
-        close TSAN;
-        chomp $tsanConfigurationValue;
-        $tsanIsEnabled = 1 if $tsanConfigurationValue eq "YES";
-    }
+sub determineUBSanIsEnabled
+{
+    return if defined $ubsanIsEnabled;
+    determineBaseProductDir();
+    $ubsanIsEnabled = readSanitizerConfiguration("UBSan");
 }
 
 sub determineForceOptimizationLevel
@@ -552,7 +565,7 @@ sub argumentsForConfiguration()
     determineConfiguration();
     determineArchitecture();
     if (isAppleCocoaWebKit()) {
-    determineXcodeSDK();
+        determineXcodeSDKPlatformName();
     }
 
     my @args = ();
@@ -560,14 +573,14 @@ sub argumentsForConfiguration()
     # These are determined automatically from stored configuration.
     push(@args, '--debug') if ($configuration =~ "^Debug");
     push(@args, '--release') if ($configuration =~ "^Release");
-    push(@args, '--ios-device') if (defined $xcodeSDK && $xcodeSDK =~ /^iphoneos/);
-    push(@args, '--ios-simulator') if (defined $xcodeSDK && $xcodeSDK =~ /^iphonesimulator/ && $simulatorIdiom eq "iPhone");
-    push(@args, '--ipad-simulator') if (defined $xcodeSDK && $xcodeSDK =~ /^iphonesimulator/ && $simulatorIdiom eq "iPad");
-    push(@args, '--tvos-device') if (defined $xcodeSDK && $xcodeSDK =~ /^appletvos/);
-    push(@args, '--tvos-simulator') if (defined $xcodeSDK && $xcodeSDK =~ /^appletvsimulator/);
-    push(@args, '--watchos-device') if (defined $xcodeSDK && $xcodeSDK =~ /^watchos/);
-    push(@args, '--watchos-simulator') if (defined $xcodeSDK && $xcodeSDK =~ /^watchsimulator/);
-    push(@args, '--maccatalyst') if (defined $xcodeSDK && $xcodeSDK =~ /^maccatalyst/);
+    push(@args, '--ios-device') if (defined $xcodeSDKPlatformName && $xcodeSDKPlatformName eq 'iphoneos');
+    push(@args, '--ios-simulator') if (defined $xcodeSDKPlatformName && $xcodeSDKPlatformName eq 'iphonesimulator' && $simulatorIdiom eq "iPhone");
+    push(@args, '--ipad-simulator') if (defined $xcodeSDKPlatformName && $xcodeSDKPlatformName eq 'iphonesimulator' && $simulatorIdiom eq "iPad");
+    push(@args, '--tvos-device') if (defined $xcodeSDKPlatformName && $xcodeSDKPlatformName eq 'appletvos');
+    push(@args, '--tvos-simulator') if (defined $xcodeSDKPlatformName && $xcodeSDKPlatformName eq 'appletvsimulator');
+    push(@args, '--watchos-device') if (defined $xcodeSDKPlatformName && $xcodeSDKPlatformName eq 'watchos');
+    push(@args, '--watchos-simulator') if (defined $xcodeSDKPlatformName && $xcodeSDKPlatformName eq 'watchsimulator');
+    push(@args, '--maccatalyst') if (defined $xcodeSDKPlatformName && $xcodeSDKPlatformName eq 'maccatalyst');
     push(@args, '--32-bit') if ($architecture eq "x86" and !isWin64());
     push(@args, '--64-bit') if (isWin64());
     push(@args, '--ftw') if isFTW();
@@ -626,53 +639,76 @@ sub availableXcodeSDKs
     return parseAvailableXcodeSDKs(\@output);
 }
 
-sub determineXcodeSDK
-{
-    return if defined $xcodeSDK;
+sub isValidXcodeSDKPlatformName($) {
+    my $name = shift;
+    my @platforms = qw(
+        appletvos
+        appletvsimulator
+        iphoneos
+        iphonesimulator
+        macosx
+        watchos
+        watchsimulator
+        maccatalyst
+    );
+    return grep { $_ eq $name } @platforms;
+}
+
+sub determineXcodeSDKPlatformName {
+    return if defined $xcodeSDKPlatformName;
     my $sdk;
     
     # The user explicitly specified the sdk, don't assume anything
     if (checkForArgumentAndRemoveFromARGVGettingValue("--sdk", \$sdk)) {
-        $xcodeSDK = $sdk;
+        $xcodeSDK = lc $sdk;
+        $xcodeSDKPlatformName = $sdk;
+        $xcodeSDKPlatformName =~ s/\.internal$//;
+        die "Couldn't determine platform name from Xcode SDK" unless isValidXcodeSDKPlatformName($xcodeSDKPlatformName);
         return;
     }
     if (checkForArgumentAndRemoveFromARGV("--device") || checkForArgumentAndRemoveFromARGV("--ios-device")) {
-        $xcodeSDK ||= "iphoneos";
+        $xcodeSDKPlatformName ||= "iphoneos";
     }
     if (checkForArgumentAndRemoveFromARGV("--simulator") || checkForArgumentAndRemoveFromARGV("--ios-simulator")) {
-        $xcodeSDK ||= 'iphonesimulator';
+        $xcodeSDKPlatformName ||= 'iphonesimulator';
         $simulatorIdiom = 'iPhone';
     }
     if (checkForArgumentAndRemoveFromARGV("--ipad-simulator")) {
-        $xcodeSDK ||= 'iphonesimulator';
+        $xcodeSDKPlatformName ||= 'iphonesimulator';
         $simulatorIdiom = 'iPad';
     }
     if (checkForArgumentAndRemoveFromARGV("--tvos-device")) {
-        $xcodeSDK ||=  "appletvos";
+        $xcodeSDKPlatformName ||= "appletvos";
     }
     if (checkForArgumentAndRemoveFromARGV("--tvos-simulator")) {
-        $xcodeSDK ||= "appletvsimulator";
+        $xcodeSDKPlatformName ||= "appletvsimulator";
     }
     if (checkForArgumentAndRemoveFromARGV("--watchos-device")) {
-        $xcodeSDK ||=  "watchos";
+        $xcodeSDKPlatformName ||= "watchos";
     }
     if (checkForArgumentAndRemoveFromARGV("--watchos-simulator")) {
-        $xcodeSDK ||= "watchsimulator";
+        $xcodeSDKPlatformName ||= "watchsimulator";
     }
     if (checkForArgumentAndRemoveFromARGV("--maccatalyst")) {
-        $xcodeSDK ||= "maccatalyst";
+        $xcodeSDKPlatformName ||= "maccatalyst";
     }
 
     # Finally, fall back to macOS if no platform is specified.
-    if (!defined $xcodeSDK) {
-        $xcodeSDK = "macosx";
-    }
-    
+    $xcodeSDKPlatformName ||= "macosx";
+}
+
+sub determineXcodeSDK
+{
+    determineXcodeSDKPlatformName();  # This can set $xcodeSDK if --sdk was used.
+    return if defined $xcodeSDK;
+
+    $xcodeSDK = $xcodeSDKPlatformName;
+
     # Prefer the internal version of an sdk, if it exists.
     my @availableSDKs = availableXcodeSDKs();
 
     foreach my $sdk (@availableSDKs) {
-        next if $sdk ne "$xcodeSDK.internal";
+        next if $sdk ne "$xcodeSDKPlatformName.internal";
         $xcodeSDK = $sdk;
         last;
     }
@@ -687,22 +723,14 @@ sub xcodeSDK
 sub setXcodeSDK($)
 {
     ($xcodeSDK) = @_;
+    $xcodeSDKPlatformName = $xcodeSDK;
+    $xcodeSDKPlatformName =~ s/\.internal$//;
 }
 
-
-sub xcodeSDKPlatformName()
+sub xcodeSDKPlatformName
 {
-    determineXcodeSDK();
-    return "" if !defined $xcodeSDK;
-    return "appletvos" if $xcodeSDK =~ /appletvos/i;
-    return "appletvsimulator" if $xcodeSDK =~ /appletvsimulator/i;
-    return "iphoneos" if $xcodeSDK =~ /iphoneos/i;
-    return "iphonesimulator" if $xcodeSDK =~ /iphonesimulator/i;
-    return "macosx" if $xcodeSDK =~ /macosx/i;
-    return "watchos" if $xcodeSDK =~ /watchos/i;
-    return "watchsimulator" if $xcodeSDK =~ /watchsimulator/i;
-    return "maccatalyst" if $xcodeSDK =~ /maccatalyst/i;
-    die "Couldn't determine platform name from Xcode SDK";
+    determineXcodeSDKPlatformName();
+    return $xcodeSDKPlatformName;
 }
 
 sub XcodeSDKPath
@@ -913,6 +941,18 @@ sub tsanIsEnabled()
     return $tsanIsEnabled;
 }
 
+sub ubsanIsEnabled()
+{
+    determineUBSanIsEnabled();
+    return $ubsanIsEnabled;
+}
+
+sub coverageIsEnabled()
+{
+    determineCoverageIsEnabled();
+    return $coverageIsEnabled;
+}
+
 sub forceOptimizationLevel()
 {
     determineForceOptimizationLevel();
@@ -968,6 +1008,7 @@ sub XcodeOptions
     determineArchitecture();
     determineASanIsEnabled();
     determineTSanIsEnabled();
+    determineUBSanIsEnabled();
     determineForceOptimizationLevel();
     determineCoverageIsEnabled();
     determineLTOMode();
@@ -978,13 +1019,16 @@ sub XcodeOptions
     push @options, "-ShowBuildOperationDuration=YES";
     push @options, ("-configuration", $configuration);
     if ($asanIsEnabled) {
-        push @options, ("-xcconfig", File::Spec->catfile(sourceDir(), "Tools", "sanitizer", "asan.xcconfig"));
+        my $xcconfig = $ubsanIsEnabled ? "asan+ubsan.xcconfig" : "asan.xcconfig";
+        push @options, ("-xcconfig", File::Spec->catfile(sourceDir(), "Tools", "sanitizer", $xcconfig));
         my $asanIgnorePath = File::Spec->catfile(sourceDir(), "Tools", "sanitizer", "webkit-asan-ignore.txt");
         push @options, "ASAN_IGNORE=$asanIgnorePath" if -e $asanIgnorePath;
     } elsif ($tsanIsEnabled) {
         push @options, ("-xcconfig", File::Spec->catfile(sourceDir(), "Tools", "sanitizer", "tsan.xcconfig"));
+    } elsif (ubsanIsEnabled) {
+        push @options, ("-xcconfig", File::Spec->catfile(sourceDir(), "Tools", "sanitizer", "ubsan.xcconfig"));
     }
-    push @options, ("-xcconfig", sourceDir() . "/Tools/coverage/coverage.xcconfig") if $coverageIsEnabled;
+    push @options, XcodeCoverageSupportOptions() if $coverageIsEnabled;
     push @options, ("GCC_OPTIMIZATION_LEVEL=$forceOptimizationLevel") if $forceOptimizationLevel;
     push @options, "WK_LTO_MODE=$ltoMode" if $ltoMode;
     push @options, @baseProductDirOption;
@@ -1024,10 +1068,7 @@ sub XcodeOptionStringNoConfig
 
 sub XcodeCoverageSupportOptions()
 {
-    my @coverageSupportOptions = ();
-    push @coverageSupportOptions, "GCC_GENERATE_TEST_COVERAGE_FILES=YES";
-    push @coverageSupportOptions, "GCC_INSTRUMENT_PROGRAM_FLOW_ARCS=YES";
-    return @coverageSupportOptions;
+    return ("-xcconfig", sourceDir() . "/Tools/coverage/coverage.xcconfig");
 }
 
 sub XcodeStaticAnalyzerOption()
@@ -1109,13 +1150,11 @@ sub passedArchitecture
     return $passedArchitecture;
 }
 
-sub nativeArchitecture(;$$)
+sub nativeArchitecture($)
 {
-    my ($target, $port) = @_;
-    $target = '' if !defined $target;
-    $port = 0 if !defined $port;
-    determineNativeArchitecture($target, $port);
-    return $nativeArchitectureMap{"$target:$port"};
+    my ($remotes) = @_;
+    determineNativeArchitecture($remotes);
+    return $nativeArchitectureMap{@{$remotes}};
 }
 
 sub architecture()
@@ -1353,7 +1392,7 @@ sub determinePortName()
     if (isAnyWindows()) {
         $portName = AppleWin;
     } elsif (isDarwin()) {
-        determineXcodeSDK();
+        determineXcodeSDKPlatformName();
         if (willUseIOSDeviceSDK() || willUseIOSSimulatorSDK()) {
             $portName = iOS;
         } elsif (willUseAppleTVDeviceSDK() || willUseAppleTVSimulatorSDK()) {
@@ -2350,7 +2389,10 @@ sub cmakeFilesPath()
 
 sub shouldRemoveCMakeCache(@)
 {
-    my (@buildArgs) = sort (@_, @originalArgv);
+    # For this check, ignore all arguments that do not begin with a dash. These
+    # are probably arguments specifying build targets. Changing those should
+    # not trigger a reconfiguration of the build.
+    my (@buildArgs) = grep(/^-/, sort(@_, @originalArgv));
 
     # We check this first, because we always want to create this file for a fresh build.
     my $productDir = File::Spec->catdir(baseProductDir(), configuration());
@@ -2495,6 +2537,7 @@ sub generateBuildSystemFromCMakeProject
 
     push @args, "-DENABLE_SANITIZERS=address" if asanIsEnabled();
     push @args, "-DENABLE_SANITIZERS=thread" if tsanIsEnabled();
+    push @args, "-DENABLE_SANITIZERS=undefined" if ubsanIsEnabled();
 
     push @args, "-DLTO_MODE=$ltoMode" if ltoMode();
 

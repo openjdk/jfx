@@ -80,20 +80,21 @@ void PatchpointExceptionHandle::scheduleExitCreationForUnwind(
 
     RefPtr<OSRExitHandle> handle = createHandle(GenericUnwind, params);
 
-    handle->exit.m_exceptionHandlerCallSiteIndex = callSiteIndex;
+    handle->m_jitCode->m_osrExit[handle->m_index].m_exceptionHandlerCallSiteIndex = callSiteIndex;
 
     HandlerInfo handler = m_handler;
     params.addLatePath(
         [handle, handler, callSiteIndex] (CCallHelpers& jit) {
             CodeBlock* codeBlock = jit.codeBlock();
-            jit.addLinkTask(
-                [=] (LinkBuffer& linkBuffer) {
-                    HandlerInfo newHandler = handler;
-                    newHandler.start = callSiteIndex.bits();
-                    newHandler.end = callSiteIndex.bits() + 1;
-                    newHandler.nativeCode = linkBuffer.locationOf<ExceptionHandlerPtrTag>(handle->label);
+            jit.addLinkTask([=] (LinkBuffer& linkBuffer) {
+                HandlerInfo newHandler = handler;
+                newHandler.start = callSiteIndex.bits();
+                newHandler.end = callSiteIndex.bits() + 1;
+                newHandler.nativeCode = linkBuffer.locationOf<ExceptionHandlerPtrTag>(handle->label);
+                linkBuffer.addMainThreadFinalizationTask([=] {
                     codeBlock->appendExceptionHandler(newHandler);
                 });
+            });
         });
 }
 

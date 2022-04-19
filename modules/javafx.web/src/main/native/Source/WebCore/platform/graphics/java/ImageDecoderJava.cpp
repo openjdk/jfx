@@ -305,7 +305,7 @@ bool ImageDecoderJava::frameIsCompleteAtIndex(size_t idx) const
 unsigned ImageDecoderJava::frameBytesAtIndex(size_t idx, SubsamplingLevel samplingLevel) const
 {
     auto frameSize = frameSizeAtIndex(idx, samplingLevel);
-    return (frameSize.area() * 4).unsafeGet();
+    return (frameSize.area() * 4);
 }
 
 RepetitionCount ImageDecoderJava::repetitionCount() const
@@ -334,7 +334,7 @@ String ImageDecoderJava::filenameExtension() const
     return String(env, ext);
 }
 
-Optional<IntPoint> ImageDecoderJava::hotSpot() const
+std::optional<IntPoint> ImageDecoderJava::hotSpot() const
 {
     notImplemented();
     return { };

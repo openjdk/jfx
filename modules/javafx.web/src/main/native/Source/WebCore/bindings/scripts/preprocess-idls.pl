@@ -41,6 +41,7 @@ my $idlFileNamesList;
 my $testGlobalContextName;
 my $supplementalDependencyFile;
 my $isoSubspacesHeaderFile;
+my $constructorsHeaderFile;
 my $windowConstructorsFile;
 my $workerGlobalScopeConstructorsFile;
 my $dedicatedWorkerGlobalScopeConstructorsFile;
@@ -64,6 +65,7 @@ GetOptions('defines=s' => \$defines,
            'testGlobalContextName=s' => \$testGlobalContextName,
            'supplementalDependencyFile=s' => \$supplementalDependencyFile,
            'isoSubspacesHeaderFile=s' => \$isoSubspacesHeaderFile,
+           'constructorsHeaderFile=s' => \$constructorsHeaderFile,
            'windowConstructorsFile=s' => \$windowConstructorsFile,
            'workerGlobalScopeConstructorsFile=s' => \$workerGlobalScopeConstructorsFile,
            'dedicatedWorkerGlobalScopeConstructorsFile=s' => \$dedicatedWorkerGlobalScopeConstructorsFile,
@@ -92,6 +94,7 @@ die('Must specify IDL attributes file using --idlAttributesFile.') unless define
 
 $supplementalDependencyFile = CygwinPathIfNeeded($supplementalDependencyFile);
 $isoSubspacesHeaderFile = CygwinPathIfNeeded($isoSubspacesHeaderFile);
+$constructorsHeaderFile = CygwinPathIfNeeded($constructorsHeaderFile);
 $windowConstructorsFile = CygwinPathIfNeeded($windowConstructorsFile);
 $workerGlobalScopeConstructorsFile = CygwinPathIfNeeded($workerGlobalScopeConstructorsFile);
 $dedicatedWorkerGlobalScopeConstructorsFile = CygwinPathIfNeeded($dedicatedWorkerGlobalScopeConstructorsFile);
@@ -155,6 +158,19 @@ class DOMIsoSubspaces {
     WTF_MAKE_FAST_ALLOCATED(DOMIsoSubspaces);
 public:
     DOMIsoSubspaces() = default;
+END
+
+my @constructors = ();
+my $constructorsHeaderCode = <<END;
+#include <wtf/FastMalloc.h>
+#include <wtf/Noncopyable.h>
+#include <JavaScriptCore/JSCInlines.h>
+
+#pragma once
+
+namespace WebCore {
+
+enum class DOMConstructorID : uint16_t {
 END
 
 # Get rid of duplicates in idlFileNames array.
@@ -230,10 +246,11 @@ foreach my $idlFileName (sort keys %idlFileNameHash) {
         }
         $exposedAttribute = substr($exposedAttribute, 1, -1) if substr($exposedAttribute, 0, 1) eq "(";
         my @globalContexts = split(",", $exposedAttribute);
-        my ($attributeCode, $windowAliases) = GenerateConstructorAttributes($interfaceName, $extendedAttributes);
         foreach my $globalContext (@globalContexts) {
+            my ($attributeCode, $windowAliases) = GenerateConstructorAttributes($interfaceName, $extendedAttributes, $globalContext);
             if ($globalContext eq "Window") {
                 $windowConstructorsCode .= $attributeCode;
+                $windowConstructorsCode .= $windowAliases if $windowAliases;
             } elsif ($globalContext eq "Worker") {
                 $workerGlobalScopeConstructorsCode .= $attributeCode;
             } elsif ($globalContext eq "DedicatedWorker") {
@@ -252,7 +269,13 @@ foreach my $idlFileName (sort keys %idlFileNameHash) {
                 die "Unsupported global context '$globalContext' used in [Exposed] at $idlFileName";
             }
         }
-        $windowConstructorsCode .= $windowAliases if $windowAliases;
+    }
+
+    $constructorsHeaderCode .= "    ${interfaceName},\n";
+    push(@constructors, "${interfaceName}");
+    if ($extendedAttributes->{LegacyFactoryFunction}) {
+        $constructorsHeaderCode .= "    ${interfaceName}LegacyFactory,\n";
+        push(@constructors, "${interfaceName}LegacyFactory");
     }
 }
 
@@ -270,6 +293,29 @@ if ($isoSubspacesHeaderFile) {
     $isoSubspacesHeaderCode .= "};\n";
     $isoSubspacesHeaderCode .= "} // namespace WebCore\n";
     WriteFileIfChanged($isoSubspacesHeaderFile, $isoSubspacesHeaderCode);
+}
+
+if ($constructorsHeaderFile) {
+    my $constructorsLength = @constructors;
+    $constructorsHeaderCode .= "};\n";
+    $constructorsHeaderCode .= "\n";
+    $constructorsHeaderCode .= "static constexpr unsigned numberOfDOMConstructors = $constructorsLength;\n";
+    $constructorsHeaderCode .= "\n";
+    $constructorsHeaderCode .= "class DOMConstructors {\n";
+    $constructorsHeaderCode .= "    WTF_MAKE_NONCOPYABLE(DOMConstructors);\n";
+    $constructorsHeaderCode .= "    WTF_MAKE_FAST_ALLOCATED(DOMConstructors);\n";
+    $constructorsHeaderCode .= "public:\n";
+    $constructorsHeaderCode .= "    using ConstructorArray = std::array<JSC::WriteBarrier<JSC::JSObject>, numberOfDOMConstructors>;\n";
+    $constructorsHeaderCode .= "    DOMConstructors() = default;\n";
+    $constructorsHeaderCode .= "    ConstructorArray& array() { return m_array; }\n";
+    $constructorsHeaderCode .= "    const ConstructorArray& array() const { return m_array; }\n";
+    $constructorsHeaderCode .= "\n";
+    $constructorsHeaderCode .= "private:\n";
+    $constructorsHeaderCode .= "    ConstructorArray m_array { };\n";
+    $constructorsHeaderCode .= "};\n";
+    $constructorsHeaderCode .= "\n";
+    $constructorsHeaderCode .= "} // namespace WebCore\n";
+    WriteFileIfChanged($constructorsHeaderFile, $constructorsHeaderCode);
 }
 
 # Resolves partial interfaces and include dependencies.
@@ -383,6 +429,19 @@ sub GenerateConstructorAttributes
 {
     my $interfaceName = shift;
     my $extendedAttributes = shift;
+    my $globalContext = shift;
+
+    # FIXME: Rather than being ConditionalForWorker=FOO, we need a syntax like ConditionalForContext=(Worker:FOO).
+    if ($extendedAttributes->{"ConditionalForWorker"} && $globalContext eq "Worker") {
+      my $conditionalForWorker = $extendedAttributes->{"ConditionalForWorker"};
+      my $existingConditional = $extendedAttributes->{"Conditional"};
+      if ($existingConditional) {
+        $existingConditional .= "&" . $conditionalForWorker;
+      } else {
+        $existingConditional = $conditionalForWorker;
+      }
+      $extendedAttributes->{"Conditional"} = $existingConditional;
+    }
 
     my $code = "    ";
     my @extendedAttributesList;
@@ -392,6 +451,7 @@ sub GenerateConstructorAttributes
         || $attributeName eq "PublicIdentifier" || $attributeName eq "DisabledByQuirk" || $attributeName eq "EnabledByQuirk"
         || $attributeName eq "EnabledForContext" || $attributeName eq "CustomEnabled") || $attributeName eq "LegacyFactoryFunctionEnabledBySetting";
       my $extendedAttribute = $attributeName;
+      
       $extendedAttribute .= "=" . $extendedAttributes->{$attributeName} unless $extendedAttributes->{$attributeName} eq "VALUE_IS_MISSING";
       push(@extendedAttributesList, $extendedAttribute);
     }
@@ -652,7 +712,7 @@ sub containsInterfaceOrCallbackInterfaceFromIDL
     my $idlFile = shift;
 
     my $fileContents = $idlFile->fileContents;
-    my $containsInterfaceOrCallbackInterface = ($fileContents =~ /\b(callback interface|interface)\s+(\w+)/gs);
+    my $containsInterfaceOrCallbackInterface = ($fileContents =~ /\b(callback interface|interface|namespace)\s+(\w+)/gs);
 
     if ($validateAgainstParser) {
         print "Validating containsInterfaceOrCallbackInterfaceFromIDL for " . $idlFile->fileName . " against validation parser.\n" if $verbose;
@@ -702,7 +762,7 @@ sub getInterfaceExtendedAttributesFromIDL
     my $fileContents = $idlFile->fileContents;
 
     my $extendedAttributes = {};
-    if ($fileContents =~ /\[(.*)\]\s+(callback interface|interface)\s+(\w+)/gs) {
+    if ($fileContents =~ /\[(.*)\]\s+(callback interface|interface|namespace)\s+(\w+)/gs) {
         my $parameters = $1;
         if (index($parameters, '}') != -1) {
             # In case we have a declaration like a dictionary with extended attributes defined before the interface.

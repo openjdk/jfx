@@ -35,12 +35,11 @@
 #include "HTMLNames.h"
 #include "HTMLParserIdioms.h"
 #include "HTMLTableElement.h"
-#include "InlineElementBox.h"
 #include "InlineIterator.h"
 #include "InlineRunAndOffset.h"
-#include "InlineTextBox.h"
 #include "LayoutIntegrationLineIterator.h"
 #include "LayoutIntegrationRunIterator.h"
+#include "LegacyInlineTextBox.h"
 #include "Logging.h"
 #include "NodeTraversal.h"
 #include "PositionIterator.h"
@@ -195,6 +194,16 @@ Text* Position::containerText() const
     }
     ASSERT_NOT_REACHED();
     return nullptr;
+}
+
+Element* Position::containerOrParentElement() const
+{
+    auto* container = containerNode();
+    if (!container)
+        return nullptr;
+    if (is<Element>(container))
+        return downcast<Element>(container);
+    return container->parentElement();
 }
 
 int Position::computeOffsetInContainerNode() const
@@ -958,6 +967,7 @@ Node* Position::rootUserSelectAllForNode(Node* node)
     return candidateRoot;
 }
 
+// This function should be kept in sync with PositionIterator::isCandidate().
 bool Position::isCandidate() const
 {
     if (isNull())
@@ -988,7 +998,7 @@ bool Position::isCandidate() const
         return false;
 
     if (is<RenderBlockFlow>(*renderer) || is<RenderGrid>(*renderer) || is<RenderFlexibleBox>(*renderer)) {
-        RenderBlock& block = downcast<RenderBlock>(*renderer);
+        auto& block = downcast<RenderBlock>(*renderer);
         if (block.logicalHeight() || is<HTMLBodyElement>(*m_anchorNode) || m_anchorNode->isRootEditableElement()) {
             if (!Position::hasRenderedNonAnonymousDescendantsWithHeight(block))
                 return atFirstEditingPositionForNode() && !Position::nodeIsUserSelectNone(deprecatedNode());
@@ -1592,11 +1602,11 @@ Position makeDeprecatedLegacyPosition(const BoundaryPoint& point)
     return makeDeprecatedLegacyPosition(point.container.ptr(), point.offset);
 }
 
-Optional<BoundaryPoint> makeBoundaryPoint(const Position& position)
+std::optional<BoundaryPoint> makeBoundaryPoint(const Position& position)
 {
     auto container = makeRefPtr(position.containerNode());
     if (!container)
-        return WTF::nullopt;
+        return std::nullopt;
     return BoundaryPoint { container.releaseNonNull(), static_cast<unsigned>(position.computeOffsetInContainerNode()) };
 }
 

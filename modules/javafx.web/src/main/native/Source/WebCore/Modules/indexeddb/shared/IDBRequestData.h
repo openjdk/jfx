@@ -25,8 +25,6 @@
 
 #pragma once
 
-#if ENABLE(INDEXED_DATABASE)
-
 #include "IDBDatabaseIdentifier.h"
 #include "IDBResourceIdentifier.h"
 #include "IndexedDB.h"
@@ -89,7 +87,7 @@ private:
     uint64_t m_indexIdentifier { 0 };
     IndexedDB::IndexRecordType m_indexRecordType { IndexedDB::IndexRecordType::Key };
 
-    mutable Optional<IDBDatabaseIdentifier> m_databaseIdentifier;
+    mutable std::optional<IDBDatabaseIdentifier> m_databaseIdentifier;
     uint64_t m_requestedVersion { 0 };
 
     IndexedDB::RequestType m_requestType { IndexedDB::RequestType::Other };
@@ -136,7 +134,7 @@ bool IDBRequestData::decode(Decoder& decoder, IDBRequestData& request)
     if (!decoder.decode(request.m_indexIdentifier))
         return false;
 
-    Optional<Optional<IDBDatabaseIdentifier>> databaseIdentifier;
+    std::optional<std::optional<IDBDatabaseIdentifier>> databaseIdentifier;
     decoder >> databaseIdentifier;
     if (!databaseIdentifier)
         return false;
@@ -184,5 +182,3 @@ bool IDBRequestData::decode(Decoder& decoder, IDBRequestData& request)
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(INDEXED_DATABASE)

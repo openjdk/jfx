@@ -75,7 +75,7 @@ public:
     bool progressionIsReversed() const { return m_progressionIsReversed; }
     void setProgressionIsReversed(bool reversed) { m_progressionIsReversed = reversed; }
 
-    RenderFragmentContainer* mapFromFlowToFragment(TransformState&) const override;
+    RenderFragmentContainer* mapFromFlowToFragment(TransformState&) const final;
 
     // This method takes a logical offset and returns a physical translation that can be applied to map
     // a physical point (corresponding to the logical offset) into the fragment's physical coordinate space.
@@ -89,7 +89,7 @@ public:
 
     bool nodeAtPoint(const HitTestRequest&, HitTestResult&, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, HitTestAction) override;
 
-    void mapAbsoluteToLocalPoint(MapCoordinatesFlags, TransformState&) const override;
+    void mapAbsoluteToLocalPoint(OptionSet<MapCoordinatesMode>, TransformState&) const override;
     LayoutSize offsetFromContainer(RenderElement&, const LayoutPoint&, bool* offsetDependsOnPoint = nullptr) const override;
 
     // FIXME: Eventually as column and fragment flow threads start nesting, this will end up changing.
@@ -102,12 +102,13 @@ private:
     bool isRenderMultiColumnFlow() const override { return true; }
     const char* renderName() const override;
     void addFragmentToThread(RenderFragmentContainer*) override;
-    void willBeRemovedFromTree() override;
+    void willBeRemovedFromTree(IsInternalMove) override;
     void fragmentedFlowDescendantBoxLaidOut(RenderBox*) override;
     LogicalExtentComputedValues computeLogicalHeight(LayoutUnit logicalHeight, LayoutUnit logicalTop) const override;
     LayoutUnit initialLogicalWidth() const override;
     void setPageBreak(const RenderBlock*, LayoutUnit offset, LayoutUnit spaceShortage) override;
     void updateMinimumPageHeight(const RenderBlock*, LayoutUnit offset, LayoutUnit minHeight) override;
+    void updateSpaceShortageForSizeContainment(const RenderBlock*, LayoutUnit offset, LayoutUnit shortage) override;
     RenderFragmentContainer* fragmentAtBlockOffset(const RenderBox*, LayoutUnit, bool extendLastFragment = false) const override;
     void setFragmentRangeForBox(const RenderBox&, RenderFragmentContainer*, RenderFragmentContainer*) override;
     bool addForcedFragmentBreak(const RenderBlock*, LayoutUnit, RenderBox* breakChild, bool isBefore, LayoutUnit* offsetBreakAdjustment = 0) override;
@@ -119,18 +120,18 @@ private:
     // The last set we worked on. It's not to be used as the "current set". The concept of a
     // "current set" is difficult, since layout may jump back and forth in the tree, due to wrong
     // top location estimates (due to e.g. margin collapsing), and possibly for other reasons.
-    RenderMultiColumnSet* m_lastSetWorkedOn;
+    RenderMultiColumnSet* m_lastSetWorkedOn { nullptr };
 
-    unsigned m_columnCount; // The default column count/width that are based off our containing block width. These values represent only the default,
-    LayoutUnit m_columnWidth; // A multi-column block that is split across variable width pages or fragments will have different column counts and widths in each. These values will be cached (eventually) for multi-column blocks.
+    unsigned m_columnCount { 1 }; // The default column count/width that are based off our containing block width. These values represent only the default,
+    LayoutUnit m_columnWidth { 0 }; // A multi-column block that is split across variable width pages or fragments will have different column counts and widths in each. These values will be cached (eventually) for multi-column blocks.
 
     LayoutUnit m_columnHeightAvailable; // Total height available to columns, or 0 if auto.
-    bool m_inLayout; // Set while we're laying out the flow thread, during which colum set heights are unknown.
-    bool m_inBalancingPass; // Guard to avoid re-entering column balancing.
-    bool m_needsHeightsRecalculation;
+    bool m_inLayout { false }; // Set while we're laying out the flow thread, during which colum set heights are unknown.
+    bool m_inBalancingPass { false }; // Guard to avoid re-entering column balancing.
+    bool m_needsHeightsRecalculation { false };
 
-    bool m_progressionIsInline;
-    bool m_progressionIsReversed;
+    bool m_progressionIsInline { false };
+    bool m_progressionIsReversed { false };
 };
 
 } // namespace WebCore

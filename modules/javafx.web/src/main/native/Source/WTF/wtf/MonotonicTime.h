@@ -54,6 +54,7 @@ public:
 
 #if OS(DARWIN)
     WTF_EXPORT_PRIVATE static MonotonicTime fromMachAbsoluteTime(uint64_t);
+    WTF_EXPORT_PRIVATE uint64_t toMachAbsoluteTime() const;
 #endif
 
     WTF_EXPORT_PRIVATE static MonotonicTime now();
@@ -149,12 +150,12 @@ public:
     }
 
     template<class Decoder>
-    static Optional<MonotonicTime> decode(Decoder& decoder)
+    static std::optional<MonotonicTime> decode(Decoder& decoder)
     {
-        Optional<double> time;
+        std::optional<double> time;
         decoder >> time;
         if (!time)
-            return WTF::nullopt;
+            return std::nullopt;
         return MonotonicTime::fromRawSeconds(*time);
     }
 

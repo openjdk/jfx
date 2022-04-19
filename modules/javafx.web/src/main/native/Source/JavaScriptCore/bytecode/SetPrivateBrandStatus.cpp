@@ -41,6 +41,11 @@ bool SetPrivateBrandStatus::appendVariant(const SetPrivateBrandVariant& variant)
     return appendICStatusVariant(m_variants, variant);
 }
 
+void SetPrivateBrandStatus::shrinkToFit()
+{
+    m_variants.shrinkToFit();
+}
+
 SetPrivateBrandStatus SetPrivateBrandStatus::computeForBaseline(CodeBlock* baselineBlock, ICStatusMap& map, BytecodeIndex bytecodeIndex, ExitFlag didExit)
 {
     ConcurrentJSLocker locker(baselineBlock->m_lock);
@@ -113,6 +118,7 @@ SetPrivateBrandStatus SetPrivateBrandStatus::computeForStubInfoWithoutExitSiteFe
                 return SetPrivateBrandStatus(JSC::slowVersion(summary), *stubInfo);
         }
 
+        result.shrinkToFit();
         return result;
     }
 
@@ -195,6 +201,7 @@ void SetPrivateBrandStatus::merge(const SetPrivateBrandStatus& other)
             if (!appendVariant(otherVariant))
                 return mergeSlow();
         }
+        shrinkToFit();
         return;
 
     case LikelyTakesSlowPath:
@@ -219,20 +226,7 @@ void SetPrivateBrandStatus::filter(const StructureSet& structureSet)
 
 CacheableIdentifier SetPrivateBrandStatus::singleIdentifier() const
 {
-    if (m_variants.isEmpty())
-        return nullptr;
-
-    CacheableIdentifier result = m_variants.first().identifier();
-    if (!result)
-        return nullptr;
-    for (size_t i = 1; i < m_variants.size(); ++i) {
-        CacheableIdentifier identifier = m_variants[i].identifier();
-        if (!identifier)
-            return nullptr;
-        if (identifier != result)
-            return nullptr;
-    }
-    return result;
+    return singleIdentifierForICStatus(m_variants);
 }
 
 template<typename Visitor>

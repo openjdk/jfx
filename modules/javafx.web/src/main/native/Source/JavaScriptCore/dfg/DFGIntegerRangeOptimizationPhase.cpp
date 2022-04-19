@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -228,8 +228,17 @@ public:
         if (*this == other)
             return true;
 
-        if (m_right->isInt32Constant() && other.m_right->isInt32Constant())
-            return (m_right->asInt32() + m_offset) == (other.m_right->asInt32() + other.m_offset);
+        if (m_right->isInt32Constant() && other.m_right->isInt32Constant()) {
+            int thisRight = m_right->asInt32();
+            int otherRight = other.m_right->asInt32();
+
+            if (sumOverflows<int>(thisRight, m_offset))
+                return false;
+            if (sumOverflows<int>(otherRight, other.m_offset))
+                return false;
+
+            return (thisRight + m_offset) == (otherRight + other.m_offset);
+        }
         return false;
     }
 
@@ -1344,6 +1353,7 @@ public:
                     break;
                 }
 
+                case EnumeratorGetByVal:
                 case GetByVal: {
                     if (node->arrayMode().type() != Array::Undecided)
                         break;
@@ -1380,6 +1390,7 @@ private:
     void executeNode(Node* node)
     {
         switch (node->op()) {
+        // FIXME: Teach this about EnumeratorNextExtractIndex.
         case CheckInBounds: {
             setRelationship(Relationship::safeCreate(node->child1().node(), node->child2().node(), Relationship::LessThan));
             setRelationship(Relationship::safeCreate(node->child1().node(), m_zero, Relationship::GreaterThan, -1));
@@ -1389,7 +1400,25 @@ private:
         case ArithAbs: {
             if (node->child1().useKind() != Int32Use)
                 break;
-            setRelationship(Relationship(node, m_zero, Relationship::GreaterThan, -1));
+
+            // If ArithAbs cares about overflow, then INT32_MIN input will cause OSR exit.
+            // Thus we can safely say `x >= 0`.
+            if (shouldCheckOverflow(node->arithMode())) {
+                setRelationship(Relationship(node, m_zero, Relationship::GreaterThan, -1));
+                break;
+            }
+
+            // If ArithAbs does not care about overflow, it can return INT32_MIN if the input is INT32_MIN.
+            // If minValue is not INT32_MIN, we can still say it is `x >= 0`.
+            int minValue = std::numeric_limits<int>::min();
+            auto iter = m_relationships.find(node->child1().node());
+            if (iter != m_relationships.end()) {
+                for (Relationship relationship : iter->value)
+                    minValue = std::max(minValue, relationship.minValueOfLeft());
+            }
+
+            if (minValue > std::numeric_limits<int>::min())
+                setRelationship(Relationship(node, m_zero, Relationship::GreaterThan, -1));
             break;
         }
 

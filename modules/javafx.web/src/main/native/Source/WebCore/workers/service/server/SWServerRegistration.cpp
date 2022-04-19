@@ -97,7 +97,7 @@ void SWServerRegistration::updateRegistrationState(ServiceWorkerRegistrationStat
         break;
     };
 
-    Optional<ServiceWorkerData> serviceWorkerData;
+    std::optional<ServiceWorkerData> serviceWorkerData;
     if (worker)
         serviceWorkerData = worker->data();
 
@@ -146,15 +146,15 @@ void SWServerRegistration::forEachConnection(const WTF::Function<void(SWServer::
 
 ServiceWorkerRegistrationData SWServerRegistration::data() const
 {
-    Optional<ServiceWorkerData> installingWorkerData;
+    std::optional<ServiceWorkerData> installingWorkerData;
     if (m_installingWorker)
         installingWorkerData = m_installingWorker->data();
 
-    Optional<ServiceWorkerData> waitingWorkerData;
+    std::optional<ServiceWorkerData> waitingWorkerData;
     if (m_waitingWorker)
         waitingWorkerData = m_waitingWorker->data();
 
-    Optional<ServiceWorkerData> activeWorkerData;
+    std::optional<ServiceWorkerData> activeWorkerData;
     if (m_activeWorker)
         activeWorkerData = m_activeWorker->data();
 
@@ -370,12 +370,14 @@ void SWServerRegistration::softUpdate()
     m_server.softUpdate(*this);
 }
 
-void SWServerRegistration::scheduleSoftUpdate()
+void SWServerRegistration::scheduleSoftUpdate(IsAppInitiated isAppInitiated)
 {
     // To avoid scheduling many updates during a single page load, we do soft updates on a 1 second delay and keep delaying
     // as long as soft update requests keep coming. This seems to match Chrome's behavior.
     if (m_softUpdateTimer.isActive())
         return;
+
+    m_isAppInitiated = isAppInitiated == IsAppInitiated::Yes;
 
     RELEASE_LOG(ServiceWorker, "SWServerRegistration::softUpdateIfNeeded");
     m_softUpdateTimer.startOneShot(softUpdateDelay);

@@ -36,10 +36,6 @@
 #include <mutex>
 #include <wtf/Expected.h>
 
-#if !OS(WINDOWS)
-#include <unistd.h>
-#endif
-
 namespace JSC {
 
 VMInspector& VMInspector::instance()
@@ -54,65 +50,39 @@ VMInspector& VMInspector::instance()
 
 void VMInspector::add(VM* vm)
 {
-    auto locker = holdLock(m_lock);
+    Locker locker { m_lock };
     m_vmList.append(vm);
 }
 
 void VMInspector::remove(VM* vm)
 {
-    auto locker = holdLock(m_lock);
+    Locker locker { m_lock };
     m_vmList.remove(vm);
-}
-
-auto VMInspector::lock(Seconds timeout) -> Expected<Locker, Error>
-{
-    // This function may be called from a signal handler (e.g. via visit()). Hence,
-    // it should only use APIs that are safe to call from signal handlers. This is
-    // why we use unistd.h's sleep() instead of its alternatives.
-
-    // We'll be doing sleep(1) between tries below. Hence, sleepPerRetry is 1.
-    unsigned maxRetries = (timeout < Seconds::infinity()) ? timeout.value() : UINT_MAX;
-
-    Expected<Locker, Error> locker = Locker::tryLock(m_lock);
-    unsigned tryCount = 0;
-    while (!locker && tryCount < maxRetries) {
-        // We want the version of sleep from unistd.h. Cast to disambiguate.
-#if !OS(WINDOWS)
-        (static_cast<unsigned (*)(unsigned)>(sleep))(1);
-#endif
-        locker = Locker::tryLock(m_lock);
-    }
-
-    if (!locker)
-        return makeUnexpected(Error::TimedOut);
-    return locker;
 }
 
 #if ENABLE(JIT)
 static bool ensureIsSafeToLock(Lock& lock)
 {
-    unsigned maxRetries = 2;
+    static constexpr unsigned maxRetries = 2;
     unsigned tryCount = 0;
-    while (tryCount <= maxRetries) {
-        bool success = lock.tryLock();
-        if (success) {
+    while (tryCount++ <= maxRetries) {
+        if (lock.tryLock()) {
             lock.unlock();
             return true;
         }
-        tryCount++;
     }
     return false;
-};
+}
 #endif // ENABLE(JIT)
 
 void VMInspector::forEachVM(Function<FunctorStatus(VM&)>&& func)
 {
     VMInspector& inspector = instance();
-    Locker lock(inspector.getLock());
+    Locker lock { inspector.getLock() };
     inspector.iterate(func);
 }
 
-auto VMInspector::isValidExecutableMemory(const VMInspector::Locker&, void* machinePC) -> Expected<bool, Error>
+auto VMInspector::isValidExecutableMemory(void* machinePC) -> Expected<bool, Error>
 {
 #if ENABLE(JIT)
     bool found = false;
@@ -127,7 +97,7 @@ auto VMInspector::isValidExecutableMemory(const VMInspector::Locker&, void* mach
             return FunctorStatus::Continue; // Skip this VM.
         }
 
-        LockHolder executableAllocatorLocker(lock);
+        Locker executableAllocatorLocker { lock };
         if (allocator.isValidExecutableMemory(executableAllocatorLocker, machinePC)) {
             found = true;
             return FunctorStatus::Done;
@@ -144,7 +114,7 @@ auto VMInspector::isValidExecutableMemory(const VMInspector::Locker&, void* mach
 #endif
 }
 
-auto VMInspector::codeBlockForMachinePC(const VMInspector::Locker&, void* machinePC) -> Expected<CodeBlock*, Error>
+auto VMInspector::codeBlockForMachinePC(void* machinePC) -> Expected<CodeBlock*, Error>
 {
 #if ENABLE(JIT)
     CodeBlock* codeBlock = nullptr;
@@ -171,7 +141,7 @@ auto VMInspector::codeBlockForMachinePC(const VMInspector::Locker&, void* machin
             return FunctorStatus::Continue; // Skip this VM.
         }
 
-        auto locker = holdLock(codeBlockSetLock);
+        Locker locker { codeBlockSetLock };
         vm.heap.forEachCodeBlockIgnoringJITPlans(locker, [&] (CodeBlock* cb) {
             JITCode* jitCode = cb->jitCode().get();
             if (!jitCode) {

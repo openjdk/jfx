@@ -31,8 +31,8 @@
 #include "SecurityOrigin.h"
 #include <wtf/FileSystem.h>
 #include <wtf/text/CString.h>
-#include <wtf/text/StringBuilder.h>
 #include <wtf/text/StringConcatenateNumbers.h>
+#include <wtf/text/StringToIntegerConversion.h>
 
 namespace WebCore {
 
@@ -70,57 +70,49 @@ static const char separatorCharacter = '_';
 
 String SecurityOriginData::databaseIdentifier() const
 {
-    // Historically, we've used the following (somewhat non-sensical) string
+    // Historically, we've used the following (somewhat nonsensical) string
     // for the databaseIdentifier of local files. We used to compute this
     // string because of a bug in how we handled the scheme for file URLs.
-    // Now that we've fixed that bug, we still need to produce this string
-    // to avoid breaking existing persistent state.
+    // Now that we've fixed that bug, we produce this string for compatibility
+    // with existing persistent state.
     if (equalIgnoringASCIICase(protocol, "file"))
         return "file__0"_s;
 
-    StringBuilder stringBuilder;
-    stringBuilder.append(protocol);
-    stringBuilder.append(separatorCharacter);
-    stringBuilder.append(FileSystem::encodeForFileName(host));
-    stringBuilder.append(separatorCharacter);
-    stringBuilder.appendNumber(port.valueOr(0));
-
-    return stringBuilder.toString();
+    return makeString(protocol, separatorCharacter, FileSystem::encodeForFileName(host), separatorCharacter, port.value_or(0));
 }
 
-Optional<SecurityOriginData> SecurityOriginData::fromDatabaseIdentifier(const String& databaseIdentifier)
+std::optional<SecurityOriginData> SecurityOriginData::fromDatabaseIdentifier(const String& databaseIdentifier)
 {
     // Make sure there's a first separator
     size_t separator1 = databaseIdentifier.find(separatorCharacter);
     if (separator1 == notFound)
-        return WTF::nullopt;
+        return std::nullopt;
 
     // Make sure there's a second separator
     size_t separator2 = databaseIdentifier.reverseFind(separatorCharacter);
     if (separator2 == notFound)
-        return WTF::nullopt;
+        return std::nullopt;
 
     // Ensure there were at least 2 separator characters. Some hostnames on intranets have
     // underscores in them, so we'll assume that any additional underscores are part of the host.
     if (separator1 == separator2)
-        return WTF::nullopt;
+        return std::nullopt;
 
-    // Make sure the port section is a valid port number or doesn't exist
-    bool portOkay;
-    int port = databaseIdentifier.right(databaseIdentifier.length() - separator2 - 1).toInt(&portOkay);
-    bool portAbsent = (separator2 == databaseIdentifier.length() - 1);
-    if (!(portOkay || portAbsent))
-        return WTF::nullopt;
+    // Make sure the port section is a valid port number or doesn't exist.
+    auto portLength = databaseIdentifier.length() - separator2 - 1;
+    auto port = parseIntegerAllowingTrailingJunk<uint16_t>(StringView { databaseIdentifier }.right(portLength));
 
-    if (port < 0 || port > std::numeric_limits<uint16_t>::max())
-        return WTF::nullopt;
+    // Nothing after the colon is fine. Failure to parse after the colon is not.
+    if (!port && portLength)
+        return std::nullopt;
+
+    // Treat port 0 like there is was no port specified.
+    if (port && !*port)
+        port = std::nullopt;
 
     auto protocol = databaseIdentifier.substring(0, separator1);
     auto host = databaseIdentifier.substring(separator1 + 1, separator2 - separator1 - 1);
-    if (!port)
-        return SecurityOriginData { protocol, host, WTF::nullopt };
-
-    return SecurityOriginData { protocol, host, static_cast<uint16_t>(port) };
+    return SecurityOriginData { protocol, host, port };
 }
 
 SecurityOriginData SecurityOriginData::isolatedCopy() const

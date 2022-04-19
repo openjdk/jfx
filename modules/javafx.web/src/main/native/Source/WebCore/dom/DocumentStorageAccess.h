@@ -29,7 +29,6 @@
 
 #include "RegistrableDomain.h"
 #include "Supplementable.h"
-#include <wtf/Optional.h>
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
@@ -66,10 +65,10 @@ struct RequestStorageAccessResult {
     RegistrableDomain subFrameDomain;
 
     template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static Optional<RequestStorageAccessResult> decode(Decoder&);
+    template<class Decoder> static std::optional<RequestStorageAccessResult> decode(Decoder&);
 };
 
-const unsigned maxNumberOfTimesExplicitlyDeniedFrameSpecificStorageAccess = 2;
+const unsigned maxNumberOfTimesExplicitlyDeniedStorageAccess = 2;
 
 class DocumentStorageAccess final : public Supplement<Document>, public CanMakeWeakPtr<DocumentStorageAccess> {
     WTF_MAKE_FAST_ALLOCATED;
@@ -85,11 +84,11 @@ public:
     static void requestStorageAccessForNonDocumentQuirk(Document& hostingDocument, RegistrableDomain&& requestingDomain, CompletionHandler<void(StorageAccessWasGranted)>&&);
 
 private:
-    Optional<bool> hasStorageAccessQuickCheck();
+    std::optional<bool> hasStorageAccessQuickCheck();
     void hasStorageAccess(Ref<DeferredPromise>&&);
     bool hasStorageAccessQuirk();
 
-    Optional<StorageAccessQuickResult> requestStorageAccessQuickCheck();
+    std::optional<StorageAccessQuickResult> requestStorageAccessQuickCheck();
     void requestStorageAccess(Ref<DeferredPromise>&&);
     void requestStorageAccessForDocumentQuirk(CompletionHandler<void(StorageAccessWasGranted)>&&);
     void requestStorageAccessForNonDocumentQuirk(RegistrableDomain&& requestingDomain, CompletionHandler<void(StorageAccessWasGranted)>&&);
@@ -99,7 +98,7 @@ private:
     static const char* supplementName();
     bool hasFrameSpecificStorageAccess() const;
     void setWasExplicitlyDeniedFrameSpecificStorageAccess() { ++m_numberOfTimesExplicitlyDeniedFrameSpecificStorageAccess; };
-    bool isAllowedToRequestFrameSpecificStorageAccess() { return m_numberOfTimesExplicitlyDeniedFrameSpecificStorageAccess < maxNumberOfTimesExplicitlyDeniedFrameSpecificStorageAccess; };
+    bool isAllowedToRequestStorageAccess() { return m_numberOfTimesExplicitlyDeniedFrameSpecificStorageAccess < maxNumberOfTimesExplicitlyDeniedStorageAccess; };
     void enableTemporaryTimeUserGesture();
     void consumeTemporaryTimeUserGesture();
 
@@ -119,32 +118,32 @@ void RequestStorageAccessResult::encode(Encoder& encoder) const
 }
 
 template<class Decoder>
-Optional<RequestStorageAccessResult> RequestStorageAccessResult::decode(Decoder& decoder)
+std::optional<RequestStorageAccessResult> RequestStorageAccessResult::decode(Decoder& decoder)
 {
-    Optional<StorageAccessWasGranted> wasGranted;
+    std::optional<StorageAccessWasGranted> wasGranted;
     decoder >> wasGranted;
     if (!wasGranted)
-        return WTF::nullopt;
+        return std::nullopt;
 
-    Optional<StorageAccessPromptWasShown> promptWasShown;
+    std::optional<StorageAccessPromptWasShown> promptWasShown;
     decoder >> promptWasShown;
     if (!promptWasShown)
-        return WTF::nullopt;
+        return std::nullopt;
 
-    Optional<StorageAccessScope> scope;
+    std::optional<StorageAccessScope> scope;
     decoder >> scope;
     if (!scope)
-        return WTF::nullopt;
+        return std::nullopt;
 
-    Optional<RegistrableDomain> topFrameDomain;
+    std::optional<RegistrableDomain> topFrameDomain;
     decoder >> topFrameDomain;
     if (!topFrameDomain)
-        return WTF::nullopt;
+        return std::nullopt;
 
-    Optional<RegistrableDomain> subFrameDomain;
+    std::optional<RegistrableDomain> subFrameDomain;
     decoder >> subFrameDomain;
     if (!subFrameDomain)
-        return WTF::nullopt;
+        return std::nullopt;
 
     return { { WTFMove(*wasGranted), WTFMove(*promptWasShown), WTFMove(*scope), WTFMove(*topFrameDomain), WTFMove(*subFrameDomain) } };
 }

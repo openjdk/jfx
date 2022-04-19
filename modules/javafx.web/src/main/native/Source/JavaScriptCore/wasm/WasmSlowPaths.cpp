@@ -29,6 +29,7 @@
 #if ENABLE(WEBASSEMBLY)
 
 #include "BytecodeStructs.h"
+#include "JSWebAssemblyInstance.h"
 #include "LLIntData.h"
 #include "WasmBBQPlan.h"
 #include "WasmCallee.h"
@@ -40,6 +41,7 @@
 #include "WasmOperations.h"
 #include "WasmSignatureInlines.h"
 #include "WasmWorklist.h"
+#include "WebAssemblyFunction.h"
 
 namespace JSC { namespace LLInt {
 
@@ -102,7 +104,7 @@ inline bool jitCompileAndSetHeuristics(Wasm::LLIntCallee* callee, Wasm::Function
         return false;
     }
 
-    if (callee->replacement())  {
+    if (callee->replacement(instance->memory()->mode()))  {
         dataLogLnIf(Options::verboseOSR(), "    Code was already compiled.");
         tierUpCounter.optimizeSoon();
         return true;
@@ -110,7 +112,7 @@ inline bool jitCompileAndSetHeuristics(Wasm::LLIntCallee* callee, Wasm::Function
 
     bool compile = false;
     {
-        auto locker = holdLock(tierUpCounter.m_lock);
+        Locker locker { tierUpCounter.m_lock };
         switch (tierUpCounter.m_compilationStatus) {
         case Wasm::LLIntTierUpCounter::CompilationStatus::NotCompiled:
             compile = true;
@@ -139,7 +141,7 @@ inline bool jitCompileAndSetHeuristics(Wasm::LLIntCallee* callee, Wasm::Function
             tierUpCounter.optimizeAfterWarmUp();
     }
 
-    return !!callee->replacement();
+    return !!callee->replacement(instance->memory()->mode());
 }
 
 WASM_SLOW_PATH_DECL(prologue_osr)
@@ -162,7 +164,7 @@ WASM_SLOW_PATH_DECL(prologue_osr)
     if (!jitCompileAndSetHeuristics(callee, codeBlock, instance))
         WASM_RETURN_TWO(nullptr, nullptr);
 
-    WASM_RETURN_TWO(callee->replacement()->entrypoint().executableAddress(), nullptr);
+    WASM_RETURN_TWO(callee->replacement(instance->memory()->mode())->entrypoint().executableAddress(), nullptr);
 }
 
 WASM_SLOW_PATH_DECL(loop_osr)
@@ -186,8 +188,7 @@ WASM_SLOW_PATH_DECL(loop_osr)
         WASM_RETURN_TWO(nullptr, nullptr);
     }
 
-    const auto doOSREntry = [&] {
-        Wasm::OMGForOSREntryCallee* osrEntryCallee = callee->osrEntryCallee();
+    const auto doOSREntry = [&](Wasm::OMGForOSREntryCallee* osrEntryCallee) {
         if (osrEntryCallee->loopIndex() != osrEntryData.loopIndex)
             WASM_RETURN_TWO(nullptr, nullptr);
 
@@ -204,12 +205,12 @@ WASM_SLOW_PATH_DECL(loop_osr)
         WASM_RETURN_TWO(buffer, osrEntryCallee->entrypoint().executableAddress());
     };
 
-    if (callee->osrEntryCallee())
-        return doOSREntry();
+    if (auto* osrEntryCallee = callee->osrEntryCallee(instance->memory()->mode()))
+        return doOSREntry(osrEntryCallee);
 
     bool compile = false;
     {
-        auto locker = holdLock(tierUpCounter.m_lock);
+        Locker locker { tierUpCounter.m_lock };
         switch (tierUpCounter.m_loopCompilationStatus) {
         case Wasm::LLIntTierUpCounter::CompilationStatus::NotCompiled:
             compile = true;
@@ -232,8 +233,8 @@ WASM_SLOW_PATH_DECL(loop_osr)
             tierUpCounter.optimizeAfterWarmUp();
     }
 
-    if (callee->osrEntryCallee())
-        return doOSREntry();
+    if (auto* osrEntryCallee = callee->osrEntryCallee(instance->memory()->mode()))
+        return doOSREntry(osrEntryCallee);
 
     WASM_RETURN_TWO(nullptr, nullptr);
 }
@@ -496,6 +497,40 @@ WASM_SLOW_PATH_DECL(call_indirect_no_tls)
     auto instruction = pc->as<WasmCallIndirectNoTls, WasmOpcodeTraits>();
     unsigned functionIndex = READ(instruction.m_functionIndex).unboxedInt32();
     return doWasmCallIndirect(callFrame, instance, functionIndex, instruction.m_tableIndex, instruction.m_signatureIndex);
+}
+
+inline SlowPathReturnType doWasmCallRef(CallFrame* callFrame, Wasm::Instance* callerInstance, JSValue targetReference, unsigned signatureIndex)
+{
+    UNUSED_PARAM(callFrame);
+
+    ASSERT(targetReference.isObject());
+    JSObject* referenceAsObject = jsCast<JSObject*>(targetReference);
+
+    ASSERT(referenceAsObject->inherits<WebAssemblyFunctionBase>(callerInstance->owner<JSObject>()->vm()));
+    auto* wasmFunction = jsCast<WebAssemblyFunctionBase*>(referenceAsObject);
+    Wasm::WasmToWasmImportableFunction function = wasmFunction->importableFunction();
+    Wasm::Instance* calleeInstance = &wasmFunction->instance()->instance();
+
+    if (calleeInstance != callerInstance)
+        calleeInstance->setCachedStackLimit(callerInstance->cachedStackLimit());
+
+    ASSERT(function.signatureIndex == Wasm::SignatureInformation::get(CODE_BLOCK()->signature(signatureIndex)));
+    UNUSED_PARAM(signatureIndex);
+    WASM_CALL_RETURN(calleeInstance, function.entrypointLoadLocation->executableAddress(), WasmEntryPtrTag);
+}
+
+WASM_SLOW_PATH_DECL(call_ref)
+{
+    auto instruction = pc->as<WasmCallRef, WasmOpcodeTraits>();
+    JSValue reference = JSValue::decode(READ(instruction.m_functionReference).encodedJSValue());
+    return doWasmCallRef(callFrame, instance, reference, instruction.m_signatureIndex);
+}
+
+WASM_SLOW_PATH_DECL(call_ref_no_tls)
+{
+    auto instruction = pc->as<WasmCallRefNoTls, WasmOpcodeTraits>();
+    JSValue reference = JSValue::decode(READ(instruction.m_functionReference).encodedJSValue());
+    return doWasmCallRef(callFrame, instance, reference, instruction.m_signatureIndex);
 }
 
 WASM_SLOW_PATH_DECL(set_global_ref)

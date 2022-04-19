@@ -209,27 +209,12 @@ static MacroAssemblerCodePtr<JSEntryPtrTag> callerReturnPC(CodeBlock* baselineCo
                 baselineCodeBlockForCaller->getCallLinkInfoForBytecodeIndex(callBytecodeIndex);
             RELEASE_ASSERT(callLinkInfo);
 
-            jumpTarget = callLinkInfo->callReturnLocation().retagged<JSEntryPtrTag>();
+            jumpTarget = callLinkInfo->doneLocation().retagged<JSEntryPtrTag>();
             break;
         }
 
         case InlineCallFrame::GetterCall:
         case InlineCallFrame::SetterCall: {
-            if (callInstruction.opcodeID() == op_put_by_val) {
-                // We compile op_put_by_val as PutById and inlines SetterCall only when we found StructureStubInfo for this op_put_by_val.
-                // But still it is possible that we cannot find StructureStubInfo here. Let's consider the following scenario.
-                // 1. Baseline CodeBlock (A) is compiled.
-                // 2. (A) gets DFG (B).
-                // 3. Since (A) collects enough information for put_by_val, (B) can get StructureStubInfo from (A) and copmile it as inlined Setter call.
-                // 4. (A)'s JITData is destroyed since it is not executed. Then, (A) becomes LLInt.
-                // 5. The CodeBlock inlining (A) gets OSR exit. So (A) is executed and (A) eventually gets Baseline CodeBlock again.
-                // 6. (B) gets OSR exit. (B) attempts to search for StructureStubInfo in (A) for PutById (originally, put_by_val). But it does not exist since (A)'s JITData is cleared once.
-                ByValInfo* byValInfo = baselineCodeBlockForCaller->findByValInfo(CodeOrigin(callBytecodeIndex));
-                RELEASE_ASSERT(byValInfo);
-                jumpTarget = byValInfo->doneTarget.retagged<JSEntryPtrTag>();
-                break;
-            }
-
             StructureStubInfo* stubInfo = baselineCodeBlockForCaller->findStubInfo(CodeOrigin(callBytecodeIndex));
             RELEASE_ASSERT(stubInfo);
             jumpTarget = stubInfo->doneLocation.retagged<JSEntryPtrTag>();
@@ -284,7 +269,7 @@ void reifyInlinedCallFrames(CCallHelpers& jit, const OSRExitBase& exit)
             jit.addPtr(AssemblyHelpers::TrustedImm32(sizeof(CallerFrameAndPC)), GPRInfo::callFrameRegister, GPRInfo::regT2);
             jit.untagPtr(GPRInfo::regT2, GPRInfo::regT3);
             jit.addPtr(AssemblyHelpers::TrustedImm32(inlineCallFrame->returnPCOffset() + sizeof(void*)), GPRInfo::callFrameRegister, GPRInfo::regT2);
-            jit.validateUntaggedPtr(GPRInfo::regT3, GPRInfo::nonArgGPR0);
+            jit.validateUntaggedPtr(GPRInfo::regT3, GPRInfo::regT4);
             jit.tagPtr(GPRInfo::regT2, GPRInfo::regT3);
 #endif
             jit.storePtr(GPRInfo::regT3, AssemblyHelpers::addressForByteOffset(inlineCallFrame->returnPCOffset()));
@@ -305,9 +290,9 @@ void reifyInlinedCallFrames(CCallHelpers& jit, const OSRExitBase& exit)
 
 #if CPU(ARM64E)
             jit.addPtr(AssemblyHelpers::TrustedImm32(inlineCallFrame->returnPCOffset() + sizeof(void*)), GPRInfo::callFrameRegister, GPRInfo::regT2);
-            jit.move(AssemblyHelpers::TrustedImmPtr(jumpTarget.untaggedExecutableAddress()), GPRInfo::nonArgGPR0);
-            jit.tagPtr(GPRInfo::regT2, GPRInfo::nonArgGPR0);
-            jit.storePtr(GPRInfo::nonArgGPR0, AssemblyHelpers::addressForByteOffset(inlineCallFrame->returnPCOffset()));
+            jit.move(AssemblyHelpers::TrustedImmPtr(jumpTarget.untaggedExecutableAddress()), GPRInfo::regT4);
+            jit.tagPtr(GPRInfo::regT2, GPRInfo::regT4);
+            jit.storePtr(GPRInfo::regT4, AssemblyHelpers::addressForByteOffset(inlineCallFrame->returnPCOffset()));
 #else
             jit.storePtr(AssemblyHelpers::TrustedImmPtr(jumpTarget.untaggedExecutableAddress()), AssemblyHelpers::addressForByteOffset(inlineCallFrame->returnPCOffset()));
 #endif
@@ -318,11 +303,11 @@ void reifyInlinedCallFrames(CCallHelpers& jit, const OSRExitBase& exit)
         // Restore the inline call frame's callee save registers.
         // If this inlined frame is a tail call that will return back to the original caller, we need to
         // copy the prior contents of the tag registers already saved for the outer frame to this frame.
-        jit.emitSaveOrCopyCalleeSavesFor(
+        jit.emitSaveOrCopyLLIntBaselineCalleeSavesFor(
             baselineCodeBlock,
             static_cast<VirtualRegister>(inlineCallFrame->stackOffset),
             trueCaller ? AssemblyHelpers::UseExistingTagRegisterContents : AssemblyHelpers::CopyBaselineCalleeSavedRegistersFromBaseFrame,
-            GPRInfo::regT2);
+            GPRInfo::regT2, GPRInfo::regT1, GPRInfo::regT4);
 
         if (callerIsLLInt) {
             CodeBlock* baselineCodeBlockForCaller = jit.baselineCodeBlockFor(*trueCaller);

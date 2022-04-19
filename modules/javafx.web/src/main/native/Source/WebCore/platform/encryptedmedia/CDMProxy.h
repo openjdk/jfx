@@ -36,8 +36,7 @@
 #include "SharedBuffer.h"
 #include <wtf/BoxPtr.h>
 #include <wtf/Condition.h>
-#include <wtf/VectorHash.h>
-#include <wtf/WeakHashSet.h>
+#include <wtf/Lock.h>
 
 #if ENABLE(THUNDER)
 #include "CDMOpenCDMTypes.h"
@@ -69,6 +68,12 @@ public:
     const KeyHandleValueVariant& value() const { return m_value; }
     KeyHandleValueVariant& value() { return m_value; }
     KeyStatus status() const { return m_status; }
+    void mergeKeyInto(RefPtr<KeyHandle>&& other)
+    {
+        m_status = other->m_status;
+        m_value = other->m_value;
+        m_numSessionReferences += other->m_numSessionReferences;
+    }
     bool isStatusCurrentlyValid()
     {
         return m_status == CDMInstanceSession::KeyStatus::Usable || m_status == CDMInstanceSession::KeyStatus::OutputRestricted
@@ -100,8 +105,10 @@ public:
 private:
     void addSessionReference() { ASSERT(isMainThread()); m_numSessionReferences++; }
     void removeSessionReference() { ASSERT(isMainThread()); m_numSessionReferences--; }
-    unsigned numSessionReferences() const { ASSERT(isMainThread()); return m_numSessionReferences; }
+    int numSessionReferences() const { ASSERT(isMainThread()); return m_numSessionReferences; }
+    bool hasReferences() const { ASSERT(isMainThread()); return m_numSessionReferences > 0; }
     friend class KeyStore;
+    friend class ReferenceAwareKeyStore;
 
     KeyHandle(KeyStatus status, KeyIDType&& keyID, KeyHandleValueVariant&& keyHandleValue)
         : m_status(status), m_id(WTFMove(keyID)), m_value(WTFMove(keyHandleValue)) { }
@@ -109,7 +116,7 @@ private:
     KeyStatus m_status;
     KeyIDType m_id;
     KeyHandleValueVariant m_value;
-    unsigned m_numSessionReferences { 0 };
+    int m_numSessionReferences { 0 };
 };
 
 class KeyStore {
@@ -117,20 +124,23 @@ public:
     using KeyStatusVector = CDMInstanceSession::KeyStatusVector;
 
     KeyStore() = default;
+    virtual ~KeyStore() = default;
 
     bool containsKeyID(const KeyIDType&) const;
     void merge(const KeyStore&);
-    void removeAllKeysFrom(const KeyStore&);
-    void removeAllKeys() { m_keys.clear(); }
+    void unrefAllKeysFrom(const KeyStore&);
+    void unrefAllKeys();
     bool addKeys(Vector<RefPtr<KeyHandle>>&&);
     bool add(RefPtr<KeyHandle>&&);
-    bool remove(const RefPtr<KeyHandle>&);
+    bool unref(const RefPtr<KeyHandle>&);
     bool hasKeys() const { return m_keys.size(); }
     unsigned numKeys() const { return m_keys.size(); }
     const RefPtr<KeyHandle>& keyHandle(const KeyIDType&) const;
     KeyStatusVector allKeysAs(CDMInstanceSession::KeyStatus) const;
     KeyStatusVector convertToJSKeyStatusVector() const;
     bool isEmpty() const { return m_keys.isEmpty(); }
+    virtual void addSessionReferenceTo(const RefPtr<KeyHandle>&) const { }
+    virtual void removeSessionReferenceFrom(const RefPtr<KeyHandle>&) const { };
 
     auto begin() { return m_keys.begin(); }
     auto begin() const { return m_keys.begin(); }
@@ -145,6 +155,13 @@ private:
     Vector<RefPtr<KeyHandle>> m_keys;
 };
 
+class ReferenceAwareKeyStore : public KeyStore {
+public:
+    virtual ~ReferenceAwareKeyStore() = default;
+    void addSessionReferenceTo(const RefPtr<KeyHandle>& key) const final { key->addSessionReference(); }
+    void removeSessionReferenceFrom(const RefPtr<KeyHandle>& key) const final { key->removeSessionReference(); }
+};
+
 class CDMInstanceProxy;
 class CDMProxyDecryptionClient;
 
@@ -156,36 +173,31 @@ public:
 
     virtual ~CDMProxy() = default;
 
-    void updateKeyStore(const KeyStore& newKeyStore);
+    void updateKeyStore(const KeyStore&);
+    void unrefAllKeysFrom(const KeyStore&);
     void setInstance(CDMInstanceProxy*);
     void abortWaitingForKey() const;
-
-    virtual void releaseDecryptionResources()
-    {
-        ASSERT(isMainThread());
-        m_keyStore.removeAllKeys();
-    }
 
 protected:
     RefPtr<KeyHandle> keyHandle(const KeyIDType&) const;
     bool keyAvailable(const KeyIDType&) const;
-    bool keyAvailableUnlocked(const KeyIDType&) const;
-    Optional<Ref<KeyHandle>> tryWaitForKeyHandle(const KeyIDType&, WeakPtr<CDMProxyDecryptionClient>&&) const;
-    Optional<Ref<KeyHandle>> getOrWaitForKeyHandle(const KeyIDType&, WeakPtr<CDMProxyDecryptionClient>&&) const;
-    Optional<KeyHandleValueVariant> getOrWaitForKeyValue(const KeyIDType&, WeakPtr<CDMProxyDecryptionClient>&&) const;
+    bool keyAvailableUnlocked(const KeyIDType&) const WTF_REQUIRES_LOCK(m_keysLock);
+    std::optional<Ref<KeyHandle>> tryWaitForKeyHandle(const KeyIDType&, WeakPtr<CDMProxyDecryptionClient>&&) const;
+    std::optional<Ref<KeyHandle>> getOrWaitForKeyHandle(const KeyIDType&, WeakPtr<CDMProxyDecryptionClient>&&) const;
+    std::optional<KeyHandleValueVariant> getOrWaitForKeyValue(const KeyIDType&, WeakPtr<CDMProxyDecryptionClient>&&) const;
     void startedWaitingForKey() const;
     void stoppedWaitingForKey() const;
-    const CDMInstanceProxy* instance() const { return m_instance; }
+    const CDMInstanceProxy* instance() const;
 
 private:
-    mutable Lock m_instanceMutex;
-    CDMInstanceProxy* m_instance;
+    mutable Lock m_instanceLock;
+    CDMInstanceProxy* m_instance WTF_GUARDED_BY_LOCK(m_instanceLock);
 
-    mutable Lock m_keysMutex;
+    mutable Lock m_keysLock;
     mutable Condition m_keysCondition;
     // FIXME: Duplicated key stores in the instance and the proxy are probably not needed, but simplified
     // the initial implementation in terms of threading invariants.
-    KeyStore m_keyStore;
+    ReferenceAwareKeyStore m_keyStore WTF_GUARDED_BY_LOCK(m_keysLock);
 };
 
 class CDMProxyFactory {
@@ -213,10 +225,6 @@ private:
 class CDMInstanceProxy;
 
 class CDMInstanceSessionProxy : public CDMInstanceSession, public CanMakeWeakPtr<CDMInstanceSessionProxy, WeakPtrFactoryInitialization::Eager> {
-public:
-    virtual void releaseDecryptionResources() { m_instance.clear(); }
-    void removeFromInstanceProxy();
-
 protected:
     CDMInstanceSessionProxy(CDMInstanceProxy&);
     const WeakPtr<CDMInstanceProxy>& cdmInstanceProxy() const { return m_instance; }
@@ -240,7 +248,7 @@ public:
 
     // Main-thread only.
     void mergeKeysFrom(const KeyStore&);
-    void removeAllKeysFrom(const KeyStore&);
+    void unrefAllKeysFrom(const KeyStore&);
 
     // Media player query methods - main thread only.
     const RefPtr<CDMProxy>& proxy() const { ASSERT(isMainThread()); return m_cdmProxy; }
@@ -251,23 +259,6 @@ public:
     void startedWaitingForKey();
     void stoppedWaitingForKey();
 
-    void removeSession(const CDMInstanceSessionProxy& session) { m_sessions.remove(session); }
-    virtual void releaseDecryptionResources()
-    {
-        ASSERT(isMainThread());
-        m_keyStore.removeAllKeys();
-        for (auto& session : m_sessions)
-            session.releaseDecryptionResources();
-        m_sessions.clear();
-        if (m_cdmProxy) {
-            m_cdmProxy->releaseDecryptionResources();
-            m_cdmProxy = nullptr;
-        }
-    }
-
-protected:
-    void trackSession(const CDMInstanceSessionProxy&);
-
 private:
     RefPtr<CDMProxy> m_cdmProxy;
     // FIXME: WeakPtr for the m_player? This is accessed from background and main threads, it's
@@ -276,12 +267,12 @@ private:
     MediaPlayer* m_player { nullptr }; // FIXME: MainThread<T>?
 
     std::atomic<int> m_numDecryptorsWaitingForKey { 0 };
-    WeakHashSet<CDMInstanceSessionProxy> m_sessions;
-
-    KeyStore m_keyStore;
 };
 
 class CDMProxyDecryptionClient : public CanMakeWeakPtr<CDMProxyDecryptionClient, WeakPtrFactoryInitialization::Eager> {
+public:
+    virtual bool isAborting() = 0;
+    virtual ~CDMProxyDecryptionClient() = default;
 public:
     virtual bool isAborting() = 0;
     virtual ~CDMProxyDecryptionClient() = default;

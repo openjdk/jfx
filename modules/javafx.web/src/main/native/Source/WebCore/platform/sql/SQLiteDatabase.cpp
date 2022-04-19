@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006, 2007, 2008 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2021 Apple Inc. All rights reserved.
  * Copyright (C) 2007 Justin Haygood (jhaygood@reaktix.com)
  *
  * Redistribution and use in source and binary forms, with or without
@@ -37,6 +37,7 @@
 #include <sqlite3.h>
 #include <thread>
 #include <wtf/FileSystem.h>
+#include <wtf/Lock.h>
 #include <wtf/Threading.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/StringConcatenateNumbers.h>
@@ -71,12 +72,12 @@ static void initializeSQLiteIfNecessary()
     });
 }
 
-static bool isDatabaseOpeningForbidden = false;
-static Lock isDatabaseOpeningForbiddenMutex;
+static Lock isDatabaseOpeningForbiddenLock;
+static bool isDatabaseOpeningForbidden WTF_GUARDED_BY_LOCK(isDatabaseOpeningForbiddenLock) { false };
 
 void SQLiteDatabase::setIsDatabaseOpeningForbidden(bool isForbidden)
 {
-    auto locker = holdLock(isDatabaseOpeningForbiddenMutex);
+    Locker locker { isDatabaseOpeningForbiddenLock };
     isDatabaseOpeningForbidden = isForbidden;
 }
 
@@ -94,7 +95,7 @@ bool SQLiteDatabase::open(const String& filename, OpenMode openMode)
     close();
 
     {
-        auto locker = holdLock(isDatabaseOpeningForbiddenMutex);
+        Locker locker { isDatabaseOpeningForbiddenLock };
         if (isDatabaseOpeningForbidden) {
             m_openErrorMessage = "opening database is forbidden";
             return false;
@@ -113,13 +114,15 @@ bool SQLiteDatabase::open(const String& filename, OpenMode openMode)
             break;
         }
 
-        m_openError = sqlite3_open_v2(FileSystem::fileSystemRepresentation(filename).data(), &m_db, flags, nullptr);
+        {
+            SQLiteTransactionInProgressAutoCounter transactionCounter;
+            m_openError = sqlite3_open_v2(FileSystem::fileSystemRepresentation(filename).data(), &m_db, flags, nullptr);
+        }
         if (m_openError != SQLITE_OK) {
             m_openErrorMessage = m_db ? sqlite3_errmsg(m_db) : "sqlite_open returned null";
             LOG_ERROR("SQLite database failed to load from %s\nCause - %s", filename.ascii().data(),
                 m_openErrorMessage.data());
-            sqlite3_close(m_db);
-            m_db = 0;
+            close(ShouldSetErrorState::No);
             return false;
         }
     }
@@ -130,8 +133,7 @@ bool SQLiteDatabase::open(const String& filename, OpenMode openMode)
     if (m_openError != SQLITE_OK) {
         m_openErrorMessage = sqlite3_errmsg(m_db);
         LOG_ERROR("SQLite database error when enabling extended errors - %s", m_openErrorMessage.data());
-        sqlite3_close(m_db);
-        m_db = 0;
+        close(ShouldSetErrorState::No);
         return false;
     }
 
@@ -142,14 +144,14 @@ bool SQLiteDatabase::open(const String& filename, OpenMode openMode)
 
     {
         SQLiteTransactionInProgressAutoCounter transactionCounter;
-        if (!SQLiteStatement(*this, "PRAGMA temp_store = MEMORY;"_s).executeCommand())
+        if (!executeCommand("PRAGMA temp_store = MEMORY;"_s))
             LOG_ERROR("SQLite database could not set temp_store to memory");
     }
 
     if (openMode != OpenMode::ReadOnly)
         useWALJournalMode();
 
-    String shmFileName = makeString(filename, "-shm"_s);
+    auto shmFileName = makeString(filename, "-shm"_s);
     if (FileSystem::fileExists(shmFileName)) {
         if (!FileSystem::isSafeToUseMemoryMapForPath(shmFileName)) {
             RELEASE_LOG_FAULT(SQLDatabase, "Opened an SQLite database with a Class A -shm file. This may trigger a crash when the user locks the device. (%s)", shmFileName.latin1().data());
@@ -193,14 +195,40 @@ void SQLiteDatabase::enableAutomaticWALTruncation()
     sqlite3_wal_hook(m_db, walAutomaticTruncationHook, nullptr);
 }
 
+static int checkpointModeValue(SQLiteDatabase::CheckpointMode mode)
+{
+    switch (mode) {
+    case SQLiteDatabase::CheckpointMode::Full:
+        return SQLITE_CHECKPOINT_FULL;
+    case SQLiteDatabase::CheckpointMode::Truncate:
+        return SQLITE_CHECKPOINT_TRUNCATE;
+    }
+    RELEASE_ASSERT_NOT_REACHED();
+}
+
+void SQLiteDatabase::checkpoint(CheckpointMode mode)
+{
+    SQLiteTransactionInProgressAutoCounter transactionCounter;
+    int result = sqlite3_wal_checkpoint_v2(m_db, nullptr, checkpointModeValue(mode), nullptr, nullptr);
+    if (result == SQLITE_OK)
+        return;
+
+    if (result == SQLITE_BUSY) {
+        LOG(SQLDatabase, "SQLite database checkpoint is blocked");
+        return;
+    }
+
+    LOG_ERROR("SQLite database failed to checkpoint: %s", lastErrorMsg());
+}
+
 void SQLiteDatabase::useWALJournalMode()
 {
     m_useWAL = true;
     {
-        SQLiteStatement walStatement(*this, "PRAGMA journal_mode=WAL;"_s);
-        if (walStatement.prepareAndStep() == SQLITE_ROW) {
+        auto walStatement = prepareStatement("PRAGMA journal_mode=WAL;"_s);
+        if (walStatement && walStatement->step() == SQLITE_ROW) {
 #ifndef NDEBUG
-            String mode = walStatement.getColumnText(0);
+            String mode = walStatement->columnText(0);
             if (!equalLettersIgnoringASCIICase(mode, "wal"))
                 LOG_ERROR("journal_mode of database should be 'WAL', but is '%s'", mode.utf8().data());
 #endif
@@ -208,37 +236,39 @@ void SQLiteDatabase::useWALJournalMode()
             LOG_ERROR("SQLite database failed to set journal_mode to WAL, error: %s", lastErrorMsg());
     }
 
-    {
-        SQLiteTransactionInProgressAutoCounter transactionCounter;
-        SQLiteStatement checkpointStatement(*this, "PRAGMA wal_checkpoint(TRUNCATE)"_s);
-        if (checkpointStatement.prepareAndStep() == SQLITE_ROW) {
-            if (checkpointStatement.getColumnInt(0))
-                LOG(SQLDatabase, "SQLite database checkpoint is blocked");
-        } else
-            LOG_ERROR("SQLite database failed to checkpoint: %s", lastErrorMsg());
-    }
+    checkpoint(CheckpointMode::Truncate);
 }
 
-void SQLiteDatabase::close()
+void SQLiteDatabase::close(ShouldSetErrorState shouldSetErrorState)
 {
     if (m_db) {
+        ASSERT_WITH_MESSAGE(!m_statementCount, "All SQLiteTransaction objects should be destroyed before closing the database");
+
         // FIXME: This is being called on the main thread during JS GC. <rdar://problem/5739818>
         // ASSERT(m_openingThread == &Thread::current());
         sqlite3* db = m_db;
         {
-            LockHolder locker(m_databaseClosingMutex);
+            Locker locker { m_databaseClosingMutex };
             m_db = 0;
         }
+
+        int closeResult;
         if (m_useWAL) {
+            // Close in the scope of counter as it may acquire lock of database.
             SQLiteTransactionInProgressAutoCounter transactionCounter;
-            sqlite3_close(db);
+            closeResult = sqlite3_close(db);
         } else
-            sqlite3_close(db);
+            closeResult = sqlite3_close(db);
+
+        if (closeResult != SQLITE_OK)
+            RELEASE_LOG_ERROR(SQLDatabase, "SQLiteDatabase::close: Failed to close database (%d) - %{public}s", closeResult, lastErrorMsg());
     }
 
-    m_openingThread = nullptr;
-    m_openError = SQLITE_ERROR;
-    m_openErrorMessage = CString();
+    if (shouldSetErrorState == ShouldSetErrorState::Yes) {
+        m_openingThread = nullptr;
+        m_openError = SQLITE_ERROR;
+        m_openErrorMessage = CString();
+    }
 }
 
 void SQLiteDatabase::overrideUnauthorizedFunctions()
@@ -270,10 +300,10 @@ int64_t SQLiteDatabase::maximumSize()
     int64_t maxPageCount = 0;
 
     {
-        LockHolder locker(m_authorizerLock);
+        Locker locker { m_authorizerLock };
         enableAuthorizer(false);
-        SQLiteStatement statement(*this, "PRAGMA max_page_count"_s);
-        maxPageCount = statement.getColumnInt64(0);
+        auto statement = prepareStatement("PRAGMA max_page_count"_s);
+        maxPageCount = statement ? statement->columnInt64(0) : 0;
         enableAuthorizer(true);
     }
 
@@ -290,12 +320,11 @@ void SQLiteDatabase::setMaximumSize(int64_t size)
     ASSERT(currentPageSize || !m_db);
     int64_t newMaxPageCount = currentPageSize ? size / currentPageSize : 0;
 
-    LockHolder locker(m_authorizerLock);
+    Locker locker { m_authorizerLock };
     enableAuthorizer(false);
 
-    SQLiteStatement statement(*this, makeString("PRAGMA max_page_count = ", newMaxPageCount));
-    statement.prepare();
-    if (statement.step() != SQLITE_ROW)
+    auto statement = prepareStatementSlow(makeString("PRAGMA max_page_count = ", newMaxPageCount));
+    if (!statement || statement->step() != SQLITE_ROW)
         LOG_ERROR("Failed to set maximum size of database to %lli bytes", static_cast<long long>(size));
 
     enableAuthorizer(true);
@@ -307,11 +336,11 @@ int SQLiteDatabase::pageSize()
     // Since the page size of a database is locked in at creation and therefore cannot be dynamic,
     // we can cache the value for future use
     if (m_pageSize == -1) {
-        LockHolder locker(m_authorizerLock);
+        Locker locker { m_authorizerLock };
         enableAuthorizer(false);
 
-        SQLiteStatement statement(*this, "PRAGMA page_size"_s);
-        m_pageSize = statement.getColumnInt(0);
+        auto statement = prepareStatement("PRAGMA page_size"_s);
+        m_pageSize = statement ? statement->columnInt(0) : 0;
 
         enableAuthorizer(true);
     }
@@ -324,11 +353,11 @@ int64_t SQLiteDatabase::freeSpaceSize()
     int64_t freelistCount = 0;
 
     {
-        LockHolder locker(m_authorizerLock);
+        Locker locker { m_authorizerLock };
         enableAuthorizer(false);
         // Note: freelist_count was added in SQLite 3.4.1.
-        SQLiteStatement statement(*this, "PRAGMA freelist_count"_s);
-        freelistCount = statement.getColumnInt64(0);
+        auto statement = prepareStatement("PRAGMA freelist_count"_s);
+        freelistCount = statement ? statement->columnInt64(0) : 0;
         enableAuthorizer(true);
     }
 
@@ -340,10 +369,10 @@ int64_t SQLiteDatabase::totalSize()
     int64_t pageCount = 0;
 
     {
-        LockHolder locker(m_authorizerLock);
+        Locker locker { m_authorizerLock };
         enableAuthorizer(false);
-        SQLiteStatement statement(*this, "PRAGMA page_count"_s);
-        pageCount = statement.getColumnInt64(0);
+        auto statement = prepareStatement("PRAGMA page_count"_s);
+        pageCount = statement ? statement->columnInt64(0) : 0;
         enableAuthorizer(true);
     }
 
@@ -352,7 +381,7 @@ int64_t SQLiteDatabase::totalSize()
 
 void SQLiteDatabase::setSynchronous(SynchronousPragma sync)
 {
-    executeCommand(makeString("PRAGMA synchronous = ", static_cast<unsigned>(sync)));
+    executeCommandSlow(makeString("PRAGMA synchronous = ", static_cast<unsigned>(sync)));
 }
 
 void SQLiteDatabase::setBusyTimeout(int ms)
@@ -371,42 +400,60 @@ void SQLiteDatabase::setBusyHandler(int(*handler)(void*, int))
         LOG(SQLDatabase, "Busy handler set on non-open database");
 }
 
-bool SQLiteDatabase::executeCommand(const String& sql)
+bool SQLiteDatabase::executeCommandSlow(const String& query)
 {
-    return SQLiteStatement(*this, sql).executeCommand();
+    auto statement = prepareStatementSlow(query);
+    return statement && statement->executeCommand();
 }
 
-bool SQLiteDatabase::returnsAtLeastOneResult(const String& sql)
+bool SQLiteDatabase::executeCommand(ASCIILiteral query)
 {
-    return SQLiteStatement(*this, sql).returnsAtLeastOneResult();
+    auto statement = prepareStatement(query);
+    return statement && statement->executeCommand();
 }
 
-bool SQLiteDatabase::tableExists(const String& tablename)
+bool SQLiteDatabase::tableExists(const String& tableName)
+{
+    return !tableSQL(tableName).isEmpty();
+}
+
+String SQLiteDatabase::tableSQL(const String& tableName)
 {
     if (!isOpen())
-        return false;
+        return { };
 
-    String statement = "SELECT name FROM sqlite_master WHERE type = 'table' AND name = '" + tablename + "';";
+    auto statement = prepareStatement("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = ?;"_s);
+    if (!statement || statement->bindText(1, tableName) != SQLITE_OK || statement->step() != SQLITE_ROW)
+        return { };
 
-    SQLiteStatement sql(*this, statement);
-    sql.prepare();
-    return sql.step() == SQLITE_ROW;
+    return statement->columnText(0);
+}
+
+String SQLiteDatabase::indexSQL(const String& indexName)
+{
+    if (!isOpen())
+        return { };
+
+    auto statement = prepareStatement("SELECT sql FROM sqlite_master WHERE type = 'index' AND name = ?;"_s);
+    if (!statement || statement->bindText(1, indexName) != SQLITE_OK || statement->step() != SQLITE_ROW)
+        return { };
+
+    return statement->columnText(0);
 }
 
 void SQLiteDatabase::clearAllTables()
 {
-    String query = "SELECT name FROM sqlite_master WHERE type='table';"_s;
-    Vector<String> tables;
-    if (!SQLiteStatement(*this, query).returnTextResults(0, tables)) {
-        LOG(SQLDatabase, "Unable to retrieve list of tables from database");
+    auto statement = prepareStatement("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%';"_s);
+    if (!statement) {
+        LOG(SQLDatabase, "Failed to prepare statement to retrieve list of tables from database");
         return;
     }
-
-    for (Vector<String>::iterator table = tables.begin(); table != tables.end(); ++table ) {
-        if (*table == "sqlite_sequence")
-            continue;
-        if (!executeCommand("DROP TABLE " + *table))
-            LOG(SQLDatabase, "Unable to drop table %s", (*table).ascii().data());
+    Vector<String> tables;
+    while (statement->step() == SQLITE_ROW)
+        tables.append(statement->columnText(0));
+    for (auto& table : tables) {
+        if (!executeCommandSlow("DROP TABLE " + table))
+            LOG(SQLDatabase, "Unable to drop table %s", table.ascii().data());
     }
 }
 
@@ -419,7 +466,7 @@ int SQLiteDatabase::runVacuumCommand()
 
 int SQLiteDatabase::runIncrementalVacuumCommand()
 {
-    LockHolder locker(m_authorizerLock);
+    Locker locker { m_authorizerLock };
     enableAuthorizer(false);
 
     if (!executeCommand("PRAGMA incremental_vacuum"_s))
@@ -431,7 +478,7 @@ int SQLiteDatabase::runIncrementalVacuumCommand()
 
 void SQLiteDatabase::interrupt()
 {
-    LockHolder locker(m_databaseClosingMutex);
+    Locker locker { m_databaseClosingMutex };
     if (m_db)
         sqlite3_interrupt(m_db);
 }
@@ -443,20 +490,12 @@ int64_t SQLiteDatabase::lastInsertRowID()
     return sqlite3_last_insert_rowid(m_db);
 }
 
-void SQLiteDatabase::updateLastChangesCount()
-{
-    if (!m_db)
-        return;
-
-    m_lastChangesCount = sqlite3_total_changes(m_db);
-}
-
 int SQLiteDatabase::lastChanges()
 {
     if (!m_db)
         return 0;
 
-    return sqlite3_total_changes(m_db) - m_lastChangesCount;
+    return sqlite3_changes(m_db);
 }
 
 int SQLiteDatabase::lastError()
@@ -561,7 +600,7 @@ void SQLiteDatabase::setAuthorizer(DatabaseAuthorizer& authorizer)
         return;
     }
 
-    LockHolder locker(m_authorizerLock);
+    Locker locker { m_authorizerLock };
 
     m_authorizer = &authorizer;
 
@@ -583,10 +622,10 @@ bool SQLiteDatabase::isAutoCommitOn() const
 
 bool SQLiteDatabase::turnOnIncrementalAutoVacuum()
 {
-    SQLiteStatement statement(*this, "PRAGMA auto_vacuum"_s);
-    int autoVacuumMode = statement.getColumnInt(0);
+    int autoVacuumMode = 0;
+    if (auto statement = prepareStatement("PRAGMA auto_vacuum"_s))
+        autoVacuumMode = statement->columnInt(0);
     int error = lastError();
-    statement.finalize();
 
     // Check if we got an error while trying to get the value of the auto_vacuum flag.
     // If we got a SQLITE_BUSY error, then there's probably another transaction in
@@ -633,6 +672,86 @@ void SQLiteDatabase::setCollationFunction(const String& collationName, WTF::Func
 void SQLiteDatabase::removeCollationFunction(const String& collationName)
 {
     sqlite3_create_collation_v2(m_db, collationName.utf8().data(), SQLITE_UTF8, nullptr, nullptr, nullptr);
+}
+
+void SQLiteDatabase::releaseMemory()
+{
+    if (!m_db)
+        return;
+
+    sqlite3_db_release_memory(m_db);
+}
+
+static Expected<sqlite3_stmt*, int> constructAndPrepareStatement(SQLiteDatabase& database, const char* query, size_t queryLength)
+{
+    Locker databaseLock { database.databaseMutex() };
+    LOG(SQLDatabase, "SQL - prepare - %s", query);
+
+    // Pass the length of the string including the null character to sqlite3_prepare_v2;
+    // this lets SQLite avoid an extra string copy.
+    size_t lengthIncludingNullCharacter = queryLength + 1;
+
+    sqlite3_stmt* statement { nullptr };
+    const char* tail = nullptr;
+    int error = sqlite3_prepare_v2(database.sqlite3Handle(), query, lengthIncludingNullCharacter, &statement, &tail);
+    if (error != SQLITE_OK)
+        LOG(SQLDatabase, "sqlite3_prepare16 failed (%i)\n%s\n%s", error, query, sqlite3_errmsg(database.sqlite3Handle()));
+
+    if (tail && *tail)
+        error = SQLITE_ERROR;
+
+    if (error != SQLITE_OK) {
+        sqlite3_finalize(statement);
+        return makeUnexpected(error);
+    }
+
+    // When the query is an empty string, sqlite3_prepare_v2() sets the statement to nullptr and yet doesn't return an error.
+    if (!statement)
+        return makeUnexpected(SQLITE_ERROR);
+
+    return statement;
+}
+
+Expected<SQLiteStatement, int> SQLiteDatabase::prepareStatementSlow(const String& queryString)
+{
+    CString query = queryString.stripWhiteSpace().utf8();
+    auto sqlStatement = constructAndPrepareStatement(*this, query.data(), query.length());
+    if (!sqlStatement) {
+        RELEASE_LOG_ERROR(SQLDatabase, "SQLiteDatabase::prepareStatement: Failed to prepare statement %{public}s", query.data());
+        return makeUnexpected(sqlStatement.error());
+    }
+    return SQLiteStatement { *this, sqlStatement.value() };
+}
+
+Expected<SQLiteStatement, int> SQLiteDatabase::prepareStatement(ASCIILiteral query)
+{
+    auto sqlStatement = constructAndPrepareStatement(*this, query.characters(), query.length());
+    if (!sqlStatement) {
+        RELEASE_LOG_ERROR(SQLDatabase, "SQLiteDatabase::prepareStatement: Failed to prepare statement %{public}s", query.characters());
+        return makeUnexpected(sqlStatement.error());
+    }
+    return SQLiteStatement { *this, sqlStatement.value() };
+}
+
+Expected<UniqueRef<SQLiteStatement>, int> SQLiteDatabase::prepareHeapStatementSlow(const String& queryString)
+{
+    CString query = queryString.stripWhiteSpace().utf8();
+    auto sqlStatement = constructAndPrepareStatement(*this, query.data(), query.length());
+    if (!sqlStatement) {
+        RELEASE_LOG_ERROR(SQLDatabase, "SQLiteDatabase::prepareHeapStatement: Failed to prepare statement %{public}s", query.data());
+        return makeUnexpected(sqlStatement.error());
+    }
+    return UniqueRef<SQLiteStatement>(*new SQLiteStatement(*this, sqlStatement.value()));
+}
+
+Expected<UniqueRef<SQLiteStatement>, int> SQLiteDatabase::prepareHeapStatement(ASCIILiteral query)
+{
+    auto sqlStatement = constructAndPrepareStatement(*this, query.characters(), query.length());
+    if (!sqlStatement) {
+        RELEASE_LOG_ERROR(SQLDatabase, "SQLiteDatabase::prepareHeapStatement: Failed to prepare statement %{public}s", query.characters());
+        return makeUnexpected(sqlStatement.error());
+    }
+    return UniqueRef<SQLiteStatement>(*new SQLiteStatement(*this, sqlStatement.value()));
 }
 
 } // namespace WebCore

@@ -76,8 +76,7 @@ ExceptionOr<Ref<Text>> Text::splitText(unsigned offset)
 
     document().textNodeSplit(*this);
 
-    if (renderer())
-        renderer()->setTextWithOffset(data(), 0, oldData.length());
+    updateRendererAfterContentChange(0, oldData.length());
 
     return newText;
 }
@@ -215,20 +214,18 @@ Ref<Text> Text::createWithLengthLimit(Document& document, const String& data, un
 
 void Text::updateRendererAfterContentChange(unsigned offsetOfReplacedData, unsigned lengthOfReplacedData)
 {
-    ASSERT(parentNode());
+    if (!isConnected())
+        return;
+
     if (styleValidity() >= Style::Validity::SubtreeAndRenderersInvalid)
         return;
 
     document().updateTextRenderer(*this, offsetOfReplacedData, lengthOfReplacedData);
 }
 
-String Text::debugDescription() const
+static void appendTextRepresentation(StringBuilder& builder, const Text& text)
 {
-    StringBuilder builder;
-
-    builder.append(CharacterData::debugDescription());
-
-    String value = data();
+    String value = text.data();
     builder.append(" length="_s, value.length());
 
     value.replaceWithLiteral('\\', "\\\\");
@@ -241,6 +238,24 @@ String Text::debugDescription() const
     }
 
     builder.append(" \"", value, '\"');
+}
+
+String Text::description() const
+{
+    StringBuilder builder;
+
+    builder.append(CharacterData::description());
+    appendTextRepresentation(builder, *this);
+
+    return builder.toString();
+}
+
+String Text::debugDescription() const
+{
+    StringBuilder builder;
+
+    builder.append(CharacterData::debugDescription());
+    appendTextRepresentation(builder, *this);
 
     return builder.toString();
 }

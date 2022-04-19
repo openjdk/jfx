@@ -65,8 +65,8 @@ public:
 
     const String& identifier() const { return m_identifier; }
 
-    static HashSet<WorkerOrWorkletThread*>& workerOrWorkletThreads();
-    static Lock& workerOrWorkletThreadsLock();
+    static HashSet<WorkerOrWorkletThread*>& workerOrWorkletThreads() WTF_REQUIRES_LOCK(workerOrWorkletThreadsLock());
+    static Lock& workerOrWorkletThreadsLock() WTF_RETURNS_LOCK(s_workerOrWorkletThreadsLock);
     static void releaseFastMallocFreeMemoryInAllThreads();
 
 protected:
@@ -81,6 +81,8 @@ private:
     virtual RefPtr<WorkerOrWorkletGlobalScope> createGlobalScope() = 0;
     virtual void evaluateScriptIfNecessary(String&) { }
     virtual bool shouldWaitForWebInspectorOnStartup() const { return false; }
+
+    static Lock s_workerOrWorkletThreadsLock;
 
     String m_identifier;
     Lock m_threadCreationAndGlobalScopeLock;

@@ -38,7 +38,9 @@ enum class StyleRuleType : uint8_t {
     Keyframes,
     Keyframe, // Not used. These are internally non-rule StyleRuleKeyframe objects.
     Namespace = 10,
+    CounterStyle = 11,
     Supports = 12,
+    Layer = 13,
 };
 
 } // namespace WebCore

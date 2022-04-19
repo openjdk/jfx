@@ -54,14 +54,14 @@ public:
     ~SocketStreamHandleImpl() final;
 
     void didOpen();
-    void didReceiveData(const char* data, int length);
+    void didReceiveData(const uint8_t* data, int length);
     void didFail(int errorCode, const String& errorDescription);
     void didClose();
 
 protected:
     void platformSend(const uint8_t* data, size_t length, Function<void(bool)>&&) final;
-    Optional<size_t> platformSendInternal(const uint8_t*, size_t);
-    void platformSendHandshake(const uint8_t* data, size_t length, const Optional<CookieRequestHeaderFieldProxy>&, Function<void(bool, bool)>&&) final;
+    std::optional<size_t> platformSendInternal(const uint8_t*, size_t);
+    void platformSendHandshake(const uint8_t* data, size_t length, const std::optional<CookieRequestHeaderFieldProxy>&, Function<void(bool, bool)>&&) final;
     void platformClose() final;
     size_t bufferedAmount() final;
     bool sendPendingData();

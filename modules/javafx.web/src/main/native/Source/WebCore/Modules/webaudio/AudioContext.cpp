@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2010 Google Inc. All rights reserved.
- * Copyright (C) 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,6 +28,7 @@
 #if ENABLE(WEB_AUDIO)
 
 #include "AudioContext.h"
+#include "AudioContextOptions.h"
 #include "AudioTimestamp.h"
 #include "DOMWindow.h"
 #include "JSDOMPromiseDeferred.h"
@@ -54,7 +55,7 @@
 
 namespace WebCore {
 
-#define RELEASE_LOG_IF_ALLOWED(fmt, ...) RELEASE_LOG_IF(document() && document()->page() && document()->page()->isAlwaysOnLoggingAllowed(), Media, "%p - AudioContext::" fmt, this, ##__VA_ARGS__)
+#define AUDIOCONTEXT_RELEASE_LOG(fmt, ...) RELEASE_LOG(Media, "%p - AudioContext::" fmt, this, ##__VA_ARGS__)
 
 #if OS(WINDOWS)
 // Don't allow more than this number of simultaneous AudioContexts talking to hardware.
@@ -63,9 +64,13 @@ constexpr unsigned maxHardwareContexts = 4;
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(AudioContext);
 
-static Optional<float>& defaultSampleRateForTesting()
+#if OS(WINDOWS)
+static unsigned hardwareContextCount;
+#endif
+
+static std::optional<float>& defaultSampleRateForTesting()
 {
-    static Optional<float> sampleRate;
+    static std::optional<float> sampleRate;
     return sampleRate;
 }
 
@@ -76,7 +81,7 @@ static bool shouldDocumentAllowWebAudioToAutoPlay(const Document& document)
     return document.quirks().shouldAutoplayWebAudioForArbitraryUserGesture() && document.topDocument().hasHadUserInteraction();
 }
 
-void AudioContext::setDefaultSampleRateForTesting(Optional<float> sampleRate)
+void AudioContext::setDefaultSampleRateForTesting(std::optional<float> sampleRate)
 {
     defaultSampleRateForTesting() = sampleRate;
 }
@@ -85,7 +90,7 @@ ExceptionOr<Ref<AudioContext>> AudioContext::create(Document& document, AudioCon
 {
     ASSERT(isMainThread());
 #if OS(WINDOWS)
-    if (s_hardwareContextCount >= maxHardwareContexts)
+    if (hardwareContextCount >= maxHardwareContexts)
         return Exception { QuotaExceededError, "Reached maximum number of hardware contexts on this platform"_s };
 #endif
 
@@ -97,17 +102,17 @@ ExceptionOr<Ref<AudioContext>> AudioContext::create(Document& document, AudioCon
     if (!contextOptions.sampleRate && defaultSampleRateForTesting())
         contextOptions.sampleRate = *defaultSampleRateForTesting();
 
-    if (contextOptions.sampleRate.hasValue() && !isSupportedSampleRate(contextOptions.sampleRate.value()))
-        return Exception { SyntaxError, "sampleRate is not in range"_s };
+    if (contextOptions.sampleRate && !isSupportedSampleRate(*contextOptions.sampleRate))
+        return Exception { NotSupportedError, "sampleRate is not in range"_s };
 
     auto audioContext = adoptRef(*new AudioContext(document, contextOptions));
     audioContext->suspendIfNeeded();
     return audioContext;
 }
 
-// Constructor for rendering to the audio hardware.
 AudioContext::AudioContext(Document& document, const AudioContextOptions& contextOptions)
-    : BaseAudioContext(document, contextOptions)
+    : BaseAudioContext(document)
+    , m_destinationNode(makeUniqueRef<DefaultAudioDestinationNode>(*this, contextOptions.sampleRate))
     , m_mediaSession(PlatformMediaSession::create(PlatformMediaSessionManager::sharedManager(), *this))
 {
     constructCommon();
@@ -117,20 +122,20 @@ AudioContext::AudioContext(Document& document, const AudioContextOptions& contex
 
     document.addAudioProducer(*this);
     document.registerForVisibilityStateChangedCallbacks(*this);
-}
 
-// Only needed for WebKitOfflineAudioContext.
-AudioContext::AudioContext(Document& document, unsigned numberOfChannels, float sampleRate, RefPtr<AudioBuffer>&& renderTarget)
-    : BaseAudioContext(document, numberOfChannels, sampleRate, WTFMove(renderTarget))
-    , m_mediaSession(PlatformMediaSession::create(PlatformMediaSessionManager::sharedManager(), *this))
-{
-    constructCommon();
+    // Unlike OfflineAudioContext, AudioContext does not require calling resume() to start rendering.
+    // Lazy initialization starts rendering so we schedule a task here to make sure lazy initialization
+    // ends up happening, even if no audio node gets constructed.
+    postTask([this, pendingActivity = makePendingActivity(*this)] {
+        if (!isStopped())
+            lazyInitialize();
+    });
 }
 
 void AudioContext::constructCommon()
 {
     ASSERT(document());
-    if (document()->audioPlaybackRequiresUserGesture())
+    if (document()->topDocument().audioPlaybackRequiresUserGesture())
         addBehaviorRestriction(RequireUserGestureForAudioStartRestriction);
     else
         m_restrictions = NoRestrictions;
@@ -148,19 +153,30 @@ AudioContext::~AudioContext()
     }
 }
 
+void AudioContext::uninitialize()
+{
+    if (!isInitialized())
+        return;
+
+    BaseAudioContext::uninitialize();
+
+#if OS(WINDOWS)
+    ASSERT(hardwareContextCount);
+    --hardwareContextCount;
+#endif
+
+    setState(State::Closed);
+}
+
 double AudioContext::baseLatency()
 {
     lazyInitialize();
 
-    auto* destination = this->destination();
-    return destination ? static_cast<double>(destination->framesPerBuffer()) / sampleRate() : 0.;
+    return static_cast<double>(destination().framesPerBuffer()) / sampleRate();
 }
 
 AudioTimestamp AudioContext::getOutputTimestamp(DOMWindow& window)
 {
-    if (!destination())
-        return { 0, 0 };
-
     auto& performance = window.performance();
 
     auto position = outputPosition();
@@ -182,7 +198,7 @@ void AudioContext::close(DOMPromiseDeferred<void>&& promise)
         return;
     }
 
-    if (state() == State::Closed || !destinationNode()) {
+    if (state() == State::Closed) {
         promise.resolve();
         return;
     }
@@ -191,15 +207,11 @@ void AudioContext::close(DOMPromiseDeferred<void>&& promise)
 
     lazyInitialize();
 
-    destinationNode()->close([this, protectedThis = makeRef(*this)] {
+    destination().close([this, activity = makePendingActivity(*this)] {
         setState(State::Closed);
         uninitialize();
+        m_mediaSession->setActive(false);
     });
-}
-
-DefaultAudioDestinationNode* AudioContext::destination()
-{
-    return static_cast<DefaultAudioDestinationNode*>(BaseAudioContext::destination());
 }
 
 void AudioContext::suspendRendering(DOMPromiseDeferred<void>&& promise)
@@ -209,7 +221,7 @@ void AudioContext::suspendRendering(DOMPromiseDeferred<void>&& promise)
         return;
     }
 
-    if (isStopped() || state() == State::Closed || !destinationNode()) {
+    if (isStopped() || state() == State::Closed) {
         promise.reject(Exception { InvalidStateError, "Context is closed"_s });
         return;
     }
@@ -223,7 +235,7 @@ void AudioContext::suspendRendering(DOMPromiseDeferred<void>&& promise)
 
     lazyInitialize();
 
-    destinationNode()->suspend([this, protectedThis = makeRef(*this), promise = WTFMove(promise)](Optional<Exception>&& exception) mutable {
+    destination().suspend([this, activity = makePendingActivity(*this), promise = WTFMove(promise)](std::optional<Exception>&& exception) mutable {
         if (exception) {
             promise.reject(WTFMove(*exception));
             return;
@@ -240,7 +252,7 @@ void AudioContext::resumeRendering(DOMPromiseDeferred<void>&& promise)
         return;
     }
 
-    if (isStopped() || state() == State::Closed || !destinationNode()) {
+    if (isStopped() || state() == State::Closed) {
         promise.reject(Exception { InvalidStateError, "Context is closed"_s });
         return;
     }
@@ -254,7 +266,7 @@ void AudioContext::resumeRendering(DOMPromiseDeferred<void>&& promise)
 
     lazyInitialize();
 
-    destinationNode()->resume([this, protectedThis = makeRef(*this), promise = WTFMove(promise)](Optional<Exception>&& exception) mutable {
+    destination().resume([this, activity = makePendingActivity(*this), promise = WTFMove(promise)](std::optional<Exception>&& exception) mutable {
         if (exception) {
             promise.reject(WTFMove(*exception));
             return;
@@ -293,10 +305,8 @@ void AudioContext::startRendering()
     if (isStopped() || !willBeginPlayback() || m_wasSuspendedByScript)
         return;
 
-    makePendingActivity();
-
     lazyInitialize();
-    destination()->startRendering([this, protectedThis = makeRef(*this)](Optional<Exception>&& exception) {
+    destination().startRendering([this, protectedThis = makeRef(*this), pendingActivity = makePendingActivity(*this)](std::optional<Exception>&& exception) {
         if (!exception)
             setState(State::Running);
     });
@@ -309,13 +319,15 @@ void AudioContext::lazyInitialize()
 
     BaseAudioContext::lazyInitialize();
     if (isInitialized()) {
-        if (destinationNode() && state() != State::Running) {
+        if (state() != State::Running) {
             // This starts the audio thread. The destination node's provideInput() method will now be called repeatedly to render audio.
             // Each time provideInput() is called, a portion of the audio stream is rendered. Let's call this time period a "render quantum".
             // NOTE: for now default AudioContext does not need an explicit startRendering() call from JavaScript.
             // We may want to consider requiring it for symmetry with OfflineAudioContext.
             startRendering();
-            ++s_hardwareContextCount;
+#if OS(WINDOWS)
+            ++hardwareContextCount;
+#endif
         }
     }
 }
@@ -346,15 +358,15 @@ bool AudioContext::willPausePlayback()
 
 MediaProducer::MediaStateFlags AudioContext::mediaState() const
 {
-    if (!isStopped() && destinationNode() && destinationNode()->isPlayingAudio())
-        return MediaProducer::IsPlayingAudio;
+    if (!isStopped() && destination().isPlayingAudio())
+        return MediaProducer::MediaState::IsPlayingAudio;
 
     return MediaProducer::IsNotPlaying;
 }
 
 void AudioContext::mayResumePlayback(bool shouldResume)
 {
-    if (!destinationNode() || state() == State::Closed || state() == State::Running)
+    if (state() == State::Closed || !isInitialized() || state() == State::Running)
         return;
 
     if (!shouldResume) {
@@ -367,7 +379,7 @@ void AudioContext::mayResumePlayback(bool shouldResume)
 
     lazyInitialize();
 
-    destinationNode()->resume([this, protectedThis = makeRef(*this)](Optional<Exception>&& exception) {
+    destination().resume([this, protectedThis = makeRef(*this), pendingActivity = makePendingActivity(*this)](std::optional<Exception>&& exception) {
         setState(exception ? State::Suspended : State::Running);
     });
 }
@@ -396,6 +408,8 @@ bool AudioContext::willBeginPlayback()
         removeBehaviorRestriction(RequirePageConsentForAudioStartRestriction);
     }
 
+    m_mediaSession->setActive(true);
+
     auto willBegin = m_mediaSession->clientWillBeginPlayback();
     ALWAYS_LOG(LOGIDENTIFIER, "returning ", willBegin);
 
@@ -405,7 +419,7 @@ bool AudioContext::willBeginPlayback()
 void AudioContext::visibilityStateChanged()
 {
     // Do not suspend if audio is audible.
-    if (!document() || mediaState() == MediaProducer::IsPlayingAudio || isStopped())
+    if (!document() || mediaState() == MediaProducer::MediaState::IsPlayingAudio || isStopped())
         return;
 
     if (document()->hidden()) {
@@ -439,14 +453,19 @@ void AudioContext::resume()
     document()->updateIsPlayingMedia();
 }
 
+const char* AudioContext::activeDOMObjectName() const
+{
+    return "AudioContext";
+}
+
 void AudioContext::suspendPlayback()
 {
-    if (!destinationNode() || state() == State::Closed)
+    if (state() == State::Closed || !isInitialized())
         return;
 
     lazyInitialize();
 
-    destinationNode()->suspend([this, protectedThis = makeRef(*this)](Optional<Exception>&& exception) {
+    destination().suspend([this, protectedThis = makeRef(*this), pendingActivity = makePendingActivity(*this)](std::optional<Exception>&& exception) {
         if (exception)
             return;
 
@@ -466,10 +485,15 @@ bool AudioContext::isSuspended() const
     return !document() || document()->activeDOMObjectsAreSuspended() || document()->activeDOMObjectsAreStopped();
 }
 
+bool AudioContext::isPlaying() const
+{
+    return state() == State::Running;
+}
+
 void AudioContext::pageMutedStateDidChange()
 {
-    if (destinationNode() && document() && document()->page())
-        destinationNode()->setMuted(document()->page()->isAudioMuted());
+    if (document() && document()->page())
+        destination().setMuted(document()->page()->isAudioMuted());
 }
 
 void AudioContext::mediaCanStart(Document& document)
@@ -477,6 +501,20 @@ void AudioContext::mediaCanStart(Document& document)
     ASSERT_UNUSED(document, &document == this->document());
     removeBehaviorRestriction(RequirePageConsentForAudioStartRestriction);
     mayResumePlayback(true);
+}
+
+void AudioContext::isPlayingAudioDidChange()
+{
+    // Heap allocations are forbidden on the audio thread for performance reasons so we need to
+    // explicitly allow the following allocation(s).
+    DisableMallocRestrictionsForCurrentThreadScope disableMallocRestrictions;
+
+    // Make sure to call Document::updateIsPlayingMedia() on the main thread, since
+    // we could be on the audio I/O thread here and the call into WebCore could block.
+    callOnMainThread([protectedThis = makeRef(*this)] {
+        if (auto* document = protectedThis->document())
+            document->updateIsPlayingMedia();
+    });
 }
 
 #if !RELEASE_LOG_DISABLED
@@ -515,6 +553,11 @@ ExceptionOr<Ref<MediaStreamAudioDestinationNode>> AudioContext::createMediaStrea
 }
 
 #endif
+
+bool AudioContext::virtualHasPendingActivity() const
+{
+    return !isClosed();
+}
 
 } // namespace WebCore
 

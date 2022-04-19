@@ -36,7 +36,7 @@ namespace Display {
 
 DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(TextBox);
 
-TextBox::TextBox(Tree& tree, AbsoluteFloatRect borderBox, Style&& displayStyle, const Layout::LineRun& lineRun)
+TextBox::TextBox(Tree& tree, UnadjustedAbsoluteFloatRect borderBox, Style&& displayStyle, const Layout::Run& lineRun)
     : Box(tree, borderBox, WTFMove(displayStyle), { TypeFlags::TextBox })
     , m_expansion(lineRun.expansion())
     , m_text(lineRun.text().value())
@@ -53,7 +53,7 @@ String TextBox::debugDescription() const
     TextStream stream;
 
     stream << boxName() << " " << absoluteBoxRect() << " (" << this << ")";
-    auto textContent = text().content().substring(text().start(), text().length());
+    auto textContent = text().originalContent().substring(text().start(), text().length());
     textContent.replaceWithLiteral('\\', "\\\\");
     textContent.replaceWithLiteral('\n', "\\n");
     const size_t maxPrintedLength = 80;
