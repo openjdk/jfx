@@ -92,6 +92,7 @@ typedef unsigned long long gsize;
 #define GLIB_SIZEOF_VOID_P 4
 #define GLIB_SIZEOF_LONG   4
 #define GLIB_SIZEOF_SIZE_T 4
+#define GLIB_SIZEOF_SSIZE_T 4
 
 typedef signed int gssize;
 typedef unsigned int gsize;
