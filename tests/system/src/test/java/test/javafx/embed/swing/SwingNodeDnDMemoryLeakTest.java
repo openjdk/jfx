@@ -123,7 +123,7 @@ public class SwingNodeDnDMemoryLeakTest {
         // Attempt gc GC_ATTEMPTS times
         for (int i = 0; i < GC_ATTEMPTS; i++) {
             System.gc();
-            System.runFinalization();
+            //System.runFinalization();
             if (getCleanedUpSwingNodeCount() == TOTAL_SWINGNODE) {
                 break;
             }
