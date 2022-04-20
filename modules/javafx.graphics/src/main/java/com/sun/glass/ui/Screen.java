@@ -382,15 +382,16 @@ public final class Screen {
             eventHandler.handleSettingsChanged();
         }
 
-        // Update the screen for each window to match the new instance.
+        // Update the screen for each window to match the new instance,
+        // also when such screen was disposed and a new one is available.
         // Note that if a window has moved to another screen, the window
         // will be notified separately of that from native code and the
         // new screen will be updated there
         List<Window> windows = Window.getWindows();
         for (Window w : windows) {
-            Screen oldScreen = w.getScreen();
+            long oldNativeScreen = w.getScreen().getNativeScreen();
             for (Screen newScreen : screens) {
-                if (oldScreen.getNativeScreen() == newScreen.getNativeScreen()) {
+                if (oldNativeScreen == newScreen.getNativeScreen() || oldNativeScreen == 0) {
                     w.setScreen(newScreen);
                     break;
                 }
