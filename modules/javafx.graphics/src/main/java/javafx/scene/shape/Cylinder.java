@@ -576,15 +576,34 @@ public class Cylinder extends Shape3D {
 
         @Override
         public int hashCode() {
-            int hash = 7;
-            hash = 47 * hash + Float.floatToIntBits((float)height);
-            hash = 47 * hash + Float.floatToIntBits((float)radius);
-            hash = 47 * hash + divisions;
-            return hash;
+            long bits = 7L;
+            bits = 31L * bits + Double.doubleToLongBits(radius);
+            bits = 31L * bits + Double.doubleToLongBits(height);
+            bits = 31L * bits + divisions;
+            return Long.hashCode(bits);
         }
 
         @Override
         public boolean equals(Object obj) {
+            if (this == obj) {
+                return true;
+            }
+            if (obj == null) {
+                return false;
+            }
+            if (!(obj instanceof CylinderKey)) {
+                return false;
+            }
+            CylinderKey other = (CylinderKey) obj;
+            if (divisions != other.divisions) {
+                return false;
+            }
+            if (Double.compare(radius, other.radius) != 0) {
+                return false;
+            }
+            if (Double.compare(height, other.height) != 0) {
+                return false;
+            }
             return true;
         }
     }
