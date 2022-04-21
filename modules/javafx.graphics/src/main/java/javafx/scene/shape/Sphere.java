@@ -455,30 +455,15 @@ public class Sphere extends Shape3D {
 
         @Override
         public int hashCode() {
-            long bits = 7L;
-            bits = 31L * bits + Double.doubleToLongBits(radius);
-            bits = 31L * bits + divisions;
-            return Long.hashCode(bits);
+            int hash = 5;
+            hash = 23 * hash + Float.floatToIntBits((float)radius);
+            hash = 23 * hash + divisions;
+            return hash;
+
         }
 
         @Override
         public boolean equals(Object obj) {
-            if (this == obj) {
-                return true;
-            }
-            if (obj == null) {
-                return false;
-            }
-            if (!(obj instanceof SphereKey)) {
-                return false;
-            }
-            SphereKey other = (SphereKey) obj;
-            if (divisions != other.divisions) {
-                return false;
-            }
-            if (Double.compare(radius, other.radius) != 0) {
-                return false;
-            }
             return true;
         }
     }
