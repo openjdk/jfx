@@ -6714,7 +6714,7 @@ public class TreeTableViewTest {
 
     // JDK-8187596
     @Test
-    public void testRemoveTreeItemShiftSelection(){
+    public void testRemoveTreeItemShiftSelection() {
         TreeItem<String> a, b, a1, a2, a3;
         TreeItem<String> root = new TreeItem<>("root");
         root.getChildren().addAll(
@@ -6749,7 +6749,7 @@ public class TreeTableViewTest {
 
     // JDK-8193442
     @Test
-    public void testRemoveTreeItemChangesSelectedItem(){
+    public void testRemoveTreeItemChangesSelectedItem() {
         TreeItem<String> rootNode = new TreeItem<>("Root");
         rootNode.setExpanded(true);
         for (int i = 0; i < 3; i++) {
