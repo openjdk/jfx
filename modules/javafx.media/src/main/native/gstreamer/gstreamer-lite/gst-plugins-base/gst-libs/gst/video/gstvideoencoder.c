@@ -107,6 +107,10 @@
 
 #include <string.h>
 
+#ifdef GSTREAMER_LITE
+#include "gst/glib-compat-private.h"
+#endif // GSTREAMER_LITE
+
 GST_DEBUG_CATEGORY (videoencoder_debug);
 #define GST_CAT_DEFAULT videoencoder_debug
 
@@ -291,7 +295,7 @@ static gboolean gst_video_encoder_transform_meta_default (GstVideoEncoder *
 GType
 gst_video_encoder_get_type (void)
 {
-  static volatile gsize type = 0;
+  static gsize type = 0;
 
   if (g_once_init_enter (&type)) {
     GType _type;
@@ -678,6 +682,15 @@ _new_output_state (GstCaps * caps, GstVideoCodecState * reference)
 
     GST_VIDEO_INFO_MULTIVIEW_MODE (tgt) = GST_VIDEO_INFO_MULTIVIEW_MODE (ref);
     GST_VIDEO_INFO_MULTIVIEW_FLAGS (tgt) = GST_VIDEO_INFO_MULTIVIEW_FLAGS (ref);
+
+    if (reference->mastering_display_info) {
+      state->mastering_display_info = g_slice_dup (GstVideoMasteringDisplayInfo,
+          reference->mastering_display_info);
+    }
+    if (reference->content_light_level) {
+      state->content_light_level = g_slice_dup (GstVideoContentLightLevel,
+          reference->content_light_level);
+    }
   }
 
   return state;
@@ -687,6 +700,8 @@ static GstVideoCodecState *
 _new_input_state (GstCaps * caps)
 {
   GstVideoCodecState *state;
+  GstStructure *c_struct;
+  const gchar *s;
 
   state = g_slice_new0 (GstVideoCodecState);
   state->ref_count = 1;
@@ -694,6 +709,18 @@ _new_input_state (GstCaps * caps)
   if (G_UNLIKELY (!gst_video_info_from_caps (&state->info, caps)))
     goto parse_fail;
   state->caps = gst_caps_ref (caps);
+
+  c_struct = gst_caps_get_structure (caps, 0);
+
+  if ((s = gst_structure_get_string (c_struct, "mastering-display-info"))) {
+    state->mastering_display_info = g_slice_new (GstVideoMasteringDisplayInfo);
+    gst_video_mastering_display_info_from_string (state->mastering_display_info,
+        s);
+  }
+  if ((s = gst_structure_get_string (c_struct, "content-light-level"))) {
+    state->content_light_level = g_slice_new (GstVideoContentLightLevel);
+    gst_video_content_light_level_from_string (state->content_light_level, s);
+  }
 
   return state;
 
@@ -1819,7 +1846,7 @@ gst_video_encoder_negotiate_default (GstVideoEncoder * encoder)
   g_return_val_if_fail (state->caps != NULL, FALSE);
 
   if (encoder->priv->output_state_changed) {
-    GstCaps *incaps;
+    GstStructure *out_struct;
 
     state->caps = gst_caps_make_writable (state->caps);
 
@@ -1855,9 +1882,18 @@ gst_video_encoder_negotiate_default (GstVideoEncoder * encoder)
           colorimetry, NULL);
     g_free (colorimetry);
 
-    if (info->chroma_site != GST_VIDEO_CHROMA_SITE_UNKNOWN)
-      gst_caps_set_simple (state->caps, "chroma-site", G_TYPE_STRING,
-          gst_video_chroma_to_string (info->chroma_site), NULL);
+    if (info->chroma_site != GST_VIDEO_CHROMA_SITE_UNKNOWN) {
+      gchar *chroma_site = gst_video_chroma_site_to_string (info->chroma_site);
+
+      if (!chroma_site) {
+        GST_WARNING ("Couldn't convert chroma-site 0x%x to string",
+            info->chroma_site);
+      } else {
+        gst_caps_set_simple (state->caps,
+            "chroma-site", G_TYPE_STRING, chroma_site, NULL);
+        g_free (chroma_site);
+      }
+    }
 
     if (GST_VIDEO_INFO_MULTIVIEW_MODE (info) != GST_VIDEO_MULTIVIEW_MODE_NONE) {
       const gchar *caps_mview_mode =
@@ -1869,30 +1905,20 @@ gst_video_encoder_negotiate_default (GstVideoEncoder * encoder)
           GST_VIDEO_INFO_MULTIVIEW_FLAGS (info), GST_FLAG_SET_MASK_EXACT, NULL);
     }
 
-    incaps = gst_pad_get_current_caps (GST_VIDEO_ENCODER_SINK_PAD (encoder));
-    if (incaps) {
-      GstStructure *in_struct;
-      GstStructure *out_struct;
-      const gchar *s;
+    out_struct = gst_caps_get_structure (state->caps, 0);
 
-      in_struct = gst_caps_get_structure (incaps, 0);
-      out_struct = gst_caps_get_structure (state->caps, 0);
+    /* forward upstream mastering display info and content light level
+     * if subclass didn't set */
+    if (state->mastering_display_info &&
+        !gst_structure_has_field (out_struct, "mastering-display-info")) {
+      gst_video_mastering_display_info_add_to_caps
+          (state->mastering_display_info, state->caps);
+    }
 
-      /* forward upstream mastering display info and content light level
-       * if subclass didn't set */
-      if ((s = gst_structure_get_string (in_struct, "mastering-display-info"))
-          && !gst_structure_has_field (out_struct, "mastering-display-info")) {
-        gst_caps_set_simple (state->caps, "mastering-display-info",
-            G_TYPE_STRING, s, NULL);
-      }
-
-      if ((s = gst_structure_get_string (in_struct, "content-light-level")) &&
-          !gst_structure_has_field (out_struct, "content-light-level")) {
-        gst_caps_set_simple (state->caps,
-            "content-light-level", G_TYPE_STRING, s, NULL);
-      }
-
-      gst_caps_unref (incaps);
+    if (state->content_light_level &&
+        !gst_structure_has_field (out_struct, "content-light-level")) {
+      gst_video_content_light_level_add_to_caps (state->content_light_level,
+          state->caps);
     }
 
     encoder->priv->output_state_changed = FALSE;
@@ -2558,6 +2584,9 @@ gst_video_encoder_finish_frame (GstVideoEncoder * encoder,
   frame->distance_from_sync = priv->distance_from_sync;
   priv->distance_from_sync++;
 
+  /* We need a writable buffer for the metadata changes below */
+  frame->output_buffer = gst_buffer_make_writable (frame->output_buffer);
+
   GST_BUFFER_PTS (frame->output_buffer) = frame->pts;
   GST_BUFFER_DTS (frame->output_buffer) = frame->dts;
   GST_BUFFER_DURATION (frame->output_buffer) = frame->duration;
@@ -2703,6 +2732,9 @@ gst_video_encoder_finish_subframe (GstVideoEncoder * encoder,
   }
 
   gst_video_encoder_infer_dts_unlocked (encoder, frame);
+
+  /* We need a writable buffer for the metadata changes below */
+  subframe_buffer = gst_buffer_make_writable (subframe_buffer);
 
   GST_BUFFER_PTS (subframe_buffer) = frame->pts;
   GST_BUFFER_DTS (subframe_buffer) = frame->dts;

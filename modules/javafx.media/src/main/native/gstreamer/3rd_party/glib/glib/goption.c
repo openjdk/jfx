@@ -102,7 +102,7 @@
  *   { "verbose", 'v', 0, G_OPTION_ARG_NONE, &verbose, "Be verbose", NULL },
  *   { "beep", 'b', 0, G_OPTION_ARG_NONE, &beep, "Beep when done", NULL },
  *   { "rand", 0, 0, G_OPTION_ARG_NONE, &randomize, "Randomize the data", NULL },
- *   { NULL }
+ *   G_OPTION_ENTRY_NULL
  * };
  *
  * int
@@ -336,7 +336,7 @@ G_DEFINE_QUARK (g-option-context-error-quark, g_option_error)
  * The @parameter_string can serve multiple purposes. It can be used
  * to add descriptions for "rest" arguments, which are not parsed by
  * the #GOptionContext, typically something like "FILES" or
- * "FILE1 FILE2...". If you are using #G_OPTION_REMAINING for
+ * "FILE1 FILE2...". If you are using %G_OPTION_REMAINING for
  * collecting "rest" arguments, GLib handles this automatically by
  * using the @arg_description of the corresponding #GOptionEntry in
  * the usage summary.
@@ -1091,7 +1091,7 @@ g_option_context_get_help (GOptionContext *context,
   return g_string_free (string, FALSE);
 }
 
-G_GNUC_NORETURN
+G_NORETURN
 static void
 print_help (GOptionContext *context,
             gboolean        main_help,
@@ -1543,22 +1543,13 @@ parse_short_option (GOptionContext *context,
 
               if (idx < *argc - 1)
                 {
-                  if (!OPTIONAL_ARG (&group->entries[j]))
+                  if (OPTIONAL_ARG (&group->entries[j]) && ((*argv)[idx + 1][0] == '-'))
+                    value = NULL;
+                  else
                     {
                       value = (*argv)[idx + 1];
                       add_pending_null (context, &((*argv)[idx + 1]), NULL);
                       *new_idx = idx + 1;
-                    }
-                  else
-                    {
-                      if ((*argv)[idx + 1][0] == '-')
-                        value = NULL;
-                      else
-                        {
-                          value = (*argv)[idx + 1];
-                          add_pending_null (context, &((*argv)[idx + 1]), NULL);
-                          *new_idx = idx + 1;
-                        }
                     }
                 }
               else if (idx >= *argc - 1 && OPTIONAL_ARG (&group->entries[j]))
@@ -2122,8 +2113,7 @@ g_option_context_parse (GOptionContext   *context,
                   gboolean has_h_entry = context_has_h_entry (context);
                   arg = (*argv)[i] + 1;
                   arg_length = strlen (arg);
-                  nulled_out = g_newa (gboolean, arg_length);
-                  memset (nulled_out, 0, arg_length * sizeof (gboolean));
+                  nulled_out = g_newa0 (gboolean, arg_length);
                   for (j = 0; j < arg_length; j++)
                     {
                       if (context->help_enabled && (arg[j] == '?' ||

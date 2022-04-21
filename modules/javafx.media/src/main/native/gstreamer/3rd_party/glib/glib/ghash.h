@@ -61,6 +61,8 @@ GHashTable* g_hash_table_new_full          (GHashFunc       hash_func,
                                             GEqualFunc      key_equal_func,
                                             GDestroyNotify  key_destroy_func,
                                             GDestroyNotify  value_destroy_func);
+GLIB_AVAILABLE_IN_2_72
+GHashTable *g_hash_table_new_similar       (GHashTable     *other_hash_table);
 GLIB_AVAILABLE_IN_ALL
 void        g_hash_table_destroy           (GHashTable     *hash_table);
 GLIB_AVAILABLE_IN_ALL
