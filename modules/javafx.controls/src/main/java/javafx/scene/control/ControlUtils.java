@@ -157,7 +157,7 @@ class ControlUtils {
         };
     }
 
-    public static <S> void updateSelectedIndices(MultipleSelectionModelBase<S> sm, ListChangeListener.Change<? extends TablePositionBase<?>> c, IntPredicate removeRowFilter) {
+    public static <S> void updateSelectedIndices(MultipleSelectionModelBase<S> sm, boolean isCellSelectionEnabled, ListChangeListener.Change<? extends TablePositionBase<?>> c, IntPredicate removeRowFilter) {
         sm.selectedIndices._beginChange();
 
         while (c.next()) {
@@ -181,14 +181,21 @@ class ControlUtils {
                     .count();
             sm.stopAtomic();
 
-            final int to = c.getFrom() + addedSize;
+            int from = c.getFrom();
+            if (isCellSelectionEnabled && 0 < from && from < c.getList().size()) {
+                // convert origin of change of list of tablePositions
+                // into origin of change of list of rows
+                int tpRow = c.getList().get(from).getRow();
+                from = sm.selectedIndices.indexOf(tpRow);
+            }
+            final int to = from + addedSize;
 
             if (c.wasReplaced()) {
-                sm.selectedIndices._nextReplace(c.getFrom(), to, removed);
+                sm.selectedIndices._nextReplace(from, to, removed);
             } else if (c.wasRemoved()) {
-                sm.selectedIndices._nextRemove(c.getFrom(), removed);
+                sm.selectedIndices._nextRemove(from, removed);
             } else if (c.wasAdded()) {
-                sm.selectedIndices._nextAdd(c.getFrom(), to);
+                sm.selectedIndices._nextAdd(from, to);
             }
         }
         c.reset();

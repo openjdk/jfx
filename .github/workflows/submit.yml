@@ -221,7 +221,7 @@ jobs:
   windows_x64_build:
     name: Windows x64
     needs: validation
-    runs-on: "windows-2019"
+    runs-on: "windows-2022"
 
     env:
       # FIXME: read this information from a property file
@@ -235,8 +235,8 @@ jobs:
       ANT_DIR: "apache-ant-1.10.5"
       ANT_FILENAME: "apache-ant-1.10.5.tar.gz"
       ANT_URL: "https://archive.apache.org/dist/ant/binaries/apache-ant-1.10.5-bin.tar.gz"
-      # FIXME: hard-code the location of VS 2019 for now
-      VS150COMNTOOLS: "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Enterprise\\VC\\Auxiliary\\Build"
+      # FIXME: hard-code the location of VS 2022 for now
+      VS150COMNTOOLS: "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\VC\\Auxiliary\\Build"
 
     steps:
       - name: Checkout the source
@@ -283,11 +283,11 @@ jobs:
         run: |
           echo "VS150COMNTOOLS=$env:VS150COMNTOOLS"
           echo "dir ...\VC\Tools\MSVC"
-          dir "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Tools\MSVC"
+          dir "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Tools\MSVC"
           echo "dir VS150COMNTOOLS"
           dir "$env:VS150COMNTOOLS"
           # echo "dir ...\VC\Tools\MSVC"
-          # dir "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Tools\MSVC"
+          # dir "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Tools\MSVC"
           # echo "dir VS150COMNTOOLS"
           # dir "$env:VS150COMNTOOLS"
 
