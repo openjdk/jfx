@@ -384,10 +384,12 @@ public class CellTest {
         cell.startEdit();
         cell.requestFocus();
         Toolkit.getToolkit().firePulse();
+        assertTrue(cell.isEditing());
 
         other.requestFocus();
         Toolkit.getToolkit().firePulse();
 
         assertFalse(cell.isEditing());
+        stage.hide();
     }
 }

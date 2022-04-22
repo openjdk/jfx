@@ -47,6 +47,7 @@ import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import javafx.util.Callback;
 
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -71,6 +72,10 @@ public class PaginationTest {
         scene = new Scene(root);
         stage = new Stage();
         stage.setScene(scene);
+    }
+
+    @After public void tearDown() {
+        stage.hide();
     }
 
     /*********************************************************************
