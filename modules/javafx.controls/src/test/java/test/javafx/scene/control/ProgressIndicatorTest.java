@@ -207,7 +207,6 @@ public class ProgressIndicatorTest {
         // Attempt gc n times
         for (int i = 0; i < n; i++) {
             System.gc();
-            System.runFinalization();
 
             if (getCleanedUpObjectCount() == TOTAL_PROGRESS_INDICATORS) {
                 break;

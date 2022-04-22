@@ -261,7 +261,6 @@ public class ControlSkinFactory {
     public static void attemptGC(WeakReference<?> weakRef) {
         for (int i = 0; i < 10; i++) {
             System.gc();
-            System.runFinalization();
 
             if (weakRef.get() == null) {
                 break;

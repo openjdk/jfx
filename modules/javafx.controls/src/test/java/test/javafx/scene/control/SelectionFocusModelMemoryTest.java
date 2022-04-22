@@ -231,7 +231,6 @@ public class SelectionFocusModelMemoryTest {
         // Attempt gc n times
         for (int i = 0; i < n; i++) {
             System.gc();
-            System.runFinalization();
 
             if (weakRef.get() == null) {
                 break;
