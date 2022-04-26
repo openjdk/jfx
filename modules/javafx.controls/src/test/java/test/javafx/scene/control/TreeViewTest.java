@@ -630,7 +630,6 @@ public class TreeViewTest {
         assertEquals(mikeGraham, treeView.getFocusModel().getFocusedItem());
     }
 
-    @Ignore("Bug hasn't been fixed yet")
     @Test public void test_rt28114() {
         myCompanyRootNode.setExpanded(true);
         treeView.setRoot(myCompanyRootNode);
@@ -646,8 +645,6 @@ public class TreeViewTest {
         itSupport.getChildren().remove(mikeGraham);
         assertEquals(itSupport, treeView.getFocusModel().getFocusedItem());
         assertEquals(itSupport, treeView.getSelectionModel().getSelectedItem());
-        assertTrue(itSupport.isLeaf());
-        assertTrue(!itSupport.isExpanded());
     }
 
     @Test public void test_rt27820_1() {
@@ -3776,6 +3773,64 @@ public class TreeViewTest {
             assertFalse("cell must not be editing", cell.isEditing());
             assertNull("table editing must be cancelled by cell", treeView.getEditingItem());
         }
+    }
+
+    // JDK-8187596
+    @Test
+    public void testRemoveTreeItemShiftSelection() {
+        TreeItem<String> a, b, a1, a2, a3;
+        TreeItem<String> root = new TreeItem<>("root");
+        root.getChildren().addAll(
+                a = new TreeItem<>("a"),
+                b = new TreeItem<>("b")
+        );
+        root.setExpanded(true);
+
+        a.getChildren().addAll(
+                a1 = new TreeItem<>("a1"),
+                a2 = new TreeItem<>("a2"),
+                a3 = new TreeItem<>("a3")
+        );
+        a.setExpanded(true);
+
+        TreeView<String> stringTreeView = new TreeView<>(root);
+        stringTreeView.setShowRoot(false);
+        SelectionModel sm = stringTreeView.getSelectionModel();
+
+        sm.clearAndSelect(3); //select a3
+        assertEquals(a3, sm.getSelectedItem()); //verify
+        root.getChildren().remove(b); //remove b
+        //a3 should remain selected
+        assertEquals(3, sm.getSelectedIndex());
+        assertEquals(a3, sm.getSelectedItem());
+    }
+
+    // JDK-8193442
+    @Test
+    public void testRemoveTreeItemChangesSelectedItem() {
+        TreeItem<String> rootNode = new TreeItem<>("Root");
+        rootNode.setExpanded(true);
+        for (int i = 0; i < 3; i++) {
+            rootNode.getChildren().add(new TreeItem<>("Node " + i));
+        }
+        for (int i = 0; i < 2; i++) {
+            TreeItem<String> node = rootNode.getChildren().get(i);
+            node.setExpanded(true);
+            for (int j = 0; j < 2; j++) {
+                node.getChildren().add(new TreeItem<>("Sub Node " + i + "-" + j));
+            }
+        }
+
+        TreeView<String> table = new TreeView<>(rootNode);
+
+        int selectIndex = 4; // select "Node 1"
+        int removeIndex = 2; // remove "Node 2"
+        table.getSelectionModel().select(selectIndex);
+        assertEquals(4, table.getSelectionModel().getSelectedIndex());
+        assertEquals("Node 1", table.getSelectionModel().getSelectedItem().getValue());
+        table.getRoot().getChildren().remove(removeIndex);
+        assertEquals(4, table.getSelectionModel().getSelectedIndex());
+        assertEquals("Node 1", table.getSelectionModel().getSelectedItem().getValue());
     }
 
     public static class MisbehavingOnCancelTreeCell<S> extends TreeCell<S> {

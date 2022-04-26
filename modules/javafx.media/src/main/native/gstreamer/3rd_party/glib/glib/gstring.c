@@ -37,6 +37,7 @@
 #include "gstring.h"
 #include "guriprivate.h"
 #include "gprintf.h"
+#include "gutilsprivate.h"
 
 
 /**
@@ -71,49 +72,35 @@
  * The GString struct contains the public fields of a GString.
  */
 
-
-#define MY_MAXSIZE ((gsize)-1)
-
-static inline gsize
-nearest_power (gsize base, gsize num)
-{
-  if (num > MY_MAXSIZE / 2)
-    {
-      return MY_MAXSIZE;
-    }
-  else
-    {
-      gsize n = base;
-
-      while (n < num)
-        n <<= 1;
-
-      return n;
-    }
-}
-
 static void
 g_string_maybe_expand (GString *string,
                        gsize    len)
 {
+  /* Detect potential overflow */
+  if G_UNLIKELY ((G_MAXSIZE - string->len - 1) < len)
+    g_error ("adding %" G_GSIZE_FORMAT " to string would overflow", len);
+
   if (string->len + len >= string->allocated_len)
     {
-      string->allocated_len = nearest_power (1, string->len + len + 1);
+      string->allocated_len = g_nearest_pow (string->len + len + 1);
+      /* If the new size is bigger than G_MAXSIZE / 2, only allocate enough
+       * memory for this string and don't over-allocate. */
+      if (string->allocated_len == 0)
+        string->allocated_len = string->len + len + 1;
       string->str = g_realloc (string->str, string->allocated_len);
     }
 }
 
 /**
- * g_string_sized_new:
- * @dfl_size: the default size of the space allocated to
- *     hold the string
+ * g_string_sized_new: (constructor)
+ * @dfl_size: the default size of the space allocated to hold the string
  *
  * Creates a new #GString, with enough space for @dfl_size
  * bytes. This is useful if you are going to add a lot of
  * text to the string and don't want it to be reallocated
  * too often.
  *
- * Returns: the new #GString
+ * Returns: (transfer full): the new #GString
  */
 GString *
 g_string_sized_new (gsize dfl_size)
@@ -129,20 +116,20 @@ g_string_sized_new (gsize dfl_size)
   string->len   = 0;
   string->str   = NULL;
 
-  g_string_maybe_expand (string, MAX (dfl_size, 2));
+  g_string_maybe_expand (string, MAX (dfl_size, 64));
   string->str[0] = 0;
 
   return string;
 }
 
 /**
- * g_string_new:
+ * g_string_new: (constructor)
  * @init: (nullable): the initial text to copy into the string, or %NULL to
- * start with an empty string
+ *   start with an empty string
  *
  * Creates a new #GString, initialized with the given string.
  *
- * Returns: the new #GString
+ * Returns: (transfer full): the new #GString
  */
 GString *
 g_string_new (const gchar *init)
@@ -165,7 +152,7 @@ g_string_new (const gchar *init)
 }
 
 /**
- * g_string_new_len:
+ * g_string_new_len: (constructor)
  * @init: initial contents of the string
  * @len: length of @init to use
  *
@@ -177,7 +164,7 @@ g_string_new (const gchar *init)
  * responsibility to ensure that @init has at least @len addressable
  * bytes.
  *
- * Returns: a new #GString
+ * Returns: (transfer full): a new #GString
  */
 GString *
 g_string_new_len (const gchar *init,
@@ -956,6 +943,69 @@ g_string_erase (GString *string,
   string->str[string->len] = 0;
 
   return string;
+}
+
+/**
+ * g_string_replace:
+ * @string: a #GString
+ * @find: the string to find in @string
+ * @replace: the string to insert in place of @find
+ * @limit: the maximum instances of @find to replace with @replace, or `0` for
+ * no limit
+ *
+ * Replaces the string @find with the string @replace in a #GString up to
+ * @limit times. If the number of instances of @find in the #GString is
+ * less than @limit, all instances are replaced. If @limit is `0`,
+ * all instances of @find are replaced.
+ *
+ * If @find is the empty string, since versions 2.69.1 and 2.68.4 the
+ * replacement will be inserted no more than once per possible position
+ * (beginning of string, end of string and between characters). This did
+ * not work correctly in earlier versions.
+ *
+ * Returns: the number of find and replace operations performed.
+ *
+ * Since: 2.68
+ */
+guint
+g_string_replace (GString     *string,
+                  const gchar *find,
+                  const gchar *replace,
+                  guint        limit)
+{
+  gsize f_len, r_len, pos;
+  gchar *cur, *next;
+  guint n = 0;
+
+  g_return_val_if_fail (string != NULL, 0);
+  g_return_val_if_fail (find != NULL, 0);
+  g_return_val_if_fail (replace != NULL, 0);
+
+  f_len = strlen (find);
+  r_len = strlen (replace);
+  cur = string->str;
+
+  while ((next = strstr (cur, find)) != NULL)
+    {
+      pos = next - string->str;
+      g_string_erase (string, pos, f_len);
+      g_string_insert (string, pos, replace);
+      cur = string->str + pos + r_len;
+      n++;
+      /* Only match the empty string once at any given position, to
+       * avoid infinite loops */
+      if (f_len == 0)
+        {
+          if (cur[0] == '\0')
+            break;
+          else
+            cur++;
+        }
+      if (n == limit)
+        break;
+    }
+
+  return n;
 }
 
 /**

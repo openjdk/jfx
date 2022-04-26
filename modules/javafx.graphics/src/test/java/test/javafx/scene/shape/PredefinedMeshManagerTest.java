@@ -34,7 +34,6 @@ import javafx.scene.shape.Shape3D;
 import javafx.scene.shape.Sphere;
 
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import com.sun.javafx.scene.NodeHelper;
@@ -79,36 +78,34 @@ public class PredefinedMeshManagerTest {
         testShapeAddition(box1again, 2);
     }
 
-    @Ignore("JDK-8282449")
     @Test
     public void sphereCacheTest() {
-        Sphere sphere1 = new Sphere(10, 1000);
+        Sphere sphere1 = new Sphere(10, 50);
         testShapeAddition(sphere1, 1);
 
         // JDK-8180151: size will stay 1 without the fix (due to hash collision)
         // From the old hash function:
         // div2 = 23 * (Float.floatToIntBits(r1) - Float.floatToIntBits(r2)) + div1
-        Sphere sphere2 = new Sphere(9.99997, 1713);
+        Sphere sphere2 = new Sphere(9.999998, 96);
         testShapeAddition(sphere2, 2);
 
-        Sphere sphere1again = new Sphere(10, 1000);
+        Sphere sphere1again = new Sphere(10, 50);
         testShapeAddition(sphere1again, 2);
     }
 
-    @Ignore("JDK-8282449")
     @Test
     public void cylinderCacheTest() {
-        Cylinder cylinder1 = new Cylinder(10, 20, 1000);
+        Cylinder cylinder1 = new Cylinder(10, 20, 100);
         testShapeAddition(cylinder1, 1);
 
         // JDK-8180151: size will stay 1 without the fix (due to hash collision)
         // From the old hash function:
         // div2 = 47*47 * (Float.floatToIntBits(h1) - Float.floatToIntBits(h2)) +
         //           47 * (Float.floatToIntBits(r1) - Float.floatToIntBits(r2)) + div1;
-        Cylinder cylinder2 = new Cylinder(9.9997, 19.9997, 362618);
+        Cylinder cylinder2 = new Cylinder(30560, 31072, 100);
         testShapeAddition(cylinder2, 2);
 
-        Cylinder cylinder1again = new Cylinder(10, 20, 1000);
+        Cylinder cylinder1again = new Cylinder(10, 20, 100);
         testShapeAddition(cylinder1again, 2);
     }
 }

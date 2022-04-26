@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2013, 2021, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
 # DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
 #
 # This code is free software; you can redistribute it and/or modify it
@@ -51,6 +51,9 @@ CFLAGS = -DTARGET_OS_LINUX=1     \
          -DHAVE_CONFIG_H         \
          -DJFXMEDIA_JNI_EXPORTS  \
          -DLINUX                 \
+         -DGLIB_VERSION_MIN_REQUIRED=GLIB_VERSION_2_48 \
+         -DGLIB_VERSION_MAX_ALLOWED=GLIB_VERSION_2_48 \
+         -Werror=deprecated-declarations \
          -ffunction-sections -fdata-sections
 
 CPPFLAGS = -fno-rtti -ffunction-sections -fdata-sections

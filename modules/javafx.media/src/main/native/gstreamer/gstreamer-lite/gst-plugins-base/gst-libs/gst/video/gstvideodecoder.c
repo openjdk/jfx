@@ -57,14 +57,29 @@
  *
  *   * Each input frame is provided in turn to the subclass' @handle_frame
  *     callback.
- *     The ownership of the frame is given to the @handle_frame callback.
+ *   * When the subclass enables the subframe mode with `gst_video_decoder_set_subframe_mode`,
+ *     the base class will provide to the subclass the same input frame with
+ *     different input buffers to the subclass @handle_frame
+ *     callback. During this call, the subclass needs to take
+ *     ownership of the input_buffer as @GstVideoCodecFrame.input_buffer
+ *     will have been changed before the next subframe buffer is received.
+ *     The subclass will call `gst_video_decoder_have_last_subframe`
+ *     when a new input frame can be created by the base class.
+ *     Every subframe will share the same @GstVideoCodecFrame.output_buffer
+ *     to write the decoding result. The subclass is responsible to protect
+ *     its access.
  *
  *   * If codec processing results in decoded data, the subclass should call
- *     @gst_video_decoder_finish_frame to have decoded data pushed.
- *     downstream. Otherwise, the subclass must call
- *     @gst_video_decoder_drop_frame, to allow the base class to do timestamp
- *     and offset tracking, and possibly to requeue the frame for a later
- *     attempt in the case of reverse playback.
+ *     @gst_video_decoder_finish_frame to have decoded data pushed
+ *     downstream. In subframe mode
+ *     the subclass should call @gst_video_decoder_finish_subframe until the
+ *     last subframe where it should call @gst_video_decoder_finish_frame.
+ *     The subclass can detect the last subframe using GST_VIDEO_BUFFER_FLAG_MARKER
+ *     on buffers or using its own logic to collect the subframes.
+ *     In case of decoding failure, the subclass must call
+ *     @gst_video_decoder_drop_frame or @gst_video_decoder_drop_subframe,
+ *     to allow the base class to do timestamp and offset tracking, and possibly
+ *     to requeue the frame for a later attempt in the case of reverse playback.
  *
  * ## Shutdown phase
  *
@@ -284,18 +299,35 @@
 #include <gst/video/gstvideometa.h>
 #include <string.h>
 
+#ifdef GSTREAMER_LITE
+#include "gst/glib-compat-private.h"
+#endif // GSTREAMER_LITE
+
 GST_DEBUG_CATEGORY (videodecoder_debug);
 #define GST_CAT_DEFAULT videodecoder_debug
 
 /* properties */
 #define DEFAULT_QOS                 TRUE
 #define DEFAULT_MAX_ERRORS          GST_VIDEO_DECODER_MAX_ERRORS
+#define DEFAULT_MIN_FORCE_KEY_UNIT_INTERVAL 0
+#define DEFAULT_DISCARD_CORRUPTED_FRAMES FALSE
+#define DEFAULT_AUTOMATIC_REQUEST_SYNC_POINTS FALSE
+#define DEFAULT_AUTOMATIC_REQUEST_SYNC_POINT_FLAGS (GST_VIDEO_DECODER_REQUEST_SYNC_POINT_DISCARD_INPUT | GST_VIDEO_DECODER_REQUEST_SYNC_POINT_CORRUPT_OUTPUT)
+
+/* Used for request_sync_point_frame_number. These are out of range for the
+ * frame numbers and can be given special meaning */
+#define REQUEST_SYNC_POINT_PENDING G_MAXUINT + 1
+#define REQUEST_SYNC_POINT_UNSET G_MAXUINT64
 
 enum
 {
   PROP_0,
   PROP_QOS,
   PROP_MAX_ERRORS,
+  PROP_MIN_FORCE_KEY_UNIT_INTERVAL,
+  PROP_DISCARD_CORRUPTED_FRAMES,
+  PROP_AUTOMATIC_REQUEST_SYNC_POINTS,
+  PROP_AUTOMATIC_REQUEST_SYNC_POINT_FLAGS,
 };
 
 struct _GstVideoDecoderPrivate
@@ -319,6 +351,9 @@ struct _GstVideoDecoderPrivate
   /* Whether input is considered packetized or not */
   gboolean packetized;
 
+  /* whether input is considered as subframes */
+  gboolean subframe_mode;
+
   /* Error handling */
   gint max_errors;
   gint error_count;
@@ -334,7 +369,7 @@ struct _GstVideoDecoderPrivate
   GstSegmentFlags decode_flags;
 
   /* ... being tracked here;
-   * only available during parsing */
+   * only available during parsing or when doing subframe decoding */
   GstVideoCodecFrame *current_frame;
   /* events that should apply to the current frame */
   /* FIXME 2.0: Use a GQueue or similar, see GstVideoCodecFrame::events */
@@ -375,9 +410,20 @@ struct _GstVideoDecoderPrivate
   /* combine with base_picture_number, framerate and calcs to yield (presentation) ts */
   GstClockTime base_timestamp;
 
-  /* FIXME : reorder_depth is never set */
-  int reorder_depth;
-  int distance_from_sync;
+  /* Properties */
+  GstClockTime min_force_key_unit_interval;
+  gboolean discard_corrupted_frames;
+
+  /* Key unit related state */
+  gboolean needs_sync_point;
+  GstVideoDecoderRequestSyncPointFlags request_sync_point_flags;
+  guint64 request_sync_point_frame_number;
+  GstClockTime last_force_key_unit_time;
+  /* -1 if we saw no sync point yet */
+  guint64 distance_from_sync;
+
+  gboolean automatic_request_sync_points;
+  GstVideoDecoderRequestSyncPointFlags automatic_request_sync_point_flags;
 
   guint32 system_frame_number;
   guint32 decode_frame_number;
@@ -494,12 +540,22 @@ static gboolean gst_video_decoder_src_query_default (GstVideoDecoder * decoder,
 static gboolean gst_video_decoder_transform_meta_default (GstVideoDecoder *
     decoder, GstVideoCodecFrame * frame, GstMeta * meta);
 
+static gboolean gst_video_decoder_handle_missing_data_default (GstVideoDecoder *
+    decoder, GstClockTime timestamp, GstClockTime duration);
+
+static void gst_video_decoder_copy_metas (GstVideoDecoder * decoder,
+    GstVideoCodecFrame * frame, GstBuffer * src_buffer,
+    GstBuffer * dest_buffer);
+
+static void gst_video_decoder_request_sync_point_internal (GstVideoDecoder *
+    dec, GstClockTime deadline, GstVideoDecoderRequestSyncPointFlags flags);
+
 /* we can't use G_DEFINE_ABSTRACT_TYPE because we need the klass in the _init
  * method to get to the padtemplates */
 GType
 gst_video_decoder_get_type (void)
 {
-  static volatile gsize type = 0;
+  static gsize type = 0;
 
   if (g_once_init_enter (&type)) {
     GType _type;
@@ -564,6 +620,7 @@ gst_video_decoder_class_init (GstVideoDecoderClass * klass)
   klass->sink_query = gst_video_decoder_sink_query_default;
   klass->src_query = gst_video_decoder_src_query_default;
   klass->transform_meta = gst_video_decoder_transform_meta_default;
+  klass->handle_missing_data = gst_video_decoder_handle_missing_data_default;
 
   /**
    * GstVideoDecoder:qos:
@@ -592,6 +649,75 @@ gst_video_decoder_class_init (GstVideoDecoderClass * klass)
       g_param_spec_int ("max-errors", "Max errors",
           "Max consecutive decoder errors before returning flow error",
           -1, G_MAXINT, DEFAULT_MAX_ERRORS,
+          G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
+
+  /**
+   * GstVideoDecoder:min-force-key-unit-interval:
+   *
+   * Minimum interval between force-key-unit events sent upstream by the
+   * decoder. Setting this to 0 will cause every event to be handled, setting
+   * this to %GST_CLOCK_TIME_NONE will cause every event to be ignored.
+   *
+   * See gst_video_event_new_upstream_force_key_unit() for more details about
+   * force-key-unit events.
+   *
+   * Since: 1.20
+   */
+  g_object_class_install_property (gobject_class,
+      PROP_MIN_FORCE_KEY_UNIT_INTERVAL,
+      g_param_spec_uint64 ("min-force-key-unit-interval",
+          "Minimum Force Keyunit Interval",
+          "Minimum interval between force-keyunit requests in nanoseconds", 0,
+          G_MAXUINT64, DEFAULT_MIN_FORCE_KEY_UNIT_INTERVAL,
+          G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
+
+  /**
+   * GstVideoDecoder:discard-corrupted-frames:
+   *
+   * If set to %TRUE the decoder will discard frames that are marked as
+   * corrupted instead of outputting them.
+   *
+   * Since: 1.20
+   */
+  g_object_class_install_property (gobject_class, PROP_DISCARD_CORRUPTED_FRAMES,
+      g_param_spec_boolean ("discard-corrupted-frames",
+          "Discard Corrupted Frames",
+          "Discard frames marked as corrupted instead of outputting them",
+          DEFAULT_DISCARD_CORRUPTED_FRAMES,
+          G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
+
+  /**
+   * GstVideoDecoder:automatic-request-sync-points:
+   *
+   * If set to %TRUE the decoder will automatically request sync points when
+   * it seems like a good idea, e.g. if the first frames are not key frames or
+   * if packet loss was reported by upstream.
+   *
+   * Since: 1.20
+   */
+  g_object_class_install_property (gobject_class,
+      PROP_AUTOMATIC_REQUEST_SYNC_POINTS,
+      g_param_spec_boolean ("automatic-request-sync-points",
+          "Automatic Request Sync Points",
+          "Automatically request sync points when it would be useful",
+          DEFAULT_AUTOMATIC_REQUEST_SYNC_POINTS,
+          G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
+
+  /**
+   * GstVideoDecoder:automatic-request-sync-point-flags:
+   *
+   * GstVideoDecoderRequestSyncPointFlags to use for the automatically
+   * requested sync points if `automatic-request-sync-points` is enabled.
+   *
+   * Since: 1.20
+   */
+  g_object_class_install_property (gobject_class,
+      PROP_AUTOMATIC_REQUEST_SYNC_POINT_FLAGS,
+      g_param_spec_flags ("automatic-request-sync-point-flags",
+          "Automatic Request Sync Point Flags",
+          "Flags to use when automatically requesting sync points",
+          GST_TYPE_VIDEO_DECODER_REQUEST_SYNC_POINT_FLAGS,
+          DEFAULT_AUTOMATIC_REQUEST_SYNC_POINT_FLAGS,
           G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
 
   meta_tag_video_quark = g_quark_from_static_string (GST_META_TAG_VIDEO_STR);
@@ -652,6 +778,11 @@ gst_video_decoder_init (GstVideoDecoder * decoder, GstVideoDecoderClass * klass)
   decoder->priv->min_latency = 0;
   decoder->priv->max_latency = 0;
 
+  decoder->priv->automatic_request_sync_points =
+      DEFAULT_AUTOMATIC_REQUEST_SYNC_POINTS;
+  decoder->priv->automatic_request_sync_point_flags =
+      DEFAULT_AUTOMATIC_REQUEST_SYNC_POINT_FLAGS;
+
   gst_video_decoder_reset (decoder, TRUE, TRUE);
 }
 
@@ -710,18 +841,8 @@ _new_output_state (GstVideoFormat fmt, GstVideoInterlaceMode interlace_mode,
     if (copy_interlace_mode)
       tgt->interlace_mode = ref->interlace_mode;
     tgt->flags = ref->flags;
-    /* only copy values that are not unknown so that we don't override the
-     * defaults. subclasses should really fill these in when they know. */
-    if (ref->chroma_site)
-      tgt->chroma_site = ref->chroma_site;
-    if (ref->colorimetry.range)
-      tgt->colorimetry.range = ref->colorimetry.range;
-    if (ref->colorimetry.matrix)
-      tgt->colorimetry.matrix = ref->colorimetry.matrix;
-    if (ref->colorimetry.transfer)
-      tgt->colorimetry.transfer = ref->colorimetry.transfer;
-    if (ref->colorimetry.primaries)
-      tgt->colorimetry.primaries = ref->colorimetry.primaries;
+    tgt->chroma_site = ref->chroma_site;
+    tgt->colorimetry = ref->colorimetry;
     GST_DEBUG ("reference par %d/%d fps %d/%d",
         ref->par_n, ref->par_d, ref->fps_n, ref->fps_d);
     tgt->par_n = ref->par_n;
@@ -866,6 +987,18 @@ gst_video_decoder_get_property (GObject * object, guint property_id,
     case PROP_MAX_ERRORS:
       g_value_set_int (value, gst_video_decoder_get_max_errors (dec));
       break;
+    case PROP_MIN_FORCE_KEY_UNIT_INTERVAL:
+      g_value_set_uint64 (value, priv->min_force_key_unit_interval);
+      break;
+    case PROP_DISCARD_CORRUPTED_FRAMES:
+      g_value_set_boolean (value, priv->discard_corrupted_frames);
+      break;
+    case PROP_AUTOMATIC_REQUEST_SYNC_POINTS:
+      g_value_set_boolean (value, priv->automatic_request_sync_points);
+      break;
+    case PROP_AUTOMATIC_REQUEST_SYNC_POINT_FLAGS:
+      g_value_set_flags (value, priv->automatic_request_sync_point_flags);
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
       break;
@@ -885,6 +1018,18 @@ gst_video_decoder_set_property (GObject * object, guint property_id,
       break;
     case PROP_MAX_ERRORS:
       gst_video_decoder_set_max_errors (dec, g_value_get_int (value));
+      break;
+    case PROP_MIN_FORCE_KEY_UNIT_INTERVAL:
+      priv->min_force_key_unit_interval = g_value_get_uint64 (value);
+      break;
+    case PROP_DISCARD_CORRUPTED_FRAMES:
+      priv->discard_corrupted_frames = g_value_get_boolean (value);
+      break;
+    case PROP_AUTOMATIC_REQUEST_SYNC_POINTS:
+      priv->automatic_request_sync_points = g_value_get_boolean (value);
+      break;
+    case PROP_AUTOMATIC_REQUEST_SYNC_POINT_FLAGS:
+      priv->automatic_request_sync_point_flags = g_value_get_flags (value);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
@@ -1167,12 +1312,41 @@ caps_error:
 }
 
 static gboolean
+gst_video_decoder_handle_missing_data_default (GstVideoDecoder *
+    decoder, GstClockTime timestamp, GstClockTime duration)
+{
+  GstVideoDecoderPrivate *priv;
+
+  priv = decoder->priv;
+
+  if (priv->automatic_request_sync_points) {
+    GstClockTime deadline =
+        gst_segment_to_running_time (&decoder->input_segment, GST_FORMAT_TIME,
+        timestamp);
+
+    GST_DEBUG_OBJECT (decoder,
+        "Requesting sync point for missing data at running time %"
+        GST_TIME_FORMAT " timestamp %" GST_TIME_FORMAT " with duration %"
+        GST_TIME_FORMAT, GST_TIME_ARGS (deadline), GST_TIME_ARGS (timestamp),
+        GST_TIME_ARGS (duration));
+
+    gst_video_decoder_request_sync_point_internal (decoder, deadline,
+        priv->automatic_request_sync_point_flags);
+  }
+
+  return TRUE;
+}
+
+static gboolean
 gst_video_decoder_sink_event_default (GstVideoDecoder * decoder,
     GstEvent * event)
 {
+  GstVideoDecoderClass *decoder_class;
   GstVideoDecoderPrivate *priv;
   gboolean ret = FALSE;
   gboolean forward_immediate = FALSE;
+
+  decoder_class = GST_VIDEO_DECODER_GET_CLASS (decoder);
 
   priv = decoder->priv;
 
@@ -1216,7 +1390,7 @@ gst_video_decoder_sink_event_default (GstVideoDecoder * decoder,
       GstFlowReturn flow_ret = GST_FLOW_OK;
 
       GST_VIDEO_DECODER_STREAM_LOCK (decoder);
-      flow_ret = gst_video_decoder_drain_out (decoder, TRUE);
+      flow_ret = gst_video_decoder_drain_out (decoder, FALSE);
       GST_VIDEO_DECODER_STREAM_UNLOCK (decoder);
       ret = (flow_ret == GST_FLOW_OK);
 
@@ -1261,54 +1435,69 @@ gst_video_decoder_sink_event_default (GstVideoDecoder * decoder,
     }
     case GST_EVENT_GAP:
     {
+      GstClockTime timestamp, duration;
+      GstGapFlags gap_flags = 0;
       GstFlowReturn flow_ret = GST_FLOW_OK;
       gboolean needs_reconfigure = FALSE;
       GList *events;
       GList *frame_events;
 
+      gst_event_parse_gap (event, &timestamp, &duration);
+      gst_event_parse_gap_flags (event, &gap_flags);
+
       GST_VIDEO_DECODER_STREAM_LOCK (decoder);
-      if (decoder->input_segment.flags & GST_SEEK_FLAG_TRICKMODE_KEY_UNITS)
-        flow_ret = gst_video_decoder_drain_out (decoder, FALSE);
-      ret = (flow_ret == GST_FLOW_OK);
+      /* If this is not missing data, or the subclass does not handle it
+       * specifically, then drain out the decoder and forward the event
+       * directly. */
+      if ((gap_flags & GST_GAP_FLAG_MISSING_DATA) == 0
+          || !decoder_class->handle_missing_data
+          || decoder_class->handle_missing_data (decoder, timestamp,
+              duration)) {
+        if (decoder->input_segment.flags & GST_SEEK_FLAG_TRICKMODE_KEY_UNITS)
+          flow_ret = gst_video_decoder_drain_out (decoder, FALSE);
+        ret = (flow_ret == GST_FLOW_OK);
 
-      /* Ensure we have caps before forwarding the event */
-      if (!decoder->priv->output_state) {
-        if (!gst_video_decoder_negotiate_default_caps (decoder)) {
-          GST_VIDEO_DECODER_STREAM_UNLOCK (decoder);
-          GST_ELEMENT_ERROR (decoder, STREAM, FORMAT, (NULL),
-              ("Decoder output not negotiated before GAP event."));
-          forward_immediate = TRUE;
-          break;
+        /* Ensure we have caps before forwarding the event */
+        if (!decoder->priv->output_state) {
+          if (!gst_video_decoder_negotiate_default_caps (decoder)) {
+            GST_VIDEO_DECODER_STREAM_UNLOCK (decoder);
+            GST_ELEMENT_ERROR (decoder, STREAM, FORMAT, (NULL),
+                ("Decoder output not negotiated before GAP event."));
+            forward_immediate = TRUE;
+            break;
+          }
+          needs_reconfigure = TRUE;
         }
-        needs_reconfigure = TRUE;
-      }
 
-      needs_reconfigure = gst_pad_check_reconfigure (decoder->srcpad)
-          || needs_reconfigure;
-      if (decoder->priv->output_state_changed || needs_reconfigure) {
-        if (!gst_video_decoder_negotiate_unlocked (decoder)) {
-          GST_WARNING_OBJECT (decoder, "Failed to negotiate with downstream");
-          gst_pad_mark_reconfigure (decoder->srcpad);
+        needs_reconfigure = gst_pad_check_reconfigure (decoder->srcpad)
+            || needs_reconfigure;
+        if (decoder->priv->output_state_changed || needs_reconfigure) {
+          if (!gst_video_decoder_negotiate_unlocked (decoder)) {
+            GST_WARNING_OBJECT (decoder, "Failed to negotiate with downstream");
+            gst_pad_mark_reconfigure (decoder->srcpad);
+          }
         }
+
+        GST_DEBUG_OBJECT (decoder, "Pushing all pending serialized events"
+            " before the gap");
+        events = decoder->priv->pending_events;
+        frame_events = decoder->priv->current_frame_events;
+        decoder->priv->pending_events = NULL;
+        decoder->priv->current_frame_events = NULL;
+
+        GST_VIDEO_DECODER_STREAM_UNLOCK (decoder);
+
+        gst_video_decoder_push_event_list (decoder, events);
+        gst_video_decoder_push_event_list (decoder, frame_events);
+
+        /* Forward GAP immediately. Everything is drained after
+         * the GAP event and we can forward this event immediately
+         * now without having buffers out of order.
+         */
+        forward_immediate = TRUE;
+      } else {
+        gst_clear_event (&event);
       }
-
-      GST_DEBUG_OBJECT (decoder, "Pushing all pending serialized events"
-          " before the gap");
-      events = decoder->priv->pending_events;
-      frame_events = decoder->priv->current_frame_events;
-      decoder->priv->pending_events = NULL;
-      decoder->priv->current_frame_events = NULL;
-
-      GST_VIDEO_DECODER_STREAM_UNLOCK (decoder);
-
-      gst_video_decoder_push_event_list (decoder, events);
-      gst_video_decoder_push_event_list (decoder, frame_events);
-
-      /* Forward GAP immediately. Everything is drained after
-       * the GAP event and we can forward this event immediately
-       * now without having buffers out of order.
-       */
-      forward_immediate = TRUE;
       break;
     }
     case GST_EVENT_CUSTOM_DOWNSTREAM:
@@ -2045,6 +2234,12 @@ gst_video_decoder_add_buffer_info (GstVideoDecoder * decoder,
   ts->flags = GST_BUFFER_FLAGS (buffer);
 
   g_queue_push_tail (&priv->timestamps, ts);
+
+  if (g_queue_get_length (&priv->timestamps) > 40) {
+    GST_WARNING_OBJECT (decoder,
+        "decoder timestamp list getting long: %d timestamps,"
+        "possible internal leaking?", g_queue_get_length (&priv->timestamps));
+  }
 }
 
 static void
@@ -2158,7 +2353,12 @@ gst_video_decoder_reset (GstVideoDecoder * decoder, gboolean full,
     priv->earliest_time = GST_CLOCK_TIME_NONE;
     priv->proportion = 0.5;
     priv->decode_flags_override = FALSE;
+
+    priv->request_sync_point_flags = 0;
+    priv->request_sync_point_frame_number = REQUEST_SYNC_POINT_UNSET;
+    priv->last_force_key_unit_time = GST_CLOCK_TIME_NONE;
     GST_OBJECT_UNLOCK (decoder);
+    priv->distance_from_sync = -1;
   }
 
   if (full) {
@@ -2257,22 +2457,43 @@ gst_video_decoder_chain_forward (GstVideoDecoder * decoder,
   priv->input_offset += gst_buffer_get_size (buf);
 
   if (priv->packetized) {
+    GstVideoCodecFrame *frame;
     gboolean was_keyframe = FALSE;
+
+    frame = priv->current_frame;
+
+    frame->abidata.ABI.num_subframes++;
+    if (gst_video_decoder_get_subframe_mode (decoder)) {
+      /* End the frame if the marker flag is set */
+      if (!GST_BUFFER_FLAG_IS_SET (buf, GST_VIDEO_BUFFER_FLAG_MARKER)
+          && (decoder->input_segment.rate > 0.0))
+        priv->current_frame = gst_video_codec_frame_ref (frame);
+      else
+        priv->current_frame = NULL;
+    } else {
+      priv->current_frame = frame;
+    }
+
     if (!GST_BUFFER_FLAG_IS_SET (buf, GST_BUFFER_FLAG_DELTA_UNIT)) {
       was_keyframe = TRUE;
-      GST_LOG_OBJECT (decoder, "Marking current_frame as sync point");
-      GST_VIDEO_CODEC_FRAME_SET_SYNC_POINT (priv->current_frame);
+      GST_DEBUG_OBJECT (decoder, "Marking current_frame as sync point");
+      GST_VIDEO_CODEC_FRAME_SET_SYNC_POINT (frame);
     }
 
-    priv->current_frame->input_buffer = buf;
+    if (frame->input_buffer) {
+      gst_video_decoder_copy_metas (decoder, frame, frame->input_buffer, buf);
+      gst_buffer_unref (frame->input_buffer);
+    }
+    frame->input_buffer = buf;
 
     if (decoder->input_segment.rate < 0.0) {
-      priv->parse_gather =
-          g_list_prepend (priv->parse_gather, priv->current_frame);
+      priv->parse_gather = g_list_prepend (priv->parse_gather, frame);
+      priv->current_frame = NULL;
     } else {
-      ret = gst_video_decoder_decode_frame (decoder, priv->current_frame);
+      ret = gst_video_decoder_decode_frame (decoder, frame);
+      if (!gst_video_decoder_get_subframe_mode (decoder))
+        priv->current_frame = NULL;
     }
-    priv->current_frame = NULL;
     /* If in trick mode and it was a keyframe, drain decoder to avoid extra
      * latency. Only do this for forwards playback as reverse playback handles
      * draining on keyframes in flush_parse(), and would otherwise call back
@@ -2301,13 +2522,37 @@ gst_video_decoder_flush_decode (GstVideoDecoder * dec)
   GstVideoDecoderPrivate *priv = dec->priv;
   GstFlowReturn res = GST_FLOW_OK;
   GList *walk;
-
+  GstVideoCodecFrame *current_frame = NULL;
+  gboolean last_subframe;
   GST_DEBUG_OBJECT (dec, "flushing buffers to decode");
 
   walk = priv->decode;
   while (walk) {
     GList *next;
     GstVideoCodecFrame *frame = (GstVideoCodecFrame *) (walk->data);
+    last_subframe = TRUE;
+    /* In subframe mode, we need to get rid of intermediary frames
+     * created during the buffer gather stage. That's why that we keep a current
+     * frame as the main frame and drop all the frame afterwhile until the end
+     * of the subframes batch.
+     * */
+    if (gst_video_decoder_get_subframe_mode (dec)) {
+      if (current_frame == NULL) {
+        current_frame = gst_video_codec_frame_ref (frame);
+      } else {
+        if (current_frame->input_buffer) {
+          gst_video_decoder_copy_metas (dec, current_frame,
+              current_frame->input_buffer, current_frame->output_buffer);
+          gst_buffer_unref (current_frame->input_buffer);
+        }
+        current_frame->input_buffer = gst_buffer_ref (frame->input_buffer);
+        gst_video_codec_frame_unref (frame);
+      }
+      last_subframe = GST_BUFFER_FLAG_IS_SET (current_frame->input_buffer,
+          GST_VIDEO_BUFFER_FLAG_MARKER);
+    } else {
+      current_frame = frame;
+    }
 
     GST_DEBUG_OBJECT (dec, "decoding frame %p buffer %p, PTS %" GST_TIME_FORMAT
         ", DTS %" GST_TIME_FORMAT, frame, frame->input_buffer,
@@ -2319,10 +2564,12 @@ gst_video_decoder_flush_decode (GstVideoDecoder * dec)
     priv->decode = g_list_delete_link (priv->decode, walk);
 
     /* decode buffer, resulting data prepended to queue */
-    res = gst_video_decoder_decode_frame (dec, frame);
+    res = gst_video_decoder_decode_frame (dec, current_frame);
     if (res != GST_FLOW_OK)
       break;
-
+    if (!gst_video_decoder_get_subframe_mode (dec)
+        || last_subframe)
+      current_frame = NULL;
     walk = next;
   }
 
@@ -2751,9 +2998,9 @@ gst_video_decoder_prepare_finish_frame (GstVideoDecoder *
   sync = GST_VIDEO_CODEC_FRAME_IS_SYNC_POINT (frame);
 
   GST_LOG_OBJECT (decoder,
-      "finish frame %p (#%d) sync:%d PTS:%" GST_TIME_FORMAT " DTS:%"
+      "finish frame %p (#%d)(sub=#%d) sync:%d PTS:%" GST_TIME_FORMAT " DTS:%"
       GST_TIME_FORMAT,
-      frame, frame->system_frame_number,
+      frame, frame->system_frame_number, frame->abidata.ABI.num_subframes,
       sync, GST_TIME_ARGS (frame->pts), GST_TIME_ARGS (frame->dts));
 
   /* Push all pending events that arrived before this frame */
@@ -2891,11 +3138,17 @@ gst_video_decoder_prepare_finish_frame (GstVideoDecoder *
     if (frame->duration != GST_CLOCK_TIME_NONE) {
       if (GST_CLOCK_TIME_IS_VALID (priv->last_timestamp_out))
         frame->pts = priv->last_timestamp_out + frame->duration;
-      else if (decoder->output_segment.rate > 0.0)
+      else if (frame->dts != GST_CLOCK_TIME_NONE) {
+        frame->pts = frame->dts;
+        GST_LOG_OBJECT (decoder,
+            "Setting DTS as PTS %" GST_TIME_FORMAT " for frame...",
+            GST_TIME_ARGS (frame->pts));
+      } else if (decoder->output_segment.rate > 0.0)
         frame->pts = decoder->output_segment.start;
-      GST_LOG_OBJECT (decoder,
-          "Guessing timestamp %" GST_TIME_FORMAT " for frame...",
-          GST_TIME_ARGS (frame->pts));
+      GST_INFO_OBJECT (decoder,
+          "Guessing PTS=%" GST_TIME_FORMAT " for frame... DTS=%"
+          GST_TIME_FORMAT, GST_TIME_ARGS (frame->pts),
+          GST_TIME_ARGS (frame->dts));
     } else if (sync && frame->dts != GST_CLOCK_TIME_NONE) {
       frame->pts = frame->dts;
       GST_LOG_OBJECT (decoder,
@@ -3011,6 +3264,10 @@ gst_video_decoder_drop_frame (GstVideoDecoder * dec, GstVideoCodecFrame * frame)
 {
   GST_LOG_OBJECT (dec, "drop frame %p", frame);
 
+  if (gst_video_decoder_get_subframe_mode (dec))
+    GST_DEBUG_OBJECT (dec, "Drop subframe %d. Must be the last one.",
+        frame->abidata.ABI.num_subframes);
+
   GST_VIDEO_DECODER_STREAM_LOCK (dec);
 
   gst_video_decoder_prepare_finish_frame (dec, frame, TRUE);
@@ -3022,6 +3279,38 @@ gst_video_decoder_drop_frame (GstVideoDecoder * dec, GstVideoCodecFrame * frame)
 
   /* now free the frame */
   gst_video_decoder_release_frame (dec, frame);
+
+  GST_VIDEO_DECODER_STREAM_UNLOCK (dec);
+
+  return GST_FLOW_OK;
+}
+
+/**
+ * gst_video_decoder_drop_subframe:
+ * @dec: a #GstVideoDecoder
+ * @frame: (transfer full): the #GstVideoCodecFrame
+ *
+ * Drops input data.
+ * The frame is not considered finished until the whole frame
+ * is finished or dropped by the subclass.
+ *
+ * Returns: a #GstFlowReturn, usually GST_FLOW_OK.
+ *
+ * Since: 1.20
+ */
+GstFlowReturn
+gst_video_decoder_drop_subframe (GstVideoDecoder * dec,
+    GstVideoCodecFrame * frame)
+{
+  g_return_val_if_fail (gst_video_decoder_get_subframe_mode (dec),
+      GST_FLOW_NOT_SUPPORTED);
+
+  GST_LOG_OBJECT (dec, "drop subframe %p num=%d", frame->input_buffer,
+      gst_video_decoder_get_input_subframe_index (dec, frame));
+
+  GST_VIDEO_DECODER_STREAM_LOCK (dec);
+
+  gst_video_codec_frame_unref (frame);
 
   GST_VIDEO_DECODER_STREAM_UNLOCK (dec);
 
@@ -3059,6 +3348,7 @@ typedef struct
 {
   GstVideoDecoder *decoder;
   GstVideoCodecFrame *frame;
+  GstBuffer *buffer;
 } CopyMetaData;
 
 static gboolean
@@ -3068,6 +3358,7 @@ foreach_metadata (GstBuffer * inbuf, GstMeta ** meta, gpointer user_data)
   GstVideoDecoder *decoder = data->decoder;
   GstVideoDecoderClass *klass = GST_VIDEO_DECODER_GET_CLASS (decoder);
   GstVideoCodecFrame *frame = data->frame;
+  GstBuffer *buffer = data->buffer;
   const GstMetaInfo *info = (*meta)->info;
   gboolean do_copy = FALSE;
 
@@ -3088,10 +3379,32 @@ foreach_metadata (GstBuffer * inbuf, GstMeta ** meta, gpointer user_data)
     GstMetaTransformCopy copy_data = { FALSE, 0, -1 };
     GST_DEBUG_OBJECT (decoder, "copy metadata %s", g_type_name (info->api));
     /* simply copy then */
-    info->transform_func (frame->output_buffer, *meta, inbuf,
-        _gst_meta_transform_copy, &copy_data);
+
+    info->transform_func (buffer, *meta, inbuf, _gst_meta_transform_copy,
+        &copy_data);
   }
   return TRUE;
+}
+
+static void
+gst_video_decoder_copy_metas (GstVideoDecoder * decoder,
+    GstVideoCodecFrame * frame, GstBuffer * src_buffer, GstBuffer * dest_buffer)
+{
+  GstVideoDecoderClass *decoder_class = GST_VIDEO_DECODER_GET_CLASS (decoder);
+
+  if (decoder_class->transform_meta) {
+    if (G_LIKELY (frame)) {
+      CopyMetaData data;
+
+      data.decoder = decoder;
+      data.frame = frame;
+      data.buffer = dest_buffer;
+      gst_buffer_foreach_meta (src_buffer, foreach_metadata, &data);
+    } else {
+      GST_WARNING_OBJECT (decoder,
+          "Can't copy metadata because input frame disappeared");
+    }
+  }
 }
 
 /**
@@ -3115,7 +3428,6 @@ gst_video_decoder_finish_frame (GstVideoDecoder * decoder,
     GstVideoCodecFrame * frame)
 {
   GstFlowReturn ret = GST_FLOW_OK;
-  GstVideoDecoderClass *decoder_class = GST_VIDEO_DECODER_GET_CLASS (decoder);
   GstVideoDecoderPrivate *priv = decoder->priv;
   GstBuffer *output_buffer;
   gboolean needs_reconfigure = FALSE;
@@ -3153,7 +3465,40 @@ gst_video_decoder_finish_frame (GstVideoDecoder * decoder,
 
   /* no buffer data means this frame is skipped */
   if (!frame->output_buffer || GST_VIDEO_CODEC_FRAME_IS_DECODE_ONLY (frame)) {
-    GST_DEBUG_OBJECT (decoder, "skipping frame %" GST_TIME_FORMAT,
+    GST_DEBUG_OBJECT (decoder,
+        "skipping frame %" GST_TIME_FORMAT " because not output was produced",
+        GST_TIME_ARGS (frame->pts));
+    goto done;
+  }
+
+  /* Mark output as corrupted if the subclass requested so and we're either
+   * still before the sync point after the request, or we don't even know the
+   * frame number of the sync point yet (it is 0) */
+  GST_OBJECT_LOCK (decoder);
+  if (frame->system_frame_number <= priv->request_sync_point_frame_number
+      && priv->request_sync_point_frame_number != REQUEST_SYNC_POINT_UNSET) {
+    if (priv->request_sync_point_flags &
+        GST_VIDEO_DECODER_REQUEST_SYNC_POINT_CORRUPT_OUTPUT) {
+      GST_DEBUG_OBJECT (decoder,
+          "marking frame %" GST_TIME_FORMAT
+          " as corrupted because it is still before the sync point",
+          GST_TIME_ARGS (frame->pts));
+      GST_VIDEO_CODEC_FRAME_FLAG_SET (frame,
+          GST_VIDEO_CODEC_FRAME_FLAG_CORRUPTED);
+    }
+  } else {
+    /* Reset to -1 to mark it as unset now that we've reached the frame */
+    priv->request_sync_point_frame_number = REQUEST_SYNC_POINT_UNSET;
+  }
+  GST_OBJECT_UNLOCK (decoder);
+
+  if (priv->discard_corrupted_frames
+      && (GST_VIDEO_CODEC_FRAME_FLAG_IS_SET (frame,
+              GST_VIDEO_CODEC_FRAME_FLAG_CORRUPTED)
+          || GST_BUFFER_FLAG_IS_SET (frame->output_buffer,
+              GST_BUFFER_FLAG_CORRUPTED))) {
+    GST_DEBUG_OBJECT (decoder,
+        "skipping frame %" GST_TIME_FORMAT " because it is corrupted",
         GST_TIME_ARGS (frame->pts));
     goto done;
   }
@@ -3175,18 +3520,16 @@ gst_video_decoder_finish_frame (GstVideoDecoder * decoder,
     GST_BUFFER_FLAG_SET (output_buffer, GST_BUFFER_FLAG_DISCONT);
   }
 
-  if (decoder_class->transform_meta) {
-    if (G_LIKELY (frame->input_buffer)) {
-      CopyMetaData data;
-
-      data.decoder = decoder;
-      data.frame = frame;
-      gst_buffer_foreach_meta (frame->input_buffer, foreach_metadata, &data);
-    } else {
-      GST_WARNING_OBJECT (decoder,
-          "Can't copy metadata because input frame disappeared");
-    }
+  if (GST_VIDEO_CODEC_FRAME_FLAG_IS_SET (frame,
+          GST_VIDEO_CODEC_FRAME_FLAG_CORRUPTED)) {
+    GST_DEBUG_OBJECT (decoder,
+        "marking frame %" GST_TIME_FORMAT " as corrupted",
+        GST_TIME_ARGS (frame->pts));
+    GST_BUFFER_FLAG_SET (output_buffer, GST_BUFFER_FLAG_CORRUPTED);
   }
+
+  gst_video_decoder_copy_metas (decoder, frame, frame->input_buffer,
+      frame->output_buffer);
 
   /* Get an additional ref to the buffer, which is going to be pushed
    * downstream, the original ref is owned by the frame
@@ -3213,6 +3556,39 @@ done:
     gst_video_decoder_release_frame (decoder, frame);
   GST_VIDEO_DECODER_STREAM_UNLOCK (decoder);
   return ret;
+}
+
+/**
+ * gst_video_decoder_finish_subframe:
+ * @decoder: a #GstVideoDecoder
+ * @frame: (transfer full): the #GstVideoCodecFrame
+ *
+ * Indicate that a subframe has been finished to be decoded
+ * by the subclass. This method should be called for all subframes
+ * except the last subframe where @gst_video_decoder_finish_frame
+ * should be called instead.
+ *
+ * Returns: a #GstFlowReturn, usually GST_FLOW_OK.
+ *
+ * Since: 1.20
+ */
+GstFlowReturn
+gst_video_decoder_finish_subframe (GstVideoDecoder * decoder,
+    GstVideoCodecFrame * frame)
+{
+  g_return_val_if_fail (gst_video_decoder_get_subframe_mode (decoder),
+      GST_FLOW_NOT_SUPPORTED);
+
+  GST_LOG_OBJECT (decoder, "finish subframe %p num=%d", frame->input_buffer,
+      gst_video_decoder_get_input_subframe_index (decoder, frame));
+
+  GST_VIDEO_DECODER_STREAM_LOCK (decoder);
+  frame->abidata.ABI.subframes_processed++;
+  gst_video_codec_frame_unref (frame);
+
+  GST_VIDEO_DECODER_STREAM_UNLOCK (decoder);
+
+  return GST_FLOW_OK;
 }
 
 /* With stream lock, takes the frame reference */
@@ -3471,6 +3847,11 @@ gst_video_decoder_have_frame (GstVideoDecoder * decoder)
     buffer = gst_buffer_new_and_alloc (0);
   }
 
+  if (priv->current_frame->input_buffer) {
+    gst_video_decoder_copy_metas (decoder, priv->current_frame,
+        priv->current_frame->input_buffer, buffer);
+    gst_buffer_unref (priv->current_frame->input_buffer);
+  }
   priv->current_frame->input_buffer = buffer;
 
   gst_video_decoder_get_buffer_info_at_offset (decoder,
@@ -3487,20 +3868,36 @@ gst_video_decoder_have_frame (GstVideoDecoder * decoder)
       GST_TIME_ARGS (duration));
 
   if (!GST_BUFFER_FLAG_IS_SET (buffer, GST_BUFFER_FLAG_DELTA_UNIT)) {
-    GST_LOG_OBJECT (decoder, "Marking as sync point");
+    GST_DEBUG_OBJECT (decoder, "Marking as sync point");
     GST_VIDEO_CODEC_FRAME_SET_SYNC_POINT (priv->current_frame);
+  }
+
+  if (GST_BUFFER_FLAG_IS_SET (buffer, GST_BUFFER_FLAG_CORRUPTED)) {
+    GST_DEBUG_OBJECT (decoder, "Marking as corrupted");
+    GST_VIDEO_CODEC_FRAME_FLAG_SET (priv->current_frame,
+        GST_VIDEO_CODEC_FRAME_FLAG_CORRUPTED);
   }
 
   /* In reverse playback, just capture and queue frames for later processing */
   if (decoder->input_segment.rate < 0.0) {
     priv->parse_gather =
         g_list_prepend (priv->parse_gather, priv->current_frame);
+    priv->current_frame = NULL;
   } else {
-    /* Otherwise, decode the frame, which gives away our ref */
-    ret = gst_video_decoder_decode_frame (decoder, priv->current_frame);
+    GstVideoCodecFrame *frame = priv->current_frame;
+    frame->abidata.ABI.num_subframes++;
+    /* In subframe mode, we keep a ref for ourselves
+     * as this frame will be kept during the data collection
+     * in parsed mode. The frame reference will be released by
+     * finish_(sub)frame or drop_(sub)frame.*/
+    if (gst_video_decoder_get_subframe_mode (decoder))
+      gst_video_codec_frame_ref (priv->current_frame);
+    else
+      priv->current_frame = NULL;
+
+    /* Decode the frame, which gives away our ref */
+    ret = gst_video_decoder_decode_frame (decoder, frame);
   }
-  /* Current frame is gone now, either way */
-  priv->current_frame = NULL;
 
   GST_VIDEO_DECODER_STREAM_UNLOCK (decoder);
 
@@ -3523,45 +3920,88 @@ gst_video_decoder_decode_frame (GstVideoDecoder * decoder,
   /* FIXME : This should only have to be checked once (either the subclass has an
    * implementation, or it doesn't) */
   g_return_val_if_fail (decoder_class->handle_frame != NULL, GST_FLOW_ERROR);
+  g_return_val_if_fail (frame != NULL, GST_FLOW_ERROR);
 
-  frame->distance_from_sync = priv->distance_from_sync;
-  priv->distance_from_sync++;
   frame->pts = GST_BUFFER_PTS (frame->input_buffer);
   frame->dts = GST_BUFFER_DTS (frame->input_buffer);
   frame->duration = GST_BUFFER_DURATION (frame->input_buffer);
+  frame->deadline =
+      gst_segment_to_running_time (&decoder->input_segment, GST_FORMAT_TIME,
+      frame->pts);
 
   /* For keyframes, PTS = DTS + constant_offset, usually 0 to 3 frame
    * durations. */
   /* FIXME upstream can be quite wrong about the keyframe aspect,
    * so we could be going off here as well,
    * maybe let subclass decide if it really is/was a keyframe */
-  if (GST_VIDEO_CODEC_FRAME_IS_SYNC_POINT (frame) &&
-      GST_CLOCK_TIME_IS_VALID (frame->pts)
-      && GST_CLOCK_TIME_IS_VALID (frame->dts)) {
-    /* just in case they are not equal as might ideally be,
-     * e.g. quicktime has a (positive) delta approach */
-    priv->pts_delta = frame->pts - frame->dts;
-    GST_DEBUG_OBJECT (decoder, "PTS delta %d ms",
-        (gint) (priv->pts_delta / GST_MSECOND));
+  if (GST_VIDEO_CODEC_FRAME_IS_SYNC_POINT (frame)) {
+    priv->distance_from_sync = 0;
+
+    GST_OBJECT_LOCK (decoder);
+    priv->request_sync_point_flags &=
+        ~GST_VIDEO_DECODER_REQUEST_SYNC_POINT_DISCARD_INPUT;
+    if (priv->request_sync_point_frame_number == REQUEST_SYNC_POINT_PENDING)
+      priv->request_sync_point_frame_number = frame->system_frame_number;
+    GST_OBJECT_UNLOCK (decoder);
+
+    if (GST_CLOCK_TIME_IS_VALID (frame->pts)
+        && GST_CLOCK_TIME_IS_VALID (frame->dts)) {
+      /* just in case they are not equal as might ideally be,
+       * e.g. quicktime has a (positive) delta approach */
+      priv->pts_delta = frame->pts - frame->dts;
+      GST_DEBUG_OBJECT (decoder, "PTS delta %d ms",
+          (gint) (priv->pts_delta / GST_MSECOND));
+    }
+  } else {
+    if (priv->distance_from_sync == -1 && priv->automatic_request_sync_points) {
+      GST_DEBUG_OBJECT (decoder,
+          "Didn't receive a keyframe yet, requesting sync point");
+      gst_video_decoder_request_sync_point (decoder, frame,
+          priv->automatic_request_sync_point_flags);
+    }
+
+    GST_OBJECT_LOCK (decoder);
+    if ((priv->needs_sync_point && priv->distance_from_sync == -1)
+        || (priv->request_sync_point_flags &
+            GST_VIDEO_DECODER_REQUEST_SYNC_POINT_DISCARD_INPUT)) {
+      GST_WARNING_OBJECT (decoder,
+          "Subclass requires a sync point but we didn't receive one yet, discarding input");
+      GST_OBJECT_UNLOCK (decoder);
+      if (priv->automatic_request_sync_points) {
+        gst_video_decoder_request_sync_point (decoder, frame,
+            priv->automatic_request_sync_point_flags);
+      }
+      gst_video_decoder_release_frame (decoder, frame);
+      return GST_FLOW_OK;
+    }
+    GST_OBJECT_UNLOCK (decoder);
+
+    priv->distance_from_sync++;
   }
 
-  frame->abidata.ABI.ts = frame->dts;
-  frame->abidata.ABI.ts2 = frame->pts;
+  frame->distance_from_sync = priv->distance_from_sync;
 
-  GST_LOG_OBJECT (decoder, "PTS %" GST_TIME_FORMAT ", DTS %" GST_TIME_FORMAT
-      ", dist %d", GST_TIME_ARGS (frame->pts), GST_TIME_ARGS (frame->dts),
+  if (frame->abidata.ABI.num_subframes == 1) {
+    frame->abidata.ABI.ts = frame->dts;
+    frame->abidata.ABI.ts2 = frame->pts;
+  }
+
+  GST_LOG_OBJECT (decoder,
+      "frame %p PTS %" GST_TIME_FORMAT ", DTS %" GST_TIME_FORMAT ", dist %d",
+      frame, GST_TIME_ARGS (frame->pts), GST_TIME_ARGS (frame->dts),
       frame->distance_from_sync);
-
-  g_queue_push_tail (&priv->frames, gst_video_codec_frame_ref (frame));
+  /* FIXME: suboptimal way to add a unique frame to the list, in case of subframe mode. */
+  if (!g_queue_find (&priv->frames, frame)) {
+    g_queue_push_tail (&priv->frames, gst_video_codec_frame_ref (frame));
+  } else {
+    GST_LOG_OBJECT (decoder,
+        "Do not add an existing frame used to decode subframes");
+  }
 
   if (priv->frames.length > 10) {
     GST_DEBUG_OBJECT (decoder, "decoder frame list getting long: %d frames,"
         "possible internal leaking?", priv->frames.length);
   }
-
-  frame->deadline =
-      gst_segment_to_running_time (&decoder->input_segment, GST_FORMAT_TIME,
-      frame->pts);
 
   /* do something with frame */
   ret = decoder_class->handle_frame (decoder, frame);
@@ -4484,6 +4924,123 @@ gst_video_decoder_get_packetized (GstVideoDecoder * decoder)
 }
 
 /**
+ * gst_video_decoder_have_last_subframe:
+ * @decoder: a #GstVideoDecoder
+ * @frame: (transfer none): the #GstVideoCodecFrame to update
+ *
+ * Indicates that the last subframe has been processed by the decoder
+ * in @frame. This will release the current frame in video decoder
+ * allowing to receive new frames from upstream elements. This method
+ * must be called in the subclass @handle_frame callback.
+ *
+ * Returns: a #GstFlowReturn, usually GST_FLOW_OK.
+ *
+ * Since: 1.20
+ */
+GstFlowReturn
+gst_video_decoder_have_last_subframe (GstVideoDecoder * decoder,
+    GstVideoCodecFrame * frame)
+{
+  g_return_val_if_fail (gst_video_decoder_get_subframe_mode (decoder),
+      GST_FLOW_OK);
+  /* unref once from the list */
+  GST_VIDEO_DECODER_STREAM_LOCK (decoder);
+  if (decoder->priv->current_frame == frame) {
+    gst_video_codec_frame_unref (decoder->priv->current_frame);
+    decoder->priv->current_frame = NULL;
+  }
+  GST_VIDEO_DECODER_STREAM_UNLOCK (decoder);
+
+  return GST_FLOW_OK;
+}
+
+/**
+ * gst_video_decoder_set_subframe_mode:
+ * @decoder: a #GstVideoDecoder
+ * @subframe_mode: whether the input data should be considered as subframes.
+ *
+ * If this is set to TRUE, it informs the base class that the subclass
+ * can receive the data at a granularity lower than one frame.
+ *
+ * Note that in this mode, the subclass has two options. It can either
+ * require the presence of a GST_VIDEO_BUFFER_FLAG_MARKER to mark the
+ * end of a frame. Or it can operate in such a way that it will decode
+ * a single frame at a time. In this second case, every buffer that
+ * arrives to the element is considered part of the same frame until
+ * gst_video_decoder_finish_frame() is called.
+ *
+ * In either case, the same #GstVideoCodecFrame will be passed to the
+ * GstVideoDecoderClass:handle_frame vmethod repeatedly with a
+ * different GstVideoCodecFrame:input_buffer every time until the end of the
+ * frame has been signaled using either method.
+ * This method must be called during the decoder subclass @set_format call.
+ *
+ * Since: 1.20
+ */
+void
+gst_video_decoder_set_subframe_mode (GstVideoDecoder * decoder,
+    gboolean subframe_mode)
+{
+  decoder->priv->subframe_mode = subframe_mode;
+}
+
+/**
+ * gst_video_decoder_get_subframe_mode:
+ * @decoder: a #GstVideoDecoder
+ *
+ * Queries whether input data is considered as subframes or not by the
+ * base class. If FALSE, each input buffer will be considered as a full
+ * frame.
+ *
+ * Returns: TRUE if input data is considered as sub frames.
+ *
+ * Since: 1.20
+ */
+gboolean
+gst_video_decoder_get_subframe_mode (GstVideoDecoder * decoder)
+{
+  return decoder->priv->subframe_mode;
+}
+
+/**
+ * gst_video_decoder_get_input_subframe_index:
+ * @decoder: a #GstVideoDecoder
+ * @frame: (transfer none): the #GstVideoCodecFrame to update
+ *
+ * Queries the number of the last subframe received by
+ * the decoder baseclass in the @frame.
+ *
+ * Returns: the current subframe index received in subframe mode, 1 otherwise.
+ *
+ * Since: 1.20
+ */
+guint
+gst_video_decoder_get_input_subframe_index (GstVideoDecoder * decoder,
+    GstVideoCodecFrame * frame)
+{
+  return frame->abidata.ABI.num_subframes;
+}
+
+/**
+ * gst_video_decoder_get_processed_subframe_index:
+ * @decoder: a #GstVideoDecoder
+ * @frame: (transfer none): the #GstVideoCodecFrame to update
+ *
+ * Queries the number of subframes in the frame processed by
+ * the decoder baseclass.
+ *
+ * Returns: the current subframe processed received in subframe mode.
+ *
+ * Since: 1.20
+ */
+guint
+gst_video_decoder_get_processed_subframe_index (GstVideoDecoder * decoder,
+    GstVideoCodecFrame * frame)
+{
+  return frame->abidata.ABI.subframes_processed;
+}
+
+/**
  * gst_video_decoder_set_estimate_rate:
  * @dec: a #GstVideoDecoder
  * @enabled: whether to enable byte to time conversion
@@ -4667,4 +5224,135 @@ gst_video_decoder_set_use_default_pad_acceptcaps (GstVideoDecoder * decoder,
     gboolean use)
 {
   decoder->priv->use_default_pad_acceptcaps = use;
+}
+
+static void
+gst_video_decoder_request_sync_point_internal (GstVideoDecoder * dec,
+    GstClockTime deadline, GstVideoDecoderRequestSyncPointFlags flags)
+{
+  GstEvent *fku = NULL;
+  GstVideoDecoderPrivate *priv;
+
+  g_return_if_fail (GST_IS_VIDEO_DECODER (dec));
+
+  priv = dec->priv;
+
+  GST_OBJECT_LOCK (dec);
+
+  /* Check if we're allowed to send a new force-keyunit event.
+   * frame->deadline is set to the running time of the PTS. */
+  if (priv->min_force_key_unit_interval == 0 ||
+      deadline == GST_CLOCK_TIME_NONE ||
+      (priv->min_force_key_unit_interval != GST_CLOCK_TIME_NONE &&
+          (priv->last_force_key_unit_time == GST_CLOCK_TIME_NONE
+              || (priv->last_force_key_unit_time +
+                  priv->min_force_key_unit_interval <= deadline)))) {
+    GST_DEBUG_OBJECT (dec,
+        "Requesting a new key-unit for frame with deadline %" GST_TIME_FORMAT,
+        GST_TIME_ARGS (deadline));
+    fku =
+        gst_video_event_new_upstream_force_key_unit (GST_CLOCK_TIME_NONE, FALSE,
+        0);
+    priv->last_force_key_unit_time = deadline;
+  } else {
+    GST_DEBUG_OBJECT (dec,
+        "Can't request a new key-unit for frame with deadline %"
+        GST_TIME_FORMAT, GST_TIME_ARGS (deadline));
+  }
+  priv->request_sync_point_flags |= flags;
+  /* We don't know yet the frame number of the sync point so set it to a
+   * frame number higher than any allowed frame number */
+  priv->request_sync_point_frame_number = REQUEST_SYNC_POINT_PENDING;
+  GST_OBJECT_UNLOCK (dec);
+
+  if (fku)
+    gst_pad_push_event (dec->sinkpad, fku);
+}
+
+/**
+ * gst_video_decoder_request_sync_point:
+ * @dec: a #GstVideoDecoder
+ * @frame: a #GstVideoCodecFrame
+ * @flags: #GstVideoDecoderRequestSyncPointFlags
+ *
+ * Allows the #GstVideoDecoder subclass to request from the base class that
+ * a new sync should be requested from upstream, and that @frame was the frame
+ * when the subclass noticed that a new sync point is required. A reason for
+ * the subclass to do this could be missing reference frames, for example.
+ *
+ * The base class will then request a new sync point from upstream as long as
+ * the time that passed since the last one is exceeding
+ * #GstVideoDecoder:min-force-key-unit-interval.
+ *
+ * The subclass can signal via @flags how the frames until the next sync point
+ * should be handled:
+ *
+ *   * If %GST_VIDEO_DECODER_REQUEST_SYNC_POINT_DISCARD_INPUT is selected then
+ *     all following input frames until the next sync point are discarded.
+ *     This can be useful if the lack of a sync point will prevent all further
+ *     decoding and the decoder implementation is not very robust in handling
+ *     missing references frames.
+ *   * If %GST_VIDEO_DECODER_REQUEST_SYNC_POINT_CORRUPT_OUTPUT is selected
+ *     then all output frames following @frame are marked as corrupted via
+ *     %GST_BUFFER_FLAG_CORRUPTED. Corrupted frames can be automatically
+ *     dropped by the base class, see #GstVideoDecoder:discard-corrupted-frames.
+ *     Subclasses can manually mark frames as corrupted via %GST_VIDEO_CODEC_FRAME_FLAG_CORRUPTED
+ *     before calling gst_video_decoder_finish_frame().
+ *
+ * Since: 1.20
+ */
+void
+gst_video_decoder_request_sync_point (GstVideoDecoder * dec,
+    GstVideoCodecFrame * frame, GstVideoDecoderRequestSyncPointFlags flags)
+{
+  g_return_if_fail (GST_IS_VIDEO_DECODER (dec));
+  g_return_if_fail (frame != NULL);
+
+  gst_video_decoder_request_sync_point_internal (dec, frame->deadline, flags);
+}
+
+/**
+ * gst_video_decoder_set_needs_sync_point:
+ * @dec: a #GstVideoDecoder
+ * @enabled: new state
+ *
+ * Configures whether the decoder requires a sync point before it starts
+ * outputting data in the beginning. If enabled, the base class will discard
+ * all non-sync point frames in the beginning and after a flush and does not
+ * pass it to the subclass.
+ *
+ * If the first frame is not a sync point, the base class will request a sync
+ * point via the force-key-unit event.
+ *
+ * Since: 1.20
+ */
+void
+gst_video_decoder_set_needs_sync_point (GstVideoDecoder * dec, gboolean enabled)
+{
+  g_return_if_fail (GST_IS_VIDEO_DECODER (dec));
+
+  dec->priv->needs_sync_point = enabled;
+}
+
+/**
+ * gst_video_decoder_get_needs_sync_point:
+ * @dec: a #GstVideoDecoder
+ *
+ * Queries if the decoder requires a sync point before it starts outputting
+ * data in the beginning.
+ *
+ * Returns: %TRUE if a sync point is required in the beginning.
+ *
+ * Since: 1.20
+ */
+gboolean
+gst_video_decoder_get_needs_sync_point (GstVideoDecoder * dec)
+{
+  gboolean result;
+
+  g_return_val_if_fail (GST_IS_VIDEO_DECODER (dec), FALSE);
+
+  result = dec->priv->needs_sync_point;
+
+  return result;
 }

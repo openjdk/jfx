@@ -34,6 +34,17 @@
  *     caps (simple caps = one line)
  */
 
+/**
+ * SECTION: debugutils
+ * @title: Debugging utilities
+ * @short_description: A set of utilities for debugging and development
+ *
+ * These utility functions help with generating dot graphs which can
+ * be rendered with [graphviz] to multiple formats.
+ *
+ * [graphviz]: https://graphviz.org/
+ */
+
 #include "gst_private.h"
 #include "gstdebugutils.h"
 
@@ -799,7 +810,7 @@ debug_dump_footer (GString * str)
  * @details: type of #GstDebugGraphDetails to use
  *
  * To aid debugging applications one can use this method to obtain the whole
- * network of gstreamer elements that form the pipeline into an dot file.
+ * network of gstreamer elements that form the pipeline into a dot file.
  * This data can be processed with graphviz to get an image.
  *
  * Returns: (transfer full): a string containing the pipeline in graphviz
@@ -828,7 +839,7 @@ gst_debug_bin_to_dot_data (GstBin * bin, GstDebugGraphDetails details)
  * @file_name: (type filename): output base filename (e.g. "myplayer")
  *
  * To aid debugging applications one can use this method to write out the whole
- * network of gstreamer elements that form the pipeline into an dot file.
+ * network of gstreamer elements that form the pipeline into a dot file.
  * This file can be processed with graphviz to get an image.
  *
  * ``` shell

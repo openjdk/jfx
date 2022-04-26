@@ -266,7 +266,7 @@ g_rand_new (void)
    * MinGW-w64 has a wrapper that will emulate rand_s() if it's not in msvcrt
    */
 #if (defined(_MSC_VER) && _MSC_VER >= 1400) || defined(__MINGW64_VERSION_MAJOR)
-  gint i;
+  gsize i;
 
   for (i = 0; i < G_N_ELEMENTS (seed); i++)
     rand_s (&seed[i]);
