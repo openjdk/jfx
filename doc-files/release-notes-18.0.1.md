@@ -15,3 +15,10 @@ Issue key|Summary|Subcomponent
 [JDK-8281459](https://bugs.openjdk.java.net/browse/JDK-8281459)|WebKit 613.1 build broken on M1|web
 [JDK-8281711](https://bugs.openjdk.java.net/browse/JDK-8281711)|Cherry-pick WebKit 613.1 stabilization fixes|web
 [JDK-8282099](https://bugs.openjdk.java.net/browse/JDK-8282099)|Cherry-pick WebKit 613.1 stabilization fixes (2)|web
+
+## List of Security fixes
+
+Issue key|Summary|Subcomponent
+---------|-------|------------
+JDK-8276371 (not public) | Better long buffering | web
+JDK-8277465 (not public) | Additional fix for JDK-8276371 | web
