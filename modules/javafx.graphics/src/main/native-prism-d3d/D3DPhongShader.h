@@ -32,15 +32,17 @@
 // VSR implies Vertex Shader Registers. Assignments happen in vsConstants.h
 // We have at least 256 constant float registers for vs 3.0
 // See https://docs.microsoft.com/en-us/windows/win32/direct3dhlsl/dx9-graphics-reference-asm-vs-registers-vs-3-0
-#define VSR_VIEWPROJMATRIX 0  // 4x4 matrix = 4: c0-3
-#define VSR_CAMERAPOS 4       // 1 position: c4
+
+#define VSR_VIEWPROJMATRIX 0 // 4x4 matrix = 4: c0-3
+#define VSR_CAMERAPOS 4      // 1 position: c4
 // Registers 5-9 (inclusive) are reserved
 
 // Lights: 5 lights (3 in use, 2 reserved)
-#define VSR_LIGHTS 10  // 1 position + 1 color = 5 * 2 = 10: c10-19
-#define VSR_DIRS 20    // 1 direction = 5 * 1 = 5: c20-24
+#define VSR_LIGHT_POS 10  // 1 position = 5 * 1 = 5: c10-14
+// Registers 15-19 free
+#define VSR_LIGHT_DIRS 20    // 1 direction = 5 * 1 = 5: c20-24
 
-#define VSR_AMBIENTCOLOR 25 // 8 ambient points + 2 coords = 10 (only 1 is used): c25-34
+//#define VSR_AMBIENT_LIGHT_COLOR 25 // 8 ambient points + 2 coords = 10 (only 1 is used): c25-34
 
 #define VSR_WORLDMATRIX 35 // 4x3 matrix = 3: c35-37
 
@@ -49,21 +51,25 @@
 // See https://docs.microsoft.com/en-us/windows/win32/direct3dhlsl/dx9-graphics-reference-asm-ps-registers-ps-3-0
 
 // Material
-#define PSR_DIFFUSECOLOR 0       // 1 color: c0
-#define PSR_SPECULARCOLOR 1      // 1 color (including the specular power): c1
-// Registers 2-3 (inclusive) are reserved
+#define PSR_MAT_DIFFUSE_COLOR 0   // 1 color: c0
+#define PSR_MAT_SPECULAR_COLOR 1  // 1 color (including the specular power): c1
+#define PSR_LIGHT_AMBIENT_COLOR 2 // 1 combined color of all ambient lights: c2
+// Register 3 reserved
 
 // Lights: 5 lights (3 in use, 2 reserved)
-#define PSR_LIGHTCOLOR 4         // 1 color: c4-8
+#define PSR_LIGHT_COLOR 4        // 1 color: c4-8
 #define PSR_LIGHT_ATTENUATION 9  // 1 attenuation: c9-13
 #define PSR_LIGHT_RANGE 14       // 1 range (max range at [0], reserved min range at [1], [2] and [3] unused): c14-18
 #define PSR_SPOTLIGHT_FACTORS 19 // 1 spotlight: c19-23
+// needed for pixel lighting
+//#define PSR_LIGHT_DIRS 24        // 1 direction = 5 * 1 = 5: c24-28
+//#define PSR_LIGHT_POS 29         // 1 position = 5 * 1 = 5: c29-34
 
 // SR implies Sampler Registers
-#define SR_DIFFUSEMAP 0
-#define SR_SPECULARMAP 1
-#define SR_BUMPHEIGHTMAP 2
-#define SR_SELFILLUMMAP 3
+#define SR_DIFFUSE_MAP 0
+#define SR_SPECULAR_MAP 1
+#define SR_BUMPHEIGHT_MAP 2
+#define SR_SELFILLUM_MAP 3
 
 enum SpecType {
     SpecNone,

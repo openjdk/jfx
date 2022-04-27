@@ -26,28 +26,40 @@
 #ifndef D3DLIGHT_H
 #define D3DLIGHT_H
 
-#include "D3DContext.h"
+//#include <iostream>
+//#include "D3DContext.h"
 
 // See     Light.h
 
 class D3DLight {
 public:
-    D3DLight();
-    virtual ~D3DLight();
+    D3DLight() = default;
+    virtual ~D3DLight() = default;
     bool isPointLight();
     bool isDirectionalLight();
-    void setColor(float r, float g, float b);
-    void setPosition(float x, float y, float z);
+//    void setColor(float r, float g, float b);
+//    void setPosition(float x, float y, float z);
 
-    float position[3];
-    float color[3];
-    float w;
-    float attenuation[4]; // ca, la, qa, isAttenuated
-    float maxRange;
-    float direction[3];
-    float innerAngle;
-    float outerAngle;
-    float falloff;
+    float position[3] = {0};
+    float color[3] = {0};
+    float lightOn = 0;
+    float attenuation[4] = {0}; // ca, la, qa, isAttenuated
+    float maxRange = 0;
+    float direction[3] = {0};
+    float innerAngle = 0;
+    float outerAngle = 0;
+    float falloff = 0;
+
+//    void printString() {
+//        std::cout << "Light" << std::endl;
+//        std::cout << "position = " << position[0] << ", " << position[1] << ", " << position[2] << std::endl;
+//        std::cout << "color = " << color[0] << ", " << color[1] << ", " << color[2] << std::endl;
+//        std::cout << "w = " << w << std::endl;
+//        std::cout << "attenuation = " << attenuation[0] << ", " << attenuation[1] << ", " << attenuation[2] << ", " << attenuation[3] << std::endl;
+//        std::cout << "maxRange = " << maxRange << std::endl;
+//        std::cout << "innerAngle = " << innerAngle << std::endl;
+//        std::cout << "----------" << std::endl;
+//    }
 
 private:
 

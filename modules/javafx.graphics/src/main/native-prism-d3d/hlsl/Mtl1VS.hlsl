@@ -27,18 +27,15 @@
 #include "vsMath.h"
 
 
-float2 transformTexture(float2 t) { return t; }
+//float2 transformTexture(float2 t) { return t; }
 
-ObjVsOutput main(VertexType i) {
-    ObjVsOutput o;
+VsOutput main(VsInput vsInput) {
+    VsOutput vsOutput;
 
-    float4 _tangent = i.Tangent;
-    float4 _pos = i.Pos;
+    calcLocalBump(vsInput.modelVertexPos, vsInput.modelVertexNormal, vsOutput.psInput);
 
-    calcLocalBump(_pos, _tangent, mWorld, o.light);
+//    vsOutput.objAttr.texD = transformTexture(vsInput.texD);
+    vsOutput.texD = vsInput.texD;
 
-    o.objAttr.ambient = gAmbinet;
-    o.objAttr.texD = transformTexture(i.TexD);
-
-    return o;
+    return vsOutput;
 }

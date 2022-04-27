@@ -68,7 +68,6 @@ public class NGSpotLight extends NGPointLight {
     private Point3D direction = DEFAULT_DIRECTION;
     private final Vec3d effectiveDir = new Vec3d();
 
-    @Override
     public Point3D getDirection() {
         var dir = new Vec3d(direction.getX(), direction.getY(), direction.getZ());
         getWorldTransform().deltaTransform(dir, effectiveDir);
@@ -85,7 +84,6 @@ public class NGSpotLight extends NGPointLight {
 
     private float innerAngle = DEFAULT_INNER_ANGLE;
 
-    @Override
     public float getInnerAngle() {
         return innerAngle;
     }
@@ -100,7 +98,6 @@ public class NGSpotLight extends NGPointLight {
 
     private float outerAngle = DEFAULT_OUTER_ANGLE;
 
-    @Override
     public float getOuterAngle() {
         return outerAngle;
     }
@@ -115,7 +112,6 @@ public class NGSpotLight extends NGPointLight {
 
     private float falloff = DEFAULT_FALLOFF;
 
-    @Override
     public float getFalloff() {
         return falloff;
     }
