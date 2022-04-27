@@ -8,7 +8,7 @@ OpenJFX is a project under the charter of the OpenJDK. The [OpenJDK Bylaws](http
 
 ## Issue tracking
 
-If you think you have found a bug in OpenJFX, first make sure that you are testing against the latest version - your issue may already have been fixed. If not, search our [issues list](https://bugs.openjdk.java.net) in the Java Bug System (JBS) in case a similar issue has already been opened. More information on where and how to report a bug can be found at [bugreport.java.com](https://bugreport.java.com/).
+If you think you have found a bug in OpenJFX, first make sure that you are testing against the latest version - your issue may already have been fixed. If not, search our [issues list](https://bugs.openjdk.java.net/issues/?filter=39543) in the Java Bug System (JBS) in case a similar issue has already been opened. More information on where and how to report a bug can be found at [bugreport.java.com](https://bugreport.java.com/).
 
 ## Getting Started
 
