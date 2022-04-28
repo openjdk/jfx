@@ -73,6 +73,7 @@ class Environment extends CameraScene3D {
 
         for (var light : directionalLights) {
             light.getScope().add(shapeGroup);
+            rootGroup.getChildren().add(light);
         }
         for (var light : pointLights) {
             setupLight(light);
