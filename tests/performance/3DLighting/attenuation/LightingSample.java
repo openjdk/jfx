@@ -67,6 +67,9 @@ public class LightingSample extends Application {
         stopButton.setOnAction(e -> stopMeasurement());
 
         var controls = new VBox(0, sphereControls, meshControls, new HBox(5, playButton, stopButton), boxesControls);
+        for (var light : environment.ambientLights) {
+            controls.getChildren().add(Controls.createLightControls(light, null));
+        }
         for (var light : environment.pointLights) {
             controls.getChildren().add(Controls.addPointLightControls(light));
         }

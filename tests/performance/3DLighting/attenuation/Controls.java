@@ -84,7 +84,7 @@ final class Controls {
         return createLightControls(light, controls);
     }
 
-    private static TitledPane createLightControls(LightBase light, Pane content) {
+    static TitledPane createLightControls(LightBase light, Pane content) {
         var lightOn = new CheckBox(light.getClass().getSimpleName());
         light.lightOnProperty().bind(lightOn.selectedProperty());
         var colorPicker = new ColorPicker(light.getColor());

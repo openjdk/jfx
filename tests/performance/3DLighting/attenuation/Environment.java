@@ -29,8 +29,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 import javafx.geometry.Point3D;
+import javafx.scene.AmbientLight;
 import javafx.scene.DirectionalLight;
 import javafx.scene.Group;
+import javafx.scene.LightBase;
 import javafx.scene.Node;
 import javafx.scene.PointLight;
 import javafx.scene.SpotLight;
@@ -47,6 +49,11 @@ class Environment extends CameraScene3D {
     private final static double LIGHT_X_DIST = 50;
 
     private final static double SPHERE_RADIUS = 50;
+
+    private final AmbientLight ambientLight1 = new AmbientLight(Color.WHITE);
+    private final AmbientLight ambientLight2 = new AmbientLight(Color.RED);
+    private final AmbientLight ambientLight3 = new AmbientLight(Color.BLACK);
+    final AmbientLight[] ambientLights = new AmbientLight[] {ambientLight1, ambientLight2, ambientLight3};
 
     private final DirectionalLight directionalLight1 = new DirectionalLight(Color.RED);
     private final DirectionalLight directionalLight2 = new DirectionalLight(Color.BLUE);
@@ -71,9 +78,11 @@ class Environment extends CameraScene3D {
         farClip.set(1000);
         zoom.set(-350);
 
+        for (var light : ambientLights) {
+            addLight(light);
+        }
         for (var light : directionalLights) {
-            light.getScope().add(shapeGroup);
-            rootGroup.getChildren().add(light);
+            addLight(light);
         }
         for (var light : pointLights) {
             setupLight(light);
@@ -96,8 +105,7 @@ class Environment extends CameraScene3D {
 
     private void setupLight(PointLight light) {
         light.setTranslateZ(-LIGHT_Z_DIST);
-        light.getScope().add(shapeGroup);
-        rootGroup.getChildren().add(light);
+        addLight(light);
 
         var lightRep = new Sphere(LIGHT_REP_RADIUS);
         var lightRepMat = new PhongMaterial();
@@ -108,6 +116,11 @@ class Environment extends CameraScene3D {
         lightRep.translateZProperty().bind(light.translateZProperty());
         lightRep.visibleProperty().bind(light.lightOnProperty());
         rootGroup.getChildren().add(lightRep);
+    }
+
+    private void addLight(LightBase light) {
+        light.getScope().add(shapeGroup);
+        rootGroup.getChildren().add(light);
     }
 
     Group createBoxes() {
