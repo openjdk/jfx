@@ -26,9 +26,6 @@
 #ifndef D3DLIGHT_H
 #define D3DLIGHT_H
 
-//#include <iostream>
-//#include "D3DContext.h"
-
 // See     Light.h
 
 class D3DLight {
@@ -49,17 +46,6 @@ public:
     float innerAngle = 0;
     float outerAngle = 0;
     float falloff = 0;
-
-//    void printString() {
-//        std::cout << "Light" << std::endl;
-//        std::cout << "position = " << position[0] << ", " << position[1] << ", " << position[2] << std::endl;
-//        std::cout << "color = " << color[0] << ", " << color[1] << ", " << color[2] << std::endl;
-//        std::cout << "w = " << w << std::endl;
-//        std::cout << "attenuation = " << attenuation[0] << ", " << attenuation[1] << ", " << attenuation[2] << ", " << attenuation[3] << std::endl;
-//        std::cout << "maxRange = " << maxRange << std::endl;
-//        std::cout << "innerAngle = " << innerAngle << std::endl;
-//        std::cout << "----------" << std::endl;
-//    }
 
 private:
 

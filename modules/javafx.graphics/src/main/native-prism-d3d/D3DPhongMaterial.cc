@@ -40,13 +40,9 @@ D3DPhongMaterial::~D3DPhongMaterial() {
     map[SELFILLUMINATION] = NULL;
 }
 
-D3DPhongMaterial::D3DPhongMaterial(D3DContext *ctx) {
-    context = ctx;
-    map[DIFFUSE] = NULL;
-    map[SPECULAR] = NULL;
-    map[BUMP] = NULL;
-    map[SELFILLUMINATION] = NULL;
-}
+D3DPhongMaterial::D3DPhongMaterial(D3DContext *ctx) :
+    context(ctx)
+{}
 
 void D3DPhongMaterial::setDiffuseColor(float r, float g, float b, float a) {
     diffuseColor[0] = r;
