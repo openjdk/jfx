@@ -1053,7 +1053,6 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
     /** {@inheritDoc} */
     @Override protected void layoutChildren() {
         double origAbsoluteOffset = absoluteOffset;
-        recalculateEstimatedSize();
         // if the last modification to the position was done via scrollPixels,
         // the absoluteOffset and position are already in sync.
         // However, the position can be modified via different ways (e.g. by
