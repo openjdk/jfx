@@ -161,8 +161,8 @@ void androidJfx_requestGlassToRedraw() {
         GLASS_LOG_WARNING("we can't do this yet, no androidWindow\n");
         return;
     }
-    int32_t width = ANativeWindow_getWidth(androidWindow);
-    int32_t height = ANativeWindow_getHeight(androidWindow);
+    int32_t width = ANativeWindow_getWidth(androidWindow) / androidDensity;
+    int32_t height = ANativeWindow_getHeight(androidWindow) / androidDensity;
     jobject screen = (*javaEnv)->NewObject(javaEnv, jScreenClass, screen_init,
         (jlong) androidWindow, 24,
         0, 0, (jint) width, (jint) height,
