@@ -213,7 +213,7 @@ gst_util_set_object_arg (GObject * object, const gchar * name,
     goto done;
   }
 
-  if (!gst_value_deserialize (&v, value))
+  if (!gst_value_deserialize_with_pspec (&v, value, pspec))
     return;
 
 done:
@@ -388,7 +388,7 @@ gst_util_uint64_mul_uint64 (GstUInt64 * c1, GstUInt64 * c0, guint64 arg1,
   b0.ll = (guint64) v.l.high * n.l.low;
 
   /* add the high word of a0 to the low words of a1 and b0 using c1 as
-   * scrach space to capture the carry.  the low word of the result becomes
+   * scratch space to capture the carry.  the low word of the result becomes
    * the final high word of c0 */
   c1->ll = (guint64) c0->l.high + a1.l.low + b0.l.low;
   c0->l.high = c1->l.low;
@@ -1825,7 +1825,7 @@ gst_element_link_pads_full (GstElement * src, const gchar * srcpadname,
   if (srcpadname) {
     /* name specified, look it up */
     if (!(srcpad = gst_element_get_static_pad (src, srcpadname))) {
-      if ((srcpad = gst_element_get_request_pad (src, srcpadname)))
+      if ((srcpad = gst_element_request_pad_simple (src, srcpadname)))
         srcrequest = TRUE;
     }
     if (!srcpad) {
@@ -1864,7 +1864,7 @@ gst_element_link_pads_full (GstElement * src, const gchar * srcpadname,
   if (destpadname) {
     /* name specified, look it up */
     if (!(destpad = gst_element_get_static_pad (dest, destpadname))) {
-      if ((destpad = gst_element_get_request_pad (dest, destpadname)))
+      if ((destpad = gst_element_request_pad_simple (dest, destpadname)))
         destrequest = TRUE;
     }
     if (!destpad) {
@@ -2324,14 +2324,14 @@ gst_element_unlink_pads (GstElement * src, const gchar * srcpadname,
 
   /* obtain the pads requested */
   if (!(srcpad = gst_element_get_static_pad (src, srcpadname)))
-    if ((srcpad = gst_element_get_request_pad (src, srcpadname)))
+    if ((srcpad = gst_element_request_pad_simple (src, srcpadname)))
       srcrequest = TRUE;
   if (srcpad == NULL) {
     GST_WARNING_OBJECT (src, "source element has no pad \"%s\"", srcpadname);
     return;
   }
   if (!(destpad = gst_element_get_static_pad (dest, destpadname)))
-    if ((destpad = gst_element_get_request_pad (dest, destpadname)))
+    if ((destpad = gst_element_request_pad_simple (dest, destpadname)))
       destrequest = TRUE;
   if (destpad == NULL) {
     GST_WARNING_OBJECT (dest, "destination element has no pad \"%s\"",
@@ -2716,7 +2716,7 @@ gst_bin_add_many (GstBin * bin, GstElement * element_1, ...)
  * @element_1: (transfer none): the first #GstElement to remove from the bin
  * @...: (transfer none): %NULL-terminated list of elements to remove from the bin
  *
- * Remove a list of elements from a bin. This function is equivalent
+ * Removes a list of elements from a bin. This function is equivalent
  * to calling gst_bin_remove() with each member of the list.
  */
 void
@@ -3295,7 +3295,7 @@ element_find_unlinked_pad (GstElement * element, GstPadDirection direction)
  * pad when it is not needed any longer.
  *
  * Returns: (transfer full) (nullable): unlinked pad of the given
- * direction, %NULL.
+ * direction.
  */
 GstPad *
 gst_bin_find_unlinked_pad (GstBin * bin, GstPadDirection direction)

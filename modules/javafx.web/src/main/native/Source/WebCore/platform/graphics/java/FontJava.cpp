@@ -166,7 +166,7 @@ Path Font::platformPathForGlyph(Glyph) const
     return Path();
 }
 
-bool Font::platformSupportsCodePoint(UChar32 character, Optional<UChar32> variation) const
+bool Font::platformSupportsCodePoint(UChar32 character, std::optional<UChar32> variation) const
 {
     return variation ? false : glyphForCharacter(character);
 }

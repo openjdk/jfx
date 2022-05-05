@@ -42,20 +42,22 @@ class WEBCORE_EXPORT RealtimeVideoCaptureSource : public RealtimeMediaSource {
 public:
     virtual ~RealtimeVideoCaptureSource();
 
-    void clientUpdatedSizeAndFrameRate(Optional<int> width, Optional<int> height, Optional<double> frameRate);
+    void clientUpdatedSizeAndFrameRate(std::optional<int> width, std::optional<int> height, std::optional<double> frameRate);
 
-    bool supportsSizeAndFrameRate(Optional<int> width, Optional<int> height, Optional<double>) override;
+    bool supportsSizeAndFrameRate(std::optional<int> width, std::optional<int> height, std::optional<double>) override;
     virtual void generatePresets() = 0;
     virtual MediaSample::VideoRotation sampleRotation() const { return MediaSample::VideoRotation::None; }
 
     double observedFrameRate() const { return m_observedFrameRate; }
     Vector<VideoPresetData> presetsData();
 
+    void ensureIntrinsicSizeMaintainsAspectRatio();
+
 protected:
     RealtimeVideoCaptureSource(String&& name, String&& id, String&& hashSalt);
 
     void prepareToProduceData();
-    void setSizeAndFrameRate(Optional<int> width, Optional<int> height, Optional<double>) override;
+    void setSizeAndFrameRate(std::optional<int> width, std::optional<int> height, std::optional<double>) override;
 
     virtual bool prefersPreset(VideoPreset&) { return true; }
     virtual void setFrameRateWithPreset(double, RefPtr<VideoPreset>) { };
@@ -79,8 +81,8 @@ private:
         IntSize requestedSize;
         double requestedFrameRate { 0 };
     };
-    bool supportsCaptureSize(Optional<int>, Optional<int>, const Function<bool(const IntSize&)>&&);
-    Optional<CaptureSizeAndFrameRate> bestSupportedSizeAndFrameRate(Optional<int> width, Optional<int> height, Optional<double>);
+    bool supportsCaptureSize(std::optional<int>, std::optional<int>, const Function<bool(const IntSize&)>&&);
+    std::optional<CaptureSizeAndFrameRate> bestSupportedSizeAndFrameRate(std::optional<int> width, std::optional<int> height, std::optional<double>);
     bool presetSupportsFrameRate(RefPtr<VideoPreset>, double);
 
 #if !RELEASE_LOG_DISABLED
@@ -93,9 +95,9 @@ private:
 };
 
 struct SizeAndFrameRate {
-    Optional<int> width;
-    Optional<int> height;
-    Optional<double> frameRate;
+    std::optional<int> width;
+    std::optional<int> height;
+    std::optional<double> frameRate;
 
     String toJSONString() const;
     Ref<JSON::Object> toJSONObject() const;

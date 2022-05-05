@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,7 +31,7 @@
 package com.sun.javafx.scene.control.skin;
 
 import com.sun.javafx.scene.NodeHelper;
-import com.sun.javafx.scene.control.behavior.TextBinding;
+import com.sun.javafx.scene.control.behavior.MnemonicInfo;
 import com.sun.javafx.scene.text.TextLayout;
 import com.sun.javafx.tk.Toolkit;
 import javafx.application.ConditionalFeature;
@@ -57,7 +57,6 @@ import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextBoundsType;
-import javafx.scene.text.HitInfo;
 
 import java.text.Bidi;
 import java.util.List;
@@ -726,10 +725,10 @@ public class Utils {
                 */
                 if (menuitem.isMnemonicParsing()) {
 
-                    TextBinding bindings = new TextBinding(menuitem.getText());
-                    int mnemonicIndex = bindings.getMnemonicIndex() ;
+                    MnemonicInfo mnemonicInfo = new MnemonicInfo(menuitem.getText());
+                    int mnemonicIndex = mnemonicInfo.getMnemonicIndex() ;
                     if (mnemonicIndex >= 0) {
-                        KeyCombination mnemonicKeyCombo = bindings.getMnemonicKeyCombination();
+                        KeyCombination mnemonicKeyCombo = mnemonicInfo.getMnemonicKeyCombination();
                         Mnemonic myMnemonic = new Mnemonic(cmContent.getLabelAt(i), mnemonicKeyCombo);
                         scene.addMnemonic(myMnemonic);
                         NodeHelper.setShowMnemonics(cmContent.getLabelAt(i), initialState);
@@ -758,10 +757,10 @@ public class Utils {
                 */
                 if (menuitem.isMnemonicParsing()) {
 
-                    TextBinding bindings = new TextBinding(menuitem.getText());
-                    int mnemonicIndex = bindings.getMnemonicIndex() ;
+                    MnemonicInfo mnemonicInfo = new MnemonicInfo(menuitem.getText());
+                    int mnemonicIndex = mnemonicInfo.getMnemonicIndex() ;
                     if (mnemonicIndex >= 0) {
-                        KeyCombination mnemonicKeyCombo = bindings.getMnemonicKeyCombination();
+                        KeyCombination mnemonicKeyCombo = mnemonicInfo.getMnemonicKeyCombination();
 
                         ObservableList<Mnemonic> mnemonicsList = scene.getMnemonics().get(mnemonicKeyCombo);
                         if (mnemonicsList != null) {

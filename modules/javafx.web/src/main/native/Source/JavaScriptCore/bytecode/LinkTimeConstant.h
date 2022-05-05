@@ -44,6 +44,7 @@ class JSGlobalObject;
     v(setBucketNext, nullptr) \
     v(setBucketKey, nullptr) \
     v(setPrototypeDirect, nullptr) \
+    v(setPrototypeDirectOrThrow, nullptr) \
     v(copyDataProperties, nullptr) \
     v(enqueueJob, nullptr) \
     v(makeTypeError, nullptr) \
@@ -110,6 +111,7 @@ class JSGlobalObject;
     v(callFunction, nullptr) \
     v(hasOwnPropertyFunction, nullptr) \
     v(createPrivateSymbol, nullptr) \
+    v(emptyPropertyNameEnumerator, nullptr) \
 
 
 #define DECLARE_LINK_TIME_CONSTANT(name, code) name,

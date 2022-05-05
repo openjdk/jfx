@@ -161,6 +161,7 @@ class JSWebAssemblyInstance;
 class JSWebAssemblyMemory;
 class JSWebAssemblyModule;
 class JSWebAssemblyTable;
+class JITSizeStatistics;
 class JITThunks;
 class LLIntOffsetsExtractor;
 class NativeExecutable;
@@ -174,6 +175,7 @@ class RegisterAtOffsetList;
 class SamplingProfiler;
 #endif
 class ShadowChicken;
+class SharedJITStubSet;
 class ScriptExecutable;
 class SourceProvider;
 class SourceProviderCache;
@@ -183,6 +185,7 @@ class Structure;
 class RegExp;
 #endif
 class Symbol;
+class TemporalDuration;
 class TypedArrayController;
 class UnlinkedCodeBlock;
 class UnlinkedEvalCodeBlock;
@@ -191,6 +194,7 @@ class UnlinkedProgramCodeBlock;
 class UnlinkedModuleProgramCodeBlock;
 class VirtualRegister;
 class VMEntryScope;
+class TemporalCalendar;
 class TopLevelGlobalObjectScope;
 class TypeProfiler;
 class TypeProfilerLog;
@@ -214,6 +218,9 @@ class Database;
 }
 namespace DOMJIT {
 class Signature;
+}
+namespace Yarr {
+class MatchingContextHolder;
 }
 
 struct EntryFrame;
@@ -258,7 +265,12 @@ struct ScratchBuffer {
         return result;
     }
 
-    static size_t allocationSize(Checked<size_t> bufferSize) { return (sizeof(ScratchBuffer) + bufferSize).unsafeGet(); }
+    static ScratchBuffer* fromData(void* buffer)
+    {
+        return bitwise_cast<ScratchBuffer*>(static_cast<char*>(buffer) - OBJECT_OFFSETOF(ScratchBuffer, m_buffer));
+    }
+
+    static size_t allocationSize(Checked<size_t> bufferSize) { return sizeof(ScratchBuffer) + bufferSize; }
     void setActiveLength(size_t activeLength) { u.m_activeLength = activeLength; }
     size_t activeLength() const { return u.m_activeLength; };
     size_t* addressOfActiveLength() { return &u.m_activeLength; };
@@ -277,6 +289,15 @@ struct ScratchBuffer {
 #if COMPILER(MSVC)
 #pragma warning(pop)
 #endif
+
+class ActiveScratchBufferScope {
+public:
+    ActiveScratchBufferScope(ScratchBuffer*, size_t activeScratchBufferSizeInJSValues);
+    ~ActiveScratchBufferScope();
+
+private:
+    ScratchBuffer* m_scratchBuffer;
+};
 
 class VM : public ThreadSafeRefCounted<VM>, public DoublyLinkedListNode<VM> {
 public:
@@ -338,6 +359,30 @@ public:
     WeakRandom& random() { return m_random; }
     Integrity::Random& integrityRandom() { return m_integrityRandom; }
 
+    bool terminationInProgress() const { return m_terminationInProgress; }
+    void setTerminationInProgress(bool value) { m_terminationInProgress = value; }
+
+    bool executionForbidden() const { return m_executionForbidden; }
+    void setExecutionForbidden() { m_executionForbidden = true; }
+
+    JS_EXPORT_PRIVATE Exception* ensureTerminationException();
+    Exception* terminationException() const
+    {
+        ASSERT(m_terminationException);
+        return m_terminationException;
+    }
+    bool isTerminationException(Exception* exception) const
+    {
+        ASSERT(exception);
+        return exception == m_terminationException;
+    }
+    bool hasPendingTerminationException() const
+    {
+        return m_exception && isTerminationException(m_exception);
+    }
+
+    void throwTerminationException();
+
 private:
     unsigned nextID();
 
@@ -365,6 +410,8 @@ public:
     std::unique_ptr<IsoHeapCellType> callbackConstructorHeapCellType;
     std::unique_ptr<IsoHeapCellType> callbackGlobalObjectHeapCellType;
     std::unique_ptr<IsoHeapCellType> callbackObjectHeapCellType;
+    std::unique_ptr<IsoHeapCellType> customGetterFunctionHeapCellType;
+    std::unique_ptr<IsoHeapCellType> customSetterFunctionHeapCellType;
     std::unique_ptr<IsoHeapCellType> dateInstanceHeapCellType;
     std::unique_ptr<IsoHeapCellType> errorInstanceHeapCellType;
     std::unique_ptr<IsoHeapCellType> finalizationRegistryCellType;
@@ -408,6 +455,10 @@ public:
     std::unique_ptr<IsoHeapCellType> webAssemblyModuleHeapCellType;
     std::unique_ptr<IsoHeapCellType> webAssemblyModuleRecordHeapCellType;
     std::unique_ptr<IsoHeapCellType> webAssemblyTableHeapCellType;
+#endif
+
+#if ENABLE(JIT)
+    std::unique_ptr<JITSizeStatistics> jitSizeStatistics;
 #endif
 
     CompleteSubspace primitiveGigacageAuxiliarySpace; // Typed arrays, strings, bitvectors, etc go here.
@@ -542,6 +593,7 @@ public:
     DYNAMIC_ISO_SUBSPACE_DEFINE_MEMBER(symbolSpace)
     DYNAMIC_ISO_SUBSPACE_DEFINE_MEMBER(symbolObjectSpace)
     DYNAMIC_ISO_SUBSPACE_DEFINE_MEMBER(templateObjectDescriptorSpace)
+    DYNAMIC_ISO_SUBSPACE_DEFINE_MEMBER(temporalCalendarSpace)
     DYNAMIC_ISO_SUBSPACE_DEFINE_MEMBER(uint8ArraySpace)
     DYNAMIC_ISO_SUBSPACE_DEFINE_MEMBER(uint8ClampedArraySpace)
     DYNAMIC_ISO_SUBSPACE_DEFINE_MEMBER(uint16ArraySpace)
@@ -566,6 +618,7 @@ public:
     DYNAMIC_ISO_SUBSPACE_DEFINE_MEMBER(intlSegmentIteratorSpace)
     DYNAMIC_ISO_SUBSPACE_DEFINE_MEMBER(intlSegmenterSpace)
     DYNAMIC_ISO_SUBSPACE_DEFINE_MEMBER(intlSegmentsSpace)
+    DYNAMIC_ISO_SUBSPACE_DEFINE_MEMBER(temporalDurationSpace)
 #if ENABLE(WEBASSEMBLY)
     DYNAMIC_ISO_SUBSPACE_DEFINE_MEMBER(jsToWasmICCalleeSpace)
     DYNAMIC_ISO_SUBSPACE_DEFINE_MEMBER(webAssemblyCodeBlockSpace)
@@ -662,7 +715,6 @@ public:
 #endif
     Strong<Structure> structureStructure;
     Strong<Structure> structureRareDataStructure;
-    Strong<Structure> terminatedExecutionErrorStructure;
     Strong<Structure> stringStructure;
     Strong<Structure> propertyNameEnumeratorStructure;
     Strong<Structure> getterSetterStructure;
@@ -816,11 +868,13 @@ public:
 #if ENABLE(JIT)
     std::unique_ptr<JITThunks> jitStubs;
     MacroAssemblerCodeRef<JITThunkPtrTag> getCTIStub(ThunkGenerator);
+    std::unique_ptr<SharedJITStubSet> m_sharedJITStubs;
 
 #endif // ENABLE(JIT)
 #if ENABLE(FTL_JIT)
     std::unique_ptr<FTL::Thunks> ftlThunks;
 #endif
+
     NativeExecutable* getHostFunction(NativeFunction, NativeFunction constructor, const String& name);
     NativeExecutable* getHostFunction(NativeFunction, Intrinsic, NativeFunction constructor, const DOMJIT::Signature*, const String& name);
 
@@ -869,8 +923,8 @@ public:
     Exception* lastException() const { return m_lastException; }
     JSCell** addressOfLastException() { return reinterpret_cast<JSCell**>(&m_lastException); }
 
-    // This should only be used for test or assertion code that wants to inspect
-    // the pending exception without interfering with Throw/CatchScopes.
+    // This should only be used for code that wants to check for any pending
+    // exception without interfering with Throw/CatchScopes.
     Exception* exceptionForInspection() const { return m_exception; }
 
     void setFailNextNewCodeBlock() { m_failNextNewCodeBlock = true; }
@@ -936,7 +990,7 @@ public:
     const Instruction* targetInterpreterPCForThrow;
     uint32_t osrExitIndex;
     void* osrExitJumpDestination;
-    bool isExecutingInRegExpJIT { false };
+    RegExp* m_executingRegExp { nullptr };
 
     // The threading protocol here is as follows:
     // - You can call scratchBufferForSize from any thread.
@@ -980,8 +1034,8 @@ public:
     static constexpr size_t patternContextBufferSize = 8192; // Space allocated to save nested parenthesis context
     UniqueArray<char> m_regExpPatternContexBuffer;
     Lock m_regExpPatternContextLock;
-    char* acquireRegExpPatternContexBuffer();
-    void releaseRegExpPatternContexBuffer();
+    char* acquireRegExpPatternContexBuffer() WTF_ACQUIRES_LOCK(m_regExpPatternContextLock);
+    void releaseRegExpPatternContexBuffer() WTF_RELEASES_LOCK(m_regExpPatternContextLock);
 #else
     static constexpr size_t patternContextBufferSize = 0; // Space allocated to save nested parenthesis context
 #endif
@@ -1066,19 +1120,20 @@ public:
     template<typename Func>
     void logEvent(CodeBlock*, const char* summary, const Func& func);
 
-    Optional<RefPtr<Thread>> ownerThread() const { return m_apiLock->ownerThread(); }
+    std::optional<RefPtr<Thread>> ownerThread() const { return m_apiLock->ownerThread(); }
 
     VMTraps& traps() { return m_traps; }
 
-    void handleTraps(JSGlobalObject* globalObject, CallFrame* callFrame, VMTraps::Mask mask = VMTraps::Mask::allEventTypes()) { m_traps.handleTraps(globalObject, callFrame, mask); }
+    JS_EXPORT_PRIVATE bool hasExceptionsAfterHandlingTraps();
 
-    bool needTrapHandling() { return m_traps.needTrapHandling(); }
-    bool needTrapHandling(VMTraps::Mask mask) { return m_traps.needTrapHandling(mask); }
-    void* needTrapHandlingAddress() { return m_traps.needTrapHandlingAddress(); }
-
+    // These may be called concurrently from another thread.
     void notifyNeedDebuggerBreak() { m_traps.fireTrap(VMTraps::NeedDebuggerBreak); }
     void notifyNeedShellTimeoutCheck() { m_traps.fireTrap(VMTraps::NeedShellTimeoutCheck); }
-    void notifyNeedTermination() { m_traps.fireTrap(VMTraps::NeedTermination); }
+    void notifyNeedTermination()
+    {
+        setTerminationInProgress(true);
+        m_traps.fireTrap(VMTraps::NeedTermination);
+    }
     void notifyNeedWatchdogCheck() { m_traps.fireTrap(VMTraps::NeedWatchdogCheck); }
 
     void promiseRejected(JSPromise*);
@@ -1096,18 +1151,30 @@ public:
     class DeferExceptionScope {
     public:
         DeferExceptionScope(VM& vm)
-            : m_savedException(vm.m_exception, nullptr)
+            : m_vm(vm)
+            , m_exceptionWasSet(vm.m_exception)
+            , m_savedException(vm.m_exception, nullptr)
             , m_savedLastException(vm.m_lastException, nullptr)
         {
+            if (m_exceptionWasSet)
+                m_vm.traps().clearTrapBit(VMTraps::NeedExceptionHandling);
+        }
+
+        ~DeferExceptionScope()
+        {
+            if (m_exceptionWasSet)
+                m_vm.traps().setTrapBit(VMTraps::NeedExceptionHandling);
         }
 
     private:
+        VM& m_vm;
+        bool m_exceptionWasSet;
         SetForScope<Exception*> m_savedException;
         SetForScope<Exception*> m_savedLastException;
     };
 
     void addLoopHintExecutionCounter(const Instruction*);
-    uint64_t* getLoopHintExecutionCounter(const Instruction*);
+    uintptr_t* getLoopHintExecutionCounter(const Instruction*);
     void removeLoopHintExecutionCounter(const Instruction*);
 
 private:
@@ -1129,11 +1196,6 @@ private:
         return curr >= stackLimit;
     }
 
-    void setException(Exception* exception)
-    {
-        m_exception = exception;
-        m_lastException = exception;
-    }
     Exception* exception() const
     {
 #if ENABLE(EXCEPTION_SCOPE_VERIFICATION)
@@ -1141,15 +1203,9 @@ private:
 #endif
         return m_exception;
     }
-    void clearException()
-    {
-#if ENABLE(EXCEPTION_SCOPE_VERIFICATION)
-        m_needExceptionCheck = false;
-        m_nativeStackTraceOfLastThrow = nullptr;
-        m_throwingThread = nullptr;
-#endif
-        m_exception = nullptr;
-    }
+
+    JS_EXPORT_PRIVATE void clearException();
+    JS_EXPORT_PRIVATE void setException(Exception*);
 
 #if ENABLE(C_LOOP)
     bool ensureStackCapacityForCLoop(Register* newTopOfStack);
@@ -1184,6 +1240,7 @@ private:
     void* m_lastStackTop { nullptr };
 
     Exception* m_exception { nullptr };
+    Exception* m_terminationException { nullptr };
     Exception* m_lastException { nullptr };
 #if ENABLE(EXCEPTION_SCOPE_VERIFICATION)
     ExceptionScope* m_topExceptionScope { nullptr };
@@ -1237,8 +1294,11 @@ private:
     WTF::Function<void(VM&)> m_onEachMicrotaskTick;
     uintptr_t m_currentWeakRefVersion { 0 };
 
+    bool m_terminationInProgress { false };
+    bool m_executionForbidden { false };
+
     Lock m_loopHintExecutionCountLock;
-    HashMap<const Instruction*, std::pair<unsigned, std::unique_ptr<uint64_t>>> m_loopHintExecutionCounts;
+    HashMap<const Instruction*, std::pair<unsigned, std::unique_ptr<uintptr_t>>> m_loopHintExecutionCounts;
 
     VM* m_prev; // Required by DoublyLinkedListNode.
     VM* m_next; // Required by DoublyLinkedListNode.

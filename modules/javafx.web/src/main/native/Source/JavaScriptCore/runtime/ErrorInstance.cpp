@@ -1,6 +1,6 @@
 /*
  *  Copyright (C) 1999-2000 Harri Porten (porten@kde.org)
- *  Copyright (C) 2003-2020 Apple Inc. All rights reserved.
+ *  Copyright (C) 2003-2021 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -28,7 +28,6 @@
 #include "JSCInlines.h"
 #include "ParseInt.h"
 #include "StackFrame.h"
-#include <wtf/text/StringBuilder.h>
 
 namespace JSC {
 
@@ -44,13 +43,22 @@ ErrorInstance::ErrorInstance(VM& vm, Structure* structure, ErrorType errorType)
 {
 }
 
-ErrorInstance* ErrorInstance::create(JSGlobalObject* globalObject, Structure* structure, JSValue message, SourceAppender appender, RuntimeType type, ErrorType errorType, bool useCurrentFrame)
+ErrorInstance* ErrorInstance::create(JSGlobalObject* globalObject, Structure* structure, JSValue message, JSValue options, SourceAppender appender, RuntimeType type, ErrorType errorType, bool useCurrentFrame)
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
+
     String messageString = message.isUndefined() ? String() : message.toWTFString(globalObject);
     RETURN_IF_EXCEPTION(scope, nullptr);
-    return create(globalObject, vm, structure, messageString, appender, type, errorType, useCurrentFrame);
+
+    JSValue cause;
+    if (options.isObject()) {
+        // Since `throw undefined;` is valid, we need to distinguish the case where `cause` is an explicit undefined.
+        cause = asObject(options)->getIfPropertyExists(globalObject, vm.propertyNames->cause);
+        RETURN_IF_EXCEPTION(scope, nullptr);
+    }
+
+    return create(globalObject, vm, structure, messageString, cause, appender, type, errorType, useCurrentFrame);
 }
 
 static String appendSourceToErrorMessage(CallFrame* callFrame, ErrorInstance* exception, BytecodeIndex bytecodeIndex, const String& message)
@@ -105,7 +113,7 @@ static String appendSourceToErrorMessage(CallFrame* callFrame, ErrorInstance* ex
     return appender(message, codeBlock->source().provider()->getRange(start, stop).toString(), type, ErrorInstance::FoundApproximateSource);
 }
 
-void ErrorInstance::finishCreation(VM& vm, JSGlobalObject* globalObject, const String& message, SourceAppender appender, RuntimeType type, bool useCurrentFrame)
+void ErrorInstance::finishCreation(VM& vm, JSGlobalObject* globalObject, const String& message, JSValue cause, SourceAppender appender, RuntimeType type, bool useCurrentFrame)
 {
     Base::finishCreation(vm);
     ASSERT(inherits(vm, info()));
@@ -115,7 +123,7 @@ void ErrorInstance::finishCreation(VM& vm, JSGlobalObject* globalObject, const S
 
     std::unique_ptr<Vector<StackFrame>> stackTrace = getStackTrace(globalObject, vm, this, useCurrentFrame);
     {
-        auto locker = holdLock(cellLock());
+        Locker locker { cellLock() };
         m_stackTrace = WTFMove(stackTrace);
     }
     vm.heap.writeBarrier(this);
@@ -131,6 +139,9 @@ void ErrorInstance::finishCreation(VM& vm, JSGlobalObject* globalObject, const S
 
     if (!messageWithSource.isNull())
         putDirect(vm, vm.propertyNames->message, jsString(vm, messageWithSource), static_cast<unsigned>(PropertyAttribute::DontEnum));
+
+    if (!cause.isEmpty())
+        putDirect(vm, vm.propertyNames->cause, cause, static_cast<unsigned>(PropertyAttribute::DontEnum));
 }
 
 // Based on ErrorPrototype's errorProtoFuncToString(), but is modified to
@@ -147,10 +158,10 @@ String ErrorInstance::sanitizedMessageString(JSGlobalObject* globalObject)
     PropertySlot messageSlot(this, PropertySlot::InternalMethodType::VMInquiry, &vm);
     if (JSObject::getOwnPropertySlot(this, globalObject, messagePropertName, messageSlot) && messageSlot.isValue())
         messageValue = messageSlot.getValue(globalObject, messagePropertName);
-    scope.assertNoException();
+    RETURN_IF_EXCEPTION(scope, { });
 
     if (!messageValue)
-        return String();
+        return { };
     RELEASE_AND_RETURN(scope, messageValue.toWTFString(globalObject));
 }
 
@@ -178,7 +189,7 @@ String ErrorInstance::sanitizedNameString(JSGlobalObject* globalObject)
         }
         currentObj = obj->getPrototypeDirect(vm);
     }
-    scope.assertNoException();
+    RETURN_IF_EXCEPTION(scope, { });
 
     if (!nameValue)
         return "Error"_s;
@@ -197,17 +208,7 @@ String ErrorInstance::sanitizedToString(JSGlobalObject* globalObject)
     String messageString = sanitizedMessageString(globalObject);
     RETURN_IF_EXCEPTION(scope, String());
 
-    if (!nameString.length())
-        return messageString;
-
-    if (!messageString.length())
-        return nameString;
-
-    StringBuilder builder;
-    builder.append(nameString);
-    builder.appendLiteral(": ");
-    builder.append(messageString);
-    return builder.toString();
+    return makeString(nameString, nameString.isEmpty() || messageString.isEmpty() ? "" : ": ", messageString);
 }
 
 void ErrorInstance::finalizeUnconditionally(VM& vm)
@@ -309,11 +310,6 @@ bool ErrorInstance::deleteProperty(JSCell* cell, JSGlobalObject* globalObject, P
     ErrorInstance* thisObject = jsCast<ErrorInstance*>(cell);
     thisObject->materializeErrorInfoIfNeeded(vm, propertyName);
     return Base::deleteProperty(thisObject, globalObject, propertyName, slot);
-}
-
-String ErrorInstance::toStringName(const JSObject*, JSGlobalObject*)
-{
-    return "Error"_s;
 }
 
 } // namespace JSC

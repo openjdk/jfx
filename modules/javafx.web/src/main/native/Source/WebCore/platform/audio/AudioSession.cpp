@@ -31,27 +31,67 @@
 #include "NotImplemented.h"
 #include <wtf/NeverDestroyed.h>
 
+#if PLATFORM(MAC)
+#include "AudioSessionMac.h"
+#endif
+
+#if PLATFORM(IOS_FAMILY)
+#include "AudioSessionIOS.h"
+#endif
+
 namespace WebCore {
 
-static UniqueRef<AudioSession>& sharedAudioSession()
+bool AudioSession::s_shouldManageAudioSessionCategory { false };
+
+static std::optional<UniqueRef<AudioSession>>& sharedAudioSession()
 {
-    static NeverDestroyed<UniqueRef<AudioSession>> session = AudioSession::create();
+    static NeverDestroyed<std::optional<UniqueRef<AudioSession>>> session;
     return session.get();
+}
+
+static WeakHashSet<AudioSession::ChangedObserver>& audioSessionChangedObservers()
+{
+    static NeverDestroyed<WeakHashSet<AudioSession::ChangedObserver>> observers;
+    return observers;
 }
 
 UniqueRef<AudioSession> AudioSession::create()
 {
+#if PLATFORM(MAC)
+    return makeUniqueRef<AudioSessionMac>();
+#elif PLATFORM(IOS_FAMILY)
+    return makeUniqueRef<AudioSessionIOS>();
+#else
     return makeUniqueRef<AudioSession>();
+#endif
 }
+
+AudioSession::AudioSession() = default;
+AudioSession::~AudioSession() = default;
 
 AudioSession& AudioSession::sharedSession()
 {
-    return sharedAudioSession();
+    if (!sharedAudioSession())
+        setSharedSession(AudioSession::create());
+    return *sharedAudioSession();
 }
 
 void AudioSession::setSharedSession(UniqueRef<AudioSession>&& session)
 {
     sharedAudioSession() = WTFMove(session);
+
+    audioSessionChangedObservers().forEach([] (auto& observer) {
+        observer(*sharedAudioSession());
+    });
+}
+
+void AudioSession::addAudioSessionChangedObserver(const ChangedObserver& observer)
+{
+    ASSERT(!audioSessionChangedObservers().contains(observer));
+    audioSessionChangedObservers().add(observer);
+
+    if (sharedAudioSession())
+        observer(*sharedAudioSession());
 }
 
 bool AudioSession::tryToSetActive(bool active)
@@ -63,57 +103,51 @@ bool AudioSession::tryToSetActive(bool active)
     return true;
 }
 
-#if !PLATFORM(IOS_FAMILY)
-void AudioSession::addInterruptionObserver(InterruptionObserver&)
+void AudioSession::addInterruptionObserver(InterruptionObserver& observer)
 {
+    m_interruptionObservers.add(observer);
 }
 
-void AudioSession::removeInterruptionObserver(InterruptionObserver&)
+void AudioSession::removeInterruptionObserver(InterruptionObserver& observer)
 {
+    m_interruptionObservers.remove(observer);
 }
 
 void AudioSession::beginInterruption()
 {
+    for (auto& observer : m_interruptionObservers)
+        observer.beginAudioSessionInterruption();
 }
 
-void AudioSession::endInterruption(MayResume)
+void AudioSession::endInterruption(MayResume mayResume)
 {
+    for (auto& observer : m_interruptionObservers)
+        observer.endAudioSessionInterruption(mayResume);
 }
-#endif
-
-#if !PLATFORM(COCOA)
-class AudioSessionPrivate {
-    WTF_MAKE_FAST_ALLOCATED;
-};
-
-AudioSession::AudioSession()
-    : m_private(nullptr)
-{
-    notImplemented();
-}
-
-AudioSession::~AudioSession() = default;
 
 void AudioSession::setCategory(CategoryType, RouteSharingPolicy)
 {
     notImplemented();
 }
 
-AudioSession::CategoryType AudioSession::categoryOverride() const
+void AudioSession::setCategoryOverride(CategoryType category)
 {
-    notImplemented();
-    return None;
+    if (m_categoryOverride == category)
+        return;
+
+    m_categoryOverride = category;
+    setCategory(category, RouteSharingPolicy::Default);
 }
 
-void AudioSession::setCategoryOverride(CategoryType)
+AudioSession::CategoryType AudioSession::categoryOverride() const
 {
-    notImplemented();
+    return m_categoryOverride;
 }
 
 AudioSession::CategoryType AudioSession::category() const
 {
     notImplemented();
-    return None;
+    return AudioSession::CategoryType::None;
 }
 
 float AudioSession::sampleRate() const
@@ -167,20 +201,25 @@ String AudioSession::routingContextUID() const
     return emptyString();
 }
 
-#endif // !PLATFORM(COCOA)
-
-#if !PLATFORM(MAC)
 void AudioSession::audioOutputDeviceChanged()
 {
     notImplemented();
 }
 
-void AudioSession::setIsPlayingToBluetoothOverride(Optional<bool>)
+void AudioSession::addConfigurationChangeObserver(ConfigurationChangeObserver&)
 {
     notImplemented();
 }
-#endif // !PLATFORM(COCOA)
 
+void AudioSession::removeConfigurationChangeObserver(ConfigurationChangeObserver&)
+{
+    notImplemented();
+}
+
+void AudioSession::setIsPlayingToBluetoothOverride(std::optional<bool>)
+{
+    notImplemented();
+}
 
 String convertEnumerationToString(RouteSharingPolicy enumerationValue)
 {

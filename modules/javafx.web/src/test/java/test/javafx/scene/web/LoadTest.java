@@ -423,4 +423,12 @@ public class LoadTest extends TestBase {
             throw new AssertionError(ex);
         }
     }
+
+    // JDK-8282134 Certain regex can cause a JS trap in WebView
+    @Test public void jsRegexpTrapTest() {
+        final String FILE = "src/test/resources/test/html/unicode.html";
+        load(new File(FILE));
+        WebEngine web = getEngine();
+        assertTrue("Load task completed successfully", getLoadState() == SUCCEEDED);
+    }
 }

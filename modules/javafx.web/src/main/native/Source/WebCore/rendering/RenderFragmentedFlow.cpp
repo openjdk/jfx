@@ -32,7 +32,7 @@
 
 #include "HitTestRequest.h"
 #include "HitTestResult.h"
-#include "InlineElementBox.h"
+#include "LegacyInlineElementBox.h"
 #include "Node.h"
 #include "RenderBoxFragmentInfo.h"
 #include "RenderFragmentContainer.h"
@@ -216,6 +216,34 @@ void RenderFragmentedFlow::repaintRectangleInFragments(const LayoutRect& repaint
 
     for (auto& fragment : m_fragmentList)
         fragment->repaintFragmentedFlowContent(repaintRect);
+}
+
+bool RenderFragmentedFlow::absoluteQuadsForBox(Vector<FloatQuad>& quads, bool* wasFixed, const RenderBox* box) const
+{
+    if (!hasValidFragmentInfo())
+        return false;
+
+    auto boxRect = FloatRect { { }, box->size() };
+    auto boxRectInFlowCoordinates = LayoutRect { box->localToContainerQuad(boxRect, this).boundingBox() };
+
+    RenderFragmentContainer* startFragment = nullptr;
+    RenderFragmentContainer* endFragment = nullptr;
+    if (!computedFragmentRangeForBox(box, startFragment, endFragment))
+        return false;
+
+    for (auto it = m_fragmentList.find(startFragment), end = m_fragmentList.end(); it != end; ++it) {
+        auto* fragment = *it;
+        auto rectsInFragment = fragment->fragmentRectsForFlowContentRect(boxRectInFlowCoordinates);
+        for (auto rect : rectsInFragment) {
+            auto absoluteQuad = fragment->localToAbsoluteQuad(FloatRect(rect), UseTransforms, wasFixed);
+            quads.append(absoluteQuad);
+        }
+
+        if (fragment == endFragment)
+            break;
+    }
+
+    return true;
 }
 
 class RenderFragmentedFlow::FragmentSearchAdapter {
@@ -647,7 +675,7 @@ bool RenderFragmentedFlow::computedFragmentRangeForBox(const RenderBox* box, Ren
     // Search the fragment range using the information provided by the containing block chain.
     auto* containingBlock = const_cast<RenderBox*>(box);
     while (!containingBlock->isRenderFragmentedFlow()) {
-        InlineElementBox* boxWrapper = containingBlock->inlineBoxWrapper();
+        LegacyInlineElementBox* boxWrapper = containingBlock->inlineBoxWrapper();
         if (boxWrapper && boxWrapper->root().containingFragment()) {
             startFragment = endFragment = boxWrapper->root().containingFragment();
             ASSERT(m_fragmentList.contains(startFragment));
@@ -764,7 +792,7 @@ bool RenderFragmentedFlow::checkLinesConsistency(const RenderBlockFlow& removedB
         return true;
 
     for (auto& linePair : *m_lineToFragmentMap.get()) {
-        const RootInlineBox* line = linePair.key;
+        const LegacyRootInlineBox* line = linePair.key;
         RenderFragmentContainer* fragment = linePair.value;
         if (&line->blockFlow() == &removedBlock)
             return false;
@@ -909,7 +937,7 @@ LayoutUnit RenderFragmentedFlow::offsetFromLogicalTopOfFirstFragment(const Rende
     return currentBlock->isHorizontalWritingMode() ? blockRect.y() : blockRect.x();
 }
 
-void RenderFragmentedFlow::mapLocalToContainer(const RenderLayerModelObject* ancestorContainer, TransformState& transformState, MapCoordinatesFlags mode, bool* wasFixed) const
+void RenderFragmentedFlow::mapLocalToContainer(const RenderLayerModelObject* ancestorContainer, TransformState& transformState, OptionSet<MapCoordinatesMode> mode, bool* wasFixed) const
 {
     if (this == ancestorContainer)
         return;
@@ -1058,7 +1086,7 @@ void RenderFragmentedFlow::addFragmentsOverflowFromChild(const RenderBox* box, c
 
         fragment->addLayoutOverflowForBox(box, childLayoutOverflowRect);
 
-        if (child->hasSelfPaintingLayer() || box->hasOverflowClip()) {
+        if (child->hasSelfPaintingLayer() || box->hasNonVisibleOverflow()) {
             if (fragment == endFragment)
                 break;
             continue;

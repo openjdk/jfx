@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2006-2020 Apple Inc. All rights reserved.
+ *  Copyright (C) 2006-2021 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Library General Public
@@ -25,6 +25,7 @@
 
 namespace WTF {
 
+class AbstractLocker;
 class AtomString;
 class AtomStringImpl;
 class BinarySemaphore;
@@ -32,6 +33,8 @@ class CString;
 class CrashOnOverflow;
 class FunctionDispatcher;
 class Hasher;
+class Lock;
+class Logger;
 class MonotonicTime;
 class OrdinalNumber;
 class PrintStream;
@@ -41,6 +44,7 @@ class String;
 class StringBuilder;
 class StringImpl;
 class StringView;
+class SuspendableWorkQueue;
 class TextPosition;
 class TextStream;
 class UniquedStringImpl;
@@ -61,17 +65,20 @@ using VectorMalloc = FastMalloc;
 template<typename> struct DefaultRefDerefTraits;
 
 template<typename> class CompletionHandler;
+template<typename> class FixedVector;
 template<typename> class Function;
 template<typename, typename = AnyThreadsAccessTraits> class LazyNeverDestroyed;
 template<typename, typename = AnyThreadsAccessTraits> class NeverDestroyed;
 template<typename> class OptionSet;
-template<typename> class Optional;
 template<typename> class Packed;
 template<typename T, size_t = alignof(T)> class PackedAlignedPtr;
 template<typename> struct RawPtrTraits;
+template<typename T, typename = RawPtrTraits<T>> class CheckedRef;
+template<typename T, typename = RawPtrTraits<T>> class CheckedPtr;
 template<typename T, typename = RawPtrTraits<T>> class Ref;
 template<typename T, typename = RawPtrTraits<T>, typename = DefaultRefDerefTraits<T>> class RefPtr;
 template<typename> class RetainPtr;
+template<typename> class ScopedLambda;
 template<typename> class StringBuffer;
 template<typename> class StringParsingBuffer;
 template<typename, typename = void> class StringTypeAdapter;
@@ -93,9 +100,15 @@ template<typename> struct EnumTraits;
 template<typename E, E...> struct EnumValues;
 template<typename> struct HashTraits;
 
+struct HashTableTraits;
+struct IdentityExtractor;
+template<typename T> struct KeyValuePairKeyExtractor;
+template<typename KeyTraits, typename MappedTraits> struct KeyValuePairTraits;
+template<typename KeyTypeArg, typename ValueTypeArg> struct KeyValuePair;
+template<typename Key, typename Value, typename Extractor, typename HashFunctions, typename Traits, typename KeyTraits> class HashTable;
 template<typename Value, typename = DefaultHash<Value>, typename = HashTraits<Value>> class HashCountedSet;
-template<typename KeyArg, typename MappedArg, typename = DefaultHash<KeyArg>, typename = HashTraits<KeyArg>, typename = HashTraits<MappedArg>> class HashMap;
-template<typename ValueArg, typename = DefaultHash<ValueArg>, typename = HashTraits<ValueArg>> class HashSet;
+template<typename KeyArg, typename MappedArg, typename = DefaultHash<KeyArg>, typename = HashTraits<KeyArg>, typename = HashTraits<MappedArg>, typename = HashTableTraits> class HashMap;
+template<typename ValueArg, typename = DefaultHash<ValueArg>, typename = HashTraits<ValueArg>, typename = HashTableTraits> class HashSet;
 
 }
 
@@ -106,11 +119,13 @@ template<class, class> class expected;
 template<class> class unexpected;
 }}} // namespace std::experimental::fundamentals_v3
 
+using WTF::AbstractLocker;
 using WTF::AtomString;
 using WTF::AtomStringImpl;
 using WTF::BinarySemaphore;
 using WTF::CString;
 using WTF::CompletionHandler;
+using WTF::FixedVector;
 using WTF::Function;
 using WTF::FunctionDispatcher;
 using WTF::HashCountedSet;
@@ -118,9 +133,10 @@ using WTF::HashMap;
 using WTF::HashSet;
 using WTF::Hasher;
 using WTF::LazyNeverDestroyed;
+using WTF::Lock;
+using WTF::Logger;
 using WTF::NeverDestroyed;
 using WTF::OptionSet;
-using WTF::Optional;
 using WTF::OrdinalNumber;
 using WTF::PrintStream;
 using WTF::RawPtrTraits;
@@ -129,12 +145,14 @@ using WTF::Ref;
 using WTF::RefPtr;
 using WTF::RetainPtr;
 using WTF::SHA1;
+using WTF::ScopedLambda;
 using WTF::String;
 using WTF::StringBuffer;
 using WTF::StringBuilder;
 using WTF::StringImpl;
 using WTF::StringParsingBuffer;
 using WTF::StringView;
+using WTF::SuspendableWorkQueue;
 using WTF::TextPosition;
 using WTF::TextStream;
 using WTF::URL;

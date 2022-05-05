@@ -40,10 +40,12 @@ ServiceWorkerContextData ServiceWorkerContextData::isolatedCopy() const
         script.isolatedCopy(),
         certificateInfo.isolatedCopy(),
         contentSecurityPolicy.isolatedCopy(),
+        crossOriginEmbedderPolicy.isolatedCopy(),
         referrerPolicy.isolatedCopy(),
         scriptURL.isolatedCopy(),
         workerType,
         loadedFromDisk,
+        lastNavigationWasAppInitiated,
         crossThreadCopy(scriptResourceMap)
     };
 }

@@ -219,7 +219,9 @@ public abstract class Toolkit {
         boolean userSpecifiedToolkit = true;
 
         // Check a system property to see if there is a specific toolkit to use.
-        // This is not a doPriviledged check so that applets cannot use this.
+        // This is not a doPriviledged check so that applications running
+        // with a security manager cannot use this unless they have permission
+        // to read system properties.
         String forcedToolkit = null;
         try {
             forcedToolkit = System.getProperty("javafx.toolkit");
@@ -374,24 +376,6 @@ public abstract class Toolkit {
 
     public abstract TKStage createTKPopupStage(Window peerWindow, StageStyle popupStyle, TKStage owner, @SuppressWarnings("removal") AccessControlContext acc);
     public abstract TKStage createTKEmbeddedStage(HostInterface host, @SuppressWarnings("removal") AccessControlContext acc);
-
-    /**
-     * Creates an AppletWindow using the provided window pointer as the parent
-     * window.
-     *
-     * @param parent the native parent which will contain the primary stage
-     * window(s). Used on Windows/Linux platforms.
-     *
-     * @param serverName the name of CARemoteLayerServer which
-     * will be used to register native layer. Used on Mac platform.
-     */
-    public abstract AppletWindow createAppletWindow(long parent, String serverName);
-
-    /**
-     * Perform cleanup in preparation for applet termination, including closing
-     * the applet window.
-     */
-    public abstract void closeAppletWindow();
 
     @SuppressWarnings("removal")
     private final Map<TKPulseListener,AccessControlContext> stagePulseListeners =

@@ -271,6 +271,7 @@ void RenderTreeBuilder::Block::removeLeftoverAnonymousBlock(RenderBlock& anonymo
     if (is<RenderButton>(*parent) || is<RenderTextControl>(*parent) || is<RenderRubyAsBlock>(*parent) || is<RenderRubyRun>(*parent))
         return;
 
+    m_builder.removeFloatingObjects(anonymousBlock);
     // FIXME: This should really just be a moveAllChilrenTo (see webkit.org/b/182495)
     moveAllChildrenToInternal(anonymousBlock, *parent);
     auto toBeDestroyed = m_builder.detachFromRenderElement(*parent, anonymousBlock);
@@ -381,7 +382,7 @@ RenderPtr<RenderObject> RenderTreeBuilder::Block::detach(RenderBlockFlow& parent
     if (!parent.renderTreeBeingDestroyed()) {
         auto* fragmentedFlow = parent.multiColumnFlow();
         if (fragmentedFlow && fragmentedFlow != &child)
-            m_builder.multiColumnBuilder().multiColumnRelativeWillBeRemoved(*fragmentedFlow, child);
+            m_builder.multiColumnBuilder().multiColumnRelativeWillBeRemoved(*fragmentedFlow, child, canCollapseAnonymousBlock);
     }
     return detach(static_cast<RenderBlock&>(parent), child, canCollapseAnonymousBlock);
 }

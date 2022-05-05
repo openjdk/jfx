@@ -108,7 +108,7 @@ String accessibilityTitle(AccessibilityObject* coreObject)
 
         // If there's an element that labels this object and it's not exposed, then we should use
         // that text as our title.
-        if (text.textSource == AccessibilityTextSource::LabelByElement && !coreObject->exposesTitleUIElement())
+        if (text.textSource == AccessibilityTextSource::LabelByElement && !coreObject->titleUIElement())
             return text.text;
 
         // Elements of role AccessibilityRole::Toolbar will return its title as AccessibilityTextSource::Alternative.
@@ -230,10 +230,10 @@ AXCoreObject* objectFocusedAndCaretOffsetUnignored(AXCoreObject* referenceObject
         offset = 0;
     else if (!isStartOfLine(endPosition)) {
         auto range = makeSimpleRange(startPosition, endPosition.previous());
-        offset = (range ? characterCount(*range, TextIteratorEmitsCharactersBetweenAllVisiblePositions) : 0) + 1;
+        offset = (range ? characterCount(*range, TextIteratorBehavior::EmitsCharactersBetweenAllVisiblePositions) : 0) + 1;
     } else {
         auto range = makeSimpleRange(startPosition, endPosition);
-        offset = range ? characterCount(*range, TextIteratorEmitsCharactersBetweenAllVisiblePositions) : 0;
+        offset = range ? characterCount(*range, TextIteratorBehavior::EmitsCharactersBetweenAllVisiblePositions) : 0;
     }
 
     return firstUnignoredParent;

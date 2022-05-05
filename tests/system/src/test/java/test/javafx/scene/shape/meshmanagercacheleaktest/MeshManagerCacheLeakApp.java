@@ -76,7 +76,6 @@ public class MeshManagerCacheLeakApp {
 
     public void testOOM() {
         System.gc();
-        System.runFinalization();
 
         try {
             // 2. Reserve maximum of available memory.

@@ -207,10 +207,12 @@ void SVGSVGElement::svgAttributeChanged(const QualifiedName& attrName)
 {
     if (PropertyRegistry::isKnownAttribute(attrName)) {
         InstanceInvalidationGuard guard(*this);
-        invalidateSVGPresentationAttributeStyle();
+        invalidateSVGPresentationalHintStyle();
 
-        if (auto renderer = this->renderer())
-            RenderSVGResource::markForLayoutAndParentResourceInvalidation(*renderer);
+        if (auto renderer = this->renderer()) {
+            if (is<RenderSVGRoot>(renderer) && downcast<RenderSVGRoot>(*renderer).isEmbeddedThroughFrameContainingSVGDocument())
+                RenderSVGResource::markForLayoutAndParentResourceInvalidation(*renderer);
+        }
         return;
     }
 
@@ -313,18 +315,18 @@ Ref<SVGTransform> SVGSVGElement::createSVGTransform()
 Ref<SVGTransform> SVGSVGElement::createSVGTransformFromMatrix(DOMMatrix2DInit&& matrixInit)
 {
     AffineTransform transform;
-    if (matrixInit.a.hasValue())
-        transform.setA(matrixInit.a.value());
-    if (matrixInit.b.hasValue())
-        transform.setB(matrixInit.b.value());
-    if (matrixInit.c.hasValue())
-        transform.setC(matrixInit.c.value());
-    if (matrixInit.d.hasValue())
-        transform.setD(matrixInit.d.value());
-    if (matrixInit.e.hasValue())
-        transform.setE(matrixInit.e.value());
-    if (matrixInit.f.hasValue())
-        transform.setF(matrixInit.f.value());
+    if (matrixInit.a)
+        transform.setA(*matrixInit.a);
+    if (matrixInit.b)
+        transform.setB(*matrixInit.b);
+    if (matrixInit.c)
+        transform.setC(*matrixInit.c);
+    if (matrixInit.d)
+        transform.setD(*matrixInit.d);
+    if (matrixInit.e)
+        transform.setE(*matrixInit.e);
+    if (matrixInit.f)
+        transform.setF(*matrixInit.f);
     return SVGTransform::create(transform);
 }
 
@@ -546,7 +548,7 @@ AffineTransform SVGSVGElement::viewBoxToViewTransform(float viewWidth, float vie
     return transform;
 }
 
-SVGViewElement* SVGSVGElement::findViewAnchor(const String& fragmentIdentifier) const
+SVGViewElement* SVGSVGElement::findViewAnchor(StringView fragmentIdentifier) const
 {
     auto* anchorElement = document().findAnchor(fragmentIdentifier);
     return is<SVGViewElement>(anchorElement) ? downcast<SVGViewElement>(anchorElement): nullptr;
@@ -558,14 +560,14 @@ SVGSVGElement* SVGSVGElement::findRootAnchor(const SVGViewElement* viewElement) 
     return is<SVGSVGElement>(viewportElement) ? downcast<SVGSVGElement>(viewportElement) : nullptr;
 }
 
-SVGSVGElement* SVGSVGElement::findRootAnchor(const String& fragmentIdentifier) const
+SVGSVGElement* SVGSVGElement::findRootAnchor(StringView fragmentIdentifier) const
 {
     if (auto* viewElement = findViewAnchor(fragmentIdentifier))
         return findRootAnchor(viewElement);
     return nullptr;
 }
 
-bool SVGSVGElement::scrollToFragment(const String& fragmentIdentifier)
+bool SVGSVGElement::scrollToFragment(StringView fragmentIdentifier)
 {
     auto renderer = this->renderer();
     auto view = m_viewSpec;
@@ -616,7 +618,7 @@ bool SVGSVGElement::scrollToFragment(const String& fragmentIdentifier)
             rootElement->inheritViewAttributes(*viewElement);
             if (auto* renderer = rootElement->renderer())
                 RenderSVGResource::markForLayoutAndParentResourceInvalidation(*renderer);
-            m_currentViewFragmentIdentifier = fragmentIdentifier;
+            m_currentViewFragmentIdentifier = fragmentIdentifier.toString();
             return true;
         }
     }

@@ -27,9 +27,11 @@
 
 #if ENABLE(WEB_RTC)
 
-#include "ContextDestructionObserver.h"
+#include "ActiveDOMObject.h"
+#include "EventTarget.h"
 #include "JSDOMPromiseDeferred.h"
 #include "RTCRtpSFrameTransformer.h"
+#include <wtf/WeakPtr.h>
 
 namespace JSC {
 class JSGlobalObject;
@@ -43,7 +45,8 @@ class ReadableStream;
 class SimpleReadableStreamSource;
 class WritableStream;
 
-class RTCRtpSFrameTransform : public RefCounted<RTCRtpSFrameTransform>, private ContextDestructionObserver {
+class RTCRtpSFrameTransform : public RefCounted<RTCRtpSFrameTransform>, public ActiveDOMObject, public EventTargetWithInlineData {
+    WTF_MAKE_ISO_ALLOCATED(RTCRtpSFrameTransform);
 public:
     enum class Role { Encrypt, Decrypt };
     using CompatibilityMode = RTCRtpSFrameTransformer::CompatibilityMode;
@@ -56,27 +59,44 @@ public:
     static Ref<RTCRtpSFrameTransform> create(ScriptExecutionContext& context, Options options) { return adoptRef(*new RTCRtpSFrameTransform(context, options)); }
     ~RTCRtpSFrameTransform();
 
-    void setEncryptionKey(CryptoKey&, Optional<uint64_t>, DOMPromiseDeferred<void>&&);
+    void setEncryptionKey(CryptoKey&, std::optional<uint64_t>, DOMPromiseDeferred<void>&&);
 
     bool isAttached() const;
     void initializeBackendForReceiver(RTCRtpTransformBackend&);
     void initializeBackendForSender(RTCRtpTransformBackend&);
     void willClearBackend(RTCRtpTransformBackend&);
 
+    WEBCORE_EXPORT void setCounterForTesting(uint64_t);
     WEBCORE_EXPORT uint64_t counterForTesting() const;
     WEBCORE_EXPORT uint64_t keyIdForTesting() const;
 
     ExceptionOr<RefPtr<ReadableStream>> readable();
     ExceptionOr<RefPtr<WritableStream>> writable();
 
+    bool hasKey(uint64_t) const;
+
+    using RefCounted<RTCRtpSFrameTransform>::ref;
+    using RefCounted<RTCRtpSFrameTransform>::deref;
+
 private:
     RTCRtpSFrameTransform(ScriptExecutionContext&, Options);
+
+    // ActiveDOMObject
+    const char* activeDOMObjectName() const final { return "RTCRtpSFrameTransform"; }
+    bool virtualHasPendingActivity() const final;
+
+    // EventTargetWithInlineData
+    EventTargetInterface eventTargetInterface() const final { return RTCRtpSFrameTransformEventTargetInterfaceType; }
+    ScriptExecutionContext* scriptExecutionContext() const final { return ContextDestructionObserver::scriptExecutionContext(); }
+    void refEventTarget() final { ref(); }
+    void derefEventTarget() final { deref(); }
 
     enum class Side { Sender, Receiver };
     void initializeTransformer(RTCRtpTransformBackend&, Side);
     void createStreams(JSC::JSGlobalObject&);
 
     bool m_isAttached { false };
+    bool m_hasWritable { false };
     Ref<RTCRtpSFrameTransformer> m_transformer;
     RefPtr<ReadableStream> m_readable;
     RefPtr<WritableStream> m_writable;

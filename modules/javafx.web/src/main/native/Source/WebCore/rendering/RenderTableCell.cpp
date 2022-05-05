@@ -88,9 +88,9 @@ RenderTableCell::RenderTableCell(Document& document, RenderStyle&& style)
 {
 }
 
-void RenderTableCell::willBeRemovedFromTree()
+void RenderTableCell::willBeRemovedFromTree(IsInternalMove isInternalMove)
 {
-    RenderBlockFlow::willBeRemovedFromTree();
+    RenderBlockFlow::willBeRemovedFromTree(isInternalMove);
     if (!table() || !section())
         return;
     RenderTableSection* section = this->section();
@@ -208,7 +208,7 @@ void RenderTableCell::computeIntrinsicPadding(LayoutUnit rowHeight)
     LayoutUnit oldIntrinsicPaddingAfter = intrinsicPaddingAfter();
     LayoutUnit logicalHeightWithoutIntrinsicPadding = logicalHeight() - oldIntrinsicPaddingBefore - oldIntrinsicPaddingAfter;
 
-    LayoutUnit intrinsicPaddingBefore;
+    auto intrinsicPaddingBefore = oldIntrinsicPaddingBefore;
     switch (style().verticalAlign()) {
     case VerticalAlign::Sub:
     case VerticalAlign::Super:
@@ -216,8 +216,9 @@ void RenderTableCell::computeIntrinsicPadding(LayoutUnit rowHeight)
     case VerticalAlign::TextBottom:
     case VerticalAlign::Length:
     case VerticalAlign::Baseline: {
-        LayoutUnit baseline = cellBaselinePosition();
-        if (baseline > borderAndPaddingBefore())
+        auto baseline = cellBaselinePosition();
+        auto needsIntrinsicPadding = baseline > borderAndPaddingBefore() || !logicalHeight();
+        if (needsIntrinsicPadding)
             intrinsicPaddingBefore = section()->rowBaseline(rowIndex()) - (baseline - oldIntrinsicPaddingBefore);
         break;
     }
@@ -347,14 +348,14 @@ LayoutSize RenderTableCell::offsetFromContainer(RenderElement& container, const 
     return offset;
 }
 
-LayoutRect RenderTableCell::clippedOverflowRectForRepaint(const RenderLayerModelObject* repaintContainer) const
+LayoutRect RenderTableCell::clippedOverflowRect(const RenderLayerModelObject* repaintContainer, VisibleRectContext context) const
 {
     // If the table grid is dirty, we cannot get reliable information about adjoining cells,
     // so we ignore outside borders. This should not be a problem because it means that
     // the table is going to recalculate the grid, relayout and repaint its current rect, which
     // includes any outside borders of this cell.
     if (!table()->collapseBorders() || table()->needsSectionRecalc())
-        return RenderBlockFlow::clippedOverflowRectForRepaint(repaintContainer);
+        return RenderBlockFlow::clippedOverflowRect(repaintContainer, context);
 
     bool rtl = !styleForCellFlow().isLeftToRightDirection();
     LayoutUnit outlineSize { style().outlineSize() };
@@ -392,10 +393,10 @@ LayoutRect RenderTableCell::clippedOverflowRectForRepaint(const RenderLayerModel
     // FIXME: layoutDelta needs to be applied in parts before/after transforms and
     // repaint containers. https://bugs.webkit.org/show_bug.cgi?id=23308
     r.move(view().frameView().layoutContext().layoutDelta());
-    return computeRectForRepaint(r, repaintContainer);
+    return computeRect(r, repaintContainer, context);
 }
 
-Optional<LayoutRect> RenderTableCell::computeVisibleRectInContainer(const LayoutRect& rect, const RenderLayerModelObject* container, VisibleRectContext context) const
+std::optional<LayoutRect> RenderTableCell::computeVisibleRectInContainer(const LayoutRect& rect, const RenderLayerModelObject* container, VisibleRectContext context) const
 {
     if (container == this)
         return rect;
@@ -410,7 +411,7 @@ LayoutUnit RenderTableCell::cellBaselinePosition() const
     // <http://www.w3.org/TR/2007/CR-CSS21-20070719/tables.html#height-layout>: The baseline of a cell is the baseline of
     // the first in-flow line box in the cell, or the first in-flow table-row in the cell, whichever comes first. If there
     // is no such line box or table-row, the baseline is the bottom of content edge of the cell box.
-    return firstLineBaseline().valueOr(borderAndPaddingBefore() + contentLogicalHeight());
+    return firstLineBaseline().value_or(borderAndPaddingBefore() + contentLogicalHeight());
 }
 
 static inline void markCellDirtyWhenCollapsedBorderChanges(RenderTableCell* cell)
@@ -1280,30 +1281,30 @@ void RenderTableCell::paintBackgroundsBehindCell(PaintInfo& paintInfo, const Lay
     if (!tableElt->collapseBorders() && style().emptyCells() == EmptyCell::Hide && !firstChild())
         return;
 
-    LayoutPoint adjustedPaintOffset = paintOffset;
-    if (backgroundObject != this)
-        adjustedPaintOffset.moveBy(location());
-
     const auto& style = backgroundObject->style();
     auto& bgLayer = style.backgroundLayers();
 
     auto color = style.visitedDependentColor(CSSPropertyBackgroundColor);
-    auto compositeOp = document().compositeOperatorForBackgroundColor(color, *this);
+    if (!bgLayer.hasImage() && !color.isVisible())
+        return;
 
     color = style.colorByApplyingColorFilter(color);
 
-    if (bgLayer.hasImage() || color.isValid()) {
-        // We have to clip here because the background would paint
-        // on top of the borders otherwise.  This only matters for cells and rows.
-        bool shouldClip = backgroundObject->hasLayer() && (backgroundObject == this || backgroundObject == parent()) && tableElt->collapseBorders();
-        GraphicsContextStateSaver stateSaver(paintInfo.context(), shouldClip);
-        if (shouldClip) {
-            LayoutRect clipRect(adjustedPaintOffset.x() + borderLeft(), adjustedPaintOffset.y() + borderTop(),
-                width() - borderLeft() - borderRight(), height() - borderTop() - borderBottom());
-            paintInfo.context().clip(clipRect);
-        }
-        paintFillLayers(paintInfo, color, bgLayer, LayoutRect(adjustedPaintOffset, frameRect().size()), BackgroundBleedNone, compositeOp, backgroundObject);
+    LayoutPoint adjustedPaintOffset = paintOffset;
+    if (backgroundObject != this)
+        adjustedPaintOffset.moveBy(location());
+
+    // We have to clip here because the background would paint
+    // on top of the borders otherwise. This only matters for cells and rows.
+    bool shouldClip = backgroundObject->hasLayer() && (backgroundObject == this || backgroundObject == parent()) && tableElt->collapseBorders();
+    GraphicsContextStateSaver stateSaver(paintInfo.context(), shouldClip);
+    if (shouldClip) {
+        LayoutRect clipRect(adjustedPaintOffset.x() + borderLeft(), adjustedPaintOffset.y() + borderTop(),
+            width() - borderLeft() - borderRight(), height() - borderTop() - borderBottom());
+        paintInfo.context().clip(clipRect);
     }
+    auto compositeOp = document().compositeOperatorForBackgroundColor(color, *this);
+    paintFillLayers(paintInfo, color, bgLayer, LayoutRect(adjustedPaintOffset, frameRect().size()), BackgroundBleedNone, compositeOp, backgroundObject);
 }
 
 void RenderTableCell::paintBoxDecorations(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
@@ -1346,7 +1347,7 @@ void RenderTableCell::paintMask(PaintInfo& paintInfo, const LayoutPoint& paintOf
     paintMaskImages(paintInfo, paintRect);
 }
 
-bool RenderTableCell::boxShadowShouldBeAppliedToBackground(const LayoutPoint&, BackgroundBleedAvoidance, InlineFlowBox*) const
+bool RenderTableCell::boxShadowShouldBeAppliedToBackground(const LayoutPoint&, BackgroundBleedAvoidance, LegacyInlineFlowBox*) const
 {
     return false;
 }

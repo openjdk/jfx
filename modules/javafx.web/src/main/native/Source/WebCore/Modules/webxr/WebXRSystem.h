@@ -37,7 +37,6 @@
 #include "XRSessionMode.h"
 #include <wtf/HashSet.h>
 #include <wtf/IsoMalloc.h>
-#include <wtf/Optional.h>
 #include <wtf/RefCounted.h>
 #include <wtf/WeakHashSet.h>
 #include <wtf/WeakPtr.h>
@@ -49,6 +48,7 @@ class JSGlobalObject;
 namespace WebCore {
 
 class DOMWindow;
+class Navigator;
 class ScriptExecutionContext;
 class WebXRSession;
 struct XRSessionInit;
@@ -59,7 +59,7 @@ public:
     using IsSessionSupportedPromise = DOMPromiseDeferred<IDLBoolean>;
     using RequestSessionPromise = DOMPromiseDeferred<IDLInterface<WebXRSession>>;
 
-    static Ref<WebXRSystem> create(ScriptExecutionContext&);
+    static Ref<WebXRSystem> create(Navigator&);
     ~WebXRSystem();
 
     using RefCounted<WebXRSystem>::ref;
@@ -78,6 +78,8 @@ public:
     WEBCORE_EXPORT void registerSimulatedXRDeviceForTesting(PlatformXR::Device&);
     WEBCORE_EXPORT void unregisterSimulatedXRDeviceForTesting(PlatformXR::Device&);
 
+    Navigator* navigator();
+
 protected:
     // EventTarget
     EventTargetInterface eventTargetInterface() const override { return WebXRSystemEventTargetInterfaceType; }
@@ -90,18 +92,18 @@ protected:
     void stop() override;
 
 private:
-    WebXRSystem(ScriptExecutionContext&);
+    WebXRSystem(Navigator&);
 
-    using FeaturesArray = PlatformXR::Device::ListOfEnabledFeatures;
-    using JSFeaturesArray = Vector<JSC::JSValue>;
-    void obtainCurrentDevice(XRSessionMode, const JSFeaturesArray& requiredFeatures, const JSFeaturesArray& optionalFeatures, CompletionHandler<void(PlatformXR::Device*)>&&);
+    using FeatureList = PlatformXR::Device::FeatureList;
+    using JSFeatureList = Vector<JSC::JSValue>;
+    void obtainCurrentDevice(XRSessionMode, const JSFeatureList& requiredFeatures, const JSFeatureList& optionalFeatures, CompletionHandler<void(PlatformXR::Device*)>&&);
 
     bool immersiveSessionRequestIsAllowedForGlobalObject(DOMWindow&, Document&) const;
     bool inlineSessionRequestIsAllowedForGlobalObject(DOMWindow&, Document&, const XRSessionInit&) const;
 
     struct ResolvedRequestedFeatures;
-    Optional<ResolvedRequestedFeatures> resolveRequestedFeatures(XRSessionMode, const XRSessionInit&, PlatformXR::Device*, JSC::JSGlobalObject&) const;
-    bool isXRPermissionGranted(XRSessionMode, const XRSessionInit&, PlatformXR::Device*, JSC::JSGlobalObject&) const;
+    std::optional<ResolvedRequestedFeatures> resolveRequestedFeatures(XRSessionMode, const XRSessionInit&, PlatformXR::Device*, JSC::JSGlobalObject&) const;
+    std::optional<FeatureList> resolveFeaturePermissions(XRSessionMode, const XRSessionInit&, PlatformXR::Device*, JSC::JSGlobalObject&) const;
 
     // https://immersive-web.github.io/webxr/#default-inline-xr-device
     class DummyInlineDevice final : public PlatformXR::Device, private ContextDestructionObserver {
@@ -115,7 +117,11 @@ private:
 
         void requestFrame(PlatformXR::Device::RequestFrameCallback&&) final;
         Vector<Device::ViewData> views(XRSessionMode) const final;
+        std::optional<PlatformXR::LayerHandle> createLayerProjection(uint32_t, uint32_t, bool) final { return std::nullopt; }
+        void deleteLayer(PlatformXR::LayerHandle) final { }
     };
+
+    WeakPtr<Navigator> m_navigator;
     DummyInlineDevice m_defaultInlineDevice;
 
     bool m_immersiveXRDevicesHaveBeenEnumerated { false };

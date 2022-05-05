@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -37,12 +37,12 @@ public class PNGDescriptor extends ImageDescriptor {
         (byte) 13, (byte) 10, (byte) 26, (byte) 10)
     };
 
-//    private static final String[] MIMETypes = { "image/png", "image/x-png" };
+    private static final String[] mimeSubtypes = { "png", "x-png" };
 
     private static ImageDescriptor theInstance = null;
 
     private PNGDescriptor() {
-        super(formatName, extensions, signatures);
+        super(formatName, extensions, signatures, mimeSubtypes);
     }
 
     public static synchronized ImageDescriptor getInstance() {

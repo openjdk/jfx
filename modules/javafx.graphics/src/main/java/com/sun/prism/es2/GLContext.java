@@ -253,7 +253,8 @@ abstract class GLContext {
             float r, float g, float b);
     private static native void nSetLight(long nativeCtxInfo, long nativeMeshViewInfo,
             int index, float x, float y, float z, float r, float g, float b, float w, float ca, float la, float qa,
-            float maxRange, float dirX, float dirY, float dirZ, float innerAngle, float outerAngle, float falloff);
+            float isAttenuated, float maxRange, float dirX, float dirY, float dirZ,
+            float innerAngle, float outerAngle, float falloff);
     private static native void nRenderMeshView(long nativeCtxInfo, long nativeMeshViewInfo);
     private static native void nBlit(long nativeCtxInfo, int srcFBO, int dstFBO,
             int srcX0, int srcY0, int srcX1, int srcY1,
@@ -810,10 +811,10 @@ abstract class GLContext {
     }
 
     void setLight(long nativeMeshViewInfo, int index, float x, float y, float z, float r, float g, float b, float w,
-            float ca, float la, float qa, float maxRange, float dirX, float dirY, float dirZ,
+            float ca, float la, float qa, float isAttenuated, float maxRange, float dirX, float dirY, float dirZ,
             float innerAngle, float outerAngle, float falloff) {
-        nSetLight(nativeCtxInfo, nativeMeshViewInfo, index, x, y, z, r, g, b, w, ca, la, qa, maxRange,
-                dirX, dirY, dirZ, innerAngle, outerAngle, falloff);
+        nSetLight(nativeCtxInfo, nativeMeshViewInfo, index, x, y, z, r, g, b, w, ca, la, qa, isAttenuated,
+                maxRange, dirX, dirY, dirZ, innerAngle, outerAngle, falloff);
     }
 
     void renderMeshView(long nativeMeshViewInfo) {

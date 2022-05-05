@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="gstreamer">
@@ -669,6 +669,18 @@
     <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\video\video-tile.c">
       <Filter>gst-plugins-base\gst-libs\gst\video</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-good\gst\isomp4\gstisoff.c">
+      <Filter>gst-plugins-good\gst\isomp4</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-good\gst\isomp4\properties.c">
+      <Filter>gst-plugins-good\gst\isomp4</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-good\gst\isomp4\qtdemux_tags.c">
+      <Filter>gst-plugins-good\gst\isomp4</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-good\gst\isomp4\qtdemux_tree.c">
+      <Filter>gst-plugins-good\gst\isomp4</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\audio.h">
@@ -814,6 +826,48 @@
     </ClInclude>
     <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\video\video-tile.h">
       <Filter>gst-plugins-base\gst-libs\gst\video</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-good\gst\isomp4\descriptors.h">
+      <Filter>gst-plugins-good\gst\isomp4</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-good\gst\isomp4\fourcc.h">
+      <Filter>gst-plugins-good\gst\isomp4</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-good\gst\isomp4\gstisoff.h">
+      <Filter>gst-plugins-good\gst\isomp4</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-good\gst\isomp4\properties.h">
+      <Filter>gst-plugins-good\gst\isomp4</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-good\gst\isomp4\qtatomparser.h">
+      <Filter>gst-plugins-good\gst\isomp4</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-good\gst\isomp4\qtdemux.h">
+      <Filter>gst-plugins-good\gst\isomp4</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-good\gst\isomp4\qtdemux_debug.h">
+      <Filter>gst-plugins-good\gst\isomp4</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-good\gst\isomp4\qtdemux_dump.h">
+      <Filter>gst-plugins-good\gst\isomp4</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-good\gst\isomp4\qtdemux_lang.h">
+      <Filter>gst-plugins-good\gst\isomp4</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-good\gst\isomp4\qtdemux_tags.h">
+      <Filter>gst-plugins-good\gst\isomp4</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-good\gst\isomp4\qtdemux_tree.h">
+      <Filter>gst-plugins-good\gst\isomp4</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-good\gst\isomp4\qtdemux_types.h">
+      <Filter>gst-plugins-good\gst\isomp4</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-good\gst\isomp4\qtpalette.h">
+      <Filter>gst-plugins-good\gst\isomp4</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-good\gst\audioparsers\gstmpegaudioparse.h">
+      <Filter>gst-plugins-good\gst\audioparsers</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

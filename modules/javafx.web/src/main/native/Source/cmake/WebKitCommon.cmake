@@ -47,7 +47,11 @@ if (NOT HAS_RUN_WEBKIT_COMMON)
 
     list(FIND ALL_PORTS ${PORT} RET)
     if (${RET} EQUAL -1)
-        message(FATAL_ERROR "Please choose which WebKit port to build (one of ${ALL_PORTS})")
+        if (APPLE)
+            set(PORT "Mac")
+        else ()
+            message(FATAL_ERROR "Please choose which WebKit port to build (one of ${ALL_PORTS})")
+        endif ()
     endif ()
 
     string(TOLOWER ${PORT} WEBKIT_PORT_DIR)
@@ -109,6 +113,8 @@ if (NOT HAS_RUN_WEBKIT_COMMON)
         set(WTF_CPU_PPC64 1)
     elseif (LOWERCASE_CMAKE_SYSTEM_PROCESSOR MATCHES "ppc64le")
         set(WTF_CPU_PPC64LE 1)
+    elseif (LOWERCASE_CMAKE_SYSTEM_PROCESSOR MATCHES "^riscv64")
+        set(WTF_CPU_RISCV64 1)
     else ()
         set(WTF_CPU_UNKNOWN 1)
     endif ()
@@ -238,20 +244,24 @@ if (NOT HAS_RUN_WEBKIT_COMMON)
     # Create derived sources directories
     # -----------------------------------------------------------------------------
 
+    file(MAKE_DIRECTORY ${WTF_DERIVED_SOURCES_DIR})
+    file(MAKE_DIRECTORY ${JavaScriptCore_DERIVED_SOURCES_DIR})
+
     if (ENABLE_WEBCORE)
-        file(MAKE_DIRECTORY ${DERIVED_SOURCES_WEBCORE_DIR})
+        file(MAKE_DIRECTORY ${PAL_DERIVED_SOURCES_DIR})
+        file(MAKE_DIRECTORY ${WebCore_DERIVED_SOURCES_DIR})
     endif ()
 
     if (ENABLE_WEBKIT)
-        file(MAKE_DIRECTORY ${DERIVED_SOURCES_WEBKIT_DIR})
+        file(MAKE_DIRECTORY ${WebKit_DERIVED_SOURCES_DIR})
     endif ()
 
     if (ENABLE_WEBKIT_LEGACY)
-        file(MAKE_DIRECTORY ${DERIVED_SOURCES_WEBKITLEGACY_DIR})
+        file(MAKE_DIRECTORY ${WebKitLegacy_DERIVED_SOURCES_DIR})
     endif ()
 
     if (ENABLE_WEBDRIVER)
-        file(MAKE_DIRECTORY ${DERIVED_SOURCES_WEBDRIVER_DIR})
+        file(MAKE_DIRECTORY ${WebDriver_DERIVED_SOURCES_DIR})
     endif ()
 
     # -----------------------------------------------------------------------------

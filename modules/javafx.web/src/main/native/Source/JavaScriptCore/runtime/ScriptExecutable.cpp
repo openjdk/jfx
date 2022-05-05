@@ -46,11 +46,12 @@ namespace JSC {
 
 const ClassInfo ScriptExecutable::s_info = { "ScriptExecutable", &ExecutableBase::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(ScriptExecutable) };
 
-ScriptExecutable::ScriptExecutable(Structure* structure, VM& vm, const SourceCode& source, bool isInStrictContext, DerivedContextType derivedContextType, bool isInArrowFunctionContext, bool isInsideOrdinaryFunction, EvalContextType evalContextType, Intrinsic intrinsic)
+ScriptExecutable::ScriptExecutable(Structure* structure, VM& vm, const SourceCode& source, LexicalScopeFeatures lexicalScopeFeatures, DerivedContextType derivedContextType, bool isInArrowFunctionContext, bool isInsideOrdinaryFunction, EvalContextType evalContextType, Intrinsic intrinsic)
     : ExecutableBase(vm, structure)
     , m_source(source)
     , m_intrinsic(intrinsic)
-    , m_features(isInStrictContext ? StrictModeFeature : 0)
+    , m_features(NoFeatures)
+    , m_lexicalScopeFeatures(lexicalScopeFeatures)
     , m_hasCapturedVariables(false)
     , m_neverInline(false)
     , m_neverOptimize(false)
@@ -328,6 +329,7 @@ CodeBlock* ScriptExecutable::newCodeBlockFor(
             executable->parseMode());
     recordParse(
         executable->m_unlinkedExecutable->features(),
+        executable->m_unlinkedExecutable->lexicalScopeFeatures(),
         executable->m_unlinkedExecutable->hasCapturedVariables(),
         lastLine(), endColumn());
     if (!unlinkedCodeBlock) {
@@ -455,7 +457,7 @@ JSArray* ScriptExecutable::createTemplateObject(JSGlobalObject* globalObject, JS
     TemplateObjectMap& templateObjectMap = ensureTemplateObjectMap(vm);
     TemplateObjectMap::AddResult result;
     {
-        auto locker = holdLock(cellLock());
+        Locker locker { cellLock() };
         result = templateObjectMap.add(descriptor->endOffset(), WriteBarrier<JSArray>());
     }
     if (JSArray* array = result.iterator->value.get())
@@ -497,11 +499,11 @@ CodeBlockHash ScriptExecutable::hashFor(CodeSpecializationKind kind) const
     return CodeBlockHash(source(), kind);
 }
 
-Optional<int> ScriptExecutable::overrideLineNumber(VM& vm) const
+std::optional<int> ScriptExecutable::overrideLineNumber(VM& vm) const
 {
     if (inherits<FunctionExecutable>(vm))
         return jsCast<const FunctionExecutable*>(this)->overrideLineNumber();
-    return WTF::nullopt;
+    return std::nullopt;
 }
 
 unsigned ScriptExecutable::typeProfilingStartOffset(VM& vm) const
@@ -522,15 +524,15 @@ unsigned ScriptExecutable::typeProfilingEndOffset(VM& vm) const
     return source().length() - 1;
 }
 
-void ScriptExecutable::recordParse(CodeFeatures features, bool hasCapturedVariables, int lastLine, unsigned endColumn)
+void ScriptExecutable::recordParse(CodeFeatures features, LexicalScopeFeatures lexicalScopeFeatures, bool hasCapturedVariables, int lastLine, unsigned endColumn)
 {
     switch (type()) {
     case FunctionExecutableType:
         // Since UnlinkedFunctionExecutable holds the information to calculate lastLine and endColumn, we do not need to remember them in ScriptExecutable's fields.
-        jsCast<FunctionExecutable*>(this)->recordParse(features, hasCapturedVariables);
+        jsCast<FunctionExecutable*>(this)->recordParse(features, lexicalScopeFeatures, hasCapturedVariables);
         return;
     default:
-        jsCast<GlobalExecutable*>(this)->recordParse(features, hasCapturedVariables, lastLine, endColumn);
+        jsCast<GlobalExecutable*>(this)->recordParse(features, lexicalScopeFeatures, hasCapturedVariables, lastLine, endColumn);
         return;
     }
 }

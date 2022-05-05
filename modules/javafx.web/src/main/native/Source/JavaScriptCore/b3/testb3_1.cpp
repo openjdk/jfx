@@ -309,7 +309,9 @@ void run(const char* filter)
     RUN_UNARY(testConvertFloatToDoubleArg, floatingPointOperands<float>());
     RUN_UNARY(testConvertFloatToDoubleImm, floatingPointOperands<float>());
     RUN_UNARY(testConvertFloatToDoubleMem, floatingPointOperands<float>());
+    RUN_UNARY(testConvertDoubleToFloatToDouble, floatingPointOperands<double>());
     RUN_UNARY(testConvertDoubleToFloatToDoubleToFloat, floatingPointOperands<double>());
+    RUN_UNARY(testConvertDoubleToFloatEqual, floatingPointOperands<double>());
     RUN_UNARY(testStoreFloat, floatingPointOperands<double>());
     RUN_UNARY(testStoreDoubleConstantAsFloat, floatingPointOperands<double>());
     RUN_UNARY(testLoadFloatConvertDoubleConvertFloatStoreFloat, floatingPointOperands<float>());
@@ -336,6 +338,7 @@ void run(const char* filter)
     RUN_UNARY(testCheckAddRemoveCheckWithSExt32, int32Operands());
     RUN_UNARY(testCheckAddRemoveCheckWithZExt32, int32Operands());
 
+    RUN(testStoreZeroReg());
     RUN(testStore32(44));
     RUN(testStoreConstant(49));
     RUN(testStoreConstantPtr(49));
@@ -865,7 +868,7 @@ void run(const char* filter)
                     for (;;) {
                         RefPtr<SharedTask<void()>> task;
                         {
-                            LockHolder locker(lock);
+                            Locker locker { lock };
                             if (tasks.isEmpty())
                                 return;
                             task = tasks.takeFirst();

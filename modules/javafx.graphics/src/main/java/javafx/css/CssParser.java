@@ -97,6 +97,7 @@ import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -124,8 +125,8 @@ final public class CssParser {
     // a string and this is that string.
     private String     stylesheetAsText;
 
-    // the url of the stylesheet file, or the docbase of an applet. This will
-    // be null if the source is not a file or from an applet.
+    // the url of the stylesheet file. This will
+    // be null if the source is not a file.
     private String        sourceOfStylesheet;
 
     // the Styleable from the node with an in-line style. This will be null
@@ -236,7 +237,7 @@ final public class CssParser {
         final Stylesheet stylesheet = new Stylesheet(path);
         if (url != null) {
             setInputSource(path, null);
-            try (Reader reader = new BufferedReader(new InputStreamReader(url.openStream()))) {
+            try (Reader reader = new BufferedReader(new InputStreamReader(url.openStream(), StandardCharsets.UTF_8))) {
                 parse(stylesheet, reader);
             }
         }

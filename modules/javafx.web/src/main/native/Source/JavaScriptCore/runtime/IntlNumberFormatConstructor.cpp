@@ -36,7 +36,7 @@ namespace JSC {
 
 STATIC_ASSERT_IS_TRIVIALLY_DESTRUCTIBLE(IntlNumberFormatConstructor);
 
-static JSC_DECLARE_HOST_FUNCTION(IntlNumberFormatConstructorFuncSupportedLocalesOf);
+static JSC_DECLARE_HOST_FUNCTION(intlNumberFormatConstructorFuncSupportedLocalesOf);
 
 }
 
@@ -48,7 +48,7 @@ const ClassInfo IntlNumberFormatConstructor::s_info = { "Function", &Base::s_inf
 
 /* Source for IntlNumberFormatConstructor.lut.h
 @begin numberFormatConstructorTable
-  supportedLocalesOf             IntlNumberFormatConstructorFuncSupportedLocalesOf             DontEnum|Function 1
+  supportedLocalesOf             intlNumberFormatConstructorFuncSupportedLocalesOf             DontEnum|Function 1
 @end
 */
 
@@ -87,9 +87,7 @@ JSC_DEFINE_HOST_FUNCTION(constructIntlNumberFormat, (JSGlobalObject* globalObjec
     // 2. Let numberFormat be OrdinaryCreateFromConstructor(newTarget, %NumberFormatPrototype%).
     // 3. ReturnIfAbrupt(numberFormat).
     JSObject* newTarget = asObject(callFrame->newTarget());
-    Structure* structure = newTarget == callFrame->jsCallee()
-        ? globalObject->numberFormatStructure()
-        : InternalFunction::createSubclassStructure(globalObject, newTarget, getFunctionRealm(vm, newTarget)->numberFormatStructure());
+    Structure* structure = JSC_GET_DERIVED_STRUCTURE(vm, numberFormatStructure, newTarget, callFrame->jsCallee());
     RETURN_IF_EXCEPTION(scope, { });
 
     IntlNumberFormat* numberFormat = IntlNumberFormat::create(vm, structure);
@@ -121,14 +119,14 @@ JSC_DEFINE_HOST_FUNCTION(callIntlNumberFormat, (JSGlobalObject* globalObject, Ca
     }));
 }
 
-JSC_DEFINE_HOST_FUNCTION(IntlNumberFormatConstructorFuncSupportedLocalesOf, (JSGlobalObject* globalObject, CallFrame* callFrame))
+JSC_DEFINE_HOST_FUNCTION(intlNumberFormatConstructorFuncSupportedLocalesOf, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
     // 11.2.2 Intl.NumberFormat.supportedLocalesOf(locales [, options]) (ECMA-402 2.0)
 
     // 1. Let availableLocales be %NumberFormat%.[[availableLocales]].
-    const HashSet<String>& availableLocales = intlNumberFormatAvailableLocales();
+    const auto& availableLocales = intlNumberFormatAvailableLocales();
 
     // 2. Let requestedLocales be CanonicalizeLocaleList(locales).
     Vector<String> requestedLocales = canonicalizeLocaleList(globalObject, callFrame->argument(0));

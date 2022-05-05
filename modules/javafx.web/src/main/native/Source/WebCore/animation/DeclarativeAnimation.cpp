@@ -55,11 +55,11 @@ DeclarativeAnimation::~DeclarativeAnimation()
 {
 }
 
-const Optional<const Styleable> DeclarativeAnimation::owningElement() const
+const std::optional<const Styleable> DeclarativeAnimation::owningElement() const
 {
     if (m_owningElement)
         return Styleable(*m_owningElement.get(), m_owningPseudoId);
-    return WTF::nullopt;
+    return std::nullopt;
 }
 
 void DeclarativeAnimation::tick()
@@ -95,8 +95,7 @@ void DeclarativeAnimation::disassociateFromOwningElement()
     if (!m_owningElement)
         return;
 
-    if (auto* animationTimeline = timeline())
-        animationTimeline->removeDeclarativeAnimationFromListsForOwningElement(*this, *owningElement());
+    owningElement()->removeDeclarativeAnimationFromListsForOwningElement(*this);
     m_owningElement = nullptr;
 }
 
@@ -131,25 +130,25 @@ void DeclarativeAnimation::syncPropertiesWithBackingAnimation()
 {
 }
 
-Optional<double> DeclarativeAnimation::bindingsStartTime() const
+std::optional<double> DeclarativeAnimation::bindingsStartTime() const
 {
     flushPendingStyleChanges();
     return WebAnimation::bindingsStartTime();
 }
 
-void DeclarativeAnimation::setBindingsStartTime(Optional<double> startTime)
+void DeclarativeAnimation::setBindingsStartTime(std::optional<double> startTime)
 {
     flushPendingStyleChanges();
     return WebAnimation::setBindingsStartTime(startTime);
 }
 
-Optional<double> DeclarativeAnimation::bindingsCurrentTime() const
+std::optional<double> DeclarativeAnimation::bindingsCurrentTime() const
 {
     flushPendingStyleChanges();
     return WebAnimation::bindingsCurrentTime();
 }
 
-ExceptionOr<void> DeclarativeAnimation::setBindingsCurrentTime(Optional<double> currentTime)
+ExceptionOr<void> DeclarativeAnimation::setBindingsCurrentTime(std::optional<double> currentTime)
 {
     flushPendingStyleChanges();
     return WebAnimation::setBindingsCurrentTime(currentTime);
@@ -215,7 +214,7 @@ void DeclarativeAnimation::setTimeline(RefPtr<AnimationTimeline>&& newTimeline)
     WebAnimation::setTimeline(WTFMove(newTimeline));
 }
 
-void DeclarativeAnimation::cancel(Silently silently)
+void DeclarativeAnimation::cancel()
 {
     auto cancelationTime = 0_s;
     if (auto* animationEffect = effect()) {
@@ -223,7 +222,7 @@ void DeclarativeAnimation::cancel(Silently silently)
             cancelationTime = *activeTime;
     }
 
-    WebAnimation::cancel(silently);
+    WebAnimation::cancel();
 
     invalidateDOMEvents(cancelationTime);
 }
@@ -351,7 +350,7 @@ void DeclarativeAnimation::enqueueDOMEvent(const AtomString& eventType, Seconds 
 
     auto time = secondsToWebAnimationsAPITime(elapsedTime) / 1000;
     auto pseudoId = pseudoIdAsString(m_owningPseudoId);
-    auto timelineTime = timeline() ? timeline()->currentTime() : WTF::nullopt;
+    auto timelineTime = timeline() ? timeline()->currentTime() : std::nullopt;
     auto event = createEvent(eventType, time, pseudoId, timelineTime);
     event->setTarget(m_owningElement.get());
     enqueueAnimationEvent(WTFMove(event));

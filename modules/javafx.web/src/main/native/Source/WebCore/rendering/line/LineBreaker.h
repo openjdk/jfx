@@ -55,7 +55,7 @@ public:
 
     bool lineWasHyphenated() { return m_hyphenated; }
     const Vector<RenderBox*>& positionedObjects() { return m_positionedObjects; }
-    Clear clear() { return m_clear; }
+    UsedClear usedClear() { return m_clear; }
 
 private:
     void reset();
@@ -66,12 +66,12 @@ private:
     FloatingObject* insertFloatingObject(RenderBox& floatBox) { return m_block.insertFloatingObject(floatBox); }
     bool positionNewFloatOnLine(const FloatingObject& newFloat, FloatingObject* lastFloatFromPreviousLine, LineInfo& lineInfo, LineWidth& width)
     {
-        return m_block.complexLineLayout()->positionNewFloatOnLine(newFloat, lastFloatFromPreviousLine, lineInfo, width);
+        return m_block.legacyLineLayout()->positionNewFloatOnLine(newFloat, lastFloatFromPreviousLine, lineInfo, width);
     }
 
     RenderBlockFlow& m_block;
     bool m_hyphenated;
-    Clear m_clear;
+    UsedClear m_clear;
     Vector<RenderBox*> m_positionedObjects;
 };
 

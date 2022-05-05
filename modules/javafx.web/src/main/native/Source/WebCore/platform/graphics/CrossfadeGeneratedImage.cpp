@@ -47,7 +47,7 @@ static void drawCrossfadeSubimage(GraphicsContext& context, Image& image, Compos
     FloatSize imageSize = image.size();
 
     // SVGImage resets the opacity when painting, so we have to use transparency layers to accurately paint one at a given opacity.
-    bool useTransparencyLayer = image.isSVGImage();
+    bool useTransparencyLayer = image.drawsSVGImage();
 
     GraphicsContextStateSaver stateSaver(context);
 
@@ -103,7 +103,7 @@ ImageDrawResult CrossfadeGeneratedImage::draw(GraphicsContext& context, const Fl
 
 void CrossfadeGeneratedImage::drawPattern(GraphicsContext& context, const FloatRect& dstRect, const FloatRect& srcRect, const AffineTransform& patternTransform, const FloatPoint& phase, const FloatSize& spacing, const ImagePaintingOptions& options)
 {
-    auto imageBuffer = ImageBuffer::create(size(), context.renderingMode());
+    auto imageBuffer = ImageBuffer::create(size(), context.renderingMode(), 1, DestinationColorSpace::SRGB(), PixelFormat::BGRA8);
     if (!imageBuffer)
         return;
 

@@ -66,9 +66,6 @@ SVGRenderingContext::~SVGRenderingContext()
     if (m_renderingFlags & EndOpacityLayer)
         m_paintInfo->context().endTransparencyLayer();
 
-    if (m_renderingFlags & EndShadowLayer)
-        m_paintInfo->context().endTransparencyLayer();
-
     if (m_renderingFlags & RestoreGraphicsContext)
         m_paintInfo->context().restore();
 }
@@ -99,7 +96,6 @@ void SVGRenderingContext::prepareToRenderSVGContent(RenderElement& renderer, Pai
     bool isRenderingMask = isRenderingMaskImage(*m_renderer);
     // RenderLayer takes care of root opacity.
     float opacity = (renderer.isSVGRoot() || isRenderingMask) ? 1 : style.opacity();
-    const ShadowData* shadow = svgStyle.shadow();
     bool hasBlendMode = style.hasBlendMode();
     bool hasIsolation = style.hasIsolation();
     bool isolateMaskForBlending = false;
@@ -111,7 +107,7 @@ void SVGRenderingContext::prepareToRenderSVGContent(RenderElement& renderer, Pai
     }
 #endif
 
-    if (opacity < 1 || shadow || hasBlendMode || isolateMaskForBlending || hasIsolation) {
+    if (opacity < 1 || hasBlendMode || isolateMaskForBlending || hasIsolation) {
         FloatRect repaintRect = m_renderer->repaintRectInLocalCoordinates();
         m_paintInfo->context().clip(repaintRect);
 
@@ -126,12 +122,6 @@ void SVGRenderingContext::prepareToRenderSVGContent(RenderElement& renderer, Pai
                 m_paintInfo->context().setCompositeOperation(m_paintInfo->context().compositeOperation(), BlendMode::Normal);
 
             m_renderingFlags |= EndOpacityLayer;
-        }
-
-        if (shadow) {
-            m_paintInfo->context().setShadow(IntSize(roundToInt(shadow->x()), roundToInt(shadow->y())), shadow->radius(), shadow->color());
-            m_paintInfo->context().beginTransparencyLayer(1);
-            m_renderingFlags |= EndShadowLayer;
         }
     }
 
@@ -236,7 +226,7 @@ AffineTransform SVGRenderingContext::calculateTransformationToOutermostCoordinat
     return absoluteTransform;
 }
 
-RefPtr<ImageBuffer> SVGRenderingContext::createImageBuffer(const FloatRect& targetRect, const AffineTransform& absoluteTransform, DestinationColorSpace colorSpace, RenderingMode renderingMode, const GraphicsContext* context)
+RefPtr<ImageBuffer> SVGRenderingContext::createImageBuffer(const FloatRect& targetRect, const AffineTransform& absoluteTransform, const DestinationColorSpace& colorSpace, RenderingMode renderingMode, const GraphicsContext* context)
 {
     IntRect paintRect = calculateImageBufferRect(targetRect, absoluteTransform);
     // Don't create empty ImageBuffers.
@@ -247,10 +237,10 @@ RefPtr<ImageBuffer> SVGRenderingContext::createImageBuffer(const FloatRect& targ
     FloatSize clampedSize = ImageBuffer::clampedSize(paintRect.size(), scale);
 
 #if USE(DIRECT2D)
-    auto imageBuffer = ImageBuffer::create(clampedSize, renderingMode, context, 1, colorSpace);
+    auto imageBuffer = ImageBuffer::create(clampedSize, renderingMode, context, 1, colorSpace, PixelFormat::BGRA8);
 #else
     UNUSED_PARAM(context);
-    auto imageBuffer = ImageBuffer::create(clampedSize, renderingMode, 1, colorSpace);
+    auto imageBuffer = ImageBuffer::create(clampedSize, renderingMode, 1, colorSpace, PixelFormat::BGRA8);
 #endif
     if (!imageBuffer)
         return nullptr;
@@ -264,7 +254,7 @@ RefPtr<ImageBuffer> SVGRenderingContext::createImageBuffer(const FloatRect& targ
     return imageBuffer;
 }
 
-RefPtr<ImageBuffer> SVGRenderingContext::createImageBuffer(const FloatRect& targetRect, const FloatRect& clampedRect, DestinationColorSpace colorSpace, RenderingMode renderingMode, const GraphicsContext* context)
+RefPtr<ImageBuffer> SVGRenderingContext::createImageBuffer(const FloatRect& targetRect, const FloatRect& clampedRect, const DestinationColorSpace& colorSpace, RenderingMode renderingMode, const GraphicsContext* context)
 {
     IntSize clampedSize = roundedIntSize(clampedRect.size());
     FloatSize unclampedSize = roundedIntSize(targetRect.size());
@@ -274,10 +264,10 @@ RefPtr<ImageBuffer> SVGRenderingContext::createImageBuffer(const FloatRect& targ
         return nullptr;
 
 #if USE(DIRECT2D)
-    auto imageBuffer = ImageBuffer::create(clampedSize, renderingMode, context, 1, colorSpace);
+    auto imageBuffer = ImageBuffer::create(clampedSize, renderingMode, context, 1, colorSpace, PixelFormat::BGRA8);
 #else
     UNUSED_PARAM(context);
-    auto imageBuffer = ImageBuffer::create(clampedSize, renderingMode, 1, colorSpace);
+    auto imageBuffer = ImageBuffer::create(clampedSize, renderingMode, 1, colorSpace, PixelFormat::BGRA8);
 #endif
     if (!imageBuffer)
         return nullptr;
@@ -315,7 +305,7 @@ void SVGRenderingContext::clipToImageBuffer(GraphicsContext& context, const Affi
 
     // The mask image has been created in the absolute coordinate space, as the image should not be scaled.
     // So the actual masking process has to be done in the absolute coordinate space as well.
-    context.concatCTM(absoluteTransform.inverse().valueOr(AffineTransform()));
+    context.concatCTM(absoluteTransform.inverse().value_or(AffineTransform()));
     context.clipToImageBuffer(*imageBuffer, absoluteTargetRect);
     context.concatCTM(absoluteTransform);
 
@@ -350,7 +340,7 @@ bool SVGRenderingContext::bufferForeground(RefPtr<ImageBuffer>& imageBuffer)
 
     // Create a new buffer and paint the foreground into it.
     if (!imageBuffer) {
-        imageBuffer = ImageBuffer::createCompatibleBuffer(expandedIntSize(boundingBox.size()), DestinationColorSpace::SRGB, m_paintInfo->context());
+        imageBuffer = ImageBuffer::createCompatibleBuffer(expandedIntSize(boundingBox.size()), DestinationColorSpace::SRGB(), m_paintInfo->context());
         if (!imageBuffer)
             return false;
     }

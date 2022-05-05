@@ -45,6 +45,7 @@
 #include "PaymentMethodData.h"
 #include "PaymentOptions.h"
 #include "PaymentRequestUpdateEvent.h"
+#include "PaymentRequestUtilities.h"
 #include "PaymentValidationErrors.h"
 #include "ScriptController.h"
 #include <JavaScriptCore/JSONObject.h>
@@ -65,79 +66,6 @@ static bool isWellFormedCurrencyCode(const String& currency)
 {
     if (currency.length() == 3)
         return currency.isAllSpecialCharacters<isASCIIAlpha>();
-    return false;
-}
-
-// Implements the "valid decimal monetary value" validity checker
-// https://www.w3.org/TR/payment-request/#dfn-valid-decimal-monetary-value
-static bool isValidDecimalMonetaryValue(StringView value)
-{
-    enum class State {
-        Start,
-        Sign,
-        Digit,
-        Dot,
-        DotDigit,
-    };
-
-    auto state = State::Start;
-    for (auto character : value.codeUnits()) {
-        switch (state) {
-        case State::Start:
-            if (character == '-') {
-                state = State::Sign;
-                break;
-            }
-
-            if (isASCIIDigit(character)) {
-                state = State::Digit;
-                break;
-            }
-
-            return false;
-
-        case State::Sign:
-            if (isASCIIDigit(character)) {
-                state = State::Digit;
-                break;
-            }
-
-            return false;
-
-        case State::Digit:
-            if (character == '.') {
-                state = State::Dot;
-                break;
-            }
-
-            if (isASCIIDigit(character)) {
-                state = State::Digit;
-                break;
-            }
-
-            return false;
-
-        case State::Dot:
-            if (isASCIIDigit(character)) {
-                state = State::DotDigit;
-                break;
-            }
-
-            return false;
-
-        case State::DotDigit:
-            if (isASCIIDigit(character)) {
-                state = State::DotDigit;
-                break;
-            }
-
-            return false;
-        }
-    }
-
-    if (state == State::Digit || state == State::DotDigit)
-        return true;
-
     return false;
 }
 
@@ -171,7 +99,7 @@ static ExceptionOr<void> checkAndCanonicalizeAmount(PaymentCurrencyAmount& amoun
 }
 
 enum class NegativeAmountAllowed { Yes, No };
-static ExceptionOr<void> checkAndCanonicalizePaymentItem(ScriptExecutionContext& context, PaymentItem& item, NegativeAmountAllowed negativeAmountAllowed)
+static ExceptionOr<void> checkAndCanonicalizePaymentItem(PaymentItem& item, NegativeAmountAllowed negativeAmountAllowed)
 {
     auto exception = checkAndCanonicalizeAmount(item.amount);
     if (exception.hasException())
@@ -180,22 +108,14 @@ static ExceptionOr<void> checkAndCanonicalizePaymentItem(ScriptExecutionContext&
     if (negativeAmountAllowed == NegativeAmountAllowed::No && item.amount.value[0] == '-')
         return Exception { TypeError, "Total currency values cannot be negative."_s };
 
-    if (item.data) {
-        auto dataResult = checkAndCanonicalizeData(context, item);
-        if (dataResult.hasException())
-            return dataResult.releaseException();
-
-        item.serializedData = dataResult.releaseReturnValue();
-    }
-
     return { };
 }
 
 // Implements the "check and canonicalize total" validity checker
 // https://www.w3.org/TR/payment-request/#dfn-check-and-canonicalize-total
-static ExceptionOr<void> checkAndCanonicalizeTotal(ScriptExecutionContext& context, PaymentItem& total)
+static ExceptionOr<void> checkAndCanonicalizeTotal(PaymentItem& total)
 {
-    return checkAndCanonicalizePaymentItem(context, total, NegativeAmountAllowed::No);
+    return checkAndCanonicalizePaymentItem(total, NegativeAmountAllowed::No);
 }
 
 // Implements "validate a standardized payment method identifier"
@@ -254,19 +174,19 @@ static bool isValidURLBasedPaymentMethodIdentifier(const URL& url)
 
 // Implements "validate a payment method identifier"
 // https://www.w3.org/TR/payment-method-id/#validity
-Optional<PaymentRequest::MethodIdentifier> convertAndValidatePaymentMethodIdentifier(const String& identifier)
+std::optional<PaymentRequest::MethodIdentifier> convertAndValidatePaymentMethodIdentifier(const String& identifier)
 {
     URL url { URL(), identifier };
     if (!url.isValid()) {
         if (isValidStandardizedPaymentMethodIdentifier(identifier))
             return { identifier };
-        return WTF::nullopt;
+        return std::nullopt;
     }
 
     if (isValidURLBasedPaymentMethodIdentifier(url))
         return { WTFMove(url) };
 
-    return WTF::nullopt;
+    return std::nullopt;
 }
 
 enum class IsUpdate {
@@ -278,7 +198,7 @@ static ExceptionOr<std::tuple<String, Vector<String>>> checkAndCanonicalizeDetai
 {
     if (details.displayItems) {
         for (auto& item : *details.displayItems) {
-            auto paymentItemResult = checkAndCanonicalizePaymentItem(context, item, NegativeAmountAllowed::Yes);
+            auto paymentItemResult = checkAndCanonicalizePaymentItem(item, NegativeAmountAllowed::Yes);
             if (paymentItemResult.hasException())
                 return paymentItemResult.releaseException();
         }
@@ -305,18 +225,11 @@ static ExceptionOr<std::tuple<String, Vector<String>>> checkAndCanonicalizeDetai
                     context.addConsoleMessage(JSC::MessageSource::PaymentRequest, JSC::MessageLevel::Warning, "WebKit currently uses the first shipping option even if other shipping options are marked as selected."_s);
                     didLog = true;
                 }
-
-                if (shippingOption.data) {
-                    auto dataResult = checkAndCanonicalizeData(context, shippingOption);
-                    if (dataResult.hasException())
-                        return dataResult.releaseException();
-
-                    shippingOption.serializedData = dataResult.releaseReturnValue();
-                }
             }
         } else if (isUpdate == IsUpdate::No)
             details.shippingOptions = { { } };
-    }
+    } else if (isUpdate == IsUpdate::No)
+        details.shippingOptions = std::nullopt;
 
     Vector<String> serializedModifierData;
     if (details.modifiers) {
@@ -329,13 +242,13 @@ static ExceptionOr<std::tuple<String, Vector<String>>> checkAndCanonicalizeDetai
             }
 
             if (modifier.total) {
-                auto totalResult = checkAndCanonicalizeTotal(context, *modifier.total);
+                auto totalResult = checkAndCanonicalizeTotal(*modifier.total);
                 if (totalResult.hasException())
                     return totalResult.releaseException();
             }
 
             for (auto& item : modifier.additionalDisplayItems) {
-                auto paymentItemResult = checkAndCanonicalizePaymentItem(context, item, NegativeAmountAllowed::Yes);
+                auto paymentItemResult = checkAndCanonicalizePaymentItem(item, NegativeAmountAllowed::Yes);
                 if (paymentItemResult.hasException())
                     return paymentItemResult.releaseException();
             }
@@ -352,14 +265,6 @@ static ExceptionOr<std::tuple<String, Vector<String>>> checkAndCanonicalizeDetai
         }
     } else if (isUpdate == IsUpdate::No)
         details.modifiers = { { } };
-
-    if (details.data) {
-        auto dataResult = checkAndCanonicalizeData(context, details);
-        if (dataResult.hasException())
-            return dataResult.releaseException();
-
-        details.serializedData = dataResult.releaseReturnValue();
-    }
 
     return std::make_tuple(WTFMove(selectedShippingOption), WTFMove(serializedModifierData));
 }
@@ -424,7 +329,7 @@ ExceptionOr<Ref<PaymentRequest>> PaymentRequest::create(Document& document, Vect
         serializedMethodData.uncheckedAppend({ WTFMove(*identifier), WTFMove(serializedData) });
     }
 
-    auto totalResult = checkAndCanonicalizeTotal(document, details.total);
+    auto totalResult = checkAndCanonicalizeTotal(details.total);
     if (totalResult.hasException())
         return totalResult.releaseException();
 
@@ -458,7 +363,7 @@ PaymentRequest::~PaymentRequest()
     ASSERT(!m_activePaymentHandler);
 }
 
-// https://www.w3.org/TR/payment-request/#show()-method
+// https://www.w3.org/TR/payment-request/#show-method
 void PaymentRequest::show(Document& document, RefPtr<DOMPromise>&& detailsPromise, ShowPromise&& promise)
 {
     if (!document.frame()) {
@@ -466,7 +371,8 @@ void PaymentRequest::show(Document& document, RefPtr<DOMPromise>&& detailsPromis
         return;
     }
 
-    if (!UserGestureIndicator::processingUserGesture()) {
+    auto* window = document.frame()->window();
+    if (!window || !window->consumeTransientActivation()) {
         promise.reject(Exception { SecurityError, "show() must be triggered by user activation." });
         return;
     }
@@ -548,7 +454,7 @@ void PaymentRequest::settleShowPromise(ExceptionOr<PaymentResponse&>&& result)
 
 void PaymentRequest::closeActivePaymentHandler()
 {
-    if (auto activePaymentHandler = std::exchange(m_activePaymentHandler, WTF::nullopt))
+    if (auto activePaymentHandler = std::exchange(m_activePaymentHandler, std::nullopt))
         activePaymentHandler->paymentHandler->hide();
 
     m_isUpdating = false;
@@ -619,18 +525,18 @@ const String& PaymentRequest::id() const
     return m_details.id;
 }
 
-Optional<PaymentShippingType> PaymentRequest::shippingType() const
+std::optional<PaymentShippingType> PaymentRequest::shippingType() const
 {
     if (m_options.requestShipping)
         return m_options.shippingType;
-    return WTF::nullopt;
+    return std::nullopt;
 }
 
 void PaymentRequest::shippingAddressChanged(Ref<PaymentAddress>&& shippingAddress)
 {
     whenDetailsSettled([this, protectedThis = makeRefPtr(this), shippingAddress = makeRefPtr(shippingAddress.get())]() mutable {
         m_shippingAddress = WTFMove(shippingAddress);
-        dispatchEvent(PaymentRequestUpdateEvent::create(eventNames().shippingaddresschangeEvent));
+        dispatchAndCheckUpdateEvent(PaymentRequestUpdateEvent::create(eventNames().shippingaddresschangeEvent));
     });
 }
 
@@ -638,7 +544,7 @@ void PaymentRequest::shippingOptionChanged(const String& shippingOption)
 {
     whenDetailsSettled([this, protectedThis = makeRefPtr(this), shippingOption]() mutable {
         m_shippingOption = shippingOption;
-        dispatchEvent(PaymentRequestUpdateEvent::create(eventNames().shippingoptionchangeEvent));
+        dispatchAndCheckUpdateEvent(PaymentRequestUpdateEvent::create(eventNames().shippingoptionchangeEvent));
     });
 }
 
@@ -647,7 +553,7 @@ void PaymentRequest::paymentMethodChanged(const String& methodName, PaymentMetho
     whenDetailsSettled([this, protectedThis = makeRefPtr(this), methodName, methodDetailsFunction = WTFMove(methodDetailsFunction)]() mutable {
         auto& eventName = eventNames().paymentmethodchangeEvent;
         if (hasEventListeners(eventName))
-            dispatchEvent(PaymentMethodChangeEvent::create(eventName, methodName, WTFMove(methodDetailsFunction)));
+            dispatchAndCheckUpdateEvent(PaymentMethodChangeEvent::create(eventName, methodName, WTFMove(methodDetailsFunction)));
         else
             activePaymentHandler()->detailsUpdated(UpdateReason::PaymentMethodChanged, { }, { }, { }, { });
     });
@@ -700,6 +606,16 @@ ExceptionOr<void> PaymentRequest::completeMerchantValidation(Event& event, Ref<D
     return { };
 }
 
+void PaymentRequest::dispatchAndCheckUpdateEvent(Ref<PaymentRequestUpdateEvent>&& event)
+{
+    dispatchEvent(event);
+
+    if (event->didCallUpdateWith())
+        return;
+
+    scriptExecutionContext()->addConsoleMessage(JSC::MessageSource::PaymentRequest, JSC::MessageLevel::Warning, makeString("updateWith() should be called synchronously when handling \""_s, event->type(), "\"."_s));
+}
+
 void PaymentRequest::settleDetailsPromise(UpdateReason reason)
 {
     auto scopeExit = makeScopeExit([&] {
@@ -725,7 +641,7 @@ void PaymentRequest::settleDetailsPromise(UpdateReason reason)
     }
 
     if (detailsUpdate.total) {
-        auto totalResult = checkAndCanonicalizeTotal(context, *detailsUpdate.total);
+        auto totalResult = checkAndCanonicalizeTotal(*detailsUpdate.total);
         if (totalResult.hasException()) {
             abortWithException(totalResult.releaseException());
             return;
@@ -752,8 +668,6 @@ void PaymentRequest::settleDetailsPromise(UpdateReason reason)
         m_details.modifiers = WTFMove(*detailsUpdate.modifiers);
         m_serializedModifierData = WTFMove(std::get<1>(shippingOptionAndModifierData));
     }
-    if (!detailsUpdate.serializedData.isEmpty())
-        m_details.serializedData = WTFMove(detailsUpdate.serializedData);
 
     auto result = activePaymentHandler()->detailsUpdated(reason, WTFMove(detailsUpdate.error), WTFMove(detailsUpdate.shippingAddressErrors), WTFMove(detailsUpdate.payerErrors), detailsUpdate.paymentMethodErrors.get());
     if (result.hasException()) {
@@ -812,14 +726,14 @@ void PaymentRequest::accept(const String& methodName, PaymentResponse::DetailsFu
     m_state = State::Closed;
 }
 
-ExceptionOr<void> PaymentRequest::complete(Optional<PaymentComplete>&& result)
+ExceptionOr<void> PaymentRequest::complete(std::optional<PaymentComplete>&& result)
 {
     ASSERT(m_state == State::Closed);
     if (!m_activePaymentHandler)
         return Exception { AbortError };
 
     activePaymentHandler()->complete(WTFMove(result));
-    m_activePaymentHandler = WTF::nullopt;
+    m_activePaymentHandler = std::nullopt;
     return { };
 }
 
@@ -835,10 +749,11 @@ ExceptionOr<void> PaymentRequest::retry(PaymentValidationErrors&& errors)
 
 void PaymentRequest::cancel()
 {
-    m_activePaymentHandler = WTF::nullopt;
+    m_activePaymentHandler = std::nullopt;
 
     if (m_isUpdating) {
         m_isCancelPending = true;
+        scriptExecutionContext()->addConsoleMessage(JSC::MessageSource::PaymentRequest, JSC::MessageLevel::Error, "payment request timed out while waiting for Promise given to show() or updateWith() to settle."_s);
         return;
     }
 

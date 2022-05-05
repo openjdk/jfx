@@ -55,6 +55,8 @@ typedef struct _QtDemuxSegment QtDemuxSegment;
 typedef struct _QtDemuxRandomAccessEntry QtDemuxRandomAccessEntry;
 typedef struct _QtDemuxStreamStsdEntry QtDemuxStreamStsdEntry;
 
+typedef GstBuffer * (*QtDemuxProcessFunc)(GstQTDemux * qtdemux, QtDemuxStream * stream, GstBuffer * buf);
+
 enum QtDemuxState
 {
   QTDEMUX_STATE_INITIAL,        /* Initial state (haven't got the header yet) */
@@ -394,8 +396,10 @@ struct _QtDemuxStream
    * data */
   gboolean need_clip;
 
-  /* buffer needs some custom processing, e.g. subtitles */
-  gboolean need_process;
+  /* If the buffer needs some custom processing, e.g. subtitles, pass them
+   * through this function */
+  QtDemuxProcessFunc process_func;
+
   /* buffer needs potentially be split, e.g. CEA608 subtitles */
   gboolean need_split;
 
@@ -476,8 +480,16 @@ struct _QtDemuxStream
   guint32 ctts_count;
   gint32 ctts_soffset;
 
-  /* cslg */
-  guint32 cslg_shift;
+  /* cslg composition_to_dts_shift or based on the smallest negative
+   * composition time offset.
+   *
+   * This is unsigned because only negative composition time offsets /
+   * positive composition_to_dts_shift matter here. In all other cases,
+   * DTS/PTS can be inferred directly without ending up with PTS>DTS.
+   *
+   * See 14496-12 6.4
+   */
+  guint64 cslg_shift;
 
   /* fragmented */
   gboolean parsed_trex;

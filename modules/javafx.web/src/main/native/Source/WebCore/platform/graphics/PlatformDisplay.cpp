@@ -80,6 +80,10 @@
 #include <wtf/NeverDestroyed.h>
 #endif
 
+#if USE(LCMS)
+#include <lcms2.h>
+#endif
+
 namespace WebCore {
 
 std::unique_ptr<PlatformDisplay> PlatformDisplay::createPlatformDisplay()
@@ -128,7 +132,6 @@ PlatformDisplay& PlatformDisplay::sharedDisplay()
 {
 #if PLATFORM(WIN)
     // ANGLE D3D renderer isn't thread-safe. Don't destruct it on non-main threads which calls _exit().
-    ASSERT(isMainThread());
     static PlatformDisplay* display = createPlatformDisplay().release();
     return *display;
 #else
@@ -170,6 +173,10 @@ PlatformDisplay::~PlatformDisplay()
 #endif
     if (s_sharedDisplayForCompositing == this)
         s_sharedDisplayForCompositing = nullptr;
+#if USE(LCMS)
+    if (m_iccProfile)
+        cmsCloseProfile(m_iccProfile);
+#endif
 }
 
 #if USE(EGL) || USE(GLX)
@@ -264,5 +271,14 @@ void PlatformDisplay::terminateEGLDisplay()
 }
 
 #endif // USE(EGL)
+
+#if USE(LCMS)
+cmsHPROFILE PlatformDisplay::colorProfile() const
+{
+    if (!m_iccProfile)
+        m_iccProfile = cmsCreate_sRGBProfile();
+    return m_iccProfile;
+}
+#endif
 
 } // namespace WebCore

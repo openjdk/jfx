@@ -33,7 +33,6 @@
 
 #include "HTMLFormControlElement.h"
 #include "HTMLFormElement.h"
-#include <wtf/Optional.h>
 
 namespace WebCore {
 
@@ -42,17 +41,31 @@ DOMFormData::DOMFormData(const TextEncoding& encoding)
 {
 }
 
-DOMFormData::DOMFormData(HTMLFormElement* form)
-    : m_encoding(UTF8Encoding())
+ExceptionOr<Ref<DOMFormData>> DOMFormData::create(HTMLFormElement* form)
 {
+    auto formData = adoptRef(*new DOMFormData);
     if (!form)
-        return;
+        return formData;
 
-    ASSERT(isMainThread());
-    for (auto& element : form->copyAssociatedElementsVector()) {
-        if (!element->asHTMLElement().isDisabledFormControl())
-            element->appendFormData(*this, true);
-    }
+    auto result = form->constructEntryList(WTFMove(formData), nullptr, HTMLFormElement::IsMultipartForm::Yes);
+
+    if (!result)
+        return Exception { InvalidStateError, "Already constructing Form entry list."_s };
+
+    return result.releaseNonNull();
+}
+
+Ref<DOMFormData> DOMFormData::create(const TextEncoding& encoding)
+{
+    return adoptRef(*new DOMFormData(encoding));
+}
+
+Ref<DOMFormData> DOMFormData::clone() const
+{
+    auto newFormData = adoptRef(*new DOMFormData(this->encoding()));
+    newFormData->m_items = m_items;
+
+    return newFormData;
 }
 
 // https://xhr.spec.whatwg.org/#create-an-entry
@@ -84,14 +97,14 @@ void DOMFormData::remove(const String& name)
     });
 }
 
-auto DOMFormData::get(const String& name) -> Optional<FormDataEntryValue>
+auto DOMFormData::get(const String& name) -> std::optional<FormDataEntryValue>
 {
     for (auto& item : m_items) {
         if (item.name == name)
             return item.data;
     }
 
-    return WTF::nullopt;
+    return std::nullopt;
 }
 
 auto DOMFormData::getAll(const String& name) -> Vector<FormDataEntryValue>
@@ -128,7 +141,7 @@ void DOMFormData::set(const String& name, Blob& blob, const String& filename)
 
 void DOMFormData::set(const String& name, Item&& item)
 {
-    Optional<size_t> initialMatchLocation;
+    std::optional<size_t> initialMatchLocation;
 
     // Find location of the first item with a matching name.
     for (size_t i = 0; i < m_items.size(); ++i) {
@@ -155,11 +168,11 @@ DOMFormData::Iterator::Iterator(DOMFormData& target)
 {
 }
 
-Optional<KeyValuePair<String, DOMFormData::FormDataEntryValue>> DOMFormData::Iterator::next()
+std::optional<KeyValuePair<String, DOMFormData::FormDataEntryValue>> DOMFormData::Iterator::next()
 {
     auto& items = m_target->items();
     if (m_index >= items.size())
-        return WTF::nullopt;
+        return std::nullopt;
 
     auto& item = items[m_index++];
     return makeKeyValuePair(item.name, item.data);

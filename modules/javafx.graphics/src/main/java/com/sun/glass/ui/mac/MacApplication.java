@@ -247,17 +247,6 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
         return new MacWindow(owner, screen, styleMask);
     }
 
-    final static long BROWSER_PARENT_ID = -1L;
-    @Override public Window createWindow(long parent) {
-        Window window = new MacWindow(parent);
-        if (parent == BROWSER_PARENT_ID) {
-            // Special case: a Mac embedded window, which is a parent to other child Windows.
-            // Needs implicit view, with a layer that will be provided to the plugin
-            window.setView(createView());
-        }
-        return window;
-    }
-
     @Override public View createView() {
         return new MacView();
     }
@@ -377,11 +366,6 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
     native private boolean _isNormalTaskbarApp();
     boolean isNormalTaskbarApp() {
         return _isNormalTaskbarApp();
-    }
-
-    native protected String _getRemoteLayerServerName();
-    public String getRemoteLayerServerName() {
-        return _getRemoteLayerServerName();
     }
 
     private native String _getDataDirectory();
