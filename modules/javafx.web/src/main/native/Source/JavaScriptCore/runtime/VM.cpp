@@ -1716,5 +1716,14 @@ void VM::removeLoopHintExecutionCounter(const Instruction* instruction)
     if (!iter->value.first)
         m_loopHintExecutionCounts.remove(iter);
 }
+#if PLATFORM(JAVA)
+void VM::set_existing_window_proxy(bool existingWindowProxy_) {
+    existingWindowProxy = existingWindowProxy_;
+}
+
+bool VM::is_existing_window_proxy() {
+    return existingWindowProxy;
+}
+#endif
 
 } // namespace JSC
