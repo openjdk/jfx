@@ -382,6 +382,10 @@ public:
     }
 
     void throwTerminationException();
+#if PLATFORM(JAVA)
+    void set_existing_window_proxy(bool existingWindowProxy_);
+    bool is_existing_window_proxy();
+#endif
 
 private:
     unsigned nextID();
@@ -394,6 +398,9 @@ private:
 
     WeakRandom m_random;
     Integrity::Random m_integrityRandom;
+#if PLATFORM(JAVA)
+    bool existingWindowProxy = true;
+#endif
 
 public:
     Heap heap;
