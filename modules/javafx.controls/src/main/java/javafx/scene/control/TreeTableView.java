@@ -2611,7 +2611,7 @@ public class TreeTableView<S> extends Control {
                         }
                     } else if (e.wasAdded()) {
                         // shuffle selection by the number of added items
-                        shift += treeItem.isExpanded() ? addedSize : 0;
+                        shift += ControlUtils.isTreeItemIncludingAncestorsExpanded(treeItem) ? addedSize : 0;
 
                         // RT-32963: We were taking the startRow from the TreeItem
                         // in which the children were added, rather than from the
@@ -2647,7 +2647,7 @@ public class TreeTableView<S> extends Control {
 
                         // shuffle selection by the number of removed items
                         // only if removed items are before the current selection.
-                        if (treeItem.isExpanded()) {
+                        if (ControlUtils.isTreeItemIncludingAncestorsExpanded(treeItem)) {
                             int lastSelectedSiblingIndex = selectedItems.stream()
                                     .map(item -> ControlUtils.getIndexOfChildWithDescendant(treeItem, item))
                                     .max(Comparator.naturalOrder())
@@ -3491,7 +3491,7 @@ public class TreeTableView<S> extends Control {
                         // get the TreeItem the event occurred on - we only need to
                         // shift if the tree item is expanded
                         TreeItem<S> eventTreeItem = e.getTreeItem();
-                        if (eventTreeItem.isExpanded()) {
+                        if (ControlUtils.isTreeItemIncludingAncestorsExpanded(eventTreeItem)) {
                             for (int i = 0; i < e.getAddedChildren().size(); i++) {
                                 // get the added item and determine the row it is in
                                 TreeItem<S> item = e.getAddedChildren().get(i);
@@ -3513,7 +3513,7 @@ public class TreeTableView<S> extends Control {
                             }
                         }
 
-                        if (e.getTreeItem().isExpanded()) {
+                        if (ControlUtils.isTreeItemIncludingAncestorsExpanded(e.getTreeItem())) {
                             int focusedSiblingRow = ControlUtils.getIndexOfChildWithDescendant(e.getTreeItem(), getFocusedItem());
                             if (e.getFrom() <= focusedSiblingRow) {
                                 // shuffle selection by the number of removed items
