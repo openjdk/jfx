@@ -2100,11 +2100,11 @@ static gboolean dshowwrapper_load_decoder_h264(GstStructure *s, GstDShowWrapper 
         // Enable dynamic format change for MP4 via ReceiveConnection().
         // HLS works fine using QueryAccept without buffer size changes and
         // breaks if dynamic format is enabled, so for now we will use it only
-        // for MP4. It seems we only need it for portrait video or anything
-        // bigger then 1920x1080, so we will enable it only for such resolution.
-        // See JDK-8133841.
-        if ((width < height) || (width > 1920 && height > 1080))
-            outputFormat.bEnableDynamicFormatChanges = 1;
+        // for MP4. It seems we need it for portrait video, anything that has
+        // width > 1920 and/or height > 1080 or any not standard resolutions
+        // such as 1706x854.
+        // See JDK-8133841 and JDK-8283318.
+        outputFormat.bEnableDynamicFormatChanges = 1;
 
         decoder->width = width;
         decoder->height = height;
