@@ -5463,7 +5463,9 @@ compileTargets { t ->
                         args("--legal-notices")
                         args(srcLegalDir)
                         if (sourceDateEpoch != null) {
-                            args("--date", buildTimestamp)
+                            // Requires OpenJDK 19
+                            // https://github.com/openjdk/jdk/pull/6481
+                            // args("--date", buildTimestamp)
                         }
                         args(jmodFile)
                     }
