@@ -271,11 +271,11 @@ static jfieldID  jDelegateMenuField = 0;
 
             jint width = (*env)->GetIntField(env, pixels, jPixelsWidthField);
             jint height = (*env)->GetIntField(env, pixels, jPixelsHeightField);
-            jfloat sx = (*env)->GetFloatField(env, pixels, jPixelsScaleXField);
-            jfloat sy = (*env)->GetFloatField(env, pixels, jPixelsScaleYField);
+            jfloat scalex = (*env)->GetFloatField(env, pixels, jPixelsScaleXField);
+            jfloat scaley = (*env)->GetFloatField(env, pixels, jPixelsScaleYField);
 
-            if ((sx > 1) && (sy > 1) && (width > 1) && (height > 1)) {
-                NSSize imgSize = {width / sx, height / sy};
+            if ((scalex > 1) && (scaley > 1) && (width > 1) && (height > 1)) {
+                NSSize imgSize = {width / scalex, height / scaley};
                 [image setSize: imgSize];
             }
             [self->item setImage: image];
