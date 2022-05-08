@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,57 +32,73 @@ import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.collections.ObservableList;
 import javafx.geometry.Point3D;
+import javafx.geometry.Pos;
 import javafx.scene.DirectionalLight;
+import javafx.scene.LightBase;
 import javafx.scene.Node;
 import javafx.scene.PointLight;
 import javafx.scene.SpotLight;
+import javafx.scene.control.CheckBox;
+import javafx.scene.control.ColorPicker;
 import javafx.scene.control.Label;
 import javafx.scene.control.Slider;
 import javafx.scene.control.TextField;
+import javafx.scene.control.TitledPane;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
 import javafx.scene.transform.Rotate;
 import javafx.scene.transform.Transform;
 import javafx.util.converter.NumberStringConverter;
 
-/**
- * A {@code LightingSample} with additional controls for light attenuation.
- */
-public class AttenLightingSample extends LightingSample {
+final class Controls {
 
-    @Override
-    protected VBox addPointLightControls(PointLight light) {
-        var vbox = super.addLightControls(light);
+    static TitledPane addPointLightControls(PointLight light) {
+        var controls = createPointLightControls(light);
+        return createLightControls(light, controls);
+    }
+
+    static TitledPane addSpotLightControls(SpotLight light) {
+        var ia = createSliderControl("inner", light.innerAngleProperty(), 0, 180, light.getInnerAngle());
+        var oa = createSliderControl("outer", light.outerAngleProperty(), 0, 180, light.getOuterAngle());
+        var fo = createSliderControl("falloff", light.falloffProperty(), -5, 5, light.getFalloff());
+        VBox controls = createPointLightControls(light);
+        controls.getChildren().addAll(ia, oa, fo);
+
+        List<Node> directionControls = createDirectionControls(light.getTransforms(), light.directionProperty());
+        controls.getChildren().addAll(directionControls);
+        return createLightControls(light, controls);
+    }
+
+    private static VBox createPointLightControls(PointLight light) {
         var range = createSliderControl("range", light.maxRangeProperty(), 0, 500, 150);
         var c = createSliderControl("constant", light.constantAttenuationProperty(), -1, 1, light.getConstantAttenuation());
         var lc = createSliderControl("linear", light.linearAttenuationProperty(), -0.1, 0.1, light.getLinearAttenuation());
         var qc = createSliderControl("quadratic", light.quadraticAttenuationProperty(), -0.01, 0.01, light.getQuadraticAttenuation());
-        vbox.getChildren().addAll(range, c, lc, qc);
-        return vbox;
+        return new VBox(range, c, lc, qc);
     }
 
-    @Override
-    protected VBox addSpotLightControls(SpotLight light) {
-        var vbox = addPointLightControls(light);
-        var ia = createSliderControl("inner", light.innerAngleProperty(), 0, 180, light.getInnerAngle());
-        var oa = createSliderControl("outer", light.outerAngleProperty(), 0, 180, light.getOuterAngle());
-        var fo = createSliderControl("falloff", light.falloffProperty(), -5, 5, light.getFalloff());
-        vbox.getChildren().addAll(ia, oa, fo);
-
+    static TitledPane addDirectionalLightControls(DirectionalLight light) {
         List<Node> directionControls = createDirectionControls(light.getTransforms(), light.directionProperty());
-        vbox.getChildren().addAll(directionControls);
-        return vbox;
+        var controls = new VBox(directionControls.toArray(new Node[0]));
+        return createLightControls(light, controls);
     }
 
-    @Override
-    protected VBox addDirectionalLightControls(DirectionalLight light) {
-        var vbox = super.addLightControls(light);
-        List<Node> directionControls = createDirectionControls(light.getTransforms(), light.directionProperty());
-        vbox.getChildren().addAll(directionControls);
-        return vbox;
+    static TitledPane createLightControls(LightBase light, Pane content) {
+        var lightOn = new CheckBox(light.getClass().getSimpleName());
+        light.lightOnProperty().bind(lightOn.selectedProperty());
+        var colorPicker = new ColorPicker(light.getColor());
+        light.colorProperty().bind(colorPicker.valueProperty());
+        var titleControls = new HBox(5, lightOn, colorPicker);
+        titleControls.setAlignment(Pos.CENTER_LEFT);
+
+        var titlePane = new TitledPane("", content);
+        titlePane.setGraphic(titleControls);
+        titlePane.setExpanded(false);
+        return titlePane;
     }
 
-    private List<Node> createDirectionControls(ObservableList<Transform> transforms, ObjectProperty<Point3D> directionProperty) {
+    private static List<Node> createDirectionControls(ObservableList<Transform> transforms, ObjectProperty<Point3D> directionProperty) {
         var transX = new Rotate(0, Rotate.X_AXIS);
         var transY = new Rotate(0, Rotate.Y_AXIS);
         var transZ = new Rotate(0, Rotate.Z_AXIS);
@@ -104,32 +120,28 @@ public class AttenLightingSample extends LightingSample {
         return List.of(rotX, rotY, rotZ, dirX, dirY, dirZ);
     }
 
-    private HBox createSliderControl(String name, DoubleProperty property, double min, double max, double start) {
+    static HBox createSliderControl(String name, DoubleProperty property, double min, double max, double start) {
         var slider = createSlider(min, max, start);
         property.bind(slider.valueProperty());
         return createSliderControl(name, slider);
     }
 
-    private HBox createSliderControl(String name, Slider slider) {
+    private static HBox createSliderControl(String name, Slider slider) {
         var tf = createTextField(slider);
         return new HBox(5, new Label(name), slider, tf);
     }
 
-    private TextField createTextField(Slider slider) {
+    private static TextField createTextField(Slider slider) {
         var tf = new TextField();
         tf.textProperty().bindBidirectional(slider.valueProperty(), new NumberStringConverter());
         tf.setMaxWidth(50);
         return tf;
     }
 
-    private Slider createSlider(double min, double max, double start) {
+    private static Slider createSlider(double min, double max, double start) {
         var slider = new Slider(min, max, start);
         slider.setShowTickMarks(true);
         slider.setShowTickLabels(true);
         return slider;
-    }
-
-    public static void main(String[] args) {
-        launch(args);
     }
 }

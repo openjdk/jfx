@@ -297,7 +297,6 @@ public class ButtonSkinTest {
     private void attemptGC(WeakReference<ButtonSkin> weakRef) {
         for (int i = 0; i < 10; i++) {
             System.gc();
-            System.runFinalization();
 
             if (weakRef.get() == null) {
                 break;

@@ -172,7 +172,6 @@ public class TooltipFXTest {
 
         for (int j = 0; j < 5; ++j) {
             System.gc();
-            System.runFinalization();
             if (webViewRef.get() == null) {
                 break;
             }

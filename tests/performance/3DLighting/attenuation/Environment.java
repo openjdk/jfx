@@ -38,45 +38,57 @@ import javafx.scene.PointLight;
 import javafx.scene.SpotLight;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.PhongMaterial;
-import javafx.scene.shape.Box;
 import javafx.scene.shape.MeshView;
 import javafx.scene.shape.Sphere;
 import javafx.scene.shape.TriangleMesh;
-import javafx.scene.transform.Rotate;
 
 class Environment extends CameraScene3D {
 
+    private final static double LIGHT_REP_RADIUS = 2;
     private final static double LIGHT_Z_DIST = 50;
     private final static double LIGHT_X_DIST = 50;
+
+    private final static double SPHERE_RADIUS = 50;
+
+    private final AmbientLight ambientLight1 = new AmbientLight(Color.WHITE);
+    private final AmbientLight ambientLight2 = new AmbientLight(Color.RED);
+    private final AmbientLight ambientLight3 = new AmbientLight(Color.BLACK);
+    final AmbientLight[] ambientLights = new AmbientLight[] {ambientLight1, ambientLight2, ambientLight3};
 
     private final DirectionalLight directionalLight1 = new DirectionalLight(Color.RED);
     private final DirectionalLight directionalLight2 = new DirectionalLight(Color.BLUE);
     private final DirectionalLight directionalLight3 = new DirectionalLight(Color.MAGENTA);
+    final DirectionalLight[] directionalLights = new DirectionalLight[] {directionalLight1, directionalLight2, directionalLight3};
+
     private final PointLight pointLight1 = new PointLight(Color.RED);
     private final PointLight pointLight2 = new PointLight(Color.BLUE);
     private final PointLight pointLight3 = new PointLight(Color.MAGENTA);
+    final PointLight[] pointLights = new PointLight[] {pointLight1, pointLight2, pointLight3};
+
     private final SpotLight spotLight1 = new SpotLight(Color.RED);
     private final SpotLight spotLight2 = new SpotLight(Color.BLUE);
     private final SpotLight spotLight3 = new SpotLight(Color.MAGENTA);
-    final LightBase[] lights = {directionalLight1, directionalLight2, directionalLight3,
-            pointLight1, pointLight2, pointLight3, spotLight1, spotLight2, spotLight3};
+    final SpotLight[] spotLights = new SpotLight[] {spotLight1, spotLight2, spotLight3};
 
-    private Node currentShape;
-
-    private final AmbientLight worldLight = new AmbientLight();
+    private Group shapeGroup = new Group();
 
     Environment() {
+        setStyle("-fx-background-color: teal");
+
         farClip.set(1000);
         zoom.set(-350);
 
-        for (var light : lights) {
-            light.setTranslateZ(-LIGHT_Z_DIST);
-            var lightRep = new Sphere(2);
-            lightRep.setMaterial(new PhongMaterial(light.getColor()));
-            lightRep.translateXProperty().bind(light.translateXProperty());
-            lightRep.translateYProperty().bind(light.translateYProperty());
-            lightRep.translateZProperty().bind(light.translateZProperty());
-            rootGroup.getChildren().addAll(light , lightRep);
+        for (var light : ambientLights) {
+            addLight(light);
+        }
+        for (var light : directionalLights) {
+            addLight(light);
+        }
+        for (var light : pointLights) {
+            setupLight(light);
+        }
+        for (var light : spotLights) {
+            setupLight(light);
         }
 
         pointLight1.setTranslateX(LIGHT_X_DIST);
@@ -87,35 +99,36 @@ class Environment extends CameraScene3D {
         directionalLight1.setDirection(new Point3D(-LIGHT_X_DIST, 0, LIGHT_Z_DIST));
         directionalLight2.setDirection(new Point3D(LIGHT_X_DIST, 0, LIGHT_Z_DIST));
 
-        directionalLight1.setUserData("RED");
-        directionalLight2.setUserData("BLUE");
-        directionalLight3.setUserData("MAGENTA");
-        pointLight1.setUserData("RED");
-        pointLight2.setUserData("BLUE");
-        pointLight3.setUserData("MAGENTA");
-        spotLight1.setUserData("RED");
-        spotLight2.setUserData("BLUE");
-        spotLight3.setUserData("MAGENTA");
-
-        rootGroup.getChildren().add(worldLight);
+        rootGroup.getChildren().add(shapeGroup);
         rootGroup.setMouseTransparent(true);
     }
 
+    private void setupLight(PointLight light) {
+        light.setTranslateZ(-LIGHT_Z_DIST);
+        addLight(light);
+
+        var lightRep = new Sphere(LIGHT_REP_RADIUS);
+        var lightRepMat = new PhongMaterial();
+        lightRepMat.setSelfIlluminationMap(Boxes.createMapImage(light.colorProperty()));
+        lightRep.setMaterial(lightRepMat);
+        lightRep.translateXProperty().bind(light.translateXProperty());
+        lightRep.translateYProperty().bind(light.translateYProperty());
+        lightRep.translateZProperty().bind(light.translateZProperty());
+        lightRep.visibleProperty().bind(light.lightOnProperty());
+        rootGroup.getChildren().add(lightRep);
+    }
+
+    private void addLight(LightBase light) {
+        light.getScope().add(shapeGroup);
+        rootGroup.getChildren().add(light);
+    }
+
     Group createBoxes() {
-        var front = new Box(200, 200, 1);
-        var back = new Box(200, 200, 1);
-        var side = new Box(200, 200, 1);
-        side.setRotationAxis(Rotate.Y_AXIS);
-        side.setRotate(90);
-        side.setTranslateX(LIGHT_Z_DIST * 2);
-        side.setTranslateZ(-LIGHT_Z_DIST);
-        front.setTranslateZ(LIGHT_Z_DIST);
-        back.setTranslateZ(-LIGHT_Z_DIST * 3);
-        return new Group(front, back, side);
+        return new Boxes(LIGHT_Z_DIST);
     }
 
     Sphere createSphere(int subdivisions) {
-        return new Sphere(50, subdivisions);
+        return new Sphere(SPHERE_RADIUS, subdivisions);
     }
 
     MeshView createMeshView(int quadNum) {
@@ -156,10 +169,6 @@ class Environment extends CameraScene3D {
     }
 
     void switchTo(Node node) {
-        worldLight.getExclusionScope().remove(currentShape);
-        worldLight.getExclusionScope().add(node);
-        rootGroup.getChildren().remove(currentShape);
-        rootGroup.getChildren().add(node);
-        currentShape = node;
+        shapeGroup.getChildren().setAll(node);
     }
 }

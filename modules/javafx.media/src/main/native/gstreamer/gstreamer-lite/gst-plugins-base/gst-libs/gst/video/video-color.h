@@ -138,11 +138,15 @@ typedef enum {
   GST_VIDEO_TRANSFER_BT601
 } GstVideoTransferFunction;
 
+GST_VIDEO_DEPRECATED_FOR(gst_video_transfer_function_encode)
+gdouble      gst_video_color_transfer_encode    (GstVideoTransferFunction func, gdouble val);
 GST_VIDEO_API
-gdouble      gst_video_color_transfer_encode (GstVideoTransferFunction func, gdouble val);
+gdouble      gst_video_transfer_function_encode (GstVideoTransferFunction func, gdouble val);
 
+GST_VIDEO_DEPRECATED_FOR(gst_video_transfer_function_decode)
+gdouble      gst_video_color_transfer_decode    (GstVideoTransferFunction func, gdouble val);
 GST_VIDEO_API
-gdouble      gst_video_color_transfer_decode (GstVideoTransferFunction func, gdouble val);
+gdouble      gst_video_transfer_function_decode (GstVideoTransferFunction func, gdouble val);
 
 /**
  * GstVideoColorPrimaries:

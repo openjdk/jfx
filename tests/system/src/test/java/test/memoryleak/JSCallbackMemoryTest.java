@@ -319,7 +319,6 @@ public class JSCallbackMemoryTest {
 
         for (int j = 0; j < 5; j++) {
             System.gc();
-            System.runFinalization();
 
             if (isAllStagesNull()) {
                 break;
@@ -381,7 +380,6 @@ public class JSCallbackMemoryTest {
 
         for (int j = 0; j < 5; j++) {
             System.gc();
-            System.runFinalization();
 
             if (isAllCallbackStatusTrue()) {
                 break;
@@ -451,7 +449,6 @@ public class JSCallbackMemoryTest {
 
         for (int j = 0; j < 5; j++) {
             System.gc();
-            System.runFinalization();
 
             if (unexpectedCallback) {
                 break;
@@ -491,7 +488,6 @@ public class JSCallbackMemoryTest {
 
                             window.setMember("console", new Object());
                             System.gc(); System.gc();
-                            System.runFinalization();
                             webview.getEngine().executeScript("window.console.debug = function() {}");
                         } catch (Throwable ex) {
                             encounteredException = ex;
@@ -515,7 +511,6 @@ public class JSCallbackMemoryTest {
         checkEncounteredException();
 
         System.gc();
-        System.runFinalization();
     }
 
     @Test(timeout = 20000) public void testJsCallbackStrongRefPrimitiveArrayFunction() throws Exception {
@@ -570,7 +565,6 @@ public class JSCallbackMemoryTest {
 
         for (int j = 0; j < 5; j++) {
             System.gc();
-            System.runFinalization();
 
             if (isAllCallbackStatusTrue()) {
                 break;
@@ -613,7 +607,6 @@ public class JSCallbackMemoryTest {
                             window.setMember("callback2", stage);
                             window.setMember("localPrimitiveArray", new int[] { 1, 2, 3, 4, 5 });
                             System.gc(); System.gc();
-                            System.runFinalization();
                         } catch (Throwable ex) {
                             encounteredException = ex;
                         } finally {
@@ -641,7 +634,6 @@ public class JSCallbackMemoryTest {
 
             for (int i = 0; i < NUM_STAGES; i++) {
                 System.gc();
-                System.runFinalization();
                 webviewArray[i].getEngine().executeScript("document.getElementById(\"mybtn2\").onclick = function() {callback2.jscallback3(localPrimitiveArray);}");
                 webviewArray[i].getEngine().executeScript("document.getElementById(\"mybtn2\").click()");
             }
@@ -709,7 +701,6 @@ public class JSCallbackMemoryTest {
 
         for (int j = 0; j < 5; j++) {
             System.gc();
-            System.runFinalization();
 
             if (isAllCallbackStatusTrue()) {
                 break;
@@ -752,7 +743,6 @@ public class JSCallbackMemoryTest {
                             window.setMember("callback2", stage);
                             window.setMember("localObjectArray", new Object[] { new Object(), new Object(), new Object(), new Object() });
                             System.gc(); System.gc();
-                            System.runFinalization();
                         } catch (Throwable ex) {
                             encounteredException = ex;
                         } finally {
@@ -780,7 +770,6 @@ public class JSCallbackMemoryTest {
 
             for (int i = 0; i < NUM_STAGES; i++) {
                 System.gc();
-                System.runFinalization();
                 webviewArray[i].getEngine().executeScript("document.getElementById(\"mybtn2\").onclick = function() {callback2.jscallback5(localObjectArray);}");
                 webviewArray[i].getEngine().executeScript("document.getElementById(\"mybtn2\").click()");
             }

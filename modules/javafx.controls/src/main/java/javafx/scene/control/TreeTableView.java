@@ -2630,9 +2630,6 @@ public class TreeTableView<S> extends Control {
                             }
                         }
                     } else if (e.wasRemoved()) {
-                        // shuffle selection by the number of removed items
-                        shift += treeItem.isExpanded() ? -removedSize : 0;
-
                         // the start row is incorrect - it is _not_ the index of the
                         // TreeItem in which the children were removed from (which is
                         // what it currently represents). We need to take the 'from'
@@ -2647,6 +2644,19 @@ public class TreeTableView<S> extends Control {
                         final List<TreeItem<S>> selectedItems = getSelectedItems();
                         final TreeItem<S> selectedItem = getSelectedItem();
                         final List<? extends TreeItem<S>> removedChildren = e.getChange().getRemoved();
+
+                        // shuffle selection by the number of removed items
+                        // only if removed items are before the current selection.
+                        if (treeItem.isExpanded()) {
+                            int lastSelectedSiblingIndex = selectedItems.stream()
+                                    .map(item -> ControlUtils.getIndexOfChildWithDescendant(treeItem, item))
+                                    .max(Comparator.naturalOrder())
+                                    .orElse(-1);
+                            // shift only if the last selected sibling index is after the first removed child
+                            if (e.getFrom() <= lastSelectedSiblingIndex || lastSelectedSiblingIndex == -1) {
+                                shift -= removedSize;
+                            }
+                        }
 
                         for (int i = 0; i < selectedIndices.size() && !selectedItems.isEmpty(); i++) {
                             int index = selectedIndices.get(i);
@@ -3371,7 +3381,7 @@ public class TreeTableView<S> extends Control {
             // if such row doesn't have any selected cells
             IntPredicate removeRowFilter = row -> !isCellSelectionEnabled() ||
                     getSelectedCells().stream().noneMatch(tp -> tp.getRow() == row);
-            ControlUtils.updateSelectedIndices(this, c, removeRowFilter);
+            ControlUtils.updateSelectedIndices(this, this.isCellSelectionEnabled(), c, removeRowFilter);
 
             if (isAtomic()) {
                 return;
@@ -3503,9 +3513,12 @@ public class TreeTableView<S> extends Control {
                             }
                         }
 
-                        if (row <= getFocusedIndex()) {
-                            // shuffle selection by the number of removed items
-                            shift += e.getTreeItem().isExpanded() ? -e.getRemovedSize() : 0;
+                        if (e.getTreeItem().isExpanded()) {
+                            int focusedSiblingRow = ControlUtils.getIndexOfChildWithDescendant(e.getTreeItem(), getFocusedItem());
+                            if (e.getFrom() <= focusedSiblingRow) {
+                                // shuffle selection by the number of removed items
+                                shift -= e.getRemovedSize();
+                            }
                         }
                     }
                 } while (e.getChange() != null && e.getChange().next());
