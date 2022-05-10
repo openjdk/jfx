@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -37,7 +37,7 @@ import java.util.function.UnaryOperator;
  * A Formatter describes a format of a {@code TextInputControl} text by using two distinct mechanisms:
  * <ul>
  *     <li>A filter ({@link #getFilter()}) that can intercept and modify user input. This helps to keep the text
- *     in the desired format. A default text supplier can be used to provide the intial text.</li>
+ *     in the desired format. A default text supplier can be used to provide the initial text.</li>
  *     <li>A value converter ({@link #getValueConverter()}) and value ({@link #valueProperty()})
  *     can be used to provide special format that represents a value of type {@code V}.
  *     If the control is editable and the text is changed by the user, the value is then updated to correspond to the text.
@@ -199,7 +199,7 @@ public class TextFormatter<V> {
     }
 
     void updateValue(String text) {
-        if (!value.isBound()) {
+        if (valueConverter != null &&!value.isBound()) {
             try {
                 V v = valueConverter.fromString(text);
                 setValue(v);
