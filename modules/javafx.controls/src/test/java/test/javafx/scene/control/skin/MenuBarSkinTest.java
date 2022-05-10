@@ -28,10 +28,16 @@ package test.javafx.scene.control.skin;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+import java.util.List;
+
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Test;
+
 import com.sun.javafx.menu.MenuBase;
 import com.sun.javafx.stage.WindowHelper;
-import test.com.sun.javafx.pgstub.StubToolkit;
 import com.sun.javafx.tk.Toolkit;
+
 import javafx.beans.value.ObservableValue;
 import javafx.geometry.Insets;
 import javafx.scene.Group;
@@ -39,14 +45,12 @@ import javafx.scene.Scene;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
-import javafx.stage.Stage;
-
-import java.util.List;
 import javafx.scene.control.skin.MenuBarSkin;
-
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import javafx.scene.control.skin.MenuBarSkinShim;
+import javafx.scene.input.KeyCode;
+import javafx.stage.Stage;
+import test.com.sun.javafx.pgstub.StubToolkit;
+import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 
 /**
  * This fails with IllegalStateException because of the toolkit's check for the FX application thread
@@ -192,6 +196,16 @@ public class MenuBarSkinTest {
             // original menubar is the system menubar
             assertTrue(menubar.isUseSystemMenuBar());
         }
+    }
+
+    @Test
+    public void testInvisibleMenuNavigation() {
+        menubar.getMenus().get(0).setVisible(false);
+        MenuBarSkinShim.setFocusedMenuIndex(skin, 0);
+
+        KeyEventFirer keyboard = new KeyEventFirer(menubar);
+        keyboard.doKeyPress(KeyCode.LEFT);
+        tk.firePulse();
     }
 
     public static final class MenuBarSkinMock extends MenuBarSkin {

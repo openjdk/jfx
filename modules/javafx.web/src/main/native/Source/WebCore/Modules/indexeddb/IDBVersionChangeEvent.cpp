@@ -26,8 +26,6 @@
 #include "config.h"
 #include "IDBVersionChangeEvent.h"
 
-#if ENABLE(INDEXED_DATABASE)
-
 #include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
@@ -42,7 +40,7 @@ IDBVersionChangeEvent::IDBVersionChangeEvent(const IDBResourceIdentifier& reques
     if (newVersion)
         m_newVersion = newVersion;
     else
-        m_newVersion = WTF::nullopt;
+        m_newVersion = std::nullopt;
 }
 
 IDBVersionChangeEvent::IDBVersionChangeEvent(const AtomString& name, const Init& init, IsTrusted isTrusted)
@@ -58,5 +56,3 @@ EventInterface IDBVersionChangeEvent::eventInterface() const
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(INDEXED_DATABASE)

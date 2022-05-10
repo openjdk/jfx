@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -48,7 +48,8 @@ public class ES2Pipeline extends GraphicsPipeline {
     private static boolean isEglfb = false;
 
     static {
-        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+        @SuppressWarnings("removal")
+        var dummy = AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
             String libName = "prism_es2";
 
             String eglType = PlatformUtil.getEmbeddedType();
@@ -74,10 +75,15 @@ public class ES2Pipeline extends GraphicsPipeline {
         if (glFactory != null) {
             es2Enabled = glFactory.initialize(PrismSettings.class,
                     pixelFormatAttributes);
+            if (!es2Enabled && PrismSettings.verbose) {
+                System.out.println("GLFactory " + glFactory + " could not be initialized. ES2Pipeline not available.");
+            }
         } else {
+            if (PrismSettings.verbose) {
+                System.out.println("No GLFactory found. ES2Pipeline not available.");
+            }
             es2Enabled = false;
         }
-
         if (es2Enabled) {
             theInstance = new ES2Pipeline();
             factories = new ES2ResourceFactory[glFactory.getAdapterCount()];
@@ -92,7 +98,6 @@ public class ES2Pipeline extends GraphicsPipeline {
             npotSupported = false;
             supports3D = false;
         }
-
     }
     private static Thread creator;
     private static final ES2Pipeline theInstance;

@@ -114,7 +114,7 @@ public:
     void suspendAnimations(MonotonicTime) override;
     void resumeAnimations() override;
     bool usesContentsLayer() const override;
-    void dumpAdditionalProperties(WTF::TextStream&, LayerTreeAsTextBehavior) const override;
+    void dumpAdditionalProperties(WTF::TextStream&, OptionSet<LayerTreeAsTextOptions>) const override;
 
 #if USE(NICOSIA)
     PlatformLayer* platformLayer() const override;
@@ -224,7 +224,7 @@ private:
     } m_needsDisplay;
 
     RefPtr<Image> m_compositedImage;
-    NativeImagePtr m_compositedNativeImagePtr;
+    RefPtr<NativeImage> m_compositedNativeImage;
 
     Timer m_animationStartedTimer;
     RunLoop::Timer<CoordinatedGraphicsLayer> m_requestPendingTileCreationTimer;

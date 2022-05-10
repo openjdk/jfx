@@ -36,12 +36,14 @@ typedef (ImageBitmap or ImageData or HTMLImageElement or HTMLCanvasElement) TexI
 [
     ActiveDOMObject,
     Conditional=WEBGL,
+    GenerateIsReachable=ImplCanvasBase,
     JSCustomMarkFunction,
     JSGenerateToJSObject,
     DoNotCheckConstants,
     ExportMacro=WEBCORE_EXPORT,
-    CallTracingCallback=recordCanvasAction,
+    Exposed=(Window,Worker),
+    CallTracer=InspectorCanvasCallTracer,
 ] interface WebGLRenderingContext {
 };
 
-WebGLRenderingContext implements WebGLRenderingContextBase;
+WebGLRenderingContext includes WebGLRenderingContextBase;

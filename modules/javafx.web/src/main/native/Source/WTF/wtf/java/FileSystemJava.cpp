@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,30 +29,26 @@
 #include <wtf/java/JavaEnv.h>
 #include <wtf/text/CString.h>
 
-
 namespace WTF {
 
 namespace FileSystemImpl {
 
-static jclass GetFileSystemClass(JNIEnv* env)
-{
-    static JGClass clazz(env->FindClass("com/sun/webkit/FileSystem"));
-    ASSERT(clazz);
-    return clazz;
-}
 
+// -----------------------------------------------------------------------
+//  Below methods use Java calls to implement the intended functionality.
+// -----------------------------------------------------------------------
 bool fileExists(const String& path)
 {
     JNIEnv* env = WTF::GetJavaEnv();
 
     static jmethodID mid = env->GetStaticMethodID(
-            GetFileSystemClass(env),
+            comSunWebkitFileSystem,
             "fwkFileExists",
             "(Ljava/lang/String;)Z");
     ASSERT(mid);
 
     jboolean result = env->CallStaticBooleanMethod(
-            GetFileSystemClass(env),
+            comSunWebkitFileSystem,
             mid,
             (jstring)path.toJavaString(env));
     WTF::CheckAndClearException(env);
@@ -60,28 +56,19 @@ bool fileExists(const String& path)
     return jbool_to_bool(result);
 }
 
-bool deleteFile(const String&)
-{
-    return false;
-}
-
-bool deleteEmptyDirectory(String const &)
-{
-    return false;
-}
 
 bool getFileSize(const String& path, long long& result)
 {
     JNIEnv* env = WTF::GetJavaEnv();
 
     static jmethodID mid = env->GetStaticMethodID(
-            GetFileSystemClass(env),
+            comSunWebkitFileSystem,
             "fwkGetFileSize",
             "(Ljava/lang/String;)J");
     ASSERT(mid);
 
     jlong size = env->CallStaticLongMethod(
-            GetFileSystemClass(env),
+            comSunWebkitFileSystem,
             mid,
             (jstring) path.toJavaString(env));
     WTF::CheckAndClearException(env);
@@ -94,9 +81,46 @@ bool getFileSize(const String& path, long long& result)
     }
 }
 
-Optional<WallTime> getFileModificationTime(const String& path)
+std::optional<uint64_t> fileSize(const String& path)
 {
-    Optional<FileMetadata> metadata = fileMetadata(path);
+    long long size = 0;
+    getFileSize(path, size);
+    return size;
+}
+
+std::optional<FileMetadata> fileMetadata(const String& path)
+{
+    JNIEnv* env = WTF::GetJavaEnv();
+
+    static jmethodID mid = env->GetStaticMethodID(
+            comSunWebkitFileSystem,
+            "fwkGetFileMetadata",
+            "(Ljava/lang/String;[J)Z");
+    ASSERT(mid);
+
+    JLocalRef<jlongArray> lArray(env->NewLongArray(3));
+
+    jboolean result = env->CallStaticBooleanMethod(
+            comSunWebkitFileSystem,
+            mid,
+            (jstring)path.toJavaString(env), (jlongArray)lArray);
+    WTF::CheckAndClearException(env);
+
+    if (result) {
+        jlong* metadataResults = env->GetLongArrayElements(lArray, 0);
+        FileMetadata metadata {};
+        metadata.modificationTime = WallTime::fromRawSeconds(metadataResults[0] / 1000.0);
+        metadata.length = metadataResults[1];
+        metadata.type = static_cast<FileMetadata::Type>(metadataResults[2]);
+        env->ReleaseLongArrayElements(lArray, metadataResults, 0);
+        return metadata;
+    }
+    return {};
+}
+
+std::optional<WallTime> getFileModificationTime(const String& path)
+{
+    std::optional<FileMetadata> metadata = fileMetadata(path);
     if (metadata) {
         return { metadata->modificationTime };
     } else {
@@ -104,9 +128,9 @@ Optional<WallTime> getFileModificationTime(const String& path)
     }
 }
 
-Optional<WallTime> getFileCreationTime(const String&) // Not all platforms store file creation time.
+std::optional<WallTime> fileModificationTime(const String& path)
 {
-    return { };
+    return getFileModificationTime(path);
 }
 
 String pathByAppendingComponents(StringView path, const Vector<StringView>& components)
@@ -125,13 +149,13 @@ String pathByAppendingComponent(const String& path, const String& component)
     JNIEnv* env = WTF::GetJavaEnv();
 
     static jmethodID mid = env->GetStaticMethodID(
-            GetFileSystemClass(env),
+            comSunWebkitFileSystem,
             "fwkPathByAppendingComponent",
             "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;");
     ASSERT(mid);
 
     JLString result = static_cast<jstring>(env->CallStaticObjectMethod(
-            GetFileSystemClass(env),
+            comSunWebkitFileSystem,
             mid,
             (jstring)path.toJavaString(env),
             (jstring)component.toJavaString(env)));
@@ -145,13 +169,13 @@ bool makeAllDirectories(const String& path)
     JNIEnv* env = WTF::GetJavaEnv();
 
     static jmethodID mid = env->GetStaticMethodID(
-            GetFileSystemClass(env),
+            comSunWebkitFileSystem,
             "fwkMakeAllDirectories",
             "(Ljava/lang/String;)Z");
     ASSERT(mid);
 
     jboolean result = env->CallStaticBooleanMethod(
-            GetFileSystemClass(env),
+            comSunWebkitFileSystem,
             mid,
             (jstring)path.toJavaString(env));
     WTF::CheckAndClearException(env);
@@ -159,67 +183,10 @@ bool makeAllDirectories(const String& path)
     return jbool_to_bool(result);
 }
 
-String homeDirectoryPath()
-{
-    return "";
-}
-
-String directoryName(String const &)
-{
-    return String();
-}
-
-Optional<FileMetadata> fileMetadata(const String& path)
-{
-    JNIEnv* env = WTF::GetJavaEnv();
-
-    static jmethodID mid = env->GetStaticMethodID(
-            GetFileSystemClass(env),
-            "fwkGetFileMetadata",
-            "(Ljava/lang/String;[J)Z");
-    ASSERT(mid);
-
-    JLocalRef<jlongArray> lArray(env->NewLongArray(3));
-
-    jboolean result = env->CallStaticBooleanMethod(
-            GetFileSystemClass(env),
-            mid,
-            (jstring)path.toJavaString(env), (jlongArray)lArray);
-    WTF::CheckAndClearException(env);
-
-    if (result) {
-        jlong* metadataResults = env->GetLongArrayElements(lArray, 0);
-        FileMetadata metadata {};
-        metadata.modificationTime = WallTime::fromRawSeconds(metadataResults[0] / 1000.0);
-        metadata.length = metadataResults[1];
-        metadata.type = static_cast<FileMetadata::Type>(metadataResults[2]);
-        env->ReleaseLongArrayElements(lArray, metadataResults, 0);
-        return metadata;
-    }
-    return {};
-}
-
-Optional<FileMetadata> fileMetadataFollowingSymlinks(const String& path)
-{
-    // TODO-java: Use nio Files to avoid sym link traversal
-    return fileMetadata(path);
-}
-
-Vector<String> listDirectory(const String&, const String&)
-{
-    Vector<String> entities;
-    return entities;
-}
 
 CString fileSystemRepresentation(const String& s)
 {
     return CString(s.latin1().data());
-}
-
-String openTemporaryFile(const String&, PlatformFileHandle& handle, const String&)
-{
-    handle = invalidPlatformFileHandle;
-    return String();
 }
 
 PlatformFileHandle openFile(const String& path, FileOpenMode mode, FileAccessPermission, bool)
@@ -229,13 +196,13 @@ PlatformFileHandle openFile(const String& path, FileOpenMode mode, FileAccessPer
     }
     JNIEnv* env = WTF::GetJavaEnv();
     static jmethodID mid = env->GetStaticMethodID(
-            GetFileSystemClass(env),
+            comSunWebkitFileSystem,
             "fwkOpenFile",
             "(Ljava/lang/String;Ljava/lang/String;)Ljava/io/RandomAccessFile;");
     ASSERT(mid);
 
     PlatformFileHandle result = env->CallStaticObjectMethod(
-            GetFileSystemClass(env),
+            comSunWebkitFileSystem,
             mid,
             (jstring)path.toJavaString(env), (jstring)(env->NewStringUTF("r")));
 
@@ -248,33 +215,33 @@ void closeFile(PlatformFileHandle& handle)
     if (isHandleValid(handle)) {
         JNIEnv* env = WTF::GetJavaEnv();
         static jmethodID mid = env->GetStaticMethodID(
-                GetFileSystemClass(env),
+                comSunWebkitFileSystem,
                 "fwkCloseFile",
                 "(Ljava/io/RandomAccessFile;)V");
         ASSERT(mid);
 
         env->CallStaticVoidMethod(
-                GetFileSystemClass(env),
+                comSunWebkitFileSystem,
                 mid, (jobject)handle);
         WTF::CheckAndClearException(env);
         handle = invalidPlatformFileHandle;
     }
 }
 
-int readFromFile(PlatformFileHandle handle, char* data, int length)
+int readFromFile(PlatformFileHandle handle, void* data, int length)
 {
     if (length < 0 || !isHandleValid(handle) || data == nullptr) {
         return -1;
     }
     JNIEnv* env = WTF::GetJavaEnv();
     static jmethodID mid = env->GetStaticMethodID(
-            GetFileSystemClass(env),
+            comSunWebkitFileSystem,
             "fwkReadFromFile",
             "(Ljava/io/RandomAccessFile;Ljava/nio/ByteBuffer;)I");
     ASSERT(mid);
 
     int result = env->CallStaticIntMethod(
-            GetFileSystemClass(env),
+            comSunWebkitFileSystem,
             mid,
             (jobject)handle,
             (jobject)(env->NewDirectByteBuffer(data, length)));
@@ -286,31 +253,18 @@ int readFromFile(PlatformFileHandle handle, char* data, int length)
     return result;
 }
 
-int writeToFile(PlatformFileHandle, const char*, int)
-{
-    return -1;
-}
-
-bool truncateFile(PlatformFileHandle, long long offset)
-{
-    // FIXME: openjfx2.26 implement truncateFile
-    UNUSED_PARAM(offset);
-    fprintf(stderr, "FileSystemJava::truncateFile notImplemented\n");
-    return false;
-}
-
 String pathGetFileName(const String& path)
 {
     JNIEnv* env = WTF::GetJavaEnv();
 
     static jmethodID mid = env->GetStaticMethodID(
-            GetFileSystemClass(env),
+            comSunWebkitFileSystem,
             "fwkPathGetFileName",
             "(Ljava/lang/String;)Ljava/lang/String;");
     ASSERT(mid);
 
     JLString result = static_cast<jstring>(env->CallStaticObjectMethod(
-            GetFileSystemClass(env),
+            comSunWebkitFileSystem,
             mid,
             (jstring) path.toJavaString(env)));
     WTF::CheckAndClearException(env);
@@ -327,13 +281,13 @@ long long seekFile(PlatformFileHandle handle, long long offset, FileSeekOrigin)
     }
     JNIEnv* env = WTF::GetJavaEnv();
     static jmethodID mid = env->GetStaticMethodID(
-            GetFileSystemClass(env),
+            comSunWebkitFileSystem,
             "fwkSeekFile",
             "(Ljava/io/RandomAccessFile;J)V");
     ASSERT(mid);
 
     env->CallStaticVoidMethod(
-            GetFileSystemClass(env),
+            comSunWebkitFileSystem,
             mid,
             (jobject)handle, (jlong)offset);
     if (WTF::CheckAndClearException(env)) {
@@ -342,21 +296,155 @@ long long seekFile(PlatformFileHandle handle, long long offset, FileSeekOrigin)
     return offset;
 }
 
-Optional<int32_t> getFileDeviceId(const CString&)
+
+// -----------------------------------------------------------------------
+// Below methods are stubs as of now.
+// TODO: Implement the functionality in future using Java calls as and
+// when needed.
+// -----------------------------------------------------------------------
+std::optional<WallTime> fileCreationTime(const String&) // Not all platforms store file creation time.
 {
+    fprintf(stderr, "fileCreationTime(const String&) NOT IMPLEMENTED\n");
+    return { };
+}
+
+String homeDirectoryPath()
+{
+    fprintf(stderr, "homeDirectoryPath() NOT IMPLEMENTED\n");
+    return "";
+}
+
+String directoryName(String const &)
+{
+    fprintf(stderr, "directoryName(String const &) NOT IMPLEMENTED\n");
+    return String();
+}
+
+Vector<String> listDirectory(const String&, const String&)
+{
+    fprintf(stderr, "listDirectory(const String&, const String&) NOT IMPLEMENTED\n");
+    Vector<String> entities;
+    return entities;
+}
+
+Vector<String> listDirectory(const String&)
+{
+    fprintf(stderr, "listDirectory(const String&) NOT IMPLEMENTED\n");
+    Vector<String> entities;
+    return entities;
+}
+
+int writeToFile(PlatformFileHandle, const void* data, int length)
+{
+    fprintf(stderr, "writeToFile(PlatformFileHandle, const void* data, int length) NOT IMPLEMENTED\n");
+    UNUSED_PARAM(data);
+    UNUSED_PARAM(length);
+
+    return -1;
+}
+
+bool truncateFile(PlatformFileHandle, long long offset)
+{
+    fprintf(stderr, "truncateFile(PlatformFileHandle, long long offset) NOT IMPLEMENTED\n");
+
+    // FIXME: openjfx2.26 implement truncateFile
+    UNUSED_PARAM(offset);
+    return false;
+}
+
+std::optional<int32_t> getFileDeviceId(const CString&)
+{
+    fprintf(stderr, "getFileDeviceId(const CString&) NOT IMPLEMENTED\n");
     return {};
 }
 
 bool MappedFileData::mapFileHandle(PlatformFileHandle, FileOpenMode, MappedFileMode)
 {
-    fprintf(stderr, "MappedFileData::mapFileHandle(PlatformFileHandle handle, MappedFileMode) notImplemented()\n");
+    fprintf(stderr, "MappedFileData::mapFileHandle(PlatformFileHandle handle, MappedFileMode) NOT IMPLEMENTED\n");
     return false;
 }
 
 bool unmapViewOfFile(void* , size_t)
 {
-    fprintf(stderr, "unmapViewOfFile(void* , size_t) notImplemented()\n");
+    fprintf(stderr, "unmapViewOfFile(void* , size_t) NOT IMPLEMENTED()\n");
     return false;
+}
+
+MappedFileData::~MappedFileData()
+{
+    if (!m_fileData)
+        return;
+    unmapViewOfFile(m_fileData, m_fileSize);
+}
+
+bool deleteFile(const String&)
+{
+    fprintf(stderr, "deleteFile(const String&) NOT IMPLEMENTED\n");
+    return false;
+}
+
+bool deleteEmptyDirectory(String const &)
+{
+    fprintf(stderr, "deleteEmptyDirectory(String const &) NOT IMPLEMENTED\n");
+    return false;
+}
+
+String openTemporaryFile(const String&, PlatformFileHandle& handle, const String&)
+{
+    fprintf(stderr, "openTemporaryFile(const String&, PlatformFileHandle& handle, const String&) NOT IMPLEMENTED\n");
+    handle = invalidPlatformFileHandle;
+    return String();
+}
+
+String parentPath(const String& path)
+{
+    fprintf(stderr, "parentPath(const String& path) NOT IMPLEMENTED\n");
+    UNUSED_PARAM(path);
+    return "";
+}
+
+bool moveFile(const String& oldPath, const String& newPath)
+{
+    fprintf(stderr, "moveFile(const String& oldPath, const String& newPath) NOT IMPLEMENTED\n");
+    UNUSED_PARAM(oldPath);
+    UNUSED_PARAM(newPath);
+
+    return false;
+}
+
+bool isHiddenFile(const String& path)
+{
+    fprintf(stderr, "isHiddenFile(const String& path) NOT IMPLEMENTED\n");
+    UNUSED_PARAM(path);
+    return false;
+}
+
+String pathFileName(const String& path)
+{
+    return path.substring(path.reverseFind('/') + 1);
+}
+
+bool hardLinkOrCopyFile(const String& targetPath, const String& linkPath)
+{
+    fprintf(stderr, "hardLinkOrCopyFile(const String& targetPath, const String& linkPath) NOT IMPLEMENTED\n");
+    UNUSED_PARAM(targetPath);
+    UNUSED_PARAM(linkPath);
+
+    return false;
+}
+
+std::optional<FileType> fileTypeFollowingSymlinks(const String& path)
+{
+    fprintf(stderr, "fileTypeFollowingSymlinks(const String& path) NOT IMPLEMENTED\n");
+    UNUSED_PARAM(path);
+    return {};
+}
+
+std::optional<FileType> fileType(const String& path)
+{
+    fprintf(stderr, "fileType(const String& path) NOT IMPLEMENTED\n");
+    UNUSED_PARAM(path);
+    return {};
 }
 
 } // namespace FileSystemImpl

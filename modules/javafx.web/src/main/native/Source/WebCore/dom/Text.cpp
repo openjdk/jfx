@@ -76,8 +76,7 @@ ExceptionOr<Ref<Text>> Text::splitText(unsigned offset)
 
     document().textNodeSplit(*this);
 
-    if (renderer())
-        renderer()->setTextWithOffset(data(), 0, oldData.length());
+    updateRendererAfterContentChange(0, oldData.length());
 
     return newText;
 }
@@ -215,20 +214,18 @@ Ref<Text> Text::createWithLengthLimit(Document& document, const String& data, un
 
 void Text::updateRendererAfterContentChange(unsigned offsetOfReplacedData, unsigned lengthOfReplacedData)
 {
-    ASSERT(parentNode());
+    if (!isConnected())
+        return;
+
     if (styleValidity() >= Style::Validity::SubtreeAndRenderersInvalid)
         return;
 
     document().updateTextRenderer(*this, offsetOfReplacedData, lengthOfReplacedData);
 }
 
-String Text::debugDescription() const
+static void appendTextRepresentation(StringBuilder& builder, const Text& text)
 {
-    StringBuilder builder;
-
-    builder.append(CharacterData::debugDescription());
-
-    String value = data();
+    String value = text.data();
     builder.append(" length="_s, value.length());
 
     value.replaceWithLiteral('\\', "\\\\");
@@ -241,23 +238,34 @@ String Text::debugDescription() const
     }
 
     builder.append(" \"", value, '\"');
+}
+
+String Text::description() const
+{
+    StringBuilder builder;
+
+    builder.append(CharacterData::description());
+    appendTextRepresentation(builder, *this);
 
     return builder.toString();
 }
 
-#if ENABLE(TREE_DEBUGGING)
-void Text::formatForDebugger(char* buffer, unsigned length) const
+String Text::debugDescription() const
 {
-    strncpy(buffer, debugDescription().utf8().data(), length - 1);
-    buffer[length - 1] = '\0';
-}
-#endif
+    StringBuilder builder;
 
-void Text::setDataAndUpdate(const String& newData, unsigned offsetOfReplacedData, unsigned oldLength, unsigned newLength)
+    builder.append(CharacterData::debugDescription());
+    appendTextRepresentation(builder, *this);
+
+    return builder.toString();
+}
+
+void Text::setDataAndUpdate(const String& newData, unsigned offsetOfReplacedData, unsigned oldLength, unsigned newLength, UpdateLiveRanges updateLiveRanges)
 {
     auto oldData = data();
-    CharacterData::setDataAndUpdate(newData, offsetOfReplacedData, oldLength, newLength);
+    CharacterData::setDataAndUpdate(newData, offsetOfReplacedData, oldLength, newLength, updateLiveRanges);
 
+    // FIXME: Does not seem correct to do this for 0 offset only.
     if (!offsetOfReplacedData) {
         auto* textManipulationController = document().textManipulationControllerIfExists();
         if (UNLIKELY(textManipulationController && oldData != newData))

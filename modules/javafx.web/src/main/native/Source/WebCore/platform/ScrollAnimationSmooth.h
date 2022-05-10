@@ -96,7 +96,7 @@ private:
         int visibleLength { 0 };
     };
 
-    bool updatePerAxisData(PerAxisData&, ScrollGranularity, float delta, float minScrollPosition, float maxScrollPosition, double smoothFactor = 1);
+    bool updatePerAxisData(PerAxisData&, ScrollGranularity, float newPosition, float minScrollPosition, float maxScrollPosition, double smoothFactor = 1);
     bool animateScroll(PerAxisData&, MonotonicTime currentTime);
 
     void requestAnimationTimerFired();
@@ -111,7 +111,11 @@ private:
     PerAxisData m_verticalData;
 
     MonotonicTime m_startTime;
+#if USE(GENERIC_EVENT_LOOP) && PLATFORM(JAVA)
+    Timer m_animationTimer;
+#else
     RunLoop::Timer<ScrollAnimationSmooth> m_animationTimer;
+#endif
 };
 
 } // namespace WebCore

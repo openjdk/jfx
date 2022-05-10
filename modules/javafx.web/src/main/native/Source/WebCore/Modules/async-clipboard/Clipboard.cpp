@@ -35,6 +35,7 @@
 #include "JSClipboardItem.h"
 #include "JSDOMPromiseDeferred.h"
 #include "Navigator.h"
+#include "PagePasteboardContext.h"
 #include "Pasteboard.h"
 #include "Settings.h"
 #include "SharedBuffer.h"
@@ -105,7 +106,7 @@ void Clipboard::readText(Ref<DeferredPromise>&& promise)
         return;
     }
 
-    auto pasteboard = Pasteboard::createForCopyAndPaste();
+    auto pasteboard = Pasteboard::createForCopyAndPaste(PagePasteboardContext::create(frame->pageID()));
     auto changeCountAtStart = pasteboard->changeCount();
     if (!frame->requestDOMPasteAccess()) {
         promise->reject(NotAllowedError);
@@ -146,14 +147,14 @@ void Clipboard::writeText(const String& data, Ref<DeferredPromise>&& promise)
     PasteboardCustomData customData;
     customData.writeString("text/plain"_s, data);
     customData.setOrigin(document->originIdentifierForPasteboard());
-    Pasteboard::createForCopyAndPaste()->writeCustomData({ WTFMove(customData) });
+    Pasteboard::createForCopyAndPaste(PagePasteboardContext::create(frame->pageID()))->writeCustomData({ WTFMove(customData) });
     promise->resolve();
 }
 
 void Clipboard::read(Ref<DeferredPromise>&& promise)
 {
     auto rejectPromiseAndClearActiveSession = [&] {
-        m_activeSession = WTF::nullopt;
+        m_activeSession = std::nullopt;
         promise->reject(NotAllowedError);
     };
 
@@ -163,7 +164,7 @@ void Clipboard::read(Ref<DeferredPromise>&& promise)
         return;
     }
 
-    auto pasteboard = Pasteboard::createForCopyAndPaste();
+    auto pasteboard = Pasteboard::createForCopyAndPaste(PagePasteboardContext::create(frame->pageID()));
     auto changeCountAtStart = pasteboard->changeCount();
 
     if (!frame->requestDOMPasteAccess()) {
@@ -197,7 +198,7 @@ void Clipboard::getType(ClipboardItem& item, const String& type, Ref<DeferredPro
 
     auto frame = makeRefPtr(this->frame());
     if (!frame) {
-        m_activeSession = WTF::nullopt;
+        m_activeSession = std::nullopt;
         promise->reject(NotAllowedError);
         return;
     }
@@ -217,7 +218,7 @@ void Clipboard::getType(ClipboardItem& item, const String& type, Ref<DeferredPro
     }
 
     if (type == "image/png"_s) {
-        ClipboardImageReader imageReader { type };
+        ClipboardImageReader imageReader { frame->document(), type };
         activePasteboard().read(imageReader, itemIndex);
         auto imageBlob = imageReader.takeResult();
         if (updateSessionValidity() == SessionIsValid::Yes && imageBlob)
@@ -252,7 +253,7 @@ void Clipboard::getType(ClipboardItem& item, const String& type, Ref<DeferredPro
         return;
     }
 
-    promise->resolve<IDLInterface<Blob>>(ClipboardItem::blobFromString(resultAsString, type));
+    promise->resolve<IDLInterface<Blob>>(ClipboardItem::blobFromString(frame->document(), resultAsString, type));
 }
 
 Clipboard::SessionIsValid Clipboard::updateSessionValidity()
@@ -261,7 +262,7 @@ Clipboard::SessionIsValid Clipboard::updateSessionValidity()
         return SessionIsValid::No;
 
     if (m_activeSession->changeCount != activePasteboard().changeCount()) {
-        m_activeSession = WTF::nullopt;
+        m_activeSession = std::nullopt;
         return SessionIsValid::No;
     }
 
@@ -303,7 +304,7 @@ Pasteboard& Clipboard::activePasteboard()
 Clipboard::ItemWriter::ItemWriter(Clipboard& clipboard, Ref<DeferredPromise>&& promise)
     : m_clipboard(makeWeakPtr(clipboard))
     , m_promise(WTFMove(promise))
-    , m_pasteboard(Pasteboard::createForCopyAndPaste())
+    , m_pasteboard(Pasteboard::createForCopyAndPaste(PagePasteboardContext::create(clipboard.frame()->pageID())))
 {
 }
 
@@ -316,7 +317,7 @@ void Clipboard::ItemWriter::write(const Vector<RefPtr<ClipboardItem>>& items)
 #if PLATFORM(COCOA)
     m_changeCountAtStart = m_pasteboard->changeCount();
 #endif
-    m_dataToWrite.fill(WTF::nullopt, items.size());
+    m_dataToWrite.fill(std::nullopt, items.size());
     m_pendingItemCount = items.size();
     for (size_t index = 0; index < items.size(); ++index) {
         items[index]->collectDataForWriting(*m_clipboard, [this, protectedThis = makeRef(*this), index] (auto data) {
@@ -335,7 +336,7 @@ void Clipboard::ItemWriter::invalidate()
         reject();
 }
 
-void Clipboard::ItemWriter::setData(Optional<PasteboardCustomData>&& data, size_t index)
+void Clipboard::ItemWriter::setData(std::optional<PasteboardCustomData>&& data, size_t index)
 {
     if (index >= m_dataToWrite.size()) {
         ASSERT_NOT_REACHED();

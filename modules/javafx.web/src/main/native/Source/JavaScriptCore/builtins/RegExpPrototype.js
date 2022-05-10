@@ -66,7 +66,7 @@ function regExpExec(regexp, str)
 
     var exec = regexp.exec;
     var builtinExec = @regExpBuiltinExec;
-    if (exec !== builtinExec && typeof exec === "function") {
+    if (exec !== builtinExec && @isCallable(exec)) {
         var result = exec.@call(regexp, str);
         if (result !== null && !@isObject(result))
             @throwTypeError("The result of a RegExp exec must be null or an object");
@@ -132,7 +132,7 @@ function matchSlow(regexp, str)
         if (!resultString.length)
             regexp.lastIndex = @advanceStringIndex(str, regexp.lastIndex, unicode);
 
-        resultList.@push(resultString);
+        @arrayPush(resultList, resultString);
     }
 }
 
@@ -174,109 +174,110 @@ function matchAll(strArg)
     return new @RegExpStringIterator(matcher, string, global, fullUnicode);
 }
 
+@globalPrivate
+function getSubstitution(matched, str, position, captures, namedCaptures, replacement)
+{
+    "use strict";
+
+    var matchLength = matched.length;
+    var stringLength = str.length;
+    var tailPos = position + matchLength;
+    var m = captures.length;
+    var replacementLength = replacement.length;
+    var result = "";
+    var lastStart = 0;
+
+    for (var start = 0; start = @stringIndexOfInternal.@call(replacement, "$", lastStart), start !== -1; lastStart = start) {
+        if (start - lastStart > 0)
+            result = result + @stringSubstringInternal.@call(replacement, lastStart, start);
+        start++;
+        if (start >= replacementLength)
+            result = result + "$";
+        else {
+            var ch = replacement[start];
+            switch (ch)
+            {
+            case "$":
+                result = result + "$";
+                start++;
+                break;
+            case "&":
+                result = result + matched;
+                start++;
+                break;
+            case "`":
+                if (position > 0)
+                    result = result + @stringSubstringInternal.@call(str, 0, position);
+                start++;
+                break;
+            case "'":
+                if (tailPos < stringLength)
+                    result = result + @stringSubstringInternal.@call(str, tailPos);
+                start++;
+                break;
+            case "<":
+                if (namedCaptures !== @undefined) {
+                    var groupNameStartIndex = start + 1;
+                    var groupNameEndIndex = @stringIndexOfInternal.@call(replacement, ">", groupNameStartIndex);
+                    if (groupNameEndIndex !== -1) {
+                        var groupName = @stringSubstringInternal.@call(replacement, groupNameStartIndex, groupNameEndIndex);
+                        var capture = namedCaptures[groupName];
+                        if (capture !== @undefined)
+                            result = result + @toString(capture);
+
+                        start = groupNameEndIndex + 1;
+                        break;
+                    }
+                }
+
+                result = result + "$<";
+                start++;
+                break;
+            default:
+                var chCode = ch.@charCodeAt(0);
+                if (chCode >= 0x30 && chCode <= 0x39) {
+                    var originalStart = start - 1;
+                    start++;
+
+                    var n = chCode - 0x30;
+                    if (n > m) {
+                        result = result + @stringSubstringInternal.@call(replacement, originalStart, start);
+                        break;
+                    }
+
+                    if (start < replacementLength) {
+                        var nextChCode = replacement.@charCodeAt(start);
+                        if (nextChCode >= 0x30 && nextChCode <= 0x39) {
+                            var nn = 10 * n + nextChCode - 0x30;
+                            if (nn <= m) {
+                                n = nn;
+                                start++;
+                            }
+                        }
+                    }
+
+                    if (n == 0) {
+                        result = result + @stringSubstringInternal.@call(replacement, originalStart, start);
+                        break;
+                    }
+
+                    var capture = captures[n - 1];
+                    if (capture !== @undefined)
+                        result = result + capture;
+                } else
+                    result = result + "$";
+                break;
+            }
+        }
+    }
+
+    return result + @stringSubstringInternal.@call(replacement, lastStart);
+}
+
 @overriddenName="[Symbol.replace]"
 function replace(strArg, replace)
 {
     "use strict";
-
-    function getSubstitution(matched, str, position, captures, namedCaptures, replacement)
-    {
-        "use strict";
-
-        var matchLength = matched.length;
-        var stringLength = str.length;
-        var tailPos = position + matchLength;
-        var m = captures.length;
-        var replacementLength = replacement.length;
-        var result = "";
-        var lastStart = 0;
-
-        for (var start = 0; start = @stringIndexOfInternal.@call(replacement, "$", lastStart), start !== -1; lastStart = start) {
-            if (start - lastStart > 0)
-                result = result + @stringSubstringInternal.@call(replacement, lastStart, start);
-            start++;
-            if (start >= replacementLength)
-                result = result + "$";
-            else {
-                var ch = replacement[start];
-                switch (ch)
-                {
-                case "$":
-                    result = result + "$";
-                    start++;
-                    break;
-                case "&":
-                    result = result + matched;
-                    start++;
-                    break;
-                case "`":
-                    if (position > 0)
-                        result = result + @stringSubstringInternal.@call(str, 0, position);
-                    start++;
-                    break;
-                case "'":
-                    if (tailPos < stringLength)
-                        result = result + @stringSubstringInternal.@call(str, tailPos);
-                    start++;
-                    break;
-                case "<":
-                    if (namedCaptures !== @undefined) {
-                        var groupNameStartIndex = start + 1;
-                        var groupNameEndIndex = @stringIndexOfInternal.@call(replacement, ">", groupNameStartIndex);
-                        if (groupNameEndIndex !== -1) {
-                            var groupName = @stringSubstringInternal.@call(replacement, groupNameStartIndex, groupNameEndIndex);
-                            var capture = namedCaptures[groupName];
-                            if (capture !== @undefined)
-                                result = result + @toString(capture);
-
-                            start = groupNameEndIndex + 1;
-                            break;
-                        }
-                    }
-
-                    result = result + "$<";
-                    start++;
-                    break;
-                default:
-                    var chCode = ch.@charCodeAt(0);
-                    if (chCode >= 0x30 && chCode <= 0x39) {
-                        var originalStart = start - 1;
-                        start++;
-
-                        var n = chCode - 0x30;
-                        if (n > m) {
-                            result = result + @stringSubstringInternal.@call(replacement, originalStart, start);
-                            break;
-                        }
-
-                        if (start < replacementLength) {
-                            var nextChCode = replacement.@charCodeAt(start);
-                            if (nextChCode >= 0x30 && nextChCode <= 0x39) {
-                                var nn = 10 * n + nextChCode - 0x30;
-                                if (nn <= m) {
-                                    n = nn;
-                                    start++;
-                                }
-                            }
-                        }
-
-                        if (n == 0) {
-                            result = result + @stringSubstringInternal.@call(replacement, originalStart, start);
-                            break;
-                        }
-
-                        var capture = captures[n - 1];
-                        if (capture !== @undefined)
-                            result = result + capture;
-                    } else
-                        result = result + "$";
-                    break;
-                }
-            }
-        }
-
-        return result + @stringSubstringInternal.@call(replacement, lastStart);
-    }
 
     if (!@isObject(this))
         @throwTypeError("RegExp.prototype.@@replace requires that |this| be an Object");
@@ -285,7 +286,7 @@ function replace(strArg, replace)
 
     var str = @toString(strArg);
     var stringLength = str.length;
-    var functionalReplace = typeof replace === 'function';
+    var functionalReplace = @isCallable(replace);
 
     if (!functionalReplace)
         replace = @toString(replace);
@@ -307,7 +308,7 @@ function replace(strArg, replace)
         if (result === null)
             done = true;
         else {
-            resultList.@push(result);
+            @arrayPush(resultList, result);
             if (!global)
                 done = true;
             else {
@@ -331,7 +332,7 @@ function replace(strArg, replace)
             nCaptures = 0;
         var matched = @toString(result[0]);
         var matchLength = matched.length;
-        var position = @toInteger(result.index);
+        var position = @toIntegerOrInfinity(result.index);
         position = (position > stringLength) ? stringLength : position;
         position = (position < 0) ? 0 : position;
 
@@ -340,7 +341,7 @@ function replace(strArg, replace)
             var capN = result[n];
             if (capN !== @undefined)
                 capN = @toString(capN);
-            captures.@push(capN);
+            @arrayPush(captures, capN);
         }
 
         var replacement;
@@ -349,13 +350,13 @@ function replace(strArg, replace)
         if (functionalReplace) {
             var replacerArgs = [ matched ];
             for (var j = 0; j < captures.length; j++)
-                replacerArgs.@push(captures[j]);
+                @arrayPush(replacerArgs, captures[j]);
 
-            replacerArgs.@push(position);
-            replacerArgs.@push(str);
+            @arrayPush(replacerArgs, position);
+            @arrayPush(replacerArgs, str);
 
             if (namedCaptures !== @undefined)
-                replacerArgs.@push(namedCaptures);
+                @arrayPush(replacerArgs, namedCaptures);
 
             var replValue = replace.@apply(@undefined, replacerArgs);
             replacement = @toString(replValue);
@@ -363,7 +364,7 @@ function replace(strArg, replace)
             if (namedCaptures !== @undefined)
                 namedCaptures = @toObject(namedCaptures, "RegExp.prototype[Symbol.replace] requires 'groups' property of a match not be null");
 
-            replacement = getSubstitution(matched, str, position, captures, namedCaptures, replace);
+            replacement = @getSubstitution(matched, str, position, captures, namedCaptures, replace);
         }
 
         if (position >= nextSourcePosition) {
@@ -566,7 +567,7 @@ function split(string, limit)
                 var subStr = @stringSubstringInternal.@call(str, position, matchPosition);
                 // 2. Perform ! CreateDataProperty(A, ! ToString(lengthA), T).
                 // 3. Let lengthA be lengthA + 1.
-                @putByValDirect(result, result.length, subStr);
+                @arrayPush(result, subStr);
                 // 4. If lengthA = lim, return A.
                 if (result.length == limit)
                     return result;
@@ -585,7 +586,7 @@ function split(string, limit)
                     var nextCapture = matches[i];
                     // b. Perform ! CreateDataProperty(A, ! ToString(lengthA), nextCapture).
                     // d. Let lengthA be lengthA + 1.
-                    @putByValDirect(result, result.length, nextCapture);
+                    @arrayPush(result, nextCapture);
                     // e. If lengthA = lim, return A.
                     if (result.length == limit)
                         return result;
@@ -600,7 +601,7 @@ function split(string, limit)
     // 20. Let T be a String value equal to the substring of S consisting of the elements at indices p (inclusive) through size (exclusive).
     var remainingStr = @stringSubstringInternal.@call(str, position, size);
     // 21. Perform ! CreateDataProperty(A, ! ToString(lengthA), T).
-    @putByValDirect(result, result.length, remainingStr);
+    @arrayPush(result, remainingStr);
     // 22. Return A.
     return result;
 }

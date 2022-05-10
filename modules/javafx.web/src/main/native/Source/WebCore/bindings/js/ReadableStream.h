@@ -44,7 +44,7 @@ public:
 
     WEBCORE_EXPORT static bool isDisturbed(JSC::JSGlobalObject&, JSC::JSValue);
 
-    std::pair<Ref<ReadableStream>, Ref<ReadableStream>> tee();
+    std::optional<std::pair<Ref<ReadableStream>, Ref<ReadableStream>>> tee();
 
     void lock();
     void pipeTo(ReadableStreamSink&);
@@ -82,6 +82,16 @@ template<> struct JSDOMWrapperConverterTraits<ReadableStream> {
 inline JSC::JSValue toJS(JSC::JSGlobalObject*, JSC::JSGlobalObject*, ReadableStream* stream)
 {
     return stream ? stream->readableStream() : JSC::jsUndefined();
+}
+
+inline JSC::JSValue toJS(JSC::JSGlobalObject*, JSC::JSGlobalObject*, ReadableStream& stream)
+{
+    return stream.readableStream();
+}
+
+inline JSC::JSValue toJSNewlyCreated(JSC::JSGlobalObject*, JSDOMGlobalObject*, Ref<ReadableStream>&& stream)
+{
+    return stream->readableStream();
 }
 
 }

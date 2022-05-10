@@ -59,9 +59,9 @@
 #include "MarkedSpace.h"
 #include "MaxFrameExtentForSlowPathCall.h"
 #include "NativeExecutable.h"
-#include "PutByIdFlags.h"
+#include "PrivateFieldPutKind.h"
 #include "ProtoCallFrame.h"
-#include "PutByValFlags.h"
+#include "PutByIdFlags.h"
 #include "ShadowChicken.h"
 #include "Structure.h"
 #include "StructureChain.h"
@@ -86,6 +86,7 @@ class LLIntOffsetsExtractor {
     // These types are useful since we can't use '<...>' syntax in LLInt offsets extraction. e.g. Vector<int>::m_data
     using Vector = WTF::Vector<int>;
     using JSInternalFieldObjectImpl = JSC::JSInternalFieldObjectImpl<>;
+    using FixedVector = WTF::FixedVector<int>;
     using RefCountedArray = WTF::RefCountedArray<int>;
 
 public:

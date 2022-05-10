@@ -42,11 +42,11 @@ namespace WebCore {
 
 // CSS Filters
 
+struct BlendingContext;
 class CachedResourceLoader;
 class CachedSVGDocumentReference;
 class FilterEffect;
 struct ResourceLoaderOptions;
-template<typename> struct SRGBA;
 
 class FilterOperation : public ThreadSafeRefCounted<FilterOperation> {
 public:
@@ -75,7 +75,7 @@ public:
     virtual bool operator==(const FilterOperation&) const = 0;
     bool operator!=(const FilterOperation& o) const { return !(*this == o); }
 
-    virtual RefPtr<FilterOperation> blend(const FilterOperation* /*from*/, double /*progress*/, bool /*blendToPassthrough*/ = false)
+    virtual RefPtr<FilterOperation> blend(const FilterOperation* /*from*/, const BlendingContext&, bool /*blendToPassthrough*/ = false)
     {
         return nullptr;
     }
@@ -216,7 +216,7 @@ public:
 
     double amount() const { return m_amount; }
 
-    RefPtr<FilterOperation> blend(const FilterOperation* from, double progress, bool blendToPassthrough = false) override;
+    RefPtr<FilterOperation> blend(const FilterOperation* from, const BlendingContext&, bool blendToPassthrough = false) override;
 
 private:
     bool operator==(const FilterOperation&) const override;
@@ -251,7 +251,7 @@ public:
 
     bool affectsOpacity() const override { return m_type == OPACITY; }
 
-    RefPtr<FilterOperation> blend(const FilterOperation* from, double progress, bool blendToPassthrough = false) override;
+    RefPtr<FilterOperation> blend(const FilterOperation* from, const BlendingContext&, bool blendToPassthrough = false) override;
 
 private:
     bool operator==(const FilterOperation&) const override;
@@ -281,7 +281,7 @@ public:
         return adoptRef(*new InvertLightnessFilterOperation());
     }
 
-    RefPtr<FilterOperation> blend(const FilterOperation* from, double progress, bool blendToPassthrough = false) override;
+    RefPtr<FilterOperation> blend(const FilterOperation* from, const BlendingContext&, bool blendToPassthrough = false) override;
 
 private:
     bool operator==(const FilterOperation&) const final;
@@ -312,7 +312,7 @@ public:
     bool affectsOpacity() const override { return true; }
     bool movesPixels() const override { return true; }
 
-    RefPtr<FilterOperation> blend(const FilterOperation* from, double progress, bool blendToPassthrough = false) override;
+    RefPtr<FilterOperation> blend(const FilterOperation* from, const BlendingContext&, bool blendToPassthrough = false) override;
 
 private:
     bool operator==(const FilterOperation&) const override;
@@ -347,7 +347,7 @@ public:
     bool affectsOpacity() const override { return true; }
     bool movesPixels() const override { return true; }
 
-    RefPtr<FilterOperation> blend(const FilterOperation* from, double progress, bool blendToPassthrough = false) override;
+    RefPtr<FilterOperation> blend(const FilterOperation* from, const BlendingContext&, bool blendToPassthrough = false) override;
 
 private:
     bool operator==(const FilterOperation&) const override;

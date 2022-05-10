@@ -26,7 +26,7 @@
 #pragma once
 
 #include "IDLTypes.h"
-#include "ImageBuffer.h"
+#include "ImageBitmapBacking.h"
 #include "ScriptWrappable.h"
 #include <wtf/RefCounted.h>
 
@@ -52,7 +52,7 @@ class OffscreenCanvas;
 #endif
 class PendingImageBitmap;
 class ScriptExecutionContext;
-class TypedOMCSSImageValue;
+class CSSStyleImageValue;
 struct ImageBitmapOptions;
 
 template<typename IDLType> class DOMPromiseDeferred;
@@ -71,7 +71,7 @@ public:
         RefPtr<OffscreenCanvas>,
 #endif
 #if ENABLE(CSS_TYPED_OM)
-        RefPtr<TypedOMCSSImageValue>,
+        RefPtr<CSSStyleImageValue>,
 #endif
         RefPtr<Blob>,
         RefPtr<ImageData>
@@ -82,62 +82,56 @@ public:
     static void createPromise(ScriptExecutionContext&, Source&&, ImageBitmapOptions&&, Promise&&);
     static void createPromise(ScriptExecutionContext&, Source&&, ImageBitmapOptions&&, int sx, int sy, int sw, int sh, Promise&&);
 
-    static Ref<ImageBitmap> create(IntSize);
-    static Ref<ImageBitmap> create(std::pair<std::unique_ptr<ImageBuffer>, ImageBuffer::SerializationState>&&);
+    static RefPtr<ImageBuffer> createImageBuffer(ScriptExecutionContext&, const FloatSize&, RenderingMode, float resolutionScale = 1);
+
+    static Ref<ImageBitmap> create(ScriptExecutionContext&, const IntSize&);
+    static Ref<ImageBitmap> create(std::optional<ImageBitmapBacking>&&);
 
     ~ImageBitmap();
 
-    unsigned width() const;
-    unsigned height() const;
-    void close();
+    ImageBuffer* buffer() const { return m_backingStore ? m_backingStore->buffer() : nullptr; }
+    // This function has the implicit side-effect of detaching the backing store.
+    // It returns nullptr if the ImageBitmap's already detached.
+    RefPtr<ImageBuffer> takeImageBuffer();
+    OptionSet<SerializationState> serializationState() const { return m_backingStore ? m_backingStore->serializationState() : SerializationState(); }
 
-    bool isDetached() const { return m_detached; }
+    unsigned width() const { return m_backingStore ? m_backingStore->width() : 0; }
+    unsigned height() const { return m_backingStore ? m_backingStore->height() : 0; }
 
-    ImageBuffer* buffer() { return m_bitmapData.get(); }
+    bool originClean() const { return m_backingStore && m_backingStore->originClean(); }
+    bool premultiplyAlpha() const { return m_backingStore && m_backingStore->premultiplyAlpha(); }
+    bool forciblyPremultiplyAlpha() const { return m_backingStore && m_backingStore->forciblyPremultiplyAlpha(); }
 
-    bool originClean() const { return m_originClean; }
+    std::optional<ImageBitmapBacking> takeImageBitmapBacking();
+    bool isDetached() const { return !m_backingStore; }
+    void close() { takeImageBitmapBacking(); }
 
-    bool premultiplyAlpha() const { return m_premultiplyAlpha; }
-
-    // When WebGL consumes an Image coming from an ImageBitmap's ImageBuffer, it typically honors
-    // the alpha mode of that native image - CGImageAlphaInfo in the Core Graphics backend. For
-    // ImageBitmaps created from ImageBitmaps, this information is not accurate, and callers must be
-    // told to ignore the alpha mode, and forcibly premultiply the alpha channel.
-    bool forciblyPremultiplyAlpha() const { return m_forciblyPremultiplyAlpha; }
-
-    std::unique_ptr<ImageBuffer> transferOwnershipAndClose();
-
-    static Vector<std::pair<std::unique_ptr<ImageBuffer>, ImageBuffer::SerializationState>> detachBitmaps(Vector<RefPtr<ImageBitmap>>&&);
+    static Vector<std::optional<ImageBitmapBacking>> detachBitmaps(Vector<RefPtr<ImageBitmap>>&&);
 
 private:
     friend class ImageBitmapImageObserver;
     friend class PendingImageBitmap;
 
-    static Ref<ImageBitmap> create(std::unique_ptr<ImageBuffer>&&);
-    ImageBitmap(std::unique_ptr<ImageBuffer>&&);
+    ImageBitmap(std::optional<ImageBitmapBacking>&&);
 
-    static void resolveWithBlankImageBuffer(bool originClean, Promise&&);
+    static void resolveWithBlankImageBuffer(ScriptExecutionContext&, bool originClean, Promise&&);
 
-    static void createPromise(ScriptExecutionContext&, RefPtr<HTMLImageElement>&, ImageBitmapOptions&&, Optional<IntRect>, Promise&&);
+    static void createPromise(ScriptExecutionContext&, RefPtr<HTMLImageElement>&, ImageBitmapOptions&&, std::optional<IntRect>, Promise&&);
 #if ENABLE(VIDEO)
-    static void createPromise(ScriptExecutionContext&, RefPtr<HTMLVideoElement>&, ImageBitmapOptions&&, Optional<IntRect>, Promise&&);
+    static void createPromise(ScriptExecutionContext&, RefPtr<HTMLVideoElement>&, ImageBitmapOptions&&, std::optional<IntRect>, Promise&&);
 #endif
-    static void createPromise(ScriptExecutionContext&, RefPtr<ImageBitmap>&, ImageBitmapOptions&&, Optional<IntRect>, Promise&&);
-    static void createPromise(ScriptExecutionContext&, RefPtr<HTMLCanvasElement>&, ImageBitmapOptions&&, Optional<IntRect>, Promise&&);
+    static void createPromise(ScriptExecutionContext&, RefPtr<ImageBitmap>&, ImageBitmapOptions&&, std::optional<IntRect>, Promise&&);
+    static void createPromise(ScriptExecutionContext&, RefPtr<HTMLCanvasElement>&, ImageBitmapOptions&&, std::optional<IntRect>, Promise&&);
 #if ENABLE(OFFSCREEN_CANVAS)
-    static void createPromise(ScriptExecutionContext&, RefPtr<OffscreenCanvas>&, ImageBitmapOptions&&, Optional<IntRect>, Promise&&);
+    static void createPromise(ScriptExecutionContext&, RefPtr<OffscreenCanvas>&, ImageBitmapOptions&&, std::optional<IntRect>, Promise&&);
 #endif
-    static void createPromise(ScriptExecutionContext&, CanvasBase&, ImageBitmapOptions&&, Optional<IntRect>, Promise&&);
-    static void createPromise(ScriptExecutionContext&, RefPtr<Blob>&, ImageBitmapOptions&&, Optional<IntRect>, Promise&&);
-    static void createPromise(ScriptExecutionContext&, RefPtr<ImageData>&, ImageBitmapOptions&&, Optional<IntRect>, Promise&&);
-    static void createPromise(ScriptExecutionContext&, RefPtr<TypedOMCSSImageValue>&, ImageBitmapOptions&&, Optional<IntRect>, Promise&&);
-    static void createFromBuffer(Ref<ArrayBuffer>&&, String mimeType, long long expectedContentLength, const URL&, ImageBitmapOptions&&, Optional<IntRect>, Promise&&);
+    static void createPromise(ScriptExecutionContext&, CanvasBase&, ImageBitmapOptions&&, std::optional<IntRect>, Promise&&);
+    static void createPromise(ScriptExecutionContext&, RefPtr<Blob>&, ImageBitmapOptions&&, std::optional<IntRect>, Promise&&);
+    static void createPromise(ScriptExecutionContext&, RefPtr<ImageData>&, ImageBitmapOptions&&, std::optional<IntRect>, Promise&&);
+    static void createPromise(ScriptExecutionContext&, RefPtr<CSSStyleImageValue>&, ImageBitmapOptions&&, std::optional<IntRect>, Promise&&);
+    static void createFromBuffer(ScriptExecutionContext&, Ref<ArrayBuffer>&&, String mimeType, long long expectedContentLength, const URL&, ImageBitmapOptions&&, std::optional<IntRect>, Promise&&);
 
-    std::unique_ptr<ImageBuffer> m_bitmapData;
-    bool m_detached { false };
-    bool m_originClean { true };
-    bool m_premultiplyAlpha { false };
-    bool m_forciblyPremultiplyAlpha { false };
+    std::optional<ImageBitmapBacking> m_backingStore;
 };
 
 }

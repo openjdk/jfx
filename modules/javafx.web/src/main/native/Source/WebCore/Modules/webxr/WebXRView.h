@@ -27,6 +27,7 @@
 
 #if ENABLE(WEBXR)
 
+#include "JSValueInWrappedObject.h"
 #include "WebXRRigidTransform.h"
 #include "XREye.h"
 #include <JavaScriptCore/Float32Array.h>
@@ -37,28 +38,40 @@
 
 namespace WebCore {
 
+class WebXRFrame;
 class WebXRRigidTransform;
+class WebXRSession;
 
 class WebXRView : public RefCounted<WebXRView> {
-    WTF_MAKE_ISO_ALLOCATED(WebXRView);
+    WTF_MAKE_ISO_ALLOCATED_EXPORT(WebXRView, WEBCORE_EXPORT);
 public:
-    static Ref<WebXRView> create();
-    ~WebXRView();
+    WEBCORE_EXPORT static Ref<WebXRView> create(Ref<WebXRFrame>&&, XREye, Ref<WebXRRigidTransform>&&, Ref<Float32Array>&&);
+    WEBCORE_EXPORT ~WebXRView();
 
+    const WebXRFrame& frame() const { return m_frame.get(); }
     XREye eye() const { return m_eye; }
-    const Float32Array& projectionMatrix() const { return *m_projectionMatrix; }
-    const WebXRRigidTransform& transform() const { return *m_transform; }
+    const Float32Array& projectionMatrix() const { return m_projection.get(); }
+    const WebXRRigidTransform& transform() const { return m_transform.get(); }
 
-    void setEye(XREye eye) { m_eye = eye; }
-    void setProjectionMatrix(const Vector<float>&);
-    void setTransform(RefPtr<WebXRRigidTransform>&& viewOffset) { m_transform = WTFMove(viewOffset); }
+    std::optional<double> recommendedViewportScale() const;
+    void requestViewportScale(std::optional<double>);
+
+    double requestedViewportScale() const { return m_requestedViewportScale; }
+    bool isViewportModifiable() const { return m_viewportModifiable; }
+    void setViewportModifiable(bool modifiable) { m_viewportModifiable = modifiable; }
+
+    JSValueInWrappedObject& cachedProjectionMatrix() { return m_cachedProjectionMatrix; }
 
 private:
-    WebXRView();
+    WebXRView(Ref<WebXRFrame>&&, XREye, Ref<WebXRRigidTransform>&&, Ref<Float32Array>&&);
 
+    Ref<WebXRFrame> m_frame;
     XREye m_eye;
-    RefPtr<Float32Array> m_projectionMatrix;
-    RefPtr<WebXRRigidTransform> m_transform;
+    Ref<WebXRRigidTransform> m_transform;
+    Ref<Float32Array> m_projection;
+    bool m_viewportModifiable { false };
+    double m_requestedViewportScale { 1.0 };
+    JSValueInWrappedObject m_cachedProjectionMatrix;
 };
 
 } // namespace WebCore

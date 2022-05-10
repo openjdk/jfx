@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2009-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,6 +28,7 @@
 #include "BatchedTransitionOptimizer.h"
 #include "CodeCache.h"
 #include "Debugger.h"
+#include "VMTrapsInlines.h"
 
 namespace JSC {
 
@@ -65,6 +66,7 @@ static GlobalPropertyLookUpStatus hasRestrictedGlobalProperty(JSGlobalObject* gl
 
 JSObject* ProgramExecutable::initializeGlobalProperties(VM& vm, JSGlobalObject* globalObject, JSScope* scope)
 {
+    DeferTermination deferScope(vm);
     auto throwScope = DECLARE_THROW_SCOPE(vm);
     RELEASE_ASSERT(scope);
     ASSERT(globalObject == scope->globalObject(vm));
@@ -208,7 +210,8 @@ auto ProgramExecutable::ensureTemplateObjectMap(VM&) -> TemplateObjectMap&
     return ensureTemplateObjectMapImpl(m_templateObjectMap);
 }
 
-void ProgramExecutable::visitChildren(JSCell* cell, SlotVisitor& visitor)
+template<typename Visitor>
+void ProgramExecutable::visitChildrenImpl(JSCell* cell, Visitor& visitor)
 {
     ProgramExecutable* thisObject = jsCast<ProgramExecutable*>(cell);
     ASSERT_GC_OBJECT_INHERITS(thisObject, info());
@@ -216,10 +219,12 @@ void ProgramExecutable::visitChildren(JSCell* cell, SlotVisitor& visitor)
     visitor.append(thisObject->m_unlinkedProgramCodeBlock);
     visitor.append(thisObject->m_programCodeBlock);
     if (TemplateObjectMap* map = thisObject->m_templateObjectMap.get()) {
-        auto locker = holdLock(thisObject->cellLock());
+        Locker locker { thisObject->cellLock() };
         for (auto& entry : *map)
             visitor.append(entry.value);
     }
 }
+
+DEFINE_VISIT_CHILDREN(ProgramExecutable);
 
 } // namespace JSC

@@ -28,6 +28,7 @@
 #if USE(LIBWEBRTC)
 
 #include "LibWebRTCMacros.h"
+#include "Timer.h"
 
 ALLOW_UNUSED_PARAMETERS_BEGIN
 
@@ -40,10 +41,12 @@ ALLOW_UNUSED_PARAMETERS_END
 namespace WebCore {
 
 // LibWebRTCAudioModule is pulling streamed data to ensure audio data is passed to the audio track.
-class LibWebRTCAudioModule final : public webrtc::AudioDeviceModule {
+class LibWebRTCAudioModule : public webrtc::AudioDeviceModule {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     LibWebRTCAudioModule();
+
+    static constexpr unsigned PollSamplesCount = 3;
 
 private:
     template<typename U> U shouldNotBeCalled(U value) const
@@ -51,9 +54,6 @@ private:
         ASSERT_NOT_REACHED();
         return value;
     }
-
-    void AddRef() const final { }
-    rtc::RefCountReleaseStatus Release() const final { return rtc::RefCountReleaseStatus::kOtherRefsRemained; }
 
     // webrtc::AudioDeviceModule API
     int32_t StartPlayout() final;
@@ -124,11 +124,17 @@ private:
 private:
     void pollAudioData();
     void pollFromSource();
+    void logTimerFired();
+    Seconds computeDelayUntilNextPolling();
+
+    static constexpr Seconds logTimerInterval = 2_s;
 
     Ref<WorkQueue> m_queue;
     bool m_isPlaying { false };
     webrtc::AudioTransport* m_audioTransport { nullptr };
     MonotonicTime m_pollingTime;
+    Timer m_logTimer;
+    int m_timeSpent { 0 };
 };
 
 } // namespace WebCore

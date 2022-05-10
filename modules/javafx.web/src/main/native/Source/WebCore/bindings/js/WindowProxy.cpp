@@ -53,7 +53,7 @@ static void collectGarbageAfterWindowProxyDestruction()
 }
 
 WindowProxy::WindowProxy(AbstractFrame& frame)
-    : m_frame(&frame)
+    : m_frame(makeWeakPtr(frame))
     , m_jsWindowProxies(makeUniqueRef<ProxyMap>())
 {
 }
@@ -62,6 +62,11 @@ WindowProxy::~WindowProxy()
 {
     ASSERT(!m_frame);
     ASSERT(m_jsWindowProxies->isEmpty());
+}
+
+AbstractFrame* WindowProxy::frame() const
+{
+    return m_frame.get();
 }
 
 void WindowProxy::detachFromFrame()
@@ -183,7 +188,7 @@ void WindowProxy::setDOMWindow(AbstractDOMWindow* newDOMWindow)
         windowProxy->attachDebugger(page ? page->debugger() : nullptr);
         if (page)
             windowProxy->window()->setProfileGroup(page->group().identifier());
-        windowProxy->window()->setConsoleClient(page ? &page->console() : nullptr);
+        windowProxy->window()->setConsoleClient(page ? makeWeakPtr(page->console()) : nullptr);
     }
 }
 

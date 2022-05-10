@@ -110,63 +110,70 @@ bool Navigator::onLine() const
     return platformStrategies()->loaderStrategy()->isOnLine();
 }
 
-bool Navigator::canShare(ScriptExecutionContext& context, const ShareData& data)
+static std::optional<URL> shareableURLForShareData(ScriptExecutionContext& context, const ShareData& data)
+{
+    if (data.url.isNull())
+        return std::nullopt;
+
+    auto url = context.completeURL(data.url);
+    if (!url.isValid())
+        return std::nullopt;
+    if (!url.protocolIsInHTTPFamily() && !url.protocolIsData())
+        return std::nullopt;
+
+    return url;
+}
+
+bool Navigator::canShare(Document& document, const ShareData& data)
 {
     auto* frame = this->frame();
     if (!frame || !frame->page())
         return false;
-    if (data.title.isNull() && data.url.isNull() && data.text.isNull()) {
-        if (!data.files.isEmpty()) {
-#if ENABLE(FILE_SHARE)
-            return true;
-#else
-            return false;
-#endif
-        }
-        return false;
-    }
 
-    Optional<URL> url;
-    if (!data.url.isNull()) {
-        url = context.completeURL(data.url);
-        if (!url->isValid())
-            return false;
-    }
-    return true;
+    bool hasShareableTitleOrText = !data.title.isNull() || !data.text.isNull();
+    bool hasShareableURL = !!shareableURLForShareData(document, data);
+#if ENABLE(FILE_SHARE)
+    bool hasShareableFiles = document.settings().webShareFileAPIEnabled() && !data.files.isEmpty();
+#else
+    bool hasShareableFiles = false;
+#endif
+
+    return hasShareableTitleOrText || hasShareableURL || hasShareableFiles;
 }
 
-void Navigator::share(ScriptExecutionContext& context, const ShareData& data, Ref<DeferredPromise>&& promise)
+void Navigator::share(Document& document, const ShareData& data, Ref<DeferredPromise>&& promise)
 {
-    if (!canShare(context, data)) {
-        promise->reject(TypeError);
-        return;
-    }
-
-    Optional<URL> url;
-    if (!data.url.isEmpty())
-        url = context.completeURL(data.url);
-
-    auto* window = this->window();
-    // Note that the specification does not indicate we should consume user activation. We are intentionally stricter here.
-    if (!window || !window->consumeTransientActivation() || m_hasPendingShare) {
+    if (m_hasPendingShare) {
         promise->reject(NotAllowedError);
         return;
     }
 
+    auto* window = this->window();
+    if (!window || !window->consumeTransientActivation()) {
+        promise->reject(NotAllowedError);
+        return;
+    }
+
+    if (!canShare(document, data)) {
+        promise->reject(TypeError);
+        return;
+    }
+
+    std::optional<URL> url = shareableURLForShareData(document, data);
     ShareDataWithParsedURL shareData = {
         data,
         url,
         { },
     };
 #if ENABLE(FILE_SHARE)
-    if (!data.files.isEmpty()) {
+    if (document.settings().webShareFileAPIEnabled() && !data.files.isEmpty()) {
         if (m_loader)
             m_loader->cancel();
 
         m_loader = ShareDataReader::create([this, promise = WTFMove(promise)] (ExceptionOr<ShareDataWithParsedURL&> readData) mutable {
             showShareData(readData, WTFMove(promise));
         });
-        m_loader->start(frame()->document(), WTFMove(shareData));
+        m_loader->start(&document, WTFMove(shareData));
         return;
     }
 #endif
@@ -183,6 +190,11 @@ void Navigator::showShareData(ExceptionOr<ShareDataWithParsedURL&> readData, Ref
     auto* frame = this->frame();
     if (!frame || !frame->page())
         return;
+
+    if (frame->page()->isControlledByAutomation()) {
+        promise->resolve();
+        return;
+    }
 
     m_hasPendingShare = true;
     auto shareData = readData.returnValue();

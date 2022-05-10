@@ -37,6 +37,7 @@
 #include "JSDOMPromiseDeferred.h"
 #include "JSMediaKeySystemAccess.h"
 #include "Logging.h"
+#include "MediaKeySystemRequest.h"
 #include <wtf/text/StringBuilder.h>
 
 namespace WTF {
@@ -58,8 +59,8 @@ struct LogArgument<Vector<T>> {
 };
 
 template<typename T>
-struct LogArgument<Optional<T>> {
-    static String toString(const Optional<T>& value)
+struct LogArgument<std::optional<T>> {
+    static String toString(const std::optional<T>& value)
     {
         return value ? "nullopt"_s : LogArgument<T>::toString(value.value());
     }
@@ -99,23 +100,27 @@ void NavigatorEME::requestMediaKeySystemAccess(Navigator& navigator, Document& d
         return;
     }
 
-    document.postTask([keySystem, supportedConfigurations = WTFMove(supportedConfigurations), promise = WTFMove(promise), &document, logger = WTFMove(logger), identifier = WTFMove(identifier)] (ScriptExecutionContext&) mutable {
-        // 3. Let document be the calling context's Document.
-        // 4. Let origin be the origin of document.
-        // 5. Let promise be a new promise.
-        // 6. Run the following steps in parallel:
-        // 6.1. If keySystem is not one of the Key Systems supported by the user agent, reject promise with a NotSupportedError.
-        //      String comparison is case-sensitive.
-        if (!CDM::supportsKeySystem(keySystem)) {
-            infoLog(logger, identifier, "Rejected: keySystem(", keySystem, ") not supported");
-            promise->reject(NotSupportedError);
-            return;
-        }
+    auto request = MediaKeySystemRequest::create(document, keySystem, WTFMove(promise));
+    request->setAllowCallback([keySystem, supportedConfigurations = WTFMove(supportedConfigurations), &document, logger = WTFMove(logger), identifier = WTFMove(identifier)](Ref<DeferredPromise>&& promise) mutable {
+        document.postTask([promise = WTFMove(promise), &document, keySystem, logger = WTFMove(logger), identifier = WTFMove(identifier), supportedConfigurations = WTFMove(supportedConfigurations)] (ScriptExecutionContext&) mutable {
+            // 3. Let document be the calling context's Document.
+            // 4. Let origin be the origin of document.
+            // 5. Let promise be a new promise.
+            // 6. Run the following steps in parallel:
+            // 6.1. If keySystem is not one of the Key Systems supported by the user agent, reject promise with a NotSupportedError.
+            //      String comparison is case-sensitive.
+            if (!CDM::supportsKeySystem(keySystem)) {
+                infoLog(logger, identifier, "Rejected: keySystem(", keySystem, ") not supported");
+                promise->reject(NotSupportedError);
+                return;
+            }
 
-        // 6.2. Let implementation be the implementation of keySystem.
-        auto implementation = CDM::create(document, keySystem);
-        tryNextSupportedConfiguration(WTFMove(implementation), WTFMove(supportedConfigurations), WTFMove(promise), WTFMove(logger), WTFMove(identifier));
+            // 6.2. Let implementation be the implementation of keySystem.
+            auto implementation = CDM::create(document, keySystem);
+            tryNextSupportedConfiguration(WTFMove(implementation), WTFMove(supportedConfigurations), WTFMove(promise), WTFMove(logger), WTFMove(identifier));
+        });
     });
+    request->start();
 }
 
 static void tryNextSupportedConfiguration(RefPtr<CDM>&& implementation, Vector<MediaKeySystemConfiguration>&& supportedConfigurations, RefPtr<DeferredPromise>&& promise, Ref<Logger>&& logger, WTF::Logger::LogSiteIdentifier&& identifier)
@@ -128,7 +133,7 @@ static void tryNextSupportedConfiguration(RefPtr<CDM>&& implementation, Vector<M
         MediaKeySystemConfiguration candidateConfiguration = WTFMove(supportedConfigurations.first());
         supportedConfigurations.remove(0);
 
-        CDM::SupportedConfigurationCallback callback = [implementation = implementation, supportedConfigurations = WTFMove(supportedConfigurations), promise, logger = WTFMove(logger), identifier = WTFMove(identifier)] (Optional<MediaKeySystemConfiguration> supportedConfiguration) mutable {
+        CDM::SupportedConfigurationCallback callback = [implementation = implementation, supportedConfigurations = WTFMove(supportedConfigurations), promise, logger = WTFMove(logger), identifier = WTFMove(identifier)] (std::optional<MediaKeySystemConfiguration> supportedConfiguration) mutable {
             // 6.3.3. If supported configuration is not NotSupported, run the following steps:
             if (supportedConfiguration) {
                 // 6.3.3.1. Let access be a new MediaKeySystemAccess object, and initialize it as follows:

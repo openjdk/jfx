@@ -34,8 +34,7 @@ using EncodedJSValue = int64_t;
 
 namespace WebCore {
 
-JSC::EncodedJSValue JSC_HOST_CALL cloneArrayBuffer(JSC::JSGlobalObject*, JSC::CallFrame*);
-JSC::EncodedJSValue JSC_HOST_CALL structuredCloneArrayBuffer(JSC::JSGlobalObject*, JSC::CallFrame*);
-JSC::EncodedJSValue JSC_HOST_CALL structuredCloneArrayBufferView(JSC::JSGlobalObject*, JSC::CallFrame*);
+JSC_DECLARE_HOST_FUNCTION(cloneArrayBuffer);
+JSC_DECLARE_HOST_FUNCTION(structuredCloneForStream);
 
 } // namespace WebCore

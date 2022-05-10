@@ -33,10 +33,12 @@
 #include "MessageEvent.h"
 #include "MessagePortChannelProvider.h"
 #include "MessageWithMessagePorts.h"
+#include "StructuredSerializeOptions.h"
 #include "WorkerGlobalScope.h"
 #include "WorkerThread.h"
 #include <wtf/CompletionHandler.h>
 #include <wtf/IsoMallocInlines.h>
+#include <wtf/Lock.h>
 #include <wtf/Scope.h>
 
 namespace WebCore {
@@ -44,7 +46,7 @@ namespace WebCore {
 WTF_MAKE_ISO_ALLOCATED_IMPL(MessagePort);
 
 static Lock allMessagePortsLock;
-static HashMap<MessagePortIdentifier, MessagePort*>& allMessagePorts()
+static HashMap<MessagePortIdentifier, MessagePort*>& allMessagePorts() WTF_REQUIRES_LOCK(allMessagePortsLock)
 {
     static NeverDestroyed<HashMap<MessagePortIdentifier, MessagePort*>> map;
     return map;
@@ -61,7 +63,7 @@ void MessagePort::deref() const
     // This allows isExistingMessagePortLocallyReachable and notifyMessageAvailable to easily query the map and manipulate MessagePort instances.
 
     if (!--m_refCount) {
-        Locker<Lock> locker(allMessagePortsLock);
+        Locker locker { allMessagePortsLock };
 
         if (m_refCount)
             return;
@@ -76,14 +78,14 @@ void MessagePort::deref() const
 
 bool MessagePort::isExistingMessagePortLocallyReachable(const MessagePortIdentifier& identifier)
 {
-    Locker<Lock> locker(allMessagePortsLock);
+    Locker locker { allMessagePortsLock };
     auto* port = allMessagePorts().get(identifier);
     return port && port->isLocallyReachable();
 }
 
 void MessagePort::notifyMessageAvailable(const MessagePortIdentifier& identifier)
 {
-    Locker<Lock> locker(allMessagePortsLock);
+    Locker locker { allMessagePortsLock };
     if (auto* port = allMessagePorts().get(identifier))
         port->messageAvailable();
 
@@ -101,8 +103,11 @@ MessagePort::MessagePort(ScriptExecutionContext& scriptExecutionContext, const M
 {
     LOG(MessagePorts, "Created MessagePort %s (%p) in process %" PRIu64, m_identifier.logString().utf8().data(), this, Process::identifier().toUInt64());
 
-    Locker<Lock> locker(allMessagePortsLock);
+    Locker locker { allMessagePortsLock };
     allMessagePorts().set(m_identifier, this);
+
+    // Make sure the WeakPtrFactory gets initialized eagerly on the thread the MessagePort gets constructed on for thread-safety reasons.
+    initializeWeakPtrFactory();
 
     m_scriptExecutionContext->createdMessagePort(*this);
     suspendIfNeeded();
@@ -128,7 +133,7 @@ void MessagePort::entangle()
     MessagePortChannelProvider::fromContext(*m_scriptExecutionContext).entangleLocalPortInThisProcessToRemote(m_identifier, m_remoteIdentifier);
 }
 
-ExceptionOr<void> MessagePort::postMessage(JSC::JSGlobalObject& state, JSC::JSValue messageValue, PostMessageOptions&& options)
+ExceptionOr<void> MessagePort::postMessage(JSC::JSGlobalObject& state, JSC::JSValue messageValue, StructuredSerializeOptions&& options)
 {
     LOG(MessagePorts, "Attempting to post message to port %s (to be received by port %s)", m_identifier.logString().utf8().data(), m_remoteIdentifier.logString().utf8().data());
 
@@ -165,7 +170,7 @@ ExceptionOr<void> MessagePort::postMessage(JSC::JSGlobalObject& state, JSC::JSVa
     return { };
 }
 
-void MessagePort::disentangle()
+TransferredMessagePort MessagePort::disentangle()
 {
     ASSERT(m_entangled);
     m_entangled = false;
@@ -180,6 +185,8 @@ void MessagePort::disentangle()
     m_scriptExecutionContext->willDestroyDestructionObserver(*this);
 
     m_scriptExecutionContext = nullptr;
+
+    return { identifier(), remoteIdentifier() };
 }
 
 void MessagePort::registerLocalActivity()
@@ -225,13 +232,9 @@ void MessagePort::close()
         return;
     m_closed = true;
 
-    if (isMainThread())
-        MessagePortChannelProvider::singleton().messagePortClosed(m_identifier);
-    else {
-        callOnMainThread([identifier = m_identifier] {
-            MessagePortChannelProvider::singleton().messagePortClosed(identifier);
-        });
-    }
+    ensureOnMainThread([identifier = m_identifier] {
+        MessagePortChannelProvider::singleton().messagePortClosed(identifier);
+    });
 
     removeAllEventListeners();
 }
@@ -326,19 +329,19 @@ bool MessagePort::virtualHasPendingActivity() const
 
     // If we're not in the middle of asking the remote port about collectability, do so now.
     if (!m_isAskingRemoteAboutGC) {
-        RefPtr<WorkerThread> workerThread;
-        if (is<WorkerGlobalScope>(*m_scriptExecutionContext))
-            workerThread = &downcast<WorkerGlobalScope>(*m_scriptExecutionContext).thread();
+        RefPtr<WorkerOrWorkletThread> workerOrWorkletThread;
+        if (is<WorkerOrWorkletGlobalScope>(*m_scriptExecutionContext))
+            workerOrWorkletThread = downcast<WorkerOrWorkletGlobalScope>(*m_scriptExecutionContext).workerOrWorkletThread();
 
-        callOnMainThread([remoteIdentifier = m_remoteIdentifier, weakThis = makeWeakPtr(const_cast<MessagePort*>(this)), workerThread = WTFMove(workerThread)]() mutable {
-            MessagePortChannelProvider::singleton().checkRemotePortForActivity(remoteIdentifier, [weakThis = WTFMove(weakThis), workerThread = WTFMove(workerThread)](auto hasActivity) mutable {
-                if (!workerThread) {
+        callOnMainThread([remoteIdentifier = m_remoteIdentifier, weakThis = makeWeakPtr(const_cast<MessagePort*>(this)), workerOrWorkletThread = WTFMove(workerOrWorkletThread)]() mutable {
+            MessagePortChannelProvider::singleton().checkRemotePortForActivity(remoteIdentifier, [weakThis = WTFMove(weakThis), workerOrWorkletThread = WTFMove(workerOrWorkletThread)](auto hasActivity) mutable {
+                if (!workerOrWorkletThread) {
                     if (weakThis)
                         weakThis->updateActivity(hasActivity);
                     return;
                 }
 
-                workerThread->runLoop().postTaskForMode([weakThis = WTFMove(weakThis), hasActivity](auto&) mutable {
+                workerOrWorkletThread->runLoop().postTaskForMode([weakThis = WTFMove(weakThis), hasActivity](auto&) mutable {
                     if (weakThis)
                         weakThis->updateActivity(hasActivity);
                 }, WorkerRunLoop::defaultMode());
@@ -378,10 +381,8 @@ ExceptionOr<TransferredMessagePortArray> MessagePort::disentanglePorts(Vector<Re
     // Passed-in ports passed validity checks, so we can disentangle them.
     TransferredMessagePortArray portArray;
     portArray.reserveInitialCapacity(ports.size());
-    for (auto& port : ports) {
-        portArray.uncheckedAppend({ port->identifier(), port->remoteIdentifier() });
-        port->disentangle();
-    }
+    for (auto& port : ports)
+        portArray.uncheckedAppend(port->disentangle());
 
     return portArray;
 }
@@ -395,12 +396,16 @@ Vector<RefPtr<MessagePort>> MessagePort::entanglePorts(ScriptExecutionContext& c
 
     Vector<RefPtr<MessagePort>> ports;
     ports.reserveInitialCapacity(transferredPorts.size());
-    for (auto& transferredPort : transferredPorts) {
-        auto port = MessagePort::create(context, transferredPort.first, transferredPort.second);
-        port->entangle();
-        ports.uncheckedAppend(WTFMove(port));
-    }
+    for (auto& transferredPort : transferredPorts)
+        ports.uncheckedAppend(MessagePort::entangle(context, WTFMove(transferredPort)));
     return ports;
+}
+
+Ref<MessagePort> MessagePort::entangle(ScriptExecutionContext& context, TransferredMessagePort&& transferredPort)
+{
+    auto port = MessagePort::create(context, transferredPort.first, transferredPort.second);
+    port->entangle();
+    return port;
 }
 
 bool MessagePort::addEventListener(const AtomString& eventType, Ref<EventListener>&& listener, const AddEventListenerOptions& options)
@@ -415,7 +420,7 @@ bool MessagePort::addEventListener(const AtomString& eventType, Ref<EventListene
     return EventTargetWithInlineData::addEventListener(eventType, WTFMove(listener), options);
 }
 
-bool MessagePort::removeEventListener(const AtomString& eventType, EventListener& listener, const ListenerOptions& options)
+bool MessagePort::removeEventListener(const AtomString& eventType, EventListener& listener, const EventListenerOptions& options)
 {
     auto result = EventTargetWithInlineData::removeEventListener(eventType, listener, options);
 

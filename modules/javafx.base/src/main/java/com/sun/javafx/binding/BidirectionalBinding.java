@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,9 +25,10 @@
 
 package com.sun.javafx.binding;
 
+import javafx.beans.InvalidationListener;
+import javafx.beans.Observable;
 import javafx.beans.WeakListener;
 import javafx.beans.property.*;
-import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.util.StringConverter;
 
@@ -36,7 +37,15 @@ import java.text.Format;
 import java.text.ParseException;
 import java.util.Objects;
 
-public abstract class BidirectionalBinding<T> implements ChangeListener<T>, WeakListener {
+/**
+ * @implNote Bidirectional bindings are implemented with InvalidationListeners, which are fired once
+ *           when the changed property was valid, but elided for any future changes until the property
+ *           is again validated by calling its getValue()/get() method.
+ *           Since bidirectional bindings require that we observe all property changes, independent
+ *           of whether the property was validated by user code, we manually validate both properties
+ *           by calling their getter method in all relevant places.
+ */
+public abstract class BidirectionalBinding implements InvalidationListener, WeakListener {
 
     private static void checkParameters(Object property1, Object property2) {
         Objects.requireNonNull(property1, "Both properties must be specified.");
@@ -61,6 +70,7 @@ public abstract class BidirectionalBinding<T> implements ChangeListener<T>, Weak
                         new BidirectionalBooleanBinding((BooleanProperty) property1, (BooleanProperty) property2)
                 : new TypedGenericBidirectionalBinding<T>(property1, property2);
         property1.setValue(property2.getValue());
+        property1.getValue();
         property1.addListener(binding);
         property2.addListener(binding);
         return binding;
@@ -71,6 +81,7 @@ public abstract class BidirectionalBinding<T> implements ChangeListener<T>, Weak
         Objects.requireNonNull(format, "Format cannot be null");
         final var binding = new StringFormatBidirectionalBinding(stringProperty, otherProperty, format);
         stringProperty.setValue(format.format(otherProperty.getValue()));
+        stringProperty.getValue();
         stringProperty.addListener(binding);
         otherProperty.addListener(binding);
         return binding;
@@ -81,6 +92,7 @@ public abstract class BidirectionalBinding<T> implements ChangeListener<T>, Weak
         Objects.requireNonNull(converter, "Converter cannot be null");
         final var binding = new StringConverterBidirectionalBinding<>(stringProperty, otherProperty, converter);
         stringProperty.setValue(converter.toString(otherProperty.getValue()));
+        stringProperty.getValue();
         stringProperty.addListener(binding);
         otherProperty.addListener(binding);
         return binding;
@@ -97,10 +109,10 @@ public abstract class BidirectionalBinding<T> implements ChangeListener<T>, Weak
         checkParameters(property1, property2);
         final BidirectionalBinding binding = new UntypedGenericBidirectionalBinding(property1, property2);
         if (property1 instanceof ObservableValue) {
-            ((ObservableValue) property1).removeListener(binding);
+            ((ObservableValue<?>)property1).removeListener(binding);
         }
         if (property2 instanceof ObservableValue) {
-            ((ObservableValue) property2).removeListener(binding);
+            ((ObservableValue<?>)property2).removeListener(binding);
         }
     }
 
@@ -139,9 +151,10 @@ public abstract class BidirectionalBinding<T> implements ChangeListener<T>, Weak
     private static <T extends Number> BidirectionalBinding bindNumberObject(Property<Number> property1, Property<T> property2) {
         checkParameters(property1, property2);
 
-        final BidirectionalBinding<Number> binding = new TypedNumberBidirectionalBinding<T>(property2, property1);
+        final BidirectionalBinding binding = new TypedNumberBidirectionalBinding<>(property2, property1);
 
         property1.setValue(property2.getValue());
+        property1.getValue();
         property1.addListener(binding);
         property2.addListener(binding);
         return binding;
@@ -150,9 +163,10 @@ public abstract class BidirectionalBinding<T> implements ChangeListener<T>, Weak
     private static <T extends Number> BidirectionalBinding bindNumber(Property<T> property1, Property<Number> property2) {
         checkParameters(property1, property2);
 
-        final BidirectionalBinding<Number> binding = new TypedNumberBidirectionalBinding<T>(property1, property2);
+        final BidirectionalBinding binding = new TypedNumberBidirectionalBinding<>(property1, property2);
 
         property1.setValue((T)property2.getValue());
+        property1.getValue();
         property1.addListener(binding);
         property2.addListener(binding);
         return binding;
@@ -208,15 +222,17 @@ public abstract class BidirectionalBinding<T> implements ChangeListener<T>, Weak
         return false;
     }
 
-    private static class BidirectionalBooleanBinding extends BidirectionalBinding<Boolean> {
+    private static class BidirectionalBooleanBinding extends BidirectionalBinding {
         private final WeakReference<BooleanProperty> propertyRef1;
         private final WeakReference<BooleanProperty> propertyRef2;
-        private boolean updating = false;
+        private boolean oldValue;
+        private boolean updating;
 
         private BidirectionalBooleanBinding(BooleanProperty property1, BooleanProperty property2) {
             super(property1, property2);
-            propertyRef1 = new WeakReference<BooleanProperty>(property1);
-            propertyRef2 = new WeakReference<BooleanProperty>(property2);
+            oldValue = property1.get();
+            propertyRef1 = new WeakReference<>(property1);
+            propertyRef2 = new WeakReference<>(property2);
         }
 
         @Override
@@ -230,7 +246,7 @@ public abstract class BidirectionalBinding<T> implements ChangeListener<T>, Weak
         }
 
         @Override
-        public void changed(ObservableValue<? extends Boolean> sourceProperty, Boolean oldValue, Boolean newValue) {
+        public void invalidated(Observable sourceProperty) {
             if (!updating) {
                 final BooleanProperty property1 = propertyRef1.get();
                 final BooleanProperty property2 = propertyRef2.get();
@@ -245,16 +261,24 @@ public abstract class BidirectionalBinding<T> implements ChangeListener<T>, Weak
                     try {
                         updating = true;
                         if (property1 == sourceProperty) {
+                            boolean newValue = property1.get();
                             property2.set(newValue);
+                            property2.get();
+                            oldValue = newValue;
                         } else {
+                            boolean newValue = property2.get();
                             property1.set(newValue);
+                            property1.get();
+                            oldValue = newValue;
                         }
                     } catch (RuntimeException e) {
                         try {
                             if (property1 == sourceProperty) {
                                 property1.set(oldValue);
+                                property1.get();
                             } else {
                                 property2.set(oldValue);
+                                property2.get();
                             }
                         } catch (Exception e2) {
                             e2.addSuppressed(e);
@@ -275,15 +299,17 @@ public abstract class BidirectionalBinding<T> implements ChangeListener<T>, Weak
         }
     }
 
-    private static class BidirectionalDoubleBinding extends BidirectionalBinding<Number> {
+    private static class BidirectionalDoubleBinding extends BidirectionalBinding {
         private final WeakReference<DoubleProperty> propertyRef1;
         private final WeakReference<DoubleProperty> propertyRef2;
+        private double oldValue;
         private boolean updating = false;
 
         private BidirectionalDoubleBinding(DoubleProperty property1, DoubleProperty property2) {
             super(property1, property2);
-            propertyRef1 = new WeakReference<DoubleProperty>(property1);
-            propertyRef2 = new WeakReference<DoubleProperty>(property2);
+            oldValue = property1.get();
+            propertyRef1 = new WeakReference<>(property1);
+            propertyRef2 = new WeakReference<>(property2);
         }
 
         @Override
@@ -297,7 +323,7 @@ public abstract class BidirectionalBinding<T> implements ChangeListener<T>, Weak
         }
 
         @Override
-        public void changed(ObservableValue<? extends Number> sourceProperty, Number oldValue, Number newValue) {
+        public void invalidated(Observable sourceProperty) {
             if (!updating) {
                 final DoubleProperty property1 = propertyRef1.get();
                 final DoubleProperty property2 = propertyRef2.get();
@@ -312,16 +338,24 @@ public abstract class BidirectionalBinding<T> implements ChangeListener<T>, Weak
                     try {
                         updating = true;
                         if (property1 == sourceProperty) {
-                            property2.set(newValue.doubleValue());
+                            double newValue = property1.get();
+                            property2.set(newValue);
+                            property2.get();
+                            oldValue = newValue;
                         } else {
-                            property1.set(newValue.doubleValue());
+                            double newValue = property2.get();
+                            property1.set(newValue);
+                            property1.get();
+                            oldValue = newValue;
                         }
                     } catch (RuntimeException e) {
                         try {
                             if (property1 == sourceProperty) {
-                                property1.set(oldValue.doubleValue());
+                                property1.set(oldValue);
+                                property1.get();
                             } else {
-                                property2.set(oldValue.doubleValue());
+                                property2.set(oldValue);
+                                property2.get();
                             }
                         } catch (Exception e2) {
                             e2.addSuppressed(e);
@@ -342,15 +376,17 @@ public abstract class BidirectionalBinding<T> implements ChangeListener<T>, Weak
         }
     }
 
-    private static class BidirectionalFloatBinding extends BidirectionalBinding<Number> {
+    private static class BidirectionalFloatBinding extends BidirectionalBinding {
         private final WeakReference<FloatProperty> propertyRef1;
         private final WeakReference<FloatProperty> propertyRef2;
+        private float oldValue;
         private boolean updating = false;
 
         private BidirectionalFloatBinding(FloatProperty property1, FloatProperty property2) {
             super(property1, property2);
-            propertyRef1 = new WeakReference<FloatProperty>(property1);
-            propertyRef2 = new WeakReference<FloatProperty>(property2);
+            oldValue = property1.get();
+            propertyRef1 = new WeakReference<>(property1);
+            propertyRef2 = new WeakReference<>(property2);
         }
 
         @Override
@@ -364,7 +400,7 @@ public abstract class BidirectionalBinding<T> implements ChangeListener<T>, Weak
         }
 
         @Override
-        public void changed(ObservableValue<? extends Number> sourceProperty, Number oldValue, Number newValue) {
+        public void invalidated(Observable sourceProperty) {
             if (!updating) {
                 final FloatProperty property1 = propertyRef1.get();
                 final FloatProperty property2 = propertyRef2.get();
@@ -379,16 +415,24 @@ public abstract class BidirectionalBinding<T> implements ChangeListener<T>, Weak
                     try {
                         updating = true;
                         if (property1 == sourceProperty) {
-                            property2.set(newValue.floatValue());
+                            float newValue = property1.get();
+                            property2.set(newValue);
+                            property2.get();
+                            oldValue = newValue;
                         } else {
-                            property1.set(newValue.floatValue());
+                            float newValue = property2.get();
+                            property1.set(newValue);
+                            property1.get();
+                            oldValue = newValue;
                         }
                     } catch (RuntimeException e) {
                         try {
                             if (property1 == sourceProperty) {
-                                property1.set(oldValue.floatValue());
+                                property1.set(oldValue);
+                                property1.get();
                             } else {
-                                property2.set(oldValue.floatValue());
+                                property2.set(oldValue);
+                                property2.get();
                             }
                         } catch (Exception e2) {
                             e2.addSuppressed(e);
@@ -409,15 +453,17 @@ public abstract class BidirectionalBinding<T> implements ChangeListener<T>, Weak
         }
     }
 
-    private static class BidirectionalIntegerBinding extends BidirectionalBinding<Number>{
+    private static class BidirectionalIntegerBinding extends BidirectionalBinding {
         private final WeakReference<IntegerProperty> propertyRef1;
         private final WeakReference<IntegerProperty> propertyRef2;
+        private int oldValue;
         private boolean updating = false;
 
         private BidirectionalIntegerBinding(IntegerProperty property1, IntegerProperty property2) {
             super(property1, property2);
-            propertyRef1 = new WeakReference<IntegerProperty>(property1);
-            propertyRef2 = new WeakReference<IntegerProperty>(property2);
+            oldValue = property1.get();
+            propertyRef1 = new WeakReference<>(property1);
+            propertyRef2 = new WeakReference<>(property2);
         }
 
         @Override
@@ -431,7 +477,7 @@ public abstract class BidirectionalBinding<T> implements ChangeListener<T>, Weak
         }
 
         @Override
-        public void changed(ObservableValue<? extends Number> sourceProperty, Number oldValue, Number newValue) {
+        public void invalidated(Observable sourceProperty) {
             if (!updating) {
                 final IntegerProperty property1 = propertyRef1.get();
                 final IntegerProperty property2 = propertyRef2.get();
@@ -446,16 +492,24 @@ public abstract class BidirectionalBinding<T> implements ChangeListener<T>, Weak
                     try {
                         updating = true;
                         if (property1 == sourceProperty) {
-                            property2.set(newValue.intValue());
+                            int newValue = property1.get();
+                            property2.set(newValue);
+                            property2.get();
+                            oldValue = newValue;
                         } else {
-                            property1.set(newValue.intValue());
+                            int newValue = property2.get();
+                            property1.set(newValue);
+                            property1.get();
+                            oldValue = newValue;
                         }
                     } catch (RuntimeException e) {
                         try {
                             if (property1 == sourceProperty) {
-                                property1.set(oldValue.intValue());
+                                property1.set(oldValue);
+                                property1.get();
                             } else {
-                                property2.set(oldValue.intValue());
+                                property2.set(oldValue);
+                                property2.get();
                             }
                         } catch (Exception e2) {
                             e2.addSuppressed(e);
@@ -476,15 +530,17 @@ public abstract class BidirectionalBinding<T> implements ChangeListener<T>, Weak
         }
     }
 
-    private static class BidirectionalLongBinding extends BidirectionalBinding<Number> {
+    private static class BidirectionalLongBinding extends BidirectionalBinding {
         private final WeakReference<LongProperty> propertyRef1;
         private final WeakReference<LongProperty> propertyRef2;
+        private long oldValue;
         private boolean updating = false;
 
         private BidirectionalLongBinding(LongProperty property1, LongProperty property2) {
             super(property1, property2);
-            propertyRef1 = new WeakReference<LongProperty>(property1);
-            propertyRef2 = new WeakReference<LongProperty>(property2);
+            oldValue = property1.get();
+            propertyRef1 = new WeakReference<>(property1);
+            propertyRef2 = new WeakReference<>(property2);
         }
 
         @Override
@@ -498,7 +554,7 @@ public abstract class BidirectionalBinding<T> implements ChangeListener<T>, Weak
         }
 
         @Override
-        public void changed(ObservableValue<? extends Number> sourceProperty, Number oldValue, Number newValue) {
+        public void invalidated(Observable sourceProperty) {
             if (!updating) {
                 final LongProperty property1 = propertyRef1.get();
                 final LongProperty property2 = propertyRef2.get();
@@ -513,16 +569,24 @@ public abstract class BidirectionalBinding<T> implements ChangeListener<T>, Weak
                     try {
                         updating = true;
                         if (property1 == sourceProperty) {
-                            property2.set(newValue.longValue());
+                            long newValue = property1.get();
+                            property2.set(newValue);
+                            property2.get();
+                            oldValue = newValue;
                         } else {
-                            property1.set(newValue.longValue());
+                            long newValue = property2.get();
+                            property1.set(newValue);
+                            property1.get();
+                            oldValue = newValue;
                         }
                     } catch (RuntimeException e) {
                         try {
                             if (property1 == sourceProperty) {
-                                property1.set(oldValue.longValue());
+                                property1.set(oldValue);
+                                property1.get();
                             } else {
-                                property2.set(oldValue.longValue());
+                                property2.set(oldValue);
+                                property2.get();
                             }
                         } catch (Exception e2) {
                             e2.addSuppressed(e);
@@ -543,15 +607,17 @@ public abstract class BidirectionalBinding<T> implements ChangeListener<T>, Weak
         }
     }
 
-    private static class TypedGenericBidirectionalBinding<T> extends BidirectionalBinding<T> {
+    private static class TypedGenericBidirectionalBinding<T> extends BidirectionalBinding {
         private final WeakReference<Property<T>> propertyRef1;
         private final WeakReference<Property<T>> propertyRef2;
+        private T oldValue;
         private boolean updating = false;
 
         private TypedGenericBidirectionalBinding(Property<T> property1, Property<T> property2) {
             super(property1, property2);
-            propertyRef1 = new WeakReference<Property<T>>(property1);
-            propertyRef2 = new WeakReference<Property<T>>(property2);
+            oldValue = property1.getValue();
+            propertyRef1 = new WeakReference<>(property1);
+            propertyRef2 = new WeakReference<>(property2);
         }
 
         @Override
@@ -565,7 +631,7 @@ public abstract class BidirectionalBinding<T> implements ChangeListener<T>, Weak
         }
 
         @Override
-        public void changed(ObservableValue<? extends T> sourceProperty, T oldValue, T newValue) {
+        public void invalidated(Observable sourceProperty) {
             if (!updating) {
                 final Property<T> property1 = propertyRef1.get();
                 final Property<T> property2 = propertyRef2.get();
@@ -580,16 +646,24 @@ public abstract class BidirectionalBinding<T> implements ChangeListener<T>, Weak
                     try {
                         updating = true;
                         if (property1 == sourceProperty) {
+                            T newValue = property1.getValue();
                             property2.setValue(newValue);
+                            property2.getValue();
+                            oldValue = newValue;
                         } else {
+                            T newValue = property2.getValue();
                             property1.setValue(newValue);
+                            property1.getValue();
+                            oldValue = newValue;
                         }
                     } catch (RuntimeException e) {
                         try {
                             if (property1 == sourceProperty) {
                                 property1.setValue(oldValue);
+                                property1.getValue();
                             } else {
                                 property2.setValue(oldValue);
+                                property2.getValue();
                             }
                         } catch (Exception e2) {
                             e2.addSuppressed(e);
@@ -610,15 +684,17 @@ public abstract class BidirectionalBinding<T> implements ChangeListener<T>, Weak
         }
     }
 
-    private static class TypedNumberBidirectionalBinding<T extends Number> extends BidirectionalBinding<Number> {
+    private static class TypedNumberBidirectionalBinding<T extends Number> extends BidirectionalBinding {
         private final WeakReference<Property<T>> propertyRef1;
         private final WeakReference<Property<Number>> propertyRef2;
+        private T oldValue;
         private boolean updating = false;
 
         private TypedNumberBidirectionalBinding(Property<T> property1, Property<Number> property2) {
             super(property1, property2);
-            propertyRef1 = new WeakReference<Property<T>>(property1);
-            propertyRef2 = new WeakReference<Property<Number>>(property2);
+            oldValue = property1.getValue();
+            propertyRef1 = new WeakReference<>(property1);
+            propertyRef2 = new WeakReference<>(property2);
         }
 
         @Override
@@ -632,7 +708,7 @@ public abstract class BidirectionalBinding<T> implements ChangeListener<T>, Weak
         }
 
         @Override
-        public void changed(ObservableValue<? extends Number> sourceProperty, Number oldValue, Number newValue) {
+        public void invalidated(Observable sourceProperty) {
             if (!updating) {
                 final Property<T> property1 = propertyRef1.get();
                 final Property<Number> property2 = propertyRef2.get();
@@ -647,16 +723,24 @@ public abstract class BidirectionalBinding<T> implements ChangeListener<T>, Weak
                     try {
                         updating = true;
                         if (property1 == sourceProperty) {
+                            T newValue = property1.getValue();
                             property2.setValue(newValue);
+                            property2.getValue();
+                            oldValue = newValue;
                         } else {
-                            property1.setValue((T)newValue);
+                            T newValue = (T)property2.getValue();
+                            property1.setValue(newValue);
+                            property1.getValue();
+                            oldValue = newValue;
                         }
                     } catch (RuntimeException e) {
                         try {
                             if (property1 == sourceProperty) {
                                 property1.setValue((T)oldValue);
+                                property1.getValue();
                             } else {
                                 property2.setValue(oldValue);
+                                property2.getValue();
                             }
                         } catch (Exception e2) {
                             e2.addSuppressed(e);
@@ -677,8 +761,7 @@ public abstract class BidirectionalBinding<T> implements ChangeListener<T>, Weak
         }
     }
 
-    private static class UntypedGenericBidirectionalBinding extends BidirectionalBinding<Object> {
-
+    private static class UntypedGenericBidirectionalBinding extends BidirectionalBinding {
         private final Object property1;
         private final Object property2;
 
@@ -699,21 +782,20 @@ public abstract class BidirectionalBinding<T> implements ChangeListener<T>, Weak
         }
 
         @Override
-        public void changed(ObservableValue<? extends Object> sourceProperty, Object oldValue, Object newValue) {
+        public void invalidated(Observable sourceProperty) {
             throw new RuntimeException("Should not reach here");
         }
     }
 
-    public abstract static class StringConversionBidirectionalBinding<T> extends BidirectionalBinding<Object> {
-
+    public abstract static class StringConversionBidirectionalBinding<T> extends BidirectionalBinding {
         private final WeakReference<Property<String>> stringPropertyRef;
         private final WeakReference<Property<T>> otherPropertyRef;
         private boolean updating;
 
         public StringConversionBidirectionalBinding(Property<String> stringProperty, Property<T> otherProperty) {
             super(stringProperty, otherProperty);
-            stringPropertyRef = new WeakReference<Property<String>>(stringProperty);
-            otherPropertyRef = new WeakReference<Property<T>>(otherProperty);
+            stringPropertyRef = new WeakReference<>(stringProperty);
+            otherPropertyRef = new WeakReference<>(otherProperty);
         }
 
         protected abstract String toString(T value);
@@ -731,7 +813,7 @@ public abstract class BidirectionalBinding<T> implements ChangeListener<T>, Weak
         }
 
         @Override
-        public void changed(ObservableValue<? extends Object> observable, Object oldValue, Object newValue) {
+        public void invalidated(Observable observable) {
             if (!updating) {
                 final Property<String> property1 = stringPropertyRef.get();
                 final Property<T> property2 = otherPropertyRef.get();
@@ -748,16 +830,20 @@ public abstract class BidirectionalBinding<T> implements ChangeListener<T>, Weak
                         if (property1 == observable) {
                             try {
                                 property2.setValue(fromString(property1.getValue()));
+                                property2.getValue();
                             } catch (Exception e) {
                                 Logging.getLogger().warning("Exception while parsing String in bidirectional binding", e);
                                 property2.setValue(null);
+                                property2.getValue();
                             }
                         } else {
                             try {
                                 property1.setValue(toString(property2.getValue()));
+                                property1.getValue();
                             } catch (Exception e) {
                                 Logging.getLogger().warning("Exception while converting Object to String in bidirectional binding", e);
                                 property1.setValue("");
+                                property1.getValue();
                             }
                         }
                     } finally {
@@ -769,7 +855,6 @@ public abstract class BidirectionalBinding<T> implements ChangeListener<T>, Weak
     }
 
     private static class StringFormatBidirectionalBinding extends StringConversionBidirectionalBinding {
-
         private final Format format;
 
         @SuppressWarnings("unchecked")
@@ -790,7 +875,6 @@ public abstract class BidirectionalBinding<T> implements ChangeListener<T>, Weak
     }
 
     private static class StringConverterBidirectionalBinding<T> extends StringConversionBidirectionalBinding<T> {
-
         private final StringConverter<T> converter;
 
         public StringConverterBidirectionalBinding(Property<String> stringProperty, Property<T> otherProperty, StringConverter<T> converter) {

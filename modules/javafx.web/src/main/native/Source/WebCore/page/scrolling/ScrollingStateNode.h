@@ -217,22 +217,68 @@ public:
     Ref<ScrollingStateNode> cloneAndReset(ScrollingStateTree& adoptiveTree);
     void cloneAndResetChildren(ScrollingStateNode&, ScrollingStateTree& adoptiveTree);
 
-    // FIXME: using an OptionSet<> for these and derived class bits would simplify code.
-    enum {
-        Layer = 0,
-        ChildNodes,
-        NumStateNodeBits // This must remain at the last position.
+    enum class Property : uint64_t {
+        // ScrollingStateNode
+        Layer                                       = 1LLU << 0,
+        ChildNodes                                  = 1LLU << 1,
+        // ScrollingStateScrollingNode
+        ScrollableAreaSize                          = 1LLU << 2,
+        TotalContentsSize                           = 1LLU << 3,
+        ReachableContentsSize                       = 1LLU << 4,
+        ScrollPosition                              = 1LLU << 5,
+        ScrollOrigin                                = 1LLU << 6,
+        ScrollableAreaParams                        = 1LLU << 7,
+        ReasonsForSynchronousScrolling              = 1LLU << 8,
+        RequestedScrollPosition                     = 1LLU << 9,
+        SnapOffsetsInfo                             = 1LLU << 10,
+        CurrentHorizontalSnapOffsetIndex            = 1LLU << 11,
+        CurrentVerticalSnapOffsetIndex              = 1LLU << 12,
+        IsMonitoringWheelEvents                     = 1LLU << 13,
+        ScrollContainerLayer                        = 1LLU << 14,
+        ScrolledContentsLayer                       = 1LLU << 15,
+        HorizontalScrollbarLayer                    = 1LLU << 16,
+        VerticalScrollbarLayer                      = 1LLU << 17,
+        PainterForScrollbar                         = 1LLU << 18,
+        // ScrollingStateFrameScrollingNode
+        FrameScaleFactor                            = 1LLU << 19,
+        EventTrackingRegion                         = 1LLU << 20,
+        RootContentsLayer                           = 1LLU << 21,
+        CounterScrollingLayer                       = 1LLU << 22,
+        InsetClipLayer                              = 1LLU << 23,
+        ContentShadowLayer                          = 1LLU << 24,
+        HeaderHeight                                = 1LLU << 25,
+        FooterHeight                                = 1LLU << 26,
+        HeaderLayer                                 = 1LLU << 27,
+        FooterLayer                                 = 1LLU << 28,
+        BehaviorForFixedElements                    = 1LLU << 29,
+        TopContentInset                             = 1LLU << 30,
+        FixedElementsLayoutRelativeToFrame          = 1LLU << 31,
+        VisualViewportIsSmallerThanLayoutViewport   = 1LLU << 32,
+        AsyncFrameOrOverflowScrollingEnabled        = 1LLU << 33,
+        WheelEventGesturesBecomeNonBlocking         = 1LLU << 34,
+        ScrollingPerformanceTestingEnabled          = 1LLU << 35,
+        LayoutViewport                              = 1LLU << 36,
+        MinLayoutViewportOrigin                     = 1LLU << 37,
+        MaxLayoutViewportOrigin                     = 1LLU << 38,
+        OverrideVisualViewportSize                  = 1LLU << 39,
+        // ScrollingStatePositionedNode
+        RelatedOverflowScrollingNodes               = 1LLU << 40,
+        LayoutConstraintData                        = 1LLU << 41,
+        // ScrollingStateFixedNode, ScrollingStateStickyNode
+        ViewportConstraints                         = 1LLU << 42,
+        // ScrollingStateOverflowScrollProxyNode
+        OverflowScrollingNode                       = 1LLU << 43,
     };
-    typedef uint64_t ChangedProperties;
 
-    bool hasChangedProperties() const { return m_changedProperties; }
-    bool hasChangedProperty(unsigned propertyBit) const { return m_changedProperties & (static_cast<ChangedProperties>(1) << propertyBit); }
-    void resetChangedProperties() { m_changedProperties = 0; }
-    void setPropertyChanged(unsigned propertyBit);
-    virtual void setPropertyChangedBitsAfterReattach();
+    bool hasChangedProperties() const { return !m_changedProperties.isEmpty(); }
+    bool hasChangedProperty(Property property) const { return m_changedProperties.contains(property); }
+    void resetChangedProperties() { m_changedProperties = { }; }
+    void setPropertyChanged(Property);
 
-    ChangedProperties changedProperties() const { return m_changedProperties; }
-    void setChangedProperties(ChangedProperties changedProperties) { m_changedProperties = changedProperties; }
+    virtual void setPropertyChangesAfterReattach();
+
+    OptionSet<Property> changedProperties() const { return m_changedProperties; }
+    void setChangedProperties(OptionSet<Property> changedProperties) { m_changedProperties = changedProperties; }
 
     virtual void reconcileLayerPositionForViewportRect(const LayoutRect& /*viewportRect*/, ScrollingLayerPositionAction) { }
 
@@ -266,16 +312,18 @@ protected:
     ScrollingStateNode(const ScrollingStateNode&, ScrollingStateTree&);
     ScrollingStateNode(ScrollingNodeType, ScrollingStateTree&, ScrollingNodeID);
 
-    virtual void dumpProperties(WTF::TextStream&, ScrollingStateTreeAsTextBehavior) const;
+    void setPropertyChangedInternal(Property property) { m_changedProperties.add(property); }
+    void setPropertiesChangedInternal(OptionSet<Property> properties) { m_changedProperties.add(properties); }
 
-    inline void setPropertyChangedBit(unsigned propertyBit);
+    virtual void dumpProperties(WTF::TextStream&, ScrollingStateTreeAsTextBehavior) const;
+    virtual OptionSet<Property> applicableProperties() const;
 
 private:
     void dump(WTF::TextStream&, ScrollingStateTreeAsTextBehavior) const;
 
     const ScrollingNodeType m_nodeType;
     const ScrollingNodeID m_nodeID;
-    ChangedProperties m_changedProperties { 0 };
+    OptionSet<Property> m_changedProperties;
 
     ScrollingStateTree& m_scrollingStateTree;
 
@@ -284,11 +332,6 @@ private:
 
     LayerRepresentation m_layer;
 };
-
-void ScrollingStateNode::setPropertyChangedBit(unsigned propertyBit)
-{
-    m_changedProperties |= (static_cast<ChangedProperties>(1) << propertyBit);
-}
 
 } // namespace WebCore
 

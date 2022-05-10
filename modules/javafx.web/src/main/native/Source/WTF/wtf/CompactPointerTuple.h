@@ -28,7 +28,12 @@
 
 #include <type_traits>
 #include <wtf/FastMalloc.h>
+#include <wtf/MathExtras.h>
 #include <wtf/StdLibExtras.h>
+
+#if OS(DARWIN)
+#include <mach/vm_param.h>
+#endif
 
 namespace WTF {
 
@@ -66,6 +71,12 @@ public:
     {
         ASSERT(this->type() == type);
         ASSERT(this->pointer() == pointer);
+    }
+
+    template<typename OtherPointerType, typename = std::enable_if<std::is_pointer<PointerType>::value && std::is_convertible<OtherPointerType, PointerType>::value>>
+    CompactPointerTuple(CompactPointerTuple<OtherPointerType, Type>&& other)
+        : m_data { std::exchange(other.m_data, { }) }
+    {
     }
 
     PointerType pointer() const { return bitwise_cast<PointerType>(m_data & pointerMask); }
@@ -108,6 +119,13 @@ public:
     {
     }
 
+    template<typename OtherPointerType, typename = std::enable_if<std::is_pointer<PointerType>::value && std::is_convertible<OtherPointerType, PointerType>::value>>
+    CompactPointerTuple(CompactPointerTuple<OtherPointerType, Type>&& other)
+        : m_pointer { std::exchange(other.m_pointer, { }) }
+        , m_type { std::exchange(other.m_type, { }) }
+    {
+    }
+
     PointerType pointer() const { return m_pointer; }
     void setPointer(PointerType pointer) { m_pointer = pointer; }
     Type type() const { return m_type; }
@@ -117,6 +135,8 @@ private:
     PointerType m_pointer { nullptr };
     Type m_type { 0 };
 #endif
+
+    template<typename, typename> friend class CompactPointerTuple;
 };
 
 } // namespace WTF

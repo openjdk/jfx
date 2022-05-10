@@ -31,6 +31,13 @@
 #include <stdint.h>
 #include <type_traits>
 
+/* On Linux with clang, libgcc is usually used instead of compiler-rt, and it does
+ * not provide the __mulodi4 symbol used by clang for __builtin_mul_overflow
+ */
+#if COMPILER(GCC) || (COMPILER(CLANG) && !(CPU(ARM) && OS(LINUX)))
+#define USE_MUL_OVERFLOW 1
+#endif
+
 /* Checked<T>
  *
  * This class provides a mechanism to perform overflow-safe integer arithmetic
@@ -86,31 +93,6 @@ public:
 
 public:
     constexpr bool hasOverflowed() const { return false; }
-};
-
-class ConditionalCrashOnOverflow {
-public:
-    void overflowed()
-    {
-        m_overflowed = true;
-        if (m_shouldCrashOnOverflow)
-            crash();
-    }
-
-    bool shouldCrashOnOverflow() const { return m_shouldCrashOnOverflow; }
-    void setShouldCrashOnOverflow(bool value) { m_shouldCrashOnOverflow = value; }
-
-    bool hasOverflowed() const { return m_overflowed; }
-    void clearOverflow() { m_overflowed = false; }
-
-    static NO_RETURN_DUE_TO_CRASH void crash()
-    {
-        CRASH();
-    }
-
-private:
-    bool m_overflowed { false };
-    bool m_shouldCrashOnOverflow { true };
 };
 
 class CrashOnOverflow {
@@ -245,11 +227,6 @@ template <typename T> struct RemoveChecked {
     static constexpr CleanType DefaultValue = 0;
 };
 
-template <typename T> struct RemoveChecked<Checked<T, ConditionalCrashOnOverflow>> {
-    using CleanType = typename RemoveChecked<T>::CleanType;
-    static constexpr CleanType DefaultValue = 0;
-};
-
 template <typename T> struct RemoveChecked<Checked<T, CrashOnOverflow>> {
     typedef typename RemoveChecked<T>::CleanType CleanType;
     static constexpr CleanType DefaultValue = 0;
@@ -349,7 +326,7 @@ template <typename LHS, typename RHS, typename ResultType> struct ArithmeticOper
                 if (lhs > std::numeric_limits<ResultType>::max() + rhs)
                     return false;
             } else {
-                if (rhs > std::numeric_limits<ResultType>::max() + lhs)
+                if (lhs < std::numeric_limits<ResultType>::min() + rhs)
                     return false;
             }
         } // if the signs match this operation can't overflow
@@ -360,7 +337,7 @@ template <typename LHS, typename RHS, typename ResultType> struct ArithmeticOper
 
     static inline bool multiply(LHS lhs, RHS rhs, ResultType& result) WARN_UNUSED_RETURN
     {
-#if COMPILER(GCC_COMPATIBLE)
+#if USE(MUL_OVERFLOW)
         ResultType temp;
         if (__builtin_mul_overflow(lhs, rhs, &temp))
             return false;
@@ -442,7 +419,7 @@ template <typename LHS, typename RHS, typename ResultType> struct ArithmeticOper
 
     static inline bool multiply(LHS lhs, RHS rhs, ResultType& result) WARN_UNUSED_RETURN
     {
-#if COMPILER(GCC_COMPATIBLE)
+#if USE(MUL_OVERFLOW)
         ResultType temp;
         if (__builtin_mul_overflow(lhs, rhs, &temp))
             return false;
@@ -514,7 +491,7 @@ template <typename ResultType> struct ArithmeticOperations<int, unsigned, Result
 
     static inline bool multiply(int64_t lhs, int64_t rhs, ResultType& result)
     {
-#if COMPILER(GCC_COMPATIBLE)
+#if USE(MUL_OVERFLOW)
         ResultType temp;
         if (__builtin_mul_overflow(lhs, rhs, &temp))
             return false;
@@ -696,7 +673,7 @@ public:
         m_value = static_cast<T>(rhs.m_value);
     }
 
-    const Checked& operator=(Checked rhs)
+    Checked& operator=(Checked rhs)
     {
         this->clearOverflow();
         if (rhs.hasOverflowed())
@@ -705,18 +682,18 @@ public:
         return *this;
     }
 
-    template <typename U> const Checked& operator=(U value)
+    template <typename U> Checked& operator=(U value)
     {
         return *this = Checked(value);
     }
 
-    template <typename U, typename V> const Checked& operator=(const Checked<U, V>& rhs)
+    template <typename U, typename V> Checked& operator=(const Checked<U, V>& rhs)
     {
         return *this = Checked(rhs);
     }
 
     // prefix
-    const Checked& operator++()
+    Checked& operator++()
     {
         if (m_value == std::numeric_limits<T>::max())
             this->overflowed();
@@ -724,7 +701,7 @@ public:
         return *this;
     }
 
-    const Checked& operator--()
+    Checked& operator--()
     {
         if (m_value == std::numeric_limits<T>::min())
             this->overflowed();
@@ -733,14 +710,14 @@ public:
     }
 
     // postfix operators
-    const Checked operator++(int)
+    Checked operator++(int)
     {
         if (m_value == std::numeric_limits<T>::max())
             this->overflowed();
         return Checked(m_value++);
     }
 
-    const Checked operator--(int)
+    Checked operator--(int)
     {
         if (m_value == std::numeric_limits<T>::min())
             this->overflowed();
@@ -750,113 +727,78 @@ public:
     // Boolean operators
     bool operator!() const
     {
-        if (this->hasOverflowed())
+        if (UNLIKELY(this->hasOverflowed()))
             this->crash();
         return !m_value;
     }
 
     explicit operator bool() const
     {
-        if (this->hasOverflowed())
+        if (UNLIKELY(this->hasOverflowed()))
             this->crash();
         return m_value;
     }
 
-    // Value accessors. unsafeGet() will crash if there's been an overflow.
-    template<typename U = T>
-    U unsafeGet() const
+    operator T() const
     {
-        if (this->hasOverflowed())
+        if (UNLIKELY(this->hasOverflowed()))
+            this->crash();
+        return m_value;
+    }
+
+    // Value accessors. value() will crash if there's been an overflow.
+    template<typename U = T>
+    U value() const
+    {
+        if (UNLIKELY(this->hasOverflowed()))
             this->crash();
         return static_cast<U>(m_value);
     }
 
-    inline CheckedState safeGet(T& value) const WARN_UNUSED_RETURN
-    {
-        value = m_value;
-        if (this->hasOverflowed())
-            return CheckedState::DidOverflow;
-        return CheckedState::DidNotOverflow;
-    }
-
     // Mutating assignment
-    template <typename U> const Checked operator+=(U rhs)
+    template <typename U> Checked& operator+=(U rhs)
     {
         if (!safeAdd<OverflowHandler>(m_value, rhs, m_value))
             this->overflowed();
         return *this;
     }
 
-    template <typename U> const Checked operator-=(U rhs)
+    template <typename U> Checked& operator-=(U rhs)
     {
         if (!safeSub<OverflowHandler>(m_value, rhs, m_value))
             this->overflowed();
         return *this;
     }
 
-    template <typename U> const Checked operator*=(U rhs)
+    template <typename U> Checked& operator*=(U rhs)
     {
         if (!safeMultiply<OverflowHandler>(m_value, rhs, m_value))
             this->overflowed();
         return *this;
     }
 
-    template <typename U> const Checked operator/=(U rhs)
+    template <typename U> Checked& operator/=(U rhs)
     {
         if (!safeDivide<OverflowHandler>(m_value, rhs, m_value))
             this->overflowed();
         return *this;
     }
 
-    const Checked operator*=(double rhs)
-    {
-        double result = rhs * m_value;
-        // Handle +/- infinity and NaN
-        if (!(std::numeric_limits<T>::min() <= result && std::numeric_limits<T>::max() >= result))
-            this->overflowed();
-        m_value = (T)result;
-        return *this;
-    }
-
-    const Checked operator/=(double rhs)
-    {
-        if (!rhs) {
-            this->overflowed();
-            return *this;
-        }
-        double result = m_value / rhs;
-        // Handle +/- infinity and NaN
-        if (!(std::numeric_limits<T>::min() <= result && std::numeric_limits<T>::max() >= result))
-            this->overflowed();
-        m_value = (T)result;
-        return *this;
-    }
-
-    const Checked operator*=(float rhs)
-    {
-        return *this *= (double)rhs;
-    }
-
-    const Checked operator/=(float rhs)
-    {
-        return *this /= (double)rhs;
-    }
-
-    template <typename U, typename V> const Checked operator+=(Checked<U, V> rhs)
+    template <typename U, typename V> Checked& operator+=(Checked<U, V> rhs)
     {
         if (rhs.hasOverflowed())
             this->overflowed();
         return *this += rhs.m_value;
     }
 
-    template <typename U, typename V> const Checked operator-=(Checked<U, V> rhs)
+    template <typename U, typename V> Checked& operator-=(Checked<U, V> rhs)
     {
         if (rhs.hasOverflowed())
             this->overflowed();
         return *this -= rhs.m_value;
     }
 
-    template <typename U, typename V> const Checked operator*=(Checked<U, V> rhs)
+    template <typename U, typename V> Checked& operator*=(Checked<U, V> rhs)
     {
         if (rhs.hasOverflowed())
             this->overflowed();
@@ -866,7 +808,7 @@ public:
     // Equality comparisons
     template <typename V> bool operator==(Checked<T, V> rhs)
     {
-        return unsafeGet() == rhs.unsafeGet();
+        return value() == rhs.value();
     }
 
     template <typename U> bool operator==(U rhs)
@@ -876,9 +818,9 @@ public:
         return safeEquals(m_value, rhs);
     }
 
-    template <typename U, typename V> const Checked operator==(Checked<U, V> rhs)
+    template <typename U, typename V> bool operator==(Checked<U, V> rhs)
     {
-        return unsafeGet() == Checked(rhs.unsafeGet());
+        return value() == Checked(rhs.value());
     }
 
     template <typename U> bool operator!=(U rhs)
@@ -889,42 +831,22 @@ public:
     // Other comparisons
     template <typename V> bool operator<(Checked<T, V> rhs) const
     {
-        return unsafeGet() < rhs.unsafeGet();
-    }
-
-    bool operator<(T rhs) const
-    {
-        return unsafeGet() < rhs;
+        return value() < rhs.value();
     }
 
     template <typename V> bool operator<=(Checked<T, V> rhs) const
     {
-        return unsafeGet() <= rhs.unsafeGet();
-    }
-
-    bool operator<=(T rhs) const
-    {
-        return unsafeGet() <= rhs;
+        return value() <= rhs.value();
     }
 
     template <typename V> bool operator>(Checked<T, V> rhs) const
     {
-        return unsafeGet() > rhs.unsafeGet();
-    }
-
-    bool operator>(T rhs) const
-    {
-        return unsafeGet() > rhs;
+        return value() > rhs.value();
     }
 
     template <typename V> bool operator>=(Checked<T, V> rhs) const
     {
-        return unsafeGet() >= rhs.unsafeGet();
-    }
-
-    bool operator>=(T rhs) const
-    {
-        return unsafeGet() >= rhs;
+        return value() >= rhs.value();
     }
 
 private:
@@ -942,48 +864,40 @@ private:
 
 template <typename U, typename V, typename OverflowHandler> static inline Checked<typename Result<U, V>::ResultType, OverflowHandler> operator+(Checked<U, OverflowHandler> lhs, Checked<V, OverflowHandler> rhs)
 {
-    U x = 0;
-    V y = 0;
-    bool overflowed = lhs.safeGet(x) == CheckedState::DidOverflow || rhs.safeGet(y) == CheckedState::DidOverflow;
+    if (UNLIKELY(lhs.hasOverflowed() || rhs.hasOverflowed()))
+        return ResultOverflowed;
     typename Result<U, V>::ResultType result = 0;
-    overflowed |= !safeAdd<OverflowHandler>(x, y, result);
-    if (overflowed)
+    if (UNLIKELY(!safeAdd<OverflowHandler>(lhs.value(), rhs.value(), result)))
         return ResultOverflowed;
     return result;
 }
 
 template <typename U, typename V, typename OverflowHandler> static inline Checked<typename Result<U, V>::ResultType, OverflowHandler> operator-(Checked<U, OverflowHandler> lhs, Checked<V, OverflowHandler> rhs)
 {
-    U x = 0;
-    V y = 0;
-    bool overflowed = lhs.safeGet(x) == CheckedState::DidOverflow || rhs.safeGet(y) == CheckedState::DidOverflow;
+    if (UNLIKELY(lhs.hasOverflowed() || rhs.hasOverflowed()))
+        return ResultOverflowed;
     typename Result<U, V>::ResultType result = 0;
-    overflowed |= !safeSub<OverflowHandler>(x, y, result);
-    if (overflowed)
+    if (UNLIKELY(!safeSub<OverflowHandler>(lhs.value(), rhs.value(), result)))
         return ResultOverflowed;
     return result;
 }
 
 template <typename U, typename V, typename OverflowHandler> static inline Checked<typename Result<U, V>::ResultType, OverflowHandler> operator*(Checked<U, OverflowHandler> lhs, Checked<V, OverflowHandler> rhs)
 {
-    U x = 0;
-    V y = 0;
-    bool overflowed = lhs.safeGet(x) == CheckedState::DidOverflow || rhs.safeGet(y) == CheckedState::DidOverflow;
+    if (UNLIKELY(lhs.hasOverflowed() || rhs.hasOverflowed()))
+        return ResultOverflowed;
     typename Result<U, V>::ResultType result = 0;
-    overflowed |= !safeMultiply<OverflowHandler>(x, y, result);
-    if (overflowed)
+    if (UNLIKELY(!safeMultiply<OverflowHandler>(lhs.value(), rhs.value(), result)))
         return ResultOverflowed;
     return result;
 }
 
 template <typename U, typename V, typename OverflowHandler> static inline Checked<typename Result<U, V>::ResultType, OverflowHandler> operator/(Checked<U, OverflowHandler> lhs, Checked<V, OverflowHandler> rhs)
 {
-    U x = 0;
-    V y = 0;
-    bool overflowed = lhs.safeGet(x) == CheckedState::DidOverflow || rhs.safeGet(y) == CheckedState::DidOverflow;
+    if (UNLIKELY(lhs.hasOverflowed() || rhs.hasOverflowed()))
+        return ResultOverflowed;
     typename Result<U, V>::ResultType result = 0;
-    overflowed |= !safeDivide<OverflowHandler>(x, y, result);
-    if (overflowed)
+    if (UNLIKELY(!safeDivide<OverflowHandler>(lhs.value(), rhs.value(), result)))
         return ResultOverflowed;
     return result;
 }
@@ -1096,7 +1010,6 @@ using WTF::CheckedUint32;
 using WTF::CheckedInt64;
 using WTF::CheckedUint64;
 using WTF::CheckedSize;
-using WTF::ConditionalCrashOnOverflow;
 using WTF::CrashOnOverflow;
 using WTF::RecordOverflow;
 using WTF::checkedSum;

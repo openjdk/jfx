@@ -49,7 +49,7 @@ public:
 
     virtual bool isCanvasObserverProxy() const { return false; }
 
-    virtual void canvasChanged(CanvasBase&, const FloatRect& changedRect) = 0;
+    virtual void canvasChanged(CanvasBase&, const std::optional<FloatRect>& changedRect) = 0;
     virtual void canvasResized(CanvasBase&) = 0;
     virtual void canvasDestroyed(CanvasBase&) = 0;
 };
@@ -89,7 +89,7 @@ public:
 
     void addObserver(CanvasObserver&);
     void removeObserver(CanvasObserver&);
-    void notifyObserversCanvasChanged(const FloatRect&);
+    void notifyObserversCanvasChanged(const std::optional<FloatRect>&);
     void notifyObserversCanvasResized();
     void notifyObserversCanvasDestroyed(); // Must be called in destruction before clearing m_context.
 
@@ -98,10 +98,12 @@ public:
     virtual GraphicsContext* drawingContext() const;
     virtual GraphicsContext* existingDrawingContext() const;
 
-    virtual void didDraw(const FloatRect&) = 0;
+    virtual void didDraw(const std::optional<FloatRect>&) = 0;
 
     virtual Image* copiedImage() const = 0;
-    bool callTracingActive() const;
+    virtual void clearCopiedImage() const = 0;
+
+    bool hasActiveInspectorCanvasCallTracer() const;
 
 protected:
     explicit CanvasBase(IntSize);
@@ -110,7 +112,7 @@ protected:
 
     virtual void setSize(const IntSize& size) { m_size = size; }
 
-    std::unique_ptr<ImageBuffer> setImageBuffer(std::unique_ptr<ImageBuffer>&&) const;
+    RefPtr<ImageBuffer> setImageBuffer(RefPtr<ImageBuffer>&&) const;
     virtual bool hasCreatedImageBuffer() const { return false; }
     static size_t activePixelMemory();
 
@@ -121,7 +123,7 @@ private:
 
     mutable IntSize m_size;
     mutable Lock m_imageBufferAssignmentLock;
-    mutable std::unique_ptr<ImageBuffer> m_imageBuffer;
+    mutable RefPtr<ImageBuffer> m_imageBuffer;
     mutable size_t m_imageBufferCost { 0 };
     mutable std::unique_ptr<GraphicsContextStateSaver> m_contextStateSaver;
 

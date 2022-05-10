@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -96,6 +96,7 @@ public class NativeMediaManager {
     /**
      * Create a <code>NativeMediaManager</code>.
      */
+    @SuppressWarnings("removal")
     protected NativeMediaManager() {
         /*
          * Load native libraries. This must be done early as platforms may need

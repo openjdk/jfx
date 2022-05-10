@@ -85,7 +85,7 @@
  * ## Two basic usage scenarios
  *
  * There are two basic usage scenarios: in the simplest case, the application
- * uses #playbin or #plasink or knows exactly what particular element is used
+ * uses #playbin or #playsink or knows exactly what particular element is used
  * for video output, which is usually the case when the application creates
  * the videosink to use (e.g. #xvimagesink, #ximagesink, etc.) itself; in this
  * case, the application can just create the videosink element, create and
@@ -118,22 +118,22 @@
  * windowing systems are not thread-safe at all and a lot of care would be
  * required to co-ordinate the toolkit and window system calls of the
  * different threads (Gtk+ users please note: prior to Gtk+ 2.18
- * GDK_WINDOW_XID() was just a simple structure access, so generally fine to do
+ * `GDK_WINDOW_XID` was just a simple structure access, so generally fine to do
  * within the bus sync handler; this macro was changed to a function call in
  * Gtk+ 2.18 and later, which is likely to cause problems when called from a
- * sync handler; see below for a better approach without GDK_WINDOW_XID()
+ * sync handler; see below for a better approach without `GDK_WINDOW_XID`
  * used in the callback).
  *
  * ## GstVideoOverlay and Gtk+
  *
  * |[
- * #include &lt;gst/video/videooverlay.h&gt;
- * #include &lt;gtk/gtk.h&gt;
+ * #include <gst/video/videooverlay.h>
+ * #include <gtk/gtk.h>
  * #ifdef GDK_WINDOWING_X11
- * #include &lt;gdk/gdkx.h&gt;  // for GDK_WINDOW_XID
+ * #include <gdk/gdkx.h>  // for GDK_WINDOW_XID
  * #endif
  * #ifdef GDK_WINDOWING_WIN32
- * #include &lt;gdk/gdkwin32.h&gt;  // for GDK_WINDOW_HWND
+ * #include <gdk/gdkwin32.h>  // for GDK_WINDOW_HWND
  * #endif
  * ...
  * static guintptr video_window_handle = 0;
@@ -228,13 +228,13 @@
  * ## GstVideoOverlay and Qt
  *
  * |[
- * #include &lt;glib.h&gt;
- * #include &lt;gst/gst.h&gt;
- * #include &lt;gst/video/videooverlay.h&gt;
+ * #include <glib.h>;
+ * #include <gst/gst.h>;
+ * #include <gst/video/videooverlay.h>;
  *
- * #include &lt;QApplication&gt;
- * #include &lt;QTimer&gt;
- * #include &lt;QWidget&gt;
+ * #include <QApplication>;
+ * #include <QTimer>;
+ * #include <QWidget>;
  *
  * int main(int argc, char *argv[])
  * {
@@ -591,7 +591,7 @@ wrong_format:
     g_value_init (&string, G_TYPE_STRING);
     g_value_transform (value, &string);
 
-    g_critical ("Badly formated rectangle, must contains four gint (got '%s')",
+    g_critical ("Badly formatted rectangle, must contains four gint (got '%s')",
         g_value_get_string (&string));
 
     g_value_unset (&string);

@@ -28,6 +28,7 @@
 
 #include <cstring>
 #include <wtf/DateMath.h>
+#include <wtf/Gigacage.h>
 #include <wtf/PrintStream.h>
 #include <wtf/RandomNumberSeed.h>
 #include <wtf/ThreadGroup.h>
@@ -45,7 +46,9 @@
 
 namespace WTF {
 
-static Optional<size_t> stackSize(ThreadType threadType)
+Lock Thread::s_allThreadsLock;
+
+static std::optional<size_t> stackSize(ThreadType threadType)
 {
     // Return the stack size for the created thread based on its type.
     // If the stack size is not specified, then use the system default. Platforms can tune the values here.
@@ -64,11 +67,17 @@ static Optional<size_t> stackSize(ThreadType threadType)
 
 #if defined(DEFAULT_THREAD_STACK_SIZE_IN_KB) && DEFAULT_THREAD_STACK_SIZE_IN_KB > 0
     return DEFAULT_THREAD_STACK_SIZE_IN_KB * 1024;
+#elif OS(LINUX) && !defined(__BIONIC__) && !defined(__GLIBC__)
+    // on libcs other than glibc and bionic (e.g. musl) we are either unsure how big
+    // the default thread stack is, or we know it's too small - pick a robust default
+    return 1 * MB;
 #else
     // Use the platform's default stack size
-    return WTF::nullopt;
+    return std::nullopt;
 #endif
 }
+
+std::atomic<uint32_t> Thread::s_uid { 0 };
 
 struct Thread::NewThreadContext : public ThreadSafeRefCounted<NewThreadContext> {
 public:
@@ -91,16 +100,19 @@ public:
 #endif
 };
 
-HashSet<Thread*>& Thread::allThreads(const LockHolder&)
+HashSet<Thread*>& Thread::allThreads()
 {
-    static NeverDestroyed<HashSet<Thread*>> allThreads;
+    static LazyNeverDestroyed<HashSet<Thread*>> allThreads;
+    static std::once_flag onceKey;
+    std::call_once(onceKey, [&] {
+        allThreads.construct();
+    });
     return allThreads;
 }
 
-Lock& Thread::allThreadsMutex()
+Lock& Thread::allThreadsLock()
 {
-    static Lock mutex;
-    return mutex;
+    return s_allThreadsLock;
 }
 
 const char* Thread::normalizeThreadName(const char* threadName)
@@ -140,7 +152,11 @@ void Thread::initializeInThread()
 #if USE(WEB_THREAD)
     // On iOS, one AtomStringTable is shared between the main UI thread and the WebThread.
     if (isWebThread() || isUIThread()) {
-        static NeverDestroyed<AtomStringTable> sharedStringTable;
+        static LazyNeverDestroyed<AtomStringTable> sharedStringTable;
+        static std::once_flag onceKey;
+        std::call_once(onceKey, [&] {
+            sharedStringTable.construct();
+        });
         m_currentAtomStringTable = &sharedStringTable.get();
     }
 #endif
@@ -177,7 +193,7 @@ void Thread::entryPoint(NewThreadContext* newThreadContext)
     function();
 }
 
-Ref<Thread> Thread::create(const char* name, Function<void()>&& entryPoint, ThreadType threadType)
+Ref<Thread> Thread::create(const char* name, Function<void()>&& entryPoint, ThreadType threadType, QOS qos)
 {
     WTF::initialize();
     Ref<Thread> thread = adoptRef(*new Thread());
@@ -190,7 +206,7 @@ Ref<Thread> Thread::create(const char* name, Function<void()>&& entryPoint, Thre
     context->ref();
     {
         MutexLocker locker(context->mutex);
-        bool success = thread->establishHandle(context.ptr(), stackSize(threadType));
+        bool success = thread->establishHandle(context.ptr(), stackSize(threadType), qos);
         RELEASE_ASSERT(success);
         context->stage = NewThreadContext::Stage::EstablishedHandle;
 
@@ -210,9 +226,9 @@ Ref<Thread> Thread::create(const char* name, Function<void()>&& entryPoint, Thre
     // called Thread::didExit to unregister itself from allThreads. Registering such a thread will register a stale thread pointer to allThreads, which will not be removed
     // even after Thread is destroyed. Register a thread only when it has not unregistered itself from allThreads yet.
     {
-        auto locker = holdLock(allThreadsMutex());
+        Locker locker { allThreadsLock() };
         if (!thread->m_didUnregisterFromAllThreads)
-            allThreads(locker).add(thread.ptr());
+            allThreads().add(thread.ptr());
     }
 
     ASSERT(!thread->stack().isEmpty());
@@ -236,8 +252,8 @@ static bool shouldRemoveThreadFromThreadGroup()
 void Thread::didExit()
 {
     {
-        auto locker = holdLock(allThreadsMutex());
-        allThreads(locker).remove(this);
+        Locker locker { allThreadsLock() };
+        allThreads().remove(this);
         m_didUnregisterFromAllThreads = true;
     }
 
@@ -245,7 +261,7 @@ void Thread::didExit()
         {
             Vector<std::shared_ptr<ThreadGroup>> threadGroups;
             {
-                auto locker = holdLock(m_mutex);
+                Locker locker { m_mutex };
                 for (auto& threadGroupPointerPair : m_threadGroupMap) {
                     // If ThreadGroup is just being destroyed,
                     // we do not need to perform unregistering.
@@ -255,15 +271,15 @@ void Thread::didExit()
                 m_isShuttingDown = true;
             }
             for (auto& threadGroup : threadGroups) {
-                auto threadGroupLocker = holdLock(threadGroup->getLock());
-                auto locker = holdLock(m_mutex);
+                Locker threadGroupLocker { threadGroup->getLock() };
+                Locker locker { m_mutex };
                 threadGroup->m_threads.remove(*this);
             }
         }
 
         // We would like to say "thread is exited" after unregistering threads from thread groups.
         // So we need to separate m_isShuttingDown from m_didExit.
-        auto locker = holdLock(m_mutex);
+        Locker locker { m_mutex };
         m_didExit = true;
     }
 }
@@ -271,7 +287,7 @@ void Thread::didExit()
 ThreadGroupAddResult Thread::addToThreadGroup(const AbstractLocker& threadGroupLocker, ThreadGroup& threadGroup)
 {
     UNUSED_PARAM(threadGroupLocker);
-    auto locker = holdLock(m_mutex);
+    Locker locker { m_mutex };
     if (m_isShuttingDown)
         return ThreadGroupAddResult::NotAdded;
     if (threadGroup.m_threads.add(*this).isNewEntry) {
@@ -284,7 +300,7 @@ ThreadGroupAddResult Thread::addToThreadGroup(const AbstractLocker& threadGroupL
 void Thread::removeFromThreadGroup(const AbstractLocker& threadGroupLocker, ThreadGroup& threadGroup)
 {
     UNUSED_PARAM(threadGroupLocker);
-    auto locker = holdLock(m_mutex);
+    Locker locker { m_mutex };
     if (m_isShuttingDown)
         return;
     m_threadGroupMap.remove(&threadGroup);
@@ -292,7 +308,7 @@ void Thread::removeFromThreadGroup(const AbstractLocker& threadGroupLocker, Thre
 
 unsigned Thread::numberOfThreadGroups()
 {
-    auto locker = holdLock(m_mutex);
+    Locker locker { m_mutex };
     return m_threadGroupMap.size();
 }
 
@@ -366,6 +382,8 @@ void initialize()
 {
     static std::once_flag onceKey;
     std::call_once(onceKey, [] {
+        setPermissionsOfConfigPage();
+        Gigacage::ensureGigacage();
         Config::AssertNotFrozenScope assertScope;
         initializeRandomNumberGenerator();
 #if !HAVE(FAST_TLS) && !OS(WINDOWS)

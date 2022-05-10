@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -44,7 +44,7 @@ final class LocalClipboard implements TKClipboard {
     }
 
     @Override
-    public void setSecurityContext(final AccessControlContext ctx) {
+    public void setSecurityContext(@SuppressWarnings("removal") final AccessControlContext ctx) {
         // ctx not needed
     }
 

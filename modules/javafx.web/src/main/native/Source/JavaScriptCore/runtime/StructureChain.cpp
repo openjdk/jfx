@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -47,7 +47,7 @@ StructureChain* StructureChain::create(VM& vm, JSObject* head)
     for (JSObject* current = head; current; current = current->structure(vm)->storedPrototypeObject(current))
         ++size;
     ++size; // Sentinel nullptr.
-    size_t bytes = (Checked<size_t>(size) * sizeof(StructureID)).unsafeGet();
+    size_t bytes = Checked<size_t>(size) * sizeof(StructureID);
     StructureID* vector = static_cast<StructureID*>(vm.jsValueGigacageAuxiliarySpace.allocateNonVirtual(vm, bytes, nullptr, AllocationFailureMode::Assert));
     memset(vector, 0, bytes);
     StructureChain* chain = new (NotNull, allocateCell<StructureChain>(vm.heap)) StructureChain(vm, vm.structureChainStructure.get(), vector);
@@ -66,7 +66,8 @@ void StructureChain::finishCreation(VM& vm, JSObject* head)
     }
 }
 
-void StructureChain::visitChildren(JSCell* cell, SlotVisitor& visitor)
+template<typename Visitor>
+void StructureChain::visitChildrenImpl(JSCell* cell, Visitor& visitor)
 {
     StructureChain* thisObject = jsCast<StructureChain*>(cell);
     ASSERT_GC_OBJECT_INHERITS(thisObject, info());
@@ -79,5 +80,7 @@ void StructureChain::visitChildren(JSCell* cell, SlotVisitor& visitor)
         visitor.appendUnbarriered(structure);
     }
 }
+
+DEFINE_VISIT_CHILDREN(StructureChain);
 
 } // namespace JSC

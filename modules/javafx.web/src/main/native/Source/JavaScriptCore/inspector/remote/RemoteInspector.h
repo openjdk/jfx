@@ -79,7 +79,7 @@ class JS_EXPORT_PRIVATE RemoteInspector final
 #endif
 {
 public:
-    class Client {
+    class JS_EXPORT_PRIVATE Client {
     public:
         struct Capabilities {
             bool remoteAutomationAllowed : 1;
@@ -89,21 +89,21 @@ public:
 
         struct SessionCapabilities {
             bool acceptInsecureCertificates { false };
-#if USE(GLIB)
+#if USE(GLIB) || USE(INSPECTOR_SOCKET_SERVER)
             Vector<std::pair<String, String>> certificates;
             struct Proxy {
                 String type;
-                Optional<String> ftpURL;
-                Optional<String> httpURL;
-                Optional<String> httpsURL;
-                Optional<String> socksURL;
+                std::optional<String> ftpURL;
+                std::optional<String> httpURL;
+                std::optional<String> httpsURL;
+                std::optional<String> socksURL;
                 Vector<String> ignoreAddressList;
             };
-            Optional<Proxy> proxy;
+            std::optional<Proxy> proxy;
 #endif
 #if PLATFORM(COCOA)
-            Optional<bool> allowInsecureMediaCapture;
-            Optional<bool> suppressICECandidateFiltering;
+            std::optional<bool> allowInsecureMediaCapture;
+            std::optional<bool> suppressICECandidateFiltering;
 #endif
         };
 
@@ -112,6 +112,10 @@ public:
         virtual String browserName() const { return { }; }
         virtual String browserVersion() const { return { }; }
         virtual void requestAutomationSession(const String& sessionIdentifier, const SessionCapabilities&) = 0;
+        virtual void requestedDebuggablesToWakeUp() { };
+#if USE(INSPECTOR_SOCKET_SERVER)
+        virtual void closeAutomationSession() = 0;
+#endif
     };
 
 #if PLATFORM(COCOA)
@@ -129,7 +133,7 @@ public:
     RemoteInspector::Client* client() const { return m_client; }
     void setClient(RemoteInspector::Client*);
     void clientCapabilitiesDidChange();
-    Optional<RemoteInspector::Client::Capabilities> clientCapabilities() const { return m_clientCapabilities; }
+    std::optional<RemoteInspector::Client::Capabilities> clientCapabilities() const { return m_clientCapabilities; }
 
     void setupFailed(TargetID);
     void setupCompleted(TargetID);
@@ -160,7 +164,7 @@ public:
     void sendMessageToTarget(TargetID, const char* message);
 #endif
 #if USE(INSPECTOR_SOCKET_SERVER)
-    void requestAutomationSession(const String& sessionID, const Client::SessionCapabilities&);
+    void requestAutomationSession(String&& sessionID, const Client::SessionCapabilities&);
 
     bool isConnected() const { return !!m_clientConnection; }
     void connect(ConnectionID);
@@ -215,6 +219,7 @@ private:
     void receivedDataMessage(NSDictionary *userInfo);
     void receivedDidCloseMessage(NSDictionary *userInfo);
     void receivedGetListingMessage(NSDictionary *userInfo);
+    void receivedWakeUpDebuggables(NSDictionary *userInfo);
     void receivedIndicateMessage(NSDictionary *userInfo);
     void receivedProxyApplicationSetupMessage(NSDictionary *userInfo);
     void receivedConnectionDiedMessage(NSDictionary *userInfo);
@@ -224,7 +229,7 @@ private:
 #endif
 #if USE(INSPECTOR_SOCKET_SERVER)
     HashMap<String, CallHandler>& dispatchMap() final;
-    void didClose(ConnectionID) final;
+    void didClose(RemoteInspectorSocketEndpoint&, ConnectionID) final;
 
     void sendWebInspectorEvent(const String&);
 
@@ -255,6 +260,7 @@ private:
 
 #if PLATFORM(COCOA)
     RefPtr<RemoteInspectorXPCConnection> m_relayConnection;
+    bool m_shouldReconnectToRelayOnFailure { false };
 #endif
 #if USE(GLIB)
     RefPtr<SocketConnection> m_socketConnection;
@@ -263,14 +269,14 @@ private:
 
 #if USE(INSPECTOR_SOCKET_SERVER)
     // Connection from RemoteInspectorClient or WebDriver.
-    Optional<ConnectionID> m_clientConnection;
+    std::optional<ConnectionID> m_clientConnection;
     bool m_readyToPushListings { false };
 
     String m_backendCommandsPath;
 #endif
 
     RemoteInspector::Client* m_client { nullptr };
-    Optional<RemoteInspector::Client::Capabilities> m_clientCapabilities;
+    std::optional<RemoteInspector::Client::Capabilities> m_clientCapabilities;
 
 #if PLATFORM(COCOA)
     dispatch_queue_t m_xpcQueue;

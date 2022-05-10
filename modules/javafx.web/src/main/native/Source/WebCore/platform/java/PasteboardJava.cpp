@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -110,7 +110,7 @@ void jWriteSelection(bool canSmartCopyOrDelete, const String& plainText, const S
 void jWriteImage(const Image& image)
 {
     DEFINE_PB_STATIC_METHOD("writeImage", "(Lcom/sun/webkit/graphics/WCImageFrame;)V");
-    CALL_PB_STATIC_VOID_METHOD(jobject(*const_cast<Image&>(image).javaImage()));
+    CALL_PB_STATIC_VOID_METHOD(jobject(*const_cast<Image&>(image).javaImage()->platformImage()->getImage()));
 }
 
 void jWriteURL(const String& url, const String& markup)
@@ -222,7 +222,7 @@ Pasteboard::Pasteboard(RefPtr<DataObjectJava> dataObject, bool copyPasteMode = f
     ASSERT(m_dataObject);
 }
 
-Pasteboard::Pasteboard() : Pasteboard(DataObjectJava::create())
+Pasteboard::Pasteboard(std::unique_ptr<PasteboardContext>&&) : Pasteboard(DataObjectJava::create())
 {
 }
 
@@ -231,22 +231,23 @@ std::unique_ptr<Pasteboard> Pasteboard::create(RefPtr<DataObjectJava> dataObject
     return std::unique_ptr<Pasteboard>(new Pasteboard(dataObject));
 }
 
-std::unique_ptr<Pasteboard> Pasteboard::createForCopyAndPaste()
+std::unique_ptr<Pasteboard> Pasteboard::createForCopyAndPaste(std::unique_ptr<PasteboardContext>&&)
 {
     // Use single shared data instance for all copy'n'paste pasteboards.
     static RefPtr<DataObjectJava> data = DataObjectJava::create();
     // TODO: setURL, setFiles, setData, setHtml (needs URL)
     data->setPlainText(jGetPlainText());
+    data->setData(DataObjectJava::mimeHTML(), jGetPlainText());
     return std::unique_ptr<Pasteboard>(new Pasteboard(data, true));
 }
 
 #if ENABLE(DRAG_SUPPORT)
-std::unique_ptr<Pasteboard> Pasteboard::createForDragAndDrop()
+std::unique_ptr<Pasteboard> Pasteboard::createForDragAndDrop(std::unique_ptr<PasteboardContext>&&)
 {
     return create(DataObjectJava::create());
 }
 
-std::unique_ptr<Pasteboard> Pasteboard::createForDragAndDrop(const DragData& dragData)
+std::unique_ptr<Pasteboard> Pasteboard::create(const DragData& dragData)
 {
     return create(dragData.platformData());
 }
@@ -430,7 +431,7 @@ bool Pasteboard::hasData()
     return m_dataObject && m_dataObject->hasData();
 }
 
-void Pasteboard::read(PasteboardFileReader& reader, Optional<size_t>)
+void Pasteboard::read(PasteboardFileReader& reader, std::optional<size_t>)
 {
     if (m_dataObject) {
         for (const auto& filename : m_dataObject->asFilenames())
@@ -452,7 +453,7 @@ Pasteboard::FileContentState Pasteboard::fileContentState()
     return reader.count ? FileContentState::MayContainFilePaths : FileContentState::NoFileOrImageData;
 }
 
-void Pasteboard::read(PasteboardPlainText& text, PlainTextURLReadingPolicy, Optional<size_t>)
+void Pasteboard::read(PasteboardPlainText& text, PlainTextURLReadingPolicy, std::optional<size_t>)
 {
     if (m_copyPasteMode) {
         text.text = jGetPlainText();
@@ -508,7 +509,7 @@ RefPtr<DocumentFragment> Pasteboard::documentFragment(
     return nullptr;
 }
 
-void Pasteboard::read(PasteboardWebContentReader&, WebContentReadingPolicy, Optional<size_t>)
+void Pasteboard::read(PasteboardWebContentReader&, WebContentReadingPolicy, std::optional<size_t>)
 {
 }
 

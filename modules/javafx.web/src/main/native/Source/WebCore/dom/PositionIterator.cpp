@@ -32,6 +32,8 @@
 #include "HTMLHtmlElement.h"
 #include "HTMLNames.h"
 #include "RenderBlockFlow.h"
+#include "RenderFlexibleBox.h"
+#include "RenderGrid.h"
 #include "RenderText.h"
 
 namespace WebCore {
@@ -51,7 +53,7 @@ PositionIterator::operator Position() const
         return atStartOfNode() ? positionBeforeNode(m_anchorNode) : positionAfterNode(m_anchorNode);
     if (m_anchorNode->hasChildNodes())
         return lastPositionInOrAfterNode(m_anchorNode);
-    return createLegacyEditingPosition(m_anchorNode, m_offsetInAnchor);
+    return makeDeprecatedLegacyPosition(m_anchorNode, m_offsetInAnchor);
 }
 
 void PositionIterator::increment()
@@ -143,9 +145,42 @@ bool PositionIterator::atEndOfNode() const
     return m_anchorNode->hasChildNodes() || m_offsetInAnchor >= lastOffsetForEditing(*m_anchorNode);
 }
 
+// This function should be kept in sync with Position::isCandidate().
 bool PositionIterator::isCandidate() const
 {
-    return m_anchorNode ? Position(*this).isCandidate() : false;
+    if (!m_anchorNode)
+        return false;
+
+    RenderObject* renderer = m_anchorNode->renderer();
+    if (!renderer)
+        return false;
+
+    if (renderer->style().visibility() != Visibility::Visible)
+        return false;
+
+    if (renderer->isBR())
+        return Position(*this).isCandidate();
+
+    if (is<RenderText>(*renderer))
+        return !Position::nodeIsUserSelectNone(m_anchorNode) && downcast<RenderText>(*renderer).containsCaretOffset(m_offsetInAnchor);
+
+    if (positionBeforeOrAfterNodeIsCandidate(*m_anchorNode))
+        return (atStartOfNode() || atEndOfNode()) && !Position::nodeIsUserSelectNone(m_anchorNode->parentNode());
+
+    if (is<HTMLHtmlElement>(*m_anchorNode))
+        return false;
+
+    if (is<RenderBlockFlow>(*renderer) || is<RenderGrid>(*renderer) || is<RenderFlexibleBox>(*renderer)) {
+        auto& block = downcast<RenderBlock>(*renderer);
+        if (block.logicalHeight() || is<HTMLBodyElement>(*m_anchorNode) || m_anchorNode->isRootEditableElement()) {
+            if (!Position::hasRenderedNonAnonymousDescendantsWithHeight(block))
+                return atStartOfNode() && !Position::nodeIsUserSelectNone(m_anchorNode);
+            return m_anchorNode->hasEditableStyle() && !Position::nodeIsUserSelectNone(m_anchorNode) && Position(*this).atEditingBoundary();
+        }
+        return false;
+    }
+
+    return m_anchorNode->hasEditableStyle() && !Position::nodeIsUserSelectNone(m_anchorNode) && Position(*this).atEditingBoundary();
 }
 
 } // namespace WebCore

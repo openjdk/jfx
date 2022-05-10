@@ -28,7 +28,7 @@
 #include "config.h"
 #include "WorkerAnimationController.h"
 
-#if ENABLE(OFFSCREEN_CANVAS)
+#if ENABLE(OFFSCREEN_CANVAS_IN_WORKERS)
 
 #include "Performance.h"
 #include "RequestAnimationFrameCallback.h"
@@ -111,7 +111,7 @@ void WorkerAnimationController::cancelAnimationFrame(CallbackId callbackId)
 
 void WorkerAnimationController::scheduleAnimation()
 {
-    if (!m_workerGlobalScope.requestAnimationFrameEnabled())
+    if (!m_workerGlobalScope.settingsValues().requestAnimationFrameEnabled)
         return;
 
     if (m_animationTimer.isActive())
@@ -131,7 +131,7 @@ void WorkerAnimationController::animationTimerFired()
 
 void WorkerAnimationController::serviceRequestAnimationFrameCallbacks(DOMHighResTimeStamp timestamp)
 {
-    if (!m_animationCallbacks.size() || !m_workerGlobalScope.requestAnimationFrameEnabled())
+    if (!m_animationCallbacks.size() || !m_workerGlobalScope.settingsValues().requestAnimationFrameEnabled)
         return;
 
     // First, generate a list of callbacks to consider. Callbacks registered from this point

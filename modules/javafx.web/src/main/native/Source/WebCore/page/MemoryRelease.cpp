@@ -50,6 +50,7 @@
 #include "StyleScope.h"
 #include "StyledElement.h"
 #include "TextPainter.h"
+#include "WorkerGlobalScope.h"
 #include "WorkerThread.h"
 #include <JavaScriptCore/VM.h>
 #include <wtf/FastMalloc.h>
@@ -67,8 +68,8 @@ static void releaseNoncriticalMemory(MaintainMemoryCache maintainMemoryCache)
     RenderTheme::singleton().purgeCaches();
 
     FontCache::singleton().purgeInactiveFontData();
+    FontCache::singleton().clearWidthCaches();
 
-    clearWidthCaches();
     TextPainter::clearGlyphDisplayLists();
 
     for (auto* document : Document::allDocuments()) {
@@ -129,6 +130,8 @@ static void releaseCriticalMemory(Synchronous synchronous, MaintainBackForwardCa
         GCController::singleton().garbageCollectSoon();
 #endif
     }
+
+    WorkerGlobalScope::releaseMemoryInWorkers(synchronous);
 }
 
 void releaseMemory(Critical critical, Synchronous synchronous, MaintainBackForwardCache maintainBackForwardCache, MaintainMemoryCache maintainMemoryCache)
@@ -147,7 +150,7 @@ void releaseMemory(Critical critical, Synchronous synchronous, MaintainBackForwa
 
     if (synchronous == Synchronous::Yes) {
         // FastMalloc has lock-free thread specific caches that can only be cleared from the thread itself.
-        WorkerThread::releaseFastMallocFreeMemoryInAllThreads();
+        WorkerOrWorkletThread::releaseFastMallocFreeMemoryInAllThreads();
 #if ENABLE(SCROLLING_THREAD)
         ScrollingThread::dispatch(WTF::releaseFastMallocFreeMemory);
 #endif
@@ -159,6 +162,15 @@ void releaseMemory(Critical critical, Synchronous synchronous, MaintainBackForwa
         InspectorInstrumentation::didHandleMemoryPressure(page, critical);
     });
 #endif
+}
+
+void releaseGraphicsMemory(Critical critical, Synchronous synchronous)
+{
+    TraceScope scope(MemoryPressureHandlerStart, MemoryPressureHandlerEnd, static_cast<uint64_t>(critical), static_cast<uint64_t>(synchronous));
+
+    platformReleaseGraphicsMemory(critical);
+
+    WTF::releaseFastMallocFreeMemory();
 }
 
 #if !RELEASE_LOG_DISABLED
@@ -213,6 +225,7 @@ void logMemoryStatisticsAtTimeOfDeath()
 
 #if !PLATFORM(COCOA)
 void platformReleaseMemory(Critical) { }
+void platformReleaseGraphicsMemory(Critical) { }
 void jettisonExpensiveObjectsOnTopLevelNavigation() { }
 void registerMemoryReleaseNotifyCallbacks() { }
 #endif

@@ -26,6 +26,7 @@
 #pragma once
 
 #include "DragImage.h"
+#include "PasteboardContext.h"
 #include "PasteboardCustomData.h"
 #include "PasteboardItemInfo.h"
 #include <wtf/HashMap.h>
@@ -180,24 +181,24 @@ struct PasteboardFileReader {
 class Pasteboard {
     WTF_MAKE_NONCOPYABLE(Pasteboard); WTF_MAKE_FAST_ALLOCATED;
 public:
-    Pasteboard();
+    Pasteboard(std::unique_ptr<PasteboardContext>&&);
     virtual ~Pasteboard();
 
 #if PLATFORM(GTK)
-    explicit Pasteboard(const String& name);
-    explicit Pasteboard(SelectionData&);
+    explicit Pasteboard(std::unique_ptr<PasteboardContext>&&, const String& name);
+    explicit Pasteboard(std::unique_ptr<PasteboardContext>&&, SelectionData&);
 #if ENABLE(DRAG_SUPPORT)
-    explicit Pasteboard(SelectionData&&);
+    explicit Pasteboard(std::unique_ptr<PasteboardContext>&&, SelectionData&&);
 #endif
 #endif
 
 #if PLATFORM(WIN)
-    explicit Pasteboard(IDataObject*);
-    explicit Pasteboard(WCDataObject*);
-    explicit Pasteboard(const DragDataMap&);
+    explicit Pasteboard(std::unique_ptr<PasteboardContext>&&, IDataObject*);
+    explicit Pasteboard(std::unique_ptr<PasteboardContext>&&, WCDataObject*);
+    explicit Pasteboard(std::unique_ptr<PasteboardContext>&&, const DragDataMap&);
 #endif
 
-    WEBCORE_EXPORT static std::unique_ptr<Pasteboard> createForCopyAndPaste();
+    WEBCORE_EXPORT static std::unique_ptr<Pasteboard> createForCopyAndPaste(std::unique_ptr<PasteboardContext>&&);
 
     static bool isSafeTypeForDOMToReadAndWrite(const String&);
     static bool canExposeURLToDOMWhenPasteboardContainsFiles(const String&);
@@ -216,9 +217,9 @@ public:
     virtual WEBCORE_EXPORT void clear();
     virtual WEBCORE_EXPORT void clear(const String& type);
 
-    virtual WEBCORE_EXPORT void read(PasteboardPlainText&, PlainTextURLReadingPolicy = PlainTextURLReadingPolicy::AllowURL, Optional<size_t> itemIndex = WTF::nullopt);
-    virtual WEBCORE_EXPORT void read(PasteboardWebContentReader&, WebContentReadingPolicy = WebContentReadingPolicy::AnyType, Optional<size_t> itemIndex = WTF::nullopt);
-    virtual WEBCORE_EXPORT void read(PasteboardFileReader&, Optional<size_t> itemIndex = WTF::nullopt);
+    virtual WEBCORE_EXPORT void read(PasteboardPlainText&, PlainTextURLReadingPolicy = PlainTextURLReadingPolicy::AllowURL, std::optional<size_t> itemIndex = std::nullopt);
+    virtual WEBCORE_EXPORT void read(PasteboardWebContentReader&, WebContentReadingPolicy = WebContentReadingPolicy::AnyType, std::optional<size_t> itemIndex = std::nullopt);
+    virtual WEBCORE_EXPORT void read(PasteboardFileReader&, std::optional<size_t> itemIndex = std::nullopt);
 
     static bool canWriteTrustworthyWebURLsPboardType();
 
@@ -243,8 +244,8 @@ public:
 #endif
 
 #if ENABLE(DRAG_SUPPORT)
-    WEBCORE_EXPORT static std::unique_ptr<Pasteboard> createForDragAndDrop();
-    WEBCORE_EXPORT static std::unique_ptr<Pasteboard> createForDragAndDrop(const DragData&);
+    WEBCORE_EXPORT static std::unique_ptr<Pasteboard> createForDragAndDrop(std::unique_ptr<PasteboardContext>&&);
+    WEBCORE_EXPORT static std::unique_ptr<Pasteboard> create(const DragData&);
 
     virtual void setDragImage(DragImage, const IntPoint& hotSpot);
 #endif
@@ -257,19 +258,19 @@ public:
 
 #if PLATFORM(GTK)
     const SelectionData& selectionData() const;
-    static std::unique_ptr<Pasteboard> createForGlobalSelection();
+    static std::unique_ptr<Pasteboard> createForGlobalSelection(std::unique_ptr<PasteboardContext>&&);
 #endif
 
 #if PLATFORM(IOS_FAMILY)
-    explicit Pasteboard(int64_t changeCount);
-    explicit Pasteboard(const String& pasteboardName);
+    explicit Pasteboard(std::unique_ptr<PasteboardContext>&&, int64_t changeCount);
+    explicit Pasteboard(std::unique_ptr<PasteboardContext>&&, const String& pasteboardName);
 
     static NSArray *supportedWebContentPasteboardTypes();
     static String resourceMIMEType(NSString *mimeType);
 #endif
 
 #if PLATFORM(MAC)
-    explicit Pasteboard(const String& pasteboardName, const Vector<String>& promisedFilePaths = { });
+    explicit Pasteboard(std::unique_ptr<PasteboardContext>&&, const String& pasteboardName, const Vector<String>& promisedFilePaths = { });
 #endif
 
 #if PLATFORM(COCOA)
@@ -299,17 +300,19 @@ public:
     void writeImageToDataObject(Element&, const URL&); // FIXME: Layering violation.
 #endif
 
-    Optional<Vector<PasteboardItemInfo>> allPasteboardItemInfo() const;
-    Optional<PasteboardItemInfo> pasteboardItemInfo(size_t index) const;
+    std::optional<Vector<PasteboardItemInfo>> allPasteboardItemInfo() const;
+    std::optional<PasteboardItemInfo> pasteboardItemInfo(size_t index) const;
 
     String readString(size_t index, const String& type);
     RefPtr<WebCore::SharedBuffer> readBuffer(size_t index, const String& type);
     URL readURL(size_t index, String& title);
 
+    const PasteboardContext* context() const { return m_context.get(); }
+
 private:
 #if PLATFORM(IOS_FAMILY)
     bool respectsUTIFidelities() const;
-    void readRespectingUTIFidelities(PasteboardWebContentReader&, WebContentReadingPolicy, Optional<size_t>);
+    void readRespectingUTIFidelities(PasteboardWebContentReader&, WebContentReadingPolicy, std::optional<size_t>);
 
     enum class ReaderResult {
         ReadType,
@@ -324,7 +327,7 @@ private:
     void writeRangeToDataObject(const SimpleRange&, Frame&); // FIXME: Layering violation.
     void writeURLToDataObject(const URL&, const String&);
     void writePlainTextToDataObject(const String&, SmartReplaceOption);
-    Optional<PasteboardCustomData> readPasteboardCustomData();
+    std::optional<PasteboardCustomData> readPasteboardCustomData();
 #endif
 
 #if PLATFORM(JAVA)
@@ -341,15 +344,17 @@ private:
     RefPtr<SharedBuffer> readBufferForTypeWithSecurityCheck(const String&);
 #endif
 
+    std::unique_ptr<PasteboardContext> m_context;
+
 #if PLATFORM(GTK)
-    Optional<SelectionData> m_selectionData;
+    std::optional<SelectionData> m_selectionData;
     String m_name;
 #endif
 
 #if PLATFORM(COCOA)
     String m_pasteboardName;
     int64_t m_changeCount;
-    Optional<PasteboardCustomData> m_customDataCache;
+    std::optional<PasteboardCustomData> m_customDataCache;
 #endif
 
 #if PLATFORM(MAC)

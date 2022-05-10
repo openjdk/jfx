@@ -231,8 +231,9 @@ JSObjectRef JSObjectMakeError(JSContextRef ctx, size_t argumentCount, const JSVa
     auto scope = DECLARE_CATCH_SCOPE(vm);
 
     JSValue message = argumentCount ? toJS(globalObject, arguments[0]) : jsUndefined();
+    JSValue options = argumentCount > 1 ? toJS(globalObject, arguments[1]) : jsUndefined();
     Structure* errorStructure = globalObject->errorStructure();
-    JSObject* result = ErrorInstance::create(globalObject, errorStructure, message);
+    JSObject* result = ErrorInstance::create(globalObject, errorStructure, message, options);
 
     if (handleExceptionIfNeeded(scope, ctx, exception) == ExceptionStatus::DidThrow)
         result = nullptr;
@@ -808,7 +809,7 @@ JSPropertyNameArrayRef JSObjectCopyPropertyNames(JSContextRef ctx, JSObjectRef o
     JSObject* jsObject = toJS(object);
     JSPropertyNameArrayRef propertyNames = new OpaqueJSPropertyNameArray(&vm);
     PropertyNameArray array(vm, PropertyNameMode::Strings, PrivateSymbolMode::Exclude);
-    jsObject->methodTable(vm)->getPropertyNames(jsObject, globalObject, array, EnumerationMode());
+    jsObject->getPropertyNames(globalObject, array, DontEnumPropertiesMode::Exclude);
 
     size_t size = array.size();
     propertyNames->array.reserveInitialCapacity(size);

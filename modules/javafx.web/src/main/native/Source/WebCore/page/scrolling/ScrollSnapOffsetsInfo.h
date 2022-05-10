@@ -25,28 +25,86 @@
 
 #pragma once
 
+#include "FloatRect.h"
+#include "LayoutRect.h"
+#include "LayoutUnit.h"
+#include "ScrollTypes.h"
+#include "StyleScrollSnapPoints.h"
+#include <utility>
 #include <wtf/Vector.h>
 
 namespace WebCore {
 
-template <typename T>
-struct ScrollOffsetRange {
-    T start;
-    T end;
-};
+class ScrollableArea;
+class RenderBox;
+class RenderStyle;
 
 template <typename T>
+struct SnapOffset {
+    T offset;
+    ScrollSnapStop stop;
+    bool hasSnapAreaLargerThanViewport;
+    Vector<size_t> snapAreaIndices;
+};
+
+template <typename UnitType, typename RectType>
 struct ScrollSnapOffsetsInfo {
     WTF_MAKE_STRUCT_FAST_ALLOCATED;
-    Vector<T> horizontalSnapOffsets;
-    Vector<T> verticalSnapOffsets;
+    ScrollSnapStrictness strictness;
+    Vector<SnapOffset<UnitType>> horizontalSnapOffsets;
+    Vector<SnapOffset<UnitType>> verticalSnapOffsets;
+    Vector<RectType> snapAreas;
 
-    // Snap offset ranges represent non-empty ranges of scroll offsets in which scrolling may rest after scroll snapping.
-    // These are used in two cases: (1) for proximity scroll snapping, where portions of areas between adjacent snap offsets
-    // may emit snap offset ranges, and (2) in the case where the snap area is larger than the snap port, in which case areas
-    // where the snap port fits within the snap area are considered to be valid snap positions.
-    Vector<ScrollOffsetRange<T>> horizontalSnapOffsetRanges;
-    Vector<ScrollOffsetRange<T>> verticalSnapOffsetRanges;
+    bool isEqual(const ScrollSnapOffsetsInfo<UnitType, RectType>& other) const
+    {
+        return strictness == other.strictness && horizontalSnapOffsets == other.horizontalSnapOffsets && verticalSnapOffsets == other.verticalSnapOffsets && snapAreas == other.snapAreas;
+    }
+
+    bool isEmpty() const
+    {
+        return horizontalSnapOffsets.isEmpty() && verticalSnapOffsets.isEmpty();
+    }
+
+    Vector<SnapOffset<UnitType>> offsetsForAxis(ScrollEventAxis axis) const
+    {
+        return axis == ScrollEventAxis::Vertical ? verticalSnapOffsets : horizontalSnapOffsets;
+    }
+
+    template<typename OutputType> OutputType convertUnits(float deviceScaleFactor = 0.0) const;
+    template<typename SizeType, typename PointType>
+    WEBCORE_EXPORT std::pair<UnitType, std::optional<unsigned>> closestSnapOffset(ScrollEventAxis, const SizeType& viewportSize, PointType scrollDestinationOffset, float velocity, std::optional<UnitType> originalPositionForDirectionalSnapping = std::nullopt) const;
 };
+
+template<typename UnitType> inline bool operator==(const SnapOffset<UnitType>& a, const SnapOffset<UnitType>& b)
+{
+    return a.offset == b.offset && a.stop == b.stop && a.snapAreaIndices == b.snapAreaIndices;
+}
+
+using LayoutScrollSnapOffsetsInfo = ScrollSnapOffsetsInfo<LayoutUnit, LayoutRect>;
+using FloatScrollSnapOffsetsInfo = ScrollSnapOffsetsInfo<float, FloatRect>;
+
+template <> template <>
+LayoutScrollSnapOffsetsInfo FloatScrollSnapOffsetsInfo::convertUnits(float /* unusedScaleFactor */) const;
+template <> template <>
+WEBCORE_EXPORT std::pair<float, std::optional<unsigned>> FloatScrollSnapOffsetsInfo::closestSnapOffset(ScrollEventAxis, const FloatSize& viewportSize, FloatPoint scrollDestinationOffset, float velocity, std::optional<float> originalPositionForDirectionalSnapping) const;
+
+
+template <> template <>
+FloatScrollSnapOffsetsInfo LayoutScrollSnapOffsetsInfo::convertUnits(float deviceScaleFactor) const;
+template <> template <>
+WEBCORE_EXPORT std::pair<LayoutUnit, std::optional<unsigned>> LayoutScrollSnapOffsetsInfo::closestSnapOffset(ScrollEventAxis, const LayoutSize& viewportSize, LayoutPoint scrollDestinationOffset, float velocity, std::optional<LayoutUnit> originalPositionForDirectionalSnapping) const;
+
+// Update the snap offsets for this scrollable area, given the RenderBox of the scroll container, the RenderStyle
+// which defines the scroll-snap properties, and the viewport rectangle with the origin at the top left of
+// the scrolling container's border box.
+void updateSnapOffsetsForScrollableArea(ScrollableArea&, const RenderBox& scrollingElementBox, const RenderStyle& scrollingElementStyle, LayoutRect viewportRectInBorderBoxCoordinates, WritingMode, TextDirection);
+
+template <typename T> WTF::TextStream& operator<<(WTF::TextStream& ts, SnapOffset<T> offset)
+{
+    ts << offset.offset;
+    if (offset.stop == ScrollSnapStop::Always)
+        ts << " (always)";
+    return ts;
+}
 
 }; // namespace WebCore

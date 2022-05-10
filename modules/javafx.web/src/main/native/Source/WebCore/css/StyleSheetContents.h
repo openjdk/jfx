@@ -21,7 +21,6 @@
 #pragma once
 
 #include "CSSParserContext.h"
-#include "CachePolicy.h"
 #include <wtf/Function.h>
 #include <wtf/HashMap.h>
 #include <wtf/RefCounted.h>
@@ -43,15 +42,17 @@ class StyleRuleBase;
 class StyleRuleImport;
 class StyleRuleNamespace;
 
+enum class CachePolicy : uint8_t;
+
 class StyleSheetContents final : public RefCounted<StyleSheetContents>, public CanMakeWeakPtr<StyleSheetContents> {
 public:
     static Ref<StyleSheetContents> create(const CSSParserContext& context = CSSParserContext(HTMLStandardMode))
     {
-        return adoptRef(*new StyleSheetContents(0, String(), context));
+        return adoptRef(*new StyleSheetContents(nullptr, String(), context));
     }
     static Ref<StyleSheetContents> create(const String& originalURL, const CSSParserContext& context)
     {
-        return adoptRef(*new StyleSheetContents(0, originalURL, context));
+        return adoptRef(*new StyleSheetContents(nullptr, originalURL, context));
     }
     static Ref<StyleSheetContents> create(StyleRuleImport* ownerRule, const String& originalURL, const CSSParserContext& context)
     {
@@ -85,7 +86,6 @@ public:
 
     bool loadCompleted() const { return m_loadCompleted; }
 
-    URL completeURL(const String& url) const;
     bool traverseRules(const WTF::Function<bool (const StyleRuleBase&)>& handler) const;
     bool traverseSubresources(const WTF::Function<bool (const CachedResource&)>& handler) const;
 
@@ -111,7 +111,7 @@ public:
 
     StyleSheetContents* parentStyleSheet() const;
     StyleRuleImport* ownerRule() const { return m_ownerRule; }
-    void clearOwnerRule() { m_ownerRule = 0; }
+    void clearOwnerRule() { m_ownerRule = nullptr; }
 
     // Note that href is the URL that started the redirect chain that led to
     // this style sheet. This property probably isn't useful for much except

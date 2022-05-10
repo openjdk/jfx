@@ -73,9 +73,11 @@ private:
 // FIXME: Use a valid WorkerObjectProxy
 // FIXME: Use valid runtime flags
 
-ServiceWorkerThread::ServiceWorkerThread(const ServiceWorkerContextData& data, String&& userAgent, WorkerLoaderProxy& loaderProxy, WorkerDebuggerProxy& debuggerProxy, IDBClient::IDBConnectionProxy* idbConnectionProxy, SocketProvider* socketProvider)
-    : WorkerThread({ data.scriptURL, emptyString(), "serviceworker:" + Inspector::IdentifiersFactory::createIdentifier(), WTFMove(userAgent), platformStrategies()->loaderStrategy()->isOnLine(), data.contentSecurityPolicy, false, MonotonicTime::now(), { }, true }, data.script, loaderProxy, debuggerProxy, DummyServiceWorkerThreadProxy::shared(), WorkerThreadStartMode::Normal, data.registration.key.topOrigin().securityOrigin().get(), idbConnectionProxy, socketProvider, JSC::RuntimeFlags::createAllEnabled())
-    , m_data(data.isolatedCopy())
+ServiceWorkerThread::ServiceWorkerThread(ServiceWorkerContextData&& data, String&& userAgent, const Settings::Values& settingsValues, WorkerLoaderProxy& loaderProxy, WorkerDebuggerProxy& debuggerProxy, IDBClient::IDBConnectionProxy* idbConnectionProxy, SocketProvider* socketProvider)
+    : WorkerThread({ data.scriptURL, emptyString(), "serviceworker:" + Inspector::IdentifiersFactory::createIdentifier(), WTFMove(userAgent), platformStrategies()->loaderStrategy()->isOnLine(), data.contentSecurityPolicy, false, data.crossOriginEmbedderPolicy, MonotonicTime::now(), { }, data.workerType, FetchRequestCredentials::Omit, settingsValues }, data.script, loaderProxy, debuggerProxy, DummyServiceWorkerThreadProxy::shared(), WorkerThreadStartMode::Normal, data.registration.key.topOrigin().securityOrigin().get(), idbConnectionProxy, socketProvider, JSC::RuntimeFlags::createAllEnabled())
+    , m_serviceWorkerIdentifier(data.serviceWorkerIdentifier)
+    , m_jobDataIdentifier(data.jobDataIdentifier)
+    , m_data(crossThreadCopy(data))
     , m_workerObjectProxy(DummyServiceWorkerThreadProxy::shared())
     , m_heartBeatTimeout(SWContextManager::singleton().connection()->shouldUseShortTimeout() ? heartBeatTimeoutForTest : heartBeatTimeout)
     , m_heartBeatTimer { *this, &ServiceWorkerThread::heartBeatTimerFired }
@@ -88,7 +90,8 @@ ServiceWorkerThread::~ServiceWorkerThread() = default;
 
 Ref<WorkerGlobalScope> ServiceWorkerThread::createWorkerGlobalScope(const WorkerParameters& params, Ref<SecurityOrigin>&& origin, Ref<SecurityOrigin>&& topOrigin)
 {
-    return ServiceWorkerGlobalScope::create(m_data, params, WTFMove(origin), *this, WTFMove(topOrigin), idbConnectionProxy(), socketProvider());
+    RELEASE_ASSERT(m_data);
+    return ServiceWorkerGlobalScope::create(*std::exchange(m_data, std::nullopt), params, WTFMove(origin), *this, WTFMove(topOrigin), idbConnectionProxy(), socketProvider());
 }
 
 void ServiceWorkerThread::runEventLoop()
@@ -97,9 +100,9 @@ void ServiceWorkerThread::runEventLoop()
     WorkerThread::runEventLoop();
 }
 
-void ServiceWorkerThread::queueTaskToFireFetchEvent(Ref<ServiceWorkerFetch::Client>&& client, Optional<ServiceWorkerClientIdentifier>&& clientId, ResourceRequest&& request, String&& referrer, FetchOptions&& options)
+void ServiceWorkerThread::queueTaskToFireFetchEvent(Ref<ServiceWorkerFetch::Client>&& client, std::optional<ServiceWorkerClientIdentifier>&& clientId, ResourceRequest&& request, String&& referrer, FetchOptions&& options)
 {
-    auto serviceWorkerGlobalScope = makeRef(downcast<ServiceWorkerGlobalScope>(*workerGlobalScope()));
+    auto serviceWorkerGlobalScope = makeRef(downcast<ServiceWorkerGlobalScope>(*globalScope()));
     serviceWorkerGlobalScope->eventLoop().queueTask(TaskSource::DOMManipulation, [serviceWorkerGlobalScope, client = WTFMove(client), clientId, request = WTFMove(request), referrer = WTFMove(referrer), options = WTFMove(options)]() mutable {
         ServiceWorkerFetch::dispatchFetchEvent(WTFMove(client), serviceWorkerGlobalScope, clientId, WTFMove(request), WTFMove(referrer), WTFMove(options));
     });
@@ -116,7 +119,7 @@ static void fireMessageEvent(ServiceWorkerGlobalScope& scope, MessageWithMessage
 
 void ServiceWorkerThread::queueTaskToPostMessage(MessageWithMessagePorts&& message, ServiceWorkerOrClientData&& sourceData)
 {
-    auto serviceWorkerGlobalScope = makeRef(downcast<ServiceWorkerGlobalScope>(*workerGlobalScope()));
+    auto serviceWorkerGlobalScope = makeRef(downcast<ServiceWorkerGlobalScope>(*globalScope()));
     serviceWorkerGlobalScope->eventLoop().queueTask(TaskSource::DOMManipulation, [weakThis = makeWeakPtr(this), serviceWorkerGlobalScope, message = WTFMove(message), sourceData = WTFMove(sourceData)]() mutable {
         URL sourceURL;
         ExtendableMessageEventSource source;
@@ -145,7 +148,7 @@ void ServiceWorkerThread::queueTaskToPostMessage(MessageWithMessagePorts&& messa
 
 void ServiceWorkerThread::queueTaskToFireInstallEvent()
 {
-    auto serviceWorkerGlobalScope = makeRef(downcast<ServiceWorkerGlobalScope>(*workerGlobalScope()));
+    auto serviceWorkerGlobalScope = makeRef(downcast<ServiceWorkerGlobalScope>(*globalScope()));
     serviceWorkerGlobalScope->eventLoop().queueTask(TaskSource::DOMManipulation, [weakThis = makeWeakPtr(this), serviceWorkerGlobalScope]() mutable {
         RELEASE_LOG(ServiceWorker, "ServiceWorkerThread::queueTaskToFireInstallEvent firing event for worker %llu", serviceWorkerGlobalScope->thread().identifier().toUInt64());
 
@@ -171,7 +174,7 @@ void ServiceWorkerThread::queueTaskToFireInstallEvent()
 
 void ServiceWorkerThread::queueTaskToFireActivateEvent()
 {
-    auto serviceWorkerGlobalScope = makeRef(downcast<ServiceWorkerGlobalScope>(*workerGlobalScope()));
+    auto serviceWorkerGlobalScope = makeRef(downcast<ServiceWorkerGlobalScope>(*globalScope()));
     serviceWorkerGlobalScope->eventLoop().queueTask(TaskSource::DOMManipulation, [weakThis = makeWeakPtr(this), serviceWorkerGlobalScope]() mutable {
         RELEASE_LOG(ServiceWorker, "ServiceWorkerThread::queueTaskToFireActivateEvent firing event for worker %llu", serviceWorkerGlobalScope->thread().identifier().toUInt64());
 
@@ -191,7 +194,7 @@ void ServiceWorkerThread::queueTaskToFireActivateEvent()
 void ServiceWorkerThread::finishedEvaluatingScript()
 {
     ASSERT(!isMainThread());
-    m_doesHandleFetch = workerGlobalScope()->hasEventListeners(eventNames().fetchEvent);
+    m_doesHandleFetch = globalScope()->hasEventListeners(eventNames().fetchEvent);
 }
 
 void ServiceWorkerThread::start(Function<void(const String&, bool)>&& callback)
@@ -257,10 +260,10 @@ void ServiceWorkerThread::heartBeatTimerFired()
         connection->didFailHeartBeatCheck(identifier());
         break;
     case State::Starting:
-        connection->serviceWorkerFailedToStart(m_data.jobDataIdentifier, identifier(), "Service Worker script execution timed out"_s);
+        connection->serviceWorkerFailedToStart(m_jobDataIdentifier, identifier(), "Service Worker script execution timed out"_s);
         break;
     case State::Installing:
-        connection->didFinishInstall(m_data.jobDataIdentifier, identifier(), false);
+        connection->didFinishInstall(m_jobDataIdentifier, identifier(), false);
         break;
     }
 }
@@ -276,7 +279,7 @@ void ServiceWorkerThread::finishedFiringInstallEvent(bool hasRejectedAnyPromise)
     m_state = State::Idle;
 
     if (auto* connection = SWContextManager::singleton().connection())
-        connection->didFinishInstall(m_data.jobDataIdentifier, identifier(), !hasRejectedAnyPromise);
+        connection->didFinishInstall(m_jobDataIdentifier, identifier(), !hasRejectedAnyPromise);
 }
 
 void ServiceWorkerThread::willPostTaskToFireActivateEvent()

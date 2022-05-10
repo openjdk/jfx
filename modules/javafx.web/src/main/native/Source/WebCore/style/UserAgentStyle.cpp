@@ -67,7 +67,6 @@ RuleSet* UserAgentStyle::defaultQuirksStyle;
 RuleSet* UserAgentStyle::defaultPrintStyle;
 unsigned UserAgentStyle::defaultStyleVersion;
 
-StyleSheetContents* UserAgentStyle::simpleDefaultStyleSheet;
 StyleSheetContents* UserAgentStyle::defaultStyleSheet;
 StyleSheetContents* UserAgentStyle::quirksStyleSheet;
 StyleSheetContents* UserAgentStyle::dialogStyleSheet;
@@ -76,7 +75,6 @@ StyleSheetContents* UserAgentStyle::mathMLStyleSheet;
 StyleSheetContents* UserAgentStyle::mediaControlsStyleSheet;
 StyleSheetContents* UserAgentStyle::fullscreenStyleSheet;
 StyleSheetContents* UserAgentStyle::plugInsStyleSheet;
-StyleSheetContents* UserAgentStyle::imageControlsStyleSheet;
 StyleSheetContents* UserAgentStyle::mediaQueryStyleSheet;
 #if ENABLE(DATALIST_ELEMENT)
 StyleSheetContents* UserAgentStyle::dataListStyleSheet;
@@ -84,44 +82,9 @@ StyleSheetContents* UserAgentStyle::dataListStyleSheet;
 #if ENABLE(INPUT_TYPE_COLOR)
 StyleSheetContents* UserAgentStyle::colorInputStyleSheet;
 #endif
-#if ENABLE(INPUT_TYPE_DATE)
-StyleSheetContents* UserAgentStyle::dateInputStyleSheet;
+#if ENABLE(IOS_FORM_CONTROL_REFRESH)
+StyleSheetContents* UserAgentStyle::legacyFormControlsIOSStyleSheet;
 #endif
-#if ENABLE(INPUT_TYPE_DATETIMELOCAL)
-StyleSheetContents* UserAgentStyle::dateTimeLocalInputStyleSheet;
-#endif
-#if ENABLE(INPUT_TYPE_MONTH)
-StyleSheetContents* UserAgentStyle::monthInputStyleSheet;
-#endif
-#if ENABLE(INPUT_TYPE_TIME)
-StyleSheetContents* UserAgentStyle::timeInputStyleSheet;
-#endif
-#if ENABLE(INPUT_TYPE_WEEK)
-StyleSheetContents* UserAgentStyle::weekInputStyleSheet;
-#endif
-
-#if PLATFORM(IOS_FAMILY)
-#define DEFAULT_OUTLINE_WIDTH "3px"
-#else
-#define DEFAULT_OUTLINE_WIDTH "5px"
-#endif
-
-#if HAVE(OS_DARK_MODE_SUPPORT)
-#define CSS_DARK_MODE_ADDITION "html{color:text}"
-#else
-#define CSS_DARK_MODE_ADDITION ""
-#endif
-
-// FIXME: It would be nice to use some mechanism that guarantees this is in sync with the real UA stylesheet.
-static const char simpleUserAgentStyleSheet[] = "html,body,div{display:block}" CSS_DARK_MODE_ADDITION "head{display:none}body{margin:8px}div:focus,span:focus,a:focus{outline:auto " DEFAULT_OUTLINE_WIDTH " -webkit-focus-ring-color}a:any-link{color:-webkit-link;text-decoration:underline}a:any-link:active{color:-webkit-activelink}";
-
-static inline bool elementCanUseSimpleDefaultStyle(const Element& element)
-{
-    return is<HTMLHtmlElement>(element) || is<HTMLHeadElement>(element)
-        || is<HTMLBodyElement>(element) || is<HTMLDivElement>(element)
-        || is<HTMLSpanElement>(element) || is<HTMLBRElement>(element)
-        || is<HTMLAnchorElement>(element);
-}
 
 static const MediaQueryEvaluator& screenEval()
 {
@@ -142,21 +105,6 @@ static StyleSheetContents* parseUASheet(const String& str)
     return &sheet;
 }
 
-static StyleSheetContents* parseUASheet(const char* characters, unsigned size)
-{
-    return parseUASheet(String(characters, size));
-}
-
-void UserAgentStyle::initDefaultStyle(const Element* root)
-{
-    if (!defaultStyle) {
-        if (!root || elementCanUseSimpleDefaultStyle(*root))
-            loadSimpleDefaultStyle();
-        else
-            loadFullDefaultStyle();
-    }
-}
-
 void UserAgentStyle::addToDefaultStyle(StyleSheetContents& sheet)
 {
     defaultStyle->addRulesFromSheet(sheet, screenEval());
@@ -168,12 +116,10 @@ void UserAgentStyle::addToDefaultStyle(StyleSheetContents& sheet)
         if (!is<StyleRuleMedia>(*rule))
             continue;
         auto& mediaRule = downcast<StyleRuleMedia>(*rule);
-        auto* mediaQuery = mediaRule.mediaQueries();
-        if (!mediaQuery)
+        auto& mediaQuery = mediaRule.mediaQueries();
+        if (screenEval().evaluate(mediaQuery, nullptr))
             continue;
-        if (screenEval().evaluate(*mediaQuery, nullptr))
-            continue;
-        if (printEval().evaluate(*mediaQuery, nullptr))
+        if (printEval().evaluate(mediaQuery, nullptr))
             continue;
         mediaQueryStyleSheet->parserAppendRule(mediaRule.copy());
     }
@@ -181,97 +127,59 @@ void UserAgentStyle::addToDefaultStyle(StyleSheetContents& sheet)
     ++defaultStyleVersion;
 }
 
-void UserAgentStyle::loadFullDefaultStyle()
+void UserAgentStyle::initDefaultStyleSheet()
 {
-    if (defaultStyle && !simpleDefaultStyleSheet)
+    if (defaultStyle)
         return;
-
-    if (simpleDefaultStyleSheet) {
-        ASSERT(defaultStyle);
-        ASSERT(defaultPrintStyle == defaultStyle);
-        defaultStyle->deref();
-        simpleDefaultStyleSheet->deref();
-        simpleDefaultStyleSheet = nullptr;
-    } else {
-        ASSERT(!defaultStyle);
-        defaultQuirksStyle = &RuleSet::create().leakRef();
-    }
 
     defaultStyle = &RuleSet::create().leakRef();
     defaultPrintStyle = &RuleSet::create().leakRef();
+    defaultQuirksStyle = &RuleSet::create().leakRef();
     mediaQueryStyleSheet = &StyleSheetContents::create(CSSParserContext(UASheetMode)).leakRef();
 
     // Strict-mode rules.
-    String defaultRules = String(htmlUserAgentStyleSheet, sizeof(htmlUserAgentStyleSheet)) + RenderTheme::singleton().extraDefaultStyleSheet();
+    String defaultRules = String(StringImpl::createWithoutCopying(htmlUserAgentStyleSheet, sizeof(htmlUserAgentStyleSheet))) + RenderTheme::singleton().extraDefaultStyleSheet();
     defaultStyleSheet = parseUASheet(defaultRules);
     addToDefaultStyle(*defaultStyleSheet);
 
     // Quirks-mode rules.
-    String quirksRules = String(quirksUserAgentStyleSheet, sizeof(quirksUserAgentStyleSheet)) + RenderTheme::singleton().extraQuirksStyleSheet();
+    String quirksRules = String(StringImpl::createWithoutCopying(quirksUserAgentStyleSheet, sizeof(quirksUserAgentStyleSheet))) + RenderTheme::singleton().extraQuirksStyleSheet();
     quirksStyleSheet = parseUASheet(quirksRules);
     defaultQuirksStyle->addRulesFromSheet(*quirksStyleSheet, screenEval());
-}
 
-void UserAgentStyle::loadSimpleDefaultStyle()
-{
-    ASSERT(!defaultStyle);
-    ASSERT(!simpleDefaultStyleSheet);
-
-    defaultStyle = &RuleSet::create().leakRef();
-    // There are no media-specific rules in the simple default style.
-    defaultPrintStyle = defaultStyle;
-    defaultQuirksStyle = &RuleSet::create().leakRef();
-
-    simpleDefaultStyleSheet = parseUASheet(simpleUserAgentStyleSheet, strlen(simpleUserAgentStyleSheet));
-    defaultStyle->addRulesFromSheet(*simpleDefaultStyleSheet, screenEval());
     ++defaultStyleVersion;
-    // No need to initialize quirks sheet yet as there are no quirk rules for elements allowed in simple default style.
 }
 
 void UserAgentStyle::ensureDefaultStyleSheetsForElement(const Element& element)
 {
-    if (simpleDefaultStyleSheet && !elementCanUseSimpleDefaultStyle(element)) {
-        loadFullDefaultStyle();
-        ++defaultStyleVersion;
-    }
-
     if (is<HTMLElement>(element)) {
         if (is<HTMLObjectElement>(element) || is<HTMLEmbedElement>(element)) {
             if (!plugInsStyleSheet && element.document().page()) {
                 String plugInsRules = RenderTheme::singleton().extraPlugInsStyleSheet() + element.document().page()->chrome().client().plugInExtraStyleSheet();
                 if (plugInsRules.isEmpty())
-                    plugInsRules = String(plugInsUserAgentStyleSheet, sizeof(plugInsUserAgentStyleSheet));
+                    plugInsRules = String(StringImpl::createWithoutCopying(plugInsUserAgentStyleSheet, sizeof(plugInsUserAgentStyleSheet)));
                 plugInsStyleSheet = parseUASheet(plugInsRules);
                 addToDefaultStyle(*plugInsStyleSheet);
             }
         }
         else if (is<HTMLDialogElement>(element) && RuntimeEnabledFeatures::sharedFeatures().dialogElementEnabled()) {
             if (!dialogStyleSheet) {
-                dialogStyleSheet = parseUASheet(dialogUserAgentStyleSheet, sizeof(dialogUserAgentStyleSheet));
+                dialogStyleSheet = parseUASheet(StringImpl::createWithoutCopying(dialogUserAgentStyleSheet, sizeof(dialogUserAgentStyleSheet)));
                 addToDefaultStyle(*dialogStyleSheet);
             }
         }
-#if ENABLE(VIDEO)
-        else if (is<HTMLMediaElement>(element) && !RuntimeEnabledFeatures::sharedFeatures().modernMediaControlsEnabled()) {
+#if ENABLE(VIDEO) && !ENABLE(MODERN_MEDIA_CONTROLS)
+        else if (is<HTMLMediaElement>(element)) {
             if (!mediaControlsStyleSheet) {
                 String mediaRules = RenderTheme::singleton().mediaControlsStyleSheet();
                 if (mediaRules.isEmpty())
-                    mediaRules = String(mediaControlsUserAgentStyleSheet, sizeof(mediaControlsUserAgentStyleSheet)) + RenderTheme::singleton().extraMediaControlsStyleSheet();
+                    mediaRules = String(StringImpl::createWithoutCopying(mediaControlsUserAgentStyleSheet, sizeof(mediaControlsUserAgentStyleSheet))) + RenderTheme::singleton().extraMediaControlsStyleSheet();
                 mediaControlsStyleSheet = parseUASheet(mediaRules);
                 addToDefaultStyle(*mediaControlsStyleSheet);
 
             }
         }
-#endif // ENABLE(VIDEO)
-#if ENABLE(SERVICE_CONTROLS)
-        else if (is<HTMLDivElement>(element) && element.isImageControlsRootElement()) {
-            if (!imageControlsStyleSheet) {
-                String imageControlsRules = RenderTheme::singleton().imageControlsStyleSheet();
-                imageControlsStyleSheet = parseUASheet(imageControlsRules);
-                addToDefaultStyle(*imageControlsStyleSheet);
-            }
-        }
-#endif // ENABLE(SERVICE_CONTROLS)
+#endif // ENABLE(VIDEO) && !ENABLE(MODERN_MEDIA_CONTROLS)
 #if ENABLE(DATALIST_ELEMENT)
         else if (!dataListStyleSheet && is<HTMLDataListElement>(element)) {
             dataListStyleSheet = parseUASheet(RenderTheme::singleton().dataListStyleSheet());
@@ -280,44 +188,14 @@ void UserAgentStyle::ensureDefaultStyleSheetsForElement(const Element& element)
 #endif // ENABLE(DATALIST_ELEMENT)
 #if ENABLE(INPUT_TYPE_COLOR)
         else if (!colorInputStyleSheet && is<HTMLInputElement>(element) && downcast<HTMLInputElement>(element).isColorControl()) {
-            colorInputStyleSheet = parseUASheet(RenderTheme::singleton().colorInputStyleSheet());
+            colorInputStyleSheet = parseUASheet(RenderTheme::singleton().colorInputStyleSheet(element.document().settings()));
             addToDefaultStyle(*colorInputStyleSheet);
         }
 #endif // ENABLE(INPUT_TYPE_COLOR)
-#if ENABLE(INPUT_TYPE_DATE)
-        else if (!dateInputStyleSheet && is<HTMLInputElement>(element) && downcast<HTMLInputElement>(element).isDateField()) {
-            dateInputStyleSheet = parseUASheet(RenderTheme::singleton().dateInputStyleSheet());
-            addToDefaultStyle(*dateInputStyleSheet);
-        }
-#endif // ENABLE(INPUT_TYPE_DATE)
-#if ENABLE(INPUT_TYPE_DATETIMELOCAL)
-        else if (!dateTimeLocalInputStyleSheet && is<HTMLInputElement>(element) && downcast<HTMLInputElement>(element).isDateTimeLocalField()) {
-            dateTimeLocalInputStyleSheet = parseUASheet(RenderTheme::singleton().dateTimeLocalInputStyleSheet());
-            addToDefaultStyle(*dateTimeLocalInputStyleSheet);
-        }
-#endif // ENABLE(INPUT_TYPE_DATETIMELOCAL)
-#if ENABLE(INPUT_TYPE_MONTH)
-        else if (!monthInputStyleSheet && is<HTMLInputElement>(element) && downcast<HTMLInputElement>(element).isMonthField()) {
-            monthInputStyleSheet = parseUASheet(RenderTheme::singleton().monthInputStyleSheet());
-            addToDefaultStyle(*monthInputStyleSheet);
-        }
-#endif // ENABLE(INPUT_TYPE_MONTH)
-#if ENABLE(INPUT_TYPE_TIME)
-        else if (!timeInputStyleSheet && is<HTMLInputElement>(element) && downcast<HTMLInputElement>(element).isTimeField()) {
-            timeInputStyleSheet = parseUASheet(RenderTheme::singleton().timeInputStyleSheet());
-            addToDefaultStyle(*timeInputStyleSheet);
-        }
-#endif // ENABLE(INPUT_TYPE_TIME)
-#if ENABLE(INPUT_TYPE_WEEK)
-        else if (!weekInputStyleSheet && is<HTMLInputElement>(element) && downcast<HTMLInputElement>(element).isWeekField()) {
-            weekInputStyleSheet = parseUASheet(RenderTheme::singleton().weekInputStyleSheet());
-            addToDefaultStyle(*weekInputStyleSheet);
-        }
-#endif // ENABLE(INPUT_TYPE_WEEK)
     } else if (is<SVGElement>(element)) {
         if (!svgStyleSheet) {
             // SVG rules.
-            svgStyleSheet = parseUASheet(svgUserAgentStyleSheet, sizeof(svgUserAgentStyleSheet));
+            svgStyleSheet = parseUASheet(StringImpl::createWithoutCopying(svgUserAgentStyleSheet, sizeof(svgUserAgentStyleSheet)));
             addToDefaultStyle(*svgStyleSheet);
         }
     }
@@ -325,7 +203,7 @@ void UserAgentStyle::ensureDefaultStyleSheetsForElement(const Element& element)
     else if (is<MathMLElement>(element)) {
         if (!mathMLStyleSheet) {
             // MathML rules.
-            mathMLStyleSheet = parseUASheet(mathmlUserAgentStyleSheet, sizeof(mathmlUserAgentStyleSheet));
+            mathMLStyleSheet = parseUASheet(StringImpl::createWithoutCopying(mathmlUserAgentStyleSheet, sizeof(mathmlUserAgentStyleSheet)));
             addToDefaultStyle(*mathMLStyleSheet);
         }
     }
@@ -336,10 +214,19 @@ void UserAgentStyle::ensureDefaultStyleSheetsForElement(const Element& element)
         StringBuilder fullscreenRules;
         fullscreenRules.appendCharacters(fullscreenUserAgentStyleSheet, sizeof(fullscreenUserAgentStyleSheet));
         fullscreenRules.append(RenderTheme::singleton().extraFullScreenStyleSheet());
+        if (element.document().quirks().needsBlackFullscreenBackgroundQuirk())
+            fullscreenRules.append(":-webkit-full-screen { background-color: black; }"_s);
         fullscreenStyleSheet = parseUASheet(fullscreenRules.toString());
         addToDefaultStyle(*fullscreenStyleSheet);
     }
 #endif // ENABLE(FULLSCREEN_API)
+
+#if ENABLE(IOS_FORM_CONTROL_REFRESH)
+    if (!legacyFormControlsIOSStyleSheet && !element.document().settings().iOSFormControlRefreshEnabled()) {
+        legacyFormControlsIOSStyleSheet = parseUASheet(StringImpl::createWithoutCopying(legacyFormControlsIOSUserAgentStyleSheet, sizeof(legacyFormControlsIOSUserAgentStyleSheet)));
+        addToDefaultStyle(*legacyFormControlsIOSStyleSheet);
+    }
+#endif
 
     ASSERT(defaultStyle->features().idsInRules.isEmpty());
     ASSERT(mathMLStyleSheet || defaultStyle->features().siblingRules.isEmpty());

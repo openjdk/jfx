@@ -263,7 +263,7 @@ class ObjCGenerator(Generator):
         if (isinstance(_type, EnumType)):
             return ObjCGenerator.protocol_type_for_type(_type.primitive_type)
         if (isinstance(_type, ObjectType)):
-            return 'Inspector::Protocol::%s::%s' % (_type.type_domain().domain_name, _type.raw_name())
+            return 'Protocol::%s::%s' % (_type.type_domain().domain_name, _type.raw_name())
         if (isinstance(_type, ArrayType)):
             sub_type = ObjCGenerator.protocol_type_for_type(_type.element_type)
             return 'JSON::ArrayOf<%s>' % sub_type
@@ -353,8 +353,6 @@ class ObjCGenerator(Generator):
         if (isinstance(_type, PrimitiveType)):
             return self.objc_type_for_raw_name(_type.raw_name())
         if (isinstance(_type, EnumType)):
-            if _type.is_anonymous:
-                return self.objc_enum_name_for_anonymous_enum_parameter(domain, event_or_command_name, parameter)
             return self.objc_enum_name_for_non_anonymous_enum(_type)
         if (isinstance(_type, ObjectType)):
             return self.objc_name_for_type(_type) + ' *'
@@ -392,14 +390,12 @@ class ObjCGenerator(Generator):
     def objc_protocol_import_expression_for_member(self, name, declaration, member):
         if isinstance(member.type, EnumType):
             if member.type.is_anonymous:
-                return 'fromProtocolString<%s>(%s)' % (self.objc_enum_name_for_anonymous_enum_member(declaration, member), name)
-            return 'fromProtocolString<%s>(%s)' % (self.objc_enum_name_for_non_anonymous_enum(member.type), name)
+                return 'fromProtocolString<%s>((__bridge CFStringRef)%s)' % (self.objc_enum_name_for_anonymous_enum_member(declaration, member), name)
+            return 'fromProtocolString<%s>((__bridge CFStringRef)%s)' % (self.objc_enum_name_for_non_anonymous_enum(member.type), name)
         return self.objc_protocol_import_expression_for_variable(member.type, name)
 
     def objc_protocol_import_expression_for_parameter(self, name, domain, event_or_command_name, parameter):
         if isinstance(parameter.type, EnumType):
-            if parameter.type.is_anonymous:
-                return 'fromProtocolString<%s>(%s)' % (self.objc_enum_name_for_anonymous_enum_parameter(domain, event_or_command_name, parameter), name)
             return 'fromProtocolString<%s>(%s)' % (self.objc_enum_name_for_non_anonymous_enum(parameter.type), name)
         return self.objc_protocol_import_expression_for_variable(parameter.type, name)
 
@@ -409,7 +405,7 @@ class ObjCGenerator(Generator):
             return var_name
         if category == ObjCTypeCategory.Object:
             objc_class = self.objc_class_for_type(var_type)
-            return '[[[%s alloc] initWithJSONObject:%s] autorelease]' % (objc_class, var_name)
+            return 'adoptNS([[%s alloc] initWithJSONObject:%s]).autorelease()' % (objc_class, var_name)
         if category == ObjCTypeCategory.Array:
             objc_class = self.objc_class_for_type(var_type.element_type)
             if objc_class == 'NSString':
@@ -446,8 +442,8 @@ class ObjCGenerator(Generator):
         if category in [ObjCTypeCategory.Simple, ObjCTypeCategory.String]:
             if isinstance(member.type, EnumType):
                 if member.type.is_anonymous:
-                    return 'fromProtocolString<%s>(%s).value()' % (self.objc_enum_name_for_anonymous_enum_member(declaration, member), sub_expression)
-                return 'fromProtocolString<%s>(%s).value()' % (self.objc_enum_name_for_non_anonymous_enum(member.type), sub_expression)
+                    return 'fromProtocolString<%s>((__bridge CFStringRef)%s).value()' % (self.objc_enum_name_for_anonymous_enum_member(declaration, member), sub_expression)
+                return 'fromProtocolString<%s>((__bridge CFStringRef)%s).value()' % (self.objc_enum_name_for_non_anonymous_enum(member.type), sub_expression)
             return sub_expression
         if category == ObjCTypeCategory.Object:
             raise Exception("protocol_to_objc_expression_for_member does not support an Object type. See: protocol_to_objc_code_block_for_object_member")
@@ -491,9 +487,9 @@ class ObjCGenerator(Generator):
         if isinstance(member.type, EnumType):
             sub_expression = 'payload[@"%s"]' % member.member_name
             if member.type.is_anonymous:
-                return 'fromProtocolString<%s>(%s)' % (self.objc_enum_name_for_anonymous_enum_member(declaration, member), sub_expression)
+                return 'fromProtocolString<%s>((__bridge CFStringRef)%s)' % (self.objc_enum_name_for_anonymous_enum_member(declaration, member), sub_expression)
             else:
-                return 'fromProtocolString<%s>(%s)' % (self.objc_enum_name_for_non_anonymous_enum(member.type), sub_expression)
+                return 'fromProtocolString<%s>((__bridge CFStringRef)%s)' % (self.objc_enum_name_for_non_anonymous_enum(member.type), sub_expression)
         if isinstance(_type, ObjectType):
             objc_class = self.objc_class_for_type(member.type)
             return '[[%s alloc] initWithPayload:payload[@"%s"]]' % (objc_class, member.member_name)

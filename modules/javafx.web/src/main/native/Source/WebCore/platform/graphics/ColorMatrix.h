@@ -30,28 +30,47 @@
 
 namespace WebCore {
 
-template<typename> struct ColorComponents;
+template<typename, size_t> struct ColorComponents;
 
-template<size_t Columns, size_t Rows>
+template<size_t ColumnCount, size_t RowCount>
 class ColorMatrix {
 public:
     template<typename ...Ts>
     explicit constexpr ColorMatrix(Ts ...input)
         : m_matrix {{ input ... }}
     {
-        static_assert(sizeof...(Ts) == Rows * Columns);
+        static_assert(sizeof...(Ts) == RowCount * ColumnCount);
     }
 
-    constexpr ColorComponents<float> transformedColorComponents(const ColorComponents<float>&) const;
+    constexpr ColorComponents<float, 4> transformedColorComponents(const ColorComponents<float, 4>&) const;
 
     constexpr float at(size_t row, size_t column) const
     {
-        return m_matrix[(row * Columns) + column];
+        return m_matrix[(row * ColumnCount) + column];
     }
 
 private:
-    std::array<float, Rows * Columns> m_matrix;
+    std::array<float, RowCount * ColumnCount> m_matrix;
 };
+
+template<size_t ColumnCount, size_t RowCount>
+constexpr bool operator==(const ColorMatrix<ColumnCount, RowCount>& a, const ColorMatrix<ColumnCount, RowCount>& b)
+{
+    for (size_t row = 0; row < RowCount; ++row) {
+        for (size_t column = 0; column < ColumnCount; ++column) {
+            if (a.at(row, column) != b.at(row, column))
+                return false;
+        }
+    }
+    return true;
+}
+
+template<size_t ColumnCount, size_t RowCount>
+constexpr bool operator!=(const ColorMatrix<ColumnCount, RowCount>& a, const ColorMatrix<ColumnCount, RowCount>& b)
+{
+    return !(a == b);
+}
+
 
 // FIXME: These are only used in FilterOperations.cpp. Consider moving them there.
 constexpr ColorMatrix<3, 3> grayscaleColorMatrix(float amount)
@@ -100,29 +119,39 @@ inline ColorMatrix<3, 3> hueRotateColorMatrix(float angleInDegrees)
     };
 }
 
-template<size_t Columns, size_t Rows>
-constexpr ColorComponents<float> ColorMatrix<Columns, Rows>::transformedColorComponents(const ColorComponents<float>& inputVector) const
+template<size_t ColumnCount, size_t RowCount>
+constexpr ColorComponents<float, 4> ColorMatrix<ColumnCount, RowCount>::transformedColorComponents(const ColorComponents<float, 4>& inputVector) const
 {
-    static_assert(ColorComponents<float>::Size >= Rows);
+    static_assert(ColorComponents<float, 4>::Size >= RowCount);
 
-    ColorComponents<float> result;
-    for (size_t row = 0; row < Rows; ++row) {
-        if constexpr (Columns <= ColorComponents<float>::Size) {
-            for (size_t column = 0; column < Columns; ++column)
+    ColorComponents<float, 4> result;
+    for (size_t row = 0; row < RowCount; ++row) {
+        if constexpr (ColumnCount <= ColorComponents<float, 4>::Size) {
+            for (size_t column = 0; column < ColumnCount; ++column)
                 result[row] += at(row, column) * inputVector[column];
-        } else if constexpr (Columns > ColorComponents<float>::Size) {
-            for (size_t column = 0; column < ColorComponents<float>::Size; ++column)
+        } else if constexpr (ColumnCount > ColorComponents<float, 4>::Size) {
+            for (size_t column = 0; column < ColorComponents<float, 4>::Size; ++column)
                 result[row] += at(row, column) * inputVector[column];
-            for (size_t additionalColumn = ColorComponents<float>::Size; additionalColumn < Columns; ++additionalColumn)
+            for (size_t additionalColumn = ColorComponents<float, 4>::Size; additionalColumn < ColumnCount; ++additionalColumn)
                 result[row] += at(row, additionalColumn);
         }
     }
-    if constexpr (ColorComponents<float>::Size > Rows) {
-        for (size_t additionalRow = Rows; additionalRow < ColorComponents<float>::Size; ++additionalRow)
+    if constexpr (ColorComponents<float, 4>::Size > RowCount) {
+        for (size_t additionalRow = RowCount; additionalRow < ColorComponents<float, 4>::Size; ++additionalRow)
             result[additionalRow] = inputVector[additionalRow];
     }
 
     return result;
+}
+
+template<typename T, typename M> inline constexpr auto applyMatricesToColorComponents(const ColorComponents<T, 4>& components, M matrix) -> ColorComponents<T, 4>
+{
+    return matrix.transformedColorComponents(components);
+}
+
+template<typename T, typename M, typename... Matrices> inline constexpr auto applyMatricesToColorComponents(const ColorComponents<T, 4>& components, M matrix, Matrices... matrices) -> ColorComponents<T, 4>
+{
+    return applyMatricesToColorComponents(matrix.transformedColorComponents(components), matrices...);
 }
 
 } // namespace WebCore

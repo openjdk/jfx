@@ -29,7 +29,8 @@
  *
  * The #GQueue structure and its associated functions provide a standard
  * queue data structure. Internally, GQueue uses the same data structure
- * as #GList to store elements.
+ * as #GList to store elements with the same complexity over
+ * insertion/deletion (O(1)) and access/search (O(n)) operations.
  *
  * The data contained in each element can be either integer values, by
  * using one of the [Type Conversion Macros][glib-Type-Conversion-Macros],
@@ -40,7 +41,7 @@
  *
  * To create a new GQueue, use g_queue_new().
  *
- * To initialize a statically-allocated GQueue, use #G_QUEUE_INIT or
+ * To initialize a statically-allocated GQueue, use %G_QUEUE_INIT or
  * g_queue_init().
  *
  * To add elements, use g_queue_push_head(), g_queue_push_head_link(),
@@ -117,7 +118,7 @@ g_queue_free_full (GQueue        *queue,
  *
  * A statically-allocated #GQueue must be initialized with this function
  * before it can be used. Alternatively you can initialize it with
- * #G_QUEUE_INIT. It is not necessary to initialize queues created with
+ * %G_QUEUE_INIT. It is not necessary to initialize queues created with
  * g_queue_new().
  *
  * Since: 2.14

@@ -98,6 +98,11 @@ CallData JSCell::getConstructData(JSCell*)
     return { };
 }
 
+bool JSCell::isValidCallee() const
+{
+    return isObject() && asObject(this)->globalObject();
+}
+
 bool JSCell::put(JSCell* cell, JSGlobalObject* globalObject, PropertyName identifier, JSValue value, PutPropertySlot& slot)
 {
     if (cell->isString() || cell->isSymbol() || cell->isHeapBigInt())
@@ -155,17 +160,6 @@ JSValue JSCell::toPrimitive(JSGlobalObject* globalObject, PreferredPrimitiveType
     return static_cast<const JSObject*>(this)->toPrimitive(globalObject, preferredType);
 }
 
-bool JSCell::getPrimitiveNumber(JSGlobalObject* globalObject, double& number, JSValue& value) const
-{
-    if (isString())
-        return static_cast<const JSString*>(this)->getPrimitiveNumber(globalObject, number, value);
-    if (isSymbol())
-        return static_cast<const Symbol*>(this)->getPrimitiveNumber(globalObject, number, value);
-    if (isHeapBigInt())
-        return static_cast<const JSBigInt*>(this)->getPrimitiveNumber(globalObject, number, value);
-    return static_cast<const JSObject*>(this)->getPrimitiveNumber(globalObject, number, value);
-}
-
 double JSCell::toNumber(JSGlobalObject* globalObject) const
 {
     if (isString())
@@ -194,12 +188,6 @@ void slowValidateCell(JSCell* cell)
     ASSERT_GC_OBJECT_LOOKS_VALID(cell);
 }
 
-JSValue JSCell::defaultValue(const JSObject*, JSGlobalObject*, PreferredPrimitiveType)
-{
-    RELEASE_ASSERT_NOT_REACHED();
-    return jsUndefined();
-}
-
 bool JSCell::getOwnPropertySlot(JSObject*, JSGlobalObject*, PropertyName, PropertySlot&)
 {
     RELEASE_ASSERT_NOT_REACHED();
@@ -212,41 +200,19 @@ bool JSCell::getOwnPropertySlotByIndex(JSObject*, JSGlobalObject*, unsigned, Pro
     return false;
 }
 
-void JSCell::doPutPropertySecurityCheck(JSObject*, JSGlobalObject*, PropertyName, PutPropertySlot&)
+void JSCell::getOwnPropertyNames(JSObject*, JSGlobalObject*, PropertyNameArray&, DontEnumPropertiesMode)
 {
     RELEASE_ASSERT_NOT_REACHED();
 }
 
-void JSCell::getOwnPropertyNames(JSObject*, JSGlobalObject*, PropertyNameArray&, EnumerationMode)
+void JSCell::getOwnSpecialPropertyNames(JSObject*, JSGlobalObject*, PropertyNameArray&, DontEnumPropertiesMode)
 {
     RELEASE_ASSERT_NOT_REACHED();
-}
-
-void JSCell::getOwnNonIndexPropertyNames(JSObject*, JSGlobalObject*, PropertyNameArray&, EnumerationMode)
-{
-    RELEASE_ASSERT_NOT_REACHED();
-}
-
-String JSCell::className(const JSObject*, VM&)
-{
-    RELEASE_ASSERT_NOT_REACHED();
-    return String();
-}
-
-String JSCell::toStringName(const JSObject*, JSGlobalObject*)
-{
-    RELEASE_ASSERT_NOT_REACHED();
-    return String();
 }
 
 const char* JSCell::className(VM& vm) const
 {
     return classInfo(vm)->className;
-}
-
-void JSCell::getPropertyNames(JSObject*, JSGlobalObject*, PropertyNameArray&, EnumerationMode)
-{
-    RELEASE_ASSERT_NOT_REACHED();
 }
 
 bool JSCell::customHasInstance(JSObject*, JSGlobalObject*, JSValue)
@@ -259,22 +225,6 @@ bool JSCell::defineOwnProperty(JSObject*, JSGlobalObject*, PropertyName, const P
 {
     RELEASE_ASSERT_NOT_REACHED();
     return false;
-}
-
-uint32_t JSCell::getEnumerableLength(JSGlobalObject*, JSObject*)
-{
-    RELEASE_ASSERT_NOT_REACHED();
-    return 0;
-}
-
-void JSCell::getStructurePropertyNames(JSObject*, JSGlobalObject*, PropertyNameArray&, EnumerationMode)
-{
-    RELEASE_ASSERT_NOT_REACHED();
-}
-
-void JSCell::getGenericPropertyNames(JSObject*, JSGlobalObject*, PropertyNameArray&, EnumerationMode)
-{
-    RELEASE_ASSERT_NOT_REACHED();
 }
 
 bool JSCell::preventExtensions(JSObject*, JSGlobalObject*)
@@ -342,7 +292,7 @@ NEVER_INLINE NO_RETURN_DUE_TO_CRASH NOT_TAIL_CALLED void reportZappedCellAndCras
         variousState |= static_cast<uint64_t>(foundBlockHandle->needsDestruction()) << 3;
         variousState |= static_cast<uint64_t>(foundBlock->isNewlyAllocated(cell)) << 4;
 
-        ptrdiff_t cellOffset = cellAddress - reinterpret_cast<uint64_t>(foundBlockHandle->start());
+        ptrdiff_t cellOffset = cellAddress - bitwise_cast<uintptr_t>(foundBlockHandle->start());
         bool cellIsProperlyAligned = !(cellOffset % cellSize);
         variousState |= static_cast<uint64_t>(cellIsProperlyAligned) << 5;
     } else {

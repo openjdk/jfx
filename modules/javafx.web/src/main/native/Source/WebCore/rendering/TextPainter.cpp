@@ -24,11 +24,11 @@
 #include "TextPainter.h"
 
 #include "DisplayListReplayer.h"
-#include "DisplayRun.h"
 #include "FilterOperations.h"
 #include "GraphicsContext.h"
 #include "HTMLParserIdioms.h"
-#include "InlineTextBox.h"
+#include "LayoutIntegrationRun.h"
+#include "LegacyInlineTextBox.h"
 #include "RenderCombineText.h"
 #include "RenderLayer.h"
 #include "RuntimeEnabledFeatures.h"
@@ -227,11 +227,10 @@ void TextPainter::paintRange(const TextRun& textRun, const FloatRect& boxRect, c
 
 void TextPainter::clearGlyphDisplayLists()
 {
-    GlyphDisplayListCache<InlineTextBox>::singleton().clear();
-    GlyphDisplayListCache<SimpleLineLayout::Run>::singleton().clear();
+    GlyphDisplayListCache<LegacyInlineTextBox>::singleton().clear();
 #if ENABLE(LAYOUT_FORMATTING_CONTEXT)
     if (RuntimeEnabledFeatures::sharedFeatures().layoutFormattingContextIntegrationEnabled())
-        GlyphDisplayListCache<Display::Run>::singleton().clear();
+        GlyphDisplayListCache<LayoutIntegration::Run>::singleton().clear();
 #endif
 }
 

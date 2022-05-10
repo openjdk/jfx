@@ -42,7 +42,6 @@ class StyledElement : public Element {
 public:
     virtual ~StyledElement();
 
-    virtual const StyleProperties* additionalPresentationAttributeStyle() const { return nullptr; }
     void invalidateStyleAttribute();
 
     const StyleProperties* inlineStyle() const { return elementData() ? elementData()->m_inlineStyle.get() : nullptr; }
@@ -54,16 +53,18 @@ public:
     bool removeInlineStyleProperty(CSSPropertyID);
     void removeAllInlineStyleProperties();
 
-    static void synchronizeStyleAttributeInternal(StyledElement*);
-    void synchronizeStyleAttributeInternal() const { StyledElement::synchronizeStyleAttributeInternal(const_cast<StyledElement*>(this)); }
+    void synchronizeStyleAttributeInternal() const { const_cast<StyledElement*>(this)->synchronizeStyleAttributeInternalImpl(); }
 
     WEBCORE_EXPORT CSSStyleDeclaration& cssomStyle();
 #if ENABLE(CSS_TYPED_OM)
     StylePropertyMap& ensureAttributeStyleMap();
 #endif
 
-    const StyleProperties* presentationAttributeStyle() const;
-    virtual void collectStyleForPresentationAttribute(const QualifiedName&, const AtomString&, MutableStyleProperties&) { }
+    // https://html.spec.whatwg.org/#presentational-hints
+    const StyleProperties* presentationalHintStyle() const;
+    virtual void collectPresentationalHintsForAttribute(const QualifiedName&, const AtomString&, MutableStyleProperties&) { }
+    virtual const StyleProperties* additionalPresentationalHintStyle() const { return nullptr; }
+    virtual void collectExtraStyleForPresentationalHints(MutableStyleProperties&) { }
 
 protected:
     StyledElement(const QualifiedName& name, Document& document, ConstructionType type)
@@ -73,32 +74,33 @@ protected:
 
     void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason = ModifiedDirectly) override;
 
-    virtual bool isPresentationAttribute(const QualifiedName&) const { return false; }
+    virtual bool hasPresentationalHintsForAttribute(const QualifiedName&) const { return false; }
 
-    void addPropertyToPresentationAttributeStyle(MutableStyleProperties&, CSSPropertyID, CSSValueID identifier);
-    void addPropertyToPresentationAttributeStyle(MutableStyleProperties&, CSSPropertyID, double value, CSSUnitType);
-    void addPropertyToPresentationAttributeStyle(MutableStyleProperties&, CSSPropertyID, const String& value);
+    void addPropertyToPresentationalHintStyle(MutableStyleProperties&, CSSPropertyID, CSSValueID identifier);
+    void addPropertyToPresentationalHintStyle(MutableStyleProperties&, CSSPropertyID, double value, CSSUnitType);
+    void addPropertyToPresentationalHintStyle(MutableStyleProperties&, CSSPropertyID, const String& value);
 
     void addSubresourceAttributeURLs(ListHashSet<URL>&) const override;
 
 private:
     void styleAttributeChanged(const AtomString& newStyleString, AttributeModificationReason);
+    void synchronizeStyleAttributeInternalImpl();
 
     void inlineStyleChanged();
     PropertySetCSSStyleDeclaration* inlineStyleCSSOMWrapper();
     void setInlineStyleFromString(const AtomString&);
     MutableStyleProperties& ensureMutableInlineStyle();
 
-    void rebuildPresentationAttributeStyle();
+    void rebuildPresentationalHintStyle();
 };
 
-inline const StyleProperties* StyledElement::presentationAttributeStyle() const
+inline const StyleProperties* StyledElement::presentationalHintStyle() const
 {
     if (!elementData())
         return nullptr;
-    if (elementData()->presentationAttributeStyleIsDirty())
-        const_cast<StyledElement&>(*this).rebuildPresentationAttributeStyle();
-    return elementData()->presentationAttributeStyle();
+    if (elementData()->presentationalHintStyleIsDirty())
+        const_cast<StyledElement&>(*this).rebuildPresentationalHintStyle();
+    return elementData()->presentationalHintStyle();
 }
 
 } // namespace WebCore

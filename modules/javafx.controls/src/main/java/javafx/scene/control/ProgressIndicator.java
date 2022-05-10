@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -70,7 +70,7 @@ public class ProgressIndicator extends Control {
      */
     public static final double INDETERMINATE_PROGRESS = -1;
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -102,7 +102,7 @@ public class ProgressIndicator extends Control {
         pseudoClassStateChanged(PSEUDO_CLASS_INDETERMINATE, c == 0);
         pseudoClassStateChanged(PSEUDO_CLASS_DETERMINATE,   c != 0);
     }
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Properties                                                              *
      *                                                                         *
@@ -184,7 +184,7 @@ public class ProgressIndicator extends Control {
         return progress;
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Methods                                                                 *
      *                                                                         *
@@ -195,7 +195,7 @@ public class ProgressIndicator extends Control {
         return new ProgressIndicatorSkin(this);
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Stylesheet Handling                                                     *
      *                                                                         *
@@ -236,7 +236,7 @@ public class ProgressIndicator extends Control {
     }
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Accessibility handling                                                  *
      *                                                                         *

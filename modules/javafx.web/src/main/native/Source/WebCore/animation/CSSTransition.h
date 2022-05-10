@@ -27,39 +27,38 @@
 
 #include "CSSPropertyNames.h"
 #include "DeclarativeAnimation.h"
+#include "Styleable.h"
 #include <wtf/Markable.h>
 #include <wtf/MonotonicTime.h>
-#include <wtf/Optional.h>
 #include <wtf/Ref.h>
 #include <wtf/Seconds.h>
 
 namespace WebCore {
 
 class Animation;
-class Element;
 class RenderStyle;
 
 class CSSTransition final : public DeclarativeAnimation {
     WTF_MAKE_ISO_ALLOCATED(CSSTransition);
 public:
-    static Ref<CSSTransition> create(Element&, CSSPropertyID, MonotonicTime generationTime, const Animation&, const RenderStyle* oldStyle, const RenderStyle& newStyle, Seconds delay, Seconds duration, const RenderStyle& reversingAdjustedStartStyle, double);
+    static Ref<CSSTransition> create(const Styleable&, CSSPropertyID, MonotonicTime generationTime, const Animation&, const RenderStyle* oldStyle, const RenderStyle& newStyle, Seconds delay, Seconds duration, const RenderStyle& reversingAdjustedStartStyle, double);
     ~CSSTransition() = default;
 
     bool isCSSTransition() const override { return true; }
     String transitionProperty() const { return getPropertyNameString(m_property); }
     CSSPropertyID property() const { return m_property; }
     MonotonicTime generationTime() const { return m_generationTime; }
-    Optional<Seconds> timelineTimeAtCreation() const { return m_timelineTimeAtCreation; }
+    std::optional<Seconds> timelineTimeAtCreation() const { return m_timelineTimeAtCreation; }
     const RenderStyle& targetStyle() const { return *m_targetStyle; }
     const RenderStyle& currentStyle() const { return *m_currentStyle; }
     const RenderStyle& reversingAdjustedStartStyle() const { return *m_reversingAdjustedStartStyle; }
     double reversingShorteningFactor() const { return m_reversingShorteningFactor; }
 
 private:
-    CSSTransition(Element&, CSSPropertyID, MonotonicTime generationTime, const Animation&, const RenderStyle& oldStyle, const RenderStyle& targetStyle, const RenderStyle& reversingAdjustedStartStyle, double);
+    CSSTransition(const Styleable&, CSSPropertyID, MonotonicTime generationTime, const Animation&, const RenderStyle& oldStyle, const RenderStyle& targetStyle, const RenderStyle& reversingAdjustedStartStyle, double);
     void setTimingProperties(Seconds delay, Seconds duration);
-    Ref<AnimationEventBase> createEvent(const AtomString& eventType, double elapsedTime, const String& pseudoId, Optional<Seconds> timelineTime) final;
-    void resolve(RenderStyle&, Optional<Seconds>) final;
+    Ref<AnimationEventBase> createEvent(const AtomString& eventType, double elapsedTime, const String& pseudoId, std::optional<Seconds> timelineTime) final;
+    void resolve(RenderStyle& targetStyle, const RenderStyle* parentElementStyle, std::optional<Seconds>) final;
 
     CSSPropertyID m_property;
     MonotonicTime m_generationTime;

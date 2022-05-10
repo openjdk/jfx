@@ -157,8 +157,12 @@ const char* intrinsicName(Intrinsic intrinsic)
         return "RegExpTestFastIntrinsic";
     case RegExpMatchFastIntrinsic:
         return "RegExpMatchFastIntrinsic";
+    case ObjectAssignIntrinsic:
+        return "ObjectAssignIntrinsic";
     case ObjectCreateIntrinsic:
         return "ObjectCreateIntrinsic";
+    case ObjectGetOwnPropertyNamesIntrinsic:
+        return "ObjectGetOwnPropertyNamesIntrinsic";
     case ObjectGetPrototypeOfIntrinsic:
         return "ObjectGetPrototypeOfIntrinsic";
     case ObjectIsIntrinsic:
@@ -259,6 +263,8 @@ const char* intrinsicName(Intrinsic intrinsic)
         return "AtomicsIsLockFreeIntrinsic";
     case AtomicsLoadIntrinsic:
         return "AtomicsLoadIntrinsic";
+    case AtomicsNotifyIntrinsic:
+        return "AtomicsNotifyIntrinsic";
     case AtomicsOrIntrinsic:
         return "AtomicsOrIntrinsic";
     case AtomicsStoreIntrinsic:
@@ -267,12 +273,12 @@ const char* intrinsicName(Intrinsic intrinsic)
         return "AtomicsSubIntrinsic";
     case AtomicsWaitIntrinsic:
         return "AtomicsWaitIntrinsic";
-    case AtomicsWakeIntrinsic:
-        return "AtomicsWakeIntrinsic";
     case AtomicsXorIntrinsic:
         return "AtomicsXorIntrinsic";
     case ParseIntIntrinsic:
         return "ParseIntIntrinsic";
+    case FunctionToStringIntrinsic:
+        return "FunctionToStringIntrinsic";
     case TypedArrayLengthIntrinsic:
         return "TypedArrayLengthIntrinsic";
     case TypedArrayByteLengthIntrinsic:
@@ -335,12 +341,14 @@ const char* intrinsicName(Intrinsic intrinsic)
         return "DataViewSetFloat32";
     case DataViewSetFloat64:
         return "DataViewSetFloat64";
+    case WasmFunctionIntrinsic:
+        return "WasmFunctionIntrinsic";
     }
     RELEASE_ASSERT_NOT_REACHED();
     return nullptr;
 }
 
-Optional<IterationKind> interationKindForIntrinsic(Intrinsic intrinsic)
+std::optional<IterationKind> interationKindForIntrinsic(Intrinsic intrinsic)
 {
     switch (intrinsic) {
     case ArrayValuesIntrinsic:
@@ -353,7 +361,7 @@ Optional<IterationKind> interationKindForIntrinsic(Intrinsic intrinsic)
     case TypedArrayEntriesIntrinsic:
         return IterationKind::Entries;
     default:
-        return WTF::nullopt;
+        return std::nullopt;
     }
 }
 

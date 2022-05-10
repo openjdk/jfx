@@ -25,32 +25,46 @@
 
 #pragma once
 
+#if ENABLE(WEBXR)
+
 #include "WebXRReferenceSpace.h"
 #include <wtf/IsoMalloc.h>
 #include <wtf/Ref.h>
 #include <wtf/Vector.h>
 
-#if ENABLE(WEBXR)
-
 namespace WebCore {
 
 class DOMPointReadOnly;
 
-class WebXRBoundedReferenceSpace : public WebXRReferenceSpace {
+class WebXRBoundedReferenceSpace final : public WebXRReferenceSpace {
     WTF_MAKE_ISO_ALLOCATED(WebXRBoundedReferenceSpace);
 public:
     static Ref<WebXRBoundedReferenceSpace> create(Document&, Ref<WebXRSession>&&, XRReferenceSpaceType);
+    static Ref<WebXRBoundedReferenceSpace> create(Document&, Ref<WebXRSession>&&, Ref<WebXRRigidTransform>&&, XRReferenceSpaceType);
 
     virtual ~WebXRBoundedReferenceSpace();
 
-    const Vector<Ref<DOMPointReadOnly>>& boundsGeometry() const;
+    TransformationMatrix nativeOrigin() const final;
+    const Vector<Ref<DOMPointReadOnly>>& boundsGeometry();
+    ExceptionOr<Ref<WebXRReferenceSpace>> getOffsetReferenceSpace(const WebXRRigidTransform&) final;
 
 private:
-    WebXRBoundedReferenceSpace(Document&, Ref<WebXRSession>&&, XRReferenceSpaceType);
+    WebXRBoundedReferenceSpace(Document&, Ref<WebXRSession>&&, Ref<WebXRRigidTransform>&&, XRReferenceSpaceType);
+
+    bool isBoundedReferenceSpace() const final { return true; }
+
+    void updateIfNeeded();
+    float quantize(float);
 
     Vector<Ref<DOMPointReadOnly>> m_boundsGeometry;
+    int m_lastUpdateId { -1 };
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::WebXRBoundedReferenceSpace)
+    static bool isType(const WebCore::WebXRReferenceSpace& element) { return element.isBoundedReferenceSpace(); }
+    static bool isType(const WebCore::WebXRSpace& element) { return is<WebCore::WebXRReferenceSpace>(element) && isType(downcast<WebCore::WebXRReferenceSpace>(element)); }
+SPECIALIZE_TYPE_TRAITS_END()
 
 #endif // ENABLE(WEBXR)

@@ -638,7 +638,7 @@ gst_core_audio_probe_caps (GstCoreAudio * core_audio, GstCaps * in_caps)
   got_outer_asbd =
       _core_audio_get_stream_format (core_audio, &outer_asbd, TRUE);
 
-  /* Collect info about the HW capabilites and preferences */
+  /* Collect info about the HW capabilities and preferences */
   spdif_allowed =
       gst_core_audio_audio_device_is_spdif_avail (core_audio->device_id);
   if (!core_audio->is_src)
@@ -740,7 +740,7 @@ gst_core_audio_probe_caps (GstCoreAudio * core_audio, GstCaps * in_caps)
         gst_caps_append_structure (caps, out_s);
         gst_caps_append_structure (caps, mono);
       } else {
-        /* Otherwhise just add the caps */
+        /* Otherwise just add the caps */
         gst_caps_append_structure (caps, out_s);
       }
     }

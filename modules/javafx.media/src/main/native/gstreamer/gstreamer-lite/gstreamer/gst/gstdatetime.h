@@ -32,8 +32,8 @@ G_BEGIN_DECLS
  * GstDateTime:
  *
  * Opaque, immutable, refcounted struct that stores date, time and timezone
- * information. It currently supports ranges from 0001-01-01 to
- * 9999-12-31 in the Gregorian proleptic calendar.
+ * information. It currently supports ranges from `0001-01-01` to
+ * `9999-12-31` in the Gregorian proleptic calendar.
  *
  * Use the accessor functions to get the stored values.
  */
@@ -110,6 +110,12 @@ GST_API
 GstDateTime *   gst_date_time_new_from_unix_epoch_utc   (gint64 secs) G_GNUC_MALLOC;
 
 GST_API
+GstDateTime *   gst_date_time_new_from_unix_epoch_local_time_usecs (gint64 usecs) G_GNUC_MALLOC;
+
+GST_API
+GstDateTime *   gst_date_time_new_from_unix_epoch_utc_usecs (gint64 usecs) G_GNUC_MALLOC;
+
+GST_API
 GstDateTime *   gst_date_time_new_local_time            (gint year,
                                                          gint month,
                                                          gint day,
@@ -158,9 +164,7 @@ GstDateTime *   gst_date_time_ref                (GstDateTime * datetime);
 GST_API
 void            gst_date_time_unref              (GstDateTime * datetime);
 
-#ifdef G_DEFINE_AUTOPTR_CLEANUP_FUNC
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstDateTime, gst_date_time_unref)
-#endif
 
 G_END_DECLS
 

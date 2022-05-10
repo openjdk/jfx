@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,7 +27,11 @@ package test.javafx.scene.control;
 
 import com.sun.javafx.scene.control.ContextMenuContent;
 import com.sun.javafx.scene.control.ContextMenuContentShim;
+import javafx.geometry.Insets;
+import javafx.scene.layout.StackPane;
+import javafx.scene.text.Font;
 import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
+import javafx.css.PseudoClass;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Bounds;
@@ -36,9 +40,12 @@ import javafx.geometry.Side;
 import javafx.scene.control.Button;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.CustomMenuItem;
+import javafx.scene.control.DialogPane;
 import javafx.scene.control.Label;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuItem;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -754,5 +761,27 @@ public class ContextMenuTest {
 
         assertEquals(anchorBounds.getMinX(), cmBounds.getMaxX(), 0.0);
         assertEquals(anchorBounds.getMinY(), cmBounds.getMinY(), 0.0);
+    }
+
+    @Test public void test_graphic_padding_onDialogPane() {
+        DialogPane dialogPane = new DialogPane();
+        anchorBtn.setGraphic(dialogPane);
+        // Since DialogPane is not set in a Dialog, PseudoClass is activated manually
+        dialogPane.pseudoClassStateChanged(PseudoClass.getPseudoClass("no-header"), true);
+
+        final ImageView graphic = new ImageView(new Image(ContextMenuTest.class.getResource("icon.png").toExternalForm()));
+        final MenuItem menuItem = new MenuItem("Menu Item Text", graphic);
+        final ContextMenu contextMenu = new ContextMenu(menuItem);
+        contextMenu.show(dialogPane, 0, 0);
+
+        final Insets padding = ((StackPane) graphic.getParent()).getPadding();
+        final double fontSize = Font.getDefault().getSize();
+
+        // -fx-padding: 0em 0.333em 0em 0em;
+        assertEquals(0, padding.getTop(), 0.0);
+        assertEquals(0.333 * fontSize, padding.getRight(), 0.01);
+        assertEquals(0, padding.getBottom(), 0.0);
+        assertEquals(0, padding.getLeft(), 0.0);
+        anchorBtn.setGraphic(null);
     }
 }

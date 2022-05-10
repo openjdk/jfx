@@ -78,6 +78,9 @@ bool RenderProgress::isDeterminate() const
 
 void RenderProgress::animationTimerFired()
 {
+    // FIXME: Progress bar animation should be performed as part of the rendering update
+    // lifecycle, to match the display's refresh rate.
+
     repaint();
     if (!m_animationTimer.isActive() && m_animating)
         m_animationTimer.startOneShot(m_animationRepeatInterval);
@@ -88,7 +91,7 @@ void RenderProgress::updateAnimationState()
     m_animationDuration = theme().animationDurationForProgressBar(*this);
     m_animationRepeatInterval = theme().animationRepeatIntervalForProgressBar(*this);
 
-    bool animating = style().hasAppearance() && m_animationRepeatInterval > 0_s;
+    bool animating = style().hasAppearance() && m_animationRepeatInterval > 0_s && !isDeterminate();
     if (animating == m_animating)
         return;
 

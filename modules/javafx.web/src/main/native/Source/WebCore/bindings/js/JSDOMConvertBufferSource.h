@@ -42,6 +42,8 @@ struct IDLUint32Array : IDLTypedArray<JSC::Uint32Array> { };
 struct IDLUint8ClampedArray : IDLTypedArray<JSC::Uint8ClampedArray> { };
 struct IDLFloat32Array : IDLTypedArray<JSC::Float32Array> { };
 struct IDLFloat64Array : IDLTypedArray<JSC::Float64Array> { };
+struct IDLBigInt64Array : IDLTypedArray<JSC::BigInt64Array> { };
+struct IDLBigUint64Array : IDLTypedArray<JSC::BigUint64Array> { };
 
 inline RefPtr<JSC::Int8Array> toPossiblySharedInt8Array(JSC::VM& vm, JSC::JSValue value) { return JSC::toPossiblySharedNativeTypedView<JSC::Int8Adaptor>(vm, value); }
 inline RefPtr<JSC::Int16Array> toPossiblySharedInt16Array(JSC::VM& vm, JSC::JSValue value) { return JSC::toPossiblySharedNativeTypedView<JSC::Int16Adaptor>(vm, value); }
@@ -52,6 +54,8 @@ inline RefPtr<JSC::Uint16Array> toPossiblySharedUint16Array(JSC::VM& vm, JSC::JS
 inline RefPtr<JSC::Uint32Array> toPossiblySharedUint32Array(JSC::VM& vm, JSC::JSValue value) { return JSC::toPossiblySharedNativeTypedView<JSC::Uint32Adaptor>(vm, value); }
 inline RefPtr<JSC::Float32Array> toPossiblySharedFloat32Array(JSC::VM& vm, JSC::JSValue value) { return JSC::toPossiblySharedNativeTypedView<JSC::Float32Adaptor>(vm, value); }
 inline RefPtr<JSC::Float64Array> toPossiblySharedFloat64Array(JSC::VM& vm, JSC::JSValue value) { return JSC::toPossiblySharedNativeTypedView<JSC::Float64Adaptor>(vm, value); }
+inline RefPtr<JSC::BigInt64Array> toPossiblySharedBigInt64Array(JSC::VM& vm, JSC::JSValue value) { return JSC::toPossiblySharedNativeTypedView<JSC::BigInt64Adaptor>(vm, value); }
+inline RefPtr<JSC::BigUint64Array> toPossiblySharedBigUint64Array(JSC::VM& vm, JSC::JSValue value) { return JSC::toPossiblySharedNativeTypedView<JSC::BigUint64Adaptor>(vm, value); }
 
 inline RefPtr<JSC::Int8Array> toUnsharedInt8Array(JSC::VM& vm, JSC::JSValue value) { return JSC::toUnsharedNativeTypedView<JSC::Int8Adaptor>(vm, value); }
 inline RefPtr<JSC::Int16Array> toUnsharedInt16Array(JSC::VM& vm, JSC::JSValue value) { return JSC::toUnsharedNativeTypedView<JSC::Int16Adaptor>(vm, value); }
@@ -62,6 +66,8 @@ inline RefPtr<JSC::Uint16Array> toUnsharedUint16Array(JSC::VM& vm, JSC::JSValue 
 inline RefPtr<JSC::Uint32Array> toUnsharedUint32Array(JSC::VM& vm, JSC::JSValue value) { return JSC::toUnsharedNativeTypedView<JSC::Uint32Adaptor>(vm, value); }
 inline RefPtr<JSC::Float32Array> toUnsharedFloat32Array(JSC::VM& vm, JSC::JSValue value) { return JSC::toUnsharedNativeTypedView<JSC::Float32Adaptor>(vm, value); }
 inline RefPtr<JSC::Float64Array> toUnsharedFloat64Array(JSC::VM& vm, JSC::JSValue value) { return JSC::toUnsharedNativeTypedView<JSC::Float64Adaptor>(vm, value); }
+inline RefPtr<JSC::BigInt64Array> toUnsharedBigInt64Array(JSC::VM& vm, JSC::JSValue value) { return JSC::toUnsharedNativeTypedView<JSC::BigInt64Adaptor>(vm, value); }
+inline RefPtr<JSC::BigUint64Array> toUnsharedBigUint64Array(JSC::VM& vm, JSC::JSValue value) { return JSC::toUnsharedNativeTypedView<JSC::BigUint64Adaptor>(vm, value); }
 
 inline JSC::JSValue toJS(JSC::JSGlobalObject* lexicalGlobalObject, JSDOMGlobalObject* globalObject, JSC::ArrayBuffer& buffer)
 {
@@ -109,7 +115,8 @@ inline RefPtr<JSC::ArrayBufferView> toUnsharedArrayBufferView(JSC::VM& vm, JSC::
 
 namespace Detail {
 
-template<typename BufferSourceType>
+enum class BufferSourceConverterAllowSharedMode { Allow, Disallow };
+template<typename BufferSourceType, BufferSourceConverterAllowSharedMode mode>
 struct BufferSourceConverter {
     using WrapperType = typename Converter<BufferSourceType>::WrapperType;
     using ReturnType = typename Converter<BufferSourceType>::ReturnType;
@@ -119,7 +126,11 @@ struct BufferSourceConverter {
     {
         auto& vm = JSC::getVM(&lexicalGlobalObject);
         auto scope = DECLARE_THROW_SCOPE(vm);
-        ReturnType object = WrapperType::toWrapped(vm, value);
+        ReturnType object { };
+        if constexpr (mode == BufferSourceConverterAllowSharedMode::Allow)
+            object = WrapperType::toWrappedAllowShared(vm, value);
+        else
+            object = WrapperType::toWrapped(vm, value);
         if (UNLIKELY(!object))
             exceptionThrower(lexicalGlobalObject, scope);
         return object;
@@ -135,7 +146,7 @@ template<> struct Converter<IDLArrayBuffer> : DefaultConverter<IDLArrayBuffer> {
     template<typename ExceptionThrower = DefaultExceptionThrower>
     static ReturnType convert(JSC::JSGlobalObject& lexicalGlobalObject, JSC::JSValue value, ExceptionThrower&& exceptionThrower = ExceptionThrower())
     {
-        return Detail::BufferSourceConverter<IDLArrayBuffer>::convert(lexicalGlobalObject, value, std::forward<ExceptionThrower>(exceptionThrower));
+        return Detail::BufferSourceConverter<IDLArrayBuffer, Detail::BufferSourceConverterAllowSharedMode::Disallow>::convert(lexicalGlobalObject, value, std::forward<ExceptionThrower>(exceptionThrower));
     }
 };
 
@@ -157,7 +168,7 @@ template<> struct Converter<IDLDataView> : DefaultConverter<IDLDataView> {
     template<typename ExceptionThrower = DefaultExceptionThrower>
     static ReturnType convert(JSC::JSGlobalObject& lexicalGlobalObject, JSC::JSValue value, ExceptionThrower&& exceptionThrower = ExceptionThrower())
     {
-        return Detail::BufferSourceConverter<IDLDataView>::convert(lexicalGlobalObject, value, std::forward<ExceptionThrower>(exceptionThrower));
+        return Detail::BufferSourceConverter<IDLDataView, Detail::BufferSourceConverterAllowSharedMode::Disallow>::convert(lexicalGlobalObject, value, std::forward<ExceptionThrower>(exceptionThrower));
     }
 };
 
@@ -179,7 +190,7 @@ template<> struct Converter<IDLInt8Array> : DefaultConverter<IDLInt8Array> {
     template<typename ExceptionThrower = DefaultExceptionThrower>
     static ReturnType convert(JSC::JSGlobalObject& lexicalGlobalObject, JSC::JSValue value, ExceptionThrower&& exceptionThrower = ExceptionThrower())
     {
-        return Detail::BufferSourceConverter<IDLInt8Array>::convert(lexicalGlobalObject, value, std::forward<ExceptionThrower>(exceptionThrower));
+        return Detail::BufferSourceConverter<IDLInt8Array, Detail::BufferSourceConverterAllowSharedMode::Disallow>::convert(lexicalGlobalObject, value, std::forward<ExceptionThrower>(exceptionThrower));
     }
 };
 
@@ -201,7 +212,7 @@ template<> struct Converter<IDLInt16Array> : DefaultConverter<IDLInt16Array> {
     template<typename ExceptionThrower = DefaultExceptionThrower>
     static ReturnType convert(JSC::JSGlobalObject& lexicalGlobalObject, JSC::JSValue value, ExceptionThrower&& exceptionThrower = ExceptionThrower())
     {
-        return Detail::BufferSourceConverter<IDLInt16Array>::convert(lexicalGlobalObject, value, std::forward<ExceptionThrower>(exceptionThrower));
+        return Detail::BufferSourceConverter<IDLInt16Array, Detail::BufferSourceConverterAllowSharedMode::Disallow>::convert(lexicalGlobalObject, value, std::forward<ExceptionThrower>(exceptionThrower));
     }
 };
 
@@ -223,7 +234,7 @@ template<> struct Converter<IDLInt32Array> : DefaultConverter<IDLInt32Array> {
     template<typename ExceptionThrower = DefaultExceptionThrower>
     static ReturnType convert(JSC::JSGlobalObject& lexicalGlobalObject, JSC::JSValue value, ExceptionThrower&& exceptionThrower = ExceptionThrower())
     {
-        return Detail::BufferSourceConverter<IDLInt32Array>::convert(lexicalGlobalObject, value, std::forward<ExceptionThrower>(exceptionThrower));
+        return Detail::BufferSourceConverter<IDLInt32Array, Detail::BufferSourceConverterAllowSharedMode::Disallow>::convert(lexicalGlobalObject, value, std::forward<ExceptionThrower>(exceptionThrower));
     }
 };
 
@@ -245,7 +256,7 @@ template<> struct Converter<IDLUint8Array> : DefaultConverter<IDLUint8Array> {
     template<typename ExceptionThrower = DefaultExceptionThrower>
     static ReturnType convert(JSC::JSGlobalObject& lexicalGlobalObject, JSC::JSValue value, ExceptionThrower&& exceptionThrower = ExceptionThrower())
     {
-        return Detail::BufferSourceConverter<IDLUint8Array>::convert(lexicalGlobalObject, value, std::forward<ExceptionThrower>(exceptionThrower));
+        return Detail::BufferSourceConverter<IDLUint8Array, Detail::BufferSourceConverterAllowSharedMode::Disallow>::convert(lexicalGlobalObject, value, std::forward<ExceptionThrower>(exceptionThrower));
     }
 };
 
@@ -258,6 +269,12 @@ template<> struct JSConverter<IDLUint8Array> {
     {
         return toJS(&lexicalGlobalObject, &globalObject, Detail::getPtrOrRef(value));
     }
+
+    template<typename U>
+    static JSC::JSValue convertNewlyCreated(JSC::JSGlobalObject& lexicalGlobalObject, JSDOMGlobalObject& globalObject, U&& value)
+    {
+        return convert(lexicalGlobalObject, globalObject, std::forward<U>(value));
+    }
 };
 
 template<> struct Converter<IDLUint16Array> : DefaultConverter<IDLUint16Array> {
@@ -267,7 +284,7 @@ template<> struct Converter<IDLUint16Array> : DefaultConverter<IDLUint16Array> {
     template<typename ExceptionThrower = DefaultExceptionThrower>
     static ReturnType convert(JSC::JSGlobalObject& lexicalGlobalObject, JSC::JSValue value, ExceptionThrower&& exceptionThrower = ExceptionThrower())
     {
-        return Detail::BufferSourceConverter<IDLUint16Array>::convert(lexicalGlobalObject, value, std::forward<ExceptionThrower>(exceptionThrower));
+        return Detail::BufferSourceConverter<IDLUint16Array, Detail::BufferSourceConverterAllowSharedMode::Disallow>::convert(lexicalGlobalObject, value, std::forward<ExceptionThrower>(exceptionThrower));
     }
 };
 
@@ -289,7 +306,7 @@ template<> struct Converter<IDLUint32Array> : DefaultConverter<IDLUint32Array> {
     template<typename ExceptionThrower = DefaultExceptionThrower>
     static ReturnType convert(JSC::JSGlobalObject& lexicalGlobalObject, JSC::JSValue value, ExceptionThrower&& exceptionThrower = ExceptionThrower())
     {
-        return Detail::BufferSourceConverter<IDLUint32Array>::convert(lexicalGlobalObject, value, std::forward<ExceptionThrower>(exceptionThrower));
+        return Detail::BufferSourceConverter<IDLUint32Array, Detail::BufferSourceConverterAllowSharedMode::Disallow>::convert(lexicalGlobalObject, value, std::forward<ExceptionThrower>(exceptionThrower));
     }
 };
 
@@ -311,7 +328,7 @@ template<> struct Converter<IDLUint8ClampedArray> : DefaultConverter<IDLUint8Cla
     template<typename ExceptionThrower = DefaultExceptionThrower>
     static ReturnType convert(JSC::JSGlobalObject& lexicalGlobalObject, JSC::JSValue value, ExceptionThrower&& exceptionThrower = ExceptionThrower())
     {
-        return Detail::BufferSourceConverter<IDLUint8ClampedArray>::convert(lexicalGlobalObject, value, std::forward<ExceptionThrower>(exceptionThrower));
+        return Detail::BufferSourceConverter<IDLUint8ClampedArray, Detail::BufferSourceConverterAllowSharedMode::Disallow>::convert(lexicalGlobalObject, value, std::forward<ExceptionThrower>(exceptionThrower));
     }
 };
 
@@ -333,7 +350,7 @@ template<> struct Converter<IDLFloat32Array> : DefaultConverter<IDLFloat32Array>
     template<typename ExceptionThrower = DefaultExceptionThrower>
     static ReturnType convert(JSC::JSGlobalObject& lexicalGlobalObject, JSC::JSValue value, ExceptionThrower&& exceptionThrower = ExceptionThrower())
     {
-        return Detail::BufferSourceConverter<IDLFloat32Array>::convert(lexicalGlobalObject, value, std::forward<ExceptionThrower>(exceptionThrower));
+        return Detail::BufferSourceConverter<IDLFloat32Array, Detail::BufferSourceConverterAllowSharedMode::Disallow>::convert(lexicalGlobalObject, value, std::forward<ExceptionThrower>(exceptionThrower));
     }
 };
 
@@ -355,11 +372,55 @@ template<> struct Converter<IDLFloat64Array> : DefaultConverter<IDLFloat64Array>
     template<typename ExceptionThrower = DefaultExceptionThrower>
     static ReturnType convert(JSC::JSGlobalObject& lexicalGlobalObject, JSC::JSValue value, ExceptionThrower&& exceptionThrower = ExceptionThrower())
     {
-        return Detail::BufferSourceConverter<IDLFloat64Array>::convert(lexicalGlobalObject, value, std::forward<ExceptionThrower>(exceptionThrower));
+        return Detail::BufferSourceConverter<IDLFloat64Array, Detail::BufferSourceConverterAllowSharedMode::Disallow>::convert(lexicalGlobalObject, value, std::forward<ExceptionThrower>(exceptionThrower));
     }
 };
 
 template<> struct JSConverter<IDLFloat64Array> {
+    static constexpr bool needsState = true;
+    static constexpr bool needsGlobalObject = true;
+
+    template <typename U>
+    static JSC::JSValue convert(JSC::JSGlobalObject& lexicalGlobalObject, JSDOMGlobalObject& globalObject, const U& value)
+    {
+        return toJS(&lexicalGlobalObject, &globalObject, Detail::getPtrOrRef(value));
+    }
+};
+
+template<> struct Converter<IDLBigInt64Array> : DefaultConverter<IDLBigInt64Array> {
+    using WrapperType = JSC::JSBigInt64Array;
+    using ReturnType = RefPtr<JSC::BigInt64Array>;
+
+    template<typename ExceptionThrower = DefaultExceptionThrower>
+    static ReturnType convert(JSC::JSGlobalObject& lexicalGlobalObject, JSC::JSValue value, ExceptionThrower&& exceptionThrower = ExceptionThrower())
+    {
+        return Detail::BufferSourceConverter<IDLBigInt64Array, Detail::BufferSourceConverterAllowSharedMode::Disallow>::convert(lexicalGlobalObject, value, std::forward<ExceptionThrower>(exceptionThrower));
+    }
+};
+
+template<> struct JSConverter<IDLBigInt64Array> {
+    static constexpr bool needsState = true;
+    static constexpr bool needsGlobalObject = true;
+
+    template <typename U>
+    static JSC::JSValue convert(JSC::JSGlobalObject& lexicalGlobalObject, JSDOMGlobalObject& globalObject, const U& value)
+    {
+        return toJS(&lexicalGlobalObject, &globalObject, Detail::getPtrOrRef(value));
+    }
+};
+
+template<> struct Converter<IDLBigUint64Array> : DefaultConverter<IDLBigUint64Array> {
+    using WrapperType = JSC::JSBigUint64Array;
+    using ReturnType = RefPtr<JSC::BigUint64Array>;
+
+    template<typename ExceptionThrower = DefaultExceptionThrower>
+    static ReturnType convert(JSC::JSGlobalObject& lexicalGlobalObject, JSC::JSValue value, ExceptionThrower&& exceptionThrower = ExceptionThrower())
+    {
+        return Detail::BufferSourceConverter<IDLBigUint64Array, Detail::BufferSourceConverterAllowSharedMode::Disallow>::convert(lexicalGlobalObject, value, std::forward<ExceptionThrower>(exceptionThrower));
+    }
+};
+
+template<> struct JSConverter<IDLBigUint64Array> {
     static constexpr bool needsState = true;
     static constexpr bool needsGlobalObject = true;
 
@@ -377,7 +438,7 @@ template<> struct Converter<IDLArrayBufferView> : DefaultConverter<IDLArrayBuffe
     template<typename ExceptionThrower = DefaultExceptionThrower>
     static ReturnType convert(JSC::JSGlobalObject& lexicalGlobalObject, JSC::JSValue value, ExceptionThrower&& exceptionThrower = ExceptionThrower())
     {
-        return Detail::BufferSourceConverter<IDLArrayBufferView>::convert(lexicalGlobalObject, value, std::forward<ExceptionThrower>(exceptionThrower));
+        return Detail::BufferSourceConverter<IDLArrayBufferView, Detail::BufferSourceConverterAllowSharedMode::Disallow>::convert(lexicalGlobalObject, value, std::forward<ExceptionThrower>(exceptionThrower));
     }
 };
 
@@ -389,6 +450,19 @@ template<> struct JSConverter<IDLArrayBufferView> {
     static JSC::JSValue convert(JSC::JSGlobalObject& lexicalGlobalObject, JSDOMGlobalObject& globalObject, const U& value)
     {
         return toJS(&lexicalGlobalObject, &globalObject, Detail::getPtrOrRef(value));
+    }
+};
+
+template<typename T>
+struct Converter<IDLAllowSharedAdaptor<T>> : DefaultConverter<T> {
+    using ConverterType = Converter<T>;
+    using WrapperType = typename ConverterType::WrapperType;
+    using ReturnType = typename ConverterType::ReturnType;
+
+    template<typename ExceptionThrower = DefaultExceptionThrower>
+    static ReturnType convert(JSC::JSGlobalObject& lexicalGlobalObject, JSC::JSValue value, ExceptionThrower&& exceptionThrower = ExceptionThrower())
+    {
+        return Detail::BufferSourceConverter<T, Detail::BufferSourceConverterAllowSharedMode::Allow>::convert(lexicalGlobalObject, value, std::forward<ExceptionThrower>(exceptionThrower));
     }
 };
 

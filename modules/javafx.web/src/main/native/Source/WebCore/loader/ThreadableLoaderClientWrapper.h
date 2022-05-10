@@ -66,7 +66,7 @@ public:
             m_client->didReceiveResponse(identifier, response);
     }
 
-    void didReceiveData(const char* data, int dataLength)
+    void didReceiveData(const uint8_t* data, int dataLength)
     {
         if (m_client)
             m_client->didReceiveData(data, dataLength);
@@ -77,6 +77,12 @@ public:
         m_done = true;
         if (m_client)
             m_client->didFinishLoading(identifier);
+    }
+
+    void notifyIsDone(bool isDone)
+    {
+        if (m_client)
+            m_client->notifyIsDone(isDone);
     }
 
     void didFail(const ResourceError& error)

@@ -40,7 +40,7 @@ namespace WebCore {
 static const double frameRate = 60;
 static const Seconds tickTime = 1_s / frameRate;
 static const Seconds minimumTimerInterval { 1_ms };
-static const double smoothFactorForProgrammaticScroll = 5;
+static const double smoothFactorForProgrammaticScroll = 1;
 
 ScrollAnimationSmooth::PerAxisData::PerAxisData(ScrollbarOrientation orientation, const FloatPoint& position, ScrollExtentsCallback& extentsCallback)
 {
@@ -65,7 +65,11 @@ ScrollAnimationSmooth::ScrollAnimationSmooth(ScrollExtentsCallback&& scrollExten
     , m_notifyAnimationStoppedFunction(WTFMove(notifyAnimationStoppedFunction))
     , m_horizontalData(HorizontalScrollbar, position, m_scrollExtentsFunction)
     , m_verticalData(VerticalScrollbar, position, m_scrollExtentsFunction)
+#if USE(GENERIC_EVENT_LOOP) && PLATFORM(JAVA)
+    , m_animationTimer(*this, &ScrollAnimationSmooth::animationTimerFired)
+#else
     , m_animationTimer(RunLoop::current(), this, &ScrollAnimationSmooth::animationTimerFired)
+#endif
 {
 #if USE(GLIB_EVENT_LOOP)
     m_animationTimer.setPriority(WTF::RunLoopSourcePriority::DisplayRefreshMonitorTimer);
@@ -84,7 +88,8 @@ bool ScrollAnimationSmooth::scroll(ScrollbarOrientation orientation, ScrollGranu
         minScrollPosition = extents.minimumScrollPosition.y();
         maxScrollPosition = extents.maximumScrollPosition.y();
     }
-    bool needToScroll = updatePerAxisData(orientation == HorizontalScrollbar ? m_horizontalData : m_verticalData, granularity, step * multiplier, minScrollPosition, maxScrollPosition);
+    auto& data = orientation == HorizontalScrollbar ? m_horizontalData : m_verticalData;
+    bool needToScroll = updatePerAxisData(data, granularity, data.desiredPosition + (step * multiplier), minScrollPosition, maxScrollPosition);
     if (needToScroll && !isActive()) {
         m_startTime = orientation == HorizontalScrollbar ? m_horizontalData.startTime : m_verticalData.startTime;
         animationTimerFired();
@@ -96,9 +101,9 @@ void ScrollAnimationSmooth::scroll(const FloatPoint& position)
 {
     ScrollGranularity granularity = ScrollByPage;
     auto extents = m_scrollExtentsFunction();
-    bool needToScroll = updatePerAxisData(m_horizontalData, granularity, position.x() - m_horizontalData.currentPosition, extents.minimumScrollPosition.x(), extents.maximumScrollPosition.x(), smoothFactorForProgrammaticScroll);
+    bool needToScroll = updatePerAxisData(m_horizontalData, granularity, position.x(), extents.minimumScrollPosition.x(), extents.maximumScrollPosition.x(), smoothFactorForProgrammaticScroll);
     needToScroll |=
-        updatePerAxisData(m_verticalData, granularity, position.y() - m_verticalData.currentPosition, extents.minimumScrollPosition.y(), extents.maximumScrollPosition.y(), smoothFactorForProgrammaticScroll);
+        updatePerAxisData(m_verticalData, granularity, position.y(), extents.minimumScrollPosition.y(), extents.maximumScrollPosition.y(), smoothFactorForProgrammaticScroll);
     if (needToScroll && !isActive()) {
         m_startTime = m_horizontalData.startTime;
         animationTimerFired();
@@ -287,16 +292,14 @@ static inline void getAnimationParametersForGranularity(ScrollGranularity granul
     }
 }
 
-bool ScrollAnimationSmooth::updatePerAxisData(PerAxisData& data, ScrollGranularity granularity, float delta, float minScrollPosition, float maxScrollPosition, double smoothFactor)
+bool ScrollAnimationSmooth::updatePerAxisData(PerAxisData& data, ScrollGranularity granularity, float newPosition, float minScrollPosition, float maxScrollPosition, double smoothFactor)
 {
-    if (!data.startTime || !delta || (delta < 0) != (data.desiredPosition - data.currentPosition < 0)) {
+    if (!data.startTime || newPosition == data.currentPosition) {
         data.desiredPosition = data.currentPosition;
         data.startTime = { };
     }
-    float newPosition = data.desiredPosition + delta;
 
     newPosition = std::max(std::min(newPosition, maxScrollPosition), minScrollPosition);
-
     if (newPosition == data.desiredPosition)
         return false;
 

@@ -40,7 +40,7 @@ CreateLinkCommand::CreateLinkCommand(Document& document, const String& url)
 
 void CreateLinkCommand::doApply()
 {
-    if (endingSelection().isNone())
+    if (endingSelection().isNoneOrOrphaned())
         return;
 
     auto anchorElement = HTMLAnchorElement::create(document());
@@ -51,7 +51,7 @@ void CreateLinkCommand::doApply()
     else {
         insertNodeAt(anchorElement.copyRef(), endingSelection().start());
         appendNode(Text::create(document(), m_url), anchorElement.copyRef());
-        setEndingSelection(VisibleSelection(positionInParentBeforeNode(anchorElement.ptr()), positionInParentAfterNode(anchorElement.ptr()), DOWNSTREAM, endingSelection().isDirectional()));
+        setEndingSelection(VisibleSelection(positionInParentBeforeNode(anchorElement.ptr()), positionInParentAfterNode(anchorElement.ptr()), Affinity::Downstream, endingSelection().isDirectional()));
     }
 }
 

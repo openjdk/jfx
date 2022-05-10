@@ -46,16 +46,15 @@
 #define O_BINARY 0
 #endif
 
+#ifndef O_CLOEXEC
+#define O_CLOEXEC 0
+#endif
+
 #include "gfileutils.h"
 
 #include "gstdio.h"
 #include "gstdioprivate.h"
 #include "glibintl.h"
-
-#ifdef HAVE_LINUX_MAGIC_H /* for btrfs check */
-#include <linux/magic.h>
-#include <sys/vfs.h>
-#endif
 
 
 /**
@@ -345,7 +344,7 @@ g_file_test (const gchar *filename,
              GFileTest    test)
 {
 #ifdef G_OS_WIN32
-  int attributes;
+  DWORD attributes;
   wchar_t *wfilename;
 #endif
 
@@ -498,15 +497,16 @@ G_DEFINE_QUARK (g-file-error-quark, g_file_error)
  * @err_no: an "errno" value
  *
  * Gets a #GFileError constant based on the passed-in @err_no.
+ *
  * For example, if you pass in `EEXIST` this function returns
- * #G_FILE_ERROR_EXIST. Unlike `errno` values, you can portably
+ * %G_FILE_ERROR_EXIST. Unlike `errno` values, you can portably
  * assume that all #GFileError values will exist.
  *
  * Normally a #GFileError value goes into a #GError returned
  * from a function that manipulates files. So you would use
  * g_file_error_from_errno() when constructing a #GError.
  *
- * Returns: #GFileError corresponding to the given @errno
+ * Returns: #GFileError corresponding to the given @err_no
  **/
 GFileError
 g_file_error_from_errno (gint err_no)
@@ -906,10 +906,12 @@ get_contents_posix (const gchar  *filename,
   if (fd < 0)
     {
       int saved_errno = errno;
-      set_file_error (error,
-                      filename,
-                      _("Failed to open file '%s': %s"),
-                      saved_errno);
+
+      if (error)
+        set_file_error (error,
+                        filename,
+                        _("Failed to open file '%s': %s"),
+                        saved_errno);
 
       return FALSE;
     }
@@ -918,10 +920,11 @@ get_contents_posix (const gchar  *filename,
   if (fstat (fd, &stat_buf) < 0)
     {
       int saved_errno = errno;
-      set_file_error (error,
-                      filename,
-                      _("Failed to get attributes of file '%s': fstat() failed: %s"),
-                      saved_errno);
+      if (error)
+        set_file_error (error,
+                        filename,
+                        _("Failed to get attributes of file '%s': fstat() failed: %s"),
+                        saved_errno);
       close (fd);
 
       return FALSE;
@@ -948,10 +951,11 @@ get_contents_posix (const gchar  *filename,
       if (f == NULL)
         {
           int saved_errno = errno;
-          set_file_error (error,
-                          filename,
-                          _("Failed to open file '%s': fdopen() failed: %s"),
-                          saved_errno);
+          if (error)
+            set_file_error (error,
+                            filename,
+                            _("Failed to open file '%s': fdopen() failed: %s"),
+                            saved_errno);
 
           return FALSE;
         }
@@ -978,10 +982,11 @@ get_contents_win32 (const gchar  *filename,
   if (f == NULL)
     {
       int saved_errno = errno;
-      set_file_error (error,
-                      filename,
-                      _("Failed to open file '%s': %s"),
-                      saved_errno);
+      if (error)
+        set_file_error (error,
+                        filename,
+                        _("Failed to open file '%s': %s"),
+                        saved_errno);
 
       return FALSE;
     }
@@ -1008,7 +1013,7 @@ get_contents_win32 (const gchar  *filename,
  * contents and @length to the length of the file contents in bytes. The string
  * stored in @contents will be nul-terminated, so for text files you can pass
  * %NULL for the @length argument. If the call was not successful, it returns
- * %FALSE and sets @error. The error domain is #G_FILE_ERROR. Possible error
+ * %FALSE and sets @error. The error domain is %G_FILE_ERROR. Possible error
  * codes are those in the #GFileError enumeration. In the error case,
  * @contents is set to %NULL and @length is set to zero.
  *
@@ -1036,8 +1041,9 @@ g_file_get_contents (const gchar  *filename,
 
 static gboolean
 rename_file (const char  *old_name,
-       const char  *new_name,
-       GError     **err)
+             const char  *new_name,
+             gboolean     do_fsync,
+             GError     **err)
 {
   errno = 0;
   if (g_rename (old_name, new_name) == -1)
@@ -1047,12 +1053,12 @@ rename_file (const char  *old_name,
       gchar *display_new_name = g_filename_display_name (new_name);
 
       g_set_error (err,
-       G_FILE_ERROR,
-       g_file_error_from_errno (save_errno),
-       _("Failed to rename file '%s' to '%s': g_rename() failed: %s"),
-       display_old_name,
-       display_new_name,
-       g_strerror (save_errno));
+                   G_FILE_ERROR,
+                   g_file_error_from_errno (save_errno),
+                   _("Failed to rename file '%s' to '%s': g_rename() failed: %s"),
+                   display_old_name,
+                   display_new_name,
+                   g_strerror (save_errno));
 
       g_free (display_old_name);
       g_free (display_new_name);
@@ -1060,35 +1066,81 @@ rename_file (const char  *old_name,
       return FALSE;
     }
 
+  /* In order to guarantee that the *new* contents of the file are seen in
+   * future, fsync() the directory containing the file. Otherwise if the file
+   * system was unmounted cleanly now, it would be undefined whether the old
+   * or new contents of the file were visible after recovery.
+   *
+   * This assumes the @old_name and @new_name are in the same directory. */
+#ifdef HAVE_FSYNC
+  if (do_fsync)
+    {
+      gchar *dir = g_path_get_dirname (new_name);
+      int dir_fd = g_open (dir, O_RDONLY, 0);
+
+      if (dir_fd >= 0)
+        {
+          g_fsync (dir_fd);
+          g_close (dir_fd, NULL);
+        }
+
+      g_free (dir);
+    }
+#endif  /* HAVE_FSYNC */
+
   return TRUE;
 }
 
-static gchar *
-write_to_temp_file (const gchar  *contents,
-        gssize        length,
-        const gchar  *dest_file,
-        GError      **err)
+static gboolean
+fd_should_be_fsynced (int                    fd,
+                      const gchar           *test_file,
+                      GFileSetContentsFlags  flags)
 {
-  gchar *tmp_name;
-  gchar *retval;
-  gint fd;
+#ifdef HAVE_FSYNC
+  struct stat statbuf;
 
-  retval = NULL;
-
-  tmp_name = g_strdup_printf ("%s.XXXXXX", dest_file);
-
-  errno = 0;
-  fd = g_mkstemp_full (tmp_name, O_RDWR | O_BINARY, 0666);
-
-  if (fd == -1)
+  /* If the final destination exists and is > 0 bytes, we want to sync the
+   * newly written file to ensure the data is on disk when we rename over
+   * the destination. Otherwise if we get a system crash we can lose both
+   * the new and the old file on some filesystems. (I.E. those that don't
+   * guarantee the data is written to the disk before the metadata.)
+   *
+   * There is no difference (in file system terms) if the old file doesn't
+   * already exist, apart from the fact that if the system crashes and the new
+   * data hasn't been fsync()ed, there is only one bit of old data to lose (that
+   * the file didn't exist in the first place). In some situations, such as
+   * trashing files, the old file never exists, so it seems reasonable to avoid
+   * the fsync(). This is not a widely applicable optimisation though.
+   */
+  if ((flags & (G_FILE_SET_CONTENTS_CONSISTENT | G_FILE_SET_CONTENTS_DURABLE)) &&
+      (flags & G_FILE_SET_CONTENTS_ONLY_EXISTING))
     {
-      int saved_errno = errno;
-      set_file_error (err,
-                      tmp_name, _("Failed to create file '%s': %s"),
-                      saved_errno);
-      goto out;
+      errno = 0;
+      if (g_lstat (test_file, &statbuf) == 0)
+        return (statbuf.st_size > 0);
+      else if (errno == ENOENT)
+        return FALSE;
+      else
+        return TRUE;  /* lstat() failed; be cautious */
     }
+  else
+    {
+      return (flags & (G_FILE_SET_CONTENTS_CONSISTENT | G_FILE_SET_CONTENTS_DURABLE));
+    }
+#else  /* if !HAVE_FSYNC */
+  return FALSE;
+#endif  /* !HAVE_FSYNC */
+}
 
+/* closes @fd once it's finished (on success or error) */
+static gboolean
+write_to_file (const gchar  *contents,
+               gsize         length,
+               int           fd,
+               const gchar  *dest_file,
+               gboolean      do_fsync,
+               GError      **err)
+{
 #ifdef HAVE_FALLOCATE
   if (length > 0)
     {
@@ -1102,7 +1154,7 @@ write_to_temp_file (const gchar  *contents,
     {
       gssize s;
 
-      s = write (fd, contents, length);
+      s = write (fd, contents, MIN (length, G_MAXSSIZE));
 
       if (s < 0)
         {
@@ -1110,79 +1162,43 @@ write_to_temp_file (const gchar  *contents,
           if (saved_errno == EINTR)
             continue;
 
-          set_file_error (err,
-                          tmp_name, _("Failed to write file '%s': write() failed: %s"),
-                          saved_errno);
+          if (err)
+            set_file_error (err,
+                            dest_file, _("Failed to write file '%s': write() failed: %s"),
+                            saved_errno);
           close (fd);
-          g_unlink (tmp_name);
 
-          goto out;
+          return FALSE;
         }
 
-      g_assert (s <= length);
+      g_assert ((gsize) s <= length);
 
       contents += s;
       length -= s;
     }
 
-#ifdef BTRFS_SUPER_MAGIC
-  {
-    struct statfs buf;
-
-    /* On Linux, on btrfs, skip the fsync since rename-over-existing is
-     * guaranteed to be atomic and this is the only case in which we
-     * would fsync() anyway.
-     */
-
-    if (fstatfs (fd, &buf) == 0 && buf.f_type == BTRFS_SUPER_MAGIC)
-      goto no_fsync;
-  }
-#endif
 
 #ifdef HAVE_FSYNC
-  {
-    struct stat statbuf;
-
     errno = 0;
-    /* If the final destination exists and is > 0 bytes, we want to sync the
-     * newly written file to ensure the data is on disk when we rename over
-     * the destination. Otherwise if we get a system crash we can lose both
-     * the new and the old file on some filesystems. (I.E. those that don't
-     * guarantee the data is written to the disk before the metadata.)
-     */
-    if (g_lstat (dest_file, &statbuf) == 0 && statbuf.st_size > 0 && fsync (fd) != 0)
+  if (do_fsync && g_fsync (fd) != 0)
       {
         int saved_errno = errno;
-        set_file_error (err,
-                        tmp_name, _("Failed to write file '%s': fsync() failed: %s"),
-                        saved_errno);
+        if (err)
+          set_file_error (err,
+                          dest_file, _("Failed to write file '%s': fsync() failed: %s"),
+                          saved_errno);
         close (fd);
-        g_unlink (tmp_name);
 
-        goto out;
+      return FALSE;
       }
-  }
-#endif
-
-#ifdef BTRFS_SUPER_MAGIC
- no_fsync:
 #endif
 
   errno = 0;
   if (!g_close (fd, err))
-    {
-      g_unlink (tmp_name);
+    return FALSE;
 
-      goto out;
+  return TRUE;
     }
-
-  retval = g_strdup (tmp_name);
-
- out:
-  g_free (tmp_name);
-
-  return retval;
-}
 
 /**
  * g_file_set_contents:
@@ -1192,11 +1208,54 @@ write_to_temp_file (const gchar  *contents,
  * @length: length of @contents, or -1 if @contents is a nul-terminated string
  * @error: return location for a #GError, or %NULL
  *
+ * Writes all of @contents to a file named @filename. This is a convenience
+ * wrapper around calling g_file_set_contents_full() with `flags` set to
+ * `G_FILE_SET_CONTENTS_CONSISTENT | G_FILE_SET_CONTENTS_ONLY_EXISTING` and
+ * `mode` set to `0666`.
+ *
+ * Returns: %TRUE on success, %FALSE if an error occurred
+ *
+ * Since: 2.8
+ */
+gboolean
+g_file_set_contents (const gchar  *filename,
+                     const gchar  *contents,
+                     gssize        length,
+                     GError      **error)
+{
+  return g_file_set_contents_full (filename, contents, length,
+                                   G_FILE_SET_CONTENTS_CONSISTENT |
+                                   G_FILE_SET_CONTENTS_ONLY_EXISTING,
+                                   0666, error);
+}
+
+/**
+ * g_file_set_contents_full:
+ * @filename: (type filename): name of a file to write @contents to, in the GLib file name
+ *   encoding
+ * @contents: (array length=length) (element-type guint8): string to write to the file
+ * @length: length of @contents, or -1 if @contents is a nul-terminated string
+ * @flags: flags controlling the safety vs speed of the operation
+ * @mode: file mode, as passed to `open()`; typically this will be `0666`
+ * @error: return location for a #GError, or %NULL
+ *
  * Writes all of @contents to a file named @filename, with good error checking.
  * If a file called @filename already exists it will be overwritten.
  *
- * This write is atomic in the sense that it is first written to a temporary
- * file which is then renamed to the final name. Notes:
+ * @flags control the properties of the write operation: whether it’s atomic,
+ * and what the tradeoff is between returning quickly or being resilient to
+ * system crashes.
+ *
+ * As this function performs file I/O, it is recommended to not call it anywhere
+ * where blocking would cause problems, such as in the main loop of a graphical
+ * application. In particular, if @flags has any value other than
+ * %G_FILE_SET_CONTENTS_NONE then this function may call `fsync()`.
+ *
+ * If %G_FILE_SET_CONTENTS_CONSISTENT is set in @flags, the operation is atomic
+ * in the sense that it is first written to a temporary file which is then
+ * renamed to the final name.
+ *
+ * Notes:
  *
  * - On UNIX, if @filename already exists hard links to @filename will break.
  *   Also since the file is recreated, existing permissions, access control
@@ -1204,15 +1263,17 @@ write_to_temp_file (const gchar  *contents,
  *   the link itself will be replaced, not the linked file.
  *
  * - On UNIX, if @filename already exists and is non-empty, and if the system
- *   supports it (via a journalling filesystem or equivalent), the fsync()
- *   call (or equivalent) will be used to ensure atomic replacement: @filename
+ *   supports it (via a journalling filesystem or equivalent), and if
+ *   %G_FILE_SET_CONTENTS_CONSISTENT is set in @flags, the `fsync()` call (or
+ *   equivalent) will be used to ensure atomic replacement: @filename
  *   will contain either its old contents or @contents, even in the face of
  *   system power loss, the disk being unsafely removed, etc.
  *
  * - On UNIX, if @filename does not already exist or is empty, there is a
  *   possibility that system power loss etc. after calling this function will
  *   leave @filename empty or full of NUL bytes, depending on the underlying
- *   filesystem.
+ *   filesystem, unless %G_FILE_SET_CONTENTS_DURABLE and
+ *   %G_FILE_SET_CONTENTS_CONSISTENT are set in @flags.
  *
  * - On Windows renaming a file will not remove an existing file with the
  *   new name, so on Windows there is a race condition between the existing
@@ -1223,50 +1284,90 @@ write_to_temp_file (const gchar  *contents,
  *   @filename already exists and is open.
  *
  * If the call was successful, it returns %TRUE. If the call was not successful,
- * it returns %FALSE and sets @error. The error domain is #G_FILE_ERROR.
+ * it returns %FALSE and sets @error. The error domain is %G_FILE_ERROR.
  * Possible error codes are those in the #GFileError enumeration.
  *
  * Note that the name for the temporary file is constructed by appending up
  * to 7 characters to @filename.
  *
+ * If the file didn't exist before and is created, it will be given the
+ * permissions from @mode. Otherwise, the permissions of the existing file may
+ * be changed to @mode depending on @flags, or they may remain unchanged.
+ *
  * Returns: %TRUE on success, %FALSE if an error occurred
  *
- * Since: 2.8
+ * Since: 2.66
  */
 gboolean
-g_file_set_contents (const gchar  *filename,
-         const gchar  *contents,
-         gssize    length,
-         GError  **error)
+g_file_set_contents_full (const gchar            *filename,
+                          const gchar            *contents,
+                          gssize                  length,
+                          GFileSetContentsFlags   flags,
+                          int                     mode,
+                          GError                **error)
 {
-  gchar *tmp_filename;
-  gboolean retval;
-  GError *rename_error = NULL;
-
   g_return_val_if_fail (filename != NULL, FALSE);
   g_return_val_if_fail (error == NULL || *error == NULL, FALSE);
   g_return_val_if_fail (contents != NULL || length == 0, FALSE);
   g_return_val_if_fail (length >= -1, FALSE);
 
-  if (length == -1)
+  /* @flags are handled as follows:
+   *  - %G_FILE_SET_CONTENTS_NONE: write directly to @filename, no fsync()s
+   *  - %G_FILE_SET_CONTENTS_CONSISTENT: write to temp file, fsync() it, rename()
+   *  - %G_FILE_SET_CONTENTS_CONSISTENT | ONLY_EXISTING: as above, but skip the
+   *    fsync() if @filename doesn't exist or is empty
+   *  - %G_FILE_SET_CONTENTS_DURABLE: write directly to @filename, fsync() it
+   *  - %G_FILE_SET_CONTENTS_DURABLE | ONLY_EXISTING: as above, but skip the
+   *    fsync() if @filename doesn't exist or is empty
+   *  - %G_FILE_SET_CONTENTS_CONSISTENT | DURABLE: write to temp file, fsync()
+   *    it, rename(), fsync() containing directory
+   *  - %G_FILE_SET_CONTENTS_CONSISTENT | DURABLE | ONLY_EXISTING: as above, but
+   *    skip both fsync()s if @filename doesn't exist or is empty
+   */
+
+  if (length < 0)
     length = strlen (contents);
 
-  tmp_filename = write_to_temp_file (contents, length, filename, error);
-
-  if (!tmp_filename)
+  if (flags & G_FILE_SET_CONTENTS_CONSISTENT)
     {
+      gchar *tmp_filename = NULL;
+      GError *rename_error = NULL;
+      gboolean retval;
+      int fd;
+      gboolean do_fsync;
+
+      tmp_filename = g_strdup_printf ("%s.XXXXXX", filename);
+
+      errno = 0;
+      fd = g_mkstemp_full (tmp_filename, O_RDWR | O_BINARY, mode);
+
+      if (fd == -1)
+    {
+          int saved_errno = errno;
+          if (error)
+            set_file_error (error,
+                            tmp_filename, _("Failed to create file '%s': %s"),
+                            saved_errno);
       retval = FALSE;
-      goto out;
+          goto consistent_out;
     }
 
-  if (!rename_file (tmp_filename, filename, &rename_error))
+      do_fsync = fd_should_be_fsynced (fd, filename, flags);
+      if (!write_to_file (contents, length, g_steal_fd (&fd), tmp_filename, do_fsync, error))
     {
+          g_unlink (tmp_filename);
+          retval = FALSE;
+          goto consistent_out;
+        }
+
+      if (!rename_file (tmp_filename, filename, do_fsync, &rename_error))
+        {
 #ifndef G_OS_WIN32
 
       g_unlink (tmp_filename);
       g_propagate_error (error, rename_error);
       retval = FALSE;
-      goto out;
+          goto consistent_out;
 
 #else /* G_OS_WIN32 */
 
@@ -1279,38 +1380,95 @@ g_file_set_contents (const gchar  *filename,
     g_unlink (tmp_filename);
     g_propagate_error (error, rename_error);
     retval = FALSE;
-    goto out;
+              goto consistent_out;
   }
 
       g_error_free (rename_error);
 
       if (g_unlink (filename) == -1)
-  {
-          int saved_errno = errno;
-          set_file_error (error,
-                          filename,
-              _("Existing file '%s' could not be removed: g_unlink() failed: %s"),
+       {
+         int saved_errno = errno;
+         if (error)
+         set_file_error (error,
+                         filename,
+                         _("Existing file '%s' could not be removed: g_unlink() failed: %s"),
                           saved_errno);
     g_unlink (tmp_filename);
     retval = FALSE;
-    goto out;
+              goto consistent_out;
   }
 
-      if (!rename_file (tmp_filename, filename, error))
+          if (!rename_file (tmp_filename, filename, flags, error))
   {
     g_unlink (tmp_filename);
     retval = FALSE;
-    goto out;
+              goto consistent_out;
   }
 
-#endif
+#endif  /* G_OS_WIN32 */
     }
 
   retval = TRUE;
 
- out:
+consistent_out:
   g_free (tmp_filename);
   return retval;
+}
+  else
+    {
+      int direct_fd;
+      int open_flags;
+      gboolean do_fsync;
+
+      open_flags = O_RDWR | O_BINARY | O_CREAT | O_CLOEXEC;
+#ifdef O_NOFOLLOW
+      /* Windows doesn't have symlinks, so O_NOFOLLOW is unnecessary there. */
+      open_flags |= O_NOFOLLOW;
+#endif
+
+      errno = 0;
+      direct_fd = g_open (filename, open_flags, mode);
+
+      if (direct_fd < 0)
+        {
+          int saved_errno = errno;
+
+#ifdef O_NOFOLLOW
+          /* ELOOP indicates that @filename is a symlink, since we used
+           * O_NOFOLLOW (alternately it could indicate that @filename contains
+           * looping or too many symlinks). In either case, try again on the
+           * %G_FILE_SET_CONTENTS_CONSISTENT code path.
+           *
+           * FreeBSD uses EMLINK instead of ELOOP
+           * (https://www.freebsd.org/cgi/man.cgi?query=open&sektion=2#STANDARDS),
+           * and NetBSD uses EFTYPE
+           * (https://netbsd.gw.com/cgi-bin/man-cgi?open+2+NetBSD-current). */
+#if defined(__FreeBSD__) || defined(__FreeBSD_kernel__) || defined(__DragonFly__)
+          if (saved_errno == EMLINK)
+#elif defined(__NetBSD__)
+          if (saved_errno == EFTYPE)
+#else
+          if (saved_errno == ELOOP)
+#endif
+            return g_file_set_contents_full (filename, contents, length,
+                                             flags | G_FILE_SET_CONTENTS_CONSISTENT,
+                                             mode, error);
+#endif  /* O_NOFOLLOW */
+
+          if (error)
+            set_file_error (error,
+                            filename, _("Failed to open file '%s': %s"),
+                            saved_errno);
+          return FALSE;
+        }
+
+      do_fsync = fd_should_be_fsynced (direct_fd, filename, flags);
+      if (!write_to_file (contents, length, g_steal_fd (&direct_fd), filename,
+                          do_fsync, error))
+        return FALSE;
+    }
+
+  return TRUE;
 }
 
 /*
@@ -1600,10 +1758,11 @@ g_get_tmp_name (const gchar      *tmpl,
   if (retval == -1)
     {
       int saved_errno = errno;
-      set_file_error (error,
-                      fulltemplate,
-                      _("Failed to create file '%s': %s"),
-                      saved_errno);
+      if (error)
+        set_file_error (error,
+                        fulltemplate,
+                        _("Failed to create file '%s': %s"),
+                        saved_errno);
       g_free (fulltemplate);
       return -1;
     }
@@ -1687,7 +1846,7 @@ g_file_open_tmp (const gchar  *tmpl,
  * Note that in contrast to g_mkdtemp() (and mkdtemp()) @tmpl is not
  * modified, and might thus be a read-only literal string.
  *
- * Returns: (type filename): The actual name used. This string
+ * Returns: (type filename) (transfer full): The actual name used. This string
  *     should be freed with g_free() when not needed any longer and is
  *     is in the GLib file name encoding. In case of errors, %NULL is
  *     returned and @error will be set.
@@ -1821,8 +1980,8 @@ g_build_path_va (const gchar  *separator,
  * as a string array, instead of varargs. This function is mainly
  * meant for language bindings.
  *
- * Returns: (type filename): a newly-allocated string that must be freed
- *     with g_free().
+ * Returns: (type filename) (transfer full): a newly-allocated string that
+ *     must be freed with g_free().
  *
  * Since: 2.8
  */
@@ -1870,8 +2029,8 @@ g_build_pathv (const gchar  *separator,
  * copies of the separator, elements consisting only of copies
  * of the separator are ignored.
  *
- * Returns: (type filename): a newly-allocated string that must be freed with
- *     g_free().
+ * Returns: (type filename) (transfer full): a newly-allocated string that
+ *     must be freed with g_free().
  **/
 gchar *
 g_build_path (const gchar *separator,
@@ -2030,8 +2189,8 @@ g_build_filename_va (const gchar  *first_argument,
  * Behaves exactly like g_build_filename(), but takes the path elements
  * as a va_list. This function is mainly meant for language bindings.
  *
- * Returns: (type filename): a newly-allocated string that must be freed
- *     with g_free().
+ * Returns: (type filename) (transfer full): a newly-allocated string that
+ *     must be freed with g_free().
  *
  * Since: 2.56
  */
@@ -2053,8 +2212,8 @@ g_build_filename_valist (const gchar  *first_element,
  * as a string array, instead of varargs. This function is mainly
  * meant for language bindings.
  *
- * Returns: (type filename): a newly-allocated string that must be freed
- *     with g_free().
+ * Returns: (type filename) (transfer full): a newly-allocated string that
+ *     must be freed with g_free().
  *
  * Since: 2.8
  */
@@ -2085,8 +2244,8 @@ g_build_filenamev (gchar **args)
  * path. If the first element is a relative path, the result will
  * be a relative path.
  *
- * Returns: (type filename): a newly-allocated string that must be freed with
- *     g_free().
+ * Returns: (type filename) (transfer full): a newly-allocated string that
+ *     must be freed with g_free().
  **/
 gchar *
 g_build_filename (const gchar *first_element,
@@ -2111,8 +2270,8 @@ g_build_filename (const gchar *first_element,
  * readlink() function.  The returned string is in the encoding used
  * for filenames. Use g_filename_to_utf8() to convert it to UTF-8.
  *
- * Returns: (type filename): A newly-allocated string with the contents of
- *     the symbolic link, or %NULL if an error occurred.
+ * Returns: (type filename) (transfer full): A newly-allocated string with
+ *     the contents of the symbolic link, or %NULL if an error occurred.
  *
  * Since: 2.4
  */
@@ -2137,10 +2296,11 @@ g_file_read_link (const gchar  *filename,
       if (read_size < 0)
         {
           int saved_errno = errno;
-          set_file_error (error,
-                          filename,
-                          _("Failed to read the symbolic link '%s': %s"),
-                          saved_errno);
+          if (error)
+            set_file_error (error,
+                            filename,
+                            _("Failed to read the symbolic link '%s': %s"),
+                            saved_errno);
           g_free (buffer);
           return NULL;
         }
@@ -2165,10 +2325,11 @@ g_file_read_link (const gchar  *filename,
   if (read_size < 0)
     {
       int saved_errno = errno;
-      set_file_error (error,
-                      filename,
-                      _("Failed to read the symbolic link '%s': %s"),
-                      saved_errno);
+      if (error)
+        set_file_error (error,
+                        filename,
+                        _("Failed to read the symbolic link '%s': %s"),
+                        saved_errno);
       return NULL;
     }
   else if (read_size == 0)
@@ -2364,8 +2525,8 @@ g_basename (const gchar *file_name)
  * separators (and on Windows, possibly a drive letter), a single
  * separator is returned. If @file_name is empty, it gets ".".
  *
- * Returns: (type filename): a newly allocated string containing the last
- *    component of the filename
+ * Returns: (type filename) (transfer full): a newly allocated string
+ *    containing the last component of the filename
  */
 gchar *
 g_path_get_basename (const gchar *file_name)
@@ -2410,7 +2571,7 @@ g_path_get_basename (const gchar *file_name)
 
   len = last_nonslash - base;
   retval = g_malloc (len + 1);
-  memcpy (retval, file_name + base + 1, len);
+  memcpy (retval, file_name + (base + 1), len);
   retval [len] = '\0';
 
   return retval;
@@ -2425,7 +2586,7 @@ g_path_get_basename (const gchar *file_name)
  * If the file name has no directory components "." is returned.
  * The returned string should be freed when no longer needed.
  *
- * Returns: (type filename): the directory components of the file
+ * Returns: (type filename) (transfer full): the directory components of the file
  *
  * Deprecated: use g_path_get_dirname() instead
  */
@@ -2441,7 +2602,7 @@ g_path_get_basename (const gchar *file_name)
  * If the file name has no directory components "." is returned.
  * The returned string should be freed when no longer needed.
  *
- * Returns: (type filename): the directory components of the file
+ * Returns: (type filename) (transfer full): the directory components of the file
  */
 gchar *
 g_path_get_dirname (const gchar *file_name)
@@ -2566,8 +2727,7 @@ gchar *
 g_canonicalize_filename (const gchar *filename,
                          const gchar *relative_to)
 {
-  gchar *canon, *start, *p, *q;
-  guint i;
+  gchar *canon, *input, *output, *after_root, *output_start;
 
   g_return_val_if_fail (relative_to == NULL || g_path_is_absolute (relative_to), NULL);
 
@@ -2589,9 +2749,9 @@ g_canonicalize_filename (const gchar *filename,
       canon = g_strdup (filename);
     }
 
-  start = (char *)g_path_skip_root (canon);
+  after_root = (char *)g_path_skip_root (canon);
 
-  if (start == NULL)
+  if (after_root == NULL)
     {
       /* This shouldn't really happen, as g_get_current_dir() should
          return an absolute pathname, but bug 573843 shows this is
@@ -2600,74 +2760,83 @@ g_canonicalize_filename (const gchar *filename,
       return g_build_filename (G_DIR_SEPARATOR_S, filename, NULL);
     }
 
-  /* POSIX allows double slashes at the start to
-   * mean something special (as does windows too).
-   * So, "//" != "/", but more than two slashes
+  /* Find the first dir separator and use the canonical dir separator. */
+  for (output = after_root - 1;
+       (output >= canon) && G_IS_DIR_SEPARATOR (*output);
+       output--)
+    *output = G_DIR_SEPARATOR;
+
+  /* 1 to re-increment after the final decrement above (so that output >= canon),
+   * and 1 to skip the first `/`. There might not be a first `/` if
+   * the @canon is a Windows `//server/share` style path with no
+   * trailing directories. @after_root will be '\0' in that case. */
+  output++;
+  if (*output == G_DIR_SEPARATOR)
+    output++;
+
+  /* POSIX allows double slashes at the start to mean something special
+   * (as does windows too). So, "//" != "/", but more than two slashes
    * is treated as "/".
    */
-  i = 0;
-  for (p = start - 1;
-       (p >= canon) &&
-         G_IS_DIR_SEPARATOR (*p);
-       p--)
-    i++;
-  if (i > 2)
-    {
-      i -= 1;
-      start -= i;
-      memmove (start, start+i, strlen (start+i) + 1);
-    }
+  if (after_root - output == 1)
+    output++;
 
-  /* Make sure we're using the canonical dir separator */
-  p++;
-  while (p < start && G_IS_DIR_SEPARATOR (*p))
-    *p++ = G_DIR_SEPARATOR;
-
-  p = start;
-  while (*p != 0)
+  input = after_root;
+  output_start = output;
+  while (*input)
     {
-      if (p[0] == '.' && (p[1] == 0 || G_IS_DIR_SEPARATOR (p[1])))
+      /* input points to the next non-separator to be processed. */
+      /* output points to the next location to write to. */
+      g_assert (input > canon && G_IS_DIR_SEPARATOR (input[-1]));
+      g_assert (output > canon && G_IS_DIR_SEPARATOR (output[-1]));
+      g_assert (input >= output);
+
+      /* Ignore repeated dir separators. */
+      while (G_IS_DIR_SEPARATOR (input[0]))
+       input++;
+
+      /* Ignore single dot directory components. */
+      if (input[0] == '.' && (input[1] == 0 || G_IS_DIR_SEPARATOR (input[1])))
         {
-          memmove (p, p+1, strlen (p+1)+1);
+           if (input[1] == 0)
+             break;
+           input += 2;
         }
-      else if (p[0] == '.' && p[1] == '.' && (p[2] == 0 || G_IS_DIR_SEPARATOR (p[2])))
+      /* Remove double-dot directory components along with the preceding
+       * path component. */
+      else if (input[0] == '.' && input[1] == '.' &&
+               (input[2] == 0 || G_IS_DIR_SEPARATOR (input[2])))
         {
-          q = p + 2;
-          /* Skip previous separator */
-          p = p - 2;
-          if (p < start)
-            p = start;
-          while (p > start && !G_IS_DIR_SEPARATOR (*p))
-            p--;
-          if (G_IS_DIR_SEPARATOR (*p))
-            *p++ = G_DIR_SEPARATOR;
-          memmove (p, q, strlen (q)+1);
+          if (output > output_start)
+            {
+              do
+                {
+                  output--;
+                }
+              while (!G_IS_DIR_SEPARATOR (output[-1]) && output > output_start);
+            }
+          if (input[2] == 0)
+            break;
+          input += 3;
         }
+      /* Copy the input to the output until the next separator,
+       * while converting it to canonical separator */
       else
         {
-          /* Skip until next separator */
-          while (*p != 0 && !G_IS_DIR_SEPARATOR (*p))
-            p++;
-
-          if (*p != 0)
-            {
-              /* Canonicalize one separator */
-              *p++ = G_DIR_SEPARATOR;
-            }
+          while (*input && !G_IS_DIR_SEPARATOR (*input))
+            *output++ = *input++;
+          if (input[0] == 0)
+            break;
+          input++;
+          *output++ = G_DIR_SEPARATOR;
         }
-
-      /* Remove additional separators */
-      q = p;
-      while (*q && G_IS_DIR_SEPARATOR (*q))
-        q++;
-
-      if (p != q)
-        memmove (p, q, strlen (q) + 1);
     }
 
-  /* Remove trailing slashes */
-  if (p > start && G_IS_DIR_SEPARATOR (*(p-1)))
-    *(p-1) = 0;
+  /* Remove a potentially trailing dir separator */
+  if (output > output_start && G_IS_DIR_SEPARATOR (output[-1]))
+    output--;
+
+  *output = '\0';
 
   return canon;
 }
@@ -2696,7 +2865,7 @@ g_canonicalize_filename (const gchar *filename,
  * the current directory.  This can make a difference in the case that
  * the current directory is the target of a symbolic link.
  *
- * Returns: (type filename): the current directory
+ * Returns: (type filename) (transfer full): the current directory
  */
 gchar *
 g_get_current_dir (void)
@@ -2705,7 +2874,7 @@ g_get_current_dir (void)
 
   gchar *dir = NULL;
   wchar_t dummy[2], *wdir;
-  int len;
+  DWORD len;
 
   len = GetCurrentDirectoryW (2, dummy);
   wdir = g_new (wchar_t, len);

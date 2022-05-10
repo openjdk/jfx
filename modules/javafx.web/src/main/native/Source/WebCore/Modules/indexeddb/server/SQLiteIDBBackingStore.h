@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,8 +25,6 @@
 
 #pragma once
 
-#if ENABLE(INDEXED_DATABASE)
-
 #include "IDBBackingStore.h"
 #include "IDBDatabaseIdentifier.h"
 #include "IDBDatabaseInfo.h"
@@ -48,10 +46,9 @@ namespace IDBServer {
 
 enum class IsSchemaUpgraded : bool { No, Yes };
 
-class IDBSerializationContext;
 class SQLiteIDBCursor;
 
-class SQLiteIDBBackingStore : public IDBBackingStore {
+class SQLiteIDBBackingStore final : public IDBBackingStore {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     SQLiteIDBBackingStore(PAL::SessionID, const IDBDatabaseIdentifier&, const String& databaseRootDirectory);
@@ -59,6 +56,7 @@ public:
     ~SQLiteIDBBackingStore() final;
 
     IDBError getOrEstablishDatabaseInfo(IDBDatabaseInfo&) final;
+    uint64_t databaseVersion() final;
 
     IDBError beginTransaction(const IDBTransactionInfo&) final;
     IDBError abortTransaction(const IDBResourceIdentifier& transactionIdentifier) final;
@@ -83,13 +81,12 @@ public:
     IDBError openCursor(const IDBResourceIdentifier& transactionIdentifier, const IDBCursorInfo&, IDBGetResult& outResult) final;
     IDBError iterateCursor(const IDBResourceIdentifier& transactionIdentifier, const IDBResourceIdentifier& cursorIdentifier, const IDBIterateCursorData&, IDBGetResult& outResult) final;
 
-    IDBSerializationContext& serializationContext() final;
-
     IDBObjectStoreInfo* infoForObjectStore(uint64_t objectStoreIdentifier) final;
     void deleteBackingStore() final;
 
     bool supportsSimultaneousTransactions() final { return false; }
     bool isEphemeral() final { return false; }
+    String fullDatabasePath() const final;
 
     bool hasTransaction(const IDBResourceIdentifier&) const final;
 
@@ -97,28 +94,24 @@ public:
 
     IDBError getBlobRecordsForObjectStoreRecord(int64_t objectStoreRecord, Vector<String>& blobURLs, Vector<String>& blobFilePaths);
 
-    static String databaseNameFromEncodedFilename(const String&);
     static uint64_t databasesSizeForDirectory(const String& directory);
 
     String databaseDirectory() const { return m_databaseDirectory; };
     static String fullDatabasePathForDirectory(const String&);
-    static Optional<IDBDatabaseNameAndVersion> databaseNameAndVersionFromFile(const String&);
+    static std::optional<IDBDatabaseNameAndVersion> databaseNameAndVersionFromFile(const String&);
 
     PAL::SessionID sessionID() const { return m_sessionID; }
 
 private:
     String filenameForDatabaseName() const;
-    String fullDatabasePath() const;
     String fullDatabaseDirectoryWithUpgrade();
 
-    String databaseRootDirectoryIsolatedCopy() const { return m_databaseRootDirectory.isolatedCopy(); }
-
-    bool ensureValidRecordsTable();
-    bool ensureValidIndexRecordsTable();
-    bool ensureValidIndexRecordsIndex();
-    bool ensureValidIndexRecordsRecordIndex();
-    bool ensureValidBlobTables();
-    Optional<IsSchemaUpgraded> ensureValidObjectStoreInfoTable();
+    IDBError ensureValidRecordsTable();
+    IDBError ensureValidIndexRecordsTable();
+    IDBError ensureValidIndexRecordsIndex();
+    IDBError ensureValidIndexRecordsRecordIndex();
+    IDBError ensureValidBlobTables();
+    std::optional<IsSchemaUpgraded> ensureValidObjectStoreInfoTable();
     std::unique_ptr<IDBDatabaseInfo> createAndPopulateInitialDatabaseInfo();
     std::unique_ptr<IDBDatabaseInfo> extractExistingDatabaseInfo();
 
@@ -127,7 +120,7 @@ private:
     IDBError uncheckedSetKeyGeneratorValue(int64_t objectStoreID, uint64_t value);
 
     IDBError updateAllIndexesForAddRecord(const IDBObjectStoreInfo&, const IDBKeyData&, const IndexIDToIndexKeyMap&, int64_t recordID);
-    IDBError updateOneIndexForAddRecord(const IDBIndexInfo&, const IDBKeyData&, const ThreadSafeDataBuffer& value, int64_t recordID);
+    IDBError updateOneIndexForAddRecord(IDBObjectStoreInfo&, const IDBIndexInfo&, const IDBKeyData&, const ThreadSafeDataBuffer& value, int64_t recordID);
     IDBError uncheckedPutIndexKey(const IDBIndexInfo&, const IDBKeyData& keyValue, const IndexKey&, int64_t recordID);
     IDBError uncheckedPutIndexRecord(int64_t objectStoreID, int64_t indexID, const IDBKeyData& keyValue, const IDBKeyData& indexKey, int64_t recordID);
     IDBError uncheckedHasIndexRecord(const IDBIndexInfo&, const IDBKeyData&, bool& hasRecord);
@@ -140,6 +133,13 @@ private:
 
     void closeSQLiteDB();
     void close() final;
+
+    bool migrateIndexInfoTableForIDUpdate(const HashMap<std::pair<uint64_t, uint64_t>, uint64_t>& indexIDMap);
+    bool migrateIndexRecordsTableForIDUpdate(const HashMap<std::pair<uint64_t, uint64_t>, uint64_t>& indexIDMap);
+
+    bool removeExistingIndex(uint64_t indexID);
+    bool addExistingIndex(IDBObjectStoreInfo&, const IDBIndexInfo&);
+    bool handleDuplicateIndexIDs(const HashMap<uint64_t, Vector<IDBIndexInfo>>&, IDBDatabaseInfo&);
 
     enum class SQL : size_t {
         CreateObjectStoreInfo,
@@ -154,9 +154,12 @@ private:
         ClearObjectStoreRecords,
         ClearObjectStoreIndexRecords,
         CreateIndexInfo,
+        CreateTempIndexInfo,
         DeleteIndexInfo,
+        RemoveIndexInfo,
         HasIndexRecord,
         PutIndexRecord,
+        PutTempIndexRecord,
         GetIndexRecordForOneKey,
         DeleteIndexRecords,
         RenameIndex,
@@ -174,6 +177,7 @@ private:
         GetBlobURL,
         GetKeyGeneratorValue,
         SetKeyGeneratorValue,
+        GetObjectStoreRecords,
         GetAllKeyRecordsLowerOpenUpperOpen,
         GetAllKeyRecordsLowerOpenUpperClosed,
         GetAllKeyRecordsLowerClosedUpperOpen,
@@ -197,7 +201,7 @@ private:
         Invalid,
     };
 
-    SQLiteStatementAutoResetScope cachedStatement(SQL, const char*);
+    SQLiteStatementAutoResetScope cachedStatement(SQL, ASCIILiteral);
     SQLiteStatementAutoResetScope cachedStatementForGetAllObjectStoreRecords(const IDBGetAllRecordsData&);
 
     std::unique_ptr<SQLiteStatement> m_cachedStatements[static_cast<int>(SQL::Invalid)];
@@ -214,11 +218,7 @@ private:
 
     String m_databaseRootDirectory;
     String m_databaseDirectory;
-
-    Ref<IDBSerializationContext> m_serializationContext;
 };
 
 } // namespace IDBServer
 } // namespace WebCore
-
-#endif // ENABLE(INDEXED_DATABASE)

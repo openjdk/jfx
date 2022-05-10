@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2007-2021 Apple Inc. All rights reserved.
  * Copyright (C) 2008 Matt Lilek <webkit@mattlilek.com>
  * Copyright (C) 2012 Google Inc. All rights reserved.
  *
@@ -102,19 +102,19 @@ int InjectedScriptManager::injectedScriptIdFor(JSGlobalObject* globalObject)
 
 InjectedScript InjectedScriptManager::injectedScriptForObjectId(const String& objectId)
 {
-    RefPtr<JSON::Value> parsedObjectId;
-    if (!JSON::Value::parseJSON(objectId, parsedObjectId))
+    auto parsedObjectId = JSON::Value::parseJSON(objectId);
+    if (!parsedObjectId)
         return InjectedScript();
 
-    RefPtr<JSON::Object> resultObject;
-    if (!parsedObjectId->asObject(resultObject))
+    auto resultObject = parsedObjectId->asObject();
+    if (!resultObject)
         return InjectedScript();
 
-    long injectedScriptId = 0;
-    if (!resultObject->getInteger("injectedScriptId"_s, injectedScriptId))
+    auto injectedScriptId = resultObject->getInteger("injectedScriptId"_s);
+    if (!injectedScriptId)
         return InjectedScript();
 
-    return m_idToInjectedScript.get(injectedScriptId);
+    return m_idToInjectedScript.get(*injectedScriptId);
 }
 
 void InjectedScriptManager::releaseObjectGroup(const String& objectGroup)
@@ -188,7 +188,7 @@ InjectedScript InjectedScriptManager::injectedScriptFor(JSGlobalObject* globalOb
         auto& error = createResult.error();
         ASSERT(error);
 
-        if (isTerminatedExecutionException(globalObject->vm(), error))
+        if (globalObject->vm().isTerminationException(error))
             return InjectedScript();
 
         unsigned line = 0;

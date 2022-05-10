@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -55,7 +55,7 @@ ScopedArguments* ScopedArguments::createUninitialized(VM& vm, Structure* structu
     WriteBarrier<Unknown>* storage = nullptr;
     if (totalLength > table->length()) {
         Checked<unsigned> overflowLength = totalLength - table->length();
-        storage = static_cast<WriteBarrier<Unknown>*>(vm.jsValueGigacageAuxiliarySpace.allocateNonVirtual(vm, (overflowLength * sizeof(WriteBarrier<Unknown>)).unsafeGet(), nullptr, AllocationFailureMode::Assert));
+        storage = static_cast<WriteBarrier<Unknown>*>(vm.jsValueGigacageAuxiliarySpace.allocateNonVirtual(vm, overflowLength * sizeof(WriteBarrier<Unknown>), nullptr, AllocationFailureMode::Assert));
     }
 
     ScopedArguments* result = new (
@@ -98,7 +98,8 @@ ScopedArguments* ScopedArguments::createByCopyingFrom(VM& vm, Structure* structu
     return result;
 }
 
-void ScopedArguments::visitChildren(JSCell* cell, SlotVisitor& visitor)
+template<typename Visitor>
+void ScopedArguments::visitChildrenImpl(JSCell* cell, Visitor& visitor)
 {
     ScopedArguments* thisObject = static_cast<ScopedArguments*>(cell);
     ASSERT_GC_OBJECT_INHERITS(thisObject, info());
@@ -114,6 +115,8 @@ void ScopedArguments::visitChildren(JSCell* cell, SlotVisitor& visitor)
             visitor.appendValues(storage, thisObject->m_totalLength - thisObject->m_table->length());
     }
 }
+
+DEFINE_VISIT_CHILDREN(ScopedArguments);
 
 Structure* ScopedArguments::createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
 {

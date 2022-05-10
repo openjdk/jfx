@@ -156,6 +156,20 @@
 #define SUPPRESS_ASAN
 #endif
 
+/* TSAN_ENABLED and SUPPRESS_TSAN */
+
+#ifdef __SANITIZE_THREAD__
+#define TSAN_ENABLED 1
+#else
+#define TSAN_ENABLED COMPILER_HAS_CLANG_FEATURE(thread_sanitizer)
+#endif
+
+#if TSAN_ENABLED
+#define SUPPRESS_TSAN __attribute__((no_sanitize_thread))
+#else
+#define SUPPRESS_TSAN
+#endif
+
 /* ==== Compiler-independent macros for various compiler features, in alphabetical order ==== */
 
 /* ALWAYS_INLINE */
@@ -341,6 +355,16 @@
 #define UNUSED_FUNCTION
 #endif
 
+/* UNUSED_TYPE_ALIAS */
+
+#if !defined(UNUSED_TYPE_ALIAS) && COMPILER(GCC_COMPATIBLE)
+#define UNUSED_TYPE_ALIAS __attribute__((unused))
+#endif
+
+#if !defined(UNUSED_TYPE_ALIAS)
+#define UNUSED_TYPE_ALIAS
+#endif
+
 /* REFERENCED_FROM_ASM */
 
 #if !defined(REFERENCED_FROM_ASM) && COMPILER(GCC_COMPATIBLE)
@@ -491,3 +515,15 @@
 
 #define IGNORE_NULL_CHECK_WARNINGS_BEGIN IGNORE_WARNINGS_BEGIN("nonnull")
 #define IGNORE_NULL_CHECK_WARNINGS_END IGNORE_WARNINGS_END
+
+/* NO_UNIQUE_ADDRESS */
+
+#if !defined(NO_UNIQUE_ADDRESS) && defined(__has_cpp_attribute)
+#if __has_cpp_attribute(no_unique_address)
+#define NO_UNIQUE_ADDRESS [[no_unique_address]] // NOLINT: check-webkit-style does not understand annotations.
+#endif
+#endif
+
+#if !defined(NO_UNIQUE_ADDRESS)
+#define NO_UNIQUE_ADDRESS
+#endif

@@ -25,8 +25,6 @@
 
 #pragma once
 
-#if ENABLE(INDEXED_DATABASE)
-
 #include "IDBKeyPath.h"
 #include <wtf/text/WTFString.h>
 
@@ -59,6 +57,7 @@ public:
     // FIXME: Remove the need for this.
     static const int64_t InvalidId = -1;
 
+    void setIdentifier(uint64_t identifier) { m_identifier = identifier; }
 private:
     uint64_t m_identifier { 0 };
     uint64_t m_objectStoreIdentifier { 0 };
@@ -99,5 +98,3 @@ bool IDBIndexInfo::decode(Decoder& decoder, IDBIndexInfo& info)
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(INDEXED_DATABASE)

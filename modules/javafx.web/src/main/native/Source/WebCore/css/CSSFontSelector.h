@@ -25,12 +25,14 @@
 
 #pragma once
 
+#include "ActiveDOMObject.h"
 #include "CSSFontFace.h"
 #include "CSSFontFaceSet.h"
 #include "CachedResourceHandle.h"
 #include "Font.h"
 #include "FontSelector.h"
-#include "SuspendableTimer.h"
+#include "Timer.h"
+#include "WebKitFontFamilyNames.h"
 #include <memory>
 #include <wtf/Forward.h>
 #include <wtf/HashSet.h>
@@ -44,14 +46,14 @@ class CSSPrimitiveValue;
 class CSSSegmentedFontFace;
 class CSSValueList;
 class CachedFont;
-class Document;
+class ScriptExecutionContext;
 class StyleRuleFontFace;
 
-class CSSFontSelector final : public FontSelector, public CSSFontFaceSetClient, public CanMakeWeakPtr<CSSFontSelector> {
+class CSSFontSelector final : public FontSelector, public CSSFontFace::Client, public CanMakeWeakPtr<CSSFontSelector>, public ActiveDOMObject {
 public:
-    static Ref<CSSFontSelector> create(Document& document)
+    static Ref<CSSFontSelector> create(ScriptExecutionContext& context)
     {
-        return adoptRef(*new CSSFontSelector(document));
+        return adoptRef(*new CSSFontSelector(context));
     }
     virtual ~CSSFontSelector();
 
@@ -62,14 +64,14 @@ public:
     size_t fallbackFontCount() final;
     RefPtr<Font> fallbackFontAt(const FontDescription&, size_t) final;
 
-    void clearDocument();
+    void clearFonts();
     void emptyCaches();
     void buildStarted();
     void buildCompleted();
 
     void addFontFaceRule(StyleRuleFontFace&, bool isInitiatingElementInUserAgentShadowTree);
 
-    void fontLoaded();
+    FontCache& fontCache() const final { return m_fontCache.get(); }
     void fontCacheInvalidated() final;
 
     bool isEmpty() const;
@@ -77,11 +79,7 @@ public:
     void registerForInvalidationCallbacks(FontSelectorClient&) final;
     void unregisterForInvalidationCallbacks(FontSelectorClient&) final;
 
-    Document* document() const { return m_document.get(); }
-
-    void beginLoadingFontSoon(CachedFont&);
-    void suspendFontLoadingTimer();
-    void restartFontLoadingTimer();
+    ScriptExecutionContext* scriptExecutionContext() const { return m_context.get(); }
 
     FontFaceSet* fontFaceSetIfExists();
     FontFaceSet& fontFaceSet();
@@ -89,16 +87,29 @@ public:
     void incrementIsComputingRootStyleFont() { ++m_computingRootStyleFontCount; }
     void decrementIsComputingRootStyleFont() { --m_computingRootStyleFontCount; }
 
+    void loadPendingFonts();
+
+    // CSSFontFace::Client needs to be able to be held in a RefPtr.
+    void ref() final { FontSelector::ref(); }
+    void deref() final { FontSelector::deref(); }
+
 private:
-    explicit CSSFontSelector(Document&);
+    explicit CSSFontSelector(ScriptExecutionContext&);
 
     void dispatchInvalidationCallbacks();
 
     void opportunisticallyStartFontDataURLLoading(const FontCascadeDescription&, const AtomString& family) final;
 
-    void fontModified() final;
+    std::optional<AtomString> resolveGenericFamily(const FontDescription&, const AtomString& family);
 
-    void beginLoadTimerFired();
+    // CSSFontFace::Client
+    void fontLoaded(CSSFontFace&) final;
+    void fontStyleUpdateNeeded(CSSFontFace&) final;
+
+    void fontModified();
+
+    // ActiveDOMObject
+    const char* activeDOMObjectName() const final { return "CSSFontSelector"_s; }
 
     struct PendingFontFaceRule {
         StyleRuleFontFace& styleRuleFontFace;
@@ -106,22 +117,25 @@ private:
     };
     Vector<PendingFontFaceRule> m_stagingArea;
 
-    WeakPtr<Document> m_document;
+    WeakPtr<ScriptExecutionContext> m_context;
+    Ref<FontCache> m_fontCache;
     RefPtr<FontFaceSet> m_fontFaceSet;
     Ref<CSSFontFaceSet> m_cssFontFaceSet;
     HashSet<FontSelectorClient*> m_clients;
 
-    Vector<CachedResourceHandle<CachedFont>> m_fontsToBeginLoading;
     HashSet<RefPtr<CSSFontFace>> m_cssConnectionsPossiblyToRemove;
     HashSet<RefPtr<StyleRuleFontFace>> m_cssConnectionsEncounteredDuringBuild;
-    SuspendableTimer m_beginLoadingTimer;
+
+    CSSFontFaceSet::FontModifiedObserver m_fontModifiedObserver;
 
     unsigned m_uniqueId;
     unsigned m_version;
     unsigned m_computingRootStyleFontCount { 0 };
     bool m_creatingFont { false };
     bool m_buildIsUnderway { false };
-    bool m_fontLoadingTimerIsSuspended { false };
+    bool m_isStopped { false };
+
+    WebKitFontFamilyNames::FamilyNamesList<AtomString> m_fontFamilyNames;
 };
 
 } // namespace WebCore

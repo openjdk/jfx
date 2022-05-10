@@ -32,4 +32,6 @@
     required DOMString detail;
     required DOMString amount;
     required DOMString identifier;
+
+    [Conditional=APPLE_PAY_SHIPPING_METHOD_DATE_COMPONENTS_RANGE] ApplePayDateComponentsRange dateComponentsRange;
 };

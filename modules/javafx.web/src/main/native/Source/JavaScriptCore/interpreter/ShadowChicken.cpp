@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,6 +28,7 @@
 
 #include "CodeBlock.h"
 #include "ShadowChickenInlines.h"
+#include "VMTrapsInlines.h"
 #include <wtf/ListDump.h>
 
 namespace JSC {
@@ -440,7 +441,9 @@ void ShadowChicken::update(VM& vm, CallFrame* callFrame)
         dataLog("    After clean-up: ", *this, "\n");
 }
 
-void ShadowChicken::visitChildren(SlotVisitor& visitor)
+// We don't need a SlotVisitor version of this because ShadowChicken is only used by the
+// Debugger, and is therefore not on the critical path for performance.
+void ShadowChicken::visitChildren(AbstractSlotVisitor& visitor)
 {
     for (unsigned i = m_logCursor - m_log; i--;) {
         JSObject* callee = m_log[i].callee;
@@ -486,6 +489,7 @@ void ShadowChicken::dump(PrintStream& out) const
 JSArray* ShadowChicken::functionsOnStack(JSGlobalObject* globalObject, CallFrame* callFrame)
 {
     VM& vm = globalObject->vm();
+    DeferTermination deferScope(vm);
     auto scope = DECLARE_THROW_SCOPE(vm);
     JSArray* result = constructEmptyArray(globalObject, nullptr);
     RETURN_IF_EXCEPTION(scope, nullptr);

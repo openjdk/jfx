@@ -41,22 +41,15 @@ WebXRTest::~WebXRTest() = default;
 void WebXRTest::simulateDeviceConnection(ScriptExecutionContext& context, const FakeXRDeviceInit& init, WebFakeXRDevicePromise&& promise)
 {
     // https://immersive-web.github.io/webxr-test-api/#dom-xrtest-simulatedeviceconnection
-    context.postTask([this, init, promise = WTFMove(promise)] (ScriptExecutionContext& context) mutable {
+    context.postTask([this, protectedThis = makeRef(*this), init, promise = WTFMove(promise)] (ScriptExecutionContext& context) mutable {
         auto device = WebFakeXRDevice::create();
         auto& simulatedDevice = device->simulatedXRDevice();
 
-        for (auto& viewInit : init.views) {
-            auto view = WebFakeXRDevice::parseView(viewInit);
-            if (view.hasException()) {
-                promise.reject(view.releaseException());
-                return;
-            }
-            simulatedDevice.views().append(view.releaseReturnValue());
-        }
+        device->setViews(init.views);
 
         Vector<XRReferenceSpaceType> features;
         if (init.supportedFeatures) {
-            if (auto* globalObject = context.execState()) {
+            if (auto* globalObject = context.globalObject()) {
                 for (auto& feature : init.supportedFeatures.value()) {
                     if (auto referenceSpaceType = parseEnumeration<XRReferenceSpaceType>(*globalObject, feature))
                         features.append(referenceSpaceType.value());
@@ -90,7 +83,7 @@ void WebXRTest::simulateDeviceConnection(ScriptExecutionContext& context, const 
         }
 
         for (auto& mode : supportedModes)
-            simulatedDevice.setEnabledFeatures(mode, features);
+            simulatedDevice.setSupportedFeatures(mode, features);
 
         m_context->registerSimulatedXRDeviceForTesting(simulatedDevice);
 

@@ -26,8 +26,6 @@
 #include "config.h"
 #include "IDBDatabaseNameAndVersionRequest.h"
 
-#if ENABLE(INDEXED_DATABASE)
-
 #include "IDBConnectionProxy.h"
 #include "ScriptExecutionContext.h"
 #include <wtf/IsoMallocInlines.h>
@@ -52,7 +50,7 @@ IDBDatabaseNameAndVersionRequest::IDBDatabaseNameAndVersionRequest(ScriptExecuti
     suspendIfNeeded();
 }
 
-void IDBDatabaseNameAndVersionRequest::complete(Optional<Vector<IDBDatabaseNameAndVersion>>&& databases)
+void IDBDatabaseNameAndVersionRequest::complete(std::optional<Vector<IDBDatabaseNameAndVersion>>&& databases)
 {
     ASSERT(canCurrentThreadAccessThreadLocalData(originThread()));
 
@@ -78,5 +76,3 @@ void IDBDatabaseNameAndVersionRequest::stop()
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(INDEXED_DATABASE)

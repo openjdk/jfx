@@ -309,7 +309,9 @@ void run(const char* filter)
     RUN_UNARY(testConvertFloatToDoubleArg, floatingPointOperands<float>());
     RUN_UNARY(testConvertFloatToDoubleImm, floatingPointOperands<float>());
     RUN_UNARY(testConvertFloatToDoubleMem, floatingPointOperands<float>());
+    RUN_UNARY(testConvertDoubleToFloatToDouble, floatingPointOperands<double>());
     RUN_UNARY(testConvertDoubleToFloatToDoubleToFloat, floatingPointOperands<double>());
+    RUN_UNARY(testConvertDoubleToFloatEqual, floatingPointOperands<double>());
     RUN_UNARY(testStoreFloat, floatingPointOperands<double>());
     RUN_UNARY(testStoreDoubleConstantAsFloat, floatingPointOperands<double>());
     RUN_UNARY(testLoadFloatConvertDoubleConvertFloatStoreFloat, floatingPointOperands<float>());
@@ -336,6 +338,7 @@ void run(const char* filter)
     RUN_UNARY(testCheckAddRemoveCheckWithSExt32, int32Operands());
     RUN_UNARY(testCheckAddRemoveCheckWithZExt32, int32Operands());
 
+    RUN(testStoreZeroReg());
     RUN(testStore32(44));
     RUN(testStoreConstant(49));
     RUN(testStoreConstantPtr(49));
@@ -865,7 +868,7 @@ void run(const char* filter)
                     for (;;) {
                         RefPtr<SharedTask<void()>> task;
                         {
-                            LockHolder locker(lock);
+                            Locker locker { lock };
                             if (tasks.isEmpty())
                                 return;
                             task = tasks.takeFirst();
@@ -891,6 +894,11 @@ static void run(const char*)
 
 #endif // ENABLE(B3_JIT)
 
+#if ENABLE(JIT_OPERATION_VALIDATION)
+extern const uintptr_t startOfJITOperationsInTestB3 __asm("section$start$__DATA_CONST$__jsc_ops");
+extern const uintptr_t endOfJITOperationsInTestB3 __asm("section$end$__DATA_CONST$__jsc_ops");
+#endif
+
 int main(int argc, char** argv)
 {
     const char* filter = nullptr;
@@ -909,6 +917,10 @@ int main(int argc, char** argv)
 
     WTF::initializeMainThread();
     JSC::initialize();
+
+#if ENABLE(JIT_OPERATION_VALIDATION)
+    JSC::JITOperationList::populatePointersInEmbedder(&startOfJITOperationsInTestB3, &endOfJITOperationsInTestB3);
+#endif
 
     for (unsigned i = 0; i <= 2; ++i) {
         JSC::Options::defaultB3OptLevel() = i;

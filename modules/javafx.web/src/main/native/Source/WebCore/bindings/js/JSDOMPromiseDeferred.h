@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -70,6 +70,18 @@ public:
         resolve(*lexicalGlobalObject, toJS<IDLType>(*lexicalGlobalObject, *globalObject(), std::forward<typename IDLType::ParameterType>(value)));
     }
 
+    void resolveWithJSValue(JSC::JSValue resolution)
+    {
+        if (shouldIgnoreRequestToFulfill())
+            return;
+
+        ASSERT(deferred());
+        ASSERT(globalObject());
+        JSC::JSGlobalObject* lexicalGlobalObject = globalObject();
+        JSC::JSLockHolder locker(lexicalGlobalObject);
+        resolve(*lexicalGlobalObject, resolution);
+    }
+
     void resolve()
     {
         if (shouldIgnoreRequestToFulfill())
@@ -135,9 +147,13 @@ public:
 
         ASSERT(deferred());
         ASSERT(globalObject());
-        JSC::JSGlobalObject* lexicalGlobalObject = globalObject();
-        JSC::JSLockHolder locker(lexicalGlobalObject);
+        auto* lexicalGlobalObject = globalObject();
+        JSC::VM& vm = lexicalGlobalObject->vm();
+        JSC::JSLockHolder locker(vm);
+        auto scope = DECLARE_CATCH_SCOPE(vm);
         resolve(*lexicalGlobalObject, callback(*globalObject()));
+        if (UNLIKELY(scope.exception()))
+            handleUncaughtException(scope, *lexicalGlobalObject);
     }
 
     template<typename Callback>
@@ -148,9 +164,13 @@ public:
 
         ASSERT(deferred());
         ASSERT(globalObject());
-        JSC::JSGlobalObject* lexicalGlobalObject = globalObject();
-        JSC::JSLockHolder locker(lexicalGlobalObject);
+        auto* lexicalGlobalObject = globalObject();
+        JSC::VM& vm = lexicalGlobalObject->vm();
+        JSC::JSLockHolder locker(vm);
+        auto scope = DECLARE_CATCH_SCOPE(vm);
         reject(*lexicalGlobalObject, callback(*globalObject()), rejectAsHandled);
+        if (UNLIKELY(scope.exception()))
+            handleUncaughtException(scope, *lexicalGlobalObject);
     }
 
     JSC::JSValue promise() const;
@@ -164,7 +184,7 @@ private:
     {
     }
 
-    bool shouldIgnoreRequestToFulfill() const { return isEmpty() || activeDOMObjectAreStopped(); }
+    bool shouldIgnoreRequestToFulfill() const { return isEmpty(); }
 
     JSC::JSPromise* deferred() const { return guarded(); }
 
@@ -176,6 +196,9 @@ private:
     {
         callFunction(lexicalGlobalObject, rejectAsHandled == RejectAsHandled::Yes ? ResolveMode::RejectAsHandled : ResolveMode::Reject, resolution);
     }
+
+    bool handleTerminationExceptionIfNeeded(JSC::CatchScope&, JSDOMGlobalObject& lexicalGlobalObject);
+    void handleUncaughtException(JSC::CatchScope&, JSDOMGlobalObject& lexicalGlobalObject);
 
     Mode m_mode;
 };
@@ -283,9 +306,6 @@ public:
     }
 };
 
-
-Ref<DeferredPromise> createDeferredPromise(JSC::JSGlobalObject&, JSDOMWindow&);
-
 void fulfillPromiseWithJSON(Ref<DeferredPromise>&&, const String&);
 void fulfillPromiseWithArrayBuffer(Ref<DeferredPromise>&&, ArrayBuffer*);
 void fulfillPromiseWithArrayBuffer(Ref<DeferredPromise>&&, const void*, size_t);
@@ -302,7 +322,7 @@ inline JSC::JSValue callPromiseFunction(JSC::JSGlobalObject& lexicalGlobalObject
     JSC::VM& vm = JSC::getVM(&lexicalGlobalObject);
     auto catchScope = DECLARE_CATCH_SCOPE(vm);
 
-    auto& globalObject = callerGlobalObject(lexicalGlobalObject, callFrame);
+    auto& globalObject = *JSC::jsSecureCast<JSDOMGlobalObject*>(vm, &lexicalGlobalObject);
     auto* promise = JSC::JSPromise::create(vm, globalObject.promiseStructure());
     ASSERT(promise);
 
@@ -321,7 +341,7 @@ inline JSC::JSValue callPromiseFunction(JSC::JSGlobalObject& lexicalGlobalObject
     JSC::VM& vm = JSC::getVM(&lexicalGlobalObject);
     auto catchScope = DECLARE_CATCH_SCOPE(vm);
 
-    auto& globalObject = callerGlobalObject(lexicalGlobalObject, callFrame);
+    auto& globalObject = *JSC::jsSecureCast<JSDOMGlobalObject*>(vm, &lexicalGlobalObject);
     auto* promise = JSC::JSPromise::create(vm, globalObject.promiseStructure());
     ASSERT(promise);
 

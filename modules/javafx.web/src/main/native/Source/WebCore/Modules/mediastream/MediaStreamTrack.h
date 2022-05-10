@@ -69,7 +69,7 @@ public:
     static Ref<MediaStreamTrack> create(ScriptExecutionContext&, Ref<MediaStreamTrackPrivate>&&);
     virtual ~MediaStreamTrack();
 
-    static void endCapture(Document&);
+    static void endCapture(Document&, MediaProducer::MediaCaptureKind);
 
     static MediaProducer::MediaStateFlags captureState(Document&);
     static void updateCaptureAccordingToMutedState(Document&);
@@ -87,6 +87,7 @@ public:
     void setEnabled(bool);
 
     bool muted() const;
+    bool mutedForBindings() const;
 
     enum class State { Live, Ended };
     State readyState() const;
@@ -101,16 +102,16 @@ public:
     bool isCaptureTrack() const { return m_isCaptureTrack; }
 
     struct TrackSettings {
-        Optional<int> width;
-        Optional<int> height;
-        Optional<double> aspectRatio;
-        Optional<double> frameRate;
+        std::optional<int> width;
+        std::optional<int> height;
+        std::optional<double> aspectRatio;
+        std::optional<double> frameRate;
         String facingMode;
-        Optional<double> volume;
-        Optional<int> sampleRate;
-        Optional<int> sampleSize;
-        Optional<bool> echoCancellation;
-        Optional<bool> displaySurface;
+        std::optional<double> volume;
+        std::optional<int> sampleRate;
+        std::optional<int> sampleSize;
+        std::optional<bool> echoCancellation;
+        std::optional<bool> displaySurface;
         String logicalSurface;
         String deviceId;
         String groupId;
@@ -118,27 +119,27 @@ public:
     TrackSettings getSettings() const;
 
     struct TrackCapabilities {
-        Optional<LongRange> width;
-        Optional<LongRange> height;
-        Optional<DoubleRange> aspectRatio;
-        Optional<DoubleRange> frameRate;
-        Optional<Vector<String>> facingMode;
-        Optional<DoubleRange> volume;
-        Optional<LongRange> sampleRate;
-        Optional<LongRange> sampleSize;
-        Optional<Vector<bool>> echoCancellation;
+        std::optional<LongRange> width;
+        std::optional<LongRange> height;
+        std::optional<DoubleRange> aspectRatio;
+        std::optional<DoubleRange> frameRate;
+        std::optional<Vector<String>> facingMode;
+        std::optional<DoubleRange> volume;
+        std::optional<LongRange> sampleRate;
+        std::optional<LongRange> sampleSize;
+        std::optional<Vector<bool>> echoCancellation;
         String deviceId;
         String groupId;
     };
     TrackCapabilities getCapabilities() const;
 
     const MediaTrackConstraints& getConstraints() const { return m_constraints; }
-    void applyConstraints(const Optional<MediaTrackConstraints>&, DOMPromiseDeferred<void>&&);
+    void applyConstraints(const std::optional<MediaTrackConstraints>&, DOMPromiseDeferred<void>&&);
 
     RealtimeMediaSource& source() const { return m_private->source(); }
     MediaStreamTrackPrivate& privateTrack() { return m_private.get(); }
 
-    AudioSourceProvider* audioSourceProvider();
+    RefPtr<WebAudioSourceProvider> createAudioSourceProvider();
 
     MediaProducer::MediaStateFlags mediaState() const;
 
@@ -201,6 +202,7 @@ private:
     MediaTrackConstraints m_constraints;
     std::unique_ptr<DOMPromiseDeferred<void>> m_promise;
 
+    bool m_muted { false };
     bool m_ended { false };
     const bool m_isCaptureTrack { false };
 };

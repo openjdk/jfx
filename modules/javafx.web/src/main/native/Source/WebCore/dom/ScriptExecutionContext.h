@@ -28,15 +28,22 @@
 #pragma once
 
 #include "ActiveDOMObject.h"
+#include "CrossOriginMode.h"
 #include "DOMTimer.h"
+#include "PermissionController.h"
+#include "RTCDataChannelRemoteHandlerConnection.h"
+#include "ResourceLoaderOptions.h"
+#include "ScriptExecutionContextIdentifier.h"
 #include "SecurityContext.h"
 #include "ServiceWorkerTypes.h"
+#include "Settings.h"
 #include <JavaScriptCore/ConsoleTypes.h>
 #include <JavaScriptCore/HandleTypes.h>
 #include <wtf/CrossThreadTask.h>
 #include <wtf/Function.h>
 #include <wtf/HashSet.h>
 #include <wtf/ObjectIdentifier.h>
+#include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>
 
 namespace JSC {
@@ -44,6 +51,7 @@ class CallFrame;
 class Exception;
 class JSPromise;
 class VM;
+enum class ScriptExecutionStatus;
 }
 
 namespace Inspector {
@@ -55,10 +63,14 @@ namespace WebCore {
 
 class EventLoop;
 class CachedScript;
+class CSSFontSelector;
+class CSSValuePool;
 class DatabaseContext;
 class EventQueue;
 class EventLoopTaskGroup;
 class EventTarget;
+class FontCache;
+class FontLoadRequest;
 class MessagePort;
 class PublicURLManager;
 class RejectedPromiseTracker;
@@ -77,10 +89,7 @@ namespace IDBClient {
 class IDBConnectionProxy;
 }
 
-enum ScriptExecutionContextIdentifierType { };
-using ScriptExecutionContextIdentifier = ObjectIdentifier<ScriptExecutionContextIdentifierType>;
-
-class ScriptExecutionContext : public SecurityContext {
+class ScriptExecutionContext : public SecurityContext, public CanMakeWeakPtr<ScriptExecutionContext> {
 public:
     ScriptExecutionContext();
     virtual ~ScriptExecutionContext();
@@ -102,13 +111,17 @@ public:
 
     virtual ReferrerPolicy referrerPolicy() const = 0;
 
+    virtual const Settings::Values& settingsValues() const = 0;
+
     virtual void disableEval(const String& errorMessage) = 0;
     virtual void disableWebAssembly(const String& errorMessage) = 0;
 
-#if ENABLE(INDEXED_DATABASE)
     virtual IDBClient::IDBConnectionProxy* idbConnectionProxy() = 0;
-#endif
+    virtual RefPtr<PermissionController> permissionController() { return nullptr; }
+
     virtual SocketProvider* socketProvider() = 0;
+
+    virtual RefPtr<RTCDataChannelRemoteHandlerConnection> createRTCDataChannelRemoteHandlerConnection() { return nullptr; }
 
     virtual String resourceRequestIdentifier() const { return String(); };
 
@@ -136,6 +149,8 @@ public:
     bool activeDOMObjectsAreSuspended() const { return m_activeDOMObjectsAreSuspended; }
     bool activeDOMObjectsAreStopped() const { return m_activeDOMObjectsAreStopped; }
 
+    JSC::ScriptExecutionStatus jscScriptExecutionStatus() const;
+
     // Called from the constructor and destructors of ActiveDOMObject.
     void didCreateActiveDOMObject(ActiveDOMObject&);
     void willDestroyActiveDOMObject(ActiveDOMObject&);
@@ -153,6 +168,15 @@ public:
     void destroyedMessagePort(MessagePort&);
 
     virtual void didLoadResourceSynchronously(const URL&);
+
+    virtual FontCache& fontCache();
+    virtual CSSFontSelector* cssFontSelector() { return nullptr; }
+    virtual CSSValuePool& cssValuePool();
+    virtual std::unique_ptr<FontLoadRequest> fontLoadRequest(String& url, bool isSVG, bool isInitiatingElementInUserAgentShadowTree, LoadedFromOpaqueSource);
+    virtual void beginLoadingFontSoon(FontLoadRequest&) { }
+
+    WEBCORE_EXPORT static void setCrossOriginMode(CrossOriginMode);
+    static CrossOriginMode crossOriginMode();
 
     void ref() { refScriptExecutionContext(); }
     void deref() { derefScriptExecutionContext(); }
@@ -190,7 +214,6 @@ public:
         bool m_isCleanupTask;
     };
 
-    void enqueueTaskForDispatcher(Function<void()>&& function) { postTask(WTFMove(function)); }
     virtual void postTask(Task&&) = 0; // Executes the task on context's thread asynchronously.
 
     template<typename... Arguments>
@@ -208,7 +231,7 @@ public:
     void removeTimeout(int timeoutId) { m_timeouts.remove(timeoutId); }
     DOMTimer* findTimeout(int timeoutId) { return m_timeouts.get(timeoutId); }
 
-    WEBCORE_EXPORT JSC::VM& vm();
+    virtual JSC::VM& vm() = 0;
 
     void adjustMinimumDOMTimerInterval(Seconds oldMinimumTimerInterval);
     virtual Seconds minimumDOMTimerInterval() const;
@@ -239,7 +262,7 @@ public:
         return ensureRejectedPromiseTrackerSlow();
     }
 
-    WEBCORE_EXPORT JSC::JSGlobalObject* execState();
+    WEBCORE_EXPORT JSC::JSGlobalObject* globalObject();
 
     WEBCORE_EXPORT String domainForCachePartition() const;
     void setDomainForCachePartition(String&& domain) { m_domainForCachePartition = WTFMove(domain); }

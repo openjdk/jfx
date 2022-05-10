@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,13 +26,12 @@
 #include "config.h"
 #include "IDBTransaction.h"
 
-#if ENABLE(INDEXED_DATABASE)
-
 #include "DOMException.h"
 #include "DOMStringList.h"
 #include "DOMWindow.h"
 #include "Event.h"
 #include "EventDispatcher.h"
+#include "EventLoop.h"
 #include "EventNames.h"
 #include "EventQueue.h"
 #include "IDBCursorWithValue.h"
@@ -97,8 +96,7 @@ IDBTransaction::IDBTransaction(IDBDatabase& database, const IDBTransactionInfo& 
         auto* context = scriptExecutionContext();
         ASSERT(context);
 
-        JSC::VM& vm = context->vm();
-        vm.whenIdle([protectedThis = makeRef(*this)]() {
+        context->eventLoop().runAtEndOfMicrotaskCheckpoint([protectedThis = makeRef(*this)] {
             protectedThis->deactivate();
         });
 
@@ -156,7 +154,7 @@ ExceptionOr<Ref<IDBObjectStore>> IDBTransaction::objectStore(const String& objec
     if (isFinishedOrFinishing())
         return Exception { InvalidStateError, "Failed to execute 'objectStore' on 'IDBTransaction': The transaction finished."_s };
 
-    Locker<Lock> locker(m_referencedObjectStoreLock);
+    Locker locker { m_referencedObjectStoreLock };
 
     if (auto* store = m_referencedObjectStores.get(objectStoreName))
         return makeRef(*store);
@@ -194,7 +192,7 @@ void IDBTransaction::abortDueToFailedRequest(DOMException& error)
         return;
 
     m_domError = &error;
-    internalAbort();
+    abortInternal();
 }
 
 void IDBTransaction::transitionedToFinishing(IndexedDB::TransactionState state)
@@ -214,28 +212,32 @@ ExceptionOr<void> IDBTransaction::abort()
     if (isFinishedOrFinishing())
         return Exception { InvalidStateError, "Failed to execute 'abort' on 'IDBTransaction': The transaction is inactive or finished."_s };
 
-    internalAbort();
+    abortInternal();
 
     return { };
 }
 
-void IDBTransaction::internalAbort()
+void IDBTransaction::abortInternal()
 {
-    LOG(IndexedDB, "IDBTransaction::internalAbort");
+    LOG(IndexedDB, "IDBTransaction::abortInternal");
     ASSERT(canCurrentThreadAccessThreadLocalData(m_database->originThread()));
     ASSERT(!isFinishedOrFinishing());
 
     m_database->willAbortTransaction(*this);
 
     if (isVersionChange()) {
-        Locker<Lock> locker(m_referencedObjectStoreLock);
+        Locker locker { m_referencedObjectStoreLock };
 
         auto& info = m_database->info();
         Vector<uint64_t> identifiersToRemove;
+        Vector<std::unique_ptr<IDBObjectStore>> objectStoresToDelete;
         for (auto& iterator : m_deletedObjectStores) {
             if (info.infoForExistingObjectStore(iterator.key)) {
                 auto name = iterator.value->info().name();
-                m_referencedObjectStores.set(name, WTFMove(iterator.value));
+                auto result = m_referencedObjectStores.add(name, nullptr);
+                if (!result.isNewEntry)
+                    objectStoresToDelete.append(std::exchange(result.iterator->value, nullptr));
+                result.iterator->value = std::exchange(iterator.value, nullptr);
                 identifiersToRemove.append(iterator.key);
             }
         }
@@ -245,6 +247,12 @@ void IDBTransaction::internalAbort()
 
         for (auto& objectStore : m_referencedObjectStores.values())
             objectStore->rollbackForVersionChangeAbort();
+
+        for (auto& objectStore : objectStoresToDelete) {
+            objectStore->rollbackForVersionChangeAbort();
+            auto objectStoreIdentifier = objectStore->info().identifier();
+            m_deletedObjectStores.set(objectStoreIdentifier, std::exchange(objectStore, nullptr));
+        }
     }
 
     transitionedToFinishing(IndexedDB::TransactionState::Aborting);
@@ -341,7 +349,7 @@ void IDBTransaction::stop()
     if (isFinishedOrFinishing())
         return;
 
-    internalAbort();
+    abortInternal();
 }
 
 bool IDBTransaction::isActive() const
@@ -448,9 +456,25 @@ void IDBTransaction::finishedDispatchEventForRequest(IDBRequest& request)
     handleOperationsCompletedOnServer();
 }
 
-void IDBTransaction::commit()
+ExceptionOr<void> IDBTransaction::commit()
 {
     LOG(IndexedDB, "IDBTransaction::commit");
+    ASSERT(canCurrentThreadAccessThreadLocalData(m_database->originThread()));
+
+    if (!isActive())
+        return Exception { InvalidStateError, "Failed to execute 'commit' on 'IDBTransaction': The transaction is inactive."_s };
+
+    if (m_currentlyCompletingRequest && m_currentlyCompletingRequest->willAbortTransactionAfterDispatchingEvent())
+        return { };
+
+    commitInternal();
+
+    return { };
+}
+
+void IDBTransaction::commitInternal()
+{
+    LOG(IndexedDB, "IDBTransaction::commitInternal");
     ASSERT(canCurrentThreadAccessThreadLocalData(m_database->originThread()));
     ASSERT(!isFinishedOrFinishing());
 
@@ -458,21 +482,28 @@ void IDBTransaction::commit()
     m_database->willCommitTransaction(*this);
 
     LOG(IndexedDBOperations, "IDB commit operation: Transaction %s", info().identifier().loggingString().utf8().data());
-    scheduleOperation(IDBClient::TransactionOperationImpl::create(*this, nullptr, [protectedThis = makeRef(*this)] (auto& operation) {
-        protectedThis->commitOnServer(operation);
+
+    auto pendingRequestCount = std::count_if(m_openRequests.begin(), m_openRequests.end(), [](auto& request) {
+        return !request->isDone();
+    });
+
+    scheduleOperation(IDBClient::TransactionOperationImpl::create(*this, nullptr, [protectedThis = Ref { *this }, pendingRequestCount] (auto& operation) {
+        protectedThis->commitOnServer(operation, pendingRequestCount);
     }));
 }
 
-void IDBTransaction::commitOnServer(IDBClient::TransactionOperation& operation)
+void IDBTransaction::commitOnServer(IDBClient::TransactionOperation& operation, uint64_t pendingRequestCount)
 {
     LOG(IndexedDB, "IDBTransaction::commitOnServer");
     ASSERT(canCurrentThreadAccessThreadLocalData(m_database->originThread()));
 
-    m_database->connectionProxy().commitTransaction(*this);
+    m_database->connectionProxy().commitTransaction(*this, pendingRequestCount);
 
     ASSERT(!m_transactionOperationsInProgressQueue.isEmpty());
     ASSERT(m_transactionOperationsInProgressQueue.last() == &operation);
     m_transactionOperationsInProgressQueue.removeLast();
+    if (!m_transactionOperationsInProgressQueue.isEmpty())
+        m_lastTransactionOperationBeforeCommit = m_transactionOperationsInProgressQueue.last()->identifier();
 
     ASSERT(m_transactionOperationMap.contains(operation.identifier()));
     m_transactionOperationMap.remove(operation.identifier());
@@ -543,6 +574,12 @@ void IDBTransaction::didCommit(const IDBError& error)
     ASSERT(canCurrentThreadAccessThreadLocalData(m_database->originThread()));
     ASSERT(m_state == IndexedDB::TransactionState::Committing);
 
+    // Delay commit until last request is completed.
+    if (m_lastTransactionOperationBeforeCommit && m_transactionOperationMap.contains(*m_lastTransactionOperationBeforeCommit)) {
+        m_commitResult = error;
+        return;
+    }
+
     if (error.isNull()) {
         m_database->didCommitTransaction(*this);
         fireOnComplete();
@@ -576,6 +613,7 @@ void IDBTransaction::enqueueEvent(Ref<Event>&& event)
     if (!scriptExecutionContext() || isContextStopped())
         return;
 
+    m_abortOrCommitEvent = event.ptr();
     queueTaskToDispatchEvent(*this, TaskSource::DatabaseAccess, WTFMove(event));
 }
 
@@ -586,15 +624,19 @@ void IDBTransaction::dispatchEvent(Event& event)
     ASSERT(canCurrentThreadAccessThreadLocalData(m_database->originThread()));
     ASSERT(scriptExecutionContext());
     ASSERT(!isContextStopped());
-    ASSERT(event.type() == eventNames().completeEvent || event.type() == eventNames().abortEvent);
+
 
     auto protectedThis = makeRef(*this);
 
     EventDispatcher::dispatchEvent({ this, m_database.ptr() }, event);
+
+    if (m_abortOrCommitEvent != &event)
+        return;
+
+    ASSERT(event.type() == eventNames().completeEvent || event.type() == eventNames().abortEvent);
     m_didDispatchAbortOrCommit = true;
 
     if (isVersionChange()) {
-        ASSERT(m_openDBRequest);
         m_openDBRequest->versionChangeTransactionDidFinish();
 
         if (event.type() == eventNames().completeEvent) {
@@ -615,7 +657,7 @@ Ref<IDBObjectStore> IDBTransaction::createObjectStore(const IDBObjectStoreInfo& 
     ASSERT(scriptExecutionContext());
     ASSERT(canCurrentThreadAccessThreadLocalData(m_database->originThread()));
 
-    Locker<Lock> locker(m_referencedObjectStoreLock);
+    Locker locker { m_referencedObjectStoreLock };
 
     auto objectStore = makeUnique<IDBObjectStore>(*scriptExecutionContext(), info, *this);
     auto* rawObjectStore = objectStore.get();
@@ -651,7 +693,7 @@ void IDBTransaction::renameObjectStore(IDBObjectStore& objectStore, const String
 {
     LOG(IndexedDB, "IDBTransaction::renameObjectStore");
 
-    Locker<Lock> locker(m_referencedObjectStoreLock);
+    Locker locker { m_referencedObjectStoreLock };
 
     ASSERT(isVersionChange());
     ASSERT(scriptExecutionContext());
@@ -738,7 +780,7 @@ void IDBTransaction::didCreateIndexOnServer(const IDBResultData& resultData)
 void IDBTransaction::renameIndex(IDBIndex& index, const String& newName)
 {
     LOG(IndexedDB, "IDBTransaction::renameIndex");
-    Locker<Lock> locker(m_referencedObjectStoreLock);
+    Locker locker { m_referencedObjectStoreLock };
 
     ASSERT(isVersionChange());
     ASSERT(scriptExecutionContext());
@@ -884,7 +926,7 @@ void IDBTransaction::didIterateCursorOnServer(IDBRequest& request, const IDBResu
     completeCursorRequest(request, resultData);
 }
 
-Ref<IDBRequest> IDBTransaction::requestGetAllObjectStoreRecords(JSC::JSGlobalObject& state, IDBObjectStore& objectStore, const IDBKeyRangeData& keyRangeData, IndexedDB::GetAllType getAllType, Optional<uint32_t> count)
+Ref<IDBRequest> IDBTransaction::requestGetAllObjectStoreRecords(JSC::JSGlobalObject& state, IDBObjectStore& objectStore, const IDBKeyRangeData& keyRangeData, IndexedDB::GetAllType getAllType, std::optional<uint32_t> count)
 {
     LOG(IndexedDB, "IDBTransaction::requestGetAllObjectStoreRecords");
     ASSERT(isActive());
@@ -907,7 +949,7 @@ Ref<IDBRequest> IDBTransaction::requestGetAllObjectStoreRecords(JSC::JSGlobalObj
     return request;
 }
 
-Ref<IDBRequest> IDBTransaction::requestGetAllIndexRecords(JSC::JSGlobalObject& state, IDBIndex& index, const IDBKeyRangeData& keyRangeData, IndexedDB::GetAllType getAllType, Optional<uint32_t> count)
+Ref<IDBRequest> IDBTransaction::requestGetAllIndexRecords(JSC::JSGlobalObject& state, IDBIndex& index, const IDBKeyRangeData& keyRangeData, IndexedDB::GetAllType getAllType, std::optional<uint32_t> count)
 {
     LOG(IndexedDB, "IDBTransaction::requestGetAllIndexRecords");
     ASSERT(isActive());
@@ -1300,7 +1342,7 @@ void IDBTransaction::deleteObjectStore(const String& objectStoreName)
     ASSERT(canCurrentThreadAccessThreadLocalData(m_database->originThread()));
     ASSERT(isVersionChange());
 
-    Locker<Lock> locker(m_referencedObjectStoreLock);
+    Locker locker { m_referencedObjectStoreLock };
 
     if (auto objectStore = m_referencedObjectStores.take(objectStoreName)) {
         objectStore->markAsDeleted();
@@ -1374,6 +1416,11 @@ void IDBTransaction::operationCompletedOnClient(IDBClient::TransactionOperation&
     m_transactionOperationMap.remove(operation.identifier());
     m_transactionOperationsInProgressQueue.removeFirst();
 
+    if (m_commitResult && operation.identifier() == *m_lastTransactionOperationBeforeCommit) {
+        didCommit(*m_commitResult);
+        return;
+    }
+
     if (m_transactionOperationsInProgressQueue.isEmpty())
         handlePendingOperations();
 
@@ -1445,14 +1492,18 @@ void IDBTransaction::connectionClosedFromServer(const IDBError& error)
     fireOnAbort();
 }
 
-void IDBTransaction::visitReferencedObjectStores(JSC::SlotVisitor& visitor) const
+template<typename Visitor>
+void IDBTransaction::visitReferencedObjectStores(Visitor& visitor) const
 {
-    Locker<Lock> locker(m_referencedObjectStoreLock);
+    Locker locker { m_referencedObjectStoreLock };
     for (auto& objectStore : m_referencedObjectStores.values())
         visitor.addOpaqueRoot(objectStore.get());
     for (auto& objectStore : m_deletedObjectStores.values())
         visitor.addOpaqueRoot(objectStore.get());
 }
+
+template void IDBTransaction::visitReferencedObjectStores(JSC::AbstractSlotVisitor&) const;
+template void IDBTransaction::visitReferencedObjectStores(JSC::SlotVisitor&) const;
 
 void IDBTransaction::handlePendingOperations()
 {
@@ -1491,7 +1542,7 @@ void IDBTransaction::autoCommit()
         return;
     ASSERT(!m_currentlyCompletingRequest);
 
-    commit();
+    commitInternal();
 }
 
 uint64_t IDBTransaction::generateOperationID()
@@ -1501,5 +1552,3 @@ uint64_t IDBTransaction::generateOperationID()
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(INDEXED_DATABASE)

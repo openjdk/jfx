@@ -47,6 +47,7 @@
 #define OFFLINE_ASM_ARMv7k 0
 #define OFFLINE_ASM_ARMv7s 0
 #define OFFLINE_ASM_MIPS 0
+#define OFFLINE_ASM_RISCV64 0
 
 #else // ENABLE(C_LOOP)
 
@@ -115,6 +116,12 @@
 #define OFFLINE_ASM_ARM64E 0
 #endif
 
+#if CPU(RISCV64)
+#define OFFLINE_ASM_RISCV64 1
+#else
+#define OFFLINE_ASM_RISCV64 0
+#endif
+
 #if CPU(MIPS)
 #ifdef WTF_MIPS_PIC
 #define S(x) #x
@@ -166,6 +173,12 @@
 #define OFFLINE_ASM_WEBASSEMBLY 1
 #else
 #define OFFLINE_ASM_WEBASSEMBLY 0
+#endif
+
+#if ENABLE(WEBASSEMBLY_B3JIT)
+#define OFFLINE_ASM_WEBASSEMBLY_B3JIT 1
+#else
+#define OFFLINE_ASM_WEBASSEMBLY_B3JIT 0
 #endif
 
 #if HAVE(FAST_TLS)

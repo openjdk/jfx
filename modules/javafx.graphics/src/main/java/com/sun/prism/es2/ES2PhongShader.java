@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -146,7 +146,7 @@ class ES2PhongShader {
         }
 
         int numLights = 0;
-        for (ES2Light light : meshView.getPointLights()) {
+        for (ES2Light light : meshView.getLights()) {
             if (light != null && light.w > 0) { numLights++; }
         }
 
@@ -203,15 +203,39 @@ class ES2PhongShader {
         shader.setConstant("ambientColor", meshView.getAmbientLightRed(),
                 meshView.getAmbientLightGreen(), meshView.getAmbientLightBlue());
 
-        int i = 0;
-        for (ES2Light light : meshView.getPointLights()) {
+        for (int i = 0; i < meshView.getLights().length; i++) {
+            ES2Light light = meshView.getLights()[i];
             if (light != null && light.w > 0) {
-                shader.setConstant("lights[" + i + "].pos", light.x, light.y, light.z, light.w);
-                shader.setConstant("lights[" + i + "].color", light.r, light.g, light.b);
-                shader.setConstant("lights[" + i + "].attn", light.ca, light.la, light.qa);
-                shader.setConstant("lights[" + i + "].range", light.maxRange);
-                i++;
+                setLightConstants(i, shader, light);
             }
+        }
+    }
+
+    private static void setLightConstants(int i, ES2Shader shader, ES2Light light) {
+        shader.setConstant("lights[" + i + "].pos", light.x, light.y, light.z, light.w);
+        shader.setConstant("lights[" + i + "].color", light.r, light.g, light.b);
+        shader.setConstant("lights[" + i + "].attn", light.ca, light.la, light.qa, light.isAttenuated);
+        shader.setConstant("lights[" + i + "].range", light.maxRange);
+        if (light.isPointLight()) {
+            shader.setConstant("lights[" + i + "].dir", 0f, 0f, 1f);
+        } else {
+            float dirX = light.dirX;
+            float dirY = light.dirY;
+            float dirZ = light.dirZ;
+            float length = (float) Math.sqrt(dirX * dirX + dirY * dirY + dirZ * dirZ);
+            shader.setConstant("lights[" + i + "].dir", dirX / length, dirY / length, dirZ / length);
+        }
+        if (light.isPointLight() || light.isDirectionalLight()) {
+            shader.setConstant("lights[" + i + "].cosOuter", -1f); // cos(180)
+            shader.setConstant("lights[" + i + "].denom", 2f);     // cos(0) - cos(180)
+            shader.setConstant("lights[" + i + "].falloff", 0f);
+        } else {
+            // preparing for: I = pow((cosAngle - cosOuter) / (cosInner - cosOuter), falloff);
+            float cosOuter = (float) Math.cos(Math.toRadians(light.outerAngle));
+            float cosInner = (float) Math.cos(Math.toRadians(light.innerAngle));
+            shader.setConstant("lights[" + i + "].cosOuter", cosOuter);
+            shader.setConstant("lights[" + i + "].denom", cosInner - cosOuter);
+            shader.setConstant("lights[" + i + "].falloff", light.falloff);
         }
     }
 }

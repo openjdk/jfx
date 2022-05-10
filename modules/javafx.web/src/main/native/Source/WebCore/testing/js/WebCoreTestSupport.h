@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2011, 2015 Google Inc. All rights reserved.
- * Copyright (C) 2016-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -54,6 +54,7 @@ TEST_SUPPORT_EXPORT void setLogChannelToAccumulate(const WTF::String& name);
 TEST_SUPPORT_EXPORT void clearAllLogChannelsToAccumulate();
 TEST_SUPPORT_EXPORT void initializeLogChannelsIfNecessary();
 TEST_SUPPORT_EXPORT void setAllowsAnySSLCertificate(bool);
+TEST_SUPPORT_EXPORT void setLinkedOnOrAfterEverythingForTesting();
 
 TEST_SUPPORT_EXPORT void installMockGamepadProvider();
 TEST_SUPPORT_EXPORT void connectMockGamepad(unsigned index);
@@ -65,5 +66,11 @@ TEST_SUPPORT_EXPORT void setMockGamepadButtonValue(unsigned index, unsigned butt
 TEST_SUPPORT_EXPORT void setupNewlyCreatedServiceWorker(uint64_t serviceWorkerIdentifier);
 
 TEST_SUPPORT_EXPORT void setAdditionalSupportedImageTypesForTesting(const WTF::String&);
+
+#if ENABLE(JIT_OPERATION_VALIDATION)
+void populateJITOperations() TEST_SUPPORT_EXPORT;
+#else
+inline void populateJITOperations() { }
+#endif
 
 } // namespace WebCoreTestSupport

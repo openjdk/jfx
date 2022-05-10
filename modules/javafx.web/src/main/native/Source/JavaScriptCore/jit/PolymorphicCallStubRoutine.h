@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -105,9 +105,11 @@ public:
     bool visitWeak(VM&) final;
 
 private:
+    template<typename Visitor> void markRequiredObjectsInternalImpl(Visitor&);
+    void markRequiredObjectsInternal(AbstractSlotVisitor&) final;
     void markRequiredObjectsInternal(SlotVisitor&) final;
 
-    Vector<WriteBarrier<JSCell>, 2> m_variants;
+    FixedVector<WriteBarrier<JSCell>> m_variants;
     UniqueArray<uint32_t> m_fastCounts;
     Bag<PolymorphicCallNode> m_callNodes;
 };

@@ -52,22 +52,22 @@ public:
         return std::unique_ptr<ImageBackingStore>(new ImageBackingStore(other));
     }
 
-    NativeImagePtr image() const;
+    PlatformImagePtr image() const;
 
     bool setSize(const IntSize& size)
     {
         if (size.isEmpty())
             return false;
 
-        Vector<char> buffer;
-        size_t bufferSize = size.area().unsafeGet() * sizeof(uint32_t);
+        Vector<uint8_t> buffer;
+        size_t bufferSize = size.area() * sizeof(uint32_t);
 
         if (!buffer.tryReserveCapacity(bufferSize))
             return false;
 
         buffer.grow(bufferSize);
         m_pixels = SharedBuffer::DataSegment::create(WTFMove(buffer));
-        m_pixelsPtr = reinterpret_cast<uint32_t*>(const_cast<char*>(m_pixels->data()));
+        m_pixelsPtr = reinterpret_cast<uint32_t*>(const_cast<uint8_t*>(m_pixels->data()));
         m_size = size;
         m_frameRect = IntRect(IntPoint(), m_size);
         clear();
@@ -86,7 +86,7 @@ public:
 
     void clear()
     {
-        memset(m_pixelsPtr, 0, (m_size.area() * sizeof(uint32_t)).unsafeGet());
+        memset(m_pixelsPtr, 0, m_size.area() * sizeof(uint32_t));
     }
 
     void clearRect(const IntRect& rect)
@@ -152,7 +152,7 @@ public:
         if (!a)
             return;
 
-        auto pixel = asSRGBA(Packed::ARGB { *dest });
+        auto pixel = asSRGBA(PackedColor::ARGB { *dest });
 
         if (a >= 255 || !pixel.alpha) {
             setPixel(dest, r, g, b, a);
@@ -169,12 +169,12 @@ public:
         b = fastDivideBy255(b * a + pixel.blue * d);
         a += fastDivideBy255(d * pixel.alpha);
 
-        auto result = SRGBA { r, g, b, a };
+        auto result = SRGBA<uint8_t> { r, g, b, a };
 
         if (!m_premultiplyAlpha)
             result = unpremultiplied(result);
 
-        *dest = Packed::ARGB { result }.value;
+        *dest = PackedColor::ARGB { result }.value;
     }
 
     static bool isOverSize(const IntSize& size)
@@ -205,10 +205,9 @@ private:
         , m_premultiplyAlpha(other.m_premultiplyAlpha)
     {
         ASSERT(!m_size.isEmpty() && !isOverSize(m_size));
-        Vector<char> buffer;
-        buffer.append(other.m_pixels->data(), other.m_pixels->size());
+        Vector<uint8_t> buffer { other.m_pixels->data(), other.m_pixels->size() };
         m_pixels = SharedBuffer::DataSegment::create(WTFMove(buffer));
-        m_pixelsPtr = reinterpret_cast<uint32_t*>(const_cast<char*>(m_pixels->data()));
+        m_pixelsPtr = reinterpret_cast<uint32_t*>(const_cast<uint8_t*>(m_pixels->data()));
     }
 
     bool inBounds(const IntPoint& point) const
@@ -226,12 +225,12 @@ private:
         if (m_premultiplyAlpha && !a)
             return 0;
 
-        auto result = SRGBA { r, g, b, a };
+        auto result = SRGBA<uint8_t> { r, g, b, a };
 
         if (m_premultiplyAlpha && a < 255)
             result = premultipliedFlooring(result);
 
-        return Packed::ARGB { result }.value;
+        return PackedColor::ARGB { result }.value;
     }
 
     RefPtr<SharedBuffer::DataSegment> m_pixels;

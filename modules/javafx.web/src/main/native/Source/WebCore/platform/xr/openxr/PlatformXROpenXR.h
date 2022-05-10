@@ -19,15 +19,21 @@
 
 #pragma once
 
-#if ENABLE(WEBXR)
+#if ENABLE(WEBXR) && USE(OPENXR)
+
+#include "GLContextEGL.h"
+#include "GraphicsContextGL.h"
+#include "OpenXRLayer.h"
+#include "OpenXRUtils.h"
 #include "PlatformXR.h"
 
 #include <wtf/HashMap.h>
-
-#if USE_OPENXR
-#include <openxr/openxr.h>
+#include <wtf/WorkQueue.h>
 
 namespace PlatformXR {
+
+class OpenXRExtensions;
+class OpenXRInput;
 
 // https://www.khronos.org/registry/OpenXR/specs/1.0/html/xrspec.html#system
 // A system represents a collection of related devices in the runtime, often made up of several individual
@@ -43,27 +49,66 @@ namespace PlatformXR {
 // the XRSystem is basically the entry point for the WebXR API available via the Navigator object.
 class OpenXRDevice final : public Device {
 public:
-    OpenXRDevice(XrSystemId, XrInstance);
-    XrSystemId xrSystemId() const { return m_systemId; }
+    static Ref<OpenXRDevice> create(XrInstance, XrSystemId, Ref<WorkQueue>&&, const OpenXRExtensions&, CompletionHandler<void()>&&);
+
 private:
+    OpenXRDevice(XrInstance, XrSystemId, Ref<WorkQueue>&&, const OpenXRExtensions&);
+    void initialize(CompletionHandler<void()>&& callback);
+
+    // PlatformXR::Device
+    WebCore::IntSize recommendedResolution(SessionMode) final;
+    void initializeTrackingAndRendering(SessionMode) final;
+    void shutDownTrackingAndRendering() final;
+    void initializeReferenceSpace(PlatformXR::ReferenceSpaceType) final;
+    bool supportsSessionShutdownNotification() const final { return true; }
+    void requestFrame(RequestFrameCallback&&) final;
+    void submitFrame(Vector<Device::Layer>&&) final;
+    Vector<ViewData> views(SessionMode) const final;
+    std::optional<LayerHandle> createLayerProjection(uint32_t width, uint32_t height, bool alpha) final;
+    void deleteLayer(LayerHandle) final;
+
+    // Custom methods
+    FeatureList collectSupportedFeatures() const;
     void collectSupportedSessionModes();
     void collectConfigurationViews();
+    XrSpace createReferenceSpace(XrReferenceSpaceType);
+    void pollEvents();
+    XrResult beginSession();
+    void endSession();
+    void resetSession();
+    void handleSessionStateChange();
+    void waitUntilStopping();
+    void updateStageParameters();
+    void updateInteractionProfile();
+    LayerHandle generateLayerHandle() { return ++m_handleIndex; }
 
-    ListOfEnabledFeatures enumerateReferenceSpaces(XrSession&) const;
-
-    WebCore::IntSize recommendedResolution(SessionMode) final;
+    XrInstance m_instance;
+    XrSystemId m_systemId;
+    WorkQueue& m_queue;
+    const OpenXRExtensions& m_extensions;
+    XrSession m_session { XR_NULL_HANDLE };
+    XrSessionState m_sessionState { XR_SESSION_STATE_UNKNOWN };
+    XrGraphicsBindingEGLMNDX m_graphicsBinding;
+    std::unique_ptr<WebCore::GLContextEGL> m_egl;
+    RefPtr<WebCore::GraphicsContextGL> m_gl;
+    XrFrameState m_frameState;
+    Vector<XrView> m_frameViews;
+    HashMap<LayerHandle, std::unique_ptr<OpenXRLayer>> m_layers;
+    LayerHandle m_handleIndex { 0 };
+    std::unique_ptr<OpenXRInput> m_input;
+    bool didNotifyInputInitialization { false };
 
     using ViewConfigurationPropertiesMap = HashMap<XrViewConfigurationType, XrViewConfigurationProperties, IntHash<XrViewConfigurationType>, WTF::StrongEnumHashTraits<XrViewConfigurationType>>;
     ViewConfigurationPropertiesMap m_viewConfigurationProperties;
     using ViewConfigurationViewsMap = HashMap<XrViewConfigurationType, Vector<XrViewConfigurationView>, IntHash<XrViewConfigurationType>, WTF::StrongEnumHashTraits<XrViewConfigurationType>>;
     ViewConfigurationViewsMap m_configurationViews;
-
-    XrSystemId m_systemId;
-    XrInstance m_instance;
-    XrSession m_session;
+    XrViewConfigurationType m_currentViewConfigurationType;
+    XrSpace m_localSpace { XR_NULL_HANDLE };
+    XrSpace m_viewSpace { XR_NULL_HANDLE };
+    XrSpace m_stageSpace { XR_NULL_HANDLE };
+    Device::FrameData::StageParameters m_stageParameters;
 };
 
 } // namespace PlatformXR
 
-#endif // USE_OPENXR
-#endif // ENABLE(WEBXR)
+#endif // ENABLE(WEBXR) && USE(OPENXR)

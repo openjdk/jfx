@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -92,6 +92,8 @@ public:
         case MiscUse:
         case AnyIntUse:
         case DoubleRepAnyIntUse:
+        case NotDoubleUse:
+        case NeitherDoubleNorHeapBigIntNorStringUse:
             return;
 
         case KnownInt32Use:
@@ -257,20 +259,23 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case OverridesHasInstance:
     case IsEmpty:
     case TypeOfIsUndefined:
+    case TypeOfIsObject:
+    case TypeOfIsFunction:
     case IsUndefinedOrNull:
     case IsBoolean:
     case IsNumber:
     case IsBigInt:
     case NumberIsInteger:
     case IsObject:
-    case IsObjectOrNull:
-    case IsFunction:
+    case IsCallable:
     case IsConstructor:
     case IsCellWithType:
     case IsTypedArrayView:
     case TypeOf:
+    case ToBoolean:
     case LogicalNot:
     case ToString:
+    case FunctionToString:
     case NumberToStringWithValidRadixConstant:
     case StrCat:
     case CallStringConstructor:
@@ -280,6 +285,7 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case StringFromCharCode:
     case ExtractOSREntryLocal:
     case ExtractCatchLocal:
+    case AssertInBounds:
     case CheckInBounds:
     case ConstantStoragePointer:
     case Check:
@@ -290,9 +296,6 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case BooleanToNumber:
     case FiatInt52:
     case HasIndexedProperty:
-    case GetEnumeratorStructurePname:
-    case GetEnumeratorGenericPname:
-    case ToIndexString:
     case CheckStructureImmediate:
     case GetMyArgumentByVal:
     case GetMyArgumentByValOutOfBounds:
@@ -356,13 +359,16 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
 
     case FilterCallLinkStatus:
     case FilterGetByStatus:
-    case FilterPutByIdStatus:
-    case FilterInByIdStatus:
+    case FilterPutByStatus:
+    case FilterInByStatus:
     case FilterDeleteByStatus:
+    case FilterCheckPrivateBrandStatus:
+    case FilterSetPrivateBrandStatus:
         // We don't want these to be moved anywhere other than where we put them, since we want them
         // to capture "profiling" at the point in control flow here the user put them.
         return false;
 
+    case EnumeratorGetByVal:
     case GetByVal:
     case GetIndexedPropertyStorage:
     case GetArrayLength:
@@ -376,7 +382,7 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case ArrayPush:
         return node->arrayMode().alreadyChecked(graph, node, state.forNode(graph.varArgChild(node, 1)));
 
-    case CheckNeutered:
+    case CheckDetached:
     case GetTypedArrayByteOffset:
         return !(state.forNode(node->child1()).m_type & ~(SpecTypedArrayView));
 
@@ -487,19 +493,25 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
         return isSafe;
     }
 
+    case EnumeratorNextUpdateIndexAndMode:
+    // These technically don't have effects but they'll only ever follow a EnumeratorNextUpdateIndexAndMode so we might as well return false.
+    case EnumeratorNextExtractMode:
+    case EnumeratorNextExtractIndex:
+    case EnumeratorNextUpdatePropertyName:
     case ToThis:
     case CreateThis:
     case CreatePromise:
     case CreateGenerator:
     case CreateAsyncGenerator:
+    case ObjectAssign:
     case ObjectCreate:
     case ObjectKeys:
+    case ObjectGetOwnPropertyNames:
     case SetLocal:
     case SetCallee:
     case PutStack:
     case KillStack:
     case MovHint:
-    case ZombieHint:
     case Upsilon:
     case Phi:
     case Flush:
@@ -525,6 +537,12 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case PutGetterSetterById:
     case PutGetterByVal:
     case PutSetterByVal:
+    case PutPrivateName:
+    case PutPrivateNameById:
+    case GetPrivateName:
+    case GetPrivateNameById:
+    case CheckPrivateBrand:
+    case SetPrivateBrand:
     case DefineDataProperty:
     case DefineAccessorProperty:
     case Arrayify:
@@ -579,6 +597,10 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case NewStringObject:
     case InByVal:
     case InById:
+    case EnumeratorInByVal:
+    case EnumeratorHasOwnProperty:
+    case HasPrivateName:
+    case HasPrivateBrand:
     case HasOwnProperty:
     case PushWithScope:
     case CreateActivation:
@@ -621,12 +643,6 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case NotifyWrite:
     case MultiPutByOffset:
     case MultiDeleteByOffset:
-    case GetEnumerableLength:
-    case HasGenericProperty:
-    case HasStructureProperty:
-    case HasOwnStructureProperty:
-    case InStructureProperty:
-    case GetDirectPname:
     case GetPropertyEnumerator:
     case PhantomNewObject:
     case PhantomNewFunction:

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -54,7 +54,8 @@ class ZoomGestureRecognizer implements GestureRecognizer {
     private static double MAX_ZOOM_OUT_FACTOR = 0.1;
 
     static {
-        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+        @SuppressWarnings("removal")
+        var dummy = AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
             String s = System.getProperty("com.sun.javafx.gestures.zoom.threshold");
             if (s != null) {
                 ZOOM_FACTOR_THRESHOLD = Double.valueOf(s);
@@ -290,6 +291,7 @@ class ZoomGestureRecognizer implements GestureRecognizer {
         }
     }
 
+    @SuppressWarnings("removal")
     private void sendZoomStartedEvent() {
         AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
             if (scene.sceneListener != null) {
@@ -308,6 +310,7 @@ class ZoomGestureRecognizer implements GestureRecognizer {
         }, scene.getAccessControlContext());
     }
 
+    @SuppressWarnings("removal")
     private void sendZoomEvent(boolean isInertia) {
         AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
             if (scene.sceneListener != null) {
@@ -325,6 +328,7 @@ class ZoomGestureRecognizer implements GestureRecognizer {
         }, scene.getAccessControlContext());
     }
 
+    @SuppressWarnings("removal")
     private void sendZoomFinishedEvent() {
         AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
             if (scene.sceneListener != null) {

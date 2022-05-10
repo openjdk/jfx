@@ -38,14 +38,13 @@
 #include "DiagnosticLoggingKeys.h"
 #include "DocumentLoader.h"
 #include "Frame.h"
-#include "FrameLoader.h"
 #include "FrameLoaderClient.h"
-#include "HTMLAppletElement.h"
 #include "HTMLFrameElement.h"
 #include "HTMLIFrameElement.h"
 #include "HTMLNames.h"
 #include "HTMLObjectElement.h"
 #include "MIMETypeRegistry.h"
+#include "MixedContentChecker.h"
 #include "NavigationScheduler.h"
 #include "Page.h"
 #include "PluginData.h"
@@ -141,38 +140,26 @@ bool FrameLoader::SubframeLoader::pluginIsLoadable(const URL& url, const String&
             return false;
         }
 
-        if (!m_frame.loader().mixedContentChecker().canRunInsecureContent(document->securityOrigin(), url))
+        if (!portAllowed(url)) {
+            FrameLoader::reportBlockedLoadFailed(m_frame, url);
+            return false;
+        }
+
+        if (!MixedContentChecker::canRunInsecureContent(m_frame, document->securityOrigin(), url))
             return false;
     }
 
     return true;
 }
 
-bool FrameLoader::SubframeLoader::requestPlugin(HTMLPlugInImageElement& ownerElement, const URL& url, const String& mimeType, const Vector<String>& paramNames, const Vector<String>& paramValues, bool useFallback)
+static String findPluginMIMETypeFromURL(Page& page, const URL& url)
 {
-    // Application plug-ins are plug-ins implemented by the user agent, for example Qt plug-ins,
-    // as opposed to third-party code such as Flash. The user agent decides whether or not they are
-    // permitted, rather than WebKit.
-    if (!(m_frame.settings().arePluginsEnabled() || MIMETypeRegistry::isApplicationPluginMIMEType(mimeType)))
-        return false;
-
-    if (!pluginIsLoadable(url, mimeType))
-        return false;
-
-    ASSERT(ownerElement.hasTagName(objectTag) || ownerElement.hasTagName(embedTag));
-    return loadPlugin(ownerElement, url, mimeType, paramNames, paramValues, useFallback);
-}
-
-static String findPluginMIMETypeFromURL(Page& page, const StringView& url)
-{
-    if (!url)
-        return { };
-
-    size_t dotIndex = url.reverseFind('.');
+    auto lastPathComponent = url.lastPathComponent();
+    size_t dotIndex = lastPathComponent.reverseFind('.');
     if (dotIndex == notFound)
         return { };
 
-    auto extensionFromURL = url.substring(dotIndex + 1);
+    auto extensionFromURL = lastPathComponent.substring(dotIndex + 1);
 
     for (auto& type : page.pluginData().webVisibleMimeTypes()) {
         for (auto& extension : type.extensions) {
@@ -184,7 +171,28 @@ static String findPluginMIMETypeFromURL(Page& page, const StringView& url)
     return { };
 }
 
-static void logPluginRequest(Page* page, const String& mimeType, const String& url, bool success)
+bool FrameLoader::SubframeLoader::requestPlugin(HTMLPlugInImageElement& ownerElement, const URL& url, const String& explicitMIMEType, const Vector<String>& paramNames, const Vector<String>& paramValues, bool useFallback)
+{
+    String mimeType = explicitMIMEType;
+    if (mimeType.isEmpty()) {
+        if (auto page = ownerElement.document().page())
+            mimeType = findPluginMIMETypeFromURL(*page, url);
+    }
+
+    // Application plug-ins are plug-ins implemented by the user agent, for example Qt plug-ins,
+    // as opposed to third-party code such as Flash. The user agent decides whether or not they are
+    // permitted, rather than WebKit.
+    if (!(m_frame.arePluginsEnabled() || MIMETypeRegistry::isApplicationPluginMIMEType(mimeType)))
+        return false;
+
+    if (!pluginIsLoadable(url, explicitMIMEType))
+        return false;
+
+    ASSERT(ownerElement.hasTagName(objectTag) || ownerElement.hasTagName(embedTag));
+    return loadPlugin(ownerElement, url, explicitMIMEType, paramNames, paramValues, useFallback);
+}
+
+static void logPluginRequest(Page* page, const String& mimeType, const URL& url)
 {
     if (!page)
         return;
@@ -199,16 +207,6 @@ static void logPluginRequest(Page* page, const String& mimeType, const String& u
 
     String pluginFile = page->pluginData().pluginFileForWebVisibleMimeType(newMIMEType);
     String description = !pluginFile ? newMIMEType : pluginFile;
-
-    DiagnosticLoggingClient& diagnosticLoggingClient = page->diagnosticLoggingClient();
-    diagnosticLoggingClient.logDiagnosticMessage(success ? DiagnosticLoggingKeys::pluginLoadedKey() : DiagnosticLoggingKeys::pluginLoadingFailedKey(), description, ShouldSample::No);
-
-    if (!page->hasSeenAnyPlugin())
-        diagnosticLoggingClient.logDiagnosticMessage(DiagnosticLoggingKeys::pageContainsAtLeastOnePluginKey(), emptyString(), ShouldSample::No);
-
-    if (!page->hasSeenPlugin(description))
-        diagnosticLoggingClient.logDiagnosticMessage(DiagnosticLoggingKeys::pageContainsPluginKey(), description, ShouldSample::No);
-
     page->sawPlugin(description);
 }
 
@@ -230,7 +228,7 @@ bool FrameLoader::SubframeLoader::requestObject(HTMLPlugInImageElement& ownerEle
     bool useFallback;
     if (shouldUsePlugin(completedURL, mimeType, hasFallbackContent, useFallback)) {
         bool success = requestPlugin(ownerElement, completedURL, mimeType, paramNames, paramValues, useFallback);
-        logPluginRequest(document.page(), mimeType, completedURL.string(), success);
+        logPluginRequest(document.page(), mimeType, completedURL);
         return success;
     }
 
@@ -238,56 +236,6 @@ bool FrameLoader::SubframeLoader::requestObject(HTMLPlugInImageElement& ownerEle
     // it will create a new frame and set it as the RenderWidget's Widget, causing what was previously
     // in the widget to be torn down.
     return loadOrRedirectSubframe(ownerElement, completedURL, frameName, LockHistory::Yes, LockBackForwardList::Yes);
-}
-
-RefPtr<Widget> FrameLoader::SubframeLoader::createJavaAppletWidget(const IntSize& size, HTMLAppletElement& element, const Vector<String>& paramNames, const Vector<String>& paramValues)
-{
-    String baseURLString;
-    String codeBaseURLString;
-
-    for (size_t i = 0; i < paramNames.size(); ++i) {
-        if (equalLettersIgnoringASCIICase(paramNames[i], "baseurl"))
-            baseURLString = paramValues[i];
-        else if (equalLettersIgnoringASCIICase(paramNames[i], "codebase"))
-            codeBaseURLString = paramValues[i];
-    }
-
-    if (!codeBaseURLString.isEmpty()) {
-        URL codeBaseURL = completeURL(codeBaseURLString);
-        if (!element.document().securityOrigin().canDisplay(codeBaseURL)) {
-            FrameLoader::reportLocalLoadFailed(&m_frame, codeBaseURL.string());
-            return nullptr;
-        }
-
-        const char javaAppletMimeType[] = "application/x-java-applet";
-        ASSERT(element.document().contentSecurityPolicy());
-        auto& contentSecurityPolicy = *element.document().contentSecurityPolicy();
-        // Elements in user agent show tree should load whatever the embedding document policy is.
-        if (!element.isInUserAgentShadowTree()
-            && (!contentSecurityPolicy.allowObjectFromSource(codeBaseURL) || !contentSecurityPolicy.allowPluginType(javaAppletMimeType, javaAppletMimeType, codeBaseURL)))
-            return nullptr;
-    }
-
-    if (baseURLString.isEmpty())
-        baseURLString = element.document().baseURL().string();
-    URL baseURL = completeURL(baseURLString);
-
-    RefPtr<Widget> widget;
-    if (m_frame.settings().arePluginsEnabled())
-        widget = m_frame.loader().client().createJavaAppletWidget(size, element, baseURL, paramNames, paramValues);
-
-    logPluginRequest(m_frame.page(), element.serviceType(), String(), widget);
-
-    if (!widget) {
-        RenderEmbeddedObject* renderer = element.renderEmbeddedObject();
-
-        if (!renderer->isPluginUnavailable())
-            renderer->setPluginUnavailabilityReason(RenderEmbeddedObject::PluginMissing);
-        return nullptr;
-    }
-
-    m_containsPlugins = true;
-    return widget;
 }
 
 Frame* FrameLoader::SubframeLoader::loadOrRedirectSubframe(HTMLFrameOwnerElement& ownerElement, const URL& requestURL, const AtomString& frameName, LockHistory lockHistory, LockBackForwardList lockBackForwardList)
@@ -317,6 +265,11 @@ RefPtr<Frame> FrameLoader::SubframeLoader::loadSubframe(HTMLFrameOwnerElement& o
 
     if (!document->securityOrigin().canDisplay(url)) {
         FrameLoader::reportLocalLoadFailed(&m_frame, url.string());
+        return nullptr;
+    }
+
+    if (!portAllowed(url)) {
+        FrameLoader::reportBlockedLoadFailed(m_frame, url);
         return nullptr;
     }
 
@@ -374,7 +327,7 @@ RefPtr<Frame> FrameLoader::SubframeLoader::loadSubframe(HTMLFrameOwnerElement& o
     // FIXME: In this case the Frame will have finished loading before
     // it's being added to the child list. It would be a good idea to
     // create the child first, then invoke the loader separately.
-    if (frame->loader().state() == FrameStateComplete && !frame->loader().policyDocumentLoader())
+    if (frame->loader().state() == FrameState::Complete && !frame->loader().policyDocumentLoader())
         frame->loader().checkCompleted();
 
     if (!frame->tree().parent())
@@ -410,8 +363,6 @@ bool FrameLoader::SubframeLoader::loadPlugin(HTMLPlugInImageElement& pluginEleme
     if (!renderer)
         return false;
 
-    pluginElement.subframeLoaderWillCreatePlugIn(url);
-
     IntSize contentSize = roundedIntSize(LayoutSize(renderer->contentWidth(), renderer->contentHeight()));
     bool loadManually = is<PluginDocument>(document) && !m_containsPlugins && downcast<PluginDocument>(document).shouldLoadPluginManually();
 
@@ -435,7 +386,6 @@ bool FrameLoader::SubframeLoader::loadPlugin(HTMLPlugInImageElement& pluginEleme
         return false;
     }
 
-    pluginElement.subframeLoaderDidCreatePlugIn(*widget);
     renderer->setWidget(WTFMove(widget));
     m_containsPlugins = true;
     return true;

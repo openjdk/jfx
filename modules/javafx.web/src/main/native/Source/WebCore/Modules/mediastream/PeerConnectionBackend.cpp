@@ -36,14 +36,16 @@
 
 #include "EventNames.h"
 #include "JSDOMPromiseDeferred.h"
-#include "JSRTCSessionDescription.h"
+#include "JSRTCSessionDescriptionInit.h"
 #include "LibWebRTCCertificateGenerator.h"
 #include "Logging.h"
 #include "Page.h"
+#include "RTCDtlsTransport.h"
 #include "RTCIceCandidate.h"
 #include "RTCPeerConnection.h"
 #include "RTCPeerConnectionIceEvent.h"
 #include "RTCRtpCapabilities.h"
+#include "RTCSessionDescriptionInit.h"
 #include "RTCTrackEvent.h"
 #include "RuntimeEnabledFeatures.h"
 #include <wtf/UUID.h>
@@ -51,8 +53,6 @@
 #include <wtf/text/StringConcatenateNumbers.h>
 
 namespace WebCore {
-
-using namespace PAL;
 
 #if !USE(LIBWEBRTC)
 static std::unique_ptr<PeerConnectionBackend> createNoPeerConnectionBackend(RTCPeerConnection&)
@@ -62,13 +62,13 @@ static std::unique_ptr<PeerConnectionBackend> createNoPeerConnectionBackend(RTCP
 
 CreatePeerConnectionBackend PeerConnectionBackend::create = createNoPeerConnectionBackend;
 
-Optional<RTCRtpCapabilities> PeerConnectionBackend::receiverCapabilities(ScriptExecutionContext&, const String&)
+std::optional<RTCRtpCapabilities> PeerConnectionBackend::receiverCapabilities(ScriptExecutionContext&, const String&)
 {
     ASSERT_NOT_REACHED();
     return { };
 }
 
-Optional<RTCRtpCapabilities> PeerConnectionBackend::senderCapabilities(ScriptExecutionContext&, const String&)
+std::optional<RTCRtpCapabilities> PeerConnectionBackend::senderCapabilities(ScriptExecutionContext&, const String&)
 {
     ASSERT_NOT_REACHED();
     return { };
@@ -105,7 +105,7 @@ void PeerConnectionBackend::createOfferSucceeded(String&& sdp)
         if (m_peerConnection.isClosed())
             return;
 
-        promise->resolve(RTCSessionDescription::Init { RTCSdpType::Offer, sdp });
+        promise->resolve(RTCSessionDescriptionInit { RTCSdpType::Offer, sdp });
     });
 }
 
@@ -142,7 +142,7 @@ void PeerConnectionBackend::createAnswerSucceeded(String&& sdp)
         if (m_peerConnection.isClosed())
             return;
 
-        promise->resolve(RTCSessionDescription::Init { RTCSdpType::Answer, sdp });
+        promise->resolve(RTCSessionDescriptionInit { RTCSdpType::Answer, sdp });
     });
 }
 
@@ -179,12 +179,12 @@ static inline bool isLocalDescriptionTypeValidForState(RTCSdpType type, RTCSigna
     return false;
 }
 
-void PeerConnectionBackend::setLocalDescription(RTCSessionDescription& sessionDescription, DOMPromiseDeferred<void>&& promise)
+void PeerConnectionBackend::setLocalDescription(const RTCSessionDescription* sessionDescription, DOMPromiseDeferred<void>&& promise)
 {
     ASSERT(!m_peerConnection.isClosed());
 
-    if (!isLocalDescriptionTypeValidForState(sessionDescription.type(), m_peerConnection.signalingState())) {
-        promise.reject(InvalidStateError, "Description type incompatible with current signaling state");
+    if (sessionDescription && !isLocalDescriptionTypeValidForState(sessionDescription->type(), m_peerConnection.signalingState())) {
+        promise.reject(InvalidStateError, makeString("Local description type ", sessionDescription->type(), " is incompatible with current signaling state ", m_peerConnection.signalingState()));
         return;
     }
 
@@ -201,7 +201,7 @@ void PeerConnectionBackend::setLocalDescriptionSucceeded()
     m_peerConnection.doTask([this, promise = WTFMove(m_setDescriptionPromise)]() mutable {
         if (m_peerConnection.isClosed())
             return;
-
+        m_peerConnection.updateTransceiversAfterSuccessfulLocalDescription();
         promise->resolve();
     });
 }
@@ -239,12 +239,12 @@ static inline bool isRemoteDescriptionTypeValidForState(RTCSdpType type, RTCSign
     return false;
 }
 
-void PeerConnectionBackend::setRemoteDescription(RTCSessionDescription& sessionDescription, DOMPromiseDeferred<void>&& promise)
+void PeerConnectionBackend::setRemoteDescription(const RTCSessionDescription& sessionDescription, DOMPromiseDeferred<void>&& promise)
 {
     ASSERT(!m_peerConnection.isClosed());
 
     if (!isRemoteDescriptionTypeValidForState(sessionDescription.type(), m_peerConnection.signalingState())) {
-        promise.reject(InvalidStateError, "Description type incompatible with current signaling state");
+        promise.reject(InvalidStateError, makeString("Remote description type ", sessionDescription.type(), " is incompatible with current signaling state ", m_peerConnection.signalingState()));
         return;
     }
 
@@ -264,6 +264,7 @@ void PeerConnectionBackend::setRemoteDescriptionSucceeded()
         auto& track = event.track.get();
 
         m_peerConnection.dispatchEventWhenFeasible(RTCTrackEvent::create(eventNames().trackEvent, Event::CanBubble::No, Event::IsCancelable::No, WTFMove(event.receiver), WTFMove(event.track), WTFMove(event.streams), WTFMove(event.transceiver)));
+        ALWAYS_LOG(LOGIDENTIFIER, "Dispatched if feasible track of type ", track.source().type());
 
         if (m_peerConnection.isClosed())
             return;
@@ -276,6 +277,7 @@ void PeerConnectionBackend::setRemoteDescriptionSucceeded()
         if (m_peerConnection.isClosed())
             return;
 
+        m_peerConnection.updateTransceiversAfterSuccessfulRemoteDescription();
         promise->resolve();
     });
 }
@@ -604,7 +606,12 @@ ExceptionOr<Ref<RTCRtpTransceiver>> PeerConnectionBackend::addTransceiver(Ref<Me
 void PeerConnectionBackend::generateCertificate(Document& document, const CertificateInformation& info, DOMPromiseDeferred<IDLInterface<RTCCertificate>>&& promise)
 {
 #if USE(LIBWEBRTC)
-    LibWebRTCCertificateGenerator::generateCertificate(document.securityOrigin(), document.page()->libWebRTCProvider(), info, WTFMove(promise));
+    auto* page = document.page();
+    if (!page) {
+        promise.reject(InvalidStateError);
+        return;
+    }
+    LibWebRTCCertificateGenerator::generateCertificate(document.securityOrigin(), page->libWebRTCProvider(), info, WTFMove(promise));
 #else
     UNUSED_PARAM(document);
     UNUSED_PARAM(expires);
@@ -616,15 +623,6 @@ void PeerConnectionBackend::generateCertificate(Document& document, const Certif
 ScriptExecutionContext* PeerConnectionBackend::context() const
 {
     return m_peerConnection.scriptExecutionContext();
-}
-
-RTCRtpTransceiver* PeerConnectionBackend::transceiverFromSender(const RTCRtpSender& sender)
-{
-    for (auto& transceiver : m_peerConnection.currentTransceivers()) {
-        if (&transceiver->sender() == &sender)
-            return transceiver.get();
-    }
-    return nullptr;
 }
 
 #if !RELEASE_LOG_DISABLED

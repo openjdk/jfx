@@ -26,6 +26,9 @@
 
 namespace WebCore {
 
+class Color;
+class MediaQuerySet;
+
 class HTMLMetaElement final : public HTMLElement {
     WTF_MAKE_ISO_ALLOCATED(HTMLMetaElement);
 public:
@@ -36,14 +39,24 @@ public:
     const AtomString& httpEquiv() const;
     const AtomString& name() const;
 
+    bool mediaAttributeMatches();
+
+    const Color& contentColor();
+
 private:
     HTMLMetaElement(const QualifiedName&, Document&);
 
+    void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason = ModifiedDirectly) final;
     void parseAttribute(const QualifiedName&, const AtomString&) final;
     InsertedIntoAncestorResult insertedIntoAncestor(InsertionType, ContainerNode&) final;
     void didFinishInsertingNode();
+    void removedFromAncestor(RemovalType, ContainerNode&) final;
 
     void process();
+
+    RefPtr<MediaQuerySet> m_media;
+
+    std::optional<Color> m_contentColor;
 };
 
 } // namespace WebCore

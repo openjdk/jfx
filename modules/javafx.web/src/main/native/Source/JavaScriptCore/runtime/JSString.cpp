@@ -1,7 +1,7 @@
 /*
  *  Copyright (C) 1999-2002 Harri Porten (porten@kde.org)
  *  Copyright (C) 2001 Peter Kelly (pmk@post.com)
- *  Copyright (C) 2004-2019 Apple Inc. All rights reserved.
+ *  Copyright (C) 2004-2021 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Library General Public
@@ -89,6 +89,10 @@ bool JSString::equalSlowCase(JSGlobalObject* globalObject, JSString* other) cons
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
+
+    if (length() != other->length())
+        return false;
+
     String str1 = value(globalObject);
     RETURN_IF_EXCEPTION(scope, false);
     String str2 = other->value(globalObject);
@@ -105,7 +109,8 @@ size_t JSString::estimatedSize(JSCell* cell, VM& vm)
     return Base::estimatedSize(cell, vm) + bitwise_cast<StringImpl*>(pointer)->costDuringGC();
 }
 
-void JSString::visitChildren(JSCell* cell, SlotVisitor& visitor)
+template<typename Visitor>
+void JSString::visitChildrenImpl(JSCell* cell, Visitor& visitor)
 {
     JSString* thisObject = asString(cell);
     ASSERT_GC_OBJECT_INHERITS(thisObject, info());
@@ -142,6 +147,8 @@ void JSString::visitChildren(JSCell* cell, SlotVisitor& visitor)
     if (StringImpl* impl = bitwise_cast<StringImpl*>(pointer))
         visitor.reportExtraMemoryVisited(impl->costDuringGC());
 }
+
+DEFINE_VISIT_CHILDREN(JSString);
 
 static constexpr unsigned maxLengthForOnStackResolve = 2048;
 
@@ -382,17 +389,6 @@ JSValue JSString::toPrimitive(JSGlobalObject*, PreferredPrimitiveType) const
     return const_cast<JSString*>(this);
 }
 
-bool JSString::getPrimitiveNumber(JSGlobalObject* globalObject, double& number, JSValue& result) const
-{
-    VM& vm = globalObject->vm();
-    auto scope = DECLARE_THROW_SCOPE(vm);
-    StringView view = unsafeView(globalObject);
-    RETURN_IF_EXCEPTION(scope, false);
-    result = this;
-    number = jsToNumber(view);
-    return false;
-}
-
 double JSString::toNumber(JSGlobalObject* globalObject) const
 {
     VM& vm = globalObject->vm();
@@ -429,7 +425,7 @@ bool JSString::getStringPropertyDescriptor(JSGlobalObject* globalObject, Propert
         return true;
     }
 
-    Optional<uint32_t> index = parseIndex(propertyName);
+    std::optional<uint32_t> index = parseIndex(propertyName);
     if (index && index.value() < length()) {
         descriptor.setDescriptor(getIndex(globalObject, index.value()), PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly);
         return true;

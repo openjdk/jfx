@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,9 +28,10 @@
 
 #if ENABLE(WEBASSEMBLY)
 
-#include "B3Compilation.h"
 #include "BytecodeDumper.h"
+#include "CCallHelpers.h"
 #include "CalleeBits.h"
+#include "JITCompilation.h"
 #include "JSToWasm.h"
 #include "LLIntThunks.h"
 #include "LinkBuffer.h"
@@ -40,18 +41,25 @@
 
 namespace JSC { namespace Wasm {
 
-LLIntPlan::LLIntPlan(Context* context, Vector<uint8_t>&& source, AsyncWork work, CompletionTask&& task)
-    : Base(context, WTFMove(source), work, WTFMove(task))
+LLIntPlan::LLIntPlan(Context* context, Vector<uint8_t>&& source, CompilerMode compilerMode, CompletionTask&& task)
+    : Base(context, WTFMove(source), compilerMode, WTFMove(task))
 {
     if (parseAndValidateModule(m_source.data(), m_source.size()))
         prepare();
 }
 
 LLIntPlan::LLIntPlan(Context* context, Ref<ModuleInformation> info, const Ref<LLIntCallee>* callees, CompletionTask&& task)
-    : Base(context, WTFMove(info), AsyncWork::FullCompile, WTFMove(task))
+    : Base(context, WTFMove(info), CompilerMode::FullCompile, WTFMove(task))
     , m_callees(callees)
 {
     ASSERT(m_callees || !m_moduleInformation->functions.size());
+    prepare();
+    m_currentIndex = m_moduleInformation->functions.size();
+}
+
+LLIntPlan::LLIntPlan(Context* context, Ref<ModuleInformation> info, CompilerMode compilerMode, CompletionTask&& task)
+    : Base(context, WTFMove(info), compilerMode, WTFMove(task))
+{
     prepare();
     m_currentIndex = m_moduleInformation->functions.size();
 }
@@ -79,10 +87,10 @@ void LLIntPlan::compileFunction(uint32_t functionIndex)
     Expected<std::unique_ptr<FunctionCodeBlock>, String> parseAndCompileResult = parseAndCompileBytecode(function.data.data(), function.data.size(), signature, m_moduleInformation.get(), functionIndex);
 
     if (UNLIKELY(!parseAndCompileResult)) {
-        auto locker = holdLock(m_lock);
+        Locker locker { m_lock };
         if (!m_errorMessage) {
             // Multiple compiles could fail simultaneously. We arbitrarily choose the first.
-            fail(locker, makeString(parseAndCompileResult.error(), ", in function at index ", String::number(functionIndex))); // FIXME make this an Expected.
+            fail(makeString(parseAndCompileResult.error(), ", in function at index ", String::number(functionIndex))); // FIXME make this an Expected.
         }
         m_currentIndex = m_moduleInformation->functions.size();
         return;
@@ -91,7 +99,7 @@ void LLIntPlan::compileFunction(uint32_t functionIndex)
     m_wasmInternalFunctions[functionIndex] = WTFMove(*parseAndCompileResult);
 }
 
-void LLIntPlan::didCompleteCompilation(const AbstractLocker& locker)
+void LLIntPlan::didCompleteCompilation()
 {
     unsigned functionCount = m_wasmInternalFunctions.size();
     if (!m_callees && functionCount) {
@@ -119,9 +127,9 @@ void LLIntPlan::didCompleteCompilation(const AbstractLocker& locker)
             jumps[i] = jit.jump();
         }
 
-        LinkBuffer linkBuffer(jit, GLOBAL_THUNK_ID, JITCompilationCanFail);
+        LinkBuffer linkBuffer(jit, GLOBAL_THUNK_ID, LinkBuffer::Profile::Wasm, JITCompilationCanFail);
         if (UNLIKELY(linkBuffer.didFailToAllocate())) {
-            Base::fail(locker, "Out of executable memory in Wasm LLInt entry thunks");
+            Base::fail("Out of executable memory in Wasm LLInt entry thunks");
             return;
         }
 
@@ -130,11 +138,11 @@ void LLIntPlan::didCompleteCompilation(const AbstractLocker& locker)
             linkBuffer.link<JITThunkPtrTag>(jumps[i], CodeLocationLabel<JITThunkPtrTag>(LLInt::wasmFunctionEntryThunk().code()));
         }
 
-        m_entryThunks = FINALIZE_CODE(linkBuffer, B3CompilationPtrTag, "Wasm LLInt entry thunks");
+        m_entryThunks = FINALIZE_CODE(linkBuffer, JITCompilationPtrTag, "Wasm LLInt entry thunks");
         m_callees = m_calleesVector.data();
     }
 
-    if (m_asyncWork == AsyncWork::Validation)
+    if (m_compilerMode == CompilerMode::Validation)
         return;
 
     for (uint32_t functionIndex = 0; functionIndex < m_moduleInformation->functions.size(); functionIndex++) {
@@ -146,14 +154,14 @@ void LLIntPlan::didCompleteCompilation(const AbstractLocker& locker)
             MemoryMode mode = MemoryMode::BoundsChecking;
             std::unique_ptr<InternalFunction> function = createJSToWasmWrapper(jit, signature, &m_unlinkedWasmToWasmCalls[functionIndex], m_moduleInformation.get(), mode, functionIndex);
 
-            LinkBuffer linkBuffer(jit, nullptr, JITCompilationCanFail);
+            LinkBuffer linkBuffer(jit, nullptr, LinkBuffer::Profile::Wasm, JITCompilationCanFail);
             if (UNLIKELY(linkBuffer.didFailToAllocate())) {
-                Base::fail(locker, makeString("Out of executable memory in function entrypoint at index ", String::number(functionIndex)));
+                Base::fail(makeString("Out of executable memory in function entrypoint at index ", String::number(functionIndex)));
                 return;
             }
 
-            function->entrypoint.compilation = makeUnique<B3::Compilation>(
-                FINALIZE_CODE(linkBuffer, B3CompilationPtrTag, "Embedder->WebAssembly entrypoint[%i] %s", functionIndex, signature.toString().ascii().data()),
+            function->entrypoint.compilation = makeUnique<Compilation>(
+                FINALIZE_CODE(linkBuffer, JITCompilationPtrTag, "Embedder->WebAssembly entrypoint[%i] %s", functionIndex, signature.toString().ascii().data()),
                 nullptr);
 
             Ref<EmbedderEntrypointCallee> callee = EmbedderEntrypointCallee::create(WTFMove(function->entrypoint));
@@ -179,6 +187,25 @@ void LLIntPlan::didCompleteCompilation(const AbstractLocker& locker)
             MacroAssembler::repatchNearCall(call.callLocation, CodeLocationLabel<WasmEntryPtrTag>(executableAddress));
         }
     }
+}
+
+void LLIntPlan::completeInStreaming()
+{
+    Locker locker { m_lock };
+    complete();
+}
+
+void LLIntPlan::didCompileFunctionInStreaming()
+{
+    Locker locker { m_lock };
+    moveToState(EntryPlan::State::Compiled);
+}
+
+void LLIntPlan::didFailInStreaming(String&& message)
+{
+    Locker locker { m_lock };
+    if (!m_errorMessage)
+        fail(WTFMove(message));
 }
 
 void LLIntPlan::work(CompilationEffort effort)

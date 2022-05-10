@@ -40,13 +40,13 @@ RemoteInspectorConnectionClient::~RemoteInspectorConnectionClient()
     endpoint.invalidateClient(*this);
 }
 
-Optional<ConnectionID> RemoteInspectorConnectionClient::connectInet(const char* serverAddr, uint16_t serverPort)
+std::optional<ConnectionID> RemoteInspectorConnectionClient::connectInet(const char* serverAddr, uint16_t serverPort)
 {
     auto& endpoint = Inspector::RemoteInspectorSocketEndpoint::singleton();
     return endpoint.connectInet(serverAddr, serverPort, *this);
 }
 
-Optional<ConnectionID> RemoteInspectorConnectionClient::createClient(PlatformSocketType socket)
+std::optional<ConnectionID> RemoteInspectorConnectionClient::createClient(PlatformSocketType socket)
 {
     auto& endpoint = Inspector::RemoteInspectorSocketEndpoint::singleton();
     return endpoint.createClient(socket, *this);
@@ -62,11 +62,11 @@ void RemoteInspectorConnectionClient::send(ConnectionID id, const uint8_t* data,
     endpoint.send(id, message.data(), message.size());
 }
 
-void RemoteInspectorConnectionClient::didReceive(ConnectionID clientID, Vector<uint8_t>&& data)
+void RemoteInspectorConnectionClient::didReceive(RemoteInspectorSocketEndpoint&, ConnectionID clientID, Vector<uint8_t>&& data)
 {
     ASSERT(!isMainThread());
 
-    LockHolder lock(m_parsersLock);
+    Locker locker { m_parsersLock };
     auto result = m_parsers.ensure(clientID, [this, clientID] {
         return MessageParser([this, clientID](Vector<uint8_t>&& data) {
             if (auto event = RemoteInspectorConnectionClient::extractEvent(clientID, WTFMove(data))) {
@@ -85,40 +85,58 @@ void RemoteInspectorConnectionClient::didReceive(ConnectionID clientID, Vector<u
     result.iterator->value.pushReceivedData(data.data(), data.size());
 }
 
-Optional<RemoteInspectorConnectionClient::Event> RemoteInspectorConnectionClient::extractEvent(ConnectionID clientID, Vector<uint8_t>&& data)
+std::optional<RemoteInspectorConnectionClient::Event> RemoteInspectorConnectionClient::extractEvent(ConnectionID clientID, Vector<uint8_t>&& data)
 {
     if (data.isEmpty())
-        return WTF::nullopt;
+        return std::nullopt;
 
     String jsonData = String::fromUTF8(data);
 
-    RefPtr<JSON::Value> messageValue;
-    if (!JSON::Value::parseJSON(jsonData, messageValue))
-        return WTF::nullopt;
+    auto messageValue = JSON::Value::parseJSON(jsonData);
+    if (!messageValue)
+        return std::nullopt;
 
-    RefPtr<JSON::Object> messageObject;
-    if (!messageValue->asObject(messageObject))
-        return WTF::nullopt;
+    auto messageObject = messageValue->asObject();
+    if (!messageObject)
+        return std::nullopt;
 
     Event event;
-    if (!messageObject->getString("event"_s, event.methodName))
-        return WTF::nullopt;
+
+    event.methodName = messageObject->getString("event"_s);
+    if (!event.methodName)
+        return std::nullopt;
 
     event.clientID = clientID;
 
-    ConnectionID connectionID;
-    if (messageObject->getInteger("connectionID"_s, connectionID))
-        event.connectionID = connectionID;
+    if (auto connectionID = messageObject->getInteger("connectionID"_s))
+        event.connectionID = *connectionID;
 
-    TargetID targetID;
-    if (messageObject->getInteger("targetID"_s, targetID))
-        event.targetID = targetID;
+    if (auto targetID = messageObject->getInteger("targetID"_s))
+        event.targetID = *targetID;
 
-    String message;
-    if (messageObject->getString("message"_s, message))
-        event.message = message;
+    event.message = messageObject->getString("message"_s);
 
     return event;
+}
+
+std::optional<Vector<Ref<JSON::Object>>> RemoteInspectorConnectionClient::parseTargetListJSON(const String& message)
+{
+    auto messageValue = JSON::Value::parseJSON(message);
+    if (!messageValue)
+        return std::nullopt;
+
+    auto messageArray = messageValue->asArray();
+    if (!messageArray)
+        return std::nullopt;
+
+    Vector<Ref<JSON::Object>> targetList;
+    for (auto& itemValue : *messageArray) {
+        if (auto itemObject = itemValue->asObject())
+            targetList.append(itemObject.releaseNonNull());
+        else
+            LOG_ERROR("Invalid type of value in targetList. It must be object.");
+    }
+    return targetList;
 }
 
 } // namespace Inspector

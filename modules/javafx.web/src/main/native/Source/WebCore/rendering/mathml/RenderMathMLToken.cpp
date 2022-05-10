@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2014 Frédéric Wang (fred.wang@free.fr). All rights reserved.
  * Copyright (C) 2016 Igalia S.L.
- * Copyright (C) 2016 Apple Inc.  All rights reserved.
+ * Copyright (C) 2016-2021 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -519,7 +519,7 @@ void RenderMathMLToken::updateMathVariantGlyph()
 {
     ASSERT(m_mathVariantGlyphDirty);
 
-    m_mathVariantCodePoint = WTF::nullopt;
+    m_mathVariantCodePoint = std::nullopt;
     m_mathVariantGlyphDirty = false;
 
     // Early return if the token element contains RenderElements.
@@ -554,12 +554,12 @@ void RenderMathMLToken::updateFromElement()
     setMathVariantGlyphDirty();
 }
 
-Optional<int> RenderMathMLToken::firstLineBaseline() const
+std::optional<LayoutUnit> RenderMathMLToken::firstLineBaseline() const
 {
     if (m_mathVariantCodePoint) {
         auto mathVariantGlyph = style().fontCascade().glyphDataForCharacter(m_mathVariantCodePoint.value(), m_mathVariantIsMirrored);
         if (mathVariantGlyph.font)
-            return Optional<int>(static_cast<int>(lroundf(-mathVariantGlyph.font->boundsForGlyph(mathVariantGlyph.glyph).y())));
+            return LayoutUnit { static_cast<int>(lroundf(-mathVariantGlyph.font->boundsForGlyph(mathVariantGlyph.glyph).y())) };
     }
     return RenderMathMLBlock::firstLineBaseline();
 }
@@ -606,10 +606,10 @@ void RenderMathMLToken::paint(PaintInfo& info, const LayoutPoint& paintOffset)
     GraphicsContextStateSaver stateSaver(info.context());
     info.context().setFillColor(style().visitedDependentColorWithColorFilter(CSSPropertyColor));
 
-    GlyphBuffer buffer;
-    buffer.add(mathVariantGlyph.glyph, *mathVariantGlyph.font, mathVariantGlyph.font->widthForGlyph(mathVariantGlyph.glyph));
     LayoutUnit glyphAscent = static_cast<int>(lroundf(-mathVariantGlyph.font->boundsForGlyph(mathVariantGlyph.glyph).y()));
-    info.context().drawGlyphs(*mathVariantGlyph.font, buffer, 0, 1, paintOffset + location() + LayoutPoint(0_lu, glyphAscent), style().fontCascade().fontDescription().fontSmoothing());
+    // FIXME: If we're just drawing a single glyph, why do we need to compute an advance?
+    auto advance = makeGlyphBufferAdvance(mathVariantGlyph.font->widthForGlyph(mathVariantGlyph.glyph));
+    info.context().drawGlyphs(*mathVariantGlyph.font, &mathVariantGlyph.glyph, &advance, 1, paintOffset + location() + LayoutPoint(0_lu, glyphAscent), style().fontCascade().fontDescription().fontSmoothing());
 }
 
 void RenderMathMLToken::paintChildren(PaintInfo& paintInfo, const LayoutPoint& paintOffset, PaintInfo& paintInfoForChild, bool usePrintRect)

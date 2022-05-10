@@ -33,14 +33,19 @@
 #include "GCReachableRef.h"
 #include "MutationObserver.h"
 #include <wtf/HashSet.h>
+#include <wtf/WeakPtr.h>
 #include <wtf/text/AtomString.h>
 #include <wtf/text/AtomStringHash.h>
+
+namespace JSC {
+class AbstractSlotVisitor;
+}
 
 namespace WebCore {
 
 class QualifiedName;
 
-class MutationObserverRegistration {
+class MutationObserverRegistration : public CanMakeWeakPtr<MutationObserverRegistration> {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     MutationObserverRegistration(MutationObserver&, Node&, MutationObserverOptions, const HashSet<AtomString>& attributeFilter);
@@ -59,7 +64,7 @@ public:
     MutationRecordDeliveryOptions deliveryOptions() const { return m_options & (MutationObserver::AttributeOldValue | MutationObserver::CharacterDataOldValue); }
     MutationObserverOptions mutationTypes() const { return m_options & MutationObserver::AllMutationTypes; }
 
-    void addRegistrationNodesToSet(HashSet<Node*>&) const;
+    bool isReachableFromOpaqueRoots(JSC::AbstractSlotVisitor&) const;
 
 private:
     Ref<MutationObserver> m_observer;

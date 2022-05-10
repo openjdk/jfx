@@ -25,8 +25,6 @@
 
 #pragma once
 
-#if ENABLE(INDEXED_DATABASE)
-
 #include "IDBKey.h"
 #include <wtf/StdSet.h>
 #include <wtf/Variant.h>
@@ -87,7 +85,7 @@ public:
     WEBCORE_EXPORT void setNumberValue(double);
 
     template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static Optional<IDBKeyData> decode(Decoder&);
+    template<class Decoder> static std::optional<IDBKeyData> decode(Decoder&);
 
 #if !LOG_DISABLED
     WEBCORE_EXPORT String loggingString() const;
@@ -154,9 +152,6 @@ public:
         return StringHasher::hashMemory(hashCodes.data(), hashCodes.size() * sizeof(unsigned));
     }
 
-    static IDBKeyData deletedValue();
-    bool isDeletedValue() const { return m_isDeletedValue; }
-
     String string() const
     {
         ASSERT(m_type == IndexedDB::KeyType::String);
@@ -190,13 +185,15 @@ public:
     size_t size() const;
 
 private:
+    friend struct IDBKeyDataHashTraits;
+
     static void isolatedCopy(const IDBKeyData& source, IDBKeyData& destination);
 
     IndexedDB::KeyType m_type;
-    Variant<Vector<IDBKeyData>, String, double, ThreadSafeDataBuffer> m_value;
-
     bool m_isNull { false };
     bool m_isDeletedValue { false };
+
+    Variant<Vector<IDBKeyData>, String, double, ThreadSafeDataBuffer> m_value;
 };
 
 struct IDBKeyDataHash {
@@ -209,16 +206,8 @@ struct IDBKeyDataHashTraits : public WTF::CustomHashTraits<IDBKeyData> {
     static const bool emptyValueIsZero = false;
     static const bool hasIsEmptyValueFunction = true;
 
-    static void constructDeletedValue(IDBKeyData& key)
-    {
-        new (&key) IDBKeyData;
-        key = IDBKeyData::deletedValue();
-    }
-
-    static bool isDeletedValue(const IDBKeyData& key)
-    {
-        return key.isDeletedValue();
-    }
+    static void constructDeletedValue(IDBKeyData& key) { key.m_isDeletedValue = true; }
+    static bool isDeletedValue(const IDBKeyData& key) { return key.m_isDeletedValue; }
 
     static IDBKeyData emptyValue()
     {
@@ -262,17 +251,17 @@ void IDBKeyData::encode(Encoder& encoder) const
 }
 
 template<class Decoder>
-Optional<IDBKeyData> IDBKeyData::decode(Decoder& decoder)
+std::optional<IDBKeyData> IDBKeyData::decode(Decoder& decoder)
 {
     IDBKeyData keyData;
     if (!decoder.decode(keyData.m_isNull))
-        return WTF::nullopt;
+        return std::nullopt;
 
     if (keyData.m_isNull)
         return keyData;
 
     if (!decoder.decode(keyData.m_type))
-        return WTF::nullopt;
+        return std::nullopt;
 
     switch (keyData.m_type) {
     case IndexedDB::KeyType::Invalid:
@@ -282,23 +271,23 @@ Optional<IDBKeyData> IDBKeyData::decode(Decoder& decoder)
     case IndexedDB::KeyType::Array:
         keyData.m_value = Vector<IDBKeyData>();
         if (!decoder.decode(WTF::get<Vector<IDBKeyData>>(keyData.m_value)))
-            return WTF::nullopt;
+            return std::nullopt;
         break;
     case IndexedDB::KeyType::Binary:
         keyData.m_value = ThreadSafeDataBuffer();
         if (!decoder.decode(WTF::get<ThreadSafeDataBuffer>(keyData.m_value)))
-            return WTF::nullopt;
+            return std::nullopt;
         break;
     case IndexedDB::KeyType::String:
         keyData.m_value = String();
         if (!decoder.decode(WTF::get<String>(keyData.m_value)))
-            return WTF::nullopt;
+            return std::nullopt;
         break;
     case IndexedDB::KeyType::Date:
     case IndexedDB::KeyType::Number:
         keyData.m_value = 0.0;
         if (!decoder.decode(WTF::get<double>(keyData.m_value)))
-            return WTF::nullopt;
+            return std::nullopt;
         break;
     }
 
@@ -308,5 +297,3 @@ Optional<IDBKeyData> IDBKeyData::decode(Decoder& decoder)
 using IDBKeyDataSet = StdSet<IDBKeyData>;
 
 } // namespace WebCore
-
-#endif // ENABLE(INDEXED_DATABASE)

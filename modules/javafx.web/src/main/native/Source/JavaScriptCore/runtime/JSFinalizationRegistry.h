@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Apple, Inc. All rights reserved.
+ * Copyright (C) 2020-2021 Apple, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -70,7 +70,7 @@ public:
     DECLARE_EXPORT_INFO;
 
     void finalizeUnconditionally(VM&);
-    static void visitChildren(JSCell*, SlotVisitor&);
+    DECLARE_VISIT_CHILDREN;
     static void destroy(JSCell*);
     static constexpr bool needsDestruction = true;
 
@@ -89,9 +89,7 @@ private:
     {
     }
 
-    JS_EXPORT_PRIVATE void finishCreation(VM&, JSObject* callback);
-
-    static String toStringName(const JSObject*, JSGlobalObject*);
+    JS_EXPORT_PRIVATE void finishCreation(VM&, JSGlobalObject*, JSObject* callback);
 
     struct Registration {
         JSObject* target;
@@ -108,6 +106,7 @@ private:
     // We use a separate list for no unregister values instead of a special key in the tables above because the HashMap has a tendency to reallocate under us when iterating...
     LiveRegistrations m_noUnregistrationLive;
     DeadRegistrations m_noUnregistrationDead;
+    bool m_hasAlreadyScheduledWork { false };
 };
 
 } // namespace JSC

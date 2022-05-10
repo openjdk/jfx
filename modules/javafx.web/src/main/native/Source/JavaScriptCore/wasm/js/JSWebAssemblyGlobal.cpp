@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,6 +25,7 @@
 
 #include "config.h"
 #include "JSWebAssemblyGlobal.h"
+#include "ObjectConstructor.h"
 
 #if ENABLE(WEBASSEMBLY)
 
@@ -71,7 +72,8 @@ void JSWebAssemblyGlobal::destroy(JSCell* cell)
     static_cast<JSWebAssemblyGlobal*>(cell)->JSWebAssemblyGlobal::~JSWebAssemblyGlobal();
 }
 
-void JSWebAssemblyGlobal::visitChildren(JSCell* cell, SlotVisitor& visitor)
+template<typename Visitor>
+void JSWebAssemblyGlobal::visitChildrenImpl(JSCell* cell, Visitor& visitor)
 {
     JSWebAssemblyGlobal* thisObject = jsCast<JSWebAssemblyGlobal*>(cell);
     ASSERT_GC_OBJECT_INHERITS(thisObject, info());
@@ -79,6 +81,45 @@ void JSWebAssemblyGlobal::visitChildren(JSCell* cell, SlotVisitor& visitor)
     Base::visitChildren(thisObject, visitor);
     thisObject->global()->visitAggregate(visitor);
 }
+
+JSObject* JSWebAssemblyGlobal::type(JSGlobalObject* globalObject)
+{
+    VM& vm = globalObject->vm();
+
+    JSObject* result = constructEmptyObject(globalObject, globalObject->objectPrototype(), 2);
+
+    result->putDirect(vm, Identifier::fromString(vm, "mutable"), jsBoolean(m_global->mutability() == Wasm::GlobalInformation::Mutable));
+
+    Wasm::Type valueType = m_global->type();
+    JSString* valueString = nullptr;
+    switch (valueType.kind) {
+    case Wasm::TypeKind::I32:
+        valueString = jsNontrivialString(vm, "i32");
+        break;
+    case Wasm::TypeKind::I64:
+        valueString = jsNontrivialString(vm, "i64");
+        break;
+    case Wasm::TypeKind::F32:
+        valueString = jsNontrivialString(vm, "f32");
+        break;
+    case Wasm::TypeKind::F64:
+        valueString = jsNontrivialString(vm, "f64");
+        break;
+    case Wasm::TypeKind::Externref:
+        valueString = jsNontrivialString(vm, "externref");
+        break;
+    case Wasm::TypeKind::Funcref:
+        valueString = jsNontrivialString(vm, "funcref");
+        break;
+    default:
+        RELEASE_ASSERT_NOT_REACHED();
+    }
+    result->putDirect(vm, Identifier::fromString(vm, "value"), valueString);
+
+    return result;
+}
+
+DEFINE_VISIT_CHILDREN(JSWebAssemblyGlobal);
 
 } // namespace JSC
 

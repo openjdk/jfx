@@ -273,13 +273,14 @@ private:
                 case ReallocatePropertyStorage:
                 case NukeStructureAndSetButterfly:
                 case GetButterfly:
+                case EnumeratorGetByVal:
                 case GetByVal:
                 case PutByValDirect:
                 case PutByVal:
                 case PutByValAlias:
                 case GetArrayLength:
                 case CheckArray:
-                case CheckNeutered:
+                case CheckDetached:
                 case GetIndexedPropertyStorage:
                 case GetTypedArrayByteOffset:
                 case Phantom:
@@ -346,12 +347,13 @@ private:
                 }
 
                 case CheckStructure:
-                case CheckNeutered:
+                case CheckDetached:
                 case GetByOffset:
                 case PutByOffset:
                 case PutStructure:
                 case ReallocatePropertyStorage:
                 case GetButterfly:
+                case EnumeratorGetByVal:
                 case GetByVal:
                 case PutByValDirect:
                 case PutByVal:
@@ -456,7 +458,7 @@ private:
                 continue;
             if (block->bytecodeBegin != m_graph.m_plan.osrEntryBytecodeIndex())
                 continue;
-            const Operands<Optional<JSValue>>& mustHandleValues = m_graph.m_plan.mustHandleValues();
+            const Operands<std::optional<JSValue>>& mustHandleValues = m_graph.m_plan.mustHandleValues();
             for (size_t i = 0; i < mustHandleValues.size(); ++i) {
                 Operand operand = mustHandleValues.operandForIndex(i);
                 Node* node = block->variablesAtHead.operand(operand);
@@ -468,7 +470,7 @@ private:
                     continue;
                 if (!TypeCheck::isValidToHoist(iter->value))
                     continue;
-                Optional<JSValue> value = mustHandleValues[i];
+                std::optional<JSValue> value = mustHandleValues[i];
                 if (!value || !value.value() || !value.value().isCell() || TypeCheck::isContravenedByValue(iter->value, value.value())) {
                     TypeCheck::disableHoisting(iter->value);
                     continue;

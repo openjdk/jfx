@@ -30,6 +30,8 @@
 
 #include "MediaStreamTrackPrivate.h"
 #include "SharedBuffer.h"
+#include "Timer.h"
+#include <wtf/MonotonicTime.h>
 
 namespace WebCore {
 
@@ -48,19 +50,26 @@ MediaRecorderPrivateMock::MediaRecorderPrivateMock(MediaStreamPrivate& stream)
 
 MediaRecorderPrivateMock::~MediaRecorderPrivateMock()
 {
-    setAudioSource(nullptr);
-    setVideoSource(nullptr);
 }
 
-void MediaRecorderPrivateMock::stopRecording()
+void MediaRecorderPrivateMock::stopRecording(CompletionHandler<void()>&& completionHandler)
 {
-    setAudioSource(nullptr);
-    setVideoSource(nullptr);
+    completionHandler();
+}
+
+void MediaRecorderPrivateMock::pauseRecording(CompletionHandler<void()>&& completionHandler)
+{
+    completionHandler();
+}
+
+void MediaRecorderPrivateMock::resumeRecording(CompletionHandler<void()>&& completionHandler)
+{
+    completionHandler();
 }
 
 void MediaRecorderPrivateMock::videoSampleAvailable(MediaSample&)
 {
-    auto locker = holdLock(m_bufferLock);
+    Locker locker { m_bufferLock };
     m_buffer.append("Video Track ID: ");
     m_buffer.append(m_videoTrackID);
     generateMockCounterString();
@@ -68,7 +77,10 @@ void MediaRecorderPrivateMock::videoSampleAvailable(MediaSample&)
 
 void MediaRecorderPrivateMock::audioSamplesAvailable(const WTF::MediaTime&, const PlatformAudioData&, const AudioStreamDescription&, size_t)
 {
-    auto locker = holdLock(m_bufferLock);
+    // Heap allocations are forbidden on the audio thread for performance reasons so we need to
+    // explicitly allow the following allocation(s).
+    DisableMallocRestrictionsForCurrentThreadScope disableMallocRestrictions;
+    Locker locker { m_bufferLock };
     m_buffer.append("Audio Track ID: ");
     m_buffer.append(m_audioTrackID);
     generateMockCounterString();
@@ -76,25 +88,26 @@ void MediaRecorderPrivateMock::audioSamplesAvailable(const WTF::MediaTime&, cons
 
 void MediaRecorderPrivateMock::generateMockCounterString()
 {
-    m_buffer.append(" Counter: ");
-    m_buffer.appendNumber(++m_counter);
-    m_buffer.append("\r\n---------\r\n");
+    m_buffer.append(" Counter: ", ++m_counter, "\r\n---------\r\n");
 }
 
 void MediaRecorderPrivateMock::fetchData(FetchDataCallback&& completionHandler)
 {
     RefPtr<SharedBuffer> buffer;
     {
-        auto locker = holdLock(m_bufferLock);
-        Vector<uint8_t> value(m_buffer.length());
-        memcpy(value.data(), m_buffer.characters8(), m_buffer.length());
+        Locker locker { m_bufferLock };
+        Vector<uint8_t> value { m_buffer.characters8(), m_buffer.length() };
         m_buffer.clear();
         buffer = SharedBuffer::create(WTFMove(value));
     }
-    completionHandler(WTFMove(buffer), mimeType());
+
+    // Delay calling the completion handler a bit to mimick real writer behavior.
+    Timer::schedule(50_ms, [completionHandler = WTFMove(completionHandler), buffer = WTFMove(buffer), mimeType = mimeType(), timeCode = MonotonicTime::now().secondsSinceEpoch().value()]() mutable {
+        completionHandler(WTFMove(buffer), mimeType, timeCode);
+    });
 }
 
-const String& MediaRecorderPrivateMock::mimeType()
+const String& MediaRecorderPrivateMock::mimeType() const
 {
     static NeverDestroyed<const String> textPlainMimeType(MAKE_STATIC_STRING_IMPL("text/plain"));
     return textPlainMimeType;

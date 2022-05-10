@@ -348,7 +348,7 @@ g_io_unix_create_watch (GIOChannel   *channel,
 
 
   source = g_source_new (&g_io_watch_funcs, sizeof (GIOUnixWatch));
-  g_source_set_name (source, "GIOChannel (Unix)");
+  g_source_set_static_name (source, "GIOChannel (Unix)");
   watch = (GIOUnixWatch *)source;
 
   watch->channel = channel;
@@ -491,7 +491,7 @@ g_io_channel_new_file (const gchar *filename,
             mode_num |= MODE_PLUS;
             break;
           }
-        /* Fall through */
+        G_GNUC_FALLTHROUGH;
       default:
         g_warning ("Invalid GIOFileMode %s.", mode);
         return NULL;

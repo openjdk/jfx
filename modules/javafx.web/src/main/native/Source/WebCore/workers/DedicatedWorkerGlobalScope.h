@@ -31,7 +31,7 @@
 
 #pragma once
 
-#include "PostMessageOptions.h"
+#include "MessagePort.h"
 #include "WorkerGlobalScope.h"
 
 namespace JSC {
@@ -44,15 +44,20 @@ namespace WebCore {
 
 class ContentSecurityPolicyResponseHeaders;
 class DedicatedWorkerThread;
-class MessagePort;
+class JSRTCRtpScriptTransformerConstructor;
+class RTCRtpScriptTransformer;
 class RequestAnimationFrameCallback;
 class SerializedScriptValue;
 
-#if ENABLE(OFFSCREEN_CANVAS)
+struct StructuredSerializeOptions;
+
+#if ENABLE(OFFSCREEN_CANVAS_IN_WORKERS)
 class WorkerAnimationController;
 
 using CallbackId = int;
 #endif
+
+using TransferredMessagePort = std::pair<WebCore::MessagePortIdentifier, WebCore::MessagePortIdentifier>;
 
 class DedicatedWorkerGlobalScope final : public WorkerGlobalScope {
     WTF_MAKE_ISO_ALLOCATED(DedicatedWorkerGlobalScope);
@@ -62,14 +67,20 @@ public:
 
     const String& name() const { return m_name; }
 
-    ExceptionOr<void> postMessage(JSC::JSGlobalObject&, JSC::JSValue message, PostMessageOptions&&);
+    ExceptionOr<void> postMessage(JSC::JSGlobalObject&, JSC::JSValue message, StructuredSerializeOptions&&);
 
     DedicatedWorkerThread& thread();
 
-#if ENABLE(OFFSCREEN_CANVAS)
+#if ENABLE(OFFSCREEN_CANVAS_IN_WORKERS)
     CallbackId requestAnimationFrame(Ref<RequestAnimationFrameCallback>&&);
     void cancelAnimationFrame(CallbackId);
 #endif
+
+#if ENABLE(WEB_RTC)
+    RefPtr<RTCRtpScriptTransformer> createRTCRtpScriptTransformer(MessageWithMessagePorts&&);
+#endif
+
+    FetchOptions::Destination destination() const final { return FetchOptions::Destination::Worker; }
 
 private:
     using Base = WorkerGlobalScope;
@@ -80,11 +91,18 @@ private:
     ExceptionOr<void> importScripts(const Vector<String>& urls) final;
     EventTargetInterface eventTargetInterface() const final;
 
+    void prepareForDestruction() final;
+
     String m_name;
 
-#if ENABLE(OFFSCREEN_CANVAS)
+#if ENABLE(OFFSCREEN_CANVAS_IN_WORKERS)
     RefPtr<WorkerAnimationController> m_workerAnimationController;
 #endif
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::DedicatedWorkerGlobalScope)
+    static bool isType(const WebCore::ScriptExecutionContext& context) { return is<WebCore::WorkerGlobalScope>(context) && downcast<WebCore::WorkerGlobalScope>(context).isDedicatedWorkerGlobalScope(); }
+    static bool isType(const WebCore::WorkerGlobalScope& context) { return context.isDedicatedWorkerGlobalScope(); }
+SPECIALIZE_TYPE_TRAITS_END()

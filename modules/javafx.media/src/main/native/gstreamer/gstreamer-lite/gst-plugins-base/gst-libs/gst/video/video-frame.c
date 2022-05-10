@@ -49,7 +49,7 @@ video_frame_get_perf_category (void)
 
 /**
  * gst_video_frame_map_id:
- * @frame: pointer to #GstVideoFrame
+ * @frame: (out caller-allocates): pointer to #GstVideoFrame
  * @info: a #GstVideoInfo
  * @buffer: the buffer to map
  * @id: the frame id to map
@@ -67,7 +67,7 @@ video_frame_get_perf_category (void)
  * Returns: %TRUE on success.
  */
 gboolean
-gst_video_frame_map_id (GstVideoFrame * frame, GstVideoInfo * info,
+gst_video_frame_map_id (GstVideoFrame * frame, const GstVideoInfo * info,
     GstBuffer * buffer, gint id, GstMapFlags flags)
 {
   GstVideoMeta *meta;
@@ -188,7 +188,7 @@ invalid_size:
 
 /**
  * gst_video_frame_map:
- * @frame: pointer to #GstVideoFrame
+ * @frame: (out caller-allocates): pointer to #GstVideoFrame
  * @info: a #GstVideoInfo
  * @buffer: the buffer to map
  * @flags: #GstMapFlags
@@ -206,7 +206,7 @@ invalid_size:
  *   GstVideoFrame vframe;
  *   ...
  *   // set RGB pixels to black one at a time
- *   if (gst_video_frame_map (&amp;vframe, video_info, video_buffer, GST_MAP_WRITE)) {
+ *   if (gst_video_frame_map (&vframe, video_info, video_buffer, GST_MAP_WRITE)) {
  *     guint8 *pixels = GST_VIDEO_FRAME_PLANE_DATA (vframe, 0);
  *     guint stride = GST_VIDEO_FRAME_PLANE_STRIDE (vframe, 0);
  *     guint pixel_stride = GST_VIDEO_FRAME_COMP_PSTRIDE (vframe, 0);
@@ -219,7 +219,7 @@ invalid_size:
  *       }
  *     }
  *
- *     gst_video_frame_unmap (&amp;vframe);
+ *     gst_video_frame_unmap (&vframe);
  *   }
  *   ...
  * ]|
@@ -240,7 +240,7 @@ invalid_size:
  * Returns: %TRUE on success.
  */
 gboolean
-gst_video_frame_map (GstVideoFrame * frame, GstVideoInfo * info,
+gst_video_frame_map (GstVideoFrame * frame, const GstVideoInfo * info,
     GstBuffer * buffer, GstMapFlags flags)
 {
   return gst_video_frame_map_id (frame, info, buffer, -1, flags);
@@ -286,6 +286,9 @@ gst_video_frame_unmap (GstVideoFrame * frame)
  *
  * Copy the plane with index @plane from @src to @dest.
  *
+ * Note: Since: 1.18, @dest dimensions are allowed to be
+ * smaller than @src dimensions.
+ *
  * Returns: TRUE if the contents could be copied.
  */
 gboolean
@@ -295,6 +298,7 @@ gst_video_frame_copy_plane (GstVideoFrame * dest, const GstVideoFrame * src,
   const GstVideoInfo *sinfo;
   GstVideoInfo *dinfo;
   const GstVideoFormatInfo *finfo;
+  gint comp[GST_VIDEO_MAX_COMPONENTS];
   guint8 *sp, *dp;
   guint w, h;
   gint ss, ds;
@@ -309,8 +313,8 @@ gst_video_frame_copy_plane (GstVideoFrame * dest, const GstVideoFrame * src,
 
   finfo = dinfo->finfo;
 
-  g_return_val_if_fail (dinfo->width == sinfo->width
-      && dinfo->height == sinfo->height, FALSE);
+  g_return_val_if_fail (dinfo->width <= sinfo->width
+      && dinfo->height <= sinfo->height, FALSE);
   g_return_val_if_fail (finfo->n_planes > plane, FALSE);
 
   sp = src->data[plane];
@@ -322,17 +326,16 @@ gst_video_frame_copy_plane (GstVideoFrame * dest, const GstVideoFrame * src,
     return TRUE;
   }
 
-  /* FIXME: assumes subsampling of component N is the same as plane N, which is
-   * currently true for all formats we have but it might not be in the future. */
+  gst_video_format_info_component (finfo, plane, comp);
   w = GST_VIDEO_FRAME_COMP_WIDTH (dest,
-      plane) * GST_VIDEO_FRAME_COMP_PSTRIDE (dest, plane);
+      comp[0]) * GST_VIDEO_FRAME_COMP_PSTRIDE (dest, comp[0]);
   /* FIXME: workaround for complex formats like v210, UYVP and IYU1 that have
    * pstride == 0 */
   if (w == 0)
     w = MIN (GST_VIDEO_INFO_PLANE_STRIDE (dinfo, plane),
         GST_VIDEO_INFO_PLANE_STRIDE (sinfo, plane));
 
-  h = GST_VIDEO_FRAME_COMP_HEIGHT (dest, plane);
+  h = GST_VIDEO_FRAME_COMP_HEIGHT (dest, comp[0]);
 
   ss = GST_VIDEO_INFO_PLANE_STRIDE (sinfo, plane);
   ds = GST_VIDEO_INFO_PLANE_STRIDE (dinfo, plane);
@@ -395,6 +398,9 @@ gst_video_frame_copy_plane (GstVideoFrame * dest, const GstVideoFrame * src,
  *
  * Copy the contents from @src to @dest.
  *
+ * Note: Since: 1.18, @dest dimensions are allowed to be
+ * smaller than @src dimensions.
+ *
  * Returns: TRUE if the contents could be copied.
  */
 gboolean
@@ -411,8 +417,8 @@ gst_video_frame_copy (GstVideoFrame * dest, const GstVideoFrame * src)
   dinfo = &dest->info;
 
   g_return_val_if_fail (dinfo->finfo->format == sinfo->finfo->format, FALSE);
-  g_return_val_if_fail (dinfo->width == sinfo->width
-      && dinfo->height == sinfo->height, FALSE);
+  g_return_val_if_fail (dinfo->width <= sinfo->width
+      && dinfo->height <= sinfo->height, FALSE);
 
   n_planes = dinfo->finfo->n_planes;
 

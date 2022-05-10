@@ -2,7 +2,7 @@
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
  *           (C) 2001 Dirk Mueller ( mueller@kde.org )
- * Copyright (C) 2003-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2003-2021 Apple Inc. All rights reserved.
  * Copyright (C) 2006 Andrew Wellington (proton@wiretapped.net)
  *
  * This library is free software; you can redistribute it and/or
@@ -25,12 +25,17 @@
 #include "config.h"
 #include "Length.h"
 
+#include "AnimationUtilities.h"
+#include "CalcExpressionBlendLength.h"
+#include "CalcExpressionLength.h"
+#include "CalcExpressionOperation.h"
 #include "CalculationValue.h"
 #include <wtf/ASCIICType.h>
 #include <wtf/HashMap.h>
 #include <wtf/MallocPtr.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/StdLibExtras.h>
+#include <wtf/text/StringToIntegerConversion.h>
 #include <wtf/text/StringView.h>
 #include <wtf/text/TextStream.h>
 
@@ -39,7 +44,7 @@ namespace WebCore {
 static Length parseLength(const UChar* data, unsigned length)
 {
     if (length == 0)
-        return Length(1, Relative);
+        return Length(1, LengthType::Relative);
 
     unsigned i = 0;
     while (i < length && isSpaceOrNewline(data[i]))
@@ -63,18 +68,15 @@ static Length parseLength(const UChar* data, unsigned length)
         // IE quirk: accept decimal fractions for percentages.
         double r = charactersToDouble(data, doubleLength, &ok);
         if (ok)
-            return Length(r, Percent);
-        return Length(1, Relative);
+            return Length(r, LengthType::Percent);
+        return Length(1, LengthType::Relative);
     }
-    int r = charactersToIntStrict(data, intLength, &ok);
-    if (next == '*') {
-        if (ok)
-            return Length(r, Relative);
-        return Length(1, Relative);
-    }
-    if (ok)
-        return Length(r, Fixed);
-    return Length(0, Relative);
+    auto r = parseInteger<int>({ data, intLength });
+    if (next == '*')
+        return Length(r.value_or(1), LengthType::Relative);
+    if (r)
+        return Length(*r, LengthType::Fixed);
+    return Length(0, LengthType::Relative);
 }
 
 static unsigned countCharacter(StringImpl& string, UChar character)
@@ -242,7 +244,7 @@ static CalculationValueMap& calculationValues()
 
 Length::Length(Ref<CalculationValue>&& value)
     : m_hasQuirk(false)
-    , m_type(Calculated)
+    , m_type(LengthType::Calculated)
     , m_isFloat(false)
 {
     m_calculationValueHandle = calculationValues().insert(WTFMove(value));
@@ -266,7 +268,7 @@ void Length::deref() const
     calculationValues().deref(m_calculationValueHandle);
 }
 
-float Length::nonNanCalculatedValue(int maxValue) const
+float Length::nonNanCalculatedValue(float maxValue) const
 {
     ASSERT(isCalculated());
     float result = calculationValue().evaluate(maxValue);
@@ -283,56 +285,64 @@ bool Length::isCalculatedEqual(const Length& other) const
 Length convertTo100PercentMinusLength(const Length& length)
 {
     if (length.isPercent())
-        return Length(100 - length.value(), Percent);
+        return Length(100 - length.value(), LengthType::Percent);
 
     // Turn this into a calc expression: calc(100% - length)
     Vector<std::unique_ptr<CalcExpressionNode>> lengths;
     lengths.reserveInitialCapacity(2);
-    lengths.uncheckedAppend(makeUnique<CalcExpressionLength>(Length(100, Percent)));
+    lengths.uncheckedAppend(makeUnique<CalcExpressionLength>(Length(100, LengthType::Percent)));
     lengths.uncheckedAppend(makeUnique<CalcExpressionLength>(length));
     auto op = makeUnique<CalcExpressionOperation>(WTFMove(lengths), CalcOperator::Subtract);
-    return Length(CalculationValue::create(WTFMove(op), ValueRangeAll));
+    return Length(CalculationValue::create(WTFMove(op), ValueRange::All));
 }
 
-static Length blendMixedTypes(const Length& from, const Length& to, double progress)
+static Length blendMixedTypes(const Length& from, const Length& to, const BlendingContext& context)
 {
-    if (progress <= 0.0)
+    if (!to.isCalculated() && !from.isPercent() && (context.progress == 1 || from.isZero()))
+        return blend(Length(0, to.type()), to, context);
+
+    if (!from.isCalculated() && !to.isPercent() && (!context.progress || to.isZero()))
+        return blend(from, Length(0, from.type()), context);
+
+    auto blend = makeUnique<CalcExpressionBlendLength>(from, to, context.progress);
+    return Length(CalculationValue::create(WTFMove(blend), ValueRange::All));
+}
+
+Length blend(const Length& from, const Length& to, const BlendingContext& context)
+{
+    if ((from.isAuto() || to.isAuto()) || (from.isUndefined() || to.isUndefined()))
+        return context.progress < 0.5 ? from : to;
+
+    if (from.isCalculated() || to.isCalculated() || (from.type() != to.type()))
+        return blendMixedTypes(from, to, context);
+
+    if (!context.progress)
         return from;
 
-    if (progress >= 1.0)
+    if (context.progress == 1)
         return to;
-
-    auto blend = makeUnique<CalcExpressionBlendLength>(from, to, progress);
-    return Length(CalculationValue::create(WTFMove(blend), ValueRangeAll));
-}
-
-Length blend(const Length& from, const Length& to, double progress)
-{
-    if (from.isAuto() || to.isAuto())
-        return progress < 0.5 ? from : to;
-
-    if (from.isUndefined() || to.isUndefined())
-        return to;
-
-    if (from.type() == Calculated || to.type() == Calculated)
-        return blendMixedTypes(from, to, progress);
-
-    if (!from.isZero() && !to.isZero() && from.type() != to.type())
-        return blendMixedTypes(from, to, progress);
 
     LengthType resultType = to.type();
     if (to.isZero())
         resultType = from.type();
 
-    if (resultType == Percent) {
+    if (resultType == LengthType::Percent) {
         float fromPercent = from.isZero() ? 0 : from.percent();
         float toPercent = to.isZero() ? 0 : to.percent();
-        return Length(WebCore::blend(fromPercent, toPercent, progress), Percent);
+        return Length(WebCore::blend(fromPercent, toPercent, context), LengthType::Percent);
     }
 
     float fromValue = from.isZero() ? 0 : from.value();
     float toValue = to.isZero() ? 0 : to.value();
-    return Length(WebCore::blend(fromValue, toValue, progress), resultType);
+    return Length(WebCore::blend(fromValue, toValue, context), resultType);
+}
+
+Length blend(const Length& from, const Length& to, const BlendingContext& context, ValueRange valueRange)
+{
+    auto blended = blend(from, to, context);
+    if (valueRange == ValueRange::NonNegative && blended.isNegative())
+        return { 0, from.isZero () ? to.type() : from.type() };
+    return blended;
 }
 
 struct SameSizeAsLength {
@@ -344,18 +354,18 @@ COMPILE_ASSERT(sizeof(Length) == sizeof(SameSizeAsLength), length_should_stay_sm
 static TextStream& operator<<(TextStream& ts, LengthType type)
 {
     switch (type) {
-    case Auto: ts << "auto"; break;
-    case Relative: ts << "relative"; break;
-    case Percent: ts << "percent"; break;
-    case Fixed: ts << "fixed"; break;
-    case Intrinsic: ts << "intrinsic"; break;
-    case MinIntrinsic: ts << "min-intrinsic"; break;
-    case MinContent: ts << "min-content"; break;
-    case MaxContent: ts << "max-content"; break;
-    case FillAvailable: ts << "fill-available"; break;
-    case FitContent: ts << "fit-content"; break;
-    case Calculated: ts << "calc"; break;
-    case Undefined: ts << "undefined"; break;
+    case LengthType::Auto: ts << "auto"; break;
+    case LengthType::Relative: ts << "relative"; break;
+    case LengthType::Percent: ts << "percent"; break;
+    case LengthType::Fixed: ts << "fixed"; break;
+    case LengthType::Intrinsic: ts << "intrinsic"; break;
+    case LengthType::MinIntrinsic: ts << "min-intrinsic"; break;
+    case LengthType::MinContent: ts << "min-content"; break;
+    case LengthType::MaxContent: ts << "max-content"; break;
+    case LengthType::FillAvailable: ts << "fill-available"; break;
+    case LengthType::FitContent: ts << "fit-content"; break;
+    case LengthType::Calculated: ts << "calc"; break;
+    case LengthType::Undefined: ts << "undefined"; break;
     }
     return ts;
 }
@@ -363,26 +373,26 @@ static TextStream& operator<<(TextStream& ts, LengthType type)
 TextStream& operator<<(TextStream& ts, Length length)
 {
     switch (length.type()) {
-    case Auto:
-    case Undefined:
+    case LengthType::Auto:
+    case LengthType::Undefined:
         ts << length.type();
         break;
-    case Fixed:
+    case LengthType::Fixed:
         ts << TextStream::FormatNumberRespectingIntegers(length.value()) << "px";
         break;
-    case Relative:
-    case Intrinsic:
-    case MinIntrinsic:
-    case MinContent:
-    case MaxContent:
-    case FillAvailable:
-    case FitContent:
+    case LengthType::Relative:
+    case LengthType::Intrinsic:
+    case LengthType::MinIntrinsic:
+    case LengthType::MinContent:
+    case LengthType::MaxContent:
+    case LengthType::FillAvailable:
+    case LengthType::FitContent:
         ts << length.type() << " " << TextStream::FormatNumberRespectingIntegers(length.value());
         break;
-    case Percent:
+    case LengthType::Percent:
         ts << TextStream::FormatNumberRespectingIntegers(length.percent()) << "%";
         break;
-    case Calculated:
+    case LengthType::Calculated:
         ts << length.calculationValue();
         break;
     }

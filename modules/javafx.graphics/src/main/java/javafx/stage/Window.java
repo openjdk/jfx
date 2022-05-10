@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -84,6 +84,16 @@ import com.sun.javafx.scene.SceneHelper;
  * The JavaFX Application Thread is created as part of the startup process for
  * the JavaFX runtime. See the {@link javafx.application.Application} class and
  * the {@link Platform#startup(Runnable)} method for more information.
+ * </p>
+ * <p>
+ * Some {@code Window} properties are read-only, even though they have
+ * corresponding set methods, because they can be changed externally by the
+ * underlying platform, and therefore must not be bindable.
+ * Further, these properties might be ignored on some platforms, depending on
+ * whether or not there is a window manager and how it is configured.
+ * For example, a tiling window manager might ignore the {@code x} and {@code y}
+ * properties, or treat them as hints, placing the window in a location of its
+ * choosing.
  * </p>
  *
  * @since JavaFX 2.0
@@ -199,6 +209,7 @@ public class Window implements EventTarget {
                         return window.screenProperty();
                     }
 
+                    @SuppressWarnings("removal")
                     @Override
                     public AccessControlContext getAccessControlContext(Window window) {
                         return window.acc;
@@ -214,6 +225,7 @@ public class Window implements EventTarget {
      * @since 9
      */
     public static ObservableList<Window> getWindows() {
+        @SuppressWarnings("removal")
         final SecurityManager securityManager = System.getSecurityManager();
         if (securityManager != null) {
             securityManager.checkPermission(ACCESS_WINDOW_LIST_PERMISSION);
@@ -222,8 +234,12 @@ public class Window implements EventTarget {
         return unmodifiableWindows;
     }
 
+    @SuppressWarnings("removal")
     final AccessControlContext acc = AccessController.getContext();
 
+    /**
+     * Constructor for subclasses to call.
+     */
     protected Window() {
         // necessary for WindowCloseRequestHandler
         initializeInternalEventDispatcher();
@@ -515,6 +531,7 @@ public class Window implements EventTarget {
     }
 
     private boolean xExplicit = false;
+
     /**
      * The horizontal location of this {@code Window} on the screen. Changing
      * this attribute will move the {@code Window} horizontally. If this
@@ -523,6 +540,11 @@ public class Window implements EventTarget {
      * {@link Stage#fullScreenProperty() fullScreen} is true, but will be honored
      * by the {@code Window} once {@link Stage#fullScreenProperty() fullScreen}
      * becomes false.
+     * <p>
+     * This property is read-only because it can be changed externally
+     * by the underlying platform.
+     * Further, setting this property might be ignored on some platforms.
+     * </p>
      */
     private ReadOnlyDoubleWrapper x =
             new ReadOnlyDoubleWrapper(this, "x", Double.NaN);
@@ -540,6 +562,7 @@ public class Window implements EventTarget {
     }
 
     private boolean yExplicit = false;
+
     /**
      * The vertical location of this {@code Window} on the screen. Changing this
      * attribute will move the {@code Window} vertically. If this
@@ -548,6 +571,11 @@ public class Window implements EventTarget {
      * {@link Stage#fullScreenProperty() fullScreen} is true, but will be honored
      * by the {@code Window} once {@link Stage#fullScreenProperty() fullScreen}
      * becomes false.
+     * <p>
+     * This property is read-only because it can be changed externally
+     * by the underlying platform.
+     * Further, setting this property might be ignored on some platforms.
+     * </p>
      */
     private ReadOnlyDoubleWrapper y =
             new ReadOnlyDoubleWrapper(this, "y", Double.NaN);
@@ -592,8 +620,9 @@ public class Window implements EventTarget {
      * by the {@code Window} once {@link Stage#fullScreenProperty() fullScreen}
      * becomes false.
      * <p>
-     * The property is read only because it can be changed externally
-     * by the underlying platform and therefore must not be bindable.
+     * This property is read-only because it can be changed externally
+     * by the underlying platform.
+     * Further, setting this property might be ignored on some platforms.
      * </p>
      */
     private ReadOnlyDoubleWrapper width =
@@ -608,6 +637,7 @@ public class Window implements EventTarget {
     public final ReadOnlyDoubleProperty widthProperty() { return width.getReadOnlyProperty(); }
 
     private boolean heightExplicit = false;
+
     /**
      * The height of this {@code Window}. Changing this attribute will shrink
      * or heighten the height of the {@code Window}. This value includes any and all
@@ -622,8 +652,9 @@ public class Window implements EventTarget {
      * by the {@code Window} once {@link Stage#fullScreenProperty() fullScreen}
      * becomes false.
      * <p>
-     * The property is read only because it can be changed externally
-     * by the underlying platform and therefore must not be bindable.
+     * This property is read-only because it can be changed externally
+     * by the underlying platform.
+     * Further, setting this property might be ignored on some platforms.
      * </p>
      */
     private ReadOnlyDoubleWrapper height =
@@ -651,10 +682,6 @@ public class Window implements EventTarget {
 
     /**
      * Whether or not this {@code Window} has the keyboard or input focus.
-     * <p>
-     * The property is read only because it can be changed externally
-     * by the underlying platform and therefore must not be bindable.
-     * </p>
      */
     private ReadOnlyBooleanWrapper focused = new ReadOnlyBooleanWrapper() {
         @Override protected void invalidated() {
@@ -685,7 +712,7 @@ public class Window implements EventTarget {
     public final boolean isFocused() { return focused.get(); }
     public final ReadOnlyBooleanProperty focusedProperty() { return focused.getReadOnlyProperty(); }
 
-    /*************************************************************************
+    /* ***********************************************************************
     *                                                                        *
     *                                                                        *
     *                                                                        *
@@ -756,18 +783,43 @@ public class Window implements EventTarget {
      * a different {@code Window} will cause the old {@code Window} to lose the
      * reference before the new one gains it. You may swap {@code Scene}s on
      * a {@code Window} at any time, even if it is an instance of {@code Stage}
-     * and with {@link Stage#fullScreenProperty() fullScreen} set to true.
-     * If the width or height of this {@code Window} have never been set by the
+     * and with {@link Stage#fullScreenProperty() fullScreen} set to {@code true}.
+     * <p>If the width or height of this {@code Window} have never been set by the
      * application, setting the scene will cause this {@code Window} to take its
-     * width or height from that scene.  Resizing this window by end user does
-     * not count as setting the width or height by the application.
+     * width or height from that scene. Resizing this {@code Window} by end user does
+     * not count as setting the width or height by the application.</p>
      *
-     * An {@link IllegalStateException} is thrown if this property is set
-     * on a thread other than the JavaFX Application Thread.
+     * <p>An {@link IllegalStateException} is thrown if this property is set
+     * on a thread other than the JavaFX Application Thread.</p>
      *
-     * @defaultValue null
+     * @defaultValue {@code null}
      */
     private SceneModel scene = new SceneModel();
+
+    /**
+     * Sets the value of the {@code scene} property.
+     *
+     * <p>The {@code Scene} to be rendered on this {@code Window}. There can only
+     * be one {@code Scene} on the {@code Window} at a time, and a {@code Scene}
+     * can only be on one {@code Window} at a time. Setting a {@code Scene} on
+     * a different {@code Window} will cause the old {@code Window} to lose the
+     * reference before the new one gains it. You may swap {@code Scene}s on
+     * a {@code Window} at any time, even if it is an instance of {@code Stage}
+     * and with {@link Stage#fullScreenProperty() fullScreen} set to {@code true}.</p>
+     * <p>If the width or height of this {@code Window} have never been set by the
+     * application, setting the scene will cause this {@code Window} to take its
+     * width or height from that scene. Resizing this {@code Window} by end user does
+     * not count as setting the width or height by the application.</p>
+     *
+     * @throws IllegalStateException if this property is set on a thread other than
+     * the JavaFX Application Thread.
+     *
+     * @defaultValue {@code null}
+     *
+     * @param value the value for the {@code scene} property
+     * @see #getScene()
+     * @see #sceneProperty()
+     */
     protected void setScene(Scene value) { scene.set(value); }
     public final Scene getScene() { return scene.get(); }
     public final ReadOnlyObjectProperty<Scene> sceneProperty() { return scene.getReadOnlyProperty(); }

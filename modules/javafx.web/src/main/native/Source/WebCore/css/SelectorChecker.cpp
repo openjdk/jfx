@@ -45,6 +45,7 @@
 #include "SelectorCheckerTestFunctions.h"
 #include "ShadowRoot.h"
 #include "Text.h"
+#include "TypedElementDescendantIterator.h"
 
 namespace WebCore {
 
@@ -828,6 +829,32 @@ bool SelectorChecker::checkOne(CheckingContext& checkingContext, const LocalCont
                     matchType = localMatchType;
                 return hasMatchedAnything;
             }
+        case CSSSelector::PseudoClassHas: {
+            // FIXME: This is the worst possible implementation in terms of performance.
+            auto checkRelative = [&](auto& elementToCheck) {
+                for (auto* subselector = selector.selectorList()->first(); subselector; subselector = CSSSelectorList::next(subselector)) {
+                    SelectorChecker selectorChecker(element.document());
+                    CheckingContext selectorCheckingContext(SelectorChecker::Mode::ResolvingStyle);
+                    selectorCheckingContext.scope = &element;
+                    if (selectorChecker.match(*subselector, elementToCheck, selectorCheckingContext))
+                        return true;
+                }
+                return false;
+            };
+            for (auto& descendant : descendantsOfType<Element>(element)) {
+                if (checkRelative(descendant))
+                    return true;
+            }
+            for (auto* sibling = element.nextElementSibling(); sibling; sibling = sibling->nextElementSibling()) {
+                if (checkRelative(*sibling))
+                    return true;
+                for (auto& descendant : descendantsOfType<Element>(*sibling)) {
+                    if (checkRelative(descendant))
+                        return true;
+                }
+            }
+            return false;
+        }
         case CSSSelector::PseudoClassPlaceholderShown:
             if (is<HTMLTextFormControlElement>(element)) {
                 addStyleRelation(checkingContext, element, Style::Relation::Unique);
@@ -958,6 +985,8 @@ bool SelectorChecker::checkOne(CheckingContext& checkingContext, const LocalCont
             return element.isBeingDragged();
         case CSSSelector::PseudoClassFocus:
             return matchesFocusPseudoClass(element);
+        case CSSSelector::PseudoClassFocusVisible:
+            return matchesFocusVisiblePseudoClass(element);
         case CSSSelector::PseudoClassFocusWithin:
             return element.hasFocusWithin();
         case CSSSelector::PseudoClassHover:
@@ -1034,9 +1063,24 @@ bool SelectorChecker::checkOne(CheckingContext& checkingContext, const LocalCont
             return matchesFutureCuePseudoClass(element);
         case CSSSelector::PseudoClassPast:
             return matchesPastCuePseudoClass(element);
+        case CSSSelector::PseudoClassPlaying:
+            return matchesPlayingPseudoClass(element);
+        case CSSSelector::PseudoClassPaused:
+            return matchesPausedPseudoClass(element);
+        case CSSSelector::PseudoClassSeeking:
+            return matchesSeekingPseudoClass(element);
+        case CSSSelector::PseudoClassBuffering:
+            return matchesBufferingPseudoClass(element);
+        case CSSSelector::PseudoClassStalled:
+            return matchesStalledPseudoClass(element);
+        case CSSSelector::PseudoClassMuted:
+            return matchesMutedPseudoClass(element);
+        case CSSSelector::PseudoClassVolumeLocked:
+            return matchesVolumeLockedPseudoClass(element);
 #endif
 
-        case CSSSelector::PseudoClassScope: {
+        case CSSSelector::PseudoClassScope:
+        case CSSSelector::PseudoClassRelativeScope: {
             const Node* contextualReferenceNode = !checkingContext.scope ? element.document().documentElement() : checkingContext.scope;
             if (&element == contextualReferenceNode)
                 return true;
@@ -1078,6 +1122,9 @@ bool SelectorChecker::checkOne(CheckingContext& checkingContext, const LocalCont
         case CSSSelector::PseudoClassHasAttachment:
             return hasAttachment(element);
 #endif
+
+        case CSSSelector::PseudoClassModalDialog:
+            return matchesModalDialogPseudoClass(element);
 
         case CSSSelector::PseudoClassUnknown:
             ASSERT_NOT_REACHED();
@@ -1143,7 +1190,7 @@ bool SelectorChecker::checkOne(CheckingContext& checkingContext, const LocalCont
             // Always matches when not specifically requested so it gets added to the pseudoIdSet.
             if (checkingContext.pseudoId == PseudoId::None)
                 return true;
-            if (checkingContext.pseudoId != PseudoId::Highlight)
+            if (checkingContext.pseudoId != PseudoId::Highlight || !selector.argumentList())
                 return false;
             return selector.argumentList()->first() == checkingContext.nameForHightlightPseudoElement;
 
@@ -1243,35 +1290,6 @@ unsigned SelectorChecker::determineLinkMatchType(const CSSSelector* selector)
             return linkMatchType;
     }
     return linkMatchType;
-}
-
-static bool isFrameFocused(const Element& element)
-{
-    return element.document().frame() && element.document().frame()->selection().isFocusedAndActive();
-}
-
-static bool doesShadowTreeContainFocusedElement(const Element& element)
-{
-    auto* shadowRoot = element.shadowRoot();
-    return shadowRoot && shadowRoot->containsFocusedElement();
-}
-
-bool SelectorChecker::matchesFocusPseudoClass(const Element& element)
-{
-    if (InspectorInstrumentation::forcePseudoState(element, CSSSelector::PseudoClassFocus))
-        return true;
-
-    return (element.focused() || doesShadowTreeContainFocusedElement(element)) && isFrameFocused(element);
-}
-
-// This needs to match a subset of elements matchesFocusPseudoClass match since direct focus is treated
-// as a part of focus pseudo class selectors in ElementRuleCollector::collectMatchingRules.
-bool SelectorChecker::matchesDirectFocusPseudoClass(const Element& element)
-{
-    if (InspectorInstrumentation::forcePseudoState(element, CSSSelector::PseudoClassFocus))
-        return true;
-
-    return element.focused() && isFrameFocused(element);
 }
 
 }

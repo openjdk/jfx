@@ -100,9 +100,9 @@ void computeUsesForBytecodeIndexImpl(VirtualRegister scopeRegister, const Instru
     case op_unreachable:
     case op_super_sampler_begin:
     case op_super_sampler_end:
+    case op_get_scope:
         return;
 
-    USES(OpGetScope, dst)
     USES(OpToThis, srcDst)
     USES(OpCheckTdz, targetVirtualRegister)
     USES(OpIdentityWithProfile, srcDst)
@@ -163,11 +163,9 @@ void computeUsesForBytecodeIndexImpl(VirtualRegister scopeRegister, const Instru
 
     USES(OpSpread, argument)
     USES(OpGetPropertyEnumerator, base)
-    USES(OpGetEnumerableLength, base)
     USES(OpNewFuncExp, scope)
     USES(OpNewGeneratorFuncExp, scope)
     USES(OpNewAsyncFuncExp, scope)
-    USES(OpToIndexString, index)
     USES(OpCreateLexicalEnvironment, scope, symbolTable, initialValue)
     USES(OpCreateGeneratorFrameEnvironment, scope, symbolTable, initialValue)
     USES(OpResolveScope, scope)
@@ -183,14 +181,15 @@ void computeUsesForBytecodeIndexImpl(VirtualRegister scopeRegister, const Instru
     USES(OpTypeof, value)
     USES(OpIsEmpty, operand)
     USES(OpTypeofIsUndefined, operand)
+    USES(OpTypeofIsObject, operand)
+    USES(OpTypeofIsFunction, operand)
     USES(OpIsUndefinedOrNull, operand)
     USES(OpIsBoolean, operand)
     USES(OpIsNumber, operand)
     USES(OpIsBigInt, operand)
     USES(OpIsObject, operand)
-    USES(OpIsObjectOrNull, operand)
     USES(OpIsCellWithType, operand)
-    USES(OpIsFunction, operand)
+    USES(OpIsCallable, operand)
     USES(OpIsConstructor, operand)
     USES(OpToNumber, operand)
     USES(OpToNumeric, operand)
@@ -220,13 +219,14 @@ void computeUsesForBytecodeIndexImpl(VirtualRegister scopeRegister, const Instru
     USES(OpGetFromArguments, arguments)
     USES(OpNewArrayBuffer, immutableButterfly)
 
-    USES(OpHasGenericProperty, base, property)
-    USES(OpHasIndexedProperty, base, property)
-    USES(OpEnumeratorStructurePname, enumerator, index)
-    USES(OpEnumeratorGenericPname, enumerator, index)
     USES(OpGetByVal, base, property)
     USES(OpGetPrivateName, base, property)
+    USES(OpPutPrivateName, base, property, value)
+    USES(OpSetPrivateBrand, base, brand)
+    USES(OpCheckPrivateBrand, base, brand)
     USES(OpInByVal, base, property)
+    USES(OpHasPrivateName, base, property)
+    USES(OpHasPrivateBrand, base, brand)
     USES(OpOverridesHasInstance, constructor, hasInstanceValue)
     USES(OpInstanceof, value, prototype)
     USES(OpAdd, lhs, rhs)
@@ -258,9 +258,6 @@ void computeUsesForBytecodeIndexImpl(VirtualRegister scopeRegister, const Instru
 
     USES(OpGetByValWithThis, base, thisValue, property)
     USES(OpInstanceofCustom, value, constructor, hasInstanceValue)
-    USES(OpHasStructureProperty, base, property, enumerator)
-    USES(OpHasOwnStructureProperty, base, property, enumerator)
-    USES(OpInStructureProperty, base, property, enumerator)
 
     case op_call_varargs: {
         auto bytecode = instruction->as<OpCallVarargs>();
@@ -278,8 +275,6 @@ void computeUsesForBytecodeIndexImpl(VirtualRegister scopeRegister, const Instru
         return;
     }
 
-    USES(OpGetDirectPname, base, property, index, enumerator)
-
     USES(OpSwitchString, scrutinee)
     USES(OpSwitchChar, scrutinee)
     USES(OpSwitchImm, scrutinee)
@@ -287,7 +282,12 @@ void computeUsesForBytecodeIndexImpl(VirtualRegister scopeRegister, const Instru
     USES(OpGetInternalField, base)
     USES(OpPutInternalField, base, value)
 
-    USES(OpYield, generator, argument)
+    USES(OpYield, argument)
+
+    USES(OpEnumeratorNext, mode, index, base, enumerator)
+    USES(OpEnumeratorGetByVal, base, mode, propertyName, index, enumerator)
+    USES(OpEnumeratorInByVal, base, mode, propertyName, index, enumerator)
+    USES(OpEnumeratorHasOwnProperty, base, mode, propertyName, index, enumerator)
 
     case op_iterator_open: {
         auto bytecode = instruction->as<OpIteratorOpen>();
@@ -394,6 +394,9 @@ void computeDefsForBytecodeIndexImpl(unsigned numVars, const Instruction* instru
     case op_put_setter_by_val:
     case op_put_by_val:
     case op_put_by_val_direct:
+    case op_put_private_name:
+    case op_set_private_brand:
+    case op_check_private_brand:
     case op_put_internal_field:
     case op_define_data_property:
     case op_define_accessor_property:
@@ -415,17 +418,7 @@ void computeDefsForBytecodeIndexImpl(unsigned numVars, const Instruction* instru
         return;
     // These all have a single destination for the first argument.
     DEFS(OpArgumentCount, dst)
-    DEFS(OpToIndexString, dst)
-    DEFS(OpGetEnumerableLength, dst)
-    DEFS(OpHasIndexedProperty, dst)
-    DEFS(OpHasStructureProperty, dst)
-    DEFS(OpHasOwnStructureProperty, dst)
-    DEFS(OpInStructureProperty, dst)
-    DEFS(OpHasGenericProperty, dst)
-    DEFS(OpGetDirectPname, dst)
     DEFS(OpGetPropertyEnumerator, dst)
-    DEFS(OpEnumeratorStructurePname, dst)
-    DEFS(OpEnumeratorGenericPname, dst)
     DEFS(OpGetParentScope, dst)
     DEFS(OpPushWithScope, dst)
     DEFS(OpCreateLexicalEnvironment, dst)
@@ -490,17 +483,20 @@ void computeDefsForBytecodeIndexImpl(unsigned numVars, const Instruction* instru
     DEFS(OpIdentityWithProfile, srcDst)
     DEFS(OpIsEmpty, dst)
     DEFS(OpTypeofIsUndefined, dst)
+    DEFS(OpTypeofIsObject, dst)
+    DEFS(OpTypeofIsFunction, dst)
     DEFS(OpIsUndefinedOrNull, dst)
     DEFS(OpIsBoolean, dst)
     DEFS(OpIsNumber, dst)
     DEFS(OpIsBigInt, dst)
     DEFS(OpIsObject, dst)
-    DEFS(OpIsObjectOrNull, dst)
     DEFS(OpIsCellWithType, dst)
-    DEFS(OpIsFunction, dst)
+    DEFS(OpIsCallable, dst)
     DEFS(OpIsConstructor, dst)
     DEFS(OpInById, dst)
     DEFS(OpInByVal, dst)
+    DEFS(OpHasPrivateName, dst)
+    DEFS(OpHasPrivateBrand, dst)
     DEFS(OpToNumber, dst)
     DEFS(OpToNumeric, dst)
     DEFS(OpToString, dst)
@@ -554,6 +550,11 @@ void computeDefsForBytecodeIndexImpl(unsigned numVars, const Instruction* instru
     DEFS(OpGetInternalField, dst)
 
     DEFS(OpCatch, exception, thrownValue)
+
+    DEFS(OpEnumeratorNext, propertyName, mode, index)
+    DEFS(OpEnumeratorGetByVal, dst)
+    DEFS(OpEnumeratorInByVal, dst)
+    DEFS(OpEnumeratorHasOwnProperty, dst)
 
     case op_iterator_open: {
         auto bytecode = instruction->as<OpIteratorOpen>();

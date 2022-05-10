@@ -44,11 +44,10 @@ namespace Wasm {
 class EntryPlan : public Plan, public StreamingParserClient {
 public:
     using Base = Plan;
-    enum AsyncWork : uint8_t { FullCompile, Validation };
 
     // Note: CompletionTask should not hold a reference to the Plan otherwise there will be a reference cycle.
-    EntryPlan(Context*, Ref<ModuleInformation>, AsyncWork, CompletionTask&&);
-    JS_EXPORT_PRIVATE EntryPlan(Context*, Vector<uint8_t>&&, AsyncWork, CompletionTask&&);
+    EntryPlan(Context*, Ref<ModuleInformation>, CompilerMode, CompletionTask&&);
+    JS_EXPORT_PRIVATE EntryPlan(Context*, Vector<uint8_t>&&, CompilerMode, CompletionTask&&);
 
     ~EntryPlan() override = default;
 
@@ -97,17 +96,18 @@ protected:
     const char* stateString(State);
     void moveToState(State);
     bool isComplete() const override { return m_state == State::Completed; }
-    void complete(const AbstractLocker&) override;
+    void complete() WTF_REQUIRES_LOCK(m_lock) override;
 
     virtual bool prepareImpl() = 0;
     virtual void compileFunction(uint32_t functionIndex) = 0;
-    virtual void didCompleteCompilation(const AbstractLocker&) = 0;
+    virtual void didCompleteCompilation() WTF_REQUIRES_LOCK(m_lock) = 0;
 
     template<typename T>
     bool tryReserveCapacity(Vector<T>& vector, size_t size, const char* what)
     {
         if (UNLIKELY(!vector.tryReserveCapacity(size))) {
-            fail(holdLock(m_lock), WTF::makeString("Failed allocating enough space for ", size, what));
+            Locker locker { m_lock };
+            fail(WTF::makeString("Failed allocating enough space for ", size, what));
             return false;
         }
         return true;
@@ -121,7 +121,7 @@ protected:
     StreamingParser m_streamingParser;
     State m_state;
 
-    const AsyncWork m_asyncWork;
+    const CompilerMode m_compilerMode;
     uint8_t m_numberOfActiveThreads { 0 };
     uint32_t m_currentIndex { 0 };
     uint32_t m_numberOfFunctions { 0 };

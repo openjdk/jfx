@@ -34,6 +34,7 @@
 #include "LayoutMilestone.h"
 #include "LinkIcon.h"
 #include "PageIdentifier.h"
+#include "RegistrableDomain.h"
 #include <wtf/Expected.h>
 #include <wtf/Forward.h>
 #include <wtf/WallTime.h>
@@ -78,7 +79,6 @@ class FormState;
 class Frame;
 class FrameLoader;
 class FrameNetworkingContext;
-class HTMLAppletElement;
 class HTMLFormElement;
 class HTMLFrameOwnerElement;
 class HTMLPlugInElement;
@@ -124,8 +124,8 @@ public:
 
     virtual void makeRepresentation(DocumentLoader*) = 0;
 
-    virtual Optional<PageIdentifier> pageID() const = 0;
-    virtual Optional<FrameIdentifier> frameID() const = 0;
+    virtual std::optional<PageIdentifier> pageID() const = 0;
+    virtual std::optional<FrameIdentifier> frameID() const = 0;
 
 #if PLATFORM(IOS_FAMILY)
     // Returns true if the client forced the layout.
@@ -173,7 +173,7 @@ public:
     virtual void dispatchDidReceiveIcon() { }
     virtual void dispatchDidStartProvisionalLoad() = 0;
     virtual void dispatchDidReceiveTitle(const StringWithDirection&) = 0;
-    virtual void dispatchDidCommitLoad(Optional<HasInsecureContent>, Optional<UsedLegacyTLS>) = 0;
+    virtual void dispatchDidCommitLoad(std::optional<HasInsecureContent>, std::optional<UsedLegacyTLS>) = 0;
     virtual void dispatchDidFailProvisionalLoad(const ResourceError&, WillContinueLoading) = 0;
     virtual void dispatchDidFailLoad(const ResourceError&) = 0;
     virtual void dispatchDidFinishDocumentLoad() = 0;
@@ -187,10 +187,10 @@ public:
     virtual void dispatchDidReachLayoutMilestone(OptionSet<LayoutMilestone>) { }
     virtual void dispatchDidReachVisuallyNonEmptyState() { }
 
-    virtual Frame* dispatchCreatePage(const NavigationAction&) = 0;
+    virtual Frame* dispatchCreatePage(const NavigationAction&, NewFrameOpenerPolicy) = 0;
     virtual void dispatchShow() = 0;
 
-    virtual void dispatchDecidePolicyForResponse(const ResourceResponse&, const ResourceRequest&, PolicyCheckIdentifier, const String& downloadAttribute, FramePolicyFunction&&) = 0;
+    virtual void dispatchDecidePolicyForResponse(const ResourceResponse&, const ResourceRequest&, PolicyCheckIdentifier, const String& downloadAttribute, BrowsingContextGroupSwitchDecision, FramePolicyFunction&&) = 0;
     virtual void dispatchDecidePolicyForNewWindowAction(const NavigationAction&, const ResourceRequest&, FormState*, const String& frameName, PolicyCheckIdentifier, FramePolicyFunction&&) = 0;
     virtual void dispatchDecidePolicyForNavigationAction(const NavigationAction&, const ResourceRequest&, const ResourceResponse& redirectResponse, FormState*, PolicyDecisionMode, PolicyCheckIdentifier, FramePolicyFunction&&) = 0;
     virtual void cancelPolicyCheck() = 0;
@@ -213,7 +213,7 @@ public:
     virtual void willReplaceMultipartContent() = 0;
     virtual void didReplaceMultipartContent() = 0;
 
-    virtual void committedLoad(DocumentLoader*, const char*, int) = 0;
+    virtual void committedLoad(DocumentLoader*, const uint8_t*, int) = 0;
     virtual void finishedLoading(DocumentLoader*) = 0;
 
     virtual void updateGlobalHistory() = 0;
@@ -287,8 +287,6 @@ public:
     virtual RefPtr<Frame> createFrame(const String& name, HTMLFrameOwnerElement&) = 0;
     virtual RefPtr<Widget> createPlugin(const IntSize&, HTMLPlugInElement&, const URL&, const Vector<String>&, const Vector<String>&, const String&, bool loadManually) = 0;
     virtual void redirectDataToPlugin(Widget&) = 0;
-
-    virtual RefPtr<Widget> createJavaAppletWidget(const IntSize&, HTMLAppletElement&, const URL& baseURL, const Vector<String>& paramNames, const Vector<String>& paramValues) = 0;
 
     virtual ObjectContentType objectContentType(const URL&, const String& mimeType) = 0;
     virtual String overrideMediaType() const = 0;
@@ -366,23 +364,31 @@ public:
     virtual void didRestoreScrollPosition() { }
 
     virtual void getLoadDecisionForIcons(const Vector<std::pair<WebCore::LinkIcon&, uint64_t>>&) { }
-    virtual void finishedLoadingIcon(uint64_t, SharedBuffer*) { }
 
     virtual void didCreateWindow(DOMWindow&) { }
 
 #if ENABLE(APPLICATION_MANIFEST)
-    virtual void finishedLoadingApplicationManifest(uint64_t, const Optional<ApplicationManifest>&) { }
+    virtual void finishedLoadingApplicationManifest(uint64_t, const std::optional<ApplicationManifest>&) { }
 #endif
 
 #if ENABLE(RESOURCE_LOAD_STATISTICS)
     virtual bool hasFrameSpecificStorageAccess() { return false; }
     virtual void didLoadFromRegistrableDomain(RegistrableDomain&&) { }
+    virtual Vector<RegistrableDomain> loadedSubresourceDomains() const { return { }; }
 #endif
 
     virtual AllowsContentJavaScript allowsContentJavaScriptFromMostRecentNavigation() const { return AllowsContentJavaScript::Yes; }
 
+#if ENABLE(APP_BOUND_DOMAINS)
     virtual bool shouldEnableInAppBrowserPrivacyProtections() const { return false; }
     virtual void notifyPageOfAppBoundBehavior() { }
+#endif
+
+#if ENABLE(PDFKIT_PLUGIN)
+    virtual bool shouldUsePDFPlugin(const String&, StringView) const { return false; }
+#endif
+
+    virtual bool isParentProcessAFullWebBrowser() const { return false; }
 };
 
 } // namespace WebCore

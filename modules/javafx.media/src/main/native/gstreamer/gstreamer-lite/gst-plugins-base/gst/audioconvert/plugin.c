@@ -23,7 +23,7 @@
 #include "config.h"
 #endif
 
-#include "plugin.h"
+#include "gstaudioconvert.h"
 
 #ifdef GSTREAMER_LITE
 gboolean
@@ -33,11 +33,7 @@ static gboolean
 plugin_init (GstPlugin * plugin)
 #endif // GSTREAMER_LITE
 {
-  if (!gst_element_register (plugin, "audioconvert",
-          GST_RANK_PRIMARY, gst_audio_convert_get_type ()))
-    return FALSE;
-
-  return TRUE;
+  return GST_ELEMENT_REGISTER (audioconvert, plugin);
 }
 
 #ifndef GSTREAMER_LITE

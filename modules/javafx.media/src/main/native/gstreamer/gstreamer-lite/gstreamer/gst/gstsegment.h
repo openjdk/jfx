@@ -73,9 +73,18 @@ typedef enum {
  *                     playback, request that elements only decode keyframes
  *                     and skip all other content, for formats that have
  *                     keyframes. (Since: 1.6)
+ * @GST_SEEK_FLAG_TRICKMODE_FORWARD_PREDICTED: When doing fast forward or fast reverse
+ *                     playback, request that elements only decode keyframes and
+ *                     forward predicted frames and skip all other content (for example
+ *                     B-Frames), for formats that have keyframes and forward predicted
+ *                     frames. (Since: 1.18)
  * @GST_SEEK_FLAG_TRICKMODE_NO_AUDIO: when doing fast forward or fast reverse
  *                     playback, request that audio decoder elements skip
  *                     decoding and output only gap events or silence. (Since: 1.6)
+ * @GST_SEEK_FLAG_INSTANT_RATE_CHANGE: Signals that a rate change should be
+ *                     applied immediately. Only valid if start/stop position
+ *                     are GST_CLOCK_TIME_NONE, the playback direction does not change
+ *                     and the seek is not flushing. (Since: 1.18)
  * @GST_SEEK_FLAG_SKIP: Deprecated backward compatibility flag, replaced
  *                     by %GST_SEEK_FLAG_TRICKMODE
  *
@@ -95,6 +104,16 @@ typedef enum {
  * When this message is posted, it is possible to send a new seek event to
  * continue playback. With this seek method it is possible to perform seamless
  * looping or simple linear editing.
+ *
+ * When only changing the playback rate and not the direction, the
+ * %GST_SEEK_FLAG_INSTANT_RATE_CHANGE flag can be used for a non-flushing seek
+ * to signal that the rate change should be applied immediately. This requires
+ * special support in the seek handlers (e.g. demuxers) and any elements
+ * synchronizing to the clock, and in general can't work in all cases (for example
+ * UDP streaming where the delivery rate is controlled by a remote server). The
+ * instant-rate-change mode supports changing the trickmode-related GST_SEEK_ flags,
+ * but can't be used in conjunction with other seek flags that affect the new
+ * playback position - as the playback position will not be changing.
  *
  * When doing fast forward (rate > 1.0) or fast reverse (rate < -1.0) trickmode
  * playback, the %GST_SEEK_FLAG_TRICKMODE flag can be used to instruct decoders
@@ -137,6 +156,8 @@ typedef enum {
   /* Careful to restart next flag with 1<<7 here */
   GST_SEEK_FLAG_TRICKMODE_KEY_UNITS = (1 << 7),
   GST_SEEK_FLAG_TRICKMODE_NO_AUDIO  = (1 << 8),
+  GST_SEEK_FLAG_TRICKMODE_FORWARD_PREDICTED = (1 << 9),
+  GST_SEEK_FLAG_INSTANT_RATE_CHANGE = (1 << 10),
 } GstSeekFlags;
 
 /**
@@ -148,6 +169,8 @@ typedef enum {
  * @GST_SEGMENT_FLAG_SEGMENT: send SEGMENT_DONE instead of EOS
  * @GST_SEGMENT_FLAG_TRICKMODE_KEY_UNITS: Decode only keyframes, where
  *                                        possible (Since: 1.6)
+ * @GST_SEGMENT_FLAG_TRICKMODE_FORWARD_PREDICTED: Decode only keyframes or forward
+ *                                        predicted frames, where possible (Since: 1.18)
  * @GST_SEGMENT_FLAG_TRICKMODE_NO_AUDIO: Do not decode any audio, where
  *                                        possible (Since: 1.6)
  * @GST_SEGMENT_FLAG_SKIP: Deprecated backward compatibility flag, replaced
@@ -166,32 +189,81 @@ typedef enum { /*< flags >*/
   GST_SEGMENT_FLAG_SKIP            = GST_SEEK_FLAG_TRICKMODE,
   GST_SEGMENT_FLAG_SEGMENT         = GST_SEEK_FLAG_SEGMENT,
   GST_SEGMENT_FLAG_TRICKMODE_KEY_UNITS = GST_SEEK_FLAG_TRICKMODE_KEY_UNITS,
+  GST_SEGMENT_FLAG_TRICKMODE_FORWARD_PREDICTED = GST_SEEK_FLAG_TRICKMODE_FORWARD_PREDICTED,
 #ifndef GSTREAMER_LITE
   GST_SEGMENT_FLAG_TRICKMODE_NO_AUDIO      = GST_SEEK_FLAG_TRICKMODE_NO_AUDIO
 #else // GSTREAMER_LITE
   GST_SEGMENT_FLAG_TRICKMODE_NO_AUDIO      = GST_SEEK_FLAG_TRICKMODE_NO_AUDIO,
-  GST_SEGMENT_FLAG_UPDATE          = (1 << 9) // Make sure it does not conflicts with GstSeekFlags
+  GST_SEGMENT_FLAG_UPDATE          = (1 << 11) // Make sure it does not conflicts with GstSeekFlags
 #endif // GSTREAMER_LITE
 } GstSegmentFlags;
 
+/* Flags that are reflected for instant-rate-change seeks */
+#define GST_SEGMENT_INSTANT_FLAGS \
+    (GST_SEGMENT_FLAG_TRICKMODE|GST_SEGMENT_FLAG_TRICKMODE_KEY_UNITS|GST_SEEK_FLAG_TRICKMODE_FORWARD_PREDICTED|GST_SEGMENT_FLAG_TRICKMODE_NO_AUDIO)
+
 /**
  * GstSegment:
- * @flags: flags for this segment
- * @rate: the playback rate of the segment
- * @applied_rate: the already applied rate to the segment
- * @format: the format of the segment values
- * @base: the running time (plus elapsed time, see offset) of the segment start
- * @offset: the amount (in buffer timestamps) that has already been elapsed in
- *     the segment
- * @start: the start of the segment in buffer timestamp time (PTS)
- * @stop: the stop of the segment in buffer timestamp time (PTS)
- * @time: the stream time of the segment start
- * @position: the buffer timestamp position in the segment (used internally by
- *     elements such as sources, demuxers or parsers to track progress)
- * @duration: the duration of the stream
+ * @flags:        flags for this segment
+ * @rate:         the playback rate of the segment is set in response to a seek
+ *                event and, without any seek, the value should be '1.0'. This
+ *                value is used by elements that synchronize buffer [running
+ *                times](additional/design/synchronisation.md#running-time) on
+ *                the clock (usually the sink elements), leading to consuming
+ *                buffers faster (for a value '> 1.0') or slower (for '0.0 <
+ *                value < 1.0') than normal playback speed. The rate also
+ *                defines the playback direction, meaning that when the value is
+ *                lower than '0.0', the playback happens in reverse, and the
+ *                [stream-time](additional/design/synchronisation.md#stream-time)
+ *                is going backward. The 'rate' value should never be '0.0'.
+ * @applied_rate: The applied rate is the rate that has been applied to the stream.
+ *                The effective/resulting playback rate of a stream is
+ *                'rate * applied_rate'.
+ *                The applied rate can be set by source elements when a server is
+ *                sending the stream with an already modified playback speed
+ *                rate. Filter elements that modify the stream in a way that
+ *                modifies the playback speed should also modify the applied
+ *                rate. For example the #videorate element when its
+ *                #videorate:rate property is set will set the applied rate of
+ *                the segment it pushed downstream. Also #scaletempo applies the
+ *                input segment rate to the stream and outputs a segment with
+ *                rate=1.0 and applied_rate=<inputsegment.rate>.
+ * @format:       the unit used for all of the segment's values.
+ * @base:         the running time (plus elapsed time, see offset) of the
+ *                segment [start](GstSegment.start) ([stop](GstSegment.stop) if
+ *                rate < 0.0).
+ * @offset:       the offset expresses the elapsed time (in buffer timestamps)
+ *                before a seek with its start (stop if rate < 0.0) seek type
+ *                set to #GST_SEEK_TYPE_NONE, the value is set to the position
+ *                of the segment at the time of the seek.
+ * @start:        the start time of the segment (in buffer timestamps)
+ *                [(PTS)](GstBuffer.pts), that is the timestamp of the first
+ *                buffer to output inside the segment (last one during
+ *                reverse playback). For example decoders will
+ *                [clip](gst_segment_clip) out the buffers before the start
+ *                time.
+ * @stop:         the stop time of the segment (in buffer timestamps)
+ *                [(PTS)](GstBuffer.pts), that is the timestamp of the last
+ *                buffer to output inside the segment (first one during
+ *                reverse playback). For example decoders will
+ *                [clip](gst_segment_clip) out buffers after the stop time.
+ * @time:         the stream time of the segment [start](GstSegment.start)
+ *                ([stop](GstSegment.stop) if rate < 0.0).
+ * @position:     the buffer timestamp position in the segment is supposed to be
+ *                updated by elements such as sources, demuxers or parsers to
+ *                track progress by setting it to the last pushed buffer' end time
+ *                ([timestamp](GstBuffer.pts) + #GstBuffer.duration) for that
+ *                specific segment. The position is used when reconfiguring the
+ *                segment with #gst_segment_do_seek when the seek is only
+ *                updating the segment (see [offset](GstSegment.offset)).
+ * @duration:     the duration of the segment is the maximum absolute difference
+ *                between #GstSegment.start and #GstSegment.stop if stop is not
+ *                set, otherwise it should be the difference between those
+ *                two values. This should be set by elements that know the
+ *                overall stream duration (like demuxers) and will be used when
+ *                seeking with #GST_SEEK_TYPE_END.
  *
- * A helper structure that holds the configured region of
- * interest in a media file.
+ * The structure that holds the configured region of interest in a media file.
  */
 struct _GstSegment {
   /*< public >*/
@@ -277,9 +349,7 @@ gboolean     gst_segment_do_seek             (GstSegment * segment, gdouble rate
 GST_API
 gboolean     gst_segment_is_equal            (const GstSegment * s0, const GstSegment * s1);
 
-#ifdef G_DEFINE_AUTOPTR_CLEANUP_FUNC
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstSegment, gst_segment_free)
-#endif
 
 G_END_DECLS
 

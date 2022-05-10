@@ -5,13 +5,16 @@
 
 #if !UCONFIG_NO_FORMATTING
 
+#include "charstr.h"
 #include "uassert.h"
 #include "unicode/numberformatter.h"
 #include "number_types.h"
 #include "number_decimalquantity.h"
 #include "double-conversion.h"
 #include "number_roundingutils.h"
+#include "number_skeletons.h"
 #include "putilimp.h"
+#include "string_segment.h"
 
 using namespace icu;
 using namespace icu::number;
@@ -19,6 +22,39 @@ using namespace icu::number::impl;
 
 
 using double_conversion::DoubleToStringConverter;
+using icu::StringSegment;
+
+void number::impl::parseIncrementOption(const StringSegment &segment,
+                                        Precision &outPrecision,
+                                        UErrorCode &status) {
+    // Need to do char <-> UChar conversion...
+    U_ASSERT(U_SUCCESS(status));
+    CharString buffer;
+    SKELETON_UCHAR_TO_CHAR(buffer, segment.toTempUnicodeString(), 0, segment.length(), status);
+
+    // Utilize DecimalQuantity/decNumber to parse this for us.
+    DecimalQuantity dq;
+    UErrorCode localStatus = U_ZERO_ERROR;
+    dq.setToDecNumber({buffer.data(), buffer.length()}, localStatus);
+    if (U_FAILURE(localStatus)) {
+        // throw new SkeletonSyntaxException("Invalid rounding increment", segment, e);
+        status = U_NUMBER_SKELETON_SYNTAX_ERROR;
+        return;
+    }
+    double increment = dq.toDouble();
+
+    // We also need to figure out how many digits. Do a brute force string operation.
+    int decimalOffset = 0;
+    while (decimalOffset < segment.length() && segment.charAt(decimalOffset) != '.') {
+        decimalOffset++;
+    }
+    if (decimalOffset == segment.length()) {
+        outPrecision = Precision::increment(increment);
+    } else {
+        int32_t fractionLength = segment.length() - decimalOffset - 1;
+        outPrecision = Precision::increment(increment).withMinFraction(fractionLength);
+    }
+}
 
 namespace {
 
@@ -33,7 +69,7 @@ int32_t getRoundingMagnitudeSignificant(const DecimalQuantity &value, int maxSig
     if (maxSig == -1) {
         return INT32_MIN;
     }
-    int magnitude = value.isZero() ? 0 : value.getMagnitude();
+    int magnitude = value.isZeroish() ? 0 : value.getMagnitude();
     return magnitude - maxSig + 1;
 }
 
@@ -45,7 +81,7 @@ int32_t getDisplayMagnitudeFraction(int minFrac) {
 }
 
 int32_t getDisplayMagnitudeSignificant(const DecimalQuantity &value, int minSig) {
-    int magnitude = value.isZero() ? 0 : value.getMagnitude();
+    int magnitude = value.isZeroish() ? 0 : value.getMagnitude();
     return magnitude - minSig + 1;
 }
 
@@ -84,7 +120,7 @@ digits_t roundingutils::doubleFractionLength(double input, int8_t* singleDigit) 
 
 
 Precision Precision::unlimited() {
-    return Precision(RND_NONE, {}, kDefaultMode);
+    return Precision(RND_NONE, {});
 }
 
 FractionPrecision Precision::integer() {
@@ -229,7 +265,7 @@ FractionPrecision Precision::constructFraction(int32_t minFrac, int32_t maxFrac)
     settings.fMaxSig = -1;
     PrecisionUnion union_;
     union_.fracSig = settings;
-    return {RND_FRACTION, union_, kDefaultMode};
+    return {RND_FRACTION, union_};
 }
 
 Precision Precision::constructSignificant(int32_t minSig, int32_t maxSig) {
@@ -240,7 +276,7 @@ Precision Precision::constructSignificant(int32_t minSig, int32_t maxSig) {
     settings.fMaxSig = static_cast<digits_t>(maxSig);
     PrecisionUnion union_;
     union_.fracSig = settings;
-    return {RND_SIGNIFICANT, union_, kDefaultMode};
+    return {RND_SIGNIFICANT, union_};
 }
 
 Precision
@@ -250,7 +286,7 @@ Precision::constructFractionSignificant(const FractionPrecision &base, int32_t m
     settings.fMaxSig = static_cast<digits_t>(maxSig);
     PrecisionUnion union_;
     union_.fracSig = settings;
-    return {RND_FRACTION_SIGNIFICANT, union_, kDefaultMode};
+    return {RND_FRACTION_SIGNIFICANT, union_};
 }
 
 IncrementPrecision Precision::constructIncrement(double increment, int32_t minFrac) {
@@ -270,18 +306,18 @@ IncrementPrecision Precision::constructIncrement(double increment, int32_t minFr
         // NOTE: In C++, we must return the correct value type with the correct union.
         // It would be invalid to return a RND_FRACTION here because the methods on the
         // IncrementPrecision type assume that the union is backed by increment data.
-        return {RND_INCREMENT_ONE, union_, kDefaultMode};
+        return {RND_INCREMENT_ONE, union_};
     } else if (singleDigit == 5) {
-        return {RND_INCREMENT_FIVE, union_, kDefaultMode};
+        return {RND_INCREMENT_FIVE, union_};
     } else {
-        return {RND_INCREMENT, union_, kDefaultMode};
+        return {RND_INCREMENT, union_};
     }
 }
 
 CurrencyPrecision Precision::constructCurrency(UCurrencyUsage usage) {
     PrecisionUnion union_;
     union_.currencyUsage = usage;
-    return {RND_CURRENCY, union_, kDefaultMode};
+    return {RND_CURRENCY, union_};
 }
 
 
@@ -294,9 +330,7 @@ RoundingImpl::RoundingImpl(const Precision& precision, UNumberFormatRoundingMode
 }
 
 RoundingImpl RoundingImpl::passThrough() {
-    RoundingImpl retval;
-    retval.fPassThrough = true;
-    return retval;
+    return {};
 }
 
 bool RoundingImpl::isSignificantDigits() const {
@@ -306,8 +340,8 @@ bool RoundingImpl::isSignificantDigits() const {
 int32_t
 RoundingImpl::chooseMultiplierAndApply(impl::DecimalQuantity &input, const impl::MultiplierProducer &producer,
                                   UErrorCode &status) {
-    // Do not call this method with zero.
-    U_ASSERT(!input.isZero());
+    // Do not call this method with zero, NaN, or infinity.
+    U_ASSERT(!input.isZeroish());
 
     // Perform the first attempt at rounding.
     int magnitude = input.getMagnitude();
@@ -316,7 +350,7 @@ RoundingImpl::chooseMultiplierAndApply(impl::DecimalQuantity &input, const impl:
     apply(input, status);
 
     // If the number rounded to zero, exit.
-    if (input.isZero() || U_FAILURE(status)) {
+    if (input.isZeroish() || U_FAILURE(status)) {
         return multiplier;
     }
 
@@ -343,6 +377,9 @@ RoundingImpl::chooseMultiplierAndApply(impl::DecimalQuantity &input, const impl:
 
 /** This is the method that contains the actual rounding logic. */
 void RoundingImpl::apply(impl::DecimalQuantity &value, UErrorCode& status) const {
+    if (U_FAILURE(status)) {
+        return;
+    }
     if (fPassThrough) {
         return;
     }
@@ -374,7 +411,7 @@ void RoundingImpl::apply(impl::DecimalQuantity &value, UErrorCode& status) const
             value.setMinFraction(
                     uprv_max(0, -getDisplayMagnitudeSignificant(value, fPrecision.fUnion.fracSig.fMinSig)));
             // Make sure that digits are displayed on zero.
-            if (value.isZero() && fPrecision.fUnion.fracSig.fMinSig > 0) {
+            if (value.isZeroish() && fPrecision.fUnion.fracSig.fMinSig > 0) {
                 value.setMinInteger(1);
             }
             break;
@@ -436,7 +473,7 @@ void RoundingImpl::apply(impl::DecimalQuantity &value, UErrorCode& status) const
 void RoundingImpl::apply(impl::DecimalQuantity &value, int32_t minInt, UErrorCode /*status*/) {
     // This method is intended for the one specific purpose of helping print "00.000E0".
     U_ASSERT(isSignificantDigits());
-    U_ASSERT(value.isZero());
+    U_ASSERT(value.isZeroish());
     value.setMinFraction(fPrecision.fUnion.fracSig.fMinSig - minInt);
 }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -237,20 +237,13 @@ public class TextFieldTreeTableCellTest {
         assertNull(cell.getGraphic());
     }
 
-    @Test(expected = NullPointerException.class)
-    public void test_startEdit_cellEditableIsTrue_tableColumnIsNull_isEmpty() {
-        TextFieldTreeTableCell<Object,Object> cell = new TextFieldTreeTableCell<>();
-        cell.setEditable(true);
-        cell.startEdit();
-    }
-
     @Test public void test_startEdit_tableViewEditableIsTrue_isEmpty() {
         TreeTableColumn tc = new TreeTableColumn();
         TreeTableView tableView = new TreeTableView();
         tableView.setEditable(true);
         TextFieldTreeTableCell<Object,Object> cell = new TextFieldTreeTableCell<>();
         cell.updateTreeTableView(tableView);
-        cell.updateTreeTableColumn(tc);
+        cell.updateTableColumn(tc);
 
         tableView.edit(0, tc);
         assertFalse(cell.isEditing());
@@ -265,7 +258,7 @@ public class TextFieldTreeTableCellTest {
     //        TextFieldTreeTableCell<Object,Object> cell = new TextFieldTreeTableCell<>();
     //        cell.updateTreeTableView(tableView);
     //        cell.updateIndex(0);
-    //        cell.updateTreeTableColumn(tc);
+    //        cell.updateTableColumn(tc);
     //        cell.setEditable(true);
     //
     //        tableView.edit(0, tc);
@@ -289,21 +282,13 @@ public class TextFieldTreeTableCellTest {
         TreeTableView tableView = new TreeTableView(new TreeItem("TEST"));
         tableView.getColumns().add(tableColumn);
         TextFieldTreeTableCell<Object,Object> cell = new TextFieldTreeTableCell<>();
-        cell.updateTreeTableColumn(tableColumn);
+        cell.updateTableColumn(tableColumn);
         cell.updateTreeTableView(tableView);
         cell.updateItem("TEST", false);
 
         cell.startEdit();
         assertFalse(cell.isEditing());
         assertNull(cell.getGraphic());
-    }
-
-    @Test(expected = NullPointerException.class)
-    public void test_startEdit_cellEditableIsTrue_tableColumnIsNull_isNotEmpty() {
-        TextFieldTreeTableCell<Object,Object> cell = new TextFieldTreeTableCell<>();
-        cell.updateItem("TEST", false);
-        cell.setEditable(true);
-        cell.startEdit();
     }
 
     @Test public void test_startEdit_tableViewEditableIsTrue_isNotEmpty() {
@@ -314,7 +299,7 @@ public class TextFieldTreeTableCellTest {
         TextFieldTreeTableCell<Object,Object> cell = new TextFieldTreeTableCell<>();
         cell.updateTreeTableView(tableView);
         cell.updateIndex(0);
-        cell.updateTreeTableColumn(tc);
+        cell.updateTableColumn(tc);
 
         tableView.edit(0, tc);
         assertTrue(cell.isEditing());
@@ -329,7 +314,7 @@ public class TextFieldTreeTableCellTest {
         TextFieldTreeTableCell<Object,Object> cell = new TextFieldTreeTableCell<>();
         cell.updateTreeTableView(tableView);
         cell.updateIndex(0);
-        cell.updateTreeTableColumn(tc);
+        cell.updateTableColumn(tc);
         cell.setEditable(true);
 
         tableView.edit(0, tc);
@@ -346,7 +331,7 @@ public class TextFieldTreeTableCellTest {
         TextFieldTreeTableCell<Object,Object> cell = new TextFieldTreeTableCell<>();
         cell.updateTreeTableView(tableView);
         cell.updateIndex(0);
-        cell.updateTreeTableColumn(tc);
+        cell.updateTableColumn(tc);
         cell.setEditable(true);
 
         tableView.edit(0, tc);
@@ -366,7 +351,7 @@ public class TextFieldTreeTableCellTest {
         TextFieldTreeTableCell<Object,Object> cell = new TextFieldTreeTableCell<>();
         cell.updateTreeTableView(tableView);
         cell.updateIndex(0);
-        cell.updateTreeTableColumn(tc);
+        cell.updateTableColumn(tc);
         cell.setEditable(true);
 
         tableView.edit(0, tc);

@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2011, Google Inc. All rights reserved.
+ * Copyright (C) 2020-2021, Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -24,38 +25,45 @@
 
 #pragma once
 
-#include "AudioBuffer.h"
 #include "AudioDestinationNode.h"
 #include <wtf/RefPtr.h>
 #include <wtf/Threading.h>
 
 namespace WebCore {
 
+class AudioBuffer;
 class AudioBus;
-class AudioContext;
+class OfflineAudioContext;
 
 class OfflineAudioDestinationNode final : public AudioDestinationNode {
     WTF_MAKE_ISO_ALLOCATED(OfflineAudioDestinationNode);
 public:
-    static Ref<OfflineAudioDestinationNode> create(BaseAudioContext& context, AudioBuffer* renderTarget)
-    {
-        return adoptRef(*new OfflineAudioDestinationNode(context, renderTarget));
-    }
+    OfflineAudioDestinationNode(OfflineAudioContext&, unsigned numberOfChannels, float sampleRate, RefPtr<AudioBuffer>&& renderTarget);
+    ~OfflineAudioDestinationNode();
 
-    virtual ~OfflineAudioDestinationNode();
+    OfflineAudioContext& context();
+    const OfflineAudioContext& context() const;
+
+    AudioBuffer* renderTarget() const { return m_renderTarget.get(); }
 
     // AudioNode
-    void initialize() override;
-    void uninitialize() override;
+    void initialize() final;
+    void uninitialize() final;
 
     // AudioDestinationNode
-    void enableInput(const String&) override { }
-    ExceptionOr<void> startRendering() override;
-
-    float sampleRate() const final { return m_renderTarget->sampleRate(); }
+    void enableInput(const String&) final { }
+    void startRendering(CompletionHandler<void(std::optional<Exception>&&)>&&) final;
 
 private:
-    OfflineAudioDestinationNode(BaseAudioContext&, AudioBuffer* renderTarget);
+    enum class RenderResult { Failure, Suspended, Complete };
+    RenderResult renderOnAudioThread();
+    void notifyOfflineRenderingSuspended();
+
+    bool requiresTailProcessing() const final { return false; }
+
+    unsigned maxChannelCount() const final { return m_numberOfChannels; }
+
+    unsigned m_numberOfChannels;
 
     // This AudioNode renders into this AudioBuffer.
     RefPtr<AudioBuffer> m_renderTarget;
@@ -65,8 +73,9 @@ private:
 
     // Rendering thread.
     RefPtr<Thread> m_renderThread;
-    bool m_startedRendering;
-    bool offlineRender();
+    size_t m_framesToProcess;
+    size_t m_destinationOffset { 0 };
+    bool m_startedRendering { false };
 };
 
 } // namespace WebCore

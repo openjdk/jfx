@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,15 +26,98 @@
 #include "config.h"
 #include "RemoteCommandListener.h"
 
+#if PLATFORM(COCOA)
+#include "RemoteCommandListenerCocoa.h"
+#endif
+
 namespace WebCore {
 
-#if !PLATFORM(COCOA)
+static RemoteCommandListener::CreationFunction& remoteCommandListenerCreationFunction()
+{
+    static NeverDestroyed<RemoteCommandListener::CreationFunction> creationFunction;
+    return creationFunction;
+}
+
+void RemoteCommandListener::setCreationFunction(CreationFunction&& function)
+{
+    remoteCommandListenerCreationFunction() = WTFMove(function);
+}
+
+void RemoteCommandListener::resetCreationFunction()
+{
+    remoteCommandListenerCreationFunction() = [] (RemoteCommandListenerClient& client) {
+#if PLATFORM(COCOA)
+        return RemoteCommandListenerCocoa::create(client);
+#else
+        return RemoteCommandListener::create(client);
+#endif
+    };
+}
 
 std::unique_ptr<RemoteCommandListener> RemoteCommandListener::create(RemoteCommandListenerClient& client)
 {
-    return makeUnique<RemoteCommandListener>(client);
+    if (!remoteCommandListenerCreationFunction())
+        resetCreationFunction();
+    return remoteCommandListenerCreationFunction()(client);
 }
 
-#endif
+RemoteCommandListener::RemoteCommandListener(RemoteCommandListenerClient& client)
+    : m_client(client)
+{
+}
+
+RemoteCommandListener::~RemoteCommandListener() = default;
+
+
+void RemoteCommandListener::scheduleSupportedCommandsUpdate()
+{
+    if (!m_updateCommandsTask.isPending()) {
+        m_updateCommandsTask.scheduleTask([this] ()  {
+            updateSupportedCommands();
+        });
+    }
+}
+
+void RemoteCommandListener::setSupportsSeeking(bool supports)
+{
+    if (m_supportsSeeking == supports)
+        return;
+
+    m_supportsSeeking = supports;
+    scheduleSupportedCommandsUpdate();
+}
+
+void RemoteCommandListener::addSupportedCommand(PlatformMediaSession::RemoteControlCommandType command)
+{
+    m_supportedCommands.add(command);
+    scheduleSupportedCommandsUpdate();
+}
+
+void RemoteCommandListener::removeSupportedCommand(PlatformMediaSession::RemoteControlCommandType command)
+{
+    m_supportedCommands.remove(command);
+    scheduleSupportedCommandsUpdate();
+}
+
+void RemoteCommandListener::setSupportedCommands(const RemoteCommandsSet& commands)
+{
+    m_supportedCommands = commands;
+    scheduleSupportedCommandsUpdate();
+}
+
+void RemoteCommandListener::updateSupportedCommands()
+{
+    ASSERT_NOT_REACHED();
+}
+
+const RemoteCommandListener::RemoteCommandsSet& RemoteCommandListener::supportedCommands() const
+{
+    return m_supportedCommands;
+}
+
+bool RemoteCommandListener::supportsSeeking() const
+{
+    return m_supportsSeeking;
+}
 
 }

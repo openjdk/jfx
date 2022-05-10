@@ -27,7 +27,6 @@
 #include "CommonVM.h"
 
 #include "DOMWindow.h"
-#include "DeprecatedGlobalSettings.h"
 #include "Frame.h"
 #include "ScriptController.h"
 #include "WebCoreJSClientData.h"
@@ -74,9 +73,7 @@ JSC::VM& commonVMSlow()
     vm.heap.machineThreads().addCurrentThread();
 #endif
 
-    vm.setGlobalConstRedeclarationShouldThrow(DeprecatedGlobalSettings::globalConstRedeclarationShouldThrow());
-
-    JSVMClientData::initNormalWorld(&vm);
+    JSVMClientData::initNormalWorld(&vm, WorkerThreadType::Main);
 
     return vm;
 }

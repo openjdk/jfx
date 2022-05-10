@@ -27,11 +27,11 @@
 
 #if ENABLE(FTL_JIT)
 
-#include "B3OpaqueByproducts.h"
 #include "DFGCommonData.h"
 #include "FTLLazySlowPath.h"
 #include "FTLOSRExit.h"
 #include "JITCode.h"
+#include "JITOpaqueByproducts.h"
 
 namespace JSC {
 
@@ -52,7 +52,7 @@ public:
     bool contains(void*) override;
 
     void initializeB3Code(CodeRef<JSEntryPtrTag>);
-    void initializeB3Byproducts(std::unique_ptr<B3::OpaqueByproducts>);
+    void initializeB3Byproducts(std::unique_ptr<OpaqueByproducts>);
     void initializeAddressForCall(CodePtr<JSEntryPtrTag>);
     void initializeArityCheckEntrypoint(CodeRef<JSEntryPtrTag>);
 
@@ -60,7 +60,7 @@ public:
 
     RegisterSet liveRegistersToPreserveAtExceptionHandlingCallSite(CodeBlock*, CallSiteIndex) override;
 
-    Optional<CodeOrigin> findPC(CodeBlock*, void* pc) override;
+    std::optional<CodeOrigin> findPC(CodeBlock*, void* pc) override;
 
     CodeRef<JSEntryPtrTag> b3Code() const { return m_b3Code; }
 
@@ -70,14 +70,14 @@ public:
     void shrinkToFit(const ConcurrentJSLocker&) override;
 
     DFG::CommonData common;
-    SegmentedVector<OSRExit, 8> osrExit;
+    Vector<OSRExit> m_osrExit;
     SegmentedVector<OSRExitDescriptor, 8> osrExitDescriptors;
     Vector<std::unique_ptr<LazySlowPath>> lazySlowPaths;
 
 private:
     CodePtr<JSEntryPtrTag> m_addressForCall;
     CodeRef<JSEntryPtrTag> m_b3Code;
-    std::unique_ptr<B3::OpaqueByproducts> m_b3Byproducts;
+    std::unique_ptr<OpaqueByproducts> m_b3Byproducts;
     CodeRef<JSEntryPtrTag> m_arityCheckEntrypoint;
 };
 

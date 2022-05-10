@@ -24,7 +24,9 @@
 
 #include <string.h>
 
+#ifndef GLIB_DISABLE_DEPRECATION_WARNINGS
 #define GLIB_DISABLE_DEPRECATION_WARNINGS
+#endif
 
 #include "gparamspecs.h"
 #include "gtype-private.h"
@@ -50,11 +52,14 @@
  * Parameter names need to start with a letter (a-z or A-Z). Subsequent
  * characters can be letters, numbers or a '-'.
  * All other characters are replaced by a '-' during construction.
+ *
+ * See also #GValue for more information.
+ *
  */
 
 
-#define G_FLOAT_EPSILON   (1e-30)
-#define G_DOUBLE_EPSILON  (1e-90)
+#define G_FLOAT_EPSILON     (1e-30)
+#define G_DOUBLE_EPSILON    (1e-90)
 
 
 /* --- param spec functions --- */
@@ -70,7 +75,7 @@ param_char_init (GParamSpec *pspec)
 
 static void
 param_char_set_default (GParamSpec *pspec,
-      GValue     *value)
+            GValue     *value)
 {
   value->data[0].v_int = G_PARAM_SPEC_CHAR (pspec)->default_value;
 }
@@ -99,7 +104,7 @@ param_uchar_init (GParamSpec *pspec)
 
 static void
 param_uchar_set_default (GParamSpec *pspec,
-       GValue     *value)
+             GValue     *value)
 {
   value->data[0].v_uint = G_PARAM_SPEC_UCHAR (pspec)->default_value;
 }
@@ -912,10 +917,13 @@ param_value_array_validate (GParamSpec *pspec,
       g_param_value_set_default (element_spec, element);
       changed++;
     }
-        /* validate array value against element_spec */
-        changed += g_param_value_validate (element_spec, element);
-      }
-  }
+              else
+                {
+                  /* validate array value against element_spec */
+                  changed += g_param_value_validate (element_spec, element);
+                }
+           }
+       }
     }
 
   return changed;
@@ -1207,11 +1215,11 @@ _g_param_spec_types_init (void)
   {
     const GParamSpecTypeInfo pspec_info = {
       sizeof (GParamSpecChar),  /* instance_size */
-      16,     /* n_preallocs */
-      param_char_init,    /* instance_init */
-      G_TYPE_CHAR,    /* value_type */
-      NULL,     /* finalize */
-      param_char_set_default, /* value_set_default */
+      16,           /* n_preallocs */
+      param_char_init,      /* instance_init */
+      G_TYPE_CHAR,      /* value_type */
+      NULL,         /* finalize */
+      param_char_set_default,   /* value_set_default */
       param_char_validate,  /* value_validate */
       param_int_values_cmp, /* values_cmp */
     };
@@ -1227,11 +1235,11 @@ _g_param_spec_types_init (void)
       sizeof (GParamSpecUChar), /* instance_size */
       16,                       /* n_preallocs */
       param_uchar_init,         /* instance_init */
-      G_TYPE_UCHAR,   /* value_type */
-      NULL,     /* finalize */
+      G_TYPE_UCHAR,     /* value_type */
+      NULL,         /* finalize */
       param_uchar_set_default,  /* value_set_default */
       param_uchar_validate, /* value_validate */
-      param_uint_values_cmp,  /* values_cmp */
+      param_uint_values_cmp,    /* values_cmp */
     };
     type = g_param_type_register_static (g_intern_static_string ("GParamUChar"), &pspec_info);
     *spec_types++ = type;
@@ -1244,7 +1252,7 @@ _g_param_spec_types_init (void)
     const GParamSpecTypeInfo pspec_info = {
       sizeof (GParamSpecBoolean), /* instance_size */
       16,                         /* n_preallocs */
-      NULL,       /* instance_init */
+      NULL,           /* instance_init */
       G_TYPE_BOOLEAN,             /* value_type */
       NULL,                       /* finalize */
       param_boolean_set_default,  /* value_set_default */
@@ -1263,10 +1271,10 @@ _g_param_spec_types_init (void)
       sizeof (GParamSpecInt),   /* instance_size */
       16,                       /* n_preallocs */
       param_int_init,           /* instance_init */
-      G_TYPE_INT,   /* value_type */
-      NULL,     /* finalize */
-      param_int_set_default,  /* value_set_default */
-      param_int_validate, /* value_validate */
+      G_TYPE_INT,       /* value_type */
+      NULL,         /* finalize */
+      param_int_set_default,    /* value_set_default */
+      param_int_validate,   /* value_validate */
       param_int_values_cmp, /* values_cmp */
     };
     type = g_param_type_register_static (g_intern_static_string ("GParamInt"), &pspec_info);
@@ -1281,11 +1289,11 @@ _g_param_spec_types_init (void)
       sizeof (GParamSpecUInt),  /* instance_size */
       16,                       /* n_preallocs */
       param_uint_init,          /* instance_init */
-      G_TYPE_UINT,    /* value_type */
-      NULL,     /* finalize */
-      param_uint_set_default, /* value_set_default */
+      G_TYPE_UINT,      /* value_type */
+      NULL,         /* finalize */
+      param_uint_set_default,   /* value_set_default */
       param_uint_validate,  /* value_validate */
-      param_uint_values_cmp,  /* values_cmp */
+      param_uint_values_cmp,    /* values_cmp */
     };
     type = g_param_type_register_static (g_intern_static_string ("GParamUInt"), &pspec_info);
     *spec_types++ = type;
@@ -1299,11 +1307,11 @@ _g_param_spec_types_init (void)
       sizeof (GParamSpecLong),  /* instance_size */
       16,                       /* n_preallocs */
       param_long_init,          /* instance_init */
-      G_TYPE_LONG,    /* value_type */
-      NULL,     /* finalize */
-      param_long_set_default, /* value_set_default */
+      G_TYPE_LONG,      /* value_type */
+      NULL,         /* finalize */
+      param_long_set_default,   /* value_set_default */
       param_long_validate,  /* value_validate */
-      param_long_values_cmp,  /* values_cmp */
+      param_long_values_cmp,    /* values_cmp */
     };
     type = g_param_type_register_static (g_intern_static_string ("GParamLong"), &pspec_info);
     *spec_types++ = type;
@@ -1317,11 +1325,11 @@ _g_param_spec_types_init (void)
       sizeof (GParamSpecULong), /* instance_size */
       16,                       /* n_preallocs */
       param_ulong_init,         /* instance_init */
-      G_TYPE_ULONG,   /* value_type */
-      NULL,     /* finalize */
+      G_TYPE_ULONG,     /* value_type */
+      NULL,         /* finalize */
       param_ulong_set_default,  /* value_set_default */
       param_ulong_validate, /* value_validate */
-      param_ulong_values_cmp, /* values_cmp */
+      param_ulong_values_cmp,   /* values_cmp */
     };
     type = g_param_type_register_static (g_intern_static_string ("GParamULong"), &pspec_info);
     *spec_types++ = type;
@@ -1335,11 +1343,11 @@ _g_param_spec_types_init (void)
       sizeof (GParamSpecInt64),  /* instance_size */
       16,                       /* n_preallocs */
       param_int64_init,         /* instance_init */
-      G_TYPE_INT64,   /* value_type */
-      NULL,     /* finalize */
+      G_TYPE_INT64,     /* value_type */
+      NULL,         /* finalize */
       param_int64_set_default,  /* value_set_default */
       param_int64_validate, /* value_validate */
-      param_int64_values_cmp, /* values_cmp */
+      param_int64_values_cmp,   /* values_cmp */
     };
     type = g_param_type_register_static (g_intern_static_string ("GParamInt64"), &pspec_info);
     *spec_types++ = type;
@@ -1353,10 +1361,10 @@ _g_param_spec_types_init (void)
       sizeof (GParamSpecUInt64), /* instance_size */
       16,                       /* n_preallocs */
       param_uint64_init,        /* instance_init */
-      G_TYPE_UINT64,    /* value_type */
-      NULL,     /* finalize */
+      G_TYPE_UINT64,        /* value_type */
+      NULL,         /* finalize */
       param_uint64_set_default, /* value_set_default */
-      param_uint64_validate,  /* value_validate */
+      param_uint64_validate,    /* value_validate */
       param_uint64_values_cmp,  /* values_cmp */
     };
     type = g_param_type_register_static (g_intern_static_string ("GParamUInt64"), &pspec_info);
@@ -1370,11 +1378,11 @@ _g_param_spec_types_init (void)
     const GParamSpecTypeInfo pspec_info = {
       sizeof (GParamSpecUnichar), /* instance_size */
       16,                        /* n_preallocs */
-      param_unichar_init,  /* instance_init */
-      G_TYPE_UINT,     /* value_type */
-      NULL,      /* finalize */
+      param_unichar_init,    /* instance_init */
+      G_TYPE_UINT,       /* value_type */
+      NULL,          /* finalize */
       param_unichar_set_default, /* value_set_default */
-      param_unichar_validate,  /* value_validate */
+      param_unichar_validate,    /* value_validate */
       param_unichar_values_cmp,  /* values_cmp */
     };
     type = g_param_type_register_static (g_intern_static_string ("GParamUnichar"), &pspec_info);
@@ -1389,11 +1397,11 @@ _g_param_spec_types_init (void)
       sizeof (GParamSpecEnum),  /* instance_size */
       16,                       /* n_preallocs */
       param_enum_init,          /* instance_init */
-      G_TYPE_ENUM,    /* value_type */
+      G_TYPE_ENUM,      /* value_type */
       param_enum_finalize,  /* finalize */
-      param_enum_set_default, /* value_set_default */
+      param_enum_set_default,   /* value_set_default */
       param_enum_validate,  /* value_validate */
-      param_long_values_cmp,  /* values_cmp */
+      param_long_values_cmp,    /* values_cmp */
     };
     type = g_param_type_register_static (g_intern_static_string ("GParamEnum"), &pspec_info);
     *spec_types++ = type;
@@ -1405,13 +1413,13 @@ _g_param_spec_types_init (void)
   {
     const GParamSpecTypeInfo pspec_info = {
       sizeof (GParamSpecFlags), /* instance_size */
-      16,     /* n_preallocs */
-      param_flags_init,   /* instance_init */
-      G_TYPE_FLAGS,   /* value_type */
+      16,           /* n_preallocs */
+      param_flags_init,     /* instance_init */
+      G_TYPE_FLAGS,     /* value_type */
       param_flags_finalize, /* finalize */
       param_flags_set_default,  /* value_set_default */
       param_flags_validate, /* value_validate */
-      param_ulong_values_cmp, /* values_cmp */
+      param_ulong_values_cmp,   /* values_cmp */
     };
     type = g_param_type_register_static (g_intern_static_string ("GParamFlags"), &pspec_info);
     *spec_types++ = type;
@@ -1425,11 +1433,11 @@ _g_param_spec_types_init (void)
       sizeof (GParamSpecFloat), /* instance_size */
       16,                       /* n_preallocs */
       param_float_init,         /* instance_init */
-      G_TYPE_FLOAT,   /* value_type */
-      NULL,     /* finalize */
+      G_TYPE_FLOAT,     /* value_type */
+      NULL,         /* finalize */
       param_float_set_default,  /* value_set_default */
       param_float_validate, /* value_validate */
-      param_float_values_cmp, /* values_cmp */
+      param_float_values_cmp,   /* values_cmp */
     };
     type = g_param_type_register_static (g_intern_static_string ("GParamFloat"), &pspec_info);
     *spec_types++ = type;
@@ -1440,14 +1448,14 @@ _g_param_spec_types_init (void)
    */
   {
     const GParamSpecTypeInfo pspec_info = {
-      sizeof (GParamSpecDouble),  /* instance_size */
-      16,       /* n_preallocs */
-      param_double_init,    /* instance_init */
-      G_TYPE_DOUBLE,      /* value_type */
-      NULL,       /* finalize */
-      param_double_set_default,   /* value_set_default */
-      param_double_validate,    /* value_validate */
-      param_double_values_cmp,    /* values_cmp */
+      sizeof (GParamSpecDouble),    /* instance_size */
+      16,               /* n_preallocs */
+      param_double_init,        /* instance_init */
+      G_TYPE_DOUBLE,            /* value_type */
+      NULL,             /* finalize */
+      param_double_set_default,     /* value_set_default */
+      param_double_validate,        /* value_validate */
+      param_double_values_cmp,      /* values_cmp */
     };
     type = g_param_type_register_static (g_intern_static_string ("GParamDouble"), &pspec_info);
     *spec_types++ = type;
@@ -1458,14 +1466,14 @@ _g_param_spec_types_init (void)
    */
   {
     const GParamSpecTypeInfo pspec_info = {
-      sizeof (GParamSpecString),  /* instance_size */
-      16,       /* n_preallocs */
-      param_string_init,    /* instance_init */
-      G_TYPE_STRING,      /* value_type */
-      param_string_finalize,    /* finalize */
-      param_string_set_default,   /* value_set_default */
-      param_string_validate,    /* value_validate */
-      param_string_values_cmp,    /* values_cmp */
+      sizeof (GParamSpecString),    /* instance_size */
+      16,               /* n_preallocs */
+      param_string_init,        /* instance_init */
+      G_TYPE_STRING,            /* value_type */
+      param_string_finalize,        /* finalize */
+      param_string_set_default,     /* value_set_default */
+      param_string_validate,        /* value_validate */
+      param_string_values_cmp,      /* values_cmp */
     };
     type = g_param_type_register_static (g_intern_static_string ("GParamString"), &pspec_info);
     *spec_types++ = type;
@@ -1477,10 +1485,10 @@ _g_param_spec_types_init (void)
   {
     const GParamSpecTypeInfo pspec_info = {
       sizeof (GParamSpecParam), /* instance_size */
-      16,     /* n_preallocs */
-      param_param_init,   /* instance_init */
-      G_TYPE_PARAM,   /* value_type */
-      NULL,     /* finalize */
+      16,           /* n_preallocs */
+      param_param_init,     /* instance_init */
+      G_TYPE_PARAM,     /* value_type */
+      NULL,         /* finalize */
       param_param_set_default,  /* value_set_default */
       param_param_validate, /* value_validate */
       param_pointer_values_cmp, /* values_cmp */
@@ -1495,13 +1503,13 @@ _g_param_spec_types_init (void)
   {
     const GParamSpecTypeInfo pspec_info = {
       sizeof (GParamSpecBoxed), /* instance_size */
-      4,      /* n_preallocs */
-      param_boxed_init,   /* instance_init */
-      G_TYPE_BOXED,   /* value_type */
-      NULL,     /* finalize */
+      4,            /* n_preallocs */
+      param_boxed_init,     /* instance_init */
+      G_TYPE_BOXED,     /* value_type */
+      NULL,         /* finalize */
       param_boxed_set_default,  /* value_set_default */
       param_boxed_validate, /* value_validate */
-      param_boxed_values_cmp, /* values_cmp */
+      param_boxed_values_cmp,   /* values_cmp */
     };
     type = g_param_type_register_static (g_intern_static_string ("GParamBoxed"), &pspec_info);
     *spec_types++ = type;
@@ -1514,11 +1522,11 @@ _g_param_spec_types_init (void)
     const GParamSpecTypeInfo pspec_info = {
       sizeof (GParamSpecPointer),  /* instance_size */
       0,                           /* n_preallocs */
-      param_pointer_init,    /* instance_init */
-      G_TYPE_POINTER,        /* value_type */
-      NULL,        /* finalize */
+      param_pointer_init,      /* instance_init */
+      G_TYPE_POINTER,          /* value_type */
+      NULL,            /* finalize */
       param_pointer_set_default,   /* value_set_default */
-      param_pointer_validate,    /* value_validate */
+      param_pointer_validate,      /* value_validate */
       param_pointer_values_cmp,    /* values_cmp */
     };
     type = g_param_type_register_static (g_intern_static_string ("GParamPointer"), &pspec_info);
@@ -1530,13 +1538,13 @@ _g_param_spec_types_init (void)
    */
   {
     /* const */ GParamSpecTypeInfo pspec_info = {
-      sizeof (GParamSpecValueArray),  /* instance_size */
-      0,        /* n_preallocs */
-      param_value_array_init,   /* instance_init */
-      0xdeadbeef,     /* value_type, assigned further down */
-      param_value_array_finalize, /* finalize */
-      param_value_array_set_default,  /* value_set_default */
-      param_value_array_validate, /* value_validate */
+      sizeof (GParamSpecValueArray),    /* instance_size */
+      0,                /* n_preallocs */
+      param_value_array_init,       /* instance_init */
+      0xdeadbeef,           /* value_type, assigned further down */
+      param_value_array_finalize,   /* finalize */
+      param_value_array_set_default,    /* value_set_default */
+      param_value_array_validate,   /* value_validate */
       param_value_array_values_cmp, /* values_cmp */
     };
     pspec_info.value_type = G_TYPE_VALUE_ARRAY;
@@ -1551,11 +1559,11 @@ _g_param_spec_types_init (void)
     const GParamSpecTypeInfo pspec_info = {
       sizeof (GParamSpecObject), /* instance_size */
       16,                        /* n_preallocs */
-      param_object_init,   /* instance_init */
-      G_TYPE_OBJECT,     /* value_type */
-      NULL,      /* finalize */
+      param_object_init,     /* instance_init */
+      G_TYPE_OBJECT,         /* value_type */
+      NULL,          /* finalize */
       param_object_set_default,  /* value_set_default */
-      param_object_validate,   /* value_validate */
+      param_object_validate,     /* value_validate */
       param_object_values_cmp,   /* values_cmp */
     };
     type = g_param_type_register_static (g_intern_static_string ("GParamObject"), &pspec_info);
@@ -1570,7 +1578,7 @@ _g_param_spec_types_init (void)
       sizeof (GParamSpecOverride), /* instance_size */
       16,                        /* n_preallocs */
       param_override_init,   /* instance_init */
-      G_TYPE_NONE,     /* value_type */
+      G_TYPE_NONE,       /* value_type */
       param_override_finalize,   /* finalize */
       param_override_set_default, /* value_set_default */
       param_override_validate,    /* value_validate */
@@ -1586,13 +1594,13 @@ _g_param_spec_types_init (void)
   {
     GParamSpecTypeInfo pspec_info = {
       sizeof (GParamSpecGType), /* instance_size */
-      0,      /* n_preallocs */
-      param_gtype_init,   /* instance_init */
-      0xdeadbeef,   /* value_type, assigned further down */
-      NULL,     /* finalize */
+      0,            /* n_preallocs */
+      param_gtype_init,     /* instance_init */
+      0xdeadbeef,       /* value_type, assigned further down */
+      NULL,         /* finalize */
       param_gtype_set_default,  /* value_set_default */
       param_gtype_validate, /* value_validate */
-      param_gtype_values_cmp, /* values_cmp */
+      param_gtype_values_cmp,   /* values_cmp */
     };
     pspec_info.value_type = G_TYPE_GTYPE;
     type = g_param_type_register_static (g_intern_static_string ("GParamGType"), &pspec_info);
@@ -1639,12 +1647,12 @@ _g_param_spec_types_init (void)
  */
 GParamSpec*
 g_param_spec_char (const gchar *name,
-       const gchar *nick,
-       const gchar *blurb,
-       gint8  minimum,
-       gint8  maximum,
-       gint8  default_value,
-       GParamFlags  flags)
+                   const gchar *nick,
+                   const gchar *blurb,
+           gint8    minimum,
+           gint8    maximum,
+           gint8    default_value,
+           GParamFlags  flags)
 {
   GParamSpecChar *cspec;
 
@@ -1681,12 +1689,12 @@ g_param_spec_char (const gchar *name,
  */
 GParamSpec*
 g_param_spec_uchar (const gchar *name,
-        const gchar *nick,
-        const gchar *blurb,
-        guint8   minimum,
-        guint8   maximum,
-        guint8   default_value,
-        GParamFlags  flags)
+                    const gchar *nick,
+                    const gchar *blurb,
+            guint8   minimum,
+            guint8   maximum,
+            guint8   default_value,
+            GParamFlags  flags)
 {
   GParamSpecUChar *uspec;
 
@@ -1727,10 +1735,10 @@ g_param_spec_uchar (const gchar *name,
  */
 GParamSpec*
 g_param_spec_boolean (const gchar *name,
-          const gchar *nick,
-          const gchar *blurb,
-          gboolean     default_value,
-          GParamFlags  flags)
+                      const gchar *nick,
+                      const gchar *blurb,
+              gboolean     default_value,
+                      GParamFlags  flags)
 {
   GParamSpecBoolean *bspec;
 
@@ -1767,12 +1775,12 @@ g_param_spec_boolean (const gchar *name,
  */
 GParamSpec*
 g_param_spec_int (const gchar *name,
-      const gchar *nick,
-      const gchar *blurb,
-      gint         minimum,
-      gint         maximum,
-      gint         default_value,
-      GParamFlags  flags)
+                  const gchar *nick,
+                  const gchar *blurb,
+          gint         minimum,
+          gint         maximum,
+          gint         default_value,
+                  GParamFlags  flags)
 {
   GParamSpecInt *ispec;
 
@@ -1811,12 +1819,12 @@ g_param_spec_int (const gchar *name,
  */
 GParamSpec*
 g_param_spec_uint (const gchar *name,
-       const gchar *nick,
-       const gchar *blurb,
-       guint  minimum,
-       guint  maximum,
-       guint  default_value,
-       GParamFlags  flags)
+                   const gchar *nick,
+                   const gchar *blurb,
+           guint    minimum,
+           guint    maximum,
+           guint    default_value,
+           GParamFlags  flags)
 {
   GParamSpecUInt *uspec;
 
@@ -1855,12 +1863,12 @@ g_param_spec_uint (const gchar *name,
  */
 GParamSpec*
 g_param_spec_long (const gchar *name,
-       const gchar *nick,
-       const gchar *blurb,
-       glong  minimum,
-       glong  maximum,
-       glong  default_value,
-       GParamFlags  flags)
+                   const gchar *nick,
+                   const gchar *blurb,
+           glong    minimum,
+           glong    maximum,
+           glong    default_value,
+           GParamFlags  flags)
 {
   GParamSpecLong *lspec;
 
@@ -1900,22 +1908,22 @@ g_param_spec_long (const gchar *name,
  */
 GParamSpec*
 g_param_spec_ulong (const gchar *name,
-        const gchar *nick,
-        const gchar *blurb,
-        gulong   minimum,
-        gulong   maximum,
-        gulong   default_value,
-        GParamFlags  flags)
+                    const gchar *nick,
+                    const gchar *blurb,
+            gulong   minimum,
+            gulong   maximum,
+            gulong   default_value,
+            GParamFlags  flags)
 {
   GParamSpecULong *uspec;
 
   g_return_val_if_fail (default_value >= minimum && default_value <= maximum, NULL);
 
   uspec = g_param_spec_internal (G_TYPE_PARAM_ULONG,
-         name,
-         nick,
-         blurb,
-         flags);
+                                 name,
+                                 nick,
+                                 blurb,
+                                 flags);
   if (uspec == NULL)
     return NULL;
 
@@ -1944,12 +1952,12 @@ g_param_spec_ulong (const gchar *name,
  */
 GParamSpec*
 g_param_spec_int64 (const gchar *name,
-        const gchar *nick,
-        const gchar *blurb,
-        gint64   minimum,
-        gint64   maximum,
-        gint64   default_value,
-        GParamFlags  flags)
+                    const gchar *nick,
+                    const gchar *blurb,
+            gint64   minimum,
+            gint64   maximum,
+            gint64   default_value,
+            GParamFlags  flags)
 {
   GParamSpecInt64 *lspec;
 
@@ -1989,12 +1997,12 @@ g_param_spec_int64 (const gchar *name,
  */
 GParamSpec*
 g_param_spec_uint64 (const gchar *name,
-         const gchar *nick,
-         const gchar *blurb,
-         guint64    minimum,
-         guint64    maximum,
-         guint64    default_value,
-         GParamFlags  flags)
+                     const gchar *nick,
+                     const gchar *blurb,
+             guint64      minimum,
+             guint64      maximum,
+             guint64      default_value,
+                     GParamFlags  flags)
 {
   GParamSpecUInt64 *uspec;
 
@@ -2033,10 +2041,10 @@ g_param_spec_uint64 (const gchar *name,
  */
 GParamSpec*
 g_param_spec_unichar (const gchar *name,
-          const gchar *nick,
-          const gchar *blurb,
-          gunichar     default_value,
-          GParamFlags  flags)
+                      const gchar *nick,
+                      const gchar *blurb,
+              gunichar     default_value,
+                      GParamFlags  flags)
 {
   GParamSpecUnichar *uspec;
 
@@ -2071,11 +2079,11 @@ g_param_spec_unichar (const gchar *name,
  */
 GParamSpec*
 g_param_spec_enum (const gchar *name,
-       const gchar *nick,
-       const gchar *blurb,
-       GType  enum_type,
-       gint   default_value,
-       GParamFlags  flags)
+                   const gchar *nick,
+                   const gchar *blurb,
+           GType    enum_type,
+           gint     default_value,
+           GParamFlags  flags)
 {
   GParamSpecEnum *espec;
   GEnumClass *enum_class;
@@ -2092,7 +2100,10 @@ g_param_spec_enum (const gchar *name,
          blurb,
          flags);
   if (espec == NULL)
-    return NULL;
+    {
+      g_type_class_unref (enum_class);
+      return NULL;
+    }
 
   espec->enum_class = enum_class;
   espec->default_value = default_value;
@@ -2119,11 +2130,11 @@ g_param_spec_enum (const gchar *name,
  */
 GParamSpec*
 g_param_spec_flags (const gchar *name,
-        const gchar *nick,
-        const gchar *blurb,
-        GType  flags_type,
-        guint  default_value,
-        GParamFlags  flags)
+                    const gchar *nick,
+                    const gchar *blurb,
+            GType    flags_type,
+            guint    default_value,
+            GParamFlags  flags)
 {
   GParamSpecFlags *fspec;
   GFlagsClass *flags_class;
@@ -2144,7 +2155,10 @@ g_param_spec_flags (const gchar *name,
          blurb,
          flags);
   if (fspec == NULL)
-    return NULL;
+    {
+      g_type_class_unref (flags_class);
+      return NULL;
+    }
 
   fspec->flags_class = flags_class;
   fspec->default_value = default_value;
@@ -2171,12 +2185,12 @@ g_param_spec_flags (const gchar *name,
  */
 GParamSpec*
 g_param_spec_float (const gchar *name,
-        const gchar *nick,
-        const gchar *blurb,
-        gfloat   minimum,
-        gfloat   maximum,
-        gfloat   default_value,
-        GParamFlags  flags)
+                    const gchar *nick,
+                    const gchar *blurb,
+            gfloat   minimum,
+            gfloat   maximum,
+            gfloat   default_value,
+            GParamFlags  flags)
 {
   GParamSpecFloat *fspec;
 
@@ -2216,12 +2230,12 @@ g_param_spec_float (const gchar *name,
  */
 GParamSpec*
 g_param_spec_double (const gchar *name,
-         const gchar *nick,
-         const gchar *blurb,
-         gdouble    minimum,
-         gdouble    maximum,
-         gdouble    default_value,
-         GParamFlags  flags)
+                     const gchar *nick,
+                     const gchar *blurb,
+             gdouble      minimum,
+             gdouble      maximum,
+             gdouble      default_value,
+                     GParamFlags  flags)
 {
   GParamSpecDouble *dspec;
 
@@ -2258,10 +2272,10 @@ g_param_spec_double (const gchar *name,
  */
 GParamSpec*
 g_param_spec_string (const gchar *name,
-         const gchar *nick,
-         const gchar *blurb,
-         const gchar *default_value,
-         GParamFlags  flags)
+                     const gchar *nick,
+                     const gchar *blurb,
+                     const gchar *default_value,
+                     GParamFlags  flags)
 {
   GParamSpecString *sspec = g_param_spec_internal (G_TYPE_PARAM_STRING,
                name,
@@ -2294,10 +2308,10 @@ g_param_spec_string (const gchar *name,
  */
 GParamSpec*
 g_param_spec_param (const gchar *name,
-        const gchar *nick,
-        const gchar *blurb,
-        GType  param_type,
-        GParamFlags  flags)
+                    const gchar *nick,
+                    const gchar *blurb,
+            GType    param_type,
+                    GParamFlags  flags)
 {
   GParamSpecParam *pspec;
 
@@ -2333,10 +2347,10 @@ g_param_spec_param (const gchar *name,
  */
 GParamSpec*
 g_param_spec_boxed (const gchar *name,
-        const gchar *nick,
-        const gchar *blurb,
-        GType  boxed_type,
-        GParamFlags  flags)
+                    const gchar *nick,
+                    const gchar *blurb,
+            GType    boxed_type,
+                    GParamFlags  flags)
 {
   GParamSpecBoxed *bspec;
 
@@ -2373,9 +2387,9 @@ g_param_spec_boxed (const gchar *name,
  */
 GParamSpec*
 g_param_spec_pointer (const gchar *name,
-          const gchar *nick,
-          const gchar *blurb,
-          GParamFlags  flags)
+                      const gchar *nick,
+                      const gchar *blurb,
+                      GParamFlags  flags)
 {
   GParamSpecPointer *pspec;
 
@@ -2410,10 +2424,10 @@ g_param_spec_pointer (const gchar *name,
  */
 GParamSpec*
 g_param_spec_gtype (const gchar *name,
-        const gchar *nick,
-        const gchar *blurb,
-        GType        is_a_type,
-        GParamFlags  flags)
+                    const gchar *nick,
+                    const gchar *blurb,
+                    GType        is_a_type,
+                    GParamFlags  flags)
 {
   GParamSpecGType *tspec;
 
@@ -2450,10 +2464,10 @@ g_param_spec_gtype (const gchar *name,
  */
 GParamSpec*
 g_param_spec_value_array (const gchar *name,
-        const gchar *nick,
-        const gchar *blurb,
-        GParamSpec  *element_spec,
-        GParamFlags  flags)
+                          const gchar *nick,
+                          const gchar *blurb,
+                          GParamSpec  *element_spec,
+                          GParamFlags  flags)
 {
   GParamSpecValueArray *aspec;
 
@@ -2494,10 +2508,10 @@ g_param_spec_value_array (const gchar *name,
  */
 GParamSpec*
 g_param_spec_object (const gchar *name,
-         const gchar *nick,
-         const gchar *blurb,
-         GType    object_type,
-         GParamFlags  flags)
+                     const gchar *nick,
+                     const gchar *blurb,
+             GType    object_type,
+                     GParamFlags  flags)
 {
   GParamSpecObject *ospec;
 
@@ -2531,7 +2545,7 @@ g_param_spec_object (const gchar *name,
  */
 GParamSpec*
 g_param_spec_override (const gchar *name,
-           GParamSpec  *overridden)
+                       GParamSpec  *overridden)
 {
   GParamSpec *pspec;
 

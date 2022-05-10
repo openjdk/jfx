@@ -32,7 +32,6 @@
 #include "RenderText.h"
 #include "TextRun.h"
 #include <unicode/ubrk.h>
-#include <wtf/Optional.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/text/TextBreakIterator.h>
 #include <wtf/unicode/CharacterNames.h>
@@ -49,7 +48,7 @@ public:
     static bool isNeeded(RenderText& text, const FontCascade& font)
     {
         TextRun run = RenderBlock::constructTextRun(text, text.style());
-        return font.codePath(run) == FontCascade::Complex;
+        return font.codePath(run) == FontCascade::CodePath::Complex;
     }
 
     TextLayout(RenderText& text, const FontCascade& font, float xPos)
@@ -215,12 +214,12 @@ unsigned ComplexTextController::offsetForPosition(float h, bool includePartialGl
                 if (cursorPositionIterator.isBoundary(hitIndex))
                     clusterStart = hitIndex;
                 else
-                    clusterStart = cursorPositionIterator.preceding(hitIndex).valueOr(0);
+                    clusterStart = cursorPositionIterator.preceding(hitIndex).value_or(0);
 
                 if (!includePartialGlyphs)
                     return complexTextRun.stringLocation() + clusterStart;
 
-                unsigned clusterEnd = cursorPositionIterator.following(hitIndex).valueOr(stringLength);
+                unsigned clusterEnd = cursorPositionIterator.following(hitIndex).value_or(stringLength);
 
                 float clusterWidth;
                 // FIXME: The search stops at the boundaries of complexTextRun. In theory, it should go on into neighboring ComplexTextRuns
@@ -315,19 +314,19 @@ static bool advanceByCombiningCharacterSequence(const UChar*& iterator, const UC
 }
 
 // FIXME: Capitalization is language-dependent and context-dependent and should operate on grapheme clusters instead of codepoints.
-static inline Optional<UChar32> capitalized(UChar32 baseCharacter)
+static inline std::optional<UChar32> capitalized(UChar32 baseCharacter)
 {
     if (U_GET_GC_MASK(baseCharacter) & U_GC_M_MASK)
-        return WTF::nullopt;
+        return std::nullopt;
 
     UChar32 uppercaseCharacter = u_toupper(baseCharacter);
     ASSERT(uppercaseCharacter == baseCharacter || (U_IS_BMP(baseCharacter) == U_IS_BMP(uppercaseCharacter)));
     if (uppercaseCharacter != baseCharacter)
         return uppercaseCharacter;
-    return WTF::nullopt;
+    return std::nullopt;
 }
 
-static bool shouldSynthesize(bool dontSynthesizeSmallCaps, const Font* nextFont, UChar32 baseCharacter, Optional<UChar32> capitalizedBase, FontVariantCaps fontVariantCaps, bool engageAllSmallCapsProcessing)
+static bool shouldSynthesize(bool dontSynthesizeSmallCaps, const Font* nextFont, UChar32 baseCharacter, std::optional<UChar32> capitalizedBase, FontVariantCaps fontVariantCaps, bool engageAllSmallCapsProcessing)
 {
     if (dontSynthesizeSmallCaps)
         return false;
@@ -342,7 +341,7 @@ static bool shouldSynthesize(bool dontSynthesizeSmallCaps, const Font* nextFont,
 
 void ComplexTextController::collectComplexTextRuns()
 {
-    if (!m_end)
+    if (!m_end || !m_font.size())
         return;
 
     // We break up glyph run generation for the string by Font.
@@ -557,7 +556,7 @@ void ComplexTextController::advance(unsigned offset, GlyphBuffer* glyphBuffer, G
     if (offset > m_end)
         offset = m_end;
 
-    if (offset <= m_currentCharacter) {
+    if (offset < m_currentCharacter) {
         m_runWidthSoFar = 0;
         m_numGlyphsSoFar = 0;
         m_currentRun = 0;
@@ -584,7 +583,7 @@ void ComplexTextController::advance(unsigned offset, GlyphBuffer* glyphBuffer, G
         // When leftmostGlyph is 0, it represents the first glyph to draw, taking into
         // account the text direction.
         if (!indexOfLeftmostGlyphInCurrentRun && glyphBuffer)
-            glyphBuffer->setInitialAdvance(GlyphBufferAdvance(complexTextRun.initialAdvance().width(), complexTextRun.initialAdvance().height()));
+            glyphBuffer->setInitialAdvance(makeGlyphBufferAdvance(complexTextRun.initialAdvance()));
 
         while (m_glyphInCurrentRun < glyphCount) {
             unsigned glyphStartOffset = complexTextRun.indexAt(glyphIndexIntoCurrentRun);
@@ -604,23 +603,23 @@ void ComplexTextController::advance(unsigned offset, GlyphBuffer* glyphBuffer, G
 
             if (glyphBuffer && !m_characterInCurrentGlyph) {
                 auto currentGlyphOrigin = glyphOrigin(glyphIndexIntoComplexTextController);
-                GlyphBufferAdvance paintAdvance(adjustedBaseAdvance);
+                GlyphBufferAdvance paintAdvance = makeGlyphBufferAdvance(adjustedBaseAdvance);
                 if (!glyphIndexIntoCurrentRun) {
                     // The first layout advance of every run includes the "initial layout advance." However, here, we need
                     // paint advances, so subtract it out before transforming the layout advance into a paint advance.
-                    paintAdvance.setWidth(paintAdvance.width() - (complexTextRun.initialAdvance().width() - currentGlyphOrigin.x()));
-                    paintAdvance.setHeight(paintAdvance.height() - (complexTextRun.initialAdvance().height() - currentGlyphOrigin.y()));
+                    setWidth(paintAdvance, width(paintAdvance) - (complexTextRun.initialAdvance().width() - currentGlyphOrigin.x()));
+                    setHeight(paintAdvance, height(paintAdvance) - (complexTextRun.initialAdvance().height() - currentGlyphOrigin.y()));
                 }
-                paintAdvance.setWidth(paintAdvance.width() + glyphOrigin(glyphIndexIntoComplexTextController + 1).x() - currentGlyphOrigin.x());
-                paintAdvance.setHeight(paintAdvance.height() + glyphOrigin(glyphIndexIntoComplexTextController + 1).y() - currentGlyphOrigin.y());
+                setWidth(paintAdvance, width(paintAdvance) + glyphOrigin(glyphIndexIntoComplexTextController + 1).x() - currentGlyphOrigin.x());
+                setHeight(paintAdvance, height(paintAdvance) + glyphOrigin(glyphIndexIntoComplexTextController + 1).y() - currentGlyphOrigin.y());
                 if (glyphIndexIntoCurrentRun == glyphCount - 1 && currentRunIndex + 1 < runCount) {
                     // Our paint advance points to the end of the run. However, the next run may have an
                     // initial advance, and our paint advance needs to point to the location of the next
                     // glyph. So, we need to add in the next run's initial advance.
-                    paintAdvance.setWidth(paintAdvance.width() - glyphOrigin(glyphIndexIntoComplexTextController + 1).x() + m_complexTextRuns[currentRunIndex + 1]->initialAdvance().width());
-                    paintAdvance.setHeight(paintAdvance.height() - glyphOrigin(glyphIndexIntoComplexTextController + 1).y() + m_complexTextRuns[currentRunIndex + 1]->initialAdvance().height());
+                    setWidth(paintAdvance, width(paintAdvance) - glyphOrigin(glyphIndexIntoComplexTextController + 1).x() + m_complexTextRuns[currentRunIndex + 1]->initialAdvance().width());
+                    setHeight(paintAdvance, height(paintAdvance) - glyphOrigin(glyphIndexIntoComplexTextController + 1).y() + m_complexTextRuns[currentRunIndex + 1]->initialAdvance().height());
                 }
-                paintAdvance.setHeight(-paintAdvance.height()); // Increasing y points down
+                setHeight(paintAdvance, -height(paintAdvance)); // Increasing y points down
                 glyphBuffer->add(m_adjustedGlyphs[glyphIndexIntoComplexTextController], complexTextRun.font(), paintAdvance, complexTextRun.indexAt(m_glyphInCurrentRun));
             }
 

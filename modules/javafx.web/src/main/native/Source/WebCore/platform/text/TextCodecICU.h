@@ -28,41 +28,38 @@
 
 #include "TextCodec.h"
 #include <unicode/ucnv.h>
+#include <wtf/unicode/icu/ICUHelpers.h>
 
 namespace WebCore {
 
-using ICUConverterPtr = std::unique_ptr<UConverter, void (*)(UConverter*)>;
+using ICUConverterPtr = std::unique_ptr<UConverter, ICUDeleter<ucnv_close>>;
 
-class TextCodecICU : public TextCodec {
+class TextCodecICU final : public TextCodec {
 public:
-    explicit TextCodecICU(const char* encoding, const char* canonicalConverterName);
-    virtual ~TextCodecICU();
-
     static void registerEncodingNames(EncodingNameRegistrar);
     static void registerCodecs(TextCodecRegistrar);
 
+    explicit TextCodecICU(const char* encoding, const char* canonicalConverterName);
+    virtual ~TextCodecICU();
+
 private:
     String decode(const char*, size_t length, bool flush, bool stopOnError, bool& sawError) final;
-    Vector<uint8_t> encode(StringView, UnencodableHandling) final;
+    Vector<uint8_t> encode(StringView, UnencodableHandling) const final;
 
     void createICUConverter() const;
     void releaseICUConverter() const;
-    bool needsGBKFallbacks() const { return m_needsGBKFallbacks; }
-    void setNeedsGBKFallbacks(bool needsFallbacks) { m_needsGBKFallbacks = needsFallbacks; }
 
     int decodeToBuffer(UChar* buffer, UChar* bufferLimit, const char*& source, const char* sourceLimit, int32_t* offsets, bool flush, UErrorCode&);
 
     const char* const m_encodingName;
     const char* const m_canonicalConverterName;
-    mutable ICUConverterPtr m_converter { nullptr, ucnv_close };
-    mutable bool m_needsGBKFallbacks { false };
+    mutable ICUConverterPtr m_converter;
 };
 
 struct ICUConverterWrapper {
     WTF_MAKE_STRUCT_FAST_ALLOCATED;
 
-    ICUConverterPtr converter { nullptr, ucnv_close };
+    ICUConverterPtr converter;
 };
 
 } // namespace WebCore
-

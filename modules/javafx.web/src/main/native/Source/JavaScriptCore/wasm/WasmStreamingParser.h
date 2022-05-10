@@ -27,8 +27,6 @@
 
 #if ENABLE(WEBASSEMBLY)
 
-#include "WasmModuleInformation.h"
-#include "WasmParser.h"
 #include "WasmSections.h"
 #include <wtf/CrossThreadCopier.h>
 #include <wtf/SHA1.h>
@@ -36,6 +34,11 @@
 #include <wtf/text/WTFString.h>
 
 namespace JSC { namespace Wasm {
+
+struct FunctionData;
+struct ModuleInformation;
+
+enum class CompilerMode : uint8_t { FullCompile, Validation };
 
 class StreamingParserClient {
 public:
@@ -86,7 +89,7 @@ private:
     static constexpr unsigned moduleHeaderSize = 8;
     static constexpr unsigned sectionIDSize = 1;
 
-    State addBytes(const uint8_t* bytes, size_t length, IsEndOfStream);
+    JS_EXPORT_PRIVATE State addBytes(const uint8_t* bytes, size_t length, IsEndOfStream);
 
     State parseModuleHeader(Vector<uint8_t>&&);
     State parseSectionID(Vector<uint8_t>&&);
@@ -97,7 +100,7 @@ private:
     State parseFunctionSize(uint32_t);
     State parseFunctionPayload(Vector<uint8_t>&&);
 
-    Optional<Vector<uint8_t>> consume(const uint8_t* bytes, size_t, size_t&, size_t);
+    std::optional<Vector<uint8_t>> consume(const uint8_t* bytes, size_t, size_t&, size_t);
     Expected<uint32_t, State> consumeVarUInt32(const uint8_t* bytes, size_t, size_t&, IsEndOfStream);
 
     void moveToStateIfNotFailed(State);

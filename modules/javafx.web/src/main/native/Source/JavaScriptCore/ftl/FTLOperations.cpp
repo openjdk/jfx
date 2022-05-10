@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -47,12 +47,13 @@
 #include "JSMapIterator.h"
 #include "JSSetIterator.h"
 #include "RegExpObject.h"
+#include <wtf/Assertions.h>
 
 IGNORE_WARNINGS_BEGIN("frame-address")
 
 namespace JSC { namespace FTL {
 
-extern "C" void JIT_OPERATION operationPopulateObjectInOSR(JSGlobalObject* globalObject, ExitTimeObjectMaterialization* materialization, EncodedJSValue* encodedValue, EncodedJSValue* values)
+JSC_DEFINE_JIT_OPERATION(operationPopulateObjectInOSR, void, (JSGlobalObject* globalObject, ExitTimeObjectMaterialization* materialization, EncodedJSValue* encodedValue, EncodedJSValue* values))
 {
     using namespace DFG;
     VM& vm = globalObject->vm();
@@ -180,7 +181,8 @@ extern "C" void JIT_OPERATION operationPopulateObjectInOSR(JSGlobalObject* globa
     }
 }
 
-extern "C" JSCell* JIT_OPERATION operationMaterializeObjectInOSR(JSGlobalObject* globalObject, ExitTimeObjectMaterialization* materialization, EncodedJSValue* values)
+
+JSC_DEFINE_JIT_OPERATION(operationMaterializeObjectInOSR, JSCell*, (JSGlobalObject* globalObject, ExitTimeObjectMaterialization* materialization, EncodedJSValue* values))
 {
     using namespace DFG;
     VM& vm = globalObject->vm();
@@ -610,7 +612,7 @@ extern "C" JSCell* JIT_OPERATION operationMaterializeObjectInOSR(JSGlobalObject*
         JSGlobalObject* globalObject = codeBlock->globalObject();
         Structure* structure = globalObject->arrayStructureForIndexingTypeDuringAllocation(ArrayWithContiguous);
 
-        Checked<unsigned, RecordOverflow> checkedArraySize = 0;
+        CheckedUint32 checkedArraySize = 0;
         unsigned numProperties = 0;
         for (unsigned i = materialization->properties().size(); i--;) {
             const ExitPropertyValue& property = materialization->properties()[i];
@@ -626,7 +628,7 @@ extern "C" JSCell* JIT_OPERATION operationMaterializeObjectInOSR(JSGlobalObject*
 
         // FIXME: we should throw an out of memory error here if checkedArraySize has hasOverflowed() or tryCreate() fails.
         // https://bugs.webkit.org/show_bug.cgi?id=169784
-        unsigned arraySize = checkedArraySize.unsafeGet(); // Crashes if overflowed.
+        unsigned arraySize = checkedArraySize; // Crashes if overflowed.
         JSArray* result = JSArray::tryCreate(vm, structure, arraySize);
         RELEASE_ASSERT(result);
 
@@ -696,7 +698,7 @@ extern "C" JSCell* JIT_OPERATION operationMaterializeObjectInOSR(JSGlobalObject*
     }
 }
 
-extern "C" int32_t JIT_OPERATION operationSwitchStringAndGetBranchOffset(JSGlobalObject* globalObject, size_t tableIndex, JSString* string)
+JSC_DEFINE_JIT_OPERATION(operationSwitchStringAndGetIndex, unsigned, (JSGlobalObject* globalObject, const UnlinkedStringJumpTable* unlinkedTable, JSString* string))
 {
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
@@ -707,10 +709,10 @@ extern "C" int32_t JIT_OPERATION operationSwitchStringAndGetBranchOffset(JSGloba
 
     RETURN_IF_EXCEPTION(throwScope, 0);
 
-    return callFrame->codeBlock()->stringSwitchJumpTable(tableIndex).offsetForValue(strImpl, std::numeric_limits<int32_t>::min());
+    return unlinkedTable->indexForValue(strImpl, std::numeric_limits<unsigned>::max());
 }
 
-extern "C" int32_t JIT_OPERATION operationTypeOfObjectAsTypeofType(JSGlobalObject* globalObject, JSCell* object)
+JSC_DEFINE_JIT_OPERATION(operationTypeOfObjectAsTypeofType, int32_t, (JSGlobalObject* globalObject, JSCell* object))
 {
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
@@ -725,9 +727,10 @@ extern "C" int32_t JIT_OPERATION operationTypeOfObjectAsTypeofType(JSGlobalObjec
     return static_cast<int32_t>(TypeofType::Object);
 }
 
-extern "C" void* JIT_OPERATION operationCompileFTLLazySlowPath(CallFrame* callFrame, unsigned index)
+JSC_DEFINE_JIT_OPERATION(operationCompileFTLLazySlowPath, void*, (CallFrame* callFrame, unsigned index))
 {
     VM& vm = callFrame->deprecatedVM();
+    // Don't need an ActiveScratchBufferScope here because we DeferGCForAWhile.
 
     // We cannot GC. We've got pointers in evil places.
     DeferGCForAWhile deferGC(vm.heap);
@@ -739,6 +742,13 @@ extern "C" void* JIT_OPERATION operationCompileFTLLazySlowPath(CallFrame* callFr
     lazySlowPath.generate(codeBlock);
 
     return lazySlowPath.stub().code().executableAddress();
+}
+
+JSC_DEFINE_JIT_OPERATION_WITH_ATTRIBUTES(operationReportBoundsCheckEliminationErrorAndCrash, NO_RETURN_DUE_TO_CRASH, void, (intptr_t codeBlockAsIntPtr, int32_t nodeIndex, int32_t child1Index, int32_t child2Index, int32_t checkedIndex, int32_t bounds))
+{
+    CodeBlock* codeBlock = bitwise_cast<CodeBlock*>(codeBlockAsIntPtr);
+    dataLogLn("Bounds Check Eimination error found @ D@", nodeIndex, ": AssertInBounds(index D@", child1Index, ": ", checkedIndex, ", bounds D@", child2Index, " ", bounds, ") in ", codeBlock);
+    CRASH();
 }
 
 } } // namespace JSC::FTL

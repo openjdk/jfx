@@ -26,6 +26,7 @@
 #include "config.h"
 #include "NativeExecutable.h"
 
+#include "ExecutableBaseInlines.h"
 #include "JSCInlines.h"
 
 namespace JSC {
@@ -59,10 +60,10 @@ void NativeExecutable::finishCreation(VM& vm, Ref<JITCode>&& callThunk, Ref<JITC
     m_jitCodeForConstructWithArityCheck = m_jitCodeForConstruct->addressForCall(MustCheckArity);
     m_name = name;
 
-    assertIsTaggedWith(m_jitCodeForCall->addressForCall(ArityCheckNotRequired).executableAddress(), JSEntryPtrTag);
-    assertIsTaggedWith(m_jitCodeForConstruct->addressForCall(ArityCheckNotRequired).executableAddress(), JSEntryPtrTag);
-    assertIsTaggedWith(m_jitCodeForCallWithArityCheck.executableAddress(), JSEntryPtrTag);
-    assertIsTaggedWith(m_jitCodeForConstructWithArityCheck.executableAddress(), JSEntryPtrTag);
+    assertIsTaggedWith<JSEntryPtrTag>(m_jitCodeForCall->addressForCall(ArityCheckNotRequired).executableAddress());
+    assertIsTaggedWith<JSEntryPtrTag>(m_jitCodeForConstruct->addressForCall(ArityCheckNotRequired).executableAddress());
+    assertIsTaggedWith<JSEntryPtrTag>(m_jitCodeForCallWithArityCheck.executableAddress());
+    assertIsTaggedWith<JSEntryPtrTag>(m_jitCodeForConstructWithArityCheck.executableAddress());
 }
 
 NativeExecutable::NativeExecutable(VM& vm, TaggedNativeFunction function, TaggedNativeFunction constructor)
@@ -91,5 +92,32 @@ CodeBlockHash NativeExecutable::hashFor(CodeSpecializationKind kind) const
     RELEASE_ASSERT(kind == CodeForConstruct);
     return CodeBlockHash(bitwise_cast<uintptr_t>(m_constructor));
 }
+
+JSString* NativeExecutable::toStringSlow(JSGlobalObject *globalObject)
+{
+    VM& vm = getVM(globalObject);
+
+    auto throwScope = DECLARE_THROW_SCOPE(vm);
+
+    JSValue value = jsMakeNontrivialString(globalObject, "function ", name(), "() {\n    [native code]\n}");
+
+    RETURN_IF_EXCEPTION(throwScope, nullptr);
+
+    JSString* asString = ::JSC::asString(value);
+    WTF::storeStoreFence();
+    m_asString.set(vm, this, asString);
+    return asString;
+}
+
+template<typename Visitor>
+void NativeExecutable::visitChildrenImpl(JSCell* cell, Visitor& visitor)
+{
+    NativeExecutable* thisObject = jsCast<NativeExecutable*>(cell);
+    ASSERT_GC_OBJECT_INHERITS(thisObject, info());
+    Base::visitChildren(thisObject, visitor);
+    visitor.append(thisObject->m_asString);
+}
+
+DEFINE_VISIT_CHILDREN(NativeExecutable);
 
 } // namespace JSC

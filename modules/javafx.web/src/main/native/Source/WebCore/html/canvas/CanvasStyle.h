@@ -43,7 +43,6 @@ public:
     CanvasStyle();
     CanvasStyle(Color);
     CanvasStyle(const SRGBA<float>&);
-    CanvasStyle(const CMYKA<float>&);
     CanvasStyle(CanvasGradient&);
     CanvasStyle(CanvasPattern&);
 
@@ -52,7 +51,7 @@ public:
 
     bool isValid() const { return !WTF::holds_alternative<Invalid>(m_style); }
     bool isCurrentColor() const { return WTF::holds_alternative<CurrentColor>(m_style); }
-    Optional<float> overrideAlpha() const { return WTF::get<CurrentColor>(m_style).overrideAlpha; }
+    std::optional<float> overrideAlpha() const { return WTF::get<CurrentColor>(m_style).overrideAlpha; }
 
     String color() const;
     RefPtr<CanvasGradient> canvasGradient() const;
@@ -63,23 +62,17 @@ public:
 
     bool isEquivalentColor(const CanvasStyle&) const;
     bool isEquivalent(const SRGBA<float>&) const;
-    bool isEquivalent(const CMYKA<float>&) const;
 
 private:
     struct Invalid { };
 
-    struct CMYKAColor {
-        Color colorConvertedToSRGBA;
-        CMYKA<float> components;
-    };
-
     struct CurrentColor {
-        Optional<float> overrideAlpha;
+        std::optional<float> overrideAlpha;
     };
 
     CanvasStyle(CurrentColor);
 
-    Variant<Invalid, Color, CMYKAColor, RefPtr<CanvasGradient>, RefPtr<CanvasPattern>, CurrentColor> m_style;
+    Variant<Invalid, Color, RefPtr<CanvasGradient>, RefPtr<CanvasPattern>, CurrentColor> m_style;
 };
 
 bool isCurrentColorString(const String& colorString);
@@ -109,7 +102,7 @@ inline RefPtr<CanvasPattern> CanvasStyle::canvasPattern() const
 
 inline String CanvasStyle::color() const
 {
-    return serializationForHTML(WTF::holds_alternative<Color>(m_style) ? WTF::get<Color>(m_style) : WTF::get<CMYKAColor>(m_style).colorConvertedToSRGBA);
+    return serializationForHTML(WTF::get<Color>(m_style));
 }
 
 } // namespace WebCore

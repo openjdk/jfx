@@ -42,7 +42,6 @@
 #include "GlyphBuffer.h"
 #include "OpenTypeTypes.h"
 #include "RefPtrCairo.h"
-#include "SurrogatePairAwareTextIterator.h"
 #include "UTF16UChar32Iterator.h"
 #include <cairo-ft.h>
 #include <cairo.h>
@@ -86,7 +85,7 @@ static float scaledFontScaleFactor(cairo_scaled_font_t* scaledFont)
     return xScale ? narrowPrecisionToFloat(determinant / xScale) : 0.;
 }
 
-static Optional<unsigned> fontUnitsPerEm(FT_Face freeTypeFace)
+static std::optional<unsigned> fontUnitsPerEm(FT_Face freeTypeFace)
 {
     if (freeTypeFace->units_per_EM)
         return freeTypeFace->units_per_EM;
@@ -94,7 +93,7 @@ static Optional<unsigned> fontUnitsPerEm(FT_Face freeTypeFace)
     if (auto* ttHeader = static_cast<TT_Header*>(FT_Get_Sfnt_Table(freeTypeFace, ft_sfnt_head)))
         return ttHeader->Units_Per_EM;
 
-    return WTF::nullopt;
+    return std::nullopt;
 }
 
 void Font::platformInit()
@@ -114,10 +113,10 @@ void Font::platformInit()
     float descent = narrowPrecisionToFloat(fontExtents.descent);
     float capHeight = narrowPrecisionToFloat(fontExtents.height);
     float lineGap = narrowPrecisionToFloat(fontExtents.height - fontExtents.ascent - fontExtents.descent);
-    Optional<float> xHeight;
-    Optional<unsigned> unitsPerEm;
-    Optional<float> underlinePosition;
-    Optional<float> underlineThickness;
+    std::optional<float> xHeight;
+    std::optional<unsigned> unitsPerEm;
+    std::optional<float> underlinePosition;
+    std::optional<float> underlineThickness;
 
     {
         CairoFtFaceLocker cairoFtFaceLocker(m_platformData.scaledFont());
@@ -206,36 +205,6 @@ void Font::determinePitch()
     m_treatAsFixedPitch = m_platformData.isFixedPitch();
 }
 
-FloatRect Font::platformBoundsForGlyph(Glyph glyph) const
-{
-    if (!m_platformData.size())
-        return FloatRect();
-
-    cairo_glyph_t cglyph = { glyph, 0, 0 };
-    cairo_text_extents_t extents;
-    cairo_scaled_font_glyph_extents(m_platformData.scaledFont(), &cglyph, 1, &extents);
-
-    if (cairo_scaled_font_status(m_platformData.scaledFont()) == CAIRO_STATUS_SUCCESS)
-        return FloatRect(extents.x_bearing, extents.y_bearing, extents.width, extents.height);
-
-    return FloatRect();
-}
-
-float Font::platformWidthForGlyph(Glyph glyph) const
-{
-    if (!m_platformData.size())
-        return 0;
-
-    if (cairo_scaled_font_status(m_platformData.scaledFont()) != CAIRO_STATUS_SUCCESS)
-        return m_spaceWidth;
-
-    cairo_glyph_t cairoGlyph = { glyph, 0, 0 };
-    cairo_text_extents_t extents;
-    cairo_scaled_font_glyph_extents(m_platformData.scaledFont(), &cairoGlyph, 1, &extents);
-    float width = platformData().orientation() == FontOrientation::Horizontal ? extents.x_advance : -extents.y_advance;
-    return width ? width : m_spaceWidth;
-}
-
 bool Font::variantCapsSupportsCharacterForSynthesis(FontVariantCaps fontVariantCaps, UChar32) const
 {
     switch (fontVariantCaps) {
@@ -250,7 +219,7 @@ bool Font::variantCapsSupportsCharacterForSynthesis(FontVariantCaps fontVariantC
     }
 }
 
-bool Font::platformSupportsCodePoint(UChar32 character, Optional<UChar32> variation) const
+bool Font::platformSupportsCodePoint(UChar32 character, std::optional<UChar32> variation) const
 {
     CairoFtFaceLocker cairoFtFaceLocker(m_platformData.scaledFont());
     if (FT_Face face = cairoFtFaceLocker.ftFace())

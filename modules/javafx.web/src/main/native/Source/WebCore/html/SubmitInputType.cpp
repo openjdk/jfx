@@ -74,8 +74,8 @@ void SubmitInputType::handleDOMActivateEvent(Event& event)
     protectedElement->document().updateLayoutIgnorePendingStylesheets();
 
     protectedElement->setActivatedSubmit(true);
-    if (auto currentForm = protectedElement->form())
-        currentForm->prepareForSubmission(event); // Event handlers can run.
+    if (auto currentForm = makeRefPtr(protectedElement->form()))
+        currentForm->submitIfPossible(&event, element()); // Event handlers can run.
     protectedElement->setActivatedSubmit(false);
     event.setDefaultHandled();
 }
@@ -88,16 +88,6 @@ bool SubmitInputType::canBeSuccessfulSubmitButton()
 String SubmitInputType::defaultValue() const
 {
     return submitButtonDefaultLabel();
-}
-
-bool SubmitInputType::isSubmitButton() const
-{
-    return true;
-}
-
-bool SubmitInputType::isTextButton() const
-{
-    return true;
 }
 
 } // namespace WebCore

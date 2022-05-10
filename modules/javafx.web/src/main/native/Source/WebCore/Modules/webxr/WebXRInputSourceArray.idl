@@ -24,7 +24,8 @@
  */
 
 [
-    EnabledAtRuntime=WebXR,
+    GenerateIsReachable=ImplWebXRSessionRoot,
+    EnabledBySetting=WebXR,
     Conditional=WEBXR,
     SecureContext,
     Exposed=Window,

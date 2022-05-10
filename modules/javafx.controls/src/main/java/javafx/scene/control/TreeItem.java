@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -205,7 +205,7 @@ import static javafx.scene.control.TreeSortMode.*;
  */
 public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Static properties and methods                                           *
      *                                                                         *
@@ -326,7 +326,7 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -370,7 +370,7 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
     };
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Instance Variables                                                      *
      *                                                                         *
@@ -413,7 +413,7 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Callbacks and events                                                    *
      *                                                                         *
@@ -427,7 +427,7 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Properties                                                              *
      *                                                                         *
@@ -631,7 +631,7 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
 
 
 
-    /***********************************************************************
+    /* *********************************************************************
      *                                                                     *
      * TreeItem API                                                        *
      *                                                                     *
@@ -668,7 +668,7 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *
@@ -767,7 +767,7 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Event Target Implementation / API                                       *
      *                                                                         *
@@ -819,7 +819,7 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * private methods                                                         *
      *                                                                         *

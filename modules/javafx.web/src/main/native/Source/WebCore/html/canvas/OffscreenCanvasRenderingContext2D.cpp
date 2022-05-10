@@ -35,18 +35,111 @@
 
 #if ENABLE(OFFSCREEN_CANVAS)
 
+#include "CSSFontSelector.h"
+#include "CSSPropertyParserHelpers.h"
+#include "CSSPropertyParserWorkerSafe.h"
+#include "RenderStyle.h"
+#include "RuntimeEnabledFeatures.h"
+#include "ScriptExecutionContext.h"
+#include "StyleResolveForFontRaw.h"
+#include "TextMetrics.h"
 #include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(OffscreenCanvasRenderingContext2D);
 
-OffscreenCanvasRenderingContext2D::OffscreenCanvasRenderingContext2D(CanvasBase& canvas)
-    : CanvasRenderingContext2DBase(canvas, false)
+bool OffscreenCanvasRenderingContext2D::enabledForContext(ScriptExecutionContext& context)
+{
+#if ENABLE(OFFSCREEN_CANVAS_IN_WORKERS)
+    if (context.isWorkerGlobalScope())
+        return RuntimeEnabledFeatures::sharedFeatures().offscreenCanvasInWorkersEnabled();
+#endif
+
+    ASSERT(context.isDocument());
+    return true;
+}
+
+OffscreenCanvasRenderingContext2D::OffscreenCanvasRenderingContext2D(CanvasBase& canvas, CanvasRenderingContext2DSettings&& settings)
+    : CanvasRenderingContext2DBase(canvas, WTFMove(settings), false)
 {
 }
 
 OffscreenCanvasRenderingContext2D::~OffscreenCanvasRenderingContext2D() = default;
+
+void OffscreenCanvasRenderingContext2D::commit()
+{
+    downcast<OffscreenCanvas>(canvasBase()).commitToPlaceholderCanvas();
+}
+
+void OffscreenCanvasRenderingContext2D::setFont(const String& newFont)
+{
+    auto& context = *canvasBase().scriptExecutionContext();
+
+    if (newFont.isEmpty())
+        return;
+
+    if (newFont == state().unparsedFont && state().font.realized())
+        return;
+
+    // According to http://lists.w3.org/Archives/Public/public-html/2009Jul/0947.html,
+    // the "inherit" and "initial" values must be ignored. CSSPropertyParserWorkerSafe::parseFont() ignores these.
+    auto fontRaw = CSSPropertyParserWorkerSafe::parseFont(newFont, strictToCSSParserMode(!usesCSSCompatibilityParseMode()));
+    if (!fontRaw)
+        return;
+
+    // The parse succeeded.
+    String newFontSafeCopy(newFont); // Create a string copy since newFont can be deleted inside realizeSaves.
+    realizeSaves();
+    modifiableState().unparsedFont = newFontSafeCopy;
+
+    // Map the <canvas> font into the text style. If the font uses keywords like larger/smaller, these will work
+    // relative to the default font.
+    FontCascadeDescription fontDescription;
+    fontDescription.setOneFamily(DefaultFontFamily);
+    fontDescription.setSpecifiedSize(DefaultFontSize);
+    fontDescription.setComputedSize(DefaultFontSize);
+
+    if (auto fontCascade = Style::resolveForFontRaw(*fontRaw, WTFMove(fontDescription), context)) {
+        ASSERT(context.cssFontSelector());
+        modifiableState().font.initialize(*context.cssFontSelector(), *fontCascade);
+    }
+}
+
+CanvasDirection OffscreenCanvasRenderingContext2D::direction() const
+{
+    // FIXME: What should we do about inherit here?
+    switch (state().direction) {
+    case Direction::Inherit:
+    case Direction::Ltr:
+        return Direction::Ltr;
+    case Direction::Rtl:
+        return Direction::Rtl;
+    }
+    ASSERT_NOT_REACHED();
+    return Direction::Ltr;
+}
+
+auto OffscreenCanvasRenderingContext2D::fontProxy() -> const FontProxy* {
+    if (!state().font.realized())
+        setFont(state().unparsedFont);
+    return &state().font;
+}
+
+void OffscreenCanvasRenderingContext2D::fillText(const String& text, double x, double y, std::optional<double> maxWidth)
+{
+    drawText(text, x, y, true, maxWidth);
+}
+
+void OffscreenCanvasRenderingContext2D::strokeText(const String& text, double x, double y, std::optional<double> maxWidth)
+{
+    drawText(text, x, y, false, maxWidth);
+}
+
+Ref<TextMetrics> OffscreenCanvasRenderingContext2D::measureText(const String& text)
+{
+    return measureTextInternal(text);
+}
 
 } // namespace WebCore
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -191,6 +191,7 @@ public class SWTFXUtils {
         return msbFirst;
     }
 
+    @SuppressWarnings("removal")
     private static int readValue(final String name) throws Exception {
         final Class<?> clazz = ImageData.class;
         return AccessController.doPrivileged(
@@ -202,6 +203,7 @@ public class SWTFXUtils {
     }
 
     private static Method blitDirect;
+    @SuppressWarnings("removal")
     private static void blit(int op,
             byte[] srcData, int srcDepth, int srcStride, int srcOrder,
             int srcX, int srcY, int srcWidth, int srcHeight,
@@ -245,6 +247,7 @@ public class SWTFXUtils {
     }
 
     private static Method blitPalette;
+    @SuppressWarnings("removal")
     private static void blit(int op,
         byte[] srcData, int srcDepth, int srcStride, int srcOrder,
         int srcX, int srcY, int srcWidth, int srcHeight,
@@ -288,6 +291,7 @@ public class SWTFXUtils {
     }
 
     private static Method getByteOrderMethod;
+    @SuppressWarnings("removal")
     private static int getByteOrder(ImageData image) throws Exception {
         final Class<?> clazz = ImageData.class;
         if (getByteOrderMethod != null) {

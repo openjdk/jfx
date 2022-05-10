@@ -28,6 +28,7 @@
 
 #include "CompositionEvent.h"
 #include "EventContext.h"
+#include "EventNames.h"
 #include "EventPath.h"
 #include "Frame.h"
 #include "FrameLoader.h"
@@ -42,6 +43,7 @@
 #include "ShadowRoot.h"
 #include "TextEvent.h"
 #include "TouchEvent.h"
+#include <wtf/text/TextStream.h>
 
 namespace WebCore {
 
@@ -71,6 +73,11 @@ static void callDefaultEventHandlersInBubblingOrder(Event& event, const EventPat
         if (event.defaultHandled())
             return;
     }
+}
+
+static bool isInShadowTree(EventTarget* target)
+{
+    return is<Node>(target) && downcast<Node>(*target).isInShadowTree();
 }
 
 static void dispatchEventInDOM(Event& event, const EventPath& path)
@@ -123,16 +130,38 @@ static bool shouldSuppressEventDispatchInDOM(Node& node, Event& event)
     return is<CompositionEvent>(event) || is<InputEvent>(event) || is<KeyboardEvent>(event);
 }
 
+static HTMLInputElement* findInputElementInEventPath(const EventPath& path)
+{
+    size_t size = path.size();
+    for (size_t i = 0; i < size; ++i) {
+        const EventContext& eventContext = path.contextAt(i);
+        if (is<HTMLInputElement>(eventContext.currentTarget()))
+            return downcast<HTMLInputElement>(eventContext.currentTarget());
+    }
+    return nullptr;
+}
+
 void EventDispatcher::dispatchEvent(Node& node, Event& event)
 {
     ASSERT_WITH_SECURITY_IMPLICATION(ScriptDisallowedScope::InMainThread::isEventDispatchAllowedInSubtree(node));
 
-    LOG(Events, "EventDispatcher::dispatchEvent %s on node %s", event.type().string().utf8().data(), node.nodeName().utf8().data());
+    LOG_WITH_STREAM(Events, stream << "EventDispatcher::dispatchEvent " << event << " on node " << node);
 
     auto protectedNode = makeRef(node);
     auto protectedView = makeRefPtr(node.document().view());
 
     EventPath eventPath { node, event };
+
+    std::optional<bool> shouldClearTargetsAfterDispatch;
+    for (size_t i = eventPath.size(); i > 0; --i) {
+        const EventContext& eventContext = eventPath.contextAt(i - 1);
+        // FIXME: We should also set shouldClearTargetsAfterDispatch to true if an EventTarget object in eventContext's touch target list
+        // is a node and its root is a shadow root.
+        if (eventContext.target()) {
+            shouldClearTargetsAfterDispatch = isInShadowTree(eventContext.target()) || isInShadowTree(eventContext.relatedTarget());
+            break;
+        }
+    }
 
     ChildNodesLazySnapshot::takeChildNodesLazySnapshot();
 
@@ -143,8 +172,13 @@ void EventDispatcher::dispatchEvent(Node& node, Event& event)
         return;
 
     InputElementClickState clickHandlingState;
-    if (is<HTMLInputElement>(node))
-        downcast<HTMLInputElement>(node).willDispatchEvent(event, clickHandlingState);
+
+    bool isActivationEvent = event.type() == eventNames().clickEvent;
+    RefPtr<HTMLInputElement> inputForLegacyPreActivationBehavior = is<HTMLInputElement>(node) ? &downcast<HTMLInputElement>(node) : nullptr;
+    if (!inputForLegacyPreActivationBehavior && isActivationEvent && event.bubbles())
+        inputForLegacyPreActivationBehavior = findInputElementInEventPath(eventPath);
+    if (inputForLegacyPreActivationBehavior)
+        inputForLegacyPreActivationBehavior->willDispatchEvent(event, clickHandlingState);
 
     if (shouldSuppressEventDispatchInDOM(node, event))
         event.stopPropagation();
@@ -157,7 +191,7 @@ void EventDispatcher::dispatchEvent(Node& node, Event& event)
     event.resetAfterDispatch();
 
     if (clickHandlingState.stateful)
-        downcast<HTMLInputElement>(node).didDispatchClickEvent(event, clickHandlingState);
+        inputForLegacyPreActivationBehavior->didDispatchClickEvent(event, clickHandlingState);
 
     // Call default event handlers. While the DOM does have a concept of preventing
     // default handling, the detail of which handlers are called is an internal
@@ -169,6 +203,12 @@ void EventDispatcher::dispatchEvent(Node& node, Event& event)
         event.setTarget(EventPath::eventTargetRespectingTargetRules(node));
         callDefaultEventHandlersInBubblingOrder(event, eventPath);
         event.setTarget(finalTarget);
+    }
+
+    if (shouldClearTargetsAfterDispatch.value_or(false)) {
+        event.setTarget(nullptr);
+        event.setRelatedTarget(nullptr);
+        // FIXME: We should also clear the event's touch target list.
     }
 }
 
@@ -189,11 +229,6 @@ static void dispatchEventWithType(const Vector<T*>& targets, Event& event)
 void EventDispatcher::dispatchEvent(const Vector<EventTarget*>& targets, Event& event)
 {
     dispatchEventWithType<EventTarget>(targets, event);
-}
-
-void EventDispatcher::dispatchEvent(const Vector<Element*>& targets, Event& event)
-{
-    dispatchEventWithType<Element>(targets, event);
 }
 
 }

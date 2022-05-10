@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -42,10 +42,10 @@ public final class ReflectionHelper {
 
     public static Object newInstance(final Class<?> cls) {
         try {
-            return cls.newInstance();
-        } catch (final InstantiationException e) {
-            throw convertToRuntimeException(e);
-        } catch (final IllegalAccessException e) {
+            return cls.getDeclaredConstructor().newInstance();
+        } catch (final RuntimeException e) {
+            throw e;
+        } catch (final Exception e) {
             throw convertToRuntimeException(e);
         }
     }

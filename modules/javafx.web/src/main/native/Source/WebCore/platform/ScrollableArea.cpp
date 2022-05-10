@@ -50,12 +50,7 @@ struct SameSizeAsScrollableArea {
 #if ASSERT_ENABLED
     bool weakPtrFactorWasConstructedOnMainThread;
 #endif
-#if ENABLE(CSS_SCROLL_SNAP)
-    void* pointers[3];
-    unsigned currentIndices[2];
-#else
     void* pointer[2];
-#endif
     IntPoint origin;
     unsigned bitfields : 16;
 };
@@ -140,13 +135,19 @@ bool ScrollableArea::scroll(ScrollDirection direction, ScrollGranularity granula
         multiplier = -multiplier;
 
     step = adjustScrollStepForFixedContent(step, orientation, granularity);
-    return scrollAnimator().scroll(orientation, granularity, step, multiplier);
+    return scrollAnimator().scroll(orientation, granularity, step, multiplier, ScrollAnimator::ScrollBehavior::DoDirectionalSnapping);
 }
 
-void ScrollableArea::scrollToOffsetWithAnimation(const FloatPoint& offset, ScrollClamping)
+void ScrollableArea::scrollToPositionWithoutAnimation(const FloatPoint& position, ScrollClamping clamping)
 {
-    LOG_WITH_STREAM(Scrolling, stream << "ScrollableArea " << this << " scrollToOffsetWithAnimation " << offset);
-    scrollAnimator().scrollToOffset(offset);
+    LOG_WITH_STREAM(Scrolling, stream << "ScrollableArea " << this << " scrollToPositionWithoutAnimation " << position);
+    scrollAnimator().scrollToPositionWithoutAnimation(position, clamping);
+}
+
+void ScrollableArea::scrollToPositionWithAnimation(const FloatPoint& position, ScrollClamping)
+{
+    LOG_WITH_STREAM(Scrolling, stream << "ScrollableArea " << this << " scrollToPositionWithAnimation " << position);
+    scrollAnimator().scrollToPositionWithAnimation(position);
 }
 
 void ScrollableArea::scrollToOffsetWithoutAnimation(const FloatPoint& offset, ScrollClamping clamping)
@@ -159,9 +160,9 @@ void ScrollableArea::scrollToOffsetWithoutAnimation(ScrollbarOrientation orienta
 {
     auto currentOffset = scrollOffsetFromPosition(IntPoint(scrollAnimator().currentPosition()));
     if (orientation == HorizontalScrollbar)
-        scrollToOffsetWithoutAnimation(FloatPoint(offset, currentOffset.y()));
+        scrollAnimator().scrollToOffsetWithoutAnimation(FloatPoint(offset, currentOffset.y()));
     else
-        scrollToOffsetWithoutAnimation(FloatPoint(currentOffset.x(), offset));
+        scrollAnimator().scrollToOffsetWithoutAnimation(FloatPoint(currentOffset.x(), offset));
 }
 
 void ScrollableArea::notifyScrollPositionChanged(const ScrollPosition& position)
@@ -203,18 +204,14 @@ void ScrollableArea::scrollPositionChanged(const ScrollPosition& position)
         scrollAnimator().notifyContentAreaScrolled(scrollPosition() - oldPosition);
 }
 
-bool ScrollableArea::handleWheelEvent(const PlatformWheelEvent& wheelEvent)
+bool ScrollableArea::handleWheelEventForScrolling(const PlatformWheelEvent& wheelEvent, std::optional<WheelScrollGestureState>)
 {
     if (!isScrollableOrRubberbandable())
         return false;
 
     bool handledEvent = scrollAnimator().handleWheelEvent(wheelEvent);
-#if ENABLE(CSS_SCROLL_SNAP)
-    if (scrollAnimator().activeScrollSnapIndexDidChange()) {
-        setCurrentHorizontalSnapPointIndex(scrollAnimator().activeScrollSnapIndexForAxis(ScrollEventAxis::Horizontal));
-        setCurrentVerticalSnapPointIndex(scrollAnimator().activeScrollSnapIndexForAxis(ScrollEventAxis::Vertical));
-    }
-#endif
+
+    LOG_WITH_STREAM(Scrolling, stream << "ScrollableArea (" << *this << ") handleWheelEvent - handled " << handledEvent);
     return handledEvent;
 }
 
@@ -228,13 +225,14 @@ bool ScrollableArea::handleTouchEvent(const PlatformTouchEvent& touchEvent)
 // NOTE: Only called from Internals for testing.
 void ScrollableArea::setScrollOffsetFromInternals(const ScrollOffset& offset)
 {
-    setScrollOffsetFromAnimation(offset);
+    setScrollPositionFromAnimation(scrollPositionFromOffset(offset));
 }
 
-void ScrollableArea::setScrollOffsetFromAnimation(const ScrollOffset& offset)
+void ScrollableArea::setScrollPositionFromAnimation(const ScrollPosition& position)
 {
-    ScrollPosition position = scrollPositionFromOffset(offset);
-    if (requestScrollPositionUpdate(position, currentScrollType()))
+    auto scrollType = currentScrollType();
+    auto clamping = scrollType == ScrollType::User ? ScrollClamping::Unclamped : ScrollClamping::Clamped;
+    if (requestScrollPositionUpdate(position, scrollType, clamping))
         return;
 
     scrollPositionChanged(position);
@@ -363,18 +361,27 @@ void ScrollableArea::setScrollbarOverlayStyle(ScrollbarOverlayStyle overlayStyle
 {
     m_scrollbarOverlayStyle = overlayStyle;
 
-    if (horizontalScrollbar()) {
-        ScrollbarTheme::theme().updateScrollbarOverlayStyle(*horizontalScrollbar());
-        horizontalScrollbar()->invalidate();
-        if (ScrollAnimator* scrollAnimator = existingScrollAnimator())
-            scrollAnimator->invalidateScrollbarPartLayers(horizontalScrollbar());
+    if (auto* scrollbar = horizontalScrollbar())
+        ScrollbarTheme::theme().updateScrollbarOverlayStyle(*scrollbar);
+
+    if (auto* scrollbar = verticalScrollbar())
+        ScrollbarTheme::theme().updateScrollbarOverlayStyle(*scrollbar);
+
+    invalidateScrollbars();
+}
+
+void ScrollableArea::invalidateScrollbars()
+{
+    if (auto* scrollbar = horizontalScrollbar()) {
+        scrollbar->invalidate();
+        if (auto* scrollAnimator = existingScrollAnimator())
+            scrollAnimator->invalidateScrollbarPartLayers(scrollbar);
     }
 
-    if (verticalScrollbar()) {
-        ScrollbarTheme::theme().updateScrollbarOverlayStyle(*verticalScrollbar());
-        verticalScrollbar()->invalidate();
-        if (ScrollAnimator* scrollAnimator = existingScrollAnimator())
-            scrollAnimator->invalidateScrollbarPartLayers(verticalScrollbar());
+    if (auto* scrollbar = verticalScrollbar()) {
+        scrollbar->invalidate();
+        if (auto* scrollAnimator = existingScrollAnimator())
+            scrollAnimator->invalidateScrollbarPartLayers(scrollbar);
     }
 }
 
@@ -438,6 +445,18 @@ bool ScrollableArea::hasLayerForScrollCorner() const
     return layerForScrollCorner();
 }
 
+bool ScrollableArea::allowsHorizontalScrolling() const
+{
+    auto* horizontalScrollbar = this->horizontalScrollbar();
+    return horizontalScrollbar && horizontalScrollbar->enabled();
+}
+
+bool ScrollableArea::allowsVerticalScrolling() const
+{
+    auto* verticalScrollbar = this->verticalScrollbar();
+    return verticalScrollbar && verticalScrollbar->enabled();
+}
+
 String ScrollableArea::horizontalScrollbarStateForTesting() const
 {
     return scrollAnimator().horizontalScrollbarStateForTesting();
@@ -448,183 +467,164 @@ String ScrollableArea::verticalScrollbarStateForTesting() const
     return scrollAnimator().verticalScrollbarStateForTesting();
 }
 
-#if ENABLE(CSS_SCROLL_SNAP)
-ScrollSnapOffsetsInfo<LayoutUnit>& ScrollableArea::ensureSnapOffsetsInfo()
+const LayoutScrollSnapOffsetsInfo* ScrollableArea::snapOffsetsInfo() const
 {
-    if (!m_snapOffsetsInfo)
-        m_snapOffsetsInfo = makeUnique<ScrollSnapOffsetsInfo<LayoutUnit>>();
-    return *m_snapOffsetsInfo;
+    return existingScrollAnimator() ? existingScrollAnimator()->snapOffsetsInfo() : nullptr;
 }
 
-const Vector<LayoutUnit>* ScrollableArea::horizontalSnapOffsets() const
+void ScrollableArea::setScrollSnapOffsetInfo(const LayoutScrollSnapOffsetsInfo& info)
 {
-    if (!m_snapOffsetsInfo)
-        return nullptr;
-
-    return &m_snapOffsetsInfo->horizontalSnapOffsets;
-}
-
-const Vector<ScrollOffsetRange<LayoutUnit>>* ScrollableArea::horizontalSnapOffsetRanges() const
-{
-    if (!m_snapOffsetsInfo)
-        return nullptr;
-
-    return &m_snapOffsetsInfo->horizontalSnapOffsetRanges;
-}
-
-const Vector<ScrollOffsetRange<LayoutUnit>>* ScrollableArea::verticalSnapOffsetRanges() const
-{
-    if (!m_snapOffsetsInfo)
-        return nullptr;
-
-    return &m_snapOffsetsInfo->verticalSnapOffsetRanges;
-}
-
-const Vector<LayoutUnit>* ScrollableArea::verticalSnapOffsets() const
-{
-    if (!m_snapOffsetsInfo)
-        return nullptr;
-
-    return &m_snapOffsetsInfo->verticalSnapOffsets;
-}
-
-void ScrollableArea::setHorizontalSnapOffsets(const Vector<LayoutUnit>& horizontalSnapOffsets)
-{
-    // Consider having a non-empty set of snap offsets as a cue to initialize the ScrollAnimator.
-    if (horizontalSnapOffsets.size())
-        scrollAnimator();
-
-    ensureSnapOffsetsInfo().horizontalSnapOffsets = horizontalSnapOffsets;
-}
-
-void ScrollableArea::setVerticalSnapOffsets(const Vector<LayoutUnit>& verticalSnapOffsets)
-{
-    // Consider having a non-empty set of snap offsets as a cue to initialize the ScrollAnimator.
-    if (verticalSnapOffsets.size())
-        scrollAnimator();
-
-    ensureSnapOffsetsInfo().verticalSnapOffsets = verticalSnapOffsets;
-}
-
-void ScrollableArea::setHorizontalSnapOffsetRanges(const Vector<ScrollOffsetRange<LayoutUnit>>& horizontalRanges)
-{
-    ensureSnapOffsetsInfo().horizontalSnapOffsetRanges = horizontalRanges;
-}
-
-void ScrollableArea::setVerticalSnapOffsetRanges(const Vector<ScrollOffsetRange<LayoutUnit>>& verticalRanges)
-{
-    ensureSnapOffsetsInfo().verticalSnapOffsetRanges = verticalRanges;
-}
-
-void ScrollableArea::clearHorizontalSnapOffsets()
-{
-    if (!m_snapOffsetsInfo)
+    if (info.isEmpty()) {
+        clearSnapOffsets();
         return;
-
-    m_snapOffsetsInfo->horizontalSnapOffsets = { };
-    m_snapOffsetsInfo->horizontalSnapOffsetRanges = { };
-    m_currentHorizontalSnapPointIndex = 0;
-}
-
-void ScrollableArea::clearVerticalSnapOffsets()
-{
-    if (!m_snapOffsetsInfo)
-        return;
-
-    m_snapOffsetsInfo->verticalSnapOffsets = { };
-    m_snapOffsetsInfo->verticalSnapOffsetRanges = { };
-    m_currentVerticalSnapPointIndex = 0;
-}
-
-bool ScrollableArea::usesScrollSnap() const
-{
-    return !!m_snapOffsetsInfo;
-}
-
-IntPoint ScrollableArea::nearestActiveSnapPoint(const IntPoint& currentPosition)
-{
-    if (!horizontalSnapOffsets() && !verticalSnapOffsets())
-        return currentPosition;
-
-    if (!existingScrollAnimator())
-        return currentPosition;
-
-    IntPoint correctedPosition = currentPosition;
-
-    if (horizontalSnapOffsets()) {
-        const auto& horizontal = *horizontalSnapOffsets();
-
-        size_t activeIndex = currentHorizontalSnapPointIndex();
-        if (activeIndex < horizontal.size())
-            correctedPosition.setX(horizontal[activeIndex].toInt());
     }
 
-    if (verticalSnapOffsets()) {
-        const auto& vertical = *verticalSnapOffsets();
-
-        size_t activeIndex = currentVerticalSnapPointIndex();
-        if (activeIndex < vertical.size())
-            correctedPosition.setY(vertical[activeIndex].toInt());
-    }
-
-    return correctedPosition;
+    // Consider having a non-empty set of snap offsets as a cue to initialize the ScrollAnimator.
+    scrollAnimator().setSnapOffsetsInfo(info);
 }
 
-void ScrollableArea::updateScrollSnapState()
+void ScrollableArea::clearSnapOffsets()
 {
-    if (ScrollAnimator* scrollAnimator = existingScrollAnimator())
-        scrollAnimator->updateScrollSnapState();
+    if (auto* scrollAnimator = existingScrollAnimator())
+        return scrollAnimator->setSnapOffsetsInfo(LayoutScrollSnapOffsetsInfo());
+}
 
-    if (!usesScrollSnap())
-        return;
+std::optional<unsigned> ScrollableArea::currentHorizontalSnapPointIndex() const
+{
+    if (auto* scrollAnimator = existingScrollAnimator())
+        return scrollAnimator->activeScrollSnapIndexForAxis(ScrollEventAxis::Horizontal);
+    return std::nullopt;
+}
 
+std::optional<unsigned> ScrollableArea::currentVerticalSnapPointIndex() const
+{
+    if (auto* scrollAnimator = existingScrollAnimator())
+        return scrollAnimator->activeScrollSnapIndexForAxis(ScrollEventAxis::Vertical);
+    return std::nullopt;
+}
+
+void ScrollableArea::setCurrentHorizontalSnapPointIndex(std::optional<unsigned> index)
+{
+    scrollAnimator().setActiveScrollSnapIndexForAxis(ScrollEventAxis::Horizontal, index);
+}
+
+void ScrollableArea::setCurrentVerticalSnapPointIndex(std::optional<unsigned> index)
+{
+    scrollAnimator().setActiveScrollSnapIndexForAxis(ScrollEventAxis::Vertical, index);
+}
+
+void ScrollableArea::resnapAfterLayout()
+{
     LOG_WITH_STREAM(ScrollSnap, stream << *this << " updateScrollSnapState: isScrollSnapInProgress " << isScrollSnapInProgress() << " isUserScrollInProgress " << isUserScrollInProgress());
 
-    if (isScrollSnapInProgress() || isUserScrollInProgress())
+    ScrollAnimator* scrollAnimator = existingScrollAnimator();
+    if (!scrollAnimator || isScrollSnapInProgress() || isUserScrollInProgress())
         return;
 
-    IntPoint currentPosition = scrollPosition();
-    IntPoint correctedPosition = nearestActiveSnapPoint(currentPosition);
+    scrollAnimator->resnapAfterLayout();
 
-    if (correctedPosition != currentPosition) {
-        LOG_WITH_STREAM(ScrollSnap, stream << " adjusting position from " << currentPosition << " to " << correctedPosition);
-        scrollToOffsetWithoutAnimation(correctedPosition);
+    const auto* info = snapOffsetsInfo();
+    if (!info)
+        return;
+
+    auto currentOffset = scrollOffset();
+    auto correctedOffset = currentOffset;
+
+    if (!horizontalScrollbar() || horizontalScrollbar()->pressedPart() == ScrollbarPart::NoPart) {
+        const auto& horizontal = info->horizontalSnapOffsets;
+        auto activeHorizontalIndex = currentHorizontalSnapPointIndex();
+        if (activeHorizontalIndex)
+            correctedOffset.setX(horizontal[*activeHorizontalIndex].offset.toInt());
+    }
+
+    if (!verticalScrollbar() || verticalScrollbar()->pressedPart() == ScrollbarPart::NoPart) {
+        const auto& vertical = info->verticalSnapOffsets;
+        auto activeVerticalIndex = currentVerticalSnapPointIndex();
+        if (activeVerticalIndex)
+            correctedOffset.setY(vertical[*activeVerticalIndex].offset.toInt());
+    }
+
+    if (correctedOffset != currentOffset) {
+        LOG_WITH_STREAM(ScrollSnap, stream << " adjusting offset from " << currentOffset << " to " << correctedOffset);
+        auto position = scrollPositionFromOffset(correctedOffset);
+        if (currentScrollBehaviorStatus() == ScrollBehaviorStatus::NotInAnimation)
+            scrollToOffsetWithoutAnimation(correctedOffset);
+        else
+            scrollAnimator->retargetRunningAnimation(position);
     }
 }
-#else
-void ScrollableArea::updateScrollSnapState()
+
+void ScrollableArea::doPostThumbMoveSnapping(ScrollbarOrientation orientation)
 {
+    auto* scrollAnimator = existingScrollAnimator();
+    if (!scrollAnimator)
+        return;
+
+    auto currentOffset = scrollOffset();
+    auto newOffset = currentOffset;
+    if (orientation == HorizontalScrollbar)
+        newOffset.setX(scrollAnimator->adjustScrollOffsetForSnappingIfNeeded(ScrollEventAxis::Horizontal, currentOffset, ScrollSnapPointSelectionMethod::Closest));
+    else
+        newOffset.setY(scrollAnimator->adjustScrollOffsetForSnappingIfNeeded(ScrollEventAxis::Vertical, currentOffset, ScrollSnapPointSelectionMethod::Closest));
+    if (newOffset == currentOffset)
+        return;
+
+    scrollAnimator->scrollToOffsetWithAnimation(newOffset);
 }
-#endif
 
-
-void ScrollableArea::serviceScrollAnimations()
+bool ScrollableArea::isPinnedForScrollDeltaOnAxis(float scrollDelta, ScrollEventAxis axis) const
 {
-    if (ScrollAnimator* scrollAnimator = existingScrollAnimator())
-        scrollAnimator->serviceScrollAnimations();
-}
+    auto scrollPosition = this->scrollPosition();
+    switch (axis) {
+    case ScrollEventAxis::Vertical:
+        if (!allowsVerticalScrolling())
+            return true;
 
-bool ScrollableArea::isPinnedInBothDirections(const IntSize& scrollDelta) const
-{
-    return isPinnedHorizontallyInDirection(scrollDelta.width()) && isPinnedVerticallyInDirection(scrollDelta.height());
-}
+        if (scrollDelta < 0) // top
+            return scrollPosition.y() <= minimumScrollPosition().y();
 
-bool ScrollableArea::isPinnedHorizontallyInDirection(int horizontalScrollDelta) const
-{
-    if (horizontalScrollDelta < 0 && isHorizontalScrollerPinnedToMinimumPosition())
-        return true;
-    if (horizontalScrollDelta > 0 && isHorizontalScrollerPinnedToMaximumPosition())
-        return true;
+        if (scrollDelta > 0) // bottom
+            return scrollPosition.y() >= maximumScrollPosition().y();
+
+        break;
+    case ScrollEventAxis::Horizontal:
+        if (!allowsHorizontalScrolling())
+            return true;
+
+        if (scrollDelta < 0) // left
+            return scrollPosition.x() <= minimumScrollPosition().x();
+
+        if (scrollDelta > 0) // right
+            return scrollPosition.x() >= maximumScrollPosition().x();
+
+        break;
+    }
+
     return false;
 }
 
-bool ScrollableArea::isPinnedVerticallyInDirection(int verticalScrollDelta) const
+bool ScrollableArea::isPinnedForScrollDelta(const FloatSize& scrollDelta) const
 {
-    if (verticalScrollDelta < 0 && isVerticalScrollerPinnedToMinimumPosition())
-        return true;
-    if (verticalScrollDelta > 0 && isVerticalScrollerPinnedToMaximumPosition())
-        return true;
-    return false;
+    return (!scrollDelta.width() || isPinnedForScrollDeltaOnAxis(scrollDelta.width(), ScrollEventAxis::Horizontal))
+        && (!scrollDelta.height() || isPinnedForScrollDeltaOnAxis(scrollDelta.height(), ScrollEventAxis::Vertical));
+}
+
+RectEdges<bool> ScrollableArea::edgePinnedState() const
+{
+    auto scrollPosition = this->scrollPosition();
+    auto minScrollPosition = minimumScrollPosition();
+    auto maxScrollPosition = maximumScrollPosition();
+
+    bool horizontallyUnscrollable = !allowsHorizontalScrolling();
+    bool verticallyUnscrollable = !allowsVerticalScrolling();
+
+    // Top, right, bottom, left.
+    return {
+        verticallyUnscrollable || scrollPosition.y() <= minScrollPosition.y(),
+        horizontallyUnscrollable || scrollPosition.x() >= maxScrollPosition.x(),
+        verticallyUnscrollable || scrollPosition.y() >= maxScrollPosition.y(),
+        horizontallyUnscrollable || scrollPosition.x() <= minScrollPosition.x()
+    };
 }
 
 int ScrollableArea::horizontalScrollbarIntrusion() const

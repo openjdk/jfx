@@ -43,8 +43,6 @@ struct CompactHashIndex {
     const int16_t next;
 };
 
-// FIXME: There is no reason this get function can't be simpler.
-// ie. typedef JSValue (*GetFunction)(JSGlobalObject*, JSObject* baseObject)
 typedef PropertySlot::GetValueFunc GetFunction;
 typedef PutPropertySlot::PutValueFunc PutFunction;
 typedef FunctionExecutable* (*BuiltinGenerator)(VM&);
@@ -238,84 +236,18 @@ inline bool getStaticPropertySlotFromTable(VM& vm, const ClassInfo* classInfo, c
     }
 
     if (entry->attributes() & PropertyAttribute::DOMJITAttribute) {
+        ASSERT_WITH_MESSAGE(entry->attributes() & PropertyAttribute::ReadOnly, "DOMJITAttribute supports readonly attributes currently.");
         const DOMJIT::GetterSetter* domJIT = entry->domJIT();
-        slot.setCacheableCustom(thisObject, attributesForStructure(entry->attributes()), domJIT->getter(), DOMAttributeAnnotation { classInfo, domJIT });
+        slot.setCacheableCustom(thisObject, attributesForStructure(entry->attributes()), domJIT->getter(), nullptr, DOMAttributeAnnotation { classInfo, domJIT });
         return true;
     }
 
     if (entry->attributes() & PropertyAttribute::DOMAttribute) {
-        slot.setCacheableCustom(thisObject, attributesForStructure(entry->attributes()), entry->propertyGetter(), DOMAttributeAnnotation { classInfo, nullptr });
+        slot.setCacheableCustom(thisObject, attributesForStructure(entry->attributes()), entry->propertyGetter(), entry->propertyPutter(), DOMAttributeAnnotation { classInfo, nullptr });
         return true;
     }
 
-    slot.setCacheableCustom(thisObject, attributesForStructure(entry->attributes()), entry->propertyGetter());
-    return true;
-}
-
-inline bool replaceStaticPropertySlot(VM& vm, JSObject* thisObject, PropertyName propertyName, JSValue value)
-{
-    if (!thisObject->putDirect(vm, propertyName, value))
-        return false;
-
-    if (!thisObject->staticPropertiesReified(vm))
-        thisObject->JSObject::setStructure(vm, Structure::attributeChangeTransition(vm, thisObject->structure(vm), propertyName, 0));
-
-    return true;
-}
-
-// 'base' means the object holding the property (possibly in the prototype chain of the object put was called on).
-// 'thisValue' is the object that put is being applied to (in the case of a proxy, the proxy target).
-// 'slot.thisValue()' is the object the put was originally performed on (in the case of a proxy, the proxy itself).
-inline bool putEntry(JSGlobalObject* globalObject, const ClassInfo*, const HashTableValue* entry, JSObject* base, JSObject* thisValue, PropertyName propertyName, JSValue value, PutPropertySlot& slot)
-{
-    VM& vm = getVM(globalObject);
-    auto scope = DECLARE_THROW_SCOPE(vm);
-
-    if (entry->attributes() & PropertyAttribute::BuiltinOrFunctionOrLazyProperty) {
-        if (!(entry->attributes() & PropertyAttribute::ReadOnly)) {
-            // If this is a function or lazy property put then we just do the put because
-            // logically the object already had the property, so this is just a replace.
-            if (JSObject* thisObject = jsDynamicCast<JSObject*>(vm, thisValue))
-                thisObject->putDirect(vm, propertyName, value);
-            return true;
-        }
-        return typeError(globalObject, scope, slot.isStrictMode(), ReadonlyPropertyWriteError);
-    }
-
-    if (entry->attributes() & PropertyAttribute::Accessor)
-        return typeError(globalObject, scope, slot.isStrictMode(), ReadonlyPropertyWriteError);
-
-    if (!(entry->attributes() & PropertyAttribute::ReadOnly)) {
-        ASSERT_WITH_MESSAGE(!(entry->attributes() & PropertyAttribute::DOMJITAttribute), "DOMJITAttribute supports readonly attributes currently.");
-        bool isAccessor = entry->attributes() & PropertyAttribute::CustomAccessor;
-        JSValue updateThisValue = entry->attributes() & PropertyAttribute::CustomAccessor ? slot.thisValue() : JSValue(base);
-        // We need to make sure that we decide to cache this property before we potentially execute aribitrary JS.
-        if (isAccessor)
-            slot.setCustomAccessor(base, entry->propertyPutter());
-        else
-            slot.setCustomValue(base, entry->propertyPutter());
-
-        bool result = callCustomSetter(globalObject, entry->propertyPutter(), isAccessor, updateThisValue, value);
-        RETURN_IF_EXCEPTION(scope, false);
-        return result;
-    }
-
-    return typeError(globalObject, scope, slot.isStrictMode(), ReadonlyPropertyWriteError);
-}
-
-/**
- * This one is for "put".
- * It looks up a hash entry for the property to be set.  If an entry
- * is found it sets the value and returns true, else it returns false.
- */
-inline bool lookupPut(JSGlobalObject* globalObject, PropertyName propertyName, JSObject* base, JSValue value, const HashTable& table, PutPropertySlot& slot, bool& putResult)
-{
-    const HashTableValue* entry = table.entry(propertyName);
-
-    if (!entry)
-        return false;
-
-    putResult = putEntry(globalObject, table.classForThis, entry, base, base, propertyName, value, slot);
+    slot.setCacheableCustom(thisObject, attributesForStructure(entry->attributes()), entry->propertyGetter(), entry->propertyPutter());
     return true;
 }
 
@@ -403,11 +335,6 @@ inline void reifyStaticProperties(VM& vm, const ClassInfo* classInfo, const Hash
         auto key = Identifier::fromString(vm, reinterpret_cast<const LChar*>(value.m_key), strlen(value.m_key));
         reifyStaticProperty(vm, classInfo, key, value, thisObj);
     }
-}
-
-template<RawNativeFunction nativeFunction, int length> EncodedJSValue nonCachingStaticFunctionGetter(JSGlobalObject* globalObject, EncodedJSValue, PropertyName propertyName)
-{
-    return JSValue::encode(JSFunction::create(globalObject->vm(), globalObject, length, propertyName.publicName(), nativeFunction));
 }
 
 } // namespace JSC

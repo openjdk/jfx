@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -50,15 +50,17 @@ public:
     SuperBinding superBinding() const { return m_codeBlock->superBinding(); }
     JSParserScriptMode scriptMode() const { return m_codeBlock->scriptMode(); }
     NeedsClassFieldInitializer needsClassFieldInitializer() const { return m_codeBlock->needsClassFieldInitializer(); }
-    bool usesEval() const { return m_codeBlock->usesEval(); }
+    PrivateBrandRequirement privateBrandRequirement() const { return m_codeBlock->privateBrandRequirement(); }
+    bool usesCallEval() const { return m_codeBlock->usesCallEval(); }
+    void setUsesCallEval() { return m_codeBlock->setUsesCallEval(); }
     SourceParseMode parseMode() const { return m_codeBlock->parseMode(); }
     bool isArrowFunction() { return m_codeBlock->isArrowFunction(); }
     DerivedContextType derivedContextType() const { return m_codeBlock->derivedContextType(); }
     EvalContextType evalContextType() const { return m_codeBlock->evalContextType(); }
     bool isArrowFunctionContext() const { return m_codeBlock->isArrowFunctionContext(); }
     bool isClassContext() const { return m_codeBlock->isClassContext(); }
-    int numCalleeLocals() const { return m_codeBlock->m_numCalleeLocals; }
-    int numVars() const { return m_codeBlock->m_numVars; }
+    unsigned numCalleeLocals() const { return m_codeBlock->m_numCalleeLocals; }
+    unsigned numVars() const { return m_codeBlock->m_numVars; }
     unsigned numParameters() const { return m_codeBlock->numParameters(); }
     VirtualRegister thisRegister() const { return m_codeBlock->thisRegister(); }
     VirtualRegister scopeRegister() const { return m_codeBlock->scopeRegister(); }
@@ -69,11 +71,11 @@ public:
     // Updating UnlinkedCodeBlock.
     void setHasCheckpoints() { m_codeBlock->setHasCheckpoints(); }
     void setHasTailCalls() { m_codeBlock->setHasTailCalls(); }
-    void setNumCalleeLocals(int numCalleeLocals) { m_codeBlock->m_numCalleeLocals = numCalleeLocals; }
-    void setNumVars(int numVars) { m_codeBlock->m_numVars = numVars; }
+    void setNumCalleeLocals(unsigned numCalleeLocals) { m_codeBlock->m_numCalleeLocals = numCalleeLocals; }
+    void setNumVars(unsigned numVars) { m_codeBlock->m_numVars = numVars; }
     void setThisRegister(VirtualRegister thisRegister) { m_codeBlock->setThisRegister(thisRegister); }
     void setScopeRegister(VirtualRegister thisRegister) { m_codeBlock->setScopeRegister(thisRegister); }
-    void setNumParameters(int newValue) { m_codeBlock->setNumParameters(newValue); }
+    void setNumParameters(unsigned newValue) { m_codeBlock->setNumParameters(newValue); }
 
     UnlinkedMetadataTable& metadata() { return m_codeBlock->metadata(); }
     void addExpressionInfo(unsigned instructionOffset, int divot, int startOffset, int endOffset, unsigned line, unsigned column);
@@ -88,13 +90,13 @@ public:
     unsigned jumpTarget(int index) const { return m_jumpTargets[index]; }
     unsigned lastJumpTarget() const { return m_jumpTargets.last(); }
 
-    size_t numberOfSwitchJumpTables() const { return m_switchJumpTables.size(); }
-    UnlinkedSimpleJumpTable& addSwitchJumpTable() { m_switchJumpTables.append(UnlinkedSimpleJumpTable()); return m_switchJumpTables.last(); }
-    UnlinkedSimpleJumpTable& switchJumpTable(int tableIndex) { return m_switchJumpTables[tableIndex]; }
+    size_t numberOfUnlinkedSwitchJumpTables() const { return m_unlinkedSwitchJumpTables.size(); }
+    UnlinkedSimpleJumpTable& addUnlinkedSwitchJumpTable() { m_unlinkedSwitchJumpTables.append(UnlinkedSimpleJumpTable()); return m_unlinkedSwitchJumpTables.last(); }
+    UnlinkedSimpleJumpTable& unlinkedSwitchJumpTable(int tableIndex) { return m_unlinkedSwitchJumpTables[tableIndex]; }
 
-    size_t numberOfStringSwitchJumpTables() const { return m_stringSwitchJumpTables.size(); }
-    UnlinkedStringJumpTable& addStringSwitchJumpTable() { m_stringSwitchJumpTables.append(UnlinkedStringJumpTable()); return m_stringSwitchJumpTables.last(); }
-    UnlinkedStringJumpTable& stringSwitchJumpTable(int tableIndex) { return m_stringSwitchJumpTables[tableIndex]; }
+    size_t numberOfUnlinkedStringSwitchJumpTables() const { return m_unlinkedStringSwitchJumpTables.size(); }
+    UnlinkedStringJumpTable& addUnlinkedStringSwitchJumpTable() { m_unlinkedStringSwitchJumpTables.append(UnlinkedStringJumpTable()); return m_unlinkedStringSwitchJumpTables.last(); }
+    UnlinkedStringJumpTable& unlinkedStringSwitchJumpTable(int tableIndex) { return m_unlinkedStringSwitchJumpTables[tableIndex]; }
 
     size_t numberOfExceptionHandlers() const { return m_exceptionHandlers.size(); }
     UnlinkedHandlerInfo& exceptionHandler(int index) { return m_exceptionHandlers[index]; }
@@ -110,20 +112,29 @@ public:
     }
 
     unsigned numberOfConstantIdentifierSets() const { return m_constantIdentifierSets.size(); }
-    const Vector<ConstantIdentifierSetEntry>& constantIdentifierSets() { return m_constantIdentifierSets; }
-    void addSetConstant(IdentifierSet& set)
+    const Vector<IdentifierSet>& constantIdentifierSets() { return m_constantIdentifierSets; }
+    unsigned addSetConstant(IdentifierSet&& set)
     {
         ASSERT(m_vm.heap.isDeferred());
-        unsigned result = m_constantRegisters.size();
-        m_constantRegisters.append(WriteBarrier<Unknown>());
-        m_constantsSourceCodeRepresentation.append(SourceCodeRepresentation::Other);
-        m_constantIdentifierSets.append(ConstantIdentifierSetEntry(set, result));
+        unsigned result = m_constantIdentifierSets.size();
+        m_constantIdentifierSets.append(WTFMove(set));
+        return result;
     }
 
     const WriteBarrier<Unknown>& constantRegister(VirtualRegister reg) const { return m_constantRegisters[reg.toConstantIndex()]; }
     const Vector<WriteBarrier<Unknown>>& constantRegisters() { return m_constantRegisters; }
     ALWAYS_INLINE JSValue getConstant(VirtualRegister reg) const { return m_constantRegisters[reg.toConstantIndex()].get(); }
-    const Vector<SourceCodeRepresentation>& constantsSourceCodeRepresentation() { return m_constantsSourceCodeRepresentation; }
+
+    SourceCodeRepresentation constantSourceCodeRepresentation(VirtualRegister reg) const
+    {
+        return constantSourceCodeRepresentation(reg.toConstantIndex());
+    }
+    SourceCodeRepresentation constantSourceCodeRepresentation(unsigned index) const
+    {
+        if (index < m_constantsSourceCodeRepresentation.size())
+            return m_constantsSourceCodeRepresentation[index];
+        return SourceCodeRepresentation::Other;
+    }
 
     unsigned addConstant(JSValue v, SourceCodeRepresentation sourceCodeRepresentation = SourceCodeRepresentation::Other)
     {
@@ -203,13 +214,13 @@ private:
     OutOfLineJumpTargets m_outOfLineJumpTargets;
     // In RareData.
     Vector<UnlinkedHandlerInfo> m_exceptionHandlers;
-    Vector<UnlinkedSimpleJumpTable> m_switchJumpTables;
-    Vector<UnlinkedStringJumpTable> m_stringSwitchJumpTables;
+    Vector<UnlinkedSimpleJumpTable> m_unlinkedSwitchJumpTables;
+    Vector<UnlinkedStringJumpTable> m_unlinkedStringSwitchJumpTables;
     Vector<ExpressionRangeInfo::FatPosition> m_expressionInfoFatPositions;
     HashMap<unsigned, UnlinkedCodeBlock::RareData::TypeProfilerExpressionRange> m_typeProfilerInfoMap;
     Vector<InstructionStream::Offset> m_opProfileControlFlowBytecodeOffsets;
     Vector<BitVector> m_bitVectors;
-    Vector<ConstantIdentifierSetEntry> m_constantIdentifierSets;
+    Vector<IdentifierSet> m_constantIdentifierSets;
 };
 
 } // namespace JSC

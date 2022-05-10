@@ -82,7 +82,7 @@ struct GenericSequenceConverter {
 // Specialization for numeric types
 // FIXME: This is only implemented for the IDLFloatingPointTypes and IDLLong. To add
 // support for more numeric types, add an overload of Converter<IDLType>::convert that
-// takes an ExecState, ThrowScope, double as its arguments.
+// takes a JSGlobalObject, ThrowScope and double as its arguments.
 template<typename IDLType>
 struct NumericSequenceConverter {
     using GenericConverter = GenericSequenceConverter<IDLType>;
@@ -129,11 +129,11 @@ struct NumericSequenceConverter {
 
         JSC::JSObject* object = JSC::asObject(value);
         if (!JSC::isJSArray(object))
-            return GenericConverter::convert(lexicalGlobalObject, object);
+            RELEASE_AND_RETURN(scope, GenericConverter::convert(lexicalGlobalObject, object));
 
         JSC::JSArray* array = JSC::asArray(object);
         if (!array->isIteratorProtocolFastAndNonObservable())
-            return GenericConverter::convert(lexicalGlobalObject, object);
+            RELEASE_AND_RETURN(scope, GenericConverter::convert(lexicalGlobalObject, object));
 
         unsigned length = array->length();
         ReturnType result;
@@ -151,7 +151,7 @@ struct NumericSequenceConverter {
 
         JSC::IndexingType indexingType = array->indexingType() & JSC::IndexingShapeMask;
         if (indexingType != JSC::Int32Shape && indexingType != JSC::DoubleShape)
-            return GenericConverter::convert(lexicalGlobalObject, object, WTFMove(result));
+            RELEASE_AND_RETURN(scope, GenericConverter::convert(lexicalGlobalObject, object, WTFMove(result)));
 
         return convertArray(lexicalGlobalObject, scope, array, length, indexingType, WTFMove(result));
     }
@@ -162,11 +162,11 @@ struct NumericSequenceConverter {
         auto scope = DECLARE_THROW_SCOPE(vm);
 
         if (!JSC::isJSArray(object))
-            return GenericConverter::convert(lexicalGlobalObject, object, method);
+            RELEASE_AND_RETURN(scope, GenericConverter::convert(lexicalGlobalObject, object, method));
 
         JSC::JSArray* array = JSC::asArray(object);
         if (!array->isIteratorProtocolFastAndNonObservable())
-            return GenericConverter::convert(lexicalGlobalObject, object, method);
+            RELEASE_AND_RETURN(scope, GenericConverter::convert(lexicalGlobalObject, object, method));
 
         unsigned length = array->length();
         ReturnType result;
@@ -184,7 +184,7 @@ struct NumericSequenceConverter {
 
         JSC::IndexingType indexingType = array->indexingType() & JSC::IndexingShapeMask;
         if (indexingType != JSC::Int32Shape && indexingType != JSC::DoubleShape)
-            return GenericConverter::convert(lexicalGlobalObject, object, method, WTFMove(result));
+            RELEASE_AND_RETURN(scope, GenericConverter::convert(lexicalGlobalObject, object, method, WTFMove(result)));
 
         return convertArray(lexicalGlobalObject, scope, array, length, indexingType, WTFMove(result));
     }
@@ -380,13 +380,16 @@ template<typename T> struct JSConverter<IDLSequence<T>> {
         JSC::VM& vm = JSC::getVM(&lexicalGlobalObject);
         auto scope = DECLARE_THROW_SCOPE(vm);
         JSC::MarkedArgumentBuffer list;
-        for (auto& element : vector)
-            list.append(toJS<T>(lexicalGlobalObject, globalObject, element));
+        for (auto& element : vector) {
+            auto jsValue = toJS<T>(lexicalGlobalObject, globalObject, element);
+            RETURN_IF_EXCEPTION(scope, { });
+            list.append(jsValue);
+        }
         if (UNLIKELY(list.hasOverflowed())) {
             throwOutOfMemoryError(&lexicalGlobalObject, scope);
             return { };
         }
-        return JSC::constructArray(&globalObject, static_cast<JSC::ArrayAllocationProfile*>(nullptr), list);
+        RELEASE_AND_RETURN(scope, JSC::constructArray(&globalObject, static_cast<JSC::ArrayAllocationProfile*>(nullptr), list));
     }
 };
 
@@ -414,14 +417,18 @@ template<typename T> struct JSConverter<IDLFrozenArray<T>> {
         JSC::VM& vm = JSC::getVM(&lexicalGlobalObject);
         auto scope = DECLARE_THROW_SCOPE(vm);
         JSC::MarkedArgumentBuffer list;
-        for (auto& element : vector)
-            list.append(toJS<T>(lexicalGlobalObject, globalObject, element));
+        for (auto& element : vector) {
+            auto jsValue = toJS<T>(lexicalGlobalObject, globalObject, element);
+            RETURN_IF_EXCEPTION(scope, { });
+            list.append(jsValue);
+        }
         if (UNLIKELY(list.hasOverflowed())) {
             throwOutOfMemoryError(&lexicalGlobalObject, scope);
             return { };
         }
         auto* array = JSC::constructArray(&globalObject, static_cast<JSC::ArrayAllocationProfile*>(nullptr), list);
-        return JSC::objectConstructorFreeze(&lexicalGlobalObject, array);
+        RETURN_IF_EXCEPTION(scope, { });
+        RELEASE_AND_RETURN(scope, JSC::objectConstructorFreeze(&lexicalGlobalObject, array));
     }
 };
 

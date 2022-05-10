@@ -30,16 +30,20 @@
  * @title: GTypeModule
  *
  * #GTypeModule provides a simple implementation of the #GTypePlugin
- * interface. The model of #GTypeModule is a dynamically loaded module
- * which implements some number of types and interface implementations.
+ * interface.
+ *
+ * The model of #GTypeModule is a dynamically loaded module which
+ * implements some number of types and interface implementations.
+ *
  * When the module is loaded, it registers its types and interfaces
  * using g_type_module_register_type() and g_type_module_add_interface().
  * As long as any instances of these types and interface implementations
  * are in use, the module is kept loaded. When the types and interfaces
  * are gone, the module may be unloaded. If the types and interfaces
  * become used again, the module will be reloaded. Note that the last
- * unref cannot happen in module code, since that would lead to the
- * caller's code being unloaded before g_object_unref() returns to it.
+ * reference cannot be released from within the module code, since that
+ * would lead to the caller's code being unloaded before g_object_unref()
+ * returns to it.
  *
  * Keeping track of whether the module should be loaded or not is done by
  * using a use count - it starts at zero, and whenever it is greater than
@@ -56,7 +60,6 @@
  * derive from #GTypeModule and implement the load and unload functions
  * in #GTypeModuleClass.
  */
-
 
 typedef struct _ModuleTypeInfo ModuleTypeInfo;
 typedef struct _ModuleInterfaceInfo ModuleInterfaceInfo;
@@ -151,6 +154,7 @@ g_type_module_get_type (void)
         sizeof (GTypeModule),
         0,              /* n_preallocs */
         NULL,           /* instance_init */
+        NULL,           /* value_table */
       };
       const GInterfaceInfo iface_info = {
         (GInterfaceInitFunc) g_type_module_iface_init,
@@ -450,7 +454,7 @@ g_type_module_register_type (GTypeModule     *module,
   module_type_info->loaded = TRUE;
   module_type_info->info = *type_info;
   if (type_info->value_table)
-    module_type_info->info.value_table = g_memdup (type_info->value_table,
+    module_type_info->info.value_table = g_memdup2 (type_info->value_table,
                sizeof (GTypeValueTable));
 
   return module_type_info->type;

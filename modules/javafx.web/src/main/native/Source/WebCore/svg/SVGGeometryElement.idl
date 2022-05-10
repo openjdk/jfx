@@ -23,12 +23,13 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
-// [Exposed=Window]
-interface SVGGeometryElement : SVGGraphicsElement {
+[
+    Exposed=Window
+] interface SVGGeometryElement : SVGGraphicsElement {
     [SameObject] readonly attribute SVGAnimatedNumber pathLength;
 
     boolean isPointInFill(optional DOMPointInit point);
     boolean isPointInStroke(optional DOMPointInit point);
     unrestricted float getTotalLength();
-    [NewObject, MayThrowException] SVGPoint getPointAtLength(float distance);
+    [NewObject] SVGPoint getPointAtLength(float distance);
 };

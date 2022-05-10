@@ -29,7 +29,6 @@
 #include "JSDOMGlobalObject.h"
 #include "JSDOMPromiseDeferred.h"
 #include <wtf/Function.h>
-#include <wtf/Optional.h>
 #include <wtf/Vector.h>
 
 namespace WebCore {
@@ -54,12 +53,12 @@ public:
     void reject(Exception, RejectAsHandled = RejectAsHandled::No);
 
 private:
-    Optional<ExceptionOr<Value>> m_valueOrException;
+    std::optional<ExceptionOr<Value>> m_valueOrException;
     Vector<Ref<DeferredPromise>, 1> m_deferredPromises;
 };
 
 template<>
-class DOMPromiseProxy<IDLVoid> {
+class DOMPromiseProxy<IDLUndefined> {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     DOMPromiseProxy() = default;
@@ -75,7 +74,7 @@ public:
     void reject(Exception, RejectAsHandled = RejectAsHandled::No);
 
 private:
-    Optional<ExceptionOr<void>> m_valueOrException;
+    std::optional<ExceptionOr<void>> m_valueOrException;
     Vector<Ref<DeferredPromise>, 1> m_deferredPromises;
 };
 
@@ -106,7 +105,7 @@ public:
 
 private:
     ResolveCallback m_resolveCallback;
-    Optional<ExceptionOr<void>> m_valueOrException;
+    std::optional<ExceptionOr<void>> m_valueOrException;
     Vector<Ref<DeferredPromise>, 1> m_deferredPromises;
 };
 
@@ -142,14 +141,14 @@ inline JSC::JSValue DOMPromiseProxy<IDLType>::promise(JSC::JSGlobalObject& lexic
 template<typename IDLType>
 inline void DOMPromiseProxy<IDLType>::clear()
 {
-    m_valueOrException = WTF::nullopt;
+    m_valueOrException = std::nullopt;
     m_deferredPromises.clear();
 }
 
 template<typename IDLType>
 inline bool DOMPromiseProxy<IDLType>::isFulfilled() const
 {
-    return m_valueOrException.hasValue();
+    return m_valueOrException.has_value();
 }
 
 template<typename IDLType>
@@ -183,9 +182,9 @@ inline void DOMPromiseProxy<IDLType>::reject(Exception exception, RejectAsHandle
 }
 
 
-// MARK: - DOMPromiseProxy<IDLVoid> specialization
+// MARK: - DOMPromiseProxy<IDLUndefined> specialization
 
-inline JSC::JSValue DOMPromiseProxy<IDLVoid>::promise(JSC::JSGlobalObject& lexicalGlobalObject, JSDOMGlobalObject& globalObject)
+inline JSC::JSValue DOMPromiseProxy<IDLUndefined>::promise(JSC::JSGlobalObject& lexicalGlobalObject, JSDOMGlobalObject& globalObject)
 {
     UNUSED_PARAM(lexicalGlobalObject);
     for (auto& deferredPromise : m_deferredPromises) {
@@ -210,18 +209,18 @@ inline JSC::JSValue DOMPromiseProxy<IDLVoid>::promise(JSC::JSGlobalObject& lexic
     return result;
 }
 
-inline void DOMPromiseProxy<IDLVoid>::clear()
+inline void DOMPromiseProxy<IDLUndefined>::clear()
 {
-    m_valueOrException = WTF::nullopt;
+    m_valueOrException = std::nullopt;
     m_deferredPromises.clear();
 }
 
-inline bool DOMPromiseProxy<IDLVoid>::isFulfilled() const
+inline bool DOMPromiseProxy<IDLUndefined>::isFulfilled() const
 {
-    return m_valueOrException.hasValue();
+    return m_valueOrException.has_value();
 }
 
-inline void DOMPromiseProxy<IDLVoid>::resolve()
+inline void DOMPromiseProxy<IDLUndefined>::resolve()
 {
     ASSERT(!m_valueOrException);
     m_valueOrException = ExceptionOr<void> { };
@@ -229,7 +228,7 @@ inline void DOMPromiseProxy<IDLVoid>::resolve()
         deferredPromise->resolve();
 }
 
-inline void DOMPromiseProxy<IDLVoid>::reject(Exception exception, RejectAsHandled rejectAsHandled)
+inline void DOMPromiseProxy<IDLUndefined>::reject(Exception exception, RejectAsHandled rejectAsHandled)
 {
     ASSERT(!m_valueOrException);
     m_valueOrException = ExceptionOr<void> { WTFMove(exception) };
@@ -281,14 +280,14 @@ inline JSC::JSValue DOMPromiseProxyWithResolveCallback<IDLType>::promise(JSC::JS
 template<typename IDLType>
 inline void DOMPromiseProxyWithResolveCallback<IDLType>::clear()
 {
-    m_valueOrException = WTF::nullopt;
+    m_valueOrException = std::nullopt;
     m_deferredPromises.clear();
 }
 
 template<typename IDLType>
 inline bool DOMPromiseProxyWithResolveCallback<IDLType>::isFulfilled() const
 {
-    return m_valueOrException.hasValue();
+    return m_valueOrException.has_value();
 }
 
 template<typename IDLType>

@@ -29,12 +29,9 @@ namespace WebCore {
 class KeyframeList;
 class RenderLayer;
 
-struct RepaintLayoutRects {
-    LayoutRect m_repaintRect; // This rect is clipped by enclosing objects (e.g., overflow:hidden).
-    LayoutRect m_outlineBox; // This rect is unclipped.
-
-    RepaintLayoutRects(const RenderLayerModelObject& renderer, const RenderLayerModelObject* repaintContainer, const RenderGeometryMap* = nullptr);
-    RepaintLayoutRects() { };
+struct LayerRepaintRects {
+    LayoutRect clippedOverflowRect;
+    LayoutRect outlineBoundsRect;
 };
 
 class RenderLayerModelObject : public RenderElement {
@@ -59,23 +56,14 @@ public:
 
     virtual bool isScrollableOrRubberbandableBox() const { return false; }
 
-    bool shouldPlaceBlockDirectionScrollbarOnLeft() const;
+    bool shouldPlaceVerticalScrollbarOnLeft() const;
 
-    void computeRepaintLayoutRects(const RenderLayerModelObject* repaintContainer, const RenderGeometryMap* = nullptr);
-
-    RepaintLayoutRects repaintLayoutRects() const;
-
-    bool hasRepaintLayoutRects() const;
-    void setRepaintLayoutRects(const RepaintLayoutRects&);
-    void clearRepaintLayoutRects();
-
-    bool startTransition(double timeOffset, CSSPropertyID, const RenderStyle* fromStyle, const RenderStyle* toStyle) override;
-    void transitionPaused(double timeOffset, CSSPropertyID) override;
-    void transitionFinished(CSSPropertyID) override;
+    std::optional<LayerRepaintRects> layerRepaintRects() const;
 
     bool startAnimation(double timeOffset, const Animation&, const KeyframeList&) override;
     void animationPaused(double timeOffset, const String& name) override;
     void animationFinished(const String& name) override;
+    void transformRelatedPropertyDidChange() override;
 
     void suspendAnimations(MonotonicTime = MonotonicTime()) override;
 

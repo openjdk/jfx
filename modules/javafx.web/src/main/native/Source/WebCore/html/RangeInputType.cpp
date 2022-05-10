@@ -80,13 +80,9 @@ static Decimal ensureMaximum(const Decimal& proposedValue, const Decimal& minimu
 }
 
 RangeInputType::RangeInputType(HTMLInputElement& element)
-    : InputType(element)
+    : InputType(Type::Range, element)
 {
-}
-
-bool RangeInputType::isRangeControl() const
-{
-    return true;
+    ASSERT(needsShadowSubtree());
 }
 
 const AtomString& RangeInputType::formControlType() const
@@ -131,11 +127,6 @@ StepRange RangeInputType::createStepRange(AnyStepHandling anyStepHandling) const
 
     const Decimal step = StepRange::parseStep(anyStepHandling, rangeStepDescription, element()->attributeWithoutSynchronization(stepAttr));
     return StepRange(minimum, RangeLimitations::Valid, minimum, maximum, step, rangeStepDescription);
-}
-
-bool RangeInputType::isSteppable() const
-{
-    return true;
 }
 
 void RangeInputType::handleMouseDownEvent(MouseEvent& event)
@@ -252,8 +243,9 @@ auto RangeInputType::handleKeydownEvent(KeyboardEvent& event) -> ShouldCallBaseE
     return ShouldCallBaseEventHandler::Yes;
 }
 
-void RangeInputType::createShadowSubtree()
+void RangeInputType::createShadowSubtreeAndUpdateInnerTextElementEditability(ContainerNode::ChildChange::Source source, bool)
 {
+    ASSERT(needsShadowSubtree());
     ASSERT(element());
     ASSERT(element()->userAgentShadowRoot());
 
@@ -261,10 +253,10 @@ void RangeInputType::createShadowSubtree()
     Document& document = element()->document();
     auto track = HTMLDivElement::create(document);
     track->setPseudo(webkitSliderRunnableTrackName);
-    track->appendChild(SliderThumbElement::create(document));
+    track->appendChild(source, SliderThumbElement::create(document));
     auto container = SliderContainerElement::create(document);
-    container->appendChild(track);
-    element()->userAgentShadowRoot()->appendChild(container);
+    container->appendChild(source, track);
+    element()->userAgentShadowRoot()->appendChild(source, container);
 }
 
 HTMLElement* RangeInputType::sliderTrackElement() const
@@ -407,11 +399,11 @@ void RangeInputType::updateTickMarkValues()
     std::sort(m_tickMarkValues.begin(), m_tickMarkValues.end());
 }
 
-Optional<Decimal> RangeInputType::findClosestTickMarkValue(const Decimal& value)
+std::optional<Decimal> RangeInputType::findClosestTickMarkValue(const Decimal& value)
 {
     updateTickMarkValues();
     if (!m_tickMarkValues.size())
-        return WTF::nullopt;
+        return std::nullopt;
 
     size_t left = 0;
     size_t right = m_tickMarkValues.size();
@@ -434,8 +426,8 @@ Optional<Decimal> RangeInputType::findClosestTickMarkValue(const Decimal& value)
             right = middle;
     }
 
-    Optional<Decimal> closestLeft = middle ? makeOptional(m_tickMarkValues[middle - 1]) : WTF::nullopt;
-    Optional<Decimal> closestRight = middle != m_tickMarkValues.size() ? makeOptional(m_tickMarkValues[middle]) : WTF::nullopt;
+    std::optional<Decimal> closestLeft = middle ? std::make_optional(m_tickMarkValues[middle - 1]) : std::nullopt;
+    std::optional<Decimal> closestRight = middle != m_tickMarkValues.size() ? std::make_optional(m_tickMarkValues[middle]) : std::nullopt;
 
     if (!closestLeft)
         return closestRight;

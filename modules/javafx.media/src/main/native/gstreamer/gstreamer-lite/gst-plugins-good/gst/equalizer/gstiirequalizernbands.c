@@ -20,21 +20,20 @@
 
 /**
  * SECTION:element-equalizer-nbands
+ * @title: equalizer-nbands
  *
  * The n-band equalizer element is a fully parametric equalizer. It allows to
  * select between 1 and 64 bands and has properties on each band to change
  * the center frequency, band width and gain.
  *
- * <refsect2>
- * <title>Example launch line</title>
+ * ## Example launch line
  * |[
  * gst-launch-1.0 filesrc location=song.ogg ! oggdemux ! vorbisdec ! audioconvert ! equalizer-nbands num-bands=15 band5::gain=6.0 ! alsasink
  * ]| This make the equalizer use 15 bands and raises the volume of the 5th band by 6 db.
- * </refsect2>
- * <refsect2>
- * <title>Example code</title>
+ *
+ * ## Example code
  * |[
- * #include &lt;gst/gst.h&gt;
+ * #include <gst/gst.h>
  *
  * ...
  * typedef struct {
@@ -63,7 +62,7 @@
  *
  * ...
  *
- *   for (i = 0; i &lt; 5; i++) {
+ *   for (i = 0; i < 5; i++) {
  *     band = gst_child_proxy_get_child_by_index (GST_CHILD_PROXY (equalizer), i);
  *     g_object_set (G_OBJECT (band), "freq", state[i].freq,
  *         "bandwidth", state[i].width,
@@ -73,7 +72,7 @@
  *
  * ...
  * ]|
- * </refsect2>
+ *
  */
 
 #ifdef HAVE_CONFIG_H
@@ -100,7 +99,9 @@ GST_DEBUG_CATEGORY_EXTERN (equalizer_debug);
 #define gst_iir_equalizer_nbands_parent_class parent_class
 G_DEFINE_TYPE (GstIirEqualizerNBands, gst_iir_equalizer_nbands,
     GST_TYPE_IIR_EQUALIZER);
-
+GST_ELEMENT_REGISTER_DEFINE_WITH_CODE (equalizer_nbands, "equalizer-nbands",
+    GST_RANK_NONE, GST_TYPE_IIR_EQUALIZER_NBANDS,
+    equalizer_element_init (plugin));
 /* equalizer implementation */
 
 static void

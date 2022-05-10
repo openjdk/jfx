@@ -29,9 +29,18 @@
 #if ENABLE(VIDEO)
 
 #include "Logging.h"
-#include <wtf/LoggerHelper.h>
 
 namespace WebCore {
+
+std::optional<uint64_t> TrackPrivateBase::trackUID() const
+{
+    return std::nullopt;
+}
+
+std::optional<bool> TrackPrivateBase::defaultEnabled() const
+{
+    return std::nullopt;
+}
 
 #if !RELEASE_LOG_DISABLED
 

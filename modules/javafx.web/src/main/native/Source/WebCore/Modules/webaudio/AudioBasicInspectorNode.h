@@ -34,17 +34,16 @@ namespace WebCore {
 class AudioBasicInspectorNode : public AudioNode {
     WTF_MAKE_ISO_ALLOCATED(AudioBasicInspectorNode);
 public:
-    explicit AudioBasicInspectorNode(BaseAudioContext&);
+    AudioBasicInspectorNode(BaseAudioContext&, NodeType);
+
+protected:
+    bool m_needAutomaticPull { false }; // When setting to true, AudioBasicInspectorNode will be pulled automatically by AudioContext before the end of each render quantum.
 
 private:
     void pullInputs(size_t framesToProcess) override;
-    ExceptionOr<void> connect(AudioNode&, unsigned outputIndex, unsigned inputIndex) override;
-    ExceptionOr<void> disconnect(unsigned outputIndex) override;
     void checkNumberOfChannelsForInput(AudioNodeInput*) override;
 
-    void updatePullStatus();
-
-    bool m_needAutomaticPull { false }; // When setting to true, AudioBasicInspectorNode will be pulled automatically by AudioContext before the end of each render quantum.
+    void updatePullStatus() override;
 };
 
 } // namespace WebCore

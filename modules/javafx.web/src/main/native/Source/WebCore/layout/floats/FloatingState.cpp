@@ -40,16 +40,16 @@ namespace Layout {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(FloatingState);
 
-FloatingState::FloatItem::FloatItem(const Box& layoutBox, Display::Box absoluteDisplayBox)
+FloatingState::FloatItem::FloatItem(const Box& layoutBox, BoxGeometry absoluteBoxGeometry)
     : m_layoutBox(makeWeakPtr(layoutBox))
     , m_position(layoutBox.isLeftFloatingPositioned() ? Position::Left : Position::Right)
-    , m_absoluteDisplayBox(absoluteDisplayBox)
+    , m_absoluteBoxGeometry(absoluteBoxGeometry)
 {
 }
 
-FloatingState::FloatItem::FloatItem(Position position, Display::Box absoluteDisplayBox)
+FloatingState::FloatItem::FloatItem(Position position, BoxGeometry absoluteBoxGeometry)
     : m_position(position)
-    , m_absoluteDisplayBox(absoluteDisplayBox)
+    , m_absoluteBoxGeometry(absoluteBoxGeometry)
 {
 }
 
@@ -61,18 +61,13 @@ FloatingState::FloatingState(LayoutState& layoutState, const ContainerBox& forma
 
 void FloatingState::append(FloatItem floatItem)
 {
-    ASSERT(is<ContainerBox>(*m_formattingContextRoot));
-#if ASSERT_ENABLED
-    if (!RuntimeEnabledFeatures::sharedFeatures().layoutFormattingContextIntegrationEnabled()) {
-        // The integration codepath does not construct a layout box for the float item.
-        ASSERT(m_floats.findMatching([&] (auto& entry) {
-            return entry.floatBox() == floatItem.floatBox();
-        }) == notFound);
-    }
-#endif
-
     if (m_floats.isEmpty())
         return m_floats.append(floatItem);
+
+    // The integration codepath does not construct a layout box for the float item.
+    ASSERT_IMPLIES(floatItem.floatBox(), m_floats.findMatching([&] (auto& entry) {
+        return entry.floatBox() == floatItem.floatBox();
+    }) == notFound);
 
     auto isLeftPositioned = floatItem.isLeftPositioned();
     // When adding a new float item to the list, we have to ensure that it is definitely the left(right)-most item.
@@ -94,54 +89,6 @@ void FloatingState::append(FloatItem floatItem)
             return m_floats.insert(i + 1, floatItem);
     }
     return m_floats.insert(0, floatItem);
-}
-
-Optional<PositionInContextRoot> FloatingState::bottom(const ContainerBox& formattingContextRoot, Clear type) const
-{
-    if (m_floats.isEmpty())
-        return { };
-
-    // TODO: Currently this is only called once for each formatting context root with floats per layout.
-    // Cache the value if we end up calling it more frequently (and update it at append/remove).
-    Optional<PositionInContextRoot> bottom;
-    for (auto& floatItem : m_floats) {
-        // Ignore floats from ancestor formatting contexts when the floating state is inherited.
-        if (!floatItem.isInFormattingContextOf(formattingContextRoot))
-            continue;
-
-        if ((type == Clear::Left && !floatItem.isLeftPositioned())
-            || (type == Clear::Right && floatItem.isLeftPositioned()))
-            continue;
-
-        auto floatsBottom = floatItem.rectWithMargin().bottom();
-        if (bottom) {
-            bottom = std::max<PositionInContextRoot>(*bottom, { floatsBottom });
-            continue;
-        }
-        bottom = PositionInContextRoot { floatsBottom };
-    }
-    return bottom;
-}
-
-Optional<PositionInContextRoot> FloatingState::top(const ContainerBox& formattingContextRoot) const
-{
-    if (m_floats.isEmpty())
-        return { };
-
-    Optional<PositionInContextRoot> top;
-    for (auto& floatItem : m_floats) {
-        // Ignore floats from ancestor formatting contexts when the floating state is inherited.
-        if (!floatItem.isInFormattingContextOf(formattingContextRoot))
-            continue;
-
-        auto floatTop = floatItem.rectWithMargin().top();
-        if (top) {
-            top = std::min<PositionInContextRoot>(*top, { floatTop });
-            continue;
-        }
-        top = PositionInContextRoot { floatTop };
-    }
-    return top;
 }
 
 }

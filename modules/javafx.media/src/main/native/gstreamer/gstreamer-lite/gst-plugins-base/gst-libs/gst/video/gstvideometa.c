@@ -64,6 +64,7 @@ gst_video_meta_init (GstMeta * meta, gpointer params, GstBuffer * buffer)
   emeta->width = emeta->height = emeta->n_planes = 0;
   memset (emeta->offset, 0, sizeof (emeta->offset));
   memset (emeta->stride, 0, sizeof (emeta->stride));
+  gst_video_alignment_reset (&emeta->alignment);
   emeta->map = NULL;
   emeta->unmap = NULL;
 
@@ -104,6 +105,7 @@ gst_video_meta_transform (GstBuffer * dest, GstMeta * meta,
       for (i = 0; i < dmeta->n_planes; i++) {
         dmeta->offset[i] = smeta->offset[i];
         dmeta->stride[i] = smeta->stride[i];
+        dmeta->alignment = smeta->alignment;
       }
       dmeta->map = smeta->map;
       dmeta->unmap = smeta->unmap;
@@ -118,7 +120,7 @@ gst_video_meta_transform (GstBuffer * dest, GstMeta * meta,
 GType
 gst_video_meta_api_get_type (void)
 {
-  static volatile GType type = 0;
+  static GType type = 0;
   static const gchar *tags[] =
       { GST_META_TAG_VIDEO_STR, GST_META_TAG_MEMORY_STR,
     GST_META_TAG_VIDEO_COLORSPACE_STR,
@@ -393,6 +395,139 @@ gst_video_meta_unmap (GstVideoMeta * meta, guint plane, GstMapInfo * info)
 }
 
 static gboolean
+gst_video_meta_validate_alignment (GstVideoMeta * meta,
+    gsize plane_size[GST_VIDEO_MAX_PLANES])
+{
+  GstVideoInfo info;
+  guint i;
+
+  gst_video_info_init (&info);
+  gst_video_info_set_format (&info, meta->format, meta->width, meta->height);
+
+  if (!gst_video_info_align_full (&info, &meta->alignment, plane_size)) {
+    GST_WARNING ("Failed to align meta with its alignment");
+    return FALSE;
+  }
+
+  for (i = 0; i < GST_VIDEO_INFO_N_PLANES (&info); i++) {
+    if (GST_VIDEO_INFO_PLANE_STRIDE (&info, i) != meta->stride[i]) {
+      GST_WARNING
+          ("Stride of plane %d defined in meta (%d) is different from the one computed from the alignment (%d)",
+          i, meta->stride[i], GST_VIDEO_INFO_PLANE_STRIDE (&info, i));
+      return FALSE;
+    }
+  }
+
+  return TRUE;
+}
+
+/**
+ * gst_video_meta_set_alignment:
+ * @meta: a #GstVideoMeta
+ * @alignment: a #GstVideoAlignment
+ *
+ * Set the alignment of @meta to @alignment. This function checks that
+ * the paddings defined in @alignment are compatible with the strides
+ * defined in @meta and will fail to update if they are not.
+ *
+ * Returns: %TRUE if @alignment's meta has been updated, %FALSE if not
+ *
+ * Since: 1.18
+ */
+gboolean
+gst_video_meta_set_alignment (GstVideoMeta * meta, GstVideoAlignment alignment)
+{
+  GstVideoAlignment old;
+
+  g_return_val_if_fail (meta, FALSE);
+
+  old = meta->alignment;
+  meta->alignment = alignment;
+
+  if (!gst_video_meta_validate_alignment (meta, NULL)) {
+    /* Invalid alignment, restore the previous one */
+    meta->alignment = old;
+    return FALSE;
+  }
+
+  GST_LOG ("Set alignment on meta: padding %u-%ux%u-%u", alignment.padding_top,
+      alignment.padding_left, alignment.padding_right,
+      alignment.padding_bottom);
+
+  return TRUE;
+}
+
+/**
+ * gst_video_meta_get_plane_size:
+ * @meta: a #GstVideoMeta
+ * @plane_size: (out caller-allocates) (array fixed-size=4): array used to store the plane sizes
+ *
+ * Compute the size, in bytes, of each video plane described in @meta including
+ * any padding and alignment constraint defined in @meta->alignment.
+ *
+ * Returns: %TRUE if @meta's alignment is valid and @plane_size has been
+ * updated, %FALSE otherwise
+ *
+ * Since: 1.18
+ */
+gboolean
+gst_video_meta_get_plane_size (GstVideoMeta * meta,
+    gsize plane_size[GST_VIDEO_MAX_PLANES])
+{
+  g_return_val_if_fail (meta, FALSE);
+  g_return_val_if_fail (plane_size, FALSE);
+
+  return gst_video_meta_validate_alignment (meta, plane_size);
+}
+
+/**
+ * gst_video_meta_get_plane_height:
+ * @meta: a #GstVideoMeta
+ * @plane_height: (out caller-allocates) (array fixed-size=4): array used to store the plane height
+ *
+ * Compute the padded height of each plane from @meta (padded size
+ * divided by stride).
+ *
+ * It is not valid to call this function with a meta associated to a
+ * TILED video format.
+ *
+ * Returns: %TRUE if @meta's alignment is valid and @plane_height has been
+ * updated, %FALSE otherwise
+ *
+ * Since: 1.18
+ */
+gboolean
+gst_video_meta_get_plane_height (GstVideoMeta * meta,
+    guint plane_height[GST_VIDEO_MAX_PLANES])
+{
+  gsize plane_size[GST_VIDEO_MAX_PLANES];
+  guint i;
+  GstVideoInfo info;
+
+  g_return_val_if_fail (meta, FALSE);
+  g_return_val_if_fail (plane_height, FALSE);
+
+  gst_video_info_init (&info);
+  gst_video_info_set_format (&info, meta->format, meta->width, meta->height);
+  g_return_val_if_fail (!GST_VIDEO_FORMAT_INFO_IS_TILED (&info), FALSE);
+
+  if (!gst_video_meta_get_plane_size (meta, plane_size))
+    return FALSE;
+
+  for (i = 0; i < meta->n_planes; i++) {
+    if (!meta->stride[i])
+      plane_height[i] = 0;
+    else
+      plane_height[i] = plane_size[i] / meta->stride[i];
+  }
+
+  for (; i < GST_VIDEO_MAX_PLANES; i++)
+    plane_height[i] = 0;
+
+  return TRUE;
+}
+
+static gboolean
 gst_video_crop_meta_transform (GstBuffer * dest, GstMeta * meta,
     GstBuffer * buffer, GQuark type, gpointer data)
 {
@@ -442,7 +577,7 @@ gst_video_crop_meta_transform (GstBuffer * dest, GstMeta * meta,
 GType
 gst_video_crop_meta_api_get_type (void)
 {
-  static volatile GType type = 0;
+  static GType type = 0;
   static const gchar *tags[] =
       { GST_META_TAG_VIDEO_STR, GST_META_TAG_VIDEO_SIZE_STR,
     GST_META_TAG_VIDEO_ORIENTATION_STR, NULL
@@ -503,7 +638,7 @@ gst_video_meta_transform_scale_get_quark (void)
 GType
 gst_video_gl_texture_upload_meta_api_get_type (void)
 {
-  static volatile GType type = 0;
+  static GType type = 0;
   static const gchar *tags[] =
       { GST_META_TAG_VIDEO_STR, GST_META_TAG_MEMORY_STR, NULL };
 
@@ -671,7 +806,7 @@ gst_video_gl_texture_upload_meta_upload (GstVideoGLTextureUploadMeta * meta,
 GType
 gst_video_region_of_interest_meta_api_get_type (void)
 {
-  static volatile GType type;
+  static GType type;
   static const gchar *tags[] =
       { GST_META_TAG_VIDEO_STR, GST_META_TAG_VIDEO_ORIENTATION_STR,
     GST_META_TAG_VIDEO_SIZE_STR, NULL
@@ -929,7 +1064,7 @@ gst_video_region_of_interest_meta_get_param (GstVideoRegionOfInterestMeta *
 GType
 gst_video_time_code_meta_api_get_type (void)
 {
-  static volatile GType type;
+  static GType type;
 
   if (g_once_init_enter (&type)) {
     static const gchar *tags[] = { NULL };
@@ -1016,7 +1151,8 @@ gst_video_time_code_meta_get_info (void)
  * Since: 1.10
  */
 GstVideoTimeCodeMeta *
-gst_buffer_add_video_time_code_meta (GstBuffer * buffer, GstVideoTimeCode * tc)
+gst_buffer_add_video_time_code_meta (GstBuffer * buffer,
+    const GstVideoTimeCode * tc)
 {
   if (!gst_video_time_code_is_valid (tc))
     return NULL;

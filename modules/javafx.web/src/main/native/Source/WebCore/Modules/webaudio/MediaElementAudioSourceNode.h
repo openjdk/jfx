@@ -50,19 +50,19 @@ public:
 
     // AudioNode
     void process(size_t framesToProcess) override;
-    void reset() override;
 
     // AudioSourceProviderClient
     void setFormat(size_t numberOfChannels, float sampleRate) override;
 
-    void lock();
-    void unlock();
+    Lock& processLock() WTF_RETURNS_LOCK(m_processLock) { return m_processLock; }
 
 private:
     MediaElementAudioSourceNode(BaseAudioContext&, Ref<HTMLMediaElement>&&);
+    void provideInput(AudioBus*, size_t framesToProcess);
 
     double tailTime() const override { return 0; }
     double latencyTime() const override { return 0; }
+    bool requiresTailProcessing() const final { return false; }
 
     // As an audio source, we will never propagate silence.
     bool propagatesSilence() const override { return false; }
@@ -70,13 +70,13 @@ private:
     bool wouldTaintOrigin();
 
     Ref<HTMLMediaElement> m_mediaElement;
-    Lock m_processMutex;
+    Lock m_processLock;
 
-    unsigned m_sourceNumberOfChannels { 0 };
-    double m_sourceSampleRate { 0 };
-    bool m_muted { false };
+    unsigned m_sourceNumberOfChannels WTF_GUARDED_BY_LOCK(m_processLock) { 0 };
+    double m_sourceSampleRate WTF_GUARDED_BY_LOCK(m_processLock) { 0 };
+    bool m_muted WTF_GUARDED_BY_LOCK(m_processLock) { false };
 
-    std::unique_ptr<MultiChannelResampler> m_multiChannelResampler;
+    std::unique_ptr<MultiChannelResampler> m_multiChannelResampler WTF_GUARDED_BY_LOCK(m_processLock);
 };
 
 } // namespace WebCore

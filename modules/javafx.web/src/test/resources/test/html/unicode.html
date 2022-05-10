@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html>
+<body>
+<script>
+    let a = "\ud800\ud800\udc00"
+    let b = /(.*[^x]+?)[^]*([1])/u
+    b.exec(a)
+</script>
+
+<p id="regtest">PASS</p>
+
+</body>
+</html>

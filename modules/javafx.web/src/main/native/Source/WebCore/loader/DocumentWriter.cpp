@@ -33,6 +33,7 @@
 #include "ContentSecurityPolicy.h"
 #include "DOMImplementation.h"
 #include "DOMWindow.h"
+#include "DocumentLoader.h"
 #include "Frame.h"
 #include "FrameLoader.h"
 #include "FrameLoaderClient.h"
@@ -55,7 +56,9 @@ namespace WebCore {
 
 static inline bool canReferToParentFrameEncoding(const Frame* frame, const Frame* parentFrame)
 {
-    return parentFrame && parentFrame->document()->securityOrigin().canAccess(frame->document()->securityOrigin());
+    if (is<XMLDocument>(frame->document()))
+        return false;
+    return parentFrame && parentFrame->document()->securityOrigin().isSameOriginDomain(frame->document()->securityOrigin());
 }
 
 // This is only called by ScriptController::executeIfJavaScriptURL
@@ -115,7 +118,7 @@ Ref<Document> DocumentWriter::createDocument(const URL& url)
 #endif
     if (!m_frame->loader().client().hasHTMLView())
         return Document::createNonRenderedPlaceholder(*m_frame, url);
-    return DOMImplementation::createDocument(m_mimeType, m_frame, url);
+    return DOMImplementation::createDocument(m_mimeType, m_frame.get(), m_frame->settings(), url);
 }
 
 bool DocumentWriter::begin(const URL& urlReference, bool dispatch, Document* ownerDocument)
@@ -136,15 +139,23 @@ bool DocumentWriter::begin(const URL& urlReference, bool dispatch, Document* own
 
     // FIXME: Do we need to consult the content security policy here about blocked plug-ins?
 
-    bool shouldReuseDefaultView = m_frame->loader().stateMachine().isDisplayingInitialEmptyDocument() && m_frame->document()->isSecureTransitionTo(url);
+    bool shouldReuseDefaultView = m_frame->loader().stateMachine().isDisplayingInitialEmptyDocument()
+        && m_frame->document()->isSecureTransitionTo(url)
+        && (m_frame->window() && !m_frame->window()->wasWrappedWithoutInitializedSecurityOrigin() && m_frame->window()->mayReuseForNavigation());
+
+    if (shouldReuseDefaultView) {
+        ASSERT(m_frame->loader().documentLoader());
+        if (auto* contentSecurityPolicy = m_frame->loader().documentLoader()->contentSecurityPolicy())
+            shouldReuseDefaultView = !(contentSecurityPolicy->sandboxFlags() & SandboxOrigin);
+    }
 
     // Temporarily extend the lifetime of the existing document so that FrameLoader::clear() doesn't destroy it as
     // we need to retain its ongoing set of upgraded requests in new navigation contexts per <http://www.w3.org/TR/upgrade-insecure-requests/>
     // and we may also need to inherit its Content Security Policy below.
     RefPtr<Document> existingDocument = m_frame->document();
 
-    WTF::Function<void()> handleDOMWindowCreation = [this, document, url] {
-        if (m_frame->loader().stateMachine().isDisplayingInitialEmptyDocument() && m_frame->document()->isSecureTransitionTo(url))
+    Function<void()> handleDOMWindowCreation = [this, document, shouldReuseDefaultView] {
+        if (shouldReuseDefaultView)
             document->takeDOMWindowFrom(*m_frame->document());
         else
             document->createDOMWindow();
@@ -171,6 +182,7 @@ bool DocumentWriter::begin(const URL& urlReference, bool dispatch, Document* own
         document->setCookieURL(ownerDocument->cookieURL());
         document->setSecurityOriginPolicy(ownerDocument->securityOriginPolicy());
         document->setStrictMixedContentMode(ownerDocument->isStrictMixedContentMode());
+        document->setCrossOriginEmbedderPolicy(ownerDocument->crossOriginEmbedderPolicy());
 
         document->setContentSecurityPolicy(makeUnique<ContentSecurityPolicy>(URL { url }, document));
         document->contentSecurityPolicy()->copyStateFrom(ownerDocument->contentSecurityPolicy());
@@ -179,6 +191,7 @@ bool DocumentWriter::begin(const URL& urlReference, bool dispatch, Document* own
         if (url.protocolIsData() || url.protocolIsBlob()) {
             document->setContentSecurityPolicy(makeUnique<ContentSecurityPolicy>(URL { url }, document));
             document->contentSecurityPolicy()->copyStateFrom(existingDocument->contentSecurityPolicy());
+            document->setCrossOriginEmbedderPolicy(existingDocument->crossOriginEmbedderPolicy());
 
             // Fix up 'self' for blob: and data:, which is inherited from its embedding document or opener.
             auto* parentFrame = m_frame->tree().parent();
@@ -187,6 +200,8 @@ bool DocumentWriter::begin(const URL& urlReference, bool dispatch, Document* own
         }
         document->contentSecurityPolicy()->setInsecureNavigationRequestsToUpgrade(existingDocument->contentSecurityPolicy()->takeNavigationRequestsToUpgrade());
     }
+
+    auto protectedFrame = makeRef(*m_frame);
 
     m_frame->loader().didBeginDocument(dispatch);
 
@@ -220,10 +235,10 @@ TextResourceDecoder& DocumentWriter::decoder()
         // an attack vector.
         // FIXME: This might be too cautious for non-7bit-encodings and
         // we may consider relaxing this later after testing.
-        if (canReferToParentFrameEncoding(m_frame, parentFrame))
+        if (canReferToParentFrameEncoding(m_frame.get(), parentFrame))
             m_decoder->setHintEncoding(parentFrame->document()->decoder());
         if (m_encoding.isEmpty()) {
-            if (canReferToParentFrameEncoding(m_frame, parentFrame))
+            if (canReferToParentFrameEncoding(m_frame.get(), parentFrame))
                 m_decoder->setEncoding(parentFrame->document()->textEncoding(), TextResourceDecoder::EncodingFromParentFrame);
         } else {
             m_decoder->setEncoding(m_encoding,
@@ -245,7 +260,7 @@ void DocumentWriter::reportDataReceived()
     m_frame->document()->resolveStyle(Document::ResolveStyleType::Rebuild);
 }
 
-void DocumentWriter::addData(const char* bytes, size_t length)
+void DocumentWriter::addData(const uint8_t* bytes, size_t length)
 {
     // FIXME: Change these to ASSERT once https://bugs.webkit.org/show_bug.cgi?id=80427 has been resolved.
     RELEASE_ASSERT(m_state != State::NotStarted);
@@ -293,6 +308,11 @@ void DocumentWriter::setEncoding(const String& name, bool userChosen)
 {
     m_encoding = name;
     m_encodingWasChosenByUser = userChosen;
+}
+
+void DocumentWriter::setFrame(Frame& frame)
+{
+    m_frame = makeWeakPtr(frame);
 }
 
 void DocumentWriter::setDocumentWasLoadedAsPartOfNavigation()

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -275,7 +275,7 @@ public final class IOSMediaPlayer extends NativeMediaPlayer {
         }
 
         public EqualizerBand addBand(double centerFrequency, double bandwidth, double gain) {
-            Double key = new Double(centerFrequency);
+            Double key = centerFrequency;
             if (bands.containsKey(key)) {
                 removeBand(centerFrequency);
             }
@@ -286,7 +286,7 @@ public final class IOSMediaPlayer extends NativeMediaPlayer {
         }
 
         public boolean removeBand(double centerFrequency) {
-            Double key = new Double(centerFrequency);
+            Double key = centerFrequency;
             if (bands.containsKey(key)) {
                 bands.remove(key);
                 return true;

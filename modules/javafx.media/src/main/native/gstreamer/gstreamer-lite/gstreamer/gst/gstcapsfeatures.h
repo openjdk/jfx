@@ -70,7 +70,10 @@ GST_API
 GstCapsFeatures * gst_caps_features_new_any (void);
 
 GST_API
-GstCapsFeatures * gst_caps_features_new (const gchar *feature1, ...);
+GstCapsFeatures * gst_caps_features_new_single (const gchar *feature) G_GNUC_MALLOC;
+
+GST_API
+GstCapsFeatures * gst_caps_features_new (const gchar *feature1, ...) G_GNUC_NULL_TERMINATED;
 
 GST_API
 GstCapsFeatures * gst_caps_features_new_valist (const gchar *feature1, va_list varargs);
@@ -129,9 +132,7 @@ void              gst_caps_features_remove (GstCapsFeatures * features, const gc
 GST_API
 void              gst_caps_features_remove_id (GstCapsFeatures * features, GQuark feature);
 
-#ifdef G_DEFINE_AUTOPTR_CLEANUP_FUNC
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstCapsFeatures, gst_caps_features_free)
-#endif
 
 G_END_DECLS
 

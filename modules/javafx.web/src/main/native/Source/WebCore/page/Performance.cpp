@@ -36,16 +36,21 @@
 #include "Document.h"
 #include "DocumentLoader.h"
 #include "Event.h"
+#include "EventLoop.h"
 #include "EventNames.h"
 #include "Frame.h"
 #include "PerformanceEntry.h"
+#include "PerformanceMarkOptions.h"
+#include "PerformanceMeasureOptions.h"
 #include "PerformanceNavigation.h"
+#include "PerformanceNavigationTiming.h"
 #include "PerformanceObserver.h"
 #include "PerformancePaintTiming.h"
 #include "PerformanceResourceTiming.h"
 #include "PerformanceTiming.h"
 #include "PerformanceUserTiming.h"
 #include "ResourceResponse.h"
+#include "RuntimeEnabledFeatures.h"
 #include "ScriptExecutionContext.h"
 #include <wtf/IsoMallocInlines.h>
 
@@ -55,19 +60,16 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(Performance);
 
 Performance::Performance(ScriptExecutionContext* context, MonotonicTime timeOrigin)
     : ContextDestructionObserver(context)
-    , m_resourceTimingBufferFullTimer(*this, &Performance::resourceTimingBufferFullTimerFired)
+    , m_resourceTimingBufferFullTimer(*this, &Performance::resourceTimingBufferFullTimerFired) // FIXME: Migrate this to the event loop as well. https://bugs.webkit.org/show_bug.cgi?id=229044
     , m_timeOrigin(timeOrigin)
-    , m_performanceTimelineTaskQueue(context)
 {
     ASSERT(m_timeOrigin);
-    ASSERT(context || m_performanceTimelineTaskQueue.isClosed());
 }
 
 Performance::~Performance() = default;
 
 void Performance::contextDestroyed()
 {
-    m_performanceTimelineTaskQueue.close();
     m_resourceTimingBufferFullTimer.stop();
     ContextDestructionObserver::contextDestroyed();
 }
@@ -75,6 +77,11 @@ void Performance::contextDestroyed()
 DOMHighResTimeStamp Performance::now() const
 {
     return nowInReducedResolutionSeconds().milliseconds();
+}
+
+DOMHighResTimeStamp Performance::timeOrigin() const
+{
+    return reduceTimeResolution(m_timeOrigin.approximateWallTime().secondsSinceEpoch()).milliseconds();
 }
 
 ReducedResolutionSeconds Performance::nowInReducedResolutionSeconds() const
@@ -122,6 +129,9 @@ Vector<RefPtr<PerformanceEntry>> Performance::getEntries() const
 {
     Vector<RefPtr<PerformanceEntry>> entries;
 
+    if (m_navigationTiming)
+        entries.append(m_navigationTiming);
+
     entries.appendVector(m_resourceTimingBuffer);
 
     if (m_userTiming) {
@@ -139,6 +149,9 @@ Vector<RefPtr<PerformanceEntry>> Performance::getEntries() const
 Vector<RefPtr<PerformanceEntry>> Performance::getEntriesByType(const String& entryType) const
 {
     Vector<RefPtr<PerformanceEntry>> entries;
+
+    if (m_navigationTiming && entryType == "navigation")
+        entries.append(m_navigationTiming);
 
     if (entryType == "resource")
         entries.appendVector(m_resourceTimingBuffer);
@@ -161,6 +174,9 @@ Vector<RefPtr<PerformanceEntry>> Performance::getEntriesByName(const String& nam
 {
     Vector<RefPtr<PerformanceEntry>> entries;
 
+    if (m_navigationTiming && (entryType.isNull() || entryType == "navigation") && name == m_navigationTiming->name())
+        entries.append(m_navigationTiming);
+
     if (entryType.isNull() || entryType == "resource") {
         for (auto& resource : m_resourceTimingBuffer) {
             if (resource->name() == name)
@@ -182,9 +198,15 @@ Vector<RefPtr<PerformanceEntry>> Performance::getEntriesByName(const String& nam
     return entries;
 }
 
-bool Performance::appendBufferedEntriesByType(const String& entryType, Vector<RefPtr<PerformanceEntry>>& entries) const
+void Performance::appendBufferedEntriesByType(const String& entryType, Vector<RefPtr<PerformanceEntry>>& entries, PerformanceObserver& observer) const
 {
-    auto oldEntriesSize = entries.size();
+    if (m_navigationTiming
+        && entryType == "navigation"
+        && !observer.hasNavigationTiming()) {
+        entries.append(m_navigationTiming);
+        observer.addedNavigationTiming();
+    }
+
     if (entryType == "resource")
         entries.appendVector(m_resourceTimingBuffer);
 
@@ -194,8 +216,6 @@ bool Performance::appendBufferedEntriesByType(const String& entryType, Vector<Re
         if (entryType.isNull() || entryType == "measure")
             entries.appendVector(m_userTiming->getMeasures());
     }
-
-    return entries.size() > oldEntriesSize;
 }
 
 void Performance::clearResourceTimings()
@@ -215,6 +235,13 @@ void Performance::reportFirstContentfulPaint()
     ASSERT(!m_firstContentfulPaint);
     m_firstContentfulPaint = PerformancePaintTiming::createFirstContentfulPaint(now());
     queueEntry(*m_firstContentfulPaint);
+}
+
+void Performance::addNavigationTiming(DocumentLoader& documentLoader, Document& document, CachedResource& resource, const DocumentLoadTiming& timing, const NetworkLoadMetrics& metrics)
+{
+    ASSERT(document.settings().performanceNavigationTimingAPIEnabled());
+    m_navigationTiming = PerformanceNavigationTiming::create(m_timeOrigin, resource, timing, metrics, document.eventTiming(), document.securityOrigin(), documentLoader.triggeringAction().type());
+    queueEntry(*m_navigationTiming);
 }
 
 void Performance::addResourceTiming(ResourceTiming&& resourceTiming)
@@ -299,45 +326,43 @@ void Performance::resourceTimingBufferFullTimerFired()
     m_waitingForBackupBufferToBeProcessed = false;
 }
 
-ExceptionOr<void> Performance::mark(const String& markName)
+ExceptionOr<Ref<PerformanceMark>> Performance::mark(JSC::JSGlobalObject& globalObject, const String& markName, std::optional<PerformanceMarkOptions>&& markOptions)
 {
     if (!m_userTiming)
-        m_userTiming = makeUnique<UserTiming>(*this);
+        m_userTiming = makeUnique<PerformanceUserTiming>(*this);
 
-    auto result = m_userTiming->mark(markName);
-    if (result.hasException())
-        return result.releaseException();
+    auto mark = m_userTiming->mark(globalObject, markName, WTFMove(markOptions));
+    if (mark.hasException())
+        return mark.releaseException();
 
-    queueEntry(result.releaseReturnValue());
-
-    return { };
+    queueEntry(mark.returnValue().get());
+    return mark.releaseReturnValue();
 }
 
 void Performance::clearMarks(const String& markName)
 {
     if (!m_userTiming)
-        m_userTiming = makeUnique<UserTiming>(*this);
+        m_userTiming = makeUnique<PerformanceUserTiming>(*this);
     m_userTiming->clearMarks(markName);
 }
 
-ExceptionOr<void> Performance::measure(const String& measureName, const String& startMark, const String& endMark)
+ExceptionOr<Ref<PerformanceMeasure>> Performance::measure(JSC::JSGlobalObject& globalObject, const String& measureName, std::optional<StartOrMeasureOptions>&& startOrMeasureOptions, const String& endMark)
 {
     if (!m_userTiming)
-        m_userTiming = makeUnique<UserTiming>(*this);
+        m_userTiming = makeUnique<PerformanceUserTiming>(*this);
 
-    auto result = m_userTiming->measure(measureName, startMark, endMark);
-    if (result.hasException())
-        return result.releaseException();
+    auto measure = m_userTiming->measure(globalObject, measureName, WTFMove(startOrMeasureOptions), endMark);
+    if (measure.hasException())
+        return measure.releaseException();
 
-    queueEntry(result.releaseReturnValue());
-
-    return { };
+    queueEntry(measure.returnValue().get());
+    return measure.releaseReturnValue();
 }
 
 void Performance::clearMeasures(const String& measureName)
 {
     if (!m_userTiming)
-        m_userTiming = makeUnique<UserTiming>(*this);
+        m_userTiming = makeUnique<PerformanceUserTiming>(*this);
     m_userTiming->clearMeasures(measureName);
 }
 
@@ -351,6 +376,13 @@ void Performance::removeAllObservers()
 void Performance::registerPerformanceObserver(PerformanceObserver& observer)
 {
     m_observers.add(&observer);
+
+    if (m_navigationTiming
+        && observer.typeFilter().contains(PerformanceEntry::Type::Navigation)
+        && !observer.hasNavigationTiming()) {
+        observer.queueEntry(*m_navigationTiming);
+        observer.addedNavigationTiming();
+    }
 }
 
 void Performance::unregisterPerformanceObserver(PerformanceObserver& observer)
@@ -358,11 +390,17 @@ void Performance::unregisterPerformanceObserver(PerformanceObserver& observer)
     m_observers.remove(&observer);
 }
 
+void Performance::scheduleNavigationObservationTaskIfNeeded()
+{
+    if (m_navigationTiming)
+        scheduleTaskIfNeeded();
+}
+
 void Performance::queueEntry(PerformanceEntry& entry)
 {
     bool shouldScheduleTask = false;
     for (auto& observer : m_observers) {
-        if (observer->typeFilter().contains(entry.type())) {
+        if (observer->typeFilter().contains(entry.performanceEntryType())) {
             observer->queueEntry(entry);
             shouldScheduleTask = true;
         }
@@ -371,10 +409,25 @@ void Performance::queueEntry(PerformanceEntry& entry)
     if (!shouldScheduleTask)
         return;
 
-    if (m_performanceTimelineTaskQueue.hasPendingTasks())
+    scheduleTaskIfNeeded();
+}
+
+void Performance::scheduleTaskIfNeeded()
+{
+    if (m_hasScheduledTimingBufferDeliveryTask)
         return;
 
-    m_performanceTimelineTaskQueue.enqueueTask([this] () {
+    auto* context = scriptExecutionContext();
+    if (!context)
+        return;
+
+    m_hasScheduledTimingBufferDeliveryTask = true;
+    context->eventLoop().queueTask(TaskSource::PerformanceTimeline, [protectedThis = makeRef(*this), this] {
+        auto* context = scriptExecutionContext();
+        if (!context)
+            return;
+
+        m_hasScheduledTimingBufferDeliveryTask = false;
         for (auto& observer : copyToVector(m_observers))
             observer->deliver();
     });

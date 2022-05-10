@@ -31,7 +31,7 @@
 #include "HTMLImageElement.h"
 #include "ImageLoader.h"
 #include "Logging.h"
-#include "RuntimeEnabledFeatures.h"
+#include "Settings.h"
 #include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
@@ -64,10 +64,18 @@ void HTMLPictureElement::sourcesChanged()
         element.selectImageSource(RelevantMutation::Yes);
 }
 
+void HTMLPictureElement::sourceDimensionAttributesChanged(const HTMLSourceElement& sourceElement)
+{
+    for (auto& element : childrenOfType<HTMLImageElement>(*this)) {
+        if (&sourceElement == element.sourceElement())
+            element.invalidateAttributeMapping();
+    }
+}
+
 #if USE(SYSTEM_PREVIEW)
 bool HTMLPictureElement::isSystemPreviewImage()
 {
-    if (!RuntimeEnabledFeatures::sharedFeatures().systemPreviewEnabled())
+    if (!document().settings().systemPreviewEnabled())
         return false;
 
     auto* parent = parentElement();

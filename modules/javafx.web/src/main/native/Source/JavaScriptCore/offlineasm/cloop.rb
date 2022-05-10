@@ -1,4 +1,4 @@
-# Copyright (C) 2012-2019 Apple Inc. All rights reserved.
+# Copyright (C) 2012-2020 Apple Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -333,6 +333,9 @@ class LabelReference
     end
     def cloopEmitLea(destination, type)
         $asm.putc "#{destination.clLValue(:voidPtr)} = CAST<void*>(&#{cLabel});"
+        if offset != 0
+            $asm.putc "#{destination.clLValue(:int8Ptr)} = #{destination.clValue(:int8Ptr)} + #{offset};"
+        end
     end
 end
 
@@ -344,7 +347,7 @@ end
 class Address
     def cloopEmitLea(destination, type)
         if destination == base
-            $asm.putc "#{destination.clLValue(:int8Ptr)} += #{offset.clValue(type)};"
+            $asm.putc "#{destination.clLValue(:int8Ptr)} = #{destination.clValue(:int8Ptr)} + #{offset.clValue(type)};"
         else
             $asm.putc "#{destination.clLValue(:int8Ptr)} = #{base.clValue(:int8Ptr)} + #{offset.clValue(type)};"
         end
@@ -739,6 +742,14 @@ class Instruction
             $asm.putc "#{operands[1].clLValue(:int64)} = #{operands[0].clValue(:int32)};"
         when "zxi2q"
             $asm.putc "#{operands[1].clLValue(:uint64)} = #{operands[0].clValue(:uint32)};"
+        when "sxb2i"
+            $asm.putc "#{operands[1].clLValue(:int32)} = #{operands[0].clValue(:int8)};"
+        when "sxh2i"
+            $asm.putc "#{operands[1].clLValue(:int32)} = #{operands[0].clValue(:int16)};"
+        when "sxb2q"
+            $asm.putc "#{operands[1].clLValue(:int64)} = #{operands[0].clValue(:int8)};"
+        when "sxh2q"
+            $asm.putc "#{operands[1].clLValue(:int64)} = #{operands[0].clValue(:int16)};"
         when "nop"
             $asm.putc "// nop"
         when "bbeq"
@@ -947,6 +958,8 @@ class Instruction
             cloopEmitCompareAndSet(operands, :int64, ">")
         when "cpgt"
             cloopEmitCompareAndSet(operands, :intptr, ">")
+        when "cdgt"
+            cloopEmitCompareAndSet(operands, :double, ">")
 
         when "cbgteq"
             cloopEmitCompareAndSet(operands, :int8, ">=")
@@ -956,6 +969,8 @@ class Instruction
             cloopEmitCompareAndSet(operands, :int64, ">=")
         when "cpgteq"
             cloopEmitCompareAndSet(operands, :intptr, ">=")
+        when "cdgteq"
+            cloopEmitCompareAndSet(operands, :double, ">=")
 
         when "cblt"
             cloopEmitCompareAndSet(operands, :int8, "<")
@@ -965,6 +980,8 @@ class Instruction
             cloopEmitCompareAndSet(operands, :int64, "<")
         when "cplt"
             cloopEmitCompareAndSet(operands, :intptr, "<")
+        when "cdlt"
+            cloopEmitCompareAndSet(operands, :double, "<")
 
         when "cblteq"
             cloopEmitCompareAndSet(operands, :int8, "<=")
@@ -974,6 +991,8 @@ class Instruction
             cloopEmitCompareAndSet(operands, :int64, "<=")
         when "cplteq"
             cloopEmitCompareAndSet(operands, :intptr, "<=")
+        when "cdlteq"
+            cloopEmitCompareAndSet(operands, :double, "<=")
 
         when "tbs"
             cloopEmitTestSet(operands, :int8, "< 0")

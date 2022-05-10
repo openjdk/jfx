@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,8 +26,6 @@
 #include "config.h"
 #include "JSIDBCursor.h"
 
-#if ENABLE(INDEXED_DATABASE)
-
 #include "IDBBindingUtilities.h"
 #include "JSDOMBinding.h"
 #include "JSIDBCursorWithValue.h"
@@ -50,7 +48,8 @@ JSC::JSValue JSIDBCursor::primaryKey(JSC::JSGlobalObject& lexicalGlobalObject) c
     });
 }
 
-void JSIDBCursor::visitAdditionalChildren(SlotVisitor& visitor)
+template<typename Visitor>
+void JSIDBCursor::visitAdditionalChildren(Visitor& visitor)
 {
     auto& cursor = wrapped();
     if (auto* request = cursor.request())
@@ -58,6 +57,8 @@ void JSIDBCursor::visitAdditionalChildren(SlotVisitor& visitor)
     cursor.keyWrapper().visit(visitor);
     cursor.primaryKeyWrapper().visit(visitor);
 }
+
+DEFINE_VISIT_ADDITIONAL_CHILDREN(JSIDBCursor);
 
 JSValue toJSNewlyCreated(JSC::JSGlobalObject*, JSDOMGlobalObject* globalObject, Ref<IDBCursor>&& cursor)
 {
@@ -72,5 +73,3 @@ JSValue toJS(JSC::JSGlobalObject* lexicalGlobalObject, JSDOMGlobalObject* global
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(INDEXED_DATABASE)

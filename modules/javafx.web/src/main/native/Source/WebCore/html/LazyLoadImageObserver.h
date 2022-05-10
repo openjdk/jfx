@@ -38,20 +38,12 @@ public:
     static void observe(Element&);
     static void unobserve(Element&, Document&);
 
-private:
-    friend class Document;
-
-    static std::unique_ptr<LazyLoadImageObserver> create()
-    {
-        return std::unique_ptr<LazyLoadImageObserver>(new LazyLoadImageObserver());
-    }
-    LazyLoadImageObserver() = default;
-
-    IntersectionObserver* intersectionObserver(Document&);
     bool isObserved(Element&) const;
 
-    // The intersection observer responsible for loading the image once it's near the viewport.
-    RefPtr<IntersectionObserver> m_lazyLoadIntersectionObserver;
+private:
+    IntersectionObserver* intersectionObserver(Document&);
+
+    RefPtr<IntersectionObserver> m_observer;
 };
 
 } // namespace

@@ -27,7 +27,9 @@
 
 #include <wtf/Forward.h>
 #include <wtf/Markable.h>
-#include <wtf/Optional.h>
+#include <wtf/OptionSet.h>
+#include <wtf/Ref.h>
+#include <wtf/RefPtr.h>
 #include <wtf/WeakPtr.h>
 #include <wtf/text/StringBuilder.h>
 
@@ -44,16 +46,14 @@ public:
         double value;
     };
 
-    enum Formatting {
+    enum class Formatting : uint8_t {
         SVGStyleRect                = 1 << 0, // "at (0,0) size 10x10"
         NumberRespectingIntegers    = 1 << 1,
         LayoutUnitsAsIntegers       = 1 << 2,
     };
 
-    using FormattingFlags = unsigned;
-
     enum class LineMode { SingleLine, MultipleLine };
-    TextStream(LineMode lineMode = LineMode::MultipleLine, FormattingFlags formattingFlags = 0)
+    TextStream(LineMode lineMode = LineMode::MultipleLine, OptionSet<Formatting> formattingFlags = { })
         : m_formattingFlags(formattingFlags)
         , m_multiLineMode(lineMode == LineMode::MultipleLine)
     {
@@ -72,18 +72,23 @@ public:
     WTF_EXPORT_PRIVATE TextStream& operator<<(double);
     WTF_EXPORT_PRIVATE TextStream& operator<<(const char*);
     WTF_EXPORT_PRIVATE TextStream& operator<<(const void*);
+    WTF_EXPORT_PRIVATE TextStream& operator<<(const AtomString&);
     WTF_EXPORT_PRIVATE TextStream& operator<<(const String&);
+    WTF_EXPORT_PRIVATE TextStream& operator<<(StringView);
     // Deprecated. Use the NumberRespectingIntegers FormattingFlag instead.
     WTF_EXPORT_PRIVATE TextStream& operator<<(const FormatNumberRespectingIntegers&);
 
+#if PLATFORM(COCOA)
+    WTF_EXPORT_PRIVATE TextStream& operator<<(id);
 #ifdef __OBJC__
-    WTF_EXPORT_PRIVATE TextStream& operator<<(id<NSObject>);
+    WTF_EXPORT_PRIVATE TextStream& operator<<(NSArray *);
+#endif
 #endif
 
-    FormattingFlags formattingFlags() const { return m_formattingFlags; }
-    void setFormattingFlags(FormattingFlags flags) { m_formattingFlags = flags; }
+    OptionSet<Formatting> formattingFlags() const { return m_formattingFlags; }
+    void setFormattingFlags(OptionSet<Formatting> flags) { m_formattingFlags = flags; }
 
-    bool hasFormattingFlag(Formatting flag) const { return m_formattingFlags & flag; }
+    bool hasFormattingFlag(Formatting flag) const { return m_formattingFlags.contains(flag); }
 
     template<typename T>
     void dumpProperty(const String& name, const T& value)
@@ -166,8 +171,8 @@ public:
 
 private:
     StringBuilder m_text;
-    FormattingFlags m_formattingFlags { 0 };
     int m_indent { 0 };
+    OptionSet<Formatting> m_formattingFlags;
     bool m_multiLineMode { true };
 };
 
@@ -196,7 +201,7 @@ TextStream& operator<<(TextStream& ts, ValueOrNull<T> item)
 }
 
 template<typename Item>
-TextStream& operator<<(TextStream& ts, const Optional<Item>& item)
+TextStream& operator<<(TextStream& ts, const std::optional<Item>& item)
 {
     if (item)
         return ts << item.value();
@@ -213,8 +218,8 @@ TextStream& operator<<(TextStream& ts, const Markable<T, Traits>& item)
     return ts << "unset";
 }
 
-template<typename Item>
-TextStream& operator<<(TextStream& ts, const Vector<Item>& vector)
+template<typename ItemType, size_t inlineCapacity>
+TextStream& operator<<(TextStream& ts, const Vector<ItemType, inlineCapacity>& vector)
 {
     ts << "[";
 
@@ -235,6 +240,21 @@ TextStream& operator<<(TextStream& ts, const WeakPtr<T>& item)
         return ts << *item;
 
     return ts << "null";
+}
+
+template<typename T>
+TextStream& operator<<(TextStream& ts, const RefPtr<T>& item)
+{
+    if (item)
+        return ts << *item;
+
+    return ts << "null";
+}
+
+template<typename T>
+TextStream& operator<<(TextStream& ts, const Ref<T>& item)
+{
+    return ts << item.get();
 }
 
 template<typename KeyArg, typename MappedArg, typename HashArg, typename KeyTraitsArg, typename MappedTraitsArg>

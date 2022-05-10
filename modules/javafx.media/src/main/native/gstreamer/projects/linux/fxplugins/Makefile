@@ -21,7 +21,7 @@ CFLAGS = -fPIC                   \
          -fstack-protector       \
          -Werror=implicit-function-declaration \
          -Werror=trampolines     \
-         -msse2                  \
+         -Werror=deprecated-declarations \
          -fbuiltin               \
          -DHAVE_STDINT_H         \
          -DLINUX                 \
@@ -31,7 +31,13 @@ CFLAGS = -fPIC                   \
          -DGST_DISABLE_LOADSAVE  \
          -DGST_DISABLE_GST_DEBUG \
          -DGSTREAMER_LITE \
+         -DGLIB_VERSION_MIN_REQUIRED=GLIB_VERSION_2_48 \
+         -DGLIB_VERSION_MAX_ALLOWED=GLIB_VERSION_2_48 \
          -ffunction-sections -fdata-sections
+
+ifneq ($(ARCH), aarch64)
+    CFLAGS += -msse2
+endif
 
 ifeq ($(BUILD_TYPE), Release)
     CFLAGS += -Os

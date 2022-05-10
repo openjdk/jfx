@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,103 +26,94 @@
 #pragma once
 
 #include "CSSParserMode.h"
+#include "CSSPropertyNames.h"
 #include "StyleRuleType.h"
 #include "TextEncoding.h"
 #include <wtf/HashFunctions.h>
-#include <wtf/Optional.h>
+#include <wtf/Hasher.h>
 #include <wtf/URL.h>
-#include <wtf/URLHash.h>
-#include <wtf/text/StringHash.h>
 
 namespace WebCore {
 
 class Document;
 
-struct CSSParserContext {
-    WTF_MAKE_FAST_ALLOCATED;
-public:
+struct ResolvedURL;
 
-    CSSParserContext(CSSParserMode, const URL& baseURL = URL());
-    WEBCORE_EXPORT CSSParserContext(const Document&, const URL& baseURL = URL(), const String& charset = emptyString());
+struct CSSParserContext {
+    WTF_MAKE_STRUCT_FAST_ALLOCATED;
 
     URL baseURL;
     String charset;
     CSSParserMode mode { HTMLStandardMode };
-    Optional<StyleRuleType> enclosingRuleType;
+    std::optional<StyleRuleType> enclosingRuleType;
     bool isHTMLDocument { false };
-#if ENABLE(TEXT_AUTOSIZING)
-    bool textAutosizingEnabled { false };
-#endif
-#if ENABLE(OVERFLOW_SCROLLING_TOUCH)
-    bool legacyOverflowScrollingTouchEnabled { false };
-#endif
-    bool enforcesCSSMIMETypeInNoQuirksMode { true };
-    bool useLegacyBackgroundSizeShorthandBehavior { false };
-    bool springTimingFunctionEnabled { false };
-    bool constantPropertiesEnabled { false };
-    bool colorFilterEnabled { false };
-#if ENABLE(ATTACHMENT_ELEMENT)
-    bool attachmentEnabled { false };
-#endif
-    bool deferredCSSParserEnabled { false };
-    bool scrollBehaviorEnabled { false };
 
     // This is only needed to support getMatchedCSSRules.
     bool hasDocumentSecurityOrigin { false };
 
+    bool isContentOpaque { false };
     bool useSystemAppearance { false };
 
-    URL completeURL(const String& url) const;
+    // Settings.
+    bool aspectRatioEnabled { false };
+    bool colorContrastEnabled { false };
+    bool colorFilterEnabled { false };
+    bool colorMixEnabled { false };
+    bool constantPropertiesEnabled { false };
+    bool containmentEnabled { false };
+    bool counterStyleAtRulesEnabled { false };
+    bool counterStyleAtRuleImageSymbolsEnabled { false };
+    bool cssColor4 { false };
+    bool deferredCSSParserEnabled { false };
+    bool individualTransformPropertiesEnabled { false };
+#if ENABLE(OVERFLOW_SCROLLING_TOUCH)
+    bool legacyOverflowScrollingTouchEnabled { false };
+#endif
+    bool overscrollBehaviorEnabled { false };
+    bool relativeColorSyntaxEnabled { false };
+    bool scrollBehaviorEnabled { false };
+    bool springTimingFunctionEnabled { false };
+#if ENABLE(TEXT_AUTOSIZING)
+    bool textAutosizingEnabled { false };
+#endif
+#if ENABLE(CSS_TRANSFORM_STYLE_OPTIMIZED_3D)
+    bool transformStyleOptimized3DEnabled { false };
+#endif
+    bool useLegacyBackgroundSizeShorthandBehavior { false };
+    bool focusVisibleEnabled { false };
+    bool hasPseudoClassEnabled { false };
+    bool cascadeLayersEnabled { false };
 
-    bool isContentOpaque { false };
+    // RuntimeEnabledFeatures.
+#if ENABLE(ATTACHMENT_ELEMENT)
+    bool attachmentEnabled { false };
+#endif
+
+    bool overflowClipEnabled { false };
+
+    CSSParserContext(CSSParserMode, const URL& baseURL = URL());
+    WEBCORE_EXPORT CSSParserContext(const Document&, const URL& baseURL = URL(), const String& charset = emptyString());
+    bool isPropertyRuntimeDisabled(CSSPropertyID) const;
+    ResolvedURL completeURL(const String&) const;
 };
 
 bool operator==(const CSSParserContext&, const CSSParserContext&);
 inline bool operator!=(const CSSParserContext& a, const CSSParserContext& b) { return !(a == b); }
 
+void add(Hasher&, const CSSParserContext&);
+
 WEBCORE_EXPORT const CSSParserContext& strictCSSParserContext();
 
 struct CSSParserContextHash {
-    static unsigned hash(const CSSParserContext& key)
-    {
-        unsigned hash = 0;
-        if (!key.baseURL.isNull())
-            hash ^= WTF::URLHash::hash(key.baseURL);
-        if (!key.charset.isEmpty())
-            hash ^= StringHash::hash(key.charset);
-        unsigned bits = key.isHTMLDocument                  << 0
-#if ENABLE(TEXT_AUTOSIZING)
-            & key.textAutosizingEnabled                     << 1
-#endif
-#if ENABLE(OVERFLOW_SCROLLING_TOUCH)
-            & key.legacyOverflowScrollingTouchEnabled       << 2
-#endif
-            & key.enforcesCSSMIMETypeInNoQuirksMode         << 3
-            & key.useLegacyBackgroundSizeShorthandBehavior  << 4
-            & key.springTimingFunctionEnabled               << 5
-            & key.constantPropertiesEnabled                 << 6
-            & key.colorFilterEnabled                        << 7
-            & key.deferredCSSParserEnabled                  << 8
-            & key.hasDocumentSecurityOrigin                 << 9
-            & key.useSystemAppearance                       << 10
-#if ENABLE(ATTACHMENT_ELEMENT)
-            & key.attachmentEnabled                         << 11
-#endif
-            & key.scrollBehaviorEnabled                     << 12
-            & key.mode                                      << 13; // Keep this last.
-        hash ^= WTF::intHash(bits);
-        return hash;
-    }
-    static bool equal(const CSSParserContext& a, const CSSParserContext& b)
-    {
-        return a == b;
-    }
+    static unsigned hash(const CSSParserContext& context) { return computeHash(context); }
+    static bool equal(const CSSParserContext& a, const CSSParserContext& b) { return a == b; }
     static const bool safeToCompareToEmptyOrDeleted = false;
 };
 
 } // namespace WebCore
 
 namespace WTF {
+
 template<> struct HashTraits<WebCore::CSSParserContext> : GenericHashTraits<WebCore::CSSParserContext> {
     static void constructDeletedValue(WebCore::CSSParserContext& slot) { new (NotNull, &slot.baseURL) URL(WTF::HashTableDeletedValue); }
     static bool isDeletedValue(const WebCore::CSSParserContext& value) { return value.baseURL.isHashTableDeletedValue(); }

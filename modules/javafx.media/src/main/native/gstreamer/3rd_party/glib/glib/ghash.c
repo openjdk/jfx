@@ -68,13 +68,14 @@
  *     given a key the value can be found quickly
  *
  * A #GHashTable provides associations between keys and values which is
- * optimized so that given a key, the associated value can be found
- * very quickly.
+ * optimized so that given a key, the associated value can be found,
+ * inserted or removed in amortized O(1). All operations going through
+ * each element take O(n) time (list all keys/values, table resize, etc.).
  *
  * Note that neither keys nor values are copied when inserted into the
  * #GHashTable, so they must exist for the lifetime of the #GHashTable.
  * This means that the use of static strings is OK, but temporary
- * strings (i.e. those created in buffers and those returned by GTK+
+ * strings (i.e. those created in buffers and those returned by GTK
  * widgets) should be copied with g_strdup() before being inserted.
  *
  * If keys or values are dynamically allocated, you must be careful to
@@ -99,7 +100,9 @@
  *
  * To call a function for each key and value pair use
  * g_hash_table_foreach() or use an iterator to iterate over the
- * key/value pairs in the hash table, see #GHashTableIter.
+ * key/value pairs in the hash table, see #GHashTableIter. The iteration order
+ * of a hash table is not defined, and you must not rely on iterating over
+ * keys/values in the same order as they were inserted.
  *
  * To destroy a #GHashTable use g_hash_table_destroy().
  *
@@ -152,7 +155,7 @@
  * a more secure hash function when using a GHashTable with keys
  * that originate in untrusted data (such as HTTP requests).
  * Using g_str_hash() in that situation might make your application
- * vulerable to
+ * vulnerable to
  * [Algorithmic Complexity Attacks](https://lwn.net/Articles/474912/).
  *
  * The key to choosing a good hash is unpredictability.  Even
@@ -209,6 +212,9 @@
  * to iterate over the elements of a #GHashTable. GHashTableIter
  * structures are typically allocated on the stack and then initialized
  * with g_hash_table_iter_init().
+ *
+ * The iteration order of a #GHashTableIter over the keys/values in a hash
+ * table is not defined.
  */
 
 /**
@@ -463,13 +469,6 @@ g_hash_table_lookup_node (GHashTable    *hash_table,
   gboolean have_tombstone = FALSE;
   guint step = 0;
 
-  /* If this happens, then the application is probably doing too much work
-   * from a destroy notifier. The alternative would be to crash any second
-   * (as keys, etc. will be NULL).
-   * Applications need to either use g_hash_table_destroy, or ensure the hash
-   * table is empty prior to removing the last reference using g_hash_table_unref(). */
-  g_assert (!g_atomic_ref_count_compare (&hash_table->ref_count, 0));
-
   hash_value = hash_table->hash_func (key);
   if (G_UNLIKELY (!HASH_IS_REAL (hash_value)))
     hash_value = 2;
@@ -566,13 +565,12 @@ g_hash_table_remove_node (GHashTable   *hash_table,
 static void
 g_hash_table_setup_storage (GHashTable *hash_table)
 {
-  gboolean small;
+  gboolean small = FALSE;
 
   /* We want to use small arrays only if:
    *   - we are running on a system where that makes sense (64 bit); and
    *   - we are not running under valgrind.
    */
-  small = FALSE;
 
 #ifdef USE_SMALL_ARRAYS
   small = TRUE;
@@ -964,7 +962,7 @@ g_hash_table_ensure_keyval_fits (GHashTable *hash_table, gpointer key, gpointer 
       if (hash_table->have_big_keys)
         {
           if (key != value)
-            hash_table->values = g_memdup (hash_table->keys, sizeof (gpointer) * hash_table->size);
+            hash_table->values = g_memdup2 (hash_table->keys, sizeof (gpointer) * hash_table->size);
           /* Keys and values are both big now, so no need for further checks */
           return;
         }
@@ -972,7 +970,7 @@ g_hash_table_ensure_keyval_fits (GHashTable *hash_table, gpointer key, gpointer 
         {
           if (key != value)
             {
-              hash_table->values = g_memdup (hash_table->keys, sizeof (guint) * hash_table->size);
+              hash_table->values = g_memdup2 (hash_table->keys, sizeof (guint) * hash_table->size);
               is_a_set = FALSE;
             }
         }
@@ -1000,7 +998,7 @@ g_hash_table_ensure_keyval_fits (GHashTable *hash_table, gpointer key, gpointer 
 
   /* Just split if necessary */
   if (is_a_set && key != value)
-    hash_table->values = g_memdup (hash_table->keys, sizeof (gpointer) * hash_table->size);
+    hash_table->values = g_memdup2 (hash_table->keys, sizeof (gpointer) * hash_table->size);
 
 #endif
 }
@@ -1093,6 +1091,33 @@ g_hash_table_new_full (GHashFunc      hash_func,
 }
 
 /**
+ * g_hash_table_new_similar:
+ * @other_hash_table: (not nullable) (transfer none): Another #GHashTable
+ *
+ * Creates a new #GHashTable like g_hash_table_new_full() with a reference
+ * count of 1.
+ *
+ * It inherits the hash function, the key equal function, the key destroy function,
+ * as well as the value destroy function, from @other_hash_table.
+ *
+ * The returned hash table will be empty; it will not contain the keys
+ * or values from @other_hash_table.
+ *
+ * Returns: (transfer full) (not nullable): a new #GHashTable
+ * Since: 2.72
+ */
+GHashTable *
+g_hash_table_new_similar (GHashTable *other_hash_table)
+{
+  g_return_val_if_fail (other_hash_table, NULL);
+
+  return g_hash_table_new_full (other_hash_table->hash_func,
+                                other_hash_table->key_equal_func,
+                                other_hash_table->key_destroy_func,
+                                other_hash_table->value_destroy_func);
+}
+
+/**
  * g_hash_table_iter_init:
  * @iter: an uninitialized #GHashTableIter
  * @hash_table: a #GHashTable
@@ -1100,6 +1125,10 @@ g_hash_table_new_full (GHashFunc      hash_func,
  * Initializes a key/value pair iterator and associates it with
  * @hash_table. Modifying the hash table after calling this function
  * invalidates the returned iterator.
+ *
+ * The iteration order of a #GHashTableIter over the keys/values in a hash
+ * table is not defined.
+ *
  * |[<!-- language="C" -->
  * GHashTableIter iter;
  * gpointer key, value;
@@ -1663,11 +1692,15 @@ g_hash_table_replace (GHashTable *hash_table,
 /**
  * g_hash_table_add:
  * @hash_table: a #GHashTable
- * @key: a key to insert
+ * @key: (transfer full): a key to insert
  *
  * This is a convenience function for using a #GHashTable as a set.  It
  * is equivalent to calling g_hash_table_replace() with @key as both the
  * key and the value.
+ *
+ * In particular, this means that if @key already exists in the hash table, then
+ * the old copy of @key in the hash table is freed and @key replaces it in the
+ * table.
  *
  * When a hash table only ever contains keys that have themselves as the
  * corresponding value it is able to be stored more efficiently.  See
@@ -2031,6 +2064,9 @@ g_hash_table_foreach_steal (GHashTable *hash_table,
  * items). To remove all items matching a predicate, use
  * g_hash_table_foreach_remove().
  *
+ * The order in which g_hash_table_foreach() iterates over the keys/values in
+ * the hash table is not defined.
+ *
  * See g_hash_table_find() for performance caveats for linear
  * order searches in contrast to g_hash_table_lookup().
  */
@@ -2187,7 +2223,7 @@ g_hash_table_get_keys (GHashTable *hash_table)
 /**
  * g_hash_table_get_keys_as_array:
  * @hash_table: a #GHashTable
- * @length: (out): the length of the returned array
+ * @length: (out) (optional): the length of the returned array
  *
  * Retrieves every key inside @hash_table, as an array.
  *

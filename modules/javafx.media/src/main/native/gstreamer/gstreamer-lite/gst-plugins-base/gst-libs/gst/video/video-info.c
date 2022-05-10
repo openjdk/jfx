@@ -19,6 +19,12 @@
  * Boston, MA 02110-1301, USA.
  */
 
+/**
+ * SECTION:video-info
+ * @title: GstVideoInfo
+ * @short_description: Structures and enumerations to describe raw images
+ */
+
 #ifdef HAVE_CONFIG_H
 #  include "config.h"
 #endif
@@ -106,11 +112,12 @@ gst_video_info_new (void)
   return info;
 }
 
-static gboolean fill_planes (GstVideoInfo * info);
+static gboolean fill_planes (GstVideoInfo * info,
+    gsize plane_size[GST_VIDEO_MAX_PLANES]);
 
 /**
  * gst_video_info_init:
- * @info: a #GstVideoInfo
+ * @info: (out caller-allocates): a #GstVideoInfo
  *
  * Initialize @info with default values.
  */
@@ -143,15 +150,13 @@ gst_video_info_init (GstVideoInfo * info)
 #define DEFAULT_RGB     2
 #define DEFAULT_GRAY    3
 #define DEFAULT_UNKNOWN 4
-#define DEFAULT_YUV_UHD 5
 
 static const GstVideoColorimetry default_color[] = {
-  MAKE_COLORIMETRY (_16_235, BT601, BT709, SMPTE170M),
+  MAKE_COLORIMETRY (_16_235, BT601, BT601, SMPTE170M),
   MAKE_COLORIMETRY (_16_235, BT709, BT709, BT709),
   MAKE_COLORIMETRY (_0_255, RGB, SRGB, BT709),
   MAKE_COLORIMETRY (_0_255, BT601, UNKNOWN, UNKNOWN),
   MAKE_COLORIMETRY (_UNKNOWN, UNKNOWN, UNKNOWN, UNKNOWN),
-  MAKE_COLORIMETRY (_16_235, BT2020, BT2020_12, BT2020),
 };
 
 static void
@@ -160,10 +165,7 @@ set_default_colorimetry (GstVideoInfo * info)
   const GstVideoFormatInfo *finfo = info->finfo;
 
   if (GST_VIDEO_FORMAT_INFO_IS_YUV (finfo)) {
-    if (info->height >= 2160) {
-      info->chroma_site = GST_VIDEO_CHROMA_SITE_H_COSITED;
-      info->colorimetry = default_color[DEFAULT_YUV_UHD];
-    } else if (info->height > 576) {
+    if (info->height > 576) {
       info->chroma_site = GST_VIDEO_CHROMA_SITE_H_COSITED;
       info->colorimetry = default_color[DEFAULT_YUV_HD];
     } else {
@@ -247,7 +249,7 @@ gst_video_info_set_format (GstVideoInfo * info, GstVideoFormat format,
   if (!gst_video_info_set_format_common (info, format, width, height))
     return FALSE;
 
-  return fill_planes (info);
+  return fill_planes (info, NULL);
 }
 
 /**
@@ -275,7 +277,7 @@ gst_video_info_set_interlaced_format (GstVideoInfo * info,
     return FALSE;
 
   GST_VIDEO_INFO_INTERLACE_MODE (info) = mode;
-  return fill_planes (info);
+  return fill_planes (info, NULL);
 }
 
 static const gchar *interlace_mode[] = {
@@ -378,7 +380,7 @@ gst_video_field_order_from_string (const gchar * order)
 
 /**
  * gst_video_info_from_caps:
- * @info: a #GstVideoInfo
+ * @info: (out caller-allocates): #GstVideoInfo
  * @caps: a #GstCaps
  *
  * Parse @caps and update @info.
@@ -501,7 +503,7 @@ gst_video_info_from_caps (GstVideoInfo * info, const GstCaps * caps)
   }
 
   if ((s = gst_structure_get_string (structure, "chroma-site")))
-    info->chroma_site = gst_video_chroma_from_string (s);
+    info->chroma_site = gst_video_chroma_site_from_string (s);
   else
     info->chroma_site = GST_VIDEO_CHROMA_SITE_UNKNOWN;
 
@@ -526,7 +528,7 @@ gst_video_info_from_caps (GstVideoInfo * info, const GstCaps * caps)
     set_default_colorimetry (info);
   }
 
-  if (!fill_planes (info))
+  if (!fill_planes (info, NULL))
     return FALSE;
 
   return TRUE;
@@ -563,6 +565,28 @@ alternate_no_feature:
     GST_ERROR
         ("caps has 'interlace-mode=alternate' but doesn't have the Interlaced feature");
     return FALSE;
+  }
+}
+
+/**
+ * gst_video_info_new_from_caps:
+ * @caps: a #GstCaps
+ *
+ * Parse @caps to generate a #GstVideoInfo.
+ *
+ * Returns: A #GstVideoInfo, or %NULL if @caps couldn't be parsed
+ * Since: 1.20
+ */
+GstVideoInfo *
+gst_video_info_new_from_caps (const GstCaps * caps)
+{
+  GstVideoInfo *ret = gst_video_info_new ();
+
+  if (gst_video_info_from_caps (ret, caps)) {
+    return ret;
+  } else {
+    gst_video_info_free (ret);
+    return NULL;
   }
 }
 
@@ -634,7 +658,7 @@ gst_video_info_is_equal (const GstVideoInfo * info, const GstVideoInfo * other)
  * Returns: a new #GstCaps containing the info of @info.
  */
 GstCaps *
-gst_video_info_to_caps (GstVideoInfo * info)
+gst_video_info_to_caps (const GstVideoInfo * info)
 {
   GstCaps *caps;
   const gchar *format;
@@ -679,14 +703,14 @@ gst_video_info_to_caps (GstVideoInfo * info)
 
   if (GST_VIDEO_INFO_MULTIVIEW_MODE (info) != GST_VIDEO_MULTIVIEW_MODE_NONE) {
     const gchar *caps_str = NULL;
+    GstVideoMultiviewFlags multiview_flags =
+        GST_VIDEO_INFO_MULTIVIEW_FLAGS (info);
 
     /* If the half-aspect flag is set, applying it into the PAR of the
      * resulting caps now seems safe, and helps with automatic behaviour
      * in elements that aren't explicitly multiview aware */
-    if (GST_VIDEO_INFO_MULTIVIEW_FLAGS (info) &
-        GST_VIDEO_MULTIVIEW_FLAGS_HALF_ASPECT) {
-      GST_VIDEO_INFO_MULTIVIEW_FLAGS (info) &=
-          ~GST_VIDEO_MULTIVIEW_FLAGS_HALF_ASPECT;
+    if (multiview_flags & GST_VIDEO_MULTIVIEW_FLAGS_HALF_ASPECT) {
+      multiview_flags &= ~GST_VIDEO_MULTIVIEW_FLAGS_HALF_ASPECT;
       switch (GST_VIDEO_INFO_MULTIVIEW_MODE (info)) {
         case GST_VIDEO_MULTIVIEW_MODE_SIDE_BY_SIDE:
         case GST_VIDEO_MULTIVIEW_MODE_SIDE_BY_SIDE_QUINCUNX:
@@ -709,16 +733,25 @@ gst_video_info_to_caps (GstVideoInfo * info)
     if (caps_str != NULL) {
       gst_caps_set_simple (caps, "multiview-mode", G_TYPE_STRING,
           caps_str, "multiview-flags", GST_TYPE_VIDEO_MULTIVIEW_FLAGSET,
-          GST_VIDEO_INFO_MULTIVIEW_FLAGS (info), GST_FLAG_SET_MASK_EXACT, NULL);
+          multiview_flags, GST_FLAG_SET_MASK_EXACT, NULL);
     }
   }
 
   gst_caps_set_simple (caps, "pixel-aspect-ratio",
       GST_TYPE_FRACTION, par_n, par_d, NULL);
 
-  if (info->chroma_site != GST_VIDEO_CHROMA_SITE_UNKNOWN)
-    gst_caps_set_simple (caps, "chroma-site", G_TYPE_STRING,
-        gst_video_chroma_to_string (info->chroma_site), NULL);
+  if (info->chroma_site != GST_VIDEO_CHROMA_SITE_UNKNOWN) {
+    gchar *chroma_site = gst_video_chroma_site_to_string (info->chroma_site);
+
+    if (!chroma_site) {
+      GST_WARNING ("Couldn't convert chroma-site 0x%x to string",
+          info->chroma_site);
+    } else {
+      gst_caps_set_simple (caps,
+          "chroma-site", G_TYPE_STRING, chroma_site, NULL);
+      g_free (chroma_site);
+    }
+  }
 
   /* make sure we set the RGB matrix for RGB formats */
   colorimetry = info->colorimetry;
@@ -750,7 +783,7 @@ gst_video_info_to_caps (GstVideoInfo * info)
 }
 
 static gboolean
-fill_planes (GstVideoInfo * info)
+fill_planes (GstVideoInfo * info, gsize plane_size[GST_VIDEO_MAX_PLANES])
 {
   gsize width, height, cr_h;
   gint bpp = 0, i;
@@ -790,6 +823,7 @@ fill_planes (GstVideoInfo * info)
     case GST_VIDEO_FORMAT_Y410:
     case GST_VIDEO_FORMAT_VUYA:
     case GST_VIDEO_FORMAT_BGR10A2_LE:
+    case GST_VIDEO_FORMAT_RGB10A2_LE:
       info->stride[0] = width * 4;
       info->offset[0] = 0;
       info->size = info->stride[0] * height;
@@ -817,6 +851,8 @@ fill_planes (GstVideoInfo * info)
       break;
     case GST_VIDEO_FORMAT_v216:
     case GST_VIDEO_FORMAT_Y210:
+    case GST_VIDEO_FORMAT_Y212_BE:
+    case GST_VIDEO_FORMAT_Y212_LE:
       info->stride[0] = GST_ROUND_UP_8 (width * 4);
       info->offset[0] = 0;
       info->size = info->stride[0] * height;
@@ -851,7 +887,17 @@ fill_planes (GstVideoInfo * info)
       info->size = info->stride[0] * height;
       break;
     case GST_VIDEO_FORMAT_ARGB64:
+    case GST_VIDEO_FORMAT_ARGB64_BE:
+    case GST_VIDEO_FORMAT_ARGB64_LE:
+    case GST_VIDEO_FORMAT_RGBA64_BE:
+    case GST_VIDEO_FORMAT_RGBA64_LE:
+    case GST_VIDEO_FORMAT_BGRA64_BE:
+    case GST_VIDEO_FORMAT_BGRA64_LE:
+    case GST_VIDEO_FORMAT_ABGR64_BE:
+    case GST_VIDEO_FORMAT_ABGR64_LE:
     case GST_VIDEO_FORMAT_AYUV64:
+    case GST_VIDEO_FORMAT_Y412_BE:
+    case GST_VIDEO_FORMAT_Y412_LE:
       info->stride[0] = width * 8;
       info->offset[0] = 0;
       info->size = info->stride[0] * height;
@@ -891,6 +937,8 @@ fill_planes (GstVideoInfo * info)
       break;
     case GST_VIDEO_FORMAT_Y444:
     case GST_VIDEO_FORMAT_GBR:
+    case GST_VIDEO_FORMAT_RGBP:
+    case GST_VIDEO_FORMAT_BGRP:
       info->stride[0] = GST_ROUND_UP_4 (width);
       info->stride[1] = info->stride[0];
       info->stride[2] = info->stride[0];
@@ -920,6 +968,16 @@ fill_planes (GstVideoInfo * info)
       if (GST_VIDEO_INFO_IS_INTERLACED (info))
         cr_h = GST_ROUND_UP_2 (cr_h);
       info->size = info->offset[1] + info->stride[0] * cr_h;
+      break;
+    case GST_VIDEO_FORMAT_AV12:
+      info->stride[0] = GST_ROUND_UP_4 (width);
+      info->stride[1] = info->stride[0];
+      info->stride[2] = info->stride[0];
+      info->offset[0] = 0;
+      info->offset[1] = info->stride[0] * GST_ROUND_UP_2 (height);
+      info->offset[2] =
+          info->offset[1] + (info->stride[1] * GST_ROUND_UP_2 (height) / 2);
+      info->size = info->offset[2] + info->stride[2] * GST_ROUND_UP_2 (height);
       break;
     case GST_VIDEO_FORMAT_NV16:
     case GST_VIDEO_FORMAT_NV61:
@@ -999,6 +1057,8 @@ fill_planes (GstVideoInfo * info)
     case GST_VIDEO_FORMAT_GBR_10BE:
     case GST_VIDEO_FORMAT_GBR_12LE:
     case GST_VIDEO_FORMAT_GBR_12BE:
+    case GST_VIDEO_FORMAT_Y444_16LE:
+    case GST_VIDEO_FORMAT_Y444_16BE:
       info->stride[0] = GST_ROUND_UP_4 (width * 2);
       info->stride[1] = info->stride[0];
       info->stride[2] = info->stride[0];
@@ -1031,8 +1091,27 @@ fill_planes (GstVideoInfo * info)
       info->offset[0] = 0;
       info->offset[1] = GST_ROUND_UP_128 (width) * GST_ROUND_UP_32 (height);
       info->size = info->offset[1] +
-          GST_ROUND_UP_128 (width) * GST_ROUND_UP_64 (height) / 2;
+          GST_ROUND_UP_128 (width) * (GST_ROUND_UP_64 (height) / 2);
       break;
+    case GST_VIDEO_FORMAT_NV12_4L4:
+    case GST_VIDEO_FORMAT_NV12_32L32:
+    {
+      gint ws = GST_VIDEO_FORMAT_INFO_TILE_WS (info->finfo);
+      gint hs = GST_VIDEO_FORMAT_INFO_TILE_HS (info->finfo);
+      info->stride[0] =
+          GST_VIDEO_TILE_MAKE_STRIDE (GST_ROUND_UP_N (width, 1 << ws) >> ws,
+          GST_ROUND_UP_N (height, 1 << hs) >> hs);
+      info->stride[1] =
+          GST_VIDEO_TILE_MAKE_STRIDE (GST_ROUND_UP_N (width, 1 << ws) >> ws,
+          GST_ROUND_UP_N (height, 1 << (hs + 1)) >> (hs + 1));
+      info->offset[0] = 0;
+      info->offset[1] =
+          GST_ROUND_UP_N (width, 1 << ws) * GST_ROUND_UP_N (height, 1 << hs);
+      info->size = info->offset[1] +
+          GST_ROUND_UP_N (width, 1 << ws) *
+          (GST_ROUND_UP_N (height, 1 << (hs + 1)) / 2);
+      break;
+    }
     case GST_VIDEO_FORMAT_A420_10LE:
     case GST_VIDEO_FORMAT_A420_10BE:
       info->stride[0] = GST_ROUND_UP_4 (width * 2);
@@ -1076,6 +1155,10 @@ fill_planes (GstVideoInfo * info)
       break;
     case GST_VIDEO_FORMAT_P010_10LE:
     case GST_VIDEO_FORMAT_P010_10BE:
+    case GST_VIDEO_FORMAT_P016_LE:
+    case GST_VIDEO_FORMAT_P016_BE:
+    case GST_VIDEO_FORMAT_P012_LE:
+    case GST_VIDEO_FORMAT_P012_BE:
       info->stride[0] = GST_ROUND_UP_4 (width * 2);
       info->stride[1] = info->stride[0];
       info->offset[0] = 0;
@@ -1124,6 +1207,25 @@ fill_planes (GstVideoInfo * info)
       return FALSE;
       break;
   }
+
+  if (plane_size) {
+    for (i = 0; i < GST_VIDEO_MAX_PLANES; i++) {
+      if (i < GST_VIDEO_INFO_N_PLANES (info)) {
+        gint comp[GST_VIDEO_MAX_COMPONENTS];
+        guint plane_height;
+
+        /* Convert plane index to component index */
+        gst_video_format_info_component (info->finfo, i, comp);
+        plane_height =
+            GST_VIDEO_FORMAT_INFO_SCALE_HEIGHT (info->finfo, comp[0],
+            GST_VIDEO_INFO_FIELD_HEIGHT (info));
+        plane_size[i] = plane_height * GST_VIDEO_INFO_PLANE_STRIDE (info, i);
+      } else {
+        plane_size[i] = 0;
+      }
+    }
+  }
+
   return TRUE;
 }
 
@@ -1143,7 +1245,7 @@ fill_planes (GstVideoInfo * info)
  * Returns: TRUE if the conversion was successful.
  */
 gboolean
-gst_video_info_convert (GstVideoInfo * info,
+gst_video_info_convert (const GstVideoInfo * info,
     GstFormat src_format, gint64 src_value,
     GstFormat dest_format, gint64 * dest_value)
 {
@@ -1254,21 +1356,29 @@ done:
 }
 
 /**
- * gst_video_info_align:
+ * gst_video_info_align_full:
  * @info: a #GstVideoInfo
  * @align: alignment parameters
- *
- * Adjust the offset and stride fields in @info so that the padding and
- * stride alignment in @align is respected.
+ * @plane_size: (out) (allow-none): array used to store the plane sizes
  *
  * Extra padding will be added to the right side when stride alignment padding
  * is required and @align will be updated with the new padding values.
  *
+ * This variant of gst_video_info_align() provides the updated size, in bytes,
+ * of each video plane after the alignment, including all horizontal and vertical
+ * paddings.
+ *
+ * In case of GST_VIDEO_INTERLACE_MODE_ALTERNATE info, the returned sizes are the
+ * ones used to hold a single field, not the full frame.
+ *
  * Returns: %FALSE if alignment could not be applied, e.g. because the
- *   size of a frame can't be represented as a 32 bit integer (Since: 1.12)
+ *   size of a frame can't be represented as a 32 bit integer
+ *
+ * Since: 1.18
  */
 gboolean
-gst_video_info_align (GstVideoInfo * info, GstVideoAlignment * align)
+gst_video_info_align_full (GstVideoInfo * info, GstVideoAlignment * align,
+    gsize plane_size[GST_VIDEO_MAX_PLANES])
 {
   const GstVideoFormatInfo *vinfo = info->finfo;
   gint width, height;
@@ -1292,11 +1402,14 @@ gst_video_info_align (GstVideoInfo * info, GstVideoAlignment * align)
     GST_LOG ("left padding %u", align->padding_left);
     aligned = TRUE;
     for (i = 0; i < n_planes; i++) {
+      gint comp[GST_VIDEO_MAX_COMPONENTS];
       gint hedge;
 
-      /* this is the amout of pixels to add as left padding */
-      hedge = GST_VIDEO_FORMAT_INFO_SCALE_WIDTH (vinfo, i, align->padding_left);
-      hedge *= GST_VIDEO_FORMAT_INFO_PSTRIDE (vinfo, i);
+      /* this is the amount of pixels to add as left padding */
+      gst_video_format_info_component (vinfo, i, comp);
+      hedge = GST_VIDEO_FORMAT_INFO_SCALE_WIDTH (vinfo, comp[0],
+          align->padding_left);
+      hedge *= GST_VIDEO_FORMAT_INFO_PSTRIDE (vinfo, comp[0]);
 
       GST_LOG ("plane %d, padding %d, alignment %u", i, hedge,
           align->stride_align[i]);
@@ -1320,7 +1433,7 @@ gst_video_info_align (GstVideoInfo * info, GstVideoAlignment * align)
     info->width = padded_width;
     info->height = padded_height;
 
-    if (!fill_planes (info))
+    if (!fill_planes (info, plane_size))
       return FALSE;
 
     /* check alignment */
@@ -1344,26 +1457,41 @@ gst_video_info_align (GstVideoInfo * info, GstVideoAlignment * align)
   info->height = height;
 
   for (i = 0; i < n_planes; i++) {
-    gint vedge, hedge, comp;
+    gint comp[GST_VIDEO_MAX_COMPONENTS];
+    gint vedge, hedge;
 
-    /* Find the component for this plane, FIXME, we assume the plane number and
-     * component number is the same for now, for scaling the dimensions this is
-     * currently true for all formats but it might not be when adding new
-     * formats. We might need to add a plane subsamling in the format info to
-     * make this more generic or maybe use a plane -> component mapping. */
-    comp = i;
-
+    gst_video_format_info_component (info->finfo, i, comp);
     hedge =
-        GST_VIDEO_FORMAT_INFO_SCALE_WIDTH (vinfo, comp, align->padding_left);
+        GST_VIDEO_FORMAT_INFO_SCALE_WIDTH (vinfo, comp[0], align->padding_left);
     vedge =
-        GST_VIDEO_FORMAT_INFO_SCALE_HEIGHT (vinfo, comp, align->padding_top);
+        GST_VIDEO_FORMAT_INFO_SCALE_HEIGHT (vinfo, comp[0], align->padding_top);
 
     GST_DEBUG ("plane %d: comp: %d, hedge %d vedge %d align %d stride %d", i,
-        comp, hedge, vedge, align->stride_align[i], info->stride[i]);
+        comp[0], hedge, vedge, align->stride_align[i], info->stride[i]);
 
     info->offset[i] += (vedge * info->stride[i]) +
-        (hedge * GST_VIDEO_FORMAT_INFO_PSTRIDE (vinfo, comp));
+        (hedge * GST_VIDEO_FORMAT_INFO_PSTRIDE (vinfo, comp[0]));
   }
 
   return TRUE;
+}
+
+/**
+ * gst_video_info_align:
+ * @info: a #GstVideoInfo
+ * @align: alignment parameters
+ *
+ * Adjust the offset and stride fields in @info so that the padding and
+ * stride alignment in @align is respected.
+ *
+ * Extra padding will be added to the right side when stride alignment padding
+ * is required and @align will be updated with the new padding values.
+ *
+ * Returns: %FALSE if alignment could not be applied, e.g. because the
+ *   size of a frame can't be represented as a 32 bit integer (Since: 1.12)
+ */
+gboolean
+gst_video_info_align (GstVideoInfo * info, GstVideoAlignment * align)
+{
+  return gst_video_info_align_full (info, align, NULL);
 }

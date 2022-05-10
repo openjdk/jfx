@@ -72,7 +72,7 @@ private:
     }
 
 #ifndef NDEBUG
-    void getNodesInCommand(HashSet<Node*>&) override
+    void getNodesInCommand(HashSet<Ref<Node>>&) override
     {
     }
 #endif
@@ -84,7 +84,7 @@ private:
 #endif
 
 SpellingCorrectionCommand::SpellingCorrectionCommand(const SimpleRange& rangeToBeCorrected, const String& correction)
-    : CompositeEditCommand(rangeToBeCorrected.start.container->document(), EditAction::InsertReplacement)
+    : CompositeEditCommand(rangeToBeCorrected.start.document(), EditAction::InsertReplacement)
     , m_rangeToBeCorrected(rangeToBeCorrected)
     , m_selectionToBeCorrected(m_rangeToBeCorrected)
     , m_correction(correction)

@@ -42,15 +42,16 @@ public:
     // sets. If |child| is such a renderer, resolve it to the placeholder that lives at the original
     // location in the tree.
     RenderObject* resolveMovedChild(RenderFragmentedFlow& enclosingFragmentedFlow, RenderObject* beforeChild);
+    void restoreColumnSpannersForContainer(const RenderElement& container, RenderMultiColumnFlow&);
     void multiColumnDescendantInserted(RenderMultiColumnFlow&, RenderObject& newDescendant);
-    void multiColumnRelativeWillBeRemoved(RenderMultiColumnFlow&, RenderObject& relative);
+    void multiColumnRelativeWillBeRemoved(RenderMultiColumnFlow&, RenderObject& relative, RenderTreeBuilder::CanCollapseAnonymousBlock);
     static RenderObject* adjustBeforeChildForMultiColumnSpannerIfNeeded(RenderObject& beforeChild);
 
 private:
     void createFragmentedFlow(RenderBlockFlow&);
     void destroyFragmentedFlow(RenderBlockFlow&);
     RenderObject* processPossibleSpannerDescendant(RenderMultiColumnFlow&, RenderObject*& subtreeRoot, RenderObject& descendant);
-    void handleSpannerRemoval(RenderMultiColumnFlow&, RenderObject& spanner);
+    void handleSpannerRemoval(RenderMultiColumnFlow&, RenderObject& spanner, RenderTreeBuilder::CanCollapseAnonymousBlock);
 
     RenderTreeBuilder& m_builder;
 };

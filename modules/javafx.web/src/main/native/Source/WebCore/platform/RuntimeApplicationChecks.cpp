@@ -27,7 +27,6 @@
 #include "RuntimeApplicationChecks.h"
 
 #include <wtf/NeverDestroyed.h>
-#include <wtf/Optional.h>
 #include <wtf/ProcessID.h>
 #include <wtf/RunLoop.h>
 
@@ -37,9 +36,9 @@ namespace WebCore {
 static bool presentingApplicationPIDOverrideWasQueried;
 #endif
 
-static Optional<int>& presentingApplicationPIDOverride()
+static std::optional<int>& presentingApplicationPIDOverride()
 {
-    static NeverDestroyed<Optional<int>> pid;
+    static NeverDestroyed<std::optional<int>> pid;
 #if !ASSERT_MSG_DISABLED
     presentingApplicationPIDOverrideWasQueried = true;
 #endif
@@ -58,6 +57,30 @@ void setPresentingApplicationPID(int pid)
     ASSERT(RunLoop::isMain());
     ASSERT_WITH_MESSAGE(!presentingApplicationPIDOverrideWasQueried, "presentingApplicationPID() should not be called before setPresentingApplicationPID()");
     presentingApplicationPIDOverride() = pid;
+}
+
+static std::optional<AuxiliaryProcessType>& auxiliaryProcessType()
+{
+    static std::optional<AuxiliaryProcessType> auxiliaryProcessType;
+    return auxiliaryProcessType;
+}
+
+bool isInAuxiliaryProcess()
+{
+    return !!auxiliaryProcessType();
+}
+
+void setAuxiliaryProcessType(AuxiliaryProcessType type)
+{
+    auxiliaryProcessType() = type;
+}
+
+bool checkAuxiliaryProcessType(AuxiliaryProcessType type)
+{
+    auto currentType = auxiliaryProcessType();
+    if (!currentType)
+        return false;
+    return *currentType == type;
 }
 
 } // namespace WebCore

@@ -40,6 +40,14 @@ class StyleResolver;
 namespace Style {
 
 class Builder;
+class BuilderState;
+
+void maybeUpdateFontForLetterSpacing(BuilderState&, CSSValue&);
+
+enum class ForVisitedLink : bool {
+    No,
+    Yes
+};
 
 struct BuilderContext {
     Ref<const Document> document;
@@ -87,7 +95,7 @@ public:
     bool createFilterOperations(const CSSValue&, FilterOperations& outOperations);
 
     static bool isColorFromPrimitiveValueDerivedFromElement(const CSSPrimitiveValue&);
-    Color colorFromPrimitiveValue(const CSSPrimitiveValue&, bool forVisitedLink = false) const;
+    Color colorFromPrimitiveValue(const CSSPrimitiveValue&, ForVisitedLink = ForVisitedLink::No) const;
     // FIXME: Remove. 'currentcolor' should be resolved at use time. All call sites are broken with inheritance.
     Color colorFromPrimitiveValueWithResolvedCurrentColor(const CSSPrimitiveValue&) const;
 
@@ -98,6 +106,8 @@ public:
     CSSToStyleMap& styleMap() { return m_styleMap; }
 
 private:
+    // See the comment in maybeUpdateFontForLetterSpacing() about why this needs to be a friend.
+    friend void maybeUpdateFontForLetterSpacing(BuilderState&, CSSValue&);
     friend class Builder;
 
     void adjustStyleForInterCharacterRuby();

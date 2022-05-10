@@ -30,12 +30,16 @@
 #include "StdLibExtras.h"
 #include <inttypes.h>
 
+#if BENABLE(UNIFIED_AND_FREEZABLE_CONFIG_RECORD)
+
 namespace WebConfig {
 
 using Slot = uint64_t;
 extern "C" Slot g_config[];
 
 } // namespace WebConfig
+
+#endif // BENABLE(UNIFIED_AND_FREEZABLE_CONFIG_RECORD)
 
 namespace Gigacage {
 
@@ -50,6 +54,30 @@ struct Config {
     {
         RELEASE_BASSERT(kind < NumberOfKinds);
         basePtrs[kind] = ptr;
+    }
+
+    void* allocBasePtr(Kind kind) const
+    {
+        RELEASE_BASSERT(kind < NumberOfKinds);
+        return allocBasePtrs[kind];
+    }
+
+    void setAllocBasePtr(Kind kind, void* ptr)
+    {
+        RELEASE_BASSERT(kind < NumberOfKinds);
+        allocBasePtrs[kind] = ptr;
+    }
+
+    size_t allocSize(Kind kind) const
+    {
+        RELEASE_BASSERT(kind < NumberOfKinds);
+        return allocSizes[kind];
+    }
+
+    void setAllocSize(Kind kind, size_t size)
+    {
+        RELEASE_BASSERT(kind < NumberOfKinds);
+        allocSizes[kind] = size;
     }
 
     // All the fields in this struct should be chosen such that their
@@ -70,12 +98,16 @@ struct Config {
     void* start;
     size_t totalSize;
     void* basePtrs[NumberOfKinds];
+    void* allocBasePtrs[NumberOfKinds];
+    size_t allocSizes[NumberOfKinds];
 };
+
+#if BENABLE(UNIFIED_AND_FREEZABLE_CONFIG_RECORD)
 
 constexpr size_t startSlotOfGigacageConfig = 0;
 constexpr size_t startOffsetOfGigacageConfig = startSlotOfGigacageConfig * sizeof(WebConfig::Slot);
 
-constexpr size_t reservedSlotsForGigacageConfig = 6;
+constexpr size_t reservedSlotsForGigacageConfig = 10;
 constexpr size_t reservedBytesForGigacageConfig = reservedSlotsForGigacageConfig * sizeof(WebConfig::Slot);
 
 constexpr size_t alignmentOfGigacageConfig = std::alignment_of<Gigacage::Config>::value;
@@ -85,4 +117,14 @@ static_assert(bmalloc::roundUpToMultipleOf<alignmentOfGigacageConfig>(startOffse
 
 #define g_gigacageConfig (*bmalloc::bitwise_cast<Gigacage::Config*>(&WebConfig::g_config[Gigacage::startSlotOfGigacageConfig]))
 
+#else // not BENABLE(UNIFIED_AND_FREEZABLE_CONFIG_RECORD)
+
+extern "C" BEXPORT Config g_gigacageConfig;
+
+#endif // BENABLE(UNIFIED_AND_FREEZABLE_CONFIG_RECORD)
+
 } // namespace Gigacage
+
+#if !BENABLE(UNIFIED_AND_FREEZABLE_CONFIG_RECORD)
+using Gigacage::g_gigacageConfig;
+#endif

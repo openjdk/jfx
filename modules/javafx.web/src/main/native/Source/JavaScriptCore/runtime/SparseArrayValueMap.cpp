@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -69,7 +69,7 @@ SparseArrayValueMap::AddResult SparseArrayValueMap::add(JSObject* array, unsigne
     AddResult result;
     size_t increasedCapacity = 0;
     {
-        auto locker = holdLock(cellLock());
+        Locker locker { cellLock() };
         result = m_map.add(i, SparseArrayEntry());
         size_t capacity = m_map.capacity();
         if (capacity > m_reportedCapacity) {
@@ -84,13 +84,13 @@ SparseArrayValueMap::AddResult SparseArrayValueMap::add(JSObject* array, unsigne
 
 void SparseArrayValueMap::remove(iterator it)
 {
-    auto locker = holdLock(cellLock());
+    Locker locker { cellLock() };
     m_map.remove(it);
 }
 
 void SparseArrayValueMap::remove(unsigned i)
 {
-    auto locker = holdLock(cellLock());
+    Locker locker { cellLock() };
     m_map.remove(i);
 }
 
@@ -142,7 +142,7 @@ bool SparseArrayValueMap::putDirect(JSGlobalObject* globalObject, JSObject* arra
 
 JSValue SparseArrayValueMap::getConcurrently(unsigned i)
 {
-    auto locker = holdLock(cellLock());
+    Locker locker { cellLock() };
     auto iterator = m_map.find(i);
     if (iterator == m_map.end())
         return JSValue();
@@ -174,8 +174,8 @@ JSValue SparseArrayEntry::getConcurrently() const
     // By emitting store-store-fence and load-load-fence between value setting and attributes setting,
     // we can ensure that the value is what we want once the attributes get ReadOnly & DontDelete:
     // once attributes get this state, the value should not be changed.
-    unsigned attributes = m_attributes;
-    Dependency attributesDependency = Dependency::fence(attributes);
+    unsigned attributes;
+    Dependency attributesDependency = Dependency::loadAndFence(&m_attributes, attributes);
     if (attributes & PropertyAttribute::Accessor)
         return JSValue();
 
@@ -201,7 +201,7 @@ bool SparseArrayEntry::put(JSGlobalObject* globalObject, JSValue thisValue, Spar
         return true;
     }
 
-    RELEASE_AND_RETURN(scope, callSetter(globalObject, thisValue, Base::get(), value, shouldThrow ? ECMAMode::strict() : ECMAMode::sloppy()));
+    RELEASE_AND_RETURN(scope, jsCast<GetterSetter*>(Base::get())->callSetter(globalObject, thisValue, value, shouldThrow));
 }
 
 JSValue SparseArrayEntry::getNonSparseMode() const
@@ -210,18 +210,21 @@ JSValue SparseArrayEntry::getNonSparseMode() const
     return Base::get();
 }
 
-void SparseArrayValueMap::visitChildren(JSCell* cell, SlotVisitor& visitor)
+template<typename Visitor>
+void SparseArrayValueMap::visitChildrenImpl(JSCell* cell, Visitor& visitor)
 {
     SparseArrayValueMap* thisObject = jsCast<SparseArrayValueMap*>(cell);
     ASSERT_GC_OBJECT_INHERITS(thisObject, info());
     Base::visitChildren(cell, visitor);
     {
-        auto locker = holdLock(thisObject->cellLock());
+        Locker locker { thisObject->cellLock() };
         for (auto& entry : thisObject->m_map)
             visitor.append(entry.value.asValue());
     }
     visitor.reportExtraMemoryVisited(thisObject->m_reportedCapacity * sizeof(Map::KeyValuePairType));
 }
+
+DEFINE_VISIT_CHILDREN(SparseArrayValueMap);
 
 } // namespace JSC
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -47,7 +47,7 @@ bool doesGC(Graph& graph, Node* node)
     //     1. Allocates any objects.
     //     2. Resolves a rope string, which allocates a string.
     //     3. Produces a string (which allocates the string) except when we can prove that
-    //        the string will always be one of the pre-allcoated SmallStrings.
+    //        the string will always be one of the pre-allocated SmallStrings.
     //     4. Triggers a structure transition (which can allocate a new structure)
     //        unless it is a known transition between previously allocated structures
     //        such as between Array types.
@@ -70,7 +70,6 @@ bool doesGC(Graph& graph, Node* node)
     case SetLocal:
     case MovHint:
     case InitializeEntrypointArguments:
-    case ZombieHint:
     case ExitOK:
     case Phantom:
     case Upsilon:
@@ -118,7 +117,7 @@ bool doesGC(Graph& graph, Node* node)
     case CheckNotJSCast:
     case CheckArray:
     case CheckArrayOrEmpty:
-    case CheckNeutered:
+    case CheckDetached:
     case GetScope:
     case SkipScope:
     case GetGlobalObject:
@@ -144,18 +143,20 @@ bool doesGC(Graph& graph, Node* node)
     case OverridesHasInstance:
     case IsEmpty:
     case TypeOfIsUndefined:
+    case TypeOfIsObject:
+    case TypeOfIsFunction:
     case IsUndefinedOrNull:
     case IsBoolean:
     case IsNumber:
     case IsBigInt:
     case NumberIsInteger:
     case IsObject:
-    case IsObjectOrNull:
-    case IsFunction:
+    case IsCallable:
     case IsConstructor:
     case IsCellWithType:
     case IsTypedArrayView:
     case TypeOf:
+    case ToBoolean:
     case LogicalNot:
     case Jump:
     case Branch:
@@ -164,7 +165,7 @@ bool doesGC(Graph& graph, Node* node)
     case SuperSamplerBegin:
     case SuperSamplerEnd:
     case CPUIntrinsic:
-    case NormalizeMapKey:
+    case NormalizeMapKey: // HeapBigInt => BigInt32 conversion does not involve GC.
     case GetMapBucketHead:
     case GetMapBucketNext:
     case LoadKeyFromMapBucket:
@@ -182,6 +183,7 @@ bool doesGC(Graph& graph, Node* node)
     case FencedStoreBarrier:
     case InvalidationPoint:
     case NotifyWrite:
+    case AssertInBounds:
     case CheckInBounds:
     case ConstantStoragePointer:
     case Check:
@@ -203,7 +205,6 @@ bool doesGC(Graph& graph, Node* node)
     case PutStructure:
     case GetByOffset:
     case GetGetterSetterByOffset:
-    case GetEnumerableLength:
     case FiatInt52:
     case BooleanToNumber:
     case CheckBadValue:
@@ -246,14 +247,17 @@ bool doesGC(Graph& graph, Node* node)
     case MatchStructure:
     case FilterCallLinkStatus:
     case FilterGetByStatus:
-    case FilterPutByIdStatus:
-    case FilterInByIdStatus:
+    case FilterPutByStatus:
+    case FilterInByStatus:
     case FilterDeleteByStatus:
+    case FilterCheckPrivateBrandStatus:
+    case FilterSetPrivateBrandStatus:
     case DateGetInt32OrNaN:
     case DateGetTime:
     case DataViewGetInt:
     case DataViewGetFloat:
     case DataViewSet:
+    case PutByOffset:
         return false;
 
 #if ASSERT_ENABLED
@@ -285,23 +289,21 @@ bool doesGC(Graph& graph, Node* node)
     case DirectTailCall:
     case DirectTailCallInlinedCaller:
     case ForceOSRExit:
+    case FunctionToString:
     case GetById:
     case GetByIdDirect:
     case GetByIdDirectFlush:
     case GetByIdFlush:
     case GetByIdWithThis:
     case GetByValWithThis:
-    case GetDirectPname:
     case GetDynamicVar:
     case GetMapBucket:
-    case HasGenericProperty:
     case HasIndexedProperty:
     case HasOwnProperty:
-    case HasStructureProperty:
-    case HasOwnStructureProperty:
-    case InStructureProperty:
     case InById:
     case InByVal:
+    case HasPrivateName:
+    case HasPrivateBrand:
     case InstanceOf:
     case InstanceOfCustom:
     case VarargsLength:
@@ -313,7 +315,6 @@ bool doesGC(Graph& graph, Node* node)
     case PutByIdDirect:
     case PutByIdFlush:
     case PutByIdWithThis:
-    case PutByOffset:
     case PutByValWithThis:
     case PutDynamicVar:
     case PutGetterById:
@@ -321,6 +322,12 @@ bool doesGC(Graph& graph, Node* node)
     case PutGetterSetterById:
     case PutSetterById:
     case PutSetterByVal:
+    case PutPrivateName:
+    case PutPrivateNameById:
+    case GetPrivateName:
+    case GetPrivateNameById:
+    case SetPrivateBrand:
+    case CheckPrivateBrand:
     case PutStack:
     case PutToArguments:
     case RegExpExec:
@@ -350,8 +357,10 @@ bool doesGC(Graph& graph, Node* node)
     case CreatePromise:
     case CreateGenerator:
     case CreateAsyncGenerator:
+    case ObjectAssign:
     case ObjectCreate:
     case ObjectKeys:
+    case ObjectGetOwnPropertyNames:
     case AllocatePropertyStorage:
     case ReallocatePropertyStorage:
     case Arrayify:
@@ -376,9 +385,10 @@ bool doesGC(Graph& graph, Node* node)
     case NewTypedArray:
     case ThrowStaticError:
     case GetPropertyEnumerator:
-    case GetEnumeratorStructurePname:
-    case GetEnumeratorGenericPname:
-    case ToIndexString:
+    case EnumeratorInByVal:
+    case EnumeratorHasOwnProperty:
+    case EnumeratorNextUpdatePropertyName:
+    case EnumeratorNextUpdateIndexAndMode:
     case MaterializeNewObject:
     case MaterializeNewInternalFieldObject:
     case MaterializeCreateActivation:
@@ -481,14 +491,20 @@ bool doesGC(Graph& graph, Node* node)
             || node->isBinaryUseKind(ObjectUse, UntypedUse) || node->isBinaryUseKind(UntypedUse, ObjectUse)
             || node->isBinaryUseKind(ObjectUse)
             || node->isBinaryUseKind(MiscUse, UntypedUse) || node->isBinaryUseKind(UntypedUse, MiscUse)
-            || node->isBinaryUseKind(StringIdentUse, NotStringVarUse) || node->isBinaryUseKind(NotStringVarUse, StringIdentUse))
+            || node->isBinaryUseKind(StringIdentUse, NotStringVarUse) || node->isBinaryUseKind(NotStringVarUse, StringIdentUse)
+            || node->isBinaryUseKind(NotDoubleUse, NeitherDoubleNorHeapBigIntNorStringUse) || node->isBinaryUseKind(NotDoubleUse, NeitherDoubleNorHeapBigIntNorStringUse))
             return false;
         return true;
 
     case GetIndexedPropertyStorage:
     case GetByVal:
+    case EnumeratorGetByVal:
         if (node->arrayMode().type() == Array::String)
             return true;
+        return false;
+
+    case EnumeratorNextExtractMode:
+    case EnumeratorNextExtractIndex:
         return false;
 
     case PutByValDirect:
@@ -516,6 +532,10 @@ bool doesGC(Graph& graph, Node* node)
         case Int32Use:
         case SymbolUse:
         case ObjectUse:
+#if USE(BIGINT32)
+        case BigInt32Use:
+#endif
+        case HeapBigIntUse:
             return false;
         default:
             // We might resolve a rope.

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -49,15 +49,12 @@ import com.sun.webkit.graphics.WCPoint;
 import com.sun.webkit.graphics.WCRectangle;
 
 public final class WebPageClientImpl implements WebPageClient<WebView> {
-    private static final boolean backBufferSupported;
+    @SuppressWarnings("removal")
+    private static final boolean backBufferSupported = Boolean.valueOf(
+        AccessController.doPrivileged((PrivilegedAction<String>) () -> System.getProperty(
+            "com.sun.webkit.pagebackbuffer", "true")));
     private static WebConsoleListener consoleListener = null;
     private final Accessor accessor;
-
-    static {
-        backBufferSupported = Boolean.valueOf(
-                AccessController.doPrivileged((PrivilegedAction<String>) () -> System.getProperty(
-                        "com.sun.webkit.pagebackbuffer", "true")));
-    }
 
     static void setConsoleListener(WebConsoleListener consoleListener) {
         WebPageClientImpl.consoleListener = consoleListener;

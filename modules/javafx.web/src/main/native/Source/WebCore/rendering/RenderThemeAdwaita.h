@@ -34,12 +34,10 @@ public:
     virtual ~RenderThemeAdwaita() = default;
 
 private:
-    bool canPaint(const PaintInfo&) const final { return true; }
-
     String extraDefaultStyleSheet() final;
 #if ENABLE(VIDEO)
     String extraMediaControlsStyleSheet() final;
-    String mediaControlsScript() final;
+    Vector<String, 2> mediaControlsScripts() final;
 #endif
 
     bool supportsHover(const RenderStyle&) const final { return true; }
@@ -60,18 +58,23 @@ private:
     void platformColorsDidChange() final;
 
     bool paintTextField(const RenderObject&, const PaintInfo&, const FloatRect&) final;
+    void adjustTextFieldStyle(RenderStyle&, const Element*) const final;
+
     bool paintTextArea(const RenderObject&, const PaintInfo&, const FloatRect&) final;
+    void adjustTextAreaStyle(RenderStyle&, const Element*) const final;
+
     bool paintSearchField(const RenderObject&, const PaintInfo&, const IntRect&) final;
+    void adjustSearchFieldStyle(RenderStyle&, const Element*) const final;
 
     bool popsMenuBySpaceOrReturn() const final { return true; }
     void adjustMenuListStyle(RenderStyle&, const Element*) const override;
     void adjustMenuListButtonStyle(RenderStyle&, const Element*) const override;
-    LengthBox popupInternalPaddingBox(const RenderStyle&) const final;
+    LengthBox popupInternalPaddingBox(const RenderStyle&, const Settings&) const final;
     bool paintMenuList(const RenderObject&, const PaintInfo&, const FloatRect&) final;
-    bool paintMenuListButtonDecorations(const RenderBox&, const PaintInfo&, const FloatRect&) final;
+    void paintMenuListButtonDecorations(const RenderBox&, const PaintInfo&, const FloatRect&) final;
 
-    Seconds animationRepeatIntervalForProgressBar(RenderProgress&) const final;
-    Seconds animationDurationForProgressBar(RenderProgress&) const final;
+    Seconds animationRepeatIntervalForProgressBar(const RenderProgress&) const final;
+    Seconds animationDurationForProgressBar(const RenderProgress&) const final;
     IntRect progressBarRectForBounds(const RenderObject&, const IntRect&) const final;
     bool paintProgressBar(const RenderObject&, const PaintInfo&, const IntRect&) final;
 
@@ -84,10 +87,16 @@ private:
     bool paintMediaVolumeSliderTrack(const RenderObject&, const PaintInfo&, const IntRect&) final;
 #endif
 
+    Color systemColor(CSSValueID, OptionSet<StyleColor::Options>) const final;
+
 #if ENABLE(DATALIST_ELEMENT)
     IntSize sliderTickSize() const final;
     int sliderTickOffsetFromTrackCenter() const final;
     void adjustListButtonStyle(RenderStyle&, const Element*) const final;
+#endif
+
+#if PLATFORM(GTK)
+    Seconds caretBlinkInterval() const override;
 #endif
 };
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -39,6 +39,8 @@ import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
 import javafx.util.StringConverter;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -98,6 +100,12 @@ public class SliderTest {
         slider.setValue(5);
         slider.setSnapToTicks(true);
         assertEquals(6.25, slider.getValue(), 0);
+    }
+    @Test
+    public void testSliderHasHorizontalPseudoclassByDefault() {
+        Slider slider = new Slider();
+        assertTrue(slider.getPseudoClassStates().stream().anyMatch(c -> c.getPseudoClassName().equals("horizontal")));
+        assertFalse(slider.getPseudoClassStates().stream().anyMatch(c -> c.getPseudoClassName().equals("vertical")));
     }
 //    Slider slider;
 //

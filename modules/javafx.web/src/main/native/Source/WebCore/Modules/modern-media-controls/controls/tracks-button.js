@@ -35,4 +35,14 @@ class TracksButton extends Button
         });
     }
 
+    // Public
+
+    get contextMenuOptions()
+    {
+        return {
+            includeLanguages: true,
+            includeSubtitles: true,
+        };
+    }
+
 }

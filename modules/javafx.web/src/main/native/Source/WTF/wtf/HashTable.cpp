@@ -20,6 +20,8 @@
 #include "config.h"
 #include <wtf/HashTable.h>
 
+#include <wtf/NeverDestroyed.h>
+
 namespace WTF {
 
 DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(HashTable);
@@ -39,7 +41,7 @@ static Lock hashTableStatsMutex;
 
 void HashTableStats::recordCollisionAtCount(unsigned count)
 {
-    auto locker = holdLock(hashTableStatsMutex);
+    Locker locker { hashTableStatsMutex };
 
     if (count > maxCollisions)
         maxCollisions = count;
@@ -49,7 +51,7 @@ void HashTableStats::recordCollisionAtCount(unsigned count)
 
 void HashTableStats::dumpStats()
 {
-    auto locker = holdLock(hashTableStatsMutex);
+    Locker locker { hashTableStatsMutex };
 
     dataLogF("\nWTF::HashTable statistics\n\n");
     dataLogF("%u accesses\n", numAccesses.load());

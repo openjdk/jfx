@@ -42,7 +42,7 @@ struct ConditionalReturner;
 template<typename ReturnType>
 struct ConditionalReturner<ReturnType, true> {
     template<typename T>
-    static Optional<ReturnType> get(T&& value)
+    static std::optional<ReturnType> get(T&& value)
     {
         return ReturnType(std::forward<T>(value));
     }
@@ -51,9 +51,9 @@ struct ConditionalReturner<ReturnType, true> {
 template<typename ReturnType>
 struct ConditionalReturner<ReturnType, false> {
     template<typename T>
-    static Optional<ReturnType> get(T&&)
+    static std::optional<ReturnType> get(T&&)
     {
-        return WTF::nullopt;
+        return std::nullopt;
     }
 };
 
@@ -62,7 +62,7 @@ struct ConditionalConverter;
 
 template<typename ReturnType, typename T>
 struct ConditionalConverter<ReturnType, T, true> {
-    static Optional<ReturnType> convert(JSC::JSGlobalObject& lexicalGlobalObject, JSC::JSValue value)
+    static std::optional<ReturnType> convert(JSC::JSGlobalObject& lexicalGlobalObject, JSC::JSValue value)
     {
         return ReturnType(Converter<T>::convert(lexicalGlobalObject, value));
     }
@@ -70,9 +70,9 @@ struct ConditionalConverter<ReturnType, T, true> {
 
 template<typename ReturnType, typename T>
 struct ConditionalConverter<ReturnType, T, false> {
-    static Optional<ReturnType> convert(JSC::JSGlobalObject&, JSC::JSValue)
+    static std::optional<ReturnType> convert(JSC::JSGlobalObject&, JSC::JSValue)
     {
-        return WTF::nullopt;
+        return std::nullopt;
     }
 };
 
@@ -81,7 +81,7 @@ struct ConditionalSequenceConverter;
 
 template<typename ReturnType, typename T>
 struct ConditionalSequenceConverter<ReturnType, T, true> {
-    static Optional<ReturnType> convert(JSC::JSGlobalObject& lexicalGlobalObject, JSC::JSObject* object, JSC::JSValue method)
+    static std::optional<ReturnType> convert(JSC::JSGlobalObject& lexicalGlobalObject, JSC::JSObject* object, JSC::JSValue method)
     {
         return ReturnType(Converter<T>::convert(lexicalGlobalObject, object, method));
     }
@@ -89,9 +89,9 @@ struct ConditionalSequenceConverter<ReturnType, T, true> {
 
 template<typename ReturnType, typename T>
 struct ConditionalSequenceConverter<ReturnType, T, false> {
-    static Optional<ReturnType> convert(JSC::JSGlobalObject&, JSC::JSObject*, JSC::JSValue)
+    static std::optional<ReturnType> convert(JSC::JSGlobalObject&, JSC::JSObject*, JSC::JSValue)
     {
-        return WTF::nullopt;
+        return std::nullopt;
     }
 };
 
@@ -191,7 +191,7 @@ template<typename... T> struct Converter<IDLUnion<T...>> : DefaultConverter<IDLU
         //     2. If types includes object, then return the IDL value that is a reference to the object V.
         //         (FIXME: Add support for object and step 4.2)
         if (brigand::any<TypeList, IsIDLInterface<brigand::_1>>::value) {
-            Optional<ReturnType> returnValue;
+            std::optional<ReturnType> returnValue;
             brigand::for_each<InterfaceTypeList>([&](auto&& type) {
                 if (returnValue)
                     return;
@@ -225,9 +225,9 @@ template<typename... T> struct Converter<IDLUnion<T...>> : DefaultConverter<IDLU
         // 7. If Type(V) is Object and V has an [[ArrayBufferData]] internal slot, then:
         //     1. If types includes ArrayBuffer, then return the result of converting V to ArrayBuffer.
         //     2. If types includes object, then return the IDL value that is a reference to the object V.
-        constexpr bool hasArrayBufferType = brigand::any<TypeList, std::is_same<IDLArrayBuffer, brigand::_1>>::value;
+        constexpr bool hasArrayBufferType = brigand::any<TypeList, IsIDLArrayBuffer<brigand::_1>>::value;
         if (hasArrayBufferType || hasObjectType) {
-            auto arrayBuffer = JSC::JSArrayBuffer::toWrapped(vm, value);
+            auto arrayBuffer = (brigand::any<TypeList, IsIDLArrayBufferAllowShared<brigand::_1>>::value) ? JSC::JSArrayBuffer::toWrappedAllowShared(vm, value) : JSC::JSArrayBuffer::toWrapped(vm, value);
             if (arrayBuffer) {
                 if (hasArrayBufferType)
                     return ConditionalReturner<ReturnType, hasArrayBufferType>::get(WTFMove(arrayBuffer)).value();
@@ -235,9 +235,9 @@ template<typename... T> struct Converter<IDLUnion<T...>> : DefaultConverter<IDLU
             }
         }
 
-        constexpr bool hasArrayBufferViewType = brigand::any<TypeList, std::is_same<IDLArrayBufferView, brigand::_1>>::value;
+        constexpr bool hasArrayBufferViewType = brigand::any<TypeList, IsIDLArrayBufferView<brigand::_1>>::value;
         if (hasArrayBufferViewType || hasObjectType) {
-            auto arrayBufferView = JSC::JSArrayBufferView::toWrapped(vm, value);
+            auto arrayBufferView = (brigand::any<TypeList, IsIDLArrayBufferViewAllowShared<brigand::_1>>::value) ? JSC::JSArrayBufferView::toWrappedAllowShared(vm, value) : JSC::JSArrayBufferView::toWrapped(vm, value);
             if (arrayBufferView) {
                 if (hasArrayBufferViewType)
                     return ConditionalReturner<ReturnType, hasArrayBufferViewType>::get(WTFMove(arrayBufferView)).value();
@@ -264,7 +264,7 @@ template<typename... T> struct Converter<IDLUnion<T...>> : DefaultConverter<IDLU
         //         (FIXME: Add support for object and step 9.2)
         constexpr bool hasTypedArrayType = brigand::any<TypeList, IsIDLTypedArray<brigand::_1>>::value;
         if (hasTypedArrayType) {
-            Optional<ReturnType> returnValue;
+            std::optional<ReturnType> returnValue;
             brigand::for_each<TypedArrayTypeList>([&](auto&& type) {
                 if (returnValue)
                     return;
@@ -391,7 +391,7 @@ template<typename... T> struct JSConverter<IDLUnion<T...>> {
     {
         auto index = variant.index();
 
-        Optional<JSC::JSValue> returnValue;
+        std::optional<JSC::JSValue> returnValue;
         brigand::for_each<Sequence>([&](auto&& type) {
             using I = typename WTF::RemoveCVAndReference<decltype(type)>::type::type;
             if (I::value == index) {
@@ -402,6 +402,15 @@ template<typename... T> struct JSConverter<IDLUnion<T...>> {
 
         ASSERT(returnValue);
         return returnValue.value();
+    }
+};
+
+// BufferSource specialization. In WebKit, BufferSource is defined as IDLUnion<IDLArrayBufferView, IDLArrayBuffer> as a hack, and it is not compatible to
+// annotation described in WebIDL.
+template<> struct Converter<IDLAllowSharedAdaptor<IDLUnion<IDLArrayBufferView, IDLArrayBuffer>>> : DefaultConverter<IDLUnion<IDLArrayBufferView, IDLArrayBuffer>> {
+    static auto convert(JSC::JSGlobalObject& lexicalGlobalObject, JSC::JSValue value) -> decltype(auto)
+    {
+        return Converter<IDLUnion<IDLAllowSharedAdaptor<IDLArrayBufferView>, IDLAllowSharedAdaptor<IDLArrayBuffer>>>::convert(lexicalGlobalObject, value);
     }
 };
 

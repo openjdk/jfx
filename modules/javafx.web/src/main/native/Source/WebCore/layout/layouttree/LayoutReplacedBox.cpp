@@ -36,7 +36,7 @@ namespace Layout {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(ReplacedBox);
 
-ReplacedBox::ReplacedBox(Optional<ElementAttributes> elementAttributes, RenderStyle&& style)
+ReplacedBox::ReplacedBox(std::optional<ElementAttributes> elementAttributes, RenderStyle&& style)
     : Box(elementAttributes, WTFMove(style), Box::ReplacedBoxFlag)
 {
 }
@@ -86,7 +86,7 @@ LayoutUnit ReplacedBox::intrinsicRatio() const
 
 bool ReplacedBox::hasAspectRatio() const
 {
-    return isImage() || style().aspectRatioType() == AspectRatioType::FromIntrinsic;
+    return isImage();
 }
 
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -87,6 +87,11 @@ public abstract class WCRenderQueue extends Ref {
     }
 
     public synchronized void decode(WCGraphicsContext gc) {
+        if (gc == null || !gc.isValid()) {
+            log.fine("WCRenderQueue::decode : GC is " + (gc == null ? "null" : " invalid"));
+            return;
+        }
+
         for (BufferData bdata : buffers) {
             try {
                 GraphicsDecoder.decode(
@@ -99,13 +104,19 @@ public abstract class WCRenderQueue extends Ref {
     }
 
     public synchronized void decode() {
-        assert (gc != null);
+        if (gc == null || !gc.isValid()) {
+            log.fine("WCRenderQueue::decode : GC is " + (gc == null ? "null" : " invalid"));
+            return;
+        }
         decode(gc);
         gc.flush();
     }
 
     public synchronized void decode(int fontSmoothingType) {
-        assert (gc != null);
+        if (gc == null || !gc.isValid()) {
+            log.fine("WCRenderQueue::decode : GC is " + (gc == null ? "null" : " invalid"));
+            return;
+        }
         gc.setFontSmoothingType(fontSmoothingType);
         decode();
     }

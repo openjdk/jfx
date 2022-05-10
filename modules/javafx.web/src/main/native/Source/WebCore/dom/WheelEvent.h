@@ -40,7 +40,7 @@ public:
         DOM_DELTA_PAGE
     };
 
-    static Ref<WheelEvent> create(const PlatformWheelEvent&, RefPtr<WindowProxy>&&);
+    static Ref<WheelEvent> create(const PlatformWheelEvent&, RefPtr<WindowProxy>&&, IsCancelable = IsCancelable::Yes);
     static Ref<WheelEvent> createForBindings();
 
     struct Init : MouseEventInit {
@@ -56,7 +56,7 @@ public:
 
     WEBCORE_EXPORT void initWebKitWheelEvent(int rawDeltaX, int rawDeltaY, RefPtr<WindowProxy>&&, int screenX, int screenY, int pageX, int pageY, bool ctrlKey, bool altKey, bool shiftKey, bool metaKey);
 
-    const Optional<PlatformWheelEvent>& underlyingPlatformEvent() const { return m_underlyingPlatformEvent; }
+    const std::optional<PlatformWheelEvent>& underlyingPlatformEvent() const { return m_underlyingPlatformEvent; }
 
     double deltaX() const { return m_deltaX; } // Positive when scrolling right.
     double deltaY() const { return m_deltaY; } // Positive when scrolling down.
@@ -69,14 +69,14 @@ public:
     bool webkitDirectionInvertedFromDevice() const { return m_underlyingPlatformEvent && m_underlyingPlatformEvent.value().directionInvertedFromDevice(); }
 
 #if PLATFORM(MAC)
-    PlatformWheelEventPhase phase() const { return m_underlyingPlatformEvent ? m_underlyingPlatformEvent.value().phase() : PlatformWheelEventPhaseNone; }
-    PlatformWheelEventPhase momentumPhase() const { return m_underlyingPlatformEvent ? m_underlyingPlatformEvent.value().momentumPhase() : PlatformWheelEventPhaseNone; }
+    PlatformWheelEventPhase phase() const { return m_underlyingPlatformEvent ? m_underlyingPlatformEvent.value().phase() : PlatformWheelEventPhase::None; }
+    PlatformWheelEventPhase momentumPhase() const { return m_underlyingPlatformEvent ? m_underlyingPlatformEvent.value().momentumPhase() : PlatformWheelEventPhase::None; }
 #endif
 
 private:
     WheelEvent();
     WheelEvent(const AtomString&, const Init&);
-    WheelEvent(const PlatformWheelEvent&, RefPtr<WindowProxy>&&);
+    WheelEvent(const PlatformWheelEvent&, RefPtr<WindowProxy>&&, IsCancelable);
 
     EventInterface eventInterface() const final;
 
@@ -87,7 +87,7 @@ private:
     double m_deltaY { 0 };
     double m_deltaZ { 0 };
     unsigned m_deltaMode { DOM_DELTA_PIXEL };
-    Optional<PlatformWheelEvent> m_underlyingPlatformEvent;
+    std::optional<PlatformWheelEvent> m_underlyingPlatformEvent;
 };
 
 } // namespace WebCore

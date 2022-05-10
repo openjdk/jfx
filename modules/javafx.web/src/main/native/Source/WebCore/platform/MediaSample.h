@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -23,8 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef MediaSample_h
-#define MediaSample_h
+#pragma once
 
 #include "FloatSize.h"
 #include <JavaScriptCore/TypedArrays.h>
@@ -35,6 +34,8 @@
 
 typedef struct opaqueCMSampleBuffer *CMSampleBufferRef;
 typedef struct _GstSample GstSample;
+typedef struct OpaqueMTPluginByteSource *MTPluginByteSourceRef;
+typedef const struct opaqueCMFormatDescription *CMFormatDescriptionRef;
 
 namespace WebCore {
 
@@ -46,15 +47,17 @@ struct PlatformSample {
         MockSampleBoxType,
         CMSampleBufferType,
         GStreamerSampleType,
+        ByteRangeSampleType,
     } type;
     union {
         MockSampleBox* mockSampleBox;
         CMSampleBufferRef cmSampleBuffer;
         GstSample* gstSample;
+        std::pair<MTPluginByteSourceRef, CMFormatDescriptionRef> byteRangeSample;
     } sample;
 };
 
-class WEBCORE_EXPORT MediaSample : public ThreadSafeRefCounted<MediaSample> {
+class MediaSample : public ThreadSafeRefCounted<MediaSample> {
 public:
     virtual ~MediaSample() = default;
 
@@ -69,7 +72,11 @@ public:
     virtual void setTimestamps(const MediaTime&, const MediaTime&) = 0;
     virtual bool isDivisable() const = 0;
     enum DivideFlags { BeforePresentationTime, AfterPresentationTime };
-    virtual std::pair<RefPtr<MediaSample>, RefPtr<MediaSample>> divide(const MediaTime& presentationTime) = 0;
+    enum class UseEndTime : bool {
+        DoNotUse,
+        Use,
+    };
+    virtual std::pair<RefPtr<MediaSample>, RefPtr<MediaSample>> divide(const MediaTime& presentationTime, UseEndTime = UseEndTime::DoNotUse) = 0;
     virtual Ref<MediaSample> createNonDisplayingCopy() const = 0;
 
     virtual RefPtr<JSC::Uint8ClampedArray> getRGBAImageData() const { return nullptr; }
@@ -79,9 +86,16 @@ public:
         IsSync = 1 << 0,
         IsNonDisplaying = 1 << 1,
         HasAlpha = 1 << 2,
+        HasSyncInfo = 1 << 3,
     };
     virtual SampleFlags flags() const = 0;
     virtual PlatformSample platformSample() = 0;
+
+    struct ByteRange {
+        size_t byteOffset { 0 };
+        size_t byteLength { 0 };
+    };
+    virtual std::optional<ByteRange> byteRange() const = 0;
 
     enum class VideoRotation {
         None = 0,
@@ -96,6 +110,7 @@ public:
     bool isSync() const { return flags() & IsSync; }
     bool isNonDisplaying() const { return flags() & IsNonDisplaying; }
     bool hasAlpha() const { return flags() & HasAlpha; }
+    bool hasSyncInfo() const { return flags() & HasSyncInfo; }
 
     virtual void dump(PrintStream&) const = 0;
     String toJSONString() const
@@ -136,5 +151,3 @@ struct LogArgument<WebCore::MediaSample> {
 };
 
 } // namespace WTF
-
-#endif

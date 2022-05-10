@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,11 +29,15 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.locks.ReentrantLock;
 import com.sun.javafx.application.PlatformImpl;
+import com.sun.javafx.logging.PlatformLogger;
 import com.sun.javafx.tk.RenderJob;
 import com.sun.javafx.tk.Toolkit;
 import com.sun.webkit.Invoker;
 
 public final class PrismInvoker extends Invoker {
+
+    private static final PlatformLogger log =
+            PlatformLogger.getLogger(PrismInvoker.class.getName());
 
     public PrismInvoker() {
     }
@@ -87,10 +91,8 @@ public final class PrismInvoker extends Invoker {
             try {
                 // block until job is complete
                 f.get();
-            } catch (ExecutionException ex) {
-                throw new AssertionError(ex);
-            } catch (InterruptedException ex) {
-                // ignore; recovery is impossible
+            } catch (ExecutionException | InterruptedException ex) {
+                log.severe("RenderJob error", ex);
             }
         }
     }

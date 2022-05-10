@@ -233,6 +233,7 @@ static const char* fragmentTemplateCommon =
         uniform SamplerType s_samplerY;
         uniform SamplerType s_samplerU;
         uniform SamplerType s_samplerV;
+        uniform SamplerType s_samplerA;
         uniform sampler2D s_contentTexture;
         uniform SamplerExternalOESType s_externalOESTexture;
         uniform float u_opacity;
@@ -264,6 +265,8 @@ static const char* fragmentTemplateCommon =
 
         void applyTextureRGB(inout vec4 color, vec2 texCoord) { color = u_textureColorSpaceMatrix * SamplerFunction(s_sampler, texCoord); }
 
+        void applyPremultiply(inout vec4 color) { color = vec4(color.rgb * color.a, color.a); }
+
         vec3 yuvToRgb(float y, float u, float v)
         {
             // yuv is either bt601 or bt709 so the offset is the same
@@ -276,6 +279,15 @@ static const char* fragmentTemplateCommon =
             float u = SamplerFunction(s_samplerU, texCoord).r;
             float v = SamplerFunction(s_samplerV, texCoord).r;
             vec4 data = vec4(yuvToRgb(y, u, v), 1.0);
+            color = u_textureColorSpaceMatrix * data;
+        }
+        void applyTextureYUVA(inout vec4 color, vec2 texCoord)
+        {
+            float y = SamplerFunction(s_samplerY, texCoord).r;
+            float u = SamplerFunction(s_samplerU, texCoord).r;
+            float v = SamplerFunction(s_samplerV, texCoord).r;
+            float a = SamplerFunction(s_samplerA, texCoord).r;
+            vec4 data = vec4(yuvToRgb(y, u, v), a);
             color = u_textureColorSpaceMatrix * data;
         }
         void applyTextureNV12(inout vec4 color, vec2 texCoord)
@@ -337,10 +349,10 @@ static const char* fragmentTemplateCommon =
                 color.a);
         }
 
-        float invert(float n) { return (1.0 - n) * u_filterAmount + n * (1.0 - u_filterAmount); }
+        float invert(float n, float a) { return (a - n) * u_filterAmount + n * (1.0 - u_filterAmount); }
         void applyInvertFilter(inout vec4 color)
         {
-            color = vec4(invert(color.r), invert(color.g), invert(color.b), color.a);
+            color = vec4(invert(color.r, color.a), invert(color.g, color.a), invert(color.b, color.a), color.a);
         }
 
         void applyBrightnessFilter(inout vec4 color)
@@ -356,7 +368,7 @@ static const char* fragmentTemplateCommon =
 
         void applyOpacityFilter(inout vec4 color)
         {
-            color = vec4(color.r, color.g, color.b, color.a * u_filterAmount);
+            color *= u_filterAmount;
         }
 
         vec4 sampleColorAtRadius(float radius, vec2 texCoord)
@@ -426,17 +438,10 @@ static const char* fragmentTemplateCommon =
             return clamp(0.5 - d, 0.0, 1.0);
         }
 
-        float roundedRectCoverage(vec2 p, int index)
+        float roundedRectCoverage(vec2 p, vec4 bounds, vec2 topLeftRadii, vec2 topRightRadii, vec2 bottomLeftRadii, vec2 bottomRightRadii)
         {
-            vec4 bounds = vec4(u_roundedRect[index].xy, u_roundedRect[index].xy + u_roundedRect[index].zw);
-
             if (p.x < bounds.x || p.y < bounds.y || p.x >= bounds.z || p.y >= bounds.w)
                 return 0.0;
-
-            vec2 topLeftRadii = u_roundedRect[index + 1].xy;
-            vec2 topRightRadii = u_roundedRect[index + 1].zw;
-            vec2 bottomLeftRadii = u_roundedRect[index + 2].xy;
-            vec2 bottomRightRadii = u_roundedRect[index + 2].zw;
 
             vec2 topLeftCenter = bounds.xy + topLeftRadii;
             vec2 topRightCenter = bounds.zy + (topRightRadii * vec2(-1, 1));
@@ -466,13 +471,21 @@ static const char* fragmentTemplateCommon =
             // We can't use gl_fragCoord for the fragment position because thats the projected point
             // and the projection screws the Z component. We need the real 3D position that comes from
             // the nonProjectedPosition variable.
-            int nRects = u_roundedRectNumber;
-            if (nRects > ROUNDED_RECT_MAX_RECTS)
-                nRects = ROUNDED_RECT_MAX_RECTS;
+            //
+            // This implementation is not optimal, but it's done this way in order to overcome rpi3's
+            // proprietary video driver limitations (see https://bugs.webkit.org/show_bug.cgi?id=219739).
 
-            for (int rectIndex = 0; rectIndex < nRects; rectIndex++) {
+            for (int rectIndex = 0; rectIndex < ROUNDED_RECT_MAX_RECTS; rectIndex++) {
+                if (rectIndex >= u_roundedRectNumber)
+                    break;
+
                 vec4 fragCoord = u_roundedRectInverseTransformMatrix[rectIndex] * v_nonProjectedPosition;
-                color *= roundedRectCoverage(fragCoord.xy, rectIndex * 3);
+                vec4 bounds = vec4(u_roundedRect[rectIndex * 3].xy, u_roundedRect[rectIndex * 3].xy + u_roundedRect[rectIndex * 3].zw);
+                vec2 topLeftRadii = u_roundedRect[(rectIndex * 3) + 1].xy;
+                vec2 topRightRadii = u_roundedRect[(rectIndex * 3) + 1].zw;
+                vec2 bottomLeftRadii = u_roundedRect[(rectIndex * 3) + 2].xy;
+                vec2 bottomRightRadii = u_roundedRect[(rectIndex * 3) + 2].zw;
+                color *= roundedRectCoverage(fragCoord.xy, bounds, topLeftRadii, topRightRadii, bottomLeftRadii, bottomRightRadii);
             }
         }
 
@@ -483,9 +496,11 @@ static const char* fragmentTemplateCommon =
             applyManualRepeatIfNeeded(texCoord);
             applyTextureRGBIfNeeded(color, texCoord);
             applyTextureYUVIfNeeded(color, texCoord);
+            applyTextureYUVAIfNeeded(color, texCoord);
             applyTextureNV12IfNeeded(color, texCoord);
             applyTextureNV21IfNeeded(color, texCoord);
             applyTexturePackedYUVIfNeeded(color, texCoord);
+            applyPremultiplyIfNeeded(color);
             applySolidColorIfNeeded(color);
             applyAntialiasingIfNeeded(color);
             applyOpacityIfNeeded(color);
@@ -515,6 +530,7 @@ Ref<TextureMapperShaderProgram> TextureMapperShaderProgram::create(TextureMapper
     StringBuilder optionsApplierBuilder;
     SET_APPLIER_FROM_OPTIONS(TextureRGB);
     SET_APPLIER_FROM_OPTIONS(TextureYUV);
+    SET_APPLIER_FROM_OPTIONS(TextureYUVA);
     SET_APPLIER_FROM_OPTIONS(TextureNV12);
     SET_APPLIER_FROM_OPTIONS(TextureNV21);
     SET_APPLIER_FROM_OPTIONS(TexturePackedYUV);
@@ -536,6 +552,7 @@ Ref<TextureMapperShaderProgram> TextureMapperShaderProgram::create(TextureMapper
     SET_APPLIER_FROM_OPTIONS(ManualRepeat);
     SET_APPLIER_FROM_OPTIONS(TextureExternalOES);
     SET_APPLIER_FROM_OPTIONS(RoundedRectClip);
+    SET_APPLIER_FROM_OPTIONS(Premultiply);
 
     StringBuilder vertexShaderBuilder;
 

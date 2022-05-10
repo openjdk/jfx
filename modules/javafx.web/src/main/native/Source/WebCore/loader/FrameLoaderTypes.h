@@ -35,12 +35,12 @@
 
 namespace WebCore {
 
-enum FrameState {
-    FrameStateProvisional,
+enum class FrameState : uint8_t {
+    Provisional,
     // This state indicates we are ready to commit to a page,
     // which means the view will transition to use the new data source.
-    FrameStateCommittedPage,
-    FrameStateComplete
+    CommittedPage,
+    Complete
 };
 
 enum class PolicyAction : uint8_t {
@@ -69,6 +69,7 @@ enum class FrameLoadType : uint8_t {
     ReloadExpiredOnly
 };
 
+enum class IsMetaRefresh : bool { No, Yes };
 enum class WillContinueLoading : bool { No, Yes };
 
 class PolicyCheckIdentifier {
@@ -81,7 +82,7 @@ public:
     bool operator==(const PolicyCheckIdentifier& other) const { return m_process == other.m_process && m_policyCheck == other.m_policyCheck; }
 
     template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static Optional<PolicyCheckIdentifier> decode(Decoder&);
+    template<class Decoder> static std::optional<PolicyCheckIdentifier> decode(Decoder&);
 
 private:
     PolicyCheckIdentifier(ProcessIdentifier process, uint64_t policyCheck)
@@ -100,15 +101,15 @@ void PolicyCheckIdentifier::encode(Encoder& encoder) const
 }
 
 template<class Decoder>
-Optional<PolicyCheckIdentifier> PolicyCheckIdentifier::decode(Decoder& decoder)
+std::optional<PolicyCheckIdentifier> PolicyCheckIdentifier::decode(Decoder& decoder)
 {
     auto process = ProcessIdentifier::decode(decoder);
     if (!process)
-        return WTF::nullopt;
+        return std::nullopt;
 
     uint64_t policyCheck;
     if (!decoder.decode(policyCheck))
-        return WTF::nullopt;
+        return std::nullopt;
 
     return PolicyCheckIdentifier { *process, policyCheck };
 }
@@ -134,7 +135,7 @@ enum class NavigationType : uint8_t {
 
 enum class ShouldOpenExternalURLsPolicy : uint8_t {
     ShouldNotAllow,
-    ShouldAllowExternalSchemes,
+    ShouldAllowExternalSchemesButNotAppLinks,
     ShouldAllow,
 };
 
@@ -143,9 +144,9 @@ enum class InitiatedByMainFrame : uint8_t {
     Unknown,
 };
 
-enum ClearProvisionalItemPolicy {
-    ShouldClearProvisionalItem,
-    ShouldNotClearProvisionalItem
+enum class ClearProvisionalItem : bool {
+    Yes,
+    No
 };
 
 enum class StopLoadingPolicy {
@@ -160,10 +161,16 @@ enum class ObjectContentType : uint8_t {
     PlugIn,
 };
 
-enum UnloadEventPolicy {
-    UnloadEventPolicyNone,
-    UnloadEventPolicyUnloadOnly,
-    UnloadEventPolicyUnloadAndPageHide
+enum class UnloadEventPolicy {
+    None,
+    UnloadOnly,
+    UnloadAndPageHide
+};
+
+enum class BrowsingContextGroupSwitchDecision : uint8_t {
+    StayInGroup,
+    NewSharedGroup,
+    NewIsolatedGroup,
 };
 
 // Passed to FrameLoader::urlSelected() and ScriptController::executeIfJavaScriptURL()
@@ -193,7 +200,7 @@ struct SystemPreviewInfo {
     bool isPreview { false };
 
     template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static Optional<SystemPreviewInfo> decode(Decoder&);
+    template<class Decoder> static std::optional<SystemPreviewInfo> decode(Decoder&);
 };
 
 template<class Encoder>
@@ -203,22 +210,22 @@ void SystemPreviewInfo::encode(Encoder& encoder) const
 }
 
 template<class Decoder>
-Optional<SystemPreviewInfo> SystemPreviewInfo::decode(Decoder& decoder)
+std::optional<SystemPreviewInfo> SystemPreviewInfo::decode(Decoder& decoder)
 {
-    Optional<ElementContext> element;
+    std::optional<ElementContext> element;
     decoder >> element;
     if (!element)
-        return WTF::nullopt;
+        return std::nullopt;
 
-    Optional<IntRect> previewRect;
+    std::optional<IntRect> previewRect;
     decoder >> previewRect;
     if (!previewRect)
-        return WTF::nullopt;
+        return std::nullopt;
 
-    Optional<bool> isPreview;
+    std::optional<bool> isPreview;
     decoder >> isPreview;
     if (!isPreview)
-        return WTF::nullopt;
+        return std::nullopt;
 
     return { { WTFMove(*element), WTFMove(*previewRect), WTFMove(*isPreview) } };
 }
@@ -275,11 +282,20 @@ template<> struct EnumTraits<WebCore::PolicyAction> {
     >;
 };
 
+template<> struct EnumTraits<WebCore::BrowsingContextGroupSwitchDecision> {
+    using values = EnumValues<
+        WebCore::BrowsingContextGroupSwitchDecision,
+        WebCore::BrowsingContextGroupSwitchDecision::StayInGroup,
+        WebCore::BrowsingContextGroupSwitchDecision::NewSharedGroup,
+        WebCore::BrowsingContextGroupSwitchDecision::NewIsolatedGroup
+    >;
+};
+
 template<> struct EnumTraits<WebCore::ShouldOpenExternalURLsPolicy> {
     using values = EnumValues<
         WebCore::ShouldOpenExternalURLsPolicy,
         WebCore::ShouldOpenExternalURLsPolicy::ShouldNotAllow,
-        WebCore::ShouldOpenExternalURLsPolicy::ShouldAllowExternalSchemes,
+        WebCore::ShouldOpenExternalURLsPolicy::ShouldAllowExternalSchemesButNotAppLinks,
         WebCore::ShouldOpenExternalURLsPolicy::ShouldAllow
     >;
 };

@@ -29,7 +29,6 @@
 #include "GraphicsContext.h"
 #include "LengthBox.h"
 #include "LengthSize.h"
-#include <wtf/Optional.h>
 
 namespace WebCore {
 
@@ -38,9 +37,9 @@ int Theme::baselinePositionAdjustment(ControlPart) const
     return 0;
 }
 
-Optional<FontCascadeDescription> Theme::controlFont(ControlPart, const FontCascade&, float) const
+std::optional<FontCascadeDescription> Theme::controlFont(ControlPart, const FontCascade&, float) const
 {
-    return WTF::nullopt;
+    return std::nullopt;
 }
 
 LengthSize Theme::controlSize(ControlPart, const FontCascade&, const LengthSize& zoomedSize, float) const
@@ -48,9 +47,21 @@ LengthSize Theme::controlSize(ControlPart, const FontCascade&, const LengthSize&
     return zoomedSize;
 }
 
+LengthSize Theme::minimumControlSize(ControlPart part, const FontCascade& fontCascade, const LengthSize& zoomedSize, const LengthSize& nonShrinkableZoomedSize, float zoom) const
+{
+    auto minSize = minimumControlSize(part, fontCascade, zoomedSize, zoom);
+    if (part == ControlPart::RadioPart) {
+        if (zoomedSize.width.isIntrinsicOrAuto())
+            minSize.width = nonShrinkableZoomedSize.width;
+        if (zoomedSize.height.isIntrinsicOrAuto())
+            minSize.height = nonShrinkableZoomedSize.height;
+    }
+    return minSize;
+}
+
 LengthSize Theme::minimumControlSize(ControlPart, const FontCascade&, const LengthSize&, float) const
 {
-    return { { 0, Fixed }, { 0, Fixed } };
+    return { { 0, LengthType::Fixed }, { 0, LengthType::Fixed } };
 }
 
 bool Theme::controlRequiresPreWhiteSpace(ControlPart) const
@@ -70,6 +81,12 @@ bool Theme::userPrefersReducedMotion() const
 {
     return false;
 }
+
+bool Theme::userPrefersContrast() const
+{
+    return false;
+}
+
 
 LengthBox Theme::controlBorder(ControlPart part, const FontCascade&, const LengthBox& zoomedBox, float) const
 {

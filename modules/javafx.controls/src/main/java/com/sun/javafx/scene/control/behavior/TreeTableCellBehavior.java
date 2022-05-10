@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -88,7 +88,7 @@ public class TreeTableCellBehavior<S,T> extends TableCellBehaviorBase<TreeItem<S
 
     /** @{@inheritDoc} */
     @Override protected boolean isTableRowSelected() {
-        return getNode().getTreeTableRow().isSelected();
+        return getNode().getTableRow().isSelected();
     }
 
     /** @{@inheritDoc} */
@@ -111,7 +111,7 @@ public class TreeTableCellBehavior<S,T> extends TableCellBehaviorBase<TreeItem<S
     }
 
     @Override protected boolean handleDisclosureNode(double x, double y) {
-        final TreeItem<S> treeItem = getNode().getTreeTableRow().getTreeItem();
+        final TreeItem<S> treeItem = getNode().getTableRow().getTreeItem();
 
         final TreeTableView<S> treeTableView = getNode().getTreeTableView();
         final TreeTableColumn<S,T> column = getTableColumn();
@@ -119,7 +119,7 @@ public class TreeTableCellBehavior<S,T> extends TableCellBehaviorBase<TreeItem<S
                 treeTableView.getVisibleLeafColumn(0) : treeTableView.getTreeColumn();
 
         if (column == treeColumn) {
-            final Node disclosureNode = getNode().getTreeTableRow().getDisclosureNode();
+            final Node disclosureNode = getNode().getTableRow().getDisclosureNode();
           // fix JDK-8253597: check disclosure node for visibility along with existence
           if (disclosureNode != null && disclosureNode.isVisible()) {
                 double startX = 0;
@@ -142,7 +142,7 @@ public class TreeTableCellBehavior<S,T> extends TableCellBehaviorBase<TreeItem<S
     @Override
     protected void handleClicks(MouseButton button, int clickCount, boolean isAlreadySelected) {
         // handle editing, which only occurs with the primary mouse button
-        TreeItem<S> treeItem = getNode().getTreeTableRow().getTreeItem();
+        TreeItem<S> treeItem = getNode().getTableRow().getTreeItem();
         if (button == MouseButton.PRIMARY) {
             if (clickCount == 1 && isAlreadySelected) {
                 edit(getNode());

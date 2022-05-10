@@ -68,7 +68,7 @@ static bool resolveVariableFallback(CSSParserTokenRange range, Vector<CSSParserT
     if (range.atEnd())
         return false;
     ASSERT(range.peek().type() == CommaToken);
-    range.consume();
+    range.consumeIncludingWhitespace();
     return resolveTokenRange(range, result, builderState);
 }
 
@@ -102,14 +102,19 @@ static bool resolveVariableReference(CSSParserTokenRange range, CSSValueID funct
     }
 
     if (!property || property->isInvalid()) {
+        if (fallbackResult.size() > CSSVariableReferenceValue::maxSubstitutionTokens)
+            return false;
+
         if (fallbackReturn)
             result.appendVector(fallbackResult);
         return fallbackReturn;
     }
 
     ASSERT(property->isResolved());
-    result.appendVector(property->tokens());
+    if (property->tokens().size() > CSSVariableReferenceValue::maxSubstitutionTokens)
+        return false;
 
+    result.appendVector(property->tokens());
     return true;
 }
 

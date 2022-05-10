@@ -29,6 +29,7 @@
 #include "IteratorOperations.h"
 #include "JSCInlines.h"
 #include "JSWeakSet.h"
+#include "WeakMapImplInlines.h"
 #include "WeakSetPrototype.h"
 
 namespace JSC {
@@ -37,35 +38,32 @@ const ClassInfo WeakSetConstructor::s_info = { "Function", &Base::s_info, nullpt
 
 void WeakSetConstructor::finishCreation(VM& vm, WeakSetPrototype* prototype)
 {
-    Base::finishCreation(vm, "WeakSet"_s, NameAdditionMode::WithoutStructureTransition);
+    Base::finishCreation(vm, 0, "WeakSet"_s, PropertyAdditionMode::WithoutStructureTransition);
     putDirectWithoutTransition(vm, vm.propertyNames->prototype, prototype, PropertyAttribute::DontEnum | PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly);
-    putDirectWithoutTransition(vm, vm.propertyNames->length, jsNumber(0), PropertyAttribute::DontEnum | PropertyAttribute::ReadOnly);
 }
 
-static EncodedJSValue JSC_HOST_CALL callWeakSet(JSGlobalObject*, CallFrame*);
-static EncodedJSValue JSC_HOST_CALL constructWeakSet(JSGlobalObject*, CallFrame*);
+static JSC_DECLARE_HOST_FUNCTION(callWeakSet);
+static JSC_DECLARE_HOST_FUNCTION(constructWeakSet);
 
 WeakSetConstructor::WeakSetConstructor(VM& vm, Structure* structure)
     : Base(vm, structure, callWeakSet, constructWeakSet)
 {
 }
 
-static EncodedJSValue JSC_HOST_CALL callWeakSet(JSGlobalObject* globalObject, CallFrame*)
+JSC_DEFINE_HOST_FUNCTION(callWeakSet, (JSGlobalObject* globalObject, CallFrame*))
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
     return JSValue::encode(throwConstructorCannotBeCalledAsFunctionTypeError(globalObject, scope, "WeakSet"));
 }
 
-static EncodedJSValue JSC_HOST_CALL constructWeakSet(JSGlobalObject* globalObject, CallFrame* callFrame)
+JSC_DEFINE_HOST_FUNCTION(constructWeakSet, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     JSObject* newTarget = asObject(callFrame->newTarget());
-    Structure* weakSetStructure = newTarget == callFrame->jsCallee()
-        ? globalObject->weakSetStructure()
-        : InternalFunction::createSubclassStructure(globalObject, newTarget, getFunctionRealm(vm, newTarget)->weakSetStructure());
+    Structure* weakSetStructure = JSC_GET_DERIVED_STRUCTURE(vm, weakSetStructure, newTarget, callFrame->jsCallee());
     RETURN_IF_EXCEPTION(scope, { });
 
     JSWeakSet* weakSet = JSWeakSet::create(vm, weakSetStructure);
@@ -78,10 +76,20 @@ static EncodedJSValue JSC_HOST_CALL constructWeakSet(JSGlobalObject* globalObjec
 
     auto adderFunctionCallData = getCallData(vm, adderFunction);
     if (adderFunctionCallData.type == CallData::Type::None)
-        return JSValue::encode(throwTypeError(globalObject, scope));
+        return throwVMTypeError(globalObject, scope, "'add' property of a WeakSet should be callable."_s);
+
+    bool canPerformFastAdd = adderFunctionCallData.type == CallData::Type::Native && adderFunctionCallData.native.function == protoFuncWeakSetAdd;
 
     scope.release();
     forEachInIterable(globalObject, iterable, [&](VM&, JSGlobalObject* globalObject, JSValue nextValue) {
+        if (canPerformFastAdd) {
+            if (nextValue.isObject())
+                weakSet->add(vm, asObject(nextValue));
+            else
+                throwTypeError(asObject(adderFunction)->globalObject(vm), scope, WeakSetNonObjectValueError);
+            return;
+        }
+
         MarkedArgumentBuffer arguments;
         arguments.append(nextValue);
         ASSERT(!arguments.hasOverflowed());

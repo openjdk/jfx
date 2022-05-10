@@ -47,12 +47,21 @@
 #include "MediaStream.h"
 #include "MediaStreamTrack.h"
 #include "Page.h"
+#include "RTCAnswerOptions.h"
 #include "RTCConfiguration.h"
 #include "RTCController.h"
 #include "RTCDataChannel.h"
+#include "RTCDtlsTransport.h"
+#include "RTCDtlsTransportBackend.h"
 #include "RTCIceCandidate.h"
+#include "RTCIceCandidateInit.h"
+#include "RTCIceTransport.h"
+#include "RTCIceTransportBackend.h"
+#include "RTCOfferOptions.h"
+#include "RTCPeerConnectionIceErrorEvent.h"
 #include "RTCPeerConnectionIceEvent.h"
 #include "RTCSessionDescription.h"
+#include "RTCSessionDescriptionInit.h"
 #include "Settings.h"
 #include <wtf/CryptographicallyRandomNumber.h>
 #include <wtf/IsoMallocInlines.h>
@@ -66,15 +75,28 @@ using namespace PeerConnection;
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(RTCPeerConnection);
 
-Ref<RTCPeerConnection> RTCPeerConnection::create(ScriptExecutionContext& context)
+ExceptionOr<Ref<RTCPeerConnection>> RTCPeerConnection::create(Document& document, RTCConfiguration&& configuration)
 {
-    auto& document = downcast<Document>(context);
+    if (!document.frame())
+        return Exception { NotSupportedError };
+
     auto peerConnection = adoptRef(*new RTCPeerConnection(document));
     peerConnection->suspendIfNeeded();
+
+    if (!peerConnection->m_backend)
+        return Exception { NotSupportedError };
+
+    auto exception = peerConnection->initializeConfiguration(WTFMove(configuration));
+    if (exception.hasException())
+        return exception.releaseException();
+
     if (!peerConnection->isClosed()) {
         if (auto* page = document.page()) {
             peerConnection->registerToController(page->rtcController());
-            page->libWebRTCProvider().setEnableLogging(!page->sessionID().isEphemeral());
+#if !LOG_DISABLED || !RELEASE_LOG_DISABLED
+            if (!page->sessionID().isEphemeral())
+                page->libWebRTCProvider().setLoggingLevel(LogWebRTC.level);
+#endif
         }
     }
     return peerConnection;
@@ -107,17 +129,6 @@ RTCPeerConnection::~RTCPeerConnection()
     stop();
 }
 
-ExceptionOr<void> RTCPeerConnection::initializeWith(Document& document, RTCConfiguration&& configuration)
-{
-    if (!document.frame())
-        return Exception { NotSupportedError };
-
-    if (!m_backend)
-        return Exception { NotSupportedError };
-
-    return initializeConfiguration(WTFMove(configuration));
-}
-
 ExceptionOr<Ref<RTCRtpSender>> RTCPeerConnection::addTrack(Ref<MediaStreamTrack>&& track, const Vector<std::reference_wrapper<MediaStream>>& streams)
 {
     INFO_LOG(LOGIDENTIFIER);
@@ -125,7 +136,7 @@ ExceptionOr<Ref<RTCRtpSender>> RTCPeerConnection::addTrack(Ref<MediaStreamTrack>
     if (isClosed())
         return Exception { InvalidStateError };
 
-    for (auto& transceiver : m_transceiverSet->list()) {
+    for (auto& transceiver : m_transceiverSet.list()) {
         if (transceiver->sender().trackId() == track->id())
             return Exception { InvalidAccessError };
     }
@@ -144,12 +155,12 @@ ExceptionOr<void> RTCPeerConnection::removeTrack(RTCRtpSender& sender)
     if (isClosed())
         return Exception { InvalidStateError, "RTCPeerConnection is closed"_s };
 
-    if (!sender.isCreatedBy(*m_backend))
+    if (!sender.isCreatedBy(*this))
         return Exception { InvalidAccessError, "RTCPeerConnection did not create the given sender"_s };
 
     bool shouldAbort = true;
     RTCRtpTransceiver* senderTransceiver = nullptr;
-    for (auto& transceiver : m_transceiverSet->list()) {
+    for (auto& transceiver : m_transceiverSet.list()) {
         if (&sender == &transceiver->sender()) {
             senderTransceiver = transceiver.get();
             shouldAbort = sender.isStopped() || !sender.track();
@@ -187,40 +198,52 @@ ExceptionOr<Ref<RTCRtpTransceiver>> RTCPeerConnection::addTransceiver(AddTransce
     return m_backend->addTransceiver(WTFMove(track), init);
 }
 
-void RTCPeerConnection::queuedCreateOffer(RTCOfferOptions&& options, SessionDescriptionPromise&& promise)
+void RTCPeerConnection::createOffer(RTCOfferOptions&& options, Ref<DeferredPromise>&& promise)
 {
     ALWAYS_LOG(LOGIDENTIFIER);
     if (isClosed()) {
-        promise.reject(InvalidStateError);
+        promise->reject(InvalidStateError);
         return;
     }
 
-    addPendingPromise(promise);
-    m_backend->createOffer(WTFMove(options), WTFMove(promise));
+    chainOperation(WTFMove(promise), [this, options = WTFMove(options)](auto&& promise) mutable {
+        m_backend->createOffer(WTFMove(options), WTFMove(promise));
+    });
 }
 
-void RTCPeerConnection::queuedCreateAnswer(RTCAnswerOptions&& options, SessionDescriptionPromise&& promise)
+void RTCPeerConnection::createAnswer(RTCAnswerOptions&& options, Ref<DeferredPromise>&& promise)
 {
     ALWAYS_LOG(LOGIDENTIFIER);
     if (isClosed()) {
-        promise.reject(InvalidStateError);
+        promise->reject(InvalidStateError);
         return;
     }
 
-    addPendingPromise(promise);
-    m_backend->createAnswer(WTFMove(options), WTFMove(promise));
+    chainOperation(WTFMove(promise), [this, options = WTFMove(options)](auto&& promise) mutable {
+        m_backend->createAnswer(WTFMove(options), WTFMove(promise));
+    });
 }
 
-void RTCPeerConnection::queuedSetLocalDescription(RTCSessionDescription& description, DOMPromiseDeferred<void>&& promise)
+void RTCPeerConnection::setLocalDescription(std::optional<Description>&& localDescription, Ref<DeferredPromise>&& promise)
 {
-    ALWAYS_LOG(LOGIDENTIFIER, "Setting local description to:\n", description.sdp());
     if (isClosed()) {
-        promise.reject(InvalidStateError);
+        promise->reject(InvalidStateError);
         return;
     }
 
-    addPendingPromise(promise);
-    m_backend->setLocalDescription(description, WTFMove(promise));
+    RefPtr<RTCSessionDescription> description;
+    if (localDescription) {
+        description = switchOn(*localDescription, [](RTCSessionDescriptionInit& init) -> RefPtr<RTCSessionDescription> {
+            return RTCSessionDescription::create(WTFMove(init));
+        }, [](RefPtr<RTCSessionDescription>& description) {
+            return WTFMove(description);
+        });
+    }
+
+    ALWAYS_LOG(LOGIDENTIFIER, "Setting local description to:\n", description ? description->sdp() : "''");
+    chainOperation(WTFMove(promise), [this, description = WTFMove(description)](auto&& promise) mutable {
+        m_backend->setLocalDescription(description.get(), WTFMove(promise));
+    });
 }
 
 RefPtr<RTCSessionDescription> RTCPeerConnection::localDescription() const
@@ -238,16 +261,28 @@ RefPtr<RTCSessionDescription> RTCPeerConnection::pendingLocalDescription() const
     return m_backend->pendingLocalDescription();
 }
 
-void RTCPeerConnection::queuedSetRemoteDescription(RTCSessionDescription& description, DOMPromiseDeferred<void>&& promise)
+void RTCPeerConnection::setRemoteDescription(Description&& remoteDescription, Ref<DeferredPromise>&& promise)
 {
-    ALWAYS_LOG(LOGIDENTIFIER, "Setting remote description to:\n", description.sdp());
-
-    if (isClosed()) {
-        promise.reject(InvalidStateError);
+    RefPtr<RTCSessionDescription> description;
+    description = switchOn(remoteDescription, [](RTCSessionDescriptionInit& init) -> RefPtr<RTCSessionDescription> {
+        return RTCSessionDescription::create(WTFMove(init));
+    }, [](RefPtr<RTCSessionDescription>& description) {
+        return WTFMove(description);
+    });
+    if (!description) {
+        promise->reject(TypeError);
         return;
     }
-    addPendingPromise(promise);
-    m_backend->setRemoteDescription(description, WTFMove(promise));
+
+    if (isClosed()) {
+        promise->reject(InvalidStateError);
+        return;
+    }
+
+    ALWAYS_LOG(LOGIDENTIFIER, "Setting remote description to:\n", description->sdp());
+    chainOperation(WTFMove(promise), [this, description = WTFMove(description)](auto&& promise) mutable {
+        m_backend->setRemoteDescription(*description, WTFMove(promise));
+    });
 }
 
 RefPtr<RTCSessionDescription> RTCPeerConnection::remoteDescription() const
@@ -265,21 +300,51 @@ RefPtr<RTCSessionDescription> RTCPeerConnection::pendingRemoteDescription() cons
     return m_backend->pendingRemoteDescription();
 }
 
-void RTCPeerConnection::queuedAddIceCandidate(RTCIceCandidate* rtcCandidate, DOMPromiseDeferred<void>&& promise)
+void RTCPeerConnection::addIceCandidate(Candidate&& rtcCandidate, Ref<DeferredPromise>&& promise)
 {
-    ALWAYS_LOG(LOGIDENTIFIER, "Received ice candidate:\n", rtcCandidate ? rtcCandidate->candidate() : "null");
+    std::optional<Exception> exception;
+    RefPtr<RTCIceCandidate> candidate;
+    if (rtcCandidate) {
+        candidate = switchOn(*rtcCandidate, [&exception](RTCIceCandidateInit& init) -> RefPtr<RTCIceCandidate> {
+            if (init.candidate.isEmpty())
+                return nullptr;
 
-    if (isClosed()) {
-        promise.reject(InvalidStateError);
+            auto result = RTCIceCandidate::create(WTFMove(init));
+            if (result.hasException()) {
+                exception = result.releaseException();
+                return nullptr;
+            }
+            return result.releaseReturnValue();
+        }, [](RefPtr<RTCIceCandidate>& iceCandidate) {
+            return WTFMove(iceCandidate);
+        });
+    }
+
+    if (exception) {
+        promise->reject(*exception);
         return;
     }
 
-    addPendingPromise(promise);
-    m_backend->addIceCandidate(rtcCandidate, WTFMove(promise));
+    if (isClosed()) {
+        promise->reject(InvalidStateError);
+        return;
+    }
+
+    ALWAYS_LOG(LOGIDENTIFIER, "Received ice candidate:\n", candidate ? candidate->candidate() : "null");
+    chainOperation(WTFMove(promise), [this, candidate = WTFMove(candidate)](auto&& promise) mutable {
+        m_backend->addIceCandidate(candidate.get(), WTFMove(promise));
+    });
+}
+
+std::optional<bool> RTCPeerConnection::canTrickleIceCandidates() const
+{
+    if (isClosed() || !remoteDescription())
+        return { };
+    return m_backend-> canTrickleIceCandidates();
 }
 
 // Implementation of https://w3c.github.io/webrtc-pc/#set-pc-configuration
-static inline ExceptionOr<Vector<MediaEndpointConfiguration::IceServerInfo>> iceServersFromConfiguration(RTCConfiguration& newConfiguration, const RTCConfiguration* existingConfiguration, bool isLocalDescriptionSet)
+ExceptionOr<Vector<MediaEndpointConfiguration::IceServerInfo>> RTCPeerConnection::iceServersFromConfiguration(RTCConfiguration& newConfiguration, const RTCConfiguration* existingConfiguration, bool isLocalDescriptionSet)
 {
     if (existingConfiguration && newConfiguration.bundlePolicy != existingConfiguration->bundlePolicy)
         return Exception { InvalidModificationError, "BundlePolicy does not match existing policy" };
@@ -301,8 +366,13 @@ static inline ExceptionOr<Vector<MediaEndpointConfiguration::IceServerInfo>> ice
                 urls = WTFMove(vector);
             });
 
-            urls.removeAllMatching([](auto& url) {
-                return URL { URL { }, url }.path().endsWithIgnoringASCIICase(".local");
+            urls.removeAllMatching([&](auto& urlString) {
+                URL url { URL { }, urlString };
+                if (url.path().endsWithIgnoringASCIICase(".local") || !portAllowed(url)) {
+                    queueTaskToDispatchEvent(*this, TaskSource::MediaElement, RTCPeerConnectionIceErrorEvent::create(Event::CanBubble::No, Event::IsCancelable::No, { }, { }, WTFMove(urlString), 701, "URL is not allowed"_s));
+                    return true;
+                }
+                return false;
             });
 
             auto serverURLs = WTF::map(urls, [](auto& url) -> URL {
@@ -316,6 +386,12 @@ static inline ExceptionOr<Vector<MediaEndpointConfiguration::IceServerInfo>> ice
                 if (serverURL.protocolIs("turn") || serverURL.protocolIs("turns")) {
                     if (server.credential.isNull() || server.username.isNull())
                         return Exception { InvalidAccessError, "TURN/TURNS server requires both username and credential" };
+                    // https://tools.ietf.org/html/rfc8489#section-14.3
+                    if (server.credential.length() > 64 || server.username.length() > 64) {
+                        constexpr size_t MaxTurnUsernameLength = 509;
+                        if (server.credential.utf8().length() > MaxTurnUsernameLength || server.username.utf8().length() > MaxTurnUsernameLength)
+                            return Exception { TypeError, "TURN/TURNS username and/or credential are too long" };
+                    }
                 } else if (!serverURL.protocolIs("stun"))
                     return Exception { NotSupportedError, "ICE server protocol not supported" };
             }
@@ -398,7 +474,7 @@ ExceptionOr<void> RTCPeerConnection::setConfiguration(RTCConfiguration&& configu
 void RTCPeerConnection::getStats(MediaStreamTrack* selector, Ref<DeferredPromise>&& promise)
 {
     if (selector) {
-        for (auto& transceiver : m_transceiverSet->list()) {
+        for (auto& transceiver : m_transceiverSet.list()) {
             if (transceiver->sender().track() == selector) {
                 m_backend->getStats(transceiver->sender(), WTFMove(promise));
                 return;
@@ -409,7 +485,7 @@ void RTCPeerConnection::getStats(MediaStreamTrack* selector, Ref<DeferredPromise
             }
         }
     }
-    addPendingPromise(promise.get());
+    promise->whenSettled([pendingActivity = makePendingActivity(*this)] { });
     m_backend->getStats(WTFMove(promise));
 }
 
@@ -446,11 +522,12 @@ bool RTCPeerConnection::doClose()
     m_iceConnectionState = RTCIceConnectionState::Closed;
     m_signalingState = RTCSignalingState::Closed;
 
-    for (auto& transceiver : m_transceiverSet->list()) {
+    for (auto& transceiver : m_transceiverSet.list()) {
         transceiver->stop();
         transceiver->sender().stop();
         transceiver->receiver().stop();
     }
+    m_operations.clear();
 
     return true;
 }
@@ -539,10 +616,10 @@ bool RTCPeerConnection::virtualHasPendingActivity() const
     return hasEventListeners();
 }
 
-void RTCPeerConnection::addTransceiver(Ref<RTCRtpTransceiver>&& transceiver)
+void RTCPeerConnection::addInternalTransceiver(Ref<RTCRtpTransceiver>&& transceiver)
 {
-    INFO_LOG(LOGIDENTIFIER);
-    m_transceiverSet->append(WTFMove(transceiver));
+    transceiver->setConnection(*this);
+    m_transceiverSet.append(WTFMove(transceiver));
 }
 
 void RTCPeerConnection::setSignalingState(RTCSignalingState newState)
@@ -579,24 +656,26 @@ void RTCPeerConnection::updateIceConnectionState(RTCIceConnectionState newState)
     });
 }
 
+RTCPeerConnectionState RTCPeerConnection::computeConnectionState()
+{
+    if (m_iceConnectionState == RTCIceConnectionState::Closed)
+        return RTCPeerConnectionState::Closed;
+    if (m_iceConnectionState == RTCIceConnectionState::Disconnected)
+        return RTCPeerConnectionState::Disconnected;
+    if (m_iceConnectionState == RTCIceConnectionState::Failed)
+        return RTCPeerConnectionState::Failed;
+    if (m_iceConnectionState == RTCIceConnectionState::New && m_iceGatheringState == RTCIceGatheringState::New)
+        return RTCPeerConnectionState::New;
+    if (m_iceConnectionState == RTCIceConnectionState::Checking || m_iceGatheringState == RTCIceGatheringState::Gathering)
+        return RTCPeerConnectionState::Connecting;
+    if ((m_iceConnectionState == RTCIceConnectionState::Completed || m_iceConnectionState == RTCIceConnectionState::Connected) && m_iceGatheringState == RTCIceGatheringState::Complete)
+        return RTCPeerConnectionState::Connected;
+    return m_connectionState;
+}
+
 void RTCPeerConnection::updateConnectionState()
 {
-    RTCPeerConnectionState state;
-
-    if (m_iceConnectionState == RTCIceConnectionState::Closed)
-        state = RTCPeerConnectionState::Closed;
-    else if (m_iceConnectionState == RTCIceConnectionState::Disconnected)
-        state = RTCPeerConnectionState::Disconnected;
-    else if (m_iceConnectionState == RTCIceConnectionState::Failed)
-        state = RTCPeerConnectionState::Failed;
-    else if (m_iceConnectionState == RTCIceConnectionState::New && m_iceGatheringState == RTCIceGatheringState::New)
-        state = RTCPeerConnectionState::New;
-    else if (m_iceConnectionState == RTCIceConnectionState::Checking || m_iceGatheringState == RTCIceGatheringState::Gathering)
-        state = RTCPeerConnectionState::Connecting;
-    else if ((m_iceConnectionState == RTCIceConnectionState::Completed || m_iceConnectionState == RTCIceConnectionState::Connected) && m_iceGatheringState == RTCIceGatheringState::Complete)
-        state = RTCPeerConnectionState::Connected;
-    else
-        return;
+    auto state = computeConnectionState();
 
     if (state == m_connectionState)
         return;
@@ -607,15 +686,75 @@ void RTCPeerConnection::updateConnectionState()
     dispatchEventWhenFeasible(Event::create(eventNames().connectionstatechangeEvent, Event::CanBubble::No, Event::IsCancelable::No));
 }
 
+static bool isIceTransportUsedByTransceiver(const RTCIceTransport& iceTransport, RTCRtpTransceiver& transceiver)
+{
+    auto* dtlsTransport = transceiver.sender().transport();
+    return dtlsTransport && &dtlsTransport->iceTransport() == &iceTransport;
+}
+
+// https://w3c.github.io/webrtc-pc/#dom-rtciceconnectionstate
+RTCIceConnectionState RTCPeerConnection::computeIceConnectionStateFromIceTransports()
+{
+    if (isClosed())
+        return RTCIceConnectionState::Closed;
+
+    auto iceTransports = m_iceTransports;
+    iceTransports.removeAllMatching([&](auto& iceTransport) {
+        bool test = allOf(m_transceiverSet.list(), [&iceTransport](auto& transceiver) {
+            return !isIceTransportUsedByTransceiver(iceTransport.get(), *transceiver);
+        });
+        return test;
+    });
+
+    if (anyOf(iceTransports, [](auto& transport) { return transport->state() == RTCIceTransportState::Failed; }))
+        return RTCIceConnectionState::Failed;
+    if (anyOf(iceTransports, [](auto& transport) { return transport->state() == RTCIceTransportState::Disconnected; }))
+        return RTCIceConnectionState::Disconnected;
+    if (allOf(iceTransports, [](auto& transport) { return transport->state() == RTCIceTransportState::New || transport->state() == RTCIceTransportState::Closed; }))
+        return RTCIceConnectionState::New;
+    if (anyOf(iceTransports, [](auto& transport) { return transport->state() == RTCIceTransportState::New || transport->state() == RTCIceTransportState::Checking; }))
+        return RTCIceConnectionState::Checking;
+    if (allOf(iceTransports, [](auto& transport) { return transport->state() == RTCIceTransportState::Completed || transport->state() == RTCIceTransportState::Closed; }))
+        return RTCIceConnectionState::Completed;
+    ASSERT(allOf(iceTransports, [](auto& transport) { return transport->state() == RTCIceTransportState::Connected || transport->state() == RTCIceTransportState::Completed || transport->state() == RTCIceTransportState::Closed; }));
+    return RTCIceConnectionState::Connected;
+}
+
+// https://w3c.github.io/webrtc-pc/#rtcicetransport, algorithm to handle a change of RTCIceTransport state.
+void RTCPeerConnection::processIceTransportStateChange(RTCIceTransport& iceTransport)
+{
+    auto newIceConnectionState = computeIceConnectionStateFromIceTransports();
+    bool iceConnectionStateChanged = m_iceConnectionState != newIceConnectionState;
+    m_iceConnectionState = newIceConnectionState;
+
+    auto newConnectionState = computeConnectionState();
+    bool connectionStateChanged = m_connectionState != newConnectionState;
+    m_connectionState = newConnectionState;
+
+    iceTransport.dispatchEvent(Event::create(eventNames().statechangeEvent, Event::CanBubble::Yes, Event::IsCancelable::No));
+    if (iceConnectionStateChanged)
+        dispatchEventWhenFeasible(Event::create(eventNames().iceconnectionstatechangeEvent, Event::CanBubble::No, Event::IsCancelable::No));
+    if (connectionStateChanged)
+        dispatchEventWhenFeasible(Event::create(eventNames().connectionstatechangeEvent, Event::CanBubble::No, Event::IsCancelable::No));
+}
+
 void RTCPeerConnection::scheduleNegotiationNeededEvent()
 {
-    scriptExecutionContext()->postTask([protectedThis = makeRef(*this)](ScriptExecutionContext&) {
-        if (protectedThis->isClosed())
+    if (m_hasPendingOperation) {
+        m_shouldFireNegotiationNeededOnceOperationChainIsEmpty = true;
+        return;
+    }
+    scriptExecutionContext()->postTask([this, protectedThis = makeRef(*this)](ScriptExecutionContext&) {
+        if (isClosed())
             return;
-        if (!protectedThis->m_backend->isNegotiationNeeded())
+        if (m_hasPendingOperation) {
+            m_shouldFireNegotiationNeededOnceOperationChainIsEmpty = true;
             return;
-        protectedThis->m_backend->clearNegotiationNeededState();
-        protectedThis->dispatchEventWhenFeasible(Event::create(eventNames().negotiationneededEvent, Event::CanBubble::No, Event::IsCancelable::No));
+        }
+        if (!m_backend->isNegotiationNeeded())
+            return;
+        m_backend->clearNegotiationNeededState();
+        dispatchEventWhenFeasible(Event::create(eventNames().negotiationneededEvent, Event::CanBubble::No, Event::IsCancelable::No));
     });
 }
 
@@ -701,24 +840,118 @@ void RTCPeerConnection::generateCertificate(JSC::JSGlobalObject& lexicalGlobalOb
 Vector<std::reference_wrapper<RTCRtpSender>> RTCPeerConnection::getSenders() const
 {
     m_backend->collectTransceivers();
-    return m_transceiverSet->senders();
+    return m_transceiverSet.senders();
 }
 
 Vector<std::reference_wrapper<RTCRtpReceiver>> RTCPeerConnection::getReceivers() const
 {
     m_backend->collectTransceivers();
-    return m_transceiverSet->receivers();
+    return m_transceiverSet.receivers();
 }
 
 const Vector<RefPtr<RTCRtpTransceiver>>& RTCPeerConnection::getTransceivers() const
 {
     m_backend->collectTransceivers();
-    return m_transceiverSet->list();
+    return m_transceiverSet.list();
+}
+
+void RTCPeerConnection::chainOperation(Ref<DeferredPromise>&& promise, Function<void(Ref<DeferredPromise>&&)>&& operation)
+{
+    if (isClosed()) {
+        promise->reject(InvalidStateError, "RTCPeerConnection is closed");
+        return;
+    }
+
+    promise->whenSettled([this, pendingActivity = makePendingActivity(*this)] {
+        ASSERT(m_hasPendingOperation);
+        if (isClosed()) {
+            for (auto& operation : std::exchange(m_operations, { }))
+                operation.first->reject(InvalidStateError, "RTCPeerConnection is closed");
+            m_hasPendingOperation = false;
+            return;
+        }
+
+        if (m_operations.isEmpty()) {
+            m_hasPendingOperation = false;
+            if (m_shouldFireNegotiationNeededOnceOperationChainIsEmpty) {
+                m_shouldFireNegotiationNeededOnceOperationChainIsEmpty = false;
+                scheduleNegotiationNeededEvent();
+            }
+            return;
+        }
+
+        auto promiseOperation = m_operations.takeFirst();
+        promiseOperation.second(WTFMove(promiseOperation.first));
+    });
+
+    if (m_hasPendingOperation || !m_operations.isEmpty()) {
+        m_operations.append(std::make_pair(WTFMove(promise), WTFMove(operation)));
+        return;
+    }
+
+    m_hasPendingOperation = true;
+    operation(WTFMove(promise));
 }
 
 Document* RTCPeerConnection::document()
 {
     return downcast<Document>(scriptExecutionContext());
+}
+
+Ref<RTCIceTransport> RTCPeerConnection::getOrCreateIceTransport(UniqueRef<RTCIceTransportBackend>&& backend)
+{
+    auto index = m_iceTransports.findMatching([&backend](auto& transport) { return backend.get() == transport->backend(); });
+    if (index == notFound) {
+        index = m_iceTransports.size();
+        m_iceTransports.append(RTCIceTransport::create(*scriptExecutionContext(), WTFMove(backend), *this));
+    }
+
+    return m_iceTransports[index].copyRef();
+}
+
+
+RefPtr<RTCDtlsTransport> RTCPeerConnection::getOrCreateDtlsTransport(std::unique_ptr<RTCDtlsTransportBackend>&& backend)
+{
+    if (!backend)
+        return nullptr;
+
+    auto* context = scriptExecutionContext();
+    if (!context)
+        return nullptr;
+
+    auto index = m_dtlsTransports.findMatching([&backend](auto& transport) { return *backend == transport->backend(); });
+    if (index == notFound) {
+        index = m_dtlsTransports.size();
+        auto iceTransportBackend = backend->iceTransportBackend();
+        m_dtlsTransports.append(RTCDtlsTransport::create(*context, makeUniqueRefFromNonNullUniquePtr(WTFMove(backend)), getOrCreateIceTransport(WTFMove(iceTransportBackend))));
+    }
+
+    return m_dtlsTransports[index].copyRef();
+}
+
+void RTCPeerConnection::updateTransceiverTransports()
+{
+    for (auto& transceiver : m_transceiverSet.list()) {
+        auto& sender = transceiver->sender();
+        if (auto* senderBackend = sender.backend())
+            sender.setTransport(getOrCreateDtlsTransport(senderBackend->dtlsTransportBackend()));
+
+        auto& receiver = transceiver->receiver();
+        if (auto* receiverBackend = receiver.backend())
+            receiver.setTransport(getOrCreateDtlsTransport(receiverBackend->dtlsTransportBackend()));
+    }
+}
+
+// https://w3c.github.io/webrtc-pc/#set-description step 4.9.1
+void RTCPeerConnection::updateTransceiversAfterSuccessfulLocalDescription()
+{
+    updateTransceiverTransports();
+}
+
+// https://w3c.github.io/webrtc-pc/#set-description step 4.9.2
+void RTCPeerConnection::updateTransceiversAfterSuccessfulRemoteDescription()
+{
+    updateTransceiverTransports();
 }
 
 #if !RELEASE_LOG_DISABLED

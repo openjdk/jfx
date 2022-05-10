@@ -31,7 +31,6 @@
 #include "StyleTransformData.h"
 #include "StyleImage.h"
 #include "StyleResolver.h"
-#include "StyleScrollSnapPoints.h"
 #include <wtf/PointerComparison.h>
 #include <wtf/RefPtr.h>
 #include <wtf/text/TextStream.h>
@@ -42,8 +41,9 @@ DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(StyleRareNonInheritedData);
 
 StyleRareNonInheritedData::StyleRareNonInheritedData()
     : opacity(RenderStyle::initialOpacity())
-    , aspectRatioDenominator(RenderStyle::initialAspectRatioDenominator())
-    , aspectRatioNumerator(RenderStyle::initialAspectRatioNumerator())
+    , aspectRatioWidth(RenderStyle::initialAspectRatioWidth())
+    , aspectRatioHeight(RenderStyle::initialAspectRatioHeight())
+    , contain(RenderStyle::initialContainment())
     , perspective(RenderStyle::initialPerspective())
     , perspectiveOriginX(RenderStyle::initialPerspectiveOriginX())
     , perspectiveOriginY(RenderStyle::initialPerspectiveOriginY())
@@ -60,12 +60,10 @@ StyleRareNonInheritedData::StyleRareNonInheritedData()
 #endif
     , grid(StyleGridData::create())
     , gridItem(StyleGridItemData::create())
-#if ENABLE(CSS_SCROLL_SNAP)
-    , scrollSnapPort(StyleScrollSnapPort::create())
-    , scrollSnapArea(StyleScrollSnapArea::create())
-#endif
+    , overscrollBehaviorX(static_cast<unsigned>(RenderStyle::initialOverscrollBehaviorX()))
+    , overscrollBehaviorY(static_cast<unsigned>(RenderStyle::initialOverscrollBehaviorY()))
     , willChange(RenderStyle::initialWillChange())
-    , mask(FillLayerType::Mask)
+    , mask(FillLayer::create(FillLayerType::Mask))
     , maskBoxImage(NinePieceImage::Type::Mask)
     , objectPosition(RenderStyle::initialObjectPosition())
     , shapeOutside(RenderStyle::initialShapeOutside())
@@ -81,6 +79,9 @@ StyleRareNonInheritedData::StyleRareNonInheritedData()
     , justifyItems(RenderStyle::initialJustifyItems())
     , justifySelf(RenderStyle::initialSelfAlignment())
     , customProperties(StyleCustomPropertyData::create())
+    , rotate(RenderStyle::initialRotate())
+    , scale(RenderStyle::initialScale())
+    , translate(RenderStyle::initialTranslate())
     , touchActions(RenderStyle::initialTouchActions())
     , pageSizeType(PAGE_SIZE_AUTO)
     , transformStyle3D(static_cast<unsigned>(RenderStyle::initialTransformStyle3D()))
@@ -118,8 +119,9 @@ StyleRareNonInheritedData::StyleRareNonInheritedData()
 inline StyleRareNonInheritedData::StyleRareNonInheritedData(const StyleRareNonInheritedData& o)
     : RefCounted<StyleRareNonInheritedData>()
     , opacity(o.opacity)
-    , aspectRatioDenominator(o.aspectRatioDenominator)
-    , aspectRatioNumerator(o.aspectRatioNumerator)
+    , aspectRatioWidth(o.aspectRatioWidth)
+    , aspectRatioHeight(o.aspectRatioHeight)
+    , contain(o.contain)
     , perspective(o.perspective)
     , perspectiveOriginX(o.perspectiveOriginX)
     , perspectiveOriginY(o.perspectiveOriginY)
@@ -136,10 +138,13 @@ inline StyleRareNonInheritedData::StyleRareNonInheritedData(const StyleRareNonIn
 #endif
     , grid(o.grid)
     , gridItem(o.gridItem)
-#if ENABLE(CSS_SCROLL_SNAP)
-    , scrollSnapPort(o.scrollSnapPort)
-    , scrollSnapArea(o.scrollSnapArea)
-#endif
+    , scrollMargin(o.scrollMargin)
+    , scrollPadding(o.scrollPadding)
+    , scrollSnapType(o.scrollSnapType)
+    , scrollSnapAlign(o.scrollSnapAlign)
+    , scrollSnapStop(o.scrollSnapStop)
+    , overscrollBehaviorX(o.overscrollBehaviorX)
+    , overscrollBehaviorY(o.overscrollBehaviorY)
     , content(o.content ? o.content->clone() : nullptr)
     , counterDirectives(o.counterDirectives ? makeUnique<CounterDirectiveMap>(*o.counterDirectives) : nullptr)
     , altText(o.altText)
@@ -173,6 +178,9 @@ inline StyleRareNonInheritedData::StyleRareNonInheritedData(const StyleRareNonIn
     , justifySelf(o.justifySelf)
     , customProperties(o.customProperties)
     , customPaintWatchedProperties(o.customPaintWatchedProperties ? makeUnique<HashSet<String>>(*o.customPaintWatchedProperties) : nullptr)
+    , rotate(o.rotate)
+    , scale(o.scale)
+    , translate(o.translate)
     , touchActions(o.touchActions)
     , pageSizeType(o.pageSizeType)
     , transformStyle3D(o.transformStyle3D)
@@ -217,8 +225,9 @@ StyleRareNonInheritedData::~StyleRareNonInheritedData() = default;
 bool StyleRareNonInheritedData::operator==(const StyleRareNonInheritedData& o) const
 {
     return opacity == o.opacity
-        && aspectRatioDenominator == o.aspectRatioDenominator
-        && aspectRatioNumerator == o.aspectRatioNumerator
+        && aspectRatioWidth == o.aspectRatioWidth
+        && aspectRatioHeight == o.aspectRatioHeight
+        && contain == o.contain
         && perspective == o.perspective
         && perspectiveOriginX == o.perspectiveOriginX
         && perspectiveOriginY == o.perspectiveOriginY
@@ -235,10 +244,13 @@ bool StyleRareNonInheritedData::operator==(const StyleRareNonInheritedData& o) c
 #endif
         && grid == o.grid
         && gridItem == o.gridItem
-#if ENABLE(CSS_SCROLL_SNAP)
-        && scrollSnapPort == o.scrollSnapPort
-        && scrollSnapArea == o.scrollSnapArea
-#endif
+        && scrollMargin == o.scrollMargin
+        && scrollPadding == o.scrollPadding
+        && scrollSnapType == o.scrollSnapType
+        && scrollSnapAlign == o.scrollSnapAlign
+        && scrollSnapStop == o.scrollSnapStop
+        && overscrollBehaviorX == o.overscrollBehaviorX
+        && overscrollBehaviorY == o.overscrollBehaviorY
         && contentDataEquivalent(o)
         && arePointingToEqualData(counterDirectives, o.counterDirectives)
         && altText == o.altText
@@ -285,6 +297,9 @@ bool StyleRareNonInheritedData::operator==(const StyleRareNonInheritedData& o) c
         && borderFit == o.borderFit
         && textCombine == o.textCombine
         && textDecorationStyle == o.textDecorationStyle
+        && arePointingToEqualData(rotate, o.rotate)
+        && arePointingToEqualData(scale, o.scale)
+        && arePointingToEqualData(translate, o.translate)
         && touchActions == o.touchActions
 #if ENABLE(CSS_COMPOSITING)
         && effectiveBlendMode == o.effectiveBlendMode

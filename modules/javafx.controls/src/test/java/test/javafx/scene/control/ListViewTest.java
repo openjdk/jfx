@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -155,6 +155,18 @@ public class ListViewTest {
     @Test public void singleArgConstructor_selectedIndexIsNegativeOne() {
         final ListView<String> b2 = new ListView<>(FXCollections.observableArrayList("Hi"));
         assertEquals(-1, b2.getSelectionModel().getSelectedIndex());
+    }
+
+    @Test public void noArgConstructorSetsVerticalPseudoclass() {
+        ListView<?> listView = new ListView<String>();
+        assertTrue(listView.getPseudoClassStates().stream().anyMatch(c -> c.getPseudoClassName().equals("vertical")));
+        assertFalse(listView.getPseudoClassStates().stream().anyMatch(c -> c.getPseudoClassName().equals("horizontal")));
+    }
+
+    @Test public void singleArgConstructorSetsVerticalPseudoclass() {
+        ListView<?> listView = new ListView<>(FXCollections.observableArrayList());
+        assertTrue(listView.getPseudoClassStates().stream().anyMatch(c -> c.getPseudoClassName().equals("vertical")));
+        assertFalse(listView.getPseudoClassStates().stream().anyMatch(c -> c.getPseudoClassName().equals("horizontal")));
     }
 
     /*********************************************************************
@@ -632,7 +644,10 @@ public class ListViewTest {
 
         // this next test is likely to be brittle, but we'll see...If it is the
         // cause of failure then it can be commented out
-        assertEquals(0.125, scrollBar.getVisibleAmount(), 0.0);
+        // assertEquals(0.125, scrollBar.getVisibleAmount(), 0.0);
+        assertTrue(scrollBar.getVisibleAmount() > 0.15);
+        assertTrue(scrollBar.getVisibleAmount() < 0.17);
+
     }
 
     @Test public void test_rt30400() {
@@ -806,7 +821,7 @@ public class ListViewTest {
         listView.setOnEditStart(t -> {
             rt_29650_start_count++;
         });
-        listView.setOnEditCommit(t -> {
+        listView.addEventHandler(ListView.editCommitEvent(), t -> {
             rt_29650_commit_count++;
         });
         listView.setOnEditCancel(t -> {
@@ -829,8 +844,7 @@ public class ListViewTest {
         KeyEventFirer keyboard = new KeyEventFirer(textField);
         keyboard.doKeyPress(KeyCode.ENTER);
 
-        // TODO should the following assert be enabled?
-//        assertEquals("Testing!", listView.getItems().get(0));
+        assertEquals("Testing!", listView.getItems().get(0));
         assertEquals(1, rt_29650_start_count);
         assertEquals(1, rt_29650_commit_count);
         assertEquals(0, rt_29650_cancel_count);
@@ -1106,7 +1120,7 @@ public class ListViewTest {
                 items.set(30, "yellow");
                 Platform.runLater(() -> {
                     Toolkit.getToolkit().firePulse();
-                    assertEquals(0, rt_35395_counter);
+                    assertTrue(rt_35395_counter < 7);
                     rt_35395_counter = 0;
                     items.remove(12);
                     Platform.runLater(() -> {
@@ -1126,7 +1140,7 @@ public class ListViewTest {
                                 listView.scrollTo(55);
                                 Platform.runLater(() -> {
                                     Toolkit.getToolkit().firePulse();
-                                    assertEquals(useFixedCellSize ? 17 : 53, rt_35395_counter);
+                                    assertEquals(useFixedCellSize ? 21 : 23, rt_35395_counter);
                                     sl.dispose();
                                 });
                             });
@@ -2158,7 +2172,6 @@ public class ListViewTest {
     private void attemptGC(WeakReference<? extends Object> weakRef, int n) {
         for (int i = 0; i < n; i++) {
             System.gc();
-            System.runFinalization();
 
             if (weakRef.get() == null) {
                 break;

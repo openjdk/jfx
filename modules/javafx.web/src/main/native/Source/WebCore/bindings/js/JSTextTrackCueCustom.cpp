@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -38,16 +38,14 @@
 namespace WebCore {
 using namespace JSC;
 
-bool JSTextTrackCueOwner::isReachableFromOpaqueRoots(JSC::Handle<JSC::Unknown> handle, void*, SlotVisitor& visitor, const char** reason)
+bool JSTextTrackCueOwner::isReachableFromOpaqueRoots(JSC::Handle<JSC::Unknown> handle, void*, AbstractSlotVisitor& visitor, const char** reason)
 {
     JSTextTrackCue* jsTextTrackCue = jsCast<JSTextTrackCue*>(handle.slot()->asCell());
     TextTrackCue& textTrackCue = jsTextTrackCue->wrapped();
 
-    // If the cue is firing event listeners, its wrapper is reachable because
-    // the wrapper is responsible for marking those event listeners.
-    if (textTrackCue.isFiringEventListeners()) {
+    if (!textTrackCue.isContextStopped() && textTrackCue.hasPendingActivity()) {
         if (UNLIKELY(reason))
-            *reason = "TextTrackCue is firing event listeners";
+            *reason = "TextTrackCue with pending activity";
         return true;
     }
 
@@ -82,11 +80,14 @@ JSValue toJS(JSGlobalObject* lexicalGlobalObject, JSDOMGlobalObject* globalObjec
     return wrap(lexicalGlobalObject, globalObject, cue);
 }
 
-void JSTextTrackCue::visitAdditionalChildren(SlotVisitor& visitor)
+template<typename Visitor>
+void JSTextTrackCue::visitAdditionalChildren(Visitor& visitor)
 {
     if (TextTrack* textTrack = wrapped().track())
         visitor.addOpaqueRoot(root(textTrack));
 }
+
+DEFINE_VISIT_ADDITIONAL_CHILDREN(JSTextTrackCue);
 
 } // namespace WebCore
 

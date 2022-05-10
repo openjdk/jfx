@@ -28,6 +28,7 @@
 
 #pragma once
 
+#include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
@@ -46,11 +47,11 @@ public:
 
     bool begin();
     bool begin(const URL&, bool dispatchWindowObjectAvailable = true, Document* ownerDocument = nullptr);
-    void addData(const char* bytes, size_t length);
+    void addData(const uint8_t* bytes, size_t length);
     void insertDataSynchronously(const String&); // For an internal use only to prevent the parser from yielding.
     WEBCORE_EXPORT void end();
 
-    void setFrame(Frame& frame) { m_frame = &frame; }
+    void setFrame(Frame&);
 
     WEBCORE_EXPORT void setEncoding(const String& encoding, bool userChosen);
 
@@ -67,7 +68,7 @@ private:
     Ref<Document> createDocument(const URL&);
     void clear();
 
-    Frame* m_frame { nullptr };
+    WeakPtr<Frame> m_frame;
 
     bool m_hasReceivedSomeData { false };
     String m_mimeType;

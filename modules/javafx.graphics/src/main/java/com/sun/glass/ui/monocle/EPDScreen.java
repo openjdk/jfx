@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2019, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -90,8 +90,10 @@ class EPDScreen implements NativeScreen {
      * @throws IllegalStateException if an error occurs opening the frame buffer
      */
     EPDScreen() {
-        fbPath = AccessController.doPrivileged((PrivilegedAction<String>) ()
+        @SuppressWarnings("removal")
+        String tmp = AccessController.doPrivileged((PrivilegedAction<String>) ()
                 -> System.getProperty(FB_PATH_KEY, FB_PATH_DEFAULT));
+        fbPath = tmp;
         try {
             fbDevice = new EPDFrameBuffer(fbPath);
             fbDevice.init();

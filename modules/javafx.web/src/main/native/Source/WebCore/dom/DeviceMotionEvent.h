@@ -25,30 +25,32 @@
 
 #pragma once
 
-#include "DeviceOrientationOrMotionEvent.h"
+#include "DeviceOrientationOrMotionPermissionState.h"
 #include "Event.h"
+#include "IDLTypes.h"
 
 namespace WebCore {
 
 class DeviceMotionData;
+template<typename IDLType> class DOMPromiseDeferred;
 
-class DeviceMotionEvent final : public Event, public DeviceOrientationOrMotionEvent {
+class DeviceMotionEvent final : public Event {
     WTF_MAKE_ISO_ALLOCATED(DeviceMotionEvent);
 public:
     virtual ~DeviceMotionEvent();
 
     // FIXME: Merge this with DeviceMotionData::Acceleration
     struct Acceleration {
-        Optional<double> x;
-        Optional<double> y;
-        Optional<double> z;
+        std::optional<double> x;
+        std::optional<double> y;
+        std::optional<double> z;
     };
 
     // FIXME: Merge this with DeviceMotionData::RotationRate
     struct RotationRate {
-        Optional<double> alpha;
-        Optional<double> beta;
-        Optional<double> gamma;
+        std::optional<double> alpha;
+        std::optional<double> beta;
+        std::optional<double> gamma;
     };
 
     static Ref<DeviceMotionEvent> create(const AtomString& eventType, DeviceMotionData* deviceMotionData)
@@ -61,12 +63,18 @@ public:
         return adoptRef(*new DeviceMotionEvent);
     }
 
-    Optional<Acceleration> acceleration() const;
-    Optional<Acceleration> accelerationIncludingGravity() const;
-    Optional<RotationRate> rotationRate() const;
-    Optional<double> interval() const;
+    std::optional<Acceleration> acceleration() const;
+    std::optional<Acceleration> accelerationIncludingGravity() const;
+    std::optional<RotationRate> rotationRate() const;
+    std::optional<double> interval() const;
 
-    void initDeviceMotionEvent(const AtomString& type, bool bubbles, bool cancelable, Optional<Acceleration>&&, Optional<Acceleration>&&, Optional<RotationRate>&&, Optional<double>);
+    void initDeviceMotionEvent(const AtomString& type, bool bubbles, bool cancelable, std::optional<Acceleration>&&, std::optional<Acceleration>&&, std::optional<RotationRate>&&, std::optional<double>);
+
+#if ENABLE(DEVICE_ORIENTATION)
+    using PermissionState = DeviceOrientationOrMotionPermissionState;
+    using PermissionPromise = DOMPromiseDeferred<IDLEnumeration<PermissionState>>;
+    static void requestPermission(Document&, PermissionPromise&&);
+#endif
 
 private:
     DeviceMotionEvent();

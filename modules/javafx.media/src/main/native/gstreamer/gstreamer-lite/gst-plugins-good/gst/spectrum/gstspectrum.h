@@ -71,7 +71,7 @@ struct _GstSpectrum
   guint64 frames_per_interval;  /* how many frames per interval */
   guint64 frames_todo;
   guint bands;                  /* number of spectrum bands */
-  gint threshold;               /* energy level treshold */
+  gint threshold;               /* energy level threshold */
   gboolean multi_channel;       /* send separate channel results */
 
   guint64 num_frames;           /* frame count (1 sample per channel)
@@ -113,6 +113,8 @@ GST_EXPORT gboolean gst_spectrum_setup_api (GstAudioFilter * base,
 GST_EXPORT GstFlowReturn
 gst_spectrum_transform_ip_api (GstBaseTransform * trans, GstBuffer * buffer);
 #endif // GSTREAMER_LITE and OSX
+
+GST_ELEMENT_REGISTER_DECLARE (spectrum);
 
 G_END_DECLS
 

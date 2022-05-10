@@ -52,11 +52,17 @@ typedef enum {
   GST_VIDEO_CHROMA_SITE_DV        = (GST_VIDEO_CHROMA_SITE_COSITED | GST_VIDEO_CHROMA_SITE_ALT_LINE),
 } GstVideoChromaSite;
 
-GST_VIDEO_API
+GST_VIDEO_DEPRECATED_FOR(gst_video_chroma_site_from_string)
 GstVideoChromaSite    gst_video_chroma_from_string   (const gchar * s);
 
-GST_VIDEO_API
+GST_VIDEO_DEPRECATED_FOR(gst_video_chroma_site_to_string)
 const gchar *         gst_video_chroma_to_string     (GstVideoChromaSite site);
+
+GST_VIDEO_API
+GstVideoChromaSite    gst_video_chroma_site_from_string (const gchar * s);
+
+GST_VIDEO_API
+gchar *               gst_video_chroma_site_to_string   (GstVideoChromaSite site);
 
 /**
  * GstVideoChromaMethod:

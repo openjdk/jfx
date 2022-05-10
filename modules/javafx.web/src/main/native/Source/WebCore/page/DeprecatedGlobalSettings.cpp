@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006, 2007, 2008, 2009, 2011, 2012 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,7 +28,6 @@
 
 #include "AudioSession.h"
 #include "HTMLMediaElement.h"
-#include "RuntimeApplicationChecks.h"
 #include <wtf/NeverDestroyed.h>
 
 namespace WebCore {
@@ -50,18 +49,15 @@ bool DeprecatedGlobalSettings::gMockScrollAnimatorEnabled = false;
 bool DeprecatedGlobalSettings::gShouldUseHighResolutionTimers = true;
 #endif
 
-bool DeprecatedGlobalSettings::gShouldRespectPriorityInCSSAttributeSetters = false;
 bool DeprecatedGlobalSettings::gLowPowerVideoAudioBufferSizeEnabled = false;
 bool DeprecatedGlobalSettings::gResourceLoadStatisticsEnabledEnabled = false;
 bool DeprecatedGlobalSettings::gAllowsAnySSLCertificate = false;
 
 #if PLATFORM(IOS_FAMILY)
 bool DeprecatedGlobalSettings::gNetworkDataUsageTrackingEnabled = false;
-bool DeprecatedGlobalSettings::gAVKitEnabled = false;
 bool DeprecatedGlobalSettings::gShouldOptOutOfNetworkStateObservation = false;
 bool DeprecatedGlobalSettings::gDisableScreenSizeOverride = false;
 #endif
-bool DeprecatedGlobalSettings::gManageAudioSession = false;
 
 #if PLATFORM(WIN)
 void DeprecatedGlobalSettings::setShouldUseHighResolutionTimers(bool shouldUseHighResolutionTimers)
@@ -139,16 +135,6 @@ bool DeprecatedGlobalSettings::usesMockScrollAnimator()
     return gMockScrollAnimatorEnabled;
 }
 
-void DeprecatedGlobalSettings::setShouldRespectPriorityInCSSAttributeSetters(bool flag)
-{
-    gShouldRespectPriorityInCSSAttributeSetters = flag;
-}
-
-bool DeprecatedGlobalSettings::shouldRespectPriorityInCSSAttributeSetters()
-{
-    return gShouldRespectPriorityInCSSAttributeSetters;
-}
-
 void DeprecatedGlobalSettings::setLowPowerVideoAudioBufferSizeEnabled(bool flag)
 {
     gLowPowerVideoAudioBufferSizeEnabled = flag;
@@ -167,7 +153,7 @@ void DeprecatedGlobalSettings::setAudioSessionCategoryOverride(unsigned sessionC
 
 unsigned DeprecatedGlobalSettings::audioSessionCategoryOverride()
 {
-    return AudioSession::sharedSession().categoryOverride();
+    return static_cast<unsigned>(AudioSession::sharedSession().categoryOverride());
 }
 
 void DeprecatedGlobalSettings::setNetworkDataUsageTrackingEnabled(bool trackingEnabled)
@@ -197,16 +183,17 @@ const String& DeprecatedGlobalSettings::networkInterfaceName()
 }
 #endif
 
-bool DeprecatedGlobalSettings::globalConstRedeclarationShouldThrow()
+#if USE(AUDIO_SESSION)
+void DeprecatedGlobalSettings::setShouldManageAudioSessionCategory(bool flag)
 {
-#if PLATFORM(MAC)
-    return !MacApplication::isIBooks();
-#elif PLATFORM(IOS_FAMILY)
-    return !IOSApplication::isIBooks();
-#else
-    return true;
-#endif
+    AudioSession::setShouldManageAudioSessionCategory(flag);
 }
+
+bool DeprecatedGlobalSettings::shouldManageAudioSessionCategory()
+{
+    return AudioSession::shouldManageAudioSessionCategory();
+}
+#endif
 
 void DeprecatedGlobalSettings::setAllowsAnySSLCertificate(bool allowAnySSLCertificate)
 {

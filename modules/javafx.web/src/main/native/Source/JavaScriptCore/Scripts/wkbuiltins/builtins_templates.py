@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Copyright (c) 2014-2019 Apple Inc. All rights reserved.
+# Copyright (c) 2014-2021 Apple Inc. All rights reserved.
 # Copyright (C) 2015 Canon Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -85,7 +85,7 @@ ${macroPrefix}_FOREACH_${objectMacro}_BUILTIN_CODE(DECLARE_BUILTIN_GENERATOR)
 #define DEFINE_BUILTIN_GENERATOR(codeName, functionName, overriddenName, argumentCount) \\
 JSC::FunctionExecutable* codeName##Generator(JSC::VM& vm) \\
 {\\
-    return vm.builtinExecutables()->codeName##Executable()->link(vm, nullptr, vm.builtinExecutables()->codeName##Source(), WTF::nullopt, s_##codeName##Intrinsic); \
+    return vm.builtinExecutables()->codeName##Executable()->link(vm, nullptr, vm.builtinExecutables()->codeName##Source(), std::nullopt, s_##codeName##Intrinsic); \
 }
 ${macroPrefix}_FOREACH_BUILTIN_CODE(DEFINE_BUILTIN_GENERATOR)
 #undef DEFINE_BUILTIN_GENERATOR
@@ -96,7 +96,7 @@ ${macroPrefix}_FOREACH_BUILTIN_CODE(DEFINE_BUILTIN_GENERATOR)
 #define DEFINE_BUILTIN_GENERATOR(codeName, functionName, overriddenName, argumentCount) \\
 JSC::FunctionExecutable* codeName##Generator(JSC::VM& vm) \\
 {\\
-    return vm.builtinExecutables()->codeName##Executable()->link(vm, nullptr, vm.builtinExecutables()->codeName##Source(), WTF::nullopt, s_##codeName##Intrinsic); \
+    return vm.builtinExecutables()->codeName##Executable()->link(vm, nullptr, vm.builtinExecutables()->codeName##Source(), std::nullopt, s_##codeName##Intrinsic); \
 }
 ${macroPrefix}_FOREACH_${objectMacro}_BUILTIN_CODE(DEFINE_BUILTIN_GENERATOR)
 #undef DEFINE_BUILTIN_GENERATOR
@@ -108,7 +108,7 @@ ${macroPrefix}_FOREACH_${objectMacro}_BUILTIN_CODE(DEFINE_BUILTIN_GENERATOR)
 JSC::FunctionExecutable* codeName##Generator(JSC::VM& vm) \\
 {\\
     JSVMClientData* clientData = static_cast<JSVMClientData*>(vm.clientData); \\
-    return clientData->builtinFunctions().${objectNameLC}Builtins().codeName##Executable()->link(vm, nullptr, clientData->builtinFunctions().${objectNameLC}Builtins().codeName##Source(), WTF::nullopt, s_##codeName##Intrinsic); \\
+    return clientData->builtinFunctions().${objectNameLC}Builtins().codeName##Executable()->link(vm, nullptr, clientData->builtinFunctions().${objectNameLC}Builtins().codeName##Source(), std::nullopt, s_##codeName##Intrinsic); \\
 }
 ${macroPrefix}_FOREACH_BUILTIN_CODE(DEFINE_BUILTIN_GENERATOR)
 #undef DEFINE_BUILTIN_GENERATOR
@@ -120,7 +120,7 @@ ${macroPrefix}_FOREACH_BUILTIN_CODE(DEFINE_BUILTIN_GENERATOR)
 JSC::FunctionExecutable* codeName##Generator(JSC::VM& vm) \\
 {\\
     JSVMClientData* clientData = static_cast<JSVMClientData*>(vm.clientData); \\
-    return clientData->builtinFunctions().${objectNameLC}Builtins().codeName##Executable()->link(vm, nullptr, clientData->builtinFunctions().${objectNameLC}Builtins().codeName##Source(), WTF::nullopt, s_##codeName##Intrinsic); \\
+    return clientData->builtinFunctions().${objectNameLC}Builtins().codeName##Executable()->link(vm, nullptr, clientData->builtinFunctions().${objectNameLC}Builtins().codeName##Source(), std::nullopt, s_##codeName##Intrinsic); \\
 }
 ${macroPrefix}_FOREACH_${objectMacro}_BUILTIN_CODE(DEFINE_BUILTIN_GENERATOR)
 #undef DEFINE_BUILTIN_GENERATOR
@@ -188,7 +188,7 @@ public:
     explicit ${objectName}BuiltinFunctions(JSC::VM& vm) : m_vm(vm) { }
 
     void init(JSC::JSGlobalObject&);
-    void visit(JSC::SlotVisitor&);
+    template<typename Visitor> void visit(Visitor&);
 
 public:
     JSC::VM& m_vm;
@@ -207,10 +207,15 @@ inline void ${objectName}BuiltinFunctions::init(JSC::JSGlobalObject& globalObjec
 #undef EXPORT_FUNCTION
 }
 
-inline void ${objectName}BuiltinFunctions::visit(JSC::SlotVisitor& visitor)
+template<typename Visitor>
+inline void ${objectName}BuiltinFunctions::visit(Visitor& visitor)
 {
 #define VISIT_FUNCTION(name) visitor.append(m_##name##Function);
     ${macroPrefix}_FOREACH_${objectMacro}_BUILTIN_FUNCTION_NAME(VISIT_FUNCTION)
 #undef VISIT_FUNCTION
 }
+
+template void ${objectName}BuiltinFunctions::visit(JSC::AbstractSlotVisitor&);
+template void ${objectName}BuiltinFunctions::visit(JSC::SlotVisitor&);
+
 """)

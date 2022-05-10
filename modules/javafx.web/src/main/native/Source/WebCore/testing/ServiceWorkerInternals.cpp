@@ -50,13 +50,24 @@ void ServiceWorkerInternals::setOnline(bool isOnline)
     });
 }
 
+void ServiceWorkerInternals::terminate()
+{
+    callOnMainThread([identifier = m_identifier] () {
+        SWContextManager::singleton().terminateWorker(identifier, Seconds::infinity(), [] { });
+    });
+}
+
 void ServiceWorkerInternals::waitForFetchEventToFinish(FetchEvent& event, DOMPromiseDeferred<IDLInterface<FetchResponse>>&& promise)
 {
     event.onResponse([promise = WTFMove(promise), event = makeRef(event)] (auto&& result) mutable {
-        if (result.has_value())
-            promise.resolve(WTFMove(result.value()));
-        else
-            promise.reject(TypeError, result.error().localizedDescription());
+        if (!result.has_value()) {
+            String description;
+            if (auto& error = result.error())
+                description = error->localizedDescription();
+            promise.reject(TypeError, description);
+            return;
+        }
+        promise.resolve(WTFMove(result.value()));
     });
 }
 
@@ -69,14 +80,14 @@ Ref<FetchEvent> ServiceWorkerInternals::createBeingDispatchedFetchEvent(ScriptEx
 
 Ref<FetchResponse> ServiceWorkerInternals::createOpaqueWithBlobBodyResponse(ScriptExecutionContext& context)
 {
-    auto blob = Blob::create();
+    auto blob = Blob::create(&context);
     auto formData = FormData::create();
     formData->appendBlob(blob->url());
 
     ResourceResponse response;
     response.setType(ResourceResponse::Type::Cors);
     response.setTainting(ResourceResponse::Tainting::Opaque);
-    auto fetchResponse = FetchResponse::create(context, FetchBody::fromFormData(formData), FetchHeaders::Guard::Response, WTFMove(response));
+    auto fetchResponse = FetchResponse::create(context, FetchBody::fromFormData(context, formData), FetchHeaders::Guard::Response, WTFMove(response));
     fetchResponse->initializeOpaqueLoadIdentifierForTesting();
     return fetchResponse;
 }
@@ -106,6 +117,23 @@ bool ServiceWorkerInternals::isThrottleable() const
 int ServiceWorkerInternals::processIdentifier() const
 {
     return getCurrentProcessID();
+}
+
+void ServiceWorkerInternals::lastNavigationWasAppInitiated(Ref<DeferredPromise>&& promise)
+{
+    ASSERT(!m_lastNavigationWasAppInitiatedPromise);
+    m_lastNavigationWasAppInitiatedPromise = WTFMove(promise);
+    callOnMainThread([identifier = m_identifier, weakThis = makeWeakPtr(this)]() mutable {
+        if (auto* proxy = SWContextManager::singleton().workerByID(identifier)) {
+            proxy->thread().runLoop().postTaskForMode([weakThis = WTFMove(weakThis), appInitiated = proxy->lastNavigationWasAppInitiated()](auto&) {
+                if (!weakThis || !weakThis->m_lastNavigationWasAppInitiatedPromise)
+                    return;
+
+                weakThis->m_lastNavigationWasAppInitiatedPromise->resolve<IDLBoolean>(appInitiated);
+                weakThis->m_lastNavigationWasAppInitiatedPromise = nullptr;
+            }, WorkerRunLoop::defaultMode());
+        }
+    });
 }
 
 } // namespace WebCore

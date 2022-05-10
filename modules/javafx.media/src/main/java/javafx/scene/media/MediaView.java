@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -178,7 +178,7 @@ public class MediaView extends Node {
         }
     }
 
-    /***************************************** Media Player Overlay support ***************************/
+    /* *************************************** Media Player Overlay support ************************* */
 
     private MediaPlayerOverlay mediaPlayerOverlay = null;
 
@@ -287,7 +287,7 @@ public class MediaView extends Node {
         }
     }
 
-    /******************************************* End of iOS specific stuff ***************************/
+    /* ***************************************** End of iOS specific stuff ************************* */
 
     /**
      * @return reference to MediaView

@@ -44,11 +44,7 @@ public:
     virtual ~ScrollAnimatorGeneric();
 
 private:
-#if ENABLE(SMOOTH_SCROLLING)
-    bool scroll(ScrollbarOrientation, ScrollGranularity, float step, float multiplier) override;
-#endif
-    void scrollToOffsetWithoutAnimation(const FloatPoint&, ScrollClamping) override;
-    void willEndLiveResize() override;
+    bool scrollToPositionWithoutAnimation(const FloatPoint&, ScrollClamping) override;
 
     bool handleWheelEvent(const PlatformWheelEvent&) override;
 
@@ -72,11 +68,6 @@ private:
     void hideOverlayScrollbars();
     void updateOverlayScrollbarsOpacity();
 
-#if ENABLE(SMOOTH_SCROLLING)
-    void ensureSmoothScrollingAnimation();
-
-    std::unique_ptr<ScrollAnimation> m_smoothAnimation;
-#endif
     std::unique_ptr<ScrollAnimationKinetic> m_kineticAnimation;
     Scrollbar* m_horizontalOverlayScrollbar { nullptr };
     Scrollbar* m_verticalOverlayScrollbar { nullptr };

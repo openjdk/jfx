@@ -18,7 +18,6 @@
  * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
  * Boston, MA 02110-1301, USA.
  */
-
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -172,6 +171,10 @@ _gst_video_codec_state_free (GstVideoCodecState * state)
     gst_caps_unref (state->allocation_caps);
   if (state->codec_data)
     gst_buffer_unref (state->codec_data);
+  if (state->mastering_display_info)
+    g_slice_free (GstVideoMasteringDisplayInfo, state->mastering_display_info);
+  if (state->content_light_level)
+    g_slice_free (GstVideoContentLightLevel, state->content_light_level);
   g_slice_free (GstVideoCodecState, state);
 }
 

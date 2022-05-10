@@ -33,6 +33,7 @@
 
 namespace WebCore {
 
+class DOMFormData;
 class Event;
 class FormAssociatedElement;
 class HTMLFormControlElement;
@@ -52,7 +53,7 @@ public:
 
     WEBCORE_EXPORT unsigned length() const;
     HTMLElement* item(unsigned index);
-    Optional<Variant<RefPtr<RadioNodeList>, RefPtr<Element>>> namedItem(const AtomString&);
+    std::optional<Variant<RefPtr<RadioNodeList>, RefPtr<Element>>> namedItem(const AtomString&);
     Vector<AtomString> supportedPropertyNames() const;
 
     String enctype() const { return m_attributes.encodingType(); }
@@ -77,9 +78,10 @@ public:
     void registerImgElement(HTMLImageElement*);
     void removeImgElement(HTMLImageElement*);
 
-    void prepareForSubmission(Event&); // FIXME: This function doesn't only prepare, it sometimes calls submit() itself.
+    void submitIfPossible(Event*, HTMLFormControlElement* = nullptr, FormSubmissionTrigger = NotSubmittedByJavaScript);
     WEBCORE_EXPORT void submit();
     void submitFromJavaScript();
+    ExceptionOr<void> requestSubmit(HTMLElement* submitter);
     WEBCORE_EXPORT void reset();
 
     void setDemoted(bool demoted) { m_wasDemoted = demoted; }
@@ -101,11 +103,11 @@ public:
     WEBCORE_EXPORT void setMethod(const String&);
 
     String target() const final;
-    String effectiveTarget(const Event*) const;
+    String effectiveTarget(const Event*, HTMLFormControlElement* submitter) const;
 
     bool wasUserSubmitted() const;
 
-    HTMLFormControlElement* findSubmitButton(const Event*) const;
+    HTMLFormControlElement* findSubmitter(const Event*) const;
 
     HTMLFormControlElement* defaultButton() const;
     void resetDefaultButton();
@@ -123,6 +125,10 @@ public:
 
     static HTMLFormElement* findClosestFormAncestor(const Element&);
 
+    enum class IsMultipartForm : bool { No, Yes };
+
+    RefPtr<DOMFormData> constructEntryList(Ref<DOMFormData>&&, StringPairVector*, IsMultipartForm);
+
 private:
     HTMLFormElement(const QualifiedName&, Document&);
 
@@ -130,8 +136,6 @@ private:
     InsertedIntoAncestorResult insertedIntoAncestor(InsertionType, ContainerNode&) final;
     void removedFromAncestor(RemovalType, ContainerNode&) final;
     void finishParsingChildren() final;
-
-    void handleLocalEvents(Event&, EventInvokePhase) final;
 
     void parseAttribute(const QualifiedName&, const AtomString&) final;
     bool isURLAttribute(const Attribute&) const final;
@@ -142,7 +146,9 @@ private:
 
     void copyNonAttributePropertiesFromElement(const Element&) final;
 
-    void submit(Event*, bool activateSubmitButton, bool processingUserGesture, FormSubmissionTrigger);
+    void submit(Event*, bool activateSubmitButton, bool processingUserGesture, FormSubmissionTrigger, HTMLFormControlElement* submitter = nullptr);
+
+    void submitDialog(Ref<FormSubmission>&&);
 
     unsigned formElementIndexWithFormAttribute(Element*, unsigned rangeStart, unsigned rangeEnd);
     unsigned formElementIndex(FormAssociatedElement*);
@@ -166,6 +172,8 @@ private:
 
     void resetAssociatedFormControlElements();
 
+    RefPtr<HTMLFormControlElement> findSubmitButton(HTMLFormControlElement* submitter, bool needButtonActivation);
+
     FormSubmission::Attributes m_attributes;
     HashMap<AtomString, WeakPtr<HTMLElement>> m_pastNamesMap;
 
@@ -186,6 +194,7 @@ private:
     bool m_isInResetFunction { false };
 
     bool m_wasDemoted { false };
+    bool m_isConstructingEntryList { false };
 };
 
 } // namespace WebCore

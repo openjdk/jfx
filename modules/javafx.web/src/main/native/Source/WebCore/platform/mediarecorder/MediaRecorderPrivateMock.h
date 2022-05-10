@@ -45,13 +45,15 @@ private:
     void videoSampleAvailable(MediaSample&) final;
     void fetchData(FetchDataCallback&&) final;
     void audioSamplesAvailable(const WTF::MediaTime&, const PlatformAudioData&, const AudioStreamDescription&, size_t) final;
-    void stopRecording() final;
+    void stopRecording(CompletionHandler<void()>&&) final;
+    void pauseRecording(CompletionHandler<void()>&&) final;
+    void resumeRecording(CompletionHandler<void()>&&) final;
+    const String& mimeType() const final;
 
-    const String& mimeType();
-    void generateMockCounterString();
+    void generateMockCounterString() WTF_REQUIRES_LOCK(m_bufferLock);
 
     mutable Lock m_bufferLock;
-    StringBuilder m_buffer;
+    StringBuilder m_buffer WTF_GUARDED_BY_LOCK(m_bufferLock);
     unsigned m_counter { 0 };
     String m_audioTrackID;
     String m_videoTrackID;

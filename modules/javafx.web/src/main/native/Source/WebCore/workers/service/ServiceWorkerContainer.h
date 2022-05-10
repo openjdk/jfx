@@ -28,6 +28,7 @@
 #if ENABLE(SERVICE_WORKER)
 
 #include "ActiveDOMObject.h"
+#include "AddEventListenerOptions.h"
 #include "EventTarget.h"
 #include "IDLTypes.h"
 #include "JSDOMPromiseDeferred.h"
@@ -46,7 +47,7 @@ class NavigatorBase;
 class ServiceWorker;
 
 enum class ServiceWorkerUpdateViaCache : uint8_t;
-enum class WorkerType;
+enum class WorkerType : uint8_t;
 
 template<typename IDLType> class DOMPromiseProxy;
 
@@ -68,7 +69,7 @@ public:
     void updateRegistration(const URL& scopeURL, const URL& scriptURL, WorkerType, RefPtr<DeferredPromise>&&);
 
     void getRegistration(const String& clientURL, Ref<DeferredPromise>&&);
-    void updateRegistrationState(ServiceWorkerRegistrationIdentifier, ServiceWorkerRegistrationState, const Optional<ServiceWorkerData>&);
+    void updateRegistrationState(ServiceWorkerRegistrationIdentifier, ServiceWorkerRegistrationState, const std::optional<ServiceWorkerData>&);
     void updateWorkerState(ServiceWorkerIdentifier, ServiceWorkerState);
     void queueTaskToFireUpdateFoundEvent(ServiceWorkerRegistrationIdentifier);
     void queueTaskToDispatchControllerChangeEvent();
@@ -88,8 +89,6 @@ public:
 
     bool isStopped() const { return m_isStopped; };
 
-    bool isAlwaysOnLoggingAllowed() const;
-
     NavigatorBase* navigator() { return &m_navigator; }
 
 private:
@@ -101,7 +100,7 @@ private:
     void jobResolvedWithRegistration(ServiceWorkerJob&, ServiceWorkerRegistrationData&&, ShouldNotifyWhenResolved) final;
     void jobResolvedWithUnregistrationResult(ServiceWorkerJob&, bool unregistrationResult) final;
     void startScriptFetchForJob(ServiceWorkerJob&, FetchOptions::Cache) final;
-    void jobFinishedLoadingScript(ServiceWorkerJob&, const String& script, const CertificateInfo&, const ContentSecurityPolicyResponseHeaders&, const String& referrerPolicy) final;
+    void jobFinishedLoadingScript(ServiceWorkerJob&, const ScriptBuffer&, const CertificateInfo&, const ContentSecurityPolicyResponseHeaders&, const CrossOriginEmbedderPolicy&, const String& referrerPolicy) final;
     void jobFailedLoadingScript(ServiceWorkerJob&, const ResourceError&, Exception&&) final;
 
     void notifyFailedFetchingScript(ServiceWorkerJob&, const ResourceError&);
@@ -137,7 +136,7 @@ private:
     bool m_isStopped { false };
     HashMap<ServiceWorkerRegistrationIdentifier, ServiceWorkerRegistration*> m_registrations;
 
-#ifndef NDEBUG
+#if ASSERT_ENABLED
     Ref<Thread> m_creationThread { Thread::current() };
 #endif
 

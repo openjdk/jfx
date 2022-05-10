@@ -1,4 +1,29 @@
 #
+# Copyright (c) 2013, 2021, Oracle and/or its affiliates. All rights reserved.
+# DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+#
+# This code is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License version 2 only, as
+# published by the Free Software Foundation.  Oracle designates this
+# particular file as subject to the "Classpath" exception as provided
+# by Oracle in the LICENSE file that accompanied this code.
+#
+# This code is distributed in the hope that it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+# version 2 for more details (a copy is included in the LICENSE file that
+# accompanied this code).
+#
+# You should have received a copy of the GNU General Public License version
+# 2 along with this work; if not, write to the Free Software Foundation,
+# Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+#
+# Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+# or visit www.oracle.com if you need additional information or have any
+# questions.
+#
+
+#
 # Mac OS X jfxmedia makefile
 #
 
@@ -11,6 +36,7 @@ OBJBASE_DIR = $(BUILD_DIR)/obj/jfxmedia
 BASE_DIR = ../../..
 GSTREAMER_LITE_DIR = $(BASE_DIR)/gstreamer/gstreamer-lite
 GLIB_LITE_DIR = $(BASE_DIR)/gstreamer/3rd_party/glib
+PLUGINS_DIR = $(BASE_DIR)/gstreamer/plugins
 
 OSX_PLATFORM_BASE = $(SRCBASE_DIR)/platform/osx
 
@@ -30,8 +56,7 @@ CFLAGS += -pipe \
          -fPIC                     \
          -Werror=implicit-function-declaration \
          -DTARGET_OS_MAC=1         \
-         -D_GNU_SOURCE             \
-         -msse2
+         -D_GNU_SOURCE
 
 ifeq ($(BUILD_TYPE), Release)
     CFLAGS += -Os
@@ -39,6 +64,9 @@ else
     CFLAGS += -O0 -g -Wall
 endif
 
+ifneq ($(ARCH), arm64)
+    CFLAGS += -msse2
+endif
 
 INCLUDES = -I$(JAVA_HOME)/include \
            -I$(JAVA_HOME)/include/darwin \
@@ -71,7 +99,8 @@ JFXMEDIA_INCLUDES = $(INCLUDES) \
            -I$(GLIB_LITE_DIR)/build/osx \
            -I$(GSTREAMER_LITE_DIR)/gstreamer \
            -I$(GSTREAMER_LITE_DIR)/gst-plugins-base/gst-libs \
-           -I$(GSTREAMER_LITE_DIR)/gstreamer/libs
+           -I$(GSTREAMER_LITE_DIR)/gstreamer/libs \
+           -I$(PLUGINS_DIR)
 
 JFXMEDIA_LDFLAGS = $(LDFLAGS) \
           -Wl,-install_name,@rpath/$(TARGET_NAME) \

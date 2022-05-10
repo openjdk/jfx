@@ -26,12 +26,7 @@ class PluralRules;
 class NumberFormat;
 class Formattable;
 class FieldPosition;
-
-namespace number {
-namespace impl {
-class NumberStringBuilder;
-}
-}
+class FormattedStringBuilder;
 
 /**
  * A plural aware formatter that is good for expressing a single quantity and
@@ -79,18 +74,18 @@ public:
      * @param variant "zero", "one", "two", "few", "many", "other"
      * @param rawPattern the pattern for the variant e.g "{0} meters"
      * @param status any error returned here.
-     * @return TRUE on success; FALSE if status was set to a non zero error.
+     * @return true on success; false if status was set to a non zero error.
      */
     UBool addIfAbsent(const char *variant, const UnicodeString &rawPattern, UErrorCode &status);
 
     /**
-     * returns TRUE if this object has at least the "other" variant.
+     * returns true if this object has at least the "other" variant.
      */
     UBool isValid() const;
 
     /**
      * Gets the pattern formatter that would be used for a particular variant.
-     * If isValid() returns TRUE, this method is guaranteed to return a
+     * If isValid() returns true, this method is guaranteed to return a
      * non-NULL value.
      */
     const SimpleFormatter *getByVariant(const char *variant) const;
@@ -117,7 +112,7 @@ public:
 
     /**
      * Selects the standard plural form for the number/formatter/rules.
-     * TODO(13591): Remove this method.
+     * Used in MeasureFormat for backwards compatibility with NumberFormat.
      */
     static StandardPlural::Form selectPlural(
             const Formattable &number,
@@ -129,7 +124,7 @@ public:
 
     /**
      * Formats a quantity and selects its plural form. The output is appended
-     * to a NumberStringBuilder in order to retain field information.
+     * to a FormattedStringBuilder in order to retain field information.
      *
      * @param quantity The number to format.
      * @param fmt The formatter to use to format the number.
@@ -144,7 +139,7 @@ public:
             double quantity,
             const NumberFormat& fmt,
             const PluralRules& rules,
-            number::impl::NumberStringBuilder& output,
+            FormattedStringBuilder& output,
             StandardPlural::Form& pluralForm,
             UErrorCode& status);
 

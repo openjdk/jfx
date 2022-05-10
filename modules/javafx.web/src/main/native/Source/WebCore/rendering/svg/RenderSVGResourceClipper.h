@@ -45,7 +45,7 @@ public:
     // clipPath can be clipped too, but don't have a boundingBox or repaintRect. So we can't call
     // applyResource directly and use the rects from the object, since they are empty for RenderSVGResources
     // FIXME: We made applyClippingToContext public because we cannot call applyResource on HTML elements (it asserts on RenderObject::objectBoundingBox)
-    bool applyClippingToContext(RenderElement&, const FloatRect&, GraphicsContext&);
+    bool applyClippingToContext(GraphicsContext&, RenderElement&, const FloatRect&, float effectiveZoom = 1);
     FloatRect resourceBoundingBox(const RenderObject&) override;
 
     RenderSVGResourceType resourceType() const override { return ClipperResourceType; }
@@ -60,10 +60,10 @@ private:
     struct ClipperData {
         FloatRect objectBoundingBox;
         AffineTransform absoluteTransform;
-        std::unique_ptr<ImageBuffer> imageBuffer;
+        RefPtr<ImageBuffer> imageBuffer;
 
         ClipperData() = default;
-        ClipperData(std::unique_ptr<ImageBuffer>&& buffer, const FloatRect& boundingBox, const AffineTransform& transform)
+        ClipperData(RefPtr<ImageBuffer>&& buffer, const FloatRect& boundingBox, const AffineTransform& transform)
             : objectBoundingBox(boundingBox)
             , absoluteTransform(transform)
             , imageBuffer(WTFMove(buffer))
@@ -81,8 +81,8 @@ private:
     const char* renderName() const override { return "RenderSVGResourceClipper"; }
     bool isSVGResourceClipper() const override { return true; }
 
-    bool pathOnlyClipping(GraphicsContext&, const AffineTransform&, const FloatRect&);
-    bool drawContentIntoMaskImage(ImageBuffer&, const FloatRect& objectBoundingBox);
+    bool pathOnlyClipping(GraphicsContext&, const AffineTransform&, const FloatRect&, float effectiveZoom);
+    bool drawContentIntoMaskImage(ImageBuffer&, const FloatRect& objectBoundingBox, float effectiveZoom);
     void calculateClipContentRepaintRect();
     ClipperData& addRendererToClipper(const RenderObject&);
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008, 2009 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,19 +33,9 @@
 #include "ServiceWorkerGlobalScope.h"
 #endif
 
-namespace JSC {
-class JSProxy;
-}
-
 namespace WebCore {
 
-class JSDedicatedWorkerGlobalScope;
-class JSWorkerGlobalScope;
 class WorkerGlobalScope;
-
-#if ENABLE(SERVICE_WORKER)
-class JSServiceWorkerGlobalScope;
-#endif
 
 class JSWorkerGlobalScopeBase : public JSDOMGlobalObject {
 public:
@@ -59,7 +49,6 @@ public:
     DECLARE_INFO;
 
     WorkerGlobalScope& wrapped() const { return *m_wrapped; }
-    JSC::JSProxy* proxy() const { ASSERT(m_proxy); return m_proxy.get(); }
     ScriptExecutionContext* scriptExecutionContext() const;
 
     static JSC::Structure* createStructure(JSC::VM& vm, JSC::JSGlobalObject* globalObject, JSC::JSValue prototype)
@@ -73,19 +62,17 @@ public:
     static bool shouldInterruptScript(const JSC::JSGlobalObject*);
     static bool shouldInterruptScriptBeforeTimeout(const JSC::JSGlobalObject*);
     static JSC::RuntimeFlags javaScriptRuntimeFlags(const JSC::JSGlobalObject*);
+    static JSC::ScriptExecutionStatus scriptExecutionStatus(JSC::JSGlobalObject*, JSC::JSObject*);
     static void queueMicrotaskToEventLoop(JSC::JSGlobalObject&, Ref<JSC::Microtask>&&);
-
-    void clearDOMGuardedObjects();
 
 protected:
     JSWorkerGlobalScopeBase(JSC::VM&, JSC::Structure*, RefPtr<WorkerGlobalScope>&&);
     void finishCreation(JSC::VM&, JSC::JSProxy*);
 
-    static void visitChildren(JSC::JSCell*, JSC::SlotVisitor&);
+    DECLARE_VISIT_CHILDREN;
 
 private:
     RefPtr<WorkerGlobalScope> m_wrapped;
-    JSC::WriteBarrier<JSC::JSProxy> m_proxy;
 };
 
 // Returns a JSWorkerGlobalScope or jsNull()
@@ -95,10 +82,4 @@ inline JSC::JSValue toJS(JSC::JSGlobalObject* lexicalGlobalObject, JSDOMGlobalOb
 JSC::JSValue toJS(JSC::JSGlobalObject*, WorkerGlobalScope&);
 inline JSC::JSValue toJS(JSC::JSGlobalObject* lexicalGlobalObject, WorkerGlobalScope* scope) { return scope ? toJS(lexicalGlobalObject, *scope) : JSC::jsNull(); }
 
-JSDedicatedWorkerGlobalScope* toJSDedicatedWorkerGlobalScope(JSC::VM&, JSC::JSValue);
-JSWorkerGlobalScope* toJSWorkerGlobalScope(JSC::VM&, JSC::JSValue);
-
-#if ENABLE(SERVICE_WORKER)
-JSServiceWorkerGlobalScope* toJSServiceWorkerGlobalScope(JSC::VM&, JSC::JSValue);
-#endif
 } // namespace WebCore

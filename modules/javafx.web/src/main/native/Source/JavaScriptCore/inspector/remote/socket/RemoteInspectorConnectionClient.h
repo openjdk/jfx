@@ -31,6 +31,7 @@
 #include "RemoteInspectorMessageParser.h"
 #include "RemoteInspectorSocketEndpoint.h"
 #include <wtf/HashMap.h>
+#include <wtf/JSONValues.h>
 #include <wtf/Lock.h>
 #include <wtf/text/WTFString.h>
 
@@ -40,29 +41,31 @@ class MessageParser;
 
 class JS_EXPORT_PRIVATE RemoteInspectorConnectionClient : public RemoteInspectorSocketEndpoint::Client {
 public:
-    virtual ~RemoteInspectorConnectionClient();
+    ~RemoteInspectorConnectionClient() override;
 
-    Optional<ConnectionID> connectInet(const char* serverAddr, uint16_t serverPort);
-    Optional<ConnectionID> createClient(PlatformSocketType);
+    std::optional<ConnectionID> connectInet(const char* serverAddr, uint16_t serverPort);
+    std::optional<ConnectionID> createClient(PlatformSocketType);
     void send(ConnectionID, const uint8_t* data, size_t);
 
-    void didReceive(ConnectionID, Vector<uint8_t>&&) override;
+    void didReceive(RemoteInspectorSocketEndpoint&, ConnectionID, Vector<uint8_t>&&) final;
 
     struct Event {
         String methodName;
         ConnectionID clientID { };
-        Optional<ConnectionID> connectionID;
-        Optional<TargetID> targetID;
-        Optional<String> message;
+        std::optional<ConnectionID> connectionID;
+        std::optional<TargetID> targetID;
+        std::optional<String> message;
     };
 
     using CallHandler = void (RemoteInspectorConnectionClient::*)(const Event&);
     virtual HashMap<String, CallHandler>& dispatchMap() = 0;
 
 protected:
-    static Optional<Event> extractEvent(ConnectionID, Vector<uint8_t>&&);
+    std::optional<Vector<Ref<JSON::Object>>> parseTargetListJSON(const String&);
 
-    HashMap<ConnectionID, MessageParser> m_parsers;
+    static std::optional<Event> extractEvent(ConnectionID, Vector<uint8_t>&&);
+
+    HashMap<ConnectionID, MessageParser> m_parsers WTF_GUARDED_BY_LOCK(m_parsersLock);
     Lock m_parsersLock;
 };
 

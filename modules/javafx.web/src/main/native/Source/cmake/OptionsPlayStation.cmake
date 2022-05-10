@@ -1,5 +1,7 @@
 set(PORT PlayStation)
 
+include(CheckSymbolExists)
+
 string(APPEND CMAKE_C_FLAGS_RELEASE " -g")
 string(APPEND CMAKE_CXX_FLAGS_RELEASE " -g")
 set(CMAKE_CONFIGURATION_TYPES "Debug" "Release")
@@ -10,6 +12,9 @@ add_definitions(-DWTF_PLATFORM_PLAYSTATION=1)
 add_definitions(-DBPLATFORM_PLAYSTATION=1)
 
 add_definitions(-DSCE_LIBC_DISABLE_CPP14_HEADER_WARNING= -DSCE_LIBC_DISABLE_CPP17_HEADER_WARNING=)
+
+# bug-224462
+WEBKIT_PREPEND_GLOBAL_COMPILER_FLAGS(-Wno-dll-attribute-on-redeclaration)
 
 set(ENABLE_API_TESTS ON CACHE BOOL "Build API Tests")
 set(ENABLE_WEBCORE ON CACHE BOOL "Build WebCore")
@@ -23,6 +28,9 @@ endif ()
 
 WEBKIT_OPTION_BEGIN()
 
+# PlayStation Specific Options
+WEBKIT_OPTION_DEFINE(ENABLE_STATIC_JSC "Control whether to build a non-shared JSC" PUBLIC ON)
+
 # Turn off JIT
 WEBKIT_OPTION_DEFAULT_PORT_VALUE(ENABLE_JIT PRIVATE OFF)
 WEBKIT_OPTION_DEFAULT_PORT_VALUE(ENABLE_FTL_JIT PRIVATE OFF)
@@ -31,8 +39,11 @@ WEBKIT_OPTION_DEFAULT_PORT_VALUE(ENABLE_DFG_JIT PRIVATE OFF)
 # Enabled features
 WEBKIT_OPTION_DEFAULT_PORT_VALUE(ENABLE_ACCESSIBILITY PRIVATE OFF)
 WEBKIT_OPTION_DEFAULT_PORT_VALUE(ENABLE_ASYNC_SCROLLING PRIVATE ON)
+WEBKIT_OPTION_DEFAULT_PORT_VALUE(ENABLE_FULLSCREEN_API PRIVATE ON)
 WEBKIT_OPTION_DEFAULT_PORT_VALUE(ENABLE_PERIODIC_MEMORY_MONITOR PRIVATE ON)
 WEBKIT_OPTION_DEFAULT_PORT_VALUE(ENABLE_SMOOTH_SCROLLING PRIVATE ON)
+WEBKIT_OPTION_DEFAULT_PORT_VALUE(ENABLE_RESOURCE_LOAD_STATISTICS PRIVATE ON)
+WEBKIT_OPTION_DEFAULT_PORT_VALUE(ENABLE_RESOURCE_USAGE PRIVATE ON)
 
 # Experimental features
 WEBKIT_OPTION_DEFAULT_PORT_VALUE(ENABLE_APPLICATION_MANIFEST PRIVATE ${ENABLE_EXPERIMENTAL_FEATURES})
@@ -43,7 +54,6 @@ WEBKIT_OPTION_DEFAULT_PORT_VALUE(ENABLE_GPU_PROCESS PRIVATE ${ENABLE_EXPERIMENTA
 WEBKIT_OPTION_DEFAULT_PORT_VALUE(ENABLE_LAYOUT_FORMATTING_CONTEXT PRIVATE ${ENABLE_EXPERIMENTAL_FEATURES})
 WEBKIT_OPTION_DEFAULT_PORT_VALUE(ENABLE_REMOTE_INSPECTOR PRIVATE ${ENABLE_EXPERIMENTAL_FEATURES})
 WEBKIT_OPTION_DEFAULT_PORT_VALUE(ENABLE_SERVICE_WORKER PRIVATE ${ENABLE_EXPERIMENTAL_FEATURES})
-WEBKIT_OPTION_DEFAULT_PORT_VALUE(ENABLE_WEBGL PRIVATE ${ENABLE_EXPERIMENTAL_FEATURES})
 WEBKIT_OPTION_DEFAULT_PORT_VALUE(ENABLE_WEB_CRYPTO PRIVATE ${ENABLE_EXPERIMENTAL_FEATURES})
 
 # Features to investigate
@@ -60,19 +70,16 @@ WEBKIT_OPTION_DEFINE(ENABLE_TLS_DEBUG "Enable TLS key log support" PRIVATE OFF)
 WEBKIT_OPTION_DEFAULT_PORT_VALUE(ENABLE_VARIATION_FONTS PRIVATE OFF)
 
 # Enable in the future
-WEBKIT_OPTION_DEFAULT_PORT_VALUE(ENABLE_FULLSCREEN_API PRIVATE OFF)
 WEBKIT_OPTION_DEFAULT_PORT_VALUE(ENABLE_CONTEXT_MENUS PRIVATE OFF)
 
 # No support planned
 WEBKIT_OPTION_DEFAULT_PORT_VALUE(ENABLE_FTPDIR PRIVATE OFF)
 WEBKIT_OPTION_DEFAULT_PORT_VALUE(ENABLE_GEOLOCATION PRIVATE OFF)
 WEBKIT_OPTION_DEFAULT_PORT_VALUE(ENABLE_MATHML PRIVATE OFF)
-WEBKIT_OPTION_DEFAULT_PORT_VALUE(ENABLE_METER_ELEMENT PRIVATE OFF)
 WEBKIT_OPTION_DEFAULT_PORT_VALUE(ENABLE_NETSCAPE_PLUGIN_API PRIVATE OFF)
 WEBKIT_OPTION_DEFAULT_PORT_VALUE(ENABLE_NOTIFICATIONS PRIVATE OFF)
-WEBKIT_OPTION_DEFAULT_PORT_VALUE(ENABLE_SVG_FONTS PRIVATE OFF)
-WEBKIT_OPTION_DEFAULT_PORT_VALUE(ENABLE_USERSELECT_ALL PRIVATE OFF)
 WEBKIT_OPTION_DEFAULT_PORT_VALUE(ENABLE_USER_MESSAGE_HANDLERS PRIVATE OFF)
+WEBKIT_OPTION_DEFAULT_PORT_VALUE(ENABLE_WEBGL PRIVATE OFF)
 WEBKIT_OPTION_DEFAULT_PORT_VALUE(ENABLE_XSLT PRIVATE OFF)
 
 WEBKIT_OPTION_END()
@@ -118,13 +125,17 @@ find_package(WebKitRequirements REQUIRED
         libwpe
 )
 
+# The OpenGL ES implementation is in the same library as the EGL implementation
+set(OpenGLES2_NAMES ${EGL_NAMES})
+
 find_package(Cairo REQUIRED)
 find_package(CURL REQUIRED)
 find_package(EGL REQUIRED)
 find_package(Fontconfig REQUIRED)
 find_package(Freetype REQUIRED)
 find_package(HarfBuzz REQUIRED COMPONENTS ICU)
-find_package(ICU 60.2 REQUIRED COMPONENTS data i18n uc)
+find_package(ICU 61.2 REQUIRED COMPONENTS data i18n uc)
+find_package(OpenGLES2 REQUIRED)
 find_package(OpenSSL REQUIRED)
 find_package(PNG REQUIRED)
 find_package(Threads REQUIRED)
@@ -136,9 +147,6 @@ set(CMAKE_C_STANDARD_LIBRARIES
 set(CMAKE_CXX_STANDARD_LIBRARIES
     "${CMAKE_CXX_STANDARD_LIBRARIES} ${C_STD_LIBRARY}"
   )
-
-# TODO: Add a check for HAVE_RSA_PSS for support of CryptoAlgorithmRSA_PSS
-# https://bugs.webkit.org/show_bug.cgi?id=206635
 
 SET_AND_EXPOSE_TO_BUILD(HAVE_PTHREAD_SETNAME_NP ON)
 
@@ -154,7 +162,6 @@ SET_AND_EXPOSE_TO_BUILD(USE_INSPECTOR_SOCKET_SERVER ${ENABLE_REMOTE_INSPECTOR})
 SET_AND_EXPOSE_TO_BUILD(USE_UNIX_DOMAIN_SOCKETS ON)
 
 # Rendering options
-SET_AND_EXPOSE_TO_BUILD(ENABLE_GRAPHICS_CONTEXT_GL ON)
 SET_AND_EXPOSE_TO_BUILD(USE_COORDINATED_GRAPHICS ON)
 SET_AND_EXPOSE_TO_BUILD(USE_EGL ON)
 SET_AND_EXPOSE_TO_BUILD(USE_NICOSIA TRUE)
@@ -163,28 +170,6 @@ SET_AND_EXPOSE_TO_BUILD(USE_TEXTURE_MAPPER ON)
 SET_AND_EXPOSE_TO_BUILD(USE_TEXTURE_MAPPER_GL ON)
 SET_AND_EXPOSE_TO_BUILD(USE_TILED_BACKING_STORE ON)
 
-# Override headers directories
-set(ANGLE_FRAMEWORK_HEADERS_DIR ${CMAKE_BINARY_DIR}/ANGLE/Headers)
-set(WTF_FRAMEWORK_HEADERS_DIR ${CMAKE_BINARY_DIR}/WTF/Headers)
-set(JavaScriptCore_FRAMEWORK_HEADERS_DIR ${CMAKE_BINARY_DIR}/JavaScriptCore/Headers)
-set(JavaScriptCore_PRIVATE_FRAMEWORK_HEADERS_DIR ${CMAKE_BINARY_DIR}/JavaScriptCore/PrivateHeaders)
-set(PAL_FRAMEWORK_HEADERS_DIR ${CMAKE_BINARY_DIR}/PAL/Headers)
-set(WebCore_PRIVATE_FRAMEWORK_HEADERS_DIR ${CMAKE_BINARY_DIR}/WebCore/PrivateHeaders)
-set(WebKitLegacy_FRAMEWORK_HEADERS_DIR ${CMAKE_BINARY_DIR}/WebKitLegacy/Headers)
-set(WebKit_FRAMEWORK_HEADERS_DIR ${CMAKE_BINARY_DIR}/WebKit/Headers)
-set(WebKit_PRIVATE_FRAMEWORK_HEADERS_DIR ${CMAKE_BINARY_DIR}/WebKit/PrivateHeaders)
-
-# Override derived sources directories
-set(WTF_DERIVED_SOURCES_DIR ${CMAKE_BINARY_DIR}/WTF/DerivedSources)
-set(JavaScriptCore_DERIVED_SOURCES_DIR ${CMAKE_BINARY_DIR}/JavaScriptCore/DerivedSources)
-set(WebCore_DERIVED_SOURCES_DIR ${CMAKE_BINARY_DIR}/WebCore/DerivedSources)
-set(WebKitLegacy_DERIVED_SOURCES_DIR ${CMAKE_BINARY_DIR}/WebKitLegacy/DerivedSources)
-set(WebKit_DERIVED_SOURCES_DIR ${CMAKE_BINARY_DIR}/WebKit/DerivedSources)
-
-# Override scripts directories
-set(WTF_SCRIPTS_DIR ${CMAKE_BINARY_DIR}/WTF/Scripts)
-set(JavaScriptCore_SCRIPTS_DIR ${CMAKE_BINARY_DIR}/JavaScriptCore/Scripts)
-
 # Create a shared JavaScriptCore with WTF and bmalloc exposed through it.
 #
 # Use OBJECT libraries for bmalloc and WTF. This is the modern CMake way to emulate
@@ -192,7 +177,12 @@ set(JavaScriptCore_SCRIPTS_DIR ${CMAKE_BINARY_DIR}/JavaScriptCore/Scripts)
 # not be exposed.
 set(bmalloc_LIBRARY_TYPE OBJECT)
 set(WTF_LIBRARY_TYPE OBJECT)
-set(JavaScriptCore_LIBRARY_TYPE SHARED)
+
+if (ENABLE_STATIC_JSC)
+    set(JavaScriptCore_LIBRARY_TYPE OBJECT)
+else ()
+    set(JavaScriptCore_LIBRARY_TYPE SHARED)
+endif ()
 
 # Create a shared WebKit
 #
@@ -220,6 +210,14 @@ function(add_library target type)
     endif ()
 endfunction()
 
+add_custom_target(playstation_tools_copy
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        ${WEBKIT_LIBRARIES_DIR}/tools/sce_sys/
+        ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/sce_sys/
+    COMMAND ${CMAKE_COMMAND} -E touch
+        ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/ebootparam.ini
+)
+
 macro(WEBKIT_EXECUTABLE _target)
     _WEBKIT_EXECUTABLE(${_target})
     playstation_setup_libc(${_target})
@@ -232,15 +230,12 @@ macro(WEBKIT_EXECUTABLE _target)
             target_link_options(${_target} PRIVATE -Wl,--wrap=${WRAP})
         endforeach ()
     endif ()
-    add_custom_command(TARGET ${_target}
-        POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_directory
-            ${WEBKIT_LIBRARIES_DIR}/tools/sce_sys/
-            $<TARGET_FILE_DIR:${_target}>/sce_sys/
-    )
+    add_dependencies(${_target} playstation_tools_copy)
 endmacro()
 
-function(PLAYSTATION_COPY_SHARED_LIBRARIES target_name)
+set_property(GLOBAL PROPERTY playstation_copied_requirements)
+
+function(PLAYSTATION_COPY_REQUIREMENTS target_name)
     set(oneValueArgs PREFIX DESTINATION)
     set(multiValueArgs FILES)
     cmake_parse_arguments(opt "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
@@ -255,33 +250,48 @@ function(PLAYSTATION_COPY_SHARED_LIBRARIES target_name)
         set(destination ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
     endif ()
 
-    set(stub_libs)
+    set(files_to_copy)
     list(REMOVE_DUPLICATES opt_FILES)
     foreach (file IN LISTS opt_FILES)
-        if (NOT ${file} MATCHES ".*_stub_weak.a")
+        if (NOT (${file} MATCHES ".*_stub_weak\.a" OR
+                 ${file} MATCHES ".*\.sprx" OR
+                 ${file} MATCHES ".*\.elf" OR
+                 ${file} MATCHES ".*\.self"))
             continue()
         endif ()
         file(RELATIVE_PATH _relative ${prefix} ${file})
         if (NOT ${_relative} MATCHES "^\.\./.*")
             get_filename_component(lib ${file} NAME)
-            list(APPEND stub_libs ${lib})
+            list(APPEND files_to_copy ${lib})
         endif ()
     endforeach ()
 
-    set(dst_shared_libs)
-    foreach (lib IN LISTS stub_libs)
-        string(REPLACE "_stub_weak.a" ".sprx" shared_lib ${lib})
-        set(src_file "${prefix}/bin/${shared_lib}")
+    set(dst_requirements)
+    get_property(copied_requirements GLOBAL PROPERTY playstation_copied_requirements)
+    foreach (basefilename IN LISTS files_to_copy)
+        string(REPLACE "_stub_weak.a" ".sprx" filename ${basefilename})
+        set(src_file "${prefix}/bin/${filename}")
+        list(FIND copied_requirements ${src_file} found)
+        if (${found} GREATER_EQUAL 0)
+            continue()
+        endif ()
         if (NOT EXISTS ${src_file})
             continue()
         endif ()
-        set(dst_file "${destination}/${shared_lib}")
+        list(APPEND copied_requirements ${src_file})
+        set(dst_file "${destination}/${filename}")
         add_custom_command(OUTPUT ${dst_file}
             COMMAND ${CMAKE_COMMAND} -E copy ${src_file} ${dst_file}
             MAIN_DEPENDENCY ${file}
             VERBATIM
         )
-        list(APPEND dst_shared_libs ${dst_file})
+        list(APPEND dst_requirements ${dst_file})
     endforeach ()
-    add_custom_target(${target_name} ALL DEPENDS ${dst_shared_libs})
+    add_custom_target(${target_name} ALL DEPENDS ${dst_requirements})
+    set_property(GLOBAL PROPERTY playstation_copied_requirements ${copied_requirements} ${dst_requirements})
 endfunction()
+
+check_symbol_exists(memmem string.h HAVE_MEMMEM)
+if (HAVE_MEMMEM)
+    add_definitions(-DHAVE_MEMMEM=1)
+endif ()

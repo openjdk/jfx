@@ -26,8 +26,9 @@
 #include "config.h"
 #include "WorkerNetworkAgent.h"
 
+#include "SharedBuffer.h"
 #include "WorkerDebuggerProxy.h"
-#include "WorkerGlobalScope.h"
+#include "WorkerOrWorkletGlobalScope.h"
 #include "WorkerThread.h"
 
 namespace WebCore {
@@ -36,37 +37,38 @@ using namespace Inspector;
 
 WorkerNetworkAgent::WorkerNetworkAgent(WorkerAgentContext& context)
     : InspectorNetworkAgent(context)
-    , m_workerGlobalScope(context.workerGlobalScope)
+    , m_globalScope(context.globalScope)
 {
-    ASSERT(context.workerGlobalScope.isContextThread());
+    ASSERT(context.globalScope.isContextThread());
 }
 
 WorkerNetworkAgent::~WorkerNetworkAgent() = default;
 
-String WorkerNetworkAgent::loaderIdentifier(DocumentLoader*)
+Protocol::Network::LoaderId WorkerNetworkAgent::loaderIdentifier(DocumentLoader*)
 {
     return { };
 }
 
-String WorkerNetworkAgent::frameIdentifier(DocumentLoader*)
+Protocol::Network::FrameId WorkerNetworkAgent::frameIdentifier(DocumentLoader*)
 {
     return { };
 }
 
-Vector<WebSocket*> WorkerNetworkAgent::activeWebSockets(const LockHolder&)
+Vector<WebSocket*> WorkerNetworkAgent::activeWebSockets()
 {
     // FIXME: <https://webkit.org/b/168475> Web Inspector: Correctly display worker's WebSockets
     return { };
 }
 
-void WorkerNetworkAgent::setResourceCachingDisabled(bool disabled)
+void WorkerNetworkAgent::setResourceCachingDisabledInternal(bool disabled)
 {
-    m_workerGlobalScope.thread().workerDebuggerProxy().setResourceCachingDisabledByWebInspector(disabled);
+    if (auto* workerDebuggerProxy = m_globalScope.workerOrWorkletThread()->workerDebuggerProxy())
+        workerDebuggerProxy->setResourceCachingDisabledByWebInspector(disabled);
 }
 
-ScriptExecutionContext* WorkerNetworkAgent::scriptExecutionContext(ErrorString&, const String&)
+ScriptExecutionContext* WorkerNetworkAgent::scriptExecutionContext(Protocol::ErrorString&, const Protocol::Network::FrameId&)
 {
-    return &m_workerGlobalScope;
+    return &m_globalScope;
 }
 
 } // namespace WebCore

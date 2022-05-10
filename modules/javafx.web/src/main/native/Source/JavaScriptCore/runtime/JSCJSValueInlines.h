@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -79,6 +79,17 @@ inline uint32_t JSValue::toIndex(JSGlobalObject* globalObject, const char* error
     RELEASE_AND_RETURN(scope, JSC::toInt32(d));
 }
 
+// https://tc39.es/ecma262/#sec-tointegerorinfinity
+inline double JSValue::toIntegerOrInfinity(JSGlobalObject* globalObject) const
+{
+    if (isInt32())
+        return asInt32();
+    double d = toNumber(globalObject);
+    if (std::isnan(d) || !d)
+        return 0.0;
+    return trunc(d);
+}
+
 inline bool JSValue::isUInt32() const
 {
     return isInt32() && asInt32() >= 0;
@@ -96,7 +107,7 @@ inline double JSValue::asNumber() const
     return isInt32() ? asInt32() : asDouble();
 }
 
-inline Optional<uint32_t> JSValue::tryGetAsUint32Index()
+inline std::optional<uint32_t> JSValue::tryGetAsUint32Index()
 {
     if (isUInt32()) {
         ASSERT(isIndex(asUInt32()));
@@ -108,10 +119,10 @@ inline Optional<uint32_t> JSValue::tryGetAsUint32Index()
         if (static_cast<double>(asUint) == number && isIndex(asUint))
             return asUint;
     }
-    return WTF::nullopt;
+    return std::nullopt;
 }
 
-inline Optional<int32_t> JSValue::tryGetAsInt32()
+inline std::optional<int32_t> JSValue::tryGetAsInt32()
 {
     if (isInt32())
         return asInt32();
@@ -121,7 +132,7 @@ inline Optional<int32_t> JSValue::tryGetAsInt32()
         if (static_cast<double>(asInt) == number)
             return asInt;
     }
-    return WTF::nullopt;
+    return std::nullopt;
 }
 
 inline JSValue jsNaN()
@@ -809,46 +820,6 @@ inline PreferredPrimitiveType toPreferredPrimitiveType(JSGlobalObject* globalObj
     return NoPreference;
 }
 
-inline bool JSValue::getPrimitiveNumber(JSGlobalObject* globalObject, double& number, JSValue& value)
-{
-    VM& vm = globalObject->vm();
-    auto scope = DECLARE_THROW_SCOPE(vm);
-
-    if (isInt32()) {
-        number = asInt32();
-        value = *this;
-        return true;
-    }
-    if (isDouble()) {
-        number = asDouble();
-        value = *this;
-        return true;
-    }
-    if (isCell())
-        return asCell()->getPrimitiveNumber(globalObject, number, value);
-    if (isTrue()) {
-        number = 1.0;
-        value = *this;
-        return true;
-    }
-    if (isFalse() || isNull()) {
-        number = 0.0;
-        value = *this;
-        return true;
-    }
-    if (isUndefined()) {
-        number = PNaN;
-        value = *this;
-        return true;
-    }
-
-    ASSERT(isBigInt32());
-    throwTypeError(globalObject, scope, "Conversion from 'BigInt' to 'number' is not allowed."_s);
-    number = 0.0;
-    value = *this;
-    return true;
-}
-
 ALWAYS_INLINE double JSValue::toNumber(JSGlobalObject* globalObject) const
 {
     if (isInt32())
@@ -878,7 +849,7 @@ ALWAYS_INLINE JSValue JSValue::toNumeric(JSGlobalObject* globalObject) const
     return jsNumber(value);
 }
 
-ALWAYS_INLINE Optional<uint32_t> JSValue::toUInt32AfterToNumeric(JSGlobalObject* globalObject) const
+ALWAYS_INLINE std::optional<uint32_t> JSValue::toUInt32AfterToNumeric(JSGlobalObject* globalObject) const
 {
     VM& vm = getVM(globalObject);
     auto scope = DECLARE_THROW_SCOPE(vm);
@@ -886,7 +857,7 @@ ALWAYS_INLINE Optional<uint32_t> JSValue::toUInt32AfterToNumeric(JSGlobalObject*
     RETURN_IF_EXCEPTION(scope, { });
     if (LIKELY(result.isInt32()))
         return static_cast<uint32_t>(result.asInt32());
-    return WTF::nullopt;
+    return std::nullopt;
 }
 
 ALWAYS_INLINE JSValue JSValue::toBigIntOrInt32(JSGlobalObject* globalObject) const
@@ -920,9 +891,25 @@ inline bool JSValue::isCallable(VM& vm) const
     return isCell() && asCell()->isCallable(vm);
 }
 
+template<Concurrency concurrency>
+inline TriState JSValue::isCallableWithConcurrency(VM& vm) const
+{
+    if (!isCell())
+        return TriState::False;
+    return asCell()->isCallableWithConcurrency<concurrency>(vm);
+}
+
 inline bool JSValue::isConstructor(VM& vm) const
 {
     return isCell() && asCell()->isConstructor(vm);
+}
+
+template<Concurrency concurrency>
+inline TriState JSValue::isConstructorWithConcurrency(VM& vm) const
+{
+    if (!isCell())
+        return TriState::False;
+    return asCell()->isConstructorWithConcurrency<concurrency>(vm);
 }
 
 // this method is here to be after the inline declaration of JSCell::inherits
@@ -1058,6 +1045,18 @@ ALWAYS_INLINE JSValue JSValue::get(JSGlobalObject* globalObject, uint64_t proper
     return get(globalObject, Identifier::from(getVM(globalObject), static_cast<double>(propertyName)));
 }
 
+template<typename T, typename PropertyNameType>
+ALWAYS_INLINE T JSValue::getAs(JSGlobalObject* globalObject, PropertyNameType propertyName) const
+{
+    JSValue value = get(globalObject, propertyName);
+#if ASSERT_ENABLED || ENABLE(SECURITY_ASSERTIONS)
+    VM& vm = getVM(globalObject);
+    if (vm.exceptionForInspection())
+        return nullptr;
+#endif
+    return jsCast<T>(value);
+}
+
 inline bool JSValue::put(JSGlobalObject* globalObject, PropertyName propertyName, JSValue value, PutPropertySlot& slot)
 {
     if (UNLIKELY(!isCell()))
@@ -1089,18 +1088,11 @@ ALWAYS_INLINE JSValue JSValue::getPrototype(JSGlobalObject* globalObject) const
     return synthesizePrototype(globalObject);
 }
 
-inline Structure* JSValue::structureOrNull() const
+inline Structure* JSValue::structureOrNull(VM& vm) const
 {
     if (isCell())
-        return asCell()->structure();
+        return asCell()->structure(vm);
     return nullptr;
-}
-
-inline JSValue JSValue::structureOrUndefined() const
-{
-    if (isCell())
-        return JSValue(asCell()->structure());
-    return jsUndefined();
 }
 
 // ECMA 11.9.3

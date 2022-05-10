@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -911,6 +911,13 @@ GdkPixbuf* DragView::get_drag_image(GtkWidget *widget, gboolean* is_raw_image, g
                     guchar* data = (guchar*) g_try_malloc0(nraw - whsz);
                     if (data) {
                         memcpy(data, (raw + whsz), nraw - whsz);
+
+                        if (is_raw_image) {
+                            guchar* origdata = data;
+                            data = (guchar*) convert_BGRA_to_RGBA((const int*) data, w * 4, h);
+                            g_free(origdata);
+                        }
+
                         pixbuf = gdk_pixbuf_new_from_data(data, GDK_COLORSPACE_RGB, TRUE, 8,
                                                           w, h, w * 4, pixbufDestroyNotifyFunc, NULL);
                     }
@@ -1047,26 +1054,8 @@ void DragView::View::expose()
 {
     cairo_t *context = gdk_cairo_create(gtk_widget_get_window(widget));
 
-    cairo_surface_t* cairo_surface;
-
-    guchar* pixels = is_raw_image
-            ? (guchar*) convert_BGRA_to_RGBA((const int*) gdk_pixbuf_get_pixels(pixbuf),
-                                                gdk_pixbuf_get_rowstride(pixbuf),
-                                                height)
-            : gdk_pixbuf_get_pixels(pixbuf);
-
-    cairo_surface = cairo_image_surface_create_for_data(
-            pixels,
-            CAIRO_FORMAT_ARGB32,
-            width, height, width * 4);
-
-    cairo_set_source_surface(context, cairo_surface, 0, 0);
-    cairo_set_operator(context, CAIRO_OPERATOR_SOURCE);
+    gdk_cairo_set_source_pixbuf(context, pixbuf, 0, 0);
     cairo_paint(context);
 
-    if (is_raw_image) {
-        g_free(pixels);
-    }
     cairo_destroy(context);
-    cairo_surface_destroy(cairo_surface);
 }

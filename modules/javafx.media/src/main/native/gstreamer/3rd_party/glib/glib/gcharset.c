@@ -36,6 +36,12 @@
 
 #include <string.h>
 #include <stdio.h>
+
+#if (HAVE_LANGINFO_TIME_CODESET || HAVE_LANGINFO_CODESET)
+#include <langinfo.h>
+#endif
+
+#include <locale.h>
 #ifdef G_OS_WIN32
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
@@ -103,6 +109,12 @@ static gboolean
 g_utf8_get_charset_internal (const char  *raw_data,
                              const char **a)
 {
+  /* Allow CHARSET to override the charset of any locale category. Users should
+   * probably never be setting this — instead, just add the charset after a `.`
+   * in `LANGUAGE`/`LC_ALL`/`LC_*`/`LANG`. I can’t find any reference (in
+   * `git log`, code comments, or man pages) to this environment variable being
+   * standardised or documented or even used anywhere outside GLib. Perhaps it
+   * should eventually be removed. */
   const char *charset = g_getenv ("CHARSET");
 
   if (charset && *charset)
@@ -215,6 +227,87 @@ g_get_charset (const char **charset)
   return cache->is_utf8;
 }
 
+/*
+ * Do the same as g_get_charset() but it temporarily set locale (LC_ALL to
+ * LC_TIME) to correctly check for charset about time conversion relatives.
+ *
+ * Returns: %TRUE if the returned charset is UTF-8
+ */
+gboolean
+_g_get_time_charset (const char **charset)
+{
+  static GPrivate cache_private = G_PRIVATE_INIT (charset_cache_free);
+  GCharsetCache *cache = g_private_get (&cache_private);
+  const gchar *raw;
+
+  if (!cache)
+    cache = g_private_set_alloc0 (&cache_private, sizeof (GCharsetCache));
+
+#ifdef HAVE_LANGINFO_TIME_CODESET
+  raw = nl_langinfo (_NL_TIME_CODESET);
+#else
+  G_LOCK (aliases);
+  raw = _g_locale_charset_raw ();
+  G_UNLOCK (aliases);
+#endif
+
+  if (cache->raw == NULL || strcmp (cache->raw, raw) != 0)
+    {
+      const gchar *new_charset;
+
+      g_free (cache->raw);
+      g_free (cache->charset);
+      cache->raw = g_strdup (raw);
+      cache->is_utf8 = g_utf8_get_charset_internal (raw, &new_charset);
+      cache->charset = g_strdup (new_charset);
+    }
+
+  if (charset)
+    *charset = cache->charset;
+
+  return cache->is_utf8;
+}
+/*
+ * Do the same as g_get_charset() but it temporarily set locale (LC_ALL to
+ * LC_CTYPE) to correctly check for charset about CTYPE conversion relatives.
+ *
+ * Returns: %TRUE if the returned charset is UTF-8
+ */
+gboolean
+_g_get_ctype_charset (const char **charset)
+{
+  static GPrivate cache_private = G_PRIVATE_INIT (charset_cache_free);
+  GCharsetCache *cache = g_private_get (&cache_private);
+  const gchar *raw;
+
+  if (!cache)
+    cache = g_private_set_alloc0 (&cache_private, sizeof (GCharsetCache));
+
+#ifdef HAVE_LANGINFO_CODESET
+  raw = nl_langinfo (CODESET);
+#else
+  G_LOCK (aliases);
+  raw = _g_locale_charset_raw ();
+  G_UNLOCK (aliases);
+#endif
+
+  if (cache->raw == NULL || strcmp (cache->raw, raw) != 0)
+    {
+      const gchar *new_charset;
+
+      g_free (cache->raw);
+      g_free (cache->charset);
+      cache->raw = g_strdup (raw);
+      cache->is_utf8 = g_utf8_get_charset_internal (raw, &new_charset);
+      cache->charset = g_strdup (new_charset);
+    }
+
+  if (charset)
+    *charset = cache->charset;
+
+  return cache->is_utf8;
+}
+
 /**
  * g_get_codeset:
  *
@@ -290,7 +383,7 @@ g_get_console_charset (const char **charset)
           modifier = strchr (dot, '@');
           if (modifier == NULL)
             raw = dot;
-          else if (modifier - dot < sizeof (buf))
+          else if ((gsize) (modifier - dot) < sizeof (buf))
             {
               memcpy (buf, dot, modifier - dot);
               buf[modifier - dot] = '\0';
@@ -315,7 +408,7 @@ g_get_console_charset (const char **charset)
           g_free (emsg);
         }
     }
-  /* fall-back to UTF-8 if the rest failed (it's a sane and universal default) */
+  /* fall-back to UTF-8 if the rest failed (it's a universal default) */
   if (raw == NULL)
     raw = "UTF-8";
 
@@ -549,10 +642,15 @@ append_locale_variants (GPtrArray *array,
  * Returns a list of derived variants of @locale, which can be used to
  * e.g. construct locale-dependent filenames or search paths. The returned
  * list is sorted from most desirable to least desirable.
- * This function handles territory, charset and extra locale modifiers.
+ * This function handles territory, charset and extra locale modifiers. See
+ * [`setlocale(3)`](man:setlocale) for information about locales and their format.
  *
- * For example, if @locale is "fr_BE", then the returned list
- * is "fr_BE", "fr".
+ * @locale itself is guaranteed to be returned in the output.
+ *
+ * For example, if @locale is `fr_BE`, then the returned list
+ * is `fr_BE`, `fr`. If @locale is `en_GB.UTF-8@euro`, then the returned list
+ * is `en_GB.UTF-8@euro`, `en_GB.UTF-8`, `en_GB@euro`, `en_GB`, `en.UTF-8@euro`,
+ * `en.UTF-8`, `en@euro`, `en`.
  *
  * If you need the list of variants for the current locale,
  * use g_get_language_names().

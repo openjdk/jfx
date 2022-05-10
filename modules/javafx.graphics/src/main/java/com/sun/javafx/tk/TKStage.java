@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -47,7 +47,7 @@ public interface TKStage {
      *
      * @return scenePeer The peer of the scene to be displayed
      */
-    public TKScene createTKScene(boolean depthBuffer, boolean msaa, AccessControlContext acc);
+    public TKScene createTKScene(boolean depthBuffer, boolean msaa, @SuppressWarnings("removal") AccessControlContext acc);
 
     /**
      * Set the scene to be displayed in this stage

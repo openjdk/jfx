@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2004-2019 Apple Inc. All rights reserved.
+ *  Copyright (C) 2004-2021 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Library General Public
@@ -26,6 +26,7 @@
 #include "WriteBarrier.h"
 #include <wtf/HashTable.h>
 #include <wtf/MathExtras.h>
+#include <wtf/StdLibExtras.h>
 #include <wtf/Vector.h>
 #include <wtf/text/AtomStringImpl.h>
 
@@ -133,7 +134,7 @@ public:
 
     static constexpr bool needsDestruction = true;
     static void destroy(JSCell*);
-    static void visitChildren(JSCell*, SlotVisitor&);
+    DECLARE_VISIT_CHILDREN;
 
     DECLARE_EXPORT_INFO;
 
@@ -548,13 +549,13 @@ inline T* PropertyTable::skipDeletedEntries(T* valuePtr, T* endValuePtr)
 inline PropertyTable::ValueType* PropertyTable::table()
 {
     // The table of values lies after the hash index.
-    return reinterpret_cast<ValueType*>(m_index + m_indexSize);
+    return reinterpret_cast_ptr<ValueType*>(m_index + m_indexSize);
 }
 
 inline const PropertyTable::ValueType* PropertyTable::table() const
 {
     // The table of values lies after the hash index.
-    return reinterpret_cast<const ValueType*>(m_index + m_indexSize);
+    return reinterpret_cast_ptr<const ValueType*>(m_index + m_indexSize);
 }
 
 inline unsigned PropertyTable::usedCount() const

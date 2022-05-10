@@ -1,6 +1,6 @@
 /*
  *  Copyright (C) 1999-2001 Harri Porten (porten@kde.org)
- *  Copyright (C) 2004-2020 Apple Inc. All rights reserved.
+ *  Copyright (C) 2004-2021 Apple Inc. All rights reserved.
  *  Copyright (C) 2007 Samuel Weinig <sam@webkit.org>
  *  Copyright (C) 2013 Michael Pruett <michael@68k.org>
  *
@@ -52,6 +52,25 @@ void reportException(JSGlobalObject* lexicalGlobalObject, JSValue exceptionValue
     reportException(lexicalGlobalObject, exception, cachedScript);
 }
 
+String retrieveErrorMessageWithoutName(JSGlobalObject& lexicalGlobalObject, VM& vm, JSValue exception, CatchScope& catchScope)
+{
+    // FIXME: <http://webkit.org/b/115087> Web Inspector: WebCore::reportException should not evaluate JavaScript handling exceptions
+    // If this is a custom exception object, call toString on it to try and get a nice string representation for the exception.
+    String errorMessage;
+    if (auto* error = jsDynamicCast<ErrorInstance*>(vm, exception))
+        errorMessage = error->sanitizedMessageString(&lexicalGlobalObject);
+    else if (auto* error = jsDynamicCast<JSDOMException*>(vm, exception))
+        errorMessage = error->wrapped().message();
+    else
+        errorMessage = exception.toWTFString(&lexicalGlobalObject);
+
+    // We need to clear any new exception that may be thrown in the toString() call above.
+    // reportException() is not supposed to be making new exceptions.
+    catchScope.clearException();
+    vm.clearLastException();
+    return errorMessage;
+}
+
 String retrieveErrorMessage(JSGlobalObject& lexicalGlobalObject, VM& vm, JSValue exception, CatchScope& catchScope)
 {
     // FIXME: <http://webkit.org/b/115087> Web Inspector: WebCore::reportException should not evaluate JavaScript handling exceptions
@@ -75,7 +94,7 @@ void reportException(JSGlobalObject* lexicalGlobalObject, JSC::Exception* except
     auto scope = DECLARE_CATCH_SCOPE(vm);
 
     RELEASE_ASSERT(vm.currentThreadIsHoldingAPILock());
-    if (isTerminatedExecutionException(vm, exception))
+    if (vm.isTerminationException(exception))
         return;
 
     ErrorHandlingScope errorScope(lexicalGlobalObject->vm());
@@ -121,36 +140,46 @@ void reportCurrentException(JSGlobalObject* lexicalGlobalObject)
 
 JSValue createDOMException(JSGlobalObject* lexicalGlobalObject, ExceptionCode ec, const String& message)
 {
-    if (ec == ExistingExceptionError)
+    switch (ec) {
+    case ExistingExceptionError:
         return jsUndefined();
 
     // FIXME: Handle other WebIDL exception types.
-    if (ec == TypeError) {
+    case TypeError:
         if (message.isEmpty())
             return createTypeError(lexicalGlobalObject);
         return createTypeError(lexicalGlobalObject, message);
-    }
 
-    if (ec == RangeError) {
+    case RangeError:
         if (message.isEmpty())
             return createRangeError(lexicalGlobalObject, "Bad value"_s);
         return createRangeError(lexicalGlobalObject, message);
-    }
 
-    if (ec == StackOverflowError)
+    case JSSyntaxError:
+        if (message.isEmpty())
+            return createSyntaxError(lexicalGlobalObject);
+        return createSyntaxError(lexicalGlobalObject, message);
+
+    case StackOverflowError:
         return createStackOverflowError(lexicalGlobalObject);
-    if (ec == OutOfMemoryError)
+
+    case OutOfMemoryError:
         return createOutOfMemoryError(lexicalGlobalObject);
 
-    // FIXME: All callers to createDOMException need to pass in the correct global object.
-    // For now, we're going to assume the lexicalGlobalObject. Which is wrong in cases like this:
-    // frames[0].document.createElement(null, null); // throws an exception which should have the subframe's prototypes.
-    JSDOMGlobalObject* globalObject = deprecatedGlobalObjectForPrototype(lexicalGlobalObject);
-    JSValue errorObject = toJS(lexicalGlobalObject, globalObject, DOMException::create(ec, message));
+    default: {
+        // FIXME: All callers to createDOMException need to pass in the correct global object.
+        // For now, we're going to assume the lexicalGlobalObject. Which is wrong in cases like this:
+        // frames[0].document.createElement(null, null); // throws an exception which should have the subframe's prototypes.
+        // https://bugs.webkit.org/show_bug.cgi?id=222229
+        JSDOMGlobalObject* globalObject = deprecatedGlobalObjectForPrototype(lexicalGlobalObject);
+        JSValue errorObject = toJS(lexicalGlobalObject, globalObject, DOMException::create(ec, message));
 
-    ASSERT(errorObject);
-    addErrorInfo(lexicalGlobalObject, asObject(errorObject), true);
-    return errorObject;
+        ASSERT(errorObject);
+        addErrorInfo(lexicalGlobalObject, asObject(errorObject), true);
+        return errorObject;
+    }
+    }
+    return { };
 }
 
 JSValue createDOMException(JSGlobalObject& lexicalGlobalObject, Exception&& exception)
@@ -160,7 +189,7 @@ JSValue createDOMException(JSGlobalObject& lexicalGlobalObject, Exception&& exce
 
 void propagateExceptionSlowPath(JSC::JSGlobalObject& lexicalGlobalObject, JSC::ThrowScope& throwScope, Exception&& exception)
 {
-    throwScope.assertNoException();
+    throwScope.assertNoExceptionExceptTermination();
     throwException(&lexicalGlobalObject, throwScope, createDOMException(lexicalGlobalObject, WTFMove(exception)));
 }
 
@@ -180,19 +209,19 @@ template<typename... StringTypes> static String makeArgumentTypeErrorMessage(uns
 
 void throwNotSupportedError(JSC::JSGlobalObject& lexicalGlobalObject, JSC::ThrowScope& scope, ASCIILiteral message)
 {
-    scope.assertNoException();
+    scope.assertNoExceptionExceptTermination();
     throwException(&lexicalGlobalObject, scope, createDOMException(&lexicalGlobalObject, NotSupportedError, message));
 }
 
 void throwInvalidStateError(JSC::JSGlobalObject& lexicalGlobalObject, JSC::ThrowScope& scope, ASCIILiteral message)
 {
-    scope.assertNoException();
+    scope.assertNoExceptionExceptTermination();
     throwException(&lexicalGlobalObject, scope, createDOMException(&lexicalGlobalObject, InvalidStateError, message));
 }
 
 void throwSecurityError(JSC::JSGlobalObject& lexicalGlobalObject, JSC::ThrowScope& scope, const String& message)
 {
-    scope.assertNoException();
+    scope.assertNoExceptionExceptTermination();
     throwException(&lexicalGlobalObject, scope, createDOMException(&lexicalGlobalObject, SecurityError, message));
 }
 
@@ -241,30 +270,19 @@ void throwNonFiniteTypeError(JSGlobalObject& lexicalGlobalObject, JSC::ThrowScop
     throwTypeError(&lexicalGlobalObject, scope, "The provided value is non-finite"_s);
 }
 
-String makeGetterTypeErrorMessage(const char* interfaceName, const char* attributeName)
+JSC::EncodedJSValue rejectPromiseWithGetterTypeError(JSC::JSGlobalObject& lexicalGlobalObject, const JSC::ClassInfo* classInfo, JSC::PropertyName attributeName)
 {
-    return makeString("The ", interfaceName, '.', attributeName, " getter can only be used on instances of ", interfaceName);
-}
-
-JSC::EncodedJSValue throwGetterTypeError(JSC::JSGlobalObject& lexicalGlobalObject, JSC::ThrowScope& scope, const char* interfaceName, const char* attributeName)
-{
-    return throwVMGetterTypeError(&lexicalGlobalObject, scope, makeGetterTypeErrorMessage(interfaceName, attributeName));
-}
-
-JSC::EncodedJSValue rejectPromiseWithGetterTypeError(JSC::JSGlobalObject& lexicalGlobalObject, const char* interfaceName, const char* attributeName)
-{
-    return createRejectedPromiseWithTypeError(lexicalGlobalObject, makeGetterTypeErrorMessage(interfaceName, attributeName), RejectedPromiseWithTypeErrorCause::NativeGetter);
-}
-
-bool throwSetterTypeError(JSC::JSGlobalObject& lexicalGlobalObject, JSC::ThrowScope& scope, const char* interfaceName, const char* attributeName)
-{
-    throwTypeError(lexicalGlobalObject, scope, makeString("The ", interfaceName, '.', attributeName, " setter can only be used on instances of ", interfaceName));
-    return false;
+    return createRejectedPromiseWithTypeError(lexicalGlobalObject, JSC::makeDOMAttributeGetterTypeErrorMessage(classInfo->className, String(attributeName.uid())), RejectedPromiseWithTypeErrorCause::NativeGetter);
 }
 
 String makeThisTypeErrorMessage(const char* interfaceName, const char* functionName)
 {
     return makeString("Can only call ", interfaceName, '.', functionName, " on instances of ", interfaceName);
+}
+
+String makeUnsupportedIndexedSetterErrorMessage(const char* interfaceName)
+{
+    return makeString("Failed to set an indexed property on ", interfaceName, ": Indexed property setter is not supported.");
 }
 
 EncodedJSValue throwThisTypeError(JSC::JSGlobalObject& lexicalGlobalObject, JSC::ThrowScope& scope, const char* interfaceName, const char* functionName)
@@ -285,13 +303,13 @@ JSC::EncodedJSValue rejectPromiseWithThisTypeError(JSC::JSGlobalObject& lexicalG
 
 void throwDOMSyntaxError(JSC::JSGlobalObject& lexicalGlobalObject, JSC::ThrowScope& scope, ASCIILiteral message)
 {
-    scope.assertNoException();
+    scope.assertNoExceptionExceptTermination();
     throwException(&lexicalGlobalObject, scope, createDOMException(&lexicalGlobalObject, SyntaxError, message));
 }
 
 void throwDataCloneError(JSC::JSGlobalObject& lexicalGlobalObject, JSC::ThrowScope& scope)
 {
-    scope.assertNoException();
+    scope.assertNoExceptionExceptTermination();
     throwException(&lexicalGlobalObject, scope, createDOMException(&lexicalGlobalObject, DataCloneError));
 }
 

@@ -1,6 +1,6 @@
 /*
  *  Copyright (C) 2000 Harri Porten (porten@kde.org)
- *  Copyright (C) 2003-2017 Apple Inc. All rights reseved.
+ *  Copyright (C) 2003-2021 Apple Inc. All rights reseved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -78,35 +78,30 @@ public:
     static bool shouldInterruptScriptBeforeTimeout(const JSC::JSGlobalObject*);
     static JSC::RuntimeFlags javaScriptRuntimeFlags(const JSC::JSGlobalObject*);
     static void queueMicrotaskToEventLoop(JSC::JSGlobalObject&, Ref<JSC::Microtask>&&);
+    static JSC::JSObject* currentScriptExecutionOwner(JSC::JSGlobalObject*);
+    static JSC::ScriptExecutionStatus scriptExecutionStatus(JSC::JSGlobalObject*, JSC::JSObject*);
 
     void printErrorMessage(const String&) const;
 
-    JSWindowProxy* proxy() const;
+    JSWindowProxy& proxy() const;
 
     static void fireFrameClearedWatchpointsForWindow(DOMWindow*);
+
+    void setCurrentEvent(Event*);
+    Event* currentEvent() const;
 
 protected:
     JSDOMWindowBase(JSC::VM&, JSC::Structure*, RefPtr<DOMWindow>&&, JSWindowProxy*);
     void finishCreation(JSC::VM&, JSWindowProxy*);
+    void initStaticGlobals(JSC::VM&);
 
-    Ref<JSC::WatchpointSet> m_windowCloseWatchpoints;
+    RefPtr<JSC::WatchpointSet> m_windowCloseWatchpoints;
 
 private:
     using ResponseCallback = WTF::Function<void(const char*, size_t)>;
 
-    static JSC::Identifier moduleLoaderResolve(JSC::JSGlobalObject*, JSC::JSModuleLoader*, JSC::JSValue, JSC::JSValue, JSC::JSValue);
-    static JSC::JSInternalPromise* moduleLoaderFetch(JSC::JSGlobalObject*, JSC::JSModuleLoader*, JSC::JSValue, JSC::JSValue, JSC::JSValue);
-    static JSC::JSValue moduleLoaderEvaluate(JSC::JSGlobalObject*, JSC::JSModuleLoader*, JSC::JSValue, JSC::JSValue, JSC::JSValue);
-    static JSC::JSInternalPromise* moduleLoaderImportModule(JSC::JSGlobalObject*, JSC::JSModuleLoader*, JSC::JSString*, JSC::JSValue, const JSC::SourceOrigin&);
-    static JSC::JSObject* moduleLoaderCreateImportMetaProperties(JSC::JSGlobalObject*, JSC::JSModuleLoader*, JSC::JSValue, JSC::JSModuleRecord*, JSC::JSValue);
-
-#if ENABLE(WEBASSEMBLY)
-    static void compileStreaming(JSC::JSGlobalObject*, JSC::JSPromise*, JSC::JSValue);
-    static void instantiateStreaming(JSC::JSGlobalObject*, JSC::JSPromise*, JSC::JSValue, JSC::JSObject*);
-#endif
-
     RefPtr<DOMWindow> m_wrapped;
-    JSWindowProxy* m_proxy;
+    RefPtr<Event> m_currentEvent;
 };
 
 WEBCORE_EXPORT JSC::JSValue toJS(JSC::JSGlobalObject*, DOMWindow&);
@@ -119,7 +114,6 @@ inline JSC::JSValue toJS(JSC::JSGlobalObject* lexicalGlobalObject, DOMWindow* wi
 // The following return a JSDOMWindow or nullptr.
 JSDOMWindow* toJSDOMWindow(Frame&, DOMWrapperWorld&);
 inline JSDOMWindow* toJSDOMWindow(Frame* frame, DOMWrapperWorld& world) { return frame ? toJSDOMWindow(*frame, world) : nullptr; }
-WEBCORE_EXPORT JSDOMWindow* toJSDOMWindow(JSC::VM&, JSC::JSValue);
 
 // DOMWindow associated with global object of the "most-recently-entered author function or script
 // on the stack, or the author function or script that originally scheduled the currently-running callback."
@@ -127,9 +121,13 @@ WEBCORE_EXPORT JSDOMWindow* toJSDOMWindow(JSC::VM&, JSC::JSValue);
 // FIXME: Make this work for an "author function or script that originally scheduled the currently-running callback."
 // See <https://bugs.webkit.org/show_bug.cgi?id=163412>.
 DOMWindow& incumbentDOMWindow(JSC::JSGlobalObject&, JSC::CallFrame&);
+DOMWindow& incumbentDOMWindow(JSC::JSGlobalObject&);
 
 DOMWindow& activeDOMWindow(JSC::JSGlobalObject&);
 DOMWindow& firstDOMWindow(JSC::JSGlobalObject&);
+
+DOMWindow& legacyActiveDOMWindowForAccessor(JSC::JSGlobalObject&, JSC::CallFrame&);
+DOMWindow& legacyActiveDOMWindowForAccessor(JSC::JSGlobalObject&);
 
 // FIXME: This should probably be removed in favor of one of the other DOMWindow accessors. It is intended
 //        to provide the document specfied as the 'responsible document' in the algorithm for document.open()

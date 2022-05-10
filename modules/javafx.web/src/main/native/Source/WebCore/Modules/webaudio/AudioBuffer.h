@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2010 Google Inc. All rights reserved.
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,6 +31,7 @@
 
 #include "AudioBufferOptions.h"
 #include "ExceptionOr.h"
+#include "JSValueInWrappedObject.h"
 #include <JavaScriptCore/Float32Array.h>
 #include <wtf/Lock.h>
 #include <wtf/Vector.h>
@@ -41,27 +42,31 @@ class AudioBus;
 
 class AudioBuffer : public RefCounted<AudioBuffer> {
 public:
-    static RefPtr<AudioBuffer> create(unsigned numberOfChannels, size_t numberOfFrames, float sampleRate);
+    enum class LegacyPreventDetaching : bool { No, Yes };
+    static RefPtr<AudioBuffer> create(unsigned numberOfChannels, size_t numberOfFrames, float sampleRate, LegacyPreventDetaching = LegacyPreventDetaching::No);
     static ExceptionOr<Ref<AudioBuffer>> create(const AudioBufferOptions&);
     // Returns nullptr if data is not a valid audio file.
     static RefPtr<AudioBuffer> createFromAudioFileData(const void* data, size_t dataSize, bool mixToMono, float sampleRate);
 
     // Format
-    size_t length() const { return m_length; }
-    double duration() const { return length() / sampleRate(); }
+    size_t originalLength() const { return m_originalLength; }
+    double originalDuration() const { return originalLength() / static_cast<double>(sampleRate()); }
     float sampleRate() const { return m_sampleRate; }
+
+    // The following function may start returning 0 if any of the underlying channel buffers gets detached.
+    size_t length() const { return hasDetachedChannelBuffer() ? 0 : m_originalLength; }
+    double duration() const { return length() / static_cast<double>(sampleRate()); }
 
     // Channel data access
     unsigned numberOfChannels() const { return m_channels.size(); }
-    ExceptionOr<Ref<Float32Array>> getChannelData(unsigned channelIndex);
+    ExceptionOr<JSC::JSValue> getChannelData(JSDOMGlobalObject&, unsigned channelIndex);
     ExceptionOr<void> copyFromChannel(Ref<Float32Array>&&, unsigned channelNumber, unsigned bufferOffset);
     ExceptionOr<void> copyToChannel(Ref<Float32Array>&&, unsigned channelNumber, unsigned startInChannel);
-    Float32Array* channelData(unsigned channelIndex);
-    void zero();
 
-    // Scalar gain
-    double gain() const { return m_gain; }
-    void setGain(double gain) { m_gain = gain; }
+    // Native channel data access.
+    RefPtr<Float32Array> channelData(unsigned channelIndex);
+    float* rawChannelData(unsigned channelIndex);
+    void zero();
 
     // Because an AudioBuffer has a JavaScript wrapper, which will be garbage collected, it may take a while for this object to be deleted.
     // releaseMemory() can be called when the AudioContext goes away, so we can release the memory earlier than when the garbage collection happens.
@@ -70,17 +75,29 @@ public:
 
     size_t memoryCost() const;
 
+    template<typename Visitor> void visitChannelWrappers(Visitor&);
+
+    bool copyTo(AudioBuffer&) const;
+
+    enum class ShouldCopyChannelData : bool { No, Yes };
+    Ref<AudioBuffer> clone(ShouldCopyChannelData = ShouldCopyChannelData::Yes) const;
+
+    bool topologyMatches(const AudioBuffer&) const;
+
 private:
-    AudioBuffer(unsigned numberOfChannels, size_t length, float sampleRate);
+    AudioBuffer(unsigned numberOfChannels, size_t length, float sampleRate, LegacyPreventDetaching = LegacyPreventDetaching::No);
     explicit AudioBuffer(AudioBus&);
 
     void invalidate();
 
-    double m_gain { 1.0 }; // scalar gain
+    bool hasDetachedChannelBuffer() const;
+
     float m_sampleRate;
     mutable Lock m_channelsLock;
-    size_t m_length;
+    size_t m_originalLength;
     Vector<RefPtr<Float32Array>> m_channels;
+    Vector<JSValueInWrappedObject> m_channelWrappers;
+    bool m_isDetachable { true };
 };
 
 } // namespace WebCore

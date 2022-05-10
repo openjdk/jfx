@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2017 Yusuke Suzuki <utatane.tea@gmail.com>
- * Copyright (C) 2018-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,6 +31,7 @@
 #include "ICStatusMap.h"
 #include "InstructionStream.h"
 #include "StructureStubInfo.h"
+#include "WasmOps.h"
 
 namespace JSC {
 
@@ -47,10 +48,12 @@ public:
     void printLocationAndOp(InstructionStream::Offset location, const char* op);
 
     template<typename T>
-    void dumpOperand(T operand, bool isFirst = false)
+    void dumpOperand(const char* operandName, T operand, bool isFirst = false)
     {
         if (!isFirst)
             m_out.print(", ");
+        m_out.print(operandName);
+        m_out.print(":");
         dumpValue(operand);
     }
 
@@ -128,7 +131,6 @@ namespace Wasm {
 
 class FunctionCodeBlock;
 struct ModuleInformation;
-enum Type : int8_t;
 
 class BytecodeDumper final : public JSC::BytecodeDumper<FunctionCodeBlock> {
 public:

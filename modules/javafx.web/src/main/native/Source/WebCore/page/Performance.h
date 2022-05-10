@@ -36,22 +36,37 @@
 #include "DOMHighResTimeStamp.h"
 #include "EventTarget.h"
 #include "ExceptionOr.h"
-#include "GenericTaskQueue.h"
 #include "ReducedResolutionSeconds.h"
+#include "ScriptExecutionContext.h"
+#include "Timer.h"
 #include <wtf/ListHashSet.h>
+#include <wtf/Variant.h>
+
+namespace JSC {
+class JSGlobalObject;
+}
 
 namespace WebCore {
 
-class LoadTiming;
+class CachedResource;
+class Document;
+class DocumentLoadTiming;
+class DocumentLoader;
+class NetworkLoadMetrics;
+class PerformanceUserTiming;
 class PerformanceEntry;
+class PerformanceMark;
+class PerformanceMeasure;
 class PerformanceNavigation;
+class PerformanceNavigationTiming;
 class PerformanceObserver;
 class PerformancePaintTiming;
 class PerformanceTiming;
 class ResourceResponse;
 class ResourceTiming;
 class ScriptExecutionContext;
-class UserTiming;
+struct PerformanceMarkOptions;
+struct PerformanceMeasureOptions;
 
 class Performance final : public RefCounted<Performance>, public ContextDestructionObserver, public EventTargetWithInlineData {
     WTF_MAKE_ISO_ALLOCATED(Performance);
@@ -60,6 +75,7 @@ public:
     ~Performance();
 
     DOMHighResTimeStamp now() const;
+    DOMHighResTimeStamp timeOrigin() const;
     ReducedResolutionSeconds nowInReducedResolutionSeconds() const;
 
     PerformanceNavigation* navigation();
@@ -68,17 +84,19 @@ public:
     Vector<RefPtr<PerformanceEntry>> getEntries() const;
     Vector<RefPtr<PerformanceEntry>> getEntriesByType(const String& entryType) const;
     Vector<RefPtr<PerformanceEntry>> getEntriesByName(const String& name, const String& entryType) const;
-    bool appendBufferedEntriesByType(const String& entryType, Vector<RefPtr<PerformanceEntry>>&) const;
+    void appendBufferedEntriesByType(const String& entryType, Vector<RefPtr<PerformanceEntry>>&, PerformanceObserver&) const;
 
     void clearResourceTimings();
     void setResourceTimingBufferSize(unsigned);
 
-    ExceptionOr<void> mark(const String& markName);
+    ExceptionOr<Ref<PerformanceMark>> mark(JSC::JSGlobalObject&, const String& markName, std::optional<PerformanceMarkOptions>&&);
     void clearMarks(const String& markName);
 
-    ExceptionOr<void> measure(const String& measureName, const String& startMark, const String& endMark);
+    using StartOrMeasureOptions = Variant<String, PerformanceMeasureOptions>;
+    ExceptionOr<Ref<PerformanceMeasure>> measure(JSC::JSGlobalObject&, const String& measureName, std::optional<StartOrMeasureOptions>&&, const String& endMark);
     void clearMeasures(const String& measureName);
 
+    void addNavigationTiming(DocumentLoader&, Document&, CachedResource&, const DocumentLoadTiming&, const NetworkLoadMetrics&);
     void addResourceTiming(ResourceTiming&&);
 
     void reportFirstContentfulPaint();
@@ -96,6 +114,10 @@ public:
     using RefCounted::ref;
     using RefCounted::deref;
 
+    void scheduleNavigationObservationTaskIfNeeded();
+
+    PerformanceNavigationTiming* navigationTiming() { return m_navigationTiming.get(); }
+
 private:
     Performance(ScriptExecutionContext*, MonotonicTime timeOrigin);
 
@@ -110,6 +132,7 @@ private:
     void resourceTimingBufferFullTimerFired();
 
     void queueEntry(PerformanceEntry&);
+    void scheduleTaskIfNeeded();
 
     mutable RefPtr<PerformanceNavigation> m_navigation;
     mutable RefPtr<PerformanceTiming> m_timing;
@@ -124,13 +147,14 @@ private:
     // https://w3c.github.io/resource-timing/#dfn-resource-timing-buffer-full-flag
     bool m_resourceTimingBufferFullFlag { false };
     bool m_waitingForBackupBufferToBeProcessed { false };
+    bool m_hasScheduledTimingBufferDeliveryTask { false };
 
     MonotonicTime m_timeOrigin;
 
+    RefPtr<PerformanceNavigationTiming> m_navigationTiming;
     RefPtr<PerformancePaintTiming> m_firstContentfulPaint;
-    std::unique_ptr<UserTiming> m_userTiming;
+    std::unique_ptr<PerformanceUserTiming> m_userTiming;
 
-    GenericTaskQueue<ScriptExecutionContext> m_performanceTimelineTaskQueue;
     ListHashSet<RefPtr<PerformanceObserver>> m_observers;
 };
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -42,7 +42,7 @@ import javafx.scene.control.*;
  */
 public class TreeTableCellSkin<S,T> extends TableCellSkinBase<TreeItem<S>, T, TreeTableCell<S,T>> {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private Fields                                                          *
      *                                                                         *
@@ -52,7 +52,7 @@ public class TreeTableCellSkin<S,T> extends TableCellSkinBase<TreeItem<S>, T, Tr
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -75,7 +75,7 @@ public class TreeTableCellSkin<S,T> extends TableCellSkinBase<TreeItem<S>, T, Tr
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *
@@ -92,7 +92,7 @@ public class TreeTableCellSkin<S,T> extends TableCellSkinBase<TreeItem<S>, T, Tr
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private implementation                                                  *
      *                                                                         *
@@ -104,8 +104,42 @@ public class TreeTableCellSkin<S,T> extends TableCellSkinBase<TreeItem<S>, T, Tr
     }
 
     /** {@inheritDoc} */
-    @Override double leftLabelPadding() {
-        double leftPadding = super.leftLabelPadding();
+    @Override
+    protected double computeMinWidth(double height, double topInset, double rightInset, double bottomInset,
+            double leftInset) {
+        return super.computeMinWidth(height, topInset, rightInset, bottomInset, leftInset) + calculateIndentation();
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    protected void layoutChildren(double x, double y, double w, double h) {
+        double indentation = calculateIndentation();
+        x += indentation;
+        w -= indentation;
+        super.layoutChildren(x, y, w, h);
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    protected double computePrefWidth(double height, double topInset, double rightInset, double bottomInset,
+            double leftInset) {
+        if (isDeferToParentForPrefWidth) {
+            return super.computePrefWidth(height, topInset, rightInset, bottomInset, leftInset) + calculateIndentation();
+        }
+
+        return super.computePrefWidth(height, topInset, rightInset, bottomInset, leftInset);
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    protected double computePrefHeight(double width, double topInset, double rightInset, double bottomInset,
+            double leftInset) {
+        width -= calculateIndentation();
+        return super.computePrefHeight(width, topInset, rightInset, bottomInset, leftInset);
+    }
+
+    private double calculateIndentation() {
+        double indentation = 0;
 
         // RT-27167: we must take into account the disclosure node and the
         // indentation (which is not taken into account by the LabeledSkinBase.
@@ -114,43 +148,43 @@ public class TreeTableCellSkin<S,T> extends TableCellSkinBase<TreeItem<S>, T, Tr
         TreeTableCell<S,T> cell = getSkinnable();
 
         TreeTableColumn<S,T> tableColumn = cell.getTableColumn();
-        if (tableColumn == null) return leftPadding;
+        if (tableColumn == null) return indentation;
 
         // check if this column is the TreeTableView treeColumn (i.e. the
         // column showing the disclosure node and graphic).
         TreeTableView<S> treeTable = cell.getTreeTableView();
-        if (treeTable == null) return leftPadding;
+        if (treeTable == null) return indentation;
 
         int columnIndex = treeTable.getVisibleLeafIndex(tableColumn);
 
         TreeTableColumn<S,?> treeColumn = treeTable.getTreeColumn();
-        if ((treeColumn == null && columnIndex != 0) || (treeColumn != null && ! tableColumn.equals(treeColumn))) {
-            return leftPadding;
+        if ((treeColumn == null && columnIndex != 0) || (treeColumn != null && !tableColumn.equals(treeColumn))) {
+            return indentation;
         }
 
-        TreeTableRow<S> treeTableRow = cell.getTreeTableRow();
-        if (treeTableRow == null) return leftPadding;
+        TreeTableRow<S> treeTableRow = cell.getTableRow();
+        if (treeTableRow == null) return indentation;
 
         TreeItem<S> treeItem = treeTableRow.getTreeItem();
-        if (treeItem == null) return leftPadding;
+        if (treeItem == null) return indentation;
 
         int nodeLevel = treeTable.getTreeItemLevel(treeItem);
-        if (! treeTable.isShowRoot()) nodeLevel--;
+        if (!treeTable.isShowRoot()) nodeLevel--;
 
         double indentPerLevel = 10;
         if (treeTableRow.getSkin() instanceof TreeTableRowSkin) {
             indentPerLevel = ((TreeTableRowSkin<?>)treeTableRow.getSkin()).getIndentationPerLevel();
         }
-        leftPadding += nodeLevel * indentPerLevel;
+        indentation += nodeLevel * indentPerLevel;
 
         // add in the width of the disclosure node, if one exists
         Map<TableColumnBase<?,?>, Double> mdwp = TableRowSkinBase.maxDisclosureWidthMap;
-        leftPadding += mdwp.containsKey(treeColumn) ? mdwp.get(treeColumn) : 0;
+        indentation += mdwp.containsKey(treeColumn) ? mdwp.get(treeColumn) : 0;
 
         // adding in the width of the graphic on the tree item
         Node graphic = treeItem.getGraphic();
-        leftPadding += graphic == null ? 0 : graphic.prefWidth(height);
+        indentation += graphic == null ? 0 : graphic.prefWidth(height);
 
-        return leftPadding;
+        return indentation;
     }
 }

@@ -37,7 +37,7 @@ namespace WebCore {
 
 struct PaymentDetailsUpdate final : PaymentDetailsBase {
     String error;
-    PaymentItem total;
+    std::optional<PaymentItem> total;
     AddressErrors shippingAddressErrors;
     PayerErrorFields payerErrors;
     JSC::Strong<JSC::JSObject> paymentMethodErrors;

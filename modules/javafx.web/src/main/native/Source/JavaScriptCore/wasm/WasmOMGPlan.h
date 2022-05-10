@@ -25,7 +25,7 @@
 
 #pragma once
 
-#if ENABLE(WEBASSEMBLY)
+#if ENABLE(WEBASSEMBLY_B3JIT)
 
 #include "WasmContext.h"
 #include "WasmModule.h"
@@ -53,10 +53,10 @@ private:
     using Base::m_lock;
 
     bool isComplete() const final { return m_completed; }
-    void complete(const AbstractLocker& locker) final
+    void complete() WTF_REQUIRES_LOCK(m_lock) final
     {
         m_completed = true;
-        runCompletionTasks(locker);
+        runCompletionTasks();
     }
 
     Ref<Module> m_module;
@@ -67,4 +67,4 @@ private:
 
 } } // namespace JSC::Wasm
 
-#endif // ENABLE(WEBASSEMBLY)
+#endif // ENABLE(WEBASSEMBLY_B3JIT)

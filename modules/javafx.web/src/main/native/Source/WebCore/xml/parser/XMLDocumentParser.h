@@ -94,7 +94,6 @@ private:
     void insert(SegmentedString&&) final;
     void append(RefPtr<StringImpl>&&) final;
     void finish() final;
-    bool isWaitingForScripts() const final;
     void stopParsing() final;
     void detach() final;
 
@@ -191,6 +190,6 @@ private:
 xmlDocPtr xmlDocPtrForString(CachedResourceLoader&, const String& source, const String& url);
 #endif
 
-Optional<HashMap<String, String>> parseAttributes(const String&);
+std::optional<HashMap<String, String>> parseAttributes(const String&);
 
 } // namespace WebCore

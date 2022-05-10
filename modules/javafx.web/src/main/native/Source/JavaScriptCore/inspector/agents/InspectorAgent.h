@@ -40,8 +40,6 @@ namespace Inspector {
 class BackendDispatcher;
 class InspectorEnvironment;
 
-typedef String ErrorString;
-
 class JS_EXPORT_PRIVATE InspectorAgent final : public InspectorAgentBase, public InspectorBackendDispatcherHandler {
     WTF_MAKE_NONCOPYABLE(InspectorAgent);
     WTF_MAKE_FAST_ALLOCATED;
@@ -54,19 +52,14 @@ public:
     void willDestroyFrontendAndBackend(DisconnectReason) final;
 
     // InspectorBackendDispatcherHandler
-    void enable(ErrorString&) final;
-    void disable(ErrorString&) final;
-    void initialized(ErrorString&) final;
+    Protocol::ErrorStringOr<void> enable() final;
+    Protocol::ErrorStringOr<void> disable() final;
+    Protocol::ErrorStringOr<void> initialized() final;
 
     // CommandLineAPI
-    void inspect(RefPtr<Protocol::Runtime::RemoteObject>&& objectToInspect, RefPtr<JSON::Object>&& hints);
+    void inspect(Ref<Protocol::Runtime::RemoteObject>&&, Ref<JSON::Object>&& hints);
 
     void evaluateForTestInFrontend(const String& script);
-
-#if ENABLE(INSPECTOR_ALTERNATE_DISPATCHERS)
-    void activateExtraDomain(const String&);
-    void activateExtraDomains(const Vector<String>&);
-#endif
 
 private:
     InspectorEnvironment& m_environment;

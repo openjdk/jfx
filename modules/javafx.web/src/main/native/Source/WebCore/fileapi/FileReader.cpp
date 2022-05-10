@@ -89,45 +89,33 @@ bool FileReader::virtualHasPendingActivity() const
     return m_state == LOADING;
 }
 
-ExceptionOr<void> FileReader::readAsArrayBuffer(Blob* blob)
+ExceptionOr<void> FileReader::readAsArrayBuffer(Blob& blob)
 {
-    if (!blob)
-        return { };
+    LOG(FileAPI, "FileReader: reading as array buffer: %s %s\n", blob.url().string().utf8().data(), is<File>(blob) ? downcast<File>(blob).path().utf8().data() : "");
 
-    LOG(FileAPI, "FileReader: reading as array buffer: %s %s\n", blob->url().string().utf8().data(), is<File>(*blob) ? downcast<File>(*blob).path().utf8().data() : "");
-
-    return readInternal(*blob, FileReaderLoader::ReadAsArrayBuffer);
+    return readInternal(blob, FileReaderLoader::ReadAsArrayBuffer);
 }
 
-ExceptionOr<void> FileReader::readAsBinaryString(Blob* blob)
+ExceptionOr<void> FileReader::readAsBinaryString(Blob& blob)
 {
-    if (!blob)
-        return { };
+    LOG(FileAPI, "FileReader: reading as binary: %s %s\n", blob.url().string().utf8().data(), is<File>(blob) ? downcast<File>(blob).path().utf8().data() : "");
 
-    LOG(FileAPI, "FileReader: reading as binary: %s %s\n", blob->url().string().utf8().data(), is<File>(*blob) ? downcast<File>(*blob).path().utf8().data() : "");
-
-    return readInternal(*blob, FileReaderLoader::ReadAsBinaryString);
+    return readInternal(blob, FileReaderLoader::ReadAsBinaryString);
 }
 
-ExceptionOr<void> FileReader::readAsText(Blob* blob, const String& encoding)
+ExceptionOr<void> FileReader::readAsText(Blob& blob, const String& encoding)
 {
-    if (!blob)
-        return { };
-
-    LOG(FileAPI, "FileReader: reading as text: %s %s\n", blob->url().string().utf8().data(), is<File>(*blob) ? downcast<File>(*blob).path().utf8().data() : "");
+    LOG(FileAPI, "FileReader: reading as text: %s %s\n", blob.url().string().utf8().data(), is<File>(blob) ? downcast<File>(blob).path().utf8().data() : "");
 
     m_encoding = encoding;
-    return readInternal(*blob, FileReaderLoader::ReadAsText);
+    return readInternal(blob, FileReaderLoader::ReadAsText);
 }
 
-ExceptionOr<void> FileReader::readAsDataURL(Blob* blob)
+ExceptionOr<void> FileReader::readAsDataURL(Blob& blob)
 {
-    if (!blob)
-        return { };
+    LOG(FileAPI, "FileReader: reading as data URL: %s %s\n", blob.url().string().utf8().data(), is<File>(blob) ? downcast<File>(blob).path().utf8().data() : "");
 
-    LOG(FileAPI, "FileReader: reading as data URL: %s %s\n", blob->url().string().utf8().data(), is<File>(*blob) ? downcast<File>(*blob).path().utf8().data() : "");
-
-    return readInternal(*blob, FileReaderLoader::ReadAsDataURL);
+    return readInternal(blob, FileReaderLoader::ReadAsDataURL);
 }
 
 ExceptionOr<void> FileReader::readInternal(Blob& blob, FileReaderLoader::ReadType type)
@@ -152,25 +140,16 @@ ExceptionOr<void> FileReader::readInternal(Blob& blob, FileReaderLoader::ReadTyp
 void FileReader::abort()
 {
     LOG(FileAPI, "FileReader: aborting\n");
-
-    if (m_aborting || m_state != LOADING)
+    if (m_state != LOADING || m_finishedLoading)
         return;
-    m_aborting = true;
 
-    // Schedule to have the abort done later since abort() might be called from the event handler and we do not want the resource loading code to be in the stack.
     m_pendingTasks.clear();
-    enqueueTask([this] {
-        ASSERT(m_state != DONE);
+    stop();
+    m_error = DOMException::create(Exception { AbortError });
 
-        stop();
-        m_aborting = false;
-
-        m_error = DOMException::create(Exception { AbortError });
-
-        fireEvent(eventNames().errorEvent);
-        fireEvent(eventNames().abortEvent);
-        fireEvent(eventNames().loadendEvent);
-    });
+    auto protectedThis = makeRef(*this);
+    fireEvent(eventNames().abortEvent);
+    fireEvent(eventNames().loadendEvent);
 }
 
 void FileReader::didStartLoading()
@@ -197,14 +176,14 @@ void FileReader::didReceiveData()
 
 void FileReader::didFinishLoading()
 {
-    if (m_aborting)
-        return;
-
     enqueueTask([this] {
-        ASSERT(m_state != DONE);
-        m_state = DONE;
-
+        if (m_state == DONE)
+            return;
+        m_finishedLoading = true;
         fireEvent(eventNames().progressEvent);
+        if (m_state == DONE)
+            return;
+        m_state = DONE;
         fireEvent(eventNames().loadEvent);
         fireEvent(eventNames().loadendEvent);
     });
@@ -212,12 +191,9 @@ void FileReader::didFinishLoading()
 
 void FileReader::didFail(ExceptionCode errorCode)
 {
-    // If we're aborting, do not proceed with normal error handling since it is covered in aborting code.
-    if (m_aborting)
-        return;
-
     enqueueTask([this, errorCode] {
-        ASSERT(m_state != DONE);
+        if (m_state == DONE)
+            return;
         m_state = DONE;
 
         m_error = DOMException::create(Exception { errorCode });
@@ -229,38 +205,37 @@ void FileReader::didFail(ExceptionCode errorCode)
 
 void FileReader::fireEvent(const AtomString& type)
 {
-    RELEASE_ASSERT(isAllowedToRunScript());
+    ASSERT(isAllowedToRunScript());
     dispatchEvent(ProgressEvent::create(type, true, m_loader ? m_loader->bytesLoaded() : 0, m_loader ? m_loader->totalBytes() : 0));
 }
 
-Optional<Variant<String, RefPtr<JSC::ArrayBuffer>>> FileReader::result() const
+std::optional<Variant<String, RefPtr<JSC::ArrayBuffer>>> FileReader::result() const
 {
-    if (!m_loader || m_error)
-        return WTF::nullopt;
+    if (!m_loader || m_error || m_state != DONE)
+        return std::nullopt;
     if (m_readType == FileReaderLoader::ReadAsArrayBuffer) {
         auto result = m_loader->arrayBufferResult();
         if (!result)
-            return WTF::nullopt;
+            return std::nullopt;
         return { result };
     }
     String result = m_loader->stringResult();
     if (result.isNull())
-        return WTF::nullopt;
+        return std::nullopt;
     return { WTFMove(result) };
 }
 
 void FileReader::enqueueTask(Function<void()>&& task)
 {
-    auto* context = scriptExecutionContext();
-    if (!context)
+    if (!scriptExecutionContext())
         return;
 
     static uint64_t taskIdentifierSeed = 0;
     uint64_t taskIdentifier = ++taskIdentifierSeed;
     m_pendingTasks.add(taskIdentifier, WTFMove(task));
-    context->eventLoop().queueTask(TaskSource::FileReading, [this, protectedThis = makeRef(*this), pendingActivity = makePendingActivity(*this), taskIdentifier] {
+    queueTaskKeepingObjectAlive(*this, TaskSource::FileReading, [this, pendingActivity = makePendingActivity(*this), taskIdentifier] {
         auto task = m_pendingTasks.take(taskIdentifier);
-        if (task)
+        if (task && !isContextStopped())
             task();
     });
 }

@@ -24,10 +24,10 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef AffineTransform_h
-#define AffineTransform_h
+#pragma once
 
 #include <array>
+#include <optional>
 #include <wtf/FastMalloc.h>
 #include <wtf/Forward.h>
 
@@ -111,7 +111,7 @@ public:
 
     WEBCORE_EXPORT AffineTransform& multiply(const AffineTransform& other);
     WEBCORE_EXPORT AffineTransform& scale(double);
-    AffineTransform& scale(double sx, double sy);
+    WEBCORE_EXPORT AffineTransform& scale(double sx, double sy);
     WEBCORE_EXPORT AffineTransform& scaleNonUniform(double sx, double sy); // Same as scale(sx, sy).
     WEBCORE_EXPORT AffineTransform& scale(const FloatSize&);
     WEBCORE_EXPORT AffineTransform& rotate(double);
@@ -132,7 +132,7 @@ public:
     WEBCORE_EXPORT double yScale() const;
 
     bool isInvertible() const; // If you call this this, you're probably doing it wrong.
-    WEBCORE_EXPORT Optional<AffineTransform> inverse() const;
+    WEBCORE_EXPORT std::optional<AffineTransform> inverse() const;
 
     WEBCORE_EXPORT void blend(const AffineTransform& from, double progress);
 
@@ -146,6 +146,11 @@ public:
     bool isIdentityOrTranslationOrFlipped() const
     {
         return m_transform[0] == 1 && m_transform[1] == 0 && m_transform[2] == 0 && (m_transform[3] == 1 || m_transform[3] == -1);
+    }
+
+    bool isRotateOrShear() const
+    {
+        return m_transform[1] || m_transform[2];
     }
 
     bool preservesAxisAlignment() const
@@ -212,5 +217,3 @@ WEBCORE_EXPORT AffineTransform makeMapBetweenRects(const FloatRect& source, cons
 WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, const AffineTransform&);
 
 }
-
-#endif

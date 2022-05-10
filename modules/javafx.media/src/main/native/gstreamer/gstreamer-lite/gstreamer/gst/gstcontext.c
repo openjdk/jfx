@@ -33,24 +33,25 @@
  *
  * Applications can set a context on a complete pipeline by using
  * gst_element_set_context(), which will then be propagated to all
- * child elements. Elements can handle these in #GstElementClass.set_context()
+ * child elements. Elements can handle these in #GstElementClass::set_context
  * and merge them with the context information they already have.
  *
  * When an element needs a context it will do the following actions in this
  * order until one step succeeds:
+ *
  * 1. Check if the element already has a context
- * 2. Query downstream with GST_QUERY_CONTEXT for the context
- * 3. Query upstream with GST_QUERY_CONTEXT for the context
- * 4. Post a GST_MESSAGE_NEED_CONTEXT message on the bus with the required
+ * 2. Query downstream with %GST_QUERY_CONTEXT for the context
+ * 3. Query upstream with %GST_QUERY_CONTEXT for the context
+ * 4. Post a %GST_MESSAGE_NEED_CONTEXT message on the bus with the required
  *    context types and afterwards check if a usable context was set now
- * 5. Create a context by itself and post a GST_MESSAGE_HAVE_CONTEXT message
+ * 5. Create a context by itself and post a %GST_MESSAGE_HAVE_CONTEXT message
  *    on the bus.
  *
- * Bins will catch GST_MESSAGE_NEED_CONTEXT messages and will set any previously
+ * Bins will catch %GST_MESSAGE_NEED_CONTEXT messages and will set any previously
  * known context on the element that asks for it if possible. Otherwise the
  * application should provide one if it can.
  *
- * #GstContext<!-- -->s can be persistent.
+ * #GstContext can be persistent.
  * A persistent #GstContext is kept in elements when they reach
  * %GST_STATE_NULL, non-persistent ones will be removed.
  * Also, a non-persistent context won't override a previous persistent
@@ -59,6 +60,7 @@
  * Since: 1.2
  */
 
+#define GST_DISABLE_MINIOBJECT_INLINE_FUNCTIONS
 #include "gst_private.h"
 #include <string.h>
 #include "gstcontext.h"
@@ -155,7 +157,7 @@ gst_context_init (GstContext * context)
  * @context_type: Context type
  * @persistent: Persistent context
  *
- * Create a new context.
+ * Creates a new context.
  *
  * Returns: (transfer full): The new context.
  *
@@ -188,7 +190,7 @@ gst_context_new (const gchar * context_type, gboolean persistent)
  * gst_context_get_context_type:
  * @context: The #GstContext.
  *
- * Get the type of @context.
+ * Gets the type of @context.
  *
  * Returns: The type of the context.
  *
@@ -227,7 +229,7 @@ gst_context_has_context_type (const GstContext * context,
  * gst_context_get_structure:
  * @context: The #GstContext.
  *
- * Access the structure of the context.
+ * Accesses the structure of the context.
  *
  * Returns: (transfer none): The structure of the context. The structure is
  * still owned by the context, which means that you should not modify it,
@@ -247,9 +249,9 @@ gst_context_get_structure (const GstContext * context)
  * gst_context_writable_structure:
  * @context: The #GstContext.
  *
- * Get a writable version of the structure.
+ * Gets a writable version of the structure.
  *
- * Returns: The structure of the context. The structure is still
+ * Returns: (transfer none): The structure of the context. The structure is still
  * owned by the context, which means that you should not free it and
  * that the pointer becomes invalid when you free the context.
  * This function checks if @context is writable.
@@ -269,7 +271,7 @@ gst_context_writable_structure (GstContext * context)
  * gst_context_is_persistent:
  * @context: The #GstContext.
  *
- * Check if @context is persistent.
+ * Checks if @context is persistent.
  *
  * Returns: %TRUE if the context is persistent.
  *
@@ -281,4 +283,80 @@ gst_context_is_persistent (const GstContext * context)
   g_return_val_if_fail (GST_IS_CONTEXT (context), FALSE);
 
   return context->persistent;
+}
+
+/**
+ * gst_context_ref:
+ * @context: the context to ref
+ *
+ * Convenience macro to increase the reference count of the context.
+ *
+ * Returns: @context (for convenience when doing assignments)
+ *
+ * Since: 1.2
+ */
+GstContext *
+gst_context_ref (GstContext * context)
+{
+  return (GstContext *) gst_mini_object_ref (GST_MINI_OBJECT_CAST (context));
+}
+
+/**
+ * gst_context_unref:
+ * @context: the context to unref
+ *
+ * Convenience macro to decrease the reference count of the context, possibly
+ * freeing it.
+ *
+ * Since: 1.2
+ */
+void
+gst_context_unref (GstContext * context)
+{
+  gst_mini_object_unref (GST_MINI_OBJECT_CAST (context));
+}
+
+/**
+ * gst_context_copy:
+ * @context: the context to copy
+ *
+ * Creates a copy of the context. Returns a copy of the context.
+ *
+ * Returns: (transfer full): a new copy of @context.
+ *
+ * MT safe
+ *
+ * Since: 1.2
+ */
+GstContext *
+gst_context_copy (const GstContext * context)
+{
+  return
+      GST_CONTEXT_CAST (gst_mini_object_copy (GST_MINI_OBJECT_CONST_CAST
+          (context)));
+}
+
+/**
+ * gst_context_replace:
+ * @old_context: (inout) (transfer full): pointer to a pointer to a #GstContext
+ *     to be replaced.
+ * @new_context: (allow-none) (transfer none): pointer to a #GstContext that will
+ *     replace the context pointed to by @old_context.
+ *
+ * Modifies a pointer to a #GstContext to point to a different #GstContext. The
+ * modification is done atomically (so this is useful for ensuring thread safety
+ * in some cases), and the reference counts are updated appropriately (the old
+ * context is unreffed, the new one is reffed).
+ *
+ * Either @new_context or the #GstContext pointed to by @old_context may be %NULL.
+ *
+ * Returns: %TRUE if @new_context was different from @old_context
+ *
+ * Since: 1.2
+ */
+gboolean
+gst_context_replace (GstContext ** old_context, GstContext * new_context)
+{
+  return gst_mini_object_replace ((GstMiniObject **) old_context,
+      (GstMiniObject *) new_context);
 }

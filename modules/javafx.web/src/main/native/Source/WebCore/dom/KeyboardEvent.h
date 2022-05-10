@@ -56,13 +56,13 @@ public:
 
         // Legacy.
         String keyIdentifier;
-        Optional<unsigned> keyLocation;
+        std::optional<unsigned> keyLocation;
         unsigned charCode;
         unsigned keyCode;
         unsigned which;
     };
 
-    static Ref<KeyboardEvent> create(const AtomString& type, const Init&);
+    static Ref<KeyboardEvent> create(const AtomString& type, const Init&, IsTrusted = IsTrusted::No);
 
     virtual ~KeyboardEvent();
 
@@ -97,7 +97,7 @@ public:
 private:
     KeyboardEvent();
     KeyboardEvent(const PlatformKeyboardEvent&, RefPtr<WindowProxy>&&);
-    KeyboardEvent(const AtomString&, const Init&);
+    KeyboardEvent(const AtomString&, const Init&, IsTrusted = IsTrusted::No);
 
     std::unique_ptr<PlatformKeyboardEvent> m_underlyingPlatformEvent;
     String m_key;
@@ -106,9 +106,9 @@ private:
     unsigned m_location { DOM_KEY_LOCATION_STANDARD };
     bool m_repeat { false };
     bool m_isComposing { false };
-    Optional<unsigned> m_charCode;
-    Optional<unsigned> m_keyCode;
-    Optional<unsigned> m_which;
+    std::optional<unsigned> m_charCode;
+    std::optional<unsigned> m_keyCode;
+    std::optional<unsigned> m_which;
 
 #if PLATFORM(COCOA)
     // Commands that were sent by AppKit when interpreting the event. Doesn't include input method commands.

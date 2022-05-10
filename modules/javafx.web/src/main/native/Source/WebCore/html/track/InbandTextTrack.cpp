@@ -50,7 +50,9 @@ Ref<InbandTextTrack> InbandTextTrack::create(Document& document, TextTrackClient
         return InbandWebVTTTextTrack::create(document, client, trackPrivate);
     }
     ASSERT_NOT_REACHED();
-    return InbandDataTextTrack::create(document, client, trackPrivate);
+    auto textTrack = InbandDataTextTrack::create(document, client, trackPrivate);
+    textTrack->suspendIfNeeded();
+    return textTrack;
 }
 
 InbandTextTrack::InbandTextTrack(Document& document, TextTrackClient& client, InbandTextTrackPrivate& trackPrivate)
@@ -77,6 +79,7 @@ void InbandTextTrack::setPrivate(InbandTextTrackPrivate& trackPrivate)
 
     setModeInternal(mode());
     updateKindFromPrivate();
+    setId(m_private->id());
 }
 
 void InbandTextTrack::setMode(Mode mode)

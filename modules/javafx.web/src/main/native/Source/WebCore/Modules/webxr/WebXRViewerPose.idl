@@ -24,12 +24,13 @@
  */
 
 [
-    EnabledAtRuntime=WebXR,
+    EnabledBySetting=WebXR,
     Conditional=WEBXR,
     SecureContext,
     Exposed=Window,
-    ImplementationLacksVTable,
+    JSGenerateToJSObject,
+    JSGenerateToNativeObject,
     InterfaceName=XRViewerPose
 ] interface WebXRViewerPose : WebXRPose {
-    [SameObject] readonly attribute FrozenArray<WebXRView> views;
+    [CachedAttribute, SameObject] readonly attribute FrozenArray<WebXRView> views;
 };

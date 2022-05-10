@@ -54,7 +54,7 @@ typedef struct _GstValueArray GstValueArray;
  * @timestamp: timestamp of the value change
  * @value: the corresponding value
  *
- * Structure for saving a timestamp and a value.
+ * Structure for storing a timestamp and a value.
  */
 struct _GstTimedValue
 {
@@ -84,7 +84,7 @@ typedef gboolean (* GstControlSourceGetValue) (GstControlSource *self,
  * @n_values: the number of values
  * @values: array to put control-values in
  *
- * Function for returning an array of values for starting at a given timestamp.
+ * Function for returning an array of values starting at a given timestamp.
  *
  * Returns: %TRUE if the values were successfully calculated.
  *
@@ -94,6 +94,7 @@ typedef gboolean (* GstControlSourceGetValueArray) (GstControlSource *self,
 
 /**
  * GstControlSource:
+ * @parent: the parent structure
  * @get_value: Function for returning a value for a given timestamp
  * @get_value_array: Function for returning a values array for a given timestamp
  *
@@ -137,13 +138,9 @@ GST_API
 gboolean       gst_control_source_get_value_array       (GstControlSource *self, GstClockTime timestamp,
                                                          GstClockTime interval, guint n_values,
                                                          gdouble *values);
-#ifdef G_DEFINE_AUTOPTR_CLEANUP_FUNC
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstControlSource, gst_object_unref)
-#endif
 
-#ifdef G_DEFINE_AUTOPTR_CLEANUP_FUNC
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstValueArray, gst_object_unref)
-#endif
 
 G_END_DECLS
 

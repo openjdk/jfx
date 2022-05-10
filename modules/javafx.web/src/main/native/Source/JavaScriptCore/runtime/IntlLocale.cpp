@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2020 Sony Interactive Entertainment Inc.
+ * Copyright (C) 2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,14 +27,24 @@
 #include "config.h"
 #include "IntlLocale.h"
 
-#include "IntlObject.h"
+#include "IntlDateTimeFormat.h"
+#include "IntlObjectInlines.h"
 #include "JSCInlines.h"
+#include <unicode/ucal.h>
+#include <unicode/ucol.h>
+#include <unicode/udat.h>
+#include <unicode/udatpg.h>
 #include <unicode/uloc.h>
+#include <unicode/unumsys.h>
 #include <wtf/unicode/icu/ICUHelpers.h>
 
 namespace JSC {
 
 const ClassInfo IntlLocale::s_info = { "Object", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(IntlLocale) };
+
+namespace IntlLocaleInternal {
+static constexpr bool verbose = false;
+}
 
 IntlLocale* IntlLocale::create(VM& vm, Structure* structure)
 {
@@ -58,7 +69,8 @@ void IntlLocale::finishCreation(VM& vm)
     ASSERT(inherits(vm, info()));
 }
 
-void IntlLocale::visitChildren(JSCell* cell, SlotVisitor& visitor)
+template<typename Visitor>
+void IntlLocale::visitChildrenImpl(JSCell* cell, Visitor& visitor)
 {
     auto* thisObject = jsCast<IntlLocale*>(cell);
     ASSERT_GC_OBJECT_INHERITS(thisObject, info());
@@ -66,9 +78,11 @@ void IntlLocale::visitChildren(JSCell* cell, SlotVisitor& visitor)
     Base::visitChildren(thisObject, visitor);
 }
 
+DEFINE_VISIT_CHILDREN(IntlLocale);
+
 class LocaleIDBuilder final {
 public:
-    bool initialize(const CString&);
+    bool initialize(const String&);
     CString toCanonical();
 
     void overrideLanguageScriptRegion(StringView language, StringView script, StringView region);
@@ -78,9 +92,12 @@ private:
     Vector<char, 32> m_buffer;
 };
 
-bool LocaleIDBuilder::initialize(const CString& tag)
+bool LocaleIDBuilder::initialize(const String& tag)
 {
-    m_buffer = localeIDBufferForLanguageTag(tag);
+    if (!isStructurallyValidLanguageTag(tag))
+        return false;
+    ASSERT(tag.isAllASCII());
+    m_buffer = localeIDBufferForLanguageTagWithNullTerminator(tag.ascii());
     return m_buffer.size();
 }
 
@@ -88,11 +105,11 @@ CString LocaleIDBuilder::toCanonical()
 {
     ASSERT(m_buffer.size());
 
-    Vector<char, 32> result;
-    auto status = callBufferProducingFunction(uloc_canonicalize, m_buffer.data(), result);
-    if (U_FAILURE(status))
+    auto buffer = canonicalizeLocaleIDWithoutNullTerminator(m_buffer.data());
+    if (!buffer)
         return CString();
 
+    auto result = canonicalizeUnicodeExtensionsAfterICULocaleCanonicalization(WTFMove(buffer.value()));
     return CString(result.data(), result.size());
 }
 
@@ -142,15 +159,21 @@ void LocaleIDBuilder::overrideLanguageScriptRegion(StringView language, StringVi
         else
             hasAppended = true;
 
-        ASSERT(subtag.is8Bit() && subtag.isAllASCII());
-        buffer.append(reinterpret_cast<const char*>(subtag.characters8()), subtag.length());
+        ASSERT(subtag.isAllASCII());
+        if (subtag.is8Bit())
+            buffer.append(subtag.characters8(), subtag.length());
+        else
+            buffer.append(subtag.characters16(), subtag.length());
     }
 
     if (endOfLanguageScriptRegionVariant != length) {
         auto rest = localeIDView.right(length - endOfLanguageScriptRegionVariant);
 
-        ASSERT(rest.is8Bit() && rest.isAllASCII());
-        buffer.append(reinterpret_cast<const char*>(rest.characters8()), rest.length());
+        ASSERT(rest.isAllASCII());
+        if (rest.is8Bit())
+            buffer.append(rest.characters8(), rest.length());
+        else
+            buffer.append(rest.characters16(), rest.length());
     }
 
     buffer.append('\0');
@@ -161,8 +184,13 @@ void LocaleIDBuilder::setKeywordValue(ASCIILiteral key, StringView value)
 {
     ASSERT(m_buffer.size());
 
-    ASSERT(value.is8Bit() && value.isAllASCII());
-    CString rawValue { reinterpret_cast<const char*>(value.characters8()), value.length() };
+    ASSERT(value.isAllASCII());
+    Vector<char, 32> rawValue(value.length() + 1);
+    if (value.is8Bit())
+        StringImpl::copyCharacters(reinterpret_cast<LChar*>(rawValue.data()), value.characters8(), value.length());
+    else
+        StringImpl::copyCharacters(reinterpret_cast<LChar*>(rawValue.data()), value.characters16(), value.length());
+    rawValue[value.length()] = '\0';
 
     UErrorCode status = U_ZERO_ERROR;
     auto length = uloc_setKeywordValue(key.characters(), rawValue.data(), m_buffer.data(), m_buffer.size(), &status);
@@ -183,12 +211,18 @@ String IntlLocale::keywordValue(ASCIILiteral key, bool isBoolean) const
     if (needsToGrowToProduceCString(status)) {
         buffer.grow(bufferLength + 1);
         status = U_ZERO_ERROR;
-        uloc_getKeywordValue(m_localeID.data(), key.characters(), buffer.data(), bufferLength + 1, &status);
+        uloc_getKeywordValue(m_localeID.data(), key.characters(), buffer.data(), buffer.size(), &status);
     }
     ASSERT(U_SUCCESS(status));
-
-    const char* value = !isBoolean ? uloc_toUnicodeLocaleType(key.characters(), buffer.data()) : buffer.data();
-    return value ? String(value) : emptyString();
+    if (isBoolean)
+        return String(buffer.data());
+    const char* value = uloc_toUnicodeLocaleType(key.characters(), buffer.data());
+    if (!value)
+        return nullString();
+    String result(value);
+    if (result == "true"_s)
+        return emptyString();
+    return result;
 }
 
 // https://tc39.es/ecma402/#sec-Intl.Locale
@@ -209,14 +243,11 @@ void IntlLocale::initializeLocale(JSGlobalObject* globalObject, const String& ta
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    JSValue options = optionsValue;
-    if (!optionsValue.isUndefined()) {
-        options = optionsValue.toObject(globalObject);
-        RETURN_IF_EXCEPTION(scope, void());
-    }
+    JSObject* options = intlCoerceOptionsToObject(globalObject, optionsValue);
+    RETURN_IF_EXCEPTION(scope, void());
 
     LocaleIDBuilder localeID;
-    if (!localeID.initialize(tag.utf8())) {
+    if (!localeID.initialize(tag)) {
         throwRangeError(globalObject, scope, "invalid language tag"_s);
         return;
     }
@@ -301,17 +332,49 @@ void IntlLocale::initializeLocale(JSGlobalObject* globalObject, const String& ta
 const String& IntlLocale::maximal()
 {
     if (m_maximal.isNull()) {
+        // ICU has a serious bug that it fails to perform uloc_addLikelySubtags when the input localeID is longer than ULOC_FULLNAME_CAPACITY,
+        // and that can be achieved if we add many unicode extensions. While ICU needs to be fixed, we work-around this bug for now: We pass
+        // non-keyword part of ICU locale ID and later, concatenate keyword part to the output.
+        // Note that ICU locale ID consists of Language, Script, Country (unicode language tag's region.
+        // FIXME: ICU tracking bug https://unicode-org.atlassian.net/browse/ICU-21639.
         UErrorCode status = U_ZERO_ERROR;
         Vector<char, 32> buffer(32);
         auto bufferLength = uloc_addLikelySubtags(m_localeID.data(), buffer.data(), buffer.size(), &status);
         if (needsToGrowToProduceCString(status)) {
             buffer.grow(bufferLength + 1);
             status = U_ZERO_ERROR;
-            uloc_addLikelySubtags(m_localeID.data(), buffer.data(), bufferLength + 1, &status);
+            uloc_addLikelySubtags(m_localeID.data(), buffer.data(), buffer.size(), &status);
         }
-        ASSERT(U_SUCCESS(status));
 
-        m_maximal = languageTagForLocaleID(buffer.data());
+        if (U_SUCCESS(status))
+            m_maximal = languageTagForLocaleID(buffer.data());
+        else {
+            status = U_ZERO_ERROR;
+            Vector<char, 32> baseNameID;
+            auto bufferLength = uloc_getBaseName(m_localeID.data(), baseNameID.data(), baseNameID.size(), &status);
+            if (needsToGrowToProduceCString(status)) {
+                baseNameID.grow(bufferLength + 1);
+                status = U_ZERO_ERROR;
+                uloc_getBaseName(m_localeID.data(), baseNameID.data(), baseNameID.size(), &status);
+            }
+            ASSERT(U_SUCCESS(status));
+
+            Vector<char, 32> maximal;
+            status = callBufferProducingFunction(uloc_addLikelySubtags, baseNameID.data(), maximal);
+            // We fail if,
+            // 1. uloc_addLikelySubtags still fails.
+            // 2. New maximal locale ID includes newly-added keywords.
+            if (!U_SUCCESS(status) || maximal.find(ULOC_KEYWORD_SEPARATOR) != notFound) {
+                m_maximal = toString();
+                return m_maximal;
+            }
+
+            auto endOfLanguageScriptRegionVariant = WTF::find(m_localeID.data(), m_localeID.length(), ULOC_KEYWORD_SEPARATOR);
+            if (endOfLanguageScriptRegionVariant != notFound)
+                maximal.appendRange(m_localeID.data() + endOfLanguageScriptRegionVariant, m_localeID.data() + m_localeID.length());
+            maximal.append('\0');
+            m_maximal = languageTagForLocaleID(maximal.data());
+        }
     }
     return m_maximal;
 }
@@ -320,17 +383,49 @@ const String& IntlLocale::maximal()
 const String& IntlLocale::minimal()
 {
     if (m_minimal.isNull()) {
+        // ICU has a serious bug that it fails to perform uloc_minimizeSubtags when the input localeID is longer than ULOC_FULLNAME_CAPACITY,
+        // and that can be achieved if we add many unicode extensions. While ICU needs to be fixed, we work-around this bug for now: We pass
+        // non-keyword part of ICU locale ID and later, concatenate keyword part to the output.
+        // Note that ICU locale ID consists of Language, Script, Country (unicode language tag's region.
+        // FIXME: ICU tracking bug https://unicode-org.atlassian.net/browse/ICU-21639.
         UErrorCode status = U_ZERO_ERROR;
         Vector<char, 32> buffer(32);
         auto bufferLength = uloc_minimizeSubtags(m_localeID.data(), buffer.data(), buffer.size(), &status);
         if (needsToGrowToProduceCString(status)) {
             buffer.grow(bufferLength + 1);
             status = U_ZERO_ERROR;
-            uloc_minimizeSubtags(m_localeID.data(), buffer.data(), bufferLength + 1, &status);
+            uloc_minimizeSubtags(m_localeID.data(), buffer.data(), buffer.size(), &status);
         }
-        ASSERT(U_SUCCESS(status));
 
-        m_minimal = languageTagForLocaleID(buffer.data());
+        if (U_SUCCESS(status))
+            m_minimal = languageTagForLocaleID(buffer.data());
+        else {
+            status = U_ZERO_ERROR;
+            Vector<char, 32> baseNameID;
+            auto bufferLength = uloc_getBaseName(m_localeID.data(), baseNameID.data(), baseNameID.size(), &status);
+            if (needsToGrowToProduceCString(status)) {
+                baseNameID.grow(bufferLength + 1);
+                status = U_ZERO_ERROR;
+                uloc_getBaseName(m_localeID.data(), baseNameID.data(), baseNameID.size(), &status);
+            }
+            ASSERT(U_SUCCESS(status));
+
+            Vector<char, 32> minimal;
+            auto status = callBufferProducingFunction(uloc_minimizeSubtags, baseNameID.data(), minimal);
+            // We fail if,
+            // 1. uloc_minimizeSubtags still fails.
+            // 2. New minimal locale ID includes newly-added keywords.
+            if (!U_SUCCESS(status) || minimal.find(ULOC_KEYWORD_SEPARATOR) != notFound) {
+                m_minimal = toString();
+                return m_minimal;
+            }
+
+            auto endOfLanguageScriptRegionVariant = WTF::find(m_localeID.data(), m_localeID.length(), ULOC_KEYWORD_SEPARATOR);
+            if (endOfLanguageScriptRegionVariant != notFound)
+                minimal.appendRange(m_localeID.data() + endOfLanguageScriptRegionVariant, m_localeID.data() + m_localeID.length());
+            minimal.append('\0');
+            m_minimal = languageTagForLocaleID(minimal.data());
+        }
     }
     return m_minimal;
 }
@@ -353,7 +448,7 @@ const String& IntlLocale::baseName()
         if (needsToGrowToProduceCString(status)) {
             buffer.grow(bufferLength + 1);
             status = U_ZERO_ERROR;
-            uloc_getBaseName(m_localeID.data(), buffer.data(), bufferLength + 1, &status);
+            uloc_getBaseName(m_localeID.data(), buffer.data(), buffer.size(), &status);
         }
         ASSERT(U_SUCCESS(status));
 
@@ -401,41 +496,41 @@ const String& IntlLocale::region()
 // https://tc39.es/ecma402/#sec-Intl.Locale.prototype.calendar
 const String& IntlLocale::calendar()
 {
-    if (m_calendar.isNull())
+    if (!m_calendar)
         m_calendar = keywordValue("calendar"_s);
-    return m_calendar;
+    return m_calendar.value();
 }
 
 // https://tc39.es/ecma402/#sec-Intl.Locale.prototype.caseFirst
 const String& IntlLocale::caseFirst()
 {
-    if (m_caseFirst.isNull())
+    if (!m_caseFirst)
         m_caseFirst = keywordValue("colcasefirst"_s);
-    return m_caseFirst;
+    return m_caseFirst.value();
 }
 
 // https://tc39.es/ecma402/#sec-Intl.Locale.prototype.collation
 const String& IntlLocale::collation()
 {
-    if (m_collation.isNull())
+    if (!m_collation)
         m_collation = keywordValue("collation"_s);
-    return m_collation;
+    return m_collation.value();
 }
 
 // https://tc39.es/ecma402/#sec-Intl.Locale.prototype.hourCycle
 const String& IntlLocale::hourCycle()
 {
-    if (m_hourCycle.isNull())
+    if (!m_hourCycle)
         m_hourCycle = keywordValue("hours"_s);
-    return m_hourCycle;
+    return m_hourCycle.value();
 }
 
 // https://tc39.es/ecma402/#sec-Intl.Locale.prototype.numberingSystem
 const String& IntlLocale::numberingSystem()
 {
-    if (m_numberingSystem.isNull())
+    if (!m_numberingSystem)
         m_numberingSystem = keywordValue("numbers"_s);
-    return m_numberingSystem;
+    return m_numberingSystem.value();
 }
 
 // https://tc39.es/ecma402/#sec-Intl.Locale.prototype.numeric
@@ -443,8 +538,313 @@ TriState IntlLocale::numeric()
 {
     constexpr bool isBoolean = true;
     if (m_numeric == TriState::Indeterminate)
-        m_numeric = triState(keywordValue("colnumeric"_s, isBoolean) == "yes");
+        m_numeric = triState(keywordValue("colnumeric"_s, isBoolean) == "yes"_s);
     return m_numeric;
+}
+
+JSArray* IntlLocale::calendars(JSGlobalObject* globalObject)
+{
+    VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    Vector<String, 1> elements;
+
+    String preferred = calendar();
+    if (!preferred.isEmpty()) {
+        elements.append(WTFMove(preferred));
+        RELEASE_AND_RETURN(scope, createArrayFromStringVector(globalObject, WTFMove(elements)));
+    }
+
+    UErrorCode status = U_ZERO_ERROR;
+    constexpr bool commonlyUsed = true;
+    auto calendars = std::unique_ptr<UEnumeration, ICUDeleter<uenum_close>>(ucal_getKeywordValuesForLocale("calendar", m_localeID.data(), commonlyUsed, &status));
+    if (!U_SUCCESS(status)) {
+        throwTypeError(globalObject, scope, "invalid locale"_s);
+        return nullptr;
+    }
+
+    const char* pointer;
+    int32_t length = 0;
+    while ((pointer = uenum_next(calendars.get(), &length, &status)) && U_SUCCESS(status)) {
+        String calendar(pointer, length);
+        if (auto mapped = mapICUCalendarKeywordToBCP47(calendar))
+            elements.append(WTFMove(mapped.value()));
+        else
+            elements.append(WTFMove(calendar));
+    }
+    if (!U_SUCCESS(status)) {
+        throwTypeError(globalObject, scope, "invalid locale"_s);
+        return nullptr;
+    }
+
+    RELEASE_AND_RETURN(scope, createArrayFromStringVector(globalObject, WTFMove(elements)));
+}
+
+JSArray* IntlLocale::collations(JSGlobalObject* globalObject)
+{
+    VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    Vector<String, 1> elements;
+
+    String preferred = collation();
+    if (!preferred.isEmpty()) {
+        elements.append(WTFMove(preferred));
+        RELEASE_AND_RETURN(scope, createArrayFromStringVector(globalObject, WTFMove(elements)));
+    }
+
+    UErrorCode status = U_ZERO_ERROR;
+    constexpr bool commonlyUsed = true;
+    auto enumeration = std::unique_ptr<UEnumeration, ICUDeleter<uenum_close>>(ucol_getKeywordValuesForLocale("collation", m_localeID.data(), commonlyUsed, &status));
+    if (!U_SUCCESS(status)) {
+        throwTypeError(globalObject, scope, "invalid locale"_s);
+        return nullptr;
+    }
+
+    const char* pointer;
+    int32_t length = 0;
+    while ((pointer = uenum_next(enumeration.get(), &length, &status)) && U_SUCCESS(status)) {
+        String collation(pointer, length);
+        // 1.1.3 step 4, The values "standard" and "search" must be excluded from list.
+        if (collation == "standard"_s || collation == "search"_s)
+            continue;
+        if (auto mapped = mapICUCollationKeywordToBCP47(collation))
+            elements.append(WTFMove(mapped.value()));
+        else
+            elements.append(WTFMove(collation));
+    }
+    if (!U_SUCCESS(status)) {
+        throwTypeError(globalObject, scope, "invalid locale"_s);
+        return nullptr;
+    }
+
+    RELEASE_AND_RETURN(scope, createArrayFromStringVector(globalObject, WTFMove(elements)));
+}
+
+JSArray* IntlLocale::hourCycles(JSGlobalObject* globalObject)
+{
+    VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    Vector<String, 1> elements;
+
+    String preferred = hourCycle();
+    if (!preferred.isEmpty()) {
+        elements.append(WTFMove(preferred));
+        RELEASE_AND_RETURN(scope, createArrayFromStringVector(globalObject, WTFMove(elements)));
+    }
+
+    UErrorCode status = U_ZERO_ERROR;
+    auto generator = std::unique_ptr<UDateTimePatternGenerator, ICUDeleter<udatpg_close>>(udatpg_open(m_localeID.data(), &status));
+    if (U_FAILURE(status))
+        return nullptr;
+
+    // Use "j" skeleton and parse pattern to retrieve the configured hour-cycle information.
+    constexpr const UChar skeleton[] = { 'j', 0 };
+    Vector<UChar, 32> pattern;
+    status = callBufferProducingFunction(udatpg_getBestPatternWithOptions, generator.get(), skeleton, 1, UDATPG_MATCH_HOUR_FIELD_LENGTH, pattern);
+    if (!U_SUCCESS(status)) {
+        throwTypeError(globalObject, scope, "invalid locale"_s);
+        return nullptr;
+    }
+
+    dataLogLnIf(IntlLocaleInternal::verbose, "pattern:(", StringView(pattern.data(), pattern.size()), ")");
+
+    switch (IntlDateTimeFormat::hourCycleFromPattern(pattern)) {
+    case IntlDateTimeFormat::HourCycle::None:
+        break;
+    case IntlDateTimeFormat::HourCycle::H11: {
+        elements.append("h11"_s);
+        RELEASE_AND_RETURN(scope, createArrayFromStringVector(globalObject, WTFMove(elements)));
+    }
+    case IntlDateTimeFormat::HourCycle::H12: {
+        elements.append("h12"_s);
+        RELEASE_AND_RETURN(scope, createArrayFromStringVector(globalObject, WTFMove(elements)));
+    }
+    case IntlDateTimeFormat::HourCycle::H23: {
+        elements.append("h23"_s);
+        RELEASE_AND_RETURN(scope, createArrayFromStringVector(globalObject, WTFMove(elements)));
+    }
+    case IntlDateTimeFormat::HourCycle::H24: {
+        elements.append("h24"_s);
+        RELEASE_AND_RETURN(scope, createArrayFromStringVector(globalObject, WTFMove(elements)));
+    }
+    }
+
+    RELEASE_AND_RETURN(scope, createArrayFromStringVector(globalObject, WTFMove(elements)));
+}
+
+JSArray* IntlLocale::numberingSystems(JSGlobalObject* globalObject)
+{
+    VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    Vector<String, 1> elements;
+    String preferred = numberingSystem();
+    if (!preferred.isEmpty()) {
+        elements.append(WTFMove(preferred));
+        RELEASE_AND_RETURN(scope, createArrayFromStringVector(globalObject, WTFMove(elements)));
+    }
+
+    UErrorCode status = U_ZERO_ERROR;
+    auto numberingSystem = std::unique_ptr<UNumberingSystem, ICUDeleter<unumsys_close>>(unumsys_open(m_localeID.data(), &status));
+    if (!U_SUCCESS(status)) {
+        throwTypeError(globalObject, scope, "invalid locale"_s);
+        return nullptr;
+    }
+    elements.append(unumsys_getName(numberingSystem.get()));
+
+    RELEASE_AND_RETURN(scope, createArrayFromStringVector(globalObject, WTFMove(elements)));
+}
+
+JSValue IntlLocale::timeZones(JSGlobalObject* globalObject)
+{
+    VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    Vector<String, 1> elements;
+
+    // 11.6-3 Let region be the substring of locale corresponding to the unicode_region_subtag production of the unicode_language_id.
+    String region = this->region();
+    if (region.isEmpty())
+        return jsUndefined();
+
+    UErrorCode status = U_ZERO_ERROR;
+    auto enumeration = std::unique_ptr<UEnumeration, ICUDeleter<uenum_close>>(ucal_openTimeZoneIDEnumeration(UCAL_ZONE_TYPE_CANONICAL, region.utf8().data(), nullptr, &status));
+    if (!U_SUCCESS(status)) {
+        throwTypeError(globalObject, scope, "invalid locale"_s);
+        return { };
+    }
+
+    int32_t length;
+    const char* collation;
+    while ((collation = uenum_next(enumeration.get(), &length, &status)) && U_SUCCESS(status))
+        elements.constructAndAppend(collation, length);
+    if (!U_SUCCESS(status)) {
+        throwTypeError(globalObject, scope, "invalid locale"_s);
+        return { };
+    }
+
+    RELEASE_AND_RETURN(scope, createArrayFromStringVector(globalObject, WTFMove(elements)));
+}
+
+JSObject* IntlLocale::textInfo(JSGlobalObject* globalObject)
+{
+    VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    UErrorCode status = U_ZERO_ERROR;
+    ULayoutType layout = uloc_getCharacterOrientation(m_localeID.data(), &status);
+    if (!U_SUCCESS(status)) {
+        throwTypeError(globalObject, scope, "invalid locale"_s);
+        return nullptr;
+    }
+
+    JSString* layoutString = nullptr;
+    switch (layout) {
+    default:
+    case ULOC_LAYOUT_LTR:
+        layoutString = jsString(vm, "ltr"_s);
+        break;
+    case ULOC_LAYOUT_RTL:
+        layoutString = jsString(vm, "rtl"_s);
+        break;
+    case ULOC_LAYOUT_TTB:
+        layoutString = jsString(vm, "ttb"_s);
+        break;
+    case ULOC_LAYOUT_BTT:
+        layoutString = jsString(vm, "btt"_s);
+        break;
+    }
+
+    JSObject* result = constructEmptyObject(globalObject);
+    result->putDirect(vm, Identifier::fromString(vm, "direction"), layoutString);
+    return result;
+}
+
+JSObject* IntlLocale::weekInfo(JSGlobalObject* globalObject)
+{
+    VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    UErrorCode status = U_ZERO_ERROR;
+    auto calendar = std::unique_ptr<UCalendar, ICUDeleter<ucal_close>>(ucal_open(nullptr, 0, m_localeID.data(), UCAL_DEFAULT, &status));
+    if (!U_SUCCESS(status)) {
+        throwTypeError(globalObject, scope, "invalid locale"_s);
+        return nullptr;
+    }
+
+    int32_t firstDayOfWeek = ucal_getAttribute(calendar.get(), UCAL_FIRST_DAY_OF_WEEK);
+    int32_t minimalDays = ucal_getAttribute(calendar.get(), UCAL_MINIMAL_DAYS_IN_FIRST_WEEK);
+
+    auto canonicalizeDayOfWeekType = [](UCalendarWeekdayType type) {
+        switch (type) {
+        // UCAL_WEEKEND_ONSET is a day that starts as a weekday and transitions to the weekend. It means this is WeekDay.
+        case UCAL_WEEKEND_ONSET:
+        case UCAL_WEEKDAY:
+            return UCAL_WEEKDAY;
+        // UCAL_WEEKEND_CEASE is a day that starts as the weekend and transitions to a weekday. It means this is WeekEnd.
+        case UCAL_WEEKEND_CEASE:
+        case UCAL_WEEKEND:
+            return UCAL_WEEKEND;
+        default:
+            return UCAL_WEEKEND;
+        }
+    };
+
+    static_assert(UCAL_SUNDAY == 1);
+    static_assert(UCAL_SATURDAY == 7);
+    UCalendarWeekdayType previous = canonicalizeDayOfWeekType(ucal_getDayOfWeekType(calendar.get(), UCAL_SATURDAY, &status));
+    if (!U_SUCCESS(status)) {
+        throwTypeError(globalObject, scope, "invalid locale"_s);
+        return nullptr;
+    }
+
+    int32_t weekendStart = 0;
+    int32_t weekendEnd = 0;
+    for (int32_t day = UCAL_SUNDAY; day <= UCAL_SATURDAY; ++day) {
+        UCalendarWeekdayType type = canonicalizeDayOfWeekType(ucal_getDayOfWeekType(calendar.get(), static_cast<UCalendarDaysOfWeek>(day), &status));
+        if (!U_SUCCESS(status)) {
+            throwTypeError(globalObject, scope, "invalid locale"_s);
+            return nullptr;
+        }
+        if (previous != type) {
+            switch (type) {
+            case UCAL_WEEKDAY: // WeekEnd => WeekDay
+                if (day == UCAL_SUNDAY)
+                    weekendEnd = UCAL_SATURDAY;
+                else
+                    weekendEnd = day - 1;
+                break;
+            case UCAL_WEEKEND: // WeekDay => WeekEnd
+                weekendStart = day;
+                break;
+            default:
+                ASSERT_NOT_REACHED();
+                break;
+            }
+        }
+        previous = type;
+    }
+
+    auto convertUCalendarDaysOfWeekToMondayBasedDay = [](int32_t day) -> int32_t {
+        // Convert from
+        //     Sunday => 1
+        //     Saturday => 7
+        // to
+        //     Monday => 1
+        //     Sunday => 7
+        if (day == UCAL_SUNDAY)
+            return 7;
+        return day - 1;
+    };
+
+    JSObject* result = constructEmptyObject(globalObject);
+    result->putDirect(vm, Identifier::fromString(vm, "firstDay"), jsNumber(convertUCalendarDaysOfWeekToMondayBasedDay(firstDayOfWeek)));
+    result->putDirect(vm, Identifier::fromString(vm, "weekendStart"), jsNumber(convertUCalendarDaysOfWeekToMondayBasedDay(weekendStart)));
+    result->putDirect(vm, Identifier::fromString(vm, "weekendEnd"), jsNumber(convertUCalendarDaysOfWeekToMondayBasedDay(weekendEnd)));
+    result->putDirect(vm, Identifier::fromString(vm, "minimalDays"), jsNumber(minimalDays));
+    return result;
 }
 
 } // namespace JSC

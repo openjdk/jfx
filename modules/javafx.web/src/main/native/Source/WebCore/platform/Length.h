@@ -36,7 +36,7 @@ class TextStream;
 
 namespace WebCore {
 
-enum LengthType {
+enum class LengthType : uint8_t {
     Auto, Relative, Percent, Fixed,
     Intrinsic, MinIntrinsic,
     MinContent, MaxContent, FillAvailable, FitContent,
@@ -44,17 +44,18 @@ enum LengthType {
     Undefined
 };
 
-enum ValueRange {
-    ValueRangeAll,
-    ValueRangeNonNegative
+enum class ValueRange : uint8_t {
+    All,
+    NonNegative
 };
 
+struct BlendingContext;
 class CalculationValue;
 
 struct Length {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    Length(LengthType = Auto);
+    Length(LengthType = LengthType::Auto);
 
     Length(int value, LengthType, bool hasQuirk = false);
     Length(LayoutUnit value, LengthType, bool hasQuirk = false);
@@ -97,6 +98,7 @@ public:
     bool isUndefined() const;
     bool isFillAvailable() const;
     bool isFitContent() const;
+    bool isMinIntrinsic() const;
 
     bool hasQuirk() const;
 
@@ -115,11 +117,11 @@ public:
     bool isSpecified() const;
     bool isSpecifiedOrIntrinsic() const;
 
-    float nonNanCalculatedValue(int maxValue) const;
+    float nonNanCalculatedValue(float maxValue) const;
 
-private:
     bool isLegacyIntrinsic() const;
 
+private:
     bool isCalculatedEqual(const Length&) const;
 
     WEBCORE_EXPORT void ref() const;
@@ -131,12 +133,13 @@ private:
         unsigned m_calculationValueHandle;
     };
     bool m_hasQuirk;
-    unsigned char m_type;
+    LengthType m_type;
     bool m_isFloat;
 };
 
 // Blend two lengths to produce a new length that is in between them. Used for animation.
-Length blend(const Length& from, const Length& to, double progress);
+Length blend(const Length& from, const Length& to, const BlendingContext&);
+Length blend(const Length& from, const Length& to, const BlendingContext&, ValueRange);
 
 UniqueArray<Length> newCoordsArray(const String&, int& length);
 UniqueArray<Length> newLengthArray(const String&, int& length);
@@ -144,31 +147,31 @@ UniqueArray<Length> newLengthArray(const String&, int& length);
 inline Length::Length(LengthType type)
     : m_intValue(0), m_hasQuirk(false), m_type(type), m_isFloat(false)
 {
-    ASSERT(type != Calculated);
+    ASSERT(type != LengthType::Calculated);
 }
 
 inline Length::Length(int value, LengthType type, bool hasQuirk)
     : m_intValue(value), m_hasQuirk(hasQuirk), m_type(type), m_isFloat(false)
 {
-    ASSERT(type != Calculated);
+    ASSERT(type != LengthType::Calculated);
 }
 
 inline Length::Length(LayoutUnit value, LengthType type, bool hasQuirk)
     : m_floatValue(value.toFloat()), m_hasQuirk(hasQuirk), m_type(type), m_isFloat(true)
 {
-    ASSERT(type != Calculated);
+    ASSERT(type != LengthType::Calculated);
 }
 
 inline Length::Length(float value, LengthType type, bool hasQuirk)
     : m_floatValue(value), m_hasQuirk(hasQuirk), m_type(type), m_isFloat(true)
 {
-    ASSERT(type != Calculated);
+    ASSERT(type != LengthType::Calculated);
 }
 
 inline Length::Length(double value, LengthType type, bool hasQuirk)
     : m_floatValue(static_cast<float>(value)), m_hasQuirk(hasQuirk), m_type(type), m_isFloat(true)
 {
-    ASSERT(type != Calculated);
+    ASSERT(type != LengthType::Calculated);
 }
 
 inline Length::Length(const Length& other)
@@ -182,7 +185,7 @@ inline Length::Length(const Length& other)
 inline Length::Length(Length&& other)
 {
     memcpy(static_cast<void*>(this), static_cast<void*>(&other), sizeof(Length));
-    other.m_type = Auto;
+    other.m_type = LengthType::Auto;
 }
 
 inline Length& Length::operator=(const Length& other)
@@ -208,7 +211,7 @@ inline Length& Length::operator=(Length&& other)
         deref();
 
     memcpy(static_cast<void*>(this), static_cast<void*>(&other), sizeof(Length));
-    other.m_type = Auto;
+    other.m_type = LengthType::Auto;
     return *this;
 }
 
@@ -289,8 +292,8 @@ inline void Length::setHasQuirk(bool hasQuirk)
 
 inline void Length::setValue(LengthType type, int value)
 {
-    ASSERT(m_type != Calculated);
-    ASSERT(type != Calculated);
+    ASSERT(m_type != LengthType::Calculated);
+    ASSERT(type != LengthType::Calculated);
     m_type = type;
     m_intValue = value;
     m_isFloat = false;
@@ -298,8 +301,8 @@ inline void Length::setValue(LengthType type, int value)
 
 inline void Length::setValue(LengthType type, float value)
 {
-    ASSERT(m_type != Calculated);
-    ASSERT(type != Calculated);
+    ASSERT(m_type != LengthType::Calculated);
+    ASSERT(type != LengthType::Calculated);
     m_type = type;
     m_floatValue = value;
     m_isFloat = true;
@@ -307,8 +310,8 @@ inline void Length::setValue(LengthType type, float value)
 
 inline void Length::setValue(LengthType type, LayoutUnit value)
 {
-    ASSERT(m_type != Calculated);
-    ASSERT(type != Calculated);
+    ASSERT(m_type != LengthType::Calculated);
+    ASSERT(type != LengthType::Calculated);
     m_type = type;
     m_floatValue = value;
     m_isFloat = true;
@@ -316,22 +319,22 @@ inline void Length::setValue(LengthType type, LayoutUnit value)
 
 inline bool Length::isAuto() const
 {
-    return type() == Auto;
+    return type() == LengthType::Auto;
 }
 
 inline bool Length::isFixed() const
 {
-    return type() == Fixed;
+    return type() == LengthType::Fixed;
 }
 
 inline bool Length::isMaxContent() const
 {
-    return type() == MaxContent;
+    return type() == LengthType::MaxContent;
 }
 
 inline bool Length::isMinContent() const
 {
-    return type() == MinContent;
+    return type() == LengthType::MinContent;
 }
 
 inline bool Length::isNegative() const
@@ -343,17 +346,17 @@ inline bool Length::isNegative() const
 
 inline bool Length::isPercent() const
 {
-    return type() == Percent;
+    return type() == LengthType::Percent;
 }
 
 inline bool Length::isRelative() const
 {
-    return type() == Relative;
+    return type() == LengthType::Relative;
 }
 
 inline bool Length::isUndefined() const
 {
-    return type() == Undefined;
+    return type() == LengthType::Undefined;
 }
 
 inline bool Length::isPercentOrCalculated() const
@@ -373,24 +376,25 @@ inline bool Length::isPositive() const
 inline bool Length::isZero() const
 {
     ASSERT(!isUndefined());
-    if (isCalculated())
+    if (isCalculated() || isAuto())
         return false;
     return m_isFloat ? !m_floatValue : !m_intValue;
 }
 
 inline bool Length::isCalculated() const
 {
-    return type() == Calculated;
+    return type() == LengthType::Calculated;
 }
 
 inline bool Length::isLegacyIntrinsic() const
 {
-    return type() == Intrinsic || type() == MinIntrinsic;
+    return type() == LengthType::Intrinsic || type() == LengthType::MinIntrinsic;
 }
 
 inline bool Length::isIntrinsic() const
 {
-    return type() == MinContent || type() == MaxContent || type() == FillAvailable || type() == FitContent;
+    // FIXME: This is misleadingly named. One would expect this function does "return type() == LengthType::Intrinsic;".
+    return type() == LengthType::MinContent || type() == LengthType::MaxContent || type() == LengthType::FillAvailable || type() == LengthType::FitContent;
 }
 
 inline bool Length::isIntrinsicOrAuto() const
@@ -410,12 +414,17 @@ inline bool Length::isSpecifiedOrIntrinsic() const
 
 inline bool Length::isFillAvailable() const
 {
-    return type() == FillAvailable;
+    return type() == LengthType::FillAvailable;
 }
 
 inline bool Length::isFitContent() const
 {
-    return type() == FitContent;
+    return type() == LengthType::FitContent;
+}
+
+inline bool Length::isMinIntrinsic() const
+{
+    return type() == LengthType::MinIntrinsic;
 }
 
 Length convertTo100PercentMinusLength(const Length&);

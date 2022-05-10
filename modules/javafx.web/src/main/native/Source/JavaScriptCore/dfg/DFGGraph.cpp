@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -51,6 +51,7 @@
 #include "JSLexicalEnvironment.h"
 #include "MaxFrameExtentForSlowPathCall.h"
 #include "OperandsInlines.h"
+#include "SlotVisitorInlines.h"
 #include "Snippet.h"
 #include "StackAlignment.h"
 #include "StructureInlines.h"
@@ -382,10 +383,12 @@ void Graph::dump(PrintStream& out, const char* prefixStr, Node* node, DumpContex
         out.print(comma, *node->callLinkStatus());
     if (node->hasGetByStatus())
         out.print(comma, *node->getByStatus());
-    if (node->hasInByIdStatus())
-        out.print(comma, *node->inByIdStatus());
-    if (node->hasPutByIdStatus())
-        out.print(comma, *node->putByIdStatus());
+    if (node->hasInByStatus())
+        out.print(comma, *node->inByStatus());
+    if (node->hasPutByStatus())
+        out.print(comma, *node->putByStatus());
+    if (node->hasEnumeratorMetadata())
+        out.print(comma, "enumeratorModes = ", node->enumeratorMetadata().toRaw());
     if (node->isJump())
         out.print(comma, "T:", *node->targetBlock());
     if (node->isBranch())
@@ -977,7 +980,7 @@ BlockList Graph::blocksInPostOrder(bool isSafeToValidate)
         }
     }
 
-    if (isSafeToValidate && validationEnabled()) { // There are users of this where we haven't yet built of the CFG enough to be able to run dominators.
+    if (isSafeToValidate && validationEnabled()) { // There are users of this where we haven't yet built the CFG enough to be able to run dominators.
         auto validateResults = [&] (auto& dominators) {
             // When iterating over reverse post order, we should see dominators
             // before things they dominate.
@@ -1103,7 +1106,7 @@ bool Graph::watchGlobalProperty(JSGlobalObject* globalObject, unsigned identifie
         if (!watchpoint->isStillValid())
             return false;
     }
-    globalProperties().addLazily(DesiredGlobalProperty(globalObject, identifierNumber));
+    watchpoints().addLazily(DesiredGlobalProperty(globalObject, identifierNumber));
     return true;
 }
 
@@ -1113,8 +1116,7 @@ FullBytecodeLiveness& Graph::livenessFor(CodeBlock* codeBlock)
     if (iter != m_bytecodeLiveness.end())
         return *iter->value;
 
-    std::unique_ptr<FullBytecodeLiveness> liveness = makeUnique<FullBytecodeLiveness>();
-    codeBlock->livenessAnalysis().computeFullLiveness(codeBlock, *liveness);
+    std::unique_ptr<FullBytecodeLiveness> liveness = codeBlock->livenessAnalysis().computeFullLiveness(codeBlock);
     FullBytecodeLiveness& result = *liveness;
     m_bytecodeLiveness.add(codeBlock, WTFMove(liveness));
     return result;
@@ -1194,7 +1196,7 @@ bool Graph::isLiveInBytecode(Operand operand, CodeOrigin codeOrigin)
         // Arguments are always live. This would be redundant if it wasn't for our
         // op_call_varargs inlining.
         if (inlineCallFrame && reg.isArgument()
-            && static_cast<size_t>(reg.toArgument()) < inlineCallFrame->argumentsWithFixup.size()) {
+            && static_cast<size_t>(reg.toArgument()) < inlineCallFrame->m_argumentsWithFixup.size()) {
             if (verbose)
                 dataLog("Argument is live.\n");
             return true;
@@ -1424,7 +1426,6 @@ void Graph::registerFrozenValues()
 {
     ConcurrentJSLocker locker(m_codeBlock->m_lock);
     m_codeBlock->constants().shrink(0);
-    m_codeBlock->constantsSourceCodeRepresentation().resize(0);
     for (FrozenValue* value : m_frozenValues) {
         if (!value->pointsToHeap())
             continue;
@@ -1445,16 +1446,19 @@ void Graph::registerFrozenValues()
         } }
     }
     m_codeBlock->constants().shrinkToFit();
-    m_codeBlock->constantsSourceCodeRepresentation().shrinkToFit();
 }
 
-void Graph::visitChildren(SlotVisitor& visitor)
+template<typename Visitor>
+ALWAYS_INLINE void Graph::visitChildrenImpl(Visitor& visitor)
 {
     for (FrozenValue* value : m_frozenValues) {
         visitor.appendUnbarriered(value->value());
         visitor.appendUnbarriered(value->structure());
     }
 }
+
+void Graph::visitChildren(AbstractSlotVisitor& visitor) { visitChildrenImpl(visitor); }
+void Graph::visitChildren(SlotVisitor& visitor) { visitChildrenImpl(visitor); }
 
 FrozenValue* Graph::freeze(JSValue value)
 {
@@ -1726,8 +1730,7 @@ MethodOfGettingAValueProfile Graph::methodOfGettingAValueProfileFor(Node* curren
 
 bool Graph::getRegExpPrototypeProperty(JSObject* regExpPrototype, Structure* regExpPrototypeStructure, UniquedStringImpl* uid, JSValue& returnJSValue)
 {
-    unsigned attributesUnused;
-    PropertyOffset offset = regExpPrototypeStructure->getConcurrently(uid, attributesUnused);
+    PropertyOffset offset = regExpPrototypeStructure->getConcurrently(uid);
     if (!isValidOffset(offset))
         return false;
 
@@ -1840,10 +1843,12 @@ bool Graph::canDoFastSpread(Node* node, const AbstractValue& value)
     if (!value.m_structure.isFinite())
         return false;
 
-    ArrayPrototype* arrayPrototype = globalObjectFor(node->child1()->origin.semantic)->arrayPrototype();
+    JSGlobalObject* globalObject = globalObjectFor(node->child1()->origin.semantic);
+    ArrayPrototype* arrayPrototype = globalObject->arrayPrototype();
     bool allGood = true;
     value.m_structure.forEach([&] (RegisteredStructure structure) {
-        allGood &= structure->hasMonoProto()
+        allGood &= structure->globalObject() == globalObject
+            && structure->hasMonoProto()
             && structure->storedPrototype() == arrayPrototype
             && !structure->isDictionary()
             && structure->getConcurrently(m_vm.propertyNames->iteratorSymbol.impl()) == invalidOffset
@@ -1858,6 +1863,26 @@ void Graph::clearCPSCFGData()
     m_cpsNaturalLoops = nullptr;
     m_cpsDominators = nullptr;
     m_cpsCFG = nullptr;
+}
+
+void Graph::freeDFGIRAfterLowering()
+{
+    m_blocks.clear();
+    m_roots.clear();
+    m_varArgChildren.clear();
+    m_nodes.clearAll();
+
+    m_bytecodeLiveness.clear();
+    m_safeToLoad.clear();
+    m_cpsDominators = nullptr;
+    m_ssaDominators = nullptr;
+    m_cpsNaturalLoops = nullptr;
+    m_ssaNaturalLoops = nullptr;
+    m_ssaCFG = nullptr;
+    m_cpsCFG = nullptr;
+    m_backwardsCFG = nullptr;
+    m_backwardsDominators = nullptr;
+    m_controlEquivalenceAnalysis = nullptr;
 }
 
 void Prefix::dump(PrintStream& out) const

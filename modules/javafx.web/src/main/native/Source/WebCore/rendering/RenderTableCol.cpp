@@ -62,9 +62,13 @@ void RenderTableCol::styleDidChange(StyleDifference diff, const RenderStyle* old
     if (!table)
         return;
     // If border was changed, notify table.
-    if (oldStyle && oldStyle->border() != style().border())
+    if (!oldStyle)
+        return;
+    if (oldStyle->border() != style().border()) {
         table->invalidateCollapsedBorders();
-    else if (oldStyle->width() != style().width()) {
+        return;
+    }
+    if (oldStyle->width() != style().width()) {
         table->recalcSectionsIfNeeded();
         for (auto& section : childrenOfType<RenderTableSection>(*table)) {
             unsigned nEffCols = table->numEffCols();
@@ -94,15 +98,15 @@ void RenderTableCol::updateFromElement()
         setNeedsLayoutAndPrefWidthsRecalc();
 }
 
-void RenderTableCol::insertedIntoTree()
+void RenderTableCol::insertedIntoTree(IsInternalMove isInternalMove)
 {
-    RenderBox::insertedIntoTree();
+    RenderBox::insertedIntoTree(isInternalMove);
     table()->addColumn(this);
 }
 
-void RenderTableCol::willBeRemovedFromTree()
+void RenderTableCol::willBeRemovedFromTree(IsInternalMove isInternalMove)
 {
-    RenderBox::willBeRemovedFromTree();
+    RenderBox::willBeRemovedFromTree(isInternalMove);
     table()->removeColumn(this);
 }
 
@@ -119,7 +123,7 @@ bool RenderTableCol::canHaveChildren() const
     return isTableColumnGroup();
 }
 
-LayoutRect RenderTableCol::clippedOverflowRectForRepaint(const RenderLayerModelObject* repaintContainer) const
+LayoutRect RenderTableCol::clippedOverflowRect(const RenderLayerModelObject* repaintContainer, VisibleRectContext context) const
 {
     // For now, just repaint the whole table.
     // FIXME: Find a better way to do this, e.g., need to repaint all the cells that we
@@ -129,7 +133,7 @@ LayoutRect RenderTableCol::clippedOverflowRectForRepaint(const RenderLayerModelO
     RenderTable* parentTable = table();
     if (!parentTable)
         return LayoutRect();
-    return parentTable->clippedOverflowRectForRepaint(repaintContainer);
+    return parentTable->clippedOverflowRect(repaintContainer, context);
 }
 
 void RenderTableCol::imageChanged(WrappedImagePtr, const IntRect*)

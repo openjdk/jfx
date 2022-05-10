@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -370,27 +370,29 @@ public class GIFImageLoader2 extends ImageLoaderImpl {
                 }
             } else {
                 int newSuffixIndex;
-                int ti = tableIndex;
-                if (code < ti) {
+                if (code < tableIndex) {
                     newSuffixIndex = code;
                 } else { // code == tableIndex
                     newSuffixIndex = oldCode;
-                    if (code != ti) {
+                    if (code != tableIndex) {
                         throw new IOException("Bad GIF LZW: Out-of-sequence code!");
                     }
                 }
 
-                int oc = oldCode;
+                if (tableIndex < 4096) {
+                    int ti = tableIndex;
+                    int oc = oldCode;
 
-                prefix[ti] = oc;
-                suffix[ti] = initial[newSuffixIndex];
-                initial[ti] = initial[oc];
-                length[ti] = length[oc] + 1;
+                    prefix[ti] = oc;
+                    suffix[ti] = initial[newSuffixIndex];
+                    initial[ti] = initial[oc];
+                    length[ti] = length[oc] + 1;
 
-                ++tableIndex;
-                if ((tableIndex == (1 << codeSize)) && (tableIndex < 4096)) {
-                    ++codeSize;
-                    codeMask = (1 << codeSize) - 1;
+                    ++tableIndex;
+                    if ((tableIndex == (1 << codeSize)) && (tableIndex < 4096)) {
+                        ++codeSize;
+                        codeMask = (1 << codeSize) - 1;
+                    }
                 }
             }
             // Reverse code

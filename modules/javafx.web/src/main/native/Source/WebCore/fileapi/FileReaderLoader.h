@@ -36,7 +36,7 @@
 #include "TextEncoding.h"
 #include "ThreadableLoaderClient.h"
 #include <wtf/Forward.h>
-#include <wtf/Optional.h>
+#include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>
 
 namespace JSC {
@@ -70,7 +70,7 @@ public:
 
     // ThreadableLoaderClient
     void didReceiveResponse(unsigned long, const ResourceResponse&) override;
-    void didReceiveData(const char*, int) override;
+    void didReceiveData(const uint8_t*, int) override;
     void didFinishLoading(unsigned long) override;
     void didFail(const ResourceError&) override;
 
@@ -78,12 +78,14 @@ public:
     WEBCORE_EXPORT RefPtr<JSC::ArrayBuffer> arrayBufferResult() const;
     unsigned bytesLoaded() const { return m_bytesLoaded; }
     unsigned totalBytes() const { return m_totalBytes; }
-    Optional<ExceptionCode> errorCode() const { return m_errorCode; }
+    std::optional<ExceptionCode> errorCode() const { return m_errorCode; }
 
     void setEncoding(const String&);
     void setDataType(const String& dataType) { m_dataType = dataType; }
 
     const URL& url() { return m_urlForReading; }
+
+    bool isCompleted() const;
 
 private:
     void terminate();
@@ -92,13 +94,11 @@ private:
     void convertToText();
     void convertToDataURL();
 
-    bool isCompleted() const;
-
     static ExceptionCode httpStatusCodeToErrorCode(int);
     static ExceptionCode toErrorCode(BlobResourceHandle::Error);
 
     ReadType m_readType;
-    FileReaderLoaderClient* m_client;
+    WeakPtr<FileReaderLoaderClient> m_client;
     TextEncoding m_encoding;
     String m_dataType;
 
@@ -118,7 +118,7 @@ private:
     unsigned m_bytesLoaded;
     unsigned m_totalBytes;
 
-    Optional<ExceptionCode> m_errorCode;
+    std::optional<ExceptionCode> m_errorCode;
 };
 
 } // namespace WebCore

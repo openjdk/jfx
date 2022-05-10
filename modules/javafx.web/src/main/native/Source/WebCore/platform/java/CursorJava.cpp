@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -73,12 +73,12 @@ Cursor::Cursor(Image* image, const IntPoint& hotspot)
                                             "(Lcom/sun/webkit/graphics/WCImageFrame;II)J");
     ASSERT(mid);
 
-    RefPtr<RQRef> cursorImageFrame = image->javaImage();
+    RefPtr<NativeImage> cursorImageFrame = image->javaImage();
     if (!cursorImageFrame) {
         return;
     }
 
-    m_platformCursor = env->CallLongMethod(jCursorManager, mid, (jobject)(*cursorImageFrame),
+    m_platformCursor = env->CallLongMethod(jCursorManager, mid, (jobject)(*cursorImageFrame->platformImage()->getImage()),
                                          hotspot.x(), hotspot.y());
     WTF::CheckAndClearException(env);
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,6 +28,7 @@ package javafx.scene.control.skin;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.WeakChangeListener;
 import javafx.event.EventHandler;
+import javafx.scene.control.PasswordField;
 import javafx.scene.control.TextField;
 import javafx.scene.input.MouseEvent;
 
@@ -38,6 +39,8 @@ public class TextFieldSkinAndroid extends TextFieldSkin {
      * Private fields
      *
      **************************************************************************/
+
+    private static final char BULLET = '\u2022';
 
     private final EventHandler<MouseEvent> mouseEventListener = e -> {
         if (getSkinnable().isEditable() && getSkinnable().isFocused()) {
@@ -70,6 +73,15 @@ public class TextFieldSkinAndroid extends TextFieldSkin {
      * Public API                                                              *
      *                                                                         *
      **************************************************************************/
+
+    /** {@inheritDoc} */
+    @Override protected String maskText(String txt) {
+        if (getSkinnable() instanceof PasswordField) {
+            return String.valueOf(BULLET).repeat(txt.length());
+        } else {
+            return super.maskText(txt);
+        }
+    }
 
     /** {@inheritDoc} */
     @Override public void dispose() {

@@ -24,8 +24,10 @@
 
 [
     Conditional=WEB_AUDIO,
+    CustomToJSObject,
+    Exposed=Window
 ] interface AudioNode : EventTarget {
-    [ImplementedAs=contextForBindings] readonly attribute (BaseAudioContext or WebKitAudioContext) context;
+    readonly attribute BaseAudioContext context;
     readonly attribute unsigned long numberOfInputs;
     readonly attribute unsigned long numberOfOutputs;
 
@@ -33,7 +35,14 @@
     attribute ChannelCountMode channelCountMode;
     attribute ChannelInterpretation channelInterpretation;
 
-    [MayThrowException] AudioNode connect([ReturnValue] AudioNode destination, optional unsigned long output = 0, optional unsigned long input = 0);
-    [MayThrowException] void connect(AudioParam destination, optional unsigned long output = 0);
-    [MayThrowException] void disconnect(optional unsigned long output = 0);
+    AudioNode connect([ReturnValue] AudioNode destination, optional unsigned long output = 0, optional unsigned long input = 0);
+    undefined connect(AudioParam destination, optional unsigned long output = 0);
+
+    undefined disconnect();
+    undefined disconnect(unsigned long output);
+    undefined disconnect(AudioNode destinationNode);
+    undefined disconnect(AudioNode destinationNode, unsigned long output);
+    undefined disconnect(AudioNode destinationNode, unsigned long output, unsigned long input);
+    undefined disconnect(AudioParam destinationParam);
+    undefined disconnect(AudioParam destinationParam, unsigned long output);
 };

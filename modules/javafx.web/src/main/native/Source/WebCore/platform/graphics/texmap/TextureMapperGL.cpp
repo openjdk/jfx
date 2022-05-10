@@ -202,9 +202,9 @@ void TextureMapperGL::beginPainting(PaintFlags flags)
     data().previousScissorState = glIsEnabled(GL_SCISSOR_TEST);
     data().previousDepthState = glIsEnabled(GL_DEPTH_TEST);
     glDisable(GL_DEPTH_TEST);
+    glDepthFunc(GL_LEQUAL);
     glEnable(GL_SCISSOR_TEST);
     data().didModifyStencil = false;
-    glDepthMask(0);
     glGetIntegerv(GL_VIEWPORT, data().viewport);
     glGetIntegerv(GL_SCISSOR_BOX, data().previousScissor);
     m_clipStack.reset(IntRect(0, 0, data().viewport[2], data().viewport[3]), flags & PaintingMirrored ? ClipStack::YAxisMode::Default : ClipStack::YAxisMode::Inverted);
@@ -504,6 +504,9 @@ void TextureMapperGL::drawTexture(GLuint texture, Flags flags, const IntSize& te
         flags |= ShouldBlend;
     }
 
+    if (flags & ShouldPremultiply)
+        options |= TextureMapperShaderProgram::Premultiply;
+
     Ref<TextureMapperShaderProgram> program = data().getShaderProgram(options);
 
     if (filter)
@@ -537,14 +540,14 @@ static void prepareTransformationMatrixWithFlags(TransformationMatrix& patternTr
         patternTransform.translate(0, -1);
 }
 
-void TextureMapperGL::drawTexturePlanarYUV(const std::array<GLuint, 3>& textures, const std::array<GLfloat, 9>& yuvToRgbMatrix, Flags flags, const IntSize& textureSize, const FloatRect& targetRect, const TransformationMatrix& modelViewMatrix, float opacity, unsigned exposedEdges)
+void TextureMapperGL::drawTexturePlanarYUV(const std::array<GLuint, 3>& textures, const std::array<GLfloat, 9>& yuvToRgbMatrix, Flags flags, const IntSize& textureSize, const FloatRect& targetRect, const TransformationMatrix& modelViewMatrix, float opacity, std::optional<GLuint> alphaPlane, unsigned exposedEdges)
 {
     bool useRect = flags & ShouldUseARBTextureRect;
     bool useAntialiasing = m_enableEdgeDistanceAntialiasing
         && exposedEdges == AllEdges
         && !modelViewMatrix.mapQuad(targetRect).isRectilinear();
 
-    TextureMapperShaderProgram::Options options = TextureMapperShaderProgram::TextureYUV;
+    TextureMapperShaderProgram::Options options = alphaPlane ? TextureMapperShaderProgram::TextureYUVA : TextureMapperShaderProgram::TextureYUV;
     if (useRect)
         options |= TextureMapperShaderProgram::Rect;
     if (opacity < 1)
@@ -575,6 +578,9 @@ void TextureMapperGL::drawTexturePlanarYUV(const std::array<GLuint, 3>& textures
         flags |= ShouldBlend;
     }
 
+    if (flags & ShouldPremultiply)
+        options |= TextureMapperShaderProgram::Premultiply;
+
     Ref<TextureMapperShaderProgram> program = data().getShaderProgram(options);
 
     if (filter)
@@ -588,6 +594,9 @@ void TextureMapperGL::drawTexturePlanarYUV(const std::array<GLuint, 3>& textures
         { textures[1], program->samplerULocation() },
         { textures[2], program->samplerVLocation() }
     };
+
+    if (alphaPlane)
+        texturesAndSamplers.append({*alphaPlane, program->samplerALocation() });
 
     glUseProgram(program->programID());
     glUniformMatrix3fv(program->yuvToRgbLocation(), 1, GL_FALSE, static_cast<const GLfloat *>(&yuvToRgbMatrix[0]));
@@ -874,8 +883,8 @@ void TextureMapperGL::drawFiltered(const BitmapTexture& sampler, const BitmapTex
 
 static inline TransformationMatrix createProjectionMatrix(const IntSize& size, bool mirrored)
 {
-    const float nearValue = 9999999;
-    const float farValue = -99999;
+    const float nearValue = -99999;
+    const float farValue = 9999999;
 
     return TransformationMatrix(2.0 / float(size.width()), 0, 0, 0,
                                 0, (mirrored ? 2.0 : -2.0) / float(size.height()), 0, 0,
@@ -1028,6 +1037,17 @@ void TextureMapperGL::endClip()
 IntRect TextureMapperGL::clipBounds()
 {
     return clipStack().current().scissorBox;
+}
+
+void TextureMapperGL::beginPreserves3D()
+{
+    glEnable(GL_DEPTH_TEST);
+    glClear(GL_DEPTH_BUFFER_BIT);
+}
+
+void TextureMapperGL::endPreserves3D()
+{
+    glDisable(GL_DEPTH_TEST);
 }
 
 Ref<BitmapTexture> TextureMapperGL::createTexture(GLint internalFormat)

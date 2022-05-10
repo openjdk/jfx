@@ -105,6 +105,30 @@ private:
 
     void readTop()
     {
+        auto readWorld = [&] (Node* node) {
+            // All of the outermost arguments, except this, are read in sloppy mode.
+            if (!m_graph.m_codeBlock->ownerExecutable()->isInStrictContext()) {
+                for (unsigned i = m_graph.m_codeBlock->numParameters(); i--;)
+                    m_read(virtualRegisterForArgumentIncludingThis(i));
+            }
+
+            // The stack header is read.
+            for (unsigned i = 0; i < CallFrameSlot::thisArgument; ++i)
+                m_read(VirtualRegister(i));
+
+            // Read all of the inline arguments and call frame headers that we didn't already capture.
+            for (InlineCallFrame* inlineCallFrame = node->origin.semantic.inlineCallFrame(); inlineCallFrame; inlineCallFrame = inlineCallFrame->getCallerInlineFrameSkippingTailCalls()) {
+                if (!inlineCallFrame->isInStrictContext()) {
+                    for (unsigned i = inlineCallFrame->m_argumentsWithFixup.size(); i--;)
+                        m_read(VirtualRegister(inlineCallFrame->stackOffset + virtualRegisterForArgumentIncludingThis(i).offset()));
+                }
+                if (inlineCallFrame->isClosureCall)
+                    m_read(VirtualRegister(inlineCallFrame->stackOffset + CallFrameSlot::callee));
+                if (inlineCallFrame->isVarargs())
+                    m_read(VirtualRegister(inlineCallFrame->stackOffset + CallFrameSlot::argumentCountIncludingThis));
+            }
+        };
+
         auto readFrame = [&] (InlineCallFrame* inlineCallFrame, unsigned numberOfArgumentsToSkip) {
             if (!inlineCallFrame) {
                 // Read the outermost arguments and argument count.
@@ -114,7 +138,7 @@ private:
                 return;
             }
 
-            for (unsigned i = numberOfArgumentsToSkip; i < inlineCallFrame->argumentsWithFixup.size(); i++)
+            for (unsigned i = numberOfArgumentsToSkip; i < inlineCallFrame->m_argumentsWithFixup.size(); i++)
                 m_read(VirtualRegister(inlineCallFrame->stackOffset + virtualRegisterForArgumentIncludingThis(i).offset()));
             if (inlineCallFrame->isVarargs())
                 m_read(VirtualRegister(inlineCallFrame->stackOffset + CallFrameSlot::argumentCountIncludingThis));
@@ -122,8 +146,10 @@ private:
 
         auto readSpread = [&] (Node* spread) {
             ASSERT(spread->op() == Spread || spread->op() == PhantomSpread);
-            if (!spread->child1()->isPhantomAllocation())
+            if (!spread->child1()->isPhantomAllocation()) {
+                readWorld(spread);
                 return;
+            }
 
             ASSERT(spread->child1()->op() == PhantomCreateRest || spread->child1()->op() == PhantomNewArrayBuffer);
             if (spread->child1()->op() == PhantomNewArrayBuffer) {
@@ -231,34 +257,14 @@ private:
             }
 
             ASSERT_WITH_MESSAGE(inlineCallFrame->isVarargs(), "GetArgument is only used for InlineCallFrame if the call frame is varargs.");
-            if (indexIncludingThis < inlineCallFrame->argumentsWithFixup.size())
+            if (indexIncludingThis < inlineCallFrame->m_argumentsWithFixup.size())
                 m_read(VirtualRegister(inlineCallFrame->stackOffset + virtualRegisterForArgumentIncludingThis(indexIncludingThis).offset()));
             m_read(VirtualRegister(inlineCallFrame->stackOffset + CallFrameSlot::argumentCountIncludingThis));
             break;
         }
 
         default: {
-            // All of the outermost arguments, except this, are read in sloppy mode.
-            if (!m_graph.m_codeBlock->ownerExecutable()->isInStrictContext()) {
-                for (unsigned i = m_graph.m_codeBlock->numParameters(); i--;)
-                    m_read(virtualRegisterForArgumentIncludingThis(i));
-            }
-
-            // The stack header is read.
-            for (unsigned i = 0; i < CallFrameSlot::thisArgument; ++i)
-                m_read(VirtualRegister(i));
-
-            // Read all of the inline arguments and call frame headers that we didn't already capture.
-            for (InlineCallFrame* inlineCallFrame = m_node->origin.semantic.inlineCallFrame(); inlineCallFrame; inlineCallFrame = inlineCallFrame->getCallerInlineFrameSkippingTailCalls()) {
-                if (!inlineCallFrame->isInStrictContext()) {
-                    for (unsigned i = inlineCallFrame->argumentsWithFixup.size(); i--;)
-                        m_read(VirtualRegister(inlineCallFrame->stackOffset + virtualRegisterForArgumentIncludingThis(i).offset()));
-                }
-                if (inlineCallFrame->isClosureCall)
-                    m_read(VirtualRegister(inlineCallFrame->stackOffset + CallFrameSlot::callee));
-                if (inlineCallFrame->isVarargs())
-                    m_read(VirtualRegister(inlineCallFrame->stackOffset + CallFrameSlot::argumentCountIncludingThis));
-            }
+            readWorld(m_node);
             break;
         } }
     }

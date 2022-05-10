@@ -45,28 +45,44 @@ struct SimpleRange {
 };
 
 SimpleRange makeSimpleRangeHelper(BoundaryPoint&&, BoundaryPoint&&);
-Optional<SimpleRange> makeSimpleRangeHelper(Optional<BoundaryPoint>&&, Optional<BoundaryPoint>&&);
+std::optional<SimpleRange> makeSimpleRangeHelper(std::optional<BoundaryPoint>&&, std::optional<BoundaryPoint>&&);
 SimpleRange makeSimpleRangeHelper(BoundaryPoint&&);
-Optional<SimpleRange> makeSimpleRangeHelper(Optional<BoundaryPoint>&&);
+std::optional<SimpleRange> makeSimpleRangeHelper(std::optional<BoundaryPoint>&&);
 
 inline BoundaryPoint makeBoundaryPointHelper(const BoundaryPoint& point) { return point; }
 inline BoundaryPoint makeBoundaryPointHelper(BoundaryPoint&& point) { return WTFMove(point); }
-inline Optional<BoundaryPoint> makeBoundaryPointHelper(const Optional<BoundaryPoint>& point) { return point; }
-inline Optional<BoundaryPoint> makeBoundaryPointHelper(Optional<BoundaryPoint>&& point) { return WTFMove(point); }
+inline std::optional<BoundaryPoint> makeBoundaryPointHelper(const std::optional<BoundaryPoint>& point) { return point; }
+inline std::optional<BoundaryPoint> makeBoundaryPointHelper(std::optional<BoundaryPoint>&& point) { return WTFMove(point); }
 template<typename T> auto makeBoundaryPointHelper(T&& argument) -> decltype(makeBoundaryPoint(std::forward<T>(argument))) { return makeBoundaryPoint(std::forward<T>(argument)); }
 
 template<typename ...T> auto makeSimpleRange(T&& ...arguments) -> decltype(makeSimpleRangeHelper(makeBoundaryPointHelper(std::forward<T>(arguments))...)) { return makeSimpleRangeHelper(makeBoundaryPointHelper(std::forward<T>(arguments))...); }
 
-// FIXME: Would like these to have shorter names; another option is to change prefix to makeSimpleRange.
-WEBCORE_EXPORT Optional<SimpleRange> makeRangeSelectingNode(Node&);
+// FIXME: Would like these two functions to have shorter names; another option is to change prefix to makeSimpleRange.
+WEBCORE_EXPORT std::optional<SimpleRange> makeRangeSelectingNode(Node&);
 WEBCORE_EXPORT SimpleRange makeRangeSelectingNodeContents(Node&);
-
-WEBCORE_EXPORT RefPtr<Node> commonInclusiveAncestor(const SimpleRange&);
 
 bool operator==(const SimpleRange&, const SimpleRange&);
 
-class IntersectingNodeRange;
-IntersectingNodeRange intersectingNodes(const SimpleRange&);
+template<TreeType = Tree> Node* commonInclusiveAncestor(const SimpleRange&);
+
+template<TreeType = Tree> bool contains(const SimpleRange&, const BoundaryPoint&);
+template<TreeType = Tree> bool contains(const SimpleRange&, const std::optional<BoundaryPoint>&);
+template<TreeType = Tree> bool contains(const SimpleRange& outerRange, const SimpleRange& innerRange);
+template<TreeType = Tree> bool contains(const SimpleRange&, const Node&);
+
+WEBCORE_EXPORT bool containsForTesting(TreeType, const SimpleRange& outerRange, const SimpleRange& innerRange);
+WEBCORE_EXPORT bool containsForTesting(TreeType, const SimpleRange&, const Node&);
+WEBCORE_EXPORT bool containsForTesting(TreeType, const SimpleRange&, const BoundaryPoint&);
+
+template<TreeType = Tree> bool intersects(const SimpleRange&, const SimpleRange&);
+template<TreeType = Tree> bool intersects(const SimpleRange&, const Node&);
+
+WEBCORE_EXPORT bool intersectsForTesting(TreeType, const SimpleRange&, const SimpleRange&);
+WEBCORE_EXPORT bool intersectsForTesting(TreeType, const SimpleRange&, const Node&);
+
+// Returns equivalent if point is in range.
+template<TreeType = Tree> PartialOrdering treeOrder(const SimpleRange&, const BoundaryPoint&);
+template<TreeType = Tree> PartialOrdering treeOrder(const BoundaryPoint&, const SimpleRange&);
 
 struct OffsetRange {
     unsigned start { 0 };
@@ -74,9 +90,27 @@ struct OffsetRange {
 };
 OffsetRange characterDataOffsetRange(const SimpleRange&, const Node&);
 
+// FIXME: Start of functions that are deprecated since they silently default to ComposedTree.
+
+WEBCORE_EXPORT SimpleRange unionRange(const SimpleRange&, const SimpleRange&);
+WEBCORE_EXPORT std::optional<SimpleRange> intersection(const std::optional<SimpleRange>&, const std::optional<SimpleRange>&);
+
+class IntersectingNodeRange;
+IntersectingNodeRange intersectingNodes(const SimpleRange&);
+
+class IntersectingNodeRangeWithQuirk;
+IntersectingNodeRangeWithQuirk intersectingNodesWithDeprecatedZeroOffsetStartQuirk(const SimpleRange&);
+
+WEBCORE_EXPORT bool containsCrossingDocumentBoundaries(const SimpleRange&, Node&);
+
+// FIXME: End of functions that are deprecated since they silently default to ComposedTree.
+
 class IntersectingNodeIterator : public std::iterator<std::forward_iterator_tag, Node> {
 public:
     IntersectingNodeIterator(const SimpleRange&);
+
+    enum QuirkFlag { DeprecatedZeroOffsetStartQuirk };
+    IntersectingNodeIterator(const SimpleRange&, QuirkFlag);
 
     Node& operator*() const { return *m_node; }
     Node* operator->() const { ASSERT(m_node); return m_node.get(); }
@@ -90,6 +124,8 @@ public:
     void advanceSkippingChildren();
 
 private:
+    void enforceEndInvariant();
+
     RefPtr<Node> m_node;
     RefPtr<Node> m_pastLastNode;
 };
@@ -105,7 +141,23 @@ private:
     SimpleRange m_range;
 };
 
+class IntersectingNodeRangeWithQuirk {
+public:
+    IntersectingNodeRangeWithQuirk(const SimpleRange&);
+
+    IntersectingNodeIterator begin() const { return { m_range, IntersectingNodeIterator::DeprecatedZeroOffsetStartQuirk }; }
+    static constexpr std::nullptr_t end() { return nullptr; }
+
+private:
+    SimpleRange m_range;
+};
+
 inline IntersectingNodeRange::IntersectingNodeRange(const SimpleRange& range)
+    : m_range(range)
+{
+}
+
+inline IntersectingNodeRangeWithQuirk::IntersectingNodeRangeWithQuirk(const SimpleRange& range)
     : m_range(range)
 {
 }
@@ -115,15 +167,20 @@ inline IntersectingNodeRange intersectingNodes(const SimpleRange& range)
     return { range };
 }
 
+inline IntersectingNodeRangeWithQuirk intersectingNodesWithDeprecatedZeroOffsetStartQuirk(const SimpleRange& range)
+{
+    return { range };
+}
+
 inline SimpleRange makeSimpleRangeHelper(BoundaryPoint&& start, BoundaryPoint&& end)
 {
     return { WTFMove(start), WTFMove(end) };
 }
 
-inline Optional<SimpleRange> makeSimpleRangeHelper(Optional<BoundaryPoint>&& start, Optional<BoundaryPoint>&& end)
+inline std::optional<SimpleRange> makeSimpleRangeHelper(std::optional<BoundaryPoint>&& start, std::optional<BoundaryPoint>&& end)
 {
     if (!start || !end)
-        return WTF::nullopt;
+        return std::nullopt;
     return makeSimpleRangeHelper(WTFMove(*start), WTFMove(*end));
 }
 
@@ -133,10 +190,10 @@ inline SimpleRange makeSimpleRangeHelper(BoundaryPoint&& point)
     return makeSimpleRangeHelper(WTFMove(point), WTFMove(end));
 }
 
-inline Optional<SimpleRange> makeSimpleRangeHelper(Optional<BoundaryPoint>&& point)
+inline std::optional<SimpleRange> makeSimpleRangeHelper(std::optional<BoundaryPoint>&& point)
 {
     if (!point)
-        return WTF::nullopt;
+        return std::nullopt;
     return makeSimpleRangeHelper(WTFMove(*point));
 }
 

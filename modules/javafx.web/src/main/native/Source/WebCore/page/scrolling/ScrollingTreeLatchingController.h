@@ -31,28 +31,39 @@
 #include <wtf/Lock.h>
 #include <wtf/Markable.h>
 #include <wtf/MonotonicTime.h>
-#include <wtf/Optional.h>
+#include <wtf/OptionSet.h>
 
 namespace WebCore {
 
 class PlatformWheelEvent;
+enum class WheelEventProcessingSteps : uint8_t;
 
 class ScrollingTreeLatchingController {
 public:
+    struct ScrollingNodeAndProcessingSteps {
+        ScrollingNodeID scrollingNodeID;
+        OptionSet<WheelEventProcessingSteps> processingSteps;
+    };
+
     ScrollingTreeLatchingController();
 
-    void receivedWheelEvent(const PlatformWheelEvent&, bool allowLatching);
-    Optional<ScrollingNodeID> latchedNodeForEvent(const PlatformWheelEvent&, bool allowLatching) const;
-    void nodeDidHandleEvent(ScrollingNodeID, const PlatformWheelEvent&, bool allowLatching);
+    void receivedWheelEvent(const PlatformWheelEvent&, OptionSet<WheelEventProcessingSteps>, bool allowLatching);
 
-    Optional<ScrollingNodeID> latchedNodeID() const;
+    std::optional<ScrollingNodeAndProcessingSteps> latchingDataForEvent(const PlatformWheelEvent&, bool allowLatching) const;
+    void nodeDidHandleEvent(ScrollingNodeID, OptionSet<WheelEventProcessingSteps>, const PlatformWheelEvent&, bool allowLatching);
+
+    std::optional<ScrollingNodeID> latchedNodeID() const;
+    std::optional<ScrollingNodeAndProcessingSteps> latchedNodeAndSteps() const;
 
     void nodeWasRemoved(ScrollingNodeID);
     void clearLatchedNode();
 
 private:
-    mutable Lock m_latchedNodeMutex;
-    Markable<ScrollingNodeID, IntegralMarkableTraits<ScrollingNodeID, 0>> m_latchedNodeID;
+    bool latchedNodeIsRelevant() const;
+
+    mutable Lock m_latchedNodeLock;
+    std::optional<ScrollingNodeAndProcessingSteps> m_latchedNodeAndSteps WTF_GUARDED_BY_LOCK(m_latchedNodeLock);
+    std::optional<OptionSet<WheelEventProcessingSteps>> m_processingStepsForCurrentGesture;
     MonotonicTime m_lastLatchedNodeInterationTime;
 };
 

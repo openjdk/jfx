@@ -7,6 +7,7 @@
       <sourceFolder url="file://$MODULE_DIR$/modules/javafx.fxml/src/main/resources" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/modules/javafx.fxml/src/test/java" isTestSource="true" />
       <sourceFolder url="file://$MODULE_DIR$/modules/javafx.fxml/src/test/resources" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/modules/javafx.fxml/src/shims/java" isTestSource="true" />
       <excludeFolder url="file://$MODULE_DIR$/modules/javafx.fxml/build" />
     </content>
     <orderEntry type="sourceFolder" forTests="false" />

@@ -21,16 +21,6 @@
 #include "config.h"
 #include "FontPlatformData.h"
 
-#include <wtf/HashMap.h>
-#include <wtf/RetainPtr.h>
-#include <wtf/text/StringHash.h>
-#include <wtf/text/WTFString.h>
-
-#if OS(DARWIN) && USE(CG)
-#include "SharedBuffer.h"
-#include <CoreGraphics/CGFont.h>
-#endif
-
 namespace WebCore {
 
 FontPlatformData::FontPlatformData(WTF::HashTableDeletedValueType)
@@ -42,24 +32,23 @@ FontPlatformData::FontPlatformData()
 {
 }
 
-FontPlatformData::FontPlatformData(float size, bool syntheticBold, bool syntheticOblique, FontOrientation orientation, FontWidthVariant widthVariant, TextRenderingMode textRenderingMode)
+template<typename ValueType> static inline std::optional<ValueType> makeOptionalFromPointer(const ValueType* pointer)
+{
+    if (!pointer)
+        return std::nullopt;
+    return *pointer;
+}
+
+FontPlatformData::FontPlatformData(float size, bool syntheticBold, bool syntheticOblique, FontOrientation orientation, FontWidthVariant widthVariant, TextRenderingMode textRenderingMode, const CreationData* creationData)
     : m_size(size)
     , m_orientation(orientation)
     , m_widthVariant(widthVariant)
     , m_textRenderingMode(textRenderingMode)
+    , m_creationData(makeOptionalFromPointer(creationData))
     , m_syntheticBold(syntheticBold)
     , m_syntheticOblique(syntheticOblique)
 {
 }
-
-#if USE(CG) && PLATFORM(WIN)
-FontPlatformData::FontPlatformData(CGFontRef cgFont, float size, bool syntheticBold, bool syntheticOblique, FontOrientation orientation, FontWidthVariant widthVariant, TextRenderingMode textRenderingMode)
-    : FontPlatformData(size, syntheticBold, syntheticOblique, orientation, widthVariant, textRenderingMode)
-{
-    m_cgFont = cgFont;
-    ASSERT(m_cgFont);
-}
-#endif
 
 #if !USE(FREETYPE)
 FontPlatformData FontPlatformData::cloneWithOrientation(const FontPlatformData& source, FontOrientation orientation)
@@ -84,14 +73,20 @@ FontPlatformData FontPlatformData::cloneWithSize(const FontPlatformData& source,
 }
 #endif
 
-#if !PLATFORM(COCOA)
-
+#if !USE(CORE_TEXT) && !PLATFORM(WIN)
 String FontPlatformData::familyName() const
 {
     // FIXME: Not implemented yet.
     return { };
 }
+#endif
 
+#if !PLATFORM(COCOA)
+Vector<FontPlatformData::FontVariationAxis> FontPlatformData::variationAxes() const
+{
+    // FIXME: <webkit.org/b/219614> Not implemented yet.
+    return { };
+}
 #endif
 
 }

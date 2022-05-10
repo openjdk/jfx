@@ -95,6 +95,7 @@ void ResourceRequestBase::setAsIsolatedCopy(const ResourceRequest& other)
     if (other.m_httpBody)
         setHTTPBody(other.m_httpBody->isolatedCopy());
     setAllowCookies(other.m_allowCookies);
+    setIsAppInitiated(other.isAppInitiated());
 }
 
 bool ResourceRequestBase::isEmpty() const
@@ -393,7 +394,7 @@ void ResourceRequestBase::setHTTPReferrer(const String& httpReferrer)
     constexpr size_t maxLength = 4096;
     if (httpReferrer.length() > maxLength) {
         RELEASE_LOG(Loading, "Truncating HTTP referer");
-        String origin = SecurityOrigin::create(URL(URL(), httpReferrer))->toString();
+        String origin = URL(URL(), SecurityOrigin::create(URL(URL(), httpReferrer))->toString()).string();
         if (origin.length() <= maxLength)
             setHTTPHeaderField(HTTPHeaderName::Referer, origin);
     } else
@@ -601,20 +602,22 @@ void ResourceRequestBase::setHTTPHeaderFields(HTTPHeaderMap headerFields)
 }
 
 #if USE(SYSTEM_PREVIEW)
+
 bool ResourceRequestBase::isSystemPreview() const
 {
-    return m_systemPreviewInfo.hasValue();
+    return m_systemPreviewInfo.has_value();
 }
 
 SystemPreviewInfo ResourceRequestBase::systemPreviewInfo() const
 {
-    return m_systemPreviewInfo.valueOr(SystemPreviewInfo { });
+    return m_systemPreviewInfo.value_or(SystemPreviewInfo { });
 }
 
 void ResourceRequestBase::setSystemPreviewInfo(const SystemPreviewInfo& info)
 {
     m_systemPreviewInfo = info;
 }
+
 #endif
 
 bool equalIgnoringHeaderFields(const ResourceRequestBase& a, const ResourceRequestBase& b)

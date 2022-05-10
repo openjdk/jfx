@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -46,13 +46,15 @@ public:
     FrameLoaderClientJava(const JLObject &webPage);
     ~FrameLoaderClientJava();
 
+    void init();
+
     bool hasWebView() const override;
 
     void makeRepresentation(DocumentLoader*) override;
     void forceLayoutForNonHTML() override;
 
-    Optional<PageIdentifier> pageID() const final;
-    Optional<FrameIdentifier> frameID() const final;
+    std::optional<PageIdentifier> pageID() const final;
+    std::optional<FrameIdentifier> frameID() const final;
 
     void setCopiesOnScroll() override;
 
@@ -81,17 +83,17 @@ public:
     void dispatchDidReceiveIcon() override;
     void dispatchDidStartProvisionalLoad() override;
     void dispatchDidReceiveTitle(const StringWithDirection&) override;
-    void dispatchDidCommitLoad(Optional<HasInsecureContent>, Optional<WebCore::UsedLegacyTLS>) override;
+    void dispatchDidCommitLoad(std::optional<HasInsecureContent>, std::optional<WebCore::UsedLegacyTLS>) override;
     void dispatchDidFailProvisionalLoad(const ResourceError&, WillContinueLoading) override;
     void dispatchDidFailLoad(const ResourceError&) override;
     void dispatchDidFinishDocumentLoad() override;
     void dispatchDidFinishLoad() override;
     void dispatchDidClearWindowObjectInWorld(WebCore::DOMWrapperWorld&) override;
 
-    Frame* dispatchCreatePage(const NavigationAction&) override;
+    Frame* dispatchCreatePage(const NavigationAction&, NewFrameOpenerPolicy) override;
     void dispatchShow() override;
 
-    void dispatchDecidePolicyForResponse(const ResourceResponse&, const ResourceRequest&, PolicyCheckIdentifier, const String& downloadAttribute, FramePolicyFunction&&) override;
+    void dispatchDecidePolicyForResponse(const ResourceResponse&, const ResourceRequest&, PolicyCheckIdentifier, const String& downloadAttribute, BrowsingContextGroupSwitchDecision, FramePolicyFunction&&) override;
     void dispatchDecidePolicyForNewWindowAction(const NavigationAction&, const ResourceRequest&, FormState*, const String& frameName, PolicyCheckIdentifier, FramePolicyFunction&&) override;
     void dispatchDecidePolicyForNavigationAction(const NavigationAction&, const ResourceRequest&, const ResourceResponse& redirectResponse, FormState*, PolicyDecisionMode, PolicyCheckIdentifier, FramePolicyFunction&&) override;
     void cancelPolicyCheck() override;
@@ -110,7 +112,6 @@ public:
     ObjectContentType objectContentType(const URL& url, const String& mimeTypeIn) override;
     RefPtr<Widget> createPlugin(const IntSize&, HTMLPlugInElement&, const URL&, const Vector<String>&, const Vector<String>&, const String&, bool loadManually) override;
     void redirectDataToPlugin(Widget&) override;
-    RefPtr<Widget> createJavaAppletWidget(const IntSize&, HTMLAppletElement&, const URL& baseURL, const Vector<String>& paramNames, const Vector<String>& paramValues) override;
     String overrideMediaType() const override;
 
     void setMainFrameDocumentReady(bool) override;
@@ -120,7 +121,7 @@ public:
     void willChangeTitle(DocumentLoader*) override;
     void didChangeTitle(DocumentLoader*) override;
 
-    void committedLoad(DocumentLoader*, const char*, int) override;
+    void committedLoad(DocumentLoader*, const uint8_t*, int) override;
     void finishedLoading(DocumentLoader*) override;
 
     void updateGlobalHistory() override;

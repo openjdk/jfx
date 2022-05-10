@@ -34,7 +34,8 @@
 #import <dispatch/dispatch.h>
 #import <stdio.h>
 #import <wtf/Assertions.h>
-#import <wtf/HashSet.h>
+#import <wtf/BlockPtr.h>
+#import <wtf/Logging.h>
 #import <wtf/RetainPtr.h>
 #import <wtf/RunLoop.h>
 #import <wtf/SchedulePair.h>
@@ -44,15 +45,7 @@
 #import <wtf/ios/WebCoreThread.h>
 #endif
 
-#define LOG_CHANNEL_PREFIX Log
-
 namespace WTF {
-
-#if RELEASE_LOG_DISABLED
-WTFLogChannel LogThreading = { WTFLogChannelState::On, "Threading", WTFLogLevel::Error };
-#else
-WTFLogChannel LogThreading = { WTFLogChannelState::On, "Threading", WTFLogLevel::Error, LOG_CHANNEL_WEBKIT_SUBSYSTEM, OS_LOG_DEFAULT };
-#endif
 
 #if USE(WEB_THREAD)
 // When the Web thread is enabled, we consider it to be the main thread, not pthread main.
@@ -73,14 +66,16 @@ void dispatchAsyncOnMainThreadWithWebThreadLockIfNeeded(void (^block)())
 {
 #if USE(WEB_THREAD)
     if (WebCoreWebThreadIsEnabled && WebCoreWebThreadIsEnabled()) {
-        dispatch_async(dispatch_get_main_queue(), ^{
+        RunLoop::main().dispatch([block = makeBlockPtr(block)] {
             WebCoreWebThreadLock();
             block();
         });
         return;
     }
 #endif
-    dispatch_async(dispatch_get_main_queue(), block);
+    RunLoop::main().dispatch([block = makeBlockPtr(block)] {
+        block();
+    });
 }
 
 void callOnWebThreadOrDispatchAsyncOnMainThread(void (^block)())
@@ -91,7 +86,9 @@ void callOnWebThreadOrDispatchAsyncOnMainThread(void (^block)())
         return;
     }
 #endif
-    dispatch_async(dispatch_get_main_queue(), block);
+    RunLoop::main().dispatch([block = makeBlockPtr(block)] {
+        block();
+    });
 }
 
 #if USE(WEB_THREAD)

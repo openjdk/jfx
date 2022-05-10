@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -38,7 +38,7 @@ const ClassInfo JSSegmentedVariableObject::s_info = { "SegmentedVariableObject",
 
 ScopeOffset JSSegmentedVariableObject::findVariableIndex(void* variableAddress)
 {
-    auto locker = holdLock(cellLock());
+    Locker locker { cellLock() };
 
     for (unsigned i = m_variables.size(); i--;) {
         if (&m_variables[i] != variableAddress)
@@ -51,7 +51,7 @@ ScopeOffset JSSegmentedVariableObject::findVariableIndex(void* variableAddress)
 
 ScopeOffset JSSegmentedVariableObject::addVariables(unsigned numberOfVariablesToAdd, JSValue initialValue)
 {
-    auto locker = holdLock(cellLock());
+    Locker locker { cellLock() };
 
     size_t oldSize = m_variables.size();
     m_variables.grow(oldSize + numberOfVariablesToAdd);
@@ -62,18 +62,21 @@ ScopeOffset JSSegmentedVariableObject::addVariables(unsigned numberOfVariablesTo
     return ScopeOffset(oldSize);
 }
 
-void JSSegmentedVariableObject::visitChildren(JSCell* cell, SlotVisitor& slotVisitor)
+template<typename Visitor>
+void JSSegmentedVariableObject::visitChildrenImpl(JSCell* cell, Visitor& visitor)
 {
     JSSegmentedVariableObject* thisObject = jsCast<JSSegmentedVariableObject*>(cell);
     ASSERT_GC_OBJECT_INHERITS(thisObject, info());
-    Base::visitChildren(thisObject, slotVisitor);
+    Base::visitChildren(thisObject, visitor);
 
     // FIXME: We could avoid locking here if SegmentedVector was lock-free. It could be made lock-free
     // relatively easily.
-    auto locker = holdLock(thisObject->cellLock());
+    Locker locker { thisObject->cellLock() };
     for (unsigned i = thisObject->m_variables.size(); i--;)
-        slotVisitor.appendHidden(thisObject->m_variables[i]);
+        visitor.appendHidden(thisObject->m_variables[i]);
 }
+
+DEFINE_VISIT_CHILDREN_WITH_MODIFIER(JS_EXPORT_PRIVATE, JSSegmentedVariableObject);
 
 void JSSegmentedVariableObject::analyzeHeap(JSCell* cell, HeapAnalyzer& analyzer)
 {

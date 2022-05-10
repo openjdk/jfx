@@ -46,7 +46,9 @@ inline InbandWebVTTTextTrack::InbandWebVTTTextTrack(Document& document, TextTrac
 
 Ref<InbandTextTrack> InbandWebVTTTextTrack::create(Document& document, TextTrackClient& client, InbandTextTrackPrivate& trackPrivate)
 {
-    return adoptRef(*new InbandWebVTTTextTrack(document, client, trackPrivate));
+    auto textTrack = adoptRef(*new InbandWebVTTTextTrack(document, client, trackPrivate));
+    textTrack->suspendIfNeeded();
+    return textTrack;
 }
 
 InbandWebVTTTextTrack::~InbandWebVTTTextTrack() = default;
@@ -58,7 +60,7 @@ WebVTTParser& InbandWebVTTTextTrack::parser()
     return *m_webVTTParser;
 }
 
-void InbandWebVTTTextTrack::parseWebVTTCueData(const char* data, unsigned length)
+void InbandWebVTTTextTrack::parseWebVTTCueData(const uint8_t* data, unsigned length)
 {
     parser().parseBytes(data, length);
 }

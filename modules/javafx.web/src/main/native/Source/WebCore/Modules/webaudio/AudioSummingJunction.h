@@ -27,6 +27,7 @@
 #include "AudioBus.h"
 #include <wtf/HashSet.h>
 #include <wtf/Vector.h>
+#include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
@@ -41,10 +42,8 @@ public:
     virtual ~AudioSummingJunction();
 
     // Can be called from any thread.
-    BaseAudioContext& context() { return m_context; }
-
-    // This must be called whenever we modify m_outputs.
-    void changedOutputs();
+    BaseAudioContext* context() { return m_context.get(); }
+    const BaseAudioContext* context() const { return m_context.get(); }
 
     // This copies m_outputs to m_renderingOutputs. Please see comments for these lists below.
     // This must be called when we own the context's graph lock in the audio thread at the very start or end of the render quantum.
@@ -59,16 +58,19 @@ public:
     virtual bool canUpdateState() = 0;
     virtual void didUpdate() = 0;
 
-protected:
-    Ref<BaseAudioContext> m_context;
+    bool addOutput(AudioNodeOutput&);
+    bool removeOutput(AudioNodeOutput&);
 
-    // m_outputs contains the AudioNodeOutputs representing current connections which are not disabled.
-    // The rendering code should never use this directly, but instead uses m_renderingOutputs.
-    HashSet<AudioNodeOutput*> m_outputs;
+    void markRenderingStateAsDirty();
+
+protected:
+    WeakPtr<BaseAudioContext> m_context;
 
     // numberOfConnections() should never be called from the audio rendering thread.
     // Instead numberOfRenderingConnections() and renderingOutput() should be used.
     unsigned numberOfConnections() const { return m_outputs.size(); }
+
+    unsigned maximumNumberOfChannels() const;
 
     // m_renderingOutputs is a copy of m_outputs which will never be modified during the graph rendering on the audio thread.
     // This is the list which is used by the rendering code.
@@ -77,7 +79,13 @@ protected:
     Vector<AudioNodeOutput*> m_renderingOutputs;
 
     // m_renderingStateNeedUpdating keeps track if m_outputs is modified.
-    bool m_renderingStateNeedUpdating;
+    bool m_renderingStateNeedUpdating { false };
+
+private:
+    // m_outputs contains the AudioNodeOutputs representing current connections which are not disabled.
+    // The rendering code should never use this directly, but instead uses m_renderingOutputs.
+    HashSet<AudioNodeOutput*> m_outputs;
+    Vector<AudioNodeOutput*> m_pendingRenderingOutputs;
 };
 
 } // namespace WebCore

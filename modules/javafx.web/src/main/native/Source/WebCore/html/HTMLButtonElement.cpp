@@ -60,8 +60,12 @@ void HTMLButtonElement::setType(const AtomString& type)
     setAttributeWithoutSynchronization(typeAttr, type);
 }
 
-RenderPtr<RenderElement> HTMLButtonElement::createElementRenderer(RenderStyle&& style, const RenderTreePosition&)
+RenderPtr<RenderElement> HTMLButtonElement::createElementRenderer(RenderStyle&& style, const RenderTreePosition& position)
 {
+    // https://html.spec.whatwg.org/multipage/rendering.html#button-layout
+    DisplayType display = style.display();
+    if (display == DisplayType::InlineGrid || display == DisplayType::Grid || display == DisplayType::InlineFlex || display == DisplayType::Flex)
+        return HTMLFormControlElement::createElementRenderer(WTFMove(style), position);
     return createRenderer<RenderButton>(*this, WTFMove(style));
 }
 
@@ -91,7 +95,7 @@ const AtomString& HTMLButtonElement::formControlType() const
     return emptyAtom();
 }
 
-bool HTMLButtonElement::isPresentationAttribute(const QualifiedName& name) const
+bool HTMLButtonElement::hasPresentationalHintsForAttribute(const QualifiedName& name) const
 {
     if (name == alignAttr) {
         // Don't map 'align' attribute.  This matches what Firefox and IE do, but not Opera.
@@ -99,7 +103,7 @@ bool HTMLButtonElement::isPresentationAttribute(const QualifiedName& name) const
         return false;
     }
 
-    return HTMLFormControlElement::isPresentationAttribute(name);
+    return HTMLFormControlElement::hasPresentationalHintsForAttribute(name);
 }
 
 void HTMLButtonElement::parseAttribute(const QualifiedName& name, const AtomString& value)
@@ -113,7 +117,7 @@ void HTMLButtonElement::parseAttribute(const QualifiedName& name, const AtomStri
         else
             m_type = SUBMIT;
         if (oldType != m_type) {
-            setNeedsWillValidateCheck();
+            updateWillValidateAndValidity();
             if (form() && (oldType == SUBMIT || m_type == SUBMIT))
                 form()->resetDefaultButton();
         }
@@ -134,7 +138,7 @@ void HTMLButtonElement::defaultEventHandler(Event& event)
             if (auto currentForm = form()) {
                 if (m_type == SUBMIT) {
                     SetForScope<bool> activatedSubmitState(m_isActivatedSubmit, true);
-                    currentForm->prepareForSubmission(event);
+                    currentForm->submitIfPossible(&event, this);
                 }
 
                 if (m_type == RESET)
@@ -231,6 +235,11 @@ const AtomString& HTMLButtonElement::value() const
 bool HTMLButtonElement::computeWillValidate() const
 {
     return m_type == SUBMIT && HTMLFormControlElement::computeWillValidate();
+}
+
+bool HTMLButtonElement::isSubmitButton() const
+{
+    return m_type == SUBMIT;
 }
 
 } // namespace

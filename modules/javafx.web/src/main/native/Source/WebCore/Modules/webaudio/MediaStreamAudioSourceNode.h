@@ -37,40 +37,42 @@ namespace WebCore {
 class AudioContext;
 struct MediaStreamAudioSourceOptions;
 class MultiChannelResampler;
+class WebAudioSourceProvider;
 
 class MediaStreamAudioSourceNode final : public AudioNode, public AudioSourceProviderClient {
     WTF_MAKE_ISO_ALLOCATED(MediaStreamAudioSourceNode);
 public:
     static ExceptionOr<Ref<MediaStreamAudioSourceNode>> create(BaseAudioContext&, MediaStreamAudioSourceOptions&&);
 
-    virtual ~MediaStreamAudioSourceNode();
+    ~MediaStreamAudioSourceNode();
 
-    MediaStream* mediaStream() { return &m_mediaStream.get(); }
-
-    // AudioNode
-    void process(size_t framesToProcess) override;
-    void reset() override { }
-
-    // AudioSourceProviderClient
-    void setFormat(size_t numberOfChannels, float sampleRate) override;
+    MediaStream& mediaStream() { return m_mediaStream; }
 
 private:
-    MediaStreamAudioSourceNode(BaseAudioContext&, MediaStream&, MediaStreamTrack&);
+    MediaStreamAudioSourceNode(BaseAudioContext&, MediaStream&, Ref<WebAudioSourceProvider>&&);
+
+    // AudioNode
+    void process(size_t framesToProcess) final;
+    // AudioSourceProviderClient
+    void setFormat(size_t numberOfChannels, float sampleRate) final;
+
+    void provideInput(AudioBus*, size_t framesToProcess);
 
     double tailTime() const override { return 0; }
     double latencyTime() const override { return 0; }
+    bool requiresTailProcessing() const final { return false; }
 
     // As an audio source, we will never propagate silence.
     bool propagatesSilence() const override { return false; }
 
     Ref<MediaStream> m_mediaStream;
-    Ref<MediaStreamTrack> m_audioTrack;
-    std::unique_ptr<MultiChannelResampler> m_multiChannelResampler;
+    Ref<WebAudioSourceProvider> m_provider;
+    std::unique_ptr<MultiChannelResampler> m_multiChannelResampler WTF_GUARDED_BY_LOCK(m_processLock);
 
-    Lock m_processMutex;
+    Lock m_processLock;
 
-    unsigned m_sourceNumberOfChannels { 0 };
-    double m_sourceSampleRate { 0 };
+    unsigned m_sourceNumberOfChannels WTF_GUARDED_BY_LOCK(m_processLock) { 0 };
+    double m_sourceSampleRate WTF_GUARDED_BY_LOCK(m_processLock) { 0 };
 };
 
 } // namespace WebCore

@@ -36,12 +36,12 @@ class WebGLRenderingContext final : public WebGLRenderingContextBase {
     WTF_MAKE_ISO_ALLOCATED(WebGLRenderingContext);
 public:
     static std::unique_ptr<WebGLRenderingContext> create(CanvasBase&, GraphicsContextGLAttributes);
-    static std::unique_ptr<WebGLRenderingContext> create(CanvasBase&, Ref<GraphicsContextGLOpenGL>&&, GraphicsContextGLAttributes);
+    static std::unique_ptr<WebGLRenderingContext> create(CanvasBase&, Ref<GraphicsContextGL>&&, GraphicsContextGLAttributes);
 
     bool isWebGL1() const final { return true; }
 
     WebGLExtension* getExtension(const String&) final;
-    Optional<Vector<String>> getSupportedExtensions() final;
+    std::optional<Vector<String>> getSupportedExtensions() final;
 
     WebGLAny getFramebufferAttachmentParameter(GCGLenum target, GCGLenum attachment, GCGLenum pname) final;
 
@@ -53,7 +53,7 @@ public:
 
 private:
     WebGLRenderingContext(CanvasBase&, GraphicsContextGLAttributes);
-    WebGLRenderingContext(CanvasBase&, Ref<GraphicsContextGLOpenGL>&&, GraphicsContextGLAttributes);
+    WebGLRenderingContext(CanvasBase&, Ref<GraphicsContextGL>&&, GraphicsContextGLAttributes);
 };
 
 } // namespace WebCore
