@@ -168,7 +168,7 @@ void androidJfx_requestGlassToRedraw() {
         0, 0, (jint) width, (jint) height,
         0, 0, (jint) width, (jint) height,
         0, 0, (jint) width, (jint) height,
-        100, 100, (jfloat) 1, (jfloat) 1, androidDensity, androidDensity);
+        SCREEN_DPI, SCREEN_DPI, (jfloat) 1, (jfloat) 1, androidDensity, androidDensity);
     (*javaEnv)->CallStaticVoidMethod(javaEnv, jMonocleWindowManagerClass, monocle_repaintAll, screen);
 }
 
