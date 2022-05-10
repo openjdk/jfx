@@ -867,7 +867,6 @@ class WindowStage extends GlassStage {
         }
         if (enabled) {
             // Check if window is really enabled - to handle nested case
-            // This will handle the case of multiple APPLICATION_MODAL Windows
             if (platformWindow != null && platformWindow.isEnabled()
                     && modality == Modality.APPLICATION_MODAL) {
                 requestToFront();

@@ -39,7 +39,6 @@ import com.sun.javafx.tk.TKScene;
 import com.sun.javafx.tk.TKStage;
 import com.sun.javafx.tk.TKStageListener;
 import com.sun.javafx.tk.Toolkit;
-import javafx.stage.Window;
 
 abstract class GlassStage implements TKStage {
 
@@ -175,16 +174,10 @@ abstract class GlassStage implements TKStage {
 
         // Make a copy of the windows list, since it could change as the result
         // of a child window being closed when the parent is closed.
-        GlassStage lastWindow = null;
         for (GlassStage window : windows.toArray(new GlassStage[windows.size()])) {
             if (window != this && windows.contains(window)) {
                 window.setPlatformEnabled(enabled);
-                lastWindow = window;
             }
-        }
-
-        if (enabled && lastWindow != null) {
-            lastWindow.requestFocus();
         }
     }
 
