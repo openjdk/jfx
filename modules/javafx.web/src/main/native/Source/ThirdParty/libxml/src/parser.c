@@ -2208,7 +2208,8 @@ xmlSkipBlankChars(xmlParserCtxtPtr ctxt) {
                 ctxt->input->col++;
             }
             cur++;
-            res++;
+            if (res < INT_MAX)
+                res++;
             if (*cur == 0) {
                 ctxt->input->cur = cur;
                 xmlParserInputGrow(ctxt->input, INPUT_CHUNK);
@@ -2244,7 +2245,8 @@ xmlSkipBlankChars(xmlParserCtxtPtr ctxt) {
              * by the attachment of one leading and one following space (#x20)
              * character."
              */
-            res++;
+            if (res < INT_MAX)
+                res++;
         }
     }
     return(res);
@@ -7644,7 +7646,7 @@ xmlParseEntityRef(xmlParserCtxtPtr ctxt) {
      * not contain a <.
      */
     else if ((ctxt->instate == XML_PARSER_ATTRIBUTE_VALUE) &&
-             (ent != NULL) &&
+             (ent != NULL) && 
              (ent->etype != XML_INTERNAL_PREDEFINED_ENTITY)) {
         if (((ent->checked & 1) || (ent->checked == 0)) &&
              (ent->content != NULL) && (xmlStrchr(ent->content, '<'))) {
@@ -14749,7 +14751,6 @@ xmlCleanupParser(void) {
     xmlSchemaCleanupTypes();
     xmlRelaxNGCleanupTypes();
 #endif
-    xmlResetLastError();
     xmlCleanupGlobals();
     xmlCleanupThreads(); /* must be last if called not from the main thread */
     xmlCleanupMemory();
