@@ -239,6 +239,8 @@ public class GlyphCache {
     }
 
     private GlyphData getCachedGlyph(int glyphCode, int subPixel) {
+        if (glyphCode <= 0) {return null;}
+
         int segIndex = glyphCode >>> SEGSHIFT;
         int subIndex = glyphCode & SEGMASK;
         segIndex |= (subPixel << SUBPIXEL_SHIFT);
