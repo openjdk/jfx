@@ -58,7 +58,7 @@ import test.com.sun.javafx.pgstub.StubToolkit;
 import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 
 /**
- * Test for https://bugs.openjdk.java.net/browse/JDK-8233040 - F4
+ * Test for https://bugs.openjdk.org/browse/JDK-8233040 - F4
  * must not be consumed by EventFilter in ComboBoxPopupControl.
  * <p>
  * Parameterized in concrete sub of ComboBoxBase and editable.

@@ -69,7 +69,7 @@ public class PrintPerformanceTest extends Application {
     }
 
     static final String instructions =
-            "This is regression test for 8150181 (see https://bugs.openjdk.java.net/browse/JDK-8150181 ).\n" +
+            "This is regression test for 8150181 (see https://bugs.openjdk.org/browse/JDK-8150181 ).\n" +
                     "Use *ONLY A VIRTUAL* printer for this test. Press print button, after this 120 pages will be printed.\n" +
                     "Printing job should take relatively small time( because we use virtual printer), " +
                     "if pages won't be printed after 60 seconds then test is failed, otherwise it is passed.";

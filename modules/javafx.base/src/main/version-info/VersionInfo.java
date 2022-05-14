@@ -37,7 +37,7 @@ package com.sun.javafx.runtime;
  * System Properties at the loading of the JavaFX Toolkit. The JavaFX properties
  * are javafx.version and javafx.runtime.version. Their formats follow the
  * specification of java.version and java.runtime.version respectively.
- * See http://openjdk.java.net/jeps/223 for details.
+ * See https://openjdk.org/jeps/223 for details.
  *
  * For example, an early access build of JavaFX 9 build 76 will contain
  * the following properties:
@@ -147,7 +147,7 @@ public class VersionInfo {
      * The format of the value strings of javafx.version and javafx.runtime.version
      * will follow the same pattern as java.version and java.runtime.version
      * respectively.
-     * See http://openjdk.java.net/jeps/223 for details.
+     * See https://openjdk.org/jeps/223 for details.
      */
     public static synchronized void setupSystemProperties() {
         if (System.getProperty("javafx.version") == null) {
