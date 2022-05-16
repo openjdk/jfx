@@ -50,7 +50,7 @@ extern "C" {
  * is insignifiant and being able to run xsltpoc -v is useful. On
  * by default unless --without-debug is passed to configure
  */
-#if 1
+#if 0
 #define WITH_XSLT_DEBUG
 #endif
 
@@ -104,7 +104,7 @@ extern "C" {
  * is insignifiant.
  * On by default unless --without-debugger is passed to configure
  */
-#if 1
+#if 0
 #ifndef WITH_DEBUGGER
 #define WITH_DEBUGGER
 #endif
@@ -117,7 +117,7 @@ extern "C" {
  * is insignifiant.
  * On by default unless --without-profiler is passed to configure
  */
-#if 1
+#if 0
 #ifndef WITH_PROFILER
 #define WITH_PROFILER
 #endif
