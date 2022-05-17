@@ -36,6 +36,8 @@ void androidJfx_requestGlassToRedraw();
 #define GLASS_LOG_FINEST(...)  ((void)__android_log_print(ANDROID_LOG_INFO,"GLASS", __VA_ARGS__))
 #define GLASS_LOG_WARNING(...)  ((void)__android_log_print(ANDROID_LOG_INFO,"GLASS", __VA_ARGS__))
 
+static const jint SCREEN_DPI = 100;
+
 ANativeWindow* android_getNativeWindow(JNIEnv *env);
 jfloat android_getDensity(JNIEnv *env);
 

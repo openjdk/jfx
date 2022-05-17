@@ -173,19 +173,18 @@ final class MonocleWindowManager {
         }
     }
 
-    static void repaintFromNative () {
-        Platform.runLater(new Runnable () {
-
-            @Override
-            public void run() {
-                Screen.notifySettingsChanged();
-                MonocleWindow focusedWindow = instance.getFocusedWindow();
-                if (focusedWindow != null) {
-                    focusedWindow.setFullScreen(true);
+    static void repaintFromNative(Screen screen) {
+        Platform.runLater(() -> {
+            Screen.notifySettingsChanged();
+            MonocleWindow focusedWindow = instance.getFocusedWindow();
+            if (focusedWindow != null) {
+                if (screen != null && screen.getNativeScreen() != focusedWindow.getScreen().getNativeScreen()) {
+                    focusedWindow.notifyMoveToAnotherScreen(screen);
                 }
-                instance.repaintAll();
-                Toolkit.getToolkit().requestNextPulse();
+                focusedWindow.setFullScreen(true);
             }
+            instance.repaintAll();
+            Toolkit.getToolkit().requestNextPulse();
         });
     }
 
