@@ -41,7 +41,7 @@ Updating libxml in OpenJFX:
 
 9.2 Copy libxml\src\config.h to libxml\linux\config.h
 
-10. Update version info in 'modules/javafx.web/src/main/legal/libxml.md'.Also, update copyright if any new files are added.
+10. Update version info in 'modules/javafx.web/src/main/legal/libxml.md'. Also, update copyright if any new files are added.
 
 11. Helper commands for removing tabs and trailing whitespaces from source files(.h and .c).
 

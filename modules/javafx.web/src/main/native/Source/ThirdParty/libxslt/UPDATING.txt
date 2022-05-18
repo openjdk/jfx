@@ -34,6 +34,6 @@ We do not require all of the features to be enabled.
         > ./configure
 9.1 Copy `libxslt/src/config.h` to `libxslt/linux/config.h` and follow same guidelines as Windows to retain changes from our repo.
 
-10. Update version info in 'modules/javafx.web/src/main/legal/libxslt.md'.Also, update copyright if any new files are added.
+10. Update version info in 'modules/javafx.web/src/main/legal/libxslt.md'. Also, update copyright if any new files are added.
 
 11. Remove tabs and trailing whitespaces from source files(.h and .c).
