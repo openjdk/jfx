@@ -10,9 +10,10 @@ Below are platform wise steps to configure.
 - For windows
 4. Configure libxslt.
         > cd modules/javafx.web/src/main/native/Source/ThirdParty/libxslt/src/win32
-        >  cscript configure.js compiler=msvc xslt_debug=no  iconv=no mem_debug=no modules=no  zlib=no profiler=no trio=no
+        > cscript configure.js compiler=msvc xslt_debug=no  iconv=no mem_debug=no modules=no  zlib=no profiler=no trio=no
         - Above command generates a header file 'src/config.h' file (on all platforms) and libxslt\src\libxslt\xsltconfig.h.
-4.1 Copy `libxslt\src\config.h` to `libxslt\win32\config.h'. config.h file defines several macros to control libxslt features. We do not require all of the features to be enabled. 
+4.1 Copy `libxslt\src\config.h` to `libxslt\win32\config.h'. config.h file defines several macros to control libxslt features.
+We do not require all of the features to be enabled.
 4.2 Compare the generated `libxslt\src\config.h` with existing `libxslt\win32\config.h' and update the macros based on the output of ./configure.
 4.3 Update version related info in libxslt\src\libxslt\xsltconfig.h.
 
@@ -33,4 +34,6 @@ Below are platform wise steps to configure.
         > ./configure
 9.1 Copy `libxslt/src/config.h` to `libxslt/linux/config.h` and follow same guidelines as Windows to retain changes from our repo.
 
-10. Remove tabs and trailing whitespaces from source files(.h and .c).
+10. Update version info in 'modules/javafx.web/src/main/legal/libxslt.md'.Also, update copyright if any new files are added.
+
+11. Remove tabs and trailing whitespaces from source files(.h and .c).
