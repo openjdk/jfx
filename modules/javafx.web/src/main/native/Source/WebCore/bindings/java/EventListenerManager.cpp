@@ -23,7 +23,6 @@
  * questions.
  */
 
-
 #include "EventListenerManager.h"
 #include "JavaEventListener.h"
 #include "DOMWindow.h"
@@ -54,8 +53,8 @@ void EventListenerManager::unregisterListener(JavaEventListener *ptr)
 
      if (it != listener_lists.end()) {
          if (it->second && it->second->use_count() == 1) {
-              delete it->second;
-              it->second = nullptr;
+             delete it->second;
+             it->second = nullptr;
          }
 
          if (it->second && it->second->use_count() > 1)
@@ -65,12 +64,12 @@ void EventListenerManager::unregisterListener(JavaEventListener *ptr)
 
 jobject EventListenerManager::get_listener(JavaEventListener *ptr)
 {
-     std::map<JavaEventListener*, JavaObjectWrapperHandler*>::iterator it;
-     it = listener_lists.find(ptr);
-     if (it != listener_lists.end())
-         return it->second->get_listener();
+    std::map<JavaEventListener*, JavaObjectWrapperHandler*>::iterator it;
+    it = listener_lists.find(ptr);
+    if (it != listener_lists.end())
+        return it->second->get_listener();
 
-     return nullptr;
+    return nullptr;
 }
 
 void EventListenerManager::registerDOMWindow(DOMWindow* window, JavaEventListener *ptr)
@@ -86,14 +85,13 @@ void EventListenerManager::registerDOMWindow(DOMWindow* window, JavaEventListene
 
 void EventListenerManager::unregisterDOMWindow(DOMWindow* window)
 {
-     std::multimap<JavaEventListener*, DOMWindow*>::iterator win_it;
-     for (win_it = windowHasEvent.begin(); win_it != windowHasEvent.end(); win_it++) {
-         // de register associated event listeners with window
-         if( window == win_it->second) {
-             unregisterListener(win_it->first);
-         }
-     }
+    std::multimap<JavaEventListener*, DOMWindow*>::iterator win_it;
+    for (win_it = windowHasEvent.begin(); win_it != windowHasEvent.end(); win_it++) {
+        // de register associated event listeners with window
+        if(window == win_it->second) {
+            unregisterListener(win_it->first);
+        }
+    }
 }
 
 } // namespace WebCore
-

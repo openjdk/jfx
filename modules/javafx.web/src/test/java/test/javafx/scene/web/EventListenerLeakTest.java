@@ -22,6 +22,7 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+
 package test.javafx.scene.web;
 
 import com.sun.javafx.application.PlatformImpl;
@@ -641,4 +642,3 @@ public class EventListenerLeakTest {
         assertEquals("Click count", 1, listeners1.get(0).getClickCount());
     }
 }
-

@@ -26,7 +26,7 @@
 #pragma once
 
 #ifndef EVENT_LISTENER_MANAGER_H
-#define VENT_LISTENER_MANAGER_H
+#define EVENT_LISTENER_MANAGER_H
 
 
 #include "config.h"
@@ -86,4 +86,3 @@ private:
 } // namespace WebCore
 
 #endif // EVENT_LISTENER_MANAGER_H
-
