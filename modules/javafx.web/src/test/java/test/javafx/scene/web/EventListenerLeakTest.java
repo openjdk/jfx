@@ -107,11 +107,6 @@ public class EventListenerLeakTest {
                 startupLatch.await(15, TimeUnit.SECONDS));
     }
 
-    @AfterClass
-    public static void cleanupOnce() {
-        Platform.exit();
-    }
-
     /**
      * Executes a job on FX app thread, and waits until it is complete.
      *
