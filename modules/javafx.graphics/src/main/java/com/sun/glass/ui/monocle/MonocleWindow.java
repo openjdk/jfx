@@ -264,6 +264,11 @@ final class MonocleWindow extends Window {
         return true;
     }
 
+    @Override
+    protected void notifyMoveToAnotherScreen(Screen screen) {
+        super.notifyMoveToAnotherScreen(screen);
+    }
+
     void setFullScreen(boolean fullscreen) {
         NativeScreen screen = NativePlatformFactory.getNativePlatform().getScreen();
         int x = getX();
