@@ -45,7 +45,7 @@ import test.com.sun.javafx.scene.control.test.Person;
 
 import java.util.List;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertTrue;
 
 public class TreeTableColumnHeaderTest {
 
