@@ -149,6 +149,10 @@
 #include "PointerLockController.h"
 #endif
 
+#if PLATFORM(JAVA)
+#include "EventListenerManager.h"
+#endif
+
 namespace WebCore {
 using namespace Inspector;
 
@@ -443,6 +447,10 @@ DOMWindow::~DOMWindow()
 #endif
 
     removeLanguageChangeObserver(this);
+
+#if PLATFORM(JAVA)
+    EventListenerManager::get_instance().unregisterDOMWindow(this);
+#endif
 }
 
 RefPtr<MediaQueryList> DOMWindow::matchMedia(const String& media)

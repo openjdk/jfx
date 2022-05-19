@@ -29,6 +29,10 @@
 #include "EventListener.h"
 #include "Node.h"
 
+#if PLATFORM(JAVA)
+#include "EventListenerManager.h"
+#endif
+
 #include <wtf/Vector.h>
 #include <wtf/java/JavaRef.h>
 
@@ -38,17 +42,15 @@ class JavaEventListener final : public EventListener {
 public:
     JavaEventListener(const JLObject &listener)
         : EventListener(NativeEventListenerType)
-        , m_joListener(listener)
     {
         relaxAdoptionRequirement();
+        EventListenerManager::get_instance().registerListener(this, listener);
     }
 
-    ~JavaEventListener() override;
+    virtual ~JavaEventListener() override;
 
     bool operator == (const EventListener&) const override;
     void handleEvent(ScriptExecutionContext& context, Event& event) override;
-
-    JGObject m_joListener;
     static ScriptExecutionContext* scriptExecutionContext();
     bool isJavaEventListener() const override { return true; }
 private:
