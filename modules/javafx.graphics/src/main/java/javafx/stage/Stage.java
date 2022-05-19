@@ -490,6 +490,62 @@ public class Stage extends Window {
         this.style = style;
     }
 
+    private boolean closable = true;
+
+    /**
+     * Specifies if this stage should be closable.
+     *
+     * @param closable closable state value
+     *
+     * @throws IllegalStateException if this property is set after the stage
+     * has ever been made visible.
+     *
+     * @defaultValue true
+     */
+    public void initClosable(boolean closable) {
+        if (hasBeenVisible) {
+            throw new IllegalStateException("Cannot set style once stage has been set visible");
+        }
+        this.closable = closable;
+    }
+
+    /**
+     * Retrieves the closable state of this stage.
+     *
+     * @return the stage closable state
+     */
+    public boolean isClosable() {
+        return closable;
+    }
+
+    private boolean minimizable = true;
+
+    /**
+     * Specifies if this stage should be minimizable.
+     *
+     * @param minimizable minimizable state value
+     *
+     * @throws IllegalStateException if this property is set after the stage
+     * has ever been made visible.
+     *
+     * @defaultValue true
+     */
+    public void initMinimizable(boolean minimizable) {
+        if (hasBeenVisible) {
+            throw new IllegalStateException("Cannot set style once stage has been set visible");
+        }
+        this.minimizable = minimizable;
+    }
+
+    /**
+     * Retrieves the minimizable state of this stage.
+     *
+     * @return the stage minimizable state
+     */
+    public boolean isMinimizable() {
+        return minimizable;
+    }
+
     /**
      * Retrieves the style attribute for this stage.
      *
@@ -1161,7 +1217,7 @@ public class Stage extends Window {
                 }
             }
             setPeer(toolkit.createTKStage(this, isSecurityDialog(),
-                    stageStyle, isPrimary(), getModality(), tkStage, rtl, acc));
+                    stageStyle, isPrimary(), getModality(), tkStage, rtl, minimizable, closable, acc));
             getPeer().setMinimumSize((int) Math.ceil(getMinWidth()),
                     (int) Math.ceil(getMinHeight()));
             getPeer().setMaximumSize((int) Math.floor(getMaxWidth()),

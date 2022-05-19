@@ -603,6 +603,20 @@ public final class QuantumToolkit extends Toolkit {
         return stage;
     }
 
+    @Override public TKStage createTKStage(Window peerWindow, boolean securityDialog, StageStyle stageStyle, boolean primary, Modality modality, TKStage owner, boolean rtl, boolean minimizable, boolean closable, AccessControlContext acc) {
+        assertToolkitRunning();
+        WindowStage stage = new WindowStage(peerWindow, securityDialog, stageStyle, modality, owner);
+        stage.setSecurityContext(acc);
+        if (primary) {
+            stage.setIsPrimary();
+        }
+        stage.setRTL(rtl);
+        stage.setClosable(closable);
+        stage.setMinimizable(minimizable);
+        stage.init(systemMenu);
+        return stage;
+    }
+
     @Override public boolean canStartNestedEventLoop() {
         return inPulse == 0;
     }

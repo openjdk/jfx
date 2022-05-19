@@ -175,6 +175,110 @@ public class StageMutabilityTest {
         assertEquals(Modality.NONE, stage.getModality());
     }
 
+    @Test public void testClosableSet() {
+        Stage stage = new Stage();
+        assertTrue(stage.isClosable());
+        stage.initClosable(true);
+        assertTrue(stage.isClosable());
+        stage.initClosable(false);
+        assertFalse(stage.isClosable());
+    }
+
+    @Test public void testClosableSetWhileVisible() {
+        Stage stage = new Stage();
+        assertTrue(stage.isClosable());
+        stage.show();
+        assertTrue(stage.isClosable());
+        try {
+            stage.initClosable(true);
+            // Error if we get here we didn't get the expected exception
+            assertTrue(false);
+        } catch (IllegalStateException ex) {
+        }
+        assertTrue(stage.isClosable());
+        try {
+            stage.initClosable(false);
+            // Error if we get here we didn't get the expected exception
+            assertTrue(false);
+        } catch (IllegalStateException ex) {
+        }
+        assertTrue(stage.isClosable());
+    }
+
+    @Test public void testClosableSetAfterVisible() {
+        Stage stage = new Stage();
+        assertTrue(stage.isClosable());
+        stage.show();
+        stage.hide();
+        assertTrue(stage.isClosable());
+        try {
+            stage.initClosable(true);
+            // Error if we get here we didn't get the expected exception
+            assertTrue(false);
+        } catch (IllegalStateException ex) {
+        }
+        assertTrue(stage.isClosable());
+        try {
+            stage.initClosable(false);
+            // Error if we get here we didn't get the expected exception
+            assertTrue(false);
+        } catch (IllegalStateException ex) {
+        }
+        assertTrue(stage.isClosable());
+    }
+
+    @Test public void testMinimizableSet() {
+        Stage stage = new Stage();
+        assertTrue(stage.isMinimizable());
+        stage.initMinimizable(true);
+        assertTrue(stage.isMinimizable());
+        stage.initMinimizable(false);
+        assertFalse(stage.isMinimizable());
+    }
+
+    @Test public void testMinimizableSetWhileVisible() {
+        Stage stage = new Stage();
+        assertTrue(stage.isMinimizable());
+        stage.show();
+        assertTrue(stage.isMinimizable());
+        try {
+            stage.initMinimizable(true);
+            // Error if we get here we didn't get the expected exception
+            assertTrue(false);
+        } catch (IllegalStateException ex) {
+        }
+        assertTrue(stage.isMinimizable());
+        try {
+            stage.initMinimizable(false);
+            // Error if we get here we didn't get the expected exception
+            assertTrue(false);
+        } catch (IllegalStateException ex) {
+        }
+        assertTrue(stage.isMinimizable());
+    }
+
+    @Test public void testMinimizableSetAfterVisible() {
+        Stage stage = new Stage();
+        assertTrue(stage.isMinimizable());
+        stage.show();
+        stage.hide();
+        assertTrue(stage.isMinimizable());
+        try {
+            stage.initMinimizable(true);
+            // Error if we get here we didn't get the expected exception
+            assertTrue(false);
+        } catch (IllegalStateException ex) {
+        }
+        assertTrue(stage.isMinimizable());
+        try {
+            stage.initMinimizable(false);
+            // Error if we get here we didn't get the expected exception
+            assertTrue(false);
+        } catch (IllegalStateException ex) {
+        }
+        assertTrue(stage.isMinimizable());
+    }
+
 // TODO: Add more Modality test below:
 //    /**
 //     * Tests that setting the value of style on a visible Stage throws an exception
