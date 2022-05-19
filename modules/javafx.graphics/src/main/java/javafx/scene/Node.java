@@ -8264,7 +8264,7 @@ public abstract class Node implements EventTarget, Styleable {
      * is called.
      *
      * @defaultValue false
-     * @since 18
+     * @since 19
      */
     private final FocusPropertyBase focusVisible = new FocusPropertyBase() {
         @Override
@@ -8291,7 +8291,7 @@ public abstract class Node implements EventTarget, Styleable {
      * has the input focus.
      *
      * @defaultValue false
-     * @since 18
+     * @since 19
      */
     private final FocusPropertyBase focusWithin = new FocusPropertyBase() {
         @Override
