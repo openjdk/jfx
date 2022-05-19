@@ -2172,7 +2172,6 @@ public class ListViewTest {
     private void attemptGC(WeakReference<? extends Object> weakRef, int n) {
         for (int i = 0; i < n; i++) {
             System.gc();
-            System.runFinalization();
 
             if (weakRef.get() == null) {
                 break;

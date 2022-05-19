@@ -20,35 +20,44 @@
 
 /* #undef GLIB_STATIC_COMPILATION */
 /* #undef GOBJECT_STATIC_COMPILATION */
+/* #undef G_INTL_STATIC_COMPILATION */
+/* #undef FFI_STATIC_BUILD */
 
 G_BEGIN_DECLS
 
-#define G_MINFLOAT  FLT_MIN
-#define G_MAXFLOAT  FLT_MAX
-#define G_MINDOUBLE DBL_MIN
-#define G_MAXDOUBLE DBL_MAX
-#define G_MINSHORT  SHRT_MIN
-#define G_MAXSHORT  SHRT_MAX
-#define G_MAXUSHORT USHRT_MAX
-#define G_MININT  INT_MIN
-#define G_MAXINT  INT_MAX
-#define G_MAXUINT UINT_MAX
-#define G_MINLONG LONG_MIN
-#define G_MAXLONG LONG_MAX
-#define G_MAXULONG  ULONG_MAX
+#define G_MINFLOAT      FLT_MIN
+#define G_MAXFLOAT      FLT_MAX
+#define G_MINDOUBLE     DBL_MIN
+#define G_MAXDOUBLE     DBL_MAX
+#define G_MINSHORT      SHRT_MIN
+#define G_MAXSHORT      SHRT_MAX
+#define G_MAXUSHORT     USHRT_MAX
+#define G_MININT        INT_MIN
+#define G_MAXINT        INT_MAX
+#define G_MAXUINT       UINT_MAX
+#define G_MINLONG       LONG_MIN
+#define G_MAXLONG       LONG_MAX
+#define G_MAXULONG      ULONG_MAX
 
 typedef signed char gint8;
 typedef unsigned char guint8;
+
 typedef signed short gint16;
 typedef unsigned short guint16;
+
 #define G_GINT16_MODIFIER "h"
 #define G_GINT16_FORMAT "hi"
 #define G_GUINT16_FORMAT "hu"
+
+
 typedef signed int gint32;
 typedef unsigned int guint32;
+
 #define G_GINT32_MODIFIER ""
 #define G_GINT32_FORMAT "i"
 #define G_GUINT32_FORMAT "u"
+
+
 #define G_HAVE_GINT64 1          /* deprecated, always true */
 
 G_GNUC_EXTENSION typedef signed long long gint64;
@@ -65,6 +74,7 @@ G_GNUC_EXTENSION typedef unsigned long long guint64;
 #define GLIB_SIZEOF_VOID_P 8
 #define GLIB_SIZEOF_LONG   4
 #define GLIB_SIZEOF_SIZE_T 8
+#define GLIB_SIZEOF_SSIZE_T 8
 
 typedef signed long long gssize;
 typedef unsigned long long gsize;
@@ -82,6 +92,7 @@ typedef unsigned long long gsize;
 #define GLIB_SIZEOF_VOID_P 4
 #define GLIB_SIZEOF_LONG   4
 #define GLIB_SIZEOF_SIZE_T 4
+#define GLIB_SIZEOF_SSIZE_T 4
 
 typedef signed int gssize;
 typedef unsigned int gsize;
@@ -143,8 +154,8 @@ typedef unsigned int guintptr;
 #endif
 
 #define GLIB_MAJOR_VERSION 2
-#define GLIB_MINOR_VERSION 62
-#define GLIB_MICRO_VERSION 2
+#define GLIB_MINOR_VERSION 72
+#define GLIB_MICRO_VERSION 0
 
 #define G_OS_WIN32
 #define G_PLATFORM_WIN32

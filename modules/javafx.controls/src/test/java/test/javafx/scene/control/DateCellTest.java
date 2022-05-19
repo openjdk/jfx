@@ -27,6 +27,8 @@ package test.javafx.scene.control;
 
 import java.time.LocalDate;
 
+import com.sun.javafx.tk.Toolkit;
+
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.scene.Group;
@@ -34,9 +36,9 @@ import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.CellShim;
 import javafx.scene.control.DateCell;
+import javafx.stage.Stage;
 
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils;
@@ -314,20 +316,27 @@ public class DateCellTest {
         assertEquals("editable", cell.editableProperty().getName());
     }
 
-    // When the cell was focused, but is no longer focused, we should cancel editing
-    // Check for focused pseudoClass state change?
-    @Ignore(value = "I'm not sure how to test this, since I need a scene & such to move focus around")
     @Test public void loseFocusWhileEditing() {
         Button other = new Button();
         Group root = new Group(other, cell);
         Scene scene = new Scene(root);
 
+        Stage stage = new Stage();
+        stage.setScene(scene);
+        stage.show();
+        stage.requestFocus();
+        Toolkit.getToolkit().firePulse();
+
         CellShim.updateItem(cell, today, false);
         cell.startEdit();
         cell.requestFocus();
+        Toolkit.getToolkit().firePulse();
+        assertTrue(cell.isEditing());
 
         other.requestFocus();
+        Toolkit.getToolkit().firePulse();
 
         assertFalse(cell.isEditing());
+        stage.hide();
     }
 }

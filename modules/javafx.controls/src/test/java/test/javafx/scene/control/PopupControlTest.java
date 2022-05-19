@@ -117,12 +117,6 @@ public class PopupControlTest {
         assertEquals("Hello Goodbye", popup.getStyleClass().toString());
     }
 
-    @org.junit.Ignore("getStyle should not return null per Node#setStyle")
-    @Test public void styleSetNullGetNull() {
-        popup.setStyle(null);
-        assertNull(popup.getStyle());
-    }
-
     // See Node#setStyle
     @Test public void styleSetNullGetEmptyString() {
         popup.setStyle(null);

@@ -43,6 +43,27 @@
 
 #include <string.h>
 
+#ifndef GST_DISABLE_GST_DEBUG
+#define GST_CAT_DEFAULT gst_pb_utils_codec_utils_ensure_debug_category()
+
+static GstDebugCategory *
+gst_pb_utils_codec_utils_ensure_debug_category (void)
+{
+  static gsize cat_gonce = 0;
+
+  if (g_once_init_enter (&cat_gonce)) {
+    GstDebugCategory *cat = NULL;
+
+    GST_DEBUG_CATEGORY_INIT (cat, "codec-utils", 0,
+        "GstPbUtils codec helper functions");
+
+    g_once_init_leave (&cat_gonce, (gsize) cat);
+  }
+
+  return (GstDebugCategory *) cat_gonce;
+}
+#endif /* GST_DISABLE_GST_DEBUG */
+
 #define GST_SIMPLE_CAPS_HAS_NAME(caps,name) \
     gst_structure_has_name(gst_caps_get_structure((caps),0),(name))
 
@@ -256,7 +277,7 @@ gst_codec_utils_aac_get_channels (const guint8 * audio_config, guint len)
  * normally determined using the AudioObjectType field which is in the first
  * 5 bits of @audio_config
  *
- * Returns: The profile as a const string and %NULL if the profile could not be
+ * Returns: (nullable): The profile as a const string and %NULL if the profile could not be
  * determined.
  */
 const gchar *
@@ -319,7 +340,7 @@ gst_codec_utils_aac_get_profile (const guint8 * audio_config, guint len)
  *     fields are appropriately shifted).
  *   * Bit 9:12 contains the channel configuration
  *
- * Returns: The level as a const string and %NULL if the level could not be
+ * Returns: (nullable): The level as a const string and %NULL if the level could not be
  * determined.
  */
 const gchar *
@@ -448,7 +469,7 @@ gst_codec_utils_aac_get_level (const guint8 * audio_config, guint len)
   else
     rcu += (rcu_ref + (rcu_ref - 1) * ((2 * num_cpe) - 1));
 
-  num_channels = num_sce + (2 * num_cpe) + num_lfe;
+  num_channels = num_sce + (2 * num_cpe);
 
   if (audio_object_type == 2) {
     /* AAC LC => return the level as per the 'AAC Profile' */
@@ -564,7 +585,7 @@ gst_codec_utils_aac_caps_set_level_and_profile (GstCaps * caps,
  * * Bit 13:15 - Reserved
  * * Bit 16:24 - Level indication
  *
- * Returns: The profile as a const string, or %NULL if there is an error.
+ * Returns: (nullable): The profile as a const string, or %NULL if there is an error.
  */
 const gchar *
 gst_codec_utils_h264_get_profile (const guint8 * sps, guint len)
@@ -665,7 +686,7 @@ gst_codec_utils_h264_get_profile (const guint8 * sps, guint len)
  * sequence parameter set into a string. The SPS is expected to have the
  * same format as for gst_codec_utils_h264_get_profile().
  *
- * Returns: The level as a const string, or %NULL if there is an error.
+ * Returns: (nullable): The level as a const string, or %NULL if there is an error.
  */
 const gchar *
 gst_codec_utils_h264_get_level (const guint8 * sps, guint len)
@@ -816,6 +837,59 @@ gst_codec_utils_h264_caps_set_level_and_profile (GstCaps * caps,
   GST_LOG ("level   : %s", (level) ? level : "---");
 
   return (level != NULL && profile != NULL);
+}
+
+/**
+ * gst_codec_utils_h264_get_profile_flags_level:
+ * @codec_data: (array length=len): H264 AVCC extradata
+ * @len: length of @codec_data
+ * @profile: (optional) (out): return location for h264 profile_idc or %NULL
+ * @flags: (optional) (out): return location for h264 constraint set flags or %NULL
+ * @level: (optional) (out): return location h264 level_idc or %NULL
+ *
+ * Parses profile, flags, and level from a H264 AVCC extradata/sequence_header.
+ * These are most commonly retrieved from a video/x-h264 caps with a codec_data
+ * buffer.
+ *
+ * The format of H264 AVCC extradata/sequence_header is documented in the
+ * ITU-T H.264 specification section 7.3.2.1.1 as well as in ISO/IEC 14496-15
+ * section 5.3.3.1.2.
+ *
+ * Returns: %TRUE on success, %FALSE on failure
+ *
+ * Since: 1.20
+ */
+gboolean
+gst_codec_utils_h264_get_profile_flags_level (const guint8 * codec_data,
+    guint len, guint8 * profile, guint8 * flags, guint8 * level)
+{
+  gboolean ret = FALSE;
+
+  g_return_val_if_fail (codec_data != NULL, FALSE);
+
+  if (len < 7) {
+    GST_WARNING ("avc codec data is too small");
+    goto done;
+  }
+  if (codec_data[0] != 1) {
+    GST_WARNING ("failed to parse avc codec version, must be 1");
+    goto done;
+  }
+
+  if (profile) {
+    *profile = codec_data[1];
+  }
+  if (flags) {
+    *flags = codec_data[2];
+  }
+  if (level) {
+    *level = codec_data[3];
+  }
+
+  ret = TRUE;
+
+done:
+  return ret;
 }
 
 /* forked from gsth265parse.c */
@@ -1127,7 +1201,7 @@ utils_get_scalable_format_range_extensions_profile (GstH265ExtensionProfile *
  * * Bit 44:87 - See below
  * * Bit 88:95 - general_level_idc
  *
- * Returns: The profile as a const string, or %NULL if there is an error.
+ * Returns: (nullable): The profile as a const string, or %NULL if there is an error.
  *
  * Since: 1.4
  */
@@ -1293,7 +1367,7 @@ gst_codec_utils_h265_get_profile (const guint8 * profile_tier_level, guint len)
  * profile_tier_level structure into a string. The profile_tier_level
  * is expected to have the same format as for gst_codec_utils_h264_get_profile().
  *
- * Returns: The tier as a const string, or %NULL if there is an error.
+ * Returns: (nullable): The tier as a const string, or %NULL if there is an error.
  *
  * Since: 1.4
  */
@@ -1330,7 +1404,7 @@ gst_codec_utils_h265_get_tier (const guint8 * profile_tier_level, guint len)
  * profile_tier_level structure into a string. The profiel_tier_level is
  * expected to have the same format as for gst_codec_utils_h264_get_profile().
  *
- * Returns: The level as a const string, or %NULL if there is an error.
+ * Returns: (nullable): The level as a const string, or %NULL if there is an error.
  *
  * Since: 1.4
  */
@@ -1480,7 +1554,7 @@ gst_codec_utils_h265_caps_set_level_tier_and_profile (GstCaps * caps,
  * object sequence start code. Only the first byte
  * (profile_and_level_indication) is used.
  *
- * Returns: The profile as a const string, or NULL if there is an error.
+ * Returns: (nullable): The profile as a const string, or NULL if there is an error.
  */
 const gchar *
 gst_codec_utils_mpeg4video_get_profile (const guint8 * vis_obj_seq, guint len)
@@ -1553,7 +1627,7 @@ gst_codec_utils_mpeg4video_get_profile (const guint8 * vis_obj_seq, guint len)
  * object sequence start code. Only the first byte
  * (profile_and_level_indication) is used.
  *
- * Returns: The level as a const string, or NULL if there is an error.
+ * Returns: (nullable): The level as a const string, or NULL if there is an error.
  */
 const gchar *
 gst_codec_utils_mpeg4video_get_level (const guint8 * vis_obj_seq, guint len)
@@ -1678,12 +1752,12 @@ gst_codec_utils_mpeg4video_caps_set_level_and_profile (GstCaps * caps,
 /**
  * gst_codec_utils_opus_parse_caps:
  * @caps: the #GstCaps to parse the data from
- * @rate: (out): the sample rate
- * @channels: (out): the number of channels
- * @channel_mapping_family: (out): the channel mapping family
- * @stream_count: (out): the number of independent streams
- * @coupled_count: (out): the number of stereo streams
- * @channel_mapping: (out) (array fixed-size=256): the mapping between the streams
+ * @rate: (optional) (out): the sample rate
+ * @channels: (optional) (out): the number of channels
+ * @channel_mapping_family: (optional) (out): the channel mapping family
+ * @stream_count: (optional) (out): the number of independent streams
+ * @coupled_count: (optional) (out): the number of stereo streams
+ * @channel_mapping: (optional) (out) (array fixed-size=256): the mapping between the streams
  *
  * Parses Opus caps and fills the different fields with defaults if possible.
  *
@@ -1799,7 +1873,7 @@ gst_codec_utils_opus_parse_caps (GstCaps * caps,
  * @channel_mapping_family: the channel mapping family
  * @stream_count: the number of independent streams
  * @coupled_count: the number of stereo streams
- * @channel_mapping: (allow-none) (array): the mapping between the streams
+ * @channel_mapping: (nullable) (array): the mapping between the streams
  *
  * Creates Opus caps from the given parameters.
  *
@@ -1964,7 +2038,7 @@ _gst_caps_set_buffer_array (GstCaps * caps, const gchar * field,
 /**
  * gst_codec_utils_opus_create_caps_from_header:
  * @header: OpusHead header
- * @comments: (allow-none): Comment header or NULL
+ * @comments: (nullable): Comment header or NULL
  *
  * Creates Opus caps from the given OpusHead @header and comment header
  * @comments.
@@ -2023,7 +2097,7 @@ gst_codec_utils_opus_create_caps_from_header (GstBuffer * header,
  * @channel_mapping_family: the channel mapping family
  * @stream_count: the number of independent streams
  * @coupled_count: the number of stereo streams
- * @channel_mapping: (allow-none) (array): the mapping between the streams
+ * @channel_mapping: (nullable) (array): the mapping between the streams
  * @pre_skip: Pre-skip in 48kHz samples or 0
  * @output_gain: Output gain or 0
  *
@@ -2100,14 +2174,14 @@ gst_codec_utils_opus_create_header (guint32 rate,
 /**
  * gst_codec_utils_opus_parse_header:
  * @header: the OpusHead #GstBuffer
- * @rate: (out): the sample rate
- * @channels: (out): the number of channels
- * @channel_mapping_family: (out): the channel mapping family
- * @stream_count: (out): the number of independent streams
- * @coupled_count: (out): the number of stereo streams
- * @channel_mapping: (out) (array fixed-size=256): the mapping between the streams
- * @pre_skip: (out): Pre-skip in 48kHz samples or 0
- * @output_gain: (out): Output gain or 0
+ * @rate: (optional) (out): the sample rate
+ * @channels: (optional) (out): the number of channels
+ * @channel_mapping_family: (optional) (out): the channel mapping family
+ * @stream_count: (optional) (out): the number of independent streams
+ * @coupled_count: (optional) (out): the number of stereo streams
+ * @channel_mapping: (optional) (out) (array fixed-size=256): the mapping between the streams
+ * @pre_skip: (optional) (out): Pre-skip in 48kHz samples or 0
+ * @output_gain: (optional) (out): Output gain or 0
  *
  * Parses the OpusHead header.
  *
@@ -2205,5 +2279,282 @@ done:
   gst_buffer_unmap (header, &map);
 
   return ret;
+}
+
+static gboolean
+h264_caps_structure_get_profile_flags_level (GstStructure * caps_st,
+    guint8 * profile, guint8 * flags, guint8 * level)
+{
+  const GValue *codec_data_value = NULL;
+  GstBuffer *codec_data = NULL;
+  GstMapInfo map;
+  gboolean ret = FALSE;
+  guint8 *data = NULL;
+  gsize size;
+
+  codec_data_value = gst_structure_get_value (caps_st, "codec_data");
+  if (!codec_data_value) {
+    GST_DEBUG
+        ("video/x-h264 caps did not have codec_data set, cannot parse profile, flags and level");
+    return FALSE;
+  }
+
+  codec_data = gst_value_get_buffer (codec_data_value);
+  if (!gst_buffer_map (codec_data, &map, GST_MAP_READ)) {
+    return FALSE;
+  }
+  data = map.data;
+  size = map.size;
+
+  if (!gst_codec_utils_h264_get_profile_flags_level (data, (guint) size,
+          profile, flags, level)) {
+    GST_WARNING
+        ("Failed to parse profile, flags and level from h264 codec data");
+    goto done;
+  }
+
+  ret = TRUE;
+
+done:
+  gst_buffer_unmap (codec_data, &map);
+
+  return ret;
+}
+
+static gboolean
+aac_caps_structure_get_audio_object_type (GstStructure * caps_st,
+    guint8 * audio_object_type)
+{
+  gboolean ret = FALSE;
+  const GValue *codec_data_value = NULL;
+  GstBuffer *codec_data = NULL;
+  GstMapInfo map;
+  guint8 *data = NULL;
+  gsize size;
+  GstBitReader br;
+
+  codec_data_value = gst_structure_get_value (caps_st, "codec_data");
+  if (!codec_data_value) {
+    GST_DEBUG
+        ("audio/mpeg pad did not have codec_data set, cannot parse audio object type");
+    return FALSE;
+  }
+
+  codec_data = gst_value_get_buffer (codec_data_value);
+  if (!gst_buffer_map (codec_data, &map, GST_MAP_READ)) {
+    return FALSE;
+  }
+  data = map.data;
+  size = map.size;
+
+  if (size < 2) {
+    GST_WARNING ("aac codec data is too small");
+    goto done;
+  }
+
+  gst_bit_reader_init (&br, data, size);
+  ret = gst_codec_utils_aac_get_audio_object_type (&br, audio_object_type);
+
+done:
+  gst_buffer_unmap (codec_data, &map);
+
+  return ret;
+}
+
+static gboolean
+hevc_caps_get_mime_codec (GstCaps * caps, gchar ** mime_codec)
+{
+  GstStructure *caps_st = NULL;
+  const GValue *codec_data_value = NULL;
+  GstBuffer *codec_data = NULL;
+  GstMapInfo map;
+  gboolean ret = FALSE;
+  const gchar *stream_format;
+  guint8 *data = NULL;
+  gsize size;
+  guint16 profile_space;
+  guint8 tier_flag;
+  guint16 profile_idc;
+  guint32 compat_flags;
+  guchar constraint_indicator_flags[6];
+  guint8 level_idc;
+  guint32 compat_flag_parameter = 0;
+  GString *codec_string;
+  const guint8 *profile_tier_level;
+  gint last_flag_index;
+
+  caps_st = gst_caps_get_structure (caps, 0);
+  codec_data_value = gst_structure_get_value (caps_st, "codec_data");
+  stream_format = gst_structure_get_string (caps_st, "stream-format");
+  if (!codec_data_value) {
+    GST_DEBUG ("video/x-h265 caps did not have codec_data set, cannot parse");
+    return FALSE;
+  } else if (!stream_format) {
+    GST_DEBUG
+        ("video/x-h265 caps did not have stream-format set, cannot parse");
+    return FALSE;
+  }
+
+  codec_data = gst_value_get_buffer (codec_data_value);
+  if (!gst_buffer_map (codec_data, &map, GST_MAP_READ)) {
+    return FALSE;
+  }
+  data = map.data;
+  size = map.size;
+
+  /* HEVCDecoderConfigurationRecord is at a minimum 23 bytes long */
+  if (size < 23) {
+    GST_DEBUG ("Incomplete HEVCDecoderConfigurationRecord");
+    goto done;
+  }
+
+  if (!g_str_equal (stream_format, "hev1")
+      && !g_str_equal (stream_format, "hvc1")) {
+    GST_DEBUG ("Unknown stream-format %s", stream_format);
+    goto done;
+  }
+
+  profile_tier_level = data + 1;
+  profile_space = (profile_tier_level[0] & 0x11) >> 6;
+  tier_flag = (profile_tier_level[0] & 0x001) >> 5;
+  profile_idc = (profile_tier_level[0] & 0x1f);
+
+  compat_flags = GST_READ_UINT32_BE (data + 2);
+  for (unsigned i = 0; i < 6; ++i)
+    constraint_indicator_flags[i] = GST_READ_UINT8 (data + 6 + i);
+
+  level_idc = data[12];
+
+  /* The 32 bits of the compat_flags, but in reverse bit order */
+  compat_flags =
+      ((compat_flags & 0xaaaaaaaa) >> 1) | ((compat_flags & 0x55555555) << 1);
+  compat_flags =
+      ((compat_flags & 0xcccccccc) >> 2) | ((compat_flags & 0x33333333) << 2);
+  compat_flags =
+      ((compat_flags & 0xf0f0f0f0) >> 4) | ((compat_flags & 0x0f0f0f0f) << 4);
+  compat_flags =
+      ((compat_flags & 0xff00ff00) >> 8) | ((compat_flags & 0x00ff00ff) << 8);
+  compat_flag_parameter = (compat_flags >> 16) | (compat_flags << 16);
+
+  codec_string = g_string_new (stream_format);
+  codec_string = g_string_append_c (codec_string, '.');
+  if (profile_space)
+    codec_string = g_string_append_c (codec_string, 'A' + profile_space - 1);
+  g_string_append_printf (codec_string, "%" G_GUINT16_FORMAT ".%X.%c%d",
+      profile_idc, compat_flag_parameter, tier_flag ? 'H' : 'L', level_idc);
+
+  /* Each of the 6 bytes of the constraint flags, starting from the byte containing the
+   * progressive_source_flag, each encoded as a hexadecimal number, and the encoding
+   * of each byte separated by a period; trailing bytes that are zero may be omitted.
+   */
+  last_flag_index = 5;
+  while (last_flag_index >= 0
+      && (int) (constraint_indicator_flags[last_flag_index]) == 0)
+    --last_flag_index;
+  for (gint i = 0; i <= last_flag_index; ++i) {
+    g_string_append_printf (codec_string, ".%02X",
+        constraint_indicator_flags[i]);
+  }
+
+  *mime_codec = g_string_free (codec_string, FALSE);
+
+  ret = TRUE;
+
+done:
+  gst_buffer_unmap (codec_data, &map);
+  return ret;
+}
+
+/**
+ * gst_codec_utils_caps_get_mime_codec:
+ * @caps: A #GstCaps to convert to mime codec
+ *
+ * Converts @caps to a RFC 6381 compatible codec string if possible.
+ *
+ * Useful for providing the 'codecs' field inside the 'Content-Type' HTTP
+ * header for containerized formats, such as mp4 or matroska.
+ *
+ * Registered codecs can be found at http://mp4ra.org/#/codecs
+ *
+ * Returns: (transfer full) (nullable): a RFC 6381 compatible codec string or %NULL
+ *
+ * Since: 1.20
+ */
+gchar *
+gst_codec_utils_caps_get_mime_codec (GstCaps * caps)
+{
+  gchar *mime_codec = NULL;
+  GstStructure *caps_st = NULL;
+  const gchar *media_type = NULL;
+
+  g_return_val_if_fail (caps != NULL, NULL);
+  g_return_val_if_fail (gst_caps_is_fixed (caps), NULL);
+
+  caps_st = gst_caps_get_structure (caps, 0);
+  if (caps_st == NULL) {
+    GST_WARNING ("Failed to get structure from caps");
+    goto done;
+  }
+
+  media_type = gst_structure_get_name (caps_st);
+
+  if (g_strcmp0 (media_type, "video/x-h264") == 0) {
+    /* avc1.AABBCC
+     *   AA = profile
+     *   BB = constraint set flags
+     *   CC = level
+     */
+    guint8 profile = 0;
+    guint8 flags = 0;
+    guint8 level = 0;
+
+    if (!h264_caps_structure_get_profile_flags_level (caps_st, &profile, &flags,
+            &level)) {
+      GST_DEBUG
+          ("h264 caps did not contain 'codec_data', cannot determine detailed codecs info");
+      mime_codec = g_strdup ("avc1");
+    } else {
+      mime_codec = g_strdup_printf ("avc1.%02X%02X%02X", profile, flags, level);
+    }
+  } else if (g_strcmp0 (media_type, "video/x-h265") == 0) {
+    if (!hevc_caps_get_mime_codec (caps, &mime_codec)) {
+      GST_DEBUG ("h265 caps parsing failed");
+      mime_codec = g_strdup ("hev1");
+    }
+  } else if (g_strcmp0 (media_type, "video/x-av1") == 0) {
+    /* TODO: Some browsers won't play the video unless more codec information is
+     * available in the mime codec for av1. This is documented in
+     * https://aomediacodec.github.io/av1-isobmff/#codecsparam */
+    mime_codec = g_strdup ("av01");
+  } else if (g_strcmp0 (media_type, "video/x-vp8") == 0) {
+    /* TODO: most browsers won't play the video unless more codec information is
+     * available in the mime codec for vp8. */
+    mime_codec = g_strdup ("vp08");
+  } else if (g_strcmp0 (media_type, "video/x-vp9") == 0) {
+    /* TODO: most browsers won't play the video unless more codec information is
+     * available in the mime codec for vp9. This is documented in
+     * https://www.webmproject.org/vp9/mp4/ */
+    mime_codec = g_strdup ("vp09");
+  } else if (g_strcmp0 (media_type, "image/jpeg") == 0) {
+    mime_codec = g_strdup ("mjpg");
+  } else if (g_strcmp0 (media_type, "audio/mpeg") == 0) {
+    guint8 audio_object_type = 0;
+    if (aac_caps_structure_get_audio_object_type (caps_st, &audio_object_type)) {
+      mime_codec = g_strdup_printf ("mp4a.40.%u", audio_object_type);
+    } else {
+      mime_codec = g_strdup ("mp4a.40");
+    }
+  } else if (g_strcmp0 (media_type, "audio/x-opus") == 0) {
+    mime_codec = g_strdup ("opus");
+  } else if (g_strcmp0 (media_type, "audio/x-mulaw") == 0) {
+    mime_codec = g_strdup ("ulaw");
+  } else if (g_strcmp0 (media_type, "audio/x-adpcm") == 0) {
+    if (g_strcmp0 (gst_structure_get_string (caps_st, "layout"), "g726") == 0) {
+      mime_codec = g_strdup ("g726");
+    }
+  }
+
+done:
+  return mime_codec;
 }
 #endif // GSTREAMER_LITE

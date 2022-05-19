@@ -89,7 +89,6 @@ public class AccordionTitlePaneLeakTest {
         accordion.getPanes().clear();
         for (int i = 0; i < 10; i++) {
             System.gc();
-            System.runFinalization();
             if (weakRefToPane.get() == null) {
                 break;
             }

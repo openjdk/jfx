@@ -63,6 +63,8 @@ struct _GstAudioPanoramaClass {
 
 GType gst_audio_panorama_get_type (void);
 
+GST_ELEMENT_REGISTER_DECLARE (audiopanorama);
+
 G_END_DECLS
 
 #endif /* __GST_AUDIO_PANORAMA_H__ */

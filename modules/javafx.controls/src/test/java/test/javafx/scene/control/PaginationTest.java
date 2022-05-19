@@ -47,8 +47,8 @@ import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import javafx.util.Callback;
 
+import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import test.com.sun.javafx.pgstub.StubToolkit;
@@ -72,6 +72,10 @@ public class PaginationTest {
         scene = new Scene(root);
         stage = new Stage();
         stage.setScene(scene);
+    }
+
+    @After public void tearDown() {
+        stage.hide();
     }
 
     /*********************************************************************
@@ -180,7 +184,7 @@ public class PaginationTest {
         assertEquals(2, pagination.getCurrentPageIndex());
     }
 
-    @Ignore @Test public void setCurrentPageIndexAndNavigateWithMouse() {
+    @Test public void setCurrentPageIndexAndNavigateWithMouse() {
         pagination.setPageCount(25);
         pagination.setPageFactory(pageIndex -> {
             Node n = createPage(pageIndex);
@@ -201,6 +205,8 @@ public class PaginationTest {
 
         SceneHelper.processMouseEvent(scene,
             MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_PRESSED, xval+170, yval+380));
+        SceneHelper.processMouseEvent(scene,
+            MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_RELEASED, xval+170, yval+380));
         tk.firePulse();
 
         assertEquals(3, pagination.getCurrentPageIndex());
