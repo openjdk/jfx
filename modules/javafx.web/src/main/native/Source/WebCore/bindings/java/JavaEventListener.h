@@ -27,11 +27,8 @@
 
 #include "Event.h"
 #include "EventListener.h"
-#include "Node.h"
-
-#if PLATFORM(JAVA)
 #include "EventListenerManager.h"
-#endif
+#include "Node.h"
 
 #include <wtf/Vector.h>
 #include <wtf/java/JavaRef.h>

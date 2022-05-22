@@ -26,6 +26,7 @@
 #include "EventListenerManager.h"
 #include "JavaEventListener.h"
 #include "DOMWindow.h"
+#include <stdio.h>
 
 namespace WebCore {
 
@@ -55,6 +56,7 @@ void EventListenerManager::unregisterListener(JavaEventListener *ptr)
          if (it->second && it->second->use_count() == 1) {
              delete it->second;
              it->second = nullptr;
+             listener_lists.erase(it); // remove from list
          }
 
          if (it->second && it->second->use_count() > 1)
@@ -88,9 +90,29 @@ void EventListenerManager::unregisterDOMWindow(DOMWindow* window)
     std::multimap<JavaEventListener*, DOMWindow*>::iterator win_it;
     for (win_it = windowHasEvent.begin(); win_it != windowHasEvent.end(); win_it++) {
         // de register associated event listeners with window
-        if(window == win_it->second) {
+        if (window == win_it->second) {
             unregisterListener(win_it->first);
         }
+    }
+}
+
+void EventListenerManager::resetDOMWindow(DOMWindow* window)
+{
+    std::multimap<JavaEventListener*, DOMWindow*>::iterator win_it;
+    std::map<JavaEventListener*, JavaObjectWrapperHandler*>::iterator it;
+    bool isReferringToOtherListener = true;
+
+    for (win_it = windowHasEvent.begin(); win_it != windowHasEvent.end(); win_it++) {
+        it = listener_lists.find(win_it->first);
+        if (window == win_it->second && it->second && it != listener_lists.end() && it->second->use_count() == 1)
+            isReferringToOtherListener = false;
+        else
+            isReferringToOtherListener = true;
+    }
+
+    for (win_it = windowHasEvent.begin(); win_it != windowHasEvent.end() && !isReferringToOtherListener; win_it++) {
+        if (window == win_it->second)
+           windowHasEvent.erase(win_it->first);
     }
 }
 

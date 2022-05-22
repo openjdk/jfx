@@ -47,7 +47,7 @@ bool JavaEventListener::operator==(const EventListener& other) const
     const JavaEventListener* jother = other.isJavaEventListener()
                                         ? static_cast<const JavaEventListener*>(&other)
                                         : nullptr;
-    return jother && ( this == jother);
+    return jother && (this == jother);
 }
 
 void JavaEventListener::handleEvent(ScriptExecutionContext& context, Event& event)

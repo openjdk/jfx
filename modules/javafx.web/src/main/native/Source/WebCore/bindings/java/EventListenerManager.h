@@ -77,6 +77,7 @@ public:
     void unregisterListener(JavaEventListener *ptr) ;
     void registerDOMWindow(DOMWindow*, JavaEventListener *ptr);
     void unregisterDOMWindow(DOMWindow*);
+    void resetDOMWindow(DOMWindow*);
     jobject get_listener(JavaEventListener *ptr);
 
 private:

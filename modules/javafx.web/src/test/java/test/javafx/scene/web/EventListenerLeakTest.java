@@ -40,13 +40,11 @@ import javafx.beans.value.ChangeListener;
 import javafx.concurrent.Worker;
 import javafx.scene.web.WebEngine;
 import javafx.scene.web.WebView;
-import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.w3c.dom.events.Event;
 import org.w3c.dom.events.EventListener;
 import org.w3c.dom.events.EventTarget;
-
 import static org.junit.Assert.*;
 import org.junit.Before;
 import org.w3c.dom.Document;
@@ -85,6 +83,29 @@ public class EventListenerLeakTest {
 
         static MyListener create() {
             MyListener listener = new MyListener();
+            listenerRefs.add(new WeakReference<>(listener));
+            return listener;
+        }
+
+        @Override
+        public void handleEvent(Event evt) {
+            clickCount.incrementAndGet();
+        }
+    }
+
+    static class MyListener1 implements EventListener {
+
+        private final AtomicInteger clickCount = new AtomicInteger(0);
+
+        private MyListener1() {
+        }
+
+        int getClickCount() {
+            return clickCount.get();
+        }
+
+        static MyListener1 create() {
+            MyListener1 listener = new MyListener1();
             listenerRefs.add(new WeakReference<>(listener));
             return listener;
         }
@@ -601,8 +622,9 @@ public class EventListenerLeakTest {
     }
 
     /**
-     * Test checks listener is not released in
-     * WebView , in case WebView load new content.
+     * Test checks that this check is testing that the immediately previous click
+     * does not get delivered since the associated DOM node is not part of the page any more.
+     * This is why the count remains at 1 (from the first click on the original page).
      */
     @Test
     public void TestStrongRefNewContentLoad() throws Exception {
@@ -627,13 +649,370 @@ public class EventListenerLeakTest {
         // load new content
         loadContent(webView1, HTML2);
 
-        // Verify that all listeners have not been released
-        Thread.sleep(100);
         submit(() -> {
             // Send click event
             click(webView1, 0);
         });
 
+        // Verify that all listeners have not been released
+        Thread.sleep(100);
         assertEquals("Click count", 1, listeners1.get(0).getClickCount());
+
+        // Clear strong reference to listener and WebView
+        listeners1.clear();
+        domNodes1.clear();
+        webViewRefs.clear();
+        webView1 = null;
+
+        // Verify that there is no strong reference to the WebView
+        assertNumActive("WebView", webViewRefs, 0);
+
+        // Verify that no listeners are strongly held
+        assertNumActive("MyListener", listenerRefs, 0);
+        listenerRefs.clear();
+    }
+
+    /**
+     * Test that the listener ref cont increase on addevent and decrease on remove event
+     */
+    @Test
+    public void oneWebViewRefCountTest() throws Exception {
+        webView2 = null; // unused
+
+        // Load HTML content and get list of DOM nodes
+        loadContent(webView1, HTML);
+
+        final List<WeakReference<MyListener>> listeners = new ArrayList<>();
+        submit(() -> {
+            domNodes1 = getDomNodes(webView1);
+            assertEquals(NUM_DOM_NODES, domNodes1.size());
+
+            // Create listeners
+            MyListener listener = MyListener.create();
+            listeners.add(new WeakReference<>(listener));
+
+            for (int i = 0; i < 3; i++) {
+                domNodes1.get(i).addEventListener("click", listeners.get(0).get(), false);
+            }
+        });
+
+        submit(() -> {
+            // Send clilck events
+            click(webView1, 0);
+            click(webView1, 1);
+            click(webView1, 2);
+        });
+
+        // Verify that the events are delivered to the listeners (0 and 2 are same)
+        Thread.sleep(100);
+        assertEquals("Click count", 3, listeners.get(0).get().getClickCount());
+
+        //save for later
+        MyListener tmpListener = listeners.get(0).get();
+
+        // remove previously registered listeners fro dom nodes
+        submit(() -> {
+            domNodes1 = getDomNodes(webView1);
+            assertEquals(NUM_DOM_NODES, domNodes1.size());
+
+            //
+            for (int i = 0; i < 3; i++) {
+                domNodes1.get(i).removeEventListener("click", listeners.get(0).get(), false);
+            }
+        });
+
+        submit(() -> {
+            // Send clilck events
+            click(webView1, 0);
+            click(webView1, 1);
+            click(webView1, 2);
+        });
+
+        // Verify that the events are delivered to the listeners (0 and 2 are same)
+        Thread.sleep(100);
+        assertEquals("Click count", 3, listeners.get(0).get().getClickCount());
+
+
+        // add events listeners again
+        submit(() -> {
+            domNodes1 = getDomNodes(webView1);
+            assertEquals(NUM_DOM_NODES, domNodes1.size());
+
+            // Create another listeners
+            MyListener listener = MyListener.create();
+            listeners.add(new WeakReference<>(listener));
+
+            for (int i = 0; i < 3; i++) {
+                domNodes1.get(i).addEventListener("click", listeners.get(1).get(), false);
+            }
+        });
+
+        tmpListener = null;
+        //save for later
+        MyListener tmpListener1 = listeners.get(0).get();
+
+        submit(() -> {
+            // Send clilck events
+            click(webView1, 0);
+            click(webView1, 1);
+            click(webView1, 2);
+        });
+
+        // Verify that the events are delivered to the listeners (0 and 2 are same)
+        Thread.sleep(100);
+        assertEquals("Click count", 6, listeners.get(1).get().getClickCount() + listeners.get(0).get().getClickCount());
+
+        // add events listeners again
+        submit(() -> {
+            domNodes1 = getDomNodes(webView1);
+            assertEquals(NUM_DOM_NODES, domNodes1.size());
+
+            // Create another listeners
+            MyListener listener = MyListener.create();
+            listeners.add(new WeakReference<>(listener));
+
+            for (int i = 0; i < 3; i++) {
+                domNodes1.get(i).removeEventListener("click", listeners.get(1).get(), false);
+            }
+        });
+
+        submit(() -> {
+            // Send clilck events
+            click(webView1, 0);
+            click(webView1, 1);
+            click(webView1, 2);
+        });
+
+        // Verify that the events are delivered to the listeners (0 and 2 are same)
+        Thread.sleep(100);
+        assertEquals("Click count", 6, listeners.get(1).get().getClickCount() + listeners.get(0).get().getClickCount());
+
+        // Release strong reference to listener and the DOM nodes
+        listeners.clear();
+        domNodes1.clear();
+        tmpListener1 = null;
+
+        // Verify that no listeners are strongly held
+        assertNumActive("MyListener", listenerRefs, 0);
+        listenerRefs.clear();
+    }
+
+    /**
+     * Test that there is no leak when a listener is implicitly released when webview goes out of scope.
+     */
+    @Test
+    public void oneWebViewMultipleListenersImplicitRelease() throws Exception {
+        webView2 = null; // unused
+
+        // Load HTML content and get list of DOM nodes
+        loadContent(webView1, HTML);
+
+        final List<WeakReference<MyListener>> listeners = new ArrayList<>();
+        submit(() -> {
+            domNodes1 = getDomNodes(webView1);
+            assertEquals(NUM_DOM_NODES, domNodes1.size());
+
+            // Create listeners and attach to DOM node 0
+            MyListener listenerA = MyListener.create();
+            MyListener listenerB = MyListener.create();
+
+            listeners.add(new WeakReference<>(listenerA));
+            listeners.add(new WeakReference<>(listenerB));
+            listeners.add(new WeakReference<>(listenerA));
+
+            for (int i = 0; i < 3; i++) {
+                domNodes1.get(i).addEventListener("click", listeners.get(i).get(), false);
+            }
+        });
+
+        // Confirm that listeners(0) == listeners(2)
+        assertSame(listeners.get(0).get(), listeners.get(2).get());
+
+        // Verify that neither listener has been released
+        assertNumActive("MyListener", listenerRefs, 2);
+        assertNotNull(listeners.get(0).get());
+        assertNotNull(listeners.get(1).get());
+        assertNotNull(listeners.get(2).get());
+
+        submit(() -> {
+            // Send clilck events
+            click(webView1, 0);
+            click(webView1, 1);
+            click(webView1, 2);
+        });
+
+        // Verify that the events are delivered
+        Thread.sleep(100);
+        assertEquals("Click count", 2, listeners.get(0).get().getClickCount());
+
+        // make web view , goes out of scope
+        domNodes1.clear();
+        webView1 = null;
+
+        Thread.sleep(100);
+        // Verify that active listener
+        assertNumActive("MyListener", listenerRefs, 0);
+        listenerRefs.clear();
+    }
+
+    /**
+     * Test that there is no leak when a listener is implicitly released when webview goes out of scope.
+     */
+    @Test
+    public void multipleWebViewMultipleListenersImplicitRelease() throws Exception {
+
+        // Load HTML content and get list of DOM nodes
+        loadContent(webView1, HTML);
+        loadContent(webView2, HTML);
+
+        final List<WeakReference<MyListener>> listeners = new ArrayList<>();
+
+        submit(() -> {
+            domNodes1 = getDomNodes(webView1);
+            assertEquals(NUM_DOM_NODES, domNodes1.size());
+
+            // Create listeners and attach to DOM node
+            MyListener listenerA = MyListener.create();
+            MyListener listenerB = MyListener.create();
+
+            listeners.add(new WeakReference<>(listenerA));
+            listeners.add(new WeakReference<>(listenerB));
+            listeners.add(new WeakReference<>(listenerA));
+
+            for (int i = 0; i < 3; i++) {
+                domNodes1.get(i).addEventListener("click", listeners.get(i).get(), false);
+            }
+        });
+
+        submit(() -> {
+            domNodes2 = getDomNodes(webView2);
+            assertEquals(NUM_DOM_NODES, domNodes1.size());
+
+            // Create listeners and attach to DOM node
+            MyListener listenerA = MyListener.create();
+            MyListener listenerB = MyListener.create();
+
+            listeners.add(new WeakReference<>(listenerA));
+            listeners.add(new WeakReference<>(listenerB));
+
+            domNodes2.get(0).addEventListener("click", listeners.get(3).get(), false);
+            domNodes2.get(1).addEventListener("click", listeners.get(4).get(), false);
+            // add existing first listener shared
+            listeners.add(listeners.get(0));
+            domNodes2.get(2).addEventListener("click", listeners.get(0).get(), false);
+        });
+
+        Thread.sleep(100);
+        // verify active listener count
+        assertNumActive("MyListener", listenerRefs, 4);
+
+        submit(() -> {
+            // Send clilck events
+            click(webView1, 0);
+            click(webView1, 1);
+            click(webView1, 2);
+            click(webView2, 0);
+            click(webView2, 1);
+            click(webView2, 2);
+        });
+
+        // Verify that the events are delivered to both webviews
+        Thread.sleep(100);
+        assertEquals("Click count", 3, listeners.get(0).get().getClickCount());
+
+        domNodes1.clear();
+        webView1 = null;
+
+        submit(() -> {
+            // Send clilck events to webview2
+            click(webView2, 0);
+            click(webView2, 1);
+            click(webView2, 2);
+        });
+
+        // Verify that the events are delivered to webview2
+        Thread.sleep(100);
+        assertEquals("Click count", 4, listeners.get(0).get().getClickCount());
+        assertEquals("Click count", 4, listeners.get(2).get().getClickCount());
+        // Verify that listener is still strongly held
+        assertNumActive("listeners", listenerRefs, 3);
+
+        //removed shared listener
+        submit(() -> {
+            domNodes2 = getDomNodes(webView2);
+            domNodes2.get(2).removeEventListener("click", listeners.get(4).get(), false);
+        });
+
+        submit(() -> {
+            // Send clilck events to webview2
+            click(webView2, 2);
+        });
+
+        // Verify that the event is not delivered to webview2 for shared listener
+        Thread.sleep(100);
+        assertEquals("Click count", 2, listeners.get(4).get().getClickCount());
+
+        // check active listeners
+        listeners.clear();
+        domNodes2.clear();
+        webView2 = null;
+        Thread.sleep(100);
+        // Verify that active listener
+        assertNumActive("MyListener", listenerRefs, 0);
+        listenerRefs.clear();
+    }
+
+    /**
+     * Test that multiple listeners on same node
+     */
+    @Test
+    public void oneWebViewMultipleListenerSameNode() throws Exception {
+        webView2 = null; // unused
+
+        // Load HTML content and get list of DOM nodes
+        loadContent(webView1, HTML);
+
+        final List<MyListener> listeners = new ArrayList<>();
+        submit(() -> {
+            domNodes1 = getDomNodes(webView1);
+            assertEquals(NUM_DOM_NODES, domNodes1.size());
+
+            // Create listener and attach to DOM node 0
+            MyListener myListener1 = MyListener.create();
+            MyListener myListener2 = MyListener.create();
+            listeners.add(myListener1);
+            listeners.add(myListener2);
+            domNodes1.get(0).addEventListener("click", listeners.get(0), false);
+            domNodes1.get(0).addEventListener("click", listeners.get(1), false);
+
+            // Send clilck event
+            click(webView1, 0);
+        });
+
+        Thread.sleep(100);
+        // Verify that the event is delivered to the listener
+        assertEquals("Click count", 1, listeners.get(0).getClickCount());
+        assertEquals("Click count", 1, listeners.get(0).getClickCount());
+
+        submit(() -> {
+            // Remove event listener
+            domNodes1.get(0).removeEventListener("click", listeners.get(0), false);
+            // Send clilck event
+            click(webView1, 0);
+        });
+
+        // Verify that listener has been released
+        assertEquals("Click count", 1, listeners.get(0).getClickCount());
+        assertEquals("Click count", 2, listeners.get(1).getClickCount());
+
+        // make web view , goes out of scope
+        domNodes1.clear();
+        webView1 = null;
+        listeners.clear();
+
+        Thread.sleep(100);
+        // Verify that active listener
+        assertNumActive("MyListener", listenerRefs, 0);
+        listenerRefs.clear();
     }
 }
