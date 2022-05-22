@@ -64,7 +64,7 @@ void EventListenerManager::unregisterListener(JavaEventListener *ptr)
      }
 }
 
-jobject EventListenerManager::get_listener(JavaEventListener *ptr)
+JGObject EventListenerManager::get_listener(JavaEventListener *ptr)
 {
     std::map<JavaEventListener*, JavaObjectWrapperHandler*>::iterator it;
     it = listener_lists.find(ptr);

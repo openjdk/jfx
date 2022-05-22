@@ -45,22 +45,21 @@ class JavaObjectWrapperHandler;
 
 
 class JavaObjectWrapperHandler {
-    jobject handler_;
+    JGObject handler_;
     unsigned int ref_count = 0;
 public:
     JavaObjectWrapperHandler(const JLObject& handler) {
         JNIEnv *env = nullptr;
         env = JavaScriptCore_GetJavaEnv();
-        handler_ = env->NewGlobalRef(handler);
+        handler_ = handler;
     }
 
     ~JavaObjectWrapperHandler() {
         JNIEnv *env = nullptr;
         env = JavaScriptCore_GetJavaEnv();
         env->DeleteGlobalRef(handler_);
-        handler_ = NULL;
     }
-    jobject get_listener() { return handler_; }
+    JGObject get_listener() { return handler_; }
     void ref() { ++ref_count; }
     void dref() { --ref_count; }
     unsigned int use_count() { return ref_count;}
@@ -78,7 +77,7 @@ public:
     void registerDOMWindow(DOMWindow*, JavaEventListener *ptr);
     void unregisterDOMWindow(DOMWindow*);
     void resetDOMWindow(DOMWindow*);
-    jobject get_listener(JavaEventListener *ptr);
+    JGObject get_listener(JavaEventListener *ptr);
 
 private:
     EventListenerManager();
