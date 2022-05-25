@@ -93,29 +93,6 @@ public class EventListenerLeakTest {
         }
     }
 
-    static class MyListener1 implements EventListener {
-
-        private final AtomicInteger clickCount = new AtomicInteger(0);
-
-        private MyListener1() {
-        }
-
-        int getClickCount() {
-            return clickCount.get();
-        }
-
-        static MyListener1 create() {
-            MyListener1 listener = new MyListener1();
-            listenerRefs.add(new WeakReference<>(listener));
-            return listener;
-        }
-
-        @Override
-        public void handleEvent(Event evt) {
-            clickCount.incrementAndGet();
-        }
-    }
-
     @BeforeClass
     public static void setupOnce() throws Exception {
         final CountDownLatch startupLatch = new CountDownLatch(1);
@@ -628,15 +605,16 @@ public class EventListenerLeakTest {
      */
     @Test
     public void TestStrongRefNewContentLoad() throws Exception {
+        webView2 = null;
         // Load HTML content and get list of DOM nodes
         loadContent(webView1, HTML);
 
-        final List<MyListener> listeners1 = new ArrayList<>();
+        final List<MyListener> listeners= new ArrayList<>();
         submit(() -> {
             domNodes1 = getDomNodes(webView1);
 
-            listeners1.add(MyListener.create());
-            domNodes1.get(0).addEventListener("click", listeners1.get(0), false);
+            listeners.add(MyListener.create());
+            domNodes1.get(0).addEventListener("click", listeners.get(0), false);
 
             // Send clilck event to node 0 in webview1
             click(webView1, 0);
@@ -644,7 +622,7 @@ public class EventListenerLeakTest {
 
         // Verify that the event is delivered to the right listener
         Thread.sleep(100);
-        assertEquals("Click count", 1, listeners1.get(0).getClickCount());
+        assertEquals("Click count", 1, listeners.get(0).getClickCount());
 
         // load new content
         loadContent(webView1, HTML2);
@@ -654,26 +632,22 @@ public class EventListenerLeakTest {
             click(webView1, 0);
         });
 
-        // Verify that all listeners have not been released
+        // Verify that the click event is not delivered to the event handler.
         Thread.sleep(100);
-        assertEquals("Click count", 1, listeners1.get(0).getClickCount());
+        assertEquals("Click count", 1, listeners.get(0).getClickCount());
+        // Verify that even a new content has been loaded , previously register listener is active
+        assertNumActive("MyListener", listenerRefs, 1);
 
-        // Clear strong reference to listener and WebView
-        listeners1.clear();
+        // Release strong reference to listener and the DOM nodes
+        listeners.clear();
         domNodes1.clear();
-        webViewRefs.clear();
-        webView1 = null;
-
-        // Verify that there is no strong reference to the WebView
-        assertNumActive("WebView", webViewRefs, 0);
 
         // Verify that no listeners are strongly held
         assertNumActive("MyListener", listenerRefs, 0);
-        listenerRefs.clear();
     }
 
     /**
-     * Test that the listener ref cont increase on addevent and decrease on remove event
+     * Test that the listener ref count increase on addevent and decrease on remove event
      */
     @Test
     public void oneWebViewRefCountTest() throws Exception {
@@ -703,19 +677,15 @@ public class EventListenerLeakTest {
             click(webView1, 2);
         });
 
-        // Verify that the events are delivered to the listeners (0 and 2 are same)
+        // Verify that all three refer to same listener
         Thread.sleep(100);
         assertEquals("Click count", 3, listeners.get(0).get().getClickCount());
 
         //save for later
         MyListener tmpListener = listeners.get(0).get();
 
-        // remove previously registered listeners fro dom nodes
+        // remove previously registered listeners from dom nodes
         submit(() -> {
-            domNodes1 = getDomNodes(webView1);
-            assertEquals(NUM_DOM_NODES, domNodes1.size());
-
-            //
             for (int i = 0; i < 3; i++) {
                 domNodes1.get(i).removeEventListener("click", listeners.get(0).get(), false);
             }
@@ -728,10 +698,9 @@ public class EventListenerLeakTest {
             click(webView1, 2);
         });
 
-        // Verify that the events are delivered to the listeners (0 and 2 are same)
+        // verify that the events are not delivered, which is why the count should be remains at 3.
         Thread.sleep(100);
         assertEquals("Click count", 3, listeners.get(0).get().getClickCount());
-
 
         // add events listeners again
         submit(() -> {
@@ -758,10 +727,6 @@ public class EventListenerLeakTest {
             click(webView1, 2);
         });
 
-        // Verify that the events are delivered to the listeners (0 and 2 are same)
-        Thread.sleep(100);
-        assertEquals("Click count", 6, listeners.get(1).get().getClickCount() + listeners.get(0).get().getClickCount());
-
         // add events listeners again
         submit(() -> {
             domNodes1 = getDomNodes(webView1);
@@ -776,17 +741,6 @@ public class EventListenerLeakTest {
             }
         });
 
-        submit(() -> {
-            // Send clilck events
-            click(webView1, 0);
-            click(webView1, 1);
-            click(webView1, 2);
-        });
-
-        // Verify that the events are delivered to the listeners (0 and 2 are same)
-        Thread.sleep(100);
-        assertEquals("Click count", 6, listeners.get(1).get().getClickCount() + listeners.get(0).get().getClickCount());
-
         // Release strong reference to listener and the DOM nodes
         listeners.clear();
         domNodes1.clear();
@@ -794,7 +748,6 @@ public class EventListenerLeakTest {
 
         // Verify that no listeners are strongly held
         assertNumActive("MyListener", listenerRefs, 0);
-        listenerRefs.clear();
     }
 
     /**
@@ -852,7 +805,6 @@ public class EventListenerLeakTest {
         Thread.sleep(100);
         // Verify that active listener
         assertNumActive("MyListener", listenerRefs, 0);
-        listenerRefs.clear();
     }
 
     /**
@@ -956,10 +908,9 @@ public class EventListenerLeakTest {
         listeners.clear();
         domNodes2.clear();
         webView2 = null;
-        Thread.sleep(100);
+        //Thread.sleep(100);
         // Verify that active listener
         assertNumActive("MyListener", listenerRefs, 0);
-        listenerRefs.clear();
     }
 
     /**
@@ -1001,18 +952,19 @@ public class EventListenerLeakTest {
             click(webView1, 0);
         });
 
+        Thread.sleep(100);
         // Verify that listener has been released
         assertEquals("Click count", 1, listeners.get(0).getClickCount());
         assertEquals("Click count", 2, listeners.get(1).getClickCount());
+        // Verify that active listener
+        assertNumActive("MyListener", listenerRefs, 2);
 
-        // make web view , goes out of scope
+        // make WebView go out of scope
         domNodes1.clear();
         webView1 = null;
         listeners.clear();
 
-        Thread.sleep(100);
         // Verify that active listener
         assertNumActive("MyListener", listenerRefs, 0);
-        listenerRefs.clear();
     }
 }

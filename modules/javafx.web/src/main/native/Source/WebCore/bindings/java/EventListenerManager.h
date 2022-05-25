@@ -49,15 +49,11 @@ class JavaObjectWrapperHandler {
     unsigned int ref_count = 0;
 public:
     JavaObjectWrapperHandler(const JLObject& handler) {
-        JNIEnv *env = nullptr;
-        env = JavaScriptCore_GetJavaEnv();
         handler_ = handler;
     }
 
     ~JavaObjectWrapperHandler() {
-        JNIEnv *env = nullptr;
-        env = JavaScriptCore_GetJavaEnv();
-        env->DeleteGlobalRef(handler_);
+        handler_.clear();
     }
     JGObject get_listener() { return handler_; }
     void ref() { ++ref_count; }

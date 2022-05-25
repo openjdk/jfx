@@ -26,7 +26,6 @@
 #include "EventListenerManager.h"
 #include "JavaEventListener.h"
 #include "DOMWindow.h"
-#include <stdio.h>
 
 namespace WebCore {
 
