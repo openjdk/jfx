@@ -727,11 +727,13 @@ public class EventListenerLeakTest {
             click(webView1, 2);
         });
 
-        // add events listeners again
+        // Verify that the events are delivered to the listeners (0 and 2 are same)
+        Thread.sleep(100);
+        assertEquals("Click count", 6, listeners.get(1).get().getClickCount() + listeners.get(0).get().getClickCount());
+
+        // remove events listeners again
         submit(() -> {
             domNodes1 = getDomNodes(webView1);
-            assertEquals(NUM_DOM_NODES, domNodes1.size());
-
             // Create another listeners
             MyListener listener = MyListener.create();
             listeners.add(new WeakReference<>(listener));
@@ -740,6 +742,17 @@ public class EventListenerLeakTest {
                 domNodes1.get(i).removeEventListener("click", listeners.get(1).get(), false);
             }
         });
+
+        submit(() -> {
+            // Send clilck events
+            click(webView1, 0);
+            click(webView1, 1);
+            click(webView1, 2);
+        });
+
+        // Verify that the events count should not be increased
+        Thread.sleep(100);
+        assertEquals("Click count", 6, listeners.get(1).get().getClickCount() + listeners.get(0).get().getClickCount());
 
         // Release strong reference to listener and the DOM nodes
         listeners.clear();

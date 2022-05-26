@@ -2148,7 +2148,7 @@ static inline bool tryAddEventListener(Node* targetNode, const AtomString& event
 
 #if PLATFORM(JAVA)
         EventListenerManager::get_instance().registerDOMWindow(targetNode->document().domWindow(),
-            static_cast<JavaEventListener *> (&listener.copyRef().get()));
+           static_cast<JavaEventListener *> (&listener.copyRef().get()));
 #endif
     targetNode->document().addListenerTypeIfNeeded(eventType);
     if (eventNames().isWheelEventType(eventType))

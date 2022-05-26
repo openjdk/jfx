@@ -33,7 +33,7 @@
 
 #include<map>
 #include <wtf/NeverDestroyed.h>
-#include<iterator>
+#include <iterator>
 #include <wtf/java/JavaRef.h>
 #include <jni.h>
 
@@ -66,6 +66,7 @@ class EventListenerManager {
     friend class NeverDestroyed<EventListenerManager>;
     std::map<JavaEventListener*, JavaObjectWrapperHandler*> listener_lists;
     std::multimap<JavaEventListener*, DOMWindow*> windowHasEvent;
+    EventListenerManager() = default;
 public:
     static EventListenerManager& get_instance();
     void registerListener(JavaEventListener *ptr, const JLObject &listener);
@@ -74,9 +75,6 @@ public:
     void unregisterDOMWindow(DOMWindow*);
     void resetDOMWindow(DOMWindow*);
     JGObject get_listener(JavaEventListener *ptr);
-
-private:
-    EventListenerManager();
 };
 
 } // namespace WebCore

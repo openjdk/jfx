@@ -35,8 +35,6 @@ EventListenerManager& EventListenerManager::get_instance()
     return sharedManager;
 }
 
-EventListenerManager::EventListenerManager() { }
-
 void EventListenerManager::registerListener(JavaEventListener *ptr, const JLObject &listener)
 {
     JavaObjectWrapperHandler *temp_ref = new JavaObjectWrapperHandler(listener);
@@ -48,8 +46,6 @@ void EventListenerManager::unregisterListener(JavaEventListener *ptr)
 {
      std::map<JavaEventListener*, JavaObjectWrapperHandler*>::iterator it;
      it = listener_lists.find(ptr);
-     JNIEnv *env = nullptr;
-     env = JavaScriptCore_GetJavaEnv();
 
      if (it != listener_lists.end()) {
          if (it->second && it->second->use_count() == 1) {
@@ -109,9 +105,11 @@ void EventListenerManager::resetDOMWindow(DOMWindow* window)
             isReferringToOtherListener = true;
     }
 
-    for (win_it = windowHasEvent.begin(); win_it != windowHasEvent.end() && !isReferringToOtherListener; win_it++) {
-        if (window == win_it->second)
-           windowHasEvent.erase(win_it->first);
+    if (!isReferringToOtherListener) {
+        for (win_it = windowHasEvent.begin(); win_it != windowHasEvent.end(); win_it++) {
+            if (window == win_it->second)
+                windowHasEvent.erase(win_it->first);
+        }
     }
 }
 
