@@ -35,23 +35,23 @@ EventListenerManager& EventListenerManager::get_instance()
     return sharedManager;
 }
 
-void EventListenerManager::registerListener(JavaEventListener *ptr, const JLObject &listener)
+void EventListenerManager::registerListener(JavaEventListener *listener, const JLObject &listenerObj)
 {
-    JavaObjectWrapperHandler *temp_ref = new JavaObjectWrapperHandler(listener);
-    std::pair<JavaEventListener*, JavaObjectWrapperHandler*> entry{ ptr, temp_ref };
-    listener_lists.insert(entry);
+    ListenerJObjectWrapper *temp_ref = new ListenerJObjectWrapper(listenerObj);
+    std::pair<JavaEventListener*, ListenerJObjectWrapper*> entry{ listener, temp_ref };
+    listenerJObjectMap.insert(entry);
 }
 
-void EventListenerManager::unregisterListener(JavaEventListener *ptr)
+void EventListenerManager::unregisterListener(JavaEventListener *listener)
 {
-     std::map<JavaEventListener*, JavaObjectWrapperHandler*>::iterator it;
-     it = listener_lists.find(ptr);
+     std::map<JavaEventListener*, ListenerJObjectWrapper*>::iterator it;
+     it = listenerJObjectMap.find(listener);
 
-     if (it != listener_lists.end()) {
+     if (it != listenerJObjectMap.end()) {
          if (it->second && it->second->use_count() == 1) {
              delete it->second;
              it->second = nullptr;
-             listener_lists.erase(it); // remove from list
+             listenerJObjectMap.erase(it); // remove from list
          }
 
          if (it->second && it->second->use_count() > 1)
@@ -59,56 +59,42 @@ void EventListenerManager::unregisterListener(JavaEventListener *ptr)
      }
 }
 
-JGObject EventListenerManager::get_listener(JavaEventListener *ptr)
+JGObject EventListenerManager::getListenerJObject(JavaEventListener *listener)
 {
-    std::map<JavaEventListener*, JavaObjectWrapperHandler*>::iterator it;
-    it = listener_lists.find(ptr);
-    if (it != listener_lists.end())
-        return it->second->get_listener();
+    std::map<JavaEventListener*, ListenerJObjectWrapper*>::iterator it;
+    it = listenerJObjectMap.find(listener);
+    if (it != listenerJObjectMap.end())
+        return it->second->getListenerJObject();
 
     return nullptr;
 }
 
-void EventListenerManager::registerDOMWindow(DOMWindow* window, JavaEventListener *ptr)
+void EventListenerManager::registerDOMWindow(DOMWindow* window, JavaEventListener *listener)
 {
-    std::map<JavaEventListener*, JavaObjectWrapperHandler*>::iterator it;
-    it = listener_lists.find(ptr);
-    if (it != listener_lists.end())
+    std::map<JavaEventListener*, ListenerJObjectWrapper*>::iterator it;
+    it = listenerJObjectMap.find(listener);
+    if (it != listenerJObjectMap.end())
         it->second->ref();
 
-    std::pair<JavaEventListener*, DOMWindow*> entry{ ptr, window};
-    windowHasEvent.insert(entry);
+    std::pair<JavaEventListener*, DOMWindow*> entry{ listener, window};
+    listenerDOMWindowMultiMap.insert(entry);
 }
 
 void EventListenerManager::unregisterDOMWindow(DOMWindow* window)
 {
     std::multimap<JavaEventListener*, DOMWindow*>::iterator win_it;
-    for (win_it = windowHasEvent.begin(); win_it != windowHasEvent.end(); win_it++) {
+    for (win_it = listenerDOMWindowMultiMap.begin(); win_it != listenerDOMWindowMultiMap.end();) {
         // de register associated event listeners with window
+        // and remove the entry from the map
         if (window == win_it->second) {
             unregisterListener(win_it->first);
-        }
-    }
-}
 
-void EventListenerManager::resetDOMWindow(DOMWindow* window)
-{
-    std::multimap<JavaEventListener*, DOMWindow*>::iterator win_it;
-    std::map<JavaEventListener*, JavaObjectWrapperHandler*>::iterator it;
-    bool isReferringToOtherListener = true;
-
-    for (win_it = windowHasEvent.begin(); win_it != windowHasEvent.end(); win_it++) {
-        it = listener_lists.find(win_it->first);
-        if (window == win_it->second && it->second && it != listener_lists.end() && it->second->use_count() == 1)
-            isReferringToOtherListener = false;
-        else
-            isReferringToOtherListener = true;
-    }
-
-    if (!isReferringToOtherListener) {
-        for (win_it = windowHasEvent.begin(); win_it != windowHasEvent.end(); win_it++) {
-            if (window == win_it->second)
-                windowHasEvent.erase(win_it->first);
+            std::multimap<JavaEventListener*, DOMWindow*>::iterator tmp_it;
+            tmp_it = win_it;
+            ++win_it;
+            listenerDOMWindowMultiMap.erase(tmp_it);
+        } else {
+            ++win_it;
         }
     }
 }

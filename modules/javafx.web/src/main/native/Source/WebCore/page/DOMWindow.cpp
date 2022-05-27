@@ -450,7 +450,6 @@ DOMWindow::~DOMWindow()
 
 #if PLATFORM(JAVA)
     EventListenerManager::get_instance().unregisterDOMWindow(this);
-    EventListenerManager::get_instance().resetDOMWindow(this);
 #endif
 }
 

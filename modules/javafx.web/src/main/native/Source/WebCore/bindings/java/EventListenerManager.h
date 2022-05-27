@@ -41,40 +41,43 @@ namespace WebCore {
 
 class DOMWindow;
 class JavaEventListener;
-class JavaObjectWrapperHandler;
 
 
-class JavaObjectWrapperHandler {
-    JGObject handler_;
+class ListenerJObjectWrapper {
+    JGObject listenerObj;
     unsigned int ref_count = 0;
 public:
-    JavaObjectWrapperHandler(const JLObject& handler) {
-        handler_ = handler;
+    ListenerJObjectWrapper(const JLObject& listenerObj) {
+        this->listenerObj = listenerObj;
     }
 
-    ~JavaObjectWrapperHandler() {
-        handler_.clear();
+    ~ListenerJObjectWrapper() {
+        listenerObj.clear();
     }
-    JGObject get_listener() { return handler_; }
+    JGObject getListenerJObject() { return listenerObj; }
     void ref() { ++ref_count; }
     void dref() { --ref_count; }
     unsigned int use_count() { return ref_count;}
 };
 
 class EventListenerManager {
-    WTF_MAKE_NONCOPYABLE(EventListenerManager);
-    friend class NeverDestroyed<EventListenerManager>;
-    std::map<JavaEventListener*, JavaObjectWrapperHandler*> listener_lists;
-    std::multimap<JavaEventListener*, DOMWindow*> windowHasEvent;
     EventListenerManager() = default;
+    WTF_MAKE_NONCOPYABLE(EventListenerManager);
+
+    std::map<JavaEventListener*, ListenerJObjectWrapper*> listenerJObjectMap;
+    std::multimap<JavaEventListener*, DOMWindow*> listenerDOMWindowMultiMap;
+
+    friend class NeverDestroyed<EventListenerManager>;
+
 public:
     static EventListenerManager& get_instance();
-    void registerListener(JavaEventListener *ptr, const JLObject &listener);
-    void unregisterListener(JavaEventListener *ptr) ;
-    void registerDOMWindow(DOMWindow*, JavaEventListener *ptr);
+
+    void registerListener(JavaEventListener *listener, const JLObject &listenerJObj);
+    void unregisterListener(JavaEventListener *listener) ;
+    JGObject getListenerJObject(JavaEventListener *listener);
+
+    void registerDOMWindow(DOMWindow*, JavaEventListener *listener);
     void unregisterDOMWindow(DOMWindow*);
-    void resetDOMWindow(DOMWindow*);
-    JGObject get_listener(JavaEventListener *ptr);
 };
 
 } // namespace WebCore

@@ -65,7 +65,7 @@ void JavaEventListener::handleEvent(ScriptExecutionContext& context, Event& even
 
     event.ref();
     env->CallVoidMethod(
-        EventListenerManager::get_instance().get_listener(this),
+        EventListenerManager::get_instance().getListenerJObject(this),
         midFwkHandleEvent,
         ptr_to_jlong(&event));
 

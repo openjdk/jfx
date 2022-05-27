@@ -604,7 +604,7 @@ public class EventListenerLeakTest {
      * This is why the count remains at 1 (from the first click on the original page).
      */
     @Test
-    public void TestStrongRefNewContentLoad() throws Exception {
+    public void testStrongRefNewContentLoad() throws Exception {
         webView2 = null;
         // Load HTML content and get list of DOM nodes
         loadContent(webView1, HTML);
@@ -727,7 +727,7 @@ public class EventListenerLeakTest {
             click(webView1, 2);
         });
 
-        // Verify that the events are delivered to the listeners (0 and 2 are same)
+        // Verify that the events are delivered to the listeners (0, 1 and 2 are same)
         Thread.sleep(100);
         assertEquals("Click count", 6, listeners.get(1).get().getClickCount() + listeners.get(0).get().getClickCount());
 
@@ -956,7 +956,7 @@ public class EventListenerLeakTest {
         Thread.sleep(100);
         // Verify that the event is delivered to the listener
         assertEquals("Click count", 1, listeners.get(0).getClickCount());
-        assertEquals("Click count", 1, listeners.get(0).getClickCount());
+        assertEquals("Click count", 1, listeners.get(1).getClickCount());
 
         submit(() -> {
             // Remove event listener
