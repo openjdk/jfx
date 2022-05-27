@@ -53,8 +53,7 @@ void EventListenerManager::unregisterListener(JavaEventListener *listener)
              it->second = nullptr;
              listenerJObjectMap.erase(it); // remove from list
          }
-
-         if (it->second && it->second->use_count() > 1)
+         else if (it->second && it->second->use_count() > 1)
              it->second->dref();
      }
 }
