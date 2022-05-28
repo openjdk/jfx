@@ -205,6 +205,10 @@ public interface ObservableValue<T> extends Observable {
      * resulting value is {@code null}. If the mapping resulted in {@code null}, then the
      * resulting value is also {@code null}.
      * <p>
+     * This method is similar to {@link #map(Function)}, but the mapping function is
+     * one whose result is already an {@code ObservableValue}, and if invoked, {@code flatMap} does
+     * not wrap it within an additional {@code ObservableValue}.
+     * <p>
      * For example, a property that is only {@code true} when a UI element is part of a {@code Scene}
      * that is part of a {@code Window} that is currently shown on screen:
      * <pre>{@code
