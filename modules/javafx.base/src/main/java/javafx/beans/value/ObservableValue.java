@@ -164,6 +164,7 @@ public interface ObservableValue<T> extends Observable {
      *     mapping function on this value, or {@code null} when it
      *     is {@code null}; never returns {@code null}
      * @throws NullPointerException if the mapping function is {@code null}
+     * @since 19
      */
     default <U> ObservableValue<U> map(Function<? super T, ? extends U> mapper) {
         return new MappedBinding<>(this, mapper);
@@ -190,6 +191,7 @@ public interface ObservableValue<T> extends Observable {
      *     holds {@code null}; can be {@code null}
      * @return an {@code ObservableValue} that holds this value, or the given constant if
      *     it is {@code null}; never returns {@code null}
+     * @since 19
      */
     default ObservableValue<T> orElse(T constant) {
         return new OrElseBinding<>(this, constant);
@@ -236,6 +238,7 @@ public interface ObservableValue<T> extends Observable {
      *     produced by applying the given mapping function on this value, or
      *     {@code null} when the value is {@code null}; never returns {@code null}
      * @throws NullPointerException if the mapping function is {@code null}
+     * @since 19
      */
     default <U> ObservableValue<U> flatMap(Function<? super T, ? extends ObservableValue<? extends U>> mapper) {
         return new FlatMappedBinding<>(this, mapper);

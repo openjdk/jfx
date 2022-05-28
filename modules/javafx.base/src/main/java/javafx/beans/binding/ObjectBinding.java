@@ -195,6 +195,7 @@ public abstract class ObjectBinding<T> extends ObjectExpression<T> implements
      *
      * @return {@code true} if this binding currently has one or more
      *     listeners registered on it, otherwise {@code false}
+     * @since 19
      */
     protected final boolean isObserved() {
         return helper != null;
@@ -211,6 +212,7 @@ public abstract class ObjectBinding<T> extends ObjectExpression<T> implements
      *
      * @return {@code true} if this binding is allowed to become valid, otherwise
      *     {@code false}
+     * @since 19
      */
     protected boolean allowValidation() {
         return true;
