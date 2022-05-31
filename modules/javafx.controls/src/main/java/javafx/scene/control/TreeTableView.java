@@ -2622,7 +2622,7 @@ public class TreeTableView<S> extends Control {
                         startRow = treeTableView.getRow(e.getChange().getAddedSubList().get(0));
 
                         TreeTablePosition<S, ?> anchor = TreeTableCellBehavior.getAnchor(treeTableView, null);
-                        if (anchor != null) {
+                        if (anchor != null && anchor.getRow() >= startRow) {
                             boolean isAnchorSelected = isSelected(anchor.getRow(), anchor.getTableColumn());
                             if (isAnchorSelected) {
                                 TreeTablePosition<S, ?> newAnchor = new TreeTablePosition<>(treeTableView, anchor.getRow() + shift, anchor.getTableColumn());

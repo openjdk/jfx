@@ -5752,4 +5752,47 @@ public class TableViewTest {
         // reset the exception handler
         Thread.currentThread().setUncaughtExceptionHandler(exceptionHandler);
     }
+
+    // see JDK-8284665
+    @Test
+    public void testAnchorRemainsWhenAddingMoreItemsBelow() {
+        TableView<String> stringTableView = new TableView<>();
+        stringTableView.getItems().addAll("a", "b", "c", "d");
+
+        TableColumn<String,String> column = new TableColumn<>("Column");
+        column.setCellValueFactory(cdf -> new ReadOnlyStringWrapper(cdf.getValue()));
+        stringTableView.getColumns().add(column);
+
+        TableSelectionModel<String> sm = stringTableView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+
+        // click on row 1
+        Cell startCell = VirtualFlowTestUtils.getCell(stringTableView, 1, 0);
+        new MouseEventFirer(startCell).fireMousePressAndRelease();
+
+        assertTrue(sm.isSelected(1));
+        assertEquals("b", sm.getSelectedItem());
+
+        TablePosition anchor = TableCellBehavior.getAnchor(stringTableView, null);
+        assertTrue(TableCellBehavior.hasNonDefaultAnchor(stringTableView));
+        assertEquals(1, anchor.getRow());
+        assertEquals(column, anchor.getTableColumn());
+
+        // now add a new item
+        stringTableView.getItems().add("e");
+
+        // select also row 2
+        Cell endCell = VirtualFlowTestUtils.getCell(stringTableView, 2, 0);
+        new MouseEventFirer(endCell).fireMousePressAndRelease(KeyModifier.SHIFT);
+
+        // row 1 should remain selected
+        assertTrue(sm.isSelected(1));
+        assertTrue(sm.isSelected(2));
+
+        // anchor should remain at 1
+        anchor = TableCellBehavior.getAnchor(stringTableView, null);
+        assertTrue(TableCellBehavior.hasNonDefaultAnchor(stringTableView));
+        assertEquals(1, anchor.getRow());
+        assertEquals(column, anchor.getTableColumn());
+    }
 }
