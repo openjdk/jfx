@@ -90,8 +90,8 @@ final class GSTMedia extends NativeMedia {
      * @return A handle to the native peer of the media.
      */
     private native int gstInitNativeMedia(Locator locator,
-                                               String contentType,
-                                               long sizeHint,
-                                               long[] nativeMediaHandle);
+                                          String contentType,
+                                          long sizeHint,
+                                          long[] nativeMediaHandle);
     private native void gstDispose(long refNativeMedia);
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,44 +23,10 @@
  * questions.
  */
 
-#ifndef _LOCATOR_H_
-#define _LOCATOR_H_
+module FXMediaPlayer {
+    requires javafx.base;
+    requires javafx.controls;
+    requires javafx.media;
 
-#include <string>
-#include <stdint.h>
-
-#include <jni/JniUtils.h>
-
-using namespace std;
-
-class CLocator
-{
-public:
-    enum LocatorType
-    {
-        kStreamLocatorType      = 1,
-        kInvalidLocator         = 0
-    };
-
-public:
-    CLocator(LocatorType type, const char* contentType, const char* location);
-    CLocator(LocatorType type, const char* contentType, const char* location, int64_t llSizeHint);
-
-    LocatorType GetType();
-
-    static jstring LocatorGetStringLocation(JNIEnv *env, jobject locator);
-
-    inline const string& GetContentType() { return m_contentType; }
-
-    inline const string GetLocation() { return m_location; }
-
-    int64_t    GetSizeHint();
-
-protected:
-    LocatorType m_type;
-    string      m_contentType;
-    string      m_location;
-    int64_t     m_llSizeHint;
-};
-
-#endif  //_LOCATOR_H_
+    exports fxmediaplayer to javafx.graphics;
+}
