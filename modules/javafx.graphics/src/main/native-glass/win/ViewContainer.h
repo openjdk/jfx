@@ -104,7 +104,7 @@ class ViewContainer {
 
         void ResetMouseTracking(HWND hwnd);
 
-        unsigned int HandleViewTouchEvent(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
+        unsigned int HandleViewTouchEvent(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam, bool isDirect);
 
         void NotifyViewMoved(HWND hwnd);
         void NotifyViewSize(HWND hwnd);

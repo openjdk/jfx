@@ -369,7 +369,7 @@ LRESULT FullScreenWindow::WindowProc(UINT msg, WPARAM wParam, LPARAM lParam)
             }
             break;
         case WM_TOUCH:
-            HandleViewTouchEvent(GetHWND(), msg, wParam, lParam);
+            HandleViewTouchEvent(GetHWND(), msg, wParam, lParam, 1);
             return 0;
         case WM_GETOBJECT: {
             LRESULT lr = HandleViewGetAccessible(GetHWND(), wParam, lParam);

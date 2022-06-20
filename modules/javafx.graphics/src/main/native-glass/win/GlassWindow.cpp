@@ -574,7 +574,7 @@ LRESULT GlassWindow::WindowProc(UINT msg, WPARAM wParam, LPARAM lParam)
         case WM_TOUCH:
             if (IsEnabled()) {
                 if (activeTouchWindow == 0 || activeTouchWindow == GetHWND()) {
-                    if(HandleViewTouchEvent(GetHWND(), msg, wParam, lParam) > 0) {
+                    if(HandleViewTouchEvent(GetHWND(), msg, wParam, lParam, 1) > 0) {
                         activeTouchWindow = GetHWND();
                     } else {
                         activeTouchWindow = 0;
@@ -1628,7 +1628,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_win_WinWindow__1setVisible
             }
 
             if (activeTouchWindow == hWnd) {
-                pWindow->HandleViewTouchEvent(hWnd, 0, 0, 0);
+                pWindow->HandleViewTouchEvent(hWnd, 0, 0, 0, 0);
                 activeTouchWindow = 0;
             }
         }

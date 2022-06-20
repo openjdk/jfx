@@ -20,12 +20,7 @@ testbin/
 org.eclipse.buildship*
 
 # Ignore IntelliJ files
-.idea/tasks.xml
-.idea/workspace.xml
-.idea/inspectionProfiles/**
-.idea/copyright/profiles_settings.xml
-.idea/codeStyles/**
-.idea/checkstyle-idea.xml
+.idea
 
 # Ignore the following file suffixes
 *.vcxproj.user

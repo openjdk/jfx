@@ -1260,14 +1260,10 @@ static char * touchEventName(unsigned int dwFlags) {
 
 void NotifyTouchInput(
         HWND hWnd, jobject view, jclass gestureSupportCls,
-        const TOUCHINPUT* ti, unsigned count)
+        const TOUCHINPUT* ti, unsigned count, bool isDirect)
 {
 
     JNIEnv *env = GetEnv();
-
-    // Sets to 'true' if source device is a touch screen
-    // and to 'false' if source device is a touch pad/pen.
-    const bool isDirect = IsTouchEvent();
 
     jint modifiers = GetModifiers();
     env->CallStaticObjectMethod(gestureSupportCls,
@@ -1337,7 +1333,7 @@ void NotifyManipulationProcessor(
 } // namespace
 
 unsigned int ViewContainer::HandleViewTouchEvent(
-        HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
+        HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam, bool isDirect)
 {
     const UINT newCount = static_cast<UINT>(LOWORD(wParam));
     TOUCHINPUT * tempTouchInputBuf;
@@ -1463,7 +1459,7 @@ unsigned int ViewContainer::HandleViewTouchEvent(
      }
 
     if (pointsCount > 0) {
-        NotifyTouchInput(hWnd, GetView(), m_gestureSupportCls, &m_thisTouchInputBuf[0], pointsCount);
+        NotifyTouchInput(hWnd, GetView(), m_gestureSupportCls, &m_thisTouchInputBuf[0], pointsCount, isDirect);
 
         if (m_manipProc) {
             NotifyManipulationProcessor(*m_manipProc, &m_thisTouchInputBuf[0], pointsCount);
