@@ -25,6 +25,7 @@
 #include "config.h"
 #include "LibWebRTCRtpReceiverBackend.h"
 
+#include "LibWebRTCDtlsTransportBackend.h"
 #include "LibWebRTCRtpReceiverTransformBackend.h"
 #include "LibWebRTCUtils.h"
 #include "RTCRtpTransformBackend.h"
@@ -103,6 +104,7 @@ Ref<RealtimeMediaSource> LibWebRTCRtpReceiverBackend::createSource()
     auto rtcTrack = m_rtcReceiver->track();
     switch (m_rtcReceiver->media_type()) {
     case cricket::MEDIA_TYPE_DATA:
+    case cricket::MEDIA_TYPE_UNSUPPORTED:
         break;
     case cricket::MEDIA_TYPE_AUDIO: {
         rtc::scoped_refptr<webrtc::AudioTrackInterface> audioTrack = static_cast<webrtc::AudioTrackInterface*>(rtcTrack.get());
@@ -116,9 +118,17 @@ Ref<RealtimeMediaSource> LibWebRTCRtpReceiverBackend::createSource()
     RELEASE_ASSERT_NOT_REACHED();
 }
 
-Ref<RTCRtpTransformBackend> LibWebRTCRtpReceiverBackend::createRTCRtpTransformBackend()
+Ref<RTCRtpTransformBackend> LibWebRTCRtpReceiverBackend::rtcRtpTransformBackend()
 {
-    return LibWebRTCRtpReceiverTransformBackend::create(m_rtcReceiver);
+    if (!m_transformBackend)
+        m_transformBackend = LibWebRTCRtpReceiverTransformBackend::create(m_rtcReceiver);
+    return *m_transformBackend;
+}
+
+std::unique_ptr<RTCDtlsTransportBackend> LibWebRTCRtpReceiverBackend::dtlsTransportBackend()
+{
+    auto backend = m_rtcReceiver->dtls_transport();
+    return backend ? makeUnique<LibWebRTCDtlsTransportBackend>(WTFMove(backend)) : nullptr;
 }
 
 } // namespace WebCore

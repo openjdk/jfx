@@ -30,12 +30,11 @@
     Exposed=AudioWorklet,
     Conditional=WEB_AUDIO,
     JSGenerateToNativeObject,
-    ImplicitThis,
     IsImmutablePrototypeExoticObject,
     IsImmutablePrototypeExoticObjectOnPrototype,
     Global=(Worklet,AudioWorklet),
 ] interface AudioWorkletGlobalScope : WorkletGlobalScope {
-    [MayThrowException] undefined registerProcessor(DOMString name, AudioWorkletProcessorConstructor processorCtor);
+    undefined registerProcessor(DOMString name, AudioWorkletProcessorConstructor processorCtor);
     readonly attribute unsigned long long currentFrame;
     readonly attribute double currentTime;
     readonly attribute float sampleRate;

@@ -44,9 +44,6 @@ typedef struct _GstChildProxyInterface GstChildProxyInterface;
 /**
  * GstChildProxyInterface:
  * @parent: parent interface type.
- * @get_child_by_name:  virtual method to fetch the child by name
- * @get_child_by_index: virtual method to fetch the child by index
- * @get_children_count: virtual method to get the children count
  *
  * #GstChildProxy interface.
  */
@@ -55,12 +52,60 @@ struct _GstChildProxyInterface
   GTypeInterface parent;
 
   /* methods */
+
+  /**
+   * GstChildProxyInterface.get_child_by_name:
+   * @parent: the #GstChildProxy
+   * @name: the name of the child to fetch
+   *
+   * Fetch a child object by name
+   *
+   * Returns: (transfer full) (nullable): the child object
+   */
   GObject * (*get_child_by_name)  (GstChildProxy * parent, const gchar * name);
+
+  /**
+   * GstChildProxyInterface.get_child_by_index:
+   * @parent: the #GstChildProxy
+   * @index: the index of the child to fetch
+   *
+   * Fetch a child object by index
+   *
+   * Returns: (transfer full) (nullable): the child object
+   */
   GObject * (*get_child_by_index) (GstChildProxy * parent, guint index);
+
+  /**
+   * GstChildProxyInterface.get_children_count:
+   * @parent: the #GstChildProxy
+   *
+   * Get the number of children in @parent
+   *
+   * Returns: the number of children
+   */
   guint     (*get_children_count) (GstChildProxy * parent);
+
   /*< private >*/
   /* signals */
+
+  /**
+   * GstChildProxyInterface.child_added:
+   * @parent: the #GstChildProxy
+   * @child: the child object
+   * @name: the name of the child object
+   *
+   * Called when @child is added to @parent
+   */
   void      (*child_added)        (GstChildProxy * parent, GObject * child, const gchar * name);
+
+  /**
+   * GstChildProxyInterface.child_removed:
+   * @parent: the #GstChildProxy
+   * @child: the child object
+   * @name: the name of the child object
+   *
+   * Called when @child is removed from @parent
+   */
   void      (*child_removed)      (GstChildProxy * parent, GObject * child, const gchar * name);
 
   /*< private >*/

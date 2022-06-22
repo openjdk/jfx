@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -176,7 +176,7 @@ final class WCImageDecoderImpl extends WCImageDecoder {
             log.fine(String.format("%X Decoding frames", hashCode()));
         }
         try {
-            return ImageStorage.loadAll(in, readerListener, 0, 0, true, 1.0f, false);
+            return ImageStorage.getInstance().loadAll(in, readerListener, 0, 0, true, 1.0f, false);
         } catch (ImageStorageException e) {
             return null; // consider image missing
         } finally {

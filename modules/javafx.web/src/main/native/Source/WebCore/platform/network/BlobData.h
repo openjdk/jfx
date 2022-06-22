@@ -32,6 +32,7 @@
 #define BlobData_h
 
 #include "BlobDataFileReference.h"
+#include "PolicyContainer.h"
 #include "ThreadSafeDataBuffer.h"
 #include <wtf/Forward.h>
 #include <wtf/ThreadSafeRefCounted.h>
@@ -105,11 +106,16 @@ public:
 
     const String& contentType() const { return m_contentType; }
 
+    const PolicyContainer& policyContainer() const { return m_policyContainer; }
+    void setPolicyContainer(const PolicyContainer& policyContainer) { m_policyContainer = policyContainer; }
+
     const BlobDataItemList& items() const { return m_items; }
     void swapItems(BlobDataItemList&);
 
     void appendData(const ThreadSafeDataBuffer&);
     void appendFile(Ref<BlobDataFileReference>&&);
+
+    Ref<BlobData> clone() const;
 
 private:
     friend class BlobRegistryImpl;
@@ -119,6 +125,7 @@ private:
     void appendFile(BlobDataFileReference*, long long offset, long long length);
 
     String m_contentType;
+    PolicyContainer m_policyContainer;
     BlobDataItemList m_items;
 };
 

@@ -38,7 +38,8 @@
 #include "ParsedContentType.h"
 #include <wtf/DateMath.h>
 #include <wtf/NeverDestroyed.h>
-#include <wtf/Optional.h>
+#include <wtf/text/StringBuilder.h>
+#include <wtf/text/StringToIntegerConversion.h>
 #include <wtf/unicode/CharacterNames.h>
 
 namespace WebCore {
@@ -310,7 +311,8 @@ bool isValidUserAgentHeaderValue(const String& value)
 #endif
 
 static const size_t maxInputSampleSize = 128;
-static String trimInputSample(const char* p, size_t length)
+template<typename CharType>
+static String trimInputSample(CharType* p, size_t length)
 {
     String s = String(p, std::min<size_t>(length, maxInputSampleSize));
     if (length > maxInputSampleSize)
@@ -318,11 +320,11 @@ static String trimInputSample(const char* p, size_t length)
     return s;
 }
 
-Optional<WallTime> parseHTTPDate(const String& value)
+std::optional<WallTime> parseHTTPDate(const String& value)
 {
     double dateInMillisecondsSinceEpoch = parseDateFromNullTerminatedCharacters(value.utf8().data());
     if (!std::isfinite(dateInMillisecondsSinceEpoch))
-        return WTF::nullopt;
+        return std::nullopt;
     // This assumes system_clock epoch equals Unix epoch which is true for all implementations but unspecified.
     // FIXME: The parsing function should be switched to WallTime too.
     return WallTime::fromRawSeconds(dateInMillisecondsSinceEpoch / 1000.0);
@@ -577,6 +579,94 @@ XFrameOptionsDisposition parseXFrameOptionsHeader(const String& header)
     return result;
 }
 
+// https://fetch.spec.whatwg.org/#concept-header-list-get-structured-header
+// FIXME: For now, this assumes the type is "item".
+std::optional<std::pair<StringView, HashMap<String, String>>> parseStructuredFieldValue(StringView header)
+{
+    header = stripLeadingAndTrailingHTTPSpaces(header);
+    if (header.isEmpty())
+        return std::nullopt;
+
+    // Parse a token (https://datatracker.ietf.org/doc/html/rfc8941#section-4.2.6).
+    if (!isASCIIAlpha(header[0]) && header[0] != '*')
+        return std::nullopt;
+    size_t index = 1;
+    while (index < header.length()) {
+        UChar c = header[index];
+        if (!RFC7230::isTokenCharacter(c) && c != ':' && c != '/')
+            break;
+        ++index;
+    }
+    StringView bareItem = header.substring(0, index);
+
+    // Parse parameters (https://datatracker.ietf.org/doc/html/rfc8941#section-4.2.3.2).
+    HashMap<String, String> parameters;
+    while (index < header.length()) {
+        if (header[index] != ';')
+            break;
+        ++index; // Consume ';'.
+        while (index < header.length() && header[index] == ' ')
+            ++index;
+        if (index == header.length())
+            return std::nullopt;
+        // Parse a key (https://datatracker.ietf.org/doc/html/rfc8941#section-4.2.3.3)
+        if (!isASCIILower(header[index]))
+            return std::nullopt;
+        size_t keyStart = index++;
+        while (index < header.length()) {
+            UChar c = header[index];
+            if (!isASCIILower(c) && !isASCIIDigit(c) && c != '_' && c != '-' && c != '.' && c != '*')
+                break;
+            ++index;
+        }
+        String key = header.substring(keyStart, index - keyStart).toString();
+        String value = "true";
+        if (index < header.length() && header[index] == '=') {
+            ++index; // Consume '='.
+            if (isASCIIAlpha(header[index]) || header[index] == '*') {
+                // https://datatracker.ietf.org/doc/html/rfc8941#section-4.2.6
+                size_t valueStart = index++;
+                while (index < header.length()) {
+                    UChar c = header[index];
+                    if (!RFC7230::isTokenCharacter(c) && c != ':' && c != '/')
+                        break;
+                    ++index;
+                }
+                value = header.substring(valueStart, index - valueStart).toString();
+            } else if (header[index] == '"') {
+                // https://datatracker.ietf.org/doc/html/rfc8941#section-4.2.5
+                StringBuilder valueBuilder;
+                ++index; // Skip DQUOTE.
+                while (index < header.length()) {
+                    if (header[index] == '\\') {
+                        ++index;
+                        if (index == header.length())
+                            return std::nullopt;
+                        if (header[index] != '\\' && header[index] != '"')
+                            return std::nullopt;
+                        valueBuilder.append(header[index]);
+                    } else if (header[index] == '\"') {
+                        value = valueBuilder.toString();
+                        break;
+                    } else if (header[index] <= 0x1F || (header[index] >= 0x7F && header[index] <= 0xFF)) // Not in VCHAR or SP.
+                        return std::nullopt;
+                    else
+                        valueBuilder.append(header[index]);
+                    ++index;
+                }
+                if (index == header.length())
+                    return std::nullopt;
+                ++index; // Skip DQUOTE.
+            } else
+                return std::nullopt;
+        }
+        parameters.set(WTFMove(key), WTFMove(value));
+    }
+    if (index != header.length())
+        return std::nullopt;
+    return std::make_pair(bareItem, parameters);
+}
+
 bool parseRange(const String& range, long long& rangeOffset, long long& rangeEnd, long long& rangeSuffixLength)
 {
     // The format of "Range" header is defined in RFC 2616 Section 14.35.1.
@@ -601,11 +691,8 @@ bool parseRange(const String& range, long long& rangeOffset, long long& rangeEnd
     // Example:
     //     -500
     if (!index) {
-        String suffixLengthString = byteRange.substring(index + 1).stripWhiteSpace();
-        bool ok;
-        long long value = suffixLengthString.toInt64Strict(&ok);
-        if (ok)
-            rangeSuffixLength = value;
+        if (auto value = parseInteger<long long>(StringView { byteRange }.substring(index + 1)))
+            rangeSuffixLength = *value;
         return true;
     }
 
@@ -613,36 +700,36 @@ bool parseRange(const String& range, long long& rangeOffset, long long& rangeEnd
     // Examples:
     //     0-499
     //     500-
-    String firstBytePosStr = byteRange.left(index).stripWhiteSpace();
-    bool ok;
-    long long firstBytePos = firstBytePosStr.toInt64Strict(&ok);
-    if (!ok)
+    auto firstBytePos = parseInteger<long long>(StringView { byteRange }.left(index));
+    if (!firstBytePos)
         return false;
 
-    String lastBytePosStr = byteRange.substring(index + 1).stripWhiteSpace();
+    auto lastBytePosStr = stripLeadingAndTrailingHTTPSpaces(StringView { byteRange }.substring(index + 1));
     long long lastBytePos = -1;
     if (!lastBytePosStr.isEmpty()) {
-        lastBytePos = lastBytePosStr.toInt64Strict(&ok);
-        if (!ok)
+        auto value = parseInteger<long long>(lastBytePosStr);
+        if (!value)
             return false;
+        lastBytePos = *value;
     }
 
-    if (firstBytePos < 0 || !(lastBytePos == -1 || lastBytePos >= firstBytePos))
+    if (*firstBytePos < 0 || !(lastBytePos == -1 || lastBytePos >= *firstBytePos))
         return false;
 
-    rangeOffset = firstBytePos;
+    rangeOffset = *firstBytePos;
     rangeEnd = lastBytePos;
     return true;
 }
 
-static inline bool isValidHeaderNameCharacter(const char* character)
+template<typename CharacterType>
+static inline bool isValidHeaderNameCharacter(CharacterType character)
 {
     // https://tools.ietf.org/html/rfc7230#section-3.2
     // A header name should only contain one or more of
     // alphanumeric or ! # $ % & ' * + - . ^ _ ` | ~
-    if (isASCIIAlphanumeric(*character))
+    if (isASCIIAlphanumeric(character))
         return true;
-    switch (*character) {
+    switch (character) {
     case '!':
     case '#':
     case '$':
@@ -664,16 +751,16 @@ static inline bool isValidHeaderNameCharacter(const char* character)
     }
 }
 
-size_t parseHTTPHeader(const char* start, size_t length, String& failureReason, StringView& nameStr, String& valueStr, bool strict)
+size_t parseHTTPHeader(const uint8_t* start, size_t length, String& failureReason, StringView& nameStr, String& valueStr, bool strict)
 {
-    const char* p = start;
-    const char* end = start + length;
+    auto p = start;
+    auto end = start + length;
 
-    Vector<char> name;
-    Vector<char> value;
+    Vector<uint8_t> name;
+    Vector<uint8_t> value;
 
     bool foundFirstNameChar = false;
-    const char* namePtr = nullptr;
+    const uint8_t* namePtr = nullptr;
     size_t nameSize = 0;
 
     nameStr = StringView();
@@ -696,7 +783,7 @@ size_t parseHTTPHeader(const char* start, size_t length, String& failureReason, 
         case ':':
             break;
         default:
-            if (!isValidHeaderNameCharacter(p)) {
+            if (!isValidHeaderNameCharacter(*p)) {
                 if (name.size() < 1)
                     failureReason = "Unexpected start character in header name";
                 else
@@ -751,7 +838,7 @@ size_t parseHTTPHeader(const char* start, size_t length, String& failureReason, 
     return p - start;
 }
 
-size_t parseHTTPRequestBody(const char* data, size_t length, Vector<unsigned char>& body)
+size_t parseHTTPRequestBody(const uint8_t* data, size_t length, Vector<uint8_t>& body)
 {
     body.clear();
     body.append(data, length);
@@ -937,6 +1024,9 @@ CrossOriginResourcePolicy parseCrossOriginResourcePolicyHeader(StringView header
 
     if (strippedHeader == "same-site")
         return CrossOriginResourcePolicy::SameSite;
+
+    if (strippedHeader == "cross-origin")
+        return CrossOriginResourcePolicy::CrossOrigin;
 
     return CrossOriginResourcePolicy::Invalid;
 }

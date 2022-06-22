@@ -197,9 +197,9 @@ gst_osx_audio_sink_class_init (GstOsxAudioSinkClass * klass)
 
   gst_element_class_add_static_pad_template (gstelement_class, &sink_factory);
 
-  gst_element_class_set_static_metadata (gstelement_class, "Audio Sink (OSX)",
+  gst_element_class_set_static_metadata (gstelement_class, "Audio Sink (macOS)",
       "Sink/Audio",
-      "Output to a sound card in OS X",
+      "Output to a sound card on macOS",
       "Zaheer Abbas Merali <zaheerabbas at merali dot org>");
 }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -56,13 +56,13 @@ public interface ImageFormatDescription {
      */
     List<Signature> getSignatures();
 
-//    /**
-//     * Get the MIME type(s) corresponding to this format, for example,
-//     * "image/jpeg," "image/png," etc.
-//     *
-//     * @return the MIME type(s) of this format.
-//     */
-//    String[] getMIMETypes();
+    /**
+     * Get the MIME subtype(s) of the "image" type corresponding to this format,
+     * for example, "jpeg" "png," etc.
+     *
+     * @return the MIME type(s) of this format.
+     */
+    List<String> getMIMESubtypes();
 
     /**
      * Represents a sequences of bytes which can appear at the beginning of

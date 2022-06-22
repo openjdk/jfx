@@ -30,6 +30,7 @@
 
 #include "LayoutBoxGeometry.h"
 #include "LayoutContainerBox.h"
+#include "LayoutContainingBlockChainIterator.h"
 #include "LayoutInitialContainingBlock.h"
 #include "LayoutPhase.h"
 #include "LayoutState.h"
@@ -41,7 +42,7 @@ namespace Layout {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(Box);
 
-Box::Box(Optional<ElementAttributes> attributes, RenderStyle&& style, OptionSet<BaseTypeFlag> baseTypeFlags)
+Box::Box(std::optional<ElementAttributes> attributes, RenderStyle&& style, OptionSet<BaseTypeFlag> baseTypeFlags)
     : m_style(WTFMove(style))
     , m_elementAttributes(attributes)
     , m_baseTypeFlags(baseTypeFlags.toRaw())
@@ -134,8 +135,7 @@ bool Box::establishesFlexFormattingContext() const
 
 bool Box::establishesIndependentFormattingContext() const
 {
-    // FIXME: This is where we would check for 'contain' property.
-    return isAbsolutelyPositioned() || isFlexItem();
+    return isLayoutContainmentBox() || isAbsolutelyPositioned() || isFlexItem();
 }
 
 bool Box::isRelativelyPositioned() const
@@ -163,7 +163,7 @@ bool Box::isFloatingPositioned() const
     // FIXME: Rendering code caches values like this. (style="position: absolute; float: left")
     if (isOutOfFlowPositioned())
         return false;
-    return m_style.floating() != Float::No;
+    return m_style.floating() != Float::None;
 }
 
 bool Box::isLeftFloatingPositioned() const
@@ -316,7 +316,6 @@ bool Box::isInlineLevelBox() const
     return display == DisplayType::Inline
         || display == DisplayType::InlineBox
         || display == DisplayType::InlineFlex
-        || display == DisplayType::WebKitInlineFlex
         || display == DisplayType::InlineGrid
         || isInlineBlockBox()
         || isInlineTableBox();
@@ -353,6 +352,47 @@ bool Box::isBlockContainer() const
         || isTableCaption(); // TODO && !replaced element
 }
 
+bool Box::isLayoutContainmentBox() const
+{
+    auto supportsLayoutContainment = [&] {
+        // If the element does not generate a principal box (as is the case with display values of contents or none),
+        // or its principal box is an internal table box other than table-cell, or an internal ruby box, or a non-atomic inline-level box,
+        // layout containment has no effect.
+        if (isInternalTableBox())
+            return isTableCell();
+        if (isInternalRubyBox())
+            return false;
+        if (isInlineLevelBox())
+            return isAtomicInlineLevelBox();
+        return true;
+    };
+    return m_style.contain().contains(Containment::Layout) && supportsLayoutContainment();
+}
+
+bool Box::isSizeContainmentBox() const
+{
+    auto supportsSizeContainment = [&] {
+        // If the element does not generate a principal box (as is the case with display: contents or display: none),
+        // or its inner display type is table, or its principal box is an internal table box, or an internal ruby box,
+        // or a non-atomic inline-level box, size containment has no effect.
+        if (isInternalTableBox() || isTableBox())
+            return false;
+        if (isInternalRubyBox())
+            return false;
+        if (isInlineLevelBox())
+            return isAtomicInlineLevelBox();
+        return true;
+    };
+    return m_style.contain().contains(Containment::Size) && supportsSizeContainment();
+}
+
+bool Box::isInternalTableBox() const
+{
+    // table-row-group, table-header-group, table-footer-group, table-row, table-cell, table-column-group, table-column
+    // generates the appropriate internal table box which participates in a table formatting context.
+    return isTableBody() || isTableHeader() || isTableFooter() || isTableRow() || isTableCell() || isTableColumnGroup() || isTableColumn();
+}
+
 const Box* Box::nextInFlowSibling() const
 {
     auto* nextSibling = this->nextSibling();
@@ -383,6 +423,17 @@ const Box* Box::previousInFlowOrFloatingSibling() const
     while (previousSibling && !(previousSibling->isInFlow() || previousSibling->isFloatingPositioned()))
         previousSibling = previousSibling->previousSibling();
     return previousSibling;
+}
+
+bool Box::isDescendantOf(const ContainerBox& ancestor) const
+{
+    if (ancestor.isInitialContainingBlock())
+        return true;
+    for (auto& containingBlock : containingBlockChain(*this)) {
+        if (&containingBlock == &ancestor)
+            return true;
+    }
+    return false;
 }
 
 bool Box::isOverflowVisible() const
@@ -463,7 +514,7 @@ void Box::setColumnWidth(LayoutUnit columnWidth)
     ensureRareData().columnWidth = columnWidth;
 }
 
-Optional<LayoutUnit> Box::columnWidth() const
+std::optional<LayoutUnit> Box::columnWidth() const
 {
     if (!hasRareData())
         return { };

@@ -82,7 +82,7 @@ void FileReaderLoader::start(ScriptExecutionContext* scriptExecutionContext, Blo
         failed(SecurityError);
         return;
     }
-    ThreadableBlobRegistry::registerBlobURL(scriptExecutionContext->securityOrigin(), m_urlForReading, blob.url());
+    ThreadableBlobRegistry::registerBlobURL(scriptExecutionContext->securityOrigin(), scriptExecutionContext->policyContainer(), m_urlForReading, blob.url());
 
     // Construct and load the request.
     ResourceRequest request(m_urlForReading);
@@ -163,7 +163,7 @@ void FileReaderLoader::didReceiveResponse(unsigned long, const ResourceResponse&
         m_client->didStartLoading();
 }
 
-void FileReaderLoader::didReceiveData(const char* data, int dataLength)
+void FileReaderLoader::didReceiveData(const uint8_t* data, int dataLength)
 {
     ASSERT(data);
     ASSERT(dataLength > 0);
@@ -333,26 +333,12 @@ void FileReaderLoader::convertToText()
 
 void FileReaderLoader::convertToDataURL()
 {
-    StringBuilder builder;
-    builder.appendLiteral("data:");
-
     if (!m_bytesLoaded) {
-        m_stringResult = builder.toString();
+        m_stringResult = "data:"_s;
         return;
     }
 
-    if (m_dataType.isEmpty())
-        builder.append("application/octet-stream");
-    else
-        builder.append(m_dataType);
-    builder.appendLiteral(";base64,");
-
-    Vector<char> out;
-    base64Encode(m_rawData->data(), m_bytesLoaded, out);
-    out.append('\0');
-    builder.append(out.data());
-
-    m_stringResult = builder.toString();
+    m_stringResult = makeString("data:", m_dataType.isEmpty() ? "application/octet-stream" : m_dataType, ";base64,", base64Encoded(m_rawData->data(), m_bytesLoaded));
 }
 
 bool FileReaderLoader::isCompleted() const

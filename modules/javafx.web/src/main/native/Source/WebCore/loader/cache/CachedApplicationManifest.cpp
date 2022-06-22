@@ -34,7 +34,7 @@
 
 namespace WebCore {
 
-CachedApplicationManifest::CachedApplicationManifest(CachedResourceRequest&& request, const PAL::SessionID& sessionID, const CookieJar* cookieJar)
+CachedApplicationManifest::CachedApplicationManifest(CachedResourceRequest&& request, PAL::SessionID sessionID, const CookieJar* cookieJar)
     : CachedResource(WTFMove(request), Type::ApplicationManifest, sessionID, cookieJar)
     , m_decoder(TextResourceDecoder::create("application/manifest+json", UTF8Encoding()))
 {
@@ -59,12 +59,12 @@ String CachedApplicationManifest::encoding() const
     return m_decoder->encoding().name();
 }
 
-Optional<ApplicationManifest> CachedApplicationManifest::process(const URL& manifestURL, const URL& documentURL, RefPtr<ScriptExecutionContext> scriptExecutionContext)
+std::optional<ApplicationManifest> CachedApplicationManifest::process(const URL& manifestURL, const URL& documentURL, Document* document)
 {
     if (!m_text)
-        return WTF::nullopt;
-    if (scriptExecutionContext)
-        return ApplicationManifestParser::parse(*scriptExecutionContext, *m_text, manifestURL, documentURL);
+        return std::nullopt;
+    if (document)
+        return ApplicationManifestParser::parse(*document, *m_text, manifestURL, documentURL);
     return ApplicationManifestParser::parse(*m_text, manifestURL, documentURL);
 }
 

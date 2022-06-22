@@ -34,7 +34,7 @@ namespace JSC {
 
 STATIC_ASSERT_IS_TRIVIALLY_DESTRUCTIBLE(IntlSegmenterConstructor);
 
-static JSC_DECLARE_HOST_FUNCTION(IntlSegmenterConstructorSupportedLocalesOf);
+static JSC_DECLARE_HOST_FUNCTION(intlSegmenterConstructorSupportedLocalesOf);
 
 }
 
@@ -46,7 +46,7 @@ const ClassInfo IntlSegmenterConstructor::s_info = { "Function", &Base::s_info, 
 
 /* Source for IntlSegmenterConstructor.lut.h
 @begin segmenterConstructorTable
-  supportedLocalesOf             IntlSegmenterConstructorSupportedLocalesOf             DontEnum|Function 1
+  supportedLocalesOf             intlSegmenterConstructorSupportedLocalesOf             DontEnum|Function 1
 @end
 */
 
@@ -84,9 +84,7 @@ JSC_DEFINE_HOST_FUNCTION(constructIntlSegmenter, (JSGlobalObject* globalObject, 
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     JSObject* newTarget = asObject(callFrame->newTarget());
-    Structure* structure = newTarget == callFrame->jsCallee()
-        ? globalObject->segmenterStructure()
-        : InternalFunction::createSubclassStructure(globalObject, newTarget, getFunctionRealm(vm, newTarget)->segmenterStructure());
+    Structure* structure = JSC_GET_DERIVED_STRUCTURE(vm, segmenterStructure, newTarget, callFrame->jsCallee());
     RETURN_IF_EXCEPTION(scope, { });
 
     IntlSegmenter* segmenter = IntlSegmenter::create(vm, structure);
@@ -106,14 +104,14 @@ JSC_DEFINE_HOST_FUNCTION(callIntlSegmenter, (JSGlobalObject* globalObject, CallF
     return JSValue::encode(throwConstructorCannotBeCalledAsFunctionTypeError(globalObject, scope, "Segmenter"));
 }
 
-JSC_DEFINE_HOST_FUNCTION(IntlSegmenterConstructorSupportedLocalesOf, (JSGlobalObject* globalObject, CallFrame* callFrame))
+JSC_DEFINE_HOST_FUNCTION(intlSegmenterConstructorSupportedLocalesOf, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
     // https://tc39.es/proposal-intl-segmenter/#sec-intl.segmenter.supportedlocalesof
 
     // 1. Let availableLocales be %Segmenter%.[[availableLocales]].
-    const HashSet<String>& availableLocales = intlSegmenterAvailableLocales();
+    const auto& availableLocales = intlSegmenterAvailableLocales();
 
     // 2. Let requestedLocales be CanonicalizeLocaleList(locales).
     Vector<String> requestedLocales = canonicalizeLocaleList(globalObject, callFrame->argument(0));

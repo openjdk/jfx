@@ -355,6 +355,7 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
         BitSet selectedIndicesCopy = new BitSet();
         selectedIndicesCopy.or(selectedIndices.bitset);
         selectedIndicesCopy.clear(row);
+        // No modifications should be made to 'selectedIndicesCopy' to honour the constructor.
         List<Integer> previousSelectedIndices = new SelectedIndicesList(selectedIndicesCopy);
 
         // RT-32411 We used to call quietClearSelection() here, but this
@@ -637,6 +638,7 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
     class SelectedIndicesList extends ReadOnlyUnbackedObservableList<Integer> {
         private final BitSet bitset;
 
+        private int size = -1;
         private int lastGetIndex = -1;
         private int lastGetValue = -1;
 
@@ -648,10 +650,18 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
 //            throw new RuntimeException("callObservers unavailable");
 //        }
 
+        /**
+         * Constructs a new instance of SelectedIndicesList
+         */
         public SelectedIndicesList() {
             this(new BitSet());
         }
 
+        /**
+         * Constructs a new instance of SelectedIndicesList from the provided BitSet.
+         * The underlying source BitSet shouldn't be modified once it has been passed to the constructor.
+         * @param bitset Bitset to be used.
+         */
         public SelectedIndicesList(BitSet bitset) {
             this.bitset = bitset;
         }
@@ -705,6 +715,7 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
             }
 
             _beginChange();
+            size = -1;
             bitset.set(index);
             int indicesIndex = indexOf(index);
             _nextAdd(indicesIndex, indicesIndex + 1);
@@ -725,6 +736,7 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
 
         public void set(int index, int end, boolean isSet) {
             _beginChange();
+            size = -1;
             if (isSet) {
                 bitset.set(index, end, isSet);
                 int indicesIndex = indexOf(index);
@@ -802,6 +814,7 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
         public void clear() {
             _beginChange();
             List<Integer> removed = bitset.stream().boxed().collect(Collectors.toList());
+            size = 0;
             bitset.clear();
             _nextRemove(0, removed);
             _endChange();
@@ -812,50 +825,11 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
 
             int indicesIndex = indexOf(index);
             _beginChange();
+            size = -1;
             bitset.clear(index);
             _nextRemove(indicesIndex, index);
             _endChange();
         }
-
-//        public void clearAndSelect(int index) {
-//            if (index < 0 || index >= getItemCount()) {
-//                clearSelection();
-//                return;
-//            }
-//
-//            final boolean wasSelected = isSelected(index);
-//
-//            // RT-33558 if this method has been called with a given row, and that
-//            // row is the only selected row currently, then this method becomes a no-op.
-//            if (wasSelected && getSelectedIndices().size() == 1) {
-//                // before we return, we double-check that the selected item
-//                // is equal to the item in the given index
-//                if (getSelectedItem() == getModelItem(index)) {
-//                    return;
-//                }
-//            }
-//
-//            List<Integer> removed = bitset.stream().boxed().collect(Collectors.toList());
-//            boolean isSelected = removed.contains(index);
-//            if (isSelected) {
-//                removed.remove((Object)index);
-//            }
-//
-//            if (removed.isEmpty()) {
-//                set(index);
-//            }
-//
-//            bitset.clear();
-//            bitset.set(index);
-//            _beginChange();
-//            if (isSelected) {
-//                _nextRemove(0, removed);
-//            } else {
-//                _nextAdd(0, 1);
-//                _nextRemove(0, removed);
-//            }
-//            _endChange();
-//        }
 
         public boolean isSelected(int index) {
             return bitset.get(index);
@@ -867,7 +841,11 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
 
         /** Returns number of true bits in BitSet */
         @Override public int size() {
-            return bitset.cardinality();
+            if (size >= 0) {
+                return size;
+            }
+            size = bitset.cardinality();
+            return size;
         }
 
         /** Returns the number of bits reserved in the BitSet */
@@ -876,8 +854,40 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
         }
 
         @Override public int indexOf(Object obj) {
-            reset();
-            return super.indexOf(obj);
+            if (!(obj instanceof Number)) {
+                return -1;
+            }
+            Number n = (Number) obj;
+            int index = n.intValue();
+            if (!bitset.get(index)) {
+                return -1;
+            }
+
+            // is left most bit
+            if (index == 0) {
+                return 0;
+            }
+
+            // is right most bit
+            if (index == bitset.length() - 1) {
+                return size() - 1;
+            }
+
+            // count right bit
+            if (index > bitset.length() / 2) {
+                int count = 1;
+                for (int i = bitset.nextSetBit(index+1); i >= 0; i = bitset.nextSetBit(i+1)) {
+                    count++;
+                }
+                return size() - count;
+            }
+
+            // count left bit
+            int count = 0;
+            for (int i = bitset.previousSetBit(index-1);  i >= 0; i = bitset.previousSetBit(i-1)) {
+                count++;
+            }
+            return count;
         }
 
         @Override public boolean contains(Object o) {

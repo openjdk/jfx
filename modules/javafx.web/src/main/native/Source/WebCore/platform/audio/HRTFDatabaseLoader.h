@@ -76,7 +76,7 @@ private:
 
     // Holding a m_threadLock is required when accessing m_databaseLoaderThread.
     Lock m_threadLock;
-    RefPtr<Thread> m_databaseLoaderThread;
+    RefPtr<Thread> m_databaseLoaderThread WTF_GUARDED_BY_LOCK(m_threadLock);
 
     float m_databaseSampleRate;
 };

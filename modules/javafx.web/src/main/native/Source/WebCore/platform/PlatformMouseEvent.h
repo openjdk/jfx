@@ -44,6 +44,9 @@ const double ForceAtForceClick = 2;
     // indicate that the pressed mouse button hasn't changed since the last event.
     enum MouseButton : int8_t { LeftButton = 0, MiddleButton, RightButton, NoButton = -2 };
     enum SyntheticClickType : int8_t { NoTap, OneFingerTap, TwoFingerTap };
+#if PLATFORM(JAVA)
+    enum MouseButtonMask : uint8_t { NoButtonMask = 0, LeftButtonMask, RightButtonMask, MiddleButtonMask = 4 };
+#endif
 
     class PlatformMouseEvent : public PlatformEvent {
     public:
@@ -65,13 +68,28 @@ const double ForceAtForceClick = 2;
         {
         }
 
+#if PLATFORM(JAVA)
+        PlatformMouseEvent(const IntPoint& position, const IntPoint& globalPosition, MouseButton button, unsigned short buttons, PlatformEvent::Type type,
+                           int clickCount, bool shiftKey, bool ctrlKey, bool altKey, bool metaKey, WallTime timestamp, double force,
+                           SyntheticClickType syntheticClickType, PointerID pointerId = mousePointerID)
+            : PlatformEvent(type, shiftKey, ctrlKey, altKey, metaKey, timestamp)
+            , m_button(button)
+            , m_syntheticClickType(syntheticClickType)
+            , m_position(position)
+            , m_globalPosition(globalPosition)
+            , m_force(force)
+            , m_pointerId(pointerId)
+            , m_clickCount(clickCount)
+            , m_buttons(buttons)
+        {
+        }
+#endif
+
         // This position is relative to the enclosing NSWindow in WebKit1, and is WKWebView-relative in WebKit2.
         // Use ScrollView::windowToContents() to convert it to into the contents of a given view.
         const IntPoint& position() const { return m_position; }
         const IntPoint& globalPosition() const { return m_globalPosition; }
-#if ENABLE(POINTER_LOCK)
         const IntPoint& movementDelta() const { return m_movementDelta; }
-#endif
 
         MouseButton button() const { return m_button; }
         unsigned short buttons() const { return m_buttons; }
@@ -93,15 +111,19 @@ const double ForceAtForceClick = 2;
         bool didActivateWebView() const { return m_didActivateWebView; }
 #endif
 
+#if PLATFORM(GTK)
+        enum class IsTouch : bool { No, Yes };
+
+        bool isTouchEvent() const { return m_isTouchEvent == IsTouch::Yes; }
+#endif
+
     protected:
         MouseButton m_button { NoButton };
         SyntheticClickType m_syntheticClickType { NoTap };
 
         IntPoint m_position;
         IntPoint m_globalPosition;
-#if ENABLE(POINTER_LOCK)
         IntPoint m_movementDelta;
-#endif
         double m_force { 0 };
         PointerID m_pointerId { mousePointerID };
         String m_pointerType { "mouse"_s };
@@ -113,6 +135,8 @@ const double ForceAtForceClick = 2;
         int m_menuTypeForEvent { 0 };
 #elif PLATFORM(WIN)
         bool m_didActivateWebView { false };
+#elif PLATFORM(GTK)
+        IsTouch m_isTouchEvent { IsTouch::No };
 #endif
     };
 
@@ -132,6 +156,7 @@ const double ForceAtForceClick = 2;
 
 #if PLATFORM(JAVA)
     MouseButton getWebCoreMouseButton(jint javaButton);
+    unsigned short getWebCoreMouseButtons(jint javaButton);
     PlatformEvent::Type getWebCoreMouseEventType(jint eventID);
 #endif
 

@@ -34,9 +34,24 @@
 #include "HTMLNames.h"
 #include "HTMLParserIdioms.h"
 #include "HTMLSourceElement.h"
+#include "JSEventTarget.h"
+#include "JSHTMLModelElement.h"
+#include "Model.h"
+#include "RenderLayerModelObject.h"
 #include "RenderModel.h"
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/URL.h>
+
+#if HAVE(ARKIT_INLINE_PREVIEW_IOS)
+#include "Chrome.h"
+#include "ChromeClient.h"
+#include "Document.h"
+#include "GraphicsLayer.h"
+#include "GraphicsLayerCA.h"
+#include "Page.h"
+#include "RenderLayer.h"
+#include "RenderLayerBacking.h"
+#endif
 
 namespace WebCore {
 
@@ -54,6 +69,10 @@ HTMLModelElement::~HTMLModelElement()
         m_resource->removeClient(*this);
         m_resource = nullptr;
     }
+
+#if HAVE(ARKIT_INLINE_PREVIEW_MAC)
+    clearFile();
+#endif
 }
 
 Ref<HTMLModelElement> HTMLModelElement::create(const QualifiedName& tagName, Document& document)
@@ -67,6 +86,14 @@ RefPtr<SharedBuffer> HTMLModelElement::modelData() const
         return nullptr;
 
     return m_data;
+}
+
+RefPtr<Model> HTMLModelElement::model() const
+{
+    if (!m_dataComplete)
+        return nullptr;
+
+    return m_model;
 }
 
 void HTMLModelElement::sourcesChanged()
@@ -108,8 +135,12 @@ void HTMLModelElement::setSourceURL(const URL& url)
 
     m_readyPromise = makeUniqueRef<ReadyPromise>(*this, &HTMLModelElement::readyPromiseResolve);
 
-    if (m_sourceURL.isEmpty())
+    if (m_sourceURL.isEmpty()) {
+#if HAVE(ARKIT_INLINE_PREVIEW_MAC)
+        clearFile();
+#endif
         return;
+    }
 
     ResourceLoaderOptions options = CachedResourceLoader::defaultCachedResourceOptions();
     options.destination = FetchOptions::Destination::Model;
@@ -136,6 +167,24 @@ HTMLModelElement& HTMLModelElement::readyPromiseResolve()
     return *this;
 }
 
+#if HAVE(ARKIT_INLINE_PREVIEW)
+static String& sharedModelElementCacheDirectory()
+{
+    static NeverDestroyed<String> sharedModelElementCacheDirectory;
+    return sharedModelElementCacheDirectory;
+}
+
+void HTMLModelElement::setModelElementCacheDirectory(const String& path)
+{
+    sharedModelElementCacheDirectory() = path;
+}
+
+const String& HTMLModelElement::modelElementCacheDirectory()
+{
+    return sharedModelElementCacheDirectory();
+}
+#endif
+
 // MARK: - DOM overrides.
 
 void HTMLModelElement::didMoveToNewDocument(Document& oldDocument, Document& newDocument)
@@ -153,7 +202,7 @@ RenderPtr<RenderElement> HTMLModelElement::createElementRenderer(RenderStyle&& s
 
 // MARK: - CachedRawResourceClient
 
-void HTMLModelElement::dataReceived(CachedResource& resource, const char* data, int dataLength)
+void HTMLModelElement::dataReceived(CachedResource& resource, const uint8_t* data, int dataLength)
 {
     ASSERT_UNUSED(resource, &resource == m_resource);
     ASSERT(m_data);
@@ -180,10 +229,38 @@ void HTMLModelElement::notifyFinished(CachedResource& resource, const NetworkLoa
     }
 
     m_dataComplete = true;
+    m_model = Model::create(*m_data);
 
     invalidateResourceHandleAndUpdateRenderer();
 
     m_readyPromise->resolve(*this);
+
+#if HAVE(ARKIT_INLINE_PREVIEW_MAC)
+    modelDidChange();
+#endif
+}
+
+void HTMLModelElement::enterFullscreen()
+{
+#if HAVE(ARKIT_INLINE_PREVIEW_IOS)
+    auto* page = document().page();
+    if (!page)
+        return;
+
+    if (!is<RenderLayerModelObject>(this->renderer()))
+        return;
+
+    auto& renderLayerModelObject = downcast<RenderLayerModelObject>(*this->renderer());
+    if (!renderLayerModelObject.isComposited() || !renderLayerModelObject.layer() || !renderLayerModelObject.layer()->backing())
+        return;
+
+    auto* graphicsLayer = renderLayerModelObject.layer()->backing()->graphicsLayer();
+    if (!graphicsLayer)
+        return;
+
+    if (auto contentLayerId = graphicsLayer->contentsLayerIDForModel())
+        page->chrome().client().takeModelElementFullscreen(contentLayerId);
+#endif
 }
 
 }

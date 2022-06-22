@@ -285,12 +285,12 @@ public:
 
     static inline void addObserver(Observer& observer)
     {
-        auto lock = holdLock(observerLock());
+        Locker locker { observerLock() };
         observers().append(observer);
     }
     static inline void removeObserver(Observer& observer)
     {
-        auto lock = holdLock(observerLock());
+        Locker locker { observerLock() };
         observers().removeFirstMatching([&observer](auto anObserver) {
             return &anObserver.get() == &observer;
         });
@@ -307,7 +307,7 @@ private:
     template<typename... Argument>
     static inline void log(WTFLogChannel& channel, WTFLogLevel level, const Argument&... arguments)
     {
-        String logMessage = makeString(LogArgument<Argument>::toString(arguments)...);
+        auto logMessage = makeString(LogArgument<Argument>::toString(arguments)...);
 
 #if RELEASE_LOG_DISABLED
         WTFLog(&channel, "%s", logMessage.utf8().data());
@@ -322,10 +322,10 @@ private:
         if (channel.state == WTFLogChannelState::Off || level > channel.level)
             return;
 
-        auto lock = tryHoldLock(observerLock());
-        if (!lock)
+        if (!observerLock().tryLock())
             return;
 
+        Locker locker { AdoptLock, observerLock() };
         for (Observer& observer : observers())
             observer.didLogMessage(channel, level, { ConsoleLogValue<Argument>::toValue(arguments)... });
     }
@@ -333,7 +333,7 @@ private:
     template<typename... Argument>
     static inline void logVerbose(WTFLogChannel& channel, WTFLogLevel level, const char* file, const char* function, int line, const Argument&... arguments)
     {
-        String logMessage = makeString(LogArgument<Argument>::toString(arguments)...);
+        auto logMessage = makeString(LogArgument<Argument>::toString(arguments)...);
 
 #if RELEASE_LOG_DISABLED
         WTFLogVerbose(file, line, function, &channel, "%s", logMessage.utf8().data());
@@ -353,17 +353,17 @@ private:
         if (channel.state == WTFLogChannelState::Off || level > channel.level)
             return;
 
-        auto lock = tryHoldLock(observerLock());
-        if (!lock)
+        if (!observerLock().tryLock())
             return;
 
+        Locker locker { AdoptLock, observerLock() };
         for (Observer& observer : observers())
             observer.didLogMessage(channel, level, { ConsoleLogValue<Argument>::toValue(arguments)... });
     }
 
-    WTF_EXPORT_PRIVATE static Vector<std::reference_wrapper<Observer>>& observers();
+    WTF_EXPORT_PRIVATE static Vector<std::reference_wrapper<Observer>>& observers() WTF_REQUIRES_LOCK(observerLock());
 
-    static Lock& observerLock()
+    static Lock& observerLock() WTF_RETURNS_LOCK(loggerObserverLock)
     {
         return loggerObserverLock;
     }

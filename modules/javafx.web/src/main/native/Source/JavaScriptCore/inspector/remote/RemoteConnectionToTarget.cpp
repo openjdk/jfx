@@ -46,11 +46,11 @@ RemoteConnectionToTarget::~RemoteConnectionToTarget()
 
 bool RemoteConnectionToTarget::setup(bool isAutomaticInspection, bool automaticallyPause)
 {
-    LockHolder lock(m_targetMutex);
+    Locker locker { m_targetMutex };
     if (!m_target)
         return false;
 
-    auto targetIdentifier = this->targetIdentifier().valueOr(0);
+    auto targetIdentifier = this->targetIdentifier().value_or(0);
 
     if (!m_target || !m_target->remoteControlAllowed()) {
         RemoteInspector::singleton().setupFailed(targetIdentifier);
@@ -76,7 +76,7 @@ void RemoteConnectionToTarget::sendMessageToTarget(const String& message)
 {
     RemoteControllableTarget* target = nullptr;
     {
-        LockHolder lock(m_targetMutex);
+        Locker locker { m_targetMutex };
         if (!m_target)
             return;
         target = m_target;
@@ -88,7 +88,7 @@ void RemoteConnectionToTarget::sendMessageToTarget(const String& message)
 void RemoteConnectionToTarget::close()
 {
     RunLoop::current().dispatch([this, protectThis = makeRef(*this)] {
-        LockHolder lock(m_targetMutex);
+        Locker locker { m_targetMutex };
         if (!m_target)
             return;
 
@@ -105,13 +105,13 @@ void RemoteConnectionToTarget::close()
 
 void RemoteConnectionToTarget::targetClosed()
 {
-    LockHolder lock(m_targetMutex);
+    Locker locker { m_targetMutex };
     m_target = nullptr;
 }
 
-Optional<TargetID> RemoteConnectionToTarget::targetIdentifier() const
+std::optional<TargetID> RemoteConnectionToTarget::targetIdentifier() const
 {
-    return m_target ? Optional<TargetID>(m_target->targetIdentifier()) : WTF::nullopt;
+    return m_target ? std::optional<TargetID>(m_target->targetIdentifier()) : std::nullopt;
 }
 
 void RemoteConnectionToTarget::sendMessageToFrontend(const String& message)

@@ -35,7 +35,9 @@
 namespace WebCore {
 
 struct HighlightRangeData;
+struct TextBoxSelectableRange;
 class RenderMultiColumnSpannerPlaceholder;
+class RenderText;
 
 class RenderRange {
 public:
@@ -80,6 +82,12 @@ private:
 
 class HighlightData {
 public:
+    enum IsSelectionTag { IsSelection };
+    HighlightData() = default;
+    HighlightData(IsSelectionTag)
+        : m_isSelection(true)
+    { }
+
     void setRenderRange(const RenderRange&);
     bool setRenderRange(const HighlightRangeData&); // Returns true if successful.
     const RenderRange& get() const { return m_renderRange; }
@@ -91,9 +99,12 @@ public:
     unsigned endOffset() const { return m_renderRange.endOffset(); }
 
     RenderObject::HighlightState highlightStateForRenderer(const RenderObject&);
+    RenderObject::HighlightState highlightStateForTextBox(const RenderText&, const TextBoxSelectableRange&);
+    std::pair<unsigned, unsigned> rangeForTextBox(const RenderText&, const TextBoxSelectableRange&);
 
 protected:
     RenderRange m_renderRange;
+    const bool m_isSelection { false };
 };
 
 } // namespace WebCore

@@ -25,8 +25,6 @@
 
 #pragma once
 
-#if ENABLE(INDEXED_DATABASE)
-
 #include "ClientOrigin.h"
 #include "SecurityOriginData.h"
 #include <wtf/text/StringHash.h>
@@ -87,7 +85,7 @@ public:
     static String databaseDirectoryRelativeToRoot(const SecurityOriginData& topLevelOrigin, const SecurityOriginData& openingOrigin, const String& rootDirectory, const String& versionString);
 
     template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static Optional<IDBDatabaseIdentifier> decode(Decoder&);
+    template<class Decoder> static std::optional<IDBDatabaseIdentifier> decode(Decoder&);
 
 #if !LOG_DISABLED
     String loggingString() const;
@@ -120,22 +118,22 @@ void IDBDatabaseIdentifier::encode(Encoder& encoder) const
 }
 
 template<class Decoder>
-Optional<IDBDatabaseIdentifier> IDBDatabaseIdentifier::decode(Decoder& decoder)
+std::optional<IDBDatabaseIdentifier> IDBDatabaseIdentifier::decode(Decoder& decoder)
 {
-    Optional<String> databaseName;
+    std::optional<String> databaseName;
     decoder >> databaseName;
     if (!databaseName)
-        return WTF::nullopt;
+        return std::nullopt;
 
-    Optional<ClientOrigin> origin;
+    std::optional<ClientOrigin> origin;
     decoder >> origin;
     if (!origin)
-        return WTF::nullopt;
+        return std::nullopt;
 
-    Optional<bool> isTransient;
+    std::optional<bool> isTransient;
     decoder >> isTransient;
     if (!isTransient)
-        return WTF::nullopt;
+        return std::nullopt;
 
     IDBDatabaseIdentifier identifier;
     identifier.m_databaseName = WTFMove(*databaseName); // FIXME: When decoding from IPC, databaseName can be null, and the non-empty constructor asserts that this is not the case.
@@ -152,5 +150,3 @@ template<> struct HashTraits<WebCore::IDBDatabaseIdentifier> : WebCore::IDBDatab
 template<> struct DefaultHash<WebCore::IDBDatabaseIdentifier> : WebCore::IDBDatabaseIdentifierHash { };
 
 } // namespace WTF
-
-#endif // ENABLE(INDEXED_DATABASE)

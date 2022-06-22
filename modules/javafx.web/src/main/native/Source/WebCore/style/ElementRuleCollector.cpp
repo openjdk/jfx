@@ -111,9 +111,10 @@ const Vector<RefPtr<const StyleRule>>& ElementRuleCollector::matchedRuleList() c
     return m_matchedRuleList;
 }
 
-inline void ElementRuleCollector::addMatchedRule(const RuleData& ruleData, unsigned specificity, ScopeOrdinal styleScopeOrdinal)
+inline void ElementRuleCollector::addMatchedRule(const RuleData& ruleData, unsigned specificity, const MatchRequest& matchRequest)
 {
-    m_matchedRules.append({ &ruleData, specificity, styleScopeOrdinal });
+    auto cascadeLayerOrder = matchRequest.ruleSet ? matchRequest.ruleSet->cascadeLayerOrderFor(ruleData) : 0;
+    m_matchedRules.append({ &ruleData, specificity, matchRequest.styleScopeOrdinal, cascadeLayerOrder });
 }
 
 void ElementRuleCollector::clearMatchedRules()
@@ -183,7 +184,7 @@ void ElementRuleCollector::sortAndTransferMatchedRules(DeclarationOrigin declara
     transferMatchedRules(declarationOrigin);
 }
 
-void ElementRuleCollector::transferMatchedRules(DeclarationOrigin declarationOrigin, Optional<ScopeOrdinal> fromScope)
+void ElementRuleCollector::transferMatchedRules(DeclarationOrigin declarationOrigin, std::optional<ScopeOrdinal> fromScope)
 {
     if (m_mode != SelectorChecker::Mode::CollectingRules)
         declarationsForOrigin(m_result, declarationOrigin).reserveCapacity(m_matchedRules.size());
@@ -339,7 +340,7 @@ void ElementRuleCollector::collectMatchingShadowPseudoElementRules(const MatchRe
 #if ENABLE(VIDEO)
     // FXIME: WebVTT should not be done by styling UA shadow trees like this.
     if (element().isWebVTTElement())
-        collectMatchingRulesForList(rules.cuePseudoRules(), matchRequest);
+        collectMatchingRulesForList(&rules.cuePseudoRules(), matchRequest);
 #endif
     auto& pseudoId = element().shadowPseudoId();
     if (!pseudoId.isEmpty())
@@ -484,14 +485,15 @@ inline bool ElementRuleCollector::ruleMatches(const RuleData& ruleData, unsigned
 #endif // ENABLE(CSS_SELECTOR_JIT)
     {
         auto* selector = ruleData.selector();
+        auto* selectorForMatching = selector;
         if (m_isMatchingSlottedPseudoElements) {
-            selector = findSlottedPseudoElementSelector(ruleData.selector());
-            if (!selector)
+            selectorForMatching = findSlottedPseudoElementSelector(ruleData.selector());
+            if (!selectorForMatching)
                 return false;
         }
         // Slow path.
         SelectorChecker selectorChecker(element().document());
-        selectorMatches = selectorChecker.match(*selector, element(), context);
+        selectorMatches = selectorChecker.match(*selectorForMatching, element(), context);
         if (selectorMatches)
             specificity = selector->computeSpecificity();
     }
@@ -534,7 +536,7 @@ void ElementRuleCollector::collectMatchingRulesForList(const RuleSet::RuleDataVe
 
         unsigned specificity;
         if (ruleMatches(ruleData, specificity))
-            addMatchedRule(ruleData, specificity, matchRequest.styleScopeOrdinal);
+            addMatchedRule(ruleData, specificity, matchRequest);
     }
 }
 
@@ -543,6 +545,9 @@ static inline bool compareRules(MatchedRule r1, MatchedRule r2)
     // For normal properties the earlier scope wins. This may be reversed by !important which is handled when resolving cascade.
     if (r1.styleScopeOrdinal != r2.styleScopeOrdinal)
         return r1.styleScopeOrdinal > r2.styleScopeOrdinal;
+
+    if (r1.cascadeLayerOrder != r2.cascadeLayerOrder)
+        return r1.cascadeLayerOrder < r2.cascadeLayerOrder;
 
     if (r1.specificity != r2.specificity)
         return r1.specificity < r2.specificity;
@@ -563,15 +568,14 @@ void ElementRuleCollector::matchAllRules(bool matchAuthorAndUserStyles, bool inc
     if (matchAuthorAndUserStyles)
         matchUserRules();
 
-    // Now check author rules, beginning first with presentational attributes mapped from HTML.
     if (is<StyledElement>(element())) {
         auto& styledElement = downcast<StyledElement>(element());
-        addElementStyleProperties(styledElement.presentationAttributeStyle());
+        // https://html.spec.whatwg.org/#presentational-hints
+        addElementStyleProperties(styledElement.presentationalHintStyle());
 
-        // Now we check additional mapped declarations.
-        // Tables and table cells share an additional mapped rule that must be applied
-        // after all attributes, since their mapped style depends on the values of multiple attributes.
-        addElementStyleProperties(styledElement.additionalPresentationAttributeStyle());
+        // Tables and table cells share an additional presentation style that must be applied
+        // after all attributes, since their style depends on the values of multiple attributes.
+        addElementStyleProperties(styledElement.additionalPresentationalHintStyle());
 
         if (is<HTMLElement>(styledElement)) {
             bool isAuto;

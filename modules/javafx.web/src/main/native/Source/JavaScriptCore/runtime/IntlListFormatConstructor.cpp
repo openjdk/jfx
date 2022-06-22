@@ -34,7 +34,7 @@ namespace JSC {
 
 STATIC_ASSERT_IS_TRIVIALLY_DESTRUCTIBLE(IntlListFormatConstructor);
 
-static JSC_DECLARE_HOST_FUNCTION(IntlListFormatConstructorSupportedLocalesOf);
+static JSC_DECLARE_HOST_FUNCTION(intlListFormatConstructorSupportedLocalesOf);
 
 }
 
@@ -46,7 +46,7 @@ const ClassInfo IntlListFormatConstructor::s_info = { "Function", &Base::s_info,
 
 /* Source for IntlListFormatConstructor.lut.h
 @begin listFormatConstructorTable
-  supportedLocalesOf             IntlListFormatConstructorSupportedLocalesOf             DontEnum|Function 1
+  supportedLocalesOf             intlListFormatConstructorSupportedLocalesOf             DontEnum|Function 1
 @end
 */
 
@@ -84,9 +84,7 @@ JSC_DEFINE_HOST_FUNCTION(constructIntlListFormat, (JSGlobalObject* globalObject,
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     JSObject* newTarget = asObject(callFrame->newTarget());
-    Structure* structure = newTarget == callFrame->jsCallee()
-        ? globalObject->listFormatStructure()
-        : InternalFunction::createSubclassStructure(globalObject, newTarget, getFunctionRealm(vm, newTarget)->listFormatStructure());
+    Structure* structure = JSC_GET_DERIVED_STRUCTURE(vm, listFormatStructure, newTarget, callFrame->jsCallee());
     RETURN_IF_EXCEPTION(scope, { });
 
     IntlListFormat* listFormat = IntlListFormat::create(vm, structure);
@@ -106,7 +104,7 @@ JSC_DEFINE_HOST_FUNCTION(callIntlListFormat, (JSGlobalObject* globalObject, Call
     return JSValue::encode(throwConstructorCannotBeCalledAsFunctionTypeError(globalObject, scope, "ListFormat"));
 }
 
-JSC_DEFINE_HOST_FUNCTION(IntlListFormatConstructorSupportedLocalesOf, (JSGlobalObject* globalObject, CallFrame* callFrame))
+JSC_DEFINE_HOST_FUNCTION(intlListFormatConstructorSupportedLocalesOf, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
@@ -114,7 +112,7 @@ JSC_DEFINE_HOST_FUNCTION(IntlListFormatConstructorSupportedLocalesOf, (JSGlobalO
     // https://tc39.es/proposal-intl-list-format/#sec-Intl.ListFormat.supportedLocalesOf
 
     // 1. Let availableLocales be %ListFormat%.[[availableLocales]].
-    const HashSet<String>& availableLocales = intlListFormatAvailableLocales();
+    const auto& availableLocales = intlListFormatAvailableLocales();
 
     // 2. Let requestedLocales be CanonicalizeLocaleList(locales).
     Vector<String> requestedLocales = canonicalizeLocaleList(globalObject, callFrame->argument(0));

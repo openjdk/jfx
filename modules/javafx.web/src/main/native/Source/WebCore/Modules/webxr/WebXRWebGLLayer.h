@@ -29,6 +29,9 @@
 
 #include "CanvasBase.h"
 #include "ExceptionOr.h"
+#include "FloatRect.h"
+#include "GraphicsTypesGL.h"
+#include "PlatformXR.h"
 #include "WebXRLayer.h"
 #include <wtf/IsoMalloc.h>
 #include <wtf/Ref.h>
@@ -41,9 +44,11 @@ class HTMLCanvasElement;
 class IntSize;
 class WebGLFramebuffer;
 class WebGLRenderingContext;
+class WebGLRenderingContextBase;
 #if ENABLE(WEBGL2)
 class WebGL2RenderingContext;
 #endif
+class WebXROpaqueFramebuffer;
 class WebXRSession;
 class WebXRView;
 class WebXRViewport;
@@ -66,7 +71,7 @@ public:
     bool antialias() const;
     bool ignoreDepthValues() const;
 
-    WebGLFramebuffer* framebuffer() const;
+    const WebGLFramebuffer* framebuffer() const;
     unsigned framebufferWidth() const;
     unsigned framebufferHeight() const;
 
@@ -80,17 +85,20 @@ public:
 
     HTMLCanvasElement* canvas() const;
 
+    // WebXRLayer
+    void startFrame(const PlatformXR::Device::FrameData&) final;
+    PlatformXR::Device::Layer endFrame() final;
+
 private:
-    WebXRWebGLLayer(Ref<WebXRSession>&&, WebXRRenderingContext&&, const XRWebGLLayerInit&);
+    WebXRWebGLLayer(Ref<WebXRSession>&&, WebXRRenderingContext&&, std::unique_ptr<WebXROpaqueFramebuffer>&&, bool antialias, bool ignoreDepthValues, bool isCompositionEnabled);
 
     void computeViewports();
     static IntSize computeNativeWebGLFramebufferResolution();
     static IntSize computeRecommendedWebGLFramebufferResolution();
 
-    void canvasChanged(CanvasBase&, const FloatRect&) final { };
+    void canvasChanged(CanvasBase&, const std::optional<FloatRect>&) final { };
     void canvasResized(CanvasBase&) final;
     void canvasDestroyed(CanvasBase&) final { };
-
     Ref<WebXRSession> m_session;
     WebXRRenderingContext m_context;
 
@@ -101,16 +109,11 @@ private:
 
     ViewportData m_leftViewportData;
     ViewportData m_rightViewportData;
+    std::unique_ptr<WebXROpaqueFramebuffer> m_framebuffer;
     bool m_antialias { false };
     bool m_ignoreDepthValues { false };
     bool m_isCompositionEnabled { true };
     bool m_viewportsDirty { true };
-
-    struct {
-        RefPtr<WebGLFramebuffer> object;
-        unsigned width { 0 };
-        unsigned height { 0 };
-    } m_framebuffer;
 };
 
 } // namespace WebCore

@@ -26,8 +26,6 @@
 #include "config.h"
 #include "MemoryCursor.h"
 
-#if ENABLE(INDEXED_DATABASE)
-
 #include "IDBResourceIdentifier.h"
 #include <wtf/HashMap.h>
 #include <wtf/NeverDestroyed.h>
@@ -35,7 +33,8 @@
 namespace WebCore {
 namespace IDBServer {
 
-static HashMap<IDBResourceIdentifier, MemoryCursor*>& cursorMap()
+static Lock cursorMapLock;
+static HashMap<IDBResourceIdentifier, MemoryCursor*>& cursorMap() WTF_REQUIRES_LOCK(cursorMapLock)
 {
     static NeverDestroyed<HashMap<IDBResourceIdentifier, MemoryCursor*>> map;
     return map;
@@ -44,22 +43,29 @@ static HashMap<IDBResourceIdentifier, MemoryCursor*>& cursorMap()
 MemoryCursor::MemoryCursor(const IDBCursorInfo& info)
     : m_info(info)
 {
+    ASSERT(!isMainThread());
+
+    Locker locker { cursorMapLock };
     ASSERT(!cursorMap().contains(m_info.identifier()));
     cursorMap().set(m_info.identifier(), this);
 }
 
 MemoryCursor::~MemoryCursor()
 {
+    ASSERT(!isMainThread());
+
+    Locker locker { cursorMapLock };
     ASSERT(cursorMap().contains(m_info.identifier()));
     cursorMap().remove(m_info.identifier());
 }
 
 MemoryCursor* MemoryCursor::cursorForIdentifier(const IDBResourceIdentifier& identifier)
 {
+    ASSERT(!isMainThread());
+
+    Locker locker { cursorMapLock };
     return cursorMap().get(identifier);
 }
 
 } // namespace IDBServer
 } // namespace WebCore
-
-#endif // ENABLE(INDEXED_DATABASE)

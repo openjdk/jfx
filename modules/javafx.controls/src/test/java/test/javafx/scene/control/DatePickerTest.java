@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,8 +25,12 @@
 
 package test.javafx.scene.control;
 
+import java.time.DateTimeException;
 import java.time.LocalDate;
 import java.time.chrono.*;
+import java.time.temporal.ChronoField;
+import java.time.temporal.TemporalAccessor;
+import java.time.temporal.ValueRange;
 import java.util.*;
 
 import javafx.scene.control.Button;
@@ -621,6 +625,30 @@ public class DatePickerTest {
     }
 
     @Test
+    public void testInvalidChronologyIsRestored() {
+        datePicker = new DatePicker(LocalDate.of(1998, 1, 23));
+        datePicker.setChronology(IsoChronology.INSTANCE);
+
+        assertEquals(IsoChronology.INSTANCE, datePicker.getChronology());
+
+        // This should restore the old set chronology (Iso) as the chronology is invalid.
+        datePicker.setChronology(new InvalidChronology());
+        assertEquals(IsoChronology.INSTANCE, datePicker.getChronology());
+    }
+
+    @Test
+    public void testInvalidValueIsRestored() {
+        datePicker = new DatePicker(null);
+        assertNull(datePicker.getValue());
+
+        datePicker.setChronology(new InvalidChronology());
+        // This should restore the old set value (null) as the chronology is invalid.
+        datePicker.setValue(LocalDate.of(1998, 1, 23));
+
+        assertNull(datePicker.getValue());
+    }
+
+    @Test
     public void testCommitValue() {
         datePicker.setEditable(true);
         datePicker.getEditor().setText("11/24/2021");
@@ -707,6 +735,53 @@ public class DatePickerTest {
         assertEquals("11/24/2021", datePicker.getEditor().getText());
 
         stageLoader.dispose();
+    }
+
+    private class InvalidChronology extends AbstractChronology {
+        @Override
+        public String getId() {
+            return null;
+        }
+        @Override
+        public String getCalendarType() {
+            return null;
+        }
+        @Override
+        public ChronoLocalDate date(int prolepticYear, int month, int dayOfMonth) {
+            return null;
+        }
+        @Override
+        public ChronoLocalDate dateYearDay(int prolepticYear, int dayOfYear) {
+            return null;
+        }
+        @Override
+        public ChronoLocalDate dateEpochDay(long epochDay) {
+            return null;
+        }
+        @Override
+        public ChronoLocalDate date(TemporalAccessor temporal) {
+            throw new DateTimeException("Invalid");
+        }
+        @Override
+        public boolean isLeapYear(long prolepticYear) {
+            return false;
+        }
+        @Override
+        public int prolepticYear(Era era, int yearOfEra) {
+            return 0;
+        }
+        @Override
+        public Era eraOf(int eraValue) {
+            return null;
+        }
+        @Override
+        public List<Era> eras() {
+            return null;
+        }
+        @Override
+        public ValueRange range(ChronoField field) {
+            return null;
+        }
     }
 
 }

@@ -26,8 +26,6 @@
 #include "config.h"
 #include "IDBDatabase.h"
 
-#if ENABLE(INDEXED_DATABASE)
-
 #include "DOMStringList.h"
 #include "EventNames.h"
 #include "EventQueue.h"
@@ -164,7 +162,7 @@ ExceptionOr<Ref<IDBObjectStore>> IDBDatabase::createObjectStore(const String& na
     return m_versionChangeTransaction->createObjectStore(info);
 }
 
-ExceptionOr<Ref<IDBTransaction>> IDBDatabase::transaction(StringOrVectorOfStrings&& storeNames, IDBTransactionMode mode)
+ExceptionOr<Ref<IDBTransaction>> IDBDatabase::transaction(StringOrVectorOfStrings&& storeNames, IDBTransactionMode mode, TransactionOptions options)
 {
     LOG(IndexedDB, "IDBDatabase::transaction");
 
@@ -202,7 +200,7 @@ ExceptionOr<Ref<IDBTransaction>> IDBDatabase::transaction(StringOrVectorOfString
     if (mode != IDBTransactionMode::Readonly && mode != IDBTransactionMode::Readwrite)
         return Exception { TypeError };
 
-    auto info = IDBTransactionInfo::clientTransaction(m_connectionProxy.get(), objectStores, mode);
+    auto info = IDBTransactionInfo::clientTransaction(m_connectionProxy.get(), objectStores, mode, options.durability);
 
     LOG(IndexedDBOperations, "IDB creating transaction: %s", info.loggingString().utf8().data());
     auto transaction = IDBTransaction::create(*this, info);
@@ -358,8 +356,9 @@ void IDBDatabase::didStartTransaction(IDBTransaction& transaction)
     ASSERT(!m_versionChangeTransaction);
     ASSERT(canCurrentThreadAccessThreadLocalData(originThread()));
 
-    // It is possible for the client to have aborted a transaction before the server replies back that it has started.
-    if (m_abortingTransactions.contains(transaction.info().identifier()))
+    // It is possible for the client to have aborted or committed a transaction
+    // before the server replies back that it has started.
+    if (m_abortingTransactions.contains(transaction.info().identifier()) || m_committingTransactions.contains(transaction.info().identifier()))
         return;
 
     m_activeTransactions.set(transaction.info().identifier(), &transaction);
@@ -501,5 +500,3 @@ void IDBDatabase::didDeleteIndexInfo(const IDBIndexInfo& info)
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(INDEXED_DATABASE)

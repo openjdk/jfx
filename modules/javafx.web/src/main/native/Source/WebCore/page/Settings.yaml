@@ -455,13 +455,13 @@ PrivateClickMeasurementFraudPreventionEnabled:
   type: bool
   defaultValue:
     WebCore:
+      "HAVE(RSA_BSSA)": true
       default: false
 
 QuickTimePluginReplacementEnabled:
   type: bool
   defaultValue:
     WebCore:
-      PLATFORM(IOS_FAMILY): true
       default: false
 
 RepaintOutsideLayoutEnabled:
@@ -490,7 +490,7 @@ SessionStorageQuota:
   type: uint32_t
   defaultValue:
     WebCore:
-      default: StorageMap::noQuota
+      default: 5242880
 
 ShouldDispatchSyntheticMouseEventsWhenModifyingSelection:
   type: bool
@@ -656,5 +656,4 @@ YouTubeFlashPluginReplacementEnabled:
   type: bool
   defaultValue:
     WebCore:
-      PLATFORM(COCOA): true
       default: false

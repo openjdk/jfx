@@ -46,14 +46,19 @@ public:
     bool isEnabled(const String&) override;
     int getGraphicsResetStatusARB() override;
 
-    PlatformGLObject createVertexArrayOES() override = 0;
-    void deleteVertexArrayOES(PlatformGLObject) override = 0;
-    GCGLboolean isVertexArrayOES(PlatformGLObject) override = 0;
-    void bindVertexArrayOES(PlatformGLObject) override = 0;
+    // GL_OES_vertex_array_object
+    virtual PlatformGLObject createVertexArrayOES() = 0;
+    virtual void deleteVertexArrayOES(PlatformGLObject) = 0;
+    virtual GCGLboolean isVertexArrayOES(PlatformGLObject) = 0;
+    virtual void bindVertexArrayOES(PlatformGLObject) = 0;
 
     void drawBuffersEXT(GCGLSpan<const GCGLenum>) override = 0;
 
     String getTranslatedShaderSourceANGLE(PlatformGLObject) override;
+
+    virtual void drawArraysInstancedANGLE(GCGLenum mode, GCGLint first, GCGLsizei count, GCGLsizei primcount) = 0;
+    virtual void drawElementsInstancedANGLE(GCGLenum mode, GCGLsizei count, GCGLenum type, GCGLvoidptr offset, GCGLsizei primcount) = 0;
+    virtual void vertexAttribDivisorANGLE(GCGLuint index, GCGLuint divisor) = 0;
 
     // EXT Robustness - uses getGraphicsResetStatusARB()
     void readnPixelsEXT(int x, int y, GCGLsizei width, GCGLsizei height, GCGLenum format, GCGLenum type, GCGLsizei bufSize, void *data) override;

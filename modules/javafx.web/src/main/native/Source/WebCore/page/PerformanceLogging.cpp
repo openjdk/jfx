@@ -92,6 +92,7 @@ void PerformanceLogging::didReachPointOfInterest(PointOfInterest poi)
 {
 #if RELEASE_LOG_DISABLED
     UNUSED_PARAM(poi);
+    UNUSED_VARIABLE(m_page);
 #else
     // Ignore synthetic main frames used internally by SVG and web inspector.
     if (m_page.mainFrame().loader().client().isEmptyFrameLoaderClient())
@@ -108,7 +109,7 @@ void PerformanceLogging::didReachPointOfInterest(PointOfInterest poi)
 
 #if !PLATFORM(COCOA)
 void PerformanceLogging::getPlatformMemoryUsageStatistics(HashMap<const char*, size_t>&) { }
-Optional<uint64_t> PerformanceLogging::physicalFootprint() { return WTF::nullopt; }
+std::optional<uint64_t> PerformanceLogging::physicalFootprint() { return std::nullopt; }
 #endif
 
 }

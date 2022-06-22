@@ -32,7 +32,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <wtf/ASCIICType.h>
 #include <wtf/HashMap.h>
 #include <wtf/Lock.h>
-#include <wtf/Optional.h>
 #include <wtf/text/StringToIntegerConversion.h>
 #include <wtf/text/TextBreakIterator.h>
 #include <wtf/unicode/icu/ICUHelpers.h>
@@ -138,7 +137,7 @@ auto StringView::SplitResult::Iterator::operator++() -> Iterator&
 class StringView::GraphemeClusters::Iterator::Impl {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    Impl(const StringView& stringView, Optional<NonSharedCharacterBreakIterator>&& iterator, unsigned index)
+    Impl(const StringView& stringView, std::optional<NonSharedCharacterBreakIterator>&& iterator, unsigned index)
         : m_stringView(stringView)
         , m_iterator(WTFMove(iterator))
         , m_index(index)
@@ -179,13 +178,13 @@ public:
 
 private:
     const StringView& m_stringView;
-    Optional<NonSharedCharacterBreakIterator> m_iterator;
+    std::optional<NonSharedCharacterBreakIterator> m_iterator;
     unsigned m_index;
     unsigned m_indexEnd;
 };
 
 StringView::GraphemeClusters::Iterator::Iterator(const StringView& stringView, unsigned index)
-    : m_impl(makeUnique<Impl>(stringView, stringView.isNull() ? WTF::nullopt : Optional<NonSharedCharacterBreakIterator>(NonSharedCharacterBreakIterator(stringView)), index))
+    : m_impl(makeUnique<Impl>(stringView, stringView.isNull() ? std::nullopt : std::optional<NonSharedCharacterBreakIterator>(NonSharedCharacterBreakIterator(stringView)), index))
 {
 }
 
@@ -246,6 +245,30 @@ String StringView::convertToASCIIUppercase() const
     if (m_is8Bit)
         return convertASCIICase<ASCIICase::Upper>(static_cast<const LChar*>(m_characters), m_length);
     return convertASCIICase<ASCIICase::Upper>(static_cast<const UChar*>(m_characters), m_length);
+}
+
+template<typename CharacterType>
+static AtomString convertASCIILowercaseAtom(const CharacterType* input, unsigned length)
+{
+    for (unsigned i = 0; i < length; ++i) {
+        if (UNLIKELY(isASCIIUpper(input[i]))) {
+            CharacterType* characters;
+            auto result = String::createUninitialized(length, characters);
+            StringImpl::copyCharacters(characters, input, i);
+            for (; i < length; ++i)
+                characters[i] = toASCIILower(input[i]);
+            return result;
+        }
+    }
+    // Fast path when the StringView is already all lowercase.
+    return AtomString(input, length);
+}
+
+AtomString StringView::convertToASCIILowercaseAtom() const
+{
+    if (m_is8Bit)
+        return convertASCIILowercaseAtom(characters8(), m_length);
+    return convertASCIILowercaseAtom(characters16(), m_length);
 }
 
 template<typename DestinationCharacterType, typename SourceCharacterType>
@@ -311,17 +334,6 @@ String normalizedNFC(const String& string)
     return result.underlyingString;
 }
 
-// FIXME: Should this be named parseNumber<uint16_t> instead?
-// FIXME: Should we replace the toInt family of functions with this style?
-Optional<uint16_t> parseUInt16(StringView string)
-{
-    bool ok = false;
-    auto number = toIntegralType<uint16_t>(string, &ok);
-    if (!ok)
-        return WTF::nullopt;
-    return number;
-}
-
 bool equalRespectingNullity(StringView a, StringView b)
 {
     if (a.m_characters == b.m_characters) {
@@ -371,15 +383,11 @@ StringView::UnderlyingString::UnderlyingString(const StringImpl& string)
 {
 }
 
-static Lock underlyingStringsMutex;
+static Lock underlyingStringsLock;
 
-static HashMap<const StringImpl*, StringView::UnderlyingString*>& underlyingStrings()
+static HashMap<const StringImpl*, StringView::UnderlyingString*>& underlyingStrings() WTF_REQUIRES_LOCK(underlyingStringsLock)
 {
-    static LazyNeverDestroyed<HashMap<const StringImpl*, StringView::UnderlyingString*>> map;
-    static std::once_flag onceKey;
-    std::call_once(onceKey, [&] {
-        map.construct();
-    });
+    static NeverDestroyed<HashMap<const StringImpl*, StringView::UnderlyingString*>> map;
     return map;
 }
 
@@ -387,7 +395,7 @@ void StringView::invalidate(const StringImpl& stringToBeDestroyed)
 {
     UnderlyingString* underlyingString;
     {
-        auto locker = holdLock(underlyingStringsMutex);
+        Locker locker { underlyingStringsLock };
         underlyingString = underlyingStrings().take(&stringToBeDestroyed);
         if (!underlyingString)
             return;
@@ -404,7 +412,7 @@ bool StringView::underlyingStringIsValid() const
 void StringView::adoptUnderlyingString(UnderlyingString* underlyingString)
 {
     if (m_underlyingString) {
-        auto locker = holdLock(underlyingStringsMutex);
+        Locker locker { underlyingStringsLock };
         if (!--m_underlyingString->refCount) {
             if (m_underlyingString->isValid) {
                 underlyingStrings().remove(&m_underlyingString->string);
@@ -421,7 +429,7 @@ void StringView::setUnderlyingString(const StringImpl* string)
     if (!string)
         underlyingString = nullptr;
     else {
-        auto locker = holdLock(underlyingStringsMutex);
+        Locker locker { underlyingStringsLock };
         auto result = underlyingStrings().add(string, nullptr);
         if (result.isNewEntry)
             result.iterator->value = new UnderlyingString(*string);
@@ -436,7 +444,7 @@ void StringView::setUnderlyingString(const StringView& otherString)
 {
     UnderlyingString* underlyingString = otherString.m_underlyingString;
     if (underlyingString) {
-        // It's safe to inc the refCount here without locking underlyingStringsMutex
+        // It's safe to inc the refCount here without locking underlyingStringsLock
         // because UnderlyingString::refCount is a std::atomic_uint, and we're
         // guaranteed that the StringView we're copying it from will at least
         // have 1 ref on it, thereby keeping it alive regardless of what other

@@ -149,14 +149,14 @@ RefPtr<ArchiveResource> MHTMLParser::parseNextPart(const MIMEHeader& mimeHeader,
             return nullptr;
         }
         m_lineReader.setSeparator(endOfPartBoundary.utf8().data());
-        Vector<char> part;
+        Vector<uint8_t> part;
         if (!m_lineReader.nextChunk(part)) {
             LOG_ERROR("Binary contents requires end of part");
             return nullptr;
         }
         content->append(WTFMove(part));
         m_lineReader.setSeparator("\r\n");
-        Vector<char> nextChars;
+        Vector<uint8_t> nextChars;
         if (m_lineReader.peek(nextChars, 2) != 2) {
             LOG_ERROR("Invalid seperator.");
             return nullptr;
@@ -192,16 +192,19 @@ RefPtr<ArchiveResource> MHTMLParser::parseNextPart(const MIMEHeader& mimeHeader,
         return nullptr;
     }
 
-    Vector<char> data;
+    Vector<uint8_t> data;
     switch (mimeHeader.contentTransferEncoding()) {
-    case MIMEHeader::Base64:
-        if (!base64Decode(content->data(), content->size(), data)) {
+    case MIMEHeader::Base64: {
+        auto decodedData = base64Decode(content->data(), content->size());
+        if (!decodedData) {
             LOG_ERROR("Invalid base64 content for MHTML part.");
             return nullptr;
         }
+        data = WTFMove(*decodedData);
         break;
+    }
     case MIMEHeader::QuotedPrintable:
-        quotedPrintableDecode(content->data(), content->size(), data);
+        data = quotedPrintableDecode(content->data(), content->size());
         break;
     case MIMEHeader::SevenBit:
     case MIMEHeader::Binary:

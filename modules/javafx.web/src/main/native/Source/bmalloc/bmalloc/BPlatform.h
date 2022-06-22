@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -274,8 +274,8 @@
 #endif
 
 #if BCPU(ADDRESS64)
-#if (BOS(IOS) || BOS(TVOS) || BOS(WATCHOS)) && BCPU(ARM64)
-#define BOS_EFFECTIVE_ADDRESS_WIDTH 36
+#if BOS(DARWIN)
+#define BOS_EFFECTIVE_ADDRESS_WIDTH (bmalloc::getMSBSetConstexpr(MACH_VM_MAX_ADDRESS) + 1)
 #else
 /* We strongly assume that effective address width is <= 48 in 64bit architectures (e.g. NaN boxing). */
 #define BOS_EFFECTIVE_ADDRESS_WIDTH 48
@@ -309,10 +309,18 @@
 /* This is used for debugging when hacking on how bmalloc calculates its physical footprint. */
 #define ENABLE_PHYSICAL_PAGE_MAP 0
 
-#if BPLATFORM(MAC)
-#define BUSE_PARTIAL_SCAVENGE 1
+/* BENABLE(LIBPAS) is enabling libpas build. But this does not mean we use libpas for bmalloc replacement. */
+#if !defined(BENABLE_LIBPAS)
+#if BCPU(ARM64) && BOS(MAC)
+#define BENABLE_LIBPAS 1
 #else
-#define BUSE_PARTIAL_SCAVENGE 0
+#define BENABLE_LIBPAS 0
+#endif
+#endif
+
+/* BUSE(LIBPAS) is using libpas for bmalloc replacement. */
+#if !defined(BUSE_LIBPAS)
+#define BUSE_LIBPAS 0
 #endif
 
 #if !defined(BUSE_PRECOMPUTED_CONSTANTS_VMPAGE4K)

@@ -35,30 +35,36 @@ namespace WebCore {
 namespace ContentExtensions {
 
 enum class ResourceType : uint16_t {
-    Invalid = 0x0000,
     Document = 0x0001,
     Image = 0x0002,
     StyleSheet = 0x0004,
     Script = 0x0008,
     Font = 0x0010,
-    Raw = 0x0020,
-    SVGDocument = 0x0040,
-    Media = 0x0080,
-    PlugInStream = 0x0100,
-    Popup = 0x0200,
-    // 0x0400 and 0x0800 are used by LoadType.
-    Ping = 0x1000,
+    SVGDocument = 0x0020,
+    Media = 0x0040,
+    Popup = 0x0080,
+    Ping = 0x0100,
+    Fetch = 0x0200,
+    WebSocket = 0x0400,
+    Other = 0x0800,
 };
-const uint16_t ResourceTypeMask = 0x13FF;
+const uint16_t ResourceTypeMask = 0x0FFF;
 
 enum class LoadType : uint16_t {
-    Invalid = 0x0000,
-    FirstParty = 0x0400,
-    ThirdParty = 0x0800,
+    FirstParty = 0x1000,
+    ThirdParty = 0x2000,
 };
-const uint16_t LoadTypeMask = 0x0C00;
+const uint16_t LoadTypeMask = 0x3000;
+
+enum class LoadContext : uint16_t {
+    TopFrame = 0x4000,
+    ChildFrame = 0x8000,
+};
+const uint16_t LoadContextMask = 0xC000;
 
 static_assert(!(ResourceTypeMask & LoadTypeMask), "ResourceTypeMask and LoadTypeMask should be mutually exclusive because they are stored in the same uint16_t");
+static_assert(!(ResourceTypeMask & LoadContextMask), "ResourceTypeMask and LoadContextMask should be mutually exclusive because they are stored in the same uint16_t");
+static_assert(!(LoadContextMask & LoadTypeMask), "LoadContextMask and LoadTypeMask should be mutually exclusive because they are stored in the same uint16_t");
 
 typedef uint16_t ResourceFlags;
 
@@ -72,14 +78,16 @@ typedef uint16_t ResourceFlags;
 const uint64_t ActionFlagMask = 0x0000FFFF00000000;
 const uint64_t IfConditionFlag = 0x0001000000000000;
 
-ResourceType toResourceType(CachedResource::Type);
-uint16_t readResourceType(const String&);
-uint16_t readLoadType(const String&);
+OptionSet<ResourceType> toResourceType(CachedResource::Type, ResourceRequestBase::Requester);
+std::optional<OptionSet<ResourceType>> readResourceType(StringView);
+std::optional<OptionSet<LoadType>> readLoadType(StringView);
+std::optional<OptionSet<LoadContext>> readLoadContext(StringView);
 
 struct ResourceLoadInfo {
     URL resourceURL;
     URL mainDocumentURL;
     OptionSet<ResourceType> type;
+    bool mainFrameContext { false };
 
     bool isThirdParty() const;
     ResourceFlags getResourceFlags() const;

@@ -134,7 +134,7 @@ inline void ShadowRoot::didChangeDefaultSlot()
 inline void ShadowRoot::hostChildElementDidChange(const Element& childElement)
 {
     if (m_slotAssignment)
-    m_slotAssignment->hostChildElementDidChange(childElement, *this);
+        m_slotAssignment->hostChildElementDidChange(childElement, *this);
 }
 
 inline void ShadowRoot::hostChildElementDidChangeSlotAttribute(Element& element, const AtomString& oldValue, const AtomString& newValue)

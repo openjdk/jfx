@@ -51,7 +51,7 @@ public:
 
     // hasValue is set to true if a valid timeline value is returned.
     // otherwise defaultValue is returned.
-    Optional<float> valueForContextTime(BaseAudioContext&, float defaultValue, float minValue, float maxValue);
+    std::optional<float> valueForContextTime(BaseAudioContext&, float defaultValue, float minValue, float maxValue);
 
     // Given the time range, calculates parameter values into the values buffer
     // and returns the last parameter value calculated for "values" or the defaultValue if none were calculated.
@@ -76,14 +76,20 @@ private:
             LastType
         };
 
-        static UniqueRef<ParamEvent> createSetValueEvent(float value, Seconds time);
-        static UniqueRef<ParamEvent> createLinearRampEvent(float value, Seconds time);
-        static UniqueRef<ParamEvent> createExponentialRampEvent(float value, Seconds time);
-        static UniqueRef<ParamEvent> createSetTargetEvent(float target, Seconds time, float timeConstant);
-        static UniqueRef<ParamEvent> createSetValueCurveEvent(Vector<float>&& curve, Seconds time, Seconds duration);
-        static UniqueRef<ParamEvent> createCancelValuesEvent(Seconds cancelTime, std::unique_ptr<ParamEvent> savedEvent);
+        struct SavedEvent {
+            Type type;
+            float value;
+            Seconds time;
+        };
 
-        ParamEvent(Type type, float value, Seconds time, float timeConstant, Seconds duration, Vector<float>&& curve, double curvePointsPerSecond, float curveEndValue, std::unique_ptr<ParamEvent> savedEvent)
+        static ParamEvent createSetValueEvent(float value, Seconds time);
+        static ParamEvent createLinearRampEvent(float value, Seconds time);
+        static ParamEvent createExponentialRampEvent(float value, Seconds time);
+        static ParamEvent createSetTargetEvent(float target, Seconds time, float timeConstant);
+        static ParamEvent createSetValueCurveEvent(Vector<float>&& curve, Seconds time, Seconds duration);
+        static ParamEvent createCancelValuesEvent(Seconds cancelTime, std::optional<SavedEvent>&&);
+
+        ParamEvent(Type type, float value, Seconds time, float timeConstant, Seconds duration, Vector<float>&& curve, double curvePointsPerSecond, float curveEndValue, std::optional<SavedEvent>&& savedEvent)
             : m_type(type)
             , m_value(value)
             , m_time(time)
@@ -102,7 +108,7 @@ private:
         float timeConstant() const { return m_timeConstant; }
         Seconds duration() const { return m_duration; }
         const Vector<float>& curve() const { return m_curve; }
-        ParamEvent* savedEvent() { return m_savedEvent.get(); }
+        SavedEvent* savedEvent() { return m_savedEvent ? &m_savedEvent.value() : nullptr; }
 
         void setCancelledValue(float cancelledValue)
         {
@@ -149,7 +155,7 @@ private:
         // holds the event that is being cancelled, so that processing can
         // continue as if the event still existed up until we reach the actual
         // scheduled cancel time.
-        std::unique_ptr<ParamEvent> m_savedEvent;
+        std::optional<SavedEvent> m_savedEvent;
     };
 
     // State of the timeline for the current event.
@@ -183,9 +189,9 @@ private:
         const int eventIndex;
     };
 
-    void removeCancelledEvents(size_t firstEventToRemove);
-    ExceptionOr<void> insertEvent(UniqueRef<ParamEvent>);
-    float valuesForFrameRangeImpl(size_t startFrame, size_t endFrame, float defaultValue, float* values, unsigned numberOfValues, double sampleRate, double controlRate);
+    void removeCancelledEvents(size_t firstEventToRemove) WTF_REQUIRES_LOCK(m_eventsLock);
+    ExceptionOr<void> insertEvent(ParamEvent&&) WTF_REQUIRES_LOCK(m_eventsLock);
+    float valuesForFrameRangeImpl(size_t startFrame, size_t endFrame, float defaultValue, float* values, unsigned numberOfValues, double sampleRate, double controlRate) WTF_REQUIRES_LOCK(m_eventsLock);
     float linearRampAtTime(Seconds t, float value1, Seconds time1, float value2, Seconds time2);
     float exponentialRampAtTime(Seconds t, float value1, Seconds time1, float value2, Seconds time2);
     float valueCurveAtTime(Seconds t, Seconds time1, Seconds duration, const float* curveData, size_t curveLength);
@@ -194,12 +200,12 @@ private:
 
     void processLinearRamp(const AutomationState&, float* values, size_t& currentFrame, float& value, unsigned& writeIndex);
     void processExponentialRamp(const AutomationState&, float* values, size_t& currentFrame, float& value, unsigned& writeIndex);
-    void processCancelValues(const AutomationState&, float* values, size_t& currentFrame, float& value, unsigned& writeIndex);
+    void processCancelValues(const AutomationState&, float* values, size_t& currentFrame, float& value, unsigned& writeIndex) WTF_REQUIRES_LOCK(m_eventsLock);
     void processSetTarget(const AutomationState&, float* values, size_t& currentFrame, float& value, unsigned& writeIndex);
     void processSetValueCurve(const AutomationState&, float* values, size_t& currentFrame, float& value, unsigned& writeIndex);
-    void processSetTargetFollowedByRamp(int eventIndex, ParamEvent*&, ParamEvent::Type nextEventType, size_t currentFrame, double samplingPeriod, double controlRate, float& value);
+    void processSetTargetFollowedByRamp(int eventIndex, ParamEvent*&, ParamEvent::Type nextEventType, size_t currentFrame, double samplingPeriod, double controlRate, float& value) WTF_REQUIRES_LOCK(m_eventsLock);
 
-    Vector<UniqueRef<ParamEvent>> m_events;
+    Vector<ParamEvent> m_events WTF_GUARDED_BY_LOCK(m_eventsLock);
 
     mutable Lock m_eventsLock;
 };

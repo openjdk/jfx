@@ -26,6 +26,7 @@
 #include "config.h"
 #include "JSCustomSetterFunction.h"
 
+#include "IdentifierInlines.h"
 #include "JSCJSValueInlines.h"
 
 namespace JSC {
@@ -35,28 +36,35 @@ static JSC_DECLARE_HOST_FUNCTION(customSetterFunctionCall);
 
 JSC_DEFINE_HOST_FUNCTION(customSetterFunctionCall, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
-    PutValueFunc setter = jsCast<JSCustomSetterFunction*>(callFrame->jsCallee())->setter();
-    ASSERT(setter);
-    setter(globalObject, JSValue::encode(callFrame->thisValue()), JSValue::encode(callFrame->argument(0)));
+    auto customSetterFunction = jsCast<JSCustomSetterFunction*>(callFrame->jsCallee());
+    auto setter = customSetterFunction->setter();
+    setter(globalObject, JSValue::encode(callFrame->thisValue()), JSValue::encode(callFrame->argument(0)), customSetterFunction->propertyName());
     return JSValue::encode(jsUndefined());
 }
 
-JSCustomSetterFunction::JSCustomSetterFunction(VM& vm, NativeExecutable* executable, JSGlobalObject* globalObject, Structure* structure, PutValueFunc setter)
+JSCustomSetterFunction::JSCustomSetterFunction(VM& vm, NativeExecutable* executable, JSGlobalObject* globalObject, Structure* structure, const PropertyName& propertyName, CustomFunctionPointer setter)
     : Base(vm, executable, globalObject, structure)
+    , m_propertyName(Identifier::fromUid(vm, propertyName.uid()))
     , m_setter(setter)
 {
 }
 
-JSCustomSetterFunction* JSCustomSetterFunction::create(VM& vm, JSGlobalObject* globalObject, const PropertyName& propertyName, PutValueFunc setter)
+JSCustomSetterFunction* JSCustomSetterFunction::create(VM& vm, JSGlobalObject* globalObject, const PropertyName& propertyName, CustomFunctionPointer setter)
 {
+    ASSERT(setter);
     NativeExecutable* executable = vm.getHostFunction(customSetterFunctionCall, callHostFunctionAsConstructor, String(propertyName.publicName()));
     Structure* structure = globalObject->customSetterFunctionStructure();
-    JSCustomSetterFunction* function = new (NotNull, allocateCell<JSCustomSetterFunction>(vm.heap)) JSCustomSetterFunction(vm, executable, globalObject, structure, setter);
+    JSCustomSetterFunction* function = new (NotNull, allocateCell<JSCustomSetterFunction>(vm.heap)) JSCustomSetterFunction(vm, executable, globalObject, structure, propertyName, setter);
 
     // Can't do this during initialization because getHostFunction might do a GC allocation.
-    String name = makeString("set ", String(propertyName.publicName()));
+    auto name = makeString("set ", propertyName.publicName());
     function->finishCreation(vm, executable, 1, name);
     return function;
+}
+
+void JSCustomSetterFunction::destroy(JSCell* cell)
+{
+    static_cast<JSCustomSetterFunction*>(cell)->~JSCustomSetterFunction();
 }
 
 } // namespace JSC

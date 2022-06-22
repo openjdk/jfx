@@ -37,7 +37,6 @@
 #include "giochannel.h"
 
 #include "gstrfuncs.h"
-#include "gstrfuncsprivate.h"
 #include "gtestutils.h"
 #include "glibintl.h"
 
@@ -594,7 +593,7 @@ g_io_channel_purge (GIOChannel *channel)
  * @condition: conditions to watch for
  *
  * Creates a #GSource that's dispatched when @condition is met for the
- * given @channel. For example, if condition is #G_IO_IN, the source will
+ * given @channel. For example, if condition is %G_IO_IN, the source will
  * be dispatched when there's data available for reading.
  *
  * The callback function invoked by the #GSource should be added with
@@ -1181,8 +1180,8 @@ g_io_channel_seek_position (GIOChannel  *channel,
  * Flushes the write buffer for the GIOChannel.
  *
  * Returns: the status of the operation: One of
- *   #G_IO_STATUS_NORMAL, #G_IO_STATUS_AGAIN, or
- *   #G_IO_STATUS_ERROR.
+ *   %G_IO_STATUS_NORMAL, %G_IO_STATUS_AGAIN, or
+ *   %G_IO_STATUS_ERROR.
  **/
 GIOStatus
 g_io_channel_flush (GIOChannel  *channel,

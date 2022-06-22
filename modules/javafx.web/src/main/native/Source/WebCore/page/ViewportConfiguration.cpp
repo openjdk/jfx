@@ -45,7 +45,7 @@ static bool constraintsAreAllRelative(const ViewportConfiguration::Parameters& c
 }
 #endif // ASSERT_ENABLED
 
-static float platformDeviceWidthOverride()
+static constexpr float platformDeviceWidthOverride()
 {
 #if PLATFORM(WATCHOS)
     return 320;
@@ -54,7 +54,16 @@ static float platformDeviceWidthOverride()
 #endif
 }
 
-static bool shouldOverrideShrinkToFitArgument()
+static constexpr double platformMinimumScaleForWebpage()
+{
+#if PLATFORM(WATCHOS)
+    return 0.1;
+#else
+    return 0.25;
+#endif
+}
+
+static constexpr bool shouldOverrideShrinkToFitArgument()
 {
 #if PLATFORM(WATCHOS)
     return true;
@@ -114,10 +123,10 @@ bool ViewportConfiguration::setContentsSize(const IntSize& contentSize)
     return true;
 }
 
-bool ViewportConfiguration::setViewLayoutSize(const FloatSize& viewLayoutSize, Optional<double>&& scaleFactor, Optional<double>&& minimumEffectiveDeviceWidth)
+bool ViewportConfiguration::setViewLayoutSize(const FloatSize& viewLayoutSize, std::optional<double>&& scaleFactor, std::optional<double>&& minimumEffectiveDeviceWidth)
 {
-    double newScaleFactor = scaleFactor.valueOr(m_layoutSizeScaleFactor);
-    double newEffectiveWidth = minimumEffectiveDeviceWidth.valueOr(m_minimumEffectiveDeviceWidth);
+    double newScaleFactor = scaleFactor.value_or(m_layoutSizeScaleFactor);
+    double newEffectiveWidth = minimumEffectiveDeviceWidth.value_or(m_minimumEffectiveDeviceWidth);
     if (m_viewLayoutSize == viewLayoutSize && m_layoutSizeScaleFactor == newScaleFactor && newEffectiveWidth == m_minimumEffectiveDeviceWidth)
         return false;
 
@@ -372,7 +381,7 @@ ViewportConfiguration::Parameters ViewportConfiguration::nativeWebpageParameters
 {
     Parameters parameters = ViewportConfiguration::nativeWebpageParametersWithoutShrinkToFit();
     parameters.allowsShrinkToFit = true;
-    parameters.minimumScale = 0.25;
+    parameters.minimumScale = platformMinimumScaleForWebpage();
     parameters.initialScaleIsSet = false;
     return parameters;
 }
@@ -384,7 +393,7 @@ ViewportConfiguration::Parameters ViewportConfiguration::webpageParameters()
     parameters.widthIsSet = true;
     parameters.allowsUserScaling = true;
     parameters.allowsShrinkToFit = true;
-    parameters.minimumScale = 0.25;
+    parameters.minimumScale = platformMinimumScaleForWebpage();
     parameters.maximumScale = 5;
     return parameters;
 }

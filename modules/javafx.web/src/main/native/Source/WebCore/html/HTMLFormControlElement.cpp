@@ -44,6 +44,7 @@
 #include "RenderBox.h"
 #include "RenderTheme.h"
 #include "ScriptDisallowedScope.h"
+#include "SelectionRestorationMode.h"
 #include "Settings.h"
 #include "StyleTreeResolver.h"
 #include "ValidationMessage.h"
@@ -183,7 +184,7 @@ void HTMLFormControlElement::disabledStateChanged()
     updateWillValidateAndValidity();
     invalidateStyleForSubtree();
     if (renderer() && renderer()->style().hasAppearance())
-        renderer()->theme().stateChanged(*renderer(), ControlStates::EnabledState);
+        renderer()->theme().stateChanged(*renderer(), ControlStates::States::Enabled);
 }
 
 void HTMLFormControlElement::readOnlyStateChanged()
@@ -254,11 +255,11 @@ void HTMLFormControlElement::didAttachRenderers()
         auto frameView = makeRefPtr(document().view());
         if (frameView && frameView->layoutContext().isInLayout()) {
             frameView->queuePostLayoutCallback([element] {
-                element->focus(SelectionRestorationMode::PlaceCaretAtStart);
+                element->focus({ SelectionRestorationMode::PlaceCaretAtStart });
             });
         } else {
             Style::queuePostResolutionCallback([element] {
-                element->focus(SelectionRestorationMode::PlaceCaretAtStart);
+                element->focus({ SelectionRestorationMode::PlaceCaretAtStart });
             });
         }
     }
@@ -352,11 +353,6 @@ void HTMLFormControlElement::dispatchFormControlInputEvent()
 {
     setChangedSinceLastFormControlChangeEvent(true);
     dispatchInputEvent();
-}
-
-bool HTMLFormControlElement::isDisabledFormControl() const
-{
-    return m_disabled || m_disabledByAncestorFieldset;
 }
 
 bool HTMLFormControlElement::isRequired() const
@@ -532,7 +528,7 @@ bool HTMLFormControlElement::reportValidity()
     }
 
     if (document().frame()) {
-        String message = makeString("An invalid form control with name='", name(), "' is not focusable.");
+        auto message = makeString("An invalid form control with name='", name(), "' is not focusable.");
         document().addConsoleMessage(MessageSource::Rendering, MessageLevel::Error, message);
     }
 

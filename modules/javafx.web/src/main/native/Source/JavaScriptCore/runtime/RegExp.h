@@ -1,6 +1,6 @@
 /*
  *  Copyright (C) 1999-2000 Harri Porten (porten@kde.org)
- *  Copyright (C) 2007-2019 Apple Inc. All rights reserved.
+ *  Copyright (C) 2007-2021 Apple Inc. All rights reserved.
  *  Copyright (C) 2009 Torch Mobile, Inc.
  *
  *  This library is free software; you can redistribute it and/or
@@ -57,14 +57,11 @@ public:
     static size_t estimatedSize(JSCell*, VM&);
     JS_EXPORT_PRIVATE static void dumpToStream(const JSCell*, PrintStream&);
 
-    bool global() const { return m_flags.contains(Yarr::Flags::Global); }
-    bool ignoreCase() const { return m_flags.contains(Yarr::Flags::IgnoreCase); }
-    bool multiline() const { return m_flags.contains(Yarr::Flags::Multiline); }
-    bool sticky() const { return m_flags.contains(Yarr::Flags::Sticky); }
+    OptionSet<Yarr::Flags> flags() const { return m_flags; }
+#define JSC_DEFINE_REGEXP_FLAG_ACCESSOR(key, name, lowerCaseName, index) bool lowerCaseName() const { return m_flags.contains(Yarr::Flags::name); }
+    JSC_REGEXP_FLAGS(JSC_DEFINE_REGEXP_FLAG_ACCESSOR)
+#undef JSC_DEFINE_REGEXP_FLAG_ACCESSOR
     bool globalOrSticky() const { return global() || sticky(); }
-    bool unicode() const { return m_flags.contains(Yarr::Flags::Unicode); }
-    bool dotAll() const { return m_flags.contains(Yarr::Flags::DotAll); }
-    bool hasIndices() const { return m_flags.contains(Yarr::Flags::HasIndices); }
 
     const String& pattern() const { return m_patternString; }
 
@@ -122,8 +119,8 @@ public:
         return m_state == JITCode || m_state == ByteCode;
     }
 
-    bool hasCodeFor(Yarr::YarrCharSize);
-    bool hasMatchOnlyCodeFor(Yarr::YarrCharSize);
+    bool hasCodeFor(Yarr::CharSize);
+    bool hasMatchOnlyCodeFor(Yarr::CharSize);
 
     void deleteCode();
 
@@ -139,6 +136,10 @@ public:
     DECLARE_INFO;
 
     RegExpKey key() { return RegExpKey(m_flags, m_patternString); }
+
+    String escapedPattern() const;
+
+    String toSourceString() const;
 
 private:
     friend class RegExpCache;
@@ -156,11 +157,11 @@ private:
 
     void byteCodeCompileIfNecessary(VM*);
 
-    void compile(VM*, Yarr::YarrCharSize);
-    void compileIfNecessary(VM&, Yarr::YarrCharSize);
+    void compile(VM*, Yarr::CharSize);
+    void compileIfNecessary(VM&, Yarr::CharSize);
 
-    void compileMatchOnly(VM*, Yarr::YarrCharSize);
-    void compileIfNecessaryMatchOnly(VM&, Yarr::YarrCharSize);
+    void compileMatchOnly(VM*, Yarr::CharSize);
+    void compileIfNecessaryMatchOnly(VM&, Yarr::CharSize);
 
 #if ENABLE(YARR_JIT_DEBUG)
     void matchCompareWithInterpreter(const String&, int startOffset, int* offsetVector, int jitResult);

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015, 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,8 +26,6 @@
 #include "config.h"
 #include "UniqueIDBDatabase.h"
 
-#if ENABLE(INDEXED_DATABASE)
-
 #include "IDBBindingUtilities.h"
 #include "IDBCursorInfo.h"
 #include "IDBGetAllRecordsData.h"
@@ -36,7 +34,7 @@
 #include "IDBIterateCursorData.h"
 #include "IDBKeyRangeData.h"
 #include "IDBResultData.h"
-#include "IDBSerializationContext.h"
+#include "IDBSerialization.h"
 #include "IDBServer.h"
 #include "IDBTransactionInfo.h"
 #include "IDBValue.h"
@@ -199,8 +197,10 @@ void UniqueIDBDatabase::performCurrentOpenOperation()
             backingStoreOpenError = m_backingStore->getOrEstablishDatabaseInfo(databaseInfo);
             if (backingStoreOpenError.isNull())
                 m_databaseInfo = makeUnique<IDBDatabaseInfo>(databaseInfo);
-            else
+            else {
+                LOG_ERROR("Failed to get database info '%s'", backingStoreOpenError.message().utf8().data());
                 m_backingStore = nullptr;
+            }
         }
     }
 
@@ -294,23 +294,9 @@ void UniqueIDBDatabase::deleteBackingStore()
     ASSERT(!isMainThread());
     LOG(IndexedDB, "UniqueIDBDatabase::deleteBackingStore");
 
-    uint64_t deletedVersion = 0;
-
-    if (m_backingStore) {
-        m_backingStore->deleteBackingStore();
-        m_backingStore = nullptr;
-    } else {
-        auto backingStore = m_server.createBackingStore(m_identifier);
-
-        IDBDatabaseInfo databaseInfo;
-        auto error = backingStore->getOrEstablishDatabaseInfo(databaseInfo);
-        if (!error.isNull())
-            LOG_ERROR("Error getting database info from database %s that we are trying to delete", m_identifier.loggingString().utf8().data());
-
-        deletedVersion = databaseInfo.version();
-        backingStore->deleteBackingStore();
-    }
-
+    auto backingStore = m_backingStore ? std::exchange(m_backingStore, nullptr) : m_server.createBackingStore(m_identifier);
+    uint64_t deletedVersion = backingStore->databaseVersion();
+    backingStore->deleteBackingStore();
     didDeleteBackingStore(deletedVersion);
 }
 
@@ -326,7 +312,7 @@ void UniqueIDBDatabase::didDeleteBackingStore(uint64_t deletedVersion)
     ASSERT(m_currentOpenDBRequest->isDeleteRequest());
 
     if (m_databaseInfo)
-        m_mostRecentDeletedDatabaseInfo = WTFMove(m_databaseInfo);
+        m_mostRecentDeletedDatabaseInfo = std::exchange(m_databaseInfo, nullptr);
 
     // If this UniqueIDBDatabase was brought into existence for the purpose of deleting the file on disk,
     // we won't have a m_mostRecentDeletedDatabaseInfo. In that case, we'll manufacture one using the
@@ -351,22 +337,18 @@ void UniqueIDBDatabase::handleDatabaseOperations()
     ASSERT(!isMainThread());
     LOG(IndexedDB, "UniqueIDBDatabase::handleDatabaseOperations - There are %u pending", m_pendingOpenDBRequests.size());
 
-    if (m_versionChangeDatabaseConnection || m_versionChangeTransaction) {
-        // We can't start any new open-database operations right now, but we might be able to start handling a delete operation.
-        if (!m_currentOpenDBRequest)
-            m_currentOpenDBRequest = takeNextRunnableRequest(RequestType::Delete);
-    } else if (!m_currentOpenDBRequest || m_currentOpenDBRequest->connection().isClosed())
+    if (!m_currentOpenDBRequest && (m_versionChangeDatabaseConnection || m_versionChangeTransaction))
+        return;
+
+    if (!m_currentOpenDBRequest || m_currentOpenDBRequest->connection().isClosed())
         m_currentOpenDBRequest = takeNextRunnableRequest();
 
     while (m_currentOpenDBRequest) {
         handleCurrentOperation();
-        if (!m_currentOpenDBRequest) {
-            if (m_versionChangeTransaction)
-                m_currentOpenDBRequest = takeNextRunnableRequest(RequestType::Delete);
-            else
-                m_currentOpenDBRequest = takeNextRunnableRequest();
-        } else // Request need multiple attempts to handle.
+        if (m_versionChangeTransaction || m_currentOpenDBRequest)
             break;
+
+        m_currentOpenDBRequest = takeNextRunnableRequest();
     }
     LOG(IndexedDB, "UniqueIDBDatabase::handleDatabaseOperations - There are %u pending after this round of handling", m_pendingOpenDBRequests.size());
 }
@@ -425,7 +407,7 @@ void UniqueIDBDatabase::startVersionChangeTransaction()
     m_inProgressTransactions.set(versionChangeTransactionInfo.identifier(), m_versionChangeTransaction);
 
     auto error = m_backingStore->beginTransaction(versionChangeTransactionInfo);
-    auto operation = WTFMove(m_currentOpenDBRequest);
+    auto operation = std::exchange(m_currentOpenDBRequest, nullptr);
     IDBResultData result;
     if (error.isNull()) {
         addOpenDatabaseConnection(*m_versionChangeDatabaseConnection);
@@ -758,7 +740,10 @@ void UniqueIDBDatabase::putOrAdd(const IDBRequestData& requestData, const IDBKey
         usedKey = keyData;
 
     // Generate index keys up front for more accurate quota check.
-    auto indexKeys = generateIndexKeyMapForValue(m_backingStore->serializationContext().globalObject(), *objectStoreInfo, usedKey, value);
+    IndexIDToIndexKeyMap indexKeys;
+    callOnIDBSerializationThreadAndWait([objectStoreInfo = objectStoreInfo->isolatedCopy(), key = usedKey.isolatedCopy(), value = value.isolatedCopy(), &indexKeys](auto& globalObject) {
+        indexKeys = generateIndexKeyMapForValue(globalObject, objectStoreInfo, key, value);
+    });
 
     if (overwriteMode == IndexedDB::ObjectStoreOverwriteMode::NoOverwrite) {
         bool keyExists;
@@ -1202,10 +1187,16 @@ void UniqueIDBDatabase::immediateClose()
     close();
 }
 
+bool UniqueIDBDatabase::hasActiveTransactions() const
+{
+    ASSERT(isMainThread());
+
+    return !m_inProgressTransactions.isEmpty();
+}
+
 void UniqueIDBDatabase::abortActiveTransactions()
 {
     ASSERT(isMainThread());
-    ASSERT(m_server.lock().isHeld());
 
     for (auto& identifier : copyToVector(m_inProgressTransactions.keys())) {
         auto transaction = m_inProgressTransactions.get(identifier);
@@ -1249,7 +1240,30 @@ RefPtr<ServerOpenDBRequest> UniqueIDBDatabase::takeNextRunnableRequest(RequestTy
     return nullptr;
 }
 
+String UniqueIDBDatabase::filePath() const
+{
+    return m_backingStore ? m_backingStore->fullDatabasePath() : nullString();
+}
+
+std::optional<IDBDatabaseNameAndVersion> UniqueIDBDatabase::nameAndVersion() const
+{
+    if (!m_backingStore)
+        return std::nullopt;
+
+    if (m_versionChangeTransaction) {
+        if (auto databaseInfo = m_versionChangeTransaction->originalDatabaseInfo()) {
+            // The database is newly created.
+            if (!databaseInfo->version())
+                return std::nullopt;
+
+            return IDBDatabaseNameAndVersion { databaseInfo->name(), databaseInfo->version() };
+        }
+
+        return std::nullopt;
+    }
+
+    return IDBDatabaseNameAndVersion { m_databaseInfo->name(), m_databaseInfo->version() };
+}
+
 } // namespace IDBServer
 } // namespace WebCore
-
-#endif // ENABLE(INDEXED_DATABASE)

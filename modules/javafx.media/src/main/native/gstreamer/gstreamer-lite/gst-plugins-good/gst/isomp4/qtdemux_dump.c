@@ -577,21 +577,37 @@ qtdemux_dump_ctts (GstQTDemux * qtdemux, GstByteReader * data, int depth)
 gboolean
 qtdemux_dump_cslg (GstQTDemux * qtdemux, GstByteReader * data, int depth)
 {
-  guint32 ver_flags = 0, shift = 0;
-  gint32 least_offset = 0, start_time = 0, end_time = 0;
+  guint32 ver_flags = 0;
 
-  if (!gst_byte_reader_get_uint32_be (data, &ver_flags) ||
-      !gst_byte_reader_get_uint32_be (data, &shift) ||
-      !gst_byte_reader_get_int32_be (data, &least_offset) ||
-      !gst_byte_reader_get_int32_be (data, &start_time) ||
-      !gst_byte_reader_get_int32_be (data, &end_time))
+  if (!gst_byte_reader_get_uint32_be (data, &ver_flags))
     return FALSE;
 
   GST_LOG ("%*s  version/flags: %08x", depth, "", ver_flags);
-  GST_LOG ("%*s  shift:         %u", depth, "", shift);
-  GST_LOG ("%*s  least offset:  %d", depth, "", least_offset);
-  GST_LOG ("%*s  start time:    %d", depth, "", start_time);
-  GST_LOG ("%*s  end time:      %d", depth, "", end_time);
+
+  if (ver_flags >> 24 == 0) {
+    gint32 shift = 0, least_offset = 0, start_time = 0, end_time = 0;
+    if (!gst_byte_reader_get_int32_be (data, &shift) ||
+        !gst_byte_reader_get_int32_be (data, &least_offset) ||
+        !gst_byte_reader_get_int32_be (data, &start_time) ||
+        !gst_byte_reader_get_int32_be (data, &end_time))
+      return FALSE;
+    GST_LOG ("%*s  shift:         %d", depth, "", shift);
+    GST_LOG ("%*s  least offset:  %d", depth, "", least_offset);
+    GST_LOG ("%*s  start time:    %d", depth, "", start_time);
+    GST_LOG ("%*s  end time:      %d", depth, "", end_time);
+  } else {
+    gint64 shift = 0, least_offset = 0, start_time = 0, end_time = 0;
+    if (!gst_byte_reader_get_int64_be (data, &shift) ||
+        !gst_byte_reader_get_int64_be (data, &least_offset) ||
+        !gst_byte_reader_get_int64_be (data, &start_time) ||
+        !gst_byte_reader_get_int64_be (data, &end_time))
+      return FALSE;
+
+    GST_LOG ("%*s  shift:         %" G_GINT64_FORMAT, depth, "", shift);
+    GST_LOG ("%*s  least offset:  %" G_GINT64_FORMAT, depth, "", least_offset);
+    GST_LOG ("%*s  start time:    %" G_GINT64_FORMAT, depth, "", start_time);
+    GST_LOG ("%*s  end time:      %" G_GINT64_FORMAT, depth, "", end_time);
+  }
 
   return TRUE;
 }
@@ -812,7 +828,7 @@ qtdemux_dump_trun (GstQTDemux * qtdemux, GstByteReader * data, int depth)
     if (flags & TR_COMPOSITION_TIME_OFFSETS) {
       if (!gst_byte_reader_get_uint32_be (data, &composition_time_offsets))
         return FALSE;
-      GST_TRACE ("%*s    composition_time_offsets:  %u", depth, "",
+      GST_TRACE ("%*s    composition_time_offsets:  %d", depth, "",
           composition_time_offsets);
     }
   }

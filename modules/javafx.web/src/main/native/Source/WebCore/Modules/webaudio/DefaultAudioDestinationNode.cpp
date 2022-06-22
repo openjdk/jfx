@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2011, Google Inc. All rights reserved.
+ * Copyright (C) 2020-2021, Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -46,15 +47,26 @@ namespace WebCore {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(DefaultAudioDestinationNode);
 
-DefaultAudioDestinationNode::DefaultAudioDestinationNode(BaseAudioContext& context, Optional<float> sampleRate)
-    : AudioDestinationNode(context, sampleRate.valueOr(AudioDestination::hardwareSampleRate()))
+DefaultAudioDestinationNode::DefaultAudioDestinationNode(AudioContext& context, std::optional<float> sampleRate)
+    : AudioDestinationNode(context, sampleRate.value_or(AudioDestination::hardwareSampleRate()))
 {
+    ASSERT(BaseAudioContext::isSupportedSampleRate(AudioDestination::hardwareSampleRate()));
     initializeDefaultNodeOptions(2, ChannelCountMode::Explicit, ChannelInterpretation::Speakers);
 }
 
 DefaultAudioDestinationNode::~DefaultAudioDestinationNode()
 {
     uninitialize();
+}
+
+AudioContext& DefaultAudioDestinationNode::context()
+{
+    return downcast<AudioContext>(AudioDestinationNode::context());
+}
+
+const AudioContext& DefaultAudioDestinationNode::context() const
+{
+    return downcast<AudioContext>(AudioDestinationNode::context());
 }
 
 void DefaultAudioDestinationNode::initialize()
@@ -94,9 +106,9 @@ void DefaultAudioDestinationNode::clearDestination()
 
 void DefaultAudioDestinationNode::createDestination()
 {
-    ALWAYS_LOG(LOGIDENTIFIER, "contextSampleRate = ", m_sampleRate, ", hardwareSampleRate = ", AudioDestination::hardwareSampleRate());
+    ALWAYS_LOG(LOGIDENTIFIER, "contextSampleRate = ", sampleRate(), ", hardwareSampleRate = ", AudioDestination::hardwareSampleRate());
     ASSERT(!m_destination);
-    m_destination = platformStrategies()->mediaStrategy().createAudioDestination(*this, m_inputDeviceId, m_numberOfInputChannels, channelCount(), m_sampleRate);
+    m_destination = platformStrategies()->mediaStrategy().createAudioDestination(*this, m_inputDeviceId, m_numberOfInputChannels, channelCount(), sampleRate());
 }
 
 void DefaultAudioDestinationNode::recreateDestination()
@@ -133,24 +145,24 @@ Function<void(Function<void()>&&)> DefaultAudioDestinationNode::dispatchToRender
             }, WorkerRunLoop::defaultMode());
         };
     }
-    return [](Function<void()>&& function) { function(); };
+    return nullptr;
 }
 
-void DefaultAudioDestinationNode::startRendering(CompletionHandler<void(Optional<Exception>&&)>&& completionHandler)
+void DefaultAudioDestinationNode::startRendering(CompletionHandler<void(std::optional<Exception>&&)>&& completionHandler)
 {
     ASSERT(isInitialized());
     if (!isInitialized())
         return completionHandler(Exception { InvalidStateError, "AudioDestinationNode is not initialized"_s });
 
     auto innerCompletionHandler = [completionHandler = WTFMove(completionHandler)](bool success) mutable {
-        completionHandler(success ? WTF::nullopt : makeOptional(Exception { InvalidStateError, "Failed to start the audio device"_s }));
+        completionHandler(success ? std::nullopt : std::make_optional(Exception { InvalidStateError, "Failed to start the audio device"_s }));
     };
 
     m_wasDestinationStarted = true;
     m_destination->start(dispatchToRenderThreadFunction(), WTFMove(innerCompletionHandler));
 }
 
-void DefaultAudioDestinationNode::resume(CompletionHandler<void(Optional<Exception>&&)>&& completionHandler)
+void DefaultAudioDestinationNode::resume(CompletionHandler<void(std::optional<Exception>&&)>&& completionHandler)
 {
     ASSERT(isInitialized());
     if (!isInitialized()) {
@@ -161,11 +173,11 @@ void DefaultAudioDestinationNode::resume(CompletionHandler<void(Optional<Excepti
     }
     m_wasDestinationStarted = true;
     m_destination->start(dispatchToRenderThreadFunction(), [completionHandler = WTFMove(completionHandler)](bool success) mutable {
-        completionHandler(success ? WTF::nullopt : makeOptional(Exception { InvalidStateError, "Failed to start the audio device"_s }));
+        completionHandler(success ? std::nullopt : std::make_optional(Exception { InvalidStateError, "Failed to start the audio device"_s }));
     });
 }
 
-void DefaultAudioDestinationNode::suspend(CompletionHandler<void(Optional<Exception>&&)>&& completionHandler)
+void DefaultAudioDestinationNode::suspend(CompletionHandler<void(std::optional<Exception>&&)>&& completionHandler)
 {
     ASSERT(isInitialized());
     if (!isInitialized()) {
@@ -177,7 +189,7 @@ void DefaultAudioDestinationNode::suspend(CompletionHandler<void(Optional<Except
 
     m_wasDestinationStarted = false;
     m_destination->stop([completionHandler = WTFMove(completionHandler)](bool success) mutable {
-        completionHandler(success ? WTF::nullopt : makeOptional(Exception { InvalidStateError, "Failed to stop the audio device"_s }));
+        completionHandler(success ? std::nullopt : std::make_optional(Exception { InvalidStateError, "Failed to stop the audio device"_s }));
     });
 }
 
@@ -225,14 +237,45 @@ ExceptionOr<void> DefaultAudioDestinationNode::setChannelCount(unsigned channelC
     return { };
 }
 
-bool DefaultAudioDestinationNode::isPlaying()
-{
-    return m_destination && m_destination->isPlaying();
-}
-
 unsigned DefaultAudioDestinationNode::framesPerBuffer() const
 {
-    return m_destination ? m_destination->framesPerBuffer() : 0.;
+    return m_destination ? m_destination->framesPerBuffer() : 0;
+}
+
+void DefaultAudioDestinationNode::render(AudioBus*, AudioBus* destinationBus, size_t numberOfFrames, const AudioIOPosition& outputPosition)
+{
+    renderQuantum(destinationBus, numberOfFrames, outputPosition);
+
+    setIsSilent(destinationBus->isSilent());
+
+    // The reason we are handling mute after the call to setIsSilent() is because the muted state does
+    // not affect the audio destination node's effective playing state.
+    if (m_muted)
+        destinationBus->zero();
+}
+
+void DefaultAudioDestinationNode::setIsSilent(bool isSilent)
+{
+    if (m_isSilent == isSilent)
+        return;
+
+    m_isSilent = isSilent;
+    updateIsEffectivelyPlayingAudio();
+}
+
+void DefaultAudioDestinationNode::isPlayingDidChange()
+{
+    updateIsEffectivelyPlayingAudio();
+}
+
+void DefaultAudioDestinationNode::updateIsEffectivelyPlayingAudio()
+{
+    bool isEffectivelyPlayingAudio = m_destination && m_destination->isPlaying() && !m_isSilent;
+    if (m_isEffectivelyPlayingAudio == isEffectivelyPlayingAudio)
+        return;
+
+    m_isEffectivelyPlayingAudio = isEffectivelyPlayingAudio;
+    context().isPlayingAudioDidChange();
 }
 
 } // namespace WebCore

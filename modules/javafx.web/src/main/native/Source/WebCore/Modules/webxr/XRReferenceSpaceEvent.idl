@@ -24,15 +24,15 @@
  */
 
 [
-    EnabledAtRuntime=WebXR,
+    EnabledBySetting=WebXR,
     Conditional=WEBXR,
 ] dictionary XRReferenceSpaceEventInit : EventInit {
     required WebXRReferenceSpace referenceSpace;
-    WebXRRigidTransform transform;
+    WebXRRigidTransform? transform;
 };
 
 [
-    EnabledAtRuntime=WebXR,
+    EnabledBySetting=WebXR,
     Conditional=WEBXR,
     SecureContext,
     Exposed=Window
@@ -40,5 +40,5 @@
     constructor(DOMString type, XRReferenceSpaceEventInit eventInitDict);
 
     [SameObject] readonly attribute WebXRReferenceSpace referenceSpace;
-    [SameObject] readonly attribute WebXRRigidTransform transform;
+    [SameObject] readonly attribute WebXRRigidTransform? transform;
 };

@@ -34,7 +34,6 @@
 #include "AudioNodeOutput.h"
 #include "AudioParam.h"
 #include "Logging.h"
-#include "WebKitAudioContext.h"
 #include <wtf/Atomics.h>
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/MainThread.h>
@@ -99,9 +98,17 @@ String convertEnumerationToString(AudioNode::NodeType enumerationValue)
     return values[static_cast<size_t>(enumerationValue)];
 }
 
+auto AudioNode::toWeakOrStrongContext(BaseAudioContext& context, NodeType nodeType) -> WeakOrStrongContext
+{
+    // Destination nodes are owned by the BaseAudioContext so we use WeakPtr to avoid a retain cycle.
+    if (nodeType == AudioNode::NodeTypeDestination)
+        return makeWeakPtr(context, EnableWeakPtrThreadingAssertions::No); // WebAudio code uses locking when accessing the context.
+    return makeRef(context);
+}
+
 AudioNode::AudioNode(BaseAudioContext& context, NodeType type)
     : m_nodeType(type)
-    , m_context(context)
+    , m_context(toWeakOrStrongContext(context, type))
 #if !RELEASE_LOG_DISABLED
     , m_logger(context.logger())
     , m_logIdentifier(context.nextAudioNodeLogIdentifier())
@@ -174,7 +181,7 @@ AudioNodeOutput* AudioNode::output(unsigned i)
 ExceptionOr<void> AudioNode::connect(AudioNode& destination, unsigned outputIndex, unsigned inputIndex)
 {
     ASSERT(isMainThread());
-    BaseAudioContext::AutoLocker locker(context());
+    Locker locker { context().graphLock() };
 
     ALWAYS_LOG(LOGIDENTIFIER, destination.nodeType(), ", output = ", outputIndex, ", input = ", inputIndex);
 
@@ -186,7 +193,7 @@ ExceptionOr<void> AudioNode::connect(AudioNode& destination, unsigned outputInde
         return Exception { IndexSizeError, "Input index exceeds number of inputs"_s };
 
     if (&context() != &destination.context())
-        return Exception { SyntaxError, "Source and destination nodes belong to different audio contexts"_s };
+        return Exception { InvalidAccessError, "Source and destination nodes belong to different audio contexts"_s };
 
     auto* input = destination.input(inputIndex);
     auto* output = this->output(outputIndex);
@@ -196,9 +203,6 @@ ExceptionOr<void> AudioNode::connect(AudioNode& destination, unsigned outputInde
 
     input->connect(output);
 
-    // Let context know that a connection has been made.
-    context().incrementConnectionCount();
-
     updatePullStatus();
 
     return { };
@@ -206,7 +210,7 @@ ExceptionOr<void> AudioNode::connect(AudioNode& destination, unsigned outputInde
 
 ExceptionOr<void> AudioNode::connect(AudioParam& param, unsigned outputIndex)
 {
-    BaseAudioContext::AutoLocker locker(context());
+    Locker locker { context().graphLock() };
 
     ASSERT(isMainThread());
 
@@ -215,8 +219,8 @@ ExceptionOr<void> AudioNode::connect(AudioParam& param, unsigned outputIndex)
     if (outputIndex >= numberOfOutputs())
         return Exception { IndexSizeError, "Output index exceeds number of outputs"_s };
 
-    if (&context() != &param.context())
-        return Exception { SyntaxError, "Node and AudioParam belong to different audio contexts"_s };
+    if (&context() != param.context())
+        return Exception { InvalidAccessError, "Node and AudioParam belong to different audio contexts"_s };
 
     auto* output = this->output(outputIndex);
     param.connect(output);
@@ -227,7 +231,7 @@ ExceptionOr<void> AudioNode::connect(AudioParam& param, unsigned outputIndex)
 void AudioNode::disconnect()
 {
     ASSERT(isMainThread());
-    BaseAudioContext::AutoLocker locker(context());
+    Locker locker { context().graphLock() };
 
     for (unsigned outputIndex = 0; outputIndex < numberOfOutputs(); ++outputIndex) {
         auto* output = this->output(outputIndex);
@@ -241,7 +245,7 @@ void AudioNode::disconnect()
 ExceptionOr<void> AudioNode::disconnect(unsigned outputIndex)
 {
     ASSERT(isMainThread());
-    BaseAudioContext::AutoLocker locker(context());
+    Locker locker { context().graphLock() };
 
     if (outputIndex >= numberOfOutputs())
         return Exception { IndexSizeError, "output index is out of bounds"_s };
@@ -258,7 +262,7 @@ ExceptionOr<void> AudioNode::disconnect(unsigned outputIndex)
 ExceptionOr<void> AudioNode::disconnect(AudioNode& destinationNode)
 {
     ASSERT(isMainThread());
-    BaseAudioContext::AutoLocker locker(context());
+    Locker locker { context().graphLock() };
 
     bool didDisconnection = false;
     for (unsigned outputIndex = 0; outputIndex < numberOfOutputs(); ++outputIndex) {
@@ -282,7 +286,7 @@ ExceptionOr<void> AudioNode::disconnect(AudioNode& destinationNode)
 ExceptionOr<void> AudioNode::disconnect(AudioNode& destinationNode, unsigned outputIndex)
 {
     ASSERT(isMainThread());
-    BaseAudioContext::AutoLocker locker(context());
+    Locker locker { context().graphLock() };
 
     if (outputIndex >= numberOfOutputs())
         return Exception { IndexSizeError, "output index is out of bounds"_s };
@@ -307,7 +311,7 @@ ExceptionOr<void> AudioNode::disconnect(AudioNode& destinationNode, unsigned out
 ExceptionOr<void> AudioNode::disconnect(AudioNode& destinationNode, unsigned outputIndex, unsigned inputIndex)
 {
     ASSERT(isMainThread());
-    BaseAudioContext::AutoLocker locker(context());
+    Locker locker { context().graphLock() };
 
     if (outputIndex >= numberOfOutputs())
         return Exception { IndexSizeError, "output index is out of bounds"_s };
@@ -329,7 +333,7 @@ ExceptionOr<void> AudioNode::disconnect(AudioNode& destinationNode, unsigned out
 ExceptionOr<void> AudioNode::disconnect(AudioParam& destinationParam)
 {
     ASSERT(isMainThread());
-    BaseAudioContext::AutoLocker locker(context());
+    Locker locker { context().graphLock() };
 
     bool didDisconnection = false;
     for (unsigned outputIndex = 0; outputIndex < numberOfOutputs(); ++outputIndex) {
@@ -350,7 +354,7 @@ ExceptionOr<void> AudioNode::disconnect(AudioParam& destinationParam)
 ExceptionOr<void> AudioNode::disconnect(AudioParam& destinationParam, unsigned outputIndex)
 {
     ASSERT(isMainThread());
-    BaseAudioContext::AutoLocker locker(context());
+    Locker locker { context().graphLock() };
 
     if (outputIndex >= numberOfOutputs())
         return Exception { IndexSizeError, "output index is out of bounds"_s };
@@ -367,21 +371,21 @@ ExceptionOr<void> AudioNode::disconnect(AudioParam& destinationParam, unsigned o
 
 float AudioNode::sampleRate() const
 {
-    return m_context->sampleRate();
+    return context().sampleRate();
 }
 
 ExceptionOr<void> AudioNode::setChannelCount(unsigned channelCount)
 {
     ASSERT(isMainThread());
-    BaseAudioContext::AutoLocker locker(context());
+    Locker locker { context().graphLock() };
 
     ALWAYS_LOG(LOGIDENTIFIER, channelCount);
 
     if (!channelCount)
         return Exception { NotSupportedError, "Channel count cannot be 0"_s };
 
-    if (channelCount > AudioContext::maxNumberOfChannels())
-        return Exception { IndexSizeError, "Channel count exceeds maximum limit"_s };
+    if (channelCount > AudioContext::maxNumberOfChannels)
+        return Exception { NotSupportedError, "Channel count exceeds maximum limit"_s };
 
     if (m_channelCount == channelCount)
         return { };
@@ -395,7 +399,7 @@ ExceptionOr<void> AudioNode::setChannelCount(unsigned channelCount)
 ExceptionOr<void> AudioNode::setChannelCountMode(ChannelCountMode mode)
 {
     ASSERT(isMainThread());
-    BaseAudioContext::AutoLocker locker(context());
+    Locker locker { context().graphLock() };
 
     ALWAYS_LOG(LOGIDENTIFIER, mode);
 
@@ -411,7 +415,7 @@ ExceptionOr<void> AudioNode::setChannelCountMode(ChannelCountMode mode)
 ExceptionOr<void> AudioNode::setChannelInterpretation(ChannelInterpretation interpretation)
 {
     ASSERT(isMainThread());
-    BaseAudioContext::AutoLocker locker(context());
+    Locker locker { context().graphLock() };
 
     ALWAYS_LOG(LOGIDENTIFIER, interpretation);
 
@@ -514,9 +518,12 @@ void AudioNode::silenceOutputs()
 
 void AudioNode::enableOutputsIfNecessary()
 {
+    Locker locker { context().graphLock() };
+    if (isTailProcessing())
+        context().removeTailProcessingNode(*this);
+
     if (m_isDisabled && m_connectionRefCount > 0) {
         ASSERT(isMainThread());
-        BaseAudioContext::AutoLocker locker(context());
 
         m_isDisabled = false;
         for (auto& output : m_outputs)
@@ -538,10 +545,11 @@ void AudioNode::disableOutputsIfNecessary()
         // But internally our outputs should be disabled from the inputs they're connected to.
         // disable() can recursively deref connections (and call disable()) down a whole chain of connected nodes.
 
-        // If a node requires tail processing, we defer the disabling of
-        // the outputs so that the tail for the node can be output.
+        // If a node requires tail processing, we defer the disabling of the outputs so that the tail for the node can be output.
         // Otherwise, we can disable the outputs right away.
-        if (!requiresTailProcessing())
+        if (requiresTailProcessing())
+            context().addTailProcessingNode(*this);
+        else
             disableOutputs();
     }
 }
@@ -571,23 +579,9 @@ void AudioNode::decrementConnectionCount()
 {
     // The actually work for deref happens completely within the audio context's graph lock.
     // In the case of the audio thread, we must use a tryLock to avoid glitches.
-    bool hasLock = false;
-    bool mustReleaseLock = false;
-
-    if (context().isAudioThread()) {
-        // Real-time audio thread must not contend lock (to avoid glitches).
-        hasLock = context().tryLock(mustReleaseLock);
-    } else {
-        context().lock(mustReleaseLock);
-        hasLock = true;
-    }
-
-    if (hasLock) {
+    if (auto locker = context().isAudioThread() ? Locker<RecursiveLock>::tryLock(context().graphLock()) : Locker { context().graphLock() }) {
         // This is where the real deref work happens.
         decrementConnectionCountWithLock();
-
-        if (mustReleaseLock)
-            context().unlock();
     } else {
         // We were unable to get the lock, so put this in a list to finish up later.
         ASSERT(context().isAudioThread());
@@ -625,6 +619,10 @@ void AudioNode::markNodeForDeletionIfNecessary()
     if (m_connectionRefCount || m_normalRefCount || m_isMarkedForDeletion)
         return;
 
+    // AudioDestinationNodes are owned by their BaseAudioContext so there is no need to mark them for deletion.
+    if (nodeType() == NodeTypeDestination)
+        return;
+
     // All references are gone - we need to go away.
     for (auto& output : m_outputs)
         output->disconnectAll(); // This will deref() nodes we're connected to.
@@ -632,7 +630,6 @@ void AudioNode::markNodeForDeletionIfNecessary()
     // Mark for deletion at end of each render quantum or when context shuts down.
     context().markForDeletion(*this);
     m_isMarkedForDeletion = true;
-    didBecomeMarkedForDeletion();
 }
 
 void AudioNode::ref()
@@ -649,7 +646,7 @@ void AudioNode::deref()
     ASSERT(!context().isAudioThread());
 
     {
-        BaseAudioContext::AutoLocker locker(context());
+        Locker locker { context().graphLock() };
         // This is where the real deref work happens.
         derefWithLock();
     }
@@ -659,13 +656,6 @@ void AudioNode::deref()
     // because AudioNodes keep a reference to the context.
     if (context().isAudioThreadFinished())
         context().deleteMarkedNodes();
-}
-
-Variant<RefPtr<BaseAudioContext>, RefPtr<WebKitAudioContext>> AudioNode::contextForBindings() const
-{
-    if (m_context->isWebKitAudioContext())
-        return makeRefPtr(static_cast<WebKitAudioContext&>(m_context.get()));
-    return makeRefPtr(m_context.get());
 }
 
 void AudioNode::derefWithLock()
@@ -684,19 +674,37 @@ void AudioNode::derefWithLock()
 
 ExceptionOr<void> AudioNode::handleAudioNodeOptions(const AudioNodeOptions& options, const DefaultAudioNodeOptions& defaults)
 {
-    auto result = setChannelCount(options.channelCount.valueOr(defaults.channelCount));
+    auto result = setChannelCount(options.channelCount.value_or(defaults.channelCount));
     if (result.hasException())
         return result.releaseException();
 
-    result = setChannelCountMode(options.channelCountMode.valueOr(defaults.channelCountMode));
+    result = setChannelCountMode(options.channelCountMode.value_or(defaults.channelCountMode));
     if (result.hasException())
         return result.releaseException();
 
-    result = setChannelInterpretation(options.channelInterpretation.valueOr(defaults.channelInterpretation));
+    result = setChannelInterpretation(options.channelInterpretation.value_or(defaults.channelInterpretation));
     if (result.hasException())
         return result.releaseException();
 
     return { };
+}
+
+BaseAudioContext& AudioNode::context()
+{
+    return WTF::switchOn(m_context, [](Ref<BaseAudioContext>& context) -> BaseAudioContext& {
+        return context.get();
+    }, [](WeakPtr<BaseAudioContext>& context) -> BaseAudioContext& {
+        return *context;
+    });
+}
+
+const BaseAudioContext& AudioNode::context() const
+{
+    return WTF::switchOn(m_context, [](const Ref<BaseAudioContext>& context) -> const BaseAudioContext& {
+        return context.get();
+    }, [](const WeakPtr<BaseAudioContext>& context) -> const BaseAudioContext& {
+        return *context;
+    });
 }
 
 #if DEBUG_AUDIONODE_REFERENCES

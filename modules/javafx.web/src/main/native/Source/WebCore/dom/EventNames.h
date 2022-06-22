@@ -32,18 +32,15 @@
 #include "RuntimeEnabledFeatures.h"
 #endif
 
-#if USE(APPLE_INTERNAL_SDK)
-#include <WebKitAdditions/EventNamesAdditions.h>
-#endif
-
 namespace WebCore {
 
-#if !defined(ADDITIONAL_DOM_EVENT_NAMES_FOR_EACH)
-#define ADDITIONAL_DOM_EVENT_NAMES_FOR_EACH(macro)
+#if ENABLE(APPLE_PAY_COUPON_CODE)
+#define DOM_EVENT_NAME_APPLE_PAY_COUPON_CODE_CHANGED(macro) macro(couponcodechanged)
+#else
+#define DOM_EVENT_NAME_APPLE_PAY_COUPON_CODE_CHANGED(macro)
 #endif
 
 #define DOM_EVENT_NAMES_FOR_EACH(macro) \
-    ADDITIONAL_DOM_EVENT_NAMES_FOR_EACH(macro) \
     macro(DOMActivate) \
     macro(DOMCharacterDataModified) \
     macro(DOMContentLoaded) \
@@ -101,7 +98,9 @@ namespace WebCore {
     macro(connecting) \
     macro(contextmenu) \
     macro(controllerchange) \
+    macro(coordinatorstatechange) \
     macro(copy) \
+    DOM_EVENT_NAME_APPLE_PAY_COUPON_CODE_CHANGED(macro) \
     macro(cuechange) \
     macro(cut) \
     macro(dataavailable) \
@@ -135,8 +134,10 @@ namespace WebCore {
     macro(focus) \
     macro(focusin) \
     macro(focusout) \
+    macro(formdata) \
     macro(gamepadconnected) \
     macro(gamepaddisconnected) \
+    macro(gatheringstatechange) \
     macro(gesturechange) \
     macro(gestureend) \
     macro(gesturescrollend) \
@@ -194,7 +195,6 @@ namespace WebCore {
     macro(online) \
     macro(open) \
     macro(orientationchange) \
-    macro(overconstrained) \
     macro(overflowchanged) \
     macro(pagehide) \
     macro(pageshow) \
@@ -232,6 +232,7 @@ namespace WebCore {
     macro(resourcetimingbufferfull) \
     macro(result) \
     macro(resume) \
+    macro(rtctransform) \
     macro(scroll) \
     macro(search) \
     macro(securitypolicyviolation) \
@@ -366,7 +367,7 @@ public:
     // We should choose one term and stick to it.
     bool isWheelEventType(const AtomString& eventType) const;
     bool isGestureEventType(const AtomString& eventType) const;
-    bool isTouchRelatedEventType(const Document&, const AtomString& eventType) const;
+    bool isTouchRelatedEventType(const AtomString& eventType, EventTarget&) const;
     bool isTouchScrollBlockingEventType(const AtomString& eventType) const;
 #if ENABLE(GAMEPAD)
     bool isGamepadEventType(const AtomString& eventType) const;
@@ -401,15 +402,15 @@ inline bool EventNames::isTouchScrollBlockingEventType(const AtomString& eventTy
         || eventType == touchmoveEvent;
 }
 
-inline bool EventNames::isTouchRelatedEventType(const Document& document, const AtomString& eventType) const
+inline bool EventNames::isTouchRelatedEventType(const AtomString& eventType, EventTarget& target) const
 {
 #if ENABLE(TOUCH_EVENTS)
-    if (document.quirks().shouldDispatchSimulatedMouseEvents()) {
+    if (is<Node>(target) && downcast<Node>(target).document().quirks().shouldDispatchSimulatedMouseEvents(&target)) {
         if (eventType == mousedownEvent || eventType == mousemoveEvent || eventType == mouseupEvent)
             return true;
     }
 #endif
-    UNUSED_PARAM(document);
+    UNUSED_PARAM(target);
     return eventType == touchstartEvent
         || eventType == touchmoveEvent
         || eventType == touchendEvent

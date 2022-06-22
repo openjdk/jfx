@@ -22,6 +22,7 @@
 #pragma once
 
 #include "ContainerNode.h"
+#include "DocumentIdentifier.h"
 #include "LoadableScript.h"
 #include "ReferrerPolicy.h"
 #include "UserGestureIndicator.h"
@@ -55,6 +56,9 @@ public:
     void executePendingScript(PendingScript&);
 
     virtual bool hasAsyncAttribute() const = 0;
+    virtual bool hasDeferAttribute() const = 0;
+    virtual bool hasSourceAttribute() const = 0;
+    virtual bool hasNoModuleAttribute() const = 0;
 
     // XML parser calls these
     virtual void dispatchLoadEvent() = 0;
@@ -100,7 +104,7 @@ protected:
 private:
     void executeScriptAndDispatchEvent(LoadableScript&);
 
-    Optional<ScriptType> determineScriptType(LegacyTypeSupport) const;
+    std::optional<ScriptType> determineScriptType(LegacyTypeSupport) const;
     bool ignoresLoadRequest() const;
     bool isScriptForEventSupported() const;
     void dispatchLoadEventRespectingUserGestureIndicator();
@@ -114,9 +118,6 @@ private:
     virtual String languageAttributeValue() const = 0;
     virtual String forAttributeValue() const = 0;
     virtual String eventAttributeValue() const = 0;
-    virtual bool hasDeferAttribute() const = 0;
-    virtual bool hasSourceAttribute() const = 0;
-    virtual bool hasNoModuleAttribute() const = 0;
     virtual ReferrerPolicy referrerPolicy() const = 0;
 
     Element& m_element;
@@ -135,6 +136,9 @@ private:
     String m_characterEncoding;
     String m_fallbackCharacterEncoding;
     RefPtr<LoadableScript> m_loadableScript;
+
+    // https://html.spec.whatwg.org/multipage/scripting.html#preparation-time-document
+    DocumentIdentifier m_preparationTimeDocumentIdentifier;
 
     MonotonicTime m_creationTime;
     RefPtr<UserGestureToken> m_userGestureToken;

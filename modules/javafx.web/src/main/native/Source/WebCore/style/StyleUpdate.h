@@ -28,7 +28,6 @@
 #include "Node.h"
 #include "StyleChange.h"
 #include <wtf/HashMap.h>
-#include <wtf/HashSet.h>
 #include <wtf/ListHashSet.h>
 
 namespace WebCore {
@@ -61,7 +60,7 @@ struct ElementUpdates {
 struct TextUpdate {
     unsigned offset { 0 };
     unsigned length { std::numeric_limits<unsigned>::max() };
-    Optional<std::unique_ptr<RenderStyle>> inheritedDisplayContentsStyle;
+    std::optional<std::unique_ptr<RenderStyle>> inheritedDisplayContentsStyle;
 };
 
 class Update {
@@ -69,7 +68,7 @@ class Update {
 public:
     Update(Document&);
 
-    const ListHashSet<ContainerNode*>& roots() const { return m_roots; }
+    const ListHashSet<RefPtr<ContainerNode>>& roots() const { return m_roots; }
 
     const ElementUpdates* elementUpdates(const Element&) const;
     ElementUpdates* elementUpdates(const Element&);
@@ -90,10 +89,10 @@ public:
 private:
     void addPossibleRoot(Element*);
 
-    Document& m_document;
-    ListHashSet<ContainerNode*> m_roots;
-    HashMap<const Element*, ElementUpdates> m_elements;
-    HashMap<const Text*, TextUpdate> m_texts;
+    Ref<Document> m_document;
+    ListHashSet<RefPtr<ContainerNode>> m_roots;
+    HashMap<RefPtr<const Element>, ElementUpdates> m_elements;
+    HashMap<RefPtr<const Text>, TextUpdate> m_texts;
 };
 
 }

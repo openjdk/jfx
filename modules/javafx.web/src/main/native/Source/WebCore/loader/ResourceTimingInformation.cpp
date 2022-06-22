@@ -32,7 +32,6 @@
 #include "Frame.h"
 #include "FrameLoader.h"
 #include "HTMLFrameOwnerElement.h"
-#include "LoadTiming.h"
 #include "Performance.h"
 #include "ResourceTiming.h"
 #include "RuntimeEnabledFeatures.h"
@@ -41,19 +40,9 @@ namespace WebCore {
 
 bool ResourceTimingInformation::shouldAddResourceTiming(CachedResource& resource)
 {
-    // FIXME: We can be less restrictive here.
-    // <https://github.com/w3c/resource-timing/issues/100>
-    if (!resource.resourceRequest().url().protocolIsInHTTPFamily())
-        return false;
-    if (resource.errorOccurred())
-        return false;
-    if (resource.wasCanceled())
-        return false;
-
-    if (resource.options().loadedFromOpaqueSource == LoadedFromOpaqueSource::Yes)
-        return false;
-
-    return true;
+    return resource.resourceRequest().url().protocolIsInHTTPFamily()
+        && !resource.loadFailedOrCanceled()
+        && resource.options().loadedFromOpaqueSource == LoadedFromOpaqueSource::No;
 }
 
 void ResourceTimingInformation::addResourceTiming(CachedResource& resource, Document& document, ResourceTiming&& resourceTiming)
@@ -84,6 +73,11 @@ void ResourceTimingInformation::addResourceTiming(CachedResource& resource, Docu
     initiatorWindow->performance().addResourceTiming(WTFMove(resourceTiming));
 
     info.added = Added;
+}
+
+void ResourceTimingInformation::removeResourceTiming(CachedResource& resource)
+{
+    m_initiatorMap.remove(&resource);
 }
 
 void ResourceTimingInformation::storeResourceTimingInitiatorInformation(const CachedResourceHandle<CachedResource>& resource, const AtomString& initiatorName, Frame* frame)

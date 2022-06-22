@@ -30,6 +30,9 @@
 #include "NotImplemented.h"
 #include "PNGImageDecoder.h"
 #include "SharedBuffer.h"
+#if USE(AVIF)
+#include "AVIFImageDecoder.h"
+#endif
 #if USE(OPENJPEG)
 #include "JPEG2000ImageDecoder.h"
 #endif
@@ -76,6 +79,13 @@ bool matchesJPEGSignature(char* contents)
 {
     return !memcmp(contents, "\xFF\xD8\xFF", 3);
 }
+
+#if USE(AVIF)
+bool matchesAVIFSignature(char* contents)
+{
+    return !memcmp(contents + 4, "\x66\x74\x79\x70", 4);
+}
+#endif
 
 #if USE(OPENJPEG)
 bool matchesJP2Signature(char* contents)
@@ -134,6 +144,11 @@ RefPtr<ScalableImageDecoder> ScalableImageDecoder::create(SharedBuffer& data, Al
     if (matchesJPEGSignature(contents))
         return JPEGImageDecoder::create(alphaOption, gammaAndColorProfileOption);
 
+#if USE(AVIF)
+    if (matchesAVIFSignature(contents))
+        return AVIFImageDecoder::create(alphaOption, gammaAndColorProfileOption);
+#endif
+
 #if USE(OPENJPEG)
     if (matchesJP2Signature(contents))
         return JPEG2000ImageDecoder::create(JPEG2000ImageDecoder::Format::JP2, alphaOption, gammaAndColorProfileOption);
@@ -155,7 +170,7 @@ RefPtr<ScalableImageDecoder> ScalableImageDecoder::create(SharedBuffer& data, Al
 
 bool ScalableImageDecoder::frameIsCompleteAtIndex(size_t index) const
 {
-    LockHolder lockHolder(m_mutex);
+    Locker locker { m_lock };
     if (index >= m_frameBufferCache.size())
         return false;
 
@@ -165,7 +180,7 @@ bool ScalableImageDecoder::frameIsCompleteAtIndex(size_t index) const
 
 bool ScalableImageDecoder::frameHasAlphaAtIndex(size_t index) const
 {
-    LockHolder lockHolder(m_mutex);
+    Locker locker { m_lock };
     if (m_frameBufferCache.size() <= index)
         return true;
 
@@ -177,16 +192,16 @@ bool ScalableImageDecoder::frameHasAlphaAtIndex(size_t index) const
 
 unsigned ScalableImageDecoder::frameBytesAtIndex(size_t index, SubsamplingLevel) const
 {
-    LockHolder lockHolder(m_mutex);
+    Locker locker { m_lock };
     if (m_frameBufferCache.size() <= index)
         return 0;
     // FIXME: Use the dimension of the requested frame.
-    return (m_size.area() * sizeof(uint32_t)).unsafeGet();
+    return m_size.area() * sizeof(uint32_t);
 }
 
 Seconds ScalableImageDecoder::frameDurationAtIndex(size_t index) const
 {
-    LockHolder lockHolder(m_mutex);
+    Locker locker { m_lock };
     if (index >= m_frameBufferCache.size())
         return 0_s;
 
@@ -206,7 +221,7 @@ Seconds ScalableImageDecoder::frameDurationAtIndex(size_t index) const
 
 PlatformImagePtr ScalableImageDecoder::createFrameImageAtIndex(size_t index, SubsamplingLevel, const DecodingOptions&)
 {
-    LockHolder lockHolder(m_mutex);
+    Locker locker { m_lock };
     // Zero-height images can cause problems for some ports. If we have an empty image dimension, just bail.
     if (size().isEmpty())
         return nullptr;
