@@ -90,6 +90,11 @@
 #include "ContentChangeObserver.h"
 #endif
 
+#if PLATFORM(JAVA)
+#include "JavaEventListener.h"
+#include "EventListenerManager.h"
+#endif
+
 namespace WebCore {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(Node);
@@ -2141,6 +2146,10 @@ static inline bool tryAddEventListener(Node* targetNode, const AtomString& event
     if (!targetNode->EventTarget::addEventListener(eventType, listener.copyRef(), options))
         return false;
 
+#if PLATFORM(JAVA)
+        EventListenerManager::get_instance().registerDOMWindow(targetNode->document().domWindow(),
+           static_cast<JavaEventListener *> (&listener.copyRef().get()));
+#endif
     targetNode->document().addListenerTypeIfNeeded(eventType);
     if (eventNames().isWheelEventType(eventType))
         targetNode->document().didAddWheelEventHandler(*targetNode);

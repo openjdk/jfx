@@ -737,8 +737,9 @@ public class TableColumnHeader extends Region {
             padding = r.snappedLeftInset() + r.snappedRightInset();
         }
 
-        TreeTableRow<T> treeTableRow = new TreeTableRow<>();
-        treeTableRow.updateTreeTableView(ttv);
+        Callback<TreeTableView<T>, TreeTableRow<T>> rowFactory = ttv.getRowFactory();
+        TreeTableRow<T> treeTableRow = createMeasureRow(ttv, tableSkin, rowFactory);
+        ((SkinBase<?>) treeTableRow.getSkin()).getChildren().add(cell);
 
         int rows = maxRows == -1 ? items.size() : Math.min(items.size(), maxRows);
         double maxWidth = 0;
@@ -752,8 +753,7 @@ public class TableColumnHeader extends Region {
             cell.updateIndex(row);
 
             if ((cell.getText() != null && !cell.getText().isEmpty()) || cell.getGraphic() != null) {
-                tableSkin.getChildren().add(cell);
-                cell.applyCss();
+                treeTableRow.applyCss();
 
                 double w = cell.prefWidth(-1);
 
@@ -795,6 +795,20 @@ public class TableColumnHeader extends Region {
         } else {
             TableColumnBaseHelper.setWidth(tc, maxWidth);
         }
+    }
+
+    private <T> TreeTableRow<T> createMeasureRow(TreeTableView<T> ttv, TableViewSkinBase tableSkin,
+            Callback<TreeTableView<T>, TreeTableRow<T>> rowFactory) {
+        TreeTableRow<T> treeTableRow = rowFactory != null ? rowFactory.call(ttv) : new TreeTableRow<>();
+        tableSkin.getChildren().add(treeTableRow);
+        treeTableRow.applyCss();
+        if (!(treeTableRow.getSkin() instanceof SkinBase<?>)) {
+            tableSkin.getChildren().remove(treeTableRow);
+            // recreate with null rowFactory will result in a standard TableRow that will
+            // have a SkinBase-derived skin
+            treeTableRow = createMeasureRow(ttv, tableSkin, null);
+        }
+        return treeTableRow;
     }
 
     private void updateSortPosition() {
