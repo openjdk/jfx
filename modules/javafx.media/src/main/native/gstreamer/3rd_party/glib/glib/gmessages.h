@@ -40,8 +40,8 @@ G_BEGIN_DECLS
 /* calculate a string size, guaranteed to fit format + args.
  */
 GLIB_AVAILABLE_IN_ALL
-gsize g_printf_string_upper_bound (const gchar* format,
-             va_list    args) G_GNUC_PRINTF(1, 0);
+gsize   g_printf_string_upper_bound (const gchar* format,
+                                     va_list      args) G_GNUC_PRINTF(1, 0);
 
 /* Log level shift offset for user defined
  * log levels (0-7 are used by GLib).
@@ -188,7 +188,8 @@ struct _GLogField
  * chained and fall back to simpler handlers in case of failure.
  *
  * Returns: %G_LOG_WRITER_HANDLED if the log entry was handled successfully;
- *    %G_LOG_WRITER_UNHANDLED otherwise
+ *   %G_LOG_WRITER_UNHANDLED otherwise
+ *
  * Since: 2.50
  */
 typedef GLogWriterOutput (*GLogWriterFunc)     (GLogLevelFlags   log_level,
@@ -242,6 +243,18 @@ GLogWriterOutput g_log_writer_default          (GLogLevelFlags   log_level,
                                                 gsize            n_fields,
                                                 gpointer         user_data);
 
+GLIB_AVAILABLE_IN_2_68
+void            g_log_writer_default_set_use_stderr (gboolean use_stderr);
+GLIB_AVAILABLE_IN_2_68
+gboolean        g_log_writer_default_would_drop (GLogLevelFlags  log_level,
+                                                 const char     *log_domain);
+
+/* G_MESSAGES_DEBUG enablement */
+GLIB_AVAILABLE_IN_2_72
+gboolean         g_log_get_debug_enabled       (void);
+GLIB_AVAILABLE_IN_2_72
+void             g_log_set_debug_enabled       (gboolean         enabled);
+
 /**
  * G_DEBUG_HERE:
  *
@@ -260,7 +273,7 @@ GLogWriterOutput g_log_writer_default          (GLogLevelFlags   log_level,
                     g_get_monotonic_time (), G_STRLOC)
 
 /* internal */
-void  _g_log_fallback_handler (const gchar   *log_domain,
+void    _g_log_fallback_handler (const gchar   *log_domain,
              GLogLevelFlags log_level,
              const gchar   *message,
              gpointer       unused_data);
@@ -277,11 +290,12 @@ void g_warn_message           (const char     *domain,
                                const char     *func,
                                const char     *warnexpr) G_ANALYZER_NORETURN;
 GLIB_DEPRECATED
+G_NORETURN
 void g_assert_warning         (const char *log_domain,
-             const char *file,
-             const int   line,
-                   const char *pretty_function,
-                   const char *expression) G_GNUC_NORETURN;
+                               const char *file,
+                               const int   line,
+                               const char *pretty_function,
+                               const char *expression);
 
 GLIB_AVAILABLE_IN_2_56
 void g_log_structured_standard (const gchar    *log_domain,
@@ -393,7 +407,7 @@ void g_log_structured_standard (const gchar    *log_domain,
                                        format)
 #endif
 #else   /* no varargs macros */
-static void g_error (const gchar *format, ...) G_GNUC_NORETURN G_ANALYZER_NORETURN;
+static G_NORETURN void g_error (const gchar *format, ...) G_ANALYZER_NORETURN;
 static void g_critical (const gchar *format, ...) G_ANALYZER_NORETURN;
 
 static inline void
@@ -472,7 +486,7 @@ g_debug (const gchar *format,
 #if defined(G_HAVE_ISO_VARARGS) && !G_ANALYZER_ANALYZING
 #define g_warning_once(...) \
   G_STMT_START { \
-    static volatile int G_PASTE (_GWarningOnceBoolean, __LINE__) = 0; \
+    static int G_PASTE (_GWarningOnceBoolean, __LINE__) = 0;  /* (atomic) */ \
     if (g_atomic_int_compare_and_exchange (&G_PASTE (_GWarningOnceBoolean, __LINE__), \
                                            0, 1)) \
       g_warning (__VA_ARGS__); \
@@ -481,7 +495,7 @@ g_debug (const gchar *format,
 #elif defined(G_HAVE_GNUC_VARARGS)  && !G_ANALYZER_ANALYZING
 #define g_warning_once(format...) \
   G_STMT_START { \
-    static volatile int G_PASTE (_GWarningOnceBoolean, __LINE__) = 0; \
+    static int G_PASTE (_GWarningOnceBoolean, __LINE__) = 0;  /* (atomic) */ \
     if (g_atomic_int_compare_and_exchange (&G_PASTE (_GWarningOnceBoolean, __LINE__), \
                                            0, 1)) \
       g_warning (format); \

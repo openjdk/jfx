@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -158,13 +158,20 @@ public class MediaUtils {
                 contentType = CONTENT_TYPE_MP4;
             else if ((buf[8] & 0xff) == 0x4D && (buf[9] & 0xff) == 0x50 && (buf[10] & 0xff) == 0x34 && (buf[11] & 0xff) == 0x20) // 'MP4 '
                 contentType = CONTENT_TYPE_MP4;
+        } else if ((buf[0] & 0xff) == 0x23
+                && (buf[1] & 0xff) == 0x45
+                && (buf[2] & 0xff) == 0x58
+                && (buf[3] & 0xff) == 0x54
+                && (buf[4] & 0xff) == 0x4d
+                && (buf[5] & 0xff) == 0x33
+                && (buf[6] & 0xff) == 0x55) { // "#EXTM3U"
+            contentType = CONTENT_TYPE_M3U8;
         } else {
             throw new MediaException("Unrecognized file signature!");
         }
 
         return contentType;
     }
-
     /**
      * Returns the content type given the file name.
      *
@@ -172,35 +179,41 @@ public class MediaUtils {
      * @return content type
      */
     public static String filenameToContentType(String filename) {
-        String contentType = Locator.DEFAULT_CONTENT_TYPE;
+        if (filename == null) {
+            return Locator.DEFAULT_CONTENT_TYPE;
+        }
 
         int dotIndex = filename.lastIndexOf(".");
-
         if (dotIndex != -1) {
             String extension = filename.toLowerCase().substring(dotIndex + 1);
 
-            if (extension.equals(FILE_TYPE_AIF) || extension.equals(FILE_TYPE_AIFF)) {
-                contentType = CONTENT_TYPE_AIFF;
-            } else if (extension.equals(FILE_TYPE_FLV) || extension.equals(FILE_TYPE_FXM)) {
-                contentType = CONTENT_TYPE_JFX;
-            } else if (extension.equals(FILE_TYPE_MPA)) {
-                contentType = CONTENT_TYPE_MPA;
-            } else if (extension.equals(FILE_TYPE_WAV)) {
-                contentType = CONTENT_TYPE_WAV;
-            } else if (extension.equals(FILE_TYPE_MP4)) {
-                contentType = CONTENT_TYPE_MP4;
-            } else if (extension.equals(FILE_TYPE_M4A)) {
-                contentType = CONTENT_TYPE_M4A;
-            } else if (extension.equals(FILE_TYPE_M4V)) {
-                contentType = CONTENT_TYPE_M4V;
-            } else if (extension.equals(FILE_TYPE_M3U8)) {
-                contentType = CONTENT_TYPE_M3U8;
-            } else if (extension.equals(FILE_TYPE_M3U)) {
-                contentType = CONTENT_TYPE_M3U;
+            switch (extension) {
+                case FILE_TYPE_AIF:
+                case FILE_TYPE_AIFF:
+                    return CONTENT_TYPE_AIFF;
+                case FILE_TYPE_FLV:
+                case FILE_TYPE_FXM:
+                    return CONTENT_TYPE_JFX;
+                case FILE_TYPE_MPA:
+                    return CONTENT_TYPE_MPA;
+                case FILE_TYPE_WAV:
+                    return CONTENT_TYPE_WAV;
+                case FILE_TYPE_MP4:
+                    return CONTENT_TYPE_MP4;
+                case FILE_TYPE_M4A:
+                    return CONTENT_TYPE_M4A;
+                case FILE_TYPE_M4V:
+                    return CONTENT_TYPE_M4V;
+                case FILE_TYPE_M3U8:
+                    return CONTENT_TYPE_M3U8;
+                case FILE_TYPE_M3U:
+                    return CONTENT_TYPE_M3U;
+                default:
+                    break;
             }
         }
 
-        return contentType;
+        return Locator.DEFAULT_CONTENT_TYPE;
     }
 
     /**

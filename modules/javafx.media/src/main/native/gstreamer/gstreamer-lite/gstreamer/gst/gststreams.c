@@ -243,6 +243,10 @@ gst_stream_set_stream_id (GstStream * stream, const gchar * stream_id)
         g_random_int (), g_random_int ());
   }
 
+  /* We hold the object lock, replace directly */
+  g_free (GST_OBJECT_NAME (stream));
+  GST_OBJECT_NAME (stream) = g_strdup (stream->stream_id);
+
   GST_OBJECT_UNLOCK (stream);
 
   if (!stream_id)

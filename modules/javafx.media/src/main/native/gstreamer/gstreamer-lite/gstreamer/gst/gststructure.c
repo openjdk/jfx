@@ -99,7 +99,7 @@
  * - [GstValueList](GST_TYPE_LIST) are inside "less and greater than" (`<` and
  *   `>`). For example `a-structure, list=<1, 2, 3>
  *
- * Structures are delimited either by a null character `\0` or a semicolumn `;`
+ * Structures are delimited either by a null character `\0` or a semicolon `;`
  * the latter allowing to store multiple structures in the same string (see
  * #GstCaps).
  *
@@ -119,11 +119,16 @@
  * a-struct, nested=(GstStructure)"nested-struct, nested=true"
  * ```
  *
- * > *Note*: Be aware that the current #GstCaps / #GstStructure serialization
- * > into string has limited support for nested #GstCaps / #GstStructure fields.
- * > It can only support one level of nesting. Using more levels will lead to
- * > unexpected behavior when using serialization features, such as
- * > gst_caps_to_string() or gst_value_serialize() and their counterparts.
+ * Since 1.20, nested structures and caps can be specified using brackets (`[`
+ * and `]`), for example:
+ *
+ * ```
+ * a-struct, nested=[nested-struct, nested=true]
+ * ```
+ *
+ * > *note*: gst_structure_to_string() won't use that syntax for backward
+ * > compatibility reason, gst_structure_serialize() has been added for
+ * > that purpose.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -307,7 +312,6 @@ gst_structure_new_id_empty (GQuark quark)
   return gst_structure_new_id_empty_with_size (quark, 0);
 }
 
-#ifndef G_DISABLE_CHECKS
 static gboolean
 gst_structure_validate_name (const gchar * name)
 {
@@ -343,7 +347,6 @@ gst_structure_validate_name (const gchar * name)
 
   return TRUE;
 }
-#endif
 
 /**
  * gst_structure_new_empty:
@@ -2026,16 +2029,18 @@ gst_structure_value_get_generic_type (const GValue * val)
 
 gboolean
 priv_gst_structure_append_to_gstring (const GstStructure * structure,
-    GString * s)
+    GString * s, GstSerializeFlags flags)
 {
   GstStructureField *field;
   guint i, len;
+  gboolean nested_structs_brackets =
+      !(flags & GST_SERIALIZE_FLAG_BACKWARD_COMPAT);
 
   g_return_val_if_fail (s != NULL, FALSE);
 
   len = GST_STRUCTURE_LEN (structure);
   for (i = 0; i < len; i++) {
-    char *t;
+    gchar *t = NULL;
     GType type;
 
     field = GST_STRUCTURE_FIELD (structure, i);
@@ -2044,7 +2049,9 @@ priv_gst_structure_append_to_gstring (const GstStructure * structure,
       t = _priv_gst_value_serialize_any_list (&field->value, "< ", " >", FALSE);
     } else if (G_VALUE_TYPE (&field->value) == GST_TYPE_LIST) {
       t = _priv_gst_value_serialize_any_list (&field->value, "{ ", " }", FALSE);
-    } else {
+    } else if (!nested_structs_brackets
+        || (G_VALUE_TYPE (&field->value) != GST_TYPE_STRUCTURE
+            && G_VALUE_TYPE (&field->value) != GST_TYPE_CAPS)) {
       t = gst_value_serialize (&field->value);
     }
 
@@ -2056,7 +2063,22 @@ priv_gst_structure_append_to_gstring (const GstStructure * structure,
     g_string_append_len (s, "=(", 2);
     g_string_append (s, _priv_gst_value_gtype_to_abbr (type));
     g_string_append_c (s, ')');
-    if (t) {
+    if (nested_structs_brackets
+        && G_VALUE_TYPE (&field->value) == GST_TYPE_STRUCTURE) {
+      const GstStructure *substruct = gst_value_get_structure (&field->value);
+
+      g_string_append_c (s, '[');
+      g_string_append (s, g_quark_to_string (substruct->name));
+      priv_gst_structure_append_to_gstring (substruct, s, flags);
+      g_string_append_c (s, ']');
+    } else if (nested_structs_brackets
+        && G_VALUE_TYPE (&field->value) == GST_TYPE_CAPS) {
+      const GstCaps *subcaps = gst_value_get_caps (&field->value);
+      gchar *capsstr = gst_caps_serialize (subcaps, flags);
+
+      g_string_append_printf (s, "[%s]", capsstr);
+      g_free (capsstr);
+    } else if (t) {
       g_string_append (s, t);
       g_free (t);
     } else if (G_TYPE_CHECK_VALUE_TYPE (&field->value, G_TYPE_POINTER)) {
@@ -2129,28 +2151,8 @@ priv__gst_structure_append_template_to_gstring (GQuark field_id,
   return TRUE;
 }
 
-/**
- * gst_structure_to_string:
- * @structure: a #GstStructure
- *
- * Converts @structure to a human-readable string representation.
- *
- * For debugging purposes its easier to do something like this:
- * |[<!-- language="C" -->
- * GST_LOG ("structure is %" GST_PTR_FORMAT, structure);
- * ]|
- * This prints the structure in human readable form.
- *
- * The current implementation of serialization will lead to unexpected results
- * when there are nested #GstCaps / #GstStructure deeper than one level.
- *
- * Free-function: g_free
- *
- * Returns: (transfer full): a pointer to string allocated by g_malloc().
- *     g_free() after usage.
- */
-gchar *
-gst_structure_to_string (const GstStructure * structure)
+static gchar *
+structure_serialize (const GstStructure * structure, GstSerializeFlags flags)
 {
   GString *s;
 
@@ -2166,8 +2168,61 @@ gst_structure_to_string (const GstStructure * structure)
    * avoid unnecessary reallocs within GString */
   s = g_string_sized_new (STRUCTURE_ESTIMATED_STRING_LEN (structure));
   g_string_append (s, g_quark_to_string (structure->name));
-  priv_gst_structure_append_to_gstring (structure, s);
+  priv_gst_structure_append_to_gstring (structure, s, flags);
   return g_string_free (s, FALSE);
+
+}
+
+/**
+ * gst_structure_to_string:
+ * @structure: a #GstStructure
+ *
+ * Converts @structure to a human-readable string representation.
+ *
+ * For debugging purposes its easier to do something like this: |[<!--
+ * language="C" --> GST_LOG ("structure is %" GST_PTR_FORMAT, structure);
+ * ]|
+ * This prints the structure in human readable form.
+ *
+ * This function will lead to unexpected results when there are nested #GstCaps
+ * / #GstStructure deeper than one level, you should user
+ * gst_structure_serialize() instead for those cases.
+ *
+ * Free-function: g_free
+ *
+ * Returns: (transfer full): a pointer to string allocated by g_malloc().
+ *     g_free() after usage.
+ */
+gchar *
+gst_structure_to_string (const GstStructure * structure)
+{
+  return structure_serialize (structure, GST_SERIALIZE_FLAG_BACKWARD_COMPAT);
+}
+
+/**
+ * gst_structure_serialize:
+ * @structure: a #GstStructure
+ * @flags: The flags to use to serialize structure
+ *
+ * Converts @structure to a human-readable string representation.
+ *
+ * This version of the caps serialization function introduces support for nested
+ * structures and caps but the resulting strings won't be parsable with
+ * GStreamer prior to 1.20 unless #GST_SERIALIZE_FLAG_BACKWARD_COMPAT is passed
+ * as @flag.
+ *
+ * Free-function: g_free
+ *
+ * Returns: (transfer full): a pointer to string allocated by g_malloc().
+ *     g_free() after usage.
+ *
+ * Since: 1.20
+ */
+gchar *
+gst_structure_serialize (const GstStructure * structure,
+    GstSerializeFlags flags)
+{
+  return structure_serialize (structure, flags);
 }
 
 static gboolean
@@ -2206,7 +2261,7 @@ gst_structure_parse_field (gchar * str,
   *name_end = c;
 
   if (G_UNLIKELY (!_priv_gst_value_parse_value (s, &s, &field->value,
-              G_TYPE_INVALID))) {
+              G_TYPE_INVALID, NULL))) {
     GST_WARNING ("failed to parse value %s", str);
     return FALSE;
   }
@@ -2217,7 +2272,7 @@ gst_structure_parse_field (gchar * str,
 
 gboolean
 priv_gst_structure_parse_name (gchar * str, gchar ** start, gchar ** end,
-    gchar ** next)
+    gchar ** next, gboolean check_valid)
 {
   char *w;
   char *r;
@@ -2234,6 +2289,17 @@ priv_gst_structure_parse_name (gchar * str, gchar ** start, gchar ** end,
   if (G_UNLIKELY (!_priv_gst_value_parse_string (r, &w, &r, TRUE))) {
     GST_WARNING ("Failed to parse structure string '%s'", str);
     return FALSE;
+  }
+
+  if (check_valid) {
+    gchar save = *w;
+
+    *w = '\0';
+    if (!gst_structure_validate_name (*start)) {
+      *w = save;
+      return FALSE;
+    }
+    *w = save;
   }
 
   *end = w;
@@ -2273,6 +2339,14 @@ priv_gst_structure_parse_fields (gchar * str, gchar ** end,
                 && g_ascii_isspace (r[1]))))
       r++;
 
+    /* Trailing comma */
+    if (*r == '\0') {
+      break;
+    } else if (*r == ';') {
+      r++;
+      break;
+    }
+
     memset (&field, 0, sizeof (field));
     if (G_UNLIKELY (!gst_structure_parse_field (r, &r, &field))) {
       GST_WARNING ("Failed to parse field, r=%s", r);
@@ -2295,7 +2369,9 @@ priv_gst_structure_parse_fields (gchar * str, gchar ** end,
  * where parsing ended will be returned.
  *
  * The current implementation of serialization will lead to unexpected results
- * when there are nested #GstCaps / #GstStructure deeper than one level.
+ * when there are nested #GstCaps / #GstStructure deeper than one level unless
+ * the gst_structure_serialize() function is used (without
+ * #GST_SERIALIZE_FLAG_BACKWARD_COMPAT)
  *
  * Free-function: gst_structure_free
  *
@@ -2341,7 +2417,7 @@ gst_structure_from_string (const gchar * string, gchar ** end)
   copy = g_strdup (string);
   r = copy;
 
-  if (!priv_gst_structure_parse_name (r, &name, &w, &r))
+  if (!priv_gst_structure_parse_name (r, &name, &w, &r, FALSE))
     goto error;
 
   save = *w;

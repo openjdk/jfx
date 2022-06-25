@@ -56,6 +56,11 @@
 #include <wtf/StdLibExtras.h>
 #include <wtf/Vector.h>
 
+#if PLATFORM(JAVA)
+#include "EventListenerManager.h"
+#include "JavaEventListener.h"
+#endif
+
 namespace WebCore {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(EventTarget);
@@ -149,6 +154,9 @@ bool EventTarget::removeEventListener(const AtomString& eventType, EventListener
     InspectorInstrumentation::willRemoveEventListener(*this, eventType, listener, options.capture);
 
     if (data->eventListenerMap.remove(eventType, listener, options.capture)) {
+#if PLATFORM(JAVA)
+        EventListenerManager::get_instance().unregisterListener(static_cast<JavaEventListener *> (&listener));
+#endif
         if (eventNames().isWheelEventType(eventType))
             invalidateEventListenerRegions();
 

@@ -48,6 +48,7 @@
 
 #include <string.h>
 
+#include "gstaudioparserselements.h"
 #include "gstmpegaudioparse.h"
 #include <gst/base/gstbytereader.h>
 #include <gst/pbutils/pbutils.h>
@@ -108,6 +109,8 @@ static void gst_mpeg_audio_parse_handle_first_frame (GstMpegAudioParse *
 
 #define gst_mpeg_audio_parse_parent_class parent_class
 G_DEFINE_TYPE (GstMpegAudioParse, gst_mpeg_audio_parse, GST_TYPE_BASE_PARSE);
+GST_ELEMENT_REGISTER_DEFINE (mpegaudioparse, "mpegaudioparse",
+    GST_RANK_PRIMARY + 2, GST_TYPE_MPEG_AUDIO_PARSE);
 
 #define GST_TYPE_MPEG_AUDIO_CHANNEL_MODE  \
     (gst_mpeg_audio_channel_mode_get_type())

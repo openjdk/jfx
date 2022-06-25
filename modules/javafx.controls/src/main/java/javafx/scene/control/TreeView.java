@@ -66,6 +66,7 @@ import java.lang.ref.SoftReference;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -1405,7 +1406,7 @@ public class TreeView<T> extends Control {
                     // no-op
                 } else if (e.wasAdded()) {
                     // shuffle selection by the number of added items
-                    shift += treeItem.isExpanded() ? addedSize : 0;
+                    shift += ControlUtils.isTreeItemIncludingAncestorsExpanded(treeItem) ? addedSize : 0;
 
                     // RT-32963: We were taking the startRow from the TreeItem
                     // in which the children were added, rather than from the
@@ -1415,9 +1416,6 @@ public class TreeView<T> extends Control {
                     // subsequently commented out due to RT-33894.
                     startRow = treeView.getRow(e.getChange().getAddedSubList().get(0));
                 } else if (e.wasRemoved()) {
-                    // shuffle selection by the number of removed items
-                    shift += treeItem.isExpanded() ? -removedSize : 0;
-
                     // the start row is incorrect - it is _not_ the index of the
                     // TreeItem in which the children were removed from (which is
                     // what it currently represents). We need to take the 'from'
@@ -1433,6 +1431,19 @@ public class TreeView<T> extends Control {
                     final List<TreeItem<T>> selectedItems = getSelectedItems();
                     final TreeItem<T> selectedItem = getSelectedItem();
                     final List<? extends TreeItem<T>> removedChildren = e.getChange().getRemoved();
+
+                    // shuffle selection by the number of removed items
+                    // only if removed items are before the current selection.
+                    if (ControlUtils.isTreeItemIncludingAncestorsExpanded(treeItem)) {
+                        int lastSelectedSiblingIndex = selectedItems.stream()
+                                .map(item -> ControlUtils.getIndexOfChildWithDescendant(treeItem, item))
+                                .max(Comparator.naturalOrder())
+                                .orElse(-1);
+                        // shift only if the last selected sibling index is after the first removed child
+                        if (e.getFrom() <= lastSelectedSiblingIndex || lastSelectedSiblingIndex == -1) {
+                            shift -= removedSize;
+                        }
+                    }
 
                     for (int i = 0; i < selectedIndices1.size() && !selectedItems.isEmpty(); i++) {
                         int index = selectedIndices1.get(i);
@@ -1672,7 +1683,7 @@ public class TreeView<T> extends Control {
                         // get the TreeItem the event occurred on - we only need to
                         // shift if the tree item is expanded
                         TreeItem<T> eventTreeItem = e.getTreeItem();
-                        if (eventTreeItem.isExpanded()) {
+                        if (ControlUtils.isTreeItemIncludingAncestorsExpanded(eventTreeItem)) {
                             for (int i = 0; i < e.getAddedChildren().size(); i++) {
                                 // get the added item and determine the row it is in
                                 TreeItem<T> item = e.getAddedChildren().get(i);
@@ -1694,9 +1705,12 @@ public class TreeView<T> extends Control {
                             }
                         }
 
-                        if (row <= getFocusedIndex()) {
-                            // shuffle selection by the number of removed items
-                            shift += e.getTreeItem().isExpanded() ? -e.getRemovedSize() : 0;
+                        if (ControlUtils.isTreeItemIncludingAncestorsExpanded(e.getTreeItem())) {
+                            int focusedSiblingRow = ControlUtils.getIndexOfChildWithDescendant(e.getTreeItem(), getFocusedItem());
+                            if (e.getFrom() <= focusedSiblingRow) {
+                                // shuffle selection by the number of removed items
+                                shift -= e.getRemovedSize();
+                            }
                         }
                     }
                 } while (e.getChange() != null && e.getChange().next());

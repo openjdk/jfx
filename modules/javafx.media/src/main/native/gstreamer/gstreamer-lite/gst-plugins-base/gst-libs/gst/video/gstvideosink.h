@@ -26,6 +26,7 @@
 #include <gst/gst.h>
 #include <gst/base/gstbasesink.h>
 #include <gst/video/video-prelude.h>
+#include <gst/video/video-info.h>
 
 G_BEGIN_DECLS
 
@@ -117,16 +118,33 @@ struct _GstVideoSinkClass {
 
   GstFlowReturn  (*show_frame) (GstVideoSink *video_sink, GstBuffer *buf);
 
+  /**
+   * GstVideoSinkClass::set_info:
+   * @caps: A #GstCaps.
+   * @info: A #GstVideoInfo corresponding to @caps.
+   *
+   * Notifies the subclass of changed #GstVideoInfo.
+   *
+   * Since: 1.20
+   */
+  gboolean       (*set_info)   (GstVideoSink *video_sink, GstCaps *caps, const GstVideoInfo *info);
+
   /*< private >*/
-  gpointer _gst_reserved[GST_PADDING];
+  gpointer _gst_reserved[GST_PADDING-1];
 };
 
 GST_VIDEO_API
 GType gst_video_sink_get_type (void);
 
-GST_VIDEO_API
+GST_VIDEO_DEPRECATED_FOR(gst_video_center_rect)
 void gst_video_sink_center_rect (GstVideoRectangle src, GstVideoRectangle dst,
                                  GstVideoRectangle *result, gboolean scaling);
+
+GST_VIDEO_API
+void gst_video_center_rect      (const GstVideoRectangle * src,
+                                 const GstVideoRectangle * dst,
+                                 GstVideoRectangle * result,
+                                 gboolean scaling);
 
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstVideoSink, gst_object_unref)
 

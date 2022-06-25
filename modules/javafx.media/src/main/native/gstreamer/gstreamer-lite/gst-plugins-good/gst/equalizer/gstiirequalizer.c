@@ -227,18 +227,6 @@ gst_iir_equalizer_band_set_property (GObject * object, guint prop_id,
       break;
   }
 
-#ifdef GSTREAMER_LITE
-  // We need to update coefficients and disable passthrough
-  // if needed, otherwise after we disable passthrough equalizer will not
-  // get re-enabled.
-//  BANDS_LOCK (equ);
-//  if (equ->need_new_coefficients) {
-//    update_coefficients (equ);
-//    set_passthrough (equ);
-//  }
-//  BANDS_UNLOCK (equ);
-#endif // GSTREAMER_LITE
-
   gst_object_unref (equ);
 }
 
@@ -934,37 +922,12 @@ gst_iir_equalizer_setup (GstAudioFilter * audio, const GstAudioInfo * info)
   return TRUE;
 }
 
-#ifdef GSTREAMER_LITE
-gboolean
-plugin_init_equalizer (GstPlugin * plugin)
-#else // GSTREAMER_LITE
-static gboolean
-plugin_init (GstPlugin * plugin)
-#endif // GSTREAMER_LITE
+void
+equalizer_element_init (GstPlugin * plugin)
 {
+  static gsize res = FALSE;
+  if (g_once_init_enter (&res)) {
   GST_DEBUG_CATEGORY_INIT (equalizer_debug, "equalizer", 0, "equalizer");
-
-  if (!(gst_element_register (plugin, "equalizer-nbands", GST_RANK_NONE,
-              GST_TYPE_IIR_EQUALIZER_NBANDS)))
-    return FALSE;
-
-#ifndef GSTREAMER_LITE
-  if (!(gst_element_register (plugin, "equalizer-3bands", GST_RANK_NONE,
-              GST_TYPE_IIR_EQUALIZER_3BANDS)))
-    return FALSE;
-
-  if (!(gst_element_register (plugin, "equalizer-10bands", GST_RANK_NONE,
-              GST_TYPE_IIR_EQUALIZER_10BANDS)))
-    return FALSE;
-#endif // GSTREAMER_LITE
-
-  return TRUE;
+    g_once_init_leave (&res, TRUE);
+  }
 }
-
-#ifndef GSTREAMER_LITE
-GST_PLUGIN_DEFINE (GST_VERSION_MAJOR,
-    GST_VERSION_MINOR,
-    equalizer,
-    "GStreamer audio equalizers",
-    plugin_init, VERSION, GST_LICENSE, GST_PACKAGE_NAME, GST_PACKAGE_ORIGIN)
-#endif // GSTREAMER_LITE

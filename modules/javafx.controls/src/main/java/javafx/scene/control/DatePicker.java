@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -106,7 +106,15 @@ public class DatePicker extends ComboBoxBase<LocalDate> {
      */
     public DatePicker() {
         this(null);
+    }
 
+    /**
+     * Creates a DatePicker instance and sets the
+     * {@link #valueProperty() value} to the given date.
+     *
+     * @param localDate to be set as the currently selected date in the DatePicker. Can be null.
+     */
+    public DatePicker(LocalDate localDate) {
         valueProperty().addListener(observable -> {
             LocalDate date = getValue();
             Chronology chrono = getChronology();
@@ -115,7 +123,7 @@ public class DatePicker extends ComboBoxBase<LocalDate> {
                 lastValidDate = date;
             } else {
                 System.err.println("Restoring value to " +
-                            ((lastValidDate == null) ? "null" : getConverter().toString(lastValidDate)));
+                        ((lastValidDate == null) ? "null" : getConverter().toString(lastValidDate)));
                 setValue(lastValidDate);
             }
         });
@@ -132,6 +140,17 @@ public class DatePicker extends ComboBoxBase<LocalDate> {
                 setChronology(lastValidChronology);
             }
         });
+
+        setValue(localDate);
+        getStyleClass().add(DEFAULT_STYLE_CLASS);
+        setAccessibleRole(AccessibleRole.DATE_PICKER);
+        setEditable(true);
+
+        focusedProperty().addListener(o -> {
+            if (!isFocused()) {
+                commitValue();
+            }
+        });
     }
 
     private boolean validateDate(Chronology chrono, LocalDate date) {
@@ -144,25 +163,6 @@ public class DatePicker extends ComboBoxBase<LocalDate> {
             System.err.println(ex);
             return false;
         }
-    }
-
-    /**
-     * Creates a DatePicker instance and sets the
-     * {@link #valueProperty() value} to the given date.
-     *
-     * @param localDate to be set as the currently selected date in the DatePicker. Can be null.
-     */
-    public DatePicker(LocalDate localDate) {
-        setValue(localDate);
-        getStyleClass().add(DEFAULT_STYLE_CLASS);
-        setAccessibleRole(AccessibleRole.DATE_PICKER);
-        setEditable(true);
-
-        focusedProperty().addListener(o -> {
-            if (!isFocused()) {
-                commitValue();
-            }
-        });
     }
 
 

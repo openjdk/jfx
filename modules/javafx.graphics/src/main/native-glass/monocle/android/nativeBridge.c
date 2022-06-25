@@ -33,11 +33,13 @@ JavaVM *jVM = NULL;
 
 static jclass jAndroidInputDeviceRegistryClass;
 static jclass jMonocleWindowManagerClass;
+static jclass jScreenClass;
 
 static jmethodID monocle_gotTouchEventFromNative;
 static jmethodID monocle_dispatchKeyEventFromNative;
 static jmethodID monocle_repaintAll;
 static jmethodID monocle_registerDevice;
+static jmethodID screen_init;
 
 ANativeWindow* androidWindow = NULL;
 jfloat androidDensity = 0.f;
@@ -51,9 +53,10 @@ void initializeFromJava (JNIEnv *env) {
                                                  (*env)->FindClass(env, "com/sun/glass/ui/monocle/MonocleWindowManager"));
     jAndroidInputDeviceRegistryClass = (*env)->NewGlobalRef(env,
                                                  (*env)->FindClass(env, "com/sun/glass/ui/monocle/AndroidInputDeviceRegistry"));
+    jScreenClass = (*env)->NewGlobalRef(env, (*env)->FindClass(env, "com/sun/glass/ui/Screen"));
     monocle_repaintAll = (*env)->GetStaticMethodID(
                                             env, jMonocleWindowManagerClass, "repaintFromNative",
-                                            "()V");
+                                            "(Lcom/sun/glass/ui/Screen;)V");
     monocle_gotTouchEventFromNative = (*env)->GetStaticMethodID(
                                             env, jAndroidInputDeviceRegistryClass, "gotTouchEventFromNative",
                                             "(I[I[I[I[II)V");
@@ -61,6 +64,7 @@ void initializeFromJava (JNIEnv *env) {
                                             env, jAndroidInputDeviceRegistryClass, "dispatchKeyEventFromNative",
                                             "(II[CI)V");
     monocle_registerDevice = (*env)->GetStaticMethodID(env, jAndroidInputDeviceRegistryClass, "registerDevice","()V");
+    screen_init = (*env)->GetMethodID(env, jScreenClass,"<init>", "(JIIIIIIIIIIIIIIIFFFF)V");
     GLASS_LOG_FINE("Initializing native Android Bridge done");
 }
 
@@ -153,7 +157,19 @@ void androidJfx_requestGlassToRedraw() {
         GLASS_LOG_WARNING("we can't do this yet, no monocle_repaintAll\n");
         return;
     }
-    (*javaEnv)->CallStaticVoidMethod(javaEnv, jMonocleWindowManagerClass, monocle_repaintAll);
+    if (androidWindow == NULL) {
+        GLASS_LOG_WARNING("we can't do this yet, no androidWindow\n");
+        return;
+    }
+    int32_t width = ANativeWindow_getWidth(androidWindow) / androidDensity;
+    int32_t height = ANativeWindow_getHeight(androidWindow) / androidDensity;
+    jobject screen = (*javaEnv)->NewObject(javaEnv, jScreenClass, screen_init,
+        (jlong) androidWindow, 24,
+        0, 0, (jint) width, (jint) height,
+        0, 0, (jint) width, (jint) height,
+        0, 0, (jint) width, (jint) height,
+        SCREEN_DPI, SCREEN_DPI, (jfloat) 1, (jfloat) 1, androidDensity, androidDensity);
+    (*javaEnv)->CallStaticVoidMethod(javaEnv, jMonocleWindowManagerClass, monocle_repaintAll, screen);
 }
 
 /* ===== called from Java ===== */
