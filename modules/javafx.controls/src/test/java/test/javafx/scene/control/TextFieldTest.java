@@ -364,7 +364,7 @@ public class TextFieldTest {
     }
 
     /**
-     * Test related to https://bugs.openjdk.java.net/browse/JDK-8207759
+     * Test related to https://bugs.openjdk.org/browse/JDK-8207759
      * broken event dispatch sequence by forwardToParent.
      */
     @Test

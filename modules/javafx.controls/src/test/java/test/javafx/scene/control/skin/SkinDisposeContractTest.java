@@ -40,7 +40,7 @@ import static test.com.sun.javafx.scene.control.infrastructure.ControlSkinFactor
 import javafx.scene.control.Control;
 
 /**
- * Test for https://bugs.openjdk.java.net/browse/JDK-8244112:
+ * Test for https://bugs.openjdk.org/browse/JDK-8244112:
  * skin must not blow if dispose is called more than once.
  * <p>
  * This test is parameterized in the type of control.

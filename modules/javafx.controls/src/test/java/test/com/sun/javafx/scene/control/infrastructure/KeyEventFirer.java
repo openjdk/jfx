@@ -51,7 +51,7 @@ public class KeyEventFirer {
      * <p>
      * Beware: using this constructor on an <code>EventTarget</code> of type <code>Node</code>
      * which is not focusOwner may lead
-     * to false greens (see https://bugs.openjdk.java.net/browse/JDK-8231692).
+     * to false greens (see https://bugs.openjdk.org/browse/JDK-8231692).
      *
      * @param target the target to fire keyEvents onto, must not be null.
      * @throws NullPointerException if target is null.

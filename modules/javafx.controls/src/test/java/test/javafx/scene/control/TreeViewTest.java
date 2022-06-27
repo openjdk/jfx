@@ -3733,7 +3733,7 @@ public class TreeViewTest {
      * Test that cell.cancelEdit can switch tree editing off
      * even if a subclass violates its contract.
      *
-     * For details, see https://bugs.openjdk.java.net/browse/JDK-8265206
+     * For details, see https://bugs.openjdk.org/browse/JDK-8265206
      *
      */
     @Test

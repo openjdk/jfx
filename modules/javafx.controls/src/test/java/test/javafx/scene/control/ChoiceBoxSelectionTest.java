@@ -125,7 +125,7 @@ public class ChoiceBoxSelectionTest {
     }
 
     /**
-     * Not quite https://bugs.openjdk.java.net/browse/JDK-8089398
+     * Not quite https://bugs.openjdk.org/browse/JDK-8089398
      * (the issue there is setting value while selectionModel == null)
      *
      * This here throws NPE if selectionModel is null when the skin is attached.
