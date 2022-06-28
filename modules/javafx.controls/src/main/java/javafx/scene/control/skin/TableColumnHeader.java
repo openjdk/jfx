@@ -704,6 +704,8 @@ public class TableColumnHeader extends Region {
     private <T> TableRow<T> createMeasureRow(TableView<T> tv, TableViewSkinBase tableSkin,
             Callback<TableView<T>, TableRow<T>> rowFactory) {
         TableRow<T> tableRow = rowFactory != null ? rowFactory.call(tv) : new TableRow<>();
+        tableRow.updateTableView(tv);
+
         tableSkin.getChildren().add(tableRow);
         tableRow.applyCss();
         if (!(tableRow.getSkin() instanceof SkinBase<?>)) {
@@ -800,6 +802,8 @@ public class TableColumnHeader extends Region {
     private <T> TreeTableRow<T> createMeasureRow(TreeTableView<T> ttv, TableViewSkinBase tableSkin,
             Callback<TreeTableView<T>, TreeTableRow<T>> rowFactory) {
         TreeTableRow<T> treeTableRow = rowFactory != null ? rowFactory.call(ttv) : new TreeTableRow<>();
+        treeTableRow.updateTreeTableView(ttv);
+
         tableSkin.getChildren().add(treeTableRow);
         treeTableRow.applyCss();
         if (!(treeTableRow.getSkin() instanceof SkinBase<?>)) {

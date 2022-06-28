@@ -28,9 +28,14 @@ package test.javafx.scene.control.skin;
 import com.sun.javafx.tk.Toolkit;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.scene.control.Skin;
 import javafx.scene.control.TableColumn;
+import javafx.scene.control.TableRow;
 import javafx.scene.control.TableView;
 import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.control.skin.TableColumnHeader;
+import javafx.scene.control.skin.TableColumnHeaderShim;
+import javafx.scene.control.skin.TableRowSkin;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -39,11 +44,13 @@ import test.com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
 import test.com.sun.javafx.scene.control.test.Person;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 
 public class TableRowSkinTest {
 
     private TableView<Person> tableView;
     private StageLoader stageLoader;
+    private TableColumnHeader firstColumnHeader;
 
     @Before
     public void before() {
@@ -70,6 +77,22 @@ public class TableRowSkinTest {
         tableView.setItems(items);
 
         stageLoader = new StageLoader(tableView);
+        firstColumnHeader = VirtualFlowTestUtils.getTableColumnHeader(tableView, firstNameCol);
+    }
+
+    /**
+     * The {@link TableView} should never be null inside the {@link TableRowSkin} during auto sizing.
+     * See also: JDK-8289357
+     */
+    @Test
+    public void testTableViewInRowSkinIsNotNullWhenAutoSizing() {
+        tableView.setRowFactory(tv -> new TableRow<>() {
+            @Override
+            protected Skin<?> createDefaultSkin() {
+                return new ThrowingTableRowSkin<>(this);
+            }
+        });
+        TableColumnHeaderShim.resizeColumnToFitContent(firstColumnHeader, -1);
     }
 
     @Test
@@ -120,6 +143,13 @@ public class TableRowSkinTest {
         // We removed 2 columns, so the cell count should be decremented by 2 as well.
         assertEquals(tableView.getColumns().size(),
                 VirtualFlowTestUtils.getCell(tableView, 0).getChildrenUnmodifiable().size());
+    }
+
+    private static class ThrowingTableRowSkin<T> extends TableRowSkin<T> {
+        public ThrowingTableRowSkin(TableRow<T> tableRow) {
+            super(tableRow);
+            assertNotNull(tableRow.getTableView());
+        }
     }
 
 }
