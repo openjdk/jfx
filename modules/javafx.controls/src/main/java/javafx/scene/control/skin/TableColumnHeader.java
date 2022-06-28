@@ -663,11 +663,12 @@ public class TableColumnHeader extends Region {
             if ((cell.getText() != null && !cell.getText().isEmpty()) || cell.getGraphic() != null) {
                 tableRow.applyCss();
                 maxWidth = Math.max(maxWidth, cell.prefWidth(-1));
-                tableSkin.getChildren().remove(cell);
             }
         }
+        tableSkin.getChildren().remove(tableRow);
 
-        // dispose of the cell to prevent it retaining listeners (see RT-31015)
+        // dispose of the row and cell to prevent it retaining listeners (see RT-31015)
+        tableRow.updateIndex(-1);
         cell.updateIndex(-1);
 
         // RT-36855 - take into account the column header text / graphic widths.
@@ -760,11 +761,12 @@ public class TableColumnHeader extends Region {
                 double w = cell.prefWidth(-1);
 
                 maxWidth = Math.max(maxWidth, w);
-                tableSkin.getChildren().remove(cell);
             }
         }
+        tableSkin.getChildren().remove(treeTableRow);
 
-        // dispose of the cell to prevent it retaining listeners (see RT-31015)
+        // dispose of the row and cell to prevent it retaining listeners (see RT-31015)
+        treeTableRow.updateIndex(-1);
         cell.updateIndex(-1);
 
         // RT-36855 - take into account the column header text / graphic widths.
