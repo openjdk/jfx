@@ -44,7 +44,9 @@ import test.com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
 import test.com.sun.javafx.scene.control.test.Person;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 public class TableRowSkinTest {
 
@@ -93,6 +95,16 @@ public class TableRowSkinTest {
             }
         });
         TableColumnHeaderShim.resizeColumnToFitContent(firstColumnHeader, -1);
+    }
+
+    /**
+     * The {@link TableView} should not have any {@link TableRow} as children.
+     * {@link TableRow}s are added temporary as part of the auto sizing, but should never remain after.
+     * See also: JDK-8289357
+     */
+    @Test
+    public void testTableViewChildrenCount() {
+        assertTrue(tableView.getChildrenUnmodifiable().stream().noneMatch(node -> node instanceof TableRow));
     }
 
     @Test

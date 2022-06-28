@@ -28,6 +28,8 @@ package test.javafx.scene.control.skin;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.scene.control.Skin;
+import javafx.scene.control.TableRow;
+import javafx.scene.control.TableView;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeTableColumn;
 import javafx.scene.control.TreeTableRow;
@@ -43,6 +45,7 @@ import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
 import test.com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
 import test.com.sun.javafx.scene.control.test.Person;
 
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 public class TreeTableRowSkinTest {
@@ -95,6 +98,16 @@ public class TreeTableRowSkinTest {
             }
         });
         TableColumnHeaderShim.resizeColumnToFitContent(firstColumnHeader, -1);
+    }
+
+    /**
+     * The {@link TreeTableView} should not have any {@link TreeTableRow} as children.
+     * {@link TreeTableRow}s are added temporary as part of the auto sizing, but should never remain after.
+     * See also: JDK-8289357
+     */
+    @Test
+    public void testTreeTableViewChildrenCount() {
+        assertTrue(treeTableView.getChildrenUnmodifiable().stream().noneMatch(node -> node instanceof TreeTableRow));
     }
 
     @AfterEach
