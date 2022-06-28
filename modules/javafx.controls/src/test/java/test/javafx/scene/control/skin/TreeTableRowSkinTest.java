@@ -35,21 +35,21 @@ import javafx.scene.control.TreeTableColumn;
 import javafx.scene.control.TreeTableRow;
 import javafx.scene.control.TreeTableView;
 import javafx.scene.control.cell.TreeItemPropertyValueFactory;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
 import test.com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
 import test.com.sun.javafx.scene.control.test.Person;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class TreeTableRowSkinTest {
 
     private TreeTableView<Person> treeTableView;
     private StageLoader stageLoader;
 
-    @Before
+    @BeforeEach
     public void before() {
         treeTableView = new TreeTableView<>();
 
@@ -237,7 +237,7 @@ public class TreeTableRowSkinTest {
         invisibleColumnsShouldRemoveCorrespondingCellsInRowImpl();
     }
 
-    @After
+    @AfterEach
     public void after() {
         stageLoader.dispose();
     }
