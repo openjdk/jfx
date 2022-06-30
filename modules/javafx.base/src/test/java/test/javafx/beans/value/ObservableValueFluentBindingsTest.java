@@ -38,16 +38,19 @@ import java.util.List;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
+import javafx.beans.InvalidationListener;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 
 public class ObservableValueFluentBindingsTest {
+    private int invalidations;
 
     private final StringProperty property = new SimpleStringProperty("Initial");
     private final List<String> values = new ArrayList<>();
     private final ChangeListener<String> changeListener = (obs, old, current) -> values.add(current);
+    private final InvalidationListener invalidationListener = obs -> invalidations++;
 
     @Nested
     class When_map_Called {
@@ -96,9 +99,56 @@ public class ObservableValueFluentBindingsTest {
             }
 
             @Nested
-            class WhenObserved {
+            class WhenObservedForInvalidations {
                 {
-                    startObserving(observableValue);
+                    startObservingInvalidations(observableValue);
+                }
+
+                @Test
+                void shouldOnlyInvalidateOnce() {
+                    assertNotInvalidated();
+
+                    property.set("Left");
+
+                    assertInvalidated();
+
+                    property.set("Right");
+
+                    assertNotInvalidated();
+                }
+
+                @Test
+                void shouldBeStronglyReferenced() {
+                    ReferenceAsserts.testIfStronglyReferenced(observableValue, () -> observableValue = null);
+                }
+
+                @Nested
+                class AndWhenUnobserved {
+                    {
+                        stopObservingInvalidations(observableValue);
+                    }
+
+                    @Test
+                    void shouldNoLongerBeCalled() {
+                        assertNotInvalidated();
+
+                        property.set("Left");
+                        property.set("Right");
+
+                        assertNotInvalidated();
+                    }
+
+                    @Test
+                    void shouldNoLongerBeStronglyReferenced() {
+                        ReferenceAsserts.testIfNotStronglyReferenced(observableValue, () -> observableValue = null);
+                    }
+                }
+            }
+
+            @Nested
+            class WhenObservedForChanges {
+                {
+                    startObservingChanges(observableValue);
                 }
 
                 @Test
@@ -125,7 +175,7 @@ public class ObservableValueFluentBindingsTest {
                 @Nested
                 class AndWhenUnobserved {
                     {
-                        stopObserving(observableValue);
+                        stopObservingChanges(observableValue);
                     }
 
                     @Test
@@ -161,9 +211,9 @@ public class ObservableValueFluentBindingsTest {
                 }
 
                 @Nested
-                class WhenObserved {
+                class WhenObservedForChanges {
                     {
-                        startObserving(observableValue);
+                        startObservingChanges(observableValue);
                     }
 
                     @Test
@@ -187,7 +237,7 @@ public class ObservableValueFluentBindingsTest {
                     @Nested
                     class AndWhenUnobserved {
                         {
-                            stopObserving(observableValue);
+                            stopObservingChanges(observableValue);
                         }
 
                         @Test
@@ -224,9 +274,9 @@ public class ObservableValueFluentBindingsTest {
                 }
 
                 @Nested
-                class WhenObserved {
+                class WhenObservedForChanges {
                     {
-                        startObserving(observableValue);
+                        startObservingChanges(observableValue);
                     }
 
                     @Test
@@ -250,7 +300,7 @@ public class ObservableValueFluentBindingsTest {
                     @Nested
                     class AndWhenUnobserved {
                         {
-                            stopObserving(observableValue);
+                            stopObservingChanges(observableValue);
                         }
 
                         @Test
@@ -300,9 +350,56 @@ public class ObservableValueFluentBindingsTest {
         }
 
         @Nested
-        class WhenObserved {
+        class WhenObservedForInvalidations {
             {
-                startObserving(observableValue);
+                startObservingInvalidations(observableValue);
+            }
+
+            @Test
+            void shouldOnlyInvalidateOnce() {
+                assertNotInvalidated();
+
+                property.set("Left");
+
+                assertInvalidated();
+
+                property.set(null);
+
+                assertNotInvalidated();
+            }
+
+            @Test
+            void shouldBeStronglyReferenced() {
+                ReferenceAsserts.testIfStronglyReferenced(observableValue, () -> observableValue = null);
+            }
+
+            @Nested
+            class AndWhenUnobserved {
+                {
+                    stopObservingInvalidations(observableValue);
+                }
+
+                @Test
+                void shouldNoLongerBeCalled() {
+                    assertNotInvalidated();
+
+                    property.set("Left");
+                    property.set(null);
+
+                    assertNotInvalidated();
+                }
+
+                @Test
+                void shouldNoLongerBeStronglyReferenced() {
+                    ReferenceAsserts.testIfNotStronglyReferenced(observableValue, () -> observableValue = null);
+                }
+            }
+        }
+
+        @Nested
+        class WhenObservedForChanges {
+            {
+                startObservingChanges(observableValue);
             }
 
             @Test
@@ -326,7 +423,7 @@ public class ObservableValueFluentBindingsTest {
             @Nested
             class AndWhenUnobserved {
                 {
-                    stopObserving(observableValue);
+                    stopObservingChanges(observableValue);
                 }
 
                 @Test
@@ -360,9 +457,27 @@ public class ObservableValueFluentBindingsTest {
 
         @Nested
         class WithNotNullReturns_ObservableValue_Which {
+            private int subscribeCount;
+            private int unsubscribeCount;
+
             private StringProperty left = new SimpleStringProperty("LEFT");
             private StringProperty right = new SimpleStringProperty("RIGHT");
-            private StringProperty unknown = new SimpleStringProperty("UNKNOWN");
+            private StringProperty unknown = new SimpleStringProperty("UNKNOWN") {
+                @Override
+                public void addListener(InvalidationListener listener) {
+                    super.addListener(listener);
+
+                    subscribeCount++;
+                };
+
+                @Override
+                public void removeListener(InvalidationListener listener) {
+                    super.removeListener(listener);
+
+                    unsubscribeCount++;
+                };
+            };
+
             private ObservableValue<String> observableValue =
                     property.flatMap(v -> "Left".equals(v) ? left : "Right".equals(v) ? right : unknown);
 
@@ -417,9 +532,86 @@ public class ObservableValueFluentBindingsTest {
             }
 
             @Nested
-            class WhenObserved {
+            class WhenObservedForInvalidations {
                 {
-                    startObserving(observableValue);
+                    startObservingInvalidations(observableValue);
+                }
+
+                @Test
+                void shouldOnlyInvalidateOnce() {
+                    assertNotInvalidated();
+
+                    unknown.set("UNKNOWN+1");
+
+                    assertInvalidated();
+
+                    property.set("Right");
+
+                    assertNotInvalidated();
+                }
+
+                @Test
+                void shouldNotResubscribeToMappedPropertyOnEachValidation() {
+                    assertEquals(1, subscribeCount);
+                    assertEquals(0, unsubscribeCount);
+
+                    unknown.set("A");
+                    observableValue.getValue();
+                    unknown.set("B");
+                    observableValue.getValue();
+                    unknown.set("C");
+                    observableValue.getValue();
+
+                    assertEquals(1, subscribeCount);
+                    assertEquals(0, unsubscribeCount);
+                }
+
+                @Test
+                void shouldBeStronglyReferenced() {
+                    ReferenceAsserts.testIfStronglyReferenced(observableValue, () -> observableValue = null);
+                }
+
+                @Test
+                void shouldStronglyReferMappedProperty() {
+                    ReferenceAsserts.testIfStronglyReferenced(unknown, () -> unknown = null);
+                }
+
+                @Test
+                void shouldNotStronglyReferOldMappedProperty() {
+                    property.set("Right");
+
+                    ReferenceAsserts.testIfNotStronglyReferenced(unknown, () -> unknown = null);
+                }
+
+                @Nested
+                class AndWhenUnobserved {
+                    {
+                        stopObservingInvalidations(observableValue);
+                    }
+
+                    @Test
+                    void shouldNoLongerBeCalled() {
+                        assertNotInvalidated();
+
+                        property.set("Left");
+                        property.set("Right");
+                        property.set("Unknown");
+
+                        assertNotInvalidated();
+                    }
+
+                    @Test
+                    void shouldNoLongerBeStronglyReferenced() {
+                        ReferenceAsserts.testIfNotStronglyReferenced(observableValue, () -> observableValue = null);
+                        ReferenceAsserts.testIfNotStronglyReferenced(unknown, () -> unknown = null);
+                    }
+                }
+            }
+
+            @Nested
+            class WhenObservedForChanges {
+                {
+                    startObservingChanges(observableValue);
                 }
 
                 @Test
@@ -446,6 +638,19 @@ public class ObservableValueFluentBindingsTest {
                     property.set("Left");
 
                     assertObserved("LEFT+1");  // switching to left sees latest left value
+                }
+
+                @Test
+                void shouldNotResubscribeToMappedPropertyOnEachValidation() {
+                    assertEquals(1, subscribeCount);
+                    assertEquals(0, unsubscribeCount);
+
+                    unknown.set("A");
+                    unknown.set("B");
+                    unknown.set("C");
+
+                    assertEquals(1, subscribeCount);
+                    assertEquals(0, unsubscribeCount);
                 }
 
                 @Test
@@ -480,10 +685,22 @@ public class ObservableValueFluentBindingsTest {
                     ReferenceAsserts.testIfStronglyReferenced(observableValue, () -> observableValue = null);
                 }
 
+                @Test
+                void shouldStronglyReferMappedProperty() {
+                    ReferenceAsserts.testIfStronglyReferenced(unknown, () -> unknown = null);
+                }
+
+                @Test
+                void shouldNotStronglyReferOldMappedProperty() {
+                    property.set("Right");
+
+                    ReferenceAsserts.testIfNotStronglyReferenced(unknown, () -> unknown = null);
+                }
+
                 @Nested
                 class AndWhenUnobserved {
                     {
-                        stopObserving(observableValue);
+                        stopObservingChanges(observableValue);
                     }
 
                     @Test
@@ -500,6 +717,7 @@ public class ObservableValueFluentBindingsTest {
                     @Test
                     void shouldNoLongerBeStronglyReferenced() {
                         ReferenceAsserts.testIfNotStronglyReferenced(observableValue, () -> observableValue = null);
+                        ReferenceAsserts.testIfNotStronglyReferenced(unknown, () -> unknown = null);
                     }
                 }
             }
@@ -521,9 +739,9 @@ public class ObservableValueFluentBindingsTest {
                 }
 
                 @Nested
-                class WhenObserved {
+                class WhenObservedForChanges {
                     {
-                        startObserving(observableValue);
+                        startObservingChanges(observableValue);
                     }
 
                     @Test
@@ -555,7 +773,7 @@ public class ObservableValueFluentBindingsTest {
                     @Nested
                     class AndWhenUnobserved {
                         {
-                            stopObserving(observableValue);
+                            stopObservingChanges(observableValue);
                         }
 
                         @Test
@@ -592,9 +810,9 @@ public class ObservableValueFluentBindingsTest {
                 }
 
                 @Nested
-                class WhenObserved {
+                class WhenObservedForChanges {
                     {
-                        startObserving(observableValue);
+                        startObservingChanges(observableValue);
                     }
 
                     @Test
@@ -638,7 +856,7 @@ public class ObservableValueFluentBindingsTest {
                     @Nested
                     class AndWhenUnobserved {
                         {
-                            stopObserving(observableValue);
+                            stopObservingChanges(observableValue);
                         }
 
                         @Test
@@ -678,13 +896,12 @@ public class ObservableValueFluentBindingsTest {
     }
 
     /**
-     * Starts observing the given observable value. This will do
-     * a sanity check that the observer is currently not working
-     * before adding it.
+     * Starts observing the given observable value for changes. This will do
+     * a sanity check that the observer is currently not working before adding it.
      *
      * @param observableValue an {@code ObservableValue}, cannot be {@code null}
      */
-    private void startObserving(ObservableValue<String> observableValue) {
+    private void startObservingChanges(ObservableValue<String> observableValue) {
         values.clear();
 
         property.setValue("Left");
@@ -697,13 +914,12 @@ public class ObservableValueFluentBindingsTest {
     }
 
     /**
-     * Stops observing the given observable value. This will do a
-     * sanity check that the observer is currently working before
-     * removing it.
+     * Stops observing the given observable value for changes. This will do a
+     * sanity check that the observer is currently working before removing it.
      *
      * @param observableValue an {@code ObservableValue}, cannot be {@code null}
      */
-    private void stopObserving(ObservableValue<String> observableValue) {
+    private void stopObservingChanges(ObservableValue<String> observableValue) {
         values.clear();
 
         property.setValue("Left");
@@ -714,5 +930,58 @@ public class ObservableValueFluentBindingsTest {
         values.clear();
 
         observableValue.removeListener(changeListener);
+    }
+
+    /**
+     * Ensures no invalidations occurred since the last check.
+     */
+    private void assertNotInvalidated() {
+        assertEquals(0, invalidations);
+    }
+
+    /**
+     * Ensures that an invalidation occurred since last check.
+     */
+    private void assertInvalidated() {
+        assertEquals(1, invalidations);
+        invalidations = 0;
+    }
+
+    /**
+     * Starts observing the given observable value for invalidations. This will do
+     * a sanity check that the observer is currently not working before adding it.
+     *
+     * @param observableValue an {@code ObservableValue}, cannot be {@code null}
+     */
+    private void startObservingInvalidations(ObservableValue<String> observableValue) {
+        invalidations = 0;
+
+        property.getValue();
+        property.setValue("Left");
+        property.setValue("Right");
+        property.setValue("Initial");
+
+        assertNotInvalidated();
+
+        observableValue.addListener(invalidationListener);
+    }
+
+    /**
+     * Stops observing the given observable value for invalidations. This will do a
+     * sanity check that the observer is currently working before removing it.
+     *
+     * @param observableValue an {@code ObservableValue}, cannot be {@code null}
+     */
+    private void stopObservingInvalidations(ObservableValue<String> observableValue) {
+        invalidations = 0;
+
+        property.getValue();
+        property.setValue("Left");
+        property.setValue("Right");
+        property.setValue("Initial");
+
+        assertInvalidated();
+
+        observableValue.removeListener(invalidationListener);
     }
 }
