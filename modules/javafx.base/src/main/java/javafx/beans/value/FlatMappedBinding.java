@@ -56,7 +56,7 @@ class FlatMappedBinding<S, T> extends LazyObjectBinding<T> {
     }
 
     @Override
-    protected Subscription observeInputs() {
+    protected Subscription observeSources() {
         Subscription subscription = Subscription.subscribeInvalidations(source, this::invalidate);
 
         return () -> {

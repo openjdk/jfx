@@ -44,7 +44,7 @@ public class LazyObjectBindingStub<T> extends LazyObjectBinding<T> {
     }
 
     @Override
-    protected Subscription observeInputs() {
+    protected Subscription observeSources() {
         startObservingCalls++;
 
         return () -> {

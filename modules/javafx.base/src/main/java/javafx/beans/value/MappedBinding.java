@@ -48,7 +48,7 @@ class MappedBinding<S, T> extends LazyObjectBinding<T> {
     }
 
     @Override
-    protected Subscription observeInputs() {
+    protected Subscription observeSources() {
         return Subscription.subscribeInvalidations(source, this::invalidate); // start observing source
     }
 }

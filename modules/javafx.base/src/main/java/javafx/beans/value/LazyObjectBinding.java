@@ -79,7 +79,7 @@ abstract class LazyObjectBinding<T> extends ObjectBinding<T> {
      */
     private void updateSubcriptionAfterAdd() {
         if (!wasObserved) { // was first observer registered?
-            subscription = observeInputs(); // start observing source
+            subscription = observeSources(); // start observing source
 
             /*
              * Although the act of registering a listener already attempts to make
@@ -123,5 +123,5 @@ abstract class LazyObjectBinding<T> extends ObjectBinding<T> {
      *
      * @return a {@link Subscription} which will be cancelled when this binding no longer has any observers, never null
      */
-    protected abstract Subscription observeInputs();
+    protected abstract Subscription observeSources();
 }
