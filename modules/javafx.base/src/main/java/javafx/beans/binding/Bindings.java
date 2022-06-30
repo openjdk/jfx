@@ -437,6 +437,10 @@ public final class Bindings {
      * <p>
      * Note: since 8.0, JavaBeans properties are supported and might be in the chain.
      * </p>
+     * <p>
+     * Since 19, it is recommended to use {@link ObservableValue#flatMap(java.util.function.Function)}
+     * to select a nested member of an {@link ObservableValue}.
+     * </p>
      *
      * @param <T> the type of the wrapped {@code Object}
      * @param root
@@ -444,6 +448,7 @@ public final class Bindings {
      * @param steps
      *            The property names to reach the final property
      * @return the created {@link ObjectBinding}
+     * @see ObservableValue#flatMap(java.util.function.Function)
      */
     public static <T> ObjectBinding<T> select(ObservableValue<?> root, String... steps) {
         return new SelectBinding.AsObject<T>(root, steps);
