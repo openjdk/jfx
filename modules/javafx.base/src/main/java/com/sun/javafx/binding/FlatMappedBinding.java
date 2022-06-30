@@ -23,12 +23,12 @@
  * questions.
  */
 
-package javafx.beans.value;
+package com.sun.javafx.binding;
 
 import java.util.Objects;
 import java.util.function.Function;
 
-import com.sun.javafx.binding.Subscription;
+import javafx.beans.value.ObservableValue;
 
 /**
  * A binding holding the value of an indirect source. The indirect source results from
@@ -51,7 +51,7 @@ import com.sun.javafx.binding.Subscription;
  * @param <S> the type of the source
  * @param <T> the type of the resulting binding
  */
-class FlatMappedBinding<S, T> extends LazyObjectBinding<T> {
+public class FlatMappedBinding<S, T> extends LazyObjectBinding<T> {
 
     private final ObservableValue<S> source;
     private final Function<? super S, ? extends ObservableValue<? extends T>> mapper;

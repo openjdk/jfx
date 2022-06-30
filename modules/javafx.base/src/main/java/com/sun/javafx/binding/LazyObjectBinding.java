@@ -23,12 +23,11 @@
  * questions.
  */
 
-package javafx.beans.value;
-
-import com.sun.javafx.binding.Subscription;
+package com.sun.javafx.binding;
 
 import javafx.beans.InvalidationListener;
 import javafx.beans.binding.ObjectBinding;
+import javafx.beans.value.ChangeListener;
 
 /**
  * Extends {@link ObjectBinding} with the ability to lazily register and eagerly unregister listeners on its

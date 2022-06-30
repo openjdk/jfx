@@ -23,27 +23,28 @@
  * questions.
  */
 
-package javafx.beans.value;
+package com.sun.javafx.binding;
 
 import java.util.Objects;
+import java.util.function.Function;
 
-import com.sun.javafx.binding.Subscription;
+import javafx.beans.value.ObservableValue;
 
-class OrElseBinding<T> extends LazyObjectBinding<T> {
+public class MappedBinding<S, T> extends LazyObjectBinding<T> {
 
-    private final ObservableValue<T> source;
-    private final T constant;
+    private final ObservableValue<S> source;
+    private final Function<? super S, ? extends T> mapper;
 
-    public OrElseBinding(ObservableValue<T> source, T constant) {
+    public MappedBinding(ObservableValue<S> source, Function<? super S, ? extends T> mapper) {
         this.source = Objects.requireNonNull(source, "source cannot be null");
-        this.constant = constant;
+        this.mapper = Objects.requireNonNull(mapper, "mapper cannot be null");
     }
 
     @Override
     protected T computeValue() {
-        T value = source.getValue();
+        S value = source.getValue();
 
-        return value == null ? constant : value;
+        return value == null ? null : mapper.apply(value);
     }
 
     @Override

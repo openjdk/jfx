@@ -27,6 +27,10 @@ package javafx.beans.value;
 
 import java.util.function.Function;
 
+import com.sun.javafx.binding.FlatMappedBinding;
+import com.sun.javafx.binding.MappedBinding;
+import com.sun.javafx.binding.OrElseBinding;
+
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 

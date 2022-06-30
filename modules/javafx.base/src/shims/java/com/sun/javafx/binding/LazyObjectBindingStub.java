@@ -23,32 +23,30 @@
  * questions.
  */
 
-package javafx.beans.value;
+package com.sun.javafx.binding;
 
-import java.util.Objects;
-import java.util.function.Function;
+/**
+ * Stub to allow testing of package private LazyObjectBinding.
+ */
+public class LazyObjectBindingStub<T> extends LazyObjectBinding<T> {
 
-import com.sun.javafx.binding.Subscription;
-
-class MappedBinding<S, T> extends LazyObjectBinding<T> {
-
-    private final ObservableValue<S> source;
-    private final Function<? super S, ? extends T> mapper;
-
-    public MappedBinding(ObservableValue<S> source, Function<? super S, ? extends T> mapper) {
-        this.source = Objects.requireNonNull(source, "source cannot be null");
-        this.mapper = Objects.requireNonNull(mapper, "mapper cannot be null");
-    }
+    public int computeValueCalls;
+    public int startObservingCalls;
+    public int stopObservingCalls;
 
     @Override
     protected T computeValue() {
-        S value = source.getValue();
+        computeValueCalls++;
 
-        return value == null ? null : mapper.apply(value);
+        return null;
     }
 
     @Override
     protected Subscription observeSources() {
-        return Subscription.subscribeInvalidations(source, this::invalidate); // start observing source
+        startObservingCalls++;
+
+        return () -> {
+            stopObservingCalls++;
+        };
     }
 }

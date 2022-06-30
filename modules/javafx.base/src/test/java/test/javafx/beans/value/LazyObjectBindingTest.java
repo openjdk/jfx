@@ -32,9 +32,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
+import com.sun.javafx.binding.LazyObjectBindingStub;
+
 import javafx.beans.InvalidationListener;
 import javafx.beans.value.ChangeListener;
-import javafx.beans.value.LazyObjectBindingStub;
 
 public class LazyObjectBindingTest {
 
