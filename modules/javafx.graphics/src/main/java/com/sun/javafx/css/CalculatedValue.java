@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -86,6 +86,18 @@ public final class CalculatedValue {
         }
 
         return true;
+    }
+
+    @Override
+    public int hashCode() {
+        int h = relative ? 1 : 0;
+        if (origin != null) {
+            h = 31 * h + origin.hashCode();
+        }
+        if (value != null) {
+            h = 31 * h + value.hashCode();
+        }
+        return h;
     }
 
     private final Object value;
