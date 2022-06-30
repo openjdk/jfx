@@ -45,28 +45,28 @@ abstract class LazyObjectBinding<T> extends ObjectBinding<T> {
     public void addListener(ChangeListener<? super T> listener) {
         super.addListener(listener);
 
-        updateSubcriptionAfterAdd();
+        updateSubscriptionAfterAdd();
     }
 
     @Override
     public void removeListener(ChangeListener<? super T> listener) {
         super.removeListener(listener);
 
-        updateSubcriptionAfterRemove();
+        updateSubscriptionAfterRemove();
     }
 
     @Override
     public void addListener(InvalidationListener listener) {
         super.addListener(listener);
 
-        updateSubcriptionAfterAdd();
+        updateSubscriptionAfterAdd();
     }
 
     @Override
     public void removeListener(InvalidationListener listener) {
         super.removeListener(listener);
 
-        updateSubcriptionAfterRemove();
+        updateSubscriptionAfterRemove();
     }
 
     @Override
@@ -77,7 +77,7 @@ abstract class LazyObjectBinding<T> extends ObjectBinding<T> {
     /**
      * Called after a listener was added to start observing inputs if they're not observed already.
      */
-    private void updateSubcriptionAfterAdd() {
+    private void updateSubscriptionAfterAdd() {
         if (!wasObserved) { // was first observer registered?
             subscription = observeSources(); // start observing source
 
@@ -108,7 +108,7 @@ abstract class LazyObjectBinding<T> extends ObjectBinding<T> {
      * Called after a listener was removed to stop observing inputs if this was the last listener
      * observing this binding.
      */
-    private void updateSubcriptionAfterRemove() {
+    private void updateSubscriptionAfterRemove() {
         if (wasObserved && !isObserved()) { // was last observer unregistered?
             subscription.unsubscribe();
             subscription = null;
