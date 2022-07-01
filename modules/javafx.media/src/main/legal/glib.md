@@ -28,7 +28,14 @@ code is here:
 
 ```
 
-### LGPL 2.1
+### LICENSE
+```
+There are multiple licenses that apply to different parts of Glib. The
+overarching license is LGPL 2.1, however parts are covered by MIT and
+other parts by BSD-style licenses.
+```
+
+#### LGPL 2.1
 ```
 
                   GNU LESSER GENERAL PUBLIC LICENSE
@@ -533,5 +540,81 @@ necessary.  Here is a sample; alter the names:
   Ty Coon, President of Vice
 
 That's all there is to it!
+
+
+```
+
+#### BSD 3-clause License
+```
+---------------------------------
+The below license applies to the following files:
+glib/glib/valgrind.h
+
+Copyright (C) 2000-2017 Julian Seward. All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions
+are met:
+
+1. Redistributions of source code must retain the above copyright
+   notice, this list of conditions and the following disclaimer.
+
+2. The origin of this software must not be misrepresented; you must
+   not claim that you wrote the original software.  If you use this
+   software in a product, an acknowledgment in the product
+   documentation would be appreciated but is not required.
+
+3. Altered source versions must be plainly marked as such, and must
+   not be misrepresented as being the original software.
+
+4. The name of the author may not be used to endorse or promote
+   products derived from this software without specific prior written
+   permission.
+
+THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS
+OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
+DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+----------------------------------------------------------------
+
+Notice that the above BSD-style license applies to this one file
+(valgrind.h) only.  The entire rest of Valgrind is licensed under
+the terms of the GNU General Public License, version 2.  See the
+COPYING file in the source distribution for details.
+
+----------------------------------------------------------------
+
+
+```
+#### MIT License
+```
+---------------------------------
+The below license applies to the following files:
+glib/glib/gbsearcharray.h
+
+Copyright (C) 2000-2003 Tim Janik
+
+This software is provided "as is"; redistribution and modification
+is permitted, provided that the following disclaimer is retained.
+
+This software is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+In no event shall the authors or contributors be liable for any
+direct, indirect, incidental, special, exemplary, or consequential
+damages (including, but not limited to, procurement of substitute
+goods or services; loss of use, data, or profits; or business
+interruption) however caused and on any theory of liability, whether
+in contract, strict liability, or tort (including negligence or
+otherwise) arising in any way out of the use of this software, even
+if advised of the possibility of such damage.
 
 ```

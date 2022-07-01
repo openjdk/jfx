@@ -26,7 +26,14 @@ code is here:
    rt/modules/javafx.media/src/main/native/gstreamer/gstreamer-lite/
 ```
 
-### LGPL 2.1
+### LICENSE
+```
+There are multiple licenses that apply to different parts of GStreamer. The
+overarching license is LGPL 2.1, however parts are covered by BSD-style
+licenses.
+```
+
+#### LGPL 2.1
 ```
 
                   GNU LESSER GENERAL PUBLIC LICENSE
@@ -531,5 +538,41 @@ necessary.  Here is a sample; alter the names:
   Ty Coon, President of Vice
 
 That's all there is to it!
+
+
+```
+
+#### BSD License
+```
+---------------------------------
+The below license applies to the following files:
+gstreamer-lite/gst-plugins-base/gst-libs/gst/fft/_kiss_fft_guts_f32.h
+gstreamer-lite/gst-plugins-base/gst-libs/gst/fft/kiss_fft_f32.c
+gstreamer-lite/gst-plugins-base/gst-libs/gst/fft/kiss_fft_f32.h
+gstreamer-lite/gst-plugins-base/gst-libs/gst/fft/kiss_fftr_f32.c
+gstreamer-lite/gst-plugins-base/gst-libs/gst/fft/kiss_fftr_f32.h
+
+Copyright (c) 2003-2010, Mark Borgerding. All rights reserved.
+
+This file is part of KISS FFT - https://github.com/mborgerding/kissfft
+
+SPDX-License-Identifier: BSD-3-Clause
+See COPYING file for more information.
+
+
+```
+
+#### Permissive License
+```
+---------------------------------
+The below license applies to the following files:
+gstreamer-lite/gst-plugins-base/gst-libs/gst/audio/dbesi0.c
+
+Copyright(C) 1996 Takuya OOURA
+
+You may use, copy, modify this code for any purpose and
+without fee.
+
+Package home:  http://www.kurims.kyoto-u.ac.jp/~ooura/bessel.html
 
 ```
