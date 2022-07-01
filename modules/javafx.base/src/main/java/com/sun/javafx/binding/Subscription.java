@@ -87,6 +87,9 @@ public interface Subscription {
      * @throws NullPointerException when {@code observableValue} or {@code subscriber} is {@code null}
      */
     static <T> Subscription subscribe(ObservableValue<T> observableValue, Consumer<? super T> subscriber) {
+        Objects.requireNonNull(observableValue);
+        Objects.requireNonNull(subscriber);
+
         ChangeListener<T> listener = (obs, old, current) -> subscriber.accept(current);
 
         subscriber.accept(observableValue.getValue());  // eagerly send current value
@@ -107,6 +110,7 @@ public interface Subscription {
      * @throws NullPointerException when {@code observableValue} or {@code runnable} is {@code null}
      */
     static Subscription subscribeInvalidations(ObservableValue<?> observableValue, Runnable runnable) {
+        Objects.requireNonNull(observableValue);
         Objects.requireNonNull(runnable);
 
         InvalidationListener listener = obs -> runnable.run();
