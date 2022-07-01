@@ -347,8 +347,7 @@ public class FXCollections {
      * @see #observableArrayList()
      */
     public static <E> ObservableList<E> observableArrayList(E... items) {
-        ArrayList<E> backingList = new ArrayList<>(Arrays.asList(items));
-        return observableList(backingList);
+        return observableList(new ArrayList<>(Arrays.asList(items)));
     }
 
     /**
