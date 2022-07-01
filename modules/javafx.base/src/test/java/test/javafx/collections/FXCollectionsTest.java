@@ -44,23 +44,23 @@ public class FXCollectionsTest {
 
     @Test
     public void testCreateObservableArrayListFromArray() {
-        ObservableList<String> observableList = FXCollections.observableArrayList("1", "2", "3");
+        ObservableList<String> observableList = FXCollections.observableArrayList("1", "2", null);
 
         assertEquals(3, observableList.size());
         assertTrue(observableList.contains("1"));
         assertTrue(observableList.contains("2"));
-        assertTrue(observableList.contains("3"));
+        assertTrue(observableList.contains(null));
     }
 
     @Test
     public void testCreateObservableArrayListFromCollection() {
-        List<String> list = List.of("1", "2", "3");
+        List<String> list = Arrays.asList("1", "2", null);
         ObservableList<String> observableList = FXCollections.observableArrayList(list);
 
         assertEquals(3, observableList.size());
         assertTrue(observableList.contains("1"));
         assertTrue(observableList.contains("2"));
-        assertTrue(observableList.contains("3"));
+        assertTrue(observableList.contains(null));
     }
 
     @Test
