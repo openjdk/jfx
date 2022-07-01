@@ -35,7 +35,7 @@ overarching license is LGPL 2.1, however parts are covered by MIT and
 other parts by BSD-style licenses.
 ```
 
-#### LGPL 2.1
+#### LGPL 2.1 License
 ```
 
                   GNU LESSER GENERAL PUBLIC LICENSE
