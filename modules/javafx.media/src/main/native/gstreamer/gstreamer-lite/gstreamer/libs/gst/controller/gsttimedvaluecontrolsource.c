@@ -98,7 +98,7 @@ gst_control_point_copy (GstControlPoint * cp)
 GType
 gst_control_point_get_type (void)
 {
-  static volatile gsize type_id = 0;
+  static gsize type_id = 0;
 
   if (g_once_init_enter (&type_id)) {
     GType tmp =

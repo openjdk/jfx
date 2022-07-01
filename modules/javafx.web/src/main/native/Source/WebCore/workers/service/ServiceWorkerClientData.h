@@ -37,50 +37,58 @@ namespace WebCore {
 class SWClientConnection;
 class ScriptExecutionContext;
 
+enum class LastNavigationWasAppInitiated : bool { No, Yes };
+
 struct ServiceWorkerClientData {
     ServiceWorkerClientIdentifier identifier;
     ServiceWorkerClientType type;
     ServiceWorkerClientFrameType frameType;
     URL url;
+    LastNavigationWasAppInitiated lastNavigationWasAppInitiated;
 
     ServiceWorkerClientData isolatedCopy() const;
 
     static ServiceWorkerClientData from(ScriptExecutionContext&, SWClientConnection&);
 
     template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static Optional<ServiceWorkerClientData> decode(Decoder&);
+    template<class Decoder> static std::optional<ServiceWorkerClientData> decode(Decoder&);
 };
 
 template<class Encoder>
 void ServiceWorkerClientData::encode(Encoder& encoder) const
 {
-    encoder << identifier << type << frameType << url;
+    encoder << identifier << type << frameType << url << lastNavigationWasAppInitiated;
 }
 
 template<class Decoder>
-Optional<ServiceWorkerClientData> ServiceWorkerClientData::decode(Decoder& decoder)
+std::optional<ServiceWorkerClientData> ServiceWorkerClientData::decode(Decoder& decoder)
 {
-    Optional<ServiceWorkerClientIdentifier> identifier;
+    std::optional<ServiceWorkerClientIdentifier> identifier;
     decoder >> identifier;
     if (!identifier)
-        return WTF::nullopt;
+        return std::nullopt;
 
-    Optional<ServiceWorkerClientType> type;
+    std::optional<ServiceWorkerClientType> type;
     decoder >> type;
     if (!type)
-        return WTF::nullopt;
+        return std::nullopt;
 
-    Optional<ServiceWorkerClientFrameType> frameType;
+    std::optional<ServiceWorkerClientFrameType> frameType;
     decoder >> frameType;
     if (!frameType)
-        return WTF::nullopt;
+        return std::nullopt;
 
-    Optional<URL> url;
+    std::optional<URL> url;
     decoder >> url;
     if (!url)
-        return WTF::nullopt;
+        return std::nullopt;
 
-    return { { WTFMove(*identifier), WTFMove(*type), WTFMove(*frameType), WTFMove(*url) } };
+    std::optional<LastNavigationWasAppInitiated> lastNavigationWasAppInitiated;
+    decoder >> lastNavigationWasAppInitiated;
+    if (!lastNavigationWasAppInitiated)
+        return std::nullopt;
+
+    return { { WTFMove(*identifier), WTFMove(*type), WTFMove(*frameType), WTFMove(*url), WTFMove(*lastNavigationWasAppInitiated) } };
 }
 
 using ServiceWorkerClientsMatchAllCallback = WTF::CompletionHandler<void(Vector<ServiceWorkerClientData>&&)>;

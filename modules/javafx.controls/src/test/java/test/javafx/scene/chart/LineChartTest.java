@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -339,7 +339,29 @@ public class LineChartTest extends XYChartTestBase {
         assertArrayEquals(convertSeriesDataToPoint2D(expectedSeries).toArray(), findDataPointsFromPathLine(lineChart).toArray());
     }
 
-    @Test public void testPathOutsideXBoundsWithDuplicateXAndHigherYWithSortYAxis() {
+    @Test public void testPathOutsideXLowerBoundsWithDuplicateXAndHigherYWithSortYAxis() {
+        startApp();
+        series1.getData().add(new XYChart.Data(-10d, 20d)); // lower bound is 0
+        series1.getData().add(new XYChart.Data(-10d, 50d));
+        lineChart.getData().addAll(series1);
+        lineChart.setAxisSortingPolicy(LineChart.SortingPolicy.Y_AXIS);
+        pulse();
+
+        XYChart.Series<Number, Number> expectedSeries = new XYChart.Series<>();
+        expectedSeries.getData().addAll(
+                new XYChart.Data<>(-10d, 50d),
+                new XYChart.Data<>(25d, 20d),
+                new XYChart.Data<>(-10d, 20d),
+                new XYChart.Data<>(30d, 15d),
+                new XYChart.Data<>(50d, 15d),
+                new XYChart.Data<>(10d, 10d),
+                new XYChart.Data<>(80d, 10d)
+        );
+
+        assertArrayEquals(convertSeriesDataToPoint2D(expectedSeries).toArray(), findDataPointsFromPathLine(lineChart).toArray());
+    }
+
+    @Test public void testPathOutsideXUpperBoundsWithDuplicateXAndHigherYWithSortYAxis() {
         startApp();
         series1.getData().add(new XYChart.Data(100d, 20d)); // upper bound is 90
         series1.getData().add(new XYChart.Data(100d, 50d));
@@ -361,7 +383,29 @@ public class LineChartTest extends XYChartTestBase {
         assertArrayEquals(convertSeriesDataToPoint2D(expectedSeries).toArray(), findDataPointsFromPathLine(lineChart).toArray());
     }
 
-    @Test public void testPathOutsideXBoundsWithDuplicateXAndLowerYWithSortYAxis() {
+    @Test public void testPathOutsideXLowerBoundsWithDuplicateXAndLowerYWithSortYAxis() {
+        startApp();
+        series1.getData().add(new XYChart.Data(-10d, 20d)); // lower bound is 0
+        series1.getData().add(new XYChart.Data(-10d, 15d));
+        lineChart.getData().addAll(series1);
+        lineChart.setAxisSortingPolicy(LineChart.SortingPolicy.Y_AXIS);
+        pulse();
+
+        XYChart.Series<Number, Number> expectedSeries = new XYChart.Series<>();
+        expectedSeries.getData().addAll(
+                new XYChart.Data<>(25d, 20d),
+                new XYChart.Data<>(-10d, 20d),
+                new XYChart.Data<>(30d, 15d),
+                new XYChart.Data<>(50d, 15d),
+                new XYChart.Data<>(-10d, 15d),
+                new XYChart.Data<>(10d, 10d),
+                new XYChart.Data<>(80d, 10d)
+        );
+
+        assertArrayEquals(convertSeriesDataToPoint2D(expectedSeries).toArray(), findDataPointsFromPathLine(lineChart).toArray());
+    }
+
+    @Test public void testPathOutsideXUpperBoundsWithDuplicateXAndLowerYWithSortYAxis() {
         startApp();
         series1.getData().add(new XYChart.Data(100d, 20d)); // upper bound is 90
         series1.getData().add(new XYChart.Data(100d, 15d));
@@ -383,7 +427,28 @@ public class LineChartTest extends XYChartTestBase {
         assertArrayEquals(convertSeriesDataToPoint2D(expectedSeries).toArray(), findDataPointsFromPathLine(lineChart).toArray());
     }
 
-    @Test public void testPathOutsideYBoundsWithDuplicateYAndHigherXWithSortYAxis() {
+    @Test public void testPathOutsideYLowerBoundsWithDuplicateYAndHigherXWithSortYAxis() {
+        startApp();
+        series1.getData().add(new XYChart.Data(80d, -10d)); // lower bound is 0
+        series1.getData().add(new XYChart.Data(90d, -10d));
+        lineChart.getData().addAll(series1);
+        lineChart.setAxisSortingPolicy(LineChart.SortingPolicy.Y_AXIS);
+        pulse();
+
+        XYChart.Series<Number, Number> expectedSeries = new XYChart.Series<>();
+        expectedSeries.getData().addAll(
+                new XYChart.Data<>(25d, 20d),
+                new XYChart.Data<>(30d, 15d),
+                new XYChart.Data<>(50d, 15d),
+                new XYChart.Data<>(10d, 10d),
+                new XYChart.Data<>(80d, 10d),
+                new XYChart.Data<>(80d, -10d)
+        );
+
+        assertArrayEquals(convertSeriesDataToPoint2D(expectedSeries).toArray(), findDataPointsFromPathLine(lineChart).toArray());
+    }
+
+    @Test public void testPathOutsideYUpperBoundsWithDuplicateYAndHigherXWithSortYAxis() {
         startApp();
         series1.getData().add(new XYChart.Data(80d, 32d)); // upper bound is 30
         series1.getData().add(new XYChart.Data(90d, 32d));
@@ -393,7 +458,7 @@ public class LineChartTest extends XYChartTestBase {
 
         XYChart.Series<Number, Number> expectedSeries = new XYChart.Series<>();
         expectedSeries.getData().addAll(
-                new XYChart.Data<>(80d, 32d),
+                new XYChart.Data<>(90d, 32d),
                 new XYChart.Data<>(25d, 20d),
                 new XYChart.Data<>(30d, 15d),
                 new XYChart.Data<>(50d, 15d),
@@ -404,7 +469,27 @@ public class LineChartTest extends XYChartTestBase {
         assertArrayEquals(convertSeriesDataToPoint2D(expectedSeries).toArray(), findDataPointsFromPathLine(lineChart).toArray());
     }
 
-    @Test public void testPathOutsideYBoundsWithDuplicateYAndLowerXWithSortYAxis() {
+    @Test public void testPathOutsideYLowerBoundsWithDuplicateYAndLowerXWithSortYAxis() {
+        startApp();
+        series1.getData().add(new XYChart.Data(80d, -10d)); // lower bound is 0
+        series1.getData().add(new XYChart.Data(70d, -10d));
+        lineChart.getData().addAll(series1);
+        lineChart.setAxisSortingPolicy(LineChart.SortingPolicy.Y_AXIS);
+        pulse();
+
+        XYChart.Series<Number, Number> expectedSeries = new XYChart.Series<>();
+        expectedSeries.getData().addAll(
+                new XYChart.Data<>(25d, 20d),
+                new XYChart.Data<>(30d, 15d),
+                new XYChart.Data<>(50d, 15d),
+                new XYChart.Data<>(10d, 10d),
+                new XYChart.Data<>(80d, 10d),
+                new XYChart.Data<>(80d, -10d)
+        );
+        assertArrayEquals(convertSeriesDataToPoint2D(expectedSeries).toArray(), findDataPointsFromPathLine(lineChart).toArray());
+    }
+
+    @Test public void testPathOutsideYUpperBoundsWithDuplicateYAndLowerXWithSortYAxis() {
         startApp();
         series1.getData().add(new XYChart.Data(80d, 40d)); // upper bound is 30
         series1.getData().add(new XYChart.Data(70d, 40d));
@@ -414,7 +499,7 @@ public class LineChartTest extends XYChartTestBase {
 
         XYChart.Series<Number, Number> expectedSeries = new XYChart.Series<>();
         expectedSeries.getData().addAll(
-                new XYChart.Data<>(80d, 40d),
+                new XYChart.Data<>(70d, 40d),
                 new XYChart.Data<>(25d, 20d),
                 new XYChart.Data<>(30d, 15d),
                 new XYChart.Data<>(50d, 15d),
@@ -425,7 +510,29 @@ public class LineChartTest extends XYChartTestBase {
         assertArrayEquals(convertSeriesDataToPoint2D(expectedSeries).toArray(), findDataPointsFromPathLine(lineChart).toArray());
     }
 
-    @Test public void testPathOutsideXAndYBoundsWithDuplicateXAndHigherYWithSortYAxis() {
+    @Test public void testPathOutsideXAndYLowerBoundsWithDuplicateXAndHigherYWithSortYAxis() {
+        startApp();
+        series1.getData().add(new XYChart.Data<>(95d, -10d)); // lower bound is 0,0
+        series1.getData().add(new XYChart.Data<>(95d, -5d));
+        lineChart.getData().addAll(series1);
+        lineChart.setAxisSortingPolicy(LineChart.SortingPolicy.Y_AXIS);
+        pulse();
+
+        XYChart.Series<Number, Number> expectedSeries = new XYChart.Series<>();
+        expectedSeries.getData().addAll(
+                new XYChart.Data<>(25d, 20d),
+                new XYChart.Data<>(30d, 15d),
+                new XYChart.Data<>(50d, 15d),
+                new XYChart.Data<>(10d, 10d),
+                new XYChart.Data<>(80d, 10d),
+                new XYChart.Data<>(95d, -5d)/*,
+                new XYChart.Data<>(95d, -10d)*/
+        );
+
+        assertArrayEquals(convertSeriesDataToPoint2D(expectedSeries).toArray(), findDataPointsFromPathLine(lineChart).toArray());
+    }
+
+    @Test public void testPathOutsideXAndYUpperBoundsWithDuplicateXAndHigherYWithSortYAxis() {
         startApp();
         series1.getData().add(new XYChart.Data<>(95d, 35d)); // upper bound is 90,30
         series1.getData().add(new XYChart.Data<>(95d, 40d));
@@ -446,7 +553,28 @@ public class LineChartTest extends XYChartTestBase {
         assertArrayEquals(convertSeriesDataToPoint2D(expectedSeries).toArray(), findDataPointsFromPathLine(lineChart).toArray());
     }
 
-    @Test public void testPathOutsideXAndYBoundsWithDuplicateXAndLowerYWithSortYAxis() {
+    @Test public void testPathOutsideXAndYLowerBoundsWithDuplicateXAndLowerYWithSortYAxis() {
+        startApp();
+        series1.getData().add(new XYChart.Data<>(-10d, -10d)); // lower bound is 0,0
+        series1.getData().add(new XYChart.Data<>(-10d, -20d));
+        lineChart.getData().addAll(series1);
+        lineChart.setAxisSortingPolicy(LineChart.SortingPolicy.Y_AXIS);
+        pulse();
+
+        XYChart.Series<Number, Number> expectedSeries = new XYChart.Series<>();
+        expectedSeries.getData().addAll(
+                new XYChart.Data<>(25d, 20d),
+                new XYChart.Data<>(30d, 15d),
+                new XYChart.Data<>(50d, 15d),
+                new XYChart.Data<>(10d, 10d),
+                new XYChart.Data<>(80d, 10d),
+                new XYChart.Data<>(-10d, -10d)
+        );
+
+        assertArrayEquals(convertSeriesDataToPoint2D(expectedSeries).toArray(), findDataPointsFromPathLine(lineChart).toArray());
+    }
+
+    @Test public void testPathOutsideXAndYUpperBoundsWithDuplicateXAndLowerYWithSortYAxis() {
         startApp();
         series1.getData().add(new XYChart.Data<>(95d, 40d)); // upper bound is 90,30
         series1.getData().add(new XYChart.Data<>(95d, 35d));
@@ -467,7 +595,28 @@ public class LineChartTest extends XYChartTestBase {
         assertArrayEquals(convertSeriesDataToPoint2D(expectedSeries).toArray(), findDataPointsFromPathLine(lineChart).toArray());
     }
 
-    @Test public void testPathOutsideXAndYBoundsWithDuplicateYAndHigherXWithSortYAxis() {
+    @Test public void testPathOutsideXAndYLowerBoundsWithDuplicateYAndHigherXWithSortYAxis() {
+        startApp();
+        series1.getData().add(new XYChart.Data<>(-15d, -10d)); // lower bound is 0,0
+        series1.getData().add(new XYChart.Data<>(-10d, -10d));
+        lineChart.getData().addAll(series1);
+        lineChart.setAxisSortingPolicy(LineChart.SortingPolicy.Y_AXIS);
+        pulse();
+
+        XYChart.Series<Number, Number> expectedSeries = new XYChart.Series<>();
+        expectedSeries.getData().addAll(
+                new XYChart.Data<>(25d, 20d),
+                new XYChart.Data<>(30d, 15d),
+                new XYChart.Data<>(50d, 15d),
+                new XYChart.Data<>(10d, 10d),
+                new XYChart.Data<>(80d, 10d),
+                new XYChart.Data<>(-15d, -10d)
+        );
+
+        assertArrayEquals(convertSeriesDataToPoint2D(expectedSeries).toArray(), findDataPointsFromPathLine(lineChart).toArray());
+    }
+
+    @Test public void testPathOutsideXAndYUpperBoundsWithDuplicateYAndHigherXWithSortYAxis() {
         startApp();
         series1.getData().add(new XYChart.Data<>(95d, 32d)); // upper bound is 90,30
         series1.getData().add(new XYChart.Data<>(100d, 32d));
@@ -477,7 +626,7 @@ public class LineChartTest extends XYChartTestBase {
 
         XYChart.Series<Number, Number> expectedSeries = new XYChart.Series<>();
         expectedSeries.getData().addAll(
-                new XYChart.Data<>(95d, 32d),
+                new XYChart.Data<>(100d, 32d),
                 new XYChart.Data<>(25d, 20d),
                 new XYChart.Data<>(30d, 15d),
                 new XYChart.Data<>(50d, 15d),
@@ -488,7 +637,28 @@ public class LineChartTest extends XYChartTestBase {
         assertArrayEquals(convertSeriesDataToPoint2D(expectedSeries).toArray(), findDataPointsFromPathLine(lineChart).toArray());
     }
 
-    @Test public void testPathOutsideXAndYBoundsWithDuplicateYAndLowerXWithSortYAxis() {
+    @Test public void testPathOutsideXAndYLowerBoundsWithDuplicateYAndLowerXWithSortYAxis() {
+        startApp();
+        series1.getData().add(new XYChart.Data<>(-10d, -10d)); // lower bound is 0,0
+        series1.getData().add(new XYChart.Data<>(-15d, -10d));
+        lineChart.getData().addAll(series1);
+        lineChart.setAxisSortingPolicy(LineChart.SortingPolicy.Y_AXIS);
+        pulse();
+
+        XYChart.Series<Number, Number> expectedSeries = new XYChart.Series<>();
+        expectedSeries.getData().addAll(
+                new XYChart.Data<>(25d, 20d),
+                new XYChart.Data<>(30d, 15d),
+                new XYChart.Data<>(50d, 15d),
+                new XYChart.Data<>(10d, 10d),
+                new XYChart.Data<>(80d, 10d),
+                new XYChart.Data<>(-10d, -10d)
+        );
+
+        assertArrayEquals(convertSeriesDataToPoint2D(expectedSeries).toArray(), findDataPointsFromPathLine(lineChart).toArray());
+    }
+
+    @Test public void testPathOutsideXAndYUpperBoundsWithDuplicateYAndLowerXWithSortYAxis() {
         startApp();
         series1.getData().add(new XYChart.Data<>(100d, 40d)); // upper bound is 90,30
         series1.getData().add(new XYChart.Data<>(95d, 40d));
@@ -498,7 +668,7 @@ public class LineChartTest extends XYChartTestBase {
 
         XYChart.Series<Number, Number> expectedSeries = new XYChart.Series<>();
         expectedSeries.getData().addAll(
-                new XYChart.Data<>(100d, 40d),
+                new XYChart.Data<>(95d, 40d),
                 new XYChart.Data<>(25d, 20d),
                 new XYChart.Data<>(30d, 15d),
                 new XYChart.Data<>(50d, 15d),

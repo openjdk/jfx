@@ -34,6 +34,7 @@
 #if ENABLE(WEB_RTC)
 
 #include "JSDOMPromiseDeferred.h"
+#include "Logging.h"
 #include "RTCDTMFSender.h"
 #include "RTCDTMFSenderBackend.h"
 #include "RTCPeerConnection.h"
@@ -42,6 +43,12 @@
 #include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
+
+#if !RELEASE_LOG_DISABLED
+#define LOGIDENTIFIER_SENDER WTF::Logger::LogSiteIdentifier(logClassName(), __func__, m_connection->logIdentifier())
+#else
+#define LOGIDENTIFIER_SENDER
+#endif
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(RTCRtpSender);
 
@@ -61,6 +68,10 @@ RTCRtpSender::RTCRtpSender(RTCPeerConnection& connection, String&& trackKind, st
     : m_trackKind(WTFMove(trackKind))
     , m_backend(WTFMove(backend))
     , m_connection(makeWeakPtr(connection))
+#if !RELEASE_LOG_DISABLED
+    , m_logger(connection.logger())
+    , m_logIdentifier(connection.logIdentifier())
+#endif
 {
     ASSERT(m_backend);
 }
@@ -180,7 +191,7 @@ bool RTCRtpSender::isCreatedBy(const RTCPeerConnection& connection) const
     return &connection == m_connection.get();
 }
 
-Optional<RTCRtpCapabilities> RTCRtpSender::getCapabilities(ScriptExecutionContext& context, const String& kind)
+std::optional<RTCRtpCapabilities> RTCRtpSender::getCapabilities(ScriptExecutionContext& context, const String& kind)
 {
     return PeerConnectionBackend::senderCapabilities(context, kind);
 }
@@ -193,7 +204,7 @@ RTCDTMFSender* RTCRtpSender::dtmf()
     return m_dtmfSender.get();
 }
 
-Optional<RTCRtpTransceiverDirection> RTCRtpSender::currentTransceiverDirection() const
+std::optional<RTCRtpTransceiverDirection> RTCRtpSender::currentTransceiverDirection() const
 {
     if (!m_connection)
         return { };
@@ -212,28 +223,42 @@ Optional<RTCRtpTransceiverDirection> RTCRtpSender::currentTransceiverDirection()
     return senderTransceiver->currentDirection();
 }
 
-ExceptionOr<void> RTCRtpSender::setTransform(Optional<RTCRtpTransform>&& transform)
+ExceptionOr<void> RTCRtpSender::setTransform(std::unique_ptr<RTCRtpTransform>&& transform)
 {
+    ALWAYS_LOG_IF(m_connection, LOGIDENTIFIER_SENDER);
+
     if (transform && m_transform && *transform == *m_transform)
         return { };
-    if (transform && transform->isAttached())
+    if (!transform) {
+        if (m_transform) {
+            m_transform->detachFromSender(*this);
+            m_transform = { };
+        }
+        return { };
+    }
+
+    if (transform->isAttached())
         return Exception { InvalidStateError, "transform is already in use"_s };
 
-    if (m_transform)
-        m_transform->detachFromSender(*this);
+    transform->attachToSender(*this, m_transform.get());
     m_transform = WTFMove(transform);
-    if (m_transform)
-        m_transform->attachToSender(*this);
 
     return { };
 }
 
-Optional<RTCRtpTransform::Internal> RTCRtpSender::transform()
+std::optional<RTCRtpTransform::Internal> RTCRtpSender::transform()
 {
     if (!m_transform)
         return { };
     return m_transform->internalTransform();
 }
+
+#if !RELEASE_LOG_DISABLED
+WTFLogChannel& RTCRtpSender::logChannel() const
+{
+    return LogWebRTC;
+}
+#endif
 
 } // namespace WebCore
 

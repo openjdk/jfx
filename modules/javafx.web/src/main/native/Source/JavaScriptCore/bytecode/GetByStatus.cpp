@@ -40,9 +40,14 @@
 
 namespace JSC {
 
-bool GetByStatus::appendVariant(const GetByIdVariant& variant)
+bool GetByStatus::appendVariant(const GetByVariant& variant)
 {
     return appendICStatusVariant(m_variants, variant);
+}
+
+void GetByStatus::shrinkToFit()
+{
+    m_variants.shrinkToFit();
 }
 
 GetByStatus GetByStatus::computeFromLLInt(CodeBlock* profiledBlock, BytecodeIndex bytecodeIndex)
@@ -135,7 +140,7 @@ GetByStatus GetByStatus::computeFromLLInt(CodeBlock* profiledBlock, BytecodeInde
         return GetByStatus(NoInformation, false);
 
     GetByStatus result(Simple, false);
-    result.appendVariant(GetByIdVariant(nullptr, StructureSet(structure), offset));
+    result.appendVariant(GetByVariant(nullptr, StructureSet(structure), offset));
     return result;
 }
 
@@ -208,13 +213,13 @@ GetByStatus GetByStatus::computeForStubInfoWithoutExitSiteFeedback(
         return GetByStatus(NoInformation);
 
     case CacheType::GetByIdSelf: {
-        Structure* structure = stubInfo->u.byIdSelf.baseObjectStructure.get();
+        Structure* structure = stubInfo->m_inlineAccessBaseStructure.get();
         if (structure->takesSlowPathInDFGForImpureProperty())
             return GetByStatus(JSC::slowVersion(summary), *stubInfo);
         CacheableIdentifier identifier = stubInfo->identifier();
         UniquedStringImpl* uid = identifier.uid();
         RELEASE_ASSERT(uid);
-        GetByIdVariant variant(WTFMove(identifier));
+        GetByVariant variant(WTFMove(identifier));
         unsigned attributes;
         variant.m_offset = structure->getConcurrently(uid, attributes);
         if (!isValidOffset(variant.m_offset))
@@ -258,7 +263,7 @@ GetByStatus GetByStatus::computeForStubInfoWithoutExitSiteFeedback(
             Structure* structure = access.structure();
             if (!structure) {
                 // The null structure cases arise due to array.length and string.length. We have no way
-                // of creating a GetByIdVariant for those, and we don't really have to since the DFG
+                // of creating a GetByVariant for those, and we don't really have to since the DFG
                 // handles those cases in FixupPhase using value profiling. That's a bit awkward - we
                 // shouldn't have to use value profiling to discover something that the AccessCase
                 // could have told us. But, it works well enough. So, our only concern here is to not
@@ -317,7 +322,7 @@ GetByStatus GetByStatus::computeForStubInfoWithoutExitSiteFeedback(
                 } }
 
                 ASSERT((AccessCase::Miss == access.type() || access.isCustom()) == (access.offset() == invalidOffset));
-                GetByIdVariant variant(access.identifier(), StructureSet(structure), complexGetStatus.offset(),
+                GetByVariant variant(access.identifier(), StructureSet(structure), complexGetStatus.offset(),
                     complexGetStatus.conditionSet(), WTFMove(callLinkStatus),
                     intrinsicFunction,
                     customAccessorGetter,
@@ -339,6 +344,7 @@ GetByStatus GetByStatus::computeForStubInfoWithoutExitSiteFeedback(
             } }
         }
 
+        result.shrinkToFit();
         return result;
     }
 
@@ -429,10 +435,11 @@ GetByStatus GetByStatus::computeFor(const StructureSet& set, UniquedStringImpl* 
         if (attributes & PropertyAttribute::CustomAccessorOrValue)
             return GetByStatus(LikelyTakesSlowPath);
 
-        if (!result.appendVariant(GetByIdVariant(nullptr, structure, offset)))
+        if (!result.appendVariant(GetByVariant(nullptr, structure, offset)))
             return GetByStatus(LikelyTakesSlowPath);
     }
 
+    result.shrinkToFit();
     return result;
 }
 #endif // ENABLE(JIT)
@@ -490,10 +497,11 @@ void GetByStatus::merge(const GetByStatus& other)
         if (m_state != other.m_state)
             return mergeSlow();
 
-        for (const GetByIdVariant& otherVariant : other.m_variants) {
+        for (const GetByVariant& otherVariant : other.m_variants) {
             if (!appendVariant(otherVariant))
                 return mergeSlow();
         }
+        shrinkToFit();
         return;
 
     case ModuleNamespace:
@@ -535,7 +543,7 @@ void GetByStatus::visitAggregateImpl(Visitor& visitor)
 {
     if (isModuleNamespace())
         m_moduleNamespaceData->m_identifier.visitAggregate(visitor);
-    for (GetByIdVariant& variant : m_variants)
+    for (GetByVariant& variant : m_variants)
         variant.visitAggregate(visitor);
 }
 
@@ -544,7 +552,7 @@ DEFINE_VISIT_AGGREGATE(GetByStatus);
 template<typename Visitor>
 void GetByStatus::markIfCheap(Visitor& visitor)
 {
-    for (GetByIdVariant& variant : m_variants)
+    for (GetByVariant& variant : m_variants)
         variant.markIfCheap(visitor);
 }
 
@@ -553,7 +561,7 @@ template void GetByStatus::markIfCheap(SlotVisitor&);
 
 bool GetByStatus::finalize(VM& vm)
 {
-    for (GetByIdVariant& variant : m_variants) {
+    for (GetByVariant& variant : m_variants) {
         if (!variant.finalize(vm))
             return false;
     }
@@ -571,20 +579,7 @@ CacheableIdentifier GetByStatus::singleIdentifier() const
     if (isModuleNamespace())
         return m_moduleNamespaceData->m_identifier;
 
-    if (m_variants.isEmpty())
-        return nullptr;
-
-    CacheableIdentifier result = m_variants.first().identifier();
-    if (!result)
-        return nullptr;
-    for (size_t i = 1; i < m_variants.size(); ++i) {
-        CacheableIdentifier identifier = m_variants[i].identifier();
-        if (!identifier)
-            return nullptr;
-        if (identifier != result)
-            return nullptr;
-    }
-    return result;
+    return singleIdentifierForICStatus(m_variants);
 }
 
 void GetByStatus::dump(PrintStream& out) const

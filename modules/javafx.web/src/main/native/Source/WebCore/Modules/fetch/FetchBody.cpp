@@ -77,7 +77,7 @@ ExceptionOr<FetchBody> FetchBody::extract(Init&& value, String& contentType)
     });
 }
 
-Optional<FetchBody> FetchBody::fromFormData(ScriptExecutionContext& context, FormData& formData)
+std::optional<FetchBody> FetchBody::fromFormData(ScriptExecutionContext& context, FormData& formData)
 {
     ASSERT(!formData.isEmpty());
 
@@ -95,7 +95,7 @@ Optional<FetchBody> FetchBody::fromFormData(ScriptExecutionContext& context, For
     }
 
     // FIXME: Support form data bodies.
-    return WTF::nullopt;
+    return std::nullopt;
 }
 
 void FetchBody::arrayBuffer(FetchBodyOwner& owner, Ref<DeferredPromise>&& promise)
@@ -235,7 +235,7 @@ void FetchBody::consumeBlob(FetchBodyOwner& owner, Ref<DeferredPromise>&& promis
 void FetchBody::consumeFormData(FetchBodyOwner& owner, Ref<DeferredPromise>&& promise)
 {
     if (auto sharedBuffer = formDataBody().asSharedBuffer()) {
-        m_consumer.resolveWithData(WTFMove(promise), owner.contentType(), sharedBuffer->dataAsUInt8Ptr(), sharedBuffer->size());
+        m_consumer.resolveWithData(WTFMove(promise), owner.contentType(), sharedBuffer->data(), sharedBuffer->size());
         m_data = nullptr;
     } else {
         // FIXME: If the form data contains blobs, load them like we do other blobs.
@@ -304,9 +304,9 @@ FetchBody::TakenData FetchBody::take()
         return SharedBuffer::create(UTF8Encoding().encode(urlSearchParamsBody().toString(), UnencodableHandling::Entities));
 
     if (isArrayBuffer())
-        return SharedBuffer::create(reinterpret_cast<const char*>(arrayBufferBody().data()), arrayBufferBody().byteLength());
+        return SharedBuffer::create(static_cast<const char*>(arrayBufferBody().data()), arrayBufferBody().byteLength());
     if (isArrayBufferView())
-        return SharedBuffer::create(reinterpret_cast<const uint8_t*>(arrayBufferViewBody().baseAddress()), arrayBufferViewBody().byteLength());
+        return SharedBuffer::create(static_cast<const uint8_t*>(arrayBufferViewBody().baseAddress()), arrayBufferViewBody().byteLength());
 
     return nullptr;
 }

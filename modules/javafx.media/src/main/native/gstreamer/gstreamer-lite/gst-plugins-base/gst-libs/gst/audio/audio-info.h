@@ -93,7 +93,7 @@ GType gst_audio_info_get_type                (void);
 #define GST_AUDIO_INFO_IS_BIG_ENDIAN(i)      (GST_AUDIO_FORMAT_INFO_IS_BIG_ENDIAN((i)->finfo))
 
 #define GST_AUDIO_INFO_FLAGS(info)           ((info)->flags)
-#define GST_AUDIO_INFO_IS_UNPOSITIONED(info) ((info)->flags & GST_AUDIO_FLAG_UNPOSITIONED)
+#define GST_AUDIO_INFO_IS_UNPOSITIONED(info) (((info)->flags & GST_AUDIO_FLAG_UNPOSITIONED) != 0)
 #define GST_AUDIO_INFO_LAYOUT(info)          ((info)->layout)
 
 #define GST_AUDIO_INFO_RATE(info)            ((info)->rate)
@@ -103,6 +103,9 @@ GType gst_audio_info_get_type                (void);
 
 GST_AUDIO_API
 GstAudioInfo * gst_audio_info_new         (void);
+
+GST_AUDIO_API
+GstAudioInfo * gst_audio_info_new_from_caps (const GstCaps * caps);
 
 GST_AUDIO_API
 void           gst_audio_info_init        (GstAudioInfo *info);

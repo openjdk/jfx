@@ -34,16 +34,17 @@
 #include "GraphicsContextGLANGLEUtilities.h"
 #include "GraphicsContextGLOpenGL.h"
 #include "ImageBuffer.h"
-#include "ImageData.h"
 #include "IntRect.h"
 #include "IntSize.h"
 #include "Logging.h"
 #include "NotImplemented.h"
+#include "PixelBuffer.h"
 #include "TemporaryANGLESetting.h"
 #include <JavaScriptCore/RegularExpression.h>
 #include <algorithm>
 #include <cstring>
 #include <wtf/HexNumber.h>
+#include <wtf/Seconds.h>
 #include <wtf/ThreadSpecific.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/StringBuilder.h>
@@ -61,10 +62,7 @@ namespace WebCore {
 
 static const char* packedDepthStencilExtensionName = "GL_OES_packed_depth_stencil";
 
-namespace {
-
-
-} // namespace anonymous
+static Seconds maxFrameDuration = 5_s;
 
 #if PLATFORM(MAC) || PLATFORM(IOS_FAMILY)
 static void wipeAlphaChannelFromPixels(int width, int height, unsigned char* pixels)
@@ -77,11 +75,12 @@ static void wipeAlphaChannelFromPixels(int width, int height, unsigned char* pix
 }
 #endif
 
-RefPtr<ImageData> GraphicsContextGLOpenGL::readPixelsForPaintResults()
+std::optional<PixelBuffer> GraphicsContextGLOpenGL::readPixelsForPaintResults()
 {
-    auto imageData = ImageData::create(getInternalFramebufferSize());
-    if (!imageData)
-        return nullptr;
+    PixelBufferFormat format { AlphaPremultiplication::Unpremultiplied, PixelFormat::RGBA8, DestinationColorSpace::SRGB() };
+    auto pixelBuffer = PixelBuffer::tryCreate(format, getInternalFramebufferSize());
+    if (!pixelBuffer)
+        return std::nullopt;
     ScopedPixelStorageMode packAlignment(GL_PACK_ALIGNMENT);
     if (packAlignment > 4)
         packAlignment.pixelStore(4);
@@ -90,16 +89,16 @@ RefPtr<ImageData> GraphicsContextGLOpenGL::readPixelsForPaintResults()
     ScopedPixelStorageMode packSkipPixels(GL_PACK_SKIP_PIXELS, 0, m_isForWebGL2);
     ScopedBufferBinding scopedPixelPackBufferReset(GL_PIXEL_PACK_BUFFER, 0, m_isForWebGL2);
 
-    gl::ReadnPixelsRobustANGLE(0, 0, imageData->width(), imageData->height(), GL_RGBA, GL_UNSIGNED_BYTE, imageData->data()->byteLength(), nullptr, nullptr, nullptr, imageData->data()->data());
+    gl::ReadnPixelsRobustANGLE(0, 0, pixelBuffer->size().width(), pixelBuffer->size().height(), GL_RGBA, GL_UNSIGNED_BYTE, pixelBuffer->data().byteLength(), nullptr, nullptr, nullptr, pixelBuffer->data().data());
     // FIXME: Rendering to GL_RGB textures with a IOSurface bound to the texture image leaves
     // the alpha in the IOSurface in incorrect state. Also ANGLE gl::ReadPixels will in some
     // cases expose the non-255 values.
     // https://bugs.webkit.org/show_bug.cgi?id=215804
 #if PLATFORM(MAC) || PLATFORM(IOS_FAMILY)
     if (!contextAttributes().alpha)
-        wipeAlphaChannelFromPixels(imageData->width(), imageData->height(), imageData->data()->data());
+        wipeAlphaChannelFromPixels(pixelBuffer->size().width(), pixelBuffer->size().height(), pixelBuffer->data().data());
 #endif
-    return imageData;
+    return pixelBuffer;
 }
 
 void GraphicsContextGLOpenGL::validateAttributes()
@@ -150,7 +149,6 @@ bool GraphicsContextGLOpenGL::reshapeFBOs(const IntSize& size)
 
     // resize regular FBO
     gl::BindFramebuffer(GL_FRAMEBUFFER, m_fbo);
-    ASSERT(m_texture);
 
 #if PLATFORM(COCOA)
     if (!reshapeDisplayBufferBacking()) {
@@ -250,13 +248,14 @@ void GraphicsContextGLOpenGL::resolveMultisamplingIfNecessary(const IntRect& rec
     gl::BindFramebuffer(GL_DRAW_FRAMEBUFFER_ANGLE, m_fbo);
 
     // FIXME: figure out more efficient solution for iOS.
-    IntRect resolveRect = rect;
-    // When using an ES 2.0 context, the full framebuffer must always be
-    // resolved; partial blits are not allowed.
-    if (!isGLES2Compliant() || rect.isEmpty())
-        resolveRect = IntRect(0, 0, m_currentWidth, m_currentHeight);
-
-    gl::BlitFramebufferANGLE(resolveRect.x(), resolveRect.y(), resolveRect.maxX(), resolveRect.maxY(), resolveRect.x(), resolveRect.y(), resolveRect.maxX(), resolveRect.maxY(), GL_COLOR_BUFFER_BIT, GL_NEAREST);
+    if (m_isForWebGL2) {
+        // ES 3.0 has BlitFramebuffer.
+        IntRect resolveRect = rect.isEmpty() ? IntRect { 0, 0, m_currentWidth, m_currentHeight } : rect;
+        gl::BlitFramebuffer(resolveRect.x(), resolveRect.y(), resolveRect.maxX(), resolveRect.maxY(), resolveRect.x(), resolveRect.y(), resolveRect.maxX(), resolveRect.maxY(), GL_COLOR_BUFFER_BIT, GL_NEAREST);
+    } else {
+        // ES 2.0 has BlitFramebufferANGLE only.
+        gl::BlitFramebufferANGLE(0, 0, m_currentWidth, m_currentHeight, 0, 0, m_currentWidth, m_currentHeight, GL_COLOR_BUFFER_BIT, GL_NEAREST);
+    }
     if (m_isForWebGL2) {
         gl::BindFramebuffer(GL_DRAW_FRAMEBUFFER, boundFrameBuffer);
         gl::BindFramebuffer(GL_READ_FRAMEBUFFER, boundReadFrameBuffer);
@@ -507,7 +506,7 @@ void GraphicsContextGLOpenGL::prepareTextureImpl()
 #endif
 }
 
-RefPtr<ImageData> GraphicsContextGLOpenGL::readRenderingResults()
+std::optional<PixelBuffer> GraphicsContextGLOpenGL::readRenderingResults()
 {
     ScopedRestoreReadFramebufferBinding fboBinding(m_isForWebGL2, m_state.boundReadFBO);
     if (contextAttributes().antialias) {
@@ -926,6 +925,14 @@ void GraphicsContextGLOpenGL::compileShaderDirect(PlatformGLObject shader)
         return;
 
     gl::CompileShader(shader);
+}
+
+void GraphicsContextGLOpenGL::texImage2DDirect(GCGLenum target, GCGLint level, GCGLenum internalformat, GCGLsizei width, GCGLsizei height, GCGLint border, GCGLenum format, GCGLenum type, const void* pixels)
+{
+    if (!makeContextCurrent())
+        return;
+    gl::TexImage2D(target, level, internalformat, width, height, border, format, type, pixels);
+    m_state.textureSeedCount.add(m_state.currentBoundTexture());
 }
 
 void GraphicsContextGLOpenGL::copyTexImage2D(GCGLenum target, GCGLint level, GCGLenum internalformat, GCGLint x, GCGLint y, GCGLsizei width, GCGLsizei height, GCGLint border)
@@ -1710,7 +1717,10 @@ PlatformGLObject GraphicsContextGLOpenGL::createVertexArray()
         return 0;
 
     GLuint array = 0;
-    gl::GenVertexArrays(1, &array);
+    if (m_isForWebGL2)
+        gl::GenVertexArrays(1, &array);
+    else
+        gl::GenVertexArraysOES(1, &array);
     return array;
 }
 
@@ -1720,8 +1730,10 @@ void GraphicsContextGLOpenGL::deleteVertexArray(PlatformGLObject array)
         return;
     if (!makeContextCurrent())
         return;
-
-    gl::DeleteVertexArrays(1, &array);
+    if (m_isForWebGL2)
+        gl::DeleteVertexArrays(1, &array);
+    else
+        gl::DeleteVertexArraysOES(1, &array);
 }
 
 GCGLboolean GraphicsContextGLOpenGL::isVertexArray(PlatformGLObject array)
@@ -1731,15 +1743,19 @@ GCGLboolean GraphicsContextGLOpenGL::isVertexArray(PlatformGLObject array)
     if (!makeContextCurrent())
         return GL_FALSE;
 
-    return gl::IsVertexArray(array);
+    if (m_isForWebGL2)
+        return gl::IsVertexArray(array);
+    return gl::IsVertexArrayOES(array);
 }
 
 void GraphicsContextGLOpenGL::bindVertexArray(PlatformGLObject array)
 {
     if (!makeContextCurrent())
         return;
-
-    gl::BindVertexArray(array);
+    if (m_isForWebGL2)
+        gl::BindVertexArray(array);
+    else
+        gl::BindVertexArrayOES(array);
 }
 
 void GraphicsContextGLOpenGL::getBooleanv(GCGLenum pname, GCGLSpan<GCGLboolean> value)
@@ -2834,6 +2850,28 @@ GraphicsContextGLCV* GraphicsContextGLOpenGL::asCV()
     return m_cv.get();
 }
 #endif
+
+bool GraphicsContextGLOpenGL::waitAndUpdateOldestFrame()
+{
+    size_t oldestFrameCompletionFence = m_oldestFrameCompletionFence++ % maxPendingFrames;
+    bool success = true;
+    if (ScopedGLFence fence = WTFMove(m_frameCompletionFences[oldestFrameCompletionFence])) {
+        // Wait so that rendering doeØs not get more than maxPendingFrames frames ahead.
+        GLbitfield flags = GL_SYNC_FLUSH_COMMANDS_BIT;
+#if PLATFORM(COCOA)
+        // Avoid using the GL_SYNC_FLUSH_COMMANDS_BIT because each each frame is ended with a flush
+        // due to external IOSurface access. This particular fence is maxPendingFrames behind.
+        // This means the creation of this fence has already been flushed.
+        flags = 0;
+#endif
+        GLenum result = gl::ClientWaitSync(fence, flags, maxFrameDuration.nanosecondsAs<GLuint64>());
+        ASSERT(result != GL_WAIT_FAILED);
+        success = result != GL_WAIT_FAILED && result != GL_TIMEOUT_EXPIRED;
+    }
+    m_frameCompletionFences[oldestFrameCompletionFence].fenceSync();
+    return success;
+}
+
 }
 
 #endif // ENABLE(WEBGL) && USE(ANGLE)

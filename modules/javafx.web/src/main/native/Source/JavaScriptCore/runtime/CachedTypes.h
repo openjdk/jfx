@@ -46,6 +46,7 @@ enum class SourceCodeType;
 // cache, since this will only be filled in when we parse the function
 struct CachedFunctionExecutableMetadata {
     CodeFeatures m_features;
+    LexicalScopeFeatures m_lexicalScopeFeatures;
     bool m_hasCapturedVariables;
 };
 
@@ -88,7 +89,7 @@ public:
 
     ptrdiff_t offsetOf(const void*);
     void cacheOffset(ptrdiff_t, void*);
-    WTF::Optional<void*> cachedPtrForOffset(ptrdiff_t);
+    std::optional<void*> cachedPtrForOffset(ptrdiff_t);
     const void* ptrForOffsetFromBase(ptrdiff_t);
     CompactTDZEnvironmentMap::Handle handleForTDZEnvironment(CompactTDZEnvironment*) const;
     void setHandleForTDZEnvironment(CompactTDZEnvironment*, const CompactTDZEnvironmentMap::Handle&);

@@ -31,9 +31,9 @@
 
 #pragma once
 
-#include "LoadTiming.h"
 #include "NetworkLoadMetrics.h"
 #include "PerformanceEntry.h"
+#include "ResourceTiming.h"
 #include <wtf/Ref.h>
 #include <wtf/text/WTFString.h>
 
@@ -42,11 +42,11 @@ namespace WebCore {
 class PerformanceServerTiming;
 class ResourceTiming;
 
-class PerformanceResourceTiming final : public PerformanceEntry {
+class PerformanceResourceTiming : public PerformanceEntry {
 public:
     static Ref<PerformanceResourceTiming> create(MonotonicTime timeOrigin, ResourceTiming&&);
 
-    const AtomString& initiatorType() const { return m_initiatorType; }
+    const String& initiatorType() const { return m_resourceTiming.initiator(); }
     const String& nextHopProtocol() const;
 
     double workerStart() const;
@@ -61,27 +61,22 @@ public:
     double requestStart() const;
     double responseStart() const;
     double responseEnd() const;
+    uint64_t transferSize() const;
+    uint64_t encodedBodySize() const;
+    uint64_t decodedBodySize() const;
+
     const Vector<Ref<PerformanceServerTiming>>& serverTiming() const { return m_serverTiming; }
 
-    Type type() const final { return Type::Resource; }
-    ASCIILiteral entryType() const final { return "resource"_s; }
+    Type performanceEntryType() const override { return Type::Resource; }
+    ASCIILiteral entryType() const override { return "resource"_s; }
 
-private:
+protected:
     PerformanceResourceTiming(MonotonicTime timeOrigin, ResourceTiming&&);
     ~PerformanceResourceTiming();
 
-    double networkLoadTimeToDOMHighResTimeStamp(Seconds) const;
-
-    AtomString m_initiatorType;
     MonotonicTime m_timeOrigin;
-    LoadTiming m_loadTiming;
-    NetworkLoadMetricsWithoutNonTimingData m_networkLoadMetrics;
-    bool m_shouldReportDetails;
+    const ResourceTiming m_resourceTiming;
     Vector<Ref<PerformanceServerTiming>> m_serverTiming;
 };
 
 } // namespace WebCore
-
-SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::PerformanceResourceTiming)
-    static bool isType(const WebCore::PerformanceEntry& entry) { return entry.isResource(); }
-SPECIALIZE_TYPE_TRAITS_END()

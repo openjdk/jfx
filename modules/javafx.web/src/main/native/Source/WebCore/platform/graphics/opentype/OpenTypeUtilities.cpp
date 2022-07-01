@@ -27,6 +27,7 @@
 #include "config.h"
 #include "OpenTypeUtilities.h"
 
+#include "FontMemoryResource.h"
 #include "SharedBuffer.h"
 
 #if USE(DIRECT2D)
@@ -203,7 +204,7 @@ bool getEOTHeader(SharedBuffer* fontData, EOTHeader& eotHeader, size_t& overlayD
     overlayLength = 0;
 
     size_t dataLength = fontData->size();
-    const char* data = fontData->data();
+    auto* data = fontData->data();
 
     EOTPrefix* prefix = eotHeader.prefix();
 
@@ -333,8 +334,8 @@ bool getEOTHeader(SharedBuffer* fontData, EOTHeader& eotHeader, size_t& overlayD
 
     // If possible, ensure that the family name is a prefix of the full name.
     if (fullNameLength >= familyNameLength && memcmp(familyName, fullName, familyNameLength)) {
-        overlaySrc = reinterpret_cast<const char*>(fullName) - data;
-        overlayDst = reinterpret_cast<const char*>(familyName) - data;
+        overlaySrc = reinterpret_cast<const uint8_t*>(fullName) - data;
+        overlayDst = reinterpret_cast<const uint8_t*>(familyName) - data;
         overlayLength = familyNameLength;
     }
     eotHeader.appendBigEndianString(fullName, fullNameLength);
@@ -347,7 +348,7 @@ bool getEOTHeader(SharedBuffer* fontData, EOTHeader& eotHeader, size_t& overlayD
 
 // adds fontName to the font table in fontData, and writes the new font table to rewrittenFontTable
 // returns the size of the name table (which is used by renameAndActivateFont), or 0 on early abort
-bool renameFont(const SharedBuffer& fontData, const String& fontName, Vector<char>& rewrittenFontData)
+bool renameFont(const SharedBuffer& fontData, const String& fontName, Vector<uint8_t>& rewrittenFontData)
 {
     size_t originalDataSize = fontData.size();
     const sfntHeader* sfnt = reinterpret_cast<const sfntHeader*>(fontData.data());
@@ -374,7 +375,7 @@ bool renameFont(const SharedBuffer& fontData, const String& fontName, Vector<cha
     size_t nameTableSize = ((offsetof(nameTable, nameRecords) + nameRecordCount * sizeof(nameRecord) + fontName.length() * sizeof(UChar)) & ~3) + 4;
 
     rewrittenFontData.resize(fontData.size() + nameTableSize);
-    char* data = rewrittenFontData.data();
+    auto* data = rewrittenFontData.data();
     memcpy(data, fontData.data(), originalDataSize);
 
     // Make the table directory entry point to the new 'name' table.
@@ -414,18 +415,19 @@ bool renameFont(const SharedBuffer& fontData, const String& fontName, Vector<cha
 }
 
 // Rename the font and install the new font data into the system
-HANDLE renameAndActivateFont(const SharedBuffer& fontData, const String& fontName)
+RefPtr<FontMemoryResource> renameAndActivateFont(const SharedBuffer& fontData, const String& fontName)
 {
-    Vector<char> rewrittenFontData;
+    Vector<uint8_t> rewrittenFontData;
     if (!renameFont(fontData, fontName, rewrittenFontData))
-        return 0;
+        return { };
 
     DWORD numFonts = 0;
     HANDLE fontHandle = AddFontMemResourceEx(rewrittenFontData.data(), rewrittenFontData.size(), 0, &numFonts);
-
-    if (fontHandle && numFonts < 1) {
+    if (!fontHandle)
+        return { };
+    if (numFonts < 1) {
         RemoveFontMemResourceEx(fontHandle);
-        return 0;
+        return { };
     }
 
 #if USE(DIRECT2D)
@@ -433,7 +435,7 @@ HANDLE renameAndActivateFont(const SharedBuffer& fontData, const String& fontNam
     ASSERT(SUCCEEDED(hr));
 #endif
 
-    return fontHandle;
+    return FontMemoryResource::create(fontHandle);
 }
 
 }

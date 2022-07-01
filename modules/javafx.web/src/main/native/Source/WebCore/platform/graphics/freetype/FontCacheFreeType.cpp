@@ -195,6 +195,9 @@ private:
 };
 
 struct FallbackFontDescriptionKey {
+    FontDescriptionKey descriptionKey;
+    bool coloredFont { false };
+
     FallbackFontDescriptionKey() = default;
 
     FallbackFontDescriptionKey(const FontDescription& description, FontCache::PreferColoredFont preferColoredFont)
@@ -220,17 +223,10 @@ struct FallbackFontDescriptionKey {
 
     bool isHashTableDeletedValue() const { return descriptionKey.isHashTableDeletedValue(); }
 
-    unsigned computeHash() const
-    {
-        return WTF::pairIntHash(descriptionKey.computeHash(), WTF::DefaultHash<bool>::hash(coloredFont));
-    }
-
-    FontDescriptionKey descriptionKey;
-    bool coloredFont { false };
 };
 
 struct FallbackFontDescriptionKeyHash {
-    static unsigned hash(const FallbackFontDescriptionKey& key) { return key.computeHash(); }
+    static unsigned hash(const FallbackFontDescriptionKey& key) { return computeHash(key.descriptionKey, key.coloredFont); }
     static bool equal(const FallbackFontDescriptionKey& a, const FallbackFontDescriptionKey& b) { return a == b; }
     static const bool safeToCompareToEmptyOrDeleted = true;
 };
@@ -250,6 +246,8 @@ RefPtr<Font> FontCache::systemFallbackForCharacters(const FontDescription& descr
 #ifdef FC_COLOR
         if (preferColoredFont == PreferColoredFont::Yes)
             FcPatternAddBool(pattern.get(), FC_COLOR, FcTrue);
+#else
+        UNUSED_VARIABLE(preferColoredFont);
 #endif
         if (!configurePatternForFontDescription(pattern.get(), description))
             return nullptr;
@@ -319,9 +317,8 @@ Ref<Font> FontCache::lastResortFallbackFont(const FontDescription& fontDescripti
 {
     // We want to return a fallback font here, otherwise the logic preventing FontConfig
     // matches for non-fallback fonts might return 0. See isFallbackFontAllowed.
-    static AtomString timesStr("serif");
-    if (RefPtr<Font> font = fontForFamily(fontDescription, timesStr))
-        return *font;
+    if (RefPtr<Font> font = fontForFamily(fontDescription, "serif"_s))
+        return font.releaseNonNull();
 
     // This could be reached due to improperly-installed or misconfigured fontconfig.
     RELEASE_ASSERT_NOT_REACHED();
@@ -332,35 +329,35 @@ Vector<FontSelectionCapabilities> FontCache::getFontSelectionCapabilitiesInFamil
     return { };
 }
 
-static String getFamilyNameStringFromFamily(const AtomString& family)
+static String getFamilyNameStringFromFamily(const String& family)
 {
     // If we're creating a fallback font (e.g. "-webkit-monospace"), convert the name into
     // the fallback name (like "monospace") that fontconfig understands.
     if (family.length() && !family.startsWith("-webkit-"))
-        return family.string();
+        return family;
 
-    if (family == standardFamily || family == serifFamily)
+    if (family == familyNamesData->at(FamilyNamesIndex::StandardFamily) || family == familyNamesData->at(FamilyNamesIndex::SerifFamily))
         return "serif";
-    if (family == sansSerifFamily)
+    if (family == familyNamesData->at(FamilyNamesIndex::SansSerifFamily))
         return "sans-serif";
-    if (family == monospaceFamily)
+    if (family == familyNamesData->at(FamilyNamesIndex::MonospaceFamily))
         return "monospace";
-    if (family == cursiveFamily)
+    if (family == familyNamesData->at(FamilyNamesIndex::CursiveFamily))
         return "cursive";
-    if (family == fantasyFamily)
+    if (family == familyNamesData->at(FamilyNamesIndex::FantasyFamily))
         return "fantasy";
 
 #if PLATFORM(GTK)
-    if (family == systemUiFamily || family == "-webkit-system-font")
+    if (family == familyNamesData->at(FamilyNamesIndex::SystemUiFamily) || family == "-webkit-system-font")
         return defaultGtkSystemFont();
 #endif
 
     return "";
 }
 
-// This is based on Chromium BSD code from Skia (src/ports/SkFontMgr_fontconfig.cpp). It is a
-// hack for lack of API in Fontconfig: https://bugs.freedesktop.org/show_bug.cgi?id=19375
-// FIXME: This is horrible. It should be deleted once Fontconfig can do this itself.
+#if FC_VERSION < 21395
+// This is based on BSD-licensed code from Skia (src/ports/SkFontMgr_fontconfig.cpp).
+// It is obsoleted by newer Fontconfig, see https://gitlab.freedesktop.org/fontconfig/fontconfig/-/issues/294.
 enum class AliasStrength {
     Weak,
     Strong,
@@ -485,6 +482,7 @@ static bool areStronglyAliased(const String& familyA, const String& familyB)
     }
     return false;
 }
+#endif // FC_VERSION < 21395
 
 static inline bool isCommonlyUsedGenericFamily(const String& familyNameString)
 {
@@ -518,8 +516,6 @@ std::unique_ptr<FontPlatformData> FontCache::createFontPlatformData(const FontDe
     if (!configurePatternForFontDescription(pattern.get(), fontDescription))
         return nullptr;
 
-    // The strategy is originally from Skia (src/ports/SkFontHost_fontconfig.cpp):
-    //
     // We do not normally allow fontconfig to substitute one font family for another, since this
     // would break CSS font family fallback: the website should be in control of fallback. During
     // normal font matching, the only font family substitution permitted is for generic families
@@ -543,20 +539,33 @@ std::unique_ptr<FontPlatformData> FontCache::createFontPlatformData(const FontDe
     if (!resultPattern) // No match.
         return nullptr;
 
-    // Loop through each font family of the result to see if it fits the one we requested.
+#if FC_VERSION < 21395
     bool matchedFontFamily = false;
     FcChar8* fontConfigFamilyNameAfterMatching;
     for (int i = 0; FcPatternGetString(resultPattern.get(), FC_FAMILY, i, &fontConfigFamilyNameAfterMatching) == FcResultMatch; ++i) {
-        // If Fontconfig gave us a different font family than the one we requested, we should ignore it
-        // and allow WebCore to give us the next font on the CSS fallback list. The exceptions are if
-        // this family name is a commonly-used generic family, or if the families are strongly-aliased.
-        // Checking for a strong alias comes last, since it is slow.
         String familyNameAfterMatching = String::fromUTF8(reinterpret_cast<char*>(fontConfigFamilyNameAfterMatching));
         if (equalIgnoringASCIICase(familyNameAfterConfiguration, familyNameAfterMatching) || isCommonlyUsedGenericFamily(familyNameString) || areStronglyAliased(familyNameAfterConfiguration, familyNameAfterMatching)) {
             matchedFontFamily = true;
             break;
         }
     }
+#else
+    // Loop through each font family of the result to see if it fits the one we requested.
+    bool matchedFontFamily = false;
+    FcValue value;
+    FcValueBinding binding;
+    for (int i = 0; FcPatternGetWithBinding(resultPattern.get(), FC_FAMILY, i, &value, &binding) == FcResultMatch; ++i) {
+        ASSERT(value.type == FcTypeString);
+        String familyNameAfterMatching = String::fromUTF8(reinterpret_cast<const char*>(value.u.s));
+        // If Fontconfig gave us a different font family than the one we requested, we should ignore it
+        // and allow WebCore to give us the next font on the CSS fallback list. The exceptions are if
+        // this family name is a commonly-used generic family, or if the families are strongly-aliased.
+        if (binding == FcValueBindingStrong || equalIgnoringASCIICase(familyNameAfterConfiguration, familyNameAfterMatching) || isCommonlyUsedGenericFamily(familyNameString)) {
+            matchedFontFamily = true;
+            break;
+        }
+    }
+#endif
 
     if (!matchedFontFamily)
         return nullptr;
@@ -599,9 +608,9 @@ std::unique_ptr<FontPlatformData> FontCache::createFontPlatformData(const FontDe
     return platformData;
 }
 
-const AtomString& FontCache::platformAlternateFamilyName(const AtomString&)
+std::optional<ASCIILiteral> FontCache::platformAlternateFamilyName(const String&)
 {
-    return nullAtom();
+    return std::nullopt;
 }
 
 #if ENABLE(VARIATION_FONTS)

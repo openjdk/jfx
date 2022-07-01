@@ -54,25 +54,25 @@ namespace {
     const uint32_t kKeyIdsMaxKeyIdSizeInBytes = 512;
 }
 
-static Optional<Vector<Ref<SharedBuffer>>> extractKeyIDsKeyids(const SharedBuffer& buffer)
+static std::optional<Vector<Ref<SharedBuffer>>> extractKeyIDsKeyids(const SharedBuffer& buffer)
 {
     // 1. Format
     // https://w3c.github.io/encrypted-media/format-registry/initdata/keyids.html#format
     if (buffer.size() > std::numeric_limits<unsigned>::max())
-        return WTF::nullopt;
+        return std::nullopt;
     String json { buffer.data(), static_cast<unsigned>(buffer.size()) };
 
     auto value = JSON::Value::parseJSON(json);
     if (!value)
-        return WTF::nullopt;
+        return std::nullopt;
 
     auto object = value->asObject();
     if (!object)
-        return WTF::nullopt;
+        return std::nullopt;
 
     auto kidsArray = object->getArray("kids"_s);
     if (!kidsArray)
-        return WTF::nullopt;
+        return std::nullopt;
 
     Vector<Ref<SharedBuffer>> keyIDs;
     for (auto& value : *kidsArray) {
@@ -80,15 +80,14 @@ static Optional<Vector<Ref<SharedBuffer>>> extractKeyIDsKeyids(const SharedBuffe
         if (!keyID)
             continue;
 
-        Vector<char> keyIDData;
-        if (!WTF::base64URLDecode(keyID, { keyIDData }))
+        auto keyIDData = base64URLDecode(keyID);
+        if (!keyIDData)
             continue;
 
-        if (keyIDData.size() < kKeyIdsMinKeyIdSizeInBytes || keyIDData.size() > kKeyIdsMaxKeyIdSizeInBytes)
-            return WTF::nullopt;
+        if (keyIDData->size() < kKeyIdsMinKeyIdSizeInBytes || keyIDData->size() > kKeyIdsMaxKeyIdSizeInBytes)
+            return std::nullopt;
 
-        Ref<SharedBuffer> keyIDBuffer = SharedBuffer::create(WTFMove(keyIDData));
-        keyIDs.append(WTFMove(keyIDBuffer));
+        keyIDs.append(SharedBuffer::create(WTFMove(*keyIDData)));
     }
 
     return keyIDs;
@@ -105,19 +104,19 @@ static RefPtr<SharedBuffer> sanitizeKeyids(const SharedBuffer& buffer)
     auto object = JSON::Object::create();
     auto kidsArray = JSON::Array::create();
     for (auto& buffer : keyIDBuffer.value())
-        kidsArray->pushString(WTF::base64URLEncode(buffer->data(), buffer->size()));
+        kidsArray->pushString(base64URLEncodeToString(buffer->data(), buffer->size()));
     object->setArray("kids", WTFMove(kidsArray));
 
     CString jsonData = object->toJSONString().utf8();
     return SharedBuffer::create(jsonData.data(), jsonData.length());
 }
 
-Optional<Vector<std::unique_ptr<ISOProtectionSystemSpecificHeaderBox>>> InitDataRegistry::extractPsshBoxesFromCenc(const SharedBuffer& buffer)
+std::optional<Vector<std::unique_ptr<ISOProtectionSystemSpecificHeaderBox>>> InitDataRegistry::extractPsshBoxesFromCenc(const SharedBuffer& buffer)
 {
     // 4. Common SystemID and PSSH Box Format
     // https://w3c.github.io/encrypted-media/format-registry/initdata/cenc.html#common-system
     if (buffer.size() >= kCencMaxBoxSize)
-        return WTF::nullopt;
+        return std::nullopt;
 
     unsigned offset = 0;
     Vector<std::unique_ptr<ISOProtectionSystemSpecificHeaderBox>> psshBoxes;
@@ -128,14 +127,14 @@ Optional<Vector<std::unique_ptr<ISOProtectionSystemSpecificHeaderBox>>> InitData
         auto& boxSize = optionalBoxType.value().second;
 
         if (boxTypeName != ISOProtectionSystemSpecificHeaderBox::boxTypeName() || boxSize > buffer.size())
-            return WTF::nullopt;
+            return std::nullopt;
 
         auto systemID = ISOProtectionSystemSpecificHeaderBox::peekSystemID(view, offset);
 #if HAVE(FAIRPLAYSTREAMING_CENC_INITDATA)
         if (systemID == ISOFairPlayStreamingPsshBox::fairPlaySystemID()) {
             auto fpsPssh = makeUnique<ISOFairPlayStreamingPsshBox>();
             if (!fpsPssh->read(view, offset))
-                return WTF::nullopt;
+                return std::nullopt;
             psshBoxes.append(WTFMove(fpsPssh));
             continue;
         }
@@ -144,7 +143,7 @@ Optional<Vector<std::unique_ptr<ISOProtectionSystemSpecificHeaderBox>>> InitData
 #endif
         auto psshBox = makeUnique<ISOProtectionSystemSpecificHeaderBox>();
         if (!psshBox->read(view, offset))
-            return WTF::nullopt;
+            return std::nullopt;
 
         psshBoxes.append(WTFMove(psshBox));
     }
@@ -152,18 +151,18 @@ Optional<Vector<std::unique_ptr<ISOProtectionSystemSpecificHeaderBox>>> InitData
     return psshBoxes;
 }
 
-Optional<Vector<Ref<SharedBuffer>>> InitDataRegistry::extractKeyIDsCenc(const SharedBuffer& buffer)
+std::optional<Vector<Ref<SharedBuffer>>> InitDataRegistry::extractKeyIDsCenc(const SharedBuffer& buffer)
 {
     Vector<Ref<SharedBuffer>> keyIDs;
 
     auto psshBoxes = extractPsshBoxesFromCenc(buffer);
     if (!psshBoxes)
-        return WTF::nullopt;
+        return std::nullopt;
 
     for (auto& psshBox : psshBoxes.value()) {
         ASSERT(psshBox);
         if (!psshBox)
-            return WTF::nullopt;
+            return std::nullopt;
 
 #if HAVE(FAIRPLAYSTREAMING_CENC_INITDATA)
         if (is<ISOFairPlayStreamingPsshBox>(*psshBox)) {
@@ -206,12 +205,12 @@ static RefPtr<SharedBuffer> sanitizeWebM(const SharedBuffer& buffer)
     return buffer.copy();
 }
 
-static Optional<Vector<Ref<SharedBuffer>>> extractKeyIDsWebM(const SharedBuffer& buffer)
+static std::optional<Vector<Ref<SharedBuffer>>> extractKeyIDsWebM(const SharedBuffer& buffer)
 {
     Vector<Ref<SharedBuffer>> keyIDs;
     RefPtr<SharedBuffer> sanitizedBuffer = sanitizeWebM(buffer);
     if (!sanitizedBuffer)
-        return WTF::nullopt;
+        return std::nullopt;
 
     // 1. Format
     // https://w3c.github.io/encrypted-media/format-registry/initdata/webm.html#format
@@ -242,11 +241,11 @@ RefPtr<SharedBuffer> InitDataRegistry::sanitizeInitData(const AtomString& initDa
     return iter->value.sanitizeInitData(buffer);
 }
 
-Optional<Vector<Ref<SharedBuffer>>> InitDataRegistry::extractKeyIDs(const AtomString& initDataType, const SharedBuffer& buffer)
+std::optional<Vector<Ref<SharedBuffer>>> InitDataRegistry::extractKeyIDs(const AtomString& initDataType, const SharedBuffer& buffer)
 {
     auto iter = m_types.find(initDataType);
     if (iter == m_types.end() || !iter->value.sanitizeInitData)
-        return WTF::nullopt;
+        return std::nullopt;
     return iter->value.extractKeyIDs(buffer);
 }
 

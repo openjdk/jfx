@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include <unicode/uidna.h>
 #include <wtf/Expected.h>
 #include <wtf/Forward.h>
 #include <wtf/URL.h>
@@ -38,6 +39,20 @@ template<typename CharacterType> class CodePointIterator;
 class URLParser {
     WTF_MAKE_FAST_ALLOCATED;
 public:
+    constexpr static int allowedNameToASCIIErrors =
+        UIDNA_ERROR_EMPTY_LABEL
+        | UIDNA_ERROR_LABEL_TOO_LONG
+        | UIDNA_ERROR_DOMAIN_NAME_TOO_LONG
+        | UIDNA_ERROR_LEADING_HYPHEN
+        | UIDNA_ERROR_TRAILING_HYPHEN
+        | UIDNA_ERROR_HYPHEN_3_4;
+
+    // Needs to be big enough to hold an IDN-encoded name.
+    // For host names bigger than this, we won't do IDN encoding, which is almost certainly OK.
+    constexpr static size_t hostnameBufferLength = 2048;
+
+#define URLTextEncodingSentinelAllowingC0AtEndOfHash reinterpret_cast<const URLTextEncoding*>(-1)
+
     WTF_EXPORT_PRIVATE static bool allValuesEqual(const URL&, const URL&);
     WTF_EXPORT_PRIVATE static bool internalValuesConsistent(const URL&);
 
@@ -45,13 +60,13 @@ public:
     WTF_EXPORT_PRIVATE static URLEncodedForm parseURLEncodedForm(StringView);
     WTF_EXPORT_PRIVATE static String serialize(const URLEncodedForm&);
 
-    WTF_EXPORT_PRIVATE static bool isSpecialScheme(const String& scheme);
-    WTF_EXPORT_PRIVATE static Optional<String> maybeCanonicalizeScheme(const String& scheme);
+    WTF_EXPORT_PRIVATE static bool isSpecialScheme(StringView);
+    WTF_EXPORT_PRIVATE static std::optional<String> maybeCanonicalizeScheme(StringView scheme);
 
     static const UIDNA& internationalDomainNameTranscoder();
     static bool isInUserInfoEncodeSet(UChar);
 
-    static Optional<uint16_t> defaultPortForProtocol(StringView);
+    static std::optional<uint16_t> defaultPortForProtocol(StringView);
 
 private:
     URLParser(const String&, const URL& = { }, const URLTextEncoding* = nullptr);
@@ -64,10 +79,10 @@ private:
     bool m_urlIsSpecial { false };
     bool m_urlIsFile { false };
     bool m_hostHasPercentOrNonASCII { false };
+    bool m_didSeeSyntaxViolation { false };
     String m_inputString;
     const void* m_inputBegin { nullptr };
 
-    bool m_didSeeSyntaxViolation { false };
     static constexpr size_t defaultInlineBufferSize = 2048;
     using LCharBuffer = Vector<LChar, defaultInlineBufferSize>;
 
@@ -99,10 +114,10 @@ private:
     template<typename UnsignedIntegerType> void appendNumberToASCIIBuffer(UnsignedIntegerType);
     template<bool(*isInCodeSet)(UChar32), typename CharacterType> void utf8PercentEncode(const CodePointIterator<CharacterType>&);
     template<typename CharacterType> void utf8QueryEncode(const CodePointIterator<CharacterType>&);
-    template<typename CharacterType> Optional<LCharBuffer> domainToASCII(StringImpl&, const CodePointIterator<CharacterType>& iteratorForSyntaxViolationPosition);
+    template<typename CharacterType> std::optional<LCharBuffer> domainToASCII(StringImpl&, const CodePointIterator<CharacterType>& iteratorForSyntaxViolationPosition);
     template<typename CharacterType> LCharBuffer percentDecode(const LChar*, size_t, const CodePointIterator<CharacterType>& iteratorForSyntaxViolationPosition);
     static LCharBuffer percentDecode(const LChar*, size_t);
-    static Optional<String> formURLDecode(StringView input);
+    static std::optional<String> formURLDecode(StringView input);
     static bool hasForbiddenHostCodePoint(const LCharBuffer&);
     void percentEncodeByte(uint8_t);
     void appendToASCIIBuffer(UChar32);
@@ -113,7 +128,8 @@ private:
     bool copyBaseWindowsDriveLetter(const URL&);
     StringView parsedDataView(size_t start, size_t length);
     UChar parsedDataView(size_t position);
-    template<typename CharacterType> bool startsWithXNDashDash(CodePointIterator<CharacterType>);
+    template<typename CharacterType> bool subdomainStartsWithXNDashDash(CodePointIterator<CharacterType>);
+    bool subdomainStartsWithXNDashDash(StringImpl&);
 
     bool needsNonSpecialDotSlash() const;
     void addNonSpecialDotSlash();
@@ -125,9 +141,9 @@ private:
     template<typename CharacterTypeForSyntaxViolation, typename CharacterType> Expected<IPv4Address, IPv4ParsingError> parseIPv4Host(const CodePointIterator<CharacterTypeForSyntaxViolation>&, CodePointIterator<CharacterType>);
     template<typename CharacterType> Expected<uint32_t, URLParser::IPv4PieceParsingError> parseIPv4Piece(CodePointIterator<CharacterType>&, bool& syntaxViolation);
     using IPv6Address = std::array<uint16_t, 8>;
-    template<typename CharacterType> Optional<IPv6Address> parseIPv6Host(CodePointIterator<CharacterType>);
-    template<typename CharacterType> Optional<uint32_t> parseIPv4PieceInsideIPv6(CodePointIterator<CharacterType>&);
-    template<typename CharacterType> Optional<IPv4Address> parseIPv4AddressInsideIPv6(CodePointIterator<CharacterType>);
+    template<typename CharacterType> std::optional<IPv6Address> parseIPv6Host(CodePointIterator<CharacterType>);
+    template<typename CharacterType> std::optional<uint32_t> parseIPv4PieceInsideIPv6(CodePointIterator<CharacterType>&);
+    template<typename CharacterType> std::optional<IPv4Address> parseIPv4AddressInsideIPv6(CodePointIterator<CharacterType>);
     void serializeIPv6Piece(uint16_t piece);
     void serializeIPv6(IPv6Address);
 

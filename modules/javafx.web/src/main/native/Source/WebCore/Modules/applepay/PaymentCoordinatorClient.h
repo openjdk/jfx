@@ -32,15 +32,12 @@
 #include <wtf/CompletionHandler.h>
 #include <wtf/Forward.h>
 #include <wtf/Function.h>
-#include <wtf/Optional.h>
 
 namespace WebCore {
 
 class Document;
 class PaymentMerchantSession;
-#if ENABLE(APPLE_PAY_PAYMENT_METHOD_MODE)
-struct ApplePayPaymentMethodModeUpdate;
-#endif // ENABLE(APPLE_PAY_PAYMENT_METHOD_MODE)
+struct ApplePayCouponCodeUpdate;
 struct ApplePayPaymentMethodUpdate;
 struct ApplePaySetupConfiguration;
 struct ApplePayShippingContactUpdate;
@@ -51,20 +48,20 @@ class PaymentCoordinatorClient {
 public:
     bool supportsVersion(unsigned version);
 
-    virtual Optional<String> validatedPaymentNetwork(const String&) = 0;
+    virtual std::optional<String> validatedPaymentNetwork(const String&) = 0;
     virtual bool canMakePayments() = 0;
     virtual void canMakePaymentsWithActiveCard(const String& merchantIdentifier, const String& domainName, CompletionHandler<void(bool)>&&) = 0;
     virtual void openPaymentSetup(const String& merchantIdentifier, const String& domainName, CompletionHandler<void(bool)>&&) = 0;
 
     virtual bool showPaymentUI(const URL& originatingURL, const Vector<URL>& linkIconURLs, const ApplePaySessionPaymentRequest&) = 0;
     virtual void completeMerchantValidation(const PaymentMerchantSession&) = 0;
-    virtual void completeShippingMethodSelection(Optional<ApplePayShippingMethodUpdate>&&) = 0;
-    virtual void completeShippingContactSelection(Optional<ApplePayShippingContactUpdate>&&) = 0;
-    virtual void completePaymentMethodSelection(Optional<ApplePayPaymentMethodUpdate>&&) = 0;
-#if ENABLE(APPLE_PAY_PAYMENT_METHOD_MODE)
-    virtual void completePaymentMethodModeChange(Optional<ApplePayPaymentMethodModeUpdate>&&) = 0;
-#endif // ENABLE(APPLE_PAY_PAYMENT_METHOD_MODE)
-    virtual void completePaymentSession(Optional<PaymentAuthorizationResult>&&) = 0;
+    virtual void completeShippingMethodSelection(std::optional<ApplePayShippingMethodUpdate>&&) = 0;
+    virtual void completeShippingContactSelection(std::optional<ApplePayShippingContactUpdate>&&) = 0;
+    virtual void completePaymentMethodSelection(std::optional<ApplePayPaymentMethodUpdate>&&) = 0;
+#if ENABLE(APPLE_PAY_COUPON_CODE)
+    virtual void completeCouponCodeChange(std::optional<ApplePayCouponCodeUpdate>&&) = 0;
+#endif
+    virtual void completePaymentSession(std::optional<PaymentAuthorizationResult>&&) = 0;
     virtual void abortPaymentSession() = 0;
     virtual void cancelPaymentSession() = 0;
     virtual void paymentCoordinatorDestroyed() = 0;
@@ -74,8 +71,6 @@ public:
 
     virtual bool isMockPaymentCoordinator() const { return false; }
     virtual bool isWebPaymentCoordinator() const { return false; }
-
-    virtual bool isAlwaysOnLoggingAllowed() const { return false; }
 
     virtual void getSetupFeatures(const ApplePaySetupConfiguration&, const URL&, CompletionHandler<void(Vector<Ref<ApplePaySetupFeature>>&&)>&& completionHandler) { completionHandler({ }); }
     virtual void beginApplePaySetup(const ApplePaySetupConfiguration&, const URL&, Vector<RefPtr<ApplePaySetupFeature>>&&, CompletionHandler<void(bool)>&& completionHandler) { completionHandler(false); }

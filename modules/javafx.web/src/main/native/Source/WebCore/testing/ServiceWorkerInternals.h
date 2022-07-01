@@ -28,6 +28,7 @@
 #if ENABLE(SERVICE_WORKER)
 
 #include "IDLTypes.h"
+#include "JSDOMPromiseDeferred.h"
 #include "ServiceWorkerIdentifier.h"
 #include <wtf/RefCounted.h>
 
@@ -39,12 +40,14 @@ class ScriptExecutionContext;
 
 template<typename IDLType> class DOMPromiseDeferred;
 
-class WEBCORE_TESTSUPPORT_EXPORT ServiceWorkerInternals : public RefCounted<ServiceWorkerInternals> {
+class WEBCORE_TESTSUPPORT_EXPORT ServiceWorkerInternals : public RefCounted<ServiceWorkerInternals>, public CanMakeWeakPtr<ServiceWorkerInternals> {
 public:
     static Ref<ServiceWorkerInternals> create(ServiceWorkerIdentifier identifier) { return adoptRef(*new ServiceWorkerInternals { identifier }); }
     ~ServiceWorkerInternals();
 
     void setOnline(bool isOnline);
+    void terminate();
+
     void waitForFetchEventToFinish(FetchEvent&, DOMPromiseDeferred<IDLInterface<FetchResponse>>&&);
     Ref<FetchEvent> createBeingDispatchedFetchEvent(ScriptExecutionContext&);
     Ref<FetchResponse> createOpaqueWithBlobBodyResponse(ScriptExecutionContext&);
@@ -57,10 +60,13 @@ public:
 
     int processIdentifier() const;
 
+    void lastNavigationWasAppInitiated(Ref<DeferredPromise>&&);
+
 private:
     explicit ServiceWorkerInternals(ServiceWorkerIdentifier);
 
     ServiceWorkerIdentifier m_identifier;
+    RefPtr<DeferredPromise> m_lastNavigationWasAppInitiatedPromise;
 };
 
 } // namespace WebCore

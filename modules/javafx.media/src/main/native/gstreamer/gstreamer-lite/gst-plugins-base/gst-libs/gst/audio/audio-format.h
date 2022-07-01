@@ -286,8 +286,11 @@ const GstAudioFormatInfo *
                gst_audio_format_get_info         (GstAudioFormat format) G_GNUC_CONST;
 
 GST_AUDIO_API
-void           gst_audio_format_fill_silence     (const GstAudioFormatInfo *info,
-                                                  gpointer dest, gsize length);
+void           gst_audio_format_info_fill_silence (const GstAudioFormatInfo *info,
+                                                   gpointer dest, gsize length);
+GST_AUDIO_API G_DEPRECATED_FOR(gst_audio_format_info_fill_silence)
+void           gst_audio_format_fill_silence      (const GstAudioFormatInfo *info,
+                                                   gpointer dest, gsize length);
 
 /**
  * GST_AUDIO_RATE_RANGE:

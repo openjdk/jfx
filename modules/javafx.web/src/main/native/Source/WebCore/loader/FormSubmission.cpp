@@ -84,6 +84,13 @@ static void appendMailtoPostFormDataToURL(URL& url, const FormData& data, const 
         url.setQuery(makeString(query, '&', body));
 }
 
+ASCIILiteral FormSubmission::Attributes::methodString(Method method)
+{
+    if (RuntimeEnabledFeatures::sharedFeatures().dialogElementEnabled() && method == Method::Dialog)
+        return "dialog"_s;
+    return method == Method::Post ? "post"_s : "get"_s;
+}
+
 void FormSubmission::Attributes::parseAction(const String& action)
 {
     // FIXME: Can we parse into a URL?
@@ -107,12 +114,29 @@ void FormSubmission::Attributes::updateEncodingType(const String& type)
 
 FormSubmission::Method FormSubmission::Attributes::parseMethodType(const String& type)
 {
-    return equalLettersIgnoringASCIICase(type, "post") ? FormSubmission::Method::Post : FormSubmission::Method::Get;
+    if (RuntimeEnabledFeatures::sharedFeatures().dialogElementEnabled() && equalLettersIgnoringASCIICase(type, "dialog"))
+        return FormSubmission::Method::Dialog;
+
+    if (equalLettersIgnoringASCIICase(type, "post"))
+        return FormSubmission::Method::Post;
+
+    return FormSubmission::Method::Get;
 }
 
 void FormSubmission::Attributes::updateMethodType(const String& type)
 {
     m_method = parseMethodType(type);
+}
+
+inline FormSubmission::FormSubmission(Method method, const String& returnValue, const URL& action, const String& target, const String& contentType, LockHistory lockHistory, Event* event)
+    : m_method(method)
+    , m_action(action)
+    , m_target(target)
+    , m_contentType(contentType)
+    , m_lockHistory(lockHistory)
+    , m_event(event)
+    , m_returnValue(returnValue)
+{
 }
 
 inline FormSubmission::FormSubmission(Method method, const URL& action, const String& target, const String& contentType, Ref<FormState>&& state, Ref<FormData>&& data, const String& boundary, LockHistory lockHistory, Event* event)
@@ -142,27 +166,36 @@ static TextEncoding encodingFromAcceptCharset(const String& acceptCharset, Docum
     return document.textEncoding();
 }
 
-Ref<FormSubmission> FormSubmission::create(HTMLFormElement& form, const Attributes& attributes, Event* event, LockHistory lockHistory, FormSubmissionTrigger trigger)
+Ref<FormSubmission> FormSubmission::create(HTMLFormElement& form, HTMLFormControlElement* overrideSubmitter, const Attributes& attributes, Event* event, LockHistory lockHistory, FormSubmissionTrigger trigger)
 {
     auto copiedAttributes = attributes;
 
-    if (auto* submitButton = form.findSubmitButton(event)) {
+    auto submitter = makeRefPtr(overrideSubmitter ? overrideSubmitter : form.findSubmitter(event));
+    if (submitter) {
         AtomString attributeValue;
-        if (!(attributeValue = submitButton->attributeWithoutSynchronization(formactionAttr)).isNull())
+        if (!(attributeValue = submitter->attributeWithoutSynchronization(formactionAttr)).isNull())
             copiedAttributes.parseAction(attributeValue);
-        if (!(attributeValue = submitButton->attributeWithoutSynchronization(formenctypeAttr)).isNull())
+        if (!(attributeValue = submitter->attributeWithoutSynchronization(formenctypeAttr)).isNull())
             copiedAttributes.updateEncodingType(attributeValue);
-        if (!(attributeValue = submitButton->attributeWithoutSynchronization(formmethodAttr)).isNull())
+        if (!(attributeValue = submitter->attributeWithoutSynchronization(formmethodAttr)).isNull())
             copiedAttributes.updateMethodType(attributeValue);
-        if (!(attributeValue = submitButton->attributeWithoutSynchronization(formtargetAttr)).isNull())
+        if (!(attributeValue = submitter->attributeWithoutSynchronization(formtargetAttr)).isNull())
             copiedAttributes.setTarget(attributeValue);
     }
 
     auto& document = form.document();
+    auto encodingType = copiedAttributes.encodingType();
     auto actionURL = document.completeURL(copiedAttributes.action().isEmpty() ? document.url().string() : copiedAttributes.action());
+
+    if (RuntimeEnabledFeatures::sharedFeatures().dialogElementEnabled() && copiedAttributes.method() == Method::Dialog) {
+        String returnValue = submitter ? submitter->resultForDialogSubmit() : emptyString();
+        return adoptRef(*new FormSubmission(copiedAttributes.method(), returnValue, actionURL, form.effectiveTarget(event, submitter.get()), encodingType, lockHistory, event));
+    }
+
+    ASSERT(copiedAttributes.method() == Method::Post || copiedAttributes.method() == Method::Get);
+
     bool isMailtoForm = actionURL.protocolIs("mailto");
     bool isMultiPartForm = false;
-    auto encodingType = copiedAttributes.encodingType();
 
     document.contentSecurityPolicy()->upgradeInsecureRequestIfNeeded(actionURL, ContentSecurityPolicy::InsecureRequestType::FormSubmission);
 
@@ -178,21 +211,9 @@ Ref<FormSubmission> FormSubmission::create(HTMLFormElement& form, const Attribut
     auto domFormData = DOMFormData::create(dataEncoding.encodingForFormSubmissionOrURLParsing());
     StringPairVector formValues;
 
-    bool containsPasswordData = false;
-    for (auto& control : form.copyAssociatedElementsVector()) {
-        auto& element = control->asHTMLElement();
-        if (!element.isDisabledFormControl())
-            control->appendFormData(domFormData, isMultiPartForm);
-        if (is<HTMLInputElement>(element)) {
-            auto& input = downcast<HTMLInputElement>(element);
-            if (input.isTextField()) {
-                formValues.append({ input.name(), input.value() });
-                input.addSearchResult();
-            }
-            if (input.isPasswordField() && !input.value().isEmpty())
-                containsPasswordData = true;
-        }
-    }
+    auto result = form.constructEntryList(WTFMove(domFormData), &formValues, isMultiPartForm ? HTMLFormElement::IsMultipartForm::Yes : HTMLFormElement::IsMultipartForm::No);
+    RELEASE_ASSERT(result);
+    domFormData = result.releaseNonNull();
 
     RefPtr<FormData> formData;
     String boundary;
@@ -210,15 +231,16 @@ Ref<FormSubmission> FormSubmission::create(HTMLFormElement& form, const Attribut
     }
 
     formData->setIdentifier(generateFormDataIdentifier());
-    formData->setContainsPasswordData(containsPasswordData);
 
     auto formState = FormState::create(form, WTFMove(formValues), document, trigger);
 
-    return adoptRef(*new FormSubmission(copiedAttributes.method(), actionURL, form.effectiveTarget(event), encodingType, WTFMove(formState), formData.releaseNonNull(), boundary, lockHistory, event));
+    return adoptRef(*new FormSubmission(copiedAttributes.method(), actionURL, form.effectiveTarget(event, submitter.get()), encodingType, WTFMove(formState), formData.releaseNonNull(), boundary, lockHistory, event));
 }
 
 URL FormSubmission::requestURL() const
 {
+    ASSERT(m_method == Method::Post || m_method == Method::Get);
+
     if (m_method == Method::Post)
         return m_action;
 
@@ -229,6 +251,8 @@ URL FormSubmission::requestURL() const
 
 void FormSubmission::populateFrameLoadRequest(FrameLoadRequest& frameRequest)
 {
+    ASSERT(m_method == Method::Post || m_method == Method::Get);
+
     if (!m_target.isEmpty())
         frameRequest.setFrameName(m_target);
 

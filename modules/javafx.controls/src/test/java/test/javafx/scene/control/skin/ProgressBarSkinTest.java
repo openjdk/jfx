@@ -121,7 +121,6 @@ public class ProgressBarSkinTest {
         // Attempt gc n times
         for (int i = 0; i < n; i++) {
             System.gc();
-            System.runFinalization();
 
             if (weakSkinRef.get() == null) {
                 break;

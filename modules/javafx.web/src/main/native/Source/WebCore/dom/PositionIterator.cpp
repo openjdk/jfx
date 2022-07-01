@@ -32,6 +32,8 @@
 #include "HTMLHtmlElement.h"
 #include "HTMLNames.h"
 #include "RenderBlockFlow.h"
+#include "RenderFlexibleBox.h"
+#include "RenderGrid.h"
 #include "RenderText.h"
 
 namespace WebCore {
@@ -143,6 +145,7 @@ bool PositionIterator::atEndOfNode() const
     return m_anchorNode->hasChildNodes() || m_offsetInAnchor >= lastOffsetForEditing(*m_anchorNode);
 }
 
+// This function should be kept in sync with Position::isCandidate().
 bool PositionIterator::isCandidate() const
 {
     if (!m_anchorNode)
@@ -161,19 +164,23 @@ bool PositionIterator::isCandidate() const
     if (is<RenderText>(*renderer))
         return !Position::nodeIsUserSelectNone(m_anchorNode) && downcast<RenderText>(*renderer).containsCaretOffset(m_offsetInAnchor);
 
-    if (isRenderedTable(m_anchorNode) || editingIgnoresContent(*m_anchorNode))
+    if (positionBeforeOrAfterNodeIsCandidate(*m_anchorNode))
         return (atStartOfNode() || atEndOfNode()) && !Position::nodeIsUserSelectNone(m_anchorNode->parentNode());
 
-    if (!is<HTMLHtmlElement>(*m_anchorNode) && is<RenderBlockFlow>(*renderer)) {
-        RenderBlockFlow& block = downcast<RenderBlockFlow>(*renderer);
-        if (block.logicalHeight() || is<HTMLBodyElement>(*m_anchorNode)) {
+    if (is<HTMLHtmlElement>(*m_anchorNode))
+        return false;
+
+    if (is<RenderBlockFlow>(*renderer) || is<RenderGrid>(*renderer) || is<RenderFlexibleBox>(*renderer)) {
+        auto& block = downcast<RenderBlock>(*renderer);
+        if (block.logicalHeight() || is<HTMLBodyElement>(*m_anchorNode) || m_anchorNode->isRootEditableElement()) {
             if (!Position::hasRenderedNonAnonymousDescendantsWithHeight(block))
                 return atStartOfNode() && !Position::nodeIsUserSelectNone(m_anchorNode);
             return m_anchorNode->hasEditableStyle() && !Position::nodeIsUserSelectNone(m_anchorNode) && Position(*this).atEditingBoundary();
         }
+        return false;
     }
 
-    return false;
+    return m_anchorNode->hasEditableStyle() && !Position::nodeIsUserSelectNone(m_anchorNode) && Position(*this).atEditingBoundary();
 }
 
 } // namespace WebCore

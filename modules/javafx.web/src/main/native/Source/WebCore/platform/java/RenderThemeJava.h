@@ -79,7 +79,7 @@ protected:
     Color platformInactiveSelectionForegroundColor(OptionSet<StyleColor::Options>) const override;
 
 #if ENABLE(VIDEO)
-    String mediaControlsScript() override;
+    virtual Vector<String, 2> mediaControlsScripts() override;
     String extraMediaControlsStyleSheet() override;
 
     String formatMediaControlsCurrentTime(float currentTime, float duration) const override;

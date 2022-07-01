@@ -35,37 +35,65 @@
 
 namespace WTF {
 
+namespace {
+
+struct DispatchWorkItem {
+    WTF_MAKE_STRUCT_FAST_ALLOCATED;
+    Ref<WorkQueue> m_workQueue;
+    Function<void()> m_function;
+    void operator()() { m_function(); }
+};
+
+}
+
+template<typename T> static void dispatchWorkItem(void* dispatchContext)
+{
+    T* item = reinterpret_cast<T*>(dispatchContext);
+    (*item)();
+    delete item;
+}
+
 void WorkQueue::dispatch(Function<void()>&& function)
 {
-    dispatch_async(m_dispatchQueue, makeBlockPtr([protectedThis = makeRef(*this), function = WTFMove(function)] {
+    dispatch_async_f(m_dispatchQueue.get(), new DispatchWorkItem { makeRef(*this), WTFMove(function) }, dispatchWorkItem<DispatchWorkItem>);
 #if PLATFORM(JAVA)
         AttachThreadAsDaemonToJavaEnv autoAttach;
 #endif
-        function();
-    }).get());
 }
 
 void WorkQueue::dispatchAfter(Seconds duration, Function<void()>&& function)
 {
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, duration.nanosecondsAs<int64_t>()), m_dispatchQueue, makeBlockPtr([protectedThis = makeRef(*this), function = WTFMove(function)] {
+    dispatch_after_f(dispatch_time(DISPATCH_TIME_NOW, duration.nanosecondsAs<int64_t>()), m_dispatchQueue.get(), new DispatchWorkItem { makeRef(*this),  WTFMove(function) }, dispatchWorkItem<DispatchWorkItem>);
 #if PLATFORM(JAVA)
         AttachThreadAsDaemonToJavaEnv autoAttach;
 #endif
-        function();
-    }).get());
+}
+
+void WorkQueue::dispatchSync(Function<void()>&& function)
+{
+    dispatch_sync_f(m_dispatchQueue.get(), new Function<void()> { WTFMove(function) }, dispatchWorkItem<Function<void()>>);
+}
+
+Ref<WorkQueue> WorkQueue::constructMainWorkQueue()
+{
+    return adoptRef(*new WorkQueue(dispatch_get_main_queue()));
+}
+
+WorkQueue::WorkQueue(OSObjectPtr<dispatch_queue_t>&& dispatchQueue)
+    : m_dispatchQueue(WTFMove(dispatchQueue))
+{
 }
 
 void WorkQueue::platformInitialize(const char* name, Type type, QOS qos)
 {
     dispatch_queue_attr_t attr = type == Type::Concurrent ? DISPATCH_QUEUE_CONCURRENT : DISPATCH_QUEUE_SERIAL;
     attr = dispatch_queue_attr_make_with_qos_class(attr, Thread::dispatchQOSClass(qos), 0);
-    m_dispatchQueue = dispatch_queue_create(name, attr);
-    dispatch_set_context(m_dispatchQueue, this);
+    m_dispatchQueue = adoptOSObject(dispatch_queue_create(name, attr));
+    dispatch_set_context(m_dispatchQueue.get(), this);
 }
 
 void WorkQueue::platformInvalidate()
 {
-    dispatch_release(m_dispatchQueue);
 }
 
 void WorkQueue::concurrentApply(size_t iterations, WTF::Function<void(size_t index)>&& function)

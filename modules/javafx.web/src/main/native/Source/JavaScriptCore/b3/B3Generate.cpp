@@ -29,6 +29,7 @@
 #if ENABLE(B3_JIT)
 
 #include "AirGenerate.h"
+#include "B3CanonicalizePrePostIncrements.h"
 #include "B3Common.h"
 #include "B3DuplicateTails.h"
 #include "B3EliminateCommonSubexpressions.h"
@@ -117,6 +118,8 @@ void generateToAir(Procedure& procedure)
     lowerMacrosAfterOptimizations(procedure);
     legalizeMemoryOffsets(procedure);
     moveConstants(procedure);
+    if (Options::useB3CanonicalizePrePostIncrements() && procedure.optLevel() >= 2)
+        canonicalizePrePostIncrements(procedure);
     eliminateDeadCode(procedure);
 
     // FIXME: We should run pureCSE here to clean up some platform specific changes from the previous phases.
@@ -133,6 +136,7 @@ void generateToAir(Procedure& procedure)
     }
 
     lowerToAir(procedure);
+    procedure.freeUnneededB3ValuesAfterLowering();
 }
 
 } } // namespace JSC::B3

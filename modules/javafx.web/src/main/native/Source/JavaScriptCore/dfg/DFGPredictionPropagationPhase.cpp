@@ -862,6 +862,7 @@ private:
             break;
         }
 
+        case EnumeratorGetByVal:
         case ArrayPop:
         case ArrayPush:
         case RegExpExec:
@@ -882,7 +883,6 @@ private:
         case GetPrivateName:
         case GetPrivateNameById:
         case MultiGetByOffset:
-        case GetDirectPname:
         case Call:
         case DirectCall:
         case TailCallInlinedCaller:
@@ -1025,6 +1025,7 @@ private:
         case DeleteByVal:
         case DeleteById:
         case MultiDeleteByOffset:
+        case ToBoolean:
         case LogicalNot:
         case CompareLess:
         case CompareLessEq:
@@ -1157,6 +1158,7 @@ private:
         case StringCharAt:
         case CallStringConstructor:
         case ToString:
+        case FunctionToString:
         case NumberToStringWithRadix:
         case NumberToStringWithValidRadixConstant:
         case MakeRope:
@@ -1203,25 +1205,20 @@ private:
             setPrediction(SpecObjectOther);
             break;
 
-        case InByVal:
-        case InById:
-            setPrediction(SpecBoolean);
-            break;
-
-        case HasOwnProperty:
-            setPrediction(SpecBoolean);
-            break;
-
-        case GetEnumerableLength: {
+        case EnumeratorNextExtractMode:
+        case EnumeratorNextExtractIndex: {
             setPrediction(SpecInt32Only);
             break;
         }
-        case HasOwnStructureProperty:
-        case InStructureProperty:
-        case HasIndexedProperty:
-        case HasEnumerableIndexedProperty:
-        case HasEnumerableStructureProperty:
-        case HasEnumerableProperty: {
+
+        case EnumeratorInByVal:
+        case EnumeratorHasOwnProperty:
+        case InByVal:
+        case InById:
+        case HasPrivateName:
+        case HasPrivateBrand:
+        case HasOwnProperty:
+        case HasIndexedProperty: {
             setPrediction(SpecBoolean);
             break;
         }
@@ -1229,18 +1226,17 @@ private:
             setPrediction(SpecCell);
             break;
         }
-        case GetEnumeratorStructurePname: {
-            setPrediction(SpecCell | SpecOther);
+
+        case EnumeratorNextUpdateIndexAndMode: {
+            setPrediction(SpecFullNumber);
             break;
         }
-        case GetEnumeratorGenericPname: {
-            setPrediction(SpecCell | SpecOther);
+
+        case EnumeratorNextUpdatePropertyName: {
+            setPrediction(SpecString | SpecOther);
             break;
         }
-        case ToIndexString: {
-            setPrediction(SpecString);
-            break;
-        }
+
         case ParseInt: {
             // We expect this node to almost always produce an int32. However,
             // it's possible it produces NaN or integers out of int32 range. We
@@ -1453,14 +1449,15 @@ private:
         case WeakMapSet:
         case FilterCallLinkStatus:
         case FilterGetByStatus:
-        case FilterPutByIdStatus:
-        case FilterInByIdStatus:
+        case FilterPutByStatus:
+        case FilterInByStatus:
         case FilterDeleteByStatus:
         case FilterCheckPrivateBrandStatus:
         case FilterSetPrivateBrandStatus:
         case ClearCatchLocals:
         case DataViewSet:
         case InvalidationPoint:
+        case ObjectAssign:
             break;
 
         // This gets ignored because it only pretends to produce a value.

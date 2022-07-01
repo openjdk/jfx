@@ -33,10 +33,12 @@
 #include "MessageEvent.h"
 #include "MessagePortChannelProvider.h"
 #include "MessageWithMessagePorts.h"
+#include "StructuredSerializeOptions.h"
 #include "WorkerGlobalScope.h"
 #include "WorkerThread.h"
 #include <wtf/CompletionHandler.h>
 #include <wtf/IsoMallocInlines.h>
+#include <wtf/Lock.h>
 #include <wtf/Scope.h>
 
 namespace WebCore {
@@ -44,7 +46,7 @@ namespace WebCore {
 WTF_MAKE_ISO_ALLOCATED_IMPL(MessagePort);
 
 static Lock allMessagePortsLock;
-static HashMap<MessagePortIdentifier, MessagePort*>& allMessagePorts()
+static HashMap<MessagePortIdentifier, MessagePort*>& allMessagePorts() WTF_REQUIRES_LOCK(allMessagePortsLock)
 {
     static NeverDestroyed<HashMap<MessagePortIdentifier, MessagePort*>> map;
     return map;
@@ -61,7 +63,7 @@ void MessagePort::deref() const
     // This allows isExistingMessagePortLocallyReachable and notifyMessageAvailable to easily query the map and manipulate MessagePort instances.
 
     if (!--m_refCount) {
-        Locker<Lock> locker(allMessagePortsLock);
+        Locker locker { allMessagePortsLock };
 
         if (m_refCount)
             return;
@@ -76,14 +78,14 @@ void MessagePort::deref() const
 
 bool MessagePort::isExistingMessagePortLocallyReachable(const MessagePortIdentifier& identifier)
 {
-    Locker<Lock> locker(allMessagePortsLock);
+    Locker locker { allMessagePortsLock };
     auto* port = allMessagePorts().get(identifier);
     return port && port->isLocallyReachable();
 }
 
 void MessagePort::notifyMessageAvailable(const MessagePortIdentifier& identifier)
 {
-    Locker<Lock> locker(allMessagePortsLock);
+    Locker locker { allMessagePortsLock };
     if (auto* port = allMessagePorts().get(identifier))
         port->messageAvailable();
 
@@ -101,7 +103,7 @@ MessagePort::MessagePort(ScriptExecutionContext& scriptExecutionContext, const M
 {
     LOG(MessagePorts, "Created MessagePort %s (%p) in process %" PRIu64, m_identifier.logString().utf8().data(), this, Process::identifier().toUInt64());
 
-    Locker<Lock> locker(allMessagePortsLock);
+    Locker locker { allMessagePortsLock };
     allMessagePorts().set(m_identifier, this);
 
     // Make sure the WeakPtrFactory gets initialized eagerly on the thread the MessagePort gets constructed on for thread-safety reasons.
@@ -131,7 +133,7 @@ void MessagePort::entangle()
     MessagePortChannelProvider::fromContext(*m_scriptExecutionContext).entangleLocalPortInThisProcessToRemote(m_identifier, m_remoteIdentifier);
 }
 
-ExceptionOr<void> MessagePort::postMessage(JSC::JSGlobalObject& state, JSC::JSValue messageValue, PostMessageOptions&& options)
+ExceptionOr<void> MessagePort::postMessage(JSC::JSGlobalObject& state, JSC::JSValue messageValue, StructuredSerializeOptions&& options)
 {
     LOG(MessagePorts, "Attempting to post message to port %s (to be received by port %s)", m_identifier.logString().utf8().data(), m_remoteIdentifier.logString().utf8().data());
 
@@ -230,13 +232,9 @@ void MessagePort::close()
         return;
     m_closed = true;
 
-    if (isMainThread())
-        MessagePortChannelProvider::singleton().messagePortClosed(m_identifier);
-    else {
-        callOnMainThread([identifier = m_identifier] {
-            MessagePortChannelProvider::singleton().messagePortClosed(identifier);
-        });
-    }
+    ensureOnMainThread([identifier = m_identifier] {
+        MessagePortChannelProvider::singleton().messagePortClosed(identifier);
+    });
 
     removeAllEventListeners();
 }

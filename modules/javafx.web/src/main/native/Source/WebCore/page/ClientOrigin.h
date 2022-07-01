@@ -37,9 +37,10 @@ struct ClientOrigin {
 
     unsigned hash() const;
     bool operator==(const ClientOrigin&) const;
+    bool operator!=(const ClientOrigin& other) const { return !(*this == other); }
 
     template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static Optional<ClientOrigin> decode(Decoder&);
+    template<class Decoder> static std::optional<ClientOrigin> decode(Decoder&);
 
     ClientOrigin isolatedCopy() const;
     bool isRelated(const SecurityOriginData& other) const { return topOrigin == other || clientOrigin == other; }
@@ -75,16 +76,16 @@ template<class Encoder> inline void ClientOrigin::encode(Encoder& encoder) const
     encoder << clientOrigin;
 }
 
-template<class Decoder> inline Optional<ClientOrigin> ClientOrigin::decode(Decoder& decoder)
+template<class Decoder> inline std::optional<ClientOrigin> ClientOrigin::decode(Decoder& decoder)
 {
-    Optional<SecurityOriginData> topOrigin;
-    Optional<SecurityOriginData> clientOrigin;
+    std::optional<SecurityOriginData> topOrigin;
+    std::optional<SecurityOriginData> clientOrigin;
     decoder >> topOrigin;
     if (!topOrigin || topOrigin->isEmpty())
-        return WTF::nullopt;
+        return std::nullopt;
     decoder >> clientOrigin;
     if (!clientOrigin || clientOrigin->isEmpty())
-        return WTF::nullopt;
+        return std::nullopt;
 
     return ClientOrigin { WTFMove(*topOrigin), WTFMove(*clientOrigin) };
 }
@@ -102,7 +103,7 @@ struct ClientOriginKeyHash {
 template<> struct HashTraits<WebCore::ClientOrigin> : GenericHashTraits<WebCore::ClientOrigin> {
     static WebCore::ClientOrigin emptyValue() { return WebCore::ClientOrigin::emptyKey(); }
 
-    static void constructDeletedValue(WebCore::ClientOrigin& slot) { slot.topOrigin = WebCore::SecurityOriginData(HashTableDeletedValue); }
+    static void constructDeletedValue(WebCore::ClientOrigin& slot) { new (NotNull, &slot.topOrigin) WebCore::SecurityOriginData(WTF::HashTableDeletedValue); }
     static bool isDeletedValue(const WebCore::ClientOrigin& slot) { return slot.topOrigin.isHashTableDeletedValue(); }
 };
 

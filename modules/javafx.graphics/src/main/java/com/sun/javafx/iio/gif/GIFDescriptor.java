@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -37,12 +37,12 @@ public class GIFDescriptor extends ImageDescriptor {
         new Signature(new byte[] { 'G', 'I', 'F', '8', '9', 'a' })
     };
 
-//    private static final String[] MIMETypes = { "image/gif" };
+    private static final String[] mimeSubtypes = { "gif" };
 
     private static ImageDescriptor theInstance = null;
 
     private GIFDescriptor() {
-        super(formatName, extensions, signatures);
+        super(formatName, extensions, signatures, mimeSubtypes);
     }
 
     public static synchronized ImageDescriptor getInstance() {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2020, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -85,13 +85,11 @@ public abstract class FocusedWindowTestBase {
         int counter = 0;
 
         System.gc();
-        System.runFinalization();
 
         while (counter < 10 && weakReference.get() != null) {
             Thread.sleep(100);
             counter = counter + 1;
             System.gc();
-            System.runFinalization();
         }
 
         Assert.assertNull(weakReference.get());

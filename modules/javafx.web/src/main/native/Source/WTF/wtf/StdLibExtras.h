@@ -80,7 +80,7 @@
  * - https://bugs.webkit.org/show_bug.cgi?id=38045
  * - http://gcc.gnu.org/bugzilla/show_bug.cgi?id=43976
  */
-#if (CPU(ARM) || CPU(MIPS)) && COMPILER(GCC_COMPATIBLE)
+#if (CPU(ARM) || CPU(MIPS) || CPU(RISCV64)) && COMPILER(GCC_COMPATIBLE)
 template<typename Type>
 inline bool isPointerTypeAlignmentOkay(Type* ptr)
 {
@@ -206,7 +206,7 @@ inline ArrayElementType* binarySearchImpl(ArrayType& array, size_t size, KeyType
     size_t offset = 0;
     while (size > 1) {
         size_t pos = (size - 1) >> 1;
-        KeyType val = extractKey(&array[offset + pos]);
+        auto val = extractKey(&array[offset + pos]);
 
         if (val == key)
             return &array[offset + pos];
@@ -527,28 +527,65 @@ constexpr auto constructFixedSizeArrayWithArguments(Args&&... args) -> decltype(
     return constructFixedSizeArrayWithArgumentsImpl<ResultType>(tuple, std::forward<Args>(args)...);
 }
 
+// FIXME: Use std::is_sorted instead of this and remove it, once we require C++20.
+template<typename Iterator, typename Predicate> constexpr bool isSortedConstExpr(Iterator first, Iterator last, Predicate predicate)
+{
+    if (first == last)
+        return true;
+    auto current = first;
+    auto previous = current;
+    while (++current != last) {
+        if (!predicate(*previous, *current))
+            return false;
+        previous = current;
+    }
+    return true;
+}
+
+// FIXME: Use std::is_sorted instead of this and remove it, once we require C++20.
+template<typename Iterator> constexpr bool isSortedConstExpr(Iterator first, Iterator last)
+{
+    return isSortedConstExpr(first, last, [] (auto& a, auto& b) { return a < b; });
+}
+
+// FIXME: Use std::all_of instead of this and remove it, once we require C++20.
+template<typename Iterator, typename Predicate> constexpr bool allOfConstExpr(Iterator first, Iterator last, Predicate predicate)
+{
+    for (; first != last; ++first) {
+        if (!predicate(*first))
+            return false;
+    }
+    return true;
+}
+
+template<typename OptionalType, class Callback> typename OptionalType::value_type valueOrCompute(OptionalType optional, Callback callback)
+{
+    return optional ? *optional : callback();
+}
+
 } // namespace WTF
 
 #define WTFMove(value) std::move<WTF::CheckMoveParameter>(value)
 
+using WTF::GB;
 using WTF::KB;
 using WTF::MB;
-using WTF::GB;
 using WTF::approximateBinarySearch;
 using WTF::binarySearch;
 using WTF::bitwise_cast;
 using WTF::callStatelessLambda;
 using WTF::checkAndSet;
+using WTF::constructFixedSizeArrayWithArguments;
 using WTF::findBitInWord;
 using WTF::insertIntoBoundedVector;
+using WTF::is8ByteAligned;
 using WTF::isCompilationThread;
 using WTF::isPointerAligned;
 using WTF::isStatelessLambda;
-using WTF::is8ByteAligned;
+using WTF::makeUnique;
+using WTF::makeUniqueWithoutFastMallocCheck;
 using WTF::mergeDeduplicatedSorted;
 using WTF::roundUpToMultipleOf;
 using WTF::safeCast;
 using WTF::tryBinarySearch;
-using WTF::makeUnique;
-using WTF::makeUniqueWithoutFastMallocCheck;
-using WTF::constructFixedSizeArrayWithArguments;
+using WTF::valueOrCompute;

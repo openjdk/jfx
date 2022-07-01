@@ -317,11 +317,8 @@ static const guint16 ascii_table_data[256] = {
 
 const guint16 * const g_ascii_table = ascii_table_data;
 
-#if defined (HAVE_NEWLOCALE) && \
-    defined (HAVE_USELOCALE) && \
-    defined (HAVE_STRTOD_L) && \
-    defined (HAVE_STRTOULL_L) && \
-    defined (HAVE_STRTOLL_L)
+#if defined(HAVE_NEWLOCALE) && \
+    defined(HAVE_USELOCALE)
 #define USE_XLOCALE 1
 #endif
 
@@ -380,10 +377,45 @@ g_strdup (const gchar *str)
  *
  * Returns: a pointer to the newly-allocated copy of the memory, or %NULL if @mem
  *  is %NULL.
+ * Deprecated: 2.68: Use g_memdup2() instead, as it accepts a #gsize argument
+ *     for @byte_size, avoiding the possibility of overflow in a #gsize → #guint
+ *     conversion
  */
 gpointer
 g_memdup (gconstpointer mem,
           guint         byte_size)
+{
+  gpointer new_mem;
+
+  if (mem && byte_size != 0)
+    {
+      new_mem = g_malloc (byte_size);
+      memcpy (new_mem, mem, byte_size);
+    }
+  else
+    new_mem = NULL;
+
+  return new_mem;
+}
+
+/**
+ * g_memdup2:
+ * @mem: (nullable): the memory to copy.
+ * @byte_size: the number of bytes to copy.
+ *
+ * Allocates @byte_size bytes of memory, and copies @byte_size bytes into it
+ * from @mem. If @mem is %NULL it returns %NULL.
+ *
+ * This replaces g_memdup(), which was prone to integer overflows when
+ * converting the argument from a #gsize to a #guint.
+ *
+ * Returns: (nullable): a pointer to the newly-allocated copy of the memory,
+ *    or %NULL if @mem is %NULL.
+ * Since: 2.68
+ */
+gpointer
+g_memdup2 (gconstpointer mem,
+           gsize         byte_size)
 {
   gpointer new_mem;
 
@@ -696,7 +728,7 @@ gdouble
 g_ascii_strtod (const gchar *nptr,
                 gchar      **endptr)
 {
-#ifdef USE_XLOCALE
+#if defined(USE_XLOCALE) && defined(HAVE_STRTOD_L)
 
   g_return_val_if_fail (nptr != NULL, 0);
 
@@ -882,7 +914,7 @@ g_ascii_strtod (const gchar *nptr,
  * the string back using g_ascii_strtod() gives the same machine-number
  * (on machines with IEEE compatible 64bit doubles). It is
  * guaranteed that the size of the resulting string will never
- * be larger than @G_ASCII_DTOSTR_BUF_SIZE bytes, including the terminating
+ * be larger than %G_ASCII_DTOSTR_BUF_SIZE bytes, including the terminating
  * nul character, which is always added.
  *
  * Returns: The pointer to the buffer with the converted string.
@@ -910,13 +942,16 @@ g_ascii_dtostr (gchar       *buffer,
  * @buffer: A buffer to place the resulting string in
  * @buf_len: The length of the buffer.
  * @format: The printf()-style format to use for the
- *          code to use for converting.
+ *   code to use for converting
  * @d: The #gdouble to convert
  *
  * Converts a #gdouble to a string, using the '.' as
  * decimal point. To format the number you pass in
  * a printf()-style format string. Allowed conversion
  * specifiers are 'e', 'E', 'f', 'F', 'g' and 'G'.
+ *
+ * The @format must just be a single format specifier
+ * starting with `%`, expecting a #gdouble argument.
  *
  * The returned buffer is guaranteed to be nul-terminated.
  *
@@ -933,6 +968,10 @@ g_ascii_formatd (gchar       *buffer,
 {
 #ifdef USE_XLOCALE
   locale_t old_locale;
+
+  g_return_val_if_fail (buffer != NULL, NULL);
+  g_return_val_if_fail (format[0] == '%', NULL);
+  g_return_val_if_fail (strpbrk (format + 1, "'l%") == NULL, NULL);
 
   old_locale = uselocale (get_C_locale ());
    _g_snprintf (buffer, buf_len, format, d);
@@ -1031,7 +1070,7 @@ g_ascii_formatd (gchar       *buffer,
 #define TOUPPER(c)              (ISLOWER (c) ? (c) - 'a' + 'A' : (c))
 #define TOLOWER(c)              (ISUPPER (c) ? (c) - 'A' + 'a' : (c))
 
-#ifndef USE_XLOCALE
+#if !defined(USE_XLOCALE) || !defined(HAVE_STRTOULL_L) || !defined(HAVE_STRTOLL_L)
 
 static guint64
 g_parse_long_long (const gchar  *nptr,
@@ -1156,7 +1195,7 @@ g_parse_long_long (const gchar  *nptr,
     }
   return 0;
 }
-#endif /* !USE_XLOCALE */
+#endif /* !defined(USE_XLOCALE) || !defined(HAVE_STRTOULL_L) || !defined(HAVE_STRTOLL_L) */
 
 /**
  * g_ascii_strtoull:
@@ -1197,7 +1236,7 @@ g_ascii_strtoull (const gchar *nptr,
                   gchar      **endptr,
                   guint        base)
 {
-#ifdef USE_XLOCALE
+#if defined(USE_XLOCALE) && defined(HAVE_STRTOULL_L)
   return strtoull_l (nptr, endptr, base, get_C_locale ());
 #else
   gboolean negative;
@@ -1244,7 +1283,7 @@ g_ascii_strtoll (const gchar *nptr,
                  gchar      **endptr,
                  guint        base)
 {
-#ifdef USE_XLOCALE
+#if defined(USE_XLOCALE) && defined(HAVE_STRTOLL_L)
   return strtoll_l (nptr, endptr, base, get_C_locale ());
 #else
   gboolean negative;
@@ -1861,7 +1900,9 @@ g_ascii_strcasecmp (const gchar *s1,
  * @n: number of characters to compare
  *
  * Compare @s1 and @s2, ignoring the case of ASCII characters and any
- * characters after the first @n in each string.
+ * characters after the first @n in each string. If either string is
+ * less than @n bytes long, comparison will stop at the first nul byte
+ * encountered.
  *
  * Unlike the BSD strcasecmp() function, this only recognizes standard
  * ASCII letters and ignores the locale, treating all non-ASCII
@@ -2011,26 +2052,30 @@ g_strncasecmp (const gchar *s1,
  * g_strdelimit:
  * @string: the string to convert
  * @delimiters: (nullable): a string containing the current delimiters,
- *     or %NULL to use the standard delimiters defined in #G_STR_DELIMITERS
+ *     or %NULL to use the standard delimiters defined in %G_STR_DELIMITERS
  * @new_delimiter: the new delimiter character
  *
  * Converts any delimiter characters in @string to @new_delimiter.
+ *
  * Any characters in @string which are found in @delimiters are
  * changed to the @new_delimiter character. Modifies @string in place,
- * and returns @string itself, not a copy. The return value is to
- * allow nesting such as
+ * and returns @string itself, not a copy.
+ *
+ * The return value is to allow nesting such as:
+ *
  * |[<!-- language="C" -->
  *   g_ascii_strup (g_strdelimit (str, "abc", '?'))
  * ]|
  *
- * In order to modify a copy, you may use `g_strdup()`:
+ * In order to modify a copy, you may use g_strdup():
+ *
  * |[<!-- language="C" -->
  *   reformatted = g_strdelimit (g_strdup (const_str), "abc", '?');
  *   ...
  *   g_free (reformatted);
  * ]|
  *
- * Returns: @string
+ * Returns: the modified @string
  */
 gchar *
 g_strdelimit (gchar       *string,
@@ -2060,21 +2105,24 @@ g_strdelimit (gchar       *string,
  * @substitutor: replacement character for disallowed bytes
  *
  * For each character in @string, if the character is not in @valid_chars,
- * replaces the character with @substitutor. Modifies @string in place,
- * and return @string itself, not a copy. The return value is to allow
- * nesting such as
+ * replaces the character with @substitutor.
+ *
+ * Modifies @string in place, and return @string itself, not a copy. The
+ * return value is to allow nesting such as:
+ *
  * |[<!-- language="C" -->
  *   g_ascii_strup (g_strcanon (str, "abc", '?'))
  * ]|
  *
- * In order to modify a copy, you may use `g_strdup()`:
+ * In order to modify a copy, you may use g_strdup():
+ *
  * |[<!-- language="C" -->
  *   reformatted = g_strcanon (g_strdup (const_str), "abc", '?');
  *   ...
  *   g_free (reformatted);
  * ]|
  *
- * Returns: @string
+ * Returns: the modified @string
  */
 gchar *
 g_strcanon (gchar       *string,
@@ -2711,10 +2759,9 @@ g_strjoin (const gchar *separator,
 
 /**
  * g_strstr_len:
- * @haystack: a string
- * @haystack_len: the maximum length of @haystack. Note that -1 is
- *     a valid length, if @haystack is nul-terminated, meaning it will
- *     search through the whole string.
+ * @haystack: a nul-terminated string
+ * @haystack_len: the maximum length of @haystack in bytes. A length of -1
+ *     can be used to mean "search the entire string", like `strstr()`.
  * @needle: the string to search for
  *
  * Searches the string @haystack for the first occurrence
@@ -2818,7 +2865,8 @@ g_strrstr (const gchar *haystack,
 /**
  * g_strrstr_len:
  * @haystack: a nul-terminated string
- * @haystack_len: the maximum length of @haystack
+ * @haystack_len: the maximum length of @haystack in bytes. A length of -1
+ *     can be used to mean "search the entire string", like g_strrstr().
  * @needle: the nul-terminated string to search for
  *
  * Searches the string @haystack for the last occurrence

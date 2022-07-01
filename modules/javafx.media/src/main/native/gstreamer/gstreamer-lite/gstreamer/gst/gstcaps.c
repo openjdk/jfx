@@ -35,7 +35,8 @@
  * handle or produce at runtime.
  *
  * A #GstCaps can be constructed with the following code fragment:
- * |[<!-- language="C" -->
+ *
+ * ``` C
  *   GstCaps *caps = gst_caps_new_simple ("video/x-raw",
  *      "format", G_TYPE_STRING, "I420",
  *      "framerate", GST_TYPE_FRACTION, 25, 1,
@@ -43,18 +44,18 @@
  *      "width", G_TYPE_INT, 320,
  *      "height", G_TYPE_INT, 240,
  *      NULL);
- * ]|
+ * ```
  *
- * A #GstCaps is fixed when it has no properties with ranges or lists. Use
+ * A #GstCaps is fixed when it has no fields with ranges or lists. Use
  * gst_caps_is_fixed() to test for fixed caps. Fixed caps can be used in a
  * caps event to notify downstream elements of the current media type.
  *
  * Various methods exist to work with the media types such as subtracting
  * or intersecting.
  *
- * Be aware that the current #GstCaps / #GstStructure serialization into string
- * has limited support for nested #GstCaps / #GstStructure fields. It can only
- * support one level of nesting. Using more levels will lead to unexpected
+ * Be aware that until 1.20 the #GstCaps / #GstStructure serialization into string
+ * had limited support for nested #GstCaps / #GstStructure fields. It could only
+ * support one level of nesting. Using more levels would lead to unexpected
  * behavior when using serialization features, such as gst_caps_to_string() or
  * gst_value_serialize() and their counterparts.
  */
@@ -246,7 +247,6 @@ gst_caps_init (GstCaps * caps)
  * Creates a new #GstCaps that is empty.  That is, the returned
  * #GstCaps contains no media formats.
  * The #GstCaps is guaranteed to be writable.
- * Caller is responsible for unreffing the returned caps.
  *
  * Returns: (transfer full): the new #GstCaps
  */
@@ -290,7 +290,6 @@ gst_caps_new_any (void)
  *
  * Creates a new #GstCaps that contains one #GstStructure with name
  * @media_type.
- * Caller is responsible for unreffing the returned caps.
  *
  * Returns: (transfer full): the new #GstCaps
  */
@@ -317,7 +316,6 @@ gst_caps_new_empty_simple (const char *media_type)
  * Creates a new #GstCaps that contains one #GstStructure.  The
  * structure is defined by the arguments, which have the same format
  * as gst_structure_new().
- * Caller is responsible for unreffing the returned caps.
  *
  * Returns: (transfer full): the new #GstCaps
  */
@@ -400,10 +398,9 @@ G_DEFINE_POINTER_TYPE (GstStaticCaps, gst_static_caps);
  *
  * Converts a #GstStaticCaps to a #GstCaps.
  *
- * Returns: (transfer full) (nullable): a pointer to the #GstCaps. Unref
- *     after usage. Since the core holds an additional ref to the
- *     returned caps, use gst_caps_make_writable() on the returned caps
- *     to modify it.
+ * Returns: (transfer full) (nullable): a pointer to the #GstCaps. Since the
+ *     core holds an additional ref to the returned caps, use
+ *     gst_caps_make_writable() on the returned caps to modify it.
  */
 GstCaps *
 gst_static_caps_get (GstStaticCaps * static_caps)
@@ -463,7 +460,7 @@ no_string:
  * gst_static_caps_cleanup:
  * @static_caps: the #GstStaticCaps to clean
  *
- * Clean up the cached caps contained in @static_caps.
+ * Cleans up the cached caps contained in @static_caps.
  */
 void
 gst_static_caps_cleanup (GstStaticCaps * static_caps)
@@ -700,7 +697,7 @@ gst_caps_append_structure_full (GstCaps * caps, GstStructure * structure,
  * @caps: the #GstCaps to remove from
  * @idx: Index of the structure to remove
  *
- * removes the structure with the given index from the list of structures
+ * Removes the structure with the given index from the list of structures
  * contained in @caps.
  */
 void
@@ -721,7 +718,7 @@ gst_caps_remove_structure (GstCaps * caps, guint idx)
  * @caps: (transfer full): the #GstCaps to merge into
  * @structure: (transfer full): the #GstStructure to merge
  *
- * Appends @structure to @caps if its not already expressed by @caps.
+ * Appends @structure to @caps if it is not already expressed by @caps.
  *
  * Returns: (transfer full): the merged caps.
  */
@@ -859,20 +856,16 @@ gst_caps_get_size (const GstCaps * caps)
  * @caps: a #GstCaps
  * @index: the index of the structure
  *
- * Finds the structure in @caps that has the index @index, and
- * returns it.
+ * Finds the structure in @caps at @index, and returns it.
  *
- * WARNING: This function takes a const GstCaps *, but returns a
- * non-const GstStructure *.  This is for programming convenience --
+ * WARNING: This function takes a `const GstCaps *`, but returns a
+ * non-const `GstStructure *`.  This is for programming convenience --
  * the caller should be aware that structures inside a constant
  * #GstCaps should not be modified. However, if you know the caps
  * are writable, either because you have just copied them or made
  * them writable with gst_caps_make_writable(), you may modify the
  * structure returned in the usual way, e.g. with functions like
  * gst_structure_set().
- *
- * You do not need to free or unref the structure returned, it
- * belongs to the #GstCaps.
  *
  * Returns: (transfer none): a pointer to the #GstStructure corresponding
  *     to @index
@@ -891,20 +884,16 @@ gst_caps_get_structure (const GstCaps * caps, guint index)
  * @caps: a #GstCaps
  * @index: the index of the structure
  *
- * Finds the features in @caps that has the index @index, and
- * returns it.
+ * Finds the features in @caps at @index, and returns it.
  *
- * WARNING: This function takes a const GstCaps *, but returns a
- * non-const GstCapsFeatures *.  This is for programming convenience --
- * the caller should be aware that structures inside a constant
+ * WARNING: This function takes a `const GstCaps *`, but returns a
+ * non-const `GstCapsFeatures *`.  This is for programming convenience --
+ * the caller should be aware that features inside a constant
  * #GstCaps should not be modified. However, if you know the caps
  * are writable, either because you have just copied them or made
  * them writable with gst_caps_make_writable(), you may modify the
  * features returned in the usual way, e.g. with functions like
  * gst_caps_features_add().
- *
- * You do not need to free or unref the structure returned, it
- * belongs to the #GstCaps.
  *
  * Returns: (transfer none) (nullable): a pointer to the #GstCapsFeatures
  *     corresponding to @index
@@ -950,7 +939,7 @@ gst_caps_get_features (const GstCaps * caps, guint index)
  * @index: the index of the structure
  * @features: (allow-none) (transfer full): the #GstCapsFeatures to set
  *
- * Sets the #GstCapsFeatures @features for the structure at @index.
+ * Sets the @features for the structure at @index.
  *
  * Since: 1.2
  */
@@ -982,7 +971,7 @@ gst_caps_set_features (GstCaps * caps, guint index, GstCapsFeatures * features)
  * @caps: a #GstCaps
  * @features: (allow-none) (transfer full): the #GstCapsFeatures to set
  *
- * Sets the #GstCapsFeatures @features for all the structures of @caps.
+ * Sets the @features for all the structures of @caps.
  *
  * Since: 1.16
  */
@@ -1056,7 +1045,7 @@ gst_caps_copy_nth (const GstCaps * caps, guint nth)
  * gst_caps_truncate:
  * @caps: (transfer full): the #GstCaps to truncate
  *
- * Discard all but the first structure from @caps. Useful when
+ * Discards all but the first structure from @caps. Useful when
  * fixating.
  *
  * This function takes ownership of @caps and will call gst_caps_make_writable()
@@ -1064,7 +1053,7 @@ gst_caps_copy_nth (const GstCaps * caps, guint nth)
  * additional reference to it with gst_caps_ref().
  *
  * Note that it is not guaranteed that the returned caps have exactly one
- * structure. If @caps is any or empty caps then then returned caps will be
+ * structure. If @caps is any or empty caps then the returned caps will be
  * the same and contain no structure at all.
  *
  * Returns: (transfer full): truncated caps
@@ -2005,7 +1994,7 @@ gst_caps_normalize_foreach (GQuark field_id, const GValue * value, gpointer ptr)
  *
  * Returns a #GstCaps that represents the same set of formats as
  * @caps, but contains no lists.  Each list is expanded into separate
- * @GstStructures.
+ * #GstStructure.
  *
  * This function takes ownership of @caps and will call gst_caps_make_writable()
  * on it so you must not use @caps afterwards unless you keep an additional
@@ -2253,10 +2242,10 @@ gst_caps_simplify (GstCaps * caps)
  * reference to it with gst_caps_ref().
  *
  * Note that it is not guaranteed that the returned caps have exactly one
- * structure. If @caps are empty caps then then returned caps will be
+ * structure. If @caps are empty caps then the returned caps will be
  * the empty too and contain no structure at all.
  *
- * Calling this function with any caps is not allowed.
+ * Calling this function with ANY caps is not allowed.
  *
  * Returns: (transfer full): the fixated caps
  */
@@ -2296,29 +2285,13 @@ gst_caps_fixate (GstCaps * caps)
 
 /* utility */
 
-/**
- * gst_caps_to_string:
- * @caps: a #GstCaps
- *
- * Converts @caps to a string representation.  This string representation
- * can be converted back to a #GstCaps by gst_caps_from_string().
- *
- * For debugging purposes its easier to do something like this:
- * |[<!-- language="C" -->
- * GST_LOG ("caps are %" GST_PTR_FORMAT, caps);
- * ]|
- * This prints the caps in human readable form.
- *
- * The current implementation of serialization will lead to unexpected results
- * when there are nested #GstCaps / #GstStructure deeper than one level.
- *
- * Returns: (transfer full): a newly allocated string representing @caps.
- */
-gchar *
-gst_caps_to_string (const GstCaps * caps)
+static gchar *
+caps_serialize (const GstCaps * caps, GstSerializeFlags flags)
 {
   guint i, slen, clen;
   GString *s;
+  gboolean nested_structs_brackets =
+      !(flags & GST_SERIALIZE_FLAG_BACKWARD_COMPAT);
 
   /* NOTE:  This function is potentially called by the debug system,
    * so any calls to gst_log() (and GST_DEBUG(), GST_LOG(), etc.)
@@ -2371,13 +2344,65 @@ gst_caps_to_string (const GstCaps * caps)
       priv_gst_caps_features_append_to_gstring (features, s);
       g_string_append_c (s, ')');
     }
-    priv_gst_structure_append_to_gstring (structure, s);
+    priv_gst_structure_append_to_gstring (structure, s,
+        nested_structs_brackets);
   }
   if (s->len && s->str[s->len - 1] == ';') {
     /* remove latest ';' */
     s->str[--s->len] = '\0';
   }
   return g_string_free (s, FALSE);
+}
+
+/**
+ * gst_caps_to_string:
+ * @caps: a #GstCaps
+ *
+ * Converts @caps to a string representation.  This string representation
+ * can be converted back to a #GstCaps by gst_caps_from_string().
+ *
+ * For debugging purposes its easier to do something like this:
+ *
+ * ``` C
+ * GST_LOG ("caps are %" GST_PTR_FORMAT, caps);
+ * ```
+ *
+ * This prints the caps in human readable form.
+ *
+ * The implementation of serialization up to 1.20 would lead to unexpected results
+ * when there were nested #GstCaps / #GstStructure deeper than one level.
+ *
+ * Returns: (transfer full): a newly allocated string representing @caps.
+ */
+gchar *
+gst_caps_to_string (const GstCaps * caps)
+{
+  return caps_serialize (caps, GST_SERIALIZE_FLAG_BACKWARD_COMPAT);
+}
+
+/**
+ * gst_caps_serialize:
+ * @caps: a #GstCaps
+ * @flags: a #GstSerializeFlags
+ *
+ * Converts @caps to a string representation.  This string representation can be
+ * converted back to a #GstCaps by gst_caps_from_string().
+ *
+ * This prints the caps in human readable form.
+ *
+ * This version of the caps serialization function introduces support for nested
+ * structures and caps but the resulting strings won't be parsable with
+ * GStreamer prior to 1.20 unless #GST_SERIALIZE_FLAG_BACKWARD_COMPAT is passed
+ * as @flag.
+ *
+ * Returns: (transfer full): a newly allocated string representing @caps.
+ *
+ * Since: 1.20
+ */
+gchar *
+gst_caps_serialize (const GstCaps * caps, GstSerializeFlags flags)
+{
+  return caps_serialize (caps, flags);
 }
 
 static gboolean
@@ -2405,7 +2430,7 @@ gst_caps_from_string_inplace (GstCaps * caps, const gchar * string)
       break;
     }
 
-    if (!priv_gst_structure_parse_name (s, &s, &end, &next)) {
+    if (!priv_gst_structure_parse_name (s, &s, &end, &next, FALSE)) {
       g_free (copy);
       return FALSE;
     }
@@ -2484,8 +2509,8 @@ gst_caps_from_string_inplace (GstCaps * caps, const gchar * string)
  *
  * Converts @caps from a string representation.
  *
- * The current implementation of serialization will lead to unexpected results
- * when there are nested #GstCaps / #GstStructure deeper than one level.
+ * The implementation of serialization up to 1.20 would lead to unexpected results
+ * when there were nested #GstCaps / #GstStructure deeper than one level.
  *
  * Returns: (transfer full) (nullable): a newly allocated #GstCaps
  */
@@ -2494,7 +2519,7 @@ gst_caps_from_string (const gchar * string)
 {
   GstCaps *caps;
 
-  g_return_val_if_fail (string, FALSE);
+  g_return_val_if_fail (string, NULL);
 
   caps = gst_caps_new_empty ();
   if (gst_caps_from_string_inplace (caps, string)) {
@@ -2677,9 +2702,7 @@ gst_caps_filter_and_map_in_place (GstCaps * caps, GstCapsFilterMapFunc func,
  * followed by a gst_caps_make_writable(). If you only want to hold on to a
  * reference to the data, you should use gst_caps_ref().
  *
- * When you are finished with the caps, call gst_caps_unref() on it.
- *
- * Returns: the new #GstCaps
+ * Returns: (transfer full): the new #GstCaps
  */
 GstCaps *(gst_caps_copy) (const GstCaps * caps)
 {
@@ -2690,7 +2713,7 @@ GstCaps *(gst_caps_copy) (const GstCaps * caps)
  * gst_caps_ref: (skip)
  * @caps: the #GstCaps to reference
  *
- * Add a reference to a #GstCaps object.
+ * Adds a reference to a #GstCaps object.
  *
  * From this point on, until the caller calls gst_caps_unref() or
  * gst_caps_make_writable(), it is guaranteed that the caps object will not
@@ -2711,7 +2734,7 @@ gst_caps_ref (GstCaps * caps)
  * gst_caps_unref: (skip)
  * @caps: a #GstCaps.
  *
- * Unref a #GstCaps and and free all its structures and the
+ * Unrefs a #GstCaps and frees all its structures and the
  * structures' values when the refcount reaches 0.
  */
 void

@@ -155,9 +155,10 @@ void ResourceHandle::continueAfterWillSendRequest(ResourceRequest&& request)
 void ResourceHandle::platformLoadResourceSynchronously(NetworkingContext* context,
                                                const ResourceRequest& request,
                                                StoredCredentialsPolicy,
+                                               SecurityOrigin* origin,
                                                ResourceError& error,
                                                ResourceResponse& response,
-                                               Vector<char>& data)
+                                               Vector<uint8_t>& data)
 {
     URLLoader::loadSynchronously(context, request, error, response, data);
 }

@@ -90,6 +90,8 @@ import com.sun.javafx.scene.SceneHelper;
 import com.sun.javafx.scene.control.GlobalMenuAdapter;
 import com.sun.javafx.tk.Toolkit;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
+
 import javafx.stage.Window;
 import javafx.util.Pair;
 
@@ -1110,11 +1112,13 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
             return Optional.empty();
         }
 
-        final int totalMenus = getSkinnable().getMenus().size();
+        List<Menu> visibleMenus = getSkinnable().getMenus().stream().filter(Menu::isVisible)
+                .collect(Collectors.toList());
+        final int totalMenus = visibleMenus.size();
         int i = 0;
         int nextIndex = 0;
 
-        // Traverse all menus in menubar to find nextIndex
+        // Traverse all visible menus in menubar to find nextIndex
         while (i < totalMenus) {
             i++;
 
@@ -1126,7 +1130,7 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
             }
 
             // if menu at nextIndex is disabled, skip it
-            if (getSkinnable().getMenus().get(nextIndex).isDisable()) {
+            if (visibleMenus.get(nextIndex).isDisable()) {
                 // Calculate new nextIndex by continuing loop
                 startIndex = nextIndex;
             } else {
@@ -1136,7 +1140,7 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
         }
 
         clearMenuButtonHover();
-        return Optional.of(new Pair<>(getSkinnable().getMenus().get(nextIndex), nextIndex));
+        return Optional.of(new Pair<>(visibleMenus.get(nextIndex), nextIndex));
     }
 
     private void updateFocusedIndex() {

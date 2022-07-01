@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -173,19 +173,18 @@ final class MonocleWindowManager {
         }
     }
 
-    static void repaintFromNative () {
-        Platform.runLater(new Runnable () {
-
-            @Override
-            public void run() {
-                Screen.notifySettingsChanged();
-                MonocleWindow focusedWindow = instance.getFocusedWindow();
-                if (focusedWindow != null) {
-                    focusedWindow.setFullScreen(true);
+    static void repaintFromNative(Screen screen) {
+        Platform.runLater(() -> {
+            Screen.notifySettingsChanged();
+            MonocleWindow focusedWindow = instance.getFocusedWindow();
+            if (focusedWindow != null) {
+                if (screen != null && screen.getNativeScreen() != focusedWindow.getScreen().getNativeScreen()) {
+                    focusedWindow.notifyMoveToAnotherScreen(screen);
                 }
-                instance.repaintAll();
-                Toolkit.getToolkit().requestNextPulse();
+                focusedWindow.setFullScreen(true);
             }
+            instance.repaintAll();
+            Toolkit.getToolkit().requestNextPulse();
         });
     }
 

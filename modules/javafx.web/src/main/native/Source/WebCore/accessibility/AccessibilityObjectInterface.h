@@ -33,6 +33,7 @@
 #include "TextIterator.h"
 #include "VisibleSelection.h"
 #include "Widget.h"
+#include <wtf/HashSet.h>
 #include <wtf/RefCounted.h>
 #include <wtf/Variant.h>
 
@@ -238,6 +239,8 @@ enum class AccessibilityRole {
     WebCoreLink,
     Window,
 };
+
+using AccessibilityRoleSet = WTF::HashSet<AccessibilityRole, WTF::IntHash<AccessibilityRole>, WTF::StrongEnumHashTraits<AccessibilityRole>>;
 
 ALWAYS_INLINE String accessibilityRoleToString(AccessibilityRole role)
 {
@@ -791,6 +794,7 @@ public:
     virtual bool isAccessibilityRenderObject() const = 0;
     virtual bool isAccessibilityScrollbar() const = 0;
     virtual bool isAccessibilityScrollViewInstance() const = 0;
+    virtual bool isAXImageInstance() const = 0;
     virtual bool isAccessibilitySVGRoot() const = 0;
     virtual bool isAccessibilitySVGElement() const = 0;
     virtual bool isAccessibilityTableInstance() const = 0;
@@ -967,7 +971,7 @@ public:
     virtual bool hasBoldFont() const = 0;
     virtual bool hasItalicFont() const = 0;
     virtual bool hasMisspelling() const = 0;
-    virtual Optional<SimpleRange> misspellingRange(const SimpleRange& start, AccessibilitySearchDirection) const = 0;
+    virtual std::optional<SimpleRange> misspellingRange(const SimpleRange& start, AccessibilitySearchDirection) const = 0;
     virtual bool hasPlainText() const = 0;
     virtual bool hasSameFont(const AXCoreObject&) const = 0;
     virtual bool hasSameFontColor(const AXCoreObject&) const = 0;
@@ -1014,6 +1018,7 @@ public:
     virtual String brailleLabel() const = 0;
     virtual String brailleRoleDescription() const = 0;
     virtual String embeddedImageDescription() const = 0;
+    virtual std::optional<AccessibilityChildrenVector> imageOverlayElements() = 0;
 
     virtual bool supportsARIAOwns() const = 0;
     virtual bool isActiveDescendantOfFocusedContainer() const = 0;
@@ -1099,7 +1104,6 @@ public:
     virtual AXCoreObject* observableObject() const = 0;
     virtual void linkedUIElements(AccessibilityChildrenVector&) const = 0;
     virtual AXCoreObject* titleUIElement() const = 0;
-    virtual bool exposesTitleUIElement() const = 0;
     virtual AXCoreObject* correspondingLabelForControlElement() const = 0;
     virtual AXCoreObject* correspondingControlForLabelElement() const = 0;
     virtual AXCoreObject* scrollBar(AccessibilityOrientation) = 0;
@@ -1172,11 +1176,9 @@ public:
     virtual Path elementPath() const = 0;
     virtual bool supportsPath() const = 0;
 
-    virtual TextIteratorBehavior textIteratorBehaviorForTextRange() const = 0;
+    virtual TextIteratorBehaviors textIteratorBehaviorForTextRange() const = 0;
     virtual PlainTextRange selectedTextRange() const = 0;
-    // FIXME: why do we need the following two methods if we already have selectedTextRange?
-    virtual unsigned selectionStart() const = 0;
-    virtual unsigned selectionEnd() const = 0;
+    virtual int insertionPointLineNumber() const = 0;
 
     virtual URL url() const = 0;
     virtual VisibleSelection selection() const = 0;
@@ -1224,7 +1226,6 @@ public:
     virtual void decrement() = 0;
 
     virtual void childrenChanged() = 0;
-    virtual void textChanged() = 0;
     virtual void updateAccessibilityRole() = 0;
 
     virtual const AccessibilityChildrenVector& children(bool updateChildrenIfNeeded = true) = 0;
@@ -1232,8 +1233,6 @@ public:
     virtual void addChild(AXCoreObject*) = 0;
     virtual void insertChild(AXCoreObject*, unsigned) = 0;
     Vector<AXID> childrenIDs();
-
-    virtual bool shouldIgnoreAttributeRole() const = 0;
 
     virtual bool canHaveChildren() const = 0;
     virtual bool hasChildren() const = 0;
@@ -1264,7 +1263,7 @@ public:
 
     virtual VisiblePositionRange visiblePositionRange() const = 0;
     virtual VisiblePositionRange visiblePositionRangeForLine(unsigned) const = 0;
-    virtual Optional<SimpleRange> elementRange() const = 0;
+    virtual std::optional<SimpleRange> elementRange() const = 0;
     virtual VisiblePositionRange visiblePositionRangeForUnorderedPositions(const VisiblePosition&, const VisiblePosition&) const = 0;
     virtual VisiblePositionRange positionOfLeftWord(const VisiblePosition&) const = 0;
     virtual VisiblePositionRange positionOfRightWord(const VisiblePosition&) const = 0;
@@ -1275,8 +1274,9 @@ public:
     virtual VisiblePositionRange styleRangeForPosition(const VisiblePosition&) const = 0;
     virtual VisiblePositionRange visiblePositionRangeForRange(const PlainTextRange&) const = 0;
     virtual VisiblePositionRange lineRangeForPosition(const VisiblePosition&) const = 0;
+    virtual VisiblePositionRange selectedVisiblePositionRange() const = 0;
 
-    virtual Optional<SimpleRange> rangeForPlainTextRange(const PlainTextRange&) const = 0;
+    virtual std::optional<SimpleRange> rangeForPlainTextRange(const PlainTextRange&) const = 0;
 #if PLATFORM(MAC)
     // FIXME: make this a COCOA method.
     virtual AXTextMarkerRangeRef textMarkerRangeForNSRange(const NSRange&) const = 0;
@@ -1568,11 +1568,18 @@ T* findAncestor(const T& object, bool includeSelf, const F& matches)
 
 void findMatchingObjects(AccessibilitySearchCriteria const&, AXCoreObject::AccessibilityChildrenVector&);
 
+template<typename T, typename F>
+void enumerateDescendants(T& object, bool includeSelf, const F& lambda)
+{
+    if (includeSelf)
+        lambda(object);
+
+    for (const auto& child : object.children())
+        enumerateDescendants(*child, true, lambda);
+}
+
 template<typename U> inline void performFunctionOnMainThread(U&& lambda)
 {
-    if (isMainThread())
-        return lambda();
-
     callOnMainThreadAndWait([&lambda] {
         lambda();
     });
@@ -1580,9 +1587,6 @@ template<typename U> inline void performFunctionOnMainThread(U&& lambda)
 
 template<typename T, typename U> inline T retrieveValueFromMainThread(U&& lambda)
 {
-    if (isMainThread())
-        return lambda();
-
     T value;
     callOnMainThreadAndWait([&value, &lambda] {
         value = lambda();
@@ -1593,9 +1597,6 @@ template<typename T, typename U> inline T retrieveValueFromMainThread(U&& lambda
 #if PLATFORM(COCOA)
 template<typename T, typename U> inline T retrieveAutoreleasedValueFromMainThread(U&& lambda)
 {
-    if (isMainThread())
-        return lambda().autorelease();
-
     RetainPtr<T> value;
     callOnMainThreadAndWait([&value, &lambda] {
         value = lambda();

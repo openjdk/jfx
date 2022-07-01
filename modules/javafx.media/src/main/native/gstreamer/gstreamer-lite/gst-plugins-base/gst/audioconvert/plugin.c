@@ -33,11 +33,7 @@ static gboolean
 plugin_init (GstPlugin * plugin)
 #endif // GSTREAMER_LITE
 {
-  if (!gst_element_register (plugin, "audioconvert",
-          GST_RANK_PRIMARY, GST_TYPE_AUDIO_CONVERT))
-    return FALSE;
-
-  return TRUE;
+  return GST_ELEMENT_REGISTER (audioconvert, plugin);
 }
 
 #ifndef GSTREAMER_LITE

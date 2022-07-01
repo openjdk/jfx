@@ -157,7 +157,7 @@ typedef struct
  */
 typedef struct
 {
-  gint         start_year;
+  guint        start_year;
   gint32       std_offset;
   gint32       dlt_offset;
   TimeZoneDate dlt_start;
@@ -440,6 +440,88 @@ zone_for_constant_offset (GTimeZone *gtz, const gchar *name)
 }
 
 #ifdef G_OS_UNIX
+
+#if defined(__sun) && defined(__SVR4)
+/*
+ * only used by Illumos distros or Solaris < 11: parse the /etc/default/init
+ * text file looking for TZ= followed by the timezone, possibly quoted
+ *
+ */
+static gchar *
+zone_identifier_illumos (void)
+{
+  gchar *resolved_identifier = NULL;
+  gchar *contents = NULL;
+  const gchar *line_start = NULL;
+  gsize tz_len = 0;
+
+  if (!g_file_get_contents ("/etc/default/init", &contents, NULL, NULL) )
+    return NULL;
+
+  /* is TZ= the first/only line in the file? */
+  if (strncmp (contents, "TZ=", 3) == 0)
+    {
+      /* found TZ= on the first line, skip over the TZ= */
+      line_start = contents + 3;
+    }
+  else
+    {
+      /* find a newline followed by TZ= */
+      line_start = strstr (contents, "\nTZ=");
+      if (line_start != NULL)
+        line_start = line_start + 4; /* skip past the \nTZ= */
+    }
+
+  /*
+   * line_start is NULL if we didn't find TZ= at the start of any line,
+   * otherwise it points to what is after the '=' (possibly '\0')
+   */
+  if (line_start == NULL || *line_start == '\0')
+    return NULL;
+
+  /* skip past a possible opening " or ' */
+  if (*line_start == '"' || *line_start == '\'')
+    line_start++;
+
+  /*
+   * loop over the next few characters, building up the length of
+   * the timezone identifier, ending with end of string, newline or
+   * a " or ' character
+   */
+  while (*(line_start + tz_len) != '\0' &&
+         *(line_start + tz_len) != '\n' &&
+         *(line_start + tz_len) != '"'  &&
+         *(line_start + tz_len) != '\'')
+    tz_len++;
+
+  if (tz_len > 0)
+    {
+      /* found it */
+      resolved_identifier = g_strndup (line_start, tz_len);
+      g_strchomp (resolved_identifier);
+      g_free (contents);
+      return g_steal_pointer (&resolved_identifier);
+    }
+  else
+    return NULL;
+}
+#endif /* defined(__sun) && defined(__SRVR) */
+
+/*
+ * returns the path to the top of the Olson zoneinfo timezone hierarchy.
+ */
+static const gchar *
+zone_info_base_dir (void)
+{
+  if (g_file_test ("/usr/share/zoneinfo", G_FILE_TEST_IS_DIR))
+    return "/usr/share/zoneinfo";     /* Most distros */
+  else if (g_file_test ("/usr/share/lib/zoneinfo", G_FILE_TEST_IS_DIR))
+    return "/usr/share/lib/zoneinfo"; /* Illumos distros */
+
+  /* need a better fallback case */
+  return "/usr/share/zoneinfo";
+}
+
 static gchar *
 zone_identifier_unix (void)
 {
@@ -458,17 +540,26 @@ zone_identifier_unix (void)
                                                 G_FILE_ERROR_INVAL);
       g_clear_error (&read_link_err);
 
-      /* Fallback to the content of /var/db/zoneinfo or /etc/timezone
-       * if /etc/localtime is not a symlink. /var/db/zoneinfo is
-       * where 'tzsetup' program on FreeBSD and DragonflyBSD stores
-       * the timezone chosen by the user. /etc/timezone is where user
-       * choice is expressed on Gentoo OpenRC and others. */
+      /* if /etc/localtime is not a symlink, try:
+       *  - /var/db/zoneinfo : 'tzsetup' program on FreeBSD and
+       *    DragonflyBSD stores the timezone chosen by the user there.
+       *  - /etc/timezone : Gentoo, OpenRC, and others store
+       *    the user choice there.
+       *  - call zone_identifier_illumos iff __sun and __SVR4 are defined,
+       *    as a last-ditch effort to parse the TZ= setting from within
+       *    /etc/default/init
+       */
       if (not_a_symlink && (g_file_get_contents ("/var/db/zoneinfo",
                                                  &resolved_identifier,
                                                  NULL, NULL) ||
                             g_file_get_contents ("/etc/timezone",
                                                  &resolved_identifier,
-                                                 NULL, NULL)))
+                                                 NULL, NULL)
+#if defined(__sun) && defined(__SVR4)
+                                                             ||
+                            (resolved_identifier = zone_identifier_illumos ())
+#endif
+                                                             ))
         g_strchomp (resolved_identifier);
       else
         {
@@ -487,7 +578,7 @@ zone_identifier_unix (void)
 
   tzdir = g_getenv ("TZDIR");
   if (tzdir == NULL)
-    tzdir = "/usr/share/zoneinfo";
+    tzdir = zone_info_base_dir ();
 
   /* Strip the prefix and slashes if possible. */
   if (g_str_has_prefix (resolved_identifier, tzdir))
@@ -520,7 +611,7 @@ zone_info_unix (const gchar *identifier,
 
   tzdir = g_getenv ("TZDIR");
   if (tzdir == NULL)
-    tzdir = "/usr/share/zoneinfo";
+    tzdir = zone_info_base_dir ();
 
   /* identifier can be a relative or absolute path name;
      if relative, it is interpreted starting from /usr/share/zoneinfo
@@ -840,7 +931,7 @@ rules_from_windows_time_zone (const gchar   *identifier,
   TIME_ZONE_INFORMATION tzi;
   DWORD size;
   guint rules_num = 0;
-  RegTZI regtzi, regtzi_prev;
+  RegTZI regtzi = { 0 }, regtzi_prev;
   WCHAR winsyspath[MAX_PATH];
   gunichar2 *subkey_w, *subkey_dynamic_w;
 
@@ -906,8 +997,7 @@ rules_from_windows_time_zone (const gchar   *identifier,
   if (RegOpenKeyExW (HKEY_LOCAL_MACHINE, subkey_dynamic_w, 0,
                      KEY_QUERY_VALUE, &key) == ERROR_SUCCESS)
     {
-      DWORD first, last;
-      int year, i;
+      DWORD i, first, last, year;
       wchar_t s[12];
 
       size = sizeof first;
@@ -1041,7 +1131,7 @@ find_relative_date (TimeZoneDate *buffer)
       g_date_set_dmy (&date, 1, buffer->mon, buffer->year);
       first_wday = g_date_get_weekday (&date);
 
-      if (first_wday > wday)
+      if ((guint) first_wday > wday)
         ++(buffer->week);
       /* week is 1 <= w <= 5, we need 0-based */
       days = 7 * (buffer->week - 1) + wday - first_wday;
@@ -1462,6 +1552,8 @@ set_tz_name (gchar **pos, gchar *buffer, guint size)
   gchar *name_pos = *pos;
   guint len;
 
+  g_assert (size != 0);
+
   if (quoted)
     {
       name_pos++;
@@ -1483,7 +1575,7 @@ set_tz_name (gchar **pos, gchar *buffer, guint size)
 
   memset (buffer, 0, size);
   /* name_pos isn't 0-terminated, so we have to limit the length expressly */
-  len = *pos - name_pos > size - 1 ? size - 1 : *pos - name_pos;
+  len = (guint) (*pos - name_pos) > size - 1 ? size - 1 : (guint) (*pos - name_pos);
   strncpy (buffer, name_pos, len);
   *pos += quoted;
   return TRUE;
@@ -1546,8 +1638,7 @@ rules_from_identifier (const gchar   *identifier,
 #ifdef G_OS_WIN32
     /* Windows allows us to use the US DST boundaries if they're not given */
     {
-      int i;
-      guint rules_num = 0;
+      guint i, rules_num = 0;
 
       /* Use US rules, Windows' default is Pacific Standard Time */
       if ((rules_num = rules_from_windows_time_zone ("Pacific Standard Time",
@@ -1608,7 +1699,39 @@ parse_footertz (const gchar *footer, size_t footerlen)
  * g_time_zone_new:
  * @identifier: (nullable): a timezone identifier
  *
- * Creates a #GTimeZone corresponding to @identifier.
+ * A version of g_time_zone_new_identifier() which returns the UTC time zone
+ * if @identifier could not be parsed or loaded.
+ *
+ * If you need to check whether @identifier was loaded successfully, use
+ * g_time_zone_new_identifier().
+ *
+ * Returns: (transfer full) (not nullable): the requested timezone
+ * Deprecated: 2.68: Use g_time_zone_new_identifier() instead, as it provides
+ *     error reporting. Change your code to handle a potentially %NULL return
+ *     value.
+ *
+ * Since: 2.26
+ **/
+GTimeZone *
+g_time_zone_new (const gchar *identifier)
+{
+  GTimeZone *tz = g_time_zone_new_identifier (identifier);
+
+  /* Always fall back to UTC. */
+  if (tz == NULL)
+    tz = g_time_zone_new_utc ();
+
+  g_assert (tz != NULL);
+
+  return g_steal_pointer (&tz);
+}
+
+/**
+ * g_time_zone_new_identifier:
+ * @identifier: (nullable): a timezone identifier
+ *
+ * Creates a #GTimeZone corresponding to @identifier. If @identifier cannot be
+ * parsed or loaded, %NULL is returned.
  *
  * @identifier can either be an RFC3339/ISO 8601 time offset or
  * something that would pass as a valid value for the `TZ` environment
@@ -1672,12 +1795,12 @@ parse_footertz (const gchar *footer, size_t footerlen)
  * You should release the return value by calling g_time_zone_unref()
  * when you are done with it.
  *
- * Returns: the requested timezone
- *
- * Since: 2.26
- **/
+ * Returns: (transfer full) (nullable): the requested timezone, or %NULL on
+ *     failure
+ * Since: 2.68
+ */
 GTimeZone *
-g_time_zone_new (const gchar *identifier)
+g_time_zone_new_identifier (const gchar *identifier)
 {
   GTimeZone *tz = NULL;
   TimeZoneRule *rules;
@@ -1791,24 +1914,31 @@ g_time_zone_new (const gchar *identifier)
 
   g_free (resolved_identifier);
 
-  /* Always fall back to UTC. */
+  /* Failed to load the timezone. */
   if (tz->t_info == NULL)
-    zone_for_constant_offset (tz, "UTC");
+    {
+      g_slice_free (GTimeZone, tz);
+
+      if (identifier)
+        G_UNLOCK (time_zones);
+      else
+        G_UNLOCK (tz_default);
+
+      return NULL;
+    }
 
   g_assert (tz->name != NULL);
   g_assert (tz->t_info != NULL);
 
-  if (tz->t_info != NULL)
+  if (identifier)
+    g_hash_table_insert (time_zones, tz->name, tz);
+  else if (tz->name)
     {
-      if (identifier)
-        g_hash_table_insert (time_zones, tz->name, tz);
-      else if (tz->name)
-        {
-          /* Caching reference */
-          g_atomic_int_inc (&tz->ref_count);
-          tz_default = tz;
-        }
+      /* Caching reference */
+      g_atomic_int_inc (&tz->ref_count);
+      tz_default = tz;
     }
+
   g_atomic_int_inc (&tz->ref_count);
 
   if (identifier)
@@ -1842,7 +1972,8 @@ g_time_zone_new_utc (void)
 
   if (g_once_init_enter (&initialised))
     {
-      utc = g_time_zone_new ("UTC");
+      utc = g_time_zone_new_identifier ("UTC");
+      g_assert (utc != NULL);
       g_once_init_leave (&initialised, TRUE);
     }
 
@@ -1879,7 +2010,9 @@ g_time_zone_new_local (void)
     g_clear_pointer (&tz_local, g_time_zone_unref);
 
   if (tz_local == NULL)
-    tz_local = g_time_zone_new (tzenv);
+    tz_local = g_time_zone_new_identifier (tzenv);
+  if (tz_local == NULL)
+    tz_local = g_time_zone_new_utc ();
 
   tz = g_time_zone_ref (tz_local);
 
@@ -1898,7 +2031,13 @@ g_time_zone_new_local (void)
  * This is equivalent to calling g_time_zone_new() with a string in the form
  * `[+|-]hh[:mm[:ss]]`.
  *
- * Returns: (transfer full): a timezone at the given offset from UTC
+ * It is possible for this function to fail if @seconds is too big (greater than
+ * 24 hours), in which case this function will return the UTC timezone for
+ * backwards compatibility. To detect failures like this, use
+ * g_time_zone_new_identifier() directly.
+ *
+ * Returns: (transfer full): a timezone at the given offset from UTC, or UTC on
+ *   failure
  * Since: 2.58
  */
 GTimeZone *
@@ -1910,16 +2049,22 @@ g_time_zone_new_offset (gint32 seconds)
   /* Seemingly, we should be using @seconds directly to set the
    * #TransitionInfo.gmt_offset to avoid all this string building and parsing.
    * However, we always need to set the #GTimeZone.name to a constructed
-   * string anyway, so we might as well reuse its code. */
+   * string anyway, so we might as well reuse its code.
+   * g_time_zone_new_identifier() should never fail in this situation. */
   identifier = g_strdup_printf ("%c%02u:%02u:%02u",
                                 (seconds >= 0) ? '+' : '-',
                                 (ABS (seconds) / 60) / 60,
                                 (ABS (seconds) / 60) % 60,
                                 ABS (seconds) % 60);
-  tz = g_time_zone_new (identifier);
-  g_free (identifier);
+  tz = g_time_zone_new_identifier (identifier);
 
-  g_assert (g_time_zone_get_offset (tz, 0) == seconds);
+  if (tz == NULL)
+    tz = g_time_zone_new_utc ();
+  else
+    g_assert (g_time_zone_get_offset (tz, 0) == seconds);
+
+  g_assert (tz != NULL);
+  g_free (identifier);
 
   return tz;
 }

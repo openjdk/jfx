@@ -48,7 +48,6 @@
 #include "SQLiteTransaction.h"
 #include "VoidCallback.h"
 #include "WindowEventLoop.h"
-#include <wtf/Optional.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/Vector.h>
 
@@ -73,7 +72,7 @@ SQLTransaction::SQLTransaction(Ref<Database>&& database, RefPtr<SQLTransactionCa
 
 SQLTransaction::~SQLTransaction() = default;
 
-ExceptionOr<void> SQLTransaction::executeSql(const String& sqlStatement, Optional<Vector<SQLValue>>&& arguments, RefPtr<SQLStatementCallback>&& callback, RefPtr<SQLStatementErrorCallback>&& callbackError)
+ExceptionOr<void> SQLTransaction::executeSql(const String& sqlStatement, std::optional<Vector<SQLValue>>&& arguments, RefPtr<SQLStatementCallback>&& callback, RefPtr<SQLStatementErrorCallback>&& callbackError)
 {
     if (!m_executeSqlAllowed || !m_database->opened())
         return Exception { InvalidStateError };
@@ -84,7 +83,7 @@ ExceptionOr<void> SQLTransaction::executeSql(const String& sqlStatement, Optiona
     else if (m_readOnly)
         permissions |= DatabaseAuthorizer::ReadOnlyMask;
 
-    auto statement = makeUnique<SQLStatement>(m_database, sqlStatement, arguments.valueOr(Vector<SQLValue> { }), WTFMove(callback), WTFMove(callbackError), permissions);
+    auto statement = makeUnique<SQLStatement>(m_database, sqlStatement, arguments.value_or(Vector<SQLValue> { }), WTFMove(callback), WTFMove(callbackError), permissions);
 
     if (m_database->deleted())
         statement->setDatabaseDeletedError();
@@ -144,7 +143,7 @@ void SQLTransaction::callErrorCallbackDueToInterruption()
 
 void SQLTransaction::enqueueStatement(std::unique_ptr<SQLStatement> statement)
 {
-    LockHolder locker(m_statementMutex);
+    Locker locker { m_statementLock };
     m_statementQueue.append(WTFMove(statement));
 }
 
@@ -190,7 +189,7 @@ void SQLTransaction::checkAndHandleClosedDatabase()
     // If the database was stopped, don't do anything and cancel queued work
     LOG(StorageAPI, "Database was stopped or interrupted - cancelling work for this transaction");
 
-    LockHolder locker(m_statementMutex);
+    Locker locker { m_statementLock };
     m_statementQueue.clear();
     m_nextStep = nullptr;
 
@@ -516,7 +515,7 @@ void SQLTransaction::getNextStatement()
 {
     m_currentStatement = nullptr;
 
-    LockHolder locker(m_statementMutex);
+    Locker locker { m_statementLock };
     if (!m_statementQueue.isEmpty())
         m_currentStatement = m_statementQueue.takeFirst();
 }

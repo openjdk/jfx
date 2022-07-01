@@ -32,13 +32,12 @@
 #include <wtf/EnumTraits.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/Noncopyable.h>
+#include <wtf/Observer.h>
 #include <wtf/UniqueRef.h>
 #include <wtf/WeakHashSet.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
-
-class AudioSessionPrivate;
 
 enum class RouteSharingPolicy : uint8_t {
     Default,
@@ -58,9 +57,13 @@ public:
     static UniqueRef<AudioSession> create();
     static void setSharedSession(UniqueRef<AudioSession>&&);
     static AudioSession& sharedSession();
+
+    using ChangedObserver = WTF::Observer<void(AudioSession&)>;
+    static void addAudioSessionChangedObserver(const ChangedObserver&);
+
     virtual ~AudioSession();
 
-    enum CategoryType : uint8_t {
+    enum class CategoryType : uint8_t {
         None,
         AmbientSound,
         SoloAmbientSound,
@@ -72,8 +75,8 @@ public:
     virtual void setCategory(CategoryType, RouteSharingPolicy);
     virtual CategoryType category() const;
 
-    void setCategoryOverride(CategoryType);
-    CategoryType categoryOverride() const;
+    virtual void setCategoryOverride(CategoryType);
+    virtual CategoryType categoryOverride() const;
 
     virtual RouteSharingPolicy routeSharingPolicy() const;
     virtual String routingContextUID() const;
@@ -88,25 +91,27 @@ public:
     virtual size_t preferredBufferSize() const;
     virtual void setPreferredBufferSize(size_t);
 
-    class MutedStateObserver {
+    class ConfigurationChangeObserver : public CanMakeWeakPtr<ConfigurationChangeObserver> {
     public:
-        virtual ~MutedStateObserver() = default;
+        virtual ~ConfigurationChangeObserver() = default;
 
-        virtual void hardwareMutedStateDidChange(AudioSession*) = 0;
+        virtual void hardwareMutedStateDidChange(const AudioSession&) = 0;
+        virtual void bufferSizeDidChange(const AudioSession&) { }
+        virtual void sampleRateDidChange(const AudioSession&) { }
     };
 
-    void addMutedStateObserver(MutedStateObserver*);
-    void removeMutedStateObserver(MutedStateObserver*);
+    virtual void addConfigurationChangeObserver(ConfigurationChangeObserver&);
+    virtual void removeConfigurationChangeObserver(ConfigurationChangeObserver&);
 
-    void audioOutputDeviceChanged();
-    void setIsPlayingToBluetoothOverride(Optional<bool>);
+    virtual void audioOutputDeviceChanged();
+    virtual void setIsPlayingToBluetoothOverride(std::optional<bool>);
 
-    virtual bool isMuted() const;
-    virtual void handleMutedStateChange();
+    virtual bool isMuted() const { return false; }
+    virtual void handleMutedStateChange() { }
 
-    void beginInterruption();
+    virtual void beginInterruption();
     enum class MayResume { No, Yes };
-    void endInterruption(MayResume);
+    virtual void endInterruption(MayResume);
 
     class InterruptionObserver : public CanMakeWeakPtr<InterruptionObserver> {
     public:
@@ -115,12 +120,15 @@ public:
         virtual void beginAudioSessionInterruption() = 0;
         virtual void endAudioSessionInterruption(MayResume) = 0;
     };
-    void addInterruptionObserver(InterruptionObserver&);
-    void removeInterruptionObserver(InterruptionObserver&);
+    virtual void addInterruptionObserver(InterruptionObserver&);
+    virtual void removeInterruptionObserver(InterruptionObserver&);
 
     virtual bool isActive() const { return m_active; }
 
-    void setRoutingArbitrationClient(WeakPtr<AudioSessionRoutingArbitrationClient>&& client) { m_routingArbitrationClient = client; }
+    virtual void setRoutingArbitrationClient(WeakPtr<AudioSessionRoutingArbitrationClient>&& client) { m_routingArbitrationClient = client; }
+
+    static bool shouldManageAudioSessionCategory() { return s_shouldManageAudioSessionCategory; }
+    static void setShouldManageAudioSessionCategory(bool flag) { s_shouldManageAudioSessionCategory = flag; }
 
 protected:
     friend class NeverDestroyed<AudioSession>;
@@ -128,14 +136,13 @@ protected:
 
     virtual bool tryToSetActiveInternal(bool);
 
-    std::unique_ptr<AudioSessionPrivate> m_private;
-    HashSet<MutedStateObserver*> m_observers;
-#if PLATFORM(IOS_FAMILY)
     WeakHashSet<InterruptionObserver> m_interruptionObservers;
-#endif
 
     WeakPtr<AudioSessionRoutingArbitrationClient> m_routingArbitrationClient;
+    AudioSession::CategoryType m_categoryOverride { AudioSession::CategoryType::None };
     bool m_active { false }; // Used only for testing.
+
+    static bool s_shouldManageAudioSessionCategory;
 };
 
 class WEBCORE_EXPORT AudioSessionRoutingArbitrationClient {
@@ -145,7 +152,9 @@ public:
     enum class RoutingArbitrationError : uint8_t { None, Failed, Cancelled };
     enum class DefaultRouteChanged : bool { No, Yes };
 
-    virtual void beginRoutingArbitrationWithCategory(AudioSession::CategoryType, CompletionHandler<void(RoutingArbitrationError, DefaultRouteChanged)>&&) = 0;
+    using ArbitrationCallback = CompletionHandler<void(RoutingArbitrationError, DefaultRouteChanged)>;
+
+    virtual void beginRoutingArbitrationWithCategory(AudioSession::CategoryType, ArbitrationCallback&&) = 0;
     virtual void leaveRoutingAbritration() = 0;
 
     using WeakValueType = AudioSessionRoutingArbitrationClient;

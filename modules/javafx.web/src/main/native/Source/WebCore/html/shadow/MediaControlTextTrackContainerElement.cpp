@@ -35,6 +35,7 @@
 #include "DOMTokenList.h"
 #include "ElementChildIterator.h"
 #include "EventHandler.h"
+#include "EventLoop.h"
 #include "EventNames.h"
 #include "Frame.h"
 #include "FullscreenManager.h"
@@ -233,7 +234,7 @@ void MediaControlTextTrackContainerElement::updateActiveCuesFontSize()
         return;
 
     float smallestDimension = std::min(m_videoDisplaySize.size().height(), m_videoDisplaySize.size().width());
-    float fontScale = document().page()->group().captionPreferences().captionFontSizeScaleAndImportance(m_fontSizeIsImportant);
+    float fontScale = document().page()->group().ensureCaptionPreferences().captionFontSizeScaleAndImportance(m_fontSizeIsImportant);
     m_fontSize = lroundf(smallestDimension * fontScale);
 
     for (auto& activeCue : m_mediaElement->currentlyActiveCues()) {
@@ -270,7 +271,7 @@ void MediaControlTextTrackContainerElement::updateTextStrokeStyle()
     bool important;
 
     // FIXME: find a way to set this property in the stylesheet like the other user style preferences, see <https://bugs.webkit.org/show_bug.cgi?id=169874>.
-    if (document().page()->group().captionPreferences().captionStrokeWidthForFont(m_fontSize, language, strokeWidth, important))
+    if (document().page()->group().ensureCaptionPreferences().captionStrokeWidthForFont(m_fontSize, language, strokeWidth, important))
         setInlineStyleProperty(CSSPropertyStrokeWidth, strokeWidth, CSSUnitType::CSS_PX, important);
 }
 
@@ -386,8 +387,9 @@ void MediaControlTextTrackContainerElement::updateSizes(ForceUpdate force)
     for (auto& activeCue : m_mediaElement->currentlyActiveCues())
         activeCue.data()->recalculateStyles();
 
-    m_taskQueue.enqueueTask([this] () {
-        updateDisplay();
+    document().eventLoop().queueTask(TaskSource::MediaElement, [weakThis = makeWeakPtr(*this)] () {
+        if (weakThis)
+            weakThis->updateDisplay();
     });
 }
 
@@ -418,7 +420,7 @@ RefPtr<Image> MediaControlTextTrackContainerElement::createTextTrackRepresentati
     IntRect paintingRect = IntRect(IntPoint(), layer->size());
 
     // FIXME (149422): This buffer should not be unconditionally unaccelerated.
-    auto buffer = ImageBuffer::create(paintingRect.size(), RenderingMode::Unaccelerated, deviceScaleFactor);
+    auto buffer = ImageBuffer::create(paintingRect.size(), RenderingMode::Unaccelerated, deviceScaleFactor, DestinationColorSpace::SRGB(), PixelFormat::BGRA8);
     if (!buffer)
         return nullptr;
 

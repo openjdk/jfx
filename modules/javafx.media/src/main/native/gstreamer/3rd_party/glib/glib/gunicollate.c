@@ -71,6 +71,10 @@ msc_strxfrm_wrapper (char       *string1,
  * compare the keys with strcmp() when sorting instead of sorting
  * the original strings.
  *
+ * If the two strings are not comparable due to being in different collation
+ * sequences, the result is undefined. This can happen if the strings are in
+ * different language scripts, for example.
+ *
  * Returns: < 0 if @str1 compares before @str2,
  *   0 if they compare equal, > 0 if @str1 compares after @str2.
  **/
@@ -415,7 +419,7 @@ g_utf8_collate_key (const gchar *str,
   return result;
 #else
 
-  gsize xfrm_len;
+  gsize xfrm_len = 0;
   const gchar *charset;
   gchar *str_norm;
 
@@ -439,22 +443,22 @@ g_utf8_collate_key (const gchar *str,
       gchar *str_locale = g_convert (str_norm, -1, charset, "UTF-8", NULL, NULL, NULL);
 
       if (str_locale)
-  {
-    xfrm_len = strxfrm (NULL, str_locale, 0);
-    if (xfrm_len < 0 || xfrm_len >= G_MAXINT - 2)
-      {
-        g_free (str_locale);
-        str_locale = NULL;
-      }
-  }
+        {
+          xfrm_len = strxfrm (NULL, str_locale, 0);
+          if (xfrm_len >= G_MAXINT - 2)
+            {
+              g_free (str_locale);
+              str_locale = NULL;
+            }
+        }
       if (str_locale)
-  {
-    result = g_malloc (xfrm_len + 2);
-    result[0] = 'A';
-    strxfrm (result + 1, str_locale, xfrm_len + 1);
+        {
+          result = g_malloc (xfrm_len + 2);
+          result[0] = 'A';
+          strxfrm (result + 1, str_locale, xfrm_len + 1);
 
-    g_free (str_locale);
-  }
+          g_free (str_locale);
+        }
     }
 
   if (!result)
@@ -648,22 +652,22 @@ g_utf8_collate_key_for_filename (const gchar *str,
       }
 
     if (leading_zeros > 0)
-      {
-        g_string_append_c (append, (char)leading_zeros);
-        prev += leading_zeros;
-      }
+            {
+              g_string_append_c (append, (char)leading_zeros);
+              prev += leading_zeros;
+            }
 
-    /* write the number itself */
-    g_string_append_len (result, prev, p - prev);
+          /* write the number itself */
+          g_string_append_len (result, prev, p - prev);
 
-    prev = p;
-    --p;    /* go one step back to avoid disturbing outer loop */
-    break;
+          prev = p;
+          --p;    /* go one step back to avoid disturbing outer loop */
+          break;
 
-  default:
-    /* other characters just accumulate */
-    break;
-  }
+        default:
+          /* other characters just accumulate */
+          break;
+        }
     }
 
   if (prev != p)

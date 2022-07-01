@@ -43,8 +43,8 @@
 #include "RealtimeMediaSourceCapabilities.h"
 #include "RealtimeMediaSourceFactory.h"
 #include <wtf/CompletionHandler.h>
+#include <wtf/Lock.h>
 #include <wtf/LoggerHelper.h>
-#include <wtf/RecursiveLockAdapter.h>
 #include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/Vector.h>
 #include <wtf/WeakHashSet.h>
@@ -69,7 +69,6 @@ struct CaptureSourceOrError;
 
 class WEBCORE_EXPORT RealtimeMediaSource
     : public ThreadSafeRefCounted<RealtimeMediaSource, WTF::DestructionThread::MainRunLoop>
-    , public CanMakeWeakPtr<RealtimeMediaSource, WeakPtrFactoryInitialization::Eager>
 #if !RELEASE_LOG_DISABLED
     , public LoggerHelper
 #endif
@@ -151,7 +150,7 @@ public:
     void setSize(const IntSize&);
 
     const IntSize intrinsicSize() const;
-    void setIntrinsicSize(const IntSize&);
+    void setIntrinsicSize(const IntSize&, bool notifyObservers = true);
 
     double frameRate() const { return m_frameRate; }
     void setFrameRate(double);
@@ -167,11 +166,11 @@ public:
 
     int sampleRate() const { return m_sampleRate; }
     void setSampleRate(int);
-    virtual Optional<Vector<int>> discreteSampleRates() const;
+    virtual std::optional<Vector<int>> discreteSampleRates() const;
 
     int sampleSize() const { return m_sampleSize; }
     void setSampleSize(int);
-    virtual Optional<Vector<int>> discreteSampleSizes() const;
+    virtual std::optional<Vector<int>> discreteSampleSizes() const;
 
     bool echoCancellation() const { return m_echoCancellation; }
     void setEchoCancellation(bool);
@@ -183,9 +182,9 @@ public:
         String badConstraint;
         String message;
     };
-    using ApplyConstraintsHandler = CompletionHandler<void(Optional<ApplyConstraintsError>&&)>;
+    using ApplyConstraintsHandler = CompletionHandler<void(std::optional<ApplyConstraintsError>&&)>;
     virtual void applyConstraints(const MediaConstraints&, ApplyConstraintsHandler&&);
-    Optional<ApplyConstraintsError> applyConstraints(const MediaConstraints&);
+    std::optional<ApplyConstraintsError> applyConstraints(const MediaConstraints&);
 
     bool supportsConstraints(const MediaConstraints&, String&);
     bool supportsConstraint(const MediaConstraint&);
@@ -232,10 +231,10 @@ protected:
     double fitnessDistance(const MediaConstraint&);
     void applyConstraint(const MediaConstraint&);
     void applyConstraints(const FlattenedConstraint&);
-    bool supportsSizeAndFrameRate(Optional<IntConstraint> width, Optional<IntConstraint> height, Optional<DoubleConstraint>, String&, double& fitnessDistance);
+    bool supportsSizeAndFrameRate(std::optional<IntConstraint> width, std::optional<IntConstraint> height, std::optional<DoubleConstraint>, String&, double& fitnessDistance);
 
-    virtual bool supportsSizeAndFrameRate(Optional<int> width, Optional<int> height, Optional<double>);
-    virtual void setSizeAndFrameRate(Optional<int> width, Optional<int> height, Optional<double>);
+    virtual bool supportsSizeAndFrameRate(std::optional<int> width, std::optional<int> height, std::optional<double>);
+    virtual void setSizeAndFrameRate(std::optional<int> width, std::optional<int> height, std::optional<double>);
 
     void notifyMutedObservers();
     void notifyMutedChange(bool muted);
@@ -277,11 +276,11 @@ private:
     String m_name;
     WeakHashSet<Observer> m_observers;
 
-    mutable RecursiveLock m_audioSampleObserversLock;
-    HashSet<AudioSampleObserver*> m_audioSampleObservers;
+    mutable Lock m_audioSampleObserversLock;
+    HashSet<AudioSampleObserver*> m_audioSampleObservers WTF_GUARDED_BY_LOCK(m_audioSampleObserversLock);
 
-    mutable RecursiveLock m_videoSampleObserversLock;
-    HashSet<VideoSampleObserver*> m_videoSampleObservers;
+    mutable Lock m_videoSampleObserversLock;
+    HashSet<VideoSampleObserver*> m_videoSampleObservers WTF_GUARDED_BY_LOCK(m_videoSampleObserversLock);
 
     // Set on the main thread from constraints.
     IntSize m_size;

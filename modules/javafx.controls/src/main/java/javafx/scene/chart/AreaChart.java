@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -467,8 +467,8 @@ public class AreaChart<X,Y> extends XYChart<X,Y> {
             if (x < dataXMin || y < dataYMin) {
                 if (prevDataPoint == null) {
                     prevDataPoint = new LineTo(x, y);
-                } else if ((sortX && prevDataPoint.getX() < x) ||
-                           (sortY && prevDataPoint.getY() < y))
+                } else if ((sortX && prevDataPoint.getX() <= x) ||
+                           (sortY && prevDataPoint.getY() <= y))
                 {
                     prevDataPoint.setX(x);
                     prevDataPoint.setY(y);

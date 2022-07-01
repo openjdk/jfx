@@ -79,7 +79,7 @@ private:
     ExceptionOr<void> setCssText(const String&) final;
     RefPtr<CSSValue> getPropertyCSSValueInternal(CSSPropertyID) final;
     String getPropertyValueInternal(CSSPropertyID) final;
-    ExceptionOr<bool> setPropertyInternal(CSSPropertyID, const String& value, bool important) final;
+    ExceptionOr<void> setPropertyInternal(CSSPropertyID, const String& value, bool important) final;
 
     Ref<MutableStyleProperties> copyProperties() const final;
 
@@ -110,13 +110,14 @@ private:
 
     CSSStyleSheet* parentStyleSheet() const final;
 
-    CSSRule* parentRule() const final { return m_parentRule;  }
+    CSSRule* parentRule() const final { return m_parentRule; }
 
     bool willMutate() final WARN_UNUSED_RETURN;
     void didMutate(MutationType) final;
     CSSParserContext cssParserContext() const final;
 
     unsigned m_refCount;
+    StyleRuleType m_parentRuleType;
     CSSRule* m_parentRule;
 };
 

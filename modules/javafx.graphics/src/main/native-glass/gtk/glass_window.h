@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -297,6 +297,9 @@ class WindowContextTop: public WindowContextBase {
 
     static WindowFrameExtents normal_extents;
     static WindowFrameExtents utility_extents;
+
+    long event_serial;
+
 public:
     WindowContextTop(jobject, WindowContext*, long, WindowFrameType, WindowType, GdkWMFunction);
     void process_map();
@@ -333,6 +336,8 @@ public:
 
     GtkWindow *get_gtk_window();
     void detach_from_java();
+    void process_key(GdkEventKey*);
+    void process_mouse_button(GdkEventButton*);
 protected:
     void applyShapeMask(void*, uint width, uint height);
 private:

@@ -84,6 +84,9 @@ const GstStructure*      gst_discoverer_stream_info_get_misc(GstDiscovererStream
 GST_PBUTILS_API
 const gchar *            gst_discoverer_stream_info_get_stream_type_nick(GstDiscovererStreamInfo* info);
 
+GST_PBUTILS_API
+gint                     gst_discoverer_stream_info_get_stream_number(GstDiscovererStreamInfo *info);
+
 /**
  * GstDiscovererContainerInfo:
  *
@@ -103,6 +106,9 @@ GType gst_discoverer_container_info_get_type (void);
 
 GST_PBUTILS_API
 GList *gst_discoverer_container_info_get_streams(GstDiscovererContainerInfo *info);
+
+GST_PBUTILS_API
+const GstTagList* gst_discoverer_container_info_get_tags(const GstDiscovererContainerInfo *info);
 
 
 /**
@@ -306,7 +312,7 @@ gboolean                  gst_discoverer_info_get_live(const GstDiscovererInfo* 
 GST_PBUTILS_DEPRECATED_FOR(gst_discoverer_info_get_missing_elements_installer_details)
 const GstStructure*       gst_discoverer_info_get_misc(const GstDiscovererInfo* info);
 
-GST_PBUTILS_API
+GST_PBUTILS_DEPRECATED
 const GstTagList*         gst_discoverer_info_get_tags(const GstDiscovererInfo* info);
 GST_PBUTILS_API
 const GstToc*             gst_discoverer_info_get_toc(const GstDiscovererInfo* info);

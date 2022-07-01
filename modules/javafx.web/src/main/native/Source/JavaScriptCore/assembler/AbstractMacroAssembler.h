@@ -125,6 +125,12 @@ public:
         ScalePtr = isAddress64Bit() ? TimesEight : TimesFour,
     };
 
+    enum class Extend : uint8_t {
+        ZExt32,
+        SExt32,
+        None
+    };
+
     struct BaseIndex;
 
     static RegisterID withSwappedRegister(RegisterID original, RegisterID left, RegisterID right)
@@ -210,18 +216,23 @@ public:
     //
     // Describes a complex addressing mode.
     struct BaseIndex {
-        BaseIndex(RegisterID base, RegisterID index, Scale scale, int32_t offset = 0)
+        BaseIndex(RegisterID base, RegisterID index, Scale scale, int32_t offset = 0, Extend extend = Extend::None)
             : base(base)
             , index(index)
             , scale(scale)
             , offset(offset)
+            , extend(extend)
         {
+#if !CPU(ARM64)
+            ASSERT(extend == Extend::None);
+#endif
         }
 
         RegisterID base;
         RegisterID index;
         Scale scale;
         int32_t offset;
+        Extend extend;
 
         BaseIndex withOffset(int32_t additionalOffset)
         {
@@ -232,6 +243,34 @@ public:
         {
             return BaseIndex(AbstractMacroAssembler::withSwappedRegister(base, left, right), AbstractMacroAssembler::withSwappedRegister(index, left, right), scale, offset);
         }
+    };
+
+    // PreIndexAddress:
+    //
+    // Describes an address with base address and pre-increment/decrement index.
+    struct PreIndexAddress {
+        PreIndexAddress(RegisterID base, int index)
+            : base(base)
+            , index(index)
+        {
+        }
+
+        RegisterID base;
+        int index;
+    };
+
+    // PostIndexAddress:
+    //
+    // Describes an address with base address and post-increment/decrement index.
+    struct PostIndexAddress {
+        PostIndexAddress(RegisterID base, int index)
+            : base(base)
+            , index(index)
+        {
+        }
+
+        RegisterID base;
+        int index;
     };
 
     // AbsoluteAddress:
@@ -311,9 +350,9 @@ public:
     // (which are implemented as an enum) from accidentally being passed as
     // immediate values.
     struct TrustedImm32 : public TrustedImm {
-        TrustedImm32() { }
+        constexpr TrustedImm32() = default;
 
-        explicit TrustedImm32(int32_t value)
+        explicit constexpr TrustedImm32(int32_t value)
             : m_value(value)
         {
         }
@@ -325,7 +364,7 @@ public:
         }
 #endif
 
-        int32_t m_value;
+        int32_t m_value { 0 };
     };
 
 
@@ -358,7 +397,7 @@ public:
         {
         }
 
-#if CPU(X86_64) || CPU(ARM64)
+#if CPU(X86_64) || CPU(ARM64) || CPU(RISCV64)
         explicit TrustedImm64(TrustedImmPtr ptr)
             : m_value(ptr.asIntptr())
         {
@@ -374,7 +413,7 @@ public:
             : TrustedImm64(value)
         {
         }
-#if CPU(X86_64) || CPU(ARM64)
+#if CPU(X86_64) || CPU(ARM64) || CPU(RISCV64)
         explicit Imm64(TrustedImmPtr ptr)
             : TrustedImm64(ptr)
         {
@@ -971,6 +1010,12 @@ public:
         m_linkTasks.append(createSharedTask<void(LinkBuffer&)>(functor));
     }
 
+    template<typename Functor>
+    void addLateLinkTask(const Functor& functor) // Run after all link tasks
+    {
+        m_lateLinkTasks.append(createSharedTask<void(LinkBuffer&)>(functor));
+    }
+
 #if COMPILER(GCC)
     // Workaround for GCC demanding that memcpy "must be the name of a function with external linkage".
     static void* memcpy(void* dst, const void* src, size_t size)
@@ -1114,6 +1159,7 @@ protected:
     bool m_allowScratchRegister { true };
 
     Vector<RefPtr<SharedTask<void(LinkBuffer&)>>> m_linkTasks;
+    Vector<RefPtr<SharedTask<void(LinkBuffer&)>>> m_lateLinkTasks;
 
     friend class LinkBuffer;
 }; // class AbstractMacroAssembler

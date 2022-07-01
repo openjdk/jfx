@@ -37,15 +37,14 @@
 }
 
 * {
-    /* This constant needs to stay in sync with the InsideMargin JS constant. */
     --inline-controls-inside-margin: 6px;
     --fullscreen-controls-bar-height: 75px;
     --primary-glyph-color: rgba(255, 255, 255, 0.75);
     --secondary-glyph-color: rgba(255, 255, 255, 0.55);
+    --scrubber-margin: 5px;
 }
 
 :host(audio), :host(video.media-document.audio), * {
-    /* This constant needs to stay in sync with the BottomControlsBarHeight JS constant. */
     --inline-controls-bar-height: 31px;
 }
 
@@ -95,11 +94,6 @@
 
 .media-controls > * {
     transition: opacity 0.1s linear;
-}
-
-.media-controls.shows-tracks-panel > .controls-bar > *,
-.media-controls.shows-tracks-panel > button {
-    pointer-events: none;
 }
 
 .media-controls.faded > *:not(.placard) {

@@ -55,7 +55,7 @@ public class ImageHiDPITest {
     private ImageFrame loadImage(String path, float pixelScale) {
         try {
             ImageFrame[] imageFrames =
-                    ImageStorage.loadAll(path, null, 0, 0, true, pixelScale, true);
+                    new ImageStorage().loadAll(path, null, 0, 0, true, pixelScale, true);
 
             assertNotNull(imageFrames);
             assertEquals(1, imageFrames.length);

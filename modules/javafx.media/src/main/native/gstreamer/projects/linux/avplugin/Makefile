@@ -29,6 +29,8 @@ CFLAGS = -fPIC                   \
          -DLINUX                 \
          -DGST_DISABLE_LOADSAVE  \
          -DGSTREAMER_LITE \
+         -DGLIB_VERSION_MIN_REQUIRED=GLIB_VERSION_2_48 \
+         -DGLIB_VERSION_MAX_ALLOWED=GLIB_VERSION_2_48 \
          -ffunction-sections -fdata-sections
 
 ifneq ($(ARCH), aarch64)
@@ -60,7 +62,7 @@ ifneq ($(strip $(LIBAV_DIR)),)
 INCLUDES += -I$(LIBAV_DIR)/include
 LDFLAGS  += -L$(LIBAV_DIR)/lib/ -lavcodec -lavformat
 else
-INCLUDES += $(shell pkg-config --cflags libavcodec libavformat)
+INCLUDES += $(shell pkg-config --cflags libavcodec libavformat libswscale)
 LDFLAGS  += $(shell pkg-config --libs libavcodec libavformat)
 endif
 

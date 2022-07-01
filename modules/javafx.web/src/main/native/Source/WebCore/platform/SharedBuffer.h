@@ -30,6 +30,7 @@
 #include <wtf/FileSystem.h>
 #include <wtf/Forward.h>
 #include <wtf/RefCounted.h>
+#include <wtf/Span.h>
 #include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/Variant.h>
 #include <wtf/Vector.h>
@@ -66,11 +67,13 @@ class SharedBufferDataView;
 class WEBCORE_EXPORT SharedBuffer : public RefCounted<SharedBuffer> {
 public:
     static Ref<SharedBuffer> create() { return adoptRef(*new SharedBuffer); }
+    static Ref<SharedBuffer> create(const uint8_t* data, size_t size) { return adoptRef(*new SharedBuffer(data, size)); }
     static Ref<SharedBuffer> create(const char* data, size_t size) { return adoptRef(*new SharedBuffer(data, size)); }
-    static Ref<SharedBuffer> create(const unsigned char* data, size_t size) { return adoptRef(*new SharedBuffer(data, size)); }
-    static RefPtr<SharedBuffer> createWithContentsOfFile(const String& filePath);
+    static Ref<SharedBuffer> create(FileSystem::MappedFileData&& mappedFileData) { return adoptRef(*new SharedBuffer(WTFMove(mappedFileData))); }
 
-    static Ref<SharedBuffer> create(Vector<char>&&);
+    enum class MayUseFileMapping : bool { No, Yes };
+    static RefPtr<SharedBuffer> createWithContentsOfFile(const String& filePath, FileSystem::MappedFileMode = FileSystem::MappedFileMode::Shared, MayUseFileMapping = MayUseFileMapping::Yes);
+
     static Ref<SharedBuffer> create(Vector<uint8_t>&&);
 
 #if USE(FOUNDATION)
@@ -96,8 +99,12 @@ public:
     // Calling data() causes all the data segments to be copied into one segment if they are not already.
     // Iterate the segments using begin() and end() instead.
     // FIXME: Audit the call sites of this function and replace them with iteration if possible.
-    const char* data() const;
-    const uint8_t* dataAsUInt8Ptr() const;
+    const uint8_t* data() const;
+    const char* dataAsCharPtr() const { return reinterpret_cast<const char*>(data()); }
+    Vector<uint8_t> copyData() const;
+
+    // Similar to copyData() but avoids copying and will take the data instead when it is safe (The SharedBuffer is not shared).
+    Vector<uint8_t> extractData();
 
     // Creates an ArrayBuffer and copies this SharedBuffer's contents to that
     // ArrayBuffer without merging segmented buffers into a flat buffer.
@@ -108,21 +115,23 @@ public:
     bool isEmpty() const { return !size(); }
 
     void append(const SharedBuffer&);
-    void append(const char*, size_t);
-    void append(Vector<char>&&);
+    void append(const uint8_t*, size_t);
+    void append(const char* data, size_t length) { append(reinterpret_cast<const uint8_t*>(data), length); }
+    void append(Vector<uint8_t>&&);
 
     void clear();
 
     Ref<SharedBuffer> copy() const;
+    void copyTo(void* destination, size_t length) const;
 
     // Data wrapped by a DataSegment should be immutable because it can be referenced by other objects.
     // To modify or combine the data, allocate a new DataSegment.
     class DataSegment : public ThreadSafeRefCounted<DataSegment> {
     public:
-        WEBCORE_EXPORT const char* data() const;
+        WEBCORE_EXPORT const uint8_t* data() const;
         WEBCORE_EXPORT size_t size() const;
 
-        static Ref<DataSegment> create(Vector<char>&& data)
+        static Ref<DataSegment> create(Vector<uint8_t>&& data)
         {
             data.shrinkToFit();
             return adoptRef(*new DataSegment(WTFMove(data)));
@@ -143,8 +152,10 @@ public:
         RetainPtr<NSData> createNSData() const;
 #endif
 
+        bool containsMappedFileData() const;
+
     private:
-        DataSegment(Vector<char>&& data)
+        DataSegment(Vector<uint8_t>&& data)
             : m_immutableData(WTFMove(data)) { }
 #if USE(CF)
         DataSegment(RetainPtr<CFDataRef>&& data)
@@ -161,7 +172,7 @@ public:
         DataSegment(FileSystem::MappedFileData&& data)
             : m_immutableData(WTFMove(data)) { }
 
-        Variant<Vector<char>,
+        Variant<Vector<uint8_t>,
 #if USE(CF)
             RetainPtr<CFDataRef>,
 #endif
@@ -175,6 +186,9 @@ public:
         friend class SharedBuffer;
     };
 
+    void forEachSegment(const Function<void(const Span<const uint8_t>&)>&) const;
+    bool startsWith(const Span<const uint8_t>& prefix) const;
+
     struct DataSegmentVectorEntry {
         size_t beginPosition;
         Ref<DataSegment> segment;
@@ -182,6 +196,7 @@ public:
     using DataSegmentVector = Vector<DataSegmentVectorEntry, 1>;
     DataSegmentVector::const_iterator begin() const { return m_segments.begin(); }
     DataSegmentVector::const_iterator end() const { return m_segments.end(); }
+    bool hasOneSegment() const;
 
     // begin and end take O(1) time, this takes O(log(N)) time.
     SharedBufferDataView getSomeData(size_t position) const;
@@ -197,9 +212,9 @@ public:
 
 private:
     explicit SharedBuffer() = default;
+    explicit SharedBuffer(const uint8_t*, size_t);
     explicit SharedBuffer(const char*, size_t);
-    explicit SharedBuffer(const unsigned char*, size_t);
-    explicit SharedBuffer(Vector<char>&&);
+    explicit SharedBuffer(Vector<uint8_t>&&);
     explicit SharedBuffer(FileSystem::MappedFileData&&);
 #if USE(CF)
     explicit SharedBuffer(CFDataRef);
@@ -213,6 +228,9 @@ private:
 
     void combineIntoOneSegment() const;
 
+    // Combines all the segments into a Vector and returns that vector after clearing the SharedBuffer.
+    Vector<uint8_t> takeData();
+
     static RefPtr<SharedBuffer> createFromReadingFile(const String& filePath);
 
     size_t m_size { 0 };
@@ -224,21 +242,19 @@ private:
 #endif
 };
 
-inline bool operator==(const Ref<SharedBuffer>& left, const SharedBuffer& right)
+inline Vector<uint8_t> SharedBuffer::extractData()
 {
-    return left.get() == right;
-}
-
-inline bool operator!=(const Ref<SharedBuffer>& left, const SharedBuffer& right)
-{
-    return left.get() != right;
+    if (hasOneRef())
+        return takeData();
+    return copyData();
 }
 
 class WEBCORE_EXPORT SharedBufferDataView {
 public:
     SharedBufferDataView(Ref<SharedBuffer::DataSegment>&&, size_t);
     size_t size() const;
-    const char* data() const;
+    const uint8_t* data() const;
+    const char* dataAsCharPtr() const { return reinterpret_cast<const char*>(data()); }
 #if USE(FOUNDATION)
     RetainPtr<NSData> createNSData() const;
 #endif
