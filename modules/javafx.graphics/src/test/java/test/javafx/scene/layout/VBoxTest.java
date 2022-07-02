@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -801,6 +801,18 @@ public class VBoxTest {
      * ╚═══════════════════╝
      */
     @Test public void testPixelSnappedContentHeightIsSameAsBoxHeight() {
+        class testPixelSnapConfig {
+            final double expectedHeight;
+            final double scale;
+            final boolean specifyContainerPrefHeight;
+
+            testPixelSnapConfig(double expectedHeight, double scale, boolean specifyContainerPrefHeight) {
+                this.expectedHeight = expectedHeight;
+                this.scale = scale;
+                this.specifyContainerPrefHeight = specifyContainerPrefHeight;
+            }
+        }
+
         for (testPixelSnapConfig config : new testPixelSnapConfig[] {
             // For these tests, VBox.prefHeight is specified, so we expect the final height to be exactly that.
             // Child heights will be adjusted appropriately such that the sum of child widths corresponds to VBox.prefHeight.
@@ -845,15 +857,4 @@ public class VBoxTest {
         }
     }
 
-    private static class testPixelSnapConfig {
-        final double expectedHeight;
-        final double scale;
-        final boolean specifyContainerPrefHeight;
-
-        testPixelSnapConfig(double expectedHeight, double scale, boolean specifyContainerPrefHeight) {
-            this.expectedHeight = expectedHeight;
-            this.scale = scale;
-            this.specifyContainerPrefHeight = specifyContainerPrefHeight;
-        }
-    }
 }

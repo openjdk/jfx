@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -393,7 +393,7 @@ public class VBox extends Pane {
         List<Node>managed = getManagedChildren();
         double contentWidth = 0;
         if (height != -1 && getContentBias() != null) {
-            double[][] prefHeights = getChildrenHeights(managed, -1, false);
+            double[][] prefHeights = computeChildrenHeights(managed, -1, false);
             adjustChildrenHeights(managed, prefHeights, height, -1);
             contentWidth = computeMaxMinAreaWidth(managed, marginAccessor, prefHeights[0], false);
         } else {
@@ -414,7 +414,7 @@ public class VBox extends Pane {
         List<Node>managed = getManagedChildren();
         double contentWidth = 0;
         if (height != -1 && getContentBias() != null) {
-            double[][] prefHeights = getChildrenHeights(managed, -1, false);
+            double[][] prefHeights = computeChildrenHeights(managed, -1, false);
             adjustChildrenHeights(managed, prefHeights, height, -1);
             contentWidth = computeMaxPrefAreaWidth(managed, marginAccessor, prefHeights[0], false);
         } else {
@@ -433,7 +433,7 @@ public class VBox extends Pane {
     /**
      * Calculates the preferred or minimum height for each child.
      */
-    private double[][] getChildrenHeights(List<Node> managed, double width, boolean minimum) {
+    private double[][] computeChildrenHeights(List<Node> managed, double width, boolean minimum) {
         // width could be -1
         double[][] temp = getTempArray(managed.size());
         final double insideWidth = width == -1? -1 : width -
@@ -461,8 +461,8 @@ public class VBox extends Pane {
 
     /**
      * Adjusts the children heights to fit the provided space.
-     * This might be necessary because the HBox is size-constrained and cannot accommodate the preferred
-     * heights for all children, or it might be necessary because the HBox is sized to be larger than the
+     * This might be necessary because the VBox is size-constrained and cannot accommodate the preferred
+     * heights for all children, or it might be necessary because the VBox is sized to be larger than the
      * preferred heights of its children and needs to grow its children to fit its size.
      */
     private double adjustChildrenHeights(List<Node> managed, double[][] childrenHeights, double height, double width) {
@@ -537,8 +537,8 @@ public class VBox extends Pane {
      * @param managed the managed children
      * @param currentHeights the current children heights
      * @param limitHeights the max or min heights for each child, depending on whether we are growing or shrinking;
-     *                    a value of -1 means the child cannot be resized
-     * @param targetHeight the target height (sum of children heights and spacing)
+     *                     a value of -1 means the child cannot be resized
+     * @param targetHeight sum of children heights and spacing
      * @param adjustingNumber a number that indicates how many children can be resized
      * @return {@code true} if the children heights were successfully resized to fit the target height;
      *         {@code false} otherwise
@@ -588,10 +588,14 @@ public class VBox extends Pane {
      * including spacing between the children.
      */
     private double computeContentHeight(List<Node> managedChildren, double width, boolean minimum) {
-        return snappedSum(getChildrenHeights(managedChildren, width, minimum)[0], managedChildren.size())
+        return snappedSum(computeChildrenHeights(managedChildren, width, minimum)[0], managedChildren.size())
                 + (managedChildren.size()-1)*snapSpaceY(getSpacing());
     }
 
+    /**
+     * Calculates the sum of the double values, and snaps the result
+     * to the nearest pixel in the vertical direction.
+     */
     private double snappedSum(double[] array, int size) {
         double res = 0;
         for (int i = 0; i < size; ++i) {
@@ -620,7 +624,7 @@ public class VBox extends Pane {
         VPos vpos = getAlignmentInternal().getVpos();
         boolean isFillWidth = isFillWidth();
 
-        double[][] actualChildrenHeights = getChildrenHeights(managed, width, false);
+        double[][] actualChildrenHeights = computeChildrenHeights(managed, width, false);
         double contentWidth = width - left - right;
         double contentHeight = adjustChildrenHeights(managed, actualChildrenHeights, height, width);
 

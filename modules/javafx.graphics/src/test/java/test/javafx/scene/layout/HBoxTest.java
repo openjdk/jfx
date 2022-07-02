@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -919,6 +919,18 @@ public class HBoxTest {
      * ╚════════════════╧════════════════╧════════════════╝
      */
     @Test public void testPixelSnappedContentWidthIsSameAsBoxWidth() {
+        class testPixelSnapConfig {
+            final double expectedWidth;
+            final double scale;
+            final boolean specifyContainerPrefWidth;
+
+            testPixelSnapConfig(double expectedWidth, double scale, boolean specifyContainerPrefWidth) {
+                this.expectedWidth = expectedWidth;
+                this.scale = scale;
+                this.specifyContainerPrefWidth = specifyContainerPrefWidth;
+            }
+        }
+
         for (testPixelSnapConfig config : new testPixelSnapConfig[] {
             // For these tests, HBox.prefWidth is specified, so we expect the final width to be exactly that.
             // Child widths will be adjusted appropriately such that the sum of child widths corresponds to HBox.prefWidth.
@@ -960,18 +972,6 @@ public class HBoxTest {
             assertEquals(config.expectedWidth, box.getWidth(), 10e-14);
             assertEquals(config.expectedWidth, r1.getWidth() + r2.getWidth() + r3.getWidth(), 10e-14);
             stage.close();
-        }
-    }
-
-    private static class testPixelSnapConfig {
-        final double expectedWidth;
-        final double scale;
-        final boolean specifyContainerPrefWidth;
-
-        testPixelSnapConfig(double expectedWidth, double scale, boolean specifyContainerPrefWidth) {
-            this.expectedWidth = expectedWidth;
-            this.scale = scale;
-            this.specifyContainerPrefWidth = specifyContainerPrefWidth;
         }
     }
 
