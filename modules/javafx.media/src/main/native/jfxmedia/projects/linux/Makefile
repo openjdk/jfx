@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2013, 2021, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
 # DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
 #
 # This code is free software; you can redistribute it and/or modify it
@@ -51,6 +51,9 @@ CFLAGS = -DTARGET_OS_LINUX=1     \
          -DHAVE_CONFIG_H         \
          -DJFXMEDIA_JNI_EXPORTS  \
          -DLINUX                 \
+         -DGLIB_VERSION_MIN_REQUIRED=GLIB_VERSION_2_48 \
+         -DGLIB_VERSION_MAX_ALLOWED=GLIB_VERSION_2_48 \
+         -Werror=deprecated-declarations \
          -ffunction-sections -fdata-sections
 
 CPPFLAGS = -fno-rtti -ffunction-sections -fdata-sections
@@ -60,6 +63,7 @@ BASE_INCLUDES = -I$(SRCBASE_DIR) \
 
 ifdef HOST_COMPILE
 	GSTREAMER_LITE_DIR = ../../../gstreamer/gstreamer-lite
+	PLUGINS_DIR = ../../../gstreamer/plugins
 
 	CFLAGS += -fPIC \
                   -Wformat \
@@ -82,6 +86,7 @@ ifdef HOST_COMPILE
 	           -I$(GSTREAMER_LITE_DIR)/gstreamer \
 		   -I$(GSTREAMER_LITE_DIR)/gst-plugins-base/gst-libs \
 	           -I$(GSTREAMER_LITE_DIR)/gstreamer/libs \
+	           -I$(PLUGINS_DIR) \
 		  $(PACKAGES_INCLUDES)
 
 	LDFLAGS = -Wl,-rpath,\$$ORIGIN -L$(BUILD_DIR) -lgstreamer-lite $(PACKAGES_LIBS) \
@@ -145,7 +150,7 @@ CPP_SOURCES = \
 C_SOURCES = Utils/ColorConverter.c
 
 
-OBJECTS  = $(patsubst %.cpp,$(OBJBASE_DIR)/%.o,$(CPP_SOURCES)) $(patsubst %.c,$(OBJBASE_DIR)/%.o,$(C_SOURCES)) 
+OBJECTS  = $(patsubst %.cpp,$(OBJBASE_DIR)/%.o,$(CPP_SOURCES)) $(patsubst %.c,$(OBJBASE_DIR)/%.o,$(C_SOURCES))
 DEPFILES = $(patsubst %.cpp,$(OBJBASE_DIR)/%.d,$(CPP_SOURCES))
 
 OBJ_DIRS = $(addprefix $(OBJBASE_DIR)/,$(DIRLIST))

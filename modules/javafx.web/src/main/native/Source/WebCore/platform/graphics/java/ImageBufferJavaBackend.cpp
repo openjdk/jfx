@@ -37,7 +37,7 @@ namespace WebCore {
 std::unique_ptr<ImageBufferJavaBackend> ImageBufferJavaBackend::create(
     const Parameters& parameters, const HostWindow*)
 {
-    IntSize backendSize = calculateBackendSize(parameters.logicalSize, parameters.resolutionScale);
+    IntSize backendSize = ImageBufferBackend::calculateBackendSize(parameters);
     if (backendSize.isEmpty())
         return nullptr;
 
@@ -49,13 +49,18 @@ std::unique_ptr<ImageBufferJavaBackend> ImageBufferJavaBackend::create(
         "(II)Lcom/sun/webkit/graphics/WCImage;");
     ASSERT(midCreateImage);
 
-    auto image = RQRef::create(JLObject(env->CallObjectMethod(
+    jobject imageObj = env->CallObjectMethod(
         PL_GetGraphicsManager(env),
         midCreateImage,
         (jint) ceilf(parameters.resolutionScale * parameters.logicalSize.width()),
         (jint) ceilf(parameters.resolutionScale * parameters.logicalSize.height())
-    )));
-    WTF::CheckAndClearException(env);
+    );
+
+    if (WTF::CheckAndClearException(env) || !imageObj) {
+        return nullptr;
+    }
+
+    auto image = RQRef::create(JLObject(imageObj));
 
     static jmethodID midCreateBufferedContextRQ = env->GetMethodID(
         PG_GetGraphicsManagerClass(env),
@@ -68,9 +73,11 @@ std::unique_ptr<ImageBufferJavaBackend> ImageBufferJavaBackend::create(
         midCreateBufferedContextRQ,
         (jobject)(image->cloneLocalCopy())));
     ASSERT(wcRenderQueue);
-    WTF::CheckAndClearException(env);
+    if (WTF::CheckAndClearException(env) || !wcRenderQueue) {
+        return nullptr;
+    }
 
-    auto context = makeUnique<GraphicsContext>(new PlatformContextJava(wcRenderQueue, true));
+    auto context = makeUnique<GraphicsContextJava>(new PlatformContextJava(wcRenderQueue, true));
 
     auto platformImage = ImageJava::create(image, context->platformContext()->rq_ref(),
         backendSize.width(), backendSize.height());
@@ -113,8 +120,11 @@ void *ImageBufferJavaBackend::getData() const
         "()Ljava/nio/ByteBuffer;");
     ASSERT(midGetBGRABytes);
 
-    JLObject byteBuffer(env->CallObjectMethod(getWCImage(), midGetBGRABytes));
-    WTF::CheckAndClearException(env);
+    jobject pixelBuf = env->CallObjectMethod(getWCImage(), midGetBGRABytes);
+    if (WTF::CheckAndClearException(env) || !pixelBuf) {
+        return NULL;
+    }
+    JLObject byteBuffer(pixelBuf);
 
     return env->GetDirectBufferAddress(byteBuffer);
 }
@@ -172,7 +182,7 @@ void ImageBufferJavaBackend::drawPattern(GraphicsContext& context, const FloatRe
     imageCopy->drawPattern(context, destRect, srcRect, patternTransform, phase, spacing, options);
 }
 
-String ImageBufferJavaBackend::toDataURL(const String& mimeType, Optional<double>, PreserveResolution) const
+String ImageBufferJavaBackend::toDataURL(const String& mimeType, std::optional<double>, PreserveResolution) const
 {
     if (MIMETypeRegistry::isSupportedImageMIMETypeForEncoding(mimeType)) {
         // RenderQueue need to be processed before pixel buffer extraction.
@@ -192,15 +202,14 @@ String ImageBufferJavaBackend::toDataURL(const String& mimeType, Optional<double
                 midToDataURL,
                 (jstring) JLString(mimeType.toJavaString(env))));
 
-        WTF::CheckAndClearException(env);
-        if (data) {
+        if (!WTF::CheckAndClearException(env) && data) {
             return String(env, data);
         }
     }
     return "data:,";
 }
 
-Vector<uint8_t> ImageBufferJavaBackend::toData(const String& mimeType, Optional<double>) const
+Vector<uint8_t> ImageBufferJavaBackend::toData(const String& mimeType, std::optional<double>) const
 {
     if (MIMETypeRegistry::isSupportedImageMIMETypeForEncoding(mimeType)) {
         // RenderQueue need to be processed before pixel buffer extraction.
@@ -220,8 +229,7 @@ Vector<uint8_t> ImageBufferJavaBackend::toData(const String& mimeType, Optional<
                 midToData,
                 (jstring) JLString(mimeType.toJavaString(env))));
 
-        WTF::CheckAndClearException(env);
-        if (jdata) {
+        if (!WTF::CheckAndClearException(env) && jdata) {
             uint8_t* dataArray = (uint8_t*)env->GetPrimitiveArrayCritical((jbyteArray)jdata, 0);
             Vector<uint8_t> data;
             data.append(dataArray, env->GetArrayLength(jdata));
@@ -232,21 +240,54 @@ Vector<uint8_t> ImageBufferJavaBackend::toData(const String& mimeType, Optional<
     return { };
 }
 
-Vector<uint8_t> ImageBufferJavaBackend::toBGRAData() const
+std::optional<PixelBuffer> ImageBufferJavaBackend::getPixelBuffer(const PixelBufferFormat& outputFormat, const IntRect& srcRect) const
 {
-    return { };
+    void *data = getData();
+    if (!data)
+        return std::nullopt;
+
+    return getPixelBuffer(outputFormat, srcRect, data);
 }
 
-RefPtr<ImageData> ImageBufferJavaBackend::getImageData(AlphaPremultiplication outputFormat, const IntRect& srcRect) const
+void ImageBufferJavaBackend::putPixelBuffer(const PixelBuffer& sourcePixelBuffer,
+    const IntRect& srcRect, const IntPoint& dstPoint, AlphaPremultiplication destFormat)
 {
-    return ImageBufferBackend::getImageData(outputFormat, srcRect, getData());
-}
+    void *data = getData();
+    if (!data)
+        return;
 
-void ImageBufferJavaBackend::putImageData(AlphaPremultiplication inputFormat, const ImageData& imageData,
-    const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat)
-{
-    ImageBufferBackend::putImageData(inputFormat, imageData, srcRect, destPoint, destFormat, getData());
+    putPixelBuffer(sourcePixelBuffer, srcRect, dstPoint, destFormat, data);
     update();
+}
+
+std::optional<PixelBuffer> ImageBufferJavaBackend::getPixelBuffer(const PixelBufferFormat& outputFormat, const IntRect& srcRect, void* data) const
+{
+    return ImageBufferBackend::getPixelBuffer(outputFormat, srcRect, data);
+}
+
+void ImageBufferJavaBackend::putPixelBuffer(const PixelBuffer& sourcePixelBuffer,
+    const IntRect& srcRect, const IntPoint& dstPoint, AlphaPremultiplication destFormat, void* data)
+{
+    ImageBufferBackend::putPixelBuffer(sourcePixelBuffer, srcRect, dstPoint, destFormat, data);
+    update();
+}
+
+size_t ImageBufferJavaBackend::calculateMemoryCost(const Parameters& parameters)
+{
+    IntSize backendSize = calculateBackendSize(parameters);
+    return ImageBufferBackend::calculateMemoryCost(backendSize, calculateBytesPerRow(backendSize));
+}
+
+unsigned ImageBufferJavaBackend::calculateBytesPerRow(const IntSize& backendSize)
+{
+    ASSERT(!backendSize.isEmpty());
+    return CheckedUint32(backendSize.width()) * 4;
+}
+
+unsigned ImageBufferJavaBackend::bytesPerRow() const
+{
+    IntSize backendSize = calculateBackendSize(m_parameters);
+    return calculateBytesPerRow(backendSize);
 }
 
 } // namespace WebCore

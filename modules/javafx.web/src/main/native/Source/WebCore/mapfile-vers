@@ -27,6 +27,7 @@ SUNWprivate_1.0 {
                _ZNK14OpaqueJSString6stringEv;
                _ZNK3WTF6String4utf8Ev;
                _ZNK3WTF10StringView23underlyingStringIsValidEv;
+               _ZN3WTF26setPermissionsOfConfigPageEv;
                JSCheckScriptSyntax;
                JSClassCreate;
                JSClassRelease;

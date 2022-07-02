@@ -37,8 +37,6 @@
 #include <pal/cf/CoreMediaSoftLink.h>
 #include "CoreVideoSoftLink.h"
 
-using namespace PAL;
-
 namespace WebCore {
 
 static inline CAAudioStreamDescription streamDescription(size_t sampleRate, size_t channelCount)
@@ -71,7 +69,7 @@ void MediaStreamAudioSource::consumeAudio(AudioBus& bus, size_t numberOfFrames)
         return;
     }
 
-    CMTime startTime = CMTimeMake(m_numberOfFrames, m_currentSettings.sampleRate());
+    CMTime startTime = PAL::CMTimeMake(m_numberOfFrames, m_currentSettings.sampleRate());
     auto mediaTime = PAL::toMediaTime(startTime);
     m_numberOfFrames += numberOfFrames;
 
@@ -79,6 +77,9 @@ void MediaStreamAudioSource::consumeAudio(AudioBus& bus, size_t numberOfFrames)
 
     auto description = streamDescription(m_currentSettings.sampleRate(), bus.numberOfChannels());
     if (!audioBuffer || audioBuffer->channelCount() != bus.numberOfChannels()) {
+        // Heap allocations are forbidden on the audio thread for performance reasons so we need to
+        // explicitly allow the following allocation(s).
+        DisableMallocRestrictionsForCurrentThreadScope disableMallocRestrictions;
         m_audioBuffer = makeUnique<WebAudioBufferList>(description, WTF::safeCast<uint32_t>(numberOfFrames));
         audioBuffer = &downcast<WebAudioBufferList>(*m_audioBuffer);
     } else

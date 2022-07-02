@@ -36,8 +36,8 @@
 #include "HTMLNames.h"
 #include "HTMLSpanElement.h"
 #include "InlineIterator.h"
-#include "InlineTextBox.h"
 #include "LayoutIntegrationRunIterator.h"
+#include "LegacyInlineTextBox.h"
 #include "Logging.h"
 #include "PrintContext.h"
 #include "PseudoElement.h"
@@ -155,19 +155,16 @@ String quoteAndEscapeNonPrintables(StringView s)
     for (unsigned i = 0; i != s.length(); ++i) {
         UChar c = s[i];
         if (c == '\\') {
-            result.appendLiteral("\\\\");
+            result.append("\\\\");
         } else if (c == '"') {
-            result.appendLiteral("\\\"");
+            result.append("\\\"");
         } else if (c == '\n' || c == noBreakSpace)
             result.append(' ');
         else {
             if (c >= 0x20 && c < 0x7F)
                 result.append(c);
-            else {
-                result.appendLiteral("\\x{");
-                result.append(hex(c));
-                result.append('}');
-            }
+            else
+                result.append("\\x{", hex(c), '}');
         }
     }
     result.append('"');
@@ -216,7 +213,7 @@ void RenderTreeAsText::writeRenderObject(TextStream& ts, const RenderObject& o, 
     ts << o.renderName();
 
     if (behavior.contains(RenderAsTextFlag::ShowAddresses))
-        ts << " " << static_cast<const void*>(&o);
+        ts << " " << &o;
 
     if (o.style().usedZIndex()) // FIXME: This should use !hasAutoUsedZIndex().
         ts << " zI: " << o.style().usedZIndex();
@@ -443,7 +440,7 @@ void RenderTreeAsText::writeRenderObject(TextStream& ts, const RenderObject& o, 
     }
 
     if (is<RenderListMarker>(o)) {
-        String text = downcast<RenderListMarker>(o).text();
+        String text = downcast<RenderListMarker>(o).textWithoutSuffix().toString();
         if (!text.isEmpty()) {
             if (text.length() != 1)
                 text = quoteAndEscapeNonPrintables(text);
@@ -474,7 +471,7 @@ void writeDebugInfo(TextStream& ts, const RenderObject& object, OptionSet<Render
     if (behavior.contains(RenderAsTextFlag::ShowIDAndClass)) {
         if (Element* element = is<Element>(object.node()) ? downcast<Element>(object.node()) : nullptr) {
             if (element->hasID())
-                ts << " id=\"" + element->getIdAttribute() + "\"";
+                ts << " id=\"" << element->getIdAttribute() << "\"";
 
             if (element->hasClass()) {
                 ts << " class=\"";
@@ -646,8 +643,11 @@ static void writeLayer(TextStream& ts, const RenderLayer& layer, const LayoutRec
 
     ts << indent << "layer ";
 
-    if (behavior.contains(RenderAsTextFlag::ShowAddresses))
-        ts << static_cast<const void*>(&layer) << " ";
+    if (behavior.contains(RenderAsTextFlag::ShowAddresses)) {
+        ts << &layer << " ";
+        if (auto* scrollableArea = layer.scrollableArea())
+            ts << "scrollableArea " << scrollableArea << " ";
+    }
 
     ts << adjustedLayoutBounds;
 
@@ -658,7 +658,7 @@ static void writeLayer(TextStream& ts, const RenderLayer& layer, const LayoutRec
             ts << " clip " << adjustedClipRect;
     }
 
-    if (layer.renderer().hasOverflowClip()) {
+    if (layer.renderer().hasNonVisibleOverflow()) {
         if (auto* scrollableArea = layer.scrollableArea()) {
             if (scrollableArea->scrollOffset().x())
                 ts << " scrollX " << scrollableArea->scrollOffset().x();
@@ -686,7 +686,9 @@ static void writeLayer(TextStream& ts, const RenderLayer& layer, const LayoutRec
 
     if (behavior.contains(RenderAsTextFlag::ShowCompositedLayers)) {
         if (layer.isComposited()) {
-            ts << " (composited, bounds=" << layer.backing()->compositedBounds() << ", drawsContent=" << layer.backing()->graphicsLayer()->drawsContent()
+            ts << " (composited " << layer.compositor().reasonsForCompositing(layer)
+                << ", bounds=" << layer.backing()->compositedBounds()
+                << ", drawsContent=" << layer.backing()->graphicsLayer()->drawsContent()
                 << ", paints into ancestor=" << layer.backing()->paintsIntoCompositedAncestor() << ")";
         } else if (layer.paintsIntoProvidedBacking())
             ts << " (shared backing of " << layer.backingProviderLayer() << ")";
@@ -819,26 +821,19 @@ static String nodePosition(Node* node)
     for (Node* n = node; n; n = parent) {
         parent = n->parentOrShadowHostNode();
         if (n != node)
-            result.appendLiteral(" of ");
+            result.append(" of ");
         if (parent) {
             if (body && n == body) {
                 // We don't care what offset body may be in the document.
-                result.appendLiteral("body");
+                result.append("body");
                 break;
             }
-            if (n->isShadowRoot()) {
-                result.append('{');
-                result.append(getTagName(n));
-                result.append('}');
-            } else {
-                result.appendLiteral("child ");
-                result.appendNumber(n->computeNodeIndex());
-                result.appendLiteral(" {");
-                result.append(getTagName(n));
-                result.append('}');
-            }
+            if (n->isShadowRoot())
+                result.append('{', getTagName(n), '}');
+            else
+                result.append("child ", n->computeNodeIndex(), " {", getTagName(n), '}');
         } else
-            result.appendLiteral("document");
+            result.append("document");
     }
 
     return result.toString();
@@ -962,7 +957,7 @@ String markerTextForListItem(Element* element)
     if (!is<RenderListItem>(renderer))
         return String();
 
-    return downcast<RenderListItem>(*renderer).markerText();
+    return downcast<RenderListItem>(*renderer).markerTextWithoutSuffix().toString();
 }
 
 } // namespace WebCore

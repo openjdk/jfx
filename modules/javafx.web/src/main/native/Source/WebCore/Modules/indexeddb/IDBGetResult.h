@@ -25,19 +25,18 @@
 
 #pragma once
 
-#if ENABLE(INDEXED_DATABASE)
-
 #include "IDBCursorRecord.h"
 #include "IDBKey.h"
 #include "IDBKeyData.h"
 #include "IDBKeyPath.h"
 #include "IDBValue.h"
 #include "SharedBuffer.h"
+#include <wtf/IsoMalloc.h>
 
 namespace WebCore {
 
 class IDBGetResult {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_ISO_ALLOCATED_EXPORT(IDBGetResult, WEBCORE_EXPORT);
 public:
     IDBGetResult()
         : m_isDefined(false)
@@ -55,21 +54,21 @@ public:
     {
     }
 
-    IDBGetResult(const IDBKeyData& keyData, const ThreadSafeDataBuffer& buffer, const Optional<IDBKeyPath>& keyPath)
+    IDBGetResult(const IDBKeyData& keyData, const ThreadSafeDataBuffer& buffer, const std::optional<IDBKeyPath>& keyPath)
         : m_value(buffer)
         , m_keyData(keyData)
         , m_keyPath(keyPath)
     {
     }
 
-    IDBGetResult(const IDBKeyData& keyData, IDBValue&& value, const Optional<IDBKeyPath>& keyPath)
+    IDBGetResult(const IDBKeyData& keyData, IDBValue&& value, const std::optional<IDBKeyPath>& keyPath)
         : m_value(WTFMove(value))
         , m_keyData(keyData)
         , m_keyPath(keyPath)
     {
     }
 
-    IDBGetResult(const IDBKeyData& keyData, const IDBKeyData& primaryKeyData, IDBValue&& value, const Optional<IDBKeyPath>& keyPath)
+    IDBGetResult(const IDBKeyData& keyData, const IDBKeyData& primaryKeyData, IDBValue&& value, const std::optional<IDBKeyPath>& keyPath)
         : m_value(WTFMove(value))
         , m_keyData(keyData)
         , m_primaryKeyData(primaryKeyData)
@@ -77,7 +76,7 @@ public:
     {
     }
 
-    IDBGetResult(const IDBKeyData& keyData, const IDBKeyData& primaryKeyData, IDBValue&& value, const Optional<IDBKeyPath>& keyPath, Vector<IDBCursorRecord>&& prefetechedRecords)
+    IDBGetResult(const IDBKeyData& keyData, const IDBKeyData& primaryKeyData, IDBValue&& value, const std::optional<IDBKeyPath>& keyPath, Vector<IDBCursorRecord>&& prefetechedRecords)
         : m_value(WTFMove(value))
         , m_keyData(keyData)
         , m_primaryKeyData(primaryKeyData)
@@ -96,7 +95,7 @@ public:
     const IDBValue& value() const { return m_value; }
     const IDBKeyData& keyData() const { return m_keyData; }
     const IDBKeyData& primaryKeyData() const { return m_primaryKeyData; }
-    const Optional<IDBKeyPath>& keyPath() const { return m_keyPath; }
+    const std::optional<IDBKeyPath>& keyPath() const { return m_keyPath; }
     const Vector<IDBCursorRecord>& prefetchedRecords() const { return m_prefetchedRecords; }
     bool isDefined() const { return m_isDefined; }
 
@@ -104,14 +103,12 @@ public:
     template<class Decoder> static WARN_UNUSED_RETURN bool decode(Decoder&, IDBGetResult&);
 
 private:
-    void dataFromBuffer(SharedBuffer&);
-
     static void isolatedCopy(const IDBGetResult& source, IDBGetResult& destination);
 
     IDBValue m_value;
     IDBKeyData m_keyData;
     IDBKeyData m_primaryKeyData;
-    Optional<IDBKeyPath> m_keyPath;
+    std::optional<IDBKeyPath> m_keyPath;
     Vector<IDBCursorRecord> m_prefetchedRecords;
     bool m_isDefined { true };
 };
@@ -125,13 +122,13 @@ void IDBGetResult::encode(Encoder& encoder) const
 template<class Decoder>
 bool IDBGetResult::decode(Decoder& decoder, IDBGetResult& result)
 {
-    Optional<IDBKeyData> keyData;
+    std::optional<IDBKeyData> keyData;
     decoder >> keyData;
     if (!keyData)
         return false;
     result.m_keyData = WTFMove(*keyData);
 
-    Optional<IDBKeyData> primaryKeyData;
+    std::optional<IDBKeyData> primaryKeyData;
     decoder >> primaryKeyData;
     if (!primaryKeyData)
         return false;
@@ -143,13 +140,13 @@ bool IDBGetResult::decode(Decoder& decoder, IDBGetResult& result)
     if (!decoder.decode(result.m_isDefined))
         return false;
 
-    Optional<IDBValue> value;
+    std::optional<IDBValue> value;
     decoder >> value;
     if (!value)
         return false;
     result.m_value = WTFMove(*value);
 
-    Optional<Vector<IDBCursorRecord>> prefetchedRecords;
+    std::optional<Vector<IDBCursorRecord>> prefetchedRecords;
     decoder >> prefetchedRecords;
     if (!prefetchedRecords)
         return false;
@@ -159,5 +156,3 @@ bool IDBGetResult::decode(Decoder& decoder, IDBGetResult& result)
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(INDEXED_DATABASE)

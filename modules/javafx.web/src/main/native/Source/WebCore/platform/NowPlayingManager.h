@@ -26,8 +26,8 @@
 #pragma once
 
 #include "NowPlayingInfo.h"
+#include "PlatformMediaSession.h"
 #include "RemoteCommandListener.h"
-#include <wtf/Optional.h>
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
@@ -48,13 +48,32 @@ public:
         virtual void didReceiveRemoteControlCommand(PlatformMediaSession::RemoteControlCommandType, const PlatformMediaSession::RemoteCommandArgument&) = 0;
     };
 
-    void clearNowPlayingInfoClient(Client&);
-    void setNowPlayingInfo(Client&, NowPlayingInfo&&);
+    void addSupportedCommand(PlatformMediaSession::RemoteControlCommandType);
+    void removeSupportedCommand(PlatformMediaSession::RemoteControlCommandType);
+    RemoteCommandListener::RemoteCommandsSet supportedCommands() const;
+
+    void addClient(Client&);
+    void removeClient(Client&);
+
+    void clearNowPlayingInfo();
+    bool setNowPlayingInfo(const NowPlayingInfo&);
+    void setSupportsSeeking(bool);
+    void setSupportedRemoteCommands(const RemoteCommandListener::RemoteCommandsSet&);
+    void updateSupportedCommands();
 
 private:
+    virtual void clearNowPlayingInfoPrivate();
+    virtual void setNowPlayingInfoPrivate(const NowPlayingInfo&);
+    void ensureRemoteCommandListenerCreated();
     std::unique_ptr<RemoteCommandListener> m_remoteCommandListener;
     WeakPtr<Client> m_client;
-    Optional<NowPlayingInfo> m_nowPlayingInfo;
+    std::optional<NowPlayingInfo> m_nowPlayingInfo;
+    struct ArtworkCache {
+        String src;
+        RefPtr<SharedBuffer> imageData;
+    };
+    std::optional<ArtworkCache> m_nowPlayingInfoArtwork;
+    bool m_setAsNowPlayingApplication { false };
 };
 
 }

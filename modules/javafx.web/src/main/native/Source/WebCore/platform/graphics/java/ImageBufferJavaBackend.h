@@ -35,6 +35,11 @@ namespace WebCore {
 
 class ImageBufferJavaBackend : public ImageBufferBackend {
 public:
+    ~ImageBufferJavaBackend() {}
+    static unsigned calculateBytesPerRow(const IntSize& backendSize);
+    static size_t calculateMemoryCost(const Parameters&);
+    void transformToColorSpace(const DestinationColorSpace&) override { }
+
     static std::unique_ptr<ImageBufferJavaBackend> create(const Parameters&, const HostWindow*);
     static std::unique_ptr<ImageBufferJavaBackend> create(const Parameters&, const GraphicsContext&);
 
@@ -56,16 +61,20 @@ public:
         const AffineTransform& patternTransform, const FloatPoint& phase,
         const FloatSize& spacing, const ImagePaintingOptions&) override;
 
-    String toDataURL(const String& mimeType, Optional<double> quality, PreserveResolution) const override;
-    Vector<uint8_t> toData(const String& mimeType, Optional<double> quality) const override;
-    Vector<uint8_t> toBGRAData() const override;
+    String toDataURL(const String& mimeType, std::optional<double> quality, PreserveResolution) const override;
+    Vector<uint8_t> toData(const String& mimeType, std::optional<double> quality) const override;
 
-    RefPtr<ImageData> getImageData(AlphaPremultiplication outputFormat, const IntRect&) const override;
-    void putImageData(AlphaPremultiplication inputFormat, const ImageData&,
-        const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat) override;
 
 protected:
     ImageBufferJavaBackend(const Parameters&, PlatformImagePtr, std::unique_ptr<GraphicsContext>&&, IntSize);
+
+
+    std::optional<PixelBuffer> getPixelBuffer(const PixelBufferFormat& outputFormat, const IntRect& srcRect) const override;
+    std::optional<PixelBuffer> getPixelBuffer(const PixelBufferFormat& outputFormat, const IntRect& srcRect, void* data) const;
+    void putPixelBuffer(const PixelBuffer&, const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat) override;
+    void putPixelBuffer(const PixelBuffer&, const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat, void* data);
+
+    unsigned bytesPerRow() const override;
 
     PlatformImagePtr m_image;
     std::unique_ptr<GraphicsContext> m_context;

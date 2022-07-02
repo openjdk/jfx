@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2020-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,7 +25,9 @@
 
 #pragma once
 
+#include "DisplayListItemBufferIdentifier.h"
 #include "DisplayListItemType.h"
+#include "DisplayListItems.h"
 #include "SharedBuffer.h"
 #include <wtf/FastMalloc.h>
 #include <wtf/ObjectIdentifier.h>
@@ -37,9 +39,6 @@ class GraphicsContext;
 namespace DisplayList {
 
 class DisplayList;
-
-enum ItemBufferIdentifierType { };
-using ItemBufferIdentifier = ObjectIdentifier<ItemBufferIdentifierType>;
 
 // An ItemBufferHandle wraps a pointer to a buffer that contains display list item data.
 struct ItemBufferHandle {
@@ -77,28 +76,54 @@ struct ItemHandle {
     template<typename T> T& get() const
     {
         ASSERT(is<T>());
-        return *reinterpret_cast<T*>(&data[sizeof(uint64_t)]);
+        return *reinterpret_cast<T*>(data + sizeof(uint64_t));
     }
 
-    bool safeCopy(ItemHandle destination) const;
+    bool safeCopy(ItemType, ItemHandle destination) const;
 };
+
+bool safeCopy(ItemHandle destination, const DisplayListItem& source);
 
 enum class DidChangeItemBuffer : bool { No, Yes };
 
 class ItemBufferWritingClient {
 public:
-    virtual ~ItemBufferWritingClient() { }
+    virtual ~ItemBufferWritingClient()
+    {
+    }
 
-    virtual ItemBufferHandle createItemBuffer(size_t) = 0;
-    virtual RefPtr<SharedBuffer> encodeItem(ItemHandle) const = 0;
-    virtual void didAppendData(const ItemBufferHandle&, size_t numberOfBytes, DidChangeItemBuffer) = 0;
+    virtual ItemBufferHandle createItemBuffer(size_t)
+    {
+        return { };
+    }
+
+    virtual std::optional<std::size_t> requiredSizeForItem(const DisplayListItem&) const
+    {
+        return std::nullopt;
+    }
+
+    virtual RefPtr<SharedBuffer> encodeItemOutOfLine(const DisplayListItem&) const
+    {
+        return nullptr;
+    }
+
+    virtual void encodeItemInline(const DisplayListItem&, uint8_t*) const
+    {
+    }
+
+    virtual void didAppendData(const ItemBufferHandle&, size_t numberOfBytes, DidChangeItemBuffer)
+    {
+        UNUSED_PARAM(numberOfBytes);
+    }
 };
 
 class ItemBufferReadingClient {
 public:
-    virtual ~ItemBufferReadingClient() { }
+    virtual ~ItemBufferReadingClient()
+    {
+    }
 
-    virtual Optional<ItemHandle> WARN_UNUSED_RETURN decodeItem(const uint8_t* data, size_t dataLength, ItemType, uint8_t* handleLocation) = 0;
+    virtual std::optional<ItemHandle> WARN_UNUSED_RETURN decodeItem(const uint8_t* data, size_t dataLength, ItemType, uint8_t* handleLocation) = 0;
 };
 
 // An ItemBuffer contains display list item data, and consists of a readwrite ItemBufferHandle (to which display
@@ -127,6 +152,7 @@ public:
     }
 
     void clear();
+    void shrinkToFit();
 
     bool isEmpty() const
     {
@@ -139,7 +165,7 @@ public:
     // writable buffer handle; if remaining buffer capacity is insufficient to store the item, a
     // new buffer will be allocated (either by the ItemBufferWritingClient, if set, or by the item
     // buffer itself if there is no client). Items are placed back-to-back in these item buffers,
-    // with padding after each item to ensure that all items are aligned to 8 bytes.
+    // with padding between each item to ensure that all items are aligned to 8 bytes.
     //
     // If a writing client is present and requires custom encoding for the given item type T, the
     // item buffer will ask the client for an opaque SharedBuffer containing encoded data for the
@@ -149,21 +175,15 @@ public:
     // data back into an item of type T.
     template<typename T, class... Args> void append(Args&&... args)
     {
-        static_assert(std::is_trivially_destructible<T>::value || !T::isInlineItem);
+        static_assert(std::is_trivially_destructible<T>::value == T::isInlineItem);
 
-        if (!T::isInlineItem && m_writingClient) {
-            static uint8_t temporaryItemBuffer[sizeof(uint64_t) + sizeof(T)];
-            temporaryItemBuffer[0] = static_cast<uint8_t>(T::itemType);
-            new (temporaryItemBuffer + sizeof(uint64_t)) T(std::forward<Args>(args)...);
-            append({ temporaryItemBuffer });
-            ItemHandle { temporaryItemBuffer }.destroy();
+        if constexpr (!T::isInlineItem) {
+            RELEASE_ASSERT(m_writingClient);
+            append(DisplayListItem(T(std::forward<Args>(args)...)));
             return;
         }
 
         auto bufferChanged = swapWritableBufferIfNeeded(paddedSizeOfTypeAndItemInBytes(T::itemType));
-
-        if (!std::is_trivially_destructible<T>::value)
-            m_itemsToDestroyInAllocatedBuffers.append({ &m_writableBuffer.data[m_writtenNumberOfBytes] });
 
         uncheckedAppend<T>(bufferChanged, std::forward<Args>(args)...);
     }
@@ -178,7 +198,7 @@ private:
     WEBCORE_EXPORT void didAppendData(size_t numberOfBytes, DidChangeItemBuffer);
 
     WEBCORE_EXPORT DidChangeItemBuffer swapWritableBufferIfNeeded(size_t numberOfBytes);
-    WEBCORE_EXPORT void append(ItemHandle);
+    WEBCORE_EXPORT void append(const DisplayListItem&);
     template<typename T, class... Args> void uncheckedAppend(DidChangeItemBuffer didChangeItemBuffer, Args&&... args)
     {
         auto* startOfItem = &m_writableBuffer.data[m_writtenNumberOfBytes];
@@ -189,7 +209,6 @@ private:
 
     ItemBufferReadingClient* m_readingClient { nullptr };
     ItemBufferWritingClient* m_writingClient { nullptr };
-    Vector<ItemHandle> m_itemsToDestroyInAllocatedBuffers;
     Vector<uint8_t*> m_allocatedBuffers;
     ItemBufferHandles m_readOnlyBuffers;
     ItemBufferHandle m_writableBuffer;

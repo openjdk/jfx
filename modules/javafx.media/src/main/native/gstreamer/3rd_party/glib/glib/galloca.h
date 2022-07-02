@@ -30,6 +30,7 @@
 #endif
 
 #include <glib/gtypes.h>
+#include <string.h>
 
 #if defined(__BIONIC__) && defined (GLIB_HAVE_ALLOCA_H)
 # include <alloca.h>
@@ -81,6 +82,11 @@ G_END_DECLS
  *   way as out of stack space situations from infinite function recursion, i.e.
  *   with a segmentation fault.
  *
+ * - Allowing @size to be specified by an untrusted party would allow for them
+ *   to trigger a segmentation fault by specifying a large size, leading to a
+ *   denial of service vulnerability. @size must always be entirely under the
+ *   control of the program.
+ *
  * - Special care has to be taken when mixing alloca() with GNU C variable sized arrays.
  *   Stack space allocated with alloca() in the same scope as a variable sized array
  *   will be freed together with the variable sized array upon exit of that scope, and
@@ -88,7 +94,23 @@ G_END_DECLS
  *
  * Returns: space for @size bytes, allocated on the stack
  */
-#define g_alloca(size)     alloca (size)
+#define g_alloca(size)           alloca (size)
+
+/**
+ * g_alloca0:
+ * @size: number of bytes to allocate.
+ *
+ * Wraps g_alloca() and initializes allocated memory to zeroes.
+ * If @size is '0' it returns %NULL.
+ *
+ * Note that the @size argument will be evaluated multiple times.
+ *
+ * Returns: (nullable) (transfer full): space for @size bytes, allocated on the stack
+ *
+ * Since: 2.72
+ */
+#define g_alloca0(size)  ((size) == 0 ? NULL : memset (g_alloca (size), 0, (size)))
+
 /**
  * g_newa:
  * @struct_type: Type of memory chunks to be allocated
@@ -96,8 +118,28 @@ G_END_DECLS
  *
  * Wraps g_alloca() in a more typesafe manner.
  *
+ * As mentioned in the documentation for g_alloca(), @n_structs must always be
+ * entirely under the control of the program, or you may introduce a denial of
+ * service vulnerability. In addition, the multiplication of @struct_type by
+ * @n_structs is not checked, so an overflow may lead to a remote code execution
+ * vulnerability.
+ *
  * Returns: Pointer to stack space for @n_structs chunks of type @struct_type
  */
 #define g_newa(struct_type, n_structs)  ((struct_type*) g_alloca (sizeof (struct_type) * (gsize) (n_structs)))
+
+/**
+ * g_newa0:
+ * @struct_type: the type of the elements to allocate.
+ * @n_structs: the number of elements to allocate.
+ *
+ * Wraps g_alloca0() in a more typesafe manner.
+ *
+ * Returns: (nullable) (transfer full): Pointer to stack space for @n_structs
+ *   chunks of type @struct_type
+ *
+ * Since: 2.72
+ */
+#define g_newa0(struct_type, n_structs)  ((struct_type*) g_alloca0 (sizeof (struct_type) * (gsize) (n_structs)))
 
 #endif /* __G_ALLOCA_H__ */

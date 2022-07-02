@@ -209,7 +209,7 @@ String PropertySetCSSStyleDeclaration::getPropertyPriority(const String& propert
 
     CSSPropertyID propertyID = cssPropertyID(propertyName);
     if (!propertyID)
-        return String();
+        return emptyString();
     return m_propertySet->propertyIsImportant(propertyID) ? "important"_s : emptyString();
 }
 
@@ -308,22 +308,22 @@ String PropertySetCSSStyleDeclaration::getPropertyValueInternal(CSSPropertyID pr
     if (!relatedValue.isEmpty())
         return relatedValue;
 
-    return String();
+    return { };
 }
 
-ExceptionOr<bool> PropertySetCSSStyleDeclaration::setPropertyInternal(CSSPropertyID propertyID, const String& value, bool important)
+ExceptionOr<void> PropertySetCSSStyleDeclaration::setPropertyInternal(CSSPropertyID propertyID, const String& value, bool important)
 {
-    StyleAttributeMutationScope mutationScope(this);
+    StyleAttributeMutationScope mutationScope { this };
     if (!willMutate())
-        return false;
+        return { };
 
-    bool changed = m_propertySet->setProperty(propertyID, value, important, cssParserContext());
-
-    didMutate(changed ? PropertyChanged : NoChanges);
-
-    if (changed)
+    if (m_propertySet->setProperty(propertyID, value, important, cssParserContext())) {
+        didMutate(PropertyChanged);
         mutationScope.enqueueMutationRecord();
-    return changed;
+    } else
+        didMutate(NoChanges);
+
+    return { };
 }
 
 RefPtr<DeprecatedCSSOMValue> PropertySetCSSStyleDeclaration::wrapForDeprecatedCSSOM(CSSValue* internalValue)
@@ -364,6 +364,7 @@ Ref<MutableStyleProperties> PropertySetCSSStyleDeclaration::copyProperties() con
 StyleRuleCSSStyleDeclaration::StyleRuleCSSStyleDeclaration(MutableStyleProperties& propertySet, CSSRule& parentRule)
     : PropertySetCSSStyleDeclaration(propertySet)
     , m_refCount(1)
+    , m_parentRuleType(static_cast<StyleRuleType>(parentRule.type()))
     , m_parentRule(&parentRule)
 {
     m_propertySet->ref();
@@ -418,8 +419,7 @@ CSSParserContext StyleRuleCSSStyleDeclaration::cssParserContext() const
         return PropertySetCSSStyleDeclaration::cssParserContext();
 
     auto context = styleSheet->parserContext();
-    if (m_parentRule)
-        context.enclosingRuleType = static_cast<StyleRuleType>(m_parentRule->type());
+    context.enclosingRuleType = m_parentRuleType;
 
     return context;
 }

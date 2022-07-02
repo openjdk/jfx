@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,8 +31,9 @@
 #include "ExceptionHelpers.h"
 #include "FunctionCodeBlock.h"
 #include "JSImmutableButterfly.h"
+#include "JSPropertyNameEnumerator.h"
 #include "ScopedArguments.h"
-#include "SlowPathReturnType.h"
+#include "SlowPathFunction.h"
 #include "StackAlignment.h"
 #include "VMInlines.h"
 #include <wtf/StdLibExtras.h>
@@ -89,6 +90,60 @@ ALWAYS_INLINE int arityCheckFor(VM& vm, CallFrame* callFrame, CodeSpecialization
     if (UNLIKELY(!vm.ensureStackCapacityFor(newStack)))
         return -1;
     return padding;
+}
+
+inline JSValue opEnumeratorGetByVal(JSGlobalObject* globalObject, JSValue baseValue, JSValue propertyNameValue, unsigned index, JSPropertyNameEnumerator::Mode mode, JSPropertyNameEnumerator* enumerator, ArrayProfile* arrayProfile = nullptr, uint8_t* enumeratorMetadata = nullptr)
+{
+    VM& vm = getVM(globalObject);
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    switch (mode) {
+    case JSPropertyNameEnumerator::IndexedMode: {
+        if (arrayProfile && LIKELY(baseValue.isCell()))
+            arrayProfile->observeStructureID(baseValue.asCell()->structureID());
+        RELEASE_AND_RETURN(scope, baseValue.get(globalObject, static_cast<unsigned>(index)));
+    }
+    case JSPropertyNameEnumerator::OwnStructureMode: {
+        if (LIKELY(baseValue.isCell()) && baseValue.asCell()->structureID() == enumerator->cachedStructureID()) {
+            // We'll only match the structure ID if the base is an object.
+            ASSERT(index < enumerator->endStructurePropertyIndex());
+            RELEASE_AND_RETURN(scope, baseValue.getObject()->getDirect(index < enumerator->cachedInlineCapacity() ? index : index - enumerator->cachedInlineCapacity() + firstOutOfLineOffset));
+        } else {
+            if (enumeratorMetadata)
+                *enumeratorMetadata |= static_cast<uint8_t>(JSPropertyNameEnumerator::HasSeenOwnStructureModeStructureMismatch);
+        }
+        FALLTHROUGH;
+    }
+
+    case JSPropertyNameEnumerator::GenericMode: {
+        if (arrayProfile && baseValue.isCell() && mode != JSPropertyNameEnumerator::OwnStructureMode)
+            arrayProfile->observeStructureID(baseValue.asCell()->structureID());
+#if USE(JSVALUE32_64)
+        if (!propertyNameValue.isCell()) {
+            // This branch is only needed because we use this method
+            // both as a slow_path and as a DFG call op. We'll end up
+            // here if propertyName is not a cell then we are in
+            // index+named mode, so do what RecoverNameAndGetVal
+            // does. This can probably be removed if we re-enable the
+            // optimizations for enumeratorGetByVal in DFG, see bug
+            // #230189.
+            JSString* string = enumerator->propertyNameAtIndex(index);
+            auto propertyName = string->toIdentifier(globalObject);
+            RETURN_IF_EXCEPTION(scope, { });
+            RELEASE_AND_RETURN(scope, baseValue.get(globalObject, propertyName));
+        }
+#endif
+        JSString* string = asString(propertyNameValue);
+        auto propertyName = string->toIdentifier(globalObject);
+        RETURN_IF_EXCEPTION(scope, { });
+        RELEASE_AND_RETURN(scope, baseValue.get(globalObject, propertyName));
+    }
+
+    default:
+        RELEASE_ASSERT_NOT_REACHED();
+        break;
+    };
+    RELEASE_ASSERT_NOT_REACHED();
 }
 
 inline bool opInByVal(JSGlobalObject* globalObject, JSValue baseVal, JSValue propName, ArrayProfile* arrayProfile = nullptr)
@@ -251,23 +306,14 @@ JSC_DECLARE_COMMON_SLOW_PATH(slow_path_typeof_is_object);
 JSC_DECLARE_COMMON_SLOW_PATH(slow_path_typeof_is_function);
 JSC_DECLARE_COMMON_SLOW_PATH(slow_path_is_callable);
 JSC_DECLARE_COMMON_SLOW_PATH(slow_path_is_constructor);
-JSC_DECLARE_COMMON_SLOW_PATH(slow_path_in_by_id);
-JSC_DECLARE_COMMON_SLOW_PATH(slow_path_in_by_val);
-JSC_DECLARE_COMMON_SLOW_PATH(slow_path_del_by_val);
 JSC_DECLARE_COMMON_SLOW_PATH(slow_path_strcat);
 JSC_DECLARE_COMMON_SLOW_PATH(slow_path_to_primitive);
 JSC_DECLARE_COMMON_SLOW_PATH(slow_path_to_property_key);
-JSC_DECLARE_COMMON_SLOW_PATH(slow_path_get_enumerable_length);
-JSC_DECLARE_COMMON_SLOW_PATH(slow_path_has_enumerable_indexed_property);
-JSC_DECLARE_COMMON_SLOW_PATH(slow_path_has_enumerable_structure_property);
-JSC_DECLARE_COMMON_SLOW_PATH(slow_path_has_enumerable_property);
-JSC_DECLARE_COMMON_SLOW_PATH(slow_path_has_own_structure_property);
-JSC_DECLARE_COMMON_SLOW_PATH(slow_path_in_structure_property);
-JSC_DECLARE_COMMON_SLOW_PATH(slow_path_get_direct_pname);
 JSC_DECLARE_COMMON_SLOW_PATH(slow_path_get_property_enumerator);
-JSC_DECLARE_COMMON_SLOW_PATH(slow_path_enumerator_structure_pname);
-JSC_DECLARE_COMMON_SLOW_PATH(slow_path_enumerator_generic_pname);
-JSC_DECLARE_COMMON_SLOW_PATH(slow_path_to_index_string);
+JSC_DECLARE_COMMON_SLOW_PATH(slow_path_enumerator_next);
+JSC_DECLARE_COMMON_SLOW_PATH(slow_path_enumerator_get_by_val);
+JSC_DECLARE_COMMON_SLOW_PATH(slow_path_enumerator_in_by_val);
+JSC_DECLARE_COMMON_SLOW_PATH(slow_path_enumerator_has_own_property);
 JSC_DECLARE_COMMON_SLOW_PATH(slow_path_profile_type_clear_log);
 JSC_DECLARE_COMMON_SLOW_PATH(slow_path_unreachable);
 JSC_DECLARE_COMMON_SLOW_PATH(slow_path_create_lexical_environment);
@@ -278,9 +324,7 @@ JSC_DECLARE_COMMON_SLOW_PATH(slow_path_create_promise);
 JSC_DECLARE_COMMON_SLOW_PATH(slow_path_create_generator);
 JSC_DECLARE_COMMON_SLOW_PATH(slow_path_create_async_generator);
 JSC_DECLARE_COMMON_SLOW_PATH(slow_path_create_rest);
-JSC_DECLARE_COMMON_SLOW_PATH(slow_path_get_by_id_with_this);
 JSC_DECLARE_COMMON_SLOW_PATH(slow_path_get_by_val_with_this);
-JSC_DECLARE_COMMON_SLOW_PATH(slow_path_get_private_name);
 JSC_DECLARE_COMMON_SLOW_PATH(slow_path_get_prototype_of);
 JSC_DECLARE_COMMON_SLOW_PATH(slow_path_put_by_id_with_this);
 JSC_DECLARE_COMMON_SLOW_PATH(slow_path_put_by_val_with_this);
@@ -298,7 +342,5 @@ JSC_DECLARE_COMMON_SLOW_PATH(iterator_open_try_fast_wide32);
 JSC_DECLARE_COMMON_SLOW_PATH(iterator_next_try_fast_narrow);
 JSC_DECLARE_COMMON_SLOW_PATH(iterator_next_try_fast_wide16);
 JSC_DECLARE_COMMON_SLOW_PATH(iterator_next_try_fast_wide32);
-
-using SlowPathFunction = SlowPathReturnType(JIT_OPERATION_ATTRIBUTES*)(CallFrame*, const Instruction*);
 
 } // namespace JSC

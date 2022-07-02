@@ -36,6 +36,16 @@
 #include <wtf/java/JavaEnv.h>
 #endif
 
+Ref<WorkQueue> WorkQueue::constructMainWorkQueue()
+{
+    return adoptRef(*new WorkQueue(RunLoop::main()));
+}
+
+WorkQueue::WorkQueue(RunLoop& runLoop)
+    : m_runLoop(&runLoop)
+{
+}
+
 void WorkQueue::platformInitialize(const char* name, Type, QOS)
 {
     BinarySemaphore semaphore;

@@ -31,12 +31,11 @@
 #include "EventTarget.h"
 #include "FetchRequestCredentials.h"
 #include "MessagePort.h"
-#include "PostMessageOptions.h"
 #include "WorkerScriptLoaderClient.h"
 #include "WorkerType.h"
 #include <JavaScriptCore/RuntimeFlags.h>
+#include <wtf/Deque.h>
 #include <wtf/MonotonicTime.h>
-#include <wtf/Optional.h>
 #include <wtf/text/AtomStringHash.h>
 
 namespace JSC {
@@ -53,6 +52,8 @@ class ScriptExecutionContext;
 class WorkerGlobalScopeProxy;
 class WorkerScriptLoader;
 
+struct StructuredSerializeOptions;
+
 class Worker final : public AbstractWorker, public ActiveDOMObject, private WorkerScriptLoaderClient {
     WTF_MAKE_ISO_ALLOCATED(Worker);
 public:
@@ -64,7 +65,7 @@ public:
     static ExceptionOr<Ref<Worker>> create(ScriptExecutionContext&, JSC::RuntimeFlags, const String& url, const Options&);
     virtual ~Worker();
 
-    ExceptionOr<void> postMessage(JSC::JSGlobalObject&, JSC::JSValue message, PostMessageOptions&&);
+    ExceptionOr<void> postMessage(JSC::JSGlobalObject&, JSC::JSValue message, StructuredSerializeOptions&&);
 
     void terminate();
     bool wasTerminated() const { return m_wasTerminated; }
@@ -77,9 +78,7 @@ public:
     void dispatchEvent(Event&) final;
 
 #if ENABLE(WEB_RTC)
-    void addRTCRtpScriptTransformer(String&&);
-    bool hasRTCRtpScriptTransformer(const String& name) { return m_transformers.contains(name); }
-    void createRTCRtpScriptTransformer(const String&, TransferredMessagePort, RTCRtpScriptTransform&);
+    void createRTCRtpScriptTransformer(RTCRtpScriptTransform&, MessageWithMessagePorts&&);
     void postTaskToWorkerGlobalScope(Function<void(ScriptExecutionContext&)>&&);
 #endif
 
@@ -108,7 +107,7 @@ private:
     String m_name;
     String m_identifier;
     WorkerGlobalScopeProxy& m_contextProxy; // The proxy outlives the worker to perform thread shutdown.
-    Optional<ContentSecurityPolicyResponseHeaders> m_contentSecurityPolicyResponseHeaders;
+    std::optional<ContentSecurityPolicyResponseHeaders> m_contentSecurityPolicyResponseHeaders;
     MonotonicTime m_workerCreationTime;
     bool m_shouldBypassMainWorldContentSecurityPolicy { false };
     bool m_isSuspendedForBackForwardCache { false };

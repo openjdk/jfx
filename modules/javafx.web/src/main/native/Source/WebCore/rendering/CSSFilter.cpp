@@ -52,21 +52,6 @@
 
 namespace WebCore {
 
-static inline void endMatrixRow(Vector<float>& parameters)
-{
-    parameters.append(0);
-    parameters.append(0);
-}
-
-static inline void lastMatrixRow(Vector<float>& parameters)
-{
-    parameters.append(0);
-    parameters.append(0);
-    parameters.append(0);
-    parameters.append(1);
-    parameters.append(0);
-}
-
 Ref<CSSFilter> CSSFilter::create()
 {
     return adoptRef(*new CSSFilter);
@@ -124,9 +109,13 @@ RefPtr<FilterEffect> CSSFilter::buildReferenceFilter(RenderElement& renderer, Fi
         }
 
         effectElement.setStandardAttributes(effect.get());
-        if (effectElement.renderer())
-            effect->setOperatingColorSpace(effectElement.renderer()->style().svgStyle().colorInterpolationFilters() == ColorInterpolation::LinearRGB ? DestinationColorSpace::LinearSRGB : DestinationColorSpace::SRGB);
-
+        if (effectElement.renderer()) {
+#if ENABLE(DESTINATION_COLOR_SPACE_LINEAR_SRGB)
+            effect->setOperatingColorSpace(effectElement.renderer()->style().svgStyle().colorInterpolationFilters() == ColorInterpolation::LinearRGB ? DestinationColorSpace::LinearSRGB() : DestinationColorSpace::SRGB());
+#else
+            effect->setOperatingColorSpace(DestinationColorSpace::SRGB());
+#endif
+        }
         builder->add(effectElement.result(), effect);
         referenceEffects.append(*effect);
     }
@@ -155,72 +144,86 @@ bool CSSFilter::build(RenderElement& renderer, const FilterOperations& operation
         }
         case FilterOperation::GRAYSCALE: {
             auto& colorMatrixOperation = downcast<BasicColorMatrixFilterOperation>(filterOperation);
-            Vector<float> inputParameters;
             double oneMinusAmount = clampTo(1 - colorMatrixOperation.amount(), 0.0, 1.0);
 
             // See https://dvcs.w3.org/hg/FXTF/raw-file/tip/filters/index.html#grayscaleEquivalent
             // for information on parameters.
 
-            inputParameters.append(narrowPrecisionToFloat(0.2126 + 0.7874 * oneMinusAmount));
-            inputParameters.append(narrowPrecisionToFloat(0.7152 - 0.7152 * oneMinusAmount));
-            inputParameters.append(narrowPrecisionToFloat(0.0722 - 0.0722 * oneMinusAmount));
-            endMatrixRow(inputParameters);
+            Vector<float> inputParameters {
+                narrowPrecisionToFloat(0.2126 + 0.7874 * oneMinusAmount),
+                narrowPrecisionToFloat(0.7152 - 0.7152 * oneMinusAmount),
+                narrowPrecisionToFloat(0.0722 - 0.0722 * oneMinusAmount),
+                0,
+                0,
 
-            inputParameters.append(narrowPrecisionToFloat(0.2126 - 0.2126 * oneMinusAmount));
-            inputParameters.append(narrowPrecisionToFloat(0.7152 + 0.2848 * oneMinusAmount));
-            inputParameters.append(narrowPrecisionToFloat(0.0722 - 0.0722 * oneMinusAmount));
-            endMatrixRow(inputParameters);
+                narrowPrecisionToFloat(0.2126 - 0.2126 * oneMinusAmount),
+                narrowPrecisionToFloat(0.7152 + 0.2848 * oneMinusAmount),
+                narrowPrecisionToFloat(0.0722 - 0.0722 * oneMinusAmount),
+                0,
+                0,
 
-            inputParameters.append(narrowPrecisionToFloat(0.2126 - 0.2126 * oneMinusAmount));
-            inputParameters.append(narrowPrecisionToFloat(0.7152 - 0.7152 * oneMinusAmount));
-            inputParameters.append(narrowPrecisionToFloat(0.0722 + 0.9278 * oneMinusAmount));
-            endMatrixRow(inputParameters);
+                narrowPrecisionToFloat(0.2126 - 0.2126 * oneMinusAmount),
+                narrowPrecisionToFloat(0.7152 - 0.7152 * oneMinusAmount),
+                narrowPrecisionToFloat(0.0722 + 0.9278 * oneMinusAmount),
+                0,
+                0,
 
-            lastMatrixRow(inputParameters);
+                0,
+                0,
+                0,
+                1,
+                0,
+            };
 
-            effect = FEColorMatrix::create(*this, FECOLORMATRIX_TYPE_MATRIX, inputParameters);
+            effect = FEColorMatrix::create(*this, FECOLORMATRIX_TYPE_MATRIX, WTFMove(inputParameters));
             break;
         }
         case FilterOperation::SEPIA: {
             auto& colorMatrixOperation = downcast<BasicColorMatrixFilterOperation>(filterOperation);
-            Vector<float> inputParameters;
             double oneMinusAmount = clampTo(1 - colorMatrixOperation.amount(), 0.0, 1.0);
 
             // See https://dvcs.w3.org/hg/FXTF/raw-file/tip/filters/index.html#sepiaEquivalent
             // for information on parameters.
 
-            inputParameters.append(narrowPrecisionToFloat(0.393 + 0.607 * oneMinusAmount));
-            inputParameters.append(narrowPrecisionToFloat(0.769 - 0.769 * oneMinusAmount));
-            inputParameters.append(narrowPrecisionToFloat(0.189 - 0.189 * oneMinusAmount));
-            endMatrixRow(inputParameters);
+            Vector<float> inputParameters {
+                narrowPrecisionToFloat(0.393 + 0.607 * oneMinusAmount),
+                narrowPrecisionToFloat(0.769 - 0.769 * oneMinusAmount),
+                narrowPrecisionToFloat(0.189 - 0.189 * oneMinusAmount),
+                0,
+                0,
 
-            inputParameters.append(narrowPrecisionToFloat(0.349 - 0.349 * oneMinusAmount));
-            inputParameters.append(narrowPrecisionToFloat(0.686 + 0.314 * oneMinusAmount));
-            inputParameters.append(narrowPrecisionToFloat(0.168 - 0.168 * oneMinusAmount));
-            endMatrixRow(inputParameters);
+                narrowPrecisionToFloat(0.349 - 0.349 * oneMinusAmount),
+                narrowPrecisionToFloat(0.686 + 0.314 * oneMinusAmount),
+                narrowPrecisionToFloat(0.168 - 0.168 * oneMinusAmount),
+                0,
+                0,
 
-            inputParameters.append(narrowPrecisionToFloat(0.272 - 0.272 * oneMinusAmount));
-            inputParameters.append(narrowPrecisionToFloat(0.534 - 0.534 * oneMinusAmount));
-            inputParameters.append(narrowPrecisionToFloat(0.131 + 0.869 * oneMinusAmount));
-            endMatrixRow(inputParameters);
+                narrowPrecisionToFloat(0.272 - 0.272 * oneMinusAmount),
+                narrowPrecisionToFloat(0.534 - 0.534 * oneMinusAmount),
+                narrowPrecisionToFloat(0.131 + 0.869 * oneMinusAmount),
+                0,
+                0,
 
-            lastMatrixRow(inputParameters);
+                0,
+                0,
+                0,
+                1,
+                0,
+            };
 
-            effect = FEColorMatrix::create(*this, FECOLORMATRIX_TYPE_MATRIX, inputParameters);
+            effect = FEColorMatrix::create(*this, FECOLORMATRIX_TYPE_MATRIX, WTFMove(inputParameters));
             break;
         }
         case FilterOperation::SATURATE: {
             auto& colorMatrixOperation = downcast<BasicColorMatrixFilterOperation>(filterOperation);
-            Vector<float> inputParameters;
-            inputParameters.append(narrowPrecisionToFloat(colorMatrixOperation.amount()));
-            effect = FEColorMatrix::create(*this, FECOLORMATRIX_TYPE_SATURATE, inputParameters);
+            Vector<float> inputParameters { narrowPrecisionToFloat(colorMatrixOperation.amount()) };
+            effect = FEColorMatrix::create(*this, FECOLORMATRIX_TYPE_SATURATE, WTFMove(inputParameters));
             break;
         }
         case FilterOperation::HUE_ROTATE: {
             auto& colorMatrixOperation = downcast<BasicColorMatrixFilterOperation>(filterOperation);
-            Vector<float> inputParameters;
-            inputParameters.append(narrowPrecisionToFloat(colorMatrixOperation.amount()));
-            effect = FEColorMatrix::create(*this, FECOLORMATRIX_TYPE_HUEROTATE, inputParameters);
+            Vector<float> inputParameters { narrowPrecisionToFloat(colorMatrixOperation.amount()) };
+            effect = FEColorMatrix::create(*this, FECOLORMATRIX_TYPE_HUEROTATE, WTFMove(inputParameters));
             break;
         }
         case FilterOperation::INVERT: {
@@ -293,10 +296,10 @@ bool CSSFilter::build(RenderElement& renderer, const FilterOperations& operation
             // Unlike SVG Filters and CSSFilterImages, filter functions on the filter
             // property applied here should not clip to their primitive subregions.
             effect->setClipsToBounds(consumer == FilterConsumer::FilterFunction);
-            effect->setOperatingColorSpace(DestinationColorSpace::SRGB);
+            effect->setOperatingColorSpace(DestinationColorSpace::SRGB());
 
             if (filterOperation.type() != FilterOperation::REFERENCE) {
-                effect->inputEffects().append(WTFMove(previousEffect));
+                effect->inputEffects() = { WTFMove(previousEffect) };
                 m_effects.append(*effect);
             }
             previousEffect = WTFMove(effect);
@@ -306,6 +309,8 @@ bool CSSFilter::build(RenderElement& renderer, const FilterOperations& operation
     // If we didn't make any effects, tell our caller we are not valid.
     if (m_effects.isEmpty())
         return false;
+
+    m_effects.shrinkToFit();
 
     setMaxEffectRects(m_sourceDrawingRegion);
 #if USE(CORE_IMAGE)
@@ -339,11 +344,11 @@ void CSSFilter::allocateBackingStoreIfNeeded(const GraphicsContext& targetContex
     IntSize logicalSize { m_sourceDrawingRegion.size() };
     if (!sourceImage() || sourceImage()->logicalSize() != logicalSize) {
 #if USE(DIRECT2D)
-        setSourceImage(ImageBuffer::create(logicalSize, renderingMode(), &targetContext, filterScale()));
+        setSourceImage(ImageBuffer::create(logicalSize, renderingMode(), &targetContext, filterScale(), DestinationColorSpace::SRGB(), PixelFormat::BGRA8));
 #else
         UNUSED_PARAM(targetContext);
         RenderingMode mode = m_filterRenderer ? RenderingMode::Accelerated : renderingMode();
-        setSourceImage(ImageBuffer::create(logicalSize, mode, filterScale()));
+        setSourceImage(ImageBuffer::create(logicalSize, mode, filterScale(), DestinationColorSpace::SRGB(), PixelFormat::BGRA8));
 #endif
     }
     m_graphicsBufferAttached = true;
@@ -377,12 +382,12 @@ void CSSFilter::apply()
     if (m_filterRenderer) {
         m_filterRenderer->applyEffects(effect);
         if (m_filterRenderer->hasResult()) {
-            effect.transformResultColorSpace(DestinationColorSpace::SRGB);
+            effect.transformResultColorSpace(DestinationColorSpace::SRGB());
             return;
         }
     }
     effect.apply();
-    effect.transformResultColorSpace(DestinationColorSpace::SRGB);
+    effect.transformResultColorSpace(DestinationColorSpace::SRGB());
 }
 
 LayoutRect CSSFilter::computeSourceImageRectForDirtyRect(const LayoutRect& filterBoxRect, const LayoutRect& dirtyRect)
@@ -422,7 +427,7 @@ IntRect CSSFilter::outputRect() const
     auto& lastEffect = m_effects.last().get();
 
     if (lastEffect.hasResult() || (m_filterRenderer && m_filterRenderer->hasResult()))
-        return lastEffect.requestedRegionOfInputImageData(IntRect { m_filterRegion });
+        return lastEffect.requestedRegionOfInputPixelBuffer(IntRect { m_filterRegion });
 
     return { };
 }

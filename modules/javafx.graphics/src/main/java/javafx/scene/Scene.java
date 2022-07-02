@@ -1662,7 +1662,8 @@ public class Scene implements EventTarget {
     private ObjectProperty<String> userAgentStylesheet = null;
 
     /**
-     * @return the userAgentStylesheet property.
+     * Gets the userAgentStylesheet property.
+     * @return the userAgentStylesheet property
      * @see #getUserAgentStylesheet()
      * @see #setUserAgentStylesheet(String)
      * @since  JavaFX 8u20

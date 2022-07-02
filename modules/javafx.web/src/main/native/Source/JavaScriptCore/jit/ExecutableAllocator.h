@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include "ExecutableMemoryHandle.h"
 #include "FastJITPermissions.h"
 #include "JITCompilationEffort.h"
 #include "JSCConfig.h"
@@ -35,8 +36,10 @@
 #include <wtf/Assertions.h>
 #include <wtf/Gigacage.h>
 #include <wtf/Lock.h>
-#include <wtf/MetaAllocatorHandle.h>
+
+#if !USE(LIBPAS_JIT_HEAP)
 #include <wtf/MetaAllocator.h>
+#endif
 
 #if OS(DARWIN)
 #include <libkern/OSCacheControl.h>
@@ -54,8 +57,6 @@
 namespace JSC {
 
 static constexpr unsigned jitAllocationGranule = 32;
-
-typedef WTF::MetaAllocatorHandle ExecutableMemoryHandle;
 
 class ExecutableAllocatorBase {
     WTF_MAKE_FAST_ALLOCATED;
@@ -77,7 +78,7 @@ public:
 
     static size_t committedByteCount() { return 0; }
 
-    Lock& getLock() const
+    Lock& getLock() const WTF_RETURNS_LOCK(m_lock)
     {
         return m_lock;
     }
@@ -125,7 +126,7 @@ static ALWAYS_INLINE void* performJITMemcpy(void *dst, const void *src, size_t n
         if (UNLIKELY(Options::dumpJITMemoryPath()))
             dumpJITMemory(dst, src, n);
 
-        if (useFastJITPermissions()) {
+        if (g_jscConfig.useFastJITPermissions) {
             threadSelfRestrictRWXToRW();
             memcpy(dst, src, n);
             threadSelfRestrictRWXToRX();

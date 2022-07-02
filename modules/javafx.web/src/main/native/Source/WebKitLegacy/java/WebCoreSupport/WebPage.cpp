@@ -105,10 +105,12 @@
 #include <WebCore/TextureMapperJava.h>
 #include <WebCore/TextureMapperLayer.h>
 #include <WebCore/WorkerThread.h>
+#include <WebCore/platform/graphics/java/GraphicsContextJava.h>
 #include <wtf/Ref.h>
 #include <wtf/RunLoop.h>
 #include <wtf/java/JavaRef.h>
 #include <wtf/text/WTFString.h>
+#include <wtf/text/StringToIntegerConversion.h>
 
 // FIXME: Move dependency of runtime_root to BridgeUtils
 #include <WebCore/runtime_root.h>
@@ -261,7 +263,7 @@ void WebPage::paint(jobject rq, jint x, jint y, jint w, jint h)
 
     // Will be deleted by GraphicsContext destructor
     PlatformContextJava* ppgc = new PlatformContextJava(rq, jRenderTheme());
-    GraphicsContext gc(ppgc);
+    GraphicsContextJava gc(ppgc);
 
     // TODO: Following JS synchronization is not necessary for single thread model
     JSGlobalContextRef globalContext = toGlobalRef(mainFrame->script().globalObject(mainThreadNormalWorld()));
@@ -285,7 +287,7 @@ void WebPage::postPaint(jobject rq, jint x, jint y, jint w, jint h)
 
     // Will be deleted by GraphicsContext destructor
     PlatformContextJava* ppgc = new PlatformContextJava(rq, jRenderTheme());
-    GraphicsContext gc(ppgc);
+    GraphicsContextJava gc(ppgc);
 
     if (m_rootLayer) {
         if (m_syncLayers) {
@@ -852,7 +854,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_WebPage_twkCreatePage
     VisitedLinkStoreJava::setShouldTrackVisitedLinks(true);
 
 #if !LOG_DISABLED
-    initializeLogChannelsIfNecessary();
+    logChannels().initializeLogChannelsIfNecessary();
 #endif
     WebCore::PlatformStrategiesJava::initialize();
 
@@ -1272,33 +1274,42 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkOverridePreference
     Settings& settings = page->settings();
     String nativePropertyName(env, propertyName);
     String nativePropertyValue(env, propertyValue);
+    StringView nativePropertyString(nativePropertyValue);
 
-    if (nativePropertyName == "WebKitTextAreasAreResizable") {
-        settings.setTextAreasAreResizable(nativePropertyValue.toInt());
+    if (nativePropertyName == "CSSCounterStyleAtRulesEnabled") {
+        settings.setCSSCounterStyleAtRulesEnabled(nativePropertyValue == "true");
+    } else if (nativePropertyName == "CSSCounterStyleAtRuleImageSymbolsEnabled") {
+        settings.setCSSCounterStyleAtRuleImageSymbolsEnabled(nativePropertyValue == "true");
+    } else if (nativePropertyName == "CSSIndividualTransformPropertiesEnabled") {
+        settings.setCSSIndividualTransformPropertiesEnabled(nativePropertyValue == "true");
+    } else if (nativePropertyName == "CSSColorContrastEnabled") {
+        settings.setCSSColorContrastEnabled(nativePropertyValue == "true");
+    } else if (nativePropertyName == "WebKitTextAreasAreResizable") {
+        settings.setTextAreasAreResizable(parseIntegerAllowingTrailingJunk<int>(nativePropertyString).value());
     } else if (nativePropertyName == "WebKitLoadsImagesAutomatically") {
-        settings.setLoadsImagesAutomatically(nativePropertyValue.toInt());
+        settings.setLoadsImagesAutomatically(parseIntegerAllowingTrailingJunk<int>(nativePropertyString).value());
     } else if (nativePropertyName == "WebKitMinimumFontSize") {
-        settings.setMinimumFontSize(nativePropertyValue.toInt());
+        settings.setMinimumFontSize(parseIntegerAllowingTrailingJunk<int>(nativePropertyString).value());
     } else if (nativePropertyName == "WebKitMinimumLogicalFontSize") {
-        settings.setMinimumLogicalFontSize(nativePropertyValue.toInt());
+        settings.setMinimumLogicalFontSize(parseIntegerAllowingTrailingJunk<int>(nativePropertyString).value());
     } else if (nativePropertyName == "WebKitAcceleratedCompositingEnabled") {
-        settings.setAcceleratedCompositingEnabled(nativePropertyValue.toInt());
+        settings.setAcceleratedCompositingEnabled(parseIntegerAllowingTrailingJunk<int>(nativePropertyString).value());
     } else if (nativePropertyName == "WebKitScriptEnabled") {
-        settings.setScriptEnabled(nativePropertyValue.toInt());
+        settings.setScriptEnabled(parseIntegerAllowingTrailingJunk<int>(nativePropertyString).value());
     } else if (nativePropertyName == "WebKitJavaScriptCanOpenWindowsAutomatically") {
-        settings.setJavaScriptCanOpenWindowsAutomatically(nativePropertyValue.toInt());
+        settings.setJavaScriptCanOpenWindowsAutomatically(parseIntegerAllowingTrailingJunk<int>(nativePropertyString).value());
     } else if (nativePropertyName == "WebKitPluginsEnabled") {
-        settings.setPluginsEnabled(nativePropertyValue.toInt());
+        settings.setPluginsEnabled(parseIntegerAllowingTrailingJunk<int>(nativePropertyString).value());
     } else if (nativePropertyName == "WebKitDefaultFixedFontSize") {
-        settings.setDefaultFixedFontSize(nativePropertyValue.toInt());
+        settings.setDefaultFixedFontSize(parseIntegerAllowingTrailingJunk<int>(nativePropertyString).value());
     } else if (nativePropertyName == "WebKitContextMenuEnabled") {
-        settings.setContextMenuEnabled(nativePropertyValue.toInt());
+        settings.setContextMenuEnabled(parseIntegerAllowingTrailingJunk<int>(nativePropertyString).value());
     } else if (nativePropertyName == "WebKitUserAgent") {
         settings.setUserAgent(nativePropertyValue);
     } else if (nativePropertyName == "WebKitMaximumHTMLParserDOMTreeDepth") {
-        settings.setMaximumHTMLParserDOMTreeDepth(nativePropertyValue.toUInt());
+        settings.setMaximumHTMLParserDOMTreeDepth(parseIntegerAllowingTrailingJunk<uint32_t>(nativePropertyString).value());
     } else if (nativePropertyName == "WebKitXSSAuditorEnabled")  {
-        settings.setXSSAuditorEnabled(nativePropertyValue.toInt());
+        settings.setXSSAuditorEnabled(parseIntegerAllowingTrailingJunk<int>(nativePropertyString).value());
     } else if (nativePropertyName == "WebKitSerifFontFamily") {
         settings.setSerifFontFamily(nativePropertyValue);
     } else if (nativePropertyName == "WebKitSansSerifFontFamily") {
@@ -1306,9 +1317,9 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkOverridePreference
     } else if (nativePropertyName == "WebKitFixedFontFamily") {
         settings.setFixedFontFamily(nativePropertyValue);
     } else if (nativePropertyName == "WebKitShowsURLsInToolTips") {
-        settings.setShowsURLsInToolTips(nativePropertyValue.toInt());
+        settings.setShowsURLsInToolTips(parseIntegerAllowingTrailingJunk<int>(nativePropertyString).value());
     } else if (nativePropertyName == "JavaScriptCanAccessClipboard") {
-        settings.setJavaScriptCanAccessClipboard(nativePropertyValue.toInt() != 0);
+        settings.setJavaScriptCanAccessClipboard(nativePropertyValue == "true");
     } else if (nativePropertyName == "allowTopNavigationToDataURLs") {
         settings.setAllowTopNavigationToDataURLs(nativePropertyValue == "true");
     } else if (nativePropertyName == "UsesBackForwardCache") {
@@ -1321,7 +1332,13 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkOverridePreference
         RuntimeEnabledFeatures::sharedFeatures().setKeygenElementEnabled(nativePropertyValue == "true");
     } else if (nativePropertyName == "CSSCustomPropertiesAndValuesEnabled") {
         settings.setCSSCustomPropertiesAndValuesEnabled(nativePropertyValue == "true");
+    } else if (nativePropertyName == "experimental:CSSCustomPropertiesAndValuesEnabled") {
+        settings.setCSSCustomPropertiesAndValuesEnabled(nativePropertyValue == "true");
     } else if (nativePropertyName == "IntersectionObserverEnabled") {
+#if ENABLE(INTERSECTION_OBSERVER)
+        settings.setIntersectionObserverEnabled(nativePropertyValue == "true");
+#endif
+    } else if (nativePropertyName == "enableIntersectionObserver") {
 #if ENABLE(INTERSECTION_OBSERVER)
         settings.setIntersectionObserverEnabled(nativePropertyValue == "true");
 #endif
@@ -1406,7 +1423,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkResetToConsistentStateBefo
     DeprecatedGlobalSettings::setMockScrollbarsEnabled(true);
 
     RuntimeEnabledFeatures::sharedFeatures().setHighlightAPIEnabled(true);
-    RuntimeEnabledFeatures::sharedFeatures().setModernMediaControlsEnabled(false);
+    // RuntimeEnabledFeatures::sharedFeatures().setModernMediaControlsEnabled(false);
     RuntimeEnabledFeatures::sharedFeatures().setInspectorAdditionsEnabled(true);
     // RuntimeEnabledFeatures::sharedFeatures().clearNetworkLoaderSession();
 
@@ -1516,7 +1533,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkPrint
 {
     auto webPage = WebPage::webPageFromJLong(pPage);
     PlatformContextJava* ppgc = new PlatformContextJava(rq, webPage->jRenderTheme());
-    GraphicsContext gc(ppgc);
+    GraphicsContextJava gc(ppgc);
     webPage->print(gc, pageIndex, width);
 }
 
@@ -1731,7 +1748,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_webkit_WebPage_twkProcessKeyEvent
 
 JNIEXPORT jboolean JNICALL Java_com_sun_webkit_WebPage_twkProcessMouseEvent
     (JNIEnv* env, jobject self, jlong pPage,
-     jint id, jint button, jint clickCount,
+     jint id, jint button, jint buttonMask, jint clickCount,
      jint x, jint y, jint screenX, jint screenY,
      jboolean shift, jboolean ctrl, jboolean alt, jboolean meta,
      jboolean popupTrigger, jdouble timestamp)
@@ -1757,6 +1774,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_webkit_WebPage_twkProcessMouseEvent
     PlatformMouseEvent mouseEvent = PlatformMouseEvent(loc,
                                                        IntPoint(screenX, screenY),
                                                        getWebCoreMouseButton(button),
+                                                       getWebCoreMouseButtons(buttonMask),
                                                        getWebCoreMouseEventType(id),
                                                        clickCount,
                                                        shift, ctrl, alt, meta,
@@ -2087,7 +2105,7 @@ enum JAVA_DND_ACTION {
     ACTION_LINK = 0x40000000
 };
 
-static jint dragOperationToDragCursor(Optional<DragOperation> operation) {
+static jint dragOperationToDragCursor(std::optional<DragOperation> operation) {
     unsigned int res = ACTION_NONE;
     if (operation == DragOperation::Copy)
         res = ACTION_COPY;

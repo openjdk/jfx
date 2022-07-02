@@ -27,7 +27,7 @@
 #include "config.h"
 #include <wtf/FileSystem.h>
 
-#include <wtf/FileMetadata.h>
+#include <wtf/CryptographicallyRandomNumber.h>
 #include <wtf/HexNumber.h>
 #include <wtf/Scope.h>
 #include <wtf/text/CString.h>
@@ -35,6 +35,7 @@
 
 #if !OS(WINDOWS)
 #include <sys/mman.h>
+#include <sys/param.h>
 #include <sys/stat.h>
 #endif
 
@@ -43,9 +44,27 @@
 #include <gio/gio.h>
 #endif
 
+#if HAVE(STD_FILESYSTEM) || HAVE(STD_EXPERIMENTAL_FILESYSTEM)
+#include <wtf/StdFilesystem.h>
+#endif
+
 namespace WTF {
 
 namespace FileSystemImpl {
+
+#if HAVE(STD_FILESYSTEM) || HAVE(STD_EXPERIMENTAL_FILESYSTEM)
+
+static std::filesystem::path toStdFileSystemPath(StringView path)
+{
+    return std::filesystem::u8path(path.utf8().data());
+}
+
+static String fromStdFileSystemPath(const std::filesystem::path& path)
+{
+    return String::fromUTF8(path.u8string().c_str());
+}
+
+#endif // HAVE(STD_FILESYSTEM) || HAVE(STD_EXPERIMENTAL_FILESYSTEM)
 
 // The following lower-ASCII characters need escaping to be used in a filename
 // across all systems, including Windows:
@@ -103,6 +122,33 @@ static inline bool shouldEscapeUChar(UChar character, UChar previousCharacter, U
     return false;
 }
 
+#if HAVE(STD_FILESYSTEM) || HAVE(STD_EXPERIMENTAL_FILESYSTEM)
+
+template<typename ClockType, typename = void> struct has_to_time_t : std::false_type { };
+template<typename ClockType> struct has_to_time_t<ClockType, std::void_t<
+    std::enable_if_t<std::is_same_v<std::time_t, decltype(ClockType::to_time_t(std::filesystem::file_time_type()))>>
+>> : std::true_type { };
+
+template <typename FileTimeType>
+typename std::enable_if_t<has_to_time_t<typename FileTimeType::clock>::value, std::time_t> toTimeT(FileTimeType fileTime)
+{
+    return decltype(fileTime)::clock::to_time_t(fileTime);
+}
+
+template <typename FileTimeType>
+typename std::enable_if_t<!has_to_time_t<typename FileTimeType::clock>::value, std::time_t> toTimeT(FileTimeType fileTime)
+{
+    return std::chrono::system_clock::to_time_t(std::chrono::time_point_cast<std::chrono::system_clock::duration>(fileTime - decltype(fileTime)::clock::now() + std::chrono::system_clock::now()));
+}
+
+static WallTime toWallTime(std::filesystem::file_time_type fileTime)
+{
+    // FIXME: Use std::chrono::file_clock::to_sys() once we can use C++20.
+    return WallTime::fromRawSeconds(toTimeT(fileTime));
+}
+
+#endif // HAVE(STD_FILESYSTEM) || HAVE(STD_EXPERIMENTAL_FILESYSTEM)
+
 String encodeForFileName(const String& inputString)
 {
     unsigned length = inputString.length();
@@ -112,25 +158,18 @@ String encodeForFileName(const String& inputString)
     StringBuilder result;
     result.reserveCapacity(length);
 
-    UChar previousCharacter;
-    UChar character = 0;
+    UChar previousCharacter = 0;
     UChar nextCharacter = inputString[0];
     for (unsigned i = 0; i < length; ++i) {
-        previousCharacter = character;
-        character = nextCharacter;
-        nextCharacter = i + 1 < length ? inputString[i + 1] : 0;
-
+        auto character = std::exchange(nextCharacter, i + 1 < length ? inputString[i + 1] : 0);
         if (shouldEscapeUChar(character, previousCharacter, nextCharacter)) {
-            if (character <= 255) {
-                result.append('%');
-                result.append(hex(static_cast<unsigned char>(character), 2));
-            } else {
-                result.appendLiteral("%+");
-                result.append(hex(static_cast<unsigned char>(character >> 8), 2));
-                result.append(hex(static_cast<unsigned char>(character), 2));
-            }
+            if (character <= 0xFF)
+                result.append('%', hex(character, 2));
+            else
+                result.append("%+", hex(static_cast<uint8_t>(character >> 8), 2), hex(static_cast<uint8_t>(character), 2));
         } else
             result.append(character);
+        previousCharacter = character;
     }
 
     return result.toString();
@@ -217,7 +256,7 @@ bool appendFileContentsToFileHandle(const String& path, PlatformFileHandle& targ
         return false;
 
     static int bufferSize = 1 << 19;
-    Vector<char> buffer(bufferSize);
+    Vector<uint8_t> buffer(bufferSize);
 
     auto fileCloser = WTF::makeScopeExit([source]() {
         PlatformFileHandle handle = source;
@@ -278,13 +317,6 @@ bool excludeFromBackup(const String&)
 
 #endif
 
-MappedFileData::~MappedFileData()
-{
-    if (!m_fileData)
-        return;
-    unmapViewOfFile(m_fileData, m_fileSize);
-}
-
 MappedFileData::MappedFileData(const String& filePath, MappedFileMode mapMode, bool& success)
 {
     auto fd = openFile(filePath, FileSystem::FileOpenMode::Read);
@@ -294,6 +326,13 @@ MappedFileData::MappedFileData(const String& filePath, MappedFileMode mapMode, b
 }
 
 #if HAVE(MMAP) && !PLATFORM(JAVA)
+
+MappedFileData::~MappedFileData()
+{
+    if (!m_fileData)
+        return;
+    munmap(m_fileData, m_fileSize);
+}
 
 bool MappedFileData::mapFileHandle(PlatformFileHandle handle, FileOpenMode openMode, MappedFileMode mapMode)
 {
@@ -319,9 +358,8 @@ bool MappedFileData::mapFileHandle(PlatformFileHandle handle, FileOpenMode openM
         return false;
     }
 
-    if (!size) {
+    if (!size)
         return true;
-    }
 
     int pageProtection = PROT_READ;
     switch (openMode) {
@@ -350,12 +388,6 @@ bool MappedFileData::mapFileHandle(PlatformFileHandle handle, FileOpenMode openM
     m_fileSize = size;
     return true;
 }
-
-bool unmapViewOfFile(void* buffer, size_t size)
-{
-    return !munmap(buffer, size);
-}
-
 #endif
 
 PlatformFileHandle openAndLockFile(const String& path, FileOpenMode openMode, OptionSet<FileLockMode> lockMode)
@@ -383,14 +415,6 @@ void unlockAndCloseFile(PlatformFileHandle handle)
     closeFile(handle);
 }
 
-bool fileIsDirectory(const String& path, ShouldFollowSymbolicLinks shouldFollowSymbolicLinks)
-{
-    auto metadata = shouldFollowSymbolicLinks == ShouldFollowSymbolicLinks::Yes ? fileMetadataFollowingSymlinks(path) : fileMetadata(path);
-    if (!metadata)
-        return false;
-    return metadata.value().type == FileMetadata::Type::Directory;
-}
-
 #if !PLATFORM(IOS_FAMILY)
 bool isSafeToUseMemoryMapForPath(const String&)
 {
@@ -408,6 +432,328 @@ String createTemporaryZipArchive(const String&)
     return { };
 }
 #endif
+
+MappedFileData mapToFile(const String& path, size_t bytesSize, Function<void(const Function<bool(Span<const uint8_t>)>&)>&& apply, PlatformFileHandle* outputHandle)
+{
+    constexpr bool failIfFileExists = true;
+    auto handle = FileSystem::openFile(path, FileSystem::FileOpenMode::ReadWrite, FileSystem::FileAccessPermission::User, failIfFileExists);
+    if (!FileSystem::isHandleValid(handle) || !FileSystem::truncateFile(handle, bytesSize)) {
+        FileSystem::closeFile(handle);
+        return { };
+    }
+
+    FileSystem::makeSafeToUseMemoryMapForPath(path);
+    bool success;
+    FileSystem::MappedFileData mappedFile(handle, FileSystem::FileOpenMode::ReadWrite, FileSystem::MappedFileMode::Shared, success);
+    if (!success) {
+        FileSystem::closeFile(handle);
+        return { };
+    }
+
+    void* map = const_cast<void*>(mappedFile.data());
+    uint8_t* mapData = static_cast<uint8_t*>(map);
+
+    apply([&mapData](Span<const uint8_t> chunk) {
+        memcpy(mapData, chunk.data(), chunk.size());
+        mapData += chunk.size();
+        return true;
+    });
+
+#if OS(WINDOWS)
+    DWORD oldProtection;
+    VirtualProtect(map, bytesSize, FILE_MAP_READ, &oldProtection);
+    FlushViewOfFile(map, bytesSize);
+#else
+    // Drop the write permission.
+    mprotect(map, bytesSize, PROT_READ);
+
+    // Flush (asynchronously) to file, turning this into clean memory.
+    msync(map, bytesSize, MS_ASYNC);
+#endif
+
+    if (outputHandle)
+        *outputHandle = handle;
+    else
+        FileSystem::closeFile(handle);
+
+    return mappedFile;
+}
+
+static Salt makeSalt()
+{
+    Salt salt;
+    static_assert(salt.size() == 8, "Salt size");
+    *reinterpret_cast_ptr<uint32_t*>(&salt[0]) = cryptographicallyRandomNumber();
+    *reinterpret_cast_ptr<uint32_t*>(&salt[4]) = cryptographicallyRandomNumber();
+    return salt;
+}
+
+std::optional<Salt> readOrMakeSalt(const String& path)
+{
+    if (FileSystem::fileExists(path)) {
+        auto file = FileSystem::openFile(path, FileSystem::FileOpenMode::Read);
+        Salt salt;
+        auto bytesRead = static_cast<std::size_t>(FileSystem::readFromFile(file, salt.data(), salt.size()));
+        FileSystem::closeFile(file);
+        if (bytesRead == salt.size())
+            return salt;
+
+        FileSystem::deleteFile(path);
+    }
+
+    Salt salt = makeSalt();
+    FileSystem::makeAllDirectories(FileSystem::parentPath(path));
+    auto file = FileSystem::openFile(path, FileSystem::FileOpenMode::Write, FileSystem::FileAccessPermission::User);
+    if (!FileSystem::isHandleValid(file))
+        return { };
+
+    bool success = static_cast<std::size_t>(FileSystem::writeToFile(file, salt.data(), salt.size())) == salt.size();
+    FileSystem::closeFile(file);
+    if (!success)
+        return { };
+
+    return salt;
+}
+
+#if HAVE(STD_FILESYSTEM) || HAVE(STD_EXPERIMENTAL_FILESYSTEM)
+
+bool deleteEmptyDirectory(const String& path)
+{
+    std::error_code ec;
+    auto fsPath = toStdFileSystemPath(path);
+
+    auto fileStatus = std::filesystem::symlink_status(fsPath, ec);
+    if (ec || fileStatus.type() != std::filesystem::file_type::directory)
+        return false;
+
+#if PLATFORM(MAC)
+    bool containsSingleDSStoreFile = false;
+    auto entries = std::filesystem::directory_iterator(fsPath, ec);
+    for (auto it = std::filesystem::begin(entries), end = std::filesystem::end(entries); !ec && it != end; it.increment(ec)) {
+        if (it->path().filename() == ".DS_Store")
+            containsSingleDSStoreFile = true;
+        else {
+            containsSingleDSStoreFile = false;
+            break;
+        }
+    }
+    if (containsSingleDSStoreFile)
+        std::filesystem::remove(fsPath / ".DS_Store", ec);
+#endif
+
+    // remove() returns false on error so no need to check ec.
+    return std::filesystem::remove(fsPath, ec);
+}
+
+bool moveFile(const String& oldPath, const String& newPath)
+{
+    auto fsOldPath = toStdFileSystemPath(oldPath);
+    auto fsNewPath = toStdFileSystemPath(newPath);
+
+    std::error_code ec;
+    std::filesystem::rename(fsOldPath, fsNewPath, ec);
+    if (!ec)
+        return true;
+
+    // Fall back to copying and then deleting source as rename() does not work across volumes.
+    ec = { };
+    std::filesystem::copy(fsOldPath, fsNewPath, std::filesystem::copy_options::overwrite_existing | std::filesystem::copy_options::recursive, ec);
+    if (ec)
+        return false;
+    return std::filesystem::remove_all(fsOldPath, ec);
+}
+
+std::optional<uint64_t> fileSize(const String& path)
+{
+    std::error_code ec;
+    auto size = std::filesystem::file_size(toStdFileSystemPath(path), ec);
+    if (ec)
+        return std::nullopt;
+    return size;
+}
+
+std::optional<uint64_t> volumeFreeSpace(const String& path)
+{
+    std::error_code ec;
+    auto spaceInfo = std::filesystem::space(toStdFileSystemPath(path), ec);
+    if (ec)
+        return std::nullopt;
+    return spaceInfo.available;
+}
+
+bool createSymbolicLink(const String& targetPath, const String& symbolicLinkPath)
+{
+    std::error_code ec;
+    std::filesystem::create_symlink(toStdFileSystemPath(targetPath), toStdFileSystemPath(symbolicLinkPath), ec);
+    return !ec;
+}
+
+bool hardLink(const String& targetPath, const String& linkPath)
+{
+    std::error_code ec;
+    std::filesystem::create_hard_link(toStdFileSystemPath(targetPath), toStdFileSystemPath(linkPath), ec);
+    return !ec;
+}
+
+bool hardLinkOrCopyFile(const String& targetPath, const String& linkPath)
+{
+    auto fsTargetPath = toStdFileSystemPath(targetPath);
+    auto fsLinkPath = toStdFileSystemPath(linkPath);
+
+    std::error_code ec;
+    std::filesystem::create_hard_link(fsTargetPath, fsLinkPath, ec);
+    if (!ec)
+        return true;
+
+    std::filesystem::copy_file(fsTargetPath, fsLinkPath, ec);
+    return !ec;
+}
+
+std::optional<uint64_t> hardLinkCount(const String& path)
+{
+    std::error_code ec;
+    uint64_t linkCount = std::filesystem::hard_link_count(toStdFileSystemPath(path), ec);
+    return ec ? std::nullopt : std::make_optional(linkCount);
+}
+
+bool deleteNonEmptyDirectory(const String& path)
+{
+    std::error_code ec;
+    std::filesystem::remove_all(toStdFileSystemPath(path), ec);
+    return !ec;
+}
+
+std::optional<WallTime> fileModificationTime(const String& path)
+{
+    std::error_code ec;
+    auto modificationTime = std::filesystem::last_write_time(toStdFileSystemPath(path), ec);
+    if (ec)
+        return std::nullopt;
+    return toWallTime(modificationTime);
+}
+
+bool updateFileModificationTime(const String& path)
+{
+    std::error_code ec;
+    std::filesystem::last_write_time(toStdFileSystemPath(path), std::filesystem::file_time_type::clock::now(), ec);
+    return !ec;
+}
+
+bool isHiddenFile(const String& path)
+{
+#if OS(UNIX)
+    auto fsPath = toStdFileSystemPath(path);
+    std::filesystem::path::string_type filename = fsPath.filename();
+    return !filename.empty() && filename[0] == '.';
+#else
+    UNUSED_PARAM(path);
+    return false;
+#endif
+}
+
+enum class ShouldFollowSymbolicLinks { No, Yes };
+static std::optional<FileType> fileTypePotentiallyFollowingSymLinks(const String& path, ShouldFollowSymbolicLinks shouldFollowSymbolicLinks)
+{
+    std::error_code ec;
+    auto status = shouldFollowSymbolicLinks == ShouldFollowSymbolicLinks::Yes ? std::filesystem::status(toStdFileSystemPath(path), ec) : std::filesystem::symlink_status(toStdFileSystemPath(path), ec);
+    if (ec)
+        return std::nullopt;
+    switch (status.type()) {
+    case std::filesystem::file_type::directory:
+        return FileType::Directory;
+    case std::filesystem::file_type::symlink:
+        return FileType::SymbolicLink;
+    default:
+        break;
+    }
+    return FileType::Regular;
+}
+
+std::optional<FileType> fileType(const String& path)
+{
+    return fileTypePotentiallyFollowingSymLinks(path, ShouldFollowSymbolicLinks::No);
+}
+
+std::optional<FileType> fileTypeFollowingSymlinks(const String& path)
+{
+    return fileTypePotentiallyFollowingSymLinks(path, ShouldFollowSymbolicLinks::Yes);
+}
+
+String pathFileName(const String& path)
+{
+    return fromStdFileSystemPath(toStdFileSystemPath(path).filename());
+}
+
+String parentPath(const String& path)
+{
+    return fromStdFileSystemPath(toStdFileSystemPath(path).parent_path());
+}
+
+String realPath(const String& path)
+{
+    std::error_code ec;
+    auto canonicalPath = std::filesystem::canonical(toStdFileSystemPath(path), ec);
+    return ec ? path : fromStdFileSystemPath(canonicalPath);
+}
+
+Vector<String> listDirectory(const String& path)
+{
+    Vector<String> fileNames;
+    std::error_code ec;
+    auto entries = std::filesystem::directory_iterator(toStdFileSystemPath(path), ec);
+    for (auto it = std::filesystem::begin(entries), end = std::filesystem::end(entries); !ec && it != end; it.increment(ec)) {
+        auto fileName = fromStdFileSystemPath(it->path().filename());
+        if (!fileName.isNull())
+            fileNames.append(WTFMove(fileName));
+    }
+    return fileNames;
+}
+
+#if !ENABLE(FILESYSTEM_POSIX_FAST_PATH)
+
+bool fileExists(const String& path)
+{
+    std::error_code ec;
+    // exists() returns false on error so no need to check ec.
+    return std::filesystem::exists(toStdFileSystemPath(path), ec);
+}
+
+bool deleteFile(const String& path)
+{
+    std::error_code ec;
+    auto fsPath = toStdFileSystemPath(path);
+
+    auto fileStatus = std::filesystem::symlink_status(fsPath, ec);
+    if (ec || fileStatus.type() == std::filesystem::file_type::directory)
+        return false;
+
+    // remove() returns false on error so no need to check ec.
+    return std::filesystem::remove(fsPath, ec);
+}
+
+bool makeAllDirectories(const String& path)
+{
+    std::error_code ec;
+    std::filesystem::create_directories(toStdFileSystemPath(path), ec);
+    return !ec;
+}
+
+String pathByAppendingComponent(const String& path, const String& component)
+{
+    return fromStdFileSystemPath(toStdFileSystemPath(path) / toStdFileSystemPath(component));
+}
+
+String pathByAppendingComponents(StringView path, const Vector<StringView>& components)
+{
+    auto fsPath = toStdFileSystemPath(path);
+    for (auto& component : components)
+        fsPath /= toStdFileSystemPath(component);
+    return fromStdFileSystemPath(fsPath);
+}
+
+#endif
+
+#endif // HAVE(STD_FILESYSTEM) || HAVE(STD_EXPERIMENTAL_FILESYSTEM)
 
 } // namespace FileSystemImpl
 } // namespace WTF

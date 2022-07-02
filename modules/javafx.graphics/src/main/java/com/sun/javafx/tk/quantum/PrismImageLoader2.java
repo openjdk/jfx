@@ -124,7 +124,7 @@ class PrismImageLoader2 implements com.sun.javafx.tk.ImageLoader {
         ImageLoadListener listener = new PrismLoadListener();
         try {
             ImageFrame[] imgFrames =
-                ImageStorage.loadAll(url, listener, w, h, preserveRatio, pixelScale, smooth);
+                ImageStorage.getInstance().loadAll(url, listener, w, h, preserveRatio, pixelScale, smooth);
             convertAll(imgFrames);
         } catch (ImageStorageException e) {
             handleException(e);
@@ -139,7 +139,7 @@ class PrismImageLoader2 implements com.sun.javafx.tk.ImageLoader {
         ImageLoadListener listener = new PrismLoadListener();
         try {
             ImageFrame[] imgFrames =
-                ImageStorage.loadAll(stream, listener, w, h, preserveRatio, 1.0f, smooth);
+                ImageStorage.getInstance().loadAll(stream, listener, w, h, preserveRatio, 1.0f, smooth);
             convertAll(imgFrames);
         } catch (ImageStorageException e) {
             handleException(e);

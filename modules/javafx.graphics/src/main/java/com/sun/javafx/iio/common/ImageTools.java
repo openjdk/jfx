@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -697,7 +697,7 @@ public class ImageTools {
     public static ImageFrame scaleImageFrame(ImageFrame src,
             int destWidth, int destHeight, boolean isSmooth)
     {
-        int numBands = ImageStorage.getNumBands(src.getImageType());
+        int numBands = ImageStorage.getInstance().getNumBands(src.getImageType());
         ByteBuffer dst = scaleImage((ByteBuffer) src.getImageData(),
                 src.getWidth(), src.getHeight(), numBands,
                 destWidth, destHeight, isSmooth);

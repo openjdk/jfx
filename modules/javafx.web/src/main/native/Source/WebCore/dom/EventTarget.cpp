@@ -56,6 +56,11 @@
 #include <wtf/StdLibExtras.h>
 #include <wtf/Vector.h>
 
+#if PLATFORM(JAVA)
+#include "EventListenerManager.h"
+#include "JavaEventListener.h"
+#endif
+
 namespace WebCore {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(EventTarget);
@@ -87,12 +92,12 @@ bool EventTarget::addEventListener(const AtomString& eventType, Ref<EventListene
 
     auto passive = options.passive;
 
-    if (!passive.hasValue() && Quirks::shouldMakeEventListenerPassive(*this, eventType, listener.get()))
+    if (!passive.has_value() && Quirks::shouldMakeEventListenerPassive(*this, eventType, listener.get()))
         passive = true;
 
     bool listenerCreatedFromScript = listener->type() == EventListener::JSEventListenerType && !listener->wasCreatedFromMarkup();
 
-    if (!ensureEventTargetData().eventListenerMap.add(eventType, listener.copyRef(), { options.capture, passive.valueOr(false), options.once }))
+    if (!ensureEventTargetData().eventListenerMap.add(eventType, listener.copyRef(), { options.capture, passive.value_or(false), options.once }))
         return false;
 
     if (options.signal) {
@@ -149,6 +154,9 @@ bool EventTarget::removeEventListener(const AtomString& eventType, EventListener
     InspectorInstrumentation::willRemoveEventListener(*this, eventType, listener, options.capture);
 
     if (data->eventListenerMap.remove(eventType, listener, options.capture)) {
+#if PLATFORM(JAVA)
+        EventListenerManager::get_instance().unregisterListener(static_cast<JavaEventListener *> (&listener));
+#endif
         if (eventNames().isWheelEventType(eventType))
             invalidateEventListenerRegions();
 
@@ -391,7 +399,7 @@ void EventTarget::visitJSEventListeners(Visitor& visitor)
     if (!data)
         return;
 
-    auto locker = holdLock(data->eventListenerMap.lock());
+    Locker locker { data->eventListenerMap.lock() };
     EventListenerIterator iterator(&data->eventListenerMap);
     while (auto* listener = iterator.nextListener())
         listener->visitJSFunction(visitor);

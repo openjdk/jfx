@@ -74,7 +74,7 @@ public:
         moveTo(object, 0);
     }
 
-    void moveTo(RenderObject& object, unsigned offset, Optional<unsigned> nextBreak = Optional<unsigned>())
+    void moveTo(RenderObject& object, unsigned offset, std::optional<unsigned> nextBreak = std::optional<unsigned>())
     {
         setRenderer(&object);
         setOffset(offset);
@@ -86,12 +86,13 @@ public:
     unsigned offset() const { return m_pos; }
     void setOffset(unsigned position);
     RenderElement* root() const { return m_root; }
-    Optional<unsigned> nextBreakablePosition() const { return m_nextBreakablePosition; }
-    void setNextBreakablePosition(Optional<unsigned> position) { m_nextBreakablePosition = position; }
+    std::optional<unsigned> nextBreakablePosition() const { return m_nextBreakablePosition; }
+    void setNextBreakablePosition(std::optional<unsigned> position) { m_nextBreakablePosition = position; }
     bool refersToEndOfPreviousNode() const { return m_refersToEndOfPreviousNode; }
     void setRefersToEndOfPreviousNode();
 
     void fastIncrementInTextNode();
+    void incrementByCodePointInTextNode();
     void increment(InlineBidiResolver* = nullptr);
     void fastDecrement();
     bool atEnd() const;
@@ -118,7 +119,7 @@ private:
     RenderElement* m_root { nullptr };
     RenderObject* m_renderer { nullptr };
 
-    Optional<unsigned> m_nextBreakablePosition;
+    std::optional<unsigned> m_nextBreakablePosition;
     unsigned m_pos { 0 };
 
     // There are a couple places where we want to decrement an InlineIterator.
@@ -346,6 +347,19 @@ inline void InlineIterator::fastIncrementInTextNode()
     ++m_pos;
 }
 
+inline void InlineIterator::incrementByCodePointInTextNode()
+{
+    ASSERT(m_renderer);
+    const auto& text = downcast<RenderText>(*m_renderer).text();
+    ASSERT(m_pos < text.length());
+    if (text.is8Bit()) {
+        ++m_pos;
+        return;
+    }
+    UChar32 character;
+    U16_NEXT(text.characters16(), m_pos, text.length(), character);
+}
+
 inline void InlineIterator::setOffset(unsigned position)
 {
     ASSERT(position <= UINT_MAX - 10); // Sanity check
@@ -537,7 +551,7 @@ public:
             addPlaceholderRunForIsolatedInline(resolver, obj, pos, root);
         }
         m_haveAddedFakeRunForRootIsolate = true;
-        ComplexLineLayout::appendRunsForObject(nullptr, pos, end, obj, resolver);
+        LegacyLineLayout::appendRunsForObject(nullptr, pos, end, obj, resolver);
     }
 
 private:
@@ -559,7 +573,7 @@ inline void InlineBidiResolver::appendRunInternal()
             if (isolateTracker.inIsolate())
                 isolateTracker.addFakeRunIfNecessary(*obj, start, obj->length(), *m_sor.root(), *this);
             else
-                ComplexLineLayout::appendRunsForObject(&m_runs, start, obj->length(), *obj, *this);
+                LegacyLineLayout::appendRunsForObject(&m_runs, start, obj->length(), *obj, *this);
             // FIXME: start/obj should be an InlineIterator instead of two separate variables.
             start = 0;
             obj = bidiNextSkippingEmptyInlines(*m_sor.root(), obj, &isolateTracker);
@@ -575,7 +589,7 @@ inline void InlineBidiResolver::appendRunInternal()
             if (isolateTracker.inIsolate())
                 isolateTracker.addFakeRunIfNecessary(*obj, start, obj->length(), *m_sor.root(), *this);
             else
-                ComplexLineLayout::appendRunsForObject(&m_runs, start, end, *obj, *this);
+                LegacyLineLayout::appendRunsForObject(&m_runs, start, end, *obj, *this);
         }
 
         m_eor.increment();

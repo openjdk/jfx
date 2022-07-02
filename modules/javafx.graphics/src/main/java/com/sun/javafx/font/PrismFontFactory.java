@@ -727,31 +727,6 @@ public abstract class PrismFontFactory implements FontFactory {
         return null;
     }
 
-    boolean isInstalledFont(String fileName) {
-        // avoid loading the full windows map. Ignore drive letter
-        // as its common to install on D: too in multi-boot.
-        String fileKey;
-        if (isWindows) {
-            if (fileName.toLowerCase().contains("\\windows\\fonts")) {
-                return true;
-            }
-            File f = new File(fileName);
-            fileKey = f.getName();
-        } else {
-            if (isMacOSX && fileName.toLowerCase().contains("/library/fonts")) {
-                // Most fonts are installed in either /System/Library/Fonts/
-                // or /Library/Fonts/
-                return true;
-            }
-            File f = new File(fileName);
-            // fileToFontMap key is the full path on non-windows
-            fileKey = f.getPath();
-        }
-
-        getFullNameToFileMap();
-        return fileToFontMap.get(fileKey.toLowerCase()) != null;
-    }
-
     /* To be called only by methods that already inited the maps
      */
     synchronized private FontResource
@@ -1500,14 +1475,8 @@ public abstract class PrismFontFactory implements FontFactory {
             }
 
             /* We don't want to leave the temp files around after exit.
-             * Also in a shared applet-type context, after all references to
-             * the applet and therefore the font are dropped, the file
-             * should be removed. This isn't so much an issue so long as
-             * the VM exists to serve a single FX app, but will be
-             * important in an app-context model.
-             * But also fonts that are over-written by new versions
-             * need to be cleaned up and that applies even in the single
-             * context.
+             * Also fonts can be over-written by new versions and
+             * need to be cleaned up.
              * We also need to decrement the byte count by the size
              * of the file.
              */

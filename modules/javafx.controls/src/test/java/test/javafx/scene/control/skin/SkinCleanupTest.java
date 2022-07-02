@@ -27,6 +27,7 @@ package test.javafx.scene.control.skin;
 
 import java.lang.ref.WeakReference;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.junit.After;
 import org.junit.Before;
@@ -37,10 +38,17 @@ import com.sun.javafx.tk.Toolkit;
 
 import static javafx.collections.FXCollections.*;
 import static javafx.scene.control.ControlShim.*;
+import static javafx.scene.control.SkinBaseShim.*;
+import static javafx.scene.control.skin.TableSkinShim.*;
+import static javafx.scene.control.skin.TableSkinShim.getVirtualFlow;
 import static javafx.scene.control.skin.TextInputSkinShim.*;
 import static org.junit.Assert.*;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlSkinFactory.*;
+import static test.com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils.*;
 
+import javafx.beans.property.SimpleStringProperty;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.geometry.Pos;
@@ -48,17 +56,31 @@ import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.ChoiceBox;
 import javafx.scene.control.Control;
+import javafx.scene.control.IndexedCell;
+import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
+import javafx.scene.control.TableColumn;
+import javafx.scene.control.TableColumnBase;
+import javafx.scene.control.TableRow;
+import javafx.scene.control.TableView;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.control.ToolBar;
 import javafx.scene.control.TreeCell;
 import javafx.scene.control.TreeItem;
+import javafx.scene.control.TreeTableColumn;
+import javafx.scene.control.TreeTableRow;
+import javafx.scene.control.TreeTableView;
 import javafx.scene.control.TreeView;
+import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.control.cell.TreeItemPropertyValueFactory;
+import javafx.scene.control.skin.TableRowSkin;
+import javafx.scene.control.skin.TreeTableRowSkin;
+import javafx.scene.control.skin.VirtualFlow;
 import javafx.scene.input.InputMethodEvent;
 import javafx.scene.input.ScrollEvent;
 import javafx.scene.layout.Pane;
@@ -67,6 +89,8 @@ import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Font;
 import javafx.scene.text.Text;
 import javafx.stage.Stage;
+import test.com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
+import test.com.sun.javafx.scene.control.test.Person;
 
 /**
  * Tests around the cleanup task JDK-8241364.
@@ -76,6 +100,751 @@ public class SkinCleanupTest {
     private Scene scene;
     private Stage stage;
     private Pane root;
+
+//------------- TreeTableRow
+
+    /**
+     * Test access to fixedCellSize via lookup (not listener)
+     */
+    @Ignore("JDK-8277000")
+    @Test
+    public void testTreeTableRowFixedCellSizeListener() {
+        TreeTableView<Person> tableView = createPersonTreeTable(false);
+        showControl(tableView, true);
+        TreeTableRow<?> tableRow = (TreeTableRow<?>) getCell(tableView, 1);
+        TreeTableRowSkin<?> rowSkin = (TreeTableRowSkin<?>) tableRow.getSkin();
+        assertNull("row skin must not have listener to fixedCellSize",
+                unregisterChangeListeners(rowSkin, tableView.fixedCellSizeProperty()));
+    }
+
+    /**
+     * Guard against incorrect initial prefWidth with many columns and fixedCellSize.
+     * See JDK-8274061 for details.
+     */
+    @Test
+    public void testTreeTablePrefRowWidthFixedCellSize() {
+        TreeTableView<String[]> table = createManyColumnsTreeTableView(true);
+        showControl(table, false, 300, 800);
+        double totalColumnWidth = table.getVisibleLeafColumns().stream()
+                .mapToDouble(col -> col.getWidth())
+                .sum();
+        TreeTableRow<?> tableRow = (TreeTableRow<?>) VirtualFlowTestUtils.getCell(table, 2);
+        assertEquals("pref row width for fixed cell size", totalColumnWidth, tableRow.prefWidth(-1), .1);
+    }
+
+    /**
+     * Sanity test: pref width of tableRow if !fixedCellSize
+     */
+    @Test
+    public void testTreeTablePrefRowTreeTable() {
+        TreeTableView<String[]> table = createManyColumnsTreeTableView(false);
+        showControl(table, false, 300, 800);
+        double totalColumnWidth = table.getVisibleLeafColumns().stream()
+                .mapToDouble(col -> col.getWidth())
+                .sum();
+        TreeTableRow<?> tableRow = (TreeTableRow<?>) VirtualFlowTestUtils.getCell(table, 2);
+        assertEquals("sanity: pref row witdh for not fixed cell size", totalColumnWidth, tableRow.prefWidth(-1), .1);
+    }
+
+    /**
+     * Sanity test: listener to treeColumn working without side-effects
+     * after replacing skin.
+     */
+    @Test
+    public void testTreeTableRowTreeColumnListenerReplaceSkin() {
+        TreeTableView<Person> tableView = createPersonTreeTable(false);
+        showControl(tableView, true);
+        TreeTableRow<?> tableRow = (TreeTableRow<?>) getCell(tableView, 1);
+        replaceSkin(tableRow);
+        tableView.setTreeColumn(tableView.getColumns().get(1));
+        // note: the actual update happens only in layout, test the marker here
+        assertTrue("dirty marker must have been set", isDirty(tableRow));
+    }
+
+    /**
+     * Sanity test: listener to treeColumn working.
+     */
+    @Test
+    public void testTreeTableRowTreeColumnListener() {
+        TreeTableView<Person> tableView = createPersonTreeTable(false);
+        showControl(tableView, true);
+        TreeTableRow<?> tableRow = (TreeTableRow<?>) getCell(tableView, 1);
+        tableView.setTreeColumn(tableView.getColumns().get(1));
+        // note: the actual update happens only in layout, test the marker here
+        assertTrue("dirty marker must have been set", isDirty(tableRow));
+    }
+
+    @Test
+    public void testTreeTableRowGraphicListenerReplaceSkin() {
+        TreeTableView<Person> tableView = createPersonTreeTable(false);
+        showControl(tableView, true);
+        int index = 1;
+        Label graphic = new Label("dummy");
+        TreeItem<Person> treeItem = tableView.getTreeItem(index);
+        treeItem.setGraphic(graphic);
+        TreeTableRow<?> tableRow = (TreeTableRow<?>) getCell(tableView, index);
+        replaceSkin(tableView);
+        // note: need an actual layout to update the children here, firePulse in _not_ enough
+        tableRow.layout();
+        assertEquals(index, tableRow.getIndex());
+        assertTrue(tableRow.getChildrenUnmodifiable().contains(graphic));
+    }
+
+    /**
+     * Sanity test: row graphic is updated on changing treeItem's graphic.
+     */
+    @Test
+    public void testTreeTableRowGraphicListener() {
+        TreeTableView<Person> tableView = createPersonTreeTable(false);
+        showControl(tableView, true);
+        int index = 1;
+        Label graphic = new Label("dummy");
+        tableView.getTreeItem(index).setGraphic(graphic);
+        Toolkit.getToolkit().firePulse();
+        TreeTableRow<?> tableRow = (TreeTableRow<?>) getCell(tableView, index);
+        assertTrue(tableRow.getChildrenUnmodifiable().contains(graphic));
+    }
+
+    @Test
+    public void testTreeTableRowFixedCellSizeReplaceSkin() {
+        TreeTableView<Person> tableView = createPersonTreeTable(false);
+        showControl(tableView, true);
+        TreeTableRow<?> tableRow = (TreeTableRow<?>) getCell(tableView, 1);
+        replaceSkin(tableRow);
+        double fixed = 200;
+        tableView.setFixedCellSize(fixed);
+        assertEquals("fixed cell size: ", fixed, tableRow.prefHeight(-1), 1);
+    }
+
+    /**
+     * Sanity test: row respects fixedCellSize.
+     */
+    @Test
+    public void testTreeTableRowFixedCellSize() {
+        TreeTableView<Person> tableView = createPersonTreeTable(false);
+        showControl(tableView, true);
+        TreeTableRow<?> tableRow = (TreeTableRow<?>) getCell(tableView, 1);
+        double fixed = 200;
+        tableView.setFixedCellSize(fixed);
+        assertEquals("fixed cell size: ", fixed, tableRow.prefHeight(-1), 1);
+    }
+
+    @Test
+    public void testTreeTableRowFixedCellSizeEnabledReplaceSkin() {
+        TreeTableView<Person> tableView = createPersonTreeTable(false);
+        showControl(tableView, true);
+        TreeTableRow<?> tableRow = (TreeTableRow<?>) getCell(tableView, 1);
+        replaceSkin(tableRow);
+        assertFalse("fixed cell size disabled initially", isFixedCellSizeEnabled(tableRow));
+        double fixed = 200;
+        tableView.setFixedCellSize(fixed);
+        assertTrue("fixed cell size enabled", isFixedCellSizeEnabled(tableRow));
+    }
+
+    /**
+     * Sanity test: fixedCellSizeEnabled.
+     */
+    @Test
+    public void testTreeTableRowFixedCellSizeEnabled() {
+        TreeTableView<Person> tableView = createPersonTreeTable(false);
+        showControl(tableView, true);
+        TreeTableRow<?> tableRow = (TreeTableRow<?>) getCell(tableView, 1);
+        assertFalse("fixed cell size disabled initially", isFixedCellSizeEnabled(tableRow));
+        double fixed = 200;
+        tableView.setFixedCellSize(fixed);
+        assertTrue("fixed cell size enabled", isFixedCellSizeEnabled(tableRow));
+    }
+
+    @Test
+    public void testTreeTableRowVirtualFlowWidthListenerReplaceSkin() {
+        TreeTableView<Person> tableView = createPersonTreeTable(false);
+        showControl(tableView, true);
+        VirtualFlow<?> flow = getVirtualFlow(tableView);
+        TreeTableRow<?> tableRow = (TreeTableRow<?>) getCell(tableView, 1);
+        replaceSkin(tableRow);
+        Toolkit.getToolkit().firePulse();
+        TreeTableRowSkin<?> rowSkin = (TreeTableRowSkin<?>) tableRow.getSkin();
+        assertNotNull("row skin must have listener to virtualFlow width",
+                unregisterChangeListeners(rowSkin, flow.widthProperty()));
+    }
+
+    /**
+     * Sanity: listener to flow's width is registered.
+     */
+    @Test
+    public void testTreeTableRowVirtualFlowWidthListener() {
+        TreeTableView<Person> tableView = createPersonTreeTable(false);
+        showControl(tableView, true);
+        VirtualFlow<?> flow = getVirtualFlow(tableView);
+        TreeTableRow<?> tableRow = (TreeTableRow<?>) getCell(tableView, 1);
+        TreeTableRowSkin<?> rowSkin = (TreeTableRowSkin<?>) tableRow.getSkin();
+        assertNotNull("row skin must have listener to virtualFlow width",
+                unregisterChangeListeners(rowSkin, flow.widthProperty()));
+    }
+
+    /**
+     * Sanity: children don't pile up with fixedCellSize.
+     */
+    @Test
+    public void testTreeTableRowChildCountFixedCellSizeReplaceSkin() {
+        TreeTableView<Person> tableView = createPersonTreeTable(false);
+        tableView.setFixedCellSize(100);
+        showControl(tableView, true);
+        TreeTableRow<?> tableRow = (TreeTableRow<?>) getCell(tableView, 0);
+        int childCount = tableRow.getChildrenUnmodifiable().size();
+        replaceSkin(tableRow);
+        Toolkit.getToolkit().firePulse();
+        assertEquals(childCount, tableRow.getChildrenUnmodifiable().size());
+    }
+
+    /**
+     * Sanity: children don't pile up.
+     */
+    @Test
+    public void testTreeTableRowChildCountReplaceSkin() {
+        TreeTableView<Person> tableView = createPersonTreeTable(false);
+        showControl(tableView, true);
+        TreeTableRow<?> tableRow = (TreeTableRow<?>) getCell(tableView, 0);
+        int childCount = tableRow.getChildrenUnmodifiable().size();
+        replaceSkin(tableRow);
+        Toolkit.getToolkit().firePulse();
+        assertEquals(childCount, tableRow.getChildrenUnmodifiable().size());
+    }
+
+    @Test
+    public void testTreeTableRowVirtualFlowReplaceSkin() {
+        TreeTableView<Person> tableView = createPersonTreeTable(false);
+        showControl(tableView, true);
+        TreeTableRow<?> tableRow = (TreeTableRow<?>) getCell(tableView, 1);
+        replaceSkin(tableRow);
+        assertEquals(tableView.getSkin(), getTableViewSkin(tableRow));
+        assertEquals(getVirtualFlow(tableView), getVirtualFlow(tableRow));
+    }
+
+    /**
+     * Sanity: invariants of skin/flow in rowSkin
+     */
+    @Test
+    public void testTreeTableRowVirtualFlow() {
+        TreeTableView<Person> tableView = createPersonTreeTable(false);
+        showControl(tableView, true);
+        TreeTableRow<?> tableRow = (TreeTableRow<?>) getCell(tableView, 1);
+        assertEquals(tableView.getSkin(), getTableViewSkin(tableRow));
+        assertEquals(getVirtualFlow(tableView), getVirtualFlow(tableRow));
+    }
+
+    /**
+     * Here we configure a tableRow with table and install the row's skin.
+     */
+    @Ignore("JDK-8274065")
+    @Test
+    public void testTreeTableRowVirtualFlowInstallSkin() {
+        TreeTableRow<?> tableRow = createTreeTableRow(1);
+        installDefaultSkin(tableRow);
+        TreeTableView<?> tableView = tableRow.getTreeTableView();
+        assertEquals(tableView.getSkin(), getTableViewSkin(tableRow));
+        assertEquals(getVirtualFlow(tableView), getVirtualFlow(tableRow));
+    }
+
+    @Test
+    public void testTreeTableRowWithGraphicMemoryLeak() {
+        TreeTableView<Person> tableView = createPersonTreeTable(false);
+        showControl(tableView, true);
+        tableView.getTreeItem(1).setGraphic(new Label("nothing"));
+        TreeTableRow<?> tableRow = (TreeTableRow<?>) getCell(tableView, 1);
+        WeakReference<?> weakRef = new WeakReference<>(replaceSkin(tableRow));
+        assertNotNull(weakRef.get());
+        attemptGC(weakRef);
+        assertEquals("Skin must be gc'ed", null, weakRef.get());
+    }
+
+    /**
+     * Fails in install skin NPE
+     */
+    @Ignore("JDK-8274065")
+    @Test
+    public void testTreeTableRowWithGraphicMemoryLeakInstallSkin() {
+        TreeTableRow<?> tableRow = createTreeTableRow(1);
+        installDefaultSkin(tableRow);
+        tableRow.getTreeTableView().getTreeItem(1).setGraphic(new Label("nothing"));
+        WeakReference<?> weakRef = new WeakReference<>(replaceSkin(tableRow));
+        assertNotNull(weakRef.get());
+        attemptGC(weakRef);
+        assertEquals("Skin must be gc'ed", null, weakRef.get());
+    }
+
+
+//--- TableRowSkinBase (tested against TreeTableRow)
+
+    /**
+     * NPE from listener in previous skin if not removed.
+     */
+    @Test
+    public void testTreeTableRowLeafColumnsListenerReplaceSkin() {
+        TreeTableView<Person> tableView = createPersonTreeTable(false);
+        showControl(tableView, true);
+        TreeTableRow<?> tableRow = (TreeTableRow<?>) getCell(tableView, 1);
+        replaceSkin(tableRow);
+        tableView.getColumns().get(0).setVisible(false);
+        assertTrue("dirty marker must have been set", isDirty(tableRow));
+    }
+
+    /**
+     * Sanity test: child cells are updated on changing visible columns.
+     */
+    @Test
+    public void testTreeTableRowLeafColumnsListener() {
+        TreeTableView<Person> tableView = createPersonTreeTable(false);
+        showControl(tableView, true);
+        TreeTableRow<?> tableRow = (TreeTableRow<?>) getCell(tableView, 1);
+        tableView.getColumns().get(0).setVisible(false);
+        assertTrue("dirty marker must have been set", isDirty(tableRow));
+    }
+
+    /**
+     *  NPE from listener in previous skin if not removed.
+     */
+    @Test
+    public void testTreeTableRowItemListenerReplaceSkin() {
+        TreeTableView<Person> tableView = createPersonTreeTable(false);
+        showControl(tableView, true);
+        int initial = 0;
+        TreeTableRow<?> tableRow = (TreeTableRow<?>) getCell(tableView, initial);
+        replaceSkin(tableRow);
+        int index = 1;
+        tableRow.updateIndex(index);
+        List<IndexedCell<?>> cells = getCells(tableRow);
+        assertEquals(tableView.getVisibleLeafColumns().size(), cells.size());
+        assertEquals("cell index must be updated", index, cells.get(0).getIndex());
+    }
+
+    /**
+     * Sanity test: child cell's index is updated
+     */
+    @Test
+    public void testTreeTableRowItemListener() {
+        TreeTableView<Person> tableView = createPersonTreeTable(false);
+        showControl(tableView, true);
+        int initial = 0;
+        TreeTableRow<?> tableRow = (TreeTableRow<?>) getCell(tableView, initial);
+        int index = 1;
+        tableRow.updateIndex(index);
+        List<IndexedCell<?>> cells = getCells(tableRow);
+        assertEquals(tableView.getVisibleLeafColumns().size(), cells.size());
+        assertEquals("cell index must be updated", index, cells.get(0).getIndex());
+   }
+
+
+//-------------- helpers for TreeTableRow tests
+
+    /**
+     * Creates and returns a treeTable with many columns of width COL_WIDTH each,
+     * setting the fixedCellSize of FIXED_CELL_SIZE if useFixedCellSize is true.
+     */
+    private TreeTableView<String[]> createManyColumnsTreeTableView(boolean useFixedCellSize) {
+        final TreeTableView<String[]> tableView = new TreeTableView<>();
+        final ObservableList<TreeTableColumn<String[], ?>> columns = tableView
+                .getColumns();
+//        tableView.getSelectionModel().setCellSelectionEnabled(true);
+        for (int i = 0; i < COL_COUNT; i++) {
+            TreeTableColumn<String[], String> column = new TreeTableColumn<>("Col" + i);
+            final int colIndex = i;
+            column.setCellValueFactory((cell) -> new SimpleStringProperty(
+                    cell.getValue().getValue()[colIndex]));
+            columns.add(column);
+            sizeColumn(column, COL_WIDTH);
+        }
+        ObservableList<String[]> items = FXCollections.observableArrayList();
+        for (int i = 0; i < ROW_COUNT; i++) {
+            String[] rec = new String[COL_COUNT];
+            for (int j = 0; j < rec.length; j++) {
+                rec[j] = i + ":" + j;
+            }
+            items.add(rec);
+        }
+        TreeItem<String[]> root = new TreeItem<>(items.get(0));
+        root.setExpanded(true);
+        for (int i = 1; i < items.size(); i++) {
+            root.getChildren().add(new TreeItem<>(items.get(i)));
+        }
+        tableView.setRoot(root);
+        if (useFixedCellSize) {
+            tableView.setFixedCellSize(FIXED_CELL_SIZE);
+        }
+
+        return tableView;
+    }
+
+    /**
+     * Creates and returns a TreeTableRow configured to test
+     * intalling/switching its skin reliably.
+     *
+     * - must be configure with a TableView that has a skin
+     * - must not be empty
+     */
+    private TreeTableRow<?> createTreeTableRow(int index) {
+        TreeTableView<Person> table = createPersonTreeTable(true);
+        TreeTableRow<Person> tableRow = new TreeTableRow<>();
+        // note: must updateTable before updateIndex
+        tableRow.updateTreeTableView(table);
+        tableRow.updateIndex(index);
+        assertFalse("sanity: row must not be empty at index: " + index, tableRow.isEmpty());
+        return tableRow;
+    }
+
+    /**
+     * Returns a table with two columns. Installs the default skin if
+     * installSkin is true.
+     */
+    private TreeTableView<Person> createPersonTreeTable(boolean installSkin) {
+        TreeItem<Person> root = new TreeItem<>(new Person("rootFirst", "rootLast", "root@nowhere.com"));
+        root.setExpanded(true);
+        root.getChildren().addAll(
+                Person.persons().stream()
+                .map(TreeItem::new)
+                .collect(Collectors.toList()));
+        TreeTableView<Person> table = new TreeTableView<>(root);
+        assertEquals(Person.persons().size() + 1, table.getExpandedItemCount());
+        TreeTableColumn<Person, String> firstName = new TreeTableColumn<>("First Name");
+        firstName.setCellValueFactory(new TreeItemPropertyValueFactory<>("firstName"));
+        TreeTableColumn<Person, String> lastName = new TreeTableColumn<>("Last Name");
+        lastName.setCellValueFactory(new TreeItemPropertyValueFactory<>("lastName"));
+        table.getColumns().addAll(firstName, lastName);
+        if (installSkin) {
+            installDefaultSkin(table);
+        }
+        return table;
+    }
+
+//--------------------- TableRowSkin
+
+    /**
+     * Test access to fixedCellSize via lookup (not listener)
+     */
+    @Ignore("JDK-8277000")
+    @Test
+    public void testTableRowFixedCellSizeListener() {
+        TableView<Person> tableView = createPersonTable(false);
+        showControl(tableView, true);
+        TableRow<?> tableRow = (TableRow<?>) getCell(tableView, 1);
+        TableRowSkin<?> rowSkin = (TableRowSkin<?>) tableRow.getSkin();
+        assertNull("row skin must not have listener to fixedCellSize",
+                unregisterChangeListeners(rowSkin, tableView.fixedCellSizeProperty()));
+    }
+
+    /**
+     * Guard against incorrect initial prefWidth with many columns and fixedCellSize.
+     * See JDK-8274061 for details.
+     */
+    @Test
+    public void testTablePrefRowWidthFixedCellSize() {
+        TableView<String[]> table = createManyColumnsTableView(true);
+        showControl(table, false, 300, 800);
+        double totalColumnWidth = table.getVisibleLeafColumns().stream()
+                .mapToDouble(col -> col.getWidth())
+                .sum();
+        TableRow<?> tableRow = (TableRow<?>) VirtualFlowTestUtils.getCell(table, 2);
+        assertEquals("pref row width for fixed cell size", totalColumnWidth, tableRow.prefWidth(-1), .1);
+    }
+
+    /**
+     * Sanity test: pref width of tableRow if !fixedCellSize
+     */
+    @Test
+    public void testTablePrefRowWidth() {
+        TableView<String[]> table = createManyColumnsTableView(false);
+        showControl(table, false, 300, 800);
+        double totalColumnWidth = table.getVisibleLeafColumns().stream()
+                .mapToDouble(col -> col.getWidth())
+                .sum();
+        TableRow<?> tableRow = (TableRow<?>) VirtualFlowTestUtils.getCell(table, 2);
+        assertEquals("sanity: pref row witdh for not fixed cell size", totalColumnWidth, tableRow.prefWidth(-1), .1);
+    }
+
+    @Test
+    public void testTableRowFixedCellSizeReplaceSkin() {
+        TableView<Person> tableView = createPersonTable(false);
+        showControl(tableView, true);
+        TableRow<?> tableRow = (TableRow<?>) getCell(tableView, 1);
+        replaceSkin(tableRow);
+        double fixed = 200;
+        tableView.setFixedCellSize(fixed);
+        assertEquals("fixed cell size: ", fixed, tableRow.prefHeight(-1), 1);
+    }
+
+    /**
+     * Sanity test: row respects fixedCellSize.
+     */
+    @Test
+    public void testTableRowFixedCellSize() {
+        TableView<Person> tableView = createPersonTable(false);
+        showControl(tableView, true);
+        TableRow<?> tableRow = (TableRow<?>) getCell(tableView, 1);
+        double fixed = 200;
+        tableView.setFixedCellSize(fixed);
+        assertEquals("fixed cell size: ", fixed, tableRow.prefHeight(-1), 1);
+    }
+
+    @Test
+    public void testTableRowFixedCellSizeEnabledReplaceSkin() {
+        TableView<Person> tableView = createPersonTable(false);
+        showControl(tableView, true);
+        TableRow<?> tableRow = (TableRow<?>) getCell(tableView, 1);
+        replaceSkin(tableRow);
+        assertFalse("fixed cell size disabled initially", isFixedCellSizeEnabled(tableRow));
+        double fixed = 200;
+        tableView.setFixedCellSize(fixed);
+        assertTrue("fixed cell size enabled", isFixedCellSizeEnabled(tableRow));
+    }
+
+    /**
+     * Sanity test: fixedCellSizeEnabled.
+     */
+    @Test
+    public void testTableRowFixedCellSizeEnabled() {
+        TableView<Person> tableView = createPersonTable(false);
+        showControl(tableView, true);
+        TableRow<?> tableRow = (TableRow<?>) getCell(tableView, 1);
+        assertFalse("fixed cell size disabled initially", isFixedCellSizeEnabled(tableRow));
+        double fixed = 200;
+        tableView.setFixedCellSize(fixed);
+        assertTrue("fixed cell size enabled", isFixedCellSizeEnabled(tableRow));
+    }
+
+    @Test
+    public void testTableRowVirtualFlowWidthListenerReplaceSkin() {
+        TableView<Person> tableView = createPersonTable(false);
+        showControl(tableView, true);
+        VirtualFlow<?> flow = getVirtualFlow(tableView);
+        TableRow<?> tableRow = (TableRow<?>) getCell(tableView, 1);
+        replaceSkin(tableRow);
+        Toolkit.getToolkit().firePulse();
+        TableRowSkin<?> rowSkin = (TableRowSkin<?>) tableRow.getSkin();
+        assertNotNull("row skin must have listener to virtualFlow width",
+                unregisterChangeListeners(rowSkin, flow.widthProperty()));
+    }
+
+    /**
+     * Sanity test: listener to flow's width is registered.
+     */
+    @Test
+    public void testTableRowVirtualFlowWidthListener() {
+        TableView<Person> tableView = createPersonTable(false);
+        showControl(tableView, true);
+        VirtualFlow<?> flow = getVirtualFlow(tableView);
+        TableRow<?> tableRow = (TableRow<?>) getCell(tableView, 1);
+        TableRowSkin<?> rowSkin = (TableRowSkin<?>) tableRow.getSkin();
+        assertNotNull("row skin must have listener to virtualFlow width",
+                unregisterChangeListeners(rowSkin, flow.widthProperty()));
+    }
+
+    /**
+     * Sanity: children don't pile up with fixed cell size.
+     */
+    @Test
+    public void testTableRowChildCountFixedCellSizeReplaceSkin() {
+        TableView<Person> tableView = createPersonTable(false);
+        tableView.setFixedCellSize(100);
+        showControl(tableView, true);
+        TableRow<?> tableRow = (TableRow<?>) getCell(tableView, 0);
+        int childCount = tableRow.getChildrenUnmodifiable().size();
+        assertEquals(2, childCount);
+        replaceSkin(tableRow);
+        Toolkit.getToolkit().firePulse();
+        assertEquals(childCount, tableRow.getChildrenUnmodifiable().size());
+    }
+
+    /**
+     * Sanity: children don't pile up.
+     */
+    @Test
+    public void testTableRowChildCountReplaceSkin() {
+        TableView<Person> tableView = createPersonTable(false);
+        showControl(tableView, true);
+        TableRow<?> tableRow = (TableRow<?>) getCell(tableView, 0);
+        int childCount = tableRow.getChildrenUnmodifiable().size();
+        assertEquals(2, childCount);
+        replaceSkin(tableRow);
+        Toolkit.getToolkit().firePulse();
+        assertEquals(childCount, tableRow.getChildrenUnmodifiable().size());
+    }
+
+    @Test
+    public void testTableRowVirtualFlowReplaceSkin() {
+        TableView<Person> tableView = createPersonTable(false);
+        showControl(tableView, true);
+        TableRow<?> tableRow = (TableRow<?>) getCell(tableView, 1);
+        replaceSkin(tableRow);
+        assertEquals(tableView.getSkin(), getTableViewSkin(tableRow));
+        assertEquals(getVirtualFlow(tableView), getVirtualFlow(tableRow));
+    }
+
+    /**
+     * Sanity: invariants of skin/flow in rowSkin
+     */
+    @Test
+    public void testTableRowVirtualFlow() {
+        TableView<Person> tableView = createPersonTable(false);
+        showControl(tableView, true);
+        TableRow<?> tableRow = (TableRow<?>) getCell(tableView, 1);
+        assertEquals(tableView.getSkin(), getTableViewSkin(tableRow));
+        assertEquals(getVirtualFlow(tableView), getVirtualFlow(tableRow));
+    }
+
+    /**
+     * Here we configure a tableRow with table and install the row's skin.
+     */
+    @Ignore("JDK-8274065")
+    @Test
+    public void testTableRowVirtualFlowInstallSkin() {
+        TableRow<?> tableRow = createTableRow(0);
+        installDefaultSkin(tableRow);
+        TableView<?> tableView = tableRow.getTableView();
+        assertEquals(tableView.getSkin(), getTableViewSkin(tableRow));
+        assertEquals(getVirtualFlow(tableView), getVirtualFlow(tableRow));
+    }
+
+
+//---------------- TableRowSkinBase (tested against TableRow)
+
+    /**
+     * NPE from listener in previous skin if not removed.
+     */
+    @Test
+    public void testTableRowLeafColumnsListenerReplaceSkin() {
+        TableView<Person> tableView = createPersonTable(false);
+        showControl(tableView, true);
+        TableRow<?> tableRow = (TableRow<?>) getCell(tableView, 1);
+        replaceSkin(tableRow);
+        tableView.getColumns().get(0).setVisible(false);
+        // note: the actual update happens only in layout, test the marker here
+        assertTrue("dirty marker must have been set", isDirty(tableRow));
+    }
+
+    /**
+     * Sanity: child cells are updated on changing visible columns.
+     */
+    @Test
+    public void testTableRowLeafColumnsListener() {
+        TableView<Person> tableView = createPersonTable(false);
+        showControl(tableView, true);
+        TableRow<?> tableRow = (TableRow<?>) getCell(tableView, 1);
+        tableView.getColumns().get(0).setVisible(false);
+        // note: the actual update happens only in layout, test the marker here
+        assertTrue("dirty marker must have been set", isDirty(tableRow));
+    }
+
+    /**
+     *  NPE from listener in previous skin if not removed.
+     */
+    @Test
+    public void testTableRowItemListenerReplaceSkin() {
+        TableView<Person> tableView = createPersonTable(false);
+        showControl(tableView, true);
+        int initial = 0;
+        TableRow<?> tableRow = (TableRow<?>) getCell(tableView, initial);
+        replaceSkin(tableRow);
+        int index = 1;
+        tableRow.updateIndex(index);
+        List<IndexedCell<?>> cells = getCells(tableRow);
+        assertEquals(tableView.getVisibleLeafColumns().size(), cells.size());
+        assertEquals("cell index must be updated", index, cells.get(0).getIndex());
+    }
+
+    /**
+     * Sanity: child cell's index is updated
+     */
+    @Test
+    public void testTableRowItemListener() {
+        TableView<Person> tableView = createPersonTable(false);
+        showControl(tableView, true);
+        int initial = 0;
+        TableRow<?> tableRow = (TableRow<?>) getCell(tableView, initial);
+        int index = 1;
+        tableRow.updateIndex(index);
+        Toolkit.getToolkit().firePulse();
+        List<IndexedCell<?>> cells = getCells(tableRow);
+        assertEquals(tableView.getVisibleLeafColumns().size(), cells.size());
+        assertEquals("cell index must be updated", index, cells.get(0).getIndex());
+   }
+
+//-------------- helpers for TableRow tests
+
+    private static final int COL_COUNT = 50;
+    private static final int ROW_COUNT = 10;
+    private static final double COL_WIDTH = 50;
+    private static final double FIXED_CELL_SIZE = 24;
+
+    /**
+     * Creates and returns a table with many columns of width COL_WIDTH each,
+     * setting the fixedCellSize of FIXED_CELL_SIZE if useFixedCellSize is true.
+     */
+    private TableView<String[]> createManyColumnsTableView(boolean useFixedCellSize) {
+        final TableView<String[]> tableView = new TableView<>();
+        final ObservableList<TableColumn<String[], ?>> columns = tableView
+                .getColumns();
+        tableView.getSelectionModel().setCellSelectionEnabled(true);
+        for (int i = 0; i < COL_COUNT; i++) {
+            TableColumn<String[], String> column = new TableColumn<>("Col" + i);
+            final int colIndex = i;
+            column.setCellValueFactory((cell) -> new SimpleStringProperty(
+                    cell.getValue()[colIndex]));
+            columns.add(column);
+            sizeColumn(column, COL_WIDTH);
+        }
+        ObservableList<String[]> items = tableView.getItems();
+        for (int i = 0; i < ROW_COUNT; i++) {
+            String[] rec = new String[COL_COUNT];
+            for (int j = 0; j < rec.length; j++) {
+                rec[j] = i + ":" + j;
+            }
+            items.add(rec);
+        }
+        if (useFixedCellSize) {
+            tableView.setFixedCellSize(FIXED_CELL_SIZE);
+        }
+
+        return tableView;
+    }
+
+    private void sizeColumn(TableColumnBase<?, ?> column, double width) {
+        column.setPrefWidth(width);
+        column.setMinWidth(width);
+        column.setMaxWidth(width);
+    }
+
+
+    /**
+     * Creates and returns a TableRow configured to test
+     * intalling/switching its skin reliably.
+     */
+    private TableRow<?> createTableRow(int index) {
+        TableView<Person> table = createPersonTable(true);
+        TableRow<Person> tableRow = new TableRow<>();
+        // note: must updateTable before updateIndex
+        tableRow.updateTableView(table);
+        tableRow.updateIndex(index);
+        assertFalse("sanity: row must not be empty at index: " + index, tableRow.isEmpty());
+        return tableRow;
+    }
+
+    /**
+     * Returns a table with two columns. Installs the default skin if
+     * installSkin is true.
+     */
+    private TableView<Person> createPersonTable(boolean installSkin) {
+        TableView<Person> table = new TableView<>(Person.persons());
+        TableColumn<Person, String> firstName = new TableColumn<>("First Name");
+        firstName.setCellValueFactory(new PropertyValueFactory<>("firstName"));
+        TableColumn<Person, String> lastName = new TableColumn<>("Last Name");
+        lastName.setCellValueFactory(new PropertyValueFactory<>("lastName"));
+        table.getColumns().addAll(firstName, lastName);
+        if (installSkin) {
+            installDefaultSkin(table);
+        }
+        return table;
+    }
+
 
 //------------ TextArea
 

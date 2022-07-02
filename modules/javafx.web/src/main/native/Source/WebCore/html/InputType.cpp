@@ -64,6 +64,7 @@
 #include "ResetInputType.h"
 #include "ScopedEventQueue.h"
 #include "SearchInputType.h"
+#include "SelectionRestorationMode.h"
 #include "Settings.h"
 #include "ShadowRoot.h"
 #include "StepRange.h"
@@ -638,7 +639,7 @@ void InputType::handleBlurEvent()
 bool InputType::accessKeyAction(bool)
 {
     ASSERT(element());
-    element()->focus(SelectionRestorationMode::SelectAll);
+    element()->focus({ SelectionRestorationMode::SelectAll });
     return false;
 }
 
@@ -679,7 +680,7 @@ FileList* InputType::files()
     return nullptr;
 }
 
-void InputType::setFiles(RefPtr<FileList>&&)
+void InputType::setFiles(RefPtr<FileList>&&, WasSetByJavaScript)
 {
 }
 
@@ -864,10 +865,10 @@ void InputType::dataListMayHaveChanged()
 {
 }
 
-Optional<Decimal> InputType::findClosestTickMarkValue(const Decimal&)
+std::optional<Decimal> InputType::findClosestTickMarkValue(const Decimal&)
 {
     ASSERT_NOT_REACHED();
-    return WTF::nullopt;
+    return std::nullopt;
 }
 #endif
 
@@ -1080,6 +1081,12 @@ Vector<Color> InputType::suggestedColors() const
 RefPtr<TextControlInnerTextElement> InputType::innerTextElement() const
 {
     return nullptr;
+}
+
+String InputType::resultForDialogSubmit() const
+{
+    ASSERT(element());
+    return element()->value();
 }
 
 } // namespace WebCore

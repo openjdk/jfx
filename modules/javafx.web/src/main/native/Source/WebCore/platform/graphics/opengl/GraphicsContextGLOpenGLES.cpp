@@ -32,10 +32,10 @@
 #if ENABLE(WEBGL) && USE(OPENGL_ES)
 
 #include "ExtensionsGLOpenGLES.h"
-#include "ImageData.h"
 #include "IntRect.h"
 #include "IntSize.h"
 #include "NotImplemented.h"
+#include "PixelBuffer.h"
 
 #include <ANGLE/ShaderLang.h>
 
@@ -45,7 +45,6 @@ void GraphicsContextGLOpenGL::readnPixels(GCGLint x, GCGLint y, GCGLsizei width,
 {
     if (!makeContextCurrent())
         return;
-
 
     auto attributes = contextAttributes();
 
@@ -65,11 +64,12 @@ void GraphicsContextGLOpenGL::readnPixels(GCGLint x, GCGLint y, GCGLsizei width,
         ::glBindFramebuffer(GL_FRAMEBUFFER, m_multisampleFBO);
 }
 
-RefPtr<ImageData> GraphicsContextGLOpenGL::readPixelsForPaintResults()
+std::optional<PixelBuffer> GraphicsContextGLOpenGL::readPixelsForPaintResults()
 {
-    auto imageData = ImageData::create(getInternalFramebufferSize());
-    if (!imageData)
-        return nullptr;
+    PixelBufferFormat format { AlphaPremultiplication::Unpremultiplied, PixelFormat::RGBA8, DestinationColorSpace::SRGB() };
+    auto pixelBuffer = PixelBuffer::tryCreate(format, getInternalFramebufferSize());
+    if (!pixelBuffer)
+        return std::nullopt;
 
     GLint packAlignment = 4;
     bool mustRestorePackAlignment = false;
@@ -79,12 +79,12 @@ RefPtr<ImageData> GraphicsContextGLOpenGL::readPixelsForPaintResults()
         mustRestorePackAlignment = true;
     }
 
-    ::glReadPixels(0, 0, imageData->width(), imageData->height(), GL_RGBA, GL_UNSIGNED_BYTE, imageData->data()->data());
+    ::glReadPixels(0, 0, pixelBuffer->size().width(), pixelBuffer->size().height(), GL_RGBA, GL_UNSIGNED_BYTE, pixelBuffer->data().data());
 
     if (mustRestorePackAlignment)
         ::glPixelStorei(GL_PACK_ALIGNMENT, packAlignment);
 
-    return imageData;
+    return pixelBuffer;
 }
 
 bool GraphicsContextGLOpenGL::reshapeFBOs(const IntSize& size)
@@ -272,148 +272,6 @@ ExtensionsGLOpenGLCommon& GraphicsContextGLOpenGL::getExtensions()
     if (!m_extensions)
         m_extensions = makeUnique<ExtensionsGLOpenGLES>(this, isGLES2Compliant());
     return *m_extensions;
-}
-#endif
-
-#if PLATFORM(WIN) && USE(CA)
-RefPtr<GraphicsContextGLOpenGL> GraphicsContextGLOpenGL::create(GraphicsContextGLAttributes attributes, HostWindow* hostWindow)
-{
-    static bool initialized = false;
-    static bool success = true;
-    if (!initialized) {
-#if !USE(OPENGL_ES)
-        success = initializeOpenGLShims();
-#endif
-        initialized = true;
-    }
-    if (!success)
-        return nullptr;
-
-    return adoptRef(new GraphicsContextGLOpenGL(attributes, hostWindow, renderStyle));
-}
-
-GraphicsContextGLOpenGL::GraphicsContextGLOpenGL(GraphicsContextGLAttributes attributes, HostWindow*, GraphicsContextGLOpenGL* sharedContext)
-    : GraphicsContextGL(attributes, sharedContext)
-    , m_compiler(isGLES2Compliant() ? SH_ESSL_OUTPUT : SH_GLSL_COMPATIBILITY_OUTPUT)
-    , m_private(makeUnique<GraphicsContextGLOpenGLPrivate>(this))
-{
-    ASSERT_UNUSED(sharedContext, !sharedContext);
-    if (!makeContextCurrent())
-        return;
-
-
-    validateAttributes();
-    attributes = contextAttributes(); // They may have changed during validation.
-
-    // Create a texture to render into.
-    ::glGenTextures(1, &m_texture);
-    ::glBindTexture(GL_TEXTURE_2D, m_texture);
-    ::glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    ::glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    ::glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    ::glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    ::glBindTexture(GL_TEXTURE_2D, 0);
-
-    // Create an FBO.
-    ::glGenFramebuffers(1, &m_fbo);
-    ::glBindFramebuffer(GL_FRAMEBUFFER, m_fbo);
-
-    m_state.boundDrawFBO = m_state.boundReadFbo = m_fbo;
-    if (!attributes.antialias && (attributes.stencil || attributes.depth))
-        ::glGenRenderbuffers(1, &m_depthStencilBuffer);
-
-    // Create a multisample FBO.
-    if (attributes.antialias) {
-        ::glGenFramebuffers(1, &m_multisampleFBO);
-        ::glBindFramebuffer(GL_FRAMEBUFFER, m_multisampleFBO);
-        m_state.boundDrawFBO = m_state.boundReadFBO = m_multisampleFBO;
-        ::glGenRenderbuffers(1, &m_multisampleColorBuffer);
-        if (attributes.stencil || attributes.depth)
-            ::glGenRenderbuffers(1, &m_multisampleDepthStencilBuffer);
-    }
-
-    // ANGLE initialization.
-    ShBuiltInResources ANGLEResources;
-    ShInitBuiltInResources(&ANGLEResources);
-
-    ::glGetIntegerv(GraphicsContextGLOpenGL::MAX_VERTEX_ATTRIBS, &ANGLEResources.MaxVertexAttribs);
-    ::glGetIntegerv(GraphicsContextGLOpenGL::MAX_VERTEX_UNIFORM_VECTORS, &ANGLEResources.MaxVertexUniformVectors);
-    ::glGetIntegerv(GraphicsContextGLOpenGL::MAX_VARYING_VECTORS, &ANGLEResources.MaxVaryingVectors);
-    ::glGetIntegerv(GraphicsContextGLOpenGL::MAX_VERTEX_TEXTURE_IMAGE_UNITS, &ANGLEResources.MaxVertexTextureImageUnits);
-    ::glGetIntegerv(GraphicsContextGLOpenGL::MAX_COMBINED_TEXTURE_IMAGE_UNITS, &ANGLEResources.MaxCombinedTextureImageUnits);
-    ::glGetIntegerv(GraphicsContextGLOpenGL::MAX_TEXTURE_IMAGE_UNITS, &ANGLEResources.MaxTextureImageUnits);
-    ::glGetIntegerv(GraphicsContextGLOpenGL::MAX_FRAGMENT_UNIFORM_VECTORS, &ANGLEResources.MaxFragmentUniformVectors);
-
-    // Always set to 1 for OpenGL ES.
-    ANGLEResources.MaxDrawBuffers = 1;
-
-    GCGLint range[2] { };
-    GCGLint precision = 0;
-    getShaderPrecisionFormat(GraphicsContextGLOpenGL::FRAGMENT_SHADER, GraphicsContextGLOpenGL::HIGH_FLOAT, range, &precision);
-    ANGLEResources.FragmentPrecisionHigh = (range[0] || range[1] || precision);
-
-    m_compiler.setResources(ANGLEResources);
-
-#if !USE(OPENGL_ES)
-    ::glEnable(GL_VERTEX_PROGRAM_POINT_SIZE);
-    ::glEnable(GL_POINT_SPRITE);
-#endif
-
-    ::glClearColor(0, 0, 0, 0);
-}
-
-GraphicsContextGLOpenGL::~GraphicsContextGLOpenGL()
-{
-    if (!makeContextCurrent())
-        return;
-
-    ::glDeleteTextures(1, &m_texture);
-
-    auto attributes = contextAttributes();
-
-    if (attributes.antialias) {
-        ::glDeleteRenderbuffers(1, &m_multisampleColorBuffer);
-        if (attributes.stencil || attributes.depth)
-            ::glDeleteRenderbuffers(1, &m_multisampleDepthStencilBuffer);
-        ::glDeleteFramebuffers(1, &m_multisampleFBO);
-    } else {
-        if (attributes.stencil || attributes.depth)
-            ::glDeleteRenderbuffers(1, &m_depthStencilBuffer);
-    }
-    ::glDeleteFramebuffers(1, &m_fbo);
-}
-
-void GraphicsContextGLOpenGL::setContextLostCallback(std::unique_ptr<ContextLostCallback>)
-{
-}
-
-void GraphicsContextGLOpenGL::setErrorMessageCallback(std::unique_ptr<ErrorMessageCallback>)
-{
-}
-
-bool GraphicsContextGLOpenGL::makeContextCurrent()
-{
-    if (!m_private)
-        return false;
-    return m_private->makeContextCurrent();
-}
-
-void GraphicsContextGLOpenGL::checkGPUStatus()
-{
-}
-
-bool GraphicsContextGLOpenGL::isGLES2Compliant() const
-{
-#if USE(OPENGL_ES)
-    return true;
-#else
-    return false;
-#endif
-}
-
-PlatformLayer* GraphicsContextGLOpenGL::platformLayer() const
-{
-    return m_webGLLayer->platformLayer();
 }
 #endif
 

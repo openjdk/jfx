@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -422,7 +422,7 @@ public class Locator {
                             InputStream stream = getInputStream(uri);
                             stream.close();
                             isConnected = true;
-                            contentType = MediaUtils.filenameToContentType(uriString); // We need to provide at least something
+                            contentType = MediaUtils.filenameToContentType(uri.getPath()); // We need to provide at least something
                         }
 
                         if (isConnected) {
@@ -438,7 +438,7 @@ public class Locator {
                             } else {
                                 if (contentType == null || !MediaManager.canPlayContentType(contentType)) {
                                     // Try content based on file name.
-                                    contentType = MediaUtils.filenameToContentType(uriString);
+                                    contentType = MediaUtils.filenameToContentType(uri.getPath());
 
                                     if (Locator.DEFAULT_CONTENT_TYPE.equals(contentType)) {
                                         // Try content based on file signature.
@@ -469,7 +469,7 @@ public class Locator {
             }
             else {
                 // in case of iPod files we can be sure all files are supported
-                contentType = MediaUtils.filenameToContentType(uriString);
+                contentType = MediaUtils.filenameToContentType(uri.getPath());
             }
 
             if (Logger.canLog(Logger.WARNING)) {
@@ -597,7 +597,7 @@ public class Locator {
     }
 
     public ConnectionHolder createConnectionHolder() throws IOException {
-        // first check if it's cached
+        // check if it's cached
         if (null != cacheEntry) {
             if (Logger.canLog(Logger.DEBUG)) {
                 Logger.logMsg(Logger.DEBUG, "Locator.createConnectionHolder: media cached, creating memory connection holder");
@@ -605,19 +605,30 @@ public class Locator {
             return ConnectionHolder.createMemoryConnectionHolder(cacheEntry.getBuffer());
         }
 
-        // then fall back on other methods
-        ConnectionHolder holder;
+        // check if it is local file
         if ("file".equals(scheme)) {
-            holder = ConnectionHolder.createFileConnectionHolder(uri);
-        } else if (uri.toString().endsWith(".m3u8") || uri.toString().endsWith(".m3u")) {
-            holder = ConnectionHolder.createHLSConnectionHolder(uri);
-        } else {
-            synchronized (propertyLock) {
-                holder = ConnectionHolder.createURIConnectionHolder(uri, connectionProperties);
-            }
+            return ConnectionHolder.createFileConnectionHolder(uri);
         }
 
-        return holder;
+        // check if it is HTTP Live Streaming
+        //    - uri path ends with .m3u8 or .m3u
+        //    - contentType is "application/vnd.apple.mpegurl" or "audio/mpegurl"
+        String uriPath = uri.getPath();
+        if (uriPath != null && (uriPath.endsWith(".m3u8") ||
+                                uriPath.endsWith(".m3u"))) {
+            return ConnectionHolder.createHLSConnectionHolder(uri);
+        }
+
+        String type = getContentType(); // Should be ready by now
+        if (type != null && (type.equals(MediaUtils.CONTENT_TYPE_M3U8) ||
+                             type.equals(MediaUtils.CONTENT_TYPE_M3U))) {
+            return ConnectionHolder.createHLSConnectionHolder(uri);
+        }
+
+        // media file over http/https
+        synchronized  (propertyLock) {
+            return ConnectionHolder.createURIConnectionHolder(uri, connectionProperties);
+        }
     }
 
     private String getContentTypeFromFileSignature(URI uri) throws MalformedURLException, IOException {

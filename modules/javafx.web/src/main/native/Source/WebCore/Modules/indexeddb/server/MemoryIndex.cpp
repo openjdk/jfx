@@ -26,8 +26,6 @@
 #include "config.h"
 #include "MemoryIndex.h"
 
-#if ENABLE(INDEXED_DATABASE)
-
 #include "IDBError.h"
 #include "IDBGetAllResult.h"
 #include "IDBGetResult.h"
@@ -152,7 +150,7 @@ uint64_t MemoryIndex::countForKeyRange(const IDBKeyRangeData& inRange)
     return count;
 }
 
-void MemoryIndex::getAllRecords(const IDBKeyRangeData& keyRangeData, Optional<uint32_t> count, IndexedDB::GetAllType type, IDBGetAllResult& result) const
+void MemoryIndex::getAllRecords(const IDBKeyRangeData& keyRangeData, std::optional<uint32_t> count, IndexedDB::GetAllType type, IDBGetAllResult& result) const
 {
     LOG(IndexedDB, "MemoryIndex::getAllRecords");
 
@@ -265,5 +263,3 @@ MemoryIndexCursor* MemoryIndex::maybeOpenCursor(const IDBCursorInfo& info)
 
 } // namespace IDBServer
 } // namespace WebCore
-
-#endif // ENABLE(INDEXED_DATABASE)

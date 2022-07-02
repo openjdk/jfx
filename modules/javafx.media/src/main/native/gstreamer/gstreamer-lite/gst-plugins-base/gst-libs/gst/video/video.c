@@ -212,4 +212,53 @@ gst_video_alignment_reset (GstVideoAlignment * align)
   for (i = 0; i < GST_VIDEO_MAX_PLANES; i++)
     align->stride_align[i] = 0;
 }
+
+/**
+ * gst_video_orientation_from_tag:
+ * @taglist: A #GstTagList
+ * @method: (out): The location where to return the orientation.
+ *
+ * Parses the "image-orientation" tag and transforms it into the
+ * #GstVideoOrientationMethod enum.
+ *
+ * Returns: TRUE if there was a valid "image-orientation" tag in the taglist.
+ *
+ * Since: 1.20
+ */
+gboolean
+gst_video_orientation_from_tag (GstTagList * taglist,
+    GstVideoOrientationMethod * method)
+{
+  gchar *orientation;
+  gboolean ret = TRUE;
+
+  g_return_val_if_fail (GST_IS_TAG_LIST (taglist), FALSE);
+  g_return_val_if_fail (method != NULL, FALSE);
+
+  if (!gst_tag_list_get_string (taglist, "image-orientation", &orientation))
+    return FALSE;
+
+  if (!g_strcmp0 ("rotate-0", orientation))
+    *method = GST_VIDEO_ORIENTATION_IDENTITY;
+  else if (!g_strcmp0 ("rotate-90", orientation))
+    *method = GST_VIDEO_ORIENTATION_90R;
+  else if (!g_strcmp0 ("rotate-180", orientation))
+    *method = GST_VIDEO_ORIENTATION_180;
+  else if (!g_strcmp0 ("rotate-270", orientation))
+    *method = GST_VIDEO_ORIENTATION_90L;
+  else if (!g_strcmp0 ("flip-rotate-0", orientation))
+    *method = GST_VIDEO_ORIENTATION_HORIZ;
+  else if (!g_strcmp0 ("flip-rotate-90", orientation))
+    *method = GST_VIDEO_ORIENTATION_UR_LL;
+  else if (!g_strcmp0 ("flip-rotate-180", orientation))
+    *method = GST_VIDEO_ORIENTATION_VERT;
+  else if (!g_strcmp0 ("flip-rotate-270", orientation))
+    *method = GST_VIDEO_ORIENTATION_UL_LR;
+  else
+    ret = FALSE;
+
+  g_free (orientation);
+
+  return ret;
+}
 #endif // GSTREAMER_LITE

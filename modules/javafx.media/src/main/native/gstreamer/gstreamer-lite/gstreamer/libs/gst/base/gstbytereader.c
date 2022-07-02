@@ -26,6 +26,7 @@
 #define GST_BYTE_READER_DISABLE_INLINES
 #include "gstbytereader.h"
 
+#include "gst/glib-compat-private.h"
 #include <string.h>
 
 /**
@@ -1222,7 +1223,7 @@ gst_byte_reader_dup_string_utf##bits (GstByteReader * reader, type ** str) \
     *str = NULL; \
     return FALSE; \
   } \
-  *str = g_memdup (reader->data + reader->byte, size); \
+  *str = g_memdup2 (reader->data + reader->byte, size); \
   reader->byte += size; \
   return TRUE; \
 }

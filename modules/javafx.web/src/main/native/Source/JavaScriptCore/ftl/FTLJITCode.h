@@ -60,7 +60,7 @@ public:
 
     RegisterSet liveRegistersToPreserveAtExceptionHandlingCallSite(CodeBlock*, CallSiteIndex) override;
 
-    Optional<CodeOrigin> findPC(CodeBlock*, void* pc) override;
+    std::optional<CodeOrigin> findPC(CodeBlock*, void* pc) override;
 
     CodeRef<JSEntryPtrTag> b3Code() const { return m_b3Code; }
 
@@ -70,7 +70,7 @@ public:
     void shrinkToFit(const ConcurrentJSLocker&) override;
 
     DFG::CommonData common;
-    SegmentedVector<OSRExit, 8> osrExit;
+    Vector<OSRExit> m_osrExit;
     SegmentedVector<OSRExitDescriptor, 8> osrExitDescriptors;
     Vector<std::unique_ptr<LazySlowPath>> lazySlowPaths;
 

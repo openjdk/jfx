@@ -69,7 +69,7 @@ private:
     void waitUntilObservers();
     void notifyObservers(ResourceUsageData&&);
 
-    void recomputeCollectionMode();
+    void recomputeCollectionMode() WTF_REQUIRES_LOCK(m_observersLock);
 
     void createThreadIfNeeded();
     NO_RETURN void threadBody();
@@ -79,9 +79,9 @@ private:
     void platformCollectMemoryData(JSC::VM*, ResourceUsageData&);
 
     RefPtr<Thread> m_thread;
-    Lock m_lock;
+    Lock m_observersLock;
     Condition m_condition;
-    HashMap<void*, std::pair<ResourceUsageCollectionMode, std::function<void (const ResourceUsageData&)>>> m_observers;
+    HashMap<void*, std::pair<ResourceUsageCollectionMode, std::function<void(const ResourceUsageData&)>>> m_observers WTF_GUARDED_BY_LOCK(m_observersLock);
     ResourceUsageCollectionMode m_collectionMode { None };
 
     // Platforms may need to access some data from the common VM.

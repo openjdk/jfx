@@ -26,8 +26,6 @@
 #include "config.h"
 #include "IDBCursor.h"
 
-#if ENABLE(INDEXED_DATABASE)
-
 #include "IDBBindingUtilities.h"
 #include "IDBDatabase.h"
 #include "IDBGetResult.h"
@@ -38,6 +36,7 @@
 #include "IDBTransaction.h"
 #include "Logging.h"
 #include "ScriptExecutionContext.h"
+#include "SerializedScriptValue.h"
 #include <JavaScriptCore/HeapInlines.h>
 #include <JavaScriptCore/JSCJSValueInlines.h>
 #include <JavaScriptCore/StrongInlines.h>
@@ -121,17 +120,30 @@ ExceptionOr<Ref<IDBRequest>> IDBCursor::update(JSGlobalObject& state, JSValue va
     if (!isKeyCursorWithValue())
         return Exception { InvalidStateError, "Failed to execute 'update' on 'IDBCursor': The cursor is a key cursor."_s };
 
+    VM& vm = state.vm();
+    auto scope = DECLARE_CATCH_SCOPE(vm);
+
+    // Transaction should be inactive during structured clone.
+    Ref transaction = effectiveObjectStore().transaction();
+    transaction->deactivate();
+    auto serializedValue = SerializedScriptValue::create(state, value);
+    transaction->activate();
+
+    if (UNLIKELY(scope.exception()))
+        return Exception { DataCloneError, "Failed to store record in an IDBObjectStore: An object could not be cloned."_s };
+
     auto& objectStore = effectiveObjectStore();
     auto& optionalKeyPath = objectStore.info().keyPath();
     const bool usesInLineKeys = !!optionalKeyPath;
     if (usesInLineKeys) {
-        RefPtr<IDBKey> keyPathKey = maybeCreateIDBKeyFromScriptValueAndKeyPath(state, value, optionalKeyPath.value());
+        auto clonedValue = serializedValue->deserialize(state, &state, SerializationErrorMode::NonThrowing);
+        RefPtr<IDBKey> keyPathKey = maybeCreateIDBKeyFromScriptValueAndKeyPath(state, clonedValue, optionalKeyPath.value());
         IDBKeyData keyPathKeyData(keyPathKey.get());
         if (!keyPathKey || keyPathKeyData != m_primaryKeyData)
             return Exception { DataError, "Failed to execute 'update' on 'IDBCursor': The effective object store of this cursor uses in-line keys and evaluating the key path of the value parameter results in a different value than the cursor's effective key."_s };
     }
 
-    auto putResult = effectiveObjectStore().putForCursorUpdate(state, value, m_primaryKey.copyRef());
+    auto putResult = effectiveObjectStore().putForCursorUpdate(state, value, m_primaryKey.copyRef(), WTFMove(serializedValue));
     if (putResult.hasException())
         return putResult.releaseException();
 
@@ -367,11 +379,11 @@ void IDBCursor::clearWrappers()
     m_valueWrapper.clear();
 }
 
-Optional<IDBGetResult> IDBCursor::iterateWithPrefetchedRecords(unsigned count, uint64_t lastWriteOperationID)
+std::optional<IDBGetResult> IDBCursor::iterateWithPrefetchedRecords(unsigned count, uint64_t lastWriteOperationID)
 {
     unsigned step = count > 0 ? count : 1;
     if (step > m_prefetchedRecords.size() || m_prefetchOperationID <= lastWriteOperationID)
-        return WTF::nullopt;
+        return std::nullopt;
 
     while (--step)
         m_prefetchedRecords.removeFirst();
@@ -388,5 +400,3 @@ void IDBCursor::clearPrefetchedRecords()
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(INDEXED_DATABASE)

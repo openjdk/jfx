@@ -39,7 +39,6 @@
 #import "GlassWindow.h"
 #import "GlassApplication.h"
 #import "GlassLayer3D.h"
-#import "GlassNSEvent.h"
 #import "GlassPasteboard.h"
 #import "GlassHelper.h"
 #import "GlassStatics.h"
@@ -683,16 +682,6 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
     jcharArray jKeyChars = GetJavaKeyChars(env, theEvent);
     jint jModifiers = GetJavaModifiers(theEvent);
 
-    // Short circuit here: If this is a synthetic key-typed from a text event
-    // post it and return.
-    if ([theEvent isKindOfClass:[GlassNSEvent class]]) {
-        if ([(GlassNSEvent *)theEvent isSyntheticKeyTyped]) {
-            SEND_KEY_EVENT(com_sun_glass_events_KeyEvent_TYPED);
-            (*env)->DeleteLocalRef(env, jKeyChars);
-            return;
-        }
-    }
-
     if (!isDown)
     {
         SEND_KEY_EVENT(com_sun_glass_events_KeyEvent_RELEASE);
@@ -701,32 +690,12 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
     {
         SEND_KEY_EVENT(com_sun_glass_events_KeyEvent_PRESS);
 
-        // In the applet case, FireFox always sends a text input event after every
-        // key-pressed, which gets turned into a TYPED event for simple key strokes.
-        // The NPAPI support code will send a boolean to let us know if we need to
-        // generate the TYPED, or if we should expect the input method support to do it.
-        BOOL sendKeyTyped = YES;
-
-        if ([theEvent isKindOfClass:[GlassNSEvent class]]) {
-            sendKeyTyped = [(GlassNSEvent *)theEvent needsKeyTyped];
-        }
-
         // TYPED events should only be sent for printable characters. Thus we avoid
         // sending them for navigation keys. Perhaps this logic could be enhanced.
-        if (sendKeyTyped) {
-            if (jKeyCode < com_sun_glass_events_KeyEvent_VK_PAGE_UP ||
-                jKeyCode > com_sun_glass_events_KeyEvent_VK_DOWN)
-            {
-                SEND_KEY_EVENT(com_sun_glass_events_KeyEvent_TYPED);
-            }
-
-            // Quirk in Firefox: If we have to generate a key-typed and this
-            // event is a repeat we will also need to generate a fake RELEASE event
-            // because we won't see a key-release.
-            if ([theEvent isARepeat] &&
-                [[self->nsView window] isKindOfClass:[GlassEmbeddedWindow class]]) {
-                SEND_KEY_EVENT(com_sun_glass_events_KeyEvent_RELEASE);
-            }
+        if (jKeyCode < com_sun_glass_events_KeyEvent_VK_PAGE_UP ||
+            jKeyCode > com_sun_glass_events_KeyEvent_VK_DOWN)
+        {
+            SEND_KEY_EVENT(com_sun_glass_events_KeyEvent_TYPED);
         }
 
         // Mac doesn't send keyUp for Cmd+<> key combinations (including Shift+Cmd+<>, etc.)
@@ -932,10 +901,17 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
 
     int mask;
     NSDragOperation operation = [info draggingSourceOperationMask];
+    jint recommendedAction = com_sun_glass_ui_Clipboard_ACTION_NONE;
 
-    [GlassDragSource setSupportedActions:[GlassDragSource mapNsOperationToJavaMask:operation]];
+    if (info.draggingSource != nil) {
+        [GlassDragSource setSupportedActions:[GlassDragSource mapNsOperationToJavaMaskInternal:operation]];
+        recommendedAction = [GlassDragSource getRecommendedActionForMaskInternal:operation];
+    }
+    else {
+        [GlassDragSource setSupportedActions:[GlassDragSource mapNsOperationToJavaMaskExternal:operation]];
+        recommendedAction = [GlassDragSource getRecommendedActionForMaskExternal:operation];
+    }
 
-    jint recommendedAction = [GlassDragSource getRecommendedActionForMask:operation];
     switch (type)
     {
         case com_sun_glass_events_DndEvent_ENTER:
@@ -969,6 +945,16 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
 
 - (NSDragOperation)draggingSourceOperationMaskForLocal:(BOOL)isLocal
 {
+    // The Command key masks out every operation other than NSDragOperationGeneric. We want
+    // internal Move events to get through this filtering so we copy the Move bit into the
+    // Generic bit and treat Generic as a synonym for Move.
+    if (isLocal)
+    {
+        NSDragOperation result = self->dragOperation;
+        if (result & NSDragOperationMove)
+            result |= NSDragOperationGeneric;
+        return result;
+    }
     return self->dragOperation;
 }
 
@@ -1200,8 +1186,7 @@ static jstring convertNSStringToJString(id aString, int length)
 - (void)setResizableForFullscreen:(BOOL)resizable
 {
     NSWindow* window =  [self->nsView window];
-    if ([window isKindOfClass:[GlassEmbeddedWindow class]] == NO
-        && !((GlassWindow*) window)->isResizable) {
+    if (!((GlassWindow*) window)->isResizable) {
         NSUInteger mask = [window styleMask];
         if (resizable) {
             mask |= NSResizableWindowMask;
@@ -1228,112 +1213,9 @@ static jstring convertNSStringToJString(id aString, int length)
 {
     LOG("GlassViewDelegate enterFullscreenWithAnimate:%d withKeepRatio:%d withHideCursor:%d", animate, keepRatio, hideCursor);
 
-    if ([[self->nsView window] isKindOfClass:[GlassEmbeddedWindow class]] == NO)
-    {
-        [[self->nsView window] toggleFullScreen:self];
-        // wait until the operation is complete
-        [GlassApplication enterFullScreenExitingLoop];
-        return;
-    }
-
-    NSScreen *screen = [[self->nsView window] screen];
-
-    NSRect frameInWindowScreenCoords = [self->nsView bounds];
-    frameInWindowScreenCoords = [self->parentWindow convertRectToScreen:frameInWindowScreenCoords];
-    NSPoint pointInPrimaryScreenCoords = frameInWindowScreenCoords.origin;
-
-    // Convert to local screen
-    frameInWindowScreenCoords.origin.x -= screen.frame.origin.x;
-    frameInWindowScreenCoords.origin.y -= screen.frame.origin.y;
-
-    @try
-    {
-        // 0. Retain the view while it's in the FS mode
-        [self->nsView retain];
-
-        // 1.
-        self->fullscreenHost = [[GlassHostView alloc] initWithFrame:[self->nsView bounds]];
-        [self->fullscreenHost setAutoresizesSubviews:YES];
-
-        // 2.
-        self->fullscreenWindow = [[GlassFullscreenWindow alloc] initWithContentRect:frameInWindowScreenCoords
-                                                                       withHostView:self->fullscreenHost
-                                                                           withView:self->nsView withScreen:screen
-                                                                          withPoint:pointInPrimaryScreenCoords];
-
-        // 3.
-
-        [self->parentWindow disableFlushWindow];
-        {
-            // handle plugin case
-            if ([[self->nsView window] isKindOfClass:[GlassEmbeddedWindow class]] == YES)
-            {
-                GlassEmbeddedWindow *window = (GlassEmbeddedWindow*)self->parentWindow;
-                [window setFullscreenWindow:self->fullscreenWindow];
-            }
-
-            // 4.
-            [self->nsView retain];
-            {
-                [self->nsView removeFromSuperviewWithoutNeedingDisplay];
-                [self->fullscreenHost addSubview:self->nsView];
-            }
-            [self->nsView release];
-
-            if ([[self->parentWindow delegate] isKindOfClass:[GlassWindow class]] == YES)
-            {
-                GlassWindow *window = (GlassWindow*)[self->parentWindow delegate];
-                [window setFullscreenWindow:self->fullscreenWindow];
-            }
-
-            // 5.
-            [self->fullscreenWindow setInitialFirstResponder:self->nsView];
-            [self->fullscreenWindow makeFirstResponder:self->nsView];
-
-            // This trick allows an applet to display a focused window. This is harmless otherwise.
-            // If we don't do this, we end up with a literally empty full screen background and no content shown whatsoever.
-            [[NSRunningApplication currentApplication] activateWithOptions:(NSApplicationActivateIgnoringOtherApps | NSApplicationActivateAllWindows)];
-
-            [self->fullscreenWindow makeKeyAndOrderFront:self->nsView];
-            [self->fullscreenWindow orderFrontRegardless];
-            [self->fullscreenWindow makeMainWindow];
-        }
-
-        // 6.
-
-        NSRect screenFrame = [screen frame];
-        NSRect fullscreenFrame = [screen frame];
-        if (keepRatio == YES)
-        {
-            CGFloat ratioWidth = (frameInWindowScreenCoords.size.width/screenFrame.size.width);
-            CGFloat ratioHeight = (frameInWindowScreenCoords.size.height/screenFrame.size.height);
-            if (ratioWidth > ratioHeight)
-            {
-                CGFloat ratio = (frameInWindowScreenCoords.size.width/frameInWindowScreenCoords.size.height);
-                fullscreenFrame.size.height = fullscreenFrame.size.width / ratio;
-                fullscreenFrame.origin.y += (screenFrame.size.height - fullscreenFrame.size.height) / 2.0f;
-            }
-            else
-            {
-                CGFloat ratio = (frameInWindowScreenCoords.size.height/frameInWindowScreenCoords.size.width);
-                fullscreenFrame.size.width = fullscreenFrame.size.height / ratio;
-                fullscreenFrame.origin.x += (screenFrame.size.width - fullscreenFrame.size.width) / 2.0f;
-            }
-        }
-
-        // 7.
-        //[self->fullscreenWindow setBackgroundColor:[NSColor whiteColor]]; // debug
-        [self->fullscreenWindow setFrame:frameInWindowScreenCoords display:YES animate:animate];
-
-        // 8.
-        [self->fullscreenWindow toggleFullScreen:self->fullscreenWindow];
-    }
-    @catch (NSException *e)
-    {
-        NSLog(@"enterFullscreenWithAnimate caught exception: %@", e);
-    }
-
-    [self sendJavaFullScreenEvent:YES withNativeWidget:NO];
+    [[self->nsView window] toggleFullScreen:self];
+    // wait until the operation is complete
+    [GlassApplication enterFullScreenExitingLoop];
 }
 
 - (void)exitFullscreenWithAnimate:(BOOL)animate
@@ -1364,13 +1246,6 @@ static jstring convertNSStringToJString(id aString, int length)
                 [self->parentHost addSubview:self->nsView];
             }
             [self->nsView release];
-
-            // handle plugin case
-            if ([[self->nsView window] isKindOfClass:[GlassEmbeddedWindow class]] == YES)
-            {
-                GlassEmbeddedWindow *window = (GlassEmbeddedWindow*)[self->nsView window];
-                [window setFullscreenWindow:nil];
-            }
 
             [self->parentWindow setInitialFirstResponder:self->nsView];
             [self->parentWindow makeFirstResponder:self->nsView];

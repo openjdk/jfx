@@ -33,11 +33,12 @@
 #include "Frame.h"
 #include "FrameDestructionObserver.h"
 #include "ImageBitmap.h"
-#include "PostMessageOptions.h"
 #include "ReducedResolutionSeconds.h"
 #include "ScrollToOptions.h"
 #include "ScrollTypes.h"
+#include "StructuredSerializeOptions.h"
 #include "Supplementable.h"
+#include "WindowOrWorkerGlobalScope.h"
 #include <JavaScriptCore/HandleTypes.h>
 #include <JavaScriptCore/Strong.h>
 #include <wtf/Function.h>
@@ -98,10 +99,10 @@ struct WindowFeatures;
 enum SetLocationLocking { LockHistoryBasedOnGestureState, LockHistoryAndBackForwardList };
 enum class IncludeTargetOrigin { No, Yes };
 
-struct WindowPostMessageOptions : public PostMessageOptions {
+struct WindowPostMessageOptions : public StructuredSerializeOptions {
     WindowPostMessageOptions() = default;
     WindowPostMessageOptions(String&& targetOrigin, Vector<JSC::Strong<JSC::JSObject>>&& transfer)
-        : PostMessageOptions(WTFMove(transfer))
+        : StructuredSerializeOptions(WTFMove(transfer))
         , targetOrigin(WTFMove(targetOrigin))
     { }
 
@@ -113,6 +114,7 @@ class DOMWindow final
     : public AbstractDOMWindow
     , public ContextDestructionObserver
     , public Base64Utilities
+    , public WindowOrWorkerGlobalScope
     , public Supplementable<DOMWindow> {
     WTF_MAKE_ISO_ALLOCATED(DOMWindow);
 public:
@@ -176,7 +178,7 @@ public:
     Navigator* optionalNavigator() const { return m_navigator.get(); }
     Navigator& clientInformation() { return navigator(); }
 
-    WEBCORE_EXPORT static void overrideTransientActivationDurationForTesting(Optional<Seconds>&&);
+    WEBCORE_EXPORT static void overrideTransientActivationDurationForTesting(std::optional<Seconds>&&);
     void setLastActivationTimestamp(MonotonicTime lastActivationTimestamp) { m_lastActivationTimestamp = lastActivationTimestamp; }
     MonotonicTime lastActivationTimestamp() const { return m_lastActivationTimestamp; }
     void notifyActivated(MonotonicTime);
@@ -310,6 +312,8 @@ public:
     // Secure Contexts
     bool isSecureContext() const;
 
+    bool crossOriginIsolated() const;
+
     // Events
     // EventTarget API
     bool addEventListener(const AtomString& eventType, Ref<EventListener>&&, const AddEventListenerOptions&) final;
@@ -402,6 +406,9 @@ public:
     bool wasWrappedWithoutInitializedSecurityOrigin() const { return m_wasWrappedWithoutInitializedSecurityOrigin; }
     void setAsWrappedWithoutInitializedSecurityOrigin() { m_wasWrappedWithoutInitializedSecurityOrigin = true; }
 
+    void setMayReuseForNavigation(bool mayReuseForNavigation) { m_mayReuseForNavigation = mayReuseForNavigation; }
+    bool mayReuseForNavigation() const { return m_mayReuseForNavigation; }
+
 private:
     explicit DOMWindow(Document&);
 
@@ -432,7 +439,7 @@ private:
     bool m_shouldPrintWhenFinishedLoading { false };
     bool m_suspendedForDocumentSuspension { false };
     bool m_isSuspendingObservers { false };
-    Optional<bool> m_canShowModalDialogOverride;
+    std::optional<bool> m_canShowModalDialogOverride;
 
     HashSet<Observer*> m_observers;
 
@@ -477,7 +484,7 @@ private:
 
     mutable RefPtr<Performance> m_performance;
 
-    Optional<ReducedResolutionSeconds> m_frozenNowTimestamp;
+    std::optional<ReducedResolutionSeconds> m_frozenNowTimestamp;
 
     // For the purpose of tracking user activation, each Window W has a last activation timestamp. This is a number indicating the last time W got
     // an activation notification. It corresponds to a DOMHighResTimeStamp value except for two cases: positive infinity indicates that W has never
@@ -486,6 +493,7 @@ private:
     MonotonicTime m_lastActivationTimestamp { MonotonicTime::infinity() };
 
     bool m_wasWrappedWithoutInitializedSecurityOrigin { false };
+    bool m_mayReuseForNavigation { true };
 #if ENABLE(USER_MESSAGE_HANDLERS)
     mutable RefPtr<WebKitNamespace> m_webkitNamespace;
 #endif

@@ -437,6 +437,9 @@ GST_VIDEO_API
 void           gst_video_info_free        (GstVideoInfo *info);
 
 GST_VIDEO_API
+GstVideoInfo * gst_video_info_new_from_caps (const GstCaps * caps);
+
+GST_VIDEO_API
 gboolean       gst_video_info_set_format  (GstVideoInfo *info, GstVideoFormat format,
                                            guint width, guint height);
 
@@ -455,7 +458,7 @@ GST_VIDEO_API
 GstCaps *      gst_video_info_to_caps     (const GstVideoInfo *info);
 
 GST_VIDEO_API
-gboolean       gst_video_info_convert     (GstVideoInfo *info,
+gboolean       gst_video_info_convert     (const GstVideoInfo *info,
                                            GstFormat     src_format,
                                            gint64        src_value,
                                            GstFormat     dest_format,

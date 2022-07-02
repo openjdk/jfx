@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -304,12 +304,20 @@ public class TreeTableCellTest {
         assertNull(tree.getEditingCell());
     }
 
-    @Ignore // TODO file bug!
     @Test public void editCellWithTreeResultsInUpdatedEditingIndexProperty() {
-        tree.setEditable(true);
-        cell.updateTreeTableView(tree);
+        setupForEditing();
         cell.updateIndex(1);
         cell.startEdit();
+        assertEquals(apples, tree.getEditingCell().getTreeItem());
+    }
+
+    @Test public void editCellWithTreeNoColumnResultsInUpdatedEditingIndexProperty() {
+        // note: cell index must be != -1 because table.edit(-1, null) sets editingCell to null
+        cell.updateIndex(1);
+        setupForcedEditing(tree, null);
+        cell.startEdit();
+        assertTrue(cell.isEditing());
+        assertNotNull(tree.getEditingCell());
         assertEquals(apples, tree.getEditingCell().getTreeItem());
     }
 
@@ -675,6 +683,27 @@ public class TreeTableCellTest {
     }
 
     /**
+     * The {@link TreeTableRow} should never be null inside the {@link TreeTableCell} during auto sizing.
+     * Note: The auto sizing is triggered as soon as the table has a scene - so when the {@link StageLoader} is created.
+     * See also: JDK-8251481
+     */
+    @Test
+    public void testRowIsNotNullWhenAutoSizing() {
+        TreeTableColumn<String, String> treeTableColumn = new TreeTableColumn<>();
+        treeTableColumn.setCellFactory(col -> new TreeTableCell<>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+
+                assertNotNull(getTableRow());
+            }
+        });
+        tree.getColumns().add(treeTableColumn);
+
+        stageLoader = new StageLoader(tree);
+    }
+
+    /**
      * Table: Editable<br>
      * Row: Not editable<br>
      * Column: Editable<br>
@@ -904,16 +933,35 @@ public class TreeTableCellTest {
     }
 
  //------------- commitEdit
- // fix of JDK-8271474 changed the implementation of how the editing location is evaluated
+
+    @Test
+    public void testCommitEditMustNotFireCancel() {
+        setupForEditing();
+        // JDK-8187307: handler that resets control's editing state
+        editingColumn.setOnEditCommit(e -> {
+            TreeItem<String> treeItem = tree.getTreeItem(e.getTreeTablePosition().getRow());
+            treeItem.setValue(e.getNewValue());
+            tree.edit(-1, null);
+        });
+        int editingRow = 1;
+        cell.updateIndex(editingRow);
+        tree.edit(editingRow, editingColumn);
+        List<CellEditEvent<?, ?>> events = new ArrayList<>();
+        editingColumn.setOnEditCancel(events::add);
+        String value = "edited";
+        cell.commitEdit(value);
+        assertEquals("sanity: value committed", value, tree.getTreeItem(editingRow).getValue());
+        assertEquals("commit must not have fired editCancel", 0, events.size());
+    }
+
+// fix of JDK-8271474 changed the implementation of how the editing location is evaluated
 
      @Test
      public void testEditCommitEvent() {
          setupForEditing();
          int editingIndex = 1;
          cell.updateIndex(editingIndex);
-         // FIXME JDK-8187474
-         // should use cell.startEdit for consistency with the following tests
-         tree.edit(editingIndex, editingColumn);
+         cell.startEdit();
          TreeTablePosition<?, ?> editingPosition = tree.getEditingCell();
          List<CellEditEvent<?, ?>> events = new ArrayList<>();
          editingColumn.setOnEditCommit(events::add);
@@ -1038,10 +1086,6 @@ public class TreeTableCellTest {
          assertEquals("cell must not fire editStart if not editing", 0, events.size());
      }
 
-     /**
-      *  Note: this would be a false green until JDK-8187474 (update control editing location) is fixed
-      */
-     @Ignore("JDK-8187474")
      @Test
      public void testStartEditOffRangeMustNotUpdateEditingLocation() {
          setupForEditing();

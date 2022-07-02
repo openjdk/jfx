@@ -36,6 +36,7 @@ OBJBASE_DIR = $(BUILD_DIR)/obj/jfxmedia
 BASE_DIR = ../../..
 GSTREAMER_LITE_DIR = $(BASE_DIR)/gstreamer/gstreamer-lite
 GLIB_LITE_DIR = $(BASE_DIR)/gstreamer/3rd_party/glib
+PLUGINS_DIR = $(BASE_DIR)/gstreamer/plugins
 
 OSX_PLATFORM_BASE = $(SRCBASE_DIR)/platform/osx
 
@@ -98,7 +99,8 @@ JFXMEDIA_INCLUDES = $(INCLUDES) \
            -I$(GLIB_LITE_DIR)/build/osx \
            -I$(GSTREAMER_LITE_DIR)/gstreamer \
            -I$(GSTREAMER_LITE_DIR)/gst-plugins-base/gst-libs \
-           -I$(GSTREAMER_LITE_DIR)/gstreamer/libs
+           -I$(GSTREAMER_LITE_DIR)/gstreamer/libs \
+           -I$(PLUGINS_DIR)
 
 JFXMEDIA_LDFLAGS = $(LDFLAGS) \
           -Wl,-install_name,@rpath/$(TARGET_NAME) \

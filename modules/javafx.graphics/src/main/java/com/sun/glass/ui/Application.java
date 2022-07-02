@@ -583,8 +583,6 @@ public abstract class Application {
         return createWindow(null, screen, styleMask);
     }
 
-    public abstract Window createWindow(long parent);
-
     public abstract View createView();
 
     public abstract Cursor createCursor(int type);

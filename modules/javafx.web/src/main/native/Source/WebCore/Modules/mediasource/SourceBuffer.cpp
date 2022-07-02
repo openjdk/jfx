@@ -38,7 +38,6 @@
 #include "BufferSource.h"
 #include "Event.h"
 #include "EventNames.h"
-#include "GenericEventQueue.h"
 #include "HTMLMediaElement.h"
 #include "InbandTextTrack.h"
 #include "InbandTextTrackPrivate.h"
@@ -75,13 +74,11 @@ SourceBuffer::SourceBuffer(Ref<SourceBufferPrivate>&& sourceBufferPrivate, Media
     : ActiveDOMObject(source->scriptExecutionContext())
     , m_private(WTFMove(sourceBufferPrivate))
     , m_source(source)
-    , m_asyncEventQueue(MainThreadGenericEventQueue::create(*this))
     , m_appendBufferTimer(*this, &SourceBuffer::appendBufferTimerFired)
     , m_appendWindowStart(MediaTime::zeroTime())
     , m_appendWindowEnd(MediaTime::positiveInfiniteTime())
     , m_appendState(WaitingForSegment)
     , m_timeOfBufferingMonitor(MonotonicTime::now())
-    , m_buffered(TimeRanges::create())
     , m_pendingRemoveStart(MediaTime::invalidTime())
     , m_pendingRemoveEnd(MediaTime::invalidTime())
     , m_removeTimer(*this, &SourceBuffer::removeTimerFired)
@@ -116,7 +113,7 @@ ExceptionOr<Ref<TimeRanges>> SourceBuffer::buffered() const
         return Exception { InvalidStateError };
 
     // 2. Return a new static normalized TimeRanges object for the media segments buffered.
-    return m_buffered->copy();
+    return m_private->buffered()->copy();
 }
 
 double SourceBuffer::timestampOffset() const
@@ -441,7 +438,7 @@ void SourceBuffer::seekToTime(const MediaTime& time)
 
 bool SourceBuffer::virtualHasPendingActivity() const
 {
-    return m_source || m_asyncEventQueue->hasPendingActivity();
+    return m_source;
 }
 
 void SourceBuffer::stop()
@@ -462,10 +459,7 @@ bool SourceBuffer::isRemoved() const
 
 void SourceBuffer::scheduleEvent(const AtomString& eventName)
 {
-    auto event = Event::create(eventName, Event::CanBubble::No, Event::IsCancelable::No);
-    event->setTarget(this);
-
-    m_asyncEventQueue->enqueueEvent(WTFMove(event));
+    queueTaskToDispatchEvent(*this, TaskSource::MediaElement, Event::create(eventName, Event::CanBubble::No, Event::IsCancelable::No));
 }
 
 ExceptionOr<void> SourceBuffer::appendBufferInternal(const unsigned char* data, unsigned size)
@@ -489,16 +483,13 @@ ExceptionOr<void> SourceBuffer::appendBufferInternal(const unsigned char* data, 
     m_source->openIfInEndedState();
 
     // 4. Run the coded frame eviction algorithm.
-    m_private->evictCodedFrames(size, m_pendingAppendData.capacity(), maximumBufferSize(), m_source->currentTime(), m_source->duration(), m_source->isEnded());
+    m_private->evictCodedFrames(size, maximumBufferSize(), m_source->currentTime(), m_source->duration(), m_source->isEnded());
 
-    // FIXME: enable this code when MSE libraries have been updated to support it.
-#if USE(GSTREAMER)
     // 5. If the buffer full flag equals true, then throw a QuotaExceededError exception and abort these step.
-    if (m_private->bufferFull()) {
+    if (m_private->isBufferFullFor(size, maximumBufferSize())) {
         ERROR_LOG(LOGIDENTIFIER, "buffer full, failing with QuotaExceededError error");
         return Exception { QuotaExceededError };
     }
-#endif
 
     // NOTE: Return to 3.2 appendBuffer()
     // 3. Add data to the end of the input buffer.
@@ -582,7 +573,7 @@ void SourceBuffer::sourceBufferPrivateAppendComplete(AppendResult result)
     scheduleEvent(eventNames().updateendEvent);
 
     m_source->monitorSourceBuffers();
-    m_private->reenqueueMediaIfNeeded(m_source->currentTime(), m_pendingAppendData.capacity(), maximumBufferSize());
+    m_private->reenqueueMediaIfNeeded(m_source->currentTime());
 
     DEBUG_LOG(LOGIDENTIFIER);
 }
@@ -642,25 +633,21 @@ uint64_t SourceBuffer::maximumBufferSize() const
 VideoTrackList& SourceBuffer::videoTracks()
 {
     if (!m_videoTracks)
-        m_videoTracks = VideoTrackList::create(makeWeakPtr(m_source->mediaElement()), scriptExecutionContext());
+        m_videoTracks = VideoTrackList::create(makeWeakPtr((isRemoved() ? nullptr : m_source->mediaElement())), scriptExecutionContext());
     return *m_videoTracks;
 }
 
 AudioTrackList& SourceBuffer::audioTracks()
 {
-    if (!m_audioTracks) {
-        ASSERT(!isRemoved());
-        m_audioTracks = AudioTrackList::create(makeWeakPtr(m_source->mediaElement()), scriptExecutionContext());
-    }
+    if (!m_audioTracks)
+        m_audioTracks = AudioTrackList::create(makeWeakPtr((isRemoved() ? nullptr : m_source->mediaElement())), scriptExecutionContext());
     return *m_audioTracks;
 }
 
 TextTrackList& SourceBuffer::textTracks()
 {
-    if (!m_textTracks) {
-        ASSERT(!isRemoved());
-        m_textTracks = TextTrackList::create(makeWeakPtr(m_source->mediaElement()), scriptExecutionContext());
-    }
+    if (!m_textTracks)
+        m_textTracks = TextTrackList::create(makeWeakPtr((isRemoved() ? nullptr : m_source->mediaElement())), scriptExecutionContext());
     return *m_textTracks;
 }
 
@@ -1219,9 +1206,9 @@ void SourceBuffer::bufferedSamplesForTrackId(const AtomString& trackID, Completi
     m_private->bufferedSamplesForTrackId(trackID, WTFMove(completionHandler));
 }
 
-Vector<String> SourceBuffer::enqueuedSamplesForTrackID(const AtomString& trackID)
+void SourceBuffer::enqueuedSamplesForTrackID(const AtomString& trackID, CompletionHandler<void(Vector<String>&&)>&& completionHandler)
 {
-    return m_private->enqueuedSamplesForTrackID(trackID);
+    return m_private->enqueuedSamplesForTrackID(trackID, WTFMove(completionHandler));
 }
 
 MediaTime SourceBuffer::minimumUpcomingPresentationTimeForTrackID(const AtomString& trackID)
@@ -1250,7 +1237,7 @@ ExceptionOr<void> SourceBuffer::setMode(AppendMode newMode)
     // 1. Let new mode equal the new value being assigned to this attribute.
     // 2. If generate timestamps flag equals true and new mode equals "segments", then throw an InvalidAccessError exception and abort these steps.
     if (m_shouldGenerateTimestamps && newMode == AppendMode::Segments)
-        return Exception { InvalidAccessError };
+        return Exception { TypeError };
 
     // 3. If this object has been removed from the sourceBuffers attribute of the parent media source, then throw an InvalidStateError exception and abort these steps.
     // 4. If the updating attribute equals true, then throw an InvalidStateError exception and abort these steps.
@@ -1292,11 +1279,8 @@ void SourceBuffer::setShouldGenerateTimestamps(bool flag)
 void SourceBuffer::sourceBufferPrivateBufferedDirtyChanged(bool flag)
 {
     m_bufferedDirty = flag;
-}
-
-void SourceBuffer::sourceBufferPrivateBufferedRangesChanged(const PlatformTimeRanges& timeRanges)
-{
-    m_buffered->ranges() = timeRanges;
+    if (!isRemoved())
+        m_source->sourceBufferDidChangeBufferedDirty(*this, flag);
 }
 
 bool SourceBuffer::isBufferedDirty() const

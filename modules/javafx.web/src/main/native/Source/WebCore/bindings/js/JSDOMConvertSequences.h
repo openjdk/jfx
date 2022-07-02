@@ -82,7 +82,7 @@ struct GenericSequenceConverter {
 // Specialization for numeric types
 // FIXME: This is only implemented for the IDLFloatingPointTypes and IDLLong. To add
 // support for more numeric types, add an overload of Converter<IDLType>::convert that
-// takes an ExecState, ThrowScope, double as its arguments.
+// takes a JSGlobalObject, ThrowScope and double as its arguments.
 template<typename IDLType>
 struct NumericSequenceConverter {
     using GenericConverter = GenericSequenceConverter<IDLType>;
@@ -380,8 +380,11 @@ template<typename T> struct JSConverter<IDLSequence<T>> {
         JSC::VM& vm = JSC::getVM(&lexicalGlobalObject);
         auto scope = DECLARE_THROW_SCOPE(vm);
         JSC::MarkedArgumentBuffer list;
-        for (auto& element : vector)
-            list.append(toJS<T>(lexicalGlobalObject, globalObject, element));
+        for (auto& element : vector) {
+            auto jsValue = toJS<T>(lexicalGlobalObject, globalObject, element);
+            RETURN_IF_EXCEPTION(scope, { });
+            list.append(jsValue);
+        }
         if (UNLIKELY(list.hasOverflowed())) {
             throwOutOfMemoryError(&lexicalGlobalObject, scope);
             return { };
@@ -414,8 +417,11 @@ template<typename T> struct JSConverter<IDLFrozenArray<T>> {
         JSC::VM& vm = JSC::getVM(&lexicalGlobalObject);
         auto scope = DECLARE_THROW_SCOPE(vm);
         JSC::MarkedArgumentBuffer list;
-        for (auto& element : vector)
-            list.append(toJS<T>(lexicalGlobalObject, globalObject, element));
+        for (auto& element : vector) {
+            auto jsValue = toJS<T>(lexicalGlobalObject, globalObject, element);
+            RETURN_IF_EXCEPTION(scope, { });
+            list.append(jsValue);
+        }
         if (UNLIKELY(list.hasOverflowed())) {
             throwOutOfMemoryError(&lexicalGlobalObject, scope);
             return { };

@@ -117,6 +117,8 @@ public:
     bool isInlineBlockBox() const;
     bool isInlineTableBox() const;
     bool isInitialContainingBlock() const { return baseTypeFlags().contains(InitialContainingBlockFlag); }
+    bool isLayoutContainmentBox() const;
+    bool isSizeContainmentBox() const;
 
     bool isDocumentBox() const { return m_elementAttributes && m_elementAttributes.value().elementType == ElementType::Document; }
     bool isBodyBox() const { return m_elementAttributes && m_elementAttributes.value().elementType == ElementType::Body; }
@@ -130,10 +132,12 @@ public:
     bool isTableColumnGroup() const { return style().display() == DisplayType::TableColumnGroup; }
     bool isTableColumn() const { return style().display() == DisplayType::TableColumn; }
     bool isTableCell() const { return style().display() == DisplayType::TableCell; }
+    bool isInternalTableBox() const;
     bool isFlexBox() const { return style().display() == DisplayType::Flex; }
     bool isFlexItem() const;
     bool isIFrame() const { return m_elementAttributes && m_elementAttributes.value().elementType == ElementType::IFrame; }
     bool isImage() const { return m_elementAttributes && m_elementAttributes.value().elementType == ElementType::Image; }
+    bool isInternalRubyBox() const { return false; }
 
     const ContainerBox& parent() const { return *m_parent; }
     const Box* nextSibling() const { return m_nextSibling; }
@@ -142,6 +146,7 @@ public:
     const Box* previousSibling() const { return m_previousSibling; }
     const Box* previousInFlowSibling() const;
     const Box* previousInFlowOrFloatingSibling() const;
+    bool isDescendantOf(const ContainerBox&) const;
 
     // FIXME: This is currently needed for style updates.
     Box* nextSibling() { return m_nextSibling; }
@@ -165,7 +170,7 @@ public:
     size_t columnSpan() const;
 
     void setColumnWidth(LayoutUnit);
-    Optional<LayoutUnit> columnWidth() const;
+    std::optional<LayoutUnit> columnWidth() const;
 
     void setParent(ContainerBox& parent) { m_parent = &parent; }
     void setNextSibling(Box& nextSibling) { m_nextSibling = &nextSibling; }
@@ -178,7 +183,7 @@ public:
     void setCachedGeometryForLayoutState(LayoutState&, std::unique_ptr<BoxGeometry>) const;
 
 protected:
-    Box(Optional<ElementAttributes>, RenderStyle&&, OptionSet<BaseTypeFlag>);
+    Box(std::optional<ElementAttributes>, RenderStyle&&, OptionSet<BaseTypeFlag>);
 
 private:
     class BoxRareData {
@@ -187,7 +192,7 @@ private:
         BoxRareData() = default;
 
         CellSpan tableCellSpan;
-        Optional<LayoutUnit> columnWidth;
+        std::optional<LayoutUnit> columnWidth;
     };
 
     bool hasRareData() const { return m_hasRareData; }
@@ -203,7 +208,7 @@ private:
     static RareDataMap& rareDataMap();
 
     RenderStyle m_style;
-    Optional<ElementAttributes> m_elementAttributes;
+    std::optional<ElementAttributes> m_elementAttributes;
 
     ContainerBox* m_parent { nullptr };
     Box* m_previousSibling { nullptr };
@@ -225,12 +230,12 @@ inline bool Box::isContainingBlockForInFlow() const
 
 inline bool Box::isContainingBlockForFixedPosition() const
 {
-    return isInitialContainingBlock() || style().hasTransform();
+    return isInitialContainingBlock() || isLayoutContainmentBox() || style().hasTransform();
 }
 
 inline bool Box::isContainingBlockForOutOfFlowPosition() const
 {
-    return isInitialContainingBlock() || isPositioned() || style().hasTransform();
+    return isInitialContainingBlock() || isPositioned() || isLayoutContainmentBox() || style().hasTransform();
 }
 
 }

@@ -387,6 +387,11 @@ String textTrackAutomaticMenuItemText()
     return String::fromUTF8("Auto");
 }
 
+String trackNoLabelText()
+{
+    return String::fromUTF8("No label");
+}
+
 String textTrackNoLabelText()
 {
     return String::fromUTF8("No label");

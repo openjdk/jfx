@@ -81,7 +81,7 @@ public:
 
     static RegistrableDomain uncheckedCreateFromRegistrableDomainString(const String& domain)
     {
-        return RegistrableDomain { domain };
+        return RegistrableDomain { String { domain } };
     }
 
     static RegistrableDomain uncheckedCreateFromHost(const String& host)
@@ -90,20 +90,20 @@ public:
         auto registrableDomain = topPrivatelyControlledDomain(host);
         if (registrableDomain.isEmpty())
             return uncheckedCreateFromRegistrableDomainString(host);
-        return RegistrableDomain { registrableDomain };
+        return RegistrableDomain { WTFMove(registrableDomain) };
 #else
         return uncheckedCreateFromRegistrableDomainString(host);
 #endif
     }
 
     template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static Optional<RegistrableDomain> decode(Decoder&);
+    template<class Decoder> static std::optional<RegistrableDomain> decode(Decoder&);
 
 protected:
 
 private:
-    explicit RegistrableDomain(const String& domain)
-        : m_registrableDomain { domain.isEmpty() ? "nullOrigin"_s : domain }
+    explicit RegistrableDomain(String&& domain)
+        : m_registrableDomain { domain.isEmpty() ? "nullOrigin"_s : WTFMove(domain) }
     {
     }
 
@@ -142,12 +142,12 @@ void RegistrableDomain::encode(Encoder& encoder) const
 }
 
 template<class Decoder>
-Optional<RegistrableDomain> RegistrableDomain::decode(Decoder& decoder)
+std::optional<RegistrableDomain> RegistrableDomain::decode(Decoder& decoder)
 {
-    Optional<String> domain;
+    std::optional<String> domain;
     decoder >> domain;
     if (!domain)
-        return WTF::nullopt;
+        return std::nullopt;
 
     RegistrableDomain registrableDomain;
     registrableDomain.m_registrableDomain = WTFMove(*domain);
@@ -164,4 +164,12 @@ inline bool areRegistrableDomainsEqual(const URL& a, const URL& b)
 namespace WTF {
 template<> struct DefaultHash<WebCore::RegistrableDomain> : WebCore::RegistrableDomain::RegistrableDomainHash { };
 template<> struct HashTraits<WebCore::RegistrableDomain> : SimpleClassHashTraits<WebCore::RegistrableDomain> { };
-}
+
+template<> class StringTypeAdapter<WebCore::RegistrableDomain, void> : public StringTypeAdapter<String, void> {
+public:
+    StringTypeAdapter(const WebCore::RegistrableDomain& domain)
+        : StringTypeAdapter<String, void>(domain.string())
+    { }
+};
+
+} // namespace WTF

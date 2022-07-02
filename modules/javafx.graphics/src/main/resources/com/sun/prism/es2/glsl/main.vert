@@ -35,7 +35,7 @@ attribute vec4 tangent;
 struct Light {
     vec4 pos;
     vec3 color;
-    vec3 attn;
+    vec4 attn;
     vec3 dir;
     float range;
     float cosOuter;

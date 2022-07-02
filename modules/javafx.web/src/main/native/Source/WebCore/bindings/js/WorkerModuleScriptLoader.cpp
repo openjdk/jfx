@@ -36,6 +36,7 @@
 #include "ScriptController.h"
 #include "ScriptModuleLoader.h"
 #include "ScriptSourceCode.h"
+#include "ServiceWorkerGlobalScope.h"
 #include "WorkerScriptFetcher.h"
 #include "WorkerScriptLoader.h"
 
@@ -60,6 +61,19 @@ WorkerModuleScriptLoader::~WorkerModuleScriptLoader()
 bool WorkerModuleScriptLoader::load(ScriptExecutionContext& context, URL&& sourceURL)
 {
     m_sourceURL = WTFMove(sourceURL);
+
+#if ENABLE(SERVICE_WORKER)
+    if (is<ServiceWorkerGlobalScope>(context)) {
+        if (auto* scriptResource = downcast<ServiceWorkerGlobalScope>(context).scriptResource(m_sourceURL)) {
+            m_script = scriptResource->script;
+            m_responseURL = scriptResource->responseURL;
+            m_responseMIMEType = scriptResource->mimeType;
+            m_retrievedFromServiceWorkerCache = true;
+            notifyClientFinished();
+            return true;
+        }
+    }
+#endif
 
     ResourceRequest request { m_sourceURL };
 
@@ -94,7 +108,21 @@ void WorkerModuleScriptLoader::notifyFinished()
 {
     ASSERT(m_promise);
 
+    if (m_scriptLoader->failed())
+        m_failed = true;
+    else {
+        m_script = m_scriptLoader->script();
+        m_responseURL = m_scriptLoader->responseURL();
+        m_responseMIMEType = m_scriptLoader->responseMIMEType();
+    }
+
+    notifyClientFinished();
+}
+
+void WorkerModuleScriptLoader::notifyClientFinished()
+{
     auto protectedThis = makeRef(*this);
+
     if (m_client)
         m_client->notifyFinished(*this, WTFMove(m_sourceURL), m_promise.releaseNonNull());
 }

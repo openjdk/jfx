@@ -25,6 +25,7 @@
 
 package test.javafx.concurrent;
 
+import com.sun.javafx.PlatformUtil;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import test.javafx.concurrent.mocks.SimpleTask;
@@ -46,6 +47,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assume.assumeTrue;
 
 /**
  */
@@ -174,6 +176,10 @@ public class ServiceTest {
     // and several micro / milliseconds to get setup and execute. So 2 seconds should be more
     // than enough time.
     @Test(timeout = 2000) public void testManyServicesRunConcurrently() throws Exception {
+        if (PlatformUtil.isWindows()) {
+            assumeTrue(Boolean.getBoolean("unstable.test")); // JDK-8284552
+        }
+
         final CountDownLatch latch = new CountDownLatch(32);
         for (int i=0; i<32; i++) {
             Service<Void> s = new ServiceShim<Void>() {

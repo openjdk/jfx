@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,13 +26,10 @@
 #include "config.h"
 #include "MemoryObjectStore.h"
 
-#if ENABLE(INDEXED_DATABASE)
-
 #include "IDBBindingUtilities.h"
 #include "IDBError.h"
 #include "IDBGetAllResult.h"
 #include "IDBKeyRangeData.h"
-#include "IDBSerializationContext.h"
 #include "IDBValue.h"
 #include "IndexKey.h"
 #include "Logging.h"
@@ -41,6 +38,7 @@
 #include <JavaScriptCore/JSCJSValue.h>
 #include <JavaScriptCore/JSCJSValueInlines.h>
 #include <JavaScriptCore/JSLock.h>
+#include <pal/SessionID.h>
 
 namespace WebCore {
 using namespace JSC;
@@ -51,9 +49,8 @@ Ref<MemoryObjectStore> MemoryObjectStore::create(PAL::SessionID sessionID, const
     return adoptRef(*new MemoryObjectStore(sessionID, info));
 }
 
-MemoryObjectStore::MemoryObjectStore(PAL::SessionID sessionID, const IDBObjectStoreInfo& info)
+MemoryObjectStore::MemoryObjectStore(PAL::SessionID, const IDBObjectStoreInfo& info)
     : m_info(info)
-    , m_serializationContext(IDBSerializationContext::getOrCreateIDBSerializationContext(sessionID))
 {
 }
 
@@ -252,7 +249,10 @@ void MemoryObjectStore::deleteRange(const IDBKeyRangeData& inputRange)
 
 IDBError MemoryObjectStore::addRecord(MemoryBackingStoreTransaction& transaction, const IDBKeyData& keyData, const IDBValue& value)
 {
-    auto indexKeys = generateIndexKeyMapForValue(m_serializationContext->globalObject(), m_info, keyData, value);
+    IndexIDToIndexKeyMap indexKeys;
+    callOnIDBSerializationThreadAndWait([info = m_info.isolatedCopy(), keyData = keyData.isolatedCopy(), value = value.isolatedCopy(), &indexKeys](auto& globalObject) {
+        indexKeys = generateIndexKeyMapForValue(globalObject, info, keyData, value);
+    });
     return addRecord(transaction, keyData, indexKeys, value);
 }
 
@@ -339,20 +339,25 @@ IDBError MemoryObjectStore::populateIndexWithExistingRecords(MemoryIndex& index)
     if (!m_keyValueStore)
         return IDBError { };
 
-    JSLockHolder locker(m_serializationContext->vm());
-
     for (const auto& iterator : *m_keyValueStore) {
-        auto jsValue = deserializeIDBValueToJSValue(m_serializationContext->globalObject(), iterator.value);
-        if (jsValue.isUndefinedOrNull())
+        std::optional<IndexKey> resultIndexKey;
+        callOnIDBSerializationThreadAndWait([key = iterator.key.isolatedCopy(), value = iterator.value, info = m_info.isolatedCopy(), indexInfo = index.info().isolatedCopy(), &resultIndexKey](auto& globalObject) {
+            auto jsValue = deserializeIDBValueToJSValue(globalObject, value);
+            if (jsValue.isUndefinedOrNull())
+                return;
+
+            IndexKey indexKey;
+            generateIndexKeyForValue(globalObject, indexInfo, jsValue, indexKey, info.keyPath(), key);
+            resultIndexKey = indexKey.isolatedCopy();
+        });
+
+        if (!resultIndexKey)
             return IDBError { };
 
-        IndexKey indexKey;
-        generateIndexKeyForValue(m_serializationContext->globalObject(), index.info(), jsValue, indexKey, m_info.keyPath(), iterator.key);
-
-        if (indexKey.isNull())
+        if (resultIndexKey->isNull())
             continue;
 
-        IDBError error = index.putIndexKey(iterator.key, indexKey);
+        IDBError error = index.putIndexKey(iterator.key, *resultIndexKey);
         if (!error.isNull())
             return error;
     }
@@ -408,7 +413,7 @@ ThreadSafeDataBuffer MemoryObjectStore::valueForKeyRange(const IDBKeyRangeData& 
     return m_keyValueStore->get(key);
 }
 
-void MemoryObjectStore::getAllRecords(const IDBKeyRangeData& keyRangeData, Optional<uint32_t> count, IndexedDB::GetAllType type, IDBGetAllResult& result) const
+void MemoryObjectStore::getAllRecords(const IDBKeyRangeData& keyRangeData, std::optional<uint32_t> count, IndexedDB::GetAllType type, IDBGetAllResult& result) const
 {
     result = { type, m_info.keyPath() };
 
@@ -517,5 +522,3 @@ void MemoryObjectStore::renameIndex(MemoryIndex& index, const String& newName)
 
 } // namespace IDBServer
 } // namespace WebCore
-
-#endif // ENABLE(INDEXED_DATABASE)

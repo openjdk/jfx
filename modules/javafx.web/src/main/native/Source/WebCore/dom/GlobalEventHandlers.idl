@@ -33,14 +33,12 @@ interface mixin GlobalEventHandlers {
     // FIXME: Implement 'onauxclick'.
     // attribute EventHandler onauxclick;
     attribute EventHandler onblur;
-    // FIXME: Implement 'oncancel'.
-    // attribute EventHandler oncancel;
+    attribute EventHandler oncancel;
     attribute EventHandler oncanplay;
     attribute EventHandler oncanplaythrough;
     attribute EventHandler onchange;
     attribute EventHandler onclick;
-    // FIXME: Implement 'onclose'.
-    // attribute EventHandler onclose;
+    attribute EventHandler onclose;
     attribute EventHandler oncontextmenu;
     attribute EventHandler oncuechange;
     attribute EventHandler ondblclick;
@@ -57,8 +55,7 @@ interface mixin GlobalEventHandlers {
     // FIXME: The spec 'onerror' should be of type 'OnErrorEventHandler'.
     attribute EventHandler onerror;
     attribute EventHandler onfocus;
-    // FIXME: Implement 'onformdata'.
-    // attribute EventHandler onformdata;
+    attribute EventHandler onformdata;
     attribute EventHandler oninput;
     attribute EventHandler oninvalid;
     attribute EventHandler onkeydown;
@@ -83,8 +80,7 @@ interface mixin GlobalEventHandlers {
     attribute EventHandler onreset;
     attribute EventHandler onresize;
     attribute EventHandler onscroll;
-    // FIXME: Implement 'onsecuritypolicyviolation'.
-    // attribute EventHandler onsecuritypolicyviolation;
+    attribute EventHandler onsecuritypolicyviolation;
     attribute EventHandler onseeked;
     attribute EventHandler onseeking;
     attribute EventHandler onselect;

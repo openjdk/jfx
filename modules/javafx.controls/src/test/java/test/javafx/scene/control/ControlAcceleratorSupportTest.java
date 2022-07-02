@@ -29,8 +29,10 @@ import javafx.scene.control.MenuBar;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuItem;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.StackPane;
 
 import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
+import test.util.memory.JMemoryBuddy;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.*;
 
 import org.junit.Test;
@@ -97,5 +99,20 @@ public class ControlAcceleratorSupportTest {
         assertEquals(0, getListenerCount(item22.acceleratorProperty()));
 
         sl.dispose();
+    }
+
+    @Test
+    public void testMemoryLeak_JDK_8274022() {
+        JMemoryBuddy.memoryTest(checker -> {
+            MenuItem menuItem = new MenuItem("LeakingItem");
+            MenuBar menuBar = new MenuBar(new Menu("MENU_BAR", null, menuItem));
+            StageLoader sl = new StageLoader(new StackPane(menuBar));
+            sl.getStage().close();
+
+            // Set listener to something on the scene, to make sure the listener references the whole scene.
+            menuItem.setOnAction((e) -> { menuItem.fire();});
+
+            checker.assertCollectable(menuItem);
+        });
     }
 }

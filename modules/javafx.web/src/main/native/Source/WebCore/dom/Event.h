@@ -32,6 +32,10 @@
 #include <wtf/TypeCasts.h>
 #include <wtf/text/AtomString.h>
 
+namespace WTF {
+class TextStream;
+}
+
 namespace WebCore {
 
 class EventPath;
@@ -70,7 +74,7 @@ public:
     void setTarget(RefPtr<EventTarget>&&);
 
     EventTarget* currentTarget() const { return m_currentTarget.get(); }
-    void setCurrentTarget(EventTarget*, Optional<bool> isInShadowTree = WTF::nullopt);
+    void setCurrentTarget(EventTarget*, std::optional<bool> isInShadowTree = std::nullopt);
     bool currentTargetIsInShadowTree() const { return m_currentTargetIsInShadowTree; }
 
     unsigned short eventPhase() const { return m_eventPhase; }
@@ -147,6 +151,8 @@ public:
     virtual EventTarget* relatedTarget() const { return nullptr; }
     virtual void setRelatedTarget(EventTarget*) { }
 
+    virtual String debugDescription() const;
+
 protected:
     explicit Event(IsTrusted = IsTrusted::No);
     Event(const AtomString& type, CanBubble, IsCancelable, IsComposed = IsComposed::No);
@@ -211,6 +217,8 @@ inline void Event::setCancelBubble(bool cancel)
     if (cancel)
         m_propagationStopped = true;
 }
+
+WTF::TextStream& operator<<(WTF::TextStream&, const Event&);
 
 } // namespace WebCore
 

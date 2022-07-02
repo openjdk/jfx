@@ -50,9 +50,14 @@ TransformationMatrix WebXRSpace::effectiveOrigin() const
 {
     // https://immersive-web.github.io/webxr/#xrspace-effective-origin
     // The effective origin can be obtained by multiplying origin offset and the native origin.
-    return m_originOffset->rawTransform() * nativeOrigin();
+    return nativeOrigin() * m_originOffset->rawTransform();
 }
 
+
+bool WebXRSpace::isPositionEmulated() const
+{
+    return session().isPositionEmulated();
+}
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(WebXRViewerSpace);
 

@@ -38,14 +38,15 @@ public final class WCMouseEvent {
 
     // button
     @Native public final static int NOBUTTON = 0;
-    @Native public final static int BUTTON1 = 1;
-    @Native public final static int BUTTON2 = 2;
-    @Native public final static int BUTTON3 = 4;
+    @Native public final static int BUTTON1 = 1; // Left Button
+    @Native public final static int BUTTON2 = 2; // Middle Button
+    @Native public final static int BUTTON3 = 4; // Right Button
 
     private final int id;
     private final long when;
 
     private final int button;
+    private final int buttonMask;
     private final int clickCount;
 
     private final int x;
@@ -61,8 +62,7 @@ public final class WCMouseEvent {
     private final boolean popupTrigger;
 
     public WCMouseEvent(int id, int button, int clickCount, int x, int y, int screenX, int screenY,
-                        long when, boolean shift, boolean control, boolean alt, boolean meta, boolean popupTrigger)
-    {
+                        long when, boolean shift, boolean control, boolean alt, boolean meta, boolean popupTrigger, int buttonMask) {
         this.id = id;
         this.button = button;
         this.clickCount = clickCount;
@@ -76,7 +76,13 @@ public final class WCMouseEvent {
         this.alt = alt;
         this.meta = meta;
         this.popupTrigger = popupTrigger;
+        this.buttonMask = buttonMask;
     }
+
+    public WCMouseEvent(int id, int button, int clickCount, int x, int y, int screenX, int screenY,
+                        long when, boolean shift, boolean control, boolean alt, boolean meta, boolean popupTrigger) {
+         this(id, button, clickCount, x, y, screenX, screenY, when, shift, control, alt, meta, popupTrigger, 0);
+     }
 
     public int getID() { return id; }
     public long getWhen() { return when; }
@@ -95,4 +101,6 @@ public final class WCMouseEvent {
     public boolean isMetaDown() { return meta; }
 
     public boolean isPopupTrigger() { return popupTrigger; }
+
+    public int getButtonMask() { return buttonMask; }
 }
