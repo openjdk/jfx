@@ -595,13 +595,13 @@ public class HBox extends Pane {
                 // by its minimum and maximum width.
                 double maxChange = limitWidths[i] - currentWidths[i];
                 double actualChange = currentDelta > 0 ? Math.min(maxChange, idealChange) : Math.max(maxChange, idealChange);
-                double oldWidth = currentWidths[i];
 
                 // Update the child width and snap the updated width to pixels in the horizontal direction.
                 // Since snapping affects the total width, we need to recompute the current total width to
                 // know how much space we have left to distribute.
-                currentWidths[i] = snapSizeX(currentWidths[i] + actualChange);
-                currentTotalWidth = snappedSum(currentWidths, managed.size()) + totalSpacing;
+                double oldWidth = currentWidths[i];
+                currentWidths[i] = snapSizeX(oldWidth + actualChange);
+                currentTotalWidth = snapSpaceX(currentTotalWidth + (currentWidths[i] - oldWidth));
 
                 // Update the amount of space we still need to grow or shrink (currentDelta) for the
                 // remaining children. If we overshoot our target, we're done because we can't resize

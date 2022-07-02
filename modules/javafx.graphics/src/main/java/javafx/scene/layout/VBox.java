@@ -579,13 +579,13 @@ public class VBox extends Pane {
                 // by its minimum and maximum height.
                 double maxChange = limitHeights[i] - currentHeights[i];
                 double actualChange = currentDelta > 0 ? Math.min(maxChange, idealChange) : Math.max(maxChange, idealChange);
-                double oldHeight = currentHeights[i];
 
                 // Update the child height and snap the updated height to pixels in the vertical direction.
                 // Since snapping affects the total height, we need to recompute the current total height to
                 // know how much space we have left to distribute.
-                currentHeights[i] = snapSizeY(currentHeights[i] + actualChange);
-                currentTotalHeight = snappedSum(currentHeights, managed.size()) + totalSpacing;
+                double oldHeight = currentHeights[i];
+                currentHeights[i] = snapSizeY(oldHeight + actualChange);
+                currentTotalHeight = snapSpaceY(currentTotalHeight + (currentHeights[i] - oldHeight));
 
                 // Update the amount of space we still need to grow or shrink (currentDelta) for the
                 // remaining children. If we overshoot our target, we're done because we can't resize
