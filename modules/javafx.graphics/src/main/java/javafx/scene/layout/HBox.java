@@ -452,6 +452,7 @@ public class HBox extends Pane {
 
     /**
      * Calculates the preferred or minimum width for each child.
+     * The returned widths are snapped to pixels in the horizontal direction.
      */
     private double[][] computeChildrenWidths(List<Node> managed, double height, boolean minimum) {
         // height could be -1
@@ -472,10 +473,12 @@ public class HBox extends Pane {
     }
 
     /**
-     * Adjusts the children widths to fit the provided space.
-     * This might be necessary because the HBox is size-constrained and cannot accommodate the preferred
-     * widths for all children, or it might be necessary because the HBox is sized to be larger than the
-     * preferred widths of its children and needs to grow its children to fit its size.
+     * Adjusts the children widths (within their min-max limits) to fit the provided space.
+     * This is necessary when the HBox is constrained to be larger or smaller than the combined preferred
+     * widths of its children. In this case, we grow or shrink the children until they fit the HBox exactly.
+     *
+     * @return the pixel-snapped content width, which is the combined width
+     *         of all children as well as the spacing between them
      */
     private double adjustChildrenWidths(List<Node> managed, double[][] childrenWidths, double width, double height) {
         Insets insets = getInsets();
@@ -498,7 +501,7 @@ public class HBox extends Pane {
 
     /**
      * Shrinks all children widths to fit the target width.
-     * Shrinking is a one-step process: all children are eligible to be adjusted down to their minimum width.
+     * In contrast to growing, shrinking does not require two phases of processing.
      */
     private void shrinkChildrenWidths(List<Node> managed, double[][] childrenWidths, double targetWidth, double height) {
         double[] usedWidths = childrenWidths[0];
@@ -516,7 +519,7 @@ public class HBox extends Pane {
 
     /**
      * Grows all children widths to fit the target width.
-     * Growing is a two-step process: first, only children with {@link Priority#ALWAYS} are eligible
+     * Growing is a two-phase process: first, only children with {@link Priority#ALWAYS} are eligible
      * for adjustment. If the first adjustment didn't suffice to fit the target width, children with
      * {@link Priority#SOMETIMES} are also eligible for adjustment.
      */
@@ -530,6 +533,10 @@ public class HBox extends Pane {
 
             for (int i = 0, size = managed.size(); i < size; i++) {
                 final Node child = managed.get(i);
+
+                // If the child is eligible to grow (as indicated by its horizontal grow priority),
+                // we count it towards the 'adjustingNumber', which represents the number of children
+                // that can grow in this phase.
                 if (getHgrow(child) == priority) {
                     maxWidths[i] = computeChildMaxAreaWidth(
                         child, getMinBaselineComplement(), getMargin(child), height, shouldFillHeight);
@@ -539,6 +546,8 @@ public class HBox extends Pane {
                 }
             }
 
+            // Adjust the children that are eligible in this phase and return early if the children
+            // fit the target width (so no second phase is required).
             if (adjustWidthsWithinLimits(managed, currentWidths, maxWidths, targetWidth, adjustingNumber)) {
                 return;
             }
@@ -562,24 +571,41 @@ public class HBox extends Pane {
     private boolean adjustWidthsWithinLimits(
             List<Node> managed, double[] currentWidths, double[] limitWidths, double targetWidth, int adjustingNumber) {
         double totalSpacing = (managed.size() - 1) * snapSpaceX(getSpacing());
+
+        // Current total width and current delta are two important numbers that we continuously
+        // update as this method converges towards a solution.
         double currentTotalWidth = snappedSum(currentWidths, managed.size()) + totalSpacing;
         double currentDelta = targetWidth - currentTotalWidth;
 
+        // We repeatedly apply the following algorithm as long as we have space left to
+        // distribute (currentDelta), as well as children that are eligible to grow or
+        // shrink (adjustingNumber).
         while ((currentDelta > Double.MIN_VALUE || currentDelta < -Double.MIN_VALUE) && adjustingNumber > 0) {
-            double portion = snapPortionX(currentDelta / adjustingNumber);
+            // The amount of space that, in the ideal case, we need to add to or subtract from
+            // each eligible child in order to fit the children into the target width.
+            double idealChange = snapPortionX(currentDelta / adjustingNumber);
 
             for (int i = managed.size() - 1; i >= 0; i--) {
+                // If the child is not eligible for adjustment, skip it.
                 if (limitWidths[i] == -1) {
                     continue;
                 }
 
+                // The actual amount of space that we add to or remove from the child is restricted
+                // by its minimum and maximum width.
                 double maxChange = limitWidths[i] - currentWidths[i];
-                double change = currentDelta > 0 ? Math.min(maxChange, portion) : Math.max(maxChange, portion);
+                double actualChange = currentDelta > 0 ? Math.min(maxChange, idealChange) : Math.max(maxChange, idealChange);
                 double oldWidth = currentWidths[i];
 
-                currentWidths[i] = snapSizeX(currentWidths[i] + change);
+                // Update the child width and snap the updated width to pixels in the horizontal direction.
+                // Since snapping affects the total width, we need to recompute the current total width to
+                // know how much space we have left to distribute.
+                currentWidths[i] = snapSizeX(currentWidths[i] + actualChange);
                 currentTotalWidth = snappedSum(currentWidths, managed.size()) + totalSpacing;
 
+                // Update the amount of space we still need to grow or shrink (currentDelta) for the
+                // remaining children. If we overshoot our target, we're done because we can't resize
+                // any further.
                 double newDelta = targetWidth - currentTotalWidth;
                 if (Math.abs(newDelta) > Math.abs(currentDelta)) {
                     currentWidths[i] = oldWidth;
@@ -588,7 +614,10 @@ public class HBox extends Pane {
 
                 currentDelta = newDelta;
 
-                if (Math.abs(change) < Math.abs(portion)) {
+                // If the actual change for the current child was restricted (as evidenced by its smaller
+                // magnitude when compared to the ideal change), we've reached the limit for this child and
+                // need to exclude it from further consideration.
+                if (Math.abs(actualChange) < Math.abs(idealChange)) {
                     limitWidths[i] = -1;
                     adjustingNumber--;
                 }

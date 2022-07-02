@@ -432,6 +432,7 @@ public class VBox extends Pane {
 
     /**
      * Calculates the preferred or minimum height for each child.
+     * The returned heights are snapped to pixels in the vertical direction.
      */
     private double[][] computeChildrenHeights(List<Node> managed, double width, boolean minimum) {
         // width could be -1
@@ -460,10 +461,12 @@ public class VBox extends Pane {
     }
 
     /**
-     * Adjusts the children heights to fit the provided space.
-     * This might be necessary because the VBox is size-constrained and cannot accommodate the preferred
-     * heights for all children, or it might be necessary because the VBox is sized to be larger than the
-     * preferred heights of its children and needs to grow its children to fit its size.
+     * Adjusts the children heights (within their min-max limits) to fit the provided space.
+     * This is necessary when the VBox is constrained to be larger or smaller than the combined preferred
+     * heights of its children. In this case, we grow or shrink the children until they fit the VBox exactly.
+     *
+     * @return the pixel-snapped content height, which is the combined height
+     *         of all children as well as the spacing between them
      */
     private double adjustChildrenHeights(List<Node> managed, double[][] childrenHeights, double height, double width) {
         Insets insets = getInsets();
@@ -486,7 +489,7 @@ public class VBox extends Pane {
 
     /**
      * Shrinks all children heights to fit the target height.
-     * Shrinking is a one-step process: all children are eligible to be adjusted down to their minimum height.
+     * In contrast to growing, shrinking does not require two phases of processing.
      */
     private void shrinkChildrenHeights(List<Node> managed, double[][] childrenHeights, double targetHeight, double width) {
         double[] usedHeights = childrenHeights[0];
@@ -502,7 +505,7 @@ public class VBox extends Pane {
 
     /**
      * Grows all children heights to fit the target height.
-     * Growing is a two-step process: first, only children with {@link Priority#ALWAYS} are eligible
+     * Growing is a two-phase process: first, only children with {@link Priority#ALWAYS} are eligible
      * for adjustment. If the first adjustment didn't suffice to fit the target height, children with
      * {@link Priority#SOMETIMES} are also eligible for adjustment.
      */
@@ -515,6 +518,10 @@ public class VBox extends Pane {
 
             for (int i = 0, size = managed.size(); i < size; i++) {
                 final Node child = managed.get(i);
+
+                // If the child is eligible to grow (as indicated by its vertical grow priority),
+                // we count it towards the 'adjustingNumber', which represents the number of children
+                // that can grow in this phase.
                 if (getVgrow(child) == priority) {
                     maxHeights[i] = computeChildMaxAreaHeight(child, -1, getMargin(child), width);
                     ++adjustingNumber;
@@ -523,6 +530,8 @@ public class VBox extends Pane {
                 }
             }
 
+            // Adjust the children that are eligible in this phase and return early if the children
+            // fit the target height (so no second phase is required).
             if (adjustHeightsWithinLimits(managed, currentHeights, maxHeights, targetHeight, adjustingNumber)) {
                 return;
             }
@@ -531,7 +540,7 @@ public class VBox extends Pane {
 
     /**
      * Resizes the children heights to fit the target height, while taking into account the resize limits
-     * for each child (their minimum and maximum width). This method will be called once when shrinking,
+     * for each child (their minimum and maximum height). This method will be called once when shrinking,
      * and may be called twice when growing.
      *
      * @param managed the managed children
@@ -546,24 +555,41 @@ public class VBox extends Pane {
     private boolean adjustHeightsWithinLimits(
             List<Node> managed, double[] currentHeights, double[] limitHeights, double targetHeight, int adjustingNumber) {
         double totalSpacing = (managed.size() - 1) * snapSpaceY(getSpacing());
+
+        // Current total height and current delta are two important numbers that we continuously
+        // update as this method converges towards a solution.
         double currentTotalHeight = snappedSum(currentHeights, managed.size()) + totalSpacing;
         double currentDelta = targetHeight - currentTotalHeight;
 
+        // We repeatedly apply the following algorithm as long as we have space left to
+        // distribute (currentDelta), as well as children that are eligible to grow or
+        // shrink (adjustingNumber).
         while ((currentDelta > Double.MIN_VALUE || currentDelta < -Double.MIN_VALUE) && adjustingNumber > 0) {
-            double portion = snapPortionY(currentDelta / adjustingNumber);
+            // The amount of space that, in the ideal case, we need to add to or subtract from
+            // each eligible child in order to fit the children into the target height.
+            double idealChange = snapPortionY(currentDelta / adjustingNumber);
 
             for (int i = managed.size() - 1; i >= 0; i--) {
+                // If the child is not eligible for adjustment, skip it.
                 if (limitHeights[i] == -1) {
                     continue;
                 }
 
+                // The actual amount of space that we add to or remove from the child is restricted
+                // by its minimum and maximum height.
                 double maxChange = limitHeights[i] - currentHeights[i];
-                double change = currentDelta > 0 ? Math.min(maxChange, portion) : Math.max(maxChange, portion);
+                double actualChange = currentDelta > 0 ? Math.min(maxChange, idealChange) : Math.max(maxChange, idealChange);
                 double oldHeight = currentHeights[i];
 
-                currentHeights[i] = snapSizeY(currentHeights[i] + change);
+                // Update the child height and snap the updated height to pixels in the vertical direction.
+                // Since snapping affects the total height, we need to recompute the current total height to
+                // know how much space we have left to distribute.
+                currentHeights[i] = snapSizeY(currentHeights[i] + actualChange);
                 currentTotalHeight = snappedSum(currentHeights, managed.size()) + totalSpacing;
 
+                // Update the amount of space we still need to grow or shrink (currentDelta) for the
+                // remaining children. If we overshoot our target, we're done because we can't resize
+                // any further.
                 double newDelta = targetHeight - currentTotalHeight;
                 if (Math.abs(newDelta) > Math.abs(currentDelta)) {
                     currentHeights[i] = oldHeight;
@@ -572,7 +598,10 @@ public class VBox extends Pane {
 
                 currentDelta = newDelta;
 
-                if (Math.abs(change) < Math.abs(portion)) {
+                // If the actual change for the current child was restricted (as evidenced by its smaller
+                // magnitude when compared to the ideal change), we've reached the limit for this child and
+                // need to exclude it from further consideration.
+                if (Math.abs(actualChange) < Math.abs(idealChange)) {
                     limitHeights[i] = -1;
                     adjustingNumber--;
                 }
