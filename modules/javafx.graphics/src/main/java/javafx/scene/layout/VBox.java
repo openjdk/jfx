@@ -475,7 +475,7 @@ public class VBox extends Pane {
 
         double refWidth = isFillWidth() && width != -1 ? width - left - right : -1;
         double totalSpacing = (managed.size() - 1) * snapSpaceY(getSpacing());
-        double contentHeight = snappedSum(childrenHeights[0], managed.size()) + totalSpacing;
+        double contentHeight = snapSpaceY(sum(childrenHeights[0], managed.size())) + totalSpacing;
         double targetHeight = height - snapSpaceY(insets.getTop()) - snapSpaceY(insets.getBottom());
 
         if (contentHeight < targetHeight) {
@@ -484,7 +484,7 @@ public class VBox extends Pane {
             shrinkChildrenHeights(managed, childrenHeights, targetHeight, refWidth);
         }
 
-        return snappedSum(childrenHeights[0], managed.size()) + totalSpacing;
+        return snapSizeY(sum(childrenHeights[0], managed.size())) + totalSpacing;
     }
 
     /**
@@ -558,7 +558,7 @@ public class VBox extends Pane {
 
         // Current total height and current delta are two important numbers that we continuously
         // update as this method converges towards a solution.
-        double currentTotalHeight = snappedSum(currentHeights, managed.size()) + totalSpacing;
+        double currentTotalHeight = snapSpaceY(sum(currentHeights, managed.size())) + totalSpacing;
         double currentDelta = targetHeight - currentTotalHeight;
 
         // We repeatedly apply the following algorithm as long as we have space left to
@@ -617,20 +617,18 @@ public class VBox extends Pane {
      * including spacing between the children.
      */
     private double computeContentHeight(List<Node> managedChildren, double width, boolean minimum) {
-        return snappedSum(computeChildrenHeights(managedChildren, width, minimum)[0], managedChildren.size())
-                + (managedChildren.size()-1)*snapSpaceY(getSpacing());
+        double[] childrenHeights = computeChildrenHeights(managedChildren, width, minimum)[0];
+        return snapSpaceY(sum(childrenHeights, managedChildren.size())) +
+               (managedChildren.size() - 1) * snapSpaceY(getSpacing());
     }
 
-    /**
-     * Calculates the sum of the double values, and snaps the result
-     * to the nearest pixel in the vertical direction.
-     */
-    private double snappedSum(double[] array, int size) {
+    private static double sum(double[] array, int size) {
+        int i = 0;
         double res = 0;
-        for (int i = 0; i < size; ++i) {
-            res += array[i];
+        while (i != size) {
+            res += array[i++];
         }
-        return snapSpaceY(res);
+        return res;
     }
 
     @Override public void requestLayout() {

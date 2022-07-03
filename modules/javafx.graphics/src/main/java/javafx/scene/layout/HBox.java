@@ -487,7 +487,7 @@ public class HBox extends Pane {
 
         double refHeight = shouldFillHeight() && height != -1 ? height - top - bottom : -1;
         double totalSpacing = (managed.size() - 1) * snapSpaceX(getSpacing());
-        double contentWidth = snappedSum(childrenWidths[0], managed.size()) + totalSpacing;
+        double contentWidth = snapSpaceX(sum(childrenWidths[0], managed.size())) + totalSpacing;
         double targetWidth = width - snapSpaceX(insets.getLeft()) - snapSpaceX(insets.getRight());
 
         if (contentWidth < targetWidth) {
@@ -496,7 +496,7 @@ public class HBox extends Pane {
             shrinkChildrenWidths(managed, childrenWidths, targetWidth, refHeight);
         }
 
-        return snappedSum(childrenWidths[0], managed.size()) + totalSpacing;
+        return snapSpaceX(sum(childrenWidths[0], managed.size())) + totalSpacing;
     }
 
     /**
@@ -574,7 +574,7 @@ public class HBox extends Pane {
 
         // Current total width and current delta are two important numbers that we continuously
         // update as this method converges towards a solution.
-        double currentTotalWidth = snappedSum(currentWidths, managed.size()) + totalSpacing;
+        double currentTotalWidth = snapSpaceX(sum(currentWidths, managed.size())) + totalSpacing;
         double currentDelta = targetWidth - currentTotalWidth;
 
         // We repeatedly apply the following algorithm as long as we have space left to
@@ -633,20 +633,18 @@ public class HBox extends Pane {
      * including spacing between the children.
      */
     private double computeContentWidth(List<Node> managedChildren, double height, boolean minimum) {
-        return snappedSum(computeChildrenWidths(managedChildren, height, minimum)[0], managedChildren.size())
-                + (managedChildren.size()-1)*snapSpaceX(getSpacing());
+        double[] childrenWidths = computeChildrenWidths(managedChildren, height, minimum)[0];
+        return snapSpaceX(sum(childrenWidths, managedChildren.size())) +
+               (managedChildren.size() - 1) * snapSpaceX(getSpacing());
     }
 
-    /**
-     * Calculates the sum of the double values, and snaps the result
-     * to the nearest pixel in the horizontal direction.
-     */
-    private double snappedSum(double[] array, int size) {
+    private static double sum(double[] array, int size) {
+        int i = 0;
         double res = 0;
-        for (int i = 0; i < size; ++i) {
-            res += array[i];
+        while (i != size) {
+            res += array[i++];
         }
-        return snapSpaceX(res);
+        return res;
     }
 
     @Override public void requestLayout() {
