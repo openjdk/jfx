@@ -321,20 +321,19 @@ public class ObservableMapWrapper<K, V> implements ObservableMap<K, V>{
 
         @Override
         public boolean retainAll(Collection<?> c) {
+            if (backingMap.isEmpty()) {
+                return false;
+            }
+
+            if (c.isEmpty()) {
+                clear();
+                return true;
+            }
+
             return removeRetain(c, false);
         }
 
         private boolean removeRetain(Collection<?> c, boolean remove) {
-            if (c.isEmpty()) {
-                // Retaining an empty key set is equivalent to clearing the map.
-                if (!remove && !backingMap.isEmpty()) {
-                    clear();
-                    return true;
-                }
-
-                return false;
-            }
-
             boolean removed = false;
             for (Iterator<Entry<K, V>> i = backingMap.entrySet().iterator(); i.hasNext();) {
                 Entry<K, V> e = i.next();
@@ -351,6 +350,10 @@ public class ObservableMapWrapper<K, V> implements ObservableMap<K, V>{
 
         @Override
         public boolean removeAll(Collection<?> c) {
+            if (backingMap.isEmpty() || c.isEmpty()) {
+                return false;
+            }
+
             return removeRetain(c, true);
         }
 
@@ -460,20 +463,14 @@ public class ObservableMapWrapper<K, V> implements ObservableMap<K, V>{
 
         @Override
         public boolean removeAll(Collection<?> c) {
+            if (backingMap.isEmpty() || c.isEmpty()) {
+                return false;
+            }
+
             return removeRetain(c, true);
         }
 
         private boolean removeRetain(Collection<?> c, boolean remove) {
-            if (c.isEmpty()) {
-                // Retaining an empty value set is equivalent to clearing the map.
-                if (!remove && !backingMap.isEmpty()) {
-                    clear();
-                    return true;
-                }
-
-                return false;
-            }
-
             boolean removed = false;
             for (Iterator<Entry<K, V>> i = backingMap.entrySet().iterator(); i.hasNext();) {
                 Entry<K, V> e = i.next();
@@ -490,6 +487,15 @@ public class ObservableMapWrapper<K, V> implements ObservableMap<K, V>{
 
         @Override
         public boolean retainAll(Collection<?> c) {
+            if (backingMap.isEmpty()) {
+                return false;
+            }
+
+            if (c.isEmpty()) {
+                clear();
+                return true;
+            }
+
             return removeRetain(c, false);
         }
 
@@ -667,20 +673,19 @@ public class ObservableMapWrapper<K, V> implements ObservableMap<K, V>{
 
         @Override
         public boolean retainAll(Collection<?> c) {
+            if (backingMap.isEmpty()) {
+                return false;
+            }
+
+            if (c.isEmpty()) {
+                clear();
+                return true;
+            }
+
             return removeRetain(c, false);
         }
 
         private boolean removeRetain(Collection<?> c, boolean remove) {
-            if (c.isEmpty()) {
-                // Retaining an empty entry set is equivalent to clearing the map.
-                if (!remove && !backingMap.isEmpty()) {
-                    clear();
-                    return true;
-                }
-
-                return false;
-            }
-
             boolean removed = false;
             for (Iterator<Entry<K, V>> i = backingMap.entrySet().iterator(); i.hasNext();) {
                 Entry<K, V> e = i.next();
@@ -697,6 +702,10 @@ public class ObservableMapWrapper<K, V> implements ObservableMap<K, V>{
 
         @Override
         public boolean removeAll(Collection<?> c) {
+            if (backingMap.isEmpty() || c.isEmpty()) {
+                return false;
+            }
+
             return removeRetain(c, true);
         }
 

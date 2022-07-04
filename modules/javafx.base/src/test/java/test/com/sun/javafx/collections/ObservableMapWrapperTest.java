@@ -63,8 +63,9 @@ public class ObservableMapWrapperTest {
                 @Override
                 public Set<Entry<String, String>> entrySet() {
                     if (entrySet == null) {
-                        entrySet = new AbstractSet<Entry<String, String>>() {
-                            @Override public Iterator<Entry<String, String>> iterator() {
+                        entrySet = new AbstractSet<>() {
+                            @Override
+                            public Iterator<Entry<String, String>> iterator() {
                                 throw new AssertionError("iterator() was not elided");
                             }
 

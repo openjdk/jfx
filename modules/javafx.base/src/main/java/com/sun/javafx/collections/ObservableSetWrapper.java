@@ -331,6 +331,15 @@ public class ObservableSetWrapper<E> implements ObservableSet<E> {
      */
     @Override
     public boolean retainAll(Collection<?> c) {
+        if (backingSet.isEmpty()) {
+            return false;
+        }
+
+        if (c.isEmpty()) {
+            clear();
+            return true;
+        }
+
         return removeRetain(c, false);
     }
 
@@ -344,20 +353,14 @@ public class ObservableSetWrapper<E> implements ObservableSet<E> {
      */
     @Override
     public boolean removeAll(Collection<?> c) {
+        if (backingSet.isEmpty() || c.isEmpty()) {
+            return false;
+        }
+
         return removeRetain(c, true);
     }
 
     private boolean removeRetain(Collection<?> c, boolean remove) {
-        if (c.isEmpty()) {
-            // Retaining an empty set is equivalent to clearing the set.
-            if (!remove && !backingSet.isEmpty()) {
-                clear();
-                return true;
-            }
-
-            return false;
-        }
-
         boolean removed = false;
         for (Iterator<E> i = backingSet.iterator(); i.hasNext();) {
             E element = i.next();
