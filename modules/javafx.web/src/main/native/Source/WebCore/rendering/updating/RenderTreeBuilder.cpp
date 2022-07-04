@@ -31,6 +31,7 @@
 #include "FrameSelection.h"
 #include "RenderButton.h"
 #include "RenderCounter.h"
+#include "RenderDescendantIterator.h"
 #include "RenderElement.h"
 #include "RenderEmbeddedObject.h"
 #include "RenderFullScreen.h"
@@ -50,6 +51,7 @@
 #include "RenderSVGRoot.h"
 #include "RenderSVGText.h"
 #include "RenderTable.h"
+#include "RenderTableCell.h"
 #include "RenderTableRow.h"
 #include "RenderTableSection.h"
 #include "RenderText.h"
@@ -79,20 +81,6 @@
 namespace WebCore {
 
 RenderTreeBuilder* RenderTreeBuilder::s_current;
-
-static void markBoxForRelayoutAfterSplit(RenderBox& box)
-{
-    // FIXME: The table code should handle that automatically. If not,
-    // we should fix it and remove the table part checks.
-    if (is<RenderTable>(box)) {
-        // Because we may have added some sections with already computed column structures, we need to
-        // sync the table structure with them now. This avoids crashes when adding new cells to the table.
-        downcast<RenderTable>(box).forceSectionsRecalc();
-    } else if (is<RenderTableSection>(box))
-        downcast<RenderTableSection>(box).setNeedsCellRecalc();
-
-    box.setNeedsLayoutAndPrefWidthsRecalc();
-}
 
 static void getInlineRun(RenderObject* start, RenderObject* boundary, RenderObject*& inlineRunStart, RenderObject*& inlineRunEnd)
 {
@@ -162,11 +150,11 @@ RenderTreeBuilder::~RenderTreeBuilder()
     s_current = m_previous;
 }
 
-void RenderTreeBuilder::destroy(RenderObject& renderer)
+void RenderTreeBuilder::destroy(RenderObject& renderer, CanCollapseAnonymousBlock canCollapseAnonymousBlock)
 {
     RELEASE_ASSERT(RenderTreeMutationDisallowedScope::isMutationAllowed());
     ASSERT(renderer.parent());
-    auto toDestroy = detach(*renderer.parent(), renderer);
+    auto toDestroy = detach(*renderer.parent(), renderer, canCollapseAnonymousBlock);
 
 #if ENABLE(FULLSCREEN_API)
     if (is<RenderFullScreen>(renderer))
@@ -425,7 +413,7 @@ void RenderTreeBuilder::attachToRenderElement(RenderElement& parent, RenderPtr<R
     parent.didAttachChild(newChild, beforeChild);
 }
 
-void RenderTreeBuilder::attachToRenderElementInternal(RenderElement& parent, RenderPtr<RenderObject> child, RenderObject* beforeChild, ReinsertAfterMove reinsertAfterMove)
+void RenderTreeBuilder::attachToRenderElementInternal(RenderElement& parent, RenderPtr<RenderObject> child, RenderObject* beforeChild, RenderObject::IsInternalMove isInternalMove)
 {
     RELEASE_ASSERT_WITH_MESSAGE(!parent.view().frameView().layoutContext().layoutState(), "Layout must not mutate render tree");
     ASSERT(parent.canHaveChildren() || parent.canHaveGeneratedChildren());
@@ -443,16 +431,16 @@ void RenderTreeBuilder::attachToRenderElementInternal(RenderElement& parent, Ren
 
     newChild->initializeFragmentedFlowStateOnInsertion();
     if (!parent.renderTreeBeingDestroyed()) {
-        newChild->insertedIntoTree();
+        newChild->insertedIntoTree(isInternalMove);
 
-        auto* fragmentedFlow = newChild->enclosingFragmentedFlow();
-        if (is<RenderMultiColumnFlow>(fragmentedFlow))
-            multiColumnBuilder().multiColumnDescendantInserted(downcast<RenderMultiColumnFlow>(*fragmentedFlow), *newChild);
+        auto needsStateReset = isInternalMove == RenderObject::IsInternalMove::No;
+        if (needsStateReset) {
+            if (auto* fragmentedFlow = newChild->enclosingFragmentedFlow(); is<RenderMultiColumnFlow>(fragmentedFlow))
+                multiColumnBuilder().multiColumnDescendantInserted(downcast<RenderMultiColumnFlow>(*fragmentedFlow), *newChild);
 
-        // FIXME: needsStateReset could probably be used for multicolumn as well.
-        auto needsStateReset = reinsertAfterMove == ReinsertAfterMove::No;
-        if (needsStateReset && is<RenderElement>(*newChild))
-            RenderCounter::rendererSubtreeAttached(downcast<RenderElement>(*newChild));
+            if (is<RenderElement>(*newChild))
+                RenderCounter::rendererSubtreeAttached(downcast<RenderElement>(*newChild));
+        }
     }
 
     newChild->setNeedsLayoutAndPrefWidthsRecalc();
@@ -481,8 +469,8 @@ void RenderTreeBuilder::move(RenderBoxModelObject& from, RenderBoxModelObject& t
         auto childToMove = detachFromRenderElement(from, child);
         attach(to, WTFMove(childToMove), beforeChild);
     } else {
-        auto childToMove = detachFromRenderElement(from, child);
-        attachToRenderElementInternal(to, WTFMove(childToMove), beforeChild, ReinsertAfterMove::Yes);
+        auto childToMove = detachFromRenderElement(from, child, WillBeDestroyed::No, RenderObject::IsInternalMove::Yes);
+        attachToRenderElementInternal(to, WTFMove(childToMove), beforeChild, RenderObject::IsInternalMove::Yes);
     }
 
     auto findBFCRootAndDestroyInlineTree = [&] {
@@ -528,9 +516,9 @@ void RenderTreeBuilder::moveChildren(RenderBoxModelObject& from, RenderBoxModelO
     // anonymous blocks which can no longer carry positioned objects (see r120761)
     // or when fullRemoveInsert is false.
     if (normalizeAfterInsertion == NormalizeAfterInsertion::Yes && is<RenderBlock>(from)) {
-        downcast<RenderBlock>(from).removePositionedObjects(nullptr);
-        if (is<RenderBlockFlow>(from))
-            downcast<RenderBlockFlow>(from).removeFloatingObjects();
+        auto& blockFlow = downcast<RenderBlock>(from);
+        blockFlow.removePositionedObjects(nullptr);
+        removeFloatingObjects(blockFlow);
     }
 
     ASSERT(!beforeChild || &to == beforeChild->parent());
@@ -595,8 +583,29 @@ void RenderTreeBuilder::normalizeTreeAfterStyleChange(RenderElement& renderer, R
         // We have gone from not affecting the inline status of the parent flow to suddenly
         // having an impact. See if there is a mismatch between the parent flow's
         // childrenInline() state and our state.
+        auto* currentEnclosingFragment = renderer.enclosingFragmentedFlow();
         if (renderer.isInline() != renderer.parent()->childrenInline())
             childFlowStateChangesAndAffectsParentBlock(renderer);
+        // WARNING: original parent might be deleted at this point.
+        if (auto* newParent = renderer.parent()) {
+            // FIXME: Merge this with the multicolumn code below webkit.org/b/228024
+            auto newMultiColumnForRenderer = [&]() -> RenderMultiColumnFlow* {
+                // Update the state when the renderer has moved from one multi-column flow to another.
+                auto* newEnclosingFragmentedFlow = newParent->enclosingFragmentedFlow();
+                if (newParent->isMultiColumnBlockFlow()) {
+                    // This renderer is a spanner so it is not in the subtree of the multicolumn renderer. It is parented directly under the block flow so
+                    // enclosingFragmentedFlow() returns the parent enclosing flow.
+                    ASSERT(is<RenderBox>(renderer) && downcast<RenderBlockFlow>(*newParent).multiColumnFlow()->spannerMap().contains(&downcast<RenderBox>(renderer)));
+                    newEnclosingFragmentedFlow = downcast<RenderBlockFlow>(*newParent).multiColumnFlow();
+                }
+                return newEnclosingFragmentedFlow != currentEnclosingFragment && is<RenderMultiColumnFlow>(newEnclosingFragmentedFlow) ? downcast<RenderMultiColumnFlow>(newEnclosingFragmentedFlow) : nullptr;
+            };
+            if (auto* newEnclosingMultiColumn = newMultiColumnForRenderer()) {
+                // Let the fragmented flow know that it has a new in-flow descendant.
+                renderer.initializeFragmentedFlowStateOnInsertion();
+                multiColumnBuilder().multiColumnDescendantInserted(*newEnclosingMultiColumn, renderer);
+            }
+        }
         return;
     }
 
@@ -614,10 +623,20 @@ void RenderTreeBuilder::normalizeTreeAfterStyleChange(RenderElement& renderer, R
     // Out of flow children of RenderMultiColumnFlow are not really part of the multicolumn flow. We need to ensure that changes in positioning like this
     // trigger insertions into the multicolumn flow.
     if (auto* enclosingFragmentedFlow = parent.enclosingFragmentedFlow(); is<RenderMultiColumnFlow>(enclosingFragmentedFlow)) {
-        auto movingIntoMulticolumn = wasOutOfFlowPositioned && !isOutOfFlowPositioned;
+        auto movingIntoMulticolumn = [&] {
+            if (wasOutOfFlowPositioned && !isOutOfFlowPositioned)
+                return true;
+            if (auto* containingBlock = renderer.containingBlock(); containingBlock && isOutOfFlowPositioned) {
+                // Sometimes the flow state could change even when the renderer stays out-of-flow (e.g when going from fixed to absolute and
+                // the containing block is inside a multi-column flow).
+                return containingBlock->fragmentedFlowState() == RenderObject::InsideInFragmentedFlow
+                    && renderer.fragmentedFlowState() == RenderObject::NotInsideFragmentedFlow;
+            }
+            return false;
+        }();
         if (movingIntoMulticolumn) {
-            multiColumnBuilder().multiColumnDescendantInserted(downcast<RenderMultiColumnFlow>(*enclosingFragmentedFlow), renderer);
             renderer.initializeFragmentedFlowStateOnInsertion();
+            multiColumnBuilder().multiColumnDescendantInserted(downcast<RenderMultiColumnFlow>(*enclosingFragmentedFlow), renderer);
             return;
         }
         auto movingOutOfMulticolumn = !wasOutOfFlowPositioned && isOutOfFlowPositioned;
@@ -712,35 +731,25 @@ RenderObject* RenderTreeBuilder::splitAnonymousBoxesAroundChild(RenderBox& paren
 void RenderTreeBuilder::childFlowStateChangesAndAffectsParentBlock(RenderElement& child)
 {
     if (!child.isInline()) {
-        auto* currentEnclosingFragment = child.enclosingFragmentedFlow();
         auto parent = makeWeakPtr(child.parent());
         if (is<RenderBlock>(*parent))
             blockBuilder().childBecameNonInline(downcast<RenderBlock>(*parent), child);
         else if (is<RenderInline>(*parent))
             inlineBuilder().childBecameNonInline(downcast<RenderInline>(*parent), child);
         // WARNING: original parent might be deleted at this point.
-
-        if (auto* newParent = child.parent()) {
-            // childBecameNonInline might have re-parented us.
-            if (newParent != parent && is<RenderGrid>(*newParent)) {
-                // We need to re-run the grid items placement if it had gained a new item.
-                downcast<RenderGrid>(*newParent).dirtyGrid();
-            }
-            if (auto* newEnclosingFragmentedFlow = newParent->enclosingFragmentedFlow(); is<RenderMultiColumnFlow>(newEnclosingFragmentedFlow) && currentEnclosingFragment != newEnclosingFragmentedFlow) {
-                // Let the fragmented flow know that it has a new in-flow descendant.
-                multiColumnBuilder().multiColumnDescendantInserted(downcast<RenderMultiColumnFlow>(*newEnclosingFragmentedFlow), child);
-                child.initializeFragmentedFlowStateOnInsertion();
-            }
+        if (auto* newParent = child.parent(); newParent != parent && is<RenderGrid>(newParent)) {
+            // We need to re-run the grid items placement if it had gained a new item.
+            downcast<RenderGrid>(*newParent).dirtyGrid();
         }
-    } else {
-        // An anonymous block must be made to wrap this inline.
-        auto* parent = child.parent();
-        auto newBlock = downcast<RenderBlock>(*parent).createAnonymousBlock();
-        auto& block = *newBlock;
-        attachToRenderElementInternal(*parent, WTFMove(newBlock), &child);
-        auto thisToMove = detachFromRenderElement(*parent, child);
-        attachToRenderElementInternal(block, WTFMove(thisToMove));
+        return;
     }
+    // An anonymous block must be made to wrap this inline.
+    auto* parent = child.parent();
+    auto newBlock = downcast<RenderBlock>(*parent).createAnonymousBlock();
+    auto& block = *newBlock;
+    attachToRenderElementInternal(*parent, WTFMove(newBlock), &child);
+    auto thisToMove = detachFromRenderElement(*parent, child);
+    attachToRenderElementInternal(block, WTFMove(thisToMove));
 }
 
 void RenderTreeBuilder::removeAnonymousWrappersForInlineChildrenIfNeeded(RenderElement& parent)
@@ -756,7 +765,7 @@ void RenderTreeBuilder::removeAnonymousWrappersForInlineChildrenIfNeeded(RenderE
     // otherwise we can proceed to stripping solitary anonymous wrappers from the inlines.
     // FIXME: We should also handle split inlines here - we exclude them at the moment by returning
     // if we find a continuation.
-    Optional<bool> shouldAllChildrenBeInline;
+    std::optional<bool> shouldAllChildrenBeInline;
     for (auto* current = blockParent.firstChild(); current; current = current->nextSibling()) {
         if (current->style().isFloating() || current->style().hasOutOfFlowPosition())
             continue;
@@ -767,7 +776,7 @@ void RenderTreeBuilder::removeAnonymousWrappersForInlineChildrenIfNeeded(RenderE
         if (!firstChild)
             continue;
         auto isInlineLevelBox = firstChild->isInline();
-        if (!shouldAllChildrenBeInline.hasValue()) {
+        if (!shouldAllChildrenBeInline.has_value()) {
             shouldAllChildrenBeInline = isInlineLevelBox;
             continue;
         }
@@ -798,9 +807,11 @@ void RenderTreeBuilder::destroyAndCleanUpAnonymousWrappers(RenderObject& rendere
         return;
     }
 
-    // Remove intruding floats from sibling blocks before detaching.
-    if (is<RenderBox>(rendererToDestroy) && rendererToDestroy.isFloatingOrOutOfFlowPositioned())
-        downcast<RenderBox>(rendererToDestroy).removeFloatingOrPositionedChildFromBlockLists();
+    // Also destroy ::backdrop along with element if there is one
+    if (is<RenderElement>(rendererToDestroy)) {
+        if (auto backdropRenderer = downcast<RenderElement>(rendererToDestroy).backdropRenderer())
+            destroy(*backdropRenderer);
+    }
 
     auto isAnonymousAndSafeToDelete = [] (const auto& renderer) {
         return renderer.isAnonymous() && !renderer.isRenderView() && !renderer.isRenderFragmentedFlow();
@@ -821,8 +832,35 @@ void RenderTreeBuilder::destroyAndCleanUpAnonymousWrappers(RenderObject& rendere
     };
 
     auto& destroyRoot = destroyRootIncludingAnonymous();
-    if (is<RenderTableRow>(destroyRoot))
-        tableBuilder().collapseAndDestroyAnonymousSiblingRows(downcast<RenderTableRow>(destroyRoot));
+
+    auto clearFloatsAndOutOfFlowPositionedObjects = [&] {
+        // Remove floats and out-of-flow positioned objects from their containing block before detaching
+        // the renderer from the tree. It includes all the anonymous block descendants that we are about
+        // to destroy as well as part of the cleanup process below.
+        if (!is<RenderElement>(destroyRoot))
+            return;
+        for (auto& descendant : descendantsOfType<RenderBox>(downcast<RenderElement>(destroyRoot))) {
+            if (descendant.isFloatingOrOutOfFlowPositioned())
+                descendant.removeFloatingOrPositionedChildFromBlockLists();
+        }
+        if (is<RenderBox>(destroyRoot) && destroyRoot.isFloatingOrOutOfFlowPositioned())
+            downcast<RenderBox>(destroyRoot).removeFloatingOrPositionedChildFromBlockLists();
+    };
+    clearFloatsAndOutOfFlowPositionedObjects();
+
+    auto collapseAndDestroyAnonymousSiblings = [&] {
+        // FIXME: Probably need to handle other table parts here as well.
+        if (is<RenderTableCell>(destroyRoot)) {
+            tableBuilder().collapseAndDestroyAnonymousSiblingCells(downcast<RenderTableCell>(destroyRoot));
+            return;
+        }
+
+        if (is<RenderTableRow>(destroyRoot)) {
+            tableBuilder().collapseAndDestroyAnonymousSiblingRows(downcast<RenderTableRow>(destroyRoot));
+            return;
+        }
+    };
+    collapseAndDestroyAnonymousSiblings();
 
     // FIXME: Do not try to collapse/cleanup the anonymous wrappers inside destroy (see webkit.org/b/186746).
     auto destroyRootParent = makeWeakPtr(*destroyRoot.parent());
@@ -864,7 +902,7 @@ RenderPtr<RenderObject> RenderTreeBuilder::detachFromRenderGrid(RenderGrid& pare
     return takenChild;
 }
 
-RenderPtr<RenderObject> RenderTreeBuilder::detachFromRenderElement(RenderElement& parent, RenderObject& child, WillBeDestroyed willBeDestroyed)
+RenderPtr<RenderObject> RenderTreeBuilder::detachFromRenderElement(RenderElement& parent, RenderObject& child, WillBeDestroyed willBeDestroyed, RenderObject::IsInternalMove isInternalMove)
 {
     RELEASE_ASSERT_WITH_MESSAGE(!parent.view().frameView().layoutContext().layoutState(), "Layout must not mutate render tree");
 
@@ -891,6 +929,8 @@ RenderPtr<RenderObject> RenderTreeBuilder::detachFromRenderElement(RenderElement
         downcast<RenderBox>(child).deleteLineBoxWrapper();
     else if (is<RenderLineBreak>(child))
         downcast<RenderLineBreak>(child).deleteInlineBoxWrapper();
+    else if (is<RenderText>(child))
+        downcast<RenderText>(child).removeAndDestroyTextBoxes();
 
     if (!parent.renderTreeBeingDestroyed() && is<RenderFlexibleBox>(parent) && !child.isFloatingOrOutOfFlowPositioned() && child.isBox())
         downcast<RenderFlexibleBox>(parent).clearCachedChildIntrinsicContentLogicalHeight(downcast<RenderBox>(child));
@@ -903,7 +943,7 @@ RenderPtr<RenderObject> RenderTreeBuilder::detachFromRenderElement(RenderElement
     child.resetFragmentedFlowStateOnRemoval();
 
     if (!parent.renderTreeBeingDestroyed())
-        child.willBeRemovedFromTree();
+        child.willBeRemovedFromTree(isInternalMove);
 
     // WARNING: There should be no code running between willBeRemovedFromTree() and the actual removal below.
     // This is needed to avoid race conditions where willBeRemovedFromTree() would dirty the tree's structure
@@ -955,11 +995,11 @@ void RenderTreeBuilder::reportVisuallyNonEmptyContent(const RenderElement& paren
         return;
     }
     if (is<RenderSVGRoot>(child)) {
-        auto fixedSize = [] (const auto& renderer) -> Optional<IntSize> {
+        auto fixedSize = [] (const auto& renderer) -> std::optional<IntSize> {
             auto& style = renderer.style();
             if (!style.width().isFixed() || !style.height().isFixed())
                 return { };
-            return makeOptional(IntSize { style.width().intValue(), style.height().intValue() });
+            return std::make_optional(IntSize { style.width().intValue(), style.height().intValue() });
         };
         // SVG content tends to have a fixed size construct. However this is known to be inaccurate in certain cases (box-sizing: border-box) or especially when the parent box is oversized.
         auto candidateSize = IntSize { };
@@ -972,6 +1012,38 @@ void RenderTreeBuilder::reportVisuallyNonEmptyContent(const RenderElement& paren
             m_view.frameView().incrementVisuallyNonEmptyPixelCount(candidateSize);
         return;
     }
+}
+
+void RenderTreeBuilder::markBoxForRelayoutAfterSplit(RenderBox& box)
+{
+    // FIXME: The table code should handle that automatically. If not,
+    // we should fix it and remove the table part checks.
+    if (is<RenderTable>(box)) {
+        // Because we may have added some sections with already computed column structures, we need to
+        // sync the table structure with them now. This avoids crashes when adding new cells to the table.
+        downcast<RenderTable>(box).forceSectionsRecalc();
+    } else if (is<RenderTableSection>(box))
+        downcast<RenderTableSection>(box).setNeedsCellRecalc();
+
+    box.setNeedsLayoutAndPrefWidthsRecalc();
+}
+
+void RenderTreeBuilder::removeFloatingObjects(RenderBlock& renderer)
+{
+    if (renderer.renderTreeBeingDestroyed())
+        return;
+    if (!is<RenderBlockFlow>(renderer))
+        return;
+    auto& blockFlow = downcast<RenderBlockFlow>(renderer);
+    auto* floatingObjects = blockFlow.floatingObjectSet();
+    if (!floatingObjects)
+        return;
+    // Here we remove the floating objects from the descendants as well.
+    auto copyOfFloatingObjects = WTF::map(*floatingObjects, [](auto& floatingObject) {
+        return floatingObject.get();
+    });
+    for (auto* floatingObject : copyOfFloatingObjects)
+        floatingObject->renderer().removeFloatingOrPositionedChildFromBlockLists();
 }
 
 }

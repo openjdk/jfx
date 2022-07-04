@@ -60,8 +60,10 @@ struct _GstMFWrapper
     gboolean is_flushing;
     gboolean is_eos_received;
     gboolean is_eos;
+    gboolean is_decoder_initialized;
 
     gboolean force_discontinuity;
+    gboolean force_output_discontinuity;
 
     HRESULT hr_mfstartup;
 

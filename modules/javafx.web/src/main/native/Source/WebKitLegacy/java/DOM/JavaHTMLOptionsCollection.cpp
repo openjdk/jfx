@@ -93,7 +93,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLOptionsCollectionImpl_addImpl
         raiseTypeErrorException(env);
         return;
     }
-    raiseOnDOMError(env, IMPL->add(static_cast<HTMLOptionElement*>(jlong_to_ptr(option)), Optional<WebCore::HTMLOptionsCollection::HTMLElementOrInt> { static_cast<int>(index) }));
+    raiseOnDOMError(env, IMPL->add(static_cast<HTMLOptionElement*>(jlong_to_ptr(option)), std::optional<WebCore::HTMLOptionsCollection::HTMLElementOrInt> { static_cast<int>(index) }));
 }
 
 

@@ -25,12 +25,9 @@
 
 #pragma once
 
-#if ENABLE(INDEXED_DATABASE)
-
 #include "IDBCursorInfo.h"
 #include "IDBKeyData.h"
 #include "MemoryCursor.h"
-#include <wtf/Optional.h>
 
 namespace WebCore {
 namespace IDBServer {
@@ -62,12 +59,10 @@ private:
 
     IDBKeyRangeData m_remainingRange;
 
-    Optional<IDBKeyDataSet::iterator> m_iterator;
+    std::optional<IDBKeyDataSet::iterator> m_iterator;
 
     IDBKeyData m_currentPositionKey;
 };
 
 } // namespace IDBServer
 } // namespace WebCore
-
-#endif // ENABLE(INDEXED_DATABASE)

@@ -27,6 +27,7 @@
 
 #include "DocumentIdentifier.h"
 #include "LibWebRTCMacros.h"
+#include "RTCDataChannelRemoteHandlerConnection.h"
 #include <wtf/CompletionHandler.h>
 #include <wtf/Expected.h>
 #include <wtf/UniqueRef.h>
@@ -61,6 +62,7 @@ class PeerConnectionFactoryInterface;
 namespace WebCore {
 
 class LibWebRTCAudioModule;
+class RegistrableDomain;
 struct PeerConnectionFactoryAndThreads;
 struct RTCRtpCapabilities;
 
@@ -77,6 +79,7 @@ public:
     static void registerWebKitVP9Decoder();
     static void registerWebKitVP8Decoder();
     static void setH264HardwareEncoderAllowed(bool);
+    static void setRTCLogging(WTFLogLevel);
 
     virtual void setActive(bool);
 
@@ -91,6 +94,8 @@ public:
         callback(makeUnexpected(MDNSRegisterError::NotImplemented));
     }
 
+    virtual RefPtr<RTCDataChannelRemoteHandlerConnection> createRTCDataChannelRemoteHandlerConnection() { return nullptr; }
+
 #if USE(LIBWEBRTC)
     virtual rtc::scoped_refptr<webrtc::PeerConnectionInterface> createPeerConnection(webrtc::PeerConnectionObserver&, rtc::PacketSocketFactory*, webrtc::PeerConnectionInterface::RTCConfiguration&&);
 
@@ -100,12 +105,14 @@ public:
     static void callOnWebRTCNetworkThread(Function<void()>&&);
     static void callOnWebRTCSignalingThread(Function<void()>&&);
     static bool hasWebRTCThreads();
+    static rtc::Thread& signalingThread();
 
     // Used for mock testing
     void setPeerConnectionFactory(rtc::scoped_refptr<webrtc::PeerConnectionFactoryInterface>&&);
 
     void disableEnumeratingAllNetworkInterfaces();
     void enableEnumeratingAllNetworkInterfaces();
+    bool isEnumeratingAllNetworkInterfacesEnabled() const { return m_enableEnumeratingAllNetworkInterfaces; }
 
     void setH265Support(bool value) { m_supportsH265 = value; }
     void setVP9Support(bool supportsVP9Profile0, bool supportsVP9Profile2);
@@ -119,12 +126,12 @@ public:
     // Callback is executed on a background thread.
     void prepareCertificateGenerator(Function<void(rtc::RTCCertificateGenerator&)>&&);
 
-    Optional<RTCRtpCapabilities> receiverCapabilities(const String& kind);
-    Optional<RTCRtpCapabilities> senderCapabilities(const String& kind);
+    std::optional<RTCRtpCapabilities> receiverCapabilities(const String& kind);
+    std::optional<RTCRtpCapabilities> senderCapabilities(const String& kind);
 
     void clearFactory() { m_factory = nullptr; }
 
-    void setEnableLogging(bool);
+    virtual void setLoggingLevel(WTFLogLevel);
     void setEnableWebRTCEncryption(bool);
     void setUseDTLS10(bool);
 
@@ -133,8 +140,9 @@ public:
         virtual ~SuspendableSocketFactory() = default;
         virtual void suspend() { };
         virtual void resume() { };
+        virtual void disableRelay() { };
     };
-    virtual std::unique_ptr<SuspendableSocketFactory> createSocketFactory(String&& /* userAgent */) { return nullptr; }
+    virtual std::unique_ptr<SuspendableSocketFactory> createSocketFactory(String&& /* userAgent */, bool /* isFirstParty */, RegistrableDomain&&) { return nullptr; }
 
 protected:
     LibWebRTCProvider() = default;
@@ -159,7 +167,6 @@ protected:
     bool m_supportsVP9Profile0 { false };
     bool m_supportsVP9Profile2 { false };
     bool m_supportsVP9VTB { false };
-    bool m_enableLogging { true };
     bool m_useDTLS10 { false };
 #endif
 };

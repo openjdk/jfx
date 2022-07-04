@@ -28,27 +28,27 @@
 #include <tchar.h>
 
 #ifdef _UNICODE
-#define _tdirent  _wdirent
-#define _TDIR     _WDIR
-#define _topendir _wopendir
-#define _tclosedir  _wclosedir
-#define _treaddir _wreaddir
-#define _trewinddir _wrewinddir
-#define _ttelldir _wtelldir
-#define _tseekdir _wseekdir
+#define _tdirent        _wdirent
+#define _TDIR           _WDIR
+#define _topendir       _wopendir
+#define _tclosedir      _wclosedir
+#define _treaddir       _wreaddir
+#define _trewinddir     _wrewinddir
+#define _ttelldir       _wtelldir
+#define _tseekdir       _wseekdir
 #else
-#define _tdirent  dirent
-#define _TDIR     DIR
-#define _topendir opendir
-#define _tclosedir  closedir
-#define _treaddir readdir
-#define _trewinddir rewinddir
-#define _ttelldir telldir
-#define _tseekdir seekdir
+#define _tdirent        dirent
+#define _TDIR           DIR
+#define _topendir       opendir
+#define _tclosedir      closedir
+#define _treaddir       readdir
+#define _trewinddir     rewinddir
+#define _ttelldir       telldir
+#define _tseekdir       seekdir
 #endif
 
 #define SUFFIX  _T("*")
-#define SLASH _T("\\")
+#define SLASH   _T("\\")
 
 
 /*
@@ -99,7 +99,7 @@ _topendir (const _TCHAR *szPath)
   /* Allocate enough space to store DIR structure and the complete
    * directory path given. */
   nd = (_TDIR *) malloc (sizeof (_TDIR) + (_tcslen(szFullPath) + _tcslen (SLASH) +
-       _tcslen(SUFFIX) + 1) * sizeof(_TCHAR));
+                         _tcslen(SUFFIX) + 1) * sizeof(_TCHAR));
 
   if (!nd)
     {
@@ -135,7 +135,7 @@ _topendir (const _TCHAR *szPath)
   nd->dd_dir.d_ino = 0;
   nd->dd_dir.d_reclen = 0;
   nd->dd_dir.d_namlen = 0;
-  memset (nd->dd_dir.d_name, 0, FILENAME_MAX);
+  memset (nd->dd_dir.d_name, 0, sizeof (nd->dd_dir.d_name));
 
   return nd;
 }
@@ -171,38 +171,38 @@ _treaddir (_TDIR * dirp)
       /* Start the search */
       dirp->dd_handle = _tfindfirst (dirp->dd_name, &(dirp->dd_dta));
 
-      if (dirp->dd_handle == -1)
-  {
-    /* Whoops! Seems there are no files in that
-     * directory. */
-    dirp->dd_stat = -1;
-  }
+          if (dirp->dd_handle == -1)
+        {
+          /* Whoops! Seems there are no files in that
+           * directory. */
+          dirp->dd_stat = -1;
+        }
       else
-  {
-    dirp->dd_stat = 1;
-  }
+        {
+          dirp->dd_stat = 1;
+        }
     }
   else
     {
       /* Get the next search entry. */
       if (_tfindnext (dirp->dd_handle, &(dirp->dd_dta)))
-  {
-    /* We are off the end or otherwise error.
-       _findnext sets errno to ENOENT if no more file
-       Undo this. */
-    DWORD winerr = GetLastError();
-    if (winerr == ERROR_NO_MORE_FILES)
-      errno = 0;
-    _findclose (dirp->dd_handle);
-    dirp->dd_handle = -1;
-    dirp->dd_stat = -1;
-  }
+        {
+          /* We are off the end or otherwise error.
+             _findnext sets errno to ENOENT if no more file
+             Undo this. */
+          DWORD winerr = GetLastError();
+          if (winerr == ERROR_NO_MORE_FILES)
+            errno = 0;
+          _findclose (dirp->dd_handle);
+          dirp->dd_handle = -1;
+          dirp->dd_stat = -1;
+        }
       else
-  {
-    /* Update the status to indicate the correct
-     * number. */
-    dirp->dd_stat++;
-  }
+        {
+          /* Update the status to indicate the correct
+           * number. */
+          dirp->dd_stat++;
+        }
     }
 
   if (dirp->dd_stat > 0)
@@ -324,9 +324,9 @@ _tseekdir (_TDIR * dirp, long lPos)
     {
       /* Seek past end. */
       if (dirp->dd_handle != -1)
-  {
-    _findclose (dirp->dd_handle);
-  }
+        {
+          _findclose (dirp->dd_handle);
+        }
       dirp->dd_handle = -1;
       dirp->dd_stat = -1;
     }
@@ -336,6 +336,6 @@ _tseekdir (_TDIR * dirp, long lPos)
       _trewinddir (dirp);
 
       while ((dirp->dd_stat < lPos) && _treaddir (dirp))
-  ;
+        ;
     }
 }

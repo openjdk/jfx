@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2016 Yusuke Suzuki <utatane.tea@gmail.com>
- * Copyright (C) 2016-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -38,7 +38,6 @@
 #include "StrongInlines.h"
 #include "UnlinkedCodeBlockGenerator.h"
 #include "UnlinkedMetadataTableInlines.h"
-#include <wtf/Optional.h>
 
 namespace JSC {
 
@@ -129,7 +128,7 @@ public:
         return m_instructions.at(m_enterPoint);
     }
 
-    Optional<GeneratorFrameData> generatorFrameData() const
+    std::optional<GeneratorFrameData> generatorFrameData() const
     {
         return m_generatorFrameData;
     }
@@ -149,7 +148,7 @@ private:
 
         if (m_storages.size() <= index)
             m_storages.resize(index + 1);
-        if (Optional<Storage> storage = m_storages[index])
+        if (std::optional<Storage> storage = m_storages[index])
             return *storage;
 
         Identifier identifier = Identifier::from(vm, index);
@@ -169,11 +168,11 @@ private:
 
     BytecodeGenerator& m_bytecodeGenerator;
     InstructionStream::Offset m_enterPoint;
-    Optional<GeneratorFrameData> m_generatorFrameData;
+    std::optional<GeneratorFrameData> m_generatorFrameData;
     UnlinkedCodeBlockGenerator* m_codeBlock;
     InstructionStreamWriter& m_instructions;
     BytecodeGraph m_graph;
-    Vector<Optional<Storage>> m_storages;
+    Vector<std::optional<Storage>> m_storages;
     Yields m_yields;
     Strong<SymbolTable> m_generatorFrameSymbolTable;
     int m_generatorFrameSymbolTableIndex;
@@ -216,12 +215,12 @@ void BytecodeGeneratorification::run()
     // Setup the global switch for the generator.
     {
         auto nextToEnterPoint = enterPoint().next();
-        unsigned switchTableIndex = m_codeBlock->numberOfSwitchJumpTables();
+        unsigned switchTableIndex = m_codeBlock->numberOfUnlinkedSwitchJumpTables();
         VirtualRegister state = virtualRegisterForArgumentIncludingThis(static_cast<int32_t>(JSGenerator::Argument::State));
-        auto& jumpTable = m_codeBlock->addSwitchJumpTable();
-        jumpTable.min = 0;
-        jumpTable.branchOffsets = RefCountedArray<int32_t>(m_yields.size() + 1);
-        std::fill(jumpTable.branchOffsets.begin(), jumpTable.branchOffsets.end(), 0);
+        auto& jumpTable = m_codeBlock->addUnlinkedSwitchJumpTable();
+        jumpTable.m_min = 0;
+        jumpTable.m_branchOffsets = FixedVector<int32_t>(m_yields.size() + 1);
+        std::fill(jumpTable.m_branchOffsets.begin(), jumpTable.m_branchOffsets.end(), 0);
         jumpTable.add(0, nextToEnterPoint.offset());
         for (unsigned i = 0; i < m_yields.size(); ++i)
             jumpTable.add(i + 1, m_yields[i].point);
@@ -245,7 +244,7 @@ void BytecodeGeneratorification::run()
                     scope, // scope
                     storage.identifierIndex, // identifier
                     operand, // value
-                    GetPutInfo(DoNotThrowIfNotFound, LocalClosureVar, InitializationMode::NotInitialization, m_bytecodeGenerator.ecmaMode()), // info
+                    GetPutInfo(DoNotThrowIfNotFound, ResolvedClosureVar, InitializationMode::NotInitialization, m_bytecodeGenerator.ecmaMode()), // info
                     SymbolTableOrScopeDepth::symbolTable(VirtualRegister { m_generatorFrameSymbolTableIndex }), // symbol table constant index
                     storage.scopeOffset.offset() // scope offset
                 );
@@ -265,7 +264,7 @@ void BytecodeGeneratorification::run()
                     operand, // dst
                     scope, // scope
                     storage.identifierIndex, // identifier
-                    GetPutInfo(DoNotThrowIfNotFound, LocalClosureVar, InitializationMode::NotInitialization, m_bytecodeGenerator.ecmaMode()), // info
+                    GetPutInfo(DoNotThrowIfNotFound, ResolvedClosureVar, InitializationMode::NotInitialization, m_bytecodeGenerator.ecmaMode()), // info
                     0, // local scope depth
                     storage.scopeOffset.offset() // scope offset
                 );

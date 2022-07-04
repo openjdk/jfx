@@ -42,13 +42,23 @@
 #include "UserAgentScripts.h"
 #include "UserAgentStyleSheets.h"
 
+#if PLATFORM(GTK)
+#include <gtk/gtk.h>
+#endif
+
 namespace WebCore {
 
 static const int textFieldBorderSize = 1;
-static constexpr auto textFieldBorderColor = SRGBA<uint8_t> { 205, 199, 194 };
-static constexpr auto textFieldBorderDisabledColor = SRGBA<uint8_t> { 213, 208, 204 };
-static constexpr auto textFieldBackgroundColor = Color::white;
-static constexpr auto textFieldBackgroundDisabledColor = SRGBA<uint8_t> { 252, 252, 252 };
+static constexpr auto textFieldBorderColorLight = SRGBA<uint8_t> { 205, 199, 194 };
+static constexpr auto textFieldBorderDisabledColorLight = SRGBA<uint8_t> { 205, 199, 194 };
+static constexpr auto textFieldBackgroundColorLight = Color::white;
+static constexpr auto textFieldBackgroundDisabledColorLight = SRGBA<uint8_t> { 250, 249, 248 };
+
+static constexpr auto textFieldBorderColorDark = SRGBA<uint8_t> { 27, 27, 27 };
+static constexpr auto textFieldBorderDisabledColorDark = SRGBA<uint8_t> { 27, 27, 27 };
+static constexpr auto textFieldBackgroundColorDark = SRGBA<uint8_t> { 45, 45, 45 };
+static constexpr auto textFieldBackgroundDisabledColorDark = SRGBA<uint8_t> { 50, 50, 50 };
+
 static const unsigned menuListButtonArrowSize = 16;
 static const int menuListButtonFocusOffset = -3;
 static const unsigned menuListButtonPadding = 5;
@@ -57,24 +67,39 @@ static const unsigned progressActivityBlocks = 5;
 static const unsigned progressAnimationFrameCount = 75;
 static const Seconds progressAnimationFrameRate = 33_ms; // 30fps.
 static const unsigned progressBarSize = 6;
-static constexpr auto progressBarBorderColor = SRGBA<uint8_t> { 205, 199, 194 };
-static constexpr auto progressBarBackgroundColor = SRGBA<uint8_t> { 225, 222, 219 };
+static constexpr auto progressBarBorderColorLight = SRGBA<uint8_t> { 205, 199, 194 };
+static constexpr auto progressBarBackgroundColorLight = SRGBA<uint8_t> { 225, 222, 219 };
+static constexpr auto progressBarBorderColorDark = SRGBA<uint8_t> { 27, 27, 27 };
+static constexpr auto progressBarBackgroundColorDark = SRGBA<uint8_t> { 40, 40, 40 };
 static const unsigned sliderTrackSize = 6;
 static const int sliderTrackBorderSize = 1;
-static constexpr auto sliderTrackBorderColor = SRGBA<uint8_t> { 205, 199, 194 };
-static constexpr auto sliderTrackBackgroundColor = SRGBA<uint8_t> { 225, 222, 219 };
+static constexpr auto sliderTrackBorderColorLight = SRGBA<uint8_t> { 205, 199, 194 };
+static constexpr auto sliderTrackBackgroundColorLight = SRGBA<uint8_t> { 225, 222, 219 };
+static constexpr auto sliderTrackBorderColorDark = SRGBA<uint8_t> { 27, 27, 27 };
+static constexpr auto sliderTrackBackgroundColorDark = SRGBA<uint8_t> { 40, 40, 40 };
 static const int sliderTrackFocusOffset = 2;
 static const int sliderThumbSize = 20;
 static const int sliderThumbBorderSize = 1;
-static constexpr auto sliderThumbBorderColor = SRGBA<uint8_t> { 205, 199, 194 };
-static constexpr auto sliderThumbBackgroundColor = SRGBA<uint8_t> { 244, 242, 241 };
-static constexpr auto sliderThumbBackgroundHoveredColor = SRGBA<uint8_t> { 248, 248, 247 };
-static constexpr auto sliderThumbBackgroundDisabledColor = SRGBA<uint8_t> { 244, 242, 241 };
+static constexpr auto sliderThumbBorderColorLight = SRGBA<uint8_t> { 205, 199, 194 };
+static constexpr auto sliderThumbBackgroundColorLight = SRGBA<uint8_t> { 244, 242, 241 };
+static constexpr auto sliderThumbBackgroundHoveredColorLight = SRGBA<uint8_t> { 248, 248, 247 };
+static constexpr auto sliderThumbBackgroundDisabledColorLight = SRGBA<uint8_t> { 250, 249, 248 };
+
+static constexpr auto sliderThumbBorderColorDark = SRGBA<uint8_t> { 27, 27, 27 };
+static constexpr auto sliderThumbBackgroundColorDark = SRGBA<uint8_t> { 52, 52, 52 };
+static constexpr auto sliderThumbBackgroundHoveredColorDark = SRGBA<uint8_t> { 55, 55, 55 };
+static constexpr auto sliderThumbBackgroundDisabledColorDark = SRGBA<uint8_t> { 50, 50, 50 };
+
 #if ENABLE(VIDEO)
 static constexpr auto mediaSliderTrackBackgroundcolor = SRGBA<uint8_t> { 77, 77, 77 };
 static constexpr auto mediaSliderTrackBufferedColor = SRGBA<uint8_t> { 173, 173, 173 };
 static constexpr auto mediaSliderTrackActiveColor = SRGBA<uint8_t> { 252, 252, 252 };
 #endif
+
+static constexpr auto buttonTextColorLight = SRGBA<uint8_t> { 46, 52, 54 };
+static constexpr auto buttonTextDisabledColorLight = SRGBA<uint8_t> { 146, 149, 149 };
+static constexpr auto buttonTextColorDark = SRGBA<uint8_t> { 238, 238, 236 };
+static constexpr auto buttonTextDisabledColorDark = SRGBA<uint8_t> { 145, 145, 144 };
 
 #if !PLATFORM(GTK)
 RenderTheme& RenderTheme::singleton()
@@ -150,9 +175,9 @@ Color RenderThemeAdwaita::platformInactiveListBoxSelectionForegroundColor(Option
     return static_cast<ThemeAdwaita&>(Theme::singleton()).inactiveSelectionForegroundColor();
 }
 
-Color RenderThemeAdwaita::platformFocusRingColor(OptionSet<StyleColor::Options>) const
+Color RenderThemeAdwaita::platformFocusRingColor(OptionSet<StyleColor::Options> options) const
 {
-    return ThemeAdwaita::focusColor();
+    return ThemeAdwaita::focusColor(options.contains(StyleColor::Options::UseDarkAppearance));
 }
 
 void RenderThemeAdwaita::platformColorsDidChange()
@@ -163,25 +188,90 @@ void RenderThemeAdwaita::platformColorsDidChange()
 
 String RenderThemeAdwaita::extraDefaultStyleSheet()
 {
-    return String(themeAdwaitaUserAgentStyleSheet, sizeof(themeAdwaitaUserAgentStyleSheet));
+    return StringImpl::createWithoutCopying(themeAdwaitaUserAgentStyleSheet, sizeof(themeAdwaitaUserAgentStyleSheet));
 }
 
 #if ENABLE(VIDEO)
 String RenderThemeAdwaita::extraMediaControlsStyleSheet()
 {
-    return String(mediaControlsAdwaitaUserAgentStyleSheet, sizeof(mediaControlsAdwaitaUserAgentStyleSheet));
+    return StringImpl::createWithoutCopying(mediaControlsAdwaitaUserAgentStyleSheet, sizeof(mediaControlsAdwaitaUserAgentStyleSheet));
 }
 
-String RenderThemeAdwaita::mediaControlsScript()
+Vector<String, 2> RenderThemeAdwaita::mediaControlsScripts()
 {
-    return String(mediaControlsAdwaitaJavaScript, sizeof(mediaControlsAdwaitaJavaScript));
+    return { StringImpl::createWithoutCopying(mediaControlsAdwaitaJavaScript, sizeof(mediaControlsAdwaitaJavaScript)) };
 }
 #endif
+
+Color RenderThemeAdwaita::systemColor(CSSValueID cssValueID, OptionSet<StyleColor::Options> options) const
+{
+    const bool useDarkAppearance = options.contains(StyleColor::Options::UseDarkAppearance);
+
+    switch (cssValueID) {
+    case CSSValueActivecaption:
+    case CSSValueActivebuttontext:
+    case CSSValueButtontext:
+        return useDarkAppearance ? buttonTextColorDark : buttonTextColorLight;
+
+    case CSSValueGraytext:
+        return useDarkAppearance ? buttonTextDisabledColorDark : buttonTextDisabledColorLight;
+
+    case CSSValueCanvas:
+    case CSSValueField:
+    case CSSValueWebkitControlBackground:
+        return useDarkAppearance ? textFieldBackgroundColorDark : textFieldBackgroundColorLight;
+
+    case CSSValueWindow:
+        return useDarkAppearance ? SRGBA<uint8_t> { 30, 30, 30 } : Color::white;
+
+    case CSSValueCanvastext:
+    case CSSValueCaptiontext:
+    case CSSValueFieldtext:
+    case CSSValueInactivecaptiontext:
+    case CSSValueInfotext:
+    case CSSValueText:
+    case CSSValueWindowtext:
+        return useDarkAppearance ? Color::white : Color::black;
+
+    case CSSValueInactiveborder:
+    case CSSValueInactivecaption:
+        return useDarkAppearance ? Color::black : Color::white;
+
+    case CSSValueWebkitFocusRingColor:
+    case CSSValueActiveborder:
+    case CSSValueHighlight:
+        // Hardcoded to avoid exposing a user appearance preference to the web for fingerprinting.
+        return SRGBA<uint8_t> { 52, 132, 228 };
+
+    case CSSValueHighlighttext:
+        return Color::white;
+
+    default:
+        return RenderTheme::systemColor(cssValueID, options);
+    }
+}
 
 bool RenderThemeAdwaita::paintTextField(const RenderObject& renderObject, const PaintInfo& paintInfo, const FloatRect& rect)
 {
     auto& graphicsContext = paintInfo.context();
     GraphicsContextStateSaver stateSaver(graphicsContext);
+
+    SRGBA<uint8_t> textFieldBackgroundColor;
+    SRGBA<uint8_t> textFieldBackgroundDisabledColor;
+    SRGBA<uint8_t> textFieldBorderColor;
+    SRGBA<uint8_t> textFieldBorderDisabledColor;
+
+    if (renderObject.useDarkAppearance()) {
+        textFieldBackgroundColor = textFieldBackgroundColorDark;
+        textFieldBackgroundDisabledColor = textFieldBackgroundDisabledColorDark;
+        textFieldBorderColor= textFieldBorderColorDark;
+        textFieldBorderDisabledColor = textFieldBorderDisabledColorDark;
+    } else {
+        textFieldBackgroundColor = textFieldBackgroundColorLight;
+        textFieldBackgroundDisabledColor = textFieldBackgroundDisabledColorLight;
+        textFieldBorderColor = textFieldBorderColorLight;
+        textFieldBorderDisabledColor = textFieldBorderDisabledColorLight;
+    }
 
     int borderSize = textFieldBorderSize;
     if (isEnabled(renderObject) && !isReadOnlyControl(renderObject) && isFocused(renderObject))
@@ -224,7 +314,7 @@ bool RenderThemeAdwaita::paintTextField(const RenderObject& renderObject, const 
         {
             GraphicsContextStateSaver arrowStateSaver(graphicsContext);
             graphicsContext.translate(arrowRect.x(), arrowRect.y());
-            ThemeAdwaita::paintArrow(graphicsContext, ThemeAdwaita::ArrowDirection::Down);
+            ThemeAdwaita::paintArrow(graphicsContext, ThemeAdwaita::ArrowDirection::Down, renderObject.useDarkAppearance());
         }
     }
 #endif
@@ -232,14 +322,30 @@ bool RenderThemeAdwaita::paintTextField(const RenderObject& renderObject, const 
     return false;
 }
 
+void RenderThemeAdwaita::adjustTextFieldStyle(RenderStyle& style, const Element*) const
+{
+    if (!style.hasExplicitlySetBorderRadius())
+        style.setBorderRadius(IntSize(5, 5));
+}
+
 bool RenderThemeAdwaita::paintTextArea(const RenderObject& renderObject, const PaintInfo& paintInfo, const FloatRect& rect)
 {
     return paintTextField(renderObject, paintInfo, rect);
 }
 
+void RenderThemeAdwaita::adjustTextAreaStyle(RenderStyle& style, const Element* element) const
+{
+    adjustTextFieldStyle(style, element);
+}
+
 bool RenderThemeAdwaita::paintSearchField(const RenderObject& renderObject, const PaintInfo& paintInfo, const IntRect& rect)
 {
     return paintTextField(renderObject, paintInfo, rect);
+}
+
+void RenderThemeAdwaita::adjustSearchFieldStyle(RenderStyle& style, const Element* element) const
+{
+    adjustTextFieldStyle(style, element);
 }
 
 void RenderThemeAdwaita::adjustMenuListStyle(RenderStyle& style, const Element*) const
@@ -268,15 +374,15 @@ bool RenderThemeAdwaita::paintMenuList(const RenderObject& renderObject, const P
     auto& graphicsContext = paintInfo.context();
     GraphicsContextStateSaver stateSaver(graphicsContext);
 
-    ControlStates::States states = 0;
+    OptionSet<ControlStates::States> states;
     if (isEnabled(renderObject))
-        states |= ControlStates::EnabledState;
+        states.add(ControlStates::States::Enabled);
     if (isPressed(renderObject))
-        states |= ControlStates::PressedState;
+        states.add(ControlStates::States::Pressed);
     if (isHovered(renderObject))
-        states |= ControlStates::HoverState;
+        states.add(ControlStates::States::Hovered);
     ControlStates controlStates(states);
-    Theme::singleton().paint(ButtonPart, controlStates, graphicsContext, rect, 1., nullptr, 1., 1., false, false);
+    Theme::singleton().paint(ButtonPart, controlStates, graphicsContext, rect, 1., nullptr, 1., 1., false, renderObject.useDarkAppearance());
 
     FloatRect fieldRect = rect;
     fieldRect.inflate(menuListButtonBorderSize);
@@ -289,11 +395,11 @@ bool RenderThemeAdwaita::paintMenuList(const RenderObject& renderObject, const P
     {
         GraphicsContextStateSaver arrowStateSaver(graphicsContext);
         graphicsContext.translate(fieldRect.x(), fieldRect.y());
-        ThemeAdwaita::paintArrow(graphicsContext, ThemeAdwaita::ArrowDirection::Down);
+        ThemeAdwaita::paintArrow(graphicsContext, ThemeAdwaita::ArrowDirection::Down, renderObject.useDarkAppearance());
     }
 
     if (isFocused(renderObject))
-        ThemeAdwaita::paintFocus(graphicsContext, rect, menuListButtonFocusOffset);
+        ThemeAdwaita::paintFocus(graphicsContext, rect, menuListButtonFocusOffset, renderObject.useDarkAppearance());
 
     return false;
 }
@@ -325,6 +431,17 @@ bool RenderThemeAdwaita::paintProgressBar(const RenderObject& renderObject, cons
 
     auto& graphicsContext = paintInfo.context();
     GraphicsContextStateSaver stateSaver(graphicsContext);
+
+    SRGBA<uint8_t> progressBarBackgroundColor;
+    SRGBA<uint8_t> progressBarBorderColor;
+
+    if (renderObject.useDarkAppearance()) {
+        progressBarBackgroundColor = progressBarBackgroundColorDark;
+        progressBarBorderColor = progressBarBorderColorDark;
+    } else {
+        progressBarBackgroundColor = progressBarBackgroundColorLight;
+        progressBarBorderColor = progressBarBorderColorLight;
+    }
 
     FloatRect fieldRect = rect;
     FloatSize corner(3, 3);
@@ -393,6 +510,17 @@ bool RenderThemeAdwaita::paintSliderTrack(const RenderObject& renderObject, cons
         fieldRect.setWidth(6);
     }
 
+    SRGBA<uint8_t> sliderTrackBackgroundColor;
+    SRGBA<uint8_t> sliderTrackBorderColor;
+
+    if (renderObject.useDarkAppearance()) {
+        sliderTrackBackgroundColor = sliderTrackBackgroundColorDark;
+        sliderTrackBorderColor = sliderTrackBorderColorDark;
+    } else {
+        sliderTrackBackgroundColor = sliderTrackBackgroundColorLight;
+        sliderTrackBorderColor = sliderTrackBorderColorLight;
+    }
+
     FloatSize corner(3, 3);
     Path path;
     path.addRoundedRect(fieldRect, corner);
@@ -446,7 +574,7 @@ bool RenderThemeAdwaita::paintSliderTrack(const RenderObject& renderObject, cons
 #endif
 
     if (isFocused(renderObject))
-        ThemeAdwaita::paintFocus(graphicsContext, fieldRect, sliderTrackFocusOffset);
+        ThemeAdwaita::paintFocus(graphicsContext, fieldRect, sliderTrackFocusOffset, renderObject.useDarkAppearance());
 
     return false;
 }
@@ -467,6 +595,23 @@ bool RenderThemeAdwaita::paintSliderThumb(const RenderObject& renderObject, cons
     GraphicsContextStateSaver stateSaver(graphicsContext);
 
     ASSERT(renderObject.style().appearance() == SliderThumbHorizontalPart || renderObject.style().appearance() == SliderThumbVerticalPart);
+
+    SRGBA<uint8_t> sliderThumbBackgroundColor;
+    SRGBA<uint8_t> sliderThumbBackgroundHoveredColor;
+    SRGBA<uint8_t> sliderThumbBackgroundDisabledColor;
+    SRGBA<uint8_t> sliderThumbBorderColor;
+
+    if (renderObject.useDarkAppearance()) {
+        sliderThumbBackgroundColor = sliderThumbBackgroundColorDark;
+        sliderThumbBackgroundHoveredColor = sliderThumbBackgroundHoveredColorDark;
+        sliderThumbBackgroundDisabledColor = sliderThumbBackgroundDisabledColorDark;
+        sliderThumbBorderColor = sliderThumbBorderColorDark;
+    } else {
+        sliderThumbBackgroundColor = sliderThumbBackgroundColorLight;
+        sliderThumbBackgroundHoveredColor = sliderThumbBackgroundHoveredColorLight;
+        sliderThumbBackgroundDisabledColor = sliderThumbBackgroundDisabledColorLight;
+        sliderThumbBorderColor = sliderThumbBorderColorLight;
+    }
 
     FloatRect fieldRect = rect;
     Path path;
@@ -606,5 +751,15 @@ void RenderThemeAdwaita::adjustListButtonStyle(RenderStyle& style, const Element
         style.setMarginLeft(Length(-2, LengthType::Fixed));
 }
 #endif // ENABLE(DATALIST_ELEMENT)
+
+#if PLATFORM(GTK)
+Seconds RenderThemeAdwaita::caretBlinkInterval() const
+{
+    gboolean shouldBlink;
+    gint time;
+    g_object_get(gtk_settings_get_default(), "gtk-cursor-blink", &shouldBlink, "gtk-cursor-blink-time", &time, nullptr);
+    return shouldBlink ? 500_us * time : 0_s;
+}
+#endif
 
 } // namespace WebCore

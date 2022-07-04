@@ -49,7 +49,7 @@ SocketStreamHandleImpl::SocketStreamHandleImpl(const URL& url, Page* page,
 {
     String host = url.host().toString();
     bool ssl = url.protocolIs("wss");
-    int port = url.port().valueOr(ssl ? 443 : 80);
+    int port = url.port().value_or(ssl ? 443 : 80);
 
     JNIEnv* env = WTF::GetJavaEnv();
 
@@ -85,7 +85,7 @@ SocketStreamHandleImpl::~SocketStreamHandleImpl()
     WTF::CheckAndClearException(env);
 }
 
-Optional<size_t> SocketStreamHandleImpl::platformSendInternal(const uint8_t* data, size_t len)
+std::optional<size_t> SocketStreamHandleImpl::platformSendInternal(const uint8_t* data, size_t len)
 {
     JNIEnv* env = WTF::GetJavaEnv();
 
@@ -131,7 +131,7 @@ void SocketStreamHandleImpl::didOpen()
     }
 }
 
-void SocketStreamHandleImpl::didReceiveData(const char* data, int length)
+void SocketStreamHandleImpl::didReceiveData(const uint8_t* data, int length)
 {
     m_client.didReceiveSocketStreamData(*this, data, length);
 }
@@ -177,7 +177,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_network_SocketStreamHandle_twkDidRece
             static_cast<SocketStreamHandleImpl*>(jlong_to_ptr(data));
     ASSERT(handle);
     jbyte* p = env->GetByteArrayElements(buffer, NULL);
-    handle->didReceiveData((const char*) p, len);
+    handle->didReceiveData((const uint8_t*) p, len);
     env->ReleaseByteArrayElements(buffer, p, JNI_ABORT);
 }
 

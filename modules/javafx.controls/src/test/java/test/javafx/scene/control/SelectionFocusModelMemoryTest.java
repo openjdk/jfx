@@ -70,7 +70,7 @@ import javafx.stage.Stage;
 
 /**
  * Testing for potential memory leaks in xxSelectionModel and xxFocusModel (
- * https://bugs.openjdk.java.net/browse/JDK-8241455).
+ * https://bugs.openjdk.org/browse/JDK-8241455).
  * Might happen, when the concrete selection/focusModel registers strong listeners on any of the
  * control's properties.
  * <p>
@@ -231,7 +231,6 @@ public class SelectionFocusModelMemoryTest {
         // Attempt gc n times
         for (int i = 0; i < n; i++) {
             System.gc();
-            System.runFinalization();
 
             if (weakRef.get() == null) {
                 break;

@@ -42,6 +42,7 @@
 #include "ResourceRequest.h"
 #include "ResourceResponse.h"
 #include "URLLoader.h"
+#include "NetworkLoadMetrics.h"
 #include "com_sun_webkit_LoadListenerClient.h"
 #include "com_sun_webkit_network_URLLoaderBase.h"
 #include <wtf/CompletionHandler.h>
@@ -151,7 +152,7 @@ void URLLoader::loadSynchronously(NetworkingContext* context,
                                   const ResourceRequest& request,
                                   ResourceError& error,
                                   ResourceResponse& response,
-                                  Vector<char>& data)
+                                  Vector<uint8_t>& data)
 {
     SynchronousTarget target(request, error, response, data);
     load(false, context, request, &target);
@@ -228,7 +229,7 @@ JLObjectArray URLLoader::toJava(const FormData* formData)
     for (size_t i = 0; i < size; i++) {
         JLObject resultElement;
         WTF::switchOn(elements[i].data,
-            [&] (const Vector<char>& data) -> void {
+            [&] (const Vector<uint8_t>& data) -> void {
                 JLByteArray byteArray = env->NewByteArray(data.size());
                 env->SetByteArrayRegion(
                         (jbyteArray) byteArray,
@@ -296,7 +297,7 @@ void URLLoader::AsynchronousTarget::didReceiveResponse(
     }
 }
 
-void URLLoader::AsynchronousTarget::didReceiveData(const char* data, int length)
+void URLLoader::AsynchronousTarget::didReceiveData(const uint8_t* data, int length)
 {
     ResourceHandleClient* client = m_handle->client();
     if (client) {
@@ -308,7 +309,7 @@ void URLLoader::AsynchronousTarget::didFinishLoading()
 {
     ResourceHandleClient* client = m_handle->client();
     if (client) {
-        client->didFinishLoading(m_handle);
+        client->didFinishLoading(m_handle, {});
     }
 }
 
@@ -323,7 +324,7 @@ void URLLoader::AsynchronousTarget::didFail(const ResourceError& error)
 URLLoader::SynchronousTarget::SynchronousTarget(const ResourceRequest& request,
                                                 ResourceError& error,
                                                 ResourceResponse& response,
-                                                Vector<char>& data)
+                                                Vector<uint8_t>& data)
     : m_request(request)
     , m_error(error)
     , m_response(response)
@@ -360,7 +361,7 @@ void URLLoader::SynchronousTarget::didReceiveResponse(
     m_response = response;
 }
 
-void URLLoader::SynchronousTarget::didReceiveData(const char* data, int length)
+void URLLoader::SynchronousTarget::didReceiveData(const uint8_t* data, int length)
 {
     m_data.append(data, length);
 }
@@ -503,8 +504,8 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_network_URLLoaderBase_twkDidReceiveDa
     URLLoader::Target* target =
             static_cast<URLLoader::Target*>(jlong_to_ptr(data));
     ASSERT(target);
-    const char* address =
-            static_cast<const char*>(env->GetDirectBufferAddress(byteBuffer));
+    const uint8_t* address =
+            static_cast<const uint8_t*>(env->GetDirectBufferAddress(byteBuffer));
     target->didReceiveData(address + position, remaining);
 }
 

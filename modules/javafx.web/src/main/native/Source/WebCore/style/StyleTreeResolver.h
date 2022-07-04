@@ -49,7 +49,7 @@ class Resolver;
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(TreeResolverScope);
 class TreeResolver {
 public:
-    TreeResolver(Document&);
+    TreeResolver(Document&, std::unique_ptr<Update> = { });
     ~TreeResolver();
 
     std::unique_ptr<Update> resolve();
@@ -61,16 +61,16 @@ private:
 
     ElementUpdates resolveElement(Element&);
 
-    ElementUpdate createAnimatedElementUpdate(std::unique_ptr<RenderStyle>, const Styleable&, Change);
-    Optional<ElementUpdate> resolvePseudoStyle(Element&, const ElementUpdate&, PseudoId);
+    static ElementUpdate createAnimatedElementUpdate(std::unique_ptr<RenderStyle>, const Styleable&, Change, const RenderStyle& parentStyle, const RenderStyle* parentBoxStyle);
+    std::optional<ElementUpdate> resolvePseudoStyle(Element&, const ElementUpdate&, PseudoId);
 
     struct Scope : RefCounted<Scope> {
         WTF_MAKE_STRUCT_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(TreeResolverScope);
-        Resolver& resolver;
+        Ref<Resolver> resolver;
         SelectorFilter selectorFilter;
         SharingResolver sharingResolver;
-        ShadowRoot* shadowRoot { nullptr };
-        Scope* enclosingScope { nullptr };
+        RefPtr<ShadowRoot> shadowRoot;
+        RefPtr<Scope> enclosingScope;
 
         Scope(Document&);
         Scope(ShadowRoot&, Scope& enclosingScope);

@@ -138,9 +138,10 @@ module DSL
 #include "GetByValHistory.h"
 #include "Instruction.h"
 #include "IterationModeMetadata.h"
+#include "JSPropertyNameEnumerator.h"
 #include "Opcode.h"
 #include "PrivateFieldPutKind.h"
-#include "PutByIdStatus.h"
+#include "PutByStatus.h"
 #include "PutByIdFlags.h"
 #include "ToThisStatus.h"
 

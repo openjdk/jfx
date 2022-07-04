@@ -843,7 +843,10 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setView
         }
         else
         {
-            [window->nsWindow performSelectorOnMainThread:@selector(setContentView:) withObject:nil waitUntilDone:YES];
+            // If the contentView is set to nil within performKeyEquivalent: the OS will crash.
+            NSView* dummy = [[NSView alloc] initWithFrame: NSMakeRect(0, 0, 10, 10)];
+            [window->nsWindow performSelectorOnMainThread:@selector(setContentView:) withObject:dummy waitUntilDone:YES];
+            [dummy release];
         }
     }
     GLASS_POOL_EXIT;
@@ -894,6 +897,11 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1close
         GlassWindow *window = getGlassWindow(env, jPtr);
         // this call will always close the window
         // without calling the windowShouldClose
+
+        // If this window is closed from within performKeyEquivalent the OS might
+        // try to send the same event to the new key window. To prevent this we
+        // ensure that performKeyEquivalent returns YES.
+        window->isClosed = YES;
 
         // RT-39813 When closing a window as the result of a global right-click
         //          mouse event outside the bounds of the window, using an immediate

@@ -151,6 +151,38 @@ gst_type_find_suggest (GstTypeFind * find, guint probability, GstCaps * caps)
 }
 
 /**
+ * gst_type_find_suggest_empty_simple:
+ * @find: The #GstTypeFind object the function was called with
+ * @probability: The probability in percent that the suggestion is right
+ * @media_type: the media type of the suggested caps
+ *
+ * If a #GstTypeFindFunction calls this function it suggests caps of the
+ * given @media_type with the given @probability.
+ *
+ * This function is similar to gst_type_find_suggest_simple(), but uses
+ * a #GstCaps with no fields.
+ *
+ * Since: 1.20
+ */
+void
+gst_type_find_suggest_empty_simple (GstTypeFind * find,
+    guint probability, const char *media_type)
+{
+  GstCaps *caps;
+
+  g_return_if_fail (find->suggest != NULL);
+  g_return_if_fail (probability <= 100);
+  g_return_if_fail (media_type != NULL);
+
+  caps = gst_caps_new_empty_simple (media_type);
+
+  g_return_if_fail (gst_caps_is_fixed (caps));
+
+  find->suggest (find->data, probability, caps);
+  gst_caps_unref (caps);
+}
+
+/**
  * gst_type_find_suggest_simple:
  * @find: The #GstTypeFind object the function was called with
  * @probability: The probability in percent that the suggestion is right
@@ -158,7 +190,8 @@ gst_type_find_suggest (GstTypeFind * find, guint probability, GstCaps * caps)
  * @fieldname: (allow-none): first field of the suggested caps, or %NULL
  * @...: additional arguments to the suggested caps in the same format as the
  *     arguments passed to gst_structure_new() (ie. triplets of field name,
- *     field GType and field value)
+ *     field GType and field value).  If @fieldname is %NULL, this list
+ *     must be exactly one %NULL.
  *
  * If a #GstTypeFindFunction calls this function it suggests the caps with the
  * given probability. A #GstTypeFindFunction may supply different suggestions

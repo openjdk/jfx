@@ -95,7 +95,6 @@ public class ShapeViewOrderLeakTest {
         });
         for (int i = 0; i < 10; i++) {
             System.gc();
-            System.runFinalization();
             if (shapeWeakRef.get() == null) {
                 break;
             }

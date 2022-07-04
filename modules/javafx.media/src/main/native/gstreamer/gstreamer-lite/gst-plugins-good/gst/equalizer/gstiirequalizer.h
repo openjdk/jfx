@@ -23,6 +23,12 @@
 
 #include <gst/audio/gstaudiofilter.h>
 
+void equalizer_element_init (GstPlugin * plugin);
+
+GST_ELEMENT_REGISTER_DECLARE (equalizer_nbands);
+GST_ELEMENT_REGISTER_DECLARE (equalizer_3bands);
+GST_ELEMENT_REGISTER_DECLARE (equalizer_10bands);
+
 typedef struct _GstIirEqualizer GstIirEqualizer;
 typedef struct _GstIirEqualizerClass GstIirEqualizerClass;
 typedef struct _GstIirEqualizerBand GstIirEqualizerBand;

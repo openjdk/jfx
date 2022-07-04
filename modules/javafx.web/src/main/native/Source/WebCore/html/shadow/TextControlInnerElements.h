@@ -40,7 +40,7 @@ public:
 private:
     TextControlInnerContainer(Document&);
     RenderPtr<RenderElement> createElementRenderer(RenderStyle&&, const RenderTreePosition&) override;
-    Optional<Style::ElementStyle> resolveCustomStyle(const RenderStyle& parentStyle, const RenderStyle* shadowHostStyle) override;
+    std::optional<Style::ElementStyle> resolveCustomStyle(const RenderStyle& parentStyle, const RenderStyle* shadowHostStyle) override;
 };
 
 class TextControlInnerElement final : public HTMLDivElement {
@@ -50,7 +50,7 @@ public:
 
 private:
     TextControlInnerElement(Document&);
-    Optional<Style::ElementStyle> resolveCustomStyle(const RenderStyle& parentStyle, const RenderStyle* shadowHostStyle) override;
+    std::optional<Style::ElementStyle> resolveCustomStyle(const RenderStyle& parentStyle, const RenderStyle* shadowHostStyle) override;
 
     bool isMouseFocusable() const override { return false; }
 };
@@ -75,7 +75,7 @@ private:
 
     TextControlInnerTextElement(Document&);
     RenderPtr<RenderElement> createElementRenderer(RenderStyle&&, const RenderTreePosition&) override;
-    Optional<Style::ElementStyle> resolveCustomStyle(const RenderStyle& parentStyle, const RenderStyle* shadowHostStyle) override;
+    std::optional<Style::ElementStyle> resolveCustomStyle(const RenderStyle& parentStyle, const RenderStyle* shadowHostStyle) override;
     bool isMouseFocusable() const override { return false; }
     bool isTextControlInnerTextElement() const override { return true; }
 };
@@ -88,7 +88,7 @@ public:
 private:
     TextControlPlaceholderElement(Document&);
 
-    Optional<Style::ElementStyle> resolveCustomStyle(const RenderStyle& parentStyle, const RenderStyle* shadowHostStyle) override;
+    std::optional<Style::ElementStyle> resolveCustomStyle(const RenderStyle& parentStyle, const RenderStyle* shadowHostStyle) override;
 };
 
 class SearchFieldResultsButtonElement final : public HTMLDivElement {
@@ -101,9 +101,15 @@ public:
     bool willRespondToMouseClickEvents() override;
 #endif
 
+    bool canAdjustStyleForAppearance() const { return m_canAdjustStyleForAppearance; }
+
 private:
     SearchFieldResultsButtonElement(Document&);
     bool isMouseFocusable() const override { return false; }
+    std::optional<Style::ElementStyle> resolveCustomStyle(const RenderStyle& parentStyle, const RenderStyle* shadowHostStyle) override;
+    bool isSearchFieldResultsButtonElement() const override { return true; }
+
+    bool m_canAdjustStyleForAppearance { true };
 };
 
 class SearchFieldCancelButtonElement final : public HTMLDivElement {
@@ -119,12 +125,17 @@ public:
 private:
     SearchFieldCancelButtonElement(Document&);
     bool isMouseFocusable() const override { return false; }
-    Optional<Style::ElementStyle> resolveCustomStyle(const RenderStyle& parentStyle, const RenderStyle* shadowHostStyle) override;
+    std::optional<Style::ElementStyle> resolveCustomStyle(const RenderStyle& parentStyle, const RenderStyle* shadowHostStyle) override;
 };
 
 } // namespace WebCore
 
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::TextControlInnerTextElement)
     static bool isType(const WebCore::HTMLElement& element) { return element.isTextControlInnerTextElement(); }
+    static bool isType(const WebCore::Node& node) { return is<WebCore::HTMLElement>(node) && isType(downcast<WebCore::HTMLElement>(node)); }
+SPECIALIZE_TYPE_TRAITS_END()
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::SearchFieldResultsButtonElement)
+    static bool isType(const WebCore::HTMLElement& element) { return element.isSearchFieldResultsButtonElement(); }
     static bool isType(const WebCore::Node& node) { return is<WebCore::HTMLElement>(node) && isType(downcast<WebCore::HTMLElement>(node)); }
 SPECIALIZE_TYPE_TRAITS_END()

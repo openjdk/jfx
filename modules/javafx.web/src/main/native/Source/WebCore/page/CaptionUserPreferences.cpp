@@ -45,6 +45,7 @@
 #include <JavaScriptCore/JSCellInlines.h>
 #include <JavaScriptCore/StructureInlines.h>
 #include <wtf/Language.h>
+#include <wtf/unicode/Collator.h>
 
 namespace WebCore {
 
@@ -169,7 +170,7 @@ void CaptionUserPreferences::captionPreferencesChanged()
 
 Vector<String> CaptionUserPreferences::preferredLanguages() const
 {
-    Vector<String> languages = userPreferredLanguages();
+    Vector<String> languages = userPreferredLanguages(ShouldMinimizeLanguages::No);
     if (m_testingMode && !m_userPreferredLanguage.isEmpty())
         languages.insert(0, m_userPreferredLanguage);
 
@@ -204,7 +205,7 @@ static String trackDisplayName(TextTrack* track)
         return textTrackAutomaticMenuItemText();
 
     if (track->label().isEmpty() && track->validBCP47Language().isEmpty())
-        return textTrackNoLabelText();
+        return trackNoLabelText();
     if (!track->label().isEmpty())
         return track->label();
     return track->validBCP47Language();
@@ -237,8 +238,10 @@ Vector<RefPtr<TextTrack>> CaptionUserPreferences::sortedTrackListForMenu(TextTra
             tracksForMenu.append(track);
     }
 
-    std::sort(tracksForMenu.begin(), tracksForMenu.end(), [](auto& a, auto& b) {
-        return codePointCompare(trackDisplayName(a.get()), trackDisplayName(b.get())) < 0;
+    Collator collator;
+
+    std::sort(tracksForMenu.begin(), tracksForMenu.end(), [&] (auto& a, auto& b) {
+        return collator.collate(trackDisplayName(a.get()), trackDisplayName(b.get())) < 0;
     });
 
     if (kinds.contains(TextTrack::Kind::Subtitles) || kinds.contains(TextTrack::Kind::Captions) || kinds.contains(TextTrack::Kind::Descriptions)) {
@@ -252,7 +255,7 @@ Vector<RefPtr<TextTrack>> CaptionUserPreferences::sortedTrackListForMenu(TextTra
 static String trackDisplayName(AudioTrack* track)
 {
     if (track->label().isEmpty() && track->validBCP47Language().isEmpty())
-        return audioTrackNoLabelText();
+        return trackNoLabelText();
     if (!track->label().isEmpty())
         return track->label();
     return track->validBCP47Language();
@@ -279,8 +282,10 @@ Vector<RefPtr<AudioTrack>> CaptionUserPreferences::sortedTrackListForMenu(AudioT
         tracksForMenu.append(track);
     }
 
-    std::sort(tracksForMenu.begin(), tracksForMenu.end(), [](auto& a, auto& b) {
-        return codePointCompare(trackDisplayName(a.get()), trackDisplayName(b.get())) < 0;
+    Collator collator;
+
+    std::sort(tracksForMenu.begin(), tracksForMenu.end(), [&] (auto& a, auto& b) {
+        return collator.collate(trackDisplayName(a.get()), trackDisplayName(b.get())) < 0;
     });
 
     return tracksForMenu;
@@ -336,7 +341,7 @@ int CaptionUserPreferences::textTrackSelectionScore(TextTrack* track, HTMLMediaE
             if (offset)
                 return 0;
         } else {
-            languageList.append(defaultLanguage());
+            languageList.append(defaultLanguage(ShouldMinimizeLanguages::No));
 
             // Only enable a text track if the current audio track is NOT in the user's preferred language ...
             size_t offset = indexOfBestMatchingLanguageInList(audioTrackLanguage, languageList, exactMatch);
@@ -413,7 +418,7 @@ String CaptionUserPreferences::primaryAudioTrackLanguageOverride() const
 {
     if (!m_primaryAudioTrackLanguageOverride.isEmpty())
         return m_primaryAudioTrackLanguageOverride;
-    return defaultLanguage();
+    return defaultLanguage(ShouldMinimizeLanguages::No);
 }
 
 }

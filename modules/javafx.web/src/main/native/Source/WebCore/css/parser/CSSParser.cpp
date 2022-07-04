@@ -65,7 +65,7 @@ CSSParser::CSSParser(const CSSParserContext& context)
 
 CSSParser::~CSSParser() = default;
 
-void CSSParser::parseSheet(StyleSheetContents* sheet, const String& string, RuleParsing ruleParsing)
+void CSSParser::parseSheet(StyleSheetContents& sheet, const String& string, RuleParsing ruleParsing)
 {
     return CSSParserImpl::parseStyleSheet(string, m_context, sheet, ruleParsing);
 }
@@ -108,18 +108,6 @@ Color CSSParser::parseColor(const String& string, bool strict)
     return primitiveValue.color();
 }
 
-Color CSSParser::parseColorWorkerSafe(const String& string)
-{
-    if (auto color = CSSParserFastPaths::parseSimpleColor(string))
-        return *color;
-
-    CSSTokenizer tokenizer(string);
-    CSSParserTokenRange range(tokenizer.tokenRange());
-    range.consumeWhitespace();
-
-    return CSSPropertyParserHelpers::consumeColorWorkerSafe(range, CSSParserContext(HTMLStandardMode));
-}
-
 Color CSSParser::parseSystemColor(StringView string)
 {
     auto keyword = cssValueKeywordID(string);
@@ -128,23 +116,14 @@ Color CSSParser::parseSystemColor(StringView string)
     return RenderTheme::singleton().systemColor(keyword, { });
 }
 
-Optional<SRGBA<uint8_t>> CSSParser::parseNamedColor(StringView string)
+std::optional<SRGBA<uint8_t>> CSSParser::parseNamedColor(StringView string)
 {
     return CSSParserFastPaths::parseNamedColor(string);
 }
 
-Optional<SRGBA<uint8_t>> CSSParser::parseHexColor(StringView string)
+std::optional<SRGBA<uint8_t>> CSSParser::parseHexColor(StringView string)
 {
     return CSSParserFastPaths::parseHexColor(string);
-}
-
-Optional<CSSPropertyParserHelpers::FontRaw> CSSParser::parseFontWorkerSafe(const String& string, CSSParserMode cssParserMode)
-{
-    CSSTokenizer tokenizer(string);
-    CSSParserTokenRange range(tokenizer.tokenRange());
-    range.consumeWhitespace();
-
-    return CSSPropertyParserHelpers::consumeFontWorkerSafe(range, cssParserMode);
 }
 
 RefPtr<CSSValue> CSSParser::parseSingleValue(CSSPropertyID propertyID, const String& string, const CSSParserContext& context)
@@ -176,7 +155,7 @@ CSSParser::ParseResult CSSParser::parseValue(MutableStyleProperties& declaration
     return CSSParserImpl::parseValue(&declaration, propertyID, string, important, m_context);
 }
 
-Optional<CSSSelectorList> CSSParser::parseSelector(const String& string)
+std::optional<CSSSelectorList> CSSParser::parseSelector(const String& string)
 {
     return parseCSSSelector(CSSTokenizer(string).tokenRange(), m_context, nullptr);
 }
@@ -220,7 +199,10 @@ RefPtr<CSSValue> CSSParser::parseValueWithVariableReferences(CSSPropertyID propI
             return nullptr;
 
         for (auto& property : parsedProperties) {
-            if (property.id() == propID)
+            CSSPropertyID currentId = property.id();
+            if (CSSProperty::isDirectionAwareProperty(currentId))
+                currentId = CSSProperty::resolveDirectionAwareProperty(currentId, direction, writingMode);
+            if (currentId == propID)
                 return property.value();
         }
 
@@ -259,15 +241,6 @@ RefPtr<CSSValue> CSSParser::parseValueWithVariableReferences(CSSPropertyID propI
 Vector<double> CSSParser::parseKeyframeKeyList(const String& selector)
 {
     return CSSParserImpl::parseKeyframeKeyList(selector);
-}
-
-RefPtr<CSSValue> CSSParser::parseFontFaceDescriptor(CSSPropertyID propertyID, const String& propertyValue, const CSSParserContext& context)
-{
-    String string = makeString("@font-face { ", getPropertyNameString(propertyID), " : ", propertyValue, "; }");
-    RefPtr<StyleRuleBase> rule = parseRule(context, nullptr, string);
-    if (!rule || !rule->isFontFaceRule())
-        return nullptr;
-    return downcast<StyleRuleFontFace>(*rule.get()).properties().getPropertyCSSValue(propertyID);
 }
 
 }

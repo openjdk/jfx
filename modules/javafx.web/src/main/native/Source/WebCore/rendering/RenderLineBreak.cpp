@@ -26,20 +26,20 @@
 #include "FontMetrics.h"
 #include "HTMLElement.h"
 #include "HTMLWBRElement.h"
-#include "InlineElementBox.h"
 #include "InlineRunAndOffset.h"
 #include "LayoutIntegrationLineIterator.h"
 #include "LayoutIntegrationRunIterator.h"
+#include "LegacyInlineElementBox.h"
+#include "LegacyRootInlineBox.h"
 #include "LogicalSelectionOffsetCaches.h"
 #include "RenderBlock.h"
 #include "RenderView.h"
-#include "RootInlineBox.h"
 #include "SVGInlineTextBox.h"
 #include "VisiblePosition.h"
 #include <wtf/IsoMallocInlines.h>
 
 #if PLATFORM(IOS_FAMILY)
-#include "SelectionRect.h"
+#include "SelectionGeometry.h"
 #endif
 
 namespace WebCore {
@@ -76,25 +76,25 @@ LayoutUnit RenderLineBreak::lineHeight(bool firstLine, LineDirectionMode /*direc
     return m_cachedLineHeight;
 }
 
-int RenderLineBreak::baselinePosition(FontBaseline baselineType, bool firstLine, LineDirectionMode direction, LinePositionMode linePositionMode) const
+LayoutUnit RenderLineBreak::baselinePosition(FontBaseline baselineType, bool firstLine, LineDirectionMode direction, LinePositionMode linePositionMode) const
 {
     const RenderStyle& style = firstLine ? firstLineStyle() : this->style();
     const FontMetrics& fontMetrics = style.fontMetrics();
-    return fontMetrics.ascent(baselineType) + (lineHeight(firstLine, direction, linePositionMode) - fontMetrics.height()) / 2;
+    return LayoutUnit { (fontMetrics.ascent(baselineType) + (lineHeight(firstLine, direction, linePositionMode) - fontMetrics.height()) / 2).toInt() };
 }
 
-std::unique_ptr<InlineElementBox> RenderLineBreak::createInlineBox()
+std::unique_ptr<LegacyInlineElementBox> RenderLineBreak::createInlineBox()
 {
-    return makeUnique<InlineElementBox>(*this);
+    return makeUnique<LegacyInlineElementBox>(*this);
 }
 
-void RenderLineBreak::setInlineBoxWrapper(InlineElementBox* inlineBox)
+void RenderLineBreak::setInlineBoxWrapper(LegacyInlineElementBox* inlineBox)
 {
     ASSERT(!inlineBox || !m_inlineBoxWrapper);
     m_inlineBoxWrapper = inlineBox;
 }
 
-void RenderLineBreak::replaceInlineBoxWrapper(InlineElementBox& inlineBox)
+void RenderLineBreak::replaceInlineBoxWrapper(LegacyInlineElementBox& inlineBox)
 {
     deleteInlineBoxWrapper();
     setInlineBoxWrapper(&inlineBox);
@@ -178,7 +178,7 @@ void RenderLineBreak::updateFromStyle()
 }
 
 #if PLATFORM(IOS_FAMILY)
-void RenderLineBreak::collectSelectionRects(Vector<SelectionRect>& rects, unsigned, unsigned)
+void RenderLineBreak::collectSelectionGeometries(Vector<SelectionGeometry>& rects, unsigned, unsigned)
 {
     auto run = LayoutIntegration::runFor(*this);
 
@@ -220,7 +220,7 @@ void RenderLineBreak::collectSelectionRects(Vector<SelectionRect>& rects, unsign
         isLastOnLine = !containingBlock->containingBlock()->inlineBoxWrapper()->nextOnLineExists();
 
     bool isFixed = false;
-    IntRect absRect = localToAbsoluteQuad(FloatRect(rect), UseTransforms, &isFixed).enclosingBoundingBox();
+    auto absoluteQuad = localToAbsoluteQuad(FloatRect(rect), UseTransforms, &isFixed);
     bool boxIsHorizontal = !is<SVGInlineTextBox>(run->legacyInlineBox()) ? run->isHorizontal() : !style().isVerticalWritingMode();
     // If the containing block is an inline element, we want to check the inlineBoxWrapper orientation
     // to determine the orientation of the block. In this case we also use the inlineBoxWrapper to
@@ -232,7 +232,7 @@ void RenderLineBreak::collectSelectionRects(Vector<SelectionRect>& rects, unsign
         }
     }
 
-    rects.append(SelectionRect(absRect, run->direction(), extentsRect.x(), extentsRect.maxX(), extentsRect.maxY(), 0, run->isLineBreak(), isFirstOnLine, isLastOnLine, false, false, boxIsHorizontal, isFixed, containingBlock->isRubyText(), view().pageNumberForBlockProgressionOffset(absRect.x())));
+    rects.append(SelectionGeometry(absoluteQuad, HTMLElement::selectionRenderingBehavior(element()), run->direction(), extentsRect.x(), extentsRect.maxX(), extentsRect.maxY(), 0, run->isLineBreak(), isFirstOnLine, isLastOnLine, false, false, boxIsHorizontal, isFixed, containingBlock->isRubyText(), view().pageNumberForBlockProgressionOffset(absoluteQuad.enclosingBoundingBox().x())));
 }
 #endif
 

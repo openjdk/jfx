@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2020 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008-2021 Apple Inc. All Rights Reserved.
  * Copyright (C) 2012 Google Inc. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -101,7 +101,7 @@ public:
     void linkAndEvaluateModule(WorkerScriptFetcher&, const ScriptSourceCode&, String* returnedExceptionMessage = nullptr);
     MessageQueueWaitResult loadModuleSynchronously(WorkerScriptFetcher&, const ScriptSourceCode&);
 
-    void loadAndEvaluateModule(const URL& moduleURL, FetchOptions::Credentials, CompletionHandler<void(Optional<Exception>&&)>&&);
+    void loadAndEvaluateModule(const URL& moduleURL, FetchOptions::Credentials, CompletionHandler<void(std::optional<Exception>&&)>&&);
 
 protected:
     WorkerOrWorkletGlobalScope* globalScope() const { return m_globalScope; }
@@ -121,9 +121,8 @@ private:
     WorkerOrWorkletGlobalScope* m_globalScope;
     JSC::Strong<JSDOMGlobalObject> m_globalScopeWrapper;
     std::unique_ptr<WorkerConsoleClient> m_consoleClient;
-    mutable Lock m_scheduledTerminationMutex;
-    bool m_executionForbidden { false };
-    bool m_isTerminatingExecution { false };
+    mutable Lock m_scheduledTerminationLock;
+    bool m_isTerminatingExecution WTF_GUARDED_BY_LOCK(m_scheduledTerminationLock) { false };
 };
 
 } // namespace WebCore

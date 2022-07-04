@@ -31,7 +31,6 @@
 #include "ParsedContentType.h"
 #include "TextEncoding.h"
 #include <wtf/MainThread.h>
-#include <wtf/Optional.h>
 #include <wtf/RunLoop.h>
 #include <wtf/URL.h>
 #include <wtf/WorkQueue.h>
@@ -69,7 +68,7 @@ static WorkQueue& decodeQueue()
 
 static Result parseMediaType(const String& mediaType)
 {
-    if (Optional<ParsedContentType> parsedContentType = ParsedContentType::create(mediaType))
+    if (std::optional<ParsedContentType> parsedContentType = ParsedContentType::create(mediaType))
         return { parsedContentType->mimeType(), parsedContentType->charset(), parsedContentType->serialize(), { } };
     return { "text/plain"_s, "US-ASCII"_s, "text/plain;charset=US-ASCII"_s, { } };
 }
@@ -148,49 +147,44 @@ static std::unique_ptr<DecodeTask> createDecodeTask(const URL& url, const Schedu
     );
 }
 
-static bool decodeBase64(DecodeTask& task, Mode mode)
+static std::optional<Vector<uint8_t>> decodeBase64(const DecodeTask& task, Mode mode)
 {
-    Vector<char> buffer;
-    if (mode == Mode::ForgivingBase64) {
-        auto unescapedString = decodeURLEscapeSequences(task.encodedData.toStringWithoutCopying());
-        if (!base64Decode(unescapedString, buffer, Base64ValidatePadding | Base64IgnoreSpacesAndNewLines | Base64DiscardVerticalTab))
-            return false;
-    } else {
-        // First try base64url.
-        if (!base64URLDecode(task.encodedData.toStringWithoutCopying(), buffer)) {
-            // Didn't work, try unescaping and decoding as base64.
-            auto unescapedString = decodeURLEscapeSequences(task.encodedData.toStringWithoutCopying());
-            if (!base64Decode(unescapedString, buffer, Base64IgnoreSpacesAndNewLines | Base64DiscardVerticalTab))
-                return false;
-        }
-    }
-    buffer.shrinkToFit();
-    task.result.data = WTFMove(buffer);
+    switch (mode) {
+    case Mode::ForgivingBase64:
+        return base64Decode(decodeURLEscapeSequences(task.encodedData), { Base64DecodeOptions::ValidatePadding, Base64DecodeOptions::IgnoreSpacesAndNewLines, Base64DecodeOptions::DiscardVerticalTab});
 
-    return true;
+    case Mode::Legacy:
+        // First try base64url.
+        if (auto decodedData = base64URLDecode(task.encodedData))
+            return decodedData;
+        // Didn't work, try unescaping and decoding as base64.
+        return base64Decode(decodeURLEscapeSequences(task.encodedData), { Base64DecodeOptions::IgnoreSpacesAndNewLines, Base64DecodeOptions::DiscardVerticalTab });
+    }
+
+    RELEASE_ASSERT_NOT_REACHED();
 }
 
-static void decodeEscaped(DecodeTask& task)
+static Vector<uint8_t> decodeEscaped(const DecodeTask& task)
 {
     TextEncoding encodingFromCharset(task.result.charset);
     auto& encoding = encodingFromCharset.isValid() ? encodingFromCharset : UTF8Encoding();
-    auto buffer = decodeURLEscapeSequencesAsData(task.encodedData, encoding);
-
-    buffer.shrinkToFit();
-    task.result.data = WTFMove(buffer);
+    return decodeURLEscapeSequencesAsData(task.encodedData, encoding);
 }
 
-static Optional<Result> decodeSynchronously(DecodeTask& task, Mode mode)
+static std::optional<Result> decodeSynchronously(DecodeTask& task, Mode mode)
 {
     if (!task.process())
-        return WTF::nullopt;
+        return std::nullopt;
 
     if (task.isBase64) {
-        if (!decodeBase64(task, mode))
-            return WTF::nullopt;
+        auto decodedData = decodeBase64(task, mode);
+        if (!decodedData)
+            return std::nullopt;
+        task.result.data = WTFMove(*decodedData);
     } else
-        decodeEscaped(task);
+        task.result.data = decodeEscaped(task);
 
+    task.result.data.shrinkToFit();
     return WTFMove(task.result);
 }
 
@@ -217,7 +211,7 @@ void decode(const URL& url, const ScheduleContext& scheduleContext, Mode mode, D
     });
 }
 
-Optional<Result> decode(const URL& url, Mode mode)
+std::optional<Result> decode(const URL& url, Mode mode)
 {
     ASSERT(url.protocolIsData());
 

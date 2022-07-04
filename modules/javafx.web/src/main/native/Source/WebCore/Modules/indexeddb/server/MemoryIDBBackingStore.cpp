@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,8 +26,6 @@
 #include "config.h"
 #include "MemoryIDBBackingStore.h"
 
-#if ENABLE(INDEXED_DATABASE)
-
 #include "IDBCursorInfo.h"
 #include "IDBGetAllRecordsData.h"
 #include "IDBGetRecordData.h"
@@ -35,7 +33,6 @@
 #include "IDBIndexInfo.h"
 #include "IDBIterateCursorData.h"
 #include "IDBKeyRangeData.h"
-#include "IDBSerializationContext.h"
 #include "Logging.h"
 #include "MemoryIndexCursor.h"
 #include "MemoryObjectStore.h"
@@ -50,7 +47,6 @@ constexpr uint64_t maxGeneratedKeyValue = 0x20000000000000;
 MemoryIDBBackingStore::MemoryIDBBackingStore(PAL::SessionID sessionID, const IDBDatabaseIdentifier& identifier)
     : m_identifier(identifier)
     , m_sessionID(sessionID)
-    , m_serializationContext(IDBSerializationContext::getOrCreateIDBSerializationContext(sessionID))
 {
 }
 
@@ -63,6 +59,11 @@ IDBError MemoryIDBBackingStore::getOrEstablishDatabaseInfo(IDBDatabaseInfo& info
 
     info = *m_databaseInfo;
     return IDBError { };
+}
+
+uint64_t MemoryIDBBackingStore::databaseVersion()
+{
+    return m_databaseInfo ? m_databaseInfo->version() : 0;
 }
 
 void MemoryIDBBackingStore::setDatabaseInfo(const IDBDatabaseInfo& info)
@@ -613,11 +614,6 @@ RefPtr<MemoryObjectStore> MemoryIDBBackingStore::takeObjectStoreByIdentifier(uin
     return objectStoreByIdentifier;
 }
 
-IDBSerializationContext& MemoryIDBBackingStore::serializationContext()
-{
-    return m_serializationContext.get();
-}
-
 IDBObjectStoreInfo* MemoryIDBBackingStore::infoForObjectStore(uint64_t objectStoreIdentifier)
 {
     ASSERT(m_databaseInfo);
@@ -635,5 +631,3 @@ void MemoryIDBBackingStore::close()
 
 } // namespace IDBServer
 } // namespace WebCore
-
-#endif // ENABLE(INDEXED_DATABASE)

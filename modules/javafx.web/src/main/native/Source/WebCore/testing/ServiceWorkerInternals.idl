@@ -30,7 +30,9 @@
     LegacyNoInterfaceObject,
 ] interface ServiceWorkerInternals {
     undefined setOnline(boolean isOnline);
-    Promise<Response> waitForFetchEventToFinish(FetchEvent event);
+    undefined terminate();
+
+    Promise<FetchResponse> waitForFetchEventToFinish(FetchEvent event);
     [CallWith=ScriptExecutionContext] FetchEvent createBeingDispatchedFetchEvent();
     [CallWith=ScriptExecutionContext] FetchResponse createOpaqueWithBlobBodyResponse();
 
@@ -40,4 +42,6 @@
     readonly attribute boolean isThrottleable;
 
     readonly attribute long processIdentifier;
+
+    Promise<boolean> lastNavigationWasAppInitiated();
 };

@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2011, Google Inc. All rights reserved.
+ * Copyright (C) 2020-2021, Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,31 +26,45 @@
 #pragma once
 
 #include "AudioDestinationNode.h"
+#include "AudioIOCallback.h"
 
 namespace WebCore {
 
+class AudioContext;
 class AudioDestination;
 
-class DefaultAudioDestinationNode final : public AudioDestinationNode {
+class DefaultAudioDestinationNode final : public AudioDestinationNode, public AudioIOCallback {
     WTF_MAKE_ISO_ALLOCATED(DefaultAudioDestinationNode);
 public:
-    static Ref<DefaultAudioDestinationNode> create(BaseAudioContext& context, Optional<float> sampleRate = WTF::nullopt)
-    {
-        return adoptRef(*new DefaultAudioDestinationNode(context, sampleRate));
-    }
+    explicit DefaultAudioDestinationNode(AudioContext&, std::optional<float> sampleRate = std::nullopt);
+    ~DefaultAudioDestinationNode();
 
-    virtual ~DefaultAudioDestinationNode();
+    AudioContext& context();
+    const AudioContext& context() const;
 
     unsigned framesPerBuffer() const;
 
-    void startRendering(CompletionHandler<void(Optional<Exception>&&)>&&) final;
+    void startRendering(CompletionHandler<void(std::optional<Exception>&&)>&&) final;
+    void resume(CompletionHandler<void(std::optional<Exception>&&)>&&);
+    void suspend(CompletionHandler<void(std::optional<Exception>&&)>&&);
+    void close(CompletionHandler<void()>&&);
+
+    void setMuted(bool muted) { m_muted = muted; }
+    bool isPlayingAudio() const { return m_isEffectivelyPlayingAudio; }
 
 private:
-    DefaultAudioDestinationNode(BaseAudioContext&, Optional<float>);
-
     void createDestination();
     void clearDestination();
     void recreateDestination();
+
+    // AudioIOCallback
+    // The audio hardware calls render() to get the next render quantum of audio into destinationBus.
+    // It will optionally give us local/live audio input in sourceBus (if it's not 0).
+    void render(AudioBus* sourceBus, AudioBus* destinationBus, size_t numberOfFrames, const AudioIOPosition& outputPosition) final;
+    void isPlayingDidChange() final;
+
+    void setIsSilent(bool);
+    void updateIsEffectivelyPlayingAudio();
 
     Function<void(Function<void()>&&)> dispatchToRenderThreadFunction();
 
@@ -60,17 +75,16 @@ private:
     bool requiresTailProcessing() const final { return false; }
 
     void enableInput(const String& inputDeviceId) final;
-    void resume(CompletionHandler<void(Optional<Exception>&&)>&&) final;
-    void suspend(CompletionHandler<void(Optional<Exception>&&)>&&) final;
     void restartRendering() final;
-    void close(CompletionHandler<void()>&&) final;
     unsigned maxChannelCount() const final;
-    bool isPlaying() final;
 
     RefPtr<AudioDestination> m_destination;
-    bool m_wasDestinationStarted { false };
     String m_inputDeviceId;
     unsigned m_numberOfInputChannels { 0 };
+    bool m_wasDestinationStarted { false };
+    bool m_isEffectivelyPlayingAudio { false };
+    bool m_isSilent { true };
+    bool m_muted { false };
 };
 
 } // namespace WebCore

@@ -1,15 +1,17 @@
+-internal-direct-focus
+-internal-modal-dialog
 -khtml-drag
 -webkit-any
 -webkit-any-link, PseudoClassAnyLinkDeprecated, PseudoElementUnknown
 -webkit-autofill
 -webkit-autofill-strong-password
 -webkit-autofill-strong-password-viewable
--webkit-direct-focus
 -webkit-drag
 -webkit-full-page-media
 active
 after, PseudoClassUnknown, PseudoElementAfter
 any-link
+autofill
 before, PseudoClassUnknown, PseudoElementBefore
 checked
 corner-present
@@ -31,6 +33,7 @@ first-of-type
 focus
 focus-visible
 focus-within
+has
 #if ENABLE(ATTACHMENT_ELEMENT)
 has-attachment
 #endif
@@ -90,5 +93,12 @@ picture-in-picture
 #if ENABLE(VIDEO)
 future
 past
+playing
+paused
+seeking
+buffering
+stalled
+muted
+volume-locked
 #endif
 

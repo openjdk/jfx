@@ -41,7 +41,6 @@
 #include "FrameView.h"
 #include "HTMLParserIdioms.h"
 #include "HostWindow.h"
-#include "InlineTextBox.h"
 #include "NotImplemented.h"
 #include "Range.h"
 #include "RenderListItem.h"
@@ -244,11 +243,8 @@ static guint accessibilityObjectLength(const AccessibilityObject* object)
     // Technologies, we need to have a way to measure their length
     // for those cases when it's needed to take it into account
     // separately (as in getAccessibilityObjectForOffset)
-    RenderObject* renderer = object->renderer();
-    if (is<RenderListMarker>(renderer)) {
-        auto& marker = downcast<RenderListMarker>(*renderer);
-        return marker.text().length() + marker.suffix().length();
-    }
+    if (auto renderer = object->renderer(); is<RenderListMarker>(renderer))
+        return downcast<RenderListMarker>(*renderer).textWithSuffix().length();
 
     return 0;
 }
@@ -408,9 +404,9 @@ static void getSelectionOffsetsForObject(AccessibilityObject* coreObject, Visibl
 
     // Set values for start offsets and calculate initial range length.
     // These values might be adjusted later to cover special cases.
-    startOffset = webCoreOffsetToAtkOffset(coreObject, characterCount(rangeInParent, TextIteratorEmitsCharactersBetweenAllVisiblePositions));
+    startOffset = webCoreOffsetToAtkOffset(coreObject, characterCount(rangeInParent, TextIteratorBehavior::EmitsCharactersBetweenAllVisiblePositions));
     auto nodeRange = *makeSimpleRange(nodeRangeStart, nodeRangeEnd);
-    int rangeLength = characterCount(nodeRange, TextIteratorEmitsCharactersBetweenAllVisiblePositions);
+    int rangeLength = characterCount(nodeRange, TextIteratorBehavior::EmitsCharactersBetweenAllVisiblePositions);
 
     // Special cases that are only relevant when working with *_END boundaries.
     if (selection.affinity() == Affinity::Upstream) {
@@ -462,7 +458,7 @@ static gchar* webkitAccessibleTextGetText(AtkText* text, gint startOffset, gint 
     if (coreObject->roleValue() == AccessibilityRole::ListItem) {
         RenderObject* objRenderer = coreObject->renderer();
         if (is<RenderListItem>(objRenderer)) {
-            String markerText = downcast<RenderListItem>(*objRenderer).markerTextWithSuffix();
+            String markerText = downcast<RenderListItem>(*objRenderer).markerTextWithSuffix().toString();
             ret = objRenderer->style().direction() == TextDirection::LTR ? markerText + ret : ret + markerText;
             if (endOffset == -1)
                 actualEndOffset = ret.length() + markerText.length();

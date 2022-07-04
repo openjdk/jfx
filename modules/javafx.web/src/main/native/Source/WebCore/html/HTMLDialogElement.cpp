@@ -25,6 +25,8 @@
 
 #include "config.h"
 #include "HTMLDialogElement.h"
+#include "EventLoop.h"
+#include "EventNames.h"
 
 #include "HTMLNames.h"
 #include <wtf/IsoMallocInlines.h>
@@ -40,28 +42,13 @@ HTMLDialogElement::HTMLDialogElement(const QualifiedName& tagName, Document& doc
 {
 }
 
-bool HTMLDialogElement::isOpen() const
-{
-    return m_isOpen;
-}
-
-const String& HTMLDialogElement::returnValue()
-{
-    return m_returnValue;
-}
-
-void HTMLDialogElement::setReturnValue(String&& returnValue)
-{
-    m_returnValue = WTFMove(returnValue);
-}
-
 void HTMLDialogElement::show()
 {
     // If the element already has an open attribute, then return.
     if (isOpen())
         return;
 
-    toggleOpen();
+    setBooleanAttribute(openAttr, true);
 }
 
 ExceptionOr<void> HTMLDialogElement::showModal()
@@ -74,34 +61,48 @@ ExceptionOr<void> HTMLDialogElement::showModal()
     if (!isConnected())
         return Exception { InvalidStateError };
 
-    toggleOpen();
+    setBooleanAttribute(openAttr, true);
+
+    m_isModal = true;
+
+    if (!isInTopLayer())
+        addToTopLayer();
+
+    // FIXME: Add steps 8 & 9 from spec. (webkit.org/b/227537)
+
     return { };
 }
 
-void HTMLDialogElement::close(const String& returnValue)
+void HTMLDialogElement::close(const String& result)
 {
     if (!isOpen())
         return;
 
-    toggleOpen();
-    if (!returnValue.isNull())
-        m_returnValue = returnValue;
+    setBooleanAttribute(openAttr, false);
+
+    m_isModal = false;
+
+    if (!result.isNull())
+        m_returnValue = result;
+
+    if (isInTopLayer())
+        removeFromTopLayer();
+
+    // FIXME: Add step 6 from spec. (webkit.org/b/227537)
+
+    document().eventLoop().queueTask(TaskSource::UserInteraction, [protectedThis = GCReachableRef { *this }] {
+        protectedThis->dispatchEvent(Event::create(eventNames().closeEvent, Event::CanBubble::No, Event::IsCancelable::No));
+    });
 }
 
-void HTMLDialogElement::parseAttribute(const QualifiedName& name, const AtomString& value)
+void HTMLDialogElement::queueCancelTask()
 {
-    if (name == HTMLNames::openAttr) {
-        m_isOpen = !value.isNull();
-        return;
-    }
-
-    HTMLElement::parseAttribute(name, value);
-}
-
-void HTMLDialogElement::toggleOpen()
-{
-    m_isOpen = !m_isOpen;
-    setAttributeWithoutSynchronization(HTMLNames::openAttr, m_isOpen ? emptyAtom() : nullAtom());
+    document().eventLoop().queueTask(TaskSource::UserInteraction, [protectedThis = GCReachableRef { *this }] {
+        auto cancelEvent = Event::create(eventNames().cancelEvent, Event::CanBubble::No, Event::IsCancelable::Yes);
+        protectedThis->dispatchEvent(cancelEvent);
+        if (!cancelEvent->defaultPrevented())
+            protectedThis->close(nullString());
+    });
 }
 
 }

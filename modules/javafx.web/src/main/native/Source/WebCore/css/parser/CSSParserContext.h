@@ -26,28 +26,26 @@
 #pragma once
 
 #include "CSSParserMode.h"
+#include "CSSPropertyNames.h"
 #include "StyleRuleType.h"
 #include "TextEncoding.h"
 #include <wtf/HashFunctions.h>
-#include <wtf/Optional.h>
+#include <wtf/Hasher.h>
 #include <wtf/URL.h>
-#include <wtf/URLHash.h>
-#include <wtf/text/StringHash.h>
 
 namespace WebCore {
 
 class Document;
 
+struct ResolvedURL;
+
 struct CSSParserContext {
-    WTF_MAKE_FAST_ALLOCATED;
-public:
-    CSSParserContext(CSSParserMode, const URL& baseURL = URL());
-    WEBCORE_EXPORT CSSParserContext(const Document&, const URL& baseURL = URL(), const String& charset = emptyString());
+    WTF_MAKE_STRUCT_FAST_ALLOCATED;
 
     URL baseURL;
     String charset;
     CSSParserMode mode { HTMLStandardMode };
-    Optional<StyleRuleType> enclosingRuleType;
+    std::optional<StyleRuleType> enclosingRuleType;
     bool isHTMLDocument { false };
 
     // This is only needed to support getMatchedCSSRules.
@@ -58,11 +56,15 @@ public:
 
     // Settings.
     bool aspectRatioEnabled { false };
+    bool colorContrastEnabled { false };
     bool colorFilterEnabled { false };
     bool colorMixEnabled { false };
     bool constantPropertiesEnabled { false };
+    bool containmentEnabled { false };
+    bool counterStyleAtRulesEnabled { false };
+    bool counterStyleAtRuleImageSymbolsEnabled { false };
+    bool cssColor4 { false };
     bool deferredCSSParserEnabled { false };
-    bool enforcesCSSMIMETypeInNoQuirksMode { true };
     bool individualTransformPropertiesEnabled { false };
 #if ENABLE(OVERFLOW_SCROLLING_TOUCH)
     bool legacyOverflowScrollingTouchEnabled { false };
@@ -79,74 +81,39 @@ public:
 #endif
     bool useLegacyBackgroundSizeShorthandBehavior { false };
     bool focusVisibleEnabled { false };
+    bool hasPseudoClassEnabled { false };
+    bool cascadeLayersEnabled { false };
 
     // RuntimeEnabledFeatures.
 #if ENABLE(ATTACHMENT_ELEMENT)
     bool attachmentEnabled { false };
 #endif
 
-    URL completeURL(const String& url) const;
+    bool overflowClipEnabled { false };
+
+    CSSParserContext(CSSParserMode, const URL& baseURL = URL());
+    WEBCORE_EXPORT CSSParserContext(const Document&, const URL& baseURL = URL(), const String& charset = emptyString());
+    bool isPropertyRuntimeDisabled(CSSPropertyID) const;
+    ResolvedURL completeURL(const String&) const;
 };
 
 bool operator==(const CSSParserContext&, const CSSParserContext&);
 inline bool operator!=(const CSSParserContext& a, const CSSParserContext& b) { return !(a == b); }
 
+void add(Hasher&, const CSSParserContext&);
+
 WEBCORE_EXPORT const CSSParserContext& strictCSSParserContext();
 
 struct CSSParserContextHash {
-    static unsigned hash(const CSSParserContext& key)
-    {
-        // FIXME: Convert this to use WTF::Hasher.
-
-        unsigned hash = 0;
-        if (!key.baseURL.isNull())
-            hash ^= WTF::URLHash::hash(key.baseURL);
-        if (!key.charset.isEmpty())
-            hash ^= StringHash::hash(key.charset);
-
-        unsigned bits = key.isHTMLDocument                  << 0
-            & key.hasDocumentSecurityOrigin                 << 1
-            & key.isContentOpaque                           << 2
-            & key.useSystemAppearance                       << 3
-            & key.aspectRatioEnabled                        << 4
-            & key.colorFilterEnabled                        << 5
-            & key.colorMixEnabled                           << 6
-            & key.constantPropertiesEnabled                 << 7
-            & key.deferredCSSParserEnabled                  << 8
-            & key.enforcesCSSMIMETypeInNoQuirksMode         << 9
-            & key.individualTransformPropertiesEnabled      << 10
-#if ENABLE(OVERFLOW_SCROLLING_TOUCH)
-            & key.legacyOverflowScrollingTouchEnabled       << 11
-#endif
-            & key.overscrollBehaviorEnabled                 << 12
-            & key.relativeColorSyntaxEnabled                << 13
-            & key.scrollBehaviorEnabled                     << 14
-            & key.springTimingFunctionEnabled               << 15
-#if ENABLE(TEXT_AUTOSIZING)
-            & key.textAutosizingEnabled                     << 16
-#endif
-#if ENABLE(CSS_TRANSFORM_STYLE_OPTIMIZED_3D)
-            & key.transformStyleOptimized3DEnabled          << 17
-#endif
-            & key.useLegacyBackgroundSizeShorthandBehavior  << 18
-            & key.focusVisibleEnabled                       << 19
-#if ENABLE(ATTACHMENT_ELEMENT)
-            & key.attachmentEnabled                         << 20
-#endif
-            & key.mode                                      << 21; // Keep this last.
-        hash ^= WTF::intHash(bits);
-        return hash;
-    }
-    static bool equal(const CSSParserContext& a, const CSSParserContext& b)
-    {
-        return a == b;
-    }
+    static unsigned hash(const CSSParserContext& context) { return computeHash(context); }
+    static bool equal(const CSSParserContext& a, const CSSParserContext& b) { return a == b; }
     static const bool safeToCompareToEmptyOrDeleted = false;
 };
 
 } // namespace WebCore
 
 namespace WTF {
+
 template<> struct HashTraits<WebCore::CSSParserContext> : GenericHashTraits<WebCore::CSSParserContext> {
     static void constructDeletedValue(WebCore::CSSParserContext& slot) { new (NotNull, &slot.baseURL) URL(WTF::HashTableDeletedValue); }
     static bool isDeletedValue(const WebCore::CSSParserContext& value) { return value.baseURL.isHashTableDeletedValue(); }

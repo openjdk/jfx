@@ -46,6 +46,7 @@ enum
 
 struct _GstVideoSinkPrivate
 {
+  GstVideoInfo info;
   gboolean show_preroll_frame;  /* ATOMIC */
 };
 
@@ -78,59 +79,88 @@ static void gst_video_sink_set_property (GObject * object, guint prop_id,
 static void gst_video_sink_get_property (GObject * object, guint prop_id,
     GValue * value, GParamSpec * pspec);
 
+static GstStateChangeReturn gst_video_sink_change_state (GstElement * element,
+    GstStateChange transition);
 static GstFlowReturn gst_video_sink_show_preroll_frame (GstBaseSink * bsink,
     GstBuffer * buf);
 static GstFlowReturn gst_video_sink_show_frame (GstBaseSink * bsink,
     GstBuffer * buf);
+static gboolean gst_video_sink_set_caps (GstBaseSink * bsink, GstCaps * caps);
+static void gst_video_sink_get_times (GstBaseSink * bsink, GstBuffer * buffer,
+    GstClockTime * start, GstClockTime * end);
 
 /**
  * gst_video_sink_center_rect:
  * @src: the #GstVideoRectangle describing the source area
  * @dst: the #GstVideoRectangle describing the destination area
- * @result: a pointer to a #GstVideoRectangle which will receive the result area
+ * @result: (out caller-allocates): a pointer to a #GstVideoRectangle which will receive the result area
  * @scaling: a #gboolean indicating if scaling should be applied or not
  *
- * Takes @src rectangle and position it at the center of @dst rectangle with or
- * without @scaling. It handles clipping if the @src rectangle is bigger than
- * the @dst one and @scaling is set to FALSE.
+ * Deprecated: 1.20: Use gst_video_center_rect() instead.
  */
 void
 gst_video_sink_center_rect (GstVideoRectangle src, GstVideoRectangle dst,
     GstVideoRectangle * result, gboolean scaling)
 {
+  gst_video_center_rect (&src, &dst, result, scaling);
+}
+
+/**
+ * gst_video_center_rect:
+ * @src: a pointer to #GstVideoRectangle describing the source area
+ * @dst: a pointer to #GstVideoRectangle describing the destination area
+ * @result: (out caller-allocates): a pointer to a #GstVideoRectangle which will receive the result area
+ * @scaling: a #gboolean indicating if scaling should be applied or not
+ *
+ * Takes @src rectangle and position it at the center of @dst rectangle with or
+ * without @scaling. It handles clipping if the @src rectangle is bigger than
+ * the @dst one and @scaling is set to FALSE.
+ *
+ * Since: 1.20
+ */
+void
+gst_video_center_rect (const GstVideoRectangle * src,
+    const GstVideoRectangle * dst, GstVideoRectangle * result, gboolean scaling)
+{
+  g_return_if_fail (src != NULL);
+  g_return_if_fail (dst != NULL);
   g_return_if_fail (result != NULL);
 
   if (!scaling) {
-    result->w = MIN (src.w, dst.w);
-    result->h = MIN (src.h, dst.h);
-    result->x = dst.x + (dst.w - result->w) / 2;
-    result->y = dst.y + (dst.h - result->h) / 2;
+    result->w = MIN (src->w, dst->w);
+    result->h = MIN (src->h, dst->h);
+    result->x = dst->x + (dst->w - result->w) / 2;
+    result->y = dst->y + (dst->h - result->h) / 2;
   } else {
     gdouble src_ratio, dst_ratio;
 
-    src_ratio = (gdouble) src.w / src.h;
-    dst_ratio = (gdouble) dst.w / dst.h;
+    g_return_if_fail (src->h != 0);
+    g_return_if_fail (dst->h != 0);
+
+    src_ratio = (gdouble) src->w / src->h;
+    dst_ratio = (gdouble) dst->w / dst->h;
 
     if (src_ratio > dst_ratio) {
-      result->w = dst.w;
-      result->h = dst.w / src_ratio;
-      result->x = dst.x;
-      result->y = dst.y + (dst.h - result->h) / 2;
+      result->w = dst->w;
+      result->h = dst->w / src_ratio;
+      result->x = dst->x;
+      result->y = dst->y + (dst->h - result->h) / 2;
     } else if (src_ratio < dst_ratio) {
-      result->w = dst.h * src_ratio;
-      result->h = dst.h;
-      result->x = dst.x + (dst.w - result->w) / 2;
-      result->y = dst.y;
+      result->w = dst->h * src_ratio;
+      result->h = dst->h;
+      result->x = dst->x + (dst->w - result->w) / 2;
+      result->y = dst->y;
     } else {
-      result->x = dst.x;
-      result->y = dst.y;
-      result->w = dst.w;
-      result->h = dst.h;
+      result->x = dst->x;
+      result->y = dst->y;
+      result->w = dst->w;
+      result->h = dst->h;
     }
   }
 
   GST_DEBUG ("source is %dx%d dest is %dx%d, result is %dx%d with x,y %dx%d",
-      src.w, src.h, dst.w, dst.h, result->w, result->h, result->x, result->y);
+      src->w, src->h, dst->w, dst->h,
+      result->w, result->h, result->x, result->y);
 }
 
 /* Initing stuff */
@@ -153,6 +183,7 @@ gst_video_sink_init (GstVideoSink * videosink)
 static void
 gst_video_sink_class_init (GstVideoSinkClass * klass)
 {
+  GstElementClass *element_class = (GstElementClass *) klass;
   GstBaseSinkClass *basesink_class = (GstBaseSinkClass *) klass;
   GObjectClass *gobject_class = (GObjectClass *) klass;
 
@@ -173,9 +204,77 @@ gst_video_sink_class_init (GstVideoSinkClass * klass)
           DEFAULT_SHOW_PREROLL_FRAME,
           G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_STRINGS));
 
+  element_class->change_state = GST_DEBUG_FUNCPTR (gst_video_sink_change_state);
+
   basesink_class->render = GST_DEBUG_FUNCPTR (gst_video_sink_show_frame);
   basesink_class->preroll =
       GST_DEBUG_FUNCPTR (gst_video_sink_show_preroll_frame);
+  basesink_class->set_caps = GST_DEBUG_FUNCPTR (gst_video_sink_set_caps);
+  basesink_class->get_times = GST_DEBUG_FUNCPTR (gst_video_sink_get_times);
+}
+
+static GstStateChangeReturn
+gst_video_sink_change_state (GstElement * element, GstStateChange transition)
+{
+  GstVideoSink *vsink;
+
+  vsink = GST_VIDEO_SINK_CAST (element);
+
+  switch (transition) {
+    case GST_STATE_CHANGE_READY_TO_PAUSED:
+      gst_video_info_init (&vsink->priv->info);
+      break;
+    default:
+      break;
+  }
+
+  return GST_ELEMENT_CLASS (parent_class)->change_state (element, transition);
+}
+
+static gboolean
+gst_video_sink_set_caps (GstBaseSink * bsink, GstCaps * caps)
+{
+  GstVideoSink *vsink;
+  GstVideoSinkClass *klass;
+  GstVideoInfo info;
+
+  vsink = GST_VIDEO_SINK_CAST (bsink);
+  klass = GST_VIDEO_SINK_GET_CLASS (vsink);
+
+  if (!gst_video_info_from_caps (&info, caps)) {
+    GST_ERROR_OBJECT (bsink, "Failed to parse caps %" GST_PTR_FORMAT, caps);
+    return FALSE;
+  }
+
+  GST_DEBUG_OBJECT (bsink, "Setting caps %" GST_PTR_FORMAT, caps);
+  vsink->priv->info = info;
+
+  if (klass->set_info)
+    return klass->set_info (vsink, caps, &vsink->priv->info);
+
+  return TRUE;
+}
+
+static void
+gst_video_sink_get_times (GstBaseSink * bsink, GstBuffer * buffer,
+    GstClockTime * start, GstClockTime * end)
+{
+  GstVideoSink *vsink;
+  GstClockTime timestamp;
+
+  vsink = GST_VIDEO_SINK_CAST (bsink);
+
+  timestamp = GST_BUFFER_DTS_OR_PTS (buffer);
+  if (GST_CLOCK_TIME_IS_VALID (timestamp)) {
+    *start = timestamp;
+    if (GST_BUFFER_DURATION_IS_VALID (buffer)) {
+      *end = timestamp + GST_BUFFER_DURATION (buffer);
+    } else if (vsink->priv->info.fps_n > 0) {
+      *end = timestamp +
+          gst_util_uint64_scale_int (GST_SECOND, vsink->priv->info.fps_d,
+          vsink->priv->info.fps_n);
+    }
+  }
 }
 
 static GstFlowReturn

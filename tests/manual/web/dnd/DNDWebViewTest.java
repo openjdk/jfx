@@ -44,7 +44,7 @@ public class DNDWebViewTest extends Application {
         final Button offlineButton = new Button("Offline test");
         final Button onlineButton = new Button("Online test");
         offlineButton.setOnAction(e -> webView.getEngine().load(getClass().getResource("drag.html").toExternalForm()));
-        onlineButton.setOnAction(e -> webView.getEngine().load("https://openjdk.java.net"));
+        onlineButton.setOnAction(e -> webView.getEngine().load("https://openjdk.org"));
 
         final Label instructions = new Label("Select a test and drag the images");
         final Label readTime = new Label("");

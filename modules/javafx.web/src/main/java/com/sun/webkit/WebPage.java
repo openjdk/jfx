@@ -841,7 +841,7 @@ public final class WebPage {
                                                 // for system DnD loop and not intereasted in
                                                 //intermediate mouse events that can change text selection.
                 && twkProcessMouseEvent(getPage(), me.getID(),
-                                        me.getButton(), me.getClickCount(),
+                                        me.getButton(), me.getButtonMask(), me.getClickCount(),
                                         me.getX(), me.getY(), me.getScreenX(), me.getScreenY(),
                                         me.isShiftDown(), me.isControlDown(), me.isAltDown(), me.isMetaDown(), me.isPopupTrigger(),
                                         me.getWhen() / 1000.0);
@@ -2681,7 +2681,7 @@ public final class WebPage {
                                               boolean shift, boolean ctrl,
                                               boolean alt, boolean meta, double when);
     private native boolean twkProcessMouseEvent(long pPage, int id,
-                                                int button, int clickCount,
+                                                int button, int buttonMask, int clickCount,
                                                 int x, int y, int sx, int sy,
                                                 boolean shift, boolean control, boolean alt, boolean meta,
                                                 boolean popupTrigger, double when);

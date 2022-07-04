@@ -29,6 +29,7 @@ if (ENABLE_VIDEO OR ENABLE_WEB_AUDIO)
         platform/graphics/gstreamer/WebKitAudioSinkGStreamer.cpp
         platform/graphics/gstreamer/WebKitWebSourceGStreamer.cpp
 
+        platform/graphics/gstreamer/eme/GStreamerEMEUtilities.cpp
         platform/graphics/gstreamer/eme/WebKitClearKeyDecryptorGStreamer.cpp
         platform/graphics/gstreamer/eme/WebKitCommonEncryptionDecryptorGStreamer.cpp
 
@@ -37,32 +38,35 @@ if (ENABLE_VIDEO OR ENABLE_WEB_AUDIO)
         platform/graphics/gstreamer/mse/GStreamerRegistryScannerMSE.cpp
         platform/graphics/gstreamer/mse/MediaPlayerPrivateGStreamerMSE.cpp
         platform/graphics/gstreamer/mse/MediaSourcePrivateGStreamer.cpp
-        platform/graphics/gstreamer/mse/PlaybackPipeline.cpp
+        platform/graphics/gstreamer/mse/MediaSourceTrackGStreamer.cpp
         platform/graphics/gstreamer/mse/SourceBufferPrivateGStreamer.cpp
+        platform/graphics/gstreamer/mse/TrackQueue.cpp
         platform/graphics/gstreamer/mse/WebKitMediaSourceGStreamer.cpp
 
-        platform/mediastream/libwebrtc/GStreamerVideoCommon.cpp
-        platform/mediastream/libwebrtc/GStreamerVideoDecoderFactory.cpp
-        platform/mediastream/libwebrtc/GStreamerVideoEncoder.cpp
-        platform/mediastream/libwebrtc/GStreamerVideoEncoderFactory.cpp
         platform/mediastream/libwebrtc/LibWebRTCAudioModule.cpp
-        platform/mediastream/libwebrtc/LibWebRTCProviderGStreamer.cpp
+
+        platform/mediastream/libwebrtc/gstreamer/GStreamerVideoCommon.cpp
+        platform/mediastream/libwebrtc/gstreamer/GStreamerVideoDecoderFactory.cpp
+        platform/mediastream/libwebrtc/gstreamer/GStreamerVideoEncoderFactory.cpp
+        platform/mediastream/libwebrtc/gstreamer/GStreamerVideoFrameLibWebRTC.cpp
+        platform/mediastream/libwebrtc/gstreamer/LibWebRTCProviderGStreamer.cpp
+        platform/mediastream/libwebrtc/gstreamer/RealtimeIncomingAudioSourceLibWebRTC.cpp
+        platform/mediastream/libwebrtc/gstreamer/RealtimeIncomingVideoSourceLibWebRTC.cpp
+        platform/mediastream/libwebrtc/gstreamer/RealtimeOutgoingAudioSourceLibWebRTC.cpp
+        platform/mediastream/libwebrtc/gstreamer/RealtimeOutgoingVideoSourceLibWebRTC.cpp
 
         platform/mediastream/gstreamer/GStreamerAudioCaptureSource.cpp
         platform/mediastream/gstreamer/GStreamerAudioCapturer.cpp
         platform/mediastream/gstreamer/GStreamerCaptureDeviceManager.cpp
         platform/mediastream/gstreamer/GStreamerCapturer.cpp
+        platform/mediastream/gstreamer/GStreamerDisplayCaptureDeviceManager.cpp
         platform/mediastream/gstreamer/GStreamerMediaStreamSource.cpp
         platform/mediastream/gstreamer/GStreamerVideoCaptureSource.cpp
         platform/mediastream/gstreamer/GStreamerVideoCapturer.cpp
-        platform/mediastream/gstreamer/GStreamerVideoFrameLibWebRTC.cpp
+        platform/mediastream/gstreamer/GStreamerVideoEncoder.cpp
         platform/mediastream/gstreamer/MockRealtimeAudioSourceGStreamer.cpp
         platform/mediastream/gstreamer/MockRealtimeVideoSourceGStreamer.cpp
-        platform/mediastream/gstreamer/RealtimeIncomingAudioSourceLibWebRTC.cpp
-        platform/mediastream/gstreamer/RealtimeIncomingVideoSourceLibWebRTC.cpp
-        platform/mediastream/gstreamer/RealtimeMediaSourceCenterLibWebRTC.cpp
-        platform/mediastream/gstreamer/RealtimeOutgoingAudioSourceLibWebRTC.cpp
-        platform/mediastream/gstreamer/RealtimeOutgoingVideoSourceLibWebRTC.cpp
+        platform/mediastream/gstreamer/RealtimeMediaSourceCenterGStreamer.cpp
     )
 
     list(APPEND WebCore_PRIVATE_FRAMEWORK_HEADERS
@@ -71,9 +75,9 @@ if (ENABLE_VIDEO OR ENABLE_WEB_AUDIO)
         platform/graphics/gstreamer/GUniquePtrGStreamer.h
         platform/graphics/gstreamer/MediaPlayerRequestInstallMissingPluginsCallback.h
 
-        platform/mediastream/libwebrtc/GStreamerVideoDecoderFactory.h
-        platform/mediastream/libwebrtc/GStreamerVideoEncoderFactory.h
-        platform/mediastream/libwebrtc/LibWebRTCProviderGStreamer.h
+        platform/mediastream/libwebrtc/gstreamer/GStreamerVideoDecoderFactory.h
+        platform/mediastream/libwebrtc/gstreamer/GStreamerVideoEncoderFactory.h
+        platform/mediastream/libwebrtc/gstreamer/LibWebRTCProviderGStreamer.h
     )
 
     if (USE_GSTREAMER_FULL)
@@ -182,14 +186,6 @@ if (ENABLE_ENCRYPTED_MEDIA)
     list(APPEND WebCore_SOURCES
         platform/graphics/gstreamer/eme/CDMFactoryGStreamer.cpp
         platform/graphics/gstreamer/eme/CDMProxyClearKey.cpp
-    )
-
-    list(APPEND WebCore_SYSTEM_INCLUDE_DIRECTORIES
-        ${LIBGCRYPT_INCLUDE_DIRS}
-    )
-
-    list(APPEND WebCore_LIBRARIES
-        ${LIBGCRYPT_LIBRARIES} -lgpg-error
     )
 
     if (ENABLE_THUNDER)

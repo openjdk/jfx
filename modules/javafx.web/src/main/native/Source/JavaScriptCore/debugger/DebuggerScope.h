@@ -36,7 +36,7 @@ class JSScope;
 class DebuggerScope final : public JSNonFinalObject {
 public:
     using Base = JSNonFinalObject;
-    static constexpr unsigned StructureFlags = Base::StructureFlags | OverridesGetOwnPropertySlot | OverridesGetOwnPropertyNames;
+    static constexpr unsigned StructureFlags = Base::StructureFlags | OverridesGetOwnPropertySlot | OverridesGetOwnPropertyNames | OverridesPut;
 
     template<typename CellType, SubspaceAccess mode>
     static IsoSubspace* subspaceFor(VM& vm)
@@ -47,8 +47,6 @@ public:
     JS_EXPORT_PRIVATE static DebuggerScope* create(VM& vm, JSScope* scope);
 
     DECLARE_VISIT_CHILDREN;
-    static String className(const JSObject*, VM&);
-    static String toStringName(const JSObject*, JSGlobalObject*);
     static bool getOwnPropertySlot(JSObject*, JSGlobalObject*, PropertyName, PropertySlot&);
     static bool put(JSCell*, JSGlobalObject*, PropertyName, JSValue, PutPropertySlot&);
     static bool deleteProperty(JSCell*, JSGlobalObject*, PropertyName, DeletePropertySlot&);

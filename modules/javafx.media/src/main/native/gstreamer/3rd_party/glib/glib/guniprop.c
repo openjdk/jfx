@@ -74,32 +74,32 @@
 
 
 
-#define ISALPHA(Type)   IS ((Type),             \
-                OR (G_UNICODE_LOWERCASE_LETTER, \
-                OR (G_UNICODE_UPPERCASE_LETTER, \
-                OR (G_UNICODE_TITLECASE_LETTER, \
-                OR (G_UNICODE_MODIFIER_LETTER,  \
-                OR (G_UNICODE_OTHER_LETTER,     0))))))
+#define ISALPHA(Type)   IS ((Type),                             \
+                            OR (G_UNICODE_LOWERCASE_LETTER,     \
+                            OR (G_UNICODE_UPPERCASE_LETTER,     \
+                            OR (G_UNICODE_TITLECASE_LETTER,     \
+                            OR (G_UNICODE_MODIFIER_LETTER,      \
+                            OR (G_UNICODE_OTHER_LETTER,         0))))))
 
-#define ISALDIGIT(Type) IS ((Type),             \
-                OR (G_UNICODE_DECIMAL_NUMBER,   \
-                OR (G_UNICODE_LETTER_NUMBER,    \
-                OR (G_UNICODE_OTHER_NUMBER,     \
-                OR (G_UNICODE_LOWERCASE_LETTER, \
-                OR (G_UNICODE_UPPERCASE_LETTER, \
-                OR (G_UNICODE_TITLECASE_LETTER, \
-                OR (G_UNICODE_MODIFIER_LETTER,  \
-                OR (G_UNICODE_OTHER_LETTER,     0)))))))))
+#define ISALDIGIT(Type) IS ((Type),                             \
+                            OR (G_UNICODE_DECIMAL_NUMBER,       \
+                            OR (G_UNICODE_LETTER_NUMBER,        \
+                            OR (G_UNICODE_OTHER_NUMBER,         \
+                            OR (G_UNICODE_LOWERCASE_LETTER,     \
+                            OR (G_UNICODE_UPPERCASE_LETTER,     \
+                            OR (G_UNICODE_TITLECASE_LETTER,     \
+                            OR (G_UNICODE_MODIFIER_LETTER,      \
+                            OR (G_UNICODE_OTHER_LETTER,         0)))))))))
 
-#define ISMARK(Type)    IS ((Type),             \
-                OR (G_UNICODE_NON_SPACING_MARK, \
-                OR (G_UNICODE_SPACING_MARK, \
-                OR (G_UNICODE_ENCLOSING_MARK,   0))))
+#define ISMARK(Type)    IS ((Type),                             \
+                            OR (G_UNICODE_NON_SPACING_MARK,     \
+                            OR (G_UNICODE_SPACING_MARK, \
+                            OR (G_UNICODE_ENCLOSING_MARK,       0))))
 
-#define ISZEROWIDTHTYPE(Type)   IS ((Type),         \
-                OR (G_UNICODE_NON_SPACING_MARK, \
-                OR (G_UNICODE_ENCLOSING_MARK,   \
-                OR (G_UNICODE_FORMAT,       0))))
+#define ISZEROWIDTHTYPE(Type)   IS ((Type),                     \
+                            OR (G_UNICODE_NON_SPACING_MARK,     \
+                            OR (G_UNICODE_ENCLOSING_MARK,       \
+                            OR (G_UNICODE_FORMAT,               0))))
 
 /**
  * g_unichar_isalnum:
@@ -421,8 +421,15 @@ g_unichar_iszerowidth (gunichar c)
   if (G_UNLIKELY (ISZEROWIDTHTYPE (TYPE (c))))
     return TRUE;
 
+  /* A few additional codepoints are zero-width:
+   *  - Part of the Hangul Jamo block covering medial/vowels/jungseong and
+   *    final/trailing_consonants/jongseong Jamo
+   *  - Jungseong and jongseong for Old Korean
+   *  - Zero-width space (U+200B)
+   */
   if (G_UNLIKELY ((c >= 0x1160 && c < 0x1200) ||
-      c == 0x200B))
+                  (c >= 0xD7B0 && c < 0xD800) ||
+                  c == 0x200B))
     return TRUE;
 
   return FALSE;
@@ -851,7 +858,7 @@ real_toupper (const gchar *str,
     /* i => LATIN CAPITAL LETTER I WITH DOT ABOVE */
     len += g_unichar_to_utf8 (0x130, out_buffer ? out_buffer + len : NULL);
   }
-      else if (c == 0x0345) /* COMBINING GREEK YPOGEGRAMMENI */
+      else if (c == 0x0345)     /* COMBINING GREEK YPOGEGRAMMENI */
   {
     /* Nasty, need to move it after other combining marks .. this would go away if
      * we normalized first.
@@ -1000,14 +1007,18 @@ real_tolower (const gchar *str,
       last = p;
       p = g_utf8_next_char (p);
 
-      if (locale_type == LOCALE_TURKIC && (c == 'I' ||
+      if (locale_type == LOCALE_TURKIC && (c == 'I' || c == 0x130 ||
                                            c == G_UNICHAR_FULLWIDTH_I))
   {
-          if (g_utf8_get_char (p) == 0x0307)
+          gboolean combining_dot = (c == 'I' || c == G_UNICHAR_FULLWIDTH_I) &&
+                                   g_utf8_get_char (p) == 0x0307;
+          if (combining_dot || c == 0x130)
             {
-              /* I + COMBINING DOT ABOVE => i (U+0069) */
+              /* I + COMBINING DOT ABOVE => i (U+0069)
+               * LATIN CAPITAL LETTER I WITH DOT ABOVE => i (U+0069) */
               len += g_unichar_to_utf8 (0x0069, out_buffer ? out_buffer + len : NULL);
-              p = g_utf8_next_char (p);
+              if (combining_dot)
+                p = g_utf8_next_char (p);
             }
           else
             {
@@ -1044,7 +1055,7 @@ real_tolower (const gchar *str,
           len += g_unichar_to_utf8 (g_unichar_tolower (c), out_buffer ? out_buffer + len : NULL);
           len += g_unichar_to_utf8 (0x0307, out_buffer ? out_buffer + len : NULL);
         }
-      else if (c == 0x03A3) /* GREEK CAPITAL LETTER SIGMA */
+      else if (c == 0x03A3)     /* GREEK CAPITAL LETTER SIGMA */
   {
     if ((max_len < 0 || p < str + max_len) && *p)
       {
@@ -1058,12 +1069,12 @@ real_tolower (const gchar *str,
          * The test here matches that in ICU.
          */
         if (ISALPHA (next_type)) /* Lu,Ll,Lt,Lm,Lo */
-        val = 0x3c3;    /* GREEK SMALL SIGMA */
+                val = 0x3c3;    /* GREEK SMALL SIGMA */
         else
-        val = 0x3c2;    /* GREEK SMALL FINAL SIGMA */
+                val = 0x3c2;    /* GREEK SMALL FINAL SIGMA */
       }
     else
-        val = 0x3c2;    /* GREEK SMALL FINAL SIGMA */
+            val = 0x3c2;        /* GREEK SMALL FINAL SIGMA */
 
     len += g_unichar_to_utf8 (val, out_buffer ? out_buffer + len : NULL);
   }
@@ -1499,6 +1510,17 @@ static const guint32 iso15924_tags[] =
     PACK ('D', 'i', 'a', 'k'), /* G_UNICODE_SCRIPT_DIVES_AKURU */
     PACK ('K', 'i', 't', 's'), /* G_UNICODE_SCRIPT_KHITAN_SMALL_SCRIPT */
     PACK ('Y', 'e', 'z', 'i'), /* G_UNICODE_SCRIPT_YEZIDI */
+
+  /* Unicode 14.0 additions */
+    PACK ('C', 'p', 'm', 'n'), /* G_UNICODE_SCRIPT_CYPRO_MINOAN */
+    PACK ('O', 'u', 'g', 'r'), /* G_UNICODE_SCRIPT_OLD_UYHUR */
+    PACK ('T', 'n', 's', 'a'), /* G_UNICODE_SCRIPT_TANGSA */
+    PACK ('T', 'o', 't', 'o'), /* G_UNICODE_SCRIPT_TOTO */
+    PACK ('V', 'i', 't', 'h'), /* G_UNICODE_SCRIPT_VITHKUQI */
+
+  /* not really a Unicode script, but part of ISO 15924 */
+    PACK ('Z', 'm', 't', 'h'), /* G_UNICODE_SCRIPT_MATH */
+
 #undef PACK
 };
 

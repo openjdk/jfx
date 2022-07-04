@@ -27,17 +27,18 @@ enum TextTrackMode { "disabled", "hidden", "showing" };
 enum TextTrackKind { "subtitles", "captions", "descriptions", "chapters", "metadata", "forced" };
 
 [
+    ActiveDOMObject,
     Conditional=VIDEO,
     ExportToWrappedFunction,
     GenerateIsReachable=ImplElementRoot,
-    JSCustomMarkFunction,
+    GenerateAddOpaqueRoot,
     SkipVTableValidation,
     Exposed=Window
 ] interface TextTrack : EventTarget {
     readonly attribute DOMString id;
     [ImplementedAs=kindForBindings] attribute TextTrackKind kind;
     readonly attribute DOMString label;
-    [ConditionallyReadWrite=MEDIA_SOURCE] attribute DOMString language;
+    [SettingsConditionallyReadWrite=MediaSource] attribute DOMString language;
     readonly attribute DOMString inBandMetadataTrackDispatchType;
 
     attribute TextTrackMode mode;
@@ -45,12 +46,12 @@ enum TextTrackKind { "subtitles", "captions", "descriptions", "chapters", "metad
     readonly attribute TextTrackCueList? cues;
     readonly attribute TextTrackCueList? activeCues;
 
-    [MayThrowException] undefined addCue(TextTrackCue cue);
-    [MayThrowException] undefined removeCue(TextTrackCue cue);
+    undefined addCue(TextTrackCue cue);
+    undefined removeCue(TextTrackCue cue);
 
     attribute EventHandler oncuechange;
 
     readonly attribute VTTRegionList regions;
     undefined addRegion(VTTRegion region);
-    [MayThrowException] undefined removeRegion(VTTRegion region);
+    undefined removeRegion(VTTRegion region);
 };

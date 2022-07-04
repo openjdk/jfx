@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -45,6 +45,8 @@
 #define HLS_PROP_GET_MIMETYPE   3
 #define HLS_VALUE_MIMETYPE_MP2T 1
 #define HLS_VALUE_MIMETYPE_MP3  2
+#define HLS_VALUE_MIMETYPE_FMP4 3
+#define HLS_VALUE_MIMETYPE_AAC  4
 
 
 //*************************************************************************************************
@@ -208,7 +210,6 @@ uint32_t CGstPipelineFactory::CreateSourceElement(CLocator* locator, GstElement*
             g_signal_connect (javaSource, "seek-data", G_CALLBACK (SourceSeekData), callbacks);
             g_signal_connect (javaSource, "close-connection", G_CALLBACK (SourceCloseConnection), callbacks);
             g_signal_connect (javaSource, "property", G_CALLBACK (SourceProperty), callbacks);
-            g_signal_connect (javaSource, "get-stream-size", G_CALLBACK (SourceGetStreamSize), callbacks);
 
             if (isRandomAccess)
                 g_signal_connect (javaSource, "read-block", G_CALLBACK (SourceReadBlock), callbacks);
@@ -220,6 +221,10 @@ uint32_t CGstPipelineFactory::CreateSourceElement(CLocator* locator, GstElement*
                 g_object_set (javaSource, "mimetype", CONTENT_TYPE_MP2T, NULL);
             else if (streamMimeType == HLS_VALUE_MIMETYPE_MP3)
                 g_object_set (javaSource, "mimetype", CONTENT_TYPE_MPA, NULL);
+            else if (streamMimeType == HLS_VALUE_MIMETYPE_FMP4)
+                g_object_set (javaSource, "mimetype", CONTENT_TYPE_FMP4, NULL);
+            else if (streamMimeType == HLS_VALUE_MIMETYPE_AAC)
+                g_object_set (javaSource, "mimetype", CONTENT_TYPE_AAC, NULL);
 
             g_object_set (javaSource,
                 "size", (gint64)locator->GetSizeHint(),
@@ -307,11 +312,6 @@ int CGstPipelineFactory::SourceProperty(GstElement *src, int prop, int value, gp
     return ((CStreamCallbacks*)data)->Property(prop, value);
 }
 
-int CGstPipelineFactory::SourceGetStreamSize(GstElement *src, gpointer data)
-{
-    return ((CStreamCallbacks*)data)->GetStreamSize();
-}
-
 void CGstPipelineFactory::SourceCloseConnection(GstElement *src, gpointer data)
 {
     CStreamCallbacks* callbacks = (CStreamCallbacks*)data;
@@ -322,7 +322,6 @@ void CGstPipelineFactory::SourceCloseConnection(GstElement *src, gpointer data)
     g_signal_handlers_disconnect_by_func (src, (void*)G_CALLBACK (SourceSeekData), callbacks);
     g_signal_handlers_disconnect_by_func (src, (void*)G_CALLBACK (SourceCloseConnection), callbacks);
     g_signal_handlers_disconnect_by_func (src, (void*)G_CALLBACK (SourceProperty), callbacks);
-    g_signal_handlers_disconnect_by_func (src, (void*)G_CALLBACK (SourceGetStreamSize), callbacks);
     delete callbacks;
 }
 
@@ -543,6 +542,11 @@ uint32_t CGstPipelineFactory::CreateHLSPipeline(GstElement* source, GstElement* 
         return CreateAVPipeline(source, "dshowwrapper", "dshowwrapper", true, "dshowwrapper", pVideoSink, pOptions, ppPipeline);
     else if (pOptions->GetStreamMimeType() == HLS_VALUE_MIMETYPE_MP3)
         return CreateAudioPipeline(source, "mpegaudioparse", "dshowwrapper", false, pOptions, ppPipeline);
+    else if (pOptions->GetStreamMimeType() == HLS_VALUE_MIMETYPE_AAC)
+        return CreateAudioPipeline(source, NULL, "dshowwrapper", false, pOptions, ppPipeline);
+    else if (pOptions->GetStreamMimeType() == HLS_VALUE_MIMETYPE_FMP4)
+        // Video decoder is loaded dynamically
+        return CreateAVPipeline(source, "qtdemux", "dshowwrapper", true, NULL, pVideoSink, pOptions, ppPipeline);
     else
         return ERROR_PLATFORM_UNSUPPORTED;
 #elif TARGET_OS_MAC
@@ -554,6 +558,10 @@ uint32_t CGstPipelineFactory::CreateHLSPipeline(GstElement* source, GstElement* 
         return CreateAVPipeline(source, "avmpegtsdemuxer", "avaudiodecoder", false, "avvideodecoder", pVideoSink, pOptions, ppPipeline);
     else if (pOptions->GetStreamMimeType() == HLS_VALUE_MIMETYPE_MP3)
         return CreateAudioPipeline(source, "mpegaudioparse", "avaudiodecoder", false, pOptions, ppPipeline);
+    else if (pOptions->GetStreamMimeType() == HLS_VALUE_MIMETYPE_AAC)
+        return CreateAudioPipeline(source, "aacparse", "avaudiodecoder", false, pOptions, ppPipeline);
+    else if (pOptions->GetStreamMimeType() == HLS_VALUE_MIMETYPE_FMP4)
+        return CreateAVPipeline(source, "qtdemux", "avaudiodecoder", true, "avvideodecoder", pVideoSink, pOptions, ppPipeline);
     else
         return ERROR_PLATFORM_UNSUPPORTED;
 #else

@@ -365,7 +365,7 @@ void EditorClientJava::handleKeyboardEvent(KeyboardEvent& evt)
     }
 }
 
-bool EditorClientJava::shouldDeleteRange(const Optional<SimpleRange>&)
+bool EditorClientJava::shouldDeleteRange(const std::optional<SimpleRange>&)
 {
     notImplemented();
     return true;
@@ -414,18 +414,18 @@ bool EditorClientJava::shouldEndEditing(const SimpleRange&)
     return true;
 }
 
-bool EditorClientJava::shouldInsertText(const String&, const Optional<SimpleRange>&, EditorInsertAction)
+bool EditorClientJava::shouldInsertText(const String&, const std::optional<SimpleRange>&, EditorInsertAction)
 {
     notImplemented();
     return true;
 }
 
-bool EditorClientJava::shouldChangeSelectedRange(const Optional<SimpleRange>&, const Optional<SimpleRange>&, Affinity, bool)
+bool EditorClientJava::shouldChangeSelectedRange(const std::optional<SimpleRange>&, const std::optional<SimpleRange>&, Affinity, bool)
 {
     return true;
 }
 
-bool EditorClientJava::shouldApplyStyle(const StyleProperties&, const Optional<SimpleRange>&)
+bool EditorClientJava::shouldApplyStyle(const StyleProperties&, const std::optional<SimpleRange>&)
 {
     return true;
 }
@@ -510,7 +510,7 @@ void EditorClientJava::redo()
     }
 }
 
-bool EditorClientJava::shouldInsertNode(Node&, const Optional<SimpleRange>&, EditorInsertAction)
+bool EditorClientJava::shouldInsertNode(Node&, const std::optional<SimpleRange>&, EditorInsertAction)
 {
     notImplemented();
     return true;
@@ -661,12 +661,12 @@ void EditorClientJava::clearUndoRedoOperations()
     m_redoStack.clear();
 }
 
-void EditorClientJava::getClientPasteboardData(const Optional<SimpleRange>&, Vector<String>&, Vector<RefPtr<SharedBuffer> >&)
+void EditorClientJava::getClientPasteboardData(const std::optional<SimpleRange>&, Vector<String>&, Vector<RefPtr<SharedBuffer> >&)
 {
     notImplemented();
 }
 
-void EditorClientJava::willWriteSelectionToPasteboard(const Optional<SimpleRange>&)
+void EditorClientJava::willWriteSelectionToPasteboard(const std::optional<SimpleRange>&)
 {
 }
 

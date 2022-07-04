@@ -26,8 +26,6 @@
 
 #pragma once
 
-#if ENABLE(INDEXED_DATABASE)
-
 #include <wtf/Variant.h>
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
@@ -46,7 +44,7 @@ enum class IDBKeyPathParseError {
 
 void IDBParseKeyPath(const String&, Vector<String>&, IDBKeyPathParseError&);
 IDBKeyPath isolatedCopy(const IDBKeyPath&);
-inline Optional<IDBKeyPath> isolatedCopy(const Optional<IDBKeyPath>& variant)
+inline std::optional<IDBKeyPath> isolatedCopy(const std::optional<IDBKeyPath>& variant)
 {
     if (!variant)
         return { };
@@ -58,5 +56,3 @@ String loggingString(const IDBKeyPath&);
 #endif
 
 } // namespace WebCore
-
-#endif

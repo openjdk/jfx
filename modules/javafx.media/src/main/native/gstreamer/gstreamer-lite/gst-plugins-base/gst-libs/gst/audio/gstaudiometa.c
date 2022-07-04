@@ -177,7 +177,7 @@ gst_buffer_add_audio_downmix_meta (GstBuffer * buffer,
 GType
 gst_audio_downmix_meta_api_get_type (void)
 {
-  static volatile GType type;
+  static GType type;
   static const gchar *tags[] =
       { GST_META_TAG_AUDIO_STR, GST_META_TAG_AUDIO_CHANNELS_STR, NULL };
 
@@ -280,7 +280,7 @@ gst_buffer_add_audio_clipping_meta (GstBuffer * buffer,
 GType
 gst_audio_clipping_meta_api_get_type (void)
 {
-  static volatile GType type;
+  static GType type;
   static const gchar *tags[] =
       { GST_META_TAG_AUDIO_STR, GST_META_TAG_AUDIO_RATE_STR, NULL };
 
@@ -463,7 +463,7 @@ gst_buffer_add_audio_meta (GstBuffer * buffer, const GstAudioInfo * info,
 GType
 gst_audio_meta_api_get_type (void)
 {
-  static volatile GType type;
+  static GType type;
   static const gchar *tags[] = {
     GST_META_TAG_AUDIO_STR, GST_META_TAG_AUDIO_CHANNELS_STR,
     GST_META_TAG_AUDIO_RATE_STR, NULL
@@ -491,4 +491,132 @@ gst_audio_meta_get_info (void)
         (GstMetaInfo *) meta);
   }
   return audio_meta_info;
+}
+
+/**
+ * gst_audio_level_meta_api_get_type:
+ *
+ * Return the #GType associated with #GstAudioLevelMeta.
+ *
+ * Returns: a #GType
+ *
+ * Since: 1.20
+ */
+GType
+gst_audio_level_meta_api_get_type (void)
+{
+  static GType type = 0;
+  static const gchar *tags[] = { NULL };
+
+  if (g_once_init_enter (&type)) {
+    GType _type = gst_meta_api_type_register ("GstAudioLevelMetaAPI", tags);
+    g_once_init_leave (&type, _type);
+  }
+  return type;
+}
+
+static gboolean
+gst_audio_level_meta_init (GstMeta * meta, gpointer params, GstBuffer * buffer)
+{
+  GstAudioLevelMeta *dmeta = (GstAudioLevelMeta *) meta;
+
+  dmeta->level = 127;
+  dmeta->voice_activity = FALSE;
+
+  return TRUE;
+}
+
+static gboolean
+gst_audio_level_meta_transform (GstBuffer * dst, GstMeta * meta,
+    GstBuffer * src, GQuark type, gpointer data)
+{
+  if (GST_META_TRANSFORM_IS_COPY (type)) {
+    GstAudioLevelMeta *smeta = (GstAudioLevelMeta *) meta;
+    GstAudioLevelMeta *dmeta;
+
+    dmeta = gst_buffer_add_audio_level_meta (dst, smeta->level,
+        smeta->voice_activity);
+    if (dmeta == NULL)
+      return FALSE;
+  } else {
+    /* return FALSE, if transform type is not supported */
+    return FALSE;
+  }
+
+  return TRUE;
+}
+
+/**
+ * gst_audio_level_meta_get_info:
+ *
+ * Return the #GstMetaInfo associated with #GstAudioLevelMeta.
+ *
+ * Returns: (transfer none): a #GstMetaInfo
+ *
+ * Since: 1.20
+ */
+const GstMetaInfo *
+gst_audio_level_meta_get_info (void)
+{
+  static const GstMetaInfo *audio_level_meta_info = NULL;
+
+  if (g_once_init_enter (&audio_level_meta_info)) {
+    const GstMetaInfo *meta = gst_meta_register (GST_AUDIO_LEVEL_META_API_TYPE,
+        "GstAudioLevelMeta",
+        sizeof (GstAudioLevelMeta),
+        gst_audio_level_meta_init,
+        (GstMetaFreeFunction) NULL,
+        gst_audio_level_meta_transform);
+    g_once_init_leave (&audio_level_meta_info, meta);
+  }
+  return audio_level_meta_info;
+}
+
+/**
+ * gst_buffer_add_audio_level_meta:
+ * @buffer: a #GstBuffer
+ * @level: the -dBov from 0-127 (127 is silence).
+ * @voice_activity: whether the buffer contains voice activity.
+ *
+ * Attaches audio level information to @buffer. (RFC 6464)
+ *
+ * Returns: (transfer none) (nullable): the #GstAudioLevelMeta on @buffer.
+ *
+ * Since: 1.20
+ */
+GstAudioLevelMeta *
+gst_buffer_add_audio_level_meta (GstBuffer * buffer, guint8 level,
+    gboolean voice_activity)
+{
+  GstAudioLevelMeta *meta;
+
+  g_return_val_if_fail (buffer != NULL, NULL);
+
+  meta = (GstAudioLevelMeta *) gst_buffer_add_meta (buffer,
+      GST_AUDIO_LEVEL_META_INFO, NULL);
+  if (!meta)
+    return NULL;
+
+  meta->level = level;
+  meta->voice_activity = voice_activity;
+
+  return meta;
+}
+
+/**
+ * gst_buffer_get_audio_level_meta:
+ * @buffer: a #GstBuffer
+ *
+ * Find the #GstAudioLevelMeta on @buffer.
+ *
+ * Returns: (transfer none) (nullable): the #GstAudioLevelMeta or %NULL when
+ * there is no such metadata on @buffer.
+ *
+ * Since: 1.20
+ */
+GstAudioLevelMeta *
+gst_buffer_get_audio_level_meta (GstBuffer * buffer)
+{
+  return (GstAudioLevelMeta *) gst_buffer_get_meta (buffer,
+      gst_audio_level_meta_api_get_type ());
 }

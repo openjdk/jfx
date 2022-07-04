@@ -68,12 +68,9 @@ void RealtimeIncomingVideoSource::stopProducingData()
 
 void RealtimeIncomingVideoSource::OnChanged()
 {
-    callOnMainThread([this, weakThis = makeWeakPtr(this)] {
-        if (!weakThis)
-            return;
-
-        if (m_videoTrack->state() == webrtc::MediaStreamTrackInterface::kEnded)
-            end();
+    callOnMainThread([protectedThis = makeRef(*this)] {
+        if (protectedThis->m_videoTrack->state() == webrtc::MediaStreamTrackInterface::kEnded)
+            protectedThis->end();
     });
 }
 
@@ -104,7 +101,7 @@ const RealtimeMediaSourceSettings& RealtimeIncomingVideoSource::settings()
 void RealtimeIncomingVideoSource::settingsDidChange(OptionSet<RealtimeMediaSourceSettings::Flag> settings)
 {
     if (settings.containsAny({ RealtimeMediaSourceSettings::Flag::Width, RealtimeMediaSourceSettings::Flag::Height }))
-        m_currentSettings = WTF::nullopt;
+        m_currentSettings = std::nullopt;
 }
 
 } // namespace WebCore

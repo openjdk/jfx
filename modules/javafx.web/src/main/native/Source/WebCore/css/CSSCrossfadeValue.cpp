@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Apple Inc.  All rights reserved.
+ * Copyright (C) 2011-2021 Apple Inc.  All rights reserved.
  * Copyright (C) 2013 Adobe Systems Incorporated. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -33,14 +33,14 @@
 #include "CachedResourceLoader.h"
 #include "CrossfadeGeneratedImage.h"
 #include "RenderElement.h"
+#include "StyleBuilderState.h"
 #include "StyleCachedImage.h"
-#include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
 
-static inline double blendFunc(double from, double to, double progress)
+static inline double blendFunc(double from, double to, const BlendingContext& context)
 {
-    return blend(from, to, progress);
+    return blend(from, to, context);
 }
 
 static bool subimageKnownToBeOpaque(const CSSValue& value, const RenderElement& renderer)
@@ -202,7 +202,7 @@ bool CSSCrossfadeValue::traverseSubresources(const WTF::Function<bool (const Cac
     return false;
 }
 
-RefPtr<CSSCrossfadeValue> CSSCrossfadeValue::blend(const CSSCrossfadeValue& from, double progress) const
+RefPtr<CSSCrossfadeValue> CSSCrossfadeValue::blend(const CSSCrossfadeValue& from, const BlendingContext& context) const
 {
     ASSERT(equalInputImages(from));
 
@@ -218,7 +218,7 @@ RefPtr<CSSCrossfadeValue> CSSCrossfadeValue::blend(const CSSCrossfadeValue& from
     double toPercentage = m_percentageValue->doubleValue();
     if (m_percentageValue->isPercentage())
         toPercentage /= 100.0;
-    auto percentageValue = CSSPrimitiveValue::create(blendFunc(fromPercentage, toPercentage, progress), CSSUnitType::CSS_NUMBER);
+    auto percentageValue = CSSPrimitiveValue::create(blendFunc(fromPercentage, toPercentage, context), CSSUnitType::CSS_NUMBER);
 
     return CSSCrossfadeValue::create(WTFMove(fromImageValue), WTFMove(toImageValue), WTFMove(percentageValue), from.isPrefixed() && isPrefixed());
 }
@@ -228,10 +228,18 @@ bool CSSCrossfadeValue::equals(const CSSCrossfadeValue& other) const
     return equalInputImages(other) && compareCSSValue(m_percentageValue, other.m_percentageValue);
 }
 
-
 bool CSSCrossfadeValue::equalInputImages(const CSSCrossfadeValue& other) const
 {
     return compareCSSValue(m_fromValue, other.m_fromValue) && compareCSSValue(m_toValue, other.m_toValue);
+}
+
+Ref<CSSCrossfadeValue> CSSCrossfadeValue::valueWithStylesResolved(Style::BuilderState& state)
+{
+    auto fromValue = state.resolveImageStyles(m_fromValue.get());
+    auto toValue = state.resolveImageStyles(m_toValue.get());
+    if (fromValue.ptr() == m_fromValue.ptr() && toValue.ptr() == m_toValue.ptr())
+        return *this;
+    return create(WTFMove(fromValue), WTFMove(toValue), Ref { m_percentageValue }, m_isPrefixed);
 }
 
 } // namespace WebCore

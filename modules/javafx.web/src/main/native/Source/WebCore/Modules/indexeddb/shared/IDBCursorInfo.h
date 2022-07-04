@@ -25,8 +25,6 @@
 
 #pragma once
 
-#if ENABLE(INDEXED_DATABASE)
-
 #include "IDBKeyRangeData.h"
 #include "IDBResourceIdentifier.h"
 
@@ -35,7 +33,7 @@ namespace WebCore {
 class IDBTransaction;
 
 namespace IndexedDB {
-enum class CursorDirection;
+enum class CursorDirection : uint8_t;
 enum class CursorSource : bool;
 enum class CursorType : bool;
 }
@@ -133,5 +131,3 @@ bool IDBCursorInfo::decode(Decoder& decoder, IDBCursorInfo& info)
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(INDEXED_DATABASE)

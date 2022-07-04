@@ -353,25 +353,26 @@ public class TableCell<S,T> extends IndexedCell<T> {
     @Override public void commitEdit(T newValue) {
         if (!isEditing()) return;
 
-        final TableView<S> table = getTableView();
-        if (getTableColumn() != null) {
-            // Inform the TableColumn of the edit being ready to be committed.
-            CellEditEvent<S, T> editEvent = new CellEditEvent<>(
-                table,
-                editingCellAtStartEdit,
-                TableColumn.editCommitEvent(),
-                newValue
-            );
-
-            Event.fireEvent(getTableColumn(), editEvent);
-        }
-
         // inform parent classes of the commit, so that they can switch us
         // out of the editing state.
         // This MUST come before the updateItem call below, otherwise it will
         // call cancelEdit(), resulting in both commit and cancel events being
         // fired (as identified in RT-29650)
         super.commitEdit(newValue);
+
+        final TableView<S> table = getTableView();
+        // JDK-8187307: fire the commit after updating cell's editing state
+        if (getTableColumn() != null) {
+            // Inform the TableColumn of the edit being ready to be committed.
+            CellEditEvent<S, T> editEvent = new CellEditEvent<>(
+                    table,
+                    editingCellAtStartEdit,
+                    TableColumn.editCommitEvent(),
+                    newValue
+                    );
+
+            Event.fireEvent(getTableColumn(), editEvent);
+        }
 
         // update the item within this cell, so that it represents the new value
         updateItem(newValue, false);

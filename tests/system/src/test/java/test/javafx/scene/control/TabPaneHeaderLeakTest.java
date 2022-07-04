@@ -93,7 +93,6 @@ public class TabPaneHeaderLeakTest {
         });
         for (int i = 0; i < 10; i++) {
             System.gc();
-            System.runFinalization();
             if (tabWeakRef.get() == null &&
                 textFieldWeakRef.get() == null) {
                 break;

@@ -28,6 +28,7 @@
 
 #include "ContentType.h"
 #include "Document.h"
+#include "EventLoop.h"
 #include "JSDOMPromiseDeferred.h"
 #include "JSMediaCapabilitiesDecodingInfo.h"
 #include "JSMediaCapabilitiesEncodingInfo.h"
@@ -39,31 +40,31 @@
 #include "MediaEncodingConfiguration.h"
 #include "MediaEngineConfigurationFactory.h"
 #include "Settings.h"
-#include <wtf/HashSet.h>
 #include <wtf/Logger.h>
+#include <wtf/RobinHoodHashSet.h>
 
 namespace WebCore {
 
-static const HashSet<String>& bucketMIMETypes()
+static const MemoryCompactLookupOnlyRobinHoodHashSet<String>& bucketMIMETypes()
 {
     // A "bucket" MIME types is one whose container type does not uniquely specify a codec.
     // See: https://tools.ietf.org/html/rfc6381
-    static NeverDestroyed<HashSet<String>> bucketMIMETypes = HashSet<String>({
-        "audio/3gpp",
-        "video/3gpp",
-        "audio/3gpp2",
-        "video/3gpp2",
-        "audio/mp4",
-        "video/mp4",
-        "application/mp4",
-        "video/quicktime",
-        "application/mp21",
-        "audio/vnd.apple.mpegurl",
-        "video/vnd.apple.mpegurl",
-        "audio/ogg",
-        "video/ogg",
-        "video/webm",
-        "audio/webm",
+    static NeverDestroyed<MemoryCompactLookupOnlyRobinHoodHashSet<String>> bucketMIMETypes(std::initializer_list<String> {
+        "audio/3gpp"_s,
+        "video/3gpp"_s,
+        "audio/3gpp2"_s,
+        "video/3gpp2"_s,
+        "audio/mp4"_s,
+        "video/mp4"_s,
+        "application/mp4"_s,
+        "video/quicktime"_s,
+        "application/mp21"_s,
+        "audio/vnd.apple.mpegurl"_s,
+        "video/vnd.apple.mpegurl"_s,
+        "audio/ogg"_s,
+        "video/ogg"_s,
+        "video/webm"_s,
+        "audio/webm"_s,
     });
     return bucketMIMETypes;
 }
@@ -194,7 +195,7 @@ void MediaCapabilities::decodingInfo(Document& document, MediaDecodingConfigurat
     // 4. Let p be a new promise.
     // 5. In parallel, run the create a MediaCapabilitiesInfo algorithm with configuration and resolve p with its result.
     // 6. Return p.
-    m_taskQueue.enqueueTask([configuration = WTFMove(configuration), promise = WTFMove(promise), logger = WTFMove(logger), identifier = WTFMove(identifier)] () mutable {
+    document.eventLoop().queueTask(TaskSource::MediaElement, [configuration = WTFMove(configuration), promise = WTFMove(promise), logger = WTFMove(logger), identifier = WTFMove(identifier)] () mutable {
 
         // 2.2.3 If configuration is of type MediaDecodingConfiguration, run the following substeps:
         MediaEngineConfigurationFactory::DecodingConfigurationCallback callback = [promise = WTFMove(promise), logger = WTFMove(logger), identifier = WTFMove(identifier)] (auto info) mutable {
@@ -219,7 +220,7 @@ void MediaCapabilities::decodingInfo(Document& document, MediaDecodingConfigurat
     });
 }
 
-void MediaCapabilities::encodingInfo(MediaEncodingConfiguration&& configuration, Ref<DeferredPromise>&& promise)
+void MediaCapabilities::encodingInfo(Document& document, MediaEncodingConfiguration&& configuration, Ref<DeferredPromise>&& promise)
 {
     // 2.4 Media Capabilities Interface
     // https://wicg.github.io/media-capabilities/#media-capabilities-interface
@@ -235,7 +236,7 @@ void MediaCapabilities::encodingInfo(MediaEncodingConfiguration&& configuration,
     // 4. Let p be a new promise.
     // 5. In parallel, run the create a MediaCapabilitiesInfo algorithm with configuration and resolve p with its result.
     // 6. Return p.
-    m_taskQueue.enqueueTask([configuration = WTFMove(configuration), promise = WTFMove(promise)] () mutable {
+    document.eventLoop().queueTask(TaskSource::MediaElement, [configuration = WTFMove(configuration), promise = WTFMove(promise)] () mutable {
 
         // 2.2.4. If configuration is of type MediaEncodingConfiguration, run the following substeps:
         MediaEngineConfigurationFactory::EncodingConfigurationCallback callback = [promise = WTFMove(promise)] (auto info) mutable {

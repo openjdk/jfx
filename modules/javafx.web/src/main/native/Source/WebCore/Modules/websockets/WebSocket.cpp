@@ -76,6 +76,8 @@ namespace WebCore {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(WebSocket);
 
+Lock WebSocket::s_allActiveWebSocketsLock;
+
 const size_t maxReasonSizeInBytes = 123;
 
 static inline bool isValidProtocolCharacter(UChar character)
@@ -106,11 +108,10 @@ static String encodeProtocolString(const String& protocol)
 {
     StringBuilder builder;
     for (size_t i = 0; i < protocol.length(); i++) {
-        if (protocol[i] < 0x20 || protocol[i] > 0x7E) {
-            builder.appendLiteral("\\u");
-            builder.append(hex(protocol[i], 4));
-        } else if (protocol[i] == 0x5c)
-            builder.appendLiteral("\\\\");
+        if (protocol[i] < 0x20 || protocol[i] > 0x7E)
+            builder.append("\\u", hex(protocol[i], 4));
+        else if (protocol[i] == 0x5c)
+            builder.append("\\\\");
         else
             builder.append(protocol[i]);
     }
@@ -146,17 +147,15 @@ WebSocket::WebSocket(ScriptExecutionContext& context)
     , m_extensions(emptyString())
     , m_resumeTimer(*this, &WebSocket::resumeTimerFired)
 {
-    LockHolder lock(allActiveWebSocketsMutex());
-
-    allActiveWebSockets(lock).add(this);
+    Locker locker { allActiveWebSocketsLock() };
+    allActiveWebSockets().add(this);
 }
 
 WebSocket::~WebSocket()
 {
     {
-        LockHolder lock(allActiveWebSocketsMutex());
-
-        allActiveWebSockets(lock).remove(this);
+        Locker locker { allActiveWebSocketsLock() };
+        allActiveWebSockets().remove(this);
     }
 
     if (m_channel)
@@ -188,16 +187,15 @@ ExceptionOr<Ref<WebSocket>> WebSocket::create(ScriptExecutionContext& context, c
     return create(context, url, Vector<String> { 1, protocol });
 }
 
-HashSet<WebSocket*>& WebSocket::allActiveWebSockets(const LockHolder&)
+HashSet<WebSocket*>& WebSocket::allActiveWebSockets()
 {
     static NeverDestroyed<HashSet<WebSocket*>> activeWebSockets;
     return activeWebSockets;
 }
 
-Lock& WebSocket::allActiveWebSocketsMutex()
+Lock& WebSocket::allActiveWebSocketsLock()
 {
-    static Lock mutex;
-    return mutex;
+    return s_allActiveWebSocketsLock;
 }
 
 ExceptionOr<void> WebSocket::connect(const String& url)
@@ -408,7 +406,7 @@ ExceptionOr<void> WebSocket::send(Blob& binaryData)
     return { };
 }
 
-ExceptionOr<void> WebSocket::close(Optional<unsigned short> optionalCode, const String& reason)
+ExceptionOr<void> WebSocket::close(std::optional<unsigned short> optionalCode, const String& reason)
 {
     int code = optionalCode ? optionalCode.value() : static_cast<int>(WebSocketChannel::CloseEventCodeNotSpecified);
     if (code == WebSocketChannel::CloseEventCodeNotSpecified)
@@ -579,7 +577,7 @@ void WebSocket::didConnect()
     m_state = OPEN;
     m_subprotocol = m_channel->subprotocol();
     m_extensions = m_channel->extensions();
-    dispatchEvent(Event::create(eventNames().openEvent, Event::CanBubble::No, Event::IsCancelable::No));
+    dispatchOrQueueEvent(Event::create(eventNames().openEvent, Event::CanBubble::No, Event::IsCancelable::No));
 }
 
 void WebSocket::didReceiveMessage(const String& msg)
@@ -588,7 +586,7 @@ void WebSocket::didReceiveMessage(const String& msg)
     if (m_state != OPEN)
         return;
     ASSERT(scriptExecutionContext());
-    dispatchEvent(MessageEvent::create(msg, SecurityOrigin::create(m_url)->toString()));
+    dispatchOrQueueEvent(MessageEvent::create(msg, SecurityOrigin::create(m_url)->toString()));
 }
 
 void WebSocket::didReceiveBinaryData(Vector<uint8_t>&& binaryData)
@@ -597,10 +595,10 @@ void WebSocket::didReceiveBinaryData(Vector<uint8_t>&& binaryData)
     switch (m_binaryType) {
     case BinaryType::Blob:
         // FIXME: We just received the data from NetworkProcess, and are sending it back. This is inefficient.
-        dispatchEvent(MessageEvent::create(Blob::create(scriptExecutionContext(), WTFMove(binaryData), emptyString()), SecurityOrigin::create(m_url)->toString()));
+        dispatchOrQueueEvent(MessageEvent::create(Blob::create(scriptExecutionContext(), WTFMove(binaryData), emptyString()), SecurityOrigin::create(m_url)->toString()));
         break;
     case BinaryType::ArrayBuffer:
-        dispatchEvent(MessageEvent::create(ArrayBuffer::create(binaryData.data(), binaryData.size()), SecurityOrigin::create(m_url)->toString()));
+        dispatchOrQueueEvent(MessageEvent::create(ArrayBuffer::create(binaryData.data(), binaryData.size()), SecurityOrigin::create(m_url)->toString()));
         break;
     }
 }

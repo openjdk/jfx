@@ -40,14 +40,14 @@
 
 namespace WebCore {
 
-static Optional<Exception> setMethod(ResourceRequest& request, const String& initMethod)
+static std::optional<Exception> setMethod(ResourceRequest& request, const String& initMethod)
 {
     if (!isValidHTTPToken(initMethod))
         return Exception { TypeError, "Method is not a valid HTTP token."_s };
     if (isForbiddenMethod(initMethod))
         return Exception { TypeError, "Method is forbidden."_s };
     request.setHTTPMethod(normalizeHTTPMethod(initMethod));
-    return WTF::nullopt;
+    return std::nullopt;
 }
 
 static ExceptionOr<String> computeReferrer(ScriptExecutionContext& context, const String& referrer)
@@ -69,7 +69,7 @@ static ExceptionOr<String> computeReferrer(ScriptExecutionContext& context, cons
     return String { referrerURL.string() };
 }
 
-static Optional<Exception> buildOptions(FetchOptions& options, ResourceRequest& request, String& referrer, ScriptExecutionContext& context, const FetchRequest::Init& init)
+static std::optional<Exception> buildOptions(FetchOptions& options, ResourceRequest& request, String& referrer, ScriptExecutionContext& context, const FetchRequest::Init& init)
 {
     if (!init.window.isUndefinedOrNull() && !init.window.isEmpty())
         return Exception { TypeError, "Window can only be null."_s };
@@ -119,7 +119,7 @@ static Optional<Exception> buildOptions(FetchOptions& options, ResourceRequest& 
             return exception;
     }
 
-    return WTF::nullopt;
+    return std::nullopt;
 }
 
 static bool methodCanHaveBody(const ResourceRequest& request)
@@ -145,7 +145,7 @@ ExceptionOr<void> FetchRequest::initializeOptions(const Init& init)
     return { };
 }
 
-static inline Optional<Exception> processInvalidSignal(ScriptExecutionContext& context)
+static inline std::optional<Exception> processInvalidSignal(ScriptExecutionContext& context)
 {
     ASCIILiteral message { "FetchRequestInit.signal should be undefined, null or an AbortSignal object. This will throw in a future release."_s };
     context.addConsoleMessage(MessageSource::JS, MessageLevel::Warning, message);
@@ -179,7 +179,7 @@ ExceptionOr<void> FetchRequest::initializeWith(const String& url, Init&& init)
 
     if (init.signal) {
         if (auto* signal = JSAbortSignal::toWrapped(scriptExecutionContext()->vm(), init.signal))
-            m_signal->follow(*signal);
+            m_signal->signalFollow(*signal);
         else if (!init.signal.isUndefinedOrNull())  {
             if (auto exception = processInvalidSignal(*scriptExecutionContext()))
                 return WTFMove(*exception);
@@ -214,14 +214,14 @@ ExceptionOr<void> FetchRequest::initializeWith(FetchRequest& input, Init&& init)
 
     if (init.signal && !init.signal.isUndefined()) {
         if (auto* signal = JSAbortSignal::toWrapped(scriptExecutionContext()->vm(), init.signal))
-            m_signal->follow(*signal);
+            m_signal->signalFollow(*signal);
         else if (!init.signal.isNull()) {
             if (auto exception = processInvalidSignal(*scriptExecutionContext()))
                 return WTFMove(*exception);
         }
 
     } else
-        m_signal->follow(input.m_signal.get());
+        m_signal->signalFollow(input.m_signal.get());
 
     if (init.hasMembers()) {
         auto fillResult = init.headers ? m_headers->fill(*init.headers) : m_headers->fill(input.headers());
@@ -273,7 +273,7 @@ ExceptionOr<void> FetchRequest::setBody(FetchRequest& request)
 
 ExceptionOr<Ref<FetchRequest>> FetchRequest::create(ScriptExecutionContext& context, Info&& input, Init&& init)
 {
-    auto request = adoptRef(*new FetchRequest(context, WTF::nullopt, FetchHeaders::create(FetchHeaders::Guard::Request), { }, { }, { }));
+    auto request = adoptRef(*new FetchRequest(context, std::nullopt, FetchHeaders::create(FetchHeaders::Guard::Request), { }, { }, { }));
 
     if (WTF::holds_alternative<String>(input)) {
         auto result = request->initializeWith(WTF::get<String>(input), WTFMove(init));
@@ -322,9 +322,9 @@ ExceptionOr<Ref<FetchRequest>> FetchRequest::clone(ScriptExecutionContext& conte
     if (isDisturbedOrLocked())
         return Exception { TypeError, "Body is disturbed or locked"_s };
 
-    auto clone = adoptRef(*new FetchRequest(context, WTF::nullopt, FetchHeaders::create(m_headers.get()), ResourceRequest { m_request }, FetchOptions { m_options}, String { m_referrer }));
+    auto clone = adoptRef(*new FetchRequest(context, std::nullopt, FetchHeaders::create(m_headers.get()), ResourceRequest { m_request }, FetchOptions { m_options}, String { m_referrer }));
     clone->cloneBody(*this);
-    clone->m_signal->follow(m_signal);
+    clone->m_signal->signalFollow(m_signal);
     return clone;
 }
 

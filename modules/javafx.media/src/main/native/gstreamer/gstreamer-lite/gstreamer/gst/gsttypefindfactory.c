@@ -43,7 +43,7 @@
  *   my_peek (gpointer data, gint64 offset, guint size)
  *   {
  *     MyTypeFind *find = (MyTypeFind *) data;
- *     if (offset &gt;= 0 &amp;&amp; offset + size &lt;= find->size) {
+ *     if (offset >= 0 && offset + size <= find->size) {
  *       return find->data + offset;
  *     }
  *     return NULL;
@@ -52,9 +52,9 @@
  *   my_suggest (gpointer data, guint probability, GstCaps *caps)
  *   {
  *     MyTypeFind *find = (MyTypeFind *) data;
- *     if (probability &gt; find->probability) {
+ *     if (probability > find->probability) {
  *       find->probability = probability;
- *       gst_caps_replace (&amp;find->caps, caps);
+ *       gst_caps_replace (&find->caps, caps);
  *     }
  *   }
  *   static GstCaps *
@@ -62,12 +62,12 @@
  *   {
  *     GList *walk, *type_list;
  *     MyTypeFind find = {data, size, 0, NULL};
- *     GstTypeFind gst_find = {my_peek, my_suggest, &amp;find, };
+ *     GstTypeFind gst_find = {my_peek, my_suggest, &find, };
  *     walk = type_list = gst_type_find_factory_get_list ();
  *     while (walk) {
  *       GstTypeFindFactory *factory = GST_TYPE_FIND_FACTORY (walk->data);
  *       walk = g_list_next (walk)
- *       gst_type_find_factory_call_function (factory, &amp;gst_find);
+ *       gst_type_find_factory_call_function (factory, &gst_find);
  *     }
  *     g_list_free (type_list);
  *     return find.caps;

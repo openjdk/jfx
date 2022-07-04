@@ -25,17 +25,14 @@
 
 #pragma once
 
-#include "FontLoadTimingOverride.h"
 #include "FontSelectionValueInlines.h"
 #include "FontTaggedSettings.h"
+#include "Settings.h"
 #include "StyleRule.h"
 #include "TextFlags.h"
-#include "Timer.h"
 #include <memory>
 #include <wtf/Forward.h>
 #include <wtf/HashSet.h>
-#include <wtf/RefCounted.h>
-#include <wtf/Vector.h>
 #include <wtf/WeakPtr.h>
 
 namespace JSC {
@@ -49,7 +46,7 @@ class CSSFontSelector;
 class CSSSegmentedFontFace;
 class CSSValue;
 class CSSValueList;
-class Document;
+class FontCache;
 class FontDescription;
 class Font;
 class FontFace;
@@ -60,10 +57,7 @@ DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(CSSFontFace);
 class CSSFontFace final : public RefCounted<CSSFontFace> {
     WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(CSSFontFace);
 public:
-    static Ref<CSSFontFace> create(CSSFontSelector* fontSelector, StyleRuleFontFace* cssConnection = nullptr, FontFace* wrapper = nullptr, bool isLocalFallback = false)
-    {
-        return adoptRef(*new CSSFontFace(fontSelector, cssConnection, wrapper, isLocalFallback));
-    }
+    static Ref<CSSFontFace> create(CSSFontSelector&, StyleRuleFontFace* cssConnection = nullptr, FontFace* wrapper = nullptr, bool isLocalFallback = false);
     virtual ~CSSFontFace();
 
     // FIXME: These functions don't need to have boolean return values.
@@ -90,14 +84,14 @@ public:
     struct UnicodeRange;
 
     // Optional return values to represent default string for members of FontFace.h
-    const Optional<CSSValueList*> families() const { return m_status == Status::Failure ? WTF::nullopt : static_cast<Optional<CSSValueList*>>(m_families.get()); }
-    Optional<FontSelectionRange> weight() const { return m_status == Status::Failure ? WTF::nullopt : static_cast<Optional<FontSelectionRange>>(m_fontSelectionCapabilities.computeWeight()); }
-    Optional<FontSelectionRange> stretch() const { return m_status == Status::Failure ? WTF::nullopt : static_cast<Optional<FontSelectionRange>>(m_fontSelectionCapabilities.computeWidth()); }
-    Optional<FontSelectionRange> italic() const { return m_status == Status::Failure ? WTF::nullopt : static_cast<Optional<FontSelectionRange>>(m_fontSelectionCapabilities.computeSlope()); }
-    Optional<FontSelectionCapabilities> fontSelectionCapabilities() const { return m_status == Status::Failure ? WTF::nullopt : static_cast<Optional<FontSelectionCapabilities>>(m_fontSelectionCapabilities.computeFontSelectionCapabilities()); }
-    const Optional<Vector<UnicodeRange>> ranges() const { return m_status == Status::Failure ? WTF::nullopt : static_cast<Optional<Vector<UnicodeRange>>>(m_ranges); }
-    const Optional<FontFeatureSettings> featureSettings() const { return m_status == Status::Failure ? WTF::nullopt : static_cast<Optional<FontFeatureSettings>>(m_featureSettings); }
-    Optional<FontLoadingBehavior> loadingBehavior() const { return m_status == Status::Failure ? WTF::nullopt :  static_cast<Optional<FontLoadingBehavior>>(m_loadingBehavior); }
+    const std::optional<CSSValueList*> families() const { return m_status == Status::Failure ? std::nullopt : static_cast<std::optional<CSSValueList*>>(m_families.get()); }
+    std::optional<FontSelectionRange> weight() const { return m_status == Status::Failure ? std::nullopt : static_cast<std::optional<FontSelectionRange>>(m_fontSelectionCapabilities.computeWeight()); }
+    std::optional<FontSelectionRange> stretch() const { return m_status == Status::Failure ? std::nullopt : static_cast<std::optional<FontSelectionRange>>(m_fontSelectionCapabilities.computeWidth()); }
+    std::optional<FontSelectionRange> italic() const { return m_status == Status::Failure ? std::nullopt : static_cast<std::optional<FontSelectionRange>>(m_fontSelectionCapabilities.computeSlope()); }
+    std::optional<FontSelectionCapabilities> fontSelectionCapabilities() const { return m_status == Status::Failure ? std::nullopt : static_cast<std::optional<FontSelectionCapabilities>>(m_fontSelectionCapabilities.computeFontSelectionCapabilities()); }
+    const std::optional<Vector<UnicodeRange>> ranges() const { return m_status == Status::Failure ? std::nullopt : static_cast<std::optional<Vector<UnicodeRange>>>(m_ranges); }
+    const std::optional<FontFeatureSettings> featureSettings() const { return m_status == Status::Failure ? std::nullopt : static_cast<std::optional<FontFeatureSettings>>(m_featureSettings); }
+    std::optional<FontLoadingBehavior> loadingBehavior() const { return m_status == Status::Failure ? std::nullopt :  static_cast<std::optional<FontLoadingBehavior>>(m_loadingBehavior); }
     void setWeight(FontSelectionRange weight) { m_fontSelectionCapabilities.weight = weight; }
     void setStretch(FontSelectionRange stretch) { m_fontSelectionCapabilities.width = stretch; }
     void setStyle(FontSelectionRange italic) { m_fontSelectionCapabilities.slope = italic; }
@@ -112,7 +106,7 @@ public:
 
     bool computeFailureState() const;
 
-    void opportunisticallyStartFontDataURLLoading(CSSFontSelector&);
+    void opportunisticallyStartFontDataURLLoading();
 
     void adoptSource(std::unique_ptr<CSSFontFaceSource>&&);
     void sourcesPopulated() { m_sourcesPopulated = true; }
@@ -123,7 +117,7 @@ public:
 
     RefPtr<Font> font(const FontDescription&, bool syntheticBold, bool syntheticItalic, ExternalResourceDownloadPolicy);
 
-    static void appendSources(CSSFontFace&, CSSValueList&, Document*, bool isInitiatingElementInUserAgentShadowTree);
+    static void appendSources(CSSFontFace&, CSSValueList&, ScriptExecutionContext*, bool isInitiatingElementInUserAgentShadowTree);
 
     class Client {
     public:
@@ -167,8 +161,7 @@ public:
     void setErrorState();
 
 private:
-    CSSFontFace(CSSFontSelector*, StyleRuleFontFace*, FontFace*, bool isLocalFallback);
-    CSSFontFace(const Settings*, StyleRuleFontFace*, FontFace*, bool isLocalFallback);
+    CSSFontFace(const Settings::Values*, StyleRuleFontFace*, FontFace*, bool isLocalFallback);
 
     size_t pump(ExternalResourceDownloadPolicy);
     void setStatus(Status);
@@ -179,6 +172,9 @@ private:
     void fontLoadEventOccurred();
     void timeoutFired();
 
+    Document* document();
+    FontCache& fontCacheFallingBackToSingleton();
+
     RefPtr<CSSValueList> m_families;
     Vector<UnicodeRange> m_ranges;
 
@@ -186,7 +182,6 @@ private:
     FontLoadingBehavior m_loadingBehavior { FontLoadingBehavior::Auto };
 
     Vector<std::unique_ptr<CSSFontFaceSource>, 0, CrashOnOverflow, 0> m_sources;
-    WeakPtr<CSSFontSelector> m_fontSelector; // FIXME: Ideally this data member would go away (https://bugs.webkit.org/show_bug.cgi?id=208351).
     RefPtr<StyleRuleFontFace> m_cssConnection;
     HashSet<Client*> m_clients;
     WeakPtr<FontFace> m_wrapper;

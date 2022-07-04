@@ -25,11 +25,10 @@
 
 #pragma once
 
-#if ENABLE(INDEXED_DATABASE)
-
 #include "IDBCursor.h"
 #include "IDBIndexInfo.h"
 #include "IDBRequest.h"
+#include <wtf/IsoMalloc.h>
 
 namespace JSC {
 class CallFrame;
@@ -42,8 +41,7 @@ class IDBKeyRange;
 struct IDBKeyRangeData;
 
 class IDBIndex final : public ActiveDOMObject {
-    WTF_MAKE_NONCOPYABLE(IDBIndex);
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_ISO_ALLOCATED(IDBIndex);
 public:
     IDBIndex(ScriptExecutionContext&, const IDBIndexInfo&, IDBObjectStore&);
 
@@ -71,10 +69,10 @@ public:
     ExceptionOr<Ref<IDBRequest>> getKey(JSC::JSGlobalObject&, IDBKeyRange*);
     ExceptionOr<Ref<IDBRequest>> getKey(JSC::JSGlobalObject&, JSC::JSValue key);
 
-    ExceptionOr<Ref<IDBRequest>> getAll(JSC::JSGlobalObject&, RefPtr<IDBKeyRange>&&, Optional<uint32_t> count);
-    ExceptionOr<Ref<IDBRequest>> getAll(JSC::JSGlobalObject&, JSC::JSValue key, Optional<uint32_t> count);
-    ExceptionOr<Ref<IDBRequest>> getAllKeys(JSC::JSGlobalObject&, RefPtr<IDBKeyRange>&&, Optional<uint32_t> count);
-    ExceptionOr<Ref<IDBRequest>> getAllKeys(JSC::JSGlobalObject&, JSC::JSValue key, Optional<uint32_t> count);
+    ExceptionOr<Ref<IDBRequest>> getAll(JSC::JSGlobalObject&, RefPtr<IDBKeyRange>&&, std::optional<uint32_t> count);
+    ExceptionOr<Ref<IDBRequest>> getAll(JSC::JSGlobalObject&, JSC::JSValue key, std::optional<uint32_t> count);
+    ExceptionOr<Ref<IDBRequest>> getAllKeys(JSC::JSGlobalObject&, RefPtr<IDBKeyRange>&&, std::optional<uint32_t> count);
+    ExceptionOr<Ref<IDBRequest>> getAllKeys(JSC::JSGlobalObject&, JSC::JSValue key, std::optional<uint32_t> count);
 
     const IDBIndexInfo& info() const { return m_info; }
 
@@ -92,8 +90,8 @@ private:
     ExceptionOr<Ref<IDBRequest>> doGetKey(JSC::JSGlobalObject&, ExceptionOr<IDBKeyRangeData>);
     ExceptionOr<Ref<IDBRequest>> doOpenCursor(JSC::JSGlobalObject&, IDBCursorDirection, WTF::Function<ExceptionOr<RefPtr<IDBKeyRange>>()> &&);
     ExceptionOr<Ref<IDBRequest>> doOpenKeyCursor(JSC::JSGlobalObject&, IDBCursorDirection, WTF::Function<ExceptionOr<RefPtr<IDBKeyRange>>()> &&);
-    ExceptionOr<Ref<IDBRequest>> doGetAll(JSC::JSGlobalObject&, Optional<uint32_t> count, WTF::Function<ExceptionOr<RefPtr<IDBKeyRange>>()> &&);
-    ExceptionOr<Ref<IDBRequest>> doGetAllKeys(JSC::JSGlobalObject&, Optional<uint32_t> count, WTF::Function<ExceptionOr<RefPtr<IDBKeyRange>>()> &&);
+    ExceptionOr<Ref<IDBRequest>> doGetAll(JSC::JSGlobalObject&, std::optional<uint32_t> count, WTF::Function<ExceptionOr<RefPtr<IDBKeyRange>>()> &&);
+    ExceptionOr<Ref<IDBRequest>> doGetAllKeys(JSC::JSGlobalObject&, std::optional<uint32_t> count, WTF::Function<ExceptionOr<RefPtr<IDBKeyRange>>()> &&);
 
     // ActiveDOMObject.
     const char* activeDOMObjectName() const final;
@@ -110,5 +108,3 @@ private:
 };
 
 } // namespace WebCore
-
-#endif // ENABLE(INDEXED_DATABASE)

@@ -28,14 +28,14 @@
 #if ENABLE(WEB_AUDIO)
 
 #include "AudioContextLatencyCategory.h"
-#include <wtf/Optional.h>
+#include <optional>
 #include <wtf/Variant.h>
 
 namespace WebCore {
 
 struct AudioContextOptions {
     Variant<AudioContextLatencyCategory, double> latencyHint { AudioContextLatencyCategory::Interactive };
-    Optional<float> sampleRate;
+    std::optional<float> sampleRate;
 };
 
 } // namespace WebCore

@@ -403,84 +403,6 @@ const String& nonBreakingSpaceString()
     return nonBreakingSpaceString;
 }
 
-static bool isSpecialHTMLElement(const Node* node)
-{
-    if (!is<HTMLElement>(node))
-        return false;
-
-    if (downcast<HTMLElement>(*node).isLink())
-        return true;
-
-    auto* renderer = downcast<HTMLElement>(*node).renderer();
-    if (!renderer)
-        return false;
-
-    if (renderer->style().display() == DisplayType::Table || renderer->style().display() == DisplayType::InlineTable)
-        return true;
-
-    if (renderer->style().isFloating())
-        return true;
-
-    if (renderer->style().position() != PositionType::Static)
-        return true;
-
-    return false;
-}
-
-static HTMLElement* firstInSpecialElement(const Position& position)
-{
-    auto* rootEditableElement = position.containerNode()->rootEditableElement();
-    for (Node* node = position.deprecatedNode(); node && node->rootEditableElement() == rootEditableElement; node = node->parentNode()) {
-        if (!isSpecialHTMLElement(node))
-            continue;
-        VisiblePosition vPos(position);
-        VisiblePosition firstInElement(firstPositionInOrBeforeNode(node));
-        if ((isRenderedTable(node) && vPos == firstInElement.next()) || vPos == firstInElement)
-            return &downcast<HTMLElement>(*node);
-    }
-    return nullptr;
-}
-
-static HTMLElement* lastInSpecialElement(const Position& position)
-{
-    auto* rootEditableElement = position.containerNode()->rootEditableElement();
-    for (Node* node = position.deprecatedNode(); node && node->rootEditableElement() == rootEditableElement; node = node->parentNode()) {
-        if (!isSpecialHTMLElement(node))
-            continue;
-        VisiblePosition vPos(position);
-        VisiblePosition lastInElement(lastPositionInOrAfterNode(node));
-        if ((isRenderedTable(node) && vPos == lastInElement.previous()) || vPos == lastInElement)
-            return &downcast<HTMLElement>(*node);
-    }
-    return nullptr;
-}
-
-Position positionBeforeContainingSpecialElement(const Position& position, HTMLElement** containingSpecialElement)
-{
-    auto* element = firstInSpecialElement(position);
-    if (!element)
-        return position;
-    Position result = positionInParentBeforeNode(element);
-    if (result.isNull() || result.deprecatedNode()->rootEditableElement() != position.deprecatedNode()->rootEditableElement())
-        return position;
-    if (containingSpecialElement)
-        *containingSpecialElement = element;
-    return result;
-}
-
-Position positionAfterContainingSpecialElement(const Position& position, HTMLElement** containingSpecialElement)
-{
-    auto* element = lastInSpecialElement(position);
-    if (!element)
-        return position;
-    Position result = positionInParentAfterNode(element);
-    if (result.isNull() || result.deprecatedNode()->rootEditableElement() != position.deprecatedNode()->rootEditableElement())
-        return position;
-    if (containingSpecialElement)
-        *containingSpecialElement = element;
-    return result;
-}
-
 Element* isFirstPositionAfterTable(const VisiblePosition& position)
 {
     Position upstream(position.deepEquivalent().upstream());
@@ -810,9 +732,9 @@ Node* nextLeafNode(const Node* node)
 // FIXME: Do not require renderer, so that this can be used within fragments.
 bool isRenderedTable(const Node* node)
 {
-    if (!is<Element>(node))
+    if (!is<HTMLElement>(node))
         return false;
-    auto* renderer = downcast<Element>(*node).renderer();
+    auto* renderer = downcast<HTMLElement>(*node).renderer();
     return renderer && renderer->isTable();
 }
 
@@ -1043,9 +965,9 @@ VisibleSelection selectionForParagraphIteration(const VisibleSelection& original
 }
 
 // FIXME: indexForVisiblePosition and visiblePositionForIndex use TextIterators to convert between
-// VisiblePositions and indices. But TextIterator iteration using TextIteratorEmitsCharactersBetweenAllVisiblePositions
+// VisiblePositions and indices. But TextIterator iteration using TextIteratorBehavior::EmitsCharactersBetweenAllVisiblePositions
 // does not exactly match VisiblePosition iteration, so using them to preserve a selection during an editing
-// opertion is unreliable. TextIterator's TextIteratorEmitsCharactersBetweenAllVisiblePositions mode needs to be fixed,
+// opertion is unreliable. TextIterator's TextIteratorBehavior::EmitsCharactersBetweenAllVisiblePositions mode needs to be fixed,
 // or these functions need to be changed to iterate using actual VisiblePositions.
 // FIXME: Deploy these functions everywhere that TextIterators are used to convert between VisiblePositions and indices.
 int indexForVisiblePosition(const VisiblePosition& visiblePosition, RefPtr<ContainerNode>& scope)
@@ -1067,14 +989,17 @@ int indexForVisiblePosition(const VisiblePosition& visiblePosition, RefPtr<Conta
     }
 
     auto range = *makeSimpleRange(makeBoundaryPointBeforeNodeContents(*scope), position);
-    return characterCount(range, TextIteratorEmitsCharactersBetweenAllVisiblePositions);
+    return characterCount(range, TextIteratorBehavior::EmitsCharactersBetweenAllVisiblePositions);
 }
 
 // FIXME: Merge this function with the one above.
 int indexForVisiblePosition(Node& node, const VisiblePosition& visiblePosition, bool forSelectionPreservation)
 {
     auto range = makeSimpleRange(makeBoundaryPointBeforeNodeContents(node), visiblePosition);
-    return range ? characterCount(*range, forSelectionPreservation ? TextIteratorEmitsCharactersBetweenAllVisiblePositions : TextIteratorDefaultBehavior) : 0;
+    TextIteratorBehaviors behaviors;
+    if (forSelectionPreservation)
+        behaviors.add(TextIteratorBehavior::EmitsCharactersBetweenAllVisiblePositions);
+    return range ? characterCount(*range, behaviors) : 0;
 }
 
 VisiblePosition visiblePositionForPositionWithOffset(const VisiblePosition& position, int offset)
@@ -1091,7 +1016,7 @@ VisiblePosition visiblePositionForIndex(int index, ContainerNode* scope)
 {
     if (!scope)
         return { };
-    return { makeDeprecatedLegacyPosition(resolveCharacterLocation(makeRangeSelectingNodeContents(*scope), index, TextIteratorEmitsCharactersBetweenAllVisiblePositions)) };
+    return { makeDeprecatedLegacyPosition(resolveCharacterLocation(makeRangeSelectingNodeContents(*scope), index, TextIteratorBehavior::EmitsCharactersBetweenAllVisiblePositions)) };
 }
 
 VisiblePosition visiblePositionForIndexUsingCharacterIterator(Node& node, int index)

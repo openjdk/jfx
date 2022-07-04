@@ -22,11 +22,13 @@
 
 #pragma once
 
+#include "HitTestRequest.h"
 #include "LengthFunctions.h"
 #include "RenderObject.h"
 
 namespace WebCore {
 
+class ContentData;
 class ControlStates;
 class KeyframeList;
 class RenderBlock;
@@ -38,8 +40,14 @@ class RenderElement : public RenderObject {
 public:
     virtual ~RenderElement();
 
-    enum RendererCreationType { CreateAllRenderers, OnlyCreateBlockAndFlexboxRenderers };
-    static RenderPtr<RenderElement> createFor(Element&, RenderStyle&&, RendererCreationType = CreateAllRenderers);
+    static bool isContentDataSupported(const ContentData&);
+
+    enum class ConstructBlockLevelRendererFor {
+        Inline           = 1 << 0,
+        ListItem         = 1 << 1,
+        TableOrTablePart = 1 << 2
+    };
+    static RenderPtr<RenderElement> createFor(Element&, RenderStyle&&, OptionSet<ConstructBlockLevelRendererFor> = { });
 
     bool hasInitializedStyle() const { return m_hasInitializedStyle; }
 
@@ -69,6 +77,8 @@ public:
 
     RenderObject* firstChild() const { return m_firstChild; }
     RenderObject* lastChild() const { return m_lastChild; }
+    RenderObject* firstInFlowChild() const;
+    RenderObject* lastInFlowChild() const;
 
     // Note that even if these 2 "canContain" functions return true for a particular renderer, it does not necessarily mean the renderer is the containing block (see containingBlockForAbsolute(Fixed)Position).
     bool canContainFixedPositionObjects() const;
@@ -143,12 +153,21 @@ public:
     bool isTransparent() const { return style().opacity() < 1.0f; }
     float opacity() const { return style().opacity(); }
 
-    bool visibleToHitTesting() const { return style().visibility() == Visibility::Visible && style().pointerEvents() != PointerEvents::None; }
+    bool visibleToHitTesting(std::optional<HitTestRequest> hitTestRequest = std::nullopt) const
+    {
+        if (style().visibility() != Visibility::Visible)
+            return false;
+
+        if ((!hitTestRequest || !hitTestRequest->ignoreCSSPointerEventsProperty()) && style().pointerEvents() == PointerEvents::None)
+            return false;
+
+        return true;
+    }
 
     bool hasBackground() const { return style().hasBackground(); }
     bool hasMask() const { return style().hasMask(); }
     bool hasClip() const { return isOutOfFlowPositioned() && style().hasClip(); }
-    bool hasClipOrOverflowClip() const { return hasClip() || hasOverflowClip(); }
+    bool hasClipOrNonVisibleOverflow() const { return hasClip() || hasNonVisibleOverflow(); }
     bool hasClipPath() const { return style().clipPath(); }
     bool hasHiddenBackface() const { return style().backfaceVisibility() == BackfaceVisibility::Hidden; }
     bool hasOutlineAnnotation() const;
@@ -205,7 +224,6 @@ public:
     bool hasCounterNodeMap() const { return m_hasCounterNodeMap; }
     void setHasCounterNodeMap(bool f) { m_hasCounterNodeMap = f; }
 
-    const RenderElement* enclosingRendererWithTextDecoration(OptionSet<TextDecoration>, bool firstLine) const;
     void drawLineForBoxSide(GraphicsContext&, const FloatRect&, BoxSide, Color, BorderStyle, float adjacentWidth1, float adjacentWidth2, bool antialias = false) const;
 
 #if ENABLE(TEXT_AUTOSIZING)
@@ -241,6 +259,9 @@ public:
     virtual void suspendAnimations(MonotonicTime = MonotonicTime()) { }
     std::unique_ptr<RenderStyle> animatedStyle();
 
+    WeakPtr<RenderBlockFlow> backdropRenderer() const;
+    void setBackdropRenderer(RenderBlockFlow&);
+
 protected:
     enum BaseTypeFlag {
         RenderLayerModelObjectFlag  = 1 << 0,
@@ -269,8 +290,8 @@ protected:
     virtual void styleWillChange(StyleDifference, const RenderStyle& newStyle);
     virtual void styleDidChange(StyleDifference, const RenderStyle* oldStyle);
 
-    void insertedIntoTree() override;
-    void willBeRemovedFromTree() override;
+    void insertedIntoTree(IsInternalMove) override;
+    void willBeRemovedFromTree(IsInternalMove) override;
     void willBeDestroyed() override;
     void notifyFinished(CachedResource&, const NetworkLoadMetrics&) override;
 
@@ -426,22 +447,27 @@ inline Element* RenderElement::generatingElement() const
 inline bool RenderElement::canContainFixedPositionObjects() const
 {
     return isRenderView()
-        || (hasTransform() && isRenderBlock())
+        || (isRenderBlock() && hasTransform())
+        // FIXME: will-change should create containing blocks on inline boxes (bug 225035)
+        || (isRenderBlock() && style().willChange() && style().willChange()->createsContainingBlockForOutOfFlowPositioned())
         || isSVGForeignObject()
-        || isOutOfFlowRenderFragmentedFlow();
+        || shouldApplyLayoutContainment(*this);
 }
 
 inline bool RenderElement::canContainAbsolutelyPositionedObjects() const
 {
     return style().position() != PositionType::Static
         || (isRenderBlock() && hasTransformRelatedProperty())
+        // FIXME: will-change should create containing blocks on inline boxes (bug 225035)
+        || (isRenderBlock() && style().willChange() && style().willChange()->createsContainingBlockForAbsolutelyPositioned())
         || isSVGForeignObject()
+        || shouldApplyLayoutContainment(*this)
         || isRenderView();
 }
 
 inline bool RenderElement::createsGroupForStyle(const RenderStyle& style)
 {
-    return style.opacity() < 1.0f || style.hasMask() || style.clipPath() || style.hasFilter() || style.hasBackdropFilter() || style.hasBlendMode();
+    return style.hasOpacity() || style.hasMask() || style.clipPath() || style.hasFilter() || style.hasBackdropFilter() || style.hasBlendMode();
 }
 
 inline bool RenderObject::isRenderLayerModelObject() const
@@ -501,6 +527,26 @@ inline int adjustForAbsoluteZoom(int value, const RenderElement& renderer)
 inline LayoutUnit adjustLayoutUnitForAbsoluteZoom(LayoutUnit value, const RenderElement& renderer)
 {
     return adjustLayoutUnitForAbsoluteZoom(value, renderer.style());
+}
+
+inline RenderObject* RenderElement::firstInFlowChild() const
+{
+    if (auto* firstChild = this->firstChild()) {
+        if (firstChild->isInFlow())
+            return firstChild;
+        return firstChild->nextInFlowSibling();
+    }
+    return nullptr;
+}
+
+inline RenderObject* RenderElement::lastInFlowChild() const
+{
+    if (auto* lastChild = this->lastChild()) {
+        if (lastChild->isInFlow())
+            return lastChild;
+        return lastChild->previousInFlowSibling();
+    }
+    return nullptr;
 }
 
 } // namespace WebCore

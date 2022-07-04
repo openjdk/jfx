@@ -27,8 +27,8 @@
 
 #if ENABLE(APPLICATION_MANIFEST)
 
+#include "Color.h"
 #include <wtf/EnumTraits.h>
-#include <wtf/Optional.h>
 #include <wtf/URL.h>
 
 namespace WebCore {
@@ -47,34 +47,37 @@ struct ApplicationManifest {
     URL scope;
     Display display;
     URL startURL;
+    Color themeColor;
 
     template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static Optional<ApplicationManifest> decode(Decoder&);
+    template<class Decoder> static std::optional<ApplicationManifest> decode(Decoder&);
 };
 
 template<class Encoder>
 void ApplicationManifest::encode(Encoder& encoder) const
 {
-    encoder << name << shortName << description << scope << display << startURL;
+    encoder << name << shortName << description << scope << display << startURL << themeColor;
 }
 
 template<class Decoder>
-Optional<ApplicationManifest> ApplicationManifest::decode(Decoder& decoder)
+std::optional<ApplicationManifest> ApplicationManifest::decode(Decoder& decoder)
 {
     ApplicationManifest result;
 
     if (!decoder.decode(result.name))
-        return WTF::nullopt;
+        return std::nullopt;
     if (!decoder.decode(result.shortName))
-        return WTF::nullopt;
+        return std::nullopt;
     if (!decoder.decode(result.description))
-        return WTF::nullopt;
+        return std::nullopt;
     if (!decoder.decode(result.scope))
-        return WTF::nullopt;
+        return std::nullopt;
     if (!decoder.decode(result.display))
-        return WTF::nullopt;
+        return std::nullopt;
     if (!decoder.decode(result.startURL))
-        return WTF::nullopt;
+        return std::nullopt;
+    if (!decoder.decode(result.themeColor))
+        return std::nullopt;
 
     return result;
 }

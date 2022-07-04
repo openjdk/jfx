@@ -50,7 +50,7 @@ GST_DEBUG_CATEGORY_STATIC (gst_video_pool_debug);
  */
 void
 gst_buffer_pool_config_set_video_alignment (GstStructure * config,
-    GstVideoAlignment * align)
+    const GstVideoAlignment * align)
 {
   g_return_if_fail (config != NULL);
   g_return_if_fail (align != NULL);

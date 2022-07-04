@@ -25,8 +25,6 @@
 
 #pragma once
 
-#if ENABLE(INDEXED_DATABASE)
-
 #include "IDBKeyData.h"
 
 namespace WebCore {
@@ -57,13 +55,13 @@ void IDBIterateCursorData::encode(Encoder& encoder) const
 template<class Decoder>
 bool IDBIterateCursorData::decode(Decoder& decoder, IDBIterateCursorData& iteratorCursorData)
 {
-    Optional<IDBKeyData> keyData;
+    std::optional<IDBKeyData> keyData;
     decoder >> keyData;
     if (!keyData)
         return false;
     iteratorCursorData.keyData = WTFMove(*keyData);
 
-    Optional<IDBKeyData> primaryKeyData;
+    std::optional<IDBKeyData> primaryKeyData;
     decoder >> primaryKeyData;
     if (!primaryKeyData)
         return false;
@@ -84,5 +82,3 @@ bool IDBIterateCursorData::decode(Decoder& decoder, IDBIterateCursorData& iterat
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(INDEXED_DATABASE)
