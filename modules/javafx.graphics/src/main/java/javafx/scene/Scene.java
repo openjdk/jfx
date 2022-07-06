@@ -4053,9 +4053,8 @@ public class Scene implements EventTarget {
         }
 
         private void setFocusVisible(Node node, boolean focusVisible) {
-            Node.FocusPropertyBase property = (Node.FocusPropertyBase)node.focusVisibleProperty();
-            property.set(focusVisible);
-            property.notifyListeners();
+            node.focusVisible.set(focusVisible);
+            node.focusVisible.notifyListeners();
         }
 
         private boolean windowFocused;

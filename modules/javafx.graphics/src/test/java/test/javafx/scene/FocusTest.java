@@ -844,6 +844,8 @@ public class FocusTest {
 
         assertNotFocused(scene, node1);
         assertNotFocusVisible(node1);
+        assertIsFocused(scene, node2);
+        assertNotFocusVisible(node2);
     }
 
     /**

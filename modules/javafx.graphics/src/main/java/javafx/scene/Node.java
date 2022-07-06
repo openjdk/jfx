@@ -8266,7 +8266,7 @@ public abstract class Node implements EventTarget, Styleable {
      * @defaultValue false
      * @since 19
      */
-    private final FocusPropertyBase focusVisible = new FocusPropertyBase() {
+    final FocusPropertyBase focusVisible = new FocusPropertyBase() {
         @Override
         protected PseudoClass getPseudoClass() {
             return FOCUS_VISIBLE_PSEUDOCLASS_STATE;
