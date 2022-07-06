@@ -1051,7 +1051,7 @@ public class FXCollections {
         }
 
         @Override
-        public <T> T[] toArray(T[] a) {
+        public <X> X[] toArray(X[] a) {
             synchronized(mutex) {
                 return backingList.toArray(a);
             }
@@ -1335,7 +1335,7 @@ public class FXCollections {
         }
 
         @Override
-        public <T> T[] toArray(T[] a) {
+        public <X> X[] toArray(X[] a) {
             return list.toArray(a);
         }
 
@@ -1631,7 +1631,7 @@ public class FXCollections {
         }
 
         @Override
-        public <E> E[] toArray(E[] a) {
+        public <X> X[] toArray(X[] a) {
             if (a.length > 0)
                 a[0] = null;
             return a;
@@ -1817,7 +1817,7 @@ public class FXCollections {
         }
 
         @Override
-        public <E> E[] toArray(E[] a) {
+        public <X> X[] toArray(X[] a) {
             synchronized(mutex) {
                 return backingSet.toArray(a);
             }
