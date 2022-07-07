@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -160,11 +160,6 @@ public abstract class Shape extends Node {
             @Override
             public NGShape.Mode getMode(Shape shape) {
                 return shape.getMode();
-            }
-
-            @Override
-            public void setMode(Shape shape, NGShape.Mode mode) {
-                shape.setMode(mode);
             }
 
             @Override
@@ -400,10 +395,6 @@ public abstract class Shape extends Node {
 
     NGShape.Mode getMode() {
         return mode;
-    }
-
-    void setMode(NGShape.Mode mode) {
-        mode = mode;
     }
 
     private NGShape.Mode mode = NGShape.Mode.FILL;
