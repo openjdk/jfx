@@ -2318,14 +2318,14 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
      * the viewport in the next layout cycle.
      */
     void getCellSizesInExpectedViewport(int index) {
-              double estlength = getOrCreateCellSize(index);
+        double estlength = getOrCreateCellSize(index);
         int i = index;
-        while ((estlength < viewportLength) && (++i < getCellCount())){
+        while ((estlength < viewportLength) && (++i < getCellCount())) {
             estlength = estlength + getOrCreateCellSize(i);
         }
         if (estlength < viewportLength) {
             int j = index;
-            while ((estlength < viewportLength) && (--j > 0)) {
+            while ((estlength < viewportLength) && (j-- > 0)) {
                 estlength = estlength + getOrCreateCellSize(j);
             }
         }
@@ -3092,14 +3092,16 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
                 cnt++;
             }
         }
-        this.estimatedSize = cnt == 0 ? 1d: tot * itemCount / cnt;
+        this.estimatedSize = cnt == 0 ? 1d : tot * itemCount / cnt;
         estSize = estimatedSize / itemCount;
 
-        if (keepRatio ) {
+        if (keepRatio) {
             double newOffset = 0;
-            for (int i = 0; i < oldIndex ; i++) {
+            for (int i = 0; i < oldIndex; i++) {
                 double h = getCellSize(i);
-                if (h < 0) h = estSize;
+                if (h < 0) {
+                    h = estSize;
+                }
                 newOffset += h;
             }
             this.absoluteOffset = newOffset + oldOffset;
