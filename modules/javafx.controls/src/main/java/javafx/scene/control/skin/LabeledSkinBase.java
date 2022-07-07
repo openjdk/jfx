@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -937,7 +937,7 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
      * text to display is an expensive operation. Package private ONLY FOR THE
      * SAKE OF TESTING.
      */
-    void updateDisplayedText() {
+    void updateDisplayedTextPrivate() {
         updateDisplayedText(-1, -1);
     }
 

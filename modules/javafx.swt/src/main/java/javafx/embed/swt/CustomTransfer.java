@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -77,7 +77,7 @@ class CustomTransfer extends ByteArrayTransfer {
         return new int [] {registerType(name)};
     }
 
-    boolean checkByteArray(Object object) {
+    private boolean checkByteArrayPrivate(Object object) {
         return (object != null && object instanceof byte[] && ((byte[])object).length > 0);
     }
 
@@ -86,7 +86,7 @@ class CustomTransfer extends ByteArrayTransfer {
     }
 
     boolean checkCustom(Object object) {
-        return checkByteArray(object) || checkByteBuffer(object);
+        return checkByteArrayPrivate(object) || checkByteBuffer(object);
     }
 
     protected boolean validate(Object object) {

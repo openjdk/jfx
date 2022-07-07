@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,7 +29,7 @@ import javafx.scene.paint.Paint;
 public class ProgressIndicatorSkinShim {
 
     public static Paint getProgressColor(ProgressIndicatorSkin ps) {
-        return ps.getProgressColor();
+        return ps.getProgressColorPrivate();
     }
 
 }

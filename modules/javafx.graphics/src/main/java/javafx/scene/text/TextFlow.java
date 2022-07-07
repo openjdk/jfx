@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -404,8 +404,8 @@ public class TextFlow extends Pane {
                     if (baseline == BASELINE_OFFSET_SAME_AS_HEIGHT) {
                         baseline = node.getLayoutBounds().getHeight();
                     }
-                    double width = computeChildPrefAreaWidth(node, null);
-                    double height = computeChildPrefAreaHeight(node, null);
+                    double width = computeChildPrefAreaWidthPrivate(node, null);
+                    double height = computeChildPrefAreaHeightPrivate(node, null);
                     spans[i] = new EmbeddedSpan(node, baseline, width, height);
                 }
             }
@@ -619,7 +619,7 @@ public class TextFlow extends Pane {
         return a <= b ? a : b;
     }
 
-    double computeChildPrefAreaWidth(Node child, Insets margin) {
+    private double computeChildPrefAreaWidthPrivate(Node child, Insets margin) {
         return computeChildPrefAreaWidth(child, margin, -1);
     }
 
@@ -637,7 +637,7 @@ public class TextFlow extends Pane {
         return left + snapSizeX(boundedSize(child.minWidth(alt), child.prefWidth(alt), child.maxWidth(alt))) + right;
     }
 
-    double computeChildPrefAreaHeight(Node child, Insets margin) {
+    private double computeChildPrefAreaHeightPrivate(Node child, Insets margin) {
         return computeChildPrefAreaHeight(child, margin, -1);
     }
 

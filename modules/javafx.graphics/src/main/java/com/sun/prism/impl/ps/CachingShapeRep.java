@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -508,7 +508,7 @@ class CachingShapeRepState {
         }
 
         BaseShaderGraphics bsg = (BaseShaderGraphics)g;
-        BaseShaderContext context = bsg.getContext();
+        BaseShaderContext context = bsg.getBaseShaderContext();
         if (doUpdateMask || texData.cacheEntry == null) {
             // need to create a new mask texture, or reuse an existing one
             if (xformBounds == null) {

@@ -1,5 +1,5 @@
  /*
- * Copyright (c) 2008, 2016, Oracle and/or its affiliates.
+ * Copyright (c) 2008, 2022, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -50,9 +50,10 @@ public class CurveFittedAreaChart extends AreaChart<Number, Number> {
     public CurveFittedAreaChart(NumberAxis xAxis, NumberAxis yAxis) {
         super(xAxis, yAxis);
     }
+
     @Override protected void layoutPlotChildren() {
         super.layoutPlotChildren();
-        for (int index = 0; index < getDataSize(); index++) {
+        for (int index = 0; index < getDataSizePrivate(); index++) {
             final XYChart.Series<Number, Number> series = getData().get(index);
             final Group seriesGroup = (Group)series.getNode();
             final Path seriesLine = (Path)seriesGroup.getChildren().get(1);
@@ -61,7 +62,7 @@ public class CurveFittedAreaChart extends AreaChart<Number, Number> {
         }
     }
 
-    private int getDataSize() {
+    private int getDataSizePrivate() {
         final ObservableList<XYChart.Series<Number, Number>> data = getData();
         return (data != null) ? data.size() : 0;
     }
