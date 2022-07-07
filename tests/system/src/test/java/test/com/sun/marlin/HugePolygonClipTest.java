@@ -76,11 +76,13 @@ public class HugePolygonClipTest {
     private static final int SCENE_WIDTH = 600;
     private static final int SCENE_HEIGHT = 400;
 
-    static final int BLUE_PIXEL = 0xff0000ff;
-    static final int RED_PIXEL = 0xffff0000;
-    static final int WHITE_PIXEL = 0xffffffff;
+    private static final double WIDTH = 2.73;
 
-    static final boolean SAVE_IMAGE = false;
+    private static final int G_MASK = 0x0000ff00;
+    private static final int R_MASK = 0x00ff0000;
+    private static final int RGB_MASK = 0x00ffffff;
+
+    private static final boolean SAVE_IMAGE = false;
 
     // Used to launch the application before running any test
     private static final CountDownLatch launchLatch = new CountDownLatch(1);
@@ -176,17 +178,18 @@ public class HugePolygonClipTest {
                     0.0, 0.0
             );
 
-            veryWidePolygon.setFill(Color.BLUE);
-            veryWidePolygon.setStroke(Color.RED);
-            veryWidePolygon.setStrokeWidth(2);
+            veryWidePolygon.setFill(Color.RED);
+            veryWidePolygon.setStroke(Color.GREEN);
+            veryWidePolygon.setStrokeWidth(WIDTH);
 
             Group group = new Group(veryWidePolygon);
             group.getTransforms().add(new Translate(-longWidth + SCENE_WIDTH, 100.0));
 
-            Scene scene = new Scene(group, SCENE_WIDTH, SCENE_HEIGHT, Color.WHITE);
+            Scene scene = new Scene(group, SCENE_WIDTH, SCENE_HEIGHT, Color.BLACK);
             myApp.stage.setScene(scene);
 
             final SnapshotParameters sp = new SnapshotParameters();
+            sp.setFill(Color.BLACK);
             sp.setViewport(new Rectangle2D(0, 0, SCENE_WIDTH, SCENE_HEIGHT));
 
             final WritableImage img = scene.getRoot().snapshot(sp, new WritableImage(SCENE_WIDTH, SCENE_HEIGHT));
@@ -203,33 +206,36 @@ public class HugePolygonClipTest {
             final PixelReader pr = img.getPixelReader();
 
             final int x = SCENE_WIDTH / 2;
-            // 10, 5 = blue
             checkColumn(pr, x, SCENE_HEIGHT);
         });
     }
 
     private static void checkColumn(final PixelReader pr, final int x, final int maxY) {
-
+        boolean trigger = false;
         boolean inside = false;
-        boolean prevRed = false;
 
         for (int y = 0; y < maxY; y++) {
             final int rgb = pr.getArgb(x, y);
             // System.out.println("pixel at (" + x + ", " + y + ") = " + rgb);
 
-            if (rgb == RED_PIXEL) {
-                if (!prevRed) {
-                    prevRed = true;
+            if ((rgb & G_MASK) != 0) {
+                if (!trigger) {
+                    trigger = true;
                     inside = !inside;
                     // System.out.println("inside: "+inside);
                 }
             } else {
-                prevRed = false;
-                final int expected = (inside) ? BLUE_PIXEL : WHITE_PIXEL;
+                trigger = false;
 
-                if (rgb != expected) {
+                final int mask = (inside) ? R_MASK : RGB_MASK;
+
+                final int expected = (rgb & mask);
+
+                // System.out.println("pix[" + y + "] = " + expected + " inside: " + inside);
+                if ((inside && (expected == 0))
+                        || (!inside && (expected != 0))) {
                     fail("bad pixel at (" + x + ", " + y
-                            + ") = " + rgb + " expected: " + expected);
+                            + ") = " + expected + " inside: " + inside);
                 }
             }
         }
