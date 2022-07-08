@@ -126,6 +126,7 @@ public final class PrismPrintPipeline extends PrintPipeline {
             printerSet = FXCollections.observableSet(printers);
             returnedPrinterSet =
                 FXCollections.unmodifiableObservableSet(printerSet);
+            lastTime = System.currentTimeMillis();
         } else {
             PrintService[] newServices =
                     PrintServiceLookup.lookupPrintServices(null, null);
