@@ -131,7 +131,7 @@ public final class PrismPrintPipeline extends PrintPipeline {
             PrintService[] newServices =
                     PrintServiceLookup.lookupPrintServices(null, null);
             if ((newServices.length != printerSet.size()) ||
-                    (lastTime + 120000) > System.currentTimeMillis()) {
+                    (lastTime + 120000) < System.currentTimeMillis()) {
                 updatePrinters(newServices);
                 lastTime = System.currentTimeMillis();
             }
