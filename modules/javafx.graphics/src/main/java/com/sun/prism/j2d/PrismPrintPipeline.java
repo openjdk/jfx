@@ -190,8 +190,8 @@ public final class PrismPrintPipeline extends PrintPipeline {
         if (newDefaultService != null) {
             if (oldDefaultService == null ||
                 (!oldDefaultService.equals(newDefaultService)))
-             {  
-                defaultPrinter = findDefaultPrinter(printerSet, newDefaultService);         
+             {
+                defaultPrinter = findDefaultPrinter(printerSet, newDefaultService);
              }
         } else {
             defaultPrinter = null;
