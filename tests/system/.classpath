@@ -34,7 +34,7 @@
 	<classpathentry combineaccessrules="false" kind="src" path="/controls">
 		<attributes>
 			<attribute name="module" value="true"/>
-			<attribute name="add-exports" value="javafx.controls/test.com.sun.javafx.scene.control.infrastructure=ALL-UNNAMED"/>
+			<attribute name="add-exports" value="javafx.controls/test.com.sun.javafx.scene.control.infrastructure=ALL-UNNAMED:javafx.controls/com.sun.javafx.scene.control=ALL-UNNAMED"/>
 		</attributes>
 	</classpathentry>
 	<classpathentry combineaccessrules="false" kind="src" path="/fxml">
