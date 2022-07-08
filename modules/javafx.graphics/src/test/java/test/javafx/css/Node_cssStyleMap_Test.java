@@ -73,7 +73,7 @@ public class Node_cssStyleMap_Test {
 
     boolean disabled = false;
 
-    /** 
+    /**
      * @param property - must be a StyleableProperty
      * @param map
      * @param decls
