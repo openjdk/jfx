@@ -97,7 +97,6 @@ public final class PrismPrintPipeline extends PrintPipeline {
 
     // The map is useful when updating
     private static HashMap<PrintService, Printer> pMap = new HashMap<>();
-    //private static TreeSet<Printer> printers = null;
 
     private static long lastTime = 0L;
     private static ObservableSet<Printer> printerSet = null;
@@ -133,9 +132,9 @@ public final class PrismPrintPipeline extends PrintPipeline {
             if ((newServices.length != printerSet.size()) ||
                     (lastTime + 120000) > System.currentTimeMillis()) {
                 updatePrinters(newServices);
+                lastTime = System.currentTimeMillis();
             }
         }
-        lastTime = System.currentTimeMillis();
         return returnedPrinterSet;
     }
 
