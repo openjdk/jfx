@@ -2326,7 +2326,7 @@ public class FXMLLoader {
         if (location == null) {
             return 0;
         }
-        return location.hashCode();
+        return location.toExternalForm().hashCode();
     }
 
     private boolean isCyclic(
