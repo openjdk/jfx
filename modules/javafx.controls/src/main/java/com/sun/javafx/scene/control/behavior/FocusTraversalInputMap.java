@@ -87,6 +87,7 @@ public class FocusTraversalInputMap<N extends Node> {
      *
      * @param node The node to traverse on
      * @param dir The direction to traverse
+     * @param method The focus traversal method
      */
     public static void traverse(final Node node, final Direction dir, TraversalMethod method) {
         if (node == null) {
