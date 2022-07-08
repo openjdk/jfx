@@ -74,7 +74,7 @@ public class PrintTest extends Application {
     }
 
     static final String instructions =
-            "This is regression test for 8150076 (see https://bugs.openjdk.java.net/browse/JDK-8150076 ).\n" +
+            "This is regression test for 8150076 (see https://bugs.openjdk.org/browse/JDK-8150076 ).\n" +
                     "Press print button, after this 2 pages must be printed. When all pages are printed you will " +
                     "see \"PASSED!\" message below, otherwise test is failed.";
 
