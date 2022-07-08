@@ -110,6 +110,6 @@ public class PrinterListenerTest extends Application {
         } else {
            System.out.println("Other change");
         }
- 
+
     }
 }

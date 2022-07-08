@@ -187,11 +187,13 @@ public final class PrismPrintPipeline extends PrintPipeline {
             (defaultPrinter == null) ? null :
                 ((J2DPrinter)PrintHelper.getPrinterImpl(defaultPrinter)).getService();
         PrintService newDefaultService = PrintServiceLookup.lookupDefaultPrintService();
-        if (oldDefaultService != null && newDefaultService != null) {
-            if (!oldDefaultService.equals(newDefaultService)) {
-                defaultPrinter = findDefaultPrinter(printerSet, newDefaultService);
-            }
-        } else if (newDefaultService == null) {
+        if (newDefaultService != null) {
+            if (oldDefaultService == null ||
+                (!oldDefaultService.equals(newDefaultService)))
+             {  
+                defaultPrinter = findDefaultPrinter(printerSet, newDefaultService);         
+             }
+        } else {
             defaultPrinter = null;
         }
     }

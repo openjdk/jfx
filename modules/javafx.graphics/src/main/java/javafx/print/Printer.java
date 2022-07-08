@@ -91,8 +91,8 @@ public final class Printer {
             defaultPrinter =
                 new ReadOnlyObjectWrapper<Printer>(null, "defaultPrinter", p);
         } else {
-        defaultPrinter.setValue(p);
-    }
+            defaultPrinter.setValue(p);
+        }
         return defaultPrinter;
     }
 
