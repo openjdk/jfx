@@ -122,7 +122,7 @@ public class ListCellStartEditTest {
 
         if (listCell instanceof CheckBoxListCell) {
             assertNotNull(listCell.getGraphic());
-            // Ignored until https://bugs.openjdk.java.net/browse/JDK-8270042 is resolved.
+            // Ignored until https://bugs.openjdk.org/browse/JDK-8270042 is resolved.
             // Check if the checkbox is disabled when not editable.
             // assertEquals(expectedEditingState, !listCell.getGraphic().isDisabled());
         } else if (!listCell.getClass().equals(ListCell.class)) {
