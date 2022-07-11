@@ -805,6 +805,17 @@ public class MapPropertyBaseTest {
         });
     }
 
+    @Test
+    public void testMapPropertyLeak() {
+        JMemoryBuddy.memoryTest(checker -> {
+            ObservableMap<Object,Object> map = FXCollections.observableMap(new HashMap<Object,Object>());
+            MapProperty<Object, Object> mapProperty = new SimpleMapProperty<>(map);
+
+            checker.setAsReferenced(map);
+            checker.assertCollectable(mapProperty);
+        });
+    }
+
     private static class MapPropertyMock extends MapPropertyBase<Object, Object> {
 
         private final Object bean;

@@ -741,6 +741,17 @@ public class SetPropertyBaseTest {
         });
     }
 
+    @Test
+    public void testSetPropertyLeak() {
+        JMemoryBuddy.memoryTest(checker -> {
+            ObservableSet<Object> set = FXCollections.observableSet();
+            SetProperty<Object> setProperty = new SimpleSetProperty<>(set);
+
+            checker.setAsReferenced(set);
+            checker.assertCollectable(setProperty);
+        });
+    }
+
     private static class SetPropertyMock extends SetPropertyBase<Object> {
 
         private final Object bean;

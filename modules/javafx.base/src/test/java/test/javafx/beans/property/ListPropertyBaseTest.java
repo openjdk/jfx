@@ -834,6 +834,17 @@ public class ListPropertyBaseTest {
         });
     }
 
+    @Test
+    public void testListPropertyLeak() {
+        JMemoryBuddy.memoryTest(checker -> {
+            ObservableList<Object> list = FXCollections.observableArrayList();
+            ListProperty<Object> listProperty = new SimpleListProperty<>(list);
+
+            checker.setAsReferenced(list);
+            checker.assertCollectable(listProperty);
+        });
+    }
+
     private static class ListPropertyMock extends ListPropertyBase<Object> {
 
         private final Object bean;
