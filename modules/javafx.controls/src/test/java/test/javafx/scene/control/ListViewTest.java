@@ -2210,11 +2210,11 @@ public class ListViewTest {
         for (int i = 0; i < cc; i++) {
             IndexedCell<Integer> cell = VirtualFlowTestUtils.getCell(listView, i);
             if ((cell != null) && (cell.getItem() == 20)) {
-                assertEquals("Last cell doesn't end at listview end", cell.getLayoutY(), viewportLength - 20, 1.);
+                assertEquals("Last cell doesn't end at listview end", viewportLength - 20, cell.getLayoutY(), 1.);
                 got20 = true;
             }
             if ((cell != null) && (cell.getItem() == 70)) {
-                assertEquals("Secondlast cell doesn't end properly", cell.getLayoutY(), viewportLength - 20 - 70, 1.);
+                assertEquals("Secondlast cell doesn't end properly", viewportLength - 20 - 70, cell.getLayoutY(), 1.);
                 got70 = true;
             }
         }
@@ -2231,11 +2231,11 @@ public class ListViewTest {
         for (int i = 0; i < cc; i++) {
             IndexedCell<Integer> cell = VirtualFlowTestUtils.getCell(listView, i);
             if ((cell != null) && (cell.getItem() == 21)) {
-                assertEquals("Last cell doesn't end at listview end", cell.getLayoutY(), viewportLength - 21, 1.);
+                assertEquals("Last cell doesn't end at listview end", viewportLength - 21, cell.getLayoutY(), 1.);
                 got21 = true;
             }
             if ((cell != null) && (cell.getItem() == 20)) {
-                assertEquals("Secondlast cell doesn't end properly", cell.getLayoutY(), viewportLength - 21 - 20, 1.);
+                assertEquals("Secondlast cell doesn't end properly", viewportLength - 21 - 20, cell.getLayoutY(), 1.);
                 got20 = true;
             }
         }
