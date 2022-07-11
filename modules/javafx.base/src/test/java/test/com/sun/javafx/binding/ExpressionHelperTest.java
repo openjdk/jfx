@@ -39,7 +39,9 @@ import test.javafx.beans.value.WeakChangeListenerMock;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.util.ArrayList;
 import java.util.BitSet;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -447,6 +449,69 @@ public class ExpressionHelperTest {
         changeListener[1].check(observable, DATA_1, DATA_2, 1);
         changeListener[2].check(observable, DATA_1, DATA_2, 1);
         changeListener[3].check(observable, DATA_1, DATA_2, 1);
+    }
+
+    @Test
+    public void testChangeValueWhenLocked() {
+        List<String> recording1 = new ArrayList<>();
+        List<String> recording2 = new ArrayList<>();
+        List<String> recording3 = new ArrayList<>();
+
+        final ChangeListener<Integer> recordingChangeListener1 = new ChangeListener<>() {
+            @Override
+            public void changed(ObservableValue<? extends Integer> observable, Integer oldValue, Integer newValue) {
+                recording1.add(oldValue + " -> " + newValue);
+            }
+        };
+
+        final ChangeListener<Integer> recordingChangeListener2 = new ChangeListener<>() {
+            @Override
+            public void changed(ObservableValue<? extends Integer> observable, Integer oldValue, Integer newValue) {
+                recording2.add(oldValue + " -> " + newValue);
+            }
+        };
+
+        final ChangeListener<Integer> changingListener = new ChangeListener<>() {
+            @Override
+            public void changed(ObservableValue<? extends Integer> observable, Integer oldValue, Integer newValue) {
+                recording3.add(oldValue + " -> " + newValue);
+                if(newValue % 2 != 0) {
+                    ExpressionHelperTest.this.observable.set(newValue + 1);
+                    ExpressionHelper.fireValueChangedEvent(helper);
+                }
+            }
+        };
+
+        observable.set(1);
+        ExpressionHelper.fireValueChangedEvent(helper);  // doing this before adding any listeners avoids an exception being logged
+
+        helper = ExpressionHelper.addListener(helper, observable, recordingChangeListener1);
+        helper = ExpressionHelper.addListener(helper, observable, changingListener);
+        helper = ExpressionHelper.addListener(helper, observable, recordingChangeListener2);
+
+        observable.set(2);
+        ExpressionHelper.fireValueChangedEvent(helper);
+
+        assertEquals("1 -> 2", recording1.get(0));
+        assertEquals("1 -> 2", recording2.get(0));
+        assertEquals(1, recording1.size());
+        assertEquals(1, recording2.size());
+
+        recording1.clear();
+        recording2.clear();
+
+        observable.set(3);
+        ExpressionHelper.fireValueChangedEvent(helper);
+
+        System.out.println(recording1);
+        System.out.println(recording3);
+        System.out.println(recording2);
+        assertEquals("2 -> 3", recording1.get(0));
+        assertEquals("2 -> 3", recording2.get(0));
+        assertEquals("3 -> 4", recording1.get(1));
+        assertEquals("3 -> 4", recording2.get(1));
+        assertEquals(2, recording1.size());
+        assertEquals(2, recording2.size());
     }
 
     @Test

@@ -193,6 +193,7 @@ public abstract class ExpressionHelper<T> extends ExpressionHelperBase {
         private int invalidationSize;
         private int changeSize;
         private boolean locked;
+        private boolean nestedEmission;
         private T currentValue;
 
         private Generic(ObservableValue<T> observable, InvalidationListener listener0, InvalidationListener listener1) {
@@ -336,6 +337,12 @@ public abstract class ExpressionHelper<T> extends ExpressionHelperBase {
 
         @Override
         protected void fireValueChangedEvent() {
+            nestedEmission = true;
+
+            if (locked) {
+                return;
+            }
+
             final InvalidationListener[] curInvalidationList = invalidationListeners;
             final int curInvalidationSize = invalidationSize;
             final ChangeListener<? super T>[] curChangeList = changeListeners;
@@ -343,25 +350,35 @@ public abstract class ExpressionHelper<T> extends ExpressionHelperBase {
 
             try {
                 locked = true;
-                for (int i = 0; i < curInvalidationSize; i++) {
-                    try {
-                        curInvalidationList[i].invalidated(observable);
-                    } catch (Exception e) {
-                        Thread.currentThread().getUncaughtExceptionHandler().uncaughtException(Thread.currentThread(), e);
+                T oldValue = currentValue;
+
+                while (nestedEmission) {
+                    nestedEmission = false;
+
+                    for (int i = 0; i < curInvalidationSize; i++) {
+                        try {
+                            curInvalidationList[i].invalidated(observable);
+                        } catch (Exception e) {
+                            Thread.currentThread().getUncaughtExceptionHandler().uncaughtException(Thread.currentThread(), e);
+                        }
                     }
-                }
-                if (curChangeSize > 0) {
-                    final T oldValue = currentValue;
-                    currentValue = observable.getValue();
-                    final boolean changed = (currentValue == null)? (oldValue != null) : !currentValue.equals(oldValue);
-                    if (changed) {
-                        for (int i = 0; i < curChangeSize; i++) {
-                            try {
-                                curChangeList[i].changed(observable, oldValue, currentValue);
-                            } catch (Exception e) {
-                                Thread.currentThread().getUncaughtExceptionHandler().uncaughtException(Thread.currentThread(), e);
+                    if (curChangeSize > 0) {
+                        currentValue = observable.getValue();
+
+                        T newValue = currentValue;
+                        boolean changed = (newValue == null) ? (oldValue != null) : !newValue.equals(oldValue);
+
+                        if (changed) {
+                            for (int i = 0; i < curChangeSize; i++) {
+                                try {
+                                    curChangeList[i].changed(observable, oldValue, newValue);
+                                } catch (Exception e) {
+                                    Thread.currentThread().getUncaughtExceptionHandler().uncaughtException(Thread.currentThread(), e);
+                                }
                             }
                         }
+
+                        oldValue = newValue;
                     }
                 }
             } finally {
