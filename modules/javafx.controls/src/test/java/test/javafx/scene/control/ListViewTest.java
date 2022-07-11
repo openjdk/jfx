@@ -2263,7 +2263,7 @@ public class ListViewTest {
         listView.scrollTo(14);
         Toolkit.getToolkit().firePulse();
         int cc = VirtualFlowTestUtils.getCellCount(listView);
-        assertEquals(cc, 15);
+        assertEquals(15, cc);
         boolean got70 = false;
         for (int i = 0; i < cc; i++) {
             IndexedCell<Integer> cell = VirtualFlowTestUtils.getCell(listView, i);
