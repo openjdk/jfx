@@ -91,12 +91,8 @@ public final class CalculatedValue {
     @Override
     public int hashCode() {
         int h = relative ? 1 : 0;
-        if (origin != null) {
-            h = 31 * h + origin.hashCode();
-        }
-        if (value != null) {
-            h = 31 * h + value.hashCode();
-        }
+        h = 31 * h + (origin == null ? 0 : origin.hashCode());
+        h = 31 * h + (value == null ? 0 : value.hashCode());
         return h;
     }
 
