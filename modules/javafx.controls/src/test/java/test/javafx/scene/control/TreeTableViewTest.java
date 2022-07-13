@@ -786,6 +786,18 @@ public class TreeTableViewTest {
         });
     }
 
+    @Test public void testSetSortOrderRetainsWhenRootHasNoChildren() {
+        TreeTableView<String> ttv = new TreeTableView<>();
+        TreeItem<String> root = new TreeItem<>("root");
+        root.setExpanded(true);
+        ttv.setRoot(root);
+        assertEquals(0, ttv.getSortOrder().size());
+
+        TreeTableColumn<String, String> ttc = new TreeTableColumn<>("Column");
+        ttv.getSortOrder().add(ttc);
+        assertEquals(1, ttv.getSortOrder().size());
+    }
+
     @Test public void testNPEWhenRootItemIsNull() {
         TreeTableView<String> ttv = new TreeTableView<>();
         ControlTestUtils.runWithExceptionHandler(() -> {
