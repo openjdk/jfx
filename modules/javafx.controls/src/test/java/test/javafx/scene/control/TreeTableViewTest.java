@@ -786,7 +786,7 @@ public class TreeTableViewTest {
         });
     }
 
-    @Test public void testSetSortOrderretainsWhenRootHasNoChildren() {
+    @Test public void testSetSortOrderRetainsWhenRootHasNoChildren() {
         TreeTableView<String> ttv = new TreeTableView<>();
         TreeItem<String> root = new TreeItem<>("root");
         root.setExpanded(true);
