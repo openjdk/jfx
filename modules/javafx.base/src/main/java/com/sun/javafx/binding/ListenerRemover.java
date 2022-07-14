@@ -44,7 +44,7 @@ import javafx.beans.WeakListener;
  */
 public class ListenerRemover {
 
-    public static final ReferenceQueue<?> QUEUE = new ReferenceQueue<>();
+    private static final ReferenceQueue<?> QUEUE = new ReferenceQueue<>();
 
     /**
      * When ref becomes weakly reachable, remove weakListener from target.
