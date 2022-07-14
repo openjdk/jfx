@@ -32,6 +32,7 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 
 import com.sun.javafx.binding.BindingHelperObserver;
+import com.sun.javafx.binding.ConcurrentListenerAccess;
 import com.sun.javafx.binding.ExpressionHelper;
 
 /**
@@ -59,7 +60,7 @@ import com.sun.javafx.binding.ExpressionHelper;
  * @since JavaFX 2.0
  */
 public abstract class ObjectBinding<T> extends ObjectExpression<T> implements
-        Binding<T> {
+        Binding<T>, ConcurrentListenerAccess {
 
     private T value;
     private boolean valid = false;
@@ -73,22 +74,22 @@ public abstract class ObjectBinding<T> extends ObjectExpression<T> implements
     }
 
     @Override
-    public void addListener(InvalidationListener listener) {
+    public synchronized void addListener(InvalidationListener listener) {
         helper = ExpressionHelper.addListener(helper, this, listener);
     }
 
     @Override
-    public void removeListener(InvalidationListener listener) {
+    public synchronized void removeListener(InvalidationListener listener) {
         helper = ExpressionHelper.removeListener(helper, listener);
     }
 
     @Override
-    public void addListener(ChangeListener<? super T> listener) {
+    public synchronized void addListener(ChangeListener<? super T> listener) {
         helper = ExpressionHelper.addListener(helper, this, listener);
     }
 
     @Override
-    public void removeListener(ChangeListener<? super T> listener) {
+    public synchronized void removeListener(ChangeListener<? super T> listener) {
         helper = ExpressionHelper.removeListener(helper, listener);
     }
 
@@ -179,7 +180,11 @@ public abstract class ObjectBinding<T> extends ObjectExpression<T> implements
         if (valid) {
             valid = false;
             onInvalidating();
-            ExpressionHelper.fireValueChangedEvent(helper);
+
+            synchronized(this) {
+                ExpressionHelper.fireValueChangedEvent(helper);
+            }
+
             value = null;  // clear cached value to avoid hard reference to stale data
         }
     }
@@ -197,7 +202,7 @@ public abstract class ObjectBinding<T> extends ObjectExpression<T> implements
      *     listeners registered on it, otherwise {@code false}
      * @since 19
      */
-    protected final boolean isObserved() {
+    protected synchronized final boolean isObserved() {
         return helper != null;
     }
 

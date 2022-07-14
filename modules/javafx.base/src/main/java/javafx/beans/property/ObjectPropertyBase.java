@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,14 +25,17 @@
 
 package javafx.beans.property;
 
+import java.lang.ref.WeakReference;
+
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
+import javafx.beans.WeakListener;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 
+import com.sun.javafx.binding.ConcurrentListenerAccess;
+import com.sun.javafx.binding.ListenerRemover;
 import com.sun.javafx.binding.ExpressionHelper;
-import java.lang.ref.WeakReference;
-import javafx.beans.WeakListener;
 
 /**
  * The class {@code ObjectPropertyBase} is the base class for a property
@@ -169,7 +172,7 @@ public abstract class ObjectPropertyBase<T> extends ObjectProperty<T> {
             unbind();
             observable = newObservable;
             if (listener == null) {
-                listener = new Listener(this);
+                listener = new Listener(this, observable);
             }
             observable.addListener(listener);
             markInvalid();
@@ -221,17 +224,20 @@ public abstract class ObjectPropertyBase<T> extends ObjectProperty<T> {
 
         private final WeakReference<ObjectPropertyBase<?>> wref;
 
-        public Listener(ObjectPropertyBase<?> ref) {
-            this.wref = new WeakReference<ObjectPropertyBase<?>>(ref);
+        public Listener(ObjectPropertyBase<?> ref, Observable observable) {
+            this.wref = observable instanceof ConcurrentListenerAccess
+                    ? ListenerRemover.whenWeaklyReachable(ref, this, observable)
+                    : new WeakReference<ObjectPropertyBase<?>>(ref);
         }
 
         @Override
         public void invalidated(Observable observable) {
             ObjectPropertyBase<?> ref = wref.get();
-            if (ref == null) {
-                observable.removeListener(this);
-            } else {
+            if (ref != null) {
                 ref.markInvalid();
+            }
+            else if(!(observable instanceof ConcurrentListenerAccess)) {
+                observable.removeListener(this);
             }
         }
 
