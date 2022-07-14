@@ -34,6 +34,8 @@ import javafx.collections.ObservableMap;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.lang.ref.WeakReference;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.Collections;
 import java.util.HashMap;
 import javafx.beans.property.MapProperty;
@@ -814,6 +816,26 @@ public class MapPropertyBaseTest {
             checker.setAsReferenced(map);
             checker.assertCollectable(mapProperty);
         });
+    }
+
+
+    @Test
+    public void testMapBindingPrematureCollection() {
+        MapProperty<Object, Object> mapB = new SimpleMapProperty<>(FXCollections.observableMap(new HashMap<Object,Object>()));
+        AtomicReference<WeakReference<MapProperty<Object, Object>>> mapAW = new AtomicReference<>(null);
+
+        JMemoryBuddy.memoryTest( checker -> {
+            MapProperty<Object, Object> mapA = new SimpleMapProperty<>(FXCollections.observableMap(new HashMap<Object,Object>()));
+            mapAW.set(new WeakReference<>(mapA));
+            mapB.bind(mapA);
+            // Ensure that the map we are binding to still remains
+            checker.setAsReferenced(mapB);
+            checker.assertNotCollectable(mapA);
+        });
+
+        // ensure that the Binding still works after GC triggered by JMemoryBuddy
+        mapAW.get().get().put(1,1);
+        assertEquals("Binding stopped working after GC", 1, mapB.getValue().get(1));
     }
 
     private static class MapPropertyMock extends MapPropertyBase<Object, Object> {

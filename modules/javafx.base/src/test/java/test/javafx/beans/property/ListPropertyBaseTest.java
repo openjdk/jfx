@@ -43,6 +43,8 @@ import javafx.beans.property.ListPropertyBase;
 import javafx.beans.property.SimpleListProperty;
 import test.javafx.collections.Person;
 import test.util.memory.JMemoryBuddy;
+import java.lang.ref.WeakReference;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.Assert.*;
 
@@ -844,6 +846,26 @@ public class ListPropertyBaseTest {
             checker.assertCollectable(listProperty);
         });
     }
+
+    @Test
+    public void testListBindingPrematureCollection() {
+        ListProperty<Object> listB = new SimpleListProperty<>(FXCollections.observableArrayList());
+        AtomicReference<WeakReference<ListProperty<Object>>> listAW = new AtomicReference<>(null);
+
+        JMemoryBuddy.memoryTest( checker -> {
+            ListProperty<Object> listA = new SimpleListProperty<>(FXCollections.observableArrayList());
+            listAW.set(new WeakReference<>(listA));
+            listB.bind(listA);
+            // Ensure that the list we are binding to still remains
+            checker.setAsReferenced(listB);
+            checker.assertNotCollectable(listA);
+        });
+
+        // ensure that the Binding still works after GC triggered by JMemoryBuddy
+        listAW.get().get().setAll(1);
+        assertEquals("Binding stopped working after GC", 1, listB.getValue().get(0));
+    }
+
 
     private static class ListPropertyMock extends ListPropertyBase<Object> {
 
