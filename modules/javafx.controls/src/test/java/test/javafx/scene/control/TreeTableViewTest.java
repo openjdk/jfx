@@ -4263,14 +4263,14 @@ public class TreeTableViewTest {
                     Platform.runLater(() -> {
                         Toolkit.getToolkit().firePulse();
                         assertTrue(rt_35395_counter > 0);
-                        assertTrue(rt_35395_counter < 18);
+                        assertTrue(rt_35395_counter < 39);
                         rt_35395_counter = 0;
                         treeTableView.scrollTo(55);
                         Platform.runLater(() -> {
                             Toolkit.getToolkit().firePulse();
 
                             assertTrue(rt_35395_counter > 0);
-                            assertTrue(rt_35395_counter < 30);
+                            assertTrue(rt_35395_counter < 90);
                             sl.dispose();
                         });
                     });
