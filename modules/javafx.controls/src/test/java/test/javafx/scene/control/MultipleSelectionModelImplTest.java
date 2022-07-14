@@ -1449,28 +1449,62 @@ public class MultipleSelectionModelImplTest {
 
 
     @Test
-    public void test_8256397() throws InterruptedException {
-        testFactory_8256397(0, new int[]{2,3}, new Integer[]{0, 2, 3});
-        testFactory_8256397(1, new int[]{0,3}, new Integer[]{0, 1, 3});
-        testFactory_8256397(3, new int[]{0}, new Integer[]{0, 3});
+    public void testSelectedIndicesChangeEvents() throws InterruptedException {
+
+        testSelectedIndicesChangeEventsFactory(0, new int[]{2,3}, 1, new int[]{5,7},
+                new int[][]{new int[]{1}, new int[]{5,7}});
+
+        testSelectedIndicesChangeEventsFactory(1, new int[]{3,4}, 0, new int[]{5,7},
+                new int[][]{new int[]{0}, new int[]{5,7}});
+
+        testSelectedIndicesChangeEventsFactory(0, new int[]{1, 3,4, 5, 7}, 6, new int[]{8,9},
+                new int[][]{new int[]{6}, new int[]{8,9}});
+
+        testSelectedIndicesChangeEventsFactory(5, new int[]{6, 7}, 2, new int[]{1,0},
+                new int[][]{new int[]{0,1,2}});
+
+        testSelectedIndicesChangeEventsFactory(2, new int[]{3, 6,7}, 0, new int[]{1,4,5,8,9},
+                new int[][]{new int[]{0,1},new int[]{4,5},new int[]{8,9}});
     }
-    public void testFactory_8256397(int selected, int[] selectedI, Integer[] added) throws InterruptedException {
+
+    public ListView creatListViewWithMultipleSelection() {
         ListView<String> listView = new ListView<>();
         listView.getItems().add("item-0");
         listView.getItems().add("item-1");
         listView.getItems().add("item-2");
         listView.getItems().add("item-3");
+        listView.getItems().add("item-4");
+        listView.getItems().add("item-5");
+        listView.getItems().add("item-6");
+        listView.getItems().add("item-7");
+        listView.getItems().add("item-8");
+        listView.getItems().add("item-9");
+        listView.getItems().add("item-10");
+        listView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+        return listView;
+    }
+
+    public void testSelectedIndicesChangeEventsFactory(int initialSelected, int[] initialSelectedI, int selected, int[] selectedI, int[][] expected) throws InterruptedException {
+        ListView<String> listView = creatListViewWithMultipleSelection();
+        listView.getSelectionModel().selectIndices(initialSelected,initialSelectedI);
+        testSelectedIndicesChangeHelper(listView, selected, selectedI, expected);
+    }
+    public void testSelectedIndicesChangeHelper(ListView listView, int selected, int[] selectedI, int[][] expected) {
+        List<int[]> expectedEntries = new LinkedList<>(Arrays.asList(expected));
         MultipleSelectionModel<String> selectionModel = listView.getSelectionModel();
-        selectionModel.setSelectionMode(SelectionMode.MULTIPLE);
         selectionModel.getSelectedIndices().addListener((ListChangeListener<? super Integer>) c -> {
             while (c.next()) {
                 try {
-                    assertEquals(added, c.getAddedSubList().toArray());
+                    assertEquals(Arrays.stream(expectedEntries.get(0)).boxed().collect(Collectors.toList()), c.getAddedSubList());
+                    expectedEntries.remove(0);
                 } catch (IndexOutOfBoundsException e) {
                     fail(e.getMessage());
                 }
             }
         });
+
         selectionModel.selectIndices(selected, selectedI);
+
+        assertTrue("A ListEvent was missing: " + Arrays.deepToString(expectedEntries.toArray()), expectedEntries.isEmpty());
     }
 }
