@@ -49,6 +49,7 @@ import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.StringProperty;
 import javafx.beans.property.StringPropertyBase;
 import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableList;
@@ -1395,6 +1396,87 @@ public abstract class Node implements EventTarget, Styleable {
             };
         }
         return visible;
+    }
+
+    /**
+     * Whether or not this {@code Node} is showing (that is, it is part of an
+     * open Window on the user's system). The Window might be "showing", yet the user might not
+     * be able to see it due to the Window being rendered behind another Window
+     * or due to the Window being positioned off the monitor.
+     *
+     * <p>Note that the {@code Node} does not need to be visible for this property
+     * to be {@code true}.
+     *
+     * @defaultValue false
+     * @since 20
+     */
+    private ReadOnlyBooleanProperty showing;
+
+    public final boolean isShowing() {
+        Scene s = getScene();
+        if (s == null) return false;
+        Window w = s.getWindow();
+        return w != null && w.isShowing();
+    }
+
+    public final ReadOnlyBooleanProperty showingProperty() {
+        if (showing == null) {
+            ObservableValue<Boolean> ov = sceneProperty()
+                .flatMap(Scene::windowProperty)
+                .flatMap(Window::showingProperty);
+
+            showing = new ReadOnlyBooleanDelegate(Node.this, "showing", ov);
+        }
+
+        return showing;
+    }
+
+    // Candidate to make publicly available or to add as a convience method to ObservableValue
+    private static class ReadOnlyBooleanDelegate extends ReadOnlyBooleanProperty {
+        private final ObservableValue<Boolean> delegate;
+        private final Object bean;
+        private final String name;
+
+        ReadOnlyBooleanDelegate(Object bean, String name, ObservableValue<Boolean> delegate) {
+            this.bean = bean;
+            this.name = name;
+            this.delegate = delegate.orElse(false);
+        }
+
+        @Override
+        public Object getBean() {
+            return bean;
+        }
+
+        @Override
+        public String getName() {
+            return name;
+        }
+
+        @Override
+        public void addListener(ChangeListener<? super Boolean> listener) {
+            delegate.addListener(listener);
+        }
+
+        @Override
+        public void removeListener(ChangeListener<? super Boolean> listener) {
+            delegate.removeListener(listener);
+        }
+
+        @Override
+        public void addListener(InvalidationListener listener) {
+            delegate.addListener(listener);
+        }
+
+        @Override
+        public void removeListener(InvalidationListener listener) {
+            delegate.removeListener(listener);
+        }
+
+        @Override
+        public boolean get() {
+            return delegate.getValue();  // orElse guarantees this is never null
+        }
     }
 
     public final void setCursor(Cursor value) {
@@ -8387,15 +8469,8 @@ public abstract class Node implements EventTarget, Styleable {
 
     }
 
-    private boolean isWindowShowing() {
-        Scene s = getScene();
-        if (s == null) return false;
-        Window w = s.getWindow();
-        return w != null && w.isShowing();
-    }
-
     final boolean isTreeShowing() {
-        return isTreeVisible() && isWindowShowing();
+        return isTreeVisible() && isShowing();
     }
 
     private void updateTreeVisible(boolean parentChanged) {

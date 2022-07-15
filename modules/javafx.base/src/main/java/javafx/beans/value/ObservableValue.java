@@ -27,6 +27,7 @@ package javafx.beans.value;
 
 import java.util.function.Function;
 
+import com.sun.javafx.binding.ConditionalBinding;
 import com.sun.javafx.binding.FlatMappedBinding;
 import com.sun.javafx.binding.MappedBinding;
 import com.sun.javafx.binding.OrElseBinding;
@@ -250,5 +251,64 @@ public interface ObservableValue<T> extends Observable {
      */
     default <U> ObservableValue<U> flatMap(Function<? super T, ? extends ObservableValue<? extends U>> mapper) {
         return new FlatMappedBinding<>(this, mapper);
+    }
+
+    /**
+     * Returns an {@code ObservableValue} that holds this value whenever the given
+     * condition evaluates to {@code true}, otherwise holds the last value when
+     * {@code condition} became {@code false}. The value is updated whenever this
+     * {@code ObservableValue} changes, unless the condition currently evaluates
+     * to {@code false}.
+     * <p>
+     * The returned {@code ObservableValue} only observes this value when the given
+     * {@code condition} evaluates to {@code true}. This allows this {@code ObservableValue}
+     * and the conditional {@code ObservableValue} to be garbage collected if neither is
+     * otherwise strongly referenced when {@code condition} becomes {@code false}.
+     * <p>
+     * A currently observed binding will observe its source, which means it will not be eligible
+     * for garbage collection while source isn't. However, using {@code when} this {@code ObservableValue}
+     * can still be eligible for garbage collection when the condition is {@code false} and the
+     * conditional itself is also eligible for garbage collection.
+     * <p>
+     * Returning {@code null} from the given condition is treated the same as
+     * returning {@code false}.
+     * <p>
+     * For example:
+     * <pre>{@code
+     * ObservableValue<Boolean> condition = new SimpleBooleanProperty(true);
+     * ObservableValue<String> globalProperty = new SimpleStringProperty("A");
+     * ObservableValue<String> whenProperty = property.when(isShowing);
+     *
+     * // observe whenProperty, which will in turn observe globalProperty
+     * whenProperty.addChangeListener((ov, old, current) -> System.out.println(current));
+     *
+     * globalProperty.setValue("B");  // "B" is printed
+     *
+     * condition.setValue(false);
+     *
+     * // After condition becomes false, whenProperty stops observing globalProperty; condition
+     * // and whenProperty may now be eligible for GC despite being observed by the ChangeListener
+     *
+     * globalProperty.setValue("C");  // nothing is printed
+     * globalProperty.setValue("D");  // nothing is printed
+     *
+     * condition.setValue(true);  // globalProperty is observed again, and "D" is printed
+     * }</pre>
+     * Another example:
+     * <pre>{@code
+     * Label label = ... ;
+     * ObservableValue<String> globalProperty = new SimpleStringProperty("A");
+     *
+     * // bind label's text to a global property only when it is showing:
+     * label.textProperty().bind(globalProperty.when(label::isShowingProperty));
+     * }</pre>
+     * @param condition a boolean {@code ObservableValue}, cannot be {@code null}
+     * @return an {@code ObservableValue} that holds this value whenever the given
+     *     condition evaluates to {@code true}, otherwise holds the last seen value;
+     *     never returns {@code null}
+     * @since 20
+     */
+    default ObservableValue<T> when(ObservableValue<Boolean> condition) {
+        return new ConditionalBinding<>(this, condition);
     }
 }
