@@ -1265,51 +1265,51 @@ public class NodeTest {
         Scene s = new Scene(g);
         Stage st = new Stage();
 
-        assertFalse(g.isShowing());
-        assertFalse(c.isShowing());
-        assertFalse(g.showingProperty().get());
-        assertFalse(c.showingProperty().get());
+        assertFalse(g.isShown());
+        assertFalse(c.isShown());
+        assertFalse(g.shownProperty().get());
+        assertFalse(c.shownProperty().get());
 
         st.show();
         st.setScene(s);
         SceneShim.scenePulseListener_pulse(s);
 
-        assertTrue(g.isShowing());
-        assertTrue(c.isShowing());
-        assertTrue(g.showingProperty().get());
-        assertTrue(c.showingProperty().get());
+        assertTrue(g.isShown());
+        assertTrue(c.isShown());
+        assertTrue(g.shownProperty().get());
+        assertTrue(c.shownProperty().get());
 
         g.setVisible(false);  // irrelevant change for isShowing
         SceneShim.scenePulseListener_pulse(s);
 
-        assertTrue(g.isShowing());
-        assertTrue(c.isShowing());
-        assertTrue(g.showingProperty().get());
-        assertTrue(c.showingProperty().get());
+        assertTrue(g.isShown());
+        assertTrue(c.isShown());
+        assertTrue(g.shownProperty().get());
+        assertTrue(c.shownProperty().get());
 
         s.setRoot(new Group());
         SceneShim.scenePulseListener_pulse(s);
 
-        assertFalse(g.isShowing());
-        assertFalse(c.isShowing());
-        assertFalse(g.showingProperty().get());
-        assertFalse(c.showingProperty().get());
+        assertFalse(g.isShown());
+        assertFalse(c.isShown());
+        assertFalse(g.shownProperty().get());
+        assertFalse(c.shownProperty().get());
 
         s.setRoot(g);
         SceneShim.scenePulseListener_pulse(s);
 
-        assertTrue(g.isShowing());
-        assertTrue(c.isShowing());
-        assertTrue(g.showingProperty().get());
-        assertTrue(c.showingProperty().get());
+        assertTrue(g.isShown());
+        assertTrue(c.isShown());
+        assertTrue(g.shownProperty().get());
+        assertTrue(c.shownProperty().get());
 
         st.hide();
         SceneShim.scenePulseListener_pulse(s);
 
-        assertFalse(g.isShowing());
-        assertFalse(c.isShowing());
-        assertFalse(g.showingProperty().get());
-        assertFalse(c.showingProperty().get());
+        assertFalse(g.isShown());
+        assertFalse(c.isShown());
+        assertFalse(g.shownProperty().get());
+        assertFalse(c.shownProperty().get());
     }
 
     @Test

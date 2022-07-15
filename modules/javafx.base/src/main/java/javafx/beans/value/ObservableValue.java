@@ -277,7 +277,7 @@ public interface ObservableValue<T> extends Observable {
      * <pre>{@code
      * ObservableValue<Boolean> condition = new SimpleBooleanProperty(true);
      * ObservableValue<String> globalProperty = new SimpleStringProperty("A");
-     * ObservableValue<String> whenProperty = property.when(isShowing);
+     * ObservableValue<String> whenProperty = property.when(condition);
      *
      * // observe whenProperty, which will in turn observe globalProperty
      * whenProperty.addChangeListener((ov, old, current) -> System.out.println(current));
@@ -299,8 +299,8 @@ public interface ObservableValue<T> extends Observable {
      * Label label = ... ;
      * ObservableValue<String> globalProperty = new SimpleStringProperty("A");
      *
-     * // bind label's text to a global property only when it is showing:
-     * label.textProperty().bind(globalProperty.when(label::isShowingProperty));
+     * // bind label's text to a global property only when it is shown:
+     * label.textProperty().bind(globalProperty.when(label::isShownProperty));
      * }</pre>
      * @param condition a boolean {@code ObservableValue}, cannot be {@code null}
      * @return an {@code ObservableValue} that holds this value whenever the given

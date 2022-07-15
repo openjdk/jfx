@@ -1410,25 +1410,25 @@ public abstract class Node implements EventTarget, Styleable {
      * @defaultValue false
      * @since 20
      */
-    private ReadOnlyBooleanProperty showing;
+    private ReadOnlyBooleanProperty shown;
 
-    public final boolean isShowing() {
+    public final boolean isShown() {
         Scene s = getScene();
         if (s == null) return false;
         Window w = s.getWindow();
         return w != null && w.isShowing();
     }
 
-    public final ReadOnlyBooleanProperty showingProperty() {
-        if (showing == null) {
+    public final ReadOnlyBooleanProperty shownProperty() {
+        if (shown == null) {
             ObservableValue<Boolean> ov = sceneProperty()
                 .flatMap(Scene::windowProperty)
                 .flatMap(Window::showingProperty);
 
-            showing = new ReadOnlyBooleanDelegate(Node.this, "showing", ov);
+            shown = new ReadOnlyBooleanDelegate(Node.this, "shown", ov);
         }
 
-        return showing;
+        return shown;
     }
 
     // Candidate to make publicly available or to add as a convience method to ObservableValue
@@ -8470,7 +8470,7 @@ public abstract class Node implements EventTarget, Styleable {
     }
 
     final boolean isTreeShowing() {
-        return isTreeVisible() && isShowing();
+        return isTreeVisible() && isShown();
     }
 
     private void updateTreeVisible(boolean parentChanged) {
