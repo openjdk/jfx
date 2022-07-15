@@ -180,7 +180,15 @@ public abstract class ObjectBinding<T> extends ObjectExpression<T> implements
             valid = false;
             onInvalidating();
             ExpressionHelper.fireValueChangedEvent(helper);
-            value = null;  // clear cached value to avoid hard reference to stale data
+
+            /*
+             * Cached value should be cleared to avoid a strong reference to stale data,
+             * but only if this binding didn't become valid after firing the event:
+             */
+
+            if (!valid) {
+                value = null;
+            }
         }
     }
 
