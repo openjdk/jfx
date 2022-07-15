@@ -181,8 +181,13 @@ public abstract class ObjectBinding<T> extends ObjectExpression<T> implements
             onInvalidating();
             ExpressionHelper.fireValueChangedEvent(helper);
 
-            if (!valid) {  // if still invalid after calling listeners...
-                value = null;  // clear cached value to avoid hard reference to stale data
+            /*
+             * Cached value should be cleared to avoid a strong reference to stale data,
+             * but only if this binding didn't become valid after firing the event:
+             */
+
+            if (!valid) {
+                value = null;
             }
         }
     }
