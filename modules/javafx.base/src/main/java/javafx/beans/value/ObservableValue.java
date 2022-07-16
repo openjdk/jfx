@@ -223,16 +223,16 @@ public interface ObservableValue<T> extends Observable {
      *
      * // Assuming the listView is currently shown to the user, then:
      *
-     * isShowing().getValue();  // Returns true
+     * isShowing.getValue();  // Returns true
      *
      * listView.getScene().getWindow().hide();
-     * isShowing().getValue();  // Returns false
+     * isShowing.getValue();  // Returns false
      *
      * listView.getScene().getWindow().show();
-     * isShowing().getValue();  // Returns true
+     * isShowing.getValue();  // Returns true
      *
      * listView.getParent().getChildren().remove(listView);
-     * isShowing().getValue();  // Returns false
+     * isShowing.getValue();  // Returns false
      * }</pre>
      * Changes in any of the values of: the scene of {@code listView}, the window of that scene, or
      * the showing of that window, will update the boolean value {@code isShowing}.
