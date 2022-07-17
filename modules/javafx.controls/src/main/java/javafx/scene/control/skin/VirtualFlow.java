@@ -3069,11 +3069,14 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         recalculateAndImproveEstimatedSize(DEFAULT_IMPROVEMENT);
     }
 
+    private boolean recalculating = false;
+
     private void recalculateAndImproveEstimatedSize(int improve) {
+        if (recalculating)  return;
+        recalculating = true;
         int itemCount = getCellCount();
         int cacheCount = itemSizeCache.size();
         boolean keepRatio = ((cacheCount > 0) && !Double.isInfinite(this.absoluteOffset));
-        double estSize = estimatedSize / itemCount;
 
         int oldIndex = computeCurrentIndex();
         double oldOffset = computeViewportOffset(getPosition());
@@ -3107,7 +3110,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
             this.absoluteOffset = newOffset + oldOffset;
             adjustPosition();
         }
-
+        recalculating = false;
     }
 
     private void resetSizeEstimates() {
