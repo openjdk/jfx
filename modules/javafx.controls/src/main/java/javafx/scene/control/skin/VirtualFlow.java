@@ -3096,7 +3096,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
             }
         }
         this.estimatedSize = cnt == 0 ? 1d : tot * itemCount / cnt;
-        estSize = estimatedSize / itemCount;
+        double estSize = estimatedSize / itemCount;
 
         if (keepRatio) {
             double newOffset = 0;
