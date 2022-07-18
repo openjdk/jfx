@@ -157,7 +157,9 @@ public abstract class Toolkit {
         // Finally load VS 2017 DLLs in the following order
         "vcruntime140",
         "vcruntime140_1",
-        "msvcp140"
+        "msvcp140",
+        "msvcp140_1",
+        "msvcp140_2"
 };
 
     private static String lookupToolkitClass(String name) {

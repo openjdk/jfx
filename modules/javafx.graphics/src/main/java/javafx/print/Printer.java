@@ -58,7 +58,7 @@ public final class Printer {
     /**
      * Retrieve the installed printers.
      * The set of printers may be dynamic.
-     * Consequently there is no guarantee that the result will be
+     * Consequently, there is no guarantee that the result will be
      * the same from call to call, but should change only as
      * a result of the default changing in the environment of the
      * application.
@@ -86,10 +86,12 @@ public final class Printer {
         if (security != null) {
             security.checkPrintJobAccess();
         }
+        Printer p = PrintPipeline.getPrintPipeline().getDefaultPrinter();
         if (defaultPrinter == null) {
-            Printer p = PrintPipeline.getPrintPipeline().getDefaultPrinter();
             defaultPrinter =
                 new ReadOnlyObjectWrapper<Printer>(null, "defaultPrinter", p);
+        } else {
+            defaultPrinter.setValue(p);
         }
         return defaultPrinter;
     }
