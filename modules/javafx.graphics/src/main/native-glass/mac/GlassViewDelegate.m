@@ -1214,8 +1214,6 @@ static jstring convertNSStringToJString(id aString, int length)
     LOG("GlassViewDelegate enterFullscreenWithAnimate:%d withKeepRatio:%d withHideCursor:%d", animate, keepRatio, hideCursor);
 
     [[self->nsView window] toggleFullScreen:self];
-    // wait until the operation is complete
-    [GlassApplication enterFullScreenExitingLoop];
 }
 
 - (void)exitFullscreenWithAnimate:(BOOL)animate
