@@ -71,7 +71,7 @@ public:
         HashMap<Value*, unsigned> valueInBlock;
         HashMap<Value*, BasicBlock*> valueOwner;
         HashMap<Value*, unsigned> valueIndex;
-        HashMap<Value*, Vector<Optional<Type>>> extractions;
+        HashMap<Value*, Vector<std::optional<Type>>> extractions;
 
         for (unsigned tuple = 0; tuple < m_procedure.tuples().size(); ++tuple) {
             VALIDATE(m_procedure.tuples()[tuple].size(), ("In tuple ", tuple));
@@ -572,6 +572,8 @@ public:
                 predecessors.add(predecessor);
             VALIDATE(block->numPredecessors() == predecessors.size(), ("At ", *block));
         }
+
+        validatePhisAreDominatedByUpsilons();
     }
 
 private:
@@ -651,6 +653,49 @@ private:
             return;
 
         VALIDATE(memory->offset() >= 0, ("At ", *value));
+    }
+
+    // A simple backwards analysis to check that we cannot reach a Phi without going through a corresponding Upsilon
+    // We cannot use the dominator tree, since we are checking that each Phi is dominated by a the set of all of its upsilons, and not by a single node.
+    void validatePhisAreDominatedByUpsilons()
+    {
+        bool changed = true;
+        BitVector blocksToVisit;
+        IndexMap<BasicBlock*, HashSet<Value*>> undominatedPhisAtTail(m_procedure.size());
+        for (BasicBlock* block : m_procedure)
+            blocksToVisit.set(block->index());
+        while (changed) {
+            changed = false;
+            for (BasicBlock* block : m_procedure.blocksInPostOrder()) {
+                if (!blocksToVisit.quickClear(block->index()))
+                    continue;
+                HashSet<Value*> undominatedPhis = undominatedPhisAtTail[block];
+                for (unsigned index = block->size()-1; index--;) {
+                    Value* value = block->at(index);
+                    switch (value->opcode()) {
+                    case Upsilon:
+                        undominatedPhis.remove(value->as<UpsilonValue>()->phi());
+                        break;
+                    case Phi:
+                        undominatedPhis.add(value);
+                        break;
+                    default:
+                        break;
+                    }
+                }
+                for (BasicBlock* predecessor : block->predecessors()) {
+                    bool changedSet = false;
+                    for (Value* phi : undominatedPhis)
+                        changedSet |= undominatedPhisAtTail[predecessor].add(phi).isNewEntry;
+                    if (changedSet) {
+                        blocksToVisit.quickSet(predecessor->index());
+                        changed = true;
+                    }
+                }
+                if (!block->index())
+                    VALIDATE(undominatedPhis.isEmpty(), ("Undominated phi at top of entry block: ", **undominatedPhis.begin()));
+            }
+        }
     }
 
     NO_RETURN_DUE_TO_CRASH void fail(

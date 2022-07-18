@@ -55,8 +55,10 @@
 #include "SVGNames.h"
 #include "SVGURIReference.h"
 #include "Settings.h"
+#include "ShadowRoot.h"
 #include "Text.h"
 #include "WebAnimationTypes.h"
+#include <wtf/RobinHoodHashSet.h>
 
 namespace WebCore {
 namespace Style {
@@ -100,7 +102,6 @@ static DisplayType equivalentBlockDisplay(const RenderStyle& style, const Docume
     case DisplayType::Table:
     case DisplayType::Box:
     case DisplayType::Flex:
-    case DisplayType::WebKitFlex:
     case DisplayType::Grid:
     case DisplayType::FlowRoot:
         return display;
@@ -115,7 +116,6 @@ static DisplayType equivalentBlockDisplay(const RenderStyle& style, const Docume
     case DisplayType::InlineBox:
         return DisplayType::Box;
     case DisplayType::InlineFlex:
-    case DisplayType::WebKitInlineFlex:
         return DisplayType::Flex;
     case DisplayType::InlineGrid:
         return DisplayType::Grid;
@@ -142,20 +142,33 @@ static DisplayType equivalentBlockDisplay(const RenderStyle& style, const Docume
     return DisplayType::Block;
 }
 
-static inline bool isAtShadowBoundary(const Element& element)
+static bool shouldInheritTextDecorationsInEffect(const RenderStyle& style, const Element* element)
 {
-    auto* parentNode = element.parentNode();
-    return parentNode && parentNode->isShadowRoot();
-}
+    if (style.isFloating() || style.hasOutOfFlowPosition())
+        return false;
 
-// CSS requires text-decoration to be reset at each DOM element for tables,
-// inline blocks, inline tables, shadow DOM crossings, floating elements,
-// and absolute or relatively positioned elements.
-static bool doesNotInheritTextDecoration(const RenderStyle& style, const Element* element)
-{
-    return style.display() == DisplayType::Table || style.display() == DisplayType::InlineTable
-        || style.display() == DisplayType::InlineBlock || style.display() == DisplayType::InlineBox || (element && isAtShadowBoundary(*element))
-        || style.isFloating() || style.hasOutOfFlowPosition();
+    auto isAtUserAgentShadowBoundary = [&] {
+        if (!element)
+            return false;
+        auto* parentNode = element->parentNode();
+        return parentNode && parentNode->isUserAgentShadowRoot();
+    }();
+
+    // There is no other good way to prevent decorations from affecting user agent shadow trees.
+    if (isAtUserAgentShadowBoundary)
+        return false;
+
+    switch (style.display()) {
+    case DisplayType::Table:
+    case DisplayType::InlineTable:
+    case DisplayType::InlineBlock:
+    case DisplayType::InlineBox:
+        return false;
+    default:
+        break;
+    };
+
+    return true;
 }
 
 static bool isScrollableOverflow(Overflow overflow)
@@ -243,9 +256,6 @@ OptionSet<EventListenerRegionType> Adjuster::computeEventListenerRegionTypes(con
 
 void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearanceStyle) const
 {
-    // Cache our original display.
-    style.setOriginalDisplay(style.display());
-
     if (style.display() == DisplayType::Contents)
         adjustDisplayContentsStyle(style);
 
@@ -257,10 +267,10 @@ void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearance
             // these tags to retain their display types.
             if (m_document.inQuirksMode()) {
                 if (m_element->hasTagName(tdTag)) {
-                    style.setDisplay(DisplayType::TableCell);
-                    style.setFloating(Float::No);
+                    style.setEffectiveDisplay(DisplayType::TableCell);
+                    style.setFloating(Float::None);
                 } else if (is<HTMLTableElement>(*m_element))
-                    style.setDisplay(style.isDisplayInlineType() ? DisplayType::InlineTable : DisplayType::Table);
+                    style.setEffectiveDisplay(style.isDisplayInlineType() ? DisplayType::InlineTable : DisplayType::Table);
             }
 
             if (m_element->hasTagName(tdTag) || m_element->hasTagName(thTag)) {
@@ -283,13 +293,13 @@ void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearance
             // fix a crash where a site tries to position these objects. They also never honor display.
             if (m_element->hasTagName(frameTag) || m_element->hasTagName(framesetTag)) {
                 style.setPosition(PositionType::Static);
-                style.setDisplay(DisplayType::Block);
+                style.setEffectiveDisplay(DisplayType::Block);
             }
 
             // Ruby text does not support float or position. This might change with evolution of the specification.
             if (m_element->hasTagName(rtTag)) {
                 style.setPosition(PositionType::Static);
-                style.setFloating(Float::No);
+                style.setFloating(Float::None);
             }
 
             // User agents are expected to have a rule in their user agent stylesheet that matches th elements that have a parent
@@ -300,17 +310,23 @@ void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearance
                 style.setTextAlign(TextAlignMode::Center);
 
             if (m_element->hasTagName(legendTag))
-                style.setDisplay(DisplayType::Block);
+                style.setEffectiveDisplay(DisplayType::Block);
         }
+
+        // Top layer elements are always position: absolute; unless the position is set to fixed.
+        // https://fullscreen.spec.whatwg.org/#new-stacking-layer
+        bool isInTopLayer = style.styleType() == PseudoId::Backdrop || (m_element && m_element->isInTopLayer());
+        if (style.position() != PositionType::Absolute && style.position() != PositionType::Fixed && isInTopLayer)
+            style.setPosition(PositionType::Absolute);
 
         // Absolute/fixed positioned elements, floating elements and the document element need block-like outside display.
         if (style.hasOutOfFlowPosition() || style.isFloating() || (m_element && m_document.documentElement() == m_element))
-            style.setDisplay(equivalentBlockDisplay(style, m_document));
+            style.setEffectiveDisplay(equivalentBlockDisplay(style, m_document));
 
         // FIXME: Don't support this mutation for pseudo styles like first-letter or first-line, since it's not completely
         // clear how that should work.
         if (style.display() == DisplayType::Inline && style.styleType() == PseudoId::None && style.writingMode() != m_parentStyle.writingMode())
-            style.setDisplay(DisplayType::InlineBlock);
+            style.setEffectiveDisplay(DisplayType::InlineBlock);
 
         // After performing the display mutation, check table rows. We do not honor position:relative or position:sticky on
         // table rows or cells. This has been established for position:relative in CSS2.1 (and caused a crash in containingBlock()
@@ -336,8 +352,8 @@ void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearance
         // https://www.w3.org/TR/css-display/#transformations
         // "A parent with a grid or flex display value blockifies the box’s display type."
         if (m_parentBoxStyle.isDisplayFlexibleOrGridBox()) {
-            style.setFloating(Float::No);
-            style.setDisplay(equivalentBlockDisplay(style, m_document));
+            style.setFloating(Float::None);
+            style.setEffectiveDisplay(equivalentBlockDisplay(style, m_document));
         }
     }
 
@@ -352,7 +368,7 @@ void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearance
     // object wedged in between them. Auto z-index also becomes 0 for objects that specify transforms/masks/reflections.
     if (style.hasAutoUsedZIndex()) {
         if ((m_element && m_document.documentElement() == m_element)
-            || style.opacity() < 1.0f
+            || style.hasOpacity()
             || style.hasTransformRelatedProperty()
             || style.hasMask()
             || style.clipPath()
@@ -397,19 +413,30 @@ void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearance
         }
     }
 
-    if (doesNotInheritTextDecoration(style, m_element))
-        style.setTextDecorationsInEffect(style.textDecoration());
-    else
+    if (shouldInheritTextDecorationsInEffect(style, m_element))
         style.addToTextDecorationsInEffect(style.textDecoration());
+    else
+        style.setTextDecorationsInEffect(style.textDecoration());
 
-    // If either overflow value is not visible, change to auto.
-    if (style.overflowX() == Overflow::Visible && style.overflowY() != Overflow::Visible) {
-        // FIXME: Once we implement pagination controls, overflow-x should default to hidden
-        // if overflow-y is set to -webkit-paged-x or -webkit-page-y. For now, we'll let it
-        // default to auto so we can at least scroll through the pages.
-        style.setOverflowX(Overflow::Auto);
-    } else if (style.overflowY() == Overflow::Visible && style.overflowX() != Overflow::Visible)
-        style.setOverflowY(Overflow::Auto);
+    auto overflowReplacement = [] (Overflow overflow, Overflow overflowInOtherDimension) -> std::optional<Overflow> {
+        if (overflow != Overflow::Visible && overflow != Overflow::Clip) {
+            if (overflowInOtherDimension == Overflow::Visible)
+                return Overflow::Auto;
+            if (overflowInOtherDimension == Overflow::Clip)
+                return Overflow::Hidden;
+        }
+        return std::nullopt;
+    };
+
+    // If either overflow value is not visible, change to auto. Similarly if either overflow
+    // value is not clip, change to hidden.
+    // FIXME: Once we implement pagination controls, overflow-x should default to hidden
+    // if overflow-y is set to -webkit-paged-x or -webkit-page-y. For now, we'll let it
+    // default to auto so we can at least scroll through the pages.
+    if (auto replacement = overflowReplacement(style.overflowY(), style.overflowX()))
+        style.setOverflowX(*replacement);
+    else if (auto replacement = overflowReplacement(style.overflowX(), style.overflowY()))
+        style.setOverflowY(*replacement);
 
     // Call setStylesForPaginationMode() if a pagination mode is set for any non-root elements. If these
     // styles are specified on a root element, then they will be incorporated in
@@ -438,6 +465,10 @@ void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearance
     if (style.hasAutoUsedZIndex() && style.useTouchOverflowScrolling() && (isScrollableOverflow(style.overflowX()) || isScrollableOverflow(style.overflowY())))
         style.setUsedZIndex(0);
 #endif
+
+    // contain: layout creates a stacking context.
+    if (style.hasAutoUsedZIndex() && style.containsLayout())
+        style.setUsedZIndex(0);
 
     // Cull out any useless layers and also repeat patterns into additional layers.
     style.adjustBackgroundLayers();
@@ -500,7 +531,7 @@ void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearance
 static bool hasEffectiveDisplayNoneForDisplayContents(const Element& element)
 {
     // https://drafts.csswg.org/css-display-3/#unbox-html
-    static NeverDestroyed<HashSet<AtomString>> tagNames = [] {
+    static NeverDestroyed<MemoryCompactLookupOnlyRobinHoodHashSet<AtomString>> tagNames = [] {
         static const HTMLQualifiedName* const tagList[] = {
             &brTag.get(),
             &wbrTag.get(),
@@ -520,7 +551,8 @@ static bool hasEffectiveDisplayNoneForDisplayContents(const Element& element)
             &textareaTag.get(),
             &selectTag.get(),
         };
-        HashSet<AtomString> set;
+        MemoryCompactLookupOnlyRobinHoodHashSet<AtomString> set;
+        set.reserveInitialCapacity(sizeof(tagList));
         for (auto& name : tagList)
             set.add(name->localName());
         return set;
@@ -542,19 +574,19 @@ static bool hasEffectiveDisplayNoneForDisplayContents(const Element& element)
 
 void Adjuster::adjustDisplayContentsStyle(RenderStyle& style) const
 {
-    if (!m_element) {
-        if (style.styleType() != PseudoId::Before && style.styleType() != PseudoId::After)
-            style.setDisplay(DisplayType::None);
+    bool isInTopLayer = style.styleType() == PseudoId::Backdrop || (m_element && m_element->isInTopLayer());
+    if (isInTopLayer || m_document.documentElement() == m_element) {
+        style.setEffectiveDisplay(DisplayType::Block);
         return;
     }
 
-    if (m_document.documentElement() == m_element) {
-        style.setDisplay(DisplayType::Block);
+    if (!m_element && style.styleType() != PseudoId::Before && style.styleType() != PseudoId::After) {
+        style.setEffectiveDisplay(DisplayType::None);
         return;
     }
 
-    if (hasEffectiveDisplayNoneForDisplayContents(*m_element))
-        style.setDisplay(DisplayType::None);
+    if (m_element && hasEffectiveDisplayNoneForDisplayContents(*m_element))
+        style.setEffectiveDisplay(DisplayType::None);
 }
 
 void Adjuster::adjustSVGElementStyle(RenderStyle& style, const SVGElement& svgElement)
@@ -571,7 +603,7 @@ void Adjuster::adjustSVGElementStyle(RenderStyle& style, const SVGElement& svgEl
 
     // SVG text layout code expects us to be a block-level style element.
     if ((svgElement.hasTagName(SVGNames::foreignObjectTag) || svgElement.hasTagName(SVGNames::textTag)) && style.isDisplayInlineType())
-        style.setDisplay(DisplayType::Block);
+        style.setEffectiveDisplay(DisplayType::Block);
 }
 
 void Adjuster::adjustAnimatedStyle(RenderStyle& style, OptionSet<AnimationImpact> impact) const
@@ -630,7 +662,7 @@ void Adjuster::adjustForSiteSpecificQuirks(RenderStyle& style) const
             if (div.hasClass() && div.classNames().contains(instreamNativeVideoDivClass)) {
                 auto* video = div.treeScope().getElementById(videoElementID);
                 if (is<HTMLVideoElement>(video) && downcast<HTMLVideoElement>(*video).isFullscreen())
-                    style.setDisplay(DisplayType::Block);
+                    style.setEffectiveDisplay(DisplayType::Block);
             }
         }
     }

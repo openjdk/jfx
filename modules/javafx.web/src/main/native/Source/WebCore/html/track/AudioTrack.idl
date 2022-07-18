@@ -27,13 +27,13 @@
     Conditional=VIDEO,
     ExportMacro=WEBCORE_EXPORT,
     GenerateIsReachable=ImplElementRoot,
-    JSCustomMarkFunction,
+    GenerateAddOpaqueRoot,
     Exposed=Window
 ] interface AudioTrack {
     readonly attribute DOMString id;
-    [ConditionallyReadWrite=MEDIA_SOURCE] attribute DOMString kind;
+    [SettingsConditionallyReadWrite=MediaSource] attribute DOMString kind;
     readonly attribute DOMString label;
-    [ConditionallyReadWrite=MEDIA_SOURCE] attribute DOMString language;
+    [SettingsConditionallyReadWrite=MediaSource] attribute DOMString language;
 
     attribute boolean enabled;
 };

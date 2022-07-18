@@ -82,13 +82,13 @@ ExceptionOr<void> AudioWorkletGlobalScope::registerProcessor(String&& name, Ref<
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     if (!jsConstructor->isConstructor(vm))
-        return Exception { TypeError, "Class definitition passed to registerProcessor() is not a constructor"_s };
+        return Exception { TypeError, "Class definition passed to registerProcessor() is not a constructor"_s };
 
     auto prototype = jsConstructor->getPrototype(vm, globalObject);
     RETURN_IF_EXCEPTION(scope, Exception { ExistingExceptionError });
 
     if (!prototype.isObject())
-        return Exception { TypeError, "Class definitition passed to registerProcessor() has invalid prototype"_s };
+        return Exception { TypeError, "Class definition passed to registerProcessor() has invalid prototype"_s };
 
     auto parameterDescriptorsValue = jsConstructor->get(globalObject, JSC::Identifier::fromString(vm, "parameterDescriptors"));
     RETURN_IF_EXCEPTION(scope, Exception { ExistingExceptionError });
@@ -110,7 +110,11 @@ ExceptionOr<void> AudioWorkletGlobalScope::registerProcessor(String&& name, Ref<
         }
     }
 
-    m_processorConstructorMap.add(name, WTFMove(processorContructor));
+    auto addResult = m_processorConstructorMap.add(name, WTFMove(processorContructor));
+
+    // We've already checked at the beginning of this function but then we ran some JS so we need to check again.
+    if (!addResult.isNewEntry)
+        return Exception { NotSupportedError, "A processor was already registered with this name"_s };
 
     thread().messagingProxy().postTaskToAudioWorklet([name = name.isolatedCopy(), parameterDescriptors = crossThreadCopy(parameterDescriptors)](AudioWorklet& worklet) mutable {
         ASSERT(isMainThread());
@@ -186,8 +190,13 @@ void AudioWorkletGlobalScope::handlePostRenderTasks(size_t currentFrame)
 {
     m_currentFrame = currentFrame;
 
-    // This takes care of processing the MicroTask queue after rendering.
-    m_lockDuringRendering = WTF::nullopt;
+    {
+        // Heap allocations are forbidden on the audio thread for performance reasons so we need to
+        // explicitly allow the following allocation(s).
+        DisableMallocRestrictionsForCurrentThreadScope disableMallocRestrictions;
+        // This takes care of processing the MicroTask queue after rendering.
+        m_lockDuringRendering = std::nullopt;
+    }
 }
 
 } // namespace WebCore

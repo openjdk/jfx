@@ -199,8 +199,7 @@ void RenderMathMLOperator::computePreferredLogicalWidths()
             // In some fonts, glyphs for invisible operators have nonzero width. Consequently, we subtract that width here to avoid wide gaps.
             GlyphData data = style().fontCascade().glyphDataForCharacter(textContent(), false);
             float glyphWidth = data.font ? data.font->widthForGlyph(data.glyph) : 0;
-            ASSERT(glyphWidth <= preferredWidth);
-            preferredWidth -= glyphWidth;
+            preferredWidth -= std::min(LayoutUnit(glyphWidth), preferredWidth);
         }
     } else
         preferredWidth = m_mathOperator.maxPreferredWidth();
@@ -301,10 +300,10 @@ LayoutUnit RenderMathMLOperator::verticalStretchedOperatorShift() const
     return (m_stretchDepthBelowBaseline - m_stretchHeightAboveBaseline - m_mathOperator.descent() + m_mathOperator.ascent()) / 2;
 }
 
-Optional<int> RenderMathMLOperator::firstLineBaseline() const
+std::optional<LayoutUnit> RenderMathMLOperator::firstLineBaseline() const
 {
     if (useMathOperator())
-        return Optional<int>(std::lround(static_cast<float>(m_mathOperator.ascent() - verticalStretchedOperatorShift())));
+        return LayoutUnit { static_cast<int>(lround(static_cast<float>(m_mathOperator.ascent() - verticalStretchedOperatorShift()))) };
     return RenderMathMLToken::firstLineBaseline();
 }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -109,8 +109,7 @@ public class SliderBehavior extends BehaviorBase<Slider> {
         // determine the percentage of the way between min and max
         // represented by this mouse event
         final Slider slider = getNode();
-        // If not already focused, request focus
-        if (!slider.isFocused()) slider.requestFocus();
+        slider.requestFocus();
         if (slider.getOrientation().equals(Orientation.HORIZONTAL)) {
             slider.adjustValue(position * (slider.getMax() - slider.getMin()) + slider.getMin());
         } else {
@@ -123,9 +122,8 @@ public class SliderBehavior extends BehaviorBase<Slider> {
       *       track and 1.0 being the end
      */
     public void thumbPressed(MouseEvent e, double position) {
-        // If not already focused, request focus
         final Slider slider = getNode();
-        if (!slider.isFocused())  slider.requestFocus();
+        slider.requestFocus();
         slider.setValueChanging(true);
     }
 

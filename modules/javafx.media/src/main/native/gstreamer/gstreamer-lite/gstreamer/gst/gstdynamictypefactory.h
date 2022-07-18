@@ -23,6 +23,54 @@
 #define __GST_DYNAMIC_TYPE_FACTORY_H__
 
 /**
+ * GST_DYNAMIC_TYPE_REGISTER_DEFINE:
+ * @t_n: The dynamic type name in lower case, with words separated by '_'.
+ * Used to generate `gst_dynamic_type_register_*(GstPlugin* plugin)`.
+ * @t: The #GType of the dynamic type
+
+ * A convenience macro to define the entry point of a
+ * dynamic type `gst_dynamic_type_register_*(GstPlugin* plugin)`.
+ *
+ * Since: 1.20
+ */
+#define GST_DYNAMIC_TYPE_REGISTER_DEFINE(t_n, t) \
+G_BEGIN_DECLS \
+gboolean G_PASTE (gst_dynamic_type_register_, t_n) (GstPlugin * plugin) \
+{ \
+  return gst_dynamic_type_register (plugin, t); \
+} \
+G_END_DECLS
+
+/**
+ * GST_DYNAMIC_TYPE_REGISTER_DECLARE:
+ * @t_f: The dynamic type name in lower case, with words separated by '_'.
+ *
+ * This macro can be used to declare a new dynamic type.
+ * It has to be used in combination with #GST_DYNAMIC_TYPE_REGISTER_DEFINE macro
+ * and must be placed outside any block to declare the type find registration
+ * function.
+ *
+ * Since: 1.20
+ */
+#define GST_DYNAMIC_TYPE_REGISTER_DECLARE(t_n) \
+G_BEGIN_DECLS \
+gboolean G_PASTE(gst_dynamic_type_register_, t_n) (GstPlugin * plugin); \
+G_END_DECLS
+
+/**
+ * GST_DYNAMIC_TYPE_REGISTER:
+ * @t_n: The dynamic type name to register
+ * @plugin: The #GstPlugin where to register the dynamic type.
+ *
+ * This macro can be used to register a dynamic type into a #GstPlugin.
+ * This method will be usually called in the plugin init function
+ * but can also be called with a NULL plugin.
+ *
+ * Since: 1.20
+ */
+#define GST_DYNAMIC_TYPE_REGISTER(t_n, plugin) G_PASTE(gst_dynamic_type_register_, t_n) (plugin)
+
+/**
  * GstDynamicTypeFactory:
  *
  * The opaque #GstDynamicTypeFactory data structure.

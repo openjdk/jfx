@@ -36,6 +36,7 @@
 #include "StyleBuilder.h"
 #include "StyleBuilderConverter.h"
 #include "StyleResolver.h"
+#include "StyleScope.h"
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
@@ -48,11 +49,11 @@ ExceptionOr<void> DOMCSSRegisterCustomProperty::registerProperty(Document& docum
     RefPtr<CSSCustomPropertyValue> initialValue;
     if (!descriptor.initialValue.isEmpty()) {
         CSSTokenizer tokenizer(descriptor.initialValue);
-        Style::Resolver styleResolver(document);
+        auto styleResolver = Style::Resolver::create(document);
 
         // We need to initialize this so that we can successfully parse computationally dependent values (like em units).
         // We don't actually need the values to be accurate, since they will be rejected later anyway
-        auto style = styleResolver.defaultStyleForElement(nullptr);
+        auto style = styleResolver->defaultStyleForElement(nullptr);
 
         HashSet<CSSPropertyID> dependencies;
         CSSPropertyParser::collectParsedCustomPropertyValueDependencies(descriptor.syntax, false, dependencies, tokenizer.tokenRange(), strictCSSParserContext());

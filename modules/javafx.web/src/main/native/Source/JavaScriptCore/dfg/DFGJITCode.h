@@ -54,42 +54,14 @@ public:
     CommonData* dfgCommon() final;
     JITCode* dfg() final;
 
-    OSREntryData* appendOSREntryData(BytecodeIndex bytecodeIndex, CodeLocationLabel<OSREntryPtrTag> machineCode)
-    {
-        DFG::OSREntryData entry;
-        entry.m_bytecodeIndex = bytecodeIndex;
-        entry.m_machineCode = machineCode;
-        osrEntry.append(entry);
-        return &osrEntry.last();
-    }
-
     OSREntryData* osrEntryDataForBytecodeIndex(BytecodeIndex bytecodeIndex)
     {
         return tryBinarySearch<OSREntryData, BytecodeIndex>(
-            osrEntry, osrEntry.size(), bytecodeIndex,
+            m_osrEntry, m_osrEntry.size(), bytecodeIndex,
             getOSREntryDataBytecodeIndex);
     }
 
-    void finalizeOSREntrypoints();
-
-    unsigned appendOSRExit(const OSRExit& exit)
-    {
-        unsigned result = osrExit.size();
-        osrExit.append(exit);
-        return result;
-    }
-
-    OSRExit& lastOSRExit()
-    {
-        return osrExit.last();
-    }
-
-    unsigned appendSpeculationRecovery(const SpeculationRecovery& recovery)
-    {
-        unsigned result = speculationRecovery.size();
-        speculationRecovery.append(recovery);
-        return result;
-    }
+    void finalizeOSREntrypoints(Vector<DFG::OSREntryData>&&);
 
     void reconstruct(
         CodeBlock*, CodeOrigin, unsigned streamIndex, Operands<ValueRecovery>& result);
@@ -98,7 +70,7 @@ public:
     // stack. Currently, it also has the restriction that the values must be in their
     // bytecode-designated stack slots.
     void reconstruct(
-        CallFrame*, CodeBlock*, CodeOrigin, unsigned streamIndex, Operands<Optional<JSValue>>& result);
+        CallFrame*, CodeBlock*, CodeOrigin, unsigned streamIndex, Operands<std::optional<JSValue>>& result);
 
 #if ENABLE(FTL_JIT)
     // NB. All of these methods take CodeBlock* because they may want to use
@@ -126,7 +98,7 @@ public:
 
     static ptrdiff_t commonDataOffset() { return OBJECT_OFFSETOF(JITCode, common); }
 
-    Optional<CodeOrigin> findPC(CodeBlock*, void* pc) final;
+    std::optional<CodeOrigin> findPC(CodeBlock*, void* pc) final;
 
     using DirectJITCode::initializeCodeRefForDFG;
 
@@ -135,9 +107,9 @@ private:
 
 public:
     CommonData common;
-    Vector<DFG::OSREntryData> osrEntry;
-    SegmentedVector<DFG::OSRExit, 8> osrExit;
-    Vector<DFG::SpeculationRecovery> speculationRecovery;
+    FixedVector<DFG::OSREntryData> m_osrEntry;
+    FixedVector<DFG::OSRExit> m_osrExit;
+    FixedVector<DFG::SpeculationRecovery> m_speculationRecovery;
     DFG::VariableEventStream variableEventStream;
     DFG::MinifiedGraph minifiedDFG;
 
@@ -151,7 +123,7 @@ public:
     //
     // The key may not always be a target for OSR Entry but the list in the value is guaranteed
     // to be usable for OSR Entry.
-    HashMap<BytecodeIndex, Vector<BytecodeIndex>> tierUpInLoopHierarchy;
+    HashMap<BytecodeIndex, FixedVector<BytecodeIndex>> tierUpInLoopHierarchy;
 
     // Map each bytecode of CheckTierUpAndOSREnter to its stream index.
     HashMap<BytecodeIndex, unsigned> bytecodeIndexToStreamIndex;

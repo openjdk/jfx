@@ -40,23 +40,25 @@ enum class MatchElement : uint8_t { Subject, Parent, Ancestor, DirectSibling, In
 constexpr unsigned matchElementCount = static_cast<unsigned>(MatchElement::Host) + 1;
 
 struct RuleFeature {
-    RuleFeature(const RuleData&, Optional<MatchElement> = WTF::nullopt);
+    RuleFeature(const RuleData&, std::optional<MatchElement> = std::nullopt);
 
     RefPtr<const StyleRule> styleRule;
     uint16_t selectorIndex; // Keep in sync with RuleData's selectorIndex size.
     uint16_t selectorListIndex; // Keep in sync with RuleData's selectorListIndex size.
-    Optional<MatchElement> matchElement { };
+    std::optional<MatchElement> matchElement { };
 };
 static_assert(sizeof(RuleFeature) <= 16, "RuleFeature is a frquently alocated object. Keep it small.");
 
 struct RuleFeatureWithInvalidationSelector : public RuleFeature {
-    RuleFeatureWithInvalidationSelector(const RuleData& data, Optional<MatchElement> matchElement = WTF::nullopt, const CSSSelector* invalidationSelector = nullptr)
+    RuleFeatureWithInvalidationSelector(const RuleData& data, std::optional<MatchElement> matchElement = std::nullopt, const CSSSelector* invalidationSelector = nullptr)
         : RuleFeature(data, WTFMove(matchElement))
         , invalidationSelector(invalidationSelector)
     { }
 
     const CSSSelector* invalidationSelector { nullptr };
 };
+
+using RuleFeatureVector = Vector<RuleFeature>;
 
 struct RuleFeatureSet {
     void add(const RuleFeatureSet&);
@@ -70,12 +72,12 @@ struct RuleFeatureSet {
     HashSet<AtomString> attributeCanonicalLocalNamesInRules;
     HashSet<AtomString> attributeLocalNamesInRules;
     HashSet<AtomString> contentAttributeNamesInRules;
-    Vector<RuleFeature> siblingRules;
-    Vector<RuleFeature> uncommonAttributeRules;
+    RuleFeatureVector siblingRules;
+    RuleFeatureVector uncommonAttributeRules;
 
-    HashMap<AtomString, std::unique_ptr<Vector<RuleFeature>>> classRules;
+    HashMap<AtomString, std::unique_ptr<RuleFeatureVector>> classRules;
     HashMap<AtomString, std::unique_ptr<Vector<RuleFeatureWithInvalidationSelector>>> attributeRules;
-    HashMap<CSSSelector::PseudoClassType, std::unique_ptr<Vector<RuleFeature>>, WTF::IntHash<CSSSelector::PseudoClassType>, WTF::StrongEnumHashTraits<CSSSelector::PseudoClassType>> pseudoClassRules;
+    HashMap<CSSSelector::PseudoClassType, std::unique_ptr<RuleFeatureVector>, WTF::IntHash<CSSSelector::PseudoClassType>, WTF::StrongEnumHashTraits<CSSSelector::PseudoClassType>> pseudoClassRules;
     HashSet<AtomString> classesAffectingHost;
     HashSet<AtomString> attributesAffectingHost;
     HashSet<CSSSelector::PseudoClassType, WTF::IntHash<CSSSelector::PseudoClassType>, WTF::StrongEnumHashTraits<CSSSelector::PseudoClassType>> pseudoClassesAffectingHost;

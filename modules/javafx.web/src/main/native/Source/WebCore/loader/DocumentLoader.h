@@ -33,12 +33,13 @@
 #include "CachedResourceHandle.h"
 #include "ContentFilterClient.h"
 #include "ContentSecurityPolicyClient.h"
+#include "CrossOriginOpenerPolicy.h"
 #include "DeviceOrientationOrMotionPermissionState.h"
 #include "DocumentIdentifier.h"
+#include "DocumentLoadTiming.h"
 #include "DocumentWriter.h"
 #include "FrameDestructionObserver.h"
 #include "LinkIcon.h"
-#include "LoadTiming.h"
 #include "NavigationAction.h"
 #include "ResourceError.h"
 #include "ResourceLoaderOptions.h"
@@ -351,11 +352,12 @@ public:
     void recordMemoryCacheLoadForFutureClientNotification(const ResourceRequest&);
     void takeMemoryCacheLoadsForClientNotification(Vector<ResourceRequest>& loads);
 
-    LoadTiming& timing() { return m_loadTiming; }
-    void resetTiming() { m_loadTiming = LoadTiming(); }
+    const DocumentLoadTiming& timing() const { return m_loadTiming; }
+    DocumentLoadTiming& timing() { return m_loadTiming; }
+    void resetTiming() { m_loadTiming = { }; }
 
     // The WebKit layer calls this function when it's ready for the data to actually be added to the document.
-    WEBCORE_EXPORT void commitData(const char* bytes, size_t length);
+    WEBCORE_EXPORT void commitData(const uint8_t* bytes, size_t length);
 
     ApplicationCacheHost& applicationCacheHost() const;
     ApplicationCacheHost* applicationCacheHostUnlessBeingDestroyed() const;
@@ -383,8 +385,6 @@ public:
     void ref() const final { RefCounted<DocumentLoader>::ref(); }
     void deref() const final { RefCounted<DocumentLoader>::deref(); }
 #endif
-
-    bool isAlwaysOnLoggingAllowed() const;
 
     void startIconLoading();
     WEBCORE_EXPORT void didGetLoadDecisionForIcon(bool decision, uint64_t loadIdentifier, CompletionHandler<void(SharedBuffer*)>&&);
@@ -420,8 +420,14 @@ public:
     WEBCORE_EXPORT bool setControllingServiceWorkerRegistration(ServiceWorkerRegistrationData&&);
 #endif
 
-    bool lastNavigationWasAppBound() const { return m_lastNavigationWasAppBound; }
-    void setlastNavigationWasAppBound(bool lastNavigationWasAppBound) { m_lastNavigationWasAppBound = lastNavigationWasAppBound; }
+    bool lastNavigationWasAppInitiated() const { return m_lastNavigationWasAppInitiated; }
+    void setLastNavigationWasAppInitiated(bool lastNavigationWasAppInitiated) { m_lastNavigationWasAppInitiated = lastNavigationWasAppInitiated; }
+
+    ContentSecurityPolicy* contentSecurityPolicy() const { return m_contentSecurityPolicy.get(); }
+    std::optional<CrossOriginOpenerPolicy> crossOriginOpenerPolicy() const { return m_currentCoopEnforcementResult ? std::make_optional(m_currentCoopEnforcementResult->crossOriginOpenerPolicy) : std::nullopt; }
+
+    bool isContinuingLoadAfterResponsePolicyCheck() const { return m_isContinuingLoadAfterResponsePolicyCheck; }
+    void setIsContinuingLoadAfterResponsePolicyCheck(bool isContinuingLoadAfterResponsePolicyCheck) { m_isContinuingLoadAfterResponsePolicyCheck = isContinuingLoadAfterResponsePolicyCheck; }
 
 protected:
     WEBCORE_EXPORT DocumentLoader(const ResourceRequest&, const SubstituteData&);
@@ -439,9 +445,12 @@ private:
     Document* document() const;
 
 #if ENABLE(SERVICE_WORKER)
-    void matchRegistration(const URL&, CompletionHandler<void(Optional<ServiceWorkerRegistrationData>&&)>&&);
+    void matchRegistration(const URL&, CompletionHandler<void(std::optional<ServiceWorkerRegistrationData>&&)>&&);
 #endif
     void unregisterTemporaryServiceWorkerClient();
+
+    bool doCrossOriginOpenerHandlingOfResponse(const ResourceResponse&);
+    CrossOriginOpenerPolicyEnforcementResult enforceResponseCrossOriginOpenerPolicy(const URL& responseURL, SecurityOrigin& responseOrigin, const CrossOriginOpenerPolicy& responseCOOP);
 
     void loadMainResource(ResourceRequest&&);
 
@@ -449,7 +458,7 @@ private:
 
     void commitIfReady();
     void setMainDocumentError(const ResourceError&);
-    void commitLoad(const char*, int);
+    void commitLoad(const uint8_t*, int);
     void clearMainResourceLoader();
 
     void setupForReplace();
@@ -465,7 +474,7 @@ private:
     void mainReceivedError(const ResourceError&);
     WEBCORE_EXPORT void redirectReceived(CachedResource&, ResourceRequest&&, const ResourceResponse&, CompletionHandler<void(ResourceRequest&&)>&&) override;
     WEBCORE_EXPORT void responseReceived(CachedResource&, const ResourceResponse&, CompletionHandler<void()>&&) override;
-    WEBCORE_EXPORT void dataReceived(CachedResource&, const char* data, int length) override;
+    WEBCORE_EXPORT void dataReceived(CachedResource&, const uint8_t* data, int length) override;
     WEBCORE_EXPORT void notifyFinished(CachedResource&, const NetworkLoadMetrics&) override;
 #if USE(QUICK_LOOK)
     WEBCORE_EXPORT void previewResponseReceived(CachedResource&, const ResourceResponse&) override;
@@ -475,13 +484,13 @@ private:
 
 #if ENABLE(CONTENT_FILTERING)
     // ContentFilterClient
-    WEBCORE_EXPORT void dataReceivedThroughContentFilter(const char*, int) final;
+    WEBCORE_EXPORT void dataReceivedThroughContentFilter(const uint8_t*, int) final;
     WEBCORE_EXPORT ResourceError contentFilterDidBlock(ContentFilterUnblockHandler, String&& unblockRequestDeniedScript) final;
     WEBCORE_EXPORT void cancelMainResourceLoadForContentFilter(const ResourceError&) final;
     WEBCORE_EXPORT void handleProvisionalLoadFailureFromContentFilter(const URL& blockedPageURL, SubstituteData&) final;
 #endif
 
-    void dataReceived(const char* data, int length);
+    void dataReceived(const uint8_t* data, int length);
 
     bool maybeLoadEmpty();
 
@@ -507,7 +516,7 @@ private:
     void becomeMainResourceClient();
 
 #if ENABLE(APPLICATION_MANIFEST)
-    void notifyFinishedLoadingApplicationManifest(uint64_t callbackIdentifier, Optional<ApplicationManifest>);
+    void notifyFinishedLoadingApplicationManifest(uint64_t callbackIdentifier, std::optional<ApplicationManifest>);
 #endif
 
     // ContentSecurityPolicyClient
@@ -556,6 +565,7 @@ private:
     bool m_gotFirstByte { false };
     bool m_isClientRedirect { false };
     bool m_isLoadingMultipartContent { false };
+    bool m_isContinuingLoadAfterResponsePolicyCheck { false };
 
     // FIXME: Document::m_processingLoadEvent and DocumentLoader::m_wasOnloadDispatched are roughly the same
     // and should be merged.
@@ -579,6 +589,8 @@ private:
     Vector<ResourceResponse> m_responses;
     bool m_stopRecordingResponses { false };
 
+    std::optional<CrossOriginOpenerPolicyEnforcementResult> m_currentCoopEnforcementResult;
+
     typedef HashMap<RefPtr<ResourceLoader>, RefPtr<SubstituteResource>> SubstituteResourceMap;
     SubstituteResourceMap m_pendingSubstituteResources;
     Timer m_substituteResourceDeliveryTimer;
@@ -596,9 +608,8 @@ private:
     bool m_didCreateGlobalHistoryEntry { false };
 
     bool m_loadingMainResource { false };
-    LoadTiming m_loadTiming;
+    DocumentLoadTiming m_loadTiming;
 
-    MonotonicTime m_timeOfLastDataReceived;
     unsigned long m_identifierForLoadWithoutResourceLoader { 0 };
 
     DataLoadToken m_dataLoadToken;
@@ -618,6 +629,7 @@ private:
     ShouldOpenExternalURLsPolicy m_shouldOpenExternalURLsPolicy { ShouldOpenExternalURLsPolicy::ShouldNotAllow };
 
     std::unique_ptr<ApplicationCacheHost> m_applicationCacheHost;
+    std::unique_ptr<ContentSecurityPolicy> m_contentSecurityPolicy;
 
 #if ENABLE(CONTENT_FILTERING)
     std::unique_ptr<ContentFilter> m_contentFilter;
@@ -650,8 +662,8 @@ private:
     MouseEventPolicy m_mouseEventPolicy { MouseEventPolicy::Default };
 
 #if ENABLE(SERVICE_WORKER)
-    Optional<ServiceWorkerRegistrationData> m_serviceWorkerRegistrationData;
-    Optional<DocumentIdentifier> m_temporaryServiceWorkerClient;
+    std::optional<ServiceWorkerRegistrationData> m_serviceWorkerRegistrationData;
+    std::optional<DocumentIdentifier> m_temporaryServiceWorkerClient;
 #endif
 
 #if ASSERT_ENABLED
@@ -661,7 +673,7 @@ private:
     bool m_allowsWebArchiveForMainFrame { false };
     bool m_allowsDataURLsForMainFrame { false };
 
-    bool m_lastNavigationWasAppBound { false };
+    bool m_lastNavigationWasAppInitiated { true };
 };
 
 inline void DocumentLoader::recordMemoryCacheLoadForFutureClientNotification(const ResourceRequest& request)

@@ -1453,7 +1453,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_DocumentImpl_execCommandImpl(
     WebCore::JSMainThreadNullState state;
     return IMPL->execCommand(String(env, command)
             , userInterface
-            , String(env, value));
+            , String(env, value)).returnValue();
 }
 
 
@@ -1461,7 +1461,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_DocumentImpl_queryCommandEnab
     , jstring command)
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->queryCommandEnabled(String(env, command));
+    return IMPL->queryCommandEnabled(String(env, command)).returnValue();
 }
 
 
@@ -1469,7 +1469,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_DocumentImpl_queryCommandInde
     , jstring command)
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->queryCommandIndeterm(String(env, command));
+    return IMPL->queryCommandIndeterm(String(env, command)).returnValue();
 }
 
 
@@ -1477,7 +1477,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_DocumentImpl_queryCommandStat
     , jstring command)
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->queryCommandState(String(env, command));
+    return IMPL->queryCommandState(String(env, command)).returnValue();
 }
 
 
@@ -1485,7 +1485,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_DocumentImpl_queryCommandSupp
     , jstring command)
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->queryCommandSupported(String(env, command));
+    return IMPL->queryCommandSupported(String(env, command)).returnValue();
 }
 
 
@@ -1493,7 +1493,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_DocumentImpl_queryCommandValue
     , jstring command)
 {
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, IMPL->queryCommandValue(String(env, command)));
+    return JavaReturn<String>(env, IMPL->queryCommandValue(String(env, command)).returnValue());
 }
 
 

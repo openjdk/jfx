@@ -559,6 +559,38 @@ g_thread_pool_new (GFunc      func,
                    gboolean   exclusive,
                    GError   **error)
 {
+  return g_thread_pool_new_full (func, user_data, NULL, max_threads, exclusive, error);
+}
+
+/**
+ * g_thread_pool_new_full:
+ * @func: a function to execute in the threads of the new thread pool
+ * @user_data: user data that is handed over to @func every time it
+ *     is called
+ * @item_free_func: (nullable): used to pass as a free function to
+ *     g_async_queue_new_full()
+ * @max_threads: the maximal number of threads to execute concurrently
+ *     in the new thread pool, `-1` means no limit
+ * @exclusive: should this thread pool be exclusive?
+ * @error: return location for error, or %NULL
+ *
+ * This function creates a new thread pool similar to g_thread_pool_new()
+ * but allowing @item_free_func to be specified to free the data passed
+ * to g_thread_pool_push() in the case that the #GThreadPool is stopped
+ * and freed before all tasks have been executed.
+ *
+ * Returns: (transfer full): the new #GThreadPool
+ *
+ * Since: 2.70
+ */
+GThreadPool *
+g_thread_pool_new_full (GFunc           func,
+                        gpointer        user_data,
+                        GDestroyNotify  item_free_func,
+                        gint            max_threads,
+                        gboolean        exclusive,
+                        GError        **error)
+{
   GRealThreadPool *retval;
   G_LOCK_DEFINE_STATIC (init);
 
@@ -571,7 +603,7 @@ g_thread_pool_new (GFunc      func,
   retval->pool.func = func;
   retval->pool.user_data = user_data;
   retval->pool.exclusive = exclusive;
-  retval->queue = g_async_queue_new ();
+  retval->queue = g_async_queue_new_full (item_free_func);
   g_cond_init (&retval->cond);
   retval->max_threads = max_threads;
   retval->num_threads = 0;
@@ -931,6 +963,11 @@ g_thread_pool_free_internal (GRealThreadPool* pool)
   g_return_if_fail (pool);
   g_return_if_fail (pool->running == FALSE);
   g_return_if_fail (pool->num_threads == 0);
+
+  /* Ensure the dummy item pushed on by g_thread_pool_wakeup_and_stop_all() is
+   * removed, before it’s potentially passed to the user-provided
+   * @item_free_func. */
+  g_async_queue_remove (pool->queue, GUINT_TO_POINTER (1));
 
   g_async_queue_unref (pool->queue);
   g_cond_clear (&pool->cond);

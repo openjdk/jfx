@@ -25,7 +25,9 @@
 
 #pragma once
 
+#include "DeferTermination.h"
 #include "Heap.h"
+#include "VMTraps.h"
 #include <wtf/StdLibExtras.h>
 
 namespace JSC {
@@ -46,7 +48,7 @@ void LazyProperty<OwnerType, ElementType>::initLater(const Func&)
     // may be used for things. We address this problem by indirecting through a global const
     // variable. The "theFunc" variable is guaranteed to be native-aligned, i.e. at least a
     // multiple of 4.
-    static const FuncType theFunc = callFunc<Func>;
+    static const FuncType theFunc = &callFunc<Func>;
     m_pointer = lazyTag | bitwise_cast<uintptr_t>(&theFunc);
 }
 
@@ -95,6 +97,8 @@ ElementType* LazyProperty<OwnerType, ElementType>::callFunc(const Initializer& i
 {
     if (initializer.property.m_pointer & initializingTag)
         return nullptr;
+
+    DeferTerminationForAWhile deferTerminationForAWhile { initializer.vm };
     initializer.property.m_pointer |= initializingTag;
     callStatelessLambda<void, Func>(initializer);
     RELEASE_ASSERT(!(initializer.property.m_pointer & lazyTag));

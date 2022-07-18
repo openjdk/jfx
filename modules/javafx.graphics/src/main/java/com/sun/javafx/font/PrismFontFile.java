@@ -42,8 +42,6 @@ import static com.sun.javafx.font.PrismMetrics.*;
 
 public abstract class PrismFontFile implements FontResource, FontConstants {
 
-    private int fontInstallationType = -1; // unknown, 0=embedded, 1=system
-
     // TrueType fonts can have multiple names, most notably split up by
     // platform and locale. Whilst fonts that have different names for
     // different platforms are arguable buggy, those with localised names
@@ -156,13 +154,6 @@ public abstract class PrismFontFile implements FontResource, FontConstants {
         return AA_GREYSCALE;
     }
 
-    public boolean isInstalledFont() {
-        if (fontInstallationType == -1) {
-            PrismFontFactory factory = PrismFontFactory.getFontFactory();
-            fontInstallationType = factory.isInstalledFont(filename) ? 1 : 0;
-        }
-        return fontInstallationType > 0;
-    }
 
 
     /* A TTC file resource is shared, so reference count and delete
@@ -545,7 +536,10 @@ public abstract class PrismFontFile implements FontResource, FontConstants {
                 /* checksum */ ibuffer.skip(4);
                 table.offset = ibuffer.getInt();
                 table.length = ibuffer.getInt();
-                if (table.offset + table.length > filesize) {
+                if ((table.offset < 0) || (table.length < 0) ||
+                    (table.offset + table.length < table.length) ||
+                    (table.offset + table.length > filesize))
+                {
                     throw new Exception("bad table, tag="+table.tag);
                 }
             }

@@ -30,28 +30,21 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.sun.javafx.scene.control.behavior.BehaviorBase;
-import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
-import javafx.beans.property.DoubleProperty;
-import javafx.scene.control.Accordion;
-import javafx.scene.control.Button;
-import javafx.scene.control.TableCell;
-import javafx.scene.control.TableColumn;
-import javafx.scene.control.TablePosition;
-import javafx.scene.control.TableRow;
-import javafx.scene.control.TableView;
-
 import com.sun.javafx.scene.control.behavior.TableRowBehavior;
 
-import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.DoubleProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.scene.AccessibleAttribute;
 import javafx.scene.Node;
 import javafx.scene.control.Control;
+import javafx.scene.control.TableCell;
+import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableColumnBase;
+import javafx.scene.control.TablePosition;
+import javafx.scene.control.TableRow;
+import javafx.scene.control.TableView;
 import javafx.scene.control.TableView.TableViewFocusModel;
-import javafx.scene.control.TreeTableView;
 
 /**
  * Default skin implementation for the {@link TableRow} control.
@@ -108,14 +101,13 @@ public class TableRowSkin<T> extends TableRowSkinBase<T, TableRow<T>, TableCell<
         setupTreeTableViewListeners();
     }
 
+    // FIXME: replace listener to fixedCellSize with direct lookup - JDK-8277000
     private void setupTreeTableViewListeners() {
         TableView<T> tableView = getSkinnable().getTableView();
         if (tableView == null) {
-            getSkinnable().tableViewProperty().addListener(new InvalidationListener() {
-                @Override public void invalidated(Observable observable) {
-                    getSkinnable().tableViewProperty().removeListener(this);
-                    setupTreeTableViewListeners();
-                }
+            registerInvalidationListener(getSkinnable().tableViewProperty(), e -> {
+                unregisterInvalidationListeners(getSkinnable().tableViewProperty());
+                setupTreeTableViewListeners();
             });
         } else {
             DoubleProperty fixedCellSizeProperty = tableView.fixedCellSizeProperty();
@@ -135,8 +127,6 @@ public class TableRowSkin<T> extends TableRowSkinBase<T, TableRow<T>, TableCell<
             }
         }
     }
-
-
 
     /* *************************************************************************
      *                                                                         *
@@ -245,4 +235,10 @@ public class TableRowSkin<T> extends TableRowSkinBase<T, TableRow<T>, TableCell<
             tableViewSkin = (TableViewSkin)tableView.getSkin();
         }
     }
+
+    // test-only
+    TableViewSkin<T> getTableViewSkin() {
+        return tableViewSkin;
+    }
+
 }

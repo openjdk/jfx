@@ -58,7 +58,7 @@ vec4 apply_selfIllum();
 struct Light {
     vec4 pos;
     vec3 color;
-    vec3 attn;
+    vec4 attn;
     vec3 dir;
     float range;
     float cosOuter;
@@ -118,6 +118,14 @@ float computeSpotlightFactor3(vec3 l, vec3 lightDir, float cosOuter, float denom
 
 void computeLight(int i, vec3 n, vec3 refl, float specPower, inout vec3 d, inout vec3 s) {
     Light light = lights[i];
+    vec3 lightDir = lightTangentSpaceDirections[i].xyz;
+    // testing if w is 0 or 1 using <0.5 since equality check for floating points might not work well
+    if (light.attn.w < 0.5) {
+        d += clamp(dot(n, -lightDir), 0.0, 1.0) * light.color.rgb;
+        s += pow(clamp(dot(-refl, -lightDir), 0.0, 1.0), specPower) * light.color.rgb;
+        return;
+    }
+
     vec3 pos = lightTangentSpacePositions[i].xyz;
     float dist = length(pos);
     if (dist > light.range) {
@@ -125,7 +133,6 @@ void computeLight(int i, vec3 n, vec3 refl, float specPower, inout vec3 d, inout
     }
     vec3 l = normalize(pos);
 
-    vec3 lightDir = lightTangentSpaceDirections[i].xyz;
     float spotlightFactor = computeSpotlightFactor(l, lightDir, light.cosOuter, light.denom, light.falloff);
 
     float invAttnFactor = light.attn.x + light.attn.y * dist + light.attn.z * dist * dist;

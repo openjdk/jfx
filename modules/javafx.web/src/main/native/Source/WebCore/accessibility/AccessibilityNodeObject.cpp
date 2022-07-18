@@ -378,7 +378,6 @@ bool AccessibilityNodeObject::canHaveChildren() const
 
     // Elements that should not have children
     switch (roleValue()) {
-    case AccessibilityRole::Image:
     case AccessibilityRole::Button:
     case AccessibilityRole::PopUpButton:
     case AccessibilityRole::CheckBox:
@@ -775,9 +774,8 @@ int AccessibilityNodeObject::headingLevel() const
         return false;
 
     if (isHeading()) {
-        int ariaLevel = getAttribute(aria_levelAttr).toInt();
-        if (ariaLevel > 0)
-            return ariaLevel;
+        if (auto level = getIntegralAttribute(aria_levelAttr); level > 0)
+            return level;
     }
 
     if (node->hasTagName(h1Tag))
@@ -1729,10 +1727,10 @@ unsigned AccessibilityNodeObject::hierarchicalLevel() const
     Node* node = this->node();
     if (!is<Element>(node))
         return 0;
-    Element& element = downcast<Element>(*node);
-    const AtomString& ariaLevel = element.attributeWithoutSynchronization(aria_levelAttr);
-    if (!ariaLevel.isEmpty())
-        return ariaLevel.toInt();
+
+    auto& element = downcast<Element>(*node);
+    if (!element.attributeWithoutSynchronization(aria_levelAttr).isEmpty())
+        return element.getIntegralAttribute(aria_levelAttr);
 
     // Only tree item will calculate its level through the DOM currently.
     if (roleValue() != AccessibilityRole::TreeItem)

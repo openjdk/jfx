@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -51,7 +51,7 @@ public class KeyEventFirer {
      * <p>
      * Beware: using this constructor on an <code>EventTarget</code> of type <code>Node</code>
      * which is not focusOwner may lead
-     * to false greens (see https://bugs.openjdk.java.net/browse/JDK-8231692).
+     * to false greens (see https://bugs.openjdk.org/browse/JDK-8231692).
      *
      * @param target the target to fire keyEvents onto, must not be null.
      * @throws NullPointerException if target is null.

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014, 2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -172,7 +172,7 @@ void JSGlobalObjectInspectorController::appendAPIBacktrace(ScriptCallStack& call
 void JSGlobalObjectInspectorController::reportAPIException(JSGlobalObject* globalObject, Exception* exception)
 {
     VM& vm = globalObject->vm();
-    if (isTerminatedExecutionException(vm, exception))
+    if (vm.isTerminationException(exception))
         return;
 
     auto scope = DECLARE_CATCH_SCOPE(vm);
@@ -198,9 +198,9 @@ void JSGlobalObjectInspectorController::reportAPIException(JSGlobalObject* globa
     m_consoleAgent->addMessageToConsole(makeUnique<ConsoleMessage>(MessageSource::JS, MessageType::Log, MessageLevel::Error, errorMessage, WTFMove(callStack)));
 }
 
-ConsoleClient* JSGlobalObjectInspectorController::consoleClient() const
+WeakPtr<ConsoleClient> JSGlobalObjectInspectorController::consoleClient() const
 {
-    return m_consoleClient.get();
+    return makeWeakPtr(m_consoleClient.get());
 }
 
 bool JSGlobalObjectInspectorController::developerExtrasEnabled() const

@@ -41,6 +41,7 @@
 #include "ShadowRoot.h"
 #include "XLinkNames.h"
 #include <wtf/IsoMallocInlines.h>
+#include <wtf/RobinHoodHashSet.h>
 
 namespace WebCore {
 
@@ -98,7 +99,7 @@ Node::InsertedIntoAncestorResult SVGUseElement::insertedIntoAncestor(InsertionTy
     SVGGraphicsElement::insertedIntoAncestor(insertionType, parentOfInsertedTree);
     if (insertionType.connectedToDocument) {
         if (m_shadowTreeNeedsUpdate)
-            document().addSVGUseElement(*this);
+            document().accessSVGExtensions().addUseElementWithPendingShadowTreeUpdate(*this);
         invalidateShadowTree();
         // FIXME: Move back the call to updateExternalDocument() here once notifyFinished is made always async.
         return InsertedIntoAncestorResult::NeedsPostInsertionCallback;
@@ -117,7 +118,7 @@ void SVGUseElement::removedFromAncestor(RemovalType removalType, ContainerNode& 
     // and SVGUseElement::updateExternalDocument which calls invalidateShadowTree().
     if (removalType.disconnectedFromDocument) {
         if (m_shadowTreeNeedsUpdate)
-            document().removeSVGUseElement(*this);
+            document().accessSVGExtensions().removeUseElementWithPendingShadowTreeUpdate(*this);
     }
     SVGGraphicsElement::removedFromAncestor(removalType, oldParentOfRemovedTree);
     if (removalType.disconnectedFromDocument) {
@@ -177,14 +178,14 @@ void SVGUseElement::svgAttributeChanged(const QualifiedName& attrName)
     SVGGraphicsElement::svgAttributeChanged(attrName);
 }
 
-static HashSet<AtomString> createAllowedElementSet()
+static MemoryCompactLookupOnlyRobinHoodHashSet<AtomString> createAllowedElementSet()
 {
     // Spec: "Any 'svg', 'symbol', 'g', graphics element or other 'use' is potentially a template object that can be re-used
     // (i.e., "instanced") in the SVG document via a 'use' element."
     // "Graphics Element" is defined as 'circle', 'ellipse', 'image', 'line', 'path', 'polygon', 'polyline', 'rect', 'text'
     // Excluded are anything that is used by reference or that only make sense to appear once in a document.
     using namespace SVGNames;
-    HashSet<AtomString> set;
+    MemoryCompactLookupOnlyRobinHoodHashSet<AtomString> set;
     for (auto& tag : { aTag.get(), circleTag.get(), descTag.get(), ellipseTag.get(), gTag.get(), imageTag.get(), lineTag.get(), metadataTag.get(), pathTag.get(), polygonTag.get(), polylineTag.get(), rectTag.get(), svgTag.get(), switchTag.get(), symbolTag.get(), textTag.get(), textPathTag.get(), titleTag.get(), trefTag.get(), tspanTag.get(), useTag.get() })
         set.add(tag.localName());
     return set;
@@ -192,7 +193,7 @@ static HashSet<AtomString> createAllowedElementSet()
 
 static inline bool isDisallowedElement(const SVGElement& element)
 {
-    static NeverDestroyed<HashSet<AtomString>> set = createAllowedElementSet();
+    static NeverDestroyed<MemoryCompactLookupOnlyRobinHoodHashSet<AtomString>> set = createAllowedElementSet();
     return !set.get().contains(element.localName());
 }
 
@@ -224,7 +225,7 @@ void SVGUseElement::updateShadowTree()
 
     if (!isConnected())
         return;
-    document().removeSVGUseElement(*this);
+    document().accessSVGExtensions().removeUseElementWithPendingShadowTreeUpdate(*this);
 
     String targetID;
     auto* target = findTarget(&targetID);
@@ -309,14 +310,14 @@ RenderElement* SVGUseElement::rendererClipChild() const
     return targetClone->renderer();
 }
 
-static inline void disassociateAndRemoveClones(const Vector<Element*>& clones)
+static inline void disassociateAndRemoveClones(const Vector<Ref<Element>>& clones)
 {
     for (auto& clone : clones) {
-        for (auto& descendant : descendantsOfType<SVGElement>(*clone))
+        for (auto& descendant : descendantsOfType<SVGElement>(clone.get()))
             descendant.setCorrespondingElement(nullptr);
         if (is<SVGElement>(clone))
-            downcast<SVGElement>(*clone).setCorrespondingElement(nullptr);
-        clone->parentNode()->removeChild(*clone);
+            downcast<SVGElement>(clone.get()).setCorrespondingElement(nullptr);
+        clone->remove();
     }
 }
 
@@ -330,10 +331,10 @@ static void removeDisallowedElementsFromSubtree(SVGElement& subtree)
     // Assert that it's not in a document to make sure callers are still using it this way.
     ASSERT(!subtree.isConnected());
 
-    Vector<Element*> disallowedElements;
+    Vector<Ref<Element>> disallowedElements;
     for (auto it = descendantsOfType<Element>(subtree).begin(); it; ) {
         if (isDisallowedElement(*it)) {
-            disallowedElements.append(&*it);
+            disallowedElements.append(*it);
             it.traverseNextSkippingChildren();
             continue;
         }
@@ -349,9 +350,15 @@ static void removeSymbolElementsFromSubtree(SVGElement& subtree)
     // don't need to be cloned to get correct rendering. 2) expandSymbolElementsInShadowTree will turn them
     // into <svg> elements, which is correct for symbol elements directly referenced by use elements,
     // but incorrect for ones that just happen to be in a subtree.
-    Vector<Element*> symbolElements;
-    for (auto& descendant : descendantsOfType<SVGSymbolElement>(subtree))
-        symbolElements.append(&descendant);
+    Vector<Ref<Element>> symbolElements;
+    for (auto it = descendantsOfType<Element>(subtree).begin(); it; ) {
+        if (is<SVGSymbolElement>(*it)) {
+            symbolElements.append(*it);
+            it.traverseNextSkippingChildren();
+            continue;
+        }
+        ++it;
+    }
     disassociateAndRemoveClones(symbolElements);
 }
 
@@ -522,12 +529,12 @@ void SVGUseElement::invalidateShadowTree()
     invalidateStyleAndRenderersForSubtree();
     invalidateDependentShadowTrees();
     if (isConnected())
-        document().addSVGUseElement(*this);
+        document().accessSVGExtensions().addUseElementWithPendingShadowTreeUpdate(*this);
 }
 
 void SVGUseElement::invalidateDependentShadowTrees()
 {
-    for (auto* instance : instances()) {
+    for (auto& instance : copyToVectorOf<Ref<SVGElement>>(instances())) {
         if (auto element = instance->correspondingUseElement())
             element->invalidateShadowTree();
     }

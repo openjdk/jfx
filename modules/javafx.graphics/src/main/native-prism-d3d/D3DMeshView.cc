@@ -74,7 +74,7 @@ void D3DMeshView::setAmbientLight(float r, float g, float b) {
 }
 
 void D3DMeshView::setLight(int index, float x, float y, float z, float r, float g, float b, float w,
-        float ca, float la, float qa, float maxRange,
+        float ca, float la, float qa, float isAttenuated, float maxRange,
         float dirX, float dirY, float dirZ, float innerAngle, float outerAngle, float falloff) {
     // NOTE: We only support up to 3 point lights at the present
     if (index >= 0 && index <= MAX_NUM_LIGHTS - 1) {
@@ -89,6 +89,7 @@ void D3DMeshView::setLight(int index, float x, float y, float z, float r, float 
         light.attenuation[0] = ca;
         light.attenuation[1] = la;
         light.attenuation[2] = qa;
+        light.attenuation[3] = isAttenuated;
         light.maxRange = maxRange;
         light.direction[0] = dirX;
         light.direction[1] = dirY;
@@ -193,7 +194,7 @@ void D3DMeshView::render() {
     }
 
     float lightsColor[MAX_NUM_LIGHTS * 4];        // 3 lights x (3 color + 1 padding)
-    float lightsAttenuation[MAX_NUM_LIGHTS * 4];  // 3 lights x (3 attenuation factors + 1 padding)
+    float lightsAttenuation[MAX_NUM_LIGHTS * 4];  // 3 lights x (3 attenuation factors + 1 isAttenuated)
     float lightsRange[MAX_NUM_LIGHTS * 4];        // 3 lights x (1 maxRange + 3 padding)
     float spotLightsFactors[MAX_NUM_LIGHTS * 4];  // 3 lights x (2 angles + 1 falloff + 1 padding)
     for (int i = 0, c = 0, a = 0, r = 0, s = 0; i < MAX_NUM_LIGHTS; i++) {
@@ -206,14 +207,14 @@ void D3DMeshView::render() {
         lightsAttenuation[a++] = lights[i].attenuation[0];
         lightsAttenuation[a++] = lights[i].attenuation[1];
         lightsAttenuation[a++] = lights[i].attenuation[2];
-        lightsAttenuation[a++] = 0;
+        lightsAttenuation[a++] = lights[i].attenuation[3];
 
         lightsRange[r++] = lights[i].maxRange;
         lightsRange[r++] = 0;
         lightsRange[r++] = 0;
         lightsRange[r++] = 0;
 
-        if (lights[i].isPointLight()) {
+        if (lights[i].isPointLight() || lights[i].isDirectionalLight()) {
             spotLightsFactors[s++] = -1; // cos(180)
             spotLightsFactors[s++] = 2;  // cos(0) - cos(180)
             spotLightsFactors[s++] = 0;

@@ -55,9 +55,7 @@ JSC_DEFINE_HOST_FUNCTION(constructJSWebAssemblyGlobal, (JSGlobalObject* globalOb
     auto throwScope = DECLARE_THROW_SCOPE(vm);
 
     JSObject* newTarget = asObject(callFrame->newTarget());
-    Structure* webAssemblyGlobalStructure = newTarget == callFrame->jsCallee()
-        ? globalObject->webAssemblyGlobalStructure()
-        : InternalFunction::createSubclassStructure(globalObject, newTarget, getFunctionRealm(vm, newTarget)->webAssemblyGlobalStructure());
+    Structure* webAssemblyGlobalStructure = JSC_GET_DERIVED_STRUCTURE(vm, webAssemblyGlobalStructure, newTarget, callFrame->jsCallee());
     RETURN_IF_EXCEPTION(throwScope, { });
 
     JSObject* globalDescriptor;
@@ -89,25 +87,25 @@ JSC_DEFINE_HOST_FUNCTION(constructJSWebAssemblyGlobal, (JSGlobalObject* globalOb
         String valueString = valueValue.toWTFString(globalObject);
         RETURN_IF_EXCEPTION(throwScope, encodedJSValue());
         if (valueString == "i32"_s)
-            type = Wasm::Type::I32;
+            type = Wasm::Types::I32;
         else if (valueString == "i64"_s)
-            type = Wasm::Type::I64;
+            type = Wasm::Types::I64;
         else if (valueString == "f32"_s)
-            type = Wasm::Type::F32;
+            type = Wasm::Types::F32;
         else if (valueString == "f64"_s)
-            type = Wasm::Type::F64;
-        else if (Options::useWebAssemblyReferences() && (valueString == "anyfunc"_s || valueString == "funcref"_s))
-            type = Wasm::Type::Funcref;
-        else if (Options::useWebAssemblyReferences() && valueString == "externref"_s)
-            type = Wasm::Type::Externref;
+            type = Wasm::Types::F64;
+        else if (valueString == "anyfunc"_s || valueString == "funcref"_s)
+            type = Wasm::Types::Funcref;
+        else if (valueString == "externref"_s)
+            type = Wasm::Types::Externref;
         else
             return JSValue::encode(throwException(globalObject, throwScope, createTypeError(globalObject, "WebAssembly.Global expects its 'value' field to be the string 'i32', 'i64', 'f32', 'f64', 'anyfunc', 'funcref', or 'externref'"_s)));
     }
 
     uint64_t initialValue = 0;
     JSValue argument = callFrame->argument(1);
-    switch (type) {
-    case Wasm::Type::I32: {
+    switch (type.kind) {
+    case Wasm::TypeKind::I32: {
         if (!argument.isUndefined()) {
             int32_t value = argument.toInt32(globalObject);
             RETURN_IF_EXCEPTION(throwScope, encodedJSValue());
@@ -115,7 +113,7 @@ JSC_DEFINE_HOST_FUNCTION(constructJSWebAssemblyGlobal, (JSGlobalObject* globalOb
         }
         break;
     }
-    case Wasm::Type::I64: {
+    case Wasm::TypeKind::I64: {
         if (!argument.isUndefined()) {
             int64_t value = argument.toBigInt64(globalObject);
             RETURN_IF_EXCEPTION(throwScope, encodedJSValue());
@@ -123,7 +121,7 @@ JSC_DEFINE_HOST_FUNCTION(constructJSWebAssemblyGlobal, (JSGlobalObject* globalOb
         }
         break;
     }
-    case Wasm::Type::F32: {
+    case Wasm::TypeKind::F32: {
         if (!argument.isUndefined()) {
             float value = argument.toFloat(globalObject);
             RETURN_IF_EXCEPTION(throwScope, encodedJSValue());
@@ -131,7 +129,7 @@ JSC_DEFINE_HOST_FUNCTION(constructJSWebAssemblyGlobal, (JSGlobalObject* globalOb
         }
         break;
     }
-    case Wasm::Type::F64: {
+    case Wasm::TypeKind::F64: {
         if (!argument.isUndefined()) {
             double value = argument.toNumber(globalObject);
             RETURN_IF_EXCEPTION(throwScope, encodedJSValue());
@@ -139,8 +137,7 @@ JSC_DEFINE_HOST_FUNCTION(constructJSWebAssemblyGlobal, (JSGlobalObject* globalOb
         }
         break;
     }
-    case Wasm::Type::Funcref: {
-        ASSERT(Options::useWebAssemblyReferences());
+    case Wasm::TypeKind::Funcref: {
         if (argument.isUndefined())
             argument = defaultValueForReferenceType(type);
         if (!isWebAssemblyHostFunction(vm, argument) && !argument.isNull()) {
@@ -150,8 +147,7 @@ JSC_DEFINE_HOST_FUNCTION(constructJSWebAssemblyGlobal, (JSGlobalObject* globalOb
         initialValue = JSValue::encode(argument);
         break;
     }
-    case Wasm::Type::Externref: {
-        ASSERT(Options::useWebAssemblyReferences());
+    case Wasm::TypeKind::Externref: {
         if (argument.isUndefined())
             argument = defaultValueForReferenceType(type);
         initialValue = JSValue::encode(argument);

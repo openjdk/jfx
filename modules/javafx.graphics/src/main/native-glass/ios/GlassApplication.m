@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -251,28 +251,19 @@ jclass classForName(JNIEnv *env, char *className)
     NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
     {
         NSAssert([[NSThread currentThread] isMainThread] == YES, @"must be on main thread" );
-        if (jEnv != NULL)
+        if (jEnv != NULL && self.jRunnable != NULL)
         {
             (*jEnv)->CallVoidMethod(jEnv, self.jRunnable, jRunnableRun);
             GLASS_CHECK_EXCEPTION(jEnv);
+
+            (*jEnv)->DeleteGlobalRef(jEnv, self.jRunnable);
         }
+
+        self.jRunnable = NULL;
 
         [self release];
     }
     [pool drain];
-}
-
-
-- (void)dealloc
-{
-    NSAssert([[NSThread currentThread] isMainThread] == YES, @"must be on main thread" );
-    if (jEnv != NULL)
-    {
-        (*jEnv)->DeleteGlobalRef(jEnv, self.jRunnable);
-    }
-    self.jRunnable = NULL;
-
-    [super dealloc];
 }
 
 @end

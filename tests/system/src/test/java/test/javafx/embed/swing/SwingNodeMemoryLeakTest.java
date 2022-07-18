@@ -138,7 +138,6 @@ public class SwingNodeMemoryLeakTest {
         // Attempt gc GC_ATTEMPTS times
         for (int i = 0; i < GC_ATTEMPTS; i++) {
             System.gc();
-            System.runFinalization();
             if (getCleanedUpSwingNodeCount() == TOTAL_SWINGNODE) {
                 break;
             }
@@ -154,7 +153,6 @@ public class SwingNodeMemoryLeakTest {
         // Attempt gc GC_ATTEMPTS times
         for (int i = 0; i < GC_ATTEMPTS; i++) {
             System.gc();
-            System.runFinalization();
             if (getCleanedUpJLabelCount() == TOTAL_SWINGNODE) {
                 break;
             }

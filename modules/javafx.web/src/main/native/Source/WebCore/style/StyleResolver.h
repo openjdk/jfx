@@ -79,10 +79,10 @@ struct ElementStyle {
     std::unique_ptr<Relations> relations;
 };
 
-class Resolver {
-    WTF_MAKE_NONCOPYABLE(Resolver); WTF_MAKE_FAST_ALLOCATED;
+class Resolver : public RefCounted<Resolver> {
+    WTF_MAKE_ISO_ALLOCATED(Resolver);
 public:
-    Resolver(Document&);
+    static Ref<Resolver> create(Document&);
     ~Resolver();
 
     ElementStyle styleForElement(const Element&, const RenderStyle* parentStyle, const RenderStyle* parentBoxStyle = nullptr, RuleMatchingBehavior = RuleMatchingBehavior::MatchAllRules, const SelectorFilter* = nullptr);
@@ -128,7 +128,7 @@ public:
     bool hasSelectorForAttribute(const Element&, const AtomString&) const;
 
     bool hasViewportDependentMediaQueries() const;
-    Optional<DynamicMediaQueryEvaluationChanges> evaluateDynamicMediaQueries();
+    std::optional<DynamicMediaQueryEvaluationChanges> evaluateDynamicMediaQueries();
 
     void addKeyframeStyle(Ref<StyleRuleKeyframes>&&);
 
@@ -140,8 +140,13 @@ public:
 
     InspectorCSSOMWrappers& inspectorCSSOMWrappers() { return m_inspectorCSSOMWrappers; }
 
+    bool isSharedBetweenShadowTrees() const { return m_isSharedBetweenShadowTrees; }
+    void setSharedBetweenShadowTrees() { m_isSharedBetweenShadowTrees = true; }
+
 private:
     friend class PageRuleCollector;
+
+    Resolver(Document&);
 
     class State {
     public:
@@ -194,6 +199,8 @@ private:
     MatchedDeclarationsCache m_matchedDeclarationsCache;
 
     bool m_matchAuthorAndUserStyles { true };
+    bool m_isSharedBetweenShadowTrees { false };
+
     // See if we still have crashes where Resolver gets deleted early.
     bool m_isDeleted { false };
 };

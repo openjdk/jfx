@@ -109,6 +109,7 @@ platform/network/java/URLLoader.cpp
 
 bindings/java/JavaDOMUtils.cpp
 bindings/java/JavaEventListener.cpp
+bindings/java/EventListenerManager.cpp
 
 page/java/DragControllerJava.cpp
 page/java/EventHandlerJava.cpp

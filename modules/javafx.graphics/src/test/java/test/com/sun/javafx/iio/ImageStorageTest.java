@@ -25,9 +25,13 @@
 
 package test.com.sun.javafx.iio;
 
+import com.sun.javafx.iio.ImageFormatDescription;
 import com.sun.javafx.iio.ImageFrame;
+import com.sun.javafx.iio.ImageLoader;
+import com.sun.javafx.iio.ImageLoaderFactory;
 import com.sun.javafx.iio.ImageStorage;
 import com.sun.javafx.iio.ImageStorageException;
+import com.sun.javafx.iio.common.ImageLoaderImpl;
 import com.sun.javafx.iio.common.ImageTools;
 import static org.junit.Assert.*;
 import org.junit.ComparisonFailure;
@@ -36,7 +40,10 @@ import org.junit.Test;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.ByteBuffer;
 import java.util.Base64;
+import java.util.Collections;
+import java.util.List;
 import java.util.zip.GZIPInputStream;
 
 public class ImageStorageTest {
@@ -47,7 +54,7 @@ public class ImageStorageTest {
     @Test
     public void createImageFromNoExtensionURL() throws ImageStorageException {
         String path = getResourcePath("testpngnoextension");
-        assertNotNull(ImageStorage.loadAll(path, null, 0, 0, true, 2.0f, true));
+        assertNotNull(new ImageStorage().loadAll(path, null, 0, 0, true, 2.0f, true));
     }
 
     @Test
@@ -74,21 +81,21 @@ public class ImageStorageTest {
     @Test
     public void testCompleteAnimation() throws ImageStorageException {
         String path = getResourcePath("gif/animation/test3Frames.gif");
-        ImageFrame[] frames = ImageStorage.loadAll(path, null, 0, 0, true, 1.0f, true);
+        ImageFrame[] frames = new ImageStorage().loadAll(path, null, 0, 0, true, 1.0f, true);
         assertEquals(frames.length, 3);
     }
 
     @Test
     public void testIncompleteAnimation() throws ImageStorageException {
         String path = getResourcePath("gif/animation/test3rdFrameIncomplete.gif");
-        ImageFrame[] frames = ImageStorage.loadAll(path, null, 0, 0, true, 1.0f, true);
+        ImageFrame[] frames = new ImageStorage().loadAll(path, null, 0, 0, true, 1.0f, true);
         assertEquals(frames.length, 2);
     }
 
     @Test(expected = ImageStorageException.class)
     public void testCorruptFirstFrame() throws ImageStorageException  {
         String path = getResourcePath("gif/animation/testBad.gif");
-        ImageStorage.loadAll(path, null, 0, 0, false, 1.0f, false);
+        new ImageStorage().loadAll(path, null, 0, 0, false, 1.0f, false);
     }
 
     @Test
@@ -195,7 +202,7 @@ public class ImageStorageTest {
                     + "KRs93I0+6caAbmPIvqGHb46gN8dwmxOUzSnuplG6adZtWu2bdrhjxoF2zOEcCxTHEtexInWs6Rwb"
                     + "dsdHH3300UcfffTRRx999P8S+v9yvP+fn3zi/t+BrTq2UCIAAA==")));
 
-        ImageFrame[] frames = ImageStorage.loadAll(stream, null, 0, 0, false, 1.0f, false);
+        ImageFrame[] frames = new ImageStorage().loadAll(stream, null, 0, 0, false, 1.0f, false);
         assertNotNull(frames);
         assertEquals(1, frames.length);
     }
@@ -207,7 +214,7 @@ public class ImageStorageTest {
             + "nQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAAcSURBVChTY/jPwADBZACyNMHAqGYSwZDU/P8/AB"
             + "ieT81GAGKoAAAAAElFTkSuQmCC";
 
-        ImageFrame[] frames = ImageStorage.loadAll(url, null, 20, 10, false, 1, false);
+        ImageFrame[] frames = new ImageStorage().loadAll(url, null, 20, 10, false, 1, false);
         assertEquals(1, frames.length);
 
         byte[] data = (byte[])frames[0].getImageData().array();
@@ -222,5 +229,100 @@ public class ImageStorageTest {
         assertEquals(0, data[6]);
         assertEquals(0, data[7]);
         assertEquals(-1, data[8]);
+    }
+
+    @Test
+    public void testLoadImageFromDataURIWithMismatchedMimeSubtype() throws ImageStorageException {
+        // The data contained in this URI is actually a PNG image
+        String url =
+            "data:image/jpeg;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAKCAIAAAA7N+mxAAAAAXNSR0IArs4c6QAAAAR"
+            + "nQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAAcSURBVChTY/jPwADBZACyNMHAqGYSwZDU/P8/AB"
+            + "ieT81GAGKoAAAAAElFTkSuQmCC";
+
+        ImageFrame[] frames = new ImageStorage().loadAll(url, null, 20, 10, false, 1, false);
+        assertEquals(1, frames.length);
+
+        byte[] data = (byte[])frames[0].getImageData().array();
+        assertEquals(-1, data[0]);
+        assertEquals(0, data[1]);
+        assertEquals(0, data[2]);
+
+        assertEquals(0, data[3]);
+        assertEquals(-1, data[4]);
+        assertEquals(0, data[5]);
+
+        assertEquals(0, data[6]);
+        assertEquals(0, data[7]);
+        assertEquals(-1, data[8]);
+    }
+
+    @Test
+    public void testLoadImageFromDataURIWithUnsupportedImageSubtypeFails() {
+        String url = "data:image/foo;base64,";
+
+        try {
+            new ImageStorage().loadAll(url, null, 20, 10, false, 1, false);
+            fail();
+        } catch (ImageStorageException ex) {
+            assertTrue(ex.getMessage().startsWith("Unsupported MIME subtype"));
+        }
+    }
+
+    @Test
+    public void testLoadImageFromDataURIWithNonImageTypeFails() {
+        String url = "data:application/octet-stream;base64,";
+
+        try {
+            new ImageStorage().loadAll(url, null, 20, 10, false, 1, false);
+            fail();
+        } catch (ImageStorageException ex) {
+            assertTrue(ex.getMessage().startsWith("Unexpected MIME type"));
+        }
+    }
+
+    @Test
+    public void testLoadImageFromDataURIWithoutMimeTypeFails() {
+        String url = "data:base64,";
+
+        try {
+            new ImageStorage().loadAll(url, null, 20, 10, false, 1, false);
+            fail();
+        } catch (ImageStorageException ex) {
+            assertTrue(ex.getMessage().startsWith("Unexpected MIME type"));
+        }
+    }
+
+    @Test
+    public void testLoadImageFromDataURIWithoutDetectableSignatureByMimeType() throws IOException {
+        var formatWithoutSignature = new ImageFormatDescription() {
+            @Override public String getFormatName() { return "TEST"; }
+            @Override public List<String> getExtensions() { return List.of("test"); }
+            @Override public List<Signature> getSignatures() { return Collections.emptyList(); }
+            @Override public List<String> getMIMESubtypes() { return List.of("test"); }
+        };
+
+        var expectedImage = new ImageFrame(ImageStorage.ImageType.RGBA_PRE, ByteBuffer.wrap(new byte[0]),
+            0, 0, 0, null, null);
+
+        class TestFactory implements ImageLoaderFactory {
+            @Override public ImageFormatDescription getFormatDescription() { return formatWithoutSignature; }
+            @Override public ImageLoader createImageLoader(InputStream input) {
+                return new ImageLoaderImpl(formatWithoutSignature) {
+                    @Override public void dispose() {}
+                    @Override public ImageFrame load(int i, int w, int h, boolean p, boolean s) {
+                        return i == 0 ? expectedImage : null;
+                    }
+                };
+            }
+        }
+
+        String url = "data:image/test;base64,";
+
+        var imageStorage = new ImageStorage();
+        imageStorage.addImageLoaderFactory(new TestFactory());
+        var actualImage = imageStorage.loadAll(
+            url, null, 0, 0, false, 1, false)[0];
+
+        assertSame(expectedImage, actualImage);
     }
 }

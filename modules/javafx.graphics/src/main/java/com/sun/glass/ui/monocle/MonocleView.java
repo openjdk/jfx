@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -201,7 +201,9 @@ final class MonocleView extends View {
                                        boolean hideCursor) {
         MonocleWindowManager wm = MonocleWindowManager.getInstance();
         MonocleWindow focusedWindow = wm.getFocusedWindow();
-        focusedWindow.setFullScreen(true);
+        if (focusedWindow != null) {
+            focusedWindow.setFullScreen(true);
+        }
         if (hideCursor) {
             resetCursorVisibility = true;
             NativeCursor nativeCursor =
@@ -216,7 +218,9 @@ final class MonocleView extends View {
     protected void _exitFullscreen(long ptr, boolean animate) {
         MonocleWindowManager wm = MonocleWindowManager.getInstance();
         MonocleWindow focusedWindow = wm.getFocusedWindow();
-        focusedWindow.setFullScreen(false);
+        if (focusedWindow != null) {
+            focusedWindow.setFullScreen(false);
+        }
         if (resetCursorVisibility) {
             resetCursorVisibility = false;
             NativeCursor nativeCursor =

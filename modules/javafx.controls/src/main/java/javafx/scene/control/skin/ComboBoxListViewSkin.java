@@ -53,6 +53,7 @@ import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
 import javafx.scene.control.SelectionMode;
 import javafx.scene.control.SelectionModel;
+import javafx.scene.control.SingleSelectionModel;
 import javafx.scene.control.TextField;
 import javafx.scene.input.*;
 import javafx.util.Callback;
@@ -321,9 +322,13 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         if (listViewSelectionDirty) {
             try {
                 listSelectionLock = true;
-                T item = comboBox.getSelectionModel().getSelectedItem();
-                listView.getSelectionModel().clearSelection();
-                listView.getSelectionModel().select(item);
+                SingleSelectionModel<T> selectionModel = comboBox.getSelectionModel();
+
+                if (selectionModel != null) {
+                    T item = selectionModel.getSelectedItem();
+                    listView.getSelectionModel().clearSelection();
+                    listView.getSelectionModel().select(item);
+                }
             } finally {
                 listSelectionLock = false;
                 listViewSelectionDirty = false;
@@ -396,6 +401,11 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
     }
 
     private void updateValue() {
+        SingleSelectionModel<T> comboBoxSM = comboBox.getSelectionModel();
+        if (comboBoxSM == null) {
+            return;
+        }
+
         T newValue = comboBox.getValue();
 
         SelectionModel<T> listViewSM = listView.getSelectionModel();
@@ -413,7 +423,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
                 listViewSM.clearSelection();
                 listSelectionLock = false;
             } else {
-                int index = comboBox.getSelectionModel().getSelectedIndex();
+                int index = comboBoxSM.getSelectedIndex();
                 if (index >= 0 && index < comboBoxItems.size()) {
                     T itemsObj = comboBoxItems.get(index);
                     if ((itemsObj != null && itemsObj.equals(newValue)) || (itemsObj == null && newValue == null)) {
@@ -554,15 +564,21 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
 
         _listView.getSelectionModel().selectedIndexProperty().addListener(o -> {
             if (listSelectionLock) return;
+            SingleSelectionModel<T> selectionModel = comboBox.getSelectionModel();
+            if (selectionModel == null) return;
+
             int index = listView.getSelectionModel().getSelectedIndex();
-            comboBox.getSelectionModel().select(index);
+            selectionModel.select(index);
             updateDisplayNode();
             comboBox.notifyAccessibleAttributeChanged(AccessibleAttribute.TEXT);
         });
 
-        comboBox.getSelectionModel().selectedItemProperty().addListener(o -> {
-            listViewSelectionDirty = true;
-        });
+        SingleSelectionModel<T> selectionModel = comboBox.getSelectionModel();
+        if (selectionModel != null) {
+            selectionModel.selectedItemProperty().addListener(o -> {
+                listViewSelectionDirty = true;
+            });
+        }
 
         _listView.addEventFilter(MouseEvent.MOUSE_RELEASED, t -> {
             // RT-18672: Without checking if the user is clicking in the

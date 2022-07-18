@@ -40,7 +40,6 @@
 #include <JavaScriptCore/Float32Array.h>
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/MainThread.h>
-#include <wtf/threads/BinarySemaphore.h>
 
 namespace WebCore {
 
@@ -63,7 +62,7 @@ ScriptProcessorNode::ScriptProcessorNode(BaseAudioContext& context, size_t buffe
     if (m_bufferSize < AudioUtilities::renderQuantumSize)
         m_bufferSize = AudioUtilities::renderQuantumSize;
 
-    ASSERT(numberOfInputChannels <= AudioContext::maxNumberOfChannels());
+    ASSERT(numberOfInputChannels <= AudioContext::maxNumberOfChannels);
 
     initializeDefaultNodeOptions(numberOfInputChannels, ChannelCountMode::Explicit, ChannelInterpretation::Speakers);
     addInput();
@@ -71,7 +70,6 @@ ScriptProcessorNode::ScriptProcessorNode(BaseAudioContext& context, size_t buffe
 
     initialize();
     suspendIfNeeded();
-    m_pendingActivity = makePendingActivity(*this);
 }
 
 ScriptProcessorNode::~ScriptProcessorNode()
@@ -89,13 +87,10 @@ void ScriptProcessorNode::initialize()
 
     // Create double buffers on both the input and output sides.
     // These AudioBuffers will be directly accessed in the main thread by JavaScript.
-    for (unsigned i = 0; i < 2; ++i) {
+    for (unsigned i = 0; i < bufferCount; ++i) {
         // We prevent detaching the AudioBuffers here since we pass those to JS and reuse them.
-        auto inputBuffer = m_numberOfInputChannels ? AudioBuffer::create(m_numberOfInputChannels, bufferSize(), sampleRate, AudioBuffer::LegacyPreventDetaching::Yes) : 0;
-        auto outputBuffer = m_numberOfOutputChannels ? AudioBuffer::create(m_numberOfOutputChannels, bufferSize(), sampleRate, AudioBuffer::LegacyPreventDetaching::Yes) : 0;
-
-        m_inputBuffers.append(inputBuffer);
-        m_outputBuffers.append(outputBuffer);
+        m_inputBuffers[i] = m_numberOfInputChannels ? AudioBuffer::create(m_numberOfInputChannels, bufferSize(), sampleRate, AudioBuffer::LegacyPreventDetaching::Yes) : 0;
+        m_outputBuffers[i] = m_numberOfOutputChannels ? AudioBuffer::create(m_numberOfOutputChannels, bufferSize(), sampleRate, AudioBuffer::LegacyPreventDetaching::Yes) : 0;
     }
 
     AudioNode::initialize();
@@ -107,10 +102,8 @@ RefPtr<AudioBuffer> ScriptProcessorNode::createInputBufferForJS(AudioBuffer* inp
         return nullptr;
 
     // As an optimization, we reuse the same buffer as last time when possible.
-    if (!m_cachedInputBufferForJS || !m_cachedInputBufferForJS->topologyMatches(*inputBuffer))
+    if (!m_cachedInputBufferForJS || !inputBuffer->copyTo(*m_cachedInputBufferForJS))
         m_cachedInputBufferForJS = inputBuffer->clone();
-    else
-        inputBuffer->copyTo(*m_cachedInputBufferForJS);
 
     return m_cachedInputBufferForJS;
 }
@@ -131,17 +124,13 @@ void ScriptProcessorNode::uninitialize()
     if (!isInitialized())
         return;
 
-    m_inputBuffers.clear();
-    m_outputBuffers.clear();
+    for (unsigned i = 0; i < bufferCount; ++i) {
+        Locker locker { m_bufferLocks[i] };
+        m_inputBuffers[i] = nullptr;
+        m_outputBuffers[i] = nullptr;
+    }
 
     AudioNode::uninitialize();
-}
-
-void ScriptProcessorNode::didBecomeMarkedForDeletion()
-{
-    ASSERT(context().isGraphOwner());
-    m_pendingActivity = nullptr;
-    ASSERT(!hasPendingActivity());
 }
 
 void ScriptProcessorNode::process(size_t framesToProcess)
@@ -157,23 +146,20 @@ void ScriptProcessorNode::process(size_t framesToProcess)
     AudioBus* inputBus = this->input(0)->bus();
     AudioBus* outputBus = this->output(0)->bus();
 
-    auto locker = tryHoldLock(m_processLock);
-    if (!locker) {
+    // Get input and output buffers. We double-buffer both the input and output sides.
+    unsigned bufferIndex = this->bufferIndex();
+    ASSERT(bufferIndex < bufferCount);
+
+    if (!m_bufferLocks[bufferIndex].tryLock()) {
         // We're late in handling the previous request. The main thread must be
         // very busy. The best we can do is clear out the buffer ourself here.
         outputBus->zero();
         return;
     }
+    Locker locker { AdoptLock, m_bufferLocks[bufferIndex] };
 
-    // Get input and output buffers. We double-buffer both the input and output sides.
-    unsigned doubleBufferIndex = this->doubleBufferIndex();
-    bool isDoubleBufferIndexGood = doubleBufferIndex < 2 && doubleBufferIndex < m_inputBuffers.size() && doubleBufferIndex < m_outputBuffers.size();
-    ASSERT(isDoubleBufferIndexGood);
-    if (!isDoubleBufferIndexGood)
-        return;
-
-    AudioBuffer* inputBuffer = m_inputBuffers[doubleBufferIndex].get();
-    AudioBuffer* outputBuffer = m_outputBuffers[doubleBufferIndex].get();
+    AudioBuffer* inputBuffer = m_inputBuffers[bufferIndex].get();
+    AudioBuffer* outputBuffer = m_outputBuffers[bufferIndex].get();
 
     // Check the consistency of input and output buffers.
     unsigned numberOfInputChannels = m_internalInputBus->numberOfChannels();
@@ -216,19 +202,20 @@ void ScriptProcessorNode::process(size_t framesToProcess)
     // m_bufferReadWriteIndex will wrap back around to 0 when the current input and output buffers are full.
     // When this happens, fire an event and swap buffers.
     if (!m_bufferReadWriteIndex) {
+        // Heap allocations are forbidden on the audio thread for performance reasons so we need to
+        // explicitly allow the following allocation(s).
+        DisableMallocRestrictionsForCurrentThreadScope disableMallocRestrictions;
+
         // Reference ourself so we don't accidentally get deleted before fireProcessEvent() gets called.
         // We only wait for script code execution when the context is an offline one for performance reasons.
         if (context().isOfflineContext()) {
-            BinarySemaphore semaphore;
-            callOnMainThread([this, &semaphore, doubleBufferIndex = m_doubleBufferIndex, protector = makeRef(*this)] {
-                fireProcessEvent(doubleBufferIndex);
-                semaphore.signal();
+            callOnMainThreadAndWait([this, bufferIndex, protector = makeRef(*this)] {
+                fireProcessEvent(bufferIndex);
             });
-            semaphore.wait();
         } else {
-            callOnMainThread([this, doubleBufferIndex = m_doubleBufferIndex, protector = makeRef(*this)] {
-                auto locker = holdLock(m_processLock);
-                fireProcessEvent(doubleBufferIndex);
+            callOnMainThread([this, bufferIndex, protector = makeRef(*this)] {
+                Locker locker { m_bufferLocks[bufferIndex] };
+                fireProcessEvent(bufferIndex);
             });
         }
 
@@ -236,17 +223,12 @@ void ScriptProcessorNode::process(size_t framesToProcess)
     }
 }
 
-void ScriptProcessorNode::fireProcessEvent(unsigned doubleBufferIndex)
+void ScriptProcessorNode::fireProcessEvent(unsigned bufferIndex)
 {
     ASSERT(isMainThread());
 
-    bool isIndexGood = doubleBufferIndex < 2;
-    ASSERT(isIndexGood);
-    if (!isIndexGood)
-        return;
-
-    AudioBuffer* inputBuffer = m_inputBuffers[doubleBufferIndex].get();
-    AudioBuffer* outputBuffer = m_outputBuffers[doubleBufferIndex].get();
+    AudioBuffer* inputBuffer = m_inputBuffers[bufferIndex].get();
+    AudioBuffer* outputBuffer = m_outputBuffers[bufferIndex].get();
     ASSERT(outputBuffer);
     if (!outputBuffer)
         return;
@@ -274,7 +256,7 @@ ExceptionOr<void> ScriptProcessorNode::setChannelCount(unsigned channelCount)
     ASSERT(isMainThread());
 
     if (channelCount != this->channelCount())
-        return Exception { NotSupportedError, "ScriptProcessorNode's channelCount cannot be changed"_s };
+        return Exception { IndexSizeError, "ScriptProcessorNode's channelCount cannot be changed"_s };
     return { };
 }
 

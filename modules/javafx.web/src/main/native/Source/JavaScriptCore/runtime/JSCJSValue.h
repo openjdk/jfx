@@ -1,7 +1,7 @@
 /*
  *  Copyright (C) 1999-2001 Harri Porten (porten@kde.org)
  *  Copyright (C) 2001 Peter Kelly (pmk@post.com)
- *  Copyright (C) 2003-2020 Apple Inc. All rights reserved.
+ *  Copyright (C) 2003-2021 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Library General Public
@@ -133,6 +133,8 @@ enum class SourceCodeRepresentation : uint8_t {
     LinkTimeConstant,
 };
 
+extern JS_EXPORT_PRIVATE const ASCIILiteral SymbolCoercionError;
+
 class JSValue {
     friend struct EncodedJSValueHashTraits;
     friend struct EncodedJSValueWithRepresentationHashTraits;
@@ -217,8 +219,8 @@ public:
 
     int32_t asInt32() const;
     uint32_t asUInt32() const;
-    Optional<uint32_t> tryGetAsUint32Index();
-    Optional<int32_t> tryGetAsInt32();
+    std::optional<uint32_t> tryGetAsUint32Index();
+    std::optional<int32_t> tryGetAsInt32();
     int64_t asAnyInt() const;
     uint32_t asUInt32AsAnyInt() const;
     int32_t asInt32AsAnyInt() const;
@@ -280,7 +282,7 @@ public:
     JSBigInt* asHeapBigInt() const;
 
     // toNumber conversion if it can be done without side effects.
-    Optional<double> toNumberFromPrimitive() const;
+    std::optional<double> toNumberFromPrimitive() const;
 
     JSString* toString(JSGlobalObject*) const; // On exception, this returns the empty string.
     JSString* toStringOrNull(JSGlobalObject*) const; // On exception, this returns null, to make exception checks faster.
@@ -301,7 +303,7 @@ public:
     int64_t toBigInt64(JSGlobalObject*) const;
     uint64_t toBigUInt64(JSGlobalObject*) const;
 
-    Optional<uint32_t> toUInt32AfterToNumeric(JSGlobalObject*) const;
+    std::optional<uint32_t> toUInt32AfterToNumeric(JSGlobalObject*) const;
 
     // Floating point conversions (this is a convenience function for WebCore;
     // single precision float is not a representation used in JS or JSC).
@@ -313,6 +315,9 @@ public:
     JSValue get(JSGlobalObject*, unsigned propertyName) const;
     JSValue get(JSGlobalObject*, unsigned propertyName, PropertySlot&) const;
     JSValue get(JSGlobalObject*, uint64_t propertyName) const;
+
+    template<typename T, typename PropertyNameType>
+    T getAs(JSGlobalObject*, PropertyNameType) const;
 
     bool getPropertySlot(JSGlobalObject*, PropertyName, PropertySlot&) const;
     template<typename CallbackWhenNoException> typename std::result_of<CallbackWhenNoException(bool, PropertySlot&)>::type getPropertySlot(JSGlobalObject*, PropertyName, CallbackWhenNoException) const;
@@ -338,7 +343,6 @@ public:
 
     bool isCell() const;
     JSCell* asCell() const;
-    JS_EXPORT_PRIVATE bool isValidCallee();
 
     Structure* structureOrNull(VM&) const;
 

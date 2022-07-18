@@ -73,7 +73,7 @@
  * If you must do that for some reason, there is still an option.
  * If the debugging
  * subsystem was compiled out, GST_DISABLE_GST_DEBUG is defined in
- * &lt;gst/gst.h&gt;,
+ * <gst/gst.h>,
  * so you can check that before doing your trick.
  * Disabling the debugging subsystem will give you a slight (read: unnoticeable)
  * speed increase and will reduce the size of your compiled code. The GStreamer
@@ -125,6 +125,10 @@
 #include "printf/printf.h"
 #include "printf/printf-extension.h"
 
+#ifdef GSTREAMER_LITE
+#include "gst/glib-compat-private.h"
+#endif // GSTREAMER_LITE
+
 static char *gst_info_printf_pointer_extension_func (const char *format,
     void *ptr);
 #else /* GST_DISABLE_GST_DEBUG */
@@ -147,6 +151,28 @@ static char *gst_info_printf_pointer_extension_func (const char *format,
 
 #ifdef HAVE_DW
 #include <elfutils/libdwfl.h>
+static Dwfl *_global_dwfl = NULL;
+static GMutex _dwfl_mutex;
+
+#define GST_DWFL_LOCK() g_mutex_lock(&_dwfl_mutex);
+#define GST_DWFL_UNLOCK() g_mutex_unlock(&_dwfl_mutex);
+
+static Dwfl *
+get_global_dwfl (void)
+{
+  if (g_once_init_enter (&_global_dwfl)) {
+    static Dwfl_Callbacks callbacks = {
+      .find_elf = dwfl_linux_proc_find_elf,
+      .find_debuginfo = dwfl_standard_find_debuginfo,
+    };
+    Dwfl *_dwfl = dwfl_begin (&callbacks);
+    g_mutex_init (&_dwfl_mutex);
+    g_once_init_leave (&_global_dwfl, _dwfl);
+  }
+
+  return _global_dwfl;
+}
+
 #endif /* HAVE_DW */
 #endif /* HAVE_UNWIND */
 
@@ -313,38 +339,8 @@ static gboolean add_default_log_func = TRUE;
 #define PRETTY_TAGS_DEFAULT  TRUE
 static gboolean pretty_tags = PRETTY_TAGS_DEFAULT;
 
-static volatile gint G_GNUC_MAY_ALIAS __default_level = GST_LEVEL_DEFAULT;
-static volatile gint G_GNUC_MAY_ALIAS __use_color = GST_DEBUG_COLOR_MODE_ON;
-
-/* FIXME: export this? */
-gboolean
-_priv_gst_in_valgrind (void)
-{
-  static enum
-  {
-    GST_VG_UNCHECKED,
-    GST_VG_NO_VALGRIND,
-    GST_VG_INSIDE
-  }
-  in_valgrind = GST_VG_UNCHECKED;
-
-  if (in_valgrind == GST_VG_UNCHECKED) {
-#ifdef HAVE_VALGRIND_VALGRIND_H
-    if (RUNNING_ON_VALGRIND) {
-      GST_CAT_INFO (GST_CAT_GST_INIT, "we're running inside valgrind");
-      in_valgrind = GST_VG_INSIDE;
-    } else {
-      GST_CAT_LOG (GST_CAT_GST_INIT, "not doing extra valgrind stuff");
-      in_valgrind = GST_VG_NO_VALGRIND;
-    }
-#else
-    in_valgrind = GST_VG_NO_VALGRIND;
-#endif
-    g_assert (in_valgrind == GST_VG_NO_VALGRIND ||
-        in_valgrind == GST_VG_INSIDE);
-  }
-  return (in_valgrind == GST_VG_INSIDE);
-}
+static gint G_GNUC_MAY_ALIAS __default_level = GST_LEVEL_DEFAULT;
+static gint G_GNUC_MAY_ALIAS __use_color = GST_DEBUG_COLOR_MODE_ON;
 
 static gchar *
 _replace_pattern_in_gst_debug_file_name (gchar * name, const char *token,
@@ -474,9 +470,6 @@ _priv_gst_debug_init (void)
   _priv_GST_CAT_PROTECTION =
       _gst_debug_category_new ("GST_PROTECTION", 0, "protection");
 
-  /* print out the valgrind message if we're in valgrind */
-  _priv_gst_in_valgrind ();
-
   env = g_getenv ("GST_DEBUG_OPTIONS");
   if (env != NULL) {
     if (strstr (env, "full_tags") || strstr (env, "full-tags"))
@@ -574,6 +567,10 @@ gst_debug_log_valist (GstDebugCategory * category, GstDebugLevel level,
 
   g_return_if_fail (category != NULL);
 
+#ifdef GST_ENABLE_EXTRA_CHECKS
+  g_warn_if_fail (object == NULL || G_IS_OBJECT (object));
+#endif
+
   if (level > gst_debug_category_get_threshold (category))
     return;
 
@@ -594,6 +591,54 @@ gst_debug_log_valist (GstDebugCategory * category, GstDebugLevel level,
   }
   g_free (message.message);
   va_end (message.arguments);
+}
+
+/**
+ * gst_debug_log_literal:
+ * @category: category to log
+ * @level: level of the message is in
+ * @file: the file that emitted the message, usually the __FILE__ identifier
+ * @function: the function that emitted the message
+ * @line: the line from that the message was emitted, usually __LINE__
+ * @object: (transfer none) (allow-none): the object this message relates to,
+ *     or %NULL if none
+ * @message_string: a message string
+ *
+ * Logs the given message using the currently registered debugging handlers.
+ *
+ * Since: 1.20
+ */
+void
+gst_debug_log_literal (GstDebugCategory * category, GstDebugLevel level,
+    const gchar * file, const gchar * function, gint line,
+    GObject * object, const gchar * message_string)
+{
+  GstDebugMessage message;
+  LogFuncEntry *entry;
+  GSList *handler;
+
+  g_return_if_fail (category != NULL);
+
+#ifdef GST_ENABLE_EXTRA_CHECKS
+  g_warn_if_fail (object == NULL || G_IS_OBJECT (object));
+#endif
+
+  if (level > gst_debug_category_get_threshold (category))
+    return;
+
+  g_return_if_fail (file != NULL);
+  g_return_if_fail (function != NULL);
+  g_return_if_fail (message_string != NULL);
+
+  message.message = (gchar *) message_string;
+
+  handler = __log_functions;
+  while (handler) {
+    entry = handler->data;
+    handler = g_slist_next (handler);
+    entry->func (category, level, file, function, line, object, &message,
+        entry->user_data);
+  }
 }
 
 /**
@@ -1208,6 +1253,10 @@ gst_debug_log_get_line (GstDebugCategory * category, GstDebugLevel level,
   gchar *ret, *obj_str = NULL;
   const gchar *message_str;
 
+#ifdef GST_ENABLE_EXTRA_CHECKS
+  g_warn_if_fail (object == NULL || G_IS_OBJECT (object));
+#endif
+
   _gst_debug_log_preamble (message, object, &file, &message_str, &obj_str,
       &elapsed);
 
@@ -1300,6 +1349,10 @@ gst_debug_log_default (GstDebugCategory * category, GstDebugLevel level,
 #define FFLUSH_DEBUG(f) G_STMT_START { \
     fflush (f); \
   } G_STMT_END
+#endif
+
+#ifdef GST_ENABLE_EXTRA_CHECKS
+  g_warn_if_fail (object == NULL || G_IS_OBJECT (object));
 #endif
 
   _gst_debug_log_preamble (message, object, &file, &message_str, &obj,
@@ -1715,10 +1768,14 @@ gst_debug_get_default_threshold (void)
   return (GstDebugLevel) g_atomic_int_get (&__default_level);
 }
 
+#if !GLIB_CHECK_VERSION(2,70,0)
+#define g_pattern_spec_match_string g_pattern_match_string
+#endif
+
 static gboolean
 gst_debug_apply_entry (GstDebugCategory * cat, LevelNameEntry * entry)
 {
-  if (!g_pattern_match_string (entry->pat, cat->name))
+  if (!g_pattern_spec_match_string (entry->pat, cat->name))
     return FALSE;
 
   if (gst_is_initialized ())
@@ -2347,6 +2404,13 @@ gst_debug_log_valist (GstDebugCategory * category, GstDebugLevel level,
 {
 }
 
+void
+gst_debug_log_literal (GstDebugCategory * category, GstDebugLevel level,
+    const gchar * file, const gchar * function, gint line,
+    GObject * object, const gchar * message_string)
+{
+}
+
 const gchar *
 gst_debug_message_get (GstDebugMessage * message)
 {
@@ -2514,12 +2578,6 @@ gint
 gst_debug_construct_win_color (guint colorinfo)
 {
   return 0;
-}
-
-gboolean
-_priv_gst_in_valgrind (void)
-{
-  return FALSE;
 }
 
 void
@@ -2838,12 +2896,6 @@ append_debug_info (GString * trace, Dwfl * dwfl, const void *ip)
   Dwfl_Module *module;
   const gchar *function_name;
 
-  if (dwfl_linux_proc_report (dwfl, getpid ()) != 0)
-    return FALSE;
-
-  if (dwfl_report_end (dwfl, NULL, NULL))
-    return FALSE;
-
   addr = (uintptr_t) ip;
   module = dwfl_addrmodule (dwfl, addr);
   function_name = dwfl_module_addrname (module, addr);
@@ -2881,13 +2933,15 @@ generate_unwind_trace (GstStackTraceFlags flags)
 
 #ifdef HAVE_DW
   Dwfl *dwfl = NULL;
-  Dwfl_Callbacks callbacks = {
-    .find_elf = dwfl_linux_proc_find_elf,
-    .find_debuginfo = dwfl_standard_find_debuginfo,
-  };
 
-  if ((flags & GST_STACK_TRACE_SHOW_FULL))
-    dwfl = dwfl_begin (&callbacks);
+  if ((flags & GST_STACK_TRACE_SHOW_FULL)) {
+    dwfl = get_global_dwfl ();
+    if (G_UNLIKELY (dwfl == NULL)) {
+      GST_WARNING ("Failed to initialize dwlf");
+      goto done;
+    }
+    GST_DWFL_LOCK ();
+  }
 #endif /* HAVE_DW */
 
   unret = unw_getcontext (&uc);
@@ -2902,6 +2956,12 @@ generate_unwind_trace (GstStackTraceFlags flags)
 
     goto done;
   }
+#ifdef HAVE_DW
+  /* Due to plugins being loaded, mapping of process might have changed,
+   * so always scan it. */
+  if (dwfl_linux_proc_report (dwfl, getpid ()) != 0)
+    goto done;
+#endif
 
   while (unw_step (&cursor) > 0) {
 #ifdef HAVE_DW
@@ -2935,7 +2995,7 @@ generate_unwind_trace (GstStackTraceFlags flags)
 done:
 #ifdef HAVE_DW
   if (dwfl)
-    dwfl_end (dwfl);
+    GST_DWFL_UNLOCK ();
 #endif
 
   return g_string_free (trace, FALSE);
@@ -2952,13 +3012,14 @@ generate_backtrace_trace (void)
   char **strings;
   GString *trace;
 
-  trace = g_string_new (NULL);
   nptrs = backtrace (buffer, BT_BUF_SIZE);
 
   strings = backtrace_symbols (buffer, nptrs);
 
   if (!strings)
     return NULL;
+
+  trace = g_string_new (NULL);
 
   for (j = 0; j < nptrs; j++)
     g_string_append_printf (trace, "%s\n", strings[j]);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -413,6 +413,34 @@ public class ScrollBarTest {
         assertEquals(scrollBar.getValue(), 50.0, 0.0);
         scrollBar.adjustValue(0.5);//This should not further change because position*(max-min) is now eqauls to the value so no more decrements
         assertEquals(scrollBar.getValue(), 50.0, 0.0);
+    }
+
+    /**
+     * @test
+     * @bug 8090158
+     * Adjusting the scrollbar value close to the max value should use the block increment and reach the max value.
+     */
+    @Test
+    public void incrementCloseToMax() {
+        scrollBar.setMin(0.0);
+        scrollBar.setMax(100.0);
+        scrollBar.setValue(90.0);
+        scrollBar.adjustValue(0.95); //This should block increment to the max value
+        assertEquals(100.0, scrollBar.getValue(), 0.0);
+    }
+
+    /**
+     * @test
+     * @bug 8090158
+     * Adjusting the scrollbar value close to the min value should use the block increment and reach the min value.
+     */
+    @Test
+    public void incrementCloseToMin() {
+        scrollBar.setMin(0.0);
+        scrollBar.setMax(100.0);
+        scrollBar.setValue(10.0);
+        scrollBar.adjustValue(0.05); //This should block decrement to the min value
+        assertEquals(0.0, scrollBar.getValue(), 0.0);
     }
 
     @Test public void incrementWhenValueIsNegativeAndSeeIfValueIsClampedToMin() {

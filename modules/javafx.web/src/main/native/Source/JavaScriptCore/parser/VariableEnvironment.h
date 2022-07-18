@@ -74,6 +74,8 @@ public:
         return m_bits == other.m_bits;
     }
 
+    void dump(PrintStream&) const;
+
 private:
     enum Traits : uint16_t {
         IsCaptured = 1 << 0,
@@ -101,21 +103,19 @@ struct VariableEnvironmentEntryHashTraits : HashTraits<VariableEnvironmentEntry>
 struct PrivateNameEntry {
     friend class CachedPrivateNameEntry;
 
+    static constexpr unsigned privateClassBrandOffset = 0;
+    static constexpr unsigned privateBrandOffset = 1;
+
 public:
     PrivateNameEntry(uint16_t traits = 0) { m_bits = traits; }
 
-    ALWAYS_INLINE bool isUsed() const { return m_bits & IsUsed; }
-    ALWAYS_INLINE bool isDeclared() const { return m_bits & IsDeclared; }
     ALWAYS_INLINE bool isMethod() const { return m_bits & IsMethod; }
     ALWAYS_INLINE bool isSetter() const { return m_bits & IsSetter; }
     ALWAYS_INLINE bool isGetter() const { return m_bits & IsGetter; }
-    ALWAYS_INLINE bool isField() const { return !isPrivateMethodOrAcessor(); }
+    ALWAYS_INLINE bool isField() const { return !isPrivateMethodOrAccessor(); }
     ALWAYS_INLINE bool isStatic() const { return m_bits & IsStatic; }
 
-    bool isPrivateMethodOrAcessor() const { return isMethod() || isSetter() || isGetter(); }
-
-    ALWAYS_INLINE void setIsUsed() { m_bits |= IsUsed; }
-    ALWAYS_INLINE void setIsDeclared() { m_bits |= IsDeclared; }
+    bool isPrivateMethodOrAccessor() const { return isMethod() || isSetter() || isGetter(); }
 
     uint16_t bits() const { return m_bits; }
 
@@ -126,12 +126,10 @@ public:
 
     enum Traits : uint16_t {
         None = 0,
-        IsUsed = 1 << 0,
-        IsDeclared = 1 << 1,
-        IsMethod = 1 << 2,
-        IsGetter = 1 << 3,
-        IsSetter = 1 << 4,
-        IsStatic = 1 << 5,
+        IsMethod = 1 << 0,
+        IsGetter = 1 << 1,
+        IsSetter = 1 << 2,
+        IsStatic = 1 << 3,
     };
 
 private:
@@ -203,7 +201,6 @@ public:
     using PrivateNamesRange = WTF::IteratorRange<PrivateNameEnvironment::iterator>;
 
     ALWAYS_INLINE Map::AddResult declarePrivateField(const Identifier& identifier) { return declarePrivateField(identifier.impl()); }
-    ALWAYS_INLINE void usePrivateName(const Identifier& identifier) { usePrivateName(identifier.impl()); }
 
     bool declarePrivateMethod(const Identifier& identifier) { return declarePrivateMethod(identifier.impl()); }
     bool declarePrivateMethod(const RefPtr<UniquedStringImpl>& identifier, PrivateNameEntry::Traits addionalTraits = PrivateNameEntry::Traits::None);
@@ -229,23 +226,7 @@ public:
     PrivateDeclarationResult declareStaticPrivateGetter(const Identifier& identifier) { return declarePrivateGetter(identifier.impl(), PrivateNameEntry::Traits::IsStatic); }
     PrivateDeclarationResult declarePrivateGetter(const RefPtr<UniquedStringImpl>& identifier, PrivateNameEntry::Traits modifierTraits = PrivateNameEntry::Traits::None);
 
-    Map::AddResult declarePrivateField(const RefPtr<UniquedStringImpl>& identifier)
-    {
-        auto& meta = getOrAddPrivateName(identifier.get());
-        meta.setIsDeclared();
-        auto entry = VariableEnvironmentEntry();
-        entry.setIsPrivateField();
-        entry.setIsConst();
-        entry.setIsCaptured();
-        return m_map.add(identifier, entry);
-    }
-    void usePrivateName(const RefPtr<UniquedStringImpl>& identifier)
-    {
-        auto& meta = getOrAddPrivateName(identifier.get());
-        meta.setIsUsed();
-        if (meta.isDeclared())
-            find(identifier)->value.setIsCaptured();
-    }
+    Map::AddResult declarePrivateField(const RefPtr<UniquedStringImpl>&);
 
     ALWAYS_INLINE PrivateNamesRange privateNames() const
     {
@@ -261,6 +242,13 @@ public:
         return m_rareData->m_privateNames.size();
     }
 
+    ALWAYS_INLINE PrivateNameEnvironment* privateNameEnvironment()
+    {
+        if (!m_rareData)
+            return nullptr;
+        return &m_rareData->m_privateNames;
+    }
+
     ALWAYS_INLINE const PrivateNameEnvironment* privateNameEnvironment() const
     {
         if (!m_rareData)
@@ -274,7 +262,7 @@ public:
             return false;
 
         for (auto entry : privateNames()) {
-            if (entry.value.isPrivateMethodOrAcessor() && entry.value.isStatic())
+            if (entry.value.isPrivateMethodOrAccessor() && entry.value.isStatic())
                 return true;
         }
 
@@ -287,7 +275,7 @@ public:
             return false;
 
         for (auto entry : privateNames()) {
-            if (entry.value.isPrivateMethodOrAcessor() && !entry.value.isStatic())
+            if (entry.value.isPrivateMethodOrAccessor() && !entry.value.isStatic())
                 return true;
         }
 
@@ -301,20 +289,6 @@ public:
         return m_rareData->m_privateNames.contains(identifier.impl());
     }
 
-    ALWAYS_INLINE void copyPrivateNamesTo(VariableEnvironment& other) const
-    {
-        if (!m_rareData)
-            return;
-        if (!other.m_rareData)
-            other.m_rareData = WTF::makeUnique<VariableEnvironment::RareData>();
-        if (privateNamesSize() > 0) {
-            for (auto entry : privateNames()) {
-                if (!(entry.value.isUsed() && entry.value.isDeclared()))
-                    other.m_rareData->m_privateNames.add(entry.key, entry.value);
-            }
-        }
-    }
-
     ALWAYS_INLINE void addPrivateNamesFrom(const PrivateNameEnvironment* privateNameEnvironment)
     {
         if (!privateNameEnvironment)
@@ -323,22 +297,8 @@ public:
         if (!m_rareData)
             m_rareData = makeUnique<VariableEnvironment::RareData>();
 
-        for (auto entry : *privateNameEnvironment) {
-            ASSERT(entry.value.isDeclared());
+        for (auto entry : *privateNameEnvironment)
             m_rareData->m_privateNames.add(entry.key, entry.value);
-        }
-    }
-
-    ALWAYS_INLINE void copyUndeclaredPrivateNamesTo(VariableEnvironment& outer) const {
-        // Used by the Parser to transfer recorded uses of PrivateNames from an
-        // inner PrivateNameEnvironment into an outer one, in case a PNE is used
-        // earlier in the source code than it is defined.
-        if (privateNamesSize() > 0) {
-            for (auto entry : privateNames()) {
-                if (entry.value.isUsed() && !entry.value.isDeclared())
-                    outer.getOrAddPrivateName(entry.key.get()).setIsUsed();
-            }
-        }
     }
 
     struct RareData {
@@ -353,6 +313,8 @@ public:
         RareData& operator=(const RareData&) = default;
         PrivateNameEnvironment m_privateNames;
     };
+
+    void dump(PrintStream&) const;
 
 private:
     friend class CachedVariableEnvironment;

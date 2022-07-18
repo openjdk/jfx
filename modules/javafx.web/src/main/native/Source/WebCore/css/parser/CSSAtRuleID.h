@@ -47,6 +47,8 @@ enum CSSAtRuleID {
 
     CSSAtRuleWebkitKeyframes = 10,
     CSSAtRuleApply = 11,
+    CSSAtRuleCounterStyle = 12,
+    CSSAtRuleLayer = 13,
 };
 
 CSSAtRuleID cssAtRuleID(StringView name);

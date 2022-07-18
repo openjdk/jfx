@@ -64,7 +64,7 @@ void InspectorScriptProfilerAgent::willDestroyFrontendAndBackend(DisconnectReaso
     }
 }
 
-Protocol::ErrorStringOr<void> InspectorScriptProfilerAgent::startTracking(Optional<bool>&& includeSamples)
+Protocol::ErrorStringOr<void> InspectorScriptProfilerAgent::startTracking(std::optional<bool>&& includeSamples)
 {
     if (m_tracking)
         return { };
@@ -78,10 +78,10 @@ Protocol::ErrorStringOr<void> InspectorScriptProfilerAgent::startTracking(Option
         VM& vm = m_environment.debugger().vm();
         SamplingProfiler& samplingProfiler = vm.ensureSamplingProfiler(stopwatch);
 
-        LockHolder locker(samplingProfiler.getLock());
-        samplingProfiler.setStopWatch(locker, stopwatch);
-        samplingProfiler.noticeCurrentThreadAsJSCExecutionThread(locker);
-        samplingProfiler.start(locker);
+        Locker locker { samplingProfiler.getLock() };
+        samplingProfiler.setStopWatch(stopwatch);
+        samplingProfiler.noticeCurrentThreadAsJSCExecutionThreadWithLock();
+        samplingProfiler.startWithLock();
         m_enabledSamplingProfiler = true;
     }
 #else
@@ -217,9 +217,9 @@ void InspectorScriptProfilerAgent::trackingComplete()
         SamplingProfiler* samplingProfiler = vm.samplingProfiler();
         RELEASE_ASSERT(samplingProfiler);
 
-        LockHolder locker(samplingProfiler->getLock());
-        samplingProfiler->pause(locker);
-        Vector<SamplingProfiler::StackTrace> stackTraces = samplingProfiler->releaseStackTraces(locker);
+        Locker locker { samplingProfiler->getLock() };
+        samplingProfiler->pause();
+        Vector<SamplingProfiler::StackTrace> stackTraces = samplingProfiler->releaseStackTraces();
         locker.unlockEarly();
 
         Ref<Protocol::ScriptProfiler::Samples> samples = buildSamples(vm, WTFMove(stackTraces));
@@ -244,9 +244,9 @@ void InspectorScriptProfilerAgent::stopSamplingWhenDisconnecting()
     JSLockHolder lock(vm);
     SamplingProfiler* samplingProfiler = vm.samplingProfiler();
     RELEASE_ASSERT(samplingProfiler);
-    LockHolder locker(samplingProfiler->getLock());
-    samplingProfiler->pause(locker);
-    samplingProfiler->clearData(locker);
+    Locker locker { samplingProfiler->getLock() };
+    samplingProfiler->pause();
+    samplingProfiler->clearData();
 
     m_enabledSamplingProfiler = false;
 #endif

@@ -1044,7 +1044,7 @@ public class TableColumnTest {
         assertEquals(76, table.getItems().get(0).getAge());
     }
 
-    @Test(expected=NullPointerException.class)
+    @Test
     public void defaultOnEditCommitHandlerDealsWithNullTableView() {
         table.getColumns().add(column);
         column.setCellValueFactory(param -> param.getValue().firstNameProperty());

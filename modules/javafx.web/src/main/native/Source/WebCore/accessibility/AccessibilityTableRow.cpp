@@ -149,7 +149,13 @@ AXCoreObject* AccessibilityTableRow::headerObject()
 
 void AccessibilityTableRow::addChildren()
 {
-    AccessibilityRenderObject::addChildren();
+    // If the element specifies its cells through aria-owns, return that first.
+    AccessibilityChildrenVector ariaOwns;
+    ariaOwnsElements(ariaOwns);
+    if (ariaOwns.size())
+        m_children = WTFMove(ariaOwns);
+    else
+        AccessibilityRenderObject::addChildren();
 
     // "ARIA 1.1, If the set of columns which is present in the DOM is contiguous, and if there are no cells which span more than one row or
     // column in that set, then authors may place aria-colindex on each row, setting the value to the index of the first column of the set."
@@ -169,20 +175,14 @@ void AccessibilityTableRow::addChildren()
 
 int AccessibilityTableRow::axColumnIndex() const
 {
-    const AtomString& colIndexValue = getAttribute(aria_colindexAttr);
-    if (colIndexValue.toInt() >= 1)
-        return colIndexValue.toInt();
-
-    return -1;
+    int value = getIntegralAttribute(aria_colindexAttr);
+    return value >= 1 ? value : -1;
 }
 
 int AccessibilityTableRow::axRowIndex() const
 {
-    const AtomString& rowIndexValue = getAttribute(aria_rowindexAttr);
-    if (rowIndexValue.toInt() >= 1)
-        return rowIndexValue.toInt();
-
-    return -1;
+    int value = getIntegralAttribute(aria_rowindexAttr);
+    return value >= 1 ? value : -1;
 }
 
 } // namespace WebCore

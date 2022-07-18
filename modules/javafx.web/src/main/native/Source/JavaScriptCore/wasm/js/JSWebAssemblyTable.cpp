@@ -30,6 +30,7 @@
 
 #include "JSCInlines.h"
 #include "JSWebAssemblyInstance.h"
+#include "ObjectConstructor.h"
 
 namespace JSC {
 
@@ -104,15 +105,7 @@ void JSWebAssemblyTable::set(uint32_t index, JSValue value)
     m_table->set(index, value);
 }
 
-void JSWebAssemblyTable::set(uint32_t index, WebAssemblyFunction* function)
-{
-    RELEASE_ASSERT(index < length());
-    RELEASE_ASSERT(m_table->asFuncrefTable());
-    auto& subThis = *static_cast<Wasm::FuncRefTable*>(&m_table.get());
-    subThis.setFunction(index, function, function->importableFunction(), &function->instance()->instance());
-}
-
-void JSWebAssemblyTable::set(uint32_t index, WebAssemblyWrapperFunction* function)
+void JSWebAssemblyTable::set(uint32_t index, WebAssemblyFunctionBase* function)
 {
     RELEASE_ASSERT(index < length());
     RELEASE_ASSERT(m_table->asFuncrefTable());
@@ -124,6 +117,37 @@ void JSWebAssemblyTable::clear(uint32_t index)
 {
     RELEASE_ASSERT(index < length());
     m_table->clear(index);
+}
+
+JSObject* JSWebAssemblyTable::type(JSGlobalObject* globalObject)
+{
+    VM& vm = globalObject->vm();
+
+    Wasm::TableElementType element = m_table->type();
+    JSString* elementString = nullptr;
+    switch (element) {
+    case Wasm::TableElementType::Funcref:
+        elementString = jsNontrivialString(vm, "funcref");
+        break;
+    case Wasm::TableElementType::Externref:
+        elementString = jsNontrivialString(vm, "externref");
+        break;
+    default:
+        RELEASE_ASSERT_NOT_REACHED();
+    }
+
+    JSObject* result;
+    auto maximum = m_table->maximum();
+    if (maximum) {
+        result = constructEmptyObject(globalObject, globalObject->objectPrototype(), 3);
+        result->putDirect(vm, Identifier::fromString(vm, "maximum"), jsNumber(*maximum));
+    } else
+        result = constructEmptyObject(globalObject, globalObject->objectPrototype(), 2);
+
+    uint32_t minimum = m_table->length();
+    result->putDirect(vm, Identifier::fromString(vm, "minimum"), jsNumber(minimum));
+    result->putDirect(vm, Identifier::fromString(vm, "element"), elementString);
+    return result;
 }
 
 } // namespace JSC

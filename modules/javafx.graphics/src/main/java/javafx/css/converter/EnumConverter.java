@@ -224,6 +224,6 @@ public final class EnumConverter<E extends Enum<E>> extends StyleConverter<Strin
 
     @Override
     public String toString() {
-        return "EnumConveter[" + enumClass.getName() + "]";
+        return "EnumConverter[" + enumClass.getName() + "]";
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Apple Inc.  All rights reserved.
+ * Copyright (C) 2020-2021 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,6 +27,7 @@
 
 #include "ConcreteImageBuffer.h"
 #include "DisplayListDrawingContext.h"
+#include "InMemoryDisplayList.h"
 
 namespace WebCore {
 namespace DisplayList {
@@ -38,7 +39,7 @@ class ImageBuffer : public ConcreteImageBuffer<BackendType> {
     using BaseConcreteImageBuffer::baseTransform;
 
 public:
-    static auto create(const FloatSize& size, float resolutionScale, DestinationColorSpace colorSpace, PixelFormat pixelFormat, const HostWindow* hostWindow)
+    static auto create(const FloatSize& size, float resolutionScale, const DestinationColorSpace& colorSpace, PixelFormat pixelFormat, const HostWindow* hostWindow)
     {
         return BaseConcreteImageBuffer::template create<ImageBuffer>(size, resolutionScale, colorSpace, pixelFormat, hostWindow);
     }
@@ -51,13 +52,21 @@ public:
     ImageBuffer(const ImageBufferBackend::Parameters& parameters, std::unique_ptr<BackendType>&& backend)
         : BaseConcreteImageBuffer(parameters, WTFMove(backend))
         , m_drawingContext(logicalSize(), baseTransform())
+        , m_writingClient(WTF::makeUnique<InMemoryDisplayList::WritingClient>())
+        , m_readingClient(WTF::makeUnique<InMemoryDisplayList::ReadingClient>())
     {
+        m_drawingContext.displayList().setItemBufferWritingClient(m_writingClient.get());
+        m_drawingContext.displayList().setItemBufferReadingClient(m_readingClient.get());
     }
 
     ImageBuffer(const ImageBufferBackend::Parameters& parameters, Recorder::Delegate* delegate = nullptr)
         : BaseConcreteImageBuffer(parameters)
         , m_drawingContext(logicalSize(), baseTransform(), delegate)
+        , m_writingClient(WTF::makeUnique<InMemoryDisplayList::WritingClient>())
+        , m_readingClient(WTF::makeUnique<InMemoryDisplayList::ReadingClient>())
     {
+        m_drawingContext.displayList().setItemBufferWritingClient(m_writingClient.get());
+        m_drawingContext.displayList().setItemBufferReadingClient(m_readingClient.get());
     }
 
     ~ImageBuffer()
@@ -78,8 +87,16 @@ public:
             m_drawingContext.replayDisplayList(BaseConcreteImageBuffer::context());
     }
 
+    void clearBackend() override
+    {
+        m_drawingContext.displayList().clear();
+        BaseConcreteImageBuffer::clearBackend();
+    }
+
 protected:
     DrawingContext m_drawingContext;
+    std::unique_ptr<ItemBufferWritingClient> m_writingClient;
+    std::unique_ptr<ItemBufferReadingClient> m_readingClient;
 };
 
 } // DisplayList

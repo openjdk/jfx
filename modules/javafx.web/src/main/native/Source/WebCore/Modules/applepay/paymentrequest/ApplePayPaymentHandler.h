@@ -33,6 +33,7 @@
 #include "PaymentHandler.h"
 #include "PaymentRequest.h"
 #include "PaymentSession.h"
+#include <wtf/Function.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/RefPtr.h>
 
@@ -40,6 +41,8 @@ namespace WebCore {
 
 class ApplePayError;
 class PaymentCoordinator;
+struct ApplePayModifier;
+struct PaymentDetailsModifier;
 
 class ApplePayPaymentHandler final : public PaymentHandler, public PaymentSession, private ContextDestructionObserver {
 public:
@@ -54,13 +57,14 @@ private:
     Document& document() const;
     PaymentCoordinator& paymentCoordinator() const;
 
-    ExceptionOr<Vector<ApplePayShippingMethod>> computeShippingMethods();
+    ExceptionOr<Vector<ApplePayShippingMethod>> computeShippingMethods() const;
     ExceptionOr<std::tuple<ApplePayLineItem, Vector<ApplePayLineItem>>> computeTotalAndLineItems() const;
     Vector<RefPtr<ApplePayError>> computeErrors(String&& error, AddressErrors&&, PayerErrorFields&&, JSC::JSObject* paymentMethodErrors) const;
     Vector<RefPtr<ApplePayError>> computeErrors(JSC::JSObject* paymentMethodErrors) const;
     void computeAddressErrors(String&& error, AddressErrors&&, Vector<RefPtr<ApplePayError>>&) const;
     void computePayerErrors(PayerErrorFields&&, Vector<RefPtr<ApplePayError>>&) const;
     ExceptionOr<void> computePaymentMethodErrors(JSC::JSObject* paymentMethodErrors, Vector<RefPtr<ApplePayError>>&) const;
+    ExceptionOr<std::optional<std::tuple<PaymentDetailsModifier, ApplePayModifier>>> firstApplicableModifier() const;
 
     ExceptionOr<void> shippingAddressUpdated(Vector<RefPtr<ApplePayError>>&& errors);
     ExceptionOr<void> shippingOptionUpdated();
@@ -73,7 +77,7 @@ private:
     void canMakePayment(Document&, WTF::Function<void(bool)>&& completionHandler) final;
     ExceptionOr<void> detailsUpdated(PaymentRequest::UpdateReason, String&& error, AddressErrors&&, PayerErrorFields&&, JSC::JSObject* paymentMethodErrors) final;
     ExceptionOr<void> merchantValidationCompleted(JSC::JSValue&&) final;
-    void complete(Optional<PaymentComplete>&&) final;
+    void complete(std::optional<PaymentComplete>&&) final;
     ExceptionOr<void> retry(PaymentValidationErrors&&) final;
 
     // PaymentSession
@@ -83,24 +87,24 @@ private:
     void didSelectShippingMethod(const ApplePayShippingMethod&) final;
     void didSelectShippingContact(const PaymentContact&) final;
     void didSelectPaymentMethod(const PaymentMethod&) final;
-#if ENABLE(APPLE_PAY_PAYMENT_METHOD_MODE)
-    void didChangePaymentMethodMode(String&& paymentMethodMode) final;
-#endif // ENABLE(APPLE_PAY_PAYMENT_METHOD_MODE)
+#if ENABLE(APPLE_PAY_COUPON_CODE)
+    void didChangeCouponCode(String&& couponCode) final;
+#endif
     void didCancelPaymentSession(PaymentSessionError&&) final;
 
     PaymentRequest::MethodIdentifier m_identifier;
     Ref<PaymentRequest> m_paymentRequest;
-    Optional<ApplePayRequest> m_applePayRequest;
-    Optional<ApplePayPaymentMethodType> m_selectedPaymentMethodType;
+    std::optional<ApplePayRequest> m_applePayRequest;
+    std::optional<ApplePayPaymentMethodType> m_selectedPaymentMethodType;
 
     enum class UpdateState : uint8_t {
         None,
         ShippingAddress,
         ShippingOption,
         PaymentMethod,
-#if ENABLE(APPLE_PAY_PAYMENT_METHOD_MODE)
-        PaymentMethodMode,
-#endif // ENABLE(APPLE_PAY_PAYMENT_METHOD_MODE)
+#if ENABLE(APPLE_PAY_COUPON_CODE)
+        CouponCode,
+#endif
     } m_updateState { UpdateState::None };
 };
 

@@ -32,6 +32,7 @@
 #include "CSSPropertyNames.h"
 #include "CSSValueKeywords.h"
 #include "ColorTypes.h"
+#include <optional>
 #include <wtf/Forward.h>
 
 namespace WebCore {
@@ -55,9 +56,9 @@ public:
     static bool isValidKeywordPropertyAndValue(CSSPropertyID, CSSValueID, const CSSParserContext&);
 
     // Parses numeric and named colors.
-    static Optional<SRGBA<uint8_t>> parseSimpleColor(StringView, bool strict = false);
-    static Optional<SRGBA<uint8_t>> parseHexColor(StringView); // Hex colors of length 3, 4, 6, or 8, without leading "#".
-    static Optional<SRGBA<uint8_t>> parseNamedColor(StringView);
+    static std::optional<SRGBA<uint8_t>> parseSimpleColor(StringView, bool strict = false);
+    static std::optional<SRGBA<uint8_t>> parseHexColor(StringView); // Hex colors of length 3, 4, 6, or 8, without leading "#".
+    static std::optional<SRGBA<uint8_t>> parseNamedColor(StringView);
 };
 
 } // namespace WebCore

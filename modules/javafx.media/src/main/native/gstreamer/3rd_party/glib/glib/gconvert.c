@@ -40,6 +40,7 @@
 #endif
 
 #include "gconvert.h"
+#include "gconvertprivate.h"
 
 #include "gcharsetprivate.h"
 #include "gslist.h"
@@ -141,7 +142,7 @@
  *    "Unknown file name" in its title bar but still let the user save
  *    the file, as it would keep the raw file name internally. This
  *    can happen if the user has not set the `G_FILENAME_ENCODING`
- *    environment variable even though he has files whose names are
+ *    environment variable even though they have files whose names are
  *    not encoded in UTF-8.
  *
  * 3. If your user interface lets the user type a file name for saving
@@ -353,7 +354,7 @@ close_converter (GIConv cd)
  *                 Even if the conversion was successful, this may be
  *                 less than @len if there were partial characters
  *                 at the end of the input. If the error
- *                 #G_CONVERT_ERROR_ILLEGAL_SEQUENCE occurs, the value
+ *                 %G_CONVERT_ERROR_ILLEGAL_SEQUENCE occurs, the value
  *                 stored will be the byte offset after the last valid
  *                 input sequence.
  * @bytes_written: (out) (optional): the number of bytes stored in
@@ -524,7 +525,7 @@ g_convert_with_iconv (const gchar *str,
  *                 Even if the conversion was successful, this may be
  *                 less than @len if there were partial characters
  *                 at the end of the input. If the error
- *                 #G_CONVERT_ERROR_ILLEGAL_SEQUENCE occurs, the value
+ *                 %G_CONVERT_ERROR_ILLEGAL_SEQUENCE occurs, the value
  *                 stored will be the byte offset after the last valid
  *                 input sequence.
  * @bytes_written: (out) (optional): the number of bytes stored in
@@ -1015,6 +1016,52 @@ g_locale_to_utf8 (const gchar  *opsysstring,
                             bytes_read, bytes_written, error);
 }
 
+/*
+ * Do the exact same as g_locale_to_utf8 except that the charset would
+ * be retrieved from _g_get_time_charset (which uses LC_TIME)
+ *
+ * Returns: The converted string, or %NULL on an error.
+ */
+gchar *
+_g_time_locale_to_utf8 (const gchar *opsysstring,
+                        gssize       len,
+                        gsize       *bytes_read,
+                        gsize       *bytes_written,
+                        GError     **error)
+{
+  const char *charset;
+
+  if (_g_get_time_charset (&charset))
+    return strdup_len (opsysstring, len, bytes_read, bytes_written, error);
+  else
+    return convert_checked (opsysstring, len, "UTF-8", charset,
+                            CONVERT_CHECK_NO_NULS_IN_OUTPUT,
+                            bytes_read, bytes_written, error);
+}
+
+/*
+ * Do the exact same as g_locale_to_utf8 except that the charset would
+ * be retrieved from _g_get_ctype_charset (which uses LC_CTYPE)
+ *
+ * Returns: The converted string, or %NULL on an error.
+ */
+gchar *
+_g_ctype_locale_to_utf8 (const gchar *opsysstring,
+                         gssize       len,
+                         gsize       *bytes_read,
+                         gsize       *bytes_written,
+                         GError     **error)
+{
+  const char *charset;
+
+  if (_g_get_ctype_charset (&charset))
+    return strdup_len (opsysstring, len, bytes_read, bytes_written, error);
+  else
+    return convert_checked (opsysstring, len, "UTF-8", charset,
+                            CONVERT_CHECK_NO_NULS_IN_OUTPUT,
+                            bytes_read, bytes_written, error);
+}
+
 /**
  * g_locale_from_utf8:
  * @utf8string:    a UTF-8 encoded string
@@ -1373,7 +1420,7 @@ static const guchar acceptable[96] = {
   0x3F,0x3F,0x3F,0x3F,0x3F,0x3F,0x3F,0x3F,0x3F,0x3F,0x3F,0x20,0x20,0x20,0x3F,0x20
 };
 
-static const gchar hex[16] = "0123456789ABCDEF";
+static const gchar hex[] = "0123456789ABCDEF";
 
 /* Note: This escape function works on file: URIs, but if you want to
  * escape something else, please read RFC-2396 */
