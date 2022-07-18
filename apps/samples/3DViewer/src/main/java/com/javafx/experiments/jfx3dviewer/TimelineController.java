@@ -76,7 +76,7 @@ public class TimelineController {
                 endBtn.setDisable(false);
                 loopBtn.setDisable(false);
                 playBtn.setSelected(t.getCurrentRate() != 0);
-                loopBtn.setSelected(t.getCycleDuration().equals(Duration.INDEFINITE));
+                loopBtn.setSelected(t.getCycleCount() == Timeline.INDEFINITE);
                 t.currentRateProperty().addListener(rateListener);
             }
             old = t;

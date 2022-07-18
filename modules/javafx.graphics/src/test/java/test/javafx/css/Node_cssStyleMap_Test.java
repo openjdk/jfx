@@ -80,6 +80,7 @@ public class Node_cssStyleMap_Test {
      */
     private void checkFoundStyle(Property<?> property, Map<StyleableProperty<?>, List<Style>> map, List<Declaration> decls) {
 
+        assertTrue(property instanceof StyleableProperty);
         List<Style> styles = map.get((StyleableProperty<?>)property);
         assert (styles != null && !styles.isEmpty());
 
