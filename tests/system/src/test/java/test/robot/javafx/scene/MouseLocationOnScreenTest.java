@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2018, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -73,7 +73,8 @@ public class MouseLocationOnScreenTest {
     public void testMouseLocation() throws Exception {
 
         Screen screen = Screen.getPrimary();
-        Rectangle2D bounds = screen.getBounds();
+        // using visual bounds prevents hitting the camera notch area on newer Macs
+        Rectangle2D bounds = screen.getVisualBounds();
         int x1 = (int) bounds.getMinX();
         int x2 = (int) (x1 + bounds.getWidth() - 1);
         int y1 = (int) bounds.getMinY();

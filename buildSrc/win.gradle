@@ -224,6 +224,8 @@ def vs2017DllPath = cygpath("${msvcRedstDir}/Microsoft.VC${windowsCRTVer}.CRT")
 if (file(vs2017DllPath).exists()) {
     ext.WIN.VS2017DLLNames = [
         "msvcp140.dll",
+        "msvcp140_1.dll",
+        "msvcp140_2.dll",
         "vcruntime140.dll",
         "vcruntime140_1.dll"
     ];

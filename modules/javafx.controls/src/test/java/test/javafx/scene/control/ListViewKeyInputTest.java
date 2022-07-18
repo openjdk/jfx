@@ -1834,6 +1834,7 @@ public class ListViewKeyInputTest {
         sl.dispose();
     }
 
+    @Ignore("JDK-8289909") // there is no guarantee that there will be 8 selected items (can be 7 as well)
     @Test public void test_rt34407_up_up_down() {
         final int items = 100;
         listView.getItems().clear();
