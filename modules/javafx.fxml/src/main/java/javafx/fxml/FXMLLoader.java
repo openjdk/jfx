@@ -2323,10 +2323,9 @@ public class FXMLLoader {
 
     @Override
     public int hashCode() {
-        if (location == null) {
-            return 0;
-        }
-        return location.toExternalForm().hashCode();
+        int h = FXMLLoader.class.hashCode();
+        h = 31 * h + (location == null ? 0 : location.toExternalForm().hashCode());
+        return h;
     }
 
     private boolean isCyclic(

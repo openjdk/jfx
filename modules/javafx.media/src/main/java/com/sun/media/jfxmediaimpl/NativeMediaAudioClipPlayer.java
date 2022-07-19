@@ -453,7 +453,14 @@ final class NativeMediaAudioClipPlayer
 
     @Override
     public int hashCode() {
-        return sourceClip.hashCode();
+        int h = sourceClip.getLocator().getURI().hashCode();
+        h = 31 * h + priority;
+        h = 31 * h + loopCount;
+        h = 31 * h + Double.hashCode(volume);
+        h = 31 * h + Double.hashCode(balance);
+        h = 31 * h + Double.hashCode(rate);
+        h = 31 * h + Double.hashCode(pan);
+        return h;
     }
 
     private static class SchedulerEntry {
@@ -525,10 +532,7 @@ final class NativeMediaAudioClipPlayer
 
         @Override
         public int hashCode() {
-            if (player == null) {
-                return 0;
-            }
-            return player.hashCode();
+            return player == null ? 0 : player.hashCode();
         }
     }
 }
