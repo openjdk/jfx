@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -172,7 +172,7 @@ public class TableViewSelectionModelImplTest {
         assertFalse(model.isSelected(1, col0));
         assertFalse(model.isSelected(3, col0));
         assertFalse(cells(model), model.isSelected(3, null));
-        assertFalse(model.isSelected(3));
+        assertTrue(model.isSelected(3));
         assertEquals(1, model.getSelectedCells().size());
     }
 
@@ -185,7 +185,7 @@ public class TableViewSelectionModelImplTest {
         assertFalse(model.isSelected(1, col0));
         assertFalse(model.isSelected(3, col0));
         assertFalse(cells(model), model.isSelected(3, null));
-        assertFalse(model.isSelected(3));
+        assertTrue(model.isSelected(3));
         assertEquals(1, model.getSelectedCells().size());
     }
 
@@ -851,5 +851,25 @@ public class TableViewSelectionModelImplTest {
         model.getSelectedItems().addListener(listener);
         model.clearSelection(2);
         model.getSelectedItems().removeListener(listener);
+    }
+
+    /**
+     * Analysing failing tests when fixing JDK-8219720.
+     *
+     * Suspect: isSelected(int row) violates contract.
+     *
+     * @see #selectRowWhenInSingleCellSelectionMode()
+     * @see #selectRowWhenInSingleCellSelectionMode2()
+     */
+    @Test
+    public void testSelectRowWhenInSingleCellSelectionModeIsSelected() {
+        model.setSelectionMode(SelectionMode.SINGLE);
+        model.setCellSelectionEnabled(true);
+        model.select(3);
+        // test against contract
+        assertEquals("selected index", 3, model.getSelectedIndex());
+        assertTrue("contained in selected indices", model.getSelectedIndices().contains(3));
+        // test against spec
+        assertEquals("is selected index", model.getSelectedIndices().contains(3), model.isSelected(3));
     }
 }

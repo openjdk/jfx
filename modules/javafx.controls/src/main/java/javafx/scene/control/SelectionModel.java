@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -199,8 +199,8 @@ public abstract class SelectionModel<T> {
 
     /**
      * <p>Convenience method to inform if the given index is currently selected
-     * in this SelectionModel. Is functionally equivalent to calling
-     * <code>getSelectedIndices().contains(index)</code>.
+     * in this SelectionModel.  It will return true when cell selection is enabled
+     * and at least one cell is selected in the specified row index.
      *
      * @param index The index to check as to whether it is currently selected
      *      or not.

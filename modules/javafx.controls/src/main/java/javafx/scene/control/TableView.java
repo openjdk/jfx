@@ -2813,8 +2813,20 @@ public class TableView<S> extends Control {
             stopAtomic();
         }
 
-        @Override public boolean isSelected(int index) {
-            return isSelected(index, null);
+        @Override
+        public boolean isSelected(int index) {
+            final boolean isCellSelectionEnabled = isCellSelectionEnabled();
+            if (isCellSelectionEnabled) {
+                int columnCount = tableView.getVisibleLeafColumns().size();
+                for (int col = 0; col < columnCount; col++) {
+                    if (selectedCellsMap.isSelected(index, col)) {
+                        return true;
+                    }
+                }
+                return false;
+            } else {
+                return selectedCellsMap.isSelected(index, -1);
+            }
         }
 
         @Override
