@@ -3928,6 +3928,7 @@ public class TreeViewTest {
         rootNode.getChildren().addAll(generateChildren(1));
         TreeView<String> treeView = new TreeView<>(rootNode);
         treeView.scrollTo(100);
+        IndexedCell expandedCell = VirtualFlowTestUtils.getCell(treeView, 100);
         Toolkit.getToolkit().firePulse();
         rootNode.getChildren().get(1).setExpanded(false);
         Toolkit.getToolkit().firePulse();

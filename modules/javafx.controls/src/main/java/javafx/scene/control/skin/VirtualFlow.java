@@ -3072,7 +3072,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
     private boolean recalculating = false;
 
     private void recalculateAndImproveEstimatedSize(int improve) {
-        if (recalculating)  return;
+        if (recalculating) return;
         recalculating = true;
         int itemCount = getCellCount();
         int cacheCount = itemSizeCache.size();
