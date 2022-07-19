@@ -18,3 +18,10 @@ Issue key|Summary|Subcomponent
 [JDK-8283328](https://bugs.openjdk.java.net/browse/JDK-8283328)|Update libxml2 to 2.9.13|web
 [JDK-8286256](https://bugs.openjdk.java.net/browse/JDK-8286256)|Update libxml2 to 2.9.14|web
 [JDK-8286257](https://bugs.openjdk.java.net/browse/JDK-8286257)|Update libxslt to 1.1.35|web
+
+## List of Security fixes
+
+Issue key|Summary|Subcomponent
+---------|-------|------------
+JDK-8282121 (not public) | Improve WebKit referencing | web
+JDK-8285691 (not public) | Additional fix for JDK-8282121 | web
