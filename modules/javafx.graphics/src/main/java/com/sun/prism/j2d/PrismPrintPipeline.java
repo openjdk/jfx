@@ -32,6 +32,7 @@ import javafx.print.PrinterJob;
 import javax.print.PrintService;
 import javax.print.PrintServiceLookup;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.Set;
 import java.util.TreeSet;
 import java.awt.Graphics;
@@ -62,8 +63,6 @@ public final class PrismPrintPipeline extends PrintPipeline {
 
     private static Printer defaultPrinter = null;
     public synchronized Printer getDefaultPrinter() {
-        // Eventually this needs to be updated to reflect when
-        // the default has changed.
         if (defaultPrinter == null) {
             PrintService defPrt =
                 PrintServiceLookup.lookupDefaultPrintService();
@@ -96,13 +95,16 @@ public final class PrismPrintPipeline extends PrintPipeline {
 
     private static final NameComparator nameComparator = new NameComparator();
 
-    // This is static. Eventually I want it to be dynamic, but first
-    // it needs to be enhanced to only create new instances where
-    // there really has been a change, which will be rare.
+    // The map is useful when updating
+    private static HashMap<PrintService, Printer> pMap = new HashMap<>();
+
+    private static long lastTime = 0L;
     private static ObservableSet<Printer> printerSet = null;
+    private static ObservableSet<Printer> returnedPrinterSet = null;
+
     public synchronized ObservableSet<Printer> getAllPrinters() {
-        if (printerSet == null) {
-            Set printers = new TreeSet<Printer>(nameComparator);
+        if (returnedPrinterSet == null) {
+            TreeSet<Printer> printers = new TreeSet<Printer>(nameComparator);
             // Trigger getting default first, so we don't recreate that.
             Printer defPrinter = getDefaultPrinter();
             PrintService defService = null;
@@ -116,17 +118,94 @@ public final class PrismPrintPipeline extends PrintPipeline {
             for (int i=0; i<allServices.length;i++) {
                 if (defService != null && defService.equals(allServices[i])) {
                     printers.add(defPrinter);
+                    pMap.put(defService, defPrinter);
                 } else {
-                    PrinterImpl impl = new J2DPrinter(allServices[i]);
-                    Printer printer = PrintHelper.createPrinter(impl);
-                    impl.setPrinter(printer);
-                    printers.add(printer);
+                    addNew(allServices[i], printers);
                 }
             }
-            printerSet =
-                FXCollections.unmodifiableObservableSet
-                   (FXCollections.observableSet(printers));
+            printerSet = FXCollections.observableSet(printers);
+            returnedPrinterSet =
+                FXCollections.unmodifiableObservableSet(printerSet);
+            lastTime = System.currentTimeMillis();
+        } else {
+            PrintService[] newServices =
+                    PrintServiceLookup.lookupPrintServices(null, null);
+            if ((newServices.length != printerSet.size()) ||
+                    (lastTime + 120000) < System.currentTimeMillis()) {
+                updatePrinters(newServices);
+                lastTime = System.currentTimeMillis();
+            }
         }
-        return printerSet;
+        return returnedPrinterSet;
+    }
+
+    private void addNew(PrintService s, Set<Printer> printers) {
+        PrinterImpl impl = new J2DPrinter(s);
+        Printer printer = PrintHelper.createPrinter(impl);
+        impl.setPrinter(printer);
+        printers.add(printer);
+        pMap.put(s, printer);
+    }
+
+    /* Only change a Printer instance if Java 2D changed it.
+     * Otherwise re-map back to the existing Printer instance.
+     * This relies on Java 2D not re-creating a printer too.
+     * Update the existing set so that an app that has cached the printer list
+     * automatically gets the updates. They can also observe changes .. but
+     * if doing so they could see the work in progress, but that's probably
+     * a good thing for an app that is interested.
+     * Two passes -
+     * First pass remove any printers that no longer exist.
+     * Second pass add any new printers.
+     * Finally update the default printer - if needed.
+     */
+    private void updatePrinters(PrintService[] newServices) {
+
+        Set<PrintService> oldServiceSet = pMap.keySet();
+        PrintService[] oldServices = oldServiceSet.toArray(new PrintService[0]);
+
+        for (PrintService os : oldServices) {
+            boolean present = false;
+            for (PrintService ns : newServices) {
+                if (os.equals(ns)) {
+                    present = true;
+                    break;
+                }
+            }
+            if (!present) {
+                Printer printer = pMap.get(os);
+                pMap.remove(os);
+                printerSet.remove(printer);
+            }
+        }
+        for (PrintService s : newServices) {
+            if (!pMap.containsKey(s)) {
+                addNew(s, printerSet);
+            }
+        }
+        PrintService oldDefaultService =
+            (defaultPrinter == null) ? null :
+                ((J2DPrinter)PrintHelper.getPrinterImpl(defaultPrinter)).getService();
+        PrintService newDefaultService = PrintServiceLookup.lookupDefaultPrintService();
+        if (newDefaultService != null) {
+            if (oldDefaultService == null ||
+                (!oldDefaultService.equals(newDefaultService)))
+             {
+                defaultPrinter = findDefaultPrinter(printerSet, newDefaultService);
+             }
+        } else {
+            defaultPrinter = null;
+        }
+    }
+
+    private static Printer findDefaultPrinter(Set<Printer> printers,
+                                              PrintService defaultService) {
+        for (Printer p : printers) {
+            PrintService s = ((J2DPrinter)PrintHelper.getPrinterImpl(p)).getService();
+            if (s.getName().equals(defaultService.getName())) {
+                return p;
+            }
+        }
+        return null;
     }
 }

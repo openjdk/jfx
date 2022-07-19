@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -34,6 +34,7 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 
+import com.sun.javafx.scene.traversal.TraversalMethod;
 import javafx.collections.ObservableList;
 import javafx.collections.ObservableMap;
 import javafx.event.Event;
@@ -99,7 +100,7 @@ public final class KeyboardShortcutsHandler extends BasicEventDispatcher {
     }
 
     private void traverse(Event event, Node node, Direction dir) {
-        if (NodeHelper.traverse(node, dir)) {
+        if (NodeHelper.traverse(node, dir, TraversalMethod.KEY)) {
             event.consume();
         }
     }

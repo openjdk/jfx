@@ -918,15 +918,13 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
 
         @Override protected void invalidated() {
             super.invalidated();
+            adjustAbsoluteOffset();
             requestLayout();
         }
     };
     public final double getPosition() { return position.get(); }
     public final void setPosition(double value) {
         position.set(value);
-        // When the position is changed explicitly, we need to make sure
-        // the absolute offset is changed accordingly.
-        adjustAbsoluteOffset();
     }
     public final DoubleProperty positionProperty() { return position; }
 
@@ -1052,27 +1050,18 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
 
     /** {@inheritDoc} */
     @Override protected void layoutChildren() {
-        double origAbsoluteOffset = absoluteOffset;
-        recalculateEstimatedSize();
-        // if the last modification to the position was done via scrollPixels,
-        // the absoluteOffset and position are already in sync.
-        // However, the position can be modified via different ways (e.g. by
-        // moving the scrollbar thumb), so we need to recalculate absoluteOffset
-        // There is an exception to this: if cells are added/removed, we want
-        // to keep the absoluteOffset constant, hence we need to adjust the position.
+        // when we enter this method, the absoluteOffset and position are
+        // already determined. In case this method invokes other methods
+        // that may change either absoluteOffset or position, it is the
+        // responsability of those methods to make sure both parameters are
+        // changed in a consistent way.
+        // For example, the recalculateEstimatedSize method also recalculates
+        // the absoluteOffset and position.
 
-        if (lastCellCount != getCellCount()) {
-            absoluteOffset = origAbsoluteOffset;
-            adjustPosition();
-        } else {
-            adjustAbsoluteOffset();
-        }
         if (needsRecreateCells) {
             lastWidth = -1;
             lastHeight = -1;
             releaseCell(accumCell);
-//            accumCell = null;
-//            accumCellParent.getChildren().clear();
             sheet.getChildren().clear();
             for (int i = 0, max = cells.size(); i < max; i++) {
                 cells.get(i).updateIndex(-1);
@@ -1334,6 +1323,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         }
         computeBarVisiblity();
 
+        recalculateAndImproveEstimatedSize(0);
         recreatedOrRebuilt = recreatedOrRebuilt || rebuild;
         updateScrollBarsAndCells(recreatedOrRebuilt);
 
@@ -1579,6 +1569,8 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
      * @param index the index
      */
     public void scrollToTop(int index) {
+        // make sure we have the real size of cells that are likely to be rendered
+        getCellSizesInExpectedViewport(index);
         boolean posSet = false;
 
         if (index > getCellCount() - 1) {
@@ -1764,6 +1756,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
                 // to a severe performance decrease. This seems to be OK, as
                 // getCell() is only used for cell measurement purposes.
                 // pile.remove(i);
+                resizeCell(cell);
                 return cell;
             }
         }
@@ -1901,8 +1894,12 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
      */
     private double viewportLength;
     void setViewportLength(double value) {
+        if (value == this.viewportLength) {
+            return;
+        }
         this.viewportLength = value;
         this.absoluteOffset = getPosition() * (estimatedSize - viewportLength);
+        recalculateEstimatedSize();
     }
     double getViewportLength() {
         return viewportLength;
@@ -1996,6 +1993,8 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
             double height = Math.max(getMaxPrefBreadth(), getViewportBreadth());
             cell.resize(fixedCellSizeEnabled ? getFixedCellSize() : Utils.boundedSize(cell.prefWidth(height), cell.minWidth(height), cell.maxWidth(height)), height);
         }
+        // when a cell is resized, our estimate needs to be updated.
+        recalculateAndImproveEstimatedSize(0);
     }
 
     /**
@@ -2311,6 +2310,28 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         requestLayout();
     }
 
+    /**
+     * Make sure the sizes of the cells that are likely to be visible are known.
+     * When updates to the cell size estimates are occurring, we don't want the current
+     * visible content to be modified.
+     * @param index the index of the cell that should be positioned at the top of
+     * the viewport in the next layout cycle.
+     */
+    void getCellSizesInExpectedViewport(int index) {
+        double estlength = getOrCreateCellSize(index);
+        int i = index;
+        while ((estlength < viewportLength) && (++i < getCellCount())) {
+            estlength = estlength + getOrCreateCellSize(i);
+        }
+        if (estlength < viewportLength) {
+            int j = index;
+            while ((estlength < viewportLength) && (j-- > 0)) {
+                estlength = estlength + getOrCreateCellSize(j);
+            }
+        }
+        recalculateEstimatedSize();
+    }
+
     private void startSBReleasedAnimation() {
         if (sbTouchTimeline == null) {
             /*
@@ -2442,6 +2463,26 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         lengthBar.setVirtual(true);
     }
 
+    /**
+     * In case we are not rendering the first cell
+     * AND
+     * there is empty room after the last cell,
+     * the cells need to be shifted down to fill the empty area.
+     */
+    private void shiftDown() {
+        T lastNonEmptyCell = getLastVisibleCell();
+        T firstCell = cells.getFirst();
+        int index = getCellIndex(firstCell);
+        double end = getCellPosition(lastNonEmptyCell) + getCellLength(lastNonEmptyCell);
+        double delta = viewportLength - end;
+        if ((index > 0) && (delta > 0)) {
+            for (int i = 0; i < cells.size(); i++) {
+                T cell = cells.get(i);
+                positionCell(cell, getCellPosition(cell) + delta);
+            }
+        }
+    }
+
     private void updateScrollBarsAndCells(boolean recreate) {
         // Assign the hbar and vbar to the breadthBar and lengthBar so as
         // to make some subsequent calculations easier.
@@ -2486,6 +2527,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
 
                 offset += getCellLength(cell);
             }
+            shiftDown();
         }
 
         // Toggle visibility on the corner
@@ -2848,6 +2890,9 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
     }
 
     private void adjustPositionToIndex(int index) {
+        if (index > 0) getOrCreateCellSize(index-1);
+        getOrCreateCellSize(index);
+        recalculateEstimatedSize();
         int cellCount = getCellCount();
         if (cellCount <= 0) {
             setPosition(0.0f);
@@ -2859,7 +2904,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
                 if (cz < 0) cz = estSize;
                 targetOffset = targetOffset+ cz;
             }
-            this.absoluteOffset = targetOffset;
+            this.absoluteOffset = (estimatedSize < viewportLength)  ? 0  : targetOffset;
             adjustPosition();
         }
 
@@ -2954,6 +2999,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
     }
 
     private double getOrCreateCellSize (int idx, boolean create) {
+        if (idx < 0) return -1;
         // is the current cache long enough to contain idx?
         if (itemSizeCache.size() > idx) {
             // is there a non-null value stored in the cache?
@@ -2964,28 +3010,34 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         if (!create) return -1;
         boolean doRelease = false;
 
-        // Do we have a visible cell for this index?
-        T cell = getVisibleCell(idx);
-        if (cell == null) { // we might get the accumcell here
-            cell = getCell(idx);
-            doRelease = true;
-        }
         // Make sure we have enough space in the cache to store this index
         while (idx >= itemSizeCache.size()) {
             itemSizeCache.add(itemSizeCache.size(), null);
         }
 
-        // if we have a valid cell, we can populate the cache
         double answer = 1d;
-        if (isVertical()) {
-            answer = cell.getLayoutBounds().getHeight();
+        if (getFixedCellSize() > 0) {
+            answer = getFixedCellSize();
+            itemSizeCache.set(idx, answer);
         } else {
-            answer = cell.getLayoutBounds().getWidth();
-        }
-        itemSizeCache.set(idx, answer);
+            // Do we have a visible cell for this index?
+            T cell = getVisibleCell(idx);
+            if (cell == null) { // we might get the accumcell here
+                cell = getCell(idx);
+                doRelease = true;
+            }
 
-        if (doRelease) { // we need to release the accumcell
-            releaseCell(cell);
+            // if we have a valid cell, we can populate the cache
+            if (isVertical()) {
+                answer = cell.getLayoutBounds().getHeight();
+            } else {
+                answer = cell.getLayoutBounds().getWidth();
+            }
+            itemSizeCache.set(idx, answer);
+
+            if (doRelease) { // we need to release the accumcell
+                releaseCell(cell);
+            }
         }
         return answer;
     }
@@ -3020,6 +3072,11 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
     private void recalculateAndImproveEstimatedSize(int improve) {
         int itemCount = getCellCount();
         int cacheCount = itemSizeCache.size();
+        boolean keepRatio = ((cacheCount > 0) && !Double.isInfinite(this.absoluteOffset));
+        double estSize = estimatedSize / itemCount;
+
+        int oldIndex = computeCurrentIndex();
+        double oldOffset = computeViewportOffset(getPosition());
         int added = 0;
         while ((itemCount > itemSizeCache.size()) && (added < improve)) {
             getOrCreateCellSize(itemSizeCache.size());
@@ -3035,7 +3092,22 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
                 cnt++;
             }
         }
-        this.estimatedSize = cnt == 0 ? 1d: tot * itemCount / cnt;
+        this.estimatedSize = cnt == 0 ? 1d : tot * itemCount / cnt;
+        estSize = estimatedSize / itemCount;
+
+        if (keepRatio) {
+            double newOffset = 0;
+            for (int i = 0; i < oldIndex; i++) {
+                double h = getCellSize(i);
+                if (h < 0) {
+                    h = estSize;
+                }
+                newOffset += h;
+            }
+            this.absoluteOffset = newOffset + oldOffset;
+            adjustPosition();
+        }
+
     }
 
     private void resetSizeEstimates() {
