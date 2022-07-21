@@ -37,6 +37,48 @@ other parts by BSD-style licenses.
 
 #### LGPL 2.1 License
 ```
+Copyright (C) 1995 A.M. Kuchling
+Copyright (C) 2005-2006 Alexander Larsson <alexl@redhat.com>
+Copyright (C) 2004 Anders Carlsson <andersca@gnome.org>
+Copyright (C) 2001-2003 Andrew Lanoix
+Copyright (C) 2009 Benjamin Otte <otte@gnome.org>
+Copyright (C) 2011, 2014-2015 Canonical Limited
+Copyright (C) 2009-2010 Christian Hergert <chris@dronelabs.com>
+Copyright (C) 2010 Christian Persch
+Copyright (C) 2008 Claus Tondering.
+Copyright (C) 2009-2010 Codethink Limited
+Copyright (C) 2009-2011, 2018 Collabora Ltd.
+Copyright (C) 2006 Dave Benson
+Copyright (C) 2000 Eazel, Inc.
+Copyright (C) 2005-2007, 2010, 2018 Emmanuele Bassi
+Copyright (C) 2018, 2020 Endless Mobile, Inc.
+Copyright (C) 2020 Frederic Martinsons
+Copyright (C) 1991-2019 Free Software Foundation, Inc.
+Copyright (C) 2001 Hans Breuer
+Copyright (C) 2021 Iain Lane, Xavier Claessens
+Copyright (C) 2005, 2007 Imendio AB
+Copyright (C) 2010 Intel Corp.
+Copyright (C) 2003, 2005 Matthias Clasen
+Copyright (C) 2003 Noah Levitt
+Copyright (C) 2009 Nokia Corporation
+Copyright (C) 1998 Owen Taylor
+Copyright (C) 1998 Owen Taylor and Tor Lillqvist
+Copyright (C) 1995-1997, 1999, 2002 Peter Mattis, Red Hat, Inc.
+Copyright (C) 1995-1998 Peter Mattis, Spencer Kimball and Josh MacDonald
+Copyright (C) 1998-2001, 2003-2005, 2007-2012, 2020 Red Hat, Inc.
+Copyright (C) 2007-2008, 2011 Ryan Lortie
+Copyright (C) 2003 Sebastian Wilhelmi
+Copyright (C) 1998-2001 Sebastian Wilhelmi; University of Karlsruhe
+Copyright (C) 2011 Stef Walter  <stefw@collabora.co.uk>
+Copyright (C) 2010 Thiago Santos <thiago.sousa.santos@collabora.co.uk>
+Copyright (C) 1997, 1998, 2000, 2005 Tim Janik
+Copyright (C) 1997-1999, 2000-2001 Tim Janik and Red Hat, Inc.
+Copyright (C) 1999, 2000 Tom Tromey
+Copyright (C) 2018 Tomasz Miasko
+Copyright (C) 1998-2000, 2003-2004 Tor Lillqvist
+Copyright (C) 1999-2000 Tor Lillqvist and Craig Setera
+Copyright (C) 2000-2003 Ximian Inc.
+Copyright (C) 2017-2019 Руслан Ижбулатов
 
                   GNU LESSER GENERAL PUBLIC LICENSE
                        Version 2.1, February 1999
@@ -541,59 +583,46 @@ necessary.  Here is a sample; alter the names:
 
 That's all there is to it!
 
+Authors
 
-```
-
-#### BSD 3-clause License
-```
+Original Authors
 ---------------------------------
-The below license applies to the following files:
-glib/glib/valgrind.h
+Peter Mattis       <petm@xcf.berkeley.edu>
+Spencer Kimball    <spencer@xcf.berkeley.edu>
+Josh MacDonald     <jmacd@xcf.berkeley.edu>
 
-Copyright (C) 2000-2017 Julian Seward. All rights reserved.
+GLib-2.0 Team
+---------------------------------
+Hans Breuer        <hans@breuer.org>
+Matthias Clasen    <mclasen@redhat.com>
+Tor Lillqvist      <tml@iki.fi>
+Tim Janik          <timj@gtk.org>
+Havoc Pennington   <hp@redhat.com>
+Ron Steinke        <rsteinke@w-link.net>
+Owen Taylor        <otaylor@redhat.com>
+Sebastian Wilhelmi <seppi@seppi.de>
 
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions
-are met:
+GLib-1.2 Team
+---------------------------------
+Shawn T. Amundson  <amundson@gimp.org>
+Jeff Garzik        <jgarzik@pobox.com>
+Raja R Harinath    <harinath@cs.umn.edu>
+Tim Janik          <timj@gtk.org>
+Elliot Lee         <sopwith@redhat.com>
+Tor Lillqvist      <tml@iki.fi>
+Paolo Molaro       <lupus@debian.org>
+Havoc Pennington   <hp@pobox.com>
+Manish Singh       <yosh@gimp.org>
+Owen Taylor        <otaylor@gtk.org>
+Sebastian Wilhelmi <wilhelmi@ira.uka.de>
 
-1. Redistributions of source code must retain the above copyright
-   notice, this list of conditions and the following disclaimer.
-
-2. The origin of this software must not be misrepresented; you must
-   not claim that you wrote the original software.  If you use this
-   software in a product, an acknowledgment in the product
-   documentation would be appreciated but is not required.
-
-3. Altered source versions must be plainly marked as such, and must
-   not be misrepresented as being the original software.
-
-4. The name of the author may not be used to endorse or promote
-   products derived from this software without specific prior written
-   permission.
-
-THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS
-OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
-DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
-GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
-WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
-NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-----------------------------------------------------------------
-
-Notice that the above BSD-style license applies to this one file
-(valgrind.h) only.  The entire rest of Valgrind is licensed under
-the terms of the GNU General Public License, version 2.  See the
-COPYING file in the source distribution for details.
-
-----------------------------------------------------------------
-
+The random number generator "Mersenne Twister", which is used by GLib,
+was developed and originally coded by:
+Makoto Matsumoto   <matumoto@math.keio.ac.jp>
+Takuji Nishimura   <nisimura@math.keio.ac.jp>
 
 ```
+
 #### MIT License
 ```
 ---------------------------------
@@ -616,5 +645,19 @@ interruption) however caused and on any theory of liability, whether
 in contract, strict liability, or tort (including negligence or
 otherwise) arising in any way out of the use of this software, even
 if advised of the possibility of such damage.
+
+```
+
+#### Permissive License
+```
+---------------------------------
+The below license applies to the following files:
+glib/glib/win_iconv.c
+
+iconv library implemented with Win32 API.
+
+This file is placed in the public domain.
+
+Maintainer: Yukihiro Nakadaira <yukihiro.nakadaira@gmail.com>
 
 ```
