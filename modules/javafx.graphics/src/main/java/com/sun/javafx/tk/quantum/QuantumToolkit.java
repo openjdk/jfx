@@ -448,12 +448,16 @@ public final class QuantumToolkit extends Toolkit {
     public static void runInRenderThreadAndWait(Runnable runnable) {
         try {
             CountDownLatch latch = new CountDownLatch(1);
-            com.sun.javafx.tk.quantum.QuantumRenderer.getInstance().execute(() -> {
-                runnable.run();
+            QuantumRenderer.getInstance().execute(() -> {
+                try {
+                    runnable.run();
+                } catch (Throwable e) {
+                    e.printStackTrace();
+                }
                 latch.countDown();
             });
             latch.await();
-        } catch (Exception e){
+        } catch (Throwable e) {
             e.printStackTrace();
         }
     }
