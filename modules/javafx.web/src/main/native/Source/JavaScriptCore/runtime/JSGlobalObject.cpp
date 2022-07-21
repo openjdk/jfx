@@ -1277,8 +1277,15 @@ capitalName ## Constructor* lowerName ## Constructor = featureFlag ? capitalName
     {
         JSValue hasOwnPropertyFunction = jsCast<JSFunction*>(objectPrototype()->get(this, vm.propertyNames->hasOwnProperty));
         catchScope.assertNoException();
+#if PLATFORM(JAVA)
+        if (vm.is_existing_window_proxy()) {
+            RELEASE_ASSERT(!!jsDynamicCast<JSFunction*>(vm, hasOwnPropertyFunction));
+            m_linkTimeConstants[static_cast<unsigned>(LinkTimeConstant::hasOwnPropertyFunction)].set(vm, this, jsCast<JSFunction*>(hasOwnPropertyFunction));
+        }
+#else
         RELEASE_ASSERT(!!jsDynamicCast<JSFunction*>(vm, hasOwnPropertyFunction));
         m_linkTimeConstants[static_cast<unsigned>(LinkTimeConstant::hasOwnPropertyFunction)].set(vm, this, jsCast<JSFunction*>(hasOwnPropertyFunction));
+#endif
     }
 
 #define INIT_PRIVATE_GLOBAL(funcName, code) \
