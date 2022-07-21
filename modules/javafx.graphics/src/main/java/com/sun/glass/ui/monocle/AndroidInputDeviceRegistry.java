@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -79,6 +79,10 @@ public class AndroidInputDeviceRegistry extends InputDeviceRegistry {
 
     public static void dispatchKeyEventFromNative(int type, int key, char[] chars, int modifiers) {
         instance.processor.dispatchKeyEvent(type, key, chars, modifiers);
+    }
+
+    public static void dispatchMenuEventFromNative(int x, int y, int xAbs, int yAbs, boolean isKeyboardTrigger) {
+        instance.processor.dispatchMenuEvent(x, y, xAbs, yAbs, isKeyboardTrigger);
     }
 
     public static void gotKeyEventFromNative(int action, int linuxKey) {
