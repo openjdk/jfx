@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -951,8 +951,6 @@ public abstract class Node implements EventTarget, Styleable {
                 @Override
                 protected void invalidated() {
                     if (oldParent != null) {
-                        oldParent.disabledProperty().removeListener(parentDisabledChangedListener);
-                        oldParent.treeVisibleProperty().removeListener(parentTreeVisibleChangedListener);
                         if (nodeTransformation != null && nodeTransformation.listenerReasons > 0) {
                             ((Node) oldParent).localToSceneTransformProperty().removeListener(
                                     nodeTransformation.getLocalToSceneInvalidationListener());
@@ -962,8 +960,6 @@ public abstract class Node implements EventTarget, Styleable {
                     computeDerivedDepthTest();
                     final Parent newParent = get();
                     if (newParent != null) {
-                        newParent.disabledProperty().addListener(parentDisabledChangedListener);
-                        newParent.treeVisibleProperty().addListener(parentTreeVisibleChangedListener);
                         if (nodeTransformation != null && nodeTransformation.listenerReasons > 0) {
                             ((Node) newParent).localToSceneTransformProperty().addListener(
                                     nodeTransformation.getLocalToSceneInvalidationListener());
@@ -1001,10 +997,6 @@ public abstract class Node implements EventTarget, Styleable {
         }
         return parent;
     }
-
-    private final InvalidationListener parentDisabledChangedListener = valueModel -> updateDisabled();
-
-    private final InvalidationListener parentTreeVisibleChangedListener = valueModel -> updateTreeVisible(true);
 
     private SubScene subScene = null;
 
@@ -1909,6 +1901,15 @@ public abstract class Node implements EventTarget, Styleable {
                     pseudoClassStateChanged(DISABLED_PSEUDOCLASS_STATE, get());
                     updateCanReceiveFocus();
                     focusSetDirty(getScene());
+
+                    if (Node.this instanceof Parent) {
+                        List<Node> children = ((Parent)Node.this).getChildren();
+                        if (children != null) {
+                            for (Node child : children) {
+                                child.updateDisabled();
+                            }
+                        }
+                    }
                 }
 
                 @Override
@@ -8437,6 +8438,14 @@ public abstract class Node implements EventTarget, Styleable {
                     // SubScene.getRoot() is only null if it's constructor
                     // has not finished.
                     subSceneRoot.setTreeVisible(value && subSceneRoot.isVisible());
+                }
+            }
+            if (Node.this instanceof Parent) {
+                List<Node> children = ((Parent)this).getChildren();
+                if (children != null) {
+                    for (Node child : children) {
+                        child.updateTreeVisible(true);
+                    }
                 }
             }
         }
