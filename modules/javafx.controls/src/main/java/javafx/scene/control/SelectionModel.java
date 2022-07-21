@@ -199,7 +199,7 @@ public abstract class SelectionModel<T> {
 
     /**
      * <p>Convenience method to inform if the given index is currently selected
-     * in this SelectionModel.  It will return true when at least one cell 
+     * in this SelectionModel.  It will return true when at least one cell
      * is selected in the specified row index.
      *
      * @param index The index to check as to whether it is currently selected
