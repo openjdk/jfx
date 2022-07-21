@@ -3907,6 +3907,35 @@ public class TreeViewTest {
         assertEquals("Node 0", table.getFocusModel().getFocusedItem().getValue());
     }
 
+    private List<TreeItem<String>> generateChildren(int lvl) {
+        List<TreeItem<String>> children = new ArrayList<>();
+        for (int idx = 0; idx < 10; idx++) {
+            TreeItem<String> child = new TreeItem<>("Child lvl. " + lvl + " idx. " + idx);
+            child.setExpanded(true);
+            if (lvl <= 2) {
+                child.getChildren().addAll(generateChildren(lvl + 1));
+            }
+            children.add(child);
+        }
+        return children;
+    }
+
+    // JDK-8290348
+    @Test
+    public void testCheckPositionAfterCollapsed() {
+        TreeItem<String> rootNode = new TreeItem<>("Root");
+        rootNode.setExpanded(true);
+        rootNode.getChildren().addAll(generateChildren(1));
+        TreeView<String> treeView = new TreeView<>(rootNode);
+        treeView.scrollTo(100);
+        IndexedCell expandedCell = VirtualFlowTestUtils.getCell(treeView, 100);
+        Toolkit.getToolkit().firePulse();
+        rootNode.getChildren().get(1).setExpanded(false);
+        Toolkit.getToolkit().firePulse();
+        IndexedCell scrolledCell = VirtualFlowTestUtils.getCell(treeView, 100);
+        assertTrue(scrolledCell.isVisible());
+    }
+
     public static class MisbehavingOnCancelTreeCell<S> extends TreeCell<S> {
 
         @Override
