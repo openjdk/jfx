@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -51,7 +51,13 @@ public interface Skinnable {
     public ObjectProperty<Skin<?>> skinProperty();
 
     /**
-     * Sets the skin that will render this {@link Control}
+     * Sets the skin that will render this {@link Control}.
+     * <p>
+     * To ensure a one-to-one relationship between a {@code Control} and its
+     * {@code Skin}, this method must check (for any non-null value) that
+     * {@link Skin#getSkinnable()}, throwing an Error in the case of mismatch.
+     * returns the same value as this Skinnable.
+     *
      * @param value the skin value for this control
      */
     public void setSkin(Skin<?> value);

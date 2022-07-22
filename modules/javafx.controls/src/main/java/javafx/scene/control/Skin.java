@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,9 +28,22 @@ package javafx.scene.control;
 import javafx.scene.Node;
 
 /**
- * Base class for defining the visual representation of user interface controls
+ * An interface for defining the visual representation of user interface controls
  * by defining a scene graph of nodes to represent the skin.
  * A user interface control is abstracted behind the {@link Skinnable} interface.
+ * <p/>
+ * A Skin implementation should generally avoid modifying its control outside of
+ * {@link #install()} method.  The recommended life cycle of a Skin implementation
+ * is as follows:
+ * <ul>
+ * <li>instantiation
+ * <li>configuration, such as passing of dependencies and parameters
+ * <li>inside of {@link Control#setSkin(Skin)}:
+ * <ul>
+ * <li>uninstalling of the old skin via its {@link #dispose()} method
+ * <li>installing of the new skin via {@link #install()}
+ * </ul>
+ * </ul>
  *
  * @param <C> A subtype of Skinnable that the Skin represents. This allows for
  *      Skin implementation to access the {@link Skinnable} implementation,
@@ -59,6 +72,14 @@ public interface Skin<C extends Skinnable> {
      * @return A non-null Node, except when the Skin has been disposed.
      */
     public Node getNode();
+    
+    /**
+     * Called by {@link Control#setSkin(Skin)} on a pristine control, or after the
+     * previous skin has been uninstalled via its {@link #dispose()} method.
+     * This method allows a Skin to register listeners, add child nodes, set
+     * required properties and/or event handlers.
+     */
+    default public void install() { }
 
     /**
      * Called by a Skinnable when the Skin is replaced on the Skinnable. This method
