@@ -64,7 +64,7 @@ public interface Skinnable {
      * @throws IllegalArgumentException if {@link Skin#getSkinnable()} returns
      * value other than this Skinnable.
      */
-    public void setSkin(Skin<?> value) throws IllegalArgumentException;
+    public void setSkin(Skin<?> value);
 
     /**
      * Returns the skin that renders this {@link Control}
