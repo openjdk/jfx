@@ -43,13 +43,14 @@ extern "C" {
 JNIEXPORT jlong JNICALL Java_com_sun_webkit_SharedBuffer_twkCreate
   (JNIEnv*, jclass)
 {
-    return ptr_to_jlong(&SharedBuffer::create().leakRef());
+   auto buffer_address = &FragmentedSharedBuffer::create().get();
+   return ptr_to_jlong(new SharedBufferBuilder(std::move(buffer_address)));
 }
 
 JNIEXPORT jlong JNICALL Java_com_sun_webkit_SharedBuffer_twkSize
   (JNIEnv*, jclass, jlong nativePointer)
 {
-    SharedBuffer* p = static_cast<SharedBuffer*>(jlong_to_ptr(nativePointer));
+    FragmentedSharedBuffer* p = static_cast<FragmentedSharedBuffer*>(jlong_to_ptr(nativePointer));
     ASSERT(p);
     return p->size();
 }
@@ -58,7 +59,7 @@ JNIEXPORT jint JNICALL Java_com_sun_webkit_SharedBuffer_twkGetSomeData
   (JNIEnv* env, jclass, jlong nativePointer, jlong position, jbyteArray buffer,
    jint offset, jint length)
 {
-    SharedBuffer* p = static_cast<SharedBuffer*>(jlong_to_ptr(nativePointer));
+    FragmentedSharedBuffer* p = static_cast<FragmentedSharedBuffer*>(jlong_to_ptr(nativePointer));
     ASSERT(p);
     ASSERT(position >= 0);
     ASSERT(buffer);
@@ -89,7 +90,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_SharedBuffer_twkAppend
   (JNIEnv* env, jclass, jlong nativePointer, jbyteArray buffer,
    jint offset, jint length)
 {
-    SharedBuffer* p = static_cast<SharedBuffer*>(jlong_to_ptr(nativePointer));
+    SharedBufferBuilder* p = static_cast<SharedBufferBuilder*>(jlong_to_ptr(nativePointer));
     ASSERT(p);
     ASSERT(buffer);
     ASSERT(offset >= 0);
@@ -104,9 +105,8 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_SharedBuffer_twkAppend
 JNIEXPORT void JNICALL Java_com_sun_webkit_SharedBuffer_twkDispose
   (JNIEnv *, jclass, jlong nativePointer)
 {
-    SharedBuffer* p = static_cast<SharedBuffer*>(jlong_to_ptr(nativePointer));
+    FragmentedSharedBuffer* p = static_cast<FragmentedSharedBuffer*>(jlong_to_ptr(nativePointer));
     ASSERT(p);
-    p->deref();
 }
 
 }

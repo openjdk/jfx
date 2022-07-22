@@ -39,8 +39,8 @@
 #include "ReducedResolutionSeconds.h"
 #include "ScriptExecutionContext.h"
 #include "Timer.h"
+#include <variant>
 #include <wtf/ListHashSet.h>
-#include <wtf/Variant.h>
 
 namespace JSC {
 class JSGlobalObject;
@@ -92,11 +92,12 @@ public:
     ExceptionOr<Ref<PerformanceMark>> mark(JSC::JSGlobalObject&, const String& markName, std::optional<PerformanceMarkOptions>&&);
     void clearMarks(const String& markName);
 
-    using StartOrMeasureOptions = Variant<String, PerformanceMeasureOptions>;
+    using StartOrMeasureOptions = std::variant<String, PerformanceMeasureOptions>;
     ExceptionOr<Ref<PerformanceMeasure>> measure(JSC::JSGlobalObject&, const String& measureName, std::optional<StartOrMeasureOptions>&&, const String& endMark);
     void clearMeasures(const String& measureName);
 
     void addNavigationTiming(DocumentLoader&, Document&, CachedResource&, const DocumentLoadTiming&, const NetworkLoadMetrics&);
+    void navigationFinished(const NetworkLoadMetrics&);
     void addResourceTiming(ResourceTiming&&);
 
     void reportFirstContentfulPaint();
@@ -105,6 +106,7 @@ public:
     void registerPerformanceObserver(PerformanceObserver&);
     void unregisterPerformanceObserver(PerformanceObserver&);
 
+    static void allowHighPrecisionTime();
     static Seconds reduceTimeResolution(Seconds);
 
     DOMHighResTimeStamp relativeTimeFromTimeOriginInReducedResolution(MonotonicTime) const;

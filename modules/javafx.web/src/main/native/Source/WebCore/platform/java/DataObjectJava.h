@@ -204,7 +204,7 @@ public:
 
     // tav todo: where and how it's supposed to be used?
     String m_fileContentFilename;
-    RefPtr<SharedBuffer> m_fileContent;
+    RefPtr<FragmentedSharedBuffer> m_fileContent;
 
     ~DataObjectJava() {
     }

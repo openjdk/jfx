@@ -79,7 +79,7 @@ public:
     bool canRunBeforeUnloadConfirmPanel() override;
     bool runBeforeUnloadConfirmPanel(const String& message, Frame&) override;
 
-    void closeWindowSoon() override;
+    void closeWindow() override;
 
     void runJavaScriptAlert(Frame&, const String&) override;
     bool runJavaScriptConfirm(Frame&, const String&) override;
@@ -176,6 +176,9 @@ public:
 
     RefPtr<Icon> createIconForFiles(const Vector<String>&) override;
     void didFinishLoadingImageForElement(HTMLImageElement&) override;
+    void requestCookieConsent(CompletionHandler<void(CookieConsentDecisionResult)>&&) override;
+    void classifyModalContainerControls(Vector<String>&& texts, CompletionHandler<void(Vector<ModalContainerControlType>&&)>&&) override;
+    void decidePolicyForModalContainer(OptionSet<ModalContainerControlType>, CompletionHandler<void(ModalContainerDecision)>&&) override;
 
 
 private:

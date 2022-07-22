@@ -88,6 +88,7 @@ elseif (UNIX)
         linux/MemoryFootprintLinux.cpp
         unix/LanguageUnix.cpp
         unix/MemoryPressureHandlerUnix.cpp
+        linux/RealTimeThreads.cpp
     )
     list(APPEND WTF_LIBRARIES rt)
 elseif (WIN32)

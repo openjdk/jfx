@@ -57,7 +57,7 @@ public:
                                  long totalBytesToBeSent) = 0;
         virtual bool willSendRequest(const ResourceResponse& response) = 0;
         virtual void didReceiveResponse(const ResourceResponse& response) = 0;
-        virtual void didReceiveData(const uint8_t* data, int length) = 0;
+        virtual void didReceiveData(const SharedBuffer* data, int length) = 0;
         virtual void didFinishLoading() = 0;
         virtual void didFail(const ResourceError& error) = 0;
         virtual ~Target();
@@ -79,7 +79,7 @@ private:
         void didSendData(long totalBytesSent, long totalBytesToBeSent) final;
         bool willSendRequest(const ResourceResponse& response) final;
         void didReceiveResponse(const ResourceResponse& response) final;
-        void didReceiveData(const uint8_t* data, int length) final;
+        void didReceiveData(const SharedBuffer* data, int length) final;
         void didFinishLoading() final;
         void didFail(const ResourceError& error) final;
     private:
@@ -96,7 +96,7 @@ private:
         void didSendData(long totalBytesSent, long totalBytesToBeSent) final;
         bool willSendRequest(const ResourceResponse& response) final;
         void didReceiveResponse(const ResourceResponse& response) final;
-        void didReceiveData(const uint8_t* data, int length) final;
+        void didReceiveData(const SharedBuffer* data, int length) final;
         void didFinishLoading() final;
         void didFail(const ResourceError& error) final;
     private:

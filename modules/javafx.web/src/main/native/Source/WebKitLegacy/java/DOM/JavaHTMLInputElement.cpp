@@ -417,12 +417,13 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLInputElementImpl_setValueImpl
 JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_HTMLInputElementImpl_getValueAsDateImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->valueAsDate();
+    return IMPL->valueAsDate().approximateMonotonicTime().get_time_value();
 }
 
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLInputElementImpl_setValueAsDateImpl(JNIEnv*, jclass, jlong peer, jlong value)
 {
     WebCore::JSMainThreadNullState state;
+
     IMPL->setValueAsDate(value);
 }
 

@@ -65,14 +65,15 @@ public:
     void didBeginEditing() override;
     void respondToChangedContents() override;
     void respondToChangedSelection(Frame*) override;
-    void didEndUserTriggeredSelectionChanges() final { }
+    void didEndUserTriggeredSelectionChanges() override { }
     void updateEditorStateAfterLayoutIfEditabilityChanged() override;
     void didEndEditing() override;
     void willWriteSelectionToPasteboard(const std::optional<SimpleRange>&) override;
     void didWriteSelectionToPasteboard() override;
     void getClientPasteboardData(const std::optional<SimpleRange>&, Vector<String>& pasteboardTypes, Vector<RefPtr<SharedBuffer> >& pasteboardData) override;
-    void didUpdateComposition() final { }
+    void didUpdateComposition() override { }
 
+    DOMPasteAccessResponse requestDOMPasteAccess(DOMPasteAccessCategory, const String& originIdentifier) override;
     void discardedComposition(Frame*) override;
     void canceledComposition() override;
 
@@ -98,7 +99,7 @@ public:
     void textWillBeDeletedInTextField(Element*) override;
     void textDidChangeInTextArea(Element*) override;
     void overflowScrollPositionChanged() override;
-    void subFrameScrollPositionChanged() final { }
+    void subFrameScrollPositionChanged() override;
 
 #if USE(APPKIT)
     void uppercaseWord() override;
@@ -155,7 +156,6 @@ public:
     bool performTwoStepDrop(DocumentFragment&, const SimpleRange&, bool) final { return false; }
     bool canShowFontPanel() const final { return false; }
 
-    DOMPasteAccessResponse requestDOMPasteAccess(const String&) final { return DOMPasteAccessResponse::DeniedForGesture; }
 
 protected:
     JGObject m_webPage;

@@ -159,7 +159,7 @@ IntSize ImageBufferJavaBackend::backendSize() const
 
 RefPtr<NativeImage> ImageBufferJavaBackend::copyNativeImage(BackingStoreCopy) const
 {
-    return NativeImage::create(makeRefPtr(m_image.get()));
+    return NativeImage::create((m_image.get()));
 }
 
 RefPtr<Image> ImageBufferJavaBackend::copyImage(BackingStoreCopy, PreserveResolution) const
