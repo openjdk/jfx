@@ -31,7 +31,7 @@ import javafx.scene.Node;
  * An interface for defining the visual representation of user interface controls
  * by defining a scene graph of nodes to represent the skin.
  * A user interface control is abstracted behind the {@link Skinnable} interface.
- * <p/>
+ * <p>
  * A Skin implementation should generally avoid modifying its control outside of
  * {@link #install()} method.  The recommended life cycle of a Skin implementation
  * is as follows:
