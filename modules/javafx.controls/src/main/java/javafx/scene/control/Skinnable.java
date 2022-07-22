@@ -55,12 +55,16 @@ public interface Skinnable {
      * <p>
      * To ensure a one-to-one relationship between a {@code Control} and its
      * {@code Skin}, this method must check (for any non-null value) that
-     * {@link Skin#getSkinnable()}, throwing an Error in the case of mismatch.
+     * {@link Skin#getSkinnable()}, throwing an IllegalArgumentException
+     * in the case of mismatch.
      * returns the same value as this Skinnable.
      *
      * @param value the skin value for this control
+     * 
+     * @throws IllegalArgumentException if {@link Skin#getSkinnable()} returns
+     * value other than this Skinnable.
      */
-    public void setSkin(Skin<?> value);
+    public void setSkin(Skin<?> value) throws IllegalArgumentException;
 
     /**
      * Returns the skin that renders this {@link Control}
