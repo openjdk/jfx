@@ -72,7 +72,7 @@ public interface Skin<C extends Skinnable> {
      * @return A non-null Node, except when the Skin has been disposed.
      */
     public Node getNode();
-    
+
     /**
      * Called by {@link Control#setSkin(Skin)} on a pristine control, or after the
      * previous skin has been uninstalled via its {@link #dispose()} method.
