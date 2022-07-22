@@ -262,7 +262,8 @@ public final class WCRectangle {
 
     @Override
     public int hashCode() {
-        int h = Float.floatToIntBits(x);
+        int h = WCRectangle.class.hashCode();
+        h = 31 * h + Float.floatToIntBits(x);
         h = 31 * h + Float.floatToIntBits(y);
         h = 31 * h + Float.floatToIntBits(w);
         return 31 * h + Float.floatToIntBits(h);

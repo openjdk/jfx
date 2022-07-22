@@ -453,7 +453,8 @@ final class NativeMediaAudioClipPlayer
 
     @Override
     public int hashCode() {
-        int h = sourceClip.getLocator().getURI().hashCode();
+        int h = NativeMediaAudioClipPlayer.class.hashCode();
+        h = 31 * h + sourceClip.getLocator().getURI().hashCode();
         h = 31 * h + priority;
         h = 31 * h + loopCount;
         h = 31 * h + Double.hashCode(volume);

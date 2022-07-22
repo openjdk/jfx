@@ -90,7 +90,8 @@ public final class CalculatedValue {
 
     @Override
     public int hashCode() {
-        int h = Boolean.hashCode(relative);
+        int h = CalculatedValue.class.hashCode();
+        h = 31 * h + Boolean.hashCode(relative);
         h = 31 * h + (origin == null ? 0 : origin.hashCode());
         h = 31 * h + (value == null ? 0 : value.hashCode());
         return h;
