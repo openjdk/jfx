@@ -232,4 +232,18 @@ class ControlUtils {
         }
         return -1;
     }
+
+    public static <S> boolean isTreeItemIncludingAncestorsExpanded(TreeItem<S> item) {
+        if (item == null || !item.isExpanded()) {
+            return false;
+        }
+        TreeItem<S> ancestor = item.getParent();
+        while (ancestor != null) {
+            if (!ancestor.isExpanded()) {
+                return false;
+            }
+            ancestor = ancestor.getParent();
+        }
+        return true;
+    }
 }

@@ -40,6 +40,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.NoSuchElementException;
+import java.util.stream.Collectors;
 import javafx.application.Platform;
 import javafx.beans.binding.Bindings;
 import javafx.beans.property.ObjectProperty;
@@ -1135,12 +1136,12 @@ public class ListViewTest {
                             listView.scrollTo(5);
                             Platform.runLater(() -> {
                                 Toolkit.getToolkit().firePulse();
-                                assertEquals(5, rt_35395_counter);
+                                assertTrue(rt_35395_counter < 30);
                                 rt_35395_counter = 0;
                                 listView.scrollTo(55);
                                 Platform.runLater(() -> {
                                     Toolkit.getToolkit().firePulse();
-                                    assertEquals(useFixedCellSize ? 21 : 23, rt_35395_counter);
+                                    assertEquals(useFixedCellSize ? 17 : 71, rt_35395_counter);
                                     sl.dispose();
                                 });
                             });
@@ -2183,4 +2184,243 @@ public class ListViewTest {
             }
         }
     }
+
+    @Test
+    public void testUnfixedCellScrollResize() {
+        final ObservableList<Integer> items = FXCollections.observableArrayList(300, 300, 70, 20);
+        final ListView<Integer> listView = new ListView(items);
+        listView.setPrefHeight(400);
+        double viewportLength = 398; // it would be better to calculate this from listView but there is no API for this
+        listView.setCellFactory(lv -> new ListCell<Integer>() {
+            @Override
+            public void updateItem(Integer item, boolean empty) {
+                super.updateItem(item, empty);
+                if (!empty && (item != null)) {
+                    this.setPrefHeight(item);
+                }
+            }
+        });
+        StageLoader sl = new StageLoader(listView);
+        Toolkit.getToolkit().firePulse();
+        listView.scrollTo(2);
+        Toolkit.getToolkit().firePulse();
+        int cc = VirtualFlowTestUtils.getCellCount(listView);
+        boolean got70 = false;
+        boolean got20 = false;
+        for (int i = 0; i < cc; i++) {
+            IndexedCell<Integer> cell = VirtualFlowTestUtils.getCell(listView, i);
+            if ((cell != null) && (cell.getItem() == 20)) {
+                assertEquals("Last cell doesn't end at listview end", viewportLength - 20, cell.getLayoutY(), 1.);
+                got20 = true;
+            }
+            if ((cell != null) && (cell.getItem() == 70)) {
+                assertEquals("Secondlast cell doesn't end properly", viewportLength - 20 - 70, cell.getLayoutY(), 1.);
+                got70 = true;
+            }
+        }
+        assertTrue(got20);
+        assertTrue(got70);
+        // resize cells and make sure they align after scrolling
+        ObservableList<Integer> list = FXCollections.observableArrayList();
+        list.addAll(300, 300, 20, 21);
+        listView.setItems(list);
+        listView.scrollTo(4);
+        Toolkit.getToolkit().firePulse();
+        got20 = false;
+        boolean got21 = false;
+        for (int i = 0; i < cc; i++) {
+            IndexedCell<Integer> cell = VirtualFlowTestUtils.getCell(listView, i);
+            if ((cell != null) && (cell.getItem() == 21)) {
+                assertEquals("Last cell doesn't end at listview end", viewportLength - 21, cell.getLayoutY(), 1.);
+                got21 = true;
+            }
+            if ((cell != null) && (cell.getItem() == 20)) {
+                assertEquals("Secondlast cell doesn't end properly", viewportLength - 21 - 20, cell.getLayoutY(), 1.);
+                got20 = true;
+            }
+        }
+        assertTrue(got20);
+        assertTrue(got21);
+    }
+
+    @Test
+    public void testNoEmptyEnd() {
+        final ObservableList<Integer> items = FXCollections.observableArrayList(200, 200, 200, 200, 200, 200, 200, 200, 20, 20, 20, 20, 20, 20, 20);
+        final ListView<Integer> listView = new ListView(items);
+        listView.setPrefHeight(400);
+        double viewportLength = 398;
+        listView.setCellFactory(lv -> new ListCell<Integer>() {
+            @Override
+            public void updateItem(Integer item, boolean empty) {
+                super.updateItem(item, empty);
+                if (!empty && (item != null)) {
+                    this.setPrefHeight(item);
+                }
+            }
+        });
+        StageLoader sl = new StageLoader(listView);
+        Toolkit.getToolkit().firePulse();
+        listView.scrollTo(14);
+        Toolkit.getToolkit().firePulse();
+        int cc = VirtualFlowTestUtils.getCellCount(listView);
+        assertEquals(15, cc);
+        boolean got70 = false;
+        for (int i = 0; i < cc; i++) {
+            IndexedCell<Integer> cell = VirtualFlowTestUtils.getCell(listView, i);
+            int tens = Math.min(15 - i, 7);
+            int hundreds = Math.max(8 - i, 0);
+            double exp = 398 - 20 * tens - 200 * hundreds;
+            double real = cell.getLayoutY();
+            if (cell.isVisible()) {
+                assertEquals(exp, real, 0.1);
+            }
+        }
+    }
+
+    @Test
+    public void testMoreUnfixedCellScrollResize() {
+
+        // Sanity Check - it has to work with cases, where all cells have the same sizes
+        testScrollTo(360, 3, new Integer[]{20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20});
+        testScrollTo(360, 3, new Integer[]{20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20});
+        testScrollTo(360, 1, new Integer[]{20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20});
+        testScrollTo(360, -1, new Integer[]{20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20});
+
+        // With 100 it's wrong, when addIncremental is set.
+        testScrollTo(360, 3, new Integer[]{100, 100, 100, 100, 100, 100, 100, 100, 100});
+        testScrollTo(360, -1, new Integer[]{100, 100, 100, 100, 100, 100, 100, 100, 100});
+
+        // More complicated tests
+        testScrollTo(360, 2, new Integer[]{300, 300, 70, 20});
+        testScrollTo(400, 2, new Integer[]{200, 200, 200, 200, 200, 200, 200, 200, 20, 20, 20, 20, 20, 20, 20});
+        testScrollTo(400, -1, new Integer[]{200, 200, 200, 200, 200, 200, 200, 200, 20, 20, 20, 20, 20, 20, 20});
+        testScrollTo(400, 3, new Integer[]{200, 200, 200, 200, 200, 200, 200, 200, 20, 20, 20, 20, 20, 20, 20});
+        testScrollTo(400, -1, new Integer[]{200, 200, 200, 200, 200, 200, 200, 200, 20, 20, 20, 20, 20, 20, 500, 20, 500, 20, 500});
+        testScrollTo(400, -1, new Integer[]{200, 200, 200, 200, 200, 200, 200, 200, 20, 20, 20, 20, 20, 20, 400, 20, 400, 20, 400});
+        testScrollTo(400, 2, new Integer[]{500, 500, 20, 20, 100, 100, 100, 100, 100, 100});
+        testScrollTo(400, 8, new Integer[]{500, 500, 20, 20, 100, 100, 100, 100, 100, 100, 300, 300, 300, 300});
+
+        testScrollTo(400, 2, new Integer[]{300, 300, 20, 20});
+        testScrollTo(400, 2, new Integer[]{300, 300, 20, 20, 200, 200});
+        testScrollTo(400, 2, new Integer[]{20, 20, 20, 500, 500});
+
+        testScrollTo(400, 2, new Integer[]{200, 200, 200, 200, 200, 200, 200, 200, 20, 20, 20, 20, 20, 20, 20});
+        testScrollTo(400, -1, new Integer[]{200, 200, 200, 200, 200, 200, 200, 200, 20, 20, 20, 20, 20, 20, 20});
+        testScrollTo(400, 3, new Integer[]{200, 200, 200, 200, 200, 200, 200, 200, 20, 20, 20, 20, 20, 20, 20});
+        testScrollTo(400, -1, new Integer[]{200, 200, 200, 200, 200, 200, 200, 200, 20, 20, 20, 20, 20, 20, 500, 20, 500, 20, 500});
+        testScrollTo(400, -1, new Integer[]{200, 200, 200, 200, 200, 200, 200, 200, 20, 20, 20, 20, 20, 20, 400, 20, 400, 20, 400});
+        testScrollTo(400, 2, new Integer[]{500, 500, 20, 20, 100, 100, 100, 100, 100, 100});
+        testScrollTo(400, 2, new Integer[]{500, 500, 500, 500, 500});
+
+    }
+
+    public void testScrollTo(int listViewHeight, int scrollToIndex, Integer[] heights) {
+        if (scrollToIndex == -1) {
+            scrollToIndex = heights.length - 1;
+        }
+        testScrollTo(false, false, false, listViewHeight, scrollToIndex, heights);
+        testScrollTo(true, false, false, listViewHeight, scrollToIndex, heights);
+        testScrollTo(true, true, false, listViewHeight, scrollToIndex, heights);
+        testScrollTo(true, true, true, listViewHeight, scrollToIndex, heights);
+
+    }
+
+    public void testScrollTo(boolean addIncremental, boolean layoutTwice, boolean selectIndex, int listViewHeight, int scrollToIndex, Integer[] heights) {
+        final ListView<Integer> listView = new ListView<Integer>();
+        listView.setPrefHeight(listViewHeight);
+        listView.setCellFactory(lv -> new ListCell<Integer>() {
+            @Override
+            public void updateItem(Integer item, boolean empty) {
+                super.updateItem(item, empty);
+                if (!empty && (item != null)) {
+                    this.setPrefHeight(item);
+                }
+            }
+        });
+        StageLoader sl = new StageLoader(new VBox(listView));
+        if (addIncremental) {
+            // Adding the elments incrementally seems to make a difference!
+            for (var height : heights) {
+                // Adding them incrementally seems to be relevant
+                listView.getItems().add(height);
+                Toolkit.getToolkit().firePulse();
+                listView.requestLayout();
+                Toolkit.getToolkit().firePulse();
+                listView.requestLayout();
+
+            }
+        } else {
+            listView.getItems().addAll(heights);
+            Toolkit.getToolkit().firePulse();
+
+        }
+        listView.scrollTo(scrollToIndex);
+        Toolkit.getToolkit().firePulse();
+        if (layoutTwice) {
+            listView.requestLayout();
+            Toolkit.getToolkit().firePulse();
+        }
+        if (selectIndex) {
+            listView.getSelectionModel().select(scrollToIndex);
+            Toolkit.getToolkit().firePulse();
+        }
+
+        verifyListViewScrollTo(listView, listViewHeight, scrollToIndex, heights);
+    }
+
+    public static void verifyListViewScrollTo(ListView listView, int listViewHeight, int scrollToIndex, Integer[] heights) {
+        double sumOfHeights = 0;
+        double viewportLength = listViewHeight - 2; // it would be better to calculate this from listView but there is no API for this
+
+        for (int height : heights) {
+            sumOfHeights += height;
+        }
+        double sizeBelow = 0;
+        for (int i = scrollToIndex; i < heights.length; i += 1) {
+            sizeBelow += heights[i];
+        }
+
+        IndexedCell<Integer> firstCell = VirtualFlowTestUtils.getCell(listView, 0);
+        IndexedCell<Integer> scrollToCell = VirtualFlowTestUtils.getCell(listView, scrollToIndex);
+        IndexedCell<Integer> lastCell = VirtualFlowTestUtils.getCell(listView, heights.length - 1);
+
+        double lastCellSize = heights[heights.length - 1];
+
+        boolean scrolledToTop = scrollToIndex == 0;
+        boolean scrolledToBottomElement = scrollToIndex == heights.length - 1;
+        boolean scrolledToBottom = false;
+        boolean isLastIndex = scrollToIndex == heights.length - 1;
+        boolean shouldScrollToBottom = (sizeBelow < viewportLength) || (isLastIndex && lastCellSize >= viewportLength);
+
+        if (Math.abs(lastCell.getLayoutY() - (viewportLength - lastCellSize)) <= 1.0) {
+            scrolledToBottom = true;
+        }
+
+        assertTrue("Our cell must be visible!", scrollToCell.isVisible());
+
+        if (lastCell.isVisible() && sumOfHeights >= viewportLength) {
+            // There shouldn't be any space between the last cell and the bottom
+            assertTrue("Last cell shouldn't leave space between itself and the bottom", lastCell.getLayoutY() + 1 > (viewportLength - lastCellSize));
+        }
+        if (sumOfHeights < viewportLength) {
+            // If we have less cells then space, then all cells are shown, and the position of the last cell, is the sum of the height of the previous cells.
+            assertEquals("Last cell should be at the bottom, if we scroll to it", sumOfHeights - lastCellSize, lastCell.getLayoutY(), 1.);
+        }
+        if (!shouldScrollToBottom && sumOfHeights > viewportLength) {
+            // If we don't scroll to the bottom, and the cells are bigger than the available space, then our cell should be at the top.
+            assertEquals("Our cell mut be at the top", 0, scrollToCell.getLayoutY(), 1.);
+        }
+        // Additional Tests:
+        double previousLayoutY = scrollToCell.getLayoutY();
+        if (previousLayoutY == 0) {
+            // Upper cell shouldn't move after heights are changed
+            List<Integer> alternateHeights = Arrays.stream(heights).map(x -> x + 250).collect(Collectors.toList());
+            listView.getItems().setAll(alternateHeights);
+            listView.requestLayout();
+            Toolkit.getToolkit().firePulse();
+            assertEquals("Upper cell shouldn't move after changing heights", previousLayoutY, scrollToCell.getLayoutY(), 1.);
+        }
+
+    }
+
 }

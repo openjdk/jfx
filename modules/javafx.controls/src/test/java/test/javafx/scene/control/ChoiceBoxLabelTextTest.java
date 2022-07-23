@@ -52,7 +52,7 @@ import javafx.util.StringConverter;
 
 /**
  * Contains tests around the text shown in the box's label, mainly covering
- * fix for https://bugs.openjdk.java.net/browse/JDK-8087555.
+ * fix for https://bugs.openjdk.org/browse/JDK-8087555.
  *
  * <p>
  * It is parameterized in the converter

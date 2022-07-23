@@ -146,7 +146,7 @@ public class TreeTableCellStartEditTest {
 
         if (treeTableCell instanceof CheckBoxTreeTableCell) {
             assertNotNull(treeTableCell.getGraphic());
-            // Ignored until https://bugs.openjdk.java.net/browse/JDK-8270042 is resolved.
+            // Ignored until https://bugs.openjdk.org/browse/JDK-8270042 is resolved.
             // Check if the checkbox is disabled when not editable.
             // assertEquals(expectedEditingState, !treeTableCell.getGraphic().isDisabled());
         } else if (treeTableCell instanceof ProgressBarTreeTableCell) {

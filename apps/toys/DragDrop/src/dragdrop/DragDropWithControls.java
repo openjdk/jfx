@@ -110,7 +110,7 @@ public class DragDropWithControls extends Application {
         new Thread(new Runnable() {
             @Override public void run() {
                 log("Loading image..");
-                image = new Image("http://openjdk.java.net/images/duke-thinking.png");
+                image = new Image("https://openjdk.org/images/duke-thinking.png");
                 log("Ready.");
                 log("");
             }

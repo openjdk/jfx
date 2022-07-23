@@ -123,7 +123,7 @@ class EPDInputDeviceRegistry extends InputDeviceRegistry {
      * Creates a Linux input device with the given properties.
      *
      * @implNote Works around bug
-     * <a href="https://bugs.openjdk.java.net/browse/JDK-8201568">JDK-8201568</a>,
+     * <a href="https://bugs.openjdk.org/browse/JDK-8201568">JDK-8201568</a>,
      * "zForce touchscreen input device fails when closed and immediately
      * reopened," by opening the device before creating its
      * {@code LinuxInputDevice}.

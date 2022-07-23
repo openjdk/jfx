@@ -786,6 +786,18 @@ public class TreeTableViewTest {
         });
     }
 
+    @Test public void testSetSortOrderRetainsWhenRootHasNoChildren() {
+        TreeTableView<String> ttv = new TreeTableView<>();
+        TreeItem<String> root = new TreeItem<>("root");
+        root.setExpanded(true);
+        ttv.setRoot(root);
+        assertEquals(0, ttv.getSortOrder().size());
+
+        TreeTableColumn<String, String> ttc = new TreeTableColumn<>("Column");
+        ttv.getSortOrder().add(ttc);
+        assertEquals(1, ttv.getSortOrder().size());
+    }
+
     @Test public void testNPEWhenRootItemIsNull() {
         TreeTableView<String> ttv = new TreeTableView<>();
         ControlTestUtils.runWithExceptionHandler(() -> {
@@ -4251,14 +4263,14 @@ public class TreeTableViewTest {
                     Platform.runLater(() -> {
                         Toolkit.getToolkit().firePulse();
                         assertTrue(rt_35395_counter > 0);
-                        assertTrue(rt_35395_counter < 18);
+                        assertTrue(rt_35395_counter < 39);
                         rt_35395_counter = 0;
                         treeTableView.scrollTo(55);
                         Platform.runLater(() -> {
                             Toolkit.getToolkit().firePulse();
 
                             assertTrue(rt_35395_counter > 0);
-                            assertTrue(rt_35395_counter < 30);
+                            assertTrue(rt_35395_counter < 90);
                             sl.dispose();
                         });
                     });
@@ -6831,4 +6843,143 @@ public class TreeTableViewTest {
         Thread.currentThread().setUncaughtExceptionHandler(exceptionHandler);
     }
 
+    // see JDK-8284665
+    @Test
+    public void testAnchorRemainsWhenAddingMoreItemsBelow() {
+        TreeItem<String> b;
+        TreeItem<String> root = new TreeItem<>("Root");
+        root.setExpanded(true);
+        root.getChildren().addAll(
+                new TreeItem<>("a"),
+                b = new TreeItem<>("b"),
+                new TreeItem<>("c"),
+                new TreeItem<>("d")
+        );
+
+        TreeTableView<String> stringTreeView = new TreeTableView<>(root);
+        stringTreeView.setShowRoot(false);
+
+        TreeTableColumn<String,String> column = new TreeTableColumn<>("Column");
+        column.setCellValueFactory(cdf -> new ReadOnlyStringWrapper(cdf.getValue().getValue()));
+        stringTreeView.getColumns().add(column);
+
+        TreeTableView.TreeTableViewSelectionModel<String> sm = stringTreeView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+
+        // test pre-conditions
+        assertTrue(sm.isEmpty());
+
+        // click on row 1
+        Cell startCell = VirtualFlowTestUtils.getCell(stringTreeView, 1, 0);
+        new MouseEventFirer(startCell).fireMousePressAndRelease();
+        assertTrue(sm.isSelected(1));
+        assertEquals(b, sm.getSelectedItem());
+
+        TreeTablePosition<String, ?> anchor = TreeTableCellBehavior.getAnchor(stringTreeView, null);
+        assertNotNull(anchor);
+        assertTrue(TreeTableCellBehavior.hasNonDefaultAnchor(stringTreeView));
+        assertEquals(1, anchor.getRow());
+
+        // now add a new item.
+        root.getChildren().add(new TreeItem<>("e"));
+
+        // select also row 2
+        Cell endCell = VirtualFlowTestUtils.getCell(stringTreeView, 2, 0);
+        new MouseEventFirer(endCell).fireMousePressAndRelease(KeyModifier.SHIFT);
+
+        // row 1 should remain selected
+        assertTrue(sm.isSelected(1));
+        assertTrue(sm.isSelected(2));
+
+        // anchor should remain at 1
+        anchor = TreeTableCellBehavior.getAnchor(stringTreeView, null);
+        assertNotNull(anchor);
+        assertTrue(TreeTableCellBehavior.hasNonDefaultAnchor(stringTreeView));
+        assertEquals(1, anchor.getRow());
+        assertEquals(column, anchor.getTableColumn());
+    }
+
+    // JDK-8286261
+    @Test
+    public void testAddTreeItemToCollapsedAncestorKeepsSelectedItem() {
+        TreeItem<String> rootNode = new TreeItem<>("Root");
+        rootNode.setExpanded(true);
+        TreeItem<String> level1 = new TreeItem<>("Node 0");
+        level1.setExpanded(false);
+        TreeItem<String> level2 = new TreeItem<>("Node 1");
+        level2.getChildren().add(new TreeItem<>("Node 2"));
+        level2.setExpanded(true);
+
+        rootNode.getChildren().add(level1);
+        rootNode.getChildren().add(new TreeItem<>("Node 3"));
+
+        level1.getChildren().add(level2);
+
+        TreeTableColumn<String, String> column = new TreeTableColumn<>("Nodes");
+        column.setCellValueFactory(p -> new ReadOnlyStringWrapper(p.getValue().getValue()));
+        column.setPrefWidth(200);
+
+        TreeTableView<String> table = new TreeTableView<>(rootNode);
+        table.setShowRoot(false);
+        table.getColumns().add(column);
+        table.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+
+        table.getSelectionModel().select(level1);
+        assertEquals(0, table.getSelectionModel().getSelectedIndex());
+        assertEquals("Node 0", table.getSelectionModel().getSelectedItem().getValue());
+        assertEquals(0, table.getFocusModel().getFocusedIndex());
+        assertEquals("Node 0", table.getFocusModel().getFocusedItem().getValue());
+
+        // add new node at level 3, that has a collapsed ancestor
+        level2.getChildren().add(new TreeItem<>("Node 4"));
+
+        // selection and focus remain at level1
+        assertEquals(0, table.getSelectionModel().getSelectedIndex());
+        assertEquals("Node 0", table.getSelectionModel().getSelectedItem().getValue());
+        assertEquals(0, table.getFocusModel().getFocusedIndex());
+        assertEquals("Node 0", table.getFocusModel().getFocusedItem().getValue());
+    }
+
+    // JDK-8286261
+    @Test
+    public void testRemoveTreeItemFromCollapsedAncestorKeepsSelectedItem() {
+        TreeItem<String> rootNode = new TreeItem<>("Root");
+        rootNode.setExpanded(true);
+        TreeItem<String> level1 = new TreeItem<>("Node 0");
+        level1.setExpanded(false);
+        TreeItem<String> level2 = new TreeItem<>("Node 1");
+        level2.getChildren().add(new TreeItem<>("Node 2"));
+        level2.getChildren().add(new TreeItem<>("Node 3"));
+
+        level2.setExpanded(true);
+
+        rootNode.getChildren().add(level1);
+        rootNode.getChildren().add(new TreeItem<>("Node 4"));
+
+        level1.getChildren().add(level2);
+
+        TreeTableColumn<String, String> column = new TreeTableColumn<>("Nodes");
+        column.setCellValueFactory(p -> new ReadOnlyStringWrapper(p.getValue().getValue()));
+        column.setPrefWidth(200);
+
+        TreeTableView<String> table = new TreeTableView<>(rootNode);
+        table.setShowRoot(false);
+        table.getColumns().add(column);
+        table.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+
+        table.getSelectionModel().select(level1);
+        assertEquals(0, table.getSelectionModel().getSelectedIndex());
+        assertEquals("Node 0", table.getSelectionModel().getSelectedItem().getValue());
+        assertEquals(0, table.getFocusModel().getFocusedIndex());
+        assertEquals("Node 0", table.getFocusModel().getFocusedItem().getValue());
+
+        // remove Node 2 at level 3, that has a collapsed ancestor
+        level2.getChildren().remove(0);
+
+        // selection and focus remain at level1
+        assertEquals(0, table.getSelectionModel().getSelectedIndex());
+        assertEquals("Node 0", table.getSelectionModel().getSelectedItem().getValue());
+        assertEquals(0, table.getFocusModel().getFocusedIndex());
+        assertEquals("Node 0", table.getFocusModel().getFocusedItem().getValue());
+    }
 }

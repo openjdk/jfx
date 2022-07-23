@@ -2344,7 +2344,7 @@ public class TableView<S> extends Control {
             }
 
             TablePosition<S,?> anchor = TableCellBehavior.getAnchor(tableView, null);
-            if (shift != 0 && startRow >= 0 && anchor != null && (c.wasRemoved() || c.wasAdded())) {
+            if (shift != 0 && startRow >= 0 && anchor != null && anchor.getRow() >= startRow && (c.wasRemoved() || c.wasAdded())) {
                 if (isSelected(anchor.getRow(), anchor.getTableColumn())) {
                     TablePosition<S,?> newAnchor = new TablePosition<>(tableView, anchor.getRow() + shift, anchor.getTableColumn());
                     TableCellBehavior.setAnchor(tableView, newAnchor, false);

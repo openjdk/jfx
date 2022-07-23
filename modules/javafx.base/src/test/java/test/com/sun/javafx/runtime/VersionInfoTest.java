@@ -89,7 +89,7 @@ public class VersionInfoTest {
         String version = VersionInfo.getVersion();
         // Need to update major version number when we develop the next
         // major release.
-        assertTrue(version.startsWith("19"));
+        assertTrue(version.startsWith("20"));
         String runtimeVersion = VersionInfo.getRuntimeVersion();
         assertTrue(runtimeVersion.startsWith(version));
     }
