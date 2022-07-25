@@ -266,9 +266,9 @@ static jfieldID  jPixelsScaleYField = 0;
         (*env)->CallVoidMethod(env, pixels, jPixelsAttachData, ptr_to_jlong(&image));
         if (image != NULL)
         {
-            if ((jPixelsWidthField > 0) 
-                && (jPixelsHeightField > 0) 
-                && (jPixelsScaleXField > 0) 
+            if ((jPixelsWidthField > 0)
+                && (jPixelsHeightField > 0)
+                && (jPixelsScaleXField > 0)
                 && (jPixelsScaleYField > 0)
             ) {
                 jint width = (*env)->GetIntField(env, pixels, jPixelsWidthField);
