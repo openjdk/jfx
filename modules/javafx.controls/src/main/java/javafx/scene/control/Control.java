@@ -227,6 +227,11 @@ public abstract class Control extends Region implements Skinnable {
      */
     @Override public final ObjectProperty<Skin<?>> skinProperty() { return skin; }
     @Override public final void setSkin(Skin<?> value) {
+        if(value != null) {
+            if(value.getSkinnable() != this) {
+                throw new IllegalArgumentException("There must be 1:1 relationship between Skin and Skinnable");
+            }
+        }
         skinProperty().set(value);
     }
     @Override public final Skin<?> getSkin() { return skinProperty().getValue(); }
