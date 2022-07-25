@@ -60,7 +60,7 @@ public interface Skinnable {
      * returns the same value as this Skinnable.
      *
      * @param value the skin value for this control
-     * 
+     *
      * @throws IllegalArgumentException if {@link Skin#getSkinnable()} returns
      * value other than this Skinnable.
      */
