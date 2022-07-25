@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1714,6 +1714,11 @@ public class ListViewTest {
         @Override public boolean equals(Object obj) {
             if (obj == null) return false;
             return id == ((RT22599_DataType)obj).id;
+        }
+
+        @Override
+        public int hashCode() {
+            return id;
         }
     }
 
