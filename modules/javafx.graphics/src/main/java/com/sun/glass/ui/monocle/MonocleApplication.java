@@ -188,9 +188,7 @@ public final class MonocleApplication extends Application {
     }
 
     @Override
-    public Pixels createPixels(int width, int height, ByteBuffer data,
-                               float scalex, float scaley)
-    {
+    public Pixels createPixels(int width, int height, ByteBuffer data, float scalex, float scaley) {
         return new MonoclePixels(width, height, data, scalex, scaley);
     }
 
@@ -200,9 +198,7 @@ public final class MonocleApplication extends Application {
     }
 
     @Override
-    public Pixels createPixels(int width, int height, IntBuffer data,
-                               float scalex, float scaley)
-    {
+    public Pixels createPixels(int width, int height, IntBuffer data, float scalex, float scaley) {
         return new MonoclePixels(width, height, data, scalex, scaley);
     }
 

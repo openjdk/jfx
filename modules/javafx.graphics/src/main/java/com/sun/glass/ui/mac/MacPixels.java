@@ -49,14 +49,14 @@ final class MacPixels extends Pixels {
         return nativeFormat;
     }
 
-    protected MacPixels(int width, int height, ByteBuffer data, float scalex, float scaley) {
-        super(width, height, data, scalex, scaley);
-    }
-
     protected MacPixels(int width, int height, ByteBuffer data) {
         super(width, height, data);
     }
 
+    protected MacPixels(int width, int height, ByteBuffer data, float scalex, float scaley) {
+        super(width, height, data, scalex, scaley);
+    }
+    
     protected MacPixels(int width, int height, IntBuffer data) {
         super(width, height, data);
     }

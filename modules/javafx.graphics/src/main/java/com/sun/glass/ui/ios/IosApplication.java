@@ -124,8 +124,7 @@ public final class IosApplication extends Application {
     public Pixels createPixels(int width, int height, ByteBuffer data, float scalex, float scaley) {
         return new IosPixels(width, height, data, scalex, scaley);
     }
-
-
+    
     /**
      * @inheritDoc
      */
