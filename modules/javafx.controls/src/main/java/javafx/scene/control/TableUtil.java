@@ -223,7 +223,7 @@ class TableUtil {
             colWidth += col.getWidth();
         }
 
-        if (Math.abs(colWidth - tableWidth) > 1) {
+        if (Math.abs(colWidth - tableWidth) > 0) {
             isShrinking = colWidth > tableWidth;
             target = tableWidth;
 

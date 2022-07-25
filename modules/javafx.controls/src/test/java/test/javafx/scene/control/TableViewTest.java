@@ -5795,4 +5795,52 @@ public class TableViewTest {
         assertEquals(1, anchor.getRow());
         assertEquals(column, anchor.getTableColumn());
     }
+
+    // see JDK-8089009
+    @Test public void testHScrollBarVisibilityForConstrainedTable() {
+        TableColumn firstNameCol = new TableColumn("First Name");
+        firstNameCol.setCellValueFactory(new PropertyValueFactory<Person, String>("firstName"));
+
+        TableColumn lastNameCol = new TableColumn("Last Name");
+        lastNameCol.setCellValueFactory(new PropertyValueFactory<Person, String>("lastName"));
+
+        TableColumn emailCol = new TableColumn("Email");
+        emailCol.setCellValueFactory(new PropertyValueFactory<Person, String>("email"));
+
+        final double initialWidth = 500;
+        TableView<Person> table = new TableView<>(personTestData);
+        table.setMinWidth(initialWidth);
+        table.getColumns().addAll(firstNameCol, lastNameCol, emailCol);
+        table.setItems(personTestData);
+        table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+
+        StageLoader sl = new StageLoader(table);
+        Toolkit.getToolkit().firePulse();
+
+        ScrollBar horizontalBar = VirtualFlowTestUtils.getVirtualFlowHorizontalScrollbar(table);
+        assertNotNull(horizontalBar);
+        assertEquals(false, horizontalBar.isVisible());
+        assertTrue(table.getWidth() == initialWidth);
+
+        // Reduce table width by 10px
+        table.setMinWidth(initialWidth-10);
+        Toolkit.getToolkit().firePulse();
+        assertTrue(table.getWidth() == initialWidth-10);
+        assertEquals(false, horizontalBar.isVisible());
+
+        // Reset table width
+        table.setMinWidth(initialWidth);
+        Toolkit.getToolkit().firePulse();
+        assertTrue(table.getWidth() == initialWidth);
+        assertEquals(false, horizontalBar.isVisible());
+
+        // Reduce table width by 1px
+        table.setMinWidth(initialWidth-1);
+        Toolkit.getToolkit().firePulse();
+        assertTrue(table.getWidth() == initialWidth-1);
+        assertEquals(false, horizontalBar.isVisible());
+
+        sl.dispose();
+    }
+
 }
