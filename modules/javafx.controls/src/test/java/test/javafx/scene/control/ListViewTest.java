@@ -1715,6 +1715,11 @@ public class ListViewTest {
             if (obj == null) return false;
             return id == ((RT22599_DataType)obj).id;
         }
+
+        @Override
+        public int hashCode() {
+            return id;
+        }
     }
 
     private int rt_39966_count = 0;
