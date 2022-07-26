@@ -316,6 +316,7 @@ public class SubScene extends Node {
                     if (oldRoot != null) {
                         StyleManager.getInstance().forget(SubScene.this);
                         oldRoot.setScenes(null, null);
+                        oldRoot.getStyleClass().remove("root");
                     }
                     oldRoot = _value;
                     _value.getStyleClass().add(0, "root");
