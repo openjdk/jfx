@@ -394,11 +394,6 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacMenuDelegate__1initIDs
     if (!jMenuClass) {
         return;
     }
-    jclass pixelsClass = [GlassHelper ClassForName:"com.sun.glass.ui.mac.MacPixels" withEnv: env];
-    if (!pixelsClass) {
-        return;
-    }
-
     jMenuActionMethod  = (*env)->GetMethodID(env, jCallbackClass,   "action",  "()V");
     if ((*env)->ExceptionCheck(env)) return;
     jMenuValidateMethod = (*env)->GetMethodID(env, jCallbackClass,   "validate",  "()V");
@@ -409,6 +404,11 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacMenuDelegate__1initIDs
     if ((*env)->ExceptionCheck(env)) return;
     jDelegateMenuField = (*env)->GetFieldID(env,  jMenuDelegateClass, "menu", "Lcom/sun/glass/ui/Menu;");
     if ((*env)->ExceptionCheck(env)) return;
+
+    jclass pixelsClass = [GlassHelper ClassForName:"com.sun.glass.ui.mac.MacPixels" withEnv: env];
+    if (!pixelsClass) {
+        return;
+    }
     jPixelsWidthField = (*env)->GetFieldID(env, pixelsClass, "width", "I");
     if ((*env)->ExceptionCheck(env)) return;
     jPixelsHeightField = (*env)->GetFieldID(env, pixelsClass, "height", "I");
@@ -416,7 +416,6 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacMenuDelegate__1initIDs
     jPixelsScaleXField = (*env)->GetFieldID(env, pixelsClass, "scalex", "F");
     if ((*env)->ExceptionCheck(env)) return;
     jPixelsScaleYField = (*env)->GetFieldID(env, pixelsClass, "scaley", "F");
-    if ((*env)->ExceptionCheck(env)) return;
 }
 
 /*
