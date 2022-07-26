@@ -1272,7 +1272,7 @@ final public class StyleManager {
 
                     StylesheetContainer container = platformUserAgentStylesheetContainers.get(n);
                     isSame = fname.equals(container.fname);
-                    if(isSame) {
+                    if (isSame) {
                         // don't use fname in calculateCheckSum since it is just the key to
                         // find the StylesheetContainer. Rather, use the URL of the
                         // stylesheet that was already loaded. For example, we could have
