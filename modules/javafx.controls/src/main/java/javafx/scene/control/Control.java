@@ -227,11 +227,6 @@ public abstract class Control extends Region implements Skinnable {
      */
     @Override public final ObjectProperty<Skin<?>> skinProperty() { return skin; }
     @Override public final void setSkin(Skin<?> value) {
-        if(value != null) {
-            if(value.getSkinnable() != this) {
-                throw new IllegalArgumentException("There must be 1:1 relationship between Skin and Skinnable");
-            }
-        }
         skinProperty().set(value);
     }
     @Override public final Skin<?> getSkin() { return skinProperty().getValue(); }
@@ -244,6 +239,13 @@ public abstract class Control extends Region implements Skinnable {
 
         @Override protected void invalidated() {
             Skin<?> skin = get();
+            // check whether the skin is for right control
+            if (skin != null) {
+                if(skin.getSkinnable() != Control.this) {
+                    throw new IllegalArgumentException("There must be 1:1 relationship between Skin and Skinnable");
+                }
+            }
+
             // Collect the name of the currently installed skin class. We do this
             // so that subsequent updates from CSS to the same skin class will not
             // result in reinstalling the skin
@@ -291,6 +293,11 @@ public abstract class Control extends Region implements Skinnable {
                 } else {
                     getChildren().clear();
                 }
+            }
+
+            // let the new skin modify this control
+            if (skin != null) {
+                skin.install();
             }
 
             // clear out the styleable properties so that the list is rebuilt

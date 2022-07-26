@@ -54,7 +54,7 @@ public interface Skinnable {
      * Sets the skin that will render this {@link Control}.
      * <p>
      * To ensure a one-to-one relationship between a {@code Control} and its
-     * {@code Skin}, this method must check (for any non-null value) that
+     * {@code Skin}, this method might check (for any non-null value) that
      * {@link Skin#getSkinnable()}, throwing an IllegalArgumentException
      * in the case of mismatch.
      * returns the same value as this Skinnable.

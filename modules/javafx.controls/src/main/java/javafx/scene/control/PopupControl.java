@@ -200,11 +200,6 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
     }
 
     @Override public final void setSkin(Skin<?> value) {
-        if(value != null) {
-            if(value.getSkinnable() != this) {
-                throw new IllegalArgumentException("There must be 1:1 relationship between Skin and Skinnable");
-            }
-        }
         skinProperty().setValue(value);
     }
 
@@ -266,6 +261,11 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
                 bridge.getChildren().setAll(n);
             } else {
                 bridge.getChildren().clear();
+            }
+
+            // let the new skin modify this control
+            if(skin != null) {
+                skin.install();
             }
 
             // calling NodeHelper.reapplyCSS() as the styleable properties may now
