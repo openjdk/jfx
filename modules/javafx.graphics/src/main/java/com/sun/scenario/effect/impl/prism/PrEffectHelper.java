@@ -165,7 +165,9 @@ public class PrEffectHelper {
         do {
             ImageData res = effect.filter(fctx, transform, rclip, prinfo, defaultInput);
             if (res == null) return;
-            if ((valid = res.validate(fctx)) == true) {
+
+            valid = res.validate(fctx);
+            if (valid) {
                 Rectangle r = res.getUntransformedBounds();
                 // the actual image may be much larger than the region
                 // of interest ("r"), so to improve performance we render
