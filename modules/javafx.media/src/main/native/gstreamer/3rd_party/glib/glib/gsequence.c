@@ -120,6 +120,7 @@ struct _GSequence
 struct _GSequenceNode
 {
   gint                  n_nodes;
+  guint32               priority;
   GSequenceNode *       parent;
   GSequenceNode *       left;
   GSequenceNode *       right;
@@ -607,7 +608,7 @@ g_sequence_move_range (GSequenceIter *dest,
                        GSequenceIter *begin,
                        GSequenceIter *end)
 {
-  GSequence *src_seq, *end_seq, *dest_seq;
+  GSequence *src_seq, *end_seq, *dest_seq = NULL;
   GSequenceNode *first;
 
   g_return_if_fail (begin != NULL);
@@ -1255,9 +1256,9 @@ g_sequence_set (GSequenceIter *iter,
  * g_sequence_get_length:
  * @seq: a #GSequence
  *
- * Returns the length of @seq. Note that this method is O(h) where `h' is the
- * height of the tree. It is thus more efficient to use g_sequence_is_empty()
- * when comparing the length to zero.
+ * Returns the positive length (>= 0) of @seq. Note that this method is
+ * O(h) where `h' is the height of the tree. It is thus more efficient
+ * to use g_sequence_is_empty() when comparing the length to zero.
  *
  * Returns: the length of @seq
  *
@@ -1572,11 +1573,9 @@ g_sequence_swap (GSequenceIter *a,
  *
  *
  */
-static guint
-get_priority (GSequenceNode *node)
+static guint32
+hash_uint32 (guint32 key)
 {
-  guint key = GPOINTER_TO_UINT (node);
-
   /* This hash function is based on one found on Thomas Wang's
    * web page at
    *
@@ -1589,6 +1588,20 @@ get_priority (GSequenceNode *node)
   key = key ^ (key >> 4);
   key = key + (key << 3) + (key << 11);
   key = key ^ (key >> 16);
+
+  return key;
+}
+
+static inline guint
+get_priority (GSequenceNode *node)
+{
+  return node->priority;
+}
+
+static guint
+make_priority (guint32 key)
+{
+  key = hash_uint32 (key);
 
   /* We rely on 0 being less than all other priorities */
   return key? key : 1;
@@ -1608,7 +1621,40 @@ node_new (gpointer data)
 {
   GSequenceNode *node = g_slice_new0 (GSequenceNode);
 
+  /*
+   * Make a random number quickly. Some binary magic is used to avoid
+   * the costs of proper RNG, such as locking around global GRand.
+   *
+   * Using just the node pointer alone is not enough, because in this
+   * case freeing and re-allocating sequence causes node's priorities
+   * to no longer be random. This happens for two reasons:
+   * 1) Nodes are freed from the root and the treap's property is that
+   *    node's priority is >= than its children's priorities.
+   * 2) g_slice_new0() will reuse freed nodes in the order similar to
+   *    the order of freeing.
+   * As a result, there are severe problems where building the treap is
+   * much slower (100x and more after a few sequence new/free
+   * iterations) and treap becomes more like a list (tree height
+   * approaches tree's number of elements), which increases costs of
+   * using the built treap.
+   *
+   * Note that for performance reasons, counter completely ignores
+   * multi-threading issues. This is fine because it's merely a source
+   * of additional randomness. Even if it fails to ++ sometimes, this
+   * won't really matter for its goal.
+   *
+   * Note that 64-bit counter is used to avoid undefined behavior on
+   * overflow.
+   *
+   * See https://gitlab.gnome.org/GNOME/glib/-/issues/2468
+   */
+  static guint64 counter = 0;
+  guint32 hash_key = (guint32) GPOINTER_TO_UINT (node);
+  hash_key ^= (guint32) counter;
+  counter++;
+
   node->n_nodes = 1;
+  node->priority = make_priority (hash_key);
   node->data = data;
   node->left = NULL;
   node->right = NULL;

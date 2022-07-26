@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -124,8 +124,9 @@ void DragClientJava::startDrag(DragItem item, DataTransfer& dataTransfer, Frame&
 
     // Attention! [jimage] can be the instance of WCImage or WCImageFrame class.
     // The nature of raster is too different to make a conversion inside the native code.
-    jobject jimage = dragImage.get() && dragImage.get()->javaImage()
-                  ? jobject(*(dragImage.get()->javaImage())) : nullptr;
+    jobject jimage = (dragImage.get() && dragImage.get()->javaImage()
+        && dragImage.get()->javaImage()->platformImage()->getImage()) ?
+        jobject(*(dragImage.get()->javaImage()->platformImage()->getImage())) : nullptr;
 
     bool isImageSource = dragSourceAction && (*dragSourceAction == DragSourceAction::Image);
 

@@ -33,7 +33,7 @@
 #include "Document.h"
 #include "JSDOMPromiseDeferred.h"
 #include "Page.h"
-#include "RuntimeEnabledFeatures.h"
+#include "Settings.h"
 #include <wtf/text/Base64.h>
 
 namespace WebCore {
@@ -54,17 +54,13 @@ AuthenticationExtensionsClientOutputs PublicKeyCredential::getClientExtensionRes
 }
 
 PublicKeyCredential::PublicKeyCredential(Ref<AuthenticatorResponse>&& response)
-    : BasicCredential(WTF::base64URLEncode(response->rawId()->data(), response->rawId()->byteLength()), Type::PublicKey, Discovery::Remote)
+    : BasicCredential(base64URLEncodeToString(response->rawId()->data(), response->rawId()->byteLength()), Type::PublicKey, Discovery::Remote)
     , m_response(WTFMove(response))
 {
 }
 
 void PublicKeyCredential::isUserVerifyingPlatformAuthenticatorAvailable(Document& document, DOMPromiseDeferred<IDLBoolean>&& promise)
 {
-    if (!RuntimeEnabledFeatures::sharedFeatures().webAuthenticationLocalAuthenticatorEnabled()) {
-        promise.resolve(false);
-        return;
-    }
     document.page()->authenticatorCoordinator().isUserVerifyingPlatformAuthenticatorAvailable(WTFMove(promise));
 }
 

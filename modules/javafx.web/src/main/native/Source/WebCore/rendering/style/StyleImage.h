@@ -2,7 +2,7 @@
  * Copyright (C) 2000 Lars Knoll (knoll@kde.org)
  *           (C) 2000 Antti Koivisto (koivisto@kde.org)
  *           (C) 2000 Dirk Mueller (mueller@kde.org)
- * Copyright (C) 2003, 2005, 2006, 2007, 2008 Apple Inc. All rights reserved.
+ * Copyright (C) 2003-2021 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -60,12 +60,14 @@ public:
     virtual bool imageHasRelativeHeight() const = 0;
     virtual bool usesImageContainerSize() const = 0;
     virtual void setContainerContextForRenderer(const RenderElement&, const FloatSize&, float) = 0;
-    virtual void addClient(RenderElement*) = 0;
-    virtual void removeClient(RenderElement*) = 0;
+    virtual void addClient(RenderElement&) = 0;
+    virtual void removeClient(RenderElement&) = 0;
+    virtual bool hasClient(RenderElement&) const = 0;
+    virtual bool hasImage() const { return false; }
     virtual RefPtr<Image> image(RenderElement*, const FloatSize&) const = 0;
     virtual WrappedImagePtr data() const = 0;
     virtual float imageScaleFactor() const { return 1; }
-    virtual bool knownToBeOpaque(const RenderElement*) const = 0;
+    virtual bool knownToBeOpaque(const RenderElement&) const = 0;
     virtual CachedImage* cachedImage() const { return 0; }
     virtual StyleImage* selectedImage() { return this; }
     virtual const StyleImage* selectedImage() const { return this; }
@@ -76,6 +78,8 @@ public:
     ALWAYS_INLINE bool isImageSet() const { return m_isImageSet; }
 
     bool hasCachedImage() const { return m_isCachedImage || selectedImage()->isCachedImage(); }
+
+    virtual bool usesDataProtocol() const { return false; }
 
 protected:
     StyleImage()

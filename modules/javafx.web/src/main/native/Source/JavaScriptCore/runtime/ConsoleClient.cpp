@@ -48,15 +48,11 @@ static void appendURLAndPosition(StringBuilder& builder, const String& url, unsi
 
     builder.append(url);
 
-    if (lineNumber > 0) {
-        builder.append(':');
-        builder.appendNumber(lineNumber);
-    }
+    if (lineNumber > 0)
+        builder.append(':', lineNumber);
 
-    if (columnNumber > 0) {
-        builder.append(':');
-        builder.appendNumber(columnNumber);
-    }
+    if (columnNumber > 0)
+        builder.append(':', columnNumber);
 }
 
 static void appendMessagePrefix(StringBuilder& builder, MessageSource source, MessageType type, MessageLevel level)
@@ -105,8 +101,11 @@ static void appendMessagePrefix(StringBuilder& builder, MessageSource source, Me
     case MessageSource::ITPDebug:
         sourceString = "ITPDEBUG"_s;
         break;
-    case MessageSource::AdClickAttribution:
-        sourceString = "ADCLICKATTRIBUTION"_s;
+    case MessageSource::PrivateClickMeasurement:
+        sourceString = "PRIVATECLICKMEASUREMENT"_s;
+        break;
+    case MessageSource::PaymentRequest:
+        sourceString = "PAYMENTREQUEST"_s;
         break;
     case MessageSource::Other:
         sourceString = "OTHER"_s;
@@ -195,12 +194,11 @@ void ConsoleClient::printConsoleMessage(MessageSource source, MessageType type, 
 
     if (!url.isEmpty()) {
         appendURLAndPosition(builder, url, lineNumber, columnNumber);
-        builder.appendLiteral(": ");
+        builder.append(": ");
     }
 
     appendMessagePrefix(builder, source, type, level);
-    builder.append(' ');
-    builder.append(message);
+    builder.append(' ', message);
 
     WTFLogAlways("%s", builder.toString().utf8().data());
 }
@@ -216,7 +214,7 @@ void ConsoleClient::printConsoleMessageWithArguments(MessageSource source, Messa
 
     if (!lastCaller.sourceURL().isEmpty()) {
         appendURLAndPosition(builder, lastCaller.sourceURL(), lastCaller.lineNumber(), lastCaller.columnNumber());
-        builder.appendLiteral(": ");
+        builder.append(": ");
     }
 
     appendMessagePrefix(builder, source, type, level);
@@ -233,15 +231,12 @@ void ConsoleClient::printConsoleMessageWithArguments(MessageSource source, Messa
     if (isTraceMessage) {
         for (size_t i = 0; i < callStack->size(); ++i) {
             const ScriptCallFrame& callFrame = callStack->at(i);
-            String functionName = String(callFrame.functionName());
+            String functionName = callFrame.functionName();
             if (functionName.isEmpty())
                 functionName = "(unknown)"_s;
 
             StringBuilder callFrameBuilder;
-            callFrameBuilder.appendNumber(i);
-            callFrameBuilder.appendLiteral(": ");
-            callFrameBuilder.append(functionName);
-            callFrameBuilder.append('(');
+            callFrameBuilder.append(i, ": ", functionName, '(');
             appendURLAndPosition(callFrameBuilder, callFrame.sourceURL(), callFrame.lineNumber(), callFrame.columnNumber());
             callFrameBuilder.append(')');
 

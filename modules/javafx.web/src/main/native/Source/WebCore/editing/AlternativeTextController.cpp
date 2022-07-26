@@ -103,7 +103,7 @@ void AlternativeTextController::startAlternativeTextUITimer(AlternativeTextType 
 
     // If type is PanelTypeReversion, then the new range has been set. So we shouldn't clear it.
     if (type == AlternativeTextTypeCorrection)
-        m_rangeWithAlternative = WTF::nullopt;
+        m_rangeWithAlternative = std::nullopt;
     m_type = type;
     m_timer.startOneShot(correctionPanelTimerInterval);
 }
@@ -111,7 +111,7 @@ void AlternativeTextController::startAlternativeTextUITimer(AlternativeTextType 
 void AlternativeTextController::stopAlternativeTextUITimer()
 {
     m_timer.stop();
-    m_rangeWithAlternative = WTF::nullopt;
+    m_rangeWithAlternative = std::nullopt;
 }
 
 void AlternativeTextController::stopPendingCorrection(const VisibleSelection& oldSelection)
@@ -141,12 +141,12 @@ void AlternativeTextController::applyPendingCorrection(const VisibleSelection& s
     if (doApplyCorrection)
         handleAlternativeTextUIResult(dismissSoon(ReasonForDismissingAlternativeTextAccepted));
     else
-        m_rangeWithAlternative = WTF::nullopt;
+        m_rangeWithAlternative = std::nullopt;
 }
 
 bool AlternativeTextController::hasPendingCorrection() const
 {
-    return m_rangeWithAlternative.hasValue();
+    return m_rangeWithAlternative.has_value();
 }
 
 bool AlternativeTextController::isSpellingMarkerAllowed(const SimpleRange& misspellingRange) const
@@ -206,13 +206,13 @@ bool AlternativeTextController::applyAutocorrectionBeforeTypingIfAppropriate()
 
     Position caretPosition = m_document.selection().selection().start();
 
-    if (createLegacyEditingPosition(m_rangeWithAlternative->end) == caretPosition) {
+    if (makeDeprecatedLegacyPosition(m_rangeWithAlternative->end) == caretPosition) {
         handleAlternativeTextUIResult(dismissSoon(ReasonForDismissingAlternativeTextAccepted));
         return true;
     }
 
     // Pending correction should always be where caret is. But in case this is not always true, we still want to dismiss the panel without accepting the correction.
-    ASSERT(createLegacyEditingPosition(m_rangeWithAlternative->end) == caretPosition);
+    ASSERT(makeDeprecatedLegacyPosition(m_rangeWithAlternative->end) == caretPosition);
     dismiss(ReasonForDismissingAlternativeTextIgnored);
     return false;
 }
@@ -244,7 +244,7 @@ void AlternativeTextController::timerFired()
         VisiblePosition p = startOfWord(start, LeftWordIfOnBoundary);
         VisibleSelection adjacentWords = VisibleSelection(p, start);
         auto adjacentWordRange = adjacentWords.toNormalizedRange();
-        m_document.editor().markAllMisspellingsAndBadGrammarInRanges({ TextCheckingType::Spelling, TextCheckingType::Replacement, TextCheckingType::ShowCorrectionPanel }, adjacentWordRange, adjacentWordRange, WTF::nullopt);
+        m_document.editor().markAllMisspellingsAndBadGrammarInRanges({ TextCheckingType::Spelling, TextCheckingType::Replacement, TextCheckingType::ShowCorrectionPanel }, adjacentWordRange, adjacentWordRange, std::nullopt);
     }
         break;
     case AlternativeTextTypeReversion: {
@@ -269,7 +269,7 @@ void AlternativeTextController::timerFired()
         Vector<String> suggestions;
         textChecker()->getGuessesForWord(m_originalText, paragraphText, m_document.selection().selection(), suggestions);
         if (suggestions.isEmpty()) {
-            m_rangeWithAlternative = WTF::nullopt;
+            m_rangeWithAlternative = std::nullopt;
             break;
         }
         String topSuggestion = suggestions.first();
@@ -332,14 +332,11 @@ void AlternativeTextController::handleAlternativeTextUIResult(const String& resu
         break;
     }
 
-    m_rangeWithAlternative = WTF::nullopt;
+    m_rangeWithAlternative = std::nullopt;
 }
 
-bool AlternativeTextController::isAutomaticSpellingCorrectionEnabled()
+bool AlternativeTextController::canEnableAutomaticSpellingCorrection() const
 {
-    if (!editorClient() || !editorClient()->isAutomaticSpellingCorrectionEnabled())
-        return false;
-
 #if ENABLE(AUTOCORRECT)
     auto position = m_document.selection().selection().start();
     if (auto editableRoot = position.rootEditableElement()) {
@@ -354,6 +351,14 @@ bool AlternativeTextController::isAutomaticSpellingCorrectionEnabled()
 #endif
 
     return true;
+}
+
+bool AlternativeTextController::isAutomaticSpellingCorrectionEnabled()
+{
+    if (!editorClient() || !editorClient()->isAutomaticSpellingCorrectionEnabled())
+        return false;
+
+    return canEnableAutomaticSpellingCorrection();
 }
 
 FloatRect AlternativeTextController::rootViewRectForRange(const SimpleRange& range) const
@@ -517,7 +522,7 @@ bool AlternativeTextController::processMarkersOnTextToBeReplacedByResult(const T
     if (markers.hasMarkers(rangeWithAlternative, DocumentMarker::AcceptedCandidate))
         return false;
 
-    auto precedingCharacterRange = makeSimpleRange(createLegacyEditingPosition(rangeWithAlternative.start).previous(), rangeWithAlternative.start);
+    auto precedingCharacterRange = makeSimpleRange(makeDeprecatedLegacyPosition(rangeWithAlternative.start).previous(), rangeWithAlternative.start);
     if (!precedingCharacterRange)
         return false;
 
@@ -599,7 +604,7 @@ void AlternativeTextController::applyAlternativeTextToRange(const SimpleRange& r
     // of the containing paragraph.
 
     // Take note of the location of autocorrection so that we can add marker after the replacement took place.
-    auto paragraphStart = makeBoundaryPoint(startOfParagraph(createLegacyEditingPosition(range.start)));
+    auto paragraphStart = makeBoundaryPoint(startOfParagraph(makeDeprecatedLegacyPosition(range.start)));
     if (!paragraphStart)
         return;
     auto treeScopeRoot = makeRef(range.start.container->treeScope().rootNode());

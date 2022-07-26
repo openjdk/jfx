@@ -36,27 +36,26 @@ const ClassInfo WeakObjectRefConstructor::s_info = { "Function", &Base::s_info, 
 
 void WeakObjectRefConstructor::finishCreation(VM& vm, WeakObjectRefPrototype* prototype)
 {
-    Base::finishCreation(vm, "WeakRef"_s, NameAdditionMode::WithoutStructureTransition);
+    Base::finishCreation(vm, 1, "WeakRef"_s, PropertyAdditionMode::WithoutStructureTransition);
     putDirectWithoutTransition(vm, vm.propertyNames->prototype, prototype, PropertyAttribute::DontEnum | PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly);
-    putDirectWithoutTransition(vm, vm.propertyNames->length, jsNumber(1), PropertyAttribute::DontEnum | PropertyAttribute::ReadOnly);
 }
 
-static EncodedJSValue JSC_HOST_CALL callWeakRef(JSGlobalObject*, CallFrame*);
-static EncodedJSValue JSC_HOST_CALL constructWeakRef(JSGlobalObject*, CallFrame*);
+static JSC_DECLARE_HOST_FUNCTION(callWeakRef);
+static JSC_DECLARE_HOST_FUNCTION(constructWeakRef);
 
 WeakObjectRefConstructor::WeakObjectRefConstructor(VM& vm, Structure* structure)
     : Base(vm, structure, callWeakRef, constructWeakRef)
 {
 }
 
-static EncodedJSValue JSC_HOST_CALL callWeakRef(JSGlobalObject* globalObject, CallFrame*)
+JSC_DEFINE_HOST_FUNCTION(callWeakRef, (JSGlobalObject* globalObject, CallFrame*))
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
     return JSValue::encode(throwConstructorCannotBeCalledAsFunctionTypeError(globalObject, scope, "WeakRef"));
 }
 
-static EncodedJSValue JSC_HOST_CALL constructWeakRef(JSGlobalObject* globalObject, CallFrame* callFrame)
+JSC_DEFINE_HOST_FUNCTION(constructWeakRef, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
@@ -65,9 +64,7 @@ static EncodedJSValue JSC_HOST_CALL constructWeakRef(JSGlobalObject* globalObjec
         return throwVMTypeError(globalObject, scope, "First argument to WeakRef should be an object"_s);
 
     JSObject* newTarget = asObject(callFrame->newTarget());
-    Structure* weakObjectRefStructure = newTarget == callFrame->jsCallee()
-        ? globalObject->weakObjectRefStructure()
-        : InternalFunction::createSubclassStructure(globalObject, newTarget, getFunctionRealm(vm, newTarget)->weakObjectRefStructure());
+    Structure* weakObjectRefStructure = JSC_GET_DERIVED_STRUCTURE(vm, weakObjectRefStructure, newTarget, callFrame->jsCallee());
     RETURN_IF_EXCEPTION(scope, { });
 
     RELEASE_AND_RETURN(scope, JSValue::encode(JSWeakObjectRef::create(vm, weakObjectRefStructure, callFrame->uncheckedArgument(0).getObject())));

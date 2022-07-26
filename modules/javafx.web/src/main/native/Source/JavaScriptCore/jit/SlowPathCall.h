@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,8 +25,9 @@
 
 #pragma once
 
-#include "CommonSlowPaths.h"
+#include "JIT.h"
 #include "MacroAssemblerCodeRef.h"
+#include "SlowPathFunction.h"
 
 #if ENABLE(JIT)
 
@@ -42,12 +43,14 @@ public:
         assertIsCFunctionPtr(slowPathFunction);
     }
 
+#if ENABLE(EXTRA_CTI_THUNKS)
+    void call();
+    static MacroAssemblerCodeRef<JITThunkPtrTag> generateThunk(VM&, SlowPathFunction);
+
+#else // not ENABLE(EXTRA_CTI_THUNKS)
+
     JIT::Call call()
     {
-#if ENABLE(OPCODE_SAMPLING)
-        if (m_jit->m_bytecodeOffset != std::numeric_limits<unsigned>::max())
-            m_jit->sampleInstruction(&m_jit->m_codeBlock->instructions()[m_jit->m_bytecodeOffset], true);
-#endif
         m_jit->updateTopCallFrame();
 #if CPU(X86_64) && OS(WINDOWS)
         m_jit->addPtr(MacroAssembler::TrustedImm32(-16), MacroAssembler::stackPointerRegister);
@@ -58,8 +61,7 @@ public:
         m_jit->move(JIT::callFrameRegister, JIT::argumentGPR0);
         m_jit->move(JIT::TrustedImmPtr(m_pc), JIT::argumentGPR1);
 #endif
-        JIT::Call call = m_jit->call(OperationPtrTag);
-        m_jit->m_calls.append(CallRecord(call, m_jit->m_bytecodeIndex, FunctionPtr<OperationPtrTag>(m_slowPathFunction)));
+        JIT::Call call = m_jit->appendCall(m_slowPathFunction);
 
 #if CPU(X86_64) && OS(WINDOWS)
         m_jit->pop(JIT::regT0); // vPC
@@ -68,14 +70,10 @@ public:
         static_assert(JIT::regT1 == GPRInfo::returnValueGPR2);
 #endif
 
-#if ENABLE(OPCODE_SAMPLING)
-        if (m_jit->m_bytecodeOffset != std::numeric_limits<unsigned>::max())
-            m_jit->sampleInstruction(&m_jit->m_codeBlock->instructions()[m_jit->m_bytecodeOffset], false);
-#endif
-
         m_jit->exceptionCheck();
         return call;
     }
+#endif // ENABLE(EXTRA_CTI_THUNKS)
 
 private:
     JIT* m_jit;

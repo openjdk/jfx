@@ -26,22 +26,75 @@
 #include "config.h"
 #include "PlatformWheelEvent.h"
 
+#include "Scrollbar.h"
 #include <wtf/text/TextStream.h>
 
+#if ENABLE(MAC_GESTURE_EVENTS)
+#include "PlatformGestureEventMac.h"
+#endif
+
 namespace WebCore {
+
+#if ENABLE(MAC_GESTURE_EVENTS)
+
+PlatformWheelEvent PlatformWheelEvent::createFromGesture(const PlatformGestureEvent& platformGestureEvent, double deltaY)
+{
+    // This tries to match as much of the behavior of `WebKit::WebEventFactory::createWebWheelEvent` as
+    // possible assuming `-[NSEvent hasPreciseScrollingDeltas]` and no `-[NSEvent _scrollCount]`.
+
+    double deltaX = 0;
+    double wheelTicksX = 0;
+    double wheelTicksY = deltaY / static_cast<float>(Scrollbar::pixelsPerLineStep());
+    bool shiftKey = platformGestureEvent.modifiers().contains(PlatformEvent::Modifier::ShiftKey);
+    bool ctrlKey = true;
+    bool altKey = platformGestureEvent.modifiers().contains(PlatformEvent::Modifier::AltKey);
+    bool metaKey = platformGestureEvent.modifiers().contains(PlatformEvent::Modifier::MetaKey);
+    PlatformWheelEvent platformWheelEvent(platformGestureEvent.pos(), platformGestureEvent.globalPosition(), deltaX, deltaY, wheelTicksX, wheelTicksY, ScrollByPixelWheelEvent, shiftKey, ctrlKey, altKey, metaKey);
+
+    // PlatformEvent
+    platformWheelEvent.m_timestamp = platformGestureEvent.timestamp();
+
+    // PlatformWheelEvent
+    platformWheelEvent.m_hasPreciseScrollingDeltas = true;
+
+#if ENABLE(KINETIC_SCROLLING)
+    switch (platformGestureEvent.type()) {
+    case PlatformEvent::GestureStart:
+        platformWheelEvent.m_phase = PlatformWheelEventPhase::Began;
+        break;
+    case PlatformEvent::GestureChange:
+        platformWheelEvent.m_phase = PlatformWheelEventPhase::Changed;
+        break;
+    case PlatformEvent::GestureEnd:
+        platformWheelEvent.m_phase = PlatformWheelEventPhase::Ended;
+        break;
+    default:
+        ASSERT_NOT_REACHED();
+        break;
+    }
+#endif // ENABLE(KINETIC_SCROLLING)
+
+#if PLATFORM(COCOA)
+    platformWheelEvent.m_unacceleratedScrollingDeltaY = deltaY;
+#endif // PLATFORM(COCOA)
+
+    return platformWheelEvent;
+}
+
+#endif // ENABLE(MAC_GESTURE_EVENTS)
 
 #if ENABLE(KINETIC_SCROLLING)
 
 TextStream& operator<<(TextStream& ts, PlatformWheelEventPhase phase)
 {
     switch (phase) {
-    case PlatformWheelEventPhaseNone: ts << "none"; break;
-    case PlatformWheelEventPhaseBegan: ts << "began"; break;
-    case PlatformWheelEventPhaseStationary: ts << "stationary"; break;
-    case PlatformWheelEventPhaseChanged: ts << "changed"; break;
-    case PlatformWheelEventPhaseEnded: ts << "ended"; break;
-    case PlatformWheelEventPhaseCancelled: ts << "cancelled"; break;
-    case PlatformWheelEventPhaseMayBegin: ts << "mayBegin"; break;
+    case PlatformWheelEventPhase::None: ts << "none"; break;
+    case PlatformWheelEventPhase::Began: ts << "began"; break;
+    case PlatformWheelEventPhase::Stationary: ts << "stationary"; break;
+    case PlatformWheelEventPhase::Changed: ts << "changed"; break;
+    case PlatformWheelEventPhase::Ended: ts << "ended"; break;
+    case PlatformWheelEventPhase::Cancelled: ts << "cancelled"; break;
+    case PlatformWheelEventPhase::MayBegin: ts << "mayBegin"; break;
     }
     return ts;
 }
@@ -64,7 +117,27 @@ TextStream& operator<<(TextStream& ts, WheelEventProcessingSteps steps)
     switch (steps) {
     case WheelEventProcessingSteps::ScrollingThread: ts << "scrolling thread"; break;
     case WheelEventProcessingSteps::MainThreadForScrolling: ts << "main thread scrolling"; break;
-    case WheelEventProcessingSteps::MainThreadForDOMEventDispatch: ts << "main thread DOM evnet dispatch"; break;
+    case WheelEventProcessingSteps::MainThreadForNonBlockingDOMEventDispatch: ts << "main thread non-blocking DOM event dispatch"; break;
+    case WheelEventProcessingSteps::MainThreadForBlockingDOMEventDispatch: ts << "main thread blocking DOM event dispatch"; break;
+    }
+    return ts;
+}
+
+TextStream& operator<<(TextStream& ts, EventHandling steps)
+{
+    switch (steps) {
+    case EventHandling::DispatchedToDOM: ts << "dispatched to DOM"; break;
+    case EventHandling::DefaultPrevented: ts << "default prevented"; break;
+    case EventHandling::DefaultHandled: ts << "default handled"; break;
+    }
+    return ts;
+}
+
+TextStream& operator<<(TextStream& ts, WheelScrollGestureState state)
+{
+    switch (state) {
+    case WheelScrollGestureState::Blocking: ts << "blocking"; break;
+    case WheelScrollGestureState::NonBlocking: ts << "non-blocking"; break;
     }
     return ts;
 }

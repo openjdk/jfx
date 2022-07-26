@@ -63,12 +63,12 @@ void ScrollingTreeStickyNode::commitStateBeforeChildren(const ScrollingStateNode
 {
     auto& stickyStateNode = downcast<ScrollingStateStickyNode>(stateNode);
 
-    if (stickyStateNode.hasChangedProperty(ScrollingStateNode::Layer)) {
+    if (stickyStateNode.hasChangedProperty(ScrollingStateNode::Property::Layer)) {
         auto* layer = static_cast<Nicosia::PlatformLayer*>(stickyStateNode.layer());
         m_layer = downcast<Nicosia::CompositionLayer>(layer);
     }
 
-    if (stickyStateNode.hasChangedProperty(ScrollingStateStickyNode::ViewportConstraints))
+    if (stickyStateNode.hasChangedProperty(ScrollingStateNode::Property::ViewportConstraints))
         m_constraints = stickyStateNode.viewportConstraints();
 }
 
@@ -118,7 +118,8 @@ FloatPoint ScrollingTreeStickyNode::computeLayerPosition() const
             constrainingRect = frameScrollingNode.layoutViewport();
         } else {
             auto& overflowScrollingNode = downcast<ScrollingTreeOverflowScrollingNode>(scrollingNode);
-            constrainingRect = FloatRect(overflowScrollingNode.currentScrollPosition(), m_constraints.constrainingRectAtLastLayout().size());
+            constrainingRect = m_constraints.constrainingRectAtLastLayout();
+            constrainingRect.move(overflowScrollingNode.scrollDeltaSinceLastCommit());
         }
         return m_constraints.layerPositionForConstrainingRect(constrainingRect);
     };

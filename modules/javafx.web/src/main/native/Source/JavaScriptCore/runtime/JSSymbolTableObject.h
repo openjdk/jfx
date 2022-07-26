@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -39,12 +39,12 @@ namespace JSC {
 class JSSymbolTableObject : public JSScope {
 public:
     using Base = JSScope;
-    static constexpr unsigned StructureFlags = Base::StructureFlags | OverridesAnyFormOfGetPropertyNames;
+    static constexpr unsigned StructureFlags = Base::StructureFlags | OverridesGetOwnSpecialPropertyNames;
 
     SymbolTable* symbolTable() const { return m_symbolTable.get(); }
 
     JS_EXPORT_PRIVATE static bool deleteProperty(JSCell*, JSGlobalObject*, PropertyName, DeletePropertySlot&);
-    JS_EXPORT_PRIVATE static void getOwnNonIndexPropertyNames(JSObject*, JSGlobalObject*, PropertyNameArray&, EnumerationMode);
+    JS_EXPORT_PRIVATE static void getOwnSpecialPropertyNames(JSObject*, JSGlobalObject*, PropertyNameArray&, DontEnumPropertiesMode);
 
     static ptrdiff_t offsetOfSymbolTable() { return OBJECT_OFFSETOF(JSSymbolTableObject, m_symbolTable); }
 
@@ -70,7 +70,7 @@ protected:
         m_symbolTable.set(vm, this, symbolTable);
     }
 
-    static void visitChildren(JSCell*, SlotVisitor&);
+    DECLARE_VISIT_CHILDREN;
 
 private:
     WriteBarrier<SymbolTable> m_symbolTable;
@@ -99,14 +99,14 @@ inline bool symbolTableGet(
 
 template<typename SymbolTableObjectType>
 inline bool symbolTableGet(
-    SymbolTableObjectType* object, PropertyName propertyName, PropertyDescriptor& descriptor)
+    SymbolTableObjectType* object, PropertyName propertyName, SymbolTableEntry& entry, PropertyDescriptor& descriptor)
 {
     SymbolTable& symbolTable = *object->symbolTable();
     ConcurrentJSLocker locker(symbolTable.m_lock);
     SymbolTable::Map::iterator iter = symbolTable.find(locker, propertyName.uid());
     if (iter == symbolTable.end(locker))
         return false;
-    SymbolTableEntry::Fast entry = iter->value;
+    entry = iter->value;
     ASSERT(!entry.isNull());
 
     ScopeOffset offset = entry.scopeOffset();
@@ -115,29 +115,6 @@ inline bool symbolTableGet(
         return false;
 
     descriptor.setDescriptor(object->variableAt(offset).get(), entry.getAttributes() | PropertyAttribute::DontDelete);
-    return true;
-}
-
-template<typename SymbolTableObjectType>
-inline bool symbolTableGet(
-    SymbolTableObjectType* object, PropertyName propertyName, PropertySlot& slot,
-    bool& slotIsWriteable)
-{
-    SymbolTable& symbolTable = *object->symbolTable();
-    ConcurrentJSLocker locker(symbolTable.m_lock);
-    SymbolTable::Map::iterator iter = symbolTable.find(locker, propertyName.uid());
-    if (iter == symbolTable.end(locker))
-        return false;
-    SymbolTableEntry::Fast entry = iter->value;
-    ASSERT(!entry.isNull());
-
-    ScopeOffset offset = entry.scopeOffset();
-    // Defend against the inspector asking for a var after it has been optimized out.
-    if (!object->isValidScopeOffset(offset))
-        return false;
-
-    slot.setValue(object, entry.getAttributes() | PropertyAttribute::DontDelete, object->variableAt(offset).get());
-    slotIsWriteable = !entry.isReadOnly();
     return true;
 }
 

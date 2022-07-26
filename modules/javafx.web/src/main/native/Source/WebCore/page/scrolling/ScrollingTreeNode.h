@@ -37,10 +37,12 @@
 namespace WebCore {
 
 class ScrollingStateFixedNode;
+class ScrollingTree;
 class ScrollingTreeFrameScrollingNode;
 class ScrollingTreeScrollingNode;
 
 class ScrollingTreeNode : public ThreadSafeRefCounted<ScrollingTreeNode> {
+    WTF_MAKE_FAST_ALLOCATED;
     friend class ScrollingTree;
 public:
     virtual ~ScrollingTreeNode();

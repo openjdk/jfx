@@ -30,6 +30,25 @@
 
 #include "gmem.h"
 
+#if defined(HAVE_POSIX_MEMALIGN) && !defined(_XOPEN_SOURCE)
+# define _XOPEN_SOURCE 600
+#endif
+
+#if defined(HAVE_MEMALIGN) || defined(HAVE__ALIGNED_MALLOC)
+/* Required for _aligned_malloc() and _aligned_free() on Windows */
+#include <malloc.h>
+#endif
+
+#ifdef HAVE__ALIGNED_MALLOC
+/* _aligned_malloc() takes parameters of aligned_malloc() in reverse order */
+# define aligned_alloc(alignment, size) _aligned_malloc (size, alignment)
+
+/* _aligned_malloc()'ed memory must be freed by _align_free() on MSVC */
+# define aligned_free(x) _aligned_free (x)
+#else
+# define aligned_free(x) free (x)
+#endif
+
 #include <stdlib.h>
 #include <string.h>
 #include <signal.h>
@@ -521,4 +540,142 @@ void
 g_mem_profile (void)
 {
   g_warning (G_STRLOC ": memory profiling not supported");
+}
+
+/**
+ * g_aligned_alloc:
+ * @n_blocks: the number of blocks to allocate
+ * @n_block_bytes: the size of each block in bytes
+ * @alignment: the alignment to be enforced, which must be a positive power of 2
+ *   and a multiple of `sizeof(void*)`
+ *
+ * This function is similar to g_malloc(), allocating (@n_blocks * @n_block_bytes)
+ * bytes, but care is taken to align the allocated memory to with the given
+ * alignment value. Additionally, it will detect possible overflow during
+ * multiplication.
+ *
+ * Aligned memory allocations returned by this function can only be
+ * freed using g_aligned_free().
+ *
+ * Returns: (transfer full): the allocated memory
+ *
+ * Since: 2.72
+ */
+gpointer
+g_aligned_alloc (gsize n_blocks,
+                 gsize n_block_bytes,
+                 gsize alignment)
+{
+  gpointer res = NULL;
+  gsize real_size;
+
+  if (G_UNLIKELY ((alignment == 0) || (alignment & (alignment - 1)) != 0))
+    {
+      g_error ("%s: alignment %"G_GSIZE_FORMAT" must be a positive power of two",
+               G_STRLOC, alignment);
+    }
+
+  if (G_UNLIKELY ((alignment % sizeof (void *)) != 0))
+    {
+      g_error ("%s: alignment %"G_GSIZE_FORMAT" must be a multiple of %"G_GSIZE_FORMAT,
+               G_STRLOC, alignment, sizeof (void *));
+    }
+
+  if (SIZE_OVERFLOWS (n_blocks, n_block_bytes))
+    {
+      g_error ("%s: overflow allocating %"G_GSIZE_FORMAT"*%"G_GSIZE_FORMAT" bytes",
+               G_STRLOC, n_blocks, n_block_bytes);
+    }
+
+  real_size = n_blocks * n_block_bytes;
+
+  if (G_UNLIKELY (real_size == 0))
+    {
+      TRACE(GLIB_MEM_ALLOC((void*) NULL, (int) real_size, 0, 0));
+      return NULL;
+    }
+
+  /* We need to clear errno because posix_memalign() will use its return
+   * value in the same way memalign() and aligned_alloc() will set errno.
+   * Additionally, posix_memalign() will warn if its return value is left
+   * unassigned.
+   *
+   * We handle all possible return values (ENOMEM and EINVAL) with either
+   * precondition or postcondition checking.
+   */
+  errno = 0;
+
+#if defined(HAVE_POSIX_MEMALIGN)
+  errno = posix_memalign (&res, alignment, real_size);
+#elif defined(HAVE_ALIGNED_ALLOC) || defined(HAVE__ALIGNED_MALLOC)
+  /* real_size must be a multiple of alignment */
+  if (real_size % alignment != 0)
+    {
+      gsize offset = real_size % alignment;
+
+      if (G_MAXSIZE - real_size < (alignment - offset))
+        {
+          g_error ("%s: overflow allocating %"G_GSIZE_FORMAT"+%"G_GSIZE_FORMAT" bytes",
+                   G_STRLOC, real_size, (alignment - offset));
+        }
+
+      real_size += (alignment - offset);
+    }
+
+  res = aligned_alloc (alignment, real_size);
+#elif defined(HAVE_MEMALIGN)
+  res = memalign (alignment, real_size);
+#else
+# error "This platform does not have an aligned memory allocator."
+#endif
+
+  TRACE (GLIB_MEM_ALLOC((void*) res, (unsigned int) real_size, 0, 0));
+  if (res)
+    return res;
+
+  g_error ("%s: failed to allocate %"G_GSIZE_FORMAT" bytes",
+           G_STRLOC, real_size);
+
+  return NULL;
+}
+
+/**
+ * g_aligned_alloc0:
+ * @n_blocks: the number of blocks to allocate
+ * @n_block_bytes: the size of each block in bytes
+ * @alignment: the alignment to be enforced, which must be a positive power of 2
+ *   and a multiple of `sizeof(void*)`
+ *
+ * This function is similar to g_aligned_alloc(), but it will
+ * also clear the allocated memory before returning it.
+ *
+ * Returns: (transfer full): the allocated, cleared memory
+ *
+ * Since: 2.72
+ */
+gpointer
+g_aligned_alloc0 (gsize n_blocks,
+                  gsize n_block_bytes,
+                  gsize alignment)
+{
+  gpointer res = g_aligned_alloc (n_blocks, n_block_bytes, alignment);
+
+  if (G_LIKELY (res != NULL))
+    memset (res, 0, n_blocks * n_block_bytes);
+
+  return res;
+}
+
+/**
+ * g_aligned_free:
+ * @mem: (nullable): the memory to deallocate
+ *
+ * Frees the memory allocated by g_aligned_alloc().
+ *
+ * Since: 2.72
+ */
+void
+g_aligned_free (gpointer mem)
+{
+  aligned_free (mem);
 }

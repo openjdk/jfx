@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007, 2008 Apple Inc. All rights reserved.
+ * Copyright (C) 2007-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,6 +26,7 @@
 #include "config.h"
 #include "JSCSSRule.h"
 
+#include "CSSCounterStyleRule.h"
 #include "CSSFontFaceRule.h"
 #include "CSSImportRule.h"
 #include "CSSKeyframeRule.h"
@@ -35,6 +36,7 @@
 #include "CSSPageRule.h"
 #include "CSSStyleRule.h"
 #include "CSSSupportsRule.h"
+#include "JSCSSCounterStyleRule.h"
 #include "JSCSSFontFaceRule.h"
 #include "JSCSSImportRule.h"
 #include "JSCSSKeyframeRule.h"
@@ -51,10 +53,13 @@
 namespace WebCore {
 using namespace JSC;
 
-void JSCSSRule::visitAdditionalChildren(SlotVisitor& visitor)
+template<typename Visitor>
+void JSCSSRule::visitAdditionalChildren(Visitor& visitor)
 {
     visitor.addOpaqueRoot(root(&wrapped()));
 }
+
+DEFINE_VISIT_ADDITIONAL_CHILDREN(JSCSSRule);
 
 JSValue toJSNewlyCreated(JSGlobalObject*, JSDOMGlobalObject* globalObject, Ref<CSSRule>&& rule)
 {
@@ -77,6 +82,8 @@ JSValue toJSNewlyCreated(JSGlobalObject*, JSDOMGlobalObject* globalObject, Ref<C
         return createWrapper<CSSKeyframesRule>(globalObject, WTFMove(rule));
     case CSSRule::SUPPORTS_RULE:
         return createWrapper<CSSSupportsRule>(globalObject, WTFMove(rule));
+    case CSSRule::COUNTER_STYLE_RULE:
+        return createWrapper<CSSCounterStyleRule>(globalObject, WTFMove(rule));
     default:
         return createWrapper<CSSRule>(globalObject, WTFMove(rule));
     }

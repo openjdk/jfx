@@ -55,13 +55,8 @@ inline CCallHelpers::Jump branchIfNotWeakIsLive(CCallHelpers& jit, GPRReg weakIm
 }
 
 template<typename WrappedNode>
-JSC::EncodedJSValue JIT_OPERATION toWrapperSlow(JSC::JSGlobalObject* globalObject, void* result)
+JSC::EncodedJSValue toWrapperSlowImpl(JSC::JSGlobalObject* globalObject, void* result)
 {
-    ASSERT(result);
-    ASSERT(globalObject);
-    JSC::VM& vm = globalObject->vm();
-    JSC::CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
-    JSC::JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
     return JSC::JSValue::encode(toJS(globalObject, static_cast<JSDOMGlobalObject*>(globalObject), *static_cast<WrappedNode*>(result)));
 }
 
@@ -197,6 +192,12 @@ inline CCallHelpers::Jump branchTestIsHTMLFlagOnNode(MacroAssembler& jit, CCallH
 {
     return jit.branchTest32(condition, CCallHelpers::Address(nodeAddress, Node::nodeFlagsMemoryOffset()), CCallHelpers::TrustedImm32(Node::flagIsHTML()));
 }
+
+JSC_DECLARE_JIT_OPERATION(operationToJSNode, JSC::EncodedJSValue, (JSC::JSGlobalObject*, void*));
+JSC_DECLARE_JIT_OPERATION(operationToJSContainerNode, JSC::EncodedJSValue, (JSC::JSGlobalObject*, void*));
+JSC_DECLARE_JIT_OPERATION(operationToJSElement, JSC::EncodedJSValue, (JSC::JSGlobalObject*, void*));
+JSC_DECLARE_JIT_OPERATION(operationToJSHTMLElement, JSC::EncodedJSValue, (JSC::JSGlobalObject*, void*));
+JSC_DECLARE_JIT_OPERATION(operationToJSDocument, JSC::EncodedJSValue, (JSC::JSGlobalObject*, void*));
 
 } }
 

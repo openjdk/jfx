@@ -69,14 +69,26 @@ bool RenderSVGResourceMasker::applyResource(RenderElement& renderer, const Rende
 
     if (!maskerData->maskImage && !repaintRect.isEmpty()) {
         const SVGRenderStyle& svgStyle = style().svgStyle();
-        ColorSpace colorSpace = svgStyle.colorInterpolation() == ColorInterpolation::LinearRGB ? ColorSpace::LinearRGB : ColorSpace::SRGB;
+
+        auto maskColorSpace = DestinationColorSpace::SRGB();
+        auto drawColorSpace = DestinationColorSpace::SRGB();
+
+#if ENABLE(DESTINATION_COLOR_SPACE_LINEAR_SRGB)
+        if (svgStyle.colorInterpolation() == ColorInterpolation::LinearRGB) {
+#if USE(CG)
+            maskColorSpace = DestinationColorSpace::LinearSRGB();
+#endif
+            drawColorSpace = DestinationColorSpace::LinearSRGB();
+        }
+#endif
+
         // FIXME (149470): This image buffer should not be unconditionally unaccelerated. Making it match the context breaks alpha masking, though.
-        maskerData->maskImage = SVGRenderingContext::createImageBuffer(repaintRect, absoluteTransform, colorSpace, RenderingMode::Unaccelerated, context);
+        maskerData->maskImage = SVGRenderingContext::createImageBuffer(repaintRect, absoluteTransform, maskColorSpace, RenderingMode::Unaccelerated, context);
         if (!maskerData->maskImage)
             return false;
 
-        if (!drawContentIntoMaskImage(maskerData, colorSpace, &renderer))
-            maskerData->maskImage.reset();
+        if (!drawContentIntoMaskImage(maskerData, drawColorSpace, &renderer))
+            maskerData->maskImage = nullptr;
     }
 
     if (!maskerData->maskImage)
@@ -86,7 +98,7 @@ bool RenderSVGResourceMasker::applyResource(RenderElement& renderer, const Rende
     return true;
 }
 
-bool RenderSVGResourceMasker::drawContentIntoMaskImage(MaskerData* maskerData, ColorSpace colorSpace, RenderObject* object)
+bool RenderSVGResourceMasker::drawContentIntoMaskImage(MaskerData* maskerData, const DestinationColorSpace& colorSpace, RenderObject* object)
 {
     GraphicsContext& maskImageContext = maskerData->maskImage->context();
 
@@ -113,7 +125,7 @@ bool RenderSVGResourceMasker::drawContentIntoMaskImage(MaskerData* maskerData, C
     }
 
 #if !USE(CG)
-    maskerData->maskImage->transformColorSpace(ColorSpace::SRGB, colorSpace);
+    maskerData->maskImage->transformToColorSpace(colorSpace);
 #else
     UNUSED_PARAM(colorSpace);
 #endif

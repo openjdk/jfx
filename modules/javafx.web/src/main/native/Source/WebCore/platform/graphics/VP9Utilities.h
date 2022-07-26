@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2020-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -125,6 +125,47 @@ struct VPCodecConfigurationRecord {
     uint8_t matrixCoefficients { VPConfigurationMatrixCoefficients::BT_709_6 };
 };
 
-WEBCORE_EXPORT Optional<VPCodecConfigurationRecord> parseVPCodecParameters(StringView codecString);
+WEBCORE_EXPORT std::optional<VPCodecConfigurationRecord> parseVPCodecParameters(StringView codecString);
+
+struct ScreenDataOverrides {
+    double width { 0 };
+    double height { 0 };
+    double scale { 1 };
+
+    template<class Encoder>
+    void encode(Encoder& encoder) const
+    {
+        encoder << width;
+        encoder << height;
+        encoder << scale;
+    }
+
+    template <class Decoder>
+    static std::optional<ScreenDataOverrides> decode(Decoder& decoder)
+    {
+#define DECODE(name, type) \
+        std::optional<type> name; \
+        decoder >> name; \
+        if (!name) \
+            return std::nullopt; \
+
+        DECODE(width, double);
+        DECODE(height, double);
+        DECODE(scale, double);
+#undef DECODE
+
+    return {{ WTFMove(*width), WTFMove(*height), WTFMove(*scale) }};
+    }
+};
+
+inline bool operator==(const ScreenDataOverrides& a, const ScreenDataOverrides& b)
+{
+    return a.width == b.width && a.height == b.height && a.scale == b.scale;
+}
+
+inline bool operator!=(const ScreenDataOverrides& a, const ScreenDataOverrides& b)
+{
+    return !(a == b);
+}
 
 }

@@ -41,7 +41,7 @@ public:
 
     bool isAccelerated() const override
     {
-#if PLATFORM(WIN)
+#if PLATFORM(WIN) && USE(CA)
         // FIXME: Implement accelerated canvas on Windows.
         return false;
 #else
@@ -50,8 +50,6 @@ public:
     }
 
     virtual void reshape(int width, int height) = 0;
-    virtual void markLayerComposited() = 0;
-
 protected:
     explicit GPUBasedCanvasRenderingContext(CanvasBase&);
 

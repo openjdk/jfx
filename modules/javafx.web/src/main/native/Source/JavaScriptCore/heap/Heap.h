@@ -1,7 +1,7 @@
 /*
  *  Copyright (C) 1999-2000 Harri Porten (porten@kde.org)
  *  Copyright (C) 2001 Peter Kelly (pmk@post.com)
- *  Copyright (C) 2003-2020 Apple Inc. All rights reserved.
+ *  Copyright (C) 2003-2021 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -46,6 +46,7 @@
 #include <wtf/Deque.h>
 #include <wtf/HashCountedSet.h>
 #include <wtf/HashSet.h>
+#include <wtf/Lock.h>
 #include <wtf/Markable.h>
 #include <wtf/ParallelHelperPool.h>
 #include <wtf/Threading.h>
@@ -86,7 +87,8 @@ class SpaceTimeMutatorScheduler;
 class StopIfNecessaryTimer;
 class SweepingScope;
 class VM;
-class WeakGCMapBase;
+class VerifierSlotVisitor;
+class WeakGCHashTable;
 struct CurrentThreadState;
 
 #ifdef JSC_GLIB_API_ENABLED
@@ -95,7 +97,6 @@ class JSCGLibWrapperObject;
 
 namespace DFG {
 class SpeculativeJIT;
-class Worklist;
 }
 
 #if ENABLE(DFG_JIT) && ASSERT_ENABLED
@@ -165,7 +166,7 @@ public:
     void removeObserver(HeapObserver* observer) { m_observers.removeFirst(observer); }
 
     MutatorState mutatorState() const { return m_mutatorState; }
-    Optional<CollectionScope> collectionScope() const { return m_collectionScope; }
+    std::optional<CollectionScope> collectionScope() const { return m_collectionScope; }
     bool hasHeapAccess() const;
     bool worldIsStopped() const;
     bool worldIsRunning() const { return !worldIsStopped(); }
@@ -184,15 +185,13 @@ public:
 
     bool isShuttingDown() const { return m_isShuttingDown; }
 
-    JS_EXPORT_PRIVATE bool isAnalyzingHeap() const;
-
     JS_EXPORT_PRIVATE void sweepSynchronously();
 
     bool shouldCollectHeuristic();
 
     // Queue up a collection. Returns immediately. This will not queue a collection if a collection
-    // of equal or greater strength exists. Full collections are stronger than WTF::nullopt collections
-    // and WTF::nullopt collections are stronger than Eden collections. WTF::nullopt means that the GC can
+    // of equal or greater strength exists. Full collections are stronger than std::nullopt collections
+    // and std::nullopt collections are stronger than Eden collections. std::nullopt means that the GC can
     // choose Eden or Full. This implies that if you request a GC while that GC is ongoing, nothing
     // will happen.
     JS_EXPORT_PRIVATE void collectAsync(GCRequest = GCRequest());
@@ -271,7 +270,7 @@ public:
     void deleteAllUnlinkedCodeBlocks(DeleteAllCodeEffort);
 
     void didAllocate(size_t);
-    bool isPagedOut(MonotonicTime deadline);
+    bool isPagedOut();
 
     const JITStubRoutineSet& jitStubRoutines() { return *m_jitStubRoutines; }
 
@@ -290,8 +289,8 @@ public:
     void releaseSoon(std::unique_ptr<JSCGLibWrapperObject>&&);
 #endif
 
-    JS_EXPORT_PRIVATE void registerWeakGCMap(WeakGCMapBase* weakGCMap);
-    JS_EXPORT_PRIVATE void unregisterWeakGCMap(WeakGCMapBase* weakGCMap);
+    JS_EXPORT_PRIVATE void registerWeakGCHashTable(WeakGCHashTable*);
+    JS_EXPORT_PRIVATE void unregisterWeakGCHashTable(WeakGCHashTable*);
 
     void addLogicallyEmptyWeakBlock(WeakBlock*);
 
@@ -385,8 +384,6 @@ public:
 
     JS_EXPORT_PRIVATE void addMarkingConstraint(std::unique_ptr<MarkingConstraint>);
 
-    size_t numOpaqueRoots() const { return m_opaqueRoots.size(); }
-
     HeapVerifier* verifier() const { return m_verifier.get(); }
 
     void addHeapFinalizerCallback(const HeapFinalizerCallback&);
@@ -406,6 +403,8 @@ public:
     Seconds totalGCTime() const { return m_totalGCTime; }
 
     HashMap<JSImmutableButterfly*, JSString*> immutableButterflyToStringCache;
+
+    bool isMarkingForGCVerifier() const { return m_isMarkingForGCVerifier; }
 
 private:
     friend class AllocatingScope;
@@ -432,6 +431,7 @@ private:
     friend class SweepingScope;
     friend class IncrementalSweeper;
     friend class VM;
+    friend class VerifierSlotVisitor;
     friend class WeakSet;
 
     class HeapThread;
@@ -491,16 +491,12 @@ private:
     JS_EXPORT_PRIVATE void acquireAccessSlow();
     JS_EXPORT_PRIVATE void releaseAccessSlow();
 
-    bool handleGCDidJIT(unsigned);
-    void handleGCDidJIT();
-
     bool handleNeedFinalize(unsigned);
     void handleNeedFinalize();
 
     bool relinquishConn(unsigned);
     void finishRelinquishingConn();
 
-    void setGCDidJIT();
     void setNeedFinalize();
     void waitWhileNeedFinalize();
 
@@ -526,7 +522,7 @@ private:
     void endMarking();
 
     void reapWeakHandles();
-    void pruneStaleEntriesFromWeakGCMaps();
+    void pruneStaleEntriesFromWeakGCHashTables();
     void sweepArrayBuffers();
     void snapshotUnswept();
     void deleteSourceProviderCaches();
@@ -575,11 +571,11 @@ private:
 
     bool overCriticalMemoryThreshold(MemoryThresholdCallType memoryThresholdCallType = MemoryThresholdCallType::Cached);
 
-    template<typename Func>
-    void iterateExecutingAndCompilingCodeBlocks(const Func&);
+    template<typename Visitor>
+    void iterateExecutingAndCompilingCodeBlocks(Visitor&, const Function<void(CodeBlock*)>&);
 
-    template<typename Func>
-    void iterateExecutingAndCompilingCodeBlocksWithoutHoldingLocks(const Func&);
+    template<typename Func, typename Visitor>
+    void iterateExecutingAndCompilingCodeBlocksWithoutHoldingLocks(Visitor&, const Func&);
 
     void assertMarkStacksEmpty();
 
@@ -589,6 +585,8 @@ private:
 
     static bool useGenerationalGC();
     static bool shouldSweepSynchronously();
+
+    void verifyGC();
 
     const HeapType m_heapType;
     MutatorState m_mutatorState { MutatorState::Running };
@@ -636,13 +634,14 @@ private:
     std::unique_ptr<MarkStackArray> m_mutatorMarkStack;
     std::unique_ptr<MarkStackArray> m_raceMarkStack;
     std::unique_ptr<MarkingConstraintSet> m_constraintSet;
+    std::unique_ptr<VerifierSlotVisitor> m_verifierSlotVisitor;
 
     // We pool the slot visitors used by parallel marking threads. It's useful to be able to
     // enumerate over them, and it's useful to have them cache some small amount of memory from
     // one GC to the next. GC marking threads claim these at the start of marking, and return
     // them at the end.
     Vector<std::unique_ptr<SlotVisitor>> m_parallelSlotVisitors;
-    Vector<SlotVisitor*> m_availableParallelSlotVisitors;
+    Vector<SlotVisitor*> m_availableParallelSlotVisitors WTF_GUARDED_BY_LOCK(m_parallelSlotVisitorLock);
 
     HandleSet m_handleSet;
     std::unique_ptr<CodeBlockSet> m_codeBlocks;
@@ -654,6 +653,7 @@ private:
     bool m_isSafeToCollect { false };
     bool m_isShuttingDown { false };
     bool m_mutatorShouldBeFenced { Options::forceFencedBarrier() };
+    bool m_isMarkingForGCVerifier { false };
 
     unsigned m_barrierThreshold { Options::forceFencedBarrier() ? tautologicalThreshold : blackThreshold };
 
@@ -685,7 +685,7 @@ private:
 #endif
     unsigned m_deferralDepth { 0 };
 
-    HashSet<WeakGCMapBase*> m_weakGCMaps;
+    HashSet<WeakGCHashTable*> m_weakGCHashTables;
 
     std::unique_ptr<MarkStackArray> m_sharedCollectorMarkStack;
     std::unique_ptr<MarkStackArray> m_sharedMutatorMarkStack;
@@ -708,9 +708,8 @@ private:
     static constexpr unsigned mutatorHasConnBit = 1u << 0u; // Must also be protected by threadLock.
     static constexpr unsigned stoppedBit = 1u << 1u; // Only set when !hasAccessBit
     static constexpr unsigned hasAccessBit = 1u << 2u;
-    static constexpr unsigned gcDidJITBit = 1u << 3u; // Set when the GC did some JITing, so on resume we need to cpuid.
-    static constexpr unsigned needFinalizeBit = 1u << 4u;
-    static constexpr unsigned mutatorWaitingBit = 1u << 5u; // Allows the mutator to use this as a condition variable.
+    static constexpr unsigned needFinalizeBit = 1u << 3u;
+    static constexpr unsigned mutatorWaitingBit = 1u << 4u; // Allows the mutator to use this as a condition variable.
     Atomic<unsigned> m_worldState;
     bool m_worldIsStopped { false };
     Lock m_visitRaceLock;

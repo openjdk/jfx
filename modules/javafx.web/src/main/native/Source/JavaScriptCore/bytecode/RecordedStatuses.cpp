@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,6 +35,8 @@ RecordedStatuses& RecordedStatuses::operator=(RecordedStatuses&& other)
     puts = WTFMove(other.puts);
     ins = WTFMove(other.ins);
     deletes = WTFMove(other.deletes);
+    checkPrivateBrands = WTFMove(other.checkPrivateBrands);
+    setPrivateBrands = WTFMove(other.setPrivateBrands);
     shrinkToFit();
     return *this;
 }
@@ -60,18 +62,18 @@ GetByStatus* RecordedStatuses::addGetByStatus(const CodeOrigin& codeOrigin, cons
     return result;
 }
 
-PutByIdStatus* RecordedStatuses::addPutByIdStatus(const CodeOrigin& codeOrigin, const PutByIdStatus& status)
+PutByStatus* RecordedStatuses::addPutByStatus(const CodeOrigin& codeOrigin, const PutByStatus& status)
 {
-    auto statusPtr = makeUnique<PutByIdStatus>(status);
-    PutByIdStatus* result = statusPtr.get();
+    auto statusPtr = makeUnique<PutByStatus>(status);
+    PutByStatus* result = statusPtr.get();
     puts.append(std::make_pair(codeOrigin, WTFMove(statusPtr)));
     return result;
 }
 
-InByIdStatus* RecordedStatuses::addInByIdStatus(const CodeOrigin& codeOrigin, const InByIdStatus& status)
+InByStatus* RecordedStatuses::addInByStatus(const CodeOrigin& codeOrigin, const InByStatus& status)
 {
-    auto statusPtr = makeUnique<InByIdStatus>(status);
-    InByIdStatus* result = statusPtr.get();
+    auto statusPtr = makeUnique<InByStatus>(status);
+    InByStatus* result = statusPtr.get();
     ins.append(std::make_pair(codeOrigin, WTFMove(statusPtr)));
     return result;
 }
@@ -84,25 +86,60 @@ DeleteByStatus* RecordedStatuses::addDeleteByStatus(const CodeOrigin& codeOrigin
     return result;
 }
 
-void RecordedStatuses::visitAggregate(SlotVisitor& slotVisitor)
+CheckPrivateBrandStatus* RecordedStatuses::addCheckPrivateBrandStatus(const CodeOrigin& codeOrigin, const CheckPrivateBrandStatus& status)
 {
-    for (auto& pair : gets)
-        pair.second->visitAggregate(slotVisitor);
-    for (auto& pair : deletes)
-        pair.second->visitAggregate(slotVisitor);
+    auto statusPtr = makeUnique<CheckPrivateBrandStatus>(status);
+    CheckPrivateBrandStatus* result = statusPtr.get();
+    checkPrivateBrands.append(std::make_pair(codeOrigin, WTFMove(statusPtr)));
+    return result;
 }
 
-void RecordedStatuses::markIfCheap(SlotVisitor& slotVisitor)
+SetPrivateBrandStatus* RecordedStatuses::addSetPrivateBrandStatus(const CodeOrigin& codeOrigin, const SetPrivateBrandStatus& status)
+{
+    auto statusPtr = makeUnique<SetPrivateBrandStatus>(status);
+    SetPrivateBrandStatus* result = statusPtr.get();
+    setPrivateBrands.append(std::make_pair(codeOrigin, WTFMove(statusPtr)));
+    return result;
+}
+
+template<typename Visitor>
+void RecordedStatuses::visitAggregateImpl(Visitor& visitor)
 {
     for (auto& pair : gets)
-        pair.second->markIfCheap(slotVisitor);
+        pair.second->visitAggregate(visitor);
     for (auto& pair : puts)
-        pair.second->markIfCheap(slotVisitor);
+        pair.second->visitAggregate(visitor);
     for (auto& pair : ins)
-        pair.second->markIfCheap(slotVisitor);
+        pair.second->visitAggregate(visitor);
     for (auto& pair : deletes)
-        pair.second->markIfCheap(slotVisitor);
+        pair.second->visitAggregate(visitor);
+    for (auto& pair : checkPrivateBrands)
+        pair.second->visitAggregate(visitor);
+    for (auto& pair : setPrivateBrands)
+        pair.second->visitAggregate(visitor);
 }
+
+DEFINE_VISIT_AGGREGATE(RecordedStatuses);
+
+template<typename Visitor>
+void RecordedStatuses::markIfCheap(Visitor& visitor)
+{
+    for (auto& pair : gets)
+        pair.second->markIfCheap(visitor);
+    for (auto& pair : puts)
+        pair.second->markIfCheap(visitor);
+    for (auto& pair : ins)
+        pair.second->markIfCheap(visitor);
+    for (auto& pair : deletes)
+        pair.second->markIfCheap(visitor);
+    for (auto& pair : checkPrivateBrands)
+        pair.second->markIfCheap(visitor);
+    for (auto& pair : setPrivateBrands)
+        pair.second->markIfCheap(visitor);
+}
+
+template void RecordedStatuses::markIfCheap(AbstractSlotVisitor&);
+template void RecordedStatuses::markIfCheap(SlotVisitor&);
 
 void RecordedStatuses::finalizeWithoutDeleting(VM& vm)
 {

@@ -9,6 +9,7 @@ endif ()
 
 if (PORT STREQUAL "Java")
     if (NOT DEFINED STATIC_BUILD)
+        add_subdirectory(TestRunnerShared/java)
         add_subdirectory(DumpRenderTree/java)
     endif ()
 endif ()

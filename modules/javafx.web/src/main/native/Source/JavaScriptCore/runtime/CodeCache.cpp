@@ -71,12 +71,14 @@ static void generateUnlinkedCodeBlockForFunctions(VM& vm, UnlinkedCodeBlock* unl
 }
 
 template <class UnlinkedCodeBlockType, class ExecutableType = ScriptExecutable>
-UnlinkedCodeBlockType* generateUnlinkedCodeBlockImpl(VM& vm, const SourceCode& source, JSParserStrictMode strictMode, JSParserScriptMode scriptMode, OptionSet<CodeGenerationMode> codeGenerationMode, ParserError& error, EvalContextType evalContextType, DerivedContextType derivedContextType, bool isArrowFunctionContext, const VariableEnvironment* variablesUnderTDZ, ExecutableType* executable = nullptr)
+UnlinkedCodeBlockType* generateUnlinkedCodeBlockImpl(VM& vm, const SourceCode& source, JSParserStrictMode strictMode, JSParserScriptMode scriptMode, OptionSet<CodeGenerationMode> codeGenerationMode, ParserError& error, EvalContextType evalContextType, DerivedContextType derivedContextType, bool isArrowFunctionContext, const TDZEnvironment* variablesUnderTDZ = nullptr, const PrivateNameEnvironment* privateNameEnvironment = nullptr, ExecutableType* executable = nullptr)
 {
     typedef typename CacheTypes<UnlinkedCodeBlockType>::RootNode RootNode;
     bool isInsideOrdinaryFunction = executable && executable->isInsideOrdinaryFunction();
+
     std::unique_ptr<RootNode> rootNode = parse<RootNode>(
-        vm, source, Identifier(), JSParserBuiltinMode::NotBuiltin, strictMode, scriptMode, CacheTypes<UnlinkedCodeBlockType>::parseMode, SuperBinding::NotNeeded, error, nullptr, ConstructorKind::None, derivedContextType, evalContextType, nullptr, variablesUnderTDZ, nullptr, isInsideOrdinaryFunction);
+        vm, source, Identifier(), JSParserBuiltinMode::NotBuiltin, strictMode, scriptMode, CacheTypes<UnlinkedCodeBlockType>::parseMode, SuperBinding::NotNeeded, error, nullptr, ConstructorKind::None, derivedContextType, evalContextType, nullptr, privateNameEnvironment, nullptr, isInsideOrdinaryFunction);
+
     if (!rootNode)
         return nullptr;
 
@@ -85,25 +87,28 @@ UnlinkedCodeBlockType* generateUnlinkedCodeBlockImpl(VM& vm, const SourceCode& s
     bool endColumnIsOnStartLine = !lineCount;
     unsigned unlinkedEndColumn = rootNode->endColumn();
     unsigned endColumn = unlinkedEndColumn + (endColumnIsOnStartLine ? startColumn : 1);
-    unsigned arrowContextFeature = isArrowFunctionContext ? ArrowFunctionContextFeature : 0;
     if (executable)
-        executable->recordParse(rootNode->features() | arrowContextFeature, rootNode->hasCapturedVariables(), rootNode->lastLine(), endColumn);
+        executable->recordParse(rootNode->features(), rootNode->lexicalScopeFeatures(), rootNode->hasCapturedVariables(), rootNode->lastLine(), endColumn);
 
-    bool usesEval = rootNode->features() & EvalFeature;
-    ECMAMode ecmaMode = rootNode->features() & StrictModeFeature ? ECMAMode::strict() : ECMAMode::sloppy();
     NeedsClassFieldInitializer needsClassFieldInitializer = NeedsClassFieldInitializer::No;
-    if constexpr (std::is_same_v<ExecutableType, DirectEvalExecutable>)
+    PrivateBrandRequirement privateBrandRequirement = PrivateBrandRequirement::None;
+    if constexpr (std::is_same_v<ExecutableType, DirectEvalExecutable>) {
         needsClassFieldInitializer = executable->needsClassFieldInitializer();
-    ExecutableInfo executableInfo(usesEval, false, false, ConstructorKind::None, scriptMode, SuperBinding::NotNeeded, CacheTypes<UnlinkedCodeBlockType>::parseMode, derivedContextType, needsClassFieldInitializer, isArrowFunctionContext, false, evalContextType);
+        privateBrandRequirement = executable->privateBrandRequirement();
+    }
+    ExecutableInfo executableInfo(false, privateBrandRequirement, false, ConstructorKind::None, scriptMode, SuperBinding::NotNeeded, CacheTypes<UnlinkedCodeBlockType>::parseMode, derivedContextType, needsClassFieldInitializer, isArrowFunctionContext, false, evalContextType);
 
     UnlinkedCodeBlockType* unlinkedCodeBlock = UnlinkedCodeBlockType::create(vm, executableInfo, codeGenerationMode);
-    unlinkedCodeBlock->recordParse(rootNode->features(), rootNode->hasCapturedVariables(), lineCount, unlinkedEndColumn);
+    unlinkedCodeBlock->recordParse(rootNode->features(), rootNode->lexicalScopeFeatures(), rootNode->hasCapturedVariables(), lineCount, unlinkedEndColumn);
     if (!source.provider()->sourceURLDirective().isNull())
         unlinkedCodeBlock->setSourceURLDirective(source.provider()->sourceURLDirective());
     if (!source.provider()->sourceMappingURLDirective().isNull())
         unlinkedCodeBlock->setSourceMappingURLDirective(source.provider()->sourceMappingURLDirective());
 
-    error = BytecodeGenerator::generate(vm, rootNode.get(), source, unlinkedCodeBlock, codeGenerationMode, variablesUnderTDZ, ecmaMode);
+    RefPtr<TDZEnvironmentLink> parentVariablesUnderTDZ;
+    if (variablesUnderTDZ)
+        parentVariablesUnderTDZ = TDZEnvironmentLink::create(vm.m_compactVariableMap->get(*variablesUnderTDZ), nullptr);
+    error = BytecodeGenerator::generate(vm, rootNode.get(), source, unlinkedCodeBlock, codeGenerationMode, parentVariablesUnderTDZ, privateNameEnvironment);
 
     if (error.isValid())
         return nullptr;
@@ -112,22 +117,22 @@ UnlinkedCodeBlockType* generateUnlinkedCodeBlockImpl(VM& vm, const SourceCode& s
 }
 
 template <class UnlinkedCodeBlockType, class ExecutableType>
-UnlinkedCodeBlockType* generateUnlinkedCodeBlock(VM& vm, ExecutableType* executable, const SourceCode& source, JSParserStrictMode strictMode, JSParserScriptMode scriptMode, OptionSet<CodeGenerationMode> codeGenerationMode, ParserError& error, EvalContextType evalContextType, const VariableEnvironment* variablesUnderTDZ)
+UnlinkedCodeBlockType* generateUnlinkedCodeBlock(VM& vm, ExecutableType* executable, const SourceCode& source, JSParserStrictMode strictMode, JSParserScriptMode scriptMode, OptionSet<CodeGenerationMode> codeGenerationMode, ParserError& error, EvalContextType evalContextType, const TDZEnvironment* variablesUnderTDZ = nullptr, const PrivateNameEnvironment* privateNameEnvironment = nullptr)
 {
-    return generateUnlinkedCodeBlockImpl<UnlinkedCodeBlockType, ExecutableType>(vm, source, strictMode, scriptMode, codeGenerationMode, error, evalContextType, executable->derivedContextType(), executable->isArrowFunctionContext(), variablesUnderTDZ, executable);
+    return generateUnlinkedCodeBlockImpl<UnlinkedCodeBlockType, ExecutableType>(vm, source, strictMode, scriptMode, codeGenerationMode, error, evalContextType, executable->derivedContextType(), executable->isArrowFunctionContext(), variablesUnderTDZ, privateNameEnvironment, executable);
 }
 
-UnlinkedEvalCodeBlock* generateUnlinkedCodeBlockForDirectEval(VM& vm, DirectEvalExecutable* executable, const SourceCode& source, JSParserStrictMode strictMode, JSParserScriptMode scriptMode, OptionSet<CodeGenerationMode> codeGenerationMode, ParserError& error, EvalContextType evalContextType, const VariableEnvironment* variablesUnderTDZ)
+UnlinkedEvalCodeBlock* generateUnlinkedCodeBlockForDirectEval(VM& vm, DirectEvalExecutable* executable, const SourceCode& source, JSParserStrictMode strictMode, JSParserScriptMode scriptMode, OptionSet<CodeGenerationMode> codeGenerationMode, ParserError& error, EvalContextType evalContextType, const TDZEnvironment* variablesUnderTDZ, const PrivateNameEnvironment* privateNameEnvironment)
 {
-    return generateUnlinkedCodeBlock<UnlinkedEvalCodeBlock>(vm, executable, source, strictMode, scriptMode, codeGenerationMode, error, evalContextType, variablesUnderTDZ);
+    return generateUnlinkedCodeBlock<UnlinkedEvalCodeBlock>(vm, executable, source, strictMode, scriptMode, codeGenerationMode, error, evalContextType, variablesUnderTDZ, privateNameEnvironment);
 }
 
 template <class UnlinkedCodeBlockType>
 std::enable_if_t<!std::is_same<UnlinkedCodeBlockType, UnlinkedEvalCodeBlock>::value, UnlinkedCodeBlockType*>
-recursivelyGenerateUnlinkedCodeBlock(VM& vm, const SourceCode& source, JSParserStrictMode strictMode, JSParserScriptMode scriptMode, OptionSet<CodeGenerationMode> codeGenerationMode, ParserError& error, EvalContextType evalContextType, const VariableEnvironment* variablesUnderTDZ)
+recursivelyGenerateUnlinkedCodeBlock(VM& vm, const SourceCode& source, JSParserStrictMode strictMode, JSParserScriptMode scriptMode, OptionSet<CodeGenerationMode> codeGenerationMode, ParserError& error, EvalContextType evalContextType)
 {
     bool isArrowFunctionContext = false;
-    UnlinkedCodeBlockType* unlinkedCodeBlock = generateUnlinkedCodeBlockImpl<UnlinkedCodeBlockType>(vm, source, strictMode, scriptMode, codeGenerationMode, error, evalContextType, DerivedContextType::None, isArrowFunctionContext, variablesUnderTDZ);
+    UnlinkedCodeBlockType* unlinkedCodeBlock = generateUnlinkedCodeBlockImpl<UnlinkedCodeBlockType>(vm, source, strictMode, scriptMode, codeGenerationMode, error, evalContextType, DerivedContextType::None, isArrowFunctionContext);
     if (!unlinkedCodeBlock)
         return nullptr;
 
@@ -135,14 +140,14 @@ recursivelyGenerateUnlinkedCodeBlock(VM& vm, const SourceCode& source, JSParserS
     return unlinkedCodeBlock;
 }
 
-UnlinkedProgramCodeBlock* recursivelyGenerateUnlinkedCodeBlockForProgram(VM& vm, const SourceCode& source, JSParserStrictMode strictMode, JSParserScriptMode scriptMode, OptionSet<CodeGenerationMode> codeGenerationMode, ParserError& error, EvalContextType evalContextType, const VariableEnvironment* variablesUnderTDZ)
+UnlinkedProgramCodeBlock* recursivelyGenerateUnlinkedCodeBlockForProgram(VM& vm, const SourceCode& source, JSParserStrictMode strictMode, JSParserScriptMode scriptMode, OptionSet<CodeGenerationMode> codeGenerationMode, ParserError& error, EvalContextType evalContextType)
 {
-    return recursivelyGenerateUnlinkedCodeBlock<UnlinkedProgramCodeBlock>(vm, source, strictMode, scriptMode, codeGenerationMode, error, evalContextType, variablesUnderTDZ);
+    return recursivelyGenerateUnlinkedCodeBlock<UnlinkedProgramCodeBlock>(vm, source, strictMode, scriptMode, codeGenerationMode, error, evalContextType);
 }
 
-UnlinkedModuleProgramCodeBlock* recursivelyGenerateUnlinkedCodeBlockForModuleProgram(VM& vm, const SourceCode& source, JSParserStrictMode strictMode, JSParserScriptMode scriptMode, OptionSet<CodeGenerationMode> codeGenerationMode, ParserError& error, EvalContextType evalContextType, const VariableEnvironment* variablesUnderTDZ)
+UnlinkedModuleProgramCodeBlock* recursivelyGenerateUnlinkedCodeBlockForModuleProgram(VM& vm, const SourceCode& source, JSParserStrictMode strictMode, JSParserScriptMode scriptMode, OptionSet<CodeGenerationMode> codeGenerationMode, ParserError& error, EvalContextType evalContextType)
 {
-    return recursivelyGenerateUnlinkedCodeBlock<UnlinkedModuleProgramCodeBlock>(vm, source, strictMode, scriptMode, codeGenerationMode, error, evalContextType, variablesUnderTDZ);
+    return recursivelyGenerateUnlinkedCodeBlock<UnlinkedModuleProgramCodeBlock>(vm, source, strictMode, scriptMode, codeGenerationMode, error, evalContextType);
 }
 
 template <class UnlinkedCodeBlockType, class ExecutableType>
@@ -153,14 +158,14 @@ UnlinkedCodeBlockType* CodeCache::getUnlinkedGlobalCodeBlock(VM& vm, ExecutableT
     SourceCodeKey key(
         source, String(), CacheTypes<UnlinkedCodeBlockType>::codeType, strictMode, scriptMode,
         derivedContextType, evalContextType, isArrowFunctionContext, codeGenerationMode,
-        WTF::nullopt);
+        std::nullopt);
     UnlinkedCodeBlockType* unlinkedCodeBlock = m_sourceCode.findCacheAndUpdateAge<UnlinkedCodeBlockType>(vm, key);
     if (unlinkedCodeBlock && Options::useCodeCache()) {
         unsigned lineCount = unlinkedCodeBlock->lineCount();
         unsigned startColumn = unlinkedCodeBlock->startColumn() + source.startColumn().oneBasedInt();
         bool endColumnIsOnStartLine = !lineCount;
         unsigned endColumn = unlinkedCodeBlock->endColumn() + (endColumnIsOnStartLine ? startColumn : 1);
-        executable->recordParse(unlinkedCodeBlock->codeFeatures(), unlinkedCodeBlock->hasCapturedVariables(), source.firstLine().oneBasedInt() + lineCount, endColumn);
+        executable->recordParse(unlinkedCodeBlock->codeFeatures(), unlinkedCodeBlock->lexicalScopeFeatures(), unlinkedCodeBlock->hasCapturedVariables(), source.firstLine().oneBasedInt() + lineCount, endColumn);
         if (unlinkedCodeBlock->sourceURLDirective())
             source.provider()->setSourceURLDirective(unlinkedCodeBlock->sourceURLDirective());
         if (unlinkedCodeBlock->sourceMappingURLDirective())
@@ -168,8 +173,7 @@ UnlinkedCodeBlockType* CodeCache::getUnlinkedGlobalCodeBlock(VM& vm, ExecutableT
         return unlinkedCodeBlock;
     }
 
-    VariableEnvironment variablesUnderTDZ;
-    unlinkedCodeBlock = generateUnlinkedCodeBlock<UnlinkedCodeBlockType, ExecutableType>(vm, executable, source, strictMode, scriptMode, codeGenerationMode, error, evalContextType, &variablesUnderTDZ);
+    unlinkedCodeBlock = generateUnlinkedCodeBlock<UnlinkedCodeBlockType, ExecutableType>(vm, executable, source, strictMode, scriptMode, codeGenerationMode, error, evalContextType);
 
     if (unlinkedCodeBlock && Options::useCodeCache()) {
         m_sourceCode.addCache(key, SourceCodeValue(vm, unlinkedCodeBlock, m_sourceCode.age()));
@@ -197,7 +201,7 @@ UnlinkedModuleProgramCodeBlock* CodeCache::getUnlinkedModuleProgramCodeBlock(VM&
     return getUnlinkedGlobalCodeBlock<UnlinkedModuleProgramCodeBlock>(vm, executable, source, JSParserStrictMode::Strict, JSParserScriptMode::Module, codeGenerationMode, error, EvalContextType::None);
 }
 
-UnlinkedFunctionExecutable* CodeCache::getUnlinkedGlobalFunctionExecutable(VM& vm, const Identifier& name, const SourceCode& source, OptionSet<CodeGenerationMode> codeGenerationMode, Optional<int> functionConstructorParametersEndPosition, ParserError& error)
+UnlinkedFunctionExecutable* CodeCache::getUnlinkedGlobalFunctionExecutable(VM& vm, const Identifier& name, const SourceCode& source, OptionSet<CodeGenerationMode> codeGenerationMode, std::optional<int> functionConstructorParametersEndPosition, ParserError& error)
 {
     bool isArrowFunctionContext = false;
     SourceCodeKey key(
@@ -244,7 +248,7 @@ UnlinkedFunctionExecutable* CodeCache::getUnlinkedGlobalFunctionExecutable(VM& v
     // The Function constructor only has access to global variables, so no variables will be under TDZ unless they're
     // in the global lexical environment, which we always TDZ check accesses from.
     ConstructAbility constructAbility = constructAbilityForParseMode(metadata->parseMode());
-    UnlinkedFunctionExecutable* functionExecutable = UnlinkedFunctionExecutable::create(vm, source, metadata, UnlinkedNormalFunction, constructAbility, JSParserScriptMode::Classic, WTF::nullopt, DerivedContextType::None, NeedsClassFieldInitializer::No);
+    UnlinkedFunctionExecutable* functionExecutable = UnlinkedFunctionExecutable::create(vm, source, metadata, UnlinkedNormalFunction, constructAbility, JSParserScriptMode::Classic, nullptr, std::nullopt, DerivedContextType::None, NeedsClassFieldInitializer::No, PrivateBrandRequirement::None);
 
     if (!source.provider()->sourceURLDirective().isNull())
         functionExecutable->setSourceURLDirective(source.provider()->sourceURLDirective());
@@ -281,7 +285,7 @@ static SourceCodeKey sourceCodeKeyForSerializedBytecode(VM&, const SourceCode& s
     return SourceCodeKey(
         sourceCode, String(), codeType, strictMode, scriptMode,
         DerivedContextType::None, EvalContextType::None, false, codeGenerationMode,
-        WTF::nullopt);
+        std::nullopt);
 }
 
 SourceCodeKey sourceCodeKeyForSerializedProgram(VM& vm, const SourceCode& sourceCode)

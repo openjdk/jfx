@@ -87,10 +87,6 @@ template<typename T, typename ExceptionThrower> inline typename Converter<T>::Re
 }
 
 
-template <typename T>
-struct IsExceptionOr : public std::integral_constant<bool, WTF::IsTemplate<std::decay_t<T>, ExceptionOr>::value> { };
-
-
 // Conversion from Implementation -> JSValue
 template<typename T> struct JSConverter;
 
@@ -98,12 +94,10 @@ template<typename T, typename U> inline JSC::JSValue toJS(U&&);
 template<typename T, typename U> inline JSC::JSValue toJS(JSC::JSGlobalObject&, U&&);
 template<typename T, typename U> inline JSC::JSValue toJS(JSC::JSGlobalObject&, JSDOMGlobalObject&, U&&);
 template<typename T, typename U> inline JSC::JSValue toJSNewlyCreated(JSC::JSGlobalObject&, JSDOMGlobalObject&, U&&);
-template<typename T, typename U> inline auto toJS(JSC::JSGlobalObject&, JSC::ThrowScope&, U&&) -> std::enable_if_t<IsExceptionOr<U>::value, JSC::JSValue>;
-template<typename T, typename U> inline auto toJS(JSC::JSGlobalObject&, JSC::ThrowScope&, U&&) -> std::enable_if_t<!IsExceptionOr<U>::value, JSC::JSValue>;
-template<typename T, typename U> inline auto toJS(JSC::JSGlobalObject&, JSDOMGlobalObject&, JSC::ThrowScope&, U&&) -> std::enable_if_t<IsExceptionOr<U>::value, JSC::JSValue>;
-template<typename T, typename U> inline auto toJS(JSC::JSGlobalObject&, JSDOMGlobalObject&, JSC::ThrowScope&, U&&) -> std::enable_if_t<!IsExceptionOr<U>::value, JSC::JSValue>;
-template<typename T, typename U> inline auto toJSNewlyCreated(JSC::JSGlobalObject&, JSDOMGlobalObject&, JSC::ThrowScope&, U&&) -> std::enable_if_t<IsExceptionOr<U>::value, JSC::JSValue>;
-template<typename T, typename U> inline auto toJSNewlyCreated(JSC::JSGlobalObject&, JSDOMGlobalObject&, JSC::ThrowScope&, U&&) -> std::enable_if_t<!IsExceptionOr<U>::value, JSC::JSValue>;
+
+template<typename T, typename U> inline JSC::JSValue toJS(JSC::JSGlobalObject&, JSC::ThrowScope&, U&& valueOrFunctor);
+template<typename T, typename U> inline JSC::JSValue toJS(JSC::JSGlobalObject&, JSDOMGlobalObject&, JSC::ThrowScope&, U&& valueOrFunctor);
+template<typename T, typename U> inline JSC::JSValue toJSNewlyCreated(JSC::JSGlobalObject&, JSDOMGlobalObject&, JSC::ThrowScope&, U&& valueOrFunctor);
 
 template<typename T, bool needsState = JSConverter<T>::needsState, bool needsGlobalObject = JSConverter<T>::needsGlobalObject>
 struct JSConverterOverloader;
@@ -162,51 +156,96 @@ template<typename T, typename U> inline JSC::JSValue toJSNewlyCreated(JSC::JSGlo
     return JSConverter<T>::convertNewlyCreated(lexicalGlobalObject, globalObject, std::forward<U>(value));
 }
 
-template<typename T, typename U> inline auto toJS(JSC::JSGlobalObject& lexicalGlobalObject, JSC::ThrowScope& throwScope, U&& value) -> std::enable_if_t<IsExceptionOr<U>::value, JSC::JSValue>
+template<typename T, typename U> inline JSC::JSValue toJS(JSC::JSGlobalObject& lexicalGlobalObject, JSC::ThrowScope& throwScope, U&& valueOrFunctor)
 {
-    if (UNLIKELY(value.hasException())) {
-        propagateException(lexicalGlobalObject, throwScope, value.releaseException());
-        return { };
+    if constexpr (std::is_invocable_v<U>) {
+        using FunctorReturnType = std::invoke_result_t<U>;
+
+        if constexpr (std::is_same_v<void, FunctorReturnType>) {
+            valueOrFunctor();
+            return JSC::jsUndefined();
+        } else if constexpr (std::is_same_v<ExceptionOr<void>, FunctorReturnType>) {
+            auto result = valueOrFunctor();
+            if (UNLIKELY(result.hasException())) {
+                propagateException(lexicalGlobalObject, throwScope, result.releaseException());
+                return { };
+            }
+            return JSC::jsUndefined();
+        } else
+            return toJS<T>(lexicalGlobalObject, throwScope, valueOrFunctor());
+    } else {
+        if constexpr (IsExceptionOr<U>) {
+            if (UNLIKELY(valueOrFunctor.hasException())) {
+                propagateException(lexicalGlobalObject, throwScope, valueOrFunctor.releaseException());
+                return { };
+            }
+
+            return toJS<T>(lexicalGlobalObject, valueOrFunctor.releaseReturnValue());
+        } else
+            return toJS<T>(lexicalGlobalObject, std::forward<U>(valueOrFunctor));
     }
-
-    return toJS<T>(lexicalGlobalObject, value.releaseReturnValue());
 }
 
-template<typename T, typename U> inline auto toJS(JSC::JSGlobalObject& lexicalGlobalObject, JSC::ThrowScope&, U&& value) -> std::enable_if_t<!IsExceptionOr<U>::value, JSC::JSValue>
+template<typename T, typename U> inline JSC::JSValue toJS(JSC::JSGlobalObject& lexicalGlobalObject, JSDOMGlobalObject& globalObject, JSC::ThrowScope& throwScope, U&& valueOrFunctor)
 {
-    return toJS<T>(lexicalGlobalObject, std::forward<U>(value));
-}
+    if constexpr (std::is_invocable_v<U>) {
+        using FunctorReturnType = std::invoke_result_t<U>;
 
-template<typename T, typename U> inline auto toJS(JSC::JSGlobalObject& lexicalGlobalObject, JSDOMGlobalObject& globalObject, JSC::ThrowScope& throwScope, U&& value) -> std::enable_if_t<IsExceptionOr<U>::value, JSC::JSValue>
-{
-    if (UNLIKELY(value.hasException())) {
-        propagateException(lexicalGlobalObject, throwScope, value.releaseException());
-        return { };
+        if constexpr (std::is_same_v<void, FunctorReturnType>) {
+            valueOrFunctor();
+            return JSC::jsUndefined();
+        } else if constexpr (std::is_same_v<ExceptionOr<void>, FunctorReturnType>) {
+            auto result = valueOrFunctor();
+            if (UNLIKELY(result.hasException())) {
+                propagateException(lexicalGlobalObject, throwScope, result.releaseException());
+                return { };
+            }
+            return JSC::jsUndefined();
+        } else
+            return toJS<T>(lexicalGlobalObject, globalObject, throwScope, valueOrFunctor());
+    } else {
+        if constexpr (IsExceptionOr<U>) {
+            if (UNLIKELY(valueOrFunctor.hasException())) {
+                propagateException(lexicalGlobalObject, throwScope, valueOrFunctor.releaseException());
+                return { };
+            }
+
+            return toJS<T>(lexicalGlobalObject, globalObject, valueOrFunctor.releaseReturnValue());
+        } else
+            return toJS<T>(lexicalGlobalObject, globalObject, std::forward<U>(valueOrFunctor));
     }
-
-    return toJS<T>(lexicalGlobalObject, globalObject, value.releaseReturnValue());
 }
 
-template<typename T, typename U> inline auto toJS(JSC::JSGlobalObject& lexicalGlobalObject, JSDOMGlobalObject& globalObject, JSC::ThrowScope&, U&& value) -> std::enable_if_t<!IsExceptionOr<U>::value, JSC::JSValue>
+template<typename T, typename U> inline JSC::JSValue toJSNewlyCreated(JSC::JSGlobalObject& lexicalGlobalObject, JSDOMGlobalObject& globalObject, JSC::ThrowScope& throwScope, U&& valueOrFunctor)
 {
-    return toJS<T>(lexicalGlobalObject, globalObject, std::forward<U>(value));
-}
+    if constexpr (std::is_invocable_v<U>) {
+        using FunctorReturnType = std::invoke_result_t<U>;
 
-template<typename T, typename U> inline auto toJSNewlyCreated(JSC::JSGlobalObject& lexicalGlobalObject, JSDOMGlobalObject& globalObject, JSC::ThrowScope& throwScope, U&& value) -> std::enable_if_t<IsExceptionOr<U>::value, JSC::JSValue>
-{
-    if (UNLIKELY(value.hasException())) {
-        propagateException(lexicalGlobalObject, throwScope, value.releaseException());
-        return { };
+        if constexpr (std::is_same_v<void, FunctorReturnType>) {
+            valueOrFunctor();
+            return JSC::jsUndefined();
+        } else if constexpr (std::is_same_v<ExceptionOr<void>, FunctorReturnType>) {
+            auto result = valueOrFunctor();
+            if (UNLIKELY(result.hasException())) {
+                propagateException(lexicalGlobalObject, throwScope, result.releaseException());
+                return { };
+            }
+            return JSC::jsUndefined();
+        } else
+            return toJSNewlyCreated<T>(lexicalGlobalObject, globalObject, throwScope, valueOrFunctor());
+
+    } else {
+        if constexpr (IsExceptionOr<U>) {
+            if (UNLIKELY(valueOrFunctor.hasException())) {
+                propagateException(lexicalGlobalObject, throwScope, valueOrFunctor.releaseException());
+                return { };
+            }
+
+            return toJSNewlyCreated<T>(lexicalGlobalObject, globalObject, valueOrFunctor.releaseReturnValue());
+        } else
+            return toJSNewlyCreated<T>(lexicalGlobalObject, globalObject, std::forward<U>(valueOrFunctor));
     }
-
-    return toJSNewlyCreated<T>(lexicalGlobalObject, globalObject, value.releaseReturnValue());
 }
-
-template<typename T, typename U> inline auto toJSNewlyCreated(JSC::JSGlobalObject& lexicalGlobalObject, JSDOMGlobalObject& globalObject, JSC::ThrowScope&, U&& value) -> std::enable_if_t<!IsExceptionOr<U>::value, JSC::JSValue>
-{
-    return toJSNewlyCreated<T>(lexicalGlobalObject, globalObject, std::forward<U>(value));
-}
-
 
 template<typename T> struct DefaultConverter {
     using ReturnType = typename T::ImplementationType;

@@ -656,7 +656,7 @@ gst_audio_ring_buffer_acquire (GstAudioRingBuffer * buf,
   buf->empty_seg = g_malloc (segsize);
 
   if (buf->spec.type == GST_AUDIO_RING_BUFFER_FORMAT_TYPE_RAW) {
-    gst_audio_format_fill_silence (buf->spec.info.finfo, buf->empty_seg,
+    gst_audio_format_info_fill_silence (buf->spec.info.finfo, buf->empty_seg,
         segsize);
   } else {
     /* FIXME, non-raw formats get 0 as the empty sample */

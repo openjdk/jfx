@@ -42,7 +42,7 @@ struct GreaterThanOrSameSizeAsStyleRareInheritedData : public RefCounted<Greater
     float firstFloat;
     Color colors[9];
     void* ownPtrs[1];
-    AtomString atomStrings[5];
+    AtomString atomStrings[6];
     void* refPtrs[3];
     Length lengths[2];
     float secondFloat;
@@ -77,6 +77,7 @@ DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(StyleRareInheritedData);
 
 StyleRareInheritedData::StyleRareInheritedData()
     : listStyleImage(RenderStyle::initialListStyleImage())
+    , listStyleStringValue(RenderStyle::initialListStyleStringValue())
     , textStrokeWidth(RenderStyle::initialTextStrokeWidth())
     , indent(RenderStyle::initialTextIndent())
     , effectiveZoom(RenderStyle::initialZoom())
@@ -100,10 +101,8 @@ StyleRareInheritedData::StyleRareInheritedData()
     , textEmphasisMark(static_cast<unsigned>(TextEmphasisMark::None))
     , textEmphasisPosition(static_cast<unsigned>(RenderStyle::initialTextEmphasisPosition().toRaw()))
     , textOrientation(static_cast<unsigned>(TextOrientation::Mixed))
-#if ENABLE(CSS3_TEXT)
-    , textIndentLine(RenderStyle::initialTextIndentLine())
-    , textIndentType(RenderStyle::initialTextIndentType())
-#endif
+    , textIndentLine(static_cast<unsigned>(RenderStyle::initialTextIndentLine()))
+    , textIndentType(static_cast<unsigned>(RenderStyle::initialTextIndentType()))
     , lineBoxContain(static_cast<unsigned>(RenderStyle::initialLineBoxContain().toRaw()))
     , imageOrientation(RenderStyle::initialImageOrientation())
     , imageRendering(static_cast<unsigned>(RenderStyle::initialImageRendering()))
@@ -117,8 +116,8 @@ StyleRareInheritedData::StyleRareInheritedData()
     , imageResolutionSnap(RenderStyle::initialImageResolutionSnap())
 #endif
 #if ENABLE(CSS3_TEXT)
-    , textAlignLast(RenderStyle::initialTextAlignLast())
-    , textJustify(RenderStyle::initialTextJustify())
+    , textAlignLast(static_cast<unsigned>(RenderStyle::initialTextAlignLast()))
+    , textJustify(static_cast<unsigned>(RenderStyle::initialTextJustify()))
 #endif
     , textDecorationSkip(RenderStyle::initialTextDecorationSkip().toRaw())
     , textUnderlinePosition(static_cast<unsigned>(RenderStyle::initialTextUnderlinePosition()))
@@ -133,6 +132,10 @@ StyleRareInheritedData::StyleRareInheritedData()
     , joinStyle(RenderStyle::initialJoinStyle())
     , hasSetStrokeWidth(false)
     , hasSetStrokeColor(false)
+    , mathStyle(static_cast<unsigned>(RenderStyle::initialMathStyle()))
+    , hasAutoCaretColor(true)
+    , hasVisitedLinkAutoCaretColor(true)
+    , isInSubtreeWithBlendMode(false)
     , effectiveTouchActions(RenderStyle::initialTouchActions())
     , strokeWidth(RenderStyle::initialStrokeWidth())
     , strokeColor(RenderStyle::initialStrokeColor())
@@ -161,6 +164,7 @@ StyleRareInheritedData::StyleRareInheritedData()
 inline StyleRareInheritedData::StyleRareInheritedData(const StyleRareInheritedData& o)
     : RefCounted<StyleRareInheritedData>()
     , listStyleImage(o.listStyleImage)
+    , listStyleStringValue(o.listStyleStringValue)
     , textStrokeColor(o.textStrokeColor)
     , textStrokeWidth(o.textStrokeWidth)
     , textFillColor(o.textFillColor)
@@ -194,10 +198,8 @@ inline StyleRareInheritedData::StyleRareInheritedData(const StyleRareInheritedDa
     , textEmphasisMark(o.textEmphasisMark)
     , textEmphasisPosition(o.textEmphasisPosition)
     , textOrientation(o.textOrientation)
-#if ENABLE(CSS3_TEXT)
     , textIndentLine(o.textIndentLine)
     , textIndentType(o.textIndentType)
-#endif
     , lineBoxContain(o.lineBoxContain)
     , imageOrientation(o.imageOrientation)
     , imageRendering(o.imageRendering)
@@ -227,6 +229,10 @@ inline StyleRareInheritedData::StyleRareInheritedData(const StyleRareInheritedDa
     , joinStyle(o.joinStyle)
     , hasSetStrokeWidth(o.hasSetStrokeWidth)
     , hasSetStrokeColor(o.hasSetStrokeColor)
+    , mathStyle(o.mathStyle)
+    , hasAutoCaretColor(o.hasAutoCaretColor)
+    , hasVisitedLinkAutoCaretColor(o.hasVisitedLinkAutoCaretColor)
+    , isInSubtreeWithBlendMode(o.isInSubtreeWithBlendMode)
     , effectiveTouchActions(o.effectiveTouchActions)
     , eventListenerRegionTypes(o.eventListenerRegionTypes)
     , strokeWidth(o.strokeWidth)
@@ -312,10 +318,8 @@ bool StyleRareInheritedData::operator==(const StyleRareInheritedData& o) const
         && textEmphasisMark == o.textEmphasisMark
         && textEmphasisPosition == o.textEmphasisPosition
         && textOrientation == o.textOrientation
-#if ENABLE(CSS3_TEXT)
         && textIndentLine == o.textIndentLine
         && textIndentType == o.textIndentType
-#endif
         && lineBoxContain == o.lineBoxContain
 #if PLATFORM(IOS_FAMILY)
         && touchCalloutEnabled == o.touchCalloutEnabled
@@ -349,6 +353,10 @@ bool StyleRareInheritedData::operator==(const StyleRareInheritedData& o) const
         && joinStyle == o.joinStyle
         && hasSetStrokeWidth == o.hasSetStrokeWidth
         && hasSetStrokeColor == o.hasSetStrokeColor
+        && mathStyle == o.mathStyle
+        && hasAutoCaretColor == o.hasAutoCaretColor
+        && hasVisitedLinkAutoCaretColor == o.hasVisitedLinkAutoCaretColor
+        && isInSubtreeWithBlendMode == o.isInSubtreeWithBlendMode
         && effectiveTouchActions == o.effectiveTouchActions
         && eventListenerRegionTypes == o.eventListenerRegionTypes
         && strokeWidth == o.strokeWidth
@@ -356,7 +364,8 @@ bool StyleRareInheritedData::operator==(const StyleRareInheritedData& o) const
         && visitedLinkStrokeColor == o.visitedLinkStrokeColor
         && miterLimit == o.miterLimit
         && customProperties == o.customProperties
-        && arePointingToEqualData(listStyleImage, o.listStyleImage);
+        && arePointingToEqualData(listStyleImage, o.listStyleImage)
+        && listStyleStringValue == o.listStyleStringValue;
 }
 
 bool StyleRareInheritedData::hasColorFilters() const

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -155,7 +155,8 @@ void JSArrayBufferView::finishCreation(VM& vm)
     RELEASE_ASSERT_NOT_REACHED();
 }
 
-void JSArrayBufferView::visitChildren(JSCell* cell, SlotVisitor& visitor)
+template<typename Visitor>
+void JSArrayBufferView::visitChildrenImpl(JSCell* cell, Visitor& visitor)
 {
     JSArrayBufferView* thisObject = jsCast<JSArrayBufferView*>(cell);
     ASSERT_GC_OBJECT_INHERITS(thisObject, info());
@@ -169,17 +170,7 @@ void JSArrayBufferView::visitChildren(JSCell* cell, SlotVisitor& visitor)
     }
 }
 
-bool JSArrayBufferView::put(
-    JSCell* cell, JSGlobalObject* globalObject, PropertyName propertyName, JSValue value,
-    PutPropertySlot& slot)
-{
-    JSArrayBufferView* thisObject = jsCast<JSArrayBufferView*>(cell);
-
-    if (UNLIKELY(isThisValueAltered(slot, thisObject)))
-        return ordinarySetSlow(globalObject, thisObject, propertyName, value, slot.thisValue(), slot.isStrictMode());
-
-    return Base::put(thisObject, globalObject, propertyName, value, slot);
-}
+DEFINE_VISIT_CHILDREN(JSArrayBufferView);
 
 ArrayBuffer* JSArrayBufferView::unsharedBuffer()
 {
@@ -220,9 +211,9 @@ JSArrayBuffer* JSArrayBufferView::possiblySharedJSBuffer(JSGlobalObject* globalO
     return nullptr;
 }
 
-void JSArrayBufferView::neuter()
+void JSArrayBufferView::detach()
 {
-    auto locker = holdLock(cellLock());
+    Locker locker { cellLock() };
     RELEASE_ASSERT(hasArrayBuffer());
     RELEASE_ASSERT(!isShared());
     m_length = 0;
@@ -233,6 +224,7 @@ static const constexpr size_t ElementSizeData[] = {
 #define FACTORY(type) sizeof(typename type ## Adaptor::Type),
     FOR_EACH_TYPED_ARRAY_TYPE_EXCLUDING_DATA_VIEW(FACTORY)
 #undef FACTORY
+    1, // DataViewType
 };
 
 #define FACTORY(type) static_assert(std::is_final<JS ## type ## Array>::value, "");
@@ -241,8 +233,14 @@ FOR_EACH_TYPED_ARRAY_TYPE_EXCLUDING_DATA_VIEW(FACTORY)
 
 static inline size_t elementSize(JSType type)
 {
-    ASSERT(type >= Int8ArrayType && type <= Float64ArrayType);
+    ASSERT(type >= Int8ArrayType && type <= DataViewType);
+    static_assert(BigUint64ArrayType + 1 == DataViewType);
     return ElementSizeData[type - Int8ArrayType];
+}
+
+unsigned JSArrayBufferView::byteLength() const
+{
+    return length() * elementSize(type());
 }
 
 ArrayBuffer* JSArrayBufferView::slowDownAndWasteMemory()
@@ -269,7 +267,7 @@ ArrayBuffer* JSArrayBufferView::slowDownAndWasteMemory()
     Structure* structure = this->structure(vm);
 
     RefPtr<ArrayBuffer> buffer;
-    unsigned byteLength = m_length * elementSize(type());
+    unsigned byteLength = this->byteLength();
 
     switch (m_mode) {
     case FastTypedArray: {
@@ -299,7 +297,7 @@ ArrayBuffer* JSArrayBufferView::slowDownAndWasteMemory()
         structure->outOfLineCapacity(), false, 0, 0));
 
     {
-        auto locker = holdLock(cellLock());
+        Locker locker { cellLock() };
         butterfly()->indexingHeader()->setArrayBuffer(buffer.get());
         m_vector.setWithoutBarrier(buffer->data(), m_length);
         WTF::storeStoreFence();
@@ -331,6 +329,30 @@ RefPtr<ArrayBufferView> JSArrayBufferView::possiblySharedImpl()
         RELEASE_ASSERT_NOT_REACHED();
         return nullptr;
     }
+}
+
+JSArrayBufferView* validateTypedArray(JSGlobalObject* globalObject, JSValue typedArrayValue)
+{
+    VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    if (!typedArrayValue.isCell()) {
+        throwTypeError(globalObject, scope, "Argument needs to be a typed array."_s);
+        return nullptr;
+    }
+
+    JSCell* typedArrayCell = typedArrayValue.asCell();
+    if (!isTypedView(typedArrayCell->classInfo(vm)->typedArrayStorageType)) {
+        throwTypeError(globalObject, scope, "Argument needs to be a typed array."_s);
+        return nullptr;
+    }
+
+    JSArrayBufferView* typedArray = jsCast<JSArrayBufferView*>(typedArrayCell);
+    if (typedArray->isDetached()) {
+        throwTypeError(globalObject, scope, typedArrayBufferHasBeenDetachedErrorMessage);
+        return nullptr;
+    }
+    return typedArray;
 }
 
 } // namespace JSC

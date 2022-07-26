@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -41,6 +41,10 @@ import javafx.scene.control.skin.DateCellSkin;
  * @since JavaFX 8.0
  */
 public class DateCell extends Cell<LocalDate> {
+
+    /**
+     * Creates a default {@code DateCell}.
+     */
     public DateCell() {
         getStyleClass().add(DEFAULT_STYLE_CLASS);
         setAccessibleRole(AccessibleRole.TEXT);
@@ -56,7 +60,7 @@ public class DateCell extends Cell<LocalDate> {
         return new DateCellSkin(this);
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Stylesheet Handling                                                     *
      *                                                                         *
@@ -64,7 +68,7 @@ public class DateCell extends Cell<LocalDate> {
 
     private static final String DEFAULT_STYLE_CLASS = "date-cell";
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Accessibility handling                                                  *
      *                                                                         *

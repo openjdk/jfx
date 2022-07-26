@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -63,7 +63,7 @@ import javafx.scene.text.Font;
  */
 public class TitledPaneSkin extends LabeledSkinBase<TitledPane>  {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Static fields                                                           *
      *                                                                         *
@@ -78,7 +78,7 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane>  {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private fields                                                          *
      *                                                                         *
@@ -98,7 +98,7 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane>  {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -178,7 +178,7 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane>  {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Properties                                                              *
      *                                                                         *
@@ -200,7 +200,7 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane>  {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *
@@ -288,7 +288,7 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane>  {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private implementation                                                  *
      *                                                                         *
@@ -406,7 +406,7 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane>  {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Support classes                                                         *
      *                                                                         *

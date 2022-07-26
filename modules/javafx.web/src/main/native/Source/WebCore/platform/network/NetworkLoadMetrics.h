@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2010 Google, Inc. All Rights Reserved.
- * Copyright (C) 2014-2017 Apple, Inc. All Rights Reserved.
+ * Copyright (C) 2014-2021 Apple, Inc. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,16 +28,19 @@
 
 #include "HTTPHeaderMap.h"
 #include <wtf/Box.h>
-#include <wtf/Optional.h>
-#include <wtf/Seconds.h>
+#include <wtf/MonotonicTime.h>
 #include <wtf/persistence/PersistentCoder.h>
 #include <wtf/text/WTFString.h>
 
 #if PLATFORM(COCOA)
-OBJC_CLASS NSDictionary;
+OBJC_CLASS NSURLConnection;
+OBJC_CLASS NSURLResponse;
+OBJC_CLASS NSURLSessionTaskMetrics;
 #endif
 
 namespace WebCore {
+
+class ResourceHandle;
 
 enum class NetworkLoadPriority : uint8_t {
     Low,
@@ -46,35 +49,48 @@ enum class NetworkLoadPriority : uint8_t {
     Unknown,
 };
 
+enum class PrivacyStance : uint8_t {
+    Unknown,
+    NotEligible,
+    Proxied,
+    Failed,
+    Direct,
+};
+
+constexpr MonotonicTime reusedTLSConnectionSentinel { MonotonicTime::fromRawSeconds(-1) };
+
 class NetworkLoadMetricsWithoutNonTimingData {
     WTF_MAKE_FAST_ALLOCATED(NetworkLoadMetricsWithoutNonTimingData);
 public:
-    NetworkLoadMetricsWithoutNonTimingData() = default;
-
     bool isComplete() const { return complete; }
     void markComplete() { complete = true; }
 
-    Seconds fetchStart;
-
-    // These should be treated as deltas to fetchStart.
-    // They should be in ascending order as listed here.
-    Seconds domainLookupStart { -1 };     // -1 if no DNS.
-    Seconds domainLookupEnd { -1 };       // -1 if no DNS.
-    Seconds connectStart { -1 };          // -1 if reused connection.
-    Seconds secureConnectionStart { -1 }; // -1 if no secure connection.
-    Seconds connectEnd { -1 };            // -1 if reused connection.
-    Seconds requestStart;
-    Seconds responseStart;
-    Seconds responseEnd;
+    // https://www.w3.org/TR/resource-timing-2/#attribute-descriptions
+    MonotonicTime redirectStart;
+    MonotonicTime fetchStart;
+    MonotonicTime domainLookupStart;
+    MonotonicTime domainLookupEnd;
+    MonotonicTime connectStart;
+    MonotonicTime secureConnectionStart;
+    MonotonicTime connectEnd;
+    MonotonicTime requestStart;
+    MonotonicTime responseStart;
+    MonotonicTime responseEnd;
 
     // ALPN Protocol ID: https://w3c.github.io/resource-timing/#bib-RFC7301
     String protocol;
+
+    uint16_t redirectCount { 0 };
+
+    // FIXME: These could all be made bit fields.
     bool complete { false };
     bool cellular { false };
     bool expensive { false };
     bool constrained { false };
     bool multipath { false };
     bool isReusedConnection { false };
+    bool failsTAOCheck { false };
+    bool hasCrossOriginRedirect { false };
 };
 
 class NetworkLoadMetrics : public NetworkLoadMetricsWithoutNonTimingData {
@@ -88,6 +104,7 @@ public:
     {
         NetworkLoadMetrics copy;
 
+        copy.redirectStart = redirectStart;
         copy.fetchStart = fetchStart;
 
         copy.domainLookupStart = domainLookupStart;
@@ -100,17 +117,21 @@ public:
         copy.responseEnd = responseEnd;
         copy.complete = complete;
         copy.protocol = protocol.isolatedCopy();
+        copy.redirectCount = redirectCount;
         copy.cellular = cellular;
         copy.expensive = expensive;
         copy.constrained = constrained;
         copy.multipath = multipath;
         copy.isReusedConnection = isReusedConnection;
+        copy.failsTAOCheck = failsTAOCheck;
+        copy.hasCrossOriginRedirect = hasCrossOriginRedirect;
 
         copy.remoteAddress = remoteAddress.isolatedCopy();
         copy.connectionIdentifier = connectionIdentifier.isolatedCopy();
         copy.tlsProtocol = tlsProtocol.isolatedCopy();
         copy.tlsCipher = tlsCipher.isolatedCopy();
         copy.priority = priority;
+        copy.privacyStance = privacyStance;
         copy.requestHeaders = requestHeaders.isolatedCopy();
 
         copy.requestHeaderBytesSent = requestHeaderBytesSent;
@@ -124,7 +145,8 @@ public:
 
     bool operator==(const NetworkLoadMetrics& other) const
     {
-        return fetchStart == other.fetchStart
+        return redirectStart == other.redirectStart
+            && fetchStart == other.fetchStart
             && domainLookupStart == other.domainLookupStart
             && domainLookupEnd == other.domainLookupEnd
             && connectStart == other.connectStart
@@ -139,12 +161,16 @@ public:
             && constrained == other.constrained
             && multipath == other.multipath
             && isReusedConnection == other.isReusedConnection
+            && failsTAOCheck == other.failsTAOCheck
+            && hasCrossOriginRedirect == other.hasCrossOriginRedirect
             && protocol == other.protocol
+            && redirectCount == other.redirectCount
             && remoteAddress == other.remoteAddress
             && connectionIdentifier == other.connectionIdentifier
             && tlsProtocol == other.tlsProtocol
             && tlsCipher == other.tlsCipher
             && priority == other.priority
+            && privacyStance == other.privacyStance
             && requestHeaders == other.requestHeaders
             && requestHeaderBytesSent == other.requestHeaderBytesSent
             && requestBodyBytesSent == other.requestBodyBytesSent
@@ -168,23 +194,28 @@ public:
     String tlsCipher;
 
     NetworkLoadPriority priority { NetworkLoadPriority::Unknown };
+    PrivacyStance privacyStance { PrivacyStance::Unknown };
 
     HTTPHeaderMap requestHeaders;
 
-    uint64_t requestHeaderBytesSent { std::numeric_limits<uint32_t>::max() };
-    uint64_t responseHeaderBytesReceived { std::numeric_limits<uint32_t>::max() };
+    uint64_t requestHeaderBytesSent { std::numeric_limits<uint64_t>::max() };
+    uint64_t responseHeaderBytesReceived { std::numeric_limits<uint64_t>::max() };
     uint64_t requestBodyBytesSent { std::numeric_limits<uint64_t>::max() };
     uint64_t responseBodyBytesReceived { std::numeric_limits<uint64_t>::max() };
     uint64_t responseBodyDecodedSize { std::numeric_limits<uint64_t>::max() };
 };
 
 #if PLATFORM(COCOA)
-WEBCORE_EXPORT Box<NetworkLoadMetrics> copyTimingData(NSDictionary *timingData);
+Box<NetworkLoadMetrics> copyTimingData(NSURLConnection *, const ResourceHandle&);
+WEBCORE_EXPORT Box<NetworkLoadMetrics> copyTimingData(NSURLSessionTaskMetrics *incompleteMetrics, const NetworkLoadMetrics&);
 #endif
 
 template<class Encoder>
 void NetworkLoadMetrics::encode(Encoder& encoder) const
 {
+    static_assert(Encoder::isIPCEncoder, "NetworkLoadMetrics should not be stored by the WTF::Persistence::Encoder");
+
+    encoder << redirectStart;
     encoder << fetchStart;
     encoder << domainLookupStart;
     encoder << domainLookupEnd;
@@ -200,12 +231,16 @@ void NetworkLoadMetrics::encode(Encoder& encoder) const
     encoder << constrained;
     encoder << multipath;
     encoder << isReusedConnection;
+    encoder << failsTAOCheck;
+    encoder << hasCrossOriginRedirect;
     encoder << protocol;
+    encoder << redirectCount;
     encoder << remoteAddress;
     encoder << connectionIdentifier;
     encoder << tlsProtocol;
     encoder << tlsCipher;
     encoder << priority;
+    encoder << privacyStance;
     encoder << requestHeaders;
     encoder << requestHeaderBytesSent;
     encoder << requestBodyBytesSent;
@@ -217,7 +252,10 @@ void NetworkLoadMetrics::encode(Encoder& encoder) const
 template<class Decoder>
 bool NetworkLoadMetrics::decode(Decoder& decoder, NetworkLoadMetrics& metrics)
 {
-    return decoder.decode(metrics.fetchStart)
+    static_assert(Decoder::isIPCDecoder, "NetworkLoadMetrics should not be stored by the WTF::Persistence::Encoder");
+
+    return decoder.decode(metrics.redirectStart)
+        && decoder.decode(metrics.fetchStart)
         && decoder.decode(metrics.domainLookupStart)
         && decoder.decode(metrics.domainLookupEnd)
         && decoder.decode(metrics.connectStart)
@@ -232,12 +270,16 @@ bool NetworkLoadMetrics::decode(Decoder& decoder, NetworkLoadMetrics& metrics)
         && decoder.decode(metrics.constrained)
         && decoder.decode(metrics.multipath)
         && decoder.decode(metrics.isReusedConnection)
+        && decoder.decode(metrics.failsTAOCheck)
+        && decoder.decode(metrics.hasCrossOriginRedirect)
         && decoder.decode(metrics.protocol)
+        && decoder.decode(metrics.redirectCount)
         && decoder.decode(metrics.remoteAddress)
         && decoder.decode(metrics.connectionIdentifier)
         && decoder.decode(metrics.tlsProtocol)
         && decoder.decode(metrics.tlsCipher)
         && decoder.decode(metrics.priority)
+        && decoder.decode(metrics.privacyStance)
         && decoder.decode(metrics.requestHeaders)
         && decoder.decode(metrics.requestHeaderBytesSent)
         && decoder.decode(metrics.requestBodyBytesSent)
@@ -248,21 +290,17 @@ bool NetworkLoadMetrics::decode(Decoder& decoder, NetworkLoadMetrics& metrics)
 
 } // namespace WebCore
 
-// NetworkLoadMetrics should not be stored by the WTF::Persistence::Decoder.
 namespace WTF {
-namespace Persistence {
 
-template<> struct Coder<Optional<WebCore::NetworkLoadPriority>> {
-    static NO_RETURN_DUE_TO_ASSERT void encode(Encoder&, const Optional<WebCore::NetworkLoadPriority>&)
-    {
-        ASSERT_NOT_REACHED();
-    }
-
-    static bool decode(Decoder&, Optional<WebCore::NetworkLoadPriority>&)
-    {
-        ASSERT_NOT_REACHED();
-        return false;
-    }
+template<> struct EnumTraits<WebCore::PrivacyStance> {
+    using values = EnumValues<
+        WebCore::PrivacyStance,
+        WebCore::PrivacyStance::Unknown,
+        WebCore::PrivacyStance::NotEligible,
+        WebCore::PrivacyStance::Proxied,
+        WebCore::PrivacyStance::Failed,
+        WebCore::PrivacyStance::Direct
+    >;
 };
 
-}} // namespace WTF::Persistence
+}

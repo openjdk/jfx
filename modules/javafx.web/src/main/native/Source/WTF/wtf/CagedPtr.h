@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,33 +25,39 @@
 
 #pragma once
 
-#include <wtf/DumbPtrTraits.h>
 #include <wtf/Gigacage.h>
+#include <wtf/MathExtras.h>
 #include <wtf/PtrTag.h>
+#include <wtf/RawPtrTraits.h>
 
 #include <climits>
+
+#if OS(DARWIN)
+#include <mach/vm_param.h>
+#endif
 
 namespace WTF {
 
 constexpr bool tagCagedPtr = true;
 
-template<Gigacage::Kind passedKind, typename T, bool shouldTag = false, typename PtrTraits = DumbPtrTraits<T>>
+template<Gigacage::Kind passedKind, typename T, bool shouldTag = false, typename PtrTraits = RawPtrTraits<T>>
 class CagedPtr {
 public:
     static constexpr Gigacage::Kind kind = passedKind;
-    static constexpr unsigned numberOfPACBits = 25;
-    static constexpr uintptr_t nonPACBitsMask = (1ull << ((sizeof(T*) * CHAR_BIT) - numberOfPACBits)) - 1;
+    static constexpr unsigned numberOfPointerBits = sizeof(T*) * CHAR_BIT;
+    static constexpr unsigned maxNumberOfAllowedPACBits = numberOfPointerBits - OS_CONSTANT(EFFECTIVE_ADDRESS_WIDTH);
+    static constexpr uintptr_t nonPACBitsMask = (1ull << (numberOfPointerBits - maxNumberOfAllowedPACBits)) - 1;
 
     CagedPtr() : CagedPtr(nullptr) { }
     CagedPtr(std::nullptr_t)
         : m_ptr(shouldTag ? tagArrayPtr<T>(nullptr, 0) : nullptr)
     { }
 
-    CagedPtr(T* ptr, unsigned size)
+    CagedPtr(T* ptr, size_t size)
         : m_ptr(shouldTag ? tagArrayPtr(ptr, size) : ptr)
     { }
 
-    T* get(unsigned size) const
+    T* get(size_t size) const
     {
         ASSERT(m_ptr);
         T* ptr = PtrTraits::unwrap(m_ptr);
@@ -60,7 +66,7 @@ public:
         return untaggedPtr;
     }
 
-    T* getMayBeNull(unsigned size) const
+    T* getMayBeNull(size_t size) const
     {
         T* ptr = PtrTraits::unwrap(m_ptr);
         if (!removeArrayPtrTag(ptr))
@@ -80,9 +86,9 @@ public:
     // We need the template here so that the type of U is deduced at usage time rather than class time. U should always be T.
     template<typename U = T>
     typename std::enable_if<!std::is_same<void, U>::value, T>::type&
-    /* T& */ at(unsigned index, unsigned size) const { return get(size)[index]; }
+    /* T& */ at(size_t index, size_t size) const { return get(size)[index]; }
 
-    void recage(unsigned oldSize, unsigned newSize)
+    void recage(size_t oldSize, size_t newSize)
     {
         auto ptr = get(oldSize);
         ASSERT(ptr == getUnsafe());

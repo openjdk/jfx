@@ -24,12 +24,13 @@
  */
 
 [
-    EnabledAtRuntime=WebXR,
+    EnabledBySetting=WebXR,
     Conditional=WEBXR,
     SecureContext,
     Exposed=Window,
-    JSGenerateToJSObject,
+    CustomToJSObject,
     JSGenerateToNativeObject,
+    SkipVTableValidation,
     InterfaceName=XRReferenceSpace
 ] interface WebXRReferenceSpace : WebXRSpace {
     [NewObject] WebXRReferenceSpace getOffsetReferenceSpace(WebXRRigidTransform originOffset);

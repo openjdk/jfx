@@ -27,18 +27,12 @@
 
 #if ENABLE(WEBXR)
 
+#include "HTMLCanvasElement.h"
+#include "WebXRWebGLLayer.h"
 #include "XRSessionMode.h"
-#include <wtf/IsoMalloc.h>
-#include <wtf/Optional.h>
-#include <wtf/Ref.h>
-#include <wtf/RefCounted.h>
-#include <wtf/RefPtr.h>
-#include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
-class HTMLCanvasElement;
-class WebXRWebGLLayer;
 struct XRRenderStateInit;
 
 class WebXRRenderState : public RefCounted<WebXRRenderState> {
@@ -47,24 +41,39 @@ public:
     static Ref<WebXRRenderState> create(XRSessionMode);
     ~WebXRRenderState();
 
-    double depthNear() const;
-    double depthFar() const;
-    Optional<double> inlineVerticalFieldOfView() const;
-    RefPtr<WebXRWebGLLayer> baseLayer() const;
-    HTMLCanvasElement* outputCanvas() const;
+    Ref<WebXRRenderState> clone() const;
+
+    double depthNear() const { return m_depth.near; }
+    void setDepthNear(double near) { m_depth.near = near; }
+
+    double depthFar() const { return m_depth.far; }
+    void setDepthFar(double far) { m_depth.far = far; };
+
+    std::optional<double> inlineVerticalFieldOfView() const { return m_inlineVerticalFieldOfView; }
+    void setInlineVerticalFieldOfView(double fieldOfView) { m_inlineVerticalFieldOfView = fieldOfView; }
+
+    RefPtr<WebXRWebGLLayer> baseLayer() const { return m_baseLayer; }
+    void setBaseLayer(WebXRWebGLLayer* baseLayer) { m_baseLayer = baseLayer; }
+
+    HTMLCanvasElement* outputCanvas() const { return m_outputCanvas.get(); }
+    void setOutputCanvas(HTMLCanvasElement* canvas) { m_outputCanvas = makeWeakPtr(canvas); }
+
+    bool isCompositionEnabled() const { return m_compositionEnabled; }
+    void setCompositionEnabled(bool compositionEnabled) { m_compositionEnabled = compositionEnabled; }
 
 private:
-    explicit WebXRRenderState(Optional<double>&& fieldOfView);
-    explicit WebXRRenderState(const XRRenderStateInit&);
+    explicit WebXRRenderState(std::optional<double> fieldOfView);
+    explicit WebXRRenderState(const WebXRRenderState&);
 
     // https://immersive-web.github.io/webxr/#initialize-the-render-state
     struct {
         double near { 0.1 }; // in meters
         double far { 1000 }; // in meters
     } m_depth;
-    Optional<double> m_inlineVerticalFieldOfView; // in radians
+    std::optional<double> m_inlineVerticalFieldOfView; // in radians
     RefPtr<WebXRWebGLLayer> m_baseLayer;
     WeakPtr<HTMLCanvasElement> m_outputCanvas;
+    bool m_compositionEnabled { true };
 };
 
 } // namespace WebCore

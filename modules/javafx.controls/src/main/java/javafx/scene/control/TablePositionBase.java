@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -45,7 +45,7 @@ import java.lang.ref.WeakReference;
  */
 public abstract class TablePositionBase<TC extends TableColumnBase> {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -70,7 +70,7 @@ public abstract class TablePositionBase<TC extends TableColumnBase> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Instance Variables                                                      *
      *                                                                         *
@@ -81,7 +81,7 @@ public abstract class TablePositionBase<TC extends TableColumnBase> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *

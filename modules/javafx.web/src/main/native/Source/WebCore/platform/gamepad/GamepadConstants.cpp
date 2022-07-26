@@ -28,8 +28,8 @@
 
 #if ENABLE(GAMEPAD)
 
-#import <wtf/NeverDestroyed.h>
-#import <wtf/text/WTFString.h>
+#include <wtf/NeverDestroyed.h>
+#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
@@ -42,6 +42,15 @@ const WTF::String& standardGamepadMappingString()
     static NeverDestroyed<String> standardGamepadMapping = "standard";
     return standardGamepadMapping;
 }
+
+#if ENABLE(WEBXR)
+// https://immersive-web.github.io/webxr-gamepads-module/#dom-gamepadmappingtype-xr-standard
+const WTF::String& xrStandardGamepadMappingString()
+{
+    static NeverDestroyed<String> xrStandardGamepadMapping = "xr-standard";
+    return xrStandardGamepadMapping;
+}
+#endif
 
 
 } // namespace WebCore

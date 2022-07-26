@@ -26,7 +26,7 @@
 
 #include "CSSPropertyNames.h"
 #include "RenderStyleConstants.h"
-#include "StyleScope.h"
+#include "StyleScopeOrdinal.h"
 #include "TimingFunction.h"
 
 namespace WebCore {
@@ -53,7 +53,7 @@ public:
 
     // We can make placeholder Animation objects to keep the comma-separated lists
     // of properties in sync. isValidAnimation means this is not a placeholder.
-    bool isValidAnimation() const { return !m_isNone && !m_name.isEmpty(); }
+    bool isValidAnimation() const { return !m_isNone && !m_name.string.isEmpty(); }
 
     bool isEmpty() const
     {
@@ -119,14 +119,20 @@ public:
     double duration() const { return m_duration; }
     double playbackRate() const { return m_playbackRate; }
 
+    struct Name {
+        String string;
+        bool isIdentifier { false };
+    };
+
     enum { IterationCountInfinite = -1 };
     double iterationCount() const { return m_iterationCount; }
-    const String& name() const { return m_name; }
+    const Name& name() const { return m_name; }
     Style::ScopeOrdinal nameStyleScopeOrdinal() const { return m_nameStyleScopeOrdinal; }
     AnimationPlayState playState() const { return static_cast<AnimationPlayState>(m_playState); }
     TransitionProperty property() const { return m_property; }
     const String& unknownProperty() const { return m_unknownProperty; }
     TimingFunction* timingFunction() const { return m_timingFunction.get(); }
+    TimingFunction* defaultTimingFunctionForKeyframes() const { return m_defaultTimingFunctionForKeyframes.get(); }
 
     void setDelay(double c) { m_delay = c; m_delaySet = true; }
     void setDirection(AnimationDirection d) { m_direction = d; m_directionSet = true; }
@@ -134,7 +140,7 @@ public:
     void setPlaybackRate(double d) { m_playbackRate = d; }
     void setFillMode(AnimationFillMode f) { m_fillMode = static_cast<unsigned>(f); m_fillModeSet = true; }
     void setIterationCount(double c) { m_iterationCount = c; m_iterationCountSet = true; }
-    void setName(const String& name, Style::ScopeOrdinal scope = Style::ScopeOrdinal::Element)
+    void setName(const Name& name, Style::ScopeOrdinal scope = Style::ScopeOrdinal::Element)
     {
         m_name = name;
         m_nameStyleScopeOrdinal = scope;
@@ -144,10 +150,11 @@ public:
     void setProperty(TransitionProperty t) { m_property = t; m_propertySet = true; }
     void setUnknownProperty(const String& property) { m_unknownProperty = property; }
     void setTimingFunction(RefPtr<TimingFunction>&& function) { m_timingFunction = WTFMove(function); m_timingFunctionSet = true; }
+    void setDefaultTimingFunctionForKeyframes(RefPtr<TimingFunction>&& function) { m_defaultTimingFunctionForKeyframes = WTFMove(function); }
 
     void setIsNoneAnimation(bool n) { m_isNone = n; }
 
-    Animation& operator=(const Animation& o);
+    Animation& operator=(const Animation&);
 
     // return true if all members of this class match (excluding m_next)
     bool animationsMatch(const Animation&, bool matchProperties = true) const;
@@ -161,18 +168,19 @@ public:
 
 private:
     WEBCORE_EXPORT Animation();
-    Animation(const Animation& o);
+    Animation(const Animation&);
 
     // Packs with m_refCount from the base class.
     TransitionProperty m_property { TransitionMode::All, CSSPropertyInvalid };
 
-    String m_name;
+    Name m_name;
     String m_unknownProperty;
     double m_iterationCount;
     double m_delay;
     double m_duration;
     double m_playbackRate { 1 };
     RefPtr<TimingFunction> m_timingFunction;
+    RefPtr<TimingFunction> m_defaultTimingFunctionForKeyframes;
 
     Style::ScopeOrdinal m_nameStyleScopeOrdinal { Style::ScopeOrdinal::Element };
 
@@ -198,7 +206,7 @@ public:
     static double initialDuration() { return 0; }
     static AnimationFillMode initialFillMode() { return AnimationFillMode::None; }
     static double initialIterationCount() { return 1.0; }
-    static const String& initialName();
+    static const Name& initialName();
     static AnimationPlayState initialPlayState() { return AnimationPlayState::Playing; }
     static TransitionProperty initialProperty() { return { TransitionMode::All, CSSPropertyInvalid }; }
     static Ref<TimingFunction> initialTimingFunction() { return CubicBezierTimingFunction::create(); }

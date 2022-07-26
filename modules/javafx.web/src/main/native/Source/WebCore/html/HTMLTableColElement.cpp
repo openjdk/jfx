@@ -54,19 +54,21 @@ Ref<HTMLTableColElement> HTMLTableColElement::create(const QualifiedName& tagNam
     return adoptRef(*new HTMLTableColElement(tagName, document));
 }
 
-bool HTMLTableColElement::isPresentationAttribute(const QualifiedName& name) const
+bool HTMLTableColElement::hasPresentationalHintsForAttribute(const QualifiedName& name) const
 {
     if (name == widthAttr)
         return true;
-    return HTMLTablePartElement::isPresentationAttribute(name);
+    return HTMLTablePartElement::hasPresentationalHintsForAttribute(name);
 }
 
-void HTMLTableColElement::collectStyleForPresentationAttribute(const QualifiedName& name, const AtomString& value, MutableStyleProperties& style)
+void HTMLTableColElement::collectPresentationalHintsForAttribute(const QualifiedName& name, const AtomString& value, MutableStyleProperties& style)
 {
     if (name == widthAttr)
-        addHTMLLengthToStyle(style, CSSPropertyWidth, value);
+        addHTMLMultiLengthToStyle(style, CSSPropertyWidth, value);
+    else if (name == heightAttr)
+        addHTMLMultiLengthToStyle(style, CSSPropertyHeight, value);
     else
-        HTMLTablePartElement::collectStyleForPresentationAttribute(name, value, style);
+        HTMLTablePartElement::collectPresentationalHintsForAttribute(name, value, style);
 }
 
 void HTMLTableColElement::parseAttribute(const QualifiedName& name, const AtomString& value)
@@ -78,8 +80,8 @@ void HTMLTableColElement::parseAttribute(const QualifiedName& name, const AtomSt
     } else if (name == widthAttr) {
         if (!value.isEmpty()) {
             if (is<RenderTableCol>(renderer())) {
-                RenderTableCol& col = downcast<RenderTableCol>(*renderer());
-                int newWidth = width().toInt();
+                auto& col = downcast<RenderTableCol>(*renderer());
+                int newWidth = parseHTMLInteger(value).value_or(0);
                 if (newWidth != col.width())
                     col.setNeedsLayoutAndPrefWidthsRecalc();
             }
@@ -88,7 +90,7 @@ void HTMLTableColElement::parseAttribute(const QualifiedName& name, const AtomSt
         HTMLTablePartElement::parseAttribute(name, value);
 }
 
-const StyleProperties* HTMLTableColElement::additionalPresentationAttributeStyle() const
+const StyleProperties* HTMLTableColElement::additionalPresentationalHintStyle() const
 {
     if (!hasTagName(colgroupTag))
         return nullptr;

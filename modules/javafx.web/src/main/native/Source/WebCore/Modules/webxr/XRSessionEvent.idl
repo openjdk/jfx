@@ -24,17 +24,17 @@
  */
 
 [
-    EnabledAtRuntime=WebXR,
+    EnabledBySetting=WebXR,
     Conditional=WEBXR,
 ] dictionary XRSessionEventInit : EventInit {
     required WebXRSession session;
 };
 
 [
-    EnabledAtRuntime=WebXR,
+    EnabledBySetting=WebXR,
     Conditional=WEBXR,
     SecureContext,
-    Exposed=Window,
+    Exposed=Window
 ] interface XRSessionEvent : Event {
     constructor(DOMString type, XRSessionEventInit eventInitDict);
 

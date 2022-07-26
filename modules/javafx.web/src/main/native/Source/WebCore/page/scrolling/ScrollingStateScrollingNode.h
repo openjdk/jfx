@@ -55,34 +55,6 @@ class ScrollingStateScrollingNode : public ScrollingStateNode {
 public:
     virtual ~ScrollingStateScrollingNode();
 
-    enum ChangedProperty {
-        ScrollableAreaSize = NumStateNodeBits,
-        TotalContentsSize,
-        ReachableContentsSize,
-        ScrollPosition,
-        ScrollOrigin,
-        ScrollableAreaParams,
-#if ENABLE(SCROLLING_THREAD)
-        ReasonsForSynchronousScrolling,
-#endif
-        RequestedScrollPosition,
-#if ENABLE(CSS_SCROLL_SNAP)
-        HorizontalSnapOffsets,
-        VerticalSnapOffsets,
-        HorizontalSnapOffsetRanges,
-        VerticalSnapOffsetRanges,
-        CurrentHorizontalSnapOffsetIndex,
-        CurrentVerticalSnapOffsetIndex,
-#endif
-        IsMonitoringWheelEvents,
-        ScrollContainerLayer,
-        ScrolledContentsLayer,
-        HorizontalScrollbarLayer,
-        VerticalScrollbarLayer,
-        PainterForScrollbar,
-        NumScrollingStateNodeBits // This must remain at the last position.
-    };
-
     const FloatSize& scrollableAreaSize() const { return m_scrollableAreaSize; }
     WEBCORE_EXPORT void setScrollableAreaSize(const FloatSize&);
 
@@ -98,25 +70,14 @@ public:
     const IntPoint& scrollOrigin() const { return m_scrollOrigin; }
     WEBCORE_EXPORT void setScrollOrigin(const IntPoint&);
 
-#if ENABLE(CSS_SCROLL_SNAP)
-    const Vector<float>& horizontalSnapOffsets() const { return m_snapOffsetsInfo.horizontalSnapOffsets; }
-    WEBCORE_EXPORT void setHorizontalSnapOffsets(const Vector<float>&);
+    const FloatScrollSnapOffsetsInfo& snapOffsetsInfo() const { return m_snapOffsetsInfo; }
+    WEBCORE_EXPORT void setSnapOffsetsInfo(const FloatScrollSnapOffsetsInfo& newOffsetsInfo);
 
-    const Vector<float>& verticalSnapOffsets() const { return m_snapOffsetsInfo.verticalSnapOffsets; }
-    WEBCORE_EXPORT void setVerticalSnapOffsets(const Vector<float>&);
+    std::optional<unsigned> currentHorizontalSnapPointIndex() const { return m_currentHorizontalSnapPointIndex; }
+    WEBCORE_EXPORT void setCurrentHorizontalSnapPointIndex(std::optional<unsigned>);
 
-    const Vector<ScrollOffsetRange<float>>& horizontalSnapOffsetRanges() const { return m_snapOffsetsInfo.horizontalSnapOffsetRanges; }
-    WEBCORE_EXPORT void setHorizontalSnapOffsetRanges(const Vector<ScrollOffsetRange<float>>&);
-
-    const Vector<ScrollOffsetRange<float>>& verticalSnapOffsetRanges() const { return m_snapOffsetsInfo.verticalSnapOffsetRanges; }
-    WEBCORE_EXPORT void setVerticalSnapOffsetRanges(const Vector<ScrollOffsetRange<float>>&);
-
-    unsigned currentHorizontalSnapPointIndex() const { return m_currentHorizontalSnapPointIndex; }
-    WEBCORE_EXPORT void setCurrentHorizontalSnapPointIndex(unsigned);
-
-    unsigned currentVerticalSnapPointIndex() const { return m_currentVerticalSnapPointIndex; }
-    WEBCORE_EXPORT void setCurrentVerticalSnapPointIndex(unsigned);
-#endif
+    std::optional<unsigned> currentVerticalSnapPointIndex() const { return m_currentVerticalSnapPointIndex; }
+    WEBCORE_EXPORT void setCurrentVerticalSnapPointIndex(std::optional<unsigned>);
 
     const ScrollableAreaParameters& scrollableAreaParameters() const { return m_scrollableAreaParameters; }
     WEBCORE_EXPORT void setScrollableAreaParameters(const ScrollableAreaParameters& params);
@@ -156,8 +117,7 @@ protected:
     ScrollingStateScrollingNode(ScrollingStateTree&, ScrollingNodeType, ScrollingNodeID);
     ScrollingStateScrollingNode(const ScrollingStateScrollingNode&, ScrollingStateTree&);
 
-    void setPropertyChangedBitsAfterReattach() override;
-
+    OptionSet<Property> applicableProperties() const override;
     void dumpProperties(WTF::TextStream&, ScrollingStateTreeAsTextBehavior) const override;
 
 private:
@@ -167,11 +127,9 @@ private:
     FloatPoint m_scrollPosition;
     IntPoint m_scrollOrigin;
 
-#if ENABLE(CSS_SCROLL_SNAP)
-    ScrollSnapOffsetsInfo<float> m_snapOffsetsInfo;
-    unsigned m_currentHorizontalSnapPointIndex { 0 };
-    unsigned m_currentVerticalSnapPointIndex { 0 };
-#endif
+    FloatScrollSnapOffsetsInfo m_snapOffsetsInfo;
+    std::optional<unsigned> m_currentHorizontalSnapPointIndex;
+    std::optional<unsigned> m_currentVerticalSnapPointIndex;
 
     LayerRepresentation m_scrollContainerLayer;
     LayerRepresentation m_scrolledContentsLayer;

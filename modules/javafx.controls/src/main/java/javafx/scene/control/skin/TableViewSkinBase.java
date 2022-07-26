@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -79,7 +79,7 @@ import java.security.PrivilegedAction;
  */
 public abstract class TableViewSkinBase<M, S, C extends Control, I extends IndexedCell<M>, TC extends TableColumnBase<S,?>> extends VirtualContainerBase<C, I> {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Static Fields                                                           *
      *                                                                         *
@@ -98,7 +98,7 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Internal Fields                                                         *
      *                                                                         *
@@ -155,7 +155,7 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Listeners                                                               *
      *                                                                         *
@@ -242,14 +242,14 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
      **************************************************************************/
 
     /**
-     *
+     * Constructs a {@code TableViewSkinBase} for the given control.
      * @param control the control
      */
     public TableViewSkinBase(final C control) {
@@ -340,7 +340,7 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Abstract Methods                                                        *
      *                                                                         *
@@ -350,7 +350,7 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *
@@ -502,7 +502,7 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private implementation                                                  *
      *                                                                         *
@@ -1002,7 +1002,7 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * A11y                                                                    *
      *                                                                         *

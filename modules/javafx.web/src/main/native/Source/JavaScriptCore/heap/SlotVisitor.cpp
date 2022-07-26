@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -77,15 +77,10 @@ static void validate(JSCell* cell)
 #endif
 
 SlotVisitor::SlotVisitor(Heap& heap, CString codeName)
-    : m_bytesVisited(0)
-    , m_visitCount(0)
-    , m_isInParallelMode(false)
+    : Base(heap, codeName, heap.m_opaqueRoots)
     , m_markingVersion(MarkedSpace::initialVersion)
-    , m_heap(heap)
-    , m_codeName(codeName)
 #if ASSERT_ENABLED
     , m_isCheckingForDefaultMarkViolation(false)
-    , m_isDraining(false)
 #endif
 {
 }
@@ -117,8 +112,8 @@ void SlotVisitor::didStartMarking()
 
 void SlotVisitor::reset()
 {
+    AbstractSlotVisitor::reset();
     m_bytesVisited = 0;
-    m_visitCount = 0;
     m_heapAnalyzer = nullptr;
     RELEASE_ASSERT(!m_currentCell);
 }
@@ -230,7 +225,7 @@ void SlotVisitor::appendJSCellOrAuxiliary(HeapCell* heapCell)
 void SlotVisitor::appendSlow(JSCell* cell, Dependency dependency)
 {
     if (UNLIKELY(m_heapAnalyzer))
-        m_heapAnalyzer->analyzeEdge(m_currentCell, cell, m_rootMarkReason);
+        m_heapAnalyzer->analyzeEdge(m_currentCell, cell, rootMarkReason());
 
     appendHiddenSlowImpl(cell, dependency);
 }
@@ -420,7 +415,7 @@ inline void SlotVisitor::propagateExternalMemoryVisitedIfNecessary()
         if (m_extraMemorySize.hasOverflowed())
             heap()->reportExtraMemoryVisited(std::numeric_limits<size_t>::max());
         else if (m_extraMemorySize)
-            heap()->reportExtraMemoryVisited(m_extraMemorySize.unsafeGet());
+            heap()->reportExtraMemoryVisited(m_extraMemorySize);
         m_extraMemorySize = 0;
     }
 }
@@ -441,9 +436,9 @@ void SlotVisitor::donateKnownParallel(MarkStackArray& from, MarkStackArray& to)
 
     // If we're contending on the lock, be conservative and assume that another
     // thread is already donating.
-    std::unique_lock<Lock> lock(m_heap.m_markingMutex, std::try_to_lock);
-    if (!lock.owns_lock())
+    if (!m_heap.m_markingMutex.tryLock())
         return;
+    Locker locker { AdoptLock, m_heap.m_markingMutex };
 
     // Otherwise, assume that a thread will go idle soon, and donate.
     from.donateSomeCellsTo(to);
@@ -469,7 +464,7 @@ void SlotVisitor::updateMutatorIsStopped()
 {
     if (mutatorIsStoppedIsUpToDate())
         return;
-    updateMutatorIsStopped(holdLock(m_rightToRun));
+    updateMutatorIsStopped(Locker { m_rightToRun });
 }
 
 bool SlotVisitor::hasAcknowledgedThatTheMutatorIsResumed() const
@@ -494,7 +489,7 @@ NEVER_INLINE void SlotVisitor::drain(MonotonicTime timeout)
         RELEASE_ASSERT_NOT_REACHED();
     }
 
-    auto locker = holdLock(m_rightToRun);
+    Locker locker { m_rightToRun };
 
     while (!hasElapsed(timeout)) {
         updateMutatorIsStopped(locker);
@@ -526,7 +521,7 @@ size_t SlotVisitor::performIncrementOfDraining(size_t bytesRequested)
 
     size_t cellsRequested = bytesRequested / MarkedBlock::atomSize;
     {
-        auto locker = holdLock(m_heap.m_markingMutex);
+        Locker locker { m_heap.m_markingMutex };
         forEachMarkStack(
             [&] (MarkStackArray& stack) -> IterationStatus {
                 cellsRequested -= correspondingGlobalStack(stack).transferTo(stack, cellsRequested);
@@ -546,7 +541,7 @@ size_t SlotVisitor::performIncrementOfDraining(size_t bytesRequested)
     };
 
     {
-        auto locker = holdLock(m_rightToRun);
+        Locker locker { m_rightToRun };
 
         while (!isDone()) {
             updateMutatorIsStopped(locker);
@@ -583,7 +578,7 @@ size_t SlotVisitor::performIncrementOfDraining(size_t bytesRequested)
 
 bool SlotVisitor::didReachTermination()
 {
-    LockHolder locker(m_heap.m_markingMutex);
+    Locker locker { m_heap.m_markingMutex };
     return didReachTermination(locker);
 }
 
@@ -611,7 +606,7 @@ NEVER_INLINE SlotVisitor::SharedDrainResult SlotVisitor::drainFromShared(SharedD
         RefPtr<SharedTask<void(SlotVisitor&)>> bonusTask;
 
         {
-            auto locker = holdLock(m_heap.m_markingMutex);
+            Locker locker { m_heap.m_markingMutex };
             if (isActive)
                 m_heap.m_numberOfActiveParallelMarkers--;
             m_heap.m_numberOfWaitingParallelMarkers++;
@@ -690,7 +685,7 @@ NEVER_INLINE SlotVisitor::SharedDrainResult SlotVisitor::drainFromShared(SharedD
             // The main thread could still be running, and may run for a while. Unless we clear the task
             // ourselves, we will keep looping around trying to run the task.
             {
-                auto locker = holdLock(m_heap.m_markingMutex);
+                Locker locker { m_heap.m_markingMutex };
                 if (m_heap.m_bonusVisitorTask == bonusTask)
                     m_heap.m_bonusVisitorTask = nullptr;
                 bonusTask = nullptr;
@@ -726,13 +721,13 @@ SlotVisitor::SharedDrainResult SlotVisitor::drainInParallelPassively(MonotonicTi
         return drainInParallel(timeout);
     }
 
-    donateAll(holdLock(m_heap.m_markingMutex));
+    donateAll(Locker { m_heap.m_markingMutex });
     return waitForTermination(timeout);
 }
 
 SlotVisitor::SharedDrainResult SlotVisitor::waitForTermination(MonotonicTime timeout)
 {
-    auto locker = holdLock(m_heap.m_markingMutex);
+    Locker locker { m_heap.m_markingMutex };
     for (;;) {
         if (hasElapsed(timeout))
             return SharedDrainResult::TimedOut;
@@ -751,7 +746,7 @@ void SlotVisitor::donateAll()
     if (isEmpty())
         return;
 
-    donateAll(holdLock(m_heap.m_markingMutex));
+    donateAll(Locker { m_heap.m_markingMutex });
 }
 
 void SlotVisitor::donateAll(const AbstractLocker&)
@@ -788,7 +783,7 @@ void SlotVisitor::didRace(const VisitRaceKey& race)
 {
     dataLogLnIf(Options::verboseVisitRace(), toCString("GC visit race: ", race));
 
-    auto locker = holdLock(heap()->m_raceMarkStackLock);
+    Locker locker { heap()->m_raceMarkStackLock };
     JSCell* cell = race.cell();
     cell->setCellState(CellState::PossiblyGrey);
     heap()->m_raceMarkStack->append(cell);
@@ -805,6 +800,11 @@ MarkStackArray& SlotVisitor::correspondingGlobalStack(MarkStackArray& stack)
         return *m_heap.m_sharedCollectorMarkStack;
     RELEASE_ASSERT(&stack == &m_mutatorStack);
     return *m_heap.m_sharedMutatorMarkStack;
+}
+
+NO_RETURN_DUE_TO_CRASH void SlotVisitor::addParallelConstraintTask(RefPtr<SharedTask<void(AbstractSlotVisitor&)>>)
+{
+    RELEASE_ASSERT_NOT_REACHED();
 }
 
 void SlotVisitor::addParallelConstraintTask(RefPtr<SharedTask<void(SlotVisitor&)>> task)

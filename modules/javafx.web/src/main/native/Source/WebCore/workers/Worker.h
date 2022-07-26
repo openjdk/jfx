@@ -29,12 +29,13 @@
 #include "ActiveDOMObject.h"
 #include "ContentSecurityPolicyResponseHeaders.h"
 #include "EventTarget.h"
+#include "FetchRequestCredentials.h"
 #include "MessagePort.h"
-#include "PostMessageOptions.h"
 #include "WorkerScriptLoaderClient.h"
+#include "WorkerType.h"
 #include <JavaScriptCore/RuntimeFlags.h>
+#include <wtf/Deque.h>
 #include <wtf/MonotonicTime.h>
-#include <wtf/Optional.h>
 #include <wtf/text/AtomStringHash.h>
 
 namespace JSC {
@@ -45,20 +46,26 @@ class JSValue;
 
 namespace WebCore {
 
+class RTCRtpScriptTransform;
+class RTCRtpScriptTransformer;
 class ScriptExecutionContext;
 class WorkerGlobalScopeProxy;
 class WorkerScriptLoader;
+
+struct StructuredSerializeOptions;
 
 class Worker final : public AbstractWorker, public ActiveDOMObject, private WorkerScriptLoaderClient {
     WTF_MAKE_ISO_ALLOCATED(Worker);
 public:
     struct Options {
+        WorkerType type;
+        FetchRequestCredentials credentials;
         String name;
     };
     static ExceptionOr<Ref<Worker>> create(ScriptExecutionContext&, JSC::RuntimeFlags, const String& url, const Options&);
     virtual ~Worker();
 
-    ExceptionOr<void> postMessage(JSC::JSGlobalObject&, JSC::JSValue message, PostMessageOptions&&);
+    ExceptionOr<void> postMessage(JSC::JSGlobalObject&, JSC::JSValue message, StructuredSerializeOptions&&);
 
     void terminate();
     bool wasTerminated() const { return m_wasTerminated; }
@@ -69,6 +76,13 @@ public:
     ScriptExecutionContext* scriptExecutionContext() const final { return ActiveDOMObject::scriptExecutionContext(); }
 
     void dispatchEvent(Event&) final;
+
+#if ENABLE(WEB_RTC)
+    void createRTCRtpScriptTransformer(RTCRtpScriptTransform&, MessageWithMessagePorts&&);
+    void postTaskToWorkerGlobalScope(Function<void(ScriptExecutionContext&)>&&);
+#endif
+
+    WorkerType type() const { return m_type; }
 
 private:
     explicit Worker(ScriptExecutionContext&, JSC::RuntimeFlags, const Options&);
@@ -93,13 +107,18 @@ private:
     String m_name;
     String m_identifier;
     WorkerGlobalScopeProxy& m_contextProxy; // The proxy outlives the worker to perform thread shutdown.
-    Optional<ContentSecurityPolicyResponseHeaders> m_contentSecurityPolicyResponseHeaders;
+    std::optional<ContentSecurityPolicyResponseHeaders> m_contentSecurityPolicyResponseHeaders;
     MonotonicTime m_workerCreationTime;
     bool m_shouldBypassMainWorldContentSecurityPolicy { false };
     bool m_isSuspendedForBackForwardCache { false };
     JSC::RuntimeFlags m_runtimeFlags;
     Deque<RefPtr<Event>> m_pendingEvents;
     bool m_wasTerminated { false };
+#if ENABLE(WEB_RTC)
+    HashSet<String> m_transformers;
+#endif
+    WorkerType m_type { WorkerType::Classic };
+    FetchRequestCredentials m_credentials { FetchRequestCredentials::SameOrigin };
 };
 
 } // namespace WebCore

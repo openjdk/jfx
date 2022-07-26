@@ -27,6 +27,8 @@
 
 #if ENABLE(MEDIA_STREAM)
 
+#include <wtf/CompletionHandler.h>
+#include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
@@ -60,6 +62,12 @@ public:
     virtual ~AudioCaptureFactory() = default;
     virtual CaptureSourceOrError createAudioCaptureSource(const CaptureDevice&, String&&, const MediaConstraints*) = 0;
     virtual CaptureDeviceManager& audioCaptureDeviceManager() = 0;
+    virtual const Vector<CaptureDevice>& speakerDevices() const = 0;
+    virtual void computeSpeakerDevices(CompletionHandler<void()>&& callback) const { callback(); }
+
+    class ExtensiveObserver : public CanMakeWeakPtr<ExtensiveObserver> { };
+    virtual void addExtensiveObserver(ExtensiveObserver&) { };
+    virtual void removeExtensiveObserver(ExtensiveObserver&) { };
 
 protected:
     AudioCaptureFactory() = default;

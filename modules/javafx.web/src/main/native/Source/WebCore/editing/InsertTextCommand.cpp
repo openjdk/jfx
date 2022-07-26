@@ -144,7 +144,7 @@ void InsertTextCommand::doApply()
         // deleteSelection eventually makes a new endingSelection out of a Position. If that Position doesn't have
         // a renderer (e.g. it is on a <frameset> in the DOM), the VisibleSelection cannot be canonicalized to
         // anything other than NoSelection. The rest of this function requires a real endingSelection, so bail out.
-        if (endingSelection().isNone())
+        if (endingSelection().isNoneOrOrphaned())
             return;
     } else if (document().editor().isOverwriteModeEnabled()) {
         if (performOverwrite(m_text, m_selectInsertedText))
@@ -214,8 +214,12 @@ void InsertTextCommand::doApply()
                 rebalanceWhitespaceAt(startPosition);
         } else {
             ASSERT(m_rebalanceType == RebalanceAllWhitespaces);
-            if (canRebalance(startPosition) && canRebalance(endPosition))
+            ASSERT(textNodeForRebalance(startPosition) == textNodeForRebalance(endPosition));
+            if (auto textForRebalance = textNodeForRebalance(startPosition)) {
+                ASSERT(textForRebalance == textNode);
                 rebalanceWhitespaceOnTextSubstring(*textNode, startPosition.offsetInContainerNode(), endPosition.offsetInContainerNode());
+            }
+
         }
     }
 
@@ -234,7 +238,7 @@ void InsertTextCommand::doApply()
 
 Position InsertTextCommand::insertTab(const Position& pos)
 {
-    Position insertPos = VisiblePosition(pos, DOWNSTREAM).deepEquivalent();
+    Position insertPos = VisiblePosition(pos).deepEquivalent();
     if (insertPos.isNull())
         return pos;
 

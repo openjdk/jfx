@@ -30,11 +30,26 @@
 
 #pragma once
 
-#include <limits>
+#include <optional>
 #include <unicode/utypes.h>
 #include <wtf/Forward.h>
 
 namespace WebCore {
+
+enum class SecondFormat : uint8_t {
+    None, // Suppress the second part and the millisecond part if they are 0.
+    Second, // Always show the second part, and suppress the millisecond part if it is 0.
+    Millisecond // Always show the second part and the millisecond part.
+};
+
+enum class DateComponentsType : uint8_t {
+    Invalid,
+    Date,
+    DateTimeLocal,
+    Month,
+    Time,
+    Week,
+};
 
 // A DateComponents instance represents one of the following date and time combinations:
 // * Month type: year-month
@@ -53,18 +68,9 @@ public:
         , m_month(0)
         , m_year(0)
         , m_week(0)
-        , m_type(Invalid)
+        , m_type(DateComponentsType::Invalid)
     {
     }
-
-    enum Type {
-        Invalid,
-        Date,
-        DateTimeLocal,
-        Month,
-        Time,
-        Week,
-    };
 
     int millisecond() const { return m_millisecond; }
     int second() const { return m_second; }
@@ -74,44 +80,38 @@ public:
     int month() const { return m_month; }
     int fullYear() const { return m_year; }
     int week() const { return m_week; }
-    Type type() const { return m_type; }
-
-    enum SecondFormat {
-        None, // Suppress the second part and the millisecond part if they are 0.
-        Second, // Always show the second part, and suppress the millisecond part if it is 0.
-        Millisecond // Always show the second part and the millisecond part.
-    };
+    DateComponentsType type() const { return m_type; }
 
     // Returns an ISO 8601 representation for this instance.
     // The format argument is valid for DateTimeLocal and Time types.
-    String toString(SecondFormat = None) const;
+    String toString(SecondFormat = SecondFormat::None) const;
 
     // Sets year and month.
-    static Optional<DateComponents> fromParsingMonth(StringView);
+    static std::optional<DateComponents> fromParsingMonth(StringView);
     // Sets year, month and monthDay.
-    static Optional<DateComponents> fromParsingDate(StringView);
+    static std::optional<DateComponents> fromParsingDate(StringView);
     // Sets year and week.
-    static Optional<DateComponents> fromParsingWeek(StringView);
+    static std::optional<DateComponents> fromParsingWeek(StringView);
     // Sets hour, minute, second and millisecond.
-    static Optional<DateComponents> fromParsingTime(StringView);
+    static std::optional<DateComponents> fromParsingTime(StringView);
     // Sets year, month, monthDay, hour, minute, second and millisecond.
-    static Optional<DateComponents> fromParsingDateTimeLocal(StringView);
+    static std::optional<DateComponents> fromParsingDateTimeLocal(StringView);
 
 
     // For Date type. Updates m_year, m_month and m_monthDay.
-    static Optional<DateComponents> fromMillisecondsSinceEpochForDate(double ms);
+    static std::optional<DateComponents> fromMillisecondsSinceEpochForDate(double ms);
     // For DateTimeLocal type. Updates m_year, m_month, m_monthDay, m_hour, m_minute, m_second and m_millisecond.
-    static Optional<DateComponents> fromMillisecondsSinceEpochForDateTimeLocal(double ms);
+    static std::optional<DateComponents> fromMillisecondsSinceEpochForDateTimeLocal(double ms);
     // For Month type. Updates m_year and m_month.
-    static Optional<DateComponents> fromMillisecondsSinceEpochForMonth(double ms);
+    static std::optional<DateComponents> fromMillisecondsSinceEpochForMonth(double ms);
     // For Week type. Updates m_year and m_week.
-    static Optional<DateComponents> fromMillisecondsSinceEpochForWeek(double ms);
+    static std::optional<DateComponents> fromMillisecondsSinceEpochForWeek(double ms);
 
     // For Time type. Updates m_hour, m_minute, m_second and m_millisecond.
-    static Optional<DateComponents> fromMillisecondsSinceMidnight(double ms);
+    static std::optional<DateComponents> fromMillisecondsSinceMidnight(double ms);
 
     // Another initializer for Month type. Updates m_year and m_month.
-    static Optional<DateComponents> fromMonthsSinceEpoch(double months);
+    static std::optional<DateComponents> fromMonthsSinceEpoch(double months);
 
     // Returns the number of milliseconds from 1970-01-01 00:00:00 UTC.
     // For a DateComponents initialized with parseDateTimeLocal(),
@@ -136,6 +136,14 @@ public:
     static constexpr inline double maximumMonth() { return (275760 - 1970) * 12.0 + 9 - 1; } // 275760-09
     static constexpr inline double maximumTime() { return 86399999; } // 23:59:59.999
     static constexpr inline double maximumWeek() { return 8639999568000000.0; } // 275760-09-08, the Monday of the week including 275760-09-13.
+
+    // HTML uses ISO-8601 format with year >= 1. Gregorian calendar started in
+    // 1582. However, we need to support 0001-01-01 in Gregorian calendar rule.
+    static constexpr inline int minimumYear() { return 1; }
+
+    // Date in ECMAScript can't represent dates later than 275760-09-13T00:00Z.
+    // So, we have the same upper limit in HTML5 date/time types.
+    static constexpr inline int maximumYear() { return 275760; }
 
 private:
     template<typename CharacterType> bool parseYear(StringParsingBuffer<CharacterType>&);
@@ -193,7 +201,7 @@ private:
     int m_year; //  1582 -
     int m_week; // 1 - 53
 
-    Type m_type;
+    DateComponentsType m_type;
 };
 
 } // namespace WebCore

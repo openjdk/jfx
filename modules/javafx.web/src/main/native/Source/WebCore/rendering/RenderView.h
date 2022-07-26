@@ -22,10 +22,10 @@
 #pragma once
 
 #include "FrameView.h"
-#include "HighlightData.h"
 #include "Region.h"
 #include "RenderBlockFlow.h"
 #include "RenderWidget.h"
+#include "SelectionRangeData.h"
 #include <memory>
 #include <wtf/HashSet.h>
 #include <wtf/ListHashSet.h>
@@ -74,7 +74,7 @@ public:
     bool needsEventRegionUpdateForNonCompositedFrame() const { return m_needsEventRegionUpdateForNonCompositedFrame; }
     void setNeedsEventRegionUpdateForNonCompositedFrame(bool value = true) { m_needsEventRegionUpdateForNonCompositedFrame = value; }
 
-    Optional<LayoutRect> computeVisibleRectInContainer(const LayoutRect&, const RenderLayerModelObject* container, VisibleRectContext) const override;
+    std::optional<LayoutRect> computeVisibleRectInContainer(const LayoutRect&, const RenderLayerModelObject* container, VisibleRectContext) const override;
     void repaintRootContents();
     void repaintViewRectangle(const LayoutRect&) const;
     void repaintViewAndCompositedLayers();
@@ -84,7 +84,7 @@ public:
     // Return the renderer whose background style is used to paint the root background.
     RenderElement* rendererForRootBackground() const;
 
-    HighlightData& selection() { return m_selection; }
+    SelectionRangeData& selection() { return m_selection; }
 
     bool printing() const;
 
@@ -183,7 +183,7 @@ public:
 
     private:
         WeakPtr<RenderView> m_rootView;
-        bool m_wasAccumulatingRepaintRegion;
+        bool m_wasAccumulatingRepaintRegion { false };
     };
 
     void scheduleLazyRepaint(RenderBox&);
@@ -195,16 +195,14 @@ public:
     void protectRenderWidgetUntilLayoutIsDone(RenderWidget& widget) { m_protectedRenderWidgets.append(&widget); }
     void releaseProtectedRenderWidgets() { m_protectedRenderWidgets.clear(); }
 
-#if ENABLE(CSS_SCROLL_SNAP)
     void registerBoxWithScrollSnapPositions(const RenderBox&);
     void unregisterBoxWithScrollSnapPositions(const RenderBox&);
     const HashSet<const RenderBox*>& boxesWithScrollSnapPositions() { return m_boxesWithScrollSnapPositions; }
-#endif
 
 private:
-    void mapLocalToContainer(const RenderLayerModelObject* repaintContainer, TransformState&, MapCoordinatesFlags, bool* wasFixed) const override;
+    void mapLocalToContainer(const RenderLayerModelObject* repaintContainer, TransformState&, OptionSet<MapCoordinatesMode>, bool* wasFixed) const override;
     const RenderObject* pushMappingToContainer(const RenderLayerModelObject* ancestorToStopAt, RenderGeometryMap&) const override;
-    void mapAbsoluteToLocalPoint(MapCoordinatesFlags, TransformState&) const override;
+    void mapAbsoluteToLocalPoint(OptionSet<MapCoordinatesMode>, TransformState&) const override;
     bool requiresColumns(int desiredColumnCount) const override;
 
     void computeColumnCountAndWidth() override;
@@ -224,7 +222,7 @@ private:
     uint64_t m_rendererCount { 1 };
 
     mutable std::unique_ptr<Region> m_accumulatedRepaintRegion;
-    HighlightData m_selection;
+    SelectionRangeData m_selection;
 
     WeakPtr<RenderLayer> m_styleChangeLayerMutationRoot;
 
@@ -247,7 +245,7 @@ private:
     HashSet<RenderBox*> m_renderersNeedingLazyRepaint;
 
     std::unique_ptr<ImageQualityController> m_imageQualityController;
-    Optional<LayoutSize> m_pageLogicalSize;
+    std::optional<LayoutSize> m_pageLogicalSize;
     bool m_pageLogicalHeightChanged { false };
     std::unique_ptr<RenderLayerCompositor> m_compositor;
 
@@ -266,9 +264,7 @@ private:
     HashSet<RenderElement*> m_visibleInViewportRenderers;
     Vector<RefPtr<RenderWidget>> m_protectedRenderWidgets;
 
-#if ENABLE(CSS_SCROLL_SNAP)
     HashSet<const RenderBox*> m_boxesWithScrollSnapPositions;
-#endif
 };
 
 } // namespace WebCore

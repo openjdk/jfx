@@ -25,6 +25,7 @@
 #include "WebResourceLoadScheduler.h"
 
 #include "PingHandle.h"
+#include <WebCore/CachedResource.h>
 #include <WebCore/Document.h>
 #include <WebCore/DocumentLoader.h>
 #include <WebCore/FetchOptions.h>
@@ -106,9 +107,11 @@ void WebResourceLoadScheduler::loadResource(Frame& frame, CachedResource& resour
     });
 }
 
-void WebResourceLoadScheduler::loadResourceSynchronously(FrameLoader& frameLoader, unsigned long, const ResourceRequest& request, ClientCredentialPolicy, const FetchOptions& options, const HTTPHeaderMap&, ResourceError& error, ResourceResponse& response, Vector<char>& data)
+void WebResourceLoadScheduler::loadResourceSynchronously(FrameLoader& frameLoader, unsigned long, const ResourceRequest& request, ClientCredentialPolicy, const FetchOptions& options, const HTTPHeaderMap&, ResourceError& error, ResourceResponse& response, Vector<uint8_t>& data)
 {
-    ResourceHandle::loadResourceSynchronously(frameLoader.networkingContext(), request, options.credentials == FetchOptions::Credentials::Omit ? StoredCredentialsPolicy::DoNotUse : StoredCredentialsPolicy::Use, error, response, data);
+    auto* document = frameLoader.frame().document();
+    auto* sourceOrigin = document ? &document->securityOrigin() : nullptr;
+    ResourceHandle::loadResourceSynchronously(frameLoader.networkingContext(), request, options.credentials == FetchOptions::Credentials::Omit ? StoredCredentialsPolicy::DoNotUse : StoredCredentialsPolicy::Use, sourceOrigin, error, response, data);
 }
 
 void WebResourceLoadScheduler::pageLoadCompleted(Page&)
@@ -201,6 +204,15 @@ void WebResourceLoadScheduler::remove(ResourceLoader* resourceLoader)
     }
 #endif
     scheduleServePendingRequests();
+}
+
+void WebResourceLoadScheduler::isResourceLoadFinished(CachedResource& resource, CompletionHandler<void(bool)>&& callback)
+{
+    if (!resource.loader()) {
+        callback(true);
+        return;
+    }
+    callback(!hostForURL(resource.loader()->url()));
 }
 
 void WebResourceLoadScheduler::setDefersLoading(ResourceLoader& loader, bool defers)

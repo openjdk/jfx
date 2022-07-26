@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -228,8 +228,17 @@ public:
         if (*this == other)
             return true;
 
-        if (m_right->isInt32Constant() && other.m_right->isInt32Constant())
-            return (m_right->asInt32() + m_offset) == (other.m_right->asInt32() + other.m_offset);
+        if (m_right->isInt32Constant() && other.m_right->isInt32Constant()) {
+            int thisRight = m_right->asInt32();
+            int otherRight = other.m_right->asInt32();
+
+            if (sumOverflows<int>(thisRight, m_offset))
+                return false;
+            if (sumOverflows<int>(otherRight, other.m_offset))
+                return false;
+
+            return (thisRight + m_offset) == (otherRight + other.m_offset);
+        }
         return false;
     }
 
@@ -1335,6 +1344,8 @@ public:
 
                     if (nonNegative && lessThanLength) {
                         executeNode(block->at(nodeIndex));
+                        if (UNLIKELY(Options::validateBoundsCheckElimination()))
+                            m_insertionSet.insertNode(nodeIndex, SpecNone, AssertInBounds, node->origin, node->child1(), node->child2());
                         // We just need to make sure we are a value-producing node.
                         node->convertToIdentityOn(node->child1().node());
                         changed = true;
@@ -1342,6 +1353,7 @@ public:
                     break;
                 }
 
+                case EnumeratorGetByVal:
                 case GetByVal: {
                     if (node->arrayMode().type() != Array::Undecided)
                         break;
@@ -1378,6 +1390,7 @@ private:
     void executeNode(Node* node)
     {
         switch (node->op()) {
+        // FIXME: Teach this about EnumeratorNextExtractIndex.
         case CheckInBounds: {
             setRelationship(Relationship::safeCreate(node->child1().node(), node->child2().node(), Relationship::LessThan));
             setRelationship(Relationship::safeCreate(node->child1().node(), m_zero, Relationship::GreaterThan, -1));
@@ -1387,7 +1400,25 @@ private:
         case ArithAbs: {
             if (node->child1().useKind() != Int32Use)
                 break;
-            setRelationship(Relationship(node, m_zero, Relationship::GreaterThan, -1));
+
+            // If ArithAbs cares about overflow, then INT32_MIN input will cause OSR exit.
+            // Thus we can safely say `x >= 0`.
+            if (shouldCheckOverflow(node->arithMode())) {
+                setRelationship(Relationship(node, m_zero, Relationship::GreaterThan, -1));
+                break;
+            }
+
+            // If ArithAbs does not care about overflow, it can return INT32_MIN if the input is INT32_MIN.
+            // If minValue is not INT32_MIN, we can still say it is `x >= 0`.
+            int minValue = std::numeric_limits<int>::min();
+            auto iter = m_relationships.find(node->child1().node());
+            if (iter != m_relationships.end()) {
+                for (Relationship relationship : iter->value)
+                    minValue = std::max(minValue, relationship.minValueOfLeft());
+            }
+
+            if (minValue > std::numeric_limits<int>::min())
+                setRelationship(Relationship(node, m_zero, Relationship::GreaterThan, -1));
             break;
         }
 
@@ -1501,9 +1532,12 @@ private:
         }
 
         case Upsilon: {
-            setEquivalence(
-                node->child1().node(),
-                NodeFlowProjection(node->phi(), NodeFlowProjection::Shadow));
+            auto shadowNode = NodeFlowProjection(node->phi(), NodeFlowProjection::Shadow);
+            // We must first remove all relationships involving the shadow node, because setEquivalence does not overwrite them.
+            // Overwriting is only required here because the shadowNodes are not in SSA form (can be written to by several Upsilons).
+            // Another way to think of it, is that we are maintaining the invariant that relationshipMaps are pruned by liveness.
+            kill(shadowNode);
+            setEquivalence(node->child1().node(), shadowNode);
             break;
         }
 
@@ -1516,6 +1550,22 @@ private:
 
         default:
             break;
+        }
+    }
+
+    void kill(NodeFlowProjection node)
+    {
+        m_relationships.remove(node);
+
+        for (auto& relationships : m_relationships.values()) {
+            unsigned i = 0, j = 0;
+            while (i < relationships.size()) {
+                const Relationship& rel = relationships[i++];
+                ASSERT(rel.left() != node);
+                if (rel.right() != node)
+                    relationships[j++] = rel;
+            }
+            relationships.shrink(j);
         }
     }
 
@@ -1558,7 +1608,7 @@ private:
             return;
 
         if (DFGIntegerRangeOptimizationPhaseInternal::verbose)
-            dataLog("    Setting: ", relationship, " (ttl = ", timeToLive, ")\n");
+            dataLogLn("    Setting: ", relationship, " (ttl = ", timeToLive, ")");
 
         auto result = relationshipMap.add(
             relationship.left(), Vector<Relationship>());
@@ -1640,6 +1690,8 @@ private:
                 if (Relationship filtered = otherRelationship.filter(relationship)) {
                     ASSERT(filtered.left() == relationship.left());
                     otherRelationship = filtered;
+                    if (DFGIntegerRangeOptimizationPhaseInternal::verbose)
+                        dataLogLn("      filtered: ", filtered);
                     found = true;
                 }
             }

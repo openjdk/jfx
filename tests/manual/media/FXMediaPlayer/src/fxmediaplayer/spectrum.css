@@ -1,0 +1,159 @@
+/*
+ * Copyright (c) 2021, Oracle and/or its affiliates. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the "Classpath" exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
+ */
+
+#mediaPlayerSpectrum .chart-bar {
+    -fx-background-color: #69de01;
+    -fx-background-insets: 0;
+    -fx-background-radius: 0;
+}
+
+#mediaPlayerSpectrum .data0.chart-bar { -fx-background-color: #69de01; }
+#mediaPlayerSpectrum .data1.chart-bar { -fx-background-color: #69de01; }
+#mediaPlayerSpectrum .data2.chart-bar { -fx-background-color: #69de01; }
+#mediaPlayerSpectrum .data3.chart-bar { -fx-background-color: #69de01; }
+#mediaPlayerSpectrum .data4.chart-bar { -fx-background-color: #69de01; }
+#mediaPlayerSpectrum .data5.chart-bar { -fx-background-color: #69de01; }
+#mediaPlayerSpectrum .data6.chart-bar { -fx-background-color: #69de01; }
+#mediaPlayerSpectrum .data7.chart-bar { -fx-background-color: #69de01; }
+#mediaPlayerSpectrum .data8.chart-bar { -fx-background-color: #75e101; }
+#mediaPlayerSpectrum .data9.chart-bar { -fx-background-color: #75e101; }
+#mediaPlayerSpectrum .data10.chart-bar { -fx-background-color: #75e101; }
+#mediaPlayerSpectrum .data11.chart-bar { -fx-background-color: #75e101; }
+#mediaPlayerSpectrum .data12.chart-bar { -fx-background-color: #75e101; }
+#mediaPlayerSpectrum .data13.chart-bar { -fx-background-color: #75e101; }
+#mediaPlayerSpectrum .data14.chart-bar { -fx-background-color: #75e101; }
+#mediaPlayerSpectrum .data15.chart-bar { -fx-background-color: #75e101; }
+#mediaPlayerSpectrum .data16.chart-bar { -fx-background-color: #86e701; }
+#mediaPlayerSpectrum .data17.chart-bar { -fx-background-color: #86e701; }
+#mediaPlayerSpectrum .data18.chart-bar { -fx-background-color: #86e701; }
+#mediaPlayerSpectrum .data19.chart-bar { -fx-background-color: #86e701; }
+#mediaPlayerSpectrum .data20.chart-bar { -fx-background-color: #86e701; }
+#mediaPlayerSpectrum .data21.chart-bar { -fx-background-color: #86e701; }
+#mediaPlayerSpectrum .data22.chart-bar { -fx-background-color: #86e701; }
+#mediaPlayerSpectrum .data23.chart-bar { -fx-background-color: #86e701; }
+#mediaPlayerSpectrum .data24.chart-bar { -fx-background-color: #9aee01; }
+#mediaPlayerSpectrum .data25.chart-bar { -fx-background-color: #9aee01; }
+#mediaPlayerSpectrum .data26.chart-bar { -fx-background-color: #9aee01; }
+#mediaPlayerSpectrum .data27.chart-bar { -fx-background-color: #9aee01; }
+#mediaPlayerSpectrum .data28.chart-bar { -fx-background-color: #9aee01; }
+#mediaPlayerSpectrum .data29.chart-bar { -fx-background-color: #9aee01; }
+#mediaPlayerSpectrum .data30.chart-bar { -fx-background-color: #9aee01; }
+#mediaPlayerSpectrum .data31.chart-bar { -fx-background-color: #9aee01; }
+#mediaPlayerSpectrum .data32.chart-bar { -fx-background-color: #b0f000; }
+#mediaPlayerSpectrum .data33.chart-bar { -fx-background-color: #b0f000; }
+#mediaPlayerSpectrum .data34.chart-bar { -fx-background-color: #b0f000; }
+#mediaPlayerSpectrum .data35.chart-bar { -fx-background-color: #b0f000; }
+#mediaPlayerSpectrum .data36.chart-bar { -fx-background-color: #b0f000; }
+#mediaPlayerSpectrum .data37.chart-bar { -fx-background-color: #b0f000; }
+#mediaPlayerSpectrum .data38.chart-bar { -fx-background-color: #b0f000; }
+#mediaPlayerSpectrum .data39.chart-bar { -fx-background-color: #b0f000; }
+#mediaPlayerSpectrum .data40.chart-bar { -fx-background-color: #c6f000; }
+#mediaPlayerSpectrum .data41.chart-bar { -fx-background-color: #c6f000; }
+#mediaPlayerSpectrum .data42.chart-bar { -fx-background-color: #c6f000; }
+#mediaPlayerSpectrum .data43.chart-bar { -fx-background-color: #c6f000; }
+#mediaPlayerSpectrum .data44.chart-bar { -fx-background-color: #c6f000; }
+#mediaPlayerSpectrum .data45.chart-bar { -fx-background-color: #c6f000; }
+#mediaPlayerSpectrum .data46.chart-bar { -fx-background-color: #c6f000; }
+#mediaPlayerSpectrum .data47.chart-bar { -fx-background-color: #c6f000; }
+#mediaPlayerSpectrum .data48.chart-bar { -fx-background-color: #dbf000; }
+#mediaPlayerSpectrum .data49.chart-bar { -fx-background-color: #dbf000; }
+#mediaPlayerSpectrum .data50.chart-bar { -fx-background-color: #dbf000; }
+#mediaPlayerSpectrum .data51.chart-bar { -fx-background-color: #dbf000; }
+#mediaPlayerSpectrum .data52.chart-bar { -fx-background-color: #dbf000; }
+#mediaPlayerSpectrum .data53.chart-bar { -fx-background-color: #dbf000; }
+#mediaPlayerSpectrum .data54.chart-bar { -fx-background-color: #dbf000; }
+#mediaPlayerSpectrum .data55.chart-bar { -fx-background-color: #dbf000; }
+#mediaPlayerSpectrum .data56.chart-bar { -fx-background-color: #edf000; }
+#mediaPlayerSpectrum .data57.chart-bar { -fx-background-color: #edf000; }
+#mediaPlayerSpectrum .data58.chart-bar { -fx-background-color: #edf000; }
+#mediaPlayerSpectrum .data59.chart-bar { -fx-background-color: #edf000; }
+#mediaPlayerSpectrum .data60.chart-bar { -fx-background-color: #edf000; }
+#mediaPlayerSpectrum .data61.chart-bar { -fx-background-color: #edf000; }
+#mediaPlayerSpectrum .data62.chart-bar { -fx-background-color: #edf000; }
+#mediaPlayerSpectrum .data63.chart-bar { -fx-background-color: #edf000; }
+#mediaPlayerSpectrum .data64.chart-bar { -fx-background-color: #fbf002; }
+#mediaPlayerSpectrum .data65.chart-bar { -fx-background-color: #fbf002; }
+#mediaPlayerSpectrum .data66.chart-bar { -fx-background-color: #fbf002; }
+#mediaPlayerSpectrum .data67.chart-bar { -fx-background-color: #fbf002; }
+#mediaPlayerSpectrum .data68.chart-bar { -fx-background-color: #fbf002; }
+#mediaPlayerSpectrum .data69.chart-bar { -fx-background-color: #fbf002; }
+#mediaPlayerSpectrum .data70.chart-bar { -fx-background-color: #fbf002; }
+#mediaPlayerSpectrum .data71.chart-bar { -fx-background-color: #fbf002; }
+#mediaPlayerSpectrum .data72.chart-bar { -fx-background-color: #ffe500; }
+#mediaPlayerSpectrum .data73.chart-bar { -fx-background-color: #ffe500; }
+#mediaPlayerSpectrum .data74.chart-bar { -fx-background-color: #ffe500; }
+#mediaPlayerSpectrum .data75.chart-bar { -fx-background-color: #ffe500; }
+#mediaPlayerSpectrum .data76.chart-bar { -fx-background-color: #ffe500; }
+#mediaPlayerSpectrum .data77.chart-bar { -fx-background-color: #ffe500; }
+#mediaPlayerSpectrum .data78.chart-bar { -fx-background-color: #ffe500; }
+#mediaPlayerSpectrum .data79.chart-bar { -fx-background-color: #ffe500; }
+#mediaPlayerSpectrum .data80.chart-bar { -fx-background-color: #ffca00; }
+#mediaPlayerSpectrum .data81.chart-bar { -fx-background-color: #ffca00; }
+#mediaPlayerSpectrum .data82.chart-bar { -fx-background-color: #ffca00; }
+#mediaPlayerSpectrum .data83.chart-bar { -fx-background-color: #ffca00; }
+#mediaPlayerSpectrum .data84.chart-bar { -fx-background-color: #ffca00; }
+#mediaPlayerSpectrum .data85.chart-bar { -fx-background-color: #ffca00; }
+#mediaPlayerSpectrum .data86.chart-bar { -fx-background-color: #ffca00; }
+#mediaPlayerSpectrum .data87.chart-bar { -fx-background-color: #ffca00; }
+#mediaPlayerSpectrum .data88.chart-bar { -fx-background-color: #ffa700; }
+#mediaPlayerSpectrum .data89.chart-bar { -fx-background-color: #ffa700; }
+#mediaPlayerSpectrum .data90.chart-bar { -fx-background-color: #ffa700; }
+#mediaPlayerSpectrum .data91.chart-bar { -fx-background-color: #ffa700; }
+#mediaPlayerSpectrum .data92.chart-bar { -fx-background-color: #ffa700; }
+#mediaPlayerSpectrum .data93.chart-bar { -fx-background-color: #ffa700; }
+#mediaPlayerSpectrum .data94.chart-bar { -fx-background-color: #ffa700; }
+#mediaPlayerSpectrum .data95.chart-bar { -fx-background-color: #ffa700; }
+#mediaPlayerSpectrum .data96.chart-bar { -fx-background-color: #ff8100; }
+#mediaPlayerSpectrum .data97.chart-bar { -fx-background-color: #ff8100; }
+#mediaPlayerSpectrum .data98.chart-bar { -fx-background-color: #ff8100; }
+#mediaPlayerSpectrum .data99.chart-bar { -fx-background-color: #ff8100; }
+#mediaPlayerSpectrum .data100.chart-bar { -fx-background-color: #ff8100; }
+#mediaPlayerSpectrum .data101.chart-bar { -fx-background-color: #ff8100; }
+#mediaPlayerSpectrum .data102.chart-bar { -fx-background-color: #ff8100; }
+#mediaPlayerSpectrum .data103.chart-bar { -fx-background-color: #ff8100; }
+#mediaPlayerSpectrum .data104.chart-bar { -fx-background-color: #ff5900; }
+#mediaPlayerSpectrum .data105.chart-bar { -fx-background-color: #ff5900; }
+#mediaPlayerSpectrum .data106.chart-bar { -fx-background-color: #ff5900; }
+#mediaPlayerSpectrum .data107.chart-bar { -fx-background-color: #ff5900; }
+#mediaPlayerSpectrum .data108.chart-bar { -fx-background-color: #ff5900; }
+#mediaPlayerSpectrum .data109.chart-bar { -fx-background-color: #ff5900; }
+#mediaPlayerSpectrum .data110.chart-bar { -fx-background-color: #ff5900; }
+#mediaPlayerSpectrum .data111.chart-bar { -fx-background-color: #ff5900; }
+#mediaPlayerSpectrum .data112.chart-bar { -fx-background-color: #ff3400; }
+#mediaPlayerSpectrum .data113.chart-bar { -fx-background-color: #ff3400; }
+#mediaPlayerSpectrum .data114.chart-bar { -fx-background-color: #ff3400; }
+#mediaPlayerSpectrum .data115.chart-bar { -fx-background-color: #ff3400; }
+#mediaPlayerSpectrum .data116.chart-bar { -fx-background-color: #ff3400; }
+#mediaPlayerSpectrum .data117.chart-bar { -fx-background-color: #ff3400; }
+#mediaPlayerSpectrum .data118.chart-bar { -fx-background-color: #ff3400; }
+#mediaPlayerSpectrum .data119.chart-bar { -fx-background-color: #ff3400; }
+#mediaPlayerSpectrum .data120.chart-bar { -fx-background-color: #ff1600; }
+#mediaPlayerSpectrum .data121.chart-bar { -fx-background-color: #ff1600; }
+#mediaPlayerSpectrum .data122.chart-bar { -fx-background-color: #ff1600; }
+#mediaPlayerSpectrum .data123.chart-bar { -fx-background-color: #ff1600; }
+#mediaPlayerSpectrum .data124.chart-bar { -fx-background-color: #ff1600; }
+#mediaPlayerSpectrum .data125.chart-bar { -fx-background-color: #ff1600; }
+#mediaPlayerSpectrum .data126.chart-bar { -fx-background-color: #ff1600; }
+#mediaPlayerSpectrum .data127.chart-bar { -fx-background-color: #ff1600; }

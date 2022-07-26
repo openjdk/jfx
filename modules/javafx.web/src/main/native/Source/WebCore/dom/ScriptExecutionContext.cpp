@@ -28,15 +28,21 @@
 #include "config.h"
 #include "ScriptExecutionContext.h"
 
+#include "CSSValuePool.h"
 #include "CachedScript.h"
 #include "CommonVM.h"
+#include "CrossOriginOpenerPolicy.h"
 #include "DOMTimer.h"
 #include "DOMWindow.h"
 #include "DatabaseContext.h"
 #include "Document.h"
 #include "ErrorEvent.h"
+#include "FontCache.h"
+#include "FontLoadRequest.h"
 #include "JSDOMExceptionHandling.h"
 #include "JSDOMWindow.h"
+#include "JSWorkerGlobalScope.h"
+#include "JSWorkletGlobalScope.h"
 #include "LegacySchemeRegistry.h"
 #include "MessagePort.h"
 #include "Navigator.h"
@@ -53,16 +59,21 @@
 #include "ServiceWorkerGlobalScope.h"
 #include "ServiceWorkerProvider.h"
 #include "Settings.h"
+#include "WebCoreJSClientData.h"
 #include "WorkerGlobalScope.h"
 #include "WorkerNavigator.h"
+#include "WorkerOrWorkletGlobalScope.h"
+#include "WorkerOrWorkletScriptController.h"
+#include "WorkerOrWorkletThread.h"
 #include "WorkerThread.h"
 #include "WorkletGlobalScope.h"
-#include "WorkletScriptController.h"
 #include <JavaScriptCore/CatchScope.h>
+#include <JavaScriptCore/DeferredWorkTimer.h>
 #include <JavaScriptCore/Exception.h>
 #include <JavaScriptCore/JSPromise.h>
 #include <JavaScriptCore/ScriptCallStack.h>
 #include <JavaScriptCore/StrongInlines.h>
+#include <wtf/Lock.h>
 #include <wtf/MainThread.h>
 #include <wtf/Ref.h>
 #include <wtf/SetForScope.h>
@@ -70,8 +81,10 @@
 namespace WebCore {
 using namespace Inspector;
 
+static std::atomic<CrossOriginMode> globalCrossOriginMode { CrossOriginMode::Shared };
+
 static Lock allScriptExecutionContextsMapLock;
-static HashMap<ScriptExecutionContextIdentifier, ScriptExecutionContext*>& allScriptExecutionContextsMap()
+static HashMap<ScriptExecutionContextIdentifier, ScriptExecutionContext*>& allScriptExecutionContextsMap() WTF_REQUIRES_LOCK(allScriptExecutionContextsMapLock)
 {
     static NeverDestroyed<HashMap<ScriptExecutionContextIdentifier, ScriptExecutionContext*>> contexts;
     ASSERT(allScriptExecutionContextsMapLock.isLocked());
@@ -104,7 +117,7 @@ ScriptExecutionContextIdentifier ScriptExecutionContext::contextIdentifier() con
 {
     ASSERT(isContextThread());
     if (!m_contextIdentifier) {
-        Locker<Lock> locker(allScriptExecutionContextsMapLock);
+        Locker locker { allScriptExecutionContextsMapLock };
 
         m_contextIdentifier = ScriptExecutionContextIdentifier::generate();
 
@@ -117,7 +130,7 @@ ScriptExecutionContextIdentifier ScriptExecutionContext::contextIdentifier() con
 void ScriptExecutionContext::removeFromContextsMap()
 {
     if (m_contextIdentifier) {
-        Locker<Lock> locker(allScriptExecutionContextsMapLock);
+        Locker locker { allScriptExecutionContextsMapLock };
         ASSERT(allScriptExecutionContextsMap().contains(m_contextIdentifier));
         allScriptExecutionContextsMap().remove(m_contextIdentifier);
     }
@@ -153,7 +166,7 @@ ScriptExecutionContext::~ScriptExecutionContext()
 
 #if ASSERT_ENABLED
     if (m_contextIdentifier) {
-        Locker<Lock> locker(allScriptExecutionContextsMapLock);
+        Locker locker { allScriptExecutionContextsMapLock };
         ASSERT_WITH_MESSAGE(!allScriptExecutionContextsMap().contains(m_contextIdentifier),
             "A ScriptExecutionContext subclass instance implementing postTask should have already removed itself from the map");
     }
@@ -204,22 +217,35 @@ void ScriptExecutionContext::dispatchMessagePortEvents()
 
 void ScriptExecutionContext::createdMessagePort(MessagePort& messagePort)
 {
-    ASSERT((is<Document>(*this) && isMainThread())
-        || (is<WorkerGlobalScope>(*this) && downcast<WorkerGlobalScope>(*this).thread().thread() == &Thread::current()));
+    ASSERT(isContextThread());
 
     m_messagePorts.add(&messagePort);
 }
 
 void ScriptExecutionContext::destroyedMessagePort(MessagePort& messagePort)
 {
-    ASSERT((is<Document>(*this) && isMainThread())
-        || (is<WorkerGlobalScope>(*this) && downcast<WorkerGlobalScope>(*this).thread().thread() == &Thread::current()));
+    ASSERT(isContextThread());
 
     m_messagePorts.remove(&messagePort);
 }
 
 void ScriptExecutionContext::didLoadResourceSynchronously(const URL&)
 {
+}
+
+FontCache& ScriptExecutionContext::fontCache()
+{
+    return FontCache::singleton();
+}
+
+CSSValuePool& ScriptExecutionContext::cssValuePool()
+{
+    return CSSValuePool::singleton();
+}
+
+std::unique_ptr<FontLoadRequest> ScriptExecutionContext::fontLoadRequest(String&, bool, bool, LoadedFromOpaqueSource)
+{
+    return nullptr;
 }
 
 void ScriptExecutionContext::forEachActiveDOMObject(const Function<ShouldContinue(ActiveDOMObject&)>& apply) const
@@ -244,6 +270,15 @@ void ScriptExecutionContext::forEachActiveDOMObject(const Function<ShouldContinu
         if (apply(*activeDOMObject) == ShouldContinue::No)
             break;
     }
+}
+
+JSC::ScriptExecutionStatus ScriptExecutionContext::jscScriptExecutionStatus() const
+{
+    if (activeDOMObjectsAreSuspended())
+        return JSC::ScriptExecutionStatus::Suspended;
+    if (activeDOMObjectsAreStopped())
+        return JSC::ScriptExecutionStatus::Stopped;
+    return JSC::ScriptExecutionStatus::Running;
 }
 
 void ScriptExecutionContext::suspendActiveDOMObjects(ReasonForSuspension why)
@@ -279,6 +314,8 @@ void ScriptExecutionContext::resumeActiveDOMObjects(ReasonForSuspension why)
         activeDOMObject.resume();
         return ShouldContinue::Yes;
     });
+
+    vm().deferredWorkTimer->didResumeScriptExecutionOwner();
 
     m_activeDOMObjectsAreSuspended = false;
 
@@ -382,10 +419,26 @@ void ScriptExecutionContext::reportUnhandledPromiseRejection(JSC::JSGlobalObject
 
     JSC::VM& vm = state.vm();
     auto scope = DECLARE_CATCH_SCOPE(vm);
-
     JSC::JSValue result = promise.result(vm);
     String resultMessage = retrieveErrorMessage(state, vm, result, scope);
-    String errorMessage = makeString("Unhandled Promise Rejection: ", resultMessage);
+    String errorMessage;
+
+    auto tryMakeErrorString = [&] (unsigned length) -> String {
+        bool addEllipsis = length != resultMessage.length();
+        return tryMakeString("Unhandled Promise Rejection: ", StringView(resultMessage).left(length), addEllipsis ? "..." : "");
+    };
+
+    if (!!resultMessage && !scope.exception()) {
+        constexpr unsigned maxLength = 200;
+        constexpr unsigned shortLength = 10;
+        errorMessage = tryMakeErrorString(std::min(resultMessage.length(), maxLength));
+        if (!errorMessage && resultMessage.length() > shortLength)
+            errorMessage = tryMakeErrorString(shortLength);
+    }
+
+    if (!errorMessage)
+        errorMessage = "Unhandled Promise Rejection"_s;
+
     std::unique_ptr<Inspector::ConsoleMessage> message;
     if (callStack)
         message = makeUnique<Inspector::ConsoleMessage>(MessageSource::JS, MessageType::Log, MessageLevel::Error, errorMessage, callStack.releaseNonNull());
@@ -462,21 +515,6 @@ Seconds ScriptExecutionContext::domTimerAlignmentInterval(bool) const
     return DOMTimer::defaultAlignmentInterval();
 }
 
-JSC::VM& ScriptExecutionContext::vm()
-{
-    if (is<Document>(*this))
-        return commonVM();
-    if (is<WorkerGlobalScope>(*this))
-        return downcast<WorkerGlobalScope>(*this).script()->vm();
-#if ENABLE(CSS_PAINTING_API)
-    if (is<WorkletGlobalScope>(*this))
-        return downcast<WorkletGlobalScope>(*this).script()->vm();
-#endif
-
-    RELEASE_ASSERT_NOT_REACHED();
-    return commonVM();
-}
-
 RejectedPromiseTracker& ScriptExecutionContext::ensureRejectedPromiseTrackerSlow()
 {
     // ScriptExecutionContext::vm() in Worker is only available after WorkerGlobalScope initialization is done.
@@ -509,20 +547,13 @@ bool ScriptExecutionContext::hasPendingActivity() const
     return false;
 }
 
-JSC::JSGlobalObject* ScriptExecutionContext::execState()
+JSC::JSGlobalObject* ScriptExecutionContext::globalObject()
 {
-    if (is<Document>(*this)) {
-        Document& document = downcast<Document>(*this);
-        auto* frame = document.frame();
-        return frame ? frame->script().globalObject(mainThreadNormalWorld()) : nullptr;
-    }
+    if (is<Document>(*this))
+        return WebCore::globalObject(mainThreadNormalWorld(), downcast<Document>(*this).frame());
 
-    if (is<WorkerGlobalScope>(*this))
-        return execStateFromWorkerGlobalScope(downcast<WorkerGlobalScope>(*this));
-#if ENABLE(CSS_PAINTING_API)
-    if (is<WorkletGlobalScope>(*this))
-        return execStateFromWorkletGlobalScope(downcast<WorkletGlobalScope>(*this));
-#endif
+    if (is<WorkerOrWorkletGlobalScope>(*this))
+        return WebCore::globalObject(downcast<WorkerOrWorkletGlobalScope>(*this));
 
     ASSERT_NOT_REACHED();
     return nullptr;
@@ -594,9 +625,19 @@ ServiceWorkerContainer* ScriptExecutionContext::ensureServiceWorkerContainer()
 
 #endif
 
+void ScriptExecutionContext::setCrossOriginMode(CrossOriginMode crossOriginMode)
+{
+    globalCrossOriginMode = crossOriginMode;
+}
+
+CrossOriginMode ScriptExecutionContext::crossOriginMode()
+{
+    return globalCrossOriginMode;
+}
+
 bool ScriptExecutionContext::postTaskTo(ScriptExecutionContextIdentifier identifier, Task&& task)
 {
-    Locker<Lock> locker(allScriptExecutionContextsMapLock);
+    Locker locker { allScriptExecutionContextsMapLock };
     auto* context = allScriptExecutionContextsMap().get(identifier);
 
     if (!context)

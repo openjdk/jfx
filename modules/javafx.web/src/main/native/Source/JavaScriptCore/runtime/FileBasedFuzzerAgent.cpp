@@ -28,6 +28,7 @@
 
 #include "CodeBlock.h"
 #include "FuzzerPredictions.h"
+#include "JSCellInlines.h"
 #include <wtf/AnsiColors.h>
 
 namespace JSC {
@@ -40,7 +41,7 @@ FileBasedFuzzerAgent::FileBasedFuzzerAgent(VM& vm)
 SpeculatedType FileBasedFuzzerAgent::getPredictionInternal(CodeBlock* codeBlock, PredictionTarget& target, SpeculatedType original)
 {
     FuzzerPredictions& fuzzerPredictions = ensureGlobalFuzzerPredictions();
-    Optional<SpeculatedType> generated = fuzzerPredictions.predictionFor(target.lookupKey);
+    std::optional<SpeculatedType> generated = fuzzerPredictions.predictionFor(target.lookupKey);
 
     SourceProvider* provider = codeBlock->source().provider();
     auto sourceUpToDivot = provider->source().substring(target.divot - target.startOffset, target.startOffset);
@@ -89,7 +90,6 @@ SpeculatedType FileBasedFuzzerAgent::getPredictionInternal(CodeBlock* codeBlock,
         break;
 
     case op_get_by_val_with_this:
-    case op_get_direct_pname:
     case op_construct:
     case op_construct_varargs:
     case op_call_varargs:

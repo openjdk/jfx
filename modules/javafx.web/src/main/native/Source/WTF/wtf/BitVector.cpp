@@ -30,6 +30,7 @@
 #include <string.h>
 #include <wtf/Assertions.h>
 #include <wtf/MathExtras.h>
+#include <wtf/NeverDestroyed.h>
 
 namespace WTF {
 
@@ -261,12 +262,8 @@ uintptr_t BitVector::hashSlowCase() const
 
 void BitVector::dump(PrintStream& out) const
 {
-    for (size_t i = 0; i < size(); ++i) {
-        if (get(i))
-            out.printf("1");
-        else
-            out.printf("-");
-    }
+    for (size_t i = 0; i < size(); ++i)
+        out.print(get(i) ? "1" : "-");
 }
 
 } // namespace WTF

@@ -30,6 +30,8 @@
 #include "AudioTrack.h"
 #include "TextTrack.h"
 #include "Timer.h"
+#include <wtf/EnumTraits.h>
+#include <wtf/HashSet.h>
 
 namespace WebCore {
 
@@ -85,7 +87,7 @@ public:
 
     virtual String displayNameForTrack(TextTrack*) const;
     MediaSelectionOption mediaSelectionOptionForTrack(TextTrack*) const;
-    virtual Vector<RefPtr<TextTrack>> sortedTrackListForMenu(TextTrackList*);
+    virtual Vector<RefPtr<TextTrack>> sortedTrackListForMenu(TextTrackList*, HashSet<TextTrack::Kind>);
 
     virtual String displayNameForTrack(AudioTrack*) const;
     MediaSelectionOption mediaSelectionOptionForTrack(AudioTrack*) const;
@@ -122,4 +124,19 @@ private:
 };
 
 }
+
+namespace WTF {
+
+template<> struct EnumTraits<WebCore::CaptionUserPreferences::CaptionDisplayMode> {
+    using values = EnumValues<
+        WebCore::CaptionUserPreferences::CaptionDisplayMode,
+        WebCore::CaptionUserPreferences::CaptionDisplayMode::Automatic,
+        WebCore::CaptionUserPreferences::CaptionDisplayMode::ForcedOnly,
+        WebCore::CaptionUserPreferences::CaptionDisplayMode::AlwaysOn,
+        WebCore::CaptionUserPreferences::CaptionDisplayMode::Manual
+    >;
+};
+
+} // namespace WTF
+
 #endif

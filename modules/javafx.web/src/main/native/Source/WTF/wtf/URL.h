@@ -29,6 +29,10 @@
 #include <wtf/RetainPtr.h>
 #include <wtf/text/WTFString.h>
 
+#if USE(GLIB) && HAVE(GURI)
+#include <wtf/glib/GRefPtr.h>
+#endif
+
 #if USE(CF)
 typedef const struct __CFURL* CFURLRef;
 #endif
@@ -102,7 +106,7 @@ public:
     WTF_EXPORT_PRIVATE StringView encodedUser() const;
     WTF_EXPORT_PRIVATE StringView encodedPassword() const;
     WTF_EXPORT_PRIVATE StringView host() const;
-    WTF_EXPORT_PRIVATE Optional<uint16_t> port() const;
+    WTF_EXPORT_PRIVATE std::optional<uint16_t> port() const;
     WTF_EXPORT_PRIVATE StringView path() const;
     WTF_EXPORT_PRIVATE StringView lastPathComponent() const;
     WTF_EXPORT_PRIVATE StringView query() const;
@@ -111,7 +115,7 @@ public:
     WTF_EXPORT_PRIVATE StringView queryWithLeadingQuestionMark() const;
     WTF_EXPORT_PRIVATE StringView fragmentIdentifierWithLeadingNumberSign() const;
     WTF_EXPORT_PRIVATE StringView stringWithoutQueryOrFragmentIdentifier() const;
-    StringView stringWithoutFragmentIdentifier() const;
+    WTF_EXPORT_PRIVATE StringView stringWithoutFragmentIdentifier() const;
 
     WTF_EXPORT_PRIVATE String protocolHostAndPort() const;
     WTF_EXPORT_PRIVATE String hostAndPort() const;
@@ -147,7 +151,7 @@ public:
     WTF_EXPORT_PRIVATE bool setProtocol(StringView);
     WTF_EXPORT_PRIVATE void setHost(StringView);
 
-    WTF_EXPORT_PRIVATE void setPort(Optional<uint16_t>);
+    WTF_EXPORT_PRIVATE void setPort(std::optional<uint16_t>);
 
     // Input is like "foo.com" or "foo.com:8000".
     WTF_EXPORT_PRIVATE void setHostAndPort(StringView);
@@ -171,7 +175,7 @@ public:
 
     WTF_EXPORT_PRIVATE static bool hostIsIPAddress(StringView);
 
-    unsigned pathStart() const;
+    WTF_EXPORT_PRIVATE unsigned pathStart() const;
     unsigned pathEnd() const;
     unsigned pathAfterLastSlash() const;
 
@@ -189,6 +193,11 @@ public:
     URL(JNIEnv* env, jstring url) : URL(URL(), String(env, url)) {}
 #endif
 
+#if USE(GLIB) && HAVE(GURI)
+    WTF_EXPORT_PRIVATE URL(GUri*);
+    WTF_EXPORT_PRIVATE GRefPtr<GUri> createGUri() const;
+#endif
+
 #ifndef NDEBUG
     void print() const;
 #endif
@@ -196,7 +205,9 @@ public:
 
     template<typename Encoder> void encode(Encoder&) const;
     template<typename Decoder> static WARN_UNUSED_RETURN bool decode(Decoder&, URL&);
-    template<typename Decoder> static Optional<URL> decode(Decoder&);
+    template<typename Decoder> static std::optional<URL> decode(Decoder&);
+
+    WTF_EXPORT_PRIVATE bool hasSpecialScheme() const;
 
 private:
     friend class URLParser;
@@ -241,6 +252,9 @@ bool operator!=(const String&, const URL&);
 
 WTF_EXPORT_PRIVATE bool equalIgnoringFragmentIdentifier(const URL&, const URL&);
 WTF_EXPORT_PRIVATE bool protocolHostAndPortAreEqual(const URL&, const URL&);
+WTF_EXPORT_PRIVATE Vector<KeyValuePair<String, String>> differingQueryParameters(const URL&, const URL&);
+WTF_EXPORT_PRIVATE bool isEqualIgnoringQueryAndFragments(const URL&, const URL&);
+WTF_EXPORT_PRIVATE void removeQueryParameters(URL&, const HashSet<String>&);
 
 WTF_EXPORT_PRIVATE const URL& aboutBlankURL();
 WTF_EXPORT_PRIVATE const URL& aboutSrcDocURL();
@@ -254,9 +268,9 @@ WTF_EXPORT_PRIVATE bool protocolIs(StringView url, const char* protocol);
 WTF_EXPORT_PRIVATE bool protocolIsJavaScript(StringView url);
 WTF_EXPORT_PRIVATE bool protocolIsInHTTPFamily(StringView url);
 
-WTF_EXPORT_PRIVATE Optional<uint16_t> defaultPortForProtocol(StringView protocol);
+WTF_EXPORT_PRIVATE std::optional<uint16_t> defaultPortForProtocol(StringView protocol);
 WTF_EXPORT_PRIVATE bool isDefaultPortForProtocol(uint16_t port, StringView protocol);
-WTF_EXPORT_PRIVATE bool portAllowed(const URL&); // Blacklist ports that should never be used for Web resources.
+WTF_EXPORT_PRIVATE bool portAllowed(const URL&); // Disallow ports that should never be used for Web resources.
 
 WTF_EXPORT_PRIVATE void registerDefaultPortForProtocolForTesting(uint16_t port, const String& protocol);
 WTF_EXPORT_PRIVATE void clearDefaultPortForProtocolMapForTesting();
@@ -269,7 +283,7 @@ WTF_EXPORT_PRIVATE String encodeWithURLEscapeSequences(const String&);
 #ifdef __OBJC__
 
 WTF_EXPORT_PRIVATE RetainPtr<id> makeNSArrayElement(const URL&);
-WTF_EXPORT_PRIVATE Optional<URL> makeVectorElement(const URL*, id);
+WTF_EXPORT_PRIVATE std::optional<URL> makeVectorElement(const URL*, id);
 
 #endif
 
@@ -294,12 +308,12 @@ template<typename Decoder> bool URL::decode(Decoder& decoder, URL& url)
     return true;
 }
 
-template<typename Decoder> Optional<URL> URL::decode(Decoder& decoder)
+template<typename Decoder> std::optional<URL> URL::decode(Decoder& decoder)
 {
-    Optional<String> string;
+    std::optional<String> string;
     decoder >> string;
     if (!string)
-        return WTF::nullopt;
+        return std::nullopt;
     return URL(URL(), WTFMove(*string));
 }
 
@@ -376,11 +390,6 @@ inline bool URL::hasFragmentIdentifier() const
 inline bool URL::protocolIsInHTTPFamily() const
 {
     return m_protocolIsInHTTPFamily;
-}
-
-inline unsigned URL::pathStart() const
-{
-    return m_hostEnd + m_portLength;
 }
 
 inline unsigned URL::pathEnd() const

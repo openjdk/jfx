@@ -54,6 +54,30 @@ namespace WebCore {
 
 namespace ContentExtensions {
 
+#if USE(APPLE_INTERNAL_SDK)
+#import <WebKitAdditions/ContentRuleListAdditions.mm>
+#else
+static void makeSecureIfNecessary(ContentRuleListResults& results, const URL& url, const URL& redirectFrom = { })
+{
+    if (redirectFrom.host() == url.host() && redirectFrom.protocolIs("https"))
+        return;
+
+    if (!url.protocolIs("http"))
+        return;
+    if (url.host() == "www.opengl.org"
+        || url.host() == "webkit.org"
+        || url.host() == "download")
+        results.summary.madeHTTPS = true;
+}
+#endif
+
+bool ContentExtensionsBackend::shouldBeMadeSecure(const URL& url)
+{
+    ContentRuleListResults results;
+    makeSecureIfNecessary(results, url);
+    return results.summary.madeHTTPS;
+}
+
 void ContentExtensionsBackend::addContentExtension(const String& identifier, Ref<CompiledContentExtension> compiledContentExtension, ContentExtension::ShouldCompileCSS shouldCompileCSS)
 {
     ASSERT(!identifier.isEmpty());
@@ -153,29 +177,30 @@ StyleSheetContents* ContentExtensionsBackend::globalDisplayNoneStyleSheet(const 
     return contentExtension ? contentExtension->globalDisplayNoneStyleSheet() : nullptr;
 }
 
-ContentRuleListResults ContentExtensionsBackend::processContentRuleListsForLoad(const URL& url, OptionSet<ResourceType> resourceType, DocumentLoader& initiatingDocumentLoader)
+ContentRuleListResults ContentExtensionsBackend::processContentRuleListsForLoad(Page& page, const URL& url, OptionSet<ResourceType> resourceType, DocumentLoader& initiatingDocumentLoader, const URL& redirectFrom)
 {
-    if (m_contentExtensions.isEmpty())
-        return { };
-
     Document* currentDocument = nullptr;
     URL mainDocumentURL;
+    bool mainFrameContext = false;
 
-    if (Frame* frame = initiatingDocumentLoader.frame()) {
+    if (auto* frame = initiatingDocumentLoader.frame()) {
+        mainFrameContext = frame->isMainFrame();
         currentDocument = frame->document();
 
         if (initiatingDocumentLoader.isLoadingMainResource()
             && frame->isMainFrame()
             && resourceType == ResourceType::Document)
             mainDocumentURL = url;
-        else if (Document* mainDocument = frame->mainFrame().document())
+        else if (auto* mainDocument = frame->mainFrame().document())
             mainDocumentURL = mainDocument->url();
     }
 
-    ResourceLoadInfo resourceLoadInfo = { url, mainDocumentURL, resourceType };
+    ResourceLoadInfo resourceLoadInfo = { url, mainDocumentURL, resourceType, mainFrameContext };
     auto actions = actionsForResourceLoad(resourceLoadInfo);
 
     ContentRuleListResults results;
+    if (page.httpsUpgradeEnabled())
+        makeSecureIfNecessary(results, url, redirectFrom);
     results.results.reserveInitialCapacity(actions.size());
     for (const auto& actionsFromContentRuleList : actions) {
         const String& contentRuleListIdentifier = actionsFromContentRuleList.contentRuleListIdentifier;
@@ -229,7 +254,7 @@ ContentRuleListResults ContentExtensionsBackend::processContentRuleListsForLoad(
         if (results.summary.madeHTTPS) {
             ASSERT(url.protocolIs("http") || url.protocolIs("ws"));
             String newProtocol = url.protocolIs("http") ? "https"_s : "wss"_s;
-            currentDocument->addConsoleMessage(MessageSource::ContentBlocker, MessageLevel::Info, makeString("Content blocker promoted URL from ", url.string(), " to ", newProtocol));
+            currentDocument->addConsoleMessage(MessageSource::ContentBlocker, MessageLevel::Info, makeString("Promoted URL from ", url.string(), " to ", newProtocol));
         }
         if (results.summary.blockedLoad) {
             currentDocument->addConsoleMessage(MessageSource::ContentBlocker, MessageLevel::Info, makeString("Content blocker prevented frame displaying ", mainDocumentURL.string(), " from loading a resource from ", url.string()));
@@ -250,13 +275,11 @@ ContentRuleListResults ContentExtensionsBackend::processContentRuleListsForLoad(
 
 ContentRuleListResults ContentExtensionsBackend::processContentRuleListsForPingLoad(const URL& url, const URL& mainDocumentURL)
 {
-    if (m_contentExtensions.isEmpty())
-        return { };
-
-    ResourceLoadInfo resourceLoadInfo = { url, mainDocumentURL, ResourceType::Raw };
+    ResourceLoadInfo resourceLoadInfo = { url, mainDocumentURL, ResourceType::Ping };
     auto actions = actionsForResourceLoad(resourceLoadInfo);
 
     ContentRuleListResults results;
+    makeSecureIfNecessary(results, url);
     for (const auto& actionsFromContentRuleList : actions) {
         for (const auto& action : actionsFromContentRuleList.actions) {
             switch (action.type()) {

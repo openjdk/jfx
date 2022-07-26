@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -110,7 +110,8 @@ void prepareForGeneration(Code& code)
 
     eliminateDeadCode(code);
 
-    if (code.optLevel() == 1) {
+    size_t numTmps = code.numTmps(Bank::GP) + code.numTmps(Bank::FP);
+    if (code.optLevel() == 1 || numTmps > Options::maximumTmpsForGraphColoring()) {
         // When we're compiling quickly, we do register and stack allocation in one linear scan
         // phase. It's fast because it computes liveness only once.
         allocateRegistersAndStackByLinearScan(code);
@@ -213,11 +214,12 @@ static void generateWithAlreadyAllocatedRegisters(Code& code, CCallHelpers& jit)
 
     PCToOriginMap& pcToOriginMap = code.proc().pcToOriginMap();
     auto addItem = [&] (Inst& inst) {
-        if (!inst.origin) {
-            pcToOriginMap.appendItem(jit.labelIgnoringWatchpoints(), Origin());
+        if (!code.shouldPreserveB3Origins())
             return;
-        }
-        pcToOriginMap.appendItem(jit.labelIgnoringWatchpoints(), inst.origin->origin());
+        if (inst.origin)
+            pcToOriginMap.appendItem(jit.labelIgnoringWatchpoints(), inst.origin->origin());
+        else
+            pcToOriginMap.appendItem(jit.labelIgnoringWatchpoints(), Origin());
     };
 
     Disassembler* disassembler = code.disassembler();
@@ -232,7 +234,7 @@ static void generateWithAlreadyAllocatedRegisters(Code& code, CCallHelpers& jit)
         if (disassembler)
             disassembler->startBlock(block, jit);
 
-        if (Optional<unsigned> entrypointIndex = code.entrypointIndex(block)) {
+        if (std::optional<unsigned> entrypointIndex = code.entrypointIndex(block)) {
             ASSERT(code.isEntrypoint(block));
 
             if (disassembler)

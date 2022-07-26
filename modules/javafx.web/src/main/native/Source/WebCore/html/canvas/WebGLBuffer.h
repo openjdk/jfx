@@ -55,7 +55,7 @@ public:
     const RefPtr<JSC::ArrayBuffer> elementArrayBuffer() const { return m_elementArrayBuffer; }
 
     // Gets the cached max index for the given type if one has been set.
-    Optional<unsigned> getCachedMaxIndex(GCGLenum type);
+    std::optional<unsigned> getCachedMaxIndex(GCGLenum type);
     // Sets the cached max index for the given type.
     void setCachedMaxIndex(GCGLenum type, unsigned value);
 
@@ -67,7 +67,7 @@ public:
 private:
     WebGLBuffer(WebGLRenderingContextBase&);
 
-    void deleteObjectImpl(GraphicsContextGLOpenGL*, PlatformGLObject) override;
+    void deleteObjectImpl(const WTF::AbstractLocker&, GraphicsContextGL*, PlatformGLObject) override;
 
     GCGLenum m_target { 0 };
 

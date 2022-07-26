@@ -35,9 +35,14 @@
 #include "ContentSecurityPolicyResponseHeaders.h"
 #include "DOMWindow.h"
 #include "DedicatedWorkerThread.h"
+#include "EventNames.h"
+#include "JSRTCRtpScriptTransformer.h"
 #include "MessageEvent.h"
+#include "RTCTransformEvent.h"
 #include "RequestAnimationFrameCallback.h"
 #include "SecurityOrigin.h"
+#include "StructuredSerializeOptions.h"
+#include "Worker.h"
 #if ENABLE(OFFSCREEN_CANVAS)
 #include "WorkerAnimationController.h"
 #endif
@@ -57,7 +62,7 @@ Ref<DedicatedWorkerGlobalScope> DedicatedWorkerGlobalScope::create(const WorkerP
 }
 
 DedicatedWorkerGlobalScope::DedicatedWorkerGlobalScope(const WorkerParameters& params, Ref<SecurityOrigin>&& origin, DedicatedWorkerThread& thread, Ref<SecurityOrigin>&& topOrigin, IDBClient::IDBConnectionProxy* connectionProxy, SocketProvider* socketProvider)
-    : WorkerGlobalScope(params, WTFMove(origin), thread, WTFMove(topOrigin), connectionProxy, socketProvider)
+    : WorkerGlobalScope(WorkerThreadType::DedicatedWorker, params, WTFMove(origin), thread, WTFMove(topOrigin), connectionProxy, socketProvider)
     , m_name(params.name)
 {
 }
@@ -69,7 +74,12 @@ EventTargetInterface DedicatedWorkerGlobalScope::eventTargetInterface() const
     return DedicatedWorkerGlobalScopeEventTargetInterfaceType;
 }
 
-ExceptionOr<void> DedicatedWorkerGlobalScope::postMessage(JSC::JSGlobalObject& state, JSC::JSValue messageValue, PostMessageOptions&& options)
+void DedicatedWorkerGlobalScope::prepareForDestruction()
+{
+    WorkerGlobalScope::prepareForDestruction();
+}
+
+ExceptionOr<void> DedicatedWorkerGlobalScope::postMessage(JSC::JSGlobalObject& state, JSC::JSValue messageValue, StructuredSerializeOptions&& options)
 {
     Vector<RefPtr<MessagePort>> ports;
     auto message = SerializedScriptValue::create(state, messageValue, WTFMove(options.transfer), ports, SerializationContext::WorkerPostMessage);
@@ -109,6 +119,18 @@ void DedicatedWorkerGlobalScope::cancelAnimationFrame(CallbackId callbackId)
 {
     if (m_workerAnimationController)
         m_workerAnimationController->cancelAnimationFrame(callbackId);
+}
+#endif
+
+#if ENABLE(WEB_RTC)
+RefPtr<RTCRtpScriptTransformer> DedicatedWorkerGlobalScope::createRTCRtpScriptTransformer(MessageWithMessagePorts&& options)
+{
+    auto transformerOrException = RTCRtpScriptTransformer::create(*this, WTFMove(options));
+    if (transformerOrException.hasException())
+        return nullptr;
+    auto transformer = transformerOrException.releaseReturnValue();
+    dispatchEvent(RTCTransformEvent::create(eventNames().rtctransformEvent, transformer.copyRef(), Event::IsTrusted::Yes));
+    return transformer;
 }
 #endif
 

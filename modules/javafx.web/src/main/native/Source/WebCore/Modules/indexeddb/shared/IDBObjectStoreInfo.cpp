@@ -27,15 +27,13 @@
 #include "IDBObjectStoreInfo.h"
 #include <wtf/text/StringBuilder.h>
 
-#if ENABLE(INDEXED_DATABASE)
-
 namespace WebCore {
 
 IDBObjectStoreInfo::IDBObjectStoreInfo()
 {
 }
 
-IDBObjectStoreInfo::IDBObjectStoreInfo(uint64_t identifier, const String& name, Optional<IDBKeyPath>&& keyPath, bool autoIncrement)
+IDBObjectStoreInfo::IDBObjectStoreInfo(uint64_t identifier, const String& name, std::optional<IDBKeyPath>&& keyPath, bool autoIncrement)
     : m_identifier(identifier)
     , m_name(name)
     , m_keyPath(WTFMove(keyPath))
@@ -52,7 +50,8 @@ IDBIndexInfo IDBObjectStoreInfo::createNewIndex(uint64_t indexID, const String& 
 
 void IDBObjectStoreInfo::addExistingIndex(const IDBIndexInfo& info)
 {
-    ASSERT(!m_indexMap.contains(info.identifier()));
+    if (m_indexMap.contains(info.identifier()))
+        LOG_ERROR("Adding an index '%s' with existing Index ID", info.name().utf8().data());
 
     m_indexMap.set(info.identifier(), info);
 }
@@ -146,5 +145,3 @@ String IDBObjectStoreInfo::condensedLoggingString() const
 #endif
 
 } // namespace WebCore
-
-#endif // ENABLE(INDEXED_DATABASE)

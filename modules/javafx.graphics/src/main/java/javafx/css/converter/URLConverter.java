@@ -43,7 +43,7 @@ import java.security.PrivilegedExceptionAction;
 import java.security.ProtectionDomain;
 
 /**
- * Converts a parsed value representing  URL to a URL string that is
+ * Converter to convert a parsed value representing URL to a URL string that is
  * resolved relative to the location of the stylesheet.
  * The input value is in the form: {@code url("<path>")}.
  *
@@ -57,6 +57,10 @@ public final class URLConverter extends StyleConverter<ParsedValue[], String> {
         static final SequenceConverter SEQUENCE_INSTANCE = new SequenceConverter();
     }
 
+    /**
+     * Gets the {@code URLConverter} instance.
+     * @return the {@code URLConverter} instance
+     */
     public static StyleConverter<ParsedValue[], String> getInstance() {
         return Holder.INSTANCE;
     }
@@ -246,8 +250,16 @@ public final class URLConverter extends StyleConverter<ParsedValue[], String> {
         return "URLType";
     }
 
+    /**
+     * Converter to convert a sequence of URLs to an array of {@code String}s.
+     * @since 9
+     */
     public static final class SequenceConverter extends StyleConverter<ParsedValue<ParsedValue[], String>[], String[]> {
 
+        /**
+         * Gets the {@code SequenceConverter} instance.
+         * @return the {@code SequenceConverter} instance
+         */
         public static SequenceConverter getInstance() {
             return Holder.SEQUENCE_INSTANCE;
         }

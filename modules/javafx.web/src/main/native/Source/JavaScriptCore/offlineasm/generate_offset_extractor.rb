@@ -43,8 +43,10 @@ outputFlnm = ARGV.shift
 validBackends = canonicalizeBackendNames(ARGV.shift.split(/[,\s]+/))
 includeOnlyBackends(validBackends)
 
+variants = ARGV.shift.split(/[,\s]+/)
+
 begin
-    configurationList = configurationIndices(settingsFlnm)
+    configurationList = configurationIndicesForVariants(settingsFlnm, variants)
 rescue MissingMagicValuesException
     $stderr.puts "OffsetExtractor: No magic values found. Skipping offsets extractor file generation."
     exit 1
@@ -90,6 +92,11 @@ File.open(outputFlnm, "w") {
             constsList = constsList(lowLevelAST)
 
             emitCodeInConfiguration(concreteSettings, lowLevelAST, backend) {
+
+                # Windows complains about signed integers being cast to unsigned but we just want the bits.
+                outp.puts "\#if COMPILER(MSVC)"
+                outp.puts "\#pragma warning(disable:4308)"
+                outp.puts "\#endif"
                 constsList.each_with_index {
                     | const, index |
                     outp.puts "constexpr int64_t constValue#{index} = static_cast<int64_t>(#{const.value});"

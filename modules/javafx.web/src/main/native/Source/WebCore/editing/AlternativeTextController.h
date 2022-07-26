@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2010-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -86,6 +86,7 @@ public:
     bool hasPendingCorrection() const UNLESS_ENABLED({ return false; })
     bool isSpellingMarkerAllowed(const SimpleRange& misspellingRange) const UNLESS_ENABLED({ UNUSED_PARAM(misspellingRange); return true; })
     bool isAutomaticSpellingCorrectionEnabled() UNLESS_ENABLED({ return false; })
+    bool canEnableAutomaticSpellingCorrection() const UNLESS_ENABLED({ return false; })
     bool shouldRemoveMarkersUponEditing();
 
     void recordAutocorrectionResponse(AutocorrectionResponse, const String& replacedString, const SimpleRange& replacementRange) UNLESS_ENABLED({ UNUSED_PARAM(replacedString); UNUSED_PARAM(replacementRange); })
@@ -105,14 +106,6 @@ private:
 #if USE(AUTOCORRECTION_PANEL)
     using AutocorrectionReplacement = String;
 
-    struct AlternativeTextInfo {
-        SimpleRange rangeWithAlternative;
-        bool isActive;
-        AlternativeTextType type;
-        String originalText;
-        Variant<AutocorrectionReplacement, DictationContext> details;
-    };
-
     String dismissSoon(ReasonForDismissingAlternativeText);
     void timerFired();
     void recordSpellcheckerResponseForModifiedCorrection(const SimpleRange& rangeOfCorrection, const String& corrected, const String& correction);
@@ -127,9 +120,9 @@ private:
     void markPrecedingWhitespaceForDeletedAutocorrectionAfterCommand(EditCommand*);
 
     Timer m_timer;
-    Optional<SimpleRange> m_rangeWithAlternative;
-    bool m_isActive;
-    bool m_isDismissedByEditing;
+    std::optional<SimpleRange> m_rangeWithAlternative;
+    bool m_isActive { };
+    bool m_isDismissedByEditing { };
     AlternativeTextType m_type;
     String m_originalText;
     Variant<AutocorrectionReplacement, DictationContext> m_details;

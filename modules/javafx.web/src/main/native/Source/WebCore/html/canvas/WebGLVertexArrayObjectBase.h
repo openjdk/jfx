@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,9 +27,17 @@
 
 #if ENABLE(WEBGL)
 
-#include "GraphicsContextGLOpenGL.h"
+#include "GraphicsContextGL.h"
 #include "WebGLBuffer.h"
 #include "WebGLContextObject.h"
+
+namespace JSC {
+class AbstractSlotVisitor;
+}
+
+namespace WTF {
+class AbstractLocker;
+}
 
 namespace WebCore {
 
@@ -52,6 +60,7 @@ public:
         GCGLsizei originalStride { 0 };
         GCGLintptr offset { 0 };
         GCGLuint divisor { 0 };
+        bool isInteger { false };
     };
 
     bool isDefaultObject() const { return m_type == Type::Default; }
@@ -60,17 +69,19 @@ public:
     void setHasEverBeenBound() { m_hasEverBeenBound = true; }
 
     WebGLBuffer* getElementArrayBuffer() const { return m_boundElementArrayBuffer.get(); }
-    void setElementArrayBuffer(WebGLBuffer*);
+    void setElementArrayBuffer(const WTF::AbstractLocker&, WebGLBuffer*);
 
     VertexAttribState& getVertexAttribState(int index) { return m_vertexAttribState[index]; }
-    void setVertexAttribState(GCGLuint, GCGLsizei, GCGLint, GCGLenum, GCGLboolean, GCGLsizei, GCGLintptr, WebGLBuffer*);
-    void unbindBuffer(WebGLBuffer&);
+    void setVertexAttribState(const WTF::AbstractLocker&, GCGLuint, GCGLsizei, GCGLint, GCGLenum, GCGLboolean, GCGLsizei, GCGLintptr, bool, WebGLBuffer*);
+    void unbindBuffer(const WTF::AbstractLocker&, WebGLBuffer&);
 
     void setVertexAttribDivisor(GCGLuint index, GCGLuint divisor);
 
+    void addMembersToOpaqueRoots(const WTF::AbstractLocker&, JSC::AbstractSlotVisitor&);
+
 protected:
     WebGLVertexArrayObjectBase(WebGLRenderingContextBase&, Type);
-    void deleteObjectImpl(GraphicsContextGLOpenGL*, PlatformGLObject) override = 0;
+    void deleteObjectImpl(const WTF::AbstractLocker&, GraphicsContextGL*, PlatformGLObject) override = 0;
 
     Type m_type;
     bool m_hasEverBeenBound { false };

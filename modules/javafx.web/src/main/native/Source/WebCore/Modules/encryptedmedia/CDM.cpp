@@ -92,7 +92,7 @@ void CDM::getSupportedConfiguration(MediaKeySystemConfiguration&& candidateConfi
 
     Document* document = downcast<Document>(m_scriptExecutionContext);
     if (!document || !m_private) {
-        callback(WTF::nullopt);
+        callback(std::nullopt);
         return;
     }
 
@@ -137,7 +137,9 @@ bool CDM::supportsInitDataType(const AtomString& initDataType) const
 
 RefPtr<SharedBuffer> CDM::sanitizeInitData(const AtomString& initDataType, const SharedBuffer& initData)
 {
-    return InitDataRegistry::shared().sanitizeInitData(initDataType, initData);
+    if (!m_private)
+        return nullptr;
+    return m_private->sanitizeInitData(initDataType, initData);
 }
 
 bool CDM::supportsInitData(const AtomString& initDataType, const SharedBuffer& initData)
@@ -152,10 +154,10 @@ RefPtr<SharedBuffer> CDM::sanitizeResponse(const SharedBuffer& response)
     return m_private->sanitizeResponse(response);
 }
 
-Optional<String> CDM::sanitizeSessionId(const String& sessionId)
+std::optional<String> CDM::sanitizeSessionId(const String& sessionId)
 {
     if (!m_private)
-        return WTF::nullopt;
+        return std::nullopt;
     return m_private->sanitizeSessionId(sessionId);
 }
 

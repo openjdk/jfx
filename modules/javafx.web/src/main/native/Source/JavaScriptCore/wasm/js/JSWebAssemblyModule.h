@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,6 +30,7 @@
 #include "JSDestructibleObject.h"
 #include "JSObject.h"
 #include "WasmMemoryMode.h"
+#include "WasmOps.h"
 #include <wtf/Bag.h>
 #include <wtf/Expected.h>
 #include <wtf/Forward.h>
@@ -42,7 +43,6 @@ namespace Wasm {
 class Module;
 struct ModuleInformation;
 class Plan;
-using SignatureIndex = uint64_t;
 }
 
 class SymbolTable;
@@ -80,7 +80,7 @@ private:
 
     JSWebAssemblyModule(VM&, Structure*, Ref<Wasm::Module>&&);
     void finishCreation(VM&);
-    static void visitChildren(JSCell*, SlotVisitor&);
+    DECLARE_VISIT_CHILDREN;
 
     Ref<Wasm::Module> m_module;
     WriteBarrier<SymbolTable> m_exportSymbolTable;

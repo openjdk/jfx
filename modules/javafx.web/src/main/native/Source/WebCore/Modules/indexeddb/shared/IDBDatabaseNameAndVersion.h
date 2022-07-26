@@ -25,8 +25,6 @@
 
 #pragma once
 
-#if ENABLE(INDEXED_DATABASE)
-
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
@@ -36,7 +34,7 @@ struct IDBDatabaseNameAndVersion {
     uint64_t version { 0 };
 
     template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static Optional<IDBDatabaseNameAndVersion> decode(Decoder&);
+    template<class Decoder> static std::optional<IDBDatabaseNameAndVersion> decode(Decoder&);
 
     IDBDatabaseNameAndVersion isolatedCopy() const;
 };
@@ -48,15 +46,15 @@ void IDBDatabaseNameAndVersion::encode(Encoder& encoder) const
 }
 
 template<class Decoder>
-Optional<IDBDatabaseNameAndVersion> IDBDatabaseNameAndVersion::decode(Decoder& decoder)
+std::optional<IDBDatabaseNameAndVersion> IDBDatabaseNameAndVersion::decode(Decoder& decoder)
 {
     IDBDatabaseNameAndVersion info;
 
     if (!decoder.decode(info.name))
-        return WTF::nullopt;
+        return std::nullopt;
 
     if (!decoder.decode(info.version))
-        return WTF::nullopt;
+        return std::nullopt;
 
     return info;
 }
@@ -67,5 +65,3 @@ inline IDBDatabaseNameAndVersion IDBDatabaseNameAndVersion::isolatedCopy() const
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(INDEXED_DATABASE)

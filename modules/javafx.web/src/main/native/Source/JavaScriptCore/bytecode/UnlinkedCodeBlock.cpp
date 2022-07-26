@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2019 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2012-2021 Apple Inc. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -42,8 +42,11 @@ const ClassInfo UnlinkedCodeBlock::s_info = { "UnlinkedCodeBlock", nullptr, null
 
 UnlinkedCodeBlock::UnlinkedCodeBlock(VM& vm, Structure* structure, CodeType codeType, const ExecutableInfo& info, OptionSet<CodeGenerationMode> codeGenerationMode)
     : Base(vm, structure)
-    , m_usesEval(info.usesEval())
+    , m_numVars(0)
+    , m_usesCallEval(false)
+    , m_numCalleeLocals(0)
     , m_isConstructor(info.isConstructor())
+    , m_numParameters(0)
     , m_hasCapturedVariables(false)
     , m_isBuiltinFunction(info.isBuiltinFunction())
     , m_superBinding(static_cast<unsigned>(info.superBinding()))
@@ -66,17 +69,24 @@ UnlinkedCodeBlock::UnlinkedCodeBlock(VM& vm, Structure* structure, CodeType code
     ASSERT(m_codeType == static_cast<unsigned>(codeType));
     ASSERT(m_didOptimize == static_cast<unsigned>(TriState::Indeterminate));
     if (info.needsClassFieldInitializer() == NeedsClassFieldInitializer::Yes) {
-        createRareDataIfNecessary(holdLock(cellLock()));
+        Locker locker { cellLock() };
+        createRareDataIfNecessary(locker);
         m_rareData->m_needsClassFieldInitializer = static_cast<unsigned>(NeedsClassFieldInitializer::Yes);
+    }
+    if (info.privateBrandRequirement() == PrivateBrandRequirement::Needed) {
+        Locker locker { cellLock() };
+        createRareDataIfNecessary(locker);
+        m_rareData->m_privateBrandRequirement = static_cast<unsigned>(PrivateBrandRequirement::Needed);
     }
 }
 
-void UnlinkedCodeBlock::visitChildren(JSCell* cell, SlotVisitor& visitor)
+template<typename Visitor>
+void UnlinkedCodeBlock::visitChildrenImpl(JSCell* cell, Visitor& visitor)
 {
     UnlinkedCodeBlock* thisObject = jsCast<UnlinkedCodeBlock*>(cell);
     ASSERT_GC_OBJECT_INHERITS(thisObject, info());
     Base::visitChildren(thisObject, visitor);
-    auto locker = holdLock(thisObject->cellLock());
+    Locker locker { thisObject->cellLock() };
     if (visitor.isFirstVisit())
         thisObject->m_age = std::min<unsigned>(static_cast<unsigned>(thisObject->m_age) + 1, maxAge);
     for (auto& barrier : thisObject->m_functionDecls)
@@ -87,8 +97,20 @@ void UnlinkedCodeBlock::visitChildren(JSCell* cell, SlotVisitor& visitor)
     size_t extraMemory = thisObject->m_metadata->sizeInBytes();
     if (thisObject->m_instructions)
         extraMemory += thisObject->m_instructions->sizeInBytes();
+    if (thisObject->hasRareData())
+        extraMemory += thisObject->m_rareData->sizeInBytes(locker);
+
+    extraMemory += thisObject->m_jumpTargets.byteSize();
+    extraMemory += thisObject->m_identifiers.byteSize();
+    extraMemory += thisObject->m_constantRegisters.byteSize();
+    extraMemory += thisObject->m_constantsSourceCodeRepresentation.byteSize();
+    extraMemory += thisObject->m_functionDecls.byteSize();
+    extraMemory += thisObject->m_functionExprs.byteSize();
+
     visitor.reportExtraMemoryVisited(extraMemory);
 }
+
+DEFINE_VISIT_CHILDREN(UnlinkedCodeBlock);
 
 size_t UnlinkedCodeBlock::estimatedSize(JSCell* cell, VM& vm)
 {
@@ -97,6 +119,23 @@ size_t UnlinkedCodeBlock::estimatedSize(JSCell* cell, VM& vm)
     if (thisObject->m_instructions)
         extraSize += thisObject->m_instructions->sizeInBytes();
     return Base::estimatedSize(cell, vm) + extraSize;
+}
+
+size_t UnlinkedCodeBlock::RareData::sizeInBytes(const AbstractLocker&) const
+{
+    size_t size = sizeof(RareData);
+    size += m_exceptionHandlers.byteSize();
+    size += m_unlinkedSwitchJumpTables.byteSize();
+    size += m_unlinkedStringSwitchJumpTables.byteSize();
+    size += m_expressionInfoFatPositions.byteSize();
+    size += m_typeProfilerInfoMap.capacity() * sizeof(decltype(m_typeProfilerInfoMap)::KeyValuePairType);
+    size += m_opProfileControlFlowBytecodeOffsets.byteSize();
+    size += m_bitVectors.byteSize();
+    // FIXME: account for each bit vector.
+    size += m_constantIdentifierSets.byteSize();
+    for (const auto& identifierSet : m_constantIdentifierSets)
+        size += identifierSet.capacity() * sizeof(std::remove_reference_t<decltype(identifierSet)>::ValueType);
+    return size;
 }
 
 int UnlinkedCodeBlock::lineNumberForBytecodeIndex(BytecodeIndex bytecodeIndex)
@@ -152,7 +191,7 @@ static void dumpLineColumnEntry(size_t index, const InstructionStream& instructi
 
 void UnlinkedCodeBlock::dumpExpressionRangeInfo()
 {
-    RefCountedArray<ExpressionRangeInfo>& expressionInfo = m_expressionInfo;
+    FixedVector<ExpressionRangeInfo>& expressionInfo = m_expressionInfo;
 
     size_t size = m_expressionInfo.size();
     dataLogF("UnlinkedCodeBlock %p expressionRangeInfo[%zu] {\n", this, size);
@@ -181,7 +220,7 @@ void UnlinkedCodeBlock::expressionRangeForBytecodeIndex(BytecodeIndex bytecodeIn
         return;
     }
 
-    const RefCountedArray<ExpressionRangeInfo>& expressionInfo = m_expressionInfo;
+    const FixedVector<ExpressionRangeInfo>& expressionInfo = m_expressionInfo;
 
     int low = 0;
     int high = expressionInfo.size();

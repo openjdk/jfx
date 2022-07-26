@@ -27,11 +27,11 @@
 
 #include <initializer_list>
 #include <iterator>
+#include <optional>
 #include <type_traits>
 #include <wtf/Assertions.h>
 #include <wtf/EnumTraits.h>
 #include <wtf/MathExtras.h>
-#include <wtf/Optional.h>
 #include <wtf/StdLibExtras.h>
 
 namespace WTF {
@@ -154,7 +154,7 @@ public:
         }
     }
 
-    constexpr OptionSet(Optional<E> optional)
+    constexpr OptionSet(std::optional<E> optional)
         : m_storage(optional ? static_cast<StorageType>(*optional) : 0)
     {
     }
@@ -193,14 +193,22 @@ public:
         m_storage &= ~optionSet.m_storage;
     }
 
+    constexpr void set(OptionSet optionSet, bool value)
+    {
+        if (value)
+            add(optionSet);
+        else
+            remove(optionSet);
+    }
+
     constexpr bool hasExactlyOneBitSet() const
     {
         return m_storage && !(m_storage & (m_storage - 1));
     }
 
-    constexpr Optional<E> toSingleValue() const
+    constexpr std::optional<E> toSingleValue() const
     {
-        return hasExactlyOneBitSet() ? Optional<E>(static_cast<E>(m_storage)) : WTF::nullopt;
+        return hasExactlyOneBitSet() ? std::optional<E>(static_cast<E>(m_storage)) : std::nullopt;
     }
 
     constexpr friend bool operator==(OptionSet lhs, OptionSet rhs)

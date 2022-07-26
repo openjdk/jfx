@@ -48,7 +48,7 @@ Color blendSourceOver(const Color& backdrop, const Color& source)
     int g = (backdropG * backdropA * (0xFF - sourceA) + 0xFF * sourceA * sourceG) / d;
     int b = (backdropB * backdropA * (0xFF - sourceA) + 0xFF * sourceA * sourceB) / d;
 
-    return clampToComponentBytes<SRGBA>(r, g, b, a);
+    return makeFromComponentsClamping<SRGBA<uint8_t>>(r, g, b, a);
 }
 
 Color blendWithWhite(const Color& color)
@@ -78,7 +78,7 @@ Color blendWithWhite(const Color& color)
         int g = blendComponent(existingG, alpha);
         int b = blendComponent(existingB, alpha);
 
-        result = clampToComponentBytes<SRGBA>(r, g, b, alpha);
+        result = makeFromComponentsClamping<SRGBA<uint8_t>>(r, g, b, alpha);
 
         if (r >= 0 && g >= 0 && b >= 0)
             break;
@@ -86,46 +86,48 @@ Color blendWithWhite(const Color& color)
 
     // FIXME: Why is preserving the semantic bit desired and/or correct here?
     if (color.isSemantic())
-        return Color(result, Color::Semantic);
+        return { result, Color::Flags::Semantic };
     return result;
 }
 
-Color blend(const Color& from, const Color& to, double progress)
+Color blend(const Color& from, const Color& to, const BlendingContext& context)
 {
     // FIXME: ExtendedColor - needs to handle color spaces.
     // We need to preserve the state of the valid flag at the end of the animation
-    if (progress == 1 && !to.isValid())
+    if (context.progress == 1 && !to.isValid())
         return { };
 
-    auto premultipliedFrom = premultipliedCeiling(from.toSRGBALossy<uint8_t>());
-    auto premultipliedTo = premultipliedCeiling(to.toSRGBALossy<uint8_t>());
+    auto premultipliedFrom = premultiplied(from.toColorTypeLossy<SRGBA<float>>());
+    auto premultipliedTo = premultiplied(to.toColorTypeLossy<SRGBA<float>>());
 
-    auto premultipliedBlended = clampToComponentBytes<SRGBA>(
-        WebCore::blend(premultipliedFrom.red, premultipliedTo.red, progress),
-        WebCore::blend(premultipliedFrom.green, premultipliedTo.green, progress),
-        WebCore::blend(premultipliedFrom.blue, premultipliedTo.blue, progress),
-        WebCore::blend(premultipliedFrom.alpha, premultipliedTo.alpha, progress)
+    auto premultipliedBlended = makeFromComponentsClamping<SRGBA<float>>(
+        WebCore::blend(premultipliedFrom.red, premultipliedTo.red, context),
+        WebCore::blend(premultipliedFrom.green, premultipliedTo.green, context),
+        WebCore::blend(premultipliedFrom.blue, premultipliedTo.blue, context),
+        WebCore::blend(premultipliedFrom.alpha, premultipliedTo.alpha, context)
     );
 
-    return unpremultiplied(premultipliedBlended);
+    return convertColor<SRGBA<uint8_t>>(unpremultiplied(premultipliedBlended));
 }
 
-Color blendWithoutPremultiply(const Color& from, const Color& to, double progress)
+Color blendWithoutPremultiply(const Color& from, const Color& to, const BlendingContext& context)
 {
     // FIXME: ExtendedColor - needs to handle color spaces.
     // We need to preserve the state of the valid flag at the end of the animation
-    if (progress == 1 && !to.isValid())
+    if (context.progress == 1 && !to.isValid())
         return { };
 
-    auto fromSRGB = from.toSRGBALossy<uint8_t>();
-    auto toSRGB = to.toSRGBALossy<uint8_t>();
+    auto fromSRGB = from.toColorTypeLossy<SRGBA<float>>();
+    auto toSRGB = to.toColorTypeLossy<SRGBA<float>>();
 
-    return clampToComponentBytes<SRGBA>(
-        WebCore::blend(fromSRGB.red, toSRGB.red, progress),
-        WebCore::blend(fromSRGB.green, toSRGB.green, progress),
-        WebCore::blend(fromSRGB.blue, toSRGB.blue, progress),
-        WebCore::blend(fromSRGB.alpha, toSRGB.alpha, progress)
+    auto blended = makeFromComponentsClamping<SRGBA<float>>(
+        WebCore::blend(fromSRGB.red, toSRGB.red, context),
+        WebCore::blend(fromSRGB.green, toSRGB.green, context),
+        WebCore::blend(fromSRGB.blue, toSRGB.blue, context),
+        WebCore::blend(fromSRGB.alpha, toSRGB.alpha, context)
     );
+
+    return convertColor<SRGBA<uint8_t>>(blended);
 }
 
 } // namespace WebCore

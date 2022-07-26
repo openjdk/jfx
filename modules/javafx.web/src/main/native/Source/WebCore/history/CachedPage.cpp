@@ -31,6 +31,7 @@
 #include "FocusController.h"
 #include "Frame.h"
 #include "FrameLoader.h"
+#include "FrameLoaderClient.h"
 #include "FrameView.h"
 #include "HistoryController.h"
 #include "HistoryItem.h"
@@ -38,6 +39,7 @@
 #include "Page.h"
 #include "PageTransitionEvent.h"
 #include "ScriptDisallowedScope.h"
+#include "SelectionRestorationMode.h"
 #include "Settings.h"
 #include "VisitedLinkState.h"
 #include <wtf/RefCountedLeakCounter.h>
@@ -57,6 +59,9 @@ CachedPage::CachedPage(Page& page)
     : m_page(page)
     , m_expirationTime(MonotonicTime::now() + page.settings().backForwardCacheExpirationInterval())
     , m_cachedMainFrame(makeUnique<CachedFrame>(page.mainFrame()))
+#if ENABLE(RESOURCE_LOAD_STATISTICS)
+    , m_loadedSubresourceDomains(page.mainFrame().loader().client().loadedSubresourceDomains())
+#endif
 {
 #ifndef NDEBUG
     cachedPageCounter.increment();
@@ -88,8 +93,9 @@ static void firePageShowAndPopStateEvents(Page& page)
         if (!document)
             continue;
 
-        // FIXME: Update Page Visibility state here.
-        // https://bugs.webkit.org/show_bug.cgi?id=116770
+        // This takes care of firing the visibilitychange event and making sure the document is reported as visible.
+        document->setVisibilityHiddenDueToDismissal(false);
+
         document->dispatchPageshowEvent(PageshowEventPersisted);
 
         auto* historyItem = child->loader().history().currentItem();
@@ -140,7 +146,7 @@ void CachedPage::restore(Page& page)
             frameView->setProhibitsScrolling(true);
         }
 #endif
-        element->updateFocusAppearance(SelectionRestorationMode::Restore);
+        element->updateFocusAppearance(SelectionRestorationMode::RestoreOrSelectAll);
 #if PLATFORM(IOS_FAMILY)
         if (frameView)
             frameView->setProhibitsScrolling(hadProhibitsScrolling);
@@ -165,6 +171,11 @@ void CachedPage::restore(Page& page)
 
     firePageShowAndPopStateEvents(page);
 
+#if ENABLE(RESOURCE_LOAD_STATISTICS)
+    for (auto& domain : m_loadedSubresourceDomains)
+        page.mainFrame().loader().client().didLoadFromRegistrableDomain(WTFMove(domain));
+#endif
+
     clear();
 }
 
@@ -178,6 +189,9 @@ void CachedPage::clear()
 #endif
     m_needsDeviceOrPageScaleChanged = false;
     m_needsUpdateContentsSize = false;
+#if ENABLE(RESOURCE_LOAD_STATISTICS)
+    m_loadedSubresourceDomains.clear();
+#endif
 }
 
 bool CachedPage::hasExpired() const

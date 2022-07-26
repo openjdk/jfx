@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2012 Google Inc. All rights reserved.
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,12 +28,15 @@
 #if ENABLE(WEB_RTC)
 
 #include "ActiveDOMObject.h"
+#include "DetachedRTCDataChannel.h"
 #include "Event.h"
 #include "EventTarget.h"
 #include "ExceptionOr.h"
 #include "NetworkSendQueue.h"
 #include "RTCDataChannelHandler.h"
 #include "RTCDataChannelHandlerClient.h"
+#include "RTCDataChannelIdentifier.h"
+#include "ScriptExecutionContext.h"
 #include "ScriptWrappable.h"
 #include "Timer.h"
 
@@ -50,14 +53,17 @@ class RTCPeerConnectionHandler;
 class RTCDataChannel final : public ActiveDOMObject, public RTCDataChannelHandlerClient, public EventTargetWithInlineData {
     WTF_MAKE_ISO_ALLOCATED(RTCDataChannel);
 public:
-    static Ref<RTCDataChannel> create(Document&, std::unique_ptr<RTCDataChannelHandler>&&, String&&, RTCDataChannelInit&&);
+    static Ref<RTCDataChannel> create(ScriptExecutionContext&, std::unique_ptr<RTCDataChannelHandler>&&, String&&, RTCDataChannelInit&&);
+    static Ref<RTCDataChannel> create(ScriptExecutionContext&, RTCDataChannelIdentifier, String&&, RTCDataChannelInit&&, RTCDataChannelState);
 
     bool ordered() const { return *m_options.ordered; }
-    Optional<unsigned short> maxPacketLifeTime() const { return m_options.maxPacketLifeTime; }
-    Optional<unsigned short> maxRetransmits() const { return m_options.maxRetransmits; }
+    std::optional<unsigned short> maxPacketLifeTime() const { return m_options.maxPacketLifeTime; }
+    std::optional<unsigned short> maxRetransmits() const { return m_options.maxRetransmits; }
     String protocol() const { return m_options.protocol; }
     bool negotiated() const { return *m_options.negotiated; };
-    Optional<unsigned short> id() const { return m_options.id; };
+    std::optional<unsigned short> id() const { return m_options.id; };
+    RTCPriorityType priority() const { return m_options.priority; };
+    const RTCDataChannelInit& options() const { return m_options; }
 
     String label() const { return m_label; }
     RTCDataChannelState readyState() const {return m_readyState; }
@@ -75,15 +81,22 @@ public:
 
     void close();
 
+    RTCDataChannelIdentifier identifier() const { return m_identifier; }
+    bool canDetach() const;
+    std::unique_ptr<DetachedRTCDataChannel> detach();
+
     using RTCDataChannelHandlerClient::ref;
     using RTCDataChannelHandlerClient::deref;
 
-private:
-    RTCDataChannel(Document&, std::unique_ptr<RTCDataChannelHandler>&&, String&&, RTCDataChannelInit&&);
+    WEBCORE_EXPORT static std::unique_ptr<RTCDataChannelHandler> handlerFromIdentifier(RTCDataChannelLocalIdentifier);
 
-    static NetworkSendQueue createMessageQueue(Document&, RTCDataChannel&);
+private:
+    RTCDataChannel(ScriptExecutionContext&, std::unique_ptr<RTCDataChannelHandler>&&, String&&, RTCDataChannelInit&&);
+
+    static NetworkSendQueue createMessageQueue(ScriptExecutionContext&, RTCDataChannel&);
 
     void scheduleDispatchEvent(Ref<Event>&&);
+    void removeFromDataChannelLocalMapIfNeeded();
 
     EventTargetInterface eventTargetInterface() const final { return RTCDataChannelEventTargetInterfaceType; }
     ScriptExecutionContext* scriptExecutionContext() const final { return m_scriptExecutionContext; }
@@ -94,16 +107,18 @@ private:
     // ActiveDOMObject API
     void stop() final;
     const char* activeDOMObjectName() const final { return "RTCDataChannel"; }
+    bool virtualHasPendingActivity() const final;
 
     // RTCDataChannelHandlerClient API
     void didChangeReadyState(RTCDataChannelState) final;
     void didReceiveStringData(const String&) final;
-    void didReceiveRawData(const char*, size_t) final;
+    void didReceiveRawData(const uint8_t*, size_t) final;
     void didDetectError() final;
     void bufferedAmountIsDecreasing(size_t) final;
 
     std::unique_ptr<RTCDataChannelHandler> m_handler;
-
+    RTCDataChannelIdentifier m_identifier;
+    ScriptExecutionContextIdentifier m_contextIdentifier;
     // FIXME: m_stopped is probably redundant with m_readyState.
     bool m_stopped { false };
     RTCDataChannelState m_readyState { RTCDataChannelState::Connecting };
@@ -115,7 +130,8 @@ private:
     RTCDataChannelInit m_options;
     size_t m_bufferedAmount { 0 };
     size_t m_bufferedAmountLowThreshold { 0 };
-
+    bool m_isDetachable { true };
+    bool m_isDetached { false };
     NetworkSendQueue m_messageQueue;
 };
 

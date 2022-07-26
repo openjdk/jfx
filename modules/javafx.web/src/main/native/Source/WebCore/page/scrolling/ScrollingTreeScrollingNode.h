@@ -28,11 +28,9 @@
 #if ENABLE(ASYNC_SCROLLING)
 
 #include "IntRect.h"
-#include "RectEdges.h"
 #include "ScrollSnapOffsetsInfo.h"
-#include "ScrollTypes.h"
 #include "ScrollableArea.h"
-#include "ScrollingCoordinator.h"
+#include "ScrollingTree.h"
 #include "ScrollingTreeNode.h"
 
 namespace WebCore {
@@ -55,8 +53,8 @@ public:
     void commitStateAfterChildren(const ScrollingStateNode&) override;
     void didCompleteCommitForNode() final;
 
-    virtual bool canHandleWheelEvent(const PlatformWheelEvent&) const;
-    virtual WheelEventHandlingResult handleWheelEvent(const PlatformWheelEvent&);
+    virtual bool canHandleWheelEvent(const PlatformWheelEvent&, EventTargeting) const;
+    virtual WheelEventHandlingResult handleWheelEvent(const PlatformWheelEvent&, EventTargeting = EventTargeting::Propagate);
 
     FloatPoint currentScrollPosition() const { return m_currentScrollPosition; }
     FloatPoint currentScrollOffset() const { return ScrollableArea::scrollOffsetFromPosition(m_currentScrollPosition, toFloatSize(m_scrollOrigin)); }
@@ -66,7 +64,6 @@ public:
     const IntPoint& scrollOrigin() const { return m_scrollOrigin; }
 
     RectEdges<bool> edgePinnedState() const;
-    bool isRubberBanding() const;
 
     bool isUserScrollProgress() const;
     void setUserScrollInProgress(bool);
@@ -80,7 +77,7 @@ public:
 
     virtual void stopScrollAnimations() { };
 
-    void wasScrolledByDelegatedScrolling(const FloatPoint& position, Optional<FloatRect> overrideLayoutViewport = { }, ScrollingLayerPositionAction = ScrollingLayerPositionAction::Sync);
+    void wasScrolledByDelegatedScrolling(const FloatPoint& position, std::optional<FloatRect> overrideLayoutViewport = { }, ScrollingLayerPositionAction = ScrollingLayerPositionAction::Sync);
 
 #if ENABLE(SCROLLING_THREAD)
     OptionSet<SynchronousScrollingReason> synchronousScrollingReasons() const { return m_synchronousScrollingReasons; }
@@ -97,16 +94,11 @@ public:
     bool canHaveVerticalScrollbar() const { return m_scrollableAreaParameters.verticalScrollbarMode != ScrollbarAlwaysOff; }
     bool canHaveScrollbars() const { return m_scrollableAreaParameters.horizontalScrollbarMode != ScrollbarAlwaysOff || m_scrollableAreaParameters.verticalScrollbarMode != ScrollbarAlwaysOff; }
 
-#if ENABLE(CSS_SCROLL_SNAP)
-    const Vector<float>& horizontalSnapOffsets() const { return m_snapOffsetsInfo.horizontalSnapOffsets; }
-    const Vector<float>& verticalSnapOffsets() const { return m_snapOffsetsInfo.verticalSnapOffsets; }
-    const Vector<ScrollOffsetRange<float>>& horizontalSnapOffsetRanges() const { return m_snapOffsetsInfo.horizontalSnapOffsetRanges; }
-    const Vector<ScrollOffsetRange<float>>& verticalSnapOffsetRanges() const { return m_snapOffsetsInfo.verticalSnapOffsetRanges; }
-    unsigned currentHorizontalSnapPointIndex() const { return m_currentHorizontalSnapPointIndex; }
-    unsigned currentVerticalSnapPointIndex() const { return m_currentVerticalSnapPointIndex; }
-    void setCurrentHorizontalSnapPointIndex(unsigned index) { m_currentHorizontalSnapPointIndex = index; }
-    void setCurrentVerticalSnapPointIndex(unsigned index) { m_currentVerticalSnapPointIndex = index; }
-#endif
+    const FloatScrollSnapOffsetsInfo& snapOffsetsInfo() const;
+    std::optional<unsigned> currentHorizontalSnapPointIndex() const;
+    std::optional<unsigned> currentVerticalSnapPointIndex() const;
+    void setCurrentHorizontalSnapPointIndex(std::optional<unsigned>);
+    void setCurrentVerticalSnapPointIndex(std::optional<unsigned>);
 
     bool useDarkAppearanceForScrollbars() const { return m_scrollableAreaParameters.useDarkAppearanceForScrollbars; }
 
@@ -125,11 +117,13 @@ protected:
 
     FloatPoint clampScrollPosition(const FloatPoint&) const;
 
+    virtual void willDoProgrammaticScroll(const FloatPoint&) { }
+
     virtual FloatPoint adjustedScrollPosition(const FloatPoint&, ScrollClamping = ScrollClamping::Clamped) const;
 
-    virtual void currentScrollPositionChanged(ScrollingLayerPositionAction = ScrollingLayerPositionAction::Sync);
-    virtual void updateViewportForCurrentScrollPosition(Optional<FloatRect> = { }) { }
-    virtual bool scrollPositionAndLayoutViewportMatch(const FloatPoint& position, Optional<FloatRect> overrideLayoutViewport);
+    virtual void currentScrollPositionChanged(ScrollType, ScrollingLayerPositionAction = ScrollingLayerPositionAction::Sync);
+    virtual void updateViewportForCurrentScrollPosition(std::optional<FloatRect> = { }) { }
+    virtual bool scrollPositionAndLayoutViewportMatch(const FloatPoint& position, std::optional<FloatRect> overrideLayoutViewport);
 
     virtual void repositionScrollingLayers() { }
     virtual void repositionRelatedLayers() { }
@@ -149,8 +143,8 @@ protected:
     ScrollElasticity horizontalScrollElasticity() const { return m_scrollableAreaParameters.horizontalScrollElasticity; }
     ScrollElasticity verticalScrollElasticity() const { return m_scrollableAreaParameters.verticalScrollElasticity; }
 
-    bool hasEnabledHorizontalScrollbar() const { return m_scrollableAreaParameters.hasEnabledHorizontalScrollbar; }
-    bool hasEnabledVerticalScrollbar() const { return m_scrollableAreaParameters.hasEnabledVerticalScrollbar; }
+    bool allowsHorizontalScrolling() const { return m_scrollableAreaParameters.allowsHorizontalScrolling; }
+    bool allowsVerticalScrolling() const { return m_scrollableAreaParameters.allowsVerticalScrolling; }
 
     void dumpProperties(WTF::TextStream&, ScrollingStateTreeAsTextBehavior) const override;
 
@@ -162,11 +156,9 @@ private:
     FloatPoint m_lastCommittedScrollPosition;
     FloatPoint m_currentScrollPosition;
     IntPoint m_scrollOrigin;
-#if ENABLE(CSS_SCROLL_SNAP)
-    ScrollSnapOffsetsInfo<float> m_snapOffsetsInfo;
-    unsigned m_currentHorizontalSnapPointIndex { 0 };
-    unsigned m_currentVerticalSnapPointIndex { 0 };
-#endif
+    FloatScrollSnapOffsetsInfo m_snapOffsetsInfo;
+    std::optional<unsigned> m_currentHorizontalSnapPointIndex;
+    std::optional<unsigned> m_currentVerticalSnapPointIndex;
     ScrollableAreaParameters m_scrollableAreaParameters;
 #if ENABLE(SCROLLING_THREAD)
     OptionSet<SynchronousScrollingReason> m_synchronousScrollingReasons;

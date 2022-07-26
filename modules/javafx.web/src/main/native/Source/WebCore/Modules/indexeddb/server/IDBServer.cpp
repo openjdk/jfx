@@ -26,8 +26,6 @@
 #include "config.h"
 #include "IDBServer.h"
 
-#if ENABLE(INDEXED_DATABASE)
-
 #include "IDBRequestData.h"
 #include "IDBResultData.h"
 #include "Logging.h"
@@ -46,9 +44,10 @@
 namespace WebCore {
 namespace IDBServer {
 
-IDBServer::IDBServer(PAL::SessionID sessionID, const String& databaseDirectoryPath, StorageQuotaManagerSpaceRequester&& spaceRequester)
+IDBServer::IDBServer(PAL::SessionID sessionID, const String& databaseDirectoryPath, StorageQuotaManagerSpaceRequester&& spaceRequester, Lock& lock)
     : m_sessionID(sessionID)
     , m_spaceRequester(WTFMove(spaceRequester))
+    , m_lock(lock)
 {
     ASSERT(!isMainThread());
     ASSERT(databaseDirectoryPath.isSafeToSendToAnotherThread());
@@ -128,16 +127,14 @@ UniqueIDBDatabase& IDBServer::getOrCreateUniqueIDBDatabase(const IDBDatabaseIden
 std::unique_ptr<IDBBackingStore> IDBServer::createBackingStore(const IDBDatabaseIdentifier& identifier)
 {
     ASSERT(!isMainThread());
-
-    auto databaseDirectoryPath = this->databaseDirectoryPathIsolatedCopy();
-    if (databaseDirectoryPath.isEmpty())
+    if (m_databaseDirectoryPath.isEmpty())
         return makeUnique<MemoryIDBBackingStore>(m_sessionID, identifier);
 
     ASSERT(!m_sessionID.isEphemeral());
     if (identifier.isTransient())
         return makeUnique<MemoryIDBBackingStore>(m_sessionID, identifier);
 
-    return makeUnique<SQLiteIDBBackingStore>(m_sessionID, identifier, databaseDirectoryPath);
+    return makeUnique<SQLiteIDBBackingStore>(m_sessionID, identifier, m_databaseDirectoryPath);
 }
 
 void IDBServer::openDatabase(const IDBRequestData& requestData)
@@ -411,7 +408,7 @@ void IDBServer::establishTransaction(uint64_t databaseConnectionIdentifier, cons
         m_uniqueIDBDatabaseMap.remove(database->identifier());
 }
 
-void IDBServer::commitTransaction(const IDBResourceIdentifier& transactionIdentifier)
+void IDBServer::commitTransaction(const IDBResourceIdentifier& transactionIdentifier, uint64_t pendingRequestCount)
 {
     LOG(IndexedDB, "IDBServer::commitTransaction");
     ASSERT(!isMainThread());
@@ -424,7 +421,7 @@ void IDBServer::commitTransaction(const IDBResourceIdentifier& transactionIdenti
         return;
     }
 
-    transaction->commit();
+    transaction->commit(pendingRequestCount);
 }
 
 void IDBServer::didFinishHandlingVersionChangeTransaction(uint64_t databaseConnectionIdentifier, const IDBResourceIdentifier& transactionIdentifier)
@@ -511,34 +508,79 @@ void IDBServer::openDBRequestCancelled(const IDBRequestData& requestData)
         m_uniqueIDBDatabaseMap.remove(uniqueIDBDatabase->identifier());
 }
 
+static void getDatabaseNameAndVersionFromOriginDirectory(const String& directory, HashSet<String>& excludedDatabasePaths, Vector<IDBDatabaseNameAndVersion>& result)
+{
+    Vector<String> databaseDirectoryNames = FileSystem::listDirectory(directory);
+    for (auto& databaseDirectoryName : databaseDirectoryNames) {
+        auto fullDatabasePath = SQLiteIDBBackingStore::fullDatabasePathForDirectory(FileSystem::pathByAppendingComponent(directory, databaseDirectoryName));
+        if (excludedDatabasePaths.contains(fullDatabasePath))
+            continue;
+
+        if (auto nameAndVersion = SQLiteIDBBackingStore::databaseNameAndVersionFromFile(fullDatabasePath))
+            result.append(WTFMove(*nameAndVersion));
+    }
+}
+
 void IDBServer::getAllDatabaseNamesAndVersions(IDBConnectionIdentifier serverConnectionIdentifier, const IDBResourceIdentifier& requestIdentifier, const ClientOrigin& origin)
 {
     ASSERT(!isMainThread());
     ASSERT(m_lock.isHeld());
 
-    auto databaseDirectoryPath = this->databaseDirectoryPathIsolatedCopy();
-    String oldDirectory = IDBDatabaseIdentifier::databaseDirectoryRelativeToRoot(origin.topOrigin, origin.clientOrigin, databaseDirectoryPath, "v0");
-    Vector<String> files = FileSystem::listDirectory(oldDirectory, "*"_s);
-    Vector<IDBDatabaseNameAndVersion> databases;
-    for (auto& file : files) {
-        auto databaseTuple = SQLiteIDBBackingStore::databaseNameAndVersionFromFile(SQLiteIDBBackingStore::fullDatabasePathForDirectory(file));
-        if (databaseTuple)
-            databases.append(WTFMove(*databaseTuple));
+    Vector<IDBDatabaseNameAndVersion> result;
+    HashSet<String> visitedDatabasePaths;
+
+    for (auto& database : m_uniqueIDBDatabaseMap.values()) {
+        if (database->identifier().origin() != origin)
+            continue;
+
+        auto path = database->filePath();
+        if (!path.isEmpty())
+            visitedDatabasePaths.add(path);
+
+        if (auto nameAndVersion = database->nameAndVersion())
+            result.append(WTFMove(*nameAndVersion));
     }
 
-    String directory = IDBDatabaseIdentifier::databaseDirectoryRelativeToRoot(origin.topOrigin, origin.clientOrigin, databaseDirectoryPath, "v1");
-    files = FileSystem::listDirectory(directory, "*"_s);
-    for (auto& file : files) {
-        auto databaseTuple = SQLiteIDBBackingStore::databaseNameAndVersionFromFile(SQLiteIDBBackingStore::fullDatabasePathForDirectory(file));
-        if (databaseTuple)
-            databases.append(WTFMove(*databaseTuple));
-    }
+    String oldDirectory = IDBDatabaseIdentifier::databaseDirectoryRelativeToRoot(origin.topOrigin, origin.clientOrigin, m_databaseDirectoryPath, "v0");
+    getDatabaseNameAndVersionFromOriginDirectory(oldDirectory, visitedDatabasePaths, result);
+
+    String directory = IDBDatabaseIdentifier::databaseDirectoryRelativeToRoot(origin.topOrigin, origin.clientOrigin, m_databaseDirectoryPath, "v1");
+    getDatabaseNameAndVersionFromOriginDirectory(directory, visitedDatabasePaths, result);
 
     auto connection = m_connectionMap.get(serverConnectionIdentifier);
     if (!connection)
         return;
 
-    connection->didGetAllDatabaseNamesAndVersions(requestIdentifier, WTFMove(databases));
+    connection->didGetAllDatabaseNamesAndVersions(requestIdentifier, WTFMove(result));
+}
+
+static void collectOriginsForVersion(const String& versionPath, HashSet<WebCore::SecurityOriginData>& securityOrigins)
+{
+    for (auto& databaseIdentifier : FileSystem::listDirectory(versionPath)) {
+        if (auto securityOrigin = SecurityOriginData::fromDatabaseIdentifier(databaseIdentifier)) {
+            securityOrigins.add(WTFMove(*securityOrigin));
+
+            for (auto& databaseIdentifier : FileSystem::listDirectory(FileSystem::pathByAppendingComponent(versionPath, databaseIdentifier))) {
+                if (auto securityOrigin = SecurityOriginData::fromDatabaseIdentifier(databaseIdentifier))
+                    securityOrigins.add(WTFMove(*securityOrigin));
+            }
+        }
+    }
+}
+
+HashSet<SecurityOriginData> IDBServer::getOrigins() const
+{
+    ASSERT(!isMainThread());
+    ASSERT(m_lock.isHeld());
+
+    if (m_databaseDirectoryPath.isEmpty())
+        return { };
+
+    HashSet<WebCore::SecurityOriginData> securityOrigins;
+    collectOriginsForVersion(FileSystem::pathByAppendingComponent(m_databaseDirectoryPath, "v0"), securityOrigins);
+    collectOriginsForVersion(FileSystem::pathByAppendingComponent(m_databaseDirectoryPath, "v1"), securityOrigins);
+
+    return securityOrigins;
 }
 
 void IDBServer::closeAndDeleteDatabasesModifiedSince(WallTime modificationTime)
@@ -601,12 +643,13 @@ void IDBServer::closeAndDeleteDatabasesForOrigins(const Vector<SecurityOriginDat
 static void removeAllDatabasesForFullOriginPath(const String& originPath, WallTime modifiedSince)
 {
     LOG(IndexedDB, "removeAllDatabasesForOriginPath with originPath %s", originPath.utf8().data());
-    Vector<String> databasePaths = FileSystem::listDirectory(originPath, "*");
+    Vector<String> databaseNames = FileSystem::listDirectory(originPath);
 
-    for (auto& databasePath : databasePaths) {
+    for (auto& databaseName : databaseNames) {
+        auto databasePath = FileSystem::pathByAppendingComponent(originPath, databaseName);
         String databaseFile = FileSystem::pathByAppendingComponent(databasePath, "IndexedDB.sqlite3");
         if (modifiedSince > -WallTime::infinity() && FileSystem::fileExists(databaseFile)) {
-            auto modificationTime = FileSystem::getFileModificationTime(databaseFile);
+            auto modificationTime = FileSystem::fileModificationTime(databaseFile);
             if (!modificationTime)
                 continue;
 
@@ -622,34 +665,25 @@ static void removeAllDatabasesForFullOriginPath(const String& originPath, WallTi
         //
         // To be conservative, we should *not* try to delete files that are unexpected;
         // We should only delete files we think we put there.
-        //
-        // IndexedDB blob files are named "N.blob" where N is a decimal integer,
-        // so those are the only blob files we should be trying to delete.
-        for (auto& blobPath : FileSystem::listDirectory(databasePath, "[0-9]*.blob")) {
-            // Globbing can't give us only filenames starting with 1-or-more digits.
-            // The above globbing gives us files that start with a digit and ends with ".blob", but there might be non-digits in between.
-            // We need to validate that each filename contains only digits before deleting it, as any other files are not ones we put there.
-            String filename = FileSystem::pathGetFileName(blobPath);
-            auto filenameLength = filename.length();
-
-            ASSERT(filenameLength >= 6);
-            ASSERT(filename.endsWith(".blob"));
-
-            if (filename.length() < 6)
+        for (auto& fileName : FileSystem::listDirectory(databasePath)) {
+            // IndexedDB blob files are named "N.blob" where N is a decimal integer,
+            // so those are the only blob files we should be trying to delete.
+            auto fileNameLength = fileName.length();
+            if (fileNameLength < 6)
                 continue;
-            if (!filename.endsWith(".blob"))
+            if (!fileName.endsWith(".blob"))
                 continue;
 
-            bool validFilename = true;
-            for (unsigned i = 0; i < filenameLength - 5; ++i) {
-                if (!isASCIIDigit(filename[i])) {
-                    validFilename = false;
+            bool validFileName = true;
+            for (unsigned i = 0; i < fileNameLength - 5; ++i) {
+                if (!isASCIIDigit(fileName[i])) {
+                    validFileName = false;
                     break;
                 }
             }
 
-            if (validFilename)
-                FileSystem::deleteFile(blobPath);
+            if (validFileName)
+                FileSystem::deleteFile(FileSystem::pathByAppendingComponent(databasePath, fileName));
         }
 
         // Now delete IndexedDB.sqlite3 and related SQLite files.
@@ -669,11 +703,10 @@ static void removeAllDatabasesForOriginPath(const String& originPath, WallTime m
     if (!SecurityOriginData::fromDatabaseIdentifier(databaseIdentifier))
         return;
 
-    auto directories = FileSystem::listDirectory(originPath, "*"_s);
-    for (auto& directory : directories) {
-        String databaseIdentifier = FileSystem::lastComponentOfPathIgnoringTrailingSlash(directory);
+    auto directoryNames = FileSystem::listDirectory(originPath);
+    for (auto& databaseIdentifier : directoryNames) {
         if (auto securityOrigin = SecurityOriginData::fromDatabaseIdentifier(databaseIdentifier))
-            removeAllDatabasesForFullOriginPath(directory, modifiedSince);
+            removeAllDatabasesForFullOriginPath(FileSystem::pathByAppendingComponent(originPath, databaseIdentifier), modifiedSince);
     }
 
     removeAllDatabasesForFullOriginPath(originPath, modifiedSince);
@@ -681,22 +714,22 @@ static void removeAllDatabasesForOriginPath(const String& originPath, WallTime m
 
 void IDBServer::removeDatabasesModifiedSinceForVersion(WallTime modifiedSince, const String& version)
 {
-    String versionPath = FileSystem::pathByAppendingComponent(databaseDirectoryPathIsolatedCopy(), version);
-    for (auto& originPath : FileSystem::listDirectory(versionPath, "*")) {
-        String databaseIdentifier = FileSystem::lastComponentOfPathIgnoringTrailingSlash(originPath);
+    String versionPath = FileSystem::pathByAppendingComponent(m_databaseDirectoryPath, version);
+    for (auto& databaseIdentifier : FileSystem::listDirectory(versionPath)) {
         if (auto securityOrigin = SecurityOriginData::fromDatabaseIdentifier(databaseIdentifier))
-            removeAllDatabasesForOriginPath(originPath, modifiedSince);
+            removeAllDatabasesForOriginPath(FileSystem::pathByAppendingComponent(versionPath, databaseIdentifier), modifiedSince);
     }
 }
 
 void IDBServer::removeDatabasesWithOriginsForVersion(const Vector<SecurityOriginData> &origins, const String& version)
 {
-    String versionPath = FileSystem::pathByAppendingComponent(databaseDirectoryPathIsolatedCopy(), version);
+    String versionPath = FileSystem::pathByAppendingComponent(m_databaseDirectoryPath, version);
     for (const auto& origin : origins) {
         String originPath = FileSystem::pathByAppendingComponent(versionPath, origin.databaseIdentifier());
         removeAllDatabasesForOriginPath(originPath, -WallTime::infinity());
 
-        for (auto& topOriginPath : FileSystem::listDirectory(versionPath, "*")) {
+        for (auto& topOrigin : FileSystem::listDirectory(versionPath)) {
+            auto topOriginPath = FileSystem::pathByAppendingComponent(versionPath, topOrigin);
             originPath = FileSystem::pathByAppendingComponent(topOriginPath, origin.databaseIdentifier());
             removeAllDatabasesForOriginPath(originPath, -WallTime::infinity());
         }
@@ -710,14 +743,14 @@ void IDBServer::renameOrigin(const WebCore::SecurityOriginData& oldOrigin, const
         return databaseOrigin.topOrigin == targetOrigin;
     });
 
-    auto versionPath = FileSystem::pathByAppendingComponent(databaseDirectoryPathIsolatedCopy(), "v1");
+    auto versionPath = FileSystem::pathByAppendingComponent(m_databaseDirectoryPath, "v1");
     auto oldOriginPath = FileSystem::pathByAppendingComponent(versionPath, oldOrigin.databaseIdentifier());
     auto newOriginPath = FileSystem::pathByAppendingComponent(versionPath, newOrigin.databaseIdentifier());
     if (FileSystem::fileExists(oldOriginPath))
         FileSystem::moveFile(oldOriginPath, newOriginPath);
 }
 
-StorageQuotaManager::Decision IDBServer::requestSpace(const ClientOrigin& origin, uint64_t taskSize)
+StorageQuotaManager::Decision IDBServer::requestSpace(const ClientOrigin& origin, uint64_t taskSize) WTF_IGNORES_THREAD_SAFETY_ANALYSIS
 {
     ASSERT(!isMainThread());
     ASSERT(m_lock.isHeld());
@@ -743,13 +776,28 @@ uint64_t IDBServer::diskUsage(const String& rootDirectory, const ClientOrigin& o
 
 void IDBServer::upgradeFilesIfNecessary()
 {
-    auto databaseDirectoryPath = this->databaseDirectoryPathIsolatedCopy();
-    if (databaseDirectoryPath.isEmpty() || !FileSystem::fileExists(databaseDirectoryPath))
+    if (m_databaseDirectoryPath.isEmpty() || !FileSystem::fileExists(m_databaseDirectoryPath))
         return;
 
-    String newVersionDirectory = FileSystem::pathByAppendingComponent(databaseDirectoryPath, "v1");
+    String newVersionDirectory = FileSystem::pathByAppendingComponent(m_databaseDirectoryPath, "v1");
     if (!FileSystem::fileExists(newVersionDirectory))
         FileSystem::makeAllDirectories(newVersionDirectory);
+}
+
+bool IDBServer::hasDatabaseActivitiesOnMainThread() const
+{
+    ASSERT(isMainThread());
+    ASSERT(m_lock.isHeld());
+
+    if (m_sessionID.isEphemeral())
+        return false;
+
+    for (auto& database : m_uniqueIDBDatabaseMap.values()) {
+        if (!database->identifier().isTransient() && database->hasActiveTransactions())
+            return true;
+    }
+
+    return false;
 }
 
 void IDBServer::stopDatabaseActivitiesOnMainThread()
@@ -757,15 +805,16 @@ void IDBServer::stopDatabaseActivitiesOnMainThread()
     ASSERT(isMainThread());
     ASSERT(m_lock.isHeld());
 
-    // Only stop non-ephemeral IDBServers that can hold locked database files.
+    // Only stop non-ephemeral IDBServer that can hold database file lock.
     if (m_sessionID.isEphemeral())
         return;
 
-    for (auto& database : m_uniqueIDBDatabaseMap.values())
-        database->abortActiveTransactions();
+    for (auto& database : m_uniqueIDBDatabaseMap.values()) {
+        // Only stop databases with non-ephemeral backing store that can hold database file lock.
+        if (!database->identifier().isTransient())
+            database->abortActiveTransactions();
+    }
 }
 
 } // namespace IDBServer
 } // namespace WebCore
-
-#endif // ENABLE(INDEXED_DATABASE)

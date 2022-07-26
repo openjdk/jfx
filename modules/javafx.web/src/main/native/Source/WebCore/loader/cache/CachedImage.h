@@ -47,10 +47,10 @@ class CachedImage final : public CachedResource {
     friend class MemoryCache;
 
 public:
-    CachedImage(CachedResourceRequest&&, const PAL::SessionID&, const CookieJar*);
-    CachedImage(Image*, const PAL::SessionID&, const CookieJar*);
+    CachedImage(CachedResourceRequest&&, PAL::SessionID, const CookieJar*);
+    CachedImage(Image*, PAL::SessionID, const CookieJar*);
     // Constructor to use for manually cached images.
-    CachedImage(const URL&, Image*, const PAL::SessionID&, const CookieJar*, const String& domainForCachePartition);
+    CachedImage(const URL&, Image*, PAL::SessionID, const CookieJar*, const String& domainForCachePartition);
     virtual ~CachedImage();
 
     WEBCORE_EXPORT Image* image(); // Returns the nullImage() if the image is not available yet.
@@ -95,6 +95,9 @@ public:
     void setForceUpdateImageDataEnabledForTesting(bool enabled) { m_forceUpdateImageDataEnabledForTesting =  enabled; }
 
     bool stillNeedsLoad() const override { return !errorOccurred() && status() == Unknown && !isLoading(); }
+    bool canSkipRevalidation(const CachedResourceLoader&, const CachedResourceRequest&) const;
+
+    bool isVisibleInViewport(const Document&) const;
 
 private:
     void clear();
@@ -125,7 +128,7 @@ private:
     RefPtr<SharedBuffer> convertedDataIfNeeded(SharedBuffer* data) const;
     void didUpdateImageData();
     EncodedDataStatus updateImageData(bool allDataReceived);
-    void updateData(const char* data, unsigned length) override;
+    void updateData(const uint8_t* data, unsigned length) override;
     void error(CachedResource::Status) override;
     void responseReceived(const ResourceResponse&) override;
 
@@ -153,7 +156,7 @@ private:
         bool canDestroyDecodedData(const Image&) final;
         void imageFrameAvailable(const Image&, ImageAnimatingState, const IntRect* changeRect = nullptr, DecodingStatus = DecodingStatus::Invalid) final;
         void changedInRect(const Image&, const IntRect*) final;
-        void scheduleTimedRenderingUpdate(const Image&) final;
+        void scheduleRenderingUpdate(const Image&) final;
 
         HashSet<CachedImage*> m_cachedImages;
     };
@@ -164,7 +167,7 @@ private:
     bool canDestroyDecodedData(const Image&);
     void imageFrameAvailable(const Image&, ImageAnimatingState, const IntRect* changeRect = nullptr, DecodingStatus = DecodingStatus::Invalid);
     void changedInRect(const Image&, const IntRect*);
-    void scheduleTimedRenderingUpdate(const Image&);
+    void scheduleRenderingUpdate(const Image&);
 
     void updateBufferInternal(SharedBuffer&);
 
@@ -186,6 +189,8 @@ private:
     std::unique_ptr<SVGImageCache> m_svgImageCache;
 
     MonotonicTime m_lastUpdateImageDataTime;
+
+    WeakPtr<Document> m_skippingRevalidationDocument;
 
     static constexpr unsigned maxUpdateImageDataCount = 4;
     unsigned m_updateImageDataCount : 3;

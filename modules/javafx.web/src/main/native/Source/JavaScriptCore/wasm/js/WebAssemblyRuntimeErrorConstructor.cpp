@@ -38,33 +38,34 @@ namespace JSC {
 
 const ClassInfo WebAssemblyRuntimeErrorConstructor::s_info = { "Function", &Base::s_info, &constructorTableWebAssemblyRuntimeError, nullptr, CREATE_METHOD_TABLE(WebAssemblyRuntimeErrorConstructor) };
 
+static JSC_DECLARE_HOST_FUNCTION(constructJSWebAssemblyRuntimeError);
+static JSC_DECLARE_HOST_FUNCTION(callJSWebAssemblyRuntimeError);
+
 /* Source for WebAssemblyRuntimeErrorConstructor.lut.h
  @begin constructorTableWebAssemblyRuntimeError
  @end
  */
 
-static EncodedJSValue JSC_HOST_CALL constructJSWebAssemblyRuntimeError(JSGlobalObject* globalObject, CallFrame* callFrame)
+JSC_DEFINE_HOST_FUNCTION(constructJSWebAssemblyRuntimeError, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     auto& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
     JSValue message = callFrame->argument(0);
-    String messageString = message.isUndefined() ? String() : message.toWTFString(globalObject);
-    RETURN_IF_EXCEPTION(scope, encodedJSValue());
+    JSValue options = callFrame->argument(1);
 
     JSObject* newTarget = asObject(callFrame->newTarget());
-    Structure* structure = newTarget == callFrame->jsCallee()
-        ? globalObject->webAssemblyRuntimeErrorStructure()
-        : InternalFunction::createSubclassStructure(globalObject, newTarget, getFunctionRealm(vm, newTarget)->webAssemblyRuntimeErrorStructure());
+    Structure* structure = JSC_GET_DERIVED_STRUCTURE(vm, webAssemblyRuntimeErrorStructure, newTarget, callFrame->jsCallee());
     RETURN_IF_EXCEPTION(scope, { });
 
-    return JSValue::encode(JSWebAssemblyRuntimeError::create(globalObject, vm, structure, WTFMove(messageString)));
+    RELEASE_AND_RETURN(scope, JSValue::encode(ErrorInstance::create(globalObject, structure, message, options, nullptr, TypeNothing, ErrorType::Error, false)));
 }
 
-static EncodedJSValue JSC_HOST_CALL callJSWebAssemblyRuntimeError(JSGlobalObject* globalObject, CallFrame* callFrame)
+JSC_DEFINE_HOST_FUNCTION(callJSWebAssemblyRuntimeError, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     JSValue message = callFrame->argument(0);
+    JSValue options = callFrame->argument(1);
     Structure* errorStructure = globalObject->webAssemblyRuntimeErrorStructure();
-    return JSValue::encode(ErrorInstance::create(globalObject, errorStructure, message, nullptr, TypeNothing, false));
+    return JSValue::encode(ErrorInstance::create(globalObject, errorStructure, message, options, nullptr, TypeNothing, ErrorType::Error, false));
 }
 
 WebAssemblyRuntimeErrorConstructor* WebAssemblyRuntimeErrorConstructor::create(VM& vm, Structure* structure, WebAssemblyRuntimeErrorPrototype* thisPrototype)
@@ -81,9 +82,8 @@ Structure* WebAssemblyRuntimeErrorConstructor::createStructure(VM& vm, JSGlobalO
 
 void WebAssemblyRuntimeErrorConstructor::finishCreation(VM& vm, WebAssemblyRuntimeErrorPrototype* prototype)
 {
-    Base::finishCreation(vm, "RuntimeError"_s, NameAdditionMode::WithoutStructureTransition);
+    Base::finishCreation(vm, 1, "RuntimeError"_s, PropertyAdditionMode::WithoutStructureTransition);
     putDirectWithoutTransition(vm, vm.propertyNames->prototype, prototype, PropertyAttribute::ReadOnly | PropertyAttribute::DontEnum | PropertyAttribute::DontDelete);
-    putDirectWithoutTransition(vm, vm.propertyNames->length, jsNumber(1), PropertyAttribute::ReadOnly | PropertyAttribute::DontEnum);
 }
 
 WebAssemblyRuntimeErrorConstructor::WebAssemblyRuntimeErrorConstructor(VM& vm, Structure* structure)

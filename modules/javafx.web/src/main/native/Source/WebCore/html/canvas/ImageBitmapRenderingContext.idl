@@ -25,11 +25,11 @@
 
 [
     EnabledAtRuntime=ImageBitmap,
-    Exposed=Window,
-    CallTracingCallback=recordCanvasAction,
+    Exposed=(Window,Worker),
+    CallTracer=InspectorCanvasCallTracer,
 ] interface ImageBitmapRenderingContext {
     readonly attribute HTMLCanvasElement canvas;
 
-    [MayThrowException] void transferFromImageBitmap(ImageBitmap? bitmap);
+    undefined transferFromImageBitmap(ImageBitmap? bitmap);
 };
 

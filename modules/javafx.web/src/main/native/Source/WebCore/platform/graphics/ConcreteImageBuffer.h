@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Apple Inc.  All rights reserved.
+ * Copyright (C) 2020-2021 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,7 +26,7 @@
 #pragma once
 
 #include "ImageBuffer.h"
-#include "ImageData.h"
+#include "PixelBuffer.h"
 
 namespace WebCore {
 
@@ -34,39 +34,47 @@ template<typename BackendType>
 class ConcreteImageBuffer : public ImageBuffer {
 public:
     template<typename ImageBufferType = ConcreteImageBuffer, typename... Arguments>
-    static std::unique_ptr<ImageBufferType> create(const FloatSize& size, float resolutionScale, ColorSpace colorSpace, const HostWindow* hostWindow, Arguments&&... arguments)
+    static RefPtr<ImageBufferType> create(const FloatSize& size, float resolutionScale, const DestinationColorSpace& colorSpace, PixelFormat pixelFormat, const HostWindow* hostWindow, Arguments&&... arguments)
     {
-        auto backend = BackendType::create(size, resolutionScale, colorSpace, hostWindow);
+        auto parameters = ImageBufferBackend::Parameters { size, resolutionScale, colorSpace, pixelFormat };
+        auto backend = BackendType::create(parameters, hostWindow);
         if (!backend)
             return nullptr;
-        return std::unique_ptr<ImageBufferType>(new ImageBufferType(WTFMove(backend), std::forward<Arguments>(arguments)...));
+        return adoptRef(new ImageBufferType(parameters, WTFMove(backend), std::forward<Arguments>(arguments)...));
     }
 
     template<typename ImageBufferType = ConcreteImageBuffer, typename... Arguments>
-    static std::unique_ptr<ImageBufferType> create(const FloatSize& size, const GraphicsContext& context, Arguments&&... arguments)
+    static RefPtr<ImageBufferType> create(const FloatSize& size, const GraphicsContext& context, Arguments&&... arguments)
     {
-        auto backend = BackendType::create(size, context);
+        auto parameters = ImageBufferBackend::Parameters { size, 1, DestinationColorSpace::SRGB(), PixelFormat::BGRA8 };
+        auto backend = BackendType::create(parameters, context);
         if (!backend)
             return nullptr;
-        return std::unique_ptr<ImageBufferType>(new ImageBufferType(WTFMove(backend), std::forward<Arguments>(arguments)...));
+        return adoptRef(new ImageBufferType(parameters, WTFMove(backend), std::forward<Arguments>(arguments)...));
     }
 
-    bool isAccelerated() const override
-    {
-        if (auto* backend = ensureBackendCreated())
-            return backend->isAccelerated();
-        return false;
-    }
+    RenderingMode renderingMode() const override { return BackendType::renderingMode; }
+    bool canMapBackingStore() const override { return BackendType::canMapBackingStore; }
 
 protected:
-    ConcreteImageBuffer(std::unique_ptr<BackendType>&& backend)
-        : m_backend(WTFMove(backend))
+    ConcreteImageBuffer(const ImageBufferBackend::Parameters& parameters, std::unique_ptr<BackendType>&& backend = nullptr, RenderingResourceIdentifier renderingResourceIdentifier = RenderingResourceIdentifier::generate())
+        : m_parameters(parameters)
+        , m_backend(WTFMove(backend))
+        , m_renderingResourceIdentifier(renderingResourceIdentifier)
     {
     }
 
-    ConcreteImageBuffer() = default;
+    void setBackend(std::unique_ptr<ImageBufferBackend>&& backend) override
+    {
+        ASSERT(!m_backend);
+        m_backend = std::unique_ptr<BackendType> { static_cast<BackendType*>(backend.release()) };
+    }
 
-    virtual BackendType* ensureBackendCreated() const { return m_backend.get(); }
+    void clearBackend() override { m_backend = nullptr; }
+    ImageBufferBackend* backend() const override { return m_backend.get(); }
+    ImageBufferBackend* ensureBackendCreated() const override { return m_backend.get(); }
+
+    RenderingResourceIdentifier renderingResourceIdentifier() const override { return m_renderingResourceIdentifier; }
 
     GraphicsContext& context() const override
     {
@@ -82,19 +90,11 @@ protected:
         }
     }
 
-    AffineTransform baseTransform() const override
-    {
-        if (auto* backend = ensureBackendCreated())
-            return backend->baseTransform();
-        return { };
-    }
-
-    IntSize logicalSize() const override
-    {
-        if (auto* backend = ensureBackendCreated())
-            return backend->logicalSize();
-        return { };
-    }
+    IntSize logicalSize() const override { return IntSize(m_parameters.logicalSize); }
+    float resolutionScale() const override { return m_parameters.resolutionScale; }
+    DestinationColorSpace colorSpace() const override { return m_parameters.colorSpace; }
+    PixelFormat pixelFormat() const override { return m_parameters.pixelFormat; }
+    const ImageBufferBackend::Parameters& parameters() const override { return m_parameters; }
 
     IntSize backendSize() const override
     {
@@ -103,28 +103,24 @@ protected:
         return { };
     }
 
-    float resolutionScale() const override
+    AffineTransform baseTransform() const override
     {
-        if (auto* backend = ensureBackendCreated())
-            return backend->resolutionScale();
-        return 1;
+        if (BackendType::isOriginAtBottomLeftCorner)
+            return AffineTransform(1, 0, 0, -1, 0, logicalSize().height());
+        return { };
     }
 
     size_t memoryCost() const override
     {
-        if (auto* backend = ensureBackendCreated())
-            return backend->memoryCost();
-        return 0;
+        return BackendType::calculateMemoryCost(m_parameters);
     }
 
     size_t externalMemoryCost() const override
     {
-        if (auto* backend = ensureBackendCreated())
-            return backend->externalMemoryCost();
-        return 0;
+        return BackendType::calculateExternalMemoryCost(m_parameters);
     }
 
-    NativeImagePtr copyNativeImage(BackingStoreCopy copyBehavior = CopyBackingStore) const override
+    RefPtr<NativeImage> copyNativeImage(BackingStoreCopy copyBehavior = CopyBackingStore) const override
     {
         if (auto* backend = ensureBackendCreated()) {
             const_cast<ConcreteImageBuffer&>(*this).flushDrawingContext();
@@ -158,7 +154,7 @@ protected:
         }
     }
 
-    NativeImagePtr sinkIntoNativeImage() override
+    RefPtr<NativeImage> sinkIntoNativeImage() override
     {
         if (auto* backend = ensureBackendCreated()) {
             flushDrawingContext();
@@ -184,6 +180,14 @@ protected:
         }
     }
 
+    void clipToMask(GraphicsContext& destContext, const FloatRect& destRect) override
+    {
+        if (auto* backend = ensureBackendCreated()) {
+            flushContext();
+            backend->clipToMask(destContext, destRect);
+        }
+    }
+
     void convertToLuminanceMask() override
     {
         if (auto* backend = ensureBackendCreated()) {
@@ -192,15 +196,16 @@ protected:
         }
     }
 
-    void transformColorSpace(ColorSpace srcColorSpace, ColorSpace destColorSpace) override
+    void transformToColorSpace(const DestinationColorSpace& newColorSpace) override
     {
         if (auto* backend = ensureBackendCreated()) {
             flushDrawingContext();
-            backend->transformColorSpace(srcColorSpace, destColorSpace);
+            backend->transformToColorSpace(newColorSpace);
+            m_parameters.colorSpace = newColorSpace;
         }
     }
 
-    String toDataURL(const String& mimeType, Optional<double> quality, PreserveResolution preserveResolution) const override
+    String toDataURL(const String& mimeType, std::optional<double> quality, PreserveResolution preserveResolution) const override
     {
         if (auto* backend = ensureBackendCreated()) {
             const_cast<ConcreteImageBuffer&>(*this).flushContext();
@@ -209,7 +214,7 @@ protected:
         return String();
     }
 
-    Vector<uint8_t> toData(const String& mimeType, Optional<double> quality = WTF::nullopt) const override
+    Vector<uint8_t> toData(const String& mimeType, std::optional<double> quality = std::nullopt) const override
     {
         if (auto* backend = ensureBackendCreated()) {
             const_cast<ConcreteImageBuffer&>(*this).flushContext();
@@ -218,29 +223,20 @@ protected:
         return { };
     }
 
-    Vector<uint8_t> toBGRAData() const override
+    std::optional<PixelBuffer> getPixelBuffer(const PixelBufferFormat& outputFormat, const IntRect& srcRect) const override
     {
         if (auto* backend = ensureBackendCreated()) {
             const_cast<ConcreteImageBuffer&>(*this).flushContext();
-            return backend->toBGRAData();
+            return backend->getPixelBuffer(outputFormat, srcRect);
         }
-        return { };
+        return std::nullopt;
     }
 
-    RefPtr<ImageData> getImageData(AlphaPremultiplication outputFormat, const IntRect& srcRect) const override
-    {
-        if (auto* backend = ensureBackendCreated()) {
-            const_cast<ConcreteImageBuffer&>(*this).flushContext();
-            return backend->getImageData(outputFormat, srcRect);
-        }
-        return nullptr;
-    }
-
-    void putImageData(AlphaPremultiplication inputFormat, const ImageData& imageData, const IntRect& srcRect, const IntPoint& destPoint = { }, AlphaPremultiplication destFormat = AlphaPremultiplication::Premultiplied) override
+    void putPixelBuffer(const PixelBuffer& pixelBuffer, const IntRect& srcRect, const IntPoint& destPoint = { }, AlphaPremultiplication destFormat = AlphaPremultiplication::Premultiplied) override
     {
         if (auto* backend = ensureBackendCreated()) {
             flushContext();
-            backend->putImageData(inputFormat, imageData, srcRect, destPoint, destFormat);
+            backend->putPixelBuffer(pixelBuffer, srcRect, destPoint, destFormat);
         }
     }
 
@@ -251,14 +247,49 @@ protected:
         return nullptr;
     }
 
-    bool copyToPlatformTexture(GraphicsContextGLOpenGL& context, GCGLenum target, PlatformGLObject destinationTexture, GCGLenum internalformat, bool premultiplyAlpha, bool flipY) const override
+    bool copyToPlatformTexture(GraphicsContextGL& context, GCGLenum target, PlatformGLObject destinationTexture, GCGLenum internalformat, bool premultiplyAlpha, bool flipY) const override
     {
         if (auto* backend = ensureBackendCreated())
             return backend->copyToPlatformTexture(context, target, destinationTexture, internalformat, premultiplyAlpha, flipY);
         return false;
     }
 
+    bool isInUse() const override
+    {
+        if (auto* backend = ensureBackendCreated())
+            return backend->isInUse();
+        return false;
+    }
+
+    void releaseGraphicsContext() override
+    {
+        if (auto* backend = ensureBackendCreated())
+            return backend->releaseGraphicsContext();
+    }
+
+    VolatilityState setVolatile(bool isVolatile) override
+    {
+        if (auto* backend = ensureBackendCreated())
+            return backend->setVolatile(isVolatile);
+        return VolatilityState::Valid;
+    }
+
+    std::unique_ptr<ThreadSafeImageBufferFlusher> createFlusher() override
+    {
+        if (auto* backend = ensureBackendCreated())
+            return backend->createFlusher();
+        return nullptr;
+    }
+
+    void releaseBufferToPool() override
+    {
+        if (auto* backend = ensureBackendCreated())
+            backend->releaseBufferToPool();
+    }
+
+    ImageBufferBackend::Parameters m_parameters;
     std::unique_ptr<BackendType> m_backend;
+    RenderingResourceIdentifier m_renderingResourceIdentifier;
 };
 
 } // namespace WebCore

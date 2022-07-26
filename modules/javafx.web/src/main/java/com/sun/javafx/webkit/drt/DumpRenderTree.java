@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -316,29 +316,45 @@ public final class DumpRenderTree {
         done();
     }
 
+    private synchronized StringBuilder dumpFramesAsText(long frame) {
+        StringBuilder str = new StringBuilder();
+        String innerText = webPage.getInnerText(frame);
+        if (frame == webPage.getMainFrame()) {
+            if (innerText != null) {
+                // don't use println() here as it varies from platform
+                // to platform, but DRT expects it always to be 0x0A
+                str.append(innerText + '\n');
+            }
+        } else {
+            str.append("\n--------\nFrame: '");
+            str.append(webPage.getName(frame));
+            str.append("'\n--------\n");
+            str.append(innerText + "\n");
+        }
+        if (dumpChildFramesAsText()) {
+            List<Long> children = webPage.getChildFrames(frame);
+            if (children != null) {
+                for (long child : children) {
+                    str.append(dumpFramesAsText(child));
+                }
+            }
+        }
+
+        // To keep things tidy, strip all trailing spaces: they are not a meaningful part of dumpAsText test output.
+        int spacePosition;
+        while ((spacePosition = str.indexOf(" \n")) != -1)
+            str.deleteCharAt(spacePosition);
+        while (str.length() != 0 && str.charAt(str.length() - 1) == ' ')
+            str.deleteCharAt(str.length() - 1);
+
+        return str;
+    }
+
     private synchronized void dump(long frame) {
         boolean dumpAsText = dumpAsText() || forceDumpAsText;
         mlog("dumpAsText = " + dumpAsText);
         if (dumpAsText) {
-            String innerText = webPage.getInnerText(frame);
-            if (frame == webPage.getMainFrame()) {
-                if (innerText != null) {
-                    // don't use println() here as it varies from platform
-                    // to platform, but DRT expects it always to be 0x0A
-                    out.print(innerText + '\n');
-                }
-            } else {
-                out.printf("\n--------\nFrame: '%s'\n--------\n%s\n",
-                        webPage.getName(frame), innerText);
-            }
-            if (dumpChildFramesAsText()) {
-                List<Long> children = webPage.getChildFrames(frame);
-                if (children != null) {
-                    for (long child : children) {
-                        dump(child);
-                    }
-                }
-            }
+            out.print(dumpFramesAsText(frame));
             if (dumpBackForwardList() && frame == webPage.getMainFrame()) {
                 drt.dumpBfl();
             }
@@ -652,7 +668,8 @@ public final class DumpRenderTree {
                     message = s1 + s2;
                 }
             }
-            out.printf("CONSOLE MESSAGE: %s\n", message);
+            out.printf("CONSOLE MESSAGE:%s\n",
+                (message.isEmpty() || message.startsWith("\n")) ? message : " " + message);
         }
 
         @Override

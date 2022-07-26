@@ -35,17 +35,17 @@ class PeriodicWave;
 
 // OscillatorNode is an audio generator of periodic waveforms.
 
-class OscillatorNode : public AudioScheduledSourceNode {
+class OscillatorNode final : public AudioScheduledSourceNode {
     WTF_MAKE_ISO_ALLOCATED(OscillatorNode);
 public:
     static ExceptionOr<Ref<OscillatorNode>> create(BaseAudioContext&, const OscillatorOptions& = { });
 
     virtual ~OscillatorNode();
 
-    const char* activeDOMObjectName() const override { return "OscillatorNode"; }
+    const char* activeDOMObjectName() const final { return "OscillatorNode"; }
 
-    OscillatorType type() const { return m_type; }
-    ExceptionOr<void> setType(OscillatorType);
+    OscillatorType typeForBindings() const { ASSERT(isMainThread()); return m_type; }
+    ExceptionOr<void> setTypeForBindings(OscillatorType);
 
     AudioParam* frequency() { return m_frequency.get(); }
     AudioParam* detune() { return m_detune.get(); }
@@ -57,18 +57,20 @@ protected:
 
 private:
     void process(size_t framesToProcess) final;
-    void reset() final;
 
     double tailTime() const final { return 0; }
     double latencyTime() const final { return 0; }
 
     // Returns true if there are sample-accurate timeline parameter changes.
-    bool calculateSampleAccuratePhaseIncrements(size_t framesToProcess);
+    bool calculateSampleAccuratePhaseIncrements(size_t framesToProcess) WTF_REQUIRES_LOCK(m_processLock);
+
+    double processARate(int, float* destP, double virtualReadIndex, float* phaseIncrements) WTF_REQUIRES_LOCK(m_processLock);
+    double processKRate(int, float* destP, double virtualReadIndex) WTF_REQUIRES_LOCK(m_processLock);
 
     bool propagatesSilence() const final;
 
     // One of the waveform types defined in the enum.
-    OscillatorType m_type;
+    OscillatorType m_type; // Only used on the main thread.
 
     // Frequency value in Hertz.
     RefPtr<AudioParam> m_frequency;
@@ -83,19 +85,13 @@ private:
     double m_virtualReadIndex { 0 };
 
     // This synchronizes process().
-    mutable Lock m_processMutex;
+    mutable Lock m_processLock;
 
     // Stores sample-accurate values calculated according to frequency and detune.
-    AudioFloatArray m_phaseIncrements { AudioNode::ProcessingSizeInFrames };
-    AudioFloatArray m_detuneValues { AudioNode::ProcessingSizeInFrames };
+    AudioFloatArray m_phaseIncrements;
+    AudioFloatArray m_detuneValues;
 
-    RefPtr<PeriodicWave> m_periodicWave;
-
-    // Cache the wave tables for different waveform types, except CUSTOM.
-    static PeriodicWave* s_periodicWaveSine;
-    static PeriodicWave* s_periodicWaveSquare;
-    static PeriodicWave* s_periodicWaveSawtooth;
-    static PeriodicWave* s_periodicWaveTriangle;
+    RefPtr<PeriodicWave> m_periodicWave WTF_GUARDED_BY_LOCK(m_processLock);
 };
 
 String convertEnumerationToString(OscillatorType); // In JSOscillatorNode.cpp

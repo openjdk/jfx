@@ -26,15 +26,16 @@
 #include "config.h"
 #include "IDBKey.h"
 
-#if ENABLE(INDEXED_DATABASE)
-
 #include "IDBKeyData.h"
 #include <JavaScriptCore/ArrayBufferView.h>
 #include <JavaScriptCore/JSArrayBuffer.h>
 #include <JavaScriptCore/JSArrayBufferView.h>
 #include <JavaScriptCore/JSCInlines.h>
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(IDBKey);
 
 using IDBKeyVector = Vector<RefPtr<IDBKey>>;
 
@@ -52,6 +53,8 @@ Ref<IDBKey> IDBKey::createBinary(JSC::JSArrayBuffer& arrayBuffer)
 Ref<IDBKey> IDBKey::createBinary(JSC::JSArrayBufferView& arrayBufferView)
 {
     auto bufferView = arrayBufferView.possiblySharedImpl();
+    if (!bufferView)
+        return createInvalid();
     return adoptRef(*new IDBKey(ThreadSafeDataBuffer::copyData(bufferView->data(), bufferView->byteLength())));
 }
 
@@ -158,5 +161,3 @@ String IDBKey::loggingString() const
 #endif
 
 } // namespace WebCore
-
-#endif

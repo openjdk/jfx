@@ -64,11 +64,11 @@ public:
     String clientLocation() const;
 
     CString clientHandshakeMessage() const;
-    ResourceRequest clientHandshakeRequest(Function<String(const URL&)>&& cookieRequestHeaderFieldValue) const;
+    ResourceRequest clientHandshakeRequest(const Function<String(const URL&)>& cookieRequestHeaderFieldValue) const;
 
     void reset();
 
-    int readServerHandshake(const char* header, size_t len);
+    int readServerHandshake(const uint8_t* header, size_t len);
     Mode mode() const;
     String failureReason() const; // Returns a string indicating the reason of failure if mode() == Failed.
 
@@ -87,10 +87,10 @@ public:
 
 private:
 
-    int readStatusLine(const char* header, size_t headerLength, int& statusCode, String& statusText);
+    int readStatusLine(const uint8_t* header, size_t headerLength, int& statusCode, String& statusText);
 
     // Reads all headers except for the two predefined ones.
-    const char* readHTTPHeaders(const char* start, const char* end);
+    const uint8_t* readHTTPHeaders(const uint8_t* start, const uint8_t* end);
     void processHeaders();
     bool checkResponseHeaders();
 

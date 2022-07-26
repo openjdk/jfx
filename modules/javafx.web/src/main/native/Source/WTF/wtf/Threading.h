@@ -38,6 +38,7 @@
 #include <wtf/Function.h>
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
+#include <wtf/Lock.h>
 #include <wtf/PlatformRegisters.h>
 #include <wtf/Ref.h>
 #include <wtf/RefPtr.h>
@@ -56,6 +57,16 @@
 #include <array>
 #endif
 
+#if HAVE(QOS_CLASSES)
+#include <dispatch/dispatch.h>
+#endif
+
+// X11 headers define a bunch of macros with common terms, interfering with WebCore and WTF enum values.
+// As a workaround, we explicitly undef them here.
+#if defined(None)
+#undef None
+#endif
+
 namespace WTF {
 
 class AbstractLocker;
@@ -67,13 +78,6 @@ class ThreadGroup;
 class PrintStream;
 
 WTF_EXPORT_PRIVATE void initialize();
-
-#if USE(PTHREADS)
-
-// We use SIGUSR1 to suspend and resume machine threads in JavaScriptCore.
-constexpr const int SigThreadSuspendResume = SIGUSR1;
-
-#endif
 
 enum class GCThreadType : uint8_t {
     None = 0,
@@ -92,24 +96,39 @@ enum class ThreadType : uint8_t {
 };
 
 class Thread : public ThreadSafeRefCounted<Thread> {
+    static std::atomic<uint32_t> s_uid;
 public:
     friend class ThreadGroup;
     friend WTF_EXPORT_PRIVATE void initialize();
 
     WTF_EXPORT_PRIVATE ~Thread();
 
+    enum class QOS {
+        UserInteractive,
+        UserInitiated,
+        Default,
+        Utility,
+        Background
+    };
+
+#if HAVE(QOS_CLASSES)
+    static dispatch_qos_class_t dispatchQOSClass(QOS);
+#endif
+
     // Returns nullptr if thread creation failed.
     // The thread name must be a literal since on some platforms it's passed in to the thread.
-    WTF_EXPORT_PRIVATE static Ref<Thread> create(const char* threadName, Function<void()>&&, ThreadType threadType = ThreadType::Unknown);
+    WTF_EXPORT_PRIVATE static Ref<Thread> create(const char* threadName, Function<void()>&&, ThreadType = ThreadType::Unknown, QOS = QOS::UserInitiated);
 
     // Returns Thread object.
     static Thread& current();
 
     // Set of all WTF::Thread created threads.
-    WTF_EXPORT_PRIVATE static HashSet<Thread*>& allThreads(const LockHolder&);
-    WTF_EXPORT_PRIVATE static Lock& allThreadsMutex();
+    WTF_EXPORT_PRIVATE static HashSet<Thread*>& allThreads() WTF_REQUIRES_LOCK(allThreadsLock());
+    WTF_EXPORT_PRIVATE static Lock& allThreadsLock() WTF_RETURNS_LOCK(s_allThreadsLock);
 
     WTF_EXPORT_PRIVATE unsigned numberOfThreadGroups();
+
+    uint32_t uid() const { return m_uid; }
 
 #if OS(WINDOWS)
     // Returns ThreadIdentifier directly. It is useful if the user only cares about identity
@@ -171,7 +190,6 @@ public:
 
 #if HAVE(QOS_CLASSES)
     WTF_EXPORT_PRIVATE static void setGlobalMaxQOSClass(qos_class_t);
-    WTF_EXPORT_PRIVATE static qos_class_t adjustedQOSClass(qos_class_t);
 #endif
 
     // Called in the thread during initialization.
@@ -248,7 +266,7 @@ protected:
     void initializeInThread();
 
     // Internal platform-specific Thread establishment implementation.
-    bool establishHandle(NewThreadContext*, Optional<size_t>);
+    bool establishHandle(NewThreadContext*, std::optional<size_t> stackSize, QOS);
 
 #if USE(PTHREADS)
     void establishPlatformSpecificHandle(PlatformThreadHandle);
@@ -258,6 +276,10 @@ protected:
 
 #if USE(PTHREADS) && !OS(DARWIN)
     static void signalHandlerSuspendResume(int, siginfo_t*, void* ucontext);
+#endif
+
+#if HAVE(QOS_CLASSES)
+    static qos_class_t adjustedQOSClass(qos_class_t);
 #endif
 
     static const char* normalizeThreadName(const char* threadName);
@@ -313,6 +335,8 @@ protected:
     static Thread* currentMayBeNull();
 #endif
 
+    static Lock s_allThreadsLock;
+
     JoinableState m_joinableState { Joinable };
     bool m_isShuttingDown : 1;
     bool m_didExit : 1;
@@ -328,6 +352,7 @@ protected:
     StackBounds m_stack { StackBounds::emptyBounds() };
     HashMap<ThreadGroup*, std::weak_ptr<ThreadGroup>> m_threadGroupMap;
     PlatformThreadHandle m_handle;
+    uint32_t m_uid;
 #if OS(WINDOWS)
     ThreadIdentifier m_id { 0 };
 #elif OS(DARWIN)
@@ -362,6 +387,7 @@ inline Thread::Thread()
     , m_isDestroyedOnce(false)
     , m_isCompilationThread(false)
     , m_gcThreadType(static_cast<unsigned>(GCThreadType::None))
+    , m_uid(++s_uid)
 {
 }
 

@@ -82,10 +82,12 @@ add_definitions(-DSTATICALLY_LINKED_WITH_WTF)
 list(APPEND WebCore_PRIVATE_FRAMEWORK_HEADERS
     bindings/java/JavaDOMUtils.h
     bindings/java/JavaEventListener.h
+    bindings/java/EventListenerManager.h
     bindings/java/JavaNodeFilterCondition.h
     bridge/jni/jsc/BridgeUtils.h
     dom/DOMStringList.h
     platform/graphics/java/ImageBufferJavaBackend.h
+    platform/graphics/java/ImageJava.h
     platform/graphics/java/PlatformContextJava.h
     platform/graphics/java/RQRef.h
     platform/graphics/java/RenderingQueue.h

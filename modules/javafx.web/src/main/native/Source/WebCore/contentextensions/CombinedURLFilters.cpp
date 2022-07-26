@@ -98,15 +98,13 @@ static String prefixTreeVertexToString(const PrefixTreeVertex& vertex, const Has
 {
     StringBuilder builder;
     while (depth--)
-        builder.appendLiteral("  ");
-    builder.appendLiteral("vertex actions: ");
+        builder.append("  ");
+    builder.append("vertex actions: ");
 
     auto actionsSlot = actions.find(&vertex);
     if (actionsSlot != actions.end()) {
-        for (uint64_t action : actionsSlot->value) {
-            builder.appendNumber(action);
-            builder.append(',');
-        }
+        for (uint64_t action : actionsSlot->value)
+            builder.append(action, ',');
     }
     builder.append('\n');
     return builder.toString();
@@ -444,7 +442,7 @@ static void generateNFAForSubtree(NFA& nfa, ImmutableCharNFANodeBuilder&& subtre
     clearReverseSuffixTree(reverseSuffixTreeRoots);
 }
 
-void CombinedURLFilters::processNFAs(size_t maxNFASize, const WTF::Function<void(NFA&&)>& handler)
+bool CombinedURLFilters::processNFAs(size_t maxNFASize, Function<bool(NFA&&)>&& handler)
 {
 #if CONTENT_EXTENSIONS_STATE_MACHINE_DEBUGGING
     print();
@@ -487,9 +485,9 @@ void CombinedURLFilters::processNFAs(size_t maxNFASize, const WTF::Function<void
             ASSERT(stack.last());
             generateNFAForSubtree(nfa, WTFMove(lastNode), *stack.last(), m_actions, maxNFASize);
         }
-        nfa.finalize();
 
-        handler(WTFMove(nfa));
+        if (!handler(WTFMove(nfa)))
+            return false;
 
         // Clean up any processed leaf nodes.
         while (true) {
@@ -503,6 +501,7 @@ void CombinedURLFilters::processNFAs(size_t maxNFASize, const WTF::Function<void
                 break; // Leave the empty root.
         }
     }
+    return true;
 }
 
 } // namespace ContentExtensions

@@ -38,7 +38,7 @@
 
 namespace WebCore {
 
-DedicatedWorkerThread::DedicatedWorkerThread(const WorkerParameters& params, const String& sourceCode, WorkerLoaderProxy& workerLoaderProxy, WorkerDebuggerProxy& workerDebuggerProxy, WorkerObjectProxy& workerObjectProxy, WorkerThreadStartMode startMode, const SecurityOrigin& topOrigin, IDBClient::IDBConnectionProxy* connectionProxy, SocketProvider* socketProvider, JSC::RuntimeFlags runtimeFlags)
+DedicatedWorkerThread::DedicatedWorkerThread(const WorkerParameters& params, const ScriptBuffer& sourceCode, WorkerLoaderProxy& workerLoaderProxy, WorkerDebuggerProxy& workerDebuggerProxy, WorkerObjectProxy& workerObjectProxy, WorkerThreadStartMode startMode, const SecurityOrigin& topOrigin, IDBClient::IDBConnectionProxy* connectionProxy, SocketProvider* socketProvider, JSC::RuntimeFlags runtimeFlags)
     : WorkerThread(params, sourceCode, workerLoaderProxy, workerDebuggerProxy, workerObjectProxy, startMode, topOrigin, connectionProxy, socketProvider, runtimeFlags)
     , m_workerObjectProxy(workerObjectProxy)
 {
@@ -54,7 +54,7 @@ Ref<WorkerGlobalScope> DedicatedWorkerThread::createWorkerGlobalScope(const Work
 void DedicatedWorkerThread::runEventLoop()
 {
     // Notify the parent object of our current active state before calling the superclass to run the event loop.
-    m_workerObjectProxy.reportPendingActivity(workerGlobalScope()->hasPendingActivity());
+    m_workerObjectProxy.reportPendingActivity(globalScope()->hasPendingActivity());
     WorkerThread::runEventLoop();
 }
 

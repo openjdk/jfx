@@ -36,7 +36,27 @@
 #include <wtf/dtoa.h>
 #include <wtf/text/StringConcatenate.h>
 
+#include "KeywordLookup.h"
+
 namespace JSC {
+
+template<typename CharType>
+ALWAYS_INLINE bool compare3Chars(const CharType* source, CharType c0, CharType c1, CharType c2)
+{
+    if constexpr (sizeof(CharType) == 1)
+        return COMPARE_3CHARS(source, c0, c1, c2);
+    else
+        return COMPARE_3UCHARS(source, c0, c1, c2);
+}
+
+template<typename CharType>
+ALWAYS_INLINE bool compare4Chars(const CharType* source, CharType c0, CharType c1, CharType c2, CharType c3)
+{
+    if constexpr (sizeof(CharType) == 1)
+        return COMPARE_4CHARS(source, c0, c1, c2, c3);
+    else
+        return COMPARE_4UCHARS(source, c0, c1, c2, c3);
+}
 
 template <typename CharType>
 static ALWAYS_INLINE bool isJSONWhiteSpace(const CharType& c)
@@ -131,49 +151,56 @@ bool LiteralParser<CharType>::tryJSONPParse(Vector<JSONPData>& results, bool nee
 }
 
 template <typename CharType>
-ALWAYS_INLINE const Identifier LiteralParser<CharType>::makeIdentifier(const LChar* characters, size_t length)
+template <typename LiteralCharType>
+ALWAYS_INLINE Identifier LiteralParser<CharType>::makeIdentifier(const LiteralCharType* characters, size_t length)
 {
     VM& vm = m_globalObject->vm();
     if (!length)
         return vm.propertyNames->emptyIdentifier;
-    if (characters[0] >= MaximumCachableCharacter)
+
+    auto firstCharacter = characters[0];
+    if (length == 1) {
+        if constexpr (sizeof(LiteralCharType) == 1)
+            return Identifier::fromString(vm, vm.smallStrings.singleCharacterStringRep(firstCharacter));
+        if (firstCharacter <= maxSingleCharacterString)
+            return Identifier::fromString(vm, vm.smallStrings.singleCharacterStringRep(firstCharacter));
+        return Identifier::fromString(vm, characters, length);
+    }
+
+    if (firstCharacter >= maximumCachableCharacter)
         return Identifier::fromString(vm, characters, length);
 
-    if (length == 1) {
-        if (!m_shortIdentifiers[characters[0]].isNull())
-            return m_shortIdentifiers[characters[0]];
-        m_shortIdentifiers[characters[0]] = Identifier::fromString(vm, characters, length);
-        return m_shortIdentifiers[characters[0]];
+    // 0 means no entry since m_recentIdentifiersIndex is zero-filled initially.
+    uint8_t indexPlusOne = m_recentIdentifiersIndex[firstCharacter];
+    if (indexPlusOne) {
+        uint8_t index = indexPlusOne - 1;
+        auto& ident = m_recentIdentifiers[index];
+        if (Identifier::equal(ident.impl(), characters, length))
+            return ident;
+        auto result = Identifier::fromString(vm, characters, length);
+        m_recentIdentifiers[index] = result;
+        return result;
     }
-    if (!m_recentIdentifiers[characters[0]].isNull() && Identifier::equal(m_recentIdentifiers[characters[0]].impl(), characters, length))
-        return m_recentIdentifiers[characters[0]];
-    m_recentIdentifiers[characters[0]] = Identifier::fromString(vm, characters, length);
-    return m_recentIdentifiers[characters[0]];
+
+    auto result = Identifier::fromString(vm, characters, length);
+    m_recentIdentifiers.uncheckedAppend(result);
+    indexPlusOne = m_recentIdentifiers.size();
+    m_recentIdentifiersIndex[firstCharacter] = indexPlusOne;
+    return result;
 }
 
-template <typename CharType>
-ALWAYS_INLINE const Identifier LiteralParser<CharType>::makeIdentifier(const UChar* characters, size_t length)
+static ALWAYS_INLINE bool cannotBeIdentPartOrEscapeStart(LChar)
 {
-    VM& vm = m_globalObject->vm();
-    if (!length)
-        return vm.propertyNames->emptyIdentifier;
-    if (characters[0] >= MaximumCachableCharacter)
-        return Identifier::fromString(vm, characters, length);
+    RELEASE_ASSERT_NOT_REACHED();
+}
 
-    if (length == 1) {
-        if (!m_shortIdentifiers[characters[0]].isNull())
-            return m_shortIdentifiers[characters[0]];
-        m_shortIdentifiers[characters[0]] = Identifier::fromString(vm, characters, length);
-        return m_shortIdentifiers[characters[0]];
-    }
-    if (!m_recentIdentifiers[characters[0]].isNull() && Identifier::equal(m_recentIdentifiers[characters[0]].impl(), characters, length))
-        return m_recentIdentifiers[characters[0]];
-    m_recentIdentifiers[characters[0]] = Identifier::fromString(vm, characters, length);
-    return m_recentIdentifiers[characters[0]];
+static ALWAYS_INLINE bool cannotBeIdentPartOrEscapeStart(UChar)
+{
+    RELEASE_ASSERT_NOT_REACHED();
 }
 
 // 256 Latin-1 codes
-static constexpr const TokenType TokenTypesOfLatin1Characters[256] = {
+static constexpr const TokenType tokenTypesOfLatin1Characters[256] = {
 /*   0 - Null               */ TokError,
 /*   1 - Start of Heading   */ TokError,
 /*   2 - Start of Text      */ TokError,
@@ -432,6 +459,266 @@ static constexpr const TokenType TokenTypesOfLatin1Characters[256] = {
 /* 255 - Ll category        */ TokError
 };
 
+// 256 Latin-1 codes
+static constexpr const bool safeStringLatin1CharactersInStrictJSON[256] = {
+/*   0 - Null               */ false,
+/*   1 - Start of Heading   */ false,
+/*   2 - Start of Text      */ false,
+/*   3 - End of Text        */ false,
+/*   4 - End of Transm.     */ false,
+/*   5 - Enquiry            */ false,
+/*   6 - Acknowledgment     */ false,
+/*   7 - Bell               */ false,
+/*   8 - Back Space         */ false,
+/*   9 - Horizontal Tab     */ false,
+/*  10 - Line Feed          */ false,
+/*  11 - Vertical Tab       */ false,
+/*  12 - Form Feed          */ false,
+/*  13 - Carriage Return    */ false,
+/*  14 - Shift Out          */ false,
+/*  15 - Shift In           */ false,
+/*  16 - Data Line Escape   */ false,
+/*  17 - Device Control 1   */ false,
+/*  18 - Device Control 2   */ false,
+/*  19 - Device Control 3   */ false,
+/*  20 - Device Control 4   */ false,
+/*  21 - Negative Ack.      */ false,
+/*  22 - Synchronous Idle   */ false,
+/*  23 - End of Transmit    */ false,
+/*  24 - Cancel             */ false,
+/*  25 - End of Medium      */ false,
+/*  26 - Substitute         */ false,
+/*  27 - Escape             */ false,
+/*  28 - File Separator     */ false,
+/*  29 - Group Separator    */ false,
+/*  30 - Record Separator   */ false,
+/*  31 - Unit Separator     */ false,
+/*  32 - Space              */ true,
+/*  33 - !                  */ true,
+/*  34 - "                  */ false,
+/*  35 - #                  */ true,
+/*  36 - $                  */ true,
+/*  37 - %                  */ true,
+/*  38 - &                  */ true,
+/*  39 - '                  */ true,
+/*  40 - (                  */ true,
+/*  41 - )                  */ true,
+/*  42 - *                  */ true,
+/*  43 - +                  */ true,
+/*  44 - ,                  */ true,
+/*  45 - -                  */ true,
+/*  46 - .                  */ true,
+/*  47 - /                  */ true,
+/*  48 - 0                  */ true,
+/*  49 - 1                  */ true,
+/*  50 - 2                  */ true,
+/*  51 - 3                  */ true,
+/*  52 - 4                  */ true,
+/*  53 - 5                  */ true,
+/*  54 - 6                  */ true,
+/*  55 - 7                  */ true,
+/*  56 - 8                  */ true,
+/*  57 - 9                  */ true,
+/*  58 - :                  */ true,
+/*  59 - ;                  */ true,
+/*  60 - <                  */ true,
+/*  61 - =                  */ true,
+/*  62 - >                  */ true,
+/*  63 - ?                  */ true,
+/*  64 - @                  */ true,
+/*  65 - A                  */ true,
+/*  66 - B                  */ true,
+/*  67 - C                  */ true,
+/*  68 - D                  */ true,
+/*  69 - E                  */ true,
+/*  70 - F                  */ true,
+/*  71 - G                  */ true,
+/*  72 - H                  */ true,
+/*  73 - I                  */ true,
+/*  74 - J                  */ true,
+/*  75 - K                  */ true,
+/*  76 - L                  */ true,
+/*  77 - M                  */ true,
+/*  78 - N                  */ true,
+/*  79 - O                  */ true,
+/*  80 - P                  */ true,
+/*  81 - Q                  */ true,
+/*  82 - R                  */ true,
+/*  83 - S                  */ true,
+/*  84 - T                  */ true,
+/*  85 - U                  */ true,
+/*  86 - V                  */ true,
+/*  87 - W                  */ true,
+/*  88 - X                  */ true,
+/*  89 - Y                  */ true,
+/*  90 - Z                  */ true,
+/*  91 - [                  */ true,
+/*  92 - \                  */ false,
+/*  93 - ]                  */ true,
+/*  94 - ^                  */ true,
+/*  95 - _                  */ true,
+/*  96 - `                  */ true,
+/*  97 - a                  */ true,
+/*  98 - b                  */ true,
+/*  99 - c                  */ true,
+/* 100 - d                  */ true,
+/* 101 - e                  */ true,
+/* 102 - f                  */ true,
+/* 103 - g                  */ true,
+/* 104 - h                  */ true,
+/* 105 - i                  */ true,
+/* 106 - j                  */ true,
+/* 107 - k                  */ true,
+/* 108 - l                  */ true,
+/* 109 - m                  */ true,
+/* 110 - n                  */ true,
+/* 111 - o                  */ true,
+/* 112 - p                  */ true,
+/* 113 - q                  */ true,
+/* 114 - r                  */ true,
+/* 115 - s                  */ true,
+/* 116 - t                  */ true,
+/* 117 - u                  */ true,
+/* 118 - v                  */ true,
+/* 119 - w                  */ true,
+/* 120 - x                  */ true,
+/* 121 - y                  */ true,
+/* 122 - z                  */ true,
+/* 123 - {                  */ true,
+/* 124 - |                  */ true,
+/* 125 - }                  */ true,
+/* 126 - ~                  */ true,
+/* 127 - Delete             */ true,
+/* 128 - Cc category        */ true,
+/* 129 - Cc category        */ true,
+/* 130 - Cc category        */ true,
+/* 131 - Cc category        */ true,
+/* 132 - Cc category        */ true,
+/* 133 - Cc category        */ true,
+/* 134 - Cc category        */ true,
+/* 135 - Cc category        */ true,
+/* 136 - Cc category        */ true,
+/* 137 - Cc category        */ true,
+/* 138 - Cc category        */ true,
+/* 139 - Cc category        */ true,
+/* 140 - Cc category        */ true,
+/* 141 - Cc category        */ true,
+/* 142 - Cc category        */ true,
+/* 143 - Cc category        */ true,
+/* 144 - Cc category        */ true,
+/* 145 - Cc category        */ true,
+/* 146 - Cc category        */ true,
+/* 147 - Cc category        */ true,
+/* 148 - Cc category        */ true,
+/* 149 - Cc category        */ true,
+/* 150 - Cc category        */ true,
+/* 151 - Cc category        */ true,
+/* 152 - Cc category        */ true,
+/* 153 - Cc category        */ true,
+/* 154 - Cc category        */ true,
+/* 155 - Cc category        */ true,
+/* 156 - Cc category        */ true,
+/* 157 - Cc category        */ true,
+/* 158 - Cc category        */ true,
+/* 159 - Cc category        */ true,
+/* 160 - Zs category (nbsp) */ true,
+/* 161 - Po category        */ true,
+/* 162 - Sc category        */ true,
+/* 163 - Sc category        */ true,
+/* 164 - Sc category        */ true,
+/* 165 - Sc category        */ true,
+/* 166 - So category        */ true,
+/* 167 - So category        */ true,
+/* 168 - Sk category        */ true,
+/* 169 - So category        */ true,
+/* 170 - Ll category        */ true,
+/* 171 - Pi category        */ true,
+/* 172 - Sm category        */ true,
+/* 173 - Cf category        */ true,
+/* 174 - So category        */ true,
+/* 175 - Sk category        */ true,
+/* 176 - So category        */ true,
+/* 177 - Sm category        */ true,
+/* 178 - No category        */ true,
+/* 179 - No category        */ true,
+/* 180 - Sk category        */ true,
+/* 181 - Ll category        */ true,
+/* 182 - So category        */ true,
+/* 183 - Po category        */ true,
+/* 184 - Sk category        */ true,
+/* 185 - No category        */ true,
+/* 186 - Ll category        */ true,
+/* 187 - Pf category        */ true,
+/* 188 - No category        */ true,
+/* 189 - No category        */ true,
+/* 190 - No category        */ true,
+/* 191 - Po category        */ true,
+/* 192 - Lu category        */ true,
+/* 193 - Lu category        */ true,
+/* 194 - Lu category        */ true,
+/* 195 - Lu category        */ true,
+/* 196 - Lu category        */ true,
+/* 197 - Lu category        */ true,
+/* 198 - Lu category        */ true,
+/* 199 - Lu category        */ true,
+/* 200 - Lu category        */ true,
+/* 201 - Lu category        */ true,
+/* 202 - Lu category        */ true,
+/* 203 - Lu category        */ true,
+/* 204 - Lu category        */ true,
+/* 205 - Lu category        */ true,
+/* 206 - Lu category        */ true,
+/* 207 - Lu category        */ true,
+/* 208 - Lu category        */ true,
+/* 209 - Lu category        */ true,
+/* 210 - Lu category        */ true,
+/* 211 - Lu category        */ true,
+/* 212 - Lu category        */ true,
+/* 213 - Lu category        */ true,
+/* 214 - Lu category        */ true,
+/* 215 - Sm category        */ true,
+/* 216 - Lu category        */ true,
+/* 217 - Lu category        */ true,
+/* 218 - Lu category        */ true,
+/* 219 - Lu category        */ true,
+/* 220 - Lu category        */ true,
+/* 221 - Lu category        */ true,
+/* 222 - Lu category        */ true,
+/* 223 - Ll category        */ true,
+/* 224 - Ll category        */ true,
+/* 225 - Ll category        */ true,
+/* 226 - Ll category        */ true,
+/* 227 - Ll category        */ true,
+/* 228 - Ll category        */ true,
+/* 229 - Ll category        */ true,
+/* 230 - Ll category        */ true,
+/* 231 - Ll category        */ true,
+/* 232 - Ll category        */ true,
+/* 233 - Ll category        */ true,
+/* 234 - Ll category        */ true,
+/* 235 - Ll category        */ true,
+/* 236 - Ll category        */ true,
+/* 237 - Ll category        */ true,
+/* 238 - Ll category        */ true,
+/* 239 - Ll category        */ true,
+/* 240 - Ll category        */ true,
+/* 241 - Ll category        */ true,
+/* 242 - Ll category        */ true,
+/* 243 - Ll category        */ true,
+/* 244 - Ll category        */ true,
+/* 245 - Ll category        */ true,
+/* 246 - Ll category        */ true,
+/* 247 - Sm category        */ true,
+/* 248 - Ll category        */ true,
+/* 249 - Ll category        */ true,
+/* 250 - Ll category        */ true,
+/* 251 - Ll category        */ true,
+/* 252 - Ll category        */ true,
+/* 253 - Ll category        */ true,
+/* 254 - Ll category        */ true,
+/* 255 - Ll category        */ true,
+};
+
 template <typename CharType>
 ALWAYS_INLINE TokenType LiteralParser<CharType>::Lexer::lex(LiteralParserToken<CharType>& token)
 {
@@ -453,10 +740,10 @@ ALWAYS_INLINE TokenType LiteralParser<CharType>::Lexer::lex(LiteralParserToken<C
     token.start = m_ptr;
     CharType character = *m_ptr;
     if (LIKELY(isLatin1(character))) {
-        TokenType tokenType = TokenTypesOfLatin1Characters[character];
+        TokenType tokenType = tokenTypesOfLatin1Characters[character];
         switch (tokenType) {
         case TokString:
-            if (character == '\'' && m_mode == StrictJSON) {
+            if (UNLIKELY(character == '\'' && m_mode == StrictJSON)) {
                 m_lexErrorMessage = "Single quotes (\') are not allowed in JSON"_s;
                 return TokError;
             }
@@ -465,7 +752,7 @@ ALWAYS_INLINE TokenType LiteralParser<CharType>::Lexer::lex(LiteralParserToken<C
         case TokIdentifier: {
             switch (character) {
             case 't':
-                if (m_end - m_ptr >= 4 && m_ptr[1] == 'r' && m_ptr[2] == 'u' && m_ptr[3] == 'e') {
+                if (m_end - m_ptr >= 4 && compare3Chars<CharType>(m_ptr + 1, 'r', 'u', 'e')) {
                     m_ptr += 4;
                     token.type = TokTrue;
                     token.end = m_ptr;
@@ -473,7 +760,7 @@ ALWAYS_INLINE TokenType LiteralParser<CharType>::Lexer::lex(LiteralParserToken<C
                 }
                 break;
             case 'f':
-                if (m_end - m_ptr >= 5 && m_ptr[1] == 'a' && m_ptr[2] == 'l' && m_ptr[3] == 's' && m_ptr[4] == 'e') {
+                if (m_end - m_ptr >= 5 && compare4Chars<CharType>(m_ptr + 1, 'a', 'l', 's', 'e')) {
                     m_ptr += 5;
                     token.type = TokFalse;
                     token.end = m_ptr;
@@ -481,7 +768,7 @@ ALWAYS_INLINE TokenType LiteralParser<CharType>::Lexer::lex(LiteralParserToken<C
                 }
                 break;
             case 'n':
-                if (m_end - m_ptr >= 4 && m_ptr[1] == 'u' && m_ptr[2] == 'l' && m_ptr[3] == 'l') {
+                if (m_end - m_ptr >= 4 && compare3Chars<CharType>(m_ptr + 1, 'u', 'l', 'l')) {
                     m_ptr += 4;
                     token.type = TokNull;
                     token.end = m_ptr;
@@ -572,13 +859,21 @@ enum class SafeStringCharacterSet { Strict, NonStrict };
 template <SafeStringCharacterSet set>
 static ALWAYS_INLINE bool isSafeStringCharacter(LChar c, LChar terminator)
 {
-    return (c >= ' ' && c != '\\' && c != terminator) || (c == '\t' && set != SafeStringCharacterSet::Strict);
+    if constexpr (set == SafeStringCharacterSet::Strict)
+        return safeStringLatin1CharactersInStrictJSON[c];
+    else
+        return (c >= ' ' && c != '\\' && c != terminator) || (c == '\t');
 }
 
 template <SafeStringCharacterSet set>
 static ALWAYS_INLINE bool isSafeStringCharacter(UChar c, UChar terminator)
 {
-    return (c >= ' ' && (set == SafeStringCharacterSet::Strict || isLatin1(c)) && c != '\\' && c != terminator) || (c == '\t' && set != SafeStringCharacterSet::Strict);
+    if constexpr (set == SafeStringCharacterSet::Strict) {
+        if (!isLatin1(c))
+            return true;
+        return isSafeStringCharacter<set>(static_cast<LChar>(c), static_cast<LChar>(terminator));
+    } else
+        return (c >= ' ' && isLatin1(c) && c != '\\' && c != terminator) || (c == '\t');
 }
 
 template <typename CharType>
@@ -588,7 +883,8 @@ ALWAYS_INLINE TokenType LiteralParser<CharType>::Lexer::lexString(LiteralParserT
     const CharType* runStart = m_ptr;
 
     if (m_mode == StrictJSON) {
-        while (m_ptr < m_end && isSafeStringCharacter<SafeStringCharacterSet::Strict>(*m_ptr, terminator))
+        ASSERT(terminator == '"');
+        while (m_ptr < m_end && isSafeStringCharacter<SafeStringCharacterSet::Strict>(*m_ptr, '"'))
             ++m_ptr;
     } else {
         while (m_ptr < m_end && isSafeStringCharacter<SafeStringCharacterSet::NonStrict>(*m_ptr, terminator))
@@ -933,7 +1229,7 @@ JSValue LiteralParser<CharType>::parse(ParserState initialState)
                     PutPropertySlot slot(object, m_nullOrCodeBlock ? m_nullOrCodeBlock->ownerExecutable()->isInStrictContext() : false);
                     objectStack.last().put(m_globalObject, ident, lastValue, slot);
                 } else {
-                    if (Optional<uint32_t> index = parseIndex(ident))
+                    if (std::optional<uint32_t> index = parseIndex(ident))
                         object->putDirectIndex(m_globalObject, index.value(), lastValue);
                     else
                         object->putDirect(vm, ident, lastValue);
@@ -992,19 +1288,22 @@ JSValue LiteralParser<CharType>::parse(ParserState initialState)
                         m_parseErrorMessage = "Unexpected token '}'"_s;
                         return JSValue();
                     case TokIdentifier: {
-                        typename Lexer::LiteralParserTokenPtr token = m_lexer.currentToken();
+                        auto token = m_lexer.currentToken();
 
-                        auto tryMakeErrorString = [=] (typename Lexer::LiteralParserTokenPtr token, unsigned length, bool addEllipsis) -> String {
+                        auto tryMakeErrorString = [&] (unsigned length) -> String {
+                            bool addEllipsis = length != token->stringLength;
                             if (token->stringIs8Bit)
                                 return tryMakeString("Unexpected identifier \"", StringView { token->stringToken8, length }, addEllipsis ? "..." : "", '"');
                             return tryMakeString("Unexpected identifier \"", StringView { token->stringToken16, length }, addEllipsis ? "..." : "", '"');
                         };
 
-                        String errorString = tryMakeErrorString(token, token->stringLength, false);
+                        constexpr unsigned maxLength = 200;
+
+                        String errorString = tryMakeErrorString(std::min(token->stringLength, maxLength));
                         if (!errorString) {
                             constexpr unsigned shortLength = 10;
                             if (token->stringLength > shortLength)
-                                errorString = tryMakeErrorString(token, shortLength, true);
+                                errorString = tryMakeErrorString(shortLength);
                             if (!errorString)
                                 errorString = "Unexpected identifier";
                         }

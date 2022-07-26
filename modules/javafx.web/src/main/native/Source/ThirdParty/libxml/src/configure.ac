@@ -1,36 +1,27 @@
 dnl Process this file with autoconf to produce a configure script.
 AC_PREREQ([2.63])
-AC_INIT
+
+m4_define([MAJOR_VERSION], 2)
+m4_define([MINOR_VERSION], 9)
+m4_define([MICRO_VERSION], 14)
+
+AC_INIT([libxml2],[MAJOR_VERSION.MINOR_VERSION.MICRO_VERSION])
 AC_CONFIG_SRCDIR([entities.c])
 AC_CONFIG_HEADERS([config.h])
 AM_MAINTAINER_MODE([enable])
 AC_CONFIG_MACRO_DIR([m4])
 AC_CANONICAL_HOST
 
-LIBXML_MAJOR_VERSION=2
-LIBXML_MINOR_VERSION=9
-LIBXML_MICRO_VERSION=10
+LIBXML_MAJOR_VERSION=MAJOR_VERSION
+LIBXML_MINOR_VERSION=MINOR_VERSION
+LIBXML_MICRO_VERSION=MICRO_VERSION
 LIBXML_MICRO_VERSION_SUFFIX=
 LIBXML_VERSION=$LIBXML_MAJOR_VERSION.$LIBXML_MINOR_VERSION.$LIBXML_MICRO_VERSION$LIBXML_MICRO_VERSION_SUFFIX
 LIBXML_VERSION_INFO=`expr $LIBXML_MAJOR_VERSION + $LIBXML_MINOR_VERSION`:$LIBXML_MICRO_VERSION:$LIBXML_MINOR_VERSION
 
 LIBXML_VERSION_NUMBER=`expr $LIBXML_MAJOR_VERSION \* 10000 + $LIBXML_MINOR_VERSION \* 100 + $LIBXML_MICRO_VERSION`
 
-if test -f CVS/Entries ; then
-  extra=`grep ChangeLog CVS/Entries | grep -v LIBXML | sed -e s\%/ChangeLog/1\.%% -e s\%/.*$%%`
-  echo extra=$extra
-  if test "$extra" != ""
-  then
-      LIBXML_VERSION_EXTRA="-CVS$extra"
-  fi
-else if test -d .svn ; then
-  extra=`svn info | grep Revision | sed 's+Revision: ++'`
-  echo extra=$extra
-  if test "$extra" != ""
-  then
-      LIBXML_VERSION_EXTRA="-SVN$extra"
-  fi
-else if test -d .git ; then
+if test -d .git ; then
   extra=`git describe 2>/dev/null | sed 's+LIBXML[[0-9.]]*-++'`
   echo extra=$extra
   if test "$extra" != ""
@@ -38,8 +29,7 @@ else if test -d .git ; then
       LIBXML_VERSION_EXTRA="-GIT$extra"
   fi
 fi
-fi
-fi
+
 AC_SUBST(LIBXML_MAJOR_VERSION)
 AC_SUBST(LIBXML_MINOR_VERSION)
 AC_SUBST(LIBXML_MICRO_VERSION)
@@ -50,7 +40,7 @@ AC_SUBST(LIBXML_VERSION_EXTRA)
 
 VERSION=${LIBXML_VERSION}
 
-AM_INIT_AUTOMAKE(libxml2, $VERSION)
+AM_INIT_AUTOMAKE([foreign no-dist-gzip dist-xz])
 
 # Support silent build rules, requires at least automake-1.11. Disable
 # by either passing --disable-silent-rules to configure or passing V=1
@@ -119,13 +109,12 @@ AC_ARG_WITH(html,
 [  --with-html             add the HTML support (on)])
 dnl Specific dir for HTML output ?
 AC_ARG_WITH(html-dir, AS_HELP_STRING([--with-html-dir=path],
-            [path to base html directory, default $datadir/doc/html]),
-            [HTML_DIR=$withval], [HTML_DIR='$(datadir)/doc'])
+            [path to base html directory, default $docdir/html]),
+            [HTML_DIR=$withval], [HTML_DIR='$(docdir)/html'])
 
 AC_ARG_WITH(html-subdir, AS_HELP_STRING([--with-html-subdir=path],
-            [directory used under html-dir, default $PACKAGE-$VERSION/html]),
-            [test "x$withval" != "x" && HTML_DIR="$HTML_DIR/$withval"],
-            [HTML_DIR="$HTML_DIR/\$(PACKAGE)-\$(VERSION)/html"])
+            [directory used under html-dir, default '']),
+            [test "x$withval" != "x" && HTML_DIR="$HTML_DIR/$withval"])
 AC_SUBST(HTML_DIR)
 AC_ARG_WITH(http,
 [  --with-http             add the HTTP support (on)])
@@ -470,7 +459,6 @@ AC_HEADER_STDC
 AC_CHECK_HEADERS([fcntl.h])
 AC_CHECK_HEADERS([unistd.h])
 AC_CHECK_HEADERS([ctype.h])
-AC_CHECK_HEADERS([dirent.h])
 AC_CHECK_HEADERS([errno.h])
 AC_CHECK_HEADERS([malloc.h])
 AC_CHECK_HEADERS([stdarg.h])
@@ -641,6 +629,17 @@ else
       [Type cast for the send() function 2nd arg])
 fi
 
+dnl Checking whether __attribute__((destructor)) is accepted by the compiler
+AC_MSG_CHECKING([whether __attribute__((destructor)) is accepted])
+AC_TRY_COMPILE2([
+void __attribute__((destructor))
+f(void) {}], [], [
+  AC_MSG_RESULT(yes)
+  AC_DEFINE([HAVE_ATTRIBUTE_DESTRUCTOR], [1],[Define if __attribute__((destructor)) is accepted])
+  AC_DEFINE([ATTRIBUTE_DESTRUCTOR], [__attribute__((destructor))],[A form that will not confuse apibuild.py])],[
+  AC_MSG_RESULT(no)])
+
+
 dnl ***********************Checking for availability of IPv6*******************
 
 AC_MSG_CHECKING([whether to enable IPv6])
@@ -725,13 +724,6 @@ fi
 
 dnl ******************************End IPv6 checks******************************
 
-dnl Checks for isnan in libm if not in libc
-AC_CHECK_FUNC(isnan, AC_DEFINE([HAVE_ISNAN],[], [Define if isnan is there]) , AC_CHECK_LIB(m, isnan,
-  [AC_DEFINE([HAVE_ISNAN],[], [Define if isnan is there])]))
-
-AC_CHECK_FUNC(isinf, AC_DEFINE([HAVE_ISINF], [], [Define if isinf is there]) , AC_CHECK_LIB(m, isinf,
-  [AC_DEFINE([HAVE_ISINF], [], [Define if isinf is there])]))
-
 XML_LIBDIR='-L${libdir}'
 XML_INCLUDEDIR='-I${includedir}/libxml2'
 
@@ -770,7 +762,7 @@ else
 
     # warnings we'd like to see
     EXTRA_CFLAGS="${EXTRA_CFLAGS} -pedantic -Wall -Wextra -Wshadow -Wpointer-arith -Wcast-align -Wwrite-strings -Waggregate-return -Wstrict-prototypes -Wmissing-prototypes -Wnested-externs -Winline -Wredundant-decls"
-    # warnings we'd like to supress
+    # warnings we'd like to suppress
     EXTRA_CFLAGS="${EXTRA_CFLAGS} -Wno-long-long -Wno-format-extra-args"
     case "${host}" in
           alpha*-*-linux* )
@@ -884,7 +876,7 @@ if test "$with_python" != "no" ; then
 	    then
 		PYTHON_SITE_PACKAGES=$with_python/lib/site-packages
 	    else
-		PYTHON_SITE_PACKAGES=`$PYTHON -c "from distutils import sysconfig; print(sysconfig.get_python_lib())"`
+		PYTHON_SITE_PACKAGES=$($PYTHON -c 'from distutils import sysconfig; print(sysconfig.get_python_lib(True,False,"${exec_prefix}"))')
 	    fi
 	fi
     fi
@@ -1047,7 +1039,6 @@ else
             AC_CHECK_HEADER(pthread.h,
                 AC_CHECK_LIB(pthread, pthread_join,[
                 THREAD_LIBS="-lpthread"
-                AC_DEFINE([HAVE_LIBPTHREAD], [], [Define if pthread library is there (-lpthread)])
                 AC_DEFINE([HAVE_PTHREAD_H], [], [Define if <pthread.h> is there])
                 WITH_THREADS="1"]))
         fi
@@ -1484,6 +1475,13 @@ else
         [have_libicu=yes],
         [have_libicu=no])
 
+    if test "x$have_libicu" = "xyes"; then
+        PKG_CHECK_VAR([ICU_DEFS], [icu-i18n], [DEFS])
+        if test "x$ICU_DEFS" != "x"; then
+            CPPFLAGS="$CPPFLAGS $ICU_DEFS"
+        fi
+    fi
+
     # If pkg-config failed, fall back to AC_CHECK_LIB. This
     # will not pick up the necessary LIBS flags for liblzma's
     # private dependencies, though, so static linking may fail.
@@ -1503,8 +1501,8 @@ else
 
             AC_CHECK_HEADER(unicode/ucnv.h,
             AC_MSG_CHECKING(for icu)
-            AC_TRY_LINK([#include <unicode/ucnv.h>],[
-        UConverter *utf = ucnv_open("UTF-8", NULL);],[
+            AC_LINK_IFELSE([AC_LANG_PROGRAM([[#include <unicode/ucnv.h>]], [[
+        UConverter *utf = ucnv_open("UTF-8", NULL);]])],[
                 AC_MSG_RESULT(yes)
                 have_libicu=yes],[
                 AC_MSG_RESULT(no)
@@ -1515,8 +1513,8 @@ else
                 LDFLAGS="${LDFLAGS} ${ICU_LIBS}"
                 LIBS="${LIBS} -licucore"
 
-                AC_TRY_LINK([#include <unicode/ucnv.h>],[
-        UConverter *utf = ucnv_open("UTF-8", NULL);],[
+                AC_LINK_IFELSE([AC_LANG_PROGRAM([[#include <unicode/ucnv.h>]], [[
+        UConverter *utf = ucnv_open("UTF-8", NULL);]])],[
                     AC_MSG_RESULT(yes)
                     have_libicu=yes
                     ICU_LIBS="${ICU_LIBS} -licucore"
@@ -1626,7 +1624,7 @@ case "$host" in
        WIN32_EXTRA_PYTHON_LIBADD="-shrext .pyd -L${pythondir}/../../lib -lpython${PYTHON_VERSION}"
        ;;
      *)
-   WIN32_EXTRA_PYTHON_LIBADD="-L${pythondir}/../../libs -lpython$(echo ${PYTHON_VERSION} | tr -d .)"
+       WIN32_EXTRA_PYTHON_LIBADD="-L${pythondir}/../../libs -lpython$(echo ${PYTHON_VERSION} | tr -d .)"
        ;;
    esac
  fi
@@ -1655,7 +1653,7 @@ dnl  http://sourceforge.net/project/shownotes.php?release_id=24832
 dnl
 dnl Also *win32*config.h files redefine them for various MSC compilers.
 dnl
-dnl So do not redefine {v}snprintf to _{v}snprintf like follwing:
+dnl So do not redefine {v}snprintf to _{v}snprintf like following:
 dnl  AC_DEFINE([snprintf],[_snprintf],[Win32 Std C name mangling work-around])
 dnl  AC_DEFINE([vsnprintf],[_vsnprintf],[Win32 Std C name mangling work-around])
 dnl and do not redefine those functions is C-source files.
@@ -1685,8 +1683,6 @@ AC_SUBST(ICONV_LIBS)
 AC_SUBST(ICU_LIBS)
 AC_SUBST(XML_INCLUDEDIR)
 AC_SUBST(HTML_DIR)
-AC_SUBST(HAVE_ISNAN)
-AC_SUBST(HAVE_ISINF)
 AC_SUBST(PYTHON)
 AC_SUBST(PYTHON_VERSION)
 AC_SUBST(PYTHON_INCLUDES)
@@ -1704,7 +1700,7 @@ rm -f COPYING.LIB COPYING
 ln -s $srcdir/Copyright COPYING
 
 # keep on one line for cygwin c.f. #130896
-AC_CONFIG_FILES([libxml2.spec:libxml.spec.in Makefile include/Makefile include/libxml/Makefile doc/Makefile doc/examples/Makefile doc/devhelp/Makefile example/Makefile python/Makefile python/tests/Makefile xstc/Makefile include/libxml/xmlversion.h libxml-2.0.pc libxml-2.0-uninstalled.pc libxml2-config.cmake])
+AC_CONFIG_FILES([libxml2.spec:libxml.spec.in Makefile include/Makefile include/libxml/Makefile doc/Makefile doc/examples/Makefile doc/devhelp/Makefile example/Makefile fuzz/Makefile python/Makefile python/tests/Makefile xstc/Makefile include/libxml/xmlversion.h libxml-2.0.pc libxml-2.0-uninstalled.pc libxml2-config.cmake])
 AC_CONFIG_FILES([python/setup.py], [chmod +x python/setup.py])
 AC_CONFIG_FILES([xml2-config], [chmod +x xml2-config])
 AC_OUTPUT

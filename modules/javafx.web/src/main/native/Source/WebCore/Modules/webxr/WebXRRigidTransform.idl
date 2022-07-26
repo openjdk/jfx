@@ -24,17 +24,18 @@
  */
 
 [
-    EnabledAtRuntime=WebXR,
+    EnabledBySetting=WebXR,
     Conditional=WEBXR,
     SecureContext,
     Exposed=Window,
+    JSCustomMarkFunction,
     ImplementationLacksVTable,
     InterfaceName=XRRigidTransform
 ] interface WebXRRigidTransform {
-    [MayThrowException] constructor(optional DOMPointInit position, optional DOMPointInit orientation);
+    constructor(optional DOMPointInit position, optional DOMPointInit orientation);
 
     [SameObject] readonly attribute DOMPointReadOnly position;
     [SameObject] readonly attribute DOMPointReadOnly orientation;
-    readonly attribute Float32Array matrix;
+    [CustomGetter] readonly attribute Float32Array matrix;
     [SameObject] readonly attribute WebXRRigidTransform inverse;
 };

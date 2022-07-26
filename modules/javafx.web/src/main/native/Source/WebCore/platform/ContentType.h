@@ -47,7 +47,7 @@ public:
     const String& raw() const { return m_type; }
     bool isEmpty() const { return m_type.isEmpty(); }
 
-    String toJSONString() const;
+    WEBCORE_EXPORT String toJSONString() const;
 
     template<class Encoder>
     void encode(Encoder& encoder) const
@@ -56,12 +56,12 @@ public:
     }
 
     template <class Decoder>
-    static Optional<ContentType> decode(Decoder& decoder)
+    static std::optional<ContentType> decode(Decoder& decoder)
     {
-        Optional<String> type;
+        std::optional<String> type;
         decoder >> type;
         if (!type)
-            return WTF::nullopt;
+            return std::nullopt;
 
         return { ContentType(WTFMove(*type)) };
     }

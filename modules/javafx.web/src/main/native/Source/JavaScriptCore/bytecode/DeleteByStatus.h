@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2020-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,7 +29,7 @@
 #include "CallLinkStatus.h"
 #include "CodeOrigin.h"
 #include "ConcurrentJSLock.h"
-#include "DeleteByIdVariant.h"
+#include "DeleteByVariant.h"
 #include "ExitFlag.h"
 #include "ICStatusMap.h"
 #include "StubInfoSummary.h"
@@ -73,7 +73,7 @@ public:
     bool operator!() const { return !isSet(); }
     bool observedSlowPath() const { return m_state == ObservedTakesSlowPath; }
     bool isSimple() const { return m_state == Simple; }
-    const Vector<DeleteByIdVariant, 1>& variants() { return m_variants; }
+    const Vector<DeleteByVariant, 1>& variants() { return m_variants; }
     CacheableIdentifier singleIdentifier() const;
 
     DeleteByStatus slowVersion() const;
@@ -81,11 +81,12 @@ public:
     // Attempts to reduce the set of variants to fit the given structure set. This may be approximate.
     void filter(const StructureSet&);
 
-    void visitAggregate(SlotVisitor&);
-    void markIfCheap(SlotVisitor&);
+    DECLARE_VISIT_AGGREGATE;
+    template<typename Visitor> void markIfCheap(Visitor&);
     bool finalize(VM&);
 
-    bool appendVariant(const DeleteByIdVariant&);
+    bool appendVariant(const DeleteByVariant&);
+    void shrinkToFit();
 
     void dump(PrintStream&) const;
 
@@ -99,7 +100,7 @@ private:
         const ConcurrentJSLocker&, CodeBlock* profiledBlock, StructureStubInfo*);
 #endif
 
-    Vector<DeleteByIdVariant, 1> m_variants;
+    Vector<DeleteByVariant, 1> m_variants;
     State m_state;
 };
 

@@ -71,7 +71,6 @@ public class ObjectPropertyLeakTest {
 
         for (int i = 0; i < 5; i++) {
             System.gc();
-            System.runFinalization();
             Thread.sleep(50);
         }
 

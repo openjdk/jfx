@@ -41,7 +41,7 @@
 
 namespace WebCore {
 
-CachedFont::CachedFont(CachedResourceRequest&& request, const PAL::SessionID& sessionID, const CookieJar* cookieJar, Type type)
+CachedFont::CachedFont(CachedResourceRequest&& request, PAL::SessionID sessionID, const CookieJar* cookieJar, Type type)
     : CachedResource(WTFMove(request), type, sessionID, cookieJar)
     , m_loadInitiated(false)
     , m_hasCreatedFontDataWrappingResource(false)
@@ -104,21 +104,13 @@ bool CachedFont::ensureCustomFontData(SharedBuffer* data)
 
 std::unique_ptr<FontCustomPlatformData> CachedFont::createCustomFontData(SharedBuffer& bytes, const String& itemInCollection, bool& wrapping)
 {
-    wrapping = true;
-
-#if !PLATFORM(COCOA) && !PLATFORM(JAVA)
-    if (isWOFF(bytes)) {
-        wrapping = false;
-        Vector<char> convertedFont;
-        if (!convertWOFFToSfnt(bytes, convertedFont))
-            return nullptr;
-
-        auto buffer = SharedBuffer::create(WTFMove(convertedFont));
-        return createFontCustomPlatformData(buffer, itemInCollection);
-    }
+    auto buffer = makeRefPtr(bytes);
+#if PLATFORM(JAVA)
+    wrapping = false;
+#else
+    wrapping = !convertWOFFToSfntIfNecessary(buffer);
 #endif
-
-    return createFontCustomPlatformData(bytes, itemInCollection);
+    return buffer ? createFontCustomPlatformData(*buffer, itemInCollection) : nullptr;
 }
 
 RefPtr<Font> CachedFont::createFont(const FontDescription& fontDescription, const AtomString&, bool syntheticBold, bool syntheticItalic, const FontFeatureSettings& fontFaceFeatures, FontSelectionSpecifiedCapabilities fontFaceCapabilities)

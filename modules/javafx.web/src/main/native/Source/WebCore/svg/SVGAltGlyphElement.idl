@@ -24,10 +24,10 @@
  */
 
 [
-    Conditional=SVG_FONTS,
+    Exposed=Window
 ] interface SVGAltGlyphElement : SVGTextPositioningElement {
     attribute DOMString glyphRef;
     attribute DOMString format;
 };
 
-SVGAltGlyphElement implements SVGURIReference;
+SVGAltGlyphElement includes SVGURIReference;

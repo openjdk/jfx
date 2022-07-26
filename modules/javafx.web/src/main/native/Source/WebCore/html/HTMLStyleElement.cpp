@@ -87,9 +87,12 @@ void HTMLStyleElement::parseAttribute(const QualifiedName& name, const AtomStrin
                 scope->didChangeStyleSheetContents();
         } else
             m_styleSheetOwner.childrenChanged(*this);
-    } else if (name == typeAttr)
+    } else if (name == typeAttr) {
         m_styleSheetOwner.setContentType(value);
-    else
+        m_styleSheetOwner.childrenChanged(*this);
+        if (auto* scope = m_styleSheetOwner.styleScope())
+            scope->didChangeStyleSheetContents();
+    } else
         HTMLElement::parseAttribute(name, value);
 }
 
@@ -136,11 +139,8 @@ void HTMLStyleElement::dispatchPendingEvent(StyleEventSender* eventSender)
 
 void HTMLStyleElement::notifyLoadedSheetAndAllCriticalSubresources(bool errorOccurred)
 {
-    if (m_firedLoad)
-        return;
     m_loadedSheet = !errorOccurred;
     styleLoadEventSender().dispatchEventSoon(*this);
-    m_firedLoad = true;
 }
 
 void HTMLStyleElement::addSubresourceAttributeURLs(ListHashSet<URL>& urls) const

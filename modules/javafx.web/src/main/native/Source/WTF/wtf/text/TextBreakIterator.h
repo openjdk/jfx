@@ -21,6 +21,7 @@
 
 #pragma once
 
+#include <mutex>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/Variant.h>
 #include <wtf/text/StringView.h>
@@ -57,14 +58,14 @@ public:
     TextBreakIterator& operator=(const TextBreakIterator&) = delete;
     TextBreakIterator& operator=(TextBreakIterator&&) = default;
 
-    Optional<unsigned> preceding(unsigned location) const
+    std::optional<unsigned> preceding(unsigned location) const
     {
         return switchOn(m_backing, [&](const auto& iterator) {
             return iterator.preceding(location);
         });
     }
 
-    Optional<unsigned> following(unsigned location) const
+    std::optional<unsigned> following(unsigned location) const
     {
         return switchOn(m_backing, [&](const auto& iterator) {
             return iterator.following(location);
@@ -112,14 +113,10 @@ class TextBreakIteratorCache {
     WTF_MAKE_FAST_ALLOCATED;
 // Use CachedTextBreakIterator instead of dealing with the cache directly.
 private:
-    friend class NeverDestroyed<TextBreakIteratorCache>;
+    friend class LazyNeverDestroyed<TextBreakIteratorCache>;
     friend class CachedTextBreakIterator;
 
-    static TextBreakIteratorCache& singleton()
-    {
-        static NeverDestroyed<TextBreakIteratorCache> cache;
-        return cache.get();
-    }
+    WTF_EXPORT_PRIVATE static TextBreakIteratorCache& singleton();
 
     TextBreakIteratorCache(const TextBreakIteratorCache&) = delete;
     TextBreakIteratorCache(TextBreakIteratorCache&&) = delete;
@@ -176,12 +173,12 @@ public:
     CachedTextBreakIterator& operator=(const CachedTextBreakIterator&) = delete;
     CachedTextBreakIterator& operator=(CachedTextBreakIterator&&) = default;
 
-    Optional<unsigned> preceding(unsigned location) const
+    std::optional<unsigned> preceding(unsigned location) const
     {
         return m_backing.preceding(location);
     }
 
-    Optional<unsigned> following(unsigned location) const
+    std::optional<unsigned> following(unsigned location) const
     {
         return m_backing.following(location);
     }

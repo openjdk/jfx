@@ -32,11 +32,14 @@
 
 namespace WebCore {
 
+constexpr unsigned LargeAudioBitRate = 192000;
+constexpr unsigned LargeVideoBitRate = 10000000;
+
 MediaRecorderPrivate::AudioVideoSelectedTracks MediaRecorderPrivate::selectTracks(MediaStreamPrivate& stream)
 {
     AudioVideoSelectedTracks selectedTracks;
     stream.forEachTrack([&](auto& track) {
-        if (!track.enabled() || track.ended())
+        if (track.ended())
             return;
         switch (track.type()) {
         case RealtimeMediaSource::Type::Video: {
@@ -54,6 +57,56 @@ MediaRecorderPrivate::AudioVideoSelectedTracks MediaRecorderPrivate::selectTrack
         }
     });
     return selectedTracks;
+}
+
+void MediaRecorderPrivate::checkTrackState(const MediaStreamTrackPrivate& track)
+{
+    if (&track.source() == m_audioSource.get()) {
+        m_shouldMuteAudio = track.muted() || !track.enabled();
+        return;
+    }
+    if (&track.source() == m_videoSource.get())
+        m_shouldMuteVideo = track.muted() || !track.enabled();
+}
+
+void MediaRecorderPrivate::stop(CompletionHandler<void()>&& completionHandler)
+{
+    setAudioSource(nullptr);
+    setVideoSource(nullptr);
+    stopRecording(WTFMove(completionHandler));
+}
+
+void MediaRecorderPrivate::pause(CompletionHandler<void()>&& completionHandler)
+{
+    ASSERT(!m_pausedAudioSource);
+    ASSERT(!m_pausedVideoSource);
+
+    m_pausedAudioSource = m_audioSource;
+    m_pausedVideoSource = m_videoSource;
+
+    setAudioSource(nullptr);
+    setVideoSource(nullptr);
+
+    pauseRecording(WTFMove(completionHandler));
+}
+
+void MediaRecorderPrivate::resume(CompletionHandler<void()>&& completionHandler)
+{
+    ASSERT(m_pausedAudioSource || m_pausedVideoSource);
+
+    setAudioSource(WTFMove(m_pausedAudioSource));
+    setVideoSource(WTFMove(m_pausedVideoSource));
+
+    resumeRecording(WTFMove(completionHandler));
+}
+
+void MediaRecorderPrivate::updateOptions(MediaRecorderPrivateOptions& options)
+{
+    // FIXME: Add support for options.bitsPerSecond.
+    if (!options.audioBitsPerSecond)
+        options.audioBitsPerSecond = LargeAudioBitRate;
+    if (!options.videoBitsPerSecond)
+        options.videoBitsPerSecond = LargeVideoBitRate;
 }
 
 } // namespace WebCore

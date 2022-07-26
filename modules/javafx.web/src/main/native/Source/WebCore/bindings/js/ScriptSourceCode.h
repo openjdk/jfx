@@ -34,6 +34,7 @@
 #include "CachedScript.h"
 #include "CachedScriptFetcher.h"
 #include "CachedScriptSourceProvider.h"
+#include "ScriptBufferSourceProvider.h"
 #include <JavaScriptCore/SourceCode.h>
 #include <JavaScriptCore/SourceProvider.h>
 #include <wtf/RefPtr.h>
@@ -50,6 +51,12 @@ public:
     {
     }
 
+    ScriptSourceCode(const ScriptBuffer& source, URL&& url = URL(), const TextPosition& startPosition = TextPosition(), JSC::SourceProviderSourceType sourceType = JSC::SourceProviderSourceType::Program)
+        : m_provider(ScriptBufferSourceProvider::create(source, JSC::SourceOrigin { url }, url.string(), startPosition, sourceType))
+        , m_code(m_provider.copyRef(), startPosition.m_line.oneBasedInt(), startPosition.m_column.oneBasedInt())
+    {
+    }
+
     ScriptSourceCode(CachedScript* cachedScript, JSC::SourceProviderSourceType sourceType, Ref<CachedScriptFetcher>&& scriptFetcher)
         : m_provider(CachedScriptSourceProvider::create(cachedScript, sourceType, WTFMove(scriptFetcher)))
         , m_code(m_provider.copyRef())
@@ -57,8 +64,14 @@ public:
     {
     }
 
-    ScriptSourceCode(const String& source, URL&& url, const TextPosition& startPosition, JSC::SourceProviderSourceType sourceType, Ref<CachedScriptFetcher>&& scriptFetcher)
+    ScriptSourceCode(const String& source, URL&& url, const TextPosition& startPosition, JSC::SourceProviderSourceType sourceType, Ref<JSC::ScriptFetcher>&& scriptFetcher)
         : m_provider(JSC::StringSourceProvider::create(source, JSC::SourceOrigin { url, WTFMove(scriptFetcher) }, url.string(), startPosition, sourceType))
+        , m_code(m_provider.copyRef(), startPosition.m_line.oneBasedInt(), startPosition.m_column.oneBasedInt())
+    {
+    }
+
+    ScriptSourceCode(const ScriptBuffer& source, URL&& url, const TextPosition& startPosition, JSC::SourceProviderSourceType sourceType, Ref<JSC::ScriptFetcher>&& scriptFetcher)
+        : m_provider(ScriptBufferSourceProvider::create(source, JSC::SourceOrigin { url, WTFMove(scriptFetcher) }, url.string(), startPosition, sourceType))
         , m_code(m_provider.copyRef(), startPosition.m_line.oneBasedInt(), startPosition.m_column.oneBasedInt())
     {
     }
@@ -67,6 +80,7 @@ public:
 
     const JSC::SourceCode& jsSourceCode() const { return m_code; }
 
+    JSC::SourceProvider& provider() { return m_provider.get(); }
     StringView source() const { return m_provider->source(); }
 
     int startLine() const { return m_code.firstLine().oneBasedInt(); }

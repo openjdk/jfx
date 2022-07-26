@@ -44,29 +44,22 @@ public:
     // Memory can be externally referenced, or can be internally allocated with an AudioFloatArray.
 
     // Reference an external buffer.
-    explicit AudioChannel(float* storage, size_t length)
-        : m_length(length)
-        , m_rawPointer(storage)
+    AudioChannel(float* storage, size_t length)
+        : m_rawPointer(storage)
+        , m_length(length)
         , m_silent(false)
     {
     }
 
     // Manage storage for us.
     explicit AudioChannel(size_t length)
-        : m_length(length)
-        , m_rawPointer(0)
-        , m_silent(true)
+        : m_memBuffer(makeUnique<AudioFloatArray>(length))
+        , m_length(length)
     {
-        m_memBuffer = makeUnique<AudioFloatArray>(length);
     }
 
     // A "blank" audio channel -- must call set() before it's useful...
-    AudioChannel()
-        : m_length(0)
-        , m_rawPointer(0)
-        , m_silent(true)
-    {
-    }
+    AudioChannel() = default;
 
     // Redefine the memory for this channel.
     // storage represents external memory not managed by this object.
@@ -81,9 +74,12 @@ public:
     // How many sample-frames do we contain?
     size_t length() const { return m_length; }
 
-    // resizeSmaller() can only be called with a new length <= the current length.
-    // The data stored in the bus will remain undisturbed.
-    void resizeSmaller(size_t newLength);
+    // Set new length. Can only be set to a value lower than the current length.
+    void setLength(size_t newLength)
+    {
+        RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(newLength <= length());
+        m_length = newLength;
+    }
 
     // Direct access to PCM sample data. Non-const accessor clears silent flag.
     float* mutableData()
@@ -129,11 +125,10 @@ public:
     float maxAbsValue() const;
 
 private:
-    size_t m_length;
-
-    float* m_rawPointer;
+    float* m_rawPointer { nullptr };
     std::unique_ptr<AudioFloatArray> m_memBuffer;
-    bool m_silent;
+    size_t m_length { 0 };
+    bool m_silent { true };
 };
 
 } // WebCore

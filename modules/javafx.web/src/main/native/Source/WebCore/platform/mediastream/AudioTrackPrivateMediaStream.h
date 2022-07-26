@@ -36,7 +36,7 @@ class AudioMediaStreamTrackRenderer;
 
 class AudioTrackPrivateMediaStream final
     : public AudioTrackPrivate
-    , private MediaStreamTrackPrivate::Observer
+    , public MediaStreamTrackPrivate::Observer
     , private RealtimeMediaSource::AudioSampleObserver {
     WTF_MAKE_NONCOPYABLE(AudioTrackPrivateMediaStream)
 public:
@@ -47,6 +47,7 @@ public:
     ~AudioTrackPrivateMediaStream();
 
     void setTrackIndex(int index) { m_index = index; }
+    void setAudioOutputDevice(const String&);
 
     MediaStreamTrackPrivate& streamTrack() { return m_streamTrack.get(); }
 
@@ -64,12 +65,13 @@ public:
     bool muted() const { return m_muted; }
 
 #if !RELEASE_LOG_DISABLED
-    void setLogger(const Logger&, const void*) final;
     const char* logClassName() const final { return "AudioTrackPrivateMediaStream"; }
 #endif
 
-protected:
+private:
     explicit AudioTrackPrivateMediaStream(MediaStreamTrackPrivate&);
+
+    static std::unique_ptr<AudioMediaStreamTrackRenderer> createRenderer(AudioTrackPrivateMediaStream&);
 
     // AudioTrackPrivate
     Kind kind() const final { return Kind::Main; }
@@ -90,6 +92,7 @@ protected:
     void startRenderer();
     void stopRenderer();
     void updateRenderer();
+    void createNewRenderer();
 
     // Main thread writable members
     bool m_isPlaying { false };

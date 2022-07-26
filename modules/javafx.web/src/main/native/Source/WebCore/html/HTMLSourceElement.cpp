@@ -40,6 +40,10 @@
 #include "HTMLMediaElement.h"
 #endif
 
+#if ENABLE(MODEL_ELEMENT)
+#include "HTMLModelElement.h"
+#endif
+
 namespace WebCore {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLSourceElement);
@@ -77,6 +81,11 @@ Node::InsertedIntoAncestorResult HTMLSourceElement::insertedIntoAncestor(Inserti
             downcast<HTMLMediaElement>(*parent).sourceWasAdded(*this);
         else
 #endif
+#if ENABLE(MODEL_ELEMENT)
+        if (is<HTMLModelElement>(*parent))
+            downcast<HTMLModelElement>(*parent).sourcesChanged();
+        else
+#endif
         if (is<HTMLPictureElement>(*parent)) {
             // The new source element only is a relevant mutation if it precedes any img element.
             m_shouldCallSourcesChanged = true;
@@ -98,6 +107,11 @@ void HTMLSourceElement::removedFromAncestor(RemovalType removalType, ContainerNo
 #if ENABLE(VIDEO)
         if (is<HTMLMediaElement>(oldParentOfRemovedTree))
             downcast<HTMLMediaElement>(oldParentOfRemovedTree).sourceWasRemoved(*this);
+        else
+#endif
+#if ENABLE(MODEL_ELEMENT)
+        if (is<HTMLModelElement>(oldParentOfRemovedTree))
+            downcast<HTMLModelElement>(oldParentOfRemovedTree).sourcesChanged();
         else
 #endif
         if (m_shouldCallSourcesChanged) {
@@ -165,11 +179,18 @@ void HTMLSourceElement::parseAttribute(const QualifiedName& name, const AtomStri
     HTMLElement::parseAttribute(name, value);
     if (name == srcsetAttr || name == sizesAttr || name == mediaAttr || name == typeAttr) {
         if (name == mediaAttr)
-            m_cachedParsedMediaAttribute = WTF::nullopt;
+            m_cachedParsedMediaAttribute = std::nullopt;
         auto parent = makeRefPtr(parentNode());
         if (m_shouldCallSourcesChanged)
             downcast<HTMLPictureElement>(*parent).sourcesChanged();
     }
+#if ENABLE(MODEL_ELEMENT)
+    if (name == srcAttr ||  name == typeAttr) {
+        RefPtr<Element> parent = parentElement();
+        if (is<HTMLModelElement>(parent))
+            downcast<HTMLModelElement>(*parent).sourcesChanged();
+    }
+#endif
 }
 
 const MediaQuerySet* HTMLSourceElement::parsedMediaAttribute(Document& document) const
@@ -182,6 +203,15 @@ const MediaQuerySet* HTMLSourceElement::parsedMediaAttribute(Document& document)
         m_cachedParsedMediaAttribute = WTFMove(parsedAttribute);
     }
     return m_cachedParsedMediaAttribute.value().get();
+}
+
+void HTMLSourceElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason reason)
+{
+    if (name == widthAttr || name == heightAttr) {
+        if (RefPtr parent = parentNode(); is<HTMLPictureElement>(parent))
+            downcast<HTMLPictureElement>(*parent).sourceDimensionAttributesChanged(*this);
+    }
+    HTMLElement::attributeChanged(name, oldValue, newValue, reason);
 }
 
 }

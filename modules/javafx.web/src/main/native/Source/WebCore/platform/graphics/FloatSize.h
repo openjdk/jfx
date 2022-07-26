@@ -72,6 +72,9 @@ public:
     float width() const { return m_width; }
     float height() const { return m_height; }
 
+    bool hasIntrinsicWidth = false;
+    bool hasIntrinsicHeight = false;
+
     void setWidth(float width) { m_width = width; }
     void setHeight(float height) { m_height = height; }
 
@@ -159,7 +162,7 @@ public:
 #endif
 
     String toJSONString() const;
-    Ref<JSON::Object> toJSONObject() const;
+    WEBCORE_EXPORT Ref<JSON::Object> toJSONObject() const;
 
 private:
     float m_width { 0 };

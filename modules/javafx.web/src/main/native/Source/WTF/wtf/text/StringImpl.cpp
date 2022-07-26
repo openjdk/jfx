@@ -163,6 +163,11 @@ Ref<StringImpl> StringImpl::createFromLiteral(const char* characters)
     return createFromLiteral(characters, strlen(characters));
 }
 
+Ref<StringImpl> StringImpl::createFromLiteral(ASCIILiteral literal)
+{
+    return createFromLiteral(literal.characters(), literal.length());
+}
+
 Ref<StringImpl> StringImpl::createWithoutCopying(const UChar* characters, unsigned length)
 {
     if (!length)
@@ -279,12 +284,22 @@ Ref<StringImpl> StringImpl::create(const LChar* characters, unsigned length)
     return createInternal(characters, length);
 }
 
-Ref<StringImpl> StringImpl::createStaticStringImpl(const char* characters, unsigned length)
+Ref<StringImpl> StringImpl::createStaticStringImpl(const LChar* characters, unsigned length)
 {
-    const LChar* lcharCharacters = reinterpret_cast<const LChar*>(characters);
-    ASSERT(charactersAreAllASCII(lcharCharacters, length));
-    Ref<StringImpl> result = createInternal(lcharCharacters, length);
-    result->setHash(StringHasher::computeHashAndMaskTop8Bits(lcharCharacters, length));
+    if (!length)
+        return *empty();
+    Ref<StringImpl> result = createInternal(characters, length);
+    result->hash();
+    result->m_refCount |= s_refCountFlagIsStaticString;
+    return result;
+}
+
+Ref<StringImpl> StringImpl::createStaticStringImpl(const UChar* characters, unsigned length)
+{
+    if (!length)
+        return *empty();
+    Ref<StringImpl> result = create8BitIfPossible(characters, length);
+    result->hash();
     result->m_refCount |= s_refCountFlagIsStaticString;
     return result;
 }
@@ -761,43 +776,6 @@ Ref<StringImpl> StringImpl::stripLeadingAndTrailingCharacters(CodeUnitMatchFunct
     return stripMatchedCharacters(predicate);
 }
 
-template<typename CharacterType> ALWAYS_INLINE Ref<StringImpl> StringImpl::removeCharacters(const CharacterType* characters, CodeUnitMatchFunction findMatch)
-{
-    auto* from = characters;
-    auto* fromEnd = from + m_length;
-
-    // Assume the common case will not remove any characters
-    while (from != fromEnd && !findMatch(*from))
-        ++from;
-    if (from == fromEnd)
-        return *this;
-
-    StringBuffer<CharacterType> data(m_length);
-    auto* to = data.characters();
-    unsigned outc = from - characters;
-
-    if (outc)
-        copyCharacters(to, characters, outc);
-
-    do {
-        while (from != fromEnd && findMatch(*from))
-            ++from;
-        while (from != fromEnd && !findMatch(*from))
-            to[outc++] = *from++;
-    } while (from != fromEnd);
-
-    data.shrink(outc);
-
-    return adopt(WTFMove(data));
-}
-
-Ref<StringImpl> StringImpl::removeCharacters(CodeUnitMatchFunction findMatch)
-{
-    if (is8Bit())
-        return removeCharacters(characters8(), findMatch);
-    return removeCharacters(characters16(), findMatch);
-}
-
 template<typename CharacterType, class UCharPredicate> inline Ref<StringImpl> StringImpl::simplifyMatchedCharactersToSpace(UCharPredicate predicate)
 {
     StringBuffer<CharacterType> data(m_length);
@@ -846,76 +824,6 @@ Ref<StringImpl> StringImpl::simplifyWhiteSpace(CodeUnitMatchFunction isWhiteSpac
     if (is8Bit())
         return StringImpl::simplifyMatchedCharactersToSpace<LChar>(isWhiteSpace);
     return StringImpl::simplifyMatchedCharactersToSpace<UChar>(isWhiteSpace);
-}
-
-int StringImpl::toIntStrict(bool* ok, int base)
-{
-    if (is8Bit())
-        return charactersToIntStrict(characters8(), m_length, ok, base);
-    return charactersToIntStrict(characters16(), m_length, ok, base);
-}
-
-unsigned StringImpl::toUIntStrict(bool* ok, int base)
-{
-    if (is8Bit())
-        return charactersToUIntStrict(characters8(), m_length, ok, base);
-    return charactersToUIntStrict(characters16(), m_length, ok, base);
-}
-
-int64_t StringImpl::toInt64Strict(bool* ok, int base)
-{
-    if (is8Bit())
-        return charactersToInt64Strict(characters8(), m_length, ok, base);
-    return charactersToInt64Strict(characters16(), m_length, ok, base);
-}
-
-uint64_t StringImpl::toUInt64Strict(bool* ok, int base)
-{
-    if (is8Bit())
-        return charactersToUInt64Strict(characters8(), m_length, ok, base);
-    return charactersToUInt64Strict(characters16(), m_length, ok, base);
-}
-
-intptr_t StringImpl::toIntPtrStrict(bool* ok, int base)
-{
-    if (is8Bit())
-        return charactersToIntPtrStrict(characters8(), m_length, ok, base);
-    return charactersToIntPtrStrict(characters16(), m_length, ok, base);
-}
-
-int StringImpl::toInt(bool* ok)
-{
-    if (is8Bit())
-        return charactersToInt(characters8(), m_length, ok);
-    return charactersToInt(characters16(), m_length, ok);
-}
-
-unsigned StringImpl::toUInt(bool* ok)
-{
-    if (is8Bit())
-        return charactersToUInt(characters8(), m_length, ok);
-    return charactersToUInt(characters16(), m_length, ok);
-}
-
-int64_t StringImpl::toInt64(bool* ok)
-{
-    if (is8Bit())
-        return charactersToInt64(characters8(), m_length, ok);
-    return charactersToInt64(characters16(), m_length, ok);
-}
-
-uint64_t StringImpl::toUInt64(bool* ok)
-{
-    if (is8Bit())
-        return charactersToUInt64(characters8(), m_length, ok);
-    return charactersToUInt64(characters16(), m_length, ok);
-}
-
-intptr_t StringImpl::toIntPtr(bool* ok)
-{
-    if (is8Bit())
-        return charactersToIntPtr(characters8(), m_length, ok);
-    return charactersToIntPtr(characters16(), m_length, ok);
 }
 
 double StringImpl::toDouble(bool* ok)
@@ -1708,8 +1616,8 @@ bool equalIgnoringASCIICaseNonNull(const StringImpl* a, const StringImpl* b)
 
 UCharDirection StringImpl::defaultWritingDirection(bool* hasStrongDirectionality)
 {
-    for (unsigned i = 0; i < m_length; ++i) {
-        auto charDirection = u_charDirection(is8Bit() ? m_data8[i] : m_data16[i]);
+    for (auto codePoint : StringView(this).codePoints()) {
+        auto charDirection = u_charDirection(codePoint);
         if (charDirection == U_LEFT_TO_RIGHT) {
             if (hasStrongDirectionality)
                 *hasStrongDirectionality = true;
@@ -1721,6 +1629,7 @@ UCharDirection StringImpl::defaultWritingDirection(bool* hasStrongDirectionality
             return U_RIGHT_TO_LEFT;
         }
     }
+
     if (hasStrongDirectionality)
         *hasStrongDirectionality = false;
     return U_LEFT_TO_RIGHT;

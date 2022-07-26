@@ -65,17 +65,17 @@ public:
     }
 
     template<class Decoder>
-    static Optional<LayoutRect> decode(Decoder& decoder)
+    static std::optional<LayoutRect> decode(Decoder& decoder)
     {
-        Optional<LayoutPoint> layoutPoint;
+        std::optional<LayoutPoint> layoutPoint;
         decoder >> layoutPoint;
         if (!layoutPoint)
-            return WTF::nullopt;
+            return std::nullopt;
 
-        Optional<LayoutSize> layoutSize;
+        std::optional<LayoutSize> layoutSize;
         decoder >> layoutSize;
         if (!layoutSize)
-            return WTF::nullopt;
+            return std::nullopt;
 
         return {{ *layoutPoint, *layoutSize }};
     }
@@ -190,6 +190,7 @@ public:
     void intersect(const LayoutRect&);
     bool edgeInclusiveIntersect(const LayoutRect&);
     WEBCORE_EXPORT void unite(const LayoutRect&);
+    void uniteEvenIfEmpty(const LayoutRect&);
     void uniteIfNonZero(const LayoutRect&);
     bool checkedUnite(const LayoutRect&);
 
@@ -223,6 +224,8 @@ public:
     operator FloatRect() const { return FloatRect(m_location, m_size); }
 
 private:
+    void setLocationAndSizeFromEdges(LayoutUnit left, LayoutUnit top, LayoutUnit right, LayoutUnit bottom);
+
     LayoutPoint m_location;
     LayoutSize m_size;
 };
@@ -256,6 +259,13 @@ inline bool operator!=(const LayoutRect& a, const LayoutRect& b)
 inline bool LayoutRect::isInfinite() const
 {
     return *this == LayoutRect::infiniteRect();
+}
+
+inline void LayoutRect::setLocationAndSizeFromEdges(LayoutUnit left, LayoutUnit top, LayoutUnit right, LayoutUnit bottom)
+{
+    m_location = { left, top };
+    m_size.setWidth(right - left);
+    m_size.setHeight(bottom - top);
 }
 
 // Integral snapping functions.

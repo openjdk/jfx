@@ -17,6 +17,8 @@ archive
 aria-activedescendant
 aria-atomic
 aria-autocomplete
+aria-braillelabel
+aria-brailleroledescription
 aria-busy
 aria-checked
 aria-colcount
@@ -66,8 +68,9 @@ aria-valuenow
 aria-valuetext
 as
 async
-adcampaignid
-addestination
+attributiondestination
+attributionsourceid
+attributionsourcenonce
 autocomplete
 autofocus
 autopictureinpicture
@@ -154,6 +157,7 @@ imagesizes
 imagesrcset
 incremental
 indeterminate
+inert
 inputmode
 integrity
 is
@@ -217,10 +221,12 @@ onbeforepaste
 onbeforeprint
 onbeforeunload
 onblur
+oncancel
 oncanplay
 oncanplaythrough
 onchange
 onclick
+onclose
 oncontextmenu
 oncopy
 oncut
@@ -240,6 +246,7 @@ onerror
 onfocus
 onfocusin
 onfocusout
+onformdata
 onhashchange
 oninput
 oninvalid
@@ -289,11 +296,13 @@ onreset
 onresize
 onscroll
 onsearch
+onsecuritypolicyviolation
 onseeked
 onseeking
 onselect
 onselectstart
 onselectionchange
+onslotchange
 onwebkitspeechchange
 onwheel
 onstalled
@@ -425,7 +434,6 @@ autocapitalize
 onwebkitcurrentplaybacktargetiswirelesschanged
 onwebkitplaybacktargetavailabilitychanged
 onwebkitpresentationmodechanged
-x-webkit-imagemenu
 webkit-playsinline
 x-webkit-airplay
 x-webkit-wirelessvideoplaybackdisabled
@@ -436,5 +444,3 @@ x-apple-data-detectors-type
 x-apple-data-detectors-result
 
 x-apple-pdf-annotation
-
-x-apple-editable-image

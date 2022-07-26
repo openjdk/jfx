@@ -32,6 +32,7 @@
 #include "FormAssociatedElement.h"
 #include "HTMLFormControlElement.h"
 #include "HTMLNames.h"
+#include "SelectionRestorationMode.h"
 #include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
@@ -85,26 +86,26 @@ HTMLFormElement* HTMLLabelElement::form() const
     return downcast<HTMLFormControlElement>(control.get())->form();
 }
 
-void HTMLLabelElement::setActive(bool down, bool pause)
+void HTMLLabelElement::setActive(bool down, bool pause, Style::InvalidationScope invalidationScope)
 {
     if (down == active())
         return;
 
     // Update our status first.
-    HTMLElement::setActive(down, pause);
+    HTMLElement::setActive(down, pause, invalidationScope);
 
     // Also update our corresponding control.
     if (auto element = control())
         element->setActive(down, pause);
 }
 
-void HTMLLabelElement::setHovered(bool over)
+void HTMLLabelElement::setHovered(bool over, Style::InvalidationScope invalidationScope)
 {
     if (over == hovered())
         return;
 
     // Update our status first.
-    HTMLElement::setHovered(over);
+    HTMLElement::setHovered(over, invalidationScope);
 
     // Also update our corresponding control.
     if (auto element = control())
@@ -172,21 +173,21 @@ bool HTMLLabelElement::willRespondToMouseClickEvents()
     return (element && element->willRespondToMouseClickEvents()) || HTMLElement::willRespondToMouseClickEvents();
 }
 
-void HTMLLabelElement::focus(bool restorePreviousSelection, FocusDirection direction)
+void HTMLLabelElement::focus(const FocusOptions& options)
 {
     Ref<HTMLLabelElement> protectedThis(*this);
     if (document().haveStylesheetsLoaded()) {
         document().updateLayout();
         if (isFocusable()) {
-            // The value of restorePreviousSelection is not used for label elements as it doesn't override updateFocusAppearance.
-            Element::focus(restorePreviousSelection, direction);
+            // The value of restorationMode is not used for label elements as it doesn't override updateFocusAppearance.
+            Element::focus(options);
             return;
         }
     }
 
     // To match other browsers, always restore previous selection.
     if (auto element = control())
-        element->focus(true, direction);
+        element->focus({ SelectionRestorationMode::RestoreOrSelectAll, options.direction });
 }
 
 bool HTMLLabelElement::accessKeyAction(bool sendMouseEvents)

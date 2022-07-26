@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -89,7 +89,7 @@ import javafx.css.Styleable;
 @DefaultProperty("content")
 public class ScrollPane extends Control {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -118,7 +118,7 @@ public class ScrollPane extends Control {
         setContent(content);
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Properties                                                              *
      *                                                                         *
@@ -580,7 +580,7 @@ public class ScrollPane extends Control {
     }
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Methods                                                                 *
      *                                                                         *
@@ -631,7 +631,7 @@ public class ScrollPane extends Control {
         return new ScrollPaneSkin(this);
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      *                         Stylesheet Handling                             *
      *                                                                         *
@@ -737,8 +737,9 @@ public class ScrollPane extends Control {
     }
 
     /**
-     * @return The CssMetaData associated with this class, which may include the
-     * CssMetaData of its superclasses.
+     * Gets the {@code CssMetaData} associated with this class, which may include the
+     * {@code CssMetaData} of its superclasses.
+     * @return the {@code CssMetaData}
      * @since JavaFX 8.0
      */
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
@@ -774,7 +775,7 @@ public class ScrollPane extends Control {
     }
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Accessibility handling                                                  *
      *                                                                         *
@@ -790,7 +791,7 @@ public class ScrollPane extends Control {
     }
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Support classes                                                         *
      *                                                                         *

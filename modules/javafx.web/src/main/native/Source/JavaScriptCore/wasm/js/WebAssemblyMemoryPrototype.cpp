@@ -38,8 +38,9 @@
 #include "StructureInlines.h"
 
 namespace JSC {
-static EncodedJSValue JSC_HOST_CALL webAssemblyMemoryProtoFuncGrow(JSGlobalObject*, CallFrame*);
-static EncodedJSValue JSC_HOST_CALL webAssemblyMemoryProtoFuncBuffer(JSGlobalObject*, CallFrame*);
+static JSC_DECLARE_HOST_FUNCTION(webAssemblyMemoryProtoFuncGrow);
+static JSC_DECLARE_CUSTOM_GETTER(webAssemblyMemoryProtoGetterBuffer);
+static JSC_DECLARE_HOST_FUNCTION(webAssemblyMemoryProtoFuncType);
 }
 
 #include "WebAssemblyMemoryPrototype.lut.h"
@@ -52,7 +53,8 @@ const ClassInfo WebAssemblyMemoryPrototype::s_info = { "WebAssembly.Memory", &Ba
 /* Source for WebAssemblyMemoryPrototype.lut.h
 @begin prototypeTableWebAssemblyMemory
  grow   webAssemblyMemoryProtoFuncGrow   Function 1
- buffer webAssemblyMemoryProtoFuncBuffer Accessor 0
+ buffer webAssemblyMemoryProtoGetterBuffer ReadOnly|CustomAccessor
+ type   webAssemblyMemoryProtoFuncType   Function 0
 @end
 */
 
@@ -69,7 +71,7 @@ ALWAYS_INLINE JSWebAssemblyMemory* getMemory(JSGlobalObject* globalObject, VM& v
     return memory;
 }
 
-EncodedJSValue JSC_HOST_CALL webAssemblyMemoryProtoFuncGrow(JSGlobalObject* globalObject, CallFrame* callFrame)
+JSC_DEFINE_HOST_FUNCTION(webAssemblyMemoryProtoFuncGrow, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     VM& vm = globalObject->vm();
     auto throwScope = DECLARE_THROW_SCOPE(vm);
@@ -86,15 +88,26 @@ EncodedJSValue JSC_HOST_CALL webAssemblyMemoryProtoFuncGrow(JSGlobalObject* glob
     return JSValue::encode(jsNumber(result.pageCount()));
 }
 
-EncodedJSValue JSC_HOST_CALL webAssemblyMemoryProtoFuncBuffer(JSGlobalObject* globalObject, CallFrame* callFrame)
+JSC_DEFINE_CUSTOM_GETTER(webAssemblyMemoryProtoGetterBuffer, (JSGlobalObject* globalObject, EncodedJSValue thisValue, PropertyName))
+{
+    VM& vm = globalObject->vm();
+    auto throwScope = DECLARE_THROW_SCOPE(vm);
+
+    JSWebAssemblyMemory* memory = getMemory(globalObject, vm, JSValue::decode(thisValue));
+    RETURN_IF_EXCEPTION(throwScope, { });
+    RELEASE_AND_RETURN(throwScope, JSValue::encode(memory->buffer(globalObject)));
+}
+
+JSC_DEFINE_HOST_FUNCTION(webAssemblyMemoryProtoFuncType, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     VM& vm = globalObject->vm();
     auto throwScope = DECLARE_THROW_SCOPE(vm);
 
     JSWebAssemblyMemory* memory = getMemory(globalObject, vm, callFrame->thisValue());
     RETURN_IF_EXCEPTION(throwScope, { });
-    return JSValue::encode(memory->buffer(globalObject->vm(), globalObject));
+    RELEASE_AND_RETURN(throwScope, JSValue::encode(memory->type(globalObject)));
 }
+
 
 WebAssemblyMemoryPrototype* WebAssemblyMemoryPrototype::create(VM& vm, JSGlobalObject*, Structure* structure)
 {

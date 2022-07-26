@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -46,9 +46,11 @@ namespace JSC {
 #if ENABLE(ASSEMBLER)
 
 class AllowMacroScratchRegisterUsage;
-class DisallowMacroScratchRegisterUsage;
 class LinkBuffer;
 class Watchpoint;
+
+template<typename T> class DisallowMacroScratchRegisterUsage;
+
 namespace DFG {
 struct OSRExit;
 }
@@ -121,6 +123,12 @@ public:
         TimesFour,
         TimesEight,
         ScalePtr = isAddress64Bit() ? TimesEight : TimesFour,
+    };
+
+    enum class Extend : uint8_t {
+        ZExt32,
+        SExt32,
+        None
     };
 
     struct BaseIndex;
@@ -208,18 +216,23 @@ public:
     //
     // Describes a complex addressing mode.
     struct BaseIndex {
-        BaseIndex(RegisterID base, RegisterID index, Scale scale, int32_t offset = 0)
+        BaseIndex(RegisterID base, RegisterID index, Scale scale, int32_t offset = 0, Extend extend = Extend::None)
             : base(base)
             , index(index)
             , scale(scale)
             , offset(offset)
+            , extend(extend)
         {
+#if !CPU(ARM64)
+            ASSERT(extend == Extend::None);
+#endif
         }
 
         RegisterID base;
         RegisterID index;
         Scale scale;
         int32_t offset;
+        Extend extend;
 
         BaseIndex withOffset(int32_t additionalOffset)
         {
@@ -230,6 +243,34 @@ public:
         {
             return BaseIndex(AbstractMacroAssembler::withSwappedRegister(base, left, right), AbstractMacroAssembler::withSwappedRegister(index, left, right), scale, offset);
         }
+    };
+
+    // PreIndexAddress:
+    //
+    // Describes an address with base address and pre-increment/decrement index.
+    struct PreIndexAddress {
+        PreIndexAddress(RegisterID base, int index)
+            : base(base)
+            , index(index)
+        {
+        }
+
+        RegisterID base;
+        int index;
+    };
+
+    // PostIndexAddress:
+    //
+    // Describes an address with base address and post-increment/decrement index.
+    struct PostIndexAddress {
+        PostIndexAddress(RegisterID base, int index)
+            : base(base)
+            , index(index)
+        {
+        }
+
+        RegisterID base;
+        int index;
     };
 
     // AbsoluteAddress:
@@ -309,9 +350,9 @@ public:
     // (which are implemented as an enum) from accidentally being passed as
     // immediate values.
     struct TrustedImm32 : public TrustedImm {
-        TrustedImm32() { }
+        constexpr TrustedImm32() = default;
 
-        explicit TrustedImm32(int32_t value)
+        explicit constexpr TrustedImm32(int32_t value)
             : m_value(value)
         {
         }
@@ -323,7 +364,7 @@ public:
         }
 #endif
 
-        int32_t m_value;
+        int32_t m_value { 0 };
     };
 
 
@@ -356,7 +397,7 @@ public:
         {
         }
 
-#if CPU(X86_64) || CPU(ARM64)
+#if CPU(X86_64) || CPU(ARM64) || CPU(RISCV64)
         explicit TrustedImm64(TrustedImmPtr ptr)
             : m_value(ptr.asIntptr())
         {
@@ -372,7 +413,7 @@ public:
             : TrustedImm64(value)
         {
         }
-#if CPU(X86_64) || CPU(ARM64)
+#if CPU(X86_64) || CPU(ARM64) || CPU(RISCV64)
         explicit Imm64(TrustedImmPtr ptr)
             : TrustedImm64(ptr)
         {
@@ -579,9 +620,7 @@ public:
         friend struct DFG::OSRExit;
         friend class LinkBuffer;
     public:
-        Jump()
-        {
-        }
+        Jump() = default;
 
 #if CPU(ARM_THUMB2)
         // Fixme: this information should be stored in the instruction stream, not in the Jump object.
@@ -637,7 +676,7 @@ public:
             masm->invalidateAllTempRegisters();
 
 #if ENABLE(DFG_REGISTER_ALLOCATION_VALIDATION)
-            masm->checkRegisterAllocationAgainstBranchRange(m_label.m_offset, masm->debugOffset());
+            masm->checkRegisterAllocationAgainstBranchRange(m_label.offset(), masm->debugOffset());
 #endif
 
 #if CPU(ARM_THUMB2)
@@ -657,7 +696,7 @@ public:
         void linkTo(Label label, AbstractMacroAssemblerType* masm) const
         {
 #if ENABLE(DFG_REGISTER_ALLOCATION_VALIDATION)
-            masm->checkRegisterAllocationAgainstBranchRange(label.m_label.m_offset, m_label.m_offset);
+            masm->checkRegisterAllocationAgainstBranchRange(label.m_label.offset(), m_label.offset());
 #endif
 
 #if CPU(ARM_THUMB2)
@@ -679,14 +718,14 @@ public:
     private:
         AssemblerLabel m_label;
 #if CPU(ARM_THUMB2)
-        ARMv7Assembler::JumpType m_type;
-        ARMv7Assembler::Condition m_condition;
+        ARMv7Assembler::JumpType m_type { ARMv7Assembler::JumpNoCondition };
+        ARMv7Assembler::Condition m_condition { ARMv7Assembler::ConditionInvalid };
 #elif CPU(ARM64)
-        ARM64Assembler::JumpType m_type;
-        ARM64Assembler::Condition m_condition;
-        bool m_is64Bit;
-        unsigned m_bitNumber;
-        ARM64Assembler::RegisterID m_compareRegister;
+        ARM64Assembler::JumpType m_type { ARM64Assembler::JumpNoCondition };
+        ARM64Assembler::Condition m_condition { ARM64Assembler::ConditionInvalid };
+        bool m_is64Bit { false };
+        unsigned m_bitNumber { 0 };
+        ARM64Assembler::RegisterID m_compareRegister { ARM64Registers::InvalidGPRReg };
 #endif
     };
 
@@ -879,7 +918,7 @@ public:
     template<PtrTag tag>
     static void* getLinkerAddress(void* code, AssemblerLabel label)
     {
-        return tagCodePtr(AssemblerType::getRelocatedAddress(code, label), tag);
+        return tagCodePtr<tag>(AssemblerType::getRelocatedAddress(code, label));
     }
 
     static unsigned getLinkerCallReturnOffset(Call call)
@@ -916,7 +955,7 @@ public:
     template<PtrTag callTag, PtrTag destTag>
     static CodeLocationLabel<destTag> prepareForAtomicRepatchNearCallConcurrently(CodeLocationNearCall<callTag> nearCall, CodeLocationLabel<destTag> destination)
     {
-#if USE(JUMP_ISLANDS)
+#if ENABLE(JUMP_ISLANDS)
         switch (nearCall.callMode()) {
         case NearCallMode::Tail:
             return CodeLocationLabel<destTag>(tagCodePtr<destTag>(AssemblerType::prepareForAtomicRelinkJumpConcurrently(nearCall.dataLocation(), destination.dataLocation())));
@@ -971,6 +1010,12 @@ public:
         m_linkTasks.append(createSharedTask<void(LinkBuffer&)>(functor));
     }
 
+    template<typename Functor>
+    void addLateLinkTask(const Functor& functor) // Run after all link tasks
+    {
+        m_lateLinkTasks.append(createSharedTask<void(LinkBuffer&)>(functor));
+    }
+
 #if COMPILER(GCC)
     // Workaround for GCC demanding that memcpy "must be the name of a function with external linkage".
     static void* memcpy(void* dst, const void* src, size_t size)
@@ -996,13 +1041,14 @@ public:
     }
 
     ALWAYS_INLINE void tagReturnAddress() { }
-    ALWAYS_INLINE void untagReturnAddress() { }
+    ALWAYS_INLINE void untagReturnAddress(RegisterID = RegisterID::InvalidGPRReg) { }
 
     ALWAYS_INLINE void tagPtr(PtrTag, RegisterID) { }
     ALWAYS_INLINE void tagPtr(RegisterID, RegisterID) { }
     ALWAYS_INLINE void untagPtr(PtrTag, RegisterID) { }
     ALWAYS_INLINE void untagPtr(RegisterID, RegisterID) { }
     ALWAYS_INLINE void removePtrTag(RegisterID) { }
+    ALWAYS_INLINE void validateUntaggedPtr(RegisterID, RegisterID = RegisterID::InvalidGPRReg) { }
 
 protected:
     AbstractMacroAssembler()
@@ -1108,11 +1154,12 @@ protected:
 
     friend class AllowMacroScratchRegisterUsage;
     friend class AllowMacroScratchRegisterUsageIf;
-    friend class DisallowMacroScratchRegisterUsage;
+    template<typename T> friend class DisallowMacroScratchRegisterUsage;
     unsigned m_tempRegistersValidBits;
     bool m_allowScratchRegister { true };
 
     Vector<RefPtr<SharedTask<void(LinkBuffer&)>>> m_linkTasks;
+    Vector<RefPtr<SharedTask<void(LinkBuffer&)>>> m_lateLinkTasks;
 
     friend class LinkBuffer;
 }; // class AbstractMacroAssembler

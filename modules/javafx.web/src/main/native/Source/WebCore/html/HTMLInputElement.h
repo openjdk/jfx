@@ -24,9 +24,9 @@
 
 #pragma once
 
-#include "DateComponents.h"
 #include "FileChooser.h"
 #include "HTMLTextFormControlElement.h"
+#include "SelectionRestorationMode.h"
 #include <memory>
 #include <wtf/WeakPtr.h>
 
@@ -37,13 +37,12 @@ class DragData;
 class FileList;
 class HTMLDataListElement;
 class HTMLImageLoader;
+class HTMLOptionElement;
 class Icon;
 class InputType;
 class ListAttributeTargetObserver;
 class RadioButtonGroups;
 class StepRange;
-
-struct DateTimeChooserParameters;
 
 struct InputElementClickState {
     bool stateful { false };
@@ -53,6 +52,8 @@ struct InputElementClickState {
 };
 
 enum class AnyStepHandling : bool;
+enum class DateComponentsType : uint8_t;
+enum class WasSetByJavaScript : bool { No, Yes };
 
 class HTMLInputElement : public HTMLTextFormControlElement {
     WTF_MAKE_ISO_ALLOCATED(HTMLInputElement);
@@ -86,7 +87,8 @@ public:
     StepRange createStepRange(AnyStepHandling) const;
 
 #if ENABLE(DATALIST_ELEMENT)
-    Optional<Decimal> findClosestTickMarkValue(const Decimal&);
+    std::optional<Decimal> findClosestTickMarkValue(const Decimal&);
+    std::optional<double> listOptionValueAsDouble(const HTMLOptionElement&);
 #endif
 
     WEBCORE_EXPORT ExceptionOr<void> stepUp(int = 1);
@@ -121,7 +123,7 @@ public:
     WEBCORE_EXPORT bool isFileUpload() const;
     bool isImageButton() const;
     WEBCORE_EXPORT bool isNumberField() const;
-    bool isSubmitButton() const;
+    bool isSubmitButton() const final;
     WEBCORE_EXPORT bool isTelephoneField() const;
     WEBCORE_EXPORT bool isURLField() const;
     WEBCORE_EXPORT bool isDateField() const;
@@ -130,12 +132,12 @@ public:
     WEBCORE_EXPORT bool isTimeField() const;
     WEBCORE_EXPORT bool isWeekField() const;
 
-    DateComponents::Type dateType() const;
+    DateComponentsType dateType() const;
 
     HTMLElement* containerElement() const;
 
     RefPtr<TextControlInnerTextElement> innerTextElement() const final;
-    RenderStyle createInnerTextStyle(const RenderStyle&) override;
+    RenderStyle createInnerTextStyle(const RenderStyle&) final;
 
     HTMLElement* innerBlockElement() const;
     HTMLElement* innerSpinButtonElement() const;
@@ -250,7 +252,10 @@ public:
     void setAutoFillAvailable(bool autoFillAvailable) { m_isAutoFillAvailable = autoFillAvailable; }
 
     WEBCORE_EXPORT FileList* files();
-    WEBCORE_EXPORT void setFiles(RefPtr<FileList>&&);
+    WEBCORE_EXPORT void setFiles(RefPtr<FileList>&&, WasSetByJavaScript = WasSetByJavaScript::No);
+
+    FileList* filesForBindings() { return files(); }
+    void setFilesForBindings(RefPtr<FileList>&& fileList) { return setFiles(WTFMove(fileList), WasSetByJavaScript::Yes); }
 
 #if ENABLE(DRAG_SUPPORT)
     // Returns true if the given DragData has more than one dropped files.
@@ -268,10 +273,11 @@ public:
     void addSearchResult();
     void onSearch();
 
-    bool willRespondToMouseClickEvents() override;
+    bool willRespondToMouseClickEvents() final;
 
 #if ENABLE(DATALIST_ELEMENT)
     WEBCORE_EXPORT RefPtr<HTMLElement> list() const;
+    WEBCORE_EXPORT bool isFocusingWithDataListDropdown() const;
     RefPtr<HTMLDataListElement> dataList() const;
     void dataListMayHaveChanged();
 #endif
@@ -291,7 +297,7 @@ public:
 
     void cacheSelectionInResponseToSetValue(int caretOffset) { cacheSelection(caretOffset, caretOffset, SelectionHasNoDirection); }
 
-    Color valueAsColor() const; // Returns transparent color if not type=color.
+    WEBCORE_EXPORT Color valueAsColor() const; // Returns transparent color if not type=color.
     WEBCORE_EXPORT void selectColor(StringView); // Does nothing if not type=color. Simulates user selection of color; intended for testing.
     WEBCORE_EXPORT Vector<Color> suggestedColors() const;
 
@@ -327,13 +333,10 @@ public:
     HTMLImageLoader* imageLoader() { return m_imageLoader.get(); }
     HTMLImageLoader& ensureImageLoader();
 
-#if ENABLE(DATE_AND_TIME_INPUT_TYPES)
-    bool setupDateTimeChooserParameters(DateTimeChooserParameters&);
-#endif
-
     void capsLockStateMayHaveChanged();
 
     bool shouldTruncateText(const RenderStyle&) const;
+    void invalidateStyleOnFocusChangeIfNeeded();
 
     ExceptionOr<int> selectionStartForBindings() const;
     ExceptionOr<void> setSelectionStartForBindings(int);
@@ -346,15 +349,15 @@ public:
 
     ExceptionOr<void> setSelectionRangeForBindings(int start, int end, const String& direction);
 
+    String resultForDialogSubmit() const final;
+
 protected:
     HTMLInputElement(const QualifiedName&, Document&, HTMLFormElement*, bool createdByParser);
 
-    void defaultEventHandler(Event&) override;
+    void defaultEventHandler(Event&) final;
 
 private:
     enum AutoCompleteSetting { Uninitialized, On, Off };
-
-    void didAddUserAgentShadowRoot(ShadowRoot&) final;
 
     void willChangeForm() final;
     void didChangeForm() final;
@@ -362,6 +365,8 @@ private:
     void didFinishInsertingNode() final;
     void removedFromAncestor(RemovalType, ContainerNode&) final;
     void didMoveToNewDocument(Document& oldDocument, Document& newDocument) final;
+
+    void createShadowSubtreeAndUpdateInnerTextElementEditability();
 
     int defaultTabIndex() const final;
     bool hasCustomFocusLogic() const final;
@@ -391,8 +396,8 @@ private:
     bool accessKeyAction(bool sendMouseEvents) final;
 
     void parseAttribute(const QualifiedName&, const AtomString&) final;
-    bool isPresentationAttribute(const QualifiedName&) const final;
-    void collectStyleForPresentationAttribute(const QualifiedName&, const AtomString&, MutableStyleProperties&) final;
+    bool hasPresentationalHintsForAttribute(const QualifiedName&) const final;
+    void collectPresentationalHintsForAttribute(const QualifiedName&, const AtomString&, MutableStyleProperties&) final;
     void finishParsingChildren() final;
     void parserDidSetAttributes() final;
 
@@ -455,7 +460,7 @@ private:
     void addToRadioButtonGroup();
     void removeFromRadioButtonGroup();
 
-    void setDefaultSelectionAfterFocus(SelectionRevealMode);
+    void setDefaultSelectionAfterFocus(SelectionRestorationMode, SelectionRevealMode);
 
     AtomString m_name;
     String m_valueIfDirty;

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,7 +30,7 @@
 #include "CodeOrigin.h"
 #include "ConcurrentJSLock.h"
 #include "ExitFlag.h"
-#include "GetByIdVariant.h"
+#include "GetByVariant.h"
 #include "ICStatusMap.h"
 #include "ScopeOffset.h"
 #include "StubInfoSummary.h"
@@ -99,9 +99,9 @@ public:
     bool isModuleNamespace() const { return m_state == ModuleNamespace; }
 
     size_t numVariants() const { return m_variants.size(); }
-    const Vector<GetByIdVariant, 1>& variants() const { return m_variants; }
-    const GetByIdVariant& at(size_t index) const { return m_variants[index]; }
-    const GetByIdVariant& operator[](size_t index) const { return at(index); }
+    const Vector<GetByVariant, 1>& variants() const { return m_variants; }
+    const GetByVariant& at(size_t index) const { return m_variants[index]; }
+    const GetByVariant& operator[](size_t index) const { return at(index); }
 
     bool takesSlowPath() const { return m_state == LikelyTakesSlowPath || m_state == ObservedTakesSlowPath || m_state == MakesCalls || m_state == ObservedSlowPathAndMakesCalls || m_state == Custom || m_state == ModuleNamespace; }
     bool observedStructureStubInfoSlowPath() const { return m_state == ObservedTakesSlowPath || m_state == ObservedSlowPathAndMakesCalls; }
@@ -118,11 +118,12 @@ public:
     JSModuleEnvironment* moduleEnvironment() const { return m_moduleNamespaceData->m_moduleEnvironment; }
     ScopeOffset scopeOffset() const { return m_moduleNamespaceData->m_scopeOffset; }
 
-    void visitAggregate(SlotVisitor&);
-    void markIfCheap(SlotVisitor&);
+    DECLARE_VISIT_AGGREGATE;
+    template<typename Visitor> void markIfCheap(Visitor&);
     bool finalize(VM&); // Return true if this gets to live.
 
-    bool appendVariant(const GetByIdVariant&);
+    bool appendVariant(const GetByVariant&);
+    void shrinkToFit();
 
     void dump(PrintStream&) const;
 
@@ -146,7 +147,7 @@ private:
         CacheableIdentifier m_identifier;
     };
 
-    Vector<GetByIdVariant, 1> m_variants;
+    Vector<GetByVariant, 1> m_variants;
     Box<ModuleNamespaceData> m_moduleNamespaceData;
     State m_state;
     bool m_wasSeenInJIT { false };

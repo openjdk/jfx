@@ -30,8 +30,7 @@
 #include "ImageTypes.h"
 #include "IntPoint.h"
 #include "IntSize.h"
-#include "NativeImage.h"
-#include <wtf/Optional.h>
+#include "PlatformImage.h"
 #include <wtf/Seconds.h>
 #include <wtf/text/WTFString.h>
 #include <wtf/ThreadSafeRefCounted.h>
@@ -50,7 +49,60 @@ public:
         Image,
         Video,
     };
+
+    struct FrameMetadata {
+        ImageOrientation orientation;
+        std::optional<IntSize> densityCorrectedSize;
+    };
+
+    struct FrameInfo {
+        bool hasAlpha;
+        Seconds duration;
+
+        template<class Encoder>
+        void encode(Encoder& encoder) const
+        {
+            encoder << hasAlpha;
+            encoder << duration;
+        }
+
+        template<class Decoder>
+        static std::optional<FrameInfo> decode(Decoder& decoder)
+        {
+            std::optional<bool> hasAlpha;
+            decoder >> hasAlpha;
+            if (!hasAlpha)
+                return std::nullopt;
+
+            std::optional<Seconds> duration;
+            decoder >> duration;
+            if (!duration)
+                return std::nullopt;
+
+            return {{
+                *hasAlpha,
+                *duration
+            }};
+        }
+    };
+
     static bool supportsMediaType(MediaType);
+
+#if ENABLE(GPU_PROCESS)
+    using SupportsMediaTypeFunc = WTF::Function<bool(MediaType)>;
+    using CanDecodeTypeFunc = WTF::Function<bool(const String&)>;
+    using CreateImageDecoderFunc = WTF::Function<RefPtr<ImageDecoder>(SharedBuffer&, const String&, AlphaOption, GammaAndColorProfileOption)>;
+
+    struct ImageDecoderFactory {
+        SupportsMediaTypeFunc supportsMediaType;
+        CanDecodeTypeFunc canDecodeType;
+        CreateImageDecoderFunc createImageDecoder;
+    };
+
+    WEBCORE_EXPORT static void installFactory(ImageDecoderFactory&&);
+    WEBCORE_EXPORT static void resetFactories();
+    WEBCORE_EXPORT static void clearFactories();
+#endif
 
     virtual size_t bytesDecodedToDetermineProperties() const = 0;
 
@@ -62,18 +114,19 @@ public:
     virtual RepetitionCount repetitionCount() const = 0;
     virtual String uti() const { return emptyString(); }
     virtual String filenameExtension() const = 0;
-    virtual Optional<IntPoint> hotSpot() const = 0;
+    virtual String accessibilityDescription() const { return emptyString(); };
+    virtual std::optional<IntPoint> hotSpot() const = 0;
 
     virtual IntSize frameSizeAtIndex(size_t, SubsamplingLevel = SubsamplingLevel::Default) const = 0;
     virtual bool frameIsCompleteAtIndex(size_t) const = 0;
-    virtual ImageOrientation frameOrientationAtIndex(size_t) const = 0;
+    virtual FrameMetadata frameMetadataAtIndex(size_t) const = 0;
 
     virtual Seconds frameDurationAtIndex(size_t) const = 0;
     virtual bool frameHasAlphaAtIndex(size_t) const = 0;
     virtual bool frameAllowSubsamplingAtIndex(size_t) const = 0;
     virtual unsigned frameBytesAtIndex(size_t, SubsamplingLevel = SubsamplingLevel::Default) const = 0;
 
-    virtual NativeImagePtr createFrameImageAtIndex(size_t, SubsamplingLevel = SubsamplingLevel::Default, const DecodingOptions& = DecodingOptions(DecodingMode::Synchronous)) = 0;
+    virtual PlatformImagePtr createFrameImageAtIndex(size_t, SubsamplingLevel = SubsamplingLevel::Default, const DecodingOptions& = DecodingOptions(DecodingMode::Synchronous)) = 0;
 
     virtual void setExpectedContentSize(long long) { }
     virtual void setData(SharedBuffer&, bool allDataReceived) = 0;

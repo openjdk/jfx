@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,7 +29,7 @@
 
 #include "DocumentIdentifier.h"
 #include "ServiceWorkerTypes.h"
-#include <wtf/text/StringConcatenateNumbers.h>
+#include <wtf/Hasher.h>
 
 namespace WebCore {
 
@@ -40,32 +40,15 @@ struct ServiceWorkerClientIdentifier {
     unsigned hash() const;
 
     String toString() const { return makeString(serverConnectionIdentifier.toUInt64(), '-', contextIdentifier.toUInt64()); }
-    static Optional<ServiceWorkerClientIdentifier> fromString(StringView);
+    static std::optional<ServiceWorkerClientIdentifier> fromString(StringView);
 
     template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static Optional<ServiceWorkerClientIdentifier> decode(Decoder&);
+    template<class Decoder> static std::optional<ServiceWorkerClientIdentifier> decode(Decoder&);
 };
 
 inline bool operator==(const ServiceWorkerClientIdentifier& a, const ServiceWorkerClientIdentifier& b)
 {
-    return a.serverConnectionIdentifier == b.serverConnectionIdentifier &&  a.contextIdentifier == b.contextIdentifier;
-}
-
-inline Optional<ServiceWorkerClientIdentifier> ServiceWorkerClientIdentifier::fromString(StringView string)
-{
-    ServiceWorkerClientIdentifier clientIdentifier;
-
-    unsigned counter = 0;
-    for (auto item : string.split('-')) {
-        auto identifier = item.toUInt64Strict();
-        if (!identifier || !*identifier)
-            return WTF::nullopt;
-        if (!counter++)
-            clientIdentifier.serverConnectionIdentifier = makeObjectIdentifier<SWServerConnectionIdentifierType>(identifier.value());
-        else if (counter == 2)
-            clientIdentifier.contextIdentifier = makeObjectIdentifier<DocumentIdentifierType>(identifier.value());
-    }
-    return (counter == 2) ? makeOptional(WTFMove(clientIdentifier)) : WTF::nullopt;
+    return a.serverConnectionIdentifier == b.serverConnectionIdentifier && a.contextIdentifier == b.contextIdentifier;
 }
 
 template<class Encoder>
@@ -75,33 +58,25 @@ void ServiceWorkerClientIdentifier::encode(Encoder& encoder) const
 }
 
 template<class Decoder>
-Optional<ServiceWorkerClientIdentifier> ServiceWorkerClientIdentifier::decode(Decoder& decoder)
+std::optional<ServiceWorkerClientIdentifier> ServiceWorkerClientIdentifier::decode(Decoder& decoder)
 {
-    Optional<SWServerConnectionIdentifier> serverConnectionIdentifier;
+    std::optional<SWServerConnectionIdentifier> serverConnectionIdentifier;
     decoder >> serverConnectionIdentifier;
     if (!serverConnectionIdentifier)
-        return WTF::nullopt;
+        return std::nullopt;
 
-    Optional<DocumentIdentifier> contextIdentifier;
+    std::optional<DocumentIdentifier> contextIdentifier;
     decoder >> contextIdentifier;
     if (!contextIdentifier)
-        return WTF::nullopt;
+        return std::nullopt;
 
-    return { { WTFMove(*serverConnectionIdentifier), WTFMove(*contextIdentifier) } };
+    return { { *serverConnectionIdentifier, *contextIdentifier } };
 }
 
 inline unsigned ServiceWorkerClientIdentifier::hash() const
 {
-    unsigned hashes[2];
-    hashes[0] = WTF::intHash(serverConnectionIdentifier.toUInt64());
-    hashes[1] = WTF::intHash(contextIdentifier.toUInt64());
-
-    return StringHasher::hashMemory(hashes, sizeof(hashes));
+    return computeHash(serverConnectionIdentifier, contextIdentifier);
 }
-
-} // namespace WebCore
-
-namespace WTF {
 
 struct ServiceWorkerClientIdentifierHash {
     static unsigned hash(const WebCore::ServiceWorkerClientIdentifier& key) { return key.hash(); }
@@ -109,15 +84,17 @@ struct ServiceWorkerClientIdentifierHash {
     static const bool safeToCompareToEmptyOrDeleted = true;
 };
 
+} // namespace WebCore
+
+namespace WTF {
+
 template<> struct HashTraits<WebCore::ServiceWorkerClientIdentifier> : GenericHashTraits<WebCore::ServiceWorkerClientIdentifier> {
     static WebCore::ServiceWorkerClientIdentifier emptyValue() { return { }; }
-
-    static void constructDeletedValue(WebCore::ServiceWorkerClientIdentifier& slot) { slot.serverConnectionIdentifier = makeObjectIdentifier<WebCore::SWServerConnectionIdentifierType>(std::numeric_limits<uint64_t>::max()); }
-
-    static bool isDeletedValue(const WebCore::ServiceWorkerClientIdentifier& slot) { return slot.serverConnectionIdentifier.toUInt64() == std::numeric_limits<uint64_t>::max(); }
+    static void constructDeletedValue(WebCore::ServiceWorkerClientIdentifier& slot) { new (NotNull, &slot.serverConnectionIdentifier) WebCore::SWServerConnectionIdentifier(HashTableDeletedValue); }
+    static bool isDeletedValue(const WebCore::ServiceWorkerClientIdentifier& slot) { return slot.serverConnectionIdentifier.isHashTableDeletedValue(); }
 };
 
-template<> struct DefaultHash<WebCore::ServiceWorkerClientIdentifier> : ServiceWorkerClientIdentifierHash { };
+template<> struct DefaultHash<WebCore::ServiceWorkerClientIdentifier> : WebCore::ServiceWorkerClientIdentifierHash { };
 
 }
 

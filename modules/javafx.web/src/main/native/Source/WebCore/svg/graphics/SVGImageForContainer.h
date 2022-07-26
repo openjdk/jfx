@@ -41,7 +41,7 @@ public:
         return adoptRef(*new SVGImageForContainer(image, containerSize, containerZoom, initialFragmentURL));
     }
 
-    bool isSVGImage() const final { return true; }
+    bool isSVGImageForContainer() const final { return true; }
 
     FloatSize size(ImageOrientation = ImageOrientation::FromImage) const final;
 
@@ -60,16 +60,10 @@ public:
     // FIXME: Implement this to be less conservative.
     bool currentFrameKnownToBeOpaque() const final { return false; }
 
-    NativeImagePtr nativeImageForCurrentFrame(const GraphicsContext* = nullptr) final;
+    RefPtr<NativeImage> nativeImageForCurrentFrame(const GraphicsContext* = nullptr) final;
 
 private:
-    SVGImageForContainer(SVGImage* image, const FloatSize& containerSize, float containerZoom, const URL& initialFragmentURL)
-        : m_image(image)
-        , m_containerSize(containerSize)
-        , m_containerZoom(containerZoom)
-        , m_initialFragmentURL(initialFragmentURL)
-    {
-    }
+    WEBCORE_EXPORT SVGImageForContainer(SVGImage*, const FloatSize& containerSize, float containerZoom, const URL& initialFragmentURL);
 
     void destroyDecodedData(bool /*destroyAll*/ = true) final { }
 
@@ -80,3 +74,5 @@ private:
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_IMAGE(SVGImageForContainer)

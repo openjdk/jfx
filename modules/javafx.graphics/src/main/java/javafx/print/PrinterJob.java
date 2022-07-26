@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -209,28 +209,8 @@ public final class PrinterJob {
     }
 
     /**
-     * Property representing the
-     * <code>Printer</code> for this job.
-     * @return the <code>Printer</code> for this job
-     */
-    public final ObjectProperty<Printer> printerProperty() {
-        /* The PrinterJob constructor always creates this property,
-         * so it can be returned directly.
-         */
-        return printer;
-    }
-
-    /**
-     * Gets the printer currently associated with this job.
-     * @return printer for the job.
-     */
-    public synchronized Printer getPrinter() {
-        return printerProperty().get();
-    }
-
-    /**
-     * Change the printer for this job.
-     * If the new printer does not support the current job settings,
+     * Property representing the {@code Printer} for this job.
+     * When setting a printer which does not support the current job settings,
      * (for example if DUPLEX printing is requested but the new printer
      * does not support this), then the values are reset to the default
      * for the new printer, or in some cases a similar value. For example
@@ -243,9 +223,20 @@ public final class PrinterJob {
      * <p>
      * Setting a null value for printer will install the default printer.
      * Setting the current printer has no effect.
-     * @param printer to be used for this print job.
+     * @return the {@code Printer} for this job
      */
-    public synchronized void setPrinter(Printer printer) {
+    public final ObjectProperty<Printer> printerProperty() {
+        /* The PrinterJob constructor always creates this property,
+         * so it can be returned directly.
+         */
+        return printer;
+    }
+
+    public synchronized final Printer getPrinter() {
+        return printerProperty().get();
+    }
+
+    public synchronized final void setPrinter(Printer printer) {
          printerProperty().set(printer);
     }
 
@@ -489,15 +480,11 @@ public final class PrinterJob {
      * <code>JobStatus</code>
      * @return the current <code>JobStatus</code>
      */
-    public ReadOnlyObjectProperty<JobStatus> jobStatusProperty() {
+    public final ReadOnlyObjectProperty<JobStatus> jobStatusProperty() {
         return jobStatus.getReadOnlyProperty();
     }
 
-    /**
-     * Obtain the current status of the job.
-     * @return the current <code>JobStatus</code>
-     */
-    public JobStatus getJobStatus() {
+    public final JobStatus getJobStatus() {
         return jobStatus.get();
     }
 

@@ -34,7 +34,6 @@
 #include "MediaKeysRestrictions.h"
 #include "SharedBuffer.h"
 #include <wtf/Function.h>
-#include <wtf/HashSet.h>
 #include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
 #include <wtf/WeakPtr.h>
@@ -63,7 +62,7 @@ public:
     static Ref<CDM> create(Document&, const String& keySystem);
     ~CDM();
 
-    using SupportedConfigurationCallback = WTF::Function<void(Optional<MediaKeySystemConfiguration>)>;
+    using SupportedConfigurationCallback = WTF::Function<void(std::optional<MediaKeySystemConfiguration>)>;
     void getSupportedConfiguration(MediaKeySystemConfiguration&& candidateConfiguration, SupportedConfigurationCallback&&);
 
     const String& keySystem() const { return m_keySystem; }
@@ -79,7 +78,7 @@ public:
 
     RefPtr<SharedBuffer> sanitizeResponse(const SharedBuffer&);
 
-    Optional<String> sanitizeSessionId(const String& sessionId);
+    std::optional<String> sanitizeSessionId(const String& sessionId);
 
     String storageDirectory() const;
 

@@ -42,6 +42,7 @@
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/text/StringConcatenateNumbers.h>
+#include <wtf/text/StringToIntegerConversion.h>
 #include <wtf/unicode/CharacterNames.h>
 
 namespace WebCore {
@@ -60,9 +61,6 @@ public:
 private:
     void append(RefPtr<StringImpl>&&) override;
     void finish() override;
-
-    // FIXME: Why do we need this?
-    bool isWaitingForScripts() const override { return false; }
 
     void checkBuffer(int len = 10)
     {
@@ -163,18 +161,15 @@ static String processFilesizeString(const String& size, bool isDirectory)
     if (isDirectory)
         return "--"_s;
 
-    bool valid;
-    int64_t bytes = size.toUInt64(&valid);
-    if (!valid)
+    auto bytes = parseIntegerAllowingTrailingJunk<uint64_t>(size);
+    if (!bytes)
         return unknownFileSizeText();
 
-    if (bytes < 1000000)
-        return makeString(FormattedNumber::fixedWidth(bytes / 1000., 2), " KB");
-
-    if (bytes < 1000000000)
-        return makeString(FormattedNumber::fixedWidth(bytes / 1000000., 2), " MB");
-
-    return makeString(FormattedNumber::fixedWidth(bytes / 1000000000., 2), " GB");
+    if (*bytes < 1000000)
+        return makeString(FormattedNumber::fixedWidth(*bytes / 1000.0, 2), " KB");
+    if (*bytes < 1000000000)
+        return makeString(FormattedNumber::fixedWidth(*bytes / 1000000.0, 2), " MB");
+    return makeString(FormattedNumber::fixedWidth(*bytes / 1000000000.0, 2), " GB");
 }
 
 static bool wasLastDayOfMonth(int year, int month, int day)
@@ -422,8 +417,8 @@ void FTPDirectoryDocumentParser::finish()
     HTMLDocumentParser::finish();
 }
 
-FTPDirectoryDocument::FTPDirectoryDocument(Frame* frame, const URL& url)
-    : HTMLDocument(frame, url)
+FTPDirectoryDocument::FTPDirectoryDocument(Frame* frame, const Settings& settings, const URL& url)
+    : HTMLDocument(frame, settings, url)
 {
 #if !LOG_DISABLED
     LogFTP.state = WTFLogChannelState::On;

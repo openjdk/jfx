@@ -256,7 +256,7 @@ void* prepareOSREntry(VM& vm, CallFrame* callFrame, CodeBlock* codeBlock, Byteco
     RELEASE_ASSERT(codeBlock->jitCode()->contains(entry->m_machineCode.untaggedExecutableAddress()));
     dataLogLnIf(Options::verboseOSR(), "    OSR using target PC ", RawPointer(targetPC));
     RELEASE_ASSERT(targetPC);
-    *bitwise_cast<void**>(scratch + 1) = retagCodePtr(targetPC, OSREntryPtrTag, bitwise_cast<PtrTag>(callFrame));
+    *bitwise_cast<void**>(scratch + 1) = tagCodePtrWithStackPointerForJITCall(untagCodePtr<OSREntryPtrTag>(targetPC), callFrame);
 
     Register* pivot = scratch + 2 + CallFrame::headerSizeInRegisters;
 
@@ -297,7 +297,7 @@ void* prepareOSREntry(VM& vm, CallFrame* callFrame, CodeBlock* codeBlock, Byteco
 #if NUMBER_OF_CALLEE_SAVES_REGISTERS > 0
     const RegisterAtOffsetList* registerSaveLocations = codeBlock->calleeSaveRegisters();
     RegisterAtOffsetList* allCalleeSaves = RegisterSet::vmCalleeSaveRegisterOffsets();
-    RegisterSet dontSaveRegisters = RegisterSet(RegisterSet::stackRegisters(), RegisterSet::allFPRs());
+    RegisterSet dontSaveRegisters = RegisterSet(RegisterSet::stackRegisters());
 
     unsigned registerCount = registerSaveLocations->size();
     VMEntryRecord* record = vmEntryRecord(vm.topEntryFrame);
@@ -305,6 +305,7 @@ void* prepareOSREntry(VM& vm, CallFrame* callFrame, CodeBlock* codeBlock, Byteco
         RegisterAtOffset currentEntry = registerSaveLocations->at(i);
         if (dontSaveRegisters.get(currentEntry.reg()))
             continue;
+        RELEASE_ASSERT(currentEntry.reg().isGPR());
         RegisterAtOffset* calleeSavesEntry = allCalleeSaves->find(currentEntry.reg());
 
         if constexpr (CallerFrameAndPC::sizeInRegisters == 2)

@@ -108,7 +108,7 @@ String accessibilityTitle(AccessibilityObject* coreObject)
 
         // If there's an element that labels this object and it's not exposed, then we should use
         // that text as our title.
-        if (text.textSource == AccessibilityTextSource::LabelByElement && !coreObject->exposesTitleUIElement())
+        if (text.textSource == AccessibilityTextSource::LabelByElement && !coreObject->titleUIElement())
             return text.text;
 
         // Elements of role AccessibilityRole::Toolbar will return its title as AccessibilityTextSource::Alternative.
@@ -155,25 +155,8 @@ bool selectionBelongsToObject(AccessibilityObject* coreObject, VisibleSelection&
     if (!coreObject || !coreObject->isAccessibilityRenderObject())
         return false;
 
-    if (selection.isNone())
-        return false;
-
-    auto range = selection.toNormalizedRange();
-    if (!range)
-        return false;
-
-    // We want to check that both the selection intersects the node
-    // AND that the selection is not just "touching" one of the
-    // boundaries for the selected node. We want to check whether the
-    // node is actually inside the region, at least partially.
-    auto& node = *coreObject->node();
-    auto* lastDescendant = node.lastDescendant();
-    unsigned lastOffset = lastDescendant->length();
-    auto intersectsResult = createLiveRange(*range)->intersectsNode(node);
-    return !intersectsResult.hasException()
-        && intersectsResult.releaseReturnValue()
-        && (range->end.container.ptr() != &node || range->end.offset)
-        && (range->start.container.ptr() != lastDescendant || range->start.offset != lastOffset);
+    auto range = selection.firstRange();
+    return range && intersects<ComposedTree>(*range, *coreObject->node());
 }
 
 AXCoreObject* objectFocusedAndCaretOffsetUnignored(AXCoreObject* referenceObject, int& offset)
@@ -240,17 +223,17 @@ AXCoreObject* objectFocusedAndCaretOffsetUnignored(AXCoreObject* referenceObject
     if (!startNode)
         return nullptr;
 
-    VisiblePosition startPosition = VisiblePosition(positionBeforeNode(startNode), DOWNSTREAM);
+    VisiblePosition startPosition = VisiblePosition(positionBeforeNode(startNode));
     VisiblePosition endPosition = firstUnignoredParent->selection().visibleEnd();
 
     if (startPosition == endPosition)
         offset = 0;
     else if (!isStartOfLine(endPosition)) {
         auto range = makeSimpleRange(startPosition, endPosition.previous());
-        offset = (range ? characterCount(*range, TextIteratorEmitsCharactersBetweenAllVisiblePositions) : 0) + 1;
+        offset = (range ? characterCount(*range, TextIteratorBehavior::EmitsCharactersBetweenAllVisiblePositions) : 0) + 1;
     } else {
         auto range = makeSimpleRange(startPosition, endPosition);
-        offset = range ? characterCount(*range, TextIteratorEmitsCharactersBetweenAllVisiblePositions) : 0;
+        offset = range ? characterCount(*range, TextIteratorBehavior::EmitsCharactersBetweenAllVisiblePositions) : 0;
     }
 
     return firstUnignoredParent;

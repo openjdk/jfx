@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -39,11 +39,6 @@ namespace JSC {
 class JSGlobalObject;
 struct ProtoCallFrame;
 class WebAssemblyInstance;
-using Wasm::WasmToWasmImportableFunction;
-
-namespace B3 {
-class Compilation;
-}
 
 class WebAssemblyFunction final : public WebAssemblyFunctionBase {
 public:
@@ -65,10 +60,6 @@ public:
     JS_EXPORT_PRIVATE static WebAssemblyFunction* create(VM&, JSGlobalObject*, Structure*, unsigned, const String&, JSWebAssemblyInstance*, Wasm::Callee& jsEntrypoint, WasmToWasmImportableFunction::LoadLocation, Wasm::SignatureIndex);
     static Structure* createStructure(VM&, JSGlobalObject*, JSValue);
 
-    Wasm::SignatureIndex signatureIndex() const { return m_importableFunction.signatureIndex; }
-    WasmToWasmImportableFunction::LoadLocation entrypointLoadLocation() const { return m_importableFunction.entrypointLoadLocation; }
-    WasmToWasmImportableFunction importableFunction() const { return m_importableFunction; }
-
     MacroAssemblerCodePtr<WasmEntryPtrTag> jsEntrypoint(ArityCheckMode arity)
     {
         if (arity == ArityCheckNotRequired)
@@ -76,8 +67,6 @@ public:
         ASSERT(arity == MustCheckArity);
         return m_jsEntrypoint;
     }
-
-    static ptrdiff_t offsetOfEntrypointLoadLocation() { return OBJECT_OFFSETOF(WebAssemblyFunction, m_importableFunction) + WasmToWasmImportableFunction::offsetOfEntrypointLoadLocation(); }
 
     MacroAssemblerCodePtr<JSEntryPtrTag> jsCallEntrypoint()
     {
@@ -90,20 +79,19 @@ public:
     Wasm::Instance* previousInstance(CallFrame*);
 
 private:
-    static void visitChildren(JSCell*, SlotVisitor&);
+    DECLARE_VISIT_CHILDREN;
     WebAssemblyFunction(VM&, NativeExecutable*, JSGlobalObject*, Structure*, Wasm::Callee& jsEntrypoint, WasmToWasmImportableFunction::LoadLocation entrypointLoadLocation, Wasm::SignatureIndex);
 
     MacroAssemblerCodePtr<JSEntryPtrTag> jsCallEntrypointSlow();
     ptrdiff_t previousInstanceOffset() const;
-    bool useTagRegisters() const;
+    bool usesTagRegisters() const;
 
     RegisterSet calleeSaves() const;
 
-    // It's safe to just hold the raw WasmToWasmImportableFunction/jsEntrypoint because we have a reference
+    // It's safe to just hold the raw jsEntrypoint because we have a reference
     // to our Instance, which points to the Module that exported us, which
     // ensures that the actual Signature/code doesn't get deallocated.
     MacroAssemblerCodePtr<WasmEntryPtrTag> m_jsEntrypoint;
-    WasmToWasmImportableFunction m_importableFunction;
     WriteBarrier<JSToWasmICCallee> m_jsToWasmICCallee;
     // Used for JS calling into Wasm.
     MacroAssemblerCodeRef<JSEntryPtrTag> m_jsCallEntrypoint;

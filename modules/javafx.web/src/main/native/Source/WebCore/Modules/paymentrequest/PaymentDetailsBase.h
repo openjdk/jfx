@@ -31,13 +31,14 @@
 #include "PaymentItem.h"
 #include "PaymentShippingOption.h"
 #include <wtf/Vector.h>
+#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
 struct PaymentDetailsBase {
-    Vector<PaymentItem> displayItems;
-    Vector<PaymentShippingOption> shippingOptions;
-    Vector<PaymentDetailsModifier> modifiers;
+    std::optional<Vector<PaymentItem>> displayItems;
+    std::optional<Vector<PaymentShippingOption>> shippingOptions;
+    std::optional<Vector<PaymentDetailsModifier>> modifiers;
 };
 
 } // namespace WebCore

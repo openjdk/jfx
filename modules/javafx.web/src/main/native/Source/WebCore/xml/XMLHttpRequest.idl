@@ -26,8 +26,8 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-// FIXME: Add URLSearchParams and ReadableStream to the union when supported.
-typedef (Blob or BufferSource or DOMFormData or USVString) BodyInit;
+// FIXME: Add ReadableStream to the union when supported.
+typedef (Blob or BufferSource or DOMFormData or USVString or URLSearchParams) BodyInit;
 
 enum XMLHttpRequestResponseType {
     "",
@@ -61,14 +61,14 @@ enum XMLHttpRequestResponseType {
     readonly attribute unsigned short readyState;
 
     // request
-    [MayThrowException] void open(ByteString method, DOMString url); // FIXME: url should be a USVString.
-    [MayThrowException] void open(ByteString method, DOMString url, boolean async, optional DOMString? user = null, optional DOMString? password = null); // FIXME: url/user/password should all be a USVStrings.
-    [MayThrowException] void setRequestHeader(ByteString header, ByteString value);
+    undefined open(ByteString method, USVString url);
+    undefined open(ByteString method, USVString url, boolean async, optional USVString? user = null, optional USVString? password = null);
+    undefined setRequestHeader(ByteString header, ByteString value);
     attribute unsigned long timeout;
     attribute boolean withCredentials;
-    readonly attribute XMLHttpRequestUpload upload;
-    [MayThrowException] void send(optional (Document or BodyInit)? body = null);
-    void abort();
+    [SameObject] readonly attribute XMLHttpRequestUpload upload;
+    undefined send(optional (Document or BodyInit)? body = null);
+    undefined abort();
 
     // response
     readonly attribute USVString responseURL;
@@ -76,7 +76,7 @@ enum XMLHttpRequestResponseType {
     readonly attribute ByteString statusText;
     ByteString? getResponseHeader(ByteString name);
     ByteString getAllResponseHeaders();
-    [MayThrowException] void overrideMimeType(DOMString mime);
+    undefined overrideMimeType(DOMString mime);
     attribute XMLHttpRequestResponseType responseType;
     [CachedAttribute, CustomGetter] readonly attribute any response;
     readonly attribute USVString responseText;

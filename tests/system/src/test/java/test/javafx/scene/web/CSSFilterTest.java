@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2020, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -37,6 +37,7 @@ import javafx.stage.Stage;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 import test.util.Util;
 
@@ -121,6 +122,7 @@ public class CSSFilterTest {
         });
     }
 
+    @Ignore("JDK-8269067")
     @Test public void testCSSFilterRendering() {
         final CountDownLatch webViewStateLatch = new CountDownLatch(1);
 

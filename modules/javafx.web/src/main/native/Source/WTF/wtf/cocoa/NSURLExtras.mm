@@ -29,6 +29,7 @@
 #import "config.h"
 #import "NSURLExtras.h"
 
+#import <mutex>
 #import <wtf/Function.h>
 #import <wtf/RetainPtr.h>
 #import <wtf/URLHelpers.h>
@@ -91,15 +92,15 @@ void loadIDNAllowedScriptList()
 
 static String decodePercentEscapes(const String& string)
 {
-    NSString *substring = CFBridgingRelease(CFURLCreateStringByReplacingPercentEscapes(nullptr, string.createCFString().get(), CFSTR("")));
+    auto substring = adoptCF(CFURLCreateStringByReplacingPercentEscapes(nullptr, string.createCFString().get(), CFSTR("")));
     if (!substring)
         return string;
-    return substring;
+    return substring.get();
 }
 
 NSString *decodeHostName(NSString *string)
 {
-    Optional<String> host = mapHostName(string, nullptr);
+    std::optional<String> host = mapHostName(string, nullptr);
     if (!host)
         return nil;
     return !*host ? string : (NSString *)*host;
@@ -107,7 +108,7 @@ NSString *decodeHostName(NSString *string)
 
 NSString *encodeHostName(NSString *string)
 {
-    Optional<String> host = mapHostName(string, decodePercentEscapes);
+    std::optional<String> host = mapHostName(string, decodePercentEscapes);
     if (!host)
         return nil;
     return !*host ? string : (NSString *)*host;
@@ -137,11 +138,11 @@ NSURL *URLByTruncatingOneCharacterBeforeComponent(NSURL *URL, CFURLComponentType
         CFURLGetBytes((__bridge CFURLRef)URL, urlBytes.data(), numBytes);
     }
 
-    CFURLRef result = CFURLCreateWithBytes(nullptr, urlBytes.data(), fragRg.location - 1, kCFStringEncodingUTF8, nullptr);
+    auto result = adoptCF(CFURLCreateWithBytes(nullptr, urlBytes.data(), fragRg.location - 1, kCFStringEncodingUTF8, nullptr));
     if (!result)
-        result = CFURLCreateWithBytes(nullptr, urlBytes.data(), fragRg.location - 1, kCFStringEncodingISOLatin1, nullptr);
+        result = adoptCF(CFURLCreateWithBytes(nullptr, urlBytes.data(), fragRg.location - 1, kCFStringEncodingISOLatin1, nullptr));
 
-    return result ? CFBridgingRelease(result) : URL;
+    return result ? result.bridgingAutorelease() : URL;
 }
 
 static NSURL *URLByRemovingResourceSpecifier(NSURL *URL)
@@ -154,7 +155,6 @@ NSURL *URLWithData(NSData *data, NSURL *baseURL)
     if (!data)
         return nil;
 
-    NSURL *result = nil;
     size_t length = [data length];
     if (length > 0) {
         // work around <rdar://4470771>: CFURLCreateAbsoluteURLWithBytes(.., TRUE) doesn't remove non-path components.
@@ -170,13 +170,12 @@ NSURL *URLWithData(NSData *data, NSURL *baseURL)
         // (e.g calls to NSURL -path). However, this function is not tolerant of illegal UTF-8 sequences, which
         // could either be a malformed string or bytes in a different encoding, like shift-jis, so we fall back
         // onto using ISO Latin 1 in those cases.
-        result = CFBridgingRelease(CFURLCreateAbsoluteURLWithBytes(nullptr, bytes, length, kCFStringEncodingUTF8, (__bridge CFURLRef)baseURL, YES));
+        auto result = adoptCF(CFURLCreateAbsoluteURLWithBytes(nullptr, bytes, length, kCFStringEncodingUTF8, (__bridge CFURLRef)baseURL, YES));
         if (!result)
-            result = CFBridgingRelease(CFURLCreateAbsoluteURLWithBytes(nullptr, bytes, length, kCFStringEncodingISOLatin1, (__bridge CFURLRef)baseURL, YES));
-    } else
-        result = [NSURL URLWithString:@""];
-
-    return result;
+            result = adoptCF(CFURLCreateAbsoluteURLWithBytes(nullptr, bytes, length, kCFStringEncodingISOLatin1, (__bridge CFURLRef)baseURL, YES));
+        return result.bridgingAutorelease();
+    }
+    return [NSURL URLWithString:@""];
 }
 static NSData *dataWithUserTypedString(NSString *string)
 {
@@ -188,12 +187,12 @@ static NSData *dataWithUserTypedString(NSString *string)
     if (!inLength)
         return nil;
 
-    Checked<int, RecordOverflow> mallocLength = inLength;
+    CheckedInt32 mallocLength = inLength;
     mallocLength *= 3; // large enough to %-escape every character
     if (mallocLength.hasOverflowed())
         return nil;
 
-    char* outBytes = static_cast<char *>(malloc(mallocLength.unsafeGet()));
+    char* outBytes = static_cast<char *>(malloc(mallocLength));
     char* p = outBytes;
     int outLength = 0;
     for (int i = 0; i < inLength; i++) {
@@ -335,11 +334,11 @@ static NSURL *URLByRemovingComponentAndSubsequentCharacter(NSURL *URL, CFURLComp
 
     memmove(urlBytes + range.location, urlBytes + range.location + range.length, numBytes - range.location + range.length);
 
-    CFURLRef result = CFURLCreateWithBytes(nullptr, urlBytes, numBytes - range.length, kCFStringEncodingUTF8, nullptr);
+    auto result = adoptCF(CFURLCreateWithBytes(nullptr, urlBytes, numBytes - range.length, kCFStringEncodingUTF8, nullptr));
     if (!result)
-        result = CFURLCreateWithBytes(nullptr, urlBytes, numBytes - range.length, kCFStringEncodingISOLatin1, nullptr);
+        result = adoptCF(CFURLCreateWithBytes(nullptr, urlBytes, numBytes - range.length, kCFStringEncodingISOLatin1, nullptr));
 
-    return result ? CFBridgingRelease(result) : URL;
+    return result ? result.bridgingAutorelease() : URL;
 }
 
 NSURL *URLByRemovingUserInfo(NSURL *URL)
@@ -424,8 +423,12 @@ NSRange rangeOfURLScheme(NSString *string)
          even need to enforce the character set here.
          */
         NSString *acceptableCharacters = @"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+.-";
-        static NeverDestroyed<RetainPtr<NSCharacterSet>> InverseSchemeCharacterSet([[NSCharacterSet characterSetWithCharactersInString:acceptableCharacters] invertedSet]);
-        NSRange illegals = [string rangeOfCharacterFromSet:InverseSchemeCharacterSet.get().get() options:0 range:scheme];
+        static LazyNeverDestroyed<RetainPtr<NSCharacterSet>> inverseSchemeCharacterSet;
+        static std::once_flag onceKey;
+        std::call_once(onceKey, [&] {
+            inverseSchemeCharacterSet.construct([[NSCharacterSet characterSetWithCharactersInString:acceptableCharacters] invertedSet]);
+        });
+        NSRange illegals = [string rangeOfCharacterFromSet:inverseSchemeCharacterSet.get().get() options:0 range:scheme];
         if (illegals.location == NSNotFound)
             return scheme;
     }

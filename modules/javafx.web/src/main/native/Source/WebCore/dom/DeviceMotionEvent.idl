@@ -24,14 +24,17 @@
  */
 
 [
-    Conditional=DEVICE_ORIENTATION
+    Conditional=DEVICE_ORIENTATION,
+    Exposed=Window
 ] interface DeviceMotionEvent : Event {
     readonly attribute Acceleration? acceleration;
     readonly attribute Acceleration? accelerationIncludingGravity;
     readonly attribute RotationRate? rotationRate;
     readonly attribute unrestricted double? interval;
 
-    void initDeviceMotionEvent(optional DOMString type = "",
+    [CallWith=Document, EnabledBySetting=DeviceOrientationPermissionAPI] static Promise<DeviceOrientationOrMotionPermissionState> requestPermission();
+
+    undefined initDeviceMotionEvent(optional DOMString type = "",
                                optional boolean bubbles = false,
                                optional boolean cancelable = false,
                                optional Acceleration? acceleration = null,
@@ -57,5 +60,3 @@
     double? beta;
     double? gamma;
 };
-
-DeviceMotionEvent implements DeviceOrientationOrMotionEvent;

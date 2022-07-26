@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2009-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,6 +34,14 @@
 #include <wtf/Lock.h>
 #include <wtf/Vector.h>
 
+namespace JSC {
+class AbstractSlotVisitor;
+}
+
+namespace WTF {
+class AbstractLocker;
+};
+
 namespace WebCore {
 
 class ScriptExecutionContext;
@@ -45,8 +53,8 @@ public:
     static Ref<WebGLProgram> create(WebGLRenderingContextBase&);
     virtual ~WebGLProgram();
 
-    static HashMap<WebGLProgram*, WebGLRenderingContextBase*>& instances(const WTF::LockHolder&);
-    static Lock& instancesMutex();
+    static HashMap<WebGLProgram*, WebGLRenderingContextBase*>& instances() WTF_REQUIRES_LOCK(instancesLock());
+    static Lock& instancesLock() WTF_RETURNS_LOCK(s_instancesLock);
 
     void contextDestroyed() final;
 
@@ -67,8 +75,8 @@ public:
     void increaseLinkCount();
 
     WebGLShader* getAttachedShader(GCGLenum);
-    bool attachShader(WebGLShader*);
-    bool detachShader(WebGLShader*);
+    bool attachShader(const WTF::AbstractLocker&, WebGLShader*);
+    bool detachShader(const WTF::AbstractLocker&, WebGLShader*);
 
     void setRequiredTransformFeedbackBufferCount(int count)
     {
@@ -80,13 +88,17 @@ public:
         return m_requiredTransformFeedbackBufferCount;
     }
 
+    void addMembersToOpaqueRoots(const WTF::AbstractLocker&, JSC::AbstractSlotVisitor&);
+
 private:
     WebGLProgram(WebGLRenderingContextBase&);
 
-    void deleteObjectImpl(GraphicsContextGLOpenGL*, PlatformGLObject) override;
+    void deleteObjectImpl(const WTF::AbstractLocker&, GraphicsContextGL*, PlatformGLObject) override;
 
-    void cacheActiveAttribLocations(GraphicsContextGLOpenGL*);
+    void cacheActiveAttribLocations(GraphicsContextGL*);
     void cacheInfoIfNeeded();
+
+    static Lock s_instancesLock;
 
     Vector<GCGLint> m_activeAttribLocations;
 

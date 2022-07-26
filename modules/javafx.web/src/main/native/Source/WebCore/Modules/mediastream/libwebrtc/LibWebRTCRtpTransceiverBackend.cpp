@@ -50,17 +50,18 @@ RTCRtpTransceiverDirection LibWebRTCRtpTransceiverBackend::direction() const
     return toRTCRtpTransceiverDirection(m_rtcTransceiver->direction());
 }
 
-Optional<RTCRtpTransceiverDirection> LibWebRTCRtpTransceiverBackend::currentDirection() const
+std::optional<RTCRtpTransceiverDirection> LibWebRTCRtpTransceiverBackend::currentDirection() const
 {
     auto value = m_rtcTransceiver->current_direction();
     if (!value)
-        return WTF::nullopt;
+        return std::nullopt;
     return toRTCRtpTransceiverDirection(*value);
 }
 
 void LibWebRTCRtpTransceiverBackend::setDirection(RTCRtpTransceiverDirection direction)
 {
-    m_rtcTransceiver->SetDirection(fromRTCRtpTransceiverDirection(direction));
+    // FIXME: Handle error.
+    m_rtcTransceiver->SetDirectionWithError(fromRTCRtpTransceiverDirection(direction));
 }
 
 String LibWebRTCRtpTransceiverBackend::mid()
@@ -72,7 +73,7 @@ String LibWebRTCRtpTransceiverBackend::mid()
 
 void LibWebRTCRtpTransceiverBackend::stop()
 {
-    m_rtcTransceiver->Stop();
+    m_rtcTransceiver->StopStandard();
 }
 
 bool LibWebRTCRtpTransceiverBackend::stopped() const

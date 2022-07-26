@@ -33,6 +33,7 @@
 
 #include "ContentRuleListResults.h"
 #include "Document.h"
+#include "DocumentLoader.h"
 #include "FrameLoader.h"
 #include "HTTPHeaderValues.h"
 #include "Page.h"
@@ -80,15 +81,20 @@ Ref<ThreadableWebSocketChannel> ThreadableWebSocketChannel::create(ScriptExecuti
     return create(downcast<Document>(context), client, provider);
 }
 
-Optional<ThreadableWebSocketChannel::ValidatedURL> ThreadableWebSocketChannel::validateURL(Document& document, const URL& requestedURL)
+ThreadableWebSocketChannel::ThreadableWebSocketChannel()
+    : m_identifier(WebSocketIdentifier::generateThreadSafe())
+{
+}
+
+std::optional<ThreadableWebSocketChannel::ValidatedURL> ThreadableWebSocketChannel::validateURL(Document& document, const URL& requestedURL)
 {
     ValidatedURL validatedURL { requestedURL, true };
     if (auto* page = document.page()) {
-        if (!page->loadsFromNetwork())
+        if (!page->allowsLoadFromURL(requestedURL, MainFrameMainResource::No))
             return { };
 #if ENABLE(CONTENT_EXTENSIONS)
         if (auto* documentLoader = document.loader()) {
-            auto results = page->userContentProvider().processContentRuleListsForLoad(validatedURL.url, ContentExtensions::ResourceType::Raw, *documentLoader);
+            auto results = page->userContentProvider().processContentRuleListsForLoad(*page, validatedURL.url, ContentExtensions::ResourceType::WebSocket, *documentLoader);
             if (results.summary.blockedLoad)
                 return { };
             if (results.summary.madeHTTPS) {
@@ -104,7 +110,7 @@ Optional<ThreadableWebSocketChannel::ValidatedURL> ThreadableWebSocketChannel::v
     return validatedURL;
 }
 
-Optional<ResourceRequest> ThreadableWebSocketChannel::webSocketConnectRequest(Document& document, const URL& url)
+std::optional<ResourceRequest> ThreadableWebSocketChannel::webSocketConnectRequest(Document& document, const URL& url)
 {
     auto validatedURL = validateURL(document, url);
     if (!validatedURL)
@@ -116,6 +122,10 @@ Optional<ResourceRequest> ThreadableWebSocketChannel::webSocketConnectRequest(Do
     request.setAllowCookies(validatedURL->areCookiesAllowed);
     request.setFirstPartyForCookies(document.firstPartyForCookies());
     request.setHTTPHeaderField(HTTPHeaderName::Origin, document.securityOrigin().toString());
+
+    if (auto* documentLoader = document.loader())
+        request.setIsAppInitiated(documentLoader->lastNavigationWasAppInitiated());
+
     FrameLoader::addSameSiteInfoToRequestIfNeeded(request, &document);
 
     // Add no-cache headers to avoid compatibility issue.

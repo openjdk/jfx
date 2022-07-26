@@ -32,42 +32,54 @@
 
 #if ENABLE(WEB_RTC)
 
+#include "JSDOMPromiseDeferred.h"
 #include "MediaStreamTrack.h"
-#include "PeerConnectionBackend.h"
+#include "RTCDtlsTransport.h"
 #include "RTCRtpSenderBackend.h"
 #include "RTCRtpTransceiverDirection.h"
+#include "RTCRtpTransform.h"
 #include "ScriptWrappable.h"
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
-class PeerConnectionBackend;
+class MediaStream;
 class RTCDTMFSender;
+class RTCPeerConnection;
 struct RTCRtpCapabilities;
 
-class RTCRtpSender final : public RefCounted<RTCRtpSender>, public ScriptWrappable, public CanMakeWeakPtr<RTCRtpSender> {
+class RTCRtpSender final : public RefCounted<RTCRtpSender>
+    , public ScriptWrappable
+    , public CanMakeWeakPtr<RTCRtpSender>
+#if !RELEASE_LOG_DISABLED
+    , private LoggerHelper
+#endif
+    {
     WTF_MAKE_ISO_ALLOCATED(RTCRtpSender);
 public:
-    static Ref<RTCRtpSender> create(PeerConnectionBackend&, Ref<MediaStreamTrack>&&, Vector<String>&& mediaStreamIds, std::unique_ptr<RTCRtpSenderBackend>&&);
-    static Ref<RTCRtpSender> create(PeerConnectionBackend&, String&& trackKind, Vector<String>&& mediaStreamIds, std::unique_ptr<RTCRtpSenderBackend>&&);
-    ~RTCRtpSender();
+    static Ref<RTCRtpSender> create(RTCPeerConnection&, Ref<MediaStreamTrack>&&, std::unique_ptr<RTCRtpSenderBackend>&&);
+    static Ref<RTCRtpSender> create(RTCPeerConnection&, String&& trackKind, std::unique_ptr<RTCRtpSenderBackend>&&);
+    virtual ~RTCRtpSender();
 
-    static Optional<RTCRtpCapabilities> getCapabilities(ScriptExecutionContext&, const String& kind);
+    static std::optional<RTCRtpCapabilities> getCapabilities(ScriptExecutionContext&, const String& kind);
 
     MediaStreamTrack* track() { return m_track.get(); }
+
+    RTCDtlsTransport* transport() { return m_transport.get(); }
+    void setTransport(RefPtr<RTCDtlsTransport>&& transport) { m_transport = WTFMove(transport); }
 
     const String& trackId() const { return m_trackId; }
     const String& trackKind() const { return m_trackKind; }
 
-    const Vector<String>& mediaStreamIds() const { return m_mediaStreamIds; }
-    void setMediaStreamIds(Vector<String>&& mediaStreamIds) { m_mediaStreamIds = WTFMove(mediaStreamIds); }
+    ExceptionOr<void> setMediaStreamIds(const Vector<String>&);
+    ExceptionOr<void> setStreams(const Vector<std::reference_wrapper<MediaStream>>&);
 
     bool isStopped() const { return !m_backend; }
     void stop();
     void setTrack(Ref<MediaStreamTrack>&&);
     void setTrackToNull();
 
-    void replaceTrack(ScriptExecutionContext&, RefPtr<MediaStreamTrack>&&, DOMPromiseDeferred<void>&&);
+    void replaceTrack(RefPtr<MediaStreamTrack>&&, Ref<DeferredPromise>&&);
 
     RTCRtpSendParameters getParameters();
     void setParameters(const RTCRtpSendParameters&, DOMPromiseDeferred<void>&&);
@@ -76,21 +88,36 @@ public:
 
     void getStats(Ref<DeferredPromise>&&);
 
-    bool isCreatedBy(const PeerConnectionBackend&) const;
+    bool isCreatedBy(const RTCPeerConnection&) const;
 
     RTCDTMFSender* dtmf();
-    Optional<RTCRtpTransceiverDirection> currentTransceiverDirection() const;
+    std::optional<RTCRtpTransceiverDirection> currentTransceiverDirection() const;
+
+    std::optional<RTCRtpTransform::Internal> transform();
+    ExceptionOr<void> setTransform(std::unique_ptr<RTCRtpTransform>&&);
 
 private:
-    RTCRtpSender(PeerConnectionBackend&, String&& trackKind, Vector<String>&& mediaStreamIds, std::unique_ptr<RTCRtpSenderBackend>&&);
+    RTCRtpSender(RTCPeerConnection&, String&& trackKind, std::unique_ptr<RTCRtpSenderBackend>&&);
+
+#if !RELEASE_LOG_DISABLED
+    const Logger& logger() const final { return m_logger.get(); }
+    const void* logIdentifier() const final { return m_logIdentifier; }
+    const char* logClassName() const final { return "RTCRtpSender"; }
+    WTFLogChannel& logChannel() const final;
+#endif
 
     RefPtr<MediaStreamTrack> m_track;
+    RefPtr<RTCDtlsTransport> m_transport;
     String m_trackId;
     String m_trackKind;
-    Vector<String> m_mediaStreamIds;
     std::unique_ptr<RTCRtpSenderBackend> m_backend;
-    WeakPtr<PeerConnectionBackend> m_connection;
+    WeakPtr<RTCPeerConnection> m_connection;
     RefPtr<RTCDTMFSender> m_dtmfSender;
+    std::unique_ptr<RTCRtpTransform> m_transform;
+#if !RELEASE_LOG_DISABLED
+    Ref<const Logger> m_logger;
+    const void* m_logIdentifier { nullptr };
+#endif
 };
 
 } // namespace WebCore

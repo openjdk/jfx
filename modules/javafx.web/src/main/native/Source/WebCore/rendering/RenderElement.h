@@ -22,14 +22,17 @@
 
 #pragma once
 
+#include "HitTestRequest.h"
 #include "LengthFunctions.h"
 #include "RenderObject.h"
 
 namespace WebCore {
 
+class ContentData;
 class ControlStates;
 class KeyframeList;
 class RenderBlock;
+class RenderStyle;
 class RenderTreeBuilder;
 
 class RenderElement : public RenderObject {
@@ -37,8 +40,14 @@ class RenderElement : public RenderObject {
 public:
     virtual ~RenderElement();
 
-    enum RendererCreationType { CreateAllRenderers, OnlyCreateBlockAndFlexboxRenderers };
-    static RenderPtr<RenderElement> createFor(Element&, RenderStyle&&, RendererCreationType = CreateAllRenderers);
+    static bool isContentDataSupported(const ContentData&);
+
+    enum class ConstructBlockLevelRendererFor {
+        Inline           = 1 << 0,
+        ListItem         = 1 << 1,
+        TableOrTablePart = 1 << 2
+    };
+    static RenderPtr<RenderElement> createFor(Element&, RenderStyle&&, OptionSet<ConstructBlockLevelRendererFor> = { });
 
     bool hasInitializedStyle() const { return m_hasInitializedStyle; }
 
@@ -68,7 +77,10 @@ public:
 
     RenderObject* firstChild() const { return m_firstChild; }
     RenderObject* lastChild() const { return m_lastChild; }
+    RenderObject* firstInFlowChild() const;
+    RenderObject* lastInFlowChild() const;
 
+    // Note that even if these 2 "canContain" functions return true for a particular renderer, it does not necessarily mean the renderer is the containing block (see containingBlockForAbsolute(Fixed)Position).
     bool canContainFixedPositionObjects() const;
     bool canContainAbsolutelyPositionedObjects() const;
 
@@ -130,6 +142,7 @@ public:
     bool repaintAfterLayoutIfNeeded(const RenderLayerModelObject* repaintContainer, const LayoutRect& oldBounds, const LayoutRect& oldOutlineBox, const LayoutRect* newBoundsPtr = nullptr, const LayoutRect* newOutlineBoxPtr = nullptr);
 
     bool borderImageIsLoadedAndCanBeRendered() const;
+    bool isVisibleIgnoringGeometry() const;
     bool mayCauseRepaintInsideViewport(const IntRect* visibleRect = nullptr) const;
     bool isVisibleInDocumentRect(const IntRect& documentRect) const;
 
@@ -140,12 +153,21 @@ public:
     bool isTransparent() const { return style().opacity() < 1.0f; }
     float opacity() const { return style().opacity(); }
 
-    bool visibleToHitTesting() const { return style().visibility() == Visibility::Visible && style().pointerEvents() != PointerEvents::None; }
+    bool visibleToHitTesting(std::optional<HitTestRequest> hitTestRequest = std::nullopt) const
+    {
+        if (style().visibility() != Visibility::Visible)
+            return false;
+
+        if ((!hitTestRequest || !hitTestRequest->ignoreCSSPointerEventsProperty()) && style().pointerEvents() == PointerEvents::None)
+            return false;
+
+        return true;
+    }
 
     bool hasBackground() const { return style().hasBackground(); }
     bool hasMask() const { return style().hasMask(); }
     bool hasClip() const { return isOutOfFlowPositioned() && style().hasClip(); }
-    bool hasClipOrOverflowClip() const { return hasClip() || hasOverflowClip(); }
+    bool hasClipOrNonVisibleOverflow() const { return hasClip() || hasNonVisibleOverflow(); }
     bool hasClipPath() const { return style().clipPath(); }
     bool hasHiddenBackface() const { return style().backfaceVisibility() == BackfaceVisibility::Hidden; }
     bool hasOutlineAnnotation() const;
@@ -154,10 +176,14 @@ public:
 
     bool checkForRepaintDuringLayout() const;
 
-    // anchorRect() is conceptually similar to absoluteBoundingBoxRect(), but is intended for scrolling to an anchor.
-    // For inline renderers, this gets the logical top left of the first leaf child and the logical bottom right of the
-    // last leaf child, converts them to absolute coordinates, and makes a box out of them.
+    // absoluteAnchorRect() is conceptually similar to absoluteBoundingBoxRect(), but is intended for scrolling to an
+    // anchor. For inline renderers, this gets the logical top left of the first leaf child and the logical bottom
+    // right of the last leaf child, converts them to absolute coordinates, and makes a box out of them.
     LayoutRect absoluteAnchorRect(bool* insideFixed = nullptr) const;
+
+    // absoluteAnchorRectWithScrollMargin() is similar to absoluteAnchorRect, but it also takes into account any
+    // CSS scroll-margin that is set in the style of this RenderElement.
+    virtual LayoutRect absoluteAnchorRectWithScrollMargin(bool* insideFixed = nullptr) const;
 
     bool hasFilter() const { return style().hasFilter(); }
     bool hasBackdropFilter() const
@@ -198,7 +224,6 @@ public:
     bool hasCounterNodeMap() const { return m_hasCounterNodeMap; }
     void setHasCounterNodeMap(bool f) { m_hasCounterNodeMap = f; }
 
-    const RenderElement* enclosingRendererWithTextDecoration(OptionSet<TextDecoration>, bool firstLine) const;
     void drawLineForBoxSide(GraphicsContext&, const FloatRect&, BoxSide, Color, BorderStyle, float adjacentWidth1, float adjacentWidth2, bool antialias = false) const;
 
 #if ENABLE(TEXT_AUTOSIZING)
@@ -226,15 +251,16 @@ public:
     RenderObject* attachRendererInternal(RenderPtr<RenderObject> child, RenderObject* beforeChild);
     RenderPtr<RenderObject> detachRendererInternal(RenderObject&);
 
-    virtual bool startTransition(double /* timeOffset */, CSSPropertyID, const RenderStyle* /* fromStyle */, const RenderStyle* /* toStyle */) { return false; }
-    virtual void transitionPaused(double /* timeOffset */, CSSPropertyID) { }
-    virtual void transitionFinished(CSSPropertyID) { }
-
     virtual bool startAnimation(double /* timeOffset */, const Animation&, const KeyframeList&) { return false; }
     virtual void animationPaused(double /* timeOffset */, const String& /* name */) { }
     virtual void animationFinished(const String& /* name */) { }
+    virtual void transformRelatedPropertyDidChange() { }
 
     virtual void suspendAnimations(MonotonicTime = MonotonicTime()) { }
+    std::unique_ptr<RenderStyle> animatedStyle();
+
+    WeakPtr<RenderBlockFlow> backdropRenderer() const;
+    void setBackdropRenderer(RenderBlockFlow&);
 
 protected:
     enum BaseTypeFlag {
@@ -259,11 +285,13 @@ protected:
     void setFirstChild(RenderObject* child) { m_firstChild = child; }
     void setLastChild(RenderObject* child) { m_lastChild = child; }
 
+    bool repaintBeforeStyleChange(StyleDifference, const RenderStyle& oldStyle, const RenderStyle& newStyle);
+
     virtual void styleWillChange(StyleDifference, const RenderStyle& newStyle);
     virtual void styleDidChange(StyleDifference, const RenderStyle* oldStyle);
 
-    void insertedIntoTree() override;
-    void willBeRemovedFromTree() override;
+    void insertedIntoTree(IsInternalMove) override;
+    void willBeRemovedFromTree(IsInternalMove) override;
     void willBeDestroyed() override;
     void notifyFinished(CachedResource&, const NetworkLoadMetrics&) override;
 
@@ -322,8 +350,9 @@ private:
 
     bool canDestroyDecodedData() final { return !isVisibleInViewport(); }
     VisibleInViewportState imageFrameAvailable(CachedImage&, ImageAnimatingState, const IntRect* changeRect) final;
+    VisibleInViewportState imageVisibleInViewport(const Document&) const final;
     void didRemoveCachedImageClient(CachedImage&) final;
-    void scheduleTimedRenderingUpdate() final;
+    void scheduleRenderingUpdateForImage(CachedImage&) final;
 
     bool getLeadingCorner(FloatPoint& output, bool& insideFixed) const;
     bool getTrailingCorner(FloatPoint& output, bool& insideFixed) const;
@@ -418,22 +447,27 @@ inline Element* RenderElement::generatingElement() const
 inline bool RenderElement::canContainFixedPositionObjects() const
 {
     return isRenderView()
-        || (hasTransform() && isRenderBlock())
+        || (isRenderBlock() && hasTransform())
+        // FIXME: will-change should create containing blocks on inline boxes (bug 225035)
+        || (isRenderBlock() && style().willChange() && style().willChange()->createsContainingBlockForOutOfFlowPositioned())
         || isSVGForeignObject()
-        || isOutOfFlowRenderFragmentedFlow();
+        || shouldApplyLayoutContainment(*this);
 }
 
 inline bool RenderElement::canContainAbsolutelyPositionedObjects() const
 {
     return style().position() != PositionType::Static
         || (isRenderBlock() && hasTransformRelatedProperty())
+        // FIXME: will-change should create containing blocks on inline boxes (bug 225035)
+        || (isRenderBlock() && style().willChange() && style().willChange()->createsContainingBlockForAbsolutelyPositioned())
         || isSVGForeignObject()
+        || shouldApplyLayoutContainment(*this)
         || isRenderView();
 }
 
 inline bool RenderElement::createsGroupForStyle(const RenderStyle& style)
 {
-    return style.opacity() < 1.0f || style.hasMask() || style.clipPath() || style.hasFilter() || style.hasBackdropFilter() || style.hasBlendMode();
+    return style.hasOpacity() || style.hasMask() || style.clipPath() || style.hasFilter() || style.hasBackdropFilter() || style.hasBlendMode();
 }
 
 inline bool RenderObject::isRenderLayerModelObject() const
@@ -493,6 +527,26 @@ inline int adjustForAbsoluteZoom(int value, const RenderElement& renderer)
 inline LayoutUnit adjustLayoutUnitForAbsoluteZoom(LayoutUnit value, const RenderElement& renderer)
 {
     return adjustLayoutUnitForAbsoluteZoom(value, renderer.style());
+}
+
+inline RenderObject* RenderElement::firstInFlowChild() const
+{
+    if (auto* firstChild = this->firstChild()) {
+        if (firstChild->isInFlow())
+            return firstChild;
+        return firstChild->nextInFlowSibling();
+    }
+    return nullptr;
+}
+
+inline RenderObject* RenderElement::lastInFlowChild() const
+{
+    if (auto* lastChild = this->lastChild()) {
+        if (lastChild->isInFlow())
+            return lastChild;
+        return lastChild->previousInFlowSibling();
+    }
+    return nullptr;
 }
 
 } // namespace WebCore

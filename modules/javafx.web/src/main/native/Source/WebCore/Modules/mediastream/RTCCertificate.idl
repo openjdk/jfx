@@ -25,7 +25,7 @@
 
 [
     Conditional=WEB_RTC,
-    EnabledAtRuntime=PeerConnection,
+    EnabledBySetting=PeerConnection,
     JSGenerateToJSObject,
 ] dictionary RTCDtlsFingerprint {
     DOMString algorithm;
@@ -36,8 +36,9 @@ typedef (object or DOMString) AlgorithmIdentifier;
 
 [
     Conditional=WEB_RTC,
-    EnabledAtRuntime=PeerConnection,
-    ImplementationLacksVTable
+    EnabledBySetting=PeerConnection,
+    ImplementationLacksVTable,
+    Exposed=Window
 ] interface RTCCertificate {
     readonly attribute double expires;
     sequence<RTCDtlsFingerprint> getFingerprints();

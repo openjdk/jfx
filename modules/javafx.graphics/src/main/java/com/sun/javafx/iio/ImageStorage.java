@@ -33,9 +33,12 @@ import com.sun.javafx.iio.gif.GIFImageLoaderFactory;
 import com.sun.javafx.iio.ios.IosImageLoaderFactory;
 import com.sun.javafx.iio.jpeg.JPEGImageLoaderFactory;
 import com.sun.javafx.iio.png.PNGImageLoaderFactory;
+import com.sun.javafx.logging.PlatformLogger;
 import com.sun.javafx.util.DataURI;
+import com.sun.javafx.util.Logging;
 
 import java.io.ByteArrayInputStream;
+import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.SequenceInputStream;
@@ -110,20 +113,32 @@ public class ImageStorage {
          */
         RGBA_PRE
     };
-    /**
-     * A mapping of lower case file extensions to loader factories.
-     */
+//    /**
+//     * A mapping of lower case file extensions to loader factories.
+//     */
 //    private static HashMap<String, ImageLoaderFactory> loaderFactoriesByExtension;
     /**
      * A mapping of format signature byte sequences to loader factories.
      */
-    private static final HashMap<Signature, ImageLoaderFactory> loaderFactoriesBySignature;
-    private static final ImageLoaderFactory[] loaderFactories;
+    private final HashMap<Signature, ImageLoaderFactory> loaderFactoriesBySignature;
+    /**
+     * A mapping of lower case MIME subtypes to loader factories.
+     */
+    private final HashMap<String, ImageLoaderFactory> loaderFactoriesByMimeSubtype;
+    private final ImageLoaderFactory[] loaderFactories;
+    private int maxSignatureLength;
+
     private static final boolean isIOS = PlatformUtil.isIOS();
 
-    private static int maxSignatureLength;
+    private static class InstanceHolder {
+        static final ImageStorage INSTANCE = new ImageStorage();
+    }
 
-    static {
+    public static ImageStorage getInstance() {
+        return InstanceHolder.INSTANCE;
+    }
+
+    public ImageStorage() {
         if (isIOS) {
             //On iOS we have single factory/ native loader
             //for all image formats
@@ -141,14 +156,15 @@ public class ImageStorage {
         }
 
 //        loaderFactoriesByExtension = new HashMap(numExtensions);
-        loaderFactoriesBySignature = new HashMap<Signature, ImageLoaderFactory>(loaderFactories.length);
+        loaderFactoriesBySignature = new HashMap<>(loaderFactories.length);
+        loaderFactoriesByMimeSubtype = new HashMap<>(loaderFactories.length);
 
         for (int i = 0; i < loaderFactories.length; i++) {
             addImageLoaderFactory(loaderFactories[i]);
         }
     }
 
-    public static ImageFormatDescription[] getSupportedDescriptions() {
+    public ImageFormatDescription[] getSupportedDescriptions() {
         ImageFormatDescription[] formats = new ImageFormatDescription[loaderFactories.length];
         for (int i = 0; i < loaderFactories.length; i++) {
             formats[i] = loaderFactories[i].getFormatDescription();
@@ -162,7 +178,7 @@ public class ImageStorage {
      * @param type the type of image
      * @return the number of bands of a raw image of this type
      */
-    public static int getNumBands(ImageType type) {
+    public int getNumBands(ImageType type) {
         int numBands = -1;
         switch (type) {
             case GRAY:
@@ -191,12 +207,12 @@ public class ImageStorage {
 
     /**
      * Registers an image loader factory. The factory replaces any other factory
-     * previously registered for the file extensions (converted to lower case)
-     * and signature indicated by the format description.
+     * previously registered for the file extensions (converted to lower case),
+     * MIME subtype, and signature indicated by the format description.
      *
      * @param factory the factory to register.
      */
-    public static void addImageLoaderFactory(ImageLoaderFactory factory) {
+    public void addImageLoaderFactory(ImageLoaderFactory factory) {
         ImageFormatDescription desc = factory.getFormatDescription();
 //        String[] extensions = desc.getExtensions();
 //        for (int j = 0; j < extensions.length; j++) {
@@ -205,6 +221,10 @@ public class ImageStorage {
 
         for (final Signature signature: desc.getSignatures()) {
             loaderFactoriesBySignature.put(signature, factory);
+        }
+
+        for (String subtype : desc.getMIMESubtypes()) {
+            loaderFactoriesByMimeSubtype.put(subtype.toLowerCase(), factory);
         }
 
         // invalidate max signature length
@@ -254,7 +274,7 @@ public class ImageStorage {
      * @return the sequence of all images in the specified source or
      * <code>null</code> on error.
      */
-    public static ImageFrame[] loadAll(InputStream input, ImageLoadListener listener,
+    public ImageFrame[] loadAll(InputStream input, ImageLoadListener listener,
             double width, double height, boolean preserveAspectRatio,
             float pixelScale, boolean smooth) throws ImageStorageException {
         ImageLoader loader = null;
@@ -289,7 +309,7 @@ public class ImageStorage {
      * Load all images present in the specified input. For more details refer to
      * {@link #loadAll(InputStream, ImageLoadListener, double, double, boolean, float, boolean)}.
      */
-    public static ImageFrame[] loadAll(String input, ImageLoadListener listener,
+    public ImageFrame[] loadAll(String input, ImageLoadListener listener,
             double width, double height, boolean preserveAspectRatio,
             float devPixelScale, boolean smooth) throws ImageStorageException {
 
@@ -304,38 +324,69 @@ public class ImageStorage {
         try {
             float imgPixelScale = 1.0f;
             try {
-                if (devPixelScale >= 1.5f) {
-                    // Use Mac Retina conventions for >= 1.5f
-                    try {
-                        String name2x = ImageTools.getScaledImageName(input);
-                        theStream = ImageTools.createInputStream(name2x);
-                        imgPixelScale = 2.0f;
-                    } catch (IOException ignored) {
+                DataURI dataUri = DataURI.tryParse(input);
+                if (dataUri != null) {
+                    if (!"image".equalsIgnoreCase(dataUri.getMimeType())) {
+                        throw new IllegalArgumentException("Unexpected MIME type: " + dataUri.getMimeType());
                     }
-                }
 
-                if (theStream == null) {
-                    try {
-                        theStream = ImageTools.createInputStream(input);
-                    } catch (IOException ex) {
-                        DataURI dataUri = DataURI.tryParse(input);
-                        if (dataUri != null) {
-                            String mimeType = dataUri.getMimeType();
-                            if (mimeType != null && !"image".equalsIgnoreCase(dataUri.getMimeType())) {
-                                throw new IllegalArgumentException("Unexpected MIME type: " + dataUri.getMimeType());
+                    // Find a factory that can load images with the specified MIME type.
+                    var factory = loaderFactoriesByMimeSubtype.get(dataUri.getMimeSubtype().toLowerCase());
+                    if (factory == null) {
+                        throw new IllegalArgumentException(
+                            "Unsupported MIME subtype: image/" + dataUri.getMimeSubtype());
+                    }
+
+                    // We also inspect the image file signature to confirm that it matches the MIME type.
+                    theStream = new ByteArrayInputStream(dataUri.getData());
+                    ImageLoader loaderBySignature = getLoaderBySignature(theStream, listener);
+
+                    if (loaderBySignature != null) {
+                        // If the MIME type doesn't agree with the file signature, log a warning and
+                        // continue with the image loader that matches the file signature.
+                        boolean imageTypeMismatch = !factory.getFormatDescription().getFormatName().equals(
+                            loaderBySignature.getFormatDescription().getFormatName());
+
+                        if (imageTypeMismatch) {
+                            var logger = Logging.getJavaFXLogger();
+                            if (logger.isLoggable(PlatformLogger.Level.WARNING)) {
+                                logger.warning(String.format(
+                                    "Image format '%s' does not match MIME type '%s/%s' in URI '%s'",
+                                    loaderBySignature.getFormatDescription().getFormatName(),
+                                    dataUri.getMimeType(), dataUri.getMimeSubtype(), dataUri));
                             }
+                        }
 
-                            theStream = new ByteArrayInputStream(dataUri.getData());
-                        } else {
-                            throw ex;
+                        loader = loaderBySignature;
+                    } else {
+                        // We're here because the image format doesn't have a detectable signature.
+                        // In this case, we need to close the input stream (because we already consumed
+                        // parts of it to detect a potential file signature) and create a new input
+                        // stream for the image loader that matches the MIME type.
+                        theStream.close();
+                        theStream = new ByteArrayInputStream(dataUri.getData());
+                        loader = factory.createImageLoader(theStream);
+                    }
+                } else {
+                    if (devPixelScale >= 1.5f) {
+                        // Use Mac Retina conventions for >= 1.5f
+                        try {
+                            String name2x = ImageTools.getScaledImageName(input);
+                            theStream = ImageTools.createInputStream(name2x);
+                            imgPixelScale = 2.0f;
+                        } catch (IOException ignored) {
                         }
                     }
-                }
 
-                if (isIOS) {
-                    loader = IosImageLoaderFactory.getInstance().createImageLoader(theStream);
-                } else {
-                    loader = getLoaderBySignature(theStream, listener);
+                    if (theStream == null) {
+                        theStream = ImageTools.createInputStream(input);
+                    }
+
+                    if (isIOS) {
+                        loader = IosImageLoaderFactory.getInstance().createImageLoader(theStream);
+                    } else {
+                        loader = getLoaderBySignature(theStream, listener);
+                    }
                 }
             } catch (Exception e) {
                 throw new ImageStorageException(e.getMessage(), e);
@@ -361,7 +412,7 @@ public class ImageStorage {
         return images;
     }
 
-    private static synchronized int getMaxSignatureLength() {
+    private synchronized int getMaxSignatureLength() {
         if (maxSignatureLength < 0) {
             maxSignatureLength = 0;
             for (final Signature signature:
@@ -376,7 +427,7 @@ public class ImageStorage {
         return maxSignatureLength;
     }
 
-    private static ImageFrame[] loadAll(ImageLoader loader,
+    private ImageFrame[] loadAll(ImageLoader loader,
             double width, double height, boolean preserveAspectRatio,
             float pixelScale, boolean smooth) throws ImageStorageException {
         ImageFrame[] images = null;
@@ -433,9 +484,14 @@ public class ImageStorage {
 //        return loader;
 //    }
 
-    private static ImageLoader getLoaderBySignature(InputStream stream, ImageLoadListener listener) throws IOException {
+    private ImageLoader getLoaderBySignature(InputStream stream, ImageLoadListener listener) throws IOException {
         byte[] header = new byte[getMaxSignatureLength()];
-        ImageTools.readFully(stream, header);
+
+        try {
+            ImageTools.readFully(stream, header);
+        } catch (EOFException ignored) {
+            return null;
+        }
 
         for (final Entry<Signature, ImageLoaderFactory> factoryRegistration:
                  loaderFactoriesBySignature.entrySet()) {
@@ -453,8 +509,5 @@ public class ImageStorage {
 
         // not found
         return null;
-    }
-
-    private ImageStorage() {
     }
 }

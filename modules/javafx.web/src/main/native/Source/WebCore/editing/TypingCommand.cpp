@@ -476,7 +476,7 @@ void TypingCommand::markMisspellingsAfterTyping(ETypingCommand commandType)
     }
 }
 
-bool TypingCommand::willAddTypingToOpenCommand(ETypingCommand commandType, TextGranularity granularity, const String& text, const Optional<SimpleRange>& range)
+bool TypingCommand::willAddTypingToOpenCommand(ETypingCommand commandType, TextGranularity granularity, const String& text, const std::optional<SimpleRange>& range)
 {
     m_currentTextToInsert = text;
     m_currentTypingEditAction = editActionForTypingCommand(commandType, granularity, m_compositionType, m_isAutocompletion);
@@ -621,7 +621,7 @@ bool TypingCommand::makeEditableRootEmpty()
         removeNode(*child);
 
     addBlockPlaceholderIfNeeded(root);
-    setEndingSelection(VisibleSelection(firstPositionInNode(root), DOWNSTREAM, endingSelection().isDirectional()));
+    setEndingSelection(VisibleSelection(firstPositionInNode(root), Affinity::Downstream, endingSelection().isDirectional()));
 
     return true;
 }
@@ -634,14 +634,15 @@ void TypingCommand::deleteKeyPressed(TextGranularity granularity, bool shouldAdd
 
     VisibleSelection selectionToDelete;
     VisibleSelection selectionAfterUndo;
-    bool expandForSpecialElements = !endingSelection().isCaret();
+    bool expandForSpecialElements = false;
 
-    switch (endingSelection().selectionType()) {
-    case VisibleSelection::RangeSelection:
+    ASSERT(endingSelection().isCaretOrRange());
+
+    if (endingSelection().isRange()) {
         selectionToDelete = endingSelection();
         selectionAfterUndo = selectionToDelete;
-        break;
-    case VisibleSelection::CaretSelection: {
+        expandForSpecialElements = true;
+    } else {
         // After breaking out of an empty mail blockquote, we still want continue with the deletion
         // so actual content will get deleted, and not just the quote style.
         if (breakOutOfEmptyMailBlockquotedParagraph())
@@ -661,8 +662,8 @@ void TypingCommand::deleteKeyPressed(TextGranularity granularity, bool shouldAdd
         const Node* enclosingTableCellForPreviousPosition = enclosingNodeOfType(previousPosition.deepEquivalent(), &isTableCell);
         if (previousPosition.isNull() || enclosingTableCell != enclosingTableCellForPreviousPosition) {
             // When the caret is at the start of the editable area in an empty list item, break out of the list item.
-            if (auto deleteListSelection = shouldBreakOutOfEmptyListItem()) {
-                if (willAddTypingToOpenCommand(DeleteKey, granularity, { }, *deleteListSelection.value().firstRange())) {
+            if (auto deleteListSelection = shouldBreakOutOfEmptyListItem(); !deleteListSelection.isNone()) {
+                if (willAddTypingToOpenCommand(DeleteKey, granularity, { }, deleteListSelection.firstRange())) {
                     breakOutOfEmptyListItem();
                     typingAddedToOpenCommand(DeleteKey);
                 }
@@ -691,7 +692,7 @@ void TypingCommand::deleteKeyPressed(TextGranularity granularity, bool shouldAdd
             selection.modify(FrameSelection::AlterationExtend, SelectionDirection::Backward, granularity);
         // If the caret is just after a table, select the table and don't delete anything.
         } else if (Node* table = isFirstPositionAfterTable(visibleStart)) {
-            setEndingSelection(VisibleSelection(positionBeforeNode(table), endingSelection().start(), DOWNSTREAM, endingSelection().isDirectional()));
+            setEndingSelection(VisibleSelection(positionBeforeNode(table), endingSelection().start(), Affinity::Downstream, endingSelection().isDirectional()));
             typingAddedToOpenCommand(DeleteKey);
             return;
         }
@@ -711,11 +712,6 @@ void TypingCommand::deleteKeyPressed(TextGranularity granularity, bool shouldAdd
             // We can't let the VisibleSelection class's validation kick in or it'll adjust for us based on
             // the current state of the document and we'll get the wrong result.
             selectionAfterUndo.setWithoutValidation(startingSelection().end(), selectionToDelete.extent());
-        break;
-    }
-    case VisibleSelection::NoSelection:
-        ASSERT_NOT_REACHED();
-        break;
     }
 
     ASSERT(!selectionToDelete.isNone());
@@ -759,14 +755,15 @@ void TypingCommand::forwardDeleteKeyPressed(TextGranularity granularity, bool sh
 
     VisibleSelection selectionToDelete;
     VisibleSelection selectionAfterUndo;
-    bool expandForSpecialElements = !endingSelection().isCaret();
+    bool expandForSpecialElements = false;
 
-    switch (endingSelection().selectionType()) {
-    case VisibleSelection::RangeSelection:
+    ASSERT(endingSelection().isCaretOrRange());
+
+    if (endingSelection().isRange()) {
         selectionToDelete = endingSelection();
         selectionAfterUndo = selectionToDelete;
-        break;
-    case VisibleSelection::CaretSelection: {
+        expandForSpecialElements = true;
+    } else {
         m_smartDelete = false;
 
         // Handle delete at beginning-of-block case.
@@ -790,7 +787,7 @@ void TypingCommand::forwardDeleteKeyPressed(TextGranularity granularity, bool sh
         // When deleting tables: Select the table first, then perform the deletion
         if (downstreamEnd.containerNode() && downstreamEnd.containerNode()->renderer() && downstreamEnd.containerNode()->renderer()->isTable()
             && downstreamEnd.computeOffsetInContainerNode() <= caretMinOffset(*downstreamEnd.containerNode())) {
-            setEndingSelection(VisibleSelection(endingSelection().end(), positionAfterNode(downstreamEnd.containerNode()), DOWNSTREAM, endingSelection().isDirectional()));
+            setEndingSelection(VisibleSelection(endingSelection().end(), positionAfterNode(downstreamEnd.containerNode()), Affinity::Downstream, endingSelection().isDirectional()));
             typingAddedToOpenCommand(ForwardDeleteKey);
             return;
         }
@@ -819,11 +816,6 @@ void TypingCommand::forwardDeleteKeyPressed(TextGranularity granularity, bool sh
             }
             selectionAfterUndo.setWithoutValidation(startingSelection().start(), extent);
         }
-        break;
-    }
-    case VisibleSelection::NoSelection:
-        ASSERT_NOT_REACHED();
-        break;
     }
 
     ASSERT(!selectionToDelete.isNone());

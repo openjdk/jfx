@@ -37,6 +37,7 @@ class WebXRInputSource;
 class WebXRSession;
 
 class XRInputSourcesChangeEvent final : public Event {
+    WTF_MAKE_ISO_ALLOCATED(XRInputSourcesChangeEvent);
 public:
     struct Init : EventInit {
         RefPtr<WebXRSession> session;
@@ -50,6 +51,8 @@ public:
     const WebXRSession& session() const;
     const Vector<RefPtr<WebXRInputSource>>& added() const;
     const Vector<RefPtr<WebXRInputSource>>& removed() const;
+
+    EventInterface eventInterface() const final { return XRInputSourcesChangeEventInterfaceType; }
 
 private:
     XRInputSourcesChangeEvent(const AtomString&, const Init&, IsTrusted);

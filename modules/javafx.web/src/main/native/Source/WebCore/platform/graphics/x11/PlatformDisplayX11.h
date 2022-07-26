@@ -28,7 +28,7 @@
 #if PLATFORM(X11)
 
 #include "PlatformDisplay.h"
-#include <wtf/Optional.h>
+#include <optional>
 
 typedef struct _XDisplay Display;
 
@@ -41,17 +41,18 @@ namespace WebCore {
 class PlatformDisplayX11 final : public PlatformDisplay {
 public:
     static std::unique_ptr<PlatformDisplay> create();
-    static std::unique_ptr<PlatformDisplay> create(Display*);
+    static std::unique_ptr<PlatformDisplay> create(::Display*);
 
     virtual ~PlatformDisplayX11();
 
-    Display* native() const { return m_display; }
+    ::Display* native() const { return m_display; }
     void* visual() const;
     bool supportsXComposite() const;
-    bool supportsXDamage(Optional<int>& damageEventBase, Optional<int>& damageErrorBase) const;
+    bool supportsXDamage(std::optional<int>& damageEventBase, std::optional<int>& damageErrorBase) const;
+    bool supportsGLX(std::optional<int>& glxErrorBase) const;
 
 private:
-    PlatformDisplayX11(Display*, NativeDisplayOwned);
+    PlatformDisplayX11(::Display*, NativeDisplayOwned);
 
     Type type() const override { return PlatformDisplay::Type::X11; }
 
@@ -59,11 +60,19 @@ private:
     void initializeEGLDisplay() override;
 #endif
 
-    Display* m_display { nullptr };
-    mutable Optional<bool> m_supportsXComposite;
-    mutable Optional<bool> m_supportsXDamage;
-    mutable Optional<int> m_damageEventBase;
-    mutable Optional<int> m_damageErrorBase;
+#if USE(LCMS)
+    cmsHPROFILE colorProfile() const override;
+#endif
+
+    ::Display* m_display { nullptr };
+    mutable std::optional<bool> m_supportsXComposite;
+    mutable std::optional<bool> m_supportsXDamage;
+    mutable std::optional<int> m_damageEventBase;
+    mutable std::optional<int> m_damageErrorBase;
+#if USE(GLX)
+    mutable std::optional<bool> m_supportsGLX;
+    mutable std::optional<int> m_glxErrorBase;
+#endif
     mutable void* m_visual { nullptr };
 };
 

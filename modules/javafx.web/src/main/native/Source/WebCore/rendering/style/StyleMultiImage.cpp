@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2003, 2005-2008, 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2003-2021 Apple Inc. All rights reserved.
  * Copyright (C) 2020 Noam Rosenthal (noam@webkit.org)
  *
  * This library is free software; you can redistribute it and/or
@@ -134,18 +134,25 @@ void StyleMultiImage::setContainerContextForRenderer(const RenderElement& render
     m_selectedImage->setContainerContextForRenderer(renderer, containerSize, containerZoom);
 }
 
-void StyleMultiImage::addClient(RenderElement* renderer)
+void StyleMultiImage::addClient(RenderElement& renderer)
 {
     if (!m_selectedImage)
         return;
     m_selectedImage->addClient(renderer);
 }
 
-void StyleMultiImage::removeClient(RenderElement* renderer)
+void StyleMultiImage::removeClient(RenderElement& renderer)
 {
     if (!m_selectedImage)
         return;
     m_selectedImage->removeClient(renderer);
+}
+
+bool StyleMultiImage::hasClient(RenderElement& renderer) const
+{
+    if (!m_selectedImage)
+        return false;
+    return m_selectedImage->hasClient(renderer);
 }
 
 RefPtr<Image> StyleMultiImage::image(RenderElement* renderer, const FloatSize& size) const
@@ -162,7 +169,7 @@ float StyleMultiImage::imageScaleFactor() const
     return m_selectedImage->imageScaleFactor();
 }
 
-bool StyleMultiImage::knownToBeOpaque(const RenderElement* renderer) const
+bool StyleMultiImage::knownToBeOpaque(const RenderElement& renderer) const
 {
     return m_selectedImage && m_selectedImage->knownToBeOpaque(renderer);
 }

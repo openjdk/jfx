@@ -26,8 +26,9 @@
 #include "FEMorphology.h"
 
 #include "ColorComponents.h"
+#include "ColorTypes.h"
 #include "Filter.h"
-#include "ImageData.h"
+#include "PixelBuffer.h"
 #include <wtf/ParallelJobs.h>
 #include <wtf/Vector.h>
 #include <wtf/text/TextStream.h>
@@ -88,19 +89,18 @@ static inline int pixelArrayIndex(int x, int y, int width)
     return (y * width + x) * 4;
 }
 
-inline ColorComponents<uint8_t> makeColorComponentsfromPixelValue(unsigned pixel)
+inline ColorComponents<uint8_t, 4> makeColorComponentsfromPixelValue(PackedColor::RGBA pixel)
 {
-    return ColorComponents<uint8_t>((pixel >> 24) & 0xFF, (pixel >> 16) & 0xFF, (pixel >> 8) & 0xFF, pixel & 0xFF);
+    return asColorComponents(asSRGBA(pixel));
 }
 
-inline unsigned makePixelValueFromColorComponents(const ColorComponents<uint8_t>& components)
+inline PackedColor::RGBA makePixelValueFromColorComponents(const ColorComponents<uint8_t, 4>& components)
 {
-    auto [r, g, b, a] = components;
-    return r << 24 | g << 16 | b << 8 | a;
+    return PackedColor::RGBA { makeFromComponents<SRGBA<uint8_t>>(components) };
 }
 
 template<MorphologyOperatorType type>
-ALWAYS_INLINE ColorComponents<uint8_t> minOrMax(const ColorComponents<uint8_t>& a, const ColorComponents<uint8_t>& b)
+ALWAYS_INLINE ColorComponents<uint8_t, 4> minOrMax(const ColorComponents<uint8_t, 4>& a, const ColorComponents<uint8_t, 4>& b)
 {
     if (type == FEMORPHOLOGY_OPERATOR_ERODE)
         return perComponentMin(a, b);
@@ -109,18 +109,18 @@ ALWAYS_INLINE ColorComponents<uint8_t> minOrMax(const ColorComponents<uint8_t>& 
 }
 
 template<MorphologyOperatorType type>
-ALWAYS_INLINE ColorComponents<uint8_t> columnExtremum(const Uint8ClampedArray& srcPixelArray, int x, int yStart, int yEnd, int width)
+ALWAYS_INLINE ColorComponents<uint8_t, 4> columnExtremum(const Uint8ClampedArray& srcPixelArray, int x, int yStart, int yEnd, int width)
 {
-    auto extremum = makeColorComponentsfromPixelValue(*reinterpret_cast<const unsigned*>(srcPixelArray.data() + pixelArrayIndex(x, yStart, width)));
+    auto extremum = makeColorComponentsfromPixelValue(PackedColor::RGBA { *reinterpret_cast<const unsigned*>(srcPixelArray.data() + pixelArrayIndex(x, yStart, width)) });
 
     for (int y = yStart + 1; y < yEnd; ++y) {
-        auto pixel = makeColorComponentsfromPixelValue(*reinterpret_cast<const unsigned*>(srcPixelArray.data() + pixelArrayIndex(x, y, width)));
+        auto pixel = makeColorComponentsfromPixelValue(PackedColor::RGBA { *reinterpret_cast<const unsigned*>(srcPixelArray.data() + pixelArrayIndex(x, y, width)) });
         extremum = minOrMax<type>(extremum, pixel);
     }
     return extremum;
 }
 
-ALWAYS_INLINE ColorComponents<uint8_t> columnExtremum(const Uint8ClampedArray& srcPixelArray, int x, int yStart, int yEnd, int width, MorphologyOperatorType type)
+ALWAYS_INLINE ColorComponents<uint8_t, 4> columnExtremum(const Uint8ClampedArray& srcPixelArray, int x, int yStart, int yEnd, int width, MorphologyOperatorType type)
 {
     if (type == FEMORPHOLOGY_OPERATOR_ERODE)
         return columnExtremum<FEMORPHOLOGY_OPERATOR_ERODE>(srcPixelArray, x, yStart, yEnd, width);
@@ -128,10 +128,10 @@ ALWAYS_INLINE ColorComponents<uint8_t> columnExtremum(const Uint8ClampedArray& s
     return columnExtremum<FEMORPHOLOGY_OPERATOR_DILATE>(srcPixelArray, x, yStart, yEnd, width);
 }
 
-using ColumnExtrema = Vector<ColorComponents<uint8_t>, 16>;
+using ColumnExtrema = Vector<ColorComponents<uint8_t, 4>, 16>;
 
 template<MorphologyOperatorType type>
-ALWAYS_INLINE ColorComponents<uint8_t> kernelExtremum(const ColumnExtrema& kernel)
+ALWAYS_INLINE ColorComponents<uint8_t, 4> kernelExtremum(const ColumnExtrema& kernel)
 {
     auto extremum = kernel[0];
     for (size_t i = 1; i < kernel.size(); ++i)
@@ -140,7 +140,7 @@ ALWAYS_INLINE ColorComponents<uint8_t> kernelExtremum(const ColumnExtrema& kerne
     return extremum;
 }
 
-ALWAYS_INLINE ColorComponents<uint8_t> kernelExtremum(const ColumnExtrema& kernel, MorphologyOperatorType type)
+ALWAYS_INLINE ColorComponents<uint8_t, 4> kernelExtremum(const ColumnExtrema& kernel, MorphologyOperatorType type)
 {
     if (type == FEMORPHOLOGY_OPERATOR_ERODE)
         return kernelExtremum<FEMORPHOLOGY_OPERATOR_ERODE>(kernel);
@@ -185,7 +185,7 @@ void FEMorphology::platformApplyGeneric(const PaintingData& paintingData, int st
                 extrema.remove(0);
 
             unsigned* destPixel = reinterpret_cast<unsigned*>(dstPixelArray.data() + pixelArrayIndex(x, y, width));
-            *destPixel = makePixelValueFromColorComponents(kernelExtremum(extrema, m_type));
+            *destPixel = makePixelValueFromColorComponents(kernelExtremum(extrema, m_type)).value;
         }
     }
 }
@@ -244,34 +244,35 @@ void FEMorphology::platformApplySoftware()
 {
     FilterEffect* in = inputEffect(0);
 
-    auto* resultImage = createPremultipliedImageResult();
-    auto* dstPixelArray = resultImage ? resultImage->data() : nullptr;
-    if (!dstPixelArray)
+    auto& destinationPixelBuffer = createPremultipliedImageResult();
+    if (!destinationPixelBuffer)
         return;
+
+    auto& destinationPixelArray = destinationPixelBuffer->data();
 
     setIsAlphaImage(in->isAlphaImage());
 
-    IntRect effectDrawingRect = requestedRegionOfInputImageData(in->absolutePaintRect());
+    IntRect effectDrawingRect = requestedRegionOfInputPixelBuffer(in->absolutePaintRect());
 
     IntSize radius = flooredIntSize(FloatSize(m_radiusX, m_radiusY));
-    if (platformApplyDegenerate(*dstPixelArray, effectDrawingRect, radius.width(), radius.height()))
+    if (platformApplyDegenerate(destinationPixelArray, effectDrawingRect, radius.width(), radius.height()))
         return;
 
     Filter& filter = this->filter();
-    auto srcPixelArray = in->premultipliedResult(effectDrawingRect, operatingColorSpace());
-    if (!srcPixelArray)
+    auto sourcePixelArray = in->premultipliedResult(effectDrawingRect, operatingColorSpace());
+    if (!sourcePixelArray)
         return;
 
     radius = flooredIntSize(filter.scaledByFilterResolution({ m_radiusX, m_radiusY }));
     int radiusX = std::min(effectDrawingRect.width() - 1, radius.width());
     int radiusY = std::min(effectDrawingRect.height() - 1, radius.height());
 
-    if (platformApplyDegenerate(*dstPixelArray, effectDrawingRect, radiusX, radiusY))
+    if (platformApplyDegenerate(destinationPixelArray, effectDrawingRect, radiusX, radiusY))
         return;
 
     PaintingData paintingData;
-    paintingData.srcPixelArray = srcPixelArray.get();
-    paintingData.dstPixelArray = dstPixelArray;
+    paintingData.srcPixelArray = sourcePixelArray.get();
+    paintingData.dstPixelArray = &destinationPixelArray;
     paintingData.width = ceilf(effectDrawingRect.width() * filter.filterScale());
     paintingData.height = ceilf(effectDrawingRect.height() * filter.filterScale());
     paintingData.radiusX = ceilf(radiusX * filter.filterScale());

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,7 +28,7 @@
 
 #include "IteratorOperations.h"
 #include "JSCInlines.h"
-#include "JSSet.h"
+#include "JSSetInlines.h"
 #include "SetPrototype.h"
 
 namespace JSC {
@@ -37,59 +37,66 @@ const ClassInfo SetConstructor::s_info = { "Function", &Base::s_info, nullptr, n
 
 void SetConstructor::finishCreation(VM& vm, SetPrototype* setPrototype, GetterSetter* speciesSymbol)
 {
-    Base::finishCreation(vm, vm.propertyNames->Set.string(), NameAdditionMode::WithoutStructureTransition);
+    Base::finishCreation(vm, 0, vm.propertyNames->Set.string(), PropertyAdditionMode::WithoutStructureTransition);
     putDirectWithoutTransition(vm, vm.propertyNames->prototype, setPrototype, PropertyAttribute::DontEnum | PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly);
-    putDirectWithoutTransition(vm, vm.propertyNames->length, jsNumber(0), PropertyAttribute::DontEnum | PropertyAttribute::ReadOnly);
     putDirectNonIndexAccessorWithoutTransition(vm, vm.propertyNames->speciesSymbol, speciesSymbol, PropertyAttribute::Accessor | PropertyAttribute::ReadOnly | PropertyAttribute::DontEnum);
 }
 
-static EncodedJSValue JSC_HOST_CALL callSet(JSGlobalObject*, CallFrame*);
-static EncodedJSValue JSC_HOST_CALL constructSet(JSGlobalObject*, CallFrame*);
+static JSC_DECLARE_HOST_FUNCTION(callSet);
+static JSC_DECLARE_HOST_FUNCTION(constructSet);
 
 SetConstructor::SetConstructor(VM& vm, Structure* structure)
     : Base(vm, structure, callSet, constructSet)
 {
 }
 
-static EncodedJSValue JSC_HOST_CALL callSet(JSGlobalObject* globalObject, CallFrame*)
+JSC_DEFINE_HOST_FUNCTION(callSet, (JSGlobalObject* globalObject, CallFrame*))
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
     return JSValue::encode(throwConstructorCannotBeCalledAsFunctionTypeError(globalObject, scope, "Set"));
 }
 
-static EncodedJSValue JSC_HOST_CALL constructSet(JSGlobalObject* globalObject, CallFrame* callFrame)
+JSC_DEFINE_HOST_FUNCTION(constructSet, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     JSObject* newTarget = asObject(callFrame->newTarget());
-    Structure* setStructure = newTarget == callFrame->jsCallee()
-        ? globalObject->setStructure()
-        : InternalFunction::createSubclassStructure(globalObject, newTarget, getFunctionRealm(vm, newTarget)->setStructure());
+    Structure* setStructure = JSC_GET_DERIVED_STRUCTURE(vm, setStructure, newTarget, callFrame->jsCallee());
     RETURN_IF_EXCEPTION(scope, { });
 
     JSValue iterable = callFrame->argument(0);
     if (iterable.isUndefinedOrNull())
         RELEASE_AND_RETURN(scope, JSValue::encode(JSSet::create(globalObject, vm, setStructure)));
 
+    bool canPerformFastAdd = JSSet::isAddFastAndNonObservable(setStructure);
     if (auto* iterableSet = jsDynamicCast<JSSet*>(vm, iterable)) {
-        if (iterableSet->canCloneFastAndNonObservable(setStructure))
+        if (canPerformFastAdd && iterableSet->isIteratorProtocolFastAndNonObservable())
             RELEASE_AND_RETURN(scope, JSValue::encode(iterableSet->clone(globalObject, vm, setStructure)));
     }
 
     JSSet* set = JSSet::create(globalObject, vm, setStructure);
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
 
-    JSValue adderFunction = set->JSObject::get(globalObject, vm.propertyNames->add);
-    RETURN_IF_EXCEPTION(scope, encodedJSValue());
+    JSValue adderFunction;
+    CallData adderFunctionCallData;
+    if (!canPerformFastAdd) {
+        adderFunction = set->JSObject::get(globalObject, vm.propertyNames->add);
+        RETURN_IF_EXCEPTION(scope, { });
 
-    auto adderFunctionCallData = getCallData(vm, adderFunction);
-    if (UNLIKELY(adderFunctionCallData.type == CallData::Type::None))
-        return JSValue::encode(throwTypeError(globalObject, scope));
+        adderFunctionCallData = getCallData(vm, adderFunction);
+        if (UNLIKELY(adderFunctionCallData.type == CallData::Type::None))
+            return throwVMTypeError(globalObject, scope, "'add' property of a Set should be callable."_s);
+    }
 
     scope.release();
     forEachInIterable(globalObject, iterable, [&](VM&, JSGlobalObject* globalObject, JSValue nextValue) {
+        if (canPerformFastAdd) {
+            set->add(setStructure->globalObject(), nextValue);
+            return;
+        }
+
         MarkedArgumentBuffer arguments;
         arguments.append(nextValue);
         ASSERT(!arguments.hasOverflowed());
@@ -99,7 +106,7 @@ static EncodedJSValue JSC_HOST_CALL constructSet(JSGlobalObject* globalObject, C
     return JSValue::encode(set);
 }
 
-EncodedJSValue JSC_HOST_CALL setPrivateFuncSetBucketHead(JSGlobalObject* globalObject, CallFrame* callFrame)
+JSC_DEFINE_HOST_FUNCTION(setPrivateFuncSetBucketHead, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     ASSERT_UNUSED(globalObject, jsDynamicCast<JSSet*>(globalObject->vm(), callFrame->argument(0)));
     JSSet* set = jsCast<JSSet*>(callFrame->uncheckedArgument(0));
@@ -108,7 +115,7 @@ EncodedJSValue JSC_HOST_CALL setPrivateFuncSetBucketHead(JSGlobalObject* globalO
     return JSValue::encode(head);
 }
 
-EncodedJSValue JSC_HOST_CALL setPrivateFuncSetBucketNext(JSGlobalObject* globalObject, CallFrame* callFrame)
+JSC_DEFINE_HOST_FUNCTION(setPrivateFuncSetBucketNext, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     ASSERT(jsDynamicCast<JSSet::BucketType*>(globalObject->vm(), callFrame->argument(0)));
     auto* bucket = jsCast<JSSet::BucketType*>(callFrame->uncheckedArgument(0));
@@ -122,7 +129,7 @@ EncodedJSValue JSC_HOST_CALL setPrivateFuncSetBucketNext(JSGlobalObject* globalO
     return JSValue::encode(globalObject->vm().sentinelSetBucket());
 }
 
-EncodedJSValue JSC_HOST_CALL setPrivateFuncSetBucketKey(JSGlobalObject* globalObject, CallFrame* callFrame)
+JSC_DEFINE_HOST_FUNCTION(setPrivateFuncSetBucketKey, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     ASSERT_UNUSED(globalObject, jsDynamicCast<JSSet::BucketType*>(globalObject->vm(), callFrame->argument(0)));
     auto* bucket = jsCast<JSSet::BucketType*>(callFrame->uncheckedArgument(0));

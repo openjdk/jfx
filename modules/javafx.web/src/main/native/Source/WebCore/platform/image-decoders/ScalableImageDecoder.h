@@ -72,7 +72,7 @@ public:
 
     void setData(SharedBuffer& data, bool allDataReceived) override
     {
-        LockHolder lockHolder(m_mutex);
+        Locker locker { m_lock };
         if (m_encodedDataStatus == EncodedDataStatus::Error)
             return;
 
@@ -144,12 +144,12 @@ public:
 
     Seconds frameDurationAtIndex(size_t) const final;
 
-    NativeImagePtr createFrameImageAtIndex(size_t, SubsamplingLevel = SubsamplingLevel::Default, const DecodingOptions& = DecodingOptions(DecodingMode::Synchronous)) override;
+    PlatformImagePtr createFrameImageAtIndex(size_t, SubsamplingLevel = SubsamplingLevel::Default, const DecodingOptions& = DecodingOptions(DecodingMode::Synchronous)) override;
 
     void setIgnoreGammaAndColorProfile(bool flag) { m_ignoreGammaAndColorProfile = flag; }
     bool ignoresGammaAndColorProfile() const { return m_ignoreGammaAndColorProfile; }
 
-    ImageOrientation frameOrientationAtIndex(size_t) const override { return m_orientation; }
+    ImageDecoder::FrameMetadata frameMetadataAtIndex(size_t) const override { return { m_orientation, m_densityCorrectedSize }; }
 
     bool frameAllowSubsamplingAtIndex(size_t) const override { return false; }
 
@@ -192,15 +192,16 @@ public:
 
     // If the image has a cursor hot-spot, stores it in the argument
     // and returns true. Otherwise returns false.
-    Optional<IntPoint> hotSpot() const override { return WTF::nullopt; }
+    std::optional<IntPoint> hotSpot() const override { return std::nullopt; }
 
 protected:
     RefPtr<SharedBuffer::DataSegment> m_data;
-    Vector<ScalableImageDecoderFrame, 1> m_frameBufferCache;
-    mutable Lock m_mutex;
+    Vector<ScalableImageDecoderFrame, 1> m_frameBufferCache WTF_GUARDED_BY_LOCK(m_lock);
+    mutable Lock m_lock;
     bool m_premultiplyAlpha;
     bool m_ignoreGammaAndColorProfile;
     ImageOrientation m_orientation;
+    std::optional<IntSize> m_densityCorrectedSize;
 
 private:
     virtual void tryDecodeSize(bool) = 0;

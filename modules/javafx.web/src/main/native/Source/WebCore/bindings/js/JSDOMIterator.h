@@ -73,7 +73,7 @@ public:
         return JSC::Structure::create(vm, globalObject, prototype, JSC::TypeInfo(JSC::ObjectType, StructureFlags), info());
     }
 
-    static JSC::EncodedJSValue JSC_HOST_CALL next(JSC::JSGlobalObject*, JSC::CallFrame*);
+    static JSC::EncodedJSValue JSC_HOST_CALL_ATTRIBUTES next(JSC::JSGlobalObject*, JSC::CallFrame*);
 
 private:
     JSDOMIteratorPrototype(JSC::VM& vm, JSC::Structure* structure) : Base(vm, structure) { }
@@ -117,7 +117,7 @@ protected:
 
     static void destroy(JSC::JSCell*);
 
-    Optional<typename DOMWrapped::Iterator> m_iterator;
+    std::optional<typename DOMWrapped::Iterator> m_iterator;
     IterationKind m_kind;
 };
 
@@ -240,13 +240,13 @@ JSC::JSValue JSDOMIteratorBase<JSWrapper, IteratorTraits>::next(JSC::JSGlobalObj
         auto iteratorValue = m_iterator->next();
         if (iteratorValue)
             return createIteratorResultObject(&lexicalGlobalObject, asJS(lexicalGlobalObject, iteratorValue), false);
-        m_iterator = WTF::nullopt;
+        m_iterator = std::nullopt;
     }
     return createIteratorResultObject(&lexicalGlobalObject, JSC::jsUndefined(), true);
 }
 
 template<typename JSWrapper, typename IteratorTraits>
-JSC::EncodedJSValue JSC_HOST_CALL JSDOMIteratorPrototype<JSWrapper, IteratorTraits>::next(JSC::JSGlobalObject* globalObject, JSC::CallFrame* callFrame)
+JSC::EncodedJSValue JSC_HOST_CALL_ATTRIBUTES JSDOMIteratorPrototype<JSWrapper, IteratorTraits>::next(JSC::JSGlobalObject* globalObject, JSC::CallFrame* callFrame)
 {
     JSC::VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -215,7 +215,7 @@ public class Region extends Parent {
 
     private static final double EPSILON = 1e-14;
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Static convenience methods for layout                                   *
      *                                                                         *
@@ -583,7 +583,7 @@ public class Region extends Parent {
         return array;
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -628,7 +628,7 @@ public class Region extends Parent {
         setPickOnBounds(true);
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Region properties                                                       *
      *                                                                         *
@@ -1505,7 +1505,7 @@ public class Region extends Parent {
         return cacheShape;
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Layout                                                                  *
      *                                                                         *
@@ -2647,7 +2647,7 @@ public class Region extends Parent {
         child.relocate(x,y);
     }
 
-     /**************************************************************************
+     /* ************************************************************************
      *                                                                         *
      * PG Implementation                                                       *
      *                                                                         *
@@ -3379,7 +3379,7 @@ public class Region extends Parent {
         }
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * CSS                                                                     *
      *                                                                         *
@@ -3677,8 +3677,9 @@ public class Region extends Parent {
     }
 
     /**
-     * @return The CssMetaData associated with this class, which may include the
-     * CssMetaData of its superclasses.
+     * Gets the {@code CssMetaData} associated with this class, which may include the
+     * {@code CssMetaData} of its superclasses.
+     * @return the {@code CssMetaData}
      * @since JavaFX 8.0
      */
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {

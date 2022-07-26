@@ -31,14 +31,6 @@
 
 namespace WTF {
 
-template<typename Counter> struct HashTraits<Ref<WeakPtrImpl<Counter>>> : RefHashTraits<WeakPtrImpl<Counter>> {
-    static constexpr bool hasIsReleasedWeakValueFunction = true;
-    static bool isReleasedWeakValue(const Ref<WeakPtrImpl<Counter>>& value)
-    {
-        return !value.isHashTableDeletedValue() && !value.isHashTableEmptyValue() && !value.get();
-    }
-};
-
 template<typename T, typename Counter = EmptyCounter>
 class WeakHashSet final {
     WTF_MAKE_FAST_ALLOCATED;
@@ -139,7 +131,11 @@ public:
 
     void forEach(const Function<void(T&)>& callback)
     {
-        for (auto& item : map(m_set, [](auto& item) { return makeWeakPtr(item->template get<T>()); })) {
+        auto items = map(m_set, [](const Ref<WeakPtrImpl<Counter>>& item) {
+            auto* pointer = static_cast<T*>(item->template get<T>());
+            return makeWeakPtr(pointer);
+        });
+        for (auto& item : items) {
             if (item && m_set.contains(*item.m_impl))
                 callback(*item);
         }
@@ -157,7 +153,7 @@ private:
 
 template<typename MapFunction, typename T>
 struct Mapper<MapFunction, const WeakHashSet<T> &, void> {
-    using SourceItemType = WeakPtr<T>;
+    using SourceItemType = T&;
     using DestinationItemType = typename std::result_of<MapFunction(SourceItemType&)>::type;
 
     static Vector<DestinationItemType> map(const WeakHashSet<T>& source, const MapFunction& mapFunction)

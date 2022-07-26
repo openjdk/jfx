@@ -1,6 +1,6 @@
 /*
  *  Copyright (C) 1999-2000 Harri Porten (porten@kde.org)
- *  Copyright (C) 2003-2020 Apple Inc. All Rights Reserved.
+ *  Copyright (C) 2003-2021 Apple Inc. All Rights Reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -27,7 +27,6 @@
 #include "JSCJSValue.h"
 #include "JSGlobalObject.h"
 #include "JSStringInlines.h"
-#include "Lexer.h"
 #include "RegExpObject.h"
 #include "RegExpObjectInlines.h"
 #include "StringRecursionChecker.h"
@@ -36,17 +35,18 @@
 
 namespace JSC {
 
-static EncodedJSValue JSC_HOST_CALL regExpProtoFuncExec(JSGlobalObject*, CallFrame*);
-static EncodedJSValue JSC_HOST_CALL regExpProtoFuncCompile(JSGlobalObject*, CallFrame*);
-static EncodedJSValue JSC_HOST_CALL regExpProtoFuncToString(JSGlobalObject*, CallFrame*);
-static EncodedJSValue JSC_HOST_CALL regExpProtoGetterGlobal(JSGlobalObject*, CallFrame*);
-static EncodedJSValue JSC_HOST_CALL regExpProtoGetterIgnoreCase(JSGlobalObject*, CallFrame*);
-static EncodedJSValue JSC_HOST_CALL regExpProtoGetterMultiline(JSGlobalObject*, CallFrame*);
-static EncodedJSValue JSC_HOST_CALL regExpProtoGetterDotAll(JSGlobalObject*, CallFrame*);
-static EncodedJSValue JSC_HOST_CALL regExpProtoGetterSticky(JSGlobalObject*, CallFrame*);
-static EncodedJSValue JSC_HOST_CALL regExpProtoGetterUnicode(JSGlobalObject*, CallFrame*);
-static EncodedJSValue JSC_HOST_CALL regExpProtoGetterSource(JSGlobalObject*, CallFrame*);
-static EncodedJSValue JSC_HOST_CALL regExpProtoGetterFlags(JSGlobalObject*, CallFrame*);
+static JSC_DECLARE_HOST_FUNCTION(regExpProtoFuncExec);
+static JSC_DECLARE_HOST_FUNCTION(regExpProtoFuncCompile);
+static JSC_DECLARE_HOST_FUNCTION(regExpProtoFuncToString);
+static JSC_DECLARE_HOST_FUNCTION(regExpProtoGetterGlobal);
+static JSC_DECLARE_HOST_FUNCTION(regExpProtoGetterHasIndices);
+static JSC_DECLARE_HOST_FUNCTION(regExpProtoGetterIgnoreCase);
+static JSC_DECLARE_HOST_FUNCTION(regExpProtoGetterMultiline);
+static JSC_DECLARE_HOST_FUNCTION(regExpProtoGetterDotAll);
+static JSC_DECLARE_HOST_FUNCTION(regExpProtoGetterSticky);
+static JSC_DECLARE_HOST_FUNCTION(regExpProtoGetterUnicode);
+static JSC_DECLARE_HOST_FUNCTION(regExpProtoGetterSource);
+static JSC_DECLARE_HOST_FUNCTION(regExpProtoGetterFlags);
 
 const ClassInfo RegExpPrototype::s_info = { "Object", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(RegExpPrototype) };
 
@@ -64,6 +64,7 @@ void RegExpPrototype::finishCreation(VM& vm, JSGlobalObject* globalObject)
     JSC_NATIVE_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->toString, regExpProtoFuncToString, static_cast<unsigned>(PropertyAttribute::DontEnum), 0);
     JSC_NATIVE_GETTER_WITHOUT_TRANSITION(vm.propertyNames->global, regExpProtoGetterGlobal, PropertyAttribute::DontEnum | PropertyAttribute::Accessor);
     JSC_NATIVE_GETTER_WITHOUT_TRANSITION(vm.propertyNames->dotAll, regExpProtoGetterDotAll, PropertyAttribute::DontEnum | PropertyAttribute::Accessor);
+    JSC_NATIVE_GETTER_WITHOUT_TRANSITION(vm.propertyNames->hasIndices, regExpProtoGetterHasIndices, PropertyAttribute::DontEnum | PropertyAttribute::Accessor);
     JSC_NATIVE_GETTER_WITHOUT_TRANSITION(vm.propertyNames->ignoreCase, regExpProtoGetterIgnoreCase, PropertyAttribute::DontEnum | PropertyAttribute::Accessor);
     JSC_NATIVE_GETTER_WITHOUT_TRANSITION(vm.propertyNames->multiline, regExpProtoGetterMultiline, PropertyAttribute::DontEnum | PropertyAttribute::Accessor);
     JSC_NATIVE_GETTER_WITHOUT_TRANSITION(vm.propertyNames->sticky, regExpProtoGetterSticky, PropertyAttribute::DontEnum | PropertyAttribute::Accessor);
@@ -80,7 +81,7 @@ void RegExpPrototype::finishCreation(VM& vm, JSGlobalObject* globalObject)
 
 // ------------------------------ Functions ---------------------------
 
-EncodedJSValue JSC_HOST_CALL regExpProtoFuncTestFast(JSGlobalObject* globalObject, CallFrame* callFrame)
+JSC_DEFINE_HOST_FUNCTION(regExpProtoFuncTestFast, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
@@ -96,7 +97,7 @@ EncodedJSValue JSC_HOST_CALL regExpProtoFuncTestFast(JSGlobalObject* globalObjec
     RELEASE_AND_RETURN(scope, JSValue::encode(jsBoolean(regexp->test(globalObject, string))));
 }
 
-EncodedJSValue JSC_HOST_CALL regExpProtoFuncExec(JSGlobalObject* globalObject, CallFrame* callFrame)
+JSC_DEFINE_HOST_FUNCTION(regExpProtoFuncExec, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
@@ -112,7 +113,7 @@ EncodedJSValue JSC_HOST_CALL regExpProtoFuncExec(JSGlobalObject* globalObject, C
     RELEASE_AND_RETURN(scope, JSValue::encode(regexp->exec(globalObject, string)));
 }
 
-EncodedJSValue JSC_HOST_CALL regExpProtoFuncMatchFast(JSGlobalObject* globalObject, CallFrame* callFrame)
+JSC_DEFINE_HOST_FUNCTION(regExpProtoFuncMatchFast, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     RegExpObject* thisObject = jsCast<RegExpObject*>(callFrame->thisValue());
     JSString* string = jsCast<JSString*>(callFrame->uncheckedArgument(0));
@@ -121,7 +122,7 @@ EncodedJSValue JSC_HOST_CALL regExpProtoFuncMatchFast(JSGlobalObject* globalObje
     return JSValue::encode(thisObject->matchGlobal(globalObject, string));
 }
 
-EncodedJSValue JSC_HOST_CALL regExpProtoFuncCompile(JSGlobalObject* globalObject, CallFrame* callFrame)
+JSC_DEFINE_HOST_FUNCTION(regExpProtoFuncCompile, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
@@ -143,7 +144,7 @@ EncodedJSValue JSC_HOST_CALL regExpProtoFuncCompile(JSGlobalObject* globalObject
         String pattern = arg0.isUndefined() ? emptyString() : arg0.toWTFString(globalObject);
         RETURN_IF_EXCEPTION(scope, encodedJSValue());
 
-        auto flags = arg1.isUndefined() ? makeOptional(OptionSet<Yarr::Flags> { }) : Yarr::parseFlags(arg1.toWTFString(globalObject));
+        auto flags = arg1.isUndefined() ? std::make_optional(OptionSet<Yarr::Flags> { }) : Yarr::parseFlags(arg1.toWTFString(globalObject));
         RETURN_IF_EXCEPTION(scope, encodedJSValue());
         if (!flags)
             return throwVMError(globalObject, scope, createSyntaxError(globalObject, "Invalid flags supplied to RegExp constructor."_s));
@@ -160,52 +161,32 @@ EncodedJSValue JSC_HOST_CALL regExpProtoFuncCompile(JSGlobalObject* globalObject
     return JSValue::encode(thisRegExp);
 }
 
-typedef std::array<char, 6 + 1> FlagsString; // 6 different flags and a null character terminator.
-
-static inline FlagsString flagsString(JSGlobalObject* globalObject, JSObject* regexp)
+static inline Yarr::FlagsString flagsString(JSGlobalObject* globalObject, JSObject* regexp)
 {
-    FlagsString string{};
-
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    JSValue globalValue = regexp->get(globalObject, vm.propertyNames->global);
-    RETURN_IF_EXCEPTION(scope, string);
-    JSValue ignoreCaseValue = regexp->get(globalObject, vm.propertyNames->ignoreCase);
-    RETURN_IF_EXCEPTION(scope, string);
-    JSValue multilineValue = regexp->get(globalObject, vm.propertyNames->multiline);
-    RETURN_IF_EXCEPTION(scope, string);
-    JSValue dotAllValue = regexp->get(globalObject, vm.propertyNames->dotAll);
-    RETURN_IF_EXCEPTION(scope, string);
-    JSValue unicodeValue = regexp->get(globalObject, vm.propertyNames->unicode);
-    RETURN_IF_EXCEPTION(scope, string);
-    JSValue stickyValue = regexp->get(globalObject, vm.propertyNames->sticky);
-    RETURN_IF_EXCEPTION(scope, string);
+    OptionSet<Yarr::Flags> flags;
 
-    unsigned index = 0;
-    if (globalValue.toBoolean(globalObject))
-        string[index++] = 'g';
-    if (ignoreCaseValue.toBoolean(globalObject))
-        string[index++] = 'i';
-    if (multilineValue.toBoolean(globalObject))
-        string[index++] = 'm';
-    if (dotAllValue.toBoolean(globalObject))
-        string[index++] = 's';
-    if (unicodeValue.toBoolean(globalObject))
-        string[index++] = 'u';
-    if (stickyValue.toBoolean(globalObject))
-        string[index++] = 'y';
-    ASSERT(index < string.size());
-    string[index] = 0;
-    return string;
+#define JSC_RETRIEVE_REGEXP_FLAG(key, name, lowerCaseName, index) \
+    JSValue lowerCaseName##Value = regexp->get(globalObject, vm.propertyNames->lowerCaseName); \
+    RETURN_IF_EXCEPTION(scope, { }); \
+    if (lowerCaseName##Value.toBoolean(globalObject)) \
+        flags.add(Yarr::Flags::name);
+
+    JSC_REGEXP_FLAGS(JSC_RETRIEVE_REGEXP_FLAG)
+
+#undef JSC_RETRIEVE_REGEXP_FLAG
+
+    return Yarr::flagsString(flags);
 }
 
-EncodedJSValue JSC_HOST_CALL regExpProtoFuncToString(JSGlobalObject* globalObject, CallFrame* callFrame)
+JSC_DEFINE_HOST_FUNCTION(regExpProtoFuncToString, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    JSValue thisValue = callFrame->thisValue();
+    JSValue thisValue = callFrame->thisValue().toThis(globalObject, ECMAMode::strict());
     if (!thisValue.isObject())
         return throwVMTypeError(globalObject, scope);
 
@@ -230,7 +211,7 @@ EncodedJSValue JSC_HOST_CALL regExpProtoFuncToString(JSGlobalObject* globalObjec
     RELEASE_AND_RETURN(scope, JSValue::encode(jsMakeNontrivialString(globalObject, '/', source, '/', flags)));
 }
 
-EncodedJSValue JSC_HOST_CALL regExpProtoGetterGlobal(JSGlobalObject* globalObject, CallFrame* callFrame)
+JSC_DEFINE_HOST_FUNCTION(regExpProtoGetterGlobal, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
@@ -246,7 +227,23 @@ EncodedJSValue JSC_HOST_CALL regExpProtoGetterGlobal(JSGlobalObject* globalObjec
     return JSValue::encode(jsBoolean(regexp->regExp()->global()));
 }
 
-EncodedJSValue JSC_HOST_CALL regExpProtoGetterIgnoreCase(JSGlobalObject* globalObject, CallFrame* callFrame)
+JSC_DEFINE_HOST_FUNCTION(regExpProtoGetterHasIndices, (JSGlobalObject* globalObject, CallFrame* callFrame))
+{
+    VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    JSValue thisValue = callFrame->thisValue();
+    auto* regexp = jsDynamicCast<RegExpObject*>(vm, thisValue);
+    if (UNLIKELY(!regexp)) {
+        if (thisValue == globalObject->regExpPrototype())
+            return JSValue::encode(jsUndefined());
+        return throwVMTypeError(globalObject, scope, "The RegExp.prototype.hasIndices getter can only be called on a RegExp object"_s);
+    }
+
+    return JSValue::encode(jsBoolean(regexp->regExp()->hasIndices()));
+}
+
+JSC_DEFINE_HOST_FUNCTION(regExpProtoGetterIgnoreCase, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
@@ -262,7 +259,7 @@ EncodedJSValue JSC_HOST_CALL regExpProtoGetterIgnoreCase(JSGlobalObject* globalO
     return JSValue::encode(jsBoolean(regexp->regExp()->ignoreCase()));
 }
 
-EncodedJSValue JSC_HOST_CALL regExpProtoGetterMultiline(JSGlobalObject* globalObject, CallFrame* callFrame)
+JSC_DEFINE_HOST_FUNCTION(regExpProtoGetterMultiline, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
@@ -278,7 +275,7 @@ EncodedJSValue JSC_HOST_CALL regExpProtoGetterMultiline(JSGlobalObject* globalOb
     return JSValue::encode(jsBoolean(regexp->regExp()->multiline()));
 }
 
-EncodedJSValue JSC_HOST_CALL regExpProtoGetterDotAll(JSGlobalObject* globalObject, CallFrame* callFrame)
+JSC_DEFINE_HOST_FUNCTION(regExpProtoGetterDotAll, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
@@ -294,7 +291,7 @@ EncodedJSValue JSC_HOST_CALL regExpProtoGetterDotAll(JSGlobalObject* globalObjec
     return JSValue::encode(jsBoolean(regexp->regExp()->dotAll()));
 }
 
-EncodedJSValue JSC_HOST_CALL regExpProtoGetterSticky(JSGlobalObject* globalObject, CallFrame* callFrame)
+JSC_DEFINE_HOST_FUNCTION(regExpProtoGetterSticky, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
@@ -310,7 +307,7 @@ EncodedJSValue JSC_HOST_CALL regExpProtoGetterSticky(JSGlobalObject* globalObjec
     return JSValue::encode(jsBoolean(regexp->regExp()->sticky()));
 }
 
-EncodedJSValue JSC_HOST_CALL regExpProtoGetterUnicode(JSGlobalObject* globalObject, CallFrame* callFrame)
+JSC_DEFINE_HOST_FUNCTION(regExpProtoGetterUnicode, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
@@ -326,7 +323,7 @@ EncodedJSValue JSC_HOST_CALL regExpProtoGetterUnicode(JSGlobalObject* globalObje
     return JSValue::encode(jsBoolean(regexp->regExp()->unicode()));
 }
 
-EncodedJSValue JSC_HOST_CALL regExpProtoGetterFlags(JSGlobalObject* globalObject, CallFrame* callFrame)
+JSC_DEFINE_HOST_FUNCTION(regExpProtoGetterFlags, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
@@ -341,114 +338,7 @@ EncodedJSValue JSC_HOST_CALL regExpProtoGetterFlags(JSGlobalObject* globalObject
     return JSValue::encode(jsString(vm, flags.data()));
 }
 
-template <typename CharacterType>
-static inline void appendLineTerminatorEscape(StringBuilder&, CharacterType);
-
-template <>
-inline void appendLineTerminatorEscape<LChar>(StringBuilder& builder, LChar lineTerminator)
-{
-    if (lineTerminator == '\n')
-        builder.append('n');
-    else
-        builder.append('r');
-}
-
-template <>
-inline void appendLineTerminatorEscape<UChar>(StringBuilder& builder, UChar lineTerminator)
-{
-    if (lineTerminator == '\n')
-        builder.append('n');
-    else if (lineTerminator == '\r')
-        builder.append('r');
-    else if (lineTerminator == 0x2028)
-        builder.appendLiteral("u2028");
-    else
-        builder.appendLiteral("u2029");
-}
-
-template <typename CharacterType>
-static inline JSValue regExpProtoGetterSourceInternal(JSGlobalObject* globalObject, const String& pattern, const CharacterType* characters, unsigned length)
-{
-    VM& vm = globalObject->vm();
-    bool previousCharacterWasBackslash = false;
-    bool inBrackets = false;
-    bool shouldEscape = false;
-
-    // 15.10.6.4 specifies that RegExp.prototype.toString must return '/' + source + '/',
-    // and also states that the result must be a valid RegularExpressionLiteral. '//' is
-    // not a valid RegularExpressionLiteral (since it is a single line comment), and hence
-    // source cannot ever validly be "". If the source is empty, return a different Pattern
-    // that would match the same thing.
-    if (!length)
-        return jsNontrivialString(vm, "(?:)"_s);
-
-    // early return for strings that don't contain a forwards slash and LineTerminator
-    for (unsigned i = 0; i < length; ++i) {
-        CharacterType ch = characters[i];
-        if (!previousCharacterWasBackslash) {
-            if (inBrackets) {
-                if (ch == ']')
-                    inBrackets = false;
-            } else {
-                if (ch == '/') {
-                    shouldEscape = true;
-                    break;
-                }
-                if (ch == '[')
-                    inBrackets = true;
-            }
-        }
-
-        if (Lexer<CharacterType>::isLineTerminator(ch)) {
-            shouldEscape = true;
-            break;
-        }
-
-        if (previousCharacterWasBackslash)
-            previousCharacterWasBackslash = false;
-        else
-            previousCharacterWasBackslash = ch == '\\';
-    }
-
-    if (!shouldEscape)
-        return jsString(vm, pattern);
-
-    previousCharacterWasBackslash = false;
-    inBrackets = false;
-    StringBuilder result;
-    for (unsigned i = 0; i < length; ++i) {
-        CharacterType ch = characters[i];
-        if (!previousCharacterWasBackslash) {
-            if (inBrackets) {
-                if (ch == ']')
-                    inBrackets = false;
-            } else {
-                if (ch == '/')
-                    result.append('\\');
-                else if (ch == '[')
-                    inBrackets = true;
-            }
-        }
-
-        // escape LineTerminator
-        if (Lexer<CharacterType>::isLineTerminator(ch)) {
-            if (!previousCharacterWasBackslash)
-                result.append('\\');
-
-            appendLineTerminatorEscape<CharacterType>(result, ch);
-        } else
-            result.append(ch);
-
-        if (previousCharacterWasBackslash)
-            previousCharacterWasBackslash = false;
-        else
-            previousCharacterWasBackslash = ch == '\\';
-    }
-
-    return jsString(vm, result.toString());
-}
-
-EncodedJSValue JSC_HOST_CALL regExpProtoGetterSource(JSGlobalObject* globalObject, CallFrame* callFrame)
+JSC_DEFINE_HOST_FUNCTION(regExpProtoGetterSource, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
@@ -461,13 +351,10 @@ EncodedJSValue JSC_HOST_CALL regExpProtoGetterSource(JSGlobalObject* globalObjec
         return throwVMTypeError(globalObject, scope, "The RegExp.prototype.source getter can only be called on a RegExp object"_s);
     }
 
-    String pattern = regexp->regExp()->pattern();
-    if (pattern.is8Bit())
-        return JSValue::encode(regExpProtoGetterSourceInternal(globalObject, pattern, pattern.characters8(), pattern.length()));
-    return JSValue::encode(regExpProtoGetterSourceInternal(globalObject, pattern, pattern.characters16(), pattern.length()));
+    return JSValue::encode(jsString(vm, regexp->regExp()->escapedPattern()));
 }
 
-EncodedJSValue JSC_HOST_CALL regExpProtoFuncSearchFast(JSGlobalObject* globalObject, CallFrame* callFrame)
+JSC_DEFINE_HOST_FUNCTION(regExpProtoFuncSearchFast, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
@@ -584,7 +471,7 @@ void genericSplit(
 }
 
 // ES 21.2.5.11 RegExp.prototype[@@split](string, limit)
-EncodedJSValue JSC_HOST_CALL regExpProtoFuncSplitFast(JSGlobalObject* globalObject, CallFrame* callFrame)
+JSC_DEFINE_HOST_FUNCTION(regExpProtoFuncSplitFast, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);

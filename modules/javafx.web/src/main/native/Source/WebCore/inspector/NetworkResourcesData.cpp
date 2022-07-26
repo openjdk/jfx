@@ -86,7 +86,7 @@ size_t NetworkResourcesData::ResourceData::dataLength() const
     return m_dataBuffer ? m_dataBuffer->size() : 0;
 }
 
-void NetworkResourcesData::ResourceData::appendData(const char* data, size_t dataLength)
+void NetworkResourcesData::ResourceData::appendData(const uint8_t* data, size_t dataLength)
 {
     ASSERT(!hasContent());
     if (!m_dataBuffer)
@@ -106,7 +106,7 @@ unsigned NetworkResourcesData::ResourceData::decodeDataToContent()
         m_content = m_decoder->decodeAndFlush(m_dataBuffer->data(), dataLength);
     } else {
         m_base64Encoded = true;
-        m_content = base64Encode(m_dataBuffer->data(), dataLength);
+        m_content = base64EncodeToString(m_dataBuffer->data(), dataLength);
     }
 
     m_dataBuffer = nullptr;
@@ -152,8 +152,11 @@ void NetworkResourcesData::responseReceived(const String& requestId, const Strin
     resourceData->setFrameId(frameId);
     resourceData->setURL(response.url().string());
     resourceData->setHTTPStatusCode(response.httpStatusCode());
+    resourceData->setHTTPStatusText(response.httpStatusText());
     resourceData->setType(type);
     resourceData->setForceBufferData(forceBufferData);
+    resourceData->setMIMEType(response.mimeType());
+    resourceData->setResponseTimestamp(WallTime::now());
 
     if (InspectorNetworkAgent::shouldTreatAsText(response.mimeType()))
         resourceData->setDecoder(InspectorNetworkAgent::createTextDecoder(response.mimeType(), response.textEncodingName()));
@@ -218,7 +221,7 @@ static bool shouldBufferResourceData(const NetworkResourcesData::ResourceData& r
     return false;
 }
 
-NetworkResourcesData::ResourceData const* NetworkResourcesData::maybeAddResourceData(const String& requestId, const char* data, size_t dataLength)
+NetworkResourcesData::ResourceData const* NetworkResourcesData::maybeAddResourceData(const String& requestId, const uint8_t* data, size_t dataLength)
 {
     ResourceData* resourceData = resourceDataForRequestId(requestId);
     if (!resourceData)
@@ -278,6 +281,22 @@ NetworkResourcesData::ResourceData const* NetworkResourcesData::data(const Strin
     return resourceDataForRequestId(requestId);
 }
 
+NetworkResourcesData::ResourceData const* NetworkResourcesData::dataForURL(const String& url)
+{
+    if (url.isNull())
+        return nullptr;
+
+    NetworkResourcesData::ResourceData* mostRecentResourceData = nullptr;
+
+    for (auto* resourceData : resources()) {
+        // responseTimestamp is checked so that we only grab the most recent response for the URL, instead of potentionally getting a more stale response.
+        if (resourceData->url() == url && resourceData->httpStatusCode() != 304 && (!mostRecentResourceData || (resourceData->responseTimestamp() > mostRecentResourceData->responseTimestamp())))
+            mostRecentResourceData = resourceData;
+    }
+
+    return mostRecentResourceData;
+}
+
 Vector<String> NetworkResourcesData::removeCachedResource(CachedResource* cachedResource)
 {
     Vector<String> result;
@@ -292,7 +311,7 @@ Vector<String> NetworkResourcesData::removeCachedResource(CachedResource* cached
     return result;
 }
 
-void NetworkResourcesData::clear(Optional<String> preservedLoaderId)
+void NetworkResourcesData::clear(std::optional<String> preservedLoaderId)
 {
     m_requestIdsDeque.clear();
     m_contentSize = 0;

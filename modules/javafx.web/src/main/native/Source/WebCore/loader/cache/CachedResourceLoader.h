@@ -25,7 +25,6 @@
 
 #pragma once
 
-#include "CachePolicy.h"
 #include "CachedResource.h"
 #include "CachedResourceHandle.h"
 #include "CachedResourceRequest.h"
@@ -63,6 +62,7 @@ class Settings;
 template <typename T>
 using ResourceErrorOr = Expected<T, ResourceError>;
 
+enum class CachePolicy : uint8_t;
 enum class ImageLoading : uint8_t { Immediate, DeferredUntilVisible };
 
 // The CachedResourceLoader provides a per-context interface to the MemoryCache
@@ -102,6 +102,9 @@ public:
 #endif
 #if ENABLE(APPLICATION_MANIFEST)
     ResourceErrorOr<CachedResourceHandle<CachedApplicationManifest>> requestApplicationManifest(CachedResourceRequest&&);
+#endif
+#if ENABLE(MODEL_ELEMENT)
+    ResourceErrorOr<CachedResourceHandle<CachedRawResource>> requestModelResource(CachedResourceRequest&&);
 #endif
 
     // Called to load Web Worker main script, Service Worker main script, importScripts(), XHR,
@@ -153,8 +156,8 @@ public:
     void warnUnusedPreloads();
     void stopUnusedPreloadsTimer();
 
-    bool updateRequestAfterRedirection(CachedResource::Type, ResourceRequest&, const ResourceLoaderOptions&);
-    bool allowedByContentSecurityPolicy(CachedResource::Type, const URL&, const ResourceLoaderOptions&, ContentSecurityPolicy::RedirectResponseReceived) const;
+    bool updateRequestAfterRedirection(CachedResource::Type, ResourceRequest&, const ResourceLoaderOptions&, const URL& preRedirectURL);
+    bool allowedByContentSecurityPolicy(CachedResource::Type, const URL&, const ResourceLoaderOptions&, ContentSecurityPolicy::RedirectResponseReceived, const URL& preRedirectURL = URL()) const;
 
     static const ResourceLoaderOptions& defaultCachedResourceOptions();
 
@@ -162,9 +165,9 @@ public:
 
     ResourceTimingInformation& resourceTimingInformation() { return m_resourceTimingInfo; }
 
-    bool isAlwaysOnLoggingAllowed() const;
-
     KeepaliveRequestTracker& keepaliveRequestTracker() { return m_keepaliveRequestTracker; }
+
+    Vector<CachedResource*> visibleResourcesToPrioritize();
 
 private:
     explicit CachedResourceLoader(DocumentLoader*);
@@ -173,7 +176,7 @@ private:
 
     ResourceErrorOr<CachedResourceHandle<CachedResource>> requestResource(CachedResource::Type, CachedResourceRequest&&, ForPreload = ForPreload::No, ImageLoading = ImageLoading::Immediate);
     CachedResourceHandle<CachedResource> revalidateResource(CachedResourceRequest&&, CachedResource&);
-    CachedResourceHandle<CachedResource> loadResource(CachedResource::Type, PAL::SessionID, CachedResourceRequest&&, const CookieJar&);
+    CachedResourceHandle<CachedResource> loadResource(CachedResource::Type, PAL::SessionID, CachedResourceRequest&&, const CookieJar&, const Settings&);
 
     void prepareFetch(CachedResource::Type, CachedResourceRequest&);
     void updateHTTPRequestHeaders(FrameLoader&, CachedResource::Type, CachedResourceRequest&);
@@ -184,7 +187,7 @@ private:
     RevalidationPolicy determineRevalidationPolicy(CachedResource::Type, CachedResourceRequest&, CachedResource* existingResource, ForPreload, ImageLoading) const;
 
     bool shouldUpdateCachedResourceWithCurrentRequest(const CachedResource&, const CachedResourceRequest&);
-    CachedResourceHandle<CachedResource> updateCachedResourceWithCurrentRequest(const CachedResource&, CachedResourceRequest&&, const PAL::SessionID&, const CookieJar&);
+    CachedResourceHandle<CachedResource> updateCachedResourceWithCurrentRequest(const CachedResource&, CachedResourceRequest&&, PAL::SessionID, const CookieJar&, const Settings&);
 
     bool shouldContinueAfterNotifyingLoadedFromMemoryCache(const CachedResourceRequest&, CachedResource&, ResourceError&);
     bool checkInsecureContent(CachedResource::Type, const URL&) const;
@@ -194,7 +197,7 @@ private:
     ImageLoading clientDefersImage(const URL&) const;
     void reloadImagesIfNotDeferred();
 
-    bool canRequestAfterRedirection(CachedResource::Type, const URL&, const ResourceLoaderOptions&) const;
+    bool canRequestAfterRedirection(CachedResource::Type, const URL&, const ResourceLoaderOptions&, const URL& preRedirectURL) const;
     bool canRequestInContentDispositionAttachmentSandbox(CachedResource::Type, const URL&) const;
 
     HashSet<String> m_validatedURLs;
@@ -203,7 +206,7 @@ private:
     WeakPtr<Document> m_document;
     DocumentLoader* m_documentLoader;
 
-    int m_requestCount;
+    int m_requestCount { 0 };
 
     std::unique_ptr<ListHashSet<CachedResource*>> m_preloads;
     Timer m_unusedPreloadsTimer;
@@ -213,10 +216,9 @@ private:
     ResourceTimingInformation m_resourceTimingInfo;
     KeepaliveRequestTracker m_keepaliveRequestTracker;
 
-    // 29 bits left
-    bool m_autoLoadImages : 1;
-    bool m_imagesEnabled : 1;
-    bool m_allowStaleResources : 1;
+    bool m_autoLoadImages { true };
+    bool m_imagesEnabled { true };
+    bool m_allowStaleResources { false };
 };
 
 class ResourceCacheValidationSuppressor {

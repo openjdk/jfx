@@ -25,11 +25,8 @@
 
 #pragma once
 
-#if USE(GLIB)
-#include <wtf/Function.h>
-#endif
-
 #include <wtf/EnumTraits.h>
+#include <wtf/Forward.h>
 
 #if PLATFORM(MAC)
 OBJC_CLASS NSScreen;
@@ -53,6 +50,7 @@ typedef struct CGColorSpace *CGColorSpaceRef;
 
 namespace WebCore {
 
+class DestinationColorSpace;
 class FloatRect;
 class FloatSize;
 class Widget;
@@ -68,6 +66,7 @@ using IORegistryGPUID = int64_t; // Global IOKit I/O registryID that can match a
 int screenDepth(Widget*);
 int screenDepthPerComponent(Widget*);
 bool screenIsMonochrome(Widget*);
+WEBCORE_EXPORT DestinationColorSpace screenColorSpace(Widget* = nullptr);
 
 bool screenHasInvertedColors();
 
@@ -100,10 +99,6 @@ WEBCORE_EXPORT bool screenSupportsHighDynamicRange(Widget* = nullptr);
 constexpr bool screenSupportsHighDynamicRange(Widget* = nullptr) { return false; }
 #endif
 
-#if USE(CG)
-WEBCORE_EXPORT CGColorSpaceRef screenColorSpace(Widget* = nullptr);
-#endif
-
 struct ScreenProperties;
 struct ScreenData;
 
@@ -122,9 +117,10 @@ NSScreen *screen(PlatformDisplayID);
 
 FloatRect screenRectForDisplay(PlatformDisplayID);
 WEBCORE_EXPORT FloatRect screenRectForPrimaryScreen();
+WEBCORE_EXPORT FloatRect availableScreenRect(NSScreen *);
 
 WEBCORE_EXPORT FloatRect toUserSpace(const NSRect&, NSWindow *destination);
-FloatRect toUserSpaceForPrimaryScreen(const NSRect&);
+WEBCORE_EXPORT FloatRect toUserSpaceForPrimaryScreen(const NSRect&);
 WEBCORE_EXPORT NSRect toDeviceSpace(const FloatRect&, NSWindow *source);
 
 NSPoint flipScreenPoint(const NSPoint&, NSScreen *);
@@ -137,6 +133,8 @@ uint32_t displayMaskForDisplay(PlatformDisplayID);
 IORegistryGPUID primaryGPUID();
 IORegistryGPUID gpuIDForDisplay(PlatformDisplayID);
 IORegistryGPUID gpuIDForDisplayMask(uint32_t);
+
+WEBCORE_EXPORT FloatRect screenRectAvoidingMenuBar(NSScreen *);
 
 #endif // !PLATFORM(MAC)
 
@@ -152,8 +150,8 @@ WEBCORE_EXPORT float screenScaleFactor(UIScreen * = nullptr);
 
 #if ENABLE(TOUCH_EVENTS)
 #if PLATFORM(GTK) || PLATFORM(WPE)
-bool screenHasTouchDevice();
-bool screenIsTouchPrimaryInputDevice();
+WEBCORE_EXPORT bool screenHasTouchDevice();
+WEBCORE_EXPORT bool screenIsTouchPrimaryInputDevice();
 #else
 constexpr bool screenHasTouchDevice() { return true; }
 constexpr bool screenIsTouchPrimaryInputDevice() { return true; }

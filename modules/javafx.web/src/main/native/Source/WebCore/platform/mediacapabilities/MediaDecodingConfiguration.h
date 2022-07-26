@@ -32,6 +32,42 @@ namespace WebCore {
 
 struct MediaDecodingConfiguration : MediaConfiguration {
     MediaDecodingType type;
+
+    bool canExposeVP9 { true };
+
+    template<class Encoder> void encode(Encoder&) const;
+    template<class Decoder> static std::optional<MediaDecodingConfiguration> decode(Decoder&);
 };
 
+template<class Encoder>
+void MediaDecodingConfiguration::encode(Encoder& encoder) const
+{
+    MediaConfiguration::encode(encoder);
+    encoder << type << canExposeVP9;
 }
+
+template<class Decoder>
+std::optional<MediaDecodingConfiguration> MediaDecodingConfiguration::decode(Decoder& decoder)
+{
+    auto mediaConfiguration = MediaConfiguration::decode(decoder);
+    if (!mediaConfiguration)
+        return std::nullopt;
+
+    std::optional<MediaDecodingType> type;
+    decoder >> type;
+    if (!type)
+        return std::nullopt;
+
+    std::optional<bool> canExposeVP9;
+    decoder >> canExposeVP9;
+    if (!canExposeVP9)
+        return std::nullopt;
+
+    return {{
+        *mediaConfiguration,
+        *type,
+        *canExposeVP9
+    }};
+}
+
+} // namespace WebCore

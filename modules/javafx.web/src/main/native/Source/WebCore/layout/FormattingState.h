@@ -40,6 +40,7 @@ class FloatingState;
 enum class StyleDiff;
 
 class FormattingState {
+    WTF_MAKE_NONCOPYABLE(FormattingState);
     WTF_MAKE_ISO_ALLOCATED(FormattingState);
 public:
     FloatingState& floatingState() const { return m_floatingState; }
@@ -47,20 +48,22 @@ public:
     void markNeedsLayout(const Box&, StyleDiff);
     bool needsLayout(const Box&);
 
-    void setIntrinsicWidthConstraintsForBox(const Box&,  FormattingContext::IntrinsicWidthConstraints);
-    Optional<FormattingContext::IntrinsicWidthConstraints> intrinsicWidthConstraintsForBox(const Box&) const;
+    void setIntrinsicWidthConstraintsForBox(const Box&,  IntrinsicWidthConstraints);
+    std::optional<IntrinsicWidthConstraints> intrinsicWidthConstraintsForBox(const Box&) const;
     void clearIntrinsicWidthConstraints(const Box&);
 
-    void setIntrinsicWidthConstraints(FormattingContext::IntrinsicWidthConstraints intrinsicWidthConstraints) { m_intrinsicWidthConstraints = intrinsicWidthConstraints; }
-    Optional<FormattingContext::IntrinsicWidthConstraints> intrinsicWidthConstraints() const { return m_intrinsicWidthConstraints; }
+    void setIntrinsicWidthConstraints(IntrinsicWidthConstraints intrinsicWidthConstraints) { m_intrinsicWidthConstraints = intrinsicWidthConstraints; }
+    std::optional<IntrinsicWidthConstraints> intrinsicWidthConstraints() const { return m_intrinsicWidthConstraints; }
 
     bool isBlockFormattingState() const { return m_type == Type::Block; }
     bool isInlineFormattingState() const { return m_type == Type::Inline; }
     bool isTableFormattingState() const { return m_type == Type::Table; }
+    bool isFlexFormattingState() const { return m_type == Type::Flex; }
 
     LayoutState& layoutState() const { return m_layoutState; }
 
-    Display::Box& displayBox(const Box& layoutBox);
+    // FIXME: We need to find a way to limit access to mutatable geometry.
+    BoxGeometry& boxGeometry(const Box& layoutBox);
     // Since we layout the out-of-flow boxes at the end of the formatting context layout, it's okay to store them in the formatting state -as opposed to the containing block level.
     using OutOfFlowBoxList = Vector<WeakPtr<const Box>>;
     void addOutOfFlowBox(const Box& outOfFlowBox) { m_outOfFlowBoxes.append(makeWeakPtr(outOfFlowBox)); }
@@ -68,21 +71,21 @@ public:
     const OutOfFlowBoxList& outOfFlowBoxes() const { return m_outOfFlowBoxes; }
 
 protected:
-    enum class Type { Block, Inline, Table };
+    enum class Type { Block, Inline, Table, Flex };
     FormattingState(Ref<FloatingState>&&, Type, LayoutState&);
     ~FormattingState();
 
 private:
     LayoutState& m_layoutState;
     Ref<FloatingState> m_floatingState;
-    HashMap<const Box*, FormattingContext::IntrinsicWidthConstraints> m_intrinsicWidthConstraintsForBoxes;
-    Optional<FormattingContext::IntrinsicWidthConstraints> m_intrinsicWidthConstraints;
+    HashMap<const Box*, IntrinsicWidthConstraints> m_intrinsicWidthConstraintsForBoxes;
+    std::optional<IntrinsicWidthConstraints> m_intrinsicWidthConstraints;
     // FIXME: This needs WeakListHashSet
     OutOfFlowBoxList m_outOfFlowBoxes;
     Type m_type;
 };
 
-inline void FormattingState::setIntrinsicWidthConstraintsForBox(const Box& layoutBox, FormattingContext::IntrinsicWidthConstraints intrinsicWidthConstraints)
+inline void FormattingState::setIntrinsicWidthConstraintsForBox(const Box& layoutBox, IntrinsicWidthConstraints intrinsicWidthConstraints)
 {
     ASSERT(!m_intrinsicWidthConstraintsForBoxes.contains(&layoutBox));
     ASSERT(&m_layoutState.formattingStateForBox(layoutBox) == this);
@@ -95,7 +98,7 @@ inline void FormattingState::clearIntrinsicWidthConstraints(const Box& layoutBox
     m_intrinsicWidthConstraintsForBoxes.remove(&layoutBox);
 }
 
-inline Optional<FormattingContext::IntrinsicWidthConstraints> FormattingState::intrinsicWidthConstraintsForBox(const Box& layoutBox) const
+inline std::optional<IntrinsicWidthConstraints> FormattingState::intrinsicWidthConstraintsForBox(const Box& layoutBox) const
 {
     ASSERT(&m_layoutState.formattingStateForBox(layoutBox) == this);
     auto iterator = m_intrinsicWidthConstraintsForBoxes.find(&layoutBox);

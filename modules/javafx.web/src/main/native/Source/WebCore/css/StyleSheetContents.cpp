@@ -24,6 +24,7 @@
 #include "CSSImportRule.h"
 #include "CSSParser.h"
 #include "CSSStyleSheet.h"
+#include "CachePolicy.h"
 #include "CachedCSSStyleSheet.h"
 #include "ContentRuleListResults.h"
 #include "Document.h"
@@ -77,7 +78,7 @@ StyleSheetContents::StyleSheetContents(StyleRuleImport* ownerRule, const String&
 
 StyleSheetContents::StyleSheetContents(const StyleSheetContents& o)
     : RefCounted<StyleSheetContents>()
-    , m_ownerRule(0)
+    , m_ownerRule(nullptr)
     , m_originalURL(o.m_originalURL)
     , m_encodingFromCharsetRule(o.m_encodingFromCharsetRule)
     , m_importRules(o.m_importRules.size())
@@ -152,7 +153,7 @@ void StyleSheetContents::parserAppendRule(Ref<StyleRuleBase>&& rule)
     }
 
     if (is<StyleRuleMedia>(rule))
-        reportMediaQueryWarningIfNeeded(singleOwnerDocument(), downcast<StyleRuleMedia>(rule.get()).mediaQueries());
+        reportMediaQueryWarningIfNeeded(singleOwnerDocument(), &downcast<StyleRuleMedia>(rule.get()).mediaQueries());
 
     // NOTE: The selector list has to fit into RuleData. <http://webkit.org/b/118369>
     // If we're adding a rule with a huge number of selectors, split it up into multiple rules
@@ -338,14 +339,14 @@ bool StyleSheetContents::parseAuthorStyleSheet(const CachedCSSStyleSheet* cached
         return false;
     }
 
-    CSSParser(parserContext()).parseSheet(this, sheetText, CSSParser::RuleParsing::Deferred);
+    CSSParser(parserContext()).parseSheet(*this, sheetText, CSSParser::RuleParsing::Deferred);
     return true;
 }
 
 bool StyleSheetContents::parseString(const String& sheetText)
 {
     CSSParser p(parserContext());
-    p.parseSheet(this, sheetText, parserContext().mode != UASheetMode ? CSSParser::RuleParsing::Deferred : CSSParser::RuleParsing::Normal);
+    p.parseSheet(*this, sheetText, parserContext().mode != UASheetMode ? CSSParser::RuleParsing::Deferred : CSSParser::RuleParsing::Normal);
     return true;
 }
 
@@ -405,7 +406,7 @@ Node* StyleSheetContents::singleOwnerNode() const
 {
     StyleSheetContents* root = rootStyleSheet();
     if (root->m_clients.isEmpty())
-        return 0;
+        return nullptr;
     ASSERT(root->m_clients.size() == 1);
     return root->m_clients[0]->ownerNode();
 }
@@ -413,12 +414,7 @@ Node* StyleSheetContents::singleOwnerNode() const
 Document* StyleSheetContents::singleOwnerDocument() const
 {
     Node* ownerNode = singleOwnerNode();
-    return ownerNode ? &ownerNode->document() : 0;
-}
-
-URL StyleSheetContents::completeURL(const String& url) const
-{
-    return m_parserContext.completeURL(url);
+    return ownerNode ? &ownerNode->document() : nullptr;
 }
 
 static bool traverseRulesInVector(const Vector<RefPtr<StyleRuleBase>>& rules, const WTF::Function<bool (const StyleRuleBase&)>& handler)
@@ -427,8 +423,10 @@ static bool traverseRulesInVector(const Vector<RefPtr<StyleRuleBase>>& rules, co
         if (handler(*rule))
             return true;
         switch (rule->type()) {
-        case StyleRuleType::Media: {
-            auto* childRules = downcast<StyleRuleMedia>(*rule).childRulesWithoutDeferredParsing();
+        case StyleRuleType::Media:
+        case StyleRuleType::Supports:
+        case StyleRuleType::Layer: {
+            auto* childRules = downcast<StyleRuleGroup>(*rule).childRulesWithoutDeferredParsing();
             if (childRules && traverseRulesInVector(*childRules, handler))
                 return true;
             break;
@@ -443,8 +441,8 @@ static bool traverseRulesInVector(const Vector<RefPtr<StyleRuleBase>>& rules, co
         case StyleRuleType::Namespace:
         case StyleRuleType::Unknown:
         case StyleRuleType::Charset:
+        case StyleRuleType::CounterStyle:
         case StyleRuleType::Keyframe:
-        case StyleRuleType::Supports:
             break;
         }
     }
@@ -477,6 +475,8 @@ bool StyleSheetContents::traverseSubresources(const WTF::Function<bool (const Ca
             if (auto* cachedResource = downcast<StyleRuleImport>(rule).cachedCSSStyleSheet())
                 return handler(*cachedResource);
             return false;
+        case StyleRuleType::CounterStyle:
+            return m_parserContext.counterStyleAtRuleImageSymbolsEnabled;
         case StyleRuleType::Media:
         case StyleRuleType::Page:
         case StyleRuleType::Keyframes:
@@ -485,6 +485,7 @@ bool StyleSheetContents::traverseSubresources(const WTF::Function<bool (const Ca
         case StyleRuleType::Charset:
         case StyleRuleType::Keyframe:
         case StyleRuleType::Supports:
+        case StyleRuleType::Layer:
             return false;
         };
         ASSERT_NOT_REACHED();
@@ -507,7 +508,7 @@ bool StyleSheetContents::subresourcesAllowReuse(CachePolicy cachePolicy, FrameLo
         auto* documentLoader = loader.documentLoader();
         if (page && documentLoader) {
             const auto& request = resource.resourceRequest();
-            auto results = page->userContentProvider().processContentRuleListsForLoad(request.url(), ContentExtensions::toResourceType(resource.type()), *documentLoader);
+            auto results = page->userContentProvider().processContentRuleListsForLoad(*page, request.url(), ContentExtensions::toResourceType(resource.type(), resource.resourceRequest().requester()), *documentLoader);
             if (results.summary.blockedLoad || results.summary.madeHTTPS)
                 return true;
         }
@@ -529,7 +530,7 @@ bool StyleSheetContents::isLoadingSubresources() const
 
 StyleSheetContents* StyleSheetContents::parentStyleSheet() const
 {
-    return m_ownerRule ? m_ownerRule->parentStyleSheet() : 0;
+    return m_ownerRule ? m_ownerRule->parentStyleSheet() : nullptr;
 }
 
 void StyleSheetContents::registerClient(CSSStyleSheet* sheet)

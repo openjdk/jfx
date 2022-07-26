@@ -73,7 +73,7 @@ StorageQuotaManager::Decision StorageQuotaManager::requestSpaceOnBackgroundThrea
 {
     ASSERT(!isMainThread());
 
-    LockHolder locker(m_quotaCountDownLock);
+    Locker locker { m_quotaCountDownLock };
 
     if (tryGrantRequest(spaceRequested))
         return Decision::Grant;
@@ -88,7 +88,7 @@ StorageQuotaManager::Decision StorageQuotaManager::requestSpaceOnBackgroundThrea
     BinarySemaphore semaphore;
     callOnMainThread([this, protectedThis = makeRef(*this), spaceRequested, &semaphore]() mutable {
         RELEASE_LOG(Storage, "%p - StorageQuotaManager asks for quota increase %" PRIu64, this, spaceRequested);
-        m_quotaIncreaseRequester(m_quota, m_usage, spaceRequested, [this, protectedThis = WTFMove(protectedThis), &semaphore](Optional<uint64_t> newQuota) mutable {
+        m_quotaIncreaseRequester(m_quota, m_usage, spaceRequested, [this, protectedThis = WTFMove(protectedThis), &semaphore](std::optional<uint64_t> newQuota) mutable {
             RELEASE_LOG(Storage, "%p - StorageQuotaManager receives quota increase response %" PRIu64, this, newQuota ? *newQuota : 0);
             ASSERT(isMainThread());
 
@@ -109,6 +109,7 @@ StorageQuotaManager::Decision StorageQuotaManager::requestSpaceOnBackgroundThrea
 bool StorageQuotaManager::tryGrantRequest(uint64_t spaceRequested)
 {
     ASSERT(m_quotaCountDownLock.isLocked());
+
     if (spaceRequested <= m_quotaCountDown) {
         m_quotaCountDown -= spaceRequested;
         return true;
@@ -130,7 +131,7 @@ void StorageQuotaManager::updateQuotaBasedOnUsage()
 
 void StorageQuotaManager::resetQuotaUpdatedBasedOnUsageForTesting()
 {
-    LockHolder locker(m_quotaCountDownLock);
+    Locker locker { m_quotaCountDownLock };
     m_quota = m_initialQuota;
     m_quotaCountDown = 0;
     m_quotaUpdatedBasedOnUsage = false;
@@ -138,7 +139,7 @@ void StorageQuotaManager::resetQuotaUpdatedBasedOnUsageForTesting()
 
 void StorageQuotaManager::resetQuotaForTesting()
 {
-    LockHolder locker(m_quotaCountDownLock);
+    Locker locker { m_quotaCountDownLock };
     m_quota = m_initialQuota;
     m_quotaCountDown = 0;
 }

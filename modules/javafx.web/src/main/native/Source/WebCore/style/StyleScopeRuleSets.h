@@ -69,8 +69,6 @@ public:
 
     bool hasComplexSelectorsForStyleAttribute() const;
 
-    void setIsForShadowScope() { m_isForShadowScope = true; }
-
     void setUsesSharedUserStyle(bool b) { m_usesSharedUserStyle = b; }
     void initializeUserStyle();
 
@@ -81,7 +79,7 @@ public:
 
     bool hasViewportDependentMediaQueries() const;
 
-    Optional<DynamicMediaQueryEvaluationChanges> evaluateDynamicMediaQueryRules(const MediaQueryEvaluator&);
+    std::optional<DynamicMediaQueryEvaluationChanges> evaluateDynamicMediaQueryRules(const MediaQueryEvaluator&);
 
     RuleFeatureSet& mutableFeatures();
 
@@ -104,13 +102,12 @@ private:
     mutable HashMap<AtomString, std::unique_ptr<Vector<InvalidationRuleSet>>> m_attributeInvalidationRuleSets;
     mutable HashMap<CSSSelector::PseudoClassType, std::unique_ptr<Vector<InvalidationRuleSet>>, WTF::IntHash<CSSSelector::PseudoClassType>, WTF::StrongEnumHashTraits<CSSSelector::PseudoClassType>> m_pseudoClassInvalidationRuleSets;
 
-    mutable Optional<bool> m_cachedHasComplexSelectorsForStyleAttribute;
+    mutable std::optional<bool> m_cachedHasComplexSelectorsForStyleAttribute;
 
     mutable unsigned m_defaultStyleVersionOnFeatureCollection { 0 };
     mutable unsigned m_userAgentMediaQueryRuleCountOnUpdate { 0 };
 
     bool m_usesSharedUserStyle { false };
-    bool m_isForShadowScope { false };
     bool m_isAuthorStyleDefined { false };
 
     // For catching <rdar://problem/53413013>

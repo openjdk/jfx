@@ -125,28 +125,28 @@ typedef gpointer GstClockID;
  * GST_TIME_AS_SECONDS:
  * @time: the time
  *
- * Convert a #GstClockTime to seconds.
+ * Converts a #GstClockTime to seconds.
  */
 #define GST_TIME_AS_SECONDS(time)  ((time) / GST_SECOND)
 /**
  * GST_TIME_AS_MSECONDS:
  * @time: the time
  *
- * Convert a #GstClockTime to milliseconds (1/1000 of a second).
+ * Converts a #GstClockTime to milliseconds (1/1000 of a second).
  */
 #define GST_TIME_AS_MSECONDS(time) ((time) / G_GINT64_CONSTANT (1000000))
 /**
  * GST_TIME_AS_USECONDS:
  * @time: the time
  *
- * Convert a #GstClockTime to microseconds (1/1000000 of a second).
+ * Converts a #GstClockTime to microseconds (1/1000000 of a second).
  */
 #define GST_TIME_AS_USECONDS(time) ((time) / G_GINT64_CONSTANT (1000))
 /**
  * GST_TIME_AS_NSECONDS:
  * @time: the time
  *
- * Convert a #GstClockTime to nanoseconds (1/1000000000 of a second).
+ * Converts a #GstClockTime to nanoseconds (1/1000000000 of a second).
  */
 #define GST_TIME_AS_NSECONDS(time) (time)
 
@@ -155,7 +155,7 @@ typedef gpointer GstClockID;
  * @s: the first time
  * @e: the second time
  *
- * Calculate a difference between two clock times as a #GstClockTimeDiff.
+ * Calculates a difference between two clock times as a #GstClockTimeDiff.
  * The difference is calculated as @e - @s.
  */
 #define GST_CLOCK_DIFF(s, e)            (GstClockTimeDiff)((e) - (s))
@@ -164,7 +164,7 @@ typedef gpointer GstClockID;
  * GST_TIMEVAL_TO_TIME:
  * @tv: the timeval to convert
  *
- * Convert a GTimeVal to a #GstClockTime.
+ * Converts a GTimeVal to a #GstClockTime.
  */
 #define GST_TIMEVAL_TO_TIME(tv)         (GstClockTime)((tv).tv_sec * GST_SECOND + (tv).tv_usec * GST_USECOND)
 
@@ -173,7 +173,7 @@ typedef gpointer GstClockID;
  * @t: The #GstClockTime to convert
  * @tv: The target timeval
  *
- * Convert a #GstClockTime to a GTimeVal
+ * Converts a #GstClockTime to a GTimeVal
  *
  * > on 32-bit systems, a timeval has a range of only 2^32 - 1 seconds,
  * > which is about 68 years.  Expect trouble if you want to schedule stuff
@@ -193,7 +193,7 @@ G_STMT_START {                                                  \
  * GST_TIMESPEC_TO_TIME:
  * @ts: the timespec to convert
  *
- * Convert a struct timespec (see man pselect) to a #GstClockTime.
+ * Converts a struct timespec (see `man pselect`) to a #GstClockTime.
  */
 #define GST_TIMESPEC_TO_TIME(ts)        (GstClockTime)((ts).tv_sec * GST_SECOND + (ts).tv_nsec * GST_NSECOND)
 /**
@@ -201,7 +201,7 @@ G_STMT_START {                                                  \
  * @t: The #GstClockTime to convert
  * @ts: The target timespec
  *
- * Convert a #GstClockTime to a struct timespec (see man pselect)
+ * Converts a #GstClockTime to a struct timespec (see `man pselect`)
  */
 #define GST_TIME_TO_TIMESPEC(t,ts)                                \
 G_STMT_START {                                                    \
@@ -216,20 +216,21 @@ G_STMT_START {                                                    \
  * GST_TIME_FORMAT: (skip):
  *
  * A string that can be used in printf-like format strings to display a
- * #GstClockTime value in h:m:s format.  Use GST_TIME_ARGS() to construct
+ * #GstClockTime value in `h:m:s` format.  Use GST_TIME_ARGS() to construct
  * the matching arguments.
  *
  * Example:
- * |[<!-- language="C" -->
+ *
+ * ``` C
  * printf("%" GST_TIME_FORMAT "\n", GST_TIME_ARGS(ts));
- * ]|
+ * ```
  */
 #define GST_TIME_FORMAT "u:%02u:%02u.%09u"
 /**
  * GST_TIME_ARGS: (skip):
  * @t: a #GstClockTime
  *
- * Format @t for the #GST_TIME_FORMAT format string. Note: @t will be
+ * Formats @t for the #GST_TIME_FORMAT format string. Note: @t will be
  * evaluated more than once.
  */
 #define GST_TIME_ARGS(t) \
@@ -245,13 +246,14 @@ G_STMT_START {                                                    \
  * GST_STIME_FORMAT: (skip):
  *
  * A string that can be used in printf-like format strings to display a signed
- * #GstClockTimeDiff or #gint64 value in h:m:s format.  Use GST_TIME_ARGS() to
+ * #GstClockTimeDiff or #gint64 value in `h:m:s` format.  Use GST_TIME_ARGS() to
  * construct the matching arguments.
  *
  * Example:
- * |[
+ *
+ * ``` C
  * printf("%" GST_STIME_FORMAT "\n", GST_STIME_ARGS(ts));
- * ]|
+ * ```
  *
  * Since: 1.6
  */
@@ -260,7 +262,7 @@ G_STMT_START {                                                    \
  * GST_STIME_ARGS: (skip):
  * @t: a #GstClockTimeDiff or #gint64
  *
- * Format @t for the #GST_STIME_FORMAT format string. Note: @t will be
+ * Formats @t for the #GST_STIME_FORMAT format string. Note: @t will be
  * evaluated more than once.
  *
  * Since: 1.6
@@ -336,7 +338,7 @@ typedef enum {
  * GST_CLOCK_ENTRY:
  * @entry: the entry to cast
  *
- * Cast to a clock entry
+ * Casts to a clock entry
  */
 #define GST_CLOCK_ENTRY(entry)          ((GstClockEntry *)(entry))
 
@@ -345,7 +347,7 @@ typedef enum {
  * GST_CLOCK_ENTRY_CLOCK:
  * @entry: the entry to query
  *
- * Get the owner clock of the entry
+ * Gets the owner clock of the entry
  *
  * Deprecated: Use gst_clock_id_get_clock() instead.
  */
@@ -355,21 +357,21 @@ typedef enum {
  * GST_CLOCK_ENTRY_TYPE:
  * @entry: the entry to query
  *
- * Get the type of the clock entry
+ * Gets the type of the clock entry
  */
 #define GST_CLOCK_ENTRY_TYPE(entry)     ((entry)->type)
 /**
  * GST_CLOCK_ENTRY_TIME:
  * @entry: the entry to query
  *
- * Get the requested time of this entry
+ * Gets the requested time of this entry
  */
 #define GST_CLOCK_ENTRY_TIME(entry)     ((entry)->time)
 /**
  * GST_CLOCK_ENTRY_INTERVAL:
  * @entry: the entry to query
  *
- * Get the interval of this periodic entry
+ * Gets the interval of this periodic entry
  */
 #define GST_CLOCK_ENTRY_INTERVAL(entry) ((entry)->interval)
 /**
@@ -391,7 +393,7 @@ typedef enum {
  */
 struct _GstClockEntry {
   gint                  refcount;
-  /*< protected >*/
+  /*< private >*/
 #ifndef GST_REMOVE_DEPRECATED
 #ifndef GST_DISABLE_DEPRECATED
   GstClock              *clock;
@@ -423,8 +425,6 @@ struct _GstClockEntry {
  * @GST_CLOCK_FLAG_CAN_DO_PERIODIC_ASYNC: clock can do async periodic timeout callbacks
  * @GST_CLOCK_FLAG_CAN_SET_RESOLUTION: clock's resolution can be changed
  * @GST_CLOCK_FLAG_CAN_SET_MASTER: clock can be slaved to a master clock
- * @GST_CLOCK_FLAG_NEEDS_STARTUP_SYNC: clock needs to be synced before it can be used
- *     (Since: 1.6)
  * @GST_CLOCK_FLAG_LAST: subclasses can add additional flags starting from this flag
  *
  * The capabilities of this clock
@@ -436,6 +436,14 @@ typedef enum {
   GST_CLOCK_FLAG_CAN_DO_PERIODIC_ASYNC  = (GST_OBJECT_FLAG_LAST << 3),
   GST_CLOCK_FLAG_CAN_SET_RESOLUTION     = (GST_OBJECT_FLAG_LAST << 4),
   GST_CLOCK_FLAG_CAN_SET_MASTER         = (GST_OBJECT_FLAG_LAST << 5),
+
+  /**
+   * GST_CLOCK_FLAG_NEEDS_STARTUP_SYNC:
+   *
+   * clock needs to be synced before it can be used
+   *
+   * Since: 1.6
+   */
   GST_CLOCK_FLAG_NEEDS_STARTUP_SYNC     = (GST_OBJECT_FLAG_LAST << 6),
   /* padding */
   GST_CLOCK_FLAG_LAST                   = (GST_OBJECT_FLAG_LAST << 8)
@@ -451,9 +459,9 @@ typedef enum {
 
 /**
  * GstClock:
+ * @object: the parent structure
  *
- * #GstClock base structure. The values of this structure are
- * protected for subclasses, use the methods to use the #GstClock.
+ * #GstClock base structure.
  */
 struct _GstClock {
   GstObject      object;
@@ -467,15 +475,6 @@ struct _GstClock {
 /**
  * GstClockClass:
  * @parent_class: the parent class structure
- * @change_resolution: change the resolution of the clock. Not all values might
- *                     be acceptable. The new resolution should be returned.
- * @get_resolution: get the resolution of the clock.
- * @get_internal_time: get the internal unadjusted time of the clock.
- *        implement @wait_jitter instead.
- * @wait: perform a blocking wait on the given #GstClockEntry and return
- *               the jitter.
- * @wait_async: perform an asynchronous wait for the given #GstClockEntry.
- * @unschedule: unblock a blocking or async wait operation.
  *
  * GStreamer clock class. Override the vmethods to implement the clock
  * functionality.
@@ -485,17 +484,81 @@ struct _GstClockClass {
 
   /*< public >*/
   /* vtable */
+
+  /**
+   * GstClockClass::change_resolution:
+   * @clock: the #GstClock
+   * @old_resolution: the previous resolution
+   * @new_resolution: the new resolution
+   *
+   * Change the resolution of the clock. Not all values might
+   * be acceptable.
+   *
+   * Returns: the new resolution
+   */
   GstClockTime          (*change_resolution)    (GstClock *clock,
                                                  GstClockTime old_resolution,
                                                  GstClockTime new_resolution);
+
+  /**
+   * GstClockClass::get_resolution:
+   * @clock: the #GstClock
+   *
+   * Get the resolution of the clock.
+   *
+   * Returns: the current resolution
+   */
   GstClockTime          (*get_resolution)       (GstClock *clock);
 
+  /**
+   * GstClockClass::get_internal_time:
+   * @clock: the #GstClock
+   *
+   * Get the internal unadjusted time of the clock.
+   *
+   * Implement #GstClockClass::wait instead.
+   *
+   * Returns: the internal time
+   */
   GstClockTime          (*get_internal_time)    (GstClock *clock);
 
   /* waiting on an ID */
+
+  /**
+   * GstClockClass::wait:
+   * @clock: the #GstClock
+   * @entry: the entry to wait on
+   * @jitter: (out) (allow-none): a pointer that will contain the jitter
+   *
+   * Perform a blocking wait on the given #GstClockEntry and return
+   * the jitter.
+   *
+   * Returns: the result of the blocking wait. #GST_CLOCK_EARLY will be returned
+   * if the current clock time is past the time of @id, #GST_CLOCK_OK if
+   * @id was scheduled in time. #GST_CLOCK_UNSCHEDULED if @id was
+   * unscheduled with gst_clock_id_unschedule().
+   */
   GstClockReturn        (*wait)                 (GstClock *clock, GstClockEntry *entry,
                                                  GstClockTimeDiff *jitter);
+
+  /**
+   * GstClockClass::wait_async:
+   * @clock: the #GstClock
+   * @entry: the entry to wait on
+   *
+   * Perform an asynchronous wait on the given #GstClockEntry.
+   *
+   * Returns: the result of the non blocking wait.
+   */
   GstClockReturn        (*wait_async)           (GstClock *clock, GstClockEntry *entry);
+
+  /**
+   * GstClockClass::unschedule:
+   * @clock: the #GstClock
+   * @entry: the entry to unschedule
+   *
+   * Unblock a blocking or async wait operation.
+   */
   void                  (*unschedule)           (GstClock *clock, GstClockEntry *entry);
 
   /*< private >*/

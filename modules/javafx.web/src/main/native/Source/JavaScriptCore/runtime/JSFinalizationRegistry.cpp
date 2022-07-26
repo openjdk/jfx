@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Apple, Inc. All rights reserved.
+ * Copyright (C) 2020-2021 Apple, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,6 +26,7 @@
 #include "config.h"
 #include "JSFinalizationRegistry.h"
 
+#include "AbstractSlotVisitor.h"
 #include "DeferredWorkTimer.h"
 #include "JSCInlines.h"
 #include "JSInternalFieldObjectImplInlines.h"
@@ -42,11 +43,11 @@ Structure* JSFinalizationRegistry::createStructure(VM& vm, JSGlobalObject* globa
 JSFinalizationRegistry* JSFinalizationRegistry::create(VM& vm, Structure* structure, JSObject* callback)
 {
     JSFinalizationRegistry* instance = new (NotNull, allocateCell<JSFinalizationRegistry>(vm.heap)) JSFinalizationRegistry(vm, structure);
-    instance->finishCreation(vm, callback);
+    instance->finishCreation(vm, structure->globalObject(), callback);
     return instance;
 }
 
-void JSFinalizationRegistry::finishCreation(VM& vm, JSObject* callback)
+void JSFinalizationRegistry::finishCreation(VM& vm, JSGlobalObject* globalObject, JSObject* callback)
 {
     Base::finishCreation(vm);
     ASSERT(callback->isCallable(vm));
@@ -54,15 +55,20 @@ void JSFinalizationRegistry::finishCreation(VM& vm, JSObject* callback)
     for (unsigned index = 0; index < values.size(); ++index)
         Base::internalField(index).setWithoutWriteBarrier(values[index]);
     internalField(Field::Callback).setWithoutWriteBarrier(callback);
+
+    // Make sure we init the DOM wrapper for our document since it must be allocated before finalizeUnconditionally is called. finalizeUnconditionally,
+    // is called during the GC flip so no JS objects can be allocated there. This only works because we no longer weakly hold on to DOM wrappers.
+    globalObject->globalObjectMethodTable()->currentScriptExecutionOwner(globalObject);
 }
 
-void JSFinalizationRegistry::visitChildren(JSCell* cell, SlotVisitor& visitor)
+template<typename Visitor>
+void JSFinalizationRegistry::visitChildrenImpl(JSCell* cell, Visitor& visitor)
 {
     Base::visitChildren(cell, visitor);
 
     auto* thisObject = jsCast<JSFinalizationRegistry*>(cell);
 
-    auto locker = holdLock(thisObject->cellLock());
+    Locker locker { thisObject->cellLock() };
     for (const auto& iter : thisObject->m_liveRegistrations) {
         for (auto& registration : iter.value)
             visitor.append(registration.holdings);
@@ -76,12 +82,14 @@ void JSFinalizationRegistry::visitChildren(JSCell* cell, SlotVisitor& visitor)
     for (auto& holdings : thisObject->m_noUnregistrationDead)
         visitor.append(holdings);
 
-    size_t totalBufferSizesInBytes = thisObject->m_deadRegistrations.capacity() * sizeof(decltype(thisObject->m_deadRegistrations)::KeyValuePairType);
-    totalBufferSizesInBytes += thisObject->m_liveRegistrations.capacity() * sizeof(decltype(thisObject->m_deadRegistrations)::KeyValuePairType);
+    size_t totalBufferSizesInBytes = thisObject->m_deadRegistrations.capacity() * sizeof(typename decltype(thisObject->m_deadRegistrations)::KeyValuePairType);
+    totalBufferSizesInBytes += thisObject->m_liveRegistrations.capacity() * sizeof(typename decltype(thisObject->m_deadRegistrations)::KeyValuePairType);
     totalBufferSizesInBytes += thisObject->m_noUnregistrationLive.capacity() * sizeof(decltype(thisObject->m_noUnregistrationLive.takeLast()));
     totalBufferSizesInBytes += thisObject->m_noUnregistrationDead.capacity() * sizeof(decltype(thisObject->m_noUnregistrationLive.takeLast()));
     visitor.vm().heap.reportExtraMemoryVisited(totalBufferSizesInBytes);
 }
+
+DEFINE_VISIT_CHILDREN(JSFinalizationRegistry);
 
 void JSFinalizationRegistry::destroy(JSCell* table)
 {
@@ -90,7 +98,7 @@ void JSFinalizationRegistry::destroy(JSCell* table)
 
 void JSFinalizationRegistry::finalizeUnconditionally(VM& vm)
 {
-    auto locker = holdLock(cellLock());
+    Locker locker { cellLock() };
 
 #if ASSERT_ENABLED
     for (const auto& iter : m_deadRegistrations)
@@ -141,15 +149,15 @@ void JSFinalizationRegistry::finalizeUnconditionally(VM& vm)
         return !bucket.value.size();
     });
 
-    if (!vm.deferredWorkTimer->hasPendingWork(this) && (readiedCell || deadCount(locker))) {
-        vm.deferredWorkTimer->addPendingWork(vm, this, { });
-        ASSERT(vm.deferredWorkTimer->hasPendingWork(this));
-        vm.deferredWorkTimer->scheduleWorkSoon(this, [this] {
+    if (!m_hasAlreadyScheduledWork && (readiedCell || deadCount(locker))) {
+        auto ticket = vm.deferredWorkTimer->addPendingWork(vm, this, { });
+        ASSERT(vm.deferredWorkTimer->hasPendingWork(ticket));
+        vm.deferredWorkTimer->scheduleWorkSoon(ticket, [this](DeferredWorkTimer::Ticket) {
             JSGlobalObject* globalObject = this->globalObject();
-            VM& vm = globalObject->vm();
+            this->m_hasAlreadyScheduledWork = false;
             this->runFinalizationCleanup(globalObject);
-            vm.deferredWorkTimer->cancelPendingWork(this);
         });
+        m_hasAlreadyScheduledWork = true;
     }
 }
 
@@ -168,7 +176,7 @@ void JSFinalizationRegistry::runFinalizationCleanup(JSGlobalObject* globalObject
 
 JSValue JSFinalizationRegistry::takeDeadHoldingsValue()
 {
-    auto locker = holdLock(cellLock());
+    Locker locker { cellLock() };
     JSValue result;
     if (m_noUnregistrationDead.size())
         result = m_noUnregistrationDead.takeLast().get();
@@ -192,7 +200,7 @@ JSValue JSFinalizationRegistry::takeDeadHoldingsValue()
 
 void JSFinalizationRegistry::registerTarget(VM& vm, JSObject* target, JSValue holdings, JSValue token)
 {
-    auto locker = holdLock(cellLock());
+    Locker locker { cellLock() };
     Registration registration;
     registration.target = target;
     registration.holdings.setWithoutWriteBarrier(holdings);
@@ -208,7 +216,7 @@ void JSFinalizationRegistry::registerTarget(VM& vm, JSObject* target, JSValue ho
 bool JSFinalizationRegistry::unregister(VM&, JSObject* token)
 {
     // We don't need to write barrier ourselves here because we will only point to less things after this finishes.
-    auto locker = holdLock(cellLock());
+    Locker locker { cellLock() };
     bool result = m_liveRegistrations.remove(token);
     result |= m_deadRegistrations.remove(token);
 
@@ -233,9 +241,5 @@ size_t JSFinalizationRegistry::deadCount(const Locker<JSCellLock>&)
     return count;
 }
 
-String JSFinalizationRegistry::toStringName(const JSC::JSObject*, JSGlobalObject*)
-{
-    return "Object"_s;
 }
 
-}

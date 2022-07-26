@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2021 Apple Inc. All rights reserved.
  * Copyright (C) 2007-2009 Torch Mobile, Inc.
  * Copyright (C) 2010, 2011 Research In Motion Limited. All rights reserved.
  * Copyright (C) 2013 Samsung Electronics. All rights reserved.
@@ -108,10 +108,6 @@
 #define ENABLE_WEBPROCESS_NSRUNLOOP 0
 #endif
 
-#if !defined(ENABLE_WEBPROCESS_WINDOWSERVER_BLOCKING)
-#define ENABLE_WEBPROCESS_WINDOWSERVER_BLOCKING 0
-#endif
-
 #if !defined(ENABLE_MAC_GESTURE_EVENTS)
 #define ENABLE_MAC_GESTURE_EVENTS 0
 #endif
@@ -181,10 +177,6 @@
 #define ENABLE_ACCESSIBILITY 1
 #endif
 
-#if !defined(ENABLE_ACCELERATED_2D_CANVAS)
-#define ENABLE_ACCELERATED_2D_CANVAS 0
-#endif
-
 #if !defined(ENABLE_OVERFLOW_SCROLLING_TOUCH)
 #define ENABLE_OVERFLOW_SCROLLING_TOUCH 0
 #endif
@@ -195,6 +187,10 @@
 
 #if !defined(ENABLE_CHANNEL_MESSAGING)
 #define ENABLE_CHANNEL_MESSAGING 1
+#endif
+
+#if !defined(ENABLE_CONTENT_CHANGE_OBSERVER)
+#define ENABLE_CONTENT_CHANGE_OBSERVER 0
 #endif
 
 #if !defined(ENABLE_CONTENT_EXTENSIONS)
@@ -229,6 +225,10 @@
 #define ENABLE_CSS_CONIC_GRADIENTS 0
 #endif
 
+#if !defined(ENABLE_CSS_TRANSFORM_STYLE_OPTIMIZED_3D)
+#define ENABLE_CSS_TRANSFORM_STYLE_OPTIMIZED_3D 0
+#endif
+
 #if !defined(ENABLE_CUSTOM_CURSOR_SUPPORT)
 #define ENABLE_CUSTOM_CURSOR_SUPPORT 1
 #endif
@@ -243,6 +243,14 @@
 
 #if !defined(ENABLE_DEVICE_ORIENTATION)
 #define ENABLE_DEVICE_ORIENTATION 0
+#endif
+
+#if !defined(ENABLE_DESTINATION_COLOR_SPACE_DISPLAY_P3)
+#define ENABLE_DESTINATION_COLOR_SPACE_DISPLAY_P3 0
+#endif
+
+#if !defined(ENABLE_DESTINATION_COLOR_SPACE_LINEAR_SRGB)
+#define ENABLE_DESTINATION_COLOR_SPACE_LINEAR_SRGB 1
 #endif
 
 #if !defined(ENABLE_DOWNLOAD_ATTRIBUTE)
@@ -283,14 +291,6 @@
 #define ENABLE_GEOLOCATION 0
 #endif
 
-#if !defined(ENABLE_INDEXED_DATABASE)
-#define ENABLE_INDEXED_DATABASE 0
-#endif
-
-#if !defined(ENABLE_INDEXED_DATABASE_IN_WORKERS)
-#define ENABLE_INDEXED_DATABASE_IN_WORKERS 0
-#endif
-
 #if !defined(ENABLE_INPUT_TYPE_COLOR)
 #define ENABLE_INPUT_TYPE_COLOR 1
 #endif
@@ -315,6 +315,17 @@
 #define ENABLE_INPUT_TYPE_WEEK 0
 #endif
 
+#if !defined(ENABLE_IOS_FORM_CONTROL_REFRESH)
+#define ENABLE_IOS_FORM_CONTROL_REFRESH 0
+#endif
+
+#if !defined(ENABLE_IPC_TESTING_API)
+/* Enable IPC testing on all ASAN builds and debug builds. */
+#if (ASAN_ENABLED || !defined(NDEBUG)) && PLATFORM(COCOA)
+#define ENABLE_IPC_TESTING_API 1
+#endif
+#endif
+
 #if ENABLE(INPUT_TYPE_DATE) || ENABLE(INPUT_TYPE_DATETIMELOCAL) || ENABLE(INPUT_TYPE_MONTH) || ENABLE(INPUT_TYPE_TIME) || ENABLE(INPUT_TYPE_WEEK)
 #if !defined(ENABLE_DATE_AND_TIME_INPUT_TYPES)
 #define ENABLE_DATE_AND_TIME_INPUT_TYPES 1
@@ -325,16 +336,16 @@
 #define ENABLE_INSPECTOR_ALTERNATE_DISPATCHERS 0
 #endif
 
+#if !defined(ENABLE_INSPECTOR_EXTENSIONS)
+#define ENABLE_INSPECTOR_EXTENSIONS 0
+#endif
+
 #if !defined(ENABLE_INSPECTOR_TELEMETRY)
 #define ENABLE_INSPECTOR_TELEMETRY 0
 #endif
 
 #if !defined(ENABLE_LAYOUT_FORMATTING_CONTEXT)
 #define ENABLE_LAYOUT_FORMATTING_CONTEXT 0
-#endif
-
-#if !defined(ENABLE_LEGACY_CSS_VENDOR_PREFIXES)
-#define ENABLE_LEGACY_CSS_VENDOR_PREFIXES 0
 #endif
 
 #if !defined(ENABLE_LETTERPRESS)
@@ -365,12 +376,12 @@
 #define ENABLE_MEDIA_STREAM 0
 #endif
 
-#if !defined(ENABLE_METER_ELEMENT)
-#define ENABLE_METER_ELEMENT 1
-#endif
-
 #if !defined(ENABLE_MHTML)
 #define ENABLE_MHTML 0
+#endif
+
+#if !defined(ENABLE_MODERN_MEDIA_CONTROLS)
+#define ENABLE_MODERN_MEDIA_CONTROLS 0
 #endif
 
 #if !defined(ENABLE_MOUSE_CURSOR_SCALE)
@@ -397,6 +408,10 @@
 #define ENABLE_OFFSCREEN_CANVAS 0
 #endif
 
+#if !defined(ENABLE_OFFSCREEN_CANVAS_IN_WORKERS)
+#define ENABLE_OFFSCREEN_CANVAS_IN_WORKERS 0
+#endif
+
 #if !defined(ENABLE_THUNDER)
 #define ENABLE_THUNDER 0
 #endif
@@ -421,10 +436,6 @@
 
 #if !defined(ENABLE_POINTER_LOCK)
 #define ENABLE_POINTER_LOCK 1
-#endif
-
-#if !defined(ENABLE_QUOTA)
-#define ENABLE_QUOTA 0
 #endif
 
 #if !defined(ENABLE_REMOTE_INSPECTOR)
@@ -456,10 +467,6 @@
 
 #if !defined(ENABLE_SPELLCHECK)
 #define ENABLE_SPELLCHECK 0
-#endif
-
-#if !defined(ENABLE_SVG_FONTS)
-#define ENABLE_SVG_FONTS 1
 #endif
 
 #if !defined(ENABLE_TEXT_CARET)
@@ -496,10 +503,6 @@
 
 #if !defined(ENABLE_WEBGL)
 #define ENABLE_WEBGL 0
-#endif
-
-#if !defined(ENABLE_GRAPHICS_CONTEXT_GL)
-#define ENABLE_GRAPHICS_CONTEXT_GL ENABLE_WEBGL
 #endif
 
 #if !defined(ENABLE_WEB_ARCHIVE)
@@ -579,6 +582,12 @@
 #endif
 
 #if USE(JSVALUE32_64)
+/* Disable WebAssembly on all 32bit platforms. Its LLInt tier could
+ * work on them, but still needs some final touches. */
+#undef ENABLE_WEBASSEMBLY
+#define ENABLE_WEBASSEMBLY 0
+#undef ENABLE_WEBASSEMBLY_B3JIT
+#define ENABLE_WEBASSEMBLY_B3JIT 0
 #if (CPU(ARM_THUMB2) || CPU(MIPS)) && OS(LINUX)
 /* On ARMv7 and MIPS on Linux the JIT is enabled unless explicitly disabled. */
 #if !defined(ENABLE_JIT)
@@ -603,6 +612,10 @@
 #else
 #define ENABLE_C_LOOP 1
 #endif
+#endif
+
+#if !defined(ENABLE_JUMP_ISLANDS) && CPU(ARM64) && CPU(ADDRESS64) && ENABLE(JIT)
+#define ENABLE_JUMP_ISLANDS 1
 #endif
 
 /* FIXME: This should be turned into an #error invariant */
@@ -658,14 +671,9 @@
 #define ENABLE_FAST_TLS_JIT 1
 #endif
 
-#if ENABLE(JIT) && (CPU(X86) || CPU(X86_64) || CPU(ARM_THUMB2) || CPU(ARM64) || CPU(MIPS))
-#define ENABLE_MASM_PROBE 1
-#endif
-
 /* FIXME: This should be turned into an #error invariant */
-/* If the baseline jit is not available, then disable upper tiers as well.
-   The MacroAssembler::probe() is also required for supporting the upper tiers. */
-#if !ENABLE(JIT) || !ENABLE(MASM_PROBE)
+/* If the baseline jit is not available, then disable upper tiers as well. */
+#if !ENABLE(JIT)
 #undef ENABLE_DFG_JIT
 #undef ENABLE_FTL_JIT
 #define ENABLE_DFG_JIT 0
@@ -686,6 +694,7 @@
 
 #if !defined(ENABLE_WEBASSEMBLY) && (ENABLE(B3_JIT) && PLATFORM(COCOA) && CPU(ADDRESS64))
 #define ENABLE_WEBASSEMBLY 1
+#define ENABLE_WEBASSEMBLY_B3JIT 1
 #endif
 
 /* The SamplingProfiler is the probabilistic and low-overhead profiler used by
@@ -697,7 +706,7 @@
 #endif
 
 #if ENABLE(WEBASSEMBLY) && HAVE(MACHINE_CONTEXT)
-#define ENABLE_WEBASSEMBLY_FAST_MEMORY 1
+#define ENABLE_WEBASSEMBLY_SIGNALING_MEMORY 1
 #endif
 
 /* Counts uses of write barriers using sampling counters. Be sure to also
@@ -752,6 +761,10 @@
 #define ENABLE_YARR_JIT_BACKREFERENCES 1
 #endif
 
+#if CPU(ARM64) || CPU(X86_64)
+#define ENABLE_YARR_JIT_UNICODE_EXPRESSIONS 1
+#endif
+
 /* If either the JIT or the RegExp JIT is enabled, then the Assembler must be
    enabled as well: */
 #if ENABLE(JIT) || ENABLE(YARR_JIT) || !ENABLE(C_LOOP)
@@ -781,6 +794,24 @@
 #define ENABLE_SIGNAL_BASED_VM_TRAPS 1
 #endif
 
+/* The unified Config record feature is not available for Windows because the
+   Windows port puts WTF in a separate DLL, and the offlineasm code accessing
+   the config record expects the config record to be directly accessible like
+   a global variable (and not have to go thru DLL shenanigans). C++ code would
+   resolve these DLL bindings automatically, but offlineasm does not.
+
+   The permanently freezing feature also currently relies on the Config records
+   being unified, and the Windows port also does not currently have an
+   implementation for the freezing mechanism anyway. For simplicity, we just
+   disable both the use of unified Config record and config freezing for the
+   Windows port.
+*/
+#if OS(WINDOWS)
+#define ENABLE_UNIFIED_AND_FREEZABLE_CONFIG_RECORD 0
+#else
+#define ENABLE_UNIFIED_AND_FREEZABLE_CONFIG_RECORD 1
+#endif
+
 /* CSS Selector JIT Compiler */
 #if !defined(ENABLE_CSS_SELECTOR_JIT) && ((CPU(X86_64) || CPU(ARM64) || (CPU(ARM_THUMB2) && OS(DARWIN))) && ENABLE(JIT) && (OS(DARWIN) || PLATFORM(GTK) || PLATFORM(WPE)))
 #define ENABLE_CSS_SELECTOR_JIT 1
@@ -800,6 +831,22 @@
 
 #if !defined(ENABLE_GC_VALIDATION) && !defined(NDEBUG)
 #define ENABLE_GC_VALIDATION 1
+#endif
+
+#if OS(DARWIN) && ENABLE(JIT) && USE(APPLE_INTERNAL_SDK) && CPU(ARM64E) && HAVE(JIT_CAGE) && !PLATFORM(MAC)
+#define ENABLE_JIT_CAGE 1
+#endif
+
+#if OS(DARWIN) && CPU(ADDRESS64) && ENABLE(JIT) && (ENABLE(JIT_CAGE) || ASSERT_ENABLED)
+#define ENABLE_JIT_OPERATION_VALIDATION 1
+#endif
+
+#if CPU(ARM64) || (CPU(X86_64) && !OS(WINDOWS))
+/* The implementation of these thunks can use up to 6 argument registers, and
+   make use of ARM64 like features. For now, we'll only support them on platforms
+   that have 6 or more argument registers to use.
+*/
+#define ENABLE_EXTRA_CTI_THUNKS 1
 #endif
 
 #if !defined(ENABLE_BINDING_INTEGRITY) && !OS(WINDOWS)
@@ -822,10 +869,6 @@
 #define ENABLE_INLINE_PATH_DATA 1
 #endif
 
-/* Disable SharedArrayBuffers until Spectre security concerns are mitigated. */
-#define ENABLE_SHARED_ARRAY_BUFFER 0
-
-
 #if ((PLATFORM(COCOA) || PLATFORM(PLAYSTATION) || PLATFORM(WPE)) && ENABLE(ASYNC_SCROLLING)) || PLATFORM(GTK)
 #define ENABLE_KINETIC_SCROLLING 1
 #endif
@@ -847,7 +890,7 @@
    that executes each opcode. It cannot be supported by the CLoop since there's no way to embed the
    OpcodeID word in the CLoop's switch statement cases. It is also currently not implemented for MSVC.
 */
-#if !defined(ENABLE_LLINT_EMBEDDED_OPCODE_ID) && !ENABLE(C_LOOP) && !COMPILER(MSVC) && (CPU(X86) || CPU(X86_64) || CPU(ARM64) || (CPU(ARM_THUMB2) && OS(DARWIN)))
+#if !defined(ENABLE_LLINT_EMBEDDED_OPCODE_ID) && !ENABLE(C_LOOP) && !COMPILER(MSVC) && (CPU(X86) || CPU(X86_64) || CPU(ARM64) || (CPU(ARM_THUMB2) && OS(DARWIN)) || CPU(RISCV64))
 #define ENABLE_LLINT_EMBEDDED_OPCODE_ID 1
 #endif
 
@@ -869,14 +912,22 @@
 #error "ENABLE(IOS_TOUCH_EVENTS) requires ENABLE(TOUCH_EVENTS)"
 #endif
 
-#if ENABLE(WEBGL) && !ENABLE(GRAPHICS_CONTEXT_GL)
-#error "ENABLE(WEBGL) requires ENABLE(GRAPHICS_CONTEXT_GL)"
-#endif
-
 #if ENABLE(WEBGL2) && !ENABLE(WEBGL)
 #error "ENABLE(WEBGL2) requires ENABLE(WEBGL)"
 #endif
 
-#if CPU(ARM64) && CPU(ADDRESS64)
-#define USE_JUMP_ISLANDS 1
+#if ENABLE(OFFSCREEN_CANVAS_IN_WORKERS) && !ENABLE(OFFSCREEN_CANVAS)
+#error "ENABLE(OFFSCREEN_CANVAS_IN_WORKERS) requires ENABLE(OFFSCREEN_CANVAS)"
+#endif
+
+#if USE(CG)
+
+#if ENABLE(DESTINATION_COLOR_SPACE_DISPLAY_P3) && !HAVE(CORE_GRAPHICS_DISPLAY_P3_COLOR_SPACE)
+#error "ENABLE(DESTINATION_COLOR_SPACE_DISPLAY_P3) requires HAVE(CORE_GRAPHICS_DISPLAY_P3_COLOR_SPACE) on platforms using CoreGraphics"
+#endif
+
+#if ENABLE(DESTINATION_COLOR_SPACE_LINEAR_SRGB) && !HAVE(CORE_GRAPHICS_LINEAR_SRGB_COLOR_SPACE)
+#error "ENABLE(DESTINATION_COLOR_SPACE_LINEAR_SRGB) requires HAVE(CORE_GRAPHICS_LINEAR_SRGB_COLOR_SPACE) on platforms using CoreGraphics"
+#endif
+
 #endif

@@ -39,11 +39,13 @@ public:
 
     bool inDragMode() const;
 
+    double valueRatio() const;
+
 private:
     const char* renderName() const override { return "RenderSlider"; }
     bool isSlider() const override { return true; }
 
-    int baselinePosition(FontBaseline, bool firstLine, LineDirectionMode, LinePositionMode = PositionOnContainingLine) const override;
+    LayoutUnit baselinePosition(FontBaseline, bool firstLine, LineDirectionMode, LinePositionMode = PositionOnContainingLine) const override;
     void computeIntrinsicLogicalWidths(LayoutUnit& minLogicalWidth, LayoutUnit& maxLogicalWidth) const override;
     void computePreferredLogicalWidths() override;
     void layout() override;

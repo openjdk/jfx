@@ -39,11 +39,16 @@ struct BoundaryPoint {
 };
 
 bool operator==(const BoundaryPoint&, const BoundaryPoint&);
+bool operator!=(const BoundaryPoint&, const BoundaryPoint&);
 
-WEBCORE_EXPORT Optional<BoundaryPoint> makeBoundaryPointBeforeNode(Node&);
-WEBCORE_EXPORT Optional<BoundaryPoint> makeBoundaryPointAfterNode(Node&);
+template<TreeType = Tree> PartialOrdering treeOrder(const BoundaryPoint&, const BoundaryPoint&);
+
+WEBCORE_EXPORT std::optional<BoundaryPoint> makeBoundaryPointBeforeNode(Node&);
+WEBCORE_EXPORT std::optional<BoundaryPoint> makeBoundaryPointAfterNode(Node&);
 BoundaryPoint makeBoundaryPointBeforeNodeContents(Node&);
 BoundaryPoint makeBoundaryPointAfterNodeContents(Node&);
+
+WEBCORE_EXPORT PartialOrdering treeOrderForTesting(TreeType, const BoundaryPoint&, const BoundaryPoint&);
 
 inline BoundaryPoint::BoundaryPoint(Ref<Node>&& container, unsigned offset)
     : container(WTFMove(container))

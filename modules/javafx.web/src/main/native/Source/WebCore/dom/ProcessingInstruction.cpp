@@ -44,7 +44,7 @@ namespace WebCore {
 WTF_MAKE_ISO_ALLOCATED_IMPL(ProcessingInstruction);
 
 inline ProcessingInstruction::ProcessingInstruction(Document& document, const String& target, const String& data)
-    : CharacterData(document, data, CreateOther)
+    : CharacterData(document, data)
     , m_target(target)
 {
 }
@@ -167,7 +167,7 @@ void ProcessingInstruction::checkStyleSheet()
 #endif
             {
                 String charset = attributes->get("charset");
-                CachedResourceRequest request(document().completeURL(href), CachedResourceLoader::defaultCachedResourceOptions(), WTF::nullopt, charset.isEmpty() ? document().charset() : WTFMove(charset));
+                CachedResourceRequest request(document().completeURL(href), CachedResourceLoader::defaultCachedResourceOptions(), std::nullopt, charset.isEmpty() ? document().charset() : WTFMove(charset));
 
                 m_cachedSheet = document().cachedResourceLoader().requestCSSStyleSheet(WTFMove(request)).value_or(nullptr);
             }

@@ -28,7 +28,7 @@
 #include "EventNames.h"
 #include "HTMLNames.h"
 #include "HTMLParserIdioms.h"
-#include "RuntimeEnabledFeatures.h"
+#include "Settings.h"
 #include "Text.h"
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/Ref.h>
@@ -197,8 +197,8 @@ String HTMLScriptElement::referrerPolicyForBindings() const
 
 ReferrerPolicy HTMLScriptElement::referrerPolicy() const
 {
-    if (RuntimeEnabledFeatures::sharedFeatures().referrerPolicyAttributeEnabled())
-        return parseReferrerPolicy(attributeWithoutSynchronization(referrerpolicyAttr), ReferrerPolicySource::ReferrerPolicyAttribute).valueOr(ReferrerPolicy::EmptyString);
+    if (document().settings().referrerPolicyAttributeEnabled())
+        return parseReferrerPolicy(attributeWithoutSynchronization(referrerpolicyAttr), ReferrerPolicySource::ReferrerPolicyAttribute).value_or(ReferrerPolicy::EmptyString);
     return ReferrerPolicy::EmptyString;
 }
 

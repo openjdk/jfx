@@ -275,6 +275,15 @@ typedef enum {
   GST_NAVIGATION_EVENT_MOUSE_BUTTON_RELEASE       = 4,
   GST_NAVIGATION_EVENT_MOUSE_MOVE                 = 5,
   GST_NAVIGATION_EVENT_COMMAND                    = 6,
+
+  /**
+   * GST_NAVIGATION_EVENT_MOUSE_SCROLL:
+   *
+   * A mouse scroll event. Use gst_navigation_event_parse_mouse_scroll_event()
+   * to extract the details from the event.
+   *
+   * Since: 1.18
+   */
   GST_NAVIGATION_EVENT_MOUSE_SCROLL               = 7
 } GstNavigationEventType;
 

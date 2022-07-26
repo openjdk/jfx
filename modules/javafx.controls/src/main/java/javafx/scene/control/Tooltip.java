@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -144,7 +144,7 @@ public class Tooltip extends PopupControl {
         BEHAVIOR.uninstall(node);
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -170,7 +170,7 @@ public class Tooltip extends PopupControl {
         getStyleClass().setAll("tooltip");
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Properties                                                              *
      *                                                                         *
@@ -560,7 +560,7 @@ public class Tooltip extends PopupControl {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Methods                                                                 *
      *                                                                         *
@@ -573,7 +573,7 @@ public class Tooltip extends PopupControl {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      *                         Stylesheet Handling                             *
      *                                                                         *
@@ -751,8 +751,9 @@ public class Tooltip extends PopupControl {
     }
 
     /**
-     * @return The CssMetaData associated with this class, which may include the
-     * CssMetaData of its superclasses.
+     * Gets the {@code CssMetaData} associated with this class, which may include the
+     * {@code CssMetaData} of its superclasses.
+     * @return the {@code CssMetaData}
      * @since JavaFX 8.0
      */
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
@@ -777,7 +778,7 @@ public class Tooltip extends PopupControl {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Support classes                                                         *
      *                                                                         *

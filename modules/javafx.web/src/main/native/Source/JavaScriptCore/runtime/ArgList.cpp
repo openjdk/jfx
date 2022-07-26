@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2003-2017 Apple Inc. All rights reserved.
+ *  Copyright (C) 2003-2021 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Library General Public
@@ -51,7 +51,8 @@ void ArgList::getSlice(int startIndex, ArgList& result) const
     result.m_argCount =  m_argCount - startIndex;
 }
 
-void MarkedArgumentBuffer::markLists(SlotVisitor& visitor, ListSet& markSet)
+template<typename Visitor>
+void MarkedArgumentBuffer::markLists(Visitor& visitor, ListSet& markSet)
 {
     ListSet::iterator end = markSet.end();
     for (ListSet::iterator it = markSet.begin(); it != end; ++it) {
@@ -61,22 +62,25 @@ void MarkedArgumentBuffer::markLists(SlotVisitor& visitor, ListSet& markSet)
     }
 }
 
+template void MarkedArgumentBuffer::markLists(AbstractSlotVisitor&, ListSet&);
+template void MarkedArgumentBuffer::markLists(SlotVisitor&, ListSet&);
+
 void MarkedArgumentBuffer::slowEnsureCapacity(size_t requestedCapacity)
 {
     setNeedsOverflowCheck();
-    auto checkedNewCapacity = Checked<int, RecordOverflow>(requestedCapacity);
+    auto checkedNewCapacity = CheckedInt32(requestedCapacity);
     if (UNLIKELY(checkedNewCapacity.hasOverflowed()))
         return this->overflowed();
-    expandCapacity(checkedNewCapacity.unsafeGet());
+    expandCapacity(checkedNewCapacity);
 }
 
 void MarkedArgumentBuffer::expandCapacity()
 {
     setNeedsOverflowCheck();
-    auto checkedNewCapacity = Checked<int, RecordOverflow>(m_capacity) * 2;
+    auto checkedNewCapacity = CheckedInt32(m_capacity) * 2;
     if (UNLIKELY(checkedNewCapacity.hasOverflowed()))
         return this->overflowed();
-    expandCapacity(checkedNewCapacity.unsafeGet());
+    expandCapacity(checkedNewCapacity);
 }
 
 void MarkedArgumentBuffer::expandCapacity(int newCapacity)
@@ -86,7 +90,9 @@ void MarkedArgumentBuffer::expandCapacity(int newCapacity)
     auto checkedSize = CheckedSize(newCapacity) * sizeof(EncodedJSValue);
     if (UNLIKELY(checkedSize.hasOverflowed()))
         return this->overflowed();
-    EncodedJSValue* newBuffer = static_cast<EncodedJSValue*>(Gigacage::malloc(Gigacage::JSValue, checkedSize.unsafeGet()));
+    EncodedJSValue* newBuffer = static_cast<EncodedJSValue*>(Gigacage::tryMalloc(Gigacage::JSValue, checkedSize));
+    if (!newBuffer)
+        return this->overflowed();
     for (int i = 0; i < m_size; ++i) {
         newBuffer[i] = m_buffer[i];
         addMarkSet(JSValue::decode(m_buffer[i]));

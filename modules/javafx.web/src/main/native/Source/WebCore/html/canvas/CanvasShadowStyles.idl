@@ -23,12 +23,8 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-[
-    NoInterfaceObject,
-    Exposed=(Window,Worker)
-] interface CanvasShadowStyles {
-    // FIXME: All the unrestricted float attributes below should be unrestricted doubles.
-
+// https://html.spec.whatwg.org/multipage/canvas.html#canvasshadowstyles
+interface mixin CanvasShadowStyles {
     // shadows
     attribute unrestricted double shadowOffsetX; // (default 0)
     attribute unrestricted double shadowOffsetY; // (default 0)

@@ -41,7 +41,7 @@ class ResourceError;
 class ResourceRequest;
 class ResourceResponse;
 
-class PlatformMediaResourceClient {
+class PlatformMediaResourceClient : public RefCounted<PlatformMediaResourceClient> {
 public:
     virtual ~PlatformMediaResourceClient() = default;
 
@@ -49,7 +49,7 @@ public:
     virtual void redirectReceived(PlatformMediaResource&, ResourceRequest&& request, const ResourceResponse&, CompletionHandler<void(ResourceRequest&&)>&& completionHandler) { completionHandler(WTFMove(request)); }
     virtual bool shouldCacheResponse(PlatformMediaResource&, const ResourceResponse&) { return true; }
     virtual void dataSent(PlatformMediaResource&, unsigned long long, unsigned long long) { }
-    virtual void dataReceived(PlatformMediaResource&, const char*, int) { }
+    virtual void dataReceived(PlatformMediaResource&, const uint8_t*, int) { }
     virtual void accessControlCheckFailed(PlatformMediaResource&, const ResourceError&) { }
     virtual void loadFailed(PlatformMediaResource&, const ResourceError&) { }
     virtual void loadFinished(PlatformMediaResource&, const NetworkLoadMetrics&) { }
@@ -81,11 +81,11 @@ public:
     virtual void stop() { }
     virtual bool didPassAccessControlCheck() const { return false; }
 
-    void setClient(std::unique_ptr<PlatformMediaResourceClient>&& client) { m_client = WTFMove(client); }
+    void setClient(RefPtr<PlatformMediaResourceClient>&& client) { m_client = WTFMove(client); }
     PlatformMediaResourceClient* client() { return m_client.get(); }
 
 protected:
-    std::unique_ptr<PlatformMediaResourceClient> m_client;
+    RefPtr<PlatformMediaResourceClient> m_client;
 };
 
 } // namespace WebCore

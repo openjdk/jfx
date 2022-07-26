@@ -26,7 +26,7 @@
 #include "config.h"
 #include "TextPaintStyle.h"
 
-#include "ColorUtilities.h"
+#include "ColorLuminance.h"
 #include "FocusController.h"
 #include "Frame.h"
 #include "GraphicsContext.h"
@@ -63,7 +63,7 @@ bool textColorIsLegibleAgainstBackgroundColor(const Color& textColor, const Colo
 {
     // Uses the WCAG 2.0 definition of legibility: a contrast ratio of 4.5:1 or greater.
     // https://www.w3.org/TR/WCAG20/#visual-audio-contrast-contrast
-    return contrastRatio(textColor.toSRGBALossy<float>(), backgroundColor.toSRGBALossy<float>()) > 4.5;
+    return contrastRatio(textColor, backgroundColor) >= 4.5;
 }
 
 static Color adjustColorForVisibilityOnBackground(const Color& textColor, const Color& backgroundColor)
@@ -108,7 +108,7 @@ TextPaintStyle computeTextPaintStyle(const Frame& frame, const RenderStyle& line
             OptionSet<StyleColor::Options> options;
             if (page->useSystemAppearance())
                 options.add(StyleColor::Options::UseSystemAppearance);
-            paintStyle.fillColor = RenderTheme::singleton().systemColor(CSSValueActivebuttontext, options);
+            paintStyle.fillColor = RenderTheme::singleton().defaultButtonTextColor(options);
             return paintStyle;
         }
     }
@@ -142,7 +142,7 @@ TextPaintStyle computeTextPaintStyle(const Frame& frame, const RenderStyle& line
     return paintStyle;
 }
 
-TextPaintStyle computeTextSelectionPaintStyle(const TextPaintStyle& textPaintStyle, const RenderText& renderer, const RenderStyle& lineStyle, const PaintInfo& paintInfo, Optional<ShadowData>& selectionShadow)
+TextPaintStyle computeTextSelectionPaintStyle(const TextPaintStyle& textPaintStyle, const RenderText& renderer, const RenderStyle& lineStyle, const PaintInfo& paintInfo, std::optional<ShadowData>& selectionShadow)
 {
     TextPaintStyle selectionPaintStyle = textPaintStyle;
 

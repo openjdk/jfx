@@ -34,6 +34,7 @@
 
 #if ENABLE(WEB_RTC)
 
+#include "RTCPeerConnection.h"
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/NeverDestroyed.h>
 
@@ -45,7 +46,6 @@ RTCRtpTransceiver::RTCRtpTransceiver(Ref<RTCRtpSender>&& sender, Ref<RTCRtpRecei
     : m_direction(RTCRtpTransceiverDirection::Sendrecv)
     , m_sender(WTFMove(sender))
     , m_receiver(WTFMove(receiver))
-    , m_iceTransport(RTCIceTransport::create())
     , m_backend(WTFMove(backend))
 {
 }
@@ -67,10 +67,10 @@ RTCRtpTransceiverDirection RTCRtpTransceiver::direction() const
     return m_backend->direction();
 }
 
-Optional<RTCRtpTransceiverDirection> RTCRtpTransceiver::currentDirection() const
+std::optional<RTCRtpTransceiverDirection> RTCRtpTransceiver::currentDirection() const
 {
     if (!m_backend)
-        return WTF::nullopt;
+        return std::nullopt;
     return m_backend->currentDirection();
 }
 
@@ -98,15 +98,28 @@ void RTCRtpTransceiver::disableSendingDirection()
         m_direction = RTCRtpTransceiverDirection::Inactive;
 }
 
-void RTCRtpTransceiver::stop()
+void RTCRtpTransceiver::setConnection(RTCPeerConnection& connection)
 {
+    ASSERT(!m_connection);
+    m_connection = makeWeakPtr(connection);
+}
+
+ExceptionOr<void> RTCRtpTransceiver::stop()
+{
+    if (!m_connection || m_connection->isClosed())
+        return Exception { InvalidStateError, "RTCPeerConnection is closed"_s };
+
     if (m_stopped)
-        return;
+        return { };
+
     m_stopped = true;
     m_receiver->stop();
     m_sender->stop();
     if (m_backend)
         m_backend->stop();
+
+    m_connection->scheduleNegotiationNeededEvent();
+    return { };
 }
 
 ExceptionOr<void> RTCRtpTransceiver::setCodecPreferences(const Vector<RTCRtpCodecCapability>& codecs)

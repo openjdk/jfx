@@ -30,6 +30,7 @@
 #include "StyleChange.h"
 #include "StyleSharingResolver.h"
 #include "StyleUpdate.h"
+#include "Styleable.h"
 #include <wtf/Function.h>
 #include <wtf/Ref.h>
 
@@ -48,28 +49,28 @@ class Resolver;
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(TreeResolverScope);
 class TreeResolver {
 public:
-    TreeResolver(Document&);
+    TreeResolver(Document&, std::unique_ptr<Update> = { });
     ~TreeResolver();
 
     std::unique_ptr<Update> resolve();
 
 private:
-    std::unique_ptr<RenderStyle> styleForElement(Element&, const RenderStyle& inheritedStyle);
+    std::unique_ptr<RenderStyle> styleForStyleable(const Styleable&, const RenderStyle& inheritedStyle);
 
     void resolveComposedTree();
 
     ElementUpdates resolveElement(Element&);
 
-    ElementUpdate createAnimatedElementUpdate(std::unique_ptr<RenderStyle>, Element&, Change);
-    ElementUpdate resolvePseudoStyle(Element&, const ElementUpdate&, PseudoId);
+    static ElementUpdate createAnimatedElementUpdate(std::unique_ptr<RenderStyle>, const Styleable&, Change, const RenderStyle& parentStyle, const RenderStyle* parentBoxStyle);
+    std::optional<ElementUpdate> resolvePseudoStyle(Element&, const ElementUpdate&, PseudoId);
 
     struct Scope : RefCounted<Scope> {
         WTF_MAKE_STRUCT_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(TreeResolverScope);
-        Resolver& resolver;
+        Ref<Resolver> resolver;
         SelectorFilter selectorFilter;
         SharingResolver sharingResolver;
-        ShadowRoot* shadowRoot { nullptr };
-        Scope* enclosingScope { nullptr };
+        RefPtr<ShadowRoot> shadowRoot;
+        RefPtr<Scope> enclosingScope;
 
         Scope(Document&);
         Scope(ShadowRoot&, Scope& enclosingScope);
@@ -79,7 +80,7 @@ private:
     struct Parent {
         Element* element;
         const RenderStyle& style;
-        Change change { NoChange };
+        Change change { Change::None };
         DescendantsToResolve descendantsToResolve { DescendantsToResolve::None };
         bool didPushScope { false };
 

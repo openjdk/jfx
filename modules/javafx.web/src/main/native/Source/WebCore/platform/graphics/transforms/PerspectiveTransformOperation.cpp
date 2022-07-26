@@ -39,15 +39,15 @@ bool PerspectiveTransformOperation::operator==(const TransformOperation& other) 
     return m_p == downcast<PerspectiveTransformOperation>(other).m_p;
 }
 
-Ref<TransformOperation> PerspectiveTransformOperation::blend(const TransformOperation* from, double progress, bool blendToIdentity)
+Ref<TransformOperation> PerspectiveTransformOperation::blend(const TransformOperation* from, const BlendingContext& context, bool blendToIdentity)
 {
     if (from && !from->isSameType(*this))
         return *this;
 
     if (blendToIdentity) {
         double p = floatValueForLength(m_p, 1);
-        p = WebCore::blend(p, 1.0, progress); // FIXME: this seems wrong. https://bugs.webkit.org/show_bug.cgi?id=52700
-        return PerspectiveTransformOperation::create(Length(clampToPositiveInteger(p), Fixed));
+        p = WebCore::blend(p, 1.0, context); // FIXME: this seems wrong. https://bugs.webkit.org/show_bug.cgi?id=52700
+        return PerspectiveTransformOperation::create(Length(clampToPositiveInteger(p), LengthType::Fixed));
     }
 
     const PerspectiveTransformOperation* fromOp = downcast<PerspectiveTransformOperation>(from);
@@ -58,15 +58,15 @@ Ref<TransformOperation> PerspectiveTransformOperation::blend(const TransformOper
     TransformationMatrix toT;
     fromT.applyPerspective(floatValueForLength(fromP, 1));
     toT.applyPerspective(floatValueForLength(toP, 1));
-    toT.blend(fromT, progress);
+    toT.blend(fromT, context.progress);
     TransformationMatrix::Decomposed4Type decomp;
     toT.decompose4(decomp);
 
     if (decomp.perspectiveZ) {
         double val = -1.0 / decomp.perspectiveZ;
-        return PerspectiveTransformOperation::create(Length(clampToPositiveInteger(val), Fixed));
+        return PerspectiveTransformOperation::create(Length(clampToPositiveInteger(val), LengthType::Fixed));
     }
-    return PerspectiveTransformOperation::create(Length(0, Fixed));
+    return PerspectiveTransformOperation::create(Length(0, LengthType::Fixed));
 }
 
 void PerspectiveTransformOperation::dump(TextStream& ts) const

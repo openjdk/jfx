@@ -59,6 +59,7 @@ page/scrolling/nicosia/ScrollingTreeNicosia.cpp
 page/scrolling/nicosia/ScrollingTreeOverflowScrollProxyNode.cpp
 page/scrolling/nicosia/ScrollingTreeOverflowScrollingNodeNicosia.cpp
 page/scrolling/nicosia/ScrollingTreePositionedNode.cpp
+page/scrolling/nicosia/ScrollingTreeScrollingNodeDelegateNicosia.cpp
 page/scrolling/nicosia/ScrollingTreeStickyNode.cpp
 
 platform/ScrollAnimationKinetic.cpp
@@ -72,6 +73,7 @@ platform/gamepad/manette/ManetteGamepadProvider.cpp
 
 platform/generic/ScrollAnimatorGeneric.cpp
 
+platform/graphics/ANGLEWebKitBridge.cpp
 platform/graphics/GLContext.cpp @no-unify
 platform/graphics/PlatformDisplay.cpp @no-unify
 
@@ -93,8 +95,6 @@ platform/graphics/gstreamer/ImageGStreamerCairo.cpp
 
 platform/graphics/libwpe/PlatformDisplayLibWPE.cpp
 
-platform/graphics/opengl/GraphicsContextGLOpenGLPrivate.cpp
-
 platform/graphics/opentype/OpenTypeVerticalData.cpp
 
 platform/graphics/wayland/PlatformDisplayWayland.cpp
@@ -107,12 +107,11 @@ platform/gtk/CursorGtk.cpp
 platform/gtk/DragDataGtk.cpp
 platform/gtk/DragImageGtk.cpp
 platform/gtk/GRefPtrGtk.cpp
-platform/gtk/GtkUtilities.cpp
+platform/gtk/GtkUtilities.cpp @no-unify
 platform/gtk/LocalizedStringsGtk.cpp
 platform/gtk/PasteboardGtk.cpp
 platform/gtk/PlatformKeyboardEventGtk.cpp
 platform/gtk/PlatformScreenGtk.cpp
-platform/gtk/PlatformWheelEventGtk.cpp
 platform/gtk/RenderThemeGadget.cpp
 platform/gtk/RenderThemeScrollbar.cpp
 platform/gtk/ScrollbarThemeGtk.cpp

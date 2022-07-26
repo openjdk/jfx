@@ -1959,11 +1959,11 @@ struct malloc_segment {
 
 # define get_segment_flags(S)   (IS_MMAPPED_BIT)
 # define set_segment_flags(S,v) \
-  (((v) != IS_MMAPPED_BIT) ? (ABORT, (v)) :             \
-   (((S)->exec_offset =                         \
-     mmap_exec_offset((S)->base, (S)->size)),               \
-    (mmap_exec_offset((S)->base + (S)->exec_offset, (S)->size) !=   \
-     (S)->exec_offset) ? (ABORT, (v)) :                 \
+  (((v) != IS_MMAPPED_BIT) ? (ABORT, (v)) :                             \
+   (((S)->exec_offset =                                                 \
+     mmap_exec_offset((S)->base, (S)->size)),                           \
+    (mmap_exec_offset((S)->base + (S)->exec_offset, (S)->size) !=       \
+     (S)->exec_offset) ? (ABORT, (v)) :                                 \
    (mmap_exec_offset((S)->base, (S)->size) = 0), (v)))
 
   /* We use an offset here, instead of a pointer, because then, when
@@ -2371,7 +2371,7 @@ static size_t traverse_and_check(mstate m);
 
 #else /* GNUC */
 #if  USE_BUILTIN_FFS
-#define compute_bit2idx(X, I) I = ffs(X)-1
+#define compute_bit2idx(X, I) I = __builtin_ffs(X)-1
 
 #else /* USE_BUILTIN_FFS */
 #define compute_bit2idx(X, I)\

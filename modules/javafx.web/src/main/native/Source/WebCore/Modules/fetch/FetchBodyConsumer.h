@@ -37,17 +37,17 @@
 namespace WebCore {
 
 class Blob;
+class DOMFormData;
 class FetchBodySource;
 class ReadableStream;
 
 class FetchBodyConsumer {
 public:
-    enum class Type { None, ArrayBuffer, Blob, JSON, Text };
+    enum class Type { None, ArrayBuffer, Blob, JSON, Text, FormData };
 
     explicit FetchBodyConsumer(Type type) : m_type(type) { }
 
-    void append(const char* data, unsigned);
-    void append(const unsigned char* data, unsigned);
+    void append(const uint8_t* data, unsigned);
 
     bool hasData() const { return !!m_buffer; }
     const SharedBuffer* data() const { return m_buffer.get(); }
@@ -63,19 +63,21 @@ public:
     void clean();
 
     void extract(ReadableStream&, ReadableStreamToSharedBufferSink::Callback&&);
-    void resolve(Ref<DeferredPromise>&&, ReadableStream*);
-    void resolveWithData(Ref<DeferredPromise>&&, const unsigned char*, unsigned);
+    void resolve(Ref<DeferredPromise>&&, const String& contentType, ReadableStream*);
+    void resolveWithData(Ref<DeferredPromise>&&, const String& contentType, const unsigned char*, unsigned);
 
     void loadingFailed(const Exception&);
-    void loadingSucceeded();
+    void loadingSucceeded(const String& contentType);
 
     void setConsumePromise(Ref<DeferredPromise>&&);
     void setSource(Ref<FetchBodySource>&&);
 
     void setAsLoading() { m_isLoading = true; }
 
+    static RefPtr<DOMFormData> packageFormData(ScriptExecutionContext*, const String& contentType, const uint8_t* data, size_t length);
+
 private:
-    Ref<Blob> takeAsBlob();
+    Ref<Blob> takeAsBlob(ScriptExecutionContext*);
     void resetConsumePromise();
 
     Type m_type;

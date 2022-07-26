@@ -36,6 +36,7 @@
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
 #include <wtf/WallTime.h>
+#include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>
 
 #if PLATFORM(COCOA) || USE(CFURLCONNECTION)
@@ -85,7 +86,6 @@ enum class IncludeSecureCookies : bool;
 enum class IncludeHttpOnlyCookies : bool;
 enum class ThirdPartyCookieBlockingMode : uint8_t { All, AllExceptBetweenAppBoundDomains, AllOnSitesWithoutUserInteraction, OnlyAccordingToPerDomainPolicy };
 enum class SameSiteStrictEnforcementEnabled : bool { Yes, No };
-enum class CNAMECloakingMitigationEnabled : bool { Yes, No };
 enum class FirstPartyWebsiteDataRemovalMode : uint8_t { AllButCookies, None, AllButCookiesLiveOnTestingTimeout, AllButCookiesReproTestingTimeout };
 enum class ShouldAskITP : bool { No, Yes };
 
@@ -99,7 +99,7 @@ public:
 };
 #endif
 
-class NetworkStorageSession {
+class NetworkStorageSession : public CanMakeWeakPtr<NetworkStorageSession> {
     WTF_MAKE_NONCOPYABLE(NetworkStorageSession); WTF_MAKE_FAST_ALLOCATED;
 public:
     using TopFrameDomain = WebCore::RegistrableDomain;
@@ -128,7 +128,6 @@ public:
     // May be null, in which case a Foundation default should be used.
     CFURLStorageSessionRef platformSession() { return m_platformSession.get(); }
     WEBCORE_EXPORT RetainPtr<CFHTTPCookieStorageRef> cookieStorage() const;
-    WEBCORE_EXPORT static void setStorageAccessAPIEnabled(bool);
 #elif USE(SOUP)
     WEBCORE_EXPORT explicit NetworkStorageSession(PAL::SessionID);
     ~NetworkStorageSession();
@@ -161,7 +160,7 @@ public:
     WEBCORE_EXPORT HTTPCookieAcceptPolicy cookieAcceptPolicy() const;
     WEBCORE_EXPORT void setCookie(const Cookie&);
     WEBCORE_EXPORT void setCookies(const Vector<Cookie>&, const URL&, const URL& mainDocumentURL);
-    WEBCORE_EXPORT void setCookiesFromDOM(const URL& firstParty, const SameSiteInfo&, const URL&, Optional<FrameIdentifier>, Optional<PageIdentifier>, ShouldAskITP, const String&, ShouldRelaxThirdPartyCookieBlocking) const;
+    WEBCORE_EXPORT void setCookiesFromDOM(const URL& firstParty, const SameSiteInfo&, const URL&, std::optional<FrameIdentifier>, std::optional<PageIdentifier>, ShouldAskITP, const String&, ShouldRelaxThirdPartyCookieBlocking) const;
     WEBCORE_EXPORT void deleteCookie(const Cookie&);
     WEBCORE_EXPORT void deleteCookie(const URL&, const String&) const;
     WEBCORE_EXPORT void deleteAllCookies();
@@ -171,11 +170,11 @@ public:
     WEBCORE_EXPORT Vector<Cookie> getAllCookies();
     WEBCORE_EXPORT Vector<Cookie> getCookies(const URL&);
     WEBCORE_EXPORT void hasCookies(const RegistrableDomain&, CompletionHandler<void(bool)>&&) const;
-    WEBCORE_EXPORT bool getRawCookies(const URL& firstParty, const SameSiteInfo&, const URL&, Optional<FrameIdentifier>, Optional<PageIdentifier>, ShouldAskITP, ShouldRelaxThirdPartyCookieBlocking, Vector<Cookie>&) const;
+    WEBCORE_EXPORT bool getRawCookies(const URL& firstParty, const SameSiteInfo&, const URL&, std::optional<FrameIdentifier>, std::optional<PageIdentifier>, ShouldAskITP, ShouldRelaxThirdPartyCookieBlocking, Vector<Cookie>&) const;
     WEBCORE_EXPORT void flushCookieStore();
     WEBCORE_EXPORT void getHostnamesWithCookies(HashSet<String>& hostnames);
-    WEBCORE_EXPORT std::pair<String, bool> cookiesForDOM(const URL& firstParty, const SameSiteInfo&, const URL&, Optional<FrameIdentifier>, Optional<PageIdentifier>, IncludeSecureCookies, ShouldAskITP, ShouldRelaxThirdPartyCookieBlocking) const;
-    WEBCORE_EXPORT std::pair<String, bool> cookieRequestHeaderFieldValue(const URL& firstParty, const SameSiteInfo&, const URL&, Optional<FrameIdentifier>, Optional<PageIdentifier>, IncludeSecureCookies, ShouldAskITP, ShouldRelaxThirdPartyCookieBlocking) const;
+    WEBCORE_EXPORT std::pair<String, bool> cookiesForDOM(const URL& firstParty, const SameSiteInfo&, const URL&, std::optional<FrameIdentifier>, std::optional<PageIdentifier>, IncludeSecureCookies, ShouldAskITP, ShouldRelaxThirdPartyCookieBlocking) const;
+    WEBCORE_EXPORT std::pair<String, bool> cookieRequestHeaderFieldValue(const URL& firstParty, const SameSiteInfo&, const URL&, std::optional<FrameIdentifier>, std::optional<PageIdentifier>, IncludeSecureCookies, ShouldAskITP, ShouldRelaxThirdPartyCookieBlocking) const;
     WEBCORE_EXPORT std::pair<String, bool> cookieRequestHeaderFieldValue(const CookieRequestHeaderFieldProxy&) const;
 
     WEBCORE_EXPORT Vector<Cookie> domCookiesForHost(const String& host);
@@ -189,8 +188,10 @@ public:
 #if ENABLE(RESOURCE_LOAD_STATISTICS)
     WEBCORE_EXPORT void setResourceLoadStatisticsEnabled(bool);
     WEBCORE_EXPORT bool resourceLoadStatisticsEnabled() const;
-    WEBCORE_EXPORT bool shouldBlockCookies(const ResourceRequest&, Optional<FrameIdentifier>, Optional<PageIdentifier>, ShouldRelaxThirdPartyCookieBlocking) const;
-    WEBCORE_EXPORT bool shouldBlockCookies(const URL& firstPartyForCookies, const URL& resource, Optional<FrameIdentifier>, Optional<PageIdentifier>, ShouldRelaxThirdPartyCookieBlocking) const;
+    WEBCORE_EXPORT void setResourceLoadStatisticsDebugLoggingEnabled(bool);
+    WEBCORE_EXPORT bool resourceLoadStatisticsDebugLoggingEnabled() const;
+    WEBCORE_EXPORT bool shouldBlockCookies(const ResourceRequest&, std::optional<FrameIdentifier>, std::optional<PageIdentifier>, ShouldRelaxThirdPartyCookieBlocking) const;
+    WEBCORE_EXPORT bool shouldBlockCookies(const URL& firstPartyForCookies, const URL& resource, std::optional<FrameIdentifier>, std::optional<PageIdentifier>, ShouldRelaxThirdPartyCookieBlocking) const;
     WEBCORE_EXPORT bool shouldBlockThirdPartyCookies(const RegistrableDomain&) const;
     WEBCORE_EXPORT bool shouldBlockThirdPartyCookiesButKeepFirstPartyCookiesFor(const RegistrableDomain&) const;
     WEBCORE_EXPORT void setAllCookiesToSameSiteStrict(const RegistrableDomain&, CompletionHandler<void()>&&);
@@ -201,19 +202,31 @@ public:
     WEBCORE_EXPORT void setPrevalentDomainsToBlockAndDeleteCookiesFor(const Vector<RegistrableDomain>&);
     WEBCORE_EXPORT void setPrevalentDomainsToBlockButKeepCookiesFor(const Vector<RegistrableDomain>&);
     WEBCORE_EXPORT void setDomainsWithUserInteractionAsFirstParty(const Vector<RegistrableDomain>&);
-    WEBCORE_EXPORT void setAgeCapForClientSideCookies(Optional<Seconds>);
-    WEBCORE_EXPORT bool hasStorageAccess(const RegistrableDomain& resourceDomain, const RegistrableDomain& firstPartyDomain, Optional<FrameIdentifier>, PageIdentifier) const;
+    WEBCORE_EXPORT void setDomainsWithCrossPageStorageAccess(const HashMap<TopFrameDomain, SubResourceDomain>&);
+    WEBCORE_EXPORT void grantCrossPageStorageAccess(const TopFrameDomain&, const SubResourceDomain&);
+    WEBCORE_EXPORT void setAgeCapForClientSideCookies(std::optional<Seconds>);
+    WEBCORE_EXPORT bool hasStorageAccess(const RegistrableDomain& resourceDomain, const RegistrableDomain& firstPartyDomain, std::optional<FrameIdentifier>, PageIdentifier) const;
     WEBCORE_EXPORT Vector<String> getAllStorageAccessEntries() const;
-    WEBCORE_EXPORT void grantStorageAccess(const RegistrableDomain& resourceDomain, const RegistrableDomain& firstPartyDomain, Optional<FrameIdentifier>, PageIdentifier);
+    WEBCORE_EXPORT void grantStorageAccess(const RegistrableDomain& resourceDomain, const RegistrableDomain& firstPartyDomain, std::optional<FrameIdentifier>, PageIdentifier);
     WEBCORE_EXPORT void removeStorageAccessForFrame(FrameIdentifier, PageIdentifier);
     WEBCORE_EXPORT void clearPageSpecificDataForResourceLoadStatistics(PageIdentifier);
     WEBCORE_EXPORT void removeAllStorageAccess();
     WEBCORE_EXPORT void setCacheMaxAgeCapForPrevalentResources(Seconds);
     WEBCORE_EXPORT void resetCacheMaxAgeCapForPrevalentResources();
-    WEBCORE_EXPORT Optional<Seconds> maxAgeCacheCap(const ResourceRequest&);
+    WEBCORE_EXPORT std::optional<Seconds> maxAgeCacheCap(const ResourceRequest&);
     WEBCORE_EXPORT void didCommitCrossSiteLoadWithDataTransferFromPrevalentResource(const RegistrableDomain& toDomain, PageIdentifier);
     WEBCORE_EXPORT void resetCrossSiteLoadsWithLinkDecorationForTesting();
     WEBCORE_EXPORT void setThirdPartyCookieBlockingMode(ThirdPartyCookieBlockingMode);
+
+    WEBCORE_EXPORT const static HashMap<RegistrableDomain, HashSet<RegistrableDomain>>& storageAccessQuirks();
+    WEBCORE_EXPORT static bool canRequestStorageAccessForLoginOrCompatibilityPurposesWithoutPriorUserInteraction(const SubResourceDomain&, const TopFrameDomain&);
+    WEBCORE_EXPORT static std::optional<HashSet<RegistrableDomain>> subResourceDomainsInNeedOfStorageAccessForFirstParty(const RegistrableDomain&);
+    WEBCORE_EXPORT static bool loginDomainMatchesRequestingDomain(const TopFrameDomain&, const SubResourceDomain&);
+    WEBCORE_EXPORT static std::optional<RegistrableDomain> findAdditionalLoginDomain(const TopFrameDomain&, const SubResourceDomain&);
+
+#endif
+
+#if ENABLE(APP_BOUND_DOMAINS)
     WEBCORE_EXPORT void setAppBoundDomains(HashSet<RegistrableDomain>&&);
     WEBCORE_EXPORT void resetAppBoundDomains();
 #endif
@@ -221,10 +234,10 @@ public:
 private:
 #if PLATFORM(COCOA)
     enum IncludeHTTPOnlyOrNot { DoNotIncludeHTTPOnly, IncludeHTTPOnly };
-    std::pair<String, bool> cookiesForSession(const URL& firstParty, const SameSiteInfo&, const URL&, Optional<FrameIdentifier>, Optional<PageIdentifier>, IncludeHTTPOnlyOrNot, IncludeSecureCookies, ShouldAskITP, ShouldRelaxThirdPartyCookieBlocking) const;
-    NSArray *httpCookies(CFHTTPCookieStorageRef) const;
-    NSArray *httpCookiesForURL(CFHTTPCookieStorageRef, NSURL *firstParty, const Optional<SameSiteInfo>&, NSURL *) const;
-    NSArray *cookiesForURL(const URL& firstParty, const SameSiteInfo&, const URL&, Optional<FrameIdentifier>, Optional<PageIdentifier>, ShouldAskITP, ShouldRelaxThirdPartyCookieBlocking) const;
+    std::pair<String, bool> cookiesForSession(const URL& firstParty, const SameSiteInfo&, const URL&, std::optional<FrameIdentifier>, std::optional<PageIdentifier>, IncludeHTTPOnlyOrNot, IncludeSecureCookies, ShouldAskITP, ShouldRelaxThirdPartyCookieBlocking) const;
+    RetainPtr<NSArray> httpCookies(CFHTTPCookieStorageRef) const;
+    RetainPtr<NSArray> httpCookiesForURL(CFHTTPCookieStorageRef, NSURL *firstParty, const std::optional<SameSiteInfo>&, NSURL *) const;
+    RetainPtr<NSArray> cookiesForURL(const URL& firstParty, const SameSiteInfo&, const URL&, std::optional<FrameIdentifier>, std::optional<PageIdentifier>, ShouldAskITP, ShouldRelaxThirdPartyCookieBlocking) const;
     void setHTTPCookiesForURL(CFHTTPCookieStorageRef, NSArray *cookies, NSURL *, NSURL *mainDocumentURL, const SameSiteInfo&) const;
     void deleteHTTPCookie(CFHTTPCookieStorageRef, NSHTTPCookie *) const;
 #endif
@@ -262,16 +275,18 @@ private:
 
 #if ENABLE(RESOURCE_LOAD_STATISTICS)
     bool m_isResourceLoadStatisticsEnabled = false;
-    Optional<Seconds> clientSideCookieCap(const TopFrameDomain&, Optional<PageIdentifier>) const;
+    bool m_isResourceLoadStatisticsDebugLoggingEnabled = false;
+    std::optional<Seconds> clientSideCookieCap(const TopFrameDomain&, std::optional<PageIdentifier>) const;
     bool shouldExemptDomainPairFromThirdPartyCookieBlocking(const TopFrameDomain&, const SubResourceDomain&) const;
     HashSet<RegistrableDomain> m_registrableDomainsToBlockAndDeleteCookiesFor;
     HashSet<RegistrableDomain> m_registrableDomainsToBlockButKeepCookiesFor;
     HashSet<RegistrableDomain> m_registrableDomainsWithUserInteractionAsFirstParty;
     HashMap<PageIdentifier, HashMap<FrameIdentifier, RegistrableDomain>> m_framesGrantedStorageAccess;
     HashMap<PageIdentifier, HashMap<RegistrableDomain, RegistrableDomain>> m_pagesGrantedStorageAccess;
-    Optional<Seconds> m_cacheMaxAgeCapForPrevalentResources { };
-    Optional<Seconds> m_ageCapForClientSideCookies { };
-    Optional<Seconds> m_ageCapForClientSideCookiesShort { };
+    HashMap<TopFrameDomain, HashSet<SubResourceDomain>> m_pairsGrantedCrossPageStorageAccess;
+    std::optional<Seconds> m_cacheMaxAgeCapForPrevalentResources { };
+    std::optional<Seconds> m_ageCapForClientSideCookies { };
+    std::optional<Seconds> m_ageCapForClientSideCookiesShort { };
     HashMap<WebCore::PageIdentifier, RegistrableDomain> m_navigatedToWithLinkDecorationByPrevalentResource;
     bool m_navigationWithLinkDecorationTestMode = false;
     ThirdPartyCookieBlockingMode m_thirdPartyCookieBlockingMode { ThirdPartyCookieBlockingMode::All };
@@ -289,7 +304,7 @@ private:
 };
 
 #if PLATFORM(COCOA) || USE(CFURLCONNECTION)
-WEBCORE_EXPORT CFURLStorageSessionRef createPrivateStorageSession(CFStringRef identifier);
+WEBCORE_EXPORT RetainPtr<CFURLStorageSessionRef> createPrivateStorageSession(CFStringRef identifier, std::optional<HTTPCookieAcceptPolicy> = std::nullopt);
 #endif
 
 }

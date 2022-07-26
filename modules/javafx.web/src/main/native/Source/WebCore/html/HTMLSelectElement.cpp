@@ -222,7 +222,7 @@ int HTMLSelectElement::activeSelectionEndListIndex() const
     return lastSelectedListIndex();
 }
 
-ExceptionOr<void> HTMLSelectElement::add(const OptionOrOptGroupElement& element, const Optional<HTMLElementOrInt>& before)
+ExceptionOr<void> HTMLSelectElement::add(const OptionOrOptGroupElement& element, const std::optional<HTMLElementOrInt>& before)
 {
     RefPtr<HTMLElement> beforeElement;
     if (before) {
@@ -277,7 +277,7 @@ void HTMLSelectElement::setValue(const String& value)
     setSelectedIndex(-1);
 }
 
-bool HTMLSelectElement::isPresentationAttribute(const QualifiedName& name) const
+bool HTMLSelectElement::hasPresentationalHintsForAttribute(const QualifiedName& name) const
 {
     if (name == alignAttr) {
         // Don't map 'align' attribute. This matches what Firefox, Opera and IE do.
@@ -285,7 +285,7 @@ bool HTMLSelectElement::isPresentationAttribute(const QualifiedName& name) const
         return false;
     }
 
-    return HTMLFormControlElementWithState::isPresentationAttribute(name);
+    return HTMLFormControlElementWithState::hasPresentationalHintsForAttribute(name);
 }
 
 void HTMLSelectElement::parseAttribute(const QualifiedName& name, const AtomString& value)
@@ -400,7 +400,7 @@ void HTMLSelectElement::setMultiple(bool multiple)
 {
     bool oldMultiple = this->multiple();
     int oldSelectedIndex = selectedIndex();
-    setAttributeWithoutSynchronization(multipleAttr, multiple ? emptyAtom() : nullAtom());
+    setBooleanAttribute(multipleAttr, multiple);
 
     // Restore selectedIndex after changing the multiple flag to preserve
     // selection as single-line and multi-line has different defaults.
@@ -469,7 +469,7 @@ ExceptionOr<void> HTMLSelectElement::setLength(unsigned newLength)
 
     if (diff < 0) { // Add dummy elements.
         do {
-            auto result = add(HTMLOptionElement::create(document()).ptr(), WTF::nullopt);
+            auto result = add(HTMLOptionElement::create(document()).ptr(), std::nullopt);
             if (result.hasException())
                 return result;
         } while (++diff);
@@ -655,6 +655,7 @@ void HTMLSelectElement::updateListBoxSelection(bool deselectOtherOptions)
             downcast<HTMLOptionElement>(element).setSelectedState(m_cachedStateForActiveSelection[i]);
     }
 
+    invalidateSelectedItems();
     scrollToSelection();
     updateValidity();
 }
@@ -881,6 +882,7 @@ void HTMLSelectElement::selectOption(int optionIndex, SelectOptionFlags flags)
         downcast<HTMLOptionElement>(*element).setSelectedState(true);
     }
 
+    invalidateSelectedItems();
     updateValidity();
 
     // For the menu list case, this is what makes the selected element appear.
@@ -962,6 +964,7 @@ void HTMLSelectElement::deselectItemsWithoutValidation(HTMLElement* excludeEleme
         if (element != excludeElement && is<HTMLOptionElement>(*element))
             downcast<HTMLOptionElement>(*element).setSelectedState(false);
     }
+    invalidateSelectedItems();
 }
 
 FormControlState HTMLSelectElement::saveFormControlState() const
@@ -1027,6 +1030,7 @@ void HTMLSelectElement::restoreFormControlState(const FormControlState& state)
         }
     }
 
+    invalidateSelectedItems();
     setOptionsChangedOnRenderer();
     updateValidity();
 }
@@ -1085,6 +1089,7 @@ void HTMLSelectElement::reset()
     if (!selectedOption && firstOption && !m_multiple && m_size <= 1)
         firstOption->setSelectedState(true);
 
+    invalidateSelectedItems();
     setOptionsChangedOnRenderer();
     invalidateStyleForSubtree();
     updateValidity();
@@ -1321,6 +1326,7 @@ void HTMLSelectElement::updateSelectedState(int listIndex, bool multi, bool shif
     if (m_activeSelectionAnchorIndex < 0 || !shiftSelect)
         setActiveSelectionAnchorIndex(listIndex);
 
+    invalidateSelectedItems();
     setActiveSelectionEndIndex(listIndex);
     updateListBoxSelection(!multiSelect);
 }

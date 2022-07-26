@@ -27,21 +27,14 @@
     Conditional=WEB_AUDIO,
     JSGenerateToJSObject,
     ActiveDOMObject,
-    EnabledBySetting=WebAudio&ModernUnprefixedWebAudio
+    Exposed=Window
 ] interface OscillatorNode : AudioScheduledSourceNode {
-    [MayThrowException] constructor (BaseAudioContext context, optional OscillatorOptions options);
+    [EnabledBySetting=WebAudio] constructor (BaseAudioContext context, optional OscillatorOptions options);
 
-    attribute OscillatorType type;
+    [ImplementedAs=typeForBindings] attribute OscillatorType type;
 
     readonly attribute AudioParam frequency; // in Hertz
     readonly attribute AudioParam detune; // in Cents
 
-    void setPeriodicWave(PeriodicWave wave);
-
-    // FIXME: Those legacy playback state constants are kept for backward compatibility with the
-    // prefixed API and should be removed once we stop supporting the prefixed API.
-    [EnabledBySetting=PrefixedWebAudio] const unsigned short UNSCHEDULED_STATE = 0;
-    [EnabledBySetting=PrefixedWebAudio] const unsigned short SCHEDULED_STATE = 1;
-    [EnabledBySetting=PrefixedWebAudio] const unsigned short PLAYING_STATE = 2;
-    [EnabledBySetting=PrefixedWebAudio] const unsigned short FINISHED_STATE = 3;
+    undefined setPeriodicWave(PeriodicWave wave);
 };

@@ -48,7 +48,7 @@ public:
     // Returns scalar gain for the given distance the current distance model is used
     double gain(double distance);
 
-    DistanceModelType model() { return m_model; }
+    DistanceModelType model() const { return m_model; }
 
     void setModel(DistanceModelType model, bool clamped)
     {
@@ -70,11 +70,11 @@ protected:
     double inverseGain(double distance);
     double exponentialGain(double distance);
 
-    DistanceModelType m_model;
-    bool m_isClamped;
-    double m_refDistance;
-    double m_maxDistance;
-    double m_rolloffFactor;
+    DistanceModelType m_model { DistanceModelType::Inverse };
+    bool m_isClamped { true };
+    double m_refDistance { 1 };
+    double m_maxDistance { 10000 };
+    double m_rolloffFactor { 1 };
 };
 
 } // namespace WebCore

@@ -33,48 +33,76 @@
 #include "JSDOMPromiseDeferred.h"
 #include "PlatformXR.h"
 #include "WebFakeXRInputController.h"
-#include "WebXRRigidTransform.h"
-#include "WebXRView.h"
 #include "XRVisibilityState.h"
 #include <wtf/RefCounted.h>
 #include <wtf/Vector.h>
 
 namespace WebCore {
+class GraphicsContextGL;
+
 class FakeXRView final : public RefCounted<FakeXRView> {
 public:
     static Ref<FakeXRView> create(XREye eye) { return adoptRef(*new FakeXRView(eye)); }
+    using Pose = PlatformXR::Device::FrameData::Pose;
+    using Fov = PlatformXR::Device::FrameData::Fov;
 
-    RefPtr<WebXRView> view() { return m_view; }
+    XREye eye() const { return m_eye; }
+    const Pose& offset() const { return m_offset; }
+    const std::array<float, 16>& projection() const { return m_projection; }
+    const std::optional<Fov>& fieldOfView() const { return m_fov;}
+
     void setResolution(FakeXRViewInit::DeviceResolution resolution) { m_resolution = resolution; }
-    void setFieldOfView(FakeXRViewInit::FieldOfViewInit);
-
+    void setOffset(Pose&& offset) { m_offset = WTFMove(offset); }
+    void setProjection(const Vector<float>&);
+    void setFieldOfView(const FakeXRViewInit::FieldOfViewInit&);
 private:
     FakeXRView(XREye eye)
-    {
-        m_view = WebXRView::create();
-        m_view->setEye(eye);
-    }
+        : m_eye(eye) { }
 
-    RefPtr<WebXRView> m_view;
+
+    XREye m_eye;
     FakeXRViewInit::DeviceResolution m_resolution;
-    FakeXRViewInit::FieldOfViewInit m_fov;
+    Pose m_offset;
+    std::array<float, 16> m_projection;
+    std::optional<Fov> m_fov;
 };
 
 class SimulatedXRDevice final : public PlatformXR::Device {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    SimulatedXRDevice() { m_supportsOrientationTracking = true; }
-    void setNativeBoundsGeometry(Vector<FakeXRBoundsPoint> geometry) { m_nativeBoundsGeometry = geometry; }
-    void setViewerOrigin(RefPtr<WebXRRigidTransform>&& origin) { m_viewerOrigin = WTFMove(origin); }
-    void setFloorOrigin(RefPtr<WebXRRigidTransform>&& origin) { m_floorOrigin = WTFMove(origin); }
-    void setEmulatedPosition(bool emulated) { m_emulatedPosition = emulated; }
-    Vector<Ref<FakeXRView>>& views() { return m_views; }
+    SimulatedXRDevice();
+    ~SimulatedXRDevice();
+    void setViews(Vector<FrameData::View>&&);
+    void setNativeBoundsGeometry(const Vector<FakeXRBoundsPoint>&);
+    void setViewerOrigin(const std::optional<FrameData::Pose>&);
+    void setFloorOrigin(std::optional<FrameData::Pose>&& origin) { m_frameData.floorTransform = WTFMove(origin); }
+    void setEmulatedPosition(bool emulated) { m_frameData.isPositionEmulated = emulated; }
+    void setSupportsShutdownNotification(bool supportsShutdownNotification) { m_supportsShutdownNotification = supportsShutdownNotification; }
+    void simulateShutdownCompleted();
+    void scheduleOnNextFrame(Function<void()>&&);
+    void addInputConnection(Ref<WebFakeXRInputController>&& input) { m_inputConnections.append(WTFMove(input)); };
 private:
-    Optional<Vector<FakeXRBoundsPoint>> m_nativeBoundsGeometry;
-    RefPtr<WebXRRigidTransform> m_viewerOrigin;
-    RefPtr<WebXRRigidTransform> m_floorOrigin;
-    bool m_emulatedPosition { false };
-    Vector<Ref<FakeXRView>> m_views;
+    WebCore::IntSize recommendedResolution(PlatformXR::SessionMode) final;
+    void initializeTrackingAndRendering(PlatformXR::SessionMode) final;
+    void shutDownTrackingAndRendering() final;
+    bool supportsSessionShutdownNotification() const final { return m_supportsShutdownNotification; }
+    void initializeReferenceSpace(PlatformXR::ReferenceSpaceType) final { }
+    Vector<PlatformXR::Device::ViewData> views(PlatformXR::SessionMode) const final;
+    void requestFrame(RequestFrameCallback&&) final;
+    std::optional<PlatformXR::LayerHandle> createLayerProjection(uint32_t width, uint32_t height, bool alpha) final;
+    void deleteLayer(PlatformXR::LayerHandle) final;
+
+    void stopTimer();
+    void frameTimerFired();
+
+    PlatformXR::Device::FrameData m_frameData;
+    bool m_supportsShutdownNotification { false };
+    Timer m_frameTimer;
+    RequestFrameCallback m_FrameCallback;
+    RefPtr<WebCore::GraphicsContextGL> m_gl;
+    HashMap<PlatformXR::LayerHandle, PlatformGLObject> m_layers;
+    uint32_t m_layerIndex { 0 };
+    Vector<Ref<WebFakeXRInputController>> m_inputConnections;
 };
 
 class WebFakeXRDevice final : public RefCounted<WebFakeXRDevice> {
@@ -82,35 +110,27 @@ public:
     static Ref<WebFakeXRDevice> create() { return adoptRef(*new WebFakeXRDevice()); }
 
     void setViews(const Vector<FakeXRViewInit>&);
-
     void disconnect(DOMPromiseDeferred<void>&&);
-
     void setViewerOrigin(FakeXRRigidTransformInit origin, bool emulatedPosition = false);
-
-    void clearViewerOrigin();
-
+    void clearViewerOrigin() { m_device.setViewerOrigin(std::nullopt); }
     void simulateVisibilityChange(XRVisibilityState);
-
-    void setBoundsGeometry(Vector<FakeXRBoundsPoint> boundsCoordinates);
-
+    void setBoundsGeometry(Vector<FakeXRBoundsPoint>&& bounds) { m_device.setNativeBoundsGeometry(WTFMove(bounds)); }
     void setFloorOrigin(FakeXRRigidTransformInit);
-
-    void clearFloorOrigin();
-
+    void clearFloorOrigin() { m_device.setFloorOrigin(std::nullopt); }
     void simulateResetPose();
-
-    Ref<WebFakeXRInputController> simulateInputSourceConnection(FakeXRInputSourceInit);
-
+    Ref<WebFakeXRInputController> simulateInputSourceConnection(const FakeXRInputSourceInit&);
     static ExceptionOr<Ref<FakeXRView>> parseView(const FakeXRViewInit&);
-
     SimulatedXRDevice& simulatedXRDevice() { return m_device; }
+    void setSupportsShutdownNotification();
+    void simulateShutdown();
+
+    static ExceptionOr<PlatformXR::Device::FrameData::Pose> parseRigidTransform(const FakeXRRigidTransformInit&);
 
 private:
     WebFakeXRDevice();
 
-    static ExceptionOr<Ref<WebXRRigidTransform>> parseRigidTransform(const FakeXRRigidTransformInit&);
-
     SimulatedXRDevice m_device;
+    PlatformXR::InputSourceHandle mInputSourceHandleIndex { 0 };
 };
 
 } // namespace WebCore

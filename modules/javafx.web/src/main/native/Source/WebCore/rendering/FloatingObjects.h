@@ -23,7 +23,7 @@
 
 #pragma once
 
-#include "RootInlineBox.h"
+#include "LegacyRootInlineBox.h"
 #include <wtf/ListHashSet.h>
 #include <wtf/WeakPtr.h>
 
@@ -49,7 +49,7 @@ public:
     FloatingObject(RenderBox&, Type, const LayoutRect&, const LayoutSize&, bool shouldPaint, bool isDescendant);
 
     Type type() const { return static_cast<Type>(m_type); }
-    RenderBox& renderer() const { return *m_renderer; }
+    RenderBox& renderer() const { ASSERT(m_renderer); return *m_renderer; }
 
     bool isPlaced() const { return m_isPlaced; }
     void setIsPlaced(bool placed = true) { m_isPlaced = placed; }
@@ -79,15 +79,18 @@ public:
     void setIsInPlacedTree(bool value) { m_isInPlacedTree = value; }
 #endif
 
-    bool shouldPaint() const { return m_shouldPaint; }
-    void setShouldPaint(bool shouldPaint) { m_shouldPaint = shouldPaint; }
+    bool shouldPaint() const;
+
+    bool paintsFloat() const { return m_paintsFloat; }
+    void setPaintsFloat(bool paintsFloat) { m_paintsFloat = paintsFloat; }
+
     bool isDescendant() const { return m_isDescendant; }
     void setIsDescendant(bool isDescendant) { m_isDescendant = isDescendant; }
 
     // FIXME: Callers of these methods are dangerous and should be allowed explicitly or removed.
-    RootInlineBox* originatingLine() const { return m_originatingLine.get(); }
+    LegacyRootInlineBox* originatingLine() const { return m_originatingLine.get(); }
     void clearOriginatingLine() { m_originatingLine = nullptr; }
-    void setOriginatingLine(RootInlineBox& line) { m_originatingLine = makeWeakPtr(line); }
+    void setOriginatingLine(LegacyRootInlineBox& line) { m_originatingLine = makeWeakPtr(line); }
 
     LayoutSize locationOffsetOfBorderBox() const
     {
@@ -99,13 +102,12 @@ public:
 
 private:
     WeakPtr<RenderBox> m_renderer;
-    WeakPtr<RootInlineBox> m_originatingLine;
+    WeakPtr<LegacyRootInlineBox> m_originatingLine;
     LayoutRect m_frameRect;
     LayoutUnit m_paginationStrut;
     LayoutSize m_marginOffset;
-
     unsigned m_type : 2; // Type (left or right aligned)
-    unsigned m_shouldPaint : 1;
+    unsigned m_paintsFloat : 1;
     unsigned m_isDescendant : 1;
     unsigned m_isPlaced : 1;
 #if ASSERT_ENABLED
@@ -172,7 +174,7 @@ public:
     LayoutUnit findNextFloatLogicalBottomBelowForBlock(LayoutUnit logicalHeight);
 
 private:
-    const RenderBlockFlow& renderer() const { return *m_renderer; }
+    const RenderBlockFlow& renderer() const { ASSERT(m_renderer); return *m_renderer; }
     void computePlacedFloatsTree();
     const FloatingObjectTree* placedFloatsTree();
     void increaseObjectsCount(FloatingObject::Type);
@@ -181,13 +183,13 @@ private:
 
     FloatingObjectSet m_set;
     std::unique_ptr<FloatingObjectTree> m_placedFloatsTree;
-    unsigned m_leftObjectsCount;
-    unsigned m_rightObjectsCount;
-    bool m_horizontalWritingMode;
+    unsigned m_leftObjectsCount { 0 };
+    unsigned m_rightObjectsCount { 0 };
+    bool m_horizontalWritingMode { false };
     WeakPtr<const RenderBlockFlow> m_renderer;
 };
 
-#ifndef NDEBUG
+#if ENABLE(TREE_DEBUGGING)
 TextStream& operator<<(TextStream&, const FloatingObject&);
 #endif
 

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <classpath>
 	<classpathentry kind="src" path="src/main/java"/>
-	<classpathentry kind="src" output="testbin" path="src/test/java">
+	<classpathentry kind="src" output="testbin" path="src/shims/java">
 		<attributes>
 			<attribute name="test" value="true"/>
 		</attributes>

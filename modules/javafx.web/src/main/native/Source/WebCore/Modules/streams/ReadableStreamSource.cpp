@@ -27,8 +27,6 @@
 #include "config.h"
 #include "ReadableStreamSource.h"
 
-#include "JSDOMPromiseDeferred.h"
-
 namespace WebCore {
 
 ReadableStreamSource::~ReadableStreamSource() = default;
@@ -82,6 +80,23 @@ void ReadableStreamSource::clean()
         m_promise = nullptr;
         setInactive();
     }
+}
+
+void SimpleReadableStreamSource::doCancel()
+{
+    m_isCancelled = true;
+}
+
+void SimpleReadableStreamSource::close()
+{
+    if (!m_isCancelled)
+        controller().close();
+}
+
+void SimpleReadableStreamSource::enqueue(JSC::JSValue value)
+{
+    if (!m_isCancelled)
+        controller().enqueue(value);
 }
 
 } // namespace WebCore

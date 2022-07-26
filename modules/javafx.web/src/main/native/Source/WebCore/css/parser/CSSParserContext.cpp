@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,6 +26,7 @@
 #include "config.h"
 #include "CSSParserContext.h"
 
+#include "CSSImageValue.h"
 #include "Document.h"
 #include "DocumentLoader.h"
 #include "Page.h"
@@ -37,7 +38,7 @@ namespace WebCore {
 
 const CSSParserContext& strictCSSParserContext()
 {
-    static NeverDestroyed<CSSParserContext> strictContext(HTMLStandardMode);
+    static MainThreadNeverDestroyed<CSSParserContext> strictContext(HTMLStandardMode);
     return strictContext;
 }
 
@@ -47,36 +48,59 @@ CSSParserContext::CSSParserContext(CSSParserMode mode, const URL& baseURL)
 {
 }
 
-CSSParserContext::CSSParserContext(const Document& document, const URL& sheetBaseURL, const String& charset)
-    : baseURL(sheetBaseURL.isNull() ? document.baseURL() : sheetBaseURL)
-    , charset(charset)
-    , mode(document.inQuirksMode() ? HTMLQuirksMode : HTMLStandardMode)
-    , isHTMLDocument(document.isHTMLDocument())
-    , hasDocumentSecurityOrigin(sheetBaseURL.isNull() || document.securityOrigin().canRequest(baseURL))
-{
-    enforcesCSSMIMETypeInNoQuirksMode = document.settings().enforceCSSMIMETypeInNoQuirksMode();
-    useLegacyBackgroundSizeShorthandBehavior = document.settings().useLegacyBackgroundSizeShorthandBehavior();
-#if ENABLE(TEXT_AUTOSIZING)
-    textAutosizingEnabled = document.settings().textAutosizingEnabled();
-#endif
 #if ENABLE(OVERFLOW_SCROLLING_TOUCH)
-    legacyOverflowScrollingTouchEnabled = document.settings().legacyOverflowScrollingTouchEnabled();
+static bool shouldEnableLegacyOverflowScrollingTouch(const Document& document)
+{
     // The legacy -webkit-overflow-scrolling: touch behavior may have been disabled through the website policy,
     // in that case we want to disable the legacy behavior regardless of what the setting says.
     if (auto* loader = document.loader()) {
         if (loader->legacyOverflowScrollingTouchPolicy() == LegacyOverflowScrollingTouchPolicy::Disable)
-            legacyOverflowScrollingTouchEnabled = false;
+            return false;
     }
+    return document.settings().legacyOverflowScrollingTouchEnabled();
+}
 #endif
-    springTimingFunctionEnabled = document.settings().springTimingFunctionEnabled();
-    constantPropertiesEnabled = document.settings().constantPropertiesEnabled();
-    colorFilterEnabled = document.settings().colorFilterEnabled();
+
+CSSParserContext::CSSParserContext(const Document& document, const URL& sheetBaseURL, const String& charset)
+    : baseURL { sheetBaseURL.isNull() ? document.baseURL() : sheetBaseURL }
+    , charset { charset }
+    , mode { document.inQuirksMode() ? HTMLQuirksMode : HTMLStandardMode }
+    , isHTMLDocument { document.isHTMLDocument() }
+    , hasDocumentSecurityOrigin { sheetBaseURL.isNull() || document.securityOrigin().canRequest(baseURL) }
+    , useSystemAppearance { document.page() ? document.page()->useSystemAppearance() : false }
+    , aspectRatioEnabled { document.settings().aspectRatioEnabled() }
+    , colorContrastEnabled { document.settings().cssColorContrastEnabled() }
+    , colorFilterEnabled { document.settings().colorFilterEnabled() }
+    , colorMixEnabled { document.settings().cssColorMixEnabled() }
+    , constantPropertiesEnabled { document.settings().constantPropertiesEnabled() }
+    , containmentEnabled { document.settings().cssContainmentEnabled() }
+    , counterStyleAtRulesEnabled { document.settings().cssCounterStyleAtRulesEnabled() }
+    , counterStyleAtRuleImageSymbolsEnabled { document.settings().cssCounterStyleAtRuleImageSymbolsEnabled() }
+    , cssColor4 { document.settings().cssColor4() }
+    , deferredCSSParserEnabled { document.settings().deferredCSSParserEnabled() }
+    , individualTransformPropertiesEnabled { document.settings().cssIndividualTransformPropertiesEnabled() }
+#if ENABLE(OVERFLOW_SCROLLING_TOUCH)
+    , legacyOverflowScrollingTouchEnabled { shouldEnableLegacyOverflowScrollingTouch(document) }
+#endif
+    , overscrollBehaviorEnabled { document.settings().overscrollBehaviorEnabled() }
+    , relativeColorSyntaxEnabled { document.settings().cssRelativeColorSyntaxEnabled() }
+    , scrollBehaviorEnabled { document.settings().CSSOMViewSmoothScrollingEnabled() }
+    , springTimingFunctionEnabled { document.settings().springTimingFunctionEnabled() }
+#if ENABLE(TEXT_AUTOSIZING)
+    , textAutosizingEnabled { document.settings().textAutosizingEnabled() }
+#endif
+#if ENABLE(CSS_TRANSFORM_STYLE_OPTIMIZED_3D)
+    , transformStyleOptimized3DEnabled { document.settings().cssTransformStyleOptimized3DEnabled() }
+#endif
+    , useLegacyBackgroundSizeShorthandBehavior { document.settings().useLegacyBackgroundSizeShorthandBehavior() }
+    , focusVisibleEnabled { document.settings().focusVisibleEnabled() }
+    , hasPseudoClassEnabled { document.settings().hasPseudoClassEnabled() }
+    , cascadeLayersEnabled { document.settings().cssCascadeLayersEnabled() }
 #if ENABLE(ATTACHMENT_ELEMENT)
-    attachmentEnabled = RuntimeEnabledFeatures::sharedFeatures().attachmentElementEnabled();
+    , attachmentEnabled { RuntimeEnabledFeatures::sharedFeatures().attachmentElementEnabled() }
 #endif
-    deferredCSSParserEnabled = document.settings().deferredCSSParserEnabled();
-    scrollBehaviorEnabled = document.settings().CSSOMViewSmoothScrollingEnabled();
-    useSystemAppearance = document.page() ? document.page()->useSystemAppearance() : false;
+    , overflowClipEnabled { document.settings().overflowClipEnabled() }
+{
 }
 
 bool operator==(const CSSParserContext& a, const CSSParserContext& b)
@@ -84,43 +108,143 @@ bool operator==(const CSSParserContext& a, const CSSParserContext& b)
     return a.baseURL == b.baseURL
         && a.charset == b.charset
         && a.mode == b.mode
+        && a.enclosingRuleType == b.enclosingRuleType
         && a.isHTMLDocument == b.isHTMLDocument
-#if ENABLE(TEXT_AUTOSIZING)
-        && a.textAutosizingEnabled == b.textAutosizingEnabled
-#endif
+        && a.hasDocumentSecurityOrigin == b.hasDocumentSecurityOrigin
+        && a.isContentOpaque == b.isContentOpaque
+        && a.useSystemAppearance == b.useSystemAppearance
+        && a.aspectRatioEnabled == b.aspectRatioEnabled
+        && a.colorContrastEnabled == b.colorContrastEnabled
+        && a.colorFilterEnabled == b.colorFilterEnabled
+        && a.colorMixEnabled == b.colorMixEnabled
+        && a.constantPropertiesEnabled == b.constantPropertiesEnabled
+        && a.containmentEnabled == b.containmentEnabled
+        && a.counterStyleAtRulesEnabled == b.counterStyleAtRulesEnabled
+        && a.counterStyleAtRuleImageSymbolsEnabled == b.counterStyleAtRuleImageSymbolsEnabled
+        && a.cssColor4 == b.cssColor4
+        && a.deferredCSSParserEnabled == b.deferredCSSParserEnabled
+        && a.individualTransformPropertiesEnabled == b.individualTransformPropertiesEnabled
 #if ENABLE(OVERFLOW_SCROLLING_TOUCH)
         && a.legacyOverflowScrollingTouchEnabled == b.legacyOverflowScrollingTouchEnabled
 #endif
-        && a.enforcesCSSMIMETypeInNoQuirksMode == b.enforcesCSSMIMETypeInNoQuirksMode
-        && a.useLegacyBackgroundSizeShorthandBehavior == b.useLegacyBackgroundSizeShorthandBehavior
+        && a.overscrollBehaviorEnabled == b.overscrollBehaviorEnabled
+        && a.relativeColorSyntaxEnabled == b.relativeColorSyntaxEnabled
+        && a.scrollBehaviorEnabled == b.scrollBehaviorEnabled
         && a.springTimingFunctionEnabled == b.springTimingFunctionEnabled
-        && a.constantPropertiesEnabled == b.constantPropertiesEnabled
-        && a.colorFilterEnabled == b.colorFilterEnabled
+#if ENABLE(TEXT_AUTOSIZING)
+        && a.textAutosizingEnabled == b.textAutosizingEnabled
+#endif
+#if ENABLE(CSS_TRANSFORM_STYLE_OPTIMIZED_3D)
+        && a.transformStyleOptimized3DEnabled == b.transformStyleOptimized3DEnabled
+#endif
+        && a.useLegacyBackgroundSizeShorthandBehavior == b.useLegacyBackgroundSizeShorthandBehavior
+        && a.focusVisibleEnabled == b.focusVisibleEnabled
+        && a.hasPseudoClassEnabled == b.hasPseudoClassEnabled
+        && a.cascadeLayersEnabled == b.cascadeLayersEnabled
 #if ENABLE(ATTACHMENT_ELEMENT)
         && a.attachmentEnabled == b.attachmentEnabled
 #endif
-        && a.deferredCSSParserEnabled == b.deferredCSSParserEnabled
-        && a.scrollBehaviorEnabled == b.scrollBehaviorEnabled
-        && a.hasDocumentSecurityOrigin == b.hasDocumentSecurityOrigin
-        && a.useSystemAppearance == b.useSystemAppearance;
+        && a.overflowClipEnabled == b.overflowClipEnabled
+    ;
 }
 
-URL CSSParserContext::completeURL(const String& url) const
+void add(Hasher& hasher, const CSSParserContext& context)
 {
-    auto completedURL = [&] {
-        if (url.isNull())
-            return URL();
+    unsigned bits = context.isHTMLDocument                  << 0
+        | context.hasDocumentSecurityOrigin                 << 1
+        | context.isContentOpaque                           << 2
+        | context.useSystemAppearance                       << 3
+        | context.aspectRatioEnabled                        << 4
+        | context.colorContrastEnabled                      << 5
+        | context.colorFilterEnabled                        << 6
+        | context.colorMixEnabled                           << 7
+        | context.constantPropertiesEnabled                 << 8
+        | context.containmentEnabled                        << 9
+        | context.cssColor4                                 << 10
+        | context.deferredCSSParserEnabled                  << 11
+        | context.individualTransformPropertiesEnabled      << 12
+#if ENABLE(OVERFLOW_SCROLLING_TOUCH)
+        | context.legacyOverflowScrollingTouchEnabled       << 13
+#endif
+        | context.overscrollBehaviorEnabled                 << 14
+        | context.relativeColorSyntaxEnabled                << 15
+        | context.scrollBehaviorEnabled                     << 16
+        | context.springTimingFunctionEnabled               << 17
+#if ENABLE(TEXT_AUTOSIZING)
+        | context.textAutosizingEnabled                     << 18
+#endif
+#if ENABLE(CSS_TRANSFORM_STYLE_OPTIMIZED_3D)
+        | context.transformStyleOptimized3DEnabled          << 19
+#endif
+        | context.useLegacyBackgroundSizeShorthandBehavior  << 20
+        | context.focusVisibleEnabled                       << 21
+        | context.hasPseudoClassEnabled                     << 22
+        | context.cascadeLayersEnabled                      << 23
+#if ENABLE(ATTACHMENT_ELEMENT)
+        | context.attachmentEnabled                         << 24
+#endif
+        | context.overflowClipEnabled                       << 25
+        | context.mode                                      << 26; // This is multiple bits, so keep it last.
+    add(hasher, context.baseURL, context.charset, bits);
+}
+
+bool CSSParserContext::isPropertyRuntimeDisabled(CSSPropertyID property) const
+{
+    switch (property) {
+    case CSSPropertyAdditiveSymbols:
+    case CSSPropertyFallback:
+    case CSSPropertyPad:
+    case CSSPropertySymbols:
+    case CSSPropertyNegative:
+    case CSSPropertyPrefix:
+    case CSSPropertyRange:
+    case CSSPropertySuffix:
+    case CSSPropertySystem:
+        return !counterStyleAtRulesEnabled;
+    case CSSPropertyAspectRatio:
+        return !aspectRatioEnabled;
+    case CSSPropertyContain:
+        return !containmentEnabled;
+    case CSSPropertyAppleColorFilter:
+        return !colorFilterEnabled;
+    case CSSPropertyTranslate:
+    case CSSPropertyRotate:
+    case CSSPropertyScale:
+        return !individualTransformPropertiesEnabled;
+    case CSSPropertyOverscrollBehavior:
+    case CSSPropertyOverscrollBehaviorX:
+    case CSSPropertyOverscrollBehaviorY:
+        return !overscrollBehaviorEnabled;
+    case CSSPropertyScrollBehavior:
+        return !scrollBehaviorEnabled;
+#if ENABLE(TEXT_AUTOSIZING) && !PLATFORM(IOS_FAMILY)
+    case CSSPropertyWebkitTextSizeAdjust:
+        return !textAutosizingEnabled;
+#endif
+#if ENABLE(OVERFLOW_SCROLLING_TOUCH)
+    case CSSPropertyWebkitOverflowScrolling:
+        return !legacyOverflowScrollingTouchEnabled;
+#endif
+    default:
+        return false;
+    }
+}
+
+ResolvedURL CSSParserContext::completeURL(const String& string) const
+{
+    auto result = [&] () -> ResolvedURL {
+        if (string.isNull())
+            return { };
         if (charset.isEmpty())
-            return URL(baseURL, url);
-        TextEncoding encoding(charset);
-        auto& encodingForURLParsing = encoding.encodingForFormSubmissionOrURLParsing();
-        return URL(baseURL, url, encodingForURLParsing == UTF8Encoding() ? nullptr : &encodingForURLParsing);
+            return { string, { baseURL, string } };
+        auto encodingForURLParsing = TextEncoding { charset }.encodingForFormSubmissionOrURLParsing();
+        return { string, { baseURL, string, encodingForURLParsing == UTF8Encoding() ? nullptr : &encodingForURLParsing } };
     }();
 
-    if (mode == WebVTTMode && !completedURL.protocolIsData())
-        return URL();
+    if (mode == WebVTTMode && !result.resolvedURL.protocolIsData())
+        return { };
 
-    return completedURL;
+    return result;
 }
 
 }

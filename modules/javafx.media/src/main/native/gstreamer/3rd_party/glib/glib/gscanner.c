@@ -216,11 +216,11 @@
  *     by the scanner (the default is the whitespace characters: space,
  *     tab, carriage-return and line-feed).
  * @cset_identifier_first: specifies the characters which can start
- *     identifiers (the default is #G_CSET_a_2_z, "_", and #G_CSET_A_2_Z).
+ *     identifiers (the default is %G_CSET_a_2_z, "_", and %G_CSET_A_2_Z).
  * @cset_identifier_nth: specifies the characters which can be used
  *     in identifiers, after the first character (the default is
- *     #G_CSET_a_2_z, "_0123456789", #G_CSET_A_2_Z, #G_CSET_LATINS,
- *     #G_CSET_LATINC).
+ *     %G_CSET_a_2_z, "_0123456789", %G_CSET_A_2_Z, %G_CSET_LATINS,
+ *     %G_CSET_LATINC).
  * @cpair_comment_single: specifies the characters at the start and
  *     end of single-line comments. The default is "#\n" which means
  *     that single-line comments start with a '#' and continue until
@@ -256,7 +256,7 @@
  * @scan_string_dq: specifies if strings can be enclosed in double
  *     quotes (the default is %TRUE).
  * @numbers_2_int: specifies if binary, octal and hexadecimal numbers
- *     are reported as #G_TOKEN_INT (the default is %TRUE).
+ *     are reported as %G_TOKEN_INT (the default is %TRUE).
  * @int_2_float: specifies if all numbers are reported as %G_TOKEN_FLOAT
  *     (the default is %FALSE).
  * @identifier_2_string: specifies if identifiers are reported as strings
@@ -275,15 +275,15 @@
  */
 
 /* --- defines --- */
-#define to_lower(c)             ( \
-    (guchar) (                          \
-      ( (((guchar)(c))>='A' && ((guchar)(c))<='Z') * ('a'-'A') ) |  \
-      ( (((guchar)(c))>=192 && ((guchar)(c))<=214) * (224-192) ) |  \
-      ( (((guchar)(c))>=216 && ((guchar)(c))<=222) * (248-216) ) |  \
-      ((guchar)(c))                         \
-    )                               \
+#define to_lower(c)                             ( \
+        (guchar) (                                                      \
+          ( (((guchar)(c))>='A' && ((guchar)(c))<='Z') * ('a'-'A') ) |  \
+          ( (((guchar)(c))>=192 && ((guchar)(c))<=214) * (224-192) ) |  \
+          ( (((guchar)(c))>=216 && ((guchar)(c))<=222) * (248-216) ) |  \
+          ((guchar)(c))                                                 \
+        )                                                               \
 )
-#define READ_BUFFER_SIZE    (4000)
+#define READ_BUFFER_SIZE        (4000)
 
 
 /* --- typedefs --- */
@@ -291,9 +291,9 @@ typedef struct  _GScannerKey    GScannerKey;
 
 struct  _GScannerKey
 {
-  guint      scope_id;
-  gchar     *symbol;
-  gpointer   value;
+  guint          scope_id;
+  gchar         *symbol;
+  gpointer       value;
 };
 
 
@@ -302,12 +302,12 @@ static const GScannerConfig g_scanner_config_template =
 {
   (
    " \t\r\n"
-   )            /* cset_skip_characters */,
+   )                    /* cset_skip_characters */,
   (
    G_CSET_a_2_z
    "_"
    G_CSET_A_2_Z
-   )            /* cset_identifier_first */,
+   )                    /* cset_identifier_first */,
   (
    G_CSET_a_2_z
    "_"
@@ -315,68 +315,68 @@ static const GScannerConfig g_scanner_config_template =
    G_CSET_DIGITS
    G_CSET_LATINS
    G_CSET_LATINC
-   )            /* cset_identifier_nth */,
-  ( "#\n" )     /* cpair_comment_single */,
+   )                    /* cset_identifier_nth */,
+  ( "#\n" )             /* cpair_comment_single */,
 
-  FALSE         /* case_sensitive */,
+  FALSE                 /* case_sensitive */,
 
-  TRUE          /* skip_comment_multi */,
-  TRUE          /* skip_comment_single */,
-  TRUE          /* scan_comment_multi */,
-  TRUE          /* scan_identifier */,
-  FALSE         /* scan_identifier_1char */,
-  FALSE         /* scan_identifier_NULL */,
-  TRUE          /* scan_symbols */,
-  FALSE         /* scan_binary */,
-  TRUE          /* scan_octal */,
-  TRUE          /* scan_float */,
-  TRUE          /* scan_hex */,
-  FALSE         /* scan_hex_dollar */,
-  TRUE          /* scan_string_sq */,
-  TRUE          /* scan_string_dq */,
-  TRUE          /* numbers_2_int */,
-  FALSE         /* int_2_float */,
-  FALSE         /* identifier_2_string */,
-  TRUE          /* char_2_token */,
-  FALSE         /* symbol_2_token */,
-  FALSE         /* scope_0_fallback */,
-  FALSE         /* store_int64 */,
-  0             /* padding_dummy */
+  TRUE                  /* skip_comment_multi */,
+  TRUE                  /* skip_comment_single */,
+  TRUE                  /* scan_comment_multi */,
+  TRUE                  /* scan_identifier */,
+  FALSE                 /* scan_identifier_1char */,
+  FALSE                 /* scan_identifier_NULL */,
+  TRUE                  /* scan_symbols */,
+  FALSE                 /* scan_binary */,
+  TRUE                  /* scan_octal */,
+  TRUE                  /* scan_float */,
+  TRUE                  /* scan_hex */,
+  FALSE                 /* scan_hex_dollar */,
+  TRUE                  /* scan_string_sq */,
+  TRUE                  /* scan_string_dq */,
+  TRUE                  /* numbers_2_int */,
+  FALSE                 /* int_2_float */,
+  FALSE                 /* identifier_2_string */,
+  TRUE                  /* char_2_token */,
+  FALSE                 /* symbol_2_token */,
+  FALSE                 /* scope_0_fallback */,
+  FALSE                 /* store_int64 */,
+  0                     /* padding_dummy */
 };
 
 
 /* --- prototypes --- */
 static inline
-GScannerKey*    g_scanner_lookup_internal (GScanner *scanner,
-                       guint     scope_id,
-                       const gchar  *symbol);
-static gboolean g_scanner_key_equal   (gconstpointer v1,
+GScannerKey*    g_scanner_lookup_internal (GScanner     *scanner,
+                                           guint         scope_id,
+                                           const gchar  *symbol);
+static gboolean g_scanner_key_equal       (gconstpointer v1,
                                            gconstpointer v2);
-static guint    g_scanner_key_hash    (gconstpointer v);
-static void g_scanner_get_token_ll    (GScanner *scanner,
-                       GTokenType   *token_p,
-                       GTokenValue  *value_p,
-                       guint    *line_p,
-                       guint    *position_p);
-static void g_scanner_get_token_i     (GScanner *scanner,
-                       GTokenType   *token_p,
-                       GTokenValue  *value_p,
-                       guint    *line_p,
-                       guint    *position_p);
+static guint    g_scanner_key_hash        (gconstpointer v);
+static void     g_scanner_get_token_ll    (GScanner     *scanner,
+                                           GTokenType   *token_p,
+                                           GTokenValue  *value_p,
+                                           guint        *line_p,
+                                           guint        *position_p);
+static void     g_scanner_get_token_i     (GScanner     *scanner,
+                                           GTokenType   *token_p,
+                                           GTokenValue  *value_p,
+                                           guint        *line_p,
+                                           guint        *position_p);
 
-static guchar   g_scanner_peek_next_char  (GScanner *scanner);
-static guchar   g_scanner_get_char    (GScanner *scanner,
-                       guint    *line_p,
-                       guint    *position_p);
-static void g_scanner_msg_handler     (GScanner *scanner,
-                       gchar    *message,
-                       gboolean  is_error);
+static guchar   g_scanner_peek_next_char  (GScanner     *scanner);
+static guchar   g_scanner_get_char        (GScanner     *scanner,
+                                           guint        *line_p,
+                                           guint        *position_p);
+static void     g_scanner_msg_handler     (GScanner     *scanner,
+                                           gchar        *message,
+                                           gboolean      is_error);
 
 
 /* --- functions --- */
 static inline gint
 g_scanner_char_2_num (guchar    c,
-              guchar    base)
+                      guchar    base)
 {
   if (c >= '0' && c <= '9')
     c -= '0';
@@ -424,7 +424,7 @@ g_scanner_new (const GScannerConfig *config_templ)
 
   scanner->config = g_new0 (GScannerConfig, 1);
 
-  scanner->config->case_sensitive    = config_templ->case_sensitive;
+  scanner->config->case_sensitive        = config_templ->case_sensitive;
   scanner->config->cset_skip_characters  = config_templ->cset_skip_characters;
   if (!scanner->config->cset_skip_characters)
     scanner->config->cset_skip_characters = "";
@@ -434,24 +434,24 @@ g_scanner_new (const GScannerConfig *config_templ)
   scanner->config->skip_comment_multi    = config_templ->skip_comment_multi;
   scanner->config->skip_comment_single   = config_templ->skip_comment_single;
   scanner->config->scan_comment_multi    = config_templ->scan_comment_multi;
-  scanner->config->scan_identifier   = config_templ->scan_identifier;
+  scanner->config->scan_identifier       = config_templ->scan_identifier;
   scanner->config->scan_identifier_1char = config_templ->scan_identifier_1char;
   scanner->config->scan_identifier_NULL  = config_templ->scan_identifier_NULL;
-  scanner->config->scan_symbols      = config_templ->scan_symbols;
-  scanner->config->scan_binary       = config_templ->scan_binary;
-  scanner->config->scan_octal        = config_templ->scan_octal;
-  scanner->config->scan_float        = config_templ->scan_float;
-  scanner->config->scan_hex      = config_templ->scan_hex;
-  scanner->config->scan_hex_dollar   = config_templ->scan_hex_dollar;
-  scanner->config->scan_string_sq    = config_templ->scan_string_sq;
-  scanner->config->scan_string_dq    = config_templ->scan_string_dq;
-  scanner->config->numbers_2_int     = config_templ->numbers_2_int;
-  scanner->config->int_2_float       = config_templ->int_2_float;
+  scanner->config->scan_symbols          = config_templ->scan_symbols;
+  scanner->config->scan_binary           = config_templ->scan_binary;
+  scanner->config->scan_octal            = config_templ->scan_octal;
+  scanner->config->scan_float            = config_templ->scan_float;
+  scanner->config->scan_hex              = config_templ->scan_hex;
+  scanner->config->scan_hex_dollar       = config_templ->scan_hex_dollar;
+  scanner->config->scan_string_sq        = config_templ->scan_string_sq;
+  scanner->config->scan_string_dq        = config_templ->scan_string_dq;
+  scanner->config->numbers_2_int         = config_templ->numbers_2_int;
+  scanner->config->int_2_float           = config_templ->int_2_float;
   scanner->config->identifier_2_string   = config_templ->identifier_2_string;
-  scanner->config->char_2_token      = config_templ->char_2_token;
-  scanner->config->symbol_2_token    = config_templ->symbol_2_token;
-  scanner->config->scope_0_fallback  = config_templ->scope_0_fallback;
-  scanner->config->store_int64       = config_templ->store_int64;
+  scanner->config->char_2_token          = config_templ->char_2_token;
+  scanner->config->symbol_2_token        = config_templ->symbol_2_token;
+  scanner->config->scope_0_fallback      = config_templ->scope_0_fallback;
+  scanner->config->store_int64           = config_templ->store_int64;
 
   scanner->token = G_TOKEN_NONE;
   scanner->value.v_int64 = 0;
@@ -530,9 +530,9 @@ g_scanner_destroy (GScanner *scanner)
 }
 
 static void
-g_scanner_msg_handler (GScanner     *scanner,
-               gchar        *message,
-               gboolean     is_error)
+g_scanner_msg_handler (GScanner         *scanner,
+                       gchar            *message,
+                       gboolean         is_error)
 {
   g_return_if_fail (scanner != NULL);
 
@@ -553,8 +553,8 @@ g_scanner_msg_handler (GScanner     *scanner,
  * Outputs an error message, via the #GScanner message handler.
  */
 void
-g_scanner_error (GScanner   *scanner,
-         const gchar    *format,
+g_scanner_error (GScanner       *scanner,
+                 const gchar    *format,
                  ...)
 {
   g_return_if_fail (scanner != NULL);
@@ -633,9 +633,9 @@ g_scanner_key_hash (gconstpointer v)
 }
 
 static inline GScannerKey*
-g_scanner_lookup_internal (GScanner *scanner,
-               guint     scope_id,
-               const gchar  *symbol)
+g_scanner_lookup_internal (GScanner     *scanner,
+                           guint         scope_id,
+                           const gchar  *symbol)
 {
   GScannerKey   *key_p;
   GScannerKey key;
@@ -685,9 +685,9 @@ g_scanner_lookup_internal (GScanner *scanner,
  */
 void
 g_scanner_scope_add_symbol (GScanner    *scanner,
-                guint    scope_id,
-                const gchar *symbol,
-                gpointer     value)
+                            guint        scope_id,
+                            const gchar *symbol,
+                            gpointer     value)
 {
   GScannerKey   *key;
 
@@ -739,7 +739,7 @@ g_scanner_scope_add_symbol (GScanner    *scanner,
  */
 void
 g_scanner_scope_remove_symbol (GScanner    *scanner,
-                   guint        scope_id,
+                               guint        scope_id,
                                const gchar *symbol)
 {
   GScannerKey   *key;
@@ -788,8 +788,8 @@ g_scanner_scope_remove_symbol (GScanner    *scanner,
  *     if @symbol is not bound in the current scope
  */
 gpointer
-g_scanner_lookup_symbol (GScanner   *scanner,
-             const gchar    *symbol)
+g_scanner_lookup_symbol (GScanner       *scanner,
+                         const gchar    *symbol)
 {
   GScannerKey   *key;
   guint scope_id;
@@ -825,7 +825,7 @@ g_scanner_lookup_symbol (GScanner   *scanner,
  */
 gpointer
 g_scanner_scope_lookup_symbol (GScanner       *scanner,
-                   guint           scope_id,
+                               guint           scope_id,
                                const gchar    *symbol)
 {
   GScannerKey   *key;
@@ -854,7 +854,7 @@ g_scanner_scope_lookup_symbol (GScanner       *scanner,
  */
 guint
 g_scanner_set_scope (GScanner       *scanner,
-             guint       scope_id)
+                     guint           scope_id)
 {
   guint old_scope_id;
 
@@ -912,9 +912,9 @@ g_scanner_foreach_internal (gpointer  _key,
  */
 void
 g_scanner_scope_foreach_symbol (GScanner       *scanner,
-                guint       scope_id,
-                GHFunc      func,
-                gpointer    user_data)
+                                guint           scope_id,
+                                GHFunc          func,
+                                gpointer        user_data)
 {
   gpointer d[3];
 
@@ -946,7 +946,7 @@ g_scanner_scope_foreach_symbol (GScanner       *scanner,
  * Returns: the type of the token
  */
 GTokenType
-g_scanner_peek_next_token (GScanner *scanner)
+g_scanner_peek_next_token (GScanner     *scanner)
 {
   g_return_val_if_fail (scanner != NULL, G_TOKEN_EOF);
 
@@ -976,7 +976,7 @@ g_scanner_peek_next_token (GScanner *scanner)
  * Returns: the type of the token
  */
 GTokenType
-g_scanner_get_next_token (GScanner  *scanner)
+g_scanner_get_next_token (GScanner      *scanner)
 {
   g_return_val_if_fail (scanner != NULL, G_TOKEN_EOF);
 
@@ -1105,7 +1105,7 @@ g_scanner_eof (GScanner *scanner)
  */
 void
 g_scanner_input_file (GScanner *scanner,
-              gint  input_fd)
+                      gint      input_fd)
 {
   g_return_if_fail (scanner != NULL);
   g_return_if_fail (input_fd >= 0);
@@ -1138,7 +1138,7 @@ g_scanner_input_file (GScanner *scanner,
 void
 g_scanner_input_text (GScanner    *scanner,
                       const gchar *text,
-              guint    text_len)
+                      guint        text_len)
 {
   g_return_if_fail (scanner != NULL);
   if (text_len)
@@ -1241,8 +1241,8 @@ g_scanner_sync_file_offset (GScanner *scanner)
 
 static guchar
 g_scanner_get_char (GScanner    *scanner,
-            guint   *line_p,
-            guint   *position_p)
+                    guint       *line_p,
+                    guint       *position_p)
 {
   guchar fchar;
 
@@ -1322,13 +1322,13 @@ g_scanner_get_char (GScanner    *scanner,
  * to construct part of the message.
  */
 void
-g_scanner_unexp_token (GScanner     *scanner,
-               GTokenType    expected_token,
-               const gchar  *identifier_spec,
-               const gchar  *symbol_spec,
-               const gchar  *symbol_name,
-               const gchar  *message,
-               gint      is_error)
+g_scanner_unexp_token (GScanner         *scanner,
+                       GTokenType        expected_token,
+                       const gchar      *identifier_spec,
+                       const gchar      *symbol_spec,
+                       const gchar      *symbol_name,
+                       const gchar      *message,
+                       gint              is_error)
 {
   gchar *token_string;
   guint token_string_len;
@@ -1650,10 +1650,10 @@ g_scanner_unexp_token (GScanner     *scanner,
 
 static void
 g_scanner_get_token_i (GScanner *scanner,
-               GTokenType   *token_p,
-               GTokenValue  *value_p,
-               guint        *line_p,
-               guint        *position_p)
+                       GTokenType       *token_p,
+                       GTokenValue      *value_p,
+                       guint            *line_p,
+                       guint            *position_p)
 {
   do
     {
@@ -1673,56 +1673,63 @@ g_scanner_get_token_i (GScanner *scanner,
     {
     case G_TOKEN_IDENTIFIER:
       if (scanner->config->identifier_2_string)
-  *token_p = G_TOKEN_STRING;
+        *token_p = G_TOKEN_STRING;
       break;
 
     case G_TOKEN_SYMBOL:
       if (scanner->config->symbol_2_token)
-  *token_p = (GTokenType) value_p->v_symbol;
+        *token_p = (GTokenType) ((size_t) value_p->v_symbol);
       break;
 
     case G_TOKEN_BINARY:
     case G_TOKEN_OCTAL:
     case G_TOKEN_HEX:
       if (scanner->config->numbers_2_int)
-  *token_p = G_TOKEN_INT;
+        *token_p = G_TOKEN_INT;
       break;
 
     default:
       break;
     }
 
-  if (*token_p == G_TOKEN_INT &&
+if (*token_p == G_TOKEN_INT &&
       scanner->config->int_2_float)
     {
       *token_p = G_TOKEN_FLOAT;
+
+      /* Have to assign through a temporary variable to avoid undefined behaviour
+       * by copying between potentially-overlapping union members. */
       if (scanner->config->store_int64)
         {
-          value_p->v_float = value_p->v_int64;
+          gint64 temp = value_p->v_int64;
+          value_p->v_float = temp;
         }
       else
-  value_p->v_float = value_p->v_int;
+        {
+          gint temp = value_p->v_int;
+          value_p->v_float = temp;
+        }
     }
 
   errno = 0;
 }
 
 static void
-g_scanner_get_token_ll  (GScanner   *scanner,
-             GTokenType *token_p,
-             GTokenValue    *value_p,
-             guint      *line_p,
-             guint      *position_p)
+g_scanner_get_token_ll  (GScanner       *scanner,
+                         GTokenType     *token_p,
+                         GTokenValue    *value_p,
+                         guint          *line_p,
+                         guint          *position_p)
 {
   GScannerConfig *config;
   GTokenType       token;
-  gboolean     in_comment_multi;
-  gboolean     in_comment_single;
-  gboolean     in_string_sq;
-  gboolean     in_string_dq;
-  GString     *gstring;
+  gboolean         in_comment_multi;
+  gboolean         in_comment_single;
+  gboolean         in_string_sq;
+  gboolean         in_string_dq;
+  GString         *gstring;
   GTokenValue      value;
-  guchar       ch;
+  guchar           ch;
 
   config = scanner->config;
   (*value_p).v_int64 = 0;
@@ -1826,8 +1833,8 @@ g_scanner_get_token_ll  (GScanner   *scanner,
           ch = g_scanner_get_char (scanner, line_p, position_p);
           switch (ch)
       {
-              guint i;
-              guint fchar;
+                          guint i;
+                          guint fchar;
 
       case 0:
         break;

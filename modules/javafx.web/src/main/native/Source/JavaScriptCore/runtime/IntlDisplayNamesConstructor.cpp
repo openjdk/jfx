@@ -34,7 +34,7 @@ namespace JSC {
 
 STATIC_ASSERT_IS_TRIVIALLY_DESTRUCTIBLE(IntlDisplayNamesConstructor);
 
-static EncodedJSValue JSC_HOST_CALL IntlDisplayNamesConstructorSupportedLocalesOf(JSGlobalObject*, CallFrame*);
+static JSC_DECLARE_HOST_FUNCTION(intlDisplayNamesConstructorSupportedLocalesOf);
 
 }
 
@@ -46,7 +46,7 @@ const ClassInfo IntlDisplayNamesConstructor::s_info = { "Function", &Base::s_inf
 
 /* Source for IntlDisplayNamesConstructor.lut.h
 @begin displayNamesConstructorTable
-  supportedLocalesOf             IntlDisplayNamesConstructorSupportedLocalesOf             DontEnum|Function 1
+  supportedLocalesOf             intlDisplayNamesConstructorSupportedLocalesOf             DontEnum|Function 1
 @end
 */
 
@@ -62,8 +62,8 @@ Structure* IntlDisplayNamesConstructor::createStructure(VM& vm, JSGlobalObject* 
     return Structure::create(vm, globalObject, prototype, TypeInfo(InternalFunctionType, StructureFlags), info());
 }
 
-static EncodedJSValue JSC_HOST_CALL callIntlDisplayNames(JSGlobalObject*, CallFrame*);
-static EncodedJSValue JSC_HOST_CALL constructIntlDisplayNames(JSGlobalObject*, CallFrame*);
+static JSC_DECLARE_HOST_FUNCTION(callIntlDisplayNames);
+static JSC_DECLARE_HOST_FUNCTION(constructIntlDisplayNames);
 
 IntlDisplayNamesConstructor::IntlDisplayNamesConstructor(VM& vm, Structure* structure)
     : Base(vm, structure, callIntlDisplayNames, constructIntlDisplayNames)
@@ -72,22 +72,19 @@ IntlDisplayNamesConstructor::IntlDisplayNamesConstructor(VM& vm, Structure* stru
 
 void IntlDisplayNamesConstructor::finishCreation(VM& vm, IntlDisplayNamesPrototype* displayNamesPrototype)
 {
-    Base::finishCreation(vm, "DisplayNames"_s, NameAdditionMode::WithoutStructureTransition);
+    Base::finishCreation(vm, 2, "DisplayNames"_s, PropertyAdditionMode::WithoutStructureTransition);
     putDirectWithoutTransition(vm, vm.propertyNames->prototype, displayNamesPrototype, PropertyAttribute::DontEnum | PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly);
-    putDirectWithoutTransition(vm, vm.propertyNames->length, jsNumber(2), PropertyAttribute::ReadOnly | PropertyAttribute::DontEnum);
     displayNamesPrototype->putDirectWithoutTransition(vm, vm.propertyNames->constructor, this, static_cast<unsigned>(PropertyAttribute::DontEnum));
 }
 
 // https://tc39.es/ecma402/#sec-Intl.DisplayNames
-static EncodedJSValue JSC_HOST_CALL constructIntlDisplayNames(JSGlobalObject* globalObject, CallFrame* callFrame)
+JSC_DEFINE_HOST_FUNCTION(constructIntlDisplayNames, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     JSObject* newTarget = asObject(callFrame->newTarget());
-    Structure* structure = newTarget == callFrame->jsCallee()
-        ? globalObject->displayNamesStructure()
-        : InternalFunction::createSubclassStructure(globalObject, newTarget, getFunctionRealm(vm, newTarget)->displayNamesStructure());
+    Structure* structure = JSC_GET_DERIVED_STRUCTURE(vm, displayNamesStructure, newTarget, callFrame->jsCallee());
     RETURN_IF_EXCEPTION(scope, { });
 
     IntlDisplayNames* displayNames = IntlDisplayNames::create(vm, structure);
@@ -99,7 +96,7 @@ static EncodedJSValue JSC_HOST_CALL constructIntlDisplayNames(JSGlobalObject* gl
 }
 
 // https://tc39.es/ecma402/#sec-Intl.DisplayNames
-static EncodedJSValue JSC_HOST_CALL callIntlDisplayNames(JSGlobalObject* globalObject, CallFrame*)
+JSC_DEFINE_HOST_FUNCTION(callIntlDisplayNames, (JSGlobalObject* globalObject, CallFrame*))
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
@@ -107,7 +104,7 @@ static EncodedJSValue JSC_HOST_CALL callIntlDisplayNames(JSGlobalObject* globalO
     return JSValue::encode(throwConstructorCannotBeCalledAsFunctionTypeError(globalObject, scope, "DisplayNames"));
 }
 
-EncodedJSValue JSC_HOST_CALL IntlDisplayNamesConstructorSupportedLocalesOf(JSGlobalObject* globalObject, CallFrame* callFrame)
+JSC_DEFINE_HOST_FUNCTION(intlDisplayNamesConstructorSupportedLocalesOf, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
@@ -115,7 +112,7 @@ EncodedJSValue JSC_HOST_CALL IntlDisplayNamesConstructorSupportedLocalesOf(JSGlo
     // https://tc39.es/proposal-intl-displaynames/#sec-Intl.DisplayNames.supportedLocalesOf
 
     // 1. Let availableLocales be %DisplayNames%.[[availableLocales]].
-    const HashSet<String>& availableLocales = intlDisplayNamesAvailableLocales();
+    const auto& availableLocales = intlDisplayNamesAvailableLocales();
 
     // 2. Let requestedLocales be CanonicalizeLocaleList(locales).
     Vector<String> requestedLocales = canonicalizeLocaleList(globalObject, callFrame->argument(0));

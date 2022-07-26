@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,8 +32,6 @@
 
 namespace JSC {
 
-using Wasm::WasmToWasmImportableFunction;
-
 class WebAssemblyWrapperFunction final : public WebAssemblyFunctionBase {
 public:
     using Base = WebAssemblyFunctionBase;
@@ -51,21 +49,14 @@ public:
     static WebAssemblyWrapperFunction* create(VM&, JSGlobalObject*, Structure*, JSObject*, unsigned importIndex, JSWebAssemblyInstance*, Wasm::SignatureIndex);
     static Structure* createStructure(VM&, JSGlobalObject*, JSValue);
 
-    Wasm::SignatureIndex signatureIndex() const { return m_importableFunction.signatureIndex; }
-    WasmToWasmImportableFunction::LoadLocation  entrypointLoadLocation() const { return m_importableFunction.entrypointLoadLocation; }
-    WasmToWasmImportableFunction importableFunction() const { return m_importableFunction; }
     JSObject* function() { return m_function.get(); }
 
 private:
     WebAssemblyWrapperFunction(VM&, NativeExecutable*, JSGlobalObject*, Structure*, WasmToWasmImportableFunction);
     void finishCreation(VM&, NativeExecutable*, unsigned length, const String& name, JSObject*, JSWebAssemblyInstance*);
-    static void visitChildren(JSCell*, SlotVisitor&);
+    DECLARE_VISIT_CHILDREN;
 
     WriteBarrier<JSObject> m_function;
-    // It's safe to just hold the raw WasmToWasmImportableFunction because we have a reference
-    // to our Instance, which points to the CodeBlock, which points to the Module
-    // that exported us, which ensures that the actual Signature/code doesn't get deallocated.
-    WasmToWasmImportableFunction m_importableFunction;
 };
 
 } // namespace JSC

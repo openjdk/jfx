@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -58,14 +58,16 @@ void JSModuleNamespaceObject::finishCreation(JSGlobalObject* globalObject, Abstr
     });
 
     m_moduleRecord.set(vm, this, moduleRecord);
-    m_names.reserveCapacity(resolutions.size());
+    m_names = FixedVector<Identifier>(resolutions.size());
     {
-        auto locker = holdLock(cellLock());
+        Locker locker { cellLock() };
+        unsigned index = 0;
         for (const auto& pair : resolutions) {
-            m_names.append(pair.first);
+            m_names[index] = pair.first;
             auto addResult = m_exports.add(pair.first.impl(), ExportEntry());
             addResult.iterator->value.localName = pair.second.localName;
             addResult.iterator->value.moduleRecord.set(vm, this, pair.second.moduleRecord);
+            ++index;
         }
     }
 
@@ -76,7 +78,7 @@ void JSModuleNamespaceObject::finishCreation(JSGlobalObject* globalObject, Abstr
     // http://www.ecma-international.org/ecma-262/6.0/#sec-module-namespace-exotic-objects-isextensible
     // http://www.ecma-international.org/ecma-262/6.0/#sec-module-namespace-exotic-objects-preventextensions
     methodTable(vm)->preventExtensions(this, globalObject);
-    scope.assertNoException();
+    scope.assertNoExceptionExceptTermination();
 }
 
 void JSModuleNamespaceObject::destroy(JSCell* cell)
@@ -85,18 +87,21 @@ void JSModuleNamespaceObject::destroy(JSCell* cell)
     thisObject->JSModuleNamespaceObject::~JSModuleNamespaceObject();
 }
 
-void JSModuleNamespaceObject::visitChildren(JSCell* cell, SlotVisitor& visitor)
+template<typename Visitor>
+void JSModuleNamespaceObject::visitChildrenImpl(JSCell* cell, Visitor& visitor)
 {
     JSModuleNamespaceObject* thisObject = jsCast<JSModuleNamespaceObject*>(cell);
     ASSERT_GC_OBJECT_INHERITS(thisObject, info());
     Base::visitChildren(thisObject, visitor);
     visitor.append(thisObject->m_moduleRecord);
     {
-        auto locker = holdLock(thisObject->cellLock());
+        Locker locker { thisObject->cellLock() };
         for (auto& pair : thisObject->m_exports)
             visitor.appendHidden(pair.value.moduleRecord);
     }
 }
+
+DEFINE_VISIT_CHILDREN(JSModuleNamespaceObject);
 
 static JSValue getValue(JSModuleEnvironment* environment, PropertyName localName, ScopeOffset& scopeOffset)
 {
@@ -123,7 +128,7 @@ bool JSModuleNamespaceObject::getOwnPropertySlotCommon(JSGlobalObject* globalObj
     // If the property name is a symbol, we don't look into the imported bindings.
     // It may return the descriptor with writable: true, but namespace objects does not allow it in [[Set]] / [[DefineOwnProperty]] side.
     if (propertyName.isSymbol())
-        return JSObject::getOwnPropertySlot(this, globalObject, propertyName, slot);
+        return Base::getOwnPropertySlot(this, globalObject, propertyName, slot);
 
     slot.setIsTaintedByOpaqueObject();
 
@@ -135,6 +140,14 @@ bool JSModuleNamespaceObject::getOwnPropertySlotCommon(JSGlobalObject* globalObj
     switch (slot.internalMethodType()) {
     case PropertySlot::InternalMethodType::GetOwnProperty:
     case PropertySlot::InternalMethodType::Get: {
+        if (exportEntry.localName == vm.propertyNames->starNamespacePrivateName) {
+            // https://tc39.es/ecma262/#sec-module-namespace-exotic-objects-get-p-receiver
+            // 10. If binding.[[BindingName]] is "*namespace*", then
+            //     a. Return ? GetModuleNamespace(targetModule).
+            // We call getModuleNamespace() to ensure materialization. And after that, looking up the value from the scope to encourage module namespace object IC.
+            exportEntry.moduleRecord->getModuleNamespace(globalObject);
+            RETURN_IF_EXCEPTION(scope, false);
+        }
         JSModuleEnvironment* environment = exportEntry.moduleRecord->moduleEnvironment();
         ScopeOffset scopeOffset;
         JSValue value = getValue(environment, exportEntry.localName, scopeOffset);
@@ -201,15 +214,22 @@ bool JSModuleNamespaceObject::putByIndex(JSCell*, JSGlobalObject* globalObject, 
 
 bool JSModuleNamespaceObject::deleteProperty(JSCell* cell, JSGlobalObject* globalObject, PropertyName propertyName, DeletePropertySlot& slot)
 {
-    // http://www.ecma-international.org/ecma-262/6.0/#sec-module-namespace-exotic-objects-delete-p
+    // https://tc39.es/ecma262/#sec-module-namespace-exotic-objects-delete-p
     JSModuleNamespaceObject* thisObject = jsCast<JSModuleNamespaceObject*>(cell);
     if (propertyName.isSymbol())
-        return JSObject::deleteProperty(thisObject, globalObject, propertyName, slot);
+        return Base::deleteProperty(thisObject, globalObject, propertyName, slot);
 
     return !thisObject->m_exports.contains(propertyName.uid());
 }
 
-void JSModuleNamespaceObject::getOwnPropertyNames(JSObject* cell, JSGlobalObject* globalObject, PropertyNameArray& propertyNames, EnumerationMode mode)
+bool JSModuleNamespaceObject::deletePropertyByIndex(JSCell* cell, JSGlobalObject* globalObject, unsigned propertyName)
+{
+    VM& vm = globalObject->vm();
+    JSModuleNamespaceObject* thisObject = jsCast<JSModuleNamespaceObject*>(cell);
+    return !thisObject->m_exports.contains(Identifier::from(vm, propertyName).impl());
+}
+
+void JSModuleNamespaceObject::getOwnPropertyNames(JSObject* cell, JSGlobalObject* globalObject, PropertyNameArray& propertyNames, DontEnumPropertiesMode mode)
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
@@ -217,7 +237,7 @@ void JSModuleNamespaceObject::getOwnPropertyNames(JSObject* cell, JSGlobalObject
     // https://tc39.es/ecma262/#sec-module-namespace-exotic-objects-ownpropertykeys
     JSModuleNamespaceObject* thisObject = jsCast<JSModuleNamespaceObject*>(cell);
     for (const auto& name : thisObject->m_names) {
-        if (!mode.includeDontEnumProperties()) {
+        if (mode == DontEnumPropertiesMode::Exclude) {
             // Perform [[GetOwnProperty]] to throw ReferenceError if binding is uninitialized.
             PropertySlot slot(cell, PropertySlot::InternalMethodType::GetOwnProperty);
             thisObject->getOwnPropertySlotCommon(globalObject, name.impl(), slot);
@@ -225,18 +245,78 @@ void JSModuleNamespaceObject::getOwnPropertyNames(JSObject* cell, JSGlobalObject
         }
         propertyNames.add(name.impl());
     }
-    JSObject::getOwnPropertyNames(thisObject, globalObject, propertyNames, mode);
+    if (propertyNames.includeSymbolProperties()) {
+        scope.release();
+        thisObject->getOwnNonIndexPropertyNames(globalObject, propertyNames, mode);
+    }
 }
 
-bool JSModuleNamespaceObject::defineOwnProperty(JSObject*, JSGlobalObject* globalObject, PropertyName, const PropertyDescriptor&, bool shouldThrow)
+bool JSModuleNamespaceObject::defineOwnProperty(JSObject* cell, JSGlobalObject* globalObject, PropertyName propertyName, const PropertyDescriptor& descriptor, bool shouldThrow)
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    // http://www.ecma-international.org/ecma-262/6.0/#sec-module-namespace-exotic-objects-defineownproperty-p-desc
-    if (shouldThrow)
-        throwTypeError(globalObject, scope, NonExtensibleObjectPropertyDefineError);
-    return false;
+    // https://tc39.es/ecma262/#sec-module-namespace-exotic-objects-defineownproperty-p-desc
+
+    JSModuleNamespaceObject* thisObject = jsCast<JSModuleNamespaceObject*>(cell);
+
+    // 1. If Type(P) is Symbol, return OrdinaryDefineOwnProperty(O, P, Desc).
+    if (propertyName.isSymbol())
+        RELEASE_AND_RETURN(scope, Base::defineOwnProperty(thisObject, globalObject, propertyName, descriptor, shouldThrow));
+
+    // 2. Let current be ? O.[[GetOwnProperty]](P).
+    PropertyDescriptor current;
+    bool isCurrentDefined = thisObject->getOwnPropertyDescriptor(globalObject, propertyName, current);
+    RETURN_IF_EXCEPTION(scope, false);
+
+    // 3. If current is undefined, return false.
+    if (!isCurrentDefined) {
+        if (shouldThrow)
+            throwTypeError(globalObject, scope, NonExtensibleObjectPropertyDefineError);
+        return false;
+    }
+
+    // 4. If IsAccessorDescriptor(Desc) is true, return false.
+    if (descriptor.isAccessorDescriptor()) {
+        if (shouldThrow)
+            throwTypeError(globalObject, scope, "Cannot change module namespace object's binding to accessor"_s);
+        return false;
+    }
+
+    // 5. If Desc.[[Writable]] is present and has value false, return false.
+    if (descriptor.writablePresent() && !descriptor.writable()) {
+        if (shouldThrow)
+            throwTypeError(globalObject, scope, "Cannot change module namespace object's binding to non-writable attribute"_s);
+        return false;
+    }
+
+    // 6. If Desc.[[Enumerable]] is present and has value false, return false.
+    if (descriptor.enumerablePresent() && !descriptor.enumerable()) {
+        if (shouldThrow)
+            throwTypeError(globalObject, scope, "Cannot replace module namespace object's binding with non-enumerable attribute"_s);
+        return false;
+    }
+
+    // 7. If Desc.[[Configurable]] is present and has value true, return false.
+    if (descriptor.configurablePresent() && descriptor.configurable()) {
+        if (shouldThrow)
+            throwTypeError(globalObject, scope, "Cannot replace module namespace object's binding with configurable attribute"_s);
+        return false;
+    }
+
+    // 8. If Desc.[[Value]] is present, return SameValue(Desc.[[Value]], current.[[Value]]).
+    if (descriptor.value()) {
+        bool result = sameValue(globalObject, descriptor.value(), current.value());
+        RETURN_IF_EXCEPTION(scope, false);
+        if (!result) {
+            if (shouldThrow)
+                throwTypeError(globalObject, scope, "Cannot replace module namespace object's binding's value"_s);
+            return false;
+        }
+    }
+
+    // 9. Return true.
+    return true;
 }
 
 } // namespace JSC

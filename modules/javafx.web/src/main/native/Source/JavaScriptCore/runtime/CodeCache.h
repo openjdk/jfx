@@ -38,6 +38,7 @@
 #include "UnlinkedFunctionCodeBlock.h"
 #include "UnlinkedModuleProgramCodeBlock.h"
 #include "UnlinkedProgramCodeBlock.h"
+#include <wtf/MainThread.h>
 
 namespace JSC {
 
@@ -50,7 +51,8 @@ class ParserError;
 class ProgramExecutable;
 class SourceCode;
 class VM;
-class VariableEnvironment;
+
+using TDZEnvironment = HashSet<RefPtr<UniquedStringImpl>, IdentifierRepHash>;
 
 namespace CodeCacheInternal {
 static constexpr bool verbose = false;
@@ -162,8 +164,10 @@ private:
     fetchFromDisk(VM& vm, const SourceCodeKey& key)
     {
         UnlinkedCodeBlockType* codeBlock = fetchFromDiskImpl<UnlinkedCodeBlockType>(vm, key);
-        if (UNLIKELY(Options::forceDiskCache()))
-            RELEASE_ASSERT(codeBlock);
+        if (UNLIKELY(Options::forceDiskCache())) {
+            if (isMainThread())
+                RELEASE_ASSERT(codeBlock);
+        }
         return codeBlock;
     }
 
@@ -219,7 +223,7 @@ public:
     UnlinkedProgramCodeBlock* getUnlinkedProgramCodeBlock(VM&, ProgramExecutable*, const SourceCode&, JSParserStrictMode, OptionSet<CodeGenerationMode>, ParserError&);
     UnlinkedEvalCodeBlock* getUnlinkedEvalCodeBlock(VM&, IndirectEvalExecutable*, const SourceCode&, JSParserStrictMode, OptionSet<CodeGenerationMode>, ParserError&, EvalContextType);
     UnlinkedModuleProgramCodeBlock* getUnlinkedModuleProgramCodeBlock(VM&, ModuleProgramExecutable*, const SourceCode&, OptionSet<CodeGenerationMode>, ParserError&);
-    UnlinkedFunctionExecutable* getUnlinkedGlobalFunctionExecutable(VM&, const Identifier&, const SourceCode&, OptionSet<CodeGenerationMode>, Optional<int> functionConstructorParametersEndPosition, ParserError&);
+    UnlinkedFunctionExecutable* getUnlinkedGlobalFunctionExecutable(VM&, const Identifier&, const SourceCode&, OptionSet<CodeGenerationMode>, std::optional<int> functionConstructorParametersEndPosition, ParserError&);
 
     void updateCache(const UnlinkedFunctionExecutable*, const SourceCode&, CodeSpecializationKind, const UnlinkedFunctionCodeBlock*);
 
@@ -253,9 +257,9 @@ template <> struct CacheTypes<UnlinkedModuleProgramCodeBlock> {
     static constexpr SourceParseMode parseMode = SourceParseMode::ModuleEvaluateMode;
 };
 
-UnlinkedEvalCodeBlock* generateUnlinkedCodeBlockForDirectEval(VM&, DirectEvalExecutable*, const SourceCode&, JSParserStrictMode, JSParserScriptMode, OptionSet<CodeGenerationMode>, ParserError&, EvalContextType, const VariableEnvironment* variablesUnderTDZ);
-UnlinkedProgramCodeBlock* recursivelyGenerateUnlinkedCodeBlockForProgram(VM&, const SourceCode&, JSParserStrictMode, JSParserScriptMode, OptionSet<CodeGenerationMode>, ParserError&, EvalContextType, const VariableEnvironment* variablesUnderTDZ);
-UnlinkedModuleProgramCodeBlock* recursivelyGenerateUnlinkedCodeBlockForModuleProgram(VM&, const SourceCode&, JSParserStrictMode, JSParserScriptMode, OptionSet<CodeGenerationMode>, ParserError&, EvalContextType, const VariableEnvironment* variablesUnderTDZ);
+UnlinkedEvalCodeBlock* generateUnlinkedCodeBlockForDirectEval(VM&, DirectEvalExecutable*, const SourceCode&, JSParserStrictMode, JSParserScriptMode, OptionSet<CodeGenerationMode>, ParserError&, EvalContextType, const TDZEnvironment* variablesUnderTDZ, const PrivateNameEnvironment*);
+UnlinkedProgramCodeBlock* recursivelyGenerateUnlinkedCodeBlockForProgram(VM&, const SourceCode&, JSParserStrictMode, JSParserScriptMode, OptionSet<CodeGenerationMode>, ParserError&, EvalContextType);
+UnlinkedModuleProgramCodeBlock* recursivelyGenerateUnlinkedCodeBlockForModuleProgram(VM&, const SourceCode&, JSParserStrictMode, JSParserScriptMode, OptionSet<CodeGenerationMode>, ParserError&, EvalContextType);
 
 void writeCodeBlock(VM&, const SourceCodeKey&, const SourceCodeValue&);
 RefPtr<CachedBytecode> serializeBytecode(VM&, UnlinkedCodeBlock*, const SourceCode&, SourceCodeType, JSParserStrictMode, JSParserScriptMode, FileSystem::PlatformFileHandle fd, BytecodeCacheError&, OptionSet<CodeGenerationMode>);

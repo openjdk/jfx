@@ -92,7 +92,7 @@ LayoutUnit RenderTextControlMultiLine::computeControlLogicalHeight(LayoutUnit li
     return lineHeight * textAreaElement().rows() + nonContentHeight;
 }
 
-int RenderTextControlMultiLine::baselinePosition(FontBaseline baselineType, bool firstLine, LineDirectionMode direction, LinePositionMode linePositionMode) const
+LayoutUnit RenderTextControlMultiLine::baselinePosition(FontBaseline baselineType, bool firstLine, LineDirectionMode direction, LinePositionMode linePositionMode) const
 {
     return RenderBox::baselinePosition(baselineType, firstLine, direction, linePositionMode);
 }
@@ -106,7 +106,7 @@ void RenderTextControlMultiLine::layoutExcludedChildren(bool relayoutChildren)
         return;
     if (is<RenderBox>(placeholderRenderer)) {
         auto& placeholderBox = downcast<RenderBox>(*placeholderRenderer);
-        placeholderBox.mutableStyle().setLogicalWidth(Length(contentLogicalWidth() - placeholderBox.borderAndPaddingLogicalWidth(), Fixed));
+        placeholderBox.mutableStyle().setLogicalWidth(Length(contentLogicalWidth() - placeholderBox.borderAndPaddingLogicalWidth(), LengthType::Fixed));
         placeholderBox.layoutIfNeeded();
         placeholderBox.setX(borderLeft() + paddingLeft());
         placeholderBox.setY(borderTop() + paddingTop());

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,7 +35,7 @@ const ClassInfo JSPropertyNameEnumerator::s_info = { "JSPropertyNameEnumerator",
 JSPropertyNameEnumerator* JSPropertyNameEnumerator::create(VM& vm, Structure* structure, uint32_t indexedLength, uint32_t numberStructureProperties, PropertyNameArray&& propertyNames)
 {
     unsigned propertyNamesSize = propertyNames.size();
-    unsigned propertyNamesBufferSizeInBytes = (Checked<unsigned>(propertyNamesSize) * sizeof(WriteBarrier<JSString>)).unsafeGet();
+    unsigned propertyNamesBufferSizeInBytes = Checked<unsigned>(propertyNamesSize) * sizeof(WriteBarrier<JSString>);
     WriteBarrier<JSString>* propertyNamesBuffer = nullptr;
     if (propertyNamesBufferSizeInBytes) {
         propertyNamesBuffer = static_cast<WriteBarrier<JSString>*>(vm.jsValueGigacageAuxiliarySpace.allocateNonVirtual(vm, propertyNamesBufferSizeInBytes, nullptr, AllocationFailureMode::Assert));
@@ -56,6 +56,12 @@ JSPropertyNameEnumerator::JSPropertyNameEnumerator(VM& vm, Structure* structure,
     , m_endGenericPropertyIndex(propertyNamesSize)
     , m_cachedInlineCapacity(structure ? structure->inlineCapacity() : 0)
 {
+    if (m_indexedLength)
+        m_modeSet |= JSPropertyNameEnumerator::IndexedMode;
+    if (m_endStructurePropertyIndex)
+        m_modeSet |= JSPropertyNameEnumerator::OwnStructureMode;
+    if (m_endGenericPropertyIndex - m_endStructurePropertyIndex)
+        m_modeSet |= JSPropertyNameEnumerator::GenericMode;
 }
 
 void JSPropertyNameEnumerator::finishCreation(VM& vm, RefPtr<PropertyNameArrayData>&& identifiers)
@@ -70,7 +76,8 @@ void JSPropertyNameEnumerator::finishCreation(VM& vm, RefPtr<PropertyNameArrayDa
     }
 }
 
-void JSPropertyNameEnumerator::visitChildren(JSCell* cell, SlotVisitor& visitor)
+template<typename Visitor>
+void JSPropertyNameEnumerator::visitChildrenImpl(JSCell* cell, Visitor& visitor)
 {
     JSPropertyNameEnumerator* thisObject = jsCast<JSPropertyNameEnumerator*>(cell);
     ASSERT_GC_OBJECT_INHERITS(thisObject, info());
@@ -85,6 +92,132 @@ void JSPropertyNameEnumerator::visitChildren(JSCell* cell, SlotVisitor& visitor)
         VM& vm = visitor.vm();
         visitor.appendUnbarriered(vm.getStructure(thisObject->cachedStructureID()));
     }
+}
+
+DEFINE_VISIT_CHILDREN(JSPropertyNameEnumerator);
+
+// FIXME: Assert that properties returned by getOwnPropertyNames() are reported enumerable by getOwnPropertySlot().
+// https://bugs.webkit.org/show_bug.cgi?id=219926
+void getEnumerablePropertyNames(JSGlobalObject* globalObject, JSObject* base, PropertyNameArray& propertyNames, uint32_t& indexedLength, uint32_t& structurePropertyCount)
+{
+    VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    auto getOwnPropertyNames = [&](JSObject* object) {
+        auto mode = DontEnumPropertiesMode::Exclude;
+        if (object->type() == ProxyObjectType) {
+            // This ensures Proxy's [[GetOwnProperty]] trap is invoked only once per property, by OpHasEnumerableProperty.
+            // Although doing this for all objects is spec-conformant, collecting DontEnum properties isn't free.
+            mode = DontEnumPropertiesMode::Include;
+        }
+        object->methodTable(vm)->getOwnPropertyNames(object, globalObject, propertyNames, mode);
+    };
+
+    Structure* structure = base->structure(vm);
+    if (structure->canAccessPropertiesQuicklyForEnumeration() && indexedLength == base->getArrayLength()) {
+        // Inlined JSObject::getOwnNonIndexPropertyNames()
+        base->methodTable(vm)->getOwnSpecialPropertyNames(base, globalObject, propertyNames, DontEnumPropertiesMode::Exclude);
+        RETURN_IF_EXCEPTION(scope, void());
+
+        base->getNonReifiedStaticPropertyNames(vm, propertyNames, DontEnumPropertiesMode::Exclude);
+        unsigned nonStructurePropertyCount = propertyNames.size();
+        structure->getPropertyNamesFromStructure(vm, propertyNames, DontEnumPropertiesMode::Exclude);
+        scope.assertNoException();
+
+        // |propertyNames| contains properties exclusively from the structure.
+        if (!nonStructurePropertyCount)
+            structurePropertyCount = propertyNames.size();
+    } else {
+        getOwnPropertyNames(base);
+        RETURN_IF_EXCEPTION(scope, void());
+        // |propertyNames| contains all indexed properties, so disable enumeration based on getEnumerableLength().
+        indexedLength = 0;
+    }
+
+    JSObject* object = base;
+    unsigned prototypeCount = 0;
+
+    while (true) {
+        JSValue prototype = object->getPrototype(vm, globalObject);
+        RETURN_IF_EXCEPTION(scope, void());
+        if (prototype.isNull())
+            break;
+
+        if (UNLIKELY(++prototypeCount > JSObject::maximumPrototypeChainDepth)) {
+            throwStackOverflowError(globalObject, scope);
+            return;
+        }
+
+        object = asObject(prototype);
+        getOwnPropertyNames(object);
+        RETURN_IF_EXCEPTION(scope, void());
+    }
+}
+
+JSString* JSPropertyNameEnumerator::computeNext(JSGlobalObject* globalObject, JSObject* base, uint32_t& index, Mode& mode, bool shouldAllocateIndexedNameString)
+{
+    VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    ASSERT(indexedLength() || sizeOfPropertyNames());
+
+    index++;
+    switch (mode) {
+    case InitMode: {
+        mode = IndexedMode;
+        index = 0;
+        FALLTHROUGH;
+    }
+
+    case JSPropertyNameEnumerator::IndexedMode: {
+        while (index < indexedLength() && !base->hasEnumerableProperty(globalObject, index)) {
+            RETURN_IF_EXCEPTION(scope, nullptr);
+            index++;
+        }
+        scope.assertNoException();
+
+        if (index < indexedLength())
+            return shouldAllocateIndexedNameString ? jsString(vm, Identifier::from(vm, index).string()) : nullptr;
+
+        if (!sizeOfPropertyNames())
+            return nullptr;
+
+        mode = OwnStructureMode;
+        index = 0;
+        FALLTHROUGH;
+    }
+
+    case JSPropertyNameEnumerator::OwnStructureMode:
+    case JSPropertyNameEnumerator::GenericMode: {
+        JSString* name = nullptr;
+        while (true) {
+            if (index >= sizeOfPropertyNames())
+                break;
+            name = propertyNameAtIndex(index);
+            if (!name)
+                break;
+            if (index < endStructurePropertyIndex() && base->structureID() == cachedStructureID())
+                break;
+            auto id = Identifier::fromString(vm, name->value(globalObject));
+            RETURN_IF_EXCEPTION(scope, nullptr);
+            if (base->hasEnumerableProperty(globalObject, id))
+                break;
+            RETURN_IF_EXCEPTION(scope, nullptr);
+            name = nullptr;
+            index++;
+        }
+        scope.assertNoException();
+
+        if (index >= endStructurePropertyIndex() && index < sizeOfPropertyNames())
+            mode = GenericMode;
+        return name;
+    }
+
+    default:
+        break;
+    }
+    RELEASE_ASSERT_NOT_REACHED();
+    return nullptr;
 }
 
 } // namespace JSC

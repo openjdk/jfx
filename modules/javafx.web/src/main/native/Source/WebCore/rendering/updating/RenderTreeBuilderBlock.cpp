@@ -186,8 +186,8 @@ void RenderTreeBuilder::Block::attachIgnoringContinuation(RenderBlock& parent, R
 #endif
                 ) {
                 // Insert the child into the anonymous block box instead of here.
-                if (child->isInline() || beforeChild->parent()->firstChild() != beforeChild)
-                    m_builder.attach(*beforeChild->parent(), WTFMove(child), beforeChild);
+                if (child->isInline() || beforeChildAnonymousContainer->firstChild() != beforeChild)
+                    m_builder.attach(*beforeChildAnonymousContainer, WTFMove(child), beforeChild);
                 else
                     m_builder.attach(parent, WTFMove(child), beforeChild->parent());
                 return;
@@ -243,8 +243,6 @@ void RenderTreeBuilder::Block::attachIgnoringContinuation(RenderBlock& parent, R
         }
     }
 
-    parent.invalidateLineLayoutPath();
-
     m_builder.attachToRenderElement(parent, WTFMove(child), beforeChild);
 
     if (madeBoxesNonInline && is<RenderBlock>(parent.parent()) && parent.isAnonymousBlock())
@@ -273,6 +271,7 @@ void RenderTreeBuilder::Block::removeLeftoverAnonymousBlock(RenderBlock& anonymo
     if (is<RenderButton>(*parent) || is<RenderTextControl>(*parent) || is<RenderRubyAsBlock>(*parent) || is<RenderRubyRun>(*parent))
         return;
 
+    m_builder.removeFloatingObjects(anonymousBlock);
     // FIXME: This should really just be a moveAllChilrenTo (see webkit.org/b/182495)
     moveAllChildrenToInternal(anonymousBlock, *parent);
     auto toBeDestroyed = m_builder.detachFromRenderElement(*parent, anonymousBlock);
@@ -290,9 +289,7 @@ RenderPtr<RenderObject> RenderTreeBuilder::Block::detach(RenderBlock& parent, Re
     // with inline content, then we can fold the inline content back together.
     auto prev = makeWeakPtr(oldChild.previousSibling());
     auto next = makeWeakPtr(oldChild.nextSibling());
-    bool canMergeAnonymousBlocks = canMergeContiguousAnonymousBlocks(oldChild, prev.get(), next.get());
-
-    parent.invalidateLineLayoutPath();
+    bool canMergeAnonymousBlocks = canCollapseAnonymousBlock == CanCollapseAnonymousBlock::Yes && canMergeContiguousAnonymousBlocks(oldChild, prev.get(), next.get());
 
     auto takenChild = m_builder.detachFromRenderElement(parent, oldChild);
 
@@ -385,7 +382,7 @@ RenderPtr<RenderObject> RenderTreeBuilder::Block::detach(RenderBlockFlow& parent
     if (!parent.renderTreeBeingDestroyed()) {
         auto* fragmentedFlow = parent.multiColumnFlow();
         if (fragmentedFlow && fragmentedFlow != &child)
-            m_builder.multiColumnBuilder().multiColumnRelativeWillBeRemoved(*fragmentedFlow, child);
+            m_builder.multiColumnBuilder().multiColumnRelativeWillBeRemoved(*fragmentedFlow, child, canCollapseAnonymousBlock);
     }
     return detach(static_cast<RenderBlock&>(parent), child, canCollapseAnonymousBlock);
 }

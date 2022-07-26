@@ -23,10 +23,10 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-// https://w3c.github.io/user-timing/
-
+// https://w3c.github.io/user-timing/#performancemark
 [
-    EnabledAtRuntime=UserTiming,
     Exposed=(Window,Worker),
 ] interface PerformanceMark : PerformanceEntry {
+    [CallWith=GlobalObject&ScriptExecutionContext] constructor(DOMString markName, optional PerformanceMarkOptions markOptions);
+    [CallWith=GlobalObject, CachedAttribute] readonly attribute any detail;
 };

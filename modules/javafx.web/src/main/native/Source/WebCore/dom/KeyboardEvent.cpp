@@ -112,7 +112,7 @@ inline KeyboardEvent::KeyboardEvent(const PlatformKeyboardEvent& key, RefPtr<Win
     , m_location(keyLocationCode(key))
     , m_repeat(key.isAutoRepeat())
     , m_isComposing(view && is<DOMWindow>(view->window()) && downcast<DOMWindow>(*view->window()).frame() && downcast<DOMWindow>(*view->window()).frame()->editor().hasComposition())
-#if USE(APPKIT) || USE(UIKIT_KEYBOARD_ADDITIONS)
+#if USE(APPKIT) || PLATFORM(IOS_FAMILY)
     , m_handledByInputMethod(key.handledByInputMethod())
 #endif
 #if USE(APPKIT)
@@ -121,8 +121,8 @@ inline KeyboardEvent::KeyboardEvent(const PlatformKeyboardEvent& key, RefPtr<Win
 {
 }
 
-inline KeyboardEvent::KeyboardEvent(const AtomString& eventType, const Init& initializer)
-    : UIEventWithKeyState(eventType, initializer)
+inline KeyboardEvent::KeyboardEvent(const AtomString& eventType, const Init& initializer, IsTrusted isTrusted)
+    : UIEventWithKeyState(eventType, initializer, isTrusted)
     , m_key(initializer.key)
     , m_code(initializer.code)
     , m_keyIdentifier(initializer.keyIdentifier)
@@ -147,9 +147,9 @@ Ref<KeyboardEvent> KeyboardEvent::createForBindings()
     return adoptRef(*new KeyboardEvent);
 }
 
-Ref<KeyboardEvent> KeyboardEvent::create(const AtomString& type, const Init& initializer)
+Ref<KeyboardEvent> KeyboardEvent::create(const AtomString& type, const Init& initializer, IsTrusted isTrusted)
 {
-    return adoptRef(*new KeyboardEvent(type, initializer));
+    return adoptRef(*new KeyboardEvent(type, initializer, isTrusted));
 }
 
 void KeyboardEvent::initKeyboardEvent(const AtomString& type, bool canBubble, bool cancelable, RefPtr<WindowProxy>&& view,
@@ -165,12 +165,12 @@ void KeyboardEvent::initKeyboardEvent(const AtomString& type, bool canBubble, bo
 
     setModifierKeys(ctrlKey, altKey, shiftKey, metaKey, altGraphKey);
 
-    m_charCode = WTF::nullopt;
+    m_charCode = std::nullopt;
     m_isComposing = false;
-    m_keyCode = WTF::nullopt;
+    m_keyCode = std::nullopt;
     m_repeat = false;
     m_underlyingPlatformEvent = nullptr;
-    m_which = WTF::nullopt;
+    m_which = std::nullopt;
     m_code = { };
     m_key = { };
 

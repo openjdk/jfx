@@ -50,6 +50,8 @@ class MediaStreamTrack;
 class PeerConnectionBackend;
 class RTCCertificate;
 class RTCDataChannelHandler;
+class RTCDtlsTransport;
+class RTCDtlsTransportBackend;
 class RTCIceCandidate;
 class RTCPeerConnection;
 class RTCRtpReceiver;
@@ -68,7 +70,7 @@ struct RTCRtpTransceiverInit;
 template<typename IDLType> class DOMPromiseDeferred;
 
 namespace PeerConnection {
-using SessionDescriptionPromise = DOMPromiseDeferred<IDLDictionary<RTCSessionDescription::Init>>;
+using SessionDescriptionPromise = DOMPromiseDeferred<IDLDictionary<RTCSessionDescriptionInit>>;
 using StatsPromise = DOMPromiseDeferred<IDLInterface<RTCStatsReport>>;
 }
 
@@ -83,16 +85,16 @@ class PeerConnectionBackend
 public:
     WEBCORE_EXPORT static CreatePeerConnectionBackend create;
 
-    static Optional<RTCRtpCapabilities> receiverCapabilities(ScriptExecutionContext&, const String& kind);
-    static Optional<RTCRtpCapabilities> senderCapabilities(ScriptExecutionContext&, const String& kind);
+    static std::optional<RTCRtpCapabilities> receiverCapabilities(ScriptExecutionContext&, const String& kind);
+    static std::optional<RTCRtpCapabilities> senderCapabilities(ScriptExecutionContext&, const String& kind);
 
     explicit PeerConnectionBackend(RTCPeerConnection&);
     virtual ~PeerConnectionBackend();
 
     void createOffer(RTCOfferOptions&&, PeerConnection::SessionDescriptionPromise&&);
     void createAnswer(RTCAnswerOptions&&, PeerConnection::SessionDescriptionPromise&&);
-    void setLocalDescription(RTCSessionDescription&, DOMPromiseDeferred<void>&&);
-    void setRemoteDescription(RTCSessionDescription&, DOMPromiseDeferred<void>&&);
+    void setLocalDescription(const RTCSessionDescription*, DOMPromiseDeferred<void>&&);
+    void setRemoteDescription(const RTCSessionDescription&, DOMPromiseDeferred<void>&&);
     void addIceCandidate(RTCIceCandidate*, DOMPromiseDeferred<void>&&);
 
     virtual std::unique_ptr<RTCDataChannelHandler> createDataChannelHandler(const String&, const RTCDataChannelInit&) = 0;
@@ -109,6 +111,7 @@ public:
     virtual RefPtr<RTCSessionDescription> currentRemoteDescription() const = 0;
     virtual RefPtr<RTCSessionDescription> pendingRemoteDescription() const = 0;
 
+    virtual void restartIce() = 0;
     virtual bool setConfiguration(MediaEndpointConfiguration&&) = 0;
 
     virtual void getStats(Ref<DeferredPromise>&&) = 0;
@@ -128,8 +131,10 @@ public:
     virtual void emulatePlatformEvent(const String& action) = 0;
 
     void newICECandidate(String&& sdp, String&& mid, unsigned short sdpMLineIndex, String&& serverURL);
-    void disableICECandidateFiltering();
+    virtual void disableICECandidateFiltering();
     void enableICECandidateFiltering();
+
+    virtual std::optional<bool> canTrickleIceCandidates() const = 0;
 
     virtual void applyRotationForOutgoingVideoSources() { }
 
@@ -167,19 +172,20 @@ public:
         }
 
         Type type;
-        Optional<double> expires;
+        std::optional<double> expires;
 
-        Optional<RSA> rsaParameters;
+        std::optional<RSA> rsaParameters;
     };
     static void generateCertificate(Document&, const CertificateInformation&, DOMPromiseDeferred<IDLInterface<RTCCertificate>>&&);
 
     virtual void collectTransceivers() { };
 
     ScriptExecutionContext* context() const;
-    RTCRtpTransceiver* transceiverFromSender(const RTCRtpSender&);
 
     virtual void suspend() { }
     virtual void resume() { }
+
+    bool shouldFilterICECandidates() const { return m_shouldFilterICECandidates; };
 
 protected:
     void fireICECandidateEvent(RefPtr<RTCIceCandidate>&&, String&& url);
@@ -215,8 +221,8 @@ protected:
 private:
     virtual void doCreateOffer(RTCOfferOptions&&) = 0;
     virtual void doCreateAnswer(RTCAnswerOptions&&) = 0;
-    virtual void doSetLocalDescription(RTCSessionDescription&) = 0;
-    virtual void doSetRemoteDescription(RTCSessionDescription&) = 0;
+    virtual void doSetLocalDescription(const RTCSessionDescription*) = 0;
+    virtual void doSetRemoteDescription(const RTCSessionDescription&) = 0;
     virtual void doAddIceCandidate(RTCIceCandidate&) = 0;
     virtual void endOfIceCandidates(DOMPromiseDeferred<void>&&);
     virtual void doStop() = 0;

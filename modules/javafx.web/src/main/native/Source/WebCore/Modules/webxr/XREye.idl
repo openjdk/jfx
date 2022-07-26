@@ -24,8 +24,9 @@
  */
 
 [
-    EnabledAtRuntime=WebXR,
-    Conditional=WEBXR
+    EnabledBySetting=WebXR,
+    Conditional=WEBXR,
+    ExportMacro=WEBCORE_EXPORT
 ] enum XREye {
     "none",
     "left",

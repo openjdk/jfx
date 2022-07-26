@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2020, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,13 +28,20 @@
 #include "ImageBufferBackend.h"
 #include <wtf/IsoMalloc.h>
 
+#include "PlatformImage.h"
+#include "RQRef.h"
+
 namespace WebCore {
 
 class ImageBufferJavaBackend : public ImageBufferBackend {
 public:
-    static std::unique_ptr<ImageBufferJavaBackend> create(
-        const FloatSize&, float resolutionScale, ColorSpace, const HostWindow*);
-    static std::unique_ptr<ImageBufferJavaBackend> create(const FloatSize&, const GraphicsContext&);
+    ~ImageBufferJavaBackend() {}
+    static unsigned calculateBytesPerRow(const IntSize& backendSize);
+    static size_t calculateMemoryCost(const Parameters&);
+    void transformToColorSpace(const DestinationColorSpace&) override { }
+
+    static std::unique_ptr<ImageBufferJavaBackend> create(const Parameters&, const HostWindow*);
+    static std::unique_ptr<ImageBufferJavaBackend> create(const Parameters&, const GraphicsContext&);
 
     JLObject getWCImage() const;
     void* getData() const;
@@ -43,7 +50,9 @@ public:
     GraphicsContext& context() const override;
     void flushContext() override;
 
-    NativeImagePtr copyNativeImage(BackingStoreCopy = CopyBackingStore) const override;
+    IntSize backendSize() const override;
+
+    RefPtr<NativeImage> copyNativeImage(BackingStoreCopy = CopyBackingStore) const override;
     RefPtr<Image> copyImage(BackingStoreCopy = CopyBackingStore, PreserveResolution = PreserveResolution::No) const override;
 
     void draw(GraphicsContext&, const FloatRect& destRect, const FloatRect& srcRect,
@@ -52,22 +61,24 @@ public:
         const AffineTransform& patternTransform, const FloatPoint& phase,
         const FloatSize& spacing, const ImagePaintingOptions&) override;
 
-    String toDataURL(const String& mimeType, Optional<double> quality, PreserveResolution) const override;
-    Vector<uint8_t> toData(const String& mimeType, Optional<double> quality) const override;
-    Vector<uint8_t> toBGRAData() const override;
+    String toDataURL(const String& mimeType, std::optional<double> quality, PreserveResolution) const override;
+    Vector<uint8_t> toData(const String& mimeType, std::optional<double> quality) const override;
 
-    RefPtr<ImageData> getImageData(AlphaPremultiplication outputFormat, const IntRect&) const override;
-    void putImageData(AlphaPremultiplication inputFormat, const ImageData&,
-        const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat) override;
 
 protected:
-    ImageBufferJavaBackend(const FloatSize&, const IntSize&, float resolutionScale, ColorSpace,
-        RefPtr<RQRef>, std::unique_ptr<GraphicsContext>&&);
+    ImageBufferJavaBackend(const Parameters&, PlatformImagePtr, std::unique_ptr<GraphicsContext>&&, IntSize);
 
-    ColorFormat backendColorFormat() const override { return ColorFormat::BGRA; }
 
-    RefPtr<RQRef> m_image;
+    std::optional<PixelBuffer> getPixelBuffer(const PixelBufferFormat& outputFormat, const IntRect& srcRect) const override;
+    std::optional<PixelBuffer> getPixelBuffer(const PixelBufferFormat& outputFormat, const IntRect& srcRect, void* data) const;
+    void putPixelBuffer(const PixelBuffer&, const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat) override;
+    void putPixelBuffer(const PixelBuffer&, const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat, void* data);
+
+    unsigned bytesPerRow() const override;
+
+    PlatformImagePtr m_image;
     std::unique_ptr<GraphicsContext> m_context;
+    IntSize m_backendSize;
 };
 
 } // namespace WebCore

@@ -61,8 +61,8 @@ void PageOverlayController::createRootLayersIfNeeded()
 
     m_documentOverlayRootLayer = GraphicsLayer::create(m_page.chrome().client().graphicsLayerFactory(), *this);
     m_viewOverlayRootLayer = GraphicsLayer::create(m_page.chrome().client().graphicsLayerFactory(), *this);
-    m_documentOverlayRootLayer->setName("Document overlay Container");
-    m_viewOverlayRootLayer->setName("View overlay container");
+    m_documentOverlayRootLayer->setName(MAKE_STATIC_STRING_IMPL("Document overlay Container"));
+    m_viewOverlayRootLayer->setName(MAKE_STATIC_STRING_IMPL("View overlay container"));
 }
 
 void PageOverlayController::installedPageOverlaysChanged()
@@ -188,7 +188,7 @@ void PageOverlayController::installPageOverlay(PageOverlay& overlay, PageOverlay
     auto layer = GraphicsLayer::create(m_page.chrome().client().graphicsLayerFactory(), *this);
     layer->setAnchorPoint({ });
     layer->setBackgroundColor(overlay.backgroundColor());
-    layer->setName("Overlay content");
+    layer->setName(MAKE_STATIC_STRING_IMPL("Overlay content"));
 
     updateSettingsForLayer(layer.get());
 
@@ -227,7 +227,7 @@ void PageOverlayController::uninstallPageOverlay(PageOverlay& overlay, PageOverl
     overlay.setPage(nullptr);
 
     if (auto optionalLayer = m_overlayGraphicsLayers.take(&overlay))
-        optionalLayer.value()->removeFromParent();
+        optionalLayer->removeFromParent();
 
     bool removed = m_pageOverlays.removeFirst(&overlay);
     ASSERT_UNUSED(removed, removed);
@@ -318,7 +318,7 @@ void PageOverlayController::didChangeDeviceScaleFactor()
 
 void PageOverlayController::didChangeViewExposedRect()
 {
-    m_page.renderingUpdateScheduler().scheduleTimedRenderingUpdate();
+    m_page.scheduleRenderingUpdate(RenderingUpdateStep::LayerFlush);
 }
 
 void PageOverlayController::didScrollFrame(Frame& frame)
@@ -412,7 +412,7 @@ float PageOverlayController::deviceScaleFactor() const
 
 void PageOverlayController::notifyFlushRequired(const GraphicsLayer*)
 {
-    m_page.renderingUpdateScheduler().scheduleTimedRenderingUpdate();
+    m_page.scheduleRenderingUpdate(RenderingUpdateStep::LayerFlush);
 }
 
 void PageOverlayController::didChangeOverlayFrame(PageOverlay& overlay)
@@ -429,9 +429,9 @@ void PageOverlayController::didChangeOverlayBackgroundColor(PageOverlay& overlay
         layer->setBackgroundColor(overlay.backgroundColor());
 }
 
-bool PageOverlayController::shouldSkipLayerInDump(const GraphicsLayer*, LayerTreeAsTextBehavior behavior) const
+bool PageOverlayController::shouldSkipLayerInDump(const GraphicsLayer*, OptionSet<LayerTreeAsTextOptions> options) const
 {
-    return !(behavior & LayerTreeAsTextIncludePageOverlayLayers);
+    return !options.contains(LayerTreeAsTextOptions::IncludePageOverlayLayers);
 }
 
 void PageOverlayController::tiledBackingUsageChanged(const GraphicsLayer* graphicsLayer, bool usingTiledBacking)

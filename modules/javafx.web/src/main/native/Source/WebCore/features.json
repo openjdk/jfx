@@ -62,10 +62,19 @@
         "category": "css"
     },
     {
+        "name": "CSS Aspect ratio property",
+        "status": {
+            "status": "Supported"
+        },
+        "url": "https://drafts.csswg.org/css-sizing-4/#aspect-ratio",
+        "webkit-url": "https://bugs.webkit.org/show_bug.cgi?id=47738",
+        "keywords": ["css", "css-sizing", "aspect-ratio"],
+        "category": "css"
+    },
+    {
         "name": "CSS Color Level 4",
         "status": {
-            "status": "Supported",
-            "enabled-by-default": true
+            "status": "Supported"
         },
         "url": "https://drafts.csswg.org/css-color/",
         "keywords": ["css color", "color"],
@@ -75,13 +84,25 @@
     {
         "name": "CSS Containment Level 1",
         "status": {
-            "status": "Under Consideration",
+            "status": "In Development",
             "enabled-by-default": false
         },
         "url": "https://www.w3.org/TR/css-contain-1/",
+        "webkit-url": "https://bugs.webkit.org/show_bug.cgi?id=172026",
         "keywords": ["css containment", "contain", "content", "layout", "size", "paint"],
         "category": "css",
         "description": "Allows content to specify that an element’s subtree is independent of the rest of the page to allow for optimizations by the browser."
+    },
+    {
+        "name": "CSS Custom Highlight API Module Level 1",
+        "status": {
+            "status": "In Development",
+            "enabled-by-default": false
+        },
+        "url": "https://drafts.csswg.org/css-highlight-api-1/",
+        "keywords": ["css pseudo-element", "highlight"],
+        "category": "css",
+        "description": "A mechanism for styling arbitrary ranges of a document identified by script."
     },
     {
         "name": "CSS Font Display",
@@ -101,6 +122,9 @@
     },
     {
         "name": "CSS Fonts Level 4",
+        "status": {
+            "status": "Partially Supported"
+        },
         "url": "https://drafts.csswg.org/css-fonts-4/",
         "keywords": ["css fonts", "fonts"],
         "category": "css",
@@ -113,8 +137,7 @@
     {
         "name": "CSS Grid Layout Level 1",
         "status": {
-            "status": "Supported",
-            "enabled-by-default": true
+            "status": "Supported"
         },
         "url": "http://dev.w3.org/csswg/css-grid/",
         "webkit-url": "https://bugs.webkit.org/show_bug.cgi?id=60731",
@@ -134,8 +157,7 @@
     {
         "name": "CSS Inline Layout Module Level 3",
         "status": {
-            "status": "Supported",
-            "enabled-by-default": true
+            "status": "Supported"
         },
         "url": "http://dev.w3.org/csswg/css-inline/",
         "keywords": ["css inline layout", "css inline", "inline"],
@@ -167,8 +189,7 @@
         "name": "CSS Masking Level 1",
         "url": "https://drafts.fxtf.org/css-masking-1/",
         "status": {
-            "status": "In Development",
-            "enabled-by-default": true
+            "status": "In Development"
         },
         "keywords": ["css masking", "clip-path", "clipping", "masking", "mask"],
         "category": "css",
@@ -230,8 +251,7 @@
     {
         "name": "CSS Scroll Snap Points Module Level 1",
         "status": {
-            "status": "Supported",
-            "enabled-by-default": true
+            "status": "Supported"
         },
         "url": "http://dev.w3.org/csswg/css-snappoints/",
         "webkit-url": "https://bugs.webkit.org/show_bug.cgi?id=134283",
@@ -256,8 +276,7 @@
     {
         "name": "CSS Shadow Parts",
         "status": {
-            "status": "Supported",
-            "enabled-by-default": true
+            "status": "Supported"
         },
         "url": "https://drafts.csswg.org/css-shadow-parts/",
         "webkit-url": "https://webkit.org/b/149443",
@@ -266,14 +285,14 @@
         "description": "Allows web components to define and expose stylable parts",
         "contact": {
             "name": "Ryosuke Niwa",
+            "twitter": "@rniwa_dev",
             "email": "rniwa@webkit.org"
         }
     },
     {
         "name": "CSS Text Decoration Level 4",
         "status": {
-            "status": "Supported",
-            "enabled-by-default": true
+            "status": "Supported"
         },
         "url": "https://drafts.csswg.org/css-text-decor-4/",
         "keywords": ["css text decoration", "text decoration"],
@@ -298,8 +317,7 @@
     {
         "name": "CSS Variables",
         "status": {
-            "status": "Supported",
-            "enabled-by-default": true
+            "status": "Supported"
         },
         "url": "https://www.w3.org/TR/css-variables/",
         "keywords": ["css variable", "css custom property"],
@@ -314,8 +332,7 @@
     {
         "name": "CSS Will Change",
         "status": {
-            "status": "Supported",
-            "enabled-by-default": true
+            "status": "Supported"
         },
         "url": "https://drafts.csswg.org/css-will-change/",
         "keywords": ["css willchange", "css will-change"],
@@ -342,13 +359,12 @@
     {
         "name": "Content Security Policy Level 2",
         "status": {
-            "status": "Supported",
-            "enabled-by-default": true
+            "status": "Supported"
         },
         "url": "https://w3c.github.io/webappsec-csp/2/",
         "keywords": ["csp", "cross-site scripting", "xss", "injection", "header", "security"],
         "category": "webapps",
-        "description": "A mechanism that web applications can use to mitigate content injection vulnerabilities, such as cross-site scripting (XSS). Developers can declare a CSP policy to prohibit their web application from loading content or executing scripts that have not been whitelisted among other capabilities.",
+        "description": "A mechanism that web applications can use to mitigate content injection vulnerabilities, such as cross-site scripting (XSS). Developers can declare a CSP policy to prohibit their web application from loading content or executing scripts that have not been allowed among other capabilities.",
         "contact": {
             "name": "Daniel Bates",
             "email": "dbates@webkit.org"
@@ -357,8 +373,7 @@
     {
         "name": "Content Security Policy Level 3",
         "status": {
-            "status": "Partially Supported",
-            "enabled-by-default": true
+            "status": "Partially Supported"
         },
         "url": "https://w3c.github.io/webappsec-csp/",
         "keywords": ["csp", "cross-site scripting", "xss", "injection", "header", "security"],
@@ -377,8 +392,7 @@
     {
         "name": "DeviceOrientation Events",
         "status": {
-            "status": "Supported",
-            "enabled-by-default": true
+            "status": "Supported"
         },
         "description": "DOM events that provide information about the physical orientation and motion of a hosting device.",
         "url": "https://w3c.github.io/deviceorientation/spec-source-orientation.html",
@@ -388,8 +402,7 @@
     {
         "name": "Encoding",
         "status": {
-            "status": "Supported",
-            "enabled-by-default": true
+            "status": "Supported"
         },
         "url": "https://encoding.spec.whatwg.org",
         "webkit-url": "https://bugs.webkit.org/show_bug.cgi?id=163771",
@@ -442,8 +455,7 @@
     {
         "name": "Geolocation API",
         "status": {
-            "status": "Supported",
-            "enabled-by-default": true
+            "status": "Supported"
         },
         "description": "An API that provides scripted access to geographical location information associated with the hosting device.",
         "url": "https://www.w3.org/TR/geolocation-API/"
@@ -505,6 +517,16 @@
         "description": "An API that can be used to understand the visibility and position of DOM elements relative to a containing element or to the top-level viewport."
     },
     {
+        "name": "Lazy image loading",
+        "status": {
+            "status": "In Development"
+        },
+        "url": "https://html.spec.whatwg.org/#attr-img-loading",
+        "keywords": ["lazy", "image", "loading"],
+        "category": "html",
+        "description": "Allows defering loading of images until they are visible in the viewport."
+    },
+    {
         "name": "Media Capture and Streams",
         "status": {
             "status": "Supported"
@@ -525,23 +547,21 @@
     {
         "name": "Navigation Timing Level 2",
         "status": {
-            "status": "In Development",
-            "enabled-by-default": false
+            "status": "Supported"
         },
         "url": "https://w3c.github.io/navigation-timing/",
         "keywords": ["performance", "navigation timing"],
         "description": "An API that exposes page load measurements to the page and adds entries to the performance timeline.",
         "contact": {
-            "name": "Joseph Pecoraro",
-            "email": "joepeck@webkit.org",
-            "twitter": "@JosephPecoraro"
+            "name": "Alex Christensen",
+            "twitter": "@alexfchr",
+            "email": "achristensen@webkit.org"
         }
     },
     {
         "name": "Performance Observer",
         "status": {
-            "status": "Supported",
-            "enabled-by-default": true
+            "status": "Supported"
         },
         "url": "https://w3c.github.io/performance-timeline/",
         "keywords": ["performance", "performance observer", "performanceobserver", "performance timeline"],
@@ -590,8 +610,7 @@
     {
         "name": "Resource Timing Level 2",
         "status": {
-            "status": "Supported",
-            "enabled-by-default": true
+            "status": "Supported"
         },
         "url": "https://w3c.github.io/resource-timing/",
         "webkit-url": "https://webkit.org/b/61138",
@@ -607,8 +626,7 @@
         "name": "SVG 2",
         "url": "https://svgwg.org/svg2-draft/",
         "status": {
-            "status": "In Development",
-            "enabled-by-default": true
+            "status": "In Development"
         },
         "keywords": ["svg"],
         "category": "svg",
@@ -658,8 +676,7 @@
     {
         "name": "User Timing Level 2",
         "status": {
-            "status": "Supported",
-            "enabled-by-default": true
+            "status": "Supported"
         },
         "url": "https://w3c.github.io/user-timing/",
         "keywords": ["performance", "usertiming", "user timing"],
@@ -724,14 +741,14 @@
         "description": "A collection of technologies to improve modularization of DOM subtrees.",
         "contact": {
             "name": "Ryosuke Niwa",
+            "twitter": "@rniwa_dev",
             "email": "rniwa@webkit.org"
         }
     },
     {
         "name": "Web Cryptography API",
         "status": {
-            "status": "Supported",
-            "enabled-by-default": true
+            "status": "Supported"
         },
         "url": "http://www.w3.org/TR/WebCryptoAPI/",
         "webkit-url": "https://bugs.webkit.org/show_bug.cgi?id=160880",
@@ -761,8 +778,7 @@
     {
         "name": "WebGL 1",
         "status": {
-            "status": "Supported",
-            "enabled-by-default": true
+            "status": "Supported"
         },
         "url": "https://www.khronos.org/registry/webgl/specs/1.0/",
         "keywords": ["webgl"],
@@ -771,8 +787,7 @@
     {
         "name": "WebGL 2",
         "status": {
-            "status": "In Development",
-            "enabled-by-default": true
+            "status": "Supported"
         },
         "url": "https://www.khronos.org/registry/webgl/specs/latest/2.0/",
         "keywords": ["webgl"],
@@ -795,6 +810,17 @@
         }
     },
     {
+        "name": "WebXR",
+        "status": {
+            "status": "In Development"
+        },
+        "url": "https://immersive-web.github.io/webxr/",
+        "webkit-url": "https://bugs.webkit.org/show_bug.cgi?id=208988",
+        "keywords": ["webxr", "webgl", "webgpu"],
+        "category": "html",
+        "description": "The WebXR device API is for accessing virtual reality (VR) and augmented reality (AR) devices, including sensors and head-mounted displays on the Web."
+    },
+    {
         "name": "Worklets Level 1",
         "status": {
             "status": "Under Consideration"
@@ -809,8 +835,7 @@
     {
         "name": "CSS Selector :any-link",
         "status": {
-            "status": "Supported",
-            "enabled-by-default": true
+            "status": "Supported"
         },
         "url": "http://dev.w3.org/csswg/selectors-4/#the-any-link-pseudo",
         "specification": "CSS Selectors Level 4",
@@ -825,23 +850,23 @@
     {
         "name": "CSS Selector :focus-visible",
         "status": {
-            "status": "Under Consideration",
+            "status": "In Development",
             "enabled-by-default": false
         },
         "url": "https://drafts.csswg.org/selectors-4/#the-focus-visible-pseudo",
         "specification": "CSS Selectors Level 4",
+        "keywords": ["focus visible", "focus-visible", ":focus-visible"],
         "description": "The selector :focus-visible matches an element that has received focus and the user-agent has determined that the focus should be made visible on the element.",
         "contact": {
-            "name": "Jonathan Davis",
-            "twitter": "@jonathandavis",
-            "email": "web-evangelist@apple.com"
+            "name": "Manuel Rego",
+            "twitter": "@regocas",
+            "email": "rego@igalia.com"
         }
     },
     {
         "name": "CSS Selector :focus-within",
         "status": {
-            "status": "Supported",
-            "enabled-by-default": true
+            "status": "Supported"
         },
         "url": "https://drafts.csswg.org/selectors-4/#the-focus-within-pseudo",
         "webkit-url": "https://trac.webkit.org/changeset/202358",
@@ -856,8 +881,7 @@
     {
         "name": "CSS Selector :is()",
         "status": {
-            "status": "Supported",
-            "enabled-by-default": true
+            "status": "Supported"
         },
         "url": "http://dev.w3.org/csswg/selectors-4/#matches",
         "specification": "CSS Selectors Level 4",
@@ -868,8 +892,7 @@
     {
         "name": "CSS Selector :lang() level 4",
         "status": {
-            "status": "Supported",
-            "enabled-by-default": true
+            "status": "Supported"
         },
         "url": "http://dev.w3.org/csswg/selectors-4/#the-lang-pseudo",
         "specification": "CSS Selectors Level 4",
@@ -878,8 +901,7 @@
     {
         "name": "CSS Selector :matches()",
         "status": {
-            "status": "Supported",
-            "enabled-by-default": true
+            "status": "Supported"
         },
         "url": "http://dev.w3.org/csswg/selectors-4/#matches",
         "specification": "CSS Selectors Level 4",
@@ -894,8 +916,7 @@
     {
         "name": "CSS Selector :not() level 4",
         "status": {
-            "status": "Supported",
-            "enabled-by-default": true
+            "status": "Supported"
         },
         "url": "http://dev.w3.org/csswg/selectors-4/#negation",
         "specification": "CSS Selectors Level 4",
@@ -910,8 +931,7 @@
     {
         "name": "CSS Selector :nth-child(An+B of selector list) and :nth-last-child(An+B of selector list)",
         "status": {
-            "status": "Supported",
-            "enabled-by-default": true
+            "status": "Supported"
         },
         "url": "http://dev.w3.org/csswg/selectors-4/#the-nth-child-pseudo",
         "specification": "CSS Selectors Level 4",
@@ -926,8 +946,7 @@
     {
         "name": "CSS Selector :placeholder-shown",
         "status": {
-            "status": "Supported",
-            "enabled-by-default": true
+            "status": "Supported"
         },
         "url": "http://dev.w3.org/csswg/selectors-4/#placeholder",
         "specification": "CSS Selectors Level 4",
@@ -942,8 +961,7 @@
     {
         "name": "CSS Shapes Level 1",
         "status": {
-            "status": "Supported",
-            "enabled-by-default": true
+            "status": "Supported"
         },
         "url": "http://www.w3.org/TR/css-shapes-1/",
         "description": "CSS Shapes describe geometric shapes for use in CSS. For Level 1, CSS Shapes can be applied to floats.",
@@ -952,8 +970,7 @@
     {
         "name": "Case-insensitive attribute selectors",
         "status": {
-            "status": "Supported",
-            "enabled-by-default": true
+            "status": "Supported"
         },
         "url": "http://dev.w3.org/csswg/selectors-4/#attribute-case",
         "specification": "CSS Selectors Level 4",
@@ -1004,6 +1021,7 @@
         "description": "Define a custom HTML tag and associate it with an ES6 class.",
         "contact": {
             "name": "Ryosuke Niwa",
+            "twitter": "@rniwa_dev",
             "email": "rniwa@webkit.org"
         }
     },
@@ -1024,9 +1042,24 @@
         }
     },
     {
+        "name": "Date and Time Input Types",
+        "status": {
+            "status": "Partially Supported"
+        },
+        "url": "https://html.spec.whatwg.org/multipage/input.html#date-state-(type=date)",
+        "specification": "HTML5",
+        "category": "html",
+        "description": "Form controls that allow users to enter a date, time or both. Refers to the following types of input elements: date, time, datetime-local, month, and week.",
+        "comment": "The month input type is unsupported on macOS. The week input type is unsupported on macOS and iOS.",
+        "contact": {
+            "name": "Aditya Keerthi",
+            "email": "akeerthi@apple.com"
+        }
+    },
+    {
         "name": "Dialog Element",
         "status": {
-            "status": "Under Consideration"
+            "status": "In Development"
         },
         "url": "https://html.spec.whatwg.org/multipage/interactive-elements.html#the-dialog-element",
         "webkit-url": "https://bugs.webkit.org/show_bug.cgi?id=84635",
@@ -1058,8 +1091,7 @@
     {
         "name": "Element.closest()",
         "status": {
-            "status": "Supported",
-            "enabled-by-default": true
+            "status": "Supported"
         },
         "url": "https://dom.spec.whatwg.org/#dom-element-closest",
         "documentation-url": "https://developer.mozilla.org/en-US/docs/Web/API/Element/closest",
@@ -1089,8 +1121,7 @@
     {
         "name": "Filter Effects backdrop-filter property",
         "status": {
-            "status": "Supported",
-            "enabled-by-default": true
+            "status": "Supported"
         },
         "url": "http://dev.w3.org/fxtf/filters-2/#propdef-backdrop-filter",
         "specification": "Filter Effects Module Level 2",
@@ -1108,8 +1139,7 @@
     {
         "name": "Force Click Events",
         "status": {
-            "status": "Supported",
-            "enabled-by-default": true
+            "status": "Supported"
         },
         "webkit-url": "https://bugs.webkit.org/show_bug.cgi?id=142836",
         "description": "Provide the events necessary to handle force click events in the page, overriding the default behavior."
@@ -1117,8 +1147,7 @@
     {
         "name": "HTML Interactive Form Validation",
         "status": {
-            "status": "Supported",
-            "enabled-by-default": true
+            "status": "Supported"
         },
         "url": "https://html.spec.whatwg.org/#constraint-validation",
         "webkit-url": "https://bugs.webkit.org/show_bug.cgi?id=164382",
@@ -1139,9 +1168,10 @@
         "url": "http://w3c.github.io/webcomponents/spec/imports/",
         "specification": "Web Components",
         "description": "Includes resusable HTML documents in other HTML documents.",
-        "comment": "Multile browser vendors have raised concerns about how the HTML imports currently works. For example, its dependency model is not fully compatible with ES6 Modules. We are exploring other ways to package web components by integrating into ES6 Modules with other browser vendors.",
+        "comment": "Multiple browser vendors have raised concerns about how the HTML imports currently works. For example, its dependency model is not fully compatible with ES6 Modules. We are exploring other ways to package web components by integrating into ES6 Modules with other browser vendors.",
         "contact": {
             "name": "Ryosuke Niwa",
+            "twitter": "@rniwa_dev",
             "email": "rniwa@webkit.org"
         }
     },
@@ -1158,10 +1188,10 @@
     {
         "name": "ImageBitmap",
         "status": {
-            "status": "Under Consideration"
+            "status": "In Development"
         },
         "url": "https://html.spec.whatwg.org/multipage/webappapis.html#imagebitmap",
-        "webkit-url": "https://webkit.org/b/",
+        "webkit-url": "https://bugs.webkit.org/show_bug.cgi?id=182424",
         "specification": "HTML5",
         "description": "An interface for drawing bitmap images to a &lt;canvas&gt; without undue latency.",
         "contact": {
@@ -1173,8 +1203,7 @@
     {
         "name": "Initial Letter",
         "status": {
-            "status": "Supported",
-            "enabled-by-default": true
+            "status": "Supported"
         },
         "url": "http://dev.w3.org/csswg/css-inline/#propdef-initial-letter",
         "specification": "CSS Inline Layout Module Level 3",
@@ -1204,8 +1233,7 @@
     {
         "name": "Interaction Media Features (pointer, hover, any-pointer, any-hover)",
         "status": {
-            "status": "Supported",
-            "enabled-by-default": true
+            "status": "Supported"
         },
         "url": "http://dev.w3.org/csswg/mediaqueries-4/#mf-interaction",
         "specification": "CSS Media Queries Level 4",
@@ -1260,8 +1288,7 @@
     {
         "name": "Position: sticky",
         "status": {
-            "status": "Supported",
-            "enabled-by-default": true
+            "status": "Supported"
         },
         "url": "http://dev.w3.org/csswg/css-position/#sticky-pos",
         "specification": "CSS Positioned Layout Module Level 3",
@@ -1271,8 +1298,7 @@
     {
         "name": "Readable Streams",
         "status": {
-            "status": "Supported",
-            "enabled-by-default": true
+            "status": "Supported"
         },
         "url": "https://streams.spec.whatwg.org/#rs",
         "webkit-url": "https://bugs.webkit.org/show_bug.cgi?id=138967",
@@ -1282,8 +1308,7 @@
     {
         "name": "Resize Observer",
         "status": {
-            "status": "Supported In Preview",
-            "enabled-by-default": false
+            "status": "Supported"
         },
         "url": "https://drafts.csswg.org/resize-observer/",
         "webkit-url": "https://bugs.webkit.org/show_bug.cgi?id=157743",
@@ -1308,8 +1333,7 @@
     {
         "name": "Shadow DOM",
         "status": {
-            "status": "Supported",
-            "enabled-by-default": true
+            "status": "Supported"
         },
         "url": "http://w3c.github.io/webcomponents/spec/shadow/",
         "webkit-url": "https://bugs.webkit.org/show_bug.cgi?id=148695",
@@ -1318,6 +1342,7 @@
         "comment": "We are fixing the remainig bugs in our implementation.",
         "contact": {
             "name": "Ryosuke Niwa",
+            "twitter": "@rniwa_dev",
             "email": "rniwa@webkit.org"
         }
     },
@@ -1334,8 +1359,7 @@
     {
         "name": "Srcset w descriptor and related sizes attribute",
         "status": {
-            "status": "Supported",
-            "enabled-by-default": true
+            "status": "Supported"
         },
         "url": "https://html.spec.whatwg.org/multipage/embedded-content.html#the-img-element",
         "webkit-url": "https://bugs.webkit.org/show_bug.cgi?id=133620",
@@ -1350,8 +1374,7 @@
     {
         "name": "Srcset x descriptor",
         "status": {
-            "status": "Supported",
-            "enabled-by-default": true
+            "status": "Supported"
         },
         "url": "https://html.spec.whatwg.org/multipage/embedded-content.html#the-img-element",
         "webkit-url": "https://bugs.webkit.org/show_bug.cgi?id=110252",
@@ -1366,8 +1389,7 @@
     {
         "name": "Strict Mixed Content Checking",
         "status": {
-            "status": "Supported",
-            "enabled-by-default": true
+            "status": "Supported"
         },
         "url": "https://w3c.github.io/webappsec-mixed-content/#strict-checking",
         "webkit-url": "https://bugs.webkit.org/show_bug.cgi?id=165438",
@@ -1396,8 +1418,7 @@
     {
         "name": "Template Element",
         "status": {
-            "status": "Supported",
-            "enabled-by-default": true
+            "status": "Supported"
         },
         "url": "http://www.w3.org/TR/html5/scripting-1.html#the-template-element",
         "webkit-url": "https://bugs.webkit.org/show_bug.cgi?id=124637",
@@ -1408,8 +1429,7 @@
     {
         "name": "Upgrade Insecure Requests",
         "status": {
-            "status": "Supported",
-            "enabled-by-default": true
+            "status": "Supported"
         },
         "url": "https://w3c.github.io/webappsec-upgrade-insecure-requests/",
         "webkit-url": "https://bugs.webkit.org/show_bug.cgi?id=143653",
@@ -1442,7 +1462,7 @@
     {
         "name": "Visual Viewport API",
         "status": {
-            "status": "Supported In Preview"
+            "status": "Supported"
         },
         "url": "https://wicg.github.io/visual-viewport/",
         "description": "A proposal to add explicit APIs to the Web for querying and setting the visual viewport.",
@@ -1451,7 +1471,7 @@
     {
         "name": "Web Audio",
         "status": {
-            "status": "Partially Supported"
+            "status": "Supported"
         },
         "url": "https://www.w3.org/TR/webaudio/",
         "keywords": ["audio", "webaudio"],
@@ -1522,7 +1542,7 @@
     {
         "name": "inert attribute",
         "status": {
-            "status": "Under Consideration",
+            "status": "In Development",
             "enabled-by-default": false
         },
         "url": "https://whatpr.org/html/4288/interaction.html#the-inert-attribute",

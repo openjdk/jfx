@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include "Styleable.h"
 #include <wtf/HashMap.h>
 
 namespace WebCore {
@@ -47,7 +48,7 @@ class SharingResolver {
 public:
     SharingResolver(const Document&, const ScopeRuleSets&, const SelectorFilter&);
 
-    std::unique_ptr<RenderStyle> resolve(const Element&, const Update&);
+    std::unique_ptr<RenderStyle> resolve(const Styleable&, const Update&);
 
 private:
     struct Context;
@@ -63,6 +64,7 @@ private:
     const ScopeRuleSets& m_ruleSets;
     const SelectorFilter& m_selectorFilter;
 
+    // FIXME: Use WeakHashMap or HashMap<CheckedPtr, CheckedPtr>.
     HashMap<const Element*, const Element*> m_elementsSharingStyle;
 };
 

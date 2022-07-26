@@ -46,14 +46,8 @@ class FireDetail {
     void* operator new(size_t) = delete;
 
 public:
-    FireDetail()
-    {
-    }
-
-    virtual ~FireDetail()
-    {
-    }
-
+    FireDetail() = default;
+    virtual ~FireDetail() = default;
     virtual void dump(PrintStream&) const = 0;
 };
 
@@ -114,7 +108,7 @@ class WatchpointSet;
     macro(CodeBlockJettisoning, CodeBlockJettisoningWatchpoint) \
     macro(LLIntPrototypeLoadAdaptiveStructure, LLIntPrototypeLoadAdaptiveStructureWatchpoint) \
     macro(FunctionRareDataAllocationProfileClearing, FunctionRareData::AllocationProfileClearingWatchpoint) \
-    macro(ObjectToStringAdaptiveStructure, ObjectToStringAdaptiveStructureWatchpoint)
+    macro(CachedSpecialPropertyAdaptiveStructure, CachedSpecialPropertyAdaptiveStructureWatchpoint)
 
 #if ENABLE(JIT)
 #define JSC_WATCHPOINT_TYPES_WITHOUT_DFG(macro) \
@@ -208,9 +202,7 @@ public:
     // then also the watchpoint state() will change to IsInvalidated.
     WatchpointState state() const
     {
-        WTF::loadLoadFence();
         WatchpointState result = static_cast<WatchpointState>(m_state);
-        WTF::loadLoadFence();
         return result;
     }
 
@@ -223,6 +215,11 @@ public:
     bool isStillValid() const
     {
         return state() != IsInvalidated;
+    }
+    // Fast way of testing isStillValid(), which only works from the main thread.
+    bool isStillValidOnJSThread() const
+    {
+        return stateOnJSThread() != IsInvalidated;
     }
     // Like isStillValid(), may be called from another thread.
     bool hasBeenInvalidated() const { return !isStillValid(); }
@@ -356,9 +353,7 @@ public:
     // state if you also add a watchpoint.
     WatchpointState state() const
     {
-        WTF::loadLoadFence();
         uintptr_t data = m_data;
-        WTF::loadLoadFence();
         if (isFat(data))
             return fat(data)->state();
         return decodeState(data);
@@ -533,14 +528,22 @@ private:
 class DeferredWatchpointFire : public FireDetail {
     WTF_MAKE_NONCOPYABLE(DeferredWatchpointFire);
 public:
-    JS_EXPORT_PRIVATE DeferredWatchpointFire(VM&);
-    JS_EXPORT_PRIVATE ~DeferredWatchpointFire() override;
+    DeferredWatchpointFire(VM& vm)
+        : m_vm(vm)
+        , m_watchpointsToFire(ClearWatchpoint)
+    {
+    }
 
     JS_EXPORT_PRIVATE void takeWatchpointsToFire(WatchpointSet*);
-    JS_EXPORT_PRIVATE void fireAll();
+    void fireAll()
+    {
+        if (m_watchpointsToFire.state() == IsWatched)
+            fireAllSlow();
+    }
 
-    void dump(PrintStream& out) const override = 0;
 private:
+    JS_EXPORT_PRIVATE void fireAllSlow();
+
     VM& m_vm;
     WatchpointSet m_watchpointsToFire;
 };

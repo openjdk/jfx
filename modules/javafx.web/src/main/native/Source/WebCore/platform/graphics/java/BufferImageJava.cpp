@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -35,18 +35,19 @@
 
 namespace WebCore {
 
-BufferImage::BufferImage(RefPtr<RQRef> rqoImage, RefPtr<RenderingQueue> rq, int w, int h)
-    : Image(),
-      m_width(w),
-      m_height(h),
-      m_rq(rq),
-      m_rqoImage(rqoImage)
+BufferImage::BufferImage(PlatformImagePtr image)
+    : Image(), m_image(image)
 {}
 
-NativeImagePtr BufferImage::nativeImageForCurrentFrame(const GraphicsContext*)
+RefPtr<NativeImage> BufferImage::nativeImage(const GraphicsContext*)
 {
-    m_rq->flushBuffer();
-    return m_rqoImage;
+    return nativeImageForCurrentFrame();
+}
+
+RefPtr<NativeImage> BufferImage::nativeImageForCurrentFrame(const GraphicsContext*)
+{
+    m_image->getRenderingQueue()->flushBuffer();
+    return NativeImage::create(m_image.get());
 }
 
 void BufferImage::flushImageRQ(GraphicsContext& gc)
@@ -55,16 +56,17 @@ void BufferImage::flushImageRQ(GraphicsContext& gc)
         return;
     }
 
-    RenderingQueue &rqScreen = gc.platformContext()->rq();
+    RenderingQueue& rqScreen = gc.platformContext()->rq();
+    auto rq = m_image->getRenderingQueue();
 
-    if (!m_rq->isEmpty()) {
+    if (!rq->isEmpty()) {
         // 1. Drawing is flushed to the buffered image's RenderQueue.
-        m_rq->flushBuffer();
+        rq->flushBuffer();
 
         // 2. The buffered image's RenderQueue is to be decoded.
         rqScreen.freeSpace(8)
         << (jint)com_sun_webkit_graphics_GraphicsDecoder_DECODERQ
-        << m_rq->getRQRenderingQueue();
+        << rq->getRQRenderingQueue();
     }
 }
 
@@ -83,7 +85,5 @@ void BufferImage::drawPattern(GraphicsContext& gc, const FloatRect& destRect, co
     Image::drawPattern(gc, destRect, srcRect, patternTransform,
                         phase, spacing, options);
 }
-
-
 
 } // namespace WebCore

@@ -24,7 +24,6 @@
 #include "config.h"
 #include "HTMLAnchorElement.h"
 
-#include "AdClickAttribution.h"
 #include "Chrome.h"
 #include "ChromeClient.h"
 #include "DOMTokenList.h"
@@ -44,6 +43,7 @@
 #include "MouseEvent.h"
 #include "PingLoader.h"
 #include "PlatformMouseEvent.h"
+#include "PrivateClickMeasurement.h"
 #include "RegistrableDomain.h"
 #include "RenderImage.h"
 #include "ResourceRequest.h"
@@ -55,7 +55,7 @@
 #include "Settings.h"
 #include "UserGestureIndicator.h"
 #include <wtf/IsoMallocInlines.h>
-#include <wtf/Optional.h>
+#include <wtf/WeakHashMap.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/StringConcatenateNumbers.h>
 
@@ -171,12 +171,9 @@ static void appendServerMapMousePosition(StringBuilder& url, Event& event)
     if (!is<RenderImage>(renderer))
         return;
 
-    // FIXME: This should probably pass UseTransforms in the MapCoordinatesFlags.
+    // FIXME: This should probably pass UseTransforms in the OptionSet<MapCoordinatesMode>.
     auto absolutePosition = downcast<RenderImage>(*renderer).absoluteToLocal(FloatPoint(mouseEvent.pageX(), mouseEvent.pageY()));
-    url.append('?');
-    url.appendNumber(std::lround(absolutePosition.x()));
-    url.append(',');
-    url.appendNumber(std::lround(absolutePosition.y()));
+    url.append('?', std::lround(absolutePosition.x()), ',', std::lround(absolutePosition.y()));
 }
 
 void HTMLAnchorElement::defaultEventHandler(Event& event)
@@ -211,34 +208,28 @@ void HTMLAnchorElement::defaultEventHandler(Event& event)
     HTMLElement::defaultEventHandler(event);
 }
 
-void HTMLAnchorElement::setActive(bool down, bool pause)
+void HTMLAnchorElement::setActive(bool down, bool pause, Style::InvalidationScope invalidationScope)
 {
     if (hasEditableStyle()) {
-        EditableLinkBehavior editableLinkBehavior = document().settings().editableLinkBehavior();
+        switch (document().settings().editableLinkBehavior()) {
+        case EditableLinkBehavior::Default:
+        case EditableLinkBehavior::AlwaysLive:
+            break;
 
-        switch (editableLinkBehavior) {
-            default:
-            case EditableLinkDefaultBehavior:
-            case EditableLinkAlwaysLive:
-                break;
-
-            case EditableLinkNeverLive:
+        // Don't set the link to be active if the current selection is in the same editable block as this link.
+        case EditableLinkBehavior::LiveWhenNotFocused:
+            if (down && document().frame() && document().frame()->selection().selection().rootEditableElement() == rootEditableElement())
                 return;
+            break;
 
-            // Don't set the link to be active if the current selection is in the same editable block as
-            // this link
-            case EditableLinkLiveWhenNotFocused:
-                if (down && document().frame() && document().frame()->selection().selection().rootEditableElement() == rootEditableElement())
-                    return;
-                break;
+        case EditableLinkBehavior::NeverLive:
+        case EditableLinkBehavior::OnlyLiveWithShiftKey:
+            return;
 
-            case EditableLinkOnlyLiveWithShiftKey:
-                return;
         }
-
     }
 
-    HTMLElement::setActive(down, pause);
+    HTMLElement::setActive(down, pause, invalidationScope);
 }
 
 void HTMLAnchorElement::parseAttribute(const QualifiedName& name, const AtomString& value)
@@ -306,7 +297,7 @@ bool HTMLAnchorElement::draggable() const
 
 URL HTMLAnchorElement::href() const
 {
-    return document().completeURL(stripLeadingAndTrailingHTMLSpaces(attributeWithoutSynchronization(hrefAttr)));
+    return document().completeURL(attributeWithoutSynchronization(hrefAttr));
 }
 
 void HTMLAnchorElement::setHref(const AtomString& value)
@@ -384,7 +375,7 @@ void HTMLAnchorElement::sendPings(const URL& destinationURL)
 #if USE(SYSTEM_PREVIEW)
 bool HTMLAnchorElement::isSystemPreviewLink()
 {
-    if (!RuntimeEnabledFeatures::sharedFeatures().systemPreviewEnabled())
+    if (!document().settings().systemPreviewEnabled())
         return false;
 
     static MainThreadNeverDestroyed<const AtomString> systemPreviewRelValue("ar", AtomString::ConstructFromLiteral);
@@ -404,59 +395,73 @@ bool HTMLAnchorElement::isSystemPreviewLink()
 }
 #endif
 
-Optional<AdClickAttribution> HTMLAnchorElement::parseAdClickAttribution() const
+std::optional<PrivateClickMeasurement> HTMLAnchorElement::parsePrivateClickMeasurement() const
 {
-    using Campaign = AdClickAttribution::Campaign;
-    using Source = AdClickAttribution::Source;
-    using Destination = AdClickAttribution::Destination;
+    using SourceID = PrivateClickMeasurement::SourceID;
+    using SourceSite = PrivateClickMeasurement::SourceSite;
+    using AttributionDestinationSite = PrivateClickMeasurement::AttributionDestinationSite;
 
     auto* page = document().page();
     if (!page || page->sessionID().isEphemeral()
-        || !RuntimeEnabledFeatures::sharedFeatures().adClickAttributionEnabled()
+        || !document().settings().privateClickMeasurementEnabled()
         || !UserGestureIndicator::processingUserGesture())
-        return WTF::nullopt;
+        return std::nullopt;
 
-    if (!hasAttributeWithoutSynchronization(adcampaignidAttr) && !hasAttributeWithoutSynchronization(addestinationAttr))
-        return WTF::nullopt;
+    auto hasAttributionSourceIDAttr = hasAttributeWithoutSynchronization(attributionsourceidAttr);
+    auto hasAttributionDestinationAttr = hasAttributeWithoutSynchronization(attributiondestinationAttr);
+    if (!hasAttributionSourceIDAttr && !hasAttributionDestinationAttr)
+        return std::nullopt;
 
-    auto adCampaignIDAttr = attributeWithoutSynchronization(adcampaignidAttr);
-    auto adDestinationAttr = attributeWithoutSynchronization(addestinationAttr);
+    auto attributionSourceIDAttr = attributeWithoutSynchronization(attributionsourceidAttr);
+    auto attributionDestinationAttr = attributeWithoutSynchronization(attributiondestinationAttr);
 
-    if (adCampaignIDAttr.isEmpty() || adDestinationAttr.isEmpty()) {
-        document().addConsoleMessage(MessageSource::Other, MessageLevel::Warning, "Both adcampaignid and addestination need to be set for Ad Click Attribution to work."_s);
-        return WTF::nullopt;
+    if (!hasAttributionSourceIDAttr || !hasAttributionDestinationAttr || attributionSourceIDAttr.isEmpty() || attributionDestinationAttr.isEmpty()) {
+        document().addConsoleMessage(MessageSource::Other, MessageLevel::Warning, "Both attributionsourceid and attributiondestination need to be set for Private Click Measurement to work."_s);
+        return std::nullopt;
     }
 
     RefPtr<Frame> frame = document().frame();
     if (!frame || !frame->isMainFrame()) {
-        document().addConsoleMessage(MessageSource::Other, MessageLevel::Warning, "Ad Click Attribution is only supported in the main frame."_s);
-        return WTF::nullopt;
+        document().addConsoleMessage(MessageSource::Other, MessageLevel::Warning, "Private Click Measurement is only supported in the main frame."_s);
+        return std::nullopt;
     }
 
-    auto adCampaignID = parseHTMLNonNegativeInteger(adCampaignIDAttr);
-    if (!adCampaignID) {
-        document().addConsoleMessage(MessageSource::Other, MessageLevel::Warning, "adcampaignid can not be converted to a non-negative integer which is required for Ad Click Attribution."_s);
-        return WTF::nullopt;
+    auto attributionSourceID = parseHTMLNonNegativeInteger(attributionSourceIDAttr);
+    if (!attributionSourceID) {
+        document().addConsoleMessage(MessageSource::Other, MessageLevel::Warning, "attributionsourceid is not a non-negative integer which is required for Private Click Measurement."_s);
+        return std::nullopt;
     }
 
-    if (adCampaignID.value() > AdClickAttribution::MaxEntropy) {
-        document().addConsoleMessage(MessageSource::Other, MessageLevel::Warning, makeString("adcampaignid must have a non-negative value less than or equal to ", AdClickAttribution::MaxEntropy, " for Ad Click Attribution."));
-        return WTF::nullopt;
+    if (attributionSourceID.value() > PrivateClickMeasurement::SourceID::MaxEntropy) {
+        document().addConsoleMessage(MessageSource::Other, MessageLevel::Warning, makeString("attributionsourceid must have a non-negative value less than or equal to ", PrivateClickMeasurement::SourceID::MaxEntropy, " for Private Click Measurement."));
+        return std::nullopt;
     }
 
-    URL adDestinationURL { URL(), adDestinationAttr };
-    if (!adDestinationURL.isValid() || !adDestinationURL.protocolIsInHTTPFamily()) {
-        document().addConsoleMessage(MessageSource::Other, MessageLevel::Warning, "addestination could not be converted to a valid HTTP-family URL."_s);
-        return WTF::nullopt;
+    URL destinationURL { URL(), attributionDestinationAttr };
+    if (!destinationURL.isValid() || !destinationURL.protocolIsInHTTPFamily()) {
+        document().addConsoleMessage(MessageSource::Other, MessageLevel::Warning, "attributiondestination could not be converted to a valid HTTP-family URL."_s);
+        return std::nullopt;
     }
 
     RegistrableDomain documentRegistrableDomain { document().url() };
-    if (documentRegistrableDomain.matches(adDestinationURL)) {
-        document().addConsoleMessage(MessageSource::Other, MessageLevel::Warning, "addestination can not be the same site as the current website."_s);
-        return WTF::nullopt;
+    if (documentRegistrableDomain.matches(destinationURL)) {
+        document().addConsoleMessage(MessageSource::Other, MessageLevel::Warning, "attributiondestination can not be the same site as the current website."_s);
+        return std::nullopt;
     }
 
-    return AdClickAttribution { Campaign(adCampaignID.value()), Source(documentRegistrableDomain), Destination(adDestinationURL) };
+    auto privateClickMeasurement = PrivateClickMeasurement { SourceID(attributionSourceID.value()), SourceSite(WTFMove(documentRegistrableDomain)), AttributionDestinationSite(destinationURL) };
+
+    auto attributionSourceNonceAttr = attributeWithoutSynchronization(attributionsourcenonceAttr);
+    if (!attributionSourceNonceAttr.isEmpty()) {
+        auto ephemeralNonce = PrivateClickMeasurement::EphemeralSourceNonce { attributionSourceNonceAttr };
+        if (!ephemeralNonce.isValid()) {
+            document().addConsoleMessage(MessageSource::Other, MessageLevel::Warning, "attributionsourcenonce was not valid."_s);
+            return std::nullopt;
+        }
+        privateClickMeasurement.setEphemeralSourceNonce(WTFMove(ephemeralNonce));
+    }
+
+    return privateClickMeasurement;
 }
 
 void HTMLAnchorElement::handleClick(Event& event)
@@ -486,7 +491,7 @@ void HTMLAnchorElement::handleClick(Event& event)
 
     String downloadAttribute;
 #if ENABLE(DOWNLOAD_ATTRIBUTE)
-    if (RuntimeEnabledFeatures::sharedFeatures().downloadAttributeEnabled()) {
+    if (document().settings().downloadAttributeEnabled()) {
         // Ignore the download attribute completely if the href URL is cross origin.
         bool isSameOrigin = completedURL.protocolIsData() || document().securityOrigin().canRequest(completedURL);
         if (isSameOrigin)
@@ -498,12 +503,12 @@ void HTMLAnchorElement::handleClick(Event& event)
 
     SystemPreviewInfo systemPreviewInfo;
 #if USE(SYSTEM_PREVIEW)
-    systemPreviewInfo.isPreview = isSystemPreviewLink() && RuntimeEnabledFeatures::sharedFeatures().systemPreviewEnabled();
+    systemPreviewInfo.isPreview = isSystemPreviewLink() && document().settings().systemPreviewEnabled();
 
     if (systemPreviewInfo.isPreview) {
         systemPreviewInfo.element.elementIdentifier = document().identifierForElement(*this);
         systemPreviewInfo.element.documentIdentifier = document().identifier();
-        systemPreviewInfo.element.webPageIdentifier = document().frame()->loader().pageID().valueOr(PageIdentifier { });
+        systemPreviewInfo.element.webPageIdentifier = document().frame()->loader().pageID().value_or(PageIdentifier { });
         if (auto* child = firstElementChild())
             systemPreviewInfo.previewRect = child->boundsInRootViewSpace();
     }
@@ -512,18 +517,16 @@ void HTMLAnchorElement::handleClick(Event& event)
     auto referrerPolicy = hasRel(Relation::NoReferrer) ? ReferrerPolicy::NoReferrer : this->referrerPolicy();
 
     auto effectiveTarget = this->effectiveTarget();
-    Optional<NewFrameOpenerPolicy> newFrameOpenerPolicy;
-    if (hasRel(Relation::Opener))
-        newFrameOpenerPolicy = NewFrameOpenerPolicy::Allow;
-    else if (hasRel(Relation::NoOpener) || (RuntimeEnabledFeatures::sharedFeatures().blankAnchorTargetImpliesNoOpenerEnabled() && equalIgnoringASCIICase(effectiveTarget, "_blank")))
+    NewFrameOpenerPolicy newFrameOpenerPolicy = NewFrameOpenerPolicy::Allow;
+    if (hasRel(Relation::NoOpener) || hasRel(Relation::NoReferrer) || (!hasRel(Relation::Opener) && document().settings().blankAnchorTargetImpliesNoOpenerEnabled() && equalIgnoringASCIICase(effectiveTarget, "_blank")))
         newFrameOpenerPolicy = NewFrameOpenerPolicy::Suppress;
 
-    auto adClickAttribution = parseAdClickAttribution();
-    // A matching conversion event needs to happen before the complete ad click attributionURL can be
-    // created. Thus, it should be empty for now.
-    ASSERT(!adClickAttribution || adClickAttribution->url().isNull());
+    auto privateClickMeasurement = parsePrivateClickMeasurement();
+    // A matching triggering event needs to happen before an attribution report can be sent.
+    // Thus, URLs should be empty for now.
+    ASSERT(!privateClickMeasurement || (privateClickMeasurement->attributionReportSourceURL().isNull() && privateClickMeasurement->attributionReportAttributeOnURL().isNull()));
 
-    frame->loader().changeLocation(completedURL, effectiveTarget, &event, LockHistory::No, LockBackForwardList::No, referrerPolicy, document().shouldOpenExternalURLsPolicyToPropagate(), newFrameOpenerPolicy, downloadAttribute, systemPreviewInfo, WTFMove(adClickAttribution));
+    frame->loader().changeLocation(completedURL, effectiveTarget, &event, referrerPolicy, document().shouldOpenExternalURLsPolicyToPropagate(), newFrameOpenerPolicy, downloadAttribute, systemPreviewInfo, WTFMove(privateClickMeasurement));
 
     sendPings(completedURL);
 }
@@ -550,19 +553,19 @@ bool HTMLAnchorElement::treatLinkAsLiveForEventType(EventType eventType) const
         return true;
 
     switch (document().settings().editableLinkBehavior()) {
-    case EditableLinkDefaultBehavior:
-    case EditableLinkAlwaysLive:
+    case EditableLinkBehavior::Default:
+    case EditableLinkBehavior::AlwaysLive:
         return true;
 
-    case EditableLinkNeverLive:
+    case EditableLinkBehavior::NeverLive:
         return false;
 
     // If the selection prior to clicking on this link resided in the same editable block as this link,
     // and the shift key isn't pressed, we don't want to follow the link.
-    case EditableLinkLiveWhenNotFocused:
+    case EditableLinkBehavior::LiveWhenNotFocused:
         return eventType == MouseEventWithShiftKey || (eventType == MouseEventWithoutShiftKey && rootEditableElementForSelectionOnMouseDown() != rootEditableElement());
 
-    case EditableLinkOnlyLiveWithShiftKey:
+    case EditableLinkBehavior::OnlyLiveWithShiftKey:
         return eventType == MouseEventWithShiftKey;
     }
 
@@ -585,26 +588,24 @@ bool HTMLAnchorElement::willRespondToMouseClickEvents()
     return isLink() || HTMLElement::willRespondToMouseClickEvents();
 }
 
-typedef HashMap<const HTMLAnchorElement*, RefPtr<Element>> RootEditableElementMap;
-
-static RootEditableElementMap& rootEditableElementMap()
+static auto& rootEditableElementMap()
 {
-    static NeverDestroyed<RootEditableElementMap> map;
-    return map;
+    static NeverDestroyed<WeakHashMap<HTMLAnchorElement, WeakPtr<Element>>> map;
+    return map.get();
 }
 
 Element* HTMLAnchorElement::rootEditableElementForSelectionOnMouseDown() const
 {
     if (!m_hasRootEditableElementForSelectionOnMouseDown)
         return 0;
-    return rootEditableElementMap().get(this);
+    return rootEditableElementMap().get(*this).get();
 }
 
 void HTMLAnchorElement::clearRootEditableElementForSelectionOnMouseDown()
 {
     if (!m_hasRootEditableElementForSelectionOnMouseDown)
         return;
-    rootEditableElementMap().remove(this);
+    rootEditableElementMap().remove(*this);
     m_hasRootEditableElementForSelectionOnMouseDown = false;
 }
 
@@ -615,7 +616,7 @@ void HTMLAnchorElement::setRootEditableElementForSelectionOnMouseDown(Element* e
         return;
     }
 
-    rootEditableElementMap().set(this, element);
+    rootEditableElementMap().set(*this, makeWeakPtr(element));
     m_hasRootEditableElementForSelectionOnMouseDown = true;
 }
 
@@ -631,8 +632,8 @@ String HTMLAnchorElement::referrerPolicyForBindings() const
 
 ReferrerPolicy HTMLAnchorElement::referrerPolicy() const
 {
-    if (RuntimeEnabledFeatures::sharedFeatures().referrerPolicyAttributeEnabled())
-        return parseReferrerPolicy(attributeWithoutSynchronization(referrerpolicyAttr), ReferrerPolicySource::ReferrerPolicyAttribute).valueOr(ReferrerPolicy::EmptyString);
+    if (document().settings().referrerPolicyAttributeEnabled())
+        return parseReferrerPolicy(attributeWithoutSynchronization(referrerpolicyAttr), ReferrerPolicySource::ReferrerPolicyAttribute).value_or(ReferrerPolicy::EmptyString);
     return ReferrerPolicy::EmptyString;
 }
 

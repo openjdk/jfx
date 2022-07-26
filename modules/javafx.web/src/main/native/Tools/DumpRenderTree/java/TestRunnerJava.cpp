@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -182,16 +182,6 @@ void TestRunner::setAppCacheMaximumSize(unsigned long long quota)
     // FIXME: implement
 }
 
-void TestRunner::setAllowUniversalAccessFromFileURLs(bool)
-{
-    // FIXME: implement
-}
-
-void TestRunner::setAuthorAndUserStylesEnabled(bool enabled)
-{
-    // FIXME: implement
-}
-
 void TestRunner::setCacheModel(int model)
 {
     // FIXME: implement
@@ -227,17 +217,7 @@ void TestRunner::setPersistentUserStyleSheetLocation(JSStringRef path)
     // FIXME: implement
 }
 
-void TestRunner::setPopupBlockingEnabled(bool enabled)
-{
-    // FIXME: implement
-}
-
 void TestRunner::setPrivateBrowsingEnabled(bool enabled)
-{
-    // FIXME: implement
-}
-
-void TestRunner::setXSSAuditorEnabled(bool enabled)
 {
     // FIXME: implement
 }
@@ -396,31 +376,11 @@ void TestRunner::removeOriginAccessAllowListEntry(JSStringRef, JSStringRef, JSSt
     //FIXME: implement
 }
 
-void TestRunner::setAllowFileAccessFromFileURLs(bool) {
-    //FIXME: implement
-}
-
 void TestRunner::setDomainRelaxationForbiddenForURLScheme(bool,JSStringRef) {
     //FIXME: implement
 }
 
-void TestRunner::setJavaScriptCanAccessClipboard(bool enable) {
-    JSStringRef webkitJavaScriptCanAccessClipboard = JSStringCreateWithUTF8CString("WebKitJavaScriptCanAccessClipboardPreferenceKey");
-    JSStringRef value = JSStringCreateWithUTF8CString(enable ? "1" : "0");
-    overridePreference(webkitJavaScriptCanAccessClipboard, value);
-    JSStringRelease(webkitJavaScriptCanAccessClipboard);
-    JSStringRelease(value);
-}
-
-void TestRunner::setPluginsEnabled(bool) {
-    //FIXME: implement
-}
-
 void TestRunner::setScrollbarPolicy(JSStringRef,JSStringRef) {
-    //FIXME: implement
-}
-
-void TestRunner::setSpatialNavigationEnabled(bool) {
     //FIXME: implement
 }
 
@@ -578,11 +538,6 @@ void TestRunner::setViewSize(double width, double height)
 void TestRunner::setSpellCheckerLoggingEnabled(bool enabled)
 {
     fprintf(testResult, "ERROR: TestRunner::setSpellCheckerLoggingEnabled() not implemented\n");
-}
-
-void TestRunner::setNeedsStorageAccessFromFileURLsQuirk(bool needsQuirk)
-{
-    fprintf(testResult, "ERROR: TestRunner::setNeedsStorageAccessFromFileURLsQuirk() not implemented\n");
 }
 
 unsigned TestRunner::imageCountInGeneralPasteboard() const

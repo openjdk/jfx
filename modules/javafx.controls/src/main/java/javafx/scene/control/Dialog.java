@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -226,7 +226,7 @@ import com.sun.javafx.tk.Toolkit;
  */
 public class Dialog<R> implements EventTarget {
 
-    /**************************************************************************
+    /* ************************************************************************
      *
      * Static fields
      *
@@ -235,7 +235,7 @@ public class Dialog<R> implements EventTarget {
 
 
 
-    /**************************************************************************
+    /* ************************************************************************
      *
      * Static methods
      *
@@ -243,19 +243,19 @@ public class Dialog<R> implements EventTarget {
 
 
 
-    /**************************************************************************
+    /* ************************************************************************
      *
      * Private fields
      *
      **************************************************************************/
 
-    final FXDialog dialog;
+    final FXDialog dialog = new HeavyweightDialog(this);
 
     private boolean isClosing;
 
 
 
-    /**************************************************************************
+    /* ************************************************************************
      *
      * Constructors
      *
@@ -265,14 +265,13 @@ public class Dialog<R> implements EventTarget {
      * Creates a dialog without a specified owner.
      */
     public Dialog() {
-        this.dialog = new HeavyweightDialog(this);
         setDialogPane(new DialogPane());
         initModality(Modality.APPLICATION_MODAL);
     }
 
 
 
-    /**************************************************************************
+    /* ************************************************************************
      *
      * Abstract methods
      *
@@ -281,7 +280,7 @@ public class Dialog<R> implements EventTarget {
 
 
 
-    /**************************************************************************
+    /* ************************************************************************
      *
      * Public API
      *
@@ -496,7 +495,7 @@ public class Dialog<R> implements EventTarget {
 
 
 
-    /**************************************************************************
+    /* ************************************************************************
      *
      * Properties
      *
@@ -887,7 +886,7 @@ public class Dialog<R> implements EventTarget {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *
      * Events
      *
@@ -1005,7 +1004,7 @@ public class Dialog<R> implements EventTarget {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *
      * Private implementation
      *
@@ -1067,7 +1066,7 @@ public class Dialog<R> implements EventTarget {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *
      * Stylesheet Handling
      *

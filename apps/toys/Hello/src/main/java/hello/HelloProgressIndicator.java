@@ -116,7 +116,7 @@ public class HelloProgressIndicator extends Application {
         root.getChildren().add(pInd6);
 
         // busy indicator - indeterminate and spin are enabled by default
-        // See https://wiki.openjdk.java.net/display/OpenJFX/ProgressIndicator+User+Experience+Documentation
+        // See https://wiki.openjdk.org/display/OpenJFX/ProgressIndicator+User+Experience+Documentation
         ProgressIndicator pInd7 = new ProgressIndicator();
         pInd7.setLayoutX(300);
         pInd7.setLayoutY(250);

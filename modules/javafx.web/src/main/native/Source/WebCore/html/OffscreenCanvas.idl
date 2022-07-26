@@ -23,11 +23,14 @@
 * THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+typedef (
 #if defined(ENABLE_WEBGL) && ENABLE_WEBGL
-typedef (OffscreenCanvasRenderingContext2D or WebGLRenderingContext) OffscreenRenderingContext;
-#else
-typedef (OffscreenCanvasRenderingContext2D) OffscreenRenderingContext;
+    WebGLRenderingContext or
 #endif
+#if defined(ENABLE_WEBGL2) && ENABLE_WEBGL2
+    WebGL2RenderingContext or
+#endif
+    OffscreenCanvasRenderingContext2D) OffscreenRenderingContext;
 
 dictionary ImageEncodeOptions
 {
@@ -38,13 +41,16 @@ dictionary ImageEncodeOptions
 enum OffscreenRenderingContextType
 {
    "2d",
-   "webgl"
+   "webgl",
+   "webgl2"
 };
 
 [
     GenerateIsReachable=Impl,
     EnabledAtRuntime=OffscreenCanvas,
     Conditional=OFFSCREEN_CANVAS,
+    ConditionalForWorker=OFFSCREEN_CANVAS_IN_WORKERS,
+    EnabledForContext,
     Exposed=(Window,Worker)
 ] interface OffscreenCanvas : EventTarget {
     [CallWith=ScriptExecutionContext] constructor([EnforceRange] unsigned long width, [EnforceRange] unsigned long height);
@@ -52,8 +58,8 @@ enum OffscreenRenderingContextType
     attribute [EnforceRange] unsigned long width;
     attribute [EnforceRange] unsigned long height;
 
-    [CallWith=GlobalObject, MayThrowException] OffscreenRenderingContext? getContext(OffscreenRenderingContextType contextType, any... arguments);
-    [MayThrowException] ImageBitmap transferToImageBitmap();
+    [CallWith=GlobalObject] OffscreenRenderingContext? getContext(OffscreenRenderingContextType contextType, any... arguments);
+    ImageBitmap transferToImageBitmap();
     Promise<Blob> convertToBlob(optional ImageEncodeOptions options);
 
 };

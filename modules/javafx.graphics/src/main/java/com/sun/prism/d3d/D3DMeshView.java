@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -83,11 +83,11 @@ class D3DMeshView extends BaseMeshView {
 
     @Override
     public void setLight(int index, float x, float y, float z, float r, float g, float b, float w,
-            float ca, float la, float qa, float maxRange, float dirX, float dirY, float dirZ,
+            float ca, float la, float qa, float isAttenuated, float maxRange, float dirX, float dirY, float dirZ,
             float innerAngle, float outerAngle, float falloff) {
         // NOTE: We only support up to 3 point lights at the present
         if (index >= 0 && index <= 2) {
-            context.setLight(nativeHandle, index, x, y, z, r, g, b, w, ca, la, qa, maxRange,
+            context.setLight(nativeHandle, index, x, y, z, r, g, b, w, ca, la, qa, isAttenuated, maxRange,
                     dirX, dirY, dirZ, innerAngle, outerAngle, falloff);
         }
     }

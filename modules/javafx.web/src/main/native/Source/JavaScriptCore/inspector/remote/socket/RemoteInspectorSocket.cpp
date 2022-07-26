@@ -63,14 +63,14 @@ void RemoteInspector::connect(ConnectionID id)
     start();
 }
 
-void RemoteInspector::didClose(ConnectionID)
+void RemoteInspector::didClose(RemoteInspectorSocketEndpoint&, ConnectionID)
 {
     ASSERT(isConnected());
 
-    m_clientConnection = WTF::nullopt;
+    m_clientConnection = std::nullopt;
 
     RunLoop::current().dispatch([=] {
-        LockHolder lock(m_mutex);
+        Locker locker { m_mutex };
         stopInternal(StopSource::API);
     });
 }
@@ -86,7 +86,7 @@ void RemoteInspector::sendWebInspectorEvent(const String& event)
 
 void RemoteInspector::start()
 {
-    LockHolder lock(m_mutex);
+    Locker locker { m_mutex };
 
     if (m_enabled)
         return;
@@ -106,6 +106,9 @@ void RemoteInspector::stopInternal(StopSource)
     for (auto targetConnection : m_targetConnectionMap.values())
         targetConnection->close();
     m_targetConnectionMap.clear();
+
+    if (m_client)
+        m_client->closeAutomationSession();
 
     updateHasActiveDebugSession();
 
@@ -158,7 +161,7 @@ void RemoteInspector::pushListingsNow()
 
     auto targetListJSON = JSON::Array::create();
     for (auto listing : m_targetListingMap.values())
-        targetListJSON->pushObject(listing);
+        targetListJSON->pushObject(*listing);
 
     auto jsonEvent = JSON::Object::create();
     jsonEvent->setString("event"_s, "SetTargetList"_s);
@@ -179,7 +182,7 @@ void RemoteInspector::pushListingsSoon()
     m_pushScheduled = true;
 
     RunLoop::current().dispatch([=] {
-        LockHolder lock(m_mutex);
+        Locker locker { m_mutex };
         if (m_pushScheduled)
             pushListingsNow();
     });
@@ -194,7 +197,7 @@ void RemoteInspector::sendAutomaticInspectionCandidateMessage()
     // FIXME: Implement automatic inspection.
 }
 
-void RemoteInspector::requestAutomationSession(const String& sessionID, const Client::SessionCapabilities& capabilities)
+void RemoteInspector::requestAutomationSession(String&& sessionID, const Client::SessionCapabilities& capabilities)
 {
     if (!m_client)
         return;
@@ -209,7 +212,7 @@ void RemoteInspector::requestAutomationSession(const String& sessionID, const Cl
         return;
     }
 
-    m_client->requestAutomationSession(sessionID, capabilities);
+    m_client->requestAutomationSession(WTFMove(sessionID), capabilities);
     updateClientCapabilities();
 }
 
@@ -230,7 +233,7 @@ void RemoteInspector::setup(TargetID targetIdentifier)
 {
     RemoteControllableTarget* target;
     {
-        LockHolder lock(m_mutex);
+        Locker locker { m_mutex };
         target = m_targetMap.get(targetIdentifier);
         if (!target)
             return;
@@ -243,7 +246,7 @@ void RemoteInspector::setup(TargetID targetIdentifier)
         return;
     }
 
-    LockHolder lock(m_mutex);
+    Locker locker { m_mutex };
     m_targetConnectionMap.set(targetIdentifier, WTFMove(connectionToTarget));
 
     updateHasActiveDebugSession();
@@ -265,10 +268,9 @@ String RemoteInspector::backendCommands() const
         return { };
 
     String result;
-    long long size;
-    if (FileSystem::getFileSize(handle, size)) {
-        Vector<LChar> buffer(size);
-        if (FileSystem::readFromFile(handle, reinterpret_cast<char*>(buffer.data()), size) == size)
+    if (auto size = FileSystem::fileSize(handle)) {
+        Vector<LChar> buffer(*size);
+        if (FileSystem::readFromFile(handle, buffer.data(), *size) == *size)
             result = String::adopt(WTFMove(buffer));
     }
     FileSystem::closeFile(handle);
@@ -301,7 +303,7 @@ void RemoteInspector::setupInspectorClient(const Event&)
 
     m_readyToPushListings = true;
 
-    LockHolder lock(m_mutex);
+    Locker locker { m_mutex };
     pushListingsNow();
 }
 
@@ -324,7 +326,7 @@ void RemoteInspector::frontendDidClose(const Event& event)
 
     RefPtr<RemoteConnectionToTarget> connectionToTarget;
     {
-        LockHolder lock(m_mutex);
+        Locker locker { m_mutex };
         RemoteControllableTarget* target = m_targetMap.get(event.targetID.value());
         if (!target)
             return;
@@ -346,7 +348,7 @@ void RemoteInspector::sendMessageToBackend(const Event& event)
 
     RefPtr<RemoteConnectionToTarget> connectionToTarget;
     {
-        LockHolder lock(m_mutex);
+        Locker locker { m_mutex };
         connectionToTarget = m_targetConnectionMap.get(event.targetID.value());
         if (!connectionToTarget)
             return;
@@ -359,13 +361,17 @@ void RemoteInspector::startAutomationSession(const Event& event)
 {
     ASSERT(isMainThread());
 
+    if (!m_clientConnection)
+        return;
+
     if (!event.message)
         return;
 
-    requestAutomationSession(event.message.value(), { });
+    String sessionID = *event.message;
+    requestAutomationSession(WTFMove(sessionID), { });
 
     auto sendEvent = JSON::Object::create();
-    sendEvent->setString("event"_s, "SetCapabilities"_s);
+    sendEvent->setString("event"_s, "StartAutomationSession_Return"_s);
 
     auto capability = clientCapabilities();
 
@@ -377,7 +383,7 @@ void RemoteInspector::startAutomationSession(const Event& event)
 
     m_readyToPushListings = true;
 
-    LockHolder lock(m_mutex);
+    Locker locker { m_mutex };
     pushListingsNow();
 }
 

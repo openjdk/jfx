@@ -41,15 +41,17 @@ class PaymentCoordinatorClient;
 class PaymentContact;
 class PaymentMerchantSession;
 class PaymentMethod;
-class PaymentMethodUpdate;
 class PaymentSession;
 class PaymentSessionError;
 enum class PaymentAuthorizationStatus;
+struct ApplePayCouponCodeUpdate;
+struct ApplePayPaymentMethodUpdate;
 struct ApplePaySetupConfiguration;
+struct ApplePayShippingContactUpdate;
+struct ApplePayShippingMethod;
+struct ApplePayShippingMethodUpdate;
 struct ExceptionDetails;
 struct PaymentAuthorizationResult;
-struct ShippingContactUpdate;
-struct ShippingMethodUpdate;
 
 class PaymentCoordinator : public CanMakeWeakPtr<PaymentCoordinator> {
     WTF_MAKE_FAST_ALLOCATED;
@@ -68,21 +70,27 @@ public:
 
     bool beginPaymentSession(Document&, PaymentSession&, const ApplePaySessionPaymentRequest&);
     void completeMerchantValidation(const PaymentMerchantSession&);
-    void completeShippingMethodSelection(Optional<ShippingMethodUpdate>&&);
-    void completeShippingContactSelection(Optional<ShippingContactUpdate>&&);
-    void completePaymentMethodSelection(Optional<PaymentMethodUpdate>&&);
-    void completePaymentSession(Optional<PaymentAuthorizationResult>&&);
+    void completeShippingMethodSelection(std::optional<ApplePayShippingMethodUpdate>&&);
+    void completeShippingContactSelection(std::optional<ApplePayShippingContactUpdate>&&);
+    void completePaymentMethodSelection(std::optional<ApplePayPaymentMethodUpdate>&&);
+#if ENABLE(APPLE_PAY_COUPON_CODE)
+    void completeCouponCodeChange(std::optional<ApplePayCouponCodeUpdate>&&);
+#endif
+    void completePaymentSession(std::optional<PaymentAuthorizationResult>&&);
     void abortPaymentSession();
     void cancelPaymentSession();
 
     WEBCORE_EXPORT void validateMerchant(URL&& validationURL);
     WEBCORE_EXPORT void didAuthorizePayment(const Payment&);
     WEBCORE_EXPORT void didSelectPaymentMethod(const PaymentMethod&);
-    WEBCORE_EXPORT void didSelectShippingMethod(const ApplePaySessionPaymentRequest::ShippingMethod&);
+    WEBCORE_EXPORT void didSelectShippingMethod(const ApplePayShippingMethod&);
     WEBCORE_EXPORT void didSelectShippingContact(const PaymentContact&);
+#if ENABLE(APPLE_PAY_COUPON_CODE)
+    WEBCORE_EXPORT void didChangeCouponCode(String&& couponCode);
+#endif
     WEBCORE_EXPORT void didCancelPaymentSession(PaymentSessionError&&);
 
-    Optional<String> validatedPaymentNetwork(Document&, unsigned version, const String&) const;
+    std::optional<String> validatedPaymentNetwork(Document&, unsigned version, const String&) const;
 
     bool shouldEnableApplePayAPIs(Document&) const;
     WEBCORE_EXPORT Expected<void, ExceptionDetails> shouldAllowUserAgentScripts(Document&) const;

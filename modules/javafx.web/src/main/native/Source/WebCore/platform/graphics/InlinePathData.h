@@ -28,7 +28,6 @@
 #if ENABLE(INLINE_PATH_DATA)
 
 #include "FloatPoint.h"
-#include <wtf/Optional.h>
 #include <wtf/Variant.h>
 
 namespace WebCore {
@@ -38,27 +37,33 @@ struct LineData {
     FloatPoint end;
 
     template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static Optional<LineData> decode(Decoder&);
+    template<class Decoder> static std::optional<LineData> decode(Decoder&);
 };
 
 struct ArcData {
-    FloatPoint offset;
+    enum class Type : uint8_t {
+        ArcOnly,
+        LineAndArc,
+        ClosedLineAndArc
+    };
+
+    FloatPoint start;
     FloatPoint center;
     float radius { 0 };
     float startAngle { 0 };
     float endAngle { 0 };
     bool clockwise { false };
-    bool hasOffset { false };
+    Type type { Type::ArcOnly };
 
     template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static Optional<ArcData> decode(Decoder&);
+    template<class Decoder> static std::optional<ArcData> decode(Decoder&);
 };
 
 struct MoveData {
     FloatPoint location;
 
     template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static Optional<MoveData> decode(Decoder&);
+    template<class Decoder> static std::optional<MoveData> decode(Decoder&);
 };
 
 struct QuadCurveData {
@@ -67,7 +72,7 @@ struct QuadCurveData {
     FloatPoint endPoint;
 
     template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static Optional<QuadCurveData> decode(Decoder&);
+    template<class Decoder> static std::optional<QuadCurveData> decode(Decoder&);
 };
 
 struct BezierCurveData {
@@ -77,7 +82,7 @@ struct BezierCurveData {
     FloatPoint endPoint;
 
     template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static Optional<BezierCurveData> decode(Decoder&);
+    template<class Decoder> static std::optional<BezierCurveData> decode(Decoder&);
 };
 
 template<class Encoder> void MoveData::encode(Encoder& encoder) const
@@ -85,11 +90,11 @@ template<class Encoder> void MoveData::encode(Encoder& encoder) const
     encoder << location;
 }
 
-template<class Decoder> Optional<MoveData> MoveData::decode(Decoder& decoder)
+template<class Decoder> std::optional<MoveData> MoveData::decode(Decoder& decoder)
 {
     MoveData data;
     if (!decoder.decode(data.location))
-        return WTF::nullopt;
+        return std::nullopt;
     return data;
 }
 
@@ -99,52 +104,52 @@ template<class Encoder> void LineData::encode(Encoder& encoder) const
     encoder << end;
 }
 
-template<class Decoder> Optional<LineData> LineData::decode(Decoder& decoder)
+template<class Decoder> std::optional<LineData> LineData::decode(Decoder& decoder)
 {
     LineData data;
     if (!decoder.decode(data.start))
-        return WTF::nullopt;
+        return std::nullopt;
 
     if (!decoder.decode(data.end))
-        return WTF::nullopt;
+        return std::nullopt;
 
     return data;
 }
 
 template<class Encoder> void ArcData::encode(Encoder& encoder) const
 {
-    encoder << offset;
+    encoder << start;
     encoder << center;
     encoder << radius;
     encoder << startAngle;
     encoder << endAngle;
     encoder << clockwise;
-    encoder << hasOffset;
+    encoder << type;
 }
 
-template<class Decoder> Optional<ArcData> ArcData::decode(Decoder& decoder)
+template<class Decoder> std::optional<ArcData> ArcData::decode(Decoder& decoder)
 {
     ArcData data;
-    if (!decoder.decode(data.offset))
-        return WTF::nullopt;
+    if (!decoder.decode(data.start))
+        return std::nullopt;
 
     if (!decoder.decode(data.center))
-        return WTF::nullopt;
+        return std::nullopt;
 
     if (!decoder.decode(data.radius))
-        return WTF::nullopt;
+        return std::nullopt;
 
     if (!decoder.decode(data.startAngle))
-        return WTF::nullopt;
+        return std::nullopt;
 
     if (!decoder.decode(data.endAngle))
-        return WTF::nullopt;
+        return std::nullopt;
 
     if (!decoder.decode(data.clockwise))
-        return WTF::nullopt;
+        return std::nullopt;
 
-    if (!decoder.decode(data.hasOffset))
-        return WTF::nullopt;
+    if (!decoder.decode(data.type))
+        return std::nullopt;
 
     return data;
 }
@@ -156,17 +161,17 @@ template<class Encoder> void QuadCurveData::encode(Encoder& encoder) const
     encoder << endPoint;
 }
 
-template<class Decoder> Optional<QuadCurveData> QuadCurveData::decode(Decoder& decoder)
+template<class Decoder> std::optional<QuadCurveData> QuadCurveData::decode(Decoder& decoder)
 {
     QuadCurveData data;
     if (!decoder.decode(data.startPoint))
-        return WTF::nullopt;
+        return std::nullopt;
 
     if (!decoder.decode(data.controlPoint))
-        return WTF::nullopt;
+        return std::nullopt;
 
     if (!decoder.decode(data.endPoint))
-        return WTF::nullopt;
+        return std::nullopt;
 
     return data;
 }
@@ -179,20 +184,20 @@ template<class Encoder> void BezierCurveData::encode(Encoder& encoder) const
     encoder << endPoint;
 }
 
-template<class Decoder> Optional<BezierCurveData> BezierCurveData::decode(Decoder& decoder)
+template<class Decoder> std::optional<BezierCurveData> BezierCurveData::decode(Decoder& decoder)
 {
     BezierCurveData data;
     if (!decoder.decode(data.startPoint))
-        return WTF::nullopt;
+        return std::nullopt;
 
     if (!decoder.decode(data.controlPoint1))
-        return WTF::nullopt;
+        return std::nullopt;
 
     if (!decoder.decode(data.controlPoint2))
-        return WTF::nullopt;
+        return std::nullopt;
 
     if (!decoder.decode(data.endPoint))
-        return WTF::nullopt;
+        return std::nullopt;
 
     return data;
 }
@@ -200,5 +205,18 @@ template<class Decoder> Optional<BezierCurveData> BezierCurveData::decode(Decode
 using InlinePathData = Variant<Monostate, MoveData, LineData, ArcData, QuadCurveData, BezierCurveData>;
 
 } // namespace WebCore
+
+namespace WTF {
+
+template<> struct EnumTraits<WebCore::ArcData::Type> {
+    using values = EnumValues<
+        WebCore::ArcData::Type,
+        WebCore::ArcData::Type::ArcOnly,
+        WebCore::ArcData::Type::LineAndArc,
+        WebCore::ArcData::Type::ClosedLineAndArc
+    >;
+};
+
+} // namespace WTF
 
 #endif // ENABLE(INLINE_PATH_DATA)

@@ -88,11 +88,11 @@ private:
     { }
 
 public:
-    static Optional<SignalContext> tryCreate(PlatformRegisters& registers)
+    static std::optional<SignalContext> tryCreate(PlatformRegisters& registers)
     {
         auto instructionPointer = MachineContext::instructionPointer(registers);
         if (!instructionPointer)
-            return WTF::nullopt;
+            return std::nullopt;
         return SignalContext(registers, *instructionPointer);
     }
 
@@ -157,7 +157,9 @@ public:
 static void installCrashHandler()
 {
 #if CPU(X86_64) || CPU(ARM64)
-    addSignalHandler(Signal::IllegalInstruction, [] (Signal, SigInfo&, PlatformRegisters& registers) {
+    addSignalHandler(Signal::IllegalInstruction, [] (Signal signal, SigInfo&, PlatformRegisters& registers) {
+        RELEASE_ASSERT(signal == Signal::IllegalInstruction);
+
         auto signalContext = SignalContext::tryCreate(registers);
         if (!signalContext)
             return SignalAction::NotHandled;
@@ -224,20 +226,18 @@ auto SigillCrashAnalyzer::analyze(SignalContext& context) -> CrashSource
         // itself crashes.
         context.dump();
 
-        VMInspector& inspector = VMInspector::instance();
+        auto& inspector = VMInspector::instance();
 
         // Use a timeout period of 2 seconds. The client is about to crash, and we don't
         // want to turn the crash into a hang by re-trying the lock for too long.
-        auto expectedLocker = inspector.lock(Seconds(2));
-        if (!expectedLocker) {
-            ASSERT(expectedLocker.error() == VMInspector::Error::TimedOut);
+        if (!inspector.getLock().tryLockWithTimeout(2_s)) {
             log("ERROR: Unable to analyze SIGILL. Timed out while waiting to iterate VMs.");
             break;
         }
-        auto& locker = expectedLocker.value();
+        Locker locker { AdoptLock, inspector.getLock() };
 
         void* pc = context.machinePC.untaggedExecutableAddress();
-        auto isInJITMemory = inspector.isValidExecutableMemory(locker, pc);
+        auto isInJITMemory = inspector.isValidExecutableMemory(pc);
         if (!isInJITMemory) {
             log("ERROR: Timed out: not able to determine if pc %p is in valid JIT executable memory", pc);
             break;
@@ -263,7 +263,7 @@ auto SigillCrashAnalyzer::analyze(SignalContext& context) -> CrashSource
         log("instruction bits at pc %p is: 0x%08x", pc, wordAtPC);
 #endif
 
-        auto expectedCodeBlock = inspector.codeBlockForMachinePC(locker, pc);
+        auto expectedCodeBlock = inspector.codeBlockForMachinePC(pc);
         if (!expectedCodeBlock) {
             if (expectedCodeBlock.error() == VMInspector::Error::TimedOut)
                 log("ERROR: Timed out: not able to determine if pc %p is in a valid CodeBlock", pc);

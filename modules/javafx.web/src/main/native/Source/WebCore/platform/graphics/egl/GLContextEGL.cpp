@@ -21,7 +21,7 @@
 
 #if USE(EGL)
 
-#include "GraphicsContextGLOpenGL.h"
+#include "GraphicsContextGL.h"
 #include "Logging.h"
 #include "PlatformDisplay.h"
 
@@ -43,14 +43,6 @@
 #include <GLES2/gl2ext.h>
 #else
 #include "OpenGLShims.h"
-#endif
-
-#if ENABLE(ACCELERATED_2D_CANVAS)
-// cairo-gl.h includes some definitions from GLX that conflict with
-// the ones provided by us. Since GLContextEGL doesn't use any GLX
-// functions we can safely disable them.
-#undef CAIRO_HAS_GLX_FUNCTIONS
-#include <cairo-gl.h>
 #endif
 
 #include <wtf/Vector.h>
@@ -118,6 +110,7 @@ bool GLContextEGL::getEGLConfig(EGLDisplay display, EGLConfig* config, EGLSurfac
         EGL_ALPHA_SIZE, rgbaSize[3],
         EGL_STENCIL_SIZE, 8,
         EGL_SURFACE_TYPE, EGL_NONE,
+        EGL_DEPTH_SIZE, 8,
         EGL_NONE
     };
 
@@ -211,7 +204,7 @@ std::unique_ptr<GLContextEGL> GLContextEGL::createWindowContext(GLNativeWindowTy
         return nullptr;
     }
 
-    return std::unique_ptr<GLContextEGL>(new GLContextEGL(platformDisplay, context, surface, WindowSurface));
+    return std::unique_ptr<GLContextEGL>(new GLContextEGL(platformDisplay, context, surface, config, WindowSurface));
 }
 
 std::unique_ptr<GLContextEGL> GLContextEGL::createPbufferContext(PlatformDisplay& platformDisplay, EGLContext sharingContext)
@@ -237,7 +230,7 @@ std::unique_ptr<GLContextEGL> GLContextEGL::createPbufferContext(PlatformDisplay
         return nullptr;
     }
 
-    return std::unique_ptr<GLContextEGL>(new GLContextEGL(platformDisplay, context, surface, PbufferSurface));
+    return std::unique_ptr<GLContextEGL>(new GLContextEGL(platformDisplay, context, surface, config, PbufferSurface));
 }
 
 std::unique_ptr<GLContextEGL> GLContextEGL::createSurfacelessContext(PlatformDisplay& platformDisplay, EGLContext sharingContext)
@@ -266,7 +259,7 @@ std::unique_ptr<GLContextEGL> GLContextEGL::createSurfacelessContext(PlatformDis
         return nullptr;
     }
 
-    return std::unique_ptr<GLContextEGL>(new GLContextEGL(platformDisplay, context, EGL_NO_SURFACE, Surfaceless));
+    return std::unique_ptr<GLContextEGL>(new GLContextEGL(platformDisplay, context, EGL_NO_SURFACE, config, Surfaceless));
 }
 
 std::unique_ptr<GLContextEGL> GLContextEGL::createContext(GLNativeWindowType window, PlatformDisplay& platformDisplay)
@@ -360,10 +353,11 @@ std::unique_ptr<GLContextEGL> GLContextEGL::createSharingContext(PlatformDisplay
     return context;
 }
 
-GLContextEGL::GLContextEGL(PlatformDisplay& display, EGLContext context, EGLSurface surface, EGLSurfaceType type)
+GLContextEGL::GLContextEGL(PlatformDisplay& display, EGLContext context, EGLSurface surface, EGLConfig config, EGLSurfaceType type)
     : GLContext(display)
     , m_context(context)
     , m_surface(surface)
+    , m_config(config)
     , m_type(type)
 {
     ASSERT(type != PixmapSurface);
@@ -374,11 +368,6 @@ GLContextEGL::GLContextEGL(PlatformDisplay& display, EGLContext context, EGLSurf
 
 GLContextEGL::~GLContextEGL()
 {
-#if USE(CAIRO)
-    if (m_cairoDevice)
-        cairo_device_destroy(m_cairoDevice);
-#endif
-
     EGLDisplay display = m_display.eglDisplay();
     if (m_context) {
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -488,6 +477,9 @@ bool GLContextEGL::makeContextCurrent()
 
 void GLContextEGL::swapBuffers()
 {
+    if (m_type == Surfaceless)
+        return;
+
     ASSERT(m_surface);
     eglSwapBuffers(m_display.eglDisplay(), m_surface);
 }
@@ -503,26 +495,10 @@ void GLContextEGL::swapInterval(int interval)
     eglSwapInterval(m_display.eglDisplay(), interval);
 }
 
-#if USE(CAIRO)
-cairo_device_t* GLContextEGL::cairoDevice()
-{
-    if (m_cairoDevice)
-        return m_cairoDevice;
-
-#if ENABLE(ACCELERATED_2D_CANVAS)
-    m_cairoDevice = cairo_egl_device_create(m_display.eglDisplay(), m_context);
-#endif
-
-    return m_cairoDevice;
-}
-#endif
-
-#if ENABLE(GRAPHICS_CONTEXT_GL)
 PlatformGraphicsContextGL GLContextEGL::platformContext()
 {
     return m_context;
 }
-#endif
 
 } // namespace WebCore
 

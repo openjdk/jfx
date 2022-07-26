@@ -1,7 +1,7 @@
 /*
  *  Copyright (C) 1999-2001 Harri Porten (porten@kde.org)
  *  Copyright (C) 2001 Peter Kelly (pmk@post.com)
- *  Copyright (C) 2003-2019 Apple Inc. All rights reserved.
+ *  Copyright (C) 2003-2021 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Library General Public
@@ -89,7 +89,7 @@ namespace JSC  {
     };
     static_assert(CallerFrameAndPC::sizeInRegisters == sizeof(CallerFrameAndPC) / sizeof(Register), "CallerFrameAndPC::sizeInRegisters is incorrect.");
 
-    enum class CallFrameSlot : int {
+    enum class CallFrameSlot {
         codeBlock = CallerFrameAndPC::sizeInRegisters,
         callee = codeBlock + 1,
         argumentCountIncludingThis = callee + 1,
@@ -149,7 +149,7 @@ namespace JSC  {
 
         static ptrdiff_t callerFrameOffset() { return OBJECT_OFFSETOF(CallerFrameAndPC, callerFrame); }
 
-        ReturnAddressPtr returnPC() const { return ReturnAddressPtr(callerFrameAndPC().returnPC); }
+        ReturnAddressPtr returnPC() const { return ReturnAddressPtr::fromTaggedPC(callerFrameAndPC().returnPC, this + CallerFrameAndPC::sizeInRegisters); }
         bool hasReturnPC() const { return !!callerFrameAndPC().returnPC; }
         void clearReturnPC() { callerFrameAndPC().returnPC = nullptr; }
         static ptrdiff_t returnPCOffset() { return OBJECT_OFFSETOF(CallerFrameAndPC, returnPC); }
@@ -263,6 +263,7 @@ namespace JSC  {
         inline void setCodeBlock(CodeBlock*);
         void setReturnPC(void* value) { callerFrameAndPC().returnPC = value; }
 
+        JS_EXPORT_PRIVATE static JSGlobalObject* globalObjectOfClosestCodeBlock(VM&, CallFrame*);
         String friendlyFunctionName();
 
         // CallFrame::iterate() expects a Functor that implements the following method:
@@ -318,6 +319,8 @@ namespace JSC  {
 JS_EXPORT_PRIVATE bool isFromJSCode(void* returnAddress);
 
 #if USE(BUILTIN_FRAME_ADDRESS)
+// FIXME (see rdar://72897291): Work around a Clang bug where __builtin_return_address()
+// sometimes gives us a signed pointer, and sometimes does not.
 #define DECLARE_CALL_FRAME(vm) \
     ({ \
         ASSERT(JSC::isFromJSCode(removeCodePtrTag<void*>(__builtin_return_address(0)))); \

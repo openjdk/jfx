@@ -25,10 +25,13 @@
 
 [
     ActiveDOMObject,
+    Exposed=Window
 ] interface HTMLSourceElement : HTMLElement {
     [CEReactions=NotNeeded, Reflect, URL] attribute USVString src;
     [CEReactions=NotNeeded, Reflect] attribute DOMString type;
     [CEReactions=NotNeeded, Reflect] attribute USVString srcset;
     [CEReactions=NotNeeded, Reflect] attribute DOMString sizes;
     [CEReactions=NotNeeded, Reflect] attribute DOMString media;
+    [CEReactions=NotNeeded, Reflect] attribute unsigned long width;
+    [CEReactions=NotNeeded, Reflect] attribute unsigned long height;
 };

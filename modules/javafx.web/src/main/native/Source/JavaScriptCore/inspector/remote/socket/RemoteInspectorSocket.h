@@ -27,8 +27,8 @@
 
 #if ENABLE(REMOTE_INSPECTOR)
 
+#include "JSExportMacros.h"
 #include <array>
-#include <wtf/Optional.h>
 #include <wtf/Vector.h>
 
 #if OS(WINDOWS)
@@ -64,20 +64,20 @@ enum class Domain {
 
 void init();
 
-Optional<PlatformSocketType> connect(const char* serverAddress, uint16_t serverPort);
-Optional<PlatformSocketType> listen(const char* address, uint16_t port);
-Optional<PlatformSocketType> accept(PlatformSocketType);
-Optional<std::array<PlatformSocketType, 2>> createPair();
+JS_EXPORT_PRIVATE std::optional<PlatformSocketType> connect(const char* serverAddress, uint16_t serverPort);
+JS_EXPORT_PRIVATE std::optional<PlatformSocketType> listen(const char* address, uint16_t port);
+JS_EXPORT_PRIVATE std::optional<PlatformSocketType> accept(PlatformSocketType);
+JS_EXPORT_PRIVATE std::optional<std::array<PlatformSocketType, 2>> createPair();
 
-bool setup(PlatformSocketType);
-bool isValid(PlatformSocketType);
-bool isListening(PlatformSocketType);
-Optional<uint16_t> getPort(PlatformSocketType);
+JS_EXPORT_PRIVATE bool setup(PlatformSocketType);
+JS_EXPORT_PRIVATE bool isValid(PlatformSocketType);
+JS_EXPORT_PRIVATE bool isListening(PlatformSocketType);
+JS_EXPORT_PRIVATE std::optional<uint16_t> getPort(PlatformSocketType);
 
-Optional<size_t> read(PlatformSocketType, void* buffer, int bufferSize);
-Optional<size_t> write(PlatformSocketType, const void* data, int size);
+JS_EXPORT_PRIVATE std::optional<size_t> read(PlatformSocketType, void* buffer, int bufferSize);
+JS_EXPORT_PRIVATE std::optional<size_t> write(PlatformSocketType, const void* data, int size);
 
-void close(PlatformSocketType&);
+JS_EXPORT_PRIVATE void close(PlatformSocketType&);
 
 PollingDescriptor preparePolling(PlatformSocketType);
 bool poll(Vector<PollingDescriptor>&, int timeout);

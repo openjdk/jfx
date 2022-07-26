@@ -57,6 +57,9 @@ class PopupMenuClient;
 class PopupOpeningObserver;
 class SearchPopupMenu;
 
+struct AppHighlight;
+struct ContactInfo;
+struct ContactsRequestData;
 struct DateTimeChooserParameters;
 struct ShareDataWithParsedURL;
 struct ViewportArguments;
@@ -82,19 +85,21 @@ public:
     void setCursor(const Cursor&) override;
     void setCursorHiddenUntilMouseMoves(bool) override;
 
-    std::unique_ptr<ImageBuffer> createImageBuffer(const FloatSize&, ShouldAccelerate, ShouldUseDisplayList, RenderingPurpose, float resolutionScale, ColorSpace) const override;
-    std::unique_ptr<ImageBuffer> createImageBuffer(const FloatSize&, RenderingMode, float resolutionScale, ColorSpace) const override;
+    RefPtr<ImageBuffer> createImageBuffer(const FloatSize&, RenderingMode, RenderingPurpose, float resolutionScale, const DestinationColorSpace&, PixelFormat) const override;
 
-    void scheduleAnimation() override { }
+#if ENABLE(WEBGL)
+    RefPtr<GraphicsContextGL> createGraphicsContextGL(const GraphicsContextGLAttributes&) const override;
+#endif
 
     PlatformDisplayID displayID() const override;
-    void windowScreenDidChange(PlatformDisplayID, Optional<unsigned>) override;
+    void windowScreenDidChange(PlatformDisplayID, std::optional<FramesPerSecond>) override;
 
     FloatSize screenSize() const override;
     FloatSize availableScreenSize() const override;
     FloatSize overrideScreenSize() const override;
 
-    void scrollRectIntoView(const IntRect&) const;
+    void scrollContainingScrollViewsToRevealRect(const IntRect&) const;
+    void scrollMainFrameToRevealRect(const IntRect&) const;
 
     void contentsSizeChanged(Frame&, const IntSize&) const;
 
@@ -157,8 +162,17 @@ public:
     std::unique_ptr<DataListSuggestionPicker> createDataListSuggestionPicker(DataListSuggestionsClient&);
 #endif
 
+#if ENABLE(DATE_AND_TIME_INPUT_TYPES)
+    std::unique_ptr<DateTimeChooser> createDateTimeChooser(DateTimeChooserClient&);
+#endif
+
+#if ENABLE(APP_HIGHLIGHTS)
+    void storeAppHighlight(AppHighlight&&) const;
+#endif
+
     void runOpenPanel(Frame&, FileChooser&);
     void showShareSheet(ShareDataWithParsedURL&, CompletionHandler<void(bool)>&&);
+    void showContactPicker(const ContactsRequestData&, CompletionHandler<void(std::optional<Vector<ContactInfo>>&&)>&&);
     void loadIconForFiles(const Vector<String>&, FileIconLoader&);
 
     void dispatchDisabledAdaptationsDidChange(const OptionSet<DisabledAdaptations>&) const;

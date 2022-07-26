@@ -31,13 +31,13 @@
 
 #include "CSSPropertyNames.h"
 #include "CSSValueKeywords.h"
+#include "ColorTypes.h"
+#include <optional>
 #include <wtf/Forward.h>
 
 namespace WebCore {
 
 class CSSValue;
-
-template<typename> struct SRGBA;
 
 struct CSSParserContext;
 
@@ -48,12 +48,17 @@ public:
 
     // Properties handled here shouldn't be explicitly handled in CSSPropertyParser.
     static bool isKeywordPropertyID(CSSPropertyID);
+
+    // Returns whether a property may be handled by the fast path but has other
+    // non-keyword values which should be handled by the CSSPropertyParser.
+    static bool isPartialKeywordPropertyID(CSSPropertyID);
+
     static bool isValidKeywordPropertyAndValue(CSSPropertyID, CSSValueID, const CSSParserContext&);
 
     // Parses numeric and named colors.
-    static Optional<SRGBA<uint8_t>> parseSimpleColor(StringView, bool strict = false);
-    static Optional<SRGBA<uint8_t>> parseHexColor(StringView); // Hex colors of length 3, 4, 6, or 8, without leading "#".
-    static Optional<SRGBA<uint8_t>> parseNamedColor(StringView);
+    static std::optional<SRGBA<uint8_t>> parseSimpleColor(StringView, bool strict = false);
+    static std::optional<SRGBA<uint8_t>> parseHexColor(StringView); // Hex colors of length 3, 4, 6, or 8, without leading "#".
+    static std::optional<SRGBA<uint8_t>> parseNamedColor(StringView);
 };
 
 } // namespace WebCore

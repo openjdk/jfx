@@ -58,5 +58,7 @@ struct _GstAudioAmplifyClass
 
 GType gst_audio_amplify_get_type (void);
 
+GST_ELEMENT_REGISTER_DECLARE (audioamplify);
+
 G_END_DECLS
 #endif /* __GST_AUDIO_AMPLIFY_H__ */

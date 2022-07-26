@@ -27,9 +27,9 @@
 
 #pragma once
 
-#if ENABLE(GRAPHICS_CONTEXT_GL)
+#if ENABLE(WEBGL)
 
-#include "GraphicsContextGLOpenGL.h"
+#include "GraphicsContextGL.h"
 #include "IntRect.h"
 #include <wtf/StdLibExtras.h>
 #include <wtf/UniqueArray.h>
@@ -59,7 +59,7 @@ public:
     {
         const unsigned MaxNumberOfComponents = 4;
         const unsigned MaxBytesPerComponent  = 4;
-        m_unpackedIntermediateSrcData = makeUniqueArray<uint8_t>((Checked<size_t>(m_srcSubRectangle.width()) * MaxNumberOfComponents * MaxBytesPerComponent).unsafeGet());
+        m_unpackedIntermediateSrcData = makeUniqueArray<uint8_t>(Checked<size_t>(m_srcSubRectangle.width()) * MaxNumberOfComponents * MaxBytesPerComponent);
 
         ASSERT(m_unpackedIntermediateSrcData.get());
     }
@@ -89,4 +89,4 @@ private:
 
 } // namespace WebCore
 
-#endif // ENABLE(GRAPHICS_CONTEXT_GL)
+#endif // ENABLE(WEBGL)

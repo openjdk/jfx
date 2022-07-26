@@ -27,28 +27,20 @@
 
 #if ENABLE(WEBASSEMBLY)
 
-#include "AirCode.h"
 #include "AllowMacroScratchRegisterUsage.h"
-#include "B3ArgumentRegValue.h"
-#include "B3BasicBlock.h"
-#include "B3Const64Value.h"
-#include "B3ConstrainedValue.h"
-#include "B3MemoryValue.h"
-#include "B3PatchpointValue.h"
-#include "B3Procedure.h"
-#include "B3StackmapGenerationParams.h"
 #include "CallFrame.h"
 #include "LinkBuffer.h"
 #include "RegisterAtOffsetList.h"
 #include "RegisterSet.h"
 #include "WasmFormat.h"
 #include "WasmSignature.h"
+#include "WasmValueLocation.h"
 
 namespace JSC { namespace Wasm {
 
 constexpr unsigned numberOfLLIntCalleeSaveRegisters = 2;
 
-using ArgumentLocation = B3::ValueRep;
+using ArgumentLocation = ValueLocation;
 enum class CallRole : uint8_t {
     Caller,
     Callee,
@@ -64,9 +56,9 @@ struct CallInformation {
     RegisterAtOffsetList computeResultsOffsetList()
     {
         RegisterSet usedResultRegisters;
-        for (B3::ValueRep rep : results) {
-            if (rep.isReg())
-                usedResultRegisters.set(rep.reg());
+        for (ValueLocation loc : results) {
+            if (loc.isReg())
+                usedResultRegisters.set(loc.reg());
         }
 
         RegisterAtOffsetList savedRegs(usedResultRegisters, RegisterAtOffsetList::ZeroBased);
@@ -110,14 +102,15 @@ private:
     ArgumentLocation marshallLocation(CallRole role, Type valueType, size_t& gpArgumentCount, size_t& fpArgumentCount, size_t& stackOffset) const
     {
         ASSERT(isValueType(valueType));
-        switch (valueType) {
-        case I32:
-        case I64:
-        case Funcref:
-        case Anyref:
+        switch (valueType.kind) {
+        case TypeKind::I32:
+        case TypeKind::I64:
+        case TypeKind::Funcref:
+        case TypeKind::Externref:
+        case TypeKind::TypeIdx:
             return marshallLocationImpl(role, gprArgs, gpArgumentCount, stackOffset);
-        case F32:
-        case F64:
+        case TypeKind::F32:
+        case TypeKind::F64:
             return marshallLocationImpl(role, fprArgs, fpArgumentCount, stackOffset);
         default:
             break;
@@ -138,7 +131,7 @@ public:
 
         Vector<ArgumentLocation> params(signature.argumentCount());
         for (size_t i = 0; i < signature.argumentCount(); ++i) {
-            argumentsIncludeI64 |= signature.argument(i) == I64;
+            argumentsIncludeI64 |= signature.argument(i).isI64();
             params[i] = marshallLocation(role, signature.argument(i), gpArgumentCount, fpArgumentCount, argStackOffset);
         }
         gpArgumentCount = 0;
@@ -149,7 +142,7 @@ public:
 
         Vector<ArgumentLocation, 1> results(signature.returnCount());
         for (size_t i = 0; i < signature.returnCount(); ++i) {
-            resultsIncludeI64 |= signature.returnType(i) == I64;
+            resultsIncludeI64 |= signature.returnType(i).isI64();
             results[i] = marshallLocation(role, signature.returnType(i), gpArgumentCount, fpArgumentCount, resultStackOffset);
         }
 
@@ -198,14 +191,15 @@ private:
     ArgumentLocation marshallLocation(CallRole role, Type valueType, size_t& gpArgumentCount, size_t& fpArgumentCount, size_t& stackOffset) const
     {
         ASSERT(isValueType(valueType));
-        switch (valueType) {
-        case I32:
-        case I64:
-        case Funcref:
-        case Anyref:
+        switch (valueType.kind) {
+        case TypeKind::I32:
+        case TypeKind::I64:
+        case TypeKind::Funcref:
+        case TypeKind::Externref:
+        case TypeKind::TypeIdx:
             return marshallLocationImpl(role, gprArgs, gpArgumentCount, stackOffset);
-        case F32:
-        case F64:
+        case TypeKind::F32:
+        case TypeKind::F64:
             return marshallLocationImpl(role, fprArgs, fpArgumentCount, stackOffset);
         default:
             break;

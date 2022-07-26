@@ -28,14 +28,17 @@
 
 #if ENABLE(APPLICATION_MANIFEST)
 
+#include "CSSParser.h"
+#include "Color.h"
+#include "Document.h"
 #include "SecurityOrigin.h"
 #include <JavaScriptCore/ConsoleMessage.h>
 
 namespace WebCore {
 
-ApplicationManifest ApplicationManifestParser::parse(ScriptExecutionContext& scriptExecutionContext, const String& source, const URL& manifestURL, const URL& documentURL)
+ApplicationManifest ApplicationManifestParser::parse(Document& document, const String& source, const URL& manifestURL, const URL& documentURL)
 {
-    ApplicationManifestParser parser { &scriptExecutionContext };
+    ApplicationManifestParser parser { &document };
     return parser.parseManifest(source, manifestURL, documentURL);
 }
 
@@ -45,8 +48,8 @@ ApplicationManifest ApplicationManifestParser::parse(const String& source, const
     return parser.parseManifest(source, manifestURL, documentURL);
 }
 
-ApplicationManifestParser::ApplicationManifestParser(RefPtr<ScriptExecutionContext> consoleContext)
-    : m_consoleContext(consoleContext)
+ApplicationManifestParser::ApplicationManifestParser(RefPtr<Document> document)
+    : m_document(document)
 {
 }
 
@@ -54,14 +57,14 @@ ApplicationManifest ApplicationManifestParser::parseManifest(const String& text,
 {
     m_manifestURL = manifestURL;
 
-    RefPtr<JSON::Value> jsonValue;
-    if (!JSON::Value::parseJSON(text, jsonValue)) {
+    auto jsonValue = JSON::Value::parseJSON(text);
+    if (!jsonValue) {
         logDeveloperWarning("The manifest is not valid JSON data."_s);
         jsonValue = JSON::Object::create();
     }
 
-    RefPtr<JSON::Object> manifest;
-    if (!jsonValue->asObject(manifest)) {
+    auto manifest = jsonValue->asObject();
+    if (!manifest) {
         logDeveloperWarning("The manifest is not a JSON value of type \"object\"."_s);
         manifest = JSON::Object::create();
     }
@@ -74,6 +77,10 @@ ApplicationManifest ApplicationManifestParser::parseManifest(const String& text,
     parsedManifest.description = parseDescription(*manifest);
     parsedManifest.shortName = parseShortName(*manifest);
     parsedManifest.scope = parseScope(*manifest, documentURL, parsedManifest.startURL);
+    parsedManifest.themeColor = parseColor(*manifest, "theme_color"_s);
+
+    if (m_document)
+        m_document->processApplicationManifest(parsedManifest);
 
     return parsedManifest;
 }
@@ -90,18 +97,18 @@ void ApplicationManifestParser::logManifestPropertyInvalidURL(const String& prop
 
 void ApplicationManifestParser::logDeveloperWarning(const String& message)
 {
-    if (m_consoleContext)
-        m_consoleContext->addConsoleMessage(makeUnique<Inspector::ConsoleMessage>(JSC::MessageSource::Other, JSC::MessageType::Log, JSC::MessageLevel::Warning, makeString("Parsing application manifest "_s, m_manifestURL.string(), ": "_s, message)));
+    if (m_document)
+        m_document->addConsoleMessage(makeUnique<Inspector::ConsoleMessage>(JSC::MessageSource::Other, JSC::MessageType::Log, JSC::MessageLevel::Warning, makeString("Parsing application manifest "_s, m_manifestURL.string(), ": "_s, message)));
 }
 
 URL ApplicationManifestParser::parseStartURL(const JSON::Object& manifest, const URL& documentURL)
 {
-    RefPtr<JSON::Value> value;
-    if (!manifest.getValue("start_url", value))
+    auto value = manifest.getValue("start_url"_s);
+    if (!value)
         return documentURL;
 
-    String stringValue;
-    if (!value->asString(stringValue)) {
+    auto stringValue = value->asString();
+    if (!stringValue) {
         logManifestPropertyNotAString("start_url"_s);
         return documentURL;
     }
@@ -127,12 +134,12 @@ URL ApplicationManifestParser::parseStartURL(const JSON::Object& manifest, const
 
 ApplicationManifest::Display ApplicationManifestParser::parseDisplay(const JSON::Object& manifest)
 {
-    RefPtr<JSON::Value> value;
-    if (!manifest.getValue("display"_s, value))
+    auto value = manifest.getValue("display"_s);
+    if (!value)
         return ApplicationManifest::Display::Browser;
 
-    String stringValue;
-    if (!value->asString(stringValue)) {
+    auto stringValue = value->asString();
+    if (!stringValue) {
         logManifestPropertyNotAString("display"_s);
         return ApplicationManifest::Display::Browser;
     }
@@ -195,12 +202,12 @@ URL ApplicationManifestParser::parseScope(const JSON::Object& manifest, const UR
 {
     URL defaultScope { startURL, "./" };
 
-    RefPtr<JSON::Value> value;
-    if (!manifest.getValue("scope", value))
+    auto value = manifest.getValue("scope");
+    if (!value)
         return defaultScope;
 
-    String stringValue;
-    if (!value->asString(stringValue)) {
+    auto stringValue = value->asString();
+    if (!stringValue) {
         logManifestPropertyNotAString("scope"_s);
         return defaultScope;
     }
@@ -229,14 +236,19 @@ URL ApplicationManifestParser::parseScope(const JSON::Object& manifest, const UR
     return scopeURL;
 }
 
+Color ApplicationManifestParser::parseColor(const JSON::Object& manifest, const String& propertyName)
+{
+    return CSSParser::parseColor(parseGenericString(manifest, propertyName));
+}
+
 String ApplicationManifestParser::parseGenericString(const JSON::Object& manifest, const String& propertyName)
 {
-    RefPtr<JSON::Value> value;
-    if (!manifest.getValue(propertyName, value))
+    auto value = manifest.getValue(propertyName);
+    if (!value)
         return { };
 
-    String stringValue;
-    if (!value->asString(stringValue)) {
+    auto stringValue = value->asString();
+    if (!stringValue) {
         logManifestPropertyNotAString(propertyName);
         return { };
     }

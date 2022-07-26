@@ -26,12 +26,12 @@
 
 #pragma once
 
-#include "CSSAspectRatioValue.h"
 #include "CSSCursorImageValue.h"
 #include "CSSFontFamily.h"
 #include "CSSFontValue.h"
 #include "CSSGradientValue.h"
 #include "CSSGridTemplateAreasValue.h"
+#include "CSSPropertyParserHelpers.h"
 #include "CSSRegisteredCustomProperty.h"
 #include "CSSShadowValue.h"
 #include "Counter.h"
@@ -71,12 +71,15 @@ inline GapLength forwardInheritedValue(const GapLength& value) { auto copy = val
 class BuilderCustom {
 public:
     // Custom handling of inherit, initial and value setting.
+    DECLARE_PROPERTY_CUSTOM_HANDLERS(AspectRatio);
     DECLARE_PROPERTY_CUSTOM_HANDLERS(BorderImageOutset);
     DECLARE_PROPERTY_CUSTOM_HANDLERS(BorderImageRepeat);
     DECLARE_PROPERTY_CUSTOM_HANDLERS(BorderImageSlice);
     DECLARE_PROPERTY_CUSTOM_HANDLERS(BorderImageWidth);
     DECLARE_PROPERTY_CUSTOM_HANDLERS(BoxShadow);
+    DECLARE_PROPERTY_CUSTOM_HANDLERS(CaretColor);
     DECLARE_PROPERTY_CUSTOM_HANDLERS(Clip);
+    DECLARE_PROPERTY_CUSTOM_HANDLERS(Contain);
     DECLARE_PROPERTY_CUSTOM_HANDLERS(Content);
     DECLARE_PROPERTY_CUSTOM_HANDLERS(CounterIncrement);
     DECLARE_PROPERTY_CUSTOM_HANDLERS(CounterReset);
@@ -88,15 +91,16 @@ public:
 #if ENABLE(CSS_IMAGE_RESOLUTION)
     DECLARE_PROPERTY_CUSTOM_HANDLERS(ImageResolution);
 #endif
+    DECLARE_PROPERTY_CUSTOM_HANDLERS(LetterSpacing);
 #if ENABLE(TEXT_AUTOSIZING)
     DECLARE_PROPERTY_CUSTOM_HANDLERS(LineHeight);
 #endif
+    DECLARE_PROPERTY_CUSTOM_HANDLERS(ListStyleType);
     DECLARE_PROPERTY_CUSTOM_HANDLERS(OutlineStyle);
     DECLARE_PROPERTY_CUSTOM_HANDLERS(Size);
     DECLARE_PROPERTY_CUSTOM_HANDLERS(Stroke);
     DECLARE_PROPERTY_CUSTOM_HANDLERS(TextIndent);
     DECLARE_PROPERTY_CUSTOM_HANDLERS(TextShadow);
-    DECLARE_PROPERTY_CUSTOM_HANDLERS(WebkitAspectRatio);
     DECLARE_PROPERTY_CUSTOM_HANDLERS(WebkitBoxShadow);
     DECLARE_PROPERTY_CUSTOM_HANDLERS(FontVariantLigatures);
     DECLARE_PROPERTY_CUSTOM_HANDLERS(FontVariantNumeric);
@@ -116,10 +120,8 @@ public:
     static void applyInheritWebkitMaskImage(BuilderState&) { }
     static void applyInitialFontFeatureSettings(BuilderState&) { }
     static void applyInheritFontFeatureSettings(BuilderState&) { }
-#if ENABLE(VARIATION_FONTS)
-    static void applyInitialFontVariationSettings(BuilderState&) { }
-    static void applyInheritFontVariationSettings(BuilderState&) { }
-#endif
+    static void applyInitialFontVariationSettings(BuilderState&);
+    static void applyInheritFontVariationSettings(BuilderState&);
 
     // Custom handling of inherit + value setting only.
     static void applyInheritDisplay(BuilderState&);
@@ -137,6 +139,7 @@ public:
     // Custom handling of value setting only.
     static void applyValueBaselineShift(BuilderState&, CSSValue&);
     static void applyValueDirection(BuilderState&, CSSValue&);
+    static void applyInheritVerticalAlign(BuilderState&);
     static void applyValueVerticalAlign(BuilderState&, CSSValue&);
     static void applyInitialTextAlign(BuilderState&);
     static void applyValueTextAlign(BuilderState&, CSSValue&);
@@ -328,6 +331,12 @@ bool BuilderCustom::getPageSizeFromName(CSSPrimitiveValue* pageSizeName, CSSPrim
     return true;
 }
 
+inline void BuilderCustom::applyInheritVerticalAlign(BuilderState& builderState)
+{
+    builderState.style().setVerticalAlignLength(forwardInheritedValue(builderState.parentStyle().verticalAlignLength()));
+    builderState.style().setVerticalAlign(forwardInheritedValue(builderState.parentStyle().verticalAlign()));
+}
+
 inline void BuilderCustom::applyValueVerticalAlign(BuilderState& builderState, CSSValue& value)
 {
     auto& primitiveValue = downcast<CSSPrimitiveValue>(value);
@@ -457,48 +466,38 @@ inline void BuilderCustom::applyValueSize(BuilderState& builderState, CSSValue& 
 inline void BuilderCustom::applyInheritTextIndent(BuilderState& builderState)
 {
     builderState.style().setTextIndent(Length { builderState.parentStyle().textIndent() });
-#if ENABLE(CSS3_TEXT)
     builderState.style().setTextIndentLine(builderState.parentStyle().textIndentLine());
     builderState.style().setTextIndentType(builderState.parentStyle().textIndentType());
-#endif
 }
 
 inline void BuilderCustom::applyInitialTextIndent(BuilderState& builderState)
 {
     builderState.style().setTextIndent(RenderStyle::initialTextIndent());
-#if ENABLE(CSS3_TEXT)
     builderState.style().setTextIndentLine(RenderStyle::initialTextIndentLine());
     builderState.style().setTextIndentType(RenderStyle::initialTextIndentType());
-#endif
 }
 
 inline void BuilderCustom::applyValueTextIndent(BuilderState& builderState, CSSValue& value)
 {
     Length lengthOrPercentageValue;
-#if ENABLE(CSS3_TEXT)
     TextIndentLine textIndentLineValue = RenderStyle::initialTextIndentLine();
     TextIndentType textIndentTypeValue = RenderStyle::initialTextIndentType();
-#endif
     for (auto& item : downcast<CSSValueList>(value)) {
         auto& primitiveValue = downcast<CSSPrimitiveValue>(item.get());
         if (!primitiveValue.valueID())
             lengthOrPercentageValue = primitiveValue.convertToLength<FixedIntegerConversion | PercentConversion | CalculatedConversion>(builderState.cssToLengthConversionData());
-#if ENABLE(CSS3_TEXT)
-        else if (primitiveValue.valueID() == CSSValueWebkitEachLine)
+        else if (primitiveValue.valueID() == CSSValueEachLine)
             textIndentLineValue = TextIndentLine::EachLine;
-        else if (primitiveValue.valueID() == CSSValueWebkitHanging)
+        else if (primitiveValue.valueID() == CSSValueHanging)
             textIndentTypeValue = TextIndentType::Hanging;
-#endif
     }
 
     if (lengthOrPercentageValue.isUndefined())
         return;
 
     builderState.style().setTextIndent(WTFMove(lengthOrPercentageValue));
-#if ENABLE(CSS3_TEXT)
     builderState.style().setTextIndentLine(textIndentLineValue);
     builderState.style().setTextIndentType(textIndentTypeValue);
-#endif
 }
 
 enum BorderImageType { BorderImage, WebkitMaskBoxImage };
@@ -531,7 +530,7 @@ public:
         NinePieceImage image(getValue(builderState.style()));
         switch (modifier) {
         case Outset:
-            image.setOutset(LengthBox(0));
+            image.setOutset(LengthBox(LengthType::Relative));
             break;
         case Repeat:
             image.setHorizontalRule(NinePieceImageRule::Stretch);
@@ -539,14 +538,14 @@ public:
             break;
         case Slice:
             // Masks have a different initial value for slices. Preserve the value of "0 fill" for backwards compatibility.
-            image.setImageSlices(type == BorderImage ? LengthBox(Length(100, Percent), Length(100, Percent), Length(100, Percent), Length(100, Percent)) : LengthBox());
+            image.setImageSlices(type == BorderImage ? LengthBox(Length(100, LengthType::Percent), Length(100, LengthType::Percent), Length(100, LengthType::Percent), Length(100, LengthType::Percent)) : LengthBox());
             image.setFill(type != BorderImage);
             break;
         case Width:
             // FIXME: This is a local variable to work around a bug in the GCC 8.1 Address Sanitizer.
             // Might be slightly less efficient when the type is not BorderImage since this is unused in that case.
             // Should be switched back to a temporary when possible. See https://webkit.org/b/186980
-            LengthBox lengthBox(Length(1, Relative), Length(1, Relative), Length(1, Relative), Length(1, Relative));
+            LengthBox lengthBox(Length(1, LengthType::Relative), Length(1, LengthType::Relative), Length(1, LengthType::Relative), Length(1, LengthType::Relative));
             // Masks have a different initial value for widths. They use an 'auto' value rather than trying to fit to the border.
             image.setBorderSlices(type == BorderImage ? lengthBox : LengthBox());
             break;
@@ -609,6 +608,64 @@ DEFINE_BORDER_IMAGE_MODIFIER_HANDLER(WebkitMaskBoxImage, Repeat)
 DEFINE_BORDER_IMAGE_MODIFIER_HANDLER(WebkitMaskBoxImage, Slice)
 DEFINE_BORDER_IMAGE_MODIFIER_HANDLER(WebkitMaskBoxImage, Width)
 
+static inline void applyLetterSpacing(BuilderState& builderState, float letterSpacing)
+{
+    // Setting the letter-spacing from a positive value to another positive value shouldn't require fonts to get updated.
+
+    bool shouldDisableLigaturesForSpacing = letterSpacing;
+    if (shouldDisableLigaturesForSpacing != builderState.fontDescription().shouldDisableLigaturesForSpacing()) {
+        auto fontDescription = builderState.fontDescription();
+        fontDescription.setShouldDisableLigaturesForSpacing(letterSpacing);
+        builderState.setFontDescription(WTFMove(fontDescription));
+    }
+
+    builderState.style().setLetterSpacingWithoutUpdatingFontDescription(letterSpacing);
+}
+
+inline void BuilderCustom::applyInheritLetterSpacing(BuilderState& builderState)
+{
+    applyLetterSpacing(builderState, builderState.parentStyle().letterSpacing());
+}
+
+inline void BuilderCustom::applyInitialLetterSpacing(BuilderState& builderState)
+{
+    applyLetterSpacing(builderState, RenderStyle::initialLetterSpacing());
+}
+
+void maybeUpdateFontForLetterSpacing(BuilderState& builderState, CSSValue& value)
+{
+    // This is unfortunate. It's related to https://github.com/w3c/csswg-drafts/issues/5498.
+    //
+    // From StyleBuilder's point of view, there's a dependency cycle:
+    // letter-spacing accepts an arbitrary <length>, which must be resolved against a font, which must
+    // be selected after all the properties that affect font selection are processed, but letter-spacing
+    // itself affects font selection because it can disable font features. StyleBuilder has some (valid)
+    // ASSERT()s which would fire because of this cycle.
+    //
+    // There isn't *actually* a dependency cycle, though, as none of the font-relative units are
+    // actually sensitive to font features (luckily). The problem is that our StyleBuilder is only
+    // smart enough to consider fonts as one indivisible thing, rather than having the deeper
+    // understanding that different parts of fonts may or may not depend on each other.
+    //
+    // So, we update the font early here, so that if there is a font-relative unit inside the CSSValue,
+    // its font is updated and ready to go. In the worst case there might be a second call to
+    // updateFont() later, but that isn't bad for perf because 1. It only happens twice if there is
+    // actually a font-relative unit passed to letter-spacing, and 2. updateFont() internally has logic
+    // to only do work if the font is actually dirty.
+
+    if (is<CSSPrimitiveValue>(value)) {
+        auto& primitiveValue = downcast<CSSPrimitiveValue>(value);
+        if (primitiveValue.isFontRelativeLength() || primitiveValue.isCalculated())
+            builderState.updateFont();
+    }
+}
+
+inline void BuilderCustom::applyValueLetterSpacing(BuilderState& builderState, CSSValue& value)
+{
+    maybeUpdateFontForLetterSpacing(builderState, value);
+    applyLetterSpacing(builderState, BuilderConverter::convertSpacing(builderState, value));
+}
+
 #if ENABLE(TEXT_AUTOSIZING)
 
 inline void BuilderCustom::applyInheritLineHeight(BuilderState& builderState)
@@ -670,7 +727,7 @@ static inline float computeLineHeightMultiplierDueToFontSize(const Document& doc
 
 inline void BuilderCustom::applyValueLineHeight(BuilderState& builderState, CSSValue& value)
 {
-    Optional<Length> lineHeight = BuilderConverter::convertLineHeight(builderState, value, 1);
+    std::optional<Length> lineHeight = BuilderConverter::convertLineHeight(builderState, value, 1);
     if (!lineHeight)
         return;
 
@@ -692,6 +749,30 @@ inline void BuilderCustom::applyValueLineHeight(BuilderState& builderState, CSSV
 
 #endif
 
+inline void BuilderCustom::applyInheritListStyleType(BuilderState& builderState)
+{
+    builderState.style().setListStyleType(builderState.parentStyle().listStyleType());
+    builderState.style().setListStyleStringValue(builderState.parentStyle().listStyleStringValue());
+}
+
+inline void BuilderCustom::applyInitialListStyleType(BuilderState& builderState)
+{
+    builderState.style().setListStyleType(RenderStyle::initialListStyleType());
+    builderState.style().setListStyleStringValue(RenderStyle::initialListStyleStringValue());
+}
+
+inline void BuilderCustom::applyValueListStyleType(BuilderState& builderState, CSSValue& value)
+{
+    auto& primitiveValue = downcast<CSSPrimitiveValue>(value);
+    if (primitiveValue.isValueID()) {
+        builderState.style().setListStyleType(primitiveValue);
+        builderState.style().setListStyleStringValue(RenderStyle::initialListStyleStringValue());
+        return;
+    }
+    builderState.style().setListStyleType(ListStyleType::String);
+    builderState.style().setListStyleStringValue(primitiveValue.stringValue());
+}
+
 inline void BuilderCustom::applyInheritOutlineStyle(BuilderState& builderState)
 {
     builderState.style().setOutlineStyleIsAuto(builderState.parentStyle().outlineStyleIsAuto());
@@ -710,6 +791,48 @@ inline void BuilderCustom::applyValueOutlineStyle(BuilderState& builderState, CS
 
     builderState.style().setOutlineStyleIsAuto(primitiveValue);
     builderState.style().setOutlineStyle(primitiveValue);
+}
+
+inline void BuilderCustom::applyInitialCaretColor(BuilderState& builderState)
+{
+    if (builderState.applyPropertyToRegularStyle())
+        builderState.style().setHasAutoCaretColor();
+    if (builderState.applyPropertyToVisitedLinkStyle())
+        builderState.style().setHasVisitedLinkAutoCaretColor();
+}
+
+inline void BuilderCustom::applyInheritCaretColor(BuilderState& builderState)
+{
+    Color color = builderState.parentStyle().caretColor();
+    if (builderState.applyPropertyToRegularStyle()) {
+        if (builderState.parentStyle().hasAutoCaretColor())
+            builderState.style().setHasAutoCaretColor();
+        else
+            builderState.style().setCaretColor(color);
+    }
+    if (builderState.applyPropertyToVisitedLinkStyle()) {
+        if (builderState.parentStyle().hasVisitedLinkAutoCaretColor())
+            builderState.style().setHasVisitedLinkAutoCaretColor();
+        else
+            builderState.style().setVisitedLinkCaretColor(color);
+    }
+}
+
+inline void BuilderCustom::applyValueCaretColor(BuilderState& builderState, CSSValue& value)
+{
+    auto& primitiveValue = downcast<CSSPrimitiveValue>(value);
+    if (builderState.applyPropertyToRegularStyle()) {
+        if (primitiveValue.valueID() == CSSValueAuto)
+            builderState.style().setHasAutoCaretColor();
+        else
+            builderState.style().setCaretColor(builderState.colorFromPrimitiveValue(primitiveValue, ForVisitedLink::No));
+    }
+    if (builderState.applyPropertyToVisitedLinkStyle()) {
+        if (primitiveValue.valueID() == CSSValueAuto)
+            builderState.style().setHasVisitedLinkAutoCaretColor();
+        else
+            builderState.style().setVisitedLinkCaretColor(builderState.colorFromPrimitiveValue(primitiveValue, ForVisitedLink::Yes));
+    }
 }
 
 inline void BuilderCustom::applyInitialClip(BuilderState& builderState)
@@ -749,7 +872,7 @@ inline void BuilderCustom::applyValueWebkitLocale(BuilderState& builderState, CS
 {
     auto& primitiveValue = downcast<CSSPrimitiveValue>(value);
 
-    FontCascadeDescription fontDescription = builderState.style().fontDescription();
+    FontCascadeDescription fontDescription = builderState.fontDescription();
     if (primitiveValue.valueID() == CSSValueAuto)
         fontDescription.setSpecifiedLocale(nullAtom());
     else
@@ -889,7 +1012,7 @@ inline void BuilderCustom::applyValueWebkitBoxShadow(BuilderState& builderState,
 
 inline void BuilderCustom::applyInitialFontFamily(BuilderState& builderState)
 {
-    auto fontDescription = builderState.style().fontDescription();
+    auto fontDescription = builderState.fontDescription();
     auto initialDesc = FontCascadeDescription();
 
     // We need to adjust the size to account for the generic family change from monospace to non-monospace.
@@ -905,7 +1028,7 @@ inline void BuilderCustom::applyInitialFontFamily(BuilderState& builderState)
 
 inline void BuilderCustom::applyInheritFontFamily(BuilderState& builderState)
 {
-    auto fontDescription = builderState.style().fontDescription();
+    auto fontDescription = builderState.fontDescription();
     auto parentFontDescription = builderState.parentStyle().fontDescription();
 
     fontDescription.setFamilies(parentFontDescription.families());
@@ -917,7 +1040,7 @@ inline void BuilderCustom::applyValueFontFamily(BuilderState& builderState, CSSV
 {
     auto& valueList = downcast<CSSValueList>(value);
 
-    auto fontDescription = builderState.style().fontDescription();
+    auto fontDescription = builderState.fontDescription();
     // Before mapping in a new font-family property, we should reset the generic family.
     bool oldFamilyUsedFixedDefaultSize = fontDescription.useFixedDefaultSize();
 
@@ -934,40 +1057,11 @@ inline void BuilderCustom::applyValueFontFamily(BuilderState& builderState, CSSV
             // If the family name was resolved by the CSS parser from a system font ID, then it is generic.
             isGenericFamily = fontFamily.fromSystemFontID;
         } else {
-            switch (contentValue.valueID()) {
-            case CSSValueWebkitBody:
+            if (contentValue.valueID() == CSSValueWebkitBody)
                 family = builderState.document().settings().standardFontFamily();
-                break;
-            case CSSValueSerif:
-                family = serifFamily;
+            else {
                 isGenericFamily = true;
-                break;
-            case CSSValueSansSerif:
-                family = sansSerifFamily;
-                isGenericFamily = true;
-                break;
-            case CSSValueCursive:
-                family = cursiveFamily;
-                isGenericFamily = true;
-                break;
-            case CSSValueFantasy:
-                family = fantasyFamily;
-                isGenericFamily = true;
-                break;
-            case CSSValueMonospace:
-                family = monospaceFamily;
-                isGenericFamily = true;
-                break;
-            case CSSValueWebkitPictograph:
-                family = pictographFamily;
-                isGenericFamily = true;
-                break;
-            case CSSValueSystemUi:
-                family = systemUiFamily;
-                isGenericFamily = true;
-                break;
-            default:
-                break;
+                family = CSSPropertyParserHelpers::genericFontFamily(contentValue.valueID());
             }
         }
 
@@ -1045,6 +1139,16 @@ inline bool BuilderCustom::isValidDisplayValue(BuilderState& builderState, Displ
     return true;
 }
 
+inline void BuilderCustom::applyInitialFontVariationSettings(BuilderState& builderState)
+{
+    builderState.style().setFontVariationSettings({ });
+}
+
+inline void BuilderCustom::applyInheritFontVariationSettings(BuilderState& builderState)
+{
+    builderState.style().setFontVariationSettings(builderState.parentStyle().fontVariationSettings());
+}
+
 inline void BuilderCustom::applyInheritDisplay(BuilderState& builderState)
 {
     DisplayType display = builderState.parentStyle().display();
@@ -1083,42 +1187,6 @@ inline void BuilderCustom::applyValueBaselineShift(BuilderState& builderState, C
     }
 }
 
-inline void BuilderCustom::applyInitialWebkitAspectRatio(BuilderState& builderState)
-{
-    builderState.style().setAspectRatioType(RenderStyle::initialAspectRatioType());
-    builderState.style().setAspectRatioDenominator(RenderStyle::initialAspectRatioDenominator());
-    builderState.style().setAspectRatioNumerator(RenderStyle::initialAspectRatioNumerator());
-}
-
-inline void BuilderCustom::applyInheritWebkitAspectRatio(BuilderState& builderState)
-{
-    if (builderState.parentStyle().aspectRatioType() == AspectRatioType::Auto)
-        return;
-    builderState.style().setAspectRatioType(builderState.parentStyle().aspectRatioType());
-    builderState.style().setAspectRatioDenominator(builderState.parentStyle().aspectRatioDenominator());
-    builderState.style().setAspectRatioNumerator(builderState.parentStyle().aspectRatioNumerator());
-}
-
-inline void BuilderCustom::applyValueWebkitAspectRatio(BuilderState& builderState, CSSValue& value)
-{
-    if (is<CSSPrimitiveValue>(value)) {
-        auto& primitiveValue = downcast<CSSPrimitiveValue>(value);
-
-        if (primitiveValue.valueID() == CSSValueFromDimensions)
-            return builderState.style().setAspectRatioType(AspectRatioType::FromDimensions);
-        if (primitiveValue.valueID() == CSSValueFromIntrinsic)
-            return builderState.style().setAspectRatioType(AspectRatioType::FromIntrinsic);
-
-        ASSERT(primitiveValue.valueID() == CSSValueAuto);
-        return builderState.style().setAspectRatioType(AspectRatioType::Auto);
-    }
-
-    auto& aspectRatioValue = downcast<CSSAspectRatioValue>(value);
-    builderState.style().setAspectRatioType(AspectRatioType::Specified);
-    builderState.style().setAspectRatioDenominator(aspectRatioValue.denominatorValue());
-    builderState.style().setAspectRatioNumerator(aspectRatioValue.numeratorValue());
-}
-
 inline void BuilderCustom::applyInitialWebkitTextEmphasisStyle(BuilderState& builderState)
 {
     builderState.style().setTextEmphasisFill(RenderStyle::initialTextEmphasisFill());
@@ -1131,6 +1199,89 @@ inline void BuilderCustom::applyInheritWebkitTextEmphasisStyle(BuilderState& bui
     builderState.style().setTextEmphasisFill(builderState.parentStyle().textEmphasisFill());
     builderState.style().setTextEmphasisMark(builderState.parentStyle().textEmphasisMark());
     builderState.style().setTextEmphasisCustomMark(builderState.parentStyle().textEmphasisCustomMark());
+}
+
+inline void BuilderCustom::applyInitialAspectRatio(BuilderState& builderState)
+{
+    builderState.style().setAspectRatioType(RenderStyle::initialAspectRatioType());
+    builderState.style().setAspectRatio(RenderStyle::initialAspectRatioWidth(), RenderStyle::initialAspectRatioHeight());
+}
+
+inline void BuilderCustom::applyInheritAspectRatio(BuilderState&)
+{
+}
+
+inline void BuilderCustom::applyValueAspectRatio(BuilderState& builderState, CSSValue& value)
+{
+    if (is<CSSPrimitiveValue>(value)) {
+        ASSERT(downcast<CSSPrimitiveValue>(value).valueID() == CSSValueAuto);
+        return builderState.style().setAspectRatioType(AspectRatioType::Auto);
+    }
+
+    if (!is<CSSValueList>(value))
+        return;
+
+    auto& list = downcast<CSSValueList>(value);
+    if (list.item(1)->isValueList()) {
+        builderState.style().setAspectRatioType(AspectRatioType::AutoAndRatio);
+        auto ratioList = downcast<CSSValueList>(list.item(1));
+        ASSERT(ratioList->length() == 2);
+        builderState.style().setAspectRatio(downcast<CSSPrimitiveValue>(ratioList->item(0))->doubleValue(), downcast<CSSPrimitiveValue>(ratioList->item(1))->doubleValue());
+        return;
+    }
+
+    ASSERT(list.length() == 2);
+    auto width = downcast<CSSPrimitiveValue>(list.item(0))->doubleValue();
+    auto height = downcast<CSSPrimitiveValue>(list.item(1))->doubleValue();
+    if (!width || !height)
+        builderState.style().setAspectRatioType(AspectRatioType::AutoZero);
+    else
+        builderState.style().setAspectRatioType(AspectRatioType::Ratio);
+    builderState.style().setAspectRatio(width, height);
+}
+
+inline void BuilderCustom::applyInitialContain(BuilderState& builderState)
+{
+    builderState.style().setContain(RenderStyle::initialContainment());
+}
+
+inline void BuilderCustom::applyInheritContain(BuilderState& builderState)
+{
+    builderState.style().setContain(forwardInheritedValue(builderState.parentStyle().contain()));
+}
+
+inline void BuilderCustom::applyValueContain(BuilderState& builderState, CSSValue& value)
+{
+    if (is<CSSPrimitiveValue>(value)) {
+        if (downcast<CSSPrimitiveValue>(value).valueID() == CSSValueNone)
+            return builderState.style().setContain(RenderStyle::initialContainment());
+        if (downcast<CSSPrimitiveValue>(value).valueID() == CSSValueStrict)
+            return builderState.style().setContain(RenderStyle::strictContainment());
+        return builderState.style().setContain(RenderStyle::contentContainment());
+    }
+
+    if (!is<CSSValueList>(value))
+        return;
+
+    OptionSet<Containment> containment;
+    auto& list = downcast<CSSValueList>(value);
+    for (auto& item : list) {
+        auto& value = downcast<CSSPrimitiveValue>(item.get());
+        switch (value.valueID()) {
+        case CSSValueSize:
+            containment.add(Containment::Size);
+            break;
+        case CSSValueLayout:
+            containment.add(Containment::Layout);
+            break;
+        case CSSValuePaint:
+            containment.add(Containment::Paint);
+            break;
+        default:
+            break;
+        };
+    }
+    return builderState.style().setContain(containment);
 }
 
 inline void BuilderCustom::applyValueWebkitTextEmphasisStyle(BuilderState& builderState, CSSValue& value)
@@ -1193,9 +1344,9 @@ inline void BuilderCustom::applyValueCounter(BuilderState& builderState, CSSValu
     CounterDirectiveMap& map = builderState.style().accessCounterDirectives();
     for (auto& keyValue : map) {
         if (counterBehavior == Reset)
-            keyValue.value.resetValue = WTF::nullopt;
+            keyValue.value.resetValue = std::nullopt;
         else
-            keyValue.value.incrementValue = WTF::nullopt;
+            keyValue.value.incrementValue = std::nullopt;
     }
 
     if (setCounterIncrementToNone)
@@ -1209,7 +1360,7 @@ inline void BuilderCustom::applyValueCounter(BuilderState& builderState, CSSValu
         if (counterBehavior == Reset)
             directives.resetValue = value;
         else
-            directives.incrementValue = saturatedAddition(directives.incrementValue.valueOr(0), value);
+            directives.incrementValue = saturatedSum<int>(directives.incrementValue.value_or(0), value);
     }
 }
 
@@ -1387,19 +1538,19 @@ inline void BuilderCustom::applyValueContent(BuilderState& builderState, CSSValu
     for (auto& item : downcast<CSSValueList>(value)) {
         if (is<CSSImageGeneratorValue>(item)) {
             if (is<CSSGradientValue>(item))
-                builderState.style().setContent(StyleGeneratedImage::create(downcast<CSSGradientValue>(item.get()).gradientWithStylesResolved(builderState)), didSet);
+                builderState.style().setContent(StyleGeneratedImage::create(downcast<CSSGradientValue>(builderState.resolveImageStyles(item.get()).get())), didSet);
             else
-                builderState.style().setContent(StyleGeneratedImage::create(downcast<CSSImageGeneratorValue>(item.get())), didSet);
+                builderState.style().setContent(StyleGeneratedImage::create(downcast<CSSImageGeneratorValue>(builderState.resolveImageStyles(item.get()).get())), didSet);
             didSet = true;
         }
 
         if (is<CSSImageSetValue>(item)) {
-            builderState.style().setContent(StyleImageSet::create(downcast<CSSImageSetValue>(item.get()).imageSetWithStylesResolved(builderState)), didSet);
+            builderState.style().setContent(StyleImageSet::create(downcast<CSSImageSetValue>(builderState.resolveImageStyles(item.get()).get())), didSet);
             didSet = true;
         }
 
         if (is<CSSImageValue>(item)) {
-            builderState.style().setContent(StyleCachedImage::create(downcast<CSSImageValue>(item.get())), didSet);
+            builderState.style().setContent(StyleCachedImage::create(downcast<CSSImageValue>(builderState.resolveImageStyles(item.get()).get())), didSet);
             didSet = true;
             continue;
         }
@@ -1555,7 +1706,7 @@ inline void BuilderCustom::applyValueFontVariantEastAsian(BuilderState& builderS
 
 inline void BuilderCustom::applyInitialFontSize(BuilderState& builderState)
 {
-    auto fontDescription = builderState.style().fontDescription();
+    auto fontDescription = builderState.fontDescription();
     float size = Style::fontSizeForKeyword(CSSValueMedium, fontDescription.useFixedDefaultSize(), builderState.document());
 
     if (size < 0)
@@ -1574,7 +1725,7 @@ inline void BuilderCustom::applyInheritFontSize(BuilderState& builderState)
     if (size < 0)
         return;
 
-    auto fontDescription = builderState.style().fontDescription();
+    auto fontDescription = builderState.fontDescription();
     fontDescription.setKeywordSize(parentFontDescription.keywordSize());
     builderState.setFontSize(fontDescription, size);
     builderState.setFontDescription(WTFMove(fontDescription));
@@ -1641,7 +1792,7 @@ inline void BuilderCustom::applyValueFontStyle(BuilderState& builderState, CSSVa
 
 inline void BuilderCustom::applyValueFontSize(BuilderState& builderState, CSSValue& value)
 {
-    auto fontDescription = builderState.style().fontDescription();
+    auto fontDescription = builderState.fontDescription();
     fontDescription.setKeywordSizeFromIdentifier(CSSValueInvalid);
 
     float parentSize = builderState.parentStyle().fontDescription().specifiedSize();
@@ -1680,15 +1831,14 @@ inline void BuilderCustom::applyValueFontSize(BuilderState& builderState, CSSVal
     } else {
         fontDescription.setIsAbsoluteSize(parentIsAbsoluteSize || !(primitiveValue.isPercentage() || primitiveValue.isFontRelativeLength()));
         if (primitiveValue.isLength()) {
-            size = primitiveValue.computeLength<float>(CSSToLengthConversionData(&builderState.parentStyle(), builderState.rootElementStyle(), &builderState.parentStyle(), builderState.document().renderView(), 1.0f, CSSPropertyFontSize));
-            if (primitiveValue.isViewportPercentageLength())
-                builderState.style().setHasViewportUnits();
+            CSSToLengthConversionData conversionData { &builderState.parentStyle(), builderState.rootElementStyle(), &builderState.parentStyle(), builderState.document().renderView(), 1.0f, CSSPropertyFontSize, &builderState.style() };
+            size = primitiveValue.computeLength<float>(conversionData);
         } else if (primitiveValue.isPercentage())
             size = (primitiveValue.floatValue() * parentSize) / 100.0f;
         else if (primitiveValue.isCalculatedPercentageWithLength()) {
-            const auto& conversionData = builderState.cssToLengthConversionData();
-            CSSToLengthConversionData parentConversionData { &builderState.parentStyle(), conversionData.rootStyle(), &builderState.parentStyle(), builderState.document().renderView(), 1.0f, CSSPropertyFontSize };
-            size = primitiveValue.cssCalcValue()->createCalculationValue(parentConversionData)->evaluate(parentSize);
+            // FIXME: Why does this need a different root style than the isLength case above?
+            CSSToLengthConversionData conversionData { &builderState.parentStyle(), builderState.cssToLengthConversionData().rootStyle(), &builderState.parentStyle(), builderState.document().renderView(), 1.0f, CSSPropertyFontSize, &builderState.style() };
+            size = primitiveValue.cssCalcValue()->createCalculationValue(conversionData)->evaluate(parentSize);
         } else
             return;
     }
@@ -1743,30 +1893,37 @@ inline void BuilderCustom::applyValueGridTemplateAreas(BuilderState& builderStat
     builderState.style().setNamedGridAreaColumnCount(gridTemplateAreasValue.columnCount());
 }
 
+#define SET_TRACKS_DATA_INTERNAL(tracksData, style, parentStyle, TrackType) \
+    ASSERT(tracksData || parentStyle); \
+    style.setGrid##TrackType##s(tracksData ? tracksData->m_trackSizes : parentStyle->grid##TrackType##s()); \
+    style.setNamedGrid##TrackType##Lines(tracksData ? tracksData->m_namedGridLines : parentStyle->namedGrid##TrackType##Lines()); \
+    style.setOrderedNamedGrid##TrackType##Lines(tracksData ? tracksData->m_orderedNamedGridLines : parentStyle->orderedNamedGrid##TrackType##Lines()); \
+    style.setGridAutoRepeat##TrackType##s(tracksData ? tracksData->m_autoRepeatTrackSizes : parentStyle->gridAutoRepeat##TrackType##s()); \
+    style.setGridAutoRepeat##TrackType##sInsertionPoint(tracksData ? tracksData->m_autoRepeatInsertionPoint : parentStyle->gridAutoRepeat##TrackType##sInsertionPoint()); \
+    style.setAutoRepeatNamedGrid##TrackType##Lines(tracksData ? tracksData->m_autoRepeatNamedGridLines : parentStyle->autoRepeatNamedGrid##TrackType##Lines()); \
+    style.setAutoRepeatOrderedNamedGrid##TrackType##Lines(tracksData ? tracksData->m_autoRepeatOrderedNamedGridLines : parentStyle->autoRepeatOrderedNamedGrid##TrackType##Lines()); \
+    style.setGridAutoRepeat##TrackType##sType(tracksData ? tracksData->m_autoRepeatType : parentStyle->gridAutoRepeat##TrackType##sType());
+
+#define SET_INHERIT_TRACKS_DATA(style, parentStyle, TrackType) \
+    BuilderConverter::TracksData* tracksData = nullptr; \
+    const RenderStyle* parentStylePointer = &parentStyle; \
+    SET_TRACKS_DATA_INTERNAL(tracksData, style, parentStylePointer, TrackType)
+
+#define SET_TRACKS_DATA(tracksData, style, TrackType) \
+    BuilderConverter::TracksData* tracksDataPointer = &tracksData; \
+    const RenderStyle* parentStyle = nullptr; \
+    SET_TRACKS_DATA_INTERNAL(tracksDataPointer, style, parentStyle, TrackType)
+
 inline void BuilderCustom::applyInitialGridTemplateColumns(BuilderState& builderState)
 {
-    builderState.style().setGridColumns(RenderStyle::initialGridColumns());
-    builderState.style().setNamedGridColumnLines(RenderStyle::initialNamedGridColumnLines());
-    builderState.style().setOrderedNamedGridColumnLines(RenderStyle::initialOrderedNamedGridColumnLines());
+    BuilderConverter::TracksData initialTracksData;
+    SET_TRACKS_DATA(initialTracksData, builderState.style(), Column);
 }
 
 inline void BuilderCustom::applyInheritGridTemplateColumns(BuilderState& builderState)
 {
-    builderState.style().setGridColumns(builderState.parentStyle().gridColumns());
-    builderState.style().setNamedGridColumnLines(builderState.parentStyle().namedGridColumnLines());
-    builderState.style().setOrderedNamedGridColumnLines(builderState.parentStyle().orderedNamedGridColumnLines());
+    SET_INHERIT_TRACKS_DATA(builderState.style(), builderState.parentStyle(), Column);
 }
-
-#define SET_TRACKS_DATA(tracksData, style, TrackType) \
-    style.setGrid##TrackType##s(tracksData.m_trackSizes); \
-    style.setNamedGrid##TrackType##Lines(tracksData.m_namedGridLines); \
-    style.setOrderedNamedGrid##TrackType##Lines(tracksData.m_orderedNamedGridLines); \
-    style.setGridAutoRepeat##TrackType##s(tracksData.m_autoRepeatTrackSizes); \
-    style.setGridAutoRepeat##TrackType##sInsertionPoint(tracksData.m_autoRepeatInsertionPoint); \
-    style.setAutoRepeatNamedGrid##TrackType##Lines(tracksData.m_autoRepeatNamedGridLines); \
-    style.setAutoRepeatOrderedNamedGrid##TrackType##Lines(tracksData.m_autoRepeatOrderedNamedGridLines); \
-    style.setGridAutoRepeat##TrackType##sType(tracksData.m_autoRepeatType); \
-    style.setGridAutoRepeat##TrackType##sInsertionPoint(tracksData.m_autoRepeatInsertionPoint);
 
 inline void BuilderCustom::applyValueGridTemplateColumns(BuilderState& builderState, CSSValue& value)
 {
@@ -1782,16 +1939,13 @@ inline void BuilderCustom::applyValueGridTemplateColumns(BuilderState& builderSt
 
 inline void BuilderCustom::applyInitialGridTemplateRows(BuilderState& builderState)
 {
-    builderState.style().setGridRows(RenderStyle::initialGridRows());
-    builderState.style().setNamedGridRowLines(RenderStyle::initialNamedGridRowLines());
-    builderState.style().setOrderedNamedGridRowLines(RenderStyle::initialOrderedNamedGridRowLines());
+    BuilderConverter::TracksData initialTracksData;
+    SET_TRACKS_DATA(initialTracksData, builderState.style(), Row);
 }
 
 inline void BuilderCustom::applyInheritGridTemplateRows(BuilderState& builderState)
 {
-    builderState.style().setGridRows(builderState.parentStyle().gridRows());
-    builderState.style().setNamedGridRowLines(builderState.parentStyle().namedGridRowLines());
-    builderState.style().setOrderedNamedGridRowLines(builderState.parentStyle().orderedNamedGridRowLines());
+    SET_INHERIT_TRACKS_DATA(builderState.style(), builderState.parentStyle(), Row);
 }
 
 inline void BuilderCustom::applyValueGridTemplateRows(BuilderState& builderState, CSSValue& value)
@@ -1849,8 +2003,11 @@ inline void BuilderCustom::applyValueWillChange(BuilderState& builderState, CSSV
             willChange->addFeature(WillChangeData::Feature::Contents);
             break;
         default:
-            if (primitiveValue.isPropertyID())
+            if (primitiveValue.isPropertyID()) {
+                if (primitiveValue.propertyID() == CSSPropertyContain && !builderState.document().settings().cssContainmentEnabled())
+                    break;
                 willChange->addFeature(WillChangeData::Feature::Property, primitiveValue.propertyID());
+            }
             break;
         }
     }
@@ -1867,9 +2024,9 @@ inline void BuilderCustom::applyValueStrokeColor(BuilderState& builderState, CSS
 {
     auto& primitiveValue = downcast<CSSPrimitiveValue>(value);
     if (builderState.applyPropertyToRegularStyle())
-        builderState.style().setStrokeColor(builderState.colorFromPrimitiveValue(primitiveValue, /* forVisitedLink */ false));
+        builderState.style().setStrokeColor(builderState.colorFromPrimitiveValue(primitiveValue, ForVisitedLink::No));
     if (builderState.applyPropertyToVisitedLinkStyle())
-        builderState.style().setVisitedLinkStrokeColor(builderState.colorFromPrimitiveValue(primitiveValue, /* forVisitedLink */ true));
+        builderState.style().setVisitedLinkStrokeColor(builderState.colorFromPrimitiveValue(primitiveValue, ForVisitedLink::Yes));
     builderState.style().setHasExplicitlySetStrokeColor(true);
 }
 

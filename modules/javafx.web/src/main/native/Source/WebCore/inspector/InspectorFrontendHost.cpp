@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2007-2021 Apple Inc. All rights reserved.
  * Copyright (C) 2008 Matt Lilek <webkit@mattlilek.com>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -53,8 +53,11 @@
 #include "MouseEvent.h"
 #include "Node.h"
 #include "Page.h"
+#include "PagePasteboardContext.h"
 #include "Pasteboard.h"
 #include "ScriptState.h"
+#include "Settings.h"
+#include "SystemSoundManager.h"
 #include "UserGestureIndicator.h"
 #include <JavaScriptCore/ScriptFunctionCall.h>
 #include <pal/system/Sound.h>
@@ -155,7 +158,7 @@ void InspectorFrontendHost::disconnectClient()
 
 void InspectorFrontendHost::addSelfToGlobalObjectInWorld(DOMWrapperWorld& world)
 {
-    auto& lexicalGlobalObject = *execStateFromPage(world, m_frontendPage);
+    auto& lexicalGlobalObject = *globalObject(world, m_frontendPage ? &m_frontendPage->mainFrame() : nullptr);
     auto& vm = lexicalGlobalObject.vm();
     JSC::JSLockHolder lock(vm);
     auto scope = DECLARE_CATCH_SCOPE(vm);
@@ -172,7 +175,7 @@ void InspectorFrontendHost::loaded()
         m_client->frontendLoaded();
 }
 
-static Optional<InspectorFrontendClient::DockSide> dockSideFromString(const String& dockSideString)
+static std::optional<InspectorFrontendClient::DockSide> dockSideFromString(const String& dockSideString)
 {
     if (dockSideString == "undocked")
         return InspectorFrontendClient::DockSide::Undocked;
@@ -182,7 +185,7 @@ static Optional<InspectorFrontendClient::DockSide> dockSideFromString(const Stri
         return InspectorFrontendClient::DockSide::Left;
     if (dockSideString == "bottom")
         return InspectorFrontendClient::DockSide::Bottom;
-    return WTF::nullopt;
+    return std::nullopt;
 }
 
 bool InspectorFrontendHost::supportsDockSide(const String& dockSideString)
@@ -275,7 +278,7 @@ void InspectorFrontendHost::setForcedAppearance(String appearance)
     }
 
     if (m_frontendPage)
-        m_frontendPage->setUseDarkAppearanceOverride(WTF::nullopt);
+        m_frontendPage->setUseDarkAppearanceOverride(std::nullopt);
     if (m_client)
         m_client->setForcedAppearance(InspectorFrontendClient::Appearance::System);
 }
@@ -388,6 +391,21 @@ String InspectorFrontendHost::platform() const
 #endif
 }
 
+String InspectorFrontendHost::platformVersionName() const
+{
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 120000
+    return "monterey"_s;
+#elif PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 110000
+    return "big-sur"_s;
+#elif PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 101500
+    return "catalina"_s;
+#elif PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 101400
+    return "mojave"_s;
+#else
+    return emptyString();
+#endif
+}
+
 String InspectorFrontendHost::port() const
 {
 #if PLATFORM(GTK)
@@ -399,7 +417,8 @@ String InspectorFrontendHost::port() const
 
 void InspectorFrontendHost::copyText(const String& text)
 {
-    Pasteboard::createForCopyAndPaste()->writePlainText(text, Pasteboard::CannotSmartReplace);
+    auto pageID = m_frontendPage ? m_frontendPage->mainFrame().pageID() : std::nullopt;
+    Pasteboard::createForCopyAndPaste(PagePasteboardContext::create(WTFMove(pageID)))->writePlainText(text, Pasteboard::CannotSmartReplace);
 }
 
 void InspectorFrontendHost::killText(const String& text, bool shouldPrependToKillRing, bool shouldStartNewSequence)
@@ -413,13 +432,13 @@ void InspectorFrontendHost::killText(const String& text, bool shouldPrependToKil
     editor.addTextToKillRing(text, insertionMode);
 }
 
-void InspectorFrontendHost::openInNewTab(const String& url)
+void InspectorFrontendHost::openURLExternally(const String& url)
 {
     if (WTF::protocolIsJavaScript(url))
         return;
 
     if (m_client)
-        m_client->openInNewTab(url);
+        m_client->openURLExternally(url);
 }
 
 bool InspectorFrontendHost::canSave()
@@ -470,7 +489,7 @@ static void populateContextMenu(Vector<InspectorFrontendHost::ContextMenuItem>&&
         }
 
         auto type = item.type == "checkbox" ? CheckableActionType : ActionType;
-        auto action = static_cast<ContextMenuAction>(ContextMenuItemBaseCustomTag + item.id.valueOr(0));
+        auto action = static_cast<ContextMenuAction>(ContextMenuItemBaseCustomTag + item.id.value_or(0));
         ContextMenuItem menuItem = { type, action, item.label };
         if (item.enabled)
             menuItem.setEnabled(*item.enabled);
@@ -486,7 +505,7 @@ void InspectorFrontendHost::showContextMenu(Event& event, Vector<ContextMenuItem
 #if ENABLE(CONTEXT_MENUS)
     ASSERT(m_frontendPage);
 
-    auto& lexicalGlobalObject = *execStateFromPage(debuggerWorld(), m_frontendPage);
+    auto& lexicalGlobalObject = *globalObject(debuggerWorld(), &m_frontendPage->mainFrame());
     auto& vm = lexicalGlobalObject.vm();
     auto value = lexicalGlobalObject.get(&lexicalGlobalObject, JSC::Identifier::fromString(vm, "InspectorFrontendAPI"));
     ASSERT(value);
@@ -541,11 +560,13 @@ void InspectorFrontendHost::unbufferedLog(const String& message)
 
 void InspectorFrontendHost::beep()
 {
-    PAL::systemBeep();
+    SystemSoundManager::singleton().systemBeep();
 }
 
 void InspectorFrontendHost::inspectInspector()
 {
+    setAllowsInspectingInspector(true);
+
     if (m_frontendPage)
         m_frontendPage->inspectorController().show();
 }
@@ -557,6 +578,12 @@ bool InspectorFrontendHost::isBeingInspected()
 
     InspectorController& inspectorController = m_frontendPage->inspectorController();
     return inspectorController.hasLocalFrontend() || inspectorController.hasRemoteFrontend();
+}
+
+void InspectorFrontendHost::setAllowsInspectingInspector(bool allow)
+{
+    if (m_frontendPage)
+        m_frontendPage->settings().setDeveloperExtrasEnabled(allow);
 }
 
 bool InspectorFrontendHost::supportsShowCertificate() const
@@ -573,12 +600,12 @@ bool InspectorFrontendHost::showCertificate(const String& serializedCertificate)
     if (!m_client)
         return false;
 
-    Vector<uint8_t> data;
-    if (!base64Decode(serializedCertificate, data))
+    auto data = base64Decode(serializedCertificate);
+    if (!data)
         return false;
 
-    WTF::Persistence::Decoder decoder(data.data(), data.size());
-    Optional<CertificateInfo> certificateInfo;
+    WTF::Persistence::Decoder decoder({ data->data(), data->size() });
+    std::optional<CertificateInfo> certificateInfo;
     decoder >> certificateInfo;
     if (!certificateInfo)
         return false;
@@ -605,38 +632,30 @@ bool InspectorFrontendHost::diagnosticLoggingAvailable()
     return m_client && m_client->diagnosticLoggingAvailable();
 }
 
-static Optional<DiagnosticLoggingClient::ValuePayload> valuePayloadFromJSONValue(const RefPtr<JSON::Value>& value)
+static std::optional<DiagnosticLoggingClient::ValuePayload> valuePayloadFromJSONValue(Ref<JSON::Value>&& value)
 {
     switch (value->type()) {
     case JSON::Value::Type::Array:
     case JSON::Value::Type::Null:
     case JSON::Value::Type::Object:
         ASSERT_NOT_REACHED();
-        return WTF::nullopt;
+        return std::nullopt;
 
     case JSON::Value::Type::Boolean:
-        bool boolValue;
-        value->asBoolean(boolValue);
-        return DiagnosticLoggingClient::ValuePayload(boolValue);
+        return DiagnosticLoggingClient::ValuePayload(value->asBoolean().value_or(false));
 
     case JSON::Value::Type::Double:
-        double doubleValue;
-        value->asDouble(doubleValue);
-        return DiagnosticLoggingClient::ValuePayload(doubleValue);
+        return DiagnosticLoggingClient::ValuePayload(value->asDouble().value_or(0));
 
     case JSON::Value::Type::Integer:
-        long long intValue;
-        value->asInteger(intValue);
-        return DiagnosticLoggingClient::ValuePayload(intValue);
+        return DiagnosticLoggingClient::ValuePayload(static_cast<long long>(value->asInteger().value_or(0)));
 
     case JSON::Value::Type::String:
-        String stringValue;
-        value->asString(stringValue);
-        return DiagnosticLoggingClient::ValuePayload(stringValue);
+        return DiagnosticLoggingClient::ValuePayload(value->asString());
     }
 
     ASSERT_NOT_REACHED();
-    return WTF::nullopt;
+    return std::nullopt;
 }
 
 void InspectorFrontendHost::logDiagnosticEvent(const String& eventName, const String& payloadString)
@@ -644,22 +663,50 @@ void InspectorFrontendHost::logDiagnosticEvent(const String& eventName, const St
     if (!supportsDiagnosticLogging())
         return;
 
-    RefPtr<JSON::Value> payloadValue;
-    if (!JSON::Value::parseJSON(payloadString, payloadValue))
+    auto payloadValue = JSON::Value::parseJSON(payloadString);
+    if (!payloadValue)
         return;
 
-    RefPtr<JSON::Object> payloadObject;
-    if (!payloadValue->asObject(payloadObject))
+    auto payloadObject = payloadValue->asObject();
+    if (!payloadObject)
         return;
 
     DiagnosticLoggingClient::ValueDictionary dictionary;
-    for (const auto& [key, value] : *payloadObject) {
-        if (auto valuePayload = valuePayloadFromJSONValue(value))
+    for (auto& [key, value] : *payloadObject) {
+        if (auto valuePayload = valuePayloadFromJSONValue(WTFMove(value)))
             dictionary.set(key, WTFMove(valuePayload.value()));
     }
 
     m_client->logDiagnosticEvent(makeString("WebInspector."_s, eventName), dictionary);
 }
 #endif // ENABLE(INSPECTOR_TELEMETRY)
+
+bool InspectorFrontendHost::supportsWebExtensions()
+{
+#if ENABLE(INSPECTOR_EXTENSIONS)
+    return m_client && m_client->supportsWebExtensions();
+#else
+    return false;
+#endif
+}
+
+#if ENABLE(INSPECTOR_EXTENSIONS)
+void InspectorFrontendHost::didShowExtensionTab(const String& extensionID, const String& extensionTabID)
+{
+    if (!m_client)
+        return;
+
+    m_client->didShowExtensionTab(extensionID, extensionTabID);
+}
+
+void InspectorFrontendHost::didHideExtensionTab(const String& extensionID, const String& extensionTabID)
+{
+    if (!m_client)
+        return;
+
+    m_client->didHideExtensionTab(extensionID, extensionTabID);
+}
+#endif // ENABLE(INSPECTOR_EXTENSIONS)
+
 
 } // namespace WebCore

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -227,10 +227,6 @@ final class WinApplication extends Application implements InvokeLaterDispatcher.
 
     @Override public Window createWindow(Window owner, Screen screen, int styleMask) {
         return new WinWindow(owner, screen, styleMask);
-    }
-
-    @Override public Window createWindow(long parent) {
-        return new WinChildWindow(parent);
     }
 
     @Override public View createView() {

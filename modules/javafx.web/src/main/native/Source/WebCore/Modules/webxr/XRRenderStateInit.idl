@@ -24,11 +24,12 @@
  */
 
 [
-    EnabledAtRuntime=WebXR,
+    EnabledBySetting=WebXR,
     Conditional=WEBXR,
 ] dictionary XRRenderStateInit {
     double depthNear;
     double depthFar;
     double inlineVerticalFieldOfView;
     WebXRWebGLLayer? baseLayer;
+    sequence<WebXRLayer>? layers;
 };

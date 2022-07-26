@@ -47,6 +47,10 @@
 #include "MockRealtimeVideoSourceMac.h"
 #endif
 
+#if USE(GSTREAMER)
+#include "MockRealtimeVideoSourceGStreamer.h"
+#endif
+
 namespace WebCore {
 
 static inline Vector<MockMediaDevice> defaultDevices()
@@ -54,6 +58,10 @@ static inline Vector<MockMediaDevice> defaultDevices()
     return Vector<MockMediaDevice> {
         MockMediaDevice { "239c24b0-2b15-11e3-8224-0800200c9a66"_s, "Mock audio device 1"_s, MockMicrophoneProperties { 44100 } },
         MockMediaDevice { "239c24b1-2b15-11e3-8224-0800200c9a66"_s, "Mock audio device 2"_s, MockMicrophoneProperties { 48000 } },
+
+        MockMediaDevice { "239c24b0-2b15-11e3-8224-0800200c9a67"_s, "Mock speaker device 1"_s, MockSpeakerProperties { "239c24b0-2b15-11e3-8224-0800200c9a66"_s, 44100 } },
+        MockMediaDevice { "239c24b1-2b15-11e3-8224-0800200c9a67"_s, "Mock speaker device 2"_s, MockSpeakerProperties { "239c24b1-2b15-11e3-8224-0800200c9a66"_s, 48000 } },
+        MockMediaDevice { "239c24b2-2b15-11e3-8224-0800200c9a67"_s, "Mock speaker device 3"_s, MockSpeakerProperties { String { }, 48000 } },
 
         MockMediaDevice { "239c24b2-2b15-11e3-8224-0800200c9a66"_s, "Mock video device 1"_s,
             MockCameraProperties {
@@ -156,11 +164,14 @@ public:
         case CaptureDevice::DeviceType::Window:
 #if PLATFORM(MAC)
             return DisplayCaptureSourceCocoa::create(UniqueRef<DisplayCaptureSourceCocoa::Capturer>(makeUniqueRef<MockDisplayCapturer>(device)), device, constraints);
+#elif USE(GSTREAMER)
+            return MockDisplayCaptureSourceGStreamer::create(device, constraints);
 #else
             return MockRealtimeVideoSource::create(String { device.persistentId() }, String { device.label() }, String { }, constraints);
 #endif
             break;
         case CaptureDevice::DeviceType::Microphone:
+        case CaptureDevice::DeviceType::Speaker:
         case CaptureDevice::DeviceType::Camera:
         case CaptureDevice::DeviceType::Unknown:
             ASSERT_NOT_REACHED();
@@ -190,6 +201,7 @@ private:
     RealtimeMediaSource* activeSource() final { return CoreAudioCaptureSourceFactory::singleton().activeSource(); }
 #endif
     CaptureDeviceManager& audioCaptureDeviceManager() final { return MockRealtimeMediaSourceCenter::singleton().audioCaptureDeviceManager(); }
+    const Vector<CaptureDevice>& speakerDevices() const final { return MockRealtimeMediaSourceCenter::speakerDevices(); }
 };
 
 static Vector<MockMediaDevice>& devices()
@@ -215,7 +227,9 @@ static HashMap<String, MockMediaDevice>& deviceMap()
 static inline Vector<CaptureDevice>& deviceListForDevice(const MockMediaDevice& device)
 {
     if (device.isMicrophone())
-        return MockRealtimeMediaSourceCenter::audioDevices();
+        return MockRealtimeMediaSourceCenter::microphoneDevices();
+    if (device.isSpeaker())
+        return MockRealtimeMediaSourceCenter::speakerDevices();
     if (device.isCamera())
         return MockRealtimeMediaSourceCenter::videoDevices();
 
@@ -262,9 +276,17 @@ bool MockRealtimeMediaSourceCenter::mockRealtimeMediaSourceCenterEnabled()
     return singleton().m_isEnabled;
 }
 
-static void createCaptureDevice(const MockMediaDevice& device)
+static CaptureDevice toCaptureDevice(const MockMediaDevice& device)
 {
-    deviceListForDevice(device).append(MockRealtimeMediaSourceCenter::captureDeviceWithPersistentID(device.type(), device.persistentId).value());
+    auto captureDevice = device.captureDevice();
+    captureDevice.setEnabled(true);
+    captureDevice.setIsMockDevice(true);
+    return captureDevice;
+}
+
+static void createMockDevice(const MockMediaDevice& device)
+{
+    deviceListForDevice(device).append(toCaptureDevice(device));
 }
 
 void MockRealtimeMediaSourceCenter::resetDevices()
@@ -275,7 +297,8 @@ void MockRealtimeMediaSourceCenter::resetDevices()
 
 void MockRealtimeMediaSourceCenter::setDevices(Vector<MockMediaDevice>&& newMockDevices)
 {
-    audioDevices().clear();
+    microphoneDevices().clear();
+    speakerDevices().clear();
     videoDevices().clear();
     displayDevices().clear();
 
@@ -287,7 +310,7 @@ void MockRealtimeMediaSourceCenter::setDevices(Vector<MockMediaDevice>&& newMock
 
     for (const auto& device : mockDevices) {
         map.add(device.persistentId, device);
-        createCaptureDevice(device);
+        createMockDevice(device);
     }
     RealtimeMediaSourceCenter::singleton().captureDevicesChanged();
 }
@@ -296,7 +319,7 @@ void MockRealtimeMediaSourceCenter::addDevice(const MockMediaDevice& device)
 {
     devices().append(device);
     deviceMap().set(device.persistentId, device);
-    createCaptureDevice(device);
+    createMockDevice(device);
     RealtimeMediaSourceCenter::singleton().captureDevicesChanged();
 }
 
@@ -319,44 +342,56 @@ void MockRealtimeMediaSourceCenter::removeDevice(const String& persistentId)
     RealtimeMediaSourceCenter::singleton().captureDevicesChanged();
 }
 
-Optional<MockMediaDevice> MockRealtimeMediaSourceCenter::mockDeviceWithPersistentID(const String& id)
+std::optional<MockMediaDevice> MockRealtimeMediaSourceCenter::mockDeviceWithPersistentID(const String& id)
 {
     ASSERT(!id.isEmpty());
 
     auto& map = deviceMap();
     auto iterator = map.find(id);
     if (iterator == map.end())
-        return WTF::nullopt;
+        return std::nullopt;
 
     return iterator->value;
 }
 
-Optional<CaptureDevice> MockRealtimeMediaSourceCenter::captureDeviceWithPersistentID(CaptureDevice::DeviceType type, const String& id)
+std::optional<CaptureDevice> MockRealtimeMediaSourceCenter::captureDeviceWithPersistentID(CaptureDevice::DeviceType type, const String& id)
 {
     ASSERT(!id.isEmpty());
 
     auto& map = deviceMap();
     auto iterator = map.find(id);
     if (iterator == map.end() || iterator->value.type() != type)
-        return WTF::nullopt;
+        return std::nullopt;
 
-    CaptureDevice device { iterator->value.persistentId, type, iterator->value.label };
-    device.setEnabled(true);
-    return device;
+    return toCaptureDevice(iterator->value);
 }
 
-Vector<CaptureDevice>& MockRealtimeMediaSourceCenter::audioDevices()
+Vector<CaptureDevice>& MockRealtimeMediaSourceCenter::microphoneDevices()
 {
-    static auto audioDevices = makeNeverDestroyed([] {
-        Vector<CaptureDevice> audioDevices;
+    static auto microphoneDevices = makeNeverDestroyed([] {
+        Vector<CaptureDevice> microphoneDevices;
         for (const auto& device : devices()) {
             if (device.isMicrophone())
-                audioDevices.append(captureDeviceWithPersistentID(CaptureDevice::DeviceType::Microphone, device.persistentId).value());
+                microphoneDevices.append(toCaptureDevice(device));
         }
-        return audioDevices;
+        return microphoneDevices;
     }());
 
-    return audioDevices;
+    return microphoneDevices;
+}
+
+Vector<CaptureDevice>& MockRealtimeMediaSourceCenter::speakerDevices()
+{
+    static auto speakerDevices = makeNeverDestroyed([] {
+        Vector<CaptureDevice> speakerDevices;
+        for (const auto& device : devices()) {
+            if (device.isSpeaker())
+                speakerDevices.append(toCaptureDevice(device));
+        }
+        return speakerDevices;
+    }());
+
+    return speakerDevices;
 }
 
 Vector<CaptureDevice>& MockRealtimeMediaSourceCenter::videoDevices()
@@ -365,7 +400,7 @@ Vector<CaptureDevice>& MockRealtimeMediaSourceCenter::videoDevices()
         Vector<CaptureDevice> videoDevices;
         for (const auto& device : devices()) {
             if (device.isCamera())
-                videoDevices.append(captureDeviceWithPersistentID(CaptureDevice::DeviceType::Camera, device.persistentId).value());
+                videoDevices.append(toCaptureDevice(device));
         }
         return videoDevices;
     }());

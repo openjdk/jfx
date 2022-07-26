@@ -33,7 +33,6 @@
 #include "ApplyStyleCommand.h"
 #include "BackForwardCache.h"
 #include "BackForwardController.h"
-#include "CSSAnimationController.h"
 #include "CSSComputedStyleDeclaration.h"
 #include "CSSPropertyNames.h"
 #include "CachedCSSStyleSheet.h"
@@ -109,7 +108,11 @@
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/TextStream.h>
 
-#define RELEASE_LOG_ERROR_IF_ALLOWED(channel, fmt, ...) RELEASE_LOG_ERROR_IF(isAlwaysOnLoggingAllowed(), channel, "%p - Frame::" fmt, this, ##__VA_ARGS__)
+#if ENABLE(DATA_DETECTION)
+#include "DataDetectionResultsStorage.h"
+#endif
+
+#define FRAME_RELEASE_LOG_ERROR(channel, fmt, ...) RELEASE_LOG_ERROR(channel, "%p - Frame::" fmt, this, ##__VA_ARGS__)
 
 namespace WebCore {
 
@@ -149,14 +152,13 @@ static inline float parentTextZoomFactor(Frame* frame)
 
 Frame::Frame(Page& page, HTMLFrameOwnerElement* ownerElement, UniqueRef<FrameLoaderClient>&& frameLoaderClient)
     : m_mainFrame(ownerElement ? page.mainFrame() : *this)
-    , m_page(&page)
+    , m_page(makeWeakPtr(page))
     , m_settings(&page.settings())
     , m_treeNode(*this, parentFromOwnerElement(ownerElement))
     , m_loader(makeUniqueRef<FrameLoader>(*this, WTFMove(frameLoaderClient)))
     , m_navigationScheduler(makeUniqueRef<NavigationScheduler>(*this))
-    , m_ownerElement(ownerElement)
+    , m_ownerElement(makeWeakPtr(ownerElement))
     , m_script(makeUniqueRef<ScriptController>(*this))
-    , m_animationController(makeUniqueRef<CSSAnimationController>(*this))
     , m_pageZoomFactor(parentPageZoomFactor(this))
     , m_textZoomFactor(parentTextZoomFactor(this))
     , m_eventHandler(makeUniqueRef<EventHandler>(*this))
@@ -165,7 +167,7 @@ Frame::Frame(Page& page, HTMLFrameOwnerElement* ownerElement, UniqueRef<FrameLoa
 
     if (ownerElement) {
         m_mainFrame.selfOnlyRef();
-        ownerElement->setContentFrame(this);
+        ownerElement->setContentFrame(*this);
     }
 
 #ifndef NDEBUG
@@ -192,7 +194,13 @@ Ref<Frame> Frame::create(Page* page, HTMLFrameOwnerElement* ownerElement, Unique
 Frame::~Frame()
 {
     setView(nullptr);
-    loader().cancelAndClear();
+    navigationScheduler().cancel();
+
+    if (!loader().isComplete())
+        loader().closeURL();
+
+    loader().clear(document(), false);
+    script().updatePlatformScriptObjects();
 
     // FIXME: We should not be doing all this work inside the destructor
 
@@ -209,14 +217,24 @@ Frame::~Frame()
         m_mainFrame.selfOnlyDeref();
 }
 
-void Frame::addDestructionObserver(FrameDestructionObserver* observer)
+Page* Frame::page() const
 {
-    m_destructionObservers.add(observer);
+    return m_page.get();
 }
 
-void Frame::removeDestructionObserver(FrameDestructionObserver* observer)
+HTMLFrameOwnerElement* Frame::ownerElement() const
 {
-    m_destructionObservers.remove(observer);
+    return m_ownerElement.get();
+}
+
+void Frame::addDestructionObserver(FrameDestructionObserver& observer)
+{
+    m_destructionObservers.add(&observer);
+}
+
+void Frame::removeDestructionObserver(FrameDestructionObserver& observer)
+{
+    m_destructionObservers.remove(&observer);
 }
 
 void Frame::setView(RefPtr<FrameView>&& view)
@@ -302,23 +320,33 @@ void Frame::setDocument(RefPtr<Document>&& newDocument)
     m_documentIsBeingReplaced = false;
 }
 
-void Frame::invalidateContentEventRegionsIfNeeded()
+void Frame::invalidateContentEventRegionsIfNeeded(InvalidateContentEventRegionsReason reason)
 {
     if (!m_page || !m_doc || !m_doc->renderView())
         return;
-    bool hasTouchActionElements = false;
-    bool hasEditableElements = false;
+
+    bool needsUpdateForWheelEventHandlers = false;
+    bool needsUpdateForTouchActionElements = false;
+    bool needsUpdateForEditableElements = false;
+#if ENABLE(WHEEL_EVENT_REGIONS)
+    needsUpdateForWheelEventHandlers = m_doc->hasWheelEventHandlers() || reason == InvalidateContentEventRegionsReason::EventHandlerChange;
+#else
+    UNUSED_PARAM(reason);
+#endif
 #if ENABLE(TOUCH_ACTION_REGIONS)
-    hasTouchActionElements = m_doc->mayHaveElementsWithNonAutoTouchAction();
+    // Document::mayHaveElementsWithNonAutoTouchAction never changes from true to false currently.
+    needsUpdateForTouchActionElements = m_doc->mayHaveElementsWithNonAutoTouchAction();
 #endif
 #if ENABLE(EDITABLE_REGION)
-    hasEditableElements = m_doc->mayHaveEditableElements() && m_page->shouldBuildEditableRegion();
+    // Document::mayHaveEditableElements never changes from true to false currently.
+    needsUpdateForEditableElements = m_doc->mayHaveEditableElements() && m_page->shouldBuildEditableRegion();
 #endif
-    // FIXME: This needs to look at wheel event handlers too.
-    if (!hasTouchActionElements && !hasEditableElements)
+    if (!needsUpdateForTouchActionElements && !needsUpdateForEditableElements && !needsUpdateForWheelEventHandlers)
         return;
+
     if (!m_doc->renderView()->compositor().viewNeedsToInvalidateEventRegionOfEnclosingCompositingLayerForRepaint())
         return;
+
     if (m_ownerElement)
         m_ownerElement->document().invalidateEventRegionsForFrame(*m_ownerElement);
 }
@@ -353,28 +381,19 @@ static JSC::Yarr::RegularExpression createRegExpForLabels(const Vector<String>& 
     static NeverDestroyed<JSC::Yarr::RegularExpression> wordRegExp("\\w");
     StringBuilder pattern;
     pattern.append('(');
-    unsigned int numLabels = labels.size();
-    unsigned int i;
-    for (i = 0; i < numLabels; i++) {
-        String label = labels[i];
+    for (unsigned i = 0, numLabels = labels.size(); i < numLabels; i++) {
+        auto& label = labels[i];
 
-        bool startsWithWordChar = false;
-        bool endsWithWordChar = false;
+        bool startsWithWordCharacter = false;
+        bool endsWithWordCharacter = false;
         if (label.length()) {
-            startsWithWordChar = wordRegExp.get().match(label.substring(0, 1)) >= 0;
-            endsWithWordChar = wordRegExp.get().match(label.substring(label.length() - 1, 1)) >= 0;
+            startsWithWordCharacter = wordRegExp.get().match(label.substring(0, 1)) >= 0;
+            endsWithWordCharacter = wordRegExp.get().match(label.substring(label.length() - 1, 1)) >= 0;
         }
 
-        if (i)
-            pattern.append('|');
         // Search for word boundaries only if label starts/ends with "word characters".
-        // If we always searched for word boundaries, this wouldn't work for languages
-        // such as Japanese.
-        if (startsWithWordChar)
-            pattern.appendLiteral("\\b");
-        pattern.append(label);
-        if (endsWithWordChar)
-            pattern.appendLiteral("\\b");
+        // If we always searched for word boundaries, this wouldn't work for languages such as Japanese.
+        pattern.append(i ? "|" : "", startsWithWordCharacter ? "\\b" : "", label, endsWithWordCharacter ? "\\b" : "");
     }
     pattern.append(')');
     return JSC::Yarr::RegularExpression(pattern.toString(), JSC::Yarr::TextCaseInsensitive);
@@ -536,7 +555,7 @@ bool Frame::selectionChangeCallbacksDisabled() const
 
 bool Frame::requestDOMPasteAccess()
 {
-    if (m_settings->javaScriptCanAccessClipboard() && m_settings->DOMPasteAllowed())
+    if (m_settings->javaScriptCanAccessClipboard() && m_settings->domPasteAllowed())
         return true;
 
     if (!m_doc)
@@ -657,13 +676,15 @@ void Frame::injectUserScripts(UserScriptInjectionTime injectionTime)
 
 void Frame::injectUserScriptImmediately(DOMWrapperWorld& world, const UserScript& script)
 {
+#if ENABLE(APP_BOUND_DOMAINS)
     if (loader().client().shouldEnableInAppBrowserPrivacyProtections()) {
         if (auto* document = this->document())
             document->addConsoleMessage(MessageSource::Security, MessageLevel::Warning, "Ignoring user script injection for non-app bound domain."_s);
-        RELEASE_LOG_ERROR_IF_ALLOWED(Loading, "injectUserScriptImmediately: Ignoring user script injection for non app-bound domain");
+        FRAME_RELEASE_LOG_ERROR(Loading, "injectUserScriptImmediately: Ignoring user script injection for non app-bound domain");
         return;
     }
     loader().client().notifyPageOfAppBoundBehavior();
+#endif
 
     auto* document = this->document();
     if (!document)
@@ -691,12 +712,12 @@ void Frame::injectUserScriptsAwaitingNotification()
         injectUserScriptImmediately(world, script.get());
 }
 
-Optional<PageIdentifier> Frame::pageID() const
+std::optional<PageIdentifier> Frame::pageID() const
 {
     return loader().pageID();
 }
 
-Optional<FrameIdentifier> Frame::frameID() const
+std::optional<FrameIdentifier> Frame::frameID() const
 {
     return loader().frameID();
 }
@@ -708,7 +729,7 @@ RenderView* Frame::contentRenderer() const
 
 RenderWidget* Frame::ownerRenderer() const
 {
-    auto* ownerElement = m_ownerElement;
+    auto* ownerElement = m_ownerElement.get();
     if (!ownerElement)
         return nullptr;
     auto* object = ownerElement->renderer();
@@ -735,11 +756,8 @@ void Frame::clearTimers(FrameView *view, Document *document)
 {
     if (view) {
         view->layoutContext().unscheduleLayout();
-        if (RuntimeEnabledFeatures::sharedFeatures().webAnimationsCSSIntegrationEnabled()) {
-            if (auto* timelines = document->timelinesController())
-                timelines->suspendAnimations();
-        } else
-            view->frame().legacyAnimation().suspendAnimationsForDocument(document);
+        if (auto* timelines = document->timelinesController())
+            timelines->suspendAnimations();
         view->frame().eventHandler().stopAutoscrollTimer();
     }
 }
@@ -798,7 +816,7 @@ String Frame::displayStringModifiedByEncoding(const String& str) const
 
 VisiblePosition Frame::visiblePositionForPoint(const IntPoint& framePoint) const
 {
-    constexpr OptionSet<HitTestRequest::RequestType> hitType { HitTestRequest::ReadOnly, HitTestRequest::Active, HitTestRequest::AllowVisibleChildFrameContentOnly };
+    constexpr OptionSet<HitTestRequest::Type> hitType { HitTestRequest::Type::ReadOnly, HitTestRequest::Type::Active, HitTestRequest::Type::AllowVisibleChildFrameContentOnly };
     HitTestResult result = eventHandler().hitTestResultAtPoint(framePoint, hitType);
     Node* node = result.innerNonSharedNode();
     if (!node)
@@ -821,19 +839,19 @@ Document* Frame::documentAtPoint(const IntPoint& point)
     HitTestResult result = HitTestResult(pt);
 
     if (contentRenderer()) {
-        constexpr OptionSet<HitTestRequest::RequestType> hitType { HitTestRequest::ReadOnly, HitTestRequest::Active, HitTestRequest::DisallowUserAgentShadowContent, HitTestRequest::AllowChildFrameContent };
+        constexpr OptionSet<HitTestRequest::Type> hitType { HitTestRequest::Type::ReadOnly, HitTestRequest::Type::Active, HitTestRequest::Type::DisallowUserAgentShadowContent, HitTestRequest::Type::AllowChildFrameContent };
         result = eventHandler().hitTestResultAtPoint(pt, hitType);
     }
     return result.innerNode() ? &result.innerNode()->document() : 0;
 }
 
-Optional<SimpleRange> Frame::rangeForPoint(const IntPoint& framePoint)
+std::optional<SimpleRange> Frame::rangeForPoint(const IntPoint& framePoint)
 {
     auto position = visiblePositionForPoint(framePoint);
 
     auto containerText = position.deepEquivalent().containerText();
     if (!containerText || !containerText->renderer() || containerText->renderer()->style().userSelect() == UserSelect::None)
-        return WTF::nullopt;
+        return std::nullopt;
 
     if (auto previousCharacterRange = makeSimpleRange(position.previous(), position)) {
         if (editor().firstRectForRange(*previousCharacterRange).contains(framePoint))
@@ -845,10 +863,10 @@ Optional<SimpleRange> Frame::rangeForPoint(const IntPoint& framePoint)
             return *nextCharacterRange;
     }
 
-    return WTF::nullopt;
+    return std::nullopt;
 }
 
-void Frame::createView(const IntSize& viewportSize, const Optional<Color>& backgroundColor,
+void Frame::createView(const IntSize& viewportSize, const std::optional<Color>& backgroundColor,
     const IntSize& fixedLayoutSize, const IntRect& fixedVisibleContentRect,
     bool useFixedLayout, ScrollbarMode horizontalScrollbarMode, bool horizontalLock,
     ScrollbarMode verticalScrollbarMode, bool verticalLock)
@@ -901,25 +919,6 @@ AbstractDOMWindow* Frame::virtualWindow() const
     return window();
 }
 
-String Frame::layerTreeAsText(LayerTreeFlags flags) const
-{
-    if (!m_view)
-        return { };
-
-    m_view->updateLayoutAndStyleIfNeededRecursive();
-    if (!contentRenderer())
-        return { };
-
-    contentRenderer()->compositor().updateEventRegions();
-
-    for (auto* child = mainFrame().tree().firstRenderedChild(); child; child = child->tree().traverseNextRendered()) {
-        if (auto* renderer = child->contentRenderer())
-            renderer->compositor().updateEventRegions();
-    }
-
-    return contentRenderer()->compositor().layerTreeAsText(flags);
-}
-
 String Frame::trackedRepaintRectsAsText() const
 {
     if (!m_view)
@@ -957,15 +956,14 @@ void Frame::setPageAndTextZoomFactors(float pageZoomFactor, float textZoomFactor
     if (is<SVGDocument>(*document) && !downcast<SVGDocument>(*document).zoomAndPanEnabled())
         return;
 
+    std::optional<ScrollPosition> scrollPositionAfterZoomed;
     if (m_pageZoomFactor != pageZoomFactor) {
+        // Compute the scroll position with scale after zooming to stay the same position in the content.
         if (FrameView* view = this->view()) {
-            // Update the scroll position when doing a full page zoom, so the content stays in relatively the same position.
-            LayoutPoint scrollPosition = view->scrollPosition();
-            float percentDifference = (pageZoomFactor / m_pageZoomFactor);
-            view->setScrollPosition(IntPoint(scrollPosition.x() * percentDifference, scrollPosition.y() * percentDifference));
+            scrollPositionAfterZoomed = view->scrollPosition();
+            scrollPositionAfterZoomed->scale(pageZoomFactor / m_pageZoomFactor);
         }
     }
-
     m_pageZoomFactor = pageZoomFactor;
     m_textZoomFactor = textZoomFactor;
 
@@ -977,6 +975,10 @@ void Frame::setPageAndTextZoomFactors(float pageZoomFactor, float textZoomFactor
     if (FrameView* view = this->view()) {
         if (document->renderView() && document->renderView()->needsLayout() && view->didFirstLayout())
             view->layoutContext().layout();
+
+        // Scrolling to the calculated position must be done after the layout.
+        if (scrollPositionAfterZoomed)
+            view->setScrollPosition(scrollPositionAfterZoomed.value());
     }
 }
 
@@ -1027,11 +1029,8 @@ void Frame::resumeActiveDOMObjectsAndAnimations()
 
     // Frame::clearTimers() suspended animations and pending relayouts.
 
-    if (RuntimeEnabledFeatures::sharedFeatures().webAnimationsCSSIntegrationEnabled()) {
-        if (auto* timelines = m_doc->timelinesController())
-            timelines->resumeAnimations();
-    } else
-        legacyAnimation().resumeAnimationsForDocument(m_doc.get());
+    if (auto* timelines = m_doc->timelinesController())
+        timelines->resumeAnimations();
     if (m_view)
         m_view->layoutContext().scheduleLayout();
 }
@@ -1043,11 +1042,6 @@ void Frame::deviceOrPageScaleFactorChanged()
 
     if (RenderView* root = contentRenderer())
         root->compositor().deviceOrPageScaleFactorChanged();
-}
-
-bool Frame::isAlwaysOnLoggingAllowed() const
-{
-    return page() && page()->isAlwaysOnLoggingAllowed();
 }
 
 void Frame::dropChildren()
@@ -1068,6 +1062,23 @@ bool Frame::mayPrewarmLocalStorage() const
 {
     ASSERT(isMainFrame());
     return m_localStoragePrewarmingCount < maxlocalStoragePrewarmingCount;
+}
+
+FloatSize Frame::screenSize() const
+{
+    if (!m_overrideScreenSize.isEmpty())
+        return m_overrideScreenSize;
+    return screenRect(view()).size();
+}
+
+void Frame::setOverrideScreenSize(FloatSize&& screenSize)
+{
+    if (m_overrideScreenSize == screenSize)
+        return;
+
+    m_overrideScreenSize = WTFMove(screenSize);
+    if (auto* document = this->document())
+        document->updateViewportArguments();
 }
 
 void Frame::selfOnlyRef()
@@ -1112,6 +1123,28 @@ TextStream& operator<<(TextStream& ts, const Frame& frame)
     return ts;
 }
 
+bool Frame::arePluginsEnabled()
+{
+    return settings().arePluginsEnabled();
+}
+
+void Frame::resetScript()
+{
+    resetWindowProxy();
+    m_script = makeUniqueRef<ScriptController>(*this);
+}
+
+#if ENABLE(DATA_DETECTION)
+
+DataDetectionResultsStorage& Frame::dataDetectionResults()
+{
+    if (!m_dataDetectionResults)
+        m_dataDetectionResults = makeUnique<DataDetectionResultsStorage>();
+    return *m_dataDetectionResults;
+}
+
+#endif
+
 } // namespace WebCore
 
-#undef RELEASE_LOG_ERROR_IF_ALLOWED
+#undef FRAME_RELEASE_LOG_ERROR

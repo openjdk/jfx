@@ -51,6 +51,7 @@
 #include "Widget.h"
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/Ref.h>
+#include <wtf/RobinHoodHashSet.h>
 
 #if PLATFORM(IOS_FAMILY)
 #include "RuntimeApplicationChecks.h"
@@ -71,9 +72,7 @@ inline HTMLObjectElement::HTMLObjectElement(const QualifiedName& tagName, Docume
 
 Ref<HTMLObjectElement> HTMLObjectElement::create(const QualifiedName& tagName, Document& document, HTMLFormElement* form)
 {
-    auto result = adoptRef(*new HTMLObjectElement(tagName, document, form));
-    result->finishCreating();
-    return result;
+    return adoptRef(*new HTMLObjectElement(tagName, document, form));
 }
 
 HTMLObjectElement::~HTMLObjectElement()
@@ -86,19 +85,19 @@ int HTMLObjectElement::defaultTabIndex() const
     return 0;
 }
 
-bool HTMLObjectElement::isPresentationAttribute(const QualifiedName& name) const
+bool HTMLObjectElement::hasPresentationalHintsForAttribute(const QualifiedName& name) const
 {
     if (name == borderAttr)
         return true;
-    return HTMLPlugInImageElement::isPresentationAttribute(name);
+    return HTMLPlugInImageElement::hasPresentationalHintsForAttribute(name);
 }
 
-void HTMLObjectElement::collectStyleForPresentationAttribute(const QualifiedName& name, const AtomString& value, MutableStyleProperties& style)
+void HTMLObjectElement::collectPresentationalHintsForAttribute(const QualifiedName& name, const AtomString& value, MutableStyleProperties& style)
 {
     if (name == borderAttr)
         applyBorderAttributeToStyle(value, style);
     else
-        HTMLPlugInImageElement::collectStyleForPresentationAttribute(name, value, style);
+        HTMLPlugInImageElement::collectPresentationalHintsForAttribute(name, value, style);
 }
 
 void HTMLObjectElement::parseAttribute(const QualifiedName& name, const AtomString& value)
@@ -363,7 +362,7 @@ void HTMLObjectElement::renderFallbackContent()
 static inline bool preventsParentObjectFromExposure(const Element& child)
 {
     static const auto mostKnownTags = makeNeverDestroyed([] {
-        HashSet<QualifiedName> set;
+        MemoryCompactLookupOnlyRobinHoodHashSet<QualifiedName> set;
         auto* tags = HTMLNames::getHTMLTags();
         for (size_t i = 0; i < HTMLNames::HTMLTagsCount; i++) {
             auto& tag = *tags[i];

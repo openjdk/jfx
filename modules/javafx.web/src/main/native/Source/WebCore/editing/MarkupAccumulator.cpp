@@ -35,12 +35,12 @@
 #include "HTMLElement.h"
 #include "HTMLNames.h"
 #include "HTMLTemplateElement.h"
-#include <wtf/URL.h>
 #include "ProcessingInstruction.h"
 #include "XLinkNames.h"
 #include "XMLNSNames.h"
 #include "XMLNames.h"
 #include <wtf/NeverDestroyed.h>
+#include <wtf/URL.h>
 #include <wtf/unicode/CharacterNames.h>
 
 namespace WebCore {
@@ -60,6 +60,9 @@ static const EntityDescription entitySubstitutionList[] = {
     { "&gt;", 4, EntityGt },
     { "&quot;", 6, EntityQuot },
     { "&nbsp;", 6, EntityNbsp },
+    { "&#9;", 4, EntityTab },
+    { "&#10;", 5, EntityLineFeed },
+    { "&#13;", 5, EntityCarriageReturn },
 };
 
 enum EntitySubstitutionIndex {
@@ -69,11 +72,19 @@ enum EntitySubstitutionIndex {
     EntitySubstitutionGtIndex = 3,
     EntitySubstitutionQuotIndex = 4,
     EntitySubstitutionNbspIndex = 5,
+    EntitySubstitutionTabIndex = 6,
+    EntitySubstitutionLineFeedIndex = 7,
+    EntitySubstitutionCarriageReturnIndex = 8,
 };
 
 static const unsigned maximumEscapedentityCharacter = noBreakSpace;
 static const uint8_t entityMap[maximumEscapedentityCharacter + 1] = {
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0,
+    EntitySubstitutionTabIndex, // '\t'.
+    EntitySubstitutionLineFeedIndex, // '\n'.
+    0, 0,
+    EntitySubstitutionCarriageReturnIndex, // '\r'.
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     EntitySubstitutionQuotIndex, // '"'.
     0, 0, 0,
     EntitySubstitutionAmpIndex, // '&'.
@@ -451,17 +462,12 @@ void MarkupAccumulator::generateUniquePrefix(QualifiedName& prefixedName, const 
     // http://www.w3.org/TR/DOM-Level-3-Core/namespaces-algorithms.html#normalizeDocumentAlgo
     // Find a prefix following the pattern "NS" + index (starting at 1) and make sure this
     // prefix is not declared in the current scope.
-    StringBuilder builder;
+    AtomString name;
     do {
-        builder.clear();
-        builder.appendLiteral("NS");
-        builder.appendNumber(++m_prefixLevel);
-        const AtomString& name = builder.toAtomString();
-        if (!namespaces.get(name.impl())) {
-            prefixedName.setPrefix(name);
-            return;
-        }
-    } while (true);
+        // FIXME: We should create makeAtomString, which would be more efficient.
+        name = makeString("NS", ++m_prefixLevel);
+    } while (namespaces.get(name.impl()));
+    prefixedName.setPrefix(name);
 }
 
 // https://html.spec.whatwg.org/#attribute's-serialised-name
@@ -513,7 +519,7 @@ void MarkupAccumulator::appendAttribute(StringBuilder& result, const Element& el
 
     result.append(' ');
 
-    Optional<QualifiedName> effectiveXMLPrefixedName;
+    std::optional<QualifiedName> effectiveXMLPrefixedName;
     if (isSerializingHTML)
         result.append(htmlAttributeSerialization(attribute));
     else {

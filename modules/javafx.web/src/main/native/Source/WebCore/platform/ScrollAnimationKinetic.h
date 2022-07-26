@@ -27,8 +27,6 @@
 
 #include "FloatPoint.h"
 #include "ScrollAnimation.h"
-
-#include <wtf/Optional.h>
 #include <wtf/RunLoop.h>
 
 namespace WebCore {
@@ -42,6 +40,7 @@ private:
         PerAxisData(double lower, double upper, double initialPosition, double initialVelocity);
 
         double position() { return m_position; }
+        double velocity() { return m_velocity; }
 
         bool animateScroll(Seconds timeDelta);
 
@@ -74,12 +73,13 @@ public:
 
 private:
     void animationTimerFired();
+    Seconds deltaToNextFrame();
 
     ScrollExtentsCallback m_scrollExtentsFunction;
     NotifyPositionChangedCallback m_notifyPositionChangedFunction;
 
-    Optional<PerAxisData> m_horizontalData;
-    Optional<PerAxisData> m_verticalData;
+    std::optional<PerAxisData> m_horizontalData;
+    std::optional<PerAxisData> m_verticalData;
 
     MonotonicTime m_startTime;
     RunLoop::Timer<ScrollAnimationKinetic> m_animationTimer;

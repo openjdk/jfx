@@ -1240,7 +1240,7 @@ gst_message_has_name (GstMessage * message, const gchar * name)
  *     case GST_MESSAGE_TAG: {
  *       GstTagList *tags = NULL;
  *
- *       gst_message_parse_tag (msg, &amp;tags);
+ *       gst_message_parse_tag (msg, &tags);
  *       g_print ("Got tags from element %s\n", GST_OBJECT_NAME (msg->src));
  *       handle_tags (tags);
  *       gst_tag_list_unref (tags);
@@ -1363,7 +1363,7 @@ gst_message_parse_buffering_stats (GstMessage * message,
  *     case GST_MESSAGE_STATE_CHANGED: {
  *       GstState old_state, new_state;
  *
- *       gst_message_parse_state_changed (msg, &amp;old_state, &amp;new_state, NULL);
+ *       gst_message_parse_state_changed (msg, &old_state, &new_state, NULL);
  *       g_print ("Element %s changed state from %s to %s.\n",
  *           GST_OBJECT_NAME (msg->src),
  *           gst_element_state_get_name (old_state),
@@ -1551,7 +1551,7 @@ gst_message_parse_structure_change (GstMessage * message,
  *       GError *err = NULL;
  *       gchar *dbg_info = NULL;
  *
- *       gst_message_parse_error (msg, &amp;err, &amp;dbg_info);
+ *       gst_message_parse_error (msg, &err, &dbg_info);
  *       g_printerr ("ERROR from element %s: %s\n",
  *           GST_OBJECT_NAME (msg->src), err->message);
  *       g_printerr ("Debugging info: %s\n", (dbg_info) ? dbg_info : "none");
@@ -2354,6 +2354,8 @@ gst_message_new_reset_time (GstObject * src, GstClockTime running_time)
   GstMessage *message;
   GstStructure *structure;
 
+  g_return_val_if_fail (GST_CLOCK_TIME_IS_VALID (running_time), NULL);
+
   structure = gst_structure_new_id (GST_QUARK (MESSAGE_RESET_TIME),
       GST_QUARK (RUNNING_TIME), G_TYPE_UINT64, running_time, NULL);
   message = gst_message_new_custom (GST_MESSAGE_RESET_TIME, src, structure);
@@ -2469,6 +2471,8 @@ gst_message_parse_group_id (GstMessage * message, guint * group_id)
 
   if (!group_id)
     return TRUE;
+
+  *group_id = 0;
 
   structure = GST_MESSAGE_STRUCTURE (message);
 

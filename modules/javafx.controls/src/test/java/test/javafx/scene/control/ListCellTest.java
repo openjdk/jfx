@@ -672,6 +672,17 @@ public class ListCellTest {
         assertTrue(called[0]);
     }
 
+    @Test public void editCellDoesNotFireEventWhileAlreadyEditing() {
+        list.setEditable(true);
+        cell.updateListView(list);
+        cell.updateIndex(2);
+        cell.startEdit();
+        List<EditEvent<?>> events = new ArrayList<>();
+        list.setOnEditStart(events::add);
+        cell.startEdit();
+        assertEquals("startEdit must not fire event while editing", 0, events.size());
+    }
+
     // commitEdit()
     @Test public void commitWhenListIsNullIsOK() {
         cell.updateIndex(1);
@@ -841,6 +852,48 @@ public class ListCellTest {
         assertEquals("editing location of cancel event", editingIndex, events.get(0).getIndex());
     }
 
+    @Test
+    public void testStartEditOffRangeMustNotFireStartEdit() {
+        list.setEditable(true);
+        cell.updateListView(list);
+        cell.updateIndex(list.getItems().size());
+        List<EditEvent<?>> events = new ArrayList<>();
+        list.addEventHandler(ListView.editStartEvent(), events::add);
+        cell.startEdit();
+        assertFalse("sanity: off-range cell must not be editing", cell.isEditing());
+        assertEquals("must not fire editStart", 0, events.size());
+    }
+
+    @Test
+    public void testStartEditOffRangeMustNotUpdateEditingLocation() {
+        list.setEditable(true);
+        cell.updateListView(list);
+        cell.updateIndex(list.getItems().size());
+        cell.startEdit();
+        assertFalse("sanity: off-range cell must not be editing", cell.isEditing());
+        assertEquals("list editing location must not be updated", -1, list.getEditingIndex());
+    }
+
+    @Test
+    public void testCommitEditMustNotFireCancel() {
+        list.setEditable(true);
+        // JDK-8187307: handler that resets control's editing state
+        list.setOnEditCommit(e -> {
+            int index = e.getIndex();
+            list.getItems().set(index, e.getNewValue());
+            list.edit(-1);
+        });
+        cell.updateListView(list);
+        int editingIndex = 1;
+        cell.updateIndex(editingIndex);
+        list.edit(editingIndex);
+        List<EditEvent<String>> events = new ArrayList<>();
+        list.setOnEditCancel(events::add);
+        String value = "edited";
+        cell.commitEdit(value);
+        assertEquals("sanity: value committed", value, list.getItems().get(editingIndex));
+        assertEquals("commit must not have fired editCancel", 0, events.size());
+    }
 
     // When the list view item's change and affects a cell that is editing, then what?
     // When the list cell's index is changed while it is editing, then what?

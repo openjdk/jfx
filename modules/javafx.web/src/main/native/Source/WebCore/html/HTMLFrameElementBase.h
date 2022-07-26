@@ -54,6 +54,11 @@ protected:
     void didFinishInsertingNode() final;
     void didAttachRenderers() override;
 
+    void openURL(LockHistory = LockHistory::Yes, LockBackForwardList = LockBackForwardList::Yes);
+
+    AtomString frameURL() const { return m_frameURL; }
+    void setFrameURL(const AtomString& frameURL) { m_frameURL = frameURL; }
+
 private:
     bool canLoadScriptURL(const URL&) const final;
 
@@ -63,14 +68,12 @@ private:
     bool canContainRangeEndPoint() const final { return false; }
 
     bool supportsFocus() const final;
-    void setFocus(bool) final;
+    void setFocus(bool, FocusVisibility = FocusVisibility::Invisible) final;
 
     bool isURLAttribute(const Attribute&) const final;
     bool isHTMLContentAttribute(const Attribute&) const final;
 
-    void openURL(LockHistory = LockHistory::Yes, LockBackForwardList = LockBackForwardList::Yes);
-
-    AtomString m_URL;
+    AtomString m_frameURL;
 };
 
 } // namespace WebCore

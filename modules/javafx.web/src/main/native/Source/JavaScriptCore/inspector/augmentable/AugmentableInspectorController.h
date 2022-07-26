@@ -27,9 +27,9 @@
 
 #if ENABLE(INSPECTOR_ALTERNATE_DISPATCHERS)
 
-#include <JavaScriptCore/AugmentableInspectorControllerClient.h>
-#include <JavaScriptCore/InspectorBackendDispatcher.h>
-#include <JavaScriptCore/InspectorFrontendRouter.h>
+#include "AugmentableInspectorControllerClient.h"
+#include "InspectorBackendDispatcher.h"
+#include "InspectorFrontendRouter.h"
 
 namespace Inspector {
 
@@ -44,7 +44,7 @@ public:
 
     virtual const FrontendRouter& frontendRouter() const = 0;
     virtual BackendDispatcher& backendDispatcher() = 0;
-    virtual void appendExtraAgent(std::unique_ptr<InspectorAgentBase>) = 0;
+    virtual void registerAlternateAgent(std::unique_ptr<InspectorAgentBase>) = 0;
 
     bool connected() const { return frontendRouter().hasFrontends(); }
 };

@@ -40,7 +40,7 @@ public:
     static Ref<LoadableModuleScript> create(const String& nonce, const String& integrity, ReferrerPolicy, const String& crossOriginMode, const String& charset, const AtomString& initiatorName, bool isInUserAgentShadowTree);
 
     bool isLoaded() const final;
-    Optional<Error> error() const final;
+    std::optional<Error> error() const final;
     bool wasCanceled() const final;
 
     bool isClassicScript() const final { return false; }
@@ -50,21 +50,20 @@ public:
 
     void setError(Error&&);
 
-    void load(Document&, const URL& rootURL);
-    void load(Document&, const ScriptSourceCode&);
-
     void notifyLoadCompleted(UniquedStringImpl&);
     void notifyLoadFailed(LoadableScript::Error&&);
     void notifyLoadWasCanceled();
 
     UniquedStringImpl* moduleKey() const { return m_moduleKey.get(); }
 
+    ModuleFetchParameters& parameters() { return m_parameters.get(); }
+
 private:
     LoadableModuleScript(const String& nonce, const String& integrity, ReferrerPolicy, const String& crossOriginMode, const String& charset, const AtomString& initiatorName, bool isInUserAgentShadowTree);
 
     Ref<ModuleFetchParameters> m_parameters;
     RefPtr<UniquedStringImpl> m_moduleKey;
-    Optional<LoadableScript::Error> m_error;
+    std::optional<LoadableScript::Error> m_error;
     bool m_wasCanceled { false };
     bool m_isLoaded { false };
 };

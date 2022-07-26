@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,12 +34,14 @@
 #include "JSWebAssemblyTable.h"
 #include "WasmCreationMode.h"
 #include "WasmInstance.h"
+#include <wtf/FixedVector.h>
 #include <wtf/Ref.h>
 
 namespace JSC {
 
 class JSModuleNamespaceObject;
 class JSWebAssemblyModule;
+class WebAssemblyModuleRecord;
 
 namespace Wasm {
 class CodeBlock;
@@ -67,7 +69,7 @@ public:
     void finalizeCreation(VM&, JSGlobalObject*, Ref<Wasm::CodeBlock>&&, JSObject* importObject, Wasm::CreationMode);
 
     Wasm::Instance& instance() { return m_instance.get(); }
-    JSModuleNamespaceObject* moduleNamespaceObject() { return m_moduleNamespaceObject.get(); }
+    WebAssemblyModuleRecord* moduleRecord() { return m_moduleRecord.get(); }
 
     JSWebAssemblyMemory* memory() { return m_memory.get(); }
     void setMemory(VM& vm, JSWebAssemblyMemory* value) {
@@ -103,8 +105,8 @@ public:
 
 private:
     JSWebAssemblyInstance(VM&, Structure*, Ref<Wasm::Instance>&&);
-    void finishCreation(VM&, JSWebAssemblyModule*, JSModuleNamespaceObject*);
-    static void visitChildren(JSCell*, SlotVisitor&);
+    void finishCreation(VM&, JSWebAssemblyModule*, WebAssemblyModuleRecord*);
+    DECLARE_VISIT_CHILDREN;
 
     Ref<Wasm::Instance> m_instance;
     VM* m_vm;
@@ -112,9 +114,9 @@ private:
     WriteBarrier<JSGlobalObject> m_globalObject;
     WriteBarrier<JSWebAssemblyModule> m_module;
     WriteBarrier<JSWebAssemblyCodeBlock> m_codeBlock;
-    WriteBarrier<JSModuleNamespaceObject> m_moduleNamespaceObject;
+    WriteBarrier<WebAssemblyModuleRecord> m_moduleRecord;
     WriteBarrier<JSWebAssemblyMemory> m_memory;
-    Vector<WriteBarrier<JSWebAssemblyTable>> m_tables;
+    FixedVector<WriteBarrier<JSWebAssemblyTable>> m_tables;
 };
 
 } // namespace JSC

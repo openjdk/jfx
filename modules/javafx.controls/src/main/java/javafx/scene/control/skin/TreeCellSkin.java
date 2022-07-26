@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -59,7 +59,7 @@ import javafx.css.Styleable;
  */
 public class TreeCellSkin<T> extends CellSkinBase<TreeCell<T>> {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Static fields                                                           *
      *                                                                         *
@@ -83,7 +83,7 @@ public class TreeCellSkin<T> extends CellSkinBase<TreeCell<T>> {
     private static final Map<TreeView<?>, Double> maxDisclosureWidthMap = new WeakHashMap<TreeView<?>, Double>();
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private fields                                                          *
      *                                                                         *
@@ -94,7 +94,7 @@ public class TreeCellSkin<T> extends CellSkinBase<TreeCell<T>> {
     private final BehaviorBase<TreeCell<T>> behavior;
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -125,7 +125,7 @@ public class TreeCellSkin<T> extends CellSkinBase<TreeCell<T>> {
     }
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Properties                                                              *
      *                                                                         *
@@ -159,7 +159,7 @@ public class TreeCellSkin<T> extends CellSkinBase<TreeCell<T>> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *
@@ -320,7 +320,7 @@ public class TreeCellSkin<T> extends CellSkinBase<TreeCell<T>> {
     }
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private implementation                                                  *
      *                                                                         *
@@ -357,7 +357,7 @@ public class TreeCellSkin<T> extends CellSkinBase<TreeCell<T>> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      *                         Stylesheet Handling                             *
      *                                                                         *

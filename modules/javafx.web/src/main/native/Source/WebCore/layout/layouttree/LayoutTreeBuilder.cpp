@@ -29,9 +29,8 @@
 #if ENABLE(LAYOUT_FORMATTING_CONTEXT)
 
 #include "CachedImage.h"
-#include "DisplayBox.h"
-#include "DisplayRun.h"
 #include "HTMLNames.h"
+#include "HTMLParserIdioms.h"
 #include "HTMLTableCellElement.h"
 #include "HTMLTableColElement.h"
 #include "HTMLTableElement.h"
@@ -39,6 +38,7 @@
 #include "InvalidationContext.h"
 #include "InvalidationState.h"
 #include "LayoutBox.h"
+#include "LayoutBoxGeometry.h"
 #include "LayoutChildIterator.h"
 #include "LayoutContainerBox.h"
 #include "LayoutContext.h"
@@ -61,26 +61,16 @@
 #include "RenderTableCaption.h"
 #include "RenderTableCell.h"
 #include "RenderView.h"
+#include "WidthIterator.h"
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/text/TextStream.h>
 
 namespace WebCore {
 namespace Layout {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(LayoutTreeContent);
-LayoutTreeContent::LayoutTreeContent(const RenderBox& rootRenderer, std::unique_ptr<ContainerBox> rootLayoutBox)
-    : m_rootRenderer(rootRenderer)
-    , m_rootLayoutBox(WTFMove(rootLayoutBox))
+WTF_MAKE_ISO_ALLOCATED_IMPL(LayoutTree);
+LayoutTree::LayoutTree()
 {
-}
-
-LayoutTreeContent::~LayoutTreeContent() = default;
-
-
-void LayoutTreeContent::addLayoutBoxForRenderer(const RenderObject& renderer, Box& layoutBox)
-{
-    m_renderObjectToLayoutBox.add(&renderer, &layoutBox);
-    m_layoutBoxToRenderObject.add(&layoutBox, &renderer);
 }
 
 static void appendChild(ContainerBox& parent, Box& newChild)
@@ -99,7 +89,7 @@ static void appendChild(ContainerBox& parent, Box& newChild)
     parent.setLastChild(newChild);
 }
 
-static Optional<LayoutSize> accumulatedOffsetForInFlowPositionedContinuation(const RenderBox& block)
+static std::optional<LayoutSize> accumulatedOffsetForInFlowPositionedContinuation(const RenderBox& block)
 {
     // FIXE: This is a workaround of the continuation logic when the relatively positioned parent inline box
     // becomes a sibling box of this block and only reachable through the continuation link which we don't have here.
@@ -108,49 +98,51 @@ static Optional<LayoutSize> accumulatedOffsetForInFlowPositionedContinuation(con
     return block.relativePositionOffset();
 }
 
-static bool canUseSimplifiedTextMeasuring(const StringView& content, const FontCascade& font, bool whitespaceIsCollapsed)
+static bool canUseSimplifiedTextMeasuring(const StringView& content, const FontCascade& fontCascade, bool whitespaceIsCollapsed)
 {
-    if (font.codePath(TextRun(content)) == FontCascade::Complex)
+    if (fontCascade.codePath(TextRun(content)) == FontCascade::CodePath::Complex)
         return false;
 
-    if (font.wordSpacing() || font.letterSpacing())
+    if (fontCascade.wordSpacing() || fontCascade.letterSpacing())
         return false;
 
+    auto& primaryFont = fontCascade.primaryFont();
     for (unsigned i = 0; i < content.length(); ++i) {
-        if ((!whitespaceIsCollapsed && content[i] == '\t') || content[i] == noBreakSpace || content[i] >= HiraganaLetterSmallA)
+        if (!WidthIterator::characterCanUseSimplifiedTextMeasuring(content[i], whitespaceIsCollapsed))
+            return false;
+        auto glyphData = fontCascade.glyphDataForCharacter(content[i], false);
+        if (!glyphData.isValid() || glyphData.font != &primaryFont)
             return false;
     }
     return true;
 }
 
-std::unique_ptr<Layout::LayoutTreeContent> TreeBuilder::buildLayoutTree(const RenderView& renderView)
+std::unique_ptr<Layout::LayoutTree> TreeBuilder::buildLayoutTree(const RenderView& renderView)
 {
     PhaseScope scope(Phase::Type::TreeBuilding);
 
-    auto style = RenderStyle::clone(renderView.style());
-    style.setLogicalWidth(Length(renderView.width(), Fixed));
-    style.setLogicalHeight(Length(renderView.height(), Fixed));
+    auto rootStyle = RenderStyle::clone(renderView.style());
+    rootStyle.setLogicalWidth(Length(renderView.width(), LengthType::Fixed));
+    rootStyle.setLogicalHeight(Length(renderView.height(), LengthType::Fixed));
 
-    auto layoutTreeContent = makeUnique<LayoutTreeContent>(renderView, makeUnique<InitialContainingBlock>(WTFMove(style)));
-    TreeBuilder(*layoutTreeContent).buildTree();
-    return layoutTreeContent;
+    auto rootLayoutBox = makeUnique<InitialContainingBlock>(WTFMove(rootStyle));
+    auto& rootContainer = *rootLayoutBox;
+    auto layoutTree = makeUnique<LayoutTree>();
+    layoutTree->append(WTFMove(rootLayoutBox));
+    TreeBuilder(*layoutTree).buildSubTree(renderView, rootContainer);
+    return layoutTree;
 }
 
-TreeBuilder::TreeBuilder(LayoutTreeContent& layoutTreeContent)
-    : m_layoutTreeContent(layoutTreeContent)
+TreeBuilder::TreeBuilder(LayoutTree& layoutTree)
+    : m_layoutTree(layoutTree)
 {
 }
 
-void TreeBuilder::buildTree()
-{
-    buildSubTree(m_layoutTreeContent.rootRenderer(), m_layoutTreeContent.rootLayoutBox());
-}
-
-Box& TreeBuilder::createReplacedBox(Optional<Box::ElementAttributes> elementAttributes, RenderStyle&& style)
+Box& TreeBuilder::createReplacedBox(std::optional<Box::ElementAttributes> elementAttributes, RenderStyle&& style)
 {
     auto newBox = makeUnique<ReplacedBox>(elementAttributes, WTFMove(style));
     auto& box = *newBox;
-    m_layoutTreeContent.addBox(WTFMove(newBox));
+    m_layoutTree.append(WTFMove(newBox));
     return box;
 }
 
@@ -158,7 +150,7 @@ Box& TreeBuilder::createTextBox(String text, bool canUseSimplifiedTextMeasuring,
 {
     auto newBox = makeUnique<InlineTextBox>(text, canUseSimplifiedTextMeasuring, WTFMove(style));
     auto& box = *newBox;
-    m_layoutTreeContent.addBox(WTFMove(newBox));
+    m_layoutTree.append(WTFMove(newBox));
     return box;
 }
 
@@ -166,21 +158,21 @@ Box& TreeBuilder::createLineBreakBox(bool isOptional, RenderStyle&& style)
 {
     auto newBox = makeUnique<Layout::LineBreakBox>(isOptional, WTFMove(style));
     auto& box = *newBox;
-    m_layoutTreeContent.addBox(WTFMove(newBox));
+    m_layoutTree.append(WTFMove(newBox));
     return box;
 }
 
-ContainerBox& TreeBuilder::createContainer(Optional<Box::ElementAttributes> elementAttributes, RenderStyle&& style)
+ContainerBox& TreeBuilder::createContainer(std::optional<Box::ElementAttributes> elementAttributes, RenderStyle&& style)
 {
     auto newContainer = makeUnique<ContainerBox>(elementAttributes, WTFMove(style));
     auto& container = *newContainer;
-    m_layoutTreeContent.addContainer(WTFMove(newContainer));
+    m_layoutTree.append(WTFMove(newContainer));
     return container;
 }
 
 Box* TreeBuilder::createLayoutBox(const ContainerBox& parentContainer, const RenderObject& childRenderer)
 {
-    auto elementAttributes = [] (const RenderElement& renderer) -> Optional<Box::ElementAttributes> {
+    auto elementAttributes = [] (const RenderElement& renderer) -> std::optional<Box::ElementAttributes> {
         if (renderer.isDocumentElementRenderer())
             return Box::ElementAttributes { Box::ElementType::Document };
         if (auto* element = renderer.element()) {
@@ -192,7 +184,7 @@ Box* TreeBuilder::createLayoutBox(const ContainerBox& parentContainer, const Ren
                 return Box::ElementAttributes { Box::ElementType::IFrame };
             return Box::ElementAttributes { Box::ElementType::GenericElement };
         }
-        return WTF::nullopt;
+        return std::nullopt;
     };
 
     Box* childLayoutBox = nullptr;
@@ -213,7 +205,8 @@ Box* TreeBuilder::createLayoutBox(const ContainerBox& parentContainer, const Ren
 
         if (is<RenderLineBreak>(renderer)) {
             clonedStyle.setDisplay(DisplayType::Inline);
-            clonedStyle.setFloating(Float::No);
+            clonedStyle.setFloating(Float::None);
+            clonedStyle.setPosition(PositionType::Static);
             childLayoutBox = &createLineBreakBox(downcast<RenderLineBreak>(childRenderer).isWBR(), WTFMove(clonedStyle));
         } else if (is<RenderTable>(renderer)) {
             // Construct the principal table wrapper box (and not the table box itself).
@@ -250,12 +243,14 @@ Box* TreeBuilder::createLayoutBox(const ContainerBox& parentContainer, const Ren
         } else {
             if (displayType == DisplayType::Block) {
                 if (auto offset = accumulatedOffsetForInFlowPositionedContinuation(downcast<RenderBox>(renderer))) {
-                    clonedStyle.setTop({ offset->height(), Fixed });
-                    clonedStyle.setLeft({ offset->width(), Fixed });
+                    clonedStyle.setTop({ offset->height(), LengthType::Fixed });
+                    clonedStyle.setLeft({ offset->width(), LengthType::Fixed });
                     childLayoutBox = &createContainer(elementAttributes(renderer), WTFMove(clonedStyle));
                 } else
                     childLayoutBox = &createContainer(elementAttributes(renderer), WTFMove(clonedStyle));
-            } else if (displayType == DisplayType::Inline)
+            } else if (displayType == DisplayType::Flex)
+                childLayoutBox = &createContainer(elementAttributes(renderer), WTFMove(clonedStyle));
+            else if (displayType == DisplayType::Inline)
                 childLayoutBox = &createContainer(elementAttributes(renderer), WTFMove(clonedStyle));
             else if (displayType == DisplayType::InlineBlock)
                 childLayoutBox = &createContainer(elementAttributes(renderer), WTFMove(clonedStyle));
@@ -269,7 +264,7 @@ Box* TreeBuilder::createLayoutBox(const ContainerBox& parentContainer, const Ren
                 auto& tableColElement = static_cast<HTMLTableColElement&>(*renderer.element());
                 auto columnWidth = tableColElement.width();
                 if (!columnWidth.isEmpty())
-                    childLayoutBox->setColumnWidth(columnWidth.toInt());
+                    childLayoutBox->setColumnWidth(parseHTMLInteger(columnWidth).value_or(0));
                 if (tableColElement.span() > 1)
                     childLayoutBox->setColumnSpan(tableColElement.span());
             } else {
@@ -287,7 +282,6 @@ Box* TreeBuilder::createLayoutBox(const ContainerBox& parentContainer, const Ren
                 auto rowSpan = cellElement.rowSpan();
                 if (rowSpan > 1)
                     childLayoutBox->setRowSpan(rowSpan);
-
                 auto columnSpan = cellElement.colSpan();
                 if (columnSpan > 1)
                     childLayoutBox->setColumnSpan(columnSpan);
@@ -297,7 +291,6 @@ Box* TreeBuilder::createLayoutBox(const ContainerBox& parentContainer, const Ren
         if (childRenderer.isAnonymous())
             childLayoutBox->setIsAnonymous();
     }
-    m_layoutTreeContent.addLayoutBoxForRenderer(childRenderer, *childLayoutBox);
     return childLayoutBox;
 }
 
@@ -316,7 +309,7 @@ void TreeBuilder::buildTableStructure(const RenderTable& tableRenderer, Containe
 
     auto tableBoxStyle = RenderStyle::clone(tableRenderer.style());
     tableBoxStyle.setPosition(PositionType::Static);
-    tableBoxStyle.setFloating(Float::No);
+    tableBoxStyle.setFloating(Float::None);
     tableBoxStyle.resetMargin();
     // FIXME: Figure out where the spec says table width is like box-sizing: border-box;
     if (is<HTMLTableElement>(tableRenderer.element()))
@@ -337,15 +330,23 @@ void TreeBuilder::buildTableStructure(const RenderTable& tableRenderer, Containe
 
         // Find the max number of columns and fill in the gaps.
         size_t maximumColumns = 0;
-        Vector<size_t> numberOfCellsPerRow;
         size_t currentRow = 0;
+        Vector<size_t> numberOfCellsPerRow;
         for (auto& rowBox : childrenOfType<ContainerBox>(tableBody)) {
+            if (numberOfCellsPerRow.size() <= currentRow) {
+                // Ensure we always have a vector entry for the current row -even when the row is empty.
+                numberOfCellsPerRow.append({ });
+            }
             for (auto& cellBox : childrenOfType<ContainerBox>(rowBox)) {
+                auto numberOfSpannedColumns = cellBox.columnSpan();
                 for (size_t rowSpan = 0; rowSpan < cellBox.rowSpan(); ++rowSpan) {
-                    if (numberOfCellsPerRow.size() <= currentRow + rowSpan)
-                        numberOfCellsPerRow.append(cellBox.columnSpan());
-                    else
-                        numberOfCellsPerRow[currentRow + rowSpan] += cellBox.columnSpan();
+                    auto rowIndexWithSpan = currentRow + rowSpan;
+                    if (numberOfCellsPerRow.size() <= rowIndexWithSpan) {
+                        // This is where we advance from the current row by having a row spanner.
+                        numberOfCellsPerRow.append(numberOfSpannedColumns);
+                        continue;
+                    }
+                    numberOfCellsPerRow[rowIndexWithSpan] += numberOfSpannedColumns;
                 }
             }
             maximumColumns = std::max(maximumColumns, numberOfCellsPerRow[currentRow]);
@@ -382,43 +383,79 @@ void TreeBuilder::buildSubTree(const RenderElement& parentRenderer, ContainerBox
 }
 
 #if ENABLE(TREE_DEBUGGING)
-static void outputInlineRuns(TextStream& stream, const LayoutState& layoutState, const ContainerBox& inlineFormattingRoot, unsigned depth)
+void showInlineTreeAndRuns(TextStream& stream, const LayoutState& layoutState, const ContainerBox& inlineFormattingRoot, size_t depth)
 {
     auto& inlineFormattingState = layoutState.establishedInlineFormattingState(inlineFormattingRoot);
-    auto* displayInlineContent = inlineFormattingState.displayInlineContent();
-    if (!displayInlineContent)
-        return;
+    auto& lines = inlineFormattingState.lines();
+    auto& runs = inlineFormattingState.runs();
 
-    auto& displayRuns = displayInlineContent->runs;
-    auto& lineBoxes = displayInlineContent->lineBoxes;
+    for (size_t lineIndex = 0; lineIndex < lines.size(); ++lineIndex) {
+        auto addSpacing = [&] {
+            size_t printedCharacters = 0;
+            stream << "-------- --";
+            while (++printedCharacters <= depth * 2)
+                stream << " ";
 
-    unsigned printedCharacters = 0;
-    while (++printedCharacters <= depth * 2)
-        stream << " ";
-    stream << "  ";
-
-    stream << "lines are -> ";
-    for (auto& lineBox : lineBoxes)
-        stream << "[" << lineBox.left() << "," << lineBox.top() << " " << lineBox.width() << "x" << lineBox.height() << "] ";
-    stream.nextLine();
-
-    for (auto& displayRun : displayRuns) {
-        unsigned printedCharacters = 0;
-        while (++printedCharacters <= depth * 2)
-            stream << " ";
-        stream << "  ";
-        if (displayRun.textContent())
-            stream << "inline text box";
-        else
-            stream << "inline box";
-        stream << " at (" << displayRun.left() << "," << displayRun.top() << ") size " << displayRun.width() << "x" << displayRun.height();
-        if (displayRun.textContent())
-            stream << " run(" << displayRun.textContent()->start() << ", " << displayRun.textContent()->end() << ")";
+        };
+        addSpacing();
+        auto& line = lines[lineIndex];
+        auto& lineBoxLogicalRect = line.lineBoxLogicalRect();
+        auto enclosingTopAndBottom = line.enclosingTopAndBottom();
+        stream << "line at (" << lineBoxLogicalRect.left() << "," << lineBoxLogicalRect.top() << ") size (" << lineBoxLogicalRect.width() << "x" << lineBoxLogicalRect.height() << ") baseline (" << line.baseline() << ") enclosing top (" << enclosingTopAndBottom.top << ") bottom (" << enclosingTopAndBottom.bottom << ")";
         stream.nextLine();
+
+        addSpacing();
+        stream << "  Inline level boxes:";
+        stream.nextLine();
+
+        auto outputInlineLevelBox = [&](const auto& inlineLevelBoxRun) {
+            addSpacing();
+            stream << "    ";
+            auto logicalRect = inlineLevelBoxRun.logicalRect();
+            auto& layoutBox = inlineLevelBoxRun.layoutBox();
+            if (layoutBox.isAtomicInlineLevelBox())
+                stream << "Atomic inline level box";
+            else if (layoutBox.isLineBreakBox())
+                stream << "Line break box";
+            else if (layoutBox.isInlineBox())
+                stream << "Inline box";
+            else
+                stream << "Generic inline level box";
+            stream
+                << " at (" << logicalRect.left() << "," << logicalRect.top() << ")"
+                << " size (" << logicalRect.width() << "x" << logicalRect.height() << ")";
+            stream.nextLine();
+        };
+        for (auto& run : runs) {
+            if (run.lineIndex() != lineIndex)
+                continue;
+            if (!run.layoutBox().isInlineLevelBox())
+                continue;
+            outputInlineLevelBox(run);
+        }
+
+        addSpacing();
+        stream << "  Runs:";
+        stream.nextLine();
+        for (auto& run : runs) {
+            if (run.lineIndex() != lineIndex)
+                continue;
+            addSpacing();
+            stream << "    ";
+            if (run.text())
+                stream << "text run";
+            else
+                stream << "box run";
+            stream << " at (" << run.logicalLeft() << "," << run.logicalTop() << ") size " << run.logicalWidth() << "x" << run.logicalHeight();
+            if (run.text())
+                stream << " run(" << run.text()->start() << ", " << run.text()->end() << ")";
+            stream.nextLine();
+        }
+
     }
 }
 
-static void outputLayoutBox(TextStream& stream, const Box& layoutBox, const Display::Box* displayBox, unsigned depth)
+static void outputLayoutBox(TextStream& stream, const Box& layoutBox, const BoxGeometry* boxGeometry, unsigned depth)
 {
     unsigned printedCharacters = 0;
     while (++printedCharacters <= depth * 2)
@@ -434,7 +471,7 @@ static void outputLayoutBox(TextStream& stream, const Box& layoutBox, const Disp
     else if (layoutBox.isBodyBox())
         stream << "BODY";
     else if (layoutBox.isTableWrapperBox())
-        stream << "TABLE principal";
+        stream << "TABLE wrapper box";
     else if (layoutBox.isTableBox())
         stream << "TABLE";
     else if (layoutBox.isTableCaption())
@@ -453,17 +490,23 @@ static void outputLayoutBox(TextStream& stream, const Box& layoutBox, const Disp
         stream << "TD";
     else if (layoutBox.isTableRow())
         stream << "TR";
-    else if (layoutBox.isInlineBlockBox())
-        stream << "Inline-block";
+    else if (layoutBox.isFlexBox())
+        stream << "Flex box";
+    else if (layoutBox.isFlexItem())
+        stream << "Flex item";
     else if (layoutBox.isInlineLevelBox()) {
-        if (layoutBox.isInlineBox())
-            stream << "SPAN inline box";
-        else if (layoutBox.isReplacedBox())
-            stream << "IMG replaced inline box";
-        else if (layoutBox.isAnonymous())
+        if (layoutBox.isAnonymous())
             stream << "anonymous inline box";
+        else if (layoutBox.isInlineBlockBox())
+            stream << "inline-block box";
         else if (layoutBox.isLineBreakBox())
-            stream << "BR line break";
+            stream << (downcast<LineBreakBox>(layoutBox).isOptional() ? "word break opportunity" : "line break");
+        else if (layoutBox.isAtomicInlineLevelBox())
+            stream << "atomic inline level box";
+        else if (layoutBox.isReplacedBox())
+            stream << "replaced inline box";
+        else if (layoutBox.isInlineBox())
+            stream << "inline box";
         else
             stream << "other inline level box";
     } else if (layoutBox.isBlockLevelBox())
@@ -471,13 +514,25 @@ static void outputLayoutBox(TextStream& stream, const Box& layoutBox, const Disp
     else
         stream << "unknown box";
 
-    // FIXME: Inline text runs don't create display boxes yet.
-    if (displayBox)
-        stream << " at (" << displayBox->left() << "," << displayBox->top() << ") size " << displayBox->width() << "x" << displayBox->height();
-    stream << " layout box->(" << &layoutBox << ")";
-    if (is<InlineTextBox>(layoutBox))
-        stream << " text content [\"" << downcast<InlineTextBox>(layoutBox).content().utf8().data() << "\"]";
+    if (boxGeometry) {
+        auto borderBox = BoxGeometry::borderBoxRect(*boxGeometry);
+        stream << " at (" << borderBox.left() << "," << borderBox.top() << ") size " << borderBox.width() << "x" << borderBox.height();
+    }
+    stream << " (" << &layoutBox << ")";
+    if (is<InlineTextBox>(layoutBox)) {
+        auto textContent = downcast<InlineTextBox>(layoutBox).content();
+        stream << " length->(" << textContent.length() << ")";
 
+        textContent.replaceWithLiteral('\\', "\\\\");
+        textContent.replaceWithLiteral('\n', "\\n");
+
+        const size_t maxPrintedLength = 80;
+        if (textContent.length() > maxPrintedLength) {
+            auto substring = textContent.substring(0, maxPrintedLength);
+            stream << " \"" << substring.utf8().data() << "\"...";
+        } else
+            stream << " \"" << textContent.utf8().data() << "\"";
+    }
     stream.nextLine();
 }
 
@@ -486,10 +541,12 @@ static void outputLayoutTree(const LayoutState* layoutState, TextStream& stream,
     for (auto& child : childrenOfType<Box>(rootContainer)) {
         if (layoutState) {
             // Not all boxes generate display boxes.
-            if (layoutState->hasDisplayBox(child))
-                outputLayoutBox(stream, child, &layoutState->displayBoxForLayoutBox(child), depth);
+            if (layoutState->hasBoxGeometry(child))
+                outputLayoutBox(stream, child, &layoutState->geometryForBox(child), depth);
+            else
+                outputLayoutBox(stream, child, nullptr, depth);
             if (child.establishesInlineFormattingContext())
-                outputInlineRuns(stream, *layoutState, downcast<ContainerBox>(child), depth + 1);
+                showInlineTreeAndRuns(stream, *layoutState, downcast<ContainerBox>(child), depth + 1);
         } else
             outputLayoutBox(stream, child, nullptr, depth);
 
@@ -498,14 +555,21 @@ static void outputLayoutTree(const LayoutState* layoutState, TextStream& stream,
     }
 }
 
-void showLayoutTree(const Box& layoutBox, const LayoutState* layoutState)
+String layoutTreeAsText(const Box& layoutBox, const LayoutState* layoutState)
 {
     TextStream stream(TextStream::LineMode::MultipleLine, TextStream::Formatting::SVGStyleRect);
 
     auto& initialContainingBlock = layoutBox.initialContainingBlock();
-    outputLayoutBox(stream, initialContainingBlock, layoutState ? &layoutState->displayBoxForLayoutBox(initialContainingBlock) : nullptr, 0);
+    outputLayoutBox(stream, initialContainingBlock, layoutState ? &layoutState->geometryForBox(initialContainingBlock) : nullptr, 0);
     outputLayoutTree(layoutState, stream, initialContainingBlock, 1);
-    WTFLogAlways("%s", stream.release().utf8().data());
+
+    return stream.release();
+}
+
+void showLayoutTree(const Box& layoutBox, const LayoutState* layoutState)
+{
+    auto treeAsText = layoutTreeAsText(layoutBox, layoutState);
+    WTFLogAlways("%s", treeAsText.utf8().data());
 }
 
 void showLayoutTree(const Box& layoutBox)
@@ -523,8 +587,8 @@ void printLayoutTreeForLiveDocuments()
         fprintf(stderr, "%s\n", document->url().string().utf8().data());
         // FIXME: Need to find a way to output geometry without layout context.
         auto& renderView = *document->renderView();
-        auto layoutTreeContent = TreeBuilder::buildLayoutTree(renderView);
-        auto layoutState = LayoutState { *document, layoutTreeContent->rootLayoutBox() };
+        auto layoutTree = TreeBuilder::buildLayoutTree(renderView);
+        auto layoutState = LayoutState { *document, layoutTree->root() };
 
         auto& layoutRoot = layoutState.root();
         auto invalidationState = InvalidationState { };

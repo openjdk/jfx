@@ -46,15 +46,14 @@ class TextTrackCue;
 class TextTrackCueBox : public HTMLElement {
     WTF_MAKE_ISO_ALLOCATED(TextTrackCueBox);
 public:
-    static Ref<TextTrackCueBox> create(Document& document, TextTrackCue& cue)
-    {
-        return adoptRef(*new TextTrackCueBox(document, cue));
-    }
+    static Ref<TextTrackCueBox> create(Document&, TextTrackCue&);
 
     TextTrackCue* getCue() const;
     virtual void applyCSSProperties(const IntSize&) { }
 
 protected:
+    void initialize();
+
     TextTrackCueBox(Document&, TextTrackCue&);
     ~TextTrackCueBox() { }
 
@@ -63,7 +62,7 @@ private:
     WeakPtr<TextTrackCue> m_cue;
 };
 
-class TextTrackCue : public RefCounted<TextTrackCue>, public EventTargetWithInlineData, public CanMakeWeakPtr<TextTrackCue> {
+class TextTrackCue : public RefCounted<TextTrackCue>, public EventTargetWithInlineData, public ActiveDOMObject {
     WTF_MAKE_ISO_ALLOCATED(TextTrackCue);
 public:
     static const AtomString& cueShadowPseudoId();
@@ -93,7 +92,7 @@ public:
     MediaTime endMediaTime() const { return m_endTime; }
     void setEndTime(const MediaTime&);
 
-    bool isActive();
+    bool isActive() const;
     virtual void setIsActive(bool);
 
     virtual bool isOrderedBefore(const TextTrackCue*) const;
@@ -138,14 +137,16 @@ protected:
 private:
     TextTrackCue(Document&, const MediaTime& start, const MediaTime& end, Ref<DocumentFragment>&&);
 
+    // EventTarget
     void refEventTarget() final { ref(); }
     void derefEventTarget() final { deref(); }
-
     using EventTarget::dispatchEvent;
     void dispatchEvent(Event&) final;
-
     EventTargetInterface eventTargetInterface() const final { return TextTrackCueEventTargetInterfaceType; }
     ScriptExecutionContext* scriptExecutionContext() const final;
+
+    // ActiveDOMObject
+    const char* activeDOMObjectName() const final;
 
     void rebuildDisplayTree();
 

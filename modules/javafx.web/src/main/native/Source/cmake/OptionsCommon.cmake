@@ -7,8 +7,13 @@ add_definitions(-DHAVE_CONFIG_H=1)
 
 option(USE_THIN_ARCHIVES "Produce all static libraries as thin archives" ON)
 if (USE_THIN_ARCHIVES)
-    execute_process(COMMAND ${CMAKE_AR} -V OUTPUT_VARIABLE AR_VERSION)
-    if ("${AR_VERSION}" MATCHES "^GNU ar")
+    execute_process(COMMAND ${CMAKE_AR} -V OUTPUT_VARIABLE AR_VERSION ERROR_VARIABLE AR_ERROR)
+    if ("${AR_ERROR}" MATCHES "^usage:")
+        # This `ar` doesn't understand "-V". Ignore the error and treat this as
+        # an unsupported `ar`. TODO: Determine BSD or Xcode equivalent.
+    elseif ("${AR_ERROR}")
+        message(WARNING "Error from `ar`: ${AR_ERROR}")
+    elseif ("${AR_VERSION}" MATCHES "^GNU ar")
         set(CMAKE_CXX_ARCHIVE_CREATE "<CMAKE_AR> crT <TARGET> <LINK_FLAGS> <OBJECTS>")
         set(CMAKE_C_ARCHIVE_CREATE "<CMAKE_AR> crT <TARGET> <LINK_FLAGS> <OBJECTS>")
         set(CMAKE_CXX_ARCHIVE_APPEND "<CMAKE_AR> rT <TARGET> <LINK_FLAGS> <OBJECTS>")
@@ -95,6 +100,8 @@ option(GCC_OFFLINEASM_SOURCE_MAP
   "Produce debug line information for offlineasm-generated code"
   ${GCC_OFFLINEASM_SOURCE_MAP_DEFAULT})
 
+option(USE_APPLE_ICU "Use Apple's internal ICU" ${APPLE})
+
 # Enable the usage of OpenMP.
 #  - At this moment, OpenMP is only used as an alternative implementation
 #    to native threads for the parallelization of the SVG filters.
@@ -137,8 +144,9 @@ WEBKIT_CHECK_HAVE_FUNCTION(HAVE_VASPRINTF vasprintf)
 # Check for symbols
 WEBKIT_CHECK_HAVE_SYMBOL(HAVE_REGEX_H regexec regex.h)
 if (NOT (${CMAKE_SYSTEM_NAME} STREQUAL "Darwin"))
-WEBKIT_CHECK_HAVE_SYMBOL(HAVE_PTHREAD_MAIN_NP pthread_main_np pthread_np.h)
+    WEBKIT_CHECK_HAVE_SYMBOL(HAVE_PTHREAD_MAIN_NP pthread_main_np pthread_np.h)
 endif ()
+WEBKIT_CHECK_HAVE_SYMBOL(HAVE_TIMINGSAFE_BCMP timingsafe_bcmp string.h)
 # Windows has signal.h but is missing symbols that are used in calls to signal.
 WEBKIT_CHECK_HAVE_SYMBOL(HAVE_SIGNAL_H SIGTRAP signal.h)
 
@@ -152,4 +160,17 @@ check_type_size("__int128_t" INT128_VALUE)
 
 if (HAVE_INT128_VALUE)
   SET_AND_EXPOSE_TO_BUILD(HAVE_INT128_T INT128_VALUE)
+endif ()
+
+# Check which filesystem implementation is available if any
+# In the Java Port we intentionally do not use std::filesystem
+if (PORT STREQUAL "Java")
+    SET_AND_EXPOSE_TO_BUILD(HAVE_STD_FILESYSTEM FALSE)
+    SET_AND_EXPOSE_TO_BUILD(HAVE_STD_EXPERIMENTAL_FILESYSTEM FALSE)
+else ()
+if (STD_FILESYSTEM_IS_AVAILABLE)
+    SET_AND_EXPOSE_TO_BUILD(HAVE_STD_FILESYSTEM TRUE)
+elseif (STD_EXPERIMENTAL_FILESYSTEM_IS_AVAILABLE)
+    SET_AND_EXPOSE_TO_BUILD(HAVE_STD_EXPERIMENTAL_FILESYSTEM TRUE)
+endif ()
 endif ()

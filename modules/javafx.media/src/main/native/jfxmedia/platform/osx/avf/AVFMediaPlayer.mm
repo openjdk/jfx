@@ -333,6 +333,9 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
 - (void) setCurrentTime:(double)time
 {
     [self.player seekToTime:CMTimeMakeWithSeconds(time, 1)];
+    if (previousPlayerState == kPlayerState_FINISHED) {
+        [self play];
+    }
 }
 
 - (BOOL) mute {
@@ -402,6 +405,8 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
 }
 
 - (void) finish {
+    [self.player pause];
+    [self setPlayerState:kPlayerState_FINISHED];
 }
 
 - (void) dispose {
@@ -477,6 +482,9 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
             }
             fcc = CMFormatDescriptionGetMediaSubType(desc);
             switch (fcc) {
+                case 'hvc1':
+                    encoding = CTrack::H265;
+                    break;
                 case 'avc1':
                     encoding = CTrack::H264;
                     break;
