@@ -241,7 +241,7 @@ public abstract class Control extends Region implements Skinnable {
             Skin<?> skin = get();
             // check whether the skin is for right control
             if (skin != null) {
-                if(skin.getSkinnable() != Control.this) {
+                if (skin.getSkinnable() != Control.this) {
                     throw new IllegalArgumentException("There must be 1:1 relationship between Skin and Skinnable");
                 }
             }
