@@ -715,7 +715,7 @@ public class TableViewMouseInputTest {
             assertFalse(sm.isSelected(row, firstNameCol));
             assertFalse(sm.isSelected(row, lastNameCol));
             assertTrue(sm.isSelected(row, emailCol));
-            assertTrue(sm.isSelected(row)); // FIX
+            assertTrue(sm.isSelected(row));
 
             // and assert that the visuals are accurate
             // (some TableCells should be selected, but TableRows should not be)
@@ -788,7 +788,7 @@ public class TableViewMouseInputTest {
         if (cellSelection) {
             // Because we are in cell selection mode, this has the effect of
             // selecting just the one cell.
-            assertTrue(sm.isSelected(0)); // FIX
+            assertTrue(sm.isSelected(0));
             assertTrue(sm.isSelected(0, firstNameCol));
             assertFalse(sm.isSelected(0, lastNameCol));
             assertFalse(sm.isSelected(0, emailCol));

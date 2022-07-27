@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -3165,8 +3165,19 @@ public class TreeTableView<S> extends Control {
             stopAtomic();
         }
 
-        @Override public boolean isSelected(int index) {
-            return isSelected(index, null);
+        @Override
+        public boolean isSelected(int index) {
+            if (isCellSelectionEnabled()) {
+                int columnCount = treeTableView.getVisibleLeafColumns().size();
+                for (int col = 0; col < columnCount; col++) {
+                    if (selectedCellsMap.isSelected(index, col)) {
+                        return true;
+                    }
+                }
+                return false;
+            } else {
+                return selectedCellsMap.isSelected(index, -1);
+            }
         }
 
         @Override public boolean isSelected(int row, TableColumnBase<TreeItem<S>,?> column) {
