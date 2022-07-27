@@ -630,6 +630,10 @@ try {
             defineProperty("jdkBuildNumber", jdkVersionInfo[1])
 
             // Define global properties based on the version of Java
+            // For example, we could define a "jdk18OrLater" property as
+            // follows that could then be used implement conditional build
+            // logic based on whether we were running on JDK 18 or later,
+            // should the need arise.
 //            def status = compareJdkVersion(jdkVersion, "18")
 //            ext.jdk18OrLater = (status >= 0)
         }
