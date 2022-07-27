@@ -41,6 +41,8 @@ import javafx.scene.Scene;
 import javafx.scene.input.KeyCombination;
 import com.sun.glass.ui.Accessible;
 import com.sun.glass.ui.View;
+import com.sun.javafx.stage.WindowHelper;
+import com.sun.javafx.tk.TKStage;
 import static javafx.scene.AccessibleAttribute.*;
 
 /*
@@ -877,6 +879,18 @@ final class WinAccessible extends Accessible {
         return variant;
     }
 
+    float[] getPlatformScales() {
+        float[] scales = new float[] { 1.0f, 1.0f };
+        Scene scene = (Scene)getAttribute(SCENE);
+        if (scene == null || scene.getWindow() == null) return scales;
+        TKStage tkStage = WindowHelper.getPeer(scene.getWindow());
+        if (tkStage == null) return scales;
+
+        scales[0] = tkStage.getPlatformScaleX();
+        scales[1] = tkStage.getPlatformScaleY();
+        return scales;
+    }
+
     /***********************************************/
     /*       IRawElementProviderFragment           */
     /***********************************************/
@@ -887,8 +901,16 @@ final class WinAccessible extends Accessible {
 
         Bounds bounds = (Bounds)getAttribute(BOUNDS);
         if (bounds != null) {
-            return new float[] {(float)bounds.getMinX(), (float)bounds.getMinY(),
-                                (float)bounds.getWidth(), (float)bounds.getHeight()};
+            float[] scales = getPlatformScales();
+            float scaleX = scales[0];
+            float scaleY = scales[1];
+
+            float minX = (float) bounds.getMinX() * scaleX;
+            float minY = (float) bounds.getMinY() * scaleY;
+            float width = (float) bounds.getWidth() * scaleX;
+            float height = (float) bounds.getHeight() * scaleY;
+
+            return new float[] { minX, minY, width, height };
         }
         return null;
     }
