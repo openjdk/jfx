@@ -2639,7 +2639,7 @@ project(":controls") {
 project(":swing") {
 
     // We need to skip setting compiler.options.release for this module,
-    // since javafx.swing requires jdk.unsupoprted.desktop, which is
+    // since javafx.swing requires jdk.unsupported.desktop, which is
     // excluded by "--release NN". This will fall back to using
     // "-source NN -target NN" for this module.
     project.ext.skipJavaCompilerOptionRelease = true
