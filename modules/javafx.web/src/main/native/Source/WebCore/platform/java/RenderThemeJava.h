@@ -73,10 +73,10 @@ protected:
     bool paintTextArea(const RenderObject&, const PaintInfo&, const FloatRect&) override;
     bool supportsFocusRing(const RenderStyle&) const override;
 
-    Color platformActiveSelectionBackgroundColor(OptionSet<StyleColor::Options>) const override;
-    Color platformInactiveSelectionBackgroundColor(OptionSet<StyleColor::Options>) const override;
-    Color platformActiveSelectionForegroundColor(OptionSet<StyleColor::Options>) const override;
-    Color platformInactiveSelectionForegroundColor(OptionSet<StyleColor::Options>) const override;
+    Color platformActiveSelectionBackgroundColor(OptionSet<StyleColorOptions>) const override;
+    Color platformInactiveSelectionBackgroundColor(OptionSet<StyleColorOptions>) const override;
+    Color platformActiveSelectionForegroundColor(OptionSet<StyleColorOptions>) const override;
+    Color platformInactiveSelectionForegroundColor(OptionSet<StyleColorOptions>) const override;
 
 #if ENABLE(VIDEO)
     virtual Vector<String, 2> mediaControlsScripts() override;

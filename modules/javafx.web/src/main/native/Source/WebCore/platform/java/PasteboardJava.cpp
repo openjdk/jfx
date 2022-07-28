@@ -157,7 +157,7 @@ void writeImageToDataObject(RefPtr<DataObjectJava> dataObject, const Element& el
     if (!cachedImage || !cachedImage->image() || !cachedImage->isLoaded()) {
         return;
     }
-    SharedBuffer* imageBuffer = cachedImage->image()->data();
+    FragmentedSharedBuffer* imageBuffer = cachedImage->image()->data();
     if (!imageBuffer || !imageBuffer->size()) {
         return;
     }
@@ -514,6 +514,10 @@ void Pasteboard::read(PasteboardWebContentReader&, WebContentReadingPolicy, std:
 }
 
 void Pasteboard::write(const PasteboardImage&)
+{
+}
+
+void Pasteboard::write(const PasteboardBuffer&)
 {
 }
 

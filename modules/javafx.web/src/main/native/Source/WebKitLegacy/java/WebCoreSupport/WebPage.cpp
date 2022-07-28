@@ -64,6 +64,7 @@
 #include <WebCore/CookieJar.h>
 #include <WebCore/DeprecatedGlobalSettings.h>
 #include <WebCore/Document.h>
+#include <WebCore/DocumentInlines.h>
 #include <WebCore/DragController.h>
 #include <WebCore/DragData.h>
 #include <WebCore/Editor.h>
@@ -609,35 +610,35 @@ bool WebPage::mapKeyCodeForScroll(int keyCode,
     switch (keyCode) {
     case VKEY_LEFT:
         *scrollDirection = ScrollLeft;
-        *scrollGranularity = ScrollByLine;
+        *scrollGranularity = ScrollGranularity::Line;
         break;
     case VKEY_RIGHT:
         *scrollDirection = ScrollRight;
-        *scrollGranularity = ScrollByLine;
+        *scrollGranularity = ScrollGranularity::Line;
         break;
     case VKEY_UP:
         *scrollDirection = ScrollUp;
-        *scrollGranularity = ScrollByLine;
+        *scrollGranularity = ScrollGranularity::Line;
         break;
     case VKEY_DOWN:
         *scrollDirection = ScrollDown;
-        *scrollGranularity = ScrollByLine;
+        *scrollGranularity = ScrollGranularity::Line;
         break;
     case VKEY_HOME:
         *scrollDirection = ScrollUp;
-        *scrollGranularity = ScrollByDocument;
+        *scrollGranularity = ScrollGranularity::Document;
         break;
     case VKEY_END:
         *scrollDirection = ScrollDown;
-        *scrollGranularity = ScrollByDocument;
+        *scrollGranularity = ScrollGranularity::Document;
         break;
     case VKEY_PRIOR:  // page up
         *scrollDirection = ScrollUp;
-        *scrollGranularity = ScrollByPage;
+        *scrollGranularity = ScrollGranularity::Page;
         break;
     case VKEY_NEXT:  // page down
         *scrollDirection = ScrollDown;
-        *scrollGranularity = ScrollByPage;
+        *scrollGranularity = ScrollGranularity::Page;
         break;
     default:
         return false;
@@ -708,13 +709,13 @@ static String agentOS()
 
 static String defaultUserAgent()
 {
-    static const auto userAgentString = makeNeverDestroyed([] {
+    static const NeverDestroyed userAgentString = [] {
         String wkVersion = makeString(
                               WEBKIT_MAJOR_VERSION, ".", WEBKIT_MINOR_VERSION,
                               " (KHTML, like Gecko) JavaFX/", JAVAFX_RELEASE_VERSION,
                               " Safari/", WEBKIT_MAJOR_VERSION, ".",  WEBKIT_MINOR_VERSION);
         return makeString("Mozilla/5.0 (", agentOS(), ") AppleWebKit/", wkVersion);
-    }());
+    }();
     return userAgentString;
 }
 
@@ -1326,11 +1327,11 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkOverridePreference
         settings.setUsesBackForwardCache(nativePropertyValue == "true");
     } else if (nativePropertyName == "enableColorFilter") {
         settings.setColorFilterEnabled(nativePropertyValue == "true");
-    } else if (nativePropertyName == "KeygenElementEnabled") {
+    } /*else if (nativePropertyName == "KeygenElementEnabled") {
         // removed from Chrome, Firefox, and the HTML specification in 2017.
         // https://trac.webkit.org/changeset/248960/webkit
         RuntimeEnabledFeatures::sharedFeatures().setKeygenElementEnabled(nativePropertyValue == "true");
-    } else if (nativePropertyName == "CSSCustomPropertiesAndValuesEnabled") {
+    } */else if (nativePropertyName == "CSSCustomPropertiesAndValuesEnabled") {
         settings.setCSSCustomPropertiesAndValuesEnabled(nativePropertyValue == "true");
     } else if (nativePropertyName == "experimental:CSSCustomPropertiesAndValuesEnabled") {
         settings.setCSSCustomPropertiesAndValuesEnabled(nativePropertyValue == "true");

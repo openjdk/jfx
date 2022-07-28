@@ -192,7 +192,7 @@ ResourceResponse ResourceResponseBase::filter(const ResourceResponse& response, 
     ASSERT(response.tainting() == Tainting::Cors);
     filteredResponse.setType(Type::Cors);
 
-    auto accessControlExposeHeaderSet = parseAccessControlAllowList<ASCIICaseInsensitiveHash>(response.httpHeaderField(HTTPHeaderName::AccessControlExposeHeaders)).value_or(HashSet<String, ASCIICaseInsensitiveHash> { });
+    auto accessControlExposeHeaderSet = valueOrDefault(parseAccessControlAllowList<ASCIICaseInsensitiveHash>(response.httpHeaderField(HTTPHeaderName::AccessControlExposeHeaders)));
     if (performCheck == PerformExposeAllHeadersCheck::Yes && accessControlExposeHeaderSet.contains("*"))
         return filteredResponse;
 
@@ -461,7 +461,7 @@ void ResourceResponseBase::sanitizeHTTPHeaderFieldsAccordingToTainting()
     case ResourceResponse::Tainting::Basic:
         break;
     case ResourceResponse::Tainting::Cors: {
-        auto corsSafeHeaderSet = parseAccessControlAllowList<ASCIICaseInsensitiveHash>(httpHeaderField(HTTPHeaderName::AccessControlExposeHeaders)).value_or(HashSet<String, ASCIICaseInsensitiveHash> { });
+        auto corsSafeHeaderSet = valueOrDefault(parseAccessControlAllowList<ASCIICaseInsensitiveHash>(httpHeaderField(HTTPHeaderName::AccessControlExposeHeaders)));
         if (corsSafeHeaderSet.contains("*"_str))
             return;
 
@@ -805,7 +805,7 @@ void ResourceResponseBase::lazyInit(InitLevel initLevel) const
     const_cast<ResourceResponse*>(static_cast<const ResourceResponse*>(this))->platformLazyInit(initLevel);
 }
 
-bool ResourceResponseBase::compare(const ResourceResponse& a, const ResourceResponse& b)
+bool ResourceResponseBase::equalForWebKitLegacyChallengeComparison(const ResourceResponse& a, const ResourceResponse& b)
 {
     if (a.isNull() != b.isNull())
         return false;
@@ -825,16 +825,6 @@ bool ResourceResponseBase::compare(const ResourceResponse& a, const ResourceResp
         return false;
     if (a.httpHeaderFields() != b.httpHeaderFields())
         return false;
-    if (a.m_networkLoadMetrics.get() != b.m_networkLoadMetrics.get()) {
-        if (!a.m_networkLoadMetrics) {
-            if (NetworkLoadMetrics() != *b.m_networkLoadMetrics.get())
-                return false;
-        } else if (!b.m_networkLoadMetrics) {
-            if (NetworkLoadMetrics() != *a.m_networkLoadMetrics.get())
-                return false;
-        } else if (*a.m_networkLoadMetrics.get() != *b.m_networkLoadMetrics.get())
-            return false;
-    }
     return ResourceResponse::platformCompare(a, b);
 }
 

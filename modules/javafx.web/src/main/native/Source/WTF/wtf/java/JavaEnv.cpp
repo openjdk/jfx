@@ -28,6 +28,7 @@
 #include <wtf/java/JavaEnv.h>
 
 JavaVM* jvm = 0;
+volatile bool g_ShuttingDown = false;
 
 namespace WTF {
 JGClass comSunWebkitFileSystem;

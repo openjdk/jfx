@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2015 Andy VanWagoner (andy@vanwagoner.family)
  * Copyright (C) 2015 Sukolsak Sakshuwong (sukolsak@gmail.com)
- * Copyright (C) 2016-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2021 Apple Inc. All rights reserved.
  * Copyright (C) 2020 Sony Interactive Entertainment Inc.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -153,6 +153,7 @@ namespace JSC {
   getCanonicalLocales   intlObjectFuncGetCanonicalLocales            DontEnum|Function 1
   Collator              createCollatorConstructor                    DontEnum|PropertyCallback
   DateTimeFormat        createDateTimeFormatConstructor              DontEnum|PropertyCallback
+  DisplayNames          createDisplayNamesConstructor                DontEnum|PropertyCallback
   Locale                createLocaleConstructor                      DontEnum|PropertyCallback
   NumberFormat          createNumberFormatConstructor                DontEnum|PropertyCallback
   PluralRules           createPluralRulesConstructor                 DontEnum|PropertyCallback
@@ -228,7 +229,7 @@ IntlObject::IntlObject(VM& vm, Structure* structure)
 
 IntlObject* IntlObject::create(VM& vm, JSGlobalObject* globalObject, Structure* structure)
 {
-    IntlObject* object = new (NotNull, allocateCell<IntlObject>(vm.heap)) IntlObject(vm, structure);
+    IntlObject* object = new (NotNull, allocateCell<IntlObject>(vm)) IntlObject(vm, structure);
     object->finishCreation(vm, globalObject);
     return object;
 }
@@ -238,11 +239,6 @@ void IntlObject::finishCreation(VM& vm, JSGlobalObject* globalObject)
     Base::finishCreation(vm);
     ASSERT(inherits(vm, info()));
     JSC_TO_STRING_TAG_WITHOUT_TRANSITION();
-#if HAVE(ICU_U_LOCALE_DISPLAY_NAMES)
-    putDirectWithoutTransition(vm, vm.propertyNames->DisplayNames, createDisplayNamesConstructor(vm, this), static_cast<unsigned>(PropertyAttribute::DontEnum));
-#else
-    UNUSED_PARAM(&createDisplayNamesConstructor);
-#endif
 #if HAVE(ICU_U_LIST_FORMATTER)
     putDirectWithoutTransition(vm, vm.propertyNames->ListFormat, createListFormatConstructor(vm, this), static_cast<unsigned>(PropertyAttribute::DontEnum));
 #else
@@ -661,10 +657,6 @@ unsigned intlDefaultNumberOption(JSGlobalObject* globalObject, JSValue value, Pr
 // http://www.unicode.org/reports/tr35/#Unicode_locale_identifier
 bool isUnicodeLocaleIdentifierType(StringView string)
 {
-    // Matching the Unicode Locale Identifier type nonterminal.
-    // Because the spec abstract operation is not mentioning to BCP-47 conformance for this matching,
-    // '-' and '_' separators are allowed while BCP-47 only accepts '-'.
-    // On the other hand, IsStructurallyValidLanguageTag explicitly mentions to BCP-47.
     return readCharactersForParsing(string, [](auto buffer) -> bool {
         while (true) {
             auto begin = buffer.position();
@@ -675,7 +667,7 @@ bool isUnicodeLocaleIdentifierType(StringView string)
                 return false;
             if (!buffer.hasCharactersRemaining())
                 return true;
-            if (*buffer != '-' && *buffer != '_')
+            if (*buffer != '-')
                 return false;
             ++buffer;
         }
@@ -1661,7 +1653,11 @@ static JSArray* availableCollations(JSGlobalObject* globalObject)
     }
 
     Vector<String, 1> elements;
-    elements.reserveInitialCapacity(count);
+    elements.reserveInitialCapacity(count + 2);
+    // ICU ~69 has a bug that does not report "emoji" and "eor" for collation when using ucol_getKeywordValues.
+    // https://github.com/unicode-org/icu/commit/24778dfc9bf67f431509361a173a33a1ab860b5d
+    elements.append("emoji"_s);
+    elements.append("eor"_s);
     for (int32_t index = 0; index < count; ++index) {
         int32_t length = 0;
         const char* pointer = uenum_next(enumeration.get(), &length, &status);
@@ -1684,6 +1680,8 @@ static JSArray* availableCollations(JSGlobalObject* globalObject)
         [](const String& a, const String& b) {
             return WTF::codePointCompare(a, b) < 0;
         });
+    auto end = std::unique(elements.begin(), elements.end());
+    elements.resize(elements.size() - (elements.end() - end));
 
     RELEASE_AND_RETURN(scope, createArrayFromStringVector(globalObject, WTFMove(elements)));
 }
@@ -1695,7 +1693,7 @@ static JSArray* availableCurrencies(JSGlobalObject* globalObject)
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     UErrorCode status = U_ZERO_ERROR;
-    auto enumeration = std::unique_ptr<UEnumeration, ICUDeleter<uenum_close>>(ucurr_openISOCurrencies(UCURR_COMMON | UCURR_NON_DEPRECATED, &status));
+    auto enumeration = std::unique_ptr<UEnumeration, ICUDeleter<uenum_close>>(ucurr_openISOCurrencies(UCURR_ALL, &status));
     if (U_FAILURE(status)) {
         throwTypeError(globalObject, scope, "failed to enumerate available currencies"_s);
         return { };
@@ -1708,15 +1706,28 @@ static JSArray* availableCurrencies(JSGlobalObject* globalObject)
     }
 
     Vector<String, 1> elements;
-    elements.reserveInitialCapacity(count);
+    // ICU ~69 doesn't list VES and UYW, but it is actually supported via Intl.DisplayNames.
+    // And ICU ~69 lists up EQE / LSM while it cannot return information via Intl.DisplayNames.
+    // So, we need to add the following work-around.
+    //     1. Add VES and UYW
+    //     2. Do not add EQE and LSM
+    // https://unicode-org.atlassian.net/browse/ICU-21685
+    elements.reserveInitialCapacity(count + 2);
+    elements.append("VES"_s);
+    elements.append("UYW"_s);
     for (int32_t index = 0; index < count; ++index) {
         int32_t length = 0;
-        const char* currency = uenum_next(enumeration.get(), &length, &status);
+        const char* pointer = uenum_next(enumeration.get(), &length, &status);
         if (U_FAILURE(status)) {
             throwTypeError(globalObject, scope, "failed to enumerate available currencies"_s);
             return { };
         }
-        elements.constructAndAppend(currency, length);
+        String currency(pointer, length);
+        if (currency == "EQE"_s)
+            continue;
+        if (currency == "LSM"_s)
+            continue;
+        elements.append(WTFMove(currency));
     }
 
     // The AvailableCurrencies abstract operation returns a List, ordered as if an Array of the same
@@ -1725,6 +1736,8 @@ static JSArray* availableCurrencies(JSGlobalObject* globalObject)
         [](const String& a, const String& b) {
             return WTF::codePointCompare(a, b) < 0;
         });
+    auto end = std::unique(elements.begin(), elements.end());
+    elements.resize(elements.size() - (elements.end() - end));
 
     RELEASE_AND_RETURN(scope, createArrayFromStringVector(globalObject, WTFMove(elements)));
 }
@@ -1752,12 +1765,19 @@ static JSArray* availableNumberingSystems(JSGlobalObject* globalObject)
     elements.reserveInitialCapacity(count);
     for (int32_t index = 0; index < count; ++index) {
         int32_t length = 0;
-        const char* numberingSystem = uenum_next(enumeration.get(), &length, &status);
+        const char* name = uenum_next(enumeration.get(), &length, &status);
         if (U_FAILURE(status)) {
             throwTypeError(globalObject, scope, "failed to enumerate available numbering systems"_s);
             return { };
         }
-        elements.constructAndAppend(numberingSystem, length);
+        auto numberingSystem = std::unique_ptr<UNumberingSystem, ICUDeleter<unumsys_close>>(unumsys_openByName(name, &status));
+        if (U_FAILURE(status)) {
+            throwTypeError(globalObject, scope, "failed to enumerate available numbering systems"_s);
+            return { };
+        }
+        if (unumsys_isAlgorithmic(numberingSystem.get()))
+            continue;
+        elements.constructAndAppend(name, length);
     }
 
     // The AvailableNumberingSystems abstract operation returns a List, ordered as if an Array of the same
@@ -1770,63 +1790,92 @@ static JSArray* availableNumberingSystems(JSGlobalObject* globalObject)
     RELEASE_AND_RETURN(scope, createArrayFromStringVector(globalObject, WTFMove(elements)));
 }
 
-// https://tc39.es/proposal-intl-enumeration/#sec-canonicalizetimezonename
-static std::optional<String> canonicalizeTimeZoneNameFromICUTimeZone(const String& timeZoneName)
+static bool isValidTimeZoneNameFromICUTimeZone(StringView timeZoneName)
 {
     // Some time zone names are included in ICU, but they are not included in the IANA Time Zone Database.
     // We need to filter them out.
     if (timeZoneName.startsWith("SystemV/"))
-        return std::nullopt;
+        return false;
     if (timeZoneName.startsWith("Etc/"))
-        return std::nullopt;
+        return isUTCEquivalent(timeZoneName);
     // IANA time zone names include '/'. Some of them are not including, but it is in backward links.
     // And ICU already resolved these backward links.
     if (!timeZoneName.contains('/'))
-        return std::nullopt;
+        return timeZoneName == "UTC"_s || timeZoneName == "GMT"_s;
+    return true;
+}
 
-    return timeZoneName;
+// https://tc39.es/proposal-intl-enumeration/#sec-canonicalizetimezonename
+static std::optional<String> canonicalizeTimeZoneNameFromICUTimeZone(String&& timeZoneName)
+{
+    if (isUTCEquivalent(timeZoneName))
+        return "UTC"_s;
+    return std::make_optional(WTFMove(timeZoneName));
+}
+
+// https://tc39.es/proposal-intl-enumeration/#sec-availabletimezones
+const Vector<String>& intlAvailableTimeZones()
+{
+    static LazyNeverDestroyed<Vector<String>> availableTimeZones;
+    static std::once_flag initializeOnce;
+    std::call_once(initializeOnce, [&] {
+        Vector<String> temporary;
+        UErrorCode status = U_ZERO_ERROR;
+        auto enumeration = std::unique_ptr<UEnumeration, ICUDeleter<uenum_close>>(ucal_openTimeZoneIDEnumeration(UCAL_ZONE_TYPE_CANONICAL, nullptr, nullptr, &status));
+        ASSERT(U_SUCCESS(status));
+
+        int32_t count = uenum_count(enumeration.get(), &status);
+        ASSERT(U_SUCCESS(status));
+        temporary.reserveInitialCapacity(count);
+        for (int32_t index = 0; index < count; ++index) {
+            int32_t length = 0;
+            const char* pointer = uenum_next(enumeration.get(), &length, &status);
+            ASSERT(U_SUCCESS(status));
+            String timeZone(pointer, length);
+            if (isValidTimeZoneNameFromICUTimeZone(timeZone)) {
+                if (auto mapped = canonicalizeTimeZoneNameFromICUTimeZone(WTFMove(timeZone)))
+                    temporary.append(WTFMove(mapped.value()));
+            }
+        }
+
+        // The AvailableTimeZones abstract operation returns a List, ordered as if an Array of the same
+        // values had been sorted using %Array.prototype.sort% using undefined as comparefn
+        std::sort(temporary.begin(), temporary.end(),
+            [](const String& a, const String& b) {
+                return WTF::codePointCompare(a, b) < 0;
+            });
+        auto end = std::unique(temporary.begin(), temporary.end());
+        availableTimeZones.construct();
+        availableTimeZones->reserveInitialCapacity(end - temporary.begin());
+
+        auto createImmortalThreadSafeString = [&](String&& string) {
+            if (string.is8Bit())
+                return StringImpl::createStaticStringImpl(string.characters8(), string.length());
+            return StringImpl::createStaticStringImpl(string.characters16(), string.length());
+        };
+        for (auto iterator = temporary.begin(); iterator != end; ++iterator)
+            availableTimeZones->uncheckedAppend(createImmortalThreadSafeString(WTFMove(*iterator)));
+    });
+    return availableTimeZones;
+}
+
+TimeZoneID utcTimeZoneIDStorage { std::numeric_limits<TimeZoneID>::max() };
+TimeZoneID utcTimeZoneIDSlow()
+{
+    static std::once_flag initializeOnce;
+    std::call_once(initializeOnce, [&] {
+        auto& timeZones = intlAvailableTimeZones();
+        auto index = timeZones.find("UTC"_s);
+        RELEASE_ASSERT(index != WTF::notFound);
+        utcTimeZoneIDStorage = index;
+    });
+    return utcTimeZoneIDStorage;
 }
 
 // https://tc39.es/proposal-intl-enumeration/#sec-availabletimezones
 static JSArray* availableTimeZones(JSGlobalObject* globalObject)
 {
-    VM& vm = globalObject->vm();
-    auto scope = DECLARE_THROW_SCOPE(vm);
-
-    UErrorCode status = U_ZERO_ERROR;
-    auto enumeration = std::unique_ptr<UEnumeration, ICUDeleter<uenum_close>>(ucal_openTimeZoneIDEnumeration(UCAL_ZONE_TYPE_CANONICAL, nullptr, nullptr, &status));
-    if (U_FAILURE(status)) {
-        throwTypeError(globalObject, scope, "failed to enumerate available timezones"_s);
-        return { };
-    }
-
-    int32_t count = uenum_count(enumeration.get(), &status);
-    if (U_FAILURE(status)) {
-        throwTypeError(globalObject, scope, "failed to enumerate available timezones"_s);
-        return { };
-    }
-
-    Vector<String, 1> elements;
-    elements.reserveInitialCapacity(count);
-    for (int32_t index = 0; index < count; ++index) {
-        int32_t length = 0;
-        const char* pointer = uenum_next(enumeration.get(), &length, &status);
-        if (U_FAILURE(status)) {
-            throwTypeError(globalObject, scope, "failed to enumerate available timezones"_s);
-            return { };
-        }
-        String timeZone(pointer, length);
-        if (auto mapped = canonicalizeTimeZoneNameFromICUTimeZone(timeZone))
-            elements.append(WTFMove(mapped.value()));
-    }
-
-    // 4. Sort result in order as if an Array of the same values had been sorted using %Array.prototype.sort% using undefined as comparefn.
-    std::sort(elements.begin(), elements.end(),
-        [](const String& a, const String& b) {
-            return WTF::codePointCompare(a, b) < 0;
-        });
-
-    RELEASE_AND_RETURN(scope, createArrayFromStringVector(globalObject, WTFMove(elements)));
+    return createArrayFromStringVector(globalObject, intlAvailableTimeZones());
 }
 
 // https://tc39.es/proposal-intl-enumeration/#sec-availableunits

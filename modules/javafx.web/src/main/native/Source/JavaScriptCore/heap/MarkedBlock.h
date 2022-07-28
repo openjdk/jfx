@@ -24,13 +24,13 @@
 #include "CellAttributes.h"
 #include "DestructionMode.h"
 #include "HeapCell.h"
-#include "IterationStatus.h"
 #include "WeakSet.h"
 #include <algorithm>
 #include <wtf/Atomics.h>
 #include <wtf/Bitmap.h>
 #include <wtf/CountingLock.h>
 #include <wtf/HashFunctions.h>
+#include <wtf/IterationStatus.h>
 #include <wtf/PageBlock.h>
 #include <wtf/StdLibExtras.h>
 
@@ -161,7 +161,7 @@ public:
         size_t cellSize();
         inline unsigned cellsPerBlock();
 
-        const CellAttributes& attributes() const;
+        CellAttributes attributes() const;
         DestructionMode destruction() const;
         bool needsDestruction() const;
         HeapCell::Kind cellKind() const;
@@ -347,7 +347,7 @@ public:
     void resetAllocated();
 
     size_t cellSize();
-    const CellAttributes& attributes() const;
+    CellAttributes attributes() const;
 
     bool hasAnyMarked() const;
     void noteMarked();
@@ -511,12 +511,12 @@ inline size_t MarkedBlock::cellSize()
     return handle().cellSize();
 }
 
-inline const CellAttributes& MarkedBlock::Handle::attributes() const
+inline CellAttributes MarkedBlock::Handle::attributes() const
 {
     return m_attributes;
 }
 
-inline const CellAttributes& MarkedBlock::attributes() const
+inline CellAttributes MarkedBlock::attributes() const
 {
     return handle().attributes();
 }

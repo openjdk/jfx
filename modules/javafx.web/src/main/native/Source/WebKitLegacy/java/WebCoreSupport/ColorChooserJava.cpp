@@ -44,8 +44,7 @@ ColorChooserJava::ColorChooserJava(JGObject& webPage, ColorChooserClient* client
         "(Lcom/sun/webkit/WebPage;IIIJ)Lcom/sun/webkit/ColorChooser;");
     ASSERT(mid);
 
-    auto [r, g, b, a] = color.toSRGBALossy<uint8_t>();
-
+    auto [r, g, b, a] = color.toColorTypeLossy<SRGBA<uint8_t>>().resolved();
     m_colorChooserRef = JGObject(env->CallStaticObjectMethod(
         PG_GetColorChooserClass(env),
         mid,
@@ -70,7 +69,7 @@ void ColorChooserJava::reattachColorChooser(const Color& color)
         "(III)V");
     ASSERT(mid);
 
-    auto [r, g, b, a] = color.toSRGBALossy<uint8_t>();
+    auto [r, g, b, a] = color.toColorTypeLossy<SRGBA<uint8_t>>().resolved();
 
     env->CallVoidMethod(
         m_colorChooserRef,

@@ -770,6 +770,12 @@ void MediaPlayerPrivate::notifyNewFrame()
     //PLOG_TRACE0("<<MediaPlayerPrivate notifyNewFrame\n");
 }
 
+DestinationColorSpace MediaPlayerPrivate::colorSpace()
+{                                                // Needs to be implemented
+    notImplemented();
+    return DestinationColorSpace::SRGB();
+}
+
 void MediaPlayerPrivate::notifyBufferChanged(std::unique_ptr<PlatformTimeRanges> timeRanges, int bytesLoaded)
 {
     PLOG_TRACE0("MediaPlayerPrivate notifyBufferChanged\n");

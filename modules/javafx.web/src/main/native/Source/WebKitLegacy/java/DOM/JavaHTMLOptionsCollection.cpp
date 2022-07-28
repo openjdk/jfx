@@ -38,7 +38,7 @@
 #include <wtf/GetPtr.h>
 #include <wtf/RefPtr.h>
 #include <wtf/URL.h>
-#include <wtf/Variant.h>
+#include <variant>
 
 #include <WebCore/JavaDOMUtils.h>
 #include <wtf/java/JavaEnv.h>
