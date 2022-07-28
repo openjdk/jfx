@@ -28,7 +28,7 @@
 #include "AXObjectCache.h"
 #include "CSSPrimitiveValueMappings.h"
 #include "ChromeClient.h"
-#include "Document.h"
+#include "DocumentInlines.h"
 #include "Editing.h"
 #include "ElementAncestorIterator.h"
 #include "Event.h"
@@ -40,9 +40,9 @@
 #include "HTMLInputElement.h"
 #include "HTMLNames.h"
 #include "HTMLParserIdioms.h"
+#include "InlineIteratorBox.h"
+#include "InlineIteratorLine.h"
 #include "LayoutDisallowedScope.h"
-#include "LayoutIntegrationLineIterator.h"
-#include "LayoutIntegrationRunIterator.h"
 #include "Logging.h"
 #include "NodeTraversal.h"
 #include "Page.h"
@@ -63,6 +63,23 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLTextFormControlElement);
 using namespace HTMLNames;
 
 static Position positionForIndex(TextControlInnerTextElement*, unsigned);
+
+#if USE(APPLE_INTERNAL_SDK)
+#include <WebKitAdditions/HTMLTextFormControlElementAdditions.mm>
+#else
+
+static String pointerTypeFromHitTestRequest(HitTestRequest)
+{
+    return WebCore::mousePointerEventType();
+}
+
+static bool showPlaceholderForPointer(bool, String)
+{
+    return true;
+}
+
+#endif
+
 
 HTMLTextFormControlElement::HTMLTextFormControlElement(const QualifiedName& tagName, Document& document, HTMLFormElement* form)
     : HTMLFormControlElementWithState(tagName, document, form)
@@ -94,6 +111,18 @@ Node::InsertedIntoAncestorResult HTMLTextFormControlElement::insertedIntoAncesto
         setTextAsOfLastFormControlChangeEvent(initialValue.isNull() ? emptyString() : initialValue);
     }
     return InsertedIntoAncestorResult;
+}
+
+void HTMLTextFormControlElement::setHovered(bool over, Style::InvalidationScope invalidationScope, HitTestRequest request)
+{
+    if (over == hovered())
+        return;
+
+    m_pointerType = pointerTypeFromHitTestRequest(request);
+
+    HTMLElement::setHovered(over, invalidationScope, request);
+
+    updatePlaceholderVisibility();
 }
 
 void HTMLTextFormControlElement::dispatchFocusEvent(RefPtr<Element>&& oldFocusedElement, FocusDirection direction)
@@ -128,27 +157,9 @@ void HTMLTextFormControlElement::forwardEvent(Event& event)
 {
     if (event.type() == eventNames().blurEvent || event.type() == eventNames().focusEvent)
         return;
-    innerTextElement()->defaultEventHandler(event);
-}
 
-String HTMLTextFormControlElement::strippedPlaceholder() const
-{
-    // According to the HTML5 specification, we need to remove CR and LF from
-    // the attribute value.
-    const AtomString& attributeValue = attributeWithoutSynchronization(placeholderAttr);
-    if (!attributeValue.contains(newlineCharacter) && !attributeValue.contains(carriageReturn))
-        return attributeValue;
-
-    StringBuilder stripped;
-    unsigned length = attributeValue.length();
-    stripped.reserveCapacity(length);
-    for (unsigned i = 0; i < length; ++i) {
-        UChar character = attributeValue[i];
-        if (character == newlineCharacter || character == carriageReturn)
-            continue;
-        stripped.append(character);
-    }
-    return stripped.toString();
+    if (auto innerText = innerTextElement())
+        innerText->defaultEventHandler(event);
 }
 
 static bool isNotLineBreak(UChar ch) { return ch != newlineCharacter && ch != carriageReturn; }
@@ -163,7 +174,7 @@ bool HTMLTextFormControlElement::placeholderShouldBeVisible() const
 {
     // This function is used by the style resolver to match the :placeholder-shown pseudo class.
     // Since it is used for styling, it must not use any value depending on the style.
-    return supportsPlaceholder() && isEmptyValue() && !isPlaceholderEmpty() && m_canShowPlaceholder;
+    return supportsPlaceholder() && isEmptyValue() && !isPlaceholderEmpty() && m_canShowPlaceholder && showPlaceholderForPointer(hovered(), m_pointerType);
 }
 
 void HTMLTextFormControlElement::updatePlaceholderVisibility()
@@ -300,7 +311,7 @@ void HTMLTextFormControlElement::setSelectionRange(int start, int end, TextField
     end = std::max(end, 0);
     start = std::min(std::max(start, 0), end);
 
-    auto innerText = innerTextElement();
+    auto innerText = innerTextElementCreatingShadowSubtreeIfNeeded();
     bool hasFocus = document().focusedElement() == this;
     if (!hasFocus && innerText) {
         if (!isConnected()) {
@@ -360,6 +371,7 @@ int HTMLTextFormControlElement::indexForVisiblePosition(const VisiblePosition& p
 
 VisiblePosition HTMLTextFormControlElement::visiblePositionForIndex(int index) const
 {
+    ASSERT(innerTextElement());
     VisiblePosition position = positionForIndex(innerTextElement().get(), index);
     ASSERT(indexForVisiblePosition(position) == index);
     return position;
@@ -578,7 +590,7 @@ static String innerTextValueFrom(TextControlInnerTextElement& innerText)
 void HTMLTextFormControlElement::setInnerTextValue(const String& value)
 {
     LayoutDisallowedScope layoutDisallowedScope(LayoutDisallowedScope::Reason::PerformanceOptimization);
-    auto innerText = innerTextElement();
+    auto innerText = innerTextElementCreatingShadowSubtreeIfNeeded();
     if (!innerText)
         return;
 
@@ -588,6 +600,16 @@ void HTMLTextFormControlElement::setInnerTextValue(const String& value)
     if (textIsChanged || !innerText->hasChildNodes()) {
 #if ENABLE(ACCESSIBILITY) && !PLATFORM(COCOA)
         if (textIsChanged && renderer()) {
+#if USE(ATSPI)
+            if (is<HTMLInputElement>(*this) && downcast<HTMLInputElement>(*this).isPasswordField()) {
+                // Get the rendered text instead to not expose actual value to accessibility.
+                RenderObject* renderer = this->renderer();
+                while (renderer && !is<RenderText>(renderer))
+                    renderer = downcast<RenderElement>(*renderer).firstChild();
+                if (is<RenderText>(renderer))
+                    previousValue = downcast<RenderText>(renderer)->textWithoutConvertingBackslashToYenSymbol();
+            }
+#endif
             if (AXObjectCache* cache = document().existingAXObjectCache())
                 cache->postNotification(this, AXObjectCache::AXValueChanged, PostTarget::ObservableParent);
         }
@@ -603,7 +625,7 @@ void HTMLTextFormControlElement::setInnerTextValue(const String& value)
                 innerText->appendChild(HTMLBRElement::create(document()));
         }
 
-#if ENABLE(ACCESSIBILITY) && PLATFORM(COCOA)
+#if ENABLE(ACCESSIBILITY) && (PLATFORM(COCOA) || USE(ATSPI))
         if (textIsChanged && renderer()) {
             if (AXObjectCache* cache = document().existingAXObjectCache())
                 cache->deferTextReplacementNotificationForTextControl(*this, previousValue);
@@ -701,13 +723,13 @@ String HTMLTextFormControlElement::valueWithHardLineBreaks() const
 
     Node* softLineBreakNode = nullptr;
     unsigned softLineBreakOffset = 0;
-    auto currentLine = LayoutIntegration::firstLineFor(*renderer);
+    auto currentLine = InlineIterator::firstLineFor(*renderer);
     if (!currentLine)
         return value();
 
     auto skipToNextSoftLineBreakPosition = [&] {
         for (; currentLine; currentLine.traverseNext()) {
-            auto lastRun = currentLine.lastRun();
+            auto lastRun = currentLine->lastLeafBox();
             ASSERT(lastRun);
             auto& renderer = lastRun->renderer();
             auto lineEndsWithBR = is<RenderLineBreak>(renderer) && !downcast<RenderLineBreak>(renderer).isWBR();
@@ -772,10 +794,10 @@ String HTMLTextFormControlElement::directionForFormData() const
             if (equalLettersIgnoringASCIICase(value, "ltr"))
                 return TextDirection::LTR;
             if (equalLettersIgnoringASCIICase(value, "auto")) {
-            bool isAuto;
+                bool isAuto;
                 return element.directionalityIfhasDirAutoAttribute(isAuto);
+            }
         }
-    }
         return TextDirection::LTR;
     }();
 

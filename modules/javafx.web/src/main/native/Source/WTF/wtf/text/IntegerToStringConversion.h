@@ -128,7 +128,16 @@ constexpr unsigned lengthOfIntegerAsString(IntegerType integer)
         return lengthOfIntegerAsStringImpl<IntegerType, PositiveNumber>(integer);
 }
 
+template<size_t N>
+struct IntegerToStringConversionTrait<Vector<LChar, N>> {
+    using ReturnType = Vector<LChar, N>;
+    using AdditionalArgumentType = void;
+    static ReturnType flush(LChar* characters, unsigned length, void*) { return { characters, length }; }
+};
+
 } // namespace WTF
 
+using WTF::numberToStringSigned;
+using WTF::numberToStringUnsigned;
 using WTF::lengthOfIntegerAsString;
 using WTF::writeIntegerToBuffer;

@@ -9,7 +9,7 @@
  * Copyright (c) 2011, Code Aurora Forum. All rights reserved.
  * Copyright (C) Research In Motion Limited 2011. All rights reserved.
  * Copyright (C) 2012, 2013 Google Inc. All rights reserved.
- * Copyright (C) 2014 Igalia S.L.
+ * Copyright (C) 2014, 2020, 2022 Igalia S.L.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -33,9 +33,10 @@
 #include "CSSFontSelector.h"
 #include "DOMTokenList.h"
 #include "DOMWindow.h"
-#include "Element.h"
+#include "ElementInlines.h"
 #include "EventNames.h"
 #include "FrameView.h"
+#include "HTMLDialogElement.h"
 #include "HTMLDivElement.h"
 #include "HTMLInputElement.h"
 #include "HTMLMarqueeElement.h"
@@ -45,6 +46,7 @@
 #include "HTMLTextAreaElement.h"
 #include "HTMLVideoElement.h"
 #include "MathMLElement.h"
+#include "ModalContainerObserver.h"
 #include "Page.h"
 #include "Quirks.h"
 #include "RenderBox.h"
@@ -315,8 +317,7 @@ void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearance
 
         // Top layer elements are always position: absolute; unless the position is set to fixed.
         // https://fullscreen.spec.whatwg.org/#new-stacking-layer
-        bool isInTopLayer = style.styleType() == PseudoId::Backdrop || (m_element && m_element->isInTopLayer());
-        if (style.position() != PositionType::Absolute && style.position() != PositionType::Fixed && isInTopLayer)
+        if (style.position() != PositionType::Absolute && style.position() != PositionType::Fixed && isInTopLayerOrBackdrop(style, m_element))
             style.setPosition(PositionType::Absolute);
 
         // Absolute/fixed positioned elements, floating elements and the document element need block-like outside display.
@@ -381,7 +382,8 @@ void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearance
             || style.hasIsolation()
             || style.position() == PositionType::Sticky
             || style.position() == PositionType::Fixed
-            || style.willChangeCreatesStackingContext())
+            || style.willChangeCreatesStackingContext()
+            || isInTopLayerOrBackdrop(style, m_element))
             style.setUsedZIndex(0);
     }
 
@@ -391,6 +393,9 @@ void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearance
             style.setOverflowX(style.overflowX() == Overflow::Visible ? Overflow::Auto : style.overflowX());
             style.setOverflowY(style.overflowY() == Overflow::Visible ? Overflow::Auto : style.overflowY());
         }
+
+        if (is<HTMLInputElement>(*m_element) && downcast<HTMLInputElement>(*m_element).isPasswordField())
+            style.setTextSecurity(style.inputSecurity() == InputSecurity::Auto ? TextSecurity::Disc : TextSecurity::None);
 
         // Disallow -webkit-user-modify on :pseudo and ::pseudo elements.
         if (!m_element->shadowPseudoId().isNull())
@@ -455,7 +460,7 @@ void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearance
     }
 
     // Menulists should have visible overflow
-    if (style.appearance() == MenulistPart) {
+    if (style.effectiveAppearance() == MenulistPart) {
         style.setOverflowX(Overflow::Visible);
         style.setOverflowY(Overflow::Visible);
     }
@@ -495,17 +500,21 @@ void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearance
     if (style.hasPseudoStyle(PseudoId::FirstLetter))
         style.setUnique();
 
-    // FIXME: when dropping the -webkit prefix on transform-style, we should also have opacity < 1 cause flattening.
-    if (style.preserves3D() && (style.overflowX() != Overflow::Visible
-        || style.overflowY() != Overflow::Visible
-        || style.hasClip()
-        || style.clipPath()
-        || style.hasFilter()
+    if (style.preserves3D()) {
+        bool forceToFlat = style.overflowX() != Overflow::Visible
+            || style.hasOpacity()
+            || style.overflowY() != Overflow::Visible
+            || style.hasClip()
+            || style.clipPath()
+            || style.hasFilter()
+            || style.hasIsolation()
+            || style.hasMask()
 #if ENABLE(FILTERS_LEVEL_2)
-        || style.hasBackdropFilter()
+            || style.hasBackdropFilter()
 #endif
-        || style.hasBlendMode()))
-        style.setTransformStyle3D(TransformStyle3D::Flat);
+            || style.hasBlendMode();
+        style.setTransformStyleForcedToFlat(forceToFlat);
+    }
 
     if (is<SVGElement>(m_element))
         adjustSVGElementStyle(style, downcast<SVGElement>(*m_element));
@@ -517,6 +526,24 @@ void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearance
 
     style.setEffectiveTouchActions(computeEffectiveTouchActions(style, m_parentStyle.effectiveTouchActions()));
 
+    // Counterparts in Element::addToTopLayer/removeFromTopLayer & SharingResolver::canShareStyleWithElement need to match!
+    auto hasInertAttribute = [this] (const Element* element) -> bool {
+        return m_document.settings().inertAttributeEnabled() && is<HTMLElement>(element) && element->hasAttribute(HTMLNames::inertAttr);
+    };
+    auto isInertSubtreeRoot = [this, hasInertAttribute] (const Element* element) -> bool {
+        if (m_document.activeModalDialog() && element == m_document.documentElement())
+            return true;
+        if (hasInertAttribute(element))
+            return true;
+        return false;
+    };
+    if (isInertSubtreeRoot(m_element))
+        style.setEffectiveInert(true);
+
+    // Make sure the active dialog is interactable when the whole document is blocked by the modal dialog
+    if (m_element == m_document.activeModalDialog() && !hasInertAttribute(m_element))
+        style.setEffectiveInert(false);
+
     if (m_element)
         style.setEventListenerRegionTypes(computeEventListenerRegionTypes(*m_element, m_parentStyle.eventListenerRegionTypes()));
 
@@ -524,6 +551,15 @@ void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearance
     if (m_element && m_document.settings().textAutosizingUsesIdempotentMode())
         adjustForTextAutosizing(style, *m_element);
 #endif
+
+    if (m_element) {
+        if (auto observer = m_element->document().modalContainerObserverIfExists()) {
+            if (observer->shouldHide(*m_element))
+                style.setDisplay(DisplayType::None);
+            if (observer->shouldMakeVerticallyScrollable(*m_element))
+                style.setOverflowY(Overflow::Auto);
+        }
+    }
 
     adjustForSiteSpecificQuirks(style);
 }
@@ -574,7 +610,7 @@ static bool hasEffectiveDisplayNoneForDisplayContents(const Element& element)
 
 void Adjuster::adjustDisplayContentsStyle(RenderStyle& style) const
 {
-    bool isInTopLayer = style.styleType() == PseudoId::Backdrop || (m_element && m_element->isInTopLayer());
+    bool isInTopLayer = isInTopLayerOrBackdrop(style, m_element);
     if (isInTopLayer || m_document.documentElement() == m_element) {
         style.setEffectiveDisplay(DisplayType::Block);
         return;
@@ -596,7 +632,45 @@ void Adjuster::adjustSVGElementStyle(RenderStyle& style, const SVGElement& svgEl
     if (!isPositioningAllowed)
         style.setPosition(RenderStyle::initialPosition());
 
-    // RenderSVGRoot handles zooming for the whole SVG subtree, so foreignObject content should
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
+    // SVG2: A new stacking context must be established at an SVG element for its descendants if:
+    // - it is the root element
+    // - the "z-index" property applies to the element and its computed value is an integer
+    // - the element is an outermost svg element, or a "foreignObject", "image", "marker", "mask", "pattern", "symbol" or "use" element
+    // - the element is an inner "svg" element and the computed value of its "overflow" property is a value other than visible
+    // - the element is subject to explicit clipping:
+    //   - the "clip" property applies to the element and it has a computed value other than auto
+    //   - the "clip-path" property applies to the element and it has a computed value other than none
+    // - the "mask" property applies to the element and it has a computed value other than none
+    // - the "filter" property applies to the element and it has a computed value other than none
+    // - a property defined in another specification is applied and that property is defined to establish a stacking context in SVG
+    //
+    // Some of the rules above were already enforced in StyleResolver::adjustRenderStyle() - for those cases assertions were added.
+    if (svgElement.document().settings().layerBasedSVGEngineEnabled() && style.hasAutoUsedZIndex()) {
+        // adjustRenderStyle() has already assigned a z-index of 0 if clip / filter is present or the element is the root element.
+        ASSERT(!style.hasClip());
+        ASSERT(!style.clipPath());
+        ASSERT(!style.hasFilter());
+        ASSERT(!svgElement.isOutermostSVGSVGElement());
+
+        auto isInnerSVGElement = [] (const SVGElement& svgElement) -> bool {
+            return svgElement.hasTagName(SVGNames::svgTag) && svgElement.parentNode() && is<SVGElement>(svgElement.parentNode());
+        };
+
+        if (svgElement.hasTagName(SVGNames::foreignObjectTag)
+            || svgElement.hasTagName(SVGNames::imageTag)
+            || svgElement.hasTagName(SVGNames::markerTag)
+            || svgElement.hasTagName(SVGNames::maskTag)
+            || svgElement.hasTagName(SVGNames::patternTag)
+            || svgElement.hasTagName(SVGNames::symbolTag)
+            || svgElement.hasTagName(SVGNames::useTag)
+            || (isInnerSVGElement(svgElement) && (style.overflowX() != Overflow::Visible || style.overflowY() != Overflow::Visible))
+            || style.hasPositionedMask())
+        style.setUsedZIndex(0);
+    }
+#endif
+
+    // (Legacy)RenderSVGRoot handles zooming for the whole SVG subtree, so foreignObject content should
     // not be scaled again.
     if (svgElement.hasTagName(SVGNames::foreignObjectTag))
         style.setEffectiveZoom(RenderStyle::initialZoom());

@@ -41,6 +41,7 @@
 #include "ResourceHandleClient.h"
 #include "ResourceRequest.h"
 #include "ResourceResponse.h"
+#include "SharedBuffer.h"
 #include "URLLoader.h"
 #include "NetworkLoadMetrics.h"
 #include "com_sun_webkit_LoadListenerClient.h"
@@ -297,11 +298,11 @@ void URLLoader::AsynchronousTarget::didReceiveResponse(
     }
 }
 
-void URLLoader::AsynchronousTarget::didReceiveData(const uint8_t* data, int length)
+void URLLoader::AsynchronousTarget::didReceiveData(const SharedBuffer* data, int length)
 {
     ResourceHandleClient* client = m_handle->client();
     if (client) {
-        client->didReceiveData(m_handle, data, length, 0);
+        client->didReceiveData(m_handle, *data, length);
     }
 }
 
@@ -361,9 +362,9 @@ void URLLoader::SynchronousTarget::didReceiveResponse(
     m_response = response;
 }
 
-void URLLoader::SynchronousTarget::didReceiveData(const uint8_t* data, int length)
+void URLLoader::SynchronousTarget::didReceiveData(const SharedBuffer* data, int length)
 {
-    m_data.append(data, length);
+    m_data.append(*data->data());
 }
 
 void URLLoader::SynchronousTarget::didFinishLoading()
@@ -506,7 +507,9 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_network_URLLoaderBase_twkDidReceiveDa
     ASSERT(target);
     const uint8_t* address =
             static_cast<const uint8_t*>(env->GetDirectBufferAddress(byteBuffer));
-    target->didReceiveData(address + position, remaining);
+    Ref<FragmentedSharedBuffer> tmp_buf = FragmentedSharedBuffer::create(address,remaining);
+    target->didReceiveData(tmp_buf->makeContiguous().ptr() + position, remaining);
+    //target->didReceiveData((SharedBuffer*)(address) + position, remaining);
 }
 
 JNIEXPORT void JNICALL Java_com_sun_webkit_network_URLLoaderBase_twkDidFinishLoading

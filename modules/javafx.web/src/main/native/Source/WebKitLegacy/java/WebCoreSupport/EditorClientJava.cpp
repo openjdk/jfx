@@ -567,6 +567,10 @@ void EditorClientJava::overflowScrollPositionChanged() {
     notImplemented();
 }
 
+void EditorClientJava::subFrameScrollPositionChanged() {
+     notImplemented();
+}
+
 void EditorClientJava::updateSpellingUIWithGrammarString(const String&, const GrammarDetail&)
 {
     notImplemented();
@@ -634,6 +638,11 @@ bool EditorClientJava::canPaste(Frame*, bool defaultValue) const
 
 void EditorClientJava::discardedComposition(Frame*)
 {
+}
+
+DOMPasteAccessResponse EditorClientJava::requestDOMPasteAccess(DOMPasteAccessCategory, const String& originIdentifier)
+{
+    return DOMPasteAccessResponse::DeniedForGesture;
 }
 
 void EditorClientJava::canceledComposition()

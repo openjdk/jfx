@@ -25,6 +25,7 @@
 #pragma once
 
 #include "SharedBuffer.h"
+#include "ShouldLocalizeAxisNames.h"
 #include "TextFlags.h"
 #include <wtf/Forward.h>
 #include <wtf/RetainPtr.h>
@@ -71,14 +72,9 @@ interface IDWriteFont;
 interface IDWriteFontFace;
 #endif
 
-#if USE(DIRECT2D)
-#include <dwrite_3.h>
-#endif
-
 namespace WebCore {
 
 class FontDescription;
-class SharedBuffer;
 
 // This class is conceptually immutable. Once created, no instances should ever change (in an observable way).
 class FontPlatformData {
@@ -123,9 +119,6 @@ public:
     FontPlatformData(GDIObject<HFONT>, float size, bool syntheticBold, bool syntheticOblique, bool useGDI, const CreationData* = nullptr);
 #if USE(CORE_TEXT)
     FontPlatformData(GDIObject<HFONT>, CTFontRef, CGFontRef, float size, bool syntheticBold, bool syntheticOblique, bool useGDI);
-#endif
-#if USE(DIRECT2D)
-    FontPlatformData(GDIObject<HFONT>&&, COMPtr<IDWriteFont>&&, float size, bool syntheticBold, bool syntheticOblique, bool useGDI);
 #endif
 #if USE(CAIRO)
     FontPlatformData(GDIObject<HFONT>, cairo_font_face_t*, float size, bool bold, bool italic, const CreationData* = nullptr);
@@ -174,11 +167,6 @@ public:
 
     bool hasVariations() const { return m_hasVariations; }
 
-#if USE(DIRECT2D)
-    IDWriteFont* dwFont() const { return m_dwFont.get(); }
-    IDWriteFontFace* dwFontFace() const { return m_dwFontFace.get(); }
-#endif
-
     bool isFixedPitch() const;
     float size() const { return m_size; }
     bool syntheticBold() const { return m_syntheticBold; }
@@ -190,7 +178,7 @@ public:
     bool isForTextCombine() const { return widthVariant() != FontWidthVariant::RegularWidth; } // Keep in sync with callers of FontDescription::setWidthVariant().
 
     String familyName() const;
-    Vector<FontVariationAxis> variationAxes() const;
+    Vector<FontVariationAxis> variationAxes(ShouldLocalizeAxisNames) const;
 
 #if USE(CAIRO)
     cairo_scaled_font_t* scaledFont() const { return m_scaledFont.get(); }
@@ -281,11 +269,6 @@ private:
     // FIXME: Get rid of one of these. These two fonts are subtly different, and it is not obvious which one to use where.
     RetainPtr<CTFontRef> m_font;
     mutable RetainPtr<CTFontRef> m_ctFont;
-#endif
-
-#if USE(DIRECT2D)
-    COMPtr<IDWriteFont> m_dwFont;
-    COMPtr<IDWriteFontFace> m_dwFontFace;
 #endif
 
 #if USE(CAIRO)

@@ -36,19 +36,30 @@
 
 namespace WebCore {
 
-Ref<StyleRuleImport> StyleRuleImport::create(const String& href, Ref<MediaQuerySet>&& media)
+Ref<StyleRuleImport> StyleRuleImport::create(const String& href, Ref<MediaQuerySet>&& media, std::optional<CascadeLayerName>&& cascadeLayerName)
 {
-    return adoptRef(*new StyleRuleImport(href, WTFMove(media)));
+    return adoptRef(*new StyleRuleImport(href, WTFMove(media), WTFMove(cascadeLayerName)));
 }
 
-StyleRuleImport::StyleRuleImport(const String& href, Ref<MediaQuerySet>&& media)
+StyleRuleImport::StyleRuleImport(const String& href, Ref<MediaQuerySet>&& media, std::optional<CascadeLayerName>&& cascadeLayerName)
     : StyleRuleBase(StyleRuleType::Import)
     , m_styleSheetClient(this)
     , m_strHref(href)
     , m_mediaQueries(WTFMove(media))
+    , m_cascadeLayerName(WTFMove(cascadeLayerName))
 {
     if (!m_mediaQueries)
         m_mediaQueries = MediaQuerySet::create(String(), MediaQueryParserContext());
+}
+
+void StyleRuleImport::cancelLoad()
+{
+    if (!isLoading())
+        return;
+
+    m_loading = false;
+    if (m_parentStyleSheet)
+        m_parentStyleSheet->checkLoaded();
 }
 
 StyleRuleImport::~StyleRuleImport()
@@ -73,12 +84,16 @@ void StyleRuleImport::setCSSStyleSheet(const String& href, const URL& baseURL, c
     m_styleSheet = StyleSheetContents::create(this, href, context);
     if ((m_parentStyleSheet && m_parentStyleSheet->isContentOpaque()) || !cachedStyleSheet->isCORSSameOrigin())
         m_styleSheet->setAsOpaque();
-    m_styleSheet->parseAuthorStyleSheet(cachedStyleSheet, document ? &document->securityOrigin() : nullptr);
+
+    bool parseSucceeded = m_styleSheet->parseAuthorStyleSheet(cachedStyleSheet, document ? &document->securityOrigin() : nullptr);
 
     m_loading = false;
 
     if (m_parentStyleSheet) {
+        if (parseSucceeded)
         m_parentStyleSheet->notifyLoadedSheet(cachedStyleSheet);
+        else
+            m_parentStyleSheet->setLoadErrorOccured();
         m_parentStyleSheet->checkLoaded();
     }
 }

@@ -43,7 +43,7 @@ public:
 
     static bool supportsMediaType(MediaType type) { return type == MediaType::Image; }
 
-    static Ref<ImageDecoder> create(const SharedBuffer&, AlphaOption, GammaAndColorProfileOption)
+    static Ref<ImageDecoder> create(const FragmentedSharedBuffer&, AlphaOption, GammaAndColorProfileOption)
     {
         return adoptRef(*new ImageDecoderJava());
     }
@@ -72,7 +72,7 @@ public:
 
     PlatformImagePtr createFrameImageAtIndex(size_t, SubsamplingLevel = SubsamplingLevel::Default, const DecodingOptions& = DecodingOptions(DecodingMode::Synchronous)) final;
 
-    void setData(SharedBuffer&, bool allDataReceived) final;
+    void setData(const FragmentedSharedBuffer&, bool allDataReceived) final;
     bool isAllDataReceived() const final { return m_isAllDataReceived;}
     void clearFrameBufferCache(size_t) final {  }
 

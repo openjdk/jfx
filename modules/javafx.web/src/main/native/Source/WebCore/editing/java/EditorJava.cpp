@@ -78,4 +78,12 @@ void Editor::writeSelectionToPasteboard(Pasteboard& pasteboard)
     pasteboard.writeSelection(*selectedRange(), canSmartCopyOrDelete(), *m_document.frame(), DefaultSelectedTextType);
 }
 
+void Editor::platformCopyFont()
+{
+}
+
+void Editor::platformPasteFont()
+{
+}
+
 } // namespace WebCore

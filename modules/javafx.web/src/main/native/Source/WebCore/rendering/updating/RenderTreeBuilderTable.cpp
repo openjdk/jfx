@@ -80,9 +80,9 @@ RenderElement& RenderTreeBuilder::Table::findOrCreateParentForChild(RenderTableR
                 // If beforeChild is inside an anonymous row, insert into the row.
                 if (is<RenderTableRow>(*lastChildParent))
                     return createAnonymousTableCell(downcast<RenderTableRow>(*lastChildParent));
-                }
             }
         }
+    }
     return createAnonymousTableCell(parent);
 }
 
@@ -129,7 +129,7 @@ RenderElement& RenderTreeBuilder::Table::findOrCreateParentForChild(RenderTable&
     if (is<RenderTableCol>(child)) {
         if (!child.node() || child.style().display() == DisplayType::TableColumnGroup) {
             // COLGROUPs and anonymous RenderTableCols (generated wrappers for COLs) are direct children of the table renderer.
-        return parent;
+            return parent;
         }
         auto newColGroup = createRenderer<RenderTableCol>(parent.document(), RenderStyle::createAnonymousStyleWithDisplay(parent.style(), DisplayType::TableColumnGroup));
         newColGroup->initializeStyle();
@@ -168,10 +168,10 @@ RenderElement& RenderTreeBuilder::Table::findOrCreateParentForChild(RenderTable&
         }
 
         if (is<RenderTableSection>(*parentCandidate) && parentCandidate->isAnonymous() && !parent.isAfterContent(parentCandidate)) {
-        if (beforeChild == parentCandidate)
-            beforeChild = downcast<RenderTableSection>(*parentCandidate).firstRow();
-        return downcast<RenderElement>(*parentCandidate);
-    }
+            if (beforeChild == parentCandidate)
+                beforeChild = downcast<RenderTableSection>(*parentCandidate).firstRow();
+            return downcast<RenderElement>(*parentCandidate);
+        }
     }
 
     if (beforeChild && !is<RenderTableSection>(*beforeChild)
@@ -205,7 +205,7 @@ void RenderTreeBuilder::Table::attach(RenderTableSection& parent, RenderPtr<Rend
         beforeChild = m_builder.splitAnonymousBoxesAroundChild(parent, *beforeChild);
 
     // FIXME: child should always be a RenderTableRow at this point.
-    if (is<RenderTableRow>(*child.get()))
+    if (is<RenderTableRow>(child))
         parent.willInsertTableRow(downcast<RenderTableRow>(*child.get()), beforeChild);
     ASSERT(!beforeChild || is<RenderTableRow>(*beforeChild));
     m_builder.attachToRenderElement(parent, WTFMove(child), beforeChild);

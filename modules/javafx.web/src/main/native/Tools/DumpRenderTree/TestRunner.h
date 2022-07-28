@@ -76,6 +76,7 @@ public:
     void execCommand(JSStringRef name, JSStringRef value);
     bool findString(JSContextRef, JSStringRef, JSObjectRef optionsArray);
     void forceImmediateCompletion();
+    void stopLoading();
     void goBack();
     JSValueRef originsWithApplicationCache(JSContextRef);
     long long applicationCacheDiskUsageForOrigin(JSStringRef name);
@@ -230,9 +231,6 @@ public:
     bool canOpenWindows() const { return m_canOpenWindows; }
     void setCanOpenWindows(bool canOpenWindows) { m_canOpenWindows = canOpenWindows; }
 
-    bool closeRemainingWindowsWhenComplete() const { return m_closeRemainingWindowsWhenComplete; }
-    void setCloseRemainingWindowsWhenComplete(bool closeRemainingWindowsWhenComplete) { m_closeRemainingWindowsWhenComplete = closeRemainingWindowsWhenComplete; }
-
     bool newWindowsCopyBackForwardList() const { return m_newWindowsCopyBackForwardList; }
     void setNewWindowsCopyBackForwardList(bool newWindowsCopyBackForwardList) { m_newWindowsCopyBackForwardList = newWindowsCopyBackForwardList; }
 
@@ -336,8 +334,6 @@ public:
 
     void setPOSIXLocale(JSStringRef);
 
-    void setWebViewEditable(bool);
-
     void abortModal();
 
     static void setSerializeHTTPLoads(bool);
@@ -428,8 +424,7 @@ private:
     bool m_dumpWillCacheResponse { false };
     bool m_generatePixelResults { true };
     bool m_callCloseOnWebViews { true };
-    bool m_canOpenWindows { false };
-    bool m_closeRemainingWindowsWhenComplete { true };
+    bool m_canOpenWindows { true };
     bool m_newWindowsCopyBackForwardList { false };
     bool m_stopProvisionalFrameLoads { false };
     bool m_testOnscreen { false };
