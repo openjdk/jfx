@@ -198,9 +198,8 @@ public abstract class SelectionModel<T> {
     public abstract void clearSelection();
 
     /**
-     * <p>Convenience method to inform if the given index is currently selected
-     * in this SelectionModel.  It will return true when at least one cell
-     * is selected in the specified row index.
+     * This method tests whether the given index is currently selected
+     * in this SelectionModel.
      *
      * @param index The index to check as to whether it is currently selected
      *      or not.
