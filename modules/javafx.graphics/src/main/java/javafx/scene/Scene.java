@@ -360,6 +360,12 @@ public class Scene implements EventTarget {
         setRoot(root);
         init(width, height);
         setFill(fill);
+
+        // Any mouse or touch press on the scene will clear the focusVisible flag of
+        // the current focus owner, if there is one.
+        EventHandler<InputEvent> handler = event -> setFocusVisible(getFocusOwner(), false);
+        addEventFilter(MouseEvent.MOUSE_PRESSED, handler);
+        addEventFilter(TouchEvent.TOUCH_PRESSED, handler);
     }
 
     static {
@@ -763,7 +769,7 @@ public class Scene implements EventTarget {
 
                 @Override protected void invalidated() {
                     final Window newWindow = get();
-                    getKeyHandler().windowForSceneChanged(oldWindow, newWindow);
+                    windowForSceneChanged(oldWindow, newWindow);
                     if (oldWindow != null) {
                         disposePeer();
                     }
@@ -2075,19 +2081,55 @@ public class Scene implements EventTarget {
      *                                                                         *
      **************************************************************************/
 
-    /*
-     * We cannot initialize keyHandler in init because some of the triggers
-     * access it before the init block.
-     * No clue why def keyHandler = bind lazy {KeyHandler{scene:this};}
-     * does not compile.
-     */
-    private KeyHandler keyHandler = null;
-    private KeyHandler getKeyHandler() {
-        if (keyHandler == null) {
-            keyHandler = new KeyHandler();
+    private void windowForSceneChanged(Window oldWindow, Window window) {
+        if (oldWindow != null) {
+            oldWindow.focusedProperty().removeListener(sceneWindowFocusedListener);
         }
-        return keyHandler;
+
+        if (window != null) {
+            window.focusedProperty().addListener(sceneWindowFocusedListener);
+            setWindowFocused(window.isFocused());
+        } else {
+            setWindowFocused(false);
+        }
     }
+
+    private final InvalidationListener sceneWindowFocusedListener =
+            valueModel -> setWindowFocused(((ReadOnlyBooleanProperty)valueModel).get());
+
+    /**
+     * Stores whether the current focus owner visibly indicates focus.
+     * This value is used to restore visible focus when a window loses and re-gains focus.
+     */
+    private boolean focusVisible;
+
+    private void setFocusVisible(Node node, boolean focusVisible) {
+        this.focusVisible = focusVisible;
+
+        if (node != null) {
+            node.focusVisible.set(focusVisible);
+            node.focusVisible.notifyListeners();
+        }
+    }
+
+    /**
+     * Stores whether the window associated with this scene is currently focused.
+     */
+    private boolean windowFocused;
+
+    private void setWindowFocused(boolean value) {
+        windowFocused = value;
+
+        if (getFocusOwner() != null) {
+            getFocusOwner().setFocusQuietly(windowFocused, focusVisible);
+            getFocusOwner().notifyFocusListeners();
+        }
+
+        if (windowFocused && accessible != null) {
+            accessible.sendNotification(AccessibleAttribute.FOCUS_NODE);
+        }
+    }
+
     /**
      * Set to true if something has happened to the focused node that makes
      * it no longer eligible to have the focus.
@@ -2144,11 +2186,26 @@ public class Scene implements EventTarget {
             }
         }
 
-        getKeyHandler().process(e);
+        final Node sceneFocusOwner = getFocusOwner();
+        final EventTarget eventTarget =
+                (sceneFocusOwner != null && sceneFocusOwner.getScene() == Scene.this) ? sceneFocusOwner : Scene.this;
+
+        // send the key event to the current focus owner or to scene if
+        // the focus owner is not set
+        Event.fireEvent(eventTarget, e);
     }
 
     void requestFocus(Node node, boolean focusVisible) {
-        getKeyHandler().requestFocus(node, focusVisible);
+        if (node == null) {
+            setFocusOwner(null);
+        } else if (node.isCanReceiveFocus()) {
+            this.focusVisible = focusVisible;
+            if (node != getFocusOwner()) {
+                setFocusOwner(node);
+            } else {
+                setFocusVisible(node, focusVisible);
+            }
+        }
     }
 
     private Node oldFocusOwner;
@@ -2168,7 +2225,7 @@ public class Scene implements EventTarget {
             }
             Node value = get();
             if (value != null) {
-                value.setFocusQuietly(keyHandler.windowFocused, keyHandler.focusVisible);
+                value.setFocusQuietly(windowFocused, focusVisible);
                 if (value != oldFocusOwner) {
                     value.getScene().enableInputMethodEvents(
                             value.getInputMethodRequests() != null
@@ -2203,12 +2260,29 @@ public class Scene implements EventTarget {
         }
     };
 
+    public final ReadOnlyObjectProperty<Node> focusOwnerProperty() {
+        return focusOwner.getReadOnlyProperty();
+    }
+
     public final Node getFocusOwner() {
         return focusOwner.get();
     }
 
-    public final ReadOnlyObjectProperty<Node> focusOwnerProperty() {
-        return focusOwner.getReadOnlyProperty();
+    private void setFocusOwner(Node value) {
+        // Cancel IM composition if there is one in progress.
+        // This needs to be done before the focus owner is switched as it
+        // generates event that needs to be delivered to the old focus owner.
+        if (oldFocusOwner != null) {
+            final Scene s = oldFocusOwner.getScene();
+            if (s != null) {
+                final TKScene peer = s.getPeer();
+                if (peer != null) {
+                    peer.finishInputMethodComposition();
+                }
+            }
+        }
+
+        focusOwner.set(value);
     }
 
     // For testing.
@@ -4027,90 +4101,6 @@ public class Scene implements EventTarget {
         }
     }
 
-    /* *****************************************************************************
-     *                                                                             *
-     * Key Event Handling                                                          *
-     *                                                                             *
-     ******************************************************************************/
-
-    class KeyHandler {
-        boolean focusVisible;
-
-        private void setFocusOwner(final Node value) {
-            // Cancel IM composition if there is one in progress.
-            // This needs to be done before the focus owner is switched as it
-            // generates event that needs to be delivered to the old focus owner.
-            if (oldFocusOwner != null) {
-                final Scene s = oldFocusOwner.getScene();
-                if (s != null) {
-                    final TKScene peer = s.getPeer();
-                    if (peer != null) {
-                        peer.finishInputMethodComposition();
-                    }
-                }
-            }
-            focusOwner.set(value);
-        }
-
-        private void setFocusVisible(Node node, boolean focusVisible) {
-            node.focusVisible.set(focusVisible);
-            node.focusVisible.notifyListeners();
-        }
-
-        private boolean windowFocused;
-        protected boolean isWindowFocused() { return windowFocused; }
-        protected void setWindowFocused(boolean value) {
-            windowFocused = value;
-            if (getFocusOwner() != null) {
-                getFocusOwner().setFocusQuietly(windowFocused, focusVisible);
-                getFocusOwner().notifyFocusListeners();
-            }
-            if (windowFocused) {
-                if (accessible != null) {
-                    accessible.sendNotification(AccessibleAttribute.FOCUS_NODE);
-                }
-            }
-        }
-
-        private void windowForSceneChanged(Window oldWindow, Window window) {
-            if (oldWindow != null) {
-                oldWindow.focusedProperty().removeListener(sceneWindowFocusedListener);
-            }
-
-            if (window != null) {
-                window.focusedProperty().addListener(sceneWindowFocusedListener);
-                setWindowFocused(window.isFocused());
-            } else {
-                setWindowFocused(false);
-            }
-        }
-
-        private final InvalidationListener sceneWindowFocusedListener = valueModel -> setWindowFocused(((ReadOnlyBooleanProperty)valueModel).get());
-
-        private void process(KeyEvent e) {
-            final Node sceneFocusOwner = getFocusOwner();
-            final EventTarget eventTarget =
-                    (sceneFocusOwner != null && sceneFocusOwner.getScene() == Scene.this) ? sceneFocusOwner
-                                              : Scene.this;
-
-            // send the key event to the current focus owner or to scene if
-            // the focus owner is not set
-            Event.fireEvent(eventTarget, e);
-        }
-
-        private void requestFocus(Node node, boolean focusVisible) {
-            if (node == null) {
-                setFocusOwner(null);
-            } else if (node.isCanReceiveFocus()) {
-                if (node != getFocusOwner()) {
-                    this.focusVisible = focusVisible;
-                    setFocusOwner(node);
-                } else {
-                    setFocusVisible(node, focusVisible);
-                }
-            }
-        }
-    }
     /* *************************************************************************
      *                                                                         *
      *                         Event Dispatch                                  *
