@@ -1235,6 +1235,7 @@ public class Scene implements EventTarget {
 
                     if (oldRoot != null) {
                         oldRoot.setScenes(null, null);
+                        oldRoot.getStyleClass().remove("root");
                     }
                     oldRoot = _value;
                     _value.getStyleClass().add(0, "root");
