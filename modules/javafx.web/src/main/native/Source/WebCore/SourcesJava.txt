@@ -66,7 +66,7 @@ platform/java/WebKitLogging.cpp
 platform/java/WheelEventJava.cpp
 platform/java/WidgetJava.cpp
 
-platform/graphics/displaylists/DisplayListDrawGlyphsRecorderJava.cpp
+platform/graphics/DrawGlyphsRecorderJava.cpp
 platform/graphics/java/BitmapImageJava.cpp
 platform/graphics/java/BufferImageJava.cpp
 platform/graphics/java/ChromiumBridge.cpp
@@ -90,9 +90,6 @@ platform/graphics/java/RenderingQueue.cpp
 platform/graphics/java/RQRef.cpp
 platform/graphics/texmap/TextureMapperJava.cpp
 platform/graphics/texmap/BitmapTextureJava.cpp
-
-platform/ScrollAnimationKinetic.cpp
-platform/generic/ScrollAnimatorGeneric.cpp
 
 platform/text/LocaleNone.cpp
 platform/text/Hyphenation.cpp
