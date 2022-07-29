@@ -870,8 +870,15 @@ public class Utils {
         }
     }
 
+    /**
+     * @return true if and only if assertions are enabled at runtime.
+     */
     public static boolean assertionEnabled() {
         boolean assertsEnabled = false;
+
+        // The following assertion check will always pass. The side-effect
+        // of the `assertsEnabled = true` assignment is intentional. It will
+        // be executed if-and-only-if assertions are enabled at runtime.
         assert (assertsEnabled = true) == true;
 
         return assertsEnabled;
