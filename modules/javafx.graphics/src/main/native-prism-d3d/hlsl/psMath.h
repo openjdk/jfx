@@ -92,7 +92,7 @@ float computeSpotlightFactor3(float3 l, float3 lightDir, float cosOuter, float d
 }
 
 /*
- * Computes the light's contribution by using the Phong shading model. A contribution consist of a diffuse component and a
+ * Computes the light's contribution by using the Phong shading model. A contribution consists of a diffuse component and a
  * specular component. The computation is done in world space.
  */
 void computeLight(float i, float3 n, float3 refl, float specPower, float3 toLight, float3 lightDir, in out float3 d, in out float3 s) {

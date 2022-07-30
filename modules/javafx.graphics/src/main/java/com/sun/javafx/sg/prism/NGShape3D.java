@@ -198,8 +198,8 @@ public abstract class NGShape3D extends NGNode {
     }
 
     /**
-     * If no lights are in the scene, add a default white point light at the camera's. The light uses the default
-     * attenuation parameters, which means that it is not attenuated.
+     * Creates a white point light at the camera's (eye) position. The light uses the default attenuation parameters,
+     * which means that it is not attenuated (isAttenuated == 0).
      */
     private void createDefaultLight(Graphics g) {
         meshView.setAmbientLight(0.0f, 0.0f, 0.0f);

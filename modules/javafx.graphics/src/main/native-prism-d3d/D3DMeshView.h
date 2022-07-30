@@ -56,9 +56,9 @@ private:
     D3DLight lights[MAX_NUM_LIGHTS];
     float ambientLightColor[3] = {0};
     int numLights = 0;
-    bool lightsDirty = TRUE;
+    bool lightsDirty = true;
     int cullMode = D3DCULL_NONE;
-    bool wireframe = FALSE;
+    bool wireframe = false;
 };
 
 #endif  /* D3DMESHVIEW_H */

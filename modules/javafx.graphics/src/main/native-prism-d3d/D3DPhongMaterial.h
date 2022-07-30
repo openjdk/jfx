@@ -53,7 +53,7 @@ public:
 private:
     D3DContext *context = NULL;
     float diffuseColor[4] = {0};
-    float specularColor[4] = {1 , 1, 1, 32};
+    float specularColor[4] = {1, 1, 1, 32};
     IDirect3DBaseTexture9 *map[4] = {NULL};
     bool specularColorSet = false;
 };
