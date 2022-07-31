@@ -146,7 +146,7 @@ void D3DMeshView::render() {
     float lightsRange[MAX_NUM_LIGHTS * 4];         // 1 maxRange + 3 padding
     float spotLightsFactors[MAX_NUM_LIGHTS * 4];   // 2 angles + 1 falloff + 1 padding
     for (int i = 0, d = 0, p = 0, c = 0, a = 0, r = 0, s = 0; i < MAX_NUM_LIGHTS; i++) {
-        D3DLight light = lights[i];
+        D3DLight& light = lights[i];
 
         lightsPosition[p++] = light.position[0];
         lightsPosition[p++] = light.position[1];
