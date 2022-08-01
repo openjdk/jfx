@@ -4115,7 +4115,7 @@ public class Scene implements EventTarget {
 
         private void requestFocus(Node node, boolean focusVisible) {
             if (node == null) {
-                setFocusOwner(null, focusVisible);
+                setFocusOwner(null, false);
             } else if (node.isCanReceiveFocus()) {
                 if (node != getFocusOwner()) {
                     setFocusOwner(node, focusVisible);
