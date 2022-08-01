@@ -363,9 +363,15 @@ public class Scene implements EventTarget {
 
         // Any mouse or touch press on the scene will clear the focusVisible flag of
         // the current focus owner, if there is one.
-        EventHandler<InputEvent> handler = event -> setFocusVisible(getFocusOwner(), false);
-        addEventFilter(MouseEvent.MOUSE_PRESSED, handler);
-        addEventFilter(TouchEvent.TOUCH_PRESSED, handler);
+        EventHandler<InputEvent> pressedHandler = event -> {
+            Node focusOwner = getFocusOwner();
+            if (focusOwner != null) {
+                getKeyHandler().setFocusVisible(focusOwner, false);
+            }
+        };
+
+        addEventFilter(MouseEvent.MOUSE_PRESSED, pressedHandler);
+        addEventFilter(TouchEvent.TOUCH_PRESSED, pressedHandler);
     }
 
     static {
@@ -769,7 +775,7 @@ public class Scene implements EventTarget {
 
                 @Override protected void invalidated() {
                     final Window newWindow = get();
-                    windowForSceneChanged(oldWindow, newWindow);
+                    getKeyHandler().windowForSceneChanged(oldWindow, newWindow);
                     if (oldWindow != null) {
                         disposePeer();
                     }
@@ -2081,55 +2087,19 @@ public class Scene implements EventTarget {
      *                                                                         *
      **************************************************************************/
 
-    private void windowForSceneChanged(Window oldWindow, Window window) {
-        if (oldWindow != null) {
-            oldWindow.focusedProperty().removeListener(sceneWindowFocusedListener);
-        }
-
-        if (window != null) {
-            window.focusedProperty().addListener(sceneWindowFocusedListener);
-            setWindowFocused(window.isFocused());
-        } else {
-            setWindowFocused(false);
-        }
-    }
-
-    private final InvalidationListener sceneWindowFocusedListener =
-            valueModel -> setWindowFocused(((ReadOnlyBooleanProperty)valueModel).get());
-
-    /**
-     * Stores whether the current focus owner visibly indicates focus.
-     * This value is used to restore visible focus when a window loses and re-gains focus.
+    /*
+     * We cannot initialize keyHandler in init because some of the triggers
+     * access it before the init block.
+     * No clue why def keyHandler = bind lazy {KeyHandler{scene:this};}
+     * does not compile.
      */
-    private boolean focusVisible;
-
-    private void setFocusVisible(Node node, boolean focusVisible) {
-        this.focusVisible = focusVisible;
-
-        if (node != null) {
-            node.focusVisible.set(focusVisible);
-            node.focusVisible.notifyListeners();
+    private KeyHandler keyHandler = null;
+    private KeyHandler getKeyHandler() {
+        if (keyHandler == null) {
+            keyHandler = new KeyHandler();
         }
+        return keyHandler;
     }
-
-    /**
-     * Stores whether the window associated with this scene is currently focused.
-     */
-    private boolean windowFocused;
-
-    private void setWindowFocused(boolean value) {
-        windowFocused = value;
-
-        if (getFocusOwner() != null) {
-            getFocusOwner().setFocusQuietly(windowFocused, focusVisible);
-            getFocusOwner().notifyFocusListeners();
-        }
-
-        if (windowFocused && accessible != null) {
-            accessible.sendNotification(AccessibleAttribute.FOCUS_NODE);
-        }
-    }
-
     /**
      * Set to true if something has happened to the focused node that makes
      * it no longer eligible to have the focus.
@@ -2186,26 +2156,11 @@ public class Scene implements EventTarget {
             }
         }
 
-        final Node sceneFocusOwner = getFocusOwner();
-        final EventTarget eventTarget =
-                (sceneFocusOwner != null && sceneFocusOwner.getScene() == Scene.this) ? sceneFocusOwner : Scene.this;
-
-        // send the key event to the current focus owner or to scene if
-        // the focus owner is not set
-        Event.fireEvent(eventTarget, e);
+        getKeyHandler().process(e);
     }
 
     void requestFocus(Node node, boolean focusVisible) {
-        if (node == null) {
-            setFocusOwner(null);
-        } else if (node.isCanReceiveFocus()) {
-            this.focusVisible = focusVisible;
-            if (node != getFocusOwner()) {
-                setFocusOwner(node);
-            } else {
-                setFocusVisible(node, focusVisible);
-            }
-        }
+        getKeyHandler().requestFocus(node, focusVisible);
     }
 
     private Node oldFocusOwner;
@@ -2225,7 +2180,7 @@ public class Scene implements EventTarget {
             }
             Node value = get();
             if (value != null) {
-                value.setFocusQuietly(windowFocused, focusVisible);
+                value.setFocusQuietly(keyHandler.windowFocused, keyHandler.focusVisible);
                 if (value != oldFocusOwner) {
                     value.getScene().enableInputMethodEvents(
                             value.getInputMethodRequests() != null
@@ -2260,29 +2215,12 @@ public class Scene implements EventTarget {
         }
     };
 
-    public final ReadOnlyObjectProperty<Node> focusOwnerProperty() {
-        return focusOwner.getReadOnlyProperty();
-    }
-
     public final Node getFocusOwner() {
         return focusOwner.get();
     }
 
-    private void setFocusOwner(Node value) {
-        // Cancel IM composition if there is one in progress.
-        // This needs to be done before the focus owner is switched as it
-        // generates event that needs to be delivered to the old focus owner.
-        if (oldFocusOwner != null) {
-            final Scene s = oldFocusOwner.getScene();
-            if (s != null) {
-                final TKScene peer = s.getPeer();
-                if (peer != null) {
-                    peer.finishInputMethodComposition();
-                }
-            }
-        }
-
-        focusOwner.set(value);
+    public final ReadOnlyObjectProperty<Node> focusOwnerProperty() {
+        return focusOwner.getReadOnlyProperty();
     }
 
     // For testing.
@@ -4101,6 +4039,92 @@ public class Scene implements EventTarget {
         }
     }
 
+    /* *****************************************************************************
+     *                                                                             *
+     * Key Event Handling                                                          *
+     *                                                                             *
+     ******************************************************************************/
+
+    class KeyHandler {
+        boolean focusVisible;
+
+        private void setFocusOwner(Node value, boolean focusVisible) {
+            this.focusVisible = focusVisible;
+
+            // Cancel IM composition if there is one in progress.
+            // This needs to be done before the focus owner is switched as it
+            // generates event that needs to be delivered to the old focus owner.
+            if (oldFocusOwner != null) {
+                final Scene s = oldFocusOwner.getScene();
+                if (s != null) {
+                    final TKScene peer = s.getPeer();
+                    if (peer != null) {
+                        peer.finishInputMethodComposition();
+                    }
+                }
+            }
+            focusOwner.set(value);
+        }
+
+        private void setFocusVisible(Node node, boolean focusVisible) {
+            this.focusVisible = focusVisible;
+            node.focusVisible.set(focusVisible);
+            node.focusVisible.notifyListeners();
+        }
+
+        private boolean windowFocused;
+        protected boolean isWindowFocused() { return windowFocused; }
+        protected void setWindowFocused(boolean value) {
+            windowFocused = value;
+            if (getFocusOwner() != null) {
+                getFocusOwner().setFocusQuietly(windowFocused, focusVisible);
+                getFocusOwner().notifyFocusListeners();
+            }
+            if (windowFocused) {
+                if (accessible != null) {
+                    accessible.sendNotification(AccessibleAttribute.FOCUS_NODE);
+                }
+            }
+        }
+
+        private void windowForSceneChanged(Window oldWindow, Window window) {
+            if (oldWindow != null) {
+                oldWindow.focusedProperty().removeListener(sceneWindowFocusedListener);
+            }
+
+            if (window != null) {
+                window.focusedProperty().addListener(sceneWindowFocusedListener);
+                setWindowFocused(window.isFocused());
+            } else {
+                setWindowFocused(false);
+            }
+        }
+
+        private final InvalidationListener sceneWindowFocusedListener = valueModel -> setWindowFocused(((ReadOnlyBooleanProperty)valueModel).get());
+
+        private void process(KeyEvent e) {
+            final Node sceneFocusOwner = getFocusOwner();
+            final EventTarget eventTarget =
+                    (sceneFocusOwner != null && sceneFocusOwner.getScene() == Scene.this) ? sceneFocusOwner
+                                              : Scene.this;
+
+            // send the key event to the current focus owner or to scene if
+            // the focus owner is not set
+            Event.fireEvent(eventTarget, e);
+        }
+
+        private void requestFocus(Node node, boolean focusVisible) {
+            if (node == null) {
+                setFocusOwner(null, focusVisible);
+            } else if (node.isCanReceiveFocus()) {
+                if (node != getFocusOwner()) {
+                    setFocusOwner(node, focusVisible);
+                } else {
+                    setFocusVisible(node, focusVisible);
+                }
+            }
+        }
+    }
     /* *************************************************************************
      *                                                                         *
      *                         Event Dispatch                                  *
