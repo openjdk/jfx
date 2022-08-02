@@ -360,6 +360,18 @@ public class Scene implements EventTarget {
         setRoot(root);
         init(width, height);
         setFill(fill);
+
+        // Any mouse or touch press on the scene will clear the focusVisible flag of
+        // the current focus owner, if there is one.
+        EventHandler<InputEvent> pressedHandler = event -> {
+            Node focusOwner = getFocusOwner();
+            if (focusOwner != null) {
+                getKeyHandler().setFocusVisible(focusOwner, false);
+            }
+        };
+
+        addEventFilter(MouseEvent.MOUSE_PRESSED, pressedHandler);
+        addEventFilter(TouchEvent.TOUCH_PRESSED, pressedHandler);
     }
 
     static {
@@ -4036,7 +4048,9 @@ public class Scene implements EventTarget {
     class KeyHandler {
         boolean focusVisible;
 
-        private void setFocusOwner(final Node value) {
+        private void setFocusOwner(Node value, boolean focusVisible) {
+            this.focusVisible = focusVisible;
+
             // Cancel IM composition if there is one in progress.
             // This needs to be done before the focus owner is switched as it
             // generates event that needs to be delivered to the old focus owner.
@@ -4053,6 +4067,7 @@ public class Scene implements EventTarget {
         }
 
         private void setFocusVisible(Node node, boolean focusVisible) {
+            this.focusVisible = focusVisible;
             node.focusVisible.set(focusVisible);
             node.focusVisible.notifyListeners();
         }
@@ -4100,11 +4115,10 @@ public class Scene implements EventTarget {
 
         private void requestFocus(Node node, boolean focusVisible) {
             if (node == null) {
-                setFocusOwner(null);
+                setFocusOwner(null, false);
             } else if (node.isCanReceiveFocus()) {
                 if (node != getFocusOwner()) {
-                    this.focusVisible = focusVisible;
-                    setFocusOwner(node);
+                    setFocusOwner(node, focusVisible);
                 } else {
                     setFocusVisible(node, focusVisible);
                 }
