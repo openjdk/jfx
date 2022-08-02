@@ -125,7 +125,7 @@ public abstract class NGShape3D extends NGNode {
         int lightIndex = 0;
         NGLightBase[] lights = g.getLights();
         if (noLights(lights)) {
-            createDefaultLight(g);
+            setDefaultLight(g);
             lightIndex++;
         } else {
             float ambientRed = 0.0f;
@@ -201,7 +201,7 @@ public abstract class NGShape3D extends NGNode {
      * Creates a white point light at the camera's (eye) position. The light uses the default attenuation parameters,
      * which means that it is not attenuated (isAttenuated == 0).
      */
-    private void createDefaultLight(Graphics g) {
+    private void setDefaultLight(Graphics g) {
         meshView.setAmbientLight(0.0f, 0.0f, 0.0f);
         Vec3d cameraPos = g.getCameraNoClone().getPositionInWorld(null);
         var direction = NGPointLight.getSimulatedDirection();
