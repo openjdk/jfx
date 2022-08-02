@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1118,16 +1118,15 @@ public class DialogPane extends Pane {
             headerLabel.setMaxHeight(Double.MAX_VALUE);
             headerTextPanel.add(headerLabel, 0, 0);
 
-            // on the right of the header is a graphic, if one is specified
+            // to the right of the header, if any, or to the left of the content area otherwise,
+            // there is a graphic, if one is specified
             graphicContainer.getChildren().clear();
-
-            if (! graphicContainer.getStyleClass().contains("graphic-container")) { //$NON-NLS-1$)
-                graphicContainer.getStyleClass().add("graphic-container"); //$NON-NLS-1$
-            }
+            graphicContainer.getStyleClass().clear();
 
             final Node graphic = getGraphic();
             if (graphic != null) {
                 graphicContainer.getChildren().add(graphic);
+                graphicContainer.getStyleClass().add("graphic-container"); //$NON-NLS-1$
             }
             headerTextPanel.add(graphicContainer, 1, 0);
 
