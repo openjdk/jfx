@@ -521,7 +521,7 @@ public class TableViewSelectionModelImplTest {
         assertTrue(model.isSelected(4, col0));
         assertTrue(model.isSelected(4));
     }
-    
+
     @Test
     public void selectIndividualCells() {
         model.setSelectionMode(SelectionMode.MULTIPLE);
