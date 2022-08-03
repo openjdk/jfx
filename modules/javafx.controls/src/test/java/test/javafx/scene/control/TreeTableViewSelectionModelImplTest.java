@@ -485,6 +485,52 @@ public class TreeTableViewSelectionModelImplTest {
         assertTrue(model.isSelected(4));
     }
 
+    @Test
+    public void selectIndividualCells() {
+        model.setSelectionMode(SelectionMode.MULTIPLE);
+        model.setCellSelectionEnabled(true);
+        model.clearSelection();
+
+        model.select(0, col0);
+        assertTrue(cells(model), model.isSelected(0));
+        assertFalse(cells(model), model.isSelected(1));
+        assertFalse(cells(model), model.isSelected(2));
+
+        model.select(1, col0);
+        model.select(1, col1);
+        assertTrue(cells(model), model.isSelected(0));
+        assertTrue(cells(model), model.isSelected(1));
+        assertFalse(cells(model), model.isSelected(2));
+
+        model.select(2, col0);
+        model.select(2, col1);
+        model.select(2, col2);
+        assertTrue(cells(model), model.isSelected(0));
+        assertTrue(cells(model), model.isSelected(1));
+        assertTrue(cells(model), model.isSelected(2));
+
+        assertFalse(cells(model), model.isSelected(3));
+
+        assertEquals(6, model.getSelectedCells().size());
+
+        model.clearSelection(0, col0);
+        assertFalse(cells(model), model.isSelected(0));
+
+        model.clearSelection(1, col0);
+        assertTrue(cells(model), model.isSelected(1));
+        model.clearSelection(1, col1);
+        assertFalse(cells(model), model.isSelected(1));
+
+        model.clearSelection(2, col0);
+        assertTrue(cells(model), model.isSelected(2));
+        model.clearSelection(2, col1);
+        assertTrue(cells(model), model.isSelected(2));
+        model.clearSelection(2, col2);
+        assertFalse(cells(model), model.isSelected(2));
+
+        assertEquals(0, model.getSelectedCells().size());
+    }
+
     /***************************************************************************
      *
      * FOCUS TESTS
