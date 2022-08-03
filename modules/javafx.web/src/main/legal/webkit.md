@@ -4681,7 +4681,7 @@ Copyright (C) 2011-2015 Ericsson AB. All rights reserved.
 Copyright (C) 2013 Nokia Corporation and/or its subsidiary(-ies).
 Copyright (c) 2021 Apple Inc.
 Copyright (C) 2012 Intel Corporation. All rights reserved.
-Copyright (c) 2012-2019, Oracle and/or its affiliates. All rights reserved.
+Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
 Copyright (C) 2015, Apple Inc. All rights reserved.
 Copyright (C) 2013 Igalia S.L. All rights reserved.
 
