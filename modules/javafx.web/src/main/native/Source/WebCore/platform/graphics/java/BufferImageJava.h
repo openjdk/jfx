@@ -57,9 +57,9 @@ public:
     void drawPattern(GraphicsContext&, const FloatRect& destRect, const FloatRect& srcRect, const AffineTransform& patternTransform,
         const FloatPoint& phase, const FloatSize& spacing, const ImagePaintingOptions& = { }) final;
 
-    RefPtr<NativeImage> nativeImage(const GraphicsContext* = nullptr) override;
+    RefPtr<NativeImage> nativeImage(const DestinationColorSpace& = DestinationColorSpace::SRGB()) override;
 
-    RefPtr<NativeImage> nativeImageForCurrentFrame(const GraphicsContext* = nullptr) override;
+    RefPtr<NativeImage> nativeImageForCurrentFrame() override;
 
 private:
     BufferImage(PlatformImagePtr);
