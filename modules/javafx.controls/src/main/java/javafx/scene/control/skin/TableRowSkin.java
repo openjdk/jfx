@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -147,6 +147,10 @@ public class TableRowSkin<T> extends TableRowSkinBase<T, TableRow<T>, TableCell<
     @Override protected Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
         switch (attribute) {
             case SELECTED_ITEMS: {
+                if (getTableView().getSelectionModel() == null) {
+                    return null;
+                }
+
                 // FIXME this could be optimised to iterate over cellsMap only
                 // (selectedCells could be big, cellsMap is much smaller)
                 List<Node> selection = new ArrayList<>();

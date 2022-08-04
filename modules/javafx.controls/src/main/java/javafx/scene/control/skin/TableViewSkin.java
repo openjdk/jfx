@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -152,9 +152,11 @@ public class TableViewSkin<T> extends TableViewSkinBase<T, T, TableView<T>, Tabl
             case SELECTED_ITEMS: {
                 List<Node> selection = new ArrayList<>();
                 TableViewSelectionModel<T> sm = getSkinnable().getSelectionModel();
-                for (TablePosition<T,?> pos : sm.getSelectedCells()) {
-                    TableRow<T> row = flow.getPrivateCell(pos.getRow());
-                    if (row != null) selection.add(row);
+                if (sm != null) {
+                    for (TablePosition<T,?> pos : sm.getSelectedCells()) {
+                        TableRow<T> row = flow.getPrivateCell(pos.getRow());
+                        if (row != null) selection.add(row);
+                    }
                 }
                 return FXCollections.observableArrayList(selection);
             }

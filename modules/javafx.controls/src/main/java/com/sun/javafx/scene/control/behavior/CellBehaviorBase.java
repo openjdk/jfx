@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -271,15 +271,21 @@ public abstract class CellBehaviorBase<T extends Cell> extends BehaviorBase<T> {
 
     protected void simpleSelect(MouseButton button, int clickCount, boolean shortcutDown) {
         final int index = getIndex();
-        MultipleSelectionModel<?> sm = getSelectionModel();
-        boolean isAlreadySelected = sm.isSelected(index);
+        boolean isAlreadySelected;
 
-        if (isAlreadySelected && shortcutDown) {
-            sm.clearSelection(index);
-            getFocusModel().focus(index);
+        MultipleSelectionModel<?> sm = getSelectionModel();
+        if (sm == null) {
             isAlreadySelected = false;
         } else {
-            sm.clearAndSelect(index);
+            isAlreadySelected = sm.isSelected(index);
+
+            if (isAlreadySelected && shortcutDown) {
+                sm.clearSelection(index);
+                getFocusModel().focus(index);
+                isAlreadySelected = false;
+            } else {
+                sm.clearAndSelect(index);
+            }
         }
 
         handleClicks(button, clickCount, isAlreadySelected);
@@ -300,6 +306,10 @@ public abstract class CellBehaviorBase<T extends Cell> extends BehaviorBase<T> {
     }
 
     void selectRows(int focusedIndex, int index) {
+        if (getSelectionModel() == null) {
+            return;
+        }
+
         final boolean asc = focusedIndex < index;
 
         // and then determine all row and columns which must be selected
