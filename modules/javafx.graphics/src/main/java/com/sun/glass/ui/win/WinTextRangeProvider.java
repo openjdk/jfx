@@ -322,18 +322,20 @@ class WinTextRangeProvider {
         }
         Bounds[] bounds = (Bounds[])getAttribute(BOUNDS_FOR_RANGE, start, endOffset);
         if (bounds != null) {
-            float[] scales = accessible.getPlatformScales();
-            float scaleX = scales[0];
-            float scaleY = scales[1];
-
             double[] result = new double[bounds.length * 4];
             int index = 0;
             for (int i = 0; i < bounds.length; i++) {
                 Bounds b = bounds[i];
-                result[index++] = b.getMinX() * scaleX;
-                result[index++] = b.getMinY() * scaleY;
-                result[index++] = b.getWidth() * scaleX;
-                result[index++] = b.getHeight() * scaleY;
+                float[] platformBounds = accessible.getPlatformBounds(
+                        (float) b.getMinX(),
+                        (float) b.getMinY(),
+                        (float) b.getWidth(),
+                        (float) b.getHeight());
+
+                result[index++] = platformBounds[0];
+                result[index++] = platformBounds[1];
+                result[index++] = platformBounds[2];
+                result[index++] = platformBounds[3];
             }
             return result;
         }
