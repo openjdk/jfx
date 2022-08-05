@@ -1078,7 +1078,12 @@ public class TreeTableView<S> extends Control {
 
                     oldValue = get();
 
-                    if (oldValue != null) {
+                    if (oldValue == null) {
+                        // show no focused rows with a null selection model
+                        if (getFocusModel() != null) {
+                            getFocusModel().setFocusedIndex(-1);
+                        }
+                    } else {
                         oldValue.cellSelectionEnabledProperty().addListener(weakCellSelectionModelInvalidationListener);
                         // fake invalidation to ensure updated pseudo-class states
                         weakCellSelectionModelInvalidationListener.invalidated(oldValue.cellSelectionEnabledProperty());
