@@ -223,6 +223,7 @@ public abstract class TableCellBehaviorBase<S, T, TC extends TableColumnBase<S, 
     }
 
     private int getColumn() {
+        // this method will not be called if selection model is null
         if (getSelectionModel().isCellSelectionEnabled()) {
             TableColumnBase<S,T> tc = getTableColumn();
             return getVisibleLeafIndex(tc);

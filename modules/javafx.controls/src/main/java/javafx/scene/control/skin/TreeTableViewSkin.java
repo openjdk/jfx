@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -218,9 +218,11 @@ public class TreeTableViewSkin<T> extends TableViewSkinBase<T, TreeItem<T>, Tree
             case SELECTED_ITEMS: {
                 List<Node> selection = new ArrayList<>();
                 TreeTableView.TreeTableViewSelectionModel<T> sm = getSkinnable().getSelectionModel();
-                for (TreeTablePosition<T,?> pos : sm.getSelectedCells()) {
-                    TreeTableRow<T> row = flow.getPrivateCell(pos.getRow());
-                    if (row != null) selection.add(row);
+                if (sm != null) {
+                    for (TreeTablePosition<T,?> pos : sm.getSelectedCells()) {
+                        TreeTableRow<T> row = flow.getPrivateCell(pos.getRow());
+                        if (row != null) selection.add(row);
+                    }
                 }
                 return FXCollections.observableArrayList(selection);
             }
