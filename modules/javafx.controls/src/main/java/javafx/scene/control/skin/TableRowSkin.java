@@ -147,27 +147,26 @@ public class TableRowSkin<T> extends TableRowSkinBase<T, TableRow<T>, TableCell<
     @Override protected Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
         switch (attribute) {
             case SELECTED_ITEMS: {
-                if (getTableView().getSelectionModel() == null) {
-                    return null;
-                }
-
-                // FIXME this could be optimised to iterate over cellsMap only
-                // (selectedCells could be big, cellsMap is much smaller)
-                List<Node> selection = new ArrayList<>();
-                int index = getSkinnable().getIndex();
-                for (TablePosition<T,?> pos : getTableView().getSelectionModel().getSelectedCells()) {
-                    if (pos.getRow() == index) {
-                        TableColumn<T,?> column = pos.getTableColumn();
-                        if (column == null) {
-                            /* This is the row-based case */
-                            column = getTableView().getVisibleLeafColumn(0);
+                if (getTableView().getSelectionModel() != null) {
+                    // FIXME this could be optimised to iterate over cellsMap only
+                    // (selectedCells could be big, cellsMap is much smaller)
+                    List<Node> selection = new ArrayList<>();
+                    int index = getSkinnable().getIndex();
+                    for (TablePosition<T,?> pos : getTableView().getSelectionModel().getSelectedCells()) {
+                        if (pos.getRow() == index) {
+                            TableColumn<T,?> column = pos.getTableColumn();
+                            if (column == null) {
+                                /* This is the row-based case */
+                                column = getTableView().getVisibleLeafColumn(0);
+                            }
+                            TableCell<T,?> cell = cellsMap.get(column).get();
+                            if (cell != null) selection.add(cell);
                         }
-                        TableCell<T,?> cell = cellsMap.get(column).get();
-                        if (cell != null) selection.add(cell);
+                        return FXCollections.observableArrayList(selection);
                     }
-                    return FXCollections.observableArrayList(selection);
                 }
             }
+            // fall through
             case CELL_AT_ROW_COLUMN: {
                 int colIndex = (Integer)parameters[1];
                 TableColumn<T,?> column = getTableView().getVisibleLeafColumn(colIndex);
@@ -176,6 +175,7 @@ public class TableRowSkin<T> extends TableRowSkinBase<T, TableRow<T>, TableCell<
                 }
                 return null;
             }
+            // fall through
             case FOCUS_ITEM: {
                 TableViewFocusModel<T> fm = getTableView().getFocusModel();
                 TablePosition<T,?> focusedCell = fm.getFocusedCell();
@@ -189,6 +189,7 @@ public class TableRowSkin<T> extends TableRowSkinBase<T, TableRow<T>, TableCell<
                 }
                 return null;
             }
+            // fall through
             default: return super.queryAccessibleAttribute(attribute, parameters);
         }
     }
