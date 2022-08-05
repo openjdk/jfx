@@ -208,7 +208,7 @@ public abstract class TableCellBehaviorBase<S, T, TC extends TableColumnBase<S, 
             final int row = getNode().getIndex();
             final TableColumnBase<S,T> column = getTableColumn();
             isAlreadySelected = sm.isSelected(row, column);
-    
+
             if (isAlreadySelected && shortcutDown) {
                 sm.clearSelection(row, column);
                 getFocusModel().focus(row, (TC) column);
