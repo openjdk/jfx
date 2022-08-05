@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -455,23 +455,26 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
         final TreeTableView<T> treeTableView = getSkinnable().getTreeTableView();
         switch (attribute) {
             case SELECTED_ITEMS: {
-                // FIXME this could be optimised to iterate over cellsMap only
-                // (selectedCells could be big, cellsMap is much smaller)
-                List<Node> selection = new ArrayList<>();
-                int index = getSkinnable().getIndex();
-                for (TreeTablePosition<T,?> pos : treeTableView.getSelectionModel().getSelectedCells()) {
-                    if (pos.getRow() == index) {
-                        TreeTableColumn<T,?> column = pos.getTableColumn();
-                        if (column == null) {
-                            /* This is the row-based case */
-                            column = treeTableView.getVisibleLeafColumn(0);
+                if (treeTableView.getSelectionModel() != null) {
+                    // FIXME this could be optimised to iterate over cellsMap only
+                    // (selectedCells could be big, cellsMap is much smaller)
+                    List<Node> selection = new ArrayList<>();
+                    int index = getSkinnable().getIndex();
+                    for (TreeTablePosition<T,?> pos : treeTableView.getSelectionModel().getSelectedCells()) {
+                        if (pos.getRow() == index) {
+                            TreeTableColumn<T,?> column = pos.getTableColumn();
+                            if (column == null) {
+                                /* This is the row-based case */
+                                column = treeTableView.getVisibleLeafColumn(0);
+                            }
+                            TreeTableCell<T,?> cell = cellsMap.get(column).get();
+                            if (cell != null) selection.add(cell);
                         }
-                        TreeTableCell<T,?> cell = cellsMap.get(column).get();
-                        if (cell != null) selection.add(cell);
+                        return FXCollections.observableArrayList(selection);
                     }
-                    return FXCollections.observableArrayList(selection);
                 }
             }
+            // fall through
             case CELL_AT_ROW_COLUMN: {
                 int colIndex = (Integer)parameters[1];
                 TreeTableColumn<T,?> column = treeTableView.getVisibleLeafColumn(colIndex);
@@ -480,6 +483,7 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
                 }
                 return null;
             }
+            // fall through
             case FOCUS_ITEM: {
                 TreeTableView.TreeTableViewFocusModel<T> fm = treeTableView.getFocusModel();
                 TreeTablePosition<T,?> focusedCell = fm.getFocusedCell();
@@ -493,6 +497,7 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
                 }
                 return null;
             }
+            // fall through
             default: return super.queryAccessibleAttribute(attribute, parameters);
         }
     }
