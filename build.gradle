@@ -4167,7 +4167,7 @@ task javadoc(type: Javadoc, dependsOn: createMSPfile) {
 }
 
 task initDirs() {
-    // JDK-8290473	
+    // JDK-8290473
     file("modules/javafx.graphics/build/hlsl/Decora").mkdirs()
     file("modules/javafx.graphics/build/hlsl/Prism").mkdirs()
 }
