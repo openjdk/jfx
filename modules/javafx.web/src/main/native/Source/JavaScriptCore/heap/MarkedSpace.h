@@ -22,13 +22,13 @@
 #pragma once
 
 #include "BlockDirectory.h"
-#include "IterationStatus.h"
 #include "MarkedBlock.h"
 #include "MarkedBlockSet.h"
 #include "PreciseAllocation.h"
 #include <array>
 #include <wtf/Bag.h>
 #include <wtf/HashSet.h>
+#include <wtf/IterationStatus.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/RetainPtr.h>
 #include <wtf/SentinelLinkedList.h>
@@ -148,7 +148,7 @@ public:
     size_t size();
     size_t capacity();
 
-    bool isPagedOut(MonotonicTime deadline);
+    bool isPagedOut();
 
     HeapVersion markingVersion() const { return m_markingVersion; }
     HeapVersion newlyAllocatedVersion() const { return m_newlyAllocatedVersion; }

@@ -29,6 +29,7 @@
 
 #include "RealtimeMediaSource.h"
 #include "SpeechRecognitionConnectionClientIdentifier.h"
+#include <wtf/Lock.h>
 
 #if PLATFORM(COCOA)
 #include "AudioSampleDataSource.h"
@@ -50,7 +51,7 @@ class SpeechRecognitionCaptureSourceImpl
     , public RealtimeMediaSource::AudioSampleObserver {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    using DataCallback = Function<void(const WTF::MediaTime&, const PlatformAudioData&, const AudioStreamDescription&, size_t)>;
+    using DataCallback = Function<void(const MediaTime&, const PlatformAudioData&, const AudioStreamDescription&, size_t)>;
     using StateUpdateCallback = Function<void(const SpeechRecognitionUpdate&)>;
     SpeechRecognitionCaptureSourceImpl(SpeechRecognitionConnectionClientIdentifier, DataCallback&&, StateUpdateCallback&&, Ref<RealtimeMediaSource>&&);
     ~SpeechRecognitionCaptureSourceImpl();
@@ -59,6 +60,11 @@ public:
 private:
     // RealtimeMediaSource::AudioSampleObserver
     void audioSamplesAvailable(const MediaTime&, const PlatformAudioData&, const AudioStreamDescription&, size_t) final;
+
+#if PLATFORM(COCOA)
+    bool updateDataSource(const CAAudioStreamDescription&);
+    void pullSamplesAndCallDataCallback(const MediaTime&, const CAAudioStreamDescription&, size_t sampleCount);
+#endif
 
     // RealtimeMediaSource::Observer
     void sourceStarted() final;
@@ -71,7 +77,7 @@ private:
     Ref<RealtimeMediaSource> m_source;
 
 #if PLATFORM(COCOA)
-    RefPtr<AudioSampleDataSource> m_dataSource;
+    RefPtr<AudioSampleDataSource> m_dataSource WTF_GUARDED_BY_LOCK(m_dataSourceLock);
     Lock m_dataSourceLock;
 #endif
 };

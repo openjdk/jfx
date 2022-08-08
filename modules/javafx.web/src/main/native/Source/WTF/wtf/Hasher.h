@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2021 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -20,34 +20,18 @@
 
 #pragma once
 
-#include <wtf/Forward.h>
-#include <wtf/Optional.h>
+#include <optional>
+#include <variant>
 #include <wtf/StdLibExtras.h>
+#include <wtf/URL.h>
+#include <wtf/text/AtomString.h>
 #include <wtf/text/StringHasher.h>
 
 namespace WTF {
 
-// Deprecated. Use Hasher instead.
-class IntegerHasher {
-    WTF_MAKE_FAST_ALLOCATED;
-public:
-    void add(uint32_t integer)
-    {
-        m_underlyingHasher.addCharactersAssumingAligned(integer, integer >> 16);
-    }
-
-    unsigned hash() const
-    {
-        return m_underlyingHasher.hash();
-    }
-
-private:
-    StringHasher m_underlyingHasher;
-};
-
 template<typename... Types> uint32_t computeHash(const Types&...);
 template<typename T, typename... OtherTypes> uint32_t computeHash(std::initializer_list<T>, std::initializer_list<OtherTypes>...);
-template<typename UnsignedInteger> std::enable_if_t<std::is_unsigned<UnsignedInteger>::value && sizeof(UnsignedInteger) <= sizeof(uint32_t), void> add(Hasher&, UnsignedInteger);
+template<typename UnsignedInteger> std::enable_if_t<std::is_unsigned_v<UnsignedInteger> && sizeof(UnsignedInteger) <= sizeof(uint32_t) && !std::is_enum_v<UnsignedInteger>, void> add(Hasher&, UnsignedInteger);
 
 class Hasher {
     WTF_MAKE_FAST_ALLOCATED;
@@ -67,7 +51,7 @@ public:
         return hasher.m_underlyingHasher.hash();
     }
 
-    template<typename UnsignedInteger> friend std::enable_if_t<std::is_unsigned<UnsignedInteger>::value && sizeof(UnsignedInteger) <= sizeof(uint32_t), void> add(Hasher& hasher, UnsignedInteger integer)
+    template<typename UnsignedInteger> friend std::enable_if_t<std::is_unsigned_v<UnsignedInteger> && sizeof(UnsignedInteger) <= sizeof(uint32_t) && !std::is_enum_v<UnsignedInteger>, void> add(Hasher& hasher, UnsignedInteger integer)
     {
         // We can consider adding a more efficient code path for hashing booleans or individual bytes if needed.
         // We can consider adding a more efficient code path for hashing 16-bit values if needed, perhaps using addCharacter,
@@ -112,7 +96,34 @@ inline void add(Hasher& hasher, float number)
     add(hasher, bitwise_cast<uint32_t>(number));
 }
 
-template<typename Enumeration> std::enable_if_t<std::is_enum<Enumeration>::value, void> add(Hasher& hasher, Enumeration value)
+template<typename T> inline void add(Hasher& hasher, T* ptr)
+{
+    add(hasher, bitwise_cast<uintptr_t>(ptr));
+}
+
+inline void add(Hasher& hasher, const String& string)
+{
+    // Chose to hash the characters here. Assuming this is better than hashing the possibly-already-computed hash of the characters.
+    bool remainder = string.length() & 1;
+    unsigned roundedLength = string.length() - remainder;
+    for (unsigned i = 0; i < roundedLength; i += 2)
+        add(hasher, (string[i] << 16) | string[i + 1]);
+    if (remainder)
+        add(hasher, string[roundedLength]);
+}
+
+inline void add(Hasher& hasher, const AtomString& string)
+{
+    // Chose to hash the pointer here. Assuming this is better than hashing the characters or hashing the already-computed hash of the characters.
+    add(hasher, bitwise_cast<uintptr_t>(string.impl()));
+}
+
+inline void add(Hasher& hasher, const URL& url)
+{
+    add(hasher, url.string());
+}
+
+template<typename Enumeration> std::enable_if_t<std::is_enum_v<Enumeration>, void> add(Hasher& hasher, Enumeration value)
 {
     add(hasher, static_cast<std::underlying_type_t<Enumeration>>(value));
 }
@@ -154,17 +165,17 @@ template<typename TupleLike> std::enable_if_t<IsTypeComplete<std::tuple_size<Tup
     addTupleLikeHelper(hasher, tuple, std::make_index_sequence<std::tuple_size<TupleLike>::value> { });
 }
 
-template<typename T> void add(Hasher& hasher, const Optional<T>& optional)
+template<typename T> void add(Hasher& hasher, const std::optional<T>& optional)
 {
-    add(hasher, optional.hasValue());
-    if (optional.hasValue())
+    add(hasher, optional.has_value());
+    if (optional.has_value())
         add(hasher, optional.value());
 }
 
-template<typename... Types> void add(Hasher& hasher, const Variant<Types...>& variant)
+template<typename... Types> void add(Hasher& hasher, const std::variant<Types...>& variant)
 {
     add(hasher, variant.index());
-    visit([&hasher] (auto& value) {
+    std::visit([&hasher] (auto& value) {
         add(hasher, value);
     }, variant);
 }
@@ -186,4 +197,3 @@ template<typename T> void add(Hasher& hasher, std::initializer_list<T> values)
 
 using WTF::computeHash;
 using WTF::Hasher;
-using WTF::IntegerHasher;

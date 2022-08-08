@@ -34,8 +34,9 @@
 namespace WebCore {
 
 class CachedFont;
-class Document;
+class FontLoadRequest;
 class SVGFontFaceElement;
+class ScriptExecutionContext;
 
 class CSSFontFaceSrcValue final : public CSSValue {
 public:
@@ -64,9 +65,9 @@ public:
 
     String customCSSText() const;
 
-    bool traverseSubresources(const WTF::Function<bool (const CachedResource&)>& handler) const;
+    bool traverseSubresources(const Function<bool(const CachedResource&)>& handler) const;
 
-    CachedFont* cachedFont(Document*, bool isSVG, bool isInitiatingElementInUserAgentShadowTree);
+    std::unique_ptr<FontLoadRequest> fontLoadRequest(ScriptExecutionContext*, bool isSVG, bool isInitiatingElementInUserAgentShadowTree);
 
     bool equals(const CSSFontFaceSrcValue&) const;
 

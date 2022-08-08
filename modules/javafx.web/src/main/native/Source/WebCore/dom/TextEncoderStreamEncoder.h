@@ -24,7 +24,7 @@
 
 #pragma once
 
-#include <JavaScriptCore/Uint8Array.h>
+#include <JavaScriptCore/Forward.h>
 #include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
@@ -42,7 +42,7 @@ public:
 private:
     TextEncoderStreamEncoder() = default;
 
-    Optional<UChar> m_pendingHighSurrogate;
+    std::optional<UChar> m_pendingHighSurrogate;
 };
 
 }

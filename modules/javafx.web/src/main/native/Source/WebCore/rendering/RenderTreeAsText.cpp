@@ -29,15 +29,18 @@
 #include "ClipRect.h"
 #include "ColorSerialization.h"
 #include "Document.h"
+#include "ElementInlines.h"
 #include "Frame.h"
 #include "FrameSelection.h"
 #include "FrameView.h"
 #include "HTMLElement.h"
 #include "HTMLNames.h"
 #include "HTMLSpanElement.h"
-#include "InlineIterator.h"
-#include "InlineTextBox.h"
-#include "LayoutIntegrationRunIterator.h"
+#include "InlineIteratorTextBox.h"
+#include "LegacyInlineTextBox.h"
+#include "LegacyRenderSVGContainer.h"
+#include "LegacyRenderSVGRoot.h"
+#include "LegacyRenderSVGShape.h"
 #include "Logging.h"
 #include "PrintContext.h"
 #include "PseudoElement.h"
@@ -63,6 +66,7 @@
 #include "RenderSVGPath.h"
 #include "RenderSVGResourceContainer.h"
 #include "RenderSVGRoot.h"
+#include "RenderSVGShape.h"
 #include "RenderSVGText.h"
 #include "RenderTableCell.h"
 #include "RenderView.h"
@@ -155,19 +159,16 @@ String quoteAndEscapeNonPrintables(StringView s)
     for (unsigned i = 0; i != s.length(); ++i) {
         UChar c = s[i];
         if (c == '\\') {
-            result.appendLiteral("\\\\");
+            result.append("\\\\");
         } else if (c == '"') {
-            result.appendLiteral("\\\"");
+            result.append("\\\"");
         } else if (c == '\n' || c == noBreakSpace)
             result.append(' ');
         else {
             if (c >= 0x20 && c < 0x7F)
                 result.append(c);
-            else {
-                result.appendLiteral("\\x{");
-                result.append(hex(c));
-                result.append('}');
-            }
+            else
+                result.append("\\x{", hex(c), '}');
         }
     }
     result.append('"');
@@ -205,7 +206,7 @@ static inline bool hasNonEmptySibling(const RenderInline& inlineRenderer)
         if (!is<RenderInline>(sibling))
             return true;
         auto& siblingRendererInline = downcast<RenderInline>(sibling);
-        if (siblingRendererInline.shouldCreateLineBoxes() || !isRenderInlineEmpty(siblingRendererInline))
+        if (siblingRendererInline.mayAffectLayout() || !isRenderInlineEmpty(siblingRendererInline))
             return true;
     }
     return false;
@@ -216,7 +217,7 @@ void RenderTreeAsText::writeRenderObject(TextStream& ts, const RenderObject& o, 
     ts << o.renderName();
 
     if (behavior.contains(RenderAsTextFlag::ShowAddresses))
-        ts << " " << static_cast<const void*>(&o);
+        ts << " " << &o;
 
     if (o.style().usedZIndex()) // FIXME: This should use !hasAutoUsedZIndex().
         ts << " zI: " << o.style().usedZIndex();
@@ -244,13 +245,13 @@ void RenderTreeAsText::writeRenderObject(TextStream& ts, const RenderObject& o, 
         // many test results.
         const RenderText& text = downcast<RenderText>(o);
         r = IntRect(text.firstRunLocation(), text.linesBoundingBox().size());
-        if (!LayoutIntegration::firstTextRunFor(text))
+        if (!InlineIterator::firstTextBoxFor(text))
             adjustForTableCells = false;
     } else if (o.isBR()) {
         const RenderLineBreak& br = downcast<RenderLineBreak>(o);
         IntRect linesBox = br.linesBoundingBox();
         r = IntRect(linesBox.x(), linesBox.y(), linesBox.width(), linesBox.height());
-        if (!br.inlineBoxWrapper() && !LayoutIntegration::runFor(br))
+        if (!br.inlineBoxWrapper() && !InlineIterator::boxFor(br))
             adjustForTableCells = false;
     } else if (is<RenderInline>(o)) {
         const RenderInline& inlineFlow = downcast<RenderInline>(o);
@@ -443,7 +444,7 @@ void RenderTreeAsText::writeRenderObject(TextStream& ts, const RenderObject& o, 
     }
 
     if (is<RenderListMarker>(o)) {
-        String text = downcast<RenderListMarker>(o).text();
+        String text = downcast<RenderListMarker>(o).textWithoutSuffix().toString();
         if (!text.isEmpty()) {
             if (text.length() != 1)
                 text = quoteAndEscapeNonPrintables(text);
@@ -472,9 +473,9 @@ void RenderTreeAsText::writeRenderObject(TextStream& ts, const RenderObject& o, 
 void writeDebugInfo(TextStream& ts, const RenderObject& object, OptionSet<RenderAsTextFlag> behavior)
 {
     if (behavior.contains(RenderAsTextFlag::ShowIDAndClass)) {
-        if (Element* element = is<Element>(object.node()) ? downcast<Element>(object.node()) : nullptr) {
+        if (auto* element = dynamicDowncast<Element>(object.node())) {
             if (element->hasID())
-                ts << " id=\"" + element->getIdAttribute() + "\"";
+                ts << " id=\"" << element->getIdAttribute() << "\"";
 
             if (element->hasClass()) {
                 ts << " class=\"";
@@ -551,11 +552,8 @@ void write(TextStream& ts, const RenderObject& o, OptionSet<RenderAsTextFlag> be
             y -= floorToInt(downcast<RenderTableCell>(*o.containingBlock()).intrinsicPaddingBefore());
 
         ts << "text run at (" << x << "," << y << ") width " << logicalWidth;
-        if (!textRun.isLeftToRightDirection() || textRun.dirOverride()) {
-            ts << (!textRun.isLeftToRightDirection() ? " RTL" : " LTR");
-            if (textRun.dirOverride())
-                ts << " override";
-        }
+        if (!textRun.isLeftToRightDirection())
+            ts << " RTL";
         ts << ": "
             << quoteAndEscapeNonPrintables(textRun.text());
         if (textRun.hasHyphen())
@@ -563,8 +561,14 @@ void write(TextStream& ts, const RenderObject& o, OptionSet<RenderAsTextFlag> be
         ts << "\n";
     };
 
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
     if (is<RenderSVGShape>(o)) {
         write(ts, downcast<RenderSVGShape>(o), behavior);
+        return;
+    }
+#endif
+    if (is<LegacyRenderSVGShape>(o)) {
+        write(ts, downcast<LegacyRenderSVGShape>(o), behavior);
         return;
     }
     if (is<RenderSVGGradientStop>(o)) {
@@ -575,12 +579,24 @@ void write(TextStream& ts, const RenderObject& o, OptionSet<RenderAsTextFlag> be
         writeSVGResourceContainer(ts, downcast<RenderSVGResourceContainer>(o), behavior);
         return;
     }
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
     if (is<RenderSVGContainer>(o)) {
         writeSVGContainer(ts, downcast<RenderSVGContainer>(o), behavior);
         return;
     }
+#endif
+    if (is<LegacyRenderSVGContainer>(o)) {
+        writeSVGContainer(ts, downcast<LegacyRenderSVGContainer>(o), behavior);
+        return;
+    }
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
     if (is<RenderSVGRoot>(o)) {
         write(ts, downcast<RenderSVGRoot>(o), behavior);
+        return;
+    }
+#endif
+    if (is<LegacyRenderSVGRoot>(o)) {
+        write(ts, downcast<LegacyRenderSVGRoot>(o), behavior);
         return;
     }
     if (is<RenderSVGText>(o)) {
@@ -605,7 +621,7 @@ void write(TextStream& ts, const RenderObject& o, OptionSet<RenderAsTextFlag> be
 
     if (is<RenderText>(o)) {
         auto& text = downcast<RenderText>(o);
-        for (auto& run : LayoutIntegration::textRunsFor(text)) {
+        for (auto& run : InlineIterator::textBoxesFor(text)) {
             ts << indent;
             writeTextRun(text, run);
         }
@@ -646,8 +662,11 @@ static void writeLayer(TextStream& ts, const RenderLayer& layer, const LayoutRec
 
     ts << indent << "layer ";
 
-    if (behavior.contains(RenderAsTextFlag::ShowAddresses))
-        ts << static_cast<const void*>(&layer) << " ";
+    if (behavior.contains(RenderAsTextFlag::ShowAddresses)) {
+        ts << &layer << " ";
+        if (auto* scrollableArea = layer.scrollableArea())
+            ts << "scrollableArea " << scrollableArea << " ";
+    }
 
     ts << adjustedLayoutBounds;
 
@@ -658,7 +677,7 @@ static void writeLayer(TextStream& ts, const RenderLayer& layer, const LayoutRec
             ts << " clip " << adjustedClipRect;
     }
 
-    if (layer.renderer().hasOverflowClip()) {
+    if (layer.renderer().hasNonVisibleOverflow()) {
         if (auto* scrollableArea = layer.scrollableArea()) {
             if (scrollableArea->scrollOffset().x())
                 ts << " scrollX " << scrollableArea->scrollOffset().x();
@@ -686,7 +705,9 @@ static void writeLayer(TextStream& ts, const RenderLayer& layer, const LayoutRec
 
     if (behavior.contains(RenderAsTextFlag::ShowCompositedLayers)) {
         if (layer.isComposited()) {
-            ts << " (composited, bounds=" << layer.backing()->compositedBounds() << ", drawsContent=" << layer.backing()->graphicsLayer()->drawsContent()
+            ts << " (composited " << layer.compositor().reasonsForCompositing(layer)
+                << ", bounds=" << layer.backing()->compositedBounds()
+                << ", drawsContent=" << layer.backing()->graphicsLayer()->drawsContent()
                 << ", paints into ancestor=" << layer.backing()->paintsIntoCompositedAncestor() << ")";
         } else if (layer.paintsIntoProvidedBacking())
             ts << " (shared backing of " << layer.backingProviderLayer() << ")";
@@ -819,26 +840,19 @@ static String nodePosition(Node* node)
     for (Node* n = node; n; n = parent) {
         parent = n->parentOrShadowHostNode();
         if (n != node)
-            result.appendLiteral(" of ");
+            result.append(" of ");
         if (parent) {
             if (body && n == body) {
                 // We don't care what offset body may be in the document.
-                result.appendLiteral("body");
+                result.append("body");
                 break;
             }
-            if (n->isShadowRoot()) {
-                result.append('{');
-                result.append(getTagName(n));
-                result.append('}');
-            } else {
-                result.appendLiteral("child ");
-                result.appendNumber(n->computeNodeIndex());
-                result.appendLiteral(" {");
-                result.append(getTagName(n));
-                result.append('}');
-            }
+            if (n->isShadowRoot())
+                result.append('{', getTagName(n), '}');
+            else
+                result.append("child ", n->computeNodeIndex(), " {", getTagName(n), '}');
         } else
-            result.appendLiteral("document");
+            result.append("document");
     }
 
     return result.toString();
@@ -962,7 +976,7 @@ String markerTextForListItem(Element* element)
     if (!is<RenderListItem>(renderer))
         return String();
 
-    return downcast<RenderListItem>(*renderer).markerText();
+    return downcast<RenderListItem>(*renderer).markerTextWithoutSuffix().toString();
 }
 
 } // namespace WebCore

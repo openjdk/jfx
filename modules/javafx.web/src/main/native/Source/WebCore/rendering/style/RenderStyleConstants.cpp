@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,6 +26,7 @@
 #include "config.h"
 #include "RenderStyleConstants.h"
 
+#include "CSSPrimitiveValueMappings.h"
 #include "TabSize.h"
 #include <wtf/text/TextStream.h>
 
@@ -122,15 +123,6 @@ TextStream& operator<<(TextStream& ts, BorderCollapse collapse)
     switch (collapse) {
     case BorderCollapse::Separate: ts << "separate"; break;
     case BorderCollapse::Collapse: ts << "collapse"; break;
-    }
-    return ts;
-}
-
-TextStream& operator<<(TextStream& ts, BorderFit borderFit)
-{
-    switch (borderFit) {
-    case BorderFit::Border: ts << "border"; break;
-    case BorderFit::Lines: ts << "lines"; break;
     }
     return ts;
 }
@@ -280,7 +272,20 @@ TextStream& operator<<(TextStream& ts, Clear clear)
     case Clear::None: ts << "none"; break;
     case Clear::Left: ts << "left"; break;
     case Clear::Right: ts << "right"; break;
+    case Clear::InlineStart : ts << "inline-start"; break;
+    case Clear::InlineEnd : ts << "inline-end"; break;
     case Clear::Both: ts << "both"; break;
+    }
+    return ts;
+}
+
+TextStream& operator<<(TextStream& ts, UsedClear clear)
+{
+    switch (clear) {
+    case UsedClear::None: ts << "none"; break;
+    case UsedClear::Left: ts << "left"; break;
+    case UsedClear::Right: ts << "right"; break;
+    case UsedClear::Both: ts << "both"; break;
     }
     return ts;
 }
@@ -437,9 +442,7 @@ TextStream& operator<<(TextStream& ts, DisplayType display)
     case DisplayType::Box: ts << "box"; break;
     case DisplayType::InlineBox: ts << "inline-box"; break;
     case DisplayType::Flex: ts << "flex"; break;
-    case DisplayType::WebKitFlex: ts << "web-kit-flex"; break;
     case DisplayType::InlineFlex: ts << "inline-flex"; break;
-    case DisplayType::WebKitInlineFlex: ts << "web-kit-inline-flex"; break;
     case DisplayType::Contents: ts << "contents"; break;
     case DisplayType::Grid: ts << "grid"; break;
     case DisplayType::InlineGrid: ts << "inline-grid"; break;
@@ -495,6 +498,7 @@ TextStream& operator<<(TextStream& ts, FillBox fill)
     case FillBox::Padding: ts << "padding"; break;
     case FillBox::Content: ts << "content"; break;
     case FillBox::Text: ts << "text"; break;
+    case FillBox::NoClip: ts << "no-clip"; break;
     }
     return ts;
 }
@@ -546,9 +550,21 @@ TextStream& operator<<(TextStream& ts, FlexWrap flexWrap)
 TextStream& operator<<(TextStream& ts, Float floating)
 {
     switch (floating) {
-    case Float::No: ts << "none"; break;
+    case Float::None: ts << "none"; break;
     case Float::Left: ts << "left"; break;
     case Float::Right: ts << "right"; break;
+    case Float::InlineStart: ts << "inline-start"; break;
+    case Float::InlineEnd: ts << "inline-end"; break;
+    }
+    return ts;
+}
+
+TextStream& operator<<(TextStream& ts, UsedFloat floating)
+{
+    switch (floating) {
+    case UsedFloat::None: ts << "none"; break;
+    case UsedFloat::Left: ts << "left"; break;
+    case UsedFloat::Right: ts << "right"; break;
     }
     return ts;
 }
@@ -691,101 +707,7 @@ TextStream& operator<<(TextStream& ts, ListStylePosition position)
 
 TextStream& operator<<(TextStream& ts, ListStyleType styleType)
 {
-    switch (styleType) {
-    case ListStyleType::Disc: ts << "disc"; break;
-    case ListStyleType::Circle: ts << "circle"; break;
-    case ListStyleType::Square: ts << "square"; break;
-    case ListStyleType::Decimal: ts << "decimal"; break;
-    case ListStyleType::DecimalLeadingZero: ts << "decimal-leading-zero"; break;
-    case ListStyleType::ArabicIndic: ts << "arabic-indic"; break;
-    case ListStyleType::Binary: ts << "binary"; break;
-    case ListStyleType::Bengali: ts << "bengali"; break;
-    case ListStyleType::Cambodian: ts << "cambodian"; break;
-    case ListStyleType::Khmer: ts << "khmer"; break;
-    case ListStyleType::Devanagari: ts << "devanagari"; break;
-    case ListStyleType::Gujarati: ts << "gujarati"; break;
-    case ListStyleType::Gurmukhi: ts << "gurmukhi"; break;
-    case ListStyleType::Kannada: ts << "kannada"; break;
-    case ListStyleType::LowerHexadecimal: ts << "lower-hexadecimal"; break;
-    case ListStyleType::Lao: ts << "lao"; break;
-    case ListStyleType::Malayalam: ts << "malayalam"; break;
-    case ListStyleType::Mongolian: ts << "mongolian"; break;
-    case ListStyleType::Myanmar: ts << "myanmar"; break;
-    case ListStyleType::Octal: ts << "octal"; break;
-    case ListStyleType::Oriya: ts << "oriya"; break;
-    case ListStyleType::Persian: ts << "persian"; break;
-    case ListStyleType::Urdu: ts << "urdu"; break;
-    case ListStyleType::Telugu: ts << "telugu"; break;
-    case ListStyleType::Tibetan: ts << "tibetan"; break;
-    case ListStyleType::Thai: ts << "thai"; break;
-    case ListStyleType::UpperHexadecimal: ts << "upper-hexadecimal"; break;
-    case ListStyleType::LowerRoman: ts << "lower-roman"; break;
-    case ListStyleType::UpperRoman: ts << "upper-roman"; break;
-    case ListStyleType::LowerGreek: ts << "lower-greek"; break;
-    case ListStyleType::LowerAlpha: ts << "lower-alpha"; break;
-    case ListStyleType::LowerLatin: ts << "lower-latin"; break;
-    case ListStyleType::UpperAlpha: ts << "upper-alpha"; break;
-    case ListStyleType::UpperLatin: ts << "upper-latin"; break;
-    case ListStyleType::Afar: ts << "afar"; break;
-    case ListStyleType::EthiopicHalehameAaEt: ts << "ethiopic-halehame-aa-et"; break;
-    case ListStyleType::EthiopicHalehameAaEr: ts << "ethiopic-halehame-aa-er"; break;
-    case ListStyleType::Amharic: ts << "amharic"; break;
-    case ListStyleType::EthiopicHalehameAmEt: ts << "ethiopic-halehame-am-et"; break;
-    case ListStyleType::AmharicAbegede: ts << "amharic-abegede"; break;
-    case ListStyleType::EthiopicAbegedeAmEt: ts << "ethiopic-abegede-am-et"; break;
-    case ListStyleType::CjkEarthlyBranch: ts << "cjk-earthly-branch"; break;
-    case ListStyleType::CjkHeavenlyStem: ts << "cjk-heavenly-stem"; break;
-    case ListStyleType::Ethiopic: ts << "ethiopic"; break;
-    case ListStyleType::EthiopicHalehameGez: ts << "ethiopic-halehame-gez"; break;
-    case ListStyleType::EthiopicAbegede: ts << "ethiopic-abegede"; break;
-    case ListStyleType::EthiopicAbegedeGez: ts << "ethiopic-abegede-gez"; break;
-    case ListStyleType::HangulConsonant: ts << "hangul-consonant"; break;
-    case ListStyleType::Hangul: ts << "hangul"; break;
-    case ListStyleType::LowerNorwegian: ts << "lower-norwegian"; break;
-    case ListStyleType::Oromo: ts << "oromo"; break;
-    case ListStyleType::EthiopicHalehameOmEt: ts << "ethiopic-halehame-om-et"; break;
-    case ListStyleType::Sidama: ts << "sidama"; break;
-    case ListStyleType::EthiopicHalehameSidEt: ts << "ethiopic-halehame-sid-et"; break;
-    case ListStyleType::Somali: ts << "somali"; break;
-    case ListStyleType::EthiopicHalehameSoEt: ts << "ethiopic-halehame-so-et"; break;
-    case ListStyleType::Tigre: ts << "tigre"; break;
-    case ListStyleType::EthiopicHalehameTig: ts << "ethiopic-halehame-tig"; break;
-    case ListStyleType::TigrinyaEr: ts << "tigrinya-er"; break;
-    case ListStyleType::EthiopicHalehameTiEr: ts << "ethiopic-halehame-ti-er"; break;
-    case ListStyleType::TigrinyaErAbegede: ts << "tigrinya-er-abegede"; break;
-    case ListStyleType::EthiopicAbegedeTiEr: ts << "ethiopic-abegede-ti-er"; break;
-    case ListStyleType::TigrinyaEt: ts << "tigrinya-et"; break;
-    case ListStyleType::EthiopicHalehameTiEt: ts << "ethiopic-halehame-ti-et"; break;
-    case ListStyleType::TigrinyaEtAbegede: ts << "tigrinya-et-abegede"; break;
-    case ListStyleType::EthiopicAbegedeTiEt: ts << "ethiopic-abegede-ti-et"; break;
-    case ListStyleType::UpperGreek: ts << "upper-greek"; break;
-    case ListStyleType::UpperNorwegian: ts << "upper-norwegian"; break;
-    case ListStyleType::Asterisks: ts << "asterisks"; break;
-    case ListStyleType::Footnotes: ts << "footnotes"; break;
-    case ListStyleType::Hebrew: ts << "hebrew"; break;
-    case ListStyleType::Armenian: ts << "armenian"; break;
-    case ListStyleType::LowerArmenian: ts << "lower-armenian"; break;
-    case ListStyleType::UpperArmenian: ts << "upper-armenian"; break;
-    case ListStyleType::Georgian: ts << "georgian"; break;
-    case ListStyleType::CJKIdeographic: ts << "cjk-ideographic"; break;
-    case ListStyleType::Hiragana: ts << "hiragana"; break;
-    case ListStyleType::Katakana: ts << "katakana"; break;
-    case ListStyleType::HiraganaIroha: ts << "hiragana-iroha"; break;
-    case ListStyleType::KatakanaIroha: ts << "katakana-iroha"; break;
-    case ListStyleType::None: ts << "none"; break;
-    case ListStyleType::String: ts << "string"; break;
-    }
-    return ts;
-}
-
-TextStream& operator<<(TextStream& ts, MarginCollapse collapse)
-{
-    switch (collapse) {
-    case MarginCollapse::Collapse: ts << "collapse"; break;
-    case MarginCollapse::Separate: ts << "separate"; break;
-    case MarginCollapse::Discard: ts << "discard"; break;
-    }
-    return ts;
+    return ts << getValueName(toCSSValueID(styleType));
 }
 
 TextStream& operator<<(TextStream& ts, MarqueeBehavior marqueeBehavior)
@@ -813,11 +735,12 @@ TextStream& operator<<(TextStream& ts, MarqueeDirection marqueeDirection)
     return ts;
 }
 
-TextStream& operator<<(TextStream& ts, MaskSourceType maskSource)
+TextStream& operator<<(TextStream& ts, MaskMode maskMode)
 {
-    switch (maskSource) {
-    case MaskSourceType::Alpha: ts << "alpha"; break;
-    case MaskSourceType::Luminance: ts << "luminance"; break;
+    switch (maskMode) {
+    case MaskMode::Alpha: ts << "alpha"; break;
+    case MaskMode::Luminance: ts << "luminance"; break;
+    case MaskMode::MatchSource: ts << "match-source"; break;
     }
 
     return ts;
@@ -862,6 +785,7 @@ TextStream& operator<<(TextStream& ts, Overflow overflow)
     case Overflow::Auto: ts << "auto"; break;
     case Overflow::PagedX: ts << "paged-x"; break;
     case Overflow::PagedY: ts << "paged-y"; break;
+    case Overflow::Clip: ts << "clip"; break;
     }
     return ts;
 }
@@ -880,7 +804,8 @@ TextStream& operator<<(TextStream& ts, OverflowWrap overflowWrap)
 {
     switch (overflowWrap) {
     case OverflowWrap::Normal: ts << "normal"; break;
-    case OverflowWrap::Break: ts << "break"; break;
+    case OverflowWrap::BreakWord: ts << "break-word"; break;
+    case OverflowWrap::Anywhere: ts << "anywhere"; break;
     }
     return ts;
 }
@@ -946,6 +871,7 @@ TextStream& operator<<(TextStream& ts, PseudoId pseudoId)
     case PseudoId::FirstLetter: ts << "first-letter"; break;
     case PseudoId::Highlight: ts << "highlight"; break;
     case PseudoId::Marker: ts << "marker"; break;
+    case PseudoId::Backdrop: ts << "backdrop"; break;
     case PseudoId::Before: ts << "before"; break;
     case PseudoId::After: ts << "after"; break;
     case PseudoId::Selection: ts << "selection"; break;
@@ -1006,7 +932,6 @@ TextStream& operator<<(TextStream& ts, RubyPosition position)
     return ts;
 }
 
-#if ENABLE(CSS_SCROLL_SNAP)
 TextStream& operator<<(TextStream& ts, ScrollSnapAxis axis)
 {
     switch (axis) {
@@ -1048,7 +973,6 @@ TextStream& operator<<(TextStream& ts, ScrollSnapStop stop)
     }
     return ts;
 }
-#endif
 
 TextStream& operator<<(TextStream& ts, SpeakAs speakAs)
 {
@@ -1108,33 +1032,29 @@ TextStream& operator<<(TextStream& ts, TextCombine textCombine)
 {
     switch (textCombine) {
     case TextCombine::None: ts << "none"; break;
-    case TextCombine::Horizontal: ts << "horizontal"; break;
+    case TextCombine::All: ts << "all"; break;
     }
     return ts;
 }
 
-TextStream& operator<<(TextStream& ts, TextDecoration textDecoration)
+TextStream& operator<<(TextStream& ts, TextDecorationLine line)
 {
-    switch (textDecoration) {
-    case TextDecoration::None: ts << "none"; break;
-    case TextDecoration::Underline: ts << "underline"; break;
-    case TextDecoration::Overline: ts << "overline"; break;
-    case TextDecoration::LineThrough: ts << "line-through"; break;
-    case TextDecoration::Blink: ts << "blink"; break;
-#if ENABLE(LETTERPRESS)
-    case TextDecoration::Letterpress: ts << "letterpress"; break;
-#endif
+    switch (line) {
+    case TextDecorationLine::None: ts << "none"; break;
+    case TextDecorationLine::Underline: ts << "underline"; break;
+    case TextDecorationLine::Overline: ts << "overline"; break;
+    case TextDecorationLine::LineThrough: ts << "line-through"; break;
+    case TextDecorationLine::Blink: ts << "blink"; break;
     }
     return ts;
 }
 
-TextStream& operator<<(TextStream& ts, TextDecorationSkip skip)
+TextStream& operator<<(TextStream& ts, TextDecorationSkipInk skip)
 {
     switch (skip) {
-    case TextDecorationSkip::None: ts << "none"; break;
-    case TextDecorationSkip::Ink: ts << "ink"; break;
-    case TextDecorationSkip::Objects: ts << "objects"; break;
-    case TextDecorationSkip::Auto: ts << "auto"; break;
+    case TextDecorationSkipInk::None: ts << "none"; break;
+    case TextDecorationSkipInk::Auto: ts << "auto"; break;
+    case TextDecorationSkipInk::All: ts << "all"; break;
     }
     return ts;
 }
@@ -1364,6 +1284,25 @@ TextStream& operator<<(TextStream& ts, MathStyle mathStyle)
 bool alwaysPageBreak(BreakBetween between)
 {
     return between >= BreakBetween::Page;
+}
+
+CSSBoxType transformBoxToCSSBoxType(TransformBox transformBox)
+{
+    switch (transformBox) {
+    case TransformBox::StrokeBox:
+        return CSSBoxType::StrokeBox;
+    case TransformBox::ContentBox:
+        return CSSBoxType::ContentBox;
+    case TransformBox::BorderBox:
+        return CSSBoxType::BorderBox;
+    case TransformBox::FillBox:
+        return CSSBoxType::FillBox;
+    case TransformBox::ViewBox:
+        return CSSBoxType::ViewBox;
+    default:
+        ASSERT_NOT_REACHED();
+        return CSSBoxType::BorderBox;
+    }
 }
 
 const float defaultMiterLimit = 4;

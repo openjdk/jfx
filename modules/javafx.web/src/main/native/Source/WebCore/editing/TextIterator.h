@@ -27,7 +27,8 @@
 
 #include "CharacterRange.h"
 #include "FindOptions.h"
-#include "LayoutIntegrationRunIterator.h"
+#include "InlineIteratorLogicalOrderTraversal.h"
+#include "InlineIteratorTextBox.h"
 #include "SimpleRange.h"
 #include "TextIteratorBehavior.h"
 #include <wtf/Vector.h>
@@ -37,16 +38,16 @@ namespace WebCore {
 class RenderTextFragment;
 
 // Character ranges based on characters from the text iterator.
-WEBCORE_EXPORT uint64_t characterCount(const SimpleRange&, TextIteratorBehavior = TextIteratorDefaultBehavior);
-CharacterRange characterRange(const BoundaryPoint& start, const SimpleRange&, TextIteratorBehavior = TextIteratorDefaultBehavior);
-CharacterRange characterRange(const SimpleRange& scope, const SimpleRange&, TextIteratorBehavior = TextIteratorDefaultBehavior);
-BoundaryPoint resolveCharacterLocation(const SimpleRange& scope, uint64_t, TextIteratorBehavior = TextIteratorDefaultBehavior);
-WEBCORE_EXPORT SimpleRange resolveCharacterRange(const SimpleRange& scope, CharacterRange, TextIteratorBehavior = TextIteratorDefaultBehavior);
+WEBCORE_EXPORT uint64_t characterCount(const SimpleRange&, TextIteratorBehaviors = { });
+CharacterRange characterRange(const BoundaryPoint& start, const SimpleRange&, TextIteratorBehaviors = { });
+CharacterRange characterRange(const SimpleRange& scope, const SimpleRange&, TextIteratorBehaviors = { });
+BoundaryPoint resolveCharacterLocation(const SimpleRange& scope, uint64_t, TextIteratorBehaviors = { });
+WEBCORE_EXPORT SimpleRange resolveCharacterRange(const SimpleRange& scope, CharacterRange, TextIteratorBehaviors = { });
 
 // Text from the text iterator.
-WEBCORE_EXPORT String plainText(const SimpleRange&, TextIteratorBehavior = TextIteratorDefaultBehavior, bool isDisplayString = false);
-WEBCORE_EXPORT bool hasAnyPlainText(const SimpleRange&, TextIteratorBehavior = TextIteratorDefaultBehavior);
-WEBCORE_EXPORT String plainTextReplacingNoBreakSpace(const SimpleRange&, TextIteratorBehavior = TextIteratorDefaultBehavior, bool isDisplayString = false);
+WEBCORE_EXPORT String plainText(const SimpleRange&, TextIteratorBehaviors = { }, bool isDisplayString = false);
+WEBCORE_EXPORT bool hasAnyPlainText(const SimpleRange&, TextIteratorBehaviors = { });
+WEBCORE_EXPORT String plainTextReplacingNoBreakSpace(const SimpleRange&, TextIteratorBehaviors = { }, bool isDisplayString = false);
 
 // Find within the document, based on the text from the text iterator.
 SimpleRange findPlainText(const SimpleRange&, const String&, FindOptions);
@@ -55,7 +56,7 @@ bool containsPlainText(const String& document, const String&, FindOptions); // L
 WEBCORE_EXPORT String foldQuoteMarks(const String&);
 
 // FIXME: Move this somewhere else in the editing directory. It doesn't belong in the header with TextIterator.
-bool isRendererReplacedElement(RenderObject*);
+bool isRendererReplacedElement(RenderObject*, TextIteratorBehaviors = { });
 
 // FIXME: Move each iterator class into a separate header file.
 
@@ -94,7 +95,7 @@ private:
 class TextIterator {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    WEBCORE_EXPORT explicit TextIterator(const SimpleRange&, TextIteratorBehavior = TextIteratorDefaultBehavior);
+    WEBCORE_EXPORT explicit TextIterator(const SimpleRange&, TextIteratorBehaviors = { });
     WEBCORE_EXPORT ~TextIterator();
 
     bool atEnd() const { return !m_positionNode; }
@@ -120,10 +121,11 @@ private:
     void handleTextNodeFirstLetter(RenderTextFragment&);
     void emitCharacter(UChar, Node& characterNode, Node* offsetBaseNode, int textStartOffset, int textEndOffset);
     void emitText(Text& textNode, RenderText&, int textStartOffset, int textEndOffset);
+    void revertToRemainingTextRun();
 
     Node* baseNodeForEmittingNewLine() const;
 
-    const TextIteratorBehavior m_behavior { TextIteratorDefaultBehavior };
+    const TextIteratorBehaviors m_behaviors;
 
     // Current position, not necessarily of the text being returned, but position as we walk through the DOM tree.
     Node* m_node { nullptr };
@@ -149,10 +151,12 @@ private:
 
     // Used when there is still some pending text from the current node; when these are false and null, we go back to normal iterating.
     Node* m_nodeForAdditionalNewline { nullptr };
-    LayoutIntegration::TextRunIterator m_textRun;
+    InlineIterator::TextBoxIterator m_textRun;
+    InlineIterator::TextLogicalOrderCache m_textRunLogicalOrderCache;
 
     // Used when iterating over :first-letter text to save pointer to remaining text box.
-    LayoutIntegration::TextRunIterator m_remainingTextRun;
+    InlineIterator::TextBoxIterator m_remainingTextRun;
+    InlineIterator::TextLogicalOrderCache m_remainingTextRunLogicalOrderCache;
 
     // Used to point to RenderText object for :first-letter.
     RenderText* m_firstLetterText { nullptr };
@@ -192,7 +196,7 @@ private:
     void emitCharacter(UChar, Node&, int startOffset, int endOffset);
     bool advanceRespectingRange(Node*);
 
-    const TextIteratorBehavior m_behavior { TextIteratorDefaultBehavior };
+    const TextIteratorBehaviors m_behaviors;
 
     // Current position, not necessarily of the text being returned, but position as we walk through the DOM tree.
     Node* m_node { nullptr };
@@ -229,7 +233,7 @@ private:
 // character at a time, or faster, as needed. Useful for searching.
 class CharacterIterator {
 public:
-    WEBCORE_EXPORT explicit CharacterIterator(const SimpleRange&, TextIteratorBehavior = TextIteratorDefaultBehavior);
+    WEBCORE_EXPORT explicit CharacterIterator(const SimpleRange&, TextIteratorBehaviors = { });
 
     bool atEnd() const { return m_underlyingIterator.atEnd(); }
     WEBCORE_EXPORT void advance(int numCharacters);
@@ -289,19 +293,27 @@ private:
     bool m_didLookAhead { true };
 };
 
-inline CharacterRange characterRange(const BoundaryPoint& start, const SimpleRange& range, TextIteratorBehavior behavior)
+constexpr TextIteratorBehaviors findIteratorOptions(FindOptions options = { })
 {
-    return { characterCount({ start, range.start }, behavior), characterCount(range, behavior) };
+    TextIteratorBehaviors iteratorOptions { TextIteratorBehavior::EntersTextControls, TextIteratorBehavior::ClipsToFrameAncestors, TextIteratorBehavior::EntersImageOverlays };
+    if (!options.contains(DoNotTraverseFlatTree))
+        iteratorOptions.add(TextIteratorBehavior::TraversesFlatTree);
+    return iteratorOptions;
 }
 
-inline CharacterRange characterRange(const SimpleRange& scope, const SimpleRange& range, TextIteratorBehavior behavior)
+inline CharacterRange characterRange(const BoundaryPoint& start, const SimpleRange& range, TextIteratorBehaviors behaviors)
 {
-    return characterRange(scope.start, range, behavior);
+    return { characterCount({ start, range.start }, behaviors), characterCount(range, behaviors) };
 }
 
-inline BoundaryPoint resolveCharacterLocation(const SimpleRange& scope, uint64_t location, TextIteratorBehavior behavior)
+inline CharacterRange characterRange(const SimpleRange& scope, const SimpleRange& range, TextIteratorBehaviors behaviors)
 {
-    return resolveCharacterRange(scope, { location, 0 }, behavior).start;
+    return characterRange(scope.start, range, behaviors);
+}
+
+inline BoundaryPoint resolveCharacterLocation(const SimpleRange& scope, uint64_t location, TextIteratorBehaviors behaviors)
+{
+    return resolveCharacterRange(scope, { location, 0 }, behaviors).start;
 }
 
 } // namespace WebCore

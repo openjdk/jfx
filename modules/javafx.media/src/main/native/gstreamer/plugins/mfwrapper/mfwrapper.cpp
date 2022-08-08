@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -188,7 +188,9 @@ static void gst_mfwrapper_init(GstMFWrapper *decoder)
     decoder->is_flushing = FALSE;
     decoder->is_eos_received = FALSE;
     decoder->is_eos = FALSE;
+    decoder->is_decoder_initialized = FALSE;
     decoder->force_discontinuity = FALSE;
+    decoder->force_output_discontinuity = FALSE;
 
     // Initialize Media Foundation
     bool bCallCoUninitialize = true;
@@ -326,7 +328,10 @@ static void mfwrapper_set_src_caps(GstMFWrapper *decoder)
 
     GstEvent *caps_event = gst_event_new_caps(srcCaps);
     if (caps_event)
+    {
         gst_pad_push_event(decoder->srcpad, caps_event);
+        decoder->force_output_discontinuity = TRUE;
+    }
     gst_caps_unref(srcCaps);
 
     // Allocate or update decoder output buffer
@@ -715,6 +720,13 @@ static GstFlowReturn mfwrapper_deliver_sample(GstMFWrapper *decoder, IMFSample *
         {
             hr = pSample->GetSampleDuration(&llDuration);
             GST_BUFFER_DURATION(pGstBuffer) = llDuration * 100;
+        }
+
+        if (SUCCEEDED(hr) && decoder->force_output_discontinuity)
+        {
+            pGstBuffer = gst_buffer_make_writable(pGstBuffer);
+            GST_BUFFER_FLAG_SET(pGstBuffer, GST_BUFFER_FLAG_DISCONT);
+            decoder->force_output_discontinuity = FALSE;
         }
 
 #if PTS_DEBUG
@@ -1185,25 +1197,29 @@ static HRESULT mfwrapper_set_output_media_type(GstMFWrapper *decoder, GstCaps *c
 
 static gboolean mfwrapper_init_mf(GstMFWrapper *decoder, GstCaps *caps)
 {
+    HRESULT hr = S_OK;
     DWORD dwStatus = 0;
     GstStructure *s = NULL;
     const GValue *codec_data_value = NULL;
     GstBuffer *codec_data = NULL;
     gint skipSize = 0;
+    IMFAttributes *pAttributes = NULL;
+    UINT32 unFormatChange = FALSE;
 
-    HRESULT hr = mfwrapper_load_decoder(decoder, caps);
+    if (!decoder->is_decoder_initialized)
+    {
+        if (SUCCEEDED(hr))
+            hr = mfwrapper_set_input_media_type(decoder, caps);
 
-    if (SUCCEEDED(hr))
-        hr = mfwrapper_set_input_media_type(decoder, caps);
+        if (SUCCEEDED(hr))
+            hr = mfwrapper_set_output_media_type(decoder, caps);
 
-    if (SUCCEEDED(hr))
-        hr = mfwrapper_set_output_media_type(decoder, caps);
+        if (SUCCEEDED(hr))
+            hr = decoder->pDecoder->GetInputStatus(0, &dwStatus);
 
-    if (SUCCEEDED(hr))
-        hr = decoder->pDecoder->GetInputStatus(0, &dwStatus);
-
-    if (FAILED(hr) || dwStatus != MFT_INPUT_STATUS_ACCEPT_DATA) {
-        return FALSE;
+        if (FAILED(hr) || dwStatus != MFT_INPUT_STATUS_ACCEPT_DATA) {
+            return FALSE;
+        }
     }
 
     if (SUCCEEDED(hr))
@@ -1225,6 +1241,10 @@ static gboolean mfwrapper_init_mf(GstMFWrapper *decoder, GstCaps *caps)
     {
         if (gst_buffer_map(codec_data, &info, GST_MAP_READ) && info.size > 0)
         {
+            // Free old one if exist
+            if (decoder->header)
+                delete[] decoder->header;
+
             decoder->header = new BYTE[info.size * 2]; // Should be enough, since we will only add several 4 bytes start codes to 3 nal units
             if (decoder->header == NULL)
             {
@@ -1244,14 +1264,20 @@ static gboolean mfwrapper_init_mf(GstMFWrapper *decoder, GstCaps *caps)
         }
     }
 
-    if (SUCCEEDED(hr))
-        hr = decoder->pDecoder->ProcessMessage(MFT_MESSAGE_COMMAND_FLUSH, NULL);
+    if (!decoder->is_decoder_initialized)
+    {
+        if (SUCCEEDED(hr))
+            hr = decoder->pDecoder->ProcessMessage(MFT_MESSAGE_COMMAND_FLUSH, NULL);
 
-    if (SUCCEEDED(hr))
-        hr = decoder->pDecoder->ProcessMessage(MFT_MESSAGE_NOTIFY_BEGIN_STREAMING, NULL);
+        if (SUCCEEDED(hr))
+            hr = decoder->pDecoder->ProcessMessage(MFT_MESSAGE_NOTIFY_BEGIN_STREAMING, NULL);
 
-    if (SUCCEEDED(hr))
-        hr = decoder->pDecoder->ProcessMessage(MFT_MESSAGE_NOTIFY_START_OF_STREAM, NULL);
+        if (SUCCEEDED(hr))
+            hr = decoder->pDecoder->ProcessMessage(MFT_MESSAGE_NOTIFY_START_OF_STREAM, NULL);
+
+        if (SUCCEEDED(hr))
+            decoder->is_decoder_initialized = TRUE;
+    }
 
     if (SUCCEEDED(hr))
         return TRUE;

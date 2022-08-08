@@ -699,6 +699,7 @@ gst_audio_base_sink_set_alignment_threshold (GstAudioBaseSink * sink,
     GstClockTime alignment_threshold)
 {
   g_return_if_fail (GST_IS_AUDIO_BASE_SINK (sink));
+  g_return_if_fail (GST_CLOCK_TIME_IS_VALID (alignment_threshold));
 
   GST_OBJECT_LOCK (sink);
   sink->priv->alignment_threshold = alignment_threshold;
@@ -739,6 +740,7 @@ gst_audio_base_sink_set_discont_wait (GstAudioBaseSink * sink,
     GstClockTime discont_wait)
 {
   g_return_if_fail (GST_IS_AUDIO_BASE_SINK (sink));
+  g_return_if_fail (GST_CLOCK_TIME_IS_VALID (discont_wait));
 
   GST_OBJECT_LOCK (sink);
   sink->priv->discont_wait = discont_wait;
@@ -1878,7 +1880,7 @@ gst_audio_base_sink_render (GstBaseSink * bsink, GstBuffer * buf)
 
   samples = size / bpf;
 
-  time = GST_BUFFER_TIMESTAMP (buf);
+  time = GST_BUFFER_PTS (buf);
 
   /* Last ditch attempt to ensure that we only play silence if
    * we are in trickmode no-audio mode (or if a buffer is marked as a GAP)
@@ -2372,6 +2374,7 @@ eos:
     gst_element_post_message (GST_ELEMENT_CAST (sink),
         gst_message_new_eos (GST_OBJECT_CAST (sink)));
     GST_PAD_STREAM_UNLOCK (basesink->sinkpad);
+    return;
   }
 flushing:
   {

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2003-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2003-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -98,7 +98,7 @@ bool RuntimeArray::getOwnPropertySlot(JSObject* object, JSGlobalObject* lexicalG
         return true;
     }
 
-    Optional<uint32_t> index = parseIndex(propertyName);
+    std::optional<uint32_t> index = parseIndex(propertyName);
     if (index && index.value() < thisObject->getLength()) {
         slot.setValue(thisObject, static_cast<unsigned>(PropertyAttribute::DontDelete),
             thisObject->getConcreteArray()->valueAt(lexicalGlobalObject, index.value()));
@@ -131,7 +131,7 @@ bool RuntimeArray::put(JSCell* cell, JSGlobalObject* lexicalGlobalObject, Proper
         return false;
     }
 
-    if (Optional<uint32_t> index = parseIndex(propertyName))
+    if (std::optional<uint32_t> index = parseIndex(propertyName))
         return thisObject->getConcreteArray()->setValueAt(lexicalGlobalObject, index.value(), value);
 
     RELEASE_AND_RETURN(scope, JSObject::put(thisObject, lexicalGlobalObject, propertyName, value, slot));
@@ -161,7 +161,7 @@ bool RuntimeArray::deletePropertyByIndex(JSCell*, JSGlobalObject*, unsigned)
     return false;
 }
 
-JSC::IsoSubspace* RuntimeArray::subspaceForImpl(JSC::VM& vm)
+JSC::GCClient::IsoSubspace* RuntimeArray::subspaceForImpl(JSC::VM& vm)
 {
     return &static_cast<JSVMClientData*>(vm.clientData)->runtimeArraySpace();
 }

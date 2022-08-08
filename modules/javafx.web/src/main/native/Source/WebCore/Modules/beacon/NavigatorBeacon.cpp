@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,6 +29,7 @@
 #include "CachedRawResource.h"
 #include "CachedResourceLoader.h"
 #include "Document.h"
+#include "DocumentLoader.h"
 #include "Frame.h"
 #include "HTTPParsers.h"
 #include "Navigator.h"
@@ -99,7 +100,7 @@ void NavigatorBeacon::logError(const ResourceError& error)
     document->addConsoleMessage(MessageSource::Network, MessageLevel::Error, makeString("Beacon API cannot load "_s, error.failingURL().string(), messageMiddle, description));
 }
 
-ExceptionOr<bool> NavigatorBeacon::sendBeacon(Document& document, const String& url, Optional<FetchBody::Init>&& body)
+ExceptionOr<bool> NavigatorBeacon::sendBeacon(Document& document, const String& url, std::optional<FetchBody::Init>&& body)
 {
     URL parsedUrl = document.completeURL(url);
 
@@ -122,6 +123,8 @@ ExceptionOr<bool> NavigatorBeacon::sendBeacon(Document& document, const String& 
     ResourceRequest request(parsedUrl);
     request.setHTTPMethod("POST"_s);
     request.setRequester(ResourceRequest::Requester::Beacon);
+    if (auto* documentLoader = document.loader())
+        request.setIsAppInitiated(documentLoader->lastNavigationWasAppInitiated());
 
     ResourceLoaderOptions options;
     options.credentials = FetchOptions::Credentials::Include;
@@ -130,20 +133,20 @@ ExceptionOr<bool> NavigatorBeacon::sendBeacon(Document& document, const String& 
     options.sendLoadCallbacks = SendCallbackPolicy::SendCallbacks;
 
     if (body) {
-        options.mode = FetchOptions::Mode::Cors;
+        options.mode = FetchOptions::Mode::NoCors;
         String mimeType;
         auto result = FetchBody::extract(WTFMove(body.value()), mimeType);
         if (result.hasException())
             return result.releaseException();
         auto fetchBody = result.releaseReturnValue();
-        if (fetchBody.hasReadableStream())
+        if (fetchBody.isReadableStream())
             return Exception { TypeError, "Beacons cannot send ReadableStream body"_s };
 
         request.setHTTPBody(fetchBody.bodyAsFormData());
         if (!mimeType.isEmpty()) {
             request.setHTTPContentType(mimeType);
-            if (isCrossOriginSafeRequestHeader(HTTPHeaderName::ContentType, mimeType))
-                options.mode = FetchOptions::Mode::NoCors;
+            if (!isCrossOriginSafeRequestHeader(HTTPHeaderName::ContentType, mimeType))
+                options.mode = FetchOptions::Mode::Cors;
         }
     }
 
@@ -159,7 +162,7 @@ ExceptionOr<bool> NavigatorBeacon::sendBeacon(Document& document, const String& 
     return true;
 }
 
-ExceptionOr<bool> NavigatorBeacon::sendBeacon(Navigator& navigator, Document& document, const String& url, Optional<FetchBody::Init>&& body)
+ExceptionOr<bool> NavigatorBeacon::sendBeacon(Navigator& navigator, Document& document, const String& url, std::optional<FetchBody::Init>&& body)
 {
     return NavigatorBeacon::from(navigator)->sendBeacon(document, url, WTFMove(body));
 }

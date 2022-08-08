@@ -27,7 +27,6 @@
     ExportToWrappedFunction,
     Exposed=Window,
     GenerateIsReachable,
-    ImplementationLacksVTable,
     JSCustomHeader,
 ] interface MediaList {
     stringifier attribute [LegacyNullToEmptyString] DOMString mediaText;
@@ -35,6 +34,6 @@
 
     getter DOMString? item(unsigned long index);
 
-    [MayThrowException] undefined deleteMedium(DOMString oldMedium);
+    undefined deleteMedium(DOMString oldMedium);
     undefined appendMedium(DOMString newMedium);
 };

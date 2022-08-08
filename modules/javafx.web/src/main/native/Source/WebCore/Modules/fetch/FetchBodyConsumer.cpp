@@ -30,22 +30,21 @@
 #include "FetchBodyConsumer.h"
 
 #include "DOMFormData.h"
+#include "FormData.h"
+#include "FormDataConsumer.h"
 #include "HTTPHeaderField.h"
 #include "HTTPParsers.h"
 #include "JSBlob.h"
 #include "JSDOMFormData.h"
-#include "ReadableStreamChunk.h"
 #include "TextResourceDecoder.h"
 #include <wtf/StringExtras.h>
 #include <wtf/URLParser.h>
 
 namespace WebCore {
 
-static inline Ref<Blob> blobFromData(ScriptExecutionContext* context, const unsigned char* data, unsigned length, const String& contentType)
+static inline Ref<Blob> blobFromData(ScriptExecutionContext* context, Vector<uint8_t>&& data, const String& contentType)
 {
-    Vector<uint8_t> value(length);
-    memcpy(value.data(), data, length);
-    return Blob::create(context, WTFMove(value), Blob::normalizedContentType(contentType));
+    return Blob::create(context, WTFMove(data), Blob::normalizedContentType(contentType));
 }
 
 // https://mimesniff.spec.whatwg.org/#http-quoted-string-token-code-point
@@ -100,45 +99,43 @@ static HashMap<String, String> parseParameters(StringView input, size_t position
         if (parameterName.length()
             && isValidHTTPToken(parameterName)
             && parameterValue.isAllSpecialCharacters<isHTTPQuotedStringTokenCodePoint>()) {
-            String nameString = parameterName.toString();
-            if (!parameters.contains(nameString))
-                parameters.set(nameString, parameterValue.toString());
+            parameters.ensure(parameterName.toString(), [&] { return parameterValue.toString(); });
         }
     }
     return parameters;
 }
 
 // https://mimesniff.spec.whatwg.org/#parsing-a-mime-type
-static Optional<MimeType> parseMIMEType(const String& contentType)
+static std::optional<MimeType> parseMIMEType(const String& contentType)
 {
     String input = stripLeadingAndTrailingHTTPSpaces(contentType);
     size_t slashIndex = input.find('/');
     if (slashIndex == notFound)
-        return WTF::nullopt;
+        return std::nullopt;
 
     String type = input.substring(0, slashIndex);
     if (!type.length() || !isValidHTTPToken(type))
-        return WTF::nullopt;
+        return std::nullopt;
 
     size_t semicolonIndex = input.find(';', slashIndex);
     String subtype = stripLeadingAndTrailingHTTPSpaces(input.substring(slashIndex + 1, semicolonIndex - slashIndex - 1));
     if (!subtype.length() || !isValidHTTPToken(subtype))
-        return WTF::nullopt;
+        return std::nullopt;
 
     return {{ WTFMove(type), WTFMove(subtype), parseParameters(StringView(input), semicolonIndex + 1) }};
 }
 
 // https://fetch.spec.whatwg.org/#concept-body-package-data
-static RefPtr<DOMFormData> packageFormData(ScriptExecutionContext* context, const String& contentType, const char* data, size_t length)
+RefPtr<DOMFormData> FetchBodyConsumer::packageFormData(ScriptExecutionContext* context, const String& contentType, const uint8_t* data, size_t length)
 {
-    auto parseMultipartPart = [context] (const char* part, size_t partLength, DOMFormData& form) -> bool {
-        const char* headerEnd = static_cast<const char*>(memmem(part, partLength, "\r\n\r\n", 4));
+    auto parseMultipartPart = [context] (const uint8_t* part, size_t partLength, DOMFormData& form) -> bool {
+        const uint8_t* headerEnd = static_cast<const uint8_t*>(memmem(part, partLength, "\r\n\r\n", 4));
         if (!headerEnd)
             return false;
-        const char* headerBegin = part;
+        const uint8_t* headerBegin = part;
         size_t headerLength = headerEnd - headerBegin;
 
-        const char* bodyBegin = headerEnd + strlen("\r\n\r\n");
+        const uint8_t* bodyBegin = headerEnd + strlen("\r\n\r\n");
         size_t bodyLength = partLength - (bodyBegin - headerBegin);
 
         String header = String::fromUTF8(headerBegin, headerLength);
@@ -170,39 +167,39 @@ static RefPtr<DOMFormData> packageFormData(ScriptExecutionContext* context, cons
                 contentType = stripLeadingAndTrailingHTTPSpaces(header.substring(contentTypeBegin + contentTypePrefixLength, contentTypeEnd - contentTypeBegin - contentTypePrefixLength));
             }
 
-            form.append(name, File::create(context, Blob::create(context, SharedBuffer::create(bodyBegin, bodyLength).get(), Blob::normalizedContentType(contentType)).get(), filename).get(), filename);
+            form.append(name, File::create(context, Blob::create(context, Vector { bodyBegin, bodyLength }, Blob::normalizedContentType(contentType)).get(), filename).get(), filename);
         }
         return true;
     };
 
-    auto parseMultipartBoundary = [] (const Optional<MimeType>& mimeType) -> Optional<String> {
+    auto parseMultipartBoundary = [] (const std::optional<MimeType>& mimeType) -> std::optional<String> {
         if (!mimeType)
-            return WTF::nullopt;
+            return std::nullopt;
         if (equalIgnoringASCIICase(mimeType->type, "multipart") && equalIgnoringASCIICase(mimeType->subtype, "form-data")) {
             auto iterator = mimeType->parameters.find("boundary"_s);
             if (iterator != mimeType->parameters.end())
                 return iterator->value;
         }
-        return WTF::nullopt;
+        return std::nullopt;
     };
 
-    auto form = DOMFormData::create(UTF8Encoding());
+    auto form = DOMFormData::create(PAL::UTF8Encoding());
     auto mimeType = parseMIMEType(contentType);
     if (auto multipartBoundary = parseMultipartBoundary(mimeType)) {
-        String boundaryWithDashes = makeString("--", *multipartBoundary);
+        auto boundaryWithDashes = makeString("--", *multipartBoundary);
         CString boundary = boundaryWithDashes.utf8();
         size_t boundaryLength = boundary.length();
 
-        const char* currentBoundary = static_cast<const char*>(memmem(data, length, boundary.data(), boundaryLength));
+        const uint8_t* currentBoundary = static_cast<const uint8_t*>(memmem(data, length, boundary.data(), boundaryLength));
         if (!currentBoundary)
             return nullptr;
-        const char* nextBoundary = static_cast<const char*>(memmem(currentBoundary + boundaryLength, length - (currentBoundary + boundaryLength - data), boundary.data(), boundaryLength));
+        const uint8_t* nextBoundary = static_cast<const uint8_t*>(memmem(currentBoundary + boundaryLength, length - (currentBoundary + boundaryLength - data), boundary.data(), boundaryLength));
         if (!nextBoundary)
             return nullptr;
         while (nextBoundary) {
             parseMultipartPart(currentBoundary + boundaryLength, nextBoundary - currentBoundary - boundaryLength - strlen("\r\n"), form.get());
             currentBoundary = nextBoundary;
-            nextBoundary = static_cast<const char*>(memmem(nextBoundary + boundaryLength, length - (nextBoundary + boundaryLength - data), boundary.data(), boundaryLength));
+            nextBoundary = static_cast<const uint8_t*>(memmem(nextBoundary + boundaryLength, length - (nextBoundary + boundaryLength - data), boundary.data(), boundaryLength));
         }
     } else if (mimeType && equalIgnoringASCIICase(mimeType->type, "application") && equalIgnoringASCIICase(mimeType->subtype, "x-www-form-urlencoded")) {
         auto dataString = String::fromUTF8(data, length);
@@ -224,7 +221,7 @@ static void resolveWithTypeAndData(Ref<DeferredPromise>&& promise, FetchBodyCons
         return;
     case FetchBodyConsumer::Type::Blob:
         promise->resolveCallbackValueWithNewlyCreated<IDLInterface<Blob>>([&data, &length, &contentType, context](auto&) {
-            return blobFromData(context, data, length, contentType);
+            return blobFromData(context, { data, length }, contentType);
         });
         return;
     case FetchBodyConsumer::Type::JSON:
@@ -234,7 +231,7 @@ static void resolveWithTypeAndData(Ref<DeferredPromise>&& promise, FetchBodyCons
         promise->resolve<IDLDOMString>(TextResourceDecoder::textFromUTF8(data, length));
         return;
     case FetchBodyConsumer::Type::FormData:
-        if (auto formData = packageFormData(context, contentType, reinterpret_cast<const char*>(data), length))
+        if (auto formData = FetchBodyConsumer::packageFormData(context, contentType, data, length))
             promise->resolve<IDLInterface<DOMFormData>>(*formData);
         else
             promise->reject(TypeError);
@@ -247,7 +244,9 @@ static void resolveWithTypeAndData(Ref<DeferredPromise>&& promise, FetchBodyCons
 
 void FetchBodyConsumer::clean()
 {
-    m_buffer = nullptr;
+    m_buffer.reset();
+    if (m_formDataConsumer)
+        m_formDataConsumer->cancel();
     resetConsumePromise();
     if (m_sink) {
         m_sink->clearCallback();
@@ -258,6 +257,62 @@ void FetchBodyConsumer::clean()
 void FetchBodyConsumer::resolveWithData(Ref<DeferredPromise>&& promise, const String& contentType, const unsigned char* data, unsigned length)
 {
     resolveWithTypeAndData(WTFMove(promise), m_type, contentType, data, length);
+}
+
+void FetchBodyConsumer::resolveWithFormData(Ref<DeferredPromise>&& promise, const String& contentType, const FormData& formData, ScriptExecutionContext* context)
+{
+    if (auto sharedBuffer = formData.asSharedBuffer()) {
+        resolveWithData(WTFMove(promise), contentType, sharedBuffer->makeContiguous()->data(), sharedBuffer->size());
+        return;
+    }
+
+    if (!context)
+        return;
+
+    m_formDataConsumer = makeUnique<FormDataConsumer>(formData, *context, [this, capturedPromise = WTFMove(promise), contentType, builder = SharedBufferBuilder { }](auto&& result) mutable {
+        if (result.hasException()) {
+            auto promise = WTFMove(capturedPromise);
+            promise->reject(result.releaseException());
+            return;
+        }
+
+        auto& value = result.returnValue();
+        if (value.empty()) {
+            auto buffer = builder.takeAsContiguous();
+            resolveWithData(WTFMove(capturedPromise), contentType, buffer->data(), buffer->size());
+            return;
+        }
+
+        builder.append(value);
+    });
+}
+
+void FetchBodyConsumer::consumeFormDataAsStream(const FormData& formData, FetchBodySource& source, ScriptExecutionContext* context)
+{
+    if (auto sharedBuffer = formData.asSharedBuffer()) {
+        if (source.enqueue(ArrayBuffer::tryCreate(sharedBuffer->makeContiguous()->data(), sharedBuffer->size())))
+            source.close();
+        return;
+    }
+
+    if (!context)
+        return;
+
+    m_formDataConsumer = makeUnique<FormDataConsumer>(formData, *context, [this, source = Ref { source }](auto&& result) {
+        if (result.hasException()) {
+            source->error(result.releaseException());
+            return;
+        }
+
+        auto& value = result.returnValue();
+        if (value.empty()) {
+            source->close();
+            return;
+        }
+
+        if (!source->enqueue(ArrayBuffer::tryCreate(value.data(), value.size())))
+            m_formDataConsumer->cancel();
+    });
 }
 
 void FetchBodyConsumer::extract(ReadableStream& stream, ReadableStreamToSharedBufferSink::Callback&& callback)
@@ -271,16 +326,18 @@ void FetchBodyConsumer::resolve(Ref<DeferredPromise>&& promise, const String& co
 {
     if (stream) {
         ASSERT(!m_sink);
-        m_sink = ReadableStreamToSharedBufferSink::create([promise = WTFMove(promise), data = SharedBuffer::create(), type = m_type, contentType](auto&& result) mutable {
+        m_sink = ReadableStreamToSharedBufferSink::create([promise = WTFMove(promise), data = SharedBufferBuilder(), type = m_type, contentType](auto&& result) mutable {
             if (result.hasException()) {
                 promise->reject(result.releaseException());
                 return;
             }
 
-            if (auto chunk = result.returnValue())
-                data->append(reinterpret_cast<const char*>(chunk->data), chunk->size);
-            else
-                resolveWithTypeAndData(WTFMove(promise), type, contentType, reinterpret_cast<const unsigned char*>(data->data()), data->size());
+            if (auto* chunk = result.returnValue())
+                data.append(chunk->data(), chunk->size());
+            else {
+                auto buffer = data.takeAsContiguous();
+                resolveWithTypeAndData(WTFMove(promise), type, contentType, buffer->data(), buffer->size());
+            }
         });
         m_sink->pipeFrom(*stream);
         return;
@@ -311,7 +368,7 @@ void FetchBodyConsumer::resolve(Ref<DeferredPromise>&& promise, const String& co
         return;
     case FetchBodyConsumer::Type::FormData: {
         auto buffer = takeData();
-        if (auto formData = packageFormData(context, contentType, buffer ? buffer->data() : nullptr, buffer ? buffer->size() : 0))
+        if (auto formData = packageFormData(context, contentType, buffer ? buffer->makeContiguous()->data() : nullptr, buffer ? buffer->size() : 0))
             promise->resolve<IDLInterface<DOMFormData>>(*formData);
         else
             promise->reject(TypeError);
@@ -323,37 +380,30 @@ void FetchBodyConsumer::resolve(Ref<DeferredPromise>&& promise, const String& co
     }
 }
 
-void FetchBodyConsumer::append(const char* data, unsigned size)
+void FetchBodyConsumer::append(const SharedBuffer& buffer)
 {
     if (m_source) {
-        m_source->enqueue(ArrayBuffer::tryCreate(data, size));
+        m_source->enqueue(buffer.tryCreateArrayBuffer());
         return;
     }
-    if (!m_buffer) {
-        m_buffer = SharedBuffer::create(data, size);
-        return;
-    }
-    m_buffer->append(data, size);
+    m_buffer.append(buffer);
 }
 
-void FetchBodyConsumer::append(const unsigned char* data, unsigned size)
+void FetchBodyConsumer::setData(Ref<FragmentedSharedBuffer>&& data)
 {
-    append(reinterpret_cast<const char*>(data), size);
+    m_buffer = WTFMove(data);
 }
 
-RefPtr<SharedBuffer> FetchBodyConsumer::takeData()
+RefPtr<FragmentedSharedBuffer> FetchBodyConsumer::takeData()
 {
-    return WTFMove(m_buffer);
+    if (!m_buffer)
+        return nullptr;
+    return m_buffer.take();
 }
 
 RefPtr<JSC::ArrayBuffer> FetchBodyConsumer::takeAsArrayBuffer()
 {
-    if (!m_buffer)
-        return ArrayBuffer::tryCreate(nullptr, 0);
-
-    auto arrayBuffer = m_buffer->tryCreateArrayBuffer();
-    m_buffer = nullptr;
-    return arrayBuffer;
+    return m_buffer.takeAsArrayBuffer();
 }
 
 Ref<Blob> FetchBodyConsumer::takeAsBlob(ScriptExecutionContext* context)
@@ -361,8 +411,7 @@ Ref<Blob> FetchBodyConsumer::takeAsBlob(ScriptExecutionContext* context)
     if (!m_buffer)
         return Blob::create(context, Vector<uint8_t>(), Blob::normalizedContentType(m_contentType));
 
-    // FIXME: We should try to move m_buffer to Blob without doing extra copy.
-    return blobFromData(context, reinterpret_cast<const unsigned char*>(m_buffer->data()), m_buffer->size(), m_contentType);
+    return blobFromData(context, m_buffer.take()->extractData(), m_contentType);
 }
 
 String FetchBodyConsumer::takeAsText()
@@ -371,8 +420,8 @@ String FetchBodyConsumer::takeAsText()
     if (!m_buffer)
         return String();
 
-    auto text = TextResourceDecoder::textFromUTF8(reinterpret_cast<const unsigned char*>(m_buffer->data()), m_buffer->size());
-    m_buffer = nullptr;
+    auto buffer = m_buffer.takeAsContiguous();
+    auto text = TextResourceDecoder::textFromUTF8(buffer->data(), buffer->size());
     return text;
 }
 
@@ -392,10 +441,8 @@ void FetchBodyConsumer::resetConsumePromise()
 void FetchBodyConsumer::setSource(Ref<FetchBodySource>&& source)
 {
     m_source = WTFMove(source);
-    if (m_buffer) {
-        m_source->enqueue(m_buffer->tryCreateArrayBuffer());
-        m_buffer = nullptr;
-    }
+    if (m_buffer)
+        m_source->enqueue(m_buffer.takeAsArrayBuffer());
 }
 
 void FetchBodyConsumer::loadingFailed(const Exception& exception)
@@ -427,6 +474,14 @@ void FetchBodyConsumer::loadingSucceeded(const String& contentType)
         m_source->close();
         m_source = nullptr;
     }
+}
+
+FetchBodyConsumer FetchBodyConsumer::clone()
+{
+    FetchBodyConsumer clone { m_type };
+    clone.m_contentType = m_contentType;
+    clone.m_buffer = m_buffer;
+    return clone;
 }
 
 } // namespace WebCore

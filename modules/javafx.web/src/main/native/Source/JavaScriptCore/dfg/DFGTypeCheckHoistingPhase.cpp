@@ -273,15 +273,18 @@ private:
                 case ReallocatePropertyStorage:
                 case NukeStructureAndSetButterfly:
                 case GetButterfly:
+                case EnumeratorGetByVal:
                 case GetByVal:
                 case PutByValDirect:
                 case PutByVal:
                 case PutByValAlias:
                 case GetArrayLength:
+                case GetTypedArrayLengthAsInt52:
                 case CheckArray:
                 case CheckDetached:
                 case GetIndexedPropertyStorage:
                 case GetTypedArrayByteOffset:
+                case GetTypedArrayByteOffsetAsInt52:
                 case Phantom:
                 case MovHint:
                 case MultiGetByOffset:
@@ -352,11 +355,13 @@ private:
                 case PutStructure:
                 case ReallocatePropertyStorage:
                 case GetButterfly:
+                case EnumeratorGetByVal:
                 case GetByVal:
                 case PutByValDirect:
                 case PutByVal:
                 case PutByValAlias:
                 case GetArrayLength:
+                case GetTypedArrayLengthAsInt52:
                 case GetIndexedPropertyStorage:
                 case Phantom:
                 case MovHint:
@@ -456,7 +461,7 @@ private:
                 continue;
             if (block->bytecodeBegin != m_graph.m_plan.osrEntryBytecodeIndex())
                 continue;
-            const Operands<Optional<JSValue>>& mustHandleValues = m_graph.m_plan.mustHandleValues();
+            const Operands<std::optional<JSValue>>& mustHandleValues = m_graph.m_plan.mustHandleValues();
             for (size_t i = 0; i < mustHandleValues.size(); ++i) {
                 Operand operand = mustHandleValues.operandForIndex(i);
                 Node* node = block->variablesAtHead.operand(operand);
@@ -468,7 +473,7 @@ private:
                     continue;
                 if (!TypeCheck::isValidToHoist(iter->value))
                     continue;
-                Optional<JSValue> value = mustHandleValues[i];
+                std::optional<JSValue> value = mustHandleValues[i];
                 if (!value || !value.value() || !value.value().isCell() || TypeCheck::isContravenedByValue(iter->value, value.value())) {
                     TypeCheck::disableHoisting(iter->value);
                     continue;

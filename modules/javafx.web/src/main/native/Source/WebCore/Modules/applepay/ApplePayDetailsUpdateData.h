@@ -39,7 +39,7 @@ struct ApplePayDetailsUpdateData {
 #endif
 
     template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static Optional<ApplePayDetailsUpdateData> decode(Decoder&);
+    template<class Decoder> static std::optional<ApplePayDetailsUpdateData> decode(Decoder&);
 
     template<class Decoder> WARN_UNUSED_RETURN bool decodeData(Decoder&);
 };
@@ -47,19 +47,20 @@ struct ApplePayDetailsUpdateData {
 template<class Encoder>
 void ApplePayDetailsUpdateData::encode(Encoder& encoder) const
 {
+    UNUSED_PARAM(encoder);
 #if defined(ApplePayDetailsUpdateDataAdditions_encode)
     ApplePayDetailsUpdateDataAdditions_encode
-#else
-    UNUSED_PARAM(encoder);
 #endif
+
+    UNUSED_PARAM(encoder);
 }
 
 template<class Decoder>
-Optional<ApplePayDetailsUpdateData> ApplePayDetailsUpdateData::decode(Decoder& decoder)
+std::optional<ApplePayDetailsUpdateData> ApplePayDetailsUpdateData::decode(Decoder& decoder)
 {
     ApplePayDetailsUpdateData result;
     if (!result.decodeData(decoder))
-        return WTF::nullopt;
+        return std::nullopt;
     return result;
 }
 
@@ -67,20 +68,20 @@ template<class Decoder>
 bool ApplePayDetailsUpdateData::decodeData(Decoder& decoder)
 {
 #define DECODE(name, type) \
-    Optional<type> name; \
+    std::optional<type> name; \
     decoder >> name; \
     if (!name) \
         return false; \
     this->name = WTFMove(*name); \
 
+    UNUSED_PARAM(decoder);
 #if defined(ApplePayDetailsUpdateDataAdditions_decodeData)
     ApplePayDetailsUpdateDataAdditions_decodeData
-#else
-    UNUSED_PARAM(decoder);
 #endif
 
 #undef DECODE
 
+    UNUSED_PARAM(decoder);
     return true;
 }
 

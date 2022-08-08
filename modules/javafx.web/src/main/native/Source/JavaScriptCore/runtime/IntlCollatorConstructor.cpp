@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2015 Andy VanWagoner (andy@vanwagoner.family)
  * Copyright (C) 2015 Sukolsak Sakshuwong (sukolsak@gmail.com)
- * Copyright (C) 2016-2020 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2016-2021 Apple Inc. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -37,7 +37,7 @@ namespace JSC {
 
 STATIC_ASSERT_IS_TRIVIALLY_DESTRUCTIBLE(IntlCollatorConstructor);
 
-static JSC_DECLARE_HOST_FUNCTION(IntlCollatorConstructorFuncSupportedLocalesOf);
+static JSC_DECLARE_HOST_FUNCTION(intlCollatorConstructorFuncSupportedLocalesOf);
 
 }
 
@@ -52,13 +52,13 @@ const ClassInfo IntlCollatorConstructor::s_info = { "Function", &InternalFunctio
 
 /* Source for IntlCollatorConstructor.lut.h
 @begin collatorConstructorTable
-  supportedLocalesOf             IntlCollatorConstructorFuncSupportedLocalesOf             DontEnum|Function 1
+  supportedLocalesOf             intlCollatorConstructorFuncSupportedLocalesOf             DontEnum|Function 1
 @end
 */
 
 IntlCollatorConstructor* IntlCollatorConstructor::create(VM& vm, Structure* structure, IntlCollatorPrototype* collatorPrototype)
 {
-    IntlCollatorConstructor* constructor = new (NotNull, allocateCell<IntlCollatorConstructor>(vm.heap)) IntlCollatorConstructor(vm, structure);
+    IntlCollatorConstructor* constructor = new (NotNull, allocateCell<IntlCollatorConstructor>(vm)) IntlCollatorConstructor(vm, structure);
     constructor->finishCreation(vm, collatorPrototype);
     return constructor;
 }
@@ -89,9 +89,7 @@ JSC_DEFINE_HOST_FUNCTION(constructIntlCollator, (JSGlobalObject* globalObject, C
     // 2. Let collator be OrdinaryCreateFromConstructor(newTarget, %CollatorPrototype%).
     // 3. ReturnIfAbrupt(collator).
     JSObject* newTarget = asObject(callFrame->newTarget());
-    Structure* structure = newTarget == callFrame->jsCallee()
-        ? globalObject->collatorStructure()
-        : InternalFunction::createSubclassStructure(globalObject, newTarget, getFunctionRealm(vm, newTarget)->collatorStructure());
+    Structure* structure = JSC_GET_DERIVED_STRUCTURE(vm, collatorStructure, newTarget, callFrame->jsCallee());
     RETURN_IF_EXCEPTION(scope, { });
 
     IntlCollator* collator = IntlCollator::create(vm, structure);
@@ -123,7 +121,7 @@ JSC_DEFINE_HOST_FUNCTION(callIntlCollator, (JSGlobalObject* globalObject, CallFr
     return JSValue::encode(collator);
 }
 
-JSC_DEFINE_HOST_FUNCTION(IntlCollatorConstructorFuncSupportedLocalesOf, (JSGlobalObject* globalObject, CallFrame* callFrame))
+JSC_DEFINE_HOST_FUNCTION(intlCollatorConstructorFuncSupportedLocalesOf, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);

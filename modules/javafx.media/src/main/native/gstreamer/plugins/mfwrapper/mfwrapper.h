@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -60,8 +60,10 @@ struct _GstMFWrapper
     gboolean is_flushing;
     gboolean is_eos_received;
     gboolean is_eos;
+    gboolean is_decoder_initialized;
 
     gboolean force_discontinuity;
+    gboolean force_output_discontinuity;
 
     HRESULT hr_mfstartup;
 

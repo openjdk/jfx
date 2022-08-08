@@ -53,18 +53,16 @@ public:
         FINISHED_STATE = 3
     };
 
-    AudioScheduledSourceNode(BaseAudioContext&, NodeType);
-
     ExceptionOr<void> startLater(double when);
     ExceptionOr<void> stopLater(double when);
-
-    void didBecomeMarkedForDeletion() override;
 
     unsigned short playbackState() const { return static_cast<unsigned short>(m_playbackState); }
     bool isPlayingOrScheduled() const { return m_playbackState == PLAYING_STATE || m_playbackState == SCHEDULED_STATE; }
     bool hasFinished() const { return m_playbackState == FINISHED_STATE; }
 
 protected:
+    AudioScheduledSourceNode(BaseAudioContext&, NodeType);
+
     // Get frame information for the current time quantum.
     // We handle the transition into PLAYING_STATE and FINISHED_STATE here,
     // zeroing out portions of the outputBus which are outside the range of startFrame and endFrame.
@@ -79,18 +77,21 @@ protected:
     // Called when we have no more sound to play or the noteOff() time has been reached.
     virtual void finish();
 
+    bool virtualHasPendingActivity() const final;
+    void eventListenersDidChange() final;
+
     bool requiresTailProcessing() const final { return false; }
 
     PlaybackState m_playbackState { UNSCHEDULED_STATE };
 
-    RefPtr<PendingActivity<AudioScheduledSourceNode>> m_pendingActivity;
     // m_startTime is the time to start playing based on the context's timeline (0 or a time less than the context's current time means "now").
     double m_startTime { 0 }; // in seconds
 
     // m_endTime is the time to stop playing based on the context's timeline (0 or a time less than the context's current time means "now").
     // If it hasn't been set explicitly, then the sound will not stop playing (if looping) or will stop when the end of the AudioBuffer
     // has been reached.
-    Optional<double> m_endTime; // in seconds
+    std::optional<double> m_endTime; // in seconds
+    bool m_hasEndedEventListener { false };
 };
 
 } // namespace WebCore

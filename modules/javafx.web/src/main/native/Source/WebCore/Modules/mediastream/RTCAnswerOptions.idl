@@ -25,6 +25,6 @@
 
 [
     Conditional=WEB_RTC,
-    EnabledAtRuntime=PeerConnection
+    EnabledBySetting=PeerConnectionEnabled
 ] dictionary RTCAnswerOptions : RTCOfferAnswerOptions {
 };

@@ -44,11 +44,13 @@
 #include "RTCDataChannel.h"
 #include "RTCIceConnectionState.h"
 #include "RTCIceGatheringState.h"
+#include "RTCLocalSessionDescriptionInit.h"
 #include "RTCPeerConnectionState.h"
 #include "RTCRtpEncodingParameters.h"
 #include "RTCRtpTransceiver.h"
+#include "RTCSessionDescriptionInit.h"
 #include "RTCSignalingState.h"
-#include <JavaScriptCore/Uint8Array.h>
+#include <JavaScriptCore/Forward.h>
 #include <wtf/LoggerHelper.h>
 #include <wtf/WeakPtr.h>
 
@@ -58,8 +60,12 @@ class DOMPromiseDeferredBase;
 class MediaStream;
 class MediaStreamTrack;
 class RTCController;
+class RTCDtlsTransport;
+class RTCDtlsTransportBackend;
 class RTCIceCandidate;
+class RTCIceTransportBackend;
 class RTCPeerConnectionErrorCallback;
+class RTCSctpTransport;
 class RTCSessionDescription;
 class RTCStatsCallback;
 
@@ -94,36 +100,36 @@ public:
         String name;
         String hash;
         String namedCurve;
-        Optional<uint32_t> modulusLength;
+        std::optional<uint32_t> modulusLength;
         RefPtr<Uint8Array> publicExponent;
-        Optional<double> expires;
+        std::optional<double> expires;
     };
 
-    using AlgorithmIdentifier = Variant<JSC::Strong<JSC::JSObject>, String>;
+    using AlgorithmIdentifier = std::variant<JSC::Strong<JSC::JSObject>, String>;
     static void generateCertificate(JSC::JSGlobalObject&, AlgorithmIdentifier&&, DOMPromiseDeferred<IDLInterface<RTCCertificate>>&&);
 
     // 4.3.2 RTCPeerConnection Interface
     void createOffer(RTCOfferOptions&&, Ref<DeferredPromise>&&);
     void createAnswer(RTCAnswerOptions&&, Ref<DeferredPromise>&&);
 
-    using Description = Variant<RTCSessionDescriptionInit, RefPtr<RTCSessionDescription>>;
-    void setLocalDescription(Optional<Description>&&, Ref<DeferredPromise>&&);
-    RefPtr<RTCSessionDescription> localDescription() const;
-    RefPtr<RTCSessionDescription> currentLocalDescription() const;
-    RefPtr<RTCSessionDescription> pendingLocalDescription() const;
+    void setLocalDescription(std::optional<RTCLocalSessionDescriptionInit>&&, Ref<DeferredPromise>&&);
+    RefPtr<RTCSessionDescription> localDescription() const { return m_pendingLocalDescription ? m_pendingLocalDescription.get() : m_currentLocalDescription.get(); }
+    RefPtr<RTCSessionDescription> currentLocalDescription() const { return m_currentLocalDescription.get(); }
+    RefPtr<RTCSessionDescription> pendingLocalDescription() const { return m_pendingLocalDescription.get(); }
 
-    void setRemoteDescription(Description&&, Ref<DeferredPromise>&&);
-    RefPtr<RTCSessionDescription> remoteDescription() const;
-    RefPtr<RTCSessionDescription> currentRemoteDescription() const;
-    RefPtr<RTCSessionDescription> pendingRemoteDescription() const;
+    void setRemoteDescription(RTCSessionDescriptionInit&&, Ref<DeferredPromise>&&);
+    RTCSessionDescription* remoteDescription() const { return m_pendingRemoteDescription ? m_pendingRemoteDescription.get() : m_currentRemoteDescription.get(); }
+    RTCSessionDescription* currentRemoteDescription() const { return m_currentRemoteDescription.get(); }
+    RTCSessionDescription* pendingRemoteDescription() const { return m_pendingRemoteDescription.get(); }
 
-    using Candidate = Optional<Variant<RTCIceCandidateInit, RefPtr<RTCIceCandidate>>>;
+    using Candidate = std::optional<std::variant<RTCIceCandidateInit, RefPtr<RTCIceCandidate>>>;
     void addIceCandidate(Candidate&&, Ref<DeferredPromise>&&);
 
     RTCSignalingState signalingState() const { return m_signalingState; }
     RTCIceGatheringState iceGatheringState() const { return m_iceGatheringState; }
     RTCIceConnectionState iceConnectionState() const { return m_iceConnectionState; }
     RTCPeerConnectionState connectionState() const { return m_connectionState; }
+    std::optional<bool> canTrickleIceCandidates() const;
 
     void restartIce() { m_backend->restartIce(); }
     const RTCConfiguration& getConfiguration() const { return m_configuration; }
@@ -140,12 +146,12 @@ public:
     Vector<std::reference_wrapper<RTCRtpReceiver>> getReceivers() const;
     const Vector<RefPtr<RTCRtpTransceiver>>& getTransceivers() const;
 
-    const Vector<RefPtr<RTCRtpTransceiver>>& currentTransceivers() const { return m_transceiverSet->list(); }
+    const Vector<RefPtr<RTCRtpTransceiver>>& currentTransceivers() const { return m_transceiverSet.list(); }
 
-    ExceptionOr<Ref<RTCRtpSender>> addTrack(Ref<MediaStreamTrack>&&, const Vector<std::reference_wrapper<MediaStream>>&);
+    ExceptionOr<Ref<RTCRtpSender>> addTrack(Ref<MediaStreamTrack>&&, const FixedVector<std::reference_wrapper<MediaStream>>&);
     ExceptionOr<void> removeTrack(RTCRtpSender&);
 
-    using AddTransceiverTrackOrKind = Variant<RefPtr<MediaStreamTrack>, String>;
+    using AddTransceiverTrackOrKind = std::variant<RefPtr<MediaStreamTrack>, String>;
     ExceptionOr<Ref<RTCRtpTransceiver>> addTransceiver(AddTransceiverTrackOrKind&&, const RTCRtpTransceiverInit&);
 
     // 6.1 Peer-to-peer data API
@@ -153,6 +159,8 @@ public:
 
     // 8.2 Statistics API
     void getStats(MediaStreamTrack*, Ref<DeferredPromise>&&);
+    // Used for testing
+    WEBCORE_EXPORT void gatherDecoderImplementationName(Function<void(String&&)>&&);
 
     // EventTarget
     EventTargetInterface eventTargetInterface() const final { return RTCPeerConnectionEventTargetInterfaceType; }
@@ -165,13 +173,13 @@ public:
     WEBCORE_EXPORT void emulatePlatformEvent(const String& action);
 
     // API used by PeerConnectionBackend and relatives
-    void setSignalingState(RTCSignalingState);
     void updateIceGatheringState(RTCIceGatheringState);
     void updateIceConnectionState(RTCIceConnectionState);
+    void updateConnectionState();
 
-    void scheduleNegotiationNeededEvent();
+    void updateNegotiationNeededFlag(std::optional<uint32_t>);
 
-    void dispatchEventWhenFeasible(Ref<Event>&&);
+    void scheduleEvent(Ref<Event>&&);
 
     void disableICECandidateFiltering() { m_backend->disableICECandidateFiltering(); }
     void enableICECandidateFiltering() { m_backend->enableICECandidateFiltering(); }
@@ -180,7 +188,18 @@ public:
 
     Document* document();
 
-    void doTask(Function<void()>&&);
+    void updateDescriptions(PeerConnectionBackend::DescriptionStates&&);
+    void updateTransceiversAfterSuccessfulLocalDescription();
+    void updateTransceiversAfterSuccessfulRemoteDescription();
+    void updateSctpBackend(std::unique_ptr<RTCSctpTransportBackend>&&);
+
+    void processIceTransportStateChange(RTCIceTransport&);
+    void processIceTransportChanges();
+
+    RTCSctpTransport* sctp() { return m_sctpTransport.get(); }
+
+    // EventTarget implementation.
+    void dispatchEvent(Event&) final;
 
 #if !RELEASE_LOG_DISABLED
     const Logger& logger() const final { return m_logger.get(); }
@@ -203,7 +222,6 @@ private:
     // EventTarget implementation.
     void refEventTarget() final { ref(); }
     void derefEventTarget() final { deref(); }
-    void dispatchEvent(Event&) final;
 
     // ActiveDOMObject
     WEBCORE_EXPORT void stop() final;
@@ -212,7 +230,10 @@ private:
     void resume() final;
     bool virtualHasPendingActivity() const final;
 
-    void updateConnectionState();
+    bool updateIceConnectionStateFromIceTransports();
+    RTCIceConnectionState computeIceConnectionStateFromIceTransports();
+    RTCPeerConnectionState computeConnectionState();
+
     bool doClose();
     void doStop();
 
@@ -223,6 +244,12 @@ private:
     friend class RTCRtpSender;
 
     ExceptionOr<Vector<MediaEndpointConfiguration::IceServerInfo>> iceServersFromConfiguration(RTCConfiguration& newConfiguration, const RTCConfiguration* existingConfiguration, bool isLocalDescriptionSet);
+
+    Ref<RTCIceTransport> getOrCreateIceTransport(UniqueRef<RTCIceTransportBackend>&&);
+    RefPtr<RTCDtlsTransport> getOrCreateDtlsTransport(std::unique_ptr<RTCDtlsTransportBackend>&&);
+    void updateTransceiverTransports();
+
+    void setSignalingState(RTCSignalingState);
 
     bool m_isStopped { false };
     RTCSignalingState m_signalingState { RTCSignalingState::Stable };
@@ -235,7 +262,7 @@ private:
     const void* m_logIdentifier;
 #endif
 
-    std::unique_ptr<RtpTransceiverSet> m_transceiverSet { std::unique_ptr<RtpTransceiverSet>(new RtpTransceiverSet()) };
+    RtpTransceiverSet m_transceiverSet;
 
     std::unique_ptr<PeerConnectionBackend> m_backend;
 
@@ -243,10 +270,20 @@ private:
     RTCController* m_controller { nullptr };
     Vector<RefPtr<RTCCertificate>> m_certificates;
     bool m_shouldDelayTasks { false };
-    Vector<Function<void()>> m_pendingTasks;
     Deque<std::pair<Ref<DeferredPromise>, Function<void(Ref<DeferredPromise>&&)>>> m_operations;
     bool m_hasPendingOperation { false };
-    bool m_shouldFireNegotiationNeededOnceOperationChainIsEmpty { false };
+    std::optional<uint32_t> m_negotiationNeededEventId;
+    Vector<Ref<RTCDtlsTransport>> m_dtlsTransports;
+    Vector<Ref<RTCIceTransport>> m_iceTransports;
+    RefPtr<RTCSctpTransport> m_sctpTransport;
+
+    RefPtr<RTCSessionDescription> m_currentLocalDescription;
+    RefPtr<RTCSessionDescription> m_pendingLocalDescription;
+    RefPtr<RTCSessionDescription> m_currentRemoteDescription;
+    RefPtr<RTCSessionDescription> m_pendingRemoteDescription;
+
+    String m_lastCreatedOffer;
+    String m_lastCreatedAnswer;
 };
 
 } // namespace WebCore

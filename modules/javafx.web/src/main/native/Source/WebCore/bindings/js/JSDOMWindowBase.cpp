@@ -1,7 +1,7 @@
 /*
  *  Copyright (C) 2000 Harri Porten (porten@kde.org)
  *  Copyright (C) 2006 Jon Shier (jshier@iastate.edu)
- *  Copyright (C) 2003-2020 Apple Inc. All rights reseved.
+ *  Copyright (C) 2003-2021 Apple Inc. All rights reseved.
  *  Copyright (C) 2006 Alexey Proskuryakov (ap@webkit.org)
  *  Copyright (c) 2015 Canon Inc. All rights reserved.
  *
@@ -26,14 +26,16 @@
 
 #include "Chrome.h"
 #include "CommonVM.h"
+#include "ContentSecurityPolicy.h"
 #include "DOMWindow.h"
 #include "Document.h"
+#include "Element.h"
+#include "Event.h"
 #include "EventLoop.h"
 #include "FetchResponse.h"
 #include "Frame.h"
 #include "InspectorController.h"
 #include "JSDOMBindingSecurity.h"
-#include "JSDOMGlobalObjectTask.h"
 #include "JSDOMWindowCustom.h"
 #include "JSDocument.h"
 #include "JSFetchResponse.h"
@@ -83,7 +85,8 @@ const GlobalObjectMethodTable JSDOMWindowBase::s_globalObjectMethodTable = {
     &reportUncaughtExceptionAtEventLoop,
     &currentScriptExecutionOwner,
     &scriptExecutionStatus,
-    &defaultLanguage,
+    &reportViolationForUnsafeEval,
+    [] { return defaultLanguage(); },
 #if ENABLE(WEBASSEMBLY)
     &compileStreaming,
     &instantiateStreaming,
@@ -91,6 +94,7 @@ const GlobalObjectMethodTable JSDOMWindowBase::s_globalObjectMethodTable = {
     nullptr,
     nullptr,
 #endif
+    &deriveShadowRealmGlobalObject
 };
 
 JSDOMWindowBase::JSDOMWindowBase(VM& vm, Structure* structure, RefPtr<DOMWindow>&& window, JSWindowProxy* proxy)
@@ -100,11 +104,10 @@ JSDOMWindowBase::JSDOMWindowBase(VM& vm, Structure* structure, RefPtr<DOMWindow>
     m_proxy.set(vm, this, proxy);
 }
 
-void JSDOMWindowBase::finishCreation(VM& vm, JSWindowProxy* proxy)
-{
-    Base::finishCreation(vm, proxy);
-    ASSERT(inherits(vm, info()));
+JSDOMWindowBase::~JSDOMWindowBase() = default;
 
+SUPPRESS_ASAN inline void JSDOMWindowBase::initStaticGlobals(JSC::VM& vm)
+{
     auto& builtinNames = static_cast<JSVMClientData*>(vm.clientData)->builtinNames();
 
     GlobalPropertyInfo staticGlobals[] = {
@@ -113,9 +116,19 @@ void JSDOMWindowBase::finishCreation(VM& vm, JSWindowProxy* proxy)
     };
 
     addStaticGlobals(staticGlobals, WTF_ARRAY_LENGTH(staticGlobals));
+}
+
+void JSDOMWindowBase::finishCreation(VM& vm, JSWindowProxy* proxy)
+{
+    Base::finishCreation(vm, proxy);
+    ASSERT(inherits(vm, info()));
+
+    initStaticGlobals(vm);
 
     if (m_wrapped && m_wrapped->frame() && m_wrapped->frame()->settings().needsSiteSpecificQuirks())
         setNeedsSiteSpecificQuirks(true);
+
+    putDirectCustomAccessor(vm, static_cast<JSVMClientData*>(vm.clientData)->builtinNames().showModalDialogPublicName(), CustomGetterSetter::create(vm, showModalDialogGetter, nullptr), static_cast<unsigned>(PropertyAttribute::CustomValue));
 }
 
 void JSDOMWindowBase::destroy(JSCell* cell)
@@ -244,6 +257,24 @@ JSC::ScriptExecutionStatus JSDOMWindowBase::scriptExecutionStatus(JSC::JSGlobalO
     return jsCast<JSDocument*>(owner)->wrapped().jscScriptExecutionStatus();
 }
 
+void JSDOMWindowBase::reportViolationForUnsafeEval(JSGlobalObject* object, JSString* source)
+{
+    const JSDOMWindowBase* thisObject = static_cast<const JSDOMWindowBase*>(object);
+    ContentSecurityPolicy* contentSecurityPolicy = nullptr;
+    if (auto* element = thisObject->wrapped().frameElement())
+        contentSecurityPolicy = element->document().contentSecurityPolicy();
+
+    if (!contentSecurityPolicy) {
+        if (auto *document = thisObject->wrapped().document())
+            contentSecurityPolicy = document->contentSecurityPolicy();
+    }
+
+    if (!contentSecurityPolicy)
+        return;
+
+    contentSecurityPolicy->allowEval(object, LogToConsole::No, source ? source->tryGetValue() : StringView());
+}
+
 void JSDOMWindowBase::willRemoveFromWindowProxy()
 {
     setCurrentEvent(0);
@@ -277,26 +308,14 @@ JSDOMWindow* toJSDOMWindow(Frame& frame, DOMWrapperWorld& world)
     return frame.script().globalObject(world);
 }
 
-JSDOMWindow* toJSDOMWindow(JSC::VM& vm, JSValue value)
+DOMWindow& incumbentDOMWindow(JSGlobalObject& fallbackGlobalObject, CallFrame& callFrame)
 {
-    if (!value.isObject())
-        return nullptr;
-
-    while (!value.isNull()) {
-        JSObject* object = asObject(value);
-        const ClassInfo* classInfo = object->classInfo(vm);
-        if (classInfo == JSDOMWindow::info())
-            return jsCast<JSDOMWindow*>(object);
-        if (classInfo == JSWindowProxy::info())
-            return jsDynamicCast<JSDOMWindow*>(vm, jsCast<JSWindowProxy*>(object)->window());
-        value = object->getPrototypeDirect(vm);
-    }
-    return nullptr;
+    return asJSDOMWindow(&callerGlobalObject(fallbackGlobalObject, &callFrame))->wrapped();
 }
 
-DOMWindow& incumbentDOMWindow(JSGlobalObject& lexicalGlobalObject, CallFrame& callFrame)
+DOMWindow& incumbentDOMWindow(JSGlobalObject& fallbackGlobalObject)
 {
-    return asJSDOMWindow(&callerGlobalObject(lexicalGlobalObject, callFrame))->wrapped();
+    return asJSDOMWindow(&callerGlobalObject(fallbackGlobalObject, fallbackGlobalObject.vm().topCallFrame))->wrapped();
 }
 
 DOMWindow& activeDOMWindow(JSGlobalObject& lexicalGlobalObject)
@@ -310,14 +329,14 @@ DOMWindow& firstDOMWindow(JSGlobalObject& lexicalGlobalObject)
     return asJSDOMWindow(vm.deprecatedVMEntryGlobalObject(&lexicalGlobalObject))->wrapped();
 }
 
-Document* responsibleDocument(VM& vm, CallFrame& callFrame)
+DOMWindow& legacyActiveDOMWindowForAccessor(JSGlobalObject& fallbackGlobalObject, CallFrame& callFrame)
 {
-    CallerFunctor functor;
-    callFrame.iterate(vm, functor);
-    auto* callerFrame = functor.callerFrame();
-    if (!callerFrame)
-        return nullptr;
-    return asJSDOMWindow(callerFrame->lexicalGlobalObject(vm))->wrapped().document();
+    return asJSDOMWindow(&legacyActiveGlobalObjectForAccessor(fallbackGlobalObject, &callFrame))->wrapped();
+}
+
+DOMWindow& legacyActiveDOMWindowForAccessor(JSGlobalObject& fallbackGlobalObject)
+{
+    return asJSDOMWindow(&legacyActiveGlobalObjectForAccessor(fallbackGlobalObject, fallbackGlobalObject.vm().topCallFrame))->wrapped();
 }
 
 void JSDOMWindowBase::fireFrameClearedWatchpointsForWindow(DOMWindow* window)

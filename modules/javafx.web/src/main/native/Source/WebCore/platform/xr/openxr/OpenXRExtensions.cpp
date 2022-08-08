@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2021 Igalia, S.L.
+ * Copyright (C) 2022 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -54,9 +55,17 @@ OpenXRExtensions::OpenXRExtensions(Vector<XrExtensionProperties>&& extensions)
 {
 }
 
+void OpenXRExtensions::loadMethods(XrInstance instance)
+{
+#if USE(EGL)
+    m_methods.getProcAddressFunc = eglGetProcAddress;
+#endif
+    xrGetInstanceProcAddr(instance, "xrGetOpenGLGraphicsRequirementsKHR", reinterpret_cast<PFN_xrVoidFunction*>(&m_methods.xrGetOpenGLGraphicsRequirementsKHR));
+}
+
 bool OpenXRExtensions::isExtensionSupported(const char* name) const
 {
-    auto position = m_extensions.findMatching([name](auto& property) {
+    auto position = m_extensions.findIf([name](auto& property) {
         return !strcmp(property.extensionName, name);
     });
     return position != notFound;

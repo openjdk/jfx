@@ -44,10 +44,10 @@
  *   GValue item = G_VALUE_INIT;
  *   done = FALSE;
  *   while (!done) {
- *     switch (gst_iterator_next (it, &amp;item)) {
+ *     switch (gst_iterator_next (it, &item)) {
  *       case GST_ITERATOR_OK:
  *         ...get/use/change item here...
- *         g_value_reset (&amp;item);
+ *         g_value_reset (&item);
  *         break;
  *       case GST_ITERATOR_RESYNC:
  *         ...rollback changes to items...
@@ -62,7 +62,7 @@
  *         break;
  *     }
  *   }
- *   g_value_unset (&amp;item);
+ *   g_value_unset (&item);
  *   gst_iterator_free (it);
  * ]|
  */
@@ -629,12 +629,7 @@ gst_iterator_fold (GstIterator * it, GstIteratorFoldFunction func,
 
 fold_done:
 
-#if GLIB_CHECK_VERSION (2, 48, 0)
   g_value_unset (&item);
-#else
-  if (item.g_type != 0)
-    g_value_unset (&item);
-#endif
 
   return result;
 }

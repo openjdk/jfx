@@ -42,7 +42,7 @@ typedef struct _GstBufferList GstBufferList;
 
 /**
  * GstBufferListFunc:
- * @buffer: (out) (nullable): pointer the buffer
+ * @buffer: (out) (nullable): pointer to the buffer
  * @idx: the index of @buffer
  * @user_data: user data passed to gst_buffer_list_foreach()
  *

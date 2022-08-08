@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,7 +28,6 @@
 
 #include "DOMWindow.h"
 #include "Frame.h"
-#include "RuntimeApplicationChecks.h"
 #include "ScriptController.h"
 #include "WebCoreJSClientData.h"
 #include <JavaScriptCore/HeapInlines.h>
@@ -43,18 +42,6 @@
 #endif
 
 namespace WebCore {
-
-// FIXME: <rdar://problem/25965028> This should be removed or replaced with a Setting that iBooks can use if it is still needed.
-static bool globalConstRedeclarationShouldThrow()
-{
-#if PLATFORM(MAC)
-    return !MacApplication::isIBooks();
-#elif PLATFORM(IOS_FAMILY)
-    return !IOSApplication::isIBooks();
-#else
-    return true;
-#endif
-}
 
 JSC::VM* g_commonVMOrNull;
 
@@ -74,7 +61,7 @@ JSC::VM& commonVMSlow()
     RunLoop* runLoop = nullptr;
 #endif
 
-    auto& vm = JSC::VM::create(JSC::LargeHeap, runLoop).leakRef();
+    auto& vm = JSC::VM::create(JSC::HeapType::Large, runLoop).leakRef();
 
     g_commonVMOrNull = &vm;
 
@@ -85,8 +72,6 @@ JSC::VM& commonVMSlow()
         vm.apiLock().makeWebThreadAware();
     vm.heap.machineThreads().addCurrentThread();
 #endif
-
-    vm.setGlobalConstRedeclarationShouldThrow(globalConstRedeclarationShouldThrow());
 
     JSVMClientData::initNormalWorld(&vm, WorkerThreadType::Main);
 

@@ -29,11 +29,10 @@
 
 [
     InterfaceName=CSS,
-    ImplementationLacksVTable,
     Exposed=Window
-] interface DOMCSSNamespace {
-    [CallWith=Document] static boolean supports(DOMString property, DOMString value);
-    [CallWith=Document] static boolean supports(DOMString conditionText);
-    static DOMString escape(DOMString ident);
-    [EnabledAtRuntime=HighlightAPI, CallWith=Document] static readonly attribute HighlightRegister highlights;
+] namespace DOMCSSNamespace {
+    [CallWith=CurrentDocument] boolean supports(DOMString property, DOMString value);
+    [CallWith=CurrentDocument] boolean supports(DOMString conditionText);
+    DOMString escape(DOMString ident);
+    [EnabledAtRuntime=HighlightAPIEnabled, CallWith=CurrentDocument] readonly attribute HighlightRegister highlights;
 };

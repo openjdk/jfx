@@ -1680,7 +1680,7 @@ utf32_wctomb(csconv_t *cv, ushort *wbuf, int wbufsize, uchar *buf, int bufsize)
  * Use MLang instead.
  */
 
-#define ISO2022_MODE(cs, shift) (((cs) << 8) | (shift))
+#define ISO2022_MODE(cs, shift) ((((DWORD) cs) << 8) | (shift))
 #define ISO2022_MODE_CS(mode) (((mode) >> 8) & 0xFF)
 #define ISO2022_MODE_SHIFT(mode) ((mode) & 0xFF)
 
@@ -2034,7 +2034,8 @@ main(int argc, char **argv)
 
     if (fromcode == NULL || tocode == NULL)
     {
-        printf("usage: %s [-c] -f from-enc -t to-enc [file]\n", argv[0]);
+        printf("usage: %s [-c] -f from-enc -t to-enc [file]\n",
+               (argc > 0) ? argv[0] : "win_iconv");
         return 0;
     }
 

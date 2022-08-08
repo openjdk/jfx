@@ -50,11 +50,6 @@ static void fixNANs(double &x)
         x = 0.0;
 }
 
-PannerNodeBase::PannerNodeBase(BaseAudioContext& context)
-    : AudioNode(context, NodeTypePanner)
-{
-}
-
 ExceptionOr<Ref<PannerNode>> PannerNode::create(BaseAudioContext& context, const PannerOptions& options)
 {
     auto panner = adoptRef(*new PannerNode(context, options));
@@ -63,19 +58,19 @@ ExceptionOr<Ref<PannerNode>> PannerNode::create(BaseAudioContext& context, const
     if (result.hasException())
         return result.releaseException();
 
-    result = panner->setMaxDistance(options.maxDistance);
+    result = panner->setMaxDistanceForBindings(options.maxDistance);
     if (result.hasException())
         return result.releaseException();
 
-    result = panner->setRefDistance(options.refDistance);
+    result = panner->setRefDistanceForBindings(options.refDistance);
     if (result.hasException())
         return result.releaseException();
 
-    result = panner->setRolloffFactor(options.rolloffFactor);
+    result = panner->setRolloffFactorForBindings(options.rolloffFactor);
     if (result.hasException())
         return result.releaseException();
 
-    result = panner->setConeOuterGain(options.coneOuterGain);
+    result = panner->setConeOuterGainForBindings(options.coneOuterGain);
     if (result.hasException())
         return result.releaseException();
 
@@ -83,20 +78,21 @@ ExceptionOr<Ref<PannerNode>> PannerNode::create(BaseAudioContext& context, const
 }
 
 PannerNode::PannerNode(BaseAudioContext& context, const PannerOptions& options)
-    : PannerNodeBase(context)
+    : AudioNode(context, NodeTypePanner)
+    // Load the HRTF database asynchronously so we don't block the Javascript thread while creating the HRTF database.
+    , m_hrtfDatabaseLoader(HRTFDatabaseLoader::createAndLoadAsynchronouslyIfNecessary(context.sampleRate()))
     , m_panningModel(options.panningModel)
+    , m_panner(Panner::create(m_panningModel, sampleRate(), m_hrtfDatabaseLoader.ptr()))
     , m_positionX(AudioParam::create(context, "positionX"_s, options.positionX, -FLT_MAX, FLT_MAX, AutomationRate::ARate))
     , m_positionY(AudioParam::create(context, "positionY"_s, options.positionY, -FLT_MAX, FLT_MAX, AutomationRate::ARate))
     , m_positionZ(AudioParam::create(context, "positionZ"_s, options.positionZ, -FLT_MAX, FLT_MAX, AutomationRate::ARate))
     , m_orientationX(AudioParam::create(context, "orientationX"_s, options.orientationX, -FLT_MAX, FLT_MAX, AutomationRate::ARate))
     , m_orientationY(AudioParam::create(context, "orientationY"_s, options.orientationY, -FLT_MAX, FLT_MAX, AutomationRate::ARate))
     , m_orientationZ(AudioParam::create(context, "orientationZ"_s, options.orientationZ, -FLT_MAX, FLT_MAX, AutomationRate::ARate))
-    // Load the HRTF database asynchronously so we don't block the Javascript thread while creating the HRTF database.
-    , m_hrtfDatabaseLoader(HRTFDatabaseLoader::createAndLoadAsynchronouslyIfNecessary(context.sampleRate()))
 {
-    setDistanceModel(options.distanceModel);
-    setConeInnerAngle(options.coneInnerAngle);
-    setConeOuterAngle(options.coneOuterAngle);
+    setDistanceModelForBindings(options.distanceModel);
+    setConeInnerAngleForBindings(options.coneInnerAngle);
+    setConeOuterAngleForBindings(options.coneOuterAngle);
 
     addInput();
     addOutput(2);
@@ -109,26 +105,11 @@ PannerNode::~PannerNode()
     uninitialize();
 }
 
-void PannerNode::pullInputs(size_t framesToProcess)
-{
-    // We override pullInputs(), so we can detect new AudioSourceNodes which have connected to us when new connections are made.
-    // These AudioSourceNodes need to be made aware of our existence in order to handle doppler shift pitch changes.
-    if (m_connectionCount != context().connectionCount()) {
-        m_connectionCount = context().connectionCount();
-
-        // Recursively go through all nodes connected to us.
-        HashSet<AudioNode*> visitedNodes;
-        notifyAudioSourcesConnectedToNode(this, visitedNodes);
-    }
-
-    AudioNode::pullInputs(framesToProcess);
-}
-
 void PannerNode::process(size_t framesToProcess)
 {
     AudioBus* destination = output(0)->bus();
 
-    if (!isInitialized() || !input(0)->isConnected() || !m_panner.get()) {
+    if (!isInitialized() || !input(0)->isConnected()) {
         destination->zero();
         return;
     }
@@ -139,8 +120,21 @@ void PannerNode::process(size_t framesToProcess)
         return;
     }
 
-    // HRTFDatabase should be loaded before proceeding for offline audio context when panningModel() is "HRTF".
-    if (panningModel() == PanningModelType::HRTF && !m_hrtfDatabaseLoader->isLoaded()) {
+    // The audio thread can't block on this lock, so we use tryLock() instead.
+    if (!m_processLock.tryLock()) {
+        // Too bad - tryLock() failed. We must be in the middle of changing the panner.
+        destination->zero();
+        return;
+    }
+    Locker locker { AdoptLock, m_processLock };
+
+    if (!m_panner) {
+        destination->zero();
+        return;
+    }
+
+    // HRTFDatabase should be loaded before proceeding for offline audio context when m_panningModel is "HRTF".
+    if (m_panningModel == PanningModelType::HRTF && !m_hrtfDatabaseLoader->isLoaded()) {
         if (context().isOfflineContext())
             m_hrtfDatabaseLoader->waitForLoaderThreadCompletion();
         else {
@@ -149,13 +143,7 @@ void PannerNode::process(size_t framesToProcess)
         }
     }
 
-    // The audio thread can't block on this lock, so we use tryHoldLock() instead.
-    auto locker = tryHoldLock(m_processLock);
-    if (!locker) {
-        // Too bad - tryHoldLock() failed. We must be in the middle of changing the panner.
-        destination->zero();
-        return;
-    }
+    invalidateCachedPropertiesIfNecessary();
 
     if ((hasSampleAccurateValues() || listener().hasSampleAccurateValues()) && (shouldUseARate() || listener().shouldUseARate())) {
         processSampleAccurateValues(destination, source, framesToProcess);
@@ -163,9 +151,7 @@ void PannerNode::process(size_t framesToProcess)
     }
 
     // Apply the panning effect.
-    double azimuth;
-    double elevation;
-    azimuthElevation(&azimuth, &elevation);
+    auto [azimuth, elevation] = azimuthElevation();
     m_panner->pan(azimuth, elevation, source, destination, framesToProcess);
 
     // Get the distance and cone gain.
@@ -177,6 +163,11 @@ void PannerNode::process(size_t framesToProcess)
 
 void PannerNode::processOnlyAudioParams(size_t framesToProcess)
 {
+    ASSERT(context().isAudioThread());
+    if (!m_processLock.tryLock())
+        return;
+
+    Locker locker { AdoptLock, m_processLock };
     float values[AudioUtilities::renderQuantumSize];
     ASSERT(framesToProcess <= AudioUtilities::renderQuantumSize);
 
@@ -235,10 +226,12 @@ void PannerNode::processSampleAccurateValues(AudioBus* destination, const AudioB
         FloatPoint3D listenerFront(forwardX[k], forwardY[k], forwardZ[k]);
         FloatPoint3D listenerUp(upX[k], upY[k], upZ[k]);
 
-        calculateAzimuthElevation(&azimuth[k], &elevation[k], pannerPosition, listenerPosition, listenerFront, listenerUp);
+        auto [calculatedAzimuth, calculatedElevation] = calculateAzimuthElevation(pannerPosition, listenerPosition, listenerFront, listenerUp);
+        azimuth[k] = calculatedAzimuth;
+        elevation[k] = calculatedElevation;
 
         // Get distance and cone gain
-        totalGain[k] = calculateDistanceConeGain(pannerPosition, orientation, listenerPosition);
+        totalGain[k] = calculateDistanceConeGain(pannerPosition, orientation, listenerPosition, m_distanceEffect, m_coneEffect);
     }
 
     m_panner->panWithSampleAccurateValues(azimuth, elevation, source, destination, framesToProcess);
@@ -265,39 +258,19 @@ bool PannerNode::shouldUseARate() const
         || m_orientationZ->automationRate() == AutomationRate::ARate;
 }
 
-void PannerNode::initialize()
-{
-    if (isInitialized())
-        return;
-
-    m_panner = Panner::create(m_panningModel, sampleRate(), m_hrtfDatabaseLoader.get());
-
-    AudioNode::initialize();
-}
-
-void PannerNode::uninitialize()
-{
-    if (!isInitialized())
-        return;
-
-    m_panner = nullptr;
-    AudioNode::uninitialize();
-}
-
 AudioListener& PannerNode::listener()
 {
     return context().listener();
 }
 
-void PannerNode::setPanningModel(PanningModelType model)
+void PannerNode::setPanningModelForBindings(PanningModelType model)
 {
     ASSERT(isMainThread());
 
-    if (!m_panner.get() || model != m_panningModel) {
-        // This synchronizes with process().
-        auto locker = holdLock(m_processLock);
-
-        m_panner = Panner::create(model, sampleRate(), m_hrtfDatabaseLoader.get());
+    // This synchronizes with process().
+    Locker locker { m_processLock };
+    if (!m_panner || model != m_panningModel) {
+        m_panner = Panner::create(model, sampleRate(), m_hrtfDatabaseLoader.ptr());
         m_panningModel = model;
     }
 }
@@ -312,7 +285,7 @@ ExceptionOr<void> PannerNode::setPosition(float x, float y, float z)
     ASSERT(isMainThread());
 
     // This synchronizes with process().
-    auto locker = holdLock(m_processLock);
+    Locker locker { m_processLock };
 
     auto now = context().currentTime();
 
@@ -339,7 +312,7 @@ ExceptionOr<void> PannerNode::setOrientation(float x, float y, float z)
     ASSERT(isMainThread());
 
     // This synchronizes with process().
-    auto locker = holdLock(m_processLock);
+    Locker locker { m_processLock };
 
     auto now = context().currentTime();
 
@@ -356,22 +329,27 @@ ExceptionOr<void> PannerNode::setOrientation(float x, float y, float z)
     return { };
 }
 
-DistanceModelType PannerNode::distanceModel() const
+DistanceModelType PannerNode::distanceModelForBindings() const WTF_IGNORES_THREAD_SAFETY_ANALYSIS
 {
-    return const_cast<PannerNode*>(this)->m_distanceEffect.model();
+    ASSERT(isMainThread());
+    return m_distanceEffect.model();
 }
 
-void PannerNode::setDistanceModel(DistanceModelType model)
+void PannerNode::setDistanceModelForBindings(DistanceModelType model)
 {
     ASSERT(isMainThread());
 
     // This synchronizes with process().
-    auto locker = holdLock(m_processLock);
+    Locker locker { m_processLock };
+
+    if (m_distanceEffect.model() == model)
+        return;
 
     m_distanceEffect.setModel(model, true);
+    m_cachedConeGain = std::nullopt;
 }
 
-ExceptionOr<void> PannerNode::setRefDistance(double refDistance)
+ExceptionOr<void> PannerNode::setRefDistanceForBindings(double refDistance)
 {
     ASSERT(isMainThread());
 
@@ -379,13 +357,17 @@ ExceptionOr<void> PannerNode::setRefDistance(double refDistance)
         return Exception { RangeError, "refDistance cannot be set to a negative value"_s };
 
     // This synchronizes with process().
-    auto locker = holdLock(m_processLock);
+    Locker locker { m_processLock };
+
+    if (m_distanceEffect.refDistance() == refDistance)
+        return { };
 
     m_distanceEffect.setRefDistance(refDistance);
+    m_cachedConeGain = std::nullopt;
     return { };
 }
 
-ExceptionOr<void> PannerNode::setMaxDistance(double maxDistance)
+ExceptionOr<void> PannerNode::setMaxDistanceForBindings(double maxDistance)
 {
     ASSERT(isMainThread());
 
@@ -393,13 +375,17 @@ ExceptionOr<void> PannerNode::setMaxDistance(double maxDistance)
         return Exception { RangeError, "maxDistance cannot be set to a non-positive value"_s };
 
     // This synchronizes with process().
-    auto locker = holdLock(m_processLock);
+    Locker locker { m_processLock };
+
+    if (m_distanceEffect.maxDistance() == maxDistance)
+        return { };
 
     m_distanceEffect.setMaxDistance(maxDistance);
+    m_cachedConeGain = std::nullopt;
     return { };
 }
 
-ExceptionOr<void> PannerNode::setRolloffFactor(double rolloffFactor)
+ExceptionOr<void> PannerNode::setRolloffFactorForBindings(double rolloffFactor)
 {
     ASSERT(isMainThread());
 
@@ -407,13 +393,17 @@ ExceptionOr<void> PannerNode::setRolloffFactor(double rolloffFactor)
         return Exception { RangeError, "rolloffFactor cannot be set to a negative value"_s };
 
     // This synchronizes with process().
-    auto locker = holdLock(m_processLock);
+    Locker locker { m_processLock };
+
+    if (m_distanceEffect.rolloffFactor() == rolloffFactor)
+        return { };
 
     m_distanceEffect.setRolloffFactor(rolloffFactor);
+    m_cachedConeGain = std::nullopt;
     return { };
 }
 
-ExceptionOr<void> PannerNode::setConeOuterGain(double gain)
+ExceptionOr<void> PannerNode::setConeOuterGainForBindings(double gain)
 {
     ASSERT(isMainThread());
 
@@ -421,30 +411,42 @@ ExceptionOr<void> PannerNode::setConeOuterGain(double gain)
         return Exception { InvalidStateError, "coneOuterGain must be in [0, 1]"_s };
 
     // This synchronizes with process().
-    auto locker = holdLock(m_processLock);
+    Locker locker { m_processLock };
+
+    if (m_coneEffect.outerGain() == gain)
+        return { };
 
     m_coneEffect.setOuterGain(gain);
+    m_cachedConeGain = std::nullopt;
     return { };
 }
 
-void PannerNode::setConeOuterAngle(double angle)
+void PannerNode::setConeOuterAngleForBindings(double angle)
 {
     ASSERT(isMainThread());
 
     // This synchronizes with process().
-    auto locker = holdLock(m_processLock);
+    Locker locker { m_processLock };
+
+    if (m_coneEffect.outerAngle() == angle)
+        return;
 
     m_coneEffect.setOuterAngle(angle);
+    m_cachedConeGain = std::nullopt;
 }
 
-void PannerNode::setConeInnerAngle(double angle)
+void PannerNode::setConeInnerAngleForBindings(double angle)
 {
     ASSERT(isMainThread());
 
     // This synchronizes with process().
-    auto locker = holdLock(m_processLock);
+    Locker locker { m_processLock };
+
+    if (m_coneEffect.innerAngle() == angle)
+        return;
 
     m_coneEffect.setInnerAngle(angle);
+    m_cachedConeGain = std::nullopt;
 }
 
 ExceptionOr<void> PannerNode::setChannelCount(unsigned channelCount)
@@ -467,18 +469,14 @@ ExceptionOr<void> PannerNode::setChannelCountMode(ChannelCountMode mode)
     return AudioNode::setChannelCountMode(mode);
 }
 
-void PannerNode::calculateAzimuthElevation(double* outAzimuth, double* outElevation, const FloatPoint3D& position, const FloatPoint3D& listenerPosition, const FloatPoint3D& listenerFront, const FloatPoint3D& listenerUp)
+auto PannerNode::calculateAzimuthElevation(const FloatPoint3D& position, const FloatPoint3D& listenerPosition, const FloatPoint3D& listenerFront, const FloatPoint3D& listenerUp) -> AzimuthElevation
 {
-    // FIXME: we should cache azimuth and elevation (if possible), so we only re-calculate if a change has been made.
-
     // Calculate the source-listener vector
     FloatPoint3D sourceListener = position - listenerPosition;
 
     if (sourceListener.isZero()) {
         // degenerate case if source and listener are at the same point
-        *outAzimuth = 0.0;
-        *outElevation = 0.0;
-        return;
+        return { };
     }
 
     sourceListener.normalize();
@@ -520,39 +518,34 @@ void PannerNode::calculateAzimuthElevation(double* outAzimuth, double* outElevat
     else if (elevation < -90.0)
         elevation = -180.0 - elevation;
 
-    if (outAzimuth)
-        *outAzimuth = azimuth;
-    if (outElevation)
-        *outElevation = elevation;
+    return { azimuth, elevation };
 }
 
-void PannerNode::azimuthElevation(double* outAzimuth, double* outElevation)
+auto PannerNode::azimuthElevation() -> const AzimuthElevation&
 {
     ASSERT(context().isAudioThread());
-
-    calculateAzimuthElevation(outAzimuth, outElevation, position(), listener().position(), listener().orientation(), listener().upVector());
-}
-
-float PannerNode::dopplerRate()
-{
-    return 1.0f;
+    auto& listener = this->listener();
+    if (!m_cachedAzimuthElevation)
+        m_cachedAzimuthElevation = calculateAzimuthElevation(position(), listener.position(), listener.orientation(), listener.upVector());
+    return *m_cachedAzimuthElevation;
 }
 
 bool PannerNode::requiresTailProcessing() const
 {
+    if (!m_processLock.tryLock())
+        return true;
+    Locker locker { AdoptLock, m_processLock };
     // If there's no internal panner method set up yet, assume we require tail
     // processing in case the HRTF panner is set later, which does require tail
     // processing.
     return !m_panner || m_panner->requiresTailProcessing();
 }
 
-float PannerNode::calculateDistanceConeGain(const FloatPoint3D& sourcePosition, const FloatPoint3D& orientation, const FloatPoint3D& listenerPosition)
+float PannerNode::calculateDistanceConeGain(const FloatPoint3D& sourcePosition, const FloatPoint3D& orientation, const FloatPoint3D& listenerPosition, const DistanceEffect& distanceEffect, const ConeEffect& coneEffect)
 {
     double listenerDistance = sourcePosition.distanceTo(listenerPosition);
-    double distanceGain = m_distanceEffect.gain(listenerDistance);
-
-    // FIXME: could optimize by caching coneGain
-    double coneGain = m_coneEffect.gain(sourcePosition, orientation, listenerPosition);
+    double distanceGain = distanceEffect.gain(listenerDistance);
+    double coneGain = coneEffect.gain(sourcePosition, orientation, listenerPosition);
 
     return float(distanceGain * coneGain);
 }
@@ -560,37 +553,40 @@ float PannerNode::calculateDistanceConeGain(const FloatPoint3D& sourcePosition, 
 float PannerNode::distanceConeGain()
 {
     ASSERT(context().isAudioThread());
-
-    return calculateDistanceConeGain(position(), orientation(), listener().position());
+    if (!m_cachedConeGain)
+        m_cachedConeGain = calculateDistanceConeGain(position(), orientation(), listener().position(), m_distanceEffect, m_coneEffect);
+    return *m_cachedConeGain;
 }
 
-void PannerNode::notifyAudioSourcesConnectedToNode(AudioNode* node, HashSet<AudioNode*>& visitedNodes)
+double PannerNode::tailTime() const
 {
-    ASSERT(node);
-    if (!node)
-        return;
+    if (!m_processLock.tryLock())
+        return std::numeric_limits<double>::infinity();
+    Locker locker { AdoptLock, m_processLock };
+    return m_panner ? m_panner->tailTime() : 0;
+}
 
-    // First check if this node is an AudioBufferSourceNode. If so, let it know about us so that doppler shift pitch can be taken into account.
-    if (node->nodeType() == NodeTypeAudioBufferSource) {
-        AudioBufferSourceNode* bufferSourceNode = reinterpret_cast<AudioBufferSourceNode*>(node);
-        bufferSourceNode->setPannerNode(this);
-    } else {
-        // Go through all inputs to this node.
-        for (unsigned i = 0; i < node->numberOfInputs(); ++i) {
-            AudioNodeInput* input = node->input(i);
+double PannerNode::latencyTime() const
+{
+    if (!m_processLock.tryLock())
+        return std::numeric_limits<double>::infinity();
+    Locker locker { AdoptLock, m_processLock };
+    return m_panner ? m_panner->latencyTime() : 0;
+}
 
-            // For each input, go through all of its connections, looking for AudioBufferSourceNodes.
-            for (unsigned j = 0; j < input->numberOfRenderingConnections(); ++j) {
-                AudioNodeOutput* connectedOutput = input->renderingOutput(j);
-                AudioNode* connectedNode = connectedOutput->node();
-                if (visitedNodes.contains(connectedNode))
-                    continue;
+void PannerNode::invalidateCachedPropertiesIfNecessary()
+{
+    auto lastPosition = std::exchange(m_lastPosition, position());
+    bool hasPositionChanged = m_lastPosition != lastPosition;
+    auto lastOrientation = std::exchange(m_lastOrientation, position());
+    bool hasOrientationChanged = m_lastOrientation != lastOrientation;
+    auto& listener = this->listener();
 
-                visitedNodes.add(connectedNode);
-                notifyAudioSourcesConnectedToNode(connectedNode, visitedNodes);
-            }
-        }
-    }
+    if (hasPositionChanged || listener.isPositionDirty() || listener.isOrientationDirty() || listener.isUpVectorDirty())
+        m_cachedAzimuthElevation = std::nullopt;
+
+    if (hasPositionChanged || hasOrientationChanged || listener.isPositionDirty())
+        m_cachedConeGain = std::nullopt;
 }
 
 } // namespace WebCore

@@ -99,77 +99,77 @@ gint                  g_ascii_xdigit_value (gchar    c) G_GNUC_CONST;
 /* String utility functions that modify a string argument or
  * return a constant string that must not be freed.
  */
-#define  G_STR_DELIMITERS "_-|> <."
+#define  G_STR_DELIMITERS       "_-|> <."
 GLIB_AVAILABLE_IN_ALL
-gchar*                g_strdelimit     (gchar      *string,
-          const gchar  *delimiters,
-          gchar       new_delimiter);
+gchar*                g_strdelimit     (gchar        *string,
+                                        const gchar  *delimiters,
+                                        gchar         new_delimiter);
 GLIB_AVAILABLE_IN_ALL
 gchar*                g_strcanon       (gchar        *string,
-          const gchar  *valid_chars,
-          gchar         substitutor);
+                                        const gchar  *valid_chars,
+                                        gchar         substitutor);
 GLIB_AVAILABLE_IN_ALL
-const gchar *         g_strerror       (gint        errnum) G_GNUC_CONST;
+const gchar *         g_strerror       (gint          errnum) G_GNUC_CONST;
 GLIB_AVAILABLE_IN_ALL
-const gchar *         g_strsignal      (gint        signum) G_GNUC_CONST;
+const gchar *         g_strsignal      (gint          signum) G_GNUC_CONST;
 GLIB_AVAILABLE_IN_ALL
-gchar *               g_strreverse     (gchar      *string);
+gchar *               g_strreverse     (gchar        *string);
 GLIB_AVAILABLE_IN_ALL
-gsize               g_strlcpy        (gchar      *dest,
-          const gchar  *src,
-          gsize         dest_size);
+gsize                 g_strlcpy        (gchar        *dest,
+                                        const gchar  *src,
+                                        gsize         dest_size);
 GLIB_AVAILABLE_IN_ALL
-gsize               g_strlcat        (gchar      *dest,
-          const gchar  *src,
-          gsize         dest_size);
+gsize                 g_strlcat        (gchar        *dest,
+                                        const gchar  *src,
+                                        gsize         dest_size);
 GLIB_AVAILABLE_IN_ALL
 gchar *               g_strstr_len     (const gchar  *haystack,
-          gssize        haystack_len,
-          const gchar  *needle);
+                                        gssize        haystack_len,
+                                        const gchar  *needle);
 GLIB_AVAILABLE_IN_ALL
 gchar *               g_strrstr        (const gchar  *haystack,
-          const gchar  *needle);
+                                        const gchar  *needle);
 GLIB_AVAILABLE_IN_ALL
 gchar *               g_strrstr_len    (const gchar  *haystack,
-          gssize        haystack_len,
-          const gchar  *needle);
+                                        gssize        haystack_len,
+                                        const gchar  *needle);
 
 GLIB_AVAILABLE_IN_ALL
 gboolean              g_str_has_suffix (const gchar  *str,
-          const gchar  *suffix);
+                                        const gchar  *suffix);
 GLIB_AVAILABLE_IN_ALL
 gboolean              g_str_has_prefix (const gchar  *str,
-          const gchar  *prefix);
+                                        const gchar  *prefix);
 
 /* String to/from double conversion functions */
 
 GLIB_AVAILABLE_IN_ALL
 gdouble               g_strtod         (const gchar  *nptr,
-          gchar     **endptr);
+                                        gchar       **endptr);
 GLIB_AVAILABLE_IN_ALL
 gdouble               g_ascii_strtod   (const gchar  *nptr,
-          gchar     **endptr);
+                                        gchar       **endptr);
 GLIB_AVAILABLE_IN_ALL
-guint64         g_ascii_strtoull (const gchar *nptr,
-          gchar      **endptr,
-          guint        base);
+guint64               g_ascii_strtoull (const gchar *nptr,
+                                        gchar      **endptr,
+                                        guint        base);
 GLIB_AVAILABLE_IN_ALL
-gint64          g_ascii_strtoll  (const gchar *nptr,
-          gchar      **endptr,
-          guint        base);
+gint64                g_ascii_strtoll  (const gchar *nptr,
+                                        gchar      **endptr,
+                                        guint        base);
 /* 29 bytes should enough for all possible values that
  * g_ascii_dtostr can produce.
  * Then add 10 for good measure */
 #define G_ASCII_DTOSTR_BUF_SIZE (29 + 10)
 GLIB_AVAILABLE_IN_ALL
 gchar *               g_ascii_dtostr   (gchar        *buffer,
-          gint          buf_len,
-          gdouble       d);
+                                        gint          buf_len,
+                                        gdouble       d);
 GLIB_AVAILABLE_IN_ALL
 gchar *               g_ascii_formatd  (gchar        *buffer,
-          gint          buf_len,
-          const gchar  *format,
-          gdouble       d);
+                                        gint          buf_len,
+                                        const gchar  *format,
+                                        gdouble       d);
 
 /* removes leading spaces */
 GLIB_AVAILABLE_IN_ALL
@@ -178,21 +178,21 @@ gchar*                g_strchug        (gchar        *string);
 GLIB_AVAILABLE_IN_ALL
 gchar*                g_strchomp       (gchar        *string);
 /* removes leading & trailing spaces */
-#define g_strstrip( string )  g_strchomp (g_strchug (string))
+#define g_strstrip( string )    g_strchomp (g_strchug (string))
 
 GLIB_AVAILABLE_IN_ALL
 gint                  g_ascii_strcasecmp  (const gchar *s1,
-             const gchar *s2);
+                                           const gchar *s2);
 GLIB_AVAILABLE_IN_ALL
 gint                  g_ascii_strncasecmp (const gchar *s1,
-             const gchar *s2,
-             gsize        n);
+                                           const gchar *s2,
+                                           gsize        n);
 GLIB_AVAILABLE_IN_ALL
 gchar*                g_ascii_strdown     (const gchar *str,
-             gssize       len) G_GNUC_MALLOC;
+                                           gssize       len) G_GNUC_MALLOC;
 GLIB_AVAILABLE_IN_ALL
 gchar*                g_ascii_strup       (const gchar *str,
-             gssize       len) G_GNUC_MALLOC;
+                                           gssize       len) G_GNUC_MALLOC;
 
 GLIB_AVAILABLE_IN_2_40
 gboolean              g_str_is_ascii      (const gchar *str);
@@ -217,22 +217,22 @@ GLIB_AVAILABLE_IN_ALL
 gchar*                g_strdup         (const gchar *str) G_GNUC_MALLOC;
 GLIB_AVAILABLE_IN_ALL
 gchar*                g_strdup_printf  (const gchar *format,
-          ...) G_GNUC_PRINTF (1, 2) G_GNUC_MALLOC;
+                                        ...) G_GNUC_PRINTF (1, 2) G_GNUC_MALLOC;
 GLIB_AVAILABLE_IN_ALL
 gchar*                g_strdup_vprintf (const gchar *format,
-          va_list      args) G_GNUC_PRINTF(1, 0) G_GNUC_MALLOC;
+                                        va_list      args) G_GNUC_PRINTF(1, 0) G_GNUC_MALLOC;
 GLIB_AVAILABLE_IN_ALL
 gchar*                g_strndup        (const gchar *str,
-          gsize        n) G_GNUC_MALLOC;
+                                        gsize        n) G_GNUC_MALLOC;
 GLIB_AVAILABLE_IN_ALL
 gchar*                g_strnfill       (gsize        length,
-          gchar        fill_char) G_GNUC_MALLOC;
+                                        gchar        fill_char) G_GNUC_MALLOC;
 GLIB_AVAILABLE_IN_ALL
 gchar*                g_strconcat      (const gchar *string1,
-          ...) G_GNUC_MALLOC G_GNUC_NULL_TERMINATED;
+                                        ...) G_GNUC_MALLOC G_GNUC_NULL_TERMINATED;
 GLIB_AVAILABLE_IN_ALL
 gchar*                g_strjoin        (const gchar  *separator,
-          ...) G_GNUC_MALLOC G_GNUC_NULL_TERMINATED;
+                                        ...) G_GNUC_MALLOC G_GNUC_NULL_TERMINATED;
 
 /* Make a copy of a string interpreting C string -style escape
  * sequences. Inverse of g_strescape. The recognized sequences are \b
@@ -253,9 +253,13 @@ GLIB_AVAILABLE_IN_ALL
 gchar*                g_strescape      (const gchar *source,
           const gchar *exceptions) G_GNUC_MALLOC;
 
-GLIB_AVAILABLE_IN_ALL
+GLIB_DEPRECATED_IN_2_68_FOR (g_memdup2)
 gpointer              g_memdup         (gconstpointer mem,
-          guint        byte_size) G_GNUC_ALLOC_SIZE(2);
+                                        guint         byte_size) G_GNUC_ALLOC_SIZE(2);
+
+GLIB_AVAILABLE_IN_2_68
+gpointer              g_memdup2        (gconstpointer mem,
+                                        gsize         byte_size) G_GNUC_ALLOC_SIZE(2);
 
 /* NULL terminated string arrays.
  * g_strsplit(), g_strsplit_set() split up string into max_tokens tokens
@@ -269,12 +273,12 @@ gpointer              g_memdup         (gconstpointer mem,
 typedef gchar** GStrv;
 GLIB_AVAILABLE_IN_ALL
 gchar**               g_strsplit       (const gchar  *string,
-          const gchar  *delimiter,
-          gint          max_tokens);
+                                        const gchar  *delimiter,
+                                        gint          max_tokens);
 GLIB_AVAILABLE_IN_ALL
-gchar **        g_strsplit_set   (const gchar *string,
-          const gchar *delimiters,
-          gint         max_tokens);
+gchar **              g_strsplit_set   (const gchar *string,
+                                        const gchar *delimiters,
+                                        gint         max_tokens);
 GLIB_AVAILABLE_IN_ALL
 gchar*                g_strjoinv       (const gchar  *separator,
           gchar       **str_array) G_GNUC_MALLOC;

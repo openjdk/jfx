@@ -27,6 +27,7 @@
 #include "SVGFilterElement.h"
 
 #include "RenderSVGResourceFilter.h"
+#include "SVGElementInlines.h"
 #include "SVGFilterBuilder.h"
 #include "SVGFilterPrimitiveStandardAttributes.h"
 #include "SVGNames.h"
@@ -93,7 +94,7 @@ void SVGFilterElement::svgAttributeChanged(const QualifiedName& attrName)
 {
     if (PropertyRegistry::isAnimatedLengthAttribute(attrName)) {
         InstanceInvalidationGuard guard(*this);
-        invalidateSVGPresentationAttributeStyle();
+        invalidateSVGPresentationalHintStyle();
         return;
     }
 

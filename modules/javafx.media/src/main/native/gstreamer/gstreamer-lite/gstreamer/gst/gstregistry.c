@@ -128,6 +128,9 @@
 #include <windows.h>
 extern HMODULE _priv_gst_dll_handle;
 #endif
+#ifdef HAVE_DLFCN_H
+#include <dlfcn.h>
+#endif
 
 #if defined(GSTREAMER_LITE) && defined(HAVE_OSX)
 #include <mach-o/dyld.h>
@@ -466,8 +469,8 @@ was_added:
  *
  * Get the list of paths for the given registry.
  *
- * Returns: (transfer container) (element-type char*): A #GList of paths as
- *     strings. g_list_free after use.
+ * Returns: (transfer container) (element-type filename): A #GList of
+ *     paths as strings. g_list_free after use.
  *
  * MT safe.
  */
@@ -1262,7 +1265,7 @@ gst_registry_scan_plugin_file (GstRegistryScanContext * context,
     /* Load plugin the old fashioned way... */
 
     /* We don't use a GError here because a failure to load some shared
-     * objects as plugins is normal (particularly in the uninstalled case)
+     * objects as plugins is normal (particularly in the development environment case)
      */
     newplugin = _priv_gst_plugin_load_file_for_registry (filename,
         context->registry, NULL);
@@ -1303,7 +1306,7 @@ is_blacklisted_directory (const gchar * dirent)
     return TRUE;
 
   /* can also skip .git and .deps dirs, those won't contain useful files.
-   * This speeds up scanning a bit in uninstalled setups. */
+   * This speeds up scanning a bit in development environment setups. */
   if (strcmp (dirent, ".git") == 0 || strcmp (dirent, ".deps") == 0)
     return TRUE;
 
@@ -1779,6 +1782,56 @@ load_plugin_func (gpointer data, gpointer user_data)
   }
 }
 
+#ifndef GSTREAMER_LITE
+char *
+priv_gst_get_relocated_libgstreamer (void)
+{
+  char *dir = NULL;
+
+#ifdef G_OS_WIN32
+  {
+    char *base_dir;
+
+    GST_DEBUG ("attempting to retrieve libgstreamer-1.0 location using "
+        "Win32-specific method");
+
+    base_dir =
+        g_win32_get_package_installation_directory_of_module
+        (_priv_gst_dll_handle);
+    if (!base_dir)
+      return NULL;
+
+    dir = g_build_filename (base_dir, GST_PLUGIN_SUBDIR, NULL);
+    GST_DEBUG ("using DLL dir %s", dir);
+
+    g_free (base_dir);
+  }
+#elif defined(__APPLE__) && defined(HAVE_DLADDR)
+  {
+    Dl_info info;
+
+    GST_DEBUG ("attempting to retrieve libgstreamer-1.0 location using "
+        "dladdr()");
+
+    if (dladdr (&gst_init, &info)) {
+      GST_LOG ("dli_fname: %s", info.dli_fname);
+
+      if (!info.dli_fname) {
+        return NULL;
+      }
+
+      dir = g_path_get_dirname (info.dli_fname);
+    } else {
+      GST_LOG ("dladdr() failed");
+      return NULL;
+    }
+  }
+#endif
+
+  return dir;
+}
+#endif // GSTREAMER_LITE
+
 #ifndef GST_DISABLE_REGISTRY
 /* Unref all plugins marked 'cached', to clear old plugins that no
  * longer exist. Returns %TRUE if any plugins were removed */
@@ -1972,7 +2025,7 @@ scan_and_update_registry (GstRegistry * default_registry,
   if (plugin_path == NULL)
     plugin_path = g_getenv ("GST_PLUGIN_SYSTEM_PATH");
   if (plugin_path == NULL) {
-    char *home_plugins;
+    char *home_plugins, *relocated_libgstreamer, *system_plugindir;
 
     GST_DEBUG ("GST_PLUGIN_SYSTEM_PATH not set");
 
@@ -1987,28 +2040,21 @@ scan_and_update_registry (GstRegistry * default_registry,
 
     /* add the main (installed) library path */
 
-#ifdef G_OS_WIN32
-    {
-      char *base_dir;
-      char *dir;
-
-      base_dir =
-          g_win32_get_package_installation_directory_of_module
-          (_priv_gst_dll_handle);
-
-      dir = g_build_filename (base_dir, GST_PLUGIN_SUBDIR,
+    relocated_libgstreamer = priv_gst_get_relocated_libgstreamer ();
+    if (relocated_libgstreamer) {
+      GST_DEBUG ("found libgstreamer-" GST_API_VERSION " library "
+          "at %s", relocated_libgstreamer);
+      system_plugindir = g_build_filename (relocated_libgstreamer,
           "gstreamer-" GST_API_VERSION, NULL);
-      GST_DEBUG ("scanning DLL dir %s", dir);
-
-      changed |= gst_registry_scan_path_internal (&context, dir);
-
-      g_free (dir);
-      g_free (base_dir);
+    } else {
+      system_plugindir = g_strdup (PLUGINDIR);
     }
-#else
-    GST_DEBUG ("scanning main plugins %s", PLUGINDIR);
-    changed |= gst_registry_scan_path_internal (&context, PLUGINDIR);
-#endif
+
+    GST_DEBUG ("using plugin dir %s", system_plugindir);
+    changed |= gst_registry_scan_path_internal (&context, system_plugindir);
+
+    g_clear_pointer (&system_plugindir, g_free);
+    g_clear_pointer (&relocated_libgstreamer, g_free);
   } else {
     gchar **list;
     gint i;

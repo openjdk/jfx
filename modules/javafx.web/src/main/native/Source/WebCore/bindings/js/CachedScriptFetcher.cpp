@@ -46,7 +46,7 @@ CachedResourceHandle<CachedScript> CachedScriptFetcher::requestModuleScript(Docu
     return requestScriptWithCache(document, sourceURL, String { }, WTFMove(integrity), { });
 }
 
-CachedResourceHandle<CachedScript> CachedScriptFetcher::requestScriptWithCache(Document& document, const URL& sourceURL, const String& crossOriginMode, String&& integrity, Optional<ResourceLoadPriority> resourceLoadPriority) const
+CachedResourceHandle<CachedScript> CachedScriptFetcher::requestScriptWithCache(Document& document, const URL& sourceURL, const String& crossOriginMode, String&& integrity, std::optional<ResourceLoadPriority> resourceLoadPriority) const
 {
     if (!document.settings().isScriptEnabled())
         return nullptr;
@@ -58,6 +58,7 @@ CachedResourceHandle<CachedScript> CachedScriptFetcher::requestScriptWithCache(D
     options.sameOriginDataURLFlag = SameOriginDataURLFlag::Set;
     options.integrity = WTFMove(integrity);
     options.referrerPolicy = m_referrerPolicy;
+    options.nonce = m_nonce;
 
     auto request = createPotentialAccessControlRequest(sourceURL, WTFMove(options), document, crossOriginMode);
     request.upgradeInsecureRequestIfNeeded(document);

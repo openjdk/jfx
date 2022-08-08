@@ -53,6 +53,8 @@ IsoHeap<Type>::IsoHeap(const char* heapClass)
 }
 #endif
 
+#if !BUSE(LIBPAS)
+
 template<typename Type>
 void* IsoHeap<Type>::allocate()
 {
@@ -109,6 +111,8 @@ auto IsoHeap<Type>::impl() -> IsoHeapImpl<Config>&
     return *m_impl;
 }
 
+#endif // !BUSE(LIBPAS)
+
 // This is most appropraite for template classes.
 #define MAKE_BISO_MALLOCED_INLINE(isoType) \
 public: \
@@ -136,7 +140,7 @@ public: \
     void operator delete[](void* p) = delete; \
 using webkitFastMalloced = int; \
 private: \
-using __makeBisoMallocedInlineMacroSemicolonifier = int
+using __makeBisoMallocedInlineMacroSemicolonifier BUNUSED_TYPE_ALIAS = int
 
 #define MAKE_BISO_MALLOCED_IMPL(isoType) \
 ::bmalloc::api::IsoHeap<isoType>& isoType::bisoHeap() \

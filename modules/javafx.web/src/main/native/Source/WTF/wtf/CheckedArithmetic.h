@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -95,31 +95,6 @@ public:
     constexpr bool hasOverflowed() const { return false; }
 };
 
-class ConditionalCrashOnOverflow {
-public:
-    void overflowed()
-    {
-        m_overflowed = true;
-        if (m_shouldCrashOnOverflow)
-            crash();
-    }
-
-    bool shouldCrashOnOverflow() const { return m_shouldCrashOnOverflow; }
-    void setShouldCrashOnOverflow(bool value) { m_shouldCrashOnOverflow = value; }
-
-    bool hasOverflowed() const { return m_overflowed; }
-    void clearOverflow() { m_overflowed = false; }
-
-    static NO_RETURN_DUE_TO_CRASH void crash()
-    {
-        CRASH();
-    }
-
-private:
-    bool m_overflowed { false };
-    bool m_shouldCrashOnOverflow { true };
-};
-
 class CrashOnOverflow {
 public:
     static NO_RETURN_DUE_TO_CRASH void overflowed()
@@ -169,14 +144,14 @@ template <typename T> struct RemoveChecked<Checked<T>>;
 
 template <typename Target, typename Source, bool isTargetBigger = sizeof(Target) >= sizeof(Source), bool targetSigned = std::numeric_limits<Target>::is_signed, bool sourceSigned = std::numeric_limits<Source>::is_signed> struct BoundsChecker;
 template <typename Target, typename Source> struct BoundsChecker<Target, Source, false, false, false> {
-    static bool inBounds(Source value)
+    static bool constexpr inBounds(Source value)
     {
         // Same signedness so implicit type conversion will always increase precision to widest type.
         return value <= std::numeric_limits<Target>::max();
     }
 };
 template <typename Target, typename Source> struct BoundsChecker<Target, Source, false, true, true> {
-    static bool inBounds(Source value)
+    static bool constexpr inBounds(Source value)
     {
         // Same signedness so implicit type conversion will always increase precision to widest type.
         return std::numeric_limits<Target>::min() <= value && value <= std::numeric_limits<Target>::max();
@@ -184,7 +159,7 @@ template <typename Target, typename Source> struct BoundsChecker<Target, Source,
 };
 
 template <typename Target, typename Source> struct BoundsChecker<Target, Source, false, false, true> {
-    static bool inBounds(Source value)
+    static bool constexpr inBounds(Source value)
     {
         // When converting value to unsigned Source, value will become a big value if value is negative.
         // Casted value will become bigger than Target::max as Source is bigger than Target.
@@ -193,7 +168,7 @@ template <typename Target, typename Source> struct BoundsChecker<Target, Source,
 };
 
 template <typename Target, typename Source> struct BoundsChecker<Target, Source, false, true, false> {
-    static bool inBounds(Source value)
+    static bool constexpr inBounds(Source value)
     {
         // The unsigned Source type has greater precision than the target so max(Target) -> Source will widen.
         return value <= static_cast<Source>(std::numeric_limits<Target>::max());
@@ -201,7 +176,7 @@ template <typename Target, typename Source> struct BoundsChecker<Target, Source,
 };
 
 template <typename Target, typename Source> struct BoundsChecker<Target, Source, true, false, false> {
-    static bool inBounds(Source)
+    static bool constexpr inBounds(Source)
     {
         // Same sign, greater or same precision.
         return true;
@@ -209,7 +184,7 @@ template <typename Target, typename Source> struct BoundsChecker<Target, Source,
 };
 
 template <typename Target, typename Source> struct BoundsChecker<Target, Source, true, true, true> {
-    static bool inBounds(Source)
+    static bool constexpr inBounds(Source)
     {
         // Same sign, greater or same precision.
         return true;
@@ -217,7 +192,7 @@ template <typename Target, typename Source> struct BoundsChecker<Target, Source,
 };
 
 template <typename Target, typename Source> struct BoundsChecker<Target, Source, true, true, false> {
-    static bool inBounds(Source value)
+    static bool constexpr inBounds(Source value)
     {
         // Target is signed with greater or same precision. If strictly greater, it is always safe.
         if (sizeof(Target) > sizeof(Source))
@@ -227,19 +202,19 @@ template <typename Target, typename Source> struct BoundsChecker<Target, Source,
 };
 
 template <typename Target, typename Source> struct BoundsChecker<Target, Source, true, false, true> {
-    static bool inBounds(Source value)
+    static bool constexpr inBounds(Source value)
     {
         // Target is unsigned with greater precision.
         return value >= 0;
     }
 };
 
-template <typename Target, typename Source> static inline bool isInBounds(Source value)
+template <typename Target, typename Source> static inline constexpr bool isInBounds(Source value)
 {
     return BoundsChecker<Target, Source>::inBounds(value);
 }
 
-template <typename Target, typename Source> static inline bool convertSafely(Source input, Target& output)
+template <typename Target, typename Source> static inline constexpr bool convertSafely(Source input, Target& output)
 {
     if (!isInBounds<Target>(input))
         return false;
@@ -249,11 +224,6 @@ template <typename Target, typename Source> static inline bool convertSafely(Sou
 
 template <typename T> struct RemoveChecked {
     typedef T CleanType;
-    static constexpr CleanType DefaultValue = 0;
-};
-
-template <typename T> struct RemoveChecked<Checked<T, ConditionalCrashOnOverflow>> {
-    using CleanType = typename RemoveChecked<T>::CleanType;
     static constexpr CleanType DefaultValue = 0;
 };
 
@@ -321,12 +291,18 @@ template <typename LHS, typename RHS, typename ResultType> struct ArithmeticOper
     static inline bool add(LHS lhs, RHS rhs, ResultType& result) WARN_UNUSED_RETURN
     {
 #if COMPILER(GCC_COMPATIBLE)
-        ResultType temp;
-        if (__builtin_add_overflow(lhs, rhs, &temp))
-            return false;
-        result = temp;
-        return true;
-#else
+#if !HAVE(INT128_T)
+        if constexpr (sizeof(LHS) <= sizeof(uint64_t) || sizeof(RHS) <= sizeof(uint64_t)) {
+#endif
+            ResultType temp;
+            if (__builtin_add_overflow(lhs, rhs, &temp))
+                return false;
+            result = temp;
+            return true;
+#if !HAVE(INT128_T)
+        }
+#endif
+#endif
         if (signsMatch(lhs, rhs)) {
             if (lhs >= 0) {
                 if ((std::numeric_limits<ResultType>::max() - rhs) < lhs)
@@ -339,41 +315,54 @@ template <typename LHS, typename RHS, typename ResultType> struct ArithmeticOper
         } // if the signs do not match this operation can't overflow
         result = lhs + rhs;
         return true;
-#endif
     }
 
     static inline bool sub(LHS lhs, RHS rhs, ResultType& result) WARN_UNUSED_RETURN
     {
 #if COMPILER(GCC_COMPATIBLE)
-        ResultType temp;
-        if (__builtin_sub_overflow(lhs, rhs, &temp))
-            return false;
-        result = temp;
-        return true;
-#else
+#if !HAVE(INT128_T)
+        if constexpr (sizeof(LHS) <= sizeof(uint64_t) || sizeof(RHS) <= sizeof(uint64_t)) {
+#endif
+            ResultType temp;
+            if (__builtin_sub_overflow(lhs, rhs, &temp))
+                return false;
+            result = temp;
+            return true;
+#if !HAVE(INT128_T)
+        }
+#endif
+#endif
         if (!signsMatch(lhs, rhs)) {
             if (lhs >= 0) {
                 if (lhs > std::numeric_limits<ResultType>::max() + rhs)
                     return false;
             } else {
-                if (rhs > std::numeric_limits<ResultType>::max() + lhs)
+                if (lhs < std::numeric_limits<ResultType>::min() + rhs)
                     return false;
             }
         } // if the signs match this operation can't overflow
         result = lhs - rhs;
         return true;
-#endif
     }
 
     static inline bool multiply(LHS lhs, RHS rhs, ResultType& result) WARN_UNUSED_RETURN
     {
 #if USE(MUL_OVERFLOW)
-        ResultType temp;
-        if (__builtin_mul_overflow(lhs, rhs, &temp))
-            return false;
-        result = temp;
-        return true;
-#else
+        // Don't use the builtin if the int128 type is WTF::[U]Int128Impl.
+        // Also don't use the builtin for __[u]int128_t on Clang/Linux.
+        // See https://bugs.llvm.org/show_bug.cgi?id=16404
+#if !HAVE(INT128_T) || (COMPILER(CLANG) && OS(LINUX))
+        if constexpr (sizeof(LHS) <= sizeof(uint64_t) || sizeof(RHS) <= sizeof(uint64_t)) {
+#endif
+            ResultType temp;
+            if (__builtin_mul_overflow(lhs, rhs, &temp))
+                return false;
+            result = temp;
+            return true;
+#if !HAVE(INT128_T) || (COMPILER(CLANG) && OS(LINUX))
+        }
+#endif
+#endif
         if (signsMatch(lhs, rhs)) {
             if (lhs >= 0) {
                 if (lhs && (std::numeric_limits<ResultType>::max() / lhs) < rhs)
@@ -395,7 +384,6 @@ template <typename LHS, typename RHS, typename ResultType> struct ArithmeticOper
         }
         result = lhs * rhs;
         return true;
-#endif
     }
 
     static inline bool divide(LHS lhs, RHS rhs, ResultType& result) WARN_UNUSED_RETURN
@@ -415,47 +403,66 @@ template <typename LHS, typename RHS, typename ResultType> struct ArithmeticOper
     // LHS and RHS are unsigned types so bounds checks are nice and easy
     static inline bool add(LHS lhs, RHS rhs, ResultType& result) WARN_UNUSED_RETURN
     {
-#if COMPILER(GCC_COMPATIBLE)
         ResultType temp;
-        if (__builtin_add_overflow(lhs, rhs, &temp))
-            return false;
-        result = temp;
-        return true;
-#else
-        ResultType temp = lhs + rhs;
+#if COMPILER(GCC_COMPATIBLE)
+#if !HAVE(INT128_T)
+        if constexpr (sizeof(LHS) <= sizeof(uint64_t) || sizeof(RHS) <= sizeof(uint64_t)) {
+#endif
+            if (__builtin_add_overflow(lhs, rhs, &temp))
+                return false;
+            result = temp;
+            return true;
+#if !HAVE(INT128_T)
+        }
+#endif
+#endif
+        temp = lhs + rhs;
         if (temp < lhs)
             return false;
         result = temp;
         return true;
-#endif
     }
 
     static inline bool sub(LHS lhs, RHS rhs, ResultType& result) WARN_UNUSED_RETURN
     {
-#if COMPILER(GCC_COMPATIBLE)
         ResultType temp;
-        if (__builtin_sub_overflow(lhs, rhs, &temp))
-            return false;
-        result = temp;
-        return true;
-#else
-        ResultType temp = lhs - rhs;
+#if COMPILER(GCC_COMPATIBLE)
+#if !HAVE(INT128_T)
+        if constexpr (sizeof(LHS) <= sizeof(uint64_t) || sizeof(RHS) <= sizeof(uint64_t)) {
+#endif
+            if (__builtin_sub_overflow(lhs, rhs, &temp))
+                return false;
+            result = temp;
+            return true;
+#if !HAVE(INT128_T)
+        }
+#endif
+#endif
+        temp = lhs - rhs;
         if (temp > lhs)
             return false;
         result = temp;
         return true;
-#endif
     }
 
     static inline bool multiply(LHS lhs, RHS rhs, ResultType& result) WARN_UNUSED_RETURN
     {
 #if USE(MUL_OVERFLOW)
-        ResultType temp;
-        if (__builtin_mul_overflow(lhs, rhs, &temp))
-            return false;
-        result = temp;
-        return true;
-#else
+        // Don't use the builtin if the int128 type is WTF::Int128Impl.
+        // Also don't use the builtin for __int128_t on Clang/Linux.
+        // See https://bugs.llvm.org/show_bug.cgi?id=16404
+#if !HAVE(INT128_T) || (COMPILER(CLANG) && OS(LINUX))
+        if constexpr (sizeof(LHS) <= sizeof(uint64_t) || sizeof(RHS) <= sizeof(uint64_t)) {
+#endif
+            ResultType temp;
+            if (__builtin_mul_overflow(lhs, rhs, &temp))
+                return false;
+            result = temp;
+            return true;
+#if !HAVE(INT128_T) || (COMPILER(CLANG) && OS(LINUX))
+        }
+#endif
+#endif
         if (!lhs || !rhs) {
             result = 0;
             return true;
@@ -464,7 +471,6 @@ template <typename LHS, typename RHS, typename ResultType> struct ArithmeticOper
             return false;
         result = lhs * rhs;
         return true;
-#endif
     }
 
     static inline bool divide(LHS lhs, RHS rhs, ResultType& result) WARN_UNUSED_RETURN
@@ -703,7 +709,7 @@ public:
         m_value = static_cast<T>(rhs.m_value);
     }
 
-    const Checked& operator=(Checked rhs)
+    Checked& operator=(Checked rhs)
     {
         this->clearOverflow();
         if (rhs.hasOverflowed())
@@ -712,18 +718,18 @@ public:
         return *this;
     }
 
-    template <typename U> const Checked& operator=(U value)
+    template <typename U> Checked& operator=(U value)
     {
         return *this = Checked(value);
     }
 
-    template <typename U, typename V> const Checked& operator=(const Checked<U, V>& rhs)
+    template <typename U, typename V> Checked& operator=(const Checked<U, V>& rhs)
     {
         return *this = Checked(rhs);
     }
 
     // prefix
-    const Checked& operator++()
+    Checked& operator++()
     {
         if (m_value == std::numeric_limits<T>::max())
             this->overflowed();
@@ -731,7 +737,7 @@ public:
         return *this;
     }
 
-    const Checked& operator--()
+    Checked& operator--()
     {
         if (m_value == std::numeric_limits<T>::min())
             this->overflowed();
@@ -740,14 +746,14 @@ public:
     }
 
     // postfix operators
-    const Checked operator++(int)
+    Checked operator++(int)
     {
         if (m_value == std::numeric_limits<T>::max())
             this->overflowed();
         return Checked(m_value++);
     }
 
-    const Checked operator--(int)
+    Checked operator--(int)
     {
         if (m_value == std::numeric_limits<T>::min())
             this->overflowed();
@@ -757,113 +763,78 @@ public:
     // Boolean operators
     bool operator!() const
     {
-        if (this->hasOverflowed())
+        if (UNLIKELY(this->hasOverflowed()))
             this->crash();
         return !m_value;
     }
 
     explicit operator bool() const
     {
-        if (this->hasOverflowed())
+        if (UNLIKELY(this->hasOverflowed()))
             this->crash();
         return m_value;
     }
 
-    // Value accessors. unsafeGet() will crash if there's been an overflow.
-    template<typename U = T>
-    U unsafeGet() const
+    operator T() const
     {
-        if (this->hasOverflowed())
+        if (UNLIKELY(this->hasOverflowed()))
+            this->crash();
+        return m_value;
+    }
+
+    // Value accessors. value() will crash if there's been an overflow.
+    template<typename U = T>
+    U value() const
+    {
+        if (UNLIKELY(this->hasOverflowed()))
             this->crash();
         return static_cast<U>(m_value);
     }
 
-    inline CheckedState safeGet(T& value) const WARN_UNUSED_RETURN
-    {
-        value = m_value;
-        if (this->hasOverflowed())
-            return CheckedState::DidOverflow;
-        return CheckedState::DidNotOverflow;
-    }
-
     // Mutating assignment
-    template <typename U> const Checked operator+=(U rhs)
+    template <typename U> Checked& operator+=(U rhs)
     {
         if (!safeAdd<OverflowHandler>(m_value, rhs, m_value))
             this->overflowed();
         return *this;
     }
 
-    template <typename U> const Checked operator-=(U rhs)
+    template <typename U> Checked& operator-=(U rhs)
     {
         if (!safeSub<OverflowHandler>(m_value, rhs, m_value))
             this->overflowed();
         return *this;
     }
 
-    template <typename U> const Checked operator*=(U rhs)
+    template <typename U> Checked& operator*=(U rhs)
     {
         if (!safeMultiply<OverflowHandler>(m_value, rhs, m_value))
             this->overflowed();
         return *this;
     }
 
-    template <typename U> const Checked operator/=(U rhs)
+    template <typename U> Checked& operator/=(U rhs)
     {
         if (!safeDivide<OverflowHandler>(m_value, rhs, m_value))
             this->overflowed();
         return *this;
     }
 
-    const Checked operator*=(double rhs)
-    {
-        double result = rhs * m_value;
-        // Handle +/- infinity and NaN
-        if (!(std::numeric_limits<T>::min() <= result && std::numeric_limits<T>::max() >= result))
-            this->overflowed();
-        m_value = (T)result;
-        return *this;
-    }
-
-    const Checked operator/=(double rhs)
-    {
-        if (!rhs) {
-            this->overflowed();
-            return *this;
-        }
-        double result = m_value / rhs;
-        // Handle +/- infinity and NaN
-        if (!(std::numeric_limits<T>::min() <= result && std::numeric_limits<T>::max() >= result))
-            this->overflowed();
-        m_value = (T)result;
-        return *this;
-    }
-
-    const Checked operator*=(float rhs)
-    {
-        return *this *= (double)rhs;
-    }
-
-    const Checked operator/=(float rhs)
-    {
-        return *this /= (double)rhs;
-    }
-
-    template <typename U, typename V> const Checked operator+=(Checked<U, V> rhs)
+    template <typename U, typename V> Checked& operator+=(Checked<U, V> rhs)
     {
         if (rhs.hasOverflowed())
             this->overflowed();
         return *this += rhs.m_value;
     }
 
-    template <typename U, typename V> const Checked operator-=(Checked<U, V> rhs)
+    template <typename U, typename V> Checked& operator-=(Checked<U, V> rhs)
     {
         if (rhs.hasOverflowed())
             this->overflowed();
         return *this -= rhs.m_value;
     }
 
-    template <typename U, typename V> const Checked operator*=(Checked<U, V> rhs)
+    template <typename U, typename V> Checked& operator*=(Checked<U, V> rhs)
     {
         if (rhs.hasOverflowed())
             this->overflowed();
@@ -873,7 +844,7 @@ public:
     // Equality comparisons
     template <typename V> bool operator==(Checked<T, V> rhs)
     {
-        return unsafeGet() == rhs.unsafeGet();
+        return value() == rhs.value();
     }
 
     template <typename U> bool operator==(U rhs)
@@ -883,9 +854,9 @@ public:
         return safeEquals(m_value, rhs);
     }
 
-    template <typename U, typename V> const Checked operator==(Checked<U, V> rhs)
+    template <typename U, typename V> bool operator==(Checked<U, V> rhs)
     {
-        return unsafeGet() == Checked(rhs.unsafeGet());
+        return value() == Checked(rhs.value());
     }
 
     template <typename U> bool operator!=(U rhs)
@@ -896,42 +867,22 @@ public:
     // Other comparisons
     template <typename V> bool operator<(Checked<T, V> rhs) const
     {
-        return unsafeGet() < rhs.unsafeGet();
-    }
-
-    bool operator<(T rhs) const
-    {
-        return unsafeGet() < rhs;
+        return value() < rhs.value();
     }
 
     template <typename V> bool operator<=(Checked<T, V> rhs) const
     {
-        return unsafeGet() <= rhs.unsafeGet();
-    }
-
-    bool operator<=(T rhs) const
-    {
-        return unsafeGet() <= rhs;
+        return value() <= rhs.value();
     }
 
     template <typename V> bool operator>(Checked<T, V> rhs) const
     {
-        return unsafeGet() > rhs.unsafeGet();
-    }
-
-    bool operator>(T rhs) const
-    {
-        return unsafeGet() > rhs;
+        return value() > rhs.value();
     }
 
     template <typename V> bool operator>=(Checked<T, V> rhs) const
     {
-        return unsafeGet() >= rhs.unsafeGet();
-    }
-
-    bool operator>=(T rhs) const
-    {
-        return unsafeGet() >= rhs;
+        return value() >= rhs.value();
     }
 
 private:
@@ -949,48 +900,40 @@ private:
 
 template <typename U, typename V, typename OverflowHandler> static inline Checked<typename Result<U, V>::ResultType, OverflowHandler> operator+(Checked<U, OverflowHandler> lhs, Checked<V, OverflowHandler> rhs)
 {
-    U x = 0;
-    V y = 0;
-    bool overflowed = lhs.safeGet(x) == CheckedState::DidOverflow || rhs.safeGet(y) == CheckedState::DidOverflow;
+    if (UNLIKELY(lhs.hasOverflowed() || rhs.hasOverflowed()))
+        return ResultOverflowed;
     typename Result<U, V>::ResultType result = 0;
-    overflowed |= !safeAdd<OverflowHandler>(x, y, result);
-    if (overflowed)
+    if (UNLIKELY(!safeAdd<OverflowHandler>(lhs.value(), rhs.value(), result)))
         return ResultOverflowed;
     return result;
 }
 
 template <typename U, typename V, typename OverflowHandler> static inline Checked<typename Result<U, V>::ResultType, OverflowHandler> operator-(Checked<U, OverflowHandler> lhs, Checked<V, OverflowHandler> rhs)
 {
-    U x = 0;
-    V y = 0;
-    bool overflowed = lhs.safeGet(x) == CheckedState::DidOverflow || rhs.safeGet(y) == CheckedState::DidOverflow;
+    if (UNLIKELY(lhs.hasOverflowed() || rhs.hasOverflowed()))
+        return ResultOverflowed;
     typename Result<U, V>::ResultType result = 0;
-    overflowed |= !safeSub<OverflowHandler>(x, y, result);
-    if (overflowed)
+    if (UNLIKELY(!safeSub<OverflowHandler>(lhs.value(), rhs.value(), result)))
         return ResultOverflowed;
     return result;
 }
 
 template <typename U, typename V, typename OverflowHandler> static inline Checked<typename Result<U, V>::ResultType, OverflowHandler> operator*(Checked<U, OverflowHandler> lhs, Checked<V, OverflowHandler> rhs)
 {
-    U x = 0;
-    V y = 0;
-    bool overflowed = lhs.safeGet(x) == CheckedState::DidOverflow || rhs.safeGet(y) == CheckedState::DidOverflow;
+    if (UNLIKELY(lhs.hasOverflowed() || rhs.hasOverflowed()))
+        return ResultOverflowed;
     typename Result<U, V>::ResultType result = 0;
-    overflowed |= !safeMultiply<OverflowHandler>(x, y, result);
-    if (overflowed)
+    if (UNLIKELY(!safeMultiply<OverflowHandler>(lhs.value(), rhs.value(), result)))
         return ResultOverflowed;
     return result;
 }
 
 template <typename U, typename V, typename OverflowHandler> static inline Checked<typename Result<U, V>::ResultType, OverflowHandler> operator/(Checked<U, OverflowHandler> lhs, Checked<V, OverflowHandler> rhs)
 {
-    U x = 0;
-    V y = 0;
-    bool overflowed = lhs.safeGet(x) == CheckedState::DidOverflow || rhs.safeGet(y) == CheckedState::DidOverflow;
+    if (UNLIKELY(lhs.hasOverflowed() || rhs.hasOverflowed()))
+        return ResultOverflowed;
     typename Result<U, V>::ResultType result = 0;
-    overflowed |= !safeDivide<OverflowHandler>(x, y, result);
-    if (overflowed)
+    if (UNLIKELY(!safeDivide<OverflowHandler>(lhs.value(), rhs.value(), result)))
         return ResultOverflowed;
     return result;
 }
@@ -1089,6 +1032,13 @@ template<typename T, typename... Args> bool productOverflows(Args... args)
     return checkedProduct<T>(args...).hasOverflowed();
 }
 
+template<typename T> bool isSumSmallerThanOrEqual(T a, T b, T bound)
+{
+    Checked<T, RecordOverflow> sum = a;
+    sum += b;
+    return !sum.hasOverflowed() && sum.value() <= bound;
+}
+
 }
 
 using WTF::AssertNoOverflow;
@@ -1103,7 +1053,6 @@ using WTF::CheckedUint32;
 using WTF::CheckedInt64;
 using WTF::CheckedUint64;
 using WTF::CheckedSize;
-using WTF::ConditionalCrashOnOverflow;
 using WTF::CrashOnOverflow;
 using WTF::RecordOverflow;
 using WTF::checkedSum;
@@ -1111,3 +1060,4 @@ using WTF::differenceOverflows;
 using WTF::isInBounds;
 using WTF::productOverflows;
 using WTF::sumOverflows;
+using WTF::isSumSmallerThanOrEqual;

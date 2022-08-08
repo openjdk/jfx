@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2020-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,7 +31,7 @@
 
 namespace JSC {
 
-static JSC_DECLARE_HOST_FUNCTION(IntlSegmentIteratorPrototypeFuncNext);
+static JSC_DECLARE_HOST_FUNCTION(intlSegmentIteratorPrototypeFuncNext);
 
 }
 
@@ -43,13 +43,13 @@ const ClassInfo IntlSegmentIteratorPrototype::s_info = { "Segment String Iterato
 
 /* Source for IntlSegmentIteratorPrototype.lut.h
 @begin segmentIteratorPrototypeTable
-  next             IntlSegmentIteratorPrototypeFuncNext               DontEnum|Function 0
+  next             intlSegmentIteratorPrototypeFuncNext               DontEnum|Function 0
 @end
 */
 
 IntlSegmentIteratorPrototype* IntlSegmentIteratorPrototype::create(VM& vm, Structure* structure)
 {
-    auto* object = new (NotNull, allocateCell<IntlSegmentIteratorPrototype>(vm.heap)) IntlSegmentIteratorPrototype(vm, structure);
+    auto* object = new (NotNull, allocateCell<IntlSegmentIteratorPrototype>(vm)) IntlSegmentIteratorPrototype(vm, structure);
     object->finishCreation(vm);
     return object;
 }
@@ -72,14 +72,14 @@ void IntlSegmentIteratorPrototype::finishCreation(VM& vm)
 }
 
 // https://tc39.es/proposal-intl-segmenter/#sec-%segmentiteratorprototype%.next
-JSC_DEFINE_HOST_FUNCTION(IntlSegmentIteratorPrototypeFuncNext, (JSGlobalObject* globalObject, CallFrame* callFrame))
+JSC_DEFINE_HOST_FUNCTION(intlSegmentIteratorPrototypeFuncNext, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     auto* segmentIterator = jsDynamicCast<IntlSegmentIterator*>(vm, callFrame->thisValue());
     if (!segmentIterator)
-        return throwVMTypeError(globalObject, scope, "Intl.SegmentIterator.prototype.next called on value that's not an object initialized as a SegmentIterator"_s);
+        return throwVMTypeError(globalObject, scope, "Intl.SegmentIterator.prototype.next called on value that's not a SegmentIterator"_s);
 
     RELEASE_AND_RETURN(scope, JSValue::encode(segmentIterator->next(globalObject)));
 }

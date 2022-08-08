@@ -33,6 +33,7 @@
 #include "HTMLNames.h"
 #include "VisibleUnits.h"
 #include <wtf/NeverDestroyed.h>
+#include <wtf/RobinHoodHashSet.h>
 
 namespace WebCore {
 
@@ -65,6 +66,9 @@ void FormatBlockCommand::formatRange(const Position& start, const Position& end,
     Node* nodeToSplitTo = enclosingBlockToSplitTreeTo(start.deprecatedNode());
     ASSERT(nodeToSplitTo);
     RefPtr<Node> outerBlock = (start.deprecatedNode() == nodeToSplitTo) ? start.deprecatedNode() : splitTreeToNode(*start.deprecatedNode(), *nodeToSplitTo);
+    if (!outerBlock)
+        return;
+
     RefPtr<Node> nodeAfterInsertionPosition = outerBlock;
 
     auto range = makeSimpleRange(start, endOfSelection);
@@ -94,11 +98,12 @@ void FormatBlockCommand::formatRange(const Position& start, const Position& end,
 
     moveParagraphWithClones(start, end, blockNode.get(), outerBlock.get());
 
-    if (wasEndOfParagraph && !isEndOfParagraph(lastParagraphInBlockNode) && !isStartOfParagraph(lastParagraphInBlockNode))
+    if (wasEndOfParagraph && lastParagraphInBlockNode.anchorNode()->isConnected()
+        && !isEndOfParagraph(lastParagraphInBlockNode) && !isStartOfParagraph(lastParagraphInBlockNode))
         insertBlockPlaceholder(lastParagraphInBlockNode);
 }
 
-Element* FormatBlockCommand::elementForFormatBlockCommand(const Optional<SimpleRange>& range)
+Element* FormatBlockCommand::elementForFormatBlockCommand(const std::optional<SimpleRange>& range)
 {
     if (!range)
         return nullptr;
@@ -118,7 +123,7 @@ Element* FormatBlockCommand::elementForFormatBlockCommand(const Optional<SimpleR
 
 bool isElementForFormatBlock(const QualifiedName& tagName)
 {
-    static const auto blockTags = makeNeverDestroyed(HashSet<QualifiedName> {
+    static NeverDestroyed blockTags = MemoryCompactLookupOnlyRobinHoodHashSet<QualifiedName> {
         addressTag,
         articleTag,
         asideTag,
@@ -141,7 +146,7 @@ bool isElementForFormatBlock(const QualifiedName& tagName)
         pTag,
         preTag,
         sectionTag,
-    });
+    };
     return blockTags.get().contains(tagName);
 }
 

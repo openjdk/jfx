@@ -63,10 +63,10 @@ void MockMediaPlayerMediaSource::registerMediaEngine(MediaEngineRegistrar regist
 // FIXME: What does the word "cache" mean here?
 static const HashSet<String, ASCIICaseInsensitiveHash>& mimeTypeCache()
 {
-    static const auto cache = makeNeverDestroyed(HashSet<String, ASCIICaseInsensitiveHash> {
+    static NeverDestroyed cache = HashSet<String, ASCIICaseInsensitiveHash> {
         "video/mock",
         "audio/mock",
-    });
+    };
     return cache;
 }
 
@@ -123,7 +123,9 @@ void MockMediaPlayerMediaSource::cancelLoad()
 void MockMediaPlayerMediaSource::play()
 {
     m_playing = 1;
-    callOnMainThread([this] {
+    callOnMainThread([this, weakThis = WeakPtr { *this }] {
+        if (!weakThis)
+            return;
         advanceCurrentTime();
     });
 }
@@ -148,7 +150,7 @@ bool MockMediaPlayerMediaSource::hasAudio() const
     return m_mediaSourcePrivate ? m_mediaSourcePrivate->hasAudio() : false;
 }
 
-void MockMediaPlayerMediaSource::setVisible(bool)
+void MockMediaPlayerMediaSource::setPageIsVisible(bool)
 {
 }
 
@@ -220,7 +222,9 @@ void MockMediaPlayerMediaSource::seekWithTolerance(const MediaTime& time, const 
         m_player->timeChanged();
 
         if (m_playing)
-            callOnMainThread([this] {
+            callOnMainThread([this, weakThis = WeakPtr { *this }] {
+                if (!weakThis)
+                    return;
                 advanceCurrentTime();
             });
     }
@@ -282,14 +286,21 @@ void MockMediaPlayerMediaSource::seekCompleted()
     m_player->timeChanged();
 
     if (m_playing)
-        callOnMainThread([this] {
+        callOnMainThread([this, weakThis = WeakPtr { *this }] {
+            if (!weakThis)
+                return;
             advanceCurrentTime();
         });
 }
 
-Optional<VideoPlaybackQualityMetrics> MockMediaPlayerMediaSource::videoPlaybackQualityMetrics()
+std::optional<VideoPlaybackQualityMetrics> MockMediaPlayerMediaSource::videoPlaybackQualityMetrics()
 {
-    return m_mediaSourcePrivate ? m_mediaSourcePrivate->videoPlaybackQualityMetrics() : WTF::nullopt;
+    return m_mediaSourcePrivate ? m_mediaSourcePrivate->videoPlaybackQualityMetrics() : std::nullopt;
+}
+
+DestinationColorSpace MockMediaPlayerMediaSource::colorSpace()
+{
+    return DestinationColorSpace::SRGB();
 }
 
 }

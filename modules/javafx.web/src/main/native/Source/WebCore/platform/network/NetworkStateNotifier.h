@@ -50,7 +50,7 @@ public:
     WEBCORE_EXPORT static NetworkStateNotifier& singleton();
 
     WEBCORE_EXPORT bool onLine();
-    WEBCORE_EXPORT void addListener(WTF::Function<void(bool isOnLine)>&&);
+    WEBCORE_EXPORT void addListener(Function<void(bool isOnLine)>&&);
 
 private:
     friend NeverDestroyed<NetworkStateNotifier>;
@@ -71,8 +71,8 @@ private:
     static void networkChangedCallback(NetworkStateNotifier*);
 #endif
 
-    Optional<bool> m_isOnLine;
-    Vector<WTF::Function<void(bool)>> m_listeners;
+    std::optional<bool> m_isOnLine;
+    Vector<Function<void(bool)>> m_listeners;
     Timer m_updateStateTimer;
 
 #if PLATFORM(IOS_FAMILY)

@@ -25,8 +25,6 @@
 
 #pragma once
 
-#if ENABLE(INDEXED_DATABASE)
-
 #include "IDBRequest.h"
 #include "IDBRequestData.h"
 #include "IDBResourceIdentifier.h"
@@ -47,6 +45,7 @@ enum class IndexRecordType : bool;
 namespace IDBClient {
 
 class TransactionOperation : public ThreadSafeRefCounted<TransactionOperation> {
+    WTF_MAKE_ISO_ALLOCATED(TransactionOperation);
     friend IDBRequestData::IDBRequestData(TransactionOperation&);
 public:
     virtual ~TransactionOperation()
@@ -150,6 +149,7 @@ private:
 };
 
 class TransactionOperationImpl final : public TransactionOperation {
+    WTF_MAKE_ISO_ALLOCATED(TransactionOperationImpl);
 public:
     template<typename... Args> static Ref<TransactionOperationImpl> create(Args&&... args) { return adoptRef(*new TransactionOperationImpl(std::forward<Args>(args)...)); }
 private:
@@ -157,12 +157,12 @@ private:
         : TransactionOperation(transaction)
     {
         ASSERT(performMethod);
-        m_performFunction = [protectedThis = makeRef(*this), performMethod = WTFMove(performMethod)] {
+        m_performFunction = [protectedThis = Ref { *this }, performMethod = WTFMove(performMethod)] {
             performMethod(protectedThis.get());
         };
 
         if (completeMethod) {
-            m_completeFunction = [protectedThis = makeRef(*this), completeMethod = WTFMove(completeMethod)] (const IDBResultData& resultData) {
+            m_completeFunction = [protectedThis = Ref { *this }, completeMethod = WTFMove(completeMethod)] (const IDBResultData& resultData) {
                 completeMethod(resultData);
             };
         }
@@ -172,12 +172,12 @@ private:
         : TransactionOperation(transaction, request)
     {
         ASSERT(performMethod);
-        m_performFunction = [protectedThis = makeRef(*this), performMethod = WTFMove(performMethod)] {
+        m_performFunction = [protectedThis = Ref { *this }, performMethod = WTFMove(performMethod)] {
             performMethod(protectedThis.get());
         };
 
         if (completeMethod) {
-            m_completeFunction = [protectedThis = makeRef(*this), completeMethod = WTFMove(completeMethod)] (const IDBResultData& resultData) {
+            m_completeFunction = [protectedThis = Ref { *this }, completeMethod = WTFMove(completeMethod)] (const IDBResultData& resultData) {
                 completeMethod(resultData);
             };
         }
@@ -186,5 +186,3 @@ private:
 
 } // namespace IDBClient
 } // namespace WebCore
-
-#endif // ENABLE(INDEXED_DATABASE)

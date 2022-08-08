@@ -44,26 +44,26 @@
  * container and implements 5 functions for dealing with it:
  *
  *  n_children:
- *    - determines (according to serialised data) how many child values
+ *    - determines (according to serialized data) how many child values
  *      are inside a particular container value.
  *
  *  get_child:
- *    - gets the type of and the serialised data corresponding to a
+ *    - gets the type of and the serialized data corresponding to a
  *      given child value within the container value.
  *
  *  needed_size:
- *    - determines how much space would be required to serialise a
+ *    - determines how much space would be required to serialize a
  *      container of this type, containing the given children so that
- *      buffers can be preallocated before serialising.
+ *      buffers can be preallocated before serializing.
  *
  *  serialise:
- *    - write the serialised data for a container of this type,
+ *    - write the serialized data for a container of this type,
  *      containing the given children, to a buffer.
  *
  *  is_normal:
  *    - check the given data to ensure that it is in normal form.  For a
  *      given set of child values, there is exactly one normal form for
- *      the serialised data of a container.  Other forms are possible
+ *      the serialized data of a container.  Other forms are possible
  *      while maintaining the same children (for example, by inserting
  *      something other than zero bytes as padding) but only one form is
  *      the normal form.
@@ -72,7 +72,7 @@
  * functions and logic to dispatch it to the handler for the appropriate
  * container type code.
  *
- * The second part also contains a routine to byteswap serialised
+ * The second part also contains a routine to byteswap serialized
  * values.  This code makes use of the n_children() and get_child()
  * functions above to do its work so no extra support is needed on a
  * per-container-type basis.
@@ -90,17 +90,17 @@
 /* < private >
  * GVariantSerialised:
  * @type_info: the #GVariantTypeInfo of this value
- * @data: (nullable): the serialised data of this value, or %NULL
+ * @data: (nullable): the serialized data of this value, or %NULL
  * @size: the size of this value
  *
- * A structure representing a GVariant in serialised form.  This
+ * A structure representing a GVariant in serialized form.  This
  * structure is used with #GVariantSerialisedFiller functions and as the
- * primary interface to the serialiser.  See #GVariantSerialisedFiller
+ * primary interface to the serializer.  See #GVariantSerialisedFiller
  * for a description of its use there.
  *
- * When used with the serialiser API functions, the following invariants
+ * When used with the serializer API functions, the following invariants
  * apply to all #GVariantTypeSerialised structures passed to and
- * returned from the serialiser.
+ * returned from the serializer.
  *
  * @type_info must be non-%NULL.
  *
@@ -117,7 +117,7 @@
  * combination should be as if @data were a pointer to an
  * appropriately-sized zero-filled region.
  *
- * @depth has no restrictions; the depth of a top-level serialised #GVariant is
+ * @depth has no restrictions; the depth of a top-level serialized #GVariant is
  * zero, and it increases for each level of nested child.
  */
 
@@ -185,9 +185,9 @@ g_variant_serialised_check (GVariantSerialised serialised)
  * from a partially-complete #GVariantSerialised.
  *
  * The @data parameter passed back to the function is one of the items
- * that was passed to the serialiser in the @children array.  It
+ * that was passed to the serializer in the @children array.  It
  * represents a single child item of the container that is being
- * serialised.  The information filled in to @serialised is the
+ * serialized.  The information filled in to @serialised is the
  * information for this child.
  *
  * If the @type_info field of @serialised is %NULL then the callback
@@ -197,24 +197,24 @@ g_variant_serialised_check (GVariantSerialised serialised)
  * of the child.
  *
  * If the @size field is zero then the callback must fill it in with the
- * required amount of space to store the serialised form of the child.
+ * required amount of space to store the serialized form of the child.
  * If it is non-zero then the callback should assert that it is equal to
  * the needed size of the child.
  *
  * If @data is non-%NULL then it points to a space that is properly
- * aligned for and large enough to store the serialised data of the
- * child.  The callback must store the serialised form of the child at
+ * aligned for and large enough to store the serialized data of the
+ * child.  The callback must store the serialized form of the child at
  * @data.
  *
  * If the child value is another container then the callback will likely
- * recurse back into the serialiser by calling
+ * recurse back into the serializer by calling
  * g_variant_serialiser_needed_size() to determine @size and
  * g_variant_serialiser_serialise() to write to @data.
  */
 
 /* PART 1: Container types {{{1
  *
- * This section contains the serialiser implementation functions for
+ * This section contains the serializer implementation functions for
  * each container type.
  */
 
@@ -235,7 +235,7 @@ g_variant_serialised_check (GVariantSerialised serialised)
  * size of the maybe value is zero corresponds to the "Nothing" case and
  * the case where the size of the maybe value is equal to the fixed size
  * of the element type corresponds to the "Just" case; in that case, the
- * serialised data of the child value forms the entire serialised data
+ * serialized data of the child value forms the entire serialized data
  * of the maybe value.
  *
  * In the event that a fixed-sized maybe value is presented with a size
@@ -331,11 +331,11 @@ gvs_fixed_sized_maybe_is_normal (GVariantSerialised value)
  * either 0 or strictly greater than 0.  The case where the size of the
  * maybe value is zero corresponds to the "Nothing" case and the case
  * where the size of the maybe value is greater than zero corresponds to
- * the "Just" case; in that case, the serialised data of the child value
- * forms the first part of the serialised data of the maybe value and is
+ * the "Just" case; in that case, the serialized data of the child value
+ * forms the first part of the serialized data of the maybe value and is
  * followed by a single zero byte.  This zero byte is always appended,
  * regardless of any zero bytes that may already be at the end of the
- * serialised ata of the child value.
+ * serialized ata of the child value.
  */
 
 static gsize
@@ -424,8 +424,8 @@ gvs_variable_sized_maybe_is_normal (GVariantSerialised value)
 
 /* Fixed-sized Array {{{3
  *
- * For fixed sized arrays, the serialised data is simply a concatenation
- * of the serialised data of each element, in order.  Since fixed-sized
+ * For fixed sized arrays, the serialized data is simply a concatenation
+ * of the serialized data of each element, in order.  Since fixed-sized
  * values always have a fixed size that is a multiple of their alignment
  * requirement no extra padding is required.
  *
@@ -535,35 +535,35 @@ gvs_fixed_sized_array_is_normal (GVariantSerialised value)
  * record the end point of each element in the array.
  *
  * GVariant works in terms of "offsets".  An offset is a pointer to a
- * boundary between two bytes.  In 4 bytes of serialised data, there
+ * boundary between two bytes.  In 4 bytes of serialized data, there
  * would be 5 possible offsets: one at the start ('0'), one between each
  * pair of adjacent bytes ('1', '2', '3') and one at the end ('4').
  *
  * The numeric value of an offset is an unsigned integer given relative
- * to the start of the serialised data of the array.  Offsets are always
+ * to the start of the serialized data of the array.  Offsets are always
  * stored in little endian byte order and are always only as big as they
- * need to be.  For example, in 255 bytes of serialised data, there are
+ * need to be.  For example, in 255 bytes of serialized data, there are
  * 256 offsets.  All possibilities can be stored in an 8 bit unsigned
- * integer.  In 256 bytes of serialised data, however, there are 257
+ * integer.  In 256 bytes of serialized data, however, there are 257
  * possible offsets so 16 bit integers must be used.  The size of an
  * offset is always a power of 2.
  *
- * The offsets are stored at the end of the serialised data of the
+ * The offsets are stored at the end of the serialized data of the
  * array.  They are simply concatenated on without any particular
  * alignment.  The size of the offsets is included in the size of the
- * serialised data for purposes of determining the size of the offsets.
+ * serialized data for purposes of determining the size of the offsets.
  * This presents a possibly ambiguity; in certain cases, a particular
- * value of array could have two different serialised forms.
+ * value of array could have two different serialized forms.
  *
  * Imagine an array containing a single string of 253 bytes in length
  * (so, 254 bytes including the nul terminator).  Now the offset must be
  * written.  If an 8 bit offset is written, it will bring the size of
- * the array's serialised data to 255 -- which means that the use of an
+ * the array's serialized data to 255 -- which means that the use of an
  * 8 bit offset was valid.  If a 16 bit offset is used then the total
  * size of the array will be 256 -- which means that the use of a 16 bit
  * offset was valid.  Although both of these will be accepted by the
- * deserialiser, only the smaller of the two is considered to be in
- * normal form and that is the one that the serialiser must produce.
+ * deserializer, only the smaller of the two is considered to be in
+ * normal form and that is the one that the serializer must produce.
  */
 
 /* bytes may be NULL if (size == 0). */
@@ -840,20 +840,20 @@ gvs_variable_sized_array_is_normal (GVariantSerialised value)
 /* Tuples {{{2
  *
  * Since tuples can contain a mix of variable- and fixed-sized items,
- * they are, in terms of serialisation, a hybrid of variable-sized and
+ * they are, in terms of serialization, a hybrid of variable-sized and
  * fixed-sized arrays.
  *
  * Offsets are only stored for variable-sized items.  Also, since the
  * number of items in a tuple is known from its type, we are able to
- * know exactly how many offsets to expect in the serialised data (and
+ * know exactly how many offsets to expect in the serialized data (and
  * therefore how much space is taken up by the offset array).  This
- * means that we know where the end of the serialised data for the last
+ * means that we know where the end of the serialized data for the last
  * item is -- we can just subtract the size of the offset array from the
  * total size of the tuple.  For this reason, the last item in the tuple
  * doesn't need an offset stored.
  *
  * Tuple offsets are stored in reverse.  This design choice allows
- * iterator-based deserialisers to be more efficient.
+ * iterator-based deserializers to be more efficient.
  *
  * Most of the "heavy lifting" here is handled by the GVariantTypeInfo
  * for the tuple.  See the notes in gvarianttypeinfo.h.
@@ -1158,7 +1158,7 @@ gvs_tuple_is_normal (GVariantSerialised value)
 
 /* Variants {{{2
  *
- * Variants are stored by storing the serialised data of the child,
+ * Variants are stored by storing the serialized data of the child,
  * followed by a '\0' character, followed by the type string of the
  * child.
  *
@@ -1287,9 +1287,9 @@ gvs_variant_is_normal (GVariantSerialised value)
 
 
 
-/* PART 2: Serialiser API {{{1
+/* PART 2: Serializer API {{{1
  *
- * This is the implementation of the API of the serialiser as advertised
+ * This is the implementation of the API of the serializer as advertised
  * in gvariant-serialiser.h.
  */
 
@@ -1338,9 +1338,9 @@ gvs_variant_is_normal (GVariantSerialised value)
         }                                                       \
     }
 
-/* Serialiser entry points {{{2
+/* Serializer entry points {{{2
  *
- * These are the functions that are called in order for the serialiser
+ * These are the functions that are called in order for the serializer
  * to do its thing.
  */
 
@@ -1348,7 +1348,7 @@ gvs_variant_is_normal (GVariantSerialised value)
  * g_variant_serialised_n_children:
  * @serialised: a #GVariantSerialised
  *
- * For serialised data that represents a container value (maybes,
+ * For serialized data that represents a container value (maybes,
  * tuples, arrays, variants), determine how many child items are inside
  * that container.
  *
@@ -1372,7 +1372,7 @@ g_variant_serialised_n_children (GVariantSerialised serialised)
  * @serialised: a #GVariantSerialised
  * @index_: the index of the child to fetch
  *
- * Extracts a child from a serialised data representing a container
+ * Extracts a child from a serialized data representing a container
  * value.
  *
  * It is an error to call this function with an index out of bounds.
@@ -1421,19 +1421,19 @@ g_variant_serialised_get_child (GVariantSerialised serialised,
  * @children: an array of child items
  * @n_children: the size of @children
  *
- * Writes data in serialised form.
+ * Writes data in serialized form.
  *
  * The type_info field of @serialised must be filled in to type info for
- * the type that we are serialising.
+ * the type that we are serializing.
  *
  * The size field of @serialised must be filled in with the value
  * returned by a previous call to g_variant_serialiser_needed_size().
  *
  * The data field of @serialised must be a pointer to a properly-aligned
- * memory region large enough to serialise into (ie: at least as big as
+ * memory region large enough to serialize into (ie: at least as big as
  * the size field).
  *
- * This function is only resonsible for serialising the top-level
+ * This function is only resonsible for serializing the top-level
  * container.  @gvs_filler is called on each child of the container in
  * order for all of the data of that child to be filled in.
  */
@@ -1457,12 +1457,12 @@ g_variant_serialiser_serialise (GVariantSerialised        serialised,
 
 /* < private >
  * g_variant_serialiser_needed_size:
- * @type_info: the type to serialise for
+ * @type_info: the type to serialize for
  * @gvs_filler: the filler function
  * @children: an array of child items
  * @n_children: the size of @children
  *
- * Determines how much memory would be needed to serialise this value.
+ * Determines how much memory would be needed to serialize this value.
  *
  * This function is only resonsible for performing calculations for the
  * top-level container.  @gvs_filler is called on each child of the
@@ -1489,7 +1489,7 @@ g_variant_serialiser_needed_size (GVariantTypeInfo         *type_info,
  * g_variant_serialised_byteswap:
  * @value: a #GVariantSerialised
  *
- * Byte-swap serialised data.  The result of this function is only
+ * Byte-swap serialized data.  The result of this function is only
  * well-defined if the data is in normal form.
  */
 void
@@ -1577,9 +1577,9 @@ g_variant_serialised_byteswap (GVariantSerialised serialised)
  * @serialised: a #GVariantSerialised
  *
  * Determines, recursively if @serialised is in normal form.  There is
- * precisely one normal form of serialised data for each possible value.
+ * precisely one normal form of serialized data for each possible value.
  *
- * It is possible that multiple byte sequences form the serialised data
+ * It is possible that multiple byte sequences form the serialized data
  * for a given value if, for example, the padding bytes are filled in
  * with something other than zeros, but only one form is the normal
  * form.
@@ -1587,6 +1587,9 @@ g_variant_serialised_byteswap (GVariantSerialised serialised)
 gboolean
 g_variant_serialised_is_normal (GVariantSerialised serialised)
 {
+  if (serialised.depth >= G_VARIANT_MAX_RECURSION_DEPTH)
+    return FALSE;
+
   DISPATCH_CASES (serialised.type_info,
 
                   return gvs_/**/,/**/_is_normal (serialised);
@@ -1594,8 +1597,6 @@ g_variant_serialised_is_normal (GVariantSerialised serialised)
                  )
 
   if (serialised.data == NULL)
-    return FALSE;
-  if (serialised.depth >= G_VARIANT_MAX_RECURSION_DEPTH)
     return FALSE;
 
   /* some hard-coded terminal cases */
@@ -1666,7 +1667,7 @@ g_variant_serialiser_is_string (gconstpointer data,
  *
  * Performs the checks for being a valid string.
  *
- * Also, ensures that @data is a valid DBus object path, as per the D-Bus
+ * Also, ensures that @data is a valid D-Bus object path, as per the D-Bus
  * specification.
  */
 gboolean

@@ -35,6 +35,7 @@
 #include "RenderLayer.h"
 #include "RenderSVGResource.h"
 #include "RenderSVGResourceFilter.h"
+#include "SVGElementTypeHelpers.h"
 #include "SVGImageElement.h"
 #include "SVGRenderingContext.h"
 #include "SVGResources.h"
@@ -47,7 +48,7 @@ namespace WebCore {
 WTF_MAKE_ISO_ALLOCATED_IMPL(RenderSVGImage);
 
 RenderSVGImage::RenderSVGImage(SVGImageElement& element, RenderStyle&& style)
-    : RenderSVGModelObject(element, WTFMove(style))
+    : LegacyRenderSVGModelObject(element, WTFMove(style))
     , m_needsBoundariesUpdate(true)
     , m_needsTransformUpdate(true)
     , m_imageResource(makeUnique<RenderImageResource>())
@@ -60,12 +61,12 @@ RenderSVGImage::~RenderSVGImage() = default;
 void RenderSVGImage::willBeDestroyed()
 {
     imageResource().shutdown();
-    RenderSVGModelObject::willBeDestroyed();
+    LegacyRenderSVGModelObject::willBeDestroyed();
 }
 
 SVGImageElement& RenderSVGImage::imageElement() const
 {
-    return downcast<SVGImageElement>(RenderSVGModelObject::element());
+    return downcast<SVGImageElement>(LegacyRenderSVGModelObject::element());
 }
 
 FloatRect RenderSVGImage::calculateObjectBoundingBox() const
@@ -144,11 +145,8 @@ void RenderSVGImage::layout()
     }
 
     if (m_needsBoundariesUpdate) {
-        m_repaintBoundingBoxExcludingShadow = m_objectBoundingBox;
-        SVGRenderSupport::intersectRepaintRectWithResources(*this, m_repaintBoundingBoxExcludingShadow);
-
-        m_repaintBoundingBox = m_repaintBoundingBoxExcludingShadow;
-
+        m_repaintBoundingBox = m_objectBoundingBox;
+        SVGRenderSupport::intersectRepaintRectWithResources(*this, m_repaintBoundingBox);
         m_needsBoundariesUpdate = false;
     }
 
@@ -158,7 +156,7 @@ void RenderSVGImage::layout()
 
     // If our bounds changed, notify the parents.
     if (transformOrBoundariesUpdate)
-        RenderSVGModelObject::setNeedsBoundariesUpdate();
+        LegacyRenderSVGModelObject::setNeedsBoundariesUpdate();
 
     repainter.repaintAfterLayout();
     clearNeedsLayout();
@@ -221,7 +219,7 @@ bool RenderSVGImage::nodeAtFloatPoint(const HitTestRequest& request, HitTestResu
     PointerEventsHitRules hitRules(PointerEventsHitRules::SVG_IMAGE_HITTESTING, request, style().pointerEvents());
     bool isVisible = (style().visibility() == Visibility::Visible);
     if (isVisible || !hitRules.requireVisible) {
-        FloatPoint localPoint = localToParentTransform().inverse().valueOr(AffineTransform()).mapPoint(pointInParent);
+        FloatPoint localPoint = valueOrDefault(localToParentTransform().inverse()).mapPoint(pointInParent);
 
         if (!SVGRenderSupport::pointInClippingArea(*this, localPoint))
             return false;
@@ -231,7 +229,7 @@ bool RenderSVGImage::nodeAtFloatPoint(const HitTestRequest& request, HitTestResu
         if (hitRules.canHitFill) {
             if (m_objectBoundingBox.contains(localPoint)) {
                 updateHitTestResult(result, LayoutPoint(localPoint));
-                if (result.addNodeToListBasedTestResult(nodeForHitTest(), request, localPoint) == HitTestProgress::Stop)
+                if (result.addNodeToListBasedTestResult(nodeForHitTest(), request, flooredLayoutPoint(localPoint)) == HitTestProgress::Stop)
                     return true;
             }
         }

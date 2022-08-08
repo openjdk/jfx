@@ -35,6 +35,7 @@
 
 #if ENABLE(VIDEO)
 
+#include "Document.h"
 #include "HTMLParserIdioms.h"
 #include "ISOVTTCue.h"
 #include "ProcessingInstruction.h"
@@ -91,7 +92,7 @@ bool WebVTTParser::parseFloatPercentageValuePair(VTTScanner& valueScanner, char 
 
 WebVTTParser::WebVTTParser(WebVTTParserClient& client, Document& document)
     : m_document(document)
-    , m_decoder(TextResourceDecoder::create("text/plain", UTF8Encoding()))
+    , m_decoder(TextResourceDecoder::create("text/plain", PAL::UTF8Encoding()))
     , m_client(client)
 {
 }
@@ -119,7 +120,7 @@ void WebVTTParser::parseFileHeader(String&& data)
     parse();
 }
 
-void WebVTTParser::parseBytes(const char* data, unsigned length)
+void WebVTTParser::parseBytes(const uint8_t* data, unsigned length)
 {
     m_lineReader.append(m_decoder->decode(data, length));
     parse();
@@ -225,7 +226,8 @@ void WebVTTParser::parse()
 void WebVTTParser::fileFinished()
 {
     ASSERT(m_state != Finished);
-    parseBytes("\n\n", 2);
+    constexpr uint8_t endLines[] = { '\n', '\n' };
+    parseBytes(endLines, 2);
     m_state = Finished;
 }
 

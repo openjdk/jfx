@@ -57,9 +57,7 @@ public:
     void disableEval(const String&) final { };
     void disableWebAssembly(const String&) final { };
 
-#if ENABLE(INDEXED_DATABASE)
     IDBClient::IDBConnectionProxy* idbConnectionProxy() final { return nullptr; }
-#endif
     SocketProvider* socketProvider() final { return nullptr; }
 
     void addConsoleMessage(std::unique_ptr<Inspector::ConsoleMessage>&&) final { }
@@ -95,6 +93,10 @@ private:
     void derefScriptExecutionContext() final { deref(); };
 
     const Settings::Values& settingsValues() const final { return m_settingsValues; }
+
+#if ENABLE(NOTIFICATIONS)
+    NotificationClient* notificationClient() final { return nullptr; }
+#endif
 
     class EmptyEventLoop final : public EventLoop {
     public:

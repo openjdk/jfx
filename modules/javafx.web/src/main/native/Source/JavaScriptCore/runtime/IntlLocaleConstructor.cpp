@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2020 Sony Interactive Entertainment Inc.
+ * Copyright (C) 2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -38,7 +39,7 @@ const ClassInfo IntlLocaleConstructor::s_info = { "Function", &Base::s_info, nul
 
 IntlLocaleConstructor* IntlLocaleConstructor::create(VM& vm, Structure* structure, IntlLocalePrototype* localePrototype)
 {
-    auto* constructor = new (NotNull, allocateCell<IntlLocaleConstructor>(vm.heap)) IntlLocaleConstructor(vm, structure);
+    auto* constructor = new (NotNull, allocateCell<IntlLocaleConstructor>(vm)) IntlLocaleConstructor(vm, structure);
     constructor->finishCreation(vm, localePrototype);
     return constructor;
 }
@@ -70,9 +71,7 @@ JSC_DEFINE_HOST_FUNCTION(constructIntlLocale, (JSGlobalObject* globalObject, Cal
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     JSObject* newTarget = asObject(callFrame->newTarget());
-    Structure* structure = newTarget == callFrame->jsCallee()
-        ? globalObject->localeStructure()
-        : InternalFunction::createSubclassStructure(globalObject, newTarget, getFunctionRealm(vm, newTarget)->localeStructure());
+    Structure* structure = JSC_GET_DERIVED_STRUCTURE(vm, localeStructure, newTarget, callFrame->jsCallee());
     RETURN_IF_EXCEPTION(scope, { });
 
     IntlLocale* locale = IntlLocale::create(vm, structure);

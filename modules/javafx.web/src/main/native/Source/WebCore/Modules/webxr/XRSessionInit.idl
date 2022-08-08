@@ -23,8 +23,9 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+// https://immersive-web.github.io/webxr/#dictdef-xrsessioninit
 [
-    EnabledAtRuntime=WebXR,
+    EnabledBySetting=WebXREnabled,
     Conditional=WEBXR,
 ] dictionary XRSessionInit {
     sequence<any> requiredFeatures;

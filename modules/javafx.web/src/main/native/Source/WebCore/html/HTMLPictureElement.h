@@ -36,6 +36,7 @@ public:
     virtual ~HTMLPictureElement();
 
     void sourcesChanged();
+    void sourceDimensionAttributesChanged(const HTMLSourceElement&);
 
 #if USE(SYSTEM_PREVIEW)
     WEBCORE_EXPORT bool isSystemPreviewImage();
@@ -43,8 +44,6 @@ public:
 
 private:
     HTMLPictureElement(const QualifiedName&, Document&);
-
-    void didMoveToNewDocument(Document& oldDocument, Document& newDocument) final;
 };
 
 } // namespace WebCore

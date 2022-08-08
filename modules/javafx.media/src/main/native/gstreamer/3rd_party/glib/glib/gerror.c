@@ -114,6 +114,12 @@
  * function (the file being opened, or whatever - though in the
  * g_file_get_contents() case, the @message already contains a filename).
  *
+ * Since error messages may be displayed to the user, they need to be valid
+ * UTF-8 (all GTK widgets expect text to be UTF-8). Keep this in mind in
+ * particular when formatting error messages with filenames, which are in
+ * the 'filename encoding', and need to be turned into UTF-8 using
+ * g_filename_to_utf8(), g_filename_display_name() or g_utf8_make_valid().
+ *
  * Note, however, that many error messages are too technical to display to the
  * user in an application, so prefer to use g_error_matches() to categorize errors
  * from called functions, and build an appropriate error message for the context
@@ -316,14 +322,14 @@
  * - Do not report programming errors via #GError.
  *
  * - The last argument of a function that returns an error should
- *   be a location where a #GError can be placed (i.e. "#GError** error").
- *   If #GError is used with varargs, the #GError** should be the last
- *   argument before the "...".
+ *   be a location where a #GError can be placed (i.e. `GError **error`).
+ *   If #GError is used with varargs, the `GError**` should be the last
+ *   argument before the `...`.
  *
- * - The caller may pass %NULL for the #GError** if they are not interested
+ * - The caller may pass %NULL for the `GError**` if they are not interested
  *   in details of the exact error that occurred.
  *
- * - If %NULL is passed for the #GError** argument, then errors should
+ * - If %NULL is passed for the `GError**` argument, then errors should
  *   not be returned to the caller, but your function should still
  *   abort and return if an error occurs. That is, control flow should
  *   not be affected by whether the caller wants to get a #GError.
@@ -337,11 +343,13 @@
  * - If a #GError is reported, out parameters are not guaranteed to
  *   be set to any defined value.
  *
- * - A #GError* must be initialized to %NULL before passing its address
+ * - A `GError*` must be initialized to %NULL before passing its address
  *   to a function that can report errors.
  *
+ * - #GError structs must not be stack-allocated.
+ *
  * - "Piling up" errors is always a bug. That is, if you assign a
- *   new #GError to a #GError* that is non-%NULL, thus overwriting
+ *   new #GError to a `GError*` that is non-%NULL, thus overwriting
  *   the previous error, it indicates that you should have aborted
  *   the operation instead of continuing. If you were able to continue,
  *   you should have cleared the previous error with g_clear_error().
@@ -349,12 +357,12 @@
  *
  * - By convention, if you return a boolean value indicating success
  *   then %TRUE means success and %FALSE means failure. Avoid creating
- *   functions which have a boolean return value and a GError parameter,
+ *   functions which have a boolean return value and a #GError parameter,
  *   but where the boolean does something other than signal whether the
- *   GError is set.  Among other problems, it requires C callers to allocate
- *   a temporary error.  Instead, provide a "gboolean *" out parameter.
+ *   #GError is set.  Among other problems, it requires C callers to allocate
+ *   a temporary error.  Instead, provide a `gboolean *` out parameter.
  *   There are functions in GLib itself such as g_key_file_has_key() that
- *   are deprecated because of this. If %FALSE is returned, the error must
+ *   are hard to use because of this. If %FALSE is returned, the error must
  *   be set to a non-%NULL value.  One exception to this is that in situations
  *   that are already considered to be undefined behaviour (such as when a
  *   g_return_val_if_fail() check fails), the error need not be set.
@@ -372,15 +380,358 @@
  *   to add a check at the top of your function that the error return
  *   location is either %NULL or contains a %NULL error (e.g.
  *   `g_return_if_fail (error == NULL || *error == NULL);`).
+ *
+ * ## Extended #GError Domains # {#gerror-extended-domains}
+ *
+ * Since GLib 2.68 it is possible to extend the #GError type. This is
+ * done with the G_DEFINE_EXTENDED_ERROR() macro. To create an
+ * extended #GError type do something like this in the header file:
+ * |[<!-- language="C" -->
+ * typedef enum
+ * {
+ *   MY_ERROR_BAD_REQUEST,
+ * } MyError;
+ * #define MY_ERROR (my_error_quark ())
+ * GQuark my_error_quark (void);
+ * int
+ * my_error_get_parse_error_id (GError *error);
+ * const char *
+ * my_error_get_bad_request_details (GError *error);
+ * ]|
+ * and in implementation:
+ * |[<!-- language="C" -->
+ * typedef struct
+ * {
+ *   int parse_error_id;
+ *   char *bad_request_details;
+ * } MyErrorPrivate;
+ *
+ * static void
+ * my_error_private_init (MyErrorPrivate *priv)
+ * {
+ *   priv->parse_error_id = -1;
+ *   // No need to set priv->bad_request_details to NULL,
+ *   // the struct is initialized with zeros.
+ * }
+ *
+ * static void
+ * my_error_private_copy (const MyErrorPrivate *src_priv, MyErrorPrivate *dest_priv)
+ * {
+ *   dest_priv->parse_error_id = src_priv->parse_error_id;
+ *   dest_priv->bad_request_details = g_strdup (src_priv->bad_request_details);
+ * }
+ *
+ * static void
+ * my_error_private_clear (MyErrorPrivate *priv)
+ * {
+ *   g_free (priv->bad_request_details);
+ * }
+ *
+ * // This defines the my_error_get_private and my_error_quark functions.
+ * G_DEFINE_EXTENDED_ERROR (MyError, my_error)
+ *
+ * int
+ * my_error_get_parse_error_id (GError *error)
+ * {
+ *   MyErrorPrivate *priv = my_error_get_private (error);
+ *   g_return_val_if_fail (priv != NULL, -1);
+ *   return priv->parse_error_id;
+ * }
+ *
+ * const char *
+ * my_error_get_bad_request_details (GError *error)
+ * {
+ *   MyErrorPrivate *priv = my_error_get_private (error);
+ *   g_return_val_if_fail (priv != NULL, NULL);
+ *   g_return_val_if_fail (error->code != MY_ERROR_BAD_REQUEST, NULL);
+ *   return priv->bad_request_details;
+ * }
+ *
+ * static void
+ * my_error_set_bad_request (GError     **error,
+ *                           const char  *reason,
+ *                           int          error_id,
+ *                           const char  *details)
+ * {
+ *   MyErrorPrivate *priv;
+ *   g_set_error (error, MY_ERROR, MY_ERROR_BAD_REQUEST, "Invalid request: %s", reason);
+ *   if (error != NULL && *error != NULL)
+ *     {
+ *       priv = my_error_get_private (error);
+ *       g_return_val_if_fail (priv != NULL, NULL);
+ *       priv->parse_error_id = error_id;
+ *       priv->bad_request_details = g_strdup (details);
+ *     }
+ * }
+ * ]|
+ * An example of use of the error could be:
+ * |[<!-- language="C" -->
+ * gboolean
+ * send_request (GBytes *request, GError **error)
+ * {
+ *   ParseFailedStatus *failure = validate_request (request);
+ *   if (failure != NULL)
+ *     {
+ *       my_error_set_bad_request (error, failure->reason, failure->error_id, failure->details);
+ *       parse_failed_status_free (failure);
+ *       return FALSE;
+ *     }
+ *
+ *   return send_one (request, error);
+ * }
+ * ]|
+ *
+ * Please note that if you are a library author and your library
+ * exposes an existing error domain, then you can't make this error
+ * domain an extended one without breaking ABI. This is because
+ * earlier it was possible to create an error with this error domain
+ * on the stack and then copy it with g_error_copy(). If the new
+ * version of your library makes the error domain an extended one,
+ * then g_error_copy() called by code that allocated the error on the
+ * stack will try to copy more data than it used to, which will lead
+ * to undefined behavior. You must not stack-allocate errors with an
+ * extended error domain, and it is bad practice to stack-allocate any
+ * other #GErrors.
+ *
+ * Extended error domains in unloadable plugins/modules are not
+ * supported.
  */
 
 #include "config.h"
 
+#include "gvalgrind.h"
+#include <string.h>
+
 #include "gerror.h"
 
+#include "ghash.h"
+#include "glib-init.h"
 #include "gslice.h"
 #include "gstrfuncs.h"
 #include "gtestutils.h"
+#include "gthread.h"
+
+static GRWLock error_domain_global;
+/* error_domain_ht must be accessed with error_domain_global
+ * locked.
+ */
+static GHashTable *error_domain_ht = NULL;
+
+void
+g_error_init (void)
+{
+  error_domain_ht = g_hash_table_new (NULL, NULL);
+}
+
+typedef struct
+{
+  /* private_size is already aligned. */
+  gsize private_size;
+  GErrorInitFunc init;
+  GErrorCopyFunc copy;
+  GErrorClearFunc clear;
+} ErrorDomainInfo;
+
+/* Must be called with error_domain_global locked.
+ */
+static inline ErrorDomainInfo *
+error_domain_lookup (GQuark domain)
+{
+  return g_hash_table_lookup (error_domain_ht,
+                              GUINT_TO_POINTER (domain));
+}
+
+/* Copied from gtype.c. */
+#define STRUCT_ALIGNMENT (2 * sizeof (gsize))
+#define ALIGN_STRUCT(offset) \
+      ((offset + (STRUCT_ALIGNMENT - 1)) & -STRUCT_ALIGNMENT)
+
+static void
+error_domain_register (GQuark            error_quark,
+                       gsize             error_type_private_size,
+                       GErrorInitFunc    error_type_init,
+                       GErrorCopyFunc    error_type_copy,
+                       GErrorClearFunc   error_type_clear)
+{
+  g_rw_lock_writer_lock (&error_domain_global);
+  if (error_domain_lookup (error_quark) == NULL)
+    {
+      ErrorDomainInfo *info = g_new (ErrorDomainInfo, 1);
+      info->private_size = ALIGN_STRUCT (error_type_private_size);
+      info->init = error_type_init;
+      info->copy = error_type_copy;
+      info->clear = error_type_clear;
+
+      g_hash_table_insert (error_domain_ht,
+                           GUINT_TO_POINTER (error_quark),
+                           info);
+    }
+  else
+    {
+      const char *name = g_quark_to_string (error_quark);
+
+      g_critical ("Attempted to register an extended error domain for %s more than once", name);
+    }
+  g_rw_lock_writer_unlock (&error_domain_global);
+}
+
+/**
+ * g_error_domain_register_static:
+ * @error_type_name: static string to create a #GQuark from
+ * @error_type_private_size: size of the private error data in bytes
+ * @error_type_init: function initializing fields of the private error data
+ * @error_type_copy: function copying fields of the private error data
+ * @error_type_clear: function freeing fields of the private error data
+ *
+ * This function registers an extended #GError domain.
+ *
+ * @error_type_name should not be freed. @error_type_private_size must
+ * be greater than 0.
+ *
+ * @error_type_init receives an initialized #GError and should then initialize
+ * the private data.
+ *
+ * @error_type_copy is a function that receives both original and a copy
+ * #GError and should copy the fields of the private error data. The standard
+ * #GError fields are already handled.
+ *
+ * @error_type_clear receives the pointer to the error, and it should free the
+ * fields of the private error data. It should not free the struct itself though.
+ *
+ * Normally, it is better to use G_DEFINE_EXTENDED_ERROR(), as it
+ * already takes care of passing valid information to this function.
+ *
+ * Returns: #GQuark representing the error domain
+ * Since: 2.68
+ */
+GQuark
+g_error_domain_register_static (const char        *error_type_name,
+                                gsize              error_type_private_size,
+                                GErrorInitFunc     error_type_init,
+                                GErrorCopyFunc     error_type_copy,
+                                GErrorClearFunc    error_type_clear)
+{
+  GQuark error_quark;
+
+  g_return_val_if_fail (error_type_name != NULL, 0);
+  g_return_val_if_fail (error_type_private_size > 0, 0);
+  g_return_val_if_fail (error_type_init != NULL, 0);
+  g_return_val_if_fail (error_type_copy != NULL, 0);
+  g_return_val_if_fail (error_type_clear != NULL, 0);
+
+  error_quark = g_quark_from_static_string (error_type_name);
+  error_domain_register (error_quark,
+                         error_type_private_size,
+                         error_type_init,
+                         error_type_copy,
+                         error_type_clear);
+  return error_quark;
+}
+
+/**
+ * g_error_domain_register:
+ * @error_type_name: string to create a #GQuark from
+ * @error_type_private_size: size of the private error data in bytes
+ * @error_type_init: function initializing fields of the private error data
+ * @error_type_copy: function copying fields of the private error data
+ * @error_type_clear: function freeing fields of the private error data
+ *
+ * This function registers an extended #GError domain.
+ * @error_type_name will be duplicated. Otherwise does the same as
+ * g_error_domain_register_static().
+ *
+ * Returns: #GQuark representing the error domain
+ * Since: 2.68
+ */
+GQuark
+g_error_domain_register (const char        *error_type_name,
+                         gsize              error_type_private_size,
+                         GErrorInitFunc     error_type_init,
+                         GErrorCopyFunc     error_type_copy,
+                         GErrorClearFunc    error_type_clear)
+{
+  GQuark error_quark;
+
+  g_return_val_if_fail (error_type_name != NULL, 0);
+  g_return_val_if_fail (error_type_private_size > 0, 0);
+  g_return_val_if_fail (error_type_init != NULL, 0);
+  g_return_val_if_fail (error_type_copy != NULL, 0);
+  g_return_val_if_fail (error_type_clear != NULL, 0);
+
+  error_quark = g_quark_from_string (error_type_name);
+  error_domain_register (error_quark,
+                         error_type_private_size,
+                         error_type_init,
+                         error_type_copy,
+                         error_type_clear);
+  return error_quark;
+}
+
+static GError *
+g_error_allocate (GQuark domain, ErrorDomainInfo *out_info)
+{
+  guint8 *allocated;
+  GError *error;
+  ErrorDomainInfo *info;
+  gsize private_size;
+
+  g_rw_lock_reader_lock (&error_domain_global);
+  info = error_domain_lookup (domain);
+  if (info != NULL)
+    {
+      if (out_info != NULL)
+        *out_info = *info;
+      private_size = info->private_size;
+      g_rw_lock_reader_unlock (&error_domain_global);
+    }
+  else
+    {
+      g_rw_lock_reader_unlock (&error_domain_global);
+      if (out_info != NULL)
+        memset (out_info, 0, sizeof (*out_info));
+      private_size = 0;
+    }
+  /* See comments in g_type_create_instance in gtype.c to see what
+   * this magic is about.
+   */
+#ifdef ENABLE_VALGRIND
+  if (private_size > 0 && RUNNING_ON_VALGRIND)
+    {
+      private_size += ALIGN_STRUCT (1);
+      allocated = g_slice_alloc0 (private_size + sizeof (GError) + sizeof (gpointer));
+      *(gpointer *) (allocated + private_size + sizeof (GError)) = allocated + ALIGN_STRUCT (1);
+      VALGRIND_MALLOCLIKE_BLOCK (allocated + private_size, sizeof (GError) + sizeof (gpointer), 0, TRUE);
+      VALGRIND_MALLOCLIKE_BLOCK (allocated + ALIGN_STRUCT (1), private_size - ALIGN_STRUCT (1), 0, TRUE);
+    }
+  else
+#endif
+    allocated = g_slice_alloc0 (private_size + sizeof (GError));
+
+  error = (GError *) (allocated + private_size);
+  return error;
+}
+
+/* This function takes ownership of @message. */
+static GError *
+g_error_new_steal (GQuark           domain,
+                   gint             code,
+                   gchar           *message,
+                   ErrorDomainInfo *out_info)
+{
+  ErrorDomainInfo info;
+  GError *error = g_error_allocate (domain, &info);
+
+  error->domain = domain;
+  error->code = code;
+  error->message = message;
+
+  if (info.init != NULL)
+    info.init (error);
+  if (out_info != NULL)
+    *out_info = info;
+
+  return error;
+}
 
 /**
  * g_error_new_valist:
@@ -402,8 +753,6 @@ g_error_new_valist (GQuark       domain,
                     const gchar *format,
                     va_list      args)
 {
-  GError *error;
-
   /* Historically, GError allowed this (although it was never meant to work),
    * and it has significant use in the wild, which g_return_val_if_fail
    * would break. It should maybe g_return_val_if_fail in GLib 4.
@@ -412,18 +761,7 @@ g_error_new_valist (GQuark       domain,
   g_warn_if_fail (domain != 0);
   g_warn_if_fail (format != NULL);
 
-  error = g_slice_new (GError);
-#ifdef GSTREAMER_LITE
-  if (error == NULL) {
-    return NULL;
-  }
-#endif // GSTREAMER_LITE
-
-  error->domain = domain;
-  error->code = code;
-  error->message = g_strdup_vprintf (format, args);
-
-  return error;
+  return g_error_new_steal (domain, code, g_strdup_vprintf (format, args), NULL);
 }
 
 /**
@@ -475,23 +813,10 @@ g_error_new_literal (GQuark         domain,
                      gint           code,
                      const gchar   *message)
 {
-  GError* err;
-
   g_return_val_if_fail (message != NULL, NULL);
   g_return_val_if_fail (domain != 0, NULL);
 
-  err = g_slice_new (GError);
-#ifdef GSTREAMER_LITE
-  if (err == NULL) {
-    return NULL;
-  }
-#endif // GSTREAMER_LITE
-
-  err->domain = domain;
-  err->code = code;
-  err->message = g_strdup (message);
-
-  return err;
+  return g_error_new_steal (domain, code, g_strdup (message), NULL);
 }
 
 /**
@@ -503,11 +828,46 @@ g_error_new_literal (GQuark         domain,
 void
 g_error_free (GError *error)
 {
+  gsize private_size;
+  ErrorDomainInfo *info;
+  guint8 *allocated;
+
   g_return_if_fail (error != NULL);
 
-  g_free (error->message);
+  g_rw_lock_reader_lock (&error_domain_global);
+  info = error_domain_lookup (error->domain);
+  if (info != NULL)
+    {
+      GErrorClearFunc clear = info->clear;
 
-  g_slice_free (GError, error);
+      private_size = info->private_size;
+      g_rw_lock_reader_unlock (&error_domain_global);
+      clear (error);
+    }
+  else
+    {
+      g_rw_lock_reader_unlock (&error_domain_global);
+      private_size = 0;
+    }
+
+  g_free (error->message);
+  allocated = ((guint8 *) error) - private_size;
+  /* See comments in g_type_free_instance in gtype.c to see what this
+   * magic is about.
+   */
+#ifdef ENABLE_VALGRIND
+  if (private_size > 0 && RUNNING_ON_VALGRIND)
+    {
+      private_size += ALIGN_STRUCT (1);
+      allocated -= ALIGN_STRUCT (1);
+      *(gpointer *) (allocated + private_size + sizeof (GError)) = NULL;
+      g_slice_free1 (private_size + sizeof (GError) + sizeof (gpointer), allocated);
+      VALGRIND_FREELIKE_BLOCK (allocated + ALIGN_STRUCT (1), 0);
+      VALGRIND_FREELIKE_BLOCK (error, 0);
+    }
+  else
+#endif
+  g_slice_free1 (private_size + sizeof (GError), allocated);
 }
 
 /**
@@ -522,22 +882,25 @@ GError*
 g_error_copy (const GError *error)
 {
   GError *copy;
+  ErrorDomainInfo info;
 
   g_return_val_if_fail (error != NULL, NULL);
   /* See g_error_new_valist for why these don't return */
   g_warn_if_fail (error->domain != 0);
   g_warn_if_fail (error->message != NULL);
 
-  copy = g_slice_new (GError);
+  copy = g_error_new_steal (error->domain,
+                            error->code,
+                            g_strdup (error->message),
+                            &info);
 #ifdef GSTREAMER_LITE
   if (copy == NULL) {
     return NULL;
   }
 #endif // GSTREAMER_LITE
 
-  *copy = *error;
-
-  copy->message = g_strdup (error->message);
+  if (info.copy != NULL)
+    info.copy (error, copy);
 
   return copy;
 }
@@ -665,8 +1028,7 @@ g_propagate_error (GError **dest,
 
   if (dest == NULL)
     {
-      if (src)
-        g_error_free (src);
+      g_error_free (src);
       return;
     }
   else
@@ -745,6 +1107,30 @@ g_prefix_error (GError      **err,
 }
 
 /**
+ * g_prefix_error_literal:
+ * @err: (allow-none): a return location for a #GError, or %NULL
+ * @prefix: string to prefix @err with
+ *
+ * Prefixes @prefix to an existing error message. If @err or *@err is
+ * %NULL (i.e.: no error variable) then do nothing.
+ *
+ * Since: 2.70
+ */
+void
+g_prefix_error_literal (GError      **err,
+                        const gchar  *prefix)
+{
+  if (err && *err)
+    {
+      gchar *oldstring;
+
+      oldstring = (*err)->message;
+      (*err)->message = g_strconcat (prefix, oldstring, NULL);
+      g_free (oldstring);
+    }
+}
+
+/**
  * g_propagate_prefixed_error:
  * @dest: error return location
  * @src: error to move into the return location
@@ -765,10 +1151,11 @@ g_propagate_prefixed_error (GError      **dest,
 {
   g_propagate_error (dest, src);
 
-  if (dest && *dest)
+  if (dest)
     {
       va_list ap;
 
+      g_assert (*dest != NULL);
       va_start (ap, format);
       g_error_add_prefix (&(*dest)->message, format, ap);
       va_end (ap);

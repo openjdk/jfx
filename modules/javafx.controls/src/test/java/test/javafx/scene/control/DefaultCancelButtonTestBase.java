@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2019, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -63,7 +63,7 @@ import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
  * <li> default/cancel button
  * <li> not/consuming external handler
  * <li> handler registration before/after showing the stage: this is due to
- *   https://bugs.openjdk.java.net/browse/JDK-8231245 (Controls' behavior
+ *   https://bugs.openjdk.org/browse/JDK-8231245 (Controls' behavior
  *   depends on sequence of handler registration). The errors mostly show up
  *   when the handlers are registered after the stage is shown.
  * <li> added filter/handler/singleton handler and no handler at all

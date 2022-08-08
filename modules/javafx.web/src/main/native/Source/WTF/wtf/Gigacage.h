@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,10 +28,12 @@
 #include <wtf/FastMalloc.h>
 #include <wtf/StdLibExtras.h>
 
-#if defined(USE_SYSTEM_MALLOC) && USE_SYSTEM_MALLOC
+#if USE(SYSTEM_MALLOC)
 #define GIGACAGE_ENABLED 0
 
 namespace Gigacage {
+
+constexpr bool hasCapacityToUseLargeGigacage = OS_CONSTANT(EFFECTIVE_ADDRESS_WIDTH) > 36;
 
 const size_t primitiveGigacageMask = 0;
 const size_t jsValueGigacageMask = 0;

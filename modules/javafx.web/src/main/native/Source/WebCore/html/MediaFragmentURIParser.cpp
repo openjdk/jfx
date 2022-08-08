@@ -24,25 +24,25 @@
  */
 
 #include "config.h"
+#include "MediaFragmentURIParser.h"
 
 #if ENABLE(VIDEO)
-
-#include "MediaFragmentURIParser.h"
 
 #include "HTMLElement.h"
 #include "MediaPlayer.h"
 #include "ProcessingInstruction.h"
 #include "SegmentedString.h"
 #include "Text.h"
+#include <pal/text/TextEncoding.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/StringBuilder.h>
-#include <wtf/text/WTFString.h>
+#include <wtf/text/StringToIntegerConversion.h>
 
 namespace WebCore {
 
-const int secondsPerHour = 3600;
-const int secondsPerMinute = 60;
-const unsigned nptIdentifierLength = 4; // "npt:"
+constexpr int secondsPerHour = 3600;
+constexpr int secondsPerMinute = 60;
+constexpr unsigned nptIdentifierLength = 4; // "npt:"
 
 static String collectDigits(const LChar* input, unsigned length, unsigned& position)
 {
@@ -125,10 +125,10 @@ void MediaFragmentURIParser::parseFragments()
         //  a. Decode percent-encoded octets in name and value as defined by RFC 3986. If either
         //     name or value are not valid percent-encoded strings, then remove the name-value pair
         //     from the list.
-        String name = decodeURLEscapeSequences(fragmentString.substring(parameterStart, equalOffset - parameterStart));
+        String name = PAL::decodeURLEscapeSequences(fragmentString.substring(parameterStart, equalOffset - parameterStart));
         String value;
         if (equalOffset != parameterEnd)
-            value = decodeURLEscapeSequences(fragmentString.substring(equalOffset + 1, parameterEnd - equalOffset - 1));
+            value = PAL::decodeURLEscapeSequences(fragmentString.substring(equalOffset + 1, parameterEnd - equalOffset - 1));
 
         //  b. Convert name and value to Unicode strings by interpreting them as UTF-8. If either
         //     name or value are not valid UTF-8 strings, then remove the name-value pair from the list.
@@ -260,7 +260,7 @@ bool MediaFragmentURIParser::parseNPTTime(const LChar* timeString, unsigned leng
     // npt-ss        =   2DIGIT      ; 0-59
 
     String digits1 = collectDigits(timeString, length, offset);
-    int value1 = digits1.toInt();
+    int value1 = parseInteger<int>(digits1).value_or(0);
     if (offset >= length || timeString[offset] == ',') {
         time = MediaTime::createWithDouble(value1);
         return true;
@@ -287,9 +287,9 @@ bool MediaFragmentURIParser::parseNPTTime(const LChar* timeString, unsigned leng
     if (offset >= length || !isASCIIDigit(timeString[(offset)]))
         return false;
     String digits2 = collectDigits(timeString, length, offset);
-    int value2 = digits2.toInt();
     if (digits2.length() != 2)
         return false;
+    int value2 = parseInteger<int>(digits2).value();
 
     // Detect whether this timestamp includes hours.
     int value3;
@@ -301,7 +301,7 @@ bool MediaFragmentURIParser::parseNPTTime(const LChar* timeString, unsigned leng
         String digits3 = collectDigits(timeString, length, offset);
         if (digits3.length() != 2)
             return false;
-        value3 = digits3.toInt();
+        value3 = parseInteger<int>(digits3).value();
     } else {
         value3 = value2;
         value2 = value1;

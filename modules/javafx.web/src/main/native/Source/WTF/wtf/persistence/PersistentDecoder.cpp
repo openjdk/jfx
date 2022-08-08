@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010, 2011, 2014 Apple Inc. All rights reserved.
+ * Copyright (C) 2010-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,10 +31,9 @@
 namespace WTF {
 namespace Persistence {
 
-Decoder::Decoder(const uint8_t* buffer, size_t bufferSize)
-    : m_buffer(buffer)
-    , m_bufferPosition(buffer)
-    , m_bufferEnd(buffer + bufferSize)
+Decoder::Decoder(Span<const uint8_t> span)
+    : m_buffer(span)
+    , m_bufferPosition(span.begin())
 {
 }
 
@@ -44,23 +43,41 @@ Decoder::~Decoder()
 
 bool Decoder::bufferIsLargeEnoughToContain(size_t size) const
 {
-    return size <= static_cast<size_t>(m_bufferEnd - m_bufferPosition);
+    return size <= static_cast<size_t>(m_buffer.end() - m_bufferPosition);
 }
 
-bool Decoder::decodeFixedLengthData(uint8_t* data, size_t size)
+const uint8_t* Decoder::bufferPointerForDirectRead(size_t size)
 {
     if (!bufferIsLargeEnoughToContain(size))
-        return false;
+        return nullptr;
 
-    memcpy(data, m_bufferPosition, size);
+    auto data = m_bufferPosition;
     m_bufferPosition += size;
 
-    Encoder::updateChecksumForData(m_sha1, data, size);
+    Encoder::updateChecksumForData(m_sha1, { data, size });
+    return data;
+}
+
+bool Decoder::decodeFixedLengthData(Span<uint8_t> span)
+{
+    auto buffer = bufferPointerForDirectRead(span.size());
+    if (!buffer)
+        return false;
+    memcpy(span.data(), buffer, span.size());
     return true;
 }
 
+bool Decoder::rewind(size_t size)
+{
+    if (size <= static_cast<size_t>(m_bufferPosition - m_buffer.begin())) {
+        m_bufferPosition -= size;
+        return true;
+    }
+    return false;
+}
+
 template<typename T>
-Decoder& Decoder::decodeNumber(Optional<T>& optional)
+Decoder& Decoder::decodeNumber(std::optional<T>& optional)
 {
     if (!bufferIsLargeEnoughToContain(sizeof(T)))
         return *this;
@@ -74,52 +91,52 @@ Decoder& Decoder::decodeNumber(Optional<T>& optional)
     return *this;
 }
 
-Decoder& Decoder::operator>>(Optional<bool>& result)
+Decoder& Decoder::operator>>(std::optional<bool>& result)
 {
     return decodeNumber(result);
 }
 
-Decoder& Decoder::operator>>(Optional<uint8_t>& result)
+Decoder& Decoder::operator>>(std::optional<uint8_t>& result)
 {
     return decodeNumber(result);
 }
 
-Decoder& Decoder::operator>>(Optional<uint16_t>& result)
+Decoder& Decoder::operator>>(std::optional<uint16_t>& result)
 {
     return decodeNumber(result);
 }
 
-Decoder& Decoder::operator>>(Optional<int16_t>& result)
+Decoder& Decoder::operator>>(std::optional<int16_t>& result)
 {
     return decodeNumber(result);
 }
 
-Decoder& Decoder::operator>>(Optional<uint32_t>& result)
+Decoder& Decoder::operator>>(std::optional<uint32_t>& result)
 {
     return decodeNumber(result);
 }
 
-Decoder& Decoder::operator>>(Optional<uint64_t>& result)
+Decoder& Decoder::operator>>(std::optional<uint64_t>& result)
 {
     return decodeNumber(result);
 }
 
-Decoder& Decoder::operator>>(Optional<int32_t>& result)
+Decoder& Decoder::operator>>(std::optional<int32_t>& result)
 {
     return decodeNumber(result);
 }
 
-Decoder& Decoder::operator>>(Optional<int64_t>& result)
+Decoder& Decoder::operator>>(std::optional<int64_t>& result)
 {
     return decodeNumber(result);
 }
 
-Decoder& Decoder::operator>>(Optional<float>& result)
+Decoder& Decoder::operator>>(std::optional<float>& result)
 {
     return decodeNumber(result);
 }
 
-Decoder& Decoder::operator>>(Optional<double>& result)
+Decoder& Decoder::operator>>(std::optional<double>& result)
 {
     return decodeNumber(result);
 }
@@ -130,11 +147,11 @@ bool Decoder::verifyChecksum()
     m_sha1.computeHash(computedHash);
 
     SHA1::Digest savedHash;
-    if (!decodeFixedLengthData(savedHash.data(), sizeof(savedHash)))
+    if (!decodeFixedLengthData({ savedHash.data(), sizeof(savedHash) }))
         return false;
 
     return computedHash == savedHash;
 }
 
-}
-}
+} // namespace Persistence
+} // namespace WTF

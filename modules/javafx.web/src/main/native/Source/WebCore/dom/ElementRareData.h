@@ -55,7 +55,6 @@ public:
     PseudoElement* afterPseudoElement() const { return m_afterPseudoElement.get(); }
 
     void resetComputedStyle();
-    void resetStyleRelations();
 
     int unusualTabIndex() const;
     void setUnusualTabIndex(int);
@@ -98,15 +97,14 @@ public:
     const SpaceSplitString& partNames() const { return m_partNames; }
     void setPartNames(SpaceSplitString&& partNames) { m_partNames = WTFMove(partNames); }
 
-#if ENABLE(INTERSECTION_OBSERVER)
     IntersectionObserverData* intersectionObserverData() { return m_intersectionObserverData.get(); }
     void setIntersectionObserverData(std::unique_ptr<IntersectionObserverData>&& data) { m_intersectionObserverData = WTFMove(data); }
-#endif
 
-#if ENABLE(RESIZE_OBSERVER)
     ResizeObserverData* resizeObserverData() { return m_resizeObserverData.get(); }
     void setResizeObserverData(std::unique_ptr<ResizeObserverData>&& data) { m_resizeObserverData = WTFMove(data); }
-#endif
+
+    const AtomString& nonce() const { return m_nonce; }
+    void setNonce(const AtomString& value) { m_nonce = value; }
 
 #if ENABLE(CSS_TYPED_OM)
     StylePropertyMap* attributeStyleMap() { return m_attributeStyleMap.get(); }
@@ -137,10 +135,8 @@ public:
             result.add(UseType::AttributeMap);
         if (m_intersectionObserverData)
             result.add(UseType::InteractionObserver);
-#if ENABLE(RESIZE_OBSERVER)
         if (m_resizeObserverData)
             result.add(UseType::ResizeObserver);
-#endif
         if (!m_animationRareData.isEmpty())
             result.add(UseType::Animations);
         if (m_beforePseudoElement || m_afterPseudoElement)
@@ -153,6 +149,8 @@ public:
             result.add(UseType::PartList);
         if (!m_partNames.isEmpty())
             result.add(UseType::PartNames);
+        if (m_nonce)
+            result.add(UseType::Nonce);
         return result;
     }
 #endif
@@ -167,13 +165,10 @@ private:
     RefPtr<ShadowRoot> m_shadowRoot;
     std::unique_ptr<CustomElementReactionQueue> m_customElementReactionQueue;
     std::unique_ptr<NamedNodeMap> m_attributeMap;
-#if ENABLE(INTERSECTION_OBSERVER)
-    std::unique_ptr<IntersectionObserverData> m_intersectionObserverData;
-#endif
 
-#if ENABLE(RESIZE_OBSERVER)
+    std::unique_ptr<IntersectionObserverData> m_intersectionObserverData;
+
     std::unique_ptr<ResizeObserverData> m_resizeObserverData;
-#endif
 
     Vector<std::unique_ptr<ElementAnimationRareData>> m_animationRareData;
 
@@ -186,6 +181,8 @@ private:
 
     std::unique_ptr<DOMTokenList> m_partList;
     SpaceSplitString m_partNames;
+
+    AtomString m_nonce;
 
     void releasePseudoElement(PseudoElement*);
 };
@@ -218,11 +215,6 @@ inline void ElementRareData::setAfterPseudoElement(RefPtr<PseudoElement>&& pseud
 inline void ElementRareData::resetComputedStyle()
 {
     m_computedStyle = nullptr;
-}
-
-inline void ElementRareData::resetStyleRelations()
-{
-    setChildIndex(0);
 }
 
 inline int ElementRareData::unusualTabIndex() const

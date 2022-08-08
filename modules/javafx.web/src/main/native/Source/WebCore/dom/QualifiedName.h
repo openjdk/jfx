@@ -72,6 +72,7 @@ public:
     };
 
     WEBCORE_EXPORT QualifiedName(const AtomString& prefix, const AtomString& localName, const AtomString& namespaceURI);
+    QualifiedName(QualifiedNameImpl& impl) : m_impl(&impl) { }
     explicit QualifiedName(WTF::HashTableDeletedValueType) : m_impl(WTF::HashTableDeletedValue) { }
     bool isHashTableDeletedValue() const { return m_impl.isHashTableDeletedValue(); }
 #ifdef QNAME_DEFAULT_CONSTRUCTOR
@@ -137,7 +138,8 @@ struct QualifiedNameHash {
     static bool equal(const QualifiedName& a, const QualifiedName& b) { return a == b; }
     static bool equal(const QualifiedName::QualifiedNameImpl* a, const QualifiedName::QualifiedNameImpl* b) { return a == b; }
 
-    static const bool safeToCompareToEmptyOrDeleted = false;
+    static constexpr bool safeToCompareToEmptyOrDeleted = false;
+    static constexpr bool hasHashInValue = true;
 };
 
 inline String QualifiedName::toString() const

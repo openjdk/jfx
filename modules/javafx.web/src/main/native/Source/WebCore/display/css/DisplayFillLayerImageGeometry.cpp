@@ -263,15 +263,15 @@ static FillLayerImageGeometry geometryForLayer(const FillLayer& fillLayer, Layou
         LayoutUnit right;
         LayoutUnit bottom;
         if (fillLayer.origin() != FillBox::Border) {
-            left = geometry.borderLeft();
-            right = geometry.borderRight();
-            top = geometry.borderTop();
-            bottom = geometry.borderBottom();
+            left = geometry.borderStart();
+            right = geometry.borderEnd();
+            top = geometry.borderBefore();
+            bottom = geometry.borderAfter();
             if (fillLayer.origin() == FillBox::Content) {
-                left += geometry.paddingLeft().valueOr(0);
-                right += geometry.paddingRight().valueOr(0);
-                top += geometry.paddingTop().valueOr(0);
-                bottom += geometry.paddingBottom().valueOr(0);
+                left += geometry.paddingStart().value_or(0);
+                right += geometry.paddingEnd().value_or(0);
+                top += geometry.paddingBefore().value_or(0);
+                bottom += geometry.paddingAfter().value_or(0);
             }
         }
 

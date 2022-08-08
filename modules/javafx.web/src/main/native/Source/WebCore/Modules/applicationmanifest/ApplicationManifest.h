@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,9 +27,10 @@
 
 #if ENABLE(APPLICATION_MANIFEST)
 
+#include "Color.h"
 #include <wtf/EnumTraits.h>
-#include <wtf/Optional.h>
 #include <wtf/URL.h>
+#include <wtf/Vector.h>
 
 namespace WebCore {
 
@@ -41,40 +42,84 @@ struct ApplicationManifest {
         Fullscreen,
     };
 
+    struct Icon {
+        enum class Purpose : uint8_t  {
+            Any = 1 << 0,
+            Monochrome = 1 << 1,
+            Maskable = 1 << 2,
+        };
+
+        URL src;
+        Vector<String> sizes;
+        String type;
+        OptionSet<Purpose> purposes;
+
+        template<class Encoder> void encode(Encoder&) const;
+        template<class Decoder> static std::optional<ApplicationManifest::Icon> decode(Decoder&);
+    };
+
     String name;
     String shortName;
     String description;
     URL scope;
     Display display;
     URL startURL;
+    Color themeColor;
+    Vector<Icon> icons;
 
     template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static Optional<ApplicationManifest> decode(Decoder&);
+    template<class Decoder> static std::optional<ApplicationManifest> decode(Decoder&);
 };
 
 template<class Encoder>
 void ApplicationManifest::encode(Encoder& encoder) const
 {
-    encoder << name << shortName << description << scope << display << startURL;
+    encoder << name << shortName << description << scope << display << startURL << themeColor << icons;
 }
 
 template<class Decoder>
-Optional<ApplicationManifest> ApplicationManifest::decode(Decoder& decoder)
+std::optional<ApplicationManifest> ApplicationManifest::decode(Decoder& decoder)
 {
     ApplicationManifest result;
 
     if (!decoder.decode(result.name))
-        return WTF::nullopt;
+        return std::nullopt;
     if (!decoder.decode(result.shortName))
-        return WTF::nullopt;
+        return std::nullopt;
     if (!decoder.decode(result.description))
-        return WTF::nullopt;
+        return std::nullopt;
     if (!decoder.decode(result.scope))
-        return WTF::nullopt;
+        return std::nullopt;
     if (!decoder.decode(result.display))
-        return WTF::nullopt;
+        return std::nullopt;
     if (!decoder.decode(result.startURL))
-        return WTF::nullopt;
+        return std::nullopt;
+    if (!decoder.decode(result.themeColor))
+        return std::nullopt;
+    if (!decoder.decode(result.icons))
+        return std::nullopt;
+
+    return result;
+}
+
+template<class Encoder>
+void ApplicationManifest::Icon::encode(Encoder& encoder) const
+{
+    encoder << src << sizes << type << purposes;
+}
+
+template<class Decoder>
+std::optional<ApplicationManifest::Icon> ApplicationManifest::Icon::decode(Decoder& decoder)
+{
+    ApplicationManifest::Icon result;
+    if (!decoder.decode(result.src))
+        return std::nullopt;
+    if (!decoder.decode(result.sizes))
+        return std::nullopt;
+    if (!decoder.decode(result.type))
+        return std::nullopt;
+    if (!decoder.decode(result.purposes))
+        return std::nullopt;
 
     return result;
 }
@@ -90,6 +135,15 @@ template<> struct EnumTraits<WebCore::ApplicationManifest::Display> {
         WebCore::ApplicationManifest::Display::MinimalUI,
         WebCore::ApplicationManifest::Display::Standalone,
         WebCore::ApplicationManifest::Display::Fullscreen
+    >;
+};
+
+template<> struct EnumTraits<WebCore::ApplicationManifest::Icon::Purpose> {
+    using values = EnumValues<
+        WebCore::ApplicationManifest::Icon::Purpose,
+        WebCore::ApplicationManifest::Icon::Purpose::Any,
+        WebCore::ApplicationManifest::Icon::Purpose::Monochrome,
+        WebCore::ApplicationManifest::Icon::Purpose::Maskable
     >;
 };
 

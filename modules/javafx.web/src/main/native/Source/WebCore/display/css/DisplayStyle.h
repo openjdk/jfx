@@ -36,7 +36,6 @@
 #include "TransformOperations.h"
 #include <wtf/IsoMalloc.h>
 #include <wtf/OptionSet.h>
-#include <wtf/Optional.h>
 
 namespace WebCore {
 
@@ -76,8 +75,8 @@ public:
 
     const ShadowData* boxShadow() const { return m_boxShadow.get(); }
 
-    Optional<int> zIndex() const { return m_zIndex; }
-    bool isStackingContext() const { return m_zIndex.hasValue(); }
+    std::optional<int> zIndex() const { return m_zIndex; }
+    bool isStackingContext() const { return m_zIndex.has_value(); }
 
     bool isPositioned() const { return m_flags.contains(Flags::Positioned); }
     bool isFloating() const { return m_flags.contains(Flags::Floating); }
@@ -88,7 +87,7 @@ public:
     bool participatesInZOrderSorting() const { return isPositioned() || isStackingContext(); }
 
     const FontCascade& fontCascade() const { return m_fontCascade; }
-    const FontMetrics& fontMetrics() const { return m_fontCascade.fontMetrics(); }
+    const FontMetrics& metricsOfPrimaryFont() const { return m_fontCascade.metricsOfPrimaryFont(); }
 
     float opacity() const { return m_opacity; }
 
@@ -125,7 +124,7 @@ private:
 
     float m_opacity;
 
-    Optional<int> m_zIndex;
+    std::optional<int> m_zIndex;
     OptionSet<Flags> m_flags;
 };
 
