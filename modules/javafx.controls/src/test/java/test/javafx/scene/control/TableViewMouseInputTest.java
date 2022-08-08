@@ -554,7 +554,6 @@ public class TableViewMouseInputTest {
         TableView.TableViewSelectionModel sm = table.getSelectionModel();
         sm.setCellSelectionEnabled(true);
         sm.setSelectionMode(SelectionMode.MULTIPLE);
-        sm.clearSelection();
 
         TableColumn firstNameCol = new TableColumn("First Name");
         firstNameCol.setCellValueFactory(new PropertyValueFactory<Person, String>("firstName"));
