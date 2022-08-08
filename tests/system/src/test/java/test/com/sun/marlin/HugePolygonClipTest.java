@@ -56,6 +56,7 @@ import javax.imageio.stream.ImageOutputStream;
 import junit.framework.AssertionFailedError;
 import org.junit.AfterClass;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -138,10 +139,8 @@ public class HugePolygonClipTest {
         new Thread(() -> Application.launch(MyApp.class, (String[]) null)).start();
 
         try {
-            if (!launchLatch.await(TIMEOUT, TimeUnit.MILLISECONDS)) {
-                throw new AssertionFailedError("Timeout waiting for Application to launch");
-            }
-
+            assertTrue("Timeout waiting for Application to launch",
+                    launchLatch.await(TIMEOUT, TimeUnit.MILLISECONDS));
         } catch (InterruptedException ex) {
             AssertionFailedError err = new AssertionFailedError("Unexpected exception");
             err.initCause(ex);

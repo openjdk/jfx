@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2007, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -601,6 +601,10 @@ public final class Stroker implements StartFlagPathConsumer2D, MarlinConst {
         double dx = x1 - cx0;
         double dy = y1 - cy0;
         if (dx == 0.0d && dy == 0.0d) {
+            if (prev == DRAWING_OP_TO) {
+                // skip repeated end-point
+                return;
+            }
             dx = 1.0d;
         }
         computeOffset(dx, dy, lineWidth2, offset0);
