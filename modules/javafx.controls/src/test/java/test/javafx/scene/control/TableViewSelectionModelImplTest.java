@@ -40,6 +40,8 @@ import javafx.scene.control.TableView.TableViewFocusModel;
 import javafx.scene.control.TableView.TableViewSelectionModel;
 import javafx.scene.control.TableViewShim;
 import javafx.scene.control.TreeViewShim;
+import javafx.scene.control.cell.PropertyValueFactory;
+import test.com.sun.javafx.scene.control.test.Person;
 
 import org.junit.After;
 import org.junit.AfterClass;
@@ -917,5 +919,78 @@ public class TableViewSelectionModelImplTest {
         assertTrue("contained in selected indices", model.getSelectedIndices().contains(3));
         // test against spec
         assertEquals("is selected index", model.getSelectedIndices().contains(3), model.isSelected(3));
+    }
+
+    @Test
+    public void testRowSelectionAfterSelectAndHideLastColumnMultipleCellEnabled() {
+        assertRowSelectionAfterSelectAndHideLastColumn(SelectionMode.MULTIPLE, true);
+    }
+
+    @Test
+    public void testRowSelectionAfterSelectAndHideLastColumnMultipleNotCellEnabled() {
+        assertRowSelectionAfterSelectAndHideLastColumn(SelectionMode.MULTIPLE, false);
+    }
+
+    @Test
+    public void testRowSelectionAfterSelectAndHideLastColumnSingleCellEnabled() {
+        assertRowSelectionAfterSelectAndHideLastColumn(SelectionMode.SINGLE, true);
+    }
+
+    @Test
+    public void testRowSelectionAfterSelectAndHideLastColumnSingleNotCellEnabled() {
+        assertRowSelectionAfterSelectAndHideLastColumn(SelectionMode.SINGLE, false);
+    }
+
+    public void assertRowSelectionAfterSelectAndHideLastColumn(SelectionMode mode, boolean cellEnabled) {
+        TableView<Person> table = createPersonTableView();
+
+        TableView.TableViewSelectionModel<Person> sm = table.getSelectionModel();
+        sm.setCellSelectionEnabled(cellEnabled);
+        sm.setSelectionMode(mode);
+        int row = 1;
+        int col = table.getColumns().size() - 1;
+        assertRowSelectionAfterSelectAndHideColumn(table, row, col);
+    }
+
+    private void assertRowSelectionAfterSelectAndHideColumn(TableView<Person> table, int row, int col) {
+        TableViewSelectionModel<Person> sm = table.getSelectionModel();
+        TableColumn<Person, ?> column = table.getColumns().get(col);
+        TablePosition<Person, ?> pos = new TablePosition<>(table, row, column);
+
+        sm.select(row, column);
+        assertTrue("sanity: row " + row + "contained in selectedIndices", sm.getSelectedIndices().contains(row));
+        assertTrue("sanity: row must be selected" , sm.isSelected(row));
+        column.setVisible(false);
+        assertTrue("after hiding column: row " + row + "contained in selectedIndices", sm.getSelectedIndices().contains(row));
+        assertTrue("after hiding column: row must be selected" , sm.isSelected(row));
+    }
+
+    /**
+     * Creates and returns a TableView with Persons and columns for all their properties.
+     */
+    private TableView<Person> createPersonTableView() {
+        final ObservableList<Person> data =
+                FXCollections.observableArrayList(
+                        new Person("Jacob", "Smith", "jacob.smith@example.com"),
+                        new Person("Isabella", "Johnson", "isabella.johnson@example.com"),
+                        new Person("Ethan", "Williams", "ethan.williams@example.com"),
+                        new Person("Emma", "Jones", "emma.jones@example.com"),
+                        new Person("Michael", "Brown", "michael.brown@example.com"));
+
+        TableView<Person> table = new TableView<>();
+        table.setItems(data);
+
+        TableColumn<Person, String> firstNameCol = new TableColumn("First Name");
+        firstNameCol.setCellValueFactory(new PropertyValueFactory<Person, String>("firstName"));
+
+        TableColumn<Person, String> lastNameCol = new TableColumn("Last Name");
+        lastNameCol.setCellValueFactory(new PropertyValueFactory<Person, String>("lastName"));
+
+        TableColumn<Person, String> emailCol = new TableColumn("Email");
+        emailCol.setCellValueFactory(new PropertyValueFactory<Person, String>("email"));
+
+        table.getColumns().addAll(firstNameCol, lastNameCol, emailCol);
+
+        return table;
     }
 }

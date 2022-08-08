@@ -2815,17 +2815,7 @@ public class TableView<S> extends Control {
 
         @Override
         public boolean isSelected(int index) {
-            if (isCellSelectionEnabled()) {
-                int columnCount = tableView.getVisibleLeafColumns().size();
-                for (int col = 0; col < columnCount; col++) {
-                    if (selectedCellsMap.isSelected(index, col)) {
-                        return true;
-                    }
-                }
-                return false;
-            } else {
-                return selectedCellsMap.isSelected(index, -1);
-            }
+            return super.isSelected(index);
         }
 
         @Override
