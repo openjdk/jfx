@@ -55,7 +55,7 @@ import java.util.Locale;
 import java.util.ResourceBundle;
 import static com.sun.javafx.FXPermissions.*;
 
-class WindowStage extends GlassStage {
+public class WindowStage extends GlassStage {
 
     protected Window platformWindow;
 
@@ -223,7 +223,7 @@ class WindowStage extends GlassStage {
         }
     }
 
-    final Window getPlatformWindow() {
+    public final Window getPlatformWindow() {
         return platformWindow;
     }
 
