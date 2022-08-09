@@ -2501,6 +2501,15 @@ project(":graphics") {
         }
     }
 
+	task initShaderDirs() {
+		doLast {
+			// Create empty hlsl dirs on all platforms for IDE support
+			file("$project.buildDir/hlsl/Decora").mkdirs()
+			file("$project.buildDir/hlsl/Prism").mkdirs()
+		}
+	}
+	project.processShaders.dependsOn(initShaderDirs)
+
     nativePrism.dependsOn compilePrismHLSLShaders;
 
     project.nativeAllTask.dependsOn nativeDecora
@@ -4166,15 +4175,7 @@ task javadoc(type: Javadoc, dependsOn: createMSPfile) {
     dependsOn(projectsToDocument.collect { project -> project.getTasksByName("classes", true)});
 }
 
-task initDirs() {
-    // JDK-8290473
-    file("modules/javafx.graphics/build/hlsl/Decora").mkdirs()
-    file("modules/javafx.graphics/build/hlsl/Prism").mkdirs()
-}
-
 task sdk() {
-    dependsOn(initDirs)
-
     if (DO_BUILD_SDK_FOR_TEST) {
         rootProject.getTasksByName("test", true).each { t ->
             if (t.enabled) t.dependsOn(sdk)
