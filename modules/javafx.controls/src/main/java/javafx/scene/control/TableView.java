@@ -2814,11 +2814,6 @@ public class TableView<S> extends Control {
         }
 
         @Override
-        public boolean isSelected(int index) {
-            return super.isSelected(index);
-        }
-
-        @Override
         public boolean isSelected(int row, TableColumn<S,?> column) {
             // When in cell selection mode, if the column is null, then we interpret
             // the users query to be asking if _all_ of the cells in the row are selected,

@@ -3165,21 +3165,6 @@ public class TreeTableView<S> extends Control {
             stopAtomic();
         }
 
-        @Override
-        public boolean isSelected(int index) {
-            if (isCellSelectionEnabled()) {
-                int columnCount = treeTableView.getVisibleLeafColumns().size();
-                for (int col = 0; col < columnCount; col++) {
-                    if (selectedCellsMap.isSelected(index, col)) {
-                        return true;
-                    }
-                }
-                return false;
-            } else {
-                return selectedCellsMap.isSelected(index, -1);
-            }
-        }
-
         @Override public boolean isSelected(int row, TableColumnBase<TreeItem<S>,?> column) {
             // When in cell selection mode, if the column is null, then we interpret
             // the users query to be asking if _all_ of the cells in the row are selected,
