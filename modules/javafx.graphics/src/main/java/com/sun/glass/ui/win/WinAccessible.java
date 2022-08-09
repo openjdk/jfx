@@ -40,7 +40,11 @@ import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.input.KeyCombination;
 import com.sun.glass.ui.Accessible;
+import com.sun.glass.ui.Screen;
 import com.sun.glass.ui.View;
+import com.sun.javafx.stage.WindowHelper;
+import com.sun.javafx.tk.TKStage;
+import com.sun.javafx.tk.quantum.WindowStage;
 import static javafx.scene.AccessibleAttribute.*;
 
 /*
@@ -877,6 +881,27 @@ final class WinAccessible extends Accessible {
         return variant;
     }
 
+    private Screen getScreen() {
+        Scene scene = (Scene) getAttribute(SCENE);
+        if (scene == null || scene.getWindow() == null) return null;
+        TKStage tkStage = WindowHelper.getPeer(scene.getWindow());
+        if (!(tkStage instanceof WindowStage)) return null;
+        WindowStage windowStage = (WindowStage) tkStage;
+        if (windowStage.getPlatformWindow() == null) return null;
+        return windowStage.getPlatformWindow().getScreen();
+    }
+
+    float[] getPlatformBounds(float x, float y, float w, float h) {
+        float[] platformBounds = new float[] { x, y, w, h };
+        Screen screen = getScreen();
+        if (screen == null) return platformBounds;
+        platformBounds[0] = screen.toPlatformX(x);
+        platformBounds[1] = screen.toPlatformY(y);
+        platformBounds[2] = (float) Math.ceil(w * screen.getPlatformScaleX());
+        platformBounds[3] = (float) Math.ceil(h * screen.getPlatformScaleY());
+        return platformBounds;
+    }
+
     /***********************************************/
     /*       IRawElementProviderFragment           */
     /***********************************************/
@@ -887,8 +912,10 @@ final class WinAccessible extends Accessible {
 
         Bounds bounds = (Bounds)getAttribute(BOUNDS);
         if (bounds != null) {
-            return new float[] {(float)bounds.getMinX(), (float)bounds.getMinY(),
-                                (float)bounds.getWidth(), (float)bounds.getHeight()};
+            return getPlatformBounds((float) bounds.getMinX(),
+                                     (float) bounds.getMinY(),
+                                     (float) bounds.getWidth(),
+                                     (float) bounds.getHeight());
         }
         return null;
     }
