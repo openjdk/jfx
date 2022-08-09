@@ -903,7 +903,7 @@ public class TreeTableViewMouseInputTest {
                 assertEquals(column == 2 ? true : false, cell.isSelected());
             }
             TreeTableRow cell = (TreeTableRow) VirtualFlowTestUtils.getCell(table, row);
-            assertTrue(cell.isSelected());
+            assertFalse(cell.isSelected());
         }
     }
 
