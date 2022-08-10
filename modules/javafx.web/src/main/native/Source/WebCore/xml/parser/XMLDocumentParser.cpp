@@ -182,7 +182,10 @@ void XMLDocumentParser::end()
     // I don't believe XMLDocumentParserQt needs doEnd called in the fragment case.
     ASSERT(!m_parsingFragment);
 
+    // doEnd() call not needed for JAVA platform, as it is making XMLDocumentParserLibxml2 xml not well-formed error
+#if !PLATFORM(JAVA)
     doEnd();
+#endif
 
     // doEnd() call above can detach the parser and null out its document.
     // In that case, we just bail out.
