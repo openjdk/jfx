@@ -349,7 +349,7 @@ defineProperty("libAVRepositoryURL", "https://libav.org/releases/")
 defineProperty("FFmpegRepositoryURL", "https://www.ffmpeg.org/releases/")
 defineProperty("icuRepositoryURL", "https://github.com/unicode-org/icu/releases/")
 
-defineProperty("icuVersion", "68.2")
+defineProperty("icuVersion", "71.1")
 
 loadProperties("$projectDir/build.properties")
 

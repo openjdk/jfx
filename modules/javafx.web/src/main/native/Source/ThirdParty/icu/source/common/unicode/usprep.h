@@ -20,7 +20,7 @@
 #define __USPREP_H__
 
 /**
- * \file
+ * \file 
  * \brief C API: Implements the StringPrep algorithm.
  */
 
@@ -38,14 +38,14 @@
  * Unicode Strings are prepared. Each profiles contains tables which describe
  * how a code point should be treated. The tables are broadly classified into
  * <ul>
- *     <li> Unassigned Table: Contains code points that are unassigned
- *          in the Unicode Version supported by StringPrep. Currently
+ *     <li> Unassigned Table: Contains code points that are unassigned 
+ *          in the Unicode Version supported by StringPrep. Currently 
  *          RFC 3454 supports Unicode 3.2. </li>
  *     <li> Prohibited Table: Contains code points that are prohibited from
  *          the output of the StringPrep processing function. </li>
  *     <li> Mapping Table: Contains code points that are deleted from the output or case mapped. </li>
  * </ul>
- *
+ * 
  * The procedure for preparing Unicode strings:
  * <ol>
  *      <li> Map: For each character in the input, check if it has a mapping
@@ -73,17 +73,17 @@
 typedef struct UStringPrepProfile UStringPrepProfile;
 
 
-/**
+/** 
  * Option to prohibit processing of unassigned code points in the input
- *
+ * 
  * @see  usprep_prepare
  * @stable ICU 2.8
  */
 #define USPREP_DEFAULT 0x0000
 
-/**
+/** 
  * Option to allow processing of unassigned code points in the input
- *
+ * 
  * @see  usprep_prepare
  * @stable ICU 2.8
  */
@@ -105,47 +105,47 @@ typedef enum UStringPrepProfileType {
      * RFC3530 nfs4_cs_prep
      * @stable ICU 4.2
      */
-    USPREP_RFC3530_NFS4_CS_PREP,
+	USPREP_RFC3530_NFS4_CS_PREP,
     /**
      * RFC3530 nfs4_cs_prep with case insensitive option
      * @stable ICU 4.2
      */
-    USPREP_RFC3530_NFS4_CS_PREP_CI,
+	USPREP_RFC3530_NFS4_CS_PREP_CI,
     /**
      * RFC3530 nfs4_cis_prep
      * @stable ICU 4.2
      */
-    USPREP_RFC3530_NFS4_CIS_PREP,
+	USPREP_RFC3530_NFS4_CIS_PREP,
     /**
      * RFC3530 nfs4_mixed_prep for prefix
      * @stable ICU 4.2
      */
-    USPREP_RFC3530_NFS4_MIXED_PREP_PREFIX,
+	USPREP_RFC3530_NFS4_MIXED_PREP_PREFIX,
     /**
      * RFC3530 nfs4_mixed_prep for suffix
      * @stable ICU 4.2
      */
-    USPREP_RFC3530_NFS4_MIXED_PREP_SUFFIX,
+	USPREP_RFC3530_NFS4_MIXED_PREP_SUFFIX,
     /**
      * RFC3722 iSCSI
      * @stable ICU 4.2
      */
-    USPREP_RFC3722_ISCSI,
+	USPREP_RFC3722_ISCSI,
     /**
      * RFC3920 XMPP Nodeprep
      * @stable ICU 4.2
      */
-    USPREP_RFC3920_NODEPREP,
+	USPREP_RFC3920_NODEPREP,
     /**
      * RFC3920 XMPP Resourceprep
      * @stable ICU 4.2
      */
-    USPREP_RFC3920_RESOURCEPREP,
+	USPREP_RFC3920_RESOURCEPREP,
     /**
      * RFC4011 Policy MIB Stringprep
      * @stable ICU 4.2
      */
-    USPREP_RFC4011_MIB,
+	USPREP_RFC4011_MIB,
     /**
      * RFC4013 SASLprep
      * @stable ICU 4.2
@@ -155,18 +155,18 @@ typedef enum UStringPrepProfileType {
      * RFC4505 trace
      * @stable ICU 4.2
      */
-    USPREP_RFC4505_TRACE,
+	USPREP_RFC4505_TRACE,
     /**
      * RFC4518 LDAP
      * @stable ICU 4.2
      */
-    USPREP_RFC4518_LDAP,
+	USPREP_RFC4518_LDAP,
     /**
      * RFC4518 LDAP for case ignore, numeric and stored prefix
      * matching rules
      * @stable ICU 4.2
      */
-    USPREP_RFC4518_LDAP_CI
+	USPREP_RFC4518_LDAP_CI
 } UStringPrepProfileType;
 
 /**
@@ -185,14 +185,14 @@ typedef enum UStringPrepProfileType {
  * @stable ICU 2.8
  */
 U_CAPI UStringPrepProfile* U_EXPORT2
-usprep_open(const char* path,
+usprep_open(const char* path, 
             const char* fileName,
             UErrorCode* status);
 
 /**
  * Creates a StringPrep profile for the specified profile type.
  *
- * @param type        The profile type
+ * @param type		The profile type
  * @param status    ICU error code in/out parameter. Must not be NULL.
  *                  Must fulfill U_SUCCESS before the function call.
  * @return          Pointer to UStringPrepProfile that is opened. Should be closed by
@@ -202,7 +202,7 @@ usprep_open(const char* path,
  */
 U_CAPI UStringPrepProfile* U_EXPORT2
 usprep_openByType(UStringPrepProfileType type,
-                  UErrorCode* status);
+				  UErrorCode* status);
 
 /**
  * Closes the profile
@@ -236,7 +236,7 @@ U_NAMESPACE_END
  * checks for prohibited and BiDi characters in the order defined by RFC 3454
  * depending on the options specified in the profile.
  *
- * @param prep          The profile to use
+ * @param prep          The profile to use 
  * @param src           Pointer to UChar buffer containing the string to prepare
  * @param srcLength     Number of characters in the source string
  * @param dest          Pointer to the destination buffer to receive the output
@@ -245,10 +245,10 @@ U_NAMESPACE_END
  *
  *  - USPREP_DEFAULT            Prohibit processing of unassigned code points in the input
  *
- *  - USPREP_ALLOW_UNASSIGNED   Treat the unassigned code points are in the input
+ *  - USPREP_ALLOW_UNASSIGNED   Treat the unassigned code points are in the input 
  *                              as normal Unicode code points.
  *
- * @param parseError        Pointer to UParseError struct to receive information on position
+ * @param parseError        Pointer to UParseError struct to receive information on position 
  *                          of error if an error is encountered. Can be NULL.
  * @param status            ICU in/out error code parameter.
  *                          U_INVALID_CHAR_FOUND if src contains
@@ -262,7 +262,7 @@ U_NAMESPACE_END
 
 U_CAPI int32_t U_EXPORT2
 usprep_prepare(   const UStringPrepProfile* prep,
-                  const UChar* src, int32_t srcLength,
+                  const UChar* src, int32_t srcLength, 
                   UChar* dest, int32_t destCapacity,
                   int32_t options,
                   UParseError* parseError,
