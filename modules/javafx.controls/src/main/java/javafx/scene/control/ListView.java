@@ -148,6 +148,53 @@ import javafx.util.Pair;
  * ListView. See the {@link Cell} class documentation for a more complete
  * description of how to write custom Cells.
  *
+ * <h2>A warning about inserting Nodes into the ListView items list</h2>
+ * ListView allows for the items list to contain elements of any type, including
+ * {@link Node} instances. Putting nodes into
+ * the items list is <strong>strongly not recommended</strong>.
+ * <p>The recommended approach, rather than inserting Node instances into the
+ * items list, is to put the relevant information into the ListView, and then
+ * provide a custom {@link #cellFactoryProperty() cell factory}. For example,
+ * rather than use the following code:
+ *
+ * <pre> {@code ListView<Rectangle> lv = new ListView<>();
+ * lv.getItems().addAll(
+ *     new Rectangle(10, 10, Color.RED),
+ *     new Rectangle(10, 10, Color.GREEN),
+ *     new Rectangle(10, 10, Color.BLUE));}}</pre>
+ *
+ * <p>You should do the following:</p>
+ *
+ * <pre><code> ListView&lt;Color&gt; lv = new ListView&lt;&gt;();
+ * lv.getItems().addAll(
+ *     Color.RED,
+ *     Color.GREEN,
+ *     Color.BLUE);
+ *
+ * lv.setCellFactory(p {@literal ->} {
+ *     return new ListCell&lt;&gt;() {
+ *         private final Rectangle rectangle;
+ *         {
+ *             setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
+ *             rectangle = new Rectangle(10, 10);
+ *         }
+ *
+ *         &#064;Override protected void updateItem(Color item, boolean empty) {
+ *             super.updateItem(item, empty);
+ *
+ *             if (item == null || empty) {
+ *                 setGraphic(null);
+ *             } else {
+ *                 rectangle.setFill(item);
+ *                 setGraphic(rectangle);
+ *             }
+ *         }
+ *     };
+ * });</code></pre>
+ * <p> This example has an anonymous custom list cell class in the custom cell factory.
+ * Note that the Rectangle (Node) object needs to be created in the custom list cell class
+ * or in it's constructor and updated/used in it's updateItem method.
+ *
  * <h2>Editing</h2>
  * <p>This control supports inline editing of values, and this section attempts to
  * give an overview of the available APIs and how you should use them.</p>
