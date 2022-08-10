@@ -431,22 +431,27 @@ null_convert (j_decompress_ptr cinfo,
   register JSAMPROW outptr;
   register JSAMPROW inptr;
   register JDIMENSION count;
-  register int num_comps = cinfo->num_components;
+  register int out_comps = cinfo->out_color_components;
   JDIMENSION num_cols = cinfo->output_width;
+  JSAMPROW startptr;
   int ci;
+  jpeg_component_info *compptr;
 
   while (--num_rows >= 0) {
     /* It seems fastest to make a separate pass for each component. */
-    for (ci = 0; ci < num_comps; ci++) {
+    startptr = *output_buf++;
+    for (ci = 0, compptr = cinfo->comp_info; ci < cinfo->num_components;
+     ci++, compptr++) {
+      if (! compptr->component_needed)
+    continue;        /* skip uninteresting component */
       inptr = input_buf[ci][input_row];
-      outptr = output_buf[0] + ci;
+      outptr = startptr++;
       for (count = num_cols; count > 0; count--) {
     *outptr = *inptr++;    /* don't need GETJSAMPLE() here */
-    outptr += num_comps;
+    outptr += out_comps;
       }
     }
     input_row++;
-    output_buf++;
   }
 }
 
@@ -462,7 +467,7 @@ grayscale_convert (j_decompress_ptr cinfo,
            JSAMPIMAGE input_buf, JDIMENSION input_row,
            JSAMPARRAY output_buf, int num_rows)
 {
-  jcopy_sample_rows(input_buf[0], (int) input_row, output_buf, 0,
+  jcopy_sample_rows(input_buf[0] + input_row, output_buf,
             num_rows, cinfo->output_width);
 }
 
@@ -662,6 +667,44 @@ ycck_cmyk_convert (j_decompress_ptr cinfo,
 
 
 /*
+ * Convert CMYK to YK part of YCCK for colorless output.
+ * We assume build_rgb_y_table has been called.
+ */
+
+METHODDEF(void)
+cmyk_yk_convert (j_decompress_ptr cinfo,
+         JSAMPIMAGE input_buf, JDIMENSION input_row,
+         JSAMPARRAY output_buf, int num_rows)
+{
+  my_cconvert_ptr cconvert = (my_cconvert_ptr) cinfo->cconvert;
+  register int r, g, b;
+  register INT32 * ctab = cconvert->rgb_y_tab;
+  register JSAMPROW outptr;
+  register JSAMPROW inptr0, inptr1, inptr2, inptr3;
+  register JDIMENSION col;
+  JDIMENSION num_cols = cinfo->output_width;
+  while (--num_rows >= 0) {
+    inptr0 = input_buf[0][input_row];
+    inptr1 = input_buf[1][input_row];
+    inptr2 = input_buf[2][input_row];
+    inptr3 = input_buf[3][input_row];
+    input_row++;
+    outptr = *output_buf++;
+    for (col = 0; col < num_cols; col++) {
+      r = MAXJSAMPLE - GETJSAMPLE(inptr0[col]);
+      g = MAXJSAMPLE - GETJSAMPLE(inptr1[col]);
+      b = MAXJSAMPLE - GETJSAMPLE(inptr2[col]);
+      outptr[0] = (JSAMPLE)
+        ((ctab[r+R_Y_OFF] + ctab[g+G_Y_OFF] + ctab[b+B_Y_OFF])
+         >> SCALEBITS);
+      outptr[1] = inptr3[col];    /* don't need GETJSAMPLE here */
+      outptr += 2;
+    }
+  }
+}
+
+
+/*
  * Empty method for start_pass.
  */
 
@@ -680,7 +723,7 @@ GLOBAL(void)
 jinit_color_deconverter (j_decompress_ptr cinfo)
 {
   my_cconvert_ptr cconvert;
-  int ci;
+  int ci, i;
 
   cconvert = (my_cconvert_ptr) (*cinfo->mem->alloc_small)
     ((j_common_ptr) cinfo, JPOOL_IMAGE, SIZEOF(my_color_deconverter));
@@ -793,9 +836,9 @@ jinit_color_deconverter (j_decompress_ptr cinfo)
     break;
 
   case JCS_BG_RGB:
-    cinfo->out_color_components = RGB_PIXELSIZE;
     if (cinfo->jpeg_color_space != JCS_BG_RGB)
       ERREXIT(cinfo, JERR_CONVERSION_NOTIMPL);
+    cinfo->out_color_components = RGB_PIXELSIZE;
     switch (cinfo->color_transform) {
     case JCT_NONE:
       cconvert->pub.color_convert = rgb_convert;
@@ -809,25 +852,35 @@ jinit_color_deconverter (j_decompress_ptr cinfo)
     break;
 
   case JCS_CMYK:
+    if (cinfo->jpeg_color_space != JCS_YCCK)
+      goto def_label;
     cinfo->out_color_components = 4;
-    switch (cinfo->jpeg_color_space) {
-    case JCS_YCCK:
       cconvert->pub.color_convert = ycck_cmyk_convert;
       build_ycc_rgb_table(cinfo);
       break;
-    case JCS_CMYK:
-      cconvert->pub.color_convert = null_convert;
-      break;
-    default:
-      ERREXIT(cinfo, JERR_CONVERSION_NOTIMPL);
-    }
+  case JCS_YCCK:
+    if (cinfo->jpeg_color_space != JCS_CMYK ||
+    ! cinfo->comp_info[0].component_needed ||
+      cinfo->comp_info[1].component_needed ||
+      cinfo->comp_info[2].component_needed ||
+    ! cinfo->comp_info[3].component_needed)
+      goto def_label;
+    cinfo->out_color_components = 2;
+    cinfo->comp_info[1].component_needed = TRUE;
+    cinfo->comp_info[2].component_needed = TRUE;
+    cconvert->pub.color_convert = cmyk_yk_convert;
+    build_rgb_y_table(cinfo);
     break;
 
-  default:        /* permit null conversion to same output space */
+  default: def_label:    /* permit null conversion to same output space */
     if (cinfo->out_color_space != cinfo->jpeg_color_space)
       /* unsupported non-null conversion */
       ERREXIT(cinfo, JERR_CONVERSION_NOTIMPL);
-    cinfo->out_color_components = cinfo->num_components;
+    i = 0;
+    for (ci = 0; ci < cinfo->num_components; ci++)
+      if (cinfo->comp_info[ci].component_needed)
+    i++;        /* count output color components */
+    cinfo->out_color_components = i;
     cconvert->pub.color_convert = null_convert;
   }
 
