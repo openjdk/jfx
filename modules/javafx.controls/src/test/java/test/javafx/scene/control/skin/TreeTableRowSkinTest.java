@@ -109,7 +109,7 @@ public class TreeTableRowSkinTest {
     /**
      * The {@link TreeTableView} should not have any {@link TreeTableRow} as children.
      * {@link TreeTableRow}s are added temporary as part of the auto sizing, but should never remain after.
-     * See also: JDK-8289357
+     * See also: JDK-8289357 and JDK-8292009
      */
     @Test
     public void testTreeTableViewChildrenCount() {

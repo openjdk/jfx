@@ -101,7 +101,7 @@ public class TableRowSkinTest {
     /**
      * The {@link TableView} should not have any {@link TableRow} as children.
      * {@link TableRow}s are added temporary as part of the auto sizing, but should never remain after.
-     * See also: JDK-8289357
+     * See also: JDK-8289357 and JDK-8292009
      */
     @Test
     public void testTableViewChildrenCount() {
