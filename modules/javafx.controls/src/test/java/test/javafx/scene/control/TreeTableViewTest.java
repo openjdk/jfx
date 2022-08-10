@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -784,6 +784,18 @@ public class TreeTableViewTest {
         ControlTestUtils.runWithExceptionHandler(() -> {
             ttv.sort();
         });
+    }
+
+    @Test public void testSetSortOrderRetainsWhenRootHasNoChildren() {
+        TreeTableView<String> ttv = new TreeTableView<>();
+        TreeItem<String> root = new TreeItem<>("root");
+        root.setExpanded(true);
+        ttv.setRoot(root);
+        assertEquals(0, ttv.getSortOrder().size());
+
+        TreeTableColumn<String, String> ttc = new TreeTableColumn<>("Column");
+        ttv.getSortOrder().add(ttc);
+        assertEquals(1, ttv.getSortOrder().size());
     }
 
     @Test public void testNPEWhenRootItemIsNull() {
@@ -4251,14 +4263,14 @@ public class TreeTableViewTest {
                     Platform.runLater(() -> {
                         Toolkit.getToolkit().firePulse();
                         assertTrue(rt_35395_counter > 0);
-                        assertTrue(rt_35395_counter < 18);
+                        assertTrue(rt_35395_counter < 39);
                         rt_35395_counter = 0;
                         treeTableView.scrollTo(55);
                         Platform.runLater(() -> {
                             Toolkit.getToolkit().firePulse();
 
                             assertTrue(rt_35395_counter > 0);
-                            assertTrue(rt_35395_counter < 30);
+                            assertTrue(rt_35395_counter < 90);
                             sl.dispose();
                         });
                     });
@@ -5741,6 +5753,11 @@ public class TreeTableViewTest {
         @Override public boolean equals(Object obj) {
             if (obj == null) return false;
             return id == ((RT22599_DataType)obj).id;
+        }
+
+        @Override
+        public int hashCode() {
+            return id;
         }
     }
 

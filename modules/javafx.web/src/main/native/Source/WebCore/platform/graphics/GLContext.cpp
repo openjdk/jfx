@@ -41,8 +41,6 @@
 #include "GLContextGLX.h"
 #endif
 
-using WTF::ThreadSpecific;
-
 namespace WebCore {
 
 class ThreadGlobalGLContext {
@@ -67,7 +65,7 @@ inline ThreadGlobalGLContext* currentContext()
 
 static bool initializeOpenGLShimsIfNeeded()
 {
-#if USE(OPENGL_ES) || USE(LIBEPOXY) || USE(ANGLE)
+#if USE(OPENGL_ES) || USE(LIBEPOXY) || (USE(ANGLE) && !(PLATFORM(GTK) || PLATFORM(WPE)))
     return true;
 #else
     static bool initialized = false;

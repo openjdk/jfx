@@ -28,7 +28,7 @@
 #include "BitmapTextureJava.h"
 #include "ImageBuffer.h"
 #include "TextureMapper.h"
-
+#include "GraphicsContext.h"
 #if USE(TEXTURE_MAPPER)
 namespace WebCore {
 

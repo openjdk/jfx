@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -445,6 +445,49 @@ std::optional<FileType> fileType(const String& path)
     fprintf(stderr, "fileType(const String& path) NOT IMPLEMENTED\n");
     UNUSED_PARAM(path);
     return {};
+}
+
+void deleteAllFilesModifiedSince(const String& path, WallTime t)
+{
+    fprintf(stderr, "deleteAllFilesModifiedSince(const String&, WallTime) NOT IMPLEMENTED\n");
+    UNUSED_PARAM(path);
+    UNUSED_PARAM(t);
+}
+
+bool flushFile(PlatformFileHandle handle)
+{
+     fprintf(stderr, "flushFile(PlatformFileHandle) NOT IMPLEMENTED\n");
+     UNUSED_PARAM(handle);
+     return false;
+}
+
+std::optional<Vector<uint8_t>> readEntireFile(PlatformFileHandle handle)
+{
+    fprintf(stderr, "readEntireFile(PlatformFileHandle handle) NOT IMPLEMENTED\n");
+    UNUSED_PARAM(handle);
+    Vector<uint8_t> vec;
+    return vec;
+}
+std::optional<Vector<uint8_t>> readEntireFile(const String& path)
+{
+    fprintf(stderr, "readEntireFile(const String& path) NOT IMPLEMENTED\n");
+    UNUSED_PARAM(path);
+    Vector<uint8_t> vec;
+    return vec;
+}
+
+bool deleteNonEmptyDirectory(String const &)
+{
+    fprintf(stderr, "deleteNonEmptyDirectory(String const &) NOT IMPLEMENTED\n");
+    return false;
+}
+
+std::optional<uint64_t> fileSize(PlatformFileHandle handle)
+{
+    long long size = 0;
+    fprintf(stderr, "readEntireFile(PlatformFileHandle) NOT IMPLEMENTED\n");
+    UNUSED_PARAM(handle);
+    return size;
 }
 
 } // namespace FileSystemImpl

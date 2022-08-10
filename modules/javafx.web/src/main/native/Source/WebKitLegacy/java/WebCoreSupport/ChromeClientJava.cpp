@@ -354,7 +354,7 @@ Page* ChromeClientJava::createWindow(
     return p;
 }
 
-void ChromeClientJava::closeWindowSoon()
+void ChromeClientJava::closeWindow()
 {
     using namespace ChromeClientJavaInternal;
     JNIEnv* env = WTF::GetJavaEnv();
@@ -819,6 +819,18 @@ RefPtr<SearchPopupMenu> ChromeClientJava::createSearchPopupMenu(PopupMenuClient&
 RefPtr<Icon> ChromeClientJava::createIconForFiles(const Vector<String>& filenames)
 {
     return Icon::createIconForFiles(filenames);
+}
+
+void ChromeClientJava::requestCookieConsent(CompletionHandler<void(CookieConsentDecisionResult)>&&)
+{
+}
+
+void ChromeClientJava::classifyModalContainerControls(Vector<String>&& texts, CompletionHandler<void(Vector<ModalContainerControlType>&&)>&&)
+{
+}
+
+void ChromeClientJava::decidePolicyForModalContainer(OptionSet<ModalContainerControlType>, CompletionHandler<void(ModalContainerDecision)>&&)
+{
 }
 
 void ChromeClientJava::didFinishLoadingImageForElement(WebCore::HTMLImageElement&)

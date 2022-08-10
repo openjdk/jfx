@@ -28,6 +28,7 @@
 
 #include "DOMWindow.h"
 #include "Document.h"
+#include "ElementInlines.h"
 #include "HTMLIFrameElement.h"
 #include "HTMLNames.h"
 #include "HTMLParserIdioms.h"
@@ -50,10 +51,14 @@ static const char* policyTypeName(FeaturePolicy::Type type)
         return "DisplayCapture";
     case FeaturePolicy::Type::Geolocation:
         return "Geolocation";
+    case FeaturePolicy::Type::Payment:
+        return "Payment";
     case FeaturePolicy::Type::SyncXHR:
         return "SyncXHR";
     case FeaturePolicy::Type::Fullscreen:
         return "Fullscreen";
+    case FeaturePolicy::Type::WebShare:
+        return "WebShare";
 #if ENABLE(DEVICE_ORIENTATION)
     case FeaturePolicy::Type::Gyroscope:
         return "Gyroscope";
@@ -61,6 +66,10 @@ static const char* policyTypeName(FeaturePolicy::Type type)
         return "Accelerometer";
     case FeaturePolicy::Type::Magnetometer:
         return "Magnetometer";
+#endif
+#if ENABLE(WEB_AUTHN)
+    case FeaturePolicy::Type::PublickeyCredentialsGetRule:
+        return "PublickeyCredentialsGet";
 #endif
 #if ENABLE(WEBXR)
     case FeaturePolicy::Type::XRSpatialTracking:
@@ -170,12 +179,17 @@ FeaturePolicy FeaturePolicy::parse(Document& document, const HTMLIFrameElement& 
     bool isSpeakerSelectionInitialized = false;
     bool isDisplayCaptureInitialized = false;
     bool isGeolocationInitialized = false;
+    bool isPaymentInitialized = false;
     bool isSyncXHRInitialized = false;
     bool isFullscreenInitialized = false;
+    bool isWebShareInitialized = false;
 #if ENABLE(DEVICE_ORIENTATION)
     bool isGyroscopeInitialized = false;
     bool isAccelerometerInitialized = false;
     bool isMagnetometerInitialized = false;
+#endif
+#if ENABLE(WEB_AUTHN)
+    bool isPublickeyCredentialsGetInitialized = false;
 #endif
 #if ENABLE(WEBXR)
     bool isXRSpatialTrackingInitialized = false;
@@ -207,6 +221,11 @@ FeaturePolicy FeaturePolicy::parse(Document& document, const HTMLIFrameElement& 
             updateList(document, policy.m_geolocationRule, item.substring(12));
             continue;
         }
+        if (item.startsWith("payment")) {
+            isPaymentInitialized = true;
+            updateList(document, policy.m_paymentRule, item.substring(8));
+            continue;
+        }
         if (item.startsWith("sync-xhr")) {
             isSyncXHRInitialized = true;
             updateList(document, policy.m_syncXHRRule, item.substring(9));
@@ -215,6 +234,11 @@ FeaturePolicy FeaturePolicy::parse(Document& document, const HTMLIFrameElement& 
         if (item.startsWith("fullscreen")) {
             isFullscreenInitialized = true;
             updateList(document, policy.m_fullscreenRule, item.substring(11));
+            continue;
+        }
+        if (item.startsWith("web-share")) {
+            isWebShareInitialized = true;
+            updateList(document, policy.m_webShareRule, item.substring(10));
             continue;
         }
 #if ENABLE(DEVICE_ORIENTATION)
@@ -231,6 +255,13 @@ FeaturePolicy FeaturePolicy::parse(Document& document, const HTMLIFrameElement& 
         if (item.startsWith("magnetometer")) {
             isMagnetometerInitialized = true;
             updateList(document, policy.m_magnetometerRule, item.substring(13));
+            continue;
+        }
+#endif
+#if ENABLE(WEB_AUTHN)
+        if (item.startsWith("publickey-credentials-get")) {
+            isPublickeyCredentialsGetInitialized = true;
+            updateList(document, policy.m_publickeyCredentialsGetRule, item.substring(26));
             continue;
         }
 #endif
@@ -254,6 +285,10 @@ FeaturePolicy FeaturePolicy::parse(Document& document, const HTMLIFrameElement& 
         policy.m_displayCaptureRule.allowedList.add(document.securityOrigin().data());
     if (!isGeolocationInitialized)
         policy.m_geolocationRule.allowedList.add(document.securityOrigin().data());
+    if (!isPaymentInitialized)
+        policy.m_paymentRule.allowedList.add(document.securityOrigin().data());
+    if (!isWebShareInitialized)
+        policy.m_webShareRule.allowedList.add(document.securityOrigin().data());
 #if ENABLE(DEVICE_ORIENTATION)
     if (!isGyroscopeInitialized)
         policy.m_gyroscopeRule.allowedList.add(document.securityOrigin().data());
@@ -261,6 +296,10 @@ FeaturePolicy FeaturePolicy::parse(Document& document, const HTMLIFrameElement& 
         policy.m_accelerometerRule.allowedList.add(document.securityOrigin().data());
     if (!isMagnetometerInitialized)
         policy.m_magnetometerRule.allowedList.add(document.securityOrigin().data());
+#endif
+#if ENABLE(WEB_AUTHN)
+    if (!isPublickeyCredentialsGetInitialized)
+        policy.m_publickeyCredentialsGetRule.allowedList.add(document.securityOrigin().data());
 #endif
 #if ENABLE(WEBXR)
     if (!isXRSpatialTrackingInitialized)
@@ -301,10 +340,14 @@ bool FeaturePolicy::allows(Type type, const SecurityOriginData& origin) const
         return isAllowedByFeaturePolicy(m_displayCaptureRule, origin);
     case Type::Geolocation:
         return isAllowedByFeaturePolicy(m_geolocationRule, origin);
+    case Type::Payment:
+        return isAllowedByFeaturePolicy(m_paymentRule, origin);
     case Type::SyncXHR:
         return isAllowedByFeaturePolicy(m_syncXHRRule, origin);
     case Type::Fullscreen:
         return isAllowedByFeaturePolicy(m_fullscreenRule, origin);
+    case Type::WebShare:
+        return isAllowedByFeaturePolicy(m_webShareRule, origin);
 #if ENABLE(DEVICE_ORIENTATION)
     case Type::Gyroscope:
         return isAllowedByFeaturePolicy(m_gyroscopeRule, origin);
@@ -312,6 +355,10 @@ bool FeaturePolicy::allows(Type type, const SecurityOriginData& origin) const
         return isAllowedByFeaturePolicy(m_accelerometerRule, origin);
     case Type::Magnetometer:
         return isAllowedByFeaturePolicy(m_magnetometerRule, origin);
+#endif
+#if ENABLE(WEB_AUTHN)
+    case Type::PublickeyCredentialsGetRule:
+        return isAllowedByFeaturePolicy(m_publickeyCredentialsGetRule, origin);
 #endif
 #if ENABLE(WEBXR)
     case Type::XRSpatialTracking:

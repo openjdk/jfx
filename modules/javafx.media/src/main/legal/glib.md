@@ -28,8 +28,57 @@ code is here:
 
 ```
 
-### LGPL 2.1
+### LICENSE
 ```
+There are multiple licenses that apply to different parts of Glib. The
+overarching license is LGPL 2.1, however parts are covered by MIT and
+other parts by BSD-style licenses.
+```
+
+#### LGPL 2.1 License
+```
+Copyright (C) 1995 A.M. Kuchling
+Copyright (C) 2005-2006 Alexander Larsson <alexl@redhat.com>
+Copyright (C) 2004 Anders Carlsson <andersca@gnome.org>
+Copyright (C) 2001-2003 Andrew Lanoix
+Copyright (C) 2009 Benjamin Otte <otte@gnome.org>
+Copyright (C) 2011, 2014-2015 Canonical Limited
+Copyright (C) 2009-2010 Christian Hergert <chris@dronelabs.com>
+Copyright (C) 2010 Christian Persch
+Copyright (C) 2008 Claus Tondering.
+Copyright (C) 2009-2010 Codethink Limited
+Copyright (C) 2009-2011, 2018 Collabora Ltd.
+Copyright (C) 2006 Dave Benson
+Copyright (C) 2000 Eazel, Inc.
+Copyright (C) 2005-2007, 2010, 2018 Emmanuele Bassi
+Copyright (C) 2018, 2020 Endless Mobile, Inc.
+Copyright (C) 2020 Frederic Martinsons
+Copyright (C) 1991-2019 Free Software Foundation, Inc.
+Copyright (C) 2001 Hans Breuer
+Copyright (C) 2021 Iain Lane, Xavier Claessens
+Copyright (C) 2005, 2007 Imendio AB
+Copyright (C) 2010 Intel Corp.
+Copyright (C) 2003, 2005 Matthias Clasen
+Copyright (C) 2003 Noah Levitt
+Copyright (C) 2009 Nokia Corporation
+Copyright (C) 1998 Owen Taylor
+Copyright (C) 1998 Owen Taylor and Tor Lillqvist
+Copyright (C) 1995-1997, 1999, 2002 Peter Mattis, Red Hat, Inc.
+Copyright (C) 1995-1998 Peter Mattis, Spencer Kimball and Josh MacDonald
+Copyright (C) 1998-2001, 2003-2005, 2007-2012, 2020 Red Hat, Inc.
+Copyright (C) 2007-2008, 2011 Ryan Lortie
+Copyright (C) 2003 Sebastian Wilhelmi
+Copyright (C) 1998-2001 Sebastian Wilhelmi; University of Karlsruhe
+Copyright (C) 2011 Stef Walter  <stefw@collabora.co.uk>
+Copyright (C) 2010 Thiago Santos <thiago.sousa.santos@collabora.co.uk>
+Copyright (C) 1997, 1998, 2000, 2005 Tim Janik
+Copyright (C) 1997-1999, 2000-2001 Tim Janik and Red Hat, Inc.
+Copyright (C) 1999, 2000 Tom Tromey
+Copyright (C) 2018 Tomasz Miasko
+Copyright (C) 1998-2000, 2003-2004 Tor Lillqvist
+Copyright (C) 1999-2000 Tor Lillqvist and Craig Setera
+Copyright (C) 2000-2003 Ximian Inc.
+Copyright (C) 2017-2019 Руслан Ижбулатов
 
                   GNU LESSER GENERAL PUBLIC LICENSE
                        Version 2.1, February 1999
@@ -533,5 +582,82 @@ necessary.  Here is a sample; alter the names:
   Ty Coon, President of Vice
 
 That's all there is to it!
+
+Authors
+
+Original Authors
+---------------------------------
+Peter Mattis       <petm@xcf.berkeley.edu>
+Spencer Kimball    <spencer@xcf.berkeley.edu>
+Josh MacDonald     <jmacd@xcf.berkeley.edu>
+
+GLib-2.0 Team
+---------------------------------
+Hans Breuer        <hans@breuer.org>
+Matthias Clasen    <mclasen@redhat.com>
+Tor Lillqvist      <tml@iki.fi>
+Tim Janik          <timj@gtk.org>
+Havoc Pennington   <hp@redhat.com>
+Ron Steinke        <rsteinke@w-link.net>
+Owen Taylor        <otaylor@redhat.com>
+Sebastian Wilhelmi <seppi@seppi.de>
+
+GLib-1.2 Team
+---------------------------------
+Shawn T. Amundson  <amundson@gimp.org>
+Jeff Garzik        <jgarzik@pobox.com>
+Raja R Harinath    <harinath@cs.umn.edu>
+Tim Janik          <timj@gtk.org>
+Elliot Lee         <sopwith@redhat.com>
+Tor Lillqvist      <tml@iki.fi>
+Paolo Molaro       <lupus@debian.org>
+Havoc Pennington   <hp@pobox.com>
+Manish Singh       <yosh@gimp.org>
+Owen Taylor        <otaylor@gtk.org>
+Sebastian Wilhelmi <wilhelmi@ira.uka.de>
+
+The random number generator "Mersenne Twister", which is used by GLib,
+was developed and originally coded by:
+Makoto Matsumoto   <matumoto@math.keio.ac.jp>
+Takuji Nishimura   <nisimura@math.keio.ac.jp>
+
+```
+
+#### MIT License
+```
+---------------------------------
+The below license applies to the following files:
+glib/glib/gbsearcharray.h
+
+Copyright (C) 2000-2003 Tim Janik
+
+This software is provided "as is"; redistribution and modification
+is permitted, provided that the following disclaimer is retained.
+
+This software is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+In no event shall the authors or contributors be liable for any
+direct, indirect, incidental, special, exemplary, or consequential
+damages (including, but not limited to, procurement of substitute
+goods or services; loss of use, data, or profits; or business
+interruption) however caused and on any theory of liability, whether
+in contract, strict liability, or tort (including negligence or
+otherwise) arising in any way out of the use of this software, even
+if advised of the possibility of such damage.
+
+```
+
+#### Permissive License
+```
+---------------------------------
+The below license applies to the following files:
+glib/glib/win_iconv.c
+
+iconv library implemented with Win32 API.
+
+This file is placed in the public domain.
+
+Maintainer: Yukihiro Nakadaira <yukihiro.nakadaira@gmail.com>
 
 ```
