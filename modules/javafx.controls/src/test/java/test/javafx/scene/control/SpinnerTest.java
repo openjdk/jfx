@@ -1495,26 +1495,26 @@ public class SpinnerTest {
 
     @Test public void testSetValueNull_IntegerSpinner() {
         intValueFactory.setValue(null);
-        assertEquals(null, intSpinner.getValue());
+        assertNull(intSpinner.getValue());
     }
 
     @Test public void testSetValueNull_DoubleSpinner() {
         dblValueFactory.setValue(null);
-        assertEquals(null, dblSpinner.getValue());
+        assertNull(dblSpinner.getValue());
     }
 
     @Test public void testSetValueNull_ListSpinner() {
         listValueFactory.setValue(null);
-        assertEquals(null, listSpinner.getValue());
+        assertNull(listSpinner.getValue());
     }
 
     @Test public void testSetValueNull_LocalDateSpinner() {
         localDateValueFactory.setValue(null);
-        assertEquals(null, localDateSpinner.getValue());
+        assertNull(localDateSpinner.getValue());
     }
 
     @Test public void testSetValueNull_LocalTimeSpinner() {
         localTimeValueFactory.setValue(null);
-        assertEquals(null, localTimeSpinner.getValue());
+        assertNull(localTimeSpinner.getValue());
     }
 }
