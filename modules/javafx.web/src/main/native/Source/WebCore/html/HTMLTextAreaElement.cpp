@@ -222,7 +222,7 @@ RenderPtr<RenderElement> HTMLTextAreaElement::createElementRenderer(RenderStyle&
     return createRenderer<RenderTextControlMultiLine>(*this, WTFMove(style));
 }
 
-bool HTMLTextAreaElement::appendFormData(DOMFormData& formData, bool)
+bool HTMLTextAreaElement::appendFormData(DOMFormData& formData)
 {
     if (name().isEmpty())
         return false;
@@ -343,6 +343,11 @@ RefPtr<TextControlInnerTextElement> HTMLTextAreaElement::innerTextElement() cons
         return nullptr;
 
     return childrenOfType<TextControlInnerTextElement>(*root).first();
+}
+
+RefPtr<TextControlInnerTextElement> HTMLTextAreaElement::innerTextElementCreatingShadowSubtreeIfNeeded()
+{
+    return innerTextElement();
 }
 
 void HTMLTextAreaElement::rendererWillBeDestroyed()
@@ -538,7 +543,7 @@ bool HTMLTextAreaElement::matchesReadWritePseudoClass() const
 
 void HTMLTextAreaElement::updatePlaceholderText()
 {
-    String placeholderText = strippedPlaceholder();
+    auto& placeholderText = attributeWithoutSynchronization(placeholderAttr);
     if (placeholderText.isEmpty()) {
         if (m_placeholder) {
             userAgentShadowRoot()->removeChild(*m_placeholder);

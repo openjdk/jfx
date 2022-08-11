@@ -25,6 +25,7 @@
 #pragma once
 
 #include "HTMLFormControlElementWithState.h"
+#include "PointerEventTypeNames.h"
 
 namespace WebCore {
 
@@ -60,7 +61,6 @@ public:
     // The derived class should return true if placeholder processing is needed.
     bool isPlaceholderVisible() const { return m_isPlaceholderVisible; }
     virtual bool supportsPlaceholder() const = 0;
-    String strippedPlaceholder() const;
     virtual HTMLElement* placeholderElement() const = 0;
     void updatePlaceholderVisibility();
 
@@ -89,6 +89,7 @@ public:
     virtual String value() const = 0;
 
     virtual RefPtr<TextControlInnerTextElement> innerTextElement() const = 0;
+    virtual RefPtr<TextControlInnerTextElement> innerTextElementCreatingShadowSubtreeIfNeeded() = 0;
     virtual RenderStyle createInnerTextStyle(const RenderStyle&) = 0;
 
     void selectionChanged(bool shouldFireSelectEvent);
@@ -148,6 +149,8 @@ private:
     void dispatchBlurEvent(RefPtr<Element>&& newFocusedElement) final;
     bool childShouldCreateRenderer(const Node&) const override;
 
+    void setHovered(bool, Style::InvalidationScope, HitTestRequest) final;
+
     unsigned indexForPosition(const Position&) const;
 
     // Returns true if user-editable value is empty. Used to check placeholder visibility.
@@ -163,6 +166,8 @@ private:
     unsigned m_lastChangeWasUserEdit : 1;
     unsigned m_isPlaceholderVisible : 1;
     unsigned m_canShowPlaceholder : 1;
+
+    String m_pointerType { mousePointerEventType() };
 
     String m_textAsOfLastFormControlChangeEvent;
 

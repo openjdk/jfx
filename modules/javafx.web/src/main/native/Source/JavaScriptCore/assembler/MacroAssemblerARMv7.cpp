@@ -33,8 +33,8 @@
 
 namespace JSC {
 
-extern "C" JSC_DECLARE_JIT_OPERATION(ctiMasmProbeTrampoline, void, ());
-JSC_ANNOTATE_JIT_OPERATION(ctiMasmProbeTrampolineId, ctiMasmProbeTrampoline);
+JSC_DECLARE_JIT_OPERATION(ctiMasmProbeTrampoline, void, ());
+JSC_ANNOTATE_JIT_OPERATION_PROBE(ctiMasmProbeTrampoline);
 
 using namespace ARMRegisters;
 
@@ -361,6 +361,7 @@ asm (
     // Restore the sp and pc.
     "ldr       sp, [sp, #" STRINGIZE_VALUE_OF(PROBE_CPU_SP_OFFSET) "]" "\n"
     "pop       { pc }" "\n"
+    ".previous" "\n"
 );
 #endif // COMPILER(GCC_COMPATIBLE)
 

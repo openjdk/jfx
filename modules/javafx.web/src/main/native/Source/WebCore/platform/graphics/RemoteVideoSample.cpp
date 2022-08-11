@@ -31,7 +31,8 @@
 #include "GraphicsContextCG.h"
 #include "IOSurface.h"
 #include "Logging.h"
-#include "MediaSample.h"
+#include "MediaSampleAVFObjC.h"
+#include "VideoFrameCV.h"
 
 #if USE(ACCELERATE)
 #include <Accelerate/Accelerate.h>
@@ -85,49 +86,55 @@ static inline std::unique_ptr<IOSurface> transferBGRAPixelBufferToIOSurface(CVPi
 #endif
 }
 
-std::unique_ptr<RemoteVideoSample> RemoteVideoSample::create(MediaSample& sample)
+std::unique_ptr<RemoteVideoSample> RemoteVideoSample::create(MediaSample& sample, ShouldCheckForIOSurface shouldCheckForIOSurface)
 {
-    ASSERT(sample.platformSample().type == PlatformSample::CMSampleBufferType);
-
-    auto imageBuffer = PAL::CMSampleBufferGetImageBuffer(sample.platformSample().sample.cmSampleBuffer);
-    if (!imageBuffer) {
-        RELEASE_LOG_ERROR(Media, "RemoteVideoSample::create: CMSampleBufferGetImageBuffer returned nullptr");
+    RetainPtr<CVPixelBufferRef> imageBuffer;
+    if (is<MediaSampleAVFObjC>(sample))
+        imageBuffer = downcast<MediaSampleAVFObjC>(sample).pixelBuffer();
+    else if (is<VideoFrameCV>(sample))
+        imageBuffer = downcast<VideoFrameCV>(sample).pixelBuffer();
+    else {
+        RELEASE_LOG_ERROR(Media, "RemoteVideoSample::create: cannot obtain CVPixelBuffer from sample. Unknown sample type.");
         return nullptr;
     }
-
+    if (!imageBuffer) {
+        RELEASE_LOG_ERROR(Media, "RemoteVideoSample::create: cannot obtain CVPixelBuffer from sample. No buffer.");
+        return nullptr;
+    }
     std::unique_ptr<IOSurface> ioSurface;
-    auto surface = CVPixelBufferGetIOSurface(imageBuffer);
-    if (!surface) {
+    auto surface = CVPixelBufferGetIOSurface(imageBuffer.get());
+    if (!surface && shouldCheckForIOSurface == ShouldCheckForIOSurface::Yes) {
         // Special case for canvas data that is RGBA, not IOSurface backed.
-        auto pixelFormatType = CVPixelBufferGetPixelFormatType(imageBuffer);
+        auto pixelFormatType = CVPixelBufferGetPixelFormatType(imageBuffer.get());
         if (pixelFormatType != kCVPixelFormatType_32BGRA) {
             RELEASE_LOG_ERROR(Media, "RemoteVideoSample::create does not support non IOSurface backed samples that are not BGRA");
             return nullptr;
         }
 
-        ioSurface = transferBGRAPixelBufferToIOSurface(imageBuffer);
+        ioSurface = transferBGRAPixelBufferToIOSurface(imageBuffer.get());
         if (!ioSurface)
             return nullptr;
 
         surface = ioSurface->surface();
     }
 
-    return std::unique_ptr<RemoteVideoSample>(new RemoteVideoSample(surface, DestinationColorSpace::SRGB(), sample.presentationTime(), sample.videoRotation(), sample.videoMirrored()));
+    return std::unique_ptr<RemoteVideoSample>(new RemoteVideoSample(surface, WTFMove(imageBuffer), DestinationColorSpace::SRGB(), sample.presentationTime(), sample.videoRotation(), sample.videoMirrored()));
 }
 
-std::unique_ptr<RemoteVideoSample> RemoteVideoSample::create(CVPixelBufferRef imageBuffer, MediaTime&& presentationTime, MediaSample::VideoRotation rotation)
+std::unique_ptr<RemoteVideoSample> RemoteVideoSample::create(RetainPtr<CVPixelBufferRef>&& imageBuffer, MediaTime&& presentationTime, MediaSample::VideoRotation rotation, ShouldCheckForIOSurface shouldCheckForIOSurface)
 {
-    auto surface = CVPixelBufferGetIOSurface(imageBuffer);
-    if (!surface) {
+    auto surface = CVPixelBufferGetIOSurface(imageBuffer.get());
+    if (!surface && shouldCheckForIOSurface == ShouldCheckForIOSurface::Yes) {
         RELEASE_LOG_ERROR(Media, "RemoteVideoSample::create: CVPixelBufferGetIOSurface returned nullptr");
         return nullptr;
     }
 
-    return std::unique_ptr<RemoteVideoSample>(new RemoteVideoSample(surface, DestinationColorSpace::SRGB(), WTFMove(presentationTime), rotation, false));
+    return std::unique_ptr<RemoteVideoSample>(new RemoteVideoSample(surface, WTFMove(imageBuffer), DestinationColorSpace::SRGB(), WTFMove(presentationTime), rotation, false));
 }
 
-RemoteVideoSample::RemoteVideoSample(IOSurfaceRef surface, const DestinationColorSpace& colorSpace, MediaTime&& time, MediaSample::VideoRotation rotation, bool mirrored)
+RemoteVideoSample::RemoteVideoSample(IOSurfaceRef surface, RetainPtr<CVPixelBufferRef>&& imageBuffer, const DestinationColorSpace& colorSpace, MediaTime&& time, MediaSample::VideoRotation rotation, bool mirrored)
     : m_ioSurface(WebCore::IOSurface::createFromSurface(surface, colorSpace))
+    , m_imageBuffer(WTFMove(imageBuffer))
     , m_rotation(rotation)
     , m_time(WTFMove(time))
     , m_videoFormat(IOSurfaceGetPixelFormat(surface))

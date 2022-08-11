@@ -29,6 +29,7 @@ require "config"
 require "backends"
 require "digest/sha1"
 require "offsets"
+require 'optparse'
 require "parser"
 require "self_hash"
 require "settings"
@@ -42,7 +43,15 @@ outputFlnm = ARGV.shift
 validBackends = canonicalizeBackendNames(ARGV.shift.split(/[,\s]+/))
 includeOnlyBackends(validBackends)
 
-inputHash = "// SettingsExtractor input hash: #{parseHash(inputFlnm)} #{selfHash}"
+$options = {}
+OptionParser.new do |opts|
+    opts.banner = "Usage: generate_settings_extractor.rb asmFile settingFile [--webkit-additions-path=<path>]"
+    opts.on("--webkit-additions-path=PATH", "WebKitAdditions path.") do |path|
+        $options[:webkit_additions_path] = path
+    end
+end.parse!
+
+inputHash = "// SettingsExtractor input hash: #{parseHash(inputFlnm, $options)} #{selfHash}"
 
 if FileTest.exist? outputFlnm
     File.open(outputFlnm, "r") {
@@ -55,7 +64,7 @@ if FileTest.exist? outputFlnm
     }
 end
 
-originalAST = parse(inputFlnm)
+originalAST = parse(inputFlnm, $options)
 prunedAST = Sequence.new(originalAST.codeOrigin, originalAST.filter(Setting))
 
 File.open(outputFlnm, "w") {

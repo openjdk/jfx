@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -828,6 +828,9 @@ void run(const char* filter)
 
     RUN(testInfiniteLoopDoesntCauseBadHoisting());
 
+    RUN(testFloatMaxMin());
+    RUN(testDoubleMaxMin());
+
     if (isX86()) {
         RUN(testBranchBitAndImmFusion(Identity, Int64, 1, Air::BranchTest32, Air::Arg::Tmp));
         RUN(testBranchBitAndImmFusion(Identity, Int64, 0xff, Air::BranchTest32, Air::Arg::Tmp));
@@ -895,8 +898,8 @@ static void run(const char*)
 #endif // ENABLE(B3_JIT)
 
 #if ENABLE(JIT_OPERATION_VALIDATION)
-extern const uintptr_t startOfJITOperationsInTestB3 __asm("section$start$__DATA_CONST$__jsc_ops");
-extern const uintptr_t endOfJITOperationsInTestB3 __asm("section$end$__DATA_CONST$__jsc_ops");
+extern const JSC::JITOperationAnnotation startOfJITOperationsInTestB3 __asm("section$start$__DATA_CONST$__jsc_ops");
+extern const JSC::JITOperationAnnotation endOfJITOperationsInTestB3 __asm("section$end$__DATA_CONST$__jsc_ops");
 #endif
 
 int main(int argc, char** argv)

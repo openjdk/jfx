@@ -60,9 +60,14 @@ bool ServiceWorkerRegistrationKey::operator==(const ServiceWorkerRegistrationKey
     return m_topOrigin == other.m_topOrigin && m_scope == other.m_scope;
 }
 
-ServiceWorkerRegistrationKey ServiceWorkerRegistrationKey::isolatedCopy() const
+ServiceWorkerRegistrationKey ServiceWorkerRegistrationKey::isolatedCopy() const &
 {
     return { m_topOrigin.isolatedCopy(), m_scope.isolatedCopy() };
+}
+
+ServiceWorkerRegistrationKey ServiceWorkerRegistrationKey::isolatedCopy() &&
+{
+    return { WTFMove(m_topOrigin).isolatedCopy(), WTFMove(m_scope).isolatedCopy() };
 }
 
 bool ServiceWorkerRegistrationKey::isMatching(const SecurityOriginData& topOrigin, const URL& clientURL) const
@@ -98,10 +103,15 @@ String ServiceWorkerRegistrationKey::toDatabaseKey() const
 std::optional<ServiceWorkerRegistrationKey> ServiceWorkerRegistrationKey::fromDatabaseKey(const String& key)
 {
     auto first = key.find(separatorCharacter, 0);
-    auto second = key.find(separatorCharacter, first + 1);
-    auto third = key.find(separatorCharacter, second + 1);
+    if (first == notFound)
+        return std::nullopt;
 
-    if (first == second || second == third)
+    auto second = key.find(separatorCharacter, first + 1);
+    if (second == notFound)
+        return std::nullopt;
+
+    auto third = key.find(separatorCharacter, second + 1);
+    if (third == notFound)
         return std::nullopt;
 
     std::optional<uint16_t> shortPort;
