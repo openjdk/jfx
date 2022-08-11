@@ -74,7 +74,7 @@ public interface Skin<C extends Skinnable> {
     public Node getNode();
 
     /**
-     * Called by {@link Control#setSkin(Skin)} on a pristine control, or after the
+     * Called by {@link Skinnable#setSkin(Skin)} on a pristine control, or after the
      * previous skin has been uninstalled via its {@link #dispose()} method.
      * This method allows a Skin to register listeners, add child nodes, set
      * required properties and/or event handlers.
