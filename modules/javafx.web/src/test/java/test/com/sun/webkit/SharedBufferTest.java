@@ -45,7 +45,7 @@ import static org.junit.Assert.fail;
 @Ignore("JDK-8290292")
 public class SharedBufferTest {
 
-    private static final int SEGMENT_SIZE = 0x10;
+    private static final int SEGMENT_SIZE = 0x1000;
     private static final Random random = new Random();
 
 
@@ -76,9 +76,9 @@ public class SharedBufferTest {
             10,
             100,
             1000,
-            //SEGMENT_SIZE,
-            //SEGMENT_SIZE * 2,
-            //SEGMENT_SIZE * 10,
+            SEGMENT_SIZE,
+            SEGMENT_SIZE * 2,
+            SEGMENT_SIZE * 10,
         };
         int expected = 0;
         assertEquals(expected, SharedBufferShim.size(sb));

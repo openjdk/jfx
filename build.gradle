@@ -3448,7 +3448,8 @@ project(":web") {
 
     dependencies {
         if (IS_COMPILE_WEBKIT) {
-            icu name: "icu4c-${icuVersion}-data-bin-l", ext: "zip"
+            def icuFileVersion = icuVersion.replaceAll('\\.', '_')
+            icu name: "icu4c-${icuFileVersion}-data-bin-l", ext: "zip"
         }
         implementation project(":base")
         implementation project(":graphics")
