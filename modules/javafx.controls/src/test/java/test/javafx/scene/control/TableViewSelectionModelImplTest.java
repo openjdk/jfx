@@ -955,7 +955,6 @@ public class TableViewSelectionModelImplTest {
     private void assertRowSelectionAfterSelectAndHideColumn(TableView<Person> table, int row, int col) {
         TableViewSelectionModel<Person> sm = table.getSelectionModel();
         TableColumn<Person, ?> column = table.getColumns().get(col);
-        TablePosition<Person, ?> pos = new TablePosition<>(table, row, column);
 
         sm.select(row, column);
         assertTrue("sanity: row " + row + "contained in selectedIndices", sm.getSelectedIndices().contains(row));

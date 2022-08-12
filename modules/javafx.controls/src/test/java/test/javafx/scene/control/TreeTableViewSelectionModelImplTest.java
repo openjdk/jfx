@@ -25,22 +25,25 @@
 
 package test.javafx.scene.control;
 
-import com.sun.javafx.tk.Toolkit;
-import javafx.beans.property.ReadOnlyObjectWrapper;
-import javafx.beans.property.ReadOnlyStringWrapper;
-import javafx.beans.property.SimpleStringProperty;
-import javafx.beans.value.ObservableValue;
-import javafx.collections.ListChangeListener;
-import javafx.scene.control.TreeTableView.TreeTableViewSelectionModel;
-import javafx.util.Callback;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+
+import java.util.Arrays;
+import java.util.Collection;
+
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runners.Parameterized.Parameters;
 
-import java.util.Arrays;
-import java.util.Collection;
+import com.sun.javafx.tk.Toolkit;
+
+import javafx.beans.property.ReadOnlyStringWrapper;
+import javafx.beans.value.ObservableValue;
+import javafx.collections.ListChangeListener;
 import javafx.scene.control.MultipleSelectionModel;
 import javafx.scene.control.MultipleSelectionModelShim;
 import javafx.scene.control.SelectionMode;
@@ -48,9 +51,11 @@ import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeTableColumn;
 import javafx.scene.control.TreeTablePosition;
 import javafx.scene.control.TreeTableView;
+import javafx.scene.control.TreeTableView.TreeTableViewSelectionModel;
 import javafx.scene.control.TreeTableViewShim;
-
-import static org.junit.Assert.*;
+import javafx.scene.control.cell.TreeItemPropertyValueFactory;
+import javafx.util.Callback;
+import test.com.sun.javafx.scene.control.test.Person;
 
 /**
  * Unit tests that are specific for the TreeTableViewSelectionModel API. Other tests
@@ -996,5 +1001,99 @@ public class TreeTableViewSelectionModelImplTest {
         model.getSelectedItems().addListener(listener);
         model.clearSelection(2);
         model.getSelectedItems().removeListener(listener);
+    }
+
+    /**
+     * Analysing failing tests when fixing JDK-8219720.
+     *
+     * Suspect: isSelected(int row) violates contract.
+     *
+     * @see #selectRowWhenInSingleCellSelectionMode()
+     * @see #selectRowWhenInSingleCellSelectionMode2()
+     */
+    @Test
+    public void testSelectRowWhenInSingleCellSelectionModeIsSelected() {
+        model.setSelectionMode(SelectionMode.SINGLE);
+        model.setCellSelectionEnabled(true);
+        model.select(3);
+        // test against contract
+        assertEquals("selected index", 3, model.getSelectedIndex());
+        assertTrue("contained in selected indices", model.getSelectedIndices().contains(3));
+        // test against spec
+        assertEquals("is selected index", model.getSelectedIndices().contains(3), model.isSelected(3));
+    }
+
+    @Test
+    public void testRowSelectionAfterSelectAndHideLastColumnMultipleCellEnabled() {
+        assertRowSelectionAfterSelectAndHideLastColumn(SelectionMode.MULTIPLE, true);
+    }
+
+    @Test
+    public void testRowSelectionAfterSelectAndHideLastColumnMultipleNotCellEnabled() {
+        assertRowSelectionAfterSelectAndHideLastColumn(SelectionMode.MULTIPLE, false);
+    }
+
+    @Test
+    public void testRowSelectionAfterSelectAndHideLastColumnSingleCellEnabled() {
+        assertRowSelectionAfterSelectAndHideLastColumn(SelectionMode.SINGLE, true);
+    }
+
+    @Test
+    public void testRowSelectionAfterSelectAndHideLastColumnSingleNotCellEnabled() {
+        assertRowSelectionAfterSelectAndHideLastColumn(SelectionMode.SINGLE, false);
+    }
+
+    public void assertRowSelectionAfterSelectAndHideLastColumn(SelectionMode mode, boolean cellEnabled) {
+        TreeTableView<Person> table = createPersonTreeTableView();
+
+        TreeTableViewSelectionModel<Person> sm = table.getSelectionModel();
+        sm.setCellSelectionEnabled(cellEnabled);
+        sm.setSelectionMode(mode);
+        int row = 1;
+        int col = table.getColumns().size() - 1;
+        assertRowSelectionAfterSelectAndHideColumn(table, row, col);
+    }
+
+    private void assertRowSelectionAfterSelectAndHideColumn(TreeTableView<Person> table, int row, int col) {
+        TreeTableViewSelectionModel<Person> sm = table.getSelectionModel();
+        TreeTableColumn<Person, ?> column = table.getColumns().get(col);
+
+        sm.select(row, column);
+        assertTrue("sanity: row " + row + "contained in selectedIndices", sm.getSelectedIndices().contains(row));
+        assertTrue("sanity: row must be selected" , sm.isSelected(row));
+        column.setVisible(false);
+        assertTrue("after hiding column: row " + row + "contained in selectedIndices", sm.getSelectedIndices().contains(row));
+        assertTrue("after hiding column: row must be selected" , sm.isSelected(row));
+    }
+
+    /**
+     * Creates and returns a TreeTableView with Persons and columns for all their properties.
+     */
+    private TreeTableView<Person> createPersonTreeTableView() {
+        TreeItem<Person> root = new TreeItem<>();
+        root.setExpanded(true);
+        root.getChildren().addAll(
+            new TreeItem<Person>(new Person("Jacob", "Smith", "jacob.smith@example.com")),
+            new TreeItem<Person>(new Person("Isabella", "Johnson", "isabella.johnson@example.com")),
+            new TreeItem<Person>(new Person("Ethan", "Williams", "ethan.williams@example.com")),
+            new TreeItem<Person>(new Person("Emma", "Jones", "emma.jones@example.com")),
+            new TreeItem<Person>(new Person("Michael", "Brown", "michael.brown@example.com"))
+        );
+
+        TreeTableView<Person> table = new TreeTableView<>();
+        table.setRoot(root);
+
+        TreeTableColumn<Person, String> firstNameCol = new TreeTableColumn("First Name");
+        firstNameCol.setCellValueFactory(new TreeItemPropertyValueFactory<Person, String>("firstName"));
+
+        TreeTableColumn<Person, String> lastNameCol = new TreeTableColumn("Last Name");
+        lastNameCol.setCellValueFactory(new TreeItemPropertyValueFactory<Person, String>("lastName"));
+
+        TreeTableColumn<Person, String> emailCol = new TreeTableColumn("Email");
+        emailCol.setCellValueFactory(new TreeItemPropertyValueFactory<Person, String>("email"));
+
+        table.getColumns().addAll(firstNameCol, lastNameCol, emailCol);
+
+        return table;
     }
 }
