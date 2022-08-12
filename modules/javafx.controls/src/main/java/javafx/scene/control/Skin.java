@@ -33,7 +33,7 @@ import javafx.scene.Node;
  * A user interface control is abstracted behind the {@link Skinnable} interface.
  * <p>
  * A Skin implementation should generally avoid modifying its control outside of
- * {@link #install()} method.  The recommended life cycle of a Skin implementation
+ * {@link #install()} method.  The life cycle of a Skin implementation
  * is as follows:
  * <ul>
  * <li>instantiation
@@ -74,10 +74,12 @@ public interface Skin<C extends Skinnable> {
     public Node getNode();
 
     /**
-     * Called by {@link Skinnable#setSkin(Skin)} on a pristine control, or after the
-     * previous skin has been uninstalled via its {@link #dispose()} method.
+     * Called by {@link Skinnable#setSkin(Skin)} after the
+     * previous skin, if any, has been uninstalled via its {@link #dispose()} method.
      * This method allows a Skin to register listeners, add child nodes, set
      * required properties and/or event handlers.
+     * <p>
+     * The default implementation of this method does nothing.
      */
     default public void install() { }
 

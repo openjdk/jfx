@@ -59,7 +59,7 @@ public interface Skinnable {
      * and may throw an {@code IllegalArgumentException} if it is not the same.
      *
      * @param value the skin value for this Skinnable
-     * @throws IllegalArgumentException if {@code Skin} does not correspond to this {@code Skinnable}
+     * @throws IllegalArgumentException if {@link Skin#getSkinnable()} returns a different {@code Skinnable}
      */
     public void setSkin(Skin<?> value);
 
