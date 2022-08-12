@@ -167,6 +167,7 @@ void D3DMeshView::render() {
         lightsAttenuation[a++] = light.attenuation[1];
         lightsAttenuation[a++] = light.attenuation[2];
         lightsAttenuation[a++] = light.attenuation[3];
+        cout << "on " << light.attenuation[3] << endl;
 
         lightsRange[r++] = light.maxRange;
         lightsRange[r++] = 0;
@@ -224,13 +225,13 @@ void D3DMeshView::render() {
 
     status = SUCCEEDED(device->SetPixelShaderConstantF(PSR_MAT_DIFFUSE_COLOR, material->getDiffuseColor(), 1));
     if (!status) {
-        cout << "D3DMeshView.render() - SetPixelShaderConstantF (PSR_DIFFUSECOLOR) failed !!!" << endl;
+        cout << "D3DMeshView.render() - SetPixelShaderConstantF (PSR_MAT_DIFFUSE_COLOR) failed !!!" << endl;
         return;
     }
 
     status = SUCCEEDED(device->SetPixelShaderConstantF(PSR_MAT_SPECULAR_COLOR, material->getSpecularColor(), 1));
     if (!status) {
-        cout << "D3DMeshView.render() - SetPixelShaderConstantF (PSR_SPECULARCOLOR) failed !!!" << endl;
+        cout << "D3DMeshView.render() - SetPixelShaderConstantF (PSR_MAT_SPECULAR_COLOR) failed !!!" << endl;
         return;
     }
 
@@ -242,7 +243,7 @@ void D3DMeshView::render() {
 
     status = SUCCEEDED(device->SetPixelShaderConstantF(PSR_LIGHT_COLOR, lightsColor, MAX_NUM_LIGHTS));
     if (!status) {
-        cout << "D3DMeshView.render() - SetPixelShaderConstantF(PSR_LIGHTCOLOR) failed !!!" << endl;
+        cout << "D3DMeshView.render() - SetPixelShaderConstantF(PSR_LIGHT_COLOR) failed !!!" << endl;
         return;
     }
 

@@ -53,7 +53,7 @@ float3 getLocalVector(float3 global, float3 N[3]) {
     return float3(dot(global, N[1]), dot(global, N[2]), dot(global, N[0]));
 }
 
-void calcLocalBump(float4 modelVertexPos, float4 modelVertexNormal, out PsInput psInput) {
+void transformVertexAttributes(float4 modelVertexPos, float4 modelVertexNormal, out PsInput psInput) {
     float3 worldVertexPos = mul(modelVertexPos, mWorld);
 
 //  needed for pixel lighting

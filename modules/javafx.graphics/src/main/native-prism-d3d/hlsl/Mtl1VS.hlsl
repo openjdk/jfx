@@ -32,7 +32,7 @@
 VsOutput main(VsInput vsInput) {
     VsOutput vsOutput;
 
-    calcLocalBump(vsInput.modelVertexPos, vsInput.modelVertexNormal, vsOutput.psInput);
+    transformVertexAttributes(vsInput.modelVertexPos, vsInput.modelVertexNormal, vsOutput.psInput);
 
 //    vsOutput.objAttr.texD = transformTexture(vsInput.texD);
     vsOutput.texD = vsInput.texD;
