@@ -49,7 +49,7 @@ import java.util.Arrays;
  */
 public final class DualPivotQuicksort20191112Ext {
 
-    private static final boolean FAST_ISORT = false;
+    private static final boolean FAST_ISORT = true;
 
     /*
     From OpenJDK14 source code:
@@ -108,8 +108,11 @@ public final class DualPivotQuicksort20191112Ext {
     /**
      * Sorts the specified range of the array.
      *
+     * @param sorter sorter context
      * @param a the array to be sorted
-     * @param b the permutation array to be handled
+     * @param auxA auxiliary storage for the array to be sorted
+     * @param b the secondary array to be ordered
+     * @param auxB auxiliary storage for the permutation array to be handled
      * @param low the index of the first element, inclusive, to be sorted
      * @param high the index of the last element, exclusive, to be sorted
      */
@@ -117,7 +120,7 @@ public final class DualPivotQuicksort20191112Ext {
         /*
          * LBO Shortcut: Invoke insertion sort on the leftmost part.
          */
-        if (FAST_ISORT && ((high - low) <= 24)) {
+        if (FAST_ISORT && ((high - low) <= MAX_INSERTION_SORT_SIZE)) {
             insertionSort(a, b, low, high);
             return;
         }
@@ -130,8 +133,9 @@ public final class DualPivotQuicksort20191112Ext {
      * Sorts the specified array using the Dual-Pivot Quicksort and/or
      * other sorts in special-cases, possibly with parallel partitions.
      *
-     * @param sorter parallel context
+     * @param sorter sorter context
      * @param a the array to be sorted
+     * @param b the secondary array to be ordered
      * @param bits the combination of recursion depth and bit flag, where
      *        the right bit "0" indicates that array is the leftmost part
      * @param low the index of the first element, inclusive, to be sorted
@@ -425,6 +429,7 @@ public final class DualPivotQuicksort20191112Ext {
      * iteration unless it is the leftmost call.
      *
      * @param a the array to be sorted
+     * @param b the secondary array to be ordered
      * @param low the index of the first element, inclusive, to be sorted
      * @param end the index of the last element for simple insertion sort
      * @param high the index of the last element, exclusive, to be sorted
@@ -562,6 +567,7 @@ public final class DualPivotQuicksort20191112Ext {
      * Sorts the specified range of the array using insertion sort.
      *
      * @param a the array to be sorted
+     * @param b the secondary array to be ordered
      * @param low the index of the first element, inclusive, to be sorted
      * @param high the index of the last element, exclusive, to be sorted
      */
@@ -586,6 +592,7 @@ public final class DualPivotQuicksort20191112Ext {
      * Sorts the specified range of the array using heap sort.
      *
      * @param a the array to be sorted
+     * @param b the secondary array to be ordered
      * @param low the index of the first element, inclusive, to be sorted
      * @param high the index of the last element, exclusive, to be sorted
      */
@@ -605,9 +612,11 @@ public final class DualPivotQuicksort20191112Ext {
     /**
      * Pushes specified element down during heap sort.
      *
-     * @param a the given array
+     * @param a the array to be sorted
+     * @param b the secondary array to be ordered
      * @param p the start index
-     * @param valueA the given element
+     * @param valueA the given element in a
+     * @param valueB the given element in b
      * @param low the index of the first element, inclusive, to be sorted
      * @param high the index of the last element, exclusive, to be sorted
      */
@@ -632,8 +641,9 @@ public final class DualPivotQuicksort20191112Ext {
     /**
      * Tries to sort the specified range of the array.
      *
-     * @param sorter parallel context
+     * @param sorter sorter context
      * @param a the array to be sorted
+     * @param b the secondary array to be ordered
      * @param low the index of the first element to be sorted
      * @param size the array size
      * @return true if finally sorted, false otherwise
@@ -767,9 +777,11 @@ public final class DualPivotQuicksort20191112Ext {
     /**
      * Merges the specified runs.
      *
-     * @param srcA the source array
-     * @param dstA the temporary buffer used in merging
+     * @param srcA the source array for the array to be sorted (a)
+     * @param dstA the temporary buffer used in merging (a)
+     * @param srcB the source array for the secondary array to be ordered (b)
      * @param offset the start index in the source, inclusive
+     * @param dstB the temporary buffer used in merging (b)
      * @param aim specifies merging: to source ( > 0), buffer ( < 0) or any ( == 0)
      * @param run the start indexes of the runs, inclusive
      * @param lo the start index of the first run, inclusive
@@ -823,12 +835,15 @@ public final class DualPivotQuicksort20191112Ext {
     /**
      * Merges the sorted parts.
      *
-     * @param dstA the destination where parts are merged
+     * @param dstA the destination where parts are merged (a)
+     * @param dstB the destination where parts are merged (b)
      * @param k the start index of the destination, inclusive
-     * @param a1 the first part
+     * @param a1 the first part (a)
+     * @param b1 the first part (b)
      * @param lo1 the start index of the first part, inclusive
      * @param hi1 the end index of the first part, exclusive
-     * @param a2 the second part
+     * @param a2 the second part (a)
+     * @param b2 the second part (b)
      * @param lo2 the start index of the second part, inclusive
      * @param hi2 the end index of the second part, exclusive
      */

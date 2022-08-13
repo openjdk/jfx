@@ -974,18 +974,12 @@ NbPixels [All Test setups][n: 30] sum: 232 avg: 7.733 [1 | 27]
     }
 
     @BeforeClass
-    public static void setupOnce() {
+    public static void setupOnce() throws Exception {
         // Start the Application
         new Thread(() -> Application.launch(MyApp.class, (String[]) null)).start();
 
-        try {
-            assertTrue("Timeout waiting for Application to launch",
-                    launchLatch.await(TIMEOUT, TimeUnit.MILLISECONDS));
-        } catch (InterruptedException ex) {
-            AssertionFailedError err = new AssertionFailedError("Unexpected exception");
-            err.initCause(ex);
-            throw err;
-        }
+        assertTrue("Timeout waiting for Application to launch",
+                launchLatch.await(TIMEOUT, TimeUnit.MILLISECONDS));
 
         assertEquals(0, launchLatch.getCount());
     }
