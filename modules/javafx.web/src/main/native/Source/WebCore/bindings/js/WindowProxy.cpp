@@ -53,7 +53,7 @@ static void collectGarbageAfterWindowProxyDestruction()
 }
 
 WindowProxy::WindowProxy(AbstractFrame& frame)
-    : m_frame(makeWeakPtr(frame))
+    : m_frame(frame)
     , m_jsWindowProxies(makeUniqueRef<ProxyMap>())
 {
 }
@@ -188,7 +188,7 @@ void WindowProxy::setDOMWindow(AbstractDOMWindow* newDOMWindow)
         windowProxy->attachDebugger(page ? page->debugger() : nullptr);
         if (page)
             windowProxy->window()->setProfileGroup(page->group().identifier());
-        windowProxy->window()->setConsoleClient(page ? makeWeakPtr(page->console()) : nullptr);
+        windowProxy->window()->setConsoleClient(page->console());
     }
 }
 
@@ -217,5 +217,12 @@ void WindowProxy::setJSWindowProxies(ProxyMap&& windowProxies)
 {
     m_jsWindowProxies = makeUniqueRef<ProxyMap>(WTFMove(windowProxies));
 }
+
+#if PLATFORM(JAVA)
+void WindowProxy::set_existing_window_proxy(bool existingWindowProxy_, DOMWrapperWorld& world) {
+    VM& vm = world.vm();
+    vm.set_existing_window_proxy(existingWindowProxy_);
+}
+#endif
 
 } // namespace WebCore

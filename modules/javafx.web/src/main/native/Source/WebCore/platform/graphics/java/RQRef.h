@@ -36,7 +36,7 @@ class RQRef : public RefCounted<RQRef> {
 public:
     inline static RefPtr<RQRef> create(const JLObject &obj)
     {
-        return obj ? adoptRef(new RQRef(obj)) : 0;
+        return obj ? adoptRef(new RQRef(obj)) : nullptr;
     }
     operator jint();
     operator jobject() {return m_ref;}

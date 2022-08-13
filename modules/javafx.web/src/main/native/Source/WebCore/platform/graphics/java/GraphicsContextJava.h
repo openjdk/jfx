@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -90,11 +90,11 @@ public:
     void drawFocusRing(const Path&, float width, float offset, const Color&) override;
     void drawFocusRing(const Vector<FloatRect>& rects, float width, float offset, const Color& color) override;
     void drawLinesForText(const FloatPoint& origin, float thickness, const DashArray& widths, bool printing, bool, StrokeStyle) override;
-    void drawLineForText(const FloatRect& rect, bool printing, bool doubleLines, StrokeStyle stroke) override;
+    void drawLineForText(const FloatRect& rect, bool printing, bool doubleLines, StrokeStyle stroke);
     void drawDotsForDocumentMarker(const FloatRect& rect, DocumentMarkerLineStyle style) override;
     void drawPlatformImage(const PlatformImagePtr& image, const FloatSize&, const FloatRect& destRect, const FloatRect& srcRect,
                             const ImagePaintingOptions& options); //-> Seems like renamed now to drawNativeImage
-    void drawPlatformPattern(const PlatformImagePtr& image, const FloatSize&, const FloatRect& destRect, const FloatRect& tileRect,
+    void drawPlatformPattern(const PlatformImagePtr& image, const FloatRect& destRect, const FloatRect& tileRect,
                                 const AffineTransform& patternTransform, const FloatPoint& phase, const FloatSize&, const ImagePaintingOptions&);
                                 // > Seems like renamed to drawPattern
 
@@ -147,13 +147,16 @@ public:
 
     PlatformGraphicsContext* m_platformContext;
 
-    void updateState(const GraphicsContextState&, GraphicsContextState::StateChangeFlags) override;
+    void didUpdateState(const GraphicsContextState&, GraphicsContextState::StateChangeFlags) override;
     void fillRoundedRectImpl(const FloatRoundedRect&, const Color&) override;
     void drawNativeImage(NativeImage&, const FloatSize& selfSize, const FloatRect& destRect,
                             const FloatRect& srcRect, const ImagePaintingOptions& = { }) override;
-    void drawPattern(NativeImage&, const FloatSize& imageSize, const FloatRect& destRect, const FloatRect& tileRect,
+    /*void drawPattern(NativeImage&, const FloatSize& imageSize, const FloatRect& destRect, const FloatRect& tileRect,
                             const AffineTransform& patternTransform, const FloatPoint& phase, const FloatSize& spacing,
                             const ImagePaintingOptions& = { }) override;
+    */
+     void drawPattern(NativeImage&, const FloatRect& destRect, const FloatRect& tileRect, const AffineTransform& patternTransform,
+                             const FloatPoint& phase, const FloatSize& spacing, const ImagePaintingOptions& = { }) override;
 };
 
 }

@@ -49,8 +49,8 @@
 #include "AirValidate.h"
 #include "B3Common.h"
 #include "B3Procedure.h"
-#include "B3TimingScope.h"
 #include "CCallHelpers.h"
+#include "CompilerTimingScope.h"
 #include "DisallowMacroScratchRegisterUsage.h"
 #include <wtf/IndexMap.h>
 
@@ -58,10 +58,10 @@ namespace JSC { namespace B3 { namespace Air {
 
 void prepareForGeneration(Code& code)
 {
-    TimingScope timingScope("Air::prepareForGeneration");
+    CompilerTimingScope timingScope("Total Air", "prepareForGeneration");
 
     // If we're doing super verbose dumping, the phase scope of any phase will already do a dump.
-    if (shouldDumpIR(AirMode) && !shouldDumpIRAtEachPhase(AirMode)) {
+    if (shouldDumpIR(code.proc(), AirMode) && !shouldDumpIRAtEachPhase(AirMode)) {
         dataLog(tierName, "Initial air:\n");
         dataLog(code);
     }
@@ -89,7 +89,7 @@ void prepareForGeneration(Code& code)
         if (shouldValidateIR())
             validate(code);
 
-        if (shouldDumpIR(AirMode)) {
+        if (shouldDumpIR(code.proc(), AirMode)) {
             dataLog("Air after ", code.lastPhaseName(), ", before generation:\n");
             dataLog(code);
         }
@@ -183,7 +183,7 @@ void prepareForGeneration(Code& code)
 
     // Do a final dump of Air. Note that we have to do this even if we are doing per-phase dumping,
     // since the final generation is not a phase.
-    if (shouldDumpIR(AirMode)) {
+    if (shouldDumpIR(code.proc(), AirMode)) {
         dataLog("Air after ", code.lastPhaseName(), ", before generation:\n");
         dataLog(code);
     }
@@ -191,7 +191,7 @@ void prepareForGeneration(Code& code)
 
 static void generateWithAlreadyAllocatedRegisters(Code& code, CCallHelpers& jit)
 {
-    TimingScope timingScope("Air::generate");
+    CompilerTimingScope timingScope("Air", "generateWithAlreadyAllocatedRegisters");
 
     DisallowMacroScratchRegisterUsage disallowScratch(jit);
 

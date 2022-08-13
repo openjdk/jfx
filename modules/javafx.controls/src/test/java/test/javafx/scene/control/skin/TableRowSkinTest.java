@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, 2022 Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,7 +28,10 @@ package test.javafx.scene.control.skin;
 import com.sun.javafx.tk.Toolkit;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.geometry.Insets;
+import javafx.scene.control.IndexedCell;
 import javafx.scene.control.TableColumn;
+import javafx.scene.control.TableRow;
 import javafx.scene.control.TableView;
 import javafx.scene.control.cell.PropertyValueFactory;
 import org.junit.After;
@@ -73,6 +76,142 @@ public class TableRowSkinTest {
     }
 
     @Test
+    public void tableRowShouldHonorPadding() {
+        int top = 10;
+        int right = 20;
+        int bottom = 30;
+        int left = 40;
+
+        int horizontalPadding = left + right;
+        int verticalPadding = top + bottom;
+
+        IndexedCell cell = VirtualFlowTestUtils.getCell(tableView, 0);
+
+        double minWidth = cell.minWidth(-1);
+        double prefWidth = cell.prefWidth(-1);
+        double maxWidth = cell.maxWidth(-1);
+        double width = cell.getWidth();
+
+        double minHeight = cell.minHeight(-1);
+        double prefHeight = cell.prefHeight(-1);
+        double maxHeight = cell.maxHeight(-1);
+        double height = cell.getHeight();
+
+        tableView.setRowFactory(tableView -> {
+            TableRow<Person> row = new TableRow<>();
+            row.setPadding(new Insets(top, right, bottom, left));
+            return row;
+        });
+
+        tableView.refresh();
+        Toolkit.getToolkit().firePulse();
+
+        cell = VirtualFlowTestUtils.getCell(tableView, 0);
+
+        assertEquals(minWidth + horizontalPadding, cell.minWidth(-1), 0);
+        assertEquals(prefWidth + horizontalPadding, cell.prefWidth(-1), 0);
+        assertEquals(maxWidth + horizontalPadding, cell.maxWidth(-1), 0);
+        assertEquals(width + horizontalPadding, cell.getWidth(), 0);
+
+        assertEquals(minHeight + verticalPadding, cell.minHeight(-1), 0);
+        assertEquals(prefHeight + verticalPadding, cell.prefHeight(-1), 0);
+        assertEquals(maxHeight + verticalPadding, cell.maxHeight(-1), 0);
+        assertEquals(height + verticalPadding, cell.getHeight(), 0);
+    }
+
+    @Test
+    public void tableRowWithCellSizeShouldHonorPadding() {
+        int top = 10;
+        int right = 20;
+        int bottom = 30;
+        int left = 40;
+
+        int horizontalPadding = left + right;
+        int verticalPadding = top + bottom;
+        int verticalPaddingWithCellSize = top + bottom + 10;
+
+        IndexedCell cell = VirtualFlowTestUtils.getCell(tableView, 0);
+
+        double minWidth = cell.minWidth(-1);
+        double prefWidth = cell.prefWidth(-1);
+        double maxWidth = cell.maxWidth(-1);
+        double width = cell.getWidth();
+
+        double minHeight = cell.minHeight(-1);
+        double prefHeight = cell.prefHeight(-1);
+        double maxHeight = cell.maxHeight(-1);
+        double height = cell.getHeight();
+
+        tableView.setRowFactory(tableView -> {
+            TableRow<Person> row = new TableRow<>();
+            row.setStyle("-fx-cell-size: 34px");
+            row.setPadding(new Insets(top, right, bottom, left));
+            return row;
+        });
+
+        tableView.refresh();
+        Toolkit.getToolkit().firePulse();
+
+        cell = VirtualFlowTestUtils.getCell(tableView, 0);
+
+        assertEquals(minWidth + horizontalPadding, cell.minWidth(-1), 0);
+        assertEquals(prefWidth + horizontalPadding, cell.prefWidth(-1), 0);
+        assertEquals(maxWidth + horizontalPadding, cell.maxWidth(-1), 0);
+        assertEquals(width + horizontalPadding, cell.getWidth(), 0);
+
+        // minHeight will take the lowest height - which are the cells (24px)
+        assertEquals(minHeight + verticalPadding, cell.minHeight(-1), 0);
+        assertEquals(prefHeight + verticalPaddingWithCellSize, cell.prefHeight(-1), 0);
+        assertEquals(maxHeight + verticalPaddingWithCellSize, cell.maxHeight(-1), 0);
+        assertEquals(height + verticalPaddingWithCellSize, cell.getHeight(), 0);
+    }
+
+    @Test
+    public void tableRowWithFixedSizeShouldIgnoreVerticalPadding() {
+        int top = 10;
+        int right = 20;
+        int bottom = 30;
+        int left = 40;
+
+        int horizontalPadding = left + right;
+
+        tableView.setFixedCellSize(24);
+
+        IndexedCell cell = VirtualFlowTestUtils.getCell(tableView, 0);
+
+        double minWidth = cell.minWidth(-1);
+        double prefWidth = cell.prefWidth(-1);
+        double maxWidth = cell.maxWidth(-1);
+        double width = cell.getWidth();
+
+        double minHeight = cell.minHeight(-1);
+        double prefHeight = cell.prefHeight(-1);
+        double maxHeight = cell.maxHeight(-1);
+        double height = cell.getHeight();
+
+        tableView.setRowFactory(tableView -> {
+            TableRow<Person> row = new TableRow<>();
+            row.setPadding(new Insets(top, right, bottom, left));
+            return row;
+        });
+
+        tableView.refresh();
+        Toolkit.getToolkit().firePulse();
+
+        cell = VirtualFlowTestUtils.getCell(tableView, 0);
+
+        assertEquals(minWidth + horizontalPadding, cell.minWidth(-1), 0);
+        assertEquals(prefWidth + horizontalPadding, cell.prefWidth(-1), 0);
+        assertEquals(maxWidth + horizontalPadding, cell.maxWidth(-1), 0);
+        assertEquals(width + horizontalPadding, cell.getWidth(), 0);
+
+        assertEquals(minHeight, cell.minHeight(-1), 0);
+        assertEquals(prefHeight, cell.prefHeight(-1), 0);
+        assertEquals(maxHeight, cell.maxHeight(-1), 0);
+        assertEquals(height, cell.getHeight(), 0);
+    }
+
+    @Test
     public void removedColumnsShouldRemoveCorrespondingCellsInRowFixedCellSize() {
         tableView.setFixedCellSize(24);
         removedColumnsShouldRemoveCorrespondingCellsInRowImpl();
@@ -113,7 +252,7 @@ public class TableRowSkinTest {
 
     private void removedColumnsShouldRemoveCorrespondingCellsInRowImpl() {
         // Remove the last 2 columns.
-        tableView.getColumns().remove(tableView.getColumns().size() - 1, tableView.getColumns().size());
+        tableView.getColumns().remove(tableView.getColumns().size() - 2, tableView.getColumns().size());
 
         Toolkit.getToolkit().firePulse();
 

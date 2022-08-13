@@ -33,7 +33,6 @@
 #include "DeclarativeAnimation.h"
 #include "Element.h"
 #include "KeyframeEffectStack.h"
-#include "PseudoElement.h"
 #include "WebAnimation.h"
 
 namespace WebCore {
@@ -115,7 +114,7 @@ static bool compareCSSTransitions(const CSSTransition& a, const CSSTransition& b
 
 static bool compareCSSAnimations(const CSSAnimation& a, const CSSAnimation& b)
 {
-            // https://drafts.csswg.org/css-animations-2/#animation-composite-order
+    // https://drafts.csswg.org/css-animations-2/#animation-composite-order
     ASSERT(a.owningElement());
     ASSERT(b.owningElement());
     auto& aOwningElement = a.owningElement();
@@ -132,15 +131,14 @@ static bool compareCSSAnimations(const CSSAnimation& a, const CSSAnimation& b)
 
     auto& aBackingAnimation = a.backingAnimation();
     auto& bBackingAnimation = b.backingAnimation();
-            for (size_t i = 0; i < cssAnimationList->size(); ++i) {
-                auto& animation = cssAnimationList->animation(i);
-        if (animation == aBackingAnimation)
-                    return true;
-        if (animation == bBackingAnimation)
-                    return false;
-            }
+    for (auto& animation : *cssAnimationList) {
+        if (animation.ptr() == &aBackingAnimation)
+            return true;
+        if (animation.ptr() == &bBackingAnimation)
+            return false;
+    }
 
-            // We should have found either of those CSS animations in the CSS animations list.
+    // We should have found either of those CSS animations in the CSS animations list.
     RELEASE_ASSERT_NOT_REACHED();
 }
 
@@ -161,7 +159,7 @@ bool compareAnimationsByCompositeOrder(const WebAnimation& a, const WebAnimation
         if (aIsCSSTransition == bIsCSSTransition)
             return compareCSSTransitions(downcast<CSSTransition>(a), downcast<CSSTransition>(b));
         return !bIsCSSTransition;
-        }
+    }
 
     // CSS Animations sort next.
     bool aIsCSSAnimation = aHasOwningElement && is<CSSAnimation>(a);

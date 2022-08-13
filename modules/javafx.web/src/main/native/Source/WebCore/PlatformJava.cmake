@@ -82,6 +82,7 @@ add_definitions(-DSTATICALLY_LINKED_WITH_WTF)
 list(APPEND WebCore_PRIVATE_FRAMEWORK_HEADERS
     bindings/java/JavaDOMUtils.h
     bindings/java/JavaEventListener.h
+    bindings/java/EventListenerManager.h
     bindings/java/JavaNodeFilterCondition.h
     bridge/jni/jsc/BridgeUtils.h
     dom/DOMStringList.h

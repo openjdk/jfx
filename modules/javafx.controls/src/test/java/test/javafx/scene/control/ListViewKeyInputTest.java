@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1834,6 +1834,7 @@ public class ListViewKeyInputTest {
         sl.dispose();
     }
 
+    @Ignore("JDK-8289909") // there is no guarantee that there will be 8 selected items (can be 7 as well)
     @Test public void test_rt34407_up_up_down() {
         final int items = 100;
         listView.getItems().clear();

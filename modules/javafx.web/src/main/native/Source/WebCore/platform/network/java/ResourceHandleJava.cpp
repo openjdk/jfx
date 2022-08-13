@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -131,7 +131,7 @@ void ResourceHandle::willSendRequest(const ResourceResponse& response)
     if (!newURL.protocolIs("https") && protocolIs(newRequest.httpReferrer(), "https") && context()->shouldClearReferrerOnHTTPSToHTTPRedirect())
         newRequest.clearHTTPReferrer();
 
-    client()->willSendRequestAsync(this, WTFMove(newRequest), ResourceResponse(response), [this, protectedThis = makeRef(*this)] (ResourceRequest&& request) {
+    client()->willSendRequestAsync(this, WTFMove(newRequest), ResourceResponse(response), [this, protectedThis = Ref(*this)] (ResourceRequest&& request) {
         continueAfterWillSendRequest(WTFMove(request));
     });
 }
@@ -182,7 +182,7 @@ void ResourceHandle::receivedRequestToContinueWithoutCredential(const Authentica
 
 void ResourceHandle::receivedCancellation(const AuthenticationChallenge& challenge)
 {
-    if (challenge != d->m_currentWebChallenge)
+    if (!AuthenticationChallengeBase::equalForWebKitLegacyChallengeComparison(challenge, d->m_currentWebChallenge))
         return;
 
     if (client())
