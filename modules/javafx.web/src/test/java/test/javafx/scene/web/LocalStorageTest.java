@@ -40,7 +40,7 @@ import javafx.scene.web.WebEngine;
 
 public class LocalStorageTest extends TestBase {
 
-    private static final File LOCAL_STORAGE_DIR = new File("LocalStorageDir");
+    private static final File LOCAL_STORAGE_DIR = new File("build/LocalStorageDir");
 
     private static void deleteRecursively(File file) throws IOException {
         if (file.isDirectory()) {
