@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -145,7 +145,7 @@ public class TableCellStartEditTest {
 
         if (tableCell instanceof CheckBoxTableCell) {
             assertNotNull(tableCell.getGraphic());
-            // Ignored until https://bugs.openjdk.java.net/browse/JDK-8270042 is resolved.
+            // Ignored until https://bugs.openjdk.org/browse/JDK-8270042 is resolved.
             // Check if the checkbox is disabled when not editable.
             // assertEquals(expectedEditingState, !tableCell.getGraphic().isDisabled());
         } else if (tableCell instanceof ProgressBarTableCell) {

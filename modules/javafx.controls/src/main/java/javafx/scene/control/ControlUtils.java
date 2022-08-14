@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -216,5 +216,34 @@ class ControlUtils {
         }
 
         sm.selectedIndices._endChange();
+    }
+
+    public static <S> int getIndexOfChildWithDescendant(TreeItem<S> parent, TreeItem<S> item) {
+        if (item == null || parent == null) {
+            return -1;
+        }
+        TreeItem<S> child = item, ancestor = item.getParent();
+        while (ancestor != null) {
+            if (ancestor == parent) {
+                return parent.getChildren().indexOf(child);
+            }
+            child = ancestor;
+            ancestor = child.getParent();
+        }
+        return -1;
+    }
+
+    public static <S> boolean isTreeItemIncludingAncestorsExpanded(TreeItem<S> item) {
+        if (item == null || !item.isExpanded()) {
+            return false;
+        }
+        TreeItem<S> ancestor = item.getParent();
+        while (ancestor != null) {
+            if (!ancestor.isExpanded()) {
+                return false;
+            }
+            ancestor = ancestor.getParent();
+        }
+        return true;
     }
 }

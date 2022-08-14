@@ -23,20 +23,20 @@ extern "C" {
 #endif /* __cplusplus */
 
 
-#define G_MODULE_IMPL_NONE  0
-#define G_MODULE_IMPL_DL    1
-#define G_MODULE_IMPL_WIN32 3
-#define G_MODULE_IMPL_AR    7
+#define G_MODULE_IMPL_NONE      0
+#define G_MODULE_IMPL_DL        1
+#define G_MODULE_IMPL_WIN32     3
+#define G_MODULE_IMPL_AR        7
 
-#define G_MODULE_IMPL       G_MODULE_IMPL_DL
+#define G_MODULE_IMPL           G_MODULE_IMPL_DL
 #undef  G_MODULE_HAVE_DLERROR
-#if (1)
+#if     (1)
 #define G_MODULE_HAVE_DLERROR
 #endif
-#if (0)
+#if     (0)
 #define G_MODULE_NEED_USCORE
 #endif
-#if (0)
+#if     (0)
 #define G_MODULE_BROKEN_RTLD_GLOBAL
 #endif
 

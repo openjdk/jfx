@@ -26,6 +26,36 @@
 
 G_BEGIN_DECLS
 
+/**
+ * GstPbUtilsCapsDescriptionFlags:
+ * @GST_PBUTILS_CAPS_DESCRIPTION_FLAG_CONTAINER: Caps describe a container format.
+ * @GST_PBUTILS_CAPS_DESCRIPTION_FLAG_AUDIO: Caps describe an audio format, or a
+ *     container format that can store audio.
+ * @GST_PBUTILS_CAPS_DESCRIPTION_FLAG_VIDEO: Caps describe an video format, or a
+ *     container format that can store video.
+ * @GST_PBUTILS_CAPS_DESCRIPTION_FLAG_IMAGE: Caps describe an image format, or a
+ *     container format that can store image.
+ * @GST_PBUTILS_CAPS_DESCRIPTION_FLAG_SUBTITLE: Caps describe an subtitle format, or a
+ *     container format that can store subtitles.
+ * @GST_PBUTILS_CAPS_DESCRIPTION_FLAG_TAG: Container format is a tags container.
+ * @GST_PBUTILS_CAPS_DESCRIPTION_FLAG_GENERIC: Container format can store any kind of
+ *     stream type.
+ *
+ * Flags that are returned by gst_pb_utils_get_caps_description_flags() and
+ * describe the format of the caps.
+ *
+ * Since: 1.20
+ */
+typedef enum {
+  GST_PBUTILS_CAPS_DESCRIPTION_FLAG_CONTAINER = 1 << 0,
+  GST_PBUTILS_CAPS_DESCRIPTION_FLAG_AUDIO     = 1 << 1,
+  GST_PBUTILS_CAPS_DESCRIPTION_FLAG_VIDEO     = 1 << 2,
+  GST_PBUTILS_CAPS_DESCRIPTION_FLAG_IMAGE     = 1 << 3,
+  GST_PBUTILS_CAPS_DESCRIPTION_FLAG_SUBTITLE  = 1 << 4,
+  GST_PBUTILS_CAPS_DESCRIPTION_FLAG_TAG       = 1 << 5,
+  GST_PBUTILS_CAPS_DESCRIPTION_FLAG_GENERIC   = 1 << 6,
+} GstPbUtilsCapsDescriptionFlags;
+
 /*
  * functions for use by demuxers or decoders to add CODEC tags to tag lists
  * from caps
@@ -59,6 +89,11 @@ gchar    * gst_pb_utils_get_encoder_description (const GstCaps * caps);
 GST_PBUTILS_API
 gchar    * gst_pb_utils_get_element_description (const gchar * factory_name);
 
+GST_PBUTILS_API
+GstPbUtilsCapsDescriptionFlags gst_pb_utils_get_caps_description_flags (const GstCaps * caps);
+
+GST_PBUTILS_API
+gchar * gst_pb_utils_get_file_extension_from_caps (const GstCaps *caps);
 
 G_END_DECLS
 

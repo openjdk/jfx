@@ -826,6 +826,53 @@ gst_event_parse_gap (GstEvent * event, GstClockTime * timestamp,
       GST_QUARK (DURATION), GST_TYPE_CLOCK_TIME, duration, NULL);
 }
 
+#ifndef GSTREAMER_LITE
+/**
+ * gst_event_set_gap_flags:
+ * @event: a #GstEvent of type #GST_EVENT_GAP
+ * @flags: a #GstGapFlags
+ *
+ * Sets @flags on @event to give additional information about the reason for
+ * the #GST_EVENT_GAP.
+ *
+ * Since: 1.20
+ */
+void
+gst_event_set_gap_flags (GstEvent * event, GstGapFlags flags)
+{
+  g_return_if_fail (event != NULL);
+  g_return_if_fail (GST_EVENT_TYPE (event) == GST_EVENT_GAP);
+  g_return_if_fail (gst_event_is_writable (event));
+
+  gst_structure_id_set (GST_EVENT_STRUCTURE (event),
+      GST_QUARK (GAP_FLAGS), GST_TYPE_GAP_FLAGS, flags, NULL);
+}
+
+/**
+ * gst_event_parse_gap_flags:
+ * @event: a #GstEvent of type #GST_EVENT_GAP
+ * @flags: (out): a #GstGapFlags or %NULL
+ *
+ * Retrieve the gap flags that may have been set on a gap event with
+ * gst_event_set_gap_flags().
+ *
+ * Since: 1.20
+ */
+void
+gst_event_parse_gap_flags (GstEvent * event, GstGapFlags * flags)
+{
+  g_return_if_fail (event != NULL);
+  g_return_if_fail (GST_EVENT_TYPE (event) == GST_EVENT_GAP);
+
+  /* Initialize to 0 for GAP events that don't have the field set */
+  if (flags)
+    *flags = 0;
+
+  gst_structure_id_get (GST_EVENT_STRUCTURE (event),
+      GST_QUARK (GAP_FLAGS), GST_TYPE_GAP_FLAGS, flags, NULL);
+}
+#endif // GSTREAMER_LITE
+
 /**
  * gst_event_new_caps:
  * @caps: (transfer none): a #GstCaps
@@ -1437,6 +1484,9 @@ gst_event_parse_seek_trickmode_interval (GstEvent * event,
   g_return_if_fail (interval != NULL);
   g_return_if_fail (GST_EVENT_TYPE (event) == GST_EVENT_SEEK);
 
+  if (interval)
+    *interval = GST_CLOCK_TIME_NONE;
+
   gst_structure_id_get (GST_EVENT_STRUCTURE (event),
       GST_QUARK (TRICKMODE_INTERVAL), GST_TYPE_CLOCK_TIME, interval, NULL);
 }
@@ -1476,6 +1526,8 @@ gst_event_new_latency (GstClockTime latency)
 {
   GstEvent *event;
   GstStructure *structure;
+
+  g_return_val_if_fail (GST_CLOCK_TIME_IS_VALID (latency), NULL);
 
   GST_CAT_INFO (GST_CAT_EVENT,
       "creating latency event %" GST_TIME_FORMAT, GST_TIME_ARGS (latency));
@@ -1771,10 +1823,10 @@ gst_event_parse_stream (GstEvent * event, GstStream ** stream)
   g_return_if_fail (GST_EVENT_TYPE (event) == GST_EVENT_STREAM_START);
 
   if (stream) {
+    *stream = NULL;
     gst_structure_id_get (GST_EVENT_STRUCTURE (event),
         GST_QUARK (STREAM), GST_TYPE_STREAM, stream, NULL);
   }
-
 }
 
 /**
@@ -1809,6 +1861,7 @@ gst_event_parse_stream_flags (GstEvent * event, GstStreamFlags * flags)
   g_return_if_fail (GST_EVENT_TYPE (event) == GST_EVENT_STREAM_START);
 
   if (flags) {
+    *flags = 0;
     gst_structure_id_get (GST_EVENT_STRUCTURE (event),
         GST_QUARK (FLAGS), GST_TYPE_STREAM_FLAGS, flags, NULL);
   }
@@ -1859,6 +1912,7 @@ gst_event_parse_group_id (GstEvent * event, guint * group_id)
       FALSE);
 
   if (group_id) {
+    *group_id = 0;
     return gst_structure_id_get (GST_EVENT_STRUCTURE (event),
         GST_QUARK (GROUP_ID), G_TYPE_UINT, group_id, NULL);
   }

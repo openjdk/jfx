@@ -81,4 +81,10 @@ void NativeImage::clearSubimages()
     notImplemented();
 }
 
+DestinationColorSpace NativeImage::colorSpace() const //TBD
+{
+    notImplemented();
+    return DestinationColorSpace::SRGB();
+}
+
 }

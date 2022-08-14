@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -120,7 +120,7 @@ public class DragDropWithControlsSwing extends Application {
         new Thread(new Runnable() {
             @Override public void run() {
                 log("Loading image..");
-                image = new Image("http://openjdk.java.net/images/duke-thinking.png");
+                image = new Image("https://openjdk.org/images/duke-thinking.png");
                 log("Ready.");
                 log("");
             }

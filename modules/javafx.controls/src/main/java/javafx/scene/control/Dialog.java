@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -249,7 +249,7 @@ public class Dialog<R> implements EventTarget {
      *
      **************************************************************************/
 
-    final FXDialog dialog;
+    final FXDialog dialog = new HeavyweightDialog(this);
 
     private boolean isClosing;
 
@@ -265,7 +265,6 @@ public class Dialog<R> implements EventTarget {
      * Creates a dialog without a specified owner.
      */
     public Dialog() {
-        this.dialog = new HeavyweightDialog(this);
         setDialogPane(new DialogPane());
         initModality(Modality.APPLICATION_MODAL);
     }

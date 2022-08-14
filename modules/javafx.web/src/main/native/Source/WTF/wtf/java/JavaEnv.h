@@ -30,6 +30,7 @@
 #include <jni.h>
 
 extern JavaVM* jvm;
+extern volatile bool g_ShuttingDown;
 
 #define WC_GETJAVAENV_CHKRET(_env_var, ... /* ret val */)   \
     JNIEnv* _env_var = WTF::GetJavaEnv(); \
@@ -83,13 +84,18 @@ template<bool daemon> class AttachThreadToJavaEnv {
 public:
     AttachThreadToJavaEnv()
     {
-        m_status = jvm->GetEnv((void **)&m_env, JNI_VERSION_1_2);
-        if (m_status == JNI_EDETACHED) {
-            if (daemon) {
-                jvm->AttachCurrentThreadAsDaemon((void **)&m_env, nullptr);
-            } else {
-                jvm->AttachCurrentThread((void **)&m_env, nullptr);
+        if (!g_ShuttingDown) {
+            m_status = jvm->GetEnv((void **)&m_env, JNI_VERSION_1_2);
+            if (m_status == JNI_EDETACHED) {
+                if (daemon) {
+                    jvm->AttachCurrentThreadAsDaemon((void **)&m_env, nullptr);
+                } else {
+                    jvm->AttachCurrentThread((void **)&m_env, nullptr);
+                }
             }
+        } else {
+            m_env = nullptr;
+            m_status = JNI_ERR;
         }
     }
 

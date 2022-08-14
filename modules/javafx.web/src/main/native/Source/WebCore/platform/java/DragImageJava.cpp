@@ -75,7 +75,7 @@ void deleteDragImage(DragImageRef)
 
 DragImageRef createDragImageIconForCachedImageFilename(const String&)
 {
-    return 0;
+    return nullptr;
 }
 
 DragImageRef createDragImageForColor(const Color&, const FloatRect&, float, Path&)

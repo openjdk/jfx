@@ -305,21 +305,26 @@ gst_audio_base_src_get_time (GstClock * clock, GstAudioBaseSrc * src)
   guint64 raw, samples;
   guint delay;
   GstClockTime result;
+  GstAudioRingBuffer *ringbuffer;
+  gint rate;
 
-  if (G_UNLIKELY (src->ringbuffer == NULL
-          || src->ringbuffer->spec.info.rate == 0))
+  ringbuffer = src->ringbuffer;
+  if (!ringbuffer)
     return GST_CLOCK_TIME_NONE;
 
-  raw = samples = gst_audio_ring_buffer_samples_done (src->ringbuffer);
+  rate = ringbuffer->spec.info.rate;
+  if (rate == 0)
+    return GST_CLOCK_TIME_NONE;
+
+  raw = samples = gst_audio_ring_buffer_samples_done (ringbuffer);
 
   /* the number of samples not yet processed, this is still queued in the
    * device (not yet read for capture). */
-  delay = gst_audio_ring_buffer_delay (src->ringbuffer);
+  delay = gst_audio_ring_buffer_delay (ringbuffer);
 
   samples += delay;
 
-  result = gst_util_uint64_scale_int (samples, GST_SECOND,
-      src->ringbuffer->spec.info.rate);
+  result = gst_util_uint64_scale_int (samples, GST_SECOND, rate);
 
   GST_DEBUG_OBJECT (src,
       "processed samples: raw %" G_GUINT64_FORMAT ", delay %u, real %"
@@ -513,7 +518,8 @@ gst_audio_base_src_setcaps (GstBaseSrc * bsrc, GstCaps * caps)
 
   spec = &src->ringbuffer->spec;
 
-  if (G_UNLIKELY (spec->caps && gst_caps_is_equal (spec->caps, caps))) {
+  if (G_UNLIKELY (gst_audio_ring_buffer_is_acquired (src->ringbuffer)
+          && gst_caps_is_equal (spec->caps, caps))) {
     GST_DEBUG_OBJECT (src,
         "Ringbuffer caps haven't changed, skipping reconfiguration");
     return TRUE;
@@ -1026,7 +1032,7 @@ gst_audio_base_src_create (GstBaseSrc * bsrc, guint64 offset, guint length,
 no_sync:
   GST_OBJECT_UNLOCK (src);
 
-  GST_BUFFER_TIMESTAMP (buf) = timestamp;
+  GST_BUFFER_PTS (buf) = timestamp;
   GST_BUFFER_DURATION (buf) = duration;
   GST_BUFFER_OFFSET (buf) = sample;
   GST_BUFFER_OFFSET_END (buf) = sample + samples;
@@ -1034,7 +1040,7 @@ no_sync:
   *outbuf = buf;
 
   GST_LOG_OBJECT (src, "Pushed buffer timestamp %" GST_TIME_FORMAT,
-      GST_TIME_ARGS (GST_BUFFER_TIMESTAMP (buf)));
+      GST_TIME_ARGS (GST_BUFFER_PTS (buf)));
 
   return GST_FLOW_OK;
 

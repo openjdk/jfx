@@ -85,6 +85,7 @@ gst_osx_audio_element_interface_init (GstOsxAudioElementInterface * iface)
 
   if (!initialized) {
     initialized = TRUE;
+    gst_type_mark_as_plugin_api (GST_OSX_AUDIO_ELEMENT_TYPE, 0);
   }
 
   /* default virtual functions */

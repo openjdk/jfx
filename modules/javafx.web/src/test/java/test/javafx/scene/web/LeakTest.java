@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -93,7 +93,6 @@ public class LeakTest extends TestBase {
 
         for (int i = 0; i < 5; i++) {
             System.gc();
-            System.runFinalization();
 
             if (isAllElementsNull(willGC)) {
                 break;
@@ -131,7 +130,6 @@ public class LeakTest extends TestBase {
 
         for (int i = 0; i < 5; i++) {
             System.gc();
-            System.runFinalization();
 
             if (isAllElementsNull(willGC)) {
                 break;
@@ -160,7 +158,6 @@ public class LeakTest extends TestBase {
 
         for (int i = 0; i < 5; i++) {
             System.gc();
-            System.runFinalization();
 
             if (isAllElementsNull(willGC)) {
                 break;
@@ -194,7 +191,6 @@ public class LeakTest extends TestBase {
         assertTrue("Load task completed successfully", getLoadState() == SUCCEEDED);
 
         System.gc();
-        System.runFinalization();
         Thread.sleep(SLEEP_TIME);
 
         // Get the initial NodeImpl hashcount (which is "initialHashCount" below), which
@@ -245,7 +241,6 @@ public class LeakTest extends TestBase {
 
         for (int i = 0; i < 5; i++) {
             System.gc();
-            System.runFinalization();
 
             if (isAllElementsNull(willGC)) {
                 break;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -2344,7 +2344,7 @@ public class TableView<S> extends Control {
             }
 
             TablePosition<S,?> anchor = TableCellBehavior.getAnchor(tableView, null);
-            if (shift != 0 && startRow >= 0 && anchor != null && (c.wasRemoved() || c.wasAdded())) {
+            if (shift != 0 && startRow >= 0 && anchor != null && anchor.getRow() >= startRow && (c.wasRemoved() || c.wasAdded())) {
                 if (isSelected(anchor.getRow(), anchor.getTableColumn())) {
                     TablePosition<S,?> newAnchor = new TablePosition<>(tableView, anchor.getRow() + shift, anchor.getTableColumn());
                     TableCellBehavior.setAnchor(tableView, newAnchor, false);

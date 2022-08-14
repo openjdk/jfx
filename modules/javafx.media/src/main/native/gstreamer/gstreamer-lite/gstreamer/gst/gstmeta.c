@@ -58,14 +58,58 @@ static GRWLock lock;
 GQuark _gst_meta_transform_copy;
 GQuark _gst_meta_tag_memory;
 
+typedef struct
+{
+  GstCustomMeta meta;
+
+  GstStructure *structure;
+} GstCustomMetaImpl;
+
+typedef struct
+{
+  GstMetaInfo info;
+  GstCustomMetaTransformFunction custom_transform_func;
+  gpointer custom_transform_user_data;
+  GDestroyNotify custom_transform_destroy_notify;
+  gboolean is_custom;
+} GstMetaInfoImpl;
+
+static void
+free_info (gpointer data)
+{
+  g_slice_free (GstMetaInfoImpl, data);
+}
+
 void
 _priv_gst_meta_initialize (void)
 {
   g_rw_lock_init (&lock);
-  metainfo = g_hash_table_new (g_str_hash, g_str_equal);
+  metainfo = g_hash_table_new_full (g_str_hash, g_str_equal, NULL, free_info);
 
   _gst_meta_transform_copy = g_quark_from_static_string ("gst-copy");
   _gst_meta_tag_memory = g_quark_from_static_string ("memory");
+}
+
+static gboolean
+notify_custom (gchar * key, GstMetaInfo * info, gpointer unused)
+{
+  GstMetaInfoImpl *impl = (GstMetaInfoImpl *) info;
+
+  if (impl->is_custom) {
+    if (impl->custom_transform_destroy_notify)
+      impl->custom_transform_destroy_notify (impl->custom_transform_user_data);
+  }
+  return TRUE;
+}
+
+void
+_priv_gst_meta_cleanup (void)
+{
+  if (metainfo != NULL) {
+    g_hash_table_foreach_remove (metainfo, (GHRFunc) notify_custom, NULL);
+    g_hash_table_unref (metainfo);
+    metainfo = NULL;
+  }
 }
 
 /**
@@ -102,6 +146,168 @@ gst_meta_api_type_register (const gchar * api, const gchar ** tags)
   g_type_set_qdata (type, GST_QUARK (TAGS), g_strdupv ((gchar **) tags));
 
   return type;
+}
+
+static gboolean
+custom_init_func (GstMeta * meta, gpointer params, GstBuffer * buffer)
+{
+  GstCustomMetaImpl *cmeta = (GstCustomMetaImpl *) meta;
+
+  cmeta->structure = gst_structure_new_empty (g_type_name (meta->info->type));
+
+  gst_structure_set_parent_refcount (cmeta->structure,
+      &GST_MINI_OBJECT_REFCOUNT (buffer));
+
+  return TRUE;
+}
+
+static void
+custom_free_func (GstMeta * meta, GstBuffer * buffer)
+{
+  GstCustomMetaImpl *cmeta = (GstCustomMetaImpl *) meta;
+
+  gst_structure_set_parent_refcount (cmeta->structure, NULL);
+  gst_structure_free (cmeta->structure);
+}
+
+static gboolean
+custom_transform_func (GstBuffer * transbuf, GstMeta * meta,
+    GstBuffer * buffer, GQuark type, gpointer data)
+{
+  GstCustomMetaImpl *custom, *cmeta = (GstCustomMetaImpl *) meta;
+  GstMetaInfoImpl *info = (GstMetaInfoImpl *) meta->info;
+
+  if (info->custom_transform_func)
+    return info->custom_transform_func (transbuf, (GstCustomMeta *) meta,
+        buffer, type, data, info->custom_transform_user_data);
+
+  if (GST_META_TRANSFORM_IS_COPY (type)) {
+    custom =
+        (GstCustomMetaImpl *) gst_buffer_add_meta (transbuf, meta->info, NULL);
+    gst_structure_set_parent_refcount (custom->structure, NULL);
+    gst_structure_take (&custom->structure,
+        gst_structure_copy (cmeta->structure));
+    gst_structure_set_parent_refcount (custom->structure,
+        &GST_MINI_OBJECT_REFCOUNT (buffer));
+  } else {
+    return FALSE;
+  }
+
+  return TRUE;
+}
+
+/**
+ * gst_custom_meta_get_structure:
+ *
+ * Retrieve the #GstStructure backing a custom meta, the structure's mutability
+ * is conditioned to the writability of the #GstBuffer @meta is attached to.
+ *
+ * Returns: (transfer none): the #GstStructure backing @meta
+ * Since: 1.20
+ */
+GstStructure *
+gst_custom_meta_get_structure (GstCustomMeta * meta)
+{
+  g_return_val_if_fail (meta != NULL, NULL);
+  g_return_val_if_fail (gst_meta_info_is_custom (((GstMeta *) meta)->info),
+      NULL);
+
+  return ((GstCustomMetaImpl *) meta)->structure;
+}
+
+/**
+ * gst_custom_meta_has_name:
+ *
+ * Checks whether the name of the custom meta is @name
+ *
+ * Returns: Whether @name is the name of the custom meta
+ * Since: 1.20
+ */
+gboolean
+gst_custom_meta_has_name (GstCustomMeta * meta, const gchar * name)
+{
+  g_return_val_if_fail (meta != NULL, FALSE);
+  g_return_val_if_fail (gst_meta_info_is_custom (((GstMeta *) meta)->info),
+      FALSE);
+
+  return gst_structure_has_name (((GstCustomMetaImpl *) meta)->structure, name);
+}
+
+/**
+ * gst_meta_register_custom:
+ * @name: the name of the #GstMeta implementation
+ * @tags: (array zero-terminated=1): tags for @api
+ * @transform_func: (scope notified) (nullable): a #GstMetaTransformFunction
+ * @user_data: (closure): user data passed to @transform_func
+ * @destroy_data: #GDestroyNotify for user_data
+ *
+ * Register a new custom #GstMeta implementation, backed by an opaque
+ * structure holding a #GstStructure.
+ *
+ * The registered info can be retrieved later with gst_meta_get_info() by using
+ * @name as the key.
+ *
+ * The backing #GstStructure can be retrieved with
+ * gst_custom_meta_get_structure(), its mutability is conditioned by the
+ * writability of the buffer the meta is attached to.
+ *
+ * When @transform_func is %NULL, the meta and its backing #GstStructure
+ * will always be copied when the transform operation is copy, other operations
+ * are discarded, copy regions are ignored.
+ *
+ * Returns: (transfer none): a #GstMetaInfo that can be used to
+ * access metadata.
+ * Since: 1.20
+ */
+const GstMetaInfo *
+gst_meta_register_custom (const gchar * name, const gchar ** tags,
+    GstCustomMetaTransformFunction transform_func,
+    gpointer user_data, GDestroyNotify destroy_data)
+{
+  gchar *api_name = g_strdup_printf ("%s-api", name);
+  GType api;
+  GstMetaInfoImpl *info;
+  GstMetaInfo *ret = NULL;
+
+  g_return_val_if_fail (tags != NULL, NULL);
+  g_return_val_if_fail (name != NULL, NULL);
+
+  api = gst_meta_api_type_register (api_name, tags);
+  g_free (api_name);
+  if (api == G_TYPE_INVALID)
+    goto done;
+
+  info = (GstMetaInfoImpl *) gst_meta_register (api, name,
+      sizeof (GstCustomMetaImpl),
+      custom_init_func, custom_free_func, custom_transform_func);
+
+  if (!info)
+    goto done;
+
+  info->is_custom = TRUE;
+  info->custom_transform_func = transform_func;
+  info->custom_transform_user_data = user_data;
+  info->custom_transform_destroy_notify = destroy_data;
+
+  ret = (GstMetaInfo *) info;
+
+done:
+  return ret;
+}
+
+/**
+ * gst_meta_info_is_custom:
+ *
+ * Returns: whether @info was registered as a #GstCustomMeta with
+ *   gst_meta_register_custom()
+ * Since:1.20
+ */
+gboolean
+gst_meta_info_is_custom (const GstMetaInfo * info)
+{
+  g_return_val_if_fail (info != NULL, FALSE);
+
+  return ((GstMetaInfoImpl *) info)->is_custom;
 }
 
 /**
@@ -158,7 +364,7 @@ gst_meta_api_type_get_tags (GType api)
  * The same @info can be retrieved later with gst_meta_get_info() by using
  * @impl as the key.
  *
- * Returns: (transfer none) (nullable): a #GstMetaInfo that can be used to
+ * Returns: (transfer none): a #GstMetaInfo that can be used to
  * access metadata.
  */
 
@@ -185,13 +391,14 @@ gst_meta_register (GType api, const gchar * impl, gsize size,
   if (type == 0)
     return NULL;
 
-  info = g_slice_new (GstMetaInfo);
+  info = (GstMetaInfo *) g_slice_new (GstMetaInfoImpl);
   info->api = api;
   info->type = type;
   info->size = size;
   info->init_func = init_func;
   info->free_func = free_func;
   info->transform_func = transform_func;
+  ((GstMetaInfoImpl *) info)->is_custom = FALSE;
 
   GST_CAT_DEBUG (GST_CAT_META,
       "register \"%s\" implementing \"%s\" of size %" G_GSIZE_FORMAT, impl,

@@ -254,6 +254,7 @@ static gboolean
 gst_registry_binary_cache_finish (BinaryRegistryCache * cache, gboolean success)
 {
   gint fclose_ret;
+  const gchar *registry_mode;
 
   if (success) {
     /* flush the file and make sure the OS's buffer has been written to disk */
@@ -293,6 +294,22 @@ gst_registry_binary_cache_finish (BinaryRegistryCache * cache, gboolean success)
   /* Only do the rename if we wrote the entire file successfully */
   if (g_rename (cache->tmp_location, cache->location) < 0)
     goto rename_failed;
+
+  /* Change mode of registry if set in environment */
+  registry_mode = g_getenv ("GST_REGISTRY_MODE");
+  if (registry_mode) {
+    gchar *endptr;
+    gint64 mode;
+
+    /* Expect numeric mode as one to four octal digits */
+    mode = g_ascii_strtoll (registry_mode, &endptr, 8);
+    if (mode > G_MAXINT || *endptr != '\0')
+      GST_ERROR ("GST_REGISTRY_MODE not an integer value");
+    else if (g_chmod (cache->location, mode) < 0)
+      GST_ERROR ("g_chmod failed: %s", g_strerror (errno));
+    else
+      GST_INFO ("Changed mode of registry cache to %s", registry_mode);
+  }
 
   g_free (cache->tmp_location);
   g_slice_free (BinaryRegistryCache, cache);

@@ -257,7 +257,7 @@ g_vsprintf (gchar  *string,
  * @n: the maximum number of bytes to produce (including the
  *     terminating nul character).
  * @format: a standard printf() format string, but notice
- *          string precision pitfalls][string-precision]
+ *          [string precision pitfalls][string-precision]
  * @args: the list of arguments to insert in the output.
  *
  * A safer form of the standard vsprintf() function. The output is guaranteed
@@ -295,7 +295,8 @@ g_vsnprintf (gchar   *string,
 
 /**
  * g_vasprintf:
- * @string: (not optional) (nullable): the return location for the newly-allocated string.
+ * @string: (not optional) (nullable): the return location for the newly-allocated string,
+ *   which will be %NULL if (and only if) this function fails
  * @format: (not nullable): a standard printf() format string, but notice
  *          [string precision pitfalls][string-precision]
  * @args: the list of arguments to insert in the output.
@@ -312,7 +313,7 @@ g_vsnprintf (gchar   *string,
  *
  * `glib/gprintf.h` must be explicitly included in order to use this function.
  *
- * Returns: the number of bytes printed.
+ * Returns: the number of bytes printed, or `-1` on failure
  *
  * Since: 2.4
  **/
@@ -356,6 +357,12 @@ g_vasprintf (gchar      **string,
 
     len = _g_vsprintf (*string, format, args2);
     va_end (args2);
+
+    if (len < 0)
+      {
+        g_free (*string);
+        *string = NULL;
+      }
   }
 #endif
 

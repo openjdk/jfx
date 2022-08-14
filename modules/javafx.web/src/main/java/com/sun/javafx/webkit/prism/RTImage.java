@@ -57,6 +57,25 @@ final class RTImage extends PrismImage implements ResourceFactoryListener {
             PlatformLogger.getLogger(RTImage.class.getName());
 
     RTImage(int w, int h, float pixelScale) {
+        if (Float.isNaN(pixelScale) || pixelScale <= 0 ||
+                Math.ceil((double)pixelScale) >= (double)Integer.MAX_VALUE) {
+
+            throw new IllegalArgumentException("pixelScale out of range");
+        }
+
+        if (w <= 0 || h <= 0) {
+            throw new IllegalArgumentException("image size must be positive");
+        }
+
+        final int ps = (int) Math.ceil(pixelScale);
+
+        final int scale = Math.max(ps, 4);
+        final int maxSize = Integer.MAX_VALUE / scale;
+
+        if (maxSize / w <= h) {
+            throw new IllegalArgumentException("image size out of range");
+        }
+
         width = w;
         height = h;
         this.pixelScale = pixelScale;
