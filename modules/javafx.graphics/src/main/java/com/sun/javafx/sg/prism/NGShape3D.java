@@ -171,12 +171,12 @@ public abstract class NGShape3D extends NGNode {
                  * float intensity = rL * 0.299f + gL * 0.587f + bL * 0.114f;
                  * intensity *= attenuationFactor;
                 */
-                else if (lightBase instanceof NGSpotLight) {
-                    addSpotLight((NGSpotLight) lightBase, lightIndex++, rL, gL, bL);
-                } else if (lightBase instanceof NGPointLight) {
-                    addPointLight((NGPointLight) lightBase, lightIndex++, rL, gL, bL);
-                } else if (lightBase instanceof NGDirectionalLight) {
-                    addDirectionalLight((NGDirectionalLight) lightBase, lightIndex++, rL, gL, bL);
+                else if (lightBase instanceof NGSpotLight light) {
+                    addSpotLight(light, lightIndex++, rL, gL, bL);
+                } else if (lightBase instanceof NGPointLight light) {
+                    addPointLight(light, lightIndex++, rL, gL, bL);
+                } else if (lightBase instanceof NGDirectionalLight light) {
+                    addDirectionalLight(light, lightIndex++, rL, gL, bL);
                 }
             }
             if (ambientRed != 0.0f || ambientGreen != 0.0f || ambientBlue != 0.0f) {

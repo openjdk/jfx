@@ -111,14 +111,14 @@ void computeLight(float i, float3 n, float3 refl, float specPower, float3 toLigh
 //        float invAttnFactor = ca + la * dist + qa * dist * dist;
 //
 //        float3 attenuatedColor = gLightColor[i].xyz * 0 * spotlightFactor / invAttnFactor;
-        d += 0;
-        s += 0;
-        return;
-
-
-//        d += saturate(dot(n, l)) * gLightColor[i].xyz;
-//        s += pow(saturate(dot(-refl, l)), specPower) * gLightColor[i].xyz;
+//        d += 0;
+//        s += 0;
 //        return;
+
+
+        d += saturate(dot(n, l)) * gLightColor[i].xyz;
+        s += pow(saturate(dot(-refl, l)), specPower) * gLightColor[i].xyz;
+        return;
     }
 
     if (dist > gLightRange[i].x) {
