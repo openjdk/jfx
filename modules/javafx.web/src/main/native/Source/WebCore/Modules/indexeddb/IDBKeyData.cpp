@@ -26,8 +26,6 @@
 #include "config.h"
 #include "IDBKeyData.h"
 
-#if ENABLE(INDEXED_DATABASE)
-
 #include "KeyedCoding.h"
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/StringConcatenateNumbers.h>
@@ -49,7 +47,7 @@ IDBKeyData::IDBKeyData(const IDBKey* key)
         break;
     case IndexedDB::KeyType::Array: {
         m_value = Vector<IDBKeyData>();
-        auto& array = WTF::get<Vector<IDBKeyData>>(m_value);
+        auto& array = std::get<Vector<IDBKeyData>>(m_value);
         for (auto& key2 : key->array())
             array.append(IDBKeyData(key2.get()));
         break;
@@ -82,20 +80,20 @@ RefPtr<IDBKey> IDBKeyData::maybeCreateIDBKey() const
         return IDBKey::createInvalid();
     case IndexedDB::KeyType::Array: {
         Vector<RefPtr<IDBKey>> array;
-        for (auto& keyData : WTF::get<Vector<IDBKeyData>>(m_value)) {
+        for (auto& keyData : std::get<Vector<IDBKeyData>>(m_value)) {
             array.append(keyData.maybeCreateIDBKey());
             ASSERT(array.last());
         }
         return IDBKey::createArray(array);
     }
     case IndexedDB::KeyType::Binary:
-        return IDBKey::createBinary(WTF::get<ThreadSafeDataBuffer>(m_value));
+        return IDBKey::createBinary(std::get<ThreadSafeDataBuffer>(m_value));
     case IndexedDB::KeyType::String:
-        return IDBKey::createString(WTF::get<String>(m_value));
+        return IDBKey::createString(std::get<String>(m_value));
     case IndexedDB::KeyType::Date:
-        return IDBKey::createDate(WTF::get<double>(m_value));
+        return IDBKey::createDate(std::get<double>(m_value));
     case IndexedDB::KeyType::Number:
-        return IDBKey::createNumber(WTF::get<double>(m_value));
+        return IDBKey::createNumber(std::get<double>(m_value));
     case IndexedDB::KeyType::Max:
     case IndexedDB::KeyType::Min:
         ASSERT_NOT_REACHED();
@@ -126,20 +124,20 @@ void IDBKeyData::isolatedCopy(const IDBKeyData& source, IDBKeyData& destination)
         return;
     case IndexedDB::KeyType::Array: {
         destination.m_value = Vector<IDBKeyData>();
-        auto& destinationArray = WTF::get<Vector<IDBKeyData>>(destination.m_value);
-        for (auto& key : WTF::get<Vector<IDBKeyData>>(source.m_value))
+        auto& destinationArray = std::get<Vector<IDBKeyData>>(destination.m_value);
+        for (auto& key : std::get<Vector<IDBKeyData>>(source.m_value))
             destinationArray.append(key.isolatedCopy());
         return;
     }
     case IndexedDB::KeyType::Binary:
-        destination.m_value = WTF::get<ThreadSafeDataBuffer>(source.m_value);
+        destination.m_value = std::get<ThreadSafeDataBuffer>(source.m_value);
         return;
     case IndexedDB::KeyType::String:
-        destination.m_value = WTF::get<String>(source.m_value).isolatedCopy();
+        destination.m_value = std::get<String>(source.m_value).isolatedCopy();
         return;
     case IndexedDB::KeyType::Date:
     case IndexedDB::KeyType::Number:
-        destination.m_value = WTF::get<double>(source.m_value);
+        destination.m_value = std::get<double>(source.m_value);
         return;
     case IndexedDB::KeyType::Max:
     case IndexedDB::KeyType::Min:
@@ -161,25 +159,25 @@ void IDBKeyData::encode(KeyedEncoder& encoder) const
     case IndexedDB::KeyType::Invalid:
         return;
     case IndexedDB::KeyType::Array: {
-        auto& array = WTF::get<Vector<IDBKeyData>>(m_value);
+        auto& array = std::get<Vector<IDBKeyData>>(m_value);
         encoder.encodeObjects("array", array.begin(), array.end(), [](KeyedEncoder& encoder, const IDBKeyData& key) {
             key.encode(encoder);
         });
         return;
     }
     case IndexedDB::KeyType::Binary: {
-        auto* data = WTF::get<ThreadSafeDataBuffer>(m_value).data();
+        auto* data = std::get<ThreadSafeDataBuffer>(m_value).data();
         encoder.encodeBool("hasBinary", !!data);
         if (data)
             encoder.encodeBytes("binary", data->data(), data->size());
         return;
     }
     case IndexedDB::KeyType::String:
-        encoder.encodeString("string", WTF::get<String>(m_value));
+        encoder.encodeString("string", std::get<String>(m_value));
         return;
     case IndexedDB::KeyType::Date:
     case IndexedDB::KeyType::Number:
-        encoder.encodeDouble("number", WTF::get<double>(m_value));
+        encoder.encodeDouble("number", std::get<double>(m_value));
         return;
     case IndexedDB::KeyType::Max:
     case IndexedDB::KeyType::Min:
@@ -221,12 +219,12 @@ bool IDBKeyData::decode(KeyedDecoder& decoder, IDBKeyData& result)
 
     if (result.m_type == IndexedDB::KeyType::String) {
         result.m_value = String();
-        return decoder.decodeString("string", WTF::get<String>(result.m_value));
+        return decoder.decodeString("string", std::get<String>(result.m_value));
     }
 
     if (result.m_type == IndexedDB::KeyType::Number || result.m_type == IndexedDB::KeyType::Date) {
         result.m_value = 0.0;
-        return decoder.decodeDouble("number", WTF::get<double>(result.m_value));
+        return decoder.decodeDouble("number", std::get<double>(result.m_value));
     }
 
     if (result.m_type == IndexedDB::KeyType::Binary) {
@@ -254,7 +252,7 @@ bool IDBKeyData::decode(KeyedDecoder& decoder, IDBKeyData& result)
     };
 
     result.m_value = Vector<IDBKeyData>();
-    return decoder.decodeObjects("array", WTF::get<Vector<IDBKeyData>>(result.m_value), arrayFunction);
+    return decoder.decodeObjects("array", std::get<Vector<IDBKeyData>>(result.m_value), arrayFunction);
 }
 
 int IDBKeyData::compare(const IDBKeyData& other) const
@@ -278,8 +276,8 @@ int IDBKeyData::compare(const IDBKeyData& other) const
         ASSERT_NOT_REACHED();
         return 0;
     case IndexedDB::KeyType::Array: {
-        auto& array = WTF::get<Vector<IDBKeyData>>(m_value);
-        auto& otherArray = WTF::get<Vector<IDBKeyData>>(other.m_value);
+        auto& array = std::get<Vector<IDBKeyData>>(m_value);
+        auto& otherArray = std::get<Vector<IDBKeyData>>(other.m_value);
         for (size_t i = 0; i < array.size() && i < otherArray.size(); ++i) {
             if (int result = array[i].compare(otherArray[i]))
                 return result;
@@ -291,13 +289,13 @@ int IDBKeyData::compare(const IDBKeyData& other) const
         return 0;
     }
     case IndexedDB::KeyType::Binary:
-        return compareBinaryKeyData(WTF::get<ThreadSafeDataBuffer>(m_value), WTF::get<ThreadSafeDataBuffer>(other.m_value));
+        return compareBinaryKeyData(std::get<ThreadSafeDataBuffer>(m_value), std::get<ThreadSafeDataBuffer>(other.m_value));
     case IndexedDB::KeyType::String:
-        return codePointCompare(WTF::get<String>(m_value), WTF::get<String>(other.m_value));
+        return codePointCompare(std::get<String>(m_value), std::get<String>(other.m_value));
     case IndexedDB::KeyType::Date:
     case IndexedDB::KeyType::Number: {
-        auto number = WTF::get<double>(m_value);
-        auto otherNumber = WTF::get<double>(other.m_value);
+        auto number = std::get<double>(m_value);
+        auto otherNumber = std::get<double>(other.m_value);
 
         if (number == otherNumber)
             return 0;
@@ -325,24 +323,24 @@ String IDBKeyData::loggingString() const
         return "<invalid>"_s;
     case IndexedDB::KeyType::Array: {
         StringBuilder builder;
-        builder.appendLiteral("<array> - { ");
-        auto& array = WTF::get<Vector<IDBKeyData>>(m_value);
+        builder.append("<array> - { ");
+        auto& array = std::get<Vector<IDBKeyData>>(m_value);
         for (size_t i = 0; i < array.size(); ++i) {
             builder.append(array[i].loggingString());
             if (i < array.size() - 1)
-                builder.appendLiteral(", ");
+                builder.append(", ");
         }
-        builder.appendLiteral(" }");
+        builder.append(" }");
         result = builder.toString();
         break;
     }
     case IndexedDB::KeyType::Binary: {
         StringBuilder builder;
-        builder.appendLiteral("<binary> - ");
+        builder.append("<binary> - ");
 
-        auto* data = WTF::get<ThreadSafeDataBuffer>(m_value).data();
+        auto* data = std::get<ThreadSafeDataBuffer>(m_value).data();
         if (!data) {
-            builder.appendLiteral("(null)");
+            builder.append("(null)");
             result = builder.toString();
             break;
         }
@@ -355,18 +353,18 @@ String IDBKeyData::loggingString() const
         }
 
         if (data->size() > 8)
-            builder.appendLiteral("...");
+            builder.append("...");
 
         result = builder.toString();
         break;
     }
     case IndexedDB::KeyType::String:
-        result = "<string> - " + WTF::get<String>(m_value);
+        result = "<string> - " + std::get<String>(m_value);
         break;
     case IndexedDB::KeyType::Date:
-        return makeString("<date> - ", WTF::get<double>(m_value));
+        return makeString("<date> - ", std::get<double>(m_value));
     case IndexedDB::KeyType::Number:
-        return makeString("<number> - ", WTF::get<double>(m_value));
+        return makeString("<number> - ", std::get<double>(m_value));
     case IndexedDB::KeyType::Max:
         return "<maximum>"_s;
     case IndexedDB::KeyType::Min:
@@ -422,14 +420,6 @@ void IDBKeyData::setNumberValue(double value)
     m_isNull = false;
 }
 
-IDBKeyData IDBKeyData::deletedValue()
-{
-    IDBKeyData result;
-    result.m_isNull = false;
-    result.m_isDeletedValue = true;
-    return result;
-}
-
 bool IDBKeyData::isValid() const
 {
     if (m_type == IndexedDB::KeyType::Invalid)
@@ -461,13 +451,13 @@ bool IDBKeyData::operator==(const IDBKeyData& other) const
         return true;
     case IndexedDB::KeyType::Number:
     case IndexedDB::KeyType::Date:
-        return WTF::get<double>(m_value) == WTF::get<double>(other.m_value);
+        return std::get<double>(m_value) == std::get<double>(other.m_value);
     case IndexedDB::KeyType::String:
-        return WTF::get<String>(m_value) == WTF::get<String>(other.m_value);
+        return std::get<String>(m_value) == std::get<String>(other.m_value);
     case IndexedDB::KeyType::Binary:
-        return WTF::get<ThreadSafeDataBuffer>(m_value) == WTF::get<ThreadSafeDataBuffer>(other.m_value);
+        return std::get<ThreadSafeDataBuffer>(m_value) == std::get<ThreadSafeDataBuffer>(other.m_value);
     case IndexedDB::KeyType::Array:
-        return WTF::get<Vector<IDBKeyData>>(m_value) == WTF::get<Vector<IDBKeyData>>(other.m_value);
+        return std::get<Vector<IDBKeyData>>(m_value) == std::get<Vector<IDBKeyData>>(other.m_value);
     }
     RELEASE_ASSERT_NOT_REACHED();
 }
@@ -483,14 +473,14 @@ size_t IDBKeyData::size() const
     case IndexedDB::KeyType::Array: {
         Vector<RefPtr<IDBKey>> array;
         size_t totalSize = 0;
-        for (auto& keyData : WTF::get<Vector<IDBKeyData>>(m_value))
+        for (auto& keyData : std::get<Vector<IDBKeyData>>(m_value))
             totalSize += keyData.size();
         return totalSize;
     }
     case IndexedDB::KeyType::Binary:
-        return WTF::get<ThreadSafeDataBuffer>(m_value).size();
+        return std::get<ThreadSafeDataBuffer>(m_value).size();
     case IndexedDB::KeyType::String:
-        return WTF::get<String>(m_value).sizeInBytes();
+        return std::get<String>(m_value).sizeInBytes();
     case IndexedDB::KeyType::Date:
     case IndexedDB::KeyType::Number:
         return sizeof(double);
@@ -504,5 +494,3 @@ size_t IDBKeyData::size() const
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(INDEXED_DATABASE)

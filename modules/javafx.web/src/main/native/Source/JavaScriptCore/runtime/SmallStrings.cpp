@@ -62,6 +62,7 @@ void SmallStrings::initializeCommonStrings(VM& vm)
     initialize(&vm, m_notEqualString, "not-equal");
     initialize(&vm, m_timedOutString, "timed-out");
     initialize(&vm, m_okString, "ok");
+    initialize(&vm, m_sentinelString, "$");
 
     setIsInitialized(true);
 }
@@ -83,6 +84,7 @@ void SmallStrings::visitStrongReferences(Visitor& visitor)
     visitor.appendUnbarriered(m_notEqualString);
     visitor.appendUnbarriered(m_timedOutString);
     visitor.appendUnbarriered(m_okString);
+    visitor.appendUnbarriered(m_sentinelString);
 }
 
 template void SmallStrings::visitStrongReferences(AbstractSlotVisitor&);
@@ -92,10 +94,10 @@ SmallStrings::~SmallStrings()
 {
 }
 
-Ref<StringImpl> SmallStrings::singleCharacterStringRep(unsigned char character)
+Ref<AtomStringImpl> SmallStrings::singleCharacterStringRep(unsigned char character)
 {
     if (LIKELY(m_isInitialized))
-        return *const_cast<StringImpl*>(m_singleCharacterStrings[character]->tryGetValueImpl());
+        return *static_cast<AtomStringImpl*>(const_cast<StringImpl*>(m_singleCharacterStrings[character]->tryGetValueImpl()));
     const LChar string[] = { static_cast<LChar>(character) };
     return AtomStringImpl::add(string, 1).releaseNonNull();
 }

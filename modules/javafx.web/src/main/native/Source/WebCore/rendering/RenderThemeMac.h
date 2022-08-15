@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2005-2021 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -53,22 +53,21 @@ public:
 
     bool isControlStyled(const RenderStyle&, const RenderStyle& userAgentStyle) const final;
 
-    bool supportsSelectionForegroundColors(OptionSet<StyleColor::Options>) const final;
+    bool supportsSelectionForegroundColors(OptionSet<StyleColorOptions>) const final;
 
-    Color platformActiveSelectionBackgroundColor(OptionSet<StyleColor::Options>) const final;
-    Color platformActiveSelectionForegroundColor(OptionSet<StyleColor::Options>) const final;
-    Color transformSelectionBackgroundColor(const Color&, OptionSet<StyleColor::Options>) const final;
-    Color platformInactiveSelectionBackgroundColor(OptionSet<StyleColor::Options>) const final;
-    Color platformInactiveSelectionForegroundColor(OptionSet<StyleColor::Options>) const final;
-    Color platformActiveListBoxSelectionBackgroundColor(OptionSet<StyleColor::Options>) const final;
-    Color platformActiveListBoxSelectionForegroundColor(OptionSet<StyleColor::Options>) const final;
-    Color platformInactiveListBoxSelectionBackgroundColor(OptionSet<StyleColor::Options>) const final;
-    Color platformInactiveListBoxSelectionForegroundColor(OptionSet<StyleColor::Options>) const final;
-    Color platformFocusRingColor(OptionSet<StyleColor::Options>) const final;
-    Color platformTextSearchHighlightColor(OptionSet<StyleColor::Options>) const final;
-#if ENABLE(APP_HIGHLIGHTS)
-    Color platformAppHighlightColor(OptionSet<StyleColor::Options>) const final;
-#endif
+    Color platformActiveSelectionBackgroundColor(OptionSet<StyleColorOptions>) const final;
+    Color platformActiveSelectionForegroundColor(OptionSet<StyleColorOptions>) const final;
+    Color transformSelectionBackgroundColor(const Color&, OptionSet<StyleColorOptions>) const final;
+    Color platformInactiveSelectionBackgroundColor(OptionSet<StyleColorOptions>) const final;
+    Color platformInactiveSelectionForegroundColor(OptionSet<StyleColorOptions>) const final;
+    Color platformActiveListBoxSelectionBackgroundColor(OptionSet<StyleColorOptions>) const final;
+    Color platformActiveListBoxSelectionForegroundColor(OptionSet<StyleColorOptions>) const final;
+    Color platformInactiveListBoxSelectionBackgroundColor(OptionSet<StyleColorOptions>) const final;
+    Color platformInactiveListBoxSelectionForegroundColor(OptionSet<StyleColorOptions>) const final;
+    Color platformFocusRingColor(OptionSet<StyleColorOptions>) const final;
+    Color platformTextSearchHighlightColor(OptionSet<StyleColorOptions>) const final;
+    Color platformAnnotationHighlightColor(OptionSet<StyleColorOptions>) const final;
+    Color platformDefaultButtonTextColor(OptionSet<StyleColorOptions>) const final;
 
     ScrollbarControlSize scrollbarControlSizeForPart(ControlPart) final { return ScrollbarControlSize::Small; }
 
@@ -99,18 +98,12 @@ public:
     // A view associated to the contained document.
     NSView* documentViewFor(const RenderObject&) const;
 
+    WEBCORE_EXPORT static RetainPtr<NSImage> iconForAttachment(const String& fileName, const String& attachmentType, const String& title);
+
 private:
     RenderThemeMac();
 
     bool canPaint(const PaintInfo&, const Settings&) const final;
-
-#if ENABLE(VIDEO)
-    // Media controls
-    String mediaControlsStyleSheet() final;
-    String modernMediaControlsStyleSheet() final;
-    String mediaControlsScript() final;
-    String mediaControlsBase64StringForIconNameAndType(const String&, const String&) final;
-#endif
 
     bool paintTextField(const RenderObject&, const PaintInfo&, const FloatRect&) final;
     void adjustTextFieldStyle(RenderStyle&, const Element*) const final;
@@ -153,6 +146,10 @@ private:
     void adjustListButtonStyle(RenderStyle&, const Element*) const final;
 #endif
 
+#if ENABLE(SERVICE_CONTROLS)
+    void adjustImageControlsButtonStyle(RenderStyle&, const Element*) const final;
+#endif
+
 #if ENABLE(VIDEO)
     bool supportsClosedCaptioning() const final { return true; }
 #endif
@@ -166,9 +163,9 @@ private:
 private:
     String fileListNameForWidth(const FileList*, const FontCascade&, int width, bool multipleFilesAllowed) const final;
 
-    Color systemColor(CSSValueID, OptionSet<StyleColor::Options>) const final;
+    bool shouldPaintCustomTextField(const RenderObject&) const;
 
-    void purgeCaches() final;
+    Color systemColor(CSSValueID, OptionSet<StyleColorOptions>) const final;
 
     // Get the control size based off the font. Used by some of the controls (like buttons).
     NSControlSize controlSizeForFont(const RenderStyle&) const;
@@ -182,7 +179,7 @@ private:
 
     void updateCheckedState(NSCell*, const RenderObject&);
     void updateEnabledState(NSCell*, const RenderObject&);
-    void updateFocusedState(NSCell*, const RenderObject&);
+    void updateFocusedState(NSCell *, const RenderObject*);
     void updatePressedState(NSCell*, const RenderObject&);
 
     // Helpers for adjusting appearance and for painting
@@ -218,6 +215,14 @@ private:
     const IntSize* progressBarSizes() const;
     const int* progressBarMargins(NSControlSize) const;
 
+#if ENABLE(SERVICE_CONTROLS)
+    bool paintImageControlsButton(const RenderObject&, const PaintInfo&, const IntRect&) final;
+    IntSize imageControlsButtonSize() const final;
+    bool isImageControl(const Element&) const final;
+
+    NSServicesRolloverButtonCell *servicesRolloverButtonCell() const;
+#endif
+
     mutable RetainPtr<NSPopUpButtonCell> m_popupButton;
     mutable RetainPtr<NSSearchFieldCell> m_search;
     mutable RetainPtr<NSMenu> m_searchMenuTemplate;
@@ -236,11 +241,6 @@ private:
     bool m_isSliderThumbVerticalPressed { false };
 
     RetainPtr<WebCoreRenderThemeNotificationObserver> m_notificationObserver;
-
-    String m_legacyMediaControlsScript;
-    String m_mediaControlsScript;
-    String m_legacyMediaControlsStyleSheet;
-    String m_mediaControlsStyleSheet;
 };
 
 } // namespace WebCore

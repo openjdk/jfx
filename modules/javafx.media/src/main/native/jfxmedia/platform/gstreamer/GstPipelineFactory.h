@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -91,7 +91,6 @@ private:
     static gint64   SourceSeekData(GstElement *src, guint64 offset, gpointer data);
     static void     SourceCloseConnection(GstElement *src, gpointer data);
     static int      SourceProperty(GstElement *src, int prop, int value, gpointer data);
-    static int      SourceGetStreamSize(GstElement *src, gpointer data);
 
 private:
     ContentTypesList m_ContentTypes;

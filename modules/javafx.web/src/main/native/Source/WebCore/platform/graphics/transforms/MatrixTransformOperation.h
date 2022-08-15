@@ -30,6 +30,8 @@
 
 namespace WebCore {
 
+struct BlendingContext;
+
 class MatrixTransformOperation final : public TransformOperation {
 public:
     static Ref<MatrixTransformOperation> create(double a, double b, double c, double d, double e, double f)
@@ -53,6 +55,7 @@ private:
     bool isIdentity() const override { return m_a == 1 && m_b == 0 && m_c == 0 && m_d == 1 && m_e == 0 && m_f == 0; }
     bool isAffectedByTransformOrigin() const override { return !isIdentity(); }
 
+    bool operator==(const MatrixTransformOperation& other) const { return operator==(static_cast<const TransformOperation&>(other)); }
     bool operator==(const TransformOperation&) const override;
 
     bool apply(TransformationMatrix& transform, const FloatSize&) const override
@@ -62,7 +65,7 @@ private:
         return false;
     }
 
-    Ref<TransformOperation> blend(const TransformOperation* from, double progress, bool blendToIdentity = false) override;
+    Ref<TransformOperation> blend(const TransformOperation* from, const BlendingContext&, bool blendToIdentity = false) override;
 
     void dump(WTF::TextStream&) const final;
 

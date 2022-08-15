@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,85 +25,34 @@
 
 #include "config.h"
 #include "GPUCanvasContext.h"
-#include "InspectorInstrumentation.h"
-#include "Logging.h"
-#include "WebGPUSwapChainDescriptor.h"
 
-#if ENABLE(WEBGPU)
-
-#include <wtf/IsoMallocInlines.h>
+#include "GPUAdapter.h"
+#include "GPUCanvasConfiguration.h"
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(GPUCanvasContext);
-
-std::unique_ptr<GPUCanvasContext> GPUCanvasContext::create(CanvasBase& canvas)
+RefPtr<HTMLCanvasElement> GPUCanvasContext::canvas()
 {
-    auto context = std::unique_ptr<GPUCanvasContext>(new GPUCanvasContext(canvas));
-    context->suspendIfNeeded();
-    return context;
+    return { };
 }
 
-GPUCanvasContext::GPUCanvasContext(CanvasBase& canvas)
-    : GPUBasedCanvasRenderingContext(canvas)
+void GPUCanvasContext::configure(const GPUCanvasConfiguration&)
+{
+
+}
+
+void GPUCanvasContext::unconfigure()
 {
 }
 
-Ref<WebGPUSwapChain> GPUCanvasContext::configureSwapChain(const WebGPUSwapChainDescriptor& descriptor)
+GPUTextureFormat GPUCanvasContext::getPreferredFormat(const GPUAdapter&)
 {
-    auto gpuDescriptor = descriptor.asGPUSwapChainDescriptor();
-    if (!gpuDescriptor)
-        return WebGPUSwapChain::create(nullptr);
-
-    auto gpuSwapChain = GPUSwapChain::tryCreate(*gpuDescriptor, canvasBase().width(), canvasBase().height());
-    bool success = gpuSwapChain;
-    auto newSwapChain = WebGPUSwapChain::create(WTFMove(gpuSwapChain));
-
-    // Upon success, invalidate and replace any existing swap chain.
-    if (success) {
-        // FIXME: Test that this works as expected with error reporting.
-        if (m_swapChain)
-            m_swapChain->destroy();
-
-        InspectorInstrumentation::willConfigureSwapChain(*this, newSwapChain.get());
-
-        m_swapChain = newSwapChain.copyRef();
-
-        notifyCanvasContentChanged();
-    }
-
-    return newSwapChain;
+    return GPUTextureFormat::Rgba8unorm;
 }
 
-PlatformLayer* GPUCanvasContext::platformLayer() const
+RefPtr<GPUTexture> GPUCanvasContext::getCurrentTexture()
 {
-    if (m_swapChain && m_swapChain->swapChain())
-        return m_swapChain->swapChain()->platformLayer();
     return nullptr;
 }
 
-void GPUCanvasContext::reshape(int width, int height)
-{
-    if (m_swapChain && m_swapChain->swapChain())
-        m_swapChain->swapChain()->reshape(width, height);
-
-    notifyCanvasContentChanged();
 }
-
-void GPUCanvasContext::prepareForDisplayWithPaint()
-{
-    m_isDisplayingWithPaint = true;
-}
-
-void GPUCanvasContext::paintRenderingResultsToCanvas()
-{
-    // FIXME: Unimplemented.
-    if (m_isDisplayingWithPaint && m_swapChain && m_swapChain->swapChain()) {
-        m_swapChain->swapChain()->present();
-        m_isDisplayingWithPaint = false;
-    }
-}
-
-} // namespace WebCore
-
-#endif // ENABLE(WEBGPU)

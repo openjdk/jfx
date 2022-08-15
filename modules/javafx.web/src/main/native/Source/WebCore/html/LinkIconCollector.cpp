@@ -31,6 +31,7 @@
 #include "HTMLHeadElement.h"
 #include "HTMLLinkElement.h"
 #include "LinkIconType.h"
+#include <wtf/text/StringToIntegerConversion.h>
 
 namespace WebCore {
 
@@ -52,7 +53,7 @@ static int compareIcons(const LinkIcon& a, const LinkIcon& b)
     // Apple Touch icons always come first.
     if (a.type == LinkIconType::Favicon && b.type != LinkIconType::Favicon)
         return 1;
-    if (a.type == LinkIconType::Favicon && b.type != LinkIconType::Favicon)
+    if (b.type == LinkIconType::Favicon && a.type != LinkIconType::Favicon)
         return -1;
 
     unsigned aSize = iconSize(a);
@@ -74,7 +75,7 @@ static int compareIcons(const LinkIcon& a, const LinkIcon& b)
 
 auto LinkIconCollector::iconsOfTypes(OptionSet<LinkIconType> iconTypes) -> Vector<LinkIcon>
 {
-    auto head = makeRefPtr(m_document.head());
+    RefPtr head = m_document.head();
     if (!head)
         return { };
 
@@ -95,19 +96,14 @@ auto LinkIconCollector::iconsOfTypes(OptionSet<LinkIconType> iconTypes) -> Vecto
         // This icon size parsing is a little wonky - it only parses the first
         // part of the size, "60x70" becomes "60". This is for compatibility reasons
         // and is probably good enough for now.
-        Optional<unsigned> iconSize;
-
-        if (linkElement.sizes().length()) {
-            bool ok;
-            unsigned size = linkElement.sizes().item(0).string().stripWhiteSpace().toUInt(&ok);
-            if (ok)
-                iconSize = size;
-        }
+        std::optional<unsigned> iconSize;
+        if (linkElement.sizes().length())
+            iconSize = parseIntegerAllowingTrailingJunk<unsigned>(linkElement.sizes().item(0));
 
         Vector<std::pair<String, String>> attributes;
         if (linkElement.hasAttributes()) {
-            attributes.reserveCapacity(linkElement.attributeCount());
-            for (const Attribute& attribute : linkElement.attributesIterator())
+            attributes.reserveInitialCapacity(linkElement.attributeCount());
+            for (auto& attribute : linkElement.attributesIterator())
                 attributes.uncheckedAppend({ attribute.localName(), attribute.value() });
         }
 

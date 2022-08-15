@@ -156,11 +156,6 @@ public final class MonocleApplication extends Application {
     }
 
     @Override
-    public Window createWindow(long parent) {
-        return new MonocleWindow(parent);
-    }
-
-    @Override
     public View createView() {
         return new MonocleView();
     }

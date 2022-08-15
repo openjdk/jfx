@@ -33,6 +33,7 @@
 #include "MutationObserverRegistration.h"
 
 #include "Document.h"
+#include "JSNodeCustom.h"
 #include "QualifiedName.h"
 
 namespace WebCore {
@@ -94,16 +95,16 @@ std::unique_ptr<HashSet<GCReachableRef<Node>>> MutationObserverRegistration::tak
     return returnValue;
 }
 
-bool MutationObserverRegistration::shouldReceiveMutationFrom(Node& node, MutationObserver::MutationType type, const QualifiedName* attributeName) const
+bool MutationObserverRegistration::shouldReceiveMutationFrom(Node& node, MutationObserverOptionType type, const QualifiedName* attributeName) const
 {
-    ASSERT((type == MutationObserver::Attributes && attributeName) || !attributeName);
-    if (!(m_options & type))
+    ASSERT((type == MutationObserverOptionType::Attributes && attributeName) || !attributeName);
+    if (!m_options.contains(type))
         return false;
 
     if (&m_node != &node && !isSubtree())
         return false;
 
-    if (type != MutationObserver::Attributes || !(m_options & MutationObserver::AttributeFilter))
+    if (type != MutationObserverOptionType::Attributes || !m_options.contains(MutationObserverOptionType::AttributeFilter))
         return true;
 
     if (!attributeName->namespaceURI().isNull())
@@ -112,13 +113,20 @@ bool MutationObserverRegistration::shouldReceiveMutationFrom(Node& node, Mutatio
     return m_attributeFilter.contains(attributeName->localName());
 }
 
-void MutationObserverRegistration::addRegistrationNodesToSet(HashSet<Node*>& nodes) const
+bool MutationObserverRegistration::isReachableFromOpaqueRoots(JSC::AbstractSlotVisitor& visitor) const
 {
-    nodes.add(&m_node);
+    if (visitor.containsOpaqueRoot(root(m_node)))
+        return true;
+
     if (!m_transientRegistrationNodes)
-        return;
-    for (auto& node : *m_transientRegistrationNodes)
-        nodes.add(node.ptr());
+        return false;
+
+    for (auto& node : *m_transientRegistrationNodes) {
+        if (visitor.containsOpaqueRoot(root(node)))
+            return true;
+    }
+
+    return false;
 }
 
 } // namespace WebCore

@@ -27,8 +27,8 @@
 
 #if ENABLE(SERVICE_WORKER)
 
+#include "ScriptExecutionContextIdentifier.h"
 #include "SecurityOriginData.h"
-#include "ServiceWorkerClientIdentifier.h"
 #include "ServiceWorkerJobDataIdentifier.h"
 #include "ServiceWorkerJobType.h"
 #include "ServiceWorkerRegistrationKey.h"
@@ -40,12 +40,13 @@ namespace WebCore {
 
 struct ServiceWorkerJobData {
     using Identifier = ServiceWorkerJobDataIdentifier;
-    ServiceWorkerJobData(SWServerConnectionIdentifier, const DocumentOrWorkerIdentifier& sourceContext);
-    ServiceWorkerJobData(Identifier, const DocumentOrWorkerIdentifier& sourceContext);
+    ServiceWorkerJobData(SWServerConnectionIdentifier, const ServiceWorkerOrClientIdentifier& sourceContext);
+    ServiceWorkerJobData(Identifier, const ServiceWorkerOrClientIdentifier& sourceContext);
 
     SWServerConnectionIdentifier connectionIdentifier() const { return m_identifier.connectionIdentifier; }
 
     bool isEquivalent(const ServiceWorkerJobData&) const;
+    std::optional<ScriptExecutionContextIdentifier> serviceWorkerPageIdentifier() const;
 
     URL scriptURL;
     URL clientCreationURL;
@@ -54,6 +55,7 @@ struct ServiceWorkerJobData {
     ServiceWorkerOrClientIdentifier sourceContext;
     WorkerType workerType;
     ServiceWorkerJobType type;
+    bool isFromServiceWorkerPage { false };
 
     ServiceWorkerRegistrationOptions registrationOptions;
 
@@ -62,7 +64,7 @@ struct ServiceWorkerJobData {
     ServiceWorkerJobData isolatedCopy() const;
 
     template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static Optional<ServiceWorkerJobData> decode(Decoder&);
+    template<class Decoder> static std::optional<ServiceWorkerJobData> decode(Decoder&);
 
 private:
     ServiceWorkerJobData() = default;
@@ -73,7 +75,7 @@ private:
 template<class Encoder>
 void ServiceWorkerJobData::encode(Encoder& encoder) const
 {
-    encoder << identifier() << scriptURL << clientCreationURL << topOrigin << scopeURL << sourceContext << workerType;
+    encoder << identifier() << scriptURL << clientCreationURL << topOrigin << scopeURL << sourceContext << workerType << isFromServiceWorkerPage;
     encoder << type;
     switch (type) {
     case ServiceWorkerJobType::Register:
@@ -86,42 +88,44 @@ void ServiceWorkerJobData::encode(Encoder& encoder) const
 }
 
 template<class Decoder>
-Optional<ServiceWorkerJobData> ServiceWorkerJobData::decode(Decoder& decoder)
+std::optional<ServiceWorkerJobData> ServiceWorkerJobData::decode(Decoder& decoder)
 {
-    Optional<ServiceWorkerJobDataIdentifier> identifier;
+    std::optional<ServiceWorkerJobDataIdentifier> identifier;
     decoder >> identifier;
     if (!identifier)
-        return WTF::nullopt;
+        return std::nullopt;
 
     ServiceWorkerJobData jobData;
     jobData.m_identifier = *identifier;
 
     if (!decoder.decode(jobData.scriptURL))
-        return WTF::nullopt;
+        return std::nullopt;
     if (!decoder.decode(jobData.clientCreationURL))
-        return WTF::nullopt;
+        return std::nullopt;
 
-    Optional<SecurityOriginData> topOrigin;
+    std::optional<SecurityOriginData> topOrigin;
     decoder >> topOrigin;
     if (!topOrigin)
-        return WTF::nullopt;
+        return std::nullopt;
     jobData.topOrigin = WTFMove(*topOrigin);
 
     if (!decoder.decode(jobData.scopeURL))
-        return WTF::nullopt;
+        return std::nullopt;
     if (!decoder.decode(jobData.sourceContext))
-        return WTF::nullopt;
+        return std::nullopt;
     if (!decoder.decode(jobData.workerType))
-        return WTF::nullopt;
+        return std::nullopt;
+    if (!decoder.decode(jobData.isFromServiceWorkerPage))
+        return std::nullopt;
     if (!decoder.decode(jobData.type))
-        return WTF::nullopt;
+        return std::nullopt;
 
     switch (jobData.type) {
     case ServiceWorkerJobType::Register: {
-        Optional<ServiceWorkerRegistrationOptions> registrationOptions;
+        std::optional<ServiceWorkerRegistrationOptions> registrationOptions;
         decoder >> registrationOptions;
         if (!registrationOptions)
-            return WTF::nullopt;
+            return std::nullopt;
         jobData.registrationOptions = WTFMove(*registrationOptions);
         break;
     }

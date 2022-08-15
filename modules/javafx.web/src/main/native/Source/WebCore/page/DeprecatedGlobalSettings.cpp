@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006, 2007, 2008, 2009, 2011, 2012 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -43,24 +43,20 @@ bool DeprecatedGlobalSettings::gGStreamerEnabled = true;
 
 bool DeprecatedGlobalSettings::gMockScrollbarsEnabled = false;
 bool DeprecatedGlobalSettings::gUsesOverlayScrollbars = false;
-bool DeprecatedGlobalSettings::gMockScrollAnimatorEnabled = false;
 
 #if PLATFORM(WIN)
 bool DeprecatedGlobalSettings::gShouldUseHighResolutionTimers = true;
 #endif
 
-bool DeprecatedGlobalSettings::gShouldRespectPriorityInCSSAttributeSetters = false;
 bool DeprecatedGlobalSettings::gLowPowerVideoAudioBufferSizeEnabled = false;
 bool DeprecatedGlobalSettings::gResourceLoadStatisticsEnabledEnabled = false;
 bool DeprecatedGlobalSettings::gAllowsAnySSLCertificate = false;
 
 #if PLATFORM(IOS_FAMILY)
 bool DeprecatedGlobalSettings::gNetworkDataUsageTrackingEnabled = false;
-bool DeprecatedGlobalSettings::gAVKitEnabled = false;
 bool DeprecatedGlobalSettings::gShouldOptOutOfNetworkStateObservation = false;
 bool DeprecatedGlobalSettings::gDisableScreenSizeOverride = false;
 #endif
-bool DeprecatedGlobalSettings::gManageAudioSession = false;
 
 #if PLATFORM(WIN)
 void DeprecatedGlobalSettings::setShouldUseHighResolutionTimers(bool shouldUseHighResolutionTimers)
@@ -128,26 +124,6 @@ bool DeprecatedGlobalSettings::usesOverlayScrollbars()
     return gUsesOverlayScrollbars;
 }
 
-void DeprecatedGlobalSettings::setUsesMockScrollAnimator(bool flag)
-{
-    gMockScrollAnimatorEnabled = flag;
-}
-
-bool DeprecatedGlobalSettings::usesMockScrollAnimator()
-{
-    return gMockScrollAnimatorEnabled;
-}
-
-void DeprecatedGlobalSettings::setShouldRespectPriorityInCSSAttributeSetters(bool flag)
-{
-    gShouldRespectPriorityInCSSAttributeSetters = flag;
-}
-
-bool DeprecatedGlobalSettings::shouldRespectPriorityInCSSAttributeSetters()
-{
-    return gShouldRespectPriorityInCSSAttributeSetters;
-}
-
 void DeprecatedGlobalSettings::setLowPowerVideoAudioBufferSizeEnabled(bool flag)
 {
     gLowPowerVideoAudioBufferSizeEnabled = flag;
@@ -166,7 +142,7 @@ void DeprecatedGlobalSettings::setAudioSessionCategoryOverride(unsigned sessionC
 
 unsigned DeprecatedGlobalSettings::audioSessionCategoryOverride()
 {
-    return AudioSession::sharedSession().categoryOverride();
+    return static_cast<unsigned>(AudioSession::sharedSession().categoryOverride());
 }
 
 void DeprecatedGlobalSettings::setNetworkDataUsageTrackingEnabled(bool trackingEnabled)
@@ -193,6 +169,18 @@ void DeprecatedGlobalSettings::setNetworkInterfaceName(const String& networkInte
 const String& DeprecatedGlobalSettings::networkInterfaceName()
 {
     return sharedNetworkInterfaceNameGlobal();
+}
+#endif
+
+#if USE(AUDIO_SESSION)
+void DeprecatedGlobalSettings::setShouldManageAudioSessionCategory(bool flag)
+{
+    AudioSession::setShouldManageAudioSessionCategory(flag);
+}
+
+bool DeprecatedGlobalSettings::shouldManageAudioSessionCategory()
+{
+    return AudioSession::shouldManageAudioSessionCategory();
 }
 #endif
 

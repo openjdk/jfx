@@ -29,10 +29,6 @@
 # endif
 #endif
 
-/* This needs to be before glib.h, since it might be used in inline
- * functions */
-extern const char             g_log_domain_gstreamer[];
-
 #include <glib.h>
 
 #include <stdlib.h>
@@ -118,8 +114,6 @@ G_GNUC_INTERNAL  gboolean _priv_plugin_deps_env_vars_changed (GstPlugin * plugin
 
 G_GNUC_INTERNAL  gboolean _priv_plugin_deps_files_changed (GstPlugin * plugin);
 
-G_GNUC_INTERNAL  gboolean _priv_gst_in_valgrind (void);
-
 /* init functions called from gst_init(). */
 G_GNUC_INTERNAL  void  _priv_gst_quarks_initialize (void);
 G_GNUC_INTERNAL  void  _priv_gst_mini_object_initialize (void);
@@ -150,6 +144,7 @@ G_GNUC_INTERNAL  void  _priv_gst_allocator_cleanup (void);
 G_GNUC_INTERNAL  void  _priv_gst_caps_features_cleanup (void);
 G_GNUC_INTERNAL  void  _priv_gst_caps_cleanup (void);
 G_GNUC_INTERNAL  void  _priv_gst_debug_cleanup (void);
+G_GNUC_INTERNAL  void  _priv_gst_meta_cleanup (void);
 
 /* called from gst_task_cleanup_all(). */
 G_GNUC_INTERNAL  void  _priv_gst_element_cleanup (void);
@@ -173,7 +168,7 @@ G_GNUC_INTERNAL const char * _priv_gst_value_gtype_to_abbr (GType type);
 
 G_GNUC_INTERNAL gboolean _priv_gst_value_parse_string (gchar * s, gchar ** end, gchar ** next, gboolean unescape);
 G_GNUC_INTERNAL gboolean _priv_gst_value_parse_simple_string (gchar * str, gchar ** end);
-G_GNUC_INTERNAL gboolean _priv_gst_value_parse_value (gchar * str, gchar ** after, GValue * value, GType default_type);
+G_GNUC_INTERNAL gboolean _priv_gst_value_parse_value (gchar * str, gchar ** after, GValue * value, GType default_type, GParamSpec *pspec);
 G_GNUC_INTERNAL gchar * _priv_gst_value_serialize_any_list (const GValue * value, const gchar * begin, const gchar * end, gboolean print_type);
 
 /* Used in GstBin for manual state handling */
@@ -186,7 +181,8 @@ G_GNUC_INTERNAL  void _priv_gst_element_state_changed (GstElement *element,
 
 G_GNUC_INTERNAL
 gboolean  priv_gst_structure_append_to_gstring (const GstStructure * structure,
-                                                GString            * s);
+                                                GString            * s,
+                                                GstSerializeFlags flags);
 G_GNUC_INTERNAL
 gboolean priv__gst_structure_append_template_to_gstring (GQuark field_id,
                                                         const GValue *value,
@@ -196,7 +192,7 @@ G_GNUC_INTERNAL
 void priv_gst_caps_features_append_to_gstring (const GstCapsFeatures * features, GString *s);
 
 G_GNUC_INTERNAL
-gboolean priv_gst_structure_parse_name (gchar * str, gchar **start, gchar ** end, gchar ** next);
+gboolean priv_gst_structure_parse_name (gchar * str, gchar **start, gchar ** end, gchar ** next, gboolean check_valid);
 G_GNUC_INTERNAL
 gboolean priv_gst_structure_parse_fields (gchar *str, gchar ** end, GstStructure *structure);
 
@@ -532,6 +528,8 @@ struct _GstClockEntryImpl
                                          * to add data in lieu of overridable
                                          * virtual functions on the clock */
 };
+
+char * priv_gst_get_relocated_libgstreamer (void);
 
 G_END_DECLS
 #endif /* __GST_PRIVATE_H__ */

@@ -25,11 +25,13 @@
 
 #pragma once
 
+#include <optional>
+#include <wtf/FastMalloc.h>
 #include <wtf/MathExtras.h>
-#include <wtf/Optional.h>
 
 namespace WTF {
 
+class ApproximateTime;
 class MonotonicTime;
 class PrintStream;
 class TextStream;
@@ -178,10 +180,12 @@ public:
 
     WTF_EXPORT_PRIVATE WallTime operator+(WallTime) const;
     WTF_EXPORT_PRIVATE MonotonicTime operator+(MonotonicTime) const;
+    WTF_EXPORT_PRIVATE ApproximateTime operator+(ApproximateTime) const;
     WTF_EXPORT_PRIVATE TimeWithDynamicClockType operator+(const TimeWithDynamicClockType&) const;
 
     WTF_EXPORT_PRIVATE WallTime operator-(WallTime) const;
     WTF_EXPORT_PRIVATE MonotonicTime operator-(MonotonicTime) const;
+    WTF_EXPORT_PRIVATE ApproximateTime operator-(ApproximateTime) const;
     WTF_EXPORT_PRIVATE TimeWithDynamicClockType operator-(const TimeWithDynamicClockType&) const;
 
     constexpr bool operator==(Seconds other) const
@@ -228,12 +232,12 @@ public:
     }
 
     template<class Decoder>
-    static Optional<Seconds> decode(Decoder& decoder)
+    static std::optional<Seconds> decode(Decoder& decoder)
     {
-        Optional<double> seconds;
+        std::optional<double> seconds;
         decoder >> seconds;
         if (!seconds)
-            return WTF::nullopt;
+            return std::nullopt;
         return Seconds(*seconds);
     }
 

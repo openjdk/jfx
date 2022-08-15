@@ -84,6 +84,9 @@
 #include <glib/gstrfuncs.h>
 #include <glib/gstringchunk.h>
 #include <glib/gstring.h>
+#ifndef GSTREAMER_LITE
+#include <glib/gstrvbuilder.h>
+#endif // GSTREAMER_LITE
 #include <glib/gtestutils.h>
 #include <glib/gthread.h>
 #include <glib/gthreadpool.h>
@@ -117,6 +120,7 @@
 #endif // GSTREAMER_LITE
 
 #include <glib/glib-autocleanups.h>
+#include <glib/glib-typeof.h>
 
 #undef __GLIB_H_INSIDE__
 

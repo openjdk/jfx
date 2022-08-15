@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -37,6 +37,10 @@
 
 #if BOS(DARWIN)
 #include <mach/mach.h>
+#endif
+
+#if BUSE(LIBPAS)
+#include "iso_heap.h"
 #endif
 
 #if GIGACAGE_ENABLED
@@ -119,7 +123,7 @@ void ensureGigacage()
 #if BENABLE(UNIFIED_AND_FREEZABLE_CONFIG_RECORD)
             // We might only get page size alignment, but that's also the minimum
             // alignment we need for freezing the Config.
-            RELEASE_BASSERT(!(reinterpret_cast<size_t>(&g_gigacageConfig) & (vmPageSize() - 1)));
+            RELEASE_BASSERT(!(reinterpret_cast<size_t>(&WebConfig::g_config) & (vmPageSize() - 1)));
 #endif
 
             Kind shuffledKinds[NumberOfKinds];
@@ -169,8 +173,26 @@ void ensureGigacage()
             size_t nextCage = 0;
             for (Kind kind : shuffledKinds) {
                 nextCage = alignTo(kind, nextCage);
-                g_gigacageConfig.setBasePtr(kind, reinterpret_cast<char*>(base) + nextCage);
+                void* gigacageBasePtr = reinterpret_cast<char*>(base) + nextCage;
+                g_gigacageConfig.setBasePtr(kind, gigacageBasePtr);
                 nextCage = bump(kind, nextCage);
+
+                uint64_t random[2];
+                cryptoRandom(reinterpret_cast<unsigned char*>(random), sizeof(random));
+                size_t gigacageSize = maxSize(kind);
+                size_t size = roundDownToMultipleOf(vmPageSize(), gigacageSize - (random[0] % maximumCageSizeReductionForSlide));
+                g_gigacageConfig.setAllocSize(kind, size);
+                ptrdiff_t offset = roundDownToMultipleOf(vmPageSize(), random[1] % (gigacageSize - size));
+                void* thisBase = reinterpret_cast<unsigned char*>(gigacageBasePtr) + offset;
+                g_gigacageConfig.setAllocBasePtr(kind, thisBase);
+
+#if BUSE(LIBPAS)
+                bmalloc_force_auxiliary_heap_into_reserved_memory(
+                    &api::heapForKind(kind),
+                    reinterpret_cast<uintptr_t>(thisBase),
+                    reinterpret_cast<uintptr_t>(thisBase) + size);
+#endif
+
                 if (runwaySize(kind) > 0) {
                     char* runway = reinterpret_cast<char*>(base) + nextCage;
                     // Make OOB accesses into the runway crash.
@@ -286,14 +308,24 @@ bool shouldBeEnabled()
     return g_gigacageConfig.shouldBeEnabled;
 }
 
+void* allocBase(Kind kind)
+{
+    return g_gigacageConfig.allocBasePtr(kind);
+}
+
 size_t size(Kind kind)
 {
-    return PerProcess<PerHeapKind<Heap>>::get()->at(heapKind(kind)).gigacageSize();
+    return g_gigacageConfig.allocSize(kind);
 }
 
 size_t footprint(Kind kind)
 {
+#if BUSE(LIBPAS)
+    BUNUSED(kind);
+    return 0;
+#else
     return PerProcess<PerHeapKind<Heap>>::get()->at(heapKind(kind)).footprint();
+#endif
 }
 
 } // namespace Gigacage

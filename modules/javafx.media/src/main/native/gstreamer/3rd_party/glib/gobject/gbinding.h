@@ -53,8 +53,9 @@ typedef struct _GBinding        GBinding;
  * @to_value: the #GValue in which to store the transformed value
  * @user_data: data passed to the transform function
  *
- * A function to be called to transform @from_value to @to_value. If
- * this is the @transform_to function of a binding, then @from_value
+ * A function to be called to transform @from_value to @to_value.
+ *
+ * If this is the @transform_to function of a binding, then @from_value
  * is the @source_property on the @source object, and @to_value is the
  * @target_property on the @target object. If this is the
  * @transform_from function of a %G_BINDING_BIDIRECTIONAL binding,
@@ -108,10 +109,14 @@ GType                 g_binding_get_type            (void) G_GNUC_CONST;
 
 GLIB_AVAILABLE_IN_ALL
 GBindingFlags         g_binding_get_flags           (GBinding *binding);
-GLIB_AVAILABLE_IN_ALL
+GLIB_DEPRECATED_IN_2_68_FOR(g_binding_dup_source)
 GObject *             g_binding_get_source          (GBinding *binding);
-GLIB_AVAILABLE_IN_ALL
+GLIB_AVAILABLE_IN_2_68
+GObject *             g_binding_dup_source          (GBinding *binding);
+GLIB_DEPRECATED_IN_2_68_FOR(g_binding_dup_target)
 GObject *             g_binding_get_target          (GBinding *binding);
+GLIB_AVAILABLE_IN_2_68
+GObject *             g_binding_dup_target          (GBinding *binding);
 GLIB_AVAILABLE_IN_ALL
 const gchar *         g_binding_get_source_property (GBinding *binding);
 GLIB_AVAILABLE_IN_ALL

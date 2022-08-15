@@ -52,13 +52,14 @@ RealtimeOutgoingVideoSource::RealtimeOutgoingVideoSource(Ref<MediaStreamTrackPri
     , m_logIdentifier(m_videoSource->logIdentifier())
 #endif
 {
+    ALWAYS_LOG(LOGIDENTIFIER);
 }
 
 RealtimeOutgoingVideoSource::~RealtimeOutgoingVideoSource()
 {
 ASSERT(!m_videoSource->hasObserver(*this));
 #if ASSERT_ENABLED
-    auto locker = holdLock(m_sinksLock);
+    Locker locker { m_sinksLock };
 #endif
     ASSERT(m_sinks.isEmpty());
     stop();
@@ -83,6 +84,8 @@ void RealtimeOutgoingVideoSource::setSource(Ref<MediaStreamTrackPrivate>&& newSo
     ASSERT(!m_videoSource->hasObserver(*this));
     m_videoSource = WTFMove(newSource);
 
+    ALWAYS_LOG(LOGIDENTIFIER, "track ", m_videoSource->logIdentifier());
+
     if (!m_areSinksAskingToApplyRotation)
         return;
     if (!m_videoSource->source().setShouldApplyRotation(true))
@@ -91,18 +94,14 @@ void RealtimeOutgoingVideoSource::setSource(Ref<MediaStreamTrackPrivate>&& newSo
 
 void RealtimeOutgoingVideoSource::applyRotation()
 {
-    if (!isMainThread()) {
-        callOnMainThread([this, protectedThis = makeRef(*this)] {
-            applyRotation();
-        });
-        return;
-    }
-    if (m_areSinksAskingToApplyRotation)
-        return;
+    ensureOnMainThread([this, protectedThis = Ref { *this }] {
+        if (m_areSinksAskingToApplyRotation)
+            return;
 
-    m_areSinksAskingToApplyRotation = true;
-    if (!m_videoSource->source().setShouldApplyRotation(true))
-        m_shouldApplyRotation = true;
+        m_areSinksAskingToApplyRotation = true;
+        if (!m_videoSource->source().setShouldApplyRotation(true))
+            m_shouldApplyRotation = true;
+    });
 }
 
 void RealtimeOutgoingVideoSource::stop()
@@ -162,13 +161,13 @@ void RealtimeOutgoingVideoSource::AddOrUpdateSink(rtc::VideoSinkInterface<webrtc
     if (sinkWants.rotation_applied)
         applyRotation();
 
-    auto locker = holdLock(m_sinksLock);
+    Locker locker { m_sinksLock };
     m_sinks.add(sink);
 }
 
 void RealtimeOutgoingVideoSource::RemoveSink(rtc::VideoSinkInterface<webrtc::VideoFrame>* sink)
 {
-    auto locker = holdLock(m_sinksLock);
+    Locker locker { m_sinksLock };
     m_sinks.remove(sink);
 }
 
@@ -223,7 +222,7 @@ void RealtimeOutgoingVideoSource::sendFrame(rtc::scoped_refptr<webrtc::VideoFram
     }
 #endif
 
-    auto locker = holdLock(m_sinksLock);
+    Locker locker { m_sinksLock };
     for (auto* sink : m_sinks)
         sink->OnFrame(frame);
 }

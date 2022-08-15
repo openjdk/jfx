@@ -27,7 +27,6 @@ package test.javafx.scene.control;
 
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import static javafx.scene.control.TableColumn.*;
@@ -110,7 +109,6 @@ public class CellEditEventOfTableColumnTest {
 
 //---------- event source
 
-    @Ignore("JDK-8271474")
     @Test
     public void testNullTable() {
         new CellEditEvent<Object, Object>(null, // null table must not throw NPE
@@ -127,7 +125,6 @@ public class CellEditEventOfTableColumnTest {
         assertCellEditEvent(table);
     }
 
-    @Ignore("JDK-8271474")
     @Test
     public void testCellEditEventNullSource() {
         assertCellEditEvent(null);

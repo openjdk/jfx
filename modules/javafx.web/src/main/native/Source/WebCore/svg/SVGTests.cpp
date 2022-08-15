@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2004, 2005, 2008 Nikolas Zimmermann <zimmermann@kde.org>
  * Copyright (C) 2004, 2005, 2006, 2007 Rob Buis <buis@kde.org>
- * Copyright (C) 2015-2018 Apple Inc. All right reserved.
+ * Copyright (C) 2015-2021 Apple Inc. All right reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -28,7 +28,7 @@
 #include "SVGNames.h"
 #include "SVGStringList.h"
 #include <wtf/Language.h>
-#include <wtf/NeverDestroyed.h>
+#include <wtf/SortedArrayMap.h>
 
 #if ENABLE(MATHML)
 #include "MathMLNames.h"
@@ -36,71 +36,57 @@
 
 namespace WebCore {
 
-using namespace SVGNames;
+constexpr ComparableLettersLiteral supportedSVGFeatureArray[] = {
+    "http://www.w3.org/tr/svg11/feature#animation",
+    "http://www.w3.org/tr/svg11/feature#basegraphicsattribute",
+    "http://www.w3.org/tr/svg11/feature#basicclip",
+    "http://www.w3.org/tr/svg11/feature#basicfilter",
+    "http://www.w3.org/tr/svg11/feature#basicfont",
+    "http://www.w3.org/tr/svg11/feature#basicpaintattribute",
+    "http://www.w3.org/tr/svg11/feature#basicstructure",
+    "http://www.w3.org/tr/svg11/feature#basictext",
+    "http://www.w3.org/tr/svg11/feature#clip",
+    "http://www.w3.org/tr/svg11/feature#conditionalprocessing",
+    "http://www.w3.org/tr/svg11/feature#containerattribute",
+    "http://www.w3.org/tr/svg11/feature#coreattribute",
+    "http://www.w3.org/tr/svg11/feature#cursor",
+    "http://www.w3.org/tr/svg11/feature#documenteventsattribute",
+    "http://www.w3.org/tr/svg11/feature#extensibility",
+    "http://www.w3.org/tr/svg11/feature#externalresourcesrequired",
+    "http://www.w3.org/tr/svg11/feature#filter",
+    "http://www.w3.org/tr/svg11/feature#font",
+    "http://www.w3.org/tr/svg11/feature#gradient",
+    "http://www.w3.org/tr/svg11/feature#graphicaleventsattribute",
+    "http://www.w3.org/tr/svg11/feature#graphicsattribute",
+    "http://www.w3.org/tr/svg11/feature#hyperlinking",
+    "http://www.w3.org/tr/svg11/feature#image",
+    "http://www.w3.org/tr/svg11/feature#marker",
+    "http://www.w3.org/tr/svg11/feature#mask",
+    "http://www.w3.org/tr/svg11/feature#opacityattribute",
+    "http://www.w3.org/tr/svg11/feature#paintattribute",
+    "http://www.w3.org/tr/svg11/feature#pattern",
+    "http://www.w3.org/tr/svg11/feature#script",
+    "http://www.w3.org/tr/svg11/feature#shape",
+    "http://www.w3.org/tr/svg11/feature#structure",
+    "http://www.w3.org/tr/svg11/feature#style",
+    "http://www.w3.org/tr/svg11/feature#svg",
+    "http://www.w3.org/tr/svg11/feature#svg-animation",
+    "http://www.w3.org/tr/svg11/feature#svg-static",
+    "http://www.w3.org/tr/svg11/feature#svgdom",
+    "http://www.w3.org/tr/svg11/feature#svgdom-animation",
+    "http://www.w3.org/tr/svg11/feature#svgdom-static",
+    "http://www.w3.org/tr/svg11/feature#text",
+    "http://www.w3.org/tr/svg11/feature#view",
+    "http://www.w3.org/tr/svg11/feature#viewportattribute",
+    "http://www.w3.org/tr/svg11/feature#xlinkattribute",
+    "org.w3c.dom",
+    "org.w3c.dom.svg",
+    "org.w3c.dom.svg.static",
+    "org.w3c.svg",
+    "org.w3c.svg.static",
+};
 
-static const HashSet<String, ASCIICaseInsensitiveHash>& supportedSVGFeatures()
-{
-    static NeverDestroyed<HashSet<String, ASCIICaseInsensitiveHash>> features = [] {
-        static const char* const features10[] = {
-            "dom",
-            "dom.svg",
-            "dom.svg.static",
-            "svg",
-            "svg.static",
-        };
-        static const char* const features11[] = {
-            "animation",
-            "basegraphicsattribute",
-            "basicclip",
-            "basicfilter",
-            "basicpaintattribute",
-            "basicstructure",
-            "basictext",
-            "clip",
-            "conditionalprocessing",
-            "containerattribute",
-            "coreattribute",
-            "cursor",
-            "documenteventsattribute",
-            "extensibility",
-            "externalresourcesrequired",
-            "filter",
-            "gradient",
-            "graphicaleventsattribute",
-            "graphicsattribute",
-            "hyperlinking",
-            "image",
-            "marker",
-            "mask",
-            "opacityattribute",
-            "paintattribute",
-            "pattern",
-            "script",
-            "shape",
-            "structure",
-            "style",
-            "svg-animation",
-            "svgdom-animation",
-            "text",
-            "view",
-            "viewportattribute",
-            "xlinkattribute",
-            "basicfont",
-            "font",
-            "svg",
-            "svg-static",
-            "svgdom",
-            "svgdom-static",
-        };
-        HashSet<String, ASCIICaseInsensitiveHash> set;
-        for (auto& feature : features10)
-            set.add(makeString("org.w3c.", feature));
-        for (auto& feature : features11)
-            set.add(makeString("http://www.w3.org/tr/svg11/feature#", feature));
-        return set;
-    }();
-    return features;
-}
+constexpr SortedArraySet supportedSVGFeatureSet { supportedSVGFeatureArray };
 
 SVGTests::SVGTests(SVGElement* contextElement)
     : m_contextElement(*contextElement)
@@ -129,7 +115,7 @@ bool SVGTests::hasExtension(const String& extension)
 bool SVGTests::isValid() const
 {
     for (auto& feature : m_requiredFeatures->items()) {
-        if (feature.isEmpty() || !supportedSVGFeatures().contains(feature))
+        if (feature.isEmpty() || !supportedSVGFeatureSet.contains(feature))
             return false;
     }
     for (auto& language : m_systemLanguage->items()) {
@@ -145,11 +131,11 @@ bool SVGTests::isValid() const
 
 void SVGTests::parseAttribute(const QualifiedName& attributeName, const AtomString& value)
 {
-    if (attributeName == requiredFeaturesAttr)
+    if (attributeName == SVGNames::requiredFeaturesAttr)
         m_requiredFeatures->reset(value);
-    if (attributeName == requiredExtensionsAttr)
+    if (attributeName == SVGNames::requiredExtensionsAttr)
         m_requiredExtensions->reset(value);
-    if (attributeName == systemLanguageAttr)
+    if (attributeName == SVGNames::systemLanguageAttr)
         m_systemLanguage->reset(value);
 }
 
@@ -163,11 +149,11 @@ void SVGTests::svgAttributeChanged(const QualifiedName& attrName)
     m_contextElement.invalidateStyleAndRenderersForSubtree();
 }
 
-void SVGTests::addSupportedAttributes(HashSet<QualifiedName>& supportedAttributes)
+void SVGTests::addSupportedAttributes(MemoryCompactLookupOnlyRobinHoodHashSet<QualifiedName>& supportedAttributes)
 {
-    supportedAttributes.add(requiredFeaturesAttr);
-    supportedAttributes.add(requiredExtensionsAttr);
-    supportedAttributes.add(systemLanguageAttr);
+    supportedAttributes.add(SVGNames::requiredFeaturesAttr);
+    supportedAttributes.add(SVGNames::requiredExtensionsAttr);
+    supportedAttributes.add(SVGNames::systemLanguageAttr);
 }
 
 bool SVGTests::hasFeatureForLegacyBindings(const String& feature, const String& version)
@@ -186,7 +172,7 @@ bool SVGTests::hasFeatureForLegacyBindings(const String& feature, const String& 
 
     // If the version number matches the style of the feature name, then use the set to see if the feature is supported.
     if (version.isEmpty() || (hasSVG10FeaturePrefix && version == "1.0") || (hasSVG11FeaturePrefix && version == "1.1"))
-        return supportedSVGFeatures().contains(feature);
+        return supportedSVGFeatureSet.contains(feature);
 
     return false;
 }

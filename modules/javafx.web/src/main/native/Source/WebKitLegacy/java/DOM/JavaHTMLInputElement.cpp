@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -38,6 +38,7 @@
 
 #include <WebCore/JavaDOMUtils.h>
 #include <wtf/java/JavaEnv.h>
+#include <wtf/text/StringToIntegerConversion.h>
 
 using namespace WebCore;
 
@@ -350,7 +351,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLInputElementImpl_getSizeIm
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLInputElementImpl_setSizeImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setSize(String(env, value).toInt());
+    IMPL->setSize(parseIntegerAllowingTrailingJunk<int>(StringView(String(env, value))).value());
 }
 
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLInputElementImpl_getSrcImpl(JNIEnv* env, jclass, jlong peer)
@@ -416,12 +417,13 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLInputElementImpl_setValueImpl
 JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_HTMLInputElementImpl_getValueAsDateImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->valueAsDate();
+    return IMPL->valueAsDate().approximateMonotonicTime().get_time_value();
 }
 
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLInputElementImpl_setValueAsDateImpl(JNIEnv*, jclass, jlong peer, jlong value)
 {
     WebCore::JSMainThreadNullState state;
+
     IMPL->setValueAsDate(value);
 }
 

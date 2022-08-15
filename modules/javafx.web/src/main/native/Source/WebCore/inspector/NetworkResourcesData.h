@@ -30,6 +30,7 @@
 #pragma once
 
 #include "InspectorPageAgent.h"
+#include "SharedBuffer.h"
 #include <wtf/Deque.h>
 #include <wtf/HashMap.h>
 #include <wtf/WallTime.h>
@@ -40,7 +41,6 @@ namespace WebCore {
 class CachedResource;
 class ResourceResponse;
 class TextResourceDecoder;
-class SharedBuffer;
 
 class NetworkResourcesData {
     WTF_MAKE_FAST_ALLOCATED;
@@ -88,11 +88,11 @@ public:
         RefPtr<TextResourceDecoder> decoder() const { return m_decoder.copyRef(); }
         void setDecoder(RefPtr<TextResourceDecoder>&& decoder) { m_decoder = WTFMove(decoder); }
 
-        RefPtr<SharedBuffer> buffer() const { return m_buffer.copyRef(); }
-        void setBuffer(RefPtr<SharedBuffer>&& buffer) { m_buffer = WTFMove(buffer); }
+        RefPtr<FragmentedSharedBuffer> buffer() const { return m_buffer.copyRef(); }
+        void setBuffer(RefPtr<FragmentedSharedBuffer>&& buffer) { m_buffer = WTFMove(buffer); }
 
-        const Optional<CertificateInfo>& certificateInfo() const { return m_certificateInfo; }
-        void setCertificateInfo(const Optional<CertificateInfo>& certificateInfo) { m_certificateInfo = certificateInfo; }
+        const std::optional<CertificateInfo>& certificateInfo() const { return m_certificateInfo; }
+        void setCertificateInfo(const std::optional<CertificateInfo>& certificateInfo) { m_certificateInfo = certificateInfo; }
 
         CachedResource* cachedResource() const { return m_cachedResource; }
         void setCachedResource(CachedResource* cachedResource) { m_cachedResource = cachedResource; }
@@ -103,12 +103,12 @@ public:
         WallTime responseTimestamp() const { return m_responseTimestamp; }
         void setResponseTimestamp(WallTime time) { m_responseTimestamp = time; }
 
-        bool hasBufferedData() const { return m_dataBuffer; }
+        bool hasBufferedData() const { return hasData(); }
 
     private:
-        bool hasData() const { return m_dataBuffer; }
+        bool hasData() const;
         size_t dataLength() const;
-        void appendData(const char* data, size_t dataLength);
+        void appendData(const SharedBuffer&);
         unsigned decodeDataToContent();
 
         String m_requestId;
@@ -119,9 +119,9 @@ public:
         String m_textEncodingName;
         String m_mimeType;
         RefPtr<TextResourceDecoder> m_decoder;
-        RefPtr<SharedBuffer> m_dataBuffer;
-        RefPtr<SharedBuffer> m_buffer;
-        Optional<CertificateInfo> m_certificateInfo;
+        SharedBufferBuilder m_dataBuffer;
+        RefPtr<FragmentedSharedBuffer> m_buffer;
+        std::optional<CertificateInfo> m_certificateInfo;
         CachedResource* m_cachedResource { nullptr };
         InspectorPageAgent::ResourceType m_type { InspectorPageAgent::OtherResource };
         int m_httpStatusCode { 0 };
@@ -141,14 +141,14 @@ public:
     void setResourceType(const String& requestId, InspectorPageAgent::ResourceType);
     InspectorPageAgent::ResourceType resourceType(const String& requestId);
     void setResourceContent(const String& requestId, const String& content, bool base64Encoded = false);
-    ResourceData const* maybeAddResourceData(const String& requestId, const char* data, size_t dataLength);
+    ResourceData const* maybeAddResourceData(const String& requestId, const SharedBuffer&);
     void maybeDecodeDataToContent(const String& requestId);
     void addCachedResource(const String& requestId, CachedResource*);
-    void addResourceSharedBuffer(const String& requestId, RefPtr<SharedBuffer>&&, const String& textEncodingName);
+    void addResourceSharedBuffer(const String& requestId, RefPtr<FragmentedSharedBuffer>&&, const String& textEncodingName);
     ResourceData const* data(const String& requestId);
     ResourceData const* dataForURL(const String& url);
     Vector<String> removeCachedResource(CachedResource*);
-    void clear(Optional<String> preservedLoaderId = WTF::nullopt);
+    void clear(std::optional<String> preservedLoaderId = std::nullopt);
     Vector<ResourceData*> resources();
 
 private:

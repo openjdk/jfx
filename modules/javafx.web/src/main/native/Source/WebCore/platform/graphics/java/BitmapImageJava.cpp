@@ -55,8 +55,10 @@ Ref<Image> BitmapImage::createFromName(const char* name)
         "(Ljava/lang/String;)V");
     ASSERT(midLoadFromResource);
 
-    RefPtr<SharedBuffer> dataBuffer(SharedBuffer::create());
-    img->m_source->ensureDecoderAvailable(dataBuffer.get());
+    SharedBufferBuilder bufferBuilder;
+    //RefPtr<SharedBuffer> dataBuffer(SharedBuffer::create());
+    //img->m_source->ensureDecoderAvailable(dataBuffer.get());
+    img->m_source->ensureDecoderAvailable(bufferBuilder.take().ptr());
     env->CallVoidMethod(
         static_cast<ImageDecoderJava*>(img->m_source->m_decoder.get())->nativeDecoder(),
         midLoadFromResource,
@@ -79,7 +81,8 @@ Ref<Image> BitmapImage::createFromName(const char* name)
        "(Ljava/lang/String;J)V");
     ASSERT(midLoadFromResource);
 
-    RefPtr<SharedBuffer> dataBuffer(SharedBuffer::create());
+    SharedBufferBuilder bufferBuilder;
+    //RefPtr<SharedBuffer> dataBuffer(SharedBuffer::create());
     JLString resourceName(String(name).toJavaString(env));
     ASSERT(resourceName);
 
@@ -87,7 +90,7 @@ Ref<Image> BitmapImage::createFromName(const char* name)
         PL_GetGraphicsManager(env),
         midLoadFromResource,
         (jstring)resourceName,
-        ptr_to_jlong(dataBuffer.get()));
+        ptr_to_jlong((bufferBuilder.get()).get()));
     WTF::CheckAndClearException(env);
     //From the upper call we got a callback [Java_com_sun_webkit_graphics_WCGraphicsManager_append]
     //that fills the buffer.
@@ -106,7 +109,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_graphics_WCGraphicsManager_append
     (JNIEnv *env, jclass, jlong sharedBufferPtr, jbyteArray jbits, jint count)
 {
     ASSERT(sharedBufferPtr);
-    SharedBuffer* pBuffer = static_cast<SharedBuffer*>jlong_to_ptr(sharedBufferPtr);
+    SharedBufferBuilder* pBuffer = static_cast<SharedBufferBuilder*>jlong_to_ptr(sharedBufferPtr);
 
     void *cbits = env->GetPrimitiveArrayCritical(jbits, 0);
     pBuffer->append(static_cast<char*>(cbits), count);

@@ -28,7 +28,7 @@
 
 [
     Conditional=WEB_AUDIO,
-    EnabledBySetting=AudioWorklet,
+    EnabledBySetting=WebAudioEnabled,
     SkipVTableValidation,
     Exposed=Window
 ] interface AudioParamMap {

@@ -28,6 +28,91 @@
 #include <gst/gstpluginfeature.h>
 
 G_BEGIN_DECLS
+/**
+ * GST_TYPE_FIND_REGISTER_DEFINE_CUSTOM:
+ * @type_find: The type find name in lower case, with words separated by '_'.
+ * Used to generate `gst_type_find_register_*(GstPlugin* plugin)`.
+ * @register_func: pointer to a method with the format: `gboolean register_func (GstPlugin* plugin);`
+ *
+ * A convenience macro to define the entry point of a
+ * type find `gst_type_find_register_*(GstPlugin* plugin)` which uses
+ * register_func as the main registration method for the type find.
+ * As an example, you may define the type find named "custom-typefind"
+ * as following using `type_find_register_custom`:
+ *
+ * ```
+ * GST_TYPE_FIND_REGISTER_DEFINE_CUSTOM (plugin, type_find_register_custom)
+ * ```
+ *
+ * Since: 1.20
+ */
+#define GST_TYPE_FIND_REGISTER_DEFINE_CUSTOM(type_find, register_func) \
+G_BEGIN_DECLS \
+gboolean G_PASTE (gst_type_find_register_, type_find) (GstPlugin * plugin) \
+{ \
+  return register_func (plugin); \
+} \
+G_END_DECLS
+
+/**
+ * GST_TYPE_FIND_REGISTER_DEFINE:
+ * @t_f: The type find name in lower case, with words separated by '_'.
+ * Used to generate `gst_type_find_register_*(GstPlugin* plugin)`.
+ * @t_f_n: The public name of the type find
+ * @r: The #GstRank of the type find (higher rank means more importance when autoplugging, see #GstRank)
+ * @func: The #GstTypeFindFunction to use
+ * @extensions: (nullable): Optional comma-separated list of extensions
+ *     that could belong to this type
+ * @possible_caps: (nullable): Optionally the caps that could be returned when typefinding
+ *                 succeeds
+ * @data: Optional user data. This user data must be available until the plugin
+ *        is unloaded.
+ * @data_notify: a #GDestroyNotify that will be called on @data when the plugin
+ *        is unloaded.
+ *
+ * A convenience macro to define the entry point of a
+ * type find `gst_type_find_register_*(GstPlugin* plugin)`.
+ *
+ * Since: 1.20
+ */
+#define GST_TYPE_FIND_REGISTER_DEFINE(t_f, t_f_n, r, func, extensions, possible_caps, data, data_notify) \
+G_BEGIN_DECLS \
+gboolean G_PASTE (gst_type_find_register_, t_f) (GstPlugin * plugin) \
+{ \
+  return gst_type_find_register (plugin, t_f_n, r, func, extensions, possible_caps, data, data_notify); \
+} \
+G_END_DECLS
+
+/**
+ * GST_TYPE_FIND_REGISTER_DECLARE:
+ * @t_f: The type find name in lower case, with words separated by '_'.
+ *
+ * This macro can be used to declare a new type find.
+ * It has to be used in combination with #GST_TYPE_FIND_REGISTER_DEFINE macro
+ * and must be placed outside any block to declare the type find registration
+ * function.
+ *
+ * Since: 1.20
+ */
+#define GST_TYPE_FIND_REGISTER_DECLARE(t_f) \
+G_BEGIN_DECLS \
+gboolean G_PASTE(gst_type_find_register_, t_f) (GstPlugin * plugin); \
+G_END_DECLS
+
+/**
+ * GST_TYPE_FIND_REGISTER:
+ * @t_f: The type find name in lower case, with words separated by '_'.
+ * @plugin: The #GstPlugin where to register the type find.
+
+ *
+ * This macro can be used to register a type find into a #GstPlugin.
+ * This method will be usually called in the plugin init function
+ * but can also be called with a NULL plugin.
+ *
+ * Since: 1.20
+ */
+#define GST_TYPE_FIND_REGISTER(t_f, plugin) G_PASTE(gst_type_find_register_, t_f) (plugin)
+
 
 #ifndef GSTREAMER_LITE
 #define GST_TYPE_TYPE_FIND  (gst_type_find_get_type())
@@ -112,10 +197,14 @@ void            gst_type_find_suggest    (GstTypeFind   * find,
                                           guint           probability,
                                           GstCaps       * caps);
 GST_API
+void            gst_type_find_suggest_empty_simple (GstTypeFind * find,
+                                                    guint         probability,
+                                                    const char  * media_type);
+GST_API
 void            gst_type_find_suggest_simple (GstTypeFind * find,
                                               guint         probability,
                                               const char  * media_type,
-                                              const char  * fieldname, ...);
+                                              const char  * fieldname, ...) G_GNUC_NULL_TERMINATED;
 GST_API
 guint64   gst_type_find_get_length (GstTypeFind   * find);
 

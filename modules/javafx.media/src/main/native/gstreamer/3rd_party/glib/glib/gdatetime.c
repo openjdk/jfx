@@ -60,22 +60,22 @@
 #include <langinfo.h>
 #endif
 
-#include "gdatetime.h"
-
-#include "gslice.h"
 #include "gatomic.h"
 #include "gcharset.h"
+#include "gcharsetprivate.h"
 #include "gconvert.h"
+#include "gconvertprivate.h"
+#include "gdatetime.h"
 #include "gfileutils.h"
 #include "ghash.h"
+#include "glibintl.h"
 #include "gmain.h"
 #include "gmappedfile.h"
+#include "gslice.h"
 #include "gstrfuncs.h"
 #include "gtestutils.h"
 #include "gthread.h"
 #include "gtimezone.h"
-
-#include "glibintl.h"
 
 #ifndef G_OS_WIN32
 #include <sys/time.h>
@@ -132,7 +132,7 @@ struct _GDateTime
   /* 1 is 0001-01-01 in Proleptic Gregorian */
   gint32 days;
 
-  volatile gint ref_count;
+  gint ref_count;  /* (atomic) */
 };
 
 /* Time conversion {{{1 */
@@ -622,7 +622,7 @@ g_date_time_get_week_number (GDateTime *datetime,
                              gint      *day_of_week,
                              gint      *day_of_year)
 {
-  gint a, b, c, d, e, f, g, n, s, month, day, year;
+  gint a, b, c, d, e, f, g, n, s, month = -1, day = -1, year = -1;
 
   g_date_time_get_ymd (datetime, &year, &month, &day);
 
@@ -893,8 +893,9 @@ static GDateTime *
 g_date_time_new_from_timeval (GTimeZone      *tz,
                               const GTimeVal *tv)
 {
-  if ((gint64) tv->tv_sec > G_MAXINT64 - 1 ||
-      !UNIX_TO_INSTANT_IS_VALID ((gint64) tv->tv_sec + 1))
+  gint64 tv_sec = tv->tv_sec;
+
+  if (tv_sec > G_MAXINT64 - 1 || !UNIX_TO_INSTANT_IS_VALID (tv_sec + 1))
     return NULL;
 
   return g_date_time_from_instant (tz, tv->tv_usec +
@@ -1391,15 +1392,15 @@ parse_iso8601_timezone (const gchar *text, gsize length, gssize *tz_offset)
     return NULL;
 
   *tz_offset = i;
-  tz = g_time_zone_new (text + i);
+  tz = g_time_zone_new_identifier (text + i);
 
   /* Double-check that the GTimeZone matches our interpretation of the timezone.
    * This can fail because our interpretation is less strict than (for example)
    * parse_time() in gtimezone.c, which restricts the range of the parsed
    * integers. */
-  if (g_time_zone_get_offset (tz, 0) != offset_sign * (offset_hours * 3600 + offset_minutes * 60))
+  if (tz == NULL || g_time_zone_get_offset (tz, 0) != offset_sign * (offset_hours * 3600 + offset_minutes * 60))
     {
-      g_time_zone_unref (tz);
+      g_clear_pointer (&tz, g_time_zone_unref);
       return NULL;
     }
 
@@ -2027,8 +2028,8 @@ g_date_time_add_full (GDateTime *datetime,
 /* Compare, difference, hash, equal {{{1 */
 /**
  * g_date_time_compare:
- * @dt1: (not nullable): first #GDateTime to compare
- * @dt2: (not nullable): second #GDateTime to compare
+ * @dt1: (type GDateTime) (not nullable): first #GDateTime to compare
+ * @dt2: (type GDateTime) (not nullable): second #GDateTime to compare
  *
  * A comparison function for #GDateTimes that is suitable
  * as a #GCompareFunc. Both #GDateTimes must be non-%NULL.
@@ -2083,7 +2084,7 @@ g_date_time_difference (GDateTime *end,
 
 /**
  * g_date_time_hash:
- * @datetime: (not nullable): a #GDateTime
+ * @datetime: (type GDateTime) (not nullable): a #GDateTime
  *
  * Hashes @datetime into a #guint, suitable for use within #GHashTable.
  *
@@ -2101,8 +2102,8 @@ g_date_time_hash (gconstpointer datetime)
 
 /**
  * g_date_time_equal:
- * @dt1: (not nullable): a #GDateTime
- * @dt2: (not nullable): a #GDateTime
+ * @dt1: (type GDateTime) (not nullable): a #GDateTime
+ * @dt2: (type GDateTime) (not nullable): a #GDateTime
  *
  * Checks to see if @dt1 and @dt2 are equal.
  *
@@ -2346,7 +2347,7 @@ g_date_time_get_day_of_month (GDateTime *datetime)
 gint
 g_date_time_get_week_numbering_year (GDateTime *datetime)
 {
-  gint year, month, day, weekday;
+  gint year = -1, month = -1, day = -1, weekday;
 
   g_date_time_get_ymd (datetime, &year, &month, &day);
   weekday = g_date_time_get_day_of_week (datetime);
@@ -2876,7 +2877,7 @@ initialize_alt_digits (void)
       if (g_strcmp0 (locale_digit, "") == 0)
         return NULL;
 
-      digit = g_locale_to_utf8 (locale_digit, -1, NULL, &digit_len, NULL);
+      digit = _g_ctype_locale_to_utf8 (locale_digit, -1, NULL, &digit_len, NULL);
       if (digit == NULL)
         return NULL;
 
@@ -3000,7 +3001,7 @@ g_date_time_format_locale (GDateTime   *datetime,
   if (locale_is_utf8)
     return g_date_time_format_utf8 (datetime, locale_format, outstr, locale_is_utf8);
 
-  utf8_format = g_locale_to_utf8 (locale_format, -1, NULL, NULL, NULL);
+  utf8_format = _g_time_locale_to_utf8 (locale_format, -1, NULL, NULL, NULL);
   if (utf8_format == NULL)
     return FALSE;
 
@@ -3024,7 +3025,7 @@ string_append (GString     *string,
     }
   else
     {
-      utf8 = g_locale_to_utf8 (s, -1, NULL, &utf8_len, NULL);
+      utf8 = _g_time_locale_to_utf8 (s, -1, NULL, &utf8_len, NULL);
       if (utf8 == NULL)
         return FALSE;
       g_string_append_len (string, utf8, utf8_len);
@@ -3450,10 +3451,11 @@ g_date_time_format (GDateTime   *datetime,
 {
   GString  *outstr;
   const gchar *charset;
-  /* Avoid conversions from locale charset to UTF-8 if charset is compatible
+  /* Avoid conversions from locale (for LC_TIME and not for LC_MESSAGES unless
+   * specified otherwise) charset to UTF-8 if charset is compatible
    * with UTF-8 already. Check for UTF-8 and synonymous canonical names of
    * ASCII. */
-  gboolean locale_is_utf8_compatible = g_get_charset (&charset) ||
+  gboolean time_is_utf8_compatible = _g_get_time_charset (&charset) ||
     g_strcmp0 ("ASCII", charset) == 0 ||
     g_strcmp0 ("ANSI_X3.4-1968", charset) == 0;
 
@@ -3464,7 +3466,7 @@ g_date_time_format (GDateTime   *datetime,
   outstr = g_string_sized_new (strlen (format) * 2);
 
   if (!g_date_time_format_utf8 (datetime, format, outstr,
-                                locale_is_utf8_compatible))
+                                time_is_utf8_compatible))
     {
       g_string_free (outstr, TRUE);
       return NULL;

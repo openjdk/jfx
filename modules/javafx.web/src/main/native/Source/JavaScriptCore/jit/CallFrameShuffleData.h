@@ -32,18 +32,28 @@
 
 namespace JSC {
 
+struct OpTailCall;
+
 struct CallFrameShuffleData {
     WTF_MAKE_FAST_ALLOCATED;
 public:
+    void shrinkToFit()
+    {
+        args.shrinkToFit();
+    }
+
+    static CallFrameShuffleData createForBaselineOrLLIntTailCall(const OpTailCall&, unsigned numParameters);
+
     Vector<ValueRecovery> args;
     unsigned numLocals { UINT_MAX };
     unsigned numPassedArgs { UINT_MAX };
-#if USE(JSVALUE64)
+    unsigned numParameters { UINT_MAX }; // On our machine frame.
     RegisterMap<ValueRecovery> registers;
+#if USE(JSVALUE64)
     GPRReg numberTagRegister { InvalidGPRReg };
-
-    void setupCalleeSaveRegisters(CodeBlock*);
 #endif
+
+    void setupCalleeSaveRegisters(const RegisterAtOffsetList*);
     ValueRecovery callee;
 };
 

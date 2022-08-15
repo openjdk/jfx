@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2020-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -36,7 +36,6 @@ enum class ItemType : uint8_t {
     Scale,
     ConcatenateCTM,
     SetCTM,
-    SetInlineFillGradient,
     SetInlineFillColor,
     SetInlineStrokeColor,
     SetStrokeThickness,
@@ -51,8 +50,7 @@ enum class ItemType : uint8_t {
     ClipToImageBuffer,
     ClipOutToPath,
     ClipPath,
-    BeginClipToDrawingCommands,
-    EndClipToDrawingCommands,
+    DrawFilteredImageBuffer,
     DrawGlyphs,
     DrawImageBuffer,
     DrawNativeImage,
@@ -72,21 +70,23 @@ enum class ItemType : uint8_t {
     FillRoundedRect,
     FillRectWithRoundedHole,
 #if ENABLE(INLINE_PATH_DATA)
-    FillInlinePath,
+    FillLine,
+    FillArc,
+    FillQuadCurve,
+    FillBezierCurve,
 #endif
     FillPath,
     FillEllipse,
     FlushContext,
-    MetaCommandChangeDestinationImageBuffer,
-    MetaCommandChangeItemBuffer,
-    PutImageData,
 #if ENABLE(VIDEO)
     PaintFrameForMedia,
 #endif
     StrokeRect,
     StrokeLine,
 #if ENABLE(INLINE_PATH_DATA)
-    StrokeInlinePath,
+    StrokeArc,
+    StrokeQuadCurve,
+    StrokeBezierCurve,
 #endif
     StrokePath,
     StrokeEllipse,

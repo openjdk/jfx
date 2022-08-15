@@ -383,9 +383,7 @@ void TestRunner::setDomainRelaxationForbiddenForURLScheme(bool,JSStringRef) {
 void TestRunner::setScrollbarPolicy(JSStringRef,JSStringRef) {
     //FIXME: implement
 }
-
-void TestRunner::setWebViewEditable(bool) {
-    //FIXME: implement
+void TestRunner::stopLoading() {
 }
 
 bool TestRunner::findString(JSContextRef context, JSStringRef target, JSObjectRef optionsArray)

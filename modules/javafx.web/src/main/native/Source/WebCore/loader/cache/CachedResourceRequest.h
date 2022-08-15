@@ -40,6 +40,7 @@ namespace WebCore {
 struct ContentRuleListResults;
 class Document;
 class FrameLoader;
+class Page;
 struct ServiceWorkerRegistrationData;
 enum class ReferrerPolicy : uint8_t;
 
@@ -47,7 +48,7 @@ bool isRequestCrossOrigin(SecurityOrigin*, const URL& requestURL, const Resource
 
 class CachedResourceRequest {
 public:
-    CachedResourceRequest(ResourceRequest&&, const ResourceLoaderOptions&, Optional<ResourceLoadPriority> = WTF::nullopt, String&& charset = String());
+    CachedResourceRequest(ResourceRequest&&, const ResourceLoaderOptions&, std::optional<ResourceLoadPriority> = std::nullopt, String&& charset = String());
 
     ResourceRequest&& releaseResourceRequest() { return WTFMove(m_resourceRequest); }
     const ResourceRequest& resourceRequest() const { return m_resourceRequest; }
@@ -59,8 +60,8 @@ public:
     const ResourceLoaderOptions& options() const { return m_options; }
     void setOptions(const ResourceLoaderOptions& options) { m_options = options; }
 
-    const Optional<ResourceLoadPriority>& priority() const { return m_priority; }
-    void setPriority(Optional<ResourceLoadPriority>&& priority) { m_priority = WTFMove(priority); }
+    const std::optional<ResourceLoadPriority>& priority() const { return m_priority; }
+    void setPriority(std::optional<ResourceLoadPriority>&& priority) { m_priority = WTFMove(priority); }
 
     void setInitiator(Element&);
     void setInitiator(const AtomString& name);
@@ -96,7 +97,8 @@ public:
 
     void setOrigin(Ref<SecurityOrigin>&& origin) { m_origin = WTFMove(origin); }
     RefPtr<SecurityOrigin> releaseOrigin() { return WTFMove(m_origin); }
-    SecurityOrigin* origin() const { return m_origin.get(); }
+    const SecurityOrigin* origin() const { return m_origin.get(); }
+    SecurityOrigin* origin() { return m_origin.get(); }
 
     String&& releaseFragmentIdentifier() { return WTFMove(m_fragmentIdentifier); }
     void clearFragmentIdentifier() { m_fragmentIdentifier = { }; }
@@ -105,16 +107,16 @@ public:
     static String acceptHeaderValueFromType(CachedResource::Type);
 
 #if ENABLE(SERVICE_WORKER)
-    void setClientIdentifierIfNeeded(DocumentIdentifier);
+    void setClientIdentifierIfNeeded(ScriptExecutionContextIdentifier);
     void setSelectedServiceWorkerRegistrationIdentifierIfNeeded(ServiceWorkerRegistrationIdentifier);
-    void setNavigationServiceWorkerRegistrationData(const Optional<ServiceWorkerRegistrationData>&);
+    void setNavigationServiceWorkerRegistrationData(const std::optional<ServiceWorkerRegistrationData>&);
 #endif
 
 private:
     ResourceRequest m_resourceRequest;
     String m_charset;
     ResourceLoaderOptions m_options;
-    Optional<ResourceLoadPriority> m_priority;
+    std::optional<ResourceLoadPriority> m_priority;
     RefPtr<Element> m_initiatorElement;
     AtomString m_initiatorName;
     RefPtr<SecurityOrigin> m_origin;

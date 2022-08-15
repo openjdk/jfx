@@ -38,19 +38,6 @@ OBJC_CLASS NSScrollerImp;
 
 namespace WebCore {
 
-struct RequestedScrollData {
-    FloatPoint scrollPosition;
-    ScrollType scrollType { ScrollType::User };
-    ScrollClamping clamping { ScrollClamping::Clamped };
-
-    bool operator==(const RequestedScrollData& other) const
-    {
-        return scrollPosition == other.scrollPosition
-            && scrollType == other.scrollType
-            && clamping == other.clamping;
-    }
-};
-
 class ScrollingStateScrollingNode : public ScrollingStateNode {
 public:
     virtual ~ScrollingStateScrollingNode();
@@ -70,16 +57,14 @@ public:
     const IntPoint& scrollOrigin() const { return m_scrollOrigin; }
     WEBCORE_EXPORT void setScrollOrigin(const IntPoint&);
 
-#if ENABLE(CSS_SCROLL_SNAP)
-    const ScrollSnapOffsetsInfo<float>& snapOffsetsInfo() const { return m_snapOffsetsInfo; }
-    WEBCORE_EXPORT void setSnapOffsetsInfo(const ScrollSnapOffsetsInfo<float>& newOffsetsInfo);
+    const FloatScrollSnapOffsetsInfo& snapOffsetsInfo() const { return m_snapOffsetsInfo; }
+    WEBCORE_EXPORT void setSnapOffsetsInfo(const FloatScrollSnapOffsetsInfo& newOffsetsInfo);
 
-    unsigned currentHorizontalSnapPointIndex() const { return m_currentHorizontalSnapPointIndex; }
-    WEBCORE_EXPORT void setCurrentHorizontalSnapPointIndex(unsigned);
+    std::optional<unsigned> currentHorizontalSnapPointIndex() const { return m_currentHorizontalSnapPointIndex; }
+    WEBCORE_EXPORT void setCurrentHorizontalSnapPointIndex(std::optional<unsigned>);
 
-    unsigned currentVerticalSnapPointIndex() const { return m_currentVerticalSnapPointIndex; }
-    WEBCORE_EXPORT void setCurrentVerticalSnapPointIndex(unsigned);
-#endif
+    std::optional<unsigned> currentVerticalSnapPointIndex() const { return m_currentVerticalSnapPointIndex; }
+    WEBCORE_EXPORT void setCurrentVerticalSnapPointIndex(std::optional<unsigned>);
 
     const ScrollableAreaParameters& scrollableAreaParameters() const { return m_scrollableAreaParameters; }
     WEBCORE_EXPORT void setScrollableAreaParameters(const ScrollableAreaParameters& params);
@@ -92,6 +77,8 @@ public:
 
     const RequestedScrollData& requestedScrollData() const { return m_requestedScrollData; }
     WEBCORE_EXPORT void setRequestedScrollData(const RequestedScrollData&);
+
+    WEBCORE_EXPORT bool hasScrollPositionRequest() const;
 
     bool isMonitoringWheelEvents() const { return m_isMonitoringWheelEvents; }
     WEBCORE_EXPORT void setIsMonitoringWheelEvents(bool);
@@ -120,7 +107,7 @@ protected:
     ScrollingStateScrollingNode(const ScrollingStateScrollingNode&, ScrollingStateTree&);
 
     OptionSet<Property> applicableProperties() const override;
-    void dumpProperties(WTF::TextStream&, ScrollingStateTreeAsTextBehavior) const override;
+    void dumpProperties(WTF::TextStream&, OptionSet<ScrollingStateTreeAsTextBehavior>) const override;
 
 private:
     FloatSize m_scrollableAreaSize;
@@ -129,11 +116,9 @@ private:
     FloatPoint m_scrollPosition;
     IntPoint m_scrollOrigin;
 
-#if ENABLE(CSS_SCROLL_SNAP)
-    ScrollSnapOffsetsInfo<float> m_snapOffsetsInfo;
-    unsigned m_currentHorizontalSnapPointIndex { 0 };
-    unsigned m_currentVerticalSnapPointIndex { 0 };
-#endif
+    FloatScrollSnapOffsetsInfo m_snapOffsetsInfo;
+    std::optional<unsigned> m_currentHorizontalSnapPointIndex;
+    std::optional<unsigned> m_currentVerticalSnapPointIndex;
 
     LayerRepresentation m_scrollContainerLayer;
     LayerRepresentation m_scrolledContentsLayer;

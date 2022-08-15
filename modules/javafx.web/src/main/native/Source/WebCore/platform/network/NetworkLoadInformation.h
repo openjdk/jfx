@@ -33,36 +33,23 @@
 namespace WebCore {
 
 struct NetworkTransactionInformation {
-    enum class Type { Redirection, Preflight };
+    enum class Type : bool { Redirection, Preflight };
     Type type;
     ResourceRequest request;
     ResourceResponse response;
     NetworkLoadMetrics metrics;
 
     template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static Optional<NetworkTransactionInformation> decode(Decoder&);
+    template<class Decoder> static std::optional<NetworkTransactionInformation> decode(Decoder&);
 };
 
 struct NetworkLoadInformation {
+    WTF_MAKE_STRUCT_FAST_ALLOCATED;
     ResourceRequest request;
     ResourceResponse response;
     NetworkLoadMetrics metrics;
     Vector<NetworkTransactionInformation> transactions;
 };
-
-}
-
-namespace WTF {
-template<> struct EnumTraits<WebCore::NetworkTransactionInformation::Type> {
-    using values = EnumValues<
-        WebCore::NetworkTransactionInformation::Type,
-        WebCore::NetworkTransactionInformation::Type::Redirection,
-        WebCore::NetworkTransactionInformation::Type::Preflight
-    >;
-};
-}
-
-namespace WebCore {
 
 template<class Encoder> inline void NetworkTransactionInformation::encode(Encoder& encoder) const
 {
@@ -72,18 +59,18 @@ template<class Encoder> inline void NetworkTransactionInformation::encode(Encode
     encoder << metrics;
 }
 
-template<class Decoder> inline Optional<NetworkTransactionInformation> NetworkTransactionInformation::decode(Decoder& decoder)
+template<class Decoder> inline std::optional<NetworkTransactionInformation> NetworkTransactionInformation::decode(Decoder& decoder)
 {
     NetworkTransactionInformation information;
 
     if (!decoder.decode(information.type))
-        return WTF::nullopt;
+        return std::nullopt;
     if (!decoder.decode(information.request))
-        return WTF::nullopt;
+        return std::nullopt;
     if (!decoder.decode(information.response))
-        return WTF::nullopt;
+        return std::nullopt;
     if (!decoder.decode(information.metrics))
-        return WTF::nullopt;
+        return std::nullopt;
 
     return information;
 }

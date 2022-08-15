@@ -28,14 +28,14 @@
 #include "FillMode.h"
 #include "PlaybackDirection.h"
 #include "WebAnimationTypes.h"
-#include <wtf/Variant.h>
+#include <variant>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
 struct OptionalEffectTiming {
-    Optional<Variant<double, String>> duration;
-    Optional<double> iterations; // This value cannot be a MarkableDouble since we need to check for a NaN value.
+    std::optional<std::variant<double, String>> duration;
+    std::optional<double> iterations; // This value cannot be a MarkableDouble since we need to check for a NaN value.
     MarkableDouble delay;
     MarkableDouble endDelay;
     MarkableDouble iterationStart;

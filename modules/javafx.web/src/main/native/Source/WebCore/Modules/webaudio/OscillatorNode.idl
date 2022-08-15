@@ -22,26 +22,20 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-
+ 
 [
     Conditional=WEB_AUDIO,
+    EnabledBySetting=WebAudioEnabled,
     JSGenerateToJSObject,
     ActiveDOMObject,
     Exposed=Window
 ] interface OscillatorNode : AudioScheduledSourceNode {
-    [EnabledBySetting=ModernUnprefixedWebAudio] constructor (BaseAudioContext context, optional OscillatorOptions options);
+    [EnabledBySetting=WebAudioEnabled] constructor (BaseAudioContext context, optional OscillatorOptions options);
 
-    attribute OscillatorType type;
+    [ImplementedAs=typeForBindings] attribute OscillatorType type;
 
     readonly attribute AudioParam frequency; // in Hertz
     readonly attribute AudioParam detune; // in Cents
 
     undefined setPeriodicWave(PeriodicWave wave);
-
-    // FIXME: Those legacy playback state constants are kept for backward compatibility with the
-    // prefixed API and should be removed once we stop supporting the prefixed API.
-    [EnabledBySetting=PrefixedWebAudio] const unsigned short UNSCHEDULED_STATE = 0;
-    [EnabledBySetting=PrefixedWebAudio] const unsigned short SCHEDULED_STATE = 1;
-    [EnabledBySetting=PrefixedWebAudio] const unsigned short PLAYING_STATE = 2;
-    [EnabledBySetting=PrefixedWebAudio] const unsigned short FINISHED_STATE = 3;
 };

@@ -66,6 +66,8 @@ struct _GstVolume {
   guint volumes_count;
 };
 
+GST_ELEMENT_REGISTER_DECLARE (volume);
+
 G_END_DECLS
 
 #endif /* __GST_VOLUME_H__ */

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -37,42 +37,59 @@
 namespace WebCore {
 using namespace JSC;
 
-ExceptionOr<Ref<ReadableStream>> ReadableStream::create(JSC::JSGlobalObject& lexicalGlobalObject, RefPtr<ReadableStreamSource>&& source)
+static inline ExceptionOr<JSObject*> invokeConstructor(JSC::JSGlobalObject& lexicalGlobalObject, const JSC::Identifier& identifier, const Function<void(MarkedArgumentBuffer&, JSC::JSGlobalObject&, JSDOMGlobalObject&)>& buildArguments)
 {
     VM& vm = lexicalGlobalObject.vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    auto& clientData = *static_cast<JSVMClientData*>(vm.clientData);
     auto& globalObject = *JSC::jsCast<JSDOMGlobalObject*>(&lexicalGlobalObject);
 
-    auto* constructor = JSC::asObject(globalObject.get(&lexicalGlobalObject, clientData.builtinNames().ReadableStreamPrivateName()));
+    auto constructorValue = globalObject.get(&lexicalGlobalObject, identifier);
+    EXCEPTION_ASSERT(!scope.exception() || vm.hasPendingTerminationException());
+    RETURN_IF_EXCEPTION(scope, Exception { ExistingExceptionError });
+    auto constructor = JSC::asObject(constructorValue);
 
     auto constructData = getConstructData(vm, constructor);
     ASSERT(constructData.type != CallData::Type::None);
 
     MarkedArgumentBuffer args;
-    args.append(source ? toJSNewlyCreated(&lexicalGlobalObject, &globalObject, source.releaseNonNull()) : JSC::jsUndefined());
+    buildArguments(args, lexicalGlobalObject, globalObject);
     ASSERT(!args.hasOverflowed());
 
     JSObject* object = JSC::construct(&lexicalGlobalObject, constructor, constructData, args);
     ASSERT(!!scope.exception() == !object);
+    EXCEPTION_ASSERT(!scope.exception() || vm.hasPendingTerminationException());
     RETURN_IF_EXCEPTION(scope, Exception { ExistingExceptionError });
 
-    return create(globalObject, *jsCast<JSReadableStream*>(object));
+    return object;
 }
 
-static inline Optional<JSC::JSValue> invokeReadableStreamFunction(JSC::JSGlobalObject& lexicalGlobalObject, const JSC::Identifier& identifier, JSC::JSValue thisValue, const JSC::MarkedArgumentBuffer& arguments)
+ExceptionOr<Ref<ReadableStream>> ReadableStream::create(JSC::JSGlobalObject& lexicalGlobalObject, RefPtr<ReadableStreamSource>&& source)
+{
+    auto& clientData = *static_cast<JSVMClientData*>(lexicalGlobalObject.vm().clientData);
+
+    auto objectOrException = invokeConstructor(lexicalGlobalObject, clientData.builtinNames().ReadableStreamPrivateName(), [&source](auto& args, auto& lexicalGlobalObject, auto& globalObject) {
+        args.append(source ? toJSNewlyCreated(&lexicalGlobalObject, &globalObject, source.releaseNonNull()) : JSC::jsUndefined());
+    });
+
+    if (objectOrException.hasException())
+        return objectOrException.releaseException();
+
+    return create(*JSC::jsCast<JSDOMGlobalObject*>(&lexicalGlobalObject), *jsCast<JSReadableStream*>(objectOrException.releaseReturnValue()));
+}
+
+static inline std::optional<JSC::JSValue> invokeReadableStreamFunction(JSC::JSGlobalObject& lexicalGlobalObject, const JSC::Identifier& identifier, JSC::JSValue thisValue, const JSC::MarkedArgumentBuffer& arguments)
 {
     JSC::VM& vm = lexicalGlobalObject.vm();
     JSC::JSLockHolder lock(vm);
 
     auto function = lexicalGlobalObject.get(&lexicalGlobalObject, identifier);
-    ASSERT(function.isCallable(lexicalGlobalObject.vm()));
+    ASSERT(function.isCallable(vm));
 
     auto scope = DECLARE_CATCH_SCOPE(vm);
     auto callData = JSC::getCallData(vm, function);
     auto result = call(&lexicalGlobalObject, function, callData, thisValue, arguments);
-    EXCEPTION_ASSERT(!scope.exception() || isTerminatedExecutionException(lexicalGlobalObject.vm(), scope.exception()));
+    EXCEPTION_ASSERT(!scope.exception() || vm.hasPendingTerminationException());
     if (scope.exception())
         return { };
     return result;
@@ -91,7 +108,7 @@ void ReadableStream::pipeTo(ReadableStreamSink& sink)
     invokeReadableStreamFunction(lexicalGlobalObject, privateName, JSC::jsUndefined(), arguments);
 }
 
-Optional<std::pair<Ref<ReadableStream>, Ref<ReadableStream>>> ReadableStream::tee()
+std::optional<std::pair<Ref<ReadableStream>, Ref<ReadableStream>>> ReadableStream::tee()
 {
     auto& lexicalGlobalObject = *m_globalObject;
     auto* clientData = static_cast<JSVMClientData*>(lexicalGlobalObject.vm().clientData);
@@ -113,25 +130,10 @@ Optional<std::pair<Ref<ReadableStream>, Ref<ReadableStream>>> ReadableStream::te
 
 void ReadableStream::lock()
 {
-    auto& lexicalGlobalObject = *m_globalObject;
-    auto& vm = lexicalGlobalObject.vm();
-#if ENABLE(EXCEPTION_SCOPE_VERIFICATION)
-    auto scope = DECLARE_CATCH_SCOPE(vm);
-#endif
-
-    auto& clientData = *static_cast<JSVMClientData*>(vm.clientData);
-
-    auto* constructor = JSC::asObject(m_globalObject->get(&lexicalGlobalObject, clientData.builtinNames().ReadableStreamDefaultReaderPrivateName()));
-
-    auto constructData = getConstructData(vm, constructor);
-    ASSERT(constructData.type != CallData::Type::None);
-
-    MarkedArgumentBuffer args;
-    args.append(readableStream());
-    ASSERT(!args.hasOverflowed());
-
-    JSC::construct(&lexicalGlobalObject, constructor, constructData, args);
-    EXCEPTION_ASSERT(!scope.exception() || isTerminatedExecutionException(lexicalGlobalObject.vm(), scope.exception()));
+    auto& clientData = *static_cast<JSVMClientData*>(m_globalObject->vm().clientData);
+    invokeConstructor(*m_globalObject, clientData.builtinNames().ReadableStreamDefaultReaderPrivateName(), [this](auto& args, auto&, auto&) {
+        args.append(readableStream());
+    });
 }
 
 static inline bool checkReadableStream(JSDOMGlobalObject& globalObject, JSReadableStream* readableStream, JSC::JSValue function)
@@ -149,7 +151,7 @@ static inline bool checkReadableStream(JSDOMGlobalObject& globalObject, JSReadab
     ASSERT(callData.type != JSC::CallData::Type::None);
 
     auto result = call(&lexicalGlobalObject, function, callData, JSC::jsUndefined(), arguments);
-    EXCEPTION_ASSERT(!scope.exception() || isTerminatedExecutionException(lexicalGlobalObject.vm(), scope.exception()));
+    EXCEPTION_ASSERT(!scope.exception() || vm.hasPendingTerminationException());
 
     return result.isTrue() || scope.exception();
 }

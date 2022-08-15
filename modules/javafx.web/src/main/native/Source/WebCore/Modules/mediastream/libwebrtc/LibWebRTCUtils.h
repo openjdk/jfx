@@ -27,6 +27,7 @@
 #if USE(LIBWEBRTC)
 
 #include "ExceptionCode.h"
+#include <webrtc/api/media_types.h>
 #include <wtf/text/WTFString.h>
 
 namespace webrtc {
@@ -35,6 +36,8 @@ struct RtpTransceiverInit;
 
 class RTCError;
 
+enum class DtlsTransportState;
+enum class Priority;
 enum class RTCErrorType;
 enum class RtpTransceiverDirection;
 }
@@ -42,11 +45,13 @@ enum class RtpTransceiverDirection;
 namespace WebCore {
 
 class Exception;
+class RTCError;
 
 struct RTCRtpParameters;
 struct RTCRtpSendParameters;
 struct RTCRtpTransceiverInit;
 
+enum class RTCPriorityType;
 enum class RTCRtpTransceiverDirection;
 
 RTCRtpParameters toRTCRtpParameters(const webrtc::RtpParameters&);
@@ -56,10 +61,14 @@ webrtc::RtpParameters fromRTCRtpSendParameters(const RTCRtpSendParameters&, cons
 
 RTCRtpTransceiverDirection toRTCRtpTransceiverDirection(webrtc::RtpTransceiverDirection);
 webrtc::RtpTransceiverDirection fromRTCRtpTransceiverDirection(RTCRtpTransceiverDirection);
-webrtc::RtpTransceiverInit fromRtpTransceiverInit(const RTCRtpTransceiverInit&);
+webrtc::RtpTransceiverInit fromRtpTransceiverInit(const RTCRtpTransceiverInit&, cricket::MediaType);
 
 ExceptionCode toExceptionCode(webrtc::RTCErrorType);
 Exception toException(const webrtc::RTCError&);
+RefPtr<RTCError> toRTCError(const webrtc::RTCError&);
+
+RTCPriorityType toRTCPriorityType(webrtc::Priority);
+webrtc::Priority fromRTCPriorityType(RTCPriorityType);
 
 inline String fromStdString(const std::string& value)
 {

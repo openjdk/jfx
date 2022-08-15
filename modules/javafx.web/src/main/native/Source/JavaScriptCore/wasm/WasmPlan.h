@@ -43,7 +43,7 @@ class CallLinkInfo;
 
 namespace Wasm {
 
-class CodeBlock;
+class CalleeGroup;
 struct Context;
 
 class Plan : public ThreadSafeRefCounted<Plan> {
@@ -78,14 +78,14 @@ public:
     bool tryRemoveContextAndCancelIfLast(Context&);
 
 protected:
-    void runCompletionTasks(const AbstractLocker&);
-    void fail(const AbstractLocker&, String&& errorMessage);
+    void runCompletionTasks() WTF_REQUIRES_LOCK(m_lock);
+    void fail(String&& errorMessage) WTF_REQUIRES_LOCK(m_lock);
 
     virtual bool isComplete() const = 0;
-    virtual void complete(const AbstractLocker&) = 0;
+    virtual void complete() WTF_REQUIRES_LOCK(m_lock) = 0;
 
 #if ENABLE(WEBASSEMBLY_B3JIT)
-    static void updateCallSitesToCallUs(CodeBlock&, CodeLocationLabel<WasmEntryPtrTag> entrypoint, uint32_t functionIndex, uint32_t functionIndexSpace);
+    static void updateCallSitesToCallUs(const AbstractLocker& calleeGroupLocker, CalleeGroup&, CodeLocationLabel<WasmEntryPtrTag> entrypoint, uint32_t functionIndex, uint32_t functionIndexSpace);
 #endif
 
     Ref<ModuleInformation> m_moduleInformation;

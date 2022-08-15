@@ -35,6 +35,8 @@
 
 namespace JSC {
 
+const ASCIILiteral SymbolCoercionError { "Cannot convert a symbol to a string"_s };
+
 double JSValue::toIntegerPreserveNaN(JSGlobalObject* globalObject) const
 {
     if (isInt32())
@@ -73,10 +75,10 @@ double JSValue::toNumberSlowCase(JSGlobalObject* globalObject) const
     return isUndefined() ? PNaN : 0; // null and false both convert to 0.
 }
 
-Optional<double> JSValue::toNumberFromPrimitive() const
+std::optional<double> JSValue::toNumberFromPrimitive() const
 {
     if (isEmpty())
-        return WTF::nullopt;
+        return std::nullopt;
     if (isNumber())
         return asNumber();
     if (isBoolean())
@@ -85,7 +87,7 @@ Optional<double> JSValue::toNumberFromPrimitive() const
         return PNaN;
     if (isNull())
         return 0;
-    return WTF::nullopt;
+    return std::nullopt;
 }
 
 // https://tc39.es/ecma262/#sec-tobigint
@@ -94,7 +96,7 @@ JSValue JSValue::toBigInt(JSGlobalObject* globalObject) const
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    JSValue primitive = toPrimitive(globalObject);
+    JSValue primitive = toPrimitive(globalObject, PreferNumber);
     RETURN_IF_EXCEPTION(scope, { });
 
     if (primitive.isBigInt())
@@ -210,78 +212,23 @@ JSObject* JSValue::synthesizePrototype(JSGlobalObject* globalObject) const
     return nullptr;
 }
 
-// ECMA 8.7.2
+// https://tc39.es/ecma262/#sec-ordinaryset
 bool JSValue::putToPrimitive(JSGlobalObject* globalObject, PropertyName propertyName, JSValue value, PutPropertySlot& slot)
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    if (Optional<uint32_t> index = parseIndex(propertyName))
+    if (std::optional<uint32_t> index = parseIndex(propertyName))
         RELEASE_AND_RETURN(scope, putToPrimitiveByIndex(globalObject, index.value(), value, slot.isStrictMode()));
 
+    if (isString() && propertyName.uid() == vm.propertyNames->length.impl())
+        return typeError(globalObject, scope, slot.isStrictMode(), ReadonlyPropertyWriteError);
     // Check if there are any setters or getters in the prototype chain
     JSObject* obj = synthesizePrototype(globalObject);
     EXCEPTION_ASSERT(!!scope.exception() == !obj);
     if (UNLIKELY(!obj))
         return false;
-    JSValue prototype;
-    if (propertyName != vm.propertyNames->underscoreProto) {
-        while (true) {
-            Structure* structure = obj->structure(vm);
-            if (structure->hasReadOnlyOrGetterSetterPropertiesExcludingProto() || structure->typeInfo().hasPutPropertySecurityCheck())
-                break;
-            if (obj->type() == ProxyObjectType) {
-                auto* proxy = jsCast<ProxyObject*>(obj);
-                RELEASE_AND_RETURN(scope, proxy->ProxyObject::put(proxy, globalObject, propertyName, value, slot));
-            }
-            prototype = obj->getPrototype(vm, globalObject);
-            RETURN_IF_EXCEPTION(scope, false);
-
-            if (prototype.isNull())
-                return typeError(globalObject, scope, slot.isStrictMode(), ReadonlyPropertyWriteError);
-            obj = asObject(prototype);
-        }
-    }
-
-    for (; ; obj = asObject(prototype)) {
-        Structure* structure = obj->structure(vm);
-        if (UNLIKELY(structure->typeInfo().hasPutPropertySecurityCheck())) {
-            obj->methodTable(vm)->doPutPropertySecurityCheck(obj, globalObject, propertyName, slot);
-            RETURN_IF_EXCEPTION(scope, false);
-        }
-        unsigned attributes;
-        PropertyOffset offset = structure->get(vm, propertyName, attributes);
-        if (offset != invalidOffset) {
-            if (attributes & PropertyAttribute::ReadOnly)
-                return typeError(globalObject, scope, slot.isStrictMode(), ReadonlyPropertyWriteError);
-
-            JSValue gs = obj->getDirect(offset);
-            if (gs.isGetterSetter())
-                RELEASE_AND_RETURN(scope, callSetter(globalObject, *this, gs, value, slot.isStrictMode() ? ECMAMode::strict() : ECMAMode::sloppy()));
-
-            if (gs.isCustomGetterSetter()) {
-                auto setter = jsCast<CustomGetterSetter*>(gs.asCell())->setter();
-                bool isAccessor = attributes & PropertyAttribute::CustomAccessor;
-                auto result = callCustomSetter(globalObject, setter, isAccessor, obj, slot.thisValue(), value);
-                if (result != TriState::Indeterminate)
-                    RELEASE_AND_RETURN(scope, result == TriState::True);
-            }
-
-            // If there's an existing property on the object or one of its
-            // prototypes it should be replaced, so break here.
-            break;
-        }
-        if (obj->type() == ProxyObjectType) {
-            auto* proxy = jsCast<ProxyObject*>(obj);
-            RELEASE_AND_RETURN(scope, proxy->ProxyObject::put(proxy, globalObject, propertyName, value, slot));
-        }
-        prototype = obj->getPrototype(vm, globalObject);
-        RETURN_IF_EXCEPTION(scope, false);
-        if (prototype.isNull())
-            break;
-    }
-
-    return typeError(globalObject, scope, slot.isStrictMode(), ReadonlyPropertyWriteError);
+    RELEASE_AND_RETURN(scope, obj->methodTable(vm)->put(obj, globalObject, propertyName, value, slot));
 }
 
 bool JSValue::putToPrimitiveByIndex(JSGlobalObject* globalObject, unsigned propertyName, JSValue value, bool shouldThrow)
@@ -366,14 +313,14 @@ void JSValue::dumpInContextAssumingStructure(
             out.print("BigInt[heap-allocated]: addr=", RawPointer(asCell()), ", length=", jsCast<JSBigInt*>(asCell())->length(), ", sign=", jsCast<JSBigInt*>(asCell())->sign());
         else if (structure->classInfo()->isSubClassOf(JSObject::info())) {
             out.print("Object: ", RawPointer(asCell()));
-            out.print(" with butterfly ", RawPointer(asObject(asCell())->butterfly()));
+            out.print(" with butterfly ", RawPointer(asObject(asCell())->butterfly()), "(base=", RawPointer(asObject(asCell())->butterfly()->base(structure)), ")");
             out.print(" (Structure ", inContext(*structure, context), ")");
         } else {
             out.print("Cell: ", RawPointer(asCell()));
             out.print(" (", inContext(*structure, context), ")");
         }
 #if USE(JSVALUE64)
-        out.print(", StructureID: ", asCell()->structureID());
+        out.print(", StructureID: ", asCell()->structureID().bits());
 #endif
     } else if (isTrue())
         out.print("True");
@@ -410,15 +357,9 @@ void JSValue::dumpForBacktrace(PrintStream& out) const
                 out.print("(unresolved string)");
         } else if (asCell()->inherits<Structure>(vm)) {
             out.print("Structure[ ", asCell()->structure()->classInfo()->className);
-#if USE(JSVALUE64)
-            out.print(" ID: ", asCell()->structureID());
-#endif
             out.print("]: ", RawPointer(asCell()));
         } else {
             out.print("Cell[", asCell()->structure()->classInfo()->className);
-#if USE(JSVALUE64)
-            out.print(" ID: ", asCell()->structureID());
-#endif
             out.print("]: ", RawPointer(asCell()));
         }
     } else if (isTrue())
@@ -435,11 +376,6 @@ void JSValue::dumpForBacktrace(PrintStream& out) const
 #endif
     else
         out.print("INVALID");
-}
-
-bool JSValue::isValidCallee()
-{
-    return asObject(asCell())->globalObject();
 }
 
 JSString* JSValue::toStringSlowCase(JSGlobalObject* globalObject, bool returnEmptyStringOnError) const
@@ -488,12 +424,12 @@ JSString* JSValue::toStringSlowCase(JSGlobalObject* globalObject, bool returnEmp
         return returnString;
     }
     if (isSymbol()) {
-        throwTypeError(globalObject, scope, "Cannot convert a symbol to a string"_s);
+        throwTypeError(globalObject, scope, SymbolCoercionError);
         return errorValue();
     }
 
-    ASSERT(isCell());
-    JSValue value = asCell()->toPrimitive(globalObject, PreferString);
+    ASSERT(isObject()); // String, Symbol, and HeapBigInt are already handled.
+    JSValue value = asObject(asCell())->toPrimitive(globalObject, PreferString);
     RETURN_IF_EXCEPTION(scope, errorValue());
     ASSERT(!value.isObject());
     JSString* result = value.toString(globalObject);
@@ -528,5 +464,20 @@ NEVER_INLINE void ensureStillAliveHere(JSValue)
 {
 }
 #endif
+
+WTF::String JSValue::toWTFStringForConsole(JSGlobalObject* globalObject) const
+{
+    VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+    JSString* string = toString(globalObject);
+    RETURN_IF_EXCEPTION(scope, { });
+    String result = string->value(globalObject);
+    RETURN_IF_EXCEPTION(scope, { });
+    if (isString())
+        return tryMakeString("\"", result, "\"");
+    if (jsDynamicCast<JSArray*>(vm, *this))
+        return tryMakeString("[", result, "]");
+    return result;
+}
 
 } // namespace JSC

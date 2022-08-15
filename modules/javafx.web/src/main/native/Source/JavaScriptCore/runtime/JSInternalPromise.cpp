@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,7 +35,7 @@ const ClassInfo JSInternalPromise::s_info = { "InternalPromise", &Base::s_info, 
 
 JSInternalPromise* JSInternalPromise::create(VM& vm, Structure* structure)
 {
-    JSInternalPromise* promise = new (NotNull, allocateCell<JSInternalPromise>(vm.heap)) JSInternalPromise(vm, structure);
+    JSInternalPromise* promise = new (NotNull, allocateCell<JSInternalPromise>(vm)) JSInternalPromise(vm, structure);
     promise->finishCreation(vm);
     return promise;
 }
@@ -60,7 +60,7 @@ JSInternalPromise* JSInternalPromise::then(JSGlobalObject* globalObject, JSFunct
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    JSObject* function = jsCast<JSObject*>(get(globalObject, vm.propertyNames->builtinNames().thenPublicName()));
+    JSObject* function = getAs<JSObject*>(globalObject, vm.propertyNames->builtinNames().thenPublicName());
     RETURN_IF_EXCEPTION(scope, nullptr);
     auto callData = JSC::getCallData(vm, function);
     ASSERT(callData.type != CallData::Type::None);

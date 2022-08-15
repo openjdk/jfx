@@ -28,7 +28,6 @@
 
 #include <wtf/NeverDestroyed.h>
 #include <wtf/StdLibExtras.h>
-#include <wtf/ThreadSpecific.h>
 
 namespace WTF {
 
@@ -63,14 +62,19 @@ void RunLoop::initializeMain()
     s_mainRunLoop = &RunLoop::current();
 }
 
-RunLoop& RunLoop::current()
+auto RunLoop::runLoopHolder() -> ThreadSpecific<Holder>&
 {
     static LazyNeverDestroyed<ThreadSpecific<Holder>> runLoopHolder;
     static std::once_flag onceKey;
     std::call_once(onceKey, [&] {
         runLoopHolder.construct();
     });
-    return runLoopHolder.get()->runLoop();
+    return runLoopHolder;
+}
+
+RunLoop& RunLoop::current()
+{
+    return runLoopHolder()->runLoop();
 }
 
 RunLoop& RunLoop::main()
@@ -101,7 +105,8 @@ RunLoop* RunLoop::webIfExists()
 bool RunLoop::isMain()
 {
     ASSERT(s_mainRunLoop);
-    return s_mainRunLoop == &RunLoop::current();
+    // Avoid constructing the RunLoop for the current thread if it has not been created yet.
+    return runLoopHolder().isSet() && s_mainRunLoop == &RunLoop::current();
 }
 
 void RunLoop::performWork()
@@ -109,7 +114,7 @@ void RunLoop::performWork()
     bool didSuspendFunctions = false;
 
     {
-        auto locker = holdLock(m_nextIterationLock);
+        Locker locker { m_nextIterationLock };
 
         // If the RunLoop re-enters or re-schedules, we're expected to execute all functions in order.
         while (!m_currentIteration.isEmpty())
@@ -145,12 +150,13 @@ void RunLoop::performWork()
 #endif
 }
 
-void RunLoop::dispatch(Function<void ()>&& function)
+void RunLoop::dispatch(Function<void()>&& function)
 {
+    RELEASE_ASSERT(function);
     bool needsWakeup = false;
 
     {
-        auto locker = holdLock(m_nextIterationLock);
+        Locker locker { m_nextIterationLock };
         needsWakeup = m_nextIteration.isEmpty();
         m_nextIteration.append(WTFMove(function));
     }
@@ -170,6 +176,7 @@ void RunLoop::dispatch(Function<void ()>&& function)
 
 void RunLoop::dispatchAfter(Seconds delay, Function<void()>&& function)
 {
+    RELEASE_ASSERT(function);
     auto timer = new DispatchTimer(*this);
     timer->setFunction([timer, function = WTFMove(function)] {
         function();
@@ -193,7 +200,7 @@ void RunLoop::threadWillExit()
 {
     m_currentIteration.clear();
     {
-        auto locker = holdLock(m_nextIterationLock);
+        Locker locker { m_nextIterationLock };
         m_nextIteration.clear();
     }
 }

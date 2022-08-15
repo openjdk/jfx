@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -43,6 +43,7 @@
 #include "TinyBloomFilter.h"
 #include "Watchpoint.h"
 #include "WriteBarrierInlines.h"
+#include <wtf/Atomics.h>
 #include <wtf/PrintStream.h>
 
 namespace WTF {
@@ -54,6 +55,7 @@ class UniquedStringImpl;
 namespace JSC {
 
 class DeferGC;
+class DeferredStructureTransitionWatchpointFire;
 class LLIntOffsetsExtractor;
 class PropertyNameArray;
 class PropertyNameArrayData;
@@ -108,20 +110,6 @@ private:
     const Structure* m_structure;
 };
 
-class DeferredStructureTransitionWatchpointFire final : public DeferredWatchpointFire {
-    WTF_MAKE_NONCOPYABLE(DeferredStructureTransitionWatchpointFire);
-public:
-    JS_EXPORT_PRIVATE DeferredStructureTransitionWatchpointFire(VM&, Structure*);
-    JS_EXPORT_PRIVATE ~DeferredStructureTransitionWatchpointFire() final;
-
-    void dump(PrintStream& out) const final;
-
-    const Structure* structure() const { return m_structure; }
-
-private:
-    const Structure* m_structure;
-};
-
 class Structure : public JSCell {
     static constexpr uint16_t shortInvalidOffset = std::numeric_limits<uint16_t>::max() - 1;
     static constexpr uint16_t useRareDataFlag = std::numeric_limits<uint16_t>::max();
@@ -130,6 +118,7 @@ public:
 
     typedef JSCell Base;
     static constexpr unsigned StructureFlags = Base::StructureFlags | StructureIsImmortal;
+    static constexpr uint8_t numberOfLowerTierCells = 0;
 
     enum PolyProtoTag { PolyProto };
     static Structure* create(VM&, JSGlobalObject*, JSValue prototype, const TypeInfo&, const ClassInfo*, IndexingType = NonArray, unsigned inlineCapacity = 0);
@@ -138,9 +127,9 @@ public:
     ~Structure();
 
     template<typename CellType, SubspaceAccess>
-    static IsoSubspace* subspaceFor(VM& vm)
+    static GCClient::IsoSubspace* subspaceFor(VM& vm)
     {
-        return &vm.structureSpace;
+        return &vm.structureSpace();
     }
 
     JS_EXPORT_PRIVATE static bool isValidPrototype(JSValue);
@@ -176,14 +165,14 @@ private:
     void validateFlags();
 
 public:
-    StructureID id() const { return m_blob.structureID(); }
+    StructureID id() const { ASSERT(m_blob.structureID() == StructureID::encode(this)); return m_blob.structureID(); }
     int32_t objectInitializationBlob() const { return m_blob.blobExcludingStructureID(); }
     int64_t idBlob() const { return m_blob.blob(); }
 
     bool isProxy() const
     {
         JSType type = m_blob.type();
-        return type == ImpureProxyType || type == PureForwardingProxyType || type == ProxyObjectType;
+        return type == PureForwardingProxyType || type == ProxyObjectType;
     }
 
     static void dumpStatistics();
@@ -191,7 +180,7 @@ public:
     JS_EXPORT_PRIVATE static Structure* addPropertyTransition(VM&, Structure*, PropertyName, unsigned attributes, PropertyOffset&);
     JS_EXPORT_PRIVATE static Structure* addNewPropertyTransition(VM&, Structure*, PropertyName, unsigned attributes, PropertyOffset&, PutPropertySlot::Context = PutPropertySlot::UnknownContext, DeferredStructureTransitionWatchpointFire* = nullptr);
     static Structure* addPropertyTransitionToExistingStructureConcurrently(Structure*, UniquedStringImpl* uid, unsigned attributes, PropertyOffset&);
-    JS_EXPORT_PRIVATE static Structure* addPropertyTransitionToExistingStructure(Structure*, PropertyName, unsigned attributes, PropertyOffset&);
+    static Structure* addPropertyTransitionToExistingStructure(Structure*, PropertyName, unsigned attributes, PropertyOffset&);
     static Structure* removeNewPropertyTransition(VM&, Structure*, PropertyName, PropertyOffset&, DeferredStructureTransitionWatchpointFire* = nullptr);
     static Structure* removePropertyTransition(VM&, Structure*, PropertyName, PropertyOffset&, DeferredStructureTransitionWatchpointFire* = nullptr);
     static Structure* removePropertyTransitionFromExistingStructure(Structure*, PropertyName, PropertyOffset&);
@@ -268,12 +257,27 @@ public:
         return typeInfo().getOwnPropertySlotIsImpure();
     }
 
+    bool hasNonReifiedStaticProperties() const
+    {
+        return typeInfo().hasStaticPropertyTable() && !staticPropertiesReified();
+    }
+
     // Type accessors.
     TypeInfo typeInfo() const { return m_blob.typeInfo(m_outOfLineTypeFlags); }
     bool isObject() const { return typeInfo().isObject(); }
+protected:
+    // You probably want typeInfo().type()
+    JSType type() { return JSCell::type(); }
+public:
 
     IndexingType indexingType() const { return m_blob.indexingModeIncludingHistory() & AllWritableArrayTypes; }
     IndexingType indexingMode() const  { return m_blob.indexingModeIncludingHistory() & AllArrayTypes; }
+    Dependency fencedIndexingMode(IndexingType& indexingType)
+    {
+        Dependency dependency = m_blob.fencedIndexingModeIncludingHistory(indexingType);
+        indexingType &= AllArrayTypes;
+        return dependency;
+    }
     IndexingType indexingModeIncludingHistory() const { return m_blob.indexingModeIncludingHistory(); }
 
     inline bool mayInterceptIndexedAccesses() const;
@@ -308,7 +312,6 @@ public:
     JSValue prototypeForLookup(JSGlobalObject*) const;
     JSValue prototypeForLookup(JSGlobalObject*, JSCell* base) const;
     StructureChain* prototypeChain(VM&, JSGlobalObject*, JSObject* base) const;
-    StructureChain* prototypeChain(JSGlobalObject*, JSObject* base) const;
     DECLARE_VISIT_CHILDREN;
 
     // A Structure is cheap to mark during GC if doing so would only add a small and bounded amount
@@ -331,6 +334,15 @@ public:
     {
         ASSERT(hasRareData());
         return static_cast<StructureRareData*>(m_previousOrRareData.get());
+    }
+
+    StructureRareData* tryRareData()
+    {
+        JSCell* value = m_previousOrRareData.get();
+        WTF::dependentLoadLoadFence();
+        if (isRareData(value))
+            return static_cast<StructureRareData*>(value);
+        return nullptr;
     }
 
     const StructureRareData* rareData() const
@@ -522,8 +534,9 @@ public:
             setHasReadOnlyOrGetterSetterPropertiesExcludingProto(true);
     }
 
-    void setCachedPropertyNameEnumerator(VM&, JSPropertyNameEnumerator*);
+    void setCachedPropertyNameEnumerator(VM&, JSPropertyNameEnumerator*, StructureChain*);
     JSPropertyNameEnumerator* cachedPropertyNameEnumerator() const;
+    uintptr_t cachedPropertyNameEnumeratorAndFlag() const;
     bool canCachePropertyNameEnumerator(VM&) const;
     bool canAccessPropertiesQuicklyForEnumeration() const;
 
@@ -627,6 +640,11 @@ public:
         return dfgShouldWatchIfPossible() && transitionWatchpointSetIsStillValid();
     }
 
+    bool propertyNameEnumeratorShouldWatch() const
+    {
+        return dfgShouldWatch() && !hasPolyProto();
+    }
+
     void addTransitionWatchpoint(Watchpoint* watchpoint) const
     {
         ASSERT(transitionWatchpointSetIsStillValid());
@@ -677,7 +695,7 @@ public:
         const HashTable* table;
         const HashTableValue* value;
     };
-    Optional<PropertyHashEntry> findPropertyHashEntry(PropertyName) const;
+    std::optional<PropertyHashEntry> findPropertyHashEntry(PropertyName) const;
 
     DECLARE_EXPORT_INFO;
 
@@ -729,7 +747,7 @@ private:
     friend class LLIntOffsetsExtractor;
 
     JS_EXPORT_PRIVATE Structure(VM&, JSGlobalObject*, JSValue prototype, const TypeInfo&, const ClassInfo*, IndexingType, unsigned inlineCapacity);
-    Structure(VM&);
+    Structure(VM&, CreatingEarlyCellTag);
 
     static Structure* create(VM&, Structure*, DeferredStructureTransitionWatchpointFire* = nullptr);
 
@@ -741,7 +759,7 @@ private:
     // and the list of structures that we visited before we got to it. If it returns a
     // non-null structure, it will also lock the structure that it returns; it is your job
     // to unlock it.
-    void findStructuresAndMapForMaterialization(Vector<Structure*, 8>& structures, Structure*&, PropertyTable*&);
+    bool findStructuresAndMapForMaterialization(Vector<Structure*, 8>& structures, Structure*& structure, PropertyTable*&) WTF_ACQUIRES_LOCK_IF(true, structure->m_lock);
 
     static Structure* toDictionaryTransition(VM&, Structure*, DictionaryKind, DeferredStructureTransitionWatchpointFire* = nullptr);
 
@@ -823,9 +841,9 @@ private:
     JS_EXPORT_PRIVATE void pin(const AbstractLocker&, VM&, PropertyTable*);
     void pinForCaching(const AbstractLocker&, VM&, PropertyTable*);
 
-    bool isRareData(JSCell* cell) const
+    static bool isRareData(JSCell* cell)
     {
-        return cell && cell->structureID() != structureID();
+        return cell && cell->type() != StructureType;
     }
 
     template<typename DetailsFunc>
@@ -835,6 +853,8 @@ private:
     JS_EXPORT_PRIVATE void allocateRareData(VM&);
 
     void startWatchingInternalProperties(VM&);
+
+    void clearCachedPrototypeChain();
 
     static constexpr int s_maxTransitionLength = 64;
     static constexpr int s_maxTransitionLengthForNonEvalPutById = 512;

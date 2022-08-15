@@ -237,7 +237,7 @@ static bool shouldScaleColumnsForSelf(RenderTable* table)
     return scale;
 }
 
-void AutoTableLayout::computeIntrinsicLogicalWidths(LayoutUnit& minWidth, LayoutUnit& maxWidth)
+void AutoTableLayout::computeIntrinsicLogicalWidths(LayoutUnit& minWidth, LayoutUnit& maxWidth, TableIntrinsics intrinsics)
 {
     fullRecalc();
 
@@ -246,7 +246,7 @@ void AutoTableLayout::computeIntrinsicLogicalWidths(LayoutUnit& minWidth, Layout
     maxWidth = 0;
     float maxPercent = 0;
     float maxNonPercent = 0;
-    bool scaleColumnsForSelf = shouldScaleColumnsForSelf(m_table);
+    bool scaleColumnsForSelf = shouldScaleColumnsForSelf(m_table) && intrinsics == TableIntrinsics::ForLayout;
 
     // We substitute 0 percent by (epsilon / percentScaleFactor) percent in two places below to avoid division by zero.
     // FIXME: Handle the 0% cases properly.
@@ -280,8 +280,9 @@ void AutoTableLayout::computeIntrinsicLogicalWidths(LayoutUnit& minWidth, Layout
 
 void AutoTableLayout::applyPreferredLogicalWidthQuirks(LayoutUnit& minWidth, LayoutUnit& maxWidth) const
 {
-    Length tableLogicalWidth = m_table->style().logicalWidth();
-    if (tableLogicalWidth.isFixed() && tableLogicalWidth.isPositive())
+    if (m_table->hasOverridingLogicalWidth())
+        minWidth = maxWidth = std::max(minWidth, m_table->overridingLogicalWidth());
+    else if (auto tableLogicalWidth = m_table->style().logicalWidth(); tableLogicalWidth.isFixed() && tableLogicalWidth.isPositive())
         minWidth = maxWidth = std::max(minWidth, LayoutUnit(tableLogicalWidth.value()));
 }
 
@@ -531,7 +532,7 @@ void AutoTableLayout::layout()
     float totalRelative = 0;
     int numFixed = 0;
     size_t numberOfNonEmptyAuto = 0;
-    Optional<float> totalAuto;
+    std::optional<float> totalAuto;
     float totalFixed = 0;
     float totalPercent = 0;
     float allocAuto = 0;
@@ -560,7 +561,7 @@ void AutoTableLayout::layout()
                 numAutoEmptyCellsOnly++;
             else {
                 ++numberOfNonEmptyAuto;
-                totalAuto = totalAuto.valueOr(0.f) + m_layoutStruct[i].effectiveMaxLogicalWidth;
+                totalAuto = totalAuto.value_or(0.f) + m_layoutStruct[i].effectiveMaxLogicalWidth;
                 allocAuto += cellLogicalWidth;
             }
             break;
@@ -625,7 +626,7 @@ void AutoTableLayout::layout()
     if (available > 0 && numberOfNonEmptyAuto) {
         ASSERT(totalAuto);
         available += allocAuto; // this gets redistributed.
-        auto equalWidthForZeroLengthColumns = Optional<float> { };
+        auto equalWidthForZeroLengthColumns = std::optional<float> { };
         if (!*totalAuto) {
             // All columns in this table are (non-empty)zero length with 'width: auto'.
             equalWidthForZeroLengthColumns = available / numberOfNonEmptyAuto;

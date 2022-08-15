@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2010 Google Inc. All rights reserved.
- * Copyright (C) 2011-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2010-2021 Google Inc. All rights reserved.
+ * Copyright (C) 2011-2021 Apple Inc. All rights reserved.
  * Copyright (C) 2012 Samsung Electronics. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -144,6 +144,16 @@ public:
         Type::Reset,
     };
 
+    static constexpr OptionSet<Type> nonShadowRootTypes = {
+        Type::Button,
+        Type::Checkbox,
+        Type::Hidden,
+        Type::Image,
+        Type::Radio,
+        Type::Reset,
+        Type::Submit,
+    };
+
     static Ref<InputType> create(HTMLInputElement&, const AtomString&);
     static Ref<InputType> createText(HTMLInputElement&);
     virtual ~InputType();
@@ -177,7 +187,7 @@ public:
     bool isRadioButton() const { return m_type == Type::Radio; }
     bool isRangeControl() const { return m_type == Type::Range; }
     bool isSearchField() const { return m_type == Type::Search; }
-    bool isSubmitButton() const { return m_type == Type::Submit; }
+    bool isSubmitButton() const { return m_type == Type::Submit || m_type == Type::Image; }
     bool isTelephoneField() const { return m_type == Type::Telephone; }
     bool isTimeField() const { return m_type == Type::Time; }
     bool isURLField() const { return m_type == Type::URL; }
@@ -195,6 +205,8 @@ public:
     bool isInteractiveContent() const;
     bool supportLabels() const;
     bool isEnumeratable() const;
+    bool needsShadowSubtree() const { return !nonShadowRootTypes.contains(m_type); }
+    bool hasCreatedShadowSubtree() const { return m_hasCreatedShadowSubtree; }
 
     // Form value functions.
 
@@ -202,15 +214,15 @@ public:
     virtual FormControlState saveFormControlState() const;
     virtual void restoreFormControlState(const FormControlState&);
     virtual bool isFormDataAppendable() const;
-    virtual bool appendFormData(DOMFormData&, bool multipart) const;
+    virtual bool appendFormData(DOMFormData&) const;
 
     // DOM property functions.
 
     virtual bool getTypeSpecificValue(String&); // Checked first, before internal storage or the value attribute.
     virtual String fallbackValue() const; // Checked last, if both internal storage and value attribute are missing.
     virtual String defaultValue() const; // Checked after even fallbackValue, only when the valueWithDefault function is called.
-    virtual double valueAsDate() const;
-    virtual ExceptionOr<void> setValueAsDate(double) const;
+    virtual WallTime valueAsDate() const;
+    virtual ExceptionOr<void> setValueAsDate(WallTime) const;
     virtual double valueAsDouble() const;
     virtual ExceptionOr<void> setValueAsDouble(double, TextFieldEventBehavior) const;
     virtual ExceptionOr<void> setValueAsDecimal(const Decimal&, TextFieldEventBehavior) const;
@@ -295,7 +307,8 @@ public:
 
     // Shadow tree handling.
 
-    virtual void createShadowSubtreeAndUpdateInnerTextElementEditability(ContainerNode::ChildChange::Source, bool);
+    void createShadowSubtreeIfNeeded();
+    virtual void createShadowSubtree();
     virtual void destroyShadowSubtree();
 
     virtual HTMLElement* containerElement() const { return nullptr; }
@@ -312,6 +325,7 @@ public:
 #if ENABLE(DATALIST_ELEMENT)
     virtual HTMLElement* dataListButtonElement() const { return nullptr; }
 #endif
+    RefPtr<TextControlInnerTextElement> innerTextElementCreatingShadowSubtreeIfNeeded();
 
     // Miscellaneous functions.
 
@@ -322,7 +336,7 @@ public:
     virtual void detach();
     virtual bool shouldRespectAlignAttribute();
     virtual FileList* files();
-    virtual void setFiles(RefPtr<FileList>&&);
+    virtual void setFiles(RefPtr<FileList>&&, WasSetByJavaScript);
     virtual Icon* icon() const;
     virtual bool shouldSendChangeEventAfterCheckedChanged();
     virtual bool canSetValue(const String&);
@@ -352,6 +366,7 @@ public:
 #if ENABLE(DATALIST_ELEMENT)
     virtual bool isFocusingWithDataListDropdown() const { return false; };
 #endif
+    virtual void willUpdateCheckedness(bool /*nowChecked*/) { }
 
     // Parses the specified string for the type, and return
     // the Decimal value for the parsing result if the parsing
@@ -375,7 +390,7 @@ public:
 
 #if ENABLE(DATALIST_ELEMENT)
     virtual void dataListMayHaveChanged();
-    virtual Optional<Decimal> findClosestTickMarkValue(const Decimal&);
+    virtual std::optional<Decimal> findClosestTickMarkValue(const Decimal&);
 #endif
 
 #if ENABLE(DRAG_SUPPORT)
@@ -386,10 +401,12 @@ public:
 
     virtual String displayString() const;
 
+    virtual String resultForDialogSubmit() const;
+
 protected:
     explicit InputType(Type type, HTMLInputElement& element)
         : m_type(type)
-        , m_element(makeWeakPtr(element)) { }
+        , m_element(element) { }
     HTMLInputElement* element() const { return m_element.get(); }
     Chrome* chrome() const;
     Decimal parseToNumberOrNaN(const String&) const;
@@ -399,6 +416,7 @@ private:
     ExceptionOr<void> applyStep(int count, AnyStepHandling, TextFieldEventBehavior);
 
     const Type m_type;
+    bool m_hasCreatedShadowSubtree { false };
     // m_element is null if this InputType is no longer associated with an element (either the element died or changed input type).
     WeakPtr<HTMLInputElement> m_element;
 };

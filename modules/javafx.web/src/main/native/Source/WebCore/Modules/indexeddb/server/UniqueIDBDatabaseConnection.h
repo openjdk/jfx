@@ -25,9 +25,6 @@
 
 #pragma once
 
-#if ENABLE(INDEXED_DATABASE)
-
-#include "IDBServer.h"
 #include "UniqueIDBDatabase.h"
 #include <wtf/HashMap.h>
 #include <wtf/Identified.h>
@@ -38,6 +35,7 @@ namespace WebCore {
 
 class IDBError;
 class IDBResultData;
+class UniqueIDBDatabaseManager;
 
 namespace IDBServer {
 
@@ -46,7 +44,7 @@ class ServerOpenDBRequest;
 class UniqueIDBDatabase;
 class UniqueIDBDatabaseTransaction;
 
-class UniqueIDBDatabaseConnection : public RefCounted<UniqueIDBDatabaseConnection>, public Identified<UniqueIDBDatabaseConnection> {
+class UniqueIDBDatabaseConnection : public RefCounted<UniqueIDBDatabaseConnection>, public Identified<UniqueIDBDatabaseConnection>, public CanMakeWeakPtr<UniqueIDBDatabaseConnection> {
 public:
     static Ref<UniqueIDBDatabaseConnection> create(UniqueIDBDatabase&, ServerOpenDBRequest&);
 
@@ -54,11 +52,11 @@ public:
 
     const IDBResourceIdentifier& openRequestIdentifier() { return m_openRequestIdentifier; }
     UniqueIDBDatabase* database() { return m_database.get(); }
-    IDBServer* server() { return &m_server; }
+    UniqueIDBDatabaseManager* manager();
     IDBConnectionToClient& connectionToClient() { return m_connectionToClient; }
 
-    void connectionPendingCloseFromClient();
-    void connectionClosedFromClient();
+    WEBCORE_EXPORT void connectionPendingCloseFromClient();
+    WEBCORE_EXPORT void connectionClosedFromClient();
 
     bool closePending() const { return m_closePending; }
 
@@ -67,7 +65,7 @@ public:
     void fireVersionChangeEvent(const IDBResourceIdentifier& requestIdentifier, uint64_t requestedVersion);
     UniqueIDBDatabaseTransaction& createVersionChangeTransaction(uint64_t newVersion);
 
-    void establishTransaction(const IDBTransactionInfo&);
+    WEBCORE_EXPORT void establishTransaction(const IDBTransactionInfo&);
     void didAbortTransaction(UniqueIDBDatabaseTransaction&, const IDBError&);
     void didCommitTransaction(UniqueIDBDatabaseTransaction&, const IDBError&);
     void didCreateObjectStore(const IDBResultData&);
@@ -77,8 +75,8 @@ public:
     void didCreateIndex(const IDBResultData&);
     void didDeleteIndex(const IDBResultData&);
     void didRenameIndex(const IDBResultData&);
-    void didFireVersionChangeEvent(const IDBResourceIdentifier& requestIdentifier, IndexedDB::ConnectionClosedOnBehalfOfServer);
-    void didFinishHandlingVersionChange(const IDBResourceIdentifier& transactionIdentifier);
+    WEBCORE_EXPORT void didFireVersionChangeEvent(const IDBResourceIdentifier& requestIdentifier, IndexedDB::ConnectionClosedOnBehalfOfServer);
+    WEBCORE_EXPORT void didFinishHandlingVersionChange(const IDBResourceIdentifier& transactionIdentifier);
 
     void abortTransactionWithoutCallback(UniqueIDBDatabaseTransaction&);
 
@@ -90,7 +88,7 @@ private:
     UniqueIDBDatabaseConnection(UniqueIDBDatabase&, ServerOpenDBRequest&);
 
     WeakPtr<UniqueIDBDatabase> m_database;
-    IDBServer& m_server;
+    WeakPtr<UniqueIDBDatabaseManager> m_manager;
     Ref<IDBConnectionToClient> m_connectionToClient;
     IDBResourceIdentifier m_openRequestIdentifier;
 
@@ -101,5 +99,3 @@ private:
 
 } // namespace IDBServer
 } // namespace WebCore
-
-#endif // ENABLE(INDEXED_DATABASE)

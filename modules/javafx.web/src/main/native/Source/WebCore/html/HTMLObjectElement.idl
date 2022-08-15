@@ -43,11 +43,11 @@
     readonly attribute ValidityState validity;
     readonly attribute DOMString validationMessage;
     boolean checkValidity();
-    [EnabledBySetting=InteractiveFormValidation] boolean reportValidity();
+    [EnabledBySetting=InteractiveFormValidationEnabled] boolean reportValidity();
     undefined setCustomValidity(DOMString error);
 
     [CheckSecurityForNode] readonly attribute Document contentDocument;
     readonly attribute WindowProxy contentWindow;
 
-    [CheckSecurityForNode, MayThrowException] Document getSVGDocument();
+    [CheckSecurityForNode] Document getSVGDocument();
 };

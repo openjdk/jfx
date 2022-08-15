@@ -35,7 +35,6 @@
 #include "MediaQueryBlockWatcher.h"
 #include "MediaQueryExpression.h"
 #include "MediaQueryParserContext.h"
-#include <wtf/Optional.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
@@ -49,22 +48,25 @@ public:
     static RefPtr<MediaQuerySet> parseMediaQuerySet(const String&, MediaQueryParserContext);
     static RefPtr<MediaQuerySet> parseMediaQuerySet(CSSParserTokenRange, MediaQueryParserContext);
     static RefPtr<MediaQuerySet> parseMediaCondition(CSSParserTokenRange, MediaQueryParserContext);
+    static RefPtr<MediaQuerySet> parseContainerQuery(CSSParserTokenRange, MediaQueryParserContext);
 
 private:
     enum ParserType {
         MediaQuerySetParser,
         MediaConditionParser,
+        ContainerQueryParser,
     };
 
     MediaQueryParser(ParserType, MediaQueryParserContext);
     virtual ~MediaQueryParser();
 
-    RefPtr<MediaQuerySet> parseInternal(CSSParserTokenRange);
+    RefPtr<MediaQuerySet> parseInternal(CSSParserTokenRange&);
 
     void processToken(const CSSParserToken&, CSSParserTokenRange&);
 
     void readRestrictor(CSSParserTokenType, const CSSParserToken&, CSSParserTokenRange&);
     void readMediaNot(CSSParserTokenType, const CSSParserToken&, CSSParserTokenRange&);
+    void readContainerQuery(CSSParserTokenType, const CSSParserToken&, CSSParserTokenRange&);
     void readMediaType(CSSParserTokenType, const CSSParserToken&, CSSParserTokenRange&);
     void readAnd(CSSParserTokenType, const CSSParserToken&, CSSParserTokenRange&);
     void readFeatureStart(CSSParserTokenType, const CSSParserToken&, CSSParserTokenRange&);
@@ -95,7 +97,7 @@ private:
 
         MediaQuery::Restrictor restrictor() const { return m_restrictor; }
         Vector<MediaQueryExpression>& expressions() { return m_expressions; }
-        const Optional<String>& mediaType() const { return m_mediaType; }
+        const std::optional<String>& mediaType() const { return m_mediaType; }
 
         bool currentMediaQueryChanged() const
         {
@@ -111,7 +113,7 @@ private:
 
     private:
         MediaQuery::Restrictor m_restrictor { MediaQuery::None };
-        Optional<String> m_mediaType;
+        std::optional<String> m_mediaType;
         Vector<MediaQueryExpression> m_expressions;
         String m_mediaFeature;
         MediaQueryParserContext m_context;
@@ -125,6 +127,7 @@ private:
 
     const static State ReadRestrictor;
     const static State ReadMediaNot;
+    const static State ReadContainerQuery;
     const static State ReadMediaType;
     const static State ReadAnd;
     const static State ReadFeatureStart;

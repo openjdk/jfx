@@ -135,17 +135,6 @@ public class StubToolkit extends Toolkit {
         return new StubStage();
     }
 
-    @Override
-    public AppletWindow createAppletWindow(long parent, String serverName) {
-        // unsupported
-        return null;
-    }
-
-    @Override
-    public void closeAppletWindow() {
-        // unsupported
-    }
-
     private final TKSystemMenu systemMenu = new StubSystemMenu();
     @Override
     public TKSystemMenu getSystemMenu() {

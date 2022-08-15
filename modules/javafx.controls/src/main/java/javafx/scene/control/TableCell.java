@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -301,6 +301,10 @@ public class TableCell<S,T> extends IndexedCell<T> {
 
     // editing location at start of edit - fix for JDK-8187229
     private TablePosition<S, T> editingCellAtStartEdit;
+    // test-only
+    TablePosition<S, T> getEditingCellAtStartEdit() {
+        return editingCellAtStartEdit;
+    }
 
     /** {@inheritDoc} */
     @Override public void startEdit() {
@@ -327,6 +331,8 @@ public class TableCell<S,T> extends IndexedCell<T> {
         // by calling super.startEdit().
         super.startEdit();
 
+        if (!isEditing()) return;
+
         editingCellAtStartEdit = new TablePosition<>(table, getIndex(), column);
         if (column != null) {
             CellEditEvent<S,?> editEvent = new CellEditEvent<>(
@@ -338,24 +344,14 @@ public class TableCell<S,T> extends IndexedCell<T> {
 
             Event.fireEvent(column, editEvent);
         }
+        if (table != null) {
+            table.edit(editingCellAtStartEdit.getRow(), editingCellAtStartEdit.getTableColumn());
+        }
     }
 
     /** {@inheritDoc} */
     @Override public void commitEdit(T newValue) {
-        if (! isEditing()) return;
-
-        final TableView<S> table = getTableView();
-        if (table != null) {
-            // Inform the TableView of the edit being ready to be committed.
-            CellEditEvent editEvent = new CellEditEvent(
-                table,
-                table.getEditingCell(),
-                TableColumn.editCommitEvent(),
-                newValue
-            );
-
-            Event.fireEvent(getTableColumn(), editEvent);
-        }
+        if (!isEditing()) return;
 
         // inform parent classes of the commit, so that they can switch us
         // out of the editing state.
@@ -363,6 +359,20 @@ public class TableCell<S,T> extends IndexedCell<T> {
         // call cancelEdit(), resulting in both commit and cancel events being
         // fired (as identified in RT-29650)
         super.commitEdit(newValue);
+
+        final TableView<S> table = getTableView();
+        // JDK-8187307: fire the commit after updating cell's editing state
+        if (getTableColumn() != null) {
+            // Inform the TableColumn of the edit being ready to be committed.
+            CellEditEvent<S, T> editEvent = new CellEditEvent<>(
+                    table,
+                    editingCellAtStartEdit,
+                    TableColumn.editCommitEvent(),
+                    newValue
+                    );
+
+            Event.fireEvent(getTableColumn(), editEvent);
+        }
 
         // update the item within this cell, so that it represents the new value
         updateItem(newValue, false);
@@ -381,22 +391,22 @@ public class TableCell<S,T> extends IndexedCell<T> {
 
     /** {@inheritDoc} */
     @Override public void cancelEdit() {
-        if (! isEditing()) return;
-
-        final TableView<S> table = getTableView();
+        if (!isEditing()) return;
 
         super.cancelEdit();
 
-        // reset the editing index on the TableView
+        final TableView<S> table = getTableView();
         if (table != null) {
+            // reset the editing index on the TableView
             if (updateEditingIndex) table.edit(-1, null);
-
             // request focus back onto the table, only if the current focus
             // owner has the table as a parent (otherwise the user might have
             // clicked out of the table entirely and given focus to something else.
             // It would be rude of us to request it back again.
             ControlUtils.requestFocusOnControlOnlyIfCurrentFocusOwnerIsChild(table);
+        }
 
+        if (getTableColumn() != null) {
             CellEditEvent<S,?> editEvent = new CellEditEvent<>(
                 table,
                 editingCellAtStartEdit,

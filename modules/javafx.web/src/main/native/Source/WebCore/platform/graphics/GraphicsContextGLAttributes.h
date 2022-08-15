@@ -61,12 +61,19 @@ struct GraphicsContextGLAttributes {
     PowerPreference initialPowerPreference { PowerPreference::Default };
     using WebGLVersion = GraphicsContextGLWebGLVersion;
     WebGLVersion webGLVersion { WebGLVersion::WebGL1 };
+    bool forceRequestForHighPerformanceGPU { false };
 #if PLATFORM(COCOA)
-    bool useMetal { false };
+    bool useMetal { true };
 #endif
 #if ENABLE(WEBXR)
     bool xrCompatible { false };
 #endif
+    PowerPreference effectivePowerPreference() const
+    {
+        if (forceRequestForHighPerformanceGPU)
+            return PowerPreference::HighPerformance;
+        return powerPreference;
+    }
 };
 
 }

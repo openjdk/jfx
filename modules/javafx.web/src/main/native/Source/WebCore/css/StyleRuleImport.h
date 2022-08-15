@@ -35,13 +35,14 @@ class StyleSheetContents;
 class StyleRuleImport final : public StyleRuleBase {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    static Ref<StyleRuleImport> create(const String& href, Ref<MediaQuerySet>&&);
+    static Ref<StyleRuleImport> create(const String& href, Ref<MediaQuerySet>&&, std::optional<CascadeLayerName>&&);
 
     ~StyleRuleImport();
 
     StyleSheetContents* parentStyleSheet() const { return m_parentStyleSheet; }
     void setParentStyleSheet(StyleSheetContents* sheet) { ASSERT(sheet); m_parentStyleSheet = sheet; }
     void clearParentStyleSheet() { m_parentStyleSheet = 0; }
+    void cancelLoad();
 
     String href() const { return m_strHref; }
     StyleSheetContents* styleSheet() const { return m_styleSheet.get(); }
@@ -52,10 +53,12 @@ public:
     void requestStyleSheet();
     const CachedCSSStyleSheet* cachedCSSStyleSheet() const { return m_cachedSheet.get(); }
 
+    const std::optional<CascadeLayerName>& cascadeLayerName() const { return m_cascadeLayerName; }
+
 private:
     // NOTE: We put the CachedStyleSheetClient in a member instead of inheriting from it
     // to avoid adding a vptr to StyleRuleImport.
-class ImportedStyleSheetClient final : public CachedStyleSheetClient {
+    class ImportedStyleSheetClient final : public CachedStyleSheetClient {
     public:
         ImportedStyleSheetClient(StyleRuleImport* ownerRule) : m_ownerRule(ownerRule) { }
         virtual ~ImportedStyleSheetClient() = default;
@@ -70,7 +73,7 @@ class ImportedStyleSheetClient final : public CachedStyleSheetClient {
     void setCSSStyleSheet(const String& href, const URL& baseURL, const String& charset, const CachedCSSStyleSheet*);
     friend class ImportedStyleSheetClient;
 
-    StyleRuleImport(const String& href, Ref<MediaQuerySet>&&);
+    StyleRuleImport(const String& href, Ref<MediaQuerySet>&&, std::optional<CascadeLayerName>&&);
 
     StyleSheetContents* m_parentStyleSheet { nullptr };
 
@@ -78,6 +81,7 @@ class ImportedStyleSheetClient final : public CachedStyleSheetClient {
     String m_strHref;
     RefPtr<MediaQuerySet> m_mediaQueries;
     RefPtr<StyleSheetContents> m_styleSheet;
+    std::optional<CascadeLayerName> m_cascadeLayerName;
     CachedResourceHandle<CachedCSSStyleSheet> m_cachedSheet;
     bool m_loading { false };
 };

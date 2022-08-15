@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2020, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -58,9 +58,7 @@ import javafx.scene.control.Skin;
 import javafx.scene.control.Spinner;
 import javafx.scene.control.SplitMenuButton;
 import javafx.scene.control.SplitPane;
-import javafx.scene.control.TableRow;
 import javafx.scene.control.TableView;
-import javafx.scene.control.TreeTableRow;
 import javafx.scene.control.TreeTableView;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
@@ -78,6 +76,40 @@ public class SkinMemoryLeakTest {
     private Control control;
 
 //--------- tests
+
+    /**
+     * default skin -> set another instance of default skin
+     */
+    @Test
+    public void testMemoryLeakSameSkinClass() {
+        installDefaultSkin(control);
+        Skin<?> skin = control.getSkin();
+        installDefaultSkin(control);
+
+        WeakReference<?> weakRef = new WeakReference<>(skin);
+        skin = null;
+        attemptGC(weakRef);
+        assertNull("Unused Skin must be gc'ed", weakRef.get());
+    }
+
+    @Test
+    public void testControlChildrenSameSkinClass() {
+        installDefaultSkin(control);
+        int childCount = control.getChildrenUnmodifiable().size();
+        installDefaultSkin(control);
+        assertEquals("Old skin should dispose children when a new skin is set",
+                childCount, control.getChildrenUnmodifiable().size());
+    }
+
+    @Test
+    public void testSetSkinOfSameClass() {
+        installDefaultSkin(control);
+        Skin<?> oldSkin = control.getSkin();
+        installDefaultSkin(control);
+        Skin<?> newSkin = control.getSkin();
+
+        assertNotEquals("New skin was not set", oldSkin, newSkin);
+    }
 
     /**
      * default skin -> set alternative
@@ -144,9 +176,7 @@ public class SkinMemoryLeakTest {
                 Spinner.class,
                 SplitMenuButton.class,
                 SplitPane.class,
-                TableRow.class,
                 TableView.class,
-                TreeTableRow.class,
                 TreeTableView.class
         );
         // remove the known issues to make the test pass

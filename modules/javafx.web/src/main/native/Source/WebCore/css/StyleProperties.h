@@ -115,7 +115,7 @@ public:
     WEBCORE_EXPORT RefPtr<CSSValue> getPropertyCSSValue(CSSPropertyID) const;
     WEBCORE_EXPORT String getPropertyValue(CSSPropertyID) const;
 
-    WEBCORE_EXPORT Optional<Color> propertyAsColor(CSSPropertyID) const;
+    WEBCORE_EXPORT std::optional<Color> propertyAsColor(CSSPropertyID) const;
     WEBCORE_EXPORT CSSValueID propertyAsValueID(CSSPropertyID) const;
 
     bool propertyIsImportant(CSSPropertyID) const;
@@ -138,7 +138,7 @@ public:
     bool hasCSSOMWrapper() const;
     bool isMutable() const { return type() == MutablePropertiesType; }
 
-    bool traverseSubresources(const WTF::Function<bool (const CachedResource&)>& handler) const;
+    bool traverseSubresources(const Function<bool(const CachedResource&)>& handler) const;
 
     static unsigned averageSizeInBytes();
 
@@ -172,7 +172,11 @@ private:
     String get4Values(const StylePropertyShorthand&) const;
     String borderSpacingValue(const StylePropertyShorthand&) const;
     String fontValue() const;
+    String fontVariantValue() const;
+    String textDecorationSkipValue() const;
+    String offsetValue() const;
     void appendFontLonghandValueIfExplicit(CSSPropertyID, StringBuilder& result, String& value) const;
+    bool shorthandHasVariableReference(CSSPropertyID, String&) const;
 
     friend class PropertySetCSSStyleDeclaration;
 };
@@ -267,6 +271,7 @@ private:
     CSSProperty* findCSSPropertyWithID(CSSPropertyID);
     CSSProperty* findCustomCSSPropertyWithName(const String&);
     std::unique_ptr<PropertySetCSSStyleDeclaration> m_cssomWrapper;
+    bool canUpdateInPlace(const CSSProperty&, CSSProperty* toReplace) const;
 
     friend class StyleProperties;
 };

@@ -27,13 +27,12 @@
 #include <wtf/cocoa/RuntimeApplicationChecksCocoa.h>
 
 #include <wtf/NeverDestroyed.h>
-#include <wtf/Optional.h>
 
 namespace WTF {
 
-static Optional<uint32_t>& applicationSDKVersionOverride()
+static std::optional<uint32_t>& applicationSDKVersionOverride()
 {
-    static NeverDestroyed<Optional<uint32_t>> version;
+    static std::optional<uint32_t> version;
     return version;
 }
 
@@ -47,6 +46,31 @@ uint32_t applicationSDKVersion()
     if (applicationSDKVersionOverride())
         return *applicationSDKVersionOverride();
     return dyld_get_program_sdk_version();
+}
+
+static std::optional<LinkedOnOrAfterOverride>& linkedOnOrAfterOverrideValue()
+{
+    static std::optional<LinkedOnOrAfterOverride> linkedOnOrAfter;
+    return linkedOnOrAfter;
+}
+
+void setLinkedOnOrAfterOverride(std::optional<LinkedOnOrAfterOverride> linkedOnOrAfter)
+{
+    linkedOnOrAfterOverrideValue() = linkedOnOrAfter;
+}
+
+std::optional<LinkedOnOrAfterOverride> linkedOnOrAfterOverride()
+{
+    return linkedOnOrAfterOverrideValue();
+}
+
+bool linkedOnOrAfter(SDKVersion sdkVersion)
+{
+    if (auto overrideValue = linkedOnOrAfterOverride())
+        return *overrideValue == LinkedOnOrAfterOverride::AfterEverything;
+
+    auto sdkVersionAsInteger = static_cast<uint32_t>(sdkVersion);
+    return sdkVersionAsInteger && applicationSDKVersion() >= sdkVersionAsInteger;
 }
 
 }

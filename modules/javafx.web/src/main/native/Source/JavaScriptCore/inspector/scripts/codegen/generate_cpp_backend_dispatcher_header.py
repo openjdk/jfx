@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # Copyright (c) 2014-2016 Apple Inc. All rights reserved.
 # Copyright (c) 2014 University of Washington. All rights reserved.
@@ -35,7 +35,7 @@ try:
     from .cpp_generator_templates import CppGeneratorTemplates as CppTemplates
     from .generator import Generator, ucfirst
     from .models import EnumType
-except ValueError:
+except ImportError:
     from cpp_generator import CppGenerator
     from cpp_generator_templates import CppGeneratorTemplates as CppTemplates
     from generator import Generator, ucfirst
@@ -79,7 +79,6 @@ class CppBackendDispatcherHeaderGenerator(CppGenerator):
             (["JavaScriptCore", "WebKit"], (self.model().framework.name, "%sProtocolObjects.h" % self.protocol_name())),
             (["JavaScriptCore", "WebKit"], ("JavaScriptCore", "inspector/InspectorBackendDispatcher.h")),
             (["JavaScriptCore", "WebKit"], ("WTF", "wtf/Expected.h")),
-            (["JavaScriptCore", "WebKit"], ("WTF", "wtf/Optional.h")),
             (["JavaScriptCore", "WebKit"], ("WTF", "wtf/text/WTFString.h")),
             (["JavaScriptCore", "WebKit"], ("std", "tuple")),
         ]

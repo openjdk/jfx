@@ -26,6 +26,7 @@
 #include "config.h"
 #include "ComposedTreeIterator.h"
 
+#include "ElementInlines.h"
 #include "HTMLSlotElement.h"
 #include <wtf/text/TextStream.h>
 
@@ -164,6 +165,8 @@ void ComposedTreeIterator::traverseNextInShadowTree()
         if (auto* assignedNodes = slot.assignedNodes()) {
             context().slotNodeIndex = 0;
             auto* assignedNode = assignedNodes->at(0).get();
+            ASSERT(assignedNode);
+            ASSERT(assignedNode->parentElement());
             m_contextStack.append(Context(*assignedNode->parentElement(), *assignedNode, Context::Slotted));
             return;
         }
@@ -198,8 +201,8 @@ bool ComposedTreeIterator::advanceInSlot(int direction)
         return false;
 
     auto* slotNode = assignedNodes.at(context().slotNodeIndex).get();
-    if (!slotNode)
-        return false;
+    ASSERT(slotNode);
+    ASSERT(slotNode->parentElement());
     m_contextStack.append(Context(*slotNode->parentElement(), *slotNode, Context::Slotted));
     return true;
 }

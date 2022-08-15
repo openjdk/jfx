@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include <wtf/Hasher.h>
 #include <wtf/URL.h>
 
 namespace WebCore {
@@ -34,7 +35,7 @@ class SecurityOrigin;
 
 struct SecurityOriginData {
     SecurityOriginData() = default;
-    SecurityOriginData(const String& protocol, const String& host, Optional<uint16_t> port)
+    SecurityOriginData(const String& protocol, const String& host, std::optional<uint16_t> port)
         : protocol(protocol)
         , host(host)
         , port(port)
@@ -62,21 +63,22 @@ struct SecurityOriginData {
 
     String protocol;
     String host;
-    Optional<uint16_t> port;
+    std::optional<uint16_t> port;
 
-    WEBCORE_EXPORT SecurityOriginData isolatedCopy() const;
+    WEBCORE_EXPORT SecurityOriginData isolatedCopy() const &;
+    WEBCORE_EXPORT SecurityOriginData isolatedCopy() &&;
 
     // Serialize the security origin to a string that could be used as part of
     // file names. This format should be used in storage APIs only.
     WEBCORE_EXPORT String databaseIdentifier() const;
-    WEBCORE_EXPORT static Optional<SecurityOriginData> fromDatabaseIdentifier(const String&);
+    WEBCORE_EXPORT static std::optional<SecurityOriginData> fromDatabaseIdentifier(const String&);
 
     template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static Optional<SecurityOriginData> decode(Decoder&);
+    template<class Decoder> static std::optional<SecurityOriginData> decode(Decoder&);
 
     bool isEmpty() const
     {
-        return protocol.isNull() && host.isNull() && port == WTF::nullopt;
+        return protocol.isNull() && host.isNull() && port == std::nullopt;
     }
 
     bool isHashTableDeletedValue() const
@@ -86,6 +88,8 @@ struct SecurityOriginData {
 
     WEBCORE_EXPORT String toString() const;
 
+    URL toURL() const;
+
 #if !LOG_DISABLED
     String debugString() const { return toString(); }
 #endif
@@ -93,6 +97,11 @@ struct SecurityOriginData {
 
 WEBCORE_EXPORT bool operator==(const SecurityOriginData&, const SecurityOriginData&);
 inline bool operator!=(const SecurityOriginData& first, const SecurityOriginData& second) { return !(first == second); }
+
+inline void add(Hasher& hasher, const SecurityOriginData& data)
+{
+    add(hasher, data.protocol, data.host, data.port);
+}
 
 template<class Encoder>
 void SecurityOriginData::encode(Encoder& encoder) const
@@ -103,46 +112,38 @@ void SecurityOriginData::encode(Encoder& encoder) const
 }
 
 template<class Decoder>
-Optional<SecurityOriginData> SecurityOriginData::decode(Decoder& decoder)
+std::optional<SecurityOriginData> SecurityOriginData::decode(Decoder& decoder)
 {
-    Optional<String> protocol;
+    std::optional<String> protocol;
     decoder >> protocol;
     if (!protocol)
-        return WTF::nullopt;
+        return std::nullopt;
 
-    Optional<String> host;
+    std::optional<String> host;
     decoder >> host;
     if (!host)
-        return WTF::nullopt;
+        return std::nullopt;
 
-    Optional<Optional<uint16_t>> port;
+    std::optional<std::optional<uint16_t>> port;
     decoder >> port;
     if (!port)
-        return WTF::nullopt;
+        return std::nullopt;
 
     SecurityOriginData data { WTFMove(*protocol), WTFMove(*host), WTFMove(*port) };
     if (data.isHashTableDeletedValue())
-        return WTF::nullopt;
+        return std::nullopt;
 
     return data;
 }
 
-struct SecurityOriginDataHashTraits : WTF::SimpleClassHashTraits<SecurityOriginData> {
+struct SecurityOriginDataHashTraits : SimpleClassHashTraits<SecurityOriginData> {
     static const bool hasIsEmptyValueFunction = true;
     static const bool emptyValueIsZero = false;
     static bool isEmptyValue(const SecurityOriginData& data) { return data.isEmpty(); }
 };
 
 struct SecurityOriginDataHash {
-    static unsigned hash(const SecurityOriginData& data)
-    {
-        unsigned hashCodes[3] = {
-            data.protocol.impl() ? data.protocol.impl()->hash() : 0,
-            data.host.impl() ? data.host.impl()->hash() : 0,
-            data.port.valueOr(0)
-        };
-        return StringHasher::hashMemory<sizeof(hashCodes)>(hashCodes);
-    }
+    static unsigned hash(const SecurityOriginData& data) { return computeHash(data); }
     static bool equal(const SecurityOriginData& a, const SecurityOriginData& b) { return a == b; }
     static const bool safeToCompareToEmptyOrDeleted = false;
 };

@@ -72,7 +72,7 @@ public:
     void unregisterAsTouchEventListenerForScrolling();
 #endif
 
-    void setPostLayoutScrollPosition(Optional<ScrollPosition>);
+    void setPostLayoutScrollPosition(std::optional<ScrollPosition>);
     void applyPostLayoutScrollPositionIfNeeded();
 
     int scrollWidth() const;
@@ -83,7 +83,10 @@ public:
     // Scrolling methods for layers that can scroll their overflow.
     void scrollByRecursively(const IntSize& delta, ScrollableArea** scrolledArea = nullptr);
 
-    WEBCORE_EXPORT void scrollToOffset(const ScrollOffset&, const ScrollPositionChangeOptions& = ScrollPositionChangeOptions::createProgrammatic());
+    // Attempt to scroll the given ScrollOffset, returning the real target offset after it has
+    // been adjusted by scroll snapping.
+    WEBCORE_EXPORT ScrollOffset scrollToOffset(const ScrollOffset&, const ScrollPositionChangeOptions& = ScrollPositionChangeOptions::createProgrammatic());
+
     void scrollToXPosition(int x, const ScrollPositionChangeOptions&);
     void scrollToYPosition(int y, const ScrollPositionChangeOptions&);
     void setScrollPosition(const ScrollPosition&, const ScrollPositionChangeOptions&);
@@ -101,8 +104,8 @@ public:
     void setHasHorizontalScrollbar(bool);
     void setHasVerticalScrollbar(bool);
 
-    Ref<Scrollbar> createScrollbar(ScrollbarOrientation);
-    void destroyScrollbar(ScrollbarOrientation);
+    OverscrollBehavior horizontalOverscrollBehavior() const final;
+    OverscrollBehavior verticalOverscrollBehavior() const final;
 
     bool requiresScrollPositionReconciliation() const { return m_requiresScrollPositionReconciliation; }
     void setRequiresScrollPositionReconciliation(bool requiresReconciliation = true) { m_requiresScrollPositionReconciliation = requiresReconciliation; }
@@ -127,7 +130,7 @@ public:
     void updateScrollInfoAfterLayout();
     void updateScrollbarSteps();
 
-    bool scroll(ScrollDirection, ScrollGranularity, float multiplier = 1);
+    bool scroll(ScrollDirection, ScrollGranularity, unsigned stepCount = 1);
 
 public:
     // All methods in this section override ScrollableaArea methods (final).
@@ -142,13 +145,11 @@ public:
     Scrollbar* verticalScrollbar() const final { return m_vBar.get(); }
     ScrollableArea* enclosingScrollableArea() const final;
 
-    bool handleWheelEventForScrolling(const PlatformWheelEvent&, Optional<WheelScrollGestureState>) final;
+    bool handleWheelEventForScrolling(const PlatformWheelEvent&, std::optional<WheelScrollGestureState>) final;
     bool isScrollableOrRubberbandable() final;
     bool hasScrollableOrRubberbandableAncestor() final;
     bool useDarkAppearance() const final;
-#if ENABLE(CSS_SCROLL_SNAP)
     void updateSnapOffsets() final;
-#endif
 
 #if PLATFORM(IOS_FAMILY)
 #if ENABLE(IOS_TOUCH_EVENTS)
@@ -167,7 +168,7 @@ public:
     bool usesCompositedScrolling() const final;
     bool usesAsyncScrolling() const final;
 
-    bool shouldPlaceBlockDirectionScrollbarOnLeft() const final;
+    bool shouldPlaceVerticalScrollbarOnLeft() const final;
 
     bool isRenderLayer() const final { return true; }
     void invalidateScrollbarRect(Scrollbar&, const IntRect&) final;
@@ -191,19 +192,20 @@ public:
     bool isUserScrollInProgress() const final;
     bool isRubberBandInProgress() const final;
     bool forceUpdateScrollbarsOnMainThreadForPerformanceTesting() const final;
-#if ENABLE(CSS_SCROLL_SNAP)
     bool isScrollSnapInProgress() const final;
-#endif
-    bool usesMockScrollAnimator() const final;
-    void logMockScrollAnimatorMessage(const String&) const final;
+    bool mockScrollbarsControllerEnabled() const final;
+    void logMockScrollbarsControllerMessage(const String&) const final;
 
     String debugDescription() const final;
+    void didStartScrollAnimation() final;
 
     IntSize visibleSize() const final;
     IntSize contentsSize() const final;
     IntSize reachableTotalContentsSize() const final;
 
     bool requestScrollPositionUpdate(const ScrollPosition&, ScrollType = ScrollType::User, ScrollClamping = ScrollClamping::Clamped) final;
+    bool requestAnimatedScrollToPosition(const ScrollPosition&, ScrollClamping = ScrollClamping::Clamped) final;
+    void stopAsyncAnimatedScroll() final;
 
     bool containsDirtyOverlayScrollbars() const { return m_containsDirtyOverlayScrollbars; }
     void setContainsDirtyOverlayScrollbars(bool dirtyScrollbars) { m_containsDirtyOverlayScrollbars = dirtyScrollbars; }
@@ -212,12 +214,8 @@ public:
     void updateScrollbarsAfterLayout();
 
     void positionOverflowControls(const IntSize&);
-    void clearScrollCorner();
-    void clearResizer();
 
     void updateAllScrollbarRelatedStyle();
-
-    void drawPlatformResizerImage(GraphicsContext&, const LayoutRect& resizerCornerRect);
 
     LayoutUnit overflowTop() const;
     LayoutUnit overflowBottom() const;
@@ -230,13 +228,7 @@ public:
 
     bool scrollingMayRevealBackground() const;
 
-    void computeScrollDimensions();
     void computeHasCompositedScrollableOverflow();
-
-    bool hasHorizontalOverflow() const;
-    bool hasVerticalOverflow() const;
-
-    bool showsOverflowControls() const;
 
     // NOTE: This should only be called by the overridden setScrollOffset from ScrollableArea.
     void scrollTo(const ScrollPosition&);
@@ -244,23 +236,33 @@ public:
 
     IntSize scrollbarOffset(const Scrollbar&) const;
 
-    void updateScrollableAreaSet(bool hasOverflow);
+    std::optional<LayoutRect> updateScrollPosition(const ScrollPositionChangeOptions&, const LayoutRect& revealRect, const LayoutRect& localExposeRect);
+
+private:
+    bool hasHorizontalOverflow() const;
+    bool hasVerticalOverflow() const;
+
+    bool showsOverflowControls() const;
 
     ScrollOffset clampScrollOffset(const ScrollOffset&) const;
 
-    void updateLayerPositionsAfterOverflowScroll();
-    void updateLayerPositionsAfterDocumentScroll();
+    void computeScrollDimensions();
+    void computeScrollOrigin();
 
-    Optional<LayoutRect> updateScrollPosition(const ScrollPositionChangeOptions&, const LayoutRect& revealRect, const LayoutRect& localExposeRect);
+    void updateScrollableAreaSet(bool hasOverflow);
 
-#if PLATFORM(IOS_FAMILY)
-    bool adjustForIOSCaretWhenScrolling() const { return m_adjustForIOSCaretWhenScrolling; }
-    void setAdjustForIOSCaretWhenScrolling(bool adjustForIOSCaretWhenScrolling) { m_adjustForIOSCaretWhenScrolling = adjustForIOSCaretWhenScrolling; }
-#endif
-
-private:
     void updateScrollCornerStyle();
     void updateResizerStyle();
+
+    void drawPlatformResizerImage(GraphicsContext&, const LayoutRect& resizerCornerRect);
+
+    Ref<Scrollbar> createScrollbar(ScrollbarOrientation);
+    void destroyScrollbar(ScrollbarOrientation);
+
+    void clearScrollCorner();
+    void clearResizer();
+
+    void updateScrollbarPresenceAndState(std::optional<bool> hasHorizontalOverflow = std::nullopt, std::optional<bool> hasVerticalOverflow = std::nullopt);
 
 private:
     bool m_scrollDimensionsDirty { true };
@@ -268,11 +270,8 @@ private:
     bool m_registeredScrollableArea { false };
     bool m_hasCompositedScrollableOverflow { false };
 
-#if PLATFORM(IOS_FAMILY)
-#if ENABLE(IOS_TOUCH_EVENTS)
+#if PLATFORM(IOS_FAMILY) && ENABLE(IOS_TOUCH_EVENTS)
     bool m_registeredAsTouchEventListenerForScrolling { false };
-#endif
-    bool m_adjustForIOSCaretWhenScrolling { false };
 #endif
     bool m_requiresScrollPositionReconciliation { false };
     bool m_containsDirtyOverlayScrollbars { false };
@@ -284,7 +283,7 @@ private:
 
     RenderLayer& m_layer;
     ScrollPosition m_scrollPosition;
-    Optional<ScrollPosition> m_postLayoutScrollPosition;
+    std::optional<ScrollPosition> m_postLayoutScrollPosition;
 
     // For layers with overflow, we have a pair of scrollbars.
     RefPtr<Scrollbar> m_hBar;

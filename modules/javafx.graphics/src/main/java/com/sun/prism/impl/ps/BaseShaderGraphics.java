@@ -126,6 +126,24 @@ public abstract class BaseShaderGraphics
     public final NGLightBase[] getLights() { return this.lights; }
 
     @Override
+    public void clearQuad(float x1, float y1, float x2, float y2) {
+        // note that unlike clear(), this method does not currently
+        // attempt to clear the depth buffer...
+        context.setRenderTarget(this);
+        context.flushVertexBuffer();
+        // set the blend mode to CLEAR and any regular Color as paint
+        CompositeMode oldMode = getCompositeMode();
+        setCompositeMode(CompositeMode.CLEAR);
+        Paint oldPaint = getPaint();
+        setPaint(Color.BLACK); // any color will do...
+        fillQuad(x1, y1, x2, y2);
+        context.flushVertexBuffer();
+        // restore prior paint and blend mode
+        setPaint(oldPaint);
+        setCompositeMode(oldMode);
+    }
+
+    @Override
     public void drawTexture(Texture tex,
                             float dx1, float dy1, float dx2, float dy2,
                             float sx1, float sy1, float sx2, float sy2)

@@ -97,7 +97,6 @@ void* prepareOSREntry(VM& vm, CallFrame* callFrame, CodeBlock* codeBlock, Byteco
     ASSERT(JITCode::isOptimizingJIT(codeBlock->jitType()));
     ASSERT(codeBlock->alternative());
     ASSERT(codeBlock->alternative()->jitType() == JITType::BaselineJIT);
-    ASSERT(!codeBlock->jitCodeMap());
     ASSERT(codeBlock->jitCode()->dfgCommon()->isStillValid);
 
     if (!Options::useOSREntryToDFG())
@@ -295,9 +294,9 @@ void* prepareOSREntry(VM& vm, CallFrame* callFrame, CodeBlock* codeBlock, Byteco
 
     // 6) Copy our callee saves to buffer.
 #if NUMBER_OF_CALLEE_SAVES_REGISTERS > 0
-    const RegisterAtOffsetList* registerSaveLocations = codeBlock->calleeSaveRegisters();
+    const RegisterAtOffsetList* registerSaveLocations = codeBlock->jitCode()->calleeSaveRegisters();
     RegisterAtOffsetList* allCalleeSaves = RegisterSet::vmCalleeSaveRegisterOffsets();
-    RegisterSet dontSaveRegisters = RegisterSet(RegisterSet::stackRegisters(), RegisterSet::allFPRs());
+    RegisterSet dontSaveRegisters = RegisterSet(RegisterSet::stackRegisters());
 
     unsigned registerCount = registerSaveLocations->size();
     VMEntryRecord* record = vmEntryRecord(vm.topEntryFrame);
@@ -305,6 +304,7 @@ void* prepareOSREntry(VM& vm, CallFrame* callFrame, CodeBlock* codeBlock, Byteco
         RegisterAtOffset currentEntry = registerSaveLocations->at(i);
         if (dontSaveRegisters.get(currentEntry.reg()))
             continue;
+        RELEASE_ASSERT(currentEntry.reg().isGPR());
         RegisterAtOffset* calleeSavesEntry = allCalleeSaves->find(currentEntry.reg());
 
         if constexpr (CallerFrameAndPC::sizeInRegisters == 2)

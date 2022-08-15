@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,6 +27,7 @@ package javafx.scene;
 
 import com.sun.glass.ui.Application;
 import com.sun.glass.ui.Accessible;
+import com.sun.javafx.scene.traversal.TraversalMethod;
 import com.sun.javafx.util.Logging;
 import com.sun.javafx.util.Utils;
 import com.sun.javafx.application.PlatformImpl;
@@ -359,6 +360,18 @@ public class Scene implements EventTarget {
         setRoot(root);
         init(width, height);
         setFill(fill);
+
+        // Any mouse or touch press on the scene will clear the focusVisible flag of
+        // the current focus owner, if there is one.
+        EventHandler<InputEvent> pressedHandler = event -> {
+            Node focusOwner = getFocusOwner();
+            if (focusOwner != null) {
+                getKeyHandler().setFocusVisible(focusOwner, false);
+            }
+        };
+
+        addEventFilter(MouseEvent.MOUSE_PRESSED, pressedHandler);
+        addEventFilter(TouchEvent.TOUCH_PRESSED, pressedHandler);
     }
 
     static {
@@ -1222,6 +1235,7 @@ public class Scene implements EventTarget {
 
                     if (oldRoot != null) {
                         oldRoot.setScenes(null, null);
+                        oldRoot.getStyleClass().remove("root");
                     }
                     oldRoot = _value;
                     _value.getStyleClass().add(0, "root");
@@ -1662,7 +1676,8 @@ public class Scene implements EventTarget {
     private ObjectProperty<String> userAgentStylesheet = null;
 
     /**
-     * @return the userAgentStylesheet property.
+     * Gets the userAgentStylesheet property.
+     * @return the userAgentStylesheet property
      * @see #getUserAgentStylesheet()
      * @see #setUserAgentStylesheet(String)
      * @since  JavaFX 8u20
@@ -2109,11 +2124,11 @@ public class Scene implements EventTarget {
     /**
      * Traverses focus from the given node in the given direction.
      */
-    boolean traverse(Node node, Direction dir) {
+    boolean traverse(Node node, Direction dir, TraversalMethod method) {
         if (node.getSubScene() != null) {
-            return node.getSubScene().traverse(node, dir);
+            return node.getSubScene().traverse(node, dir, method);
         }
-        return traversalEngine.trav(node, dir) != null;
+        return traversalEngine.trav(node, dir, method) != null;
     }
 
     /**
@@ -2132,7 +2147,7 @@ public class Scene implements EventTarget {
      * function assumes that it is still a member of the same scene.
      */
     private void focusIneligible(Node node) {
-        traverse(node, Direction.NEXT);
+        traverse(node, Direction.NEXT, TraversalMethod.DEFAULT);
     }
 
     void processKeyEvent(KeyEvent e) {
@@ -2145,8 +2160,8 @@ public class Scene implements EventTarget {
         getKeyHandler().process(e);
     }
 
-    void requestFocus(Node node) {
-        getKeyHandler().requestFocus(node);
+    void requestFocus(Node node, boolean focusVisible) {
+        getKeyHandler().requestFocus(node, focusVisible);
     }
 
     private Node oldFocusOwner;
@@ -2162,11 +2177,11 @@ public class Scene implements EventTarget {
         @Override
         protected void invalidated() {
             if (oldFocusOwner != null) {
-                ((Node.FocusedProperty) oldFocusOwner.focusedProperty()).store(false);
+                oldFocusOwner.setFocusQuietly(false, false);
             }
             Node value = get();
             if (value != null) {
-                ((Node.FocusedProperty) value.focusedProperty()).store(keyHandler.windowFocused);
+                value.setFocusQuietly(keyHandler.windowFocused, keyHandler.focusVisible);
                 if (value != oldFocusOwner) {
                     value.getScene().enableInputMethodEvents(
                             value.getInputMethodRequests() != null
@@ -2179,10 +2194,10 @@ public class Scene implements EventTarget {
             Node localOldOwner = oldFocusOwner;
             oldFocusOwner = value;
             if (localOldOwner != null) {
-                ((Node.FocusedProperty) localOldOwner.focusedProperty()).notifyListeners();
+                localOldOwner.notifyFocusListeners();
             }
             if (value != null) {
-                ((Node.FocusedProperty) value.focusedProperty()).notifyListeners();
+                value.notifyFocusListeners();
             }
             PlatformLogger logger = Logging.getFocusLogger();
             if (logger.isLoggable(Level.FINE)) {
@@ -2456,10 +2471,10 @@ public class Scene implements EventTarget {
                 if (oldOwner == null) {
                     Scene.this.focusInitial();
                 } else if (oldOwner.getScene() != Scene.this) {
-                    Scene.this.requestFocus(null);
+                    Scene.this.requestFocus(null, false);
                     Scene.this.focusInitial();
                 } else if (!oldOwner.isCanReceiveFocus()) {
-                    Scene.this.requestFocus(null);
+                    Scene.this.requestFocus(null, false);
                     Scene.this.focusIneligible(oldOwner);
                 }
                 Scene.this.setFocusDirty(false);
@@ -4032,7 +4047,11 @@ public class Scene implements EventTarget {
      ******************************************************************************/
 
     class KeyHandler {
-        private void setFocusOwner(final Node value) {
+        boolean focusVisible;
+
+        private void setFocusOwner(Node value, boolean focusVisible) {
+            this.focusVisible = focusVisible;
+
             // Cancel IM composition if there is one in progress.
             // This needs to be done before the focus owner is switched as it
             // generates event that needs to be delivered to the old focus owner.
@@ -4048,12 +4067,19 @@ public class Scene implements EventTarget {
             focusOwner.set(value);
         }
 
+        private void setFocusVisible(Node node, boolean focusVisible) {
+            this.focusVisible = focusVisible;
+            node.focusVisible.set(focusVisible);
+            node.focusVisible.notifyListeners();
+        }
+
         private boolean windowFocused;
         protected boolean isWindowFocused() { return windowFocused; }
         protected void setWindowFocused(boolean value) {
             windowFocused = value;
             if (getFocusOwner() != null) {
-                getFocusOwner().setFocused(windowFocused);
+                getFocusOwner().setFocusQuietly(windowFocused, focusVisible);
+                getFocusOwner().notifyFocusListeners();
             }
             if (windowFocused) {
                 if (accessible != null) {
@@ -4088,11 +4114,16 @@ public class Scene implements EventTarget {
             Event.fireEvent(eventTarget, e);
         }
 
-        private void requestFocus(Node node) {
-            if (getFocusOwner() == node || (node != null && !node.isCanReceiveFocus())) {
-                return;
+        private void requestFocus(Node node, boolean focusVisible) {
+            if (node == null) {
+                setFocusOwner(null, false);
+            } else if (node.isCanReceiveFocus()) {
+                if (node != getFocusOwner()) {
+                    setFocusOwner(node, focusVisible);
+                } else {
+                    setFocusVisible(node, focusVisible);
+                }
             }
-            setFocusOwner(node);
         }
     }
     /* *************************************************************************

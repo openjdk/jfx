@@ -39,7 +39,7 @@ struct NameSection : public ThreadSafeRefCounted<NameSection> {
 public:
     NameSection()
     {
-        setHash(WTF::nullopt);
+        setHash(std::nullopt);
     }
 
     static Ref<NameSection> create()
@@ -47,7 +47,7 @@ public:
         return adoptRef(*new NameSection);
     }
 
-    void setHash(const Optional<CString> &hash)
+    void setHash(const std::optional<CString> &hash)
     {
         moduleHash = Name(hash ? hash->length() : 3);
         if (hash) {
@@ -62,7 +62,7 @@ public:
 
     std::pair<const Name*, RefPtr<NameSection>> get(size_t functionIndexSpace)
     {
-        return std::make_pair(functionIndexSpace < functionNames.size() ? &functionNames[functionIndexSpace] : nullptr, makeRefPtr(this));
+        return std::make_pair(functionIndexSpace < functionNames.size() ? &functionNames[functionIndexSpace] : nullptr, RefPtr { this });
     }
     Name moduleName;
     Name moduleHash;

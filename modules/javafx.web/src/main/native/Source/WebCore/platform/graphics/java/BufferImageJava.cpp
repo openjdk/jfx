@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -39,12 +39,12 @@ BufferImage::BufferImage(PlatformImagePtr image)
     : Image(), m_image(image)
 {}
 
-RefPtr<NativeImage> BufferImage::nativeImage(const GraphicsContext*)
+RefPtr<NativeImage> BufferImage::nativeImage(const DestinationColorSpace&)
 {
     return nativeImageForCurrentFrame();
 }
 
-RefPtr<NativeImage> BufferImage::nativeImageForCurrentFrame(const GraphicsContext*)
+RefPtr<NativeImage> BufferImage::nativeImageForCurrentFrame()
 {
     m_image->getRenderingQueue()->flushBuffer();
     return NativeImage::create(m_image.get());

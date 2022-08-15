@@ -295,22 +295,6 @@ public class ComboBoxTreeTableCellTest {
         assertNull(cell.getGraphic());
     }
 
-    @Test(expected = NullPointerException.class)
-    public void test_startEdit_cellEditableIsTrue_tableViewIsNull_isEmpty() {
-        ComboBoxTreeTableCell<Object,Object> cell = new ComboBoxTreeTableCell<>();
-        cell.setEditable(true);
-        cell.startEdit();
-    }
-
-    @Test(expected = NullPointerException.class)
-    public void test_startEdit_tableViewEditableIsTrue_tableColumnIsNull() {
-        TreeTableView tableView = new TreeTableView();
-        tableView.setEditable(true);
-        ComboBoxTreeTableCell<Object,Object> cell = new ComboBoxTreeTableCell<>();
-        cell.updateTreeTableView(tableView);
-        cell.startEdit();
-    }
-
     @Test public void test_startEdit_tableViewEditableIsTrue_isEmpty() {
         TreeTableColumn tc = new TreeTableColumn();
         TreeTableView tableView = new TreeTableView();
@@ -358,14 +342,6 @@ public class ComboBoxTreeTableCellTest {
         cell.startEdit();
         assertFalse(cell.isEditing());
         assertNull(cell.getGraphic());
-    }
-
-    @Test(expected = NullPointerException.class)
-    public void test_startEdit_cellEditableIsTrue_tableViewIsNull_isNotEmpty() {
-        ComboBoxTreeTableCell<Object,Object> cell = new ComboBoxTreeTableCell<>();
-        cell.updateItem("TEST", false);
-        cell.setEditable(true);
-        cell.startEdit();
     }
 
     @Test public void test_startEdit_tableViewEditableIsTrue_isNotEmpty() {

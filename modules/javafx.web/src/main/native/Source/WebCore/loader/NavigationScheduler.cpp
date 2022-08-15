@@ -120,8 +120,8 @@ class ScheduledURLNavigation : public ScheduledNavigation {
 protected:
     ScheduledURLNavigation(Document& initiatingDocument, double delay, SecurityOrigin* securityOrigin, const URL& url, const String& referrer, LockHistory lockHistory, LockBackForwardList lockBackForwardList, bool duringLoad, bool isLocationChange)
         : ScheduledNavigation(delay, lockHistory, lockBackForwardList, duringLoad, isLocationChange, initiatingDocument.shouldOpenExternalURLsPolicyToPropagate())
-        , m_initiatingDocument { makeRef(initiatingDocument) }
-        , m_securityOrigin{ makeRefPtr(securityOrigin) }
+        , m_initiatingDocument { initiatingDocument }
+        , m_securityOrigin { securityOrigin }
         , m_url { url }
         , m_referrer { referrer }
     {
@@ -167,8 +167,9 @@ private:
 
 class ScheduledRedirect : public ScheduledURLNavigation {
 public:
-    ScheduledRedirect(Document& initiatingDocument, double delay, SecurityOrigin* securityOrigin, const URL& url, LockHistory lockHistory, LockBackForwardList lockBackForwardList)
+    ScheduledRedirect(Document& initiatingDocument, double delay, SecurityOrigin* securityOrigin, const URL& url, LockHistory lockHistory, LockBackForwardList lockBackForwardList, IsMetaRefresh isMetaRefresh)
         : ScheduledURLNavigation(initiatingDocument, delay, securityOrigin, url, String(), lockHistory, lockBackForwardList, false, false)
+        , m_isMetaRefresh(isMetaRefresh)
     {
         clearUserGesture();
     }
@@ -180,13 +181,20 @@ public:
 
     void fire(Frame& frame) override
     {
+        if (m_isMetaRefresh == IsMetaRefresh::Yes) {
+            if (auto document = frame.document(); document && document->isSandboxed(SandboxAutomaticFeatures)) {
+                document->addConsoleMessage(MessageSource::Security, MessageLevel::Error, "Unable to do meta refresh due to sandboxing"_s);
+                return;
+            }
+        }
+
         UserGestureIndicator gestureIndicator { userGestureToForward() };
 
         bool refresh = equalIgnoringFragmentIdentifier(frame.document()->url(), url());
         ResourceRequest resourceRequest { url(), referrer(), refresh ? ResourceRequestCachePolicy::ReloadIgnoringCacheData : ResourceRequestCachePolicy::UseProtocolCachePolicy };
         if (initiatedByMainFrame() == InitiatedByMainFrame::Yes)
             resourceRequest.setRequester(ResourceRequest::Requester::Main);
-        FrameLoadRequest frameLoadRequest { initiatingDocument(), *securityOrigin(), WTFMove(resourceRequest), "_self", initiatedByMainFrame() };
+        FrameLoadRequest frameLoadRequest { initiatingDocument(), *securityOrigin(), WTFMove(resourceRequest), selfTargetFrameName(), initiatedByMainFrame() };
         frameLoadRequest.setLockHistory(lockHistory());
         frameLoadRequest.setLockBackForwardList(lockBackForwardList());
         frameLoadRequest.disableNavigationToInvalidURL();
@@ -194,6 +202,9 @@ public:
 
         frame.loader().changeLocation(WTFMove(frameLoadRequest));
     }
+
+private:
+    IsMetaRefresh m_isMetaRefresh;
 };
 
 class ScheduledLocationChange : public ScheduledURLNavigation {
@@ -215,7 +226,7 @@ public:
         UserGestureIndicator gestureIndicator { userGestureToForward() };
 
         ResourceRequest resourceRequest { url(), referrer(), ResourceRequestCachePolicy::UseProtocolCachePolicy };
-        FrameLoadRequest frameLoadRequest { initiatingDocument(), *securityOrigin(), WTFMove(resourceRequest), "_self", initiatedByMainFrame() };
+        FrameLoadRequest frameLoadRequest { initiatingDocument(), *securityOrigin(), WTFMove(resourceRequest), selfTargetFrameName(), initiatedByMainFrame() };
         frameLoadRequest.setLockHistory(lockHistory());
         frameLoadRequest.setLockBackForwardList(lockBackForwardList());
         frameLoadRequest.disableNavigationToInvalidURL();
@@ -242,7 +253,7 @@ public:
         UserGestureIndicator gestureIndicator { userGestureToForward() };
 
         ResourceRequest resourceRequest { url(), referrer(), ResourceRequestCachePolicy::ReloadIgnoringCacheData };
-        FrameLoadRequest frameLoadRequest { initiatingDocument(), *securityOrigin(), WTFMove(resourceRequest), "_self", initiatedByMainFrame() };
+        FrameLoadRequest frameLoadRequest { initiatingDocument(), *securityOrigin(), WTFMove(resourceRequest), selfTargetFrameName(), initiatedByMainFrame() };
         frameLoadRequest.setLockHistory(lockHistory());
         frameLoadRequest.setLockBackForwardList(lockBackForwardList());
         frameLoadRequest.setShouldOpenExternalURLsPolicy(shouldOpenExternalURLs());
@@ -266,7 +277,7 @@ public:
         if (!m_historySteps) {
             // Special case for go(0) from a frame -> reload only the frame
             // To follow Firefox and IE's behavior, history reload can only navigate the self frame.
-            frame.loader().changeLocation(frame.document()->url(), "_self", 0, ReferrerPolicy::EmptyString, shouldOpenExternalURLs());
+            frame.loader().changeLocation(frame.document()->url(), selfTargetFrameName(), 0, ReferrerPolicy::EmptyString, shouldOpenExternalURLs());
             return;
         }
 
@@ -304,8 +315,10 @@ public:
         FrameLoadRequest frameLoadRequest { requestingDocument, requestingDocument.securityOrigin(), { }, { }, initiatedByMainFrame() };
         frameLoadRequest.setLockHistory(lockHistory());
         frameLoadRequest.setLockBackForwardList(lockBackForwardList());
-        frameLoadRequest.setReferrerPolicy(ReferrerPolicy::EmptyString);
+        frameLoadRequest.setReferrerPolicy(m_submission->referrerPolicy());
+        frameLoadRequest.setNewFrameOpenerPolicy(m_submission->newFrameOpenerPolicy());
         frameLoadRequest.setShouldOpenExternalURLsPolicy(shouldOpenExternalURLs());
+        frameLoadRequest.disableShouldReplaceDocumentIfJavaScriptURL();
         m_submission->populateFrameLoadRequest(frameLoadRequest);
         frame.loader().loadFrameRequest(WTFMove(frameLoadRequest), m_submission->event(), m_submission->takeState());
     }
@@ -407,7 +420,7 @@ inline bool NavigationScheduler::shouldScheduleNavigation(const URL& url) const
     return NavigationDisabler::isNavigationAllowed(m_frame);
 }
 
-void NavigationScheduler::scheduleRedirect(Document& initiatingDocument, double delay, const URL& url)
+void NavigationScheduler::scheduleRedirect(Document& initiatingDocument, double delay, const URL& url, IsMetaRefresh isMetaRefresh)
 {
     if (!shouldScheduleNavigation(url))
         return;
@@ -419,7 +432,7 @@ void NavigationScheduler::scheduleRedirect(Document& initiatingDocument, double 
     // We want a new back/forward list item if the refresh timeout is > 1 second.
     if (!m_redirect || delay <= m_redirect->delay()) {
         auto lockBackForwardList = delay <= 1 ? LockBackForwardList::Yes : LockBackForwardList::No;
-        schedule(makeUnique<ScheduledRedirect>(initiatingDocument, delay, &m_frame.document()->securityOrigin(), url, LockHistory::Yes, lockBackForwardList));
+        schedule(makeUnique<ScheduledRedirect>(initiatingDocument, delay, &m_frame.document()->securityOrigin(), url, LockHistory::Yes, lockBackForwardList, isMetaRefresh));
     }
 }
 
@@ -458,7 +471,7 @@ void NavigationScheduler::scheduleLocationChange(Document& initiatingDocument, S
         auto* frame = lexicalFrameFromCommonVM();
         auto initiatedByMainFrame = frame && frame->isMainFrame() ? InitiatedByMainFrame::Yes : InitiatedByMainFrame::Unknown;
 
-        FrameLoadRequest frameLoadRequest { initiatingDocument, securityOrigin, WTFMove(resourceRequest), "_self"_s, initiatedByMainFrame };
+        FrameLoadRequest frameLoadRequest { initiatingDocument, securityOrigin, WTFMove(resourceRequest), selfTargetFrameName(), initiatedByMainFrame };
         frameLoadRequest.setLockHistory(lockHistory);
         frameLoadRequest.setLockBackForwardList(lockBackForwardList);
         frameLoadRequest.disableNavigationToInvalidURL();
@@ -494,7 +507,17 @@ void NavigationScheduler::scheduleFormSubmission(Ref<FormSubmission>&& submissio
         lockBackForwardList = LockBackForwardList::Yes;
     }
 
-    schedule(makeUnique<ScheduledFormSubmission>(WTFMove(submission), lockBackForwardList, duringLoad));
+    bool isJavaScriptURL = submission->requestURL().protocolIsJavaScript();
+
+    auto scheduledFormSubmission = makeUnique<ScheduledFormSubmission>(WTFMove(submission), lockBackForwardList, duringLoad);
+
+    // FIXME: We currently run JavaScript URLs synchronously even though this doesn't appear to match the specification.
+    if (isJavaScriptURL) {
+        scheduledFormSubmission->fire(m_frame);
+        return;
+    }
+
+    schedule(WTFMove(scheduledFormSubmission));
 }
 
 void NavigationScheduler::scheduleRefresh(Document& initiatingDocument)

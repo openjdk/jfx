@@ -1,18 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <classpath>
 	<classpathentry kind="src" path="src/main/java"/>
-	<classpathentry kind="src" path="build/hlsl/Prism">
-		<attributes>
-			<attribute name="ignore_optional_problems" value="true"/>
-		</attributes>
-	</classpathentry>
-	<classpathentry kind="src" path="build/gensrc/jsl-prism"/>
-	<classpathentry kind="src" path="build/hlsl/Decora">
-		<attributes>
-			<attribute name="ignore_optional_problems" value="true"/>
-		</attributes>
-	</classpathentry>
-	<classpathentry kind="src" path="build/gensrc/jsl-decora"/>
 	<classpathentry kind="src" output="testbin" path="src/shims/java">
 		<attributes>
 			<attribute name="test" value="true"/>

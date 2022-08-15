@@ -27,9 +27,10 @@
 
 #if ENABLE(WEBASSEMBLY)
 
-#include "WasmCodeBlock.h"
+#include "WasmCalleeGroup.h"
 #include "WasmEmbedder.h"
 #include "WasmMemory.h"
+#include "WasmOps.h"
 #include <wtf/Expected.h>
 #include <wtf/Lock.h>
 #include <wtf/SharedTask.h>
@@ -40,8 +41,6 @@ namespace JSC { namespace Wasm {
 class LLIntPlan;
 struct Context;
 struct ModuleInformation;
-
-using SignatureIndex = uint64_t;
 
 class Module : public ThreadSafeRefCounted<Module> {
 public:
@@ -60,19 +59,22 @@ public:
     Wasm::SignatureIndex signatureIndexFromFunctionIndexSpace(unsigned functionIndexSpace) const;
     const Wasm::ModuleInformation& moduleInformation() const { return m_moduleInformation.get(); }
 
-    Ref<CodeBlock> compileSync(Context*, MemoryMode);
-    void compileAsync(Context*, MemoryMode, CodeBlock::AsyncCompilationCallback&&);
+    Ref<CalleeGroup> compileSync(Context*, MemoryMode);
+    void compileAsync(Context*, MemoryMode, CalleeGroup::AsyncCompilationCallback&&);
 
     JS_EXPORT_PRIVATE ~Module();
 
-    CodeBlock* codeBlockFor(MemoryMode mode) { return m_codeBlocks[static_cast<uint8_t>(mode)].get(); }
+    CalleeGroup* calleeGroupFor(MemoryMode mode) { return m_calleeGroups[static_cast<uint8_t>(mode)].get(); }
+
+    void copyInitialCalleeGroupToAllMemoryModes(MemoryMode);
+
 private:
-    Ref<CodeBlock> getOrCreateCodeBlock(Context*, MemoryMode);
+    Ref<CalleeGroup> getOrCreateCalleeGroup(Context*, MemoryMode);
 
     Module(LLIntPlan&);
     Ref<ModuleInformation> m_moduleInformation;
-    RefPtr<CodeBlock> m_codeBlocks[Wasm::NumberOfMemoryModes];
-    RefPtr<LLIntCallees> m_llintCallees;
+    RefPtr<CalleeGroup> m_calleeGroups[Wasm::NumberOfMemoryModes];
+    Ref<LLIntCallees> m_llintCallees;
     MacroAssemblerCodeRef<JITCompilationPtrTag> m_llintEntryThunks;
     Lock m_lock;
 };

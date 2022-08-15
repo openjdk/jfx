@@ -52,6 +52,8 @@ class JSGlobalObject;
 class OpaqueICUTimeZone;
 class VM;
 
+static constexpr double minECMAScriptTime = -8.64E15;
+
 // We do not expose icu::TimeZone in this header file. And we cannot use icu::TimeZone forward declaration
 // because icu namespace can be an alias to icu$verNum namespace.
 struct OpaqueICUTimeZoneDeleter {
@@ -83,7 +85,7 @@ public:
 
     void msToGregorianDateTime(double millisecondsFromEpoch, WTF::TimeType outputTimeType, GregorianDateTime&);
     double gregorianDateTimeToMS(const GregorianDateTime&, double milliseconds, WTF::TimeType inputTimeType);
-    double parseDate(JSGlobalObject*, VM&, const WTF::String&);
+    JS_EXPORT_PRIVATE double parseDate(JSGlobalObject*, VM&, const WTF::String&);
 
 private:
     void timeZoneCacheSlow();

@@ -51,6 +51,7 @@
 #include "PaintInfo.h"
 #include "RenderBox.h"
 #include "RenderPtr.h"
+#include "RenderSVGModelObject.h"
 #include "ScrollBehavior.h"
 #include <memory>
 #include <wtf/Markable.h>
@@ -133,6 +134,8 @@ enum class IndirectCompositingReason {
     Preserve3D
 };
 
+enum class ShouldAllowCrossOriginScrolling { No, Yes };
+
 struct ScrollRectToVisibleOptions {
     SelectionRevealMode revealMode { SelectionRevealMode::Reveal };
     const ScrollAlignment& alignX { ScrollAlignment::alignCenterIfNeeded };
@@ -154,7 +157,7 @@ public:
     friend class RenderLayerScrollableArea;
 
     explicit RenderLayer(RenderLayerModelObject&);
-    virtual ~RenderLayer();
+    ~RenderLayer();
 
     WEBCORE_EXPORT RenderLayerScrollableArea* scrollableArea() const;
     WEBCORE_EXPORT RenderLayerScrollableArea* ensureLayerScrollableArea();
@@ -167,7 +170,7 @@ public:
 
     Page& page() const { return renderer().page(); }
     RenderLayerModelObject& renderer() const { return m_renderer; }
-    RenderBox* renderBox() const { return is<RenderBox>(renderer()) ? &downcast<RenderBox>(renderer()) : nullptr; }
+    RenderBox* renderBox() const { return dynamicDowncast<RenderBox>(renderer()); }
 
     RenderLayer* parent() const { return m_parent; }
     RenderLayer* previousSibling() const { return m_previous; }
@@ -216,6 +219,14 @@ public:
 
     RenderLayer* paintOrderParent() const;
 
+    std::optional<LayerRepaintRects> repaintRects() const
+    {
+        if (m_repaintRectsValid)
+            return m_repaintRects;
+
+        return { };
+    }
+
     void dirtyNormalFlowList();
     void dirtyZOrderLists();
     void dirtyStackingContextZOrderLists();
@@ -227,6 +238,8 @@ public:
     bool layerListMutationAllowed() const { return m_layerListMutationAllowed; }
     void setLayerListMutationAllowed(bool flag) { m_layerListMutationAllowed = flag; }
 #endif
+
+    bool willCompositeClipPath() const;
 
 protected:
     void destroy();
@@ -427,7 +440,6 @@ public:
 
     bool hasReflection() const { return renderer().hasReflection(); }
     bool isReflection() const { return renderer().isReplica(); }
-    RenderReplica* reflection() const { return m_reflection.get(); }
     RenderLayer* reflectionLayer() const;
     bool isReflectionLayer(const RenderLayer&) const;
 
@@ -484,6 +496,8 @@ public:
 
     void updateLayerPositionsAfterStyleChange();
     void updateLayerPositionsAfterLayout(bool isRelayoutingSubtree, bool didFullRepaint);
+    void updateLayerPositionsAfterOverflowScroll();
+    void updateLayerPositionsAfterDocumentScroll();
 
     bool hasCompositedLayerInEnclosingPaginationChain() const;
     enum PaginationInclusionMode { ExcludeCompositedPaginatedLayers, IncludeCompositedPaginatedLayers };
@@ -501,7 +515,7 @@ public:
     void willRemoveChildWithBlendMode();
 #endif
 
-    const LayoutSize& offsetForInFlowPosition() const { return m_offsetForInFlowPosition; }
+    const LayoutSize& offsetForInFlowPosition() const { return m_offsetForPosition; }
 
     void clearClipRectsIncludingDescendants(ClipRectsType typeToClear = AllClipRectTypes);
     void clearClipRects(ClipRectsType typeToClear = AllClipRectTypes);
@@ -587,7 +601,7 @@ public:
     {
         // FIXME: This really needs to know if there are transforms on this layer and any of the layers
         // between it and the ancestor in question.
-        return !renderer().hasTransform() && !renderer().isSVGRoot();
+        return !renderer().hasTransform() && !renderer().isSVGRootOrLegacySVGRoot();
     }
 
     // FIXME: adjustForColumns allows us to position compositing layers in columns correctly, but eventually they need to be split across columns too.
@@ -642,7 +656,7 @@ public:
     };
 
     // This method figures out our layerBounds in coordinates relative to
-    // |rootLayer}.  It also computes our background and foreground clip rects
+    // |rootLayer|. It also computes our background and foreground clip rects
     // for painting/event handling.
     // Pass offsetFromRoot if known.
     void calculateRects(const ClipRectsContext&, const LayoutRect& paintDirtyRect, LayoutRect& layerBounds,
@@ -661,7 +675,7 @@ public:
     bool clipCrossesPaintingBoundary() const;
 
     // Pass offsetFromRoot if known.
-    bool intersectsDamageRect(const LayoutRect& layerBounds, const LayoutRect& damageRect, const RenderLayer* rootLayer, const LayoutSize& offsetFromRoot, const Optional<LayoutRect>& cachedBoundingBox = WTF::nullopt) const;
+    bool intersectsDamageRect(const LayoutRect& layerBounds, const LayoutRect& damageRect, const RenderLayer* rootLayer, const LayoutSize& offsetFromRoot, const std::optional<LayoutRect>& cachedBoundingBox = std::nullopt) const;
 
     enum CalculateLayerBoundsFlag {
         IncludeSelfTransform                    = 1 << 0,
@@ -699,18 +713,16 @@ public:
     // Can pass offsetFromRoot if known.
     LayoutRect calculateLayerBounds(const RenderLayer* ancestorLayer, const LayoutSize& offsetFromRoot, OptionSet<CalculateLayerBoundsFlag> = defaultCalculateLayerBoundsFlags()) const;
 
-    // Return a cached repaint rect, computed relative to the layer renderer's containerForRepaint.
-    bool hasComputedRepaintRects() const { return renderer().hasRepaintLayoutRects(); }
     LayoutRect repaintRectIncludingNonCompositingDescendants() const;
 
     void setRepaintStatus(RepaintStatus status) { m_repaintStatus = status; }
     RepaintStatus repaintStatus() const { return static_cast<RepaintStatus>(m_repaintStatus); }
 
-    LayoutUnit staticInlinePosition() const { return m_staticInlinePosition; }
-    LayoutUnit staticBlockPosition() const { return m_staticBlockPosition; }
+    LayoutUnit staticInlinePosition() const { return m_offsetForPosition.width(); }
+    LayoutUnit staticBlockPosition() const { return m_offsetForPosition.height(); }
 
-    void setStaticInlinePosition(LayoutUnit position) { m_staticInlinePosition = position; }
-    void setStaticBlockPosition(LayoutUnit position) { m_staticBlockPosition = position; }
+    void setStaticInlinePosition(LayoutUnit position) { m_offsetForPosition.setWidth(position); }
+    void setStaticBlockPosition(LayoutUnit position) { m_offsetForPosition.setHeight(position); }
 
     bool hasTransform() const { return renderer().hasTransform(); }
     // Note that this transform has the transform-origin baked in.
@@ -726,7 +738,7 @@ public:
     // Note that this transform has the perspective-origin baked in.
     TransformationMatrix perspectiveTransform(const LayoutRect& layerRect) const;
     FloatPoint perspectiveOrigin() const;
-    bool preserves3D() const { return renderer().style().transformStyle3D() == TransformStyle3D::Preserve3D; }
+    bool preserves3D() const { return renderer().style().preserves3D(); }
     bool has3DTransform() const { return m_transform && !m_transform->isAffine(); }
     bool hasTransformedAncestor() const { return m_hasTransformedAncestor; }
 
@@ -787,8 +799,8 @@ public:
     bool usesCompositedScrolling() const;
 
     // Layers with the same ScrollingScope are scrolled by some common ancestor scroller. Used for async scrolling.
-    Optional<ScrollingScope> boxScrollingScope() const { return m_boxScrollingScope; }
-    Optional<ScrollingScope> contentsScrollingScope() const { return m_contentsScrollingScope; }
+    std::optional<ScrollingScope> boxScrollingScope() const { return m_boxScrollingScope; }
+    std::optional<ScrollingScope> contentsScrollingScope() const { return m_contentsScrollingScope; }
 
     bool paintsWithTransparency(OptionSet<PaintBehavior> paintBehavior) const
     {
@@ -808,6 +820,12 @@ public:
 
     Element* enclosingElement() const;
 
+    static Vector<RenderLayer*> topLayerRenderLayers(RenderView&);
+
+    bool establishesTopLayer() const;
+    void establishesTopLayerWillChange();
+    void establishesTopLayerDidChange();
+
     enum ViewportConstrainedNotCompositedReason {
         NoNotCompositedReason,
         NotCompositedForBoundsOutOfView,
@@ -821,7 +839,6 @@ public:
     IndirectCompositingReason indirectCompositingReason() const { return static_cast<IndirectCompositingReason>(m_indirectCompositingReason); }
 
     bool isRenderFragmentedFlow() const { return renderer().isRenderFragmentedFlow(); }
-    bool isOutOfFlowRenderFragmentedFlow() const { return renderer().isOutOfFlowRenderFragmentedFlow(); }
     bool isInsideFragmentedFlow() const { return renderer().fragmentedFlowState() != RenderObject::NotInsideFragmentedFlow; }
     bool isDirtyRenderFragmentedFlow() const
     {
@@ -898,6 +915,11 @@ private:
         EventRegionContext* eventRegionContext { nullptr };
     };
 
+    LayoutPoint paintOffsetForRenderer(const LayerFragment& fragment, const LayerPaintingInfo& paintingInfo) const
+    {
+        return toLayoutPoint(fragment.layerBounds.location() - rendererLocation() + paintingInfo.subpixelOffset);
+    }
+
     // Compute, cache and return clip rects computed with the given layer as the root.
     Ref<ClipRects> updateClipRects(const ClipRectsContext&);
     // Compute and return the clip rects. If useCached is true, will used previously computed clip rects on ancestors
@@ -910,16 +932,19 @@ private:
 
     void computeRepaintRects(const RenderLayerModelObject* repaintContainer, const RenderGeometryMap* = nullptr);
     void computeRepaintRectsIncludingDescendants();
+
+    void setRepaintRects(const LayerRepaintRects&);
     void clearRepaintRects();
 
     LayoutRect clipRectRelativeToAncestor(RenderLayer* ancestor, LayoutSize offsetFromAncestor, const LayoutRect& constrainingRect) const;
 
-    void clipToRect(GraphicsContext&, const LayerPaintingInfo&, OptionSet<PaintBehavior>, const ClipRect&, BorderRadiusClippingRule = IncludeSelfForBorderRadius);
-    void restoreClip(GraphicsContext&, const LayerPaintingInfo&, const ClipRect&);
+    void clipToRect(GraphicsContext&, GraphicsContextStateSaver&, EventRegionContextStateSaver&, const LayerPaintingInfo&, OptionSet<PaintBehavior>, const ClipRect&, BorderRadiusClippingRule = IncludeSelfForBorderRadius);
 
     bool shouldRepaintAfterLayout() const;
 
     void updateSelfPaintingLayer();
+
+    void willUpdateLayerPositions();
 
     enum UpdateLayerPositionsFlag {
         CheckForRepaint                     = 1 << 0,
@@ -936,7 +961,7 @@ private:
     // Returns true if the position changed.
     bool updateLayerPosition(OptionSet<UpdateLayerPositionsFlag>* = nullptr);
 
-    void updateLayerPositions(RenderGeometryMap*, OptionSet<UpdateLayerPositionsFlag>);
+    void recursiveUpdateLayerPositions(RenderGeometryMap*, OptionSet<UpdateLayerPositionsFlag>);
 
     enum UpdateLayerPositionsAfterScrollFlag {
         IsOverflowScroll                        = 1 << 0,
@@ -944,17 +969,39 @@ private:
         HasSeenAncestorWithOverflowClip         = 1 << 2,
         HasChangedAncestor                      = 1 << 3,
     };
-    void updateLayerPositionsAfterScroll(RenderGeometryMap*, OptionSet<UpdateLayerPositionsAfterScrollFlag> = { });
+    void recursiveUpdateLayerPositionsAfterScroll(RenderGeometryMap*, OptionSet<UpdateLayerPositionsAfterScrollFlag> = { });
 
     RenderLayer* enclosingPaginationLayerInSubtree(const RenderLayer* rootLayer, PaginationInclusionMode) const;
 
-    LayoutPoint renderBoxLocation() const { return is<RenderBox>(renderer()) ? downcast<RenderBox>(renderer()).location() : LayoutPoint(); }
+    LayoutPoint rendererLocation() const
+    {
+        if (is<RenderBox>(renderer()))
+            return downcast<RenderBox>(renderer()).location();
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
+        if (is<RenderSVGModelObject>(renderer()))
+            return downcast<RenderSVGModelObject>(renderer()).layoutLocation();
+#endif
+
+        return LayoutPoint();
+    }
+
+    LayoutRect rendererBorderBoxRect() const
+    {
+        if (is<RenderBox>(renderer()))
+            return downcast<RenderBox>(renderer()).borderBoxRect();
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
+        if (is<RenderSVGModelObject>(renderer()))
+            return downcast<RenderSVGModelObject>(renderer()).borderBoxRectEquivalent();
+#endif
+
+        return LayoutRect();
+    }
 
     bool setupFontSubpixelQuantization(GraphicsContext&, bool& didQuantizeFonts);
 
-    Path computeClipPath(const LayoutSize& offsetFromRoot, LayoutRect& rootRelativeBounds, WindRule&) const;
+    std::pair<Path, WindRule> computeClipPath(const LayoutSize& offsetFromRoot, const LayoutRect& rootRelativeBoundsForNonBoxes) const;
 
-    bool setupClipPath(GraphicsContext&, const LayerPaintingInfo&, const LayoutSize& offsetFromRoot);
+    void setupClipPath(GraphicsContext&, GraphicsContextStateSaver&, const LayerPaintingInfo&, const LayoutSize& offsetFromRoot);
 
     void ensureLayerFilters();
     void clearLayerFilters();
@@ -1019,6 +1066,8 @@ private:
 
     void dirtyAncestorChainVisibleDescendantStatus();
     void setAncestorChainHasVisibleDescendant();
+
+    bool computeHasVisibleContent() const;
 
     bool has3DTransformedDescendant() const { return m_has3DTransformedDescendant; }
     bool has3DTransformedAncestor() const { return m_has3DTransformedAncestor; }
@@ -1136,6 +1185,7 @@ private:
     bool m_hasNotIsolatedBlendingDescendants : 1;
     bool m_hasNotIsolatedBlendingDescendantsStatusDirty : 1;
 #endif
+    bool m_repaintRectsValid : 1;
 
     RenderLayerModelObject& m_renderer;
 
@@ -1157,8 +1207,11 @@ private:
     // This list contains child layers that cannot create stacking contexts and appear in normal flow order.
     std::unique_ptr<Vector<RenderLayer*>> m_normalFlowList;
 
-    // Our current relative position offset.
-    LayoutSize m_offsetForInFlowPosition;
+    // Only valid if m_repaintRectsValid is set (std::optional<> not used to avoid padding).
+    LayerRepaintRects m_repaintRects;
+
+    // Our current relative or absolute position offset.
+    LayoutSize m_offsetForPosition;
 
     // Our (x,y) coordinates are in our parent layer's coordinate space.
     LayoutPoint m_topLeft;
@@ -1170,10 +1223,6 @@ private:
 
     Markable<ScrollingScope, IntegralMarkableTraits<ScrollingScope, 0>> m_boxScrollingScope;
     Markable<ScrollingScope, IntegralMarkableTraits<ScrollingScope, 0>> m_contentsScrollingScope;
-
-    // Cached normal flow values for absolute positioned elements with static left/top values.
-    LayoutUnit m_staticInlinePosition;
-    LayoutUnit m_staticBlockPosition;
 
     std::unique_ptr<TransformationMatrix> m_transform;
 

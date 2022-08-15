@@ -2,7 +2,7 @@
 /* config.h.in.  Generated from configure.ac by autoheader.  */
 
 /* Define to 1 if you have the `clock_gettime' function. */
-
+#define HAVE_CLOCK_GETTIME 1
 
 /* Define to 1 if you have the <dlfcn.h> header file. */
 #define HAVE_DLFCN_H 1
@@ -29,7 +29,7 @@
 #define HAVE_FTIME 1
 
 /* Define if gcrypt library is available. */
-
+/* #undef HAVE_GCRYPT */
 
 /* Define to 1 if you have the `gettimeofday' function. */
 #define HAVE_GETTIMEOFDAY 1
@@ -53,7 +53,7 @@
 #define HAVE_LOCALE_H 1
 
 /* Define to 1 if you have the `localtime' function. */
-
+#define HAVE_LOCALTIME 1
 
 /* Define to 1 if you have the `localtime_r' function. */
 #define HAVE_LOCALTIME_R 1
@@ -140,13 +140,12 @@
 #define HAVE_VSPRINTF 1
 
 /* Define to 1 if you have the <xlocale.h> header file. */
-
+/* #undef HAVE_XLOCALE_H */
 
 /* Define to 1 if you have the `_stat' function. */
 /* #undef HAVE__STAT */
 
-/* Define to the sub-directory in which libtool stores uninstalled libraries.
-   */
+/* Define to the sub-directory where libtool stores uninstalled libraries. */
 #define LT_OBJDIR ".libs/"
 
 /* Name of package */
@@ -159,7 +158,7 @@
 #define PACKAGE_NAME "libxslt"
 
 /* Define to the full name and version of this package. */
-#define PACKAGE_STRING "libxslt 1.1.34"
+#define PACKAGE_STRING "libxslt 1.1.35"
 
 /* Define to the one symbol short name of this package. */
 #define PACKAGE_TARNAME "libxslt"
@@ -168,7 +167,7 @@
 #define PACKAGE_URL ""
 
 /* Define to the version of this package. */
-#define PACKAGE_VERSION "1.1.34"
+#define PACKAGE_VERSION "1.1.35"
 
 /* Define to 1 if you have the ANSI C header files. */
 #define STDC_HEADERS 1
@@ -196,7 +195,7 @@
 
 
 /* Version number of package */
-#define VERSION "1.1.34"
+#define VERSION "1.1.35"
 
 /* Define if debugging support is enabled */
 /* #undef WITH_DEBUGGER */
