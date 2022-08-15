@@ -97,30 +97,14 @@ float computeSpotlightFactor3(float3 l, float3 lightDir, float cosOuter, float d
  */
 void computeLight(float i, float3 n, float3 refl, float specPower, float3 toLight, float3 lightDir, in out float3 d, in out float3 s) {
     float3 l = normalize(toLight);
-    float dist = length(toLight);
     // testing if w is 0 or 1 using <0.5 since equality check for floating points might not work well
     if (gLightAttenuation[i].w < 0.5) {
-//        float cosOuter = gSpotLightFactors[i].x;
-//        float denom = gSpotLightFactors[i].y;
-//        float falloff = gSpotLightFactors[i].z;
-//        float spotlightFactor = computeSpotlightFactor3(l, lightDir, cosOuter, denom, falloff);
-//
-//        float ca = gLightAttenuation[i].x;
-//        float la = gLightAttenuation[i].y;
-//        float qa = gLightAttenuation[i].z;
-//        float invAttnFactor = ca + la * dist + qa * dist * dist;
-//
-//        float3 attenuatedColor = gLightColor[i].xyz * 0 * spotlightFactor / invAttnFactor;
-//        d += 0;
-//        s += 0;
-//        return;
-
-
         d += saturate(dot(n, l)) * gLightColor[i].xyz;
         s += pow(saturate(dot(-refl, l)), specPower) * gLightColor[i].xyz;
         return;
     }
 
+    float dist = length(toLight);
     if (dist > gLightRange[i].x) {
         return;
     }

@@ -167,7 +167,6 @@ void D3DMeshView::render() {
         lightsAttenuation[a++] = light.attenuation[1];
         lightsAttenuation[a++] = light.attenuation[2];
         lightsAttenuation[a++] = light.attenuation[3];
-        cout << "on " << light.attenuation[3] << endl;
 
         lightsRange[r++] = light.maxRange;
         lightsRange[r++] = 0;

@@ -75,7 +75,7 @@ float4 main(float2 texD : texcoord0, PsInput psInput) : color {
 
     // return gDiffuseColor.aaaa;
 
-    float3 n = float3(0,0,1);
+    float3 n = float3(0, 0, 1);
 
     //bump
     if (bump) {
@@ -84,10 +84,10 @@ float4 main(float2 texD : texcoord0, PsInput psInput) : color {
     }
 
     // specular
-    float4 tSpec = float4(0,0,0,0);
+    float4 tSpec = float4(0, 0, 0, 0);
     float specPower = 0;
 
-    if ( specType > 0 ) {
+    if (specType > 0) {
         specPower = gSpecularColor.a;
         if (specType != SpecColor) { // Texture or Mix
             tSpec = tex2D(mapSpecular, texD);
