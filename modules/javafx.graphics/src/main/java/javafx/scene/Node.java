@@ -28,6 +28,7 @@ package javafx.scene;
 
 import com.sun.javafx.geometry.BoundsUtils;
 import com.sun.javafx.scene.traversal.TraversalMethod;
+import javafx.css.TransitionDefinition;
 import javafx.application.Platform;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
@@ -39,12 +40,14 @@ import javafx.beans.property.DoublePropertyBase;
 import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
+import javafx.beans.property.Property;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanPropertyBase;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectPropertyBase;
 import javafx.beans.property.ReadOnlyObjectWrapper;
+import javafx.beans.property.ReadOnlyProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.StringProperty;
@@ -52,6 +55,7 @@ import javafx.beans.property.StringPropertyBase;
 import javafx.beans.value.ChangeListener;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener.Change;
+import javafx.collections.ModifiableObservableListBase;
 import javafx.collections.ObservableList;
 import javafx.collections.ObservableMap;
 import javafx.collections.ObservableSet;
@@ -59,6 +63,7 @@ import javafx.css.CssMetaData;
 import javafx.css.ParsedValue;
 import javafx.css.PseudoClass;
 import javafx.css.StyleConverter;
+import javafx.css.StyleOrigin;
 import javafx.css.Styleable;
 import javafx.css.StyleableBooleanProperty;
 import javafx.css.StyleableDoubleProperty;
@@ -121,6 +126,7 @@ import com.sun.javafx.beans.IDProperty;
 import com.sun.javafx.beans.event.AbstractNotifyListener;
 import com.sun.javafx.collections.TrackableObservableList;
 import com.sun.javafx.collections.UnmodifiableListSet;
+import com.sun.javafx.css.TransitionDefinitionCssMetaData;
 import com.sun.javafx.css.PseudoClassState;
 import javafx.css.Selector;
 import javafx.css.Style;
@@ -623,6 +629,11 @@ public abstract class Node implements EventTarget, Styleable {
             @Override
             public void requestFocusVisible(Node node) {
                 node.requestFocusVisible();
+            }
+
+            @Override
+            public TransitionDefinition findTransition(Node node, CssMetaData<? extends Styleable, ?> metadata) {
+                return node.transitions == null ? null : node.transitions.find(metadata);
             }
         });
     }
@@ -8875,6 +8886,149 @@ public abstract class Node implements EventTarget, Styleable {
         Event.fireEvent(this, event);
     }
 
+
+    /* *************************************************************************
+     *                                                                         *
+     *                           CSS Transitions                               *
+     *                                                                         *
+     **************************************************************************/
+
+    private class TransitionDefinitions
+            extends ModifiableObservableListBase<TransitionDefinition>
+            implements StyleableProperty<TransitionDefinition[]> {
+
+        private final List<TransitionDefinition> list = new ArrayList<>(4);
+        private StyleOrigin origin;
+
+        /**
+         * Returns the transition for the property referenced by the specified CSS metadata,
+         * or {@code null} if no transition was found.
+         */
+        public TransitionDefinition find(CssMetaData<? extends Styleable, ?> metadata) {
+            if (list.size() == 0) {
+                return null;
+            }
+
+            String beanPropertyName = ((CssMetaData<Styleable, ?>)metadata).getStyleableProperty(Node.this)
+                instanceof ReadOnlyProperty<?> property ? property.getName() : null;
+
+            // We look for a matching transition in reverse, since multiple transitions might be specified
+            // for the same property. In this case, the last transition takes precedence.
+            for (int i = list.size() - 1; i >= 0; --i) {
+                TransitionDefinition transition = list.get(i);
+
+                // Depending on the property selector, we match the transition's property name against
+                // the JavaFX Bean property name, the CSS property name, or both.
+                boolean selected = switch (transition.getSelector()) {
+                    case BEAN -> beanPropertyName != null && beanPropertyName.equals(transition.getProperty());
+                    case CSS -> metadata.getProperty().equals(transition.getProperty());
+                    case ANY -> beanPropertyName != null && beanPropertyName.equals(transition.getProperty())
+                                || metadata.getProperty().equals(transition.getProperty());
+                    case ALL -> true;
+                };
+
+                if (selected) {
+                    return transition;
+                }
+            }
+
+            List<CssMetaData<? extends Styleable, ?>> subMetadata = metadata.getSubProperties();
+            if (subMetadata == null) {
+                return null;
+            }
+
+            // We also need to search for matching sub-properties, since a transition might be defined
+            // for a sub-property (for example, '-fx-background-color') but must be applied to the base
+            // property (Region.background).
+            for (int i = 0, max = subMetadata.size(); i < max; ++i) {
+                TransitionDefinition transition = find(subMetadata.get(i));
+                if (transition != null) {
+                    return transition;
+                }
+            }
+
+            return null;
+        }
+
+        @Override
+        public TransitionDefinition get(int index) {
+            return list.get(index);
+        }
+
+        @Override
+        public int size() {
+            return list.size();
+        }
+
+        @Override
+        protected void doAdd(int index, TransitionDefinition element) {
+            list.add(index, element);
+        }
+
+        @Override
+        protected TransitionDefinition doSet(int index, TransitionDefinition element) {
+            return list.set(index, element);
+        }
+
+        @Override
+        protected TransitionDefinition doRemove(int index) {
+            return list.remove(index);
+        }
+
+        @Override
+        public TransitionDefinition[] getValue() {
+            return list.toArray(TransitionDefinition[]::new);
+        }
+
+        @Override
+        public void setValue(TransitionDefinition[] value) {
+            setAll(value);
+            this.origin = StyleOrigin.USER;
+        }
+
+        @Override
+        public void applyStyle(StyleOrigin origin, TransitionDefinition[] value) {
+            setValue(value);
+            this.origin = origin;
+        }
+
+        @Override
+        public StyleOrigin getStyleOrigin() {
+            return origin;
+        }
+
+        @Override
+        public CssMetaData<? extends Styleable, TransitionDefinition[]> getCssMetaData() {
+            return StyleableProperties.TRANSITION;
+        }
+    }
+
+    private TransitionDefinitions transitions;
+
+    /**
+     * Gets a list of transition definitions that describe the animated transitions that are
+     * currently defined for properties of this {@code Node}.
+     * <p>
+     * All property transitions are implicit, which means they are started automatically by
+     * the CSS subsystem when a property value is changed. Explicit property changes, such as
+     * by calling {@link Property#setValue(Object)}, do not trigger an animated transition.
+     *
+     * @return an {@code ObservableList} of {@code TransitionDefinition} instances
+     * @since 20
+     */
+    public final ObservableList<TransitionDefinition> getTransitions() {
+        if (transitions == null) {
+            transitions = new TransitionDefinitions();
+        }
+        return transitions;
+    }
+
+    // package-private for testing
+    StyleableProperty<TransitionDefinition[]> getTransitionsProperty() {
+        return transitions;
+    }
+
+
     /* *************************************************************************
      *                                                                         *
      *                         Stylesheet Handling                             *
@@ -9198,6 +9352,21 @@ public abstract class Node implements EventTarget, Styleable {
                     return (StyleableProperty<Boolean>)node.managedProperty();
                 }
             };
+         private static final CssMetaData<Node, TransitionDefinition[]> TRANSITION =
+             new TransitionDefinitionCssMetaData<Node>() {
+                 @Override
+                 public boolean isSettable(Node node) {
+                     return true;
+                 }
+
+                 @Override
+                 public StyleableProperty<TransitionDefinition[]> getStyleableProperty(Node node) {
+                     if (node.transitions == null) {
+                         node.transitions = node.new TransitionDefinitions();
+                     }
+                     return node.transitions;
+                 }
+             };
 
          private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
 
@@ -9205,6 +9374,9 @@ public abstract class Node implements EventTarget, Styleable {
 
              final List<CssMetaData<? extends Styleable, ?>> styleables =
                      new ArrayList<>();
+             // The transition property must be the first property in this list, since transitions
+             // can potentially affect other properties that are set by CssStyleHelper.
+             styleables.add(TRANSITION);
              styleables.add(CURSOR);
              styleables.add(EFFECT);
              styleables.add(FOCUS_TRAVERSABLE);

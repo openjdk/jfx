@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -41,6 +41,7 @@ public final class DurationConverter extends StyleConverter<ParsedValue<?, Size>
     // lazy, thread-safe instatiation
     private static class Holder {
         static final DurationConverter INSTANCE = new DurationConverter();
+        static final SequenceConverter SEQUENCE_INSTANCE = new SequenceConverter();
     }
 
     /**
@@ -76,6 +77,40 @@ public final class DurationConverter extends StyleConverter<ParsedValue<?, Size>
     @Override
     public String toString() {
         return "DurationConverter";
+    }
+
+    /**
+     * Converts a sequence of parsed values to an array of {@link Duration} instances.
+     *
+     * @since 20
+     */
+    public static final class SequenceConverter extends StyleConverter<ParsedValue<ParsedValue<?, Size>, Duration>[], Duration[]> {
+        /**
+         * Gets the {@code SequenceConverter} instance.
+         * @return the {@code SequenceConverter} instance
+         */
+        public static SequenceConverter getInstance() {
+            return Holder.SEQUENCE_INSTANCE;
+        }
+
+        private SequenceConverter() {}
+
+        @Override
+        public Duration[] convert(
+                ParsedValue<ParsedValue<ParsedValue<?, Size>, Duration>[], Duration[]> value, Font font) {
+            ParsedValue<?, Duration>[] values = value.getValue();
+            Duration[] durations = new Duration[values.length];
+            for (int p = 0; p < values.length; p++) {
+                durations[p] = values[p].convert(font);
+            }
+
+            return durations;
+        }
+
+        @Override
+        public String toString() {
+            return "Duration.SequenceConverter";
+        }
     }
 
 }

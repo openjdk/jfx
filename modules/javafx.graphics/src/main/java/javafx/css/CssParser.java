@@ -27,9 +27,12 @@ package javafx.css;
 
 import com.sun.javafx.css.Combinator;
 import com.sun.javafx.css.FontFaceImpl;
+import com.sun.javafx.css.InterpolatorConverter;
 import com.sun.javafx.css.ParsedValueImpl;
 import com.sun.javafx.css.StyleManager;
+import com.sun.javafx.css.TransitionDefinitionConverter;
 import com.sun.javafx.util.Utils;
+import javafx.animation.Interpolator;
 import javafx.css.converter.BooleanConverter;
 import javafx.css.converter.DurationConverter;
 import javafx.css.converter.EffectConverter;
@@ -639,6 +642,43 @@ final public class CssParser {
         );
     }
 
+    // Return true if the token is a time type or an identifier
+    // (which would indicate a lookup).
+    private boolean isTime(Token token) {
+        switch (token.getType()) {
+            case CssLexer.SECONDS:
+            case CssLexer.MS:
+                return true;
+            default:
+                return token.getType() == CssLexer.IDENT;
+        }
+    }
+
+    private Size time(Token token) throws ParseException {
+        return switch (token.getType()) {
+            case CssLexer.SECONDS -> {
+                String sval = token.getText().trim();
+                double v = Double.parseDouble(sval.substring(0, sval.length() - 1).trim());
+                yield new Size(v, SizeUnits.S);
+            }
+
+            case CssLexer.MS -> {
+                String sval = token.getText().trim();
+                double v = Double.parseDouble(sval.substring(0, sval.length() - 2).trim());
+                yield new Size(v, SizeUnits.MS);
+            }
+
+            default -> {
+                if (LOGGER.isLoggable(Level.FINEST)) {
+                    LOGGER.finest("Expected \'<time>\'");
+                }
+                ParseException re = new ParseException("Expected \'<time>\'",token, this);
+                reportError(createError(re.toString()));
+                throw re;
+            }
+        };
+    }
+
     // Count the number of terms in a series
     private int numberOfTerms(final Term root) {
         if (root == null) return 0;
@@ -827,6 +867,16 @@ final public class CssParser {
                 error(root,  "Expected STRING or IDENT");
             }
             return new ParsedValueImpl<String, String>(stripQuotes(str), null, false);
+        } else if ("transition".equals(prop)) {
+            return parseTransitionLayers(root);
+        } else if ("transition-duration".equals(prop)) {
+            return parseTransitionDurationLayers(root);
+        } else if ("transition-delay".equals(prop)) {
+            return parseTransitionDelayLayers(root);
+        } else if ("transition-timing-function".equals(prop)) {
+            return parseTransitionTimingFunctionLayers(root);
+        } else if ("transition-property".equals(prop)) {
+            return parseTransitionPropertyLayers(root);
         }
         return parse(root);
     }
@@ -949,6 +999,23 @@ final public class CssParser {
         }
 
         return value;
+    }
+
+    private ParsedValueImpl<?, Size> parseTime(final Term root) throws ParseException {
+        if (root.token == null || !isTime(root.token)) {
+            error(root, "Expected \'<time>\'");
+        }
+
+        if (root.token.getType() != CssLexer.IDENT) {
+            Size time = time(root.token);
+            return new ParsedValueImpl<>(time, null);
+        } else {
+            String key = root.token.getText();
+            return switch (key) {
+                case "initial", "inherit" -> new ParsedValueImpl<>(new Size(0, SizeUnits.S), null);
+                default -> new ParsedValueImpl<>(key, null, true);
+            };
+        }
     }
 
     private ParsedValueImpl<?,Color> parseColor(final Term root) throws ParseException {
@@ -3833,6 +3900,242 @@ final public class CssParser {
 
         ParsedValueImpl[] values = new ParsedValueImpl[]{ ffamily, fsize, fweight, fstyle };
         return new ParsedValueImpl<>(values, FontConverter.getInstance());
+    }
+
+    // https://www.w3.org/TR/css-transitions-1/#transition-shorthand-property
+    private ParsedValueImpl<ParsedValue<ParsedValue[], TransitionDefinition>[], TransitionDefinition[]>
+            parseTransitionLayers(Term term) throws ParseException {
+        int nLayers = numberOfLayers(term);
+        ParsedValue<ParsedValue[], TransitionDefinition>[] layers = new ParsedValue[nLayers];
+
+        for (int i = 0; i < nLayers; ++i) {
+            layers[i] = parseTransition(term);
+            term = nextLayer(term);
+        }
+
+        return new ParsedValueImpl<ParsedValue<ParsedValue[], TransitionDefinition>[], TransitionDefinition[]>(
+            layers, TransitionDefinitionConverter.SequenceConverter.getInstance());
+    }
+
+    private ParsedValueImpl<ParsedValue[], TransitionDefinition> parseTransition(Term term)
+            throws ParseException{
+        ParsedValue<?, String> parsedProperty = null;
+        ParsedValue<ParsedValue<?, Size>, Duration> parsedDuration = null;
+        ParsedValue<ParsedValue<?, Size>, Duration> parsedDelay = null;
+        ParsedValue<?, Interpolator> parsedTimingFunction = null;
+
+        for (int i = 0; i < 4; ++i) {
+            if (term == null) {
+                break;
+            } else if (isEasingFunction(term.token)) {
+                if (parsedTimingFunction != null) {
+                    error(term, "Expected \'<single-transition-property>\' or \'<time>\'");
+                }
+
+                parsedTimingFunction = parseEasingFunction(term);
+            } else if (isTransitionProperty(term.token)) {
+                if (parsedProperty != null) {
+                    error(term, "Expected \'<easing-function>\' or \'<time>\'");
+                }
+
+                parsedProperty = parseTransitionProperty(term);
+            } else if (isTime(term.token)) {
+                if (parsedDuration == null) {
+                    parsedDuration = parseTransitionDuration(term);
+                } else if (parsedDelay == null) {
+                    parsedDelay = parseTransitionDelay(term);
+                }
+            } else {
+                List<String> args = new ArrayList<>();
+                if (parsedTimingFunction == null) args.add("\'<easing-function>\'");
+                if (parsedProperty == null) args.add("\'<single-transition-property>\'");
+                if (parsedDuration == null || parsedDelay == null) args.add("\'<time>\'");
+                error(term, "Expected " + String.join(" or ", args));
+            }
+
+            term = term.nextInSeries;
+        }
+
+        if (parsedProperty == null || parsedDuration == null) {
+            error(term, "Expected \'<single-transition>#\'");
+        }
+
+        return new ParsedValueImpl<ParsedValue[], TransitionDefinition>(new ParsedValue[] {
+            parsedProperty, parsedDuration, parsedDelay, parsedTimingFunction
+        }, TransitionDefinitionConverter.getInstance());
+    }
+
+    /*
+     * https://www.w3.org/TR/css-transitions-1/#transition-property-property
+     */
+    private ParsedValueImpl<ParsedValue<String, String>[], String[]> parseTransitionPropertyLayers(Term term)
+            throws ParseException {
+        int nLayers = numberOfLayers(term);
+        ParsedValue<String, String>[] layers = new ParsedValue[nLayers];
+
+        for (int i = 0; i < nLayers; ++i) {
+            layers[i] = parseTransitionProperty(term);
+            term = nextLayer(term);
+        }
+
+        return new ParsedValueImpl<ParsedValue<String, String>[], String[]>(
+            layers, StringConverter.SequenceConverter.getInstance());
+    }
+
+    private ParsedValueImpl<String, String> parseTransitionProperty(Term term) throws ParseException {
+        if (term == null || !isTransitionProperty(term.token)) {
+            error(term,  "Expected \'<transition-property>\'");
+        }
+
+        return new ParsedValueImpl<String, String>(term.token.getText().toLowerCase(Locale.ROOT), null);
+    }
+
+    private boolean isTransitionProperty(Token token) {
+        int ttype;
+        String str;
+        return token != null
+            && ((ttype = token.getType()) == CssLexer.STRING || ttype == CssLexer.IDENT)
+            && (str = token.getText()) != null
+            && !str.isEmpty();
+    }
+
+    /*
+     * https://www.w3.org/TR/css-transitions-1/#transition-duration-property
+     */
+    private ParsedValueImpl<ParsedValue<ParsedValue<?, Size>, Duration>[], Duration[]>
+            parseTransitionDurationLayers(Term term) throws ParseException {
+        int nLayers = numberOfLayers(term);
+        ParsedValue<ParsedValue<?, Size>, Duration>[] layers = new ParsedValueImpl[nLayers];
+
+        for (int i = 0; i < nLayers; ++i) {
+            layers[i] = parseTransitionDuration(term);
+            term = nextLayer(term);
+        }
+
+        return new ParsedValueImpl<ParsedValue<ParsedValue<?, Size>, Duration>[], Duration[]>(
+                layers, DurationConverter.SequenceConverter.getInstance());
+    }
+
+    private ParsedValueImpl<ParsedValue<?, Size>, Duration> parseTransitionDuration(Term term) throws ParseException {
+        ParsedValue<?, Size> time = parseTime(term);
+        Size size = (Size)time.getValue();
+        if (size.getValue() < 0) {
+            error(term, "Invalid <transition-duration> \'" + size.getValue() + "\'");
+        }
+
+        return new ParsedValueImpl<>(time, DurationConverter.getInstance());
+    }
+
+    /*
+     * https://www.w3.org/TR/css-transitions-1/#transition-delay-property
+     */
+    private ParsedValueImpl<ParsedValue<ParsedValue<?, Size>, Duration>[], Duration[]>
+            parseTransitionDelayLayers(Term term) throws ParseException {
+        int nLayers = numberOfLayers(term);
+        ParsedValue<ParsedValue<?, Size>, Duration>[] layers = new ParsedValueImpl[nLayers];
+
+        for (int i = 0; i < nLayers; ++i) {
+            layers[i] = parseTransitionDelay(term);
+            term = nextLayer(term);
+        }
+
+        return new ParsedValueImpl<ParsedValue<ParsedValue<?, Size>, Duration>[], Duration[]>(
+                layers, DurationConverter.SequenceConverter.getInstance());
+    }
+
+    private ParsedValueImpl<ParsedValue<?, Size>, Duration> parseTransitionDelay(Term term) throws ParseException {
+        return new ParsedValueImpl<>(parseTime(term), DurationConverter.getInstance());
+    }
+
+    /*
+     * https://www.w3.org/TR/css-transitions-1/#transition-timing-function-property
+     */
+    private ParsedValueImpl<ParsedValue<?, Interpolator>[], Interpolator[]>
+            parseTransitionTimingFunctionLayers(Term term) throws ParseException {
+        int nLayers = numberOfLayers(term);
+        ParsedValue<?, Interpolator>[] layers = new ParsedValue[nLayers];
+
+        for (int i = 0; i < nLayers; ++i) {
+            layers[i] = parseEasingFunction(term);
+            term = nextLayer(term);
+        }
+
+        return new ParsedValueImpl<ParsedValue<?, Interpolator>[], Interpolator[]>(
+            layers, InterpolatorConverter.SequenceConverter.getInstance());
+    }
+
+    // https://www.w3.org/TR/css-easing-1/#easing-functions
+    private ParsedValueImpl<?, Interpolator> parseEasingFunction(Term term) throws ParseException {
+        if (term == null || !isEasingFunction(term.token)) {
+            error(term,  "Expected \'<easing-function>\'");
+        }
+
+        return switch (term.token.getText()) {
+            case "cubic-bezier(" -> {
+                double[] args = new double[4];
+                Term arg = term.firstArg;
+
+                for (int j = 0; j < 4; ++j, arg = arg.nextArg) {
+                    if (arg == null || arg.token == null || arg.token.getType() != CssLexer.NUMBER
+                            || (args[j] = Double.parseDouble(arg.token.getText())) < 0 || args[j] > 1) {
+                        error(arg != null ? arg : term,  "Expected \'<number [0,1]>\'");
+                    }
+                }
+
+                yield new ParsedValueImpl<>(new ParsedValue[] {
+                        new ParsedValueImpl(term.token.getText(), null), new ParsedValueImpl(args, null)
+                    }, InterpolatorConverter.getInstance());
+            }
+
+            case "steps(" -> {
+                Object[] args = new Object[2];
+                Term arg = term.firstArg;
+                if (arg == null || arg.token == null || arg.token.getType() != CssLexer.NUMBER) {
+                    error(arg,  "Expected \'<integer>\'");
+                } else {
+                    args[0] = Integer.parseInt(arg.token.getText());
+                }
+
+                arg = arg.nextArg;
+                if (arg != null) {
+                    if (isStepPosition(arg.token)) {
+                        args[1] = arg.token.getText();
+                    } else {
+                        error(arg != null ? arg : term, "Expected \'<step-position>\'");
+                    }
+                }
+
+                yield new ParsedValueImpl<>(new ParsedValue[] {
+                        new ParsedValueImpl(term.token.getText(), null), new ParsedValueImpl(args, null)
+                    }, InterpolatorConverter.getInstance());
+            }
+
+            default -> {
+                yield new ParsedValueImpl<>(
+                    new ParsedValueImpl(term.token.getText(), null),
+                    InterpolatorConverter.getInstance());
+            }
+        };
+    }
+
+    // https://www.w3.org/TR/css-easing-1/#easing-functions
+    // <easing-function> = linear | <cubic-bezier-easing-function> | <step-easing-function>
+    private boolean isEasingFunction(Token token) throws ParseException {
+        return token != null && switch (token.getText()) {
+            case "linear" -> true;
+            case "ease", "ease-in", "ease-out", "ease-in-out", "cubic-bezier(" -> true;
+            case "step-start", "step-end", "steps(" -> true;
+            default -> false;
+        };
+    }
+
+    // https://www.w3.org/TR/css-easing-1/#step-easing-functions
+    // <step-position> = jump-start | jump-end | jump-none | jump-both | start | end
+    private boolean isStepPosition(Token token) throws ParseException {
+        return token != null && switch (token.getText()) {
+            case "jump-start", "jump-end", "jump-none", "jump-both", "start", "end" -> true;
+            default -> false;
+        };
     }
 
     //

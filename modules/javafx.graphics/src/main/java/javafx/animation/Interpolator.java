@@ -29,6 +29,7 @@ import javafx.util.Duration;
 
 import com.sun.scenario.animation.NumberTangentInterpolator;
 import com.sun.scenario.animation.SplineInterpolator;
+import com.sun.scenario.animation.StepInterpolator;
 
 /**
  * The abstract class defines several {@code interpolate} methods, which are
@@ -257,6 +258,35 @@ public abstract class Interpolator {
     }
 
     /**
+     * Built-in interpolator instance that is equivalent to {@code STEPS(1, StepPosition.START)}.
+     *
+     * @since 20
+     */
+    public static Interpolator STEP_START = STEPS(1, StepPosition.START);
+
+    /**
+     * Built-in interpolator instance that is equivalent to {@code STEPS(1, StepPosition.END)}.
+     *
+     * @since 20
+     */
+    public static Interpolator STEP_END = STEPS(1, StepPosition.END);
+
+    /**
+     * Creates a step interpolator that divides the input time into a series of intervals, each
+     * interval being equal in length, where each interval maps to a constant output time value.
+     * The output time value is determined by the {@link StepPosition}.
+     *
+     * @param intervals the number of intervals in the step interpolator
+     * @param position the {@code StepPosition} of the step interpolator
+     * @return a new step interpolator
+     *
+     * @since 20
+     */
+    public static Interpolator STEPS(int intervals, StepPosition position) {
+        return new StepInterpolator(intervals, position);
+    }
+
+    /**
      * This method takes two {@code Objects} along with a {@code fraction}
      * between {@code 0.0} and {@code 1.0} and returns the interpolated value.
      * <p>
@@ -388,19 +418,35 @@ public abstract class Interpolator {
                 + Math.round((endValue - startValue) * curve(fraction));
     }
 
+    /**
+     * Returns whether the interpolator is valid before the active interval of the animation.
+     * <p>
+     * If this method returns {@code true}, callers may pass a negative input time value
+     * to {@link #curve(double)}, which the interpolator implementation should interpret as a
+     * point in time before the active interval.
+     *
+     * @return {@code true} if the interpolator accepts negative input time values;
+     *         {@code false} otherwise
+     * @since 20
+     */
+    public boolean isValidBeforeInterval() {
+        return false;
+    }
+
     private static double clamp(double t) {
         return (t < 0.0) ? 0.0 : (t > 1.0) ? 1.0 : t;
     }
 
     /**
-     * Mapping from [0.0..1.0] to itself.
+     * Maps an input time value to an output time value.
+     * <p>
+     * Typically, the input time value is in the range [0..1], but some interpolators also
+     * accept a negative value. A negative value should be interpreted as a point in time before
+     * the active interval of the animation. Interpolators declare that a negative input time
+     * value is a valid argument by returning {@code true} from {@link #isValidBeforeInterval()}.
      *
-     * @param t
-     *            time, but normalized to the range [0.0..1.0], where 0.0 is the
-     *            start of the current interval, while 1.0 is the end of the
-     *            current interval. Usually a function that increases
-     *            monotonically.
-     * @return the curved value
+     * @param t the input progress value
+     * @return the output progress value
      */
     protected abstract double curve(double t);
 

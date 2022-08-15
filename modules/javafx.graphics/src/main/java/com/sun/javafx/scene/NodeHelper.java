@@ -42,6 +42,7 @@ import javafx.css.CssMetaData;
 import javafx.css.Style;
 import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
+import javafx.css.TransitionDefinition;
 import javafx.geometry.Bounds;
 import javafx.scene.Node;
 import javafx.scene.SubScene;
@@ -312,6 +313,10 @@ public abstract class NodeHelper {
         nodeAccessor.requestFocusVisible(node);
     }
 
+    public static TransitionDefinition findTransition(Node node, CssMetaData<? extends Styleable, ?> metadata) {
+        return nodeAccessor.findTransition(node, metadata);
+    }
+
     public static void setNodeAccessor(final NodeAccessor newAccessor) {
         if (nodeAccessor != null) {
             throw new IllegalStateException();
@@ -372,6 +377,7 @@ public abstract class NodeHelper {
         Map<StyleableProperty<?>,List<Style>> findStyles(Node node,
                 Map<StyleableProperty<?>,List<Style>> styleMap);
         void requestFocusVisible(Node node);
+        TransitionDefinition findTransition(Node node, CssMetaData<? extends Styleable, ?> metadata);
     }
 
 }

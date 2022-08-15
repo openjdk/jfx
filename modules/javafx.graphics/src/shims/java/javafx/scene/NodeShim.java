@@ -25,11 +25,13 @@
 
 package javafx.scene;
 
+import javafx.css.TransitionDefinition;
 import com.sun.javafx.scene.DirtyBits;
 import com.sun.javafx.sg.prism.NGNode;
 
 import javafx.collections.ObservableSet;
 import javafx.css.PseudoClass;
+import javafx.css.StyleableProperty;
 import javafx.scene.transform.Transform;
 
 public class NodeShim {
@@ -84,5 +86,9 @@ public class NodeShim {
 
     public static void setTreeVisible(Node n, boolean visible) {
         n.setTreeVisible(visible);
+    }
+
+    public static StyleableProperty<TransitionDefinition[]> getTransitionsProperty(Node n) {
+        return n.getTransitionsProperty();
     }
 }

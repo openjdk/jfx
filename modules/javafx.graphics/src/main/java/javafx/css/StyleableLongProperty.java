@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,8 +25,11 @@
 
 package javafx.css;
 
+import com.sun.javafx.css.TransitionTimer;
+import com.sun.javafx.scene.NodeHelper;
 import javafx.beans.property.LongPropertyBase;
 import javafx.beans.value.ObservableValue;
+import javafx.scene.Node;
 
 /**
  * This class extends {@code LongPropertyBase} and provides a partial
@@ -65,22 +68,56 @@ public abstract class StyleableLongProperty
     /** {@inheritDoc} */
     @Override
     public void applyStyle(StyleOrigin origin, Number v) {
-        setValue(v);
+        if (timer != null) {
+            timer.stop();
+        }
+
+        // If this.origin == null, we're setting the initial value; no transition should be started in this case.
+        TransitionDefinition transition = this.origin != null && getBean() instanceof Node node ?
+            NodeHelper.findTransition(node, getCssMetaData()) : null;
+
+        if (transition != null) {
+            timer = new TransitionTimer(transition) {
+                final long oldValue = get();
+                final long newValue = v != null ? v.longValue() : 0;
+
+                @Override
+                protected void onUpdate(double progress) {
+                    set(progress < 1 ? oldValue + (long)((newValue - oldValue) * progress) : newValue);
+                }
+
+                @Override
+                public void stop() {
+                    super.stop();
+                    timer = null;
+                }
+            };
+
+            timer.start();
+        } else {
+            setValue(v);
+        }
+
         this.origin = origin;
     }
 
     /** {@inheritDoc} */
     @Override
     public void bind(ObservableValue<? extends Number> observable) {
-        super.bind(observable);
-        origin = StyleOrigin.USER;
+        if (TransitionTimer.tryStop(timer)) {
+            super.bind(observable);
+            origin = StyleOrigin.USER;
+        }
     }
 
     /** {@inheritDoc} */
     @Override
     public void set(long v) {
         super.set(v);
-        origin = StyleOrigin.USER;
+
+        if (TransitionTimer.tryStop(timer)) {
+            origin = StyleOrigin.USER;
+        }
     }
 
     /** {@inheritDoc} */
@@ -88,5 +125,6 @@ public abstract class StyleableLongProperty
     public StyleOrigin getStyleOrigin() { return origin; }
 
     private StyleOrigin origin = null;
+    private TransitionTimer timer = null;
 
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,24 +26,31 @@
 package javafx.animation;
 
 /**
- * A value that can be interpolated. It defines single
- * {@link #interpolate(Object, double)} method, which returns interpolated value
- * of given fraction.
+ * A value that can be interpolated. It defines a single {@link #interpolate(Object, double)}
+ * method, which returns an intermediate value between the value of this {@code Interpolatable}
+ * and the specified target value.
+ *
  * @since JavaFX 2.0
  */
 @FunctionalInterface
 public interface Interpolatable<T> {
 
     /**
-     * The function calculates an interpolated value along the fraction
-     * {@code t} between {@code 0.0} and {@code 1.0}. When {@code t} = 1.0,
-     * {@code endVal} is returned.
+     * Returns an intermediate value between the value of this {@code Interpolatable} and the specified
+     * {@code endValue} using the linear interpolation factor {@code t}, ranging from 0 (inclusive)
+     * to 1 (inclusive).
+     * <p>
+     * If the linear interpolation factor {@code t} is less than or equal to 0, a value equal to the
+     * value of this {@code Interpolatable} is returned; if the fraction is larger than or equal to 1,
+     * a value equal to {@code endValue} is returned.
+     * <p>
+     * The returned value may not be a new instance; it can also be either of the two existing instances
+     * if the intermediate value would be equal to one of the existing values. However, applications
+     * should not assume any particular identity of the returned value.
      *
-     * @param endValue
-     *            target value
-     * @param t
-     *            fraction between {@code 0.0} and {@code 1.0}
-     * @return interpolated value
+     * @param endValue the target value
+     * @param t the interpolation factor
+     * @return the intermediate value
      */
-    public T interpolate(T endValue, double t);
+    T interpolate(T endValue, double t);
 }
