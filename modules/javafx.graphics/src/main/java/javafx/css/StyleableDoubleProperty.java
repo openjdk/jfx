@@ -30,6 +30,7 @@ import com.sun.javafx.scene.NodeHelper;
 import javafx.beans.property.DoublePropertyBase;
 import javafx.beans.value.ObservableValue;
 import javafx.scene.Node;
+import java.lang.ref.WeakReference;
 
 /**
  * This class extends {@code DoublePropertyBase} and provides a partial
@@ -72,27 +73,13 @@ public abstract class StyleableDoubleProperty
             timer.stop();
         }
 
-        // If this.origin == null, we're setting the initial value; no transition should be started in this case.
+        // If this.origin == null, we're setting the value for the first time.
+        // No transition should be started in this case.
         TransitionDefinition transition = this.origin != null && getBean() instanceof Node node ?
             NodeHelper.findTransition(node, getCssMetaData()) : null;
 
         if (transition != null) {
-            timer = new TransitionTimer(transition) {
-                final double oldValue = get();
-                final double newValue = v != null ? v.doubleValue() : 0;
-
-                @Override
-                protected void onUpdate(double progress) {
-                    set(progress < 1 ? oldValue + (newValue - oldValue) * progress : newValue);
-                }
-
-                @Override
-                public void stop() {
-                    super.stop();
-                    timer = null;
-                }
-            };
-
+            timer = new TransitionTimerImpl(this, v, transition);
             timer.start();
         } else {
             setValue(v);
@@ -126,5 +113,38 @@ public abstract class StyleableDoubleProperty
 
     private StyleOrigin origin = null;
     private TransitionTimer timer = null;
+
+    private static class TransitionTimerImpl extends TransitionTimer {
+        final WeakReference<StyleableDoubleProperty> wref;
+        final double oldValue;
+        final double newValue;
+
+        TransitionTimerImpl(StyleableDoubleProperty property, Number value, TransitionDefinition transition) {
+            super(transition);
+            this.wref = new WeakReference<>(property);
+            this.oldValue = property.get();
+            this.newValue = value != null ? value.doubleValue() : 0;
+        }
+
+        @Override
+        protected void onUpdate(double progress) {
+            StyleableDoubleProperty property = wref.get();
+            if (property != null) {
+                property.set(progress < 1 ? oldValue + (newValue - oldValue) * progress : newValue);
+            } else {
+                super.stop();
+            }
+        }
+
+        @Override
+        public void stop() {
+            super.stop();
+
+            StyleableDoubleProperty property = wref.get();
+            if (property != null) {
+                property.timer = null;
+            }
+        }
+    }
 
 }

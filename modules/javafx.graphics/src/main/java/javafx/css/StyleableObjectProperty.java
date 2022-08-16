@@ -31,6 +31,7 @@ import javafx.animation.Interpolatable;
 import javafx.beans.property.ObjectPropertyBase;
 import javafx.beans.value.ObservableValue;
 import javafx.scene.Node;
+import java.lang.ref.WeakReference;
 
 /**
  * This class extends {@code ObjectPropertyBase} and provides a partial
@@ -80,27 +81,14 @@ public abstract class StyleableObjectProperty<T>
         } else if ((oldValue = get()) == null) {
             set(v);
         } else {
-            // If this.origin == null, we're setting the initial value; no transition should be started in this case.
+            // If this.origin == null, we're setting the value for the first time.
+            // No transition should be started in this case.
             TransitionDefinition transition = this.origin != null
                 && v instanceof Interpolatable<?>
-                && getBean() instanceof Node node ?
-                    NodeHelper.findTransition(node, getCssMetaData()) : null;
+                && getBean() instanceof Node node ? NodeHelper.findTransition(node, getCssMetaData()) : null;
 
             if (transition != null) {
-                timer = new TransitionTimer(transition) {
-                    @Override
-                    @SuppressWarnings("unchecked")
-                    protected void onUpdate(double progress) {
-                        set(progress < 1 ? ((Interpolatable<T>)oldValue).interpolate(v, progress) : v);
-                    }
-
-                    @Override
-                    public void stop() {
-                        super.stop();
-                        timer = null;
-                    }
-                };
-
+                timer = new TransitionTimerImpl<>(this, oldValue, v, transition);
                 timer.start();
             } else {
                 set(v);
@@ -135,5 +123,40 @@ public abstract class StyleableObjectProperty<T>
 
     private StyleOrigin origin = null;
     private TransitionTimer timer = null;
+
+    private static class TransitionTimerImpl<U> extends TransitionTimer {
+        final WeakReference<StyleableObjectProperty<U>> wref;
+        final U oldValue;
+        final U newValue;
+
+        TransitionTimerImpl(StyleableObjectProperty<U> property, U oldValue, U newValue,
+                            TransitionDefinition transition) {
+            super(transition);
+            this.wref = new WeakReference<>(property);
+            this.oldValue = oldValue;
+            this.newValue = newValue;
+        }
+
+        @Override
+        @SuppressWarnings("unchecked")
+        protected void onUpdate(double progress) {
+            StyleableObjectProperty<U> property = wref.get();
+            if (property != null) {
+                property.set(progress < 1 ? ((Interpolatable<U>)oldValue).interpolate(newValue, progress) : newValue);
+            } else {
+                super.stop();
+            }
+        }
+
+        @Override
+        public void stop() {
+            super.stop();
+
+            StyleableObjectProperty<U> property = wref.get();
+            if (property != null) {
+                property.timer = null;
+            }
+        }
+    }
 
 }
