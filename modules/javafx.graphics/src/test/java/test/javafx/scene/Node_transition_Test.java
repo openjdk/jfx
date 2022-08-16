@@ -25,6 +25,7 @@
 
 package test.javafx.scene;
 
+import com.sun.javafx.css.TransitionTimer;
 import com.sun.javafx.scene.NodeHelper;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
@@ -40,6 +41,7 @@ import javafx.scene.shape.Rectangle;
 import javafx.util.Duration;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static test.javafx.animation.InterpolatorUtils.*;
@@ -69,10 +71,10 @@ public class Node_transition_Test {
         node.setStyle("transition: -fx-fill 1s, ALL 2s ease-in-out;");
         node.applyCss();
 
-        TransitionDefinition[] transitions = NodeShim.getTransitionsProperty(node).getValue();
-        assertEquals(2, transitions.length);
-        assertTransitionEquals("-fx-fill", Duration.seconds(1), Duration.ZERO, LINEAR, transitions[0]);
-        assertTransitionEquals("all", Duration.seconds(2), Duration.ZERO, EASE_IN_OUT, transitions[1]);
+        List<TransitionDefinition> transitions = NodeShim.getTransitionDefinitions(node);
+        assertEquals(2, transitions.size());
+        assertTransitionEquals("-fx-fill", Duration.seconds(1), Duration.ZERO, LINEAR, transitions.get(0));
+        assertTransitionEquals("all", Duration.seconds(2), Duration.ZERO, EASE_IN_OUT, transitions.get(1));
     }
 
     @Test
@@ -125,18 +127,102 @@ public class Node_transition_Test {
         node.getStyleClass().add("testClass");
         node.applyCss();
 
-        TransitionDefinition[] transitions = NodeShim.getTransitionsProperty(node).getValue();
-        assertEquals(3, transitions.length);
-        assertTransitionEquals("-fx-background-color", Duration.seconds(1), Duration.seconds(0.5), EASE, transitions[0]);
-        assertTransitionEquals("-fx-scale-x", Duration.seconds(1), Duration.ZERO, LINEAR, transitions[1]);
-        assertTransitionEquals("-fx-scale-y", Duration.seconds(1), Duration.ZERO, LINEAR, transitions[2]);
+        List<TransitionDefinition> transitions = NodeShim.getTransitionDefinitions(node);
+        assertEquals(3, transitions.size());
+        assertTransitionEquals("-fx-background-color", Duration.seconds(1), Duration.seconds(0.5), EASE, transitions.get(0));
+        assertTransitionEquals("-fx-scale-x", Duration.seconds(1), Duration.ZERO, LINEAR, transitions.get(1));
+        assertTransitionEquals("-fx-scale-y", Duration.seconds(1), Duration.ZERO, LINEAR, transitions.get(2));
 
         node.pseudoClassStateChanged(PseudoClass.getPseudoClass("hover"), true);
         node.applyCss();
 
-        transitions = NodeShim.getTransitionsProperty(node).getValue();
-        assertEquals(1, transitions.length);
-        assertTransitionEquals("-fx-background-color", Duration.seconds(1), Duration.ZERO, LINEAR, transitions[0]);
+        transitions = NodeShim.getTransitionDefinitions(node);
+        assertEquals(1, transitions.size());
+        assertTransitionEquals("-fx-background-color", Duration.seconds(1), Duration.ZERO, LINEAR, transitions.get(0));
+    }
+
+    @Test
+    public void testRunningTimersAreTrackedInNode() {
+        String url = "data:text/css;base64," + Base64.getUrlEncoder().encodeToString("""
+            .testClass { -fx-opacity: 0; transition: all 1s; }
+            .testClass:hover { -fx-opacity: 1; }
+            """.getBytes(StandardCharsets.UTF_8));
+
+        var node = new Rectangle();
+        var scene = new Scene(new Group(node));
+        scene.getStylesheets().add(url);
+        node.getStyleClass().add("testClass");
+        node.applyCss();
+
+        List<TransitionTimer> timers = NodeShim.getTransitionTimers(node);
+        assertEquals(0, timers.size());
+
+        // The hover state starts the timer.
+        node.pseudoClassStateChanged(PseudoClass.getPseudoClass("hover"), true);
+        node.applyCss();
+        assertEquals(1, timers.size());
+
+        // Complete the timer, which removes it from the list.
+        timers.get(0).update(1);
+        assertEquals(0, timers.size());
+    }
+
+    @Test
+    public void testRunningTimerIsCompletedWhenNodeIsRemovedFromSceneGraph() {
+        String url = "data:text/css;base64," + Base64.getUrlEncoder().encodeToString("""
+            .testClass { -fx-opacity: 0; transition: all 1s; }
+            .testClass:hover { -fx-opacity: 1; }
+            """.getBytes(StandardCharsets.UTF_8));
+
+        var node = new Rectangle();
+        var scene = new Scene(new Group(node));
+        scene.getStylesheets().add(url);
+        node.getStyleClass().add("testClass");
+        node.applyCss();
+
+        List<TransitionTimer> timers = NodeShim.getTransitionTimers(node);
+        assertEquals(0, timers.size());
+
+        // The hover state starts the timer.
+        node.pseudoClassStateChanged(PseudoClass.getPseudoClass("hover"), true);
+        node.applyCss();
+        assertEquals(1, timers.size());
+        assertTrue(node.getOpacity() < 1);
+
+        // The original node is removed from the scene graph, causing the timer to complete early
+        // with the target value of the transition.
+        scene.setRoot(new Group());
+        assertEquals(0, timers.size());
+        assertEquals(1, node.getOpacity(), 0.001);
+    }
+
+    @Test
+    public void testRunningTimerIsCompletedWhenNodeBecomesInvisible() {
+        String url = "data:text/css;base64," + Base64.getUrlEncoder().encodeToString("""
+            .testClass { -fx-opacity: 0; transition: all 1s; }
+            .testClass:hover { -fx-opacity: 1; }
+            """.getBytes(StandardCharsets.UTF_8));
+
+        var node = new Rectangle();
+        var scene = new Scene(new Group(node));
+        scene.getStylesheets().add(url);
+        node.getStyleClass().add("testClass");
+        node.applyCss();
+
+        List<TransitionTimer> timers = NodeShim.getTransitionTimers(node);
+        assertEquals(0, timers.size());
+
+        // The hover state starts the timer.
+        node.pseudoClassStateChanged(PseudoClass.getPseudoClass("hover"), true);
+        node.applyCss();
+        assertEquals(1, timers.size());
+        assertTrue(node.getOpacity() < 1);
+
+        // The node is made invisible, causing the timer to complete early with the
+        // target value of the transition.
+        node.setVisible(false);
+        assertEquals(0, timers.size());
+        assertEquals(1, node.getOpacity(), 0.001);
     }
 
     @Test
@@ -155,9 +241,9 @@ public class Node_transition_Test {
         node.getStyleClass().add("testClass");
         node.applyCss();
 
-        TransitionDefinition[] transitions = NodeShim.getTransitionsProperty(node).getValue();
-        assertEquals(1, transitions.length);
-        assertTransitionEquals("-fx-scale-x", Duration.seconds(2), Duration.ZERO, LINEAR, transitions[0]);
+        List<TransitionDefinition> transitions = NodeShim.getTransitionDefinitions(node);
+        assertEquals(1, transitions.size());
+        assertTransitionEquals("-fx-scale-x", Duration.seconds(2), Duration.ZERO, LINEAR, transitions.get(0));
     }
 
 }

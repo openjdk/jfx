@@ -26,6 +26,7 @@
 package com.sun.javafx.scene;
 
 import com.sun.glass.ui.Accessible;
+import com.sun.javafx.css.TransitionTimer;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.PickRay;
 import com.sun.javafx.geom.transform.BaseTransform;
@@ -317,6 +318,14 @@ public abstract class NodeHelper {
         return nodeAccessor.findTransition(node, metadata);
     }
 
+    public static void addTransitionTimer(Node node, TransitionTimer timer) {
+        nodeAccessor.addTransitionTimer(node, timer);
+    }
+
+    public static void removeTransitionTimer(Node node, TransitionTimer timer) {
+        nodeAccessor.removeTransitionTimer(node, timer);
+    }
+
     public static void setNodeAccessor(final NodeAccessor newAccessor) {
         if (nodeAccessor != null) {
             throw new IllegalStateException();
@@ -378,6 +387,8 @@ public abstract class NodeHelper {
                 Map<StyleableProperty<?>,List<Style>> styleMap);
         void requestFocusVisible(Node node);
         TransitionDefinition findTransition(Node node, CssMetaData<? extends Styleable, ?> metadata);
+        void addTransitionTimer(Node node, TransitionTimer timer);
+        void removeTransitionTimer(Node node, TransitionTimer timer);
     }
 
 }

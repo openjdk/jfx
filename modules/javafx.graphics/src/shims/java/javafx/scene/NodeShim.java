@@ -26,13 +26,14 @@
 package javafx.scene;
 
 import javafx.css.TransitionDefinition;
+import com.sun.javafx.css.TransitionTimer;
 import com.sun.javafx.scene.DirtyBits;
 import com.sun.javafx.sg.prism.NGNode;
 
 import javafx.collections.ObservableSet;
 import javafx.css.PseudoClass;
-import javafx.css.StyleableProperty;
 import javafx.scene.transform.Transform;
+import java.util.List;
 
 public class NodeShim {
 
@@ -88,7 +89,11 @@ public class NodeShim {
         n.setTreeVisible(visible);
     }
 
-    public static StyleableProperty<TransitionDefinition[]> getTransitionsProperty(Node n) {
-        return n.getTransitionsProperty();
+    public static List<TransitionDefinition> getTransitionDefinitions(Node n) {
+        return n.getTransitionDefinitions();
+    }
+
+    public static List<TransitionTimer> getTransitionTimers(Node n) {
+        return n.getTransitionTimers();
     }
 }

@@ -127,6 +127,7 @@ import com.sun.javafx.beans.event.AbstractNotifyListener;
 import com.sun.javafx.collections.TrackableObservableList;
 import com.sun.javafx.collections.UnmodifiableListSet;
 import com.sun.javafx.css.TransitionDefinitionCssMetaData;
+import com.sun.javafx.css.TransitionTimer;
 import com.sun.javafx.css.PseudoClassState;
 import javafx.css.Selector;
 import javafx.css.Style;
@@ -636,6 +637,20 @@ public abstract class Node implements EventTarget, Styleable {
             public TransitionDefinition findTransition(Node node, CssMetaData<? extends Styleable, ?> metadata) {
                 return node.transitions == null ? null : node.transitions.find(metadata);
             }
+
+            @Override
+            public void addTransitionTimer(Node node, TransitionTimer timer) {
+                if (node.transitions != null) {
+                    node.transitions.addTransitionTimer(timer);
+                }
+            }
+
+            @Override
+            public void removeTransitionTimer(Node node, TransitionTimer timer) {
+                if (node.transitions != null) {
+                    node.transitions.removeTransitionTimer(timer);
+                }
+            }
         });
     }
 
@@ -1066,6 +1081,9 @@ public abstract class Node implements EventTarget, Styleable {
             getClip().setScenes(newScene, newSubScene);
         }
         if (sceneChanged) {
+            if (newScene == null && transitions != null) {
+                transitions.completeTransitionTimers();
+            }
             updateCanReceiveFocus();
             if (isFocusTraversable()) {
                 if (newScene != null) {
@@ -8567,6 +8585,9 @@ public abstract class Node implements EventTarget, Styleable {
     final void setTreeVisible(boolean value) {
         if (treeVisible != value) {
             treeVisible = value;
+            if (!value && transitions != null) {
+                transitions.completeTransitionTimers();
+            }
             updateCanReceiveFocus();
             focusSetDirty(getScene());
             if (getClip() != null) {
@@ -8898,6 +8919,7 @@ public abstract class Node implements EventTarget, Styleable {
             extends ModifiableObservableListBase<TransitionDefinition>
             implements StyleableProperty<TransitionDefinition[]> {
 
+        private final List<TransitionTimer> timers = new ArrayList<>(4);
         private final List<TransitionDefinition> list = new ArrayList<>(4);
         private StyleOrigin origin;
 
@@ -8905,7 +8927,7 @@ public abstract class Node implements EventTarget, Styleable {
          * Returns the transition for the property referenced by the specified CSS metadata,
          * or {@code null} if no transition with a duration larger than 0 was found.
          */
-        public TransitionDefinition find(CssMetaData<? extends Styleable, ?> metadata) {
+        TransitionDefinition find(CssMetaData<? extends Styleable, ?> metadata) {
             if (list.size() == 0) {
                 return null;
             }
@@ -8949,6 +8971,40 @@ public abstract class Node implements EventTarget, Styleable {
             }
 
             return null;
+        }
+
+        /**
+         * Called by {@code StyleableProperty} implementations that support animated transitions
+         * in order to register a running timer with this {@code Node}. This allows running timers
+         * to be completed early by this {@code Node}.
+         */
+        void addTransitionTimer(TransitionTimer timer) {
+            timers.add(timer);
+        }
+
+        /**
+         * Removes a timer that was previously registered with {@link #addTransitionTimer}.
+         * This method is called by implementations of {@code StyleableProperty} that support
+         * animated transitions when their {@code TransitionTimer} has completed.
+         */
+        void removeTransitionTimer(TransitionTimer timer) {
+            timers.remove(timer);
+        }
+
+        /**
+         * Completes all running timers, which skips the rest of their transition animation
+         * and sets the property value to the target value of the transition.
+         */
+        void completeTransitionTimers() {
+            if (timers.isEmpty()) {
+                return;
+            }
+
+            // Make a copy of the list, because completing the timers will remove them
+            // from the list, which would result in a ConcurrentModificationException.
+            for (TransitionTimer timer : new ArrayList<>(timers)) {
+                timer.update(1);
+            }
         }
 
         @Override
@@ -9025,8 +9081,13 @@ public abstract class Node implements EventTarget, Styleable {
     }
 
     // package-private for testing
-    StyleableProperty<TransitionDefinition[]> getTransitionsProperty() {
-        return transitions;
+    List<TransitionDefinition> getTransitionDefinitions() {
+        return transitions.list;
+    }
+
+    // package-private for testing
+    List<TransitionTimer> getTransitionTimers() {
+        return transitions.timers;
     }
 
 

@@ -90,6 +90,7 @@ public abstract class StyleableObjectProperty<T>
             if (transition != null) {
                 timer = new TransitionTimerImpl<>(this, oldValue, v, transition);
                 timer.start();
+                NodeHelper.addTransitionTimer((Node)getBean(), timer);
             } else {
                 set(v);
             }
@@ -155,6 +156,7 @@ public abstract class StyleableObjectProperty<T>
             StyleableObjectProperty<U> property = wref.get();
             if (property != null) {
                 property.timer = null;
+                NodeHelper.removeTransitionTimer((Node)property.getBean(), this);
             }
         }
     }

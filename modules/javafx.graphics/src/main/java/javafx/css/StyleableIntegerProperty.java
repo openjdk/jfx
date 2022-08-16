@@ -81,6 +81,7 @@ public abstract class StyleableIntegerProperty
         if (transition != null) {
             timer = new TransitionTimerImpl(this, v, transition);
             timer.start();
+            NodeHelper.addTransitionTimer((Node)getBean(), timer);
         } else {
             setValue(v);
         }
@@ -143,6 +144,7 @@ public abstract class StyleableIntegerProperty
             StyleableIntegerProperty property = wref.get();
             if (property != null) {
                 property.timer = null;
+                NodeHelper.removeTransitionTimer((Node)property.getBean(), this);
             }
         }
     }

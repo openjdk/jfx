@@ -78,6 +78,18 @@ public abstract class TransitionTimer extends AnimationTimer {
             (double)(now - startTime) / (double)duration,
             1);
 
+        update(progress);
+    }
+
+    /**
+     * Updates the transition timer by mapping the specified input progress to an output progress
+     * value using the timer's interpolator, and then calling {@link #onUpdate(double)}} with the
+     * output progress value.
+     * When the specified input progress value is 1, the timer is automatically stopped.
+     *
+     * @param progress the input progress value
+     */
+    public final void update(double progress) {
         try {
             updating = true;
             onUpdate(interpolator.interpolate(0D, 1D, progress));
