@@ -1254,6 +1254,40 @@ public class VirtualFlowTest {
         assertEquals("Wrong number of sheet children after removing all items", 12, sheetChildrenSize);
     }
 
+    @Test
+    // See JDK-8291908
+    public void test_noEmptyTrailingCells() {
+        flow = new VirtualFlowShim();
+        flow.setVertical(true);
+        flow.setCellFactory(p -> new CellStub(flow) {
+            @Override
+            protected double computeMaxHeight(double width) {
+                return computePrefHeight(width);
+            }
+
+            @Override
+            protected double computePrefHeight(double width) {
+                return (getIndex() > 100) ? 1 : 20;
+            }
+
+            @Override
+            protected double computeMinHeight(double width) {
+                return computePrefHeight(width);
+            }
+
+        });
+        flow.setCellCount(100);
+        flow.setViewportLength(1000);
+        flow.resize(100, 1000);
+        pulse();
+        flow.sheetChildren.addListener((InvalidationListener) (o) -> {
+            int count = ((List) o).size();
+            assertTrue(Integer.toString(count), count < 101);
+        });
+        flow.scrollTo(99);
+        pulse();
+    }
+
     private ArrayLinkedListShim<GraphicalCellStub> circlelist = new ArrayLinkedListShim<GraphicalCellStub>();
 
     private VirtualFlowShim createCircleFlow() {
