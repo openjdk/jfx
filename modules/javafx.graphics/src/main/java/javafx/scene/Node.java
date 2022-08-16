@@ -166,6 +166,7 @@ import com.sun.prism.impl.PrismSettings;
 import com.sun.scenario.effect.EffectHelper;
 
 import javafx.scene.shape.Shape3D;
+import javafx.util.Duration;
 import com.sun.javafx.logging.PlatformLogger;
 import com.sun.javafx.logging.PlatformLogger.Level;
 
@@ -8902,7 +8903,7 @@ public abstract class Node implements EventTarget, Styleable {
 
         /**
          * Returns the transition for the property referenced by the specified CSS metadata,
-         * or {@code null} if no transition was found.
+         * or {@code null} if no transition with a duration larger than 0 was found.
          */
         public TransitionDefinition find(CssMetaData<? extends Styleable, ?> metadata) {
             if (list.size() == 0) {
@@ -8928,7 +8929,7 @@ public abstract class Node implements EventTarget, Styleable {
                 };
 
                 if (selected) {
-                    return transition;
+                    return transition.getDuration().equals(Duration.ZERO) ? null : transition;
                 }
             }
 
@@ -8943,7 +8944,7 @@ public abstract class Node implements EventTarget, Styleable {
             for (int i = 0, max = subMetadata.size(); i < max; ++i) {
                 TransitionDefinition transition = find(subMetadata.get(i));
                 if (transition != null) {
-                    return transition;
+                    return transition.getDuration().equals(Duration.ZERO) ? null : transition;
                 }
             }
 

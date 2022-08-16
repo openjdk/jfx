@@ -74,17 +74,19 @@ public class CssParser_transition_Test {
     public void testTransitionDuration() {
         Stylesheet stylesheet = parse("""
             .rule1 { transition-duration: 1s; }
-            .rule2 { transition-duration: 1s, 0.5s, 0.25ms; }
-            .rule3 { transition-duration: 10; }
+            .rule2 { transition-duration: 1s, 0.5s, 0.25ms, 0s; }
+            .err1 { transition-duration: 10; }
+            .err2 { transition-duration: -5s; }
         """);
 
         assertArrayEquals(new Duration[] { seconds(1) },
             values("transition-duration", stylesheet.getRules().get(0)));
 
-        assertArrayEquals(new Duration[] { seconds(1), seconds(0.5), millis(0.25) },
+        assertArrayEquals(new Duration[] { seconds(1), seconds(0.5), millis(0.25), ZERO },
             values("transition-duration", stylesheet.getRules().get(1)));
 
         assertStartsWith("Expected '<time>'", CssParser.errorsProperty().get(0).getMessage());
+        assertStartsWith("Invalid '<transition-duration>'", CssParser.errorsProperty().get(2).getMessage());
     }
 
     @Test

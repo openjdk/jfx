@@ -79,7 +79,7 @@ public final class TransitionDefinitionConverter extends StyleConverter<ParsedVa
         Duration duration;
         try {
             duration = parsedDuration.convert(null);
-            if (duration.lessThanOrEqualTo(Duration.ZERO)) {
+            if (duration.lessThan(Duration.ZERO)) {
                 throw new IllegalArgumentException("duration");
             }
         } catch (RuntimeException ex) {

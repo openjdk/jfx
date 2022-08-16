@@ -90,6 +90,20 @@ public class Node_transition_Test {
     }
 
     @Test
+    public void testTransitionWithZeroDurationIsElided() {
+        var node = new Rectangle();
+        var scene = new Scene(new Group(node));
+        node.setStyle("transition: -fx-fill 1s, -fx-fill 0s;");
+        node.applyCss();
+
+        CssMetaData<?, ?> propertyMetadata = node.getCssMetaData().stream()
+            .filter(m -> m.getProperty().equals("-fx-fill"))
+            .findFirst().get();
+
+        assertNull(NodeHelper.findTransition(node, propertyMetadata));
+    }
+
+    @Test
     public void testTransitionsAreAppliedWhenPseudoClassIsChanged() {
         String url = "data:text/css;base64," + Base64.getUrlEncoder().encodeToString("""
             .testClass {

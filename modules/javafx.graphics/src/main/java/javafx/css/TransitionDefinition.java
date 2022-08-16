@@ -47,7 +47,7 @@ public class TransitionDefinition {
      *
      * @param selector property selector
      * @param property name of the property (may be {@code null} when {@code selector} is {@code PropertySelector.ALL})
-     * @param duration duration of the transition (must be larger than 0)
+     * @param duration duration of the transition
      * @throws NullPointerException if any of the arguments is {@code null}
      * @throws IllegalArgumentException if the duration is negative
      */
@@ -60,7 +60,7 @@ public class TransitionDefinition {
      *
      * @param selector property selector
      * @param property name of the property (may be {@code null} when {@code selector} is {@code PropertySelector.ALL})
-     * @param duration duration of the transition (must be larger than 0)
+     * @param duration duration of the transition
      * @param delay delay after which the transition is started; if negative, the transition starts
      *              immediately, but will appear to have begun at an earlier point in time
      * @param interpolator interpolator for the transition
@@ -80,8 +80,8 @@ public class TransitionDefinition {
             this.property = null;
         }
 
-        if (duration.lessThanOrEqualTo(Duration.ZERO)) {
-            throw new IllegalArgumentException("duration cannot be zero or negative");
+        if (duration.lessThan(Duration.ZERO)) {
+            throw new IllegalArgumentException("duration cannot be negative");
         }
     }
 
