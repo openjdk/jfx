@@ -266,17 +266,17 @@ static jfieldID  jPixelsScaleYField = 0;
         (*env)->CallVoidMethod(env, pixels, jPixelsAttachData, ptr_to_jlong(&image));
         if (image != NULL)
         {
-            if ((jPixelsWidthField > 0)
-                && (jPixelsHeightField > 0)
-                && (jPixelsScaleXField > 0)
-                && (jPixelsScaleYField > 0)
+            if (jPixelsWidthField
+                && jPixelsHeightField
+                && jPixelsScaleXField
+                && jPixelsScaleYField
             ) {
                 jint width = (*env)->GetIntField(env, pixels, jPixelsWidthField);
                 jint height = (*env)->GetIntField(env, pixels, jPixelsHeightField);
                 jfloat scalex = (*env)->GetFloatField(env, pixels, jPixelsScaleXField);
                 jfloat scaley = (*env)->GetFloatField(env, pixels, jPixelsScaleYField);
 
-                if ((scalex > 1) && (scaley > 1) && (width > 1) && (height > 1)) {
+                if ((scalex > 1) && (scaley > 1) && (width > 0) && (height > 0)) {
                     NSSize imgSize = {width / scalex, height / scaley};
                     [image setSize: imgSize];
                 }
