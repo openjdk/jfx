@@ -832,6 +832,8 @@ public enum AccessibleRole {
      * <li> {@link AccessibleAttribute#ROLE_DESCRIPTION} </li>
      * <li> {@link AccessibleAttribute#CHILDREN} </li>
      * </ul>
+     *
+     * @since 20
      */
     DIALOG
 }
