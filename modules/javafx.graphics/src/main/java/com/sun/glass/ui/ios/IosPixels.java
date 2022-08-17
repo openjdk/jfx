@@ -38,6 +38,10 @@ final class IosPixels extends Pixels {
         super(width, height, data);
     }
 
+    protected IosPixels(int width, int height, ByteBuffer data, float scalex, float scaley) {
+        super(width, height, data, scalex, scaley);
+    }
+
     protected IosPixels(int width, int height, IntBuffer data) {
         super(width, height, data);
     }
