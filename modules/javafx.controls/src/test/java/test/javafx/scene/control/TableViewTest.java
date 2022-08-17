@@ -5819,26 +5819,26 @@ public class TableViewTest {
 
         ScrollBar horizontalBar = VirtualFlowTestUtils.getVirtualFlowHorizontalScrollbar(table);
         assertNotNull(horizontalBar);
-        assertEquals(false, horizontalBar.isVisible());
-        assertTrue(table.getWidth() == initialWidth);
+        assertEquals(initialWidth, table.getWidth(), 0);
+        assertFalse(horizontalBar.isVisible());
 
         // Reduce table width by 10px
-        table.setMinWidth(initialWidth-10);
+        table.setMinWidth(initialWidth - 10);
         Toolkit.getToolkit().firePulse();
-        assertTrue(table.getWidth() == initialWidth-10);
-        assertEquals(false, horizontalBar.isVisible());
+        assertEquals(initialWidth - 10, table.getWidth(), 0);
+        assertFalse(horizontalBar.isVisible());
 
         // Reset table width
         table.setMinWidth(initialWidth);
         Toolkit.getToolkit().firePulse();
-        assertTrue(table.getWidth() == initialWidth);
-        assertEquals(false, horizontalBar.isVisible());
+        assertEquals(initialWidth, table.getWidth(), 0);
+        assertFalse(horizontalBar.isVisible());
 
         // Reduce table width by 1px
-        table.setMinWidth(initialWidth-1);
+        table.setMinWidth(initialWidth - 1);
         Toolkit.getToolkit().firePulse();
-        assertTrue(table.getWidth() == initialWidth-1);
-        assertEquals(false, horizontalBar.isVisible());
+        assertEquals(initialWidth - 1, table.getWidth(), 0);
+        assertFalse(horizontalBar.isVisible());
 
         sl.dispose();
     }
