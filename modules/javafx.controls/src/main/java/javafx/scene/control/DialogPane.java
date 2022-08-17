@@ -53,6 +53,7 @@ import javafx.css.StyleableProperty;
 import javafx.css.StyleableStringProperty;
 import javafx.event.ActionEvent;
 import javafx.geometry.Pos;
+import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
 import javafx.scene.control.ButtonBar.ButtonData;
 import javafx.scene.image.Image;
@@ -209,6 +210,7 @@ public class DialogPane extends Pane {
      */
     public DialogPane() {
         getStyleClass().add("dialog-pane");
+        setAccessibleRole(AccessibleRole.DIALOG);
 
         headerTextPanel = new GridPane();
         getChildren().add(headerTextPanel);
