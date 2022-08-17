@@ -45,6 +45,10 @@ static jmethodID jMenuOpeningMethod = 0;
 static jmethodID jMenuClosedMethod = 0;
 static jmethodID jMenuValidateMethod = 0;
 static jfieldID  jDelegateMenuField = 0;
+static jfieldID  jPixelsWidthField = 0;
+static jfieldID  jPixelsHeightField = 0;
+static jfieldID  jPixelsScaleXField = 0;
+static jfieldID  jPixelsScaleYField = 0;
 
 @interface NSMenuItem (SPI)
 
@@ -262,6 +266,21 @@ static jfieldID  jDelegateMenuField = 0;
         (*env)->CallVoidMethod(env, pixels, jPixelsAttachData, ptr_to_jlong(&image));
         if (image != NULL)
         {
+            if (jPixelsWidthField
+                && jPixelsHeightField
+                && jPixelsScaleXField
+                && jPixelsScaleYField
+            ) {
+                jint width = (*env)->GetIntField(env, pixels, jPixelsWidthField);
+                jint height = (*env)->GetIntField(env, pixels, jPixelsHeightField);
+                jfloat scalex = (*env)->GetFloatField(env, pixels, jPixelsScaleXField);
+                jfloat scaley = (*env)->GetFloatField(env, pixels, jPixelsScaleYField);
+
+                if ((scalex > 1) && (scaley > 1) && (width > 0) && (height > 0)) {
+                    NSSize imgSize = {width / scalex, height / scaley};
+                    [image setSize: imgSize];
+                }
+            }
             [self->item setImage: image];
             [image release];
         }
@@ -375,7 +394,6 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacMenuDelegate__1initIDs
     if (!jMenuClass) {
         return;
     }
-
     jMenuActionMethod  = (*env)->GetMethodID(env, jCallbackClass,   "action",  "()V");
     if ((*env)->ExceptionCheck(env)) return;
     jMenuValidateMethod = (*env)->GetMethodID(env, jCallbackClass,   "validate",  "()V");
@@ -385,6 +403,19 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacMenuDelegate__1initIDs
     jMenuClosedMethod  = (*env)->GetMethodID(env, jMenuClass, "notifyMenuClosed",  "()V");
     if ((*env)->ExceptionCheck(env)) return;
     jDelegateMenuField = (*env)->GetFieldID(env,  jMenuDelegateClass, "menu", "Lcom/sun/glass/ui/Menu;");
+    if ((*env)->ExceptionCheck(env)) return;
+
+    jclass pixelsClass = [GlassHelper ClassForName:"com.sun.glass.ui.mac.MacPixels" withEnv: env];
+    if (!pixelsClass) {
+        return;
+    }
+    jPixelsWidthField = (*env)->GetFieldID(env, pixelsClass, "width", "I");
+    if ((*env)->ExceptionCheck(env)) return;
+    jPixelsHeightField = (*env)->GetFieldID(env, pixelsClass, "height", "I");
+    if ((*env)->ExceptionCheck(env)) return;
+    jPixelsScaleXField = (*env)->GetFieldID(env, pixelsClass, "scalex", "F");
+    if ((*env)->ExceptionCheck(env)) return;
+    jPixelsScaleYField = (*env)->GetFieldID(env, pixelsClass, "scaley", "F");
 }
 
 /*
