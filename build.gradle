@@ -2506,6 +2506,8 @@ project(":graphics") {
             // Create empty hlsl dirs on all platforms for IDE support
             file("$project.buildDir/hlsl/Decora").mkdirs()
             file("$project.buildDir/hlsl/Prism").mkdirs()
+            file("$project.buildDir/gensrc/jsl-prism").mkdirs()
+            file("$project.buildDir/gensrc/jsl-decora").mkdirs()
         }
     }
     project.processShaders.dependsOn(initShaderDirs)
