@@ -445,7 +445,7 @@ public class TreeTableRow<T> extends IndexedCell<T> {
             return;
         }
 
-        boolean isSelected = !sm.isCellSelectionEnabled() && sm.isSelected(index, null);
+        boolean isSelected = !sm.isCellSelectionEnabled() && sm.isSelected(index);
         if (isSelected() != isSelected) {
             updateSelected(isSelected);
         }
