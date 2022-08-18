@@ -71,7 +71,7 @@ import static javafx.concurrent.WorkerStateEvent.WORKER_STATE_SUCCEEDED;
  *     of managing multithreaded code that interacts with the user interface. As
  *     such, all of the methods and state on the Service are intended to be
  *     invoked exclusively from the JavaFX Application thread. The only exception
- *     to this, is when initially configuring a Service, which may safely be done
+ *     to this is when initially configuring a Service, which may safely be done
  *     from any thread, and initially starting a Service, which may also safely
  *     be done from any thread. However, once the Service has been initialized and
  *     started, it may only thereafter be used from the FX thread.
@@ -99,8 +99,8 @@ import static javafx.concurrent.WorkerStateEvent.WORKER_STATE_SUCCEEDED;
  * <p>
  *     Because a Service is intended to simplify declarative use cases, subclasses
  *     should expose as properties the input parameters to the work to be done.
- *     For example, suppose I wanted to write a Service which read the first line
- *     from any URL and returned it as a String. Such a Service might be defined,
+ *     For example, suppose I wanted to write a Service that reads the first line
+ *     from any URL and returned it as a String. Such a Service might be defined
  *     such that it had a single property, {@code url}. It might be implemented
  *     as:
  * </p>
