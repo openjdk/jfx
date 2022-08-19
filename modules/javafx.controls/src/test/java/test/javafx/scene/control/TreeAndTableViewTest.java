@@ -127,11 +127,11 @@ public class TreeAndTableViewTest {
         assertFalse(c1.isSelected());
         assertTrue(c2.isSelected());
         assertFalse(row.isSelected());
-        
+
         // and now with the cell selection off
         sm.setCellSelectionEnabled(false);
         sm.clearSelection();
-        
+
         // select 0:0
         mouseClick(c0, KeyModifier.getShortcutKey());
 
@@ -250,7 +250,7 @@ public class TreeAndTableViewTest {
         // and now with the cell selection off
         sm.setCellSelectionEnabled(false);
         sm.clearSelection();
-        
+
         // select 0:0
         mouseClick(c0, KeyModifier.getShortcutKey());
 
