@@ -99,7 +99,7 @@ public interface Property<T> extends ReadOnlyProperty<T>, WritableValue<T> {
      * It is possible to unbind by a call on the second property. This code will work:
      *
      * <blockquote><pre>
-     *     property1.bindBicirectional(property2);
+     *     property1.bindBidirectional(property2);
      *     property2.unbindBidirectional(property1);
      * </pre></blockquote>
      *
