@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -39,12 +39,18 @@ namespace WebCore {
 bool PlatformMediaSessionManager::m_webMFormatReaderEnabled;
 #endif
 
-#if ENABLE(VORBIS) && PLATFORM(MAC)
+#if ENABLE(VORBIS)
 bool PlatformMediaSessionManager::m_vorbisDecoderEnabled;
 #endif
 
-#if ENABLE(OPUS) && PLATFORM(MAC)
+#if ENABLE(OPUS)
 bool PlatformMediaSessionManager::m_opusDecoderEnabled;
+#endif
+
+#if ENABLE(VP9)
+bool PlatformMediaSessionManager::m_vp9DecoderEnabled;
+bool PlatformMediaSessionManager::m_vp8DecoderEnabled;
+bool PlatformMediaSessionManager::m_vp9SWDecoderEnabled;
 #endif
 
 static std::unique_ptr<PlatformMediaSessionManager>& sharedPlatformMediaSessionManager()
@@ -68,12 +74,12 @@ PlatformMediaSessionManager* PlatformMediaSessionManager::sharedManagerIfExists(
     return sharedPlatformMediaSessionManager().get();
 }
 
-#if !PLATFORM(COCOA)
+#if !PLATFORM(COCOA) && (!USE(GLIB) || !ENABLE(MEDIA_SESSION))
 std::unique_ptr<PlatformMediaSessionManager> PlatformMediaSessionManager::create()
 {
     return std::unique_ptr<PlatformMediaSessionManager>(new PlatformMediaSessionManager);
 }
-#endif // !PLATFORM(COCOA)
+#endif // !PLATFORM(COCOA) && (!USE(GLIB) || !ENABLE(MEDIA_SESSION))
 
 void PlatformMediaSessionManager::updateNowPlayingInfoIfNecessary()
 {
@@ -110,8 +116,11 @@ bool PlatformMediaSessionManager::has(PlatformMediaSession::MediaType type) cons
 
 bool PlatformMediaSessionManager::activeAudioSessionRequired() const
 {
-    return anyOfSessions([] (auto& session) {
-        return session.activeAudioSessionRequired();
+    if (anyOfSessions([] (auto& session) { return session.activeAudioSessionRequired(); }))
+        return true;
+
+    return WTF::anyOf(m_audioCaptureSources, [](auto& source) {
+        return source.isCapturingAudio();
     });
 }
 
@@ -167,7 +176,7 @@ void PlatformMediaSessionManager::endInterruption(PlatformMediaSession::EndInter
 void PlatformMediaSessionManager::addSession(PlatformMediaSession& session)
 {
     ALWAYS_LOG(LOGIDENTIFIER, session.logIdentifier());
-    m_sessions.append(makeWeakPtr(session));
+    m_sessions.append(session);
     if (m_interrupted)
         session.setState(PlatformMediaSession::Interrupted);
 
@@ -193,10 +202,8 @@ void PlatformMediaSessionManager::removeSession(PlatformMediaSession& session)
 
     m_sessions.remove(index);
 
-#if USE(AUDIO_SESSION)
     if (hasNoSession())
         maybeDeactivateAudioSession();
-#endif
 
 #if !RELEASE_LOG_DISABLED
     m_logger->removeLogger(session.logger());
@@ -231,17 +238,10 @@ bool PlatformMediaSessionManager::sessionWillBeginPlayback(PlatformMediaSession&
         return false;
     }
 
-#if USE(AUDIO_SESSION)
-    if (activeAudioSessionRequired()) {
-        if (!AudioSession::sharedSession().tryToSetActive(true)) {
-            ALWAYS_LOG(LOGIDENTIFIER, session.logIdentifier(), " returning false failed to set active AudioSession");
-            return false;
-        }
-
-        ALWAYS_LOG(LOGIDENTIFIER, session.logIdentifier(), " sucessfully activated AudioSession");
-        m_becameActive = true;
+    if (!maybeActivateAudioSession()) {
+        ALWAYS_LOG(LOGIDENTIFIER, session.logIdentifier(), " returning false, failed to activate AudioSession");
+        return false;
     }
-#endif
 
     if (m_interrupted)
         endInterruption(PlatformMediaSession::NoFlags);
@@ -285,7 +285,7 @@ void PlatformMediaSessionManager::sessionWillEndPlayback(PlatformMediaSession& s
         return;
 
     m_sessions.remove(pausingSessionIndex);
-    m_sessions.append(makeWeakPtr(session));
+    m_sessions.append(session);
 
     ALWAYS_LOG(LOGIDENTIFIER, "session moved from index ", pausingSessionIndex, " to ", lastPlayingSessionIndex);
 }
@@ -308,7 +308,7 @@ void PlatformMediaSessionManager::setCurrentSession(PlatformMediaSession& sessio
         return;
 
     m_sessions.remove(index);
-    m_sessions.insert(0, makeWeakPtr(session));
+    m_sessions.insert(0, session);
 
     ALWAYS_LOG(LOGIDENTIFIER, "session moved from index ", index, " to 0");
 }
@@ -388,9 +388,7 @@ void PlatformMediaSessionManager::processWillSuspend()
         session.client().processIsSuspendedChanged();
     });
 
-#if USE(AUDIO_SESSION)
     maybeDeactivateAudioSession();
-#endif
 }
 
 void PlatformMediaSessionManager::processDidResume()
@@ -404,10 +402,8 @@ void PlatformMediaSessionManager::processDidResume()
     });
 
 #if USE(AUDIO_SESSION)
-    if (!m_becameActive && activeAudioSessionRequired()) {
-        m_becameActive = AudioSession::sharedSession().tryToSetActive(true);
-        ALWAYS_LOG(LOGIDENTIFIER, "tried to set active AudioSession, ", m_becameActive ? "succeeded" : "failed");
-    }
+    if (!m_becameActive)
+        maybeActivateAudioSession();
 #endif
 }
 
@@ -431,6 +427,8 @@ void PlatformMediaSessionManager::sessionIsPlayingToWirelessPlaybackTargetChange
 
 void PlatformMediaSessionManager::sessionCanProduceAudioChanged()
 {
+    ALWAYS_LOG(LOGIDENTIFIER);
+    maybeActivateAudioSession();
     updateSessionState();
 }
 
@@ -575,7 +573,7 @@ void PlatformMediaSessionManager::addAudioCaptureSource(PlatformMediaSession::Au
 {
     ASSERT(!m_audioCaptureSources.contains(source));
     m_audioCaptureSources.add(source);
-    scheduleUpdateSessionState();
+    updateSessionState();
 }
 
 
@@ -587,26 +585,41 @@ void PlatformMediaSessionManager::removeAudioCaptureSource(PlatformMediaSession:
 
 void PlatformMediaSessionManager::scheduleUpdateSessionState()
 {
-    if (updateSessionStateQueue.hasPendingTasks())
+    if (m_hasScheduledSessionStateUpdate)
         return;
 
-    updateSessionStateQueue.enqueueTask([this] {
+    m_hasScheduledSessionStateUpdate = true;
+    callOnMainThread([this] {
         updateSessionState();
+        m_hasScheduledSessionStateUpdate = false;
     });
 }
 
-#if USE(AUDIO_SESSION)
 void PlatformMediaSessionManager::maybeDeactivateAudioSession()
 {
+#if USE(AUDIO_SESSION)
     if (!m_becameActive || !shouldDeactivateAudioSession())
         return;
 
     ALWAYS_LOG(LOGIDENTIFIER, "tried to set inactive AudioSession");
     AudioSession::sharedSession().tryToSetActive(false);
     m_becameActive = false;
-}
 #endif
+}
 
+bool PlatformMediaSessionManager::maybeActivateAudioSession()
+{
+#if USE(AUDIO_SESSION)
+    if (!activeAudioSessionRequired())
+        return true;
+
+    m_becameActive = AudioSession::sharedSession().tryToSetActive(true);
+    ALWAYS_LOG(LOGIDENTIFIER, m_becameActive ? "successfully activated" : "failed to activate", " AudioSession");
+    return m_becameActive;
+#else
+    return true;
+#endif
+}
 static bool& deactivateAudioSession()
 {
     static bool deactivate;
@@ -643,7 +656,7 @@ void PlatformMediaSessionManager::setWebMFormatReaderEnabled(bool enabled)
 
 bool PlatformMediaSessionManager::vorbisDecoderEnabled()
 {
-#if ENABLE(VORBIS) && PLATFORM(MAC)
+#if ENABLE(VORBIS)
     return m_vorbisDecoderEnabled;
 #else
     return false;
@@ -652,7 +665,7 @@ bool PlatformMediaSessionManager::vorbisDecoderEnabled()
 
 void PlatformMediaSessionManager::setVorbisDecoderEnabled(bool enabled)
 {
-#if ENABLE(VORBIS) && PLATFORM(MAC)
+#if ENABLE(VORBIS)
     m_vorbisDecoderEnabled = enabled;
 #else
     UNUSED_PARAM(enabled);
@@ -661,7 +674,7 @@ void PlatformMediaSessionManager::setVorbisDecoderEnabled(bool enabled)
 
 bool PlatformMediaSessionManager::opusDecoderEnabled()
 {
-#if ENABLE(OPUS) && PLATFORM(MAC)
+#if ENABLE(OPUS)
     return m_opusDecoderEnabled;
 #else
     return false;
@@ -670,12 +683,44 @@ bool PlatformMediaSessionManager::opusDecoderEnabled()
 
 void PlatformMediaSessionManager::setOpusDecoderEnabled(bool enabled)
 {
-#if ENABLE(OPUS) && PLATFORM(MAC)
+#if ENABLE(OPUS)
     m_opusDecoderEnabled = enabled;
 #else
     UNUSED_PARAM(enabled);
 #endif
 }
+
+#if ENABLE(VP9)
+void PlatformMediaSessionManager::setShouldEnableVP9Decoder(bool vp9DecoderEnabled)
+{
+    m_vp9DecoderEnabled = vp9DecoderEnabled;
+}
+
+bool PlatformMediaSessionManager::shouldEnableVP9Decoder()
+{
+    return m_vp9DecoderEnabled;
+}
+
+void PlatformMediaSessionManager::setShouldEnableVP8Decoder(bool vp8DecoderEnabled)
+{
+    m_vp8DecoderEnabled = vp8DecoderEnabled;
+}
+
+bool PlatformMediaSessionManager::shouldEnableVP8Decoder()
+{
+    return m_vp8DecoderEnabled;
+}
+
+void PlatformMediaSessionManager::setShouldEnableVP9SWDecoder(bool vp9SWDecoderEnabled)
+{
+    m_vp9SWDecoderEnabled = vp9SWDecoderEnabled;
+}
+
+bool PlatformMediaSessionManager::shouldEnableVP9SWDecoder()
+{
+    return m_vp9SWDecoderEnabled;
+}
+#endif // ENABLE(VP9)
 
 #else // ENABLE(VIDEO) || ENABLE(WEB_AUDIO)
 

@@ -25,6 +25,7 @@
 
 #include "config.h"
 #include "JSWebAssemblyGlobal.h"
+#include "ObjectConstructor.h"
 
 #if ENABLE(WEBASSEMBLY)
 
@@ -43,7 +44,7 @@ JSWebAssemblyGlobal* JSWebAssemblyGlobal::tryCreate(JSGlobalObject* globalObject
         return nullptr;
     }
 
-    auto* instance = new (NotNull, allocateCell<JSWebAssemblyGlobal>(vm.heap)) JSWebAssemblyGlobal(vm, structure, WTFMove(global));
+    auto* instance = new (NotNull, allocateCell<JSWebAssemblyGlobal>(vm)) JSWebAssemblyGlobal(vm, structure, WTFMove(global));
     instance->global()->setOwner(instance);
     instance->finishCreation(vm);
     return instance;
@@ -79,6 +80,43 @@ void JSWebAssemblyGlobal::visitChildrenImpl(JSCell* cell, Visitor& visitor)
 
     Base::visitChildren(thisObject, visitor);
     thisObject->global()->visitAggregate(visitor);
+}
+
+JSObject* JSWebAssemblyGlobal::type(JSGlobalObject* globalObject)
+{
+    VM& vm = globalObject->vm();
+
+    JSObject* result = constructEmptyObject(globalObject, globalObject->objectPrototype(), 2);
+
+    result->putDirect(vm, Identifier::fromString(vm, "mutable"), jsBoolean(m_global->mutability() == Wasm::GlobalInformation::Mutable));
+
+    Wasm::Type valueType = m_global->type();
+    JSString* valueString = nullptr;
+    switch (valueType.kind) {
+    case Wasm::TypeKind::I32:
+        valueString = jsNontrivialString(vm, "i32");
+        break;
+    case Wasm::TypeKind::I64:
+        valueString = jsNontrivialString(vm, "i64");
+        break;
+    case Wasm::TypeKind::F32:
+        valueString = jsNontrivialString(vm, "f32");
+        break;
+    case Wasm::TypeKind::F64:
+        valueString = jsNontrivialString(vm, "f64");
+        break;
+    default: {
+        if (Wasm::isFuncref(valueType))
+            valueString = jsNontrivialString(vm, "anyfunc");
+        else if (Wasm::isExternref(valueType))
+            valueString = jsNontrivialString(vm, "externref");
+        else
+            RELEASE_ASSERT_NOT_REACHED();
+    }
+    }
+    result->putDirect(vm, Identifier::fromString(vm, "value"), valueString);
+
+    return result;
 }
 
 DEFINE_VISIT_CHILDREN(JSWebAssemblyGlobal);

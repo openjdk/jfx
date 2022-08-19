@@ -47,6 +47,7 @@
 #include <getopt.h>
 #include <alsa/asoundlib.h>
 
+#include "gstalsaelements.h"
 #include "gstalsa.h"
 #include "gstalsasink.h"
 
@@ -72,10 +73,10 @@ enum
   PROP_LAST
 };
 
-static void gst_alsasink_init_interfaces (GType type);
 #define gst_alsasink_parent_class parent_class
-G_DEFINE_TYPE_WITH_CODE (GstAlsaSink, gst_alsasink,
-    GST_TYPE_AUDIO_SINK, gst_alsasink_init_interfaces (g_define_type_id));
+G_DEFINE_TYPE (GstAlsaSink, gst_alsasink, GST_TYPE_AUDIO_SINK);
+GST_ELEMENT_REGISTER_DEFINE_WITH_CODE (alsasink, "alsasink", GST_RANK_PRIMARY,
+    GST_TYPE_ALSA_SINK, alsa_element_init (plugin));
 
 static void gst_alsasink_finalise (GObject * object);
 static void gst_alsasink_set_property (GObject * object,
@@ -134,14 +135,6 @@ gst_alsasink_finalise (GObject * object)
   g_mutex_unlock (&output_mutex);
 
   G_OBJECT_CLASS (parent_class)->finalize (object);
-}
-
-static void
-gst_alsasink_init_interfaces (GType type)
-{
-#if 0
-  gst_alsa_type_add_device_property_probe_interface (type);
-#endif
 }
 
 static void
@@ -432,22 +425,16 @@ static int
 set_hwparams (GstAlsaSink * alsa)
 {
   guint rrate;
-  gint err;
-  snd_pcm_hw_params_t *params;
-  guint period_time, buffer_time;
+  gint err = 0;
+  snd_pcm_hw_params_t *params, *params_copy;
 
   snd_pcm_hw_params_malloc (&params);
+  snd_pcm_hw_params_malloc (&params_copy);
 
   GST_DEBUG_OBJECT (alsa, "Negotiating to %d channels @ %d Hz (format = %s) "
       "SPDIF (%d)", alsa->channels, alsa->rate,
       snd_pcm_format_name (alsa->format), alsa->iec958);
 
-  /* start with requested values, if we cannot configure alsa for those values,
-   * we set these values to -1, which will leave the default alsa values */
-  buffer_time = alsa->buffer_time;
-  period_time = alsa->period_time;
-
-retry:
   /* choose all parameters */
   CHECK (snd_pcm_hw_params_any (alsa->handle, params), no_config);
   /* set the interleaved read/write format */
@@ -473,7 +460,6 @@ retry:
   rrate = alsa->rate;
   CHECK (snd_pcm_hw_params_set_rate_near (alsa->handle, params, &rrate, NULL),
       no_rate);
-
 #ifndef GST_DISABLE_GST_DEBUG
   /* get and dump some limits */
   {
@@ -497,40 +483,69 @@ retry:
     GST_DEBUG_OBJECT (alsa, "periods min %u, max %u", min, max);
   }
 #endif
-
-  /* now try to configure the buffer time and period time, if one
-   * of those fail, we fall back to the defaults and emit a warning. */
-  if (buffer_time != -1 && !alsa->iec958) {
-    /* set the buffer time */
-    if ((err = snd_pcm_hw_params_set_buffer_time_near (alsa->handle, params,
-                &buffer_time, NULL)) < 0) {
-      GST_ELEMENT_WARNING (alsa, RESOURCE, SETTINGS, (NULL),
-          ("Unable to set buffer time %i for playback: %s",
-              buffer_time, snd_strerror (err)));
-      /* disable buffer_time the next round */
-      buffer_time = -1;
-      goto retry;
+  /* Keep a copy of initial params struct that can be used later */
+  snd_pcm_hw_params_copy (params_copy, params);
+  if (!alsa->iec958) {
+    /* Following pulseaudio's approach in
+     * https://gitlab.freedesktop.org/pulseaudio/pulseaudio/-/commit/557c4295107dc7374c850b0bd5331dd35e8fdd0f
+     * we'll try various configuration to set the period time and buffer time as some
+     * driver can be picky on the order of the calls.
+     */
+    if (alsa->buffer_time != -1 && alsa->period_time != -1) {
+      if (((err = snd_pcm_hw_params_set_period_time_near (alsa->handle,
+                      params, &alsa->period_time, NULL)) >= 0)
+          && ((err =
+                  snd_pcm_hw_params_set_buffer_time_near (alsa->handle,
+                      params, &alsa->buffer_time, NULL)) >= 0)) {
+        GST_DEBUG_OBJECT (alsa, "period time %u buffer time %u set correctly",
+            alsa->period_time, alsa->buffer_time);
+        goto success;
+      }
+      /* Try the new order with previous params struct as current one might
+         have partial settings from the order that was tried unsuccessfully */
+      snd_pcm_hw_params_copy (params, params_copy);
+      if (((err = snd_pcm_hw_params_set_buffer_time_near (alsa->handle,
+                      params, &alsa->buffer_time, NULL)) >= 0)
+          && ((err =
+                  snd_pcm_hw_params_set_period_time_near (alsa->handle,
+                      params, &alsa->period_time, NULL)) >= 0)) {
+        GST_DEBUG_OBJECT (alsa, "buffer time %u period time %u set correctly",
+            alsa->buffer_time, alsa->period_time);
+        goto success;
+      }
     }
-    GST_DEBUG_OBJECT (alsa, "buffer time %u", buffer_time);
-    alsa->buffer_time = buffer_time;
-  }
-  if (period_time != -1 && !alsa->iec958) {
-    /* set the period time */
-    if ((err = snd_pcm_hw_params_set_period_time_near (alsa->handle, params,
-                &period_time, NULL)) < 0) {
-      GST_ELEMENT_WARNING (alsa, RESOURCE, SETTINGS, (NULL),
-          ("Unable to set period time %i for playback: %s",
-              period_time, snd_strerror (err)));
-      /* disable period_time the next round */
-      period_time = -1;
-      goto retry;
+    /* now try to configure the period time and buffer time exclusively
+     * if both fail  we fall back to the defaults */
+    if (alsa->period_time != -1) {
+      snd_pcm_hw_params_copy (params, params_copy);
+      /* set the period time */
+      if ((err =
+              snd_pcm_hw_params_set_period_time_near (alsa->handle, params,
+                  &alsa->period_time, NULL)) < 0) {
+        GST_DEBUG_OBJECT (alsa, "Unable to set period time %i for playback: %s",
+            alsa->period_time, snd_strerror (err));
+      } else {
+        GST_DEBUG_OBJECT (alsa, "period time %u set correctly",
+            alsa->period_time);
+        goto success;
+      }
     }
-    GST_DEBUG_OBJECT (alsa, "period time %u", period_time);
-    alsa->period_time = period_time;
-  }
-
-  /* Set buffer size and period size manually for SPDIF */
-  if (G_UNLIKELY (alsa->iec958)) {
+    if (alsa->buffer_time != -1) {
+      snd_pcm_hw_params_copy (params, params_copy);
+      /* set the buffer time */
+      if ((err =
+              snd_pcm_hw_params_set_buffer_time_near (alsa->handle, params,
+                  &alsa->buffer_time, NULL)) < 0) {
+        GST_DEBUG_OBJECT (alsa, "Unable to set buffer time %i for playback: %s",
+            alsa->buffer_time, snd_strerror (err));
+      } else {
+        GST_DEBUG_OBJECT (alsa, "buffer time %u set correctly",
+            alsa->buffer_time);
+        goto success;
+      }
+    }
+  } else {
+    /* Set buffer size and period size manually for SPDIF */
     snd_pcm_uframes_t buffer_size = SPDIF_BUFFER_SIZE;
     snd_pcm_uframes_t period_size = SPDIF_PERIOD_SIZE;
 
@@ -538,16 +553,20 @@ retry:
             &buffer_size), buffer_size);
     CHECK (snd_pcm_hw_params_set_period_size_near (alsa->handle, params,
             &period_size, NULL), period_size);
+    goto success;
   }
+  /* Set nothing if all above failed */
+  snd_pcm_hw_params_copy (params, params_copy);
+  GST_DEBUG_OBJECT (alsa, "Not setting period time and buffer time");
 
+success:
   /* write the parameters to device */
   CHECK (snd_pcm_hw_params (alsa->handle, params), set_hw_params);
-
   /* now get the configured values */
   CHECK (snd_pcm_hw_params_get_buffer_size (params, &alsa->buffer_size),
       buffer_size);
-  CHECK (snd_pcm_hw_params_get_period_size (params, &alsa->period_size, NULL),
-      period_size);
+  CHECK (snd_pcm_hw_params_get_period_size (params, &alsa->period_size,
+          NULL), period_size);
 
   GST_DEBUG_OBJECT (alsa, "buffer size %lu, period size %lu", alsa->buffer_size,
       alsa->period_size);
@@ -557,31 +576,26 @@ retry:
   GST_DEBUG_OBJECT (alsa, "Hw support pause: %s",
       alsa->hw_support_pause ? "yes" : "no");
 
-  snd_pcm_hw_params_free (params);
-  return 0;
-
+  goto exit;
   /* ERRORS */
 no_config:
   {
     GST_ELEMENT_ERROR (alsa, RESOURCE, SETTINGS, (NULL),
         ("Broken configuration for playback: no configurations available: %s",
             snd_strerror (err)));
-    snd_pcm_hw_params_free (params);
-    return err;
+    goto exit;
   }
 wrong_access:
   {
     GST_ELEMENT_ERROR (alsa, RESOURCE, SETTINGS, (NULL),
         ("Access type not available for playback: %s", snd_strerror (err)));
-    snd_pcm_hw_params_free (params);
-    return err;
+    goto exit;
   }
 no_sample_format:
   {
     GST_ELEMENT_ERROR (alsa, RESOURCE, SETTINGS, (NULL),
         ("Sample format not available for playback: %s", snd_strerror (err)));
-    snd_pcm_hw_params_free (params);
-    return err;
+    goto exit;
   }
 no_channels:
   {
@@ -599,35 +613,36 @@ no_channels:
     GST_ELEMENT_ERROR (alsa, RESOURCE, SETTINGS, ("%s", msg),
         ("%s", snd_strerror (err)));
     g_free (msg);
-    snd_pcm_hw_params_free (params);
-    return err;
+    goto exit;
   }
 no_rate:
   {
     GST_ELEMENT_ERROR (alsa, RESOURCE, SETTINGS, (NULL),
         ("Rate %iHz not available for playback: %s",
             alsa->rate, snd_strerror (err)));
-    return err;
+    goto exit;
   }
 buffer_size:
   {
     GST_ELEMENT_ERROR (alsa, RESOURCE, SETTINGS, (NULL),
         ("Unable to get buffer size for playback: %s", snd_strerror (err)));
-    snd_pcm_hw_params_free (params);
-    return err;
+    goto exit;
   }
 period_size:
   {
     GST_ELEMENT_ERROR (alsa, RESOURCE, SETTINGS, (NULL),
         ("Unable to get period size for playback: %s", snd_strerror (err)));
-    snd_pcm_hw_params_free (params);
-    return err;
+    goto exit;
   }
 set_hw_params:
   {
     GST_ELEMENT_ERROR (alsa, RESOURCE, SETTINGS, (NULL),
         ("Unable to set hw params for playback: %s", snd_strerror (err)));
+  }
+exit:
+  {
     snd_pcm_hw_params_free (params);
+    snd_pcm_hw_params_free (params_copy);
     return err;
   }
 }
@@ -1057,19 +1072,29 @@ gst_alsasink_write (GstAudioSink * asink, gpointer data, guint length)
       GST_DELAY_SINK_UNLOCK (asink);
     }
 
-    GST_DEBUG_OBJECT (asink, "written %d frames out of %d", err, cptr);
     if (err < 0) {
-      GST_DEBUG_OBJECT (asink, "Write error: %s", snd_strerror (err));
+      GST_DEBUG_OBJECT (asink, "Write error: %s (%d)", snd_strerror (err), err);
       if (err == -EAGAIN) {
-        continue;
+        /* will continue out of the if/else group */
       } else if (err == -ENODEV) {
         goto device_disappeared;
       } else if (xrun_recovery (alsa, alsa->handle, err) < 0) {
         goto write_error;
       }
+
+      /* Unlock so that _reset() can run and break an otherwise infinit loop
+       * here */
+      GST_ALSA_SINK_UNLOCK (asink);
+      g_thread_yield ();
+      GST_ALSA_SINK_LOCK (asink);
       continue;
+    } else if (err == 0 && alsa->hw_support_pause) {
+      /* We might be already paused, if so, just bail */
+      if (snd_pcm_state (alsa->handle) == SND_PCM_STATE_PAUSED)
+        break;
     }
 
+    GST_DEBUG_OBJECT (asink, "written %d frames out of %d", err, cptr);
     ptr += snd_pcm_frames_to_bytes (alsa->handle, err);
     cptr -= err;
   }

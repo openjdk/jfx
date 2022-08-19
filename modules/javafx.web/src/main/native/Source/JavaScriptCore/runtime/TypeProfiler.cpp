@@ -72,7 +72,7 @@ void TypeProfiler::insertNewLocation(TypeLocation* location)
     bucket.append(location);
 }
 
-String TypeProfiler::typeInformationForExpressionAtOffset(TypeProfilerSearchDescriptor descriptor, unsigned offset, intptr_t sourceID, VM& vm)
+String TypeProfiler::typeInformationForExpressionAtOffset(TypeProfilerSearchDescriptor descriptor, unsigned offset, SourceID sourceID, VM& vm)
 {
     // This returns a JSON string representing an Object with the following properties:
     //     globalTypeSet: 'JSON<TypeSet> | null'
@@ -85,27 +85,24 @@ String TypeProfiler::typeInformationForExpressionAtOffset(TypeProfilerSearchDesc
 
     json.append('{');
 
-    json.appendLiteral("\"globalTypeSet\":");
+    json.append("\"globalTypeSet\":");
     if (location->m_globalTypeSet && location->m_globalVariableID != TypeProfilerNoGlobalIDExists)
         json.append(location->m_globalTypeSet->toJSONString());
     else
-        json.appendLiteral("null");
+        json.append("null");
     json.append(',');
 
     json.append("\"instructionTypeSet\":", location->m_instructionTypeSet->toJSONString(), ',');
 
-    json.appendLiteral("\"isOverflown\":");
-    if (location->m_instructionTypeSet->isOverflown() || (location->m_globalTypeSet && location->m_globalTypeSet->isOverflown()))
-        json.appendLiteral("true");
-    else
-        json.appendLiteral("false");
+    bool isOverflown = location->m_instructionTypeSet->isOverflown() || (location->m_globalTypeSet && location->m_globalTypeSet->isOverflown());
+    json.append("\"isOverflown\":", isOverflown ? "true" : "false");
 
     json.append('}');
 
     return json.toString();
 }
 
-TypeLocation* TypeProfiler::findLocation(unsigned divot, intptr_t sourceID, TypeProfilerSearchDescriptor descriptor, VM& vm)
+TypeLocation* TypeProfiler::findLocation(unsigned divot, SourceID sourceID, TypeProfilerSearchDescriptor descriptor, VM& vm)
 {
     QueryKey queryKey(sourceID, divot, descriptor);
     auto iter = m_queryCache.find(queryKey);

@@ -21,6 +21,7 @@
 
 #pragma once
 
+#include <string>
 #include <wtf/text/LChar.h>
 
 namespace WTF {
@@ -51,7 +52,7 @@ template<typename T, typename SignedIntegerType>
 inline typename IntegerToStringConversionTrait<T>::ReturnType numberToStringSigned(SignedIntegerType number, typename IntegerToStringConversionTrait<T>::AdditionalArgumentType* additionalArgument = nullptr)
 {
     if (number < 0)
-        return numberToStringImpl<T, typename std::make_unsigned_t<SignedIntegerType>, NegativeNumber>(-number, additionalArgument);
+        return numberToStringImpl<T, typename std::make_unsigned_t<SignedIntegerType>, NegativeNumber>(-static_cast<typename std::make_unsigned_t<SignedIntegerType>>(number), additionalArgument);
     return numberToStringImpl<T, typename std::make_unsigned_t<SignedIntegerType>, PositiveNumber>(number, additionalArgument);
 }
 
@@ -96,7 +97,7 @@ inline void writeIntegerToBuffer(IntegerType integer, CharacterType* destination
 }
 
 template<typename UnsignedIntegerType, PositiveOrNegativeNumber NumberType>
-static unsigned lengthOfIntegerAsStringImpl(UnsignedIntegerType number)
+constexpr unsigned lengthOfIntegerAsStringImpl(UnsignedIntegerType number)
 {
     unsigned length = 0;
 
@@ -112,7 +113,7 @@ static unsigned lengthOfIntegerAsStringImpl(UnsignedIntegerType number)
 }
 
 template<typename IntegerType>
-inline unsigned lengthOfIntegerAsString(IntegerType integer)
+constexpr unsigned lengthOfIntegerAsString(IntegerType integer)
 {
     static_assert(std::is_integral_v<IntegerType>);
     if constexpr (std::is_same_v<IntegerType, bool>) {
@@ -127,4 +128,16 @@ inline unsigned lengthOfIntegerAsString(IntegerType integer)
         return lengthOfIntegerAsStringImpl<IntegerType, PositiveNumber>(integer);
 }
 
+template<size_t N>
+struct IntegerToStringConversionTrait<Vector<LChar, N>> {
+    using ReturnType = Vector<LChar, N>;
+    using AdditionalArgumentType = void;
+    static ReturnType flush(LChar* characters, unsigned length, void*) { return { characters, length }; }
+};
+
 } // namespace WTF
+
+using WTF::numberToStringSigned;
+using WTF::numberToStringUnsigned;
+using WTF::lengthOfIntegerAsString;
+using WTF::writeIntegerToBuffer;

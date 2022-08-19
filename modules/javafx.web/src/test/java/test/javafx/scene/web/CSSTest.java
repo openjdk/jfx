@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -128,6 +128,41 @@ public class CSSTest extends TestBase {
         });
     }
 
+    private void testPageFill(javafx.scene.paint.Color expected) {
+        assertEquals(expected, getView().getPageFill());
+    }
+
+    @Test public void testPageFillDefault() {
+        testPageFill(javafx.scene.paint.Color.WHITE);
+    }
+
+    @Test public void testPageFillManual() {
+        submit(() -> {
+            getView().setPageFill(javafx.scene.paint.Color.TRANSPARENT);
+            testPageFill(javafx.scene.paint.Color.TRANSPARENT);
+        });
+    }
+
+    @Test public void testPageFillTransparentCSS() {
+        setStyle("-fx-page-fill: transparent");
+        submit(() -> {
+            testPageFill(javafx.scene.paint.Color.TRANSPARENT);
+        });
+    }
+
+    @Test public void testPageFillOpaqueCSS() {
+        setStyle("-fx-page-fill: #aabbcc");
+        submit(() -> {
+            testPageFill(javafx.scene.paint.Color.web("#aabbcc"));
+        });
+    }
+
+    @Test public void testPageFillTranslucentCSS() {
+        setStyle("-fx-page-fill: #aabbccdd");
+        submit(() -> {
+            testPageFill(javafx.scene.paint.Color.web("#aabbccdd"));
+        });
+    }
 
     private void testFontScale(double expected) {
         assertEquals(expected, getView().getFontScale(), 0);

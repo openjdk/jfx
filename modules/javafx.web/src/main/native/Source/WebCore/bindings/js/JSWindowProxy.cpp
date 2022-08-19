@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -42,6 +42,10 @@
 #include <JavaScriptCore/JSObject.h>
 #include <JavaScriptCore/StrongInlines.h>
 
+#if PLATFORM(COCOA)
+#include <wtf/cocoa/RuntimeApplicationChecksCocoa.h>
+#endif
+
 namespace WebCore {
 using namespace JSC;
 
@@ -65,7 +69,7 @@ void JSWindowProxy::finishCreation(VM& vm, AbstractDOMWindow& window)
 JSWindowProxy& JSWindowProxy::create(VM& vm, AbstractDOMWindow& window, DOMWrapperWorld& world)
 {
     auto& structure = *Structure::create(vm, 0, jsNull(), TypeInfo(PureForwardingProxyType, StructureFlags), info());
-    auto& proxy = *new (NotNull, allocateCell<JSWindowProxy>(vm.heap)) JSWindowProxy(vm, structure, world);
+    auto& proxy = *new (NotNull, allocateCell<JSWindowProxy>(vm)) JSWindowProxy(vm, structure, world);
     proxy.finishCreation(vm, window);
     return proxy;
 }
@@ -107,7 +111,11 @@ void JSWindowProxy::setWindow(AbstractDOMWindow& domWindow)
         auto& localWindow = downcast<DOMWindow>(domWindow);
         auto& windowStructure = *JSDOMWindow::createStructure(vm, nullptr, prototype);
         window = JSDOMWindow::create(vm, &windowStructure, localWindow, this);
-        if (!localWindow.document()->haveInitializedSecurityOrigin())
+        bool linkedWithNewSDK = true;
+#if PLATFORM(COCOA)
+        linkedWithNewSDK = linkedOnOrAfter(SDKVersion::FirstWithDOMWindowReuseRestriction);
+#endif
+        if (!localWindow.document()->haveInitializedSecurityOrigin() && linkedWithNewSDK)
             localWindow.setAsWrappedWithoutInitializedSecurityOrigin();
     }
 
@@ -170,7 +178,7 @@ WindowProxy* JSWindowProxy::toWrapped(VM& vm, JSValue value)
     return nullptr;
 }
 
-JSC::IsoSubspace* JSWindowProxy::subspaceForImpl(JSC::VM& vm)
+JSC::GCClient::IsoSubspace* JSWindowProxy::subspaceForImpl(JSC::VM& vm)
 {
     return &static_cast<JSVMClientData*>(vm.clientData)->windowProxySpace();
 }

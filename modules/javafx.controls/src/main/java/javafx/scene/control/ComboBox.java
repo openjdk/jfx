@@ -240,8 +240,9 @@ public class ComboBox<T> extends ComboBoxBase<T> {
         // selection model to indicate that this is the selected item
         valueProperty().addListener((ov, t, t1) -> {
             if (getItems() == null) return;
-
             SelectionModel<T> sm = getSelectionModel();
+            if (sm == null) return;
+
             int index = getItems().indexOf(t1);
 
             if (index == -1) {
@@ -278,7 +279,10 @@ public class ComboBox<T> extends ComboBoxBase<T> {
             if (!isEditable()) {
                 // check if value is in items list
                 if (getItems() != null && !getItems().contains(getValue())) {
-                    getSelectionModel().clearSelection();
+                    SingleSelectionModel<T> selectionModel = getSelectionModel();
+                    if (selectionModel != null) {
+                        selectionModel.clearSelection();
+                    }
                 }
             }
         });

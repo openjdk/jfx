@@ -28,6 +28,8 @@
 
 namespace WebCore {
 
+class WindowProxy;
+
 class HTMLFrameSetElement final : public HTMLElement {
     WTF_MAKE_ISO_ALLOCATED(HTMLFrameSetElement);
 public:
@@ -54,8 +56,8 @@ private:
     HTMLFrameSetElement(const QualifiedName&, Document&);
 
     void parseAttribute(const QualifiedName&, const AtomString&) final;
-    bool isPresentationAttribute(const QualifiedName&) const final;
-    void collectStyleForPresentationAttribute(const QualifiedName&, const AtomString&, MutableStyleProperties&) final;
+    bool hasPresentationalHintsForAttribute(const QualifiedName&) const final;
+    void collectPresentationalHintsForAttribute(const QualifiedName&, const AtomString&, MutableStyleProperties&) final;
 
     void willAttachRenderers() final;
     bool rendererIsNeeded(const RenderStyle&) final;

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -187,7 +187,7 @@ protected:
 
     void appendPCRelativeOffset(uint32_t* pc, int32_t immediate)
     {
-        bufferPrintf("0x%" PRIx64, reinterpret_cast<uint64_t>(pc + immediate));
+        bufferPrintf("0x%" PRIxPTR, bitwise_cast<uintptr_t>(pc + immediate));
     }
 
     void appendShiftAmount(unsigned amount)
@@ -263,7 +263,7 @@ public:
     bool isNeg() { return (op() && rn() == 31); }
     const char* negName() { return sBit() ? "negs" : "neg"; }
     unsigned shift() { return (m_opcode >> 22) & 0x3; }
-    int immediate6() { return (static_cast<int>((m_opcode >> 10) & 0x3f) << 26) >> 26; }
+    int immediate6() { return (static_cast<uint32_t>((m_opcode >> 10) & 0x3f) << 26) >> 26; }
 };
 
 class A64DOpcodeBitfield : public A64DOpcode {
@@ -787,7 +787,7 @@ public:
 
 class A64DOpcodeLoadStoreRegisterPair : public A64DOpcodeLoadStore {
 public:
-    static constexpr uint32_t mask = 0x3a000000;
+    static constexpr uint32_t mask = 0x38000000;
     static constexpr uint32_t pattern = 0x28000000;
 
     DEFINE_STATIC_FORMAT(A64DOpcodeLoadStoreRegisterPair, thisObj);
@@ -857,7 +857,7 @@ public:
     bool isMov() { return ((opc() == 1) && (rn() == 31)); }
     unsigned opNumber() { return (opc() << 1) | nBit(); }
     unsigned shift() { return (m_opcode >> 22) & 0x3; }
-    int immediate6() { return (static_cast<int>((m_opcode >> 10) & 0x3f) << 26) >> 26; }
+    int immediate6() { return (static_cast<uint32_t>((m_opcode >> 10) & 0x3f) << 26) >> 26; }
 };
 
 class A64DOpcodeMoveWide : public A64DOpcode {

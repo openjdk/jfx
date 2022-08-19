@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -37,12 +37,14 @@ IsoHeapCellType::IsoHeapCellType(DestructionMode destructionMode, DestroyFunctio
 {
 }
 
-void IsoHeapCellType::finishSweep(MarkedBlock::Handle& handle, FreeList* freeList)
+IsoHeapCellType::~IsoHeapCellType() = default;
+
+void IsoHeapCellType::finishSweep(MarkedBlock::Handle& handle, FreeList* freeList) const
 {
     handle.finishSweepKnowingHeapCellType(freeList, *this);
 }
 
-void IsoHeapCellType::destroy(VM&, JSCell* cell)
+void IsoHeapCellType::destroy(VM&, JSCell* cell) const
 {
     m_destroy(cell);
 }

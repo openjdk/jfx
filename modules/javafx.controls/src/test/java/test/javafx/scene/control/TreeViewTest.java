@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -630,7 +630,6 @@ public class TreeViewTest {
         assertEquals(mikeGraham, treeView.getFocusModel().getFocusedItem());
     }
 
-    @Ignore("Bug hasn't been fixed yet")
     @Test public void test_rt28114() {
         myCompanyRootNode.setExpanded(true);
         treeView.setRoot(myCompanyRootNode);
@@ -646,8 +645,6 @@ public class TreeViewTest {
         itSupport.getChildren().remove(mikeGraham);
         assertEquals(itSupport, treeView.getFocusModel().getFocusedItem());
         assertEquals(itSupport, treeView.getSelectionModel().getSelectedItem());
-        assertTrue(itSupport.isLeaf());
-        assertTrue(!itSupport.isExpanded());
     }
 
     @Test public void test_rt27820_1() {
@@ -1195,7 +1192,8 @@ public class TreeViewTest {
         treeView.setOnEditStart(t -> {
             rt_29650_start_count++;
         });
-        treeView.setOnEditCommit(t -> {
+        // Note: must add a commit handler to not replace the default (saving) handler
+        treeView.addEventHandler(TreeView.editCommitEvent(), t -> {
             rt_29650_commit_count++;
         });
         treeView.setOnEditCancel(t -> {
@@ -3078,6 +3076,11 @@ public class TreeViewTest {
             if (obj == null) return false;
             return id == ((RT22599_DataType)obj).id;
         }
+
+        @Override
+        public int hashCode() {
+            return id;
+        }
     }
 
     private int rt_39966_count = 0;
@@ -3735,7 +3738,7 @@ public class TreeViewTest {
      * Test that cell.cancelEdit can switch tree editing off
      * even if a subclass violates its contract.
      *
-     * For details, see https://bugs.openjdk.java.net/browse/JDK-8265206
+     * For details, see https://bugs.openjdk.org/browse/JDK-8265206
      *
      */
     @Test
@@ -3775,6 +3778,167 @@ public class TreeViewTest {
             assertFalse("cell must not be editing", cell.isEditing());
             assertNull("table editing must be cancelled by cell", treeView.getEditingItem());
         }
+    }
+
+    // JDK-8187596
+    @Test
+    public void testRemoveTreeItemShiftSelection() {
+        TreeItem<String> a, b, a1, a2, a3;
+        TreeItem<String> root = new TreeItem<>("root");
+        root.getChildren().addAll(
+                a = new TreeItem<>("a"),
+                b = new TreeItem<>("b")
+        );
+        root.setExpanded(true);
+
+        a.getChildren().addAll(
+                a1 = new TreeItem<>("a1"),
+                a2 = new TreeItem<>("a2"),
+                a3 = new TreeItem<>("a3")
+        );
+        a.setExpanded(true);
+
+        TreeView<String> stringTreeView = new TreeView<>(root);
+        stringTreeView.setShowRoot(false);
+        SelectionModel sm = stringTreeView.getSelectionModel();
+
+        sm.clearAndSelect(3); //select a3
+        assertEquals(a3, sm.getSelectedItem()); //verify
+        root.getChildren().remove(b); //remove b
+        //a3 should remain selected
+        assertEquals(3, sm.getSelectedIndex());
+        assertEquals(a3, sm.getSelectedItem());
+    }
+
+    // JDK-8193442
+    @Test
+    public void testRemoveTreeItemChangesSelectedItem() {
+        TreeItem<String> rootNode = new TreeItem<>("Root");
+        rootNode.setExpanded(true);
+        for (int i = 0; i < 3; i++) {
+            rootNode.getChildren().add(new TreeItem<>("Node " + i));
+        }
+        for (int i = 0; i < 2; i++) {
+            TreeItem<String> node = rootNode.getChildren().get(i);
+            node.setExpanded(true);
+            for (int j = 0; j < 2; j++) {
+                node.getChildren().add(new TreeItem<>("Sub Node " + i + "-" + j));
+            }
+        }
+
+        TreeView<String> table = new TreeView<>(rootNode);
+
+        int selectIndex = 4; // select "Node 1"
+        int removeIndex = 2; // remove "Node 2"
+        table.getSelectionModel().select(selectIndex);
+        assertEquals(4, table.getSelectionModel().getSelectedIndex());
+        assertEquals("Node 1", table.getSelectionModel().getSelectedItem().getValue());
+        table.getRoot().getChildren().remove(removeIndex);
+        assertEquals(4, table.getSelectionModel().getSelectedIndex());
+        assertEquals("Node 1", table.getSelectionModel().getSelectedItem().getValue());
+    }
+
+    // JDK-8286261
+    @Test
+    public void testAddTreeItemToCollapsedAncestorKeepsSelectedItem() {
+        TreeItem<String> rootNode = new TreeItem<>("Root");
+        rootNode.setExpanded(true);
+        TreeItem<String> level1 = new TreeItem<>("Node 0");
+        level1.setExpanded(false);
+        TreeItem<String> level2 = new TreeItem<>("Node 1");
+        level2.getChildren().add(new TreeItem<>("Node 2"));
+        level2.setExpanded(true);
+
+        rootNode.getChildren().add(level1);
+        rootNode.getChildren().add(new TreeItem<>("Node 3"));
+
+        level1.getChildren().add(level2);
+
+        TreeView<String> table = new TreeView<>(rootNode);
+        table.setShowRoot(false);
+        table.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+
+        table.getSelectionModel().select(level1);
+        assertEquals(0, table.getSelectionModel().getSelectedIndex());
+        assertEquals("Node 0", table.getSelectionModel().getSelectedItem().getValue());
+        assertEquals(0, table.getFocusModel().getFocusedIndex());
+        assertEquals("Node 0", table.getFocusModel().getFocusedItem().getValue());
+
+        // add new node at level 3, that has a collapsed ancestor
+        level2.getChildren().add(new TreeItem<>("Node 4"));
+
+        // selection and focus remain at level1
+        assertEquals(0, table.getSelectionModel().getSelectedIndex());
+        assertEquals("Node 0", table.getSelectionModel().getSelectedItem().getValue());
+        assertEquals(0, table.getFocusModel().getFocusedIndex());
+        assertEquals("Node 0", table.getFocusModel().getFocusedItem().getValue());
+    }
+
+    // JDK-8286261
+    @Test
+    public void testRemoveTreeItemFromCollapsedAncestorKeepsSelectedItem() {
+        TreeItem<String> rootNode = new TreeItem<>("Root");
+        rootNode.setExpanded(true);
+        TreeItem<String> level1 = new TreeItem<>("Node 0");
+        level1.setExpanded(false);
+        TreeItem<String> level2 = new TreeItem<>("Node 1");
+        level2.getChildren().add(new TreeItem<>("Node 2"));
+        level2.getChildren().add(new TreeItem<>("Node 3"));
+
+        level2.setExpanded(true);
+
+        rootNode.getChildren().add(level1);
+        rootNode.getChildren().add(new TreeItem<>("Node 4"));
+
+        level1.getChildren().add(level2);
+
+        TreeView<String> table = new TreeView<>(rootNode);
+        table.setShowRoot(false);
+        table.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+
+        table.getSelectionModel().select(level1);
+        assertEquals(0, table.getSelectionModel().getSelectedIndex());
+        assertEquals("Node 0", table.getSelectionModel().getSelectedItem().getValue());
+        assertEquals(0, table.getFocusModel().getFocusedIndex());
+        assertEquals("Node 0", table.getFocusModel().getFocusedItem().getValue());
+
+        // remove Node 2 at level 3, that has a collapsed ancestor
+        level2.getChildren().remove(0);
+
+        // selection and focus remain at level1
+        assertEquals(0, table.getSelectionModel().getSelectedIndex());
+        assertEquals("Node 0", table.getSelectionModel().getSelectedItem().getValue());
+        assertEquals(0, table.getFocusModel().getFocusedIndex());
+        assertEquals("Node 0", table.getFocusModel().getFocusedItem().getValue());
+    }
+
+    private List<TreeItem<String>> generateChildren(int lvl) {
+        List<TreeItem<String>> children = new ArrayList<>();
+        for (int idx = 0; idx < 10; idx++) {
+            TreeItem<String> child = new TreeItem<>("Child lvl. " + lvl + " idx. " + idx);
+            child.setExpanded(true);
+            if (lvl <= 2) {
+                child.getChildren().addAll(generateChildren(lvl + 1));
+            }
+            children.add(child);
+        }
+        return children;
+    }
+
+    // JDK-8290348
+    @Test
+    public void testCheckPositionAfterCollapsed() {
+        TreeItem<String> rootNode = new TreeItem<>("Root");
+        rootNode.setExpanded(true);
+        rootNode.getChildren().addAll(generateChildren(1));
+        TreeView<String> treeView = new TreeView<>(rootNode);
+        treeView.scrollTo(100);
+        IndexedCell expandedCell = VirtualFlowTestUtils.getCell(treeView, 100);
+        Toolkit.getToolkit().firePulse();
+        rootNode.getChildren().get(1).setExpanded(false);
+        Toolkit.getToolkit().firePulse();
+        IndexedCell scrolledCell = VirtualFlowTestUtils.getCell(treeView, 100);
+        assertTrue(scrolledCell.isVisible());
     }
 
     public static class MisbehavingOnCancelTreeCell<S> extends TreeCell<S> {

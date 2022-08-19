@@ -619,6 +619,11 @@ public class TreeTableColumn<S,T> extends TableColumnBase<TreeItem<S>,T> impleme
         return getClassCssMetaData();
     }
 
+    /**
+     * Gets the {@code CssMetaData} associated with this class, which may include the
+     * {@code CssMetaData} of its superclasses. It is currently an empty list.
+     * @return an empty list
+     */
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return Collections.emptyList();
     }
@@ -762,9 +767,6 @@ public class TreeTableColumn<S,T> extends TableColumnBase<TreeItem<S>,T> impleme
                 EventType<TreeTableColumn.CellEditEvent<S,T>> eventType, T newValue) {
             super(table, Event.NULL_SOURCE_TARGET, eventType);
 
-            if (table == null) {
-                throw new NullPointerException("TableView can not be null");
-            }
             this.pos = pos;
             this.newValue = newValue;
         }

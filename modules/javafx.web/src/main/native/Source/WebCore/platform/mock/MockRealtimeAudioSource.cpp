@@ -71,7 +71,7 @@ MockRealtimeAudioSource::MockRealtimeAudioSource(String&& deviceID, String&& nam
     ASSERT(device);
     m_device = *device;
 
-    setSampleRate(WTF::get<MockMicrophoneProperties>(m_device.properties).defaultSampleRate);
+    setSampleRate(std::get<MockMicrophoneProperties>(m_device.properties).defaultSampleRate);
     initializeEchoCancellation(true);
 }
 
@@ -130,7 +130,7 @@ const RealtimeMediaSourceCapabilities& MockRealtimeAudioSource::capabilities()
 
 void MockRealtimeAudioSource::settingsDidChange(OptionSet<RealtimeMediaSourceSettings::Flag>)
 {
-    m_currentSettings = WTF::nullopt;
+    m_currentSettings = std::nullopt;
 }
 
 void MockRealtimeAudioSource::startProducingData()
@@ -138,11 +138,11 @@ void MockRealtimeAudioSource::startProducingData()
 #if PLATFORM(IOS_FAMILY)
     RealtimeMediaSourceCenter::singleton().audioCaptureFactory().setActiveSource(*this);
     PlatformMediaSessionManager::sharedManager().sessionCanProduceAudioChanged();
-    ASSERT(AudioSession::sharedSession().category() == AudioSession::PlayAndRecord);
+    ASSERT(AudioSession::sharedSession().category() == AudioSession::CategoryType::PlayAndRecord);
 #endif
 
     if (!sampleRate())
-        setSampleRate(WTF::get<MockMicrophoneProperties>(m_device.properties).defaultSampleRate);
+        setSampleRate(std::get<MockMicrophoneProperties>(m_device.properties).defaultSampleRate);
 
     m_startTime = MonotonicTime::now();
     m_timer.startRepeating(renderInterval());
@@ -170,7 +170,7 @@ void MockRealtimeAudioSource::tick()
     Seconds delta = now - m_lastRenderTime;
     m_lastRenderTime = now;
 
-    m_workQueue->dispatch([this, delta, protectedThis = makeRef(*this)] {
+    m_workQueue->dispatch([this, delta, protectedThis = Ref { *this }] {
         render(delta);
     });
 }

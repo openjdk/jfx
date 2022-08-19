@@ -37,6 +37,7 @@
 #include "gmessages.h"
 
 #include "gutils.h"
+#include "gutilsprivate.h"
 
 /**
  * SECTION:string_chunks
@@ -82,27 +83,6 @@ struct _GStringChunk
   gsize       default_size;
 };
 
-#define MY_MAXSIZE ((gsize)-1)
-
-static inline gsize
-nearest_power (gsize base,
-               gsize num)
-{
-  if (num > MY_MAXSIZE / 2)
-    {
-      return MY_MAXSIZE;
-    }
-  else
-    {
-      gsize n = base;
-
-      while (n < num)
-        n <<= 1;
-
-      return n;
-    }
-}
-
 /**
  * g_string_chunk_new:
  * @size: the default size of the blocks of memory which are
@@ -120,7 +100,7 @@ g_string_chunk_new (gsize size)
   GStringChunk *new_chunk = g_new (GStringChunk, 1);
   gsize actual_size = 1;
 
-  actual_size = nearest_power (1, size);
+  actual_size = g_nearest_pow (MAX (1, size));
 
   new_chunk->const_table  = NULL;
   new_chunk->storage_list = NULL;
@@ -280,7 +260,7 @@ g_string_chunk_insert_len (GStringChunk *chunk,
                            const gchar  *string,
                            gssize        len)
 {
-  gssize size;
+  gsize size;
   gchar* pos;
 
   g_return_val_if_fail (chunk != NULL, NULL);
@@ -288,11 +268,16 @@ g_string_chunk_insert_len (GStringChunk *chunk,
   if (len < 0)
     size = strlen (string);
   else
-    size = len;
+    size = (gsize) len;
 
-  if ((chunk->storage_next + size + 1) > chunk->this_size)
+  if ((G_MAXSIZE - chunk->storage_next < size + 1) || (chunk->storage_next + size + 1) > chunk->this_size)
     {
-      gsize new_size = nearest_power (chunk->default_size, size + 1);
+      gsize new_size = g_nearest_pow (MAX (chunk->default_size, size + 1));
+
+      /* If size is bigger than G_MAXSIZE / 2 then store it in its own
+       * allocation instead of failing here */
+      if (new_size == 0)
+        new_size = size + 1;
 
       chunk->storage_list = g_slist_prepend (chunk->storage_list,
                                              g_new (gchar, new_size));

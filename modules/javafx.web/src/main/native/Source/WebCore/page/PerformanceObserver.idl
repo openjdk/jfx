@@ -28,14 +28,14 @@
 [
     CustomIsReachable,
     Exposed=(Window,Worker),
-    ImplementationLacksVTable,
     JSCustomMarkFunction,
 ] interface PerformanceObserver {
-    [CallWith=ScriptExecutionContext] constructor(PerformanceObserverCallback callback);
+    [CallWith=CurrentScriptExecutionContext] constructor(PerformanceObserverCallback callback);
 
-    [MayThrowException] undefined observe(PerformanceObserverInit options);
+    undefined observe(optional PerformanceObserverInit options);
     undefined disconnect();
-    [CallWith=ScriptExecutionContext] static readonly attribute FrozenArray<DOMString> supportedEntryTypes;
+    sequence<PerformanceEntry> takeRecords();
+    [CallWith=CurrentScriptExecutionContext] static readonly attribute FrozenArray<DOMString> supportedEntryTypes;
 };
 
 dictionary PerformanceObserverInit {

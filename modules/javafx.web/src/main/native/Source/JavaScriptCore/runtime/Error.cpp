@@ -35,37 +35,37 @@ namespace JSC {
 JSObject* createError(JSGlobalObject* globalObject, const String& message, ErrorInstance::SourceAppender appender)
 {
     ASSERT(!message.isEmpty());
-    return ErrorInstance::create(globalObject, globalObject->vm(), globalObject->errorStructure(), message, appender, TypeNothing, ErrorType::Error, true);
+    return ErrorInstance::create(globalObject, globalObject->vm(), globalObject->errorStructure(), message, JSValue(), appender, TypeNothing, ErrorType::Error, true);
 }
 
 JSObject* createEvalError(JSGlobalObject* globalObject, const String& message, ErrorInstance::SourceAppender appender)
 {
     ASSERT(!message.isEmpty());
-    return ErrorInstance::create(globalObject, globalObject->vm(), globalObject->errorStructure(ErrorType::EvalError), message, appender, TypeNothing, ErrorType::EvalError, true);
+    return ErrorInstance::create(globalObject, globalObject->vm(), globalObject->errorStructure(ErrorType::EvalError), message, JSValue(), appender, TypeNothing, ErrorType::EvalError, true);
 }
 
 JSObject* createRangeError(JSGlobalObject* globalObject, const String& message, ErrorInstance::SourceAppender appender)
 {
     ASSERT(!message.isEmpty());
-    return ErrorInstance::create(globalObject, globalObject->vm(), globalObject->errorStructure(ErrorType::RangeError), message, appender, TypeNothing, ErrorType::RangeError, true);
+    return ErrorInstance::create(globalObject, globalObject->vm(), globalObject->errorStructure(ErrorType::RangeError), message, JSValue(), appender, TypeNothing, ErrorType::RangeError, true);
 }
 
 JSObject* createReferenceError(JSGlobalObject* globalObject, const String& message, ErrorInstance::SourceAppender appender)
 {
     ASSERT(!message.isEmpty());
-    return ErrorInstance::create(globalObject, globalObject->vm(), globalObject->errorStructure(ErrorType::ReferenceError), message, appender, TypeNothing, ErrorType::ReferenceError, true);
+    return ErrorInstance::create(globalObject, globalObject->vm(), globalObject->errorStructure(ErrorType::ReferenceError), message, JSValue(), appender, TypeNothing, ErrorType::ReferenceError, true);
 }
 
 JSObject* createSyntaxError(JSGlobalObject* globalObject, const String& message, ErrorInstance::SourceAppender appender)
 {
     ASSERT(!message.isEmpty());
-    return ErrorInstance::create(globalObject, globalObject->vm(), globalObject->errorStructure(ErrorType::SyntaxError), message, appender, TypeNothing, ErrorType::SyntaxError, true);
+    return ErrorInstance::create(globalObject, globalObject->vm(), globalObject->errorStructure(ErrorType::SyntaxError), message, JSValue(), appender, TypeNothing, ErrorType::SyntaxError, true);
 }
 
 JSObject* createTypeError(JSGlobalObject* globalObject, const String& message, ErrorInstance::SourceAppender appender, RuntimeType type)
 {
     ASSERT(!message.isEmpty());
-    return ErrorInstance::create(globalObject, globalObject->vm(), globalObject->errorStructure(ErrorType::TypeError), message, appender, type, ErrorType::TypeError, true);
+    return ErrorInstance::create(globalObject, globalObject->vm(), globalObject->errorStructure(ErrorType::TypeError), message, JSValue(), appender, type, ErrorType::TypeError, true);
 }
 
 JSObject* createNotEnoughArgumentsError(JSGlobalObject* globalObject, ErrorInstance::SourceAppender appender)
@@ -76,7 +76,7 @@ JSObject* createNotEnoughArgumentsError(JSGlobalObject* globalObject, ErrorInsta
 JSObject* createURIError(JSGlobalObject* globalObject, const String& message, ErrorInstance::SourceAppender appender)
 {
     ASSERT(!message.isEmpty());
-    return ErrorInstance::create(globalObject, globalObject->vm(), globalObject->errorStructure(ErrorType::URIError), message, appender, TypeNothing, ErrorType::URIError, true);
+    return ErrorInstance::create(globalObject, globalObject->vm(), globalObject->errorStructure(ErrorType::URIError), message, JSValue(), appender, TypeNothing, ErrorType::URIError, true);
 }
 
 JSObject* createError(JSGlobalObject* globalObject, ErrorType errorType, const String& message)
@@ -110,10 +110,10 @@ JSObject* createError(JSGlobalObject* globalObject, ErrorTypeWithExtension error
     return nullptr;
 }
 
-JSObject* createGetterTypeError(JSGlobalObject* globalObject, const String& message)
+static JSObject* createGetterTypeError(JSGlobalObject* globalObject, const String& message)
 {
     ASSERT(!message.isEmpty());
-    auto* error = ErrorInstance::create(globalObject, globalObject->vm(), globalObject->errorStructure(ErrorType::TypeError), message, nullptr, TypeNothing, ErrorType::TypeError);
+    auto* error = ErrorInstance::create(globalObject, globalObject->vm(), globalObject->errorStructure(ErrorType::TypeError), message, JSValue(), nullptr, TypeNothing, ErrorType::TypeError);
     error->setNativeGetterTypeError();
     return error;
 }
@@ -252,6 +252,16 @@ JSObject* addErrorInfo(VM& vm, JSObject* error, int line, const SourceCode& sour
     return error;
 }
 
+String makeDOMAttributeGetterTypeErrorMessage(const char* interfaceName, const String& attributeName)
+{
+    return makeString("The ", interfaceName, '.', attributeName, " getter can only be used on instances of ", interfaceName);
+}
+
+String makeDOMAttributeSetterTypeErrorMessage(const char* interfaceName, const String& attributeName)
+{
+    return makeString("The ", interfaceName, '.', attributeName, " setter can only be used on instances of ", interfaceName);
+}
+
 Exception* throwConstructorCannotBeCalledAsFunctionTypeError(JSGlobalObject* globalObject, ThrowScope& scope, const char* constructorName)
 {
     return throwTypeError(globalObject, scope, makeString("calling ", constructorName, " constructor without new is invalid"));
@@ -282,14 +292,14 @@ Exception* throwSyntaxError(JSGlobalObject* globalObject, ThrowScope& scope, con
     return throwException(globalObject, scope, createSyntaxError(globalObject, message));
 }
 
-Exception* throwGetterTypeError(JSGlobalObject* globalObject, ThrowScope& scope, const String& message)
-{
-    return throwException(globalObject, scope, createGetterTypeError(globalObject, message));
-}
-
 JSValue throwDOMAttributeGetterTypeError(JSGlobalObject* globalObject, ThrowScope& scope, const ClassInfo* classInfo, PropertyName propertyName)
 {
-    return throwGetterTypeError(globalObject, scope, makeString("The ", classInfo->className, '.', String(propertyName.uid()), " getter can only be used on instances of ", classInfo->className));
+    return throwException(globalObject, scope, createGetterTypeError(globalObject, makeDOMAttributeGetterTypeErrorMessage(classInfo->className, String(propertyName.uid()))));
+}
+
+JSValue throwDOMAttributeSetterTypeError(JSGlobalObject* globalObject, ThrowScope& scope, const ClassInfo* classInfo, PropertyName propertyName)
+{
+    return throwException(globalObject, scope, createTypeError(globalObject, makeDOMAttributeSetterTypeErrorMessage(classInfo->className, String(propertyName.uid()))));
 }
 
 JSObject* createError(JSGlobalObject* globalObject, const String& message)

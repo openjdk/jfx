@@ -31,61 +31,70 @@
 #include <wtf/OptionSet.h>
 #include <wtf/URL.h>
 
-namespace WebCore {
-namespace ContentExtensions {
+namespace WebCore::ContentExtensions {
 
-enum class ResourceType : uint16_t {
-    Invalid = 0x0000,
+enum class ActionCondition : uint32_t {
+    None = 0x00000,
+    IfTopURL = 0x20000,
+    UnlessTopURL = 0x40000,
+    IfFrameURL = 0x60000,
+};
+static constexpr uint32_t ActionConditionMask = 0x60000;
+
+enum class ResourceType : uint32_t {
     Document = 0x0001,
     Image = 0x0002,
     StyleSheet = 0x0004,
     Script = 0x0008,
     Font = 0x0010,
-    Raw = 0x0020,
-    SVGDocument = 0x0040,
-    Media = 0x0080,
-    PlugInStream = 0x0100,
-    Popup = 0x0200,
-    // 0x0400 and 0x0800 are used by LoadType.
-    Ping = 0x1000,
+    SVGDocument = 0x0020,
+    Media = 0x0040,
+    Popup = 0x0080,
+    Ping = 0x0100,
+    Fetch = 0x0200,
+    WebSocket = 0x0400,
+    Other = 0x0800,
+    CSPReport = 0x10000,
 };
-const uint16_t ResourceTypeMask = 0x13FF;
+static constexpr uint32_t ResourceTypeMask = 0x10FFF;
 
-enum class LoadType : uint16_t {
-    Invalid = 0x0000,
-    FirstParty = 0x0400,
-    ThirdParty = 0x0800,
+enum class LoadType : uint32_t {
+    FirstParty = 0x1000,
+    ThirdParty = 0x2000,
 };
-const uint16_t LoadTypeMask = 0x0C00;
+static constexpr uint32_t LoadTypeMask = 0x3000;
 
-static_assert(!(ResourceTypeMask & LoadTypeMask), "ResourceTypeMask and LoadTypeMask should be mutually exclusive because they are stored in the same uint16_t");
+enum class LoadContext : uint32_t {
+    TopFrame = 0x4000,
+    ChildFrame = 0x8000,
+};
+static constexpr uint32_t LoadContextMask = 0xC000;
 
-typedef uint16_t ResourceFlags;
+using ResourceFlags = uint32_t;
+
+constexpr ResourceFlags AllResourceFlags = LoadTypeMask | ResourceTypeMask | LoadContextMask | ActionConditionMask;
 
 // The first 32 bits of a uint64_t action are used for the action location.
-// The next 16 bits are used for the flags (ResourceType and LoadType).
-// The next bit is used to mark actions that are from a rule with an if-domain.
-//     Actions from rules with unless-domain conditions are distinguished from
-//     rules with if-domain conditions by not having this bit set.
-//     Actions from rules with no conditions are put in the DFA without conditions.
+// The next 19 bits are used for the flags (ResourceType, LoadType, LoadContext, ActionCondition).
 // The values -1 and -2 are used for removed and empty values in HashTables.
-const uint64_t ActionFlagMask = 0x0000FFFF00000000;
-const uint64_t IfConditionFlag = 0x0001000000000000;
+static constexpr uint64_t ActionFlagMask = 0x0007FFFF00000000;
 
-ResourceType toResourceType(CachedResource::Type);
-uint16_t readResourceType(const String&);
-uint16_t readLoadType(const String&);
+OptionSet<ResourceType> toResourceType(CachedResource::Type, ResourceRequestBase::Requester);
+std::optional<OptionSet<ResourceType>> readResourceType(StringView);
+std::optional<OptionSet<LoadType>> readLoadType(StringView);
+std::optional<OptionSet<LoadContext>> readLoadContext(StringView);
 
 struct ResourceLoadInfo {
     URL resourceURL;
     URL mainDocumentURL;
+    URL frameURL;
     OptionSet<ResourceType> type;
+    bool mainFrameContext { false };
 
     bool isThirdParty() const;
     ResourceFlags getResourceFlags() const;
 };
 
-} // namespace ContentExtensions
-} // namespace WebCore
+} // namespace WebCore::ContentExtensions
 
 #endif

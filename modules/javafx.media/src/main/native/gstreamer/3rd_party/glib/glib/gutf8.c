@@ -40,38 +40,38 @@
 #include "gthread.h"
 #include "glibintl.h"
 
-#define UTF8_COMPUTE(Char, Mask, Len)                         \
-  if (Char < 128)                                 \
-    {                                         \
-      Len = 1;                                    \
-      Mask = 0x7f;                                \
-    }                                         \
-  else if ((Char & 0xe0) == 0xc0)                         \
-    {                                         \
-      Len = 2;                                    \
-      Mask = 0x1f;                                \
-    }                                         \
-  else if ((Char & 0xf0) == 0xe0)                         \
-    {                                         \
-      Len = 3;                                    \
-      Mask = 0x0f;                                \
-    }                                         \
-  else if ((Char & 0xf8) == 0xf0)                         \
-    {                                         \
-      Len = 4;                                    \
-      Mask = 0x07;                                \
-    }                                         \
-  else if ((Char & 0xfc) == 0xf8)                         \
-    {                                         \
-      Len = 5;                                    \
-      Mask = 0x03;                                \
-    }                                         \
-  else if ((Char & 0xfe) == 0xfc)                         \
-    {                                         \
-      Len = 6;                                    \
-      Mask = 0x01;                                \
-    }                                         \
-  else                                        \
+#define UTF8_COMPUTE(Char, Mask, Len)                                         \
+  if (Char < 128)                                                             \
+    {                                                                         \
+      Len = 1;                                                                \
+      Mask = 0x7f;                                                            \
+    }                                                                         \
+  else if ((Char & 0xe0) == 0xc0)                                             \
+    {                                                                         \
+      Len = 2;                                                                \
+      Mask = 0x1f;                                                            \
+    }                                                                         \
+  else if ((Char & 0xf0) == 0xe0)                                             \
+    {                                                                         \
+      Len = 3;                                                                \
+      Mask = 0x0f;                                                            \
+    }                                                                         \
+  else if ((Char & 0xf8) == 0xf0)                                             \
+    {                                                                         \
+      Len = 4;                                                                \
+      Mask = 0x07;                                                            \
+    }                                                                         \
+  else if ((Char & 0xfc) == 0xf8)                                             \
+    {                                                                         \
+      Len = 5;                                                                \
+      Mask = 0x03;                                                            \
+    }                                                                         \
+  else if ((Char & 0xfe) == 0xfc)                                             \
+    {                                                                         \
+      Len = 6;                                                                \
+      Mask = 0x01;                                                            \
+    }                                                                         \
+  else                                                                        \
     Len = -1;
 
 #define UTF8_LENGTH(Char)              \
@@ -82,17 +82,17 @@
       ((Char) < 0x4000000 ? 5 : 6)))))
 
 
-#define UTF8_GET(Result, Chars, Count, Mask, Len)                 \
-  (Result) = (Chars)[0] & (Mask);                         \
-  for ((Count) = 1; (Count) < (Len); ++(Count))                   \
-    {                                         \
-      if (((Chars)[(Count)] & 0xc0) != 0x80)                      \
-    {                                     \
-      (Result) = -1;                              \
-      break;                                  \
-    }                                     \
-      (Result) <<= 6;                                 \
-      (Result) |= ((Chars)[(Count)] & 0x3f);                      \
+#define UTF8_GET(Result, Chars, Count, Mask, Len)                             \
+  (Result) = (Chars)[0] & (Mask);                                             \
+  for ((Count) = 1; (Count) < (Len); ++(Count))                               \
+    {                                                                         \
+      if (((Chars)[(Count)] & 0xc0) != 0x80)                                  \
+        {                                                                     \
+          (Result) = -1;                                                      \
+          break;                                                              \
+        }                                                                     \
+      (Result) <<= 6;                                                         \
+      (Result) |= ((Chars)[(Count)] & 0x3f);                                  \
     }
 
 /*
@@ -271,10 +271,14 @@ g_utf8_strlen (const gchar *p,
  * g_utf8_substring:
  * @str: a UTF-8 encoded string
  * @start_pos: a character offset within @str
- * @end_pos: another character offset within @str
+ * @end_pos: another character offset within @str,
+ *   or `-1` to indicate the end of the string
  *
  * Copies a substring out of a UTF-8 encoded string.
  * The substring will contain @end_pos - @start_pos characters.
+ *
+ * Since GLib 2.72, `-1` can be passed to @end_pos to indicate the
+ * end of the string.
  *
  * Returns: (transfer full): a newly allocated copy of the requested
  *     substring. Free with g_free() when no longer needed.
@@ -288,8 +292,19 @@ g_utf8_substring (const gchar *str,
 {
   gchar *start, *end, *out;
 
+  g_return_val_if_fail (end_pos >= start_pos || end_pos == -1, NULL);
+
   start = g_utf8_offset_to_pointer (str, start_pos);
-  end = g_utf8_offset_to_pointer (start, end_pos - start_pos);
+
+  if (end_pos == -1)
+    {
+      glong length = g_utf8_strlen (start, -1);
+      end = g_utf8_offset_to_pointer (start, length);
+    }
+  else
+    {
+      end = g_utf8_offset_to_pointer (start, end_pos - start_pos);
+    }
 
   out = g_malloc (end - start + 1);
   memcpy (out, start, end - start);
@@ -574,7 +589,7 @@ static inline gunichar
 g_utf8_get_char_extended (const  gchar *p,
         gssize max_len)
 {
-  guint i, len;
+  gsize i, len;
   gunichar min_code;
   gunichar wc = (guchar) *p;
   const gunichar partial_sequence = (gunichar) -2;
@@ -623,13 +638,13 @@ g_utf8_get_char_extended (const  gchar *p,
       return malformed_sequence;
     }
 
-  if (G_UNLIKELY (max_len >= 0 && len > max_len))
+  if (G_UNLIKELY (max_len >= 0 && len > (gsize) max_len))
     {
-      for (i = 1; i < max_len; i++)
-  {
-    if ((((guchar *)p)[i] & 0xc0) != 0x80)
-      return malformed_sequence;
-  }
+      for (i = 1; i < (gsize) max_len; i++)
+        {
+          if ((((guchar *)p)[i] & 0xc0) != 0x80)
+            return malformed_sequence;
+        }
       return partial_sequence;
     }
 
@@ -706,7 +721,7 @@ g_utf8_get_char_validated (const gchar *p,
  * @str: a UTF-8 encoded string
  * @len: the maximum length of @str to use, in bytes. If @len < 0,
  *     then the string is nul-terminated.
- * @items_written: (out caller-allocates) (optional): location to store the
+ * @items_written: (out) (optional): location to store the
  *     number of characters in the result, or %NULL.
  *
  * Convert a string from UTF-8 to a 32-bit fixed width
@@ -823,13 +838,13 @@ try_malloc_n (gsize n_blocks, gsize n_block_bytes, GError **error)
  * @str: a UTF-8 encoded string
  * @len: the maximum length of @str to use, in bytes. If @len < 0,
  *     then the string is nul-terminated.
- * @items_read: (out caller-allocates) (optional): location to store number of
+ * @items_read: (out) (optional): location to store number of
   *    bytes read, or %NULL.
  *     If %NULL, then %G_CONVERT_ERROR_PARTIAL_INPUT will be
  *     returned in case @str contains a trailing partial
  *     character. If an error occurs then the index of the
  *     invalid input is stored here.
- * @items_written: (out caller-allocates) (optional): location to store number
+ * @items_written: (out) (optional): location to store number
  *     of characters written or %NULL. The value here stored does not include
  *     the trailing 0 character.
  * @error: location to store the error occurring, or %NULL to ignore
@@ -909,9 +924,9 @@ g_utf8_to_ucs4 (const gchar *str,
  * @str: a UCS-4 encoded string
  * @len: the maximum length (number of characters) of @str to use.
  *     If @len < 0, then the string is nul-terminated.
- * @items_read: (out caller-allocates) (optional): location to store number of
+ * @items_read: (out) (optional): location to store number of
  *     characters read, or %NULL.
- * @items_written: (out caller-allocates) (optional): location to store number
+ * @items_written: (out) (optional): location to store number
  *     of bytes written or %NULL. The value here stored does not include the
  *     trailing 0 byte.
  * @error: location to store the error occurring, or %NULL to ignore
@@ -983,13 +998,14 @@ g_ucs4_to_utf8 (const gunichar *str,
  * @str: a UTF-16 encoded string
  * @len: the maximum length (number of #gunichar2) of @str to use.
  *     If @len < 0, then the string is nul-terminated.
- * @items_read: (out caller-allocates) (optional): location to store number of
+ * @items_read: (out) (optional): location to store number of
  *     words read, or %NULL. If %NULL, then %G_CONVERT_ERROR_PARTIAL_INPUT will
  *     be returned in case @str contains a trailing partial character. If
  *     an error occurs then the index of the invalid input is stored here.
- * @items_written: (out caller-allocates) (optional): location to store number
+ *     It’s guaranteed to be non-negative.
+ * @items_written: (out) (optional): location to store number
  *     of bytes written, or %NULL. The value stored here does not include the
- *     trailing 0 byte.
+ *     trailing 0 byte. It’s guaranteed to be non-negative.
  * @error: location to store the error occurring, or %NULL to ignore
  *     errors. Any of the errors in #GConvertError other than
  *     %G_CONVERT_ERROR_NO_CONVERSION may occur.
@@ -1138,11 +1154,11 @@ g_utf16_to_utf8 (const gunichar2  *str,
  * @str: a UTF-16 encoded string
  * @len: the maximum length (number of #gunichar2) of @str to use.
  *     If @len < 0, then the string is nul-terminated.
- * @items_read: (out caller-allocates) (optional): location to store number of
+ * @items_read: (out) (optional): location to store number of
  *     words read, or %NULL. If %NULL, then %G_CONVERT_ERROR_PARTIAL_INPUT will
  *     be returned in case @str contains a trailing partial character. If
  *     an error occurs then the index of the invalid input is stored here.
- * @items_written: (out caller-allocates) (optional): location to store number
+ * @items_written: (out) (optional): location to store number
  *     of characters written, or %NULL. The value stored here does not include
  *     the trailing 0 character.
  * @error: location to store the error occurring, or %NULL to ignore
@@ -1276,11 +1292,11 @@ g_utf16_to_ucs4 (const gunichar2  *str,
  * @str: a UTF-8 encoded string
  * @len: the maximum length (number of bytes) of @str to use.
  *     If @len < 0, then the string is nul-terminated.
- * @items_read: (out caller-allocates) (optional): location to store number of
+ * @items_read: (out) (optional): location to store number of
  *     bytes read, or %NULL. If %NULL, then %G_CONVERT_ERROR_PARTIAL_INPUT will
  *     be returned in case @str contains a trailing partial character. If
  *     an error occurs then the index of the invalid input is stored here.
- * @items_written: (out caller-allocates) (optional): location to store number
+ * @items_written: (out) (optional): location to store number
  *     of #gunichar2 written, or %NULL. The value stored here does not include
  *     the trailing 0.
  * @error: location to store the error occurring, or %NULL to ignore
@@ -1393,10 +1409,10 @@ g_utf8_to_utf16 (const gchar *str,
  * @str: a UCS-4 encoded string
  * @len: the maximum length (number of characters) of @str to use.
  *     If @len < 0, then the string is nul-terminated.
- * @items_read: (out caller-allocates) (optional): location to store number of
+ * @items_read: (out) (optional): location to store number of
  *     bytes read, or %NULL. If an error occurs then the index of the invalid
  *     input is stored here.
- * @items_written: (out caller-allocates) (optional): location to store number
+ * @items_written: (out) (optional): location to store number
  *     of #gunichar2  written, or %NULL. The value stored here does not include
  *     the trailing 0.
  * @error: location to store the error occurring, or %NULL to ignore

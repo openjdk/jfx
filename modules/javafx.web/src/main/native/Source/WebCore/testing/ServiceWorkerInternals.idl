@@ -26,18 +26,30 @@
 [
     Conditional=SERVICE_WORKER,
     ExportMacro=WEBCORE_TESTSUPPORT_EXPORT,
-    ImplementationLacksVTable,
     LegacyNoInterfaceObject,
 ] interface ServiceWorkerInternals {
     undefined setOnline(boolean isOnline);
-    Promise<Response> waitForFetchEventToFinish(FetchEvent event);
-    [CallWith=ScriptExecutionContext] FetchEvent createBeingDispatchedFetchEvent();
-    [CallWith=ScriptExecutionContext] FetchResponse createOpaqueWithBlobBodyResponse();
+    undefined terminate();
+
+    Promise<FetchResponse> waitForFetchEventToFinish(FetchEvent event);
+    [CallWith=CurrentScriptExecutionContext] FetchEvent createBeingDispatchedFetchEvent();
+    [CallWith=CurrentScriptExecutionContext] FetchResponse createOpaqueWithBlobBodyResponse();
 
     sequence<ByteString> fetchResponseHeaderList(FetchResponse response);
+
+    Promise<boolean> schedulePushEvent(optional DOMString data);
+    undefined schedulePushSubscriptionChangeEvent(PushSubscription? newSubscription, PushSubscription? oldSubscription);
 
     readonly attribute DOMString processName;
     readonly attribute boolean isThrottleable;
 
     readonly attribute long processIdentifier;
+
+    Promise<boolean> lastNavigationWasAppInitiated();
+    
+    PushSubscription createPushSubscription(USVString endpoint, EpochTimeStamp? expirationTime, ArrayBuffer serverVAPIDPublicKey, ArrayBuffer clientECDHPublicKey, ArrayBuffer auth);
+
+    boolean fetchEventIsSameSite(FetchEvent event);
+
+    DOMString serviceWorkerClientInternalIdentifier(ServiceWorkerClient client);
 };

@@ -303,7 +303,8 @@ public class ChoiceBoxTableCell<S,T> extends TableCell<S,T> {
 
     /** {@inheritDoc} */
     @Override public void startEdit() {
-        if (! isEditable() || ! getTableView().isEditable() || ! getTableColumn().isEditable()) {
+        super.startEdit();
+        if (!isEditing()) {
             return;
         }
 
@@ -313,7 +314,6 @@ public class ChoiceBoxTableCell<S,T> extends TableCell<S,T> {
 
         choiceBox.getSelectionModel().select(getItem());
 
-        super.startEdit();
         setText(null);
         setGraphic(choiceBox);
     }

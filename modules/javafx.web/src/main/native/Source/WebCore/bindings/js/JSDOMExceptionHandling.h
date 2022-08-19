@@ -38,7 +38,6 @@ class DeferredPromise;
 class JSDOMGlobalObject;
 
 void throwAttributeTypeError(JSC::JSGlobalObject&, JSC::ThrowScope&, const char* interfaceName, const char* attributeName, const char* expectedType);
-WEBCORE_EXPORT bool throwSetterTypeError(JSC::JSGlobalObject&, JSC::ThrowScope&, const char* interfaceName, const char* attributeName);
 
 void throwDataCloneError(JSC::JSGlobalObject&, JSC::ThrowScope&);
 void throwDOMSyntaxError(JSC::JSGlobalObject&, JSC::ThrowScope&, ASCIILiteral); // Not the same as a JavaScript syntax error.
@@ -55,20 +54,19 @@ WEBCORE_EXPORT JSC::EncodedJSValue throwArgumentTypeError(JSC::JSGlobalObject&, 
 WEBCORE_EXPORT JSC::EncodedJSValue throwRequiredMemberTypeError(JSC::JSGlobalObject&, JSC::ThrowScope&, const char* memberName, const char* dictionaryName, const char* expectedType);
 JSC::EncodedJSValue throwConstructorScriptExecutionContextUnavailableError(JSC::JSGlobalObject&, JSC::ThrowScope&, const char* interfaceName);
 
-String makeGetterTypeErrorMessage(const char* interfaceName, const char* attributeName);
 String makeThisTypeErrorMessage(const char* interfaceName, const char* attributeName);
+String makeUnsupportedIndexedSetterErrorMessage(const char* interfaceName);
 
-WEBCORE_EXPORT JSC::EncodedJSValue throwGetterTypeError(JSC::JSGlobalObject&, JSC::ThrowScope&, const char* interfaceName, const char* attributeName);
 WEBCORE_EXPORT JSC::EncodedJSValue throwThisTypeError(JSC::JSGlobalObject&, JSC::ThrowScope&, const char* interfaceName, const char* functionName);
 
-WEBCORE_EXPORT JSC::EncodedJSValue rejectPromiseWithGetterTypeError(JSC::JSGlobalObject&, const char* interfaceName, const char* attributeName);
+WEBCORE_EXPORT JSC::EncodedJSValue rejectPromiseWithGetterTypeError(JSC::JSGlobalObject&, const JSC::ClassInfo*, JSC::PropertyName attributeName);
 WEBCORE_EXPORT JSC::EncodedJSValue rejectPromiseWithThisTypeError(DeferredPromise&, const char* interfaceName, const char* operationName);
 WEBCORE_EXPORT JSC::EncodedJSValue rejectPromiseWithThisTypeError(JSC::JSGlobalObject&, const char* interfaceName, const char* operationName);
 
 String retrieveErrorMessageWithoutName(JSC::JSGlobalObject&, JSC::VM&, JSC::JSValue exception, JSC::CatchScope&);
 String retrieveErrorMessage(JSC::JSGlobalObject&, JSC::VM&, JSC::JSValue exception, JSC::CatchScope&);
-WEBCORE_EXPORT void reportException(JSC::JSGlobalObject*, JSC::JSValue exception, CachedScript* = nullptr);
-WEBCORE_EXPORT void reportException(JSC::JSGlobalObject*, JSC::Exception*, CachedScript* = nullptr, ExceptionDetails* = nullptr);
+WEBCORE_EXPORT void reportException(JSC::JSGlobalObject*, JSC::JSValue exception, CachedScript* = nullptr, bool = false);
+WEBCORE_EXPORT void reportException(JSC::JSGlobalObject*, JSC::Exception*, CachedScript* = nullptr, bool = false, ExceptionDetails* = nullptr);
 void reportCurrentException(JSC::JSGlobalObject*);
 
 JSC::JSValue createDOMException(JSC::JSGlobalObject&, Exception&&);
@@ -98,10 +96,8 @@ template<typename Functor> void invokeFunctorPropagatingExceptionIfNecessary(JSC
         auto result = functor();
         if (UNLIKELY(result.hasException()))
             propagateException(lexicalGlobalObject, throwScope, result.releaseException());
-        return;
-    }
-
-    functor();
+    } else
+        functor();
 }
 
 } // namespace WebCore

@@ -32,6 +32,7 @@
 
 #include <wtf/RefPtr.h>
 #include <wtf/GetPtr.h>
+#include "HTMLNames.h"
 
 #include <WebCore/JavaDOMUtils.h>
 #include <wtf/java/JavaEnv.h>

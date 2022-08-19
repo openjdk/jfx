@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -72,12 +72,17 @@ public class IndexedCell<T> extends Cell<T> {
      *                                                                         *
      **************************************************************************/
 
+    private int oldIndex = -1;
+
     // --- Index
     private ReadOnlyIntegerWrapper index = new ReadOnlyIntegerWrapper(this, "index", -1) {
         @Override protected void invalidated() {
-            boolean active = ((get() % 2) == 0);
+            int newIndex = get();
+            boolean active = ((newIndex % 2) == 0);
             pseudoClassStateChanged(PSEUDO_CLASS_EVEN,  active);
             pseudoClassStateChanged(PSEUDO_CLASS_ODD,  !active);
+
+            indexChanged(oldIndex, newIndex);
         }
     };
 
@@ -112,19 +117,25 @@ public class IndexedCell<T> extends Cell<T> {
      * Note: This function is intended to be used by experts, primarily
      *       by those implementing new Skins. It is not common
      *       for developers or designers to access this function directly.
-     * @param i the index associated with this indexed cell
+     * @param newIndex the index associated with this indexed cell
      */
-    public void updateIndex(int i) {
-        final int oldIndex = index.get();
-        index.set(i);
-        indexChanged(oldIndex, i);
+    public void updateIndex(int newIndex) {
+        oldIndex = index.get();
+
+        if (oldIndex == newIndex) {
+            // When the index wasn't changed the index property will not be invalidated,
+            // therefore indexChanged() is not called, so we will manually call it here.
+            indexChanged(oldIndex, newIndex);
+        } else {
+            index.set(newIndex);
+        }
     }
 
     /**
      * This method is called whenever the index is changed, regardless of whether
      * the new index is the same as the old index.
-     * @param oldIndex
-     * @param newIndex
+     * @param oldIndex the old index
+     * @param newIndex the new index
      */
     void indexChanged(int oldIndex, int newIndex) {
         // no-op

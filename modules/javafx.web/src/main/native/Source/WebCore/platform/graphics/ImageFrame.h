@@ -33,6 +33,12 @@
 #include "NativeImage.h"
 #include <wtf/Seconds.h>
 
+// X11 headers define a bunch of macros with common terms, interfering with WebCore and WTF enum values.
+// As a workaround, we explicitly undef them here.
+#if defined(None)
+#undef None
+#endif
+
 namespace WebCore {
 
 class ImageFrame {
@@ -60,7 +66,7 @@ public:
     bool isComplete() const { return m_decodingStatus == DecodingStatus::Complete; }
 
     IntSize size() const;
-    unsigned frameBytes() const { return hasNativeImage() ? (size().area() * sizeof(uint32_t)).unsafeGet() : 0; }
+    unsigned frameBytes() const { return hasNativeImage() ? (size().area() * sizeof(uint32_t)).value() : 0; }
     SubsamplingLevel subsamplingLevel() const { return m_subsamplingLevel; }
 
     RefPtr<NativeImage> nativeImage() const { return m_nativeImage; }
@@ -69,7 +75,7 @@ public:
     ImageOrientation orientation() const { return m_orientation; }
 
     void setDensityCorrectedSize(const IntSize& size) { m_densityCorrectedSize = size; }
-    Optional<IntSize> densityCorrectedSize() const { return m_densityCorrectedSize; }
+    std::optional<IntSize> densityCorrectedSize() const { return m_densityCorrectedSize; }
 
     void setDuration(const Seconds& duration) { m_duration = duration; }
     Seconds duration() const { return m_duration; }
@@ -77,9 +83,9 @@ public:
     void setHasAlpha(bool hasAlpha) { m_hasAlpha = hasAlpha; }
     bool hasAlpha() const { return !hasMetadata() || m_hasAlpha; }
 
-    bool hasNativeImage(const Optional<SubsamplingLevel>& = { }) const;
-    bool hasFullSizeNativeImage(const Optional<SubsamplingLevel>& = { }) const;
-    bool hasDecodedNativeImageCompatibleWithOptions(const Optional<SubsamplingLevel>&, const DecodingOptions&) const;
+    bool hasNativeImage(const std::optional<SubsamplingLevel>& = { }) const;
+    bool hasFullSizeNativeImage(const std::optional<SubsamplingLevel>& = { }) const;
+    bool hasDecodedNativeImageCompatibleWithOptions(const std::optional<SubsamplingLevel>&, const DecodingOptions&) const;
     bool hasMetadata() const { return !size().isEmpty(); }
 
     Color singlePixelSolidColor() const;
@@ -93,7 +99,7 @@ private:
     DecodingOptions m_decodingOptions;
 
     ImageOrientation m_orientation { ImageOrientation::None };
-    Optional<IntSize> m_densityCorrectedSize;
+    std::optional<IntSize> m_densityCorrectedSize;
     Seconds m_duration;
     bool m_hasAlpha { true };
 };

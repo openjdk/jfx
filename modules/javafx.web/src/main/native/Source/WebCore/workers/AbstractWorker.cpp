@@ -34,17 +34,29 @@
 #include "ContentSecurityPolicy.h"
 #include "ScriptExecutionContext.h"
 #include "SecurityOrigin.h"
+#include "WorkerOptions.h"
 #include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(AbstractWorker);
 
-ExceptionOr<URL> AbstractWorker::resolveURL(const String& url, bool shouldBypassMainWorldContentSecurityPolicy)
+FetchOptions AbstractWorker::workerFetchOptions(const WorkerOptions& options, FetchOptions::Destination destination)
 {
-    if (url.isEmpty())
-        return Exception { SyntaxError };
+    FetchOptions fetchOptions;
+    fetchOptions.mode = FetchOptions::Mode::SameOrigin;
+    if (options.type == WorkerType::Module)
+        fetchOptions.credentials = options.credentials;
+    else
+        fetchOptions.credentials = FetchOptions::Credentials::SameOrigin;
+    fetchOptions.cache = FetchOptions::Cache::Default;
+    fetchOptions.redirect = FetchOptions::Redirect::Follow;
+    fetchOptions.destination = destination;
+    return fetchOptions;
+}
 
+ExceptionOr<URL> AbstractWorker::resolveURL(const String& url)
+{
     auto& context = *scriptExecutionContext();
 
     // FIXME: This should use the dynamic global scope (bug #27887).
@@ -52,11 +64,11 @@ ExceptionOr<URL> AbstractWorker::resolveURL(const String& url, bool shouldBypass
     if (!scriptURL.isValid())
         return Exception { SyntaxError };
 
-    if (!context.securityOrigin()->canRequest(scriptURL))
+    if (!context.securityOrigin()->canRequest(scriptURL) && !scriptURL.protocolIsData())
         return Exception { SecurityError };
 
     ASSERT(context.contentSecurityPolicy());
-    if (!shouldBypassMainWorldContentSecurityPolicy && !context.contentSecurityPolicy()->allowChildContextFromSource(scriptURL))
+    if (!context.contentSecurityPolicy()->allowWorkerFromSource(scriptURL))
         return Exception { SecurityError };
 
     return scriptURL;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -41,6 +41,7 @@ class X11GLFactory extends GLFactory {
     // Limit es2 pipe qualification check to supported drivers and GPUs
     private GLGPUInfo preQualificationFilter[] = {
         new GLGPUInfo("advanced micro devices", null),
+        new GLGPUInfo("amd", null),
         new GLGPUInfo("ati", null),
         new GLGPUInfo("intel", null),
         new GLGPUInfo("nvidia", null),

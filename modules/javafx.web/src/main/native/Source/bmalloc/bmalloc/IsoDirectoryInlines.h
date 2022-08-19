@@ -27,6 +27,8 @@
 
 #include "IsoDirectory.h"
 
+#if !BUSE(LIBPAS)
+
 namespace bmalloc {
 
 template<typename Config>
@@ -50,12 +52,7 @@ EligibilityResult<Config> IsoDirectory<Config, passedNumPages>::takeFirstEligibl
     if (pageIndex >= numPages)
         return EligibilityKind::Full;
 
-#if BUSE(PARTIAL_SCAVENGE)
-    m_highWatermark = std::max(pageIndex, m_highWatermark);
-#endif
-
     Scavenger& scavenger = *Scavenger::get();
-    scavenger.didStartGrowing();
 
     IsoPage<Config>* page = m_pages[pageIndex].get();
 
@@ -146,23 +143,7 @@ void IsoDirectory<Config, passedNumPages>::scavenge(const LockHolder& locker, Ve
         [&] (size_t index) {
             scavengePage(locker, index, decommits);
         });
-#if BUSE(PARTIAL_SCAVENGE)
-    m_highWatermark = 0;
-#endif
 }
-
-#if BUSE(PARTIAL_SCAVENGE)
-template<typename Config, unsigned passedNumPages>
-void IsoDirectory<Config, passedNumPages>::scavengeToHighWatermark(const LockHolder& locker, Vector<DeferredDecommit>& decommits)
-{
-    (m_empty & m_committed).forEachSetBit(
-        [&] (size_t index) {
-            if (index > m_highWatermark)
-                scavengePage(locker, index, decommits);
-        });
-    m_highWatermark = 0;
-}
-#endif
 
 template<typename Config, unsigned passedNumPages>
 template<typename Func>
@@ -176,3 +157,4 @@ void IsoDirectory<Config, passedNumPages>::forEachCommittedPage(const LockHolder
 
 } // namespace bmalloc
 
+#endif

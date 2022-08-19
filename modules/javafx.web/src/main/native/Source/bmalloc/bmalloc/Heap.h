@@ -23,8 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef Heap_h
-#define Heap_h
+#pragma once
 
 #include "BumpRange.h"
 #include "Chunk.h"
@@ -46,11 +45,12 @@
 #include <mutex>
 #include <vector>
 
+#if !BUSE(LIBPAS)
+
 namespace bmalloc {
 
 class BulkDecommit;
 class BumpAllocator;
-class DebugHeap;
 class HeapConstants;
 class Scavenger;
 
@@ -74,12 +74,7 @@ public:
     size_t largeSize(UniqueLockHolder&, void*);
     void shrinkLarge(UniqueLockHolder&, const Range&, size_t);
 
-#if BUSE(PARTIAL_SCAVENGE)
-    void scavengeToHighWatermark(UniqueLockHolder&, BulkDecommit&);
-    void scavenge(UniqueLockHolder&, BulkDecommit&);
-#else
     void scavenge(UniqueLockHolder&, BulkDecommit&, size_t& deferredDecommits);
-#endif
     void scavenge(UniqueLockHolder&, BulkDecommit&, size_t& freed, size_t goal);
 
     size_t freeableMemory(UniqueLockHolder&);
@@ -123,6 +118,11 @@ private:
     LargeRange tryAllocateLargeChunk(size_t alignment, size_t);
     LargeRange splitAndAllocate(UniqueLockHolder&, LargeRange&, size_t alignment, size_t);
 
+    inline void adjustFootprint(UniqueLockHolder&, ssize_t, const char* note);
+    inline void adjustFreeableMemory(UniqueLockHolder&, ssize_t, const char* note);
+    inline void adjustStat(size_t& value, ssize_t);
+    inline void logStat(size_t value, ssize_t amount, const char* label, const char* note);
+
     HeapKind m_kind;
     HeapConstants& m_constants;
 
@@ -140,16 +140,11 @@ private:
 
     Scavenger* m_scavenger { nullptr };
 
-    size_t m_gigacageSize { 0 };
     size_t m_footprint { 0 };
     size_t m_freeableMemory { 0 };
 
 #if ENABLE_PHYSICAL_PAGE_MAP
     PhysicalPageMap m_physicalPageMap;
-#endif
-
-#if BUSE(PARTIAL_SCAVENGE)
-    void* m_highWatermark { nullptr };
 #endif
 };
 
@@ -177,4 +172,4 @@ inline bool Heap::isLarge(void* object)
 
 } // namespace bmalloc
 
-#endif // Heap_h
+#endif

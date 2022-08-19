@@ -26,6 +26,7 @@
 #include "config.h"
 #include "InsertIntoTextNodeCommand.h"
 
+#include "CompositeEditCommand.h"
 #include "Document.h"
 #include "Editor.h"
 #include "EditorClient.h"
@@ -86,7 +87,7 @@ void InsertIntoTextNodeCommand::doUnapply()
 
 #ifndef NDEBUG
 
-void InsertIntoTextNodeCommand::getNodesInCommand(HashSet<Node*>& nodes)
+void InsertIntoTextNodeCommand::getNodesInCommand(HashSet<Ref<Node>>& nodes)
 {
     addNodeAndDescendants(m_node.ptr(), nodes);
 }

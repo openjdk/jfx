@@ -25,8 +25,6 @@
 
 #pragma once
 
-#if ENABLE(INDEXED_DATABASE)
-
 #include "EventTarget.h"
 #include "IDBActiveDOMObject.h"
 #include "IDBError.h"
@@ -40,6 +38,7 @@
 #include "Timer.h"
 #include <wtf/Deque.h>
 #include <wtf/HashMap.h>
+#include <wtf/Lock.h>
 
 namespace WebCore {
 
@@ -78,10 +77,12 @@ public:
     // IDBTransaction IDL
     Ref<DOMStringList> objectStoreNames() const;
     IDBTransactionMode mode() const { return m_info.mode(); }
+    IDBTransactionDurability durability() const { return m_info.durability(); }
     IDBDatabase* db();
     DOMException* error() const;
     ExceptionOr<Ref<IDBObjectStore>> objectStore(const String& name);
     ExceptionOr<void> abort();
+    ExceptionOr<void> commit();
 
     EventTargetInterface eventTargetInterface() const final { return IDBTransactionEventTargetInterfaceType; }
     ScriptExecutionContext* scriptExecutionContext() const final { return ActiveDOMObject::scriptExecutionContext(); }
@@ -111,18 +112,18 @@ public:
     std::unique_ptr<IDBIndex> createIndex(IDBObjectStore&, const IDBIndexInfo&);
     void renameIndex(IDBIndex&, const String& newName);
 
-    Ref<IDBRequest> requestPutOrAdd(JSC::JSGlobalObject&, IDBObjectStore&, RefPtr<IDBKey>&&, SerializedScriptValue&, IndexedDB::ObjectStoreOverwriteMode);
-    Ref<IDBRequest> requestGetRecord(JSC::JSGlobalObject&, IDBObjectStore&, const IDBGetRecordData&);
-    Ref<IDBRequest> requestGetAllObjectStoreRecords(JSC::JSGlobalObject&, IDBObjectStore&, const IDBKeyRangeData&, IndexedDB::GetAllType, Optional<uint32_t> count);
-    Ref<IDBRequest> requestGetAllIndexRecords(JSC::JSGlobalObject&, IDBIndex&, const IDBKeyRangeData&, IndexedDB::GetAllType, Optional<uint32_t> count);
-    Ref<IDBRequest> requestDeleteRecord(JSC::JSGlobalObject&, IDBObjectStore&, const IDBKeyRangeData&);
-    Ref<IDBRequest> requestClearObjectStore(JSC::JSGlobalObject&, IDBObjectStore&);
-    Ref<IDBRequest> requestCount(JSC::JSGlobalObject&, IDBObjectStore&, const IDBKeyRangeData&);
-    Ref<IDBRequest> requestCount(JSC::JSGlobalObject&, IDBIndex&, const IDBKeyRangeData&);
-    Ref<IDBRequest> requestGetValue(JSC::JSGlobalObject&, IDBIndex&, const IDBKeyRangeData&);
-    Ref<IDBRequest> requestGetKey(JSC::JSGlobalObject&, IDBIndex&, const IDBKeyRangeData&);
-    Ref<IDBRequest> requestOpenCursor(JSC::JSGlobalObject&, IDBObjectStore&, const IDBCursorInfo&);
-    Ref<IDBRequest> requestOpenCursor(JSC::JSGlobalObject&, IDBIndex&, const IDBCursorInfo&);
+    Ref<IDBRequest> requestPutOrAdd(IDBObjectStore&, RefPtr<IDBKey>&&, SerializedScriptValue&, IndexedDB::ObjectStoreOverwriteMode);
+    Ref<IDBRequest> requestGetRecord(IDBObjectStore&, const IDBGetRecordData&);
+    Ref<IDBRequest> requestGetAllObjectStoreRecords(IDBObjectStore&, const IDBKeyRangeData&, IndexedDB::GetAllType, std::optional<uint32_t> count);
+    Ref<IDBRequest> requestGetAllIndexRecords(IDBIndex&, const IDBKeyRangeData&, IndexedDB::GetAllType, std::optional<uint32_t> count);
+    Ref<IDBRequest> requestDeleteRecord(IDBObjectStore&, const IDBKeyRangeData&);
+    Ref<IDBRequest> requestClearObjectStore(IDBObjectStore&);
+    Ref<IDBRequest> requestCount(IDBObjectStore&, const IDBKeyRangeData&);
+    Ref<IDBRequest> requestCount(IDBIndex&, const IDBKeyRangeData&);
+    Ref<IDBRequest> requestGetValue(IDBIndex&, const IDBKeyRangeData&);
+    Ref<IDBRequest> requestGetKey(IDBIndex&, const IDBKeyRangeData&);
+    Ref<IDBRequest> requestOpenCursor(IDBObjectStore&, const IDBCursorInfo&);
+    Ref<IDBRequest> requestOpenCursor(IDBIndex&, const IDBCursorInfo&);
     void iterateCursor(IDBCursor&, const IDBIterateCursorData&);
 
     void deleteObjectStore(const String& objectStoreName);
@@ -163,9 +164,8 @@ private:
     const char* activeDOMObjectName() const final;
     bool virtualHasPendingActivity() const final;
 
-    void commit();
-
-    void internalAbort();
+    void commitInternal();
+    void abortInternal();
     void notifyDidAbort(const IDBError&);
     void finishAbortOrCommit();
     void abortInProgressOperations(const IDBError&);
@@ -180,9 +180,9 @@ private:
     void fireOnAbort();
     void enqueueEvent(Ref<Event>&&);
 
-    Ref<IDBRequest> requestIndexRecord(JSC::JSGlobalObject&, IDBIndex&, IndexedDB::IndexRecordType, const IDBKeyRangeData&);
+    Ref<IDBRequest> requestIndexRecord(IDBIndex&, IndexedDB::IndexRecordType, const IDBKeyRangeData&);
 
-    void commitOnServer(IDBClient::TransactionOperation&);
+    void commitOnServer(IDBClient::TransactionOperation&, uint64_t pendingRequestCount);
     void abortOnServerAndCancelRequests(IDBClient::TransactionOperation&);
 
     void createObjectStoreOnServer(IDBClient::TransactionOperation&, const IDBObjectStoreInfo&);
@@ -221,7 +221,7 @@ private:
     void deleteIndexOnServer(IDBClient::TransactionOperation&, const uint64_t& objectStoreIdentifier, const String& indexName);
     void didDeleteIndexOnServer(const IDBResultData&);
 
-    Ref<IDBRequest> doRequestOpenCursor(JSC::JSGlobalObject&, Ref<IDBCursor>&&);
+    Ref<IDBRequest> doRequestOpenCursor(Ref<IDBCursor>&&);
     void openCursorOnServer(IDBClient::TransactionOperation&, const IDBCursorInfo&);
     void didOpenCursorOnServer(IDBRequest&, const IDBResultData&);
 
@@ -251,12 +251,12 @@ private:
     Deque<RefPtr<IDBClient::TransactionOperation>> m_pendingTransactionOperationQueue;
     Deque<IDBClient::TransactionOperation*> m_transactionOperationsInProgressQueue;
     Deque<RefPtr<IDBClient::TransactionOperation>> m_abortQueue;
+    Event* m_abortOrCommitEvent;
     HashMap<RefPtr<IDBClient::TransactionOperation>, IDBResultData> m_transactionOperationResultMap;
-
     HashMap<IDBResourceIdentifier, RefPtr<IDBClient::TransactionOperation>> m_transactionOperationMap;
 
     mutable Lock m_referencedObjectStoreLock;
-    HashMap<String, std::unique_ptr<IDBObjectStore>> m_referencedObjectStores;
+    HashMap<String, std::unique_ptr<IDBObjectStore>> m_referencedObjectStores WTF_GUARDED_BY_LOCK(m_referencedObjectStoreLock);
     HashMap<uint64_t, std::unique_ptr<IDBObjectStore>> m_deletedObjectStores;
 
     HashSet<RefPtr<IDBRequest>> m_openRequests;
@@ -266,6 +266,8 @@ private:
     bool m_didDispatchAbortOrCommit { false };
 
     uint64_t m_lastWriteOperationID { 0 };
+    std::optional<IDBResourceIdentifier> m_lastTransactionOperationBeforeCommit;
+    std::optional<IDBError> m_commitResult;
 };
 
 class TransactionActivator {
@@ -289,5 +291,3 @@ private:
 };
 
 } // namespace WebCore
-
-#endif // ENABLE(INDEXED_DATABASE)

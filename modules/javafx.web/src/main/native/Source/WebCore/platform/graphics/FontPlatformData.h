@@ -25,6 +25,7 @@
 #pragma once
 
 #include "SharedBuffer.h"
+#include "ShouldLocalizeAxisNames.h"
 #include "TextFlags.h"
 #include <wtf/Forward.h>
 #include <wtf/RetainPtr.h>
@@ -32,6 +33,7 @@
 
 #if PLATFORM(WIN)
 #include "COMPtr.h"
+#include "FontMemoryResource.h"
 #include "SharedGDIObject.h"
 #endif
 
@@ -70,14 +72,9 @@ interface IDWriteFont;
 interface IDWriteFontFace;
 #endif
 
-#if USE(DIRECT2D)
-#include <dwrite_3.h>
-#endif
-
 namespace WebCore {
 
 class FontDescription;
-class SharedBuffer;
 
 // This class is conceptually immutable. Once created, no instances should ever change (in an observable way).
 class FontPlatformData {
@@ -112,22 +109,19 @@ public:
     FontPlatformData(WTF::HashTableDeletedValueType);
     FontPlatformData();
 
-    FontPlatformData(float size, bool syntheticBold, bool syntheticOblique, FontOrientation = FontOrientation::Horizontal, FontWidthVariant = FontWidthVariant::RegularWidth, TextRenderingMode = TextRenderingMode::AutoTextRendering, CreationData* = nullptr);
+    FontPlatformData(float size, bool syntheticBold, bool syntheticOblique, FontOrientation = FontOrientation::Horizontal, FontWidthVariant = FontWidthVariant::RegularWidth, TextRenderingMode = TextRenderingMode::AutoTextRendering, const CreationData* = nullptr);
 
 #if USE(CORE_TEXT)
-    WEBCORE_EXPORT FontPlatformData(CTFontRef, float size, bool syntheticBold = false, bool syntheticOblique = false, FontOrientation = FontOrientation::Horizontal, FontWidthVariant = FontWidthVariant::RegularWidth, TextRenderingMode = TextRenderingMode::AutoTextRendering, CreationData* = nullptr);
+    WEBCORE_EXPORT FontPlatformData(RetainPtr<CTFontRef>&&, float size, bool syntheticBold = false, bool syntheticOblique = false, FontOrientation = FontOrientation::Horizontal, FontWidthVariant = FontWidthVariant::RegularWidth, TextRenderingMode = TextRenderingMode::AutoTextRendering, const CreationData* = nullptr);
 #endif
 
 #if PLATFORM(WIN)
-    FontPlatformData(GDIObject<HFONT>, float size, bool syntheticBold, bool syntheticOblique, bool useGDI);
+    FontPlatformData(GDIObject<HFONT>, float size, bool syntheticBold, bool syntheticOblique, bool useGDI, const CreationData* = nullptr);
 #if USE(CORE_TEXT)
     FontPlatformData(GDIObject<HFONT>, CTFontRef, CGFontRef, float size, bool syntheticBold, bool syntheticOblique, bool useGDI);
 #endif
-#if USE(DIRECT2D)
-    FontPlatformData(GDIObject<HFONT>&&, COMPtr<IDWriteFont>&&, float size, bool syntheticBold, bool syntheticOblique, bool useGDI);
-#endif
 #if USE(CAIRO)
-    FontPlatformData(GDIObject<HFONT>, cairo_font_face_t*, float size, bool bold, bool italic);
+    FontPlatformData(GDIObject<HFONT>, cairo_font_face_t*, float size, bool bold, bool italic, const CreationData* = nullptr);
 #endif
 #endif
 
@@ -173,11 +167,6 @@ public:
 
     bool hasVariations() const { return m_hasVariations; }
 
-#if USE(DIRECT2D)
-    IDWriteFont* dwFont() const { return m_dwFont.get(); }
-    IDWriteFontFace* dwFontFace() const { return m_dwFontFace.get(); }
-#endif
-
     bool isFixedPitch() const;
     float size() const { return m_size; }
     bool syntheticBold() const { return m_syntheticBold; }
@@ -189,7 +178,7 @@ public:
     bool isForTextCombine() const { return widthVariant() != FontWidthVariant::RegularWidth; } // Keep in sync with callers of FontDescription::setWidthVariant().
 
     String familyName() const;
-    Vector<FontVariationAxis> variationAxes() const;
+    Vector<FontVariationAxis> variationAxes(ShouldLocalizeAxisNames) const;
 
 #if USE(CAIRO)
     cairo_scaled_font_t* scaledFont() const { return m_scaledFont.get(); }
@@ -245,9 +234,12 @@ public:
     struct CreationData {
         Ref<SharedBuffer> fontFaceData;
         String itemInCollection;
+#if PLATFORM(WIN)
+        Ref<FontMemoryResource> m_fontResource;
+#endif
     };
 
-    const Optional<CreationData>& creationData() const
+    const std::optional<CreationData>& creationData() const
     {
         return m_creationData;
     }
@@ -279,11 +271,6 @@ private:
     mutable RetainPtr<CTFontRef> m_ctFont;
 #endif
 
-#if USE(DIRECT2D)
-    COMPtr<IDWriteFont> m_dwFont;
-    COMPtr<IDWriteFontFace> m_dwFontFace;
-#endif
-
 #if USE(CAIRO)
     RefPtr<cairo_scaled_font_t> m_scaledFont;
 #endif
@@ -302,7 +289,9 @@ private:
     FontWidthVariant m_widthVariant { FontWidthVariant::RegularWidth };
     TextRenderingMode m_textRenderingMode { TextRenderingMode::AutoTextRendering };
 
-    Optional<CreationData> m_creationData;
+    // This is conceptually const, but we can't make it actually const,
+    // because FontPlatformData is used as a key in a HashMap.
+    std::optional<CreationData> m_creationData;
 
     bool m_syntheticBold { false };
     bool m_syntheticOblique { false };

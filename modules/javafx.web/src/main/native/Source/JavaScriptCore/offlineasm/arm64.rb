@@ -135,13 +135,13 @@ class RegisterID
             arm64GPRName('x2', kind)
         when 't3', 'a3', 'wa3'
             arm64GPRName('x3', kind)
-        when 't4', 'wa4'
+        when 't4', 'a4', 'wa4'
             arm64GPRName('x4', kind)
-        when 't5', 'wa5'
+        when 't5', 'a5', 'wa5'
           arm64GPRName('x5', kind)
-        when 't6', 'wa6'
+        when 't6', 'a6', 'wa6'
           arm64GPRName('x6', kind)
-        when 't7', 'wa7'
+        when 't7', 'a7', 'wa7'
           arm64GPRName('x7', kind)
         when 'ws0'
           arm64GPRName('x9', kind)
@@ -884,7 +884,7 @@ class Instruction
         when "move"
             if operands[0].immediate?
                 emitARM64MoveImmediate(operands[0].value, operands[1])
-            else
+            elsif operands[0] != operands[1]
                 emitARM64("mov", operands, :quad)
             end
         when "moved"
@@ -1313,7 +1313,10 @@ class Instruction
               offset = operands[0].arm64Operand(:word)
             end
             $asm.puts "mrs #{tmp}, tpidrro_el0"
+            $asm.puts "#if !HAVE(SIMPLIFIED_FAST_TLS_BASE)"
             $asm.puts "bic #{tmp}, #{tmp}, #7"
+            $asm.puts "#endif"
+
             $asm.puts "ldr #{operands[1].arm64Operand(:ptr)}, [#{tmp}, #{offset}]"
         when "tls_storep"
             tmp = ARM64_EXTRA_GPRS[0].arm64Operand(:ptr)
@@ -1323,7 +1326,9 @@ class Instruction
               offset = operands[1].arm64Operand(:word)
             end
             $asm.puts "mrs #{tmp}, tpidrro_el0"
+            $asm.puts "#if !HAVE(SIMPLIFIED_FAST_TLS_BASE)"
             $asm.puts "bic #{tmp}, #{tmp}, #7"
+            $asm.puts "#endif"
             $asm.puts "str #{operands[0].arm64Operand(:ptr)}, [#{tmp}, #{offset}]"
         when "loadlinkacqb"
             $asm.puts "ldaxrb #{operands[1].arm64Operand(:word)}, #{operands[0].arm64Operand(:word)}"

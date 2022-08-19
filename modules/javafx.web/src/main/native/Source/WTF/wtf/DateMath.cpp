@@ -645,7 +645,7 @@ double parseES5DateFromNullTerminatedCharacters(const char* dateString, bool& is
         return std::numeric_limits<double>::quiet_NaN();
     // Look for a time portion.
     // Note: As of ES2016, when a UTC offset is missing, date-time forms are local time while date-only forms are UTC.
-    if (*currentPosition == 'T') {
+    if (*currentPosition == 'T' || *currentPosition == 't' || *currentPosition == ' ') {
         // Parse the time HH:mm[:ss[.sss]][Z|(+|-)(00:00|0000|00)]
         currentPosition = parseES5TimePortion(currentPosition + 1, hours, minutes, seconds, milliseconds, isLocalTime, timeZoneSeconds);
         if (!currentPosition)
@@ -734,7 +734,7 @@ double parseDateFromNullTerminatedCharacters(const char* dateString, bool& isLoc
     if (day < 0)
         return std::numeric_limits<double>::quiet_NaN();
 
-    Optional<int> year;
+    std::optional<int> year;
     if (day > 31) {
         // ### where is the boundary and what happens below?
         if (*dateString != '/')
@@ -817,7 +817,7 @@ double parseDateFromNullTerminatedCharacters(const char* dateString, bool& isLoc
             if (*newPosStr != ':')
                 return std::numeric_limits<double>::quiet_NaN();
             // There was no year; the number was the hour.
-            year = WTF::nullopt;
+            year = std::nullopt;
         } else {
             // in the normal case (we parsed the year), advance to the next number
             dateString = ++newPosStr;

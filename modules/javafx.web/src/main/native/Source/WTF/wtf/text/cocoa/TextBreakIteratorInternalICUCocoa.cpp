@@ -23,6 +23,7 @@
 
 #include <array>
 #include <wtf/RetainPtr.h>
+#include <wtf/cf/TypeCastsCF.h>
 #include <wtf/text/TextBreakIterator.h>
 
 namespace WTF {
@@ -30,7 +31,7 @@ namespace WTF {
 // Buffer sized to hold ASCII locale ID strings up to 32 characters long.
 using LocaleIDBuffer = std::array<char, 33>;
 
-static Variant<TextBreakIteratorICU, TextBreakIteratorPlatform> mapModeToBackingIterator(StringView string, TextBreakIterator::Mode mode, const AtomString& locale)
+static std::variant<TextBreakIteratorICU, TextBreakIteratorPlatform> mapModeToBackingIterator(StringView string, TextBreakIterator::Mode mode, const AtomString& locale)
 {
     switch (mode) {
     case TextBreakIterator::Mode::Line:
@@ -51,11 +52,8 @@ TextBreakIterator::TextBreakIterator(StringView string, Mode mode, const AtomStr
 
 static RetainPtr<CFStringRef> textBreakLocalePreference()
 {
-    auto locale = adoptCF(CFPreferencesCopyValue(CFSTR("AppleTextBreakLocale"),
-        kCFPreferencesAnyApplication, kCFPreferencesCurrentUser, kCFPreferencesAnyHost));
-    if (!locale || CFGetTypeID(locale.get()) != CFStringGetTypeID())
-        return nullptr;
-    return static_cast<CFStringRef>(locale.get());
+    return dynamic_cf_cast<CFStringRef>(adoptCF(CFPreferencesCopyValue(CFSTR("AppleTextBreakLocale"),
+        kCFPreferencesAnyApplication, kCFPreferencesCurrentUser, kCFPreferencesAnyHost)));
 }
 
 static RetainPtr<CFStringRef> topLanguagePreference()

@@ -183,20 +183,16 @@ public class TextFieldTableCell<S,T> extends TableCell<S,T> {
 
     /** {@inheritDoc} */
     @Override public void startEdit() {
-        if (! isEditable()
-                || ! getTableView().isEditable()
-                || ! getTableColumn().isEditable()) {
+        super.startEdit();
+        if (!isEditing()) {
             return;
         }
-        super.startEdit();
 
-        if (isEditing()) {
-            if (textField == null) {
-                textField = CellUtils.createTextField(this, getConverter());
-            }
-
-            CellUtils.startEdit(this, getConverter(), null, null, textField);
+        if (textField == null) {
+            textField = CellUtils.createTextField(this, getConverter());
         }
+
+        CellUtils.startEdit(this, getConverter(), null, null, textField);
     }
 
     /** {@inheritDoc} */

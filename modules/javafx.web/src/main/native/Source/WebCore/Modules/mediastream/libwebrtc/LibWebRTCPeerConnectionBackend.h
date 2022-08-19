@@ -28,7 +28,6 @@
 
 #include "PeerConnectionBackend.h"
 #include "RealtimeMediaSource.h"
-#include <wtf/HashMap.h>
 
 namespace webrtc {
 class IceCandidateInterface;
@@ -63,22 +62,17 @@ private:
     void doCreateAnswer(RTCAnswerOptions&&) final;
     void doSetLocalDescription(const RTCSessionDescription*) final;
     void doSetRemoteDescription(const RTCSessionDescription&) final;
-    void doAddIceCandidate(RTCIceCandidate&) final;
+    void doAddIceCandidate(RTCIceCandidate&, AddIceCandidateCallback&&) final;
     void doStop() final;
     std::unique_ptr<RTCDataChannelHandler> createDataChannelHandler(const String&, const RTCDataChannelInit&) final;
     void restartIce() final;
     bool setConfiguration(MediaEndpointConfiguration&&) final;
+    void gatherDecoderImplementationName(Function<void(String&&)>&&) final;
     void getStats(Ref<DeferredPromise>&&) final;
     void getStats(RTCRtpSender&, Ref<DeferredPromise>&&) final;
     void getStats(RTCRtpReceiver&, Ref<DeferredPromise>&&) final;
 
-    RefPtr<RTCSessionDescription> localDescription() const final;
-    RefPtr<RTCSessionDescription> currentLocalDescription() const final;
-    RefPtr<RTCSessionDescription> pendingLocalDescription() const final;
-
-    RefPtr<RTCSessionDescription> remoteDescription() const final;
-    RefPtr<RTCSessionDescription> currentRemoteDescription() const final;
-    RefPtr<RTCSessionDescription> pendingRemoteDescription() const final;
+    std::optional<bool> canTrickleIceCandidates() const final;
 
     void emulatePlatformEvent(const String&) final { }
     void applyRotationForOutgoingVideoSources() final;
@@ -89,14 +83,14 @@ private:
 
     void getStatsSucceeded(const DeferredPromise&, Ref<RTCStatsReport>&&);
 
-    ExceptionOr<Ref<RTCRtpSender>> addTrack(MediaStreamTrack&, Vector<String>&&) final;
+    ExceptionOr<Ref<RTCRtpSender>> addTrack(MediaStreamTrack&, FixedVector<String>&&) final;
     void removeTrack(RTCRtpSender&) final;
 
     ExceptionOr<Ref<RTCRtpTransceiver>> addTransceiver(const String&, const RTCRtpTransceiverInit&) final;
     ExceptionOr<Ref<RTCRtpTransceiver>> addTransceiver(Ref<MediaStreamTrack>&&, const RTCRtpTransceiverInit&) final;
     void setSenderSourceFromTrack(LibWebRTCRtpSenderBackend&, MediaStreamTrack&);
 
-    RTCRtpTransceiver* existingTransceiver(WTF::Function<bool(LibWebRTCRtpTransceiverBackend&)>&&);
+    RTCRtpTransceiver* existingTransceiver(Function<bool(LibWebRTCRtpTransceiverBackend&)>&&);
     RTCRtpTransceiver& newRemoteTransceiver(std::unique_ptr<LibWebRTCRtpTransceiverBackend>&&, RealtimeMediaSource::Type);
 
     void collectTransceivers() final;
@@ -111,6 +105,8 @@ private:
 
     void suspend() final;
     void resume() final;
+    void disableICECandidateFiltering() final;
+    bool isNegotiationNeeded(uint32_t) const final;
 
     Ref<LibWebRTCMediaEndpoint> m_endpoint;
     bool m_isLocalDescriptionSet { false };

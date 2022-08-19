@@ -28,6 +28,7 @@
 #include "ElementIterator.h"
 #include "HTMLFieldSetElement.h"
 #include "HTMLNames.h"
+#include "SelectionRestorationMode.h"
 #include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
@@ -57,19 +58,19 @@ RefPtr<HTMLFormControlElement> HTMLLegendElement::associatedControl()
     return descendantsOfType<HTMLFormControlElement>(*enclosingFieldset).first();
 }
 
-void HTMLLegendElement::focus(SelectionRestorationMode restorationMode, FocusDirection direction)
+void HTMLLegendElement::focus(const FocusOptions& options)
 {
     if (document().haveStylesheetsLoaded()) {
         document().updateLayoutIgnorePendingStylesheets();
         if (isFocusable()) {
-            Element::focus(restorationMode, direction);
+            Element::focus({ options.selectionRestorationMode, options.direction });
             return;
         }
     }
 
     // To match other browsers' behavior, never restore previous selection.
     if (auto control = associatedControl())
-        control->focus(SelectionRestorationMode::SelectAll, direction);
+        control->focus({ SelectionRestorationMode::SelectAll, options.direction });
 }
 
 bool HTMLLegendElement::accessKeyAction(bool sendMouseEvents)
@@ -84,7 +85,7 @@ HTMLFormElement* HTMLLegendElement::form() const
     // According to the specification, If the legend has a fieldset element as
     // its parent, then the form attribute must return the same value as the
     // form attribute on that fieldset element. Otherwise, it must return null.
-    auto fieldset = makeRefPtr(parentNode());
+    RefPtr fieldset = parentNode();
     if (!is<HTMLFieldSetElement>(fieldset))
         return nullptr;
     return downcast<HTMLFieldSetElement>(*fieldset).form();

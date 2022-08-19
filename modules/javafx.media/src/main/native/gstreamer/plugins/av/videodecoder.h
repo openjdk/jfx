@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,6 +28,9 @@
 
 #include "decoder.h"
 
+#include <dlfcn.h>
+#include <libswscale/swscale.h>
+
 G_BEGIN_DECLS
 
 #define TYPE_VIDEODECODER \
@@ -42,6 +45,21 @@ G_BEGIN_DECLS
 (G_TYPE_CHECK_CLASS_TYPE((klass),TYPE_VIDEODECODER))
 
 #define AV_VIDEO_DECODER_PLUGIN_NAME "avvideodecoder"
+
+#if HEVC_SUPPORT
+// libswscale APIs
+typedef struct SwsContext *(*sws_getContext_ptr)(int srcW, int srcH,
+                                                 enum AVPixelFormat srcFormat,
+                                                 int dstW, int dstH,
+                                                 enum AVPixelFormat dstFormat,
+                                                 int flags, SwsFilter *srcFilter,
+                                                 SwsFilter *dstFilter,
+                                                 const double *param);
+typedef void (*sws_freeContext_ptr)(struct SwsContext *swsContext);
+typedef int (*sws_scale_ptr)(struct SwsContext *c, const uint8_t *const srcSlice[],
+                      const int srcStride[], int srcSliceY, int srcSliceH,
+                      uint8_t *const dst[], const int dstStride[]);
+#endif // HEVC_SUPPORT
 
 typedef struct _VideoDecoder      VideoDecoder;
 typedef struct _VideoDecoderClass VideoDecoderClass;
@@ -59,7 +77,20 @@ struct _VideoDecoder {
     int         v_offset;
     int         uv_blocksize;
 
-    AVPacket       packet;
+    AVPacket    packet;
+
+    gint        codec_id;
+
+#if HEVC_SUPPORT
+    struct SwsContext *sws_context;
+    AVFrame           *dest_frame;
+
+    // Load and use libswscale dynamically
+    void                *swscale_module;
+    sws_getContext_ptr  sws_getContext_func;
+    sws_freeContext_ptr sws_freeContext_func;
+    sws_scale_ptr       sws_scale_func;
+#endif // HEVC_SUPPORT
 };
 
 struct _VideoDecoderClass

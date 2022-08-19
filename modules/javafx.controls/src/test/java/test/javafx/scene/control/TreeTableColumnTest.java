@@ -1070,11 +1070,12 @@ public class TreeTableColumnTest {
 //        assertEquals(76, table.getItems().get(0).getAge());
 //    }
 
-    @Test(expected=NullPointerException.class)
+    @Test
     public void defaultOnEditCommitHandlerDealsWithNullTableView() {
         table.getColumns().add(column);
+        // FIXME: this factory will throw if treeItem has null value - as is the case for root
         column.setCellValueFactory(param -> param.getValue().getValue().firstNameProperty());
-        TreeTablePosition<Person,String> pos = new TreeTablePosition<Person, String>(table, 0, column);
+        TreeTablePosition<Person,String> pos = new TreeTablePosition<Person, String>(table, 1, column);
         EventType<TreeTableColumn.CellEditEvent<Person,String>> eventType = TreeTableColumn.editCommitEvent();
         column.getOnEditCommit().handle(new TreeTableColumn.CellEditEvent<Person, String>(
                 null, pos, (EventType) eventType, "Richard Bair"));

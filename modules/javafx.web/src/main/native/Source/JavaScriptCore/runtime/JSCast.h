@@ -79,6 +79,7 @@ struct JSTypeRange {
     macro(JSArrayBuffer, JSType::ArrayBufferType, JSType::ArrayBufferType) \
     macro(JSArrayBufferView, FirstTypedArrayType, LastTypedArrayType) \
     macro(JSPromise, JSType::JSPromiseType, JSType::JSPromiseType) \
+    macro(JSProxy, JSType::PureForwardingProxyType, JSType::PureForwardingProxyType) \
     macro(JSSet, JSType::JSSetType, JSType::JSSetType) \
     macro(JSMap, JSType::JSMapType, JSType::JSMapType) \
     macro(JSWeakSet, JSType::JSWeakSetType, JSType::JSWeakSetType) \
@@ -98,6 +99,7 @@ struct JSTypeRange {
     macro(JSSymbolTableObject, JSType::GlobalObjectType, JSType::ModuleEnvironmentType) \
     macro(JSScope, JSType::GlobalObjectType, JSType::WithScopeType) \
     macro(StringObject, JSType::StringObjectType, JSType::DerivedStringObjectType) \
+    macro(ShadowRealmObject, JSType::ShadowRealmType, JSType::ShadowRealmType) \
 
 
 // Forward declare the classes because they may not already exist.
@@ -148,7 +150,7 @@ inline bool inheritsJSTypeImpl(VM& vm, From* from, JSTypeRange range)
 // way to say that we are overloading just the first type in a template list...
 template<typename Target>
 struct InheritsTraits {
-    static constexpr Optional<JSTypeRange> typeRange { WTF::nullopt };
+    static constexpr std::optional<JSTypeRange> typeRange { std::nullopt };
     template<typename From>
     static inline bool inherits(VM& vm, From* from) { return FinalTypeDispatcher<std::is_final<Target>::value>::template inheritsGeneric<Target>(vm, from); }
 };
@@ -156,7 +158,7 @@ struct InheritsTraits {
 #define DEFINE_TRAITS_FOR_JS_TYPE_OVERLOAD(className, firstJSType, lastJSType) \
     template<> \
     struct InheritsTraits<className> { \
-        static constexpr Optional<JSTypeRange> typeRange { { static_cast<JSType>(firstJSType), static_cast<JSType>(lastJSType) } }; \
+        static constexpr std::optional<JSTypeRange> typeRange { { static_cast<JSType>(firstJSType), static_cast<JSType>(lastJSType) } }; \
         template<typename From> \
         static inline bool inherits(VM& vm, From* from) { return inheritsJSTypeImpl<className, From>(vm, from, *typeRange); } \
     }; \

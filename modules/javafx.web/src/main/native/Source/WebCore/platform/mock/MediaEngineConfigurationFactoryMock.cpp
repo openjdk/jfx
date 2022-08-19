@@ -66,7 +66,7 @@ static bool canDecodeMedia(const MediaDecodingConfiguration& configuration)
             return false;
 
         // Can only support spatial rendering of tracks with multichannel audio:
-        if (audioConfig->spatialRendering.valueOr(false) && audioConfig->channels.toDouble() <= 2)
+        if (audioConfig->spatialRendering.value_or(false) && audioConfig->channels.toDouble() <= 2)
             return false;
     }
 
@@ -101,8 +101,8 @@ static bool canPowerEfficientlyDecodeMedia(const MediaDecodingConfiguration& con
 
 static bool canEncodeMedia(const MediaEncodingConfiguration& configuration)
 {
-    // The mock implementation supports only local file playback.
-    if (configuration.type == MediaEncodingType::Record)
+    ASSERT(configuration.type == MediaEncodingType::Record);
+    if (configuration.type != MediaEncodingType::Record)
         return false;
 
     // Maxing out video encoding support at 720P.

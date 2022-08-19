@@ -88,7 +88,7 @@ g_environ_find (gchar       **envp,
  * Returns the value of the environment variable @variable in the
  * provided list @envp.
  *
- * Returns: (type filename): the value of the environment variable, or %NULL if
+ * Returns: (type filename) (nullable): the value of the environment variable, or %NULL if
  *     the environment variable is not set in @envp. The returned
  *     string is owned by @envp, and will be freed if @variable is
  *     set or unset again.
@@ -242,7 +242,7 @@ g_environ_unsetenv (gchar       **envp,
  * On Windows, in case the environment variable's value contains
  * references to other environment variables, they are expanded.
  *
- * Returns: (type filename): the value of the environment variable, or %NULL if
+ * Returns: (type filename) (nullable): the value of the environment variable, or %NULL if
  *     the environment variable is not found. The returned string
  *     may be overwritten by the next call to g_getenv(), g_setenv()
  *     or g_unsetenv().
@@ -454,7 +454,7 @@ g_getenv (const gchar *variable)
   GQuark quark;
   gchar *value;
   wchar_t dummy[2], *wname, *wvalue;
-  int len;
+  DWORD len;
 
   g_return_val_if_fail (variable != NULL, NULL);
   g_return_val_if_fail (g_utf8_validate (variable, -1, NULL), NULL);

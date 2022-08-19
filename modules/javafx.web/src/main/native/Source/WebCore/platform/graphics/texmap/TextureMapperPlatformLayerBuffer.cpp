@@ -34,8 +34,8 @@
 namespace WebCore {
 
 TextureMapperPlatformLayerBuffer::TextureMapperPlatformLayerBuffer(RefPtr<BitmapTexture>&& texture, TextureMapperGL::Flags flags)
-    : m_texture(WTFMove(texture))
-    , m_variant(RGBTexture { 0 })
+    : m_variant(RGBTexture { 0 })
+    , m_texture(WTFMove(texture))
     , m_extraFlags(flags)
     , m_hasManagedTexture(true)
 {
@@ -83,12 +83,12 @@ std::unique_ptr<TextureMapperPlatformLayerBuffer> TextureMapperPlatformLayerBuff
             static_cast<BitmapTextureGL&>(clonedTexture.get()).copyFromExternalTexture(texture.id);
             return makeUnique<TextureMapperPlatformLayerBuffer>(WTFMove(clonedTexture), m_extraFlags);
         },
-        [](const YUVTexture&)
+        [](const YUVTexture&) -> std::unique_ptr<TextureMapperPlatformLayerBuffer>
         {
             notImplemented();
             return nullptr;
         },
-        [](const ExternalOESTexture&)
+        [](const ExternalOESTexture&) -> std::unique_ptr<TextureMapperPlatformLayerBuffer>
         {
             notImplemented();
             return nullptr;
@@ -143,7 +143,12 @@ void TextureMapperPlatformLayerBuffer::paintToTextureMapper(TextureMapper& textu
             case 3:
                 ASSERT(!texture.yuvPlaneOffset[0] && !texture.yuvPlaneOffset[1] && !texture.yuvPlaneOffset[2]);
                 texmapGL.drawTexturePlanarYUV(std::array<GLuint, 3> { texture.planes[texture.yuvPlane[0]], texture.planes[texture.yuvPlane[1]], texture.planes[texture.yuvPlane[2]] },
-                    texture.yuvToRgbMatrix, m_extraFlags, m_size, targetRect, modelViewMatrix, opacity);
+                    texture.yuvToRgbMatrix, m_extraFlags, m_size, targetRect, modelViewMatrix, opacity, std::nullopt);
+                break;
+            case 4:
+                ASSERT(!texture.yuvPlaneOffset[0] && !texture.yuvPlaneOffset[1] && !texture.yuvPlaneOffset[2]);
+                texmapGL.drawTexturePlanarYUV(std::array<GLuint, 3> { texture.planes[texture.yuvPlane[0]], texture.planes[texture.yuvPlane[1]], texture.planes[texture.yuvPlane[2]] },
+                    texture.yuvToRgbMatrix, m_extraFlags, m_size, targetRect, modelViewMatrix, opacity, texture.planes[texture.yuvPlane[3]]);
                 break;
             }
         },

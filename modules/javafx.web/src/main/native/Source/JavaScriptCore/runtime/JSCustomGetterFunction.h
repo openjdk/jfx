@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,8 +34,13 @@ public:
     typedef JSFunction Base;
     static constexpr unsigned StructureFlags = Base::StructureFlags;
 
+    using CustomFunctionPointer = GetValueFunc;
+
+    static constexpr bool needsDestruction = true;
+    static void destroy(JSCell*);
+
     template<typename CellType, SubspaceAccess mode>
-    static IsoSubspace* subspaceFor(VM& vm)
+    static GCClient::IsoSubspace* subspaceFor(VM& vm)
     {
         return vm.customGetterFunctionSpace<mode>();
     }
@@ -46,20 +51,21 @@ public:
         return Structure::create(vm, globalObject, prototype, TypeInfo(JSFunctionType, StructureFlags), info());
     }
 
-    JS_EXPORT_PRIVATE static JSCustomGetterFunction* create(VM&, JSGlobalObject*, const PropertyName&, GetValueFunc, Optional<DOMAttributeAnnotation> = WTF::nullopt);
+    JS_EXPORT_PRIVATE static JSCustomGetterFunction* create(VM&, JSGlobalObject*, const PropertyName&, CustomFunctionPointer, std::optional<DOMAttributeAnnotation> = std::nullopt);
 
     DECLARE_EXPORT_INFO;
 
-    const PropertyName& propertyName() const { return m_propertyName; }
-    GetValueFunc getter() const { return m_getter; };
-    Optional<DOMAttributeAnnotation> domAttribute() const { return m_domAttribute; };
+    const Identifier& propertyName() const { return m_propertyName; }
+    CustomFunctionPointer getter() const { return m_getter; };
+    CustomFunctionPointer customFunctionPointer() const { return m_getter; };
+    std::optional<DOMAttributeAnnotation> domAttribute() const { return m_domAttribute; };
 
 private:
-    JSCustomGetterFunction(VM&, NativeExecutable*, JSGlobalObject*, Structure*, const PropertyName&, GetValueFunc, Optional<DOMAttributeAnnotation>);
+    JSCustomGetterFunction(VM&, NativeExecutable*, JSGlobalObject*, Structure*, const PropertyName&, CustomFunctionPointer, std::optional<DOMAttributeAnnotation>);
 
-    PropertyName m_propertyName;
-    GetValueFunc m_getter;
-    Optional<DOMAttributeAnnotation> m_domAttribute;
+    Identifier m_propertyName;
+    CustomFunctionPointer m_getter;
+    std::optional<DOMAttributeAnnotation> m_domAttribute;
 };
 
 } // namespace JSC

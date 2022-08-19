@@ -58,7 +58,7 @@ private:
     {
     }
 
-    void appendBytes(DocumentWriter&, const char*, size_t) final;
+    void appendBytes(DocumentWriter&, const uint8_t*, size_t) final;
     void createDocumentStructure();
 
     HTMLEmbedElement* m_embedElement { nullptr };
@@ -101,7 +101,7 @@ void PluginDocumentParser::createDocumentStructure()
     embedElement->setAttributeWithoutSynchronization(srcAttr, document.url().string());
 
     ASSERT(document.loader());
-    if (auto loader = makeRefPtr(document.loader()))
+    if (RefPtr loader = document.loader())
         m_embedElement->setAttributeWithoutSynchronization(typeAttr, loader->writer().mimeType());
 
     document.setPluginElement(*m_embedElement);
@@ -110,14 +110,14 @@ void PluginDocumentParser::createDocumentStructure()
     document.setHasVisuallyNonEmptyCustomContent();
 }
 
-void PluginDocumentParser::appendBytes(DocumentWriter&, const char*, size_t)
+void PluginDocumentParser::appendBytes(DocumentWriter&, const uint8_t*, size_t)
 {
     if (m_embedElement)
         return;
 
     createDocumentStructure();
 
-    auto frame = makeRefPtr(document()->frame());
+    RefPtr frame = document()->frame();
     if (!frame)
         return;
 
@@ -131,7 +131,7 @@ void PluginDocumentParser::appendBytes(DocumentWriter&, const char*, size_t)
     frame->view()->flushAnyPendingPostLayoutTasks();
 
     if (auto renderer = m_embedElement->renderWidget()) {
-        if (auto widget = makeRefPtr(renderer->widget())) {
+        if (RefPtr widget = renderer->widget()) {
             frame->loader().client().redirectDataToPlugin(*widget);
 
             // In a plugin document, the main resource is the plugin. If we have a null widget, that means
@@ -144,7 +144,7 @@ void PluginDocumentParser::appendBytes(DocumentWriter&, const char*, size_t)
 }
 
 PluginDocument::PluginDocument(Frame& frame, const URL& url)
-    : HTMLDocument(&frame, frame.settings(), url, PluginDocumentClass)
+    : HTMLDocument(&frame, frame.settings(), url, { }, { DocumentClass::Plugin })
 {
     setCompatibilityMode(DocumentCompatibilityMode::QuirksMode);
     lockCompatibilityMode();

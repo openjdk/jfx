@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,7 +35,7 @@
 #include "WebAssemblyModuleRecord.h"
 
 namespace JSC {
-static JSC_DECLARE_HOST_FUNCTION(webAssemblyInstanceProtoFuncExports);
+static JSC_DECLARE_CUSTOM_GETTER(webAssemblyInstanceProtoGetterExports);
 }
 
 #include "WebAssemblyInstancePrototype.lut.h"
@@ -46,7 +46,7 @@ const ClassInfo WebAssemblyInstancePrototype::s_info = { "WebAssembly.Instance",
 
 /* Source for WebAssemblyInstancePrototype.lut.h
  @begin prototypeTableWebAssemblyInstance
- exports webAssemblyInstanceProtoFuncExports Accessor 0
+  exports webAssemblyInstanceProtoGetterExports ReadOnly|CustomAccessor
  @end
  */
 
@@ -62,19 +62,19 @@ static ALWAYS_INLINE JSWebAssemblyInstance* getInstance(JSGlobalObject* globalOb
     return result;
 }
 
-JSC_DEFINE_HOST_FUNCTION(webAssemblyInstanceProtoFuncExports, (JSGlobalObject* globalObject, CallFrame* callFrame))
+JSC_DEFINE_CUSTOM_GETTER(webAssemblyInstanceProtoGetterExports, (JSGlobalObject* globalObject, EncodedJSValue thisValue, PropertyName))
 {
     VM& vm = globalObject->vm();
     auto throwScope = DECLARE_THROW_SCOPE(vm);
 
-    JSWebAssemblyInstance* instance = getInstance(globalObject, vm, callFrame->thisValue());
+    JSWebAssemblyInstance* instance = getInstance(globalObject, vm, JSValue::decode(thisValue));
     RETURN_IF_EXCEPTION(throwScope, { });
     RELEASE_AND_RETURN(throwScope, JSValue::encode(instance->moduleRecord()->exportsObject()));
 }
 
 WebAssemblyInstancePrototype* WebAssemblyInstancePrototype::create(VM& vm, JSGlobalObject*, Structure* structure)
 {
-    auto* object = new (NotNull, allocateCell<WebAssemblyInstancePrototype>(vm.heap)) WebAssemblyInstancePrototype(vm, structure);
+    auto* object = new (NotNull, allocateCell<WebAssemblyInstancePrototype>(vm)) WebAssemblyInstancePrototype(vm, structure);
     object->finishCreation(vm);
     return object;
 }

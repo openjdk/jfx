@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -36,6 +36,7 @@ import javafx.scene.Scene;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.function.IntPredicate;
 import java.util.stream.Collectors;
 
 class ControlUtils {
@@ -86,9 +87,15 @@ class ControlUtils {
             private int from = -1;
 
             {
-                int midIndex = -Collections.binarySearch(removed, retainedRow, rowComparator) - 1;
-                firstRemovedRange = removed.subList(0, midIndex);
-                secondRemovedRange = removed.subList(midIndex, removedSize);
+                int insertionPoint = Collections.binarySearch(removed, retainedRow, rowComparator);
+                if (insertionPoint >= 0) {
+                    firstRemovedRange = removed;
+                    secondRemovedRange = Collections.emptyList();
+                } else {
+                    int midIndex = -insertionPoint - 1;
+                    firstRemovedRange = removed.subList(0, midIndex);
+                    secondRemovedRange = removed.subList(midIndex, removedSize);
+                }
             }
 
             @Override public int getFrom() {
@@ -150,7 +157,7 @@ class ControlUtils {
         };
     }
 
-    public static <S> void updateSelectedIndices(MultipleSelectionModelBase<S> sm, ListChangeListener.Change<? extends TablePositionBase<?>> c) {
+    public static <S> void updateSelectedIndices(MultipleSelectionModelBase<S> sm, boolean isCellSelectionEnabled, ListChangeListener.Change<? extends TablePositionBase<?>> c, IntPredicate removeRowFilter) {
         sm.selectedIndices._beginChange();
 
         while (c.next()) {
@@ -160,26 +167,35 @@ class ControlUtils {
 
             sm.startAtomic();
             final List<Integer> removed = c.getRemoved().stream()
-                    .map(TablePositionBase::getRow)
+                    .mapToInt(TablePositionBase::getRow)
                     .distinct()
+                    .filter(removeRowFilter)
+                    .boxed()
                     .peek(sm.selectedIndices::clear)
                     .collect(Collectors.toList());
 
             final int addedSize = (int)c.getAddedSubList().stream()
-                    .map(TablePositionBase::getRow)
+                    .mapToInt(TablePositionBase::getRow)
                     .distinct()
                     .peek(sm.selectedIndices::set)
                     .count();
             sm.stopAtomic();
 
-            final int to = c.getFrom() + addedSize;
+            int from = c.getFrom();
+            if (isCellSelectionEnabled && 0 < from && from < c.getList().size()) {
+                // convert origin of change of list of tablePositions
+                // into origin of change of list of rows
+                int tpRow = c.getList().get(from).getRow();
+                from = sm.selectedIndices.indexOf(tpRow);
+            }
+            final int to = from + addedSize;
 
             if (c.wasReplaced()) {
-                sm.selectedIndices._nextReplace(c.getFrom(), to, removed);
+                sm.selectedIndices._nextReplace(from, to, removed);
             } else if (c.wasRemoved()) {
-                sm.selectedIndices._nextRemove(c.getFrom(), removed);
+                sm.selectedIndices._nextRemove(from, removed);
             } else if (c.wasAdded()) {
-                sm.selectedIndices._nextAdd(c.getFrom(), to);
+                sm.selectedIndices._nextAdd(from, to);
             }
         }
         c.reset();
@@ -200,5 +216,34 @@ class ControlUtils {
         }
 
         sm.selectedIndices._endChange();
+    }
+
+    public static <S> int getIndexOfChildWithDescendant(TreeItem<S> parent, TreeItem<S> item) {
+        if (item == null || parent == null) {
+            return -1;
+        }
+        TreeItem<S> child = item, ancestor = item.getParent();
+        while (ancestor != null) {
+            if (ancestor == parent) {
+                return parent.getChildren().indexOf(child);
+            }
+            child = ancestor;
+            ancestor = child.getParent();
+        }
+        return -1;
+    }
+
+    public static <S> boolean isTreeItemIncludingAncestorsExpanded(TreeItem<S> item) {
+        if (item == null || !item.isExpanded()) {
+            return false;
+        }
+        TreeItem<S> ancestor = item.getParent();
+        while (ancestor != null) {
+            if (!ancestor.isExpanded()) {
+                return false;
+            }
+            ancestor = ancestor.getParent();
+        }
+        return true;
     }
 }

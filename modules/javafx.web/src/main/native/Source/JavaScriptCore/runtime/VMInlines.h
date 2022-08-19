@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,11 +26,27 @@
 #pragma once
 
 #include "EntryFrame.h"
+#include "FuzzerAgent.h"
 #include "ProfilerDatabase.h"
 #include "VM.h"
 #include "Watchdog.h"
 
 namespace JSC {
+
+inline ActiveScratchBufferScope::ActiveScratchBufferScope(ScratchBuffer* buffer, size_t activeScratchBufferSizeInJSValues)
+    : m_scratchBuffer(buffer)
+{
+    // Tell GC mark phase how much of the scratch buffer is active during the call operation this scope is used in.
+    if (m_scratchBuffer)
+        m_scratchBuffer->setActiveLength(activeScratchBufferSizeInJSValues * sizeof(EncodedJSValue));
+}
+
+inline ActiveScratchBufferScope::~ActiveScratchBufferScope()
+{
+    // Tell the GC that we're not using the scratch buffer anymore.
+    if (m_scratchBuffer)
+        m_scratchBuffer->setActiveLength(0);
+}
 
 bool VM::ensureStackCapacityFor(Register* newTopOfStack)
 {
@@ -73,6 +89,12 @@ inline CallFrame* VM::topJSCallFrame() const
         ASSERT(!frame || !frame->isStackOverflowFrame());
     } while (frame && frame->isWasmFrame());
     return frame;
+}
+
+inline void VM::setFuzzerAgent(std::unique_ptr<FuzzerAgent>&& fuzzerAgent)
+{
+    RELEASE_ASSERT_WITH_MESSAGE(!m_fuzzerAgent, "Only one FuzzerAgent can be specified at a time.");
+    m_fuzzerAgent = WTFMove(fuzzerAgent);
 }
 
 } // namespace JSC

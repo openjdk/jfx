@@ -31,6 +31,7 @@
 #include "Document.h"
 #include "FetchIdentifier.h"
 #include "Page.h"
+#include "PushSubscriptionData.h"
 #include "ServiceWorkerDebuggable.h"
 #include "ServiceWorkerIdentifier.h"
 #include "ServiceWorkerInspectorProxy.h"
@@ -39,6 +40,7 @@
 #include "WorkerDebuggerProxy.h"
 #include "WorkerLoaderProxy.h"
 #include <wtf/HashMap.h>
+#include <wtf/URLHash.h>
 
 namespace WebCore {
 
@@ -46,8 +48,10 @@ class CacheStorageProvider;
 class FetchLoader;
 class FetchLoaderClient;
 class PageConfiguration;
+class NotificationClient;
 class ServiceWorkerInspectorProxy;
 struct ServiceWorkerContextData;
+enum class WorkerThreadMode : bool;
 
 class ServiceWorkerThreadProxy final : public ThreadSafeRefCounted<ServiceWorkerThreadProxy>, public WorkerLoaderProxy, public WorkerDebuggerProxy {
 public:
@@ -70,17 +74,25 @@ public:
 
     WEBCORE_EXPORT void notifyNetworkStateChange(bool isOnline);
 
-    WEBCORE_EXPORT void startFetch(SWServerConnectionIdentifier, FetchIdentifier, Ref<ServiceWorkerFetch::Client>&&, Optional<ServiceWorkerClientIdentifier>&&, ResourceRequest&&, String&& referrer, FetchOptions&&);
+    WEBCORE_EXPORT void startFetch(SWServerConnectionIdentifier, FetchIdentifier, Ref<ServiceWorkerFetch::Client>&&, ResourceRequest&&, String&& referrer, FetchOptions&&, bool isServiceWorkerNavigationPreloadEnabled, String&& clientIdentifier, String&& resultingClientIdentifier);
     WEBCORE_EXPORT void cancelFetch(SWServerConnectionIdentifier, FetchIdentifier);
+    WEBCORE_EXPORT void convertFetchToDownload(SWServerConnectionIdentifier, FetchIdentifier);
     WEBCORE_EXPORT void continueDidReceiveFetchResponse(SWServerConnectionIdentifier, FetchIdentifier);
     WEBCORE_EXPORT void removeFetch(SWServerConnectionIdentifier, FetchIdentifier);
 
     void postMessageToServiceWorker(MessageWithMessagePorts&&, ServiceWorkerOrClientData&&);
     void fireInstallEvent();
     void fireActivateEvent();
+    void firePushEvent(std::optional<Vector<uint8_t>>&&, CompletionHandler<void(bool)>&&);
+    void firePushSubscriptionChangeEvent(std::optional<PushSubscriptionData>&& newSubscriptionData, std::optional<PushSubscriptionData>&& oldSubscriptionData);
+
+    void didSaveScriptsToDisk(ScriptBuffer&&, HashMap<URL, ScriptBuffer>&& importedScripts);
+
+    WEBCORE_EXPORT void setLastNavigationWasAppInitiated(bool);
+    WEBCORE_EXPORT bool lastNavigationWasAppInitiated();
 
 private:
-    WEBCORE_EXPORT ServiceWorkerThreadProxy(PageConfiguration&&, const ServiceWorkerContextData&, String&& userAgent, CacheStorageProvider&, StorageBlockingPolicy);
+    WEBCORE_EXPORT ServiceWorkerThreadProxy(UniqueRef<Page>&&, ServiceWorkerContextData&&, ServiceWorkerData&&, String&& userAgent, WorkerThreadMode, CacheStorageProvider&, std::unique_ptr<NotificationClient>&&);
 
     WEBCORE_EXPORT static void networkStateChanged(bool isOnLine);
 
@@ -88,6 +100,7 @@ private:
     bool postTaskForModeToWorkerOrWorkletGlobalScope(ScriptExecutionContext::Task&&, const String& mode) final;
     void postTaskToLoader(ScriptExecutionContext::Task&&) final;
     RefPtr<CacheStorageConnection> createCacheStorageConnection() final;
+    RefPtr<RTCDataChannelRemoteHandlerConnection> createRTCDataChannelRemoteHandlerConnection() final;
 
     // WorkerDebuggerProxy
     void postMessageToDebugger(const String&) final;
@@ -95,16 +108,18 @@ private:
 
     UniqueRef<Page> m_page;
     Ref<Document> m_document;
+#if ENABLE(REMOTE_INSPECTOR)
+    std::unique_ptr<ServiceWorkerDebuggable> m_remoteDebuggable;
+#endif
     Ref<ServiceWorkerThread> m_serviceWorkerThread;
     CacheStorageProvider& m_cacheStorageProvider;
     RefPtr<CacheStorageConnection> m_cacheStorageConnection;
     bool m_isTerminatingOrTerminated { false };
 
     ServiceWorkerInspectorProxy m_inspectorProxy;
-#if ENABLE(REMOTE_INSPECTOR)
-    std::unique_ptr<ServiceWorkerDebuggable> m_remoteDebuggable;
-#endif
     HashMap<std::pair<SWServerConnectionIdentifier, FetchIdentifier>, Ref<ServiceWorkerFetch::Client>> m_ongoingFetchTasks;
+    uint64_t m_pushTasksCounter { 0 };
+    HashMap<uint64_t, CompletionHandler<void(bool)>> m_ongoingPushTasks;
 };
 
 } // namespace WebKit

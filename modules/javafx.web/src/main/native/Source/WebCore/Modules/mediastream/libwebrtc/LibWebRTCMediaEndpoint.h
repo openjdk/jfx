@@ -85,24 +85,18 @@ public:
     void doSetRemoteDescription(const RTCSessionDescription&);
     void doCreateOffer(const RTCOfferOptions&);
     void doCreateAnswer();
+    void gatherDecoderImplementationName(Function<void(String&&)>&&);
     void getStats(Ref<DeferredPromise>&&);
     void getStats(webrtc::RtpReceiverInterface&, Ref<DeferredPromise>&&);
     void getStats(webrtc::RtpSenderInterface&, Ref<DeferredPromise>&&);
     std::unique_ptr<RTCDataChannelHandler> createDataChannel(const String&, const RTCDataChannelInit&);
-    bool addIceCandidate(webrtc::IceCandidateInterface& candidate) { return m_backend->AddIceCandidate(&candidate); }
+    void addIceCandidate(std::unique_ptr<webrtc::IceCandidateInterface>&&, PeerConnectionBackend::AddIceCandidateCallback&&);
 
     void close();
     void stop();
     bool isStopped() const { return !m_backend; }
 
-    RefPtr<RTCSessionDescription> localDescription() const;
-    RefPtr<RTCSessionDescription> remoteDescription() const;
-    RefPtr<RTCSessionDescription> currentLocalDescription() const;
-    RefPtr<RTCSessionDescription> currentRemoteDescription() const;
-    RefPtr<RTCSessionDescription> pendingLocalDescription() const;
-    RefPtr<RTCSessionDescription> pendingRemoteDescription() const;
-
-    bool addTrack(LibWebRTCRtpSenderBackend&, MediaStreamTrack&, const Vector<String>&);
+    bool addTrack(LibWebRTCRtpSenderBackend&, MediaStreamTrack&, const FixedVector<String>&);
     void removeTrack(LibWebRTCRtpSenderBackend&);
 
     struct Backends {
@@ -117,8 +111,13 @@ public:
     void setSenderSourceFromTrack(LibWebRTCRtpSenderBackend&, MediaStreamTrack&);
     void collectTransceivers();
 
+    std::optional<bool> canTrickleIceCandidates() const;
+
     void suspend();
     void resume();
+    LibWebRTCProvider::SuspendableSocketFactory* rtcSocketFactory() { return m_rtcSocketFactory.get(); }
+
+    bool isNegotiationNeeded(uint32_t) const;
 
 private:
     LibWebRTCMediaEndpoint(LibWebRTCPeerConnectionBackend&, LibWebRTCProvider&);
@@ -129,8 +128,8 @@ private:
     void OnTrack(rtc::scoped_refptr<webrtc::RtpTransceiverInterface>) final;
     void OnRemoveTrack(rtc::scoped_refptr<webrtc::RtpReceiverInterface>) final;
 
-    void OnRenegotiationNeeded() final;
-    void OnIceConnectionChange(webrtc::PeerConnectionInterface::IceConnectionState) final;
+    void OnNegotiationNeededEvent(uint32_t) final;
+    void OnStandardizedIceConnectionChange(webrtc::PeerConnectionInterface::IceConnectionState) final;
     void OnIceGatheringChange(webrtc::PeerConnectionInterface::IceGatheringState) final;
     void OnIceCandidate(const webrtc::IceCandidateInterface*) final;
     void OnIceCandidatesRemoved(const std::vector<cricket::Candidate>&) final;
@@ -147,7 +146,7 @@ private:
     void addPendingTrackEvent(Ref<RTCRtpReceiver>&&, MediaStreamTrack&, const std::vector<rtc::scoped_refptr<webrtc::MediaStreamInterface>>&, RefPtr<RTCRtpTransceiver>&&);
 
     template<typename T>
-    ExceptionOr<Backends> createTransceiverBackends(T&&, const RTCRtpTransceiverInit&, LibWebRTCRtpSenderBackend::Source&&);
+    ExceptionOr<Backends> createTransceiverBackends(T&&, webrtc::RtpTransceiverInit&&, LibWebRTCRtpSenderBackend::Source&&);
 
     void OnStatsDelivered(const rtc::scoped_refptr<const webrtc::RTCStatsReport>&) final;
     void gatherStatsForLogging();
@@ -180,7 +179,7 @@ private:
 #endif
 
     LibWebRTCPeerConnectionBackend& m_peerConnectionBackend;
-    webrtc::PeerConnectionFactoryInterface& m_peerConnectionFactory;
+    rtc::scoped_refptr<webrtc::PeerConnectionFactoryInterface> m_peerConnectionFactory;
     rtc::scoped_refptr<webrtc::PeerConnectionInterface> m_backend;
 
     friend CreateSessionDescriptionObserver<LibWebRTCMediaEndpoint>;

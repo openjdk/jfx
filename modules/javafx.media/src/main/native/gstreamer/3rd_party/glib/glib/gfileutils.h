@@ -75,21 +75,21 @@ typedef enum
 /**
  * GFileSetContentsFlags:
  * @G_FILE_SET_CONTENTS_NONE: No guarantees about file consistency or durability.
- *    The most dangerous setting, which is slightly faster than other settings.
+ *   The most dangerous setting, which is slightly faster than other settings.
  * @G_FILE_SET_CONTENTS_CONSISTENT: Guarantee file consistency: after a crash,
- *    either the old version of the file or the new version of the file will be
- *    available, but not a mixture. On Unix systems this equates to an `fsync()`
- *    on the file and use of an atomic `rename()` of the new version of the file
- *    over the old.
+ *   either the old version of the file or the new version of the file will be
+ *   available, but not a mixture. On Unix systems this equates to an `fsync()`
+ *   on the file and use of an atomic `rename()` of the new version of the file
+ *   over the old.
  * @G_FILE_SET_CONTENTS_DURABLE: Guarantee file durability: after a crash, the
- *    new version of the file will be available. On Unix systems this equates to
- *    an `fsync()` on the file (if %G_FILE_SET_CONTENTS_CONSISTENT is unset), or
- *    the effects of %G_FILE_SET_CONTENTS_CONSISTENT plus an `fsync()` on the
- *    directory containing the file after calling `rename()`.
+ *   new version of the file will be available. On Unix systems this equates to
+ *   an `fsync()` on the file (if %G_FILE_SET_CONTENTS_CONSISTENT is unset), or
+ *   the effects of %G_FILE_SET_CONTENTS_CONSISTENT plus an `fsync()` on the
+ *   directory containing the file after calling `rename()`.
  * @G_FILE_SET_CONTENTS_ONLY_EXISTING: Only apply consistency and durability
- *    guarantees if the file already exists. This may speed up file operations
- *    if the file doesn’t currently exist, but may result in a corrupted version
- *    of the new file if the system crashes while writing it.
+ *   guarantees if the file already exists. This may speed up file operations
+ *   if the file doesn’t currently exist, but may result in a corrupted version
+ *   of the new file if the system crashes while writing it.
  *
  * Flags to pass to g_file_set_contents_full() to affect its safety and
  * performance.

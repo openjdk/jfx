@@ -46,11 +46,11 @@ class PerformanceUserTiming {
 public:
     explicit PerformanceUserTiming(Performance&);
 
-    ExceptionOr<Ref<PerformanceMark>> mark(JSC::JSGlobalObject&, const String& markName, Optional<PerformanceMarkOptions>&&);
+    ExceptionOr<Ref<PerformanceMark>> mark(JSC::JSGlobalObject&, const String& markName, std::optional<PerformanceMarkOptions>&&);
     void clearMarks(const String& markName);
 
-    using StartOrMeasureOptions = Variant<String, PerformanceMeasureOptions>;
-    ExceptionOr<Ref<PerformanceMeasure>> measure(JSC::JSGlobalObject&, const String& measureName, Optional<StartOrMeasureOptions>&&, const String& endMark);
+    using StartOrMeasureOptions = std::variant<String, PerformanceMeasureOptions>;
+    ExceptionOr<Ref<PerformanceMeasure>> measure(JSC::JSGlobalObject&, const String& measureName, std::optional<StartOrMeasureOptions>&&, const String& endMark);
     void clearMeasures(const String& measureName);
 
     Vector<RefPtr<PerformanceEntry>> getMarks() const;
@@ -62,7 +62,7 @@ public:
     static bool isRestrictedMarkName(const String& markName);
 
 private:
-    ExceptionOr<double> convertMarkToTimestamp(const Variant<String, double>&) const;
+    ExceptionOr<double> convertMarkToTimestamp(const std::variant<String, double>&) const;
     ExceptionOr<double> convertMarkToTimestamp(const String& markName) const;
     ExceptionOr<double> convertMarkToTimestamp(double) const;
 

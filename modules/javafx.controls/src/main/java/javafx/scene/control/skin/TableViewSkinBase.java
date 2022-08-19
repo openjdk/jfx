@@ -249,7 +249,7 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
      **************************************************************************/
 
     /**
-     *
+     * Constructs a {@code TableViewSkinBase} for the given control.
      * @param control the control
      */
     public TableViewSkinBase(final C control) {

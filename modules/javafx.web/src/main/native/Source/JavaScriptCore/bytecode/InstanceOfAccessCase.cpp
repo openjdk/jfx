@@ -32,22 +32,22 @@
 
 namespace JSC {
 
-std::unique_ptr<AccessCase> InstanceOfAccessCase::create(
+Ref<AccessCase> InstanceOfAccessCase::create(
     VM& vm, JSCell* owner, AccessType accessType, Structure* structure,
     const ObjectPropertyConditionSet& conditionSet, JSObject* prototype)
 {
-    return std::unique_ptr<AccessCase>(new InstanceOfAccessCase(vm, owner, accessType, structure, conditionSet, prototype));
+    return adoptRef(*new InstanceOfAccessCase(vm, owner, accessType, structure, conditionSet, prototype));
 }
 
-void InstanceOfAccessCase::dumpImpl(PrintStream& out, CommaPrinter& comma) const
+void InstanceOfAccessCase::dumpImpl(PrintStream& out, CommaPrinter& comma, Indenter& indent) const
 {
-    Base::dumpImpl(out, comma);
+    Base::dumpImpl(out, comma, indent);
     out.print(comma, "prototype = ", JSValue(prototype()));
 }
 
-std::unique_ptr<AccessCase> InstanceOfAccessCase::clone() const
+Ref<AccessCase> InstanceOfAccessCase::clone() const
 {
-    std::unique_ptr<InstanceOfAccessCase> result(new InstanceOfAccessCase(*this));
+    auto result = adoptRef(*new InstanceOfAccessCase(*this));
     result->resetState();
     return result;
 }

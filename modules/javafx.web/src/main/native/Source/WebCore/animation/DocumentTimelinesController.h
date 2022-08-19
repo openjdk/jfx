@@ -25,9 +25,10 @@
 
 #pragma once
 
-#include "GenericTaskQueue.h"
+#include "FrameRateAligner.h"
 #include "ReducedResolutionSeconds.h"
 #include "Timer.h"
+#include <wtf/CancellableTask.h>
 #include <wtf/Markable.h>
 #include <wtf/Seconds.h>
 #include <wtf/WeakHashSet.h>
@@ -50,7 +51,9 @@ public:
     void detachFromDocument();
     void updateAnimationsAndSendEvents(ReducedResolutionSeconds);
 
-    Optional<Seconds> currentTime();
+    std::optional<Seconds> currentTime();
+    std::optional<FramesPerSecond> maximumAnimationFrameRate() const { return m_frameRateAligner.maximumFrameRate(); }
+    std::optional<Seconds> timeUntilNextTickForAnimationsWithFrameRate(FramesPerSecond) const;
 
     WEBCORE_EXPORT void suspendAnimations();
     WEBCORE_EXPORT void resumeAnimations();
@@ -66,9 +69,11 @@ private:
     void cacheCurrentTime(ReducedResolutionSeconds);
     void maybeClearCachedCurrentTime();
 
+    HashMap<FramesPerSecond, ReducedResolutionSeconds> m_animationFrameRateToLastTickTimeMap;
     WeakHashSet<DocumentTimeline> m_timelines;
-    GenericTaskQueue<Timer> m_currentTimeClearingTaskQueue;
+    TaskCancellationGroup m_currentTimeClearingTaskCancellationGroup;
     Document& m_document;
+    FrameRateAligner m_frameRateAligner;
     Markable<Seconds, Seconds::MarkableTraits> m_cachedCurrentTime;
     bool m_isSuspended { false };
     bool m_waitingOnVMIdle { false };

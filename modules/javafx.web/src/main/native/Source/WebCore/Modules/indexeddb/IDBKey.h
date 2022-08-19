@@ -25,13 +25,12 @@
 
 #pragma once
 
-#if ENABLE(INDEXED_DATABASE)
-
 #include "IndexedDB.h"
 #include "ThreadSafeDataBuffer.h"
+#include <variant>
 #include <wtf/Forward.h>
+#include <wtf/IsoMalloc.h>
 #include <wtf/RefCounted.h>
-#include <wtf/Variant.h>
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
 
@@ -43,6 +42,7 @@ class JSArrayBufferView;
 namespace WebCore {
 
 class IDBKey : public RefCounted<IDBKey> {
+    WTF_MAKE_ISO_ALLOCATED(IDBKey);
 public:
     static Ref<IDBKey> createInvalid()
     {
@@ -111,31 +111,31 @@ public:
     const Vector<RefPtr<IDBKey>>& array() const
     {
         ASSERT(m_type == IndexedDB::KeyType::Array);
-        return WTF::get<Vector<RefPtr<IDBKey>>>(m_value);
+        return std::get<Vector<RefPtr<IDBKey>>>(m_value);
     }
 
     const String& string() const
     {
         ASSERT(m_type == IndexedDB::KeyType::String);
-        return WTF::get<String>(m_value);
+        return std::get<String>(m_value);
     }
 
     double date() const
     {
         ASSERT(m_type == IndexedDB::KeyType::Date);
-        return WTF::get<double>(m_value);
+        return std::get<double>(m_value);
     }
 
     double number() const
     {
         ASSERT(m_type == IndexedDB::KeyType::Number);
-        return WTF::get<double>(m_value);
+        return std::get<double>(m_value);
     }
 
     const ThreadSafeDataBuffer& binary() const
     {
         ASSERT(m_type == IndexedDB::KeyType::Binary);
-        return WTF::get<ThreadSafeDataBuffer>(m_value);
+        return std::get<ThreadSafeDataBuffer>(m_value);
     }
 
     int compare(const IDBKey& other) const;
@@ -169,7 +169,7 @@ private:
     explicit IDBKey(const ThreadSafeDataBuffer&);
 
     const IndexedDB::KeyType m_type;
-    Variant<Vector<RefPtr<IDBKey>>, String, double, ThreadSafeDataBuffer> m_value;
+    std::variant<Vector<RefPtr<IDBKey>>, String, double, ThreadSafeDataBuffer> m_value;
 
     const size_t m_sizeEstimate;
 
@@ -215,5 +215,3 @@ inline int compareBinaryKeyData(const ThreadSafeDataBuffer& a, const ThreadSafeD
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(INDEXED_DATABASE)

@@ -24,6 +24,7 @@
 
 #include "HTMLFrameOwnerElement.h"
 #include "Image.h"
+#include "JSValueInWrappedObject.h"
 #include "RenderEmbeddedObject.h"
 
 namespace JSC {
@@ -34,7 +35,6 @@ class Instance;
 
 namespace WebCore {
 
-class PluginReplacement;
 class RenderWidget;
 class Widget;
 
@@ -57,8 +57,6 @@ public:
     };
     DisplayState displayState() const { return m_displayState; }
     void setDisplayState(DisplayState);
-
-    JSC::JSObject* scriptObjectForPluginReplacement();
 
     bool isCapturingMouseEvents() const { return m_isCapturingMouseEvents; }
     void setIsCapturingMouseEvents(bool capturing) { m_isCapturingMouseEvents = capturing; }
@@ -84,8 +82,8 @@ protected:
 
     bool canContainRangeEndPoint() const override { return false; }
     void willDetachRenderers() override;
-    bool isPresentationAttribute(const QualifiedName&) const override;
-    void collectStyleForPresentationAttribute(const QualifiedName&, const AtomString&, MutableStyleProperties&) override;
+    bool hasPresentationalHintsForAttribute(const QualifiedName&) const override;
+    void collectPresentationalHintsForAttribute(const QualifiedName&, const AtomString&, MutableStyleProperties&) override;
 
     virtual bool useFallbackContent() const { return false; }
 
@@ -95,17 +93,12 @@ protected:
     RenderPtr<RenderElement> createElementRenderer(RenderStyle&&, const RenderTreePosition&) override;
     void didAddUserAgentShadowRoot(ShadowRoot&) final;
 
-    // Subclasses should use guardedDispatchBeforeLoadEvent instead of calling dispatchBeforeLoadEvent directly.
-    bool guardedDispatchBeforeLoadEvent(const String& sourceURL);
-
     // This will load the plugin if necessary.
     virtual RenderWidget* renderWidgetLoadingPlugin() const;
 
 private:
     void swapRendererTimerFired();
     bool shouldOverridePlugin(const String& url, const String& mimeType);
-
-    bool dispatchBeforeLoadEvent(const String& sourceURL) = delete; // Generate a compile error if someone calls this by mistake.
 
     bool supportsFocus() const final;
 
@@ -115,9 +108,7 @@ private:
 
     RefPtr<JSC::Bindings::Instance> m_instance;
     Timer m_swapRendererTimer;
-    RefPtr<PluginReplacement> m_pluginReplacement;
     bool m_isCapturingMouseEvents { false };
-    bool m_inBeforeLoadEventHandler { false };
     DisplayState m_displayState { Playing };
 };
 

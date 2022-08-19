@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1834,6 +1834,7 @@ public class ListViewKeyInputTest {
         sl.dispose();
     }
 
+    @Ignore("JDK-8289909") // there is no guarantee that there will be 8 selected items (can be 7 as well)
     @Test public void test_rt34407_up_up_down() {
         final int items = 100;
         listView.getItems().clear();
@@ -1861,11 +1862,11 @@ public class ListViewKeyInputTest {
         final int diff = 99 - leadSelectedIndex;
         assertEquals(99 - diff, leadSelectedIndex);
         assertEquals(99 - diff, fm.getFocusedIndex());
-        assertEquals(7, selectedIndicesCount);
+        assertEquals(8, selectedIndicesCount);
 
         keyboard.doKeyPress(KeyCode.PAGE_UP, KeyModifier.SHIFT);
-        assertEquals(99 - diff * 2, sm.getSelectedIndex());
-        assertEquals(selectedIndicesCount * 2 - 1, sm.getSelectedIndices().size());
+        assertEquals(99 - diff * 2 + 1, sm.getSelectedIndex());
+        assertEquals(selectedIndicesCount * 2 - 2, sm.getSelectedIndices().size());
 
         keyboard.doKeyPress(KeyCode.PAGE_DOWN, KeyModifier.SHIFT);
         assertEquals(leadSelectedIndex, sm.getSelectedIndex());

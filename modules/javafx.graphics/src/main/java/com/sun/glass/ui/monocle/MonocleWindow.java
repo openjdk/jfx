@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -53,10 +53,6 @@ final class MonocleWindow extends Window {
 
     MonocleWindow(Window owner, Screen screen, int styleMask) {
         super(owner, screen, styleMask);
-    }
-
-    MonocleWindow(long parent) {
-        super(parent);
     }
 
     @Override
@@ -168,11 +164,6 @@ final class MonocleWindow extends Window {
     }
 
     @Override
-    protected long _createChildWindow(long parent) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
     protected boolean _close(long nativeWindowPointer) {
         return MonocleWindowManager.getInstance().closeWindow(this);
     }
@@ -271,6 +262,11 @@ final class MonocleWindow extends Window {
         }
         notifyResizeAndMove(x, y, width, height);
         return true;
+    }
+
+    @Override
+    protected void notifyMoveToAnotherScreen(Screen screen) {
+        super.notifyMoveToAnotherScreen(screen);
     }
 
     void setFullScreen(boolean fullscreen) {
@@ -443,13 +439,6 @@ final class MonocleWindow extends Window {
 
     @Override protected void _setCursor(long ptr, Cursor cursor) {
         ((MonocleCursor) cursor).applyCursor();
-    }
-
-    @Override protected int _getEmbeddedX(long ptr) {
-        return 0;
-    }
-    @Override protected int _getEmbeddedY(long ptr) {
-        return 0;
     }
 
     @Override

@@ -1,5 +1,5 @@
 // Copyright 2018 The Chromium Authors. All rights reserved.
-// Copyright (C) 2019 Apple Inc. All rights reserved.
+// Copyright (C) 2019-2021 Apple Inc. All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
@@ -34,6 +34,7 @@
 #include <wtf/Forward.h>
 
 namespace WebCore {
+class BufferSource;
 struct AuthenticationExtensionsClientInputs;
 struct PublicKeyCredentialCreationOptions;
 struct PublicKeyCredentialDescriptor;
@@ -55,20 +56,20 @@ WEBCORE_EXPORT bool isConvertibleToU2fRegisterCommand(const WebCore::PublicKeyCr
 WEBCORE_EXPORT bool isConvertibleToU2fSignCommand(const WebCore::PublicKeyCredentialRequestOptions&);
 
 // Extracts APDU encoded U2F register command from PublicKeyCredentialCreationOptions.
-WEBCORE_EXPORT Optional<Vector<uint8_t>> convertToU2fRegisterCommand(const Vector<uint8_t>& clientDataHash, const WebCore::PublicKeyCredentialCreationOptions&);
+WEBCORE_EXPORT std::optional<Vector<uint8_t>> convertToU2fRegisterCommand(const Vector<uint8_t>& clientDataHash, const WebCore::PublicKeyCredentialCreationOptions&);
 
 // Extracts APDU encoded U2F check only sign command from
 // PublicKeyCredentialCreationOptions. Invoked when U2F register operation includes key
 // handles in exclude list.
-WEBCORE_EXPORT Optional<Vector<uint8_t>> convertToU2fCheckOnlySignCommand(const Vector<uint8_t>& clientDataHash, const WebCore::PublicKeyCredentialCreationOptions&, const WebCore::PublicKeyCredentialDescriptor&);
+WEBCORE_EXPORT std::optional<Vector<uint8_t>> convertToU2fCheckOnlySignCommand(const Vector<uint8_t>& clientDataHash, const WebCore::PublicKeyCredentialCreationOptions&, const WebCore::PublicKeyCredentialDescriptor&);
 
 // Extracts APDU encoded U2F sign command from PublicKeyCredentialRequestOptions.
-WEBCORE_EXPORT Optional<Vector<uint8_t>> convertToU2fSignCommand(const Vector<uint8_t>& clientDataHash, const WebCore::PublicKeyCredentialRequestOptions&, const Vector<uint8_t>& keyHandle, bool isAppId = false);
+WEBCORE_EXPORT std::optional<Vector<uint8_t>> convertToU2fSignCommand(const Vector<uint8_t>& clientDataHash, const WebCore::PublicKeyCredentialRequestOptions&, const WebCore::BufferSource& keyHandle, bool isAppId = false);
 
 WEBCORE_EXPORT Vector<uint8_t> constructBogusU2fRegistrationCommand();
 
 // Returns "https://www.gstatic.com/securitykey/origins.json" as an AppID when googleLegacyAppidSupport is true.
-WEBCORE_EXPORT String processGoogleLegacyAppIdSupportExtension(const Optional<WebCore::AuthenticationExtensionsClientInputs>&);
+WEBCORE_EXPORT String processGoogleLegacyAppIdSupportExtension(const std::optional<WebCore::AuthenticationExtensionsClientInputs>&);
 
 } // namespace fido
 

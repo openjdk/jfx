@@ -37,6 +37,8 @@
 #include "CacheStorageConnection.h"
 #include "Document.h"
 #include "Frame.h"
+#include "LibWebRTCProvider.h"
+#include "Page.h"
 #include "Settings.h"
 #include "WorkletParameters.h"
 #include "WorkletPendingTasks.h"
@@ -59,7 +61,7 @@ static WorkletParameters generateWorkletParameters(AudioWorklet& worklet)
 }
 
 AudioWorkletMessagingProxy::AudioWorkletMessagingProxy(AudioWorklet& worklet)
-    : m_worklet(makeWeakPtr(worklet))
+    : m_worklet(worklet)
     , m_document(*worklet.document())
     , m_workletThread(AudioWorkletThread::create(*this, generateWorkletParameters(worklet)))
 {
@@ -85,6 +87,14 @@ RefPtr<CacheStorageConnection> AudioWorkletMessagingProxy::createCacheStorageCon
     return nullptr;
 }
 
+RefPtr<RTCDataChannelRemoteHandlerConnection> AudioWorkletMessagingProxy::createRTCDataChannelRemoteHandlerConnection()
+{
+    ASSERT(isMainThread());
+    if (!m_document->page())
+        return nullptr;
+    return m_document->page()->libWebRTCProvider().createRTCDataChannelRemoteHandlerConnection();
+}
+
 void AudioWorkletMessagingProxy::postTaskToLoader(ScriptExecutionContext::Task&& task)
 {
     m_document->postTask(WTFMove(task));
@@ -97,7 +107,7 @@ bool AudioWorkletMessagingProxy::postTaskForModeToWorkerOrWorkletGlobalScope(Scr
 
 void AudioWorkletMessagingProxy::postTaskToAudioWorklet(Function<void(AudioWorklet&)>&& task)
 {
-    m_document->postTask([this, protectedThis = makeRef(*this), task = WTFMove(task)](ScriptExecutionContext&) {
+    m_document->postTask([this, protectedThis = Ref { *this }, task = WTFMove(task)](ScriptExecutionContext&) {
         if (m_worklet)
             task(*m_worklet);
     });

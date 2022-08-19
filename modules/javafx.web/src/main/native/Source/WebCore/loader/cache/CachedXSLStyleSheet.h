@@ -35,7 +35,7 @@ class TextResourceDecoder;
 
 class CachedXSLStyleSheet final : public CachedResource {
 public:
-    CachedXSLStyleSheet(CachedResourceRequest&&, const PAL::SessionID&, const CookieJar*);
+    CachedXSLStyleSheet(CachedResourceRequest&&, PAL::SessionID, const CookieJar*);
     virtual ~CachedXSLStyleSheet();
 
     const String& sheet() const { return m_sheet; }
@@ -47,7 +47,7 @@ private:
     void setEncoding(const String&) final;
     String encoding() const final;
     const TextResourceDecoder* textResourceDecoder() const final { return m_decoder.get(); }
-    void finishLoading(SharedBuffer*, const NetworkLoadMetrics&) final;
+    void finishLoading(const FragmentedSharedBuffer*, const NetworkLoadMetrics&) final;
 
     String m_sheet;
     RefPtr<TextResourceDecoder> m_decoder;

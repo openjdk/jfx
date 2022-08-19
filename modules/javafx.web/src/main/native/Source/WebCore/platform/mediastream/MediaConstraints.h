@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2012 Google Inc. All rights reserved.
- * Copyright (C) 2016-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -237,7 +237,7 @@ public:
         return true;
     }
 
-    ValueType find(const WTF::Function<bool(ValueType)>& function) const
+    ValueType find(const Function<bool(ValueType)>& function) const
     {
         if (m_min && function(m_min.value()))
             return m_min.value();
@@ -293,11 +293,11 @@ public:
         return value;
     }
 
-    Optional<ValueType> valueForDiscreteCapabilityValues(ValueType current, const Vector<ValueType>& discreteCapabilityValues) const
+    std::optional<ValueType> valueForDiscreteCapabilityValues(ValueType current, const Vector<ValueType>& discreteCapabilityValues) const
     {
-        Optional<ValueType> value;
-        Optional<ValueType> min;
-        Optional<ValueType> max;
+        std::optional<ValueType> value;
+        std::optional<ValueType> min;
+        std::optional<ValueType> max;
 
         if (m_exact) {
             ASSERT(discreteCapabilityValues.contains(m_exact.value()));
@@ -305,7 +305,7 @@ public:
         }
 
         if (m_min) {
-            auto index = discreteCapabilityValues.findMatching([&](ValueType value) { return m_min.value() >= value; });
+            auto index = discreteCapabilityValues.findIf([&](ValueType value) { return m_min.value() >= value; });
             if (index != notFound) {
                 min = value = discreteCapabilityValues[index];
 
@@ -397,10 +397,10 @@ protected:
         }
     }
 
-    Optional<ValueType> m_min;
-    Optional<ValueType> m_max;
-    Optional<ValueType> m_exact;
-    Optional<ValueType> m_ideal;
+    std::optional<ValueType> m_min;
+    std::optional<ValueType> m_max;
+    std::optional<ValueType> m_exact;
+    std::optional<ValueType> m_ideal;
 };
 
 class IntConstraint final : public NumericConstraint<int> {
@@ -536,8 +536,8 @@ public:
     void logAsBoolean() const;
 
 private:
-    Optional<bool> m_exact;
-    Optional<bool> m_ideal;
+    std::optional<bool> m_exact;
+    std::optional<bool> m_ideal;
 };
 
 class StringConstraint : public MediaConstraint {
@@ -573,7 +573,7 @@ public:
 
     bool getExact(Vector<String>& exact) const
     {
-        if (!m_exact.isEmpty())
+        if (m_exact.isEmpty())
             return false;
 
         exact = m_exact;
@@ -582,7 +582,7 @@ public:
 
     bool getIdeal(Vector<String>& ideal) const
     {
-        if (!m_ideal.isEmpty())
+        if (m_ideal.isEmpty())
             return false;
 
         ideal = m_ideal;
@@ -592,7 +592,7 @@ public:
     double fitnessDistance(const String&) const;
     double fitnessDistance(const Vector<String>&) const;
 
-    const String& find(const WTF::Function<bool(const String&)>&) const;
+    const String& find(const Function<bool(const String&)>&) const;
 
     bool isEmpty() const { return m_exact.isEmpty() && m_ideal.isEmpty(); }
     bool isMandatory() const { return !m_exact.isEmpty(); }
@@ -649,32 +649,32 @@ private:
 
 class MediaTrackConstraintSetMap {
 public:
-    WEBCORE_EXPORT void forEach(WTF::Function<void(const MediaConstraint&)>&&) const;
-    void filter(const WTF::Function<bool(const MediaConstraint&)>&) const;
+    WEBCORE_EXPORT void forEach(Function<void(const MediaConstraint&)>&&) const;
+    void filter(const Function<bool(const MediaConstraint&)>&) const;
     bool isEmpty() const;
     WEBCORE_EXPORT size_t size() const;
 
-    WEBCORE_EXPORT void set(MediaConstraintType, Optional<IntConstraint>&&);
-    WEBCORE_EXPORT void set(MediaConstraintType, Optional<DoubleConstraint>&&);
-    WEBCORE_EXPORT void set(MediaConstraintType, Optional<BooleanConstraint>&&);
-    WEBCORE_EXPORT void set(MediaConstraintType, Optional<StringConstraint>&&);
+    WEBCORE_EXPORT void set(MediaConstraintType, std::optional<IntConstraint>&&);
+    WEBCORE_EXPORT void set(MediaConstraintType, std::optional<DoubleConstraint>&&);
+    WEBCORE_EXPORT void set(MediaConstraintType, std::optional<BooleanConstraint>&&);
+    WEBCORE_EXPORT void set(MediaConstraintType, std::optional<StringConstraint>&&);
 
-    Optional<IntConstraint> width() const { return m_width; }
-    Optional<IntConstraint> height() const { return m_height; }
-    Optional<IntConstraint> sampleRate() const { return m_sampleRate; }
-    Optional<IntConstraint> sampleSize() const { return m_sampleSize; }
+    std::optional<IntConstraint> width() const { return m_width; }
+    std::optional<IntConstraint> height() const { return m_height; }
+    std::optional<IntConstraint> sampleRate() const { return m_sampleRate; }
+    std::optional<IntConstraint> sampleSize() const { return m_sampleSize; }
 
-    Optional<DoubleConstraint> aspectRatio() const { return m_aspectRatio; }
-    Optional<DoubleConstraint> frameRate() const { return m_frameRate; }
-    Optional<DoubleConstraint> volume() const { return m_volume; }
+    std::optional<DoubleConstraint> aspectRatio() const { return m_aspectRatio; }
+    std::optional<DoubleConstraint> frameRate() const { return m_frameRate; }
+    std::optional<DoubleConstraint> volume() const { return m_volume; }
 
-    Optional<BooleanConstraint> echoCancellation() const { return m_echoCancellation; }
-    Optional<BooleanConstraint> displaySurface() const { return m_displaySurface; }
-    Optional<BooleanConstraint> logicalSurface() const { return m_logicalSurface; }
+    std::optional<BooleanConstraint> echoCancellation() const { return m_echoCancellation; }
+    std::optional<BooleanConstraint> displaySurface() const { return m_displaySurface; }
+    std::optional<BooleanConstraint> logicalSurface() const { return m_logicalSurface; }
 
-    Optional<StringConstraint> facingMode() const { return m_facingMode; }
-    Optional<StringConstraint> deviceId() const { return m_deviceId; }
-    Optional<StringConstraint> groupId() const { return m_groupId; }
+    std::optional<StringConstraint> facingMode() const { return m_facingMode; }
+    std::optional<StringConstraint> deviceId() const { return m_deviceId; }
+    std::optional<StringConstraint> groupId() const { return m_groupId; }
 
     template <class Encoder> void encode(Encoder& encoder) const
     {
@@ -696,59 +696,59 @@ public:
         encoder << m_groupId;
     }
 
-    template <class Decoder> static Optional<MediaTrackConstraintSetMap> decode(Decoder& decoder)
+    template <class Decoder> static std::optional<MediaTrackConstraintSetMap> decode(Decoder& decoder)
     {
         MediaTrackConstraintSetMap map;
         if (!decoder.decode(map.m_width))
-            return WTF::nullopt;
+            return std::nullopt;
         if (!decoder.decode(map.m_height))
-            return WTF::nullopt;
+            return std::nullopt;
         if (!decoder.decode(map.m_sampleRate))
-            return WTF::nullopt;
+            return std::nullopt;
         if (!decoder.decode(map.m_sampleSize))
-            return WTF::nullopt;
+            return std::nullopt;
 
         if (!decoder.decode(map.m_aspectRatio))
-            return WTF::nullopt;
+            return std::nullopt;
         if (!decoder.decode(map.m_frameRate))
-            return WTF::nullopt;
+            return std::nullopt;
         if (!decoder.decode(map.m_volume))
-            return WTF::nullopt;
+            return std::nullopt;
 
         if (!decoder.decode(map.m_echoCancellation))
-            return WTF::nullopt;
+            return std::nullopt;
         if (!decoder.decode(map.m_displaySurface))
-            return WTF::nullopt;
+            return std::nullopt;
         if (!decoder.decode(map.m_logicalSurface))
-            return WTF::nullopt;
+            return std::nullopt;
 
         if (!decoder.decode(map.m_facingMode))
-            return WTF::nullopt;
+            return std::nullopt;
         if (!decoder.decode(map.m_deviceId))
-            return WTF::nullopt;
+            return std::nullopt;
         if (!decoder.decode(map.m_groupId))
-            return WTF::nullopt;
+            return std::nullopt;
 
         return map;
     }
 
 private:
-    Optional<IntConstraint> m_width;
-    Optional<IntConstraint> m_height;
-    Optional<IntConstraint> m_sampleRate;
-    Optional<IntConstraint> m_sampleSize;
+    std::optional<IntConstraint> m_width;
+    std::optional<IntConstraint> m_height;
+    std::optional<IntConstraint> m_sampleRate;
+    std::optional<IntConstraint> m_sampleSize;
 
-    Optional<DoubleConstraint> m_aspectRatio;
-    Optional<DoubleConstraint> m_frameRate;
-    Optional<DoubleConstraint> m_volume;
+    std::optional<DoubleConstraint> m_aspectRatio;
+    std::optional<DoubleConstraint> m_frameRate;
+    std::optional<DoubleConstraint> m_volume;
 
-    Optional<BooleanConstraint> m_echoCancellation;
-    Optional<BooleanConstraint> m_displaySurface;
-    Optional<BooleanConstraint> m_logicalSurface;
+    std::optional<BooleanConstraint> m_echoCancellation;
+    std::optional<BooleanConstraint> m_displaySurface;
+    std::optional<BooleanConstraint> m_logicalSurface;
 
-    Optional<StringConstraint> m_facingMode;
-    Optional<StringConstraint> m_deviceId;
-    Optional<StringConstraint> m_groupId;
+    std::optional<StringConstraint> m_facingMode;
+    std::optional<StringConstraint> m_deviceId;
+    std::optional<StringConstraint> m_groupId;
 };
 
 class FlattenedConstraint {
@@ -894,7 +894,7 @@ private:
 
 struct MediaConstraints {
     void setDefaultVideoConstraints();
-    bool isConstraintSet(const WTF::Function<bool(const MediaTrackConstraintSetMap&)>&);
+    bool isConstraintSet(const Function<bool(const MediaTrackConstraintSetMap&)>&);
 
     MediaTrackConstraintSetMap mandatoryConstraints;
     Vector<MediaTrackConstraintSetMap> advancedConstraints;

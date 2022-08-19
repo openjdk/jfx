@@ -79,15 +79,15 @@ RenderWidget* HTMLEmbedElement::renderWidgetLoadingPlugin() const
     return widget ? widget : findWidgetRenderer(this);
 }
 
-void HTMLEmbedElement::collectStyleForPresentationAttribute(const QualifiedName& name, const AtomString& value, MutableStyleProperties& style)
+void HTMLEmbedElement::collectPresentationalHintsForAttribute(const QualifiedName& name, const AtomString& value, MutableStyleProperties& style)
 {
     if (name == hiddenAttr) {
         if (equalLettersIgnoringASCIICase(value, "yes") || equalLettersIgnoringASCIICase(value, "true")) {
-            addPropertyToPresentationAttributeStyle(style, CSSPropertyWidth, 0, CSSUnitType::CSS_PX);
-            addPropertyToPresentationAttributeStyle(style, CSSPropertyHeight, 0, CSSUnitType::CSS_PX);
+            addPropertyToPresentationalHintStyle(style, CSSPropertyWidth, 0, CSSUnitType::CSS_PX);
+            addPropertyToPresentationalHintStyle(style, CSSPropertyHeight, 0, CSSUnitType::CSS_PX);
         }
     } else
-        HTMLPlugInImageElement::collectStyleForPresentationAttribute(name, value, style);
+        HTMLPlugInImageElement::collectPresentationalHintsForAttribute(name, value, style);
 }
 
 static bool hasTypeOrSrc(const HTMLEmbedElement& embed)
@@ -161,16 +161,6 @@ void HTMLEmbedElement::updateWidget(CreatePlugins createPlugins)
     parametersForPlugin(paramNames, paramValues);
 
     Ref<HTMLEmbedElement> protectedThis(*this); // Loading the plugin might remove us from the document.
-    bool beforeLoadAllowedLoad = guardedDispatchBeforeLoadEvent(m_url);
-    if (!beforeLoadAllowedLoad) {
-        if (is<PluginDocument>(document())) {
-            // Plugins inside plugin documents load differently than other plugins. By the time
-            // we are here in a plugin document, the load of the plugin (which is the plugin document's
-            // main resource) has already started. We need to explicitly cancel the main resource load here.
-            downcast<PluginDocument>(document()).cancelManualPluginLoad();
-        }
-        return;
-    }
     if (!renderer()) // Do not load the plugin if beforeload removed this element or its renderer.
         return;
 

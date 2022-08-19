@@ -60,13 +60,19 @@ public:
     void setContainerContextForRenderer(const RenderElement&, const FloatSize&, float) final;
     void addClient(RenderElement&) final;
     void removeClient(RenderElement&) final;
+    bool hasClient(RenderElement&) const final;
+    bool hasImage() const final;
     RefPtr<Image> image(RenderElement*, const FloatSize&) const final;
     float imageScaleFactor() const final;
     bool knownToBeOpaque(const RenderElement&) const final;
+    bool usesDataProtocol() const final;
+
+    URL reresolvedURL(const Document&) const;
 
 private:
     StyleCachedImage(CSSImageValue&, float);
-    URL imageURL();
+
+    URL imageURL() const;
 
     Ref<CSSImageValue> m_cssValue;
     bool m_isPending { true };

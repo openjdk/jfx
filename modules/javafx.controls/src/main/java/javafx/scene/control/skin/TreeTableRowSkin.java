@@ -26,8 +26,6 @@
 package javafx.scene.control.skin;
 
 import com.sun.javafx.scene.control.behavior.BehaviorBase;
-import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
 import javafx.collections.FXCollections;
 import javafx.scene.control.Control;
 import javafx.scene.control.TableColumnBase;
@@ -56,7 +54,6 @@ import javafx.beans.value.WritableValue;
 import javafx.collections.ObservableList;
 import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
-import javafx.scene.control.TreeView;
 
 /**
  * Default skin implementation for the {@link TreeTableRow} control.
@@ -120,20 +117,19 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
         setupTreeTableViewListeners();
     }
 
+    // FIXME: replace listener to fixedCellSize with direct lookup - JDK-8277000
     private void setupTreeTableViewListeners() {
         TreeTableView<T> treeTableView = getSkinnable().getTreeTableView();
         if (treeTableView == null) {
-            getSkinnable().treeTableViewProperty().addListener(new InvalidationListener() {
-                @Override public void invalidated(Observable observable) {
-                    getSkinnable().treeTableViewProperty().removeListener(this);
-                    setupTreeTableViewListeners();
-                }
+            registerInvalidationListener(getSkinnable().treeTableViewProperty(), e -> {
+                unregisterInvalidationListeners(getSkinnable().treeTableViewProperty());
+                setupTreeTableViewListeners();
             });
         } else {
             registerChangeListener(treeTableView.treeColumnProperty(), e -> {
                 // Fix for RT-27782: Need to set isDirty to true, rather than the
                 // cheaper updateCells, as otherwise the text indentation will not
-                // be recalculated in TreeTableCellSkin.leftLabelPadding()
+                // be recalculated in TreeTableCellSkin.calculateIndentation()
                 isDirty = true;
                 getSkinnable().requestLayout();
             });
@@ -163,11 +159,10 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
      *                                                                         *
      **************************************************************************/
 
-    private final InvalidationListener graphicListener = o -> {
+    private void updateTreeItemGraphic() {
         disclosureNodeDirty = true;
         getSkinnable().requestLayout();
-    };
-
+    }
 
     /* *************************************************************************
      *                                                                         *
@@ -253,7 +248,6 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
     }
 
 
-
     /* *************************************************************************
      *                                                                         *
      * Private Implementation                                                  *
@@ -331,21 +325,14 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
 
     /** {@inheritDoc} */
     @Override protected ObjectProperty<Node> graphicProperty() {
-        TreeTableRow<T> treeTableRow = getSkinnable();
-        if (treeTableRow == null) return null;
         if (treeItem == null) return null;
-
         return treeItem.graphicProperty();
     }
 
     private void updateTreeItem() {
-        if (treeItem != null) {
-            treeItem.graphicProperty().removeListener(graphicListener);
-        }
+        unregisterInvalidationListeners(graphicProperty());
         treeItem = getSkinnable().getTreeItem();
-        if (treeItem != null) {
-            treeItem.graphicProperty().addListener(graphicListener);
-        }
+        registerInvalidationListener(graphicProperty(), e -> updateTreeItemGraphic());
     }
 
     private TreeTableView<T> getTreeTableView() {
@@ -403,6 +390,15 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
         }
     }
 
+    // test-only
+    TreeTableViewSkin<T> getTableViewSkin() {
+        return treeTableViewSkin;
+    }
+
+    // test-only
+    TreeItem<T> getTreeItem() {
+        return (TreeItem<T>) treeItem;
+    }
 
     /* *************************************************************************
      *                                                                         *

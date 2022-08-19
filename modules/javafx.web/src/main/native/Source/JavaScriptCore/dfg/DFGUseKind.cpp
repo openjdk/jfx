@@ -170,6 +170,15 @@ void printInternal(PrintStream& out, UseKind useKind)
     case NotCellNorBigIntUse:
         out.print("NotCellNorBigInt");
         return;
+    case NotDoubleUse:
+        out.print("NotDouble");
+        return;
+    case NeitherDoubleNorHeapBigIntUse:
+        out.print("NeitherDoubleNorHeapBigInt");
+        return;
+    case NeitherDoubleNorHeapBigIntNorStringUse:
+        out.print("NeitherDoubleNorHeapBigIntNorString");
+        return;
     case KnownOtherUse:
         out.print("KnownOther");
         return;

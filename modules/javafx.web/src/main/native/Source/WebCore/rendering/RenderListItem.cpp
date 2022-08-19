@@ -25,11 +25,11 @@
 #include "RenderListItem.h"
 
 #include "CSSFontSelector.h"
+#include "ElementInlines.h"
 #include "ElementTraversal.h"
 #include "HTMLNames.h"
 #include "HTMLOListElement.h"
 #include "HTMLUListElement.h"
-#include "InlineElementBox.h"
 #include "PseudoElement.h"
 #include "RenderStyleConstants.h"
 #include "RenderTreeBuilder.h"
@@ -61,9 +61,8 @@ RenderListItem::~RenderListItem()
 RenderStyle RenderListItem::computeMarkerStyle() const
 {
     if (!is<PseudoElement>(element())) {
-        auto markerStyle = getCachedPseudoStyle(PseudoId::Marker, &style());
-        ASSERT(markerStyle);
-        return RenderStyle::clone(*markerStyle);
+        if (auto markerStyle = getCachedPseudoStyle(PseudoId::Marker, &style()))
+            return RenderStyle::clone(*markerStyle);
     }
 
     // The marker always inherits from the list item, regardless of where it might end
@@ -78,24 +77,26 @@ RenderStyle RenderListItem::computeMarkerStyle() const
     fontDescription.setVariantNumericSpacing(FontVariantNumericSpacing::TabularNumbers);
     markerStyle.setFontDescription(WTFMove(fontDescription));
     markerStyle.fontCascade().update(&document().fontSelector());
-    markerStyle.setUnicodeBidi(EUnicodeBidi::Isolate);
+    markerStyle.setUnicodeBidi(UnicodeBidi::Isolate);
     markerStyle.setWhiteSpace(WhiteSpace::Pre);
     markerStyle.setTextTransform(TextTransform::None);
     return markerStyle;
 }
 
-void RenderListItem::insertedIntoTree()
+void RenderListItem::insertedIntoTree(IsInternalMove isInternalMove)
 {
-    RenderBlockFlow::insertedIntoTree();
+    RenderBlockFlow::insertedIntoTree(isInternalMove);
 
-    updateListMarkerNumbers();
+    if (isInternalMove == IsInternalMove::No)
+        updateListMarkerNumbers();
 }
 
-void RenderListItem::willBeRemovedFromTree()
+void RenderListItem::willBeRemovedFromTree(IsInternalMove isInternalMove)
 {
-    RenderBlockFlow::willBeRemovedFromTree();
+    RenderBlockFlow::willBeRemovedFromTree(isInternalMove);
 
-    updateListMarkerNumbers();
+    if (isInternalMove == IsInternalMove::No)
+        updateListMarkerNumbers();
 }
 
 bool isHTMLListElement(const Node& node)
@@ -209,7 +210,7 @@ unsigned RenderListItem::itemCountForOrderedList(const HTMLOListElement& list)
 void RenderListItem::updateValueNow() const
 {
     auto* list = enclosingList(*this);
-    auto* orderedList = is<HTMLOListElement>(list) ? downcast<HTMLOListElement>(list) : nullptr;
+    auto* orderedList = dynamicDowncast<HTMLOListElement>(list);
 
     // The start item is either the closest item before this one in the list that already has a value,
     // or the first item in the list if none have before this have values yet.
@@ -238,7 +239,7 @@ void RenderListItem::updateValueNow() const
 void RenderListItem::updateValue()
 {
     if (!m_valueWasSetExplicitly) {
-        m_value = WTF::nullopt;
+        m_value = std::nullopt;
         if (m_marker)
             m_marker->setNeedsLayoutAndPrefWidthsRecalc();
     }
@@ -270,29 +271,24 @@ void RenderListItem::computePreferredLogicalWidths()
 
 void RenderListItem::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
 {
-    if (!logicalHeight() && hasOverflowClip())
+    if (!logicalHeight() && hasNonVisibleOverflow())
         return;
 
     RenderBlockFlow::paint(paintInfo, paintOffset);
 }
 
-const String& RenderListItem::markerText() const
-{
-    if (m_marker)
-        return m_marker->text();
-    return nullAtom().string();
-}
-
-String RenderListItem::markerTextWithSuffix() const
+StringView RenderListItem::markerTextWithoutSuffix() const
 {
     if (!m_marker)
-        return String();
+        return { };
+    return m_marker->textWithoutSuffix();
+}
 
-    // Append the suffix for the marker in the right place depending
-    // on the direction of the text (right-to-left or left-to-right).
-    if (m_marker->style().isLeftToRightDirection())
-        return m_marker->text() + m_marker->suffix();
-    return m_marker->suffix() + m_marker->text();
+StringView RenderListItem::markerTextWithSuffix() const
+{
+    if (!m_marker)
+        return { };
+    return m_marker->textWithSuffix();
 }
 
 void RenderListItem::explicitValueChanged()
@@ -309,7 +305,7 @@ void RenderListItem::explicitValueChanged()
         item->updateValue();
 }
 
-void RenderListItem::setExplicitValue(Optional<int> value)
+void RenderListItem::setExplicitValue(std::optional<int> value)
 {
     if (!value) {
         if (!m_valueWasSetExplicitly)
@@ -318,7 +314,7 @@ void RenderListItem::setExplicitValue(Optional<int> value)
         if (m_valueWasSetExplicitly && m_value == value)
             return;
     }
-    m_valueWasSetExplicitly = value.hasValue();
+    m_valueWasSetExplicitly = value.has_value();
     m_value = value;
     explicitValueChanged();
 }

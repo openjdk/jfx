@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -43,7 +43,6 @@ import static org.junit.Assert.*;
 
 
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -234,14 +233,6 @@ public class RadioMenuItemTest {
     @Test public void getUnspecifiedToggleGroupProperty2() {
         RadioMenuItem rmi2 = new RadioMenuItem("", null);
         assertNotNull(rmi2.toggleGroupProperty());
-    }
-
-    // calling toggleGroupProperty does not ensure the value of toggleGroup
-    // to be non null
-    @Ignore
-    @Test public void unsetToggleGroupButNotNull() {
-        rmi.toggleGroupProperty();
-        assertNotNull(rmi.getToggleGroup());
     }
 
     @Test public void toggleGroupCanBeBound() {

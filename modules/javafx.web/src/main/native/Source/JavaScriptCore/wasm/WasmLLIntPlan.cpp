@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,6 +32,7 @@
 #include "CCallHelpers.h"
 #include "CalleeBits.h"
 #include "JITCompilation.h"
+#include "JITOpaqueByproducts.h"
 #include "JSToWasm.h"
 #include "LLIntThunks.h"
 #include "LinkBuffer.h"
@@ -84,13 +85,13 @@ void LLIntPlan::compileFunction(uint32_t functionIndex)
     ASSERT_UNUSED(functionIndexSpace, m_moduleInformation->signatureIndexFromFunctionIndexSpace(functionIndexSpace) == signatureIndex);
 
     m_unlinkedWasmToWasmCalls[functionIndex] = Vector<UnlinkedWasmToWasmCall>();
-    Expected<std::unique_ptr<FunctionCodeBlock>, String> parseAndCompileResult = parseAndCompileBytecode(function.data.data(), function.data.size(), signature, m_moduleInformation.get(), functionIndex);
+    Expected<std::unique_ptr<FunctionCodeBlockGenerator>, String> parseAndCompileResult = parseAndCompileBytecode(function.data.data(), function.data.size(), signature, m_moduleInformation.get(), functionIndex);
 
     if (UNLIKELY(!parseAndCompileResult)) {
-        auto locker = holdLock(m_lock);
+        Locker locker { m_lock };
         if (!m_errorMessage) {
             // Multiple compiles could fail simultaneously. We arbitrarily choose the first.
-            fail(locker, makeString(parseAndCompileResult.error(), ", in function at index ", String::number(functionIndex))); // FIXME make this an Expected.
+            fail(makeString(parseAndCompileResult.error(), ", in function at index ", String::number(functionIndex))); // FIXME make this an Expected.
         }
         m_currentIndex = m_moduleInformation->functions.size();
         return;
@@ -99,7 +100,7 @@ void LLIntPlan::compileFunction(uint32_t functionIndex)
     m_wasmInternalFunctions[functionIndex] = WTFMove(*parseAndCompileResult);
 }
 
-void LLIntPlan::didCompleteCompilation(const AbstractLocker& locker)
+void LLIntPlan::didCompleteCompilation()
 {
     unsigned functionCount = m_wasmInternalFunctions.size();
     if (!m_callees && functionCount) {
@@ -114,11 +115,11 @@ void LLIntPlan::didCompleteCompilation(const AbstractLocker& locker)
             if (UNLIKELY(Options::dumpGeneratedWasmBytecodes()))
                 BytecodeDumper::dumpBlock(m_wasmInternalFunctions[i].get(), m_moduleInformation, WTF::dataFile());
 
-            m_calleesVector[i] = LLIntCallee::create(WTFMove(m_wasmInternalFunctions[i]), functionIndexSpace, m_moduleInformation->nameSection->get(functionIndexSpace));
+            m_calleesVector[i] = LLIntCallee::create(*m_wasmInternalFunctions[i], functionIndexSpace, m_moduleInformation->nameSection->get(functionIndexSpace));
             entrypoints[i] = jit.label();
 #if CPU(X86_64)
             CCallHelpers::Address calleeSlot(CCallHelpers::stackPointerRegister, CallFrameSlot::callee * static_cast<int>(sizeof(Register)) - sizeof(CPURegister));
-#elif CPU(ARM64)
+#elif CPU(ARM64) || CPU(RISCV64)
             CCallHelpers::Address calleeSlot(CCallHelpers::stackPointerRegister, CallFrameSlot::callee * static_cast<int>(sizeof(Register)) - sizeof(CallerFrameAndPC));
 #else
 #error Unsupported architecture.
@@ -127,9 +128,9 @@ void LLIntPlan::didCompleteCompilation(const AbstractLocker& locker)
             jumps[i] = jit.jump();
         }
 
-        LinkBuffer linkBuffer(jit, GLOBAL_THUNK_ID, JITCompilationCanFail);
+        LinkBuffer linkBuffer(jit, GLOBAL_THUNK_ID, LinkBuffer::Profile::Wasm, JITCompilationCanFail);
         if (UNLIKELY(linkBuffer.didFailToAllocate())) {
-            Base::fail(locker, "Out of executable memory in Wasm LLInt entry thunks");
+            Base::fail("Out of executable memory in Wasm LLInt entry thunks");
             return;
         }
 
@@ -154,9 +155,9 @@ void LLIntPlan::didCompleteCompilation(const AbstractLocker& locker)
             MemoryMode mode = MemoryMode::BoundsChecking;
             std::unique_ptr<InternalFunction> function = createJSToWasmWrapper(jit, signature, &m_unlinkedWasmToWasmCalls[functionIndex], m_moduleInformation.get(), mode, functionIndex);
 
-            LinkBuffer linkBuffer(jit, nullptr, JITCompilationCanFail);
+            LinkBuffer linkBuffer(jit, nullptr, LinkBuffer::Profile::Wasm, JITCompilationCanFail);
             if (UNLIKELY(linkBuffer.didFailToAllocate())) {
-                Base::fail(locker, makeString("Out of executable memory in function entrypoint at index ", String::number(functionIndex)));
+                Base::fail(makeString("Out of executable memory in function entrypoint at index ", String::number(functionIndex)));
                 return;
             }
 
@@ -167,8 +168,8 @@ void LLIntPlan::didCompleteCompilation(const AbstractLocker& locker)
             Ref<EmbedderEntrypointCallee> callee = EmbedderEntrypointCallee::create(WTFMove(function->entrypoint));
             // FIXME: remove this repatchPointer - just pass in the callee directly
             // https://bugs.webkit.org/show_bug.cgi?id=166462
-            if (function->calleeMoveLocation)
-                MacroAssembler::repatchPointer(function->calleeMoveLocation, CalleeBits::boxWasm(callee.ptr()));
+            for (auto& moveLocation : function->calleeMoveLocations)
+                MacroAssembler::repatchPointer(moveLocation, CalleeBits::boxWasm(callee.ptr()));
 
             auto result = m_embedderCallees.add(functionIndex, WTFMove(callee));
             ASSERT_UNUSED(result, result.isNewEntry);
@@ -191,20 +192,21 @@ void LLIntPlan::didCompleteCompilation(const AbstractLocker& locker)
 
 void LLIntPlan::completeInStreaming()
 {
-    complete(holdLock(m_lock));
+    Locker locker { m_lock };
+    complete();
 }
 
 void LLIntPlan::didCompileFunctionInStreaming()
 {
-    auto locker = holdLock(m_lock);
+    Locker locker { m_lock };
     moveToState(EntryPlan::State::Compiled);
 }
 
 void LLIntPlan::didFailInStreaming(String&& message)
 {
-    auto locker = holdLock(m_lock);
+    Locker locker { m_lock };
     if (!m_errorMessage)
-        fail(locker, WTFMove(message));
+        fail(WTFMove(message));
 }
 
 void LLIntPlan::work(CompilationEffort effort)

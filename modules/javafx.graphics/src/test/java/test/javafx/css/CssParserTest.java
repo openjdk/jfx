@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,11 +27,16 @@ package test.javafx.css;
 
 import com.sun.javafx.css.*;
 
+import java.io.BufferedWriter;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -314,5 +319,29 @@ public class CssParserTest {
         value = new CssParserShim().parseExpr("foo", "indefinite;");
         observed = value.convert(null);
         assertEquals(Duration.INDEFINITE, observed);
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    public void testUTF8EncodedMultibyteSymbolIsCorrectlyParsed() throws IOException {
+        File file = null;
+
+        try {
+            file = File.createTempFile("CssParserTest", ".css");
+
+            try (var writer = new BufferedWriter(new OutputStreamWriter(
+                    new FileOutputStream(file), StandardCharsets.UTF_8))) {
+                writer.write(".foo { bar: '\u2713' }");
+            }
+
+            var stylesheet = new CssParser().parse(file.toURI().toURL());
+            ParsedValue<String, ?> parsedValue = stylesheet.getRules().get(0).getDeclarations().get(0).getParsedValue();
+
+            assertEquals("\u2713", parsedValue.getValue());
+        } finally {
+            if (file != null) {
+                file.delete();
+            }
+        }
     }
 }

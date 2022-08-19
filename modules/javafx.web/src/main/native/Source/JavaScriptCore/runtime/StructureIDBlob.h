@@ -28,17 +28,14 @@
 #include "CellState.h"
 #include "IndexingType.h"
 #include "JSTypeInfo.h"
-#include "StructureIDTable.h"
+#include "StructureID.h"
 
 namespace JSC {
 
 class StructureIDBlob {
     friend class LLIntOffsetsExtractor;
 public:
-    StructureIDBlob()
-    {
-        u.doubleWord = 0xbbadbeef;
-    }
+    StructureIDBlob() = default;
 
     StructureIDBlob(StructureID structureID, IndexingType indexingModeIncludingHistory, const TypeInfo& typeInfo)
     {
@@ -53,6 +50,10 @@ public:
 
     StructureID structureID() const { return u.fields.structureID; }
     IndexingType indexingModeIncludingHistory() const { return u.fields.indexingModeIncludingHistory; }
+    Dependency fencedIndexingModeIncludingHistory(IndexingType& indexingType)
+    {
+        return Dependency::loadAndFence(&u.fields.indexingModeIncludingHistory, indexingType);
+    }
     void setIndexingModeIncludingHistory(IndexingType indexingModeIncludingHistory) { u.fields.indexingModeIncludingHistory = indexingModeIncludingHistory; }
     JSType type() const { return u.fields.type; }
     TypeInfo::InlineTypeFlags inlineTypeFlags() const { return u.fields.inlineTypeFlags; }
@@ -73,8 +74,9 @@ public:
     }
 
 private:
-    union {
+    union Data {
         struct {
+            // FIXME: We should remove this since the structureID can be directly computed from the Structure*
             StructureID structureID;
             IndexingType indexingModeIncludingHistory;
             JSType type;
@@ -86,7 +88,11 @@ private:
             int32_t word2;
         } words;
         int64_t doubleWord;
-    } u;
+
+        Data() { doubleWord = 0xbbadbeef; }
+    };
+
+    Data u;
 };
 
 } // namespace JSC

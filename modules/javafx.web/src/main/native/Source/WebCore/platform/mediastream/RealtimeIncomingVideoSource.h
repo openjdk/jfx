@@ -63,6 +63,8 @@ protected:
     const char* logClassName() const final { return "RealtimeIncomingVideoSource"; }
 #endif
 
+    static VideoSampleMetadata metadataFromVideoFrame(const webrtc::VideoFrame&);
+
 private:
     // RealtimeMediaSource API
     void startProducingData() final;
@@ -77,7 +79,7 @@ private:
     // webrtc::ObserverInterface API
     void OnChanged() final;
 
-    Optional<RealtimeMediaSourceSettings> m_currentSettings;
+    std::optional<RealtimeMediaSourceSettings> m_currentSettings;
     rtc::scoped_refptr<webrtc::VideoTrackInterface> m_videoTrack;
 
 #if !RELEASE_LOG_DISABLED
