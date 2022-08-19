@@ -1,5 +1,5 @@
 // Copyright 2014 The Chromium Authors. All rights reserved.
-// Copyright (C) 2016-2020 Apple Inc. All rights reserved.
+// Copyright (C) 2016-2021 Apple Inc. All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
@@ -45,13 +45,16 @@ class CSSParserObserver;
 class CSSParserObserverWrapper;
 class CSSSelectorList;
 class CSSTokenizer;
+class StyleRuleCounterStyle;
 class StyleRuleKeyframe;
 class StyleRule;
 class StyleRuleBase;
 class StyleRuleCharset;
 class StyleRuleFontFace;
+class StyleRuleFontPaletteValues;
 class StyleRuleImport;
 class StyleRuleKeyframes;
+class StyleRuleLayer;
 class StyleRuleMedia;
 class StyleRuleNamespace;
 class StyleRulePage;
@@ -74,11 +77,13 @@ public:
         // may follow it, i.e. @namespace rules and regular rules.
         // AllowCharsetRules and AllowNamespaceRules behave similarly.
         AllowCharsetRules,
+        AllowLayerStatementRules,
         AllowImportRules,
         AllowNamespaceRules,
         RegularRules,
         KeyframeRules,
         ApplyRules, // For @apply inside style rules
+        CounterStyleRules,
         NoRules, // For parsing at-rules inside declaration lists
     };
 
@@ -87,7 +92,7 @@ public:
     static Ref<ImmutableStyleProperties> parseInlineStyleDeclaration(const String&, const Element*);
     static bool parseDeclarationList(MutableStyleProperties*, const String&, const CSSParserContext&);
     static RefPtr<StyleRuleBase> parseRule(const String&, const CSSParserContext&, StyleSheetContents*, AllowedRulesType);
-    static void parseStyleSheet(const String&, const CSSParserContext&, StyleSheetContents*, CSSParser::RuleParsing);
+    static void parseStyleSheet(const String&, const CSSParserContext&, StyleSheetContents&, CSSParser::RuleParsing);
     static CSSSelectorList parsePageSelector(CSSParserTokenRange, StyleSheetContents*);
 
     static Vector<double> parseKeyframeKeyList(const String&);
@@ -130,11 +135,12 @@ private:
     RefPtr<StyleRuleSupports> consumeSupportsRule(CSSParserTokenRange prelude, CSSParserTokenRange block);
     RefPtr<StyleRuleViewport> consumeViewportRule(CSSParserTokenRange prelude, CSSParserTokenRange block);
     RefPtr<StyleRuleFontFace> consumeFontFaceRule(CSSParserTokenRange prelude, CSSParserTokenRange block);
+    RefPtr<StyleRuleFontPaletteValues> consumeFontPaletteValuesRule(CSSParserTokenRange prelude, CSSParserTokenRange block);
     RefPtr<StyleRuleKeyframes> consumeKeyframesRule(bool webkitPrefixed, CSSParserTokenRange prelude, CSSParserTokenRange block);
     RefPtr<StyleRulePage> consumePageRule(CSSParserTokenRange prelude, CSSParserTokenRange block);
-
-    // FIXME-NEWPARSER: Support "apply"
-    // void consumeApplyRule(CSSParserTokenRange prelude);
+    RefPtr<StyleRuleCounterStyle> consumeCounterStyleRule(CSSParserTokenRange prelude, CSSParserTokenRange block);
+    RefPtr<StyleRuleLayer> consumeLayerRule(CSSParserTokenRange prelude, std::optional<CSSParserTokenRange> block);
+    RefPtr<StyleRuleContainer> consumeContainerRule(CSSParserTokenRange prelude, CSSParserTokenRange block);
 
     RefPtr<StyleRuleKeyframe> consumeKeyframeStyleRule(CSSParserTokenRange prelude, CSSParserTokenRange block);
     RefPtr<StyleRule> consumeStyleRule(CSSParserTokenRange prelude, CSSParserTokenRange block);
@@ -143,8 +149,6 @@ private:
     void consumeDeclaration(CSSParserTokenRange, StyleRuleType);
     void consumeDeclarationValue(CSSParserTokenRange, CSSPropertyID, bool important, StyleRuleType);
     void consumeCustomPropertyValue(CSSParserTokenRange, const AtomString& propertyName, bool important);
-
-    bool isPropertyRuntimeDisabled(CSSPropertyID) const;
 
     static Vector<double> consumeKeyframeKeyList(CSSParserTokenRange);
 

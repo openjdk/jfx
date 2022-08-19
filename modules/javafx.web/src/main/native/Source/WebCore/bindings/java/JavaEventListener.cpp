@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -47,7 +47,7 @@ bool JavaEventListener::operator==(const EventListener& other) const
     const JavaEventListener* jother = other.isJavaEventListener()
                                         ? static_cast<const JavaEventListener*>(&other)
                                         : nullptr;
-    return jother && isJavaEquals(m_joListener, jother->m_joListener);
+    return this == jother;
 }
 
 void JavaEventListener::handleEvent(ScriptExecutionContext& context, Event& event)
@@ -65,7 +65,7 @@ void JavaEventListener::handleEvent(ScriptExecutionContext& context, Event& even
 
     event.ref();
     env->CallVoidMethod(
-        m_joListener,
+        EventListenerManager::get_instance().getListenerJObject(this),
         midFwkHandleEvent,
         ptr_to_jlong(&event));
 

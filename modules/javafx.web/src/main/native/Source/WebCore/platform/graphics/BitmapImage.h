@@ -88,7 +88,7 @@ public:
     String uti() const override { return m_source->uti(); }
     String filenameExtension() const override { return m_source->filenameExtension(); }
     String accessibilityDescription() const override { return m_source->accessibilityDescription(); }
-    Optional<IntPoint> hotSpot() const override { return m_source->hotSpot(); }
+    std::optional<IntPoint> hotSpot() const override { return m_source->hotSpot(); }
 
     // FloatSize due to override.
     FloatSize size(ImageOrientation orientation = ImageOrientation::FromImage) const override { return m_source->size(orientation); }
@@ -100,7 +100,7 @@ public:
     bool frameHasAlphaAtIndex(size_t index) const { return m_source->frameHasAlphaAtIndex(index); }
 
     bool frameHasFullSizeNativeImageAtIndex(size_t index, SubsamplingLevel subsamplingLevel) { return m_source->frameHasFullSizeNativeImageAtIndex(index, subsamplingLevel); }
-    bool frameHasDecodedNativeImageCompatibleWithOptionsAtIndex(size_t index, const Optional<SubsamplingLevel>& subsamplingLevel, const DecodingOptions& decodingOptions) { return m_source->frameHasDecodedNativeImageCompatibleWithOptionsAtIndex(index, subsamplingLevel, decodingOptions); }
+    bool frameHasDecodedNativeImageCompatibleWithOptionsAtIndex(size_t index, const std::optional<SubsamplingLevel>& subsamplingLevel, const DecodingOptions& decodingOptions) { return m_source->frameHasDecodedNativeImageCompatibleWithOptionsAtIndex(index, subsamplingLevel, decodingOptions); }
 
     SubsamplingLevel frameSubsamplingLevelAtIndex(size_t index) const { return m_source->frameSubsamplingLevelAtIndex(index); }
 
@@ -120,6 +120,8 @@ public:
     void setLargeImageAsyncDecodingEnabledForTesting(bool enabled) { m_largeImageAsyncDecodingEnabledForTesting = enabled; }
     bool isLargeImageAsyncDecodingEnabledForTesting() const { return m_largeImageAsyncDecodingEnabledForTesting; }
     void stopAsyncDecodingQueue() { m_source->stopAsyncDecodingQueue(); }
+
+    DestinationColorSpace colorSpace() final;
 
     WEBCORE_EXPORT unsigned decodeCountForTesting() const;
 
@@ -145,11 +147,11 @@ public:
 #endif
 #endif
 
-    WEBCORE_EXPORT RefPtr<NativeImage> nativeImage(const GraphicsContext* = nullptr) override;
-    RefPtr<NativeImage> nativeImageForCurrentFrame(const GraphicsContext* = nullptr) override;
-    RefPtr<NativeImage> preTransformedNativeImageForCurrentFrame(bool respectOrientation, const GraphicsContext* = nullptr) override;
+    WEBCORE_EXPORT RefPtr<NativeImage> nativeImage(const DestinationColorSpace& = DestinationColorSpace::SRGB()) override;
+    RefPtr<NativeImage> nativeImageForCurrentFrame() override;
+    RefPtr<NativeImage> preTransformedNativeImageForCurrentFrame(bool respectOrientation) override;
 #if USE(CG)
-    RefPtr<NativeImage> nativeImageOfSize(const IntSize&, const GraphicsContext* = nullptr) override;
+    RefPtr<NativeImage> nativeImageOfSize(const IntSize&) override;
     Vector<Ref<NativeImage>> framesNativeImages();
 #endif
 
@@ -161,7 +163,7 @@ private:
     WEBCORE_EXPORT BitmapImage(ImageObserver* = nullptr);
 
     RefPtr<NativeImage> frameImageAtIndex(size_t index) { return m_source->frameImageAtIndex(index); }
-    RefPtr<NativeImage> frameImageAtIndexCacheIfNeeded(size_t, SubsamplingLevel = SubsamplingLevel::Default, const GraphicsContext* = nullptr);
+    RefPtr<NativeImage> frameImageAtIndexCacheIfNeeded(size_t, SubsamplingLevel = SubsamplingLevel::Default);
 
     // Called to invalidate cached data. When |destroyAll| is true, we wipe out
     // the entire frame buffer cache and tell the image source to destroy

@@ -27,6 +27,7 @@
 
 #include "UnlinkedCodeBlock.h"
 
+#include "BaselineJITCode.h"
 #include "BytecodeLivenessAnalysis.h"
 #include "BytecodeStructs.h"
 #include "ClassInfo.h"
@@ -42,8 +43,11 @@ const ClassInfo UnlinkedCodeBlock::s_info = { "UnlinkedCodeBlock", nullptr, null
 
 UnlinkedCodeBlock::UnlinkedCodeBlock(VM& vm, Structure* structure, CodeType codeType, const ExecutableInfo& info, OptionSet<CodeGenerationMode> codeGenerationMode)
     : Base(vm, structure)
-    , m_usesEval(info.usesEval())
+    , m_numVars(0)
+    , m_usesCallEval(false)
+    , m_numCalleeLocals(0)
     , m_isConstructor(info.isConstructor())
+    , m_numParameters(0)
     , m_hasCapturedVariables(false)
     , m_isBuiltinFunction(info.isBuiltinFunction())
     , m_superBinding(static_cast<unsigned>(info.superBinding()))
@@ -66,12 +70,26 @@ UnlinkedCodeBlock::UnlinkedCodeBlock(VM& vm, Structure* structure, CodeType code
     ASSERT(m_codeType == static_cast<unsigned>(codeType));
     ASSERT(m_didOptimize == static_cast<unsigned>(TriState::Indeterminate));
     if (info.needsClassFieldInitializer() == NeedsClassFieldInitializer::Yes) {
-        createRareDataIfNecessary(holdLock(cellLock()));
+        Locker locker { cellLock() };
+        createRareDataIfNecessary(locker);
         m_rareData->m_needsClassFieldInitializer = static_cast<unsigned>(NeedsClassFieldInitializer::Yes);
     }
     if (info.privateBrandRequirement() == PrivateBrandRequirement::Needed) {
-        createRareDataIfNecessary(holdLock(cellLock()));
+        Locker locker { cellLock() };
+        createRareDataIfNecessary(locker);
         m_rareData->m_privateBrandRequirement = static_cast<unsigned>(PrivateBrandRequirement::Needed);
+    }
+
+    m_llintExecuteCounter.setNewThreshold(thresholdForJIT(Options::thresholdForJITAfterWarmUp()));
+}
+
+void UnlinkedCodeBlock::initializeLoopHintExecutionCounter()
+{
+    ASSERT(Options::returnEarlyFromInfiniteLoopsForFuzzing());
+    VM& vm = this->vm();
+    for (const auto& instruction : instructions()) {
+        if (instruction->is<OpLoopHint>())
+            vm.addLoopHintExecutionCounter(instruction.ptr());
     }
 }
 
@@ -81,7 +99,7 @@ void UnlinkedCodeBlock::visitChildrenImpl(JSCell* cell, Visitor& visitor)
     UnlinkedCodeBlock* thisObject = jsCast<UnlinkedCodeBlock*>(cell);
     ASSERT_GC_OBJECT_INHERITS(thisObject, info());
     Base::visitChildren(thisObject, visitor);
-    auto locker = holdLock(thisObject->cellLock());
+    Locker locker { thisObject->cellLock() };
     if (visitor.isFirstVisit())
         thisObject->m_age = std::min<unsigned>(static_cast<unsigned>(thisObject->m_age) + 1, maxAge);
     for (auto& barrier : thisObject->m_functionDecls)
@@ -92,6 +110,16 @@ void UnlinkedCodeBlock::visitChildrenImpl(JSCell* cell, Visitor& visitor)
     size_t extraMemory = thisObject->m_metadata->sizeInBytes();
     if (thisObject->m_instructions)
         extraMemory += thisObject->m_instructions->sizeInBytes();
+    if (thisObject->hasRareData())
+        extraMemory += thisObject->m_rareData->sizeInBytes(locker);
+
+    extraMemory += thisObject->m_jumpTargets.byteSize();
+    extraMemory += thisObject->m_identifiers.byteSize();
+    extraMemory += thisObject->m_constantRegisters.byteSize();
+    extraMemory += thisObject->m_constantsSourceCodeRepresentation.byteSize();
+    extraMemory += thisObject->m_functionDecls.byteSize();
+    extraMemory += thisObject->m_functionExprs.byteSize();
+
     visitor.reportExtraMemoryVisited(extraMemory);
 }
 
@@ -104,6 +132,23 @@ size_t UnlinkedCodeBlock::estimatedSize(JSCell* cell, VM& vm)
     if (thisObject->m_instructions)
         extraSize += thisObject->m_instructions->sizeInBytes();
     return Base::estimatedSize(cell, vm) + extraSize;
+}
+
+size_t UnlinkedCodeBlock::RareData::sizeInBytes(const AbstractLocker&) const
+{
+    size_t size = sizeof(RareData);
+    size += m_exceptionHandlers.byteSize();
+    size += m_unlinkedSwitchJumpTables.byteSize();
+    size += m_unlinkedStringSwitchJumpTables.byteSize();
+    size += m_expressionInfoFatPositions.byteSize();
+    size += m_typeProfilerInfoMap.capacity() * sizeof(decltype(m_typeProfilerInfoMap)::KeyValuePairType);
+    size += m_opProfileControlFlowBytecodeOffsets.byteSize();
+    size += m_bitVectors.byteSize();
+    // FIXME: account for each bit vector.
+    size += m_constantIdentifierSets.byteSize();
+    for (const auto& identifierSet : m_constantIdentifierSets)
+        size += identifierSet.capacity() * sizeof(std::remove_reference_t<decltype(identifierSet)>::ValueType);
+    return size;
 }
 
 int UnlinkedCodeBlock::lineNumberForBytecodeIndex(BytecodeIndex bytecodeIndex)
@@ -159,7 +204,7 @@ static void dumpLineColumnEntry(size_t index, const InstructionStream& instructi
 
 void UnlinkedCodeBlock::dumpExpressionRangeInfo()
 {
-    RefCountedArray<ExpressionRangeInfo>& expressionInfo = m_expressionInfo;
+    FixedVector<ExpressionRangeInfo>& expressionInfo = m_expressionInfo;
 
     size_t size = m_expressionInfo.size();
     dataLogF("UnlinkedCodeBlock %p expressionRangeInfo[%zu] {\n", this, size);
@@ -188,7 +233,7 @@ void UnlinkedCodeBlock::expressionRangeForBytecodeIndex(BytecodeIndex bytecodeIn
         return;
     }
 
-    const RefCountedArray<ExpressionRangeInfo>& expressionInfo = m_expressionInfo;
+    const FixedVector<ExpressionRangeInfo>& expressionInfo = m_expressionInfo;
 
     int low = 0;
     int high = expressionInfo.size();
@@ -238,6 +283,15 @@ bool UnlinkedCodeBlock::typeProfilerExpressionInfoForBytecodeOffset(unsigned byt
 
 UnlinkedCodeBlock::~UnlinkedCodeBlock()
 {
+    if (UNLIKELY(Options::returnEarlyFromInfiniteLoopsForFuzzing())) {
+        if (auto* instructions = m_instructions.get()) {
+            VM& vm = this->vm();
+            for (const auto& instruction : *instructions) {
+                if (instruction->is<OpLoopHint>())
+                    vm.removeLoopHintExecutionCounter(instruction.ptr());
+            }
+        }
+    }
 }
 
 const InstructionStream& UnlinkedCodeBlock::instructions() const
@@ -282,6 +336,81 @@ int UnlinkedCodeBlock::outOfLineJumpOffset(InstructionStream::Offset bytecodeOff
 {
     ASSERT(m_outOfLineJumpTargets.contains(bytecodeOffset));
     return m_outOfLineJumpTargets.get(bytecodeOffset);
+}
+
+#if ASSERT_ENABLED
+bool UnlinkedCodeBlock::hasIdentifier(UniquedStringImpl* uid)
+{
+    if (numberOfIdentifiers() > 100) {
+        if (numberOfIdentifiers() != m_cachedIdentifierUids.size()) {
+            Locker locker(m_cachedIdentifierUidsLock);
+            HashSet<UniquedStringImpl*> cachedIdentifierUids;
+            for (unsigned i = 0; i < numberOfIdentifiers(); ++i) {
+                const Identifier& identifier = this->identifier(i);
+                cachedIdentifierUids.add(identifier.impl());
+            }
+
+            WTF::storeStoreFence();
+            m_cachedIdentifierUids = WTFMove(cachedIdentifierUids);
+        }
+
+        return m_cachedIdentifierUids.contains(uid);
+    }
+
+    for (unsigned i = 0; i < numberOfIdentifiers(); ++i) {
+        if (identifier(i).impl() == uid)
+            return true;
+    }
+    return false;
+}
+#endif
+
+int32_t UnlinkedCodeBlock::thresholdForJIT(int32_t threshold)
+{
+    switch (didOptimize()) {
+    case TriState::Indeterminate:
+        return threshold;
+    case TriState::False:
+        return threshold * 4;
+    case TriState::True:
+        return threshold / 2;
+    }
+    ASSERT_NOT_REACHED();
+    return threshold;
+}
+
+
+void UnlinkedCodeBlock::allocateSharedProfiles(unsigned numBinaryArithProfiles, unsigned numUnaryArithProfiles)
+{
+    RELEASE_ASSERT(!m_metadata->isFinalized());
+
+    {
+        unsigned numberOfValueProfiles = numParameters();
+        if (m_metadata->hasMetadata()) {
+#define COUNT(__op) \
+            numberOfValueProfiles += m_metadata->numEntries<__op>();
+            FOR_EACH_OPCODE_WITH_VALUE_PROFILE(COUNT)
+#undef COUNT
+            numberOfValueProfiles += m_metadata->numEntries<OpIteratorOpen>() * 3;
+            numberOfValueProfiles += m_metadata->numEntries<OpIteratorNext>() * 3;
+        }
+
+        m_valueProfiles = FixedVector<UnlinkedValueProfile>(numberOfValueProfiles);
+    }
+
+    if (m_metadata->hasMetadata()) {
+        unsigned numberOfArrayProfiles = 0;
+
+#define COUNT(__op) numberOfArrayProfiles += m_metadata->numEntries<__op>();
+        FOR_EACH_OPCODE_WITH_ARRAY_PROFILE(COUNT)
+#undef COUNT
+        numberOfArrayProfiles += m_metadata->numEntries<OpIteratorNext>();
+        numberOfArrayProfiles += m_metadata->numEntries<OpGetById>();
+        m_arrayProfiles = FixedVector<UnlinkedArrayProfile>(numberOfArrayProfiles);
+    }
+
+    m_binaryArithProfiles = FixedVector<BinaryArithProfile>(numBinaryArithProfiles);
+    m_unaryArithProfiles = FixedVector<UnaryArithProfile>(numUnaryArithProfiles);
 }
 
 } // namespace JSC

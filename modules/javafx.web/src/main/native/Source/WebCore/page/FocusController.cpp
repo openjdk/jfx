@@ -30,7 +30,7 @@
 #include "AXObjectCache.h"
 #include "Chrome.h"
 #include "ChromeClient.h"
-#include "Document.h"
+#include "DocumentInlines.h"
 #include "Editing.h"
 #include "Editor.h"
 #include "EditorClient.h"
@@ -39,6 +39,7 @@
 #include "Event.h"
 #include "EventHandler.h"
 #include "EventNames.h"
+#include "FocusOptions.h"
 #include "Frame.h"
 #include "FrameSelection.h"
 #include "FrameTree.h"
@@ -56,6 +57,7 @@
 #include "Range.h"
 #include "RenderWidget.h"
 #include "ScrollAnimator.h"
+#include "SelectionRestorationMode.h"
 #include "Settings.h"
 #include "ShadowRoot.h"
 #include "SpatialNavigation.h"
@@ -332,7 +334,7 @@ static inline int shadowAdjustedTabIndex(Element& element, KeyboardEvent* event)
         if (!element.tabIndexSetExplicitly())
             return 0; // Treat a shadow host without tabindex if it has tabindex=0 even though HTMLElement::tabIndex returns -1 on such an element.
     }
-    return element.shouldBeIgnoredInSequentialFocusNavigation() ? -1 : element.tabIndexSetExplicitly().valueOr(0);
+    return element.shouldBeIgnoredInSequentialFocusNavigation() ? -1 : element.tabIndexSetExplicitly().value_or(0);
 }
 
 FocusController::FocusController(Page& page, OptionSet<ActivityState::Flag> activityState)
@@ -357,7 +359,8 @@ void FocusController::setFocusedFrame(Frame* frame)
     m_focusedFrame = newFrame;
 
     // Now that the frame is updated, fire events and update the selection focused states of both frames.
-    if (oldFrame && oldFrame->view()) {
+    if (auto* oldFrameView = oldFrame ? oldFrame->view() : nullptr) {
+        oldFrameView->stopKeyboardScrollAnimation();
         oldFrame->selection().setFocused(false);
         oldFrame->document()->dispatchWindowEvent(Event::create(eventNames().blurEvent, Event::CanBubble::No, Event::IsCancelable::No));
     }
@@ -533,7 +536,7 @@ bool FocusController::advanceFocusInDocumentOrder(FocusDirection direction, Keyb
         }
     }
 
-    element->focus(SelectionRestorationMode::SelectAll, direction);
+    element->focus({ SelectionRestorationMode::SelectAll, direction, { }, { }, FocusVisibility::Visible });
     return true;
 }
 
@@ -825,7 +828,7 @@ static bool shouldClearSelectionWhenChangingFocusedElement(const Page& page, Ref
     return true;
 }
 
-bool FocusController::setFocusedElement(Element* element, Frame& newFocusedFrame, FocusDirection direction)
+bool FocusController::setFocusedElement(Element* element, Frame& newFocusedFrame, const FocusOptions& options)
 {
     Ref<Frame> protectedNewFocusedFrame = newFocusedFrame;
     RefPtr<Frame> oldFocusedFrame = focusedFrame();
@@ -872,7 +875,7 @@ bool FocusController::setFocusedElement(Element* element, Frame& newFocusedFrame
 
     Ref<Element> protect(*element);
 
-    bool successfullyFocused = newDocument->setFocusedElement(element, direction);
+    bool successfullyFocused = newDocument->setFocusedElement(element, options);
     if (!successfullyFocused)
         return false;
 
@@ -981,7 +984,7 @@ static void updateFocusCandidateIfNeeded(FocusDirection direction, const FocusCa
     if (!intersectionRect.isEmpty() && !areElementsOnSameLine(closest, candidate)) {
         // If 2 nodes are intersecting, do hit test to find which node in on top.
         auto center = flooredIntPoint(intersectionRect.center()); // FIXME: Would roundedIntPoint be better?
-        constexpr OptionSet<HitTestRequest::RequestType> hitType { HitTestRequest::ReadOnly, HitTestRequest::Active, HitTestRequest::IgnoreClipping, HitTestRequest::DisallowUserAgentShadowContent, HitTestRequest::AllowChildFrameContent };
+        constexpr OptionSet<HitTestRequest::Type> hitType { HitTestRequest::Type::ReadOnly, HitTestRequest::Type::Active, HitTestRequest::Type::IgnoreClipping, HitTestRequest::Type::DisallowUserAgentShadowContent, HitTestRequest::Type::AllowChildFrameContent };
         HitTestResult result = candidate.visibleNode->document().page()->mainFrame().eventHandler().hitTestResultAtPoint(center, hitType);
         if (candidate.visibleNode->contains(result.innerNode())) {
             closest = candidate;
@@ -1107,7 +1110,7 @@ bool FocusController::advanceFocusDirectionallyInContainer(Node* container, cons
     Element* element = downcast<Element>(focusCandidate.focusableNode);
     ASSERT(element);
 
-    element->focus(SelectionRestorationMode::SelectAll, direction);
+    element->focus({ SelectionRestorationMode::SelectAll, direction });
     return true;
 }
 

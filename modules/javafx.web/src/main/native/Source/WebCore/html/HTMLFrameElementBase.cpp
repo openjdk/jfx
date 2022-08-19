@@ -25,6 +25,7 @@
 #include "HTMLFrameElementBase.h"
 
 #include "Document.h"
+#include "ElementInlines.h"
 #include "FocusController.h"
 #include "Frame.h"
 #include "FrameLoader.h"
@@ -186,14 +187,15 @@ bool HTMLFrameElementBase::supportsFocus() const
     return true;
 }
 
-void HTMLFrameElementBase::setFocus(bool received)
+void HTMLFrameElementBase::setFocus(bool received, FocusVisibility visibility)
 {
-    HTMLFrameOwnerElement::setFocus(received);
+    HTMLFrameOwnerElement::setFocus(received, visibility);
     if (Page* page = document().page()) {
+        CheckedRef focusController { page->focusController() };
         if (received)
-            page->focusController().setFocusedFrame(contentFrame());
-        else if (page->focusController().focusedFrame() == contentFrame()) // Focus may have already been given to another frame, don't take it away.
-            page->focusController().setFocusedFrame(0);
+            focusController->setFocusedFrame(contentFrame());
+        else if (focusController->focusedFrame() == contentFrame()) // Focus may have already been given to another frame, don't take it away.
+            focusController->setFocusedFrame(nullptr);
     }
 }
 
@@ -229,7 +231,7 @@ ScrollbarMode HTMLFrameElementBase::scrollingMode() const
     return equalLettersIgnoringASCIICase(scrollingAttribute, "no")
         || equalLettersIgnoringASCIICase(scrollingAttribute, "noscroll")
         || equalLettersIgnoringASCIICase(scrollingAttribute, "off")
-        ? ScrollbarAlwaysOff : ScrollbarAuto;
+        ? ScrollbarMode::AlwaysOff : ScrollbarMode::Auto;
 }
 
 } // namespace WebCore

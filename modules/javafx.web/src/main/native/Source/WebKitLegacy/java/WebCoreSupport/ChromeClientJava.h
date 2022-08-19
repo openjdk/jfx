@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -79,7 +79,7 @@ public:
     bool canRunBeforeUnloadConfirmPanel() override;
     bool runBeforeUnloadConfirmPanel(const String& message, Frame&) override;
 
-    void closeWindowSoon() override;
+    void closeWindow() override;
 
     void runJavaScriptAlert(Frame&, const String&) override;
     bool runJavaScriptConfirm(Frame&, const String&) override;
@@ -89,7 +89,7 @@ public:
 
     bool hoverSupportedByPrimaryPointingDevice() const override { return true; }
     bool hoverSupportedByAnyAvailablePointingDevice() const override { return true; }
-    Optional<PointerCharacteristics> pointerCharacteristicsOfPrimaryPointingDevice() const override { return PointerCharacteristics::Fine; }
+    std::optional<PointerCharacteristics> pointerCharacteristicsOfPrimaryPointingDevice() const override { return PointerCharacteristics::Fine; }
     OptionSet<PointerCharacteristics> pointerCharacteristicsOfAllAvailablePointingDevices() const override { return PointerCharacteristics::Fine; }
 
     // Methods used by HostWindow.
@@ -109,6 +109,7 @@ public:
     PlatformPageClient platformPageClient() const override;
     void setCursor(const Cursor&) override;
     void setCursorHiddenUntilMouseMoves(bool) override;
+    void setTextIndicator(const TextIndicatorData&) const override {}
     // End methods used by HostWindow.
 
     void contentsSizeChanged(Frame&, const IntSize&) const override;
@@ -175,6 +176,9 @@ public:
 
     RefPtr<Icon> createIconForFiles(const Vector<String>&) override;
     void didFinishLoadingImageForElement(HTMLImageElement&) override;
+    void requestCookieConsent(CompletionHandler<void(CookieConsentDecisionResult)>&&) override;
+    void classifyModalContainerControls(Vector<String>&& texts, CompletionHandler<void(Vector<ModalContainerControlType>&&)>&&) override;
+    void decidePolicyForModalContainer(OptionSet<ModalContainerControlType>, CompletionHandler<void(ModalContainerDecision)>&&) override;
 
 
 private:

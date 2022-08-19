@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -450,10 +450,10 @@ class ES2Context extends BaseShaderContext {
     }
 
     void setLight(long nativeHandle, int index, float x, float y, float z, float r, float g, float b, float w,
-            float ca, float la, float qa, float maxRange, float dirX, float dirY, float dirZ,
+            float ca, float la, float qa, float isAttenuated, float maxRange, float dirX, float dirY, float dirZ,
             float innerAngle, float outerAngle, float falloff) {
-        glContext.setLight(nativeHandle, index, x, y, z, r, g, b, w, ca, la, qa, maxRange, dirX, dirY, dirZ,
-                innerAngle, outerAngle, falloff);
+        glContext.setLight(nativeHandle, index, x, y, z, r, g, b, w, ca, la, qa, isAttenuated,
+                maxRange, dirX, dirY, dirZ, innerAngle, outerAngle, falloff);
     }
 
     @Override

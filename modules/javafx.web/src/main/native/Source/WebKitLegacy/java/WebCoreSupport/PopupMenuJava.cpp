@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -109,8 +109,8 @@ void PopupMenuJava::populate()
         JLString itemTextJ(itemText.toJavaString(env));
         ASSERT(itemTextJ);
         PopupMenuStyle style = client()->itemStyle(i);
-        auto [r1, g1, b1, a1] = style.backgroundColor().toSRGBALossy<uint8_t>();
-        auto [r2, g2, b2, a2] = style.foregroundColor().toSRGBALossy<uint8_t>();
+        auto [r1, g1, b1, a1] = style.backgroundColor().toColorTypeLossy<SRGBA<uint8_t>>().resolved();
+        auto [r2, g2, b2, a2] = style.foregroundColor().toColorTypeLossy<SRGBA<uint8_t>>().resolved();
         env->CallVoidMethod(m_popup, mid, (jstring)itemTextJ,
                             bool_to_jbool(client()->itemIsLabel(i)),
                             bool_to_jbool(client()->itemIsSeparator(i)),

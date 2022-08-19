@@ -26,12 +26,13 @@
 #pragma once
 
 #include <memory>
+#include <optional>
 #include <stdarg.h>
 #include <tuple>
 #include <wtf/Forward.h>
 #include <wtf/FastMalloc.h>
+#include <wtf/FixedWidthDouble.h>
 #include <wtf/Noncopyable.h>
-#include <wtf/Optional.h>
 #include <wtf/RawPointer.h>
 #include <wtf/RefPtr.h>
 #include <wtf/StdLibExtras.h>
@@ -94,7 +95,7 @@ protected:
 };
 
 WTF_EXPORT_PRIVATE void printInternal(PrintStream&, const char*);
-WTF_EXPORT_PRIVATE void printInternal(PrintStream&, const StringView&);
+WTF_EXPORT_PRIVATE void printInternal(PrintStream&, StringView);
 WTF_EXPORT_PRIVATE void printInternal(PrintStream&, const CString&);
 WTF_EXPORT_PRIVATE void printInternal(PrintStream&, const String&);
 WTF_EXPORT_PRIVATE void printInternal(PrintStream&, const StringImpl*);
@@ -122,6 +123,7 @@ WTF_EXPORT_PRIVATE void printInternal(PrintStream&, unsigned long long);
 WTF_EXPORT_PRIVATE void printInternal(PrintStream&, float);
 WTF_EXPORT_PRIVATE void printInternal(PrintStream&, double);
 WTF_EXPORT_PRIVATE void printInternal(PrintStream&, RawPointer);
+WTF_EXPORT_PRIVATE void printInternal(PrintStream&, FixedWidthDouble);
 
 template<typename T>
 void printInternal(PrintStream& out, const T& value)
@@ -326,7 +328,7 @@ FormatImpl<Types...> format(Types... values)
 }
 
 template<typename T>
-void printInternal(PrintStream& out, const Optional<T>& value)
+void printInternal(PrintStream& out, const std::optional<T>& value)
 {
     if (value)
         out.print(*value);

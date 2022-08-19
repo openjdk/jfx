@@ -37,6 +37,7 @@
 #include "CSSPrimitiveValueMappings.h"
 #include "CSSTimingFunctionValue.h"
 #include "CSSValueKeywords.h"
+#include "CompositeOperation.h"
 #include "FillLayer.h"
 #include "Pair.h"
 #include "Rect.h"
@@ -264,11 +265,11 @@ void CSSToStyleMap::mapFillYPosition(CSSPropertyID propertyID, FillLayer& layer,
         layer.setBackgroundYOrigin(*pair->first());
 }
 
-void CSSToStyleMap::mapFillMaskSourceType(CSSPropertyID propertyID, FillLayer& layer, const CSSValue& value)
+void CSSToStyleMap::mapFillMaskMode(CSSPropertyID propertyID, FillLayer& layer, const CSSValue& value)
 {
-    MaskSourceType type = FillLayer::initialFillMaskSourceType(layer.type());
+    MaskMode maskMode = FillLayer::initialFillMaskMode(layer.type());
     if (value.treatAsInitialValue(propertyID)) {
-        layer.setMaskSourceType(type);
+        layer.setMaskMode(maskMode);
         return;
     }
 
@@ -277,18 +278,23 @@ void CSSToStyleMap::mapFillMaskSourceType(CSSPropertyID propertyID, FillLayer& l
 
     switch (downcast<CSSPrimitiveValue>(value).valueID()) {
     case CSSValueAlpha:
-        type = MaskSourceType::Alpha;
+        maskMode = MaskMode::Alpha;
         break;
     case CSSValueLuminance:
-        type = MaskSourceType::Luminance;
+        maskMode = MaskMode::Luminance;
+        break;
+    case CSSValueMatchSource:
+        ASSERT(propertyID == CSSPropertyMaskMode);
+        maskMode = MaskMode::MatchSource;
         break;
     case CSSValueAuto:
+        ASSERT(propertyID == CSSPropertyWebkitMaskSourceType);
         break;
     default:
         ASSERT_NOT_REACHED();
     }
 
-    layer.setMaskSourceType(type);
+    layer.setMaskMode(maskMode);
 }
 
 void CSSToStyleMap::mapAnimationDelay(Animation& animation, const CSSValue& value)
@@ -404,7 +410,7 @@ void CSSToStyleMap::mapAnimationName(Animation& layer, const CSSValue& value)
     if (primitiveValue.valueID() == CSSValueNone)
         layer.setIsNoneAnimation(true);
     else
-        layer.setName(primitiveValue.stringValue(), m_builderState.styleScopeOrdinal());
+        layer.setName({ primitiveValue.stringValue(), primitiveValue.isCustomIdent() }, m_builderState.styleScopeOrdinal());
 }
 
 void CSSToStyleMap::mapAnimationPlayState(Animation& layer, const CSSValue& value)
@@ -451,50 +457,18 @@ void CSSToStyleMap::mapAnimationProperty(Animation& animation, const CSSValue& v
 
 void CSSToStyleMap::mapAnimationTimingFunction(Animation& animation, const CSSValue& value)
 {
-    if (value.treatAsInitialValue(CSSPropertyAnimationTimingFunction)) {
+    if (value.treatAsInitialValue(CSSPropertyAnimationTimingFunction))
         animation.setTimingFunction(Animation::initialTimingFunction());
-        return;
-    }
+    else if (auto timingFunction = TimingFunction::createFromCSSValue(value))
+        animation.setTimingFunction(WTFMove(timingFunction));
+}
 
-    if (is<CSSPrimitiveValue>(value)) {
-        switch (downcast<CSSPrimitiveValue>(value).valueID()) {
-        case CSSValueLinear:
-            animation.setTimingFunction(LinearTimingFunction::create());
-            break;
-        case CSSValueEase:
-            animation.setTimingFunction(CubicBezierTimingFunction::create());
-            break;
-        case CSSValueEaseIn:
-            animation.setTimingFunction(CubicBezierTimingFunction::create(CubicBezierTimingFunction::EaseIn));
-            break;
-        case CSSValueEaseOut:
-            animation.setTimingFunction(CubicBezierTimingFunction::create(CubicBezierTimingFunction::EaseOut));
-            break;
-        case CSSValueEaseInOut:
-            animation.setTimingFunction(CubicBezierTimingFunction::create(CubicBezierTimingFunction::EaseInOut));
-            break;
-        case CSSValueStepStart:
-            animation.setTimingFunction(StepsTimingFunction::create(1, StepsTimingFunction::StepPosition::Start));
-            break;
-        case CSSValueStepEnd:
-            animation.setTimingFunction(StepsTimingFunction::create(1, StepsTimingFunction::StepPosition::End));
-            break;
-        default:
-            break;
-        }
-        return;
-    }
-
-    if (is<CSSCubicBezierTimingFunctionValue>(value)) {
-        auto& cubicTimingFunction = downcast<CSSCubicBezierTimingFunctionValue>(value);
-        animation.setTimingFunction(CubicBezierTimingFunction::create(cubicTimingFunction.x1(), cubicTimingFunction.y1(), cubicTimingFunction.x2(), cubicTimingFunction.y2()));
-    } else if (is<CSSStepsTimingFunctionValue>(value)) {
-        auto& stepsTimingFunction = downcast<CSSStepsTimingFunctionValue>(value);
-        animation.setTimingFunction(StepsTimingFunction::create(stepsTimingFunction.numberOfSteps(), stepsTimingFunction.stepPosition()));
-    } else if (is<CSSSpringTimingFunctionValue>(value)) {
-        auto& springTimingFunction = downcast<CSSSpringTimingFunctionValue>(value);
-        animation.setTimingFunction(SpringTimingFunction::create(springTimingFunction.mass(), springTimingFunction.stiffness(), springTimingFunction.damping(), springTimingFunction.initialVelocity()));
-    }
+void CSSToStyleMap::mapAnimationCompositeOperation(Animation& animation, const CSSValue& value)
+{
+    if (value.treatAsInitialValue(CSSPropertyAnimationComposition))
+        animation.setCompositeOperation(Animation::initialCompositeOperation());
+    else if (auto compositeOperation = toCompositeOperation(value))
+        animation.setCompositeOperation(*compositeOperation);
 }
 
 void CSSToStyleMap::mapNinePieceImage(CSSPropertyID property, CSSValue* value, NinePieceImage& image)
@@ -596,6 +570,8 @@ LengthBox CSSToStyleMap::mapNinePieceImageQuad(CSSValue& value)
         box.top() = Length(slices->top()->floatValue(), LengthType::Relative);
     else if (slices->top()->isPercentage())
         box.top() = Length(slices->top()->doubleValue(CSSUnitType::CSS_PERCENTAGE), LengthType::Percent);
+    else if (slices->top()->isCalculatedPercentageWithLength())
+        box.top() = Length(slices->top()->cssCalcValue()->createCalculationValue(conversionData));
     else if (slices->top()->valueID() != CSSValueAuto)
         box.top() = slices->top()->computeLength<Length>(conversionData);
 
@@ -603,6 +579,8 @@ LengthBox CSSToStyleMap::mapNinePieceImageQuad(CSSValue& value)
         box.right() = Length(slices->right()->floatValue(), LengthType::Relative);
     else if (slices->right()->isPercentage())
         box.right() = Length(slices->right()->doubleValue(CSSUnitType::CSS_PERCENTAGE), LengthType::Percent);
+    else if (slices->right()->isCalculatedPercentageWithLength())
+        box.right() = Length(slices->right()->cssCalcValue()->createCalculationValue(conversionData));
     else if (slices->right()->valueID() != CSSValueAuto)
         box.right() = slices->right()->computeLength<Length>(conversionData);
 
@@ -610,6 +588,8 @@ LengthBox CSSToStyleMap::mapNinePieceImageQuad(CSSValue& value)
         box.bottom() = Length(slices->bottom()->floatValue(), LengthType::Relative);
     else if (slices->bottom()->isPercentage())
         box.bottom() = Length(slices->bottom()->doubleValue(CSSUnitType::CSS_PERCENTAGE), LengthType::Percent);
+    else if (slices->bottom()->isCalculatedPercentageWithLength())
+        box.bottom() = Length(slices->bottom()->cssCalcValue()->createCalculationValue(conversionData));
     else if (slices->bottom()->valueID() != CSSValueAuto)
         box.bottom() = slices->bottom()->computeLength<Length>(conversionData);
 
@@ -617,6 +597,8 @@ LengthBox CSSToStyleMap::mapNinePieceImageQuad(CSSValue& value)
         box.left() = Length(slices->left()->floatValue(), LengthType::Relative);
     else if (slices->left()->isPercentage())
         box.left() = Length(slices->left()->doubleValue(CSSUnitType::CSS_PERCENTAGE), LengthType::Percent);
+    else if (slices->left()->isCalculatedPercentageWithLength())
+        box.left() = Length(slices->left()->cssCalcValue()->createCalculationValue(conversionData));
     else if (slices->left()->valueID() != CSSValueAuto)
         box.left() = slices->left()->computeLength<Length>(conversionData);
 

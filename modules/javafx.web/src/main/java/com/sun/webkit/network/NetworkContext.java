@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -238,7 +238,7 @@ final class NetworkContext {
         // Need to assert the modifyThread and modifyThreadGroup permission when
         // creating the thread from the URLLoaderThreadFactory, so we can
         // create the thread with the desired ThreadGroup.
-        // Note that this is needed when running as an applet or a web start app.
+        // Note that this is needed when running with a security manager
         private static final Permission modifyThreadGroupPerm = new RuntimePermission("modifyThreadGroup");
         private static final Permission modifyThreadPerm = new RuntimePermission("modifyThread");
 

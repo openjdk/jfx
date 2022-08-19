@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -155,7 +155,7 @@ public abstract class Control extends Region implements Skinnable {
         }
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private fields                                                          *
      *                                                                         *
@@ -176,7 +176,7 @@ public abstract class Control extends Region implements Skinnable {
      */
     private SkinBase<?> skinBase;
 
-    /***************************************************************************
+    /* *************************************************************************
     *                                                                         *
     * Event Handlers / Listeners                                              *
     *                                                                         *
@@ -204,7 +204,7 @@ public abstract class Control extends Region implements Skinnable {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Properties                                                              *
      *                                                                         *
@@ -236,19 +236,6 @@ public abstract class Control extends Region implements Skinnable {
         // only needed because invalidated() does not currently take
         // a reference to the old value.
         private Skin<?> oldValue;
-
-        @Override
-        //This code is basically a kind of optimization that prevents a Skin that is equal but not instance equal.
-        //Although it's not kosher from the property perspective (bindings won't pass through set), it should not do any harm.
-        //But it should be evaluated in the future.
-        public void set(Skin<?> v) {
-            if (v == null
-                ? oldValue == null
-                : oldValue != null && v.getClass().equals(oldValue.getClass()))
-                return;
-
-            super.set(v);
-        }
 
         @Override protected void invalidated() {
             Skin<?> skin = get();
@@ -415,7 +402,7 @@ public abstract class Control extends Region implements Skinnable {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -449,7 +436,7 @@ public abstract class Control extends Region implements Skinnable {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *
@@ -584,7 +571,7 @@ public abstract class Control extends Region implements Skinnable {
         }
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      * Implementation of layout bounds for the Control. We want to preserve    *
      * the lazy semantics of layout bounds. So whenever the width/height       *
      * changes on the node, we end up invalidating layout bounds. We then      *
@@ -607,7 +594,7 @@ public abstract class Control extends Region implements Skinnable {
         }
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      * Forward the following to the skin                                       *
      **************************************************************************/
 
@@ -623,7 +610,7 @@ public abstract class Control extends Region implements Skinnable {
         return null;
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Package API for SkinBase                                                *
      *                                                                         *
@@ -635,7 +622,7 @@ public abstract class Control extends Region implements Skinnable {
     }
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private implementation                                                  *
      *                                                                         *
@@ -777,7 +764,7 @@ public abstract class Control extends Region implements Skinnable {
         }
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * StyleSheet Handling                                                     *
      *                                                                         *
@@ -809,8 +796,9 @@ public abstract class Control extends Region implements Skinnable {
     }
 
     /**
-     * @return The CssMetaData associated with this class, which may include the
-     * CssMetaData of its superclasses.
+     * Gets the {@code CssMetaData} associated with this class, which may include the
+     * {@code CssMetaData} of its superclasses.
+     * @return the {@code CssMetaData}
      * @since JavaFX 8.0
      */
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
@@ -870,7 +858,8 @@ public abstract class Control extends Region implements Skinnable {
     }
 
     /**
-     * @return unmodifiable list of the controls css styleable properties
+     * Gets the unmodifiable list of the control's CSS-styleable properties.
+     * @return the unmodifiable list of the control's CSS-styleable properties
      * @since JavaFX 8.0
      */
     protected List<CssMetaData<? extends Styleable, ?>> getControlCssMetaData() {
@@ -928,7 +917,7 @@ public abstract class Control extends Region implements Skinnable {
     }
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Accessibility handling                                                  *
      *                                                                         *

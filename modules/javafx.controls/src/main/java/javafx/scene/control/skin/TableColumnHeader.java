@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -53,9 +53,11 @@ import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Label;
+import javafx.scene.control.SkinBase;
 import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableColumnBase;
+import javafx.scene.control.TableRow;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TreeTableCell;
 import javafx.scene.control.TreeTableColumn;
@@ -89,7 +91,7 @@ import static com.sun.javafx.scene.control.TableColumnSortTypeWrapper.setSortTyp
  */
 public class TableColumnHeader extends Region {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Static Fields                                                           *
      *                                                                         *
@@ -103,7 +105,7 @@ public class TableColumnHeader extends Region {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private Fields                                                          *
      *                                                                         *
@@ -143,7 +145,7 @@ public class TableColumnHeader extends Region {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructor                                                             *
      *                                                                         *
@@ -197,7 +199,7 @@ public class TableColumnHeader extends Region {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Listeners                                                               *
      *                                                                         *
@@ -294,7 +296,7 @@ public class TableColumnHeader extends Region {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Properties                                                              *
      *                                                                         *
@@ -357,7 +359,7 @@ public class TableColumnHeader extends Region {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *
@@ -439,7 +441,7 @@ public class TableColumnHeader extends Region {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private Implementation                                                  *
      *                                                                         *
@@ -644,17 +646,22 @@ public class TableColumnHeader extends Region {
             Region r = (Region) n;
             padding = r.snappedLeftInset() + r.snappedRightInset();
         }
+        Callback<TableView<T>, TableRow<T>> rowFactory = tv.getRowFactory();
+        TableRow<T> tableRow = createMeasureRow(tv, tableSkin, rowFactory);
+        ((SkinBase<?>) tableRow.getSkin()).getChildren().add(cell);
 
         int rows = maxRows == -1 ? items.size() : Math.min(items.size(), maxRows);
         double maxWidth = 0;
         for (int row = 0; row < rows; row++) {
+            tableRow.updateIndex(row);
+
             cell.updateTableColumn(tc);
             cell.updateTableView(tv);
+            cell.updateTableRow(tableRow);
             cell.updateIndex(row);
 
             if ((cell.getText() != null && !cell.getText().isEmpty()) || cell.getGraphic() != null) {
-                tableSkin.getChildren().add(cell);
-                cell.applyCss();
+                tableRow.applyCss();
                 maxWidth = Math.max(maxWidth, cell.prefWidth(-1));
                 tableSkin.getChildren().remove(cell);
             }
@@ -694,6 +701,20 @@ public class TableColumnHeader extends Region {
         }
     }
 
+    private <T> TableRow<T> createMeasureRow(TableView<T> tv, TableViewSkinBase tableSkin,
+            Callback<TableView<T>, TableRow<T>> rowFactory) {
+        TableRow<T> tableRow = rowFactory != null ? rowFactory.call(tv) : new TableRow<>();
+        tableSkin.getChildren().add(tableRow);
+        tableRow.applyCss();
+        if (!(tableRow.getSkin() instanceof SkinBase<?>)) {
+            tableSkin.getChildren().remove(tableRow);
+            // recreate with null rowFactory will result in a standard TableRow that will
+            // have a SkinBase-derived skin
+            tableRow = createMeasureRow(tv, tableSkin, null);
+        }
+        return tableRow;
+    }
+
     private <T,S> void resizeColumnToFitContent(TreeTableView<T> ttv, TreeTableColumn<T, S> tc, TableViewSkinBase tableSkin, int maxRows) {
         List<?> items = new TreeTableViewBackingList(ttv);
         if (items == null || items.isEmpty()) return;
@@ -716,8 +737,9 @@ public class TableColumnHeader extends Region {
             padding = r.snappedLeftInset() + r.snappedRightInset();
         }
 
-        TreeTableRow<T> treeTableRow = new TreeTableRow<>();
-        treeTableRow.updateTreeTableView(ttv);
+        Callback<TreeTableView<T>, TreeTableRow<T>> rowFactory = ttv.getRowFactory();
+        TreeTableRow<T> treeTableRow = createMeasureRow(ttv, tableSkin, rowFactory);
+        ((SkinBase<?>) treeTableRow.getSkin()).getChildren().add(cell);
 
         int rows = maxRows == -1 ? items.size() : Math.min(items.size(), maxRows);
         double maxWidth = 0;
@@ -725,14 +747,13 @@ public class TableColumnHeader extends Region {
             treeTableRow.updateIndex(row);
             treeTableRow.updateTreeItem(ttv.getTreeItem(row));
 
-            cell.updateTreeTableColumn(tc);
+            cell.updateTableColumn(tc);
             cell.updateTreeTableView(ttv);
-            cell.updateTreeTableRow(treeTableRow);
+            cell.updateTableRow(treeTableRow);
             cell.updateIndex(row);
 
             if ((cell.getText() != null && !cell.getText().isEmpty()) || cell.getGraphic() != null) {
-                tableSkin.getChildren().add(cell);
-                cell.applyCss();
+                treeTableRow.applyCss();
 
                 double w = cell.prefWidth(-1);
 
@@ -774,6 +795,20 @@ public class TableColumnHeader extends Region {
         } else {
             TableColumnBaseHelper.setWidth(tc, maxWidth);
         }
+    }
+
+    private <T> TreeTableRow<T> createMeasureRow(TreeTableView<T> ttv, TableViewSkinBase tableSkin,
+            Callback<TreeTableView<T>, TreeTableRow<T>> rowFactory) {
+        TreeTableRow<T> treeTableRow = rowFactory != null ? rowFactory.call(ttv) : new TreeTableRow<>();
+        tableSkin.getChildren().add(treeTableRow);
+        treeTableRow.applyCss();
+        if (!(treeTableRow.getSkin() instanceof SkinBase<?>)) {
+            tableSkin.getChildren().remove(treeTableRow);
+            // recreate with null rowFactory will result in a standard TableRow that will
+            // have a SkinBase-derived skin
+            treeTableRow = createMeasureRow(ttv, tableSkin, null);
+        }
+        return treeTableRow;
     }
 
     private void updateSortPosition() {
@@ -1104,7 +1139,7 @@ public class TableColumnHeader extends Region {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private Implementation: Column Reordering                               *
      *                                                                         *
@@ -1240,7 +1275,7 @@ public class TableColumnHeader extends Region {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Stylesheet Handling                                                     *
      *                                                                         *

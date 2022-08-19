@@ -33,6 +33,9 @@
 #if USE(LIBEPOXY)
 #include <epoxy/gl.h>
 #else
+#if HAVE(OPENGL_ES_3)
+#include <GLES3/gl3.h>
+#endif // HAVE(OPENGL_ES_3)
 #include <GLES2/gl2.h>
 #include <GLES2/gl2ext.h>
 #endif
@@ -68,6 +71,12 @@ class GraphicsContextGLOpenGL;
 
 class ExtensionsGLOpenGLES : public ExtensionsGLOpenGLCommon {
 public:
+    // GL_IMG_multisampled_render_to_texture
+    static constexpr GCGLenum RENDERBUFFER_SAMPLES_IMG = 0x9133;
+    static constexpr GCGLenum FRAMEBUFFER_INCOMPLETE_MULTISAMPLE_IMG = 0x9134;
+    static constexpr GCGLenum MAX_SAMPLES_IMG = 0x9135;
+    static constexpr GCGLenum TEXTURE_SAMPLES_IMG = 0x9136;
+
     // This class only needs to be instantiated by GraphicsContextGLOpenGL implementations.
     ExtensionsGLOpenGLES(GraphicsContextGLOpenGL*, bool useIndexedGetString);
     virtual ~ExtensionsGLOpenGLES();
@@ -98,7 +107,7 @@ public:
     void getnUniformivEXT(GCGLuint program, int location, GCGLsizei bufSize, int *params) override;
 
 protected:
-    bool supportsExtension(const String&) override;
+    bool platformSupportsExtension(const String&) override;
     String getExtensions() override;
 
     GCGLenum m_contextResetStatus;

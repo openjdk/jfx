@@ -31,19 +31,18 @@
 #include "IntPoint.h"
 #include "IntSize.h"
 #include "PlatformImage.h"
-#include <wtf/Optional.h>
 #include <wtf/Seconds.h>
 #include <wtf/text/WTFString.h>
 #include <wtf/ThreadSafeRefCounted.h>
 
 namespace WebCore {
 
-class SharedBuffer;
+class FragmentedSharedBuffer;
 
 class ImageDecoder : public ThreadSafeRefCounted<ImageDecoder> {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    static RefPtr<ImageDecoder> create(SharedBuffer&, const String& mimeType, AlphaOption, GammaAndColorProfileOption);
+    static RefPtr<ImageDecoder> create(FragmentedSharedBuffer&, const String& mimeType, AlphaOption, GammaAndColorProfileOption);
     virtual ~ImageDecoder() = default;
 
     enum class MediaType {
@@ -53,7 +52,7 @@ public:
 
     struct FrameMetadata {
         ImageOrientation orientation;
-        Optional<IntSize> densityCorrectedSize;
+        std::optional<IntSize> densityCorrectedSize;
     };
 
     struct FrameInfo {
@@ -68,17 +67,17 @@ public:
         }
 
         template<class Decoder>
-        static Optional<FrameInfo> decode(Decoder& decoder)
+        static std::optional<FrameInfo> decode(Decoder& decoder)
         {
-            Optional<bool> hasAlpha;
+            std::optional<bool> hasAlpha;
             decoder >> hasAlpha;
             if (!hasAlpha)
-                return WTF::nullopt;
+                return std::nullopt;
 
-            Optional<Seconds> duration;
+            std::optional<Seconds> duration;
             decoder >> duration;
             if (!duration)
-                return WTF::nullopt;
+                return std::nullopt;
 
             return {{
                 *hasAlpha,
@@ -90,9 +89,9 @@ public:
     static bool supportsMediaType(MediaType);
 
 #if ENABLE(GPU_PROCESS)
-    using SupportsMediaTypeFunc = WTF::Function<bool(MediaType)>;
-    using CanDecodeTypeFunc = WTF::Function<bool(const String&)>;
-    using CreateImageDecoderFunc = WTF::Function<RefPtr<ImageDecoder>(SharedBuffer&, const String&, AlphaOption, GammaAndColorProfileOption)>;
+    using SupportsMediaTypeFunc = Function<bool(MediaType)>;
+    using CanDecodeTypeFunc = Function<bool(const String&)>;
+    using CreateImageDecoderFunc = Function<RefPtr<ImageDecoder>(FragmentedSharedBuffer&, const String&, AlphaOption, GammaAndColorProfileOption)>;
 
     struct ImageDecoderFactory {
         SupportsMediaTypeFunc supportsMediaType;
@@ -108,7 +107,7 @@ public:
     virtual size_t bytesDecodedToDetermineProperties() const = 0;
 
     virtual EncodedDataStatus encodedDataStatus() const = 0;
-    virtual void setEncodedDataStatusChangeCallback(WTF::Function<void(EncodedDataStatus)>&&) { }
+    virtual void setEncodedDataStatusChangeCallback(Function<void(EncodedDataStatus)>&&) { }
     virtual bool isSizeAvailable() const { return encodedDataStatus() >= EncodedDataStatus::SizeAvailable; }
     virtual IntSize size() const = 0;
     virtual size_t frameCount() const = 0;
@@ -116,7 +115,7 @@ public:
     virtual String uti() const { return emptyString(); }
     virtual String filenameExtension() const = 0;
     virtual String accessibilityDescription() const { return emptyString(); };
-    virtual Optional<IntPoint> hotSpot() const = 0;
+    virtual std::optional<IntPoint> hotSpot() const = 0;
 
     virtual IntSize frameSizeAtIndex(size_t, SubsamplingLevel = SubsamplingLevel::Default) const = 0;
     virtual bool frameIsCompleteAtIndex(size_t) const = 0;
@@ -130,13 +129,9 @@ public:
     virtual PlatformImagePtr createFrameImageAtIndex(size_t, SubsamplingLevel = SubsamplingLevel::Default, const DecodingOptions& = DecodingOptions(DecodingMode::Synchronous)) = 0;
 
     virtual void setExpectedContentSize(long long) { }
-    virtual void setData(SharedBuffer&, bool allDataReceived) = 0;
+    virtual void setData(const FragmentedSharedBuffer&, bool allDataReceived) = 0;
     virtual bool isAllDataReceived() const = 0;
     virtual void clearFrameBufferCache(size_t) = 0;
-
-#if USE(DIRECT2D)
-    virtual void setTargetContext(ID2D1RenderTarget*) = 0;
-#endif
 
 protected:
     ImageDecoder() = default;

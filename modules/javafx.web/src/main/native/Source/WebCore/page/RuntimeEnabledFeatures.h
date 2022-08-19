@@ -31,9 +31,9 @@
 
 #pragma once
 
+#include <optional>
 #include <wtf/Forward.h>
 #include <wtf/Noncopyable.h>
-#include <wtf/Optional.h>
 
 namespace WebCore {
 
@@ -56,15 +56,17 @@ public:
     void setCustomPasteboardDataEnabled(bool isEnabled) { m_isCustomPasteboardDataEnabled = isEnabled; }
     bool customPasteboardDataEnabled() const { return m_isCustomPasteboardDataEnabled; }
 
-    void setModernMediaControlsEnabled(bool areEnabled) { m_areModernMediaControlsEnabled = areEnabled; }
-    bool modernMediaControlsEnabled() const { return m_areModernMediaControlsEnabled; }
-
     void setImageBitmapEnabled(bool isEnabled) { m_isImageBitmapEnabled = isEnabled; }
     bool imageBitmapEnabled() const { return m_isImageBitmapEnabled; }
 
 #if ENABLE(OFFSCREEN_CANVAS)
     void setOffscreenCanvasEnabled(bool isEnabled) { m_isOffscreenCanvasEnabled = isEnabled; }
     bool offscreenCanvasEnabled() const { return m_isOffscreenCanvasEnabled; }
+#endif
+
+#if ENABLE(OFFSCREEN_CANVAS_IN_WORKERS)
+    void setOffscreenCanvasInWorkersEnabled(bool isEnabled) { m_isOffscreenCanvasInWorkersEnabled = isEnabled; }
+    bool offscreenCanvasInWorkersEnabled() const { return m_isOffscreenCanvasInWorkersEnabled; }
 #endif
 
     void setCacheAPIEnabled(bool isEnabled) { m_isCacheAPIEnabled = isEnabled; }
@@ -99,9 +101,6 @@ public:
     void setServerTimingEnabled(bool isEnabled) { m_isServerTimingEnabled = isEnabled; }
     bool serverTimingEnabled() const { return m_isServerTimingEnabled; }
 
-    void setExperimentalPlugInSandboxProfilesEnabled(bool isEnabled) { m_experimentalPlugInSandboxProfilesEnabled = isEnabled; }
-    bool experimentalPlugInSandboxProfilesEnabled() const { return m_experimentalPlugInSandboxProfilesEnabled; }
-
     void setAttrStyleEnabled(bool isEnabled) { m_attrStyleEnabled = isEnabled; }
     bool attrStyleEnabled() const { return m_attrStyleEnabled; }
 
@@ -126,14 +125,8 @@ public:
     bool cssTypedOMEnabled() const { return m_CSSTypedOMEnabled; }
 #endif
 
-    void setWebSQLDisabled(bool isDisabled) { m_webSQLEnabled = !isDisabled; }
+    void setWebSQLEnabled(bool isEnabled) { m_webSQLEnabled = isEnabled; }
     bool webSQLEnabled() const { return m_webSQLEnabled; }
-
-    void setDialogElementEnabled(bool isEnabled) { m_dialogElementEnabled = isEnabled; }
-    bool dialogElementEnabled() const { return m_dialogElementEnabled; }
-
-    void setKeygenElementEnabled(bool isEnabled) { m_keygenElementEnabled = isEnabled; }
-    bool keygenElementEnabled() const { return m_keygenElementEnabled; }
 
     void setHighlightAPIEnabled(bool isEnabled) { m_highlightAPIEnabled = isEnabled; }
     bool highlightAPIEnabled() const { return m_highlightAPIEnabled; }
@@ -149,22 +142,16 @@ public:
 #if ENABLE(WEB_RTC)
     bool webRTCDTMFEnabled() const { return m_isWebRTCDTMFEnabled; }
     void setWebRTCDTMFEnabled(bool isEnabled) { m_isWebRTCDTMFEnabled = isEnabled; }
-    bool webRTCH265CodecEnabled() const { return m_isWebRTCH265CodecEnabled; }
-    void setWebRTCH265CodecEnabled(bool isEnabled) { m_isWebRTCH265CodecEnabled = isEnabled; }
-    bool webRTCVP9Profile0CodecEnabled() const { return m_isWebRTCVP9Profile0CodecEnabled; }
-    void setWebRTCVP9Profile0CodecEnabled(bool isEnabled) { m_isWebRTCVP9Profile0CodecEnabled = isEnabled; }
-    bool webRTCVP9Profile2CodecEnabled() const { return m_isWebRTCVP9Profile2CodecEnabled; }
-    void setWebRTCVP9Profile2CodecEnabled(bool isEnabled) { m_isWebRTCVP9Profile2CodecEnabled = isEnabled; }
     bool webRTCH264LowLatencyEncoderEnabled() const { return m_isWebRTCH264LowLatencyEncoderEnabled; }
     void setWebRTCH264LowLatencyEncoderEnabled(bool isEnabled) { m_isWebRTCH264LowLatencyEncoderEnabled = isEnabled; }
-    bool peerConnectionEnabled() const { return m_isPeerConnectionEnabled; }
-    void setPeerConnectionEnabled(bool isEnabled) { m_isPeerConnectionEnabled = isEnabled; }
     bool webRTCMDNSICECandidatesEnabled() const { return m_isWebRTCMDNSICECandidatesEnabled; }
     void setWebRTCMDNSICECandidatesEnabled(bool isEnabled) { m_isWebRTCMDNSICECandidatesEnabled = isEnabled; }
     bool webRTCH264SimulcastEnabled() const { return m_isWebRTCH264SimulcastEnabled; }
     void setWebRTCH264SimulcastEnabled(bool isEnabled) { m_isWebRTCH264SimulcastEnabled = isEnabled; }
-    bool webRTCPlatformSocketsEnabled() const { return m_isWebRTCPlatformSocketsEnabled; }
-    void setWebRTCPlatformSocketsEnabled(bool isEnabled) { m_isWebRTCPlatformSocketsEnabled = isEnabled; }
+    bool webRTCPlatformTCPSocketsEnabled() const { return m_isWebRTCPlatformTCPSocketsEnabled; }
+    void setWebRTCPlatformTCPSocketsEnabled(bool isEnabled) { m_isWebRTCPlatformTCPSocketsEnabled = isEnabled; }
+    bool webRTCPlatformUDPSocketsEnabled() const { return m_isWebRTCPlatformUDPSocketsEnabled; }
+    void setWebRTCPlatformUDPSocketsEnabled(bool isEnabled) { m_isWebRTCPlatformUDPSocketsEnabled = isEnabled; }
 #endif
 
 #if ENABLE(DATALIST_ELEMENT)
@@ -172,37 +159,18 @@ public:
     void setDataListElementEnabled(bool isEnabled) { m_isDataListElementEnabled = isEnabled; }
 #endif
 
-#if ENABLE(WEBGL)
-    void setWebGLUsingMetal(bool usingMetal) { m_webGLUsingMetal = usingMetal; }
-    bool webGLUsingMetal() const { return m_webGLUsingMetal; }
-#endif
-
-#if ENABLE(WEBGL2)
-    void setWebGL2Enabled(bool isEnabled) { m_isWebGL2Enabled = isEnabled; }
-    bool webGL2Enabled() const { return m_isWebGL2Enabled; }
-#endif
-
-#if ENABLE(WEBGPU)
-    void setWebGPUEnabled(bool isEnabled) { m_isWebGPUEnabled = isEnabled; }
-    bool webGPUEnabled() const { return m_isWebGPUEnabled; }
-#endif
-
-#if ENABLE(WEBGL) || ENABLE(WEBGL2)
-    void setMaskWebGLStringsEnabled(bool isEnabled) { m_isMaskWebGLStringsEnabled = isEnabled; }
-    bool maskWebGLStringsEnabled() const { return m_isMaskWebGLStringsEnabled; }
-#endif
-
     void setReadableByteStreamAPIEnabled(bool isEnabled) { m_isReadableByteStreamAPIEnabled = isEnabled; }
     bool readableByteStreamAPIEnabled() const { return m_isReadableByteStreamAPIEnabled; }
-    void setWritableStreamAPIEnabled(bool isEnabled) { m_isWritableStreamAPIEnabled = isEnabled; }
-    bool writableStreamAPIEnabled() const { return m_isWritableStreamAPIEnabled; }
-    void setTransformStreamAPIEnabled(bool isEnabled) { m_isTransformStreamAPIEnabled = isEnabled; }
-    bool transformStreamAPIEnabled() const { return m_isTransformStreamAPIEnabled; }
 
 #if ENABLE(SERVICE_WORKER)
+    bool pushAPIEnabled() const { return m_pushAPIEnabled; }
+    void setPushAPIEnabled(bool isEnabled) { m_pushAPIEnabled = isEnabled; }
     bool serviceWorkerEnabled() const { return m_serviceWorkerEnabled; }
     void setServiceWorkerEnabled(bool isEnabled) { m_serviceWorkerEnabled = isEnabled; }
 #endif
+
+    void setCSSDisplayContentsAXSupportEnabled(bool isEnabled) { m_CSSDisplayContentsAXSupportEnabled = isEnabled; }
+    bool cssDisplayContentsAXSupportEnabled() const { return m_CSSDisplayContentsAXSupportEnabled; }
 
     void setCSSLogicalEnabled(bool isEnabled) { m_CSSLogicalEnabled = isEnabled; }
     bool cssLogicalEnabled() const { return m_CSSLogicalEnabled; }
@@ -261,12 +229,12 @@ public:
 #endif
 
 #if ENABLE(VORBIS)
-    void setVorbisDecoderEnabled(bool isEnabled) { m_vorbisDecoderEnabled = isEnabled; }
+    WEBCORE_EXPORT void setVorbisDecoderEnabled(bool isEnabled);
     bool vorbisDecoderEnabled() const { return m_vorbisDecoderEnabled; }
 #endif
 
 #if ENABLE(OPUS)
-    void setOpusDecoderEnabled(bool isEnabled) { m_opusDecoderEnabled = isEnabled; }
+    WEBCORE_EXPORT void setOpusDecoderEnabled(bool isEnabled);
     bool opusDecoderEnabled() const { return m_opusDecoderEnabled; }
 #endif
 
@@ -275,11 +243,30 @@ public:
     bool webAuthenticationModernEnabled() const { return m_areWebAuthenticationModernEnabled; }
 #endif
 
+#if ENABLE(MEDIA_SOURCE) && (HAVE(AVSAMPLEBUFFERVIDEOOUTPUT) || USE(GSTREAMER))
+    WEBCORE_EXPORT void setMediaSourceInlinePaintingEnabled(bool);
+    bool mediaSourceInlinePaintingEnabled() const { return m_mediaSourceInlinePaintingEnabled; }
+#endif
+
+#if ENABLE(BUILT_IN_NOTIFICATIONS)
+    void setBuiltInNotificationsEnabled(bool isEnabled) { m_builtInNotificationsEnabled = isEnabled; }
+    bool builtInNotificationsEnabled() const { return m_builtInNotificationsEnabled; }
+#endif
+
+#if ENABLE(NOTIFICATION_EVENT)
+    void setNotificationEventEnabled(bool isEnabled) { m_notificationEventEnabled = isEnabled; }
+    bool notificationEventEnabled() const { return m_notificationEventEnabled; }
+#endif
+
+#if ENABLE(MODEL_ELEMENT)
+    void setModelDocumentEnabled(bool isEnabled) { m_modelDocumentEnabled = isEnabled; }
+    bool modelDocumentEnabled() const { return m_modelDocumentEnabled; }
+#endif
+
 private:
     // Never instantiate.
     RuntimeEnabledFeatures();
 
-    bool m_areModernMediaControlsEnabled { false };
     bool m_isPaintTimingEnabled { false };
     bool m_isMenuItemElementEnabled { false };
     bool m_isDirectoryUploadEnabled { false };
@@ -287,6 +274,9 @@ private:
     bool m_isImageBitmapEnabled { true };
 #if ENABLE(OFFSCREEN_CANVAS)
     bool m_isOffscreenCanvasEnabled { false };
+#endif
+#if ENABLE(OFFSCREEN_CANVAS_IN_WORKERS)
+    bool m_isOffscreenCanvasInWorkersEnabled { false };
 #endif
     bool m_isCacheAPIEnabled { false };
     bool m_isWebSocketEnabled { true };
@@ -300,11 +290,9 @@ private:
     bool m_itpDebugMode { false };
     bool m_isRestrictedHTTPResponseAccess { true };
     bool m_isServerTimingEnabled { false };
-    bool m_experimentalPlugInSandboxProfilesEnabled { false };
     bool m_attrStyleEnabled { false };
     bool m_webAPIStatisticsEnabled { false };
     bool m_syntheticEditingCommandsEnabled { true };
-    bool m_dialogElementEnabled { false };
     bool m_webSQLEnabled { false };
     bool m_keygenElementEnabled { false };
     bool m_pageAtRuleSupportEnabled { false };
@@ -331,14 +319,11 @@ private:
 
 #if ENABLE(WEB_RTC)
     bool m_isWebRTCDTMFEnabled { true };
-    bool m_isPeerConnectionEnabled { true };
     bool m_isWebRTCH264SimulcastEnabled { true };
     bool m_isWebRTCMDNSICECandidatesEnabled { false };
-    bool m_isWebRTCH265CodecEnabled { false };
-    bool m_isWebRTCVP9Profile0CodecEnabled { false };
-    bool m_isWebRTCVP9Profile2CodecEnabled { false };
     bool m_isWebRTCH264LowLatencyEncoderEnabled { false };
-    bool m_isWebRTCPlatformSocketsEnabled { false };
+    bool m_isWebRTCPlatformTCPSocketsEnabled { false };
+    bool m_isWebRTCPlatformUDPSocketsEnabled { false };
 #endif
 
 #if ENABLE(DATALIST_ELEMENT)
@@ -346,29 +331,13 @@ private:
 #endif
 
     bool m_isReadableByteStreamAPIEnabled { false };
-    bool m_isWritableStreamAPIEnabled { false };
-    bool m_isTransformStreamAPIEnabled { false };
-
-#if ENABLE(WEBGL)
-    bool m_webGLUsingMetal { false };
-#endif
-
-#if ENABLE(WEBGL2)
-    bool m_isWebGL2Enabled { true };
-#endif
-
-#if ENABLE(WEBGPU)
-    bool m_isWebGPUEnabled { false };
-#endif
-
-#if ENABLE(WEBGL) || ENABLE(WEBGL2)
-    bool m_isMaskWebGLStringsEnabled { false };
-#endif
 
 #if ENABLE(SERVICE_WORKER)
+    bool m_pushAPIEnabled { false };
     bool m_serviceWorkerEnabled { false };
 #endif
 
+    bool m_CSSDisplayContentsAXSupportEnabled { false };
     bool m_CSSLogicalEnabled { false };
 
     // False by default until https://bugs.webkit.org/show_bug.cgi?id=211351 /
@@ -376,11 +345,15 @@ private:
     bool m_lineHeightUnitsEnabled { false };
 
     bool m_privateClickMeasurementDebugModeEnabled { false };
+#if HAVE(RSA_BSSA)
+    bool m_privateClickMeasurementFraudPreventionEnabled { true };
+#else
     bool m_privateClickMeasurementFraudPreventionEnabled { false };
+#endif
 
 #if ENABLE(TOUCH_EVENTS)
     bool m_mouseEventsSimulationEnabled { false };
-    Optional<bool> m_touchEventsEnabled;
+    std::optional<bool> m_touchEventsEnabled;
 #endif
 
 #if HAVE(NSURLSESSION_WEBSOCKET)
@@ -421,7 +394,23 @@ private:
     bool m_areWebAuthenticationModernEnabled { false };
 #endif
 
-    friend class WTF::NeverDestroyed<RuntimeEnabledFeatures>;
+#if ENABLE(MEDIA_SOURCE) && (HAVE(AVSAMPLEBUFFERVIDEOOUTPUT) || USE(GSTREAMER))
+    bool m_mediaSourceInlinePaintingEnabled { false };
+#endif
+
+#if ENABLE(BUILT_IN_NOTIFICATIONS)
+    bool m_builtInNotificationsEnabled { false };
+#endif
+
+#if ENABLE(NOTIFICATION_EVENT)
+    bool m_notificationEventEnabled { true };
+#endif
+
+#if ENABLE(MODEL_ELEMENT)
+    bool m_modelDocumentEnabled { false };
+#endif
+
+    friend class NeverDestroyed<RuntimeEnabledFeatures>;
 };
 
 } // namespace WebCore

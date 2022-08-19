@@ -33,7 +33,6 @@
 #include "SharedBuffer.h"
 #include <JavaScriptCore/ArrayBuffer.h>
 #include <wtf/CompletionHandler.h>
-#include <wtf/Optional.h>
 
 namespace WebCore {
 
@@ -44,12 +43,13 @@ public:
     ~BlobLoader();
 
     void start(Blob&, ScriptExecutionContext*, FileReaderLoader::ReadType);
+    void start(const URL&, ScriptExecutionContext*, FileReaderLoader::ReadType);
 
     void cancel();
     bool isLoading() const { return m_loader && m_completionHandler; }
     String stringResult() const { return m_loader ? m_loader->stringResult() : String(); }
     RefPtr<JSC::ArrayBuffer> arrayBufferResult() const { return m_loader ? m_loader->arrayBufferResult() : nullptr; }
-    Optional<ExceptionCode> errorCode() const { return m_loader ? m_loader->errorCode() : WTF::nullopt; }
+    std::optional<ExceptionCode> errorCode() const { return m_loader ? m_loader->errorCode() : std::nullopt; }
 
 private:
     void didStartLoading() final { }
@@ -88,6 +88,13 @@ inline void BlobLoader::start(Blob& blob, ScriptExecutionContext* context, FileR
     ASSERT(!m_loader);
     m_loader = makeUnique<FileReaderLoader>(readType, this);
     m_loader->start(context, blob);
+}
+
+inline void BlobLoader::start(const URL& blobURL, ScriptExecutionContext* context, FileReaderLoader::ReadType readType)
+{
+    ASSERT(!m_loader);
+    m_loader = makeUnique<FileReaderLoader>(readType, this);
+    m_loader->start(context, blobURL);
 }
 
 inline void BlobLoader::didFinishLoading()

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -87,7 +87,7 @@ import static com.sun.javafx.scene.control.skin.resources.ControlResources.getSt
  */
 public class ToolBarSkin extends SkinBase<ToolBar> {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private fields                                                          *
      *                                                                         *
@@ -107,7 +107,7 @@ public class ToolBarSkin extends SkinBase<ToolBar> {
 
     private ListChangeListener<Node> itemsListener;
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -256,7 +256,7 @@ public class ToolBarSkin extends SkinBase<ToolBar> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Properties                                                              *
      *                                                                         *
@@ -358,7 +358,7 @@ public class ToolBarSkin extends SkinBase<ToolBar> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *
@@ -543,7 +543,7 @@ public class ToolBarSkin extends SkinBase<ToolBar> {
         }
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private implementation                                                  *
      *                                                                         *
@@ -718,7 +718,7 @@ public class ToolBarSkin extends SkinBase<ToolBar> {
         return hasOverflow;
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Support classes                                                         *
      *                                                                         *
@@ -818,7 +818,7 @@ public class ToolBarSkin extends SkinBase<ToolBar> {
         }
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      *                         Stylesheet Handling                             *
      *                                                                         *

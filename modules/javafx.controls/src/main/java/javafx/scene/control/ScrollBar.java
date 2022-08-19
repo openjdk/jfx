@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -69,7 +69,7 @@ import java.util.List;
  */
 public class ScrollBar extends Control {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -96,7 +96,7 @@ public class ScrollBar extends Control {
         pseudoClassStateChanged(HORIZONTAL_PSEUDOCLASS_STATE, true);
 
     }
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Properties                                                              *
      *                                                                         *
@@ -290,7 +290,7 @@ public class ScrollBar extends Control {
         return visibleAmount;
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Methods                                                                 *
      *                                                                         *
@@ -324,9 +324,6 @@ public class ScrollBar extends Control {
                 newValue = getValue() - getBlockIncrement();
             }
 
-            boolean incrementing = position > ((getValue() - getMin())/(getMax() - getMin()));
-            if (incrementing && newValue > posValue) newValue = posValue;
-            if (! incrementing && newValue < posValue) newValue = posValue;
             setValue(Utils.clamp(getMin(), newValue, getMax()));
         }
     }
@@ -360,7 +357,7 @@ public class ScrollBar extends Control {
         return new ScrollBarSkin(this);
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Stylesheet Handling                                                     *
      *                                                                         *
@@ -441,8 +438,9 @@ public class ScrollBar extends Control {
     }
 
     /**
-     * @return The CssMetaData associated with this class, which may include the
-     * CssMetaData of its superclasses.
+     * Gets the {@code CssMetaData} associated with this class, which may include the
+     * {@code CssMetaData} of its superclasses.
+     * @return the {@code CssMetaData}
      * @since JavaFX 8.0
      */
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
@@ -484,7 +482,7 @@ public class ScrollBar extends Control {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Accessibility handling                                                  *
      *                                                                         *

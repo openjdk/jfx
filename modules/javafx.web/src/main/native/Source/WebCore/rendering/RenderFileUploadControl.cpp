@@ -197,6 +197,8 @@ void RenderFileUploadControl::paintObject(PaintInfo& paintInfo, const LayoutPoin
 
 void RenderFileUploadControl::computeIntrinsicLogicalWidths(LayoutUnit& minLogicalWidth, LayoutUnit& maxLogicalWidth) const
 {
+    if (shouldApplySizeContainment(*this))
+        return;
     // Figure out how big the filename space needs to be for a given number of characters
     // (using "0" as the nominal character).
     const UChar character = '0';
@@ -241,8 +243,7 @@ VisiblePosition RenderFileUploadControl::positionForPoint(const LayoutPoint&, co
 HTMLInputElement* RenderFileUploadControl::uploadButton() const
 {
     ASSERT(inputElement().shadowRoot());
-    Node* buttonNode = inputElement().shadowRoot()->firstChild();
-    return is<HTMLInputElement>(buttonNode) ? downcast<HTMLInputElement>(buttonNode) : nullptr;
+    return dynamicDowncast<HTMLInputElement>(inputElement().shadowRoot()->firstChild());
 }
 
 String RenderFileUploadControl::buttonValue()

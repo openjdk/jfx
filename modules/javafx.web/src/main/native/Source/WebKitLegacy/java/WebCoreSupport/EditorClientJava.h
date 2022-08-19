@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -43,7 +43,7 @@ public:
     EditorClientJava(const JLObject &webPage);
     ~EditorClientJava() override;
 
-    bool shouldDeleteRange(const Optional<SimpleRange>&) override;
+    bool shouldDeleteRange(const std::optional<SimpleRange>&) override;
     bool smartInsertDeleteEnabled() override;
     bool isSelectTrailingWhitespaceEnabled() const override;
     bool isContinuousSpellCheckingEnabled() override;
@@ -54,25 +54,26 @@ public:
 
     bool shouldBeginEditing(const SimpleRange&) override;
     bool shouldEndEditing(const SimpleRange&) override;
-    bool shouldInsertNode(Node&, const Optional<SimpleRange>&, EditorInsertAction) override;
-    bool shouldInsertText(const String&, const Optional<SimpleRange>&, EditorInsertAction) override;
-    bool shouldChangeSelectedRange(const Optional<SimpleRange>& fromRange, const Optional<SimpleRange>& toRange, Affinity, bool stillSelecting) override;
+    bool shouldInsertNode(Node&, const std::optional<SimpleRange>&, EditorInsertAction) override;
+    bool shouldInsertText(const String&, const std::optional<SimpleRange>&, EditorInsertAction) override;
+    bool shouldChangeSelectedRange(const std::optional<SimpleRange>& fromRange, const std::optional<SimpleRange>& toRange, Affinity, bool stillSelecting) override;
 
-    bool shouldApplyStyle(const StyleProperties&, const Optional<SimpleRange>&) override;
+    bool shouldApplyStyle(const StyleProperties&, const std::optional<SimpleRange>&) override;
     void didApplyStyle() override;
     bool shouldMoveRangeAfterDelete(const SimpleRange&, const SimpleRange&) override;
 
     void didBeginEditing() override;
     void respondToChangedContents() override;
     void respondToChangedSelection(Frame*) override;
-    void didEndUserTriggeredSelectionChanges() final { }
+    void didEndUserTriggeredSelectionChanges() override { }
     void updateEditorStateAfterLayoutIfEditabilityChanged() override;
     void didEndEditing() override;
-    void willWriteSelectionToPasteboard(const Optional<SimpleRange>&) override;
+    void willWriteSelectionToPasteboard(const std::optional<SimpleRange>&) override;
     void didWriteSelectionToPasteboard() override;
-    void getClientPasteboardData(const Optional<SimpleRange>&, Vector<String>& pasteboardTypes, Vector<RefPtr<SharedBuffer> >& pasteboardData) override;
-    void didUpdateComposition() final { }
+    void getClientPasteboardData(const std::optional<SimpleRange>&, Vector<String>& pasteboardTypes, Vector<RefPtr<SharedBuffer> >& pasteboardData) override;
+    void didUpdateComposition() override { }
 
+    DOMPasteAccessResponse requestDOMPasteAccess(DOMPasteAccessCategory, const String& originIdentifier) override;
     void discardedComposition(Frame*) override;
     void canceledComposition() override;
 
@@ -98,7 +99,7 @@ public:
     void textWillBeDeletedInTextField(Element*) override;
     void textDidChangeInTextArea(Element*) override;
     void overflowScrollPositionChanged() override;
-    void subFrameScrollPositionChanged() final { }
+    void subFrameScrollPositionChanged() override;
 
 #if USE(APPKIT)
     void uppercaseWord() override;
@@ -155,7 +156,6 @@ public:
     bool performTwoStepDrop(DocumentFragment&, const SimpleRange&, bool) final { return false; }
     bool canShowFontPanel() const final { return false; }
 
-    DOMPasteAccessResponse requestDOMPasteAccess(const String&) final { return DOMPasteAccessResponse::DeniedForGesture; }
 
 protected:
     JGObject m_webPage;

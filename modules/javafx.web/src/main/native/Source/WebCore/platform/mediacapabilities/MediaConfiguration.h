@@ -27,17 +27,24 @@
 
 #include "AudioConfiguration.h"
 #include "VideoConfiguration.h"
-#include <wtf/Optional.h>
+#include <wtf/CrossThreadCopier.h>
 
 namespace WebCore {
 
 struct MediaConfiguration {
-    Optional<VideoConfiguration> video;
-    Optional<AudioConfiguration> audio;
+    std::optional<VideoConfiguration> video;
+    std::optional<AudioConfiguration> audio;
+
+    MediaConfiguration isolatedCopy() const;
 
     template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static Optional<MediaConfiguration> decode(Decoder&);
+    template<class Decoder> static std::optional<MediaConfiguration> decode(Decoder&);
 };
+
+inline MediaConfiguration MediaConfiguration::isolatedCopy() const
+{
+    return { crossThreadCopy(video),  crossThreadCopy(audio) };
+}
 
 template<class Encoder>
 void MediaConfiguration::encode(Encoder& encoder) const
@@ -47,17 +54,17 @@ void MediaConfiguration::encode(Encoder& encoder) const
 }
 
 template<class Decoder>
-Optional<MediaConfiguration> MediaConfiguration::decode(Decoder& decoder)
+std::optional<MediaConfiguration> MediaConfiguration::decode(Decoder& decoder)
 {
-    Optional<Optional<VideoConfiguration>> video;
+    std::optional<std::optional<VideoConfiguration>> video;
     decoder >> video;
     if (!video)
-        return WTF::nullopt;
+        return std::nullopt;
 
-    Optional<Optional<AudioConfiguration>> audio;
+    std::optional<std::optional<AudioConfiguration>> audio;
     decoder >> audio;
     if (!audio)
-        return WTF::nullopt;
+        return std::nullopt;
 
     return {{
         *video,

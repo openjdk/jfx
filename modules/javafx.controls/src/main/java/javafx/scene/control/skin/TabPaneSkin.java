@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -110,7 +110,7 @@ import static com.sun.javafx.scene.control.skin.resources.ControlResources.getSt
  */
 public class TabPaneSkin extends SkinBase<TabPane> {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Enums                                                                   *
      *                                                                         *
@@ -128,7 +128,7 @@ public class TabPaneSkin extends SkinBase<TabPane> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Static fields                                                           *
      *                                                                         *
@@ -138,7 +138,7 @@ public class TabPaneSkin extends SkinBase<TabPane> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private fields                                                          *
      *                                                                         *
@@ -157,7 +157,7 @@ public class TabPaneSkin extends SkinBase<TabPane> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -225,7 +225,7 @@ public class TabPaneSkin extends SkinBase<TabPane> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Properties                                                              *
      *                                                                         *
@@ -259,7 +259,7 @@ public class TabPaneSkin extends SkinBase<TabPane> {
         }
     };
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *
@@ -440,7 +440,7 @@ public class TabPaneSkin extends SkinBase<TabPane> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private implementation                                                  *
      *                                                                         *
@@ -743,7 +743,7 @@ public class TabPaneSkin extends SkinBase<TabPane> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * CSS                                                                     *
      *                                                                         *
@@ -813,13 +813,13 @@ public class TabPaneSkin extends SkinBase<TabPane> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Support classes                                                         *
      *                                                                         *
      **************************************************************************/
 
-    /**************************************************************************
+    /* ************************************************************************
      *
      * TabHeaderArea: Area responsible for painting all tabs
      *
@@ -1241,7 +1241,7 @@ public class TabPaneSkin extends SkinBase<TabPane> {
 
 
 
-    /**************************************************************************
+    /* ************************************************************************
      *
      * TabHeaderSkin: skin for each tab
      *
@@ -1673,7 +1673,7 @@ public class TabPaneSkin extends SkinBase<TabPane> {
             PseudoClass.getPseudoClass("disabled");
 
 
-    /**************************************************************************
+    /* ************************************************************************
      *
      * TabContentRegion: each tab has one to contain the tab's content node
      *
@@ -1727,7 +1727,7 @@ public class TabPaneSkin extends SkinBase<TabPane> {
 
     } /* End TabContentRegion */
 
-    /**************************************************************************
+    /* ************************************************************************
      *
      * TabControlButtons: controls to manipulate tab interaction
      *

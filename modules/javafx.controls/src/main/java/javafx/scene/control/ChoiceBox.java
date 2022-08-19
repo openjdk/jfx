@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -84,7 +84,7 @@ import javafx.beans.DefaultProperty;
 @DefaultProperty("items")
 public class ChoiceBox<T> extends Control {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Static properties and methods                                           *
      *                                                                         *
@@ -121,7 +121,7 @@ public class ChoiceBox<T> extends Control {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -151,14 +151,17 @@ public class ChoiceBox<T> extends Control {
         // selection model to indicate that this is the selected item
         valueProperty().addListener((ov, t, t1) -> {
             if (getItems() == null) return;
+            SingleSelectionModel<T> sm = getSelectionModel();
+            if (sm == null) return;
+
             int index = getItems().indexOf(t1);
             if (index > -1) {
-                getSelectionModel().select(index);
+                sm.select(index);
             }
         });
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Properties                                                              *
      *                                                                         *
@@ -468,7 +471,7 @@ public class ChoiceBox<T> extends Control {
         }
     };
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Methods                                                                 *
      *                                                                         *
@@ -493,7 +496,7 @@ public class ChoiceBox<T> extends Control {
         return new ChoiceBoxSkin<T>(this);
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Stylesheet Handling                                                     *
      *                                                                         *
@@ -635,7 +638,7 @@ public class ChoiceBox<T> extends Control {
         }
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Accessibility handling                                                  *
      *                                                                         *

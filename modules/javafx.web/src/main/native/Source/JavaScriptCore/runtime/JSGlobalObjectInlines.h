@@ -29,30 +29,53 @@
 
 #include "ArrayConstructor.h"
 #include "ArrayPrototype.h"
+#include "JSCustomGetterFunction.h"
+#include "JSCustomSetterFunction.h"
 #include "JSFunction.h"
 #include "LinkTimeConstant.h"
 #include "ObjectPrototype.h"
 
 namespace JSC {
 
-ALWAYS_INLINE bool JSGlobalObject::objectPrototypeIsSane()
+ALWAYS_INLINE bool JSGlobalObject::objectPrototypeIsSaneConcurrently(Structure* objectPrototypeStructure)
 {
-    return !hasIndexedProperties(m_objectPrototype->indexingType())
-        && m_objectPrototype->getPrototypeDirect(vm()).isNull();
+    return !hasIndexedProperties(objectPrototypeStructure->indexingType())
+        && objectPrototypeStructure->hasMonoProto()
+        && objectPrototypeStructure->storedPrototype().isNull();
+}
+
+ALWAYS_INLINE bool JSGlobalObject::arrayPrototypeChainIsSaneConcurrently(Structure* arrayPrototypeStructure, Structure* objectPrototypeStructure)
+{
+    return !hasIndexedProperties(arrayPrototypeStructure->indexingType())
+        && arrayPrototypeStructure->hasMonoProto()
+        && arrayPrototypeStructure->storedPrototype() == objectPrototype()
+        && objectPrototypeIsSaneConcurrently(objectPrototypeStructure);
+}
+
+ALWAYS_INLINE bool JSGlobalObject::stringPrototypeChainIsSaneConcurrently(Structure* stringPrototypeStructure, Structure* objectPrototypeStructure)
+{
+    return !hasIndexedProperties(stringPrototypeStructure->indexingType())
+        && stringPrototypeStructure->hasMonoProto()
+        && stringPrototypeStructure->storedPrototype() == objectPrototype()
+        && objectPrototypeIsSaneConcurrently(objectPrototypeStructure);
 }
 
 ALWAYS_INLINE bool JSGlobalObject::arrayPrototypeChainIsSane()
 {
-    return !hasIndexedProperties(m_arrayPrototype->indexingType())
-        && m_arrayPrototype->getPrototypeDirect(vm()) == m_objectPrototype.get()
-        && objectPrototypeIsSane();
+    VM& vm = this->vm();
+    ASSERT(!isCompilationThread() && !Thread::mayBeGCThread());
+    Structure* arrayPrototypeStructure = arrayPrototype()->structure(vm);
+    Structure* objectPrototypeStructure = objectPrototype()->structure(vm);
+    return arrayPrototypeChainIsSaneConcurrently(arrayPrototypeStructure, objectPrototypeStructure);
 }
 
 ALWAYS_INLINE bool JSGlobalObject::stringPrototypeChainIsSane()
 {
-    return !hasIndexedProperties(m_stringPrototype->indexingType())
-        && m_stringPrototype->getPrototypeDirect(vm()) == m_objectPrototype.get()
-        && objectPrototypeIsSane();
+    VM& vm = this->vm();
+    ASSERT(!isCompilationThread() && !Thread::mayBeGCThread());
+    Structure* stringPrototypeStructure = stringPrototype()->structure(vm);
+    Structure* objectPrototypeStructure = objectPrototype()->structure(vm);
+    return stringPrototypeChainIsSaneConcurrently(stringPrototypeStructure, objectPrototypeStructure);
 }
 
 ALWAYS_INLINE bool JSGlobalObject::isArrayPrototypeIteratorProtocolFastAndNonObservable()
@@ -101,9 +124,13 @@ ALWAYS_INLINE bool JSGlobalObject::isSetPrototypeAddFastAndNonObservable()
 
 ALWAYS_INLINE Structure* JSGlobalObject::arrayStructureForIndexingTypeDuringAllocation(JSGlobalObject* globalObject, IndexingType indexingType, JSValue newTarget) const
 {
-    return !newTarget || newTarget == globalObject->arrayConstructor()
-        ? globalObject->arrayStructureForIndexingTypeDuringAllocation(indexingType)
-        : InternalFunction::createSubclassStructure(globalObject, asObject(newTarget), getFunctionRealm(globalObject->vm(), asObject(newTarget))->arrayStructureForIndexingTypeDuringAllocation(indexingType));
+    VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+    if (!newTarget || newTarget == globalObject->arrayConstructor())
+        return globalObject->arrayStructureForIndexingTypeDuringAllocation(indexingType);
+    auto* functionGlobalObject = getFunctionRealm(globalObject, asObject(newTarget));
+    RETURN_IF_EXCEPTION(scope, nullptr);
+    RELEASE_AND_RETURN(scope, InternalFunction::createSubclassStructure(globalObject, asObject(newTarget), functionGlobalObject->arrayStructureForIndexingTypeDuringAllocation(indexingType)));
 }
 
 inline JSFunction* JSGlobalObject::throwTypeErrorFunction() const { return jsCast<JSFunction*>(linkTimeConstant(LinkTimeConstant::throwTypeErrorFunction)); }
@@ -111,6 +138,7 @@ inline JSFunction* JSGlobalObject::newPromiseCapabilityFunction() const { return
 inline JSFunction* JSGlobalObject::resolvePromiseFunction() const { return jsCast<JSFunction*>(linkTimeConstant(LinkTimeConstant::resolvePromise)); }
 inline JSFunction* JSGlobalObject::rejectPromiseFunction() const { return jsCast<JSFunction*>(linkTimeConstant(LinkTimeConstant::rejectPromise)); }
 inline JSFunction* JSGlobalObject::promiseProtoThenFunction() const { return jsCast<JSFunction*>(linkTimeConstant(LinkTimeConstant::defaultPromiseThen)); }
+inline JSFunction* JSGlobalObject::performPromiseThenFunction() const { return jsCast<JSFunction*>(linkTimeConstant(LinkTimeConstant::performPromiseThen)); }
 inline JSFunction* JSGlobalObject::regExpProtoExecFunction() const { return jsCast<JSFunction*>(linkTimeConstant(LinkTimeConstant::regExpBuiltinExec)); }
 inline GetterSetter* JSGlobalObject::regExpProtoGlobalGetter() const { return bitwise_cast<GetterSetter*>(linkTimeConstant(LinkTimeConstant::regExpProtoGlobalGetter)); }
 inline GetterSetter* JSGlobalObject::regExpProtoUnicodeGetter() const { return bitwise_cast<GetterSetter*>(linkTimeConstant(LinkTimeConstant::regExpProtoUnicodeGetter)); }
@@ -118,6 +146,31 @@ inline GetterSetter* JSGlobalObject::regExpProtoUnicodeGetter() const { return b
 ALWAYS_INLINE VM& getVM(JSGlobalObject* globalObject)
 {
     return globalObject->vm();
+}
+
+template<typename T>
+inline unsigned JSGlobalObject::WeakCustomGetterOrSetterHash<T>::hash(const Weak<T>& value)
+{
+    if (!value)
+        return 0;
+    return hash(value->propertyName(), value->customFunctionPointer());
+}
+
+template<typename T>
+inline bool JSGlobalObject::WeakCustomGetterOrSetterHash<T>::equal(const Weak<T>& a, const Weak<T>& b)
+{
+    if (!a || !b)
+        return false;
+    return a == b;
+}
+
+template<typename T>
+inline unsigned JSGlobalObject::WeakCustomGetterOrSetterHash<T>::hash(const PropertyName& propertyName, typename T::CustomFunctionPointer functionPointer)
+{
+    unsigned hash = DefaultHash<typename T::CustomFunctionPointer>::hash(functionPointer);
+    if (!propertyName.isNull())
+        hash = WTF::pairIntHash(hash, propertyName.uid()->existingSymbolAwareHash());
+    return hash;
 }
 
 } // namespace JSC

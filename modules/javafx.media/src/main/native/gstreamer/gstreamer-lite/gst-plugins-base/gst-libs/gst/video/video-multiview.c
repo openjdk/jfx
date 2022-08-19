@@ -28,7 +28,7 @@
 GType
 gst_video_multiview_flagset_get_type (void)
 {
-  static volatile GType type = 0;
+  static GType type = 0;
 
   if (g_once_init_enter (&type)) {
     GType _type = gst_flagset_register (GST_TYPE_VIDEO_MULTIVIEW_FLAGS);
@@ -405,7 +405,7 @@ gst_video_multiview_guess_half_aspect (GstVideoMultiviewMode mv_mode,
 GType
 gst_video_multiview_meta_api_get_type (void)
 {
-  static volatile GType type = 0;
+  static GType type = 0;
   static const gchar *tags[] =
       { GST_META_TAG_VIDEO_STR, GST_META_TAG_MEMORY_STR,
     NULL

@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2015 Andy VanWagoner (andy@vanwagoner.family)
- * Copyright (C) 2016-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,9 +33,9 @@
 
 namespace JSC {
 
-static JSC_DECLARE_HOST_FUNCTION(IntlCollatorPrototypeGetterCompare);
-static JSC_DECLARE_HOST_FUNCTION(IntlCollatorPrototypeFuncResolvedOptions);
-static JSC_DECLARE_HOST_FUNCTION(IntlCollatorFuncCompare);
+static JSC_DECLARE_CUSTOM_GETTER(intlCollatorPrototypeGetterCompare);
+static JSC_DECLARE_HOST_FUNCTION(intlCollatorPrototypeFuncResolvedOptions);
+static JSC_DECLARE_HOST_FUNCTION(intlCollatorFuncCompare);
 
 }
 
@@ -47,14 +47,14 @@ const ClassInfo IntlCollatorPrototype::s_info = { "Intl.Collator", &Base::s_info
 
 /* Source for IntlCollatorPrototype.lut.h
 @begin collatorPrototypeTable
-  compare          IntlCollatorPrototypeGetterCompare        DontEnum|Accessor
-  resolvedOptions  IntlCollatorPrototypeFuncResolvedOptions  DontEnum|Function 0
+  compare          intlCollatorPrototypeGetterCompare        DontEnum|ReadOnly|CustomAccessor
+  resolvedOptions  intlCollatorPrototypeFuncResolvedOptions  DontEnum|Function 0
 @end
 */
 
 IntlCollatorPrototype* IntlCollatorPrototype::create(VM& vm, JSGlobalObject*, Structure* structure)
 {
-    IntlCollatorPrototype* object = new (NotNull, allocateCell<IntlCollatorPrototype>(vm.heap)) IntlCollatorPrototype(vm, structure);
+    IntlCollatorPrototype* object = new (NotNull, allocateCell<IntlCollatorPrototype>(vm)) IntlCollatorPrototype(vm, structure);
     object->finishCreation(vm);
     return object;
 }
@@ -76,7 +76,7 @@ void IntlCollatorPrototype::finishCreation(VM& vm)
     JSC_TO_STRING_TAG_WITHOUT_TRANSITION();
 }
 
-JSC_DEFINE_HOST_FUNCTION(IntlCollatorFuncCompare, (JSGlobalObject* globalObject, CallFrame* callFrame))
+JSC_DEFINE_HOST_FUNCTION(intlCollatorFuncCompare, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
@@ -105,16 +105,16 @@ JSC_DEFINE_HOST_FUNCTION(IntlCollatorFuncCompare, (JSGlobalObject* globalObject,
     RELEASE_AND_RETURN(scope, JSValue::encode(collator->compareStrings(globalObject, xViewWithString.view, yViewWithString.view)));
 }
 
-JSC_DEFINE_HOST_FUNCTION(IntlCollatorPrototypeGetterCompare, (JSGlobalObject* globalObject, CallFrame* callFrame))
+JSC_DEFINE_CUSTOM_GETTER(intlCollatorPrototypeGetterCompare, (JSGlobalObject* globalObject, EncodedJSValue thisValue, PropertyName))
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     // 10.3.3 Intl.Collator.prototype.compare (ECMA-402 2.0)
     // 1. Let collator be this Collator object.
-    IntlCollator* collator = jsDynamicCast<IntlCollator*>(vm, callFrame->thisValue());
+    IntlCollator* collator = jsDynamicCast<IntlCollator*>(vm, JSValue::decode(thisValue));
     if (!collator)
-        return JSValue::encode(throwTypeError(globalObject, scope, "Intl.Collator.prototype.compare called on value that's not an object initialized as a Collator"_s));
+        return JSValue::encode(throwTypeError(globalObject, scope, "Intl.Collator.prototype.compare called on value that's not a Collator"_s));
 
     JSBoundFunction* boundCompare = collator->boundCompare();
     // 2. If collator.[[boundCompare]] is undefined,
@@ -122,7 +122,7 @@ JSC_DEFINE_HOST_FUNCTION(IntlCollatorPrototypeGetterCompare, (JSGlobalObject* gl
         JSGlobalObject* globalObject = collator->globalObject(vm);
         // a. Let F be a new built-in function object as defined in 11.3.4.
         // b. The value of F’s length property is 2.
-        JSFunction* targetObject = JSFunction::create(vm, globalObject, 2, "compare"_s, IntlCollatorFuncCompare, NoIntrinsic);
+        JSFunction* targetObject = JSFunction::create(vm, globalObject, 2, "compare"_s, intlCollatorFuncCompare, NoIntrinsic);
 
         // c. Let bc be BoundFunctionCreate(F, «this value»).
         boundCompare = JSBoundFunction::create(vm, globalObject, targetObject, collator, nullptr, 2, nullptr);
@@ -134,7 +134,7 @@ JSC_DEFINE_HOST_FUNCTION(IntlCollatorPrototypeGetterCompare, (JSGlobalObject* gl
     return JSValue::encode(boundCompare);
 }
 
-JSC_DEFINE_HOST_FUNCTION(IntlCollatorPrototypeFuncResolvedOptions, (JSGlobalObject* globalObject, CallFrame* callFrame))
+JSC_DEFINE_HOST_FUNCTION(intlCollatorPrototypeFuncResolvedOptions, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
@@ -142,7 +142,7 @@ JSC_DEFINE_HOST_FUNCTION(IntlCollatorPrototypeFuncResolvedOptions, (JSGlobalObje
     // 10.3.5 Intl.Collator.prototype.resolvedOptions() (ECMA-402 2.0)
     IntlCollator* collator = jsDynamicCast<IntlCollator*>(vm, callFrame->thisValue());
     if (!collator)
-        return JSValue::encode(throwTypeError(globalObject, scope, "Intl.Collator.prototype.resolvedOptions called on value that's not an object initialized as a Collator"_s));
+        return JSValue::encode(throwTypeError(globalObject, scope, "Intl.Collator.prototype.resolvedOptions called on value that's not a Collator"_s));
 
     RELEASE_AND_RETURN(scope, JSValue::encode(collator->resolvedOptions(globalObject)));
 }

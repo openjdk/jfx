@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2020-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -61,7 +61,7 @@ void UListFormatterDeleter::operator()(UListFormatter* formatter)
 
 IntlListFormat* IntlListFormat::create(VM& vm, Structure* structure)
 {
-    auto* object = new (NotNull, allocateCell<IntlListFormat>(vm.heap)) IntlListFormat(vm, structure);
+    auto* object = new (NotNull, allocateCell<IntlListFormat>(vm)) IntlListFormat(vm, structure);
     object->finishCreation(vm);
     return object;
 }
@@ -91,7 +91,7 @@ void IntlListFormat::initializeListFormat(JSGlobalObject* globalObject, JSValue 
     auto requestedLocales = canonicalizeLocaleList(globalObject, locales);
     RETURN_IF_EXCEPTION(scope, void());
 
-    Optional<JSObject&> options = intlGetOptionsObject(globalObject, optionsValue);
+    JSObject* options = intlGetOptionsObject(globalObject, optionsValue);
     RETURN_IF_EXCEPTION(scope, void());
 
     ResolveLocaleOptions localeOptions;
@@ -103,7 +103,7 @@ void IntlListFormat::initializeListFormat(JSGlobalObject* globalObject, JSValue 
         return { };
     };
 
-    auto& availableLocales = intlListFormatAvailableLocales();
+    const auto& availableLocales = intlListFormatAvailableLocales();
     auto resolved = resolveLocale(globalObject, availableLocales, requestedLocales, localeMatcher, localeOptions, { }, localeData);
 
     m_locale = resolved.locale;

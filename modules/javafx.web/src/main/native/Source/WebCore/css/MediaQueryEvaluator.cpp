@@ -35,6 +35,7 @@
 #include "CSSValueKeywords.h"
 #include "Chrome.h"
 #include "ChromeClient.h"
+#include "DocumentLoader.h"
 #include "Frame.h"
 #include "FrameView.h"
 #include "Logging.h"
@@ -49,6 +50,7 @@
 #include "RenderStyle.h"
 #include "RenderView.h"
 #include "Settings.h"
+#include "StyleFontSizeFunctions.h"
 #include "Theme.h"
 #include <wtf/HashMap.h>
 #include <wtf/text/StringConcatenateNumbers.h>
@@ -110,6 +112,12 @@ static bool isAppearanceDependent(const AtomString& mediaFeature)
     ;
 }
 
+MediaQueryViewportState mediaQueryViewportStateForDocument(const Document& document)
+{
+    // These things affect evaluation of viewport dependent media queries.
+    return { document.view()->layoutSize(), document.frame()->pageZoomFactor(), document.printing() };
+}
+
 MediaQueryEvaluator::MediaQueryEvaluator(bool mediaFeatureResult)
     : m_fallbackResult(mediaFeatureResult)
 {
@@ -123,7 +131,7 @@ MediaQueryEvaluator::MediaQueryEvaluator(const String& acceptedMediaType, bool m
 
 MediaQueryEvaluator::MediaQueryEvaluator(const String& acceptedMediaType, const Document& document, const RenderStyle* style)
     : m_mediaType(acceptedMediaType)
-    , m_document(makeWeakPtr(document))
+    , m_document(document)
     , m_style(style)
 {
 }
@@ -257,10 +265,10 @@ static bool compareAspectRatioValue(CSSValue* value, int width, int height, Medi
     return compareValue(width * aspectRatio.denominatorValue(), height * aspectRatio.numeratorValue(), op);
 }
 
-static Optional<double> doubleValue(CSSValue* value)
+static std::optional<double> doubleValue(CSSValue* value)
 {
-    if (!is<CSSPrimitiveValue>(value) || !downcast<CSSPrimitiveValue>(*value).isNumber())
-        return WTF::nullopt;
+    if (!is<CSSPrimitiveValue>(value) || !downcast<CSSPrimitiveValue>(*value).isNumberOrInteger())
+        return std::nullopt;
     return downcast<CSSPrimitiveValue>(*value).doubleValue(CSSUnitType::CSS_NUMBER);
 }
 
@@ -427,7 +435,7 @@ static bool evaluateResolution(CSSValue* value, Frame& frame, MediaFeaturePrefix
         return false;
 
     auto& resolution = downcast<CSSPrimitiveValue>(*value);
-    float resolutionValue = resolution.isNumber() ? resolution.floatValue() : resolution.floatValue(CSSUnitType::CSS_DPPX);
+    float resolutionValue = resolution.isNumberOrInteger() ? resolution.floatValue() : resolution.floatValue(CSSUnitType::CSS_DPPX);
     bool result = compareValue(deviceScaleFactor, resolutionValue, op);
     LOG_WITH_STREAM(MediaQueries, stream << "  evaluateResolution: " << op << " " << resolutionValue << " device scale factor " << deviceScaleFactor << ": " << result);
     return result;
@@ -435,19 +443,15 @@ static bool evaluateResolution(CSSValue* value, Frame& frame, MediaFeaturePrefix
 
 static bool devicePixelRatioEvaluate(CSSValue* value, const CSSToLengthConversionData&, Frame& frame, MediaFeaturePrefix op)
 {
-    return (!value || (is<CSSPrimitiveValue>(*value) && downcast<CSSPrimitiveValue>(*value).isNumber())) && evaluateResolution(value, frame, op);
+    return (!value || (is<CSSPrimitiveValue>(*value) && downcast<CSSPrimitiveValue>(*value).isNumberOrInteger())) && evaluateResolution(value, frame, op);
 }
 
 static bool resolutionEvaluate(CSSValue* value, const CSSToLengthConversionData&, Frame& frame, MediaFeaturePrefix op)
 {
-#if ENABLE(RESOLUTION_MEDIA_QUERY)
+    if (!frame.settings().resolutionMediaFeatureEnabled())
+        return false;
+
     return (!value || (is<CSSPrimitiveValue>(*value) && downcast<CSSPrimitiveValue>(*value).isResolution())) && evaluateResolution(value, frame, op);
-#else
-    UNUSED_PARAM(value);
-    UNUSED_PARAM(frame);
-    UNUSED_PARAM(op);
-    return false;
-#endif
 }
 
 static bool dynamicRangeEvaluate(CSSValue* value, const CSSToLengthConversionData&, Frame& frame, MediaFeaturePrefix)
@@ -482,24 +486,24 @@ static bool gridEvaluate(CSSValue* value, const CSSToLengthConversionData&, Fram
     return zeroEvaluate(value, op);
 }
 
-static bool computeLength(CSSValue* value, bool strict, const CSSToLengthConversionData& conversionData, int& result)
+static std::optional<double> computeLength(CSSValue* value, bool strict, const CSSToLengthConversionData& conversionData)
 {
     if (!is<CSSPrimitiveValue>(value))
-        return false;
+        return std::nullopt;
 
     auto& primitiveValue = downcast<CSSPrimitiveValue>(*value);
-
-    if (primitiveValue.isNumber()) {
-        result = primitiveValue.intValue();
-        return !strict || !result;
+    if (primitiveValue.isNumberOrInteger()) {
+        double value = primitiveValue.doubleValue();
+        // The only unitless number value allowed in strict mode is zero.
+        if (strict && value)
+            return std::nullopt;
+        return value;
     }
 
-    if (primitiveValue.isLength()) {
-        result = primitiveValue.computeLength<int>(conversionData);
-        return true;
-    }
+    if (primitiveValue.isLength())
+        return primitiveValue.computeLength<double>(conversionData);
 
-    return false;
+    return std::nullopt;
 }
 
 static bool deviceHeightEvaluate(CSSValue* value, const CSSToLengthConversionData& conversionData, Frame& frame, MediaFeaturePrefix op)
@@ -508,14 +512,13 @@ static bool deviceHeightEvaluate(CSSValue* value, const CSSToLengthConversionDat
     // assume if we have a device, assume non-zero
     if (!value)
         return true;
-    int length;
-    auto height = frame.mainFrame().screenSize().height();
-    if (!computeLength(value, !frame.document()->inQuirksMode(), conversionData, length))
+    auto length = computeLength(value, !frame.document()->inQuirksMode(), conversionData);
+    if (!length)
         return false;
 
-    LOG_WITH_STREAM(MediaQueries, stream << "  deviceHeightEvaluate: query " << op << " height " << length << ", actual height " << height << " result: " << compareValue(height, length, op));
-
-    return compareValue(height, length, op);
+    auto height = frame.mainFrame().screenSize().height();
+    LOG_WITH_STREAM(MediaQueries, stream << "  deviceHeightEvaluate: query " << op << " height " << *length << ", actual height " << height << " result: " << compareValue(height, *length, op));
+    return compareValue(height, *length, op);
 }
 
 static bool deviceWidthEvaluate(CSSValue* value, const CSSToLengthConversionData& conversionData, Frame& frame, MediaFeaturePrefix op)
@@ -524,14 +527,13 @@ static bool deviceWidthEvaluate(CSSValue* value, const CSSToLengthConversionData
     // assume if we have a device, assume non-zero
     if (!value)
         return true;
-    int length;
-    auto width = frame.mainFrame().screenSize().width();
-    if (!computeLength(value, !frame.document()->inQuirksMode(), conversionData, length))
+    auto length = computeLength(value, !frame.document()->inQuirksMode(), conversionData);
+    if (!length)
         return false;
 
-    LOG_WITH_STREAM(MediaQueries, stream << "  deviceWidthEvaluate: query " << op << " width " << length << ", actual width " << width << " result: " << compareValue(width, length, op));
-
-    return compareValue(width, length, op);
+    auto width = frame.mainFrame().screenSize().width();
+    LOG_WITH_STREAM(MediaQueries, stream << "  deviceWidthEvaluate: query " << op << " width " << *length << ", actual width " << width << " result: " << compareValue(width, *length, op));
+    return compareValue(width, *length, op);
 }
 
 static bool heightEvaluate(CSSValue* value, const CSSToLengthConversionData& conversionData, Frame& frame, MediaFeaturePrefix op)
@@ -542,16 +544,16 @@ static bool heightEvaluate(CSSValue* value, const CSSToLengthConversionData& con
     int height = view->layoutHeight();
     if (!value)
         return height;
+
+    auto length = computeLength(value, !frame.document()->inQuirksMode(), conversionData);
+    if (!length)
+        return false;
+
     if (auto* renderView = frame.document()->renderView())
         height = adjustForAbsoluteZoom(height, *renderView);
 
-    int length;
-    if (!computeLength(value, !frame.document()->inQuirksMode(), conversionData, length))
-        return false;
-
-    LOG_WITH_STREAM(MediaQueries, stream << "  heightEvaluate: query " << op << " height " << length << ", actual height " << height << " result: " << compareValue(height, length, op));
-
-    return compareValue(height, length, op);
+    LOG_WITH_STREAM(MediaQueries, stream << "  heightEvaluate: query " << op << " height " << *length << ", actual height " << height << " result: " << compareValue(height, *length, op));
+    return compareValue(height, *length, op);
 }
 
 static bool widthEvaluate(CSSValue* value, const CSSToLengthConversionData& conversionData, Frame& frame, MediaFeaturePrefix op)
@@ -562,16 +564,16 @@ static bool widthEvaluate(CSSValue* value, const CSSToLengthConversionData& conv
     int width = view->layoutWidth();
     if (!value)
         return width;
+
+    auto length = computeLength(value, !frame.document()->inQuirksMode(), conversionData);
+    if (!length)
+        return false;
+
     if (auto* renderView = frame.document()->renderView())
         width = adjustForAbsoluteZoom(width, *renderView);
 
-    int length;
-    if (!computeLength(value, !frame.document()->inQuirksMode(), conversionData, length))
-        return false;
-
-    LOG_WITH_STREAM(MediaQueries, stream << "  widthEvaluate: query " << op << " width " << length << ", actual width " << width << " result: " << compareValue(width, length, op));
-
-    return compareValue(width, length, op);
+    LOG_WITH_STREAM(MediaQueries, stream << "  widthEvaluate: query " << op << " width " << *length << ", actual width " << width << " result: " << compareValue(width, *length, op));
+    return compareValue(width, *length, op);
 }
 
 static bool minColorEvaluate(CSSValue* value, const CSSToLengthConversionData& conversionData, Frame& frame, MediaFeaturePrefix)
@@ -742,7 +744,7 @@ static bool anyHoverEvaluate(CSSValue* value, const CSSToLengthConversionData&, 
 static bool pointerEvaluate(CSSValue* value, const CSSToLengthConversionData&, Frame& frame, MediaFeaturePrefix)
 {
     auto* page = frame.page();
-    auto pointerCharacteristicsOfPrimaryPointingDevice = page ? page->chrome().client().pointerCharacteristicsOfPrimaryPointingDevice() : Optional<PointerCharacteristics>();
+    auto pointerCharacteristicsOfPrimaryPointingDevice = page ? page->chrome().client().pointerCharacteristicsOfPrimaryPointingDevice() : std::optional<PointerCharacteristics>();
 
 #if ENABLE(TOUCH_EVENTS)
     if (pointerCharacteristicsOfPrimaryPointingDevice == PointerCharacteristics::Coarse) {
@@ -806,11 +808,17 @@ static bool prefersColorSchemeEvaluate(CSSValue* value, const CSSToLengthConvers
         return false;
 
     auto keyword = downcast<CSSPrimitiveValue>(*value).valueID();
-    bool useDarkAppearance = frame.page()->useDarkAppearance();
+    bool useDarkAppearance = [&] () -> auto {
+        if (frame.document()->loader()) {
+            auto colorSchemePreference = frame.document()->loader()->colorSchemePreference();
+            if (colorSchemePreference != ColorSchemePreference::NoPreference)
+                return colorSchemePreference == ColorSchemePreference::Dark;
+        }
+
+        return frame.page()->useDarkAppearance();
+    }();
 
     switch (keyword) {
-    case CSSValueNoPreference:
-        return false;
     case CSSValueDark:
         return useDarkAppearance;
     case CSSValueLight:
@@ -841,7 +849,7 @@ static bool prefersContrastEvaluate(CSSValue* value, const CSSToLengthConversion
     if (!value)
         return userPrefersContrast;
 
-    // Apple platforms: less and forced are ignored and only "more" is mapped to the user's preference.
+    // Apple platforms: "less" is ignored and only "more" is mapped to the user's preference.
     return downcast<CSSPrimitiveValue>(*value).valueID() == (userPrefersContrast ? CSSValueMore : CSSValueNoPreference);
 }
 
@@ -876,7 +884,7 @@ static bool displayModeEvaluate(CSSValue* value, const CSSToLengthConversionData
 
     auto keyword = downcast<CSSPrimitiveValue>(*value).valueID();
 
-    auto manifest = frame.page() ? frame.page()->applicationManifest() : WTF::nullopt;
+    auto manifest = frame.page() ? frame.page()->applicationManifest() : std::nullopt;
     if (!manifest)
         return keyword == CSSValueBrowser;
 
@@ -929,8 +937,16 @@ bool MediaQueryEvaluator::evaluate(const MediaQueryExpression& expression) const
     if (!document.documentElement())
         return false;
 
+    auto defaultStyle = RenderStyle::create();
+    auto fontDescription = defaultStyle.fontDescription();
+    auto size = Style::fontSizeForKeyword(CSSValueMedium, false, document);
+    fontDescription.setComputedSize(size);
+    fontDescription.setSpecifiedSize(size);
+    defaultStyle.setFontDescription(WTFMove(fontDescription));
+    defaultStyle.fontCascade().update();
+
     // Pass `nullptr` for `parentStyle` because we are in the context of a media query.
-    return function(expression.value(), { m_style, document.documentElement()->renderStyle(), nullptr, document.renderView(), 1, WTF::nullopt }, *frame, NoPrefix);
+    return function(expression.value(), { m_style, &defaultStyle, nullptr, document.renderView(), 1, std::nullopt }, *frame, NoPrefix);
 }
 
 bool MediaQueryEvaluator::mediaAttributeMatches(Document& document, const String& attributeValue)

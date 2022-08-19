@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -58,7 +58,7 @@ import java.util.List;
  */
 public class MenuButtonSkinBase<C extends MenuButton> extends SkinBase<C> {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private fields                                                          *
      *                                                                         *
@@ -77,7 +77,7 @@ public class MenuButtonSkinBase<C extends MenuButton> extends SkinBase<C> {
     private final ChangeListener<? super Scene> sceneChangeListener;
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -148,12 +148,17 @@ public class MenuButtonSkinBase<C extends MenuButton> extends SkinBase<C> {
             ControlAcceleratorSupport.addAcceleratorsIntoScene(getSkinnable().getItems(), getSkinnable());
         }
 
+        List<Mnemonic> mnemonics = new ArrayList<>();
         sceneChangeListener = (scene, oldValue, newValue) -> {
             if (oldValue != null) {
                 ControlAcceleratorSupport.removeAcceleratorsFromScene(getSkinnable().getItems(), oldValue);
+
+                // We only need to remove the mnemonics from the old scene,
+                // they will be added to the new one as soon as the popup becomes visible again.
+                removeMnemonicsFromScene(mnemonics, oldValue);
             }
 
-             // FIXME: null skinnable should not happen
+            // FIXME: null skinnable should not happen
             if (getSkinnable() != null && getSkinnable().getScene() != null) {
                 ControlAcceleratorSupport.addAcceleratorsIntoScene(getSkinnable().getItems(), getSkinnable());
             }
@@ -181,7 +186,6 @@ public class MenuButtonSkinBase<C extends MenuButton> extends SkinBase<C> {
             label.setMnemonicParsing(getSkinnable().isMnemonicParsing());
             getSkinnable().requestLayout();
         });
-        List<Mnemonic> mnemonics = new ArrayList<>();
         registerChangeListener(popup.showingProperty(), e -> {
             if (!popup.isShowing() && getSkinnable().isShowing()) {
                 // Popup was dismissed. Maybe user clicked outside or typed ESCAPE.
@@ -201,16 +205,17 @@ public class MenuButtonSkinBase<C extends MenuButton> extends SkinBase<C> {
                 // consumed to prevent them being used elsewhere).
                 // See JBS-8090026 for more detail.
                 Scene scene = getSkinnable().getScene();
-                List<Mnemonic> mnemonicsToRemove = new ArrayList<>(mnemonics);
-                mnemonics.clear();
-                Platform.runLater(() -> mnemonicsToRemove.forEach(scene::removeMnemonic));
+                // JDK-8244234: MenuButton: NPE on removing from scene with open popup
+                if (scene != null) {
+                    removeMnemonicsFromScene(mnemonics, scene);
+                }
             }
         });
     }
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private implementation                                                  *
      *                                                                         *
@@ -289,7 +294,7 @@ public class MenuButtonSkinBase<C extends MenuButton> extends SkinBase<C> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private implementation                                                  *
      *                                                                         *
@@ -311,6 +316,12 @@ public class MenuButtonSkinBase<C extends MenuButton> extends SkinBase<C> {
         }
     }
 
+    private void removeMnemonicsFromScene(List<Mnemonic> mnemonics, Scene scene) {
+        List<Mnemonic> mnemonicsToRemove = new ArrayList<>(mnemonics);
+        mnemonics.clear();
+        Platform.runLater(() -> mnemonicsToRemove.forEach(scene::removeMnemonic));
+    }
+
     boolean requestFocusOnFirstMenuItem = false;
     void requestFocusOnFirstMenuItem() {
         this.requestFocusOnFirstMenuItem = true;
@@ -328,7 +339,7 @@ public class MenuButtonSkinBase<C extends MenuButton> extends SkinBase<C> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Support classes                                                         *
      *                                                                         *

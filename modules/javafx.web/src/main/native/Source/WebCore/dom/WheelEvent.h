@@ -32,7 +32,7 @@ namespace WebCore {
 class WheelEvent final : public MouseEvent {
     WTF_MAKE_ISO_ALLOCATED(WheelEvent);
 public:
-    enum { TickMultiplier = 120 };
+    static constexpr int TickMultiplier = 120;
 
     enum {
         DOM_DELTA_PIXEL = 0,
@@ -56,7 +56,7 @@ public:
 
     WEBCORE_EXPORT void initWebKitWheelEvent(int rawDeltaX, int rawDeltaY, RefPtr<WindowProxy>&&, int screenX, int screenY, int pageX, int pageY, bool ctrlKey, bool altKey, bool shiftKey, bool metaKey);
 
-    const Optional<PlatformWheelEvent>& underlyingPlatformEvent() const { return m_underlyingPlatformEvent; }
+    const std::optional<PlatformWheelEvent>& underlyingPlatformEvent() const { return m_underlyingPlatformEvent; }
 
     double deltaX() const { return m_deltaX; } // Positive when scrolling right.
     double deltaY() const { return m_deltaY; } // Positive when scrolling down.
@@ -87,7 +87,7 @@ private:
     double m_deltaY { 0 };
     double m_deltaZ { 0 };
     unsigned m_deltaMode { DOM_DELTA_PIXEL };
-    Optional<PlatformWheelEvent> m_underlyingPlatformEvent;
+    std::optional<PlatformWheelEvent> m_underlyingPlatformEvent;
 };
 
 } // namespace WebCore

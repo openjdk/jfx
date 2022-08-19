@@ -326,10 +326,16 @@ class WinTextRangeProvider {
             int index = 0;
             for (int i = 0; i < bounds.length; i++) {
                 Bounds b = bounds[i];
-                result[index++] = b.getMinX();
-                result[index++] = b.getMinY();
-                result[index++] = b.getWidth();
-                result[index++] = b.getHeight();
+                float[] platformBounds = accessible.getPlatformBounds(
+                        (float) b.getMinX(),
+                        (float) b.getMinY(),
+                        (float) b.getWidth(),
+                        (float) b.getHeight());
+
+                result[index++] = platformBounds[0];
+                result[index++] = platformBounds[1];
+                result[index++] = platformBounds[2];
+                result[index++] = platformBounds[3];
             }
             return result;
         }

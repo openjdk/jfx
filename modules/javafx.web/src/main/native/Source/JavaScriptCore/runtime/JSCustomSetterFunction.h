@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,8 +34,13 @@ public:
     typedef JSFunction Base;
     static constexpr unsigned StructureFlags = Base::StructureFlags;
 
+    using CustomFunctionPointer = PutValueFunc;
+
+    static constexpr bool needsDestruction = true;
+    static void destroy(JSCell*);
+
     template<typename CellType, SubspaceAccess mode>
-    static IsoSubspace* subspaceFor(VM& vm)
+    static GCClient::IsoSubspace* subspaceFor(VM& vm)
     {
         return vm.customSetterFunctionSpace<mode>();
     }
@@ -46,16 +51,19 @@ public:
         return Structure::create(vm, globalObject, prototype, TypeInfo(JSFunctionType, StructureFlags), info());
     }
 
-    JS_EXPORT_PRIVATE static JSCustomSetterFunction* create(VM&, JSGlobalObject*, const PropertyName&, PutValueFunc);
+    JS_EXPORT_PRIVATE static JSCustomSetterFunction* create(VM&, JSGlobalObject*, const PropertyName&, CustomFunctionPointer);
 
     DECLARE_EXPORT_INFO;
 
-    PutValueFunc setter() const { return m_setter; };
+    const Identifier& propertyName() const { return m_propertyName; }
+    CustomFunctionPointer setter() const { return m_setter; };
+    CustomFunctionPointer customFunctionPointer() const { return m_setter; };
 
 private:
-    JSCustomSetterFunction(VM&, NativeExecutable*, JSGlobalObject*, Structure*, PutValueFunc);
+    JSCustomSetterFunction(VM&, NativeExecutable*, JSGlobalObject*, Structure*, const PropertyName&, CustomFunctionPointer);
 
-    PutValueFunc m_setter;
+    Identifier m_propertyName;
+    CustomFunctionPointer m_setter;
 };
 
 } // namespace JSC

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2020, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -38,10 +38,9 @@ import static javafx.scene.control.ControlShim.*;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlSkinFactory.*;
 
 import javafx.scene.control.Control;
-import javafx.scene.control.TextArea;
 
 /**
- * Test for https://bugs.openjdk.java.net/browse/JDK-8244112:
+ * Test for https://bugs.openjdk.org/browse/JDK-8244112:
  * skin must not blow if dispose is called more than once.
  * <p>
  * This test is parameterized in the type of control.
@@ -76,8 +75,6 @@ public class SkinDisposeContractTest {
     @Parameterized.Parameters //(name = "{index}: {0} ")
     public static Collection<Object[]> data() {
         List<Class<Control>> controlClasses = getControlClasses();
-        // @Ignore("8244419")
-        controlClasses.remove(TextArea.class);
         return asArrays(controlClasses);
     }
 

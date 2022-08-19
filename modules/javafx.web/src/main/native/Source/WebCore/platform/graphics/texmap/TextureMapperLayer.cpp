@@ -144,17 +144,12 @@ void TextureMapperLayer::paint(TextureMapper& textureMapper)
     paintRecursive(options);
 }
 
-static Color blendWithOpacity(const Color& color, float opacity)
-{
-    if (color.isOpaque() && opacity == 1.)
-        return color;
-
-    return color.colorWithAlphaMultipliedBy(opacity);
-}
-
 void TextureMapperLayer::paintSelf(TextureMapperPaintOptions& options)
 {
     if (!m_state.visible || !m_state.contentsVisible)
+        return;
+    auto targetRect = layerRect();
+    if (targetRect.isEmpty())
         return;
 
     // We apply the following transform to compensate for painting into a surface, and then apply the offset so that the painting fits in the target rect.
@@ -163,28 +158,31 @@ void TextureMapperLayer::paintSelf(TextureMapperPaintOptions& options)
     transform.multiply(options.transform);
     transform.multiply(m_layerTransforms.combined);
 
-    if (m_state.solidColor.isValid() && !m_state.contentsRect.isEmpty() && m_state.solidColor.isVisible()) {
-        options.textureMapper.drawSolidColor(m_state.contentsRect, transform, blendWithOpacity(m_state.solidColor, options.opacity), true);
-        if (m_state.showDebugBorders)
-            options.textureMapper.drawBorder(m_state.debugBorderColor, m_state.debugBorderWidth, layerRect(), transform);
-        return;
+    TextureMapperSolidColorLayer solidColorLayer;
+    TextureMapperBackingStore* backingStore = m_backingStore;
+    if (m_state.backgroundColor.isValid()) {
+        solidColorLayer.setColor(m_state.backgroundColor);
+        backingStore = &solidColorLayer;
     }
 
     options.textureMapper.setWrapMode(TextureMapper::StretchWrap);
     options.textureMapper.setPatternTransform(TransformationMatrix());
 
-    if (m_backingStore) {
-        FloatRect targetRect = layerRect();
-        ASSERT(!targetRect.isEmpty());
-        m_backingStore->paintToTextureMapper(options.textureMapper, targetRect, transform, options.opacity);
+    if (backingStore) {
+        backingStore->paintToTextureMapper(options.textureMapper, targetRect, transform, options.opacity);
         if (m_state.showDebugBorders)
-            m_backingStore->drawBorder(options.textureMapper, m_state.debugBorderColor, m_state.debugBorderWidth, targetRect, transform);
+            backingStore->drawBorder(options.textureMapper, m_state.debugBorderColor, m_state.debugBorderWidth, targetRect, transform);
         // Only draw repaint count for the main backing store.
         if (m_state.showRepaintCounter)
-            m_backingStore->drawRepaintCounter(options.textureMapper, m_state.repaintCount, m_state.debugBorderColor, targetRect, transform);
+            backingStore->drawRepaintCounter(options.textureMapper, m_state.repaintCount, m_state.debugBorderColor, targetRect, transform);
     }
 
-    if (!m_contentsLayer)
+    TextureMapperPlatformLayer* contentsLayer = m_contentsLayer;
+    if (m_state.solidColor.isValid() && m_state.solidColor.isVisible()) {
+        solidColorLayer.setColor(m_state.solidColor);
+        contentsLayer = &solidColorLayer;
+    }
+    if (!contentsLayer)
         return;
 
     if (!m_state.contentsTileSize.isEmpty()) {
@@ -195,20 +193,18 @@ void TextureMapperLayer::paintSelf(TextureMapperPaintOptions& options)
         options.textureMapper.setPatternTransform(patternTransform);
     }
 
-    ASSERT(!layerRect().isEmpty());
-
     bool shouldClip = m_state.contentsClippingRect.isRounded() || !m_state.contentsClippingRect.rect().contains(m_state.contentsRect);
     if (shouldClip) {
         options.textureMapper.beginClip(transform, m_state.contentsClippingRect);
     }
 
-    m_contentsLayer->paintToTextureMapper(options.textureMapper, m_state.contentsRect, transform, options.opacity);
+    contentsLayer->paintToTextureMapper(options.textureMapper, m_state.contentsRect, transform, options.opacity);
 
     if (shouldClip)
         options.textureMapper.endClip();
 
     if (m_state.showDebugBorders)
-        m_contentsLayer->drawBorder(options.textureMapper, m_state.debugBorderColor, m_state.debugBorderWidth, m_state.contentsRect, transform);
+        contentsLayer->drawBorder(options.textureMapper, m_state.debugBorderColor, m_state.debugBorderWidth, m_state.contentsRect, transform);
 }
 
 void TextureMapperLayer::sortByZOrder(Vector<TextureMapperLayer* >& array)
@@ -263,10 +259,10 @@ void TextureMapperLayer::paintSelfAndChildren(TextureMapperPaintOptions& options
     bool shouldClip = m_state.masksToBounds && !m_state.preserves3D;
     if (shouldClip) {
         TransformationMatrix clipTransform;
-        clipTransform.translate(options.offset.width() + m_state.boundsOrigin.x(),
-            options.offset.height() + m_state.boundsOrigin.y());
+        clipTransform.translate(options.offset.width(), options.offset.height());
         clipTransform.multiply(options.transform);
         clipTransform.multiply(m_layerTransforms.combined);
+        clipTransform.translate(m_state.boundsOrigin.x(), m_state.boundsOrigin.y());
         options.textureMapper.beginClip(clipTransform, FloatRoundedRect(layerRect()));
 
         // If as a result of beginClip(), the clipping area is empty, it means that the intersection of the previous
@@ -323,7 +319,7 @@ void TextureMapperLayer::paintSelfAndChildrenWithReplica(TextureMapperPaintOptio
 TransformationMatrix TextureMapperLayer::replicaTransform()
 {
     return TransformationMatrix(m_state.replicaLayer->m_layerTransforms.combined)
-        .multiply(m_layerTransforms.combined.inverse().valueOr(TransformationMatrix()));
+        .multiply(m_layerTransforms.combined.inverse().value_or(TransformationMatrix()));
 }
 
 static void resolveOverlaps(const IntRect& newRegion, Region& overlapRegion, Region& nonOverlapRegion)
@@ -558,8 +554,8 @@ void TextureMapperLayer::removeAllChildren()
 void TextureMapperLayer::setMaskLayer(TextureMapperLayer* maskLayer)
 {
     if (maskLayer) {
-        maskLayer->m_effectTarget = makeWeakPtr(*this);
-        m_state.maskLayer = makeWeakPtr(*maskLayer);
+        maskLayer->m_effectTarget = *this;
+        m_state.maskLayer = *maskLayer;
     } else
         m_state.maskLayer = nullptr;
 }
@@ -568,8 +564,8 @@ void TextureMapperLayer::setReplicaLayer(TextureMapperLayer* replicaLayer)
 {
     if (replicaLayer) {
         replicaLayer->m_isReplica = true;
-        replicaLayer->m_effectTarget = makeWeakPtr(*this);
-        m_state.replicaLayer = makeWeakPtr(*replicaLayer);
+        replicaLayer->m_effectTarget = *this;
+        m_state.replicaLayer = *replicaLayer;
     } else
         m_state.replicaLayer = nullptr;
 }
@@ -578,8 +574,8 @@ void TextureMapperLayer::setBackdropLayer(TextureMapperLayer* backdropLayer)
 {
     if (backdropLayer) {
         backdropLayer->m_isBackdrop = true;
-        backdropLayer->m_effectTarget = makeWeakPtr(*this);
-        m_state.backdropLayer = makeWeakPtr(*backdropLayer);
+        backdropLayer->m_effectTarget = *this;
+        m_state.backdropLayer = *backdropLayer;
     } else
         m_state.backdropLayer = nullptr;
 }
@@ -679,6 +675,11 @@ void TextureMapperLayer::setSolidColor(const Color& color)
     m_state.solidColor = color;
 }
 
+void TextureMapperLayer::setBackgroundColor(const Color& color)
+{
+    m_state.backgroundColor = color;
+}
+
 void TextureMapperLayer::setFilters(const FilterOperations& filters)
 {
     m_state.filters = filters;
@@ -747,15 +748,15 @@ bool TextureMapperLayer::syncAnimations(MonotonicTime time)
     Nicosia::Animation::ApplicationResult applicationResults;
     m_animations.apply(applicationResults, time);
 
-    m_layerTransforms.localTransform = applicationResults.transform.valueOr(m_state.transform);
-    m_currentOpacity = applicationResults.opacity.valueOr(m_state.opacity);
-    m_currentFilters = applicationResults.filters.valueOr(m_state.filters);
+    m_layerTransforms.localTransform = applicationResults.transform.value_or(m_state.transform);
+    m_currentOpacity = applicationResults.opacity.value_or(m_state.opacity);
+    m_currentFilters = applicationResults.filters.value_or(m_state.filters);
 
 #if USE(COORDINATED_GRAPHICS)
     // Calculate localTransform 50ms in the future.
     Nicosia::Animation::ApplicationResult futureApplicationResults;
     m_animations.applyKeepingInternalState(futureApplicationResults, time + 50_ms);
-    m_layerTransforms.futureLocalTransform = futureApplicationResults.transform.valueOr(m_layerTransforms.localTransform);
+    m_layerTransforms.futureLocalTransform = futureApplicationResults.transform.value_or(m_layerTransforms.localTransform);
 #endif
 
     return applicationResults.hasRunningAnimations;

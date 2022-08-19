@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2013 Adobe Systems Incorporated. All rights reserved.
+ * Copyright (C) 2021 Apple Inc. All right reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,7 +36,6 @@
 #include "RenderElement.h"
 #include "StyleBuilderState.h"
 #include "StyleCachedImage.h"
-#include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
 
@@ -115,27 +115,24 @@ RefPtr<Image> CSSFilterImageValue::image(RenderElement& renderer, const FloatSiz
         return &Image::nullImage();
 
     // Transform Image into ImageBuffer.
-    // FIXME (149424): This buffer should not be unconditionally unaccelerated.
-    auto texture = ImageBuffer::create(size, RenderingMode::Unaccelerated);
-    if (!texture)
+    auto renderingMode = renderer.page().acceleratedFiltersEnabled() ? RenderingMode::Accelerated : RenderingMode::Unaccelerated;
+    auto sourceImage = ImageBuffer::create(size, renderingMode, ShouldUseDisplayList::No, RenderingPurpose::DOM, 1, DestinationColorSpace::SRGB(), PixelFormat::BGRA8, renderer.hostWindow());
+    if (!sourceImage)
         return &Image::nullImage();
 
-    auto imageRect = FloatRect { { }, size };
-    texture->context().drawImage(*image, imageRect);
+    auto sourceImageRect = FloatRect { { }, size };
+    sourceImage->context().drawImage(*image, sourceImageRect);
 
-    auto cssFilter = CSSFilter::create();
-    cssFilter->setSourceImage(WTFMove(texture));
-    cssFilter->setSourceImageRect(imageRect);
-    cssFilter->setFilterRegion(imageRect);
-    if (!cssFilter->build(renderer, m_filterOperations, FilterConsumer::FilterFunction))
-        return &Image::nullImage();
-    cssFilter->apply();
-
-    auto* output = cssFilter->output();
-    if (!output)
+    auto cssFilter = CSSFilter::create(renderer, m_filterOperations, renderingMode, FloatSize { 1, 1 }, Filter::ClipOperation::Intersect, sourceImageRect);
+    if (!cssFilter)
         return &Image::nullImage();
 
-    return output->copyImage();
+    cssFilter->setFilterRegion(sourceImageRect);
+
+    if (auto image = sourceImage->filteredImage(*cssFilter))
+        return image;
+
+    return &Image::nullImage();
 }
 
 void CSSFilterImageValue::filterImageChanged(const IntRect&)
@@ -156,7 +153,7 @@ void CSSFilterImageValue::FilterSubimageObserverProxy::imageChanged(CachedImage*
         m_ownerValue->filterImageChanged(*rect);
 }
 
-bool CSSFilterImageValue::traverseSubresources(const WTF::Function<bool (const CachedResource&)>& handler) const
+bool CSSFilterImageValue::traverseSubresources(const Function<bool(const CachedResource&)>& handler) const
 {
     if (!m_cachedImage)
         return false;
@@ -171,6 +168,18 @@ bool CSSFilterImageValue::equals(const CSSFilterImageValue& other) const
 bool CSSFilterImageValue::equalInputImages(const CSSFilterImageValue& other) const
 {
     return compareCSSValue(m_imageValue, other.m_imageValue);
+}
+
+Ref<CSSFilterImageValue> CSSFilterImageValue::valueWithStylesResolved(Style::BuilderState& state)
+{
+    auto imageValue = state.resolveImageStyles(m_imageValue.get());
+    if (imageValue.ptr() == m_imageValue.ptr()) {
+        createFilterOperations(state);
+        return *this;
+    }
+    auto filterImageValue = create(WTFMove(imageValue), Ref { m_filterValue });
+    filterImageValue->createFilterOperations(state);
+    return filterImageValue;
 }
 
 } // namespace WebCore

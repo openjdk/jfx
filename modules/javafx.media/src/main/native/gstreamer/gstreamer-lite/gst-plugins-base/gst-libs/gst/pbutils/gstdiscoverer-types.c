@@ -50,7 +50,7 @@ G_DEFINE_TYPE (GstDiscovererStreamInfo, gst_discoverer_stream_info,
 static void
 gst_discoverer_stream_info_init (GstDiscovererStreamInfo * info)
 {
-  /* Nothing needs initialization */
+  info->stream_number = -1;
 }
 
 static void
@@ -143,6 +143,8 @@ gst_discoverer_info_copy_int (GstDiscovererStreamInfo * info,
   if (stream_map)
     g_hash_table_insert (stream_map, info, ret);
 
+  ret->stream_number = info->stream_number;
+
   return ret;
 }
 
@@ -175,6 +177,9 @@ gst_discoverer_container_info_finalize (GObject * object)
 
   gst_discoverer_stream_info_list_free (info->streams);
 
+  if (info->tags)
+    gst_tag_list_unref (info->tags);
+
   gst_discoverer_stream_info_finalize ((GObject *) info);
 }
 
@@ -203,6 +208,9 @@ gst_stream_container_info_copy_int (GstDiscovererContainerInfo * ptr,
     if (stream_map)
       g_hash_table_insert (stream_map, tmp->data, subtop);
   }
+
+  if (ptr->tags)
+    ret->tags = gst_tag_list_copy (ptr->tags);
 
   return ret;
 }
@@ -712,6 +720,23 @@ gst_discoverer_stream_info_get_misc (GstDiscovererStreamInfo * info)
 }
 #endif
 
+/**
+ * gst_discoverer_stream_info_get_stream_number:
+ * @info: a #GstDiscovererStreamInfo
+ *
+ * Returns: the stream number, -1 if no index could be determined. This property
+ * acts as a unique identifier as a 'int' for the stream.
+ *
+ * Since: 1.20
+ */
+gint
+gst_discoverer_stream_info_get_stream_number (GstDiscovererStreamInfo * info)
+{
+  g_return_val_if_fail (GST_IS_DISCOVERER_STREAM_INFO (info), -1);
+
+  return info->stream_number;
+}
+
 /* GstDiscovererContainerInfo */
 
 /**
@@ -736,6 +761,23 @@ gst_discoverer_container_info_get_streams (GstDiscovererContainerInfo * info)
         gst_discoverer_stream_info_ref ((GstDiscovererStreamInfo *) tmp->data));
 
   return res;
+}
+
+/**
+ * gst_discoverer_container_info_get_tags:
+ * @info: a #GstDiscovererStreamInfo
+ *
+ * Returns: (transfer none): tags specific to the given container. If you wish to use
+ * the tags after the life-time of @info, you will need to copy them.
+ *
+ * Since: 1.20
+ */
+const GstTagList *
+gst_discoverer_container_info_get_tags (const GstDiscovererContainerInfo * info)
+{
+  g_return_val_if_fail (GST_IS_DISCOVERER_CONTAINER_INFO (info), NULL);
+
+  return info->tags;
 }
 
 /* GstDiscovererAudioInfo */
@@ -1057,7 +1099,6 @@ DISCOVERER_INFO_ACCESSOR_CODE (live, gboolean, FALSE);
  */
 
 DISCOVERER_INFO_ACCESSOR_CODE (misc, const GstStructure *, NULL);
-#endif
 
 /**
  * gst_discoverer_info_get_tags:
@@ -1065,9 +1106,12 @@ DISCOVERER_INFO_ACCESSOR_CODE (misc, const GstStructure *, NULL);
  *
  * Returns: (transfer none): all tags contained in the URI. If you wish to use
  * the tags after the life-time of @info, you will need to copy them.
+ *
+ * Deprecated: 1.20: Use gst_discoverer_{container,stream}_info_get_tags() instead.
  */
 
 DISCOVERER_INFO_ACCESSOR_CODE (tags, const GstTagList *, NULL);
+#endif
 
 /**
  * gst_discoverer_info_get_toc:

@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2003 Lars Knoll (knoll@kde.org)
- * Copyright (C) 2004, 2005, 2006, 2008, 2009, 2010, 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2004 - 2021 Apple Inc. All rights reserved.
  * Copyright (C) 2008 Eric Seidel <eric@webkit.org>
  * Copyright (C) 2009 - 2010  Torch Mobile (Beijing) Co. Ltd. All rights reserved.
  *
@@ -24,6 +24,7 @@
 
 #include "CSSParserTokenRange.h"
 #include "CSSPropertyParserHelpers.h"
+#include "CSSPropertyParserWorkerSafe.h"
 #include "StyleRule.h"
 #include <wtf/text/StringView.h>
 
@@ -31,6 +32,7 @@ namespace WebCore {
 
 class CSSProperty;
 class CSSValue;
+class CSSValueList;
 class StylePropertyShorthand;
 class StyleSheetContents;
 
@@ -54,6 +56,8 @@ public:
     static RefPtr<CSSCustomPropertyValue> parseTypedCustomPropertyValue(const String& name, const String& syntax, const CSSParserTokenRange&, const Style::BuilderState&, const CSSParserContext&);
     static void collectParsedCustomPropertyValueDependencies(const String& syntax, bool isRoot, HashSet<CSSPropertyID>& dependencies, const CSSParserTokenRange&, const CSSParserContext&);
 
+    static RefPtr<CSSValue> parseCounterStyleDescriptor(CSSPropertyID, CSSParserTokenRange&, const CSSParserContext&);
+
 private:
     CSSPropertyParser(const CSSParserTokenRange&, const CSSParserContext&, Vector<CSSProperty, 256>*, bool consumeWhitespace = true);
 
@@ -69,8 +73,11 @@ private:
 
     bool parseViewportDescriptor(CSSPropertyID propId, bool important);
     bool parseFontFaceDescriptor(CSSPropertyID);
+    bool parseFontPaletteValuesDescriptor(CSSPropertyID);
+    bool parseCounterStyleDescriptor(CSSPropertyID, const CSSParserContext&);
 
     void addProperty(CSSPropertyID, CSSPropertyID, Ref<CSSValue>&&, bool important, bool implicit = false);
+    void addPropertyWithImplicitDefault(CSSPropertyID, CSSPropertyID, RefPtr<CSSValue>&&, Ref<CSSValue>&& implicitDefault, bool important);
     void addExpandedPropertyForValue(CSSPropertyID propId, Ref<CSSValue>&&, bool);
 
     bool consumeBorder(RefPtr<CSSValue>& width, RefPtr<CSSValue>& style, RefPtr<CSSValue>& color);
@@ -98,6 +105,7 @@ private:
     bool consumePlaceSelfShorthand(bool important);
 
     bool consumeFont(bool important);
+    bool consumeTextDecorationSkip(bool important);
     bool consumeFontVariantShorthand(bool important);
     bool consumeSystemFont(bool important);
 
@@ -112,8 +120,11 @@ private:
 
     bool consumeTransformOrigin(bool important);
     bool consumePerspectiveOrigin(bool important);
+    bool consumeOffset(bool important);
 
     bool consumeOverscrollBehaviorShorthand(bool important);
+
+    bool consumeContainerShorthand(bool important);
 
 private:
     // Inputs:
@@ -127,9 +138,5 @@ private:
 CSSPropertyID cssPropertyID(StringView);
 WEBCORE_EXPORT CSSValueID cssValueKeywordID(StringView);
 bool isCustomPropertyName(const String&);
-
-#if PLATFORM(IOS_FAMILY)
-void cssPropertyNameIOSAliasing(const char* propertyName, const char*& propertyNameAlias, unsigned& newLength);
-#endif
 
 } // namespace WebCore

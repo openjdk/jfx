@@ -66,9 +66,15 @@ public:
         if (!m_frame)
             return nullptr;
 
-        if (auto* existingProxy = existingJSWindowProxy(world))
+        if (auto* existingProxy = existingJSWindowProxy(world)) {
+#if PLATFORM(JAVA)
+            set_existing_window_proxy(true, world);
+#endif
             return existingProxy;
-
+        }
+#if PLATFORM(JAVA)
+        set_existing_window_proxy(false, world);
+#endif
         return &createJSWindowProxyWithInitializedScript(world);
     }
 
@@ -94,6 +100,9 @@ private:
 
     JSWindowProxy& createJSWindowProxy(DOMWrapperWorld&);
     WEBCORE_EXPORT JSWindowProxy& createJSWindowProxyWithInitializedScript(DOMWrapperWorld&);
+#if PLATFORM(JAVA)
+    void set_existing_window_proxy(bool existingWindowProxy_, DOMWrapperWorld& world);
+#endif
 
     WeakPtr<AbstractFrame> m_frame;
     UniqueRef<ProxyMap> m_jsWindowProxies;

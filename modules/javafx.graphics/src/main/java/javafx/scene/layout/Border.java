@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -147,8 +147,9 @@ public final class Border {
                             BORDER_IMAGE_INSETS));
 
     /**
-     * @return The CssMetaData associated with this class, which may include the
-     * CssMetaData of its superclasses.
+     * Gets the {@code CssMetaData} associated with this class, which may include the
+     * {@code CssMetaData} of its superclasses.
+     * @return the {@code CssMetaData}
      */
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return STYLEABLES;
@@ -387,6 +388,20 @@ public final class Border {
         int result = this.strokes.hashCode();
         result = 31 * result + this.images.hashCode();
         hash = result;
+    }
+
+    /**
+     * A convenience factory method for creating a solid {@code Border} with a single {@code Paint}.
+     *
+     * @implSpec
+     * This call is equivalent to {@link BorderStroke#BorderStroke(Paint, BorderStrokeStyle, CornerRadii, BorderWidths)
+     * new Border(new BorderStroke(stroke, BorderStrokeStyle.SOLID, null, null));}.
+     * @param stroke the stroke of the border (for all sides). If {@code null}, {@code Color.BLACK} will be used.
+     * @return a new border of the given stroke
+     * @since 18
+     */
+    public static Border stroke(Paint stroke) {
+        return new Border(new BorderStroke(stroke, BorderStrokeStyle.SOLID, null, null));
     }
 
     /**

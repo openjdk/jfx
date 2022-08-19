@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -48,8 +48,10 @@ void scheduleDispatchFunctionsOnMainThread()
 {
     AttachThreadAsNonDaemonToJavaEnv autoAttach;
     JNIEnv* env = autoAttach.env();
-    env->CallStaticVoidMethod(jMainThreadCls, fwkScheduleDispatchFunctions);
-    WTF::CheckAndClearException(env);
+    if (env) {
+        env->CallStaticVoidMethod(jMainThreadCls, fwkScheduleDispatchFunctions);
+        WTF::CheckAndClearException(env);
+    }
 }
 
 void initializeMainThreadPlatform()
@@ -118,6 +120,18 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_MainThread_twkScheduleDispatchFunctio
 {
     RunLoop::main().dispatchFunctionsFromMainThread();
 }
+
+/*
+ * Class:     com_sun_webkit_MainThread
+ * Method:    twkSetShutdown
+ * Signature: (Z)V
+ */
+JNIEXPORT void JNICALL Java_com_sun_webkit_MainThread_twkSetShutdown
+  (JNIEnv *, jclass, jboolean isShutdown)
+{
+    g_ShuttingDown = isShutdown;
+}
+
 }
 
 } // namespace WTF

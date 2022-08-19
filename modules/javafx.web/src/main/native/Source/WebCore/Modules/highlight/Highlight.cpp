@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,6 +31,7 @@
 #include "JSStaticRange.h"
 #include "NodeTraversal.h"
 #include "PropertySetCSSStyleDeclaration.h"
+#include "RenderBlockFlow.h"
 #include "RenderObject.h"
 #include "StaticRange.h"
 #include "StyleProperties.h"
@@ -64,7 +65,7 @@ static void repaintRange(const SimpleRange& range)
     for (auto& node : intersectingNodes(sortedRange)) {
         if (auto renderer = node.renderer())
             renderer->repaint();
-    }
+        }
 }
 
 bool Highlight::removeFromSetLike(const StaticRange& range)
@@ -84,11 +85,17 @@ void Highlight::clearFromSetLike()
 
 bool Highlight::addToSetLike(StaticRange& range)
 {
-    if (notFound != m_rangesData.findMatching([&range](const Ref<HighlightRangeData>& current) { return current.get().range.get() == range; }))
+    if (notFound != m_rangesData.findIf([&range](const Ref<HighlightRangeData>& current) { return current.get().range.get() == range; }))
         return false;
     repaintRange(range);
     m_rangesData.append(HighlightRangeData::create(range));
     return true;
+}
+
+void Highlight::repaint()
+{
+    for (auto& data : m_rangesData)
+        repaintRange(data->range);
 }
 
 }

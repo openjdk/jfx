@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,23 +28,12 @@
 #if ENABLE(WEBASSEMBLY)
 
 #include "ErrorInstance.h"
+#include "WasmExceptionType.h"
 
 namespace JSC {
 
-class JSWebAssemblyRuntimeError final : public ErrorInstance {
-public:
-    typedef ErrorInstance Base;
-
-    static JSWebAssemblyRuntimeError* create(JSGlobalObject*, VM&, Structure*, const String&);
-
-    DECLARE_INFO;
-
-private:
-    JSWebAssemblyRuntimeError(VM&, Structure*);
-};
-STATIC_ASSERT_ISO_SUBSPACE_SHARABLE(JSWebAssemblyRuntimeError, ErrorInstance);
-
 JSObject* createJSWebAssemblyRuntimeError(JSGlobalObject*, VM&, const String&);
+JSObject* createJSWebAssemblyRuntimeError(JSGlobalObject*, VM&, Wasm::ExceptionType);
 
 } // namespace JSC
 

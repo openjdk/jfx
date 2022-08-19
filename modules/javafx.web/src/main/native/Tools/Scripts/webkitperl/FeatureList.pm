@@ -86,7 +86,6 @@ my (
     $downloadAttributeSupport,
     $dragSupportSupport,
     $encryptedMediaSupport,
-    $fastJITPermissionsSupport,
     $filtersLevel2Support,
     $ftlJITSupport,
     $ftpDirSupport,
@@ -95,8 +94,6 @@ my (
     $geolocationSupport,
     $gpuProcessSupport,
     $gstreamerGLSupport,
-    $indexedDatabaseInWorkersSupport,
-    $indexedDatabaseSupport,
     $inputTypeColorSupport,
     $inputTypeDateSupport,
     $inputTypeDatetimelocalSupport,
@@ -105,12 +102,12 @@ my (
     $inputTypeWeekSupport,
     $inspectorAlternateDispatchersSupport,
     $inspectorTelemetrySupport,
-    $intersectionObserverSupport,
+    $intelligentTrackingPrevention,
     $iosGestureEventsSupport,
     $iosTouchEventsSupport,
     $jitSupport,
+    $layerBasedSVGEngineSupport,
     $layoutFormattingContextSupport,
-    $legacyCSSVendorPrefixesSupport,
     $legacyCustomProtocolManagerSupport,
     $legacyEncryptedMediaSupport,
     $letterpressSupport,
@@ -131,6 +128,7 @@ my (
     $networkCacheStaleWhileRevalidateSupport,
     $notificationsSupport,
     $offscreenCanvasSupport,
+    $offscreenCanvasInWorkersSupport,
     $thunderSupport,
     $orientationEventsSupport,
     $overflowScrollingTouchSupport,
@@ -141,9 +139,7 @@ my (
     $publicSuffixListSupport,
     $quotaSupport,
     $remoteInspectorSupport,
-    $resizeObserverSupport,
     $resolutionMediaQuerySupport,
-    $resourceLoadStatisticsSupport,
     $resourceUsageSupport,
     $rubberBandingSupport,
     $samplingProfilerSupport,
@@ -157,6 +153,7 @@ my (
     $spellcheckSupport,
     $streamsAPISupport,
     $svgFontsSupport,
+    $isoMallocSupport,
     $systemMallocSupport,
     $telephoneNumberDetectionSupport,
     $textAutosizingSupport,
@@ -178,7 +175,6 @@ my (
     $webAuthNSupport,
     $webCryptoSupport,
     $webRTCSupport,
-    $webassemblyStreamingAPISupport,
     $webdriverKeyboardInteractionsSupport,
     $webdriverMouseInteractionsSupport,
     $webdriverSupport,
@@ -186,7 +182,6 @@ my (
     $webdriverWheelInteractionsSupport,
     $webgl2Support,
     $webglSupport,
-    $webgpuSupport,
     $webXRSupport,
     $wirelessPlaybackTargetSupport,
     $xsltSupport,
@@ -264,14 +259,8 @@ my @features = (
     { option => "css-painting-api", desc => "Toggle CSS Painting API support",
       define => "ENABLE_CSS_PAINTING_API", value => \$cssPaintingAPISupport },
 
-    { option => "css-scroll-snap", desc => "Toggle CSS snap scroll support",
-      define => "ENABLE_CSS_SCROLL_SNAP", value => \$cssScrollSnapSupport },
-
     { option => "css-selectors-level4", desc => "Toggle CSS Selectors Level 4 support",
       define => "ENABLE_CSS_SELECTORS_LEVEL4", value => \$cssSelectorsLevel4Support },
-
-    { option => "css-trailing-word", desc => "Toggle css trailing word",
-      define => "ENABLE_CSS_TRAILING_WORD", value => \$cssTrailingWordSupport },
 
     { option => "css-typed-om", desc => "Toggle CSS Typed OM support",
       define => "ENABLE_CSS_TYPED_OM", value => \$cssTypedOMSupport },
@@ -306,9 +295,6 @@ my @features = (
     { option => "encrypted-media", desc => "Toggle EME V3 support",
       define => "ENABLE_ENCRYPTED_MEDIA", value => \$encryptedMediaSupport },
 
-    { option => "fast-jit-permissions", desc => "Toggle fast JIT permissions support",
-      define => "ENABLE_FAST_JIT_PERMISSIONS", value => \$fastJITPermissionsSupport },
-
     { option => "filters-level-2", desc => "Toggle Filters Module Level 2",
       define => "ENABLE_FILTERS_LEVEL_2", value => \$filtersLevel2Support },
 
@@ -329,12 +315,6 @@ my @features = (
 
     { option => "gpu-process", desc => "Toggle GPU Process support",
       define => "ENABLE_GPU_PROCESS", value => \$gpuProcessSupport },
-
-    { option => "indexed-database", desc => "Toggle Indexed Database support",
-      define => "ENABLE_INDEXED_DATABASE", value => \$indexedDatabaseSupport },
-
-    { option => "indexed-database-in-workers", desc => "Toggle support for Indexed Database in workers",
-      define => "ENABLE_INDEXED_DATABASE_IN_WORKERS", value => \$indexedDatabaseInWorkersSupport },
 
     { option => "input-type-color", desc => "Toggle Input Type Color support",
       define => "ENABLE_INPUT_TYPE_COLOR", value => \$inputTypeColorSupport },
@@ -360,8 +340,8 @@ my @features = (
     { option => "inspector-telemetry", desc => "Toggle inspector telemetry support",
       define => "ENABLE_INSPECTOR_TELEMETRY", value => \$inspectorTelemetrySupport },
 
-    { option => "intersection-observer", desc => "Enable Intersection Observer support",
-      define => "ENABLE_INTERSECTION_OBSERVER", value => \$intersectionObserverSupport },
+    { option => "intelligent-tracking-prevention", desc => "Toggle intelligent tracking prevention support",
+      define => "ENABLE_INTELLIGENT_TRACKING_PREVENTION", value => \$intelligentTrackingPrevention },
 
     { option => "ios-gesture-events", desc => "Toggle iOS gesture events support",
       define => "ENABLE_IOS_GESTURE_EVENTS", value => \$iosGestureEventsSupport },
@@ -372,11 +352,11 @@ my @features = (
     { option => "jit", desc => "Toggle JustInTime JavaScript support",
       define => "ENABLE_JIT", value => \$jitSupport },
 
+    { option => "layer-based-svg-engine", desc => "Toggle Layer Based SVG Engine support",
+      define => "ENABLE_LAYER_BASED_SVG_ENGINE", value => \$layerBasedSVGEngineSupport },
+
     { option => "layout-formatting-context", desc => "Toggle Layout Formatting Context support",
       define => "ENABLE_LAYOUT_FORMATTING_CONTEXT", value => \$layoutFormattingContextSupport },
-
-    { option => "legacy-css-vendor-prefixes", desc => "Toggle legacy css vendor prefix support",
-      define => "ENABLE_LEGACY_CSS_VENDOR_PREFIXES", value => \$legacyCSSVendorPrefixesSupport },
 
     { option => "legacy-custom-protocol-manager", desc => "Toggle legacy protocol manager support",
       define => "ENABLE_LEGACY_CUSTOM_PROTOCOL_MANAGER", value => \$legacyCustomProtocolManagerSupport },
@@ -435,6 +415,9 @@ my @features = (
     { option => "offscreen-canvas", desc => "Toggle OffscreenCanvas support",
       define => "ENABLE_OFFSCREEN_CANVAS", value => \$offscreenCanvasSupport },
 
+    { option => "offscreen-canvas-in-workers", desc => "Toggle OffscreenCanvas in Workers support",
+      define => "ENABLE_OFFSCREEN_CANVAS_IN_WORKERS", value => \$offscreenCanvasInWorkersSupport },
+
     { option => "thunder", desc => "Toggle Thunder CDM support",
       define => "ENABLE_THUNDER", value => \$thunderSupport },
 
@@ -462,14 +445,8 @@ my @features = (
     { option => "remote-inspector", desc => "Toggle remote inspector support",
       define => "ENABLE_REMOTE_INSPECTOR", value => \$remoteInspectorSupport },
 
-    { option => "resize-observer", desc => "Toggle Resize Observer support",
-      define => "ENABLE_RESIZE_OBSERVER", value => \$resizeObserverSupport },
-
     { option => "resolution-media-query", desc => "Toggle resolution media query support",
       define => "ENABLE_RESOLUTION_MEDIA_QUERY", value => \$resolutionMediaQuerySupport },
-
-    { option => "resource-load-statistics", desc => "Toggle resource load statistics support",
-      define => "ENABLE_RESOURCE_LOAD_STATISTICS", value => \$resourceLoadStatisticsSupport },
 
     { option => "resource-usage", desc => "Toggle resource usage support",
       define => "ENABLE_RESOURCE_USAGE", value => \$resourceUsageSupport },
@@ -540,9 +517,6 @@ my @features = (
     { option => "webassembly-b3jit", desc => "Toggle WebAssembly B3 JIT support",
       define => "ENABLE_WEBASSEMBLY_B3JIT", value => \$webAssemblyB3JITSupport },
 
-    { option => "webassembly-streaming-api", desc => "Toggle WebAssembly streaming api support.",
-      define => "ENABLE_WEBASSEMBLY_STREAMING_API", value => \$webassemblyStreamingAPISupport },
-
     { option => "webdriver", desc => "Toggle WebDriver service process",
       define => "ENABLE_WEBDRIVER", value => \$webdriverSupport },
 
@@ -563,9 +537,6 @@ my @features = (
 
     { option => "webgl2", desc => "Toggle WebGL2 support",
       define => "ENABLE_WEBGL2", value => \$webgl2Support },
-
-    { option => "webgpu", desc => "Toggle WebGPU support",
-      define => "ENABLE_WEBGPU", value => \$webgpuSupport },
 
     { option => "webxr", desc => "Toggle WebXR support",
       define => "ENABLE_WEBXR", value => \$webXRSupport },
@@ -593,6 +564,9 @@ my @features = (
 
     { option => "gstreamer-gl", desc => "Toggle GStreamer GL support",
       define => "USE_GSTREAMER_GL", value => \$gstreamerGLSupport },
+
+    { option => "iso-malloc", desc => "Toggle IsoMalloc support",
+      define => "USE_ISO_MALLOC", value => \$isoMallocSupport },
 
     { option => "system-malloc", desc => "Toggle system allocator instead of bmalloc",
       define => "USE_SYSTEM_MALLOC", value => \$systemMallocSupport },

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -56,6 +56,15 @@ final class GtkApplication extends Application implements
     private static final String SWT_INTERNAL_CLASS =
             "org.eclipse.swt.internal.gtk.OS";
     private static final int forcedGtkVersion;
+    private static boolean gtk2WarningIssued = false;
+    private static final String GTK2_ALREADY_LOADED_WARNING =
+        "WARNING: Found GTK 2 library already loaded";
+    private static final String GTK2_SPECIFIED_WARNING =
+        "WARNING: A command line option has enabled the GTK 2 library";
+    private static final String GTK2_FALLBACK_WARNING =
+        "WARNING: Using GTK 2 library because GTK 3 cannot be loaded ";
+    private static final String GTK2_DEPRECATION_WARNING =
+        "WARNING: The JavaFX GTK 2 library is deprecated and will be removed in a future release";
 
 
     static  {
@@ -103,6 +112,11 @@ final class GtkApplication extends Application implements
                 ver = 3;
             }
             forcedGtkVersion = ver;
+            if (ver == 2 && !gtk2WarningIssued) {
+                System.err.println(GTK2_ALREADY_LOADED_WARNING);
+                System.err.println(GTK2_DEPRECATION_WARNING);
+                gtk2WarningIssued = true;
+            }
         } else {
             forcedGtkVersion = 0;
         }
@@ -159,6 +173,13 @@ final class GtkApplication extends Application implements
                 }
                 return ret;
             }) : forcedGtkVersion;
+
+        if (gtkVersion == 2 && !gtk2WarningIssued) {
+            System.err.println(GTK2_SPECIFIED_WARNING);
+            System.err.println(GTK2_DEPRECATION_WARNING);
+            gtk2WarningIssued = true;
+        }
+
         @SuppressWarnings("removal")
         boolean gtkVersionVerbose =
                 AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> {
@@ -188,6 +209,11 @@ final class GtkApplication extends Application implements
                     System.out.println("Glass GTK library to load is glassgtk2");
                 }
                 NativeLibLoader.loadLibrary("glassgtk2");
+                if (!gtk2WarningIssued) {
+                    System.err.println(GTK2_FALLBACK_WARNING);
+                    System.err.println(GTK2_DEPRECATION_WARNING);
+                    gtk2WarningIssued = true;
+                }
             } else if (libraryToLoad == QUERY_LOAD_GTK3) {
                 if (gtkVersionVerbose) {
                     System.out.println("Glass GTK library to load is glassgtk3");
@@ -383,11 +409,6 @@ final class GtkApplication extends Application implements
     }
 
     @Override
-    public Window createWindow(long parent) {
-        return new GtkChildWindow(parent);
-    }
-
-    @Override
     public View createView() {
         return new GtkView();
     }
@@ -414,6 +435,11 @@ final class GtkApplication extends Application implements
     @Override
     public Pixels createPixels(int width, int height, ByteBuffer data) {
         return new GtkPixels(width, height, data);
+    }
+
+    @Override
+    public Pixels createPixels(int width, int height, ByteBuffer data, float scalex, float scaley) {
+        return new GtkPixels(width, height, data, scalex, scaley);
     }
 
     @Override

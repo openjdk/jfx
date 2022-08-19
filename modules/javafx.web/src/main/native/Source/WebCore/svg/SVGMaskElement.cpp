@@ -26,7 +26,8 @@
 #include "config.h"
 #include "SVGMaskElement.h"
 
-#include "RenderSVGResourceMasker.h"
+#include "RenderSVGResourceMaskerInlines.h"
+#include "SVGElementInlines.h"
 #include "SVGNames.h"
 #include "SVGRenderSupport.h"
 #include "SVGStringList.h"
@@ -99,7 +100,7 @@ void SVGMaskElement::svgAttributeChanged(const QualifiedName& attrName)
 {
     if (PropertyRegistry::isAnimatedLengthAttribute(attrName)) {
         InstanceInvalidationGuard guard(*this);
-        invalidateSVGPresentationAttributeStyle();
+        invalidateSVGPresentationalHintStyle();
         return;
     }
 

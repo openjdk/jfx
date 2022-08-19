@@ -33,19 +33,9 @@
 #include "ServiceWorkerGlobalScope.h"
 #endif
 
-namespace JSC {
-class JSProxy;
-}
-
 namespace WebCore {
 
-class JSDedicatedWorkerGlobalScope;
-class JSWorkerGlobalScope;
 class WorkerGlobalScope;
-
-#if ENABLE(SERVICE_WORKER)
-class JSServiceWorkerGlobalScope;
-#endif
 
 class JSWorkerGlobalScopeBase : public JSDOMGlobalObject {
 public:
@@ -74,6 +64,7 @@ public:
     static JSC::RuntimeFlags javaScriptRuntimeFlags(const JSC::JSGlobalObject*);
     static JSC::ScriptExecutionStatus scriptExecutionStatus(JSC::JSGlobalObject*, JSC::JSObject*);
     static void queueMicrotaskToEventLoop(JSC::JSGlobalObject&, Ref<JSC::Microtask>&&);
+    static void reportViolationForUnsafeEval(JSC::JSGlobalObject*, JSC::JSString*);
 
 protected:
     JSWorkerGlobalScopeBase(JSC::VM&, JSC::Structure*, RefPtr<WorkerGlobalScope>&&);
@@ -92,10 +83,4 @@ inline JSC::JSValue toJS(JSC::JSGlobalObject* lexicalGlobalObject, JSDOMGlobalOb
 JSC::JSValue toJS(JSC::JSGlobalObject*, WorkerGlobalScope&);
 inline JSC::JSValue toJS(JSC::JSGlobalObject* lexicalGlobalObject, WorkerGlobalScope* scope) { return scope ? toJS(lexicalGlobalObject, *scope) : JSC::jsNull(); }
 
-JSDedicatedWorkerGlobalScope* toJSDedicatedWorkerGlobalScope(JSC::VM&, JSC::JSValue);
-JSWorkerGlobalScope* toJSWorkerGlobalScope(JSC::VM&, JSC::JSValue);
-
-#if ENABLE(SERVICE_WORKER)
-JSServiceWorkerGlobalScope* toJSServiceWorkerGlobalScope(JSC::VM&, JSC::JSValue);
-#endif
 } // namespace WebCore

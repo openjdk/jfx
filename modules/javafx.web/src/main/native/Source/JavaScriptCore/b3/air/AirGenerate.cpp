@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -49,8 +49,8 @@
 #include "AirValidate.h"
 #include "B3Common.h"
 #include "B3Procedure.h"
-#include "B3TimingScope.h"
 #include "CCallHelpers.h"
+#include "CompilerTimingScope.h"
 #include "DisallowMacroScratchRegisterUsage.h"
 #include <wtf/IndexMap.h>
 
@@ -58,10 +58,10 @@ namespace JSC { namespace B3 { namespace Air {
 
 void prepareForGeneration(Code& code)
 {
-    TimingScope timingScope("Air::prepareForGeneration");
+    CompilerTimingScope timingScope("Total Air", "prepareForGeneration");
 
     // If we're doing super verbose dumping, the phase scope of any phase will already do a dump.
-    if (shouldDumpIR(AirMode) && !shouldDumpIRAtEachPhase(AirMode)) {
+    if (shouldDumpIR(code.proc(), AirMode) && !shouldDumpIRAtEachPhase(AirMode)) {
         dataLog(tierName, "Initial air:\n");
         dataLog(code);
     }
@@ -89,7 +89,7 @@ void prepareForGeneration(Code& code)
         if (shouldValidateIR())
             validate(code);
 
-        if (shouldDumpIR(AirMode)) {
+        if (shouldDumpIR(code.proc(), AirMode)) {
             dataLog("Air after ", code.lastPhaseName(), ", before generation:\n");
             dataLog(code);
         }
@@ -183,7 +183,7 @@ void prepareForGeneration(Code& code)
 
     // Do a final dump of Air. Note that we have to do this even if we are doing per-phase dumping,
     // since the final generation is not a phase.
-    if (shouldDumpIR(AirMode)) {
+    if (shouldDumpIR(code.proc(), AirMode)) {
         dataLog("Air after ", code.lastPhaseName(), ", before generation:\n");
         dataLog(code);
     }
@@ -191,7 +191,7 @@ void prepareForGeneration(Code& code)
 
 static void generateWithAlreadyAllocatedRegisters(Code& code, CCallHelpers& jit)
 {
-    TimingScope timingScope("Air::generate");
+    CompilerTimingScope timingScope("Air", "generateWithAlreadyAllocatedRegisters");
 
     DisallowMacroScratchRegisterUsage disallowScratch(jit);
 
@@ -214,11 +214,12 @@ static void generateWithAlreadyAllocatedRegisters(Code& code, CCallHelpers& jit)
 
     PCToOriginMap& pcToOriginMap = code.proc().pcToOriginMap();
     auto addItem = [&] (Inst& inst) {
-        if (!inst.origin) {
-            pcToOriginMap.appendItem(jit.labelIgnoringWatchpoints(), Origin());
+        if (!code.shouldPreserveB3Origins())
             return;
-        }
-        pcToOriginMap.appendItem(jit.labelIgnoringWatchpoints(), inst.origin->origin());
+        if (inst.origin)
+            pcToOriginMap.appendItem(jit.labelIgnoringWatchpoints(), inst.origin->origin());
+        else
+            pcToOriginMap.appendItem(jit.labelIgnoringWatchpoints(), Origin());
     };
 
     Disassembler* disassembler = code.disassembler();
@@ -233,7 +234,7 @@ static void generateWithAlreadyAllocatedRegisters(Code& code, CCallHelpers& jit)
         if (disassembler)
             disassembler->startBlock(block, jit);
 
-        if (Optional<unsigned> entrypointIndex = code.entrypointIndex(block)) {
+        if (std::optional<unsigned> entrypointIndex = code.entrypointIndex(block)) {
             ASSERT(code.isEntrypoint(block));
 
             if (disassembler)

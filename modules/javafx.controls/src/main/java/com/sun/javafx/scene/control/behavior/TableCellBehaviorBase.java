@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -66,7 +66,7 @@ public abstract class TableCellBehaviorBase<S, T, TC extends TableColumnBase<S, 
     protected abstract TableSelectionModel<S> getSelectionModel();
     protected abstract TableFocusModel<S,TC> getFocusModel();
     protected abstract TablePositionBase getFocusedCell();
-    protected abstract boolean isTableRowSelected(); // tableCell.getTreeTableRow().isSelected()
+    protected abstract boolean isTableRowSelected(); // tableCell.getTableRow().isSelected()
 
     /**
      * Returns the position of the given table column in the visible leaf columns

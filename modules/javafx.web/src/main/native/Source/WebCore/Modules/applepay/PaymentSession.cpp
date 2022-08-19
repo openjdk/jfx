@@ -30,8 +30,7 @@
 
 #include "Document.h"
 #include "DocumentLoader.h"
-#include "Page.h"
-#include "PaymentCoordinator.h"
+#include "FeaturePolicy.h"
 #include "SecurityOrigin.h"
 
 namespace WebCore {
@@ -49,6 +48,9 @@ static bool isSecure(DocumentLoader& documentLoader)
 
 ExceptionOr<void> PaymentSession::canCreateSession(Document& document)
 {
+    if (!isFeaturePolicyAllowedByDocumentAndAllOwners(FeaturePolicy::Type::Payment, document, LogFeaturePolicyFailure::Yes))
+        return Exception { SecurityError, "Third-party iframes are not allowed to request payments unless explicitly allowed via Feature-Policy (payment)"_s };
+
     if (!document.frame())
         return Exception { InvalidAccessError, "Trying to start an Apple Pay session from an inactive document." };
 
@@ -72,15 +74,6 @@ ExceptionOr<void> PaymentSession::canCreateSession(Document& document)
     }
 
     return { };
-}
-
-bool PaymentSession::enabledForContext(ScriptExecutionContext& context)
-{
-    auto& document = downcast<Document>(context);
-    if (auto page = document.page())
-        return page->paymentCoordinator().shouldEnableApplePayAPIs(document);
-
-    return false;
 }
 
 } // namespace WebCore

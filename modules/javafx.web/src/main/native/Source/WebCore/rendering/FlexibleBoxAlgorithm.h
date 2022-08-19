@@ -41,7 +41,7 @@ class RenderBox;
 
 class FlexItem {
 public:
-    FlexItem(RenderBox&, LayoutUnit flexBaseContentSize, LayoutUnit hypotheticalMainContentSize, LayoutUnit mainAxisBorderAndPadding, LayoutUnit mainAxisMargin);
+    FlexItem(RenderBox&, LayoutUnit flexBaseContentSize, LayoutUnit mainAxisBorderAndPadding, LayoutUnit mainAxisMargin, std::pair<LayoutUnit, LayoutUnit> minMaxSizes, bool everHadLayout);
 
     LayoutUnit hypotheticalMainAxisMarginBoxSize() const
     {
@@ -58,13 +58,17 @@ public:
         return flexedContentSize + mainAxisBorderAndPadding + mainAxisMargin;
     }
 
+    LayoutUnit constrainSizeByMinMax(const LayoutUnit) const;
+
     RenderBox& box;
     const LayoutUnit flexBaseContentSize;
-    const LayoutUnit hypotheticalMainContentSize;
     const LayoutUnit mainAxisBorderAndPadding;
     const LayoutUnit mainAxisMargin;
+    const std::pair<LayoutUnit, LayoutUnit> minMaxSizes;
+    const LayoutUnit hypotheticalMainContentSize;
     LayoutUnit flexedContentSize;
-    bool frozen;
+    bool frozen { false };
+    bool everHadLayout { false };
 };
 
 class FlexLayoutAlgorithm {

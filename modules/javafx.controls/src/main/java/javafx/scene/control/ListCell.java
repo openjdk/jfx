@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -72,7 +72,7 @@ import javafx.scene.control.skin.ListCellSkin;
 // TODO add code examples
 public class ListCell<T> extends IndexedCell<T> {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -87,7 +87,7 @@ public class ListCell<T> extends IndexedCell<T> {
     }
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Listeners                                                               *
      *     We have to listen to a number of properties on the ListView itself  *
@@ -228,7 +228,7 @@ public class ListCell<T> extends IndexedCell<T> {
     private final WeakInvalidationListener weakFocusedListener = new WeakInvalidationListener(focusedListener);
     private final WeakChangeListener<FocusModel<T>> weakFocusModelPropertyListener = new WeakChangeListener<FocusModel<T>>(focusModelPropertyListener);
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Properties                                                              *
      *                                                                         *
@@ -315,7 +315,7 @@ public class ListCell<T> extends IndexedCell<T> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *
@@ -347,7 +347,7 @@ public class ListCell<T> extends IndexedCell<T> {
     }
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Editing API                                                             *
      *                                                                         *
@@ -357,6 +357,7 @@ public class ListCell<T> extends IndexedCell<T> {
 
     /** {@inheritDoc} */
     @Override public void startEdit() {
+        if (isEditing()) return;
         final ListView<T> list = getListView();
         if (!isEditable() || (list != null && ! list.isEditable())) {
             return;
@@ -367,31 +368,24 @@ public class ListCell<T> extends IndexedCell<T> {
         // by calling super.startEdit().
         super.startEdit();
 
+        if (!isEditing()) return;
+
+        indexAtStartEdit = getIndex();
          // Inform the ListView of the edit starting.
         if (list != null) {
             list.fireEvent(new ListView.EditEvent<T>(list,
                     ListView.<T>editStartEvent(),
                     null,
-                    getIndex()));
-            list.edit(getIndex());
+                    indexAtStartEdit));
+            list.edit(indexAtStartEdit);
             list.requestFocus();
         }
 
-        indexAtStartEdit = getIndex();
     }
 
     /** {@inheritDoc} */
     @Override public void commitEdit(T newValue) {
         if (! isEditing()) return;
-        ListView<T> list = getListView();
-
-        if (list != null) {
-            // Inform the ListView of the edit being ready to be committed.
-            list.fireEvent(new ListView.EditEvent<T>(list,
-                    ListView.<T>editCommitEvent(),
-                    newValue,
-                    list.getEditingIndex()));
-        }
 
         // inform parent classes of the commit, so that they can switch us
         // out of the editing state.
@@ -399,6 +393,16 @@ public class ListCell<T> extends IndexedCell<T> {
         // call cancelEdit(), resulting in both commit and cancel events being
         // fired (as identified in RT-29650)
         super.commitEdit(newValue);
+
+        ListView<T> list = getListView();
+        // JDK-8187307: fire the commit after updating cell's editing state
+        if (list != null) {
+            // Inform the ListView of the edit being ready to be committed.
+            list.fireEvent(new ListView.EditEvent<T>(list,
+                    ListView.<T>editCommitEvent(),
+                    newValue,
+                    list.getEditingIndex()));
+        }
 
         // update the item within this cell, so that it represents the new value
         updateItem(newValue, false);
@@ -565,7 +569,7 @@ public class ListCell<T> extends IndexedCell<T> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Stylesheet Handling                                                     *
      *                                                                         *
@@ -575,7 +579,7 @@ public class ListCell<T> extends IndexedCell<T> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Accessibility handling                                                  *
      *                                                                         *

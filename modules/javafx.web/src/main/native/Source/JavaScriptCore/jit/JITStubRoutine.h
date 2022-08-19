@@ -29,11 +29,15 @@
 
 #include "ExecutableAllocator.h"
 #include "MacroAssemblerCodeRef.h"
+#include "StructureID.h"
 
 namespace JSC {
 
 class JITStubRoutineSet;
+class Structure;
 class VM;
+
+class AccessCase;
 
 // This is a base-class for JIT stub routines, and also the class you want
 // to instantiate directly if you have a routine that does not need any
@@ -111,6 +115,7 @@ protected:
 
     MacroAssemblerCodeRef<JITStubRoutinePtrTag> m_code;
     unsigned m_refCount;
+    mutable unsigned m_hash { 0 };
 };
 
 // Helper for the creation of simple stub routines that need no help from the GC.

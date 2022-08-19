@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2003-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2003-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -37,11 +37,11 @@ Exception* throwRuntimeObjectInvalidAccessError(JSGlobalObject*, ThrowScope&);
 class WEBCORE_EXPORT RuntimeObject : public JSNonFinalObject {
 public:
     using Base = JSNonFinalObject;
-    static constexpr unsigned StructureFlags = Base::StructureFlags | OverridesGetOwnPropertySlot | OverridesGetOwnPropertyNames | OverridesGetCallData | GetOwnPropertySlotMayBeWrongAboutDontEnum;
+    static constexpr unsigned StructureFlags = Base::StructureFlags | OverridesGetOwnPropertySlot | OverridesGetOwnPropertyNames | OverridesGetCallData | OverridesPut | GetOwnPropertySlotMayBeWrongAboutDontEnum;
     static constexpr bool needsDestruction = true;
 
     template<typename CellType, JSC::SubspaceAccess>
-    static IsoSubspace* subspaceFor(JSC::VM& vm)
+    static GCClient::IsoSubspace* subspaceFor(JSC::VM& vm)
     {
         static_assert(sizeof(CellType) == sizeof(RuntimeObject), "RuntimeObject subclasses that add fields need to override subspaceFor<>()");
         static_assert(CellType::destroy == RuntimeObject::destroy);
@@ -50,7 +50,7 @@ public:
 
     static RuntimeObject* create(VM& vm, Structure* structure, RefPtr<Instance>&& instance)
     {
-        RuntimeObject* object = new (NotNull, allocateCell<RuntimeObject>(vm.heap)) RuntimeObject(vm, structure, WTFMove(instance));
+        RuntimeObject* object = new (NotNull, allocateCell<RuntimeObject>(vm)) RuntimeObject(vm, structure, WTFMove(instance));
         object->finishCreation(vm);
         return object;
     }
@@ -60,7 +60,6 @@ public:
     static bool getOwnPropertySlot(JSObject*, JSGlobalObject*, PropertyName, PropertySlot&);
     static bool put(JSCell*, JSGlobalObject*, PropertyName, JSValue, PutPropertySlot&);
     static bool deleteProperty(JSCell*, JSGlobalObject*, PropertyName, DeletePropertySlot&);
-    static JSValue defaultValue(const JSObject*, JSGlobalObject*, PreferredPrimitiveType);
     static CallData getCallData(JSCell*);
     static CallData getConstructData(JSCell*);
 
@@ -87,7 +86,7 @@ protected:
     void finishCreation(VM&);
 
 private:
-    static IsoSubspace* subspaceForImpl(VM&);
+    static GCClient::IsoSubspace* subspaceForImpl(VM&);
 
     RefPtr<Instance> m_instance;
 };

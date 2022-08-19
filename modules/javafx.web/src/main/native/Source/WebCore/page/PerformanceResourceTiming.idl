@@ -50,7 +50,12 @@ typedef double DOMHighResTimeStamp;
     readonly attribute DOMHighResTimeStamp requestStart;
     readonly attribute DOMHighResTimeStamp responseStart;
     readonly attribute DOMHighResTimeStamp responseEnd;
-    [EnabledAtRuntime=ServerTiming] readonly attribute FrozenArray<PerformanceServerTiming> serverTiming;
+    [EnabledBySetting=PerformanceResourceTimingSensitivePropertiesEnabled] readonly attribute unsigned long long transferSize;
+    [EnabledBySetting=PerformanceResourceTimingSensitivePropertiesEnabled] readonly attribute unsigned long long encodedBodySize;
+    [EnabledBySetting=PerformanceResourceTimingSensitivePropertiesEnabled] readonly attribute unsigned long long decodedBodySize;
+
+    // https://www.w3.org/TR/server-timing/#extension-to-the-performanceresourcetiming-interface
+    [EnabledAtRuntime=ServerTimingEnabled] readonly attribute FrozenArray<PerformanceServerTiming> serverTiming;
 
     [Default] object toJSON();
 };

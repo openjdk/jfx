@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -96,7 +96,7 @@ import static javafx.scene.web.HTMLEditorSkin.Command.*;
  */
 public class HTMLEditorSkin extends SkinBase<HTMLEditor> {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private fields                                                          *
      *                                                                         *
@@ -165,7 +165,7 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Static fields                                                           *
      *                                                                         *
@@ -205,7 +205,7 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Static Methods                                                          *
      *                                                                         *
@@ -213,7 +213,7 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Listeners                                                               *
      *                                                                         *
@@ -234,7 +234,7 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -485,7 +485,7 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *
@@ -528,7 +528,7 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private Implementation                                                  *
      *                                                                         *
@@ -1155,7 +1155,7 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Support Classes                                                         *
      *                                                                         *
@@ -1165,40 +1165,66 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> {
      * Represents commands that can be passed into the HTMLEditor web engine.
      */
     public enum Command {
+        /** Cut command.*/
         CUT("cut"),
+        /** Copy command.*/
         COPY("copy"),
+        /** Paste command.*/
         PASTE("paste"),
 
+        /** Undo command.*/
         UNDO("undo"),
+        /** Redo command.*/
         REDO("redo"),
 
+        /** Command to insert horizontal rule.*/
         INSERT_HORIZONTAL_RULE("inserthorizontalrule"),
 
+        /** Align Left command.*/
         ALIGN_LEFT("justifyleft"),
+        /** Align Center command.*/
         ALIGN_CENTER("justifycenter"),
+        /** Align Right command.*/
         ALIGN_RIGHT("justifyright"),
+        /** Align Justify command.*/
         ALIGN_JUSTIFY("justifyfull"),
 
+        /** Insert bullets command.*/
         BULLETS("insertUnorderedList"),
+        /** Insert numbers command.*/
         NUMBERS("insertOrderedList"),
 
+        /** Indent command.*/
         INDENT("indent"),
+        /** Outdent command.*/
         OUTDENT("outdent"),
 
+        /** Format command.*/
         FORMAT("formatblock"),
+        /** Font name command.*/
         FONT_FAMILY("fontname"),
+        /** Font size command.*/
         FONT_SIZE("fontsize"),
 
+        /** Bold command.*/
         BOLD("bold"),
+        /** Italic command.*/
         ITALIC("italic"),
+        /** Underline command.*/
         UNDERLINE("underline"),
+        /** Strikethrough command.*/
         STRIKETHROUGH("strikethrough"),
 
+        /** Foreground color command.*/
         FOREGROUND_COLOR("forecolor"),
+        /** Background color command.*/
         BACKGROUND_COLOR("backcolor"),
+        /** Style with CSS command.*/
         STYLEWITHCSS("styleWithCSS"),
 
+        /** Insert newline command.*/
         INSERT_NEW_LINE("insertnewline"),
+        /** Insert tab command.*/
         INSERT_TAB("inserttab");
 
         private final String command;
@@ -1207,6 +1233,11 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> {
             this.command = command;
         }
 
+        /**
+         * Gets the name of this command.
+         *
+         * @return the name of this command
+         */
         public String getCommand() {
             return command;
         }

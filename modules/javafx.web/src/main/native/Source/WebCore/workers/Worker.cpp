@@ -41,6 +41,7 @@
 #endif
 #include "ResourceResponse.h"
 #include "SecurityOrigin.h"
+#include "StructuredSerializeOptions.h"
 #include "WorkerGlobalScopeProxy.h"
 #include "WorkerScriptLoader.h"
 #include "WorkerThread.h"
@@ -68,14 +69,12 @@ void Worker::networkStateChanged(bool isOnLine)
         worker->notifyNetworkStateChange(isOnLine);
 }
 
-inline Worker::Worker(ScriptExecutionContext& context, JSC::RuntimeFlags runtimeFlags, const Options& options)
+Worker::Worker(ScriptExecutionContext& context, JSC::RuntimeFlags runtimeFlags, WorkerOptions&& options)
     : ActiveDOMObject(&context)
-    , m_name(options.name)
+    , m_options(WTFMove(options))
     , m_identifier("worker:" + Inspector::IdentifiersFactory::createIdentifier())
     , m_contextProxy(WorkerGlobalScopeProxy::create(*this))
     , m_runtimeFlags(runtimeFlags)
-    , m_type(options.type)
-    , m_credentials(options.credentials)
 {
     static bool addedListener;
     if (!addedListener) {
@@ -87,46 +86,35 @@ inline Worker::Worker(ScriptExecutionContext& context, JSC::RuntimeFlags runtime
     ASSERT_UNUSED(addResult, addResult.isNewEntry);
 }
 
-ExceptionOr<Ref<Worker>> Worker::create(ScriptExecutionContext& context, JSC::RuntimeFlags runtimeFlags, const String& url, const Options& options)
+ExceptionOr<Ref<Worker>> Worker::create(ScriptExecutionContext& context, JSC::RuntimeFlags runtimeFlags, const String& url, WorkerOptions&& options)
 {
     ASSERT(isMainThread());
 
     // We don't currently support nested workers, so workers can only be created from documents.
     ASSERT_WITH_SECURITY_IMPLICATION(context.isDocument());
 
-    auto worker = adoptRef(*new Worker(context, runtimeFlags, options));
+    auto worker = adoptRef(*new Worker(context, runtimeFlags, WTFMove(options)));
 
     worker->suspendIfNeeded();
 
-    bool shouldBypassMainWorldContentSecurityPolicy = context.shouldBypassMainWorldContentSecurityPolicy();
-    auto scriptURL = worker->resolveURL(url, shouldBypassMainWorldContentSecurityPolicy);
+    auto scriptURL = worker->resolveURL(url);
     if (scriptURL.hasException())
         return scriptURL.releaseException();
 
+    bool shouldBypassMainWorldContentSecurityPolicy = context.shouldBypassMainWorldContentSecurityPolicy();
     worker->m_shouldBypassMainWorldContentSecurityPolicy = shouldBypassMainWorldContentSecurityPolicy;
-
-    // The worker context does not exist while loading, so we must ensure that the worker object is not collected, nor are its event listeners.
-    worker->setPendingActivity(worker.get());
 
     // https://html.spec.whatwg.org/multipage/workers.html#official-moment-of-creation
     worker->m_workerCreationTime = MonotonicTime::now();
 
     worker->m_scriptLoader = WorkerScriptLoader::create();
-    auto contentSecurityPolicyEnforcement = shouldBypassMainWorldContentSecurityPolicy ? ContentSecurityPolicyEnforcement::DoNotEnforce : ContentSecurityPolicyEnforcement::EnforceChildSrcDirective;
+    auto contentSecurityPolicyEnforcement = shouldBypassMainWorldContentSecurityPolicy ? ContentSecurityPolicyEnforcement::DoNotEnforce : ContentSecurityPolicyEnforcement::EnforceWorkerSrcDirective;
 
     ResourceRequest request { scriptURL.releaseReturnValue() };
     request.setInitiatorIdentifier(worker->m_identifier);
 
-    FetchOptions fetchOptions;
-    fetchOptions.mode = FetchOptions::Mode::SameOrigin;
-    if (worker->m_type == WorkerType::Module)
-        fetchOptions.credentials = worker->m_credentials;
-    else
-        fetchOptions.credentials = FetchOptions::Credentials::SameOrigin;
-    fetchOptions.cache = FetchOptions::Cache::Default;
-    fetchOptions.redirect = FetchOptions::Redirect::Follow;
-    fetchOptions.destination = FetchOptions::Destination::Worker;
-    worker->m_scriptLoader->loadAsynchronously(context, WTFMove(request), WTFMove(fetchOptions), contentSecurityPolicyEnforcement, ServiceWorkersMode::All, worker.get(), WorkerRunLoop::defaultMode());
+    auto source = options.type == WorkerType::Module ? WorkerScriptLoader::Source::ModuleScript : WorkerScriptLoader::Source::ClassicWorkerScript;
+    worker->m_scriptLoader->loadAsynchronously(context, WTFMove(request), source, workerFetchOptions(worker->m_options, FetchOptions::Destination::Worker), contentSecurityPolicyEnforcement, ServiceWorkersMode::All, worker.get(), WorkerRunLoop::defaultMode());
 
     return worker;
 }
@@ -139,7 +127,7 @@ Worker::~Worker()
     m_contextProxy.workerObjectDestroyed();
 }
 
-ExceptionOr<void> Worker::postMessage(JSC::JSGlobalObject& state, JSC::JSValue messageValue, PostMessageOptions&& options)
+ExceptionOr<void> Worker::postMessage(JSC::JSGlobalObject& state, JSC::JSValue messageValue, StructuredSerializeOptions&& options)
 {
     Vector<RefPtr<MessagePort>> ports;
     auto message = SerializedScriptValue::create(state, messageValue, WTFMove(options.transfer), ports, SerializationContext::WorkerPostMessage);
@@ -189,7 +177,7 @@ void Worker::resume()
 
 bool Worker::virtualHasPendingActivity() const
 {
-    return m_contextProxy.hasPendingActivity();
+    return m_contextProxy.hasPendingActivity() || m_scriptLoader;
 }
 
 void Worker::notifyNetworkStateChange(bool isOnLine)
@@ -197,7 +185,7 @@ void Worker::notifyNetworkStateChange(bool isOnLine)
     m_contextProxy.notifyNetworkStateChange(isOnLine);
 }
 
-void Worker::didReceiveResponse(unsigned long identifier, const ResourceResponse& response)
+void Worker::didReceiveResponse(ResourceLoaderIdentifier identifier, const ResourceResponse& response)
 {
     const URL& responseURL = response.url();
     if (!responseURL.protocolIsBlob() && !responseURL.protocolIs("file") && !SecurityOrigin::create(responseURL)->isUnique())
@@ -209,7 +197,6 @@ void Worker::notifyFinished()
 {
     auto clearLoader = makeScopeExit([this] {
         m_scriptLoader = nullptr;
-        unsetPendingActivity(*this);
     });
 
     auto* context = scriptExecutionContext();
@@ -227,13 +214,8 @@ void Worker::notifyFinished()
     if (auto policy = parseReferrerPolicy(m_scriptLoader->referrerPolicy(), ReferrerPolicySource::HTTPHeader))
         referrerPolicy = *policy;
 
-    URL responseURL = m_scriptLoader->responseURL();
-    if (!m_scriptLoader->isRedirected() && m_scriptLoader->responseSource() != ResourceResponse::Source::ServiceWorker) {
-        if (m_scriptLoader->url().hasFragmentIdentifier())
-            responseURL.setFragmentIdentifier(m_scriptLoader->url().fragmentIdentifier());
-    }
-    m_contextProxy.startWorkerGlobalScope(responseURL, m_name, context->userAgent(responseURL), isOnline, m_scriptLoader->script(), contentSecurityPolicyResponseHeaders, m_shouldBypassMainWorldContentSecurityPolicy, m_workerCreationTime, referrerPolicy, m_type, m_credentials, m_runtimeFlags);
-    InspectorInstrumentation::scriptImported(*context, m_scriptLoader->identifier(), m_scriptLoader->script());
+    m_contextProxy.startWorkerGlobalScope(m_scriptLoader->lastRequestURL(), m_options.name, context->userAgent(m_scriptLoader->lastRequestURL()), isOnline, m_scriptLoader->script(), contentSecurityPolicyResponseHeaders, m_shouldBypassMainWorldContentSecurityPolicy, m_scriptLoader->crossOriginEmbedderPolicy(), m_workerCreationTime, referrerPolicy, m_options.type, m_options.credentials, m_runtimeFlags);
+    InspectorInstrumentation::scriptImported(*context, m_scriptLoader->identifier(), m_scriptLoader->script().toString());
 }
 
 void Worker::dispatchEvent(Event& event)
@@ -249,19 +231,14 @@ void Worker::dispatchEvent(Event& event)
 }
 
 #if ENABLE(WEB_RTC)
-void Worker::addRTCRtpScriptTransformer(String&& name)
-{
-    m_transformers.add(WTFMove(name));
-}
-
-void Worker::createRTCRtpScriptTransformer(const String& name, TransferredMessagePort port, RTCRtpScriptTransform& transform)
+void Worker::createRTCRtpScriptTransformer(RTCRtpScriptTransform& transform, MessageWithMessagePorts&& options)
 {
     if (!scriptExecutionContext())
         return;
 
-    m_contextProxy.postTaskToWorkerGlobalScope([name = name.isolatedCopy(), port, transform = makeRef(transform)](auto& context) mutable {
-        transform->setTransformer(downcast<DedicatedWorkerGlobalScope>(context).createRTCRtpScriptTransformer(WTFMove(name), port));
-        callOnMainThread([transform = WTFMove(transform)] { });
+    m_contextProxy.postTaskToWorkerGlobalScope([transform = Ref { transform }, options = WTFMove(options)](auto& context) mutable {
+        if (auto transformer = downcast<DedicatedWorkerGlobalScope>(context).createRTCRtpScriptTransformer(WTFMove(options)))
+            transform->setTransformer(*transformer);
     });
 
 }

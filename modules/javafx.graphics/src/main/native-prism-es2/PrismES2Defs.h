@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -380,7 +380,7 @@ struct MeshViewInfoRec {
     GLfloat lightColor[3];
     GLfloat lightPosition[3];
     GLfloat lightWeight;
-    GLfloat lightAttenuation[3];
+    GLfloat lightAttenuation[4];
     GLfloat lightMaxRange;
     GLfloat lightDir[3];
     GLfloat lightInnerAngle;

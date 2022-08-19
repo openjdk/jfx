@@ -32,6 +32,8 @@
 #include "Packed.h"
 #include "PhysicalPageMap.h"
 
+#if !BUSE(LIBPAS)
+
 namespace bmalloc {
 
 class AllIsoHeaps;
@@ -49,9 +51,6 @@ public:
     virtual ~IsoHeapImplBase();
 
     virtual void scavenge(Vector<DeferredDecommit>&) = 0;
-#if BUSE(PARTIAL_SCAVENGE)
-    virtual void scavengeToHighWatermark(Vector<DeferredDecommit>&) = 0;
-#endif
 
     void scavengeNow();
     static void finishScavenging(Vector<DeferredDecommit>&);
@@ -112,9 +111,6 @@ public:
     void didBecomeEligibleOrDecommited(const LockHolder&, IsoDirectory<Config, IsoDirectoryPage<Config>::numPages>*);
 
     void scavenge(Vector<DeferredDecommit>&) override;
-#if BUSE(PARTIAL_SCAVENGE)
-    void scavengeToHighWatermark(Vector<DeferredDecommit>&) override;
-#endif
 
     unsigned allocatorOffset();
     unsigned deallocatorOffset();
@@ -148,4 +144,4 @@ private:
 
 } // namespace bmalloc
 
-
+#endif

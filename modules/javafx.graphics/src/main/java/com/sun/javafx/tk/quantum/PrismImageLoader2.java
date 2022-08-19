@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -124,7 +124,7 @@ class PrismImageLoader2 implements com.sun.javafx.tk.ImageLoader {
         ImageLoadListener listener = new PrismLoadListener();
         try {
             ImageFrame[] imgFrames =
-                ImageStorage.loadAll(url, listener, w, h, preserveRatio, pixelScale, smooth);
+                ImageStorage.getInstance().loadAll(url, listener, w, h, preserveRatio, pixelScale, smooth);
             convertAll(imgFrames);
         } catch (ImageStorageException e) {
             handleException(e);
@@ -139,7 +139,7 @@ class PrismImageLoader2 implements com.sun.javafx.tk.ImageLoader {
         ImageLoadListener listener = new PrismLoadListener();
         try {
             ImageFrame[] imgFrames =
-                ImageStorage.loadAll(stream, listener, w, h, preserveRatio, 1.0f, smooth);
+                ImageStorage.getInstance().loadAll(stream, listener, w, h, preserveRatio, 1.0f, smooth);
             convertAll(imgFrames);
         } catch (ImageStorageException e) {
             handleException(e);

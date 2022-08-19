@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -109,7 +109,7 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
     protected CSSBridge bridge;
 
     /**
-     * Create a new empty PopupControl.
+     * Creates a new empty {@code PopupControl}.
      */
     public PopupControl() {
         super();
@@ -132,7 +132,7 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
      * (<a href="http://www.w3.org/TR/CSS21/syndata.html#value-def-identifier">CSS ID Specification</a>).
      *
      * @return the id property
-     * @defaultValue null
+     * @defaultValue {@code null}
      */
     public final StringProperty idProperty() { return bridge.idProperty(); }
 
@@ -145,7 +145,7 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
      *
      * @param value  the id assigned to this {@code PopupControl} using the {@code setId}
      *         method or {@code null}, if no id has been assigned.
-     * @defaultValue null
+     * @defaultValue {@code null}
      */
     public final void setId(String value) { idProperty().set(value); }
 
@@ -158,7 +158,7 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
      *
      * @return the id assigned to this {@code PopupControl} using the {@code setId}
      *         method or {@code null}, if no id has been assigned.
-     * @defaultValue null
+     * @defaultValue {@code null}
      */
     @Override public final String getId() { return idProperty().get(); }
 
@@ -168,31 +168,20 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
      */
     @Override public final ObservableList<String> getStyleClass() { return bridge.getStyleClass(); }
 
-    /**
-     * A string representation of the CSS style associated with this
-     * specific {@code PopupControl}. This is analogous to the "style" attribute of an
-     * HTML element. Note that, like the HTML style attribute, this
-     * variable contains style properties and values and not the
-     * selector portion of a style rule.
-     * @param value The inline CSS style to use for this {@code PopupControl}.
-     *         {@code null} is implicitly converted to an empty String.
-     * @defaultValue empty string
-     */
     public final void setStyle(String value) { styleProperty().set(value); }
+    @Override public final String getStyle() { return styleProperty().get(); }
 
-    // TODO: javadoc copied from property for the sole purpose of providing a return tag
     /**
      * A string representation of the CSS style associated with this
      * specific {@code PopupControl}. This is analogous to the "style" attribute of an
      * HTML element. Note that, like the HTML style attribute, this
      * variable contains style properties and values and not the
      * selector portion of a style rule.
-     * @defaultValue empty string
-     * @return The inline CSS style associated with this {@code PopupControl}.
-     *         If this {@code PopupControl} does not have an inline style,
-     *         an empty String is returned.
+     * <p>A value of {@code null} is implicitly converted to an empty {@code String}.</p>
+     *
+     * @return the {@code style} property
+     * @defaultValue {@code null}
      */
-    @Override public final String getStyle() { return styleProperty().get(); }
     public final StringProperty styleProperty() { return bridge.styleProperty(); }
 
     /**
@@ -204,7 +193,7 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
      * {@code Skin}. Every {@code Skin} maintains a back reference to the
      * {@code PopupControl}.
      * <p>
-     * A skin may be null.
+     * A skin may be {@code null}.
      */
     @Override public final ObjectProperty<Skin<?>> skinProperty() {
         return skin;
@@ -997,7 +986,7 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
         return null;
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      *                         StyleSheet Handling                             *
      *                                                                         *
@@ -1029,8 +1018,9 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
     }
 
     /**
-     * @return The CssMetaData associated with this class, which may include the
-     * CssMetaData of its superclasses.
+     * Gets the {@code CssMetaData} associated with this class, which may include the
+     * {@code CssMetaData} of its superclasses.
+     * @return the {@code CssMetaData}
      * @since JavaFX 8.0
      */
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
@@ -1047,6 +1037,8 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
     }
 
     /**
+     * Used to specify that a pseudo-class of this node has changed.
+     *
      * @param pseudoClass the pseudo class
      * @param active the active state
      * @see Node#pseudoClassStateChanged(javafx.css.PseudoClass, boolean)
@@ -1132,6 +1124,12 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
         {
             // To initialize the class helper at the begining each constructor of this class
             CSSBridgeHelper.initHelper(this);
+        }
+
+        /**
+         * Constructor for subclasses to call.
+         */
+        protected CSSBridge() {
         }
 
         /**

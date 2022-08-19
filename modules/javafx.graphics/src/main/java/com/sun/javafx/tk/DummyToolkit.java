@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -114,16 +114,6 @@ final public class DummyToolkit extends Toolkit {
 
     @Override
     public TKStage createTKEmbeddedStage(HostInterface host, @SuppressWarnings("removal") AccessControlContext acc) {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    @Override
-    public AppletWindow createAppletWindow(long parent, String serverName) {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    @Override
-    public void closeAppletWindow() {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,7 +25,6 @@
 
 package javafx.scene.control.skin;
 
-import com.sun.javafx.scene.control.behavior.BehaviorBase;
 import com.sun.javafx.scene.control.behavior.TextAreaBehavior;
 import com.sun.javafx.scene.control.skin.Utils;
 import javafx.animation.KeyFrame;
@@ -36,7 +35,6 @@ import javafx.beans.binding.DoubleBinding;
 import javafx.beans.binding.IntegerBinding;
 import javafx.beans.value.ObservableBooleanValue;
 import javafx.beans.value.ObservableIntegerValue;
-import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
@@ -49,8 +47,6 @@ import javafx.geometry.VerticalDirection;
 import javafx.scene.AccessibleAttribute;
 import javafx.scene.Group;
 import javafx.scene.Node;
-import javafx.scene.control.Accordion;
-import javafx.scene.control.Button;
 import javafx.scene.control.Control;
 import javafx.scene.control.IndexRange;
 import javafx.scene.control.ScrollPane;
@@ -58,7 +54,6 @@ import javafx.scene.control.TextArea;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.ScrollEvent;
 import javafx.scene.layout.Region;
-import javafx.scene.shape.MoveTo;
 import javafx.scene.shape.Path;
 import javafx.scene.shape.PathElement;
 import javafx.scene.text.Text;
@@ -69,7 +64,6 @@ import java.util.List;
 
 import static com.sun.javafx.PlatformUtil.isMac;
 import static com.sun.javafx.PlatformUtil.isWindows;
-
 /**
  * Default skin implementation for the {@link TextArea} control.
  *
@@ -78,7 +72,7 @@ import static com.sun.javafx.PlatformUtil.isWindows;
  */
 public class TextAreaSkin extends TextInputControlSkin<TextArea> {
 
-    /**************************************************************************
+    /* ************************************************************************
      *
      * Static fields
      *
@@ -89,7 +83,7 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea> {
 
 
 
-    /**************************************************************************
+    /* ************************************************************************
      *
      * Private fields
      *
@@ -144,6 +138,8 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea> {
     private double pressX, pressY; // For dragging handles on embedded
     private boolean handlePressed;
 
+    private EventHandler<ScrollEvent> scrollEventFilter;
+
     /**
      * Remembers horizontal position when traversing up / down.
      */
@@ -151,7 +147,7 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea> {
 
 
 
-    /**************************************************************************
+    /* ************************************************************************
      *
      * Constructors
      *
@@ -201,11 +197,12 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea> {
         scrollPane.setContent(contentView);
         getChildren().add(scrollPane);
 
-        getSkinnable().addEventFilter(ScrollEvent.ANY, event -> {
+        scrollEventFilter = event -> {
             if (event.isDirect() && handlePressed) {
                 event.consume();
             }
-        });
+        };
+        getSkinnable().addEventFilter(ScrollEvent.ANY, scrollEventFilter);
 
         // Add selection
         selectionHighlightGroup.setManaged(false);
@@ -255,23 +252,23 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea> {
             addParagraphNode(i, paragraph.toString());
         }
 
-        control.selectionProperty().addListener((observable, oldValue, newValue) -> {
+        registerChangeListener(control.selectionProperty(), e -> {
             // TODO Why do we need two calls here?
             control.requestLayout();
             contentView.requestLayout();
         });
 
-        control.wrapTextProperty().addListener((observable, oldValue, newValue) -> {
+        registerChangeListener(control.wrapTextProperty(), e -> {
             invalidateMetrics();
-            scrollPane.setFitToWidth(newValue);
+            scrollPane.setFitToWidth(control.isWrapText());
         });
 
-        control.prefColumnCountProperty().addListener((observable, oldValue, newValue) -> {
+        registerChangeListener(control.prefColumnCountProperty(), e -> {
             invalidateMetrics();
             updatePrefViewportWidth();
         });
 
-        control.prefRowCountProperty().addListener((observable, oldValue, newValue) -> {
+        registerChangeListener(control.prefRowCountProperty(), e -> {
             invalidateMetrics();
             updatePrefViewportHeight();
         });
@@ -303,24 +300,26 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea> {
             }
         });
 
-        control.scrollTopProperty().addListener((observable, oldValue, newValue) -> {
-            double vValue = (newValue.doubleValue() < getScrollTopMax())
-                               ? (newValue.doubleValue() / getScrollTopMax()) : 1.0;
+        registerChangeListener(control.scrollTopProperty(), e -> {
+            double newValue = control.getScrollTop();
+            double vValue = (newValue < getScrollTopMax())
+                               ? (newValue / getScrollTopMax()) : 1.0;
             scrollPane.setVvalue(vValue);
         });
 
-        control.scrollLeftProperty().addListener((observable, oldValue, newValue) -> {
-            double hValue = (newValue.doubleValue() < getScrollLeftMax())
-                               ? (newValue.doubleValue() / getScrollLeftMax()) : 1.0;
+        registerChangeListener(control.scrollLeftProperty(), e -> {
+            double newValue = control.getScrollLeft();
+            double hValue = (newValue < getScrollLeftMax())
+                               ? (newValue / getScrollLeftMax()) : 1.0;
             scrollPane.setHvalue(hValue);
         });
 
         if (USE_MULTIPLE_NODES) {
-            control.getParagraphs().addListener((ListChangeListener.Change<? extends CharSequence> change) -> {
+            registerListChangeListener(control.getParagraphs(), change -> {
                 while (change.next()) {
                     int from = change.getFrom();
                     int to = change.getTo();
-                    List<? extends CharSequence> removed = change.getRemoved();
+                    List<? extends CharSequence> removed = (List<? extends CharSequence>) change.getRemoved();
                     if (from < to) {
 
                         if (removed.isEmpty()) {
@@ -343,7 +342,7 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea> {
                 }
             });
         } else {
-            control.textProperty().addListener(observable -> {
+            registerInvalidationListener(control.textProperty(), e -> {
                 invalidateMetrics();
                 ((Text)paragraphNodes.getChildren().get(0)).setText(control.textProperty().getValueSafe());
                 contentView.requestLayout();
@@ -364,7 +363,7 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea> {
             createPromptNode();
         }
 
-        usePromptText.addListener(observable -> {
+        registerInvalidationListener(usePromptText, e -> {
             createPromptNode();
             control.requestLayout();
         });
@@ -452,7 +451,7 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *
@@ -832,14 +831,14 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea> {
 
     /** {@inheritDoc} */
     @Override public void dispose() {
+        if (getSkinnable() == null) return;
+        getSkinnable().removeEventFilter(ScrollEvent.ANY, scrollEventFilter);
+        getChildren().remove(scrollPane);
         super.dispose();
 
         if (behavior != null) {
             behavior.dispose();
         }
-
-        // TODO Unregister listeners on text editor, paragraph list
-        throw new UnsupportedOperationException();
     }
 
     /** {@inheritDoc} */
@@ -1011,7 +1010,7 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea> {
 
 
 
-    /**************************************************************************
+    /* ************************************************************************
      *
      * Private implementation
      *
@@ -1168,7 +1167,8 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea> {
         return p;
     }
 
-    private Text getTextNode() {
+    // package for testing only!
+    Text getTextNode() {
         if (USE_MULTIPLE_NODES) {
             throw new IllegalArgumentException("Multiple node traversal is not yet implemented.");
         }
@@ -1185,9 +1185,22 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea> {
         textNode.caretBiasProperty().set(isForwardBias());
     }
 
+    // for testing
+    void setHandlePressed(boolean pressed) {
+        handlePressed = pressed;
+    }
 
+    // for testing
+    ScrollPane getScrollPane() {
+        return scrollPane;
+    }
 
-    /**************************************************************************
+    // for testing
+    Text getPromptNode() {
+        return promptNode;
+    }
+
+    /* ************************************************************************
      *
      * Support classes
      *

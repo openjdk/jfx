@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,6 +29,7 @@ import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.scene.traversal.Direction;
 import com.sun.javafx.scene.traversal.SubSceneTraversalEngine;
 import com.sun.javafx.scene.traversal.TopMostTraversalEngine;
+import com.sun.javafx.scene.traversal.TraversalMethod;
 import javafx.application.ConditionalFeature;
 import javafx.application.Platform;
 import javafx.beans.NamedArg;
@@ -315,6 +316,7 @@ public class SubScene extends Node {
                     if (oldRoot != null) {
                         StyleManager.getInstance().forget(SubScene.this);
                         oldRoot.setScenes(null, null);
+                        oldRoot.getStyleClass().remove("root");
                     }
                     oldRoot = _value;
                     _value.getStyleClass().add(0, "root");
@@ -617,7 +619,7 @@ public class SubScene extends Node {
         getRoot().parentResolvedOrientationInvalidated();
     }
 
-    /***********************************************************************
+    /* *********************************************************************
      *                         CSS                                         *
      **********************************************************************/
     /*
@@ -646,7 +648,8 @@ public class SubScene extends Node {
 
     private ObjectProperty<String> userAgentStylesheet = null;
     /**
-     * @return the userAgentStylesheet property.
+     * Gets the userAgentStylesheet property.
+     * @return the userAgentStylesheet property
      * @see #getUserAgentStylesheet()
      * @see #setUserAgentStylesheet(String)
      * @since  JavaFX 8u20
@@ -733,7 +736,7 @@ public class SubScene extends Node {
         return bounds;
     }
 
-    /***********************************************************************
+    /* *********************************************************************
      *                         Dirty Bits                                  *
      **********************************************************************/
     boolean dirtyLayout = false;
@@ -767,8 +770,8 @@ public class SubScene extends Node {
 
     private TopMostTraversalEngine traversalEngine = new SubSceneTraversalEngine(this);
 
-    boolean traverse(Node node, Direction dir) {
-        return traversalEngine.trav(node, dir) != null;
+    boolean traverse(Node node, Direction dir, TraversalMethod method) {
+        return traversalEngine.trav(node, dir, method) != null;
     }
 
     private enum SubSceneDirtyBits {
@@ -809,7 +812,7 @@ public class SubScene extends Node {
         setDirty(dirtyBit);
     }
 
-    /***********************************************************************
+    /* *********************************************************************
      *                           Picking                                   *
      **********************************************************************/
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,10 +25,13 @@
 
 package test.javafx.scene.control;
 
+import com.sun.javafx.tk.Toolkit;
+
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.scene.Group;
 import javafx.scene.Scene;
+import javafx.stage.Stage;
 
 import java.util.Arrays;
 import java.util.Collection;
@@ -45,7 +48,6 @@ import javafx.scene.control.TreeTableCellShim;
 import javafx.scene.control.TreeTableRow;
 
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -92,7 +94,7 @@ public class CellTest {
         } else if (cell instanceof TreeTableCell) {
             TreeTableRow tableRow = new TreeTableRow();
             CellShim.updateItem(tableRow, "TableRow", false);
-            ((TreeTableCell)cell).updateTreeTableRow(tableRow);
+            ((TreeTableCell)cell).updateTableRow(tableRow);
             TreeTableCellShim.set_lockItemOnEdit((TreeTableCell)cell, true);
         }
     }
@@ -367,20 +369,27 @@ public class CellTest {
         assertEquals("editable", cell.editableProperty().getName());
     }
 
-    // When the cell was focused, but is no longer focused, we should cancel editing
-    // Check for focused pseudoClass state change?
-    @Ignore(value = "I'm not sure how to test this, since I need a scene & such to move focus around")
     @Test public void loseFocusWhileEditing() {
         Button other = new Button();
         Group root = new Group(other, cell);
         Scene scene = new Scene(root);
 
+        Stage stage = new Stage();
+        stage.setScene(scene);
+        stage.show();
+        stage.requestFocus();
+        Toolkit.getToolkit().firePulse();
+
         CellShim.updateItem(cell, "Apples", false);
         cell.startEdit();
         cell.requestFocus();
+        Toolkit.getToolkit().firePulse();
+        assertTrue(cell.isEditing());
 
         other.requestFocus();
+        Toolkit.getToolkit().firePulse();
 
         assertFalse(cell.isEditing());
+        stage.hide();
     }
 }

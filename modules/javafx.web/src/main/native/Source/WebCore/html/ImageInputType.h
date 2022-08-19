@@ -45,7 +45,7 @@ public:
 private:
     const AtomString& formControlType() const final;
     bool isFormDataAppendable() const final;
-    bool appendFormData(DOMFormData&, bool) const final;
+    bool appendFormData(DOMFormData&) const final;
     RenderPtr<RenderElement> createInputRenderer(RenderStyle&&) final;
     void handleDOMActivateEvent(Event&) final;
     void attributeChanged(const QualifiedName&) final;
@@ -55,8 +55,9 @@ private:
     bool shouldRespectHeightAndWidthAttributes() final;
     unsigned height() const final;
     unsigned width() const final;
+    String resultForDialogSubmit() const final;
 
-    IntPoint m_clickLocation; // Valid only during HTMLFormElement::prepareForSubmission().
+    IntPoint m_clickLocation; // Valid only during HTMLFormElement::submitIfPossible().
 };
 
 } // namespace WebCore

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,6 +30,7 @@
 #include <WebCore/AddEventListenerOptions.h>
 #include <WebCore/Document.h>
 #include <WebCore/Element.h>
+#include <WebCore/ElementInlines.h>
 #include <WebCore/Event.h>
 #include <WebCore/EventListener.h>
 #include <WebCore/EventTarget.h>

@@ -24,6 +24,7 @@
 #include "Document.h"
 #include "SVGAnimateMotionElement.h"
 #include "SVGDocumentExtensions.h"
+#include "SVGElementTypeHelpers.h"
 #include "SVGNames.h"
 #include "SVGPathElement.h"
 #include <wtf/IsoMallocInlines.h>
@@ -65,18 +66,15 @@ void SVGMPathElement::buildPendingResource()
             document().accessSVGExtensions().addPendingResource(target.identifier, *this);
             ASSERT(hasPendingResources());
         }
-    } else if (is<SVGElement>(*target.element)) {
-        // Register us with the target in the dependencies map. Any change of hrefElement
-        // that leads to relayout/repainting now informs us, so we can react to it.
-        document().accessSVGExtensions().addElementReferencingTarget(*this, downcast<SVGElement>(*target.element));
-    }
+    } else if (is<SVGElement>(*target.element))
+        downcast<SVGElement>(*target.element).addReferencingElement(*this);
 
     targetPathChanged();
 }
 
 void SVGMPathElement::clearResourceReferences()
 {
-    document().accessSVGExtensions().removeAllTargetReferencesForElement(*this);
+    removeElementReference();
 }
 
 Node::InsertedIntoAncestorResult SVGMPathElement::insertedIntoAncestor(InsertionType insertionType, ContainerNode& parentOfInsertedTree)

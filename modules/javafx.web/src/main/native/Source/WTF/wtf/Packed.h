@@ -33,6 +33,10 @@
 #include <wtf/StdLibExtras.h>
 #include <wtf/UnalignedAccess.h>
 
+#if OS(DARWIN)
+#include <mach/vm_param.h>
+#endif
+
 namespace WTF {
 
 template<typename T>
@@ -115,6 +119,7 @@ public:
     static constexpr bool isAlignmentShiftProfitable = storageSizeWithoutAlignmentShift > storageSizeWithAlignmentShift;
     static constexpr unsigned alignmentShiftSize = isAlignmentShiftProfitable ? alignmentShiftSizeIfProfitable : 0;
     static constexpr unsigned storageSize = storageSizeWithAlignmentShift;
+    static_assert(storageSize <= sizeof(uintptr_t));
 
     constexpr PackedAlignedPtr()
         : m_storage()
@@ -136,11 +141,13 @@ public:
         // FIXME: PackedPtr<> can load memory with one mov by checking page boundary.
         // https://bugs.webkit.org/show_bug.cgi?id=197754
         uintptr_t value = 0;
+
 #if CPU(LITTLE_ENDIAN)
         memcpy(&value, m_storage.data(), storageSize);
 #else
         memcpy(bitwise_cast<uint8_t*>(&value) + (sizeof(void*) - storageSize), m_storage.data(), storageSize);
 #endif
+
         if (isAlignmentShiftProfitable)
             value <<= alignmentShiftSize;
 
@@ -179,7 +186,10 @@ public:
     }
 
     T* operator->() const { return get(); }
-    T& operator*() const { return *get(); }
+
+    template <typename U = T>
+    typename std::enable_if<!std::is_void_v<U>, U&>::type operator*() const { return *get(); }
+
     bool operator!() const { return !get(); }
 
     // This conversion operator allows implicit conversion to bool but not to other integer types.

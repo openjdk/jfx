@@ -56,9 +56,11 @@ public:
     const AtomString& name() const { return m_name; }
     void setName(const AtomString& name) { m_name = name; }
 
-    Optional<size_t> findKeyframeIndex(const String& key) const;
+    std::optional<size_t> findKeyframeIndex(const String& key) const;
 
     Ref<StyleRuleKeyframes> copy() const { return adoptRef(*new StyleRuleKeyframes(*this)); }
+
+    void shrinkToFit();
 
 private:
     explicit StyleRuleKeyframes(const AtomString&);
@@ -79,7 +81,7 @@ public:
 
     virtual ~CSSKeyframesRule();
 
-    CSSRule::Type type() const final { return KEYFRAMES_RULE; }
+    StyleRuleType styleRuleType() const final { return StyleRuleType::Keyframes; }
     String cssText() const final;
     void reattach(StyleRuleBase&) final;
 
@@ -107,7 +109,7 @@ private:
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_CSS_RULE(CSSKeyframesRule, CSSRule::KEYFRAMES_RULE)
+SPECIALIZE_TYPE_TRAITS_CSS_RULE(CSSKeyframesRule, StyleRuleType::Keyframes)
 
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::StyleRuleKeyframes)
     static bool isType(const WebCore::StyleRuleBase& rule) { return rule.isKeyframesRule(); }

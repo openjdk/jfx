@@ -233,6 +233,15 @@ private:
             case PutByVal:
             case PutByValAlias: {
                 switch (m_node->arrayMode().modeForPut().type()) {
+                case Array::Generic:
+                case Array::BigInt64Array:
+                case Array::BigUint64Array: {
+                    Edge child1 = m_graph.varArgChild(m_node, 0);
+                    if (!m_graph.m_slowPutByVal.contains(m_node) && (child1.useKind() == CellUse || child1.useKind() == KnownCellUse))
+                        // FIXME: there are some cases where we can avoid a store barrier by considering the value https://bugs.webkit.org/show_bug.cgi?id=230377
+                        considerBarrier(child1);
+                    break;
+                }
                 case Array::Contiguous:
                 case Array::ArrayStorage:
                 case Array::SlowPutArrayStorage: {
@@ -266,6 +275,13 @@ private:
                 break;
             }
 
+            case PutPrivateName: {
+                if (!m_graph.m_slowPutByVal.contains(m_node) && (m_node->child1().useKind() == CellUse || m_node->child1().useKind() == KnownCellUse))
+                    // FIXME: there are some cases where we can avoid a store barrier by considering the value https://bugs.webkit.org/show_bug.cgi?id=230377
+                    considerBarrier(m_node->child1());
+                break;
+            }
+
             case PutPrivateNameById: {
                 // We emit IC code when we have a non-null cacheableIdentifier and we need to introduce a
                 // barrier for it. On PutPrivateName, we perform store barrier during slow path execution.
@@ -289,6 +305,11 @@ private:
                 // https://bugs.webkit.org/show_bug.cgi?id=209396
                 if (isCell(m_node->child1().useKind()))
                     considerBarrier(m_node->child1());
+                break;
+            }
+
+            case RegExpTestInline: {
+                considerBarrier(m_node->child1());
                 break;
             }
 

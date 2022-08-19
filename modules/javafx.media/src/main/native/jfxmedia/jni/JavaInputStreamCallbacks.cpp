@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -40,7 +40,6 @@ jmethodID CJavaInputStreamCallbacks::m_IsRandomAccessMID = 0;
 jmethodID CJavaInputStreamCallbacks::m_SeekMID = 0;
 jmethodID CJavaInputStreamCallbacks::m_CloseConnectionMID = 0;
 jmethodID CJavaInputStreamCallbacks::m_PropertyMID = 0;
-jmethodID CJavaInputStreamCallbacks::m_GetStreamSizeMID = 0;
 
 CJavaInputStreamCallbacks::CJavaInputStreamCallbacks()
     : m_ConnectionHolder(0)
@@ -139,12 +138,6 @@ bool CJavaInputStreamCallbacks::Init(JNIEnv *env, jobject jLocator)
         if (!hasException)
         {
             m_PropertyMID = env->GetMethodID(klass, "property", "(II)I");
-            hasException = javaEnv.reportException();
-        }
-
-        if (!hasException)
-        {
-            m_GetStreamSizeMID = env->GetMethodID(klass, "getStreamSize", "()I");
             hasException = javaEnv.reportException();
         }
 
@@ -321,25 +314,6 @@ int CJavaInputStreamCallbacks::Property(int prop, int value)
         jobject connection = pEnv->NewLocalRef(m_ConnectionHolder);
         if (connection) {
             result = pEnv->CallIntMethod(connection, m_PropertyMID, (jint)prop, (jint)value);
-            pEnv->DeleteLocalRef(connection);
-        }
-
-        javaEnv.reportException();
-    }
-
-    return result;
-}
-
-int CJavaInputStreamCallbacks::GetStreamSize()
-{
-    CJavaEnvironment javaEnv(m_jvm);
-    JNIEnv *pEnv = javaEnv.getEnvironment();
-    int result = 0;
-
-    if (pEnv) {
-        jobject connection = pEnv->NewLocalRef(m_ConnectionHolder);
-        if (connection) {
-            result = pEnv->CallIntMethod(connection, m_GetStreamSizeMID);
             pEnv->DeleteLocalRef(connection);
         }
 

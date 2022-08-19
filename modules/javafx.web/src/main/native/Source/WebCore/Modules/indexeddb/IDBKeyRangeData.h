@@ -25,8 +25,6 @@
 
 #pragma once
 
-#if ENABLE(INDEXED_DATABASE)
-
 #include "IDBKeyData.h"
 #include "IDBKeyRange.h"
 
@@ -37,8 +35,6 @@ class IDBKey;
 struct IDBKeyRangeData {
     IDBKeyRangeData()
         : isNull(true)
-        , lowerOpen(false)
-        , upperOpen(false)
     {
     }
 
@@ -56,8 +52,6 @@ struct IDBKeyRangeData {
 
     IDBKeyRangeData(IDBKeyRange* keyRange)
         : isNull(!keyRange)
-        , lowerOpen(false)
-        , upperOpen(false)
     {
         if (isNull)
             return;
@@ -79,13 +73,13 @@ struct IDBKeyRangeData {
     template<class Encoder> void encode(Encoder&) const;
     template<class Decoder> static WARN_UNUSED_RETURN bool decode(Decoder&, IDBKeyRangeData&);
 
-    bool isNull;
-
     IDBKeyData lowerKey;
     IDBKeyData upperKey;
 
-    bool lowerOpen;
-    bool upperOpen;
+    bool lowerOpen { false };
+    bool upperOpen { false };
+
+    bool isNull;
 
 #if !LOG_DISABLED
     String loggingString() const;
@@ -111,13 +105,13 @@ bool IDBKeyRangeData::decode(Decoder& decoder, IDBKeyRangeData& keyRange)
     if (keyRange.isNull)
         return true;
 
-    Optional<IDBKeyData> upperKey;
+    std::optional<IDBKeyData> upperKey;
     decoder >> upperKey;
     if (!upperKey)
         return false;
     keyRange.upperKey = WTFMove(*upperKey);
 
-    Optional<IDBKeyData> lowerKey;
+    std::optional<IDBKeyData> lowerKey;
     decoder >> lowerKey;
     if (!lowerKey)
         return false;
@@ -133,5 +127,3 @@ bool IDBKeyRangeData::decode(Decoder& decoder, IDBKeyRangeData& keyRange)
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(INDEXED_DATABASE)

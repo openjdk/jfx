@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -475,7 +475,8 @@ class D3DContext extends BaseShaderContext {
             float r, float g, float b);
     private static native void nSetLight(long pContext, long nativeMeshView,
             int index, float x, float y, float z, float r, float g, float b, float w, float ca, float la, float qa,
-            float maxRange, float dirX, float dirY, float dirZ, float innerAngle, float outerAngle, float falloff);
+            float isAttenuated, float maxRange, float dirX, float dirY, float dirZ, float innerAngle, float outerAngle,
+            float falloff);
     private static native void nRenderMeshView(long pContext, long nativeMeshView);
     private static native int nDrawIndexedQuads(long pContext,
             float coords[], byte colors[], int numVertices);
@@ -611,9 +612,9 @@ class D3DContext extends BaseShaderContext {
     }
 
     void setLight(long nativeMeshView, int index, float x, float y, float z, float r, float g, float b, float w,
-            float ca, float la, float qa, float maxRange, float dirX, float dirY, float dirZ,
+            float ca, float la, float qa, float isAttenuated, float maxRange, float dirX, float dirY, float dirZ,
             float innerAngle, float outerAngle, float falloff) {
-        nSetLight(pContext, nativeMeshView, index, x, y, z, r, g, b, w,  ca, la, qa, maxRange,
+        nSetLight(pContext, nativeMeshView, index, x, y, z, r, g, b, w,  ca, la, qa, isAttenuated, maxRange,
                 dirX, dirY, dirZ, innerAngle, outerAngle, falloff);
     }
 

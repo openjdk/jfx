@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -36,7 +36,6 @@ import javafx.geometry.Orientation;
 import javafx.geometry.VPos;
 import javafx.scene.Cursor;
 import javafx.scene.Node;
-import javafx.scene.control.Accordion;
 import javafx.scene.control.Control;
 import javafx.scene.control.SkinBase;
 import javafx.scene.control.SplitPane;
@@ -56,7 +55,7 @@ import java.util.ListIterator;
  */
 public class SplitPaneSkin extends SkinBase<SplitPane> {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private fields                                                          *
      *                                                                         *
@@ -65,10 +64,17 @@ public class SplitPaneSkin extends SkinBase<SplitPane> {
     private ObservableList<Content> contentRegions;
     private ObservableList<ContentDivider> contentDividers;
     private boolean horizontal;
+    /**
+     * Flag which is used to determine whether we need to request layout when a divider position changed or not.
+     * E.g. We don't want to request layout when we are changing the divider position in
+     * {@link #layoutChildren(double, double, double, double)} since we are currently doing the layout.
+     * See also: JDK-8277122
+     */
+    private boolean duringLayout;
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -113,7 +119,7 @@ public class SplitPaneSkin extends SkinBase<SplitPane> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *
@@ -216,8 +222,8 @@ public class SplitPaneSkin extends SkinBase<SplitPane> {
             previousSize = horizontal ? sw : sh;
         }
 
-        // If the window is less than the min size we want to resize
-        // proportionally
+        duringLayout = true;
+        // If the window is less than the min size we want to resize proportionally
         double minSize = totalMinSize();
         if (minSize > (horizontal ? w : h)) {
             double percentage = 0;
@@ -235,6 +241,7 @@ public class SplitPaneSkin extends SkinBase<SplitPane> {
             setupContentAndDividerForLayout();
             layoutDividersAndContent(w, h);
             resize = false;
+            duringLayout = false;
             return;
         }
 
@@ -411,6 +418,7 @@ public class SplitPaneSkin extends SkinBase<SplitPane> {
         }
 
         layoutDividersAndContent(w, h);
+        duringLayout = false;
         resize = false;
     }
 
@@ -488,7 +496,7 @@ public class SplitPaneSkin extends SkinBase<SplitPane> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private implementation                                                  *
      *                                                                         *
@@ -617,7 +625,7 @@ public class SplitPaneSkin extends SkinBase<SplitPane> {
         ChangeListener<Number> posPropertyListener = new PosPropertyListener(c);
         c.setPosPropertyListener(posPropertyListener);
         d.positionProperty().addListener(posPropertyListener);
-        initializeDivderEventHandlers(c);
+        initializeDividerEventHandlers(c);
         contentDividers.add(c);
         getChildren().add(c);
     }
@@ -633,7 +641,7 @@ public class SplitPaneSkin extends SkinBase<SplitPane> {
         lastDividerUpdate = 0;
     }
 
-    private void initializeDivderEventHandlers(final ContentDivider divider) {
+    private void initializeDividerEventHandlers(final ContentDivider divider) {
         // TODO: do we need to consume all mouse events?
         // they only bubble to the skin which consumes them by default
         divider.addEventHandler(MouseEvent.ANY, event -> {
@@ -935,7 +943,7 @@ public class SplitPaneSkin extends SkinBase<SplitPane> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Support classes                                                         *
      *                                                                         *
@@ -954,7 +962,9 @@ public class SplitPaneSkin extends SkinBase<SplitPane> {
                 // When checking is enforced, we know that the position was set explicitly
                 divider.posExplicit = true;
             }
-            getSkinnable().requestLayout();
+            if (!duringLayout) {
+                getSkinnable().requestLayout();
+            }
         }
     }
 

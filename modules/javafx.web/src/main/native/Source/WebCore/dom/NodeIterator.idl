@@ -21,7 +21,6 @@
 // https://dom.spec.whatwg.org/#interface-nodeiterator
 [
     ExportToWrappedFunction,
-    ImplementationLacksVTable,
     JSCustomMarkFunction,
     Exposed=Window
 ] interface NodeIterator {
@@ -31,8 +30,8 @@
     readonly attribute unsigned long whatToShow;
     readonly attribute NodeFilter? filter;
 
-    [MayThrowException] Node? nextNode();
-    [MayThrowException] Node? previousNode();
+    Node? nextNode();
+    Node? previousNode();
 
     undefined detach();
 };

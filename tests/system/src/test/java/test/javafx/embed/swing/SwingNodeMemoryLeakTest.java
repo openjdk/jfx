@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2017, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -138,7 +138,6 @@ public class SwingNodeMemoryLeakTest {
         // Attempt gc GC_ATTEMPTS times
         for (int i = 0; i < GC_ATTEMPTS; i++) {
             System.gc();
-            System.runFinalization();
             if (getCleanedUpSwingNodeCount() == TOTAL_SWINGNODE) {
                 break;
             }
@@ -154,7 +153,6 @@ public class SwingNodeMemoryLeakTest {
         // Attempt gc GC_ATTEMPTS times
         for (int i = 0; i < GC_ATTEMPTS; i++) {
             System.gc();
-            System.runFinalization();
             if (getCleanedUpJLabelCount() == TOTAL_SWINGNODE) {
                 break;
             }

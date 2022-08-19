@@ -26,17 +26,21 @@
 #pragma once
 
 #include "ContentSecurityPolicyResponseHeaders.h"
+#include "CrossOriginEmbedderPolicy.h"
 #include "FetchRequestCredentials.h"
+#include "NotificationPermission.h"
 #include "WorkerOrWorkletThread.h"
 #include "WorkerRunLoop.h"
 #include "WorkerType.h"
 #include <JavaScriptCore/RuntimeFlags.h>
 #include <memory>
+#include <pal/SessionID.h>
 #include <wtf/URL.h>
 
 namespace WebCore {
 
 class NotificationClient;
+class ScriptBuffer;
 class SecurityOrigin;
 class SocketProvider;
 class WorkerGlobalScope;
@@ -59,16 +63,19 @@ struct WorkerParameters {
 public:
     URL scriptURL;
     String name;
-    String identifier;
+    String inspectorIdentifier;
     String userAgent;
     bool isOnline;
     ContentSecurityPolicyResponseHeaders contentSecurityPolicyResponseHeaders;
     bool shouldBypassMainWorldContentSecurityPolicy;
+    CrossOriginEmbedderPolicy crossOriginEmbedderPolicy;
     MonotonicTime timeOrigin;
     ReferrerPolicy referrerPolicy;
     WorkerType workerType;
     FetchRequestCredentials credentials;
     Settings::Values settingsValues;
+    WorkerThreadMode workerThreadMode { WorkerThreadMode::CreateNewThread };
+    std::optional<PAL::SessionID> sessionID { std::nullopt };
 
     WorkerParameters isolatedCopy() const;
 };
@@ -90,9 +97,10 @@ public:
 #endif
 
     JSC::RuntimeFlags runtimeFlags() const { return m_runtimeFlags; }
+    bool isInStaticScriptEvaluation() const { return m_isInStaticScriptEvaluation; }
 
 protected:
-    WorkerThread(const WorkerParameters&, const String& sourceCode, WorkerLoaderProxy&, WorkerDebuggerProxy&, WorkerReportingProxy&, WorkerThreadStartMode, const SecurityOrigin& topOrigin, IDBClient::IDBConnectionProxy*, SocketProvider*, JSC::RuntimeFlags);
+    WorkerThread(const WorkerParameters&, const ScriptBuffer& sourceCode, WorkerLoaderProxy&, WorkerDebuggerProxy&, WorkerReportingProxy&, WorkerThreadStartMode, const SecurityOrigin& topOrigin, IDBClient::IDBConnectionProxy*, SocketProvider*, JSC::RuntimeFlags);
 
     // Factory method for creating a new worker context for the thread.
     virtual Ref<WorkerGlobalScope> createWorkerGlobalScope(const WorkerParameters&, Ref<SecurityOrigin>&&, Ref<SecurityOrigin>&& topOrigin) = 0;
@@ -103,12 +111,12 @@ protected:
     SocketProvider* socketProvider();
 
 private:
-    virtual bool isServiceWorkerThread() const { return false; }
+    virtual ASCIILiteral threadName() const = 0;
 
     virtual void finishedEvaluatingScript() { }
 
     // WorkerOrWorkletThread.
-    Ref<WTF::Thread> createThread() final;
+    Ref<Thread> createThread() final;
     RefPtr<WorkerOrWorkletGlobalScope> createGlobalScope() final;
     void evaluateScriptIfNecessary(String& exceptionMessage) final;
     bool shouldWaitForWebInspectorOnStartup() const final;
@@ -124,10 +132,9 @@ private:
     NotificationClient* m_notificationClient { nullptr };
 #endif
 
-#if ENABLE(INDEXED_DATABASE)
     RefPtr<IDBClient::IDBConnectionProxy> m_idbConnectionProxy;
-#endif
     RefPtr<SocketProvider> m_socketProvider;
+    bool m_isInStaticScriptEvaluation { false };
 };
 
 } // namespace WebCore

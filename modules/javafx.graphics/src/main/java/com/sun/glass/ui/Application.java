@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -583,8 +583,6 @@ public abstract class Application {
         return createWindow(null, screen, styleMask);
     }
 
-    public abstract Window createWindow(long parent);
-
     public abstract View createView();
 
     public abstract Cursor createCursor(int type);
@@ -624,6 +622,7 @@ public abstract class Application {
     }
 
     public abstract Pixels createPixels(int width, int height, ByteBuffer data);
+    public abstract Pixels createPixels(int width, int height, ByteBuffer data, float scalex, float scaley);
     public abstract Pixels createPixels(int width, int height, IntBuffer data);
     public abstract Pixels createPixels(int width, int height, IntBuffer data, float scalex, float scaley);
     protected abstract int staticPixels_getNativeFormat();

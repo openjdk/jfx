@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,9 +27,11 @@ package com.sun.webkit;
 
 import javafx.application.ConditionalFeature;
 import javafx.application.Platform;
+import javafx.scene.paint.Color;
 import com.sun.glass.utils.NativeLibLoader;
 import com.sun.javafx.logging.PlatformLogger;
 import com.sun.javafx.logging.PlatformLogger.Level;
+import com.sun.javafx.tk.Toolkit;
 import com.sun.webkit.event.WCFocusEvent;
 import com.sun.webkit.event.WCInputMethodEvent;
 import com.sun.webkit.event.WCKeyEvent;
@@ -82,6 +84,7 @@ public final class WebPage {
     private final static PlatformLogger paintLog = PlatformLogger.getLogger(WebPage.class.getName() + ".paint");
 
     private static final int MAX_FRAME_QUEUE_SIZE = 10;
+    private static final int DEFAULT_BACKGROUND_INT_RGBA = 0xFFFFFFFF; // Color.WHITE
 
     // Native WebPage* pointer
     private long pPage = 0;
@@ -93,6 +96,7 @@ public final class WebPage {
     private int width, height;
 
     private int fontSmoothingType;
+    private int backgroundIntRgba = DEFAULT_BACKGROUND_INT_RGBA;
 
     private final WCFrameView hostWindow;
 
@@ -156,6 +160,19 @@ public final class WebPage {
 
             // Initialize WTF, WebCore and JavaScriptCore.
             twkInitWebCore(useJIT, useDFGJIT, useCSS3D);
+
+            // Inform the native webkit code when either the JVM or the
+            // JavaFX runtime is being shutdown
+            final Runnable shutdownHook = () -> {
+                synchronized(WebPage.class) {
+                    MainThread.twkSetShutdown(true);
+                }
+            };
+
+            // Register shutdown hook with the Java runtime and the Toolkit
+            Toolkit.getToolkit().addShutdownHook(shutdownHook);
+            Runtime.getRuntime().addShutdownHook(new Thread(shutdownHook));
+
             return null;
         });
 
@@ -373,6 +390,14 @@ public final class WebPage {
     }
 
     private void scroll(int x, int y, int w, int h, int dx, int dy) {
+        if (!isBackgroundColorOpaque()) {
+            if (paintLog.isLoggable(Level.FINEST)) {
+                paintLog.finest("rect=[" + x + ", " + y + " " + w + "x" + h +"]");
+            }
+            addDirtyRect(new WCRectangle(x, y, (float) w, (float) h));
+            return;
+        }
+
         if (paintLog.isLoggable(Level.FINEST)) {
             paintLog.finest("rect=[" + x + ", " + y + " " + w + "x" + h +
                             "] delta=[" + dx + ", " + dy + "]");
@@ -588,9 +613,10 @@ public final class WebPage {
     }
 
     public void setBackgroundColor(long frameID, int backgroundColor) {
+        backgroundIntRgba = backgroundColor;
         lockPage();
         try {
-            log.fine("setBackgroundColor: " + backgroundColor);
+            log.fine("setBackgroundColor intRgba: {0}", backgroundColor);
             if (isDisposed) {
                 log.fine("setBackgroundColor() request for a disposed web page.");
                 return;
@@ -598,27 +624,34 @@ public final class WebPage {
             if (!frames.contains(frameID)) {
                 return;
             }
+            twkSetTransparent(frameID, isBackgroundColorTransparent());
             twkSetBackgroundColor(frameID, backgroundColor);
-
+            repaintAll();
         } finally {
             unlockPage();
         }
     }
 
+    public void setBackgroundColor(Color backgroundColor) {
+        log.fine("setBackgroundColor color: " + backgroundColor);
+        setBackgroundColor(getIntRgba(backgroundColor));
+    }
+
     public void setBackgroundColor(int backgroundColor) {
+        backgroundIntRgba = backgroundColor;
         lockPage();
         try {
-            log.fine("setBackgroundColor: " + backgroundColor +
-                   " for all frames");
+            log.fine("setBackgroundColor intRgba: {0} for all frames", backgroundColor);
             if (isDisposed) {
                 log.fine("setBackgroundColor() request for a disposed web page.");
                 return;
             }
 
             for (long frameID: frames) {
+                twkSetTransparent(frameID, isBackgroundColorTransparent());
                 twkSetBackgroundColor(frameID, backgroundColor);
             }
-
+            repaintAll();
         } finally {
             unlockPage();
         }
@@ -739,8 +772,15 @@ public final class WebPage {
             paintLog.finest("Rendering: {0}", frame);
             for (WCRenderQueue rq : frame.getRQList()) {
                 gc.saveState();
-                if (rq.getClip() != null) {
-                    gc.setClip(rq.getClip());
+                WCRectangle clip = rq.getClip();
+                if (clip != null) {
+                    if (isBackgroundColorTransparent()) {
+                        // As backbuffer is enabled, new clips are drawn over the old rendered frames
+                        // regardless the alpha channel. While that works fine for alpha > 0,
+                        // for alpha == 0 we need to clear the old frame or it will still be visible.
+                        gc.clearRect((int) clip.getX(), (int) clip.getY(), (int) clip.getWidth(), (int) clip.getHeight());
+                    }
+                    gc.setClip(clip);
                 }
                 rq.decode(gc);
                 gc.restoreState();
@@ -811,15 +851,18 @@ public final class WebPage {
                 log.fine("Mouse event for a disposed web page.");
                 return false;
             }
-
-            return !isDragConfirmed() //When Webkit informes FX about drag start, it waits
-                                      //for system DnD loop and not intereasted in
-                                      //intermediate mouse events that can change text selection.
+            boolean result = !isDragConfirmed() //When Webkit informes FX about drag start, it waits
+                                                // for system DnD loop and not intereasted in
+                                                //intermediate mouse events that can change text selection.
                 && twkProcessMouseEvent(getPage(), me.getID(),
-                                        me.getButton(), me.getClickCount(),
+                                        me.getButton(), me.getButtonMask(), me.getClickCount(),
                                         me.getX(), me.getY(), me.getScreenX(), me.getScreenY(),
                                         me.isShiftDown(), me.isControlDown(), me.isAltDown(), me.isMetaDown(), me.isPopupTrigger(),
                                         me.getWhen() / 1000.0);
+            if (!isBackgroundColorOpaque()) {
+                repaintAll();
+            }
+            return result;
         } finally {
             unlockPage();
         }
@@ -833,11 +876,15 @@ public final class WebPage {
                 log.fine("MouseWheel event for a disposed web page.");
                 return false;
             }
-            return twkProcessMouseWheelEvent(getPage(),
-                                             me.getX(), me.getY(), me.getScreenX(), me.getScreenY(),
-                                             me.getDeltaX(), me.getDeltaY(),
-                                             me.isShiftDown(), me.isControlDown(), me.isAltDown(), me.isMetaDown(),
-                                             me.getWhen() / 1000.0);
+            boolean result = twkProcessMouseWheelEvent(getPage(),
+                    me.getX(), me.getY(), me.getScreenX(), me.getScreenY(),
+                    me.getDeltaX(), me.getDeltaY(),
+                    me.isShiftDown(), me.isControlDown(), me.isAltDown(), me.isMetaDown(),
+                    me.getWhen() / 1000.0);
+            if (!isBackgroundColorOpaque()) {
+                repaintAll();
+            }
+            return result;
         } finally {
             unlockPage();
         }
@@ -2525,6 +2572,7 @@ public final class WebPage {
     private void fireLoadEvent(long frameID, int state, String url,
             String contentType, double progress, int errorCode)
     {
+        setBackgroundColor(backgroundIntRgba);
         for (LoadListenerClient l : loadListenerClients) {
             l.dispatchLoadEvent(frameID, state, url, contentType, progress, errorCode);
         }
@@ -2541,6 +2589,27 @@ public final class WebPage {
     private void repaintAll() {
         dirtyRects.clear();
         addDirtyRect(new WCRectangle(0, 0, width, height));
+    }
+
+    private boolean isBackgroundColorTransparent() {
+        return (backgroundIntRgba & 0x000000FF) == 0;
+    }
+
+    private boolean isBackgroundColorOpaque() {
+        return (backgroundIntRgba & 0x000000FF) == 255;
+    }
+
+    private static int getIntRgba(Color color) {
+        if (color == null) {
+            return DEFAULT_BACKGROUND_INT_RGBA;
+        }
+        int red = (int) Math.round(color.getRed() * 255.0);
+        int green = (int) Math.round(color.getGreen() * 255.0);
+        int blue = (int) Math.round(color.getBlue() * 255.0);
+        int alpha = (int) Math.round(color.getOpacity() * 255.0);
+
+        // return 32 bit integer representation compatible with WebKit
+        return (red << 24) | (green << 16) | (blue << 8) | alpha;
     }
 
     // Package scope method for testing
@@ -2626,7 +2695,7 @@ public final class WebPage {
                                               boolean shift, boolean ctrl,
                                               boolean alt, boolean meta, double when);
     private native boolean twkProcessMouseEvent(long pPage, int id,
-                                                int button, int clickCount,
+                                                int button, int buttonMask, int clickCount,
                                                 int x, int y, int sx, int sy,
                                                 boolean shift, boolean control, boolean alt, boolean meta,
                                                 boolean popupTrigger, double when);

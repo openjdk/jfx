@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,7 +32,9 @@ import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 
 /**
- * Derive a Color from a Color and a brightness value
+ * Converter to convert a combination of color and brightness values to a derived {@code Color}.
+ *
+ * @since 9
  */
 public final class DeriveColorConverter extends StyleConverter<ParsedValue[], Color> {
 
@@ -41,6 +43,10 @@ public final class DeriveColorConverter extends StyleConverter<ParsedValue[], Co
         static final DeriveColorConverter INSTANCE = new DeriveColorConverter();
     }
 
+    /**
+     * Gets the {@code DeriveColorConverter} instance.
+     * @return the {@code DeriveColorConverter} instance
+     */
     public static DeriveColorConverter getInstance() {
         return Holder.INSTANCE;
     }

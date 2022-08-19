@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -229,10 +229,6 @@ final class WinApplication extends Application implements InvokeLaterDispatcher.
         return new WinWindow(owner, screen, styleMask);
     }
 
-    @Override public Window createWindow(long parent) {
-        return new WinChildWindow(parent);
-    }
-
     @Override public View createView() {
         return new WinView();
     }
@@ -255,6 +251,11 @@ final class WinApplication extends Application implements InvokeLaterDispatcher.
 
     @Override public Pixels createPixels(int width, int height, ByteBuffer data) {
         return new WinPixels(width, height, data);
+    }
+
+    @Override
+    public Pixels createPixels(int width, int height, ByteBuffer data, float scalex, float scaley) {
+        return new WinPixels(width, height, data, scalex, scaley);
     }
 
     @Override public Pixels createPixels(int width, int height, IntBuffer data) {

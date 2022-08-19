@@ -37,6 +37,7 @@
 #include <wtf/Platform.h>
 #include <wtf/PrintStream.h>
 #include <wtf/RAMSize.h>
+#include <wtf/SafeStrerror.h>
 #include <wtf/StdSet.h>
 #include <wtf/Vector.h>
 
@@ -105,7 +106,7 @@ public:
     MemoryResult tryAllocateFastMemory()
     {
         MemoryResult result = [&] {
-            auto holder = holdLock(m_lock);
+            Locker locker { m_lock };
             if (m_fastMemories.size() >= m_maxFastMemoryCount)
                 return MemoryResult(nullptr, MemoryResult::SyncTryToReclaimMemory);
 
@@ -128,7 +129,7 @@ public:
     void freeFastMemory(void* basePtr)
     {
         {
-            auto holder = holdLock(m_lock);
+            Locker locker { m_lock };
             Gigacage::freeVirtualPages(Gigacage::Primitive, basePtr, Memory::fastMappedBytes());
             m_fastMemories.removeFirst(basePtr);
         }
@@ -139,7 +140,7 @@ public:
     MemoryResult tryAllocateGrowableBoundsCheckingMemory(size_t mappedCapacity)
     {
         MemoryResult result = [&] {
-            auto holder = holdLock(m_lock);
+            Locker locker { m_lock };
             void* result = Gigacage::tryAllocateZeroedVirtualPages(Gigacage::Primitive, mappedCapacity);
             if (!result)
                 return MemoryResult(nullptr, MemoryResult::SyncTryToReclaimMemory);
@@ -157,7 +158,7 @@ public:
     void freeGrowableBoundsCheckingMemory(void* basePtr, size_t mappedCapacity)
     {
         {
-            auto holder = holdLock(m_lock);
+            Locker locker { m_lock };
             Gigacage::freeVirtualPages(Gigacage::Primitive, basePtr, mappedCapacity);
             m_growableBoundsCheckingMemories.erase(std::make_pair(bitwise_cast<uintptr_t>(basePtr), mappedCapacity));
         }
@@ -168,7 +169,7 @@ public:
     bool isInGrowableOrFastMemory(void* address)
     {
         // NOTE: This can be called from a signal handler, but only after we proved that we're in JIT code or WasmLLInt code.
-        auto holder = holdLock(m_lock);
+        Locker locker { m_lock };
         for (void* memory : m_fastMemories) {
             char* start = static_cast<char*>(memory);
             if (start <= address && address <= start + Memory::fastMappedBytes())
@@ -197,7 +198,7 @@ public:
     MemoryResult::Kind tryAllocatePhysicalBytes(size_t bytes)
     {
         MemoryResult::Kind result = [&] {
-            auto holder = holdLock(m_lock);
+            Locker locker { m_lock };
             if (m_physicalBytes + bytes > memoryLimit())
                 return MemoryResult::SyncTryToReclaimMemory;
 
@@ -217,7 +218,7 @@ public:
     void freePhysicalBytes(size_t bytes)
     {
         {
-            auto holder = holdLock(m_lock);
+            Locker locker { m_lock };
             m_physicalBytes -= bytes;
         }
 
@@ -279,13 +280,13 @@ bool tryAllocate(const Func& allocate, const WTF::Function<void(Memory::NotifyPr
 
 
 MemoryHandle::MemoryHandle(void* memory, size_t size, size_t mappedCapacity, PageCount initial, PageCount maximum, MemorySharingMode sharingMode, MemoryMode mode)
-    : m_memory(memory, mappedCapacity)
+    : m_sharingMode(sharingMode)
+    , m_mode(mode)
+    , m_memory(memory, mappedCapacity)
     , m_size(size)
     , m_mappedCapacity(mappedCapacity)
     , m_initial(initial)
     , m_maximum(maximum)
-    , m_sharingMode(sharingMode)
-    , m_mode(mode)
 {
 #if ASSERT_ENABLED
     if (sharingMode == MemorySharingMode::Default && mode == MemoryMode::BoundsChecking)
@@ -301,7 +302,7 @@ MemoryHandle::~MemoryHandle()
         switch (m_mode) {
         case MemoryMode::Signaling:
             if (mprotect(memory, Memory::fastMappedBytes(), PROT_READ | PROT_WRITE)) {
-                dataLog("mprotect failed: ", strerror(errno), "\n");
+                dataLog("mprotect failed: ", safeStrerror(errno).data(), "\n");
                 RELEASE_ASSERT_NOT_REACHED();
             }
             memoryManager().freeFastMemory(memory);
@@ -313,7 +314,7 @@ MemoryHandle::~MemoryHandle()
                 break;
             case MemorySharingMode::Shared: {
                 if (mprotect(memory, m_mappedCapacity, PROT_READ | PROT_WRITE)) {
-                    dataLog("mprotect failed: ", strerror(errno), "\n");
+                    dataLog("mprotect failed: ", safeStrerror(errno).data(), "\n");
                     RELEASE_ASSERT_NOT_REACHED();
                 }
                 memoryManager().freeGrowableBoundsCheckingMemory(memory, m_mappedCapacity);
@@ -406,7 +407,7 @@ RefPtr<Memory> Memory::tryCreate(PageCount initial, PageCount maximum, MemorySha
 
     if (fastMemory) {
         if (mprotect(fastMemory + initialBytes, Memory::fastMappedBytes() - initialBytes, PROT_NONE)) {
-            dataLog("mprotect failed: ", strerror(errno), "\n");
+            dataLog("mprotect failed: ", safeStrerror(errno).data(), "\n");
             RELEASE_ASSERT_NOT_REACHED();
         }
 
@@ -416,11 +417,11 @@ RefPtr<Memory> Memory::tryCreate(PageCount initial, PageCount maximum, MemorySha
     if (UNLIKELY(Options::crashIfWebAssemblyCantFastMemory()))
         webAssemblyCouldntGetFastMemory();
 
-    if (!initialBytes)
-        return adoptRef(new Memory(initial, maximum, sharingMode, WTFMove(notifyMemoryPressure), WTFMove(syncTryToReclaimMemory), WTFMove(growSuccessCallback)));
-
     switch (sharingMode) {
     case MemorySharingMode::Default: {
+        if (!initialBytes)
+            return adoptRef(new Memory(initial, maximum, sharingMode, WTFMove(notifyMemoryPressure), WTFMove(syncTryToReclaimMemory), WTFMove(growSuccessCallback)));
+
         void* slowMemory = Gigacage::tryAllocateZeroedVirtualPages(Gigacage::Primitive, initialBytes);
         if (!slowMemory) {
             memoryManager().freePhysicalBytes(initialBytes);
@@ -442,7 +443,7 @@ RefPtr<Memory> Memory::tryCreate(PageCount initial, PageCount maximum, MemorySha
         }
 
         if (mprotect(slowMemory + initialBytes, maximumBytes - initialBytes, PROT_NONE)) {
-            dataLog("mprotect failed: ", strerror(errno), "\n");
+            dataLog("mprotect failed: ", safeStrerror(errno).data(), "\n");
             RELEASE_ASSERT_NOT_REACHED();
         }
 
@@ -476,7 +477,7 @@ Expected<PageCount, Memory::GrowFailReason> Memory::growShared(PageCount delta)
     Wasm::PageCount oldPageCount;
     Wasm::PageCount newPageCount;
     auto result = ([&]() -> Expected<PageCount, Memory::GrowFailReason> {
-        auto locker = holdLock(m_handle->lock());
+        Locker locker { m_handle->lock() };
 
         oldPageCount = sizeInPages();
         newPageCount = oldPageCount + delta;
@@ -516,7 +517,7 @@ Expected<PageCount, Memory::GrowFailReason> Memory::growShared(PageCount delta)
 
         dataLogLnIf(verbose, "Marking WebAssembly memory's ", RawPointer(memory), " as read+write in range [", RawPointer(startAddress), ", ", RawPointer(startAddress + extraBytes), ")");
         if (mprotect(startAddress, extraBytes, PROT_READ | PROT_WRITE)) {
-            dataLog("mprotect failed: ", strerror(errno), "\n");
+            dataLog("mprotect failed: ", safeStrerror(errno).data(), "\n");
             RELEASE_ASSERT_NOT_REACHED();
         }
 
@@ -605,7 +606,7 @@ Expected<PageCount, Memory::GrowFailReason> Memory::grow(PageCount delta)
 
         dataLogLnIf(verbose, "Marking WebAssembly memory's ", RawPointer(memory), " as read+write in range [", RawPointer(startAddress), ", ", RawPointer(startAddress + extraBytes), ")");
         if (mprotect(startAddress, extraBytes, PROT_READ | PROT_WRITE)) {
-            dataLog("mprotect failed: ", strerror(errno), "\n");
+            dataLog("mprotect failed: ", safeStrerror(errno).data(), "\n");
             RELEASE_ASSERT_NOT_REACHED();
         }
 
@@ -669,11 +670,11 @@ void Memory::registerInstance(Instance* instance)
     size_t count = m_instances.size();
     for (size_t index = 0; index < count; index++) {
         if (m_instances.at(index).get() == nullptr) {
-            m_instances.at(index) = makeWeakPtr(*instance);
+            m_instances.at(index) = *instance;
             return;
         }
     }
-    m_instances.append(makeWeakPtr(*instance));
+    m_instances.append(*instance);
 }
 
 void Memory::dump(PrintStream& out) const

@@ -33,7 +33,10 @@
 #include "ContentSecurityPolicy.h"
 #include "CrossOriginAccessControl.h"
 #include "DOMTokenList.h"
-#include "Document.h"
+#include "DefaultResourceLoadPriority.h"
+#include "DocumentInlines.h"
+#include "DocumentLoader.h"
+#include "ElementInlines.h"
 #include "Event.h"
 #include "EventNames.h"
 #include "EventSender.h"
@@ -63,6 +66,7 @@
 #include <wtf/Ref.h>
 #include <wtf/Scope.h>
 #include <wtf/StdLibExtras.h>
+#include <wtf/text/TextStream.h>
 
 namespace WebCore {
 
@@ -170,10 +174,6 @@ void HTMLLinkElement::parseAttribute(const QualifiedName& name, const AtomString
         return;
     }
     if (name == hrefAttr) {
-        bool wasLink = isLink();
-        setIsLink(!value.isNull() && !shouldProhibitLinks(this));
-        if (wasLink != isLink())
-            invalidateStyleForSubtree();
         process();
         return;
     }
@@ -209,13 +209,7 @@ void HTMLLinkElement::parseAttribute(const QualifiedName& name, const AtomString
 
 bool HTMLLinkElement::shouldLoadLink()
 {
-    Ref<Document> originalDocument = document();
-    if (!dispatchBeforeLoadEvent(getNonEmptyURLAttribute(hrefAttr).string()))
-        return false;
-    // A beforeload handler might have removed us from the document or changed the document.
-    if (!isConnected() || &document() != originalDocument.ptr())
-        return false;
-    return true;
+    return isConnected();
 }
 
 void HTMLLinkElement::setCrossOrigin(const AtomString& value)
@@ -284,9 +278,11 @@ void HTMLLinkElement::process()
     if (!treatAsStyleSheet)
         treatAsStyleSheet = document().settings().treatsAnyTextCSSLinkAsStylesheet() && m_type.containsIgnoringASCIICase("text/css");
 
+    LOG_WITH_STREAM(StyleSheets, stream << "HTMLLinkElement " << this << " process() - treatAsStyleSheet " << treatAsStyleSheet);
+
     if (m_disabledState != Disabled && treatAsStyleSheet && document().frame() && url.isValid()) {
         String charset = attributeWithoutSynchronization(charsetAttr);
-        if (charset.isEmpty())
+        if (!PAL::TextEncoding { charset }.isValid())
             charset = document().charset();
 
         if (m_cachedSheet) {
@@ -305,32 +301,22 @@ void HTMLLinkElement::process()
 
         m_loading = true;
 
-        bool mediaQueryMatches = true;
-        if (!m_media.isEmpty()) {
-            Optional<RenderStyle> documentStyle;
-            if (document().hasLivingRenderTree())
-                documentStyle = Style::resolveForDocument(document());
-            auto media = MediaQuerySet::create(m_media, MediaQueryParserContext(document()));
-            LOG(MediaQueries, "HTMLLinkElement::process evaluating queries");
-            mediaQueryMatches = MediaQueryEvaluator { document().frame()->view()->mediaType(), document(), documentStyle ? &*documentStyle : nullptr }.evaluate(media.get());
-        }
-
         // Don't hold up render tree construction and script execution on stylesheets
         // that are not needed for the rendering at the moment.
-        bool isActive = mediaQueryMatches && !isAlternate();
+        bool isActive = mediaAttributeMatches() && !isAlternate();
         addPendingSheet(isActive ? ActiveSheet : InactiveSheet);
 
         // Load stylesheets that are not needed for the rendering immediately with low priority.
-        Optional<ResourceLoadPriority> priority;
+        std::optional<ResourceLoadPriority> priority;
         if (!isActive)
-            priority = ResourceLoadPriority::VeryLow;
+            priority = DefaultResourceLoadPriority::inactiveStyleSheet;
 
-        if (document().settings().subresourceIntegrityEnabled())
-            m_integrityMetadataForPendingSheetRequest = attributeWithoutSynchronization(HTMLNames::integrityAttr);
+        m_integrityMetadataForPendingSheetRequest = attributeWithoutSynchronization(HTMLNames::integrityAttr);
 
         ResourceLoaderOptions options = CachedResourceLoader::defaultCachedResourceOptions();
+        options.nonce = attributeWithoutSynchronization(HTMLNames::nonceAttr);
         options.sameOriginDataURLFlag = SameOriginDataURLFlag::Set;
-        if (document().contentSecurityPolicy()->allowStyleWithNonce(attributeWithoutSynchronization(HTMLNames::nonceAttr)))
+        if (document().contentSecurityPolicy()->allowStyleWithNonce(options.nonce))
             options.contentSecurityPolicyImposition = ContentSecurityPolicyImposition::SkipPolicyCheck;
         options.integrity = m_integrityMetadataForPendingSheetRequest;
         options.referrerPolicy = params.referrerPolicy;
@@ -351,11 +337,24 @@ void HTMLLinkElement::process()
             sheetLoaded();
             notifyLoadedSheetAndAllCriticalSubresources(true);
         }
-    } else if (m_sheet) {
+
+        return;
+    }
+
+    if (m_sheet) {
         // we no longer contain a stylesheet, e.g. perhaps rel or type was changed
         clearSheet();
         m_styleScope->didChangeActiveStyleSheetCandidates();
+        return;
     }
+
+#if ENABLE(APPLICATION_MANIFEST)
+    if (isApplicationManifest()) {
+        if (RefPtr loader = document().loader())
+            loader->loadApplicationManifest({ });
+        return;
+    }
+#endif // ENABLE(APPLICATION_MANIFEST)
 }
 
 void HTMLLinkElement::clearSheet()
@@ -414,7 +413,7 @@ void HTMLLinkElement::finishParsingChildren()
 void HTMLLinkElement::initializeStyleSheet(Ref<StyleSheetContents>&& styleSheet, const CachedCSSStyleSheet& cachedStyleSheet, MediaQueryParserContext context)
 {
     // FIXME: originClean should be turned to false except if fetch mode is CORS.
-    Optional<bool> originClean;
+    std::optional<bool> originClean;
     if (cachedStyleSheet.options().mode == FetchOptions::Mode::Cors)
         originClean = cachedStyleSheet.isCORSSameOrigin();
 
@@ -433,7 +432,7 @@ void HTMLLinkElement::setCSSStyleSheet(const String& href, const URL& baseURL, c
         ASSERT(!m_sheet);
         return;
     }
-    auto frame = makeRefPtr(document().frame());
+    RefPtr frame = document().frame();
     if (!frame)
         return;
 
@@ -497,6 +496,19 @@ DOMTokenList& HTMLLinkElement::sizes()
     if (!m_sizes)
         m_sizes = makeUnique<DOMTokenList>(*this, sizesAttr);
     return *m_sizes;
+}
+
+bool HTMLLinkElement::mediaAttributeMatches() const
+{
+    if (m_media.isEmpty())
+        return true;
+
+    std::optional<RenderStyle> documentStyle;
+    if (document().hasLivingRenderTree())
+        documentStyle = Style::resolveForDocument(document());
+    auto media = MediaQuerySet::create(m_media, MediaQueryParserContext(document()));
+    LOG(MediaQueries, "HTMLLinkElement::mediaAttributeMatches");
+    return MediaQueryEvaluator(document().frame()->view()->mediaType(), document(), documentStyle ? &*documentStyle : nullptr).evaluate(media.get());
 }
 
 void HTMLLinkElement::linkLoaded()
@@ -565,27 +577,6 @@ bool HTMLLinkElement::isURLAttribute(const Attribute& attribute) const
     return attribute.name().localName() == hrefAttr || HTMLElement::isURLAttribute(attribute);
 }
 
-void HTMLLinkElement::defaultEventHandler(Event& event)
-{
-    if (MouseEvent::canTriggerActivationBehavior(event)) {
-        handleClick(event);
-        return;
-    }
-    HTMLElement::defaultEventHandler(event);
-}
-
-void HTMLLinkElement::handleClick(Event& event)
-{
-    event.setDefaultHandled();
-    URL url = href();
-    if (url.isNull())
-        return;
-    RefPtr<Frame> frame = document().frame();
-    if (!frame)
-        return;
-    frame->loader().changeLocation(url, target(), &event, ReferrerPolicy::EmptyString, document().shouldOpenExternalURLsPolicyToPropagate());
-}
-
 URL HTMLLinkElement::href() const
 {
     return document().completeURL(attributeWithoutSynchronization(hrefAttr));
@@ -606,7 +597,7 @@ const AtomString& HTMLLinkElement::type() const
     return attributeWithoutSynchronization(typeAttr);
 }
 
-Optional<LinkIconType> HTMLLinkElement::iconType() const
+std::optional<LinkIconType> HTMLLinkElement::iconType() const
 {
     return m_relAttribute.iconType;
 }
@@ -625,7 +616,7 @@ void HTMLLinkElement::addSubresourceAttributeURLs(ListHashSet<URL>& urls) const
     // Append the URL of this link element.
     addSubresourceURL(urls, href());
 
-    if (auto styleSheet = makeRefPtr(this->sheet())) {
+    if (RefPtr styleSheet = this->sheet()) {
         styleSheet->contents().traverseSubresources([&] (auto& resource) {
             urls.add(resource.url());
             return false;
@@ -676,8 +667,13 @@ String HTMLLinkElement::referrerPolicyForBindings() const
 ReferrerPolicy HTMLLinkElement::referrerPolicy() const
 {
     if (document().settings().referrerPolicyAttributeEnabled())
-        return parseReferrerPolicy(attributeWithoutSynchronization(referrerpolicyAttr), ReferrerPolicySource::ReferrerPolicyAttribute).valueOr(ReferrerPolicy::EmptyString);
+        return parseReferrerPolicy(attributeWithoutSynchronization(referrerpolicyAttr), ReferrerPolicySource::ReferrerPolicyAttribute).value_or(ReferrerPolicy::EmptyString);
     return ReferrerPolicy::EmptyString;
+}
+
+String HTMLLinkElement::debugDescription() const
+{
+    return makeString(HTMLElement::debugDescription(), ' ', type(), ' ', href().string());
 }
 
 } // namespace WebCore

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -43,7 +43,7 @@ public:
     void setAmbientLight(float r, float g, float b);
     void setLight(int index, float x, float y, float z,
         float r, float g, float b, float w,
-        float ca, float la, float qa, float maxRange,
+        float ca, float la, float qa, float isAttenuated, float maxRange,
         float dirX, float dirY, float dirZ,
         float innerAngle, float outerAngle, float falloff);
     void computeNumLights();

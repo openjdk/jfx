@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -130,7 +130,7 @@ public class Spinner<T> extends Control {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -368,7 +368,7 @@ public class Spinner<T> extends Control {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *
@@ -483,7 +483,7 @@ public class Spinner<T> extends Control {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Properties                                                              *
      *                                                                         *
@@ -673,7 +673,7 @@ public class Spinner<T> extends Control {
         return repeatDelay.get();
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Stylesheet Handling                                                     *
      *                                                                         *
@@ -718,9 +718,10 @@ public class Spinner<T> extends Control {
         STYLEABLES = Collections.unmodifiableList(styleables);
     }
 
-    /*
-     * @return The CssMetaData associated with this class, which may include the
-     * CssMetaData of its superclasses.
+    /**
+     * Gets the {@code CssMetaData} associated with this class, which may include the
+     * {@code CssMetaData} of its superclasses.
+     * @return the {@code CssMetaData}
      * @since 11
      */
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
@@ -736,7 +737,7 @@ public class Spinner<T> extends Control {
         return getClassCssMetaData();
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Implementation                                                          *
      *                                                                         *
@@ -811,7 +812,7 @@ public class Spinner<T> extends Control {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Accessibility handling                                                  *
      *                                                                         *

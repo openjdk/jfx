@@ -54,6 +54,20 @@
             "email": "web-evangelist@apple.com",
             "twitter": "@jonathandavis"
         }
+    },
+    {
+        "name": "WebGPU",
+        "status": {
+            "status": "In Development"
+        },
+        "url": "https://webgpu.io",
+        "description": "WebGPU exposes an API for performing operations, such as rendering and computation, on a Graphics Processing Unit.",
+        "keywords": ["webgpu", "gpu", "compute", "3d", "rendering", "render", "wgsl", "shading"],
+        "contact": {
+            "name": "Myles C. Maxfield",
+            "email": "mmaxfield@apple.com",
+            "twitter": "@Litherum"
+        }
     }
     ],
 
@@ -448,6 +462,26 @@
         "documentation-url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/new.target",
         "description": "new.target allows you to detect if a function or constructor was instantiated with the new operator, or if instead it was called using normal function calling syntax.",
         "specification": "ES6"
+    },
+    {
+        "name": "Temporal",
+        "status": {
+            "status": "In Development"
+        },
+        "url": "https://github.com/tc39/proposal-temporal",
+        "documentation-url": "https://tc39.es/proposal-temporal/docs/",
+        "description": "Temporal brings a modern date/time API to the ECMAScript language.",
+        "specification": "ESNext"
+    },
+    {
+        "name": "WebGPU",
+        "status": {
+            "status": "In Development"
+        },
+        "url": "https://github.com/gpuweb/gpuweb",
+        "documentation-url": "https://webgpu.io",
+        "description": "WebGPU exposes an API for performing operations, such as rendering and computation, on a Graphics Processing Unit.",
+        "specification": "WebGPU"
     }
     ]
 }

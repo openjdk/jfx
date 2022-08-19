@@ -34,7 +34,8 @@
 
 #include "ContentSecurityPolicy.h"
 #include "DOMFormData.h"
-#include "Document.h"
+#include "DocumentInlines.h"
+#include "ElementInlines.h"
 #include "Event.h"
 #include "FormData.h"
 #include "FormDataBuilder.h"
@@ -48,7 +49,7 @@
 #include "HTMLNames.h"
 #include "HTMLParserIdioms.h"
 #include "ScriptDisallowedScope.h"
-#include "TextEncoding.h"
+#include <pal/text/TextEncoding.h>
 #include <wtf/WallTime.h>
 
 namespace WebCore {
@@ -69,7 +70,7 @@ static void appendMailtoPostFormDataToURL(URL& url, const FormData& data, const 
 
     if (equalLettersIgnoringASCIICase(encodingType, "text/plain")) {
         // Convention seems to be to decode, and s/&/\r\n/. Also, spaces are encoded as %20.
-        body = decodeURLEscapeSequences(makeString(body.replaceWithLiteral('&', "\r\n").replace('+', ' '), "\r\n"));
+        body = PAL::decodeURLEscapeSequences(body.replaceWithLiteral('&', "\r\n").replace('+', ' '));
     }
 
     Vector<char> bodyData;
@@ -82,6 +83,13 @@ static void appendMailtoPostFormDataToURL(URL& url, const FormData& data, const 
         url.setQuery(body);
     else
         url.setQuery(makeString(query, '&', body));
+}
+
+ASCIILiteral FormSubmission::Attributes::methodString(Method method, bool dialogElementEnabled)
+{
+    if (dialogElementEnabled && method == Method::Dialog)
+        return "dialog"_s;
+    return method == Method::Post ? "post"_s : "get"_s;
 }
 
 void FormSubmission::Attributes::parseAction(const String& action)
@@ -105,14 +113,31 @@ void FormSubmission::Attributes::updateEncodingType(const String& type)
     m_isMultiPartForm = (m_encodingType == "multipart/form-data");
 }
 
-FormSubmission::Method FormSubmission::Attributes::parseMethodType(const String& type)
+FormSubmission::Method FormSubmission::Attributes::parseMethodType(const String& type, bool dialogElementEnabled)
 {
-    return equalLettersIgnoringASCIICase(type, "post") ? FormSubmission::Method::Post : FormSubmission::Method::Get;
+    if (dialogElementEnabled && equalLettersIgnoringASCIICase(type, "dialog"))
+        return FormSubmission::Method::Dialog;
+
+    if (equalLettersIgnoringASCIICase(type, "post"))
+        return FormSubmission::Method::Post;
+
+    return FormSubmission::Method::Get;
 }
 
-void FormSubmission::Attributes::updateMethodType(const String& type)
+void FormSubmission::Attributes::updateMethodType(const String& type, bool dialogElementEnabled)
 {
-    m_method = parseMethodType(type);
+    m_method = parseMethodType(type, dialogElementEnabled);
+}
+
+inline FormSubmission::FormSubmission(Method method, const String& returnValue, const URL& action, const String& target, const String& contentType, LockHistory lockHistory, Event* event)
+    : m_method(method)
+    , m_action(action)
+    , m_target(target)
+    , m_contentType(contentType)
+    , m_lockHistory(lockHistory)
+    , m_event(event)
+    , m_returnValue(returnValue)
+{
 }
 
 inline FormSubmission::FormSubmission(Method method, const URL& action, const String& target, const String& contentType, Ref<FormState>&& state, Ref<FormData>&& data, const String& boundary, LockHistory lockHistory, Event* event)
@@ -128,13 +153,13 @@ inline FormSubmission::FormSubmission(Method method, const URL& action, const St
 {
 }
 
-static TextEncoding encodingFromAcceptCharset(const String& acceptCharset, Document& document)
+static PAL::TextEncoding encodingFromAcceptCharset(const String& acceptCharset, Document& document)
 {
     String normalizedAcceptCharset = acceptCharset;
     normalizedAcceptCharset.replace(',', ' ');
 
     for (auto& charset : normalizedAcceptCharset.split(' ')) {
-        TextEncoding encoding(charset);
+        PAL::TextEncoding encoding(charset);
         if (encoding.isValid())
             return encoding;
     }
@@ -142,27 +167,36 @@ static TextEncoding encodingFromAcceptCharset(const String& acceptCharset, Docum
     return document.textEncoding();
 }
 
-Ref<FormSubmission> FormSubmission::create(HTMLFormElement& form, const Attributes& attributes, Event* event, LockHistory lockHistory, FormSubmissionTrigger trigger)
+Ref<FormSubmission> FormSubmission::create(HTMLFormElement& form, HTMLFormControlElement* overrideSubmitter, const Attributes& attributes, Event* event, LockHistory lockHistory, FormSubmissionTrigger trigger)
 {
     auto copiedAttributes = attributes;
 
-    if (auto* submitButton = form.findSubmitButton(event)) {
+    RefPtr submitter = overrideSubmitter ? overrideSubmitter : form.findSubmitter(event);
+    if (submitter) {
         AtomString attributeValue;
-        if (!(attributeValue = submitButton->attributeWithoutSynchronization(formactionAttr)).isNull())
+        if (!(attributeValue = submitter->attributeWithoutSynchronization(formactionAttr)).isNull())
             copiedAttributes.parseAction(attributeValue);
-        if (!(attributeValue = submitButton->attributeWithoutSynchronization(formenctypeAttr)).isNull())
+        if (!(attributeValue = submitter->attributeWithoutSynchronization(formenctypeAttr)).isNull())
             copiedAttributes.updateEncodingType(attributeValue);
-        if (!(attributeValue = submitButton->attributeWithoutSynchronization(formmethodAttr)).isNull())
-            copiedAttributes.updateMethodType(attributeValue);
-        if (!(attributeValue = submitButton->attributeWithoutSynchronization(formtargetAttr)).isNull())
+        if (!(attributeValue = submitter->attributeWithoutSynchronization(formmethodAttr)).isNull())
+            copiedAttributes.updateMethodType(attributeValue, form.document().settings().dialogElementEnabled());
+        if (!(attributeValue = submitter->attributeWithoutSynchronization(formtargetAttr)).isNull())
             copiedAttributes.setTarget(attributeValue);
     }
 
     auto& document = form.document();
+    auto encodingType = copiedAttributes.encodingType();
     auto actionURL = document.completeURL(copiedAttributes.action().isEmpty() ? document.url().string() : copiedAttributes.action());
+
+    if (document.settings().dialogElementEnabled() && copiedAttributes.method() == Method::Dialog) {
+        String returnValue = submitter ? submitter->resultForDialogSubmit() : emptyString();
+        return adoptRef(*new FormSubmission(copiedAttributes.method(), returnValue, actionURL, form.effectiveTarget(event, submitter.get()), encodingType, lockHistory, event));
+    }
+
+    ASSERT(copiedAttributes.method() == Method::Post || copiedAttributes.method() == Method::Get);
+
     bool isMailtoForm = actionURL.protocolIs("mailto");
     bool isMultiPartForm = false;
-    auto encodingType = copiedAttributes.encodingType();
 
     document.contentSecurityPolicy()->upgradeInsecureRequestIfNeeded(actionURL, ContentSecurityPolicy::InsecureRequestType::FormSubmission);
 
@@ -174,25 +208,13 @@ Ref<FormSubmission> FormSubmission::create(HTMLFormElement& form, const Attribut
         }
     }
 
-    auto dataEncoding = isMailtoForm ? UTF8Encoding() : encodingFromAcceptCharset(copiedAttributes.acceptCharset(), document);
+    auto dataEncoding = isMailtoForm ? PAL::UTF8Encoding() : encodingFromAcceptCharset(copiedAttributes.acceptCharset(), document);
     auto domFormData = DOMFormData::create(dataEncoding.encodingForFormSubmissionOrURLParsing());
     StringPairVector formValues;
 
-    bool containsPasswordData = false;
-    for (auto& control : form.copyAssociatedElementsVector()) {
-        auto& element = control->asHTMLElement();
-        if (!element.isDisabledFormControl())
-            control->appendFormData(domFormData, isMultiPartForm);
-        if (is<HTMLInputElement>(element)) {
-            auto& input = downcast<HTMLInputElement>(element);
-            if (input.isTextField()) {
-                formValues.append({ input.name(), input.value() });
-                input.addSearchResult();
-            }
-            if (input.isPasswordField() && !input.value().isEmpty())
-                containsPasswordData = true;
-        }
-    }
+    auto result = form.constructEntryList(WTFMove(domFormData), &formValues);
+    RELEASE_ASSERT(result);
+    domFormData = result.releaseNonNull();
 
     RefPtr<FormData> formData;
     String boundary;
@@ -210,25 +232,29 @@ Ref<FormSubmission> FormSubmission::create(HTMLFormElement& form, const Attribut
     }
 
     formData->setIdentifier(generateFormDataIdentifier());
-    formData->setContainsPasswordData(containsPasswordData);
 
     auto formState = FormState::create(form, WTFMove(formValues), document, trigger);
 
-    return adoptRef(*new FormSubmission(copiedAttributes.method(), actionURL, form.effectiveTarget(event), encodingType, WTFMove(formState), formData.releaseNonNull(), boundary, lockHistory, event));
+    return adoptRef(*new FormSubmission(copiedAttributes.method(), actionURL, form.effectiveTarget(event, submitter.get()), encodingType, WTFMove(formState), formData.releaseNonNull(), boundary, lockHistory, event));
 }
 
 URL FormSubmission::requestURL() const
 {
+    ASSERT(m_method == Method::Post || m_method == Method::Get);
+
     if (m_method == Method::Post)
         return m_action;
 
     URL requestURL(m_action);
-    requestURL.setQuery(m_formData->flattenToString());
+    if (!requestURL.protocolIsJavaScript())
+        requestURL.setQuery(m_formData->flattenToString());
     return requestURL;
 }
 
 void FormSubmission::populateFrameLoadRequest(FrameLoadRequest& frameRequest)
 {
+    ASSERT(m_method == Method::Post || m_method == Method::Get);
+
     if (!m_target.isEmpty())
         frameRequest.setFrameName(m_target);
 

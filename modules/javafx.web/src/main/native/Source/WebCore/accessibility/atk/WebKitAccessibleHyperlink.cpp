@@ -21,7 +21,7 @@
 #include "config.h"
 #include "WebKitAccessibleHyperlink.h"
 
-#if ENABLE(ACCESSIBILITY)
+#if ENABLE(ACCESSIBILITY) && USE(ATK)
 
 #include "AXObjectCache.h"
 #include "AccessibilityObject.h"
@@ -111,7 +111,7 @@ static const gchar* webkitAccessibleHyperlinkActionGetName(AtkAction* action, gi
         return nullptr;
 
     auto& coreObject = webkitAccessibleGetAccessibilityObject(accessibleHyperlink->priv->hyperlinkImpl);
-    accessibleHyperlink->priv->actionName = coreObject.actionVerb().utf8();
+    accessibleHyperlink->priv->actionName = coreObject.localizedActionVerb().utf8();
     return accessibleHyperlink->priv->actionName.data();
 }
 
@@ -151,13 +151,13 @@ static AtkObject* webkitAccessibleHyperlinkGetObject(AtkHyperlink* link, gint in
     return ATK_OBJECT(accessibleHyperlink->priv->hyperlinkImpl);
 }
 
-static gint rangeLengthForObject(AccessibilityObject& obj, const Optional<SimpleRange>& range)
+static gint rangeLengthForObject(AccessibilityObject& obj, const std::optional<SimpleRange>& range)
 {
     if (!range)
         return 0;
 
     // This is going to be the actual length in most of the cases
-    int baseLength = characterCount(*range, TextIteratorEmitsCharactersBetweenAllVisiblePositions);
+    int baseLength = characterCount(*range, TextIteratorBehavior::EmitsCharactersBetweenAllVisiblePositions);
 
     // Check whether the current hyperlink belongs to a list item.
     // If so, we need to consider the length of the item's marker
@@ -177,8 +177,7 @@ static gint rangeLengthForObject(AccessibilityObject& obj, const Optional<Simple
     if (!is<RenderListMarker>(renderer))
         return baseLength;
 
-    auto& marker = downcast<RenderListMarker>(*renderer);
-    return baseLength + marker.text().length() + marker.suffix().length();
+    return baseLength + downcast<RenderListMarker>(*renderer).textWithSuffix().length();
 }
 
 static gint webkitAccessibleHyperlinkGetStartIndex(AtkHyperlink* link)
@@ -314,4 +313,4 @@ WebKitAccessibleHyperlink* webkitAccessibleHyperlinkGetOrCreate(AtkHyperlinkImpl
     return hyperlink;
 }
 
-#endif // ENABLE(ACCESSIBILITY)
+#endif // ENABLE(ACCESSIBILITY) && USE(ATK)

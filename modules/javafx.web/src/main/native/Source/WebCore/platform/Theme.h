@@ -26,12 +26,15 @@
 #pragma once
 
 #include "ThemeTypes.h"
+#include <optional>
 #include <wtf/Forward.h>
 
 namespace WebCore {
 
+class Color;
 class ControlStates;
 class FloatRect;
+class FloatSize;
 class FontCascade;
 class FontCascadeDescription;
 class GraphicsContext;
@@ -51,13 +54,13 @@ public:
     virtual int baselinePositionAdjustment(ControlPart) const;
 
     // The font description result should have a zoomed font size.
-    virtual Optional<FontCascadeDescription> controlFont(ControlPart, const FontCascade&, float zoomFactor) const;
+    virtual std::optional<FontCascadeDescription> controlFont(ControlPart, const FontCascade&, float zoomFactor) const;
 
     // The size here is in zoomed coordinates already. If a new size is returned, it also needs to be in zoomed coordinates.
     virtual LengthSize controlSize(ControlPart, const FontCascade&, const LengthSize& zoomedSize, float zoomFactor) const;
 
     // Returns the minimum size for a control in zoomed coordinates.
-    virtual LengthSize minimumControlSize(ControlPart, const FontCascade&, const LengthSize& zoomedSize, float zoomFactor) const;
+    LengthSize minimumControlSize(ControlPart, const FontCascade&, const LengthSize& zoomedSize, const LengthSize& nonShrinkableZoomedSize, float zoomFactor) const;
 
     // Allows the theme to modify the existing padding/border.
     virtual LengthBox controlPadding(ControlPart, const FontCascade&, const LengthBox& zoomedBox, float zoomFactor) const;
@@ -67,7 +70,8 @@ public:
     virtual bool controlRequiresPreWhiteSpace(ControlPart) const;
 
     // Method for painting a control. The rect is in zoomed coordinates.
-    virtual void paint(ControlPart, ControlStates&, GraphicsContext&, const FloatRect& zoomedRect, float zoomFactor, ScrollView*, float deviceScaleFactor, float pageScaleFactor, bool useSystemAppearance, bool useDarkAppearance);
+    // FIXME: <https://webkit.org/b/231637> Move parameters to a struct.
+    virtual void paint(ControlPart, ControlStates&, GraphicsContext&, const FloatRect& zoomedRect, float zoomFactor, ScrollView*, float deviceScaleFactor, float pageScaleFactor, bool useSystemAppearance, bool useDarkAppearance, const Color& tintColor);
 
     // Some controls may spill out of their containers (e.g., the check on an OS X checkbox).  When these controls repaint,
     // the theme needs to communicate this inflated rect to the engine so that it can invalidate the whole control.
@@ -75,7 +79,7 @@ public:
     // amount is also scaled by the zoomFactor.
     virtual void inflateControlPaintRect(ControlPart, const ControlStates&, FloatRect& zoomedRect, float zoomFactor) const;
 
-    virtual void drawNamedImage(const String&, GraphicsContext&, const FloatRect&) const;
+    virtual void drawNamedImage(const String&, GraphicsContext&, const FloatSize&) const;
 
     virtual bool userPrefersContrast() const;
     virtual bool userPrefersReducedMotion() const;
@@ -83,6 +87,8 @@ public:
 protected:
     Theme() = default;
     virtual ~Theme() = default;
+
+    virtual LengthSize minimumControlSize(ControlPart, const FontCascade&, const LengthSize& zoomedSize, float zoomFactor) const;
 
 private:
     Theme(const Theme&) = delete;

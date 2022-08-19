@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -90,6 +90,8 @@ import com.sun.javafx.scene.SceneHelper;
 import com.sun.javafx.scene.control.GlobalMenuAdapter;
 import com.sun.javafx.tk.Toolkit;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
+
 import javafx.stage.Window;
 import javafx.util.Pair;
 
@@ -118,7 +120,7 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
         stages = windows.filtered(findStage);
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private fields                                                          *
      *                                                                         *
@@ -157,7 +159,7 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
     private boolean altKeyPressed = false;
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Listeners / Callbacks                                                   *
      *                                                                         *
@@ -211,7 +213,7 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -487,7 +489,7 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Static methods                                                          *
      *                                                                         *
@@ -581,7 +583,7 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Properties                                                              *
      *                                                                         *
@@ -674,7 +676,7 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *
@@ -746,7 +748,7 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private implementation                                                  *
      *                                                                         *
@@ -1110,11 +1112,13 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
             return Optional.empty();
         }
 
-        final int totalMenus = getSkinnable().getMenus().size();
+        List<Menu> visibleMenus = getSkinnable().getMenus().stream().filter(Menu::isVisible)
+                .collect(Collectors.toList());
+        final int totalMenus = visibleMenus.size();
         int i = 0;
         int nextIndex = 0;
 
-        // Traverse all menus in menubar to find nextIndex
+        // Traverse all visible menus in menubar to find nextIndex
         while (i < totalMenus) {
             i++;
 
@@ -1126,7 +1130,7 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
             }
 
             // if menu at nextIndex is disabled, skip it
-            if (getSkinnable().getMenus().get(nextIndex).isDisable()) {
+            if (visibleMenus.get(nextIndex).isDisable()) {
                 // Calculate new nextIndex by continuing loop
                 startIndex = nextIndex;
             } else {
@@ -1136,7 +1140,7 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
         }
 
         clearMenuButtonHover();
-        return Optional.of(new Pair<>(getSkinnable().getMenus().get(nextIndex), nextIndex));
+        return Optional.of(new Pair<>(visibleMenus.get(nextIndex), nextIndex));
     }
 
     private void updateFocusedIndex() {
@@ -1163,7 +1167,7 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * CSS                                                                     *
      *                                                                         *
@@ -1243,7 +1247,7 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
         return getClassCssMetaData();
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Accessibility handling                                                  *
      *                                                                         *

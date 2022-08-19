@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -76,6 +76,14 @@ void Editor::writeImageToPasteboard(Pasteboard& pasteboard, Element& element, co
 void Editor::writeSelectionToPasteboard(Pasteboard& pasteboard)
 {
     pasteboard.writeSelection(*selectedRange(), canSmartCopyOrDelete(), *m_document.frame(), DefaultSelectedTextType);
+}
+
+void Editor::platformCopyFont()
+{
+}
+
+void Editor::platformPasteFont()
+{
 }
 
 } // namespace WebCore

@@ -52,6 +52,7 @@ JITStubRoutineSet::~JITStubRoutineSet()
 
 void JITStubRoutineSet::add(GCAwareJITStubRoutine* routine)
 {
+    RELEASE_ASSERT(!isCompilationThread());
     ASSERT(!routine->m_isJettisoned);
 
     m_routines.append(Routine {
@@ -125,7 +126,7 @@ void JITStubRoutineSet::deleteUnmarkedJettisonedStubRoutines()
         }
         routine.routine->deleteFromGC();
     }
-    m_routines.shrink(dstIndex);
+    m_routines.shrinkCapacity(dstIndex);
 }
 
 template<typename Visitor>

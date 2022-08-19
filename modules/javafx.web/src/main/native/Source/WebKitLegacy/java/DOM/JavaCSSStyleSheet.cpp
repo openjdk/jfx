@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -62,7 +62,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_CSSStyleSheetImpl_getCssRulesImp
 JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_CSSStyleSheetImpl_getRulesImpl(JNIEnv* env, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<CSSRuleList>(env, WTF::getPtr(IMPL->rules()));
+    return JavaReturn<CSSRuleList>(env, WTF::getPtr(IMPL->cssRules()));
 }
 
 

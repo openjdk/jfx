@@ -27,7 +27,7 @@
 #include "CachedResourceRequest.h"
 
 #include "CachedResourceLoader.h"
-#include "ContentExtensionActions.h"
+#include "ContentExtensionsBackend.h"
 #include "CrossOriginAccessControl.h"
 #include "Document.h"
 #include "Element.h"
@@ -41,7 +41,7 @@
 
 namespace WebCore {
 
-CachedResourceRequest::CachedResourceRequest(ResourceRequest&& resourceRequest, const ResourceLoaderOptions& options, Optional<ResourceLoadPriority> priority, String&& charset)
+CachedResourceRequest::CachedResourceRequest(ResourceRequest&& resourceRequest, const ResourceLoaderOptions& options, std::optional<ResourceLoadPriority> priority, String&& charset)
     : m_resourceRequest(WTFMove(resourceRequest))
     , m_charset(WTFMove(charset))
     , m_options(options)
@@ -279,7 +279,7 @@ void CachedResourceRequest::setDestinationIfNotSet(FetchOptions::Destination des
 }
 
 #if ENABLE(SERVICE_WORKER)
-void CachedResourceRequest::setClientIdentifierIfNeeded(DocumentIdentifier clientIdentifier)
+void CachedResourceRequest::setClientIdentifierIfNeeded(ScriptExecutionContextIdentifier clientIdentifier)
 {
     if (!m_options.clientIdentifier)
         m_options.clientIdentifier = clientIdentifier;
@@ -300,7 +300,7 @@ void CachedResourceRequest::setSelectedServiceWorkerRegistrationIdentifierIfNeed
     m_options.serviceWorkerRegistrationIdentifier = identifier;
 }
 
-void CachedResourceRequest::setNavigationServiceWorkerRegistrationData(const Optional<ServiceWorkerRegistrationData>& data)
+void CachedResourceRequest::setNavigationServiceWorkerRegistrationData(const std::optional<ServiceWorkerRegistrationData>& data)
 {
     if (!data || !data->activeWorker) {
         m_options.serviceWorkersMode = ServiceWorkersMode::None;

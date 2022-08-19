@@ -55,7 +55,7 @@ public:
 
     static ExceptionOr<RefPtr<TimingFunction>> createFromCSSText(const String&);
     static RefPtr<TimingFunction> createFromCSSValue(const CSSValue&);
-    double transformTime(double, double, bool before = false) const;
+    double transformProgress(double progress, double duration, bool before = false) const;
     String cssText() const;
 
 protected:
@@ -208,7 +208,7 @@ public:
         End,
     };
 
-    static Ref<StepsTimingFunction> create(int steps, Optional<StepPosition> stepPosition)
+    static Ref<StepsTimingFunction> create(int steps, std::optional<StepPosition> stepPosition)
     {
         return adoptRef(*new StepsTimingFunction(steps, stepPosition));
     }
@@ -222,17 +222,30 @@ public:
         if (!is<StepsTimingFunction>(other))
             return false;
         auto& otherSteps = downcast<StepsTimingFunction>(other);
-        return m_steps == otherSteps.m_steps && m_stepPosition == otherSteps.m_stepPosition;
+
+        if (m_steps != otherSteps.m_steps)
+            return false;
+
+        if (m_stepPosition == otherSteps.m_stepPosition)
+            return true;
+
+        if (!m_stepPosition && *otherSteps.m_stepPosition == StepPosition::End)
+            return true;
+
+        if (*m_stepPosition == StepPosition::End && !otherSteps.m_stepPosition)
+            return true;
+
+        return false;
     }
 
     int numberOfSteps() const { return m_steps; }
     void setNumberOfSteps(int steps) { m_steps = steps; }
 
-    Optional<StepPosition> stepPosition() const { return m_stepPosition; }
-    void setStepPosition(Optional<StepPosition> stepPosition) { m_stepPosition = stepPosition; }
+    std::optional<StepPosition> stepPosition() const { return m_stepPosition; }
+    void setStepPosition(std::optional<StepPosition> stepPosition) { m_stepPosition = stepPosition; }
 
 private:
-    StepsTimingFunction(int steps, Optional<StepPosition> stepPosition)
+    StepsTimingFunction(int steps, std::optional<StepPosition> stepPosition)
         : TimingFunction(StepsFunction)
         , m_steps(steps)
         , m_stepPosition(stepPosition)
@@ -245,7 +258,7 @@ private:
     }
 
     int m_steps;
-    Optional<StepPosition> m_stepPosition;
+    std::optional<StepPosition> m_stepPosition;
 };
 
 class SpringTimingFunction final : public TimingFunction {

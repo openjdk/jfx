@@ -28,8 +28,8 @@
 #include "ShouldRelaxThirdPartyCookieBlocking.h"
 #include <pal/SessionID.h>
 #include <wtf/Forward.h>
+#include <wtf/HashSet.h>
 #include <wtf/Noncopyable.h>
-#include <wtf/Optional.h>
 #include <wtf/RefPtr.h>
 #include <wtf/UniqueRef.h>
 #include <wtf/Vector.h>
@@ -38,16 +38,22 @@
 #include "ApplicationManifest.h"
 #endif
 
+#if PLATFORM(IOS_FAMILY) && ENABLE(DEVICE_ORIENTATION)
+#include "DeviceOrientationUpdateProvider.h"
+#endif
+
 namespace WebCore {
 
 class AlternativeTextClient;
 class ApplicationCacheStorage;
+class AttachmentElementClient;
 class AuthenticatorCoordinatorClient;
 class BackForwardClient;
+class BroadcastChannelRegistry;
 class CacheStorageProvider;
-class CookieJar;
 class ChromeClient;
 class ContextMenuClient;
+class CookieJar;
 class DatabaseProvider;
 class DiagnosticLoggingClient;
 class DragClient;
@@ -56,24 +62,28 @@ class FrameLoaderClient;
 class InspectorClient;
 class LibWebRTCProvider;
 class MediaRecorderProvider;
+class ModelPlayerProvider;
 class PaymentCoordinatorClient;
 class PerformanceLoggingClient;
+class PermissionController;
 class PluginInfoProvider;
 class ProgressTrackerClient;
 class SocketProvider;
 class SpeechRecognitionProvider;
+class SpeechSynthesisClient;
 class StorageNamespaceProvider;
+class StorageProvider;
 class UserContentProvider;
 class UserContentURLPattern;
 class ValidationMessageClient;
 class VisitedLinkStore;
 class WebGLStateTracker;
-class SpeechSynthesisClient;
+class WebLockRegistry;
 
 class PageConfiguration {
     WTF_MAKE_NONCOPYABLE(PageConfiguration); WTF_MAKE_FAST_ALLOCATED;
 public:
-    WEBCORE_EXPORT PageConfiguration(PAL::SessionID, UniqueRef<EditorClient>&&, Ref<SocketProvider>&&, UniqueRef<LibWebRTCProvider>&&, Ref<CacheStorageProvider>&&, Ref<UserContentProvider>&&, Ref<BackForwardClient>&&, Ref<CookieJar>&&, UniqueRef<ProgressTrackerClient>&&, UniqueRef<FrameLoaderClient>&&, UniqueRef<SpeechRecognitionProvider>&&, UniqueRef<MediaRecorderProvider>&&);
+    WEBCORE_EXPORT PageConfiguration(PAL::SessionID, UniqueRef<EditorClient>&&, Ref<SocketProvider>&&, UniqueRef<LibWebRTCProvider>&&, Ref<CacheStorageProvider>&&, Ref<UserContentProvider>&&, Ref<BackForwardClient>&&, Ref<CookieJar>&&, UniqueRef<ProgressTrackerClient>&&, UniqueRef<FrameLoaderClient>&&, UniqueRef<SpeechRecognitionProvider>&&, UniqueRef<MediaRecorderProvider>&&, Ref<BroadcastChannelRegistry>&&, Ref<WebLockRegistry>&&, Ref<PermissionController>&&, UniqueRef<StorageProvider>&&, UniqueRef<ModelPlayerProvider>&&);
     WEBCORE_EXPORT ~PageConfiguration();
     PageConfiguration(PageConfiguration&&);
 
@@ -96,7 +106,7 @@ public:
 #endif
 
 #if ENABLE(APPLICATION_MANIFEST)
-    Optional<ApplicationManifest> applicationManifest;
+    std::optional<ApplicationManifest> applicationManifest;
 #endif
 
     UniqueRef<LibWebRTCProvider> libWebRTCProvider;
@@ -122,6 +132,8 @@ public:
     RefPtr<StorageNamespaceProvider> storageNamespaceProvider;
     Ref<UserContentProvider> userContentProvider;
     RefPtr<VisitedLinkStore> visitedLinkStore;
+    Ref<BroadcastChannelRegistry> broadcastChannelRegistry;
+    Ref<WebLockRegistry> webLockRegistry;
 
 #if ENABLE(DEVICE_ORIENTATION) && PLATFORM(IOS_FAMILY)
     RefPtr<DeviceOrientationUpdateProvider> deviceOrientationUpdateProvider;
@@ -129,12 +141,21 @@ public:
     Vector<UserContentURLPattern> corsDisablingPatterns;
     UniqueRef<SpeechRecognitionProvider> speechRecognitionProvider;
     UniqueRef<MediaRecorderProvider> mediaRecorderProvider;
+
+    // FIXME: These should be all be Settings.
     bool loadsSubresources { true };
-    bool loadsFromNetwork { true };
+    std::optional<HashSet<String>> allowedNetworkHosts;
     bool userScriptsShouldWaitUntilNotification { true };
     ShouldRelaxThirdPartyCookieBlocking shouldRelaxThirdPartyCookieBlocking { ShouldRelaxThirdPartyCookieBlocking::No };
-    bool textInteractionEnabled { true };
     bool httpsUpgradeEnabled { true };
+
+    Ref<PermissionController> permissionController;
+    UniqueRef<StorageProvider> storageProvider;
+
+    UniqueRef<ModelPlayerProvider> modelPlayerProvider;
+#if ENABLE(ATTACHMENT_ELEMENT)
+    std::unique_ptr<AttachmentElementClient> attachmentElementClient;
+#endif
 };
 
 }

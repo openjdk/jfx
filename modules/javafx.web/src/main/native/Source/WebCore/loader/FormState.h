@@ -31,6 +31,7 @@
 #include "FrameDestructionObserver.h"
 #include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>
+#include "Document.h"
 
 namespace WebCore {
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -247,17 +247,6 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
         return new MacWindow(owner, screen, styleMask);
     }
 
-    final static long BROWSER_PARENT_ID = -1L;
-    @Override public Window createWindow(long parent) {
-        Window window = new MacWindow(parent);
-        if (parent == BROWSER_PARENT_ID) {
-            // Special case: a Mac embedded window, which is a parent to other child Windows.
-            // Needs implicit view, with a layer that will be provided to the plugin
-            window.setView(createView());
-        }
-        return window;
-    }
-
     @Override public View createView() {
         return new MacView();
     }
@@ -280,6 +269,10 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
 
     @Override public Pixels createPixels(int width, int height, ByteBuffer data) {
         return new MacPixels(width, height, data);
+    }
+
+    @Override public Pixels createPixels(int width, int height, ByteBuffer data, float scalex, float scaley) {
+        return new MacPixels(width, height, data, scalex, scaley);
     }
 
     @Override public Pixels createPixels(int width, int height, IntBuffer data) {
@@ -377,11 +370,6 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
     native private boolean _isNormalTaskbarApp();
     boolean isNormalTaskbarApp() {
         return _isNormalTaskbarApp();
-    }
-
-    native protected String _getRemoteLayerServerName();
-    public String getRemoteLayerServerName() {
-        return _getRemoteLayerServerName();
     }
 
     private native String _getDataDirectory();

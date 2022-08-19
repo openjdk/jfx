@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -41,8 +41,8 @@
 #include <zircon/syscalls.h>
 #endif
 
-#define CHECK_DATASIZE_OF(datasize) ASSERT(datasize == 32 || datasize == 64)
-#define CHECK_MEMOPSIZE_OF(size) ASSERT(size == 8 || size == 16 || size == 32 || size == 64 || size == 128);
+#define CHECK_DATASIZE_OF(datasize) static_assert(datasize == 32 || datasize == 64)
+#define CHECK_MEMOPSIZE_OF(size) static_assert(size == 8 || size == 16 || size == 32 || size == 64 || size == 128);
 #define DATASIZE_OF(datasize) ((datasize == 64) ? Datasize_64 : Datasize_32)
 #define MEMOPSIZE_OF(datasize) ((datasize == 8 || datasize == 128) ? MemOpSize_8_or_128 : (datasize == 16) ? MemOpSize_16 : (datasize == 32) ? MemOpSize_32 : MemOpSize_64)
 #define CHECK_DATASIZE() CHECK_DATASIZE_OF(datasize)
@@ -383,6 +383,9 @@ public:
             data.realTypes.m_bitNumber = bitNumber;
             data.realTypes.m_compareRegister = compareRegister;
         }
+        // We are defining a copy constructor and assignment operator
+        // because the ones provided by the compiler are not
+        // optimal. See https://bugs.webkit.org/show_bug.cgi?id=90930
         LinkRecord(const LinkRecord& other)
         {
             data.copyTypes = other.data.copyTypes;
@@ -830,6 +833,12 @@ public:
     }
 
     template<int datasize>
+    ALWAYS_INLINE void bfc(RegisterID rd, int lsb, int width)
+    {
+        bfi<datasize>(rd, ARM64Registers::zr, lsb, width);
+    }
+
+    template<int datasize>
     ALWAYS_INLINE void bfi(RegisterID rd, RegisterID rn, int lsb, int width)
     {
         bfm<datasize>(rd, rn, (datasize - lsb) & (datasize - 1), width - 1);
@@ -1112,6 +1121,20 @@ public:
     }
 
     template<int datasize>
+    ALWAYS_INLINE static bool isValidLDPImm(int immediate)
+    {
+        unsigned immedShiftAmount = memPairOffsetShift(false, MEMPAIROPSIZE_INT(datasize));
+        return isValidSignedImm7(immediate, immedShiftAmount);
+    }
+
+    template<int datasize>
+    ALWAYS_INLINE static bool isValidLDPFPImm(int immediate)
+    {
+        unsigned immedShiftAmount = memPairOffsetShift(true, MEMPAIROPSIZE_FP(datasize));
+        return isValidSignedImm7(immediate, immedShiftAmount);
+    }
+
+    template<int datasize>
     ALWAYS_INLINE void ldp(RegisterID rt, RegisterID rt2, RegisterID rn, PairPostIndex simm)
     {
         CHECK_DATASIZE();
@@ -1126,17 +1149,45 @@ public:
     }
 
     template<int datasize>
-    ALWAYS_INLINE void ldp(RegisterID rt, RegisterID rt2, RegisterID rn, unsigned pimm = 0)
+    ALWAYS_INLINE void ldp(RegisterID rt, RegisterID rt2, RegisterID rn, int simm = 0)
     {
         CHECK_DATASIZE();
-        insn(loadStoreRegisterPairOffset(MEMPAIROPSIZE_INT(datasize), false, MemOp_LOAD, pimm, rn, rt, rt2));
+        insn(loadStoreRegisterPairOffset(MEMPAIROPSIZE_INT(datasize), false, MemOp_LOAD, simm, rn, rt, rt2));
     }
 
     template<int datasize>
-    ALWAYS_INLINE void ldnp(RegisterID rt, RegisterID rt2, RegisterID rn, unsigned pimm = 0)
+    ALWAYS_INLINE void ldnp(RegisterID rt, RegisterID rt2, RegisterID rn, int simm = 0)
     {
         CHECK_DATASIZE();
-        insn(loadStoreRegisterPairNonTemporal(MEMPAIROPSIZE_INT(datasize), false, MemOp_LOAD, pimm, rn, rt, rt2));
+        insn(loadStoreRegisterPairNonTemporal(MEMPAIROPSIZE_INT(datasize), false, MemOp_LOAD, simm, rn, rt, rt2));
+    }
+
+    template<int datasize>
+    ALWAYS_INLINE void ldp(FPRegisterID rt, FPRegisterID rt2, RegisterID rn, PairPostIndex simm)
+    {
+        CHECK_DATASIZE();
+        insn(loadStoreRegisterPairPostIndex(MEMPAIROPSIZE_FP(datasize), true, MemOp_LOAD, simm, rn, rt, rt2));
+    }
+
+    template<int datasize>
+    ALWAYS_INLINE void ldp(FPRegisterID rt, FPRegisterID rt2, RegisterID rn, PairPreIndex simm)
+    {
+        CHECK_DATASIZE();
+        insn(loadStoreRegisterPairPreIndex(MEMPAIROPSIZE_FP(datasize), true, MemOp_LOAD, simm, rn, rt, rt2));
+    }
+
+    template<int datasize>
+    ALWAYS_INLINE void ldp(FPRegisterID rt, FPRegisterID rt2, RegisterID rn, int simm = 0)
+    {
+        CHECK_DATASIZE();
+        insn(loadStoreRegisterPairOffset(MEMPAIROPSIZE_FP(datasize), true, MemOp_LOAD, simm, rn, rt, rt2));
+    }
+
+    template<int datasize>
+    ALWAYS_INLINE void ldnp(FPRegisterID rt, FPRegisterID rt2, RegisterID rn, int simm = 0)
+    {
+        CHECK_DATASIZE();
+        insn(loadStoreRegisterPairNonTemporal(MEMPAIROPSIZE_FP(datasize), true, MemOp_LOAD, simm, rn, rt, rt2));
     }
 
     template<int datasize>
@@ -1741,6 +1792,18 @@ public:
     }
 
     template<int datasize>
+    ALWAYS_INLINE static bool isValidSTPImm(int immediate)
+    {
+        return isValidLDPImm<datasize>(immediate);
+    }
+
+    template<int datasize>
+    ALWAYS_INLINE static bool isValidSTPFPImm(int immediate)
+    {
+        return isValidLDPFPImm<datasize>(immediate);
+    }
+
+    template<int datasize>
     ALWAYS_INLINE void stp(RegisterID rt, RegisterID rt2, RegisterID rn, PairPostIndex simm)
     {
         CHECK_DATASIZE();
@@ -1755,17 +1818,45 @@ public:
     }
 
     template<int datasize>
-    ALWAYS_INLINE void stp(RegisterID rt, RegisterID rt2, RegisterID rn, unsigned pimm = 0)
+    ALWAYS_INLINE void stp(RegisterID rt, RegisterID rt2, RegisterID rn, int simm = 0)
     {
         CHECK_DATASIZE();
-        insn(loadStoreRegisterPairOffset(MEMPAIROPSIZE_INT(datasize), false, MemOp_STORE, pimm, rn, rt, rt2));
+        insn(loadStoreRegisterPairOffset(MEMPAIROPSIZE_INT(datasize), false, MemOp_STORE, simm, rn, rt, rt2));
     }
 
     template<int datasize>
-    ALWAYS_INLINE void stnp(RegisterID rt, RegisterID rt2, RegisterID rn, unsigned pimm = 0)
+    ALWAYS_INLINE void stnp(RegisterID rt, RegisterID rt2, RegisterID rn, int simm = 0)
     {
         CHECK_DATASIZE();
-        insn(loadStoreRegisterPairNonTemporal(MEMPAIROPSIZE_INT(datasize), false, MemOp_STORE, pimm, rn, rt, rt2));
+        insn(loadStoreRegisterPairNonTemporal(MEMPAIROPSIZE_INT(datasize), false, MemOp_STORE, simm, rn, rt, rt2));
+    }
+
+    template<int datasize>
+    ALWAYS_INLINE void stp(FPRegisterID rt, FPRegisterID rt2, RegisterID rn, PairPostIndex simm)
+    {
+        CHECK_DATASIZE();
+        insn(loadStoreRegisterPairPostIndex(MEMPAIROPSIZE_FP(datasize), true, MemOp_STORE, simm, rn, rt, rt2));
+    }
+
+    template<int datasize>
+    ALWAYS_INLINE void stp(FPRegisterID rt, FPRegisterID rt2, RegisterID rn, PairPreIndex simm)
+    {
+        CHECK_DATASIZE();
+        insn(loadStoreRegisterPairPreIndex(MEMPAIROPSIZE_FP(datasize), true, MemOp_STORE, simm, rn, rt, rt2));
+    }
+
+    template<int datasize>
+    ALWAYS_INLINE void stp(FPRegisterID rt, FPRegisterID rt2, RegisterID rn, int simm = 0)
+    {
+        CHECK_DATASIZE();
+        insn(loadStoreRegisterPairOffset(MEMPAIROPSIZE_FP(datasize), true, MemOp_STORE, simm, rn, rt, rt2));
+    }
+
+    template<int datasize>
+    ALWAYS_INLINE void stnp(FPRegisterID rt, FPRegisterID rt2, RegisterID rn, int simm = 0)
+    {
+        CHECK_DATASIZE();
+        insn(loadStoreRegisterPairNonTemporal(MEMPAIROPSIZE_FP(datasize), true, MemOp_STORE, simm, rn, rt, rt2));
     }
 
     template<int datasize>
@@ -2792,11 +2883,6 @@ public:
         cacheFlush(from, sizeof(int));
     }
 
-    static void relinkJumpToNop(void* from)
-    {
-        relinkJump(from, static_cast<char*>(from) + 4);
-    }
-
     static void relinkCall(void* from, void* to)
     {
         relinkJumpOrCall<BranchType_CALL>(reinterpret_cast<int*>(from) - 1, reinterpret_cast<const int*>(from) - 1, to);
@@ -3541,6 +3627,7 @@ protected:
         ASSERT(opc == (opc & 1)); // Only load or store, load signed 64 is handled via size.
         ASSERT(V || (size != MemPairOp_LoadSigned_32) || (opc == MemOp_LOAD)); // There isn't an integer store signed.
         unsigned immedShiftAmount = memPairOffsetShift(V, size);
+        RELEASE_ASSERT(isValidSignedImm7(immediate, immedShiftAmount));
         int imm7 = immediate >> immedShiftAmount;
         ASSERT((imm7 << immedShiftAmount) == immediate && isInt<7>(imm7));
         return (0x28800000 | size << 30 | V << 26 | opc << 22 | (imm7 & 0x7f) << 15 | rt2 << 10 | xOrSp(rn) << 5 | rt);
@@ -3572,6 +3659,7 @@ protected:
         ASSERT(opc == (opc & 1)); // Only load or store, load signed 64 is handled via size.
         ASSERT(V || (size != MemPairOp_LoadSigned_32) || (opc == MemOp_LOAD)); // There isn't an integer store signed.
         unsigned immedShiftAmount = memPairOffsetShift(V, size);
+        RELEASE_ASSERT(isValidSignedImm7(immediate, immedShiftAmount));
         int imm7 = immediate >> immedShiftAmount;
         ASSERT((imm7 << immedShiftAmount) == immediate && isInt<7>(imm7));
         return (0x29800000 | size << 30 | V << 26 | opc << 22 | (imm7 & 0x7f) << 15 | rt2 << 10 | xOrSp(rn) << 5 | rt);
@@ -3589,6 +3677,7 @@ protected:
         ASSERT(opc == (opc & 1)); // Only load or store, load signed 64 is handled via size.
         ASSERT(V || (size != MemPairOp_LoadSigned_32) || (opc == MemOp_LOAD)); // There isn't an integer store signed.
         unsigned immedShiftAmount = memPairOffsetShift(V, size);
+        RELEASE_ASSERT(isValidSignedImm7(immediate, immedShiftAmount));
         int imm7 = immediate >> immedShiftAmount;
         ASSERT((imm7 << immedShiftAmount) == immediate && isInt<7>(imm7));
         return (0x29000000 | size << 30 | V << 26 | opc << 22 | (imm7 & 0x7f) << 15 | rt2 << 10 | xOrSp(rn) << 5 | rt);
@@ -3606,6 +3695,7 @@ protected:
         ASSERT(opc == (opc & 1)); // Only load or store, load signed 64 is handled via size.
         ASSERT(V || (size != MemPairOp_LoadSigned_32) || (opc == MemOp_LOAD)); // There isn't an integer store signed.
         unsigned immedShiftAmount = memPairOffsetShift(V, size);
+        RELEASE_ASSERT(isValidSignedImm7(immediate, immedShiftAmount));
         int imm7 = immediate >> immedShiftAmount;
         ASSERT((imm7 << immedShiftAmount) == immediate && isInt<7>(imm7));
         return (0x28000000 | size << 30 | V << 26 | opc << 22 | (imm7 & 0x7f) << 15 | rt2 << 10 | xOrSp(rn) << 5 | rt);
@@ -3767,6 +3857,7 @@ public:
 } // namespace JSC
 
 #undef CHECK_DATASIZE_OF
+#undef CHECK_MEMOPSIZE_OF
 #undef DATASIZE_OF
 #undef MEMOPSIZE_OF
 #undef CHECK_DATASIZE

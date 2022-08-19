@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -37,13 +37,19 @@ final public class Size {
 
     final private double value;
     final private SizeUnits units;
+
+    /**
+     * Constructs a {@code Size} object.
+     * @param value value of the size
+     * @param units unit of the size
+     */
     public Size(double value, SizeUnits units) {
         this.value = value;
         this.units = (units != null) ? units : SizeUnits.PX;
     }
 
     /**
-     * Return the value
+     * Returns the value.
      * @return the value
      */
     public double getValue() {
@@ -51,7 +57,7 @@ final public class Size {
     }
 
     /**
-     * Return the units
+     * Return the units.
      * @return the units
      */
     public SizeUnits getUnits() {
@@ -59,20 +65,22 @@ final public class Size {
     }
 
     /**
-     * Return whether or not this Size is an absolute value or a relative value.
+     * Returns whether or not this {@code Size} is an absolute value or a relative value.
      * @return true if it is absolute, otherwise false
      */
     public boolean isAbsolute() {
         return units.isAbsolute();
     }
 
-    /** Convert this size into Points units, a Point is 1/72 of a inch */
+    /**
+     * Converts this size into Points units, a Point is 1/72 of a inch
+     */
     double points(Font font) {
         return points(1.0, font);
     }
 
     /**
-      * Convert this size into points
+      * Converts this size into points.
       *
       * @param multiplier   The multiplier for PERCENTAGE sizes
       * @param font         The font for EM sizes
@@ -82,7 +90,7 @@ final public class Size {
     }
 
     /**
-      * Convert this size into pixels
+      * Converts this size into pixels.
       *
       * @param multiplier   The multiplier for PERCENTAGE sizes
       * @param font         The font for EM sizes

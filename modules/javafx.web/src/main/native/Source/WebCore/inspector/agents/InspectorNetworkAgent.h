@@ -34,6 +34,7 @@
 #include "InspectorInstrumentation.h"
 #include "InspectorPageAgent.h"
 #include "InspectorWebAgentBase.h"
+#include "WebSocket.h"
 #include <JavaScriptCore/InspectorBackendDispatchers.h>
 #include <JavaScriptCore/InspectorFrontendDispatchers.h>
 #include <JavaScriptCore/RegularExpression.h>
@@ -69,7 +70,7 @@ public:
 
     static bool shouldTreatAsText(const String& mimeType);
     static Ref<TextResourceDecoder> createTextDecoder(const String& mimeType, const String& textEncodingName);
-    static Optional<String> textContentForCachedResource(CachedResource&);
+    static std::optional<String> textContentForCachedResource(CachedResource&);
     static bool cachedResourceContent(CachedResource&, String* result, bool* base64Encoded);
 
     // InspectorAgentBase
@@ -86,43 +87,43 @@ public:
     Inspector::Protocol::ErrorStringOr<String> getSerializedCertificate(const Inspector::Protocol::Network::RequestId&) final;
     Inspector::Protocol::ErrorStringOr<Ref<Inspector::Protocol::Runtime::RemoteObject>> resolveWebSocket(const Inspector::Protocol::Network::RequestId&, const String& objectGroup) final;
     Inspector::Protocol::ErrorStringOr<void> setInterceptionEnabled(bool) final;
-    Inspector::Protocol::ErrorStringOr<void> addInterception(const String& url, Inspector::Protocol::Network::NetworkStage, Optional<bool>&& caseSensitive, Optional<bool>&& isRegex) final;
-    Inspector::Protocol::ErrorStringOr<void> removeInterception(const String& url, Inspector::Protocol::Network::NetworkStage, Optional<bool>&& caseSensitive, Optional<bool>&& isRegex) final;
+    Inspector::Protocol::ErrorStringOr<void> addInterception(const String& url, Inspector::Protocol::Network::NetworkStage, std::optional<bool>&& caseSensitive, std::optional<bool>&& isRegex) final;
+    Inspector::Protocol::ErrorStringOr<void> removeInterception(const String& url, Inspector::Protocol::Network::NetworkStage, std::optional<bool>&& caseSensitive, std::optional<bool>&& isRegex) final;
     Inspector::Protocol::ErrorStringOr<void> interceptContinue(const Inspector::Protocol::Network::RequestId&, Inspector::Protocol::Network::NetworkStage) final;
     Inspector::Protocol::ErrorStringOr<void> interceptWithRequest(const Inspector::Protocol::Network::RequestId&, const String& url, const String& method, RefPtr<JSON::Object>&& headers, const String& postData) final;
-    Inspector::Protocol::ErrorStringOr<void> interceptWithResponse(const Inspector::Protocol::Network::RequestId&, const String& content, bool base64Encoded, const String& mimeType, Optional<int>&& status, const String& statusText, RefPtr<JSON::Object>&& headers) final;
+    Inspector::Protocol::ErrorStringOr<void> interceptWithResponse(const Inspector::Protocol::Network::RequestId&, const String& content, bool base64Encoded, const String& mimeType, std::optional<int>&& status, const String& statusText, RefPtr<JSON::Object>&& headers) final;
     Inspector::Protocol::ErrorStringOr<void> interceptRequestWithResponse(const Inspector::Protocol::Network::RequestId&, const String& content, bool base64Encoded, const String& mimeType, int status, const String& statusText, Ref<JSON::Object>&& headers) final;
     Inspector::Protocol::ErrorStringOr<void> interceptRequestWithError(const Inspector::Protocol::Network::RequestId&, Inspector::Protocol::Network::ResourceErrorType) final;
 
     // InspectorInstrumentation
     void willRecalculateStyle();
     void didRecalculateStyle();
-    void willSendRequest(unsigned long identifier, DocumentLoader*, ResourceRequest&, const ResourceResponse& redirectResponse);
-    void willSendRequestOfType(unsigned long identifier, DocumentLoader*, ResourceRequest&, InspectorInstrumentation::LoadType);
-    void didReceiveResponse(unsigned long identifier, DocumentLoader*, const ResourceResponse&, ResourceLoader*);
-    void didReceiveData(unsigned long identifier, const char* data, int dataLength, int encodedDataLength);
-    void didFinishLoading(unsigned long identifier, DocumentLoader*, const NetworkLoadMetrics&, ResourceLoader*);
-    void didFailLoading(unsigned long identifier, DocumentLoader*, const ResourceError&);
+    void willSendRequest(ResourceLoaderIdentifier, DocumentLoader*, ResourceRequest&, const ResourceResponse& redirectResponse, const CachedResource*);
+    void willSendRequestOfType(ResourceLoaderIdentifier, DocumentLoader*, ResourceRequest&, InspectorInstrumentation::LoadType);
+    void didReceiveResponse(ResourceLoaderIdentifier, DocumentLoader*, const ResourceResponse&, ResourceLoader*);
+    void didReceiveData(ResourceLoaderIdentifier, const SharedBuffer*, int expectedDataLength, int encodedDataLength);
+    void didFinishLoading(ResourceLoaderIdentifier, DocumentLoader*, const NetworkLoadMetrics&, ResourceLoader*);
+    void didFailLoading(ResourceLoaderIdentifier, DocumentLoader*, const ResourceError&);
     void didLoadResourceFromMemoryCache(DocumentLoader*, CachedResource&);
-    void didReceiveThreadableLoaderResponse(unsigned long identifier, DocumentThreadableLoader&);
+    void didReceiveThreadableLoaderResponse(ResourceLoaderIdentifier, DocumentThreadableLoader&);
     void willLoadXHRSynchronously();
     void didLoadXHRSynchronously();
-    void didReceiveScriptResponse(unsigned long identifier);
+    void didReceiveScriptResponse(ResourceLoaderIdentifier);
     void willDestroyCachedResource(CachedResource&);
-    void didCreateWebSocket(unsigned long identifier, const URL& requestURL);
-    void willSendWebSocketHandshakeRequest(unsigned long identifier, const ResourceRequest&);
-    void didReceiveWebSocketHandshakeResponse(unsigned long identifier, const ResourceResponse&);
-    void didCloseWebSocket(unsigned long identifier);
-    void didReceiveWebSocketFrame(unsigned long identifier, const WebSocketFrame&);
-    void didSendWebSocketFrame(unsigned long identifier, const WebSocketFrame&);
-    void didReceiveWebSocketFrameError(unsigned long identifier, const String&);
+    void didCreateWebSocket(WebSocketChannelIdentifier, const URL& requestURL);
+    void willSendWebSocketHandshakeRequest(WebSocketChannelIdentifier, const ResourceRequest&);
+    void didReceiveWebSocketHandshakeResponse(WebSocketChannelIdentifier, const ResourceResponse&);
+    void didCloseWebSocket(WebSocketChannelIdentifier);
+    void didReceiveWebSocketFrame(WebSocketChannelIdentifier, const WebSocketFrame&);
+    void didSendWebSocketFrame(WebSocketChannelIdentifier, const WebSocketFrame&);
+    void didReceiveWebSocketFrameError(WebSocketChannelIdentifier, const String&);
     void mainFrameNavigated(DocumentLoader&);
-    void setInitialScriptContent(unsigned long identifier, const String& sourceString);
+    void setInitialScriptContent(ResourceLoaderIdentifier, const String& sourceString);
     void didScheduleStyleRecalculation(Document&);
     bool willIntercept(const ResourceRequest&);
     bool shouldInterceptRequest(const ResourceRequest&);
     bool shouldInterceptResponse(const ResourceResponse&);
-    void interceptResponse(const ResourceResponse&, unsigned long identifier, CompletionHandler<void(const ResourceResponse&, RefPtr<SharedBuffer>)>&&);
+    void interceptResponse(const ResourceResponse&, ResourceLoaderIdentifier, CompletionHandler<void(const ResourceResponse&, RefPtr<FragmentedSharedBuffer>)>&&);
     void interceptRequest(ResourceLoader&, Function<void(const ResourceRequest&)>&&);
 
     void searchOtherRequests(const JSC::Yarr::RegularExpression&, Ref<JSON::ArrayOf<Inspector::Protocol::Page::SearchResult>>&);
@@ -133,13 +134,13 @@ protected:
 
     virtual Inspector::Protocol::Network::LoaderId loaderIdentifier(DocumentLoader*) = 0;
     virtual Inspector::Protocol::Network::FrameId frameIdentifier(DocumentLoader*) = 0;
-    virtual Vector<WebSocket*> activeWebSockets(const LockHolder&) = 0;
+    virtual Vector<WebSocket*> activeWebSockets() WTF_REQUIRES_LOCK(WebSocket::allActiveWebSocketsLock()) = 0;
     virtual void setResourceCachingDisabledInternal(bool) = 0;
     virtual ScriptExecutionContext* scriptExecutionContext(Inspector::Protocol::ErrorString&, const Inspector::Protocol::Network::FrameId&) = 0;
     virtual bool shouldForceBufferingNetworkResourceData() const = 0;
 
 private:
-    void willSendRequest(unsigned long identifier, DocumentLoader*, ResourceRequest&, const ResourceResponse& redirectResponse, InspectorPageAgent::ResourceType);
+    void willSendRequest(ResourceLoaderIdentifier, DocumentLoader*, ResourceRequest&, const ResourceResponse& redirectResponse, InspectorPageAgent::ResourceType);
 
     bool shouldIntercept(URL, Inspector::Protocol::Network::NetworkStage);
     void continuePendingRequests();
@@ -148,7 +149,7 @@ private:
     WebSocket* webSocketForRequestId(const Inspector::Protocol::Network::RequestId&);
 
     Ref<Inspector::Protocol::Network::Initiator> buildInitiatorObject(Document*, const ResourceRequest* = nullptr);
-    Ref<Inspector::Protocol::Network::ResourceTiming> buildObjectForTiming(const NetworkLoadMetrics*, ResourceLoader&);
+    Ref<Inspector::Protocol::Network::ResourceTiming> buildObjectForTiming(const NetworkLoadMetrics&, ResourceLoader&);
     Ref<Inspector::Protocol::Network::Metrics> buildObjectForMetrics(const NetworkLoadMetrics&);
     RefPtr<Inspector::Protocol::Network::Response> buildObjectForResourceResponse(const ResourceResponse&, ResourceLoader*);
     Ref<Inspector::Protocol::Network::CachedResource> buildObjectForCachedResource(CachedResource*);
@@ -184,7 +185,7 @@ private:
         WTF_MAKE_NONCOPYABLE(PendingInterceptResponse);
         WTF_MAKE_FAST_ALLOCATED;
     public:
-        PendingInterceptResponse(const ResourceResponse& originalResponse, CompletionHandler<void(const ResourceResponse&, RefPtr<SharedBuffer>)>&& completionHandler)
+        PendingInterceptResponse(const ResourceResponse& originalResponse, CompletionHandler<void(const ResourceResponse&, RefPtr<FragmentedSharedBuffer>)>&& completionHandler)
             : m_originalResponse(originalResponse)
             , m_completionHandler(WTFMove(completionHandler))
         { }
@@ -201,7 +202,7 @@ private:
             respond(m_originalResponse, nullptr);
         }
 
-        void respond(const ResourceResponse& response, RefPtr<SharedBuffer> data)
+        void respond(const ResourceResponse& response, RefPtr<FragmentedSharedBuffer> data)
         {
             ASSERT(!m_responded);
             if (m_responded)
@@ -214,7 +215,7 @@ private:
 
     private:
         ResourceResponse m_originalResponse;
-        CompletionHandler<void(const ResourceResponse&, RefPtr<SharedBuffer>)> m_completionHandler;
+        CompletionHandler<void(const ResourceResponse&, RefPtr<FragmentedSharedBuffer>)> m_completionHandler;
         bool m_responded { false };
     };
 
@@ -225,7 +226,7 @@ private:
     std::unique_ptr<NetworkResourcesData> m_resourcesData;
 
     HashMap<String, String> m_extraRequestHeaders;
-    HashSet<unsigned long> m_hiddenRequestIdentifiers;
+    HashSet<ResourceLoaderIdentifier> m_hiddenRequestIdentifiers;
 
     struct Intercept {
         String url;

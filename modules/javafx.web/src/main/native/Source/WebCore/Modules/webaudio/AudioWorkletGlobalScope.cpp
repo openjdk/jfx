@@ -77,18 +77,18 @@ ExceptionOr<void> AudioWorkletGlobalScope::registerProcessor(String&& name, Ref<
         return Exception { NotSupportedError, "A processor was already registered with this name"_s };
 
     JSC::JSObject* jsConstructor = processorContructor->callbackData()->callback();
-    auto* globalObject = jsConstructor->globalObject();
+    auto* globalObject = scriptExecutionContext()->globalObject();
     auto& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     if (!jsConstructor->isConstructor(vm))
-        return Exception { TypeError, "Class definitition passed to registerProcessor() is not a constructor"_s };
+        return Exception { TypeError, "Class definition passed to registerProcessor() is not a constructor"_s };
 
     auto prototype = jsConstructor->getPrototype(vm, globalObject);
     RETURN_IF_EXCEPTION(scope, Exception { ExistingExceptionError });
 
     if (!prototype.isObject())
-        return Exception { TypeError, "Class definitition passed to registerProcessor() has invalid prototype"_s };
+        return Exception { TypeError, "Class definition passed to registerProcessor() has invalid prototype"_s };
 
     auto parameterDescriptorsValue = jsConstructor->get(globalObject, JSC::Identifier::fromString(vm, "parameterDescriptors"));
     RETURN_IF_EXCEPTION(scope, Exception { ExistingExceptionError });
@@ -110,7 +110,11 @@ ExceptionOr<void> AudioWorkletGlobalScope::registerProcessor(String&& name, Ref<
         }
     }
 
-    m_processorConstructorMap.add(name, WTFMove(processorContructor));
+    auto addResult = m_processorConstructorMap.add(name, WTFMove(processorContructor));
+
+    // We've already checked at the beginning of this function but then we ran some JS so we need to check again.
+    if (!addResult.isNewEntry)
+        return Exception { NotSupportedError, "A processor was already registered with this name"_s };
 
     thread().messagingProxy().postTaskToAudioWorklet([name = name.isolatedCopy(), parameterDescriptors = crossThreadCopy(parameterDescriptors)](AudioWorklet& worklet) mutable {
         ASSERT(isMainThread());
@@ -129,7 +133,7 @@ RefPtr<AudioWorkletProcessor> AudioWorkletGlobalScope::createProcessor(const Str
         return nullptr;
 
     JSC::JSObject* jsConstructor = constructor->callbackData()->callback();
-    auto* globalObject = constructor->callbackData()->globalObject();
+    auto* globalObject = scriptExecutionContext()->globalObject();
     JSC::VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
     JSC::JSLockHolder lock { globalObject };
@@ -146,10 +150,16 @@ RefPtr<AudioWorkletProcessor> AudioWorkletGlobalScope::createProcessor(const Str
     ASSERT(!!scope.exception() == !object);
     RETURN_IF_EXCEPTION(scope, nullptr);
 
-    auto& jsProcessor = *JSC::jsCast<JSAudioWorkletProcessor*>(object);
-    jsProcessor.wrapped().setProcessCallback(makeUnique<JSCallbackDataStrong>(&jsProcessor, globalObject));
+    auto* jsProcessor = JSC::jsDynamicCast<JSAudioWorkletProcessor*>(vm, object);
+    if (!jsProcessor)
+        return nullptr;
 
-    return &jsProcessor.wrapped();
+    {
+        Locker locker { m_processorsLock };
+        m_processors.add(jsProcessor->wrapped());
+    }
+
+    return &jsProcessor->wrapped();
 }
 
 void AudioWorkletGlobalScope::prepareForDestruction()
@@ -183,8 +193,27 @@ void AudioWorkletGlobalScope::handlePostRenderTasks(size_t currentFrame)
 {
     m_currentFrame = currentFrame;
 
-    // This takes care of processing the MicroTask queue after rendering.
-    m_lockDuringRendering = WTF::nullopt;
+    {
+        // Heap allocations are forbidden on the audio thread for performance reasons so we need to
+        // explicitly allow the following allocation(s).
+        DisableMallocRestrictionsForCurrentThreadScope disableMallocRestrictions;
+        // This takes care of processing the MicroTask queue after rendering.
+        m_lockDuringRendering = std::nullopt;
+    }
+}
+
+void AudioWorkletGlobalScope::processorIsNoLongerNeeded(AudioWorkletProcessor& processor)
+{
+    Locker locker { m_processorsLock };
+    m_processors.remove(processor);
+}
+
+void AudioWorkletGlobalScope::visitProcessors(JSC::AbstractSlotVisitor& visitor)
+{
+    Locker locker { m_processorsLock };
+    m_processors.forEach([&](auto& processor) {
+        visitor.addOpaqueRoot(&processor);
+    });
 }
 
 } // namespace WebCore
