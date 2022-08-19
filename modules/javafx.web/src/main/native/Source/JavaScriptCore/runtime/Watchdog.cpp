@@ -39,7 +39,7 @@ Watchdog::Watchdog(VM* vm)
     , m_callback(nullptr)
     , m_callbackData1(nullptr)
     , m_callbackData2(nullptr)
-    , m_timerQueue(WorkQueue::create("jsc.watchdog.queue", WorkQueue::Type::Serial, WorkQueue::QOS::Utility))
+    , m_timerQueue(WorkQueue::create("jsc.watchdog.queue", WorkQueue::QOS::Utility))
 {
 }
 
@@ -144,7 +144,7 @@ void Watchdog::startTimer(Seconds timeLimit)
     // via willDestroyVM() before it goes away.
     RefPtr<Watchdog> protectedThis = this;
     m_timerQueue->dispatchAfter(timeLimit, [this, protectedThis] {
-        LockHolder locker(m_lock);
+        Locker locker { m_lock };
         if (m_vm)
             m_vm->notifyNeedWatchdogCheck();
     });
@@ -159,7 +159,7 @@ void Watchdog::stopTimer()
 
 void Watchdog::willDestroyVM(VM* vm)
 {
-    LockHolder locker(m_lock);
+    Locker locker { m_lock };
     ASSERT_UNUSED(vm, m_vm == vm);
     m_vm = nullptr;
 }

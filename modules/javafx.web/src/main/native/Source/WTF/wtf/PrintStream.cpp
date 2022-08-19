@@ -89,7 +89,7 @@ static void printExpectedCStringHelper(PrintStream& out, const char* type, Expec
     printInternal(out, expectedCString.value());
 }
 
-void printInternal(PrintStream& out, const StringView& string)
+void printInternal(PrintStream& out, StringView string)
 {
     printExpectedCStringHelper(out, "StringView", string.tryGetUtf8());
 }
@@ -181,6 +181,11 @@ void printInternal(PrintStream& out, double value)
 void printInternal(PrintStream& out, RawPointer value)
 {
     out.printf("%p", value.value());
+}
+
+void printInternal(PrintStream& out, FixedWidthDouble value)
+{
+    out.printf("%*.*lf", value.width(), value.precision(), value.value());
 }
 
 void dumpCharacter(PrintStream& out, char value)

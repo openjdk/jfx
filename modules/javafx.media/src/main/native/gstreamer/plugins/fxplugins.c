@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -36,7 +36,8 @@
 #endif
 
 #if defined(WIN32)
-gboolean dshowwrapper_init(GstPlugin* aacdecoder);
+gboolean dshowwrapper_init(GstPlugin* dshowwrapper);
+gboolean mfwrapper_init(GstPlugin* mfwrapper);
 #endif
 
 #ifdef STATIC_BUILD
@@ -50,6 +51,7 @@ static gboolean fxplugins_init (GstPlugin * plugin)
 
 #if defined(WIN32)
            dshowwrapper_init(plugin) &&
+           mfwrapper_init(plugin) &&
 #elif defined(OSX)
            audioconverter_plugin_init(plugin) &&
            avcdecoder_plugin_init(plugin) &&

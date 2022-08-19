@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # Copyright (c) 2014 Apple Inc. All rights reserved.
 # Copyright (c) 2014 University of Washington. All rights reserved.
@@ -57,7 +57,7 @@ namespace Inspector {""")
 
     TypeConversionsHeaderStandard = (
     """template<typename ObjCEnumType>
-Optional<ObjCEnumType> fromProtocolString(const String& value);""")
+std::optional<ObjCEnumType> fromProtocolString(const String& value);""")
 
     BackendDispatcherHeaderPrelude = (
     """${includes}

@@ -156,11 +156,6 @@ public final class MonocleApplication extends Application {
     }
 
     @Override
-    public Window createWindow(long parent) {
-        return new MonocleWindow(parent);
-    }
-
-    @Override
     public View createView() {
         return new MonocleView();
     }
@@ -193,14 +188,17 @@ public final class MonocleApplication extends Application {
     }
 
     @Override
+    public Pixels createPixels(int width, int height, ByteBuffer data, float scalex, float scaley) {
+        return new MonoclePixels(width, height, data, scalex, scaley);
+    }
+
+    @Override
     public Pixels createPixels(int width, int height, IntBuffer data) {
         return new MonoclePixels(width, height, data);
     }
 
     @Override
-    public Pixels createPixels(int width, int height, IntBuffer data,
-                               float scalex, float scaley)
-    {
+    public Pixels createPixels(int width, int height, IntBuffer data, float scalex, float scaley) {
         return new MonoclePixels(width, height, data, scalex, scaley);
     }
 

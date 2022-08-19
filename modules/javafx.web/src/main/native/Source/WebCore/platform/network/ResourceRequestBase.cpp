@@ -95,7 +95,7 @@ void ResourceRequestBase::setAsIsolatedCopy(const ResourceRequest& other)
     if (other.m_httpBody)
         setHTTPBody(other.m_httpBody->isolatedCopy());
     setAllowCookies(other.m_allowCookies);
-    setIsAppBound(other.isAppBound());
+    setIsAppInitiated(other.isAppInitiated());
 }
 
 bool ResourceRequestBase::isEmpty() const
@@ -394,7 +394,7 @@ void ResourceRequestBase::setHTTPReferrer(const String& httpReferrer)
     constexpr size_t maxLength = 4096;
     if (httpReferrer.length() > maxLength) {
         RELEASE_LOG(Loading, "Truncating HTTP referer");
-        String origin = SecurityOrigin::create(URL(URL(), httpReferrer))->toString();
+        String origin = URL(URL(), SecurityOrigin::create(URL(URL(), httpReferrer))->toString()).string();
         if (origin.length() <= maxLength)
             setHTTPHeaderField(HTTPHeaderName::Referer, origin);
     } else
@@ -502,7 +502,7 @@ bool ResourceRequestBase::hasUpload() const
 {
     if (auto* body = httpBody()) {
         for (auto& element : body->elements()) {
-            if (WTF::holds_alternative<WebCore::FormDataElement::EncodedFileData>(element.data) || WTF::holds_alternative<WebCore::FormDataElement::EncodedBlobData>(element.data))
+            if (std::holds_alternative<WebCore::FormDataElement::EncodedFileData>(element.data) || std::holds_alternative<WebCore::FormDataElement::EncodedBlobData>(element.data))
                 return true;
         }
     }
@@ -601,21 +601,53 @@ void ResourceRequestBase::setHTTPHeaderFields(HTTPHeaderMap headerFields)
     m_platformRequestUpdated = false;
 }
 
+void ResourceRequestBase::removeHTTPHeaderField(const String& name)
+{
+    updateResourceRequest();
+
+    m_httpHeaderFields.remove(name);
+
+    m_platformRequestUpdated = false;
+}
+
+void ResourceRequestBase::removeHTTPHeaderField(HTTPHeaderName name)
+{
+    updateResourceRequest();
+
+    m_httpHeaderFields.remove(name);
+
+    m_platformRequestUpdated = false;
+}
+
+void ResourceRequestBase::setIsAppInitiated(bool isAppInitiated)
+{
+    updateResourceRequest();
+
+    if (m_isAppInitiated == isAppInitiated)
+        return;
+
+    m_isAppInitiated = isAppInitiated;
+
+    m_platformRequestUpdated = false;
+};
+
 #if USE(SYSTEM_PREVIEW)
+
 bool ResourceRequestBase::isSystemPreview() const
 {
-    return m_systemPreviewInfo.hasValue();
+    return m_systemPreviewInfo.has_value();
 }
 
 SystemPreviewInfo ResourceRequestBase::systemPreviewInfo() const
 {
-    return m_systemPreviewInfo.valueOr(SystemPreviewInfo { });
+    return valueOrDefault(m_systemPreviewInfo);
 }
 
 void ResourceRequestBase::setSystemPreviewInfo(const SystemPreviewInfo& info)
 {
     m_systemPreviewInfo = info;
 }
+
 #endif
 
 bool equalIgnoringHeaderFields(const ResourceRequestBase& a, const ResourceRequestBase& b)

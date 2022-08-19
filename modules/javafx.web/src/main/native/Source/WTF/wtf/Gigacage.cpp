@@ -29,7 +29,7 @@
 #include <wtf/Atomics.h>
 #include <wtf/PageBlock.h>
 
-#if defined(USE_SYSTEM_MALLOC) && USE_SYSTEM_MALLOC
+#if USE(SYSTEM_MALLOC)
 #include <wtf/OSAllocator.h>
 
 namespace Gigacage {
@@ -64,7 +64,7 @@ void freeVirtualPages(Kind, void* basePtr, size_t size)
 }
 
 } // namespace Gigacage
-#else // defined(USE_SYSTEM_MALLOC) && USE_SYSTEM_MALLOC
+#else // USE(SYSTEM_MALLOC)
 #include <bmalloc/bmalloc.h>
 
 namespace Gigacage {
@@ -139,7 +139,7 @@ void* tryMallocArray(Kind kind, size_t numElements, size_t elementSize)
     checkedSize *= numElements;
     if (checkedSize.hasOverflowed())
         return nullptr;
-    return tryMalloc(kind, checkedSize.unsafeGet());
+    return tryMalloc(kind, checkedSize);
 }
 
 void* malloc(Kind kind, size_t size)

@@ -33,6 +33,7 @@ G_BEGIN_DECLS
  * G_BOOKMARK_FILE_ERROR:
  *
  * Error domain for bookmark file parsing.
+ *
  * Errors in this domain will be from the #GBookmarkFileError
  * enumeration. See #GError for information on error domains.
  */
@@ -72,8 +73,7 @@ GQuark g_bookmark_file_error_quark (void);
 /**
  * GBookmarkFile:
  *
- * The `GBookmarkFile` structure contains only
- * private data and should not be directly accessed.
+ * An opaque data structure representing a set of bookmarks.
  */
 typedef struct _GBookmarkFile GBookmarkFile;
 

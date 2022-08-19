@@ -42,6 +42,7 @@
 #include "PNGImageDecoder.h"
 
 #include "Color.h"
+#include "PlatformDisplay.h"
 #include <png.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/UniqueArray.h>
@@ -147,7 +148,7 @@ public:
         m_readOffset = 0;
     }
 
-    bool decode(const SharedBuffer::DataSegment& data, bool sizeOnly, unsigned haltAtFrame)
+    bool decode(const SharedBuffer& data, bool sizeOnly, unsigned haltAtFrame)
     {
         m_decodingSizeOnly = sizeOnly;
         PNGImageDecoder* decoder = static_cast<PNGImageDecoder*>(png_get_progressive_ptr(m_png));
@@ -160,7 +161,7 @@ public:
         auto bytesToUse = data.size() - bytesToSkip;
         m_readOffset += bytesToUse;
         m_currentBufferSize = m_readOffset;
-        png_process_data(m_png, m_info, reinterpret_cast<png_bytep>(const_cast<char*>(data.data() + bytesToSkip)), bytesToUse);
+        png_process_data(m_png, m_info, reinterpret_cast<png_bytep>(const_cast<uint8_t*>(data.data() + bytesToSkip)), bytesToUse);
         // We explicitly specify the superclass encodedDataStatus() because we
         // merely want to check if we've managed to set the size, not
         // (recursively) trigger additional decoding if we haven't.
@@ -222,7 +223,10 @@ PNGImageDecoder::PNGImageDecoder(AlphaOption alphaOption, GammaAndColorProfileOp
 {
 }
 
-PNGImageDecoder::~PNGImageDecoder() = default;
+PNGImageDecoder::~PNGImageDecoder()
+{
+    clear();
+}
 
 #if ENABLE(APNG)
 RepetitionCount PNGImageDecoder::repetitionCount() const
@@ -262,11 +266,19 @@ ScalableImageDecoderFrame* PNGImageDecoder::frameBufferAtIndex(size_t index)
     return &frame;
 }
 
+void PNGImageDecoder::clear()
+{
+    m_reader = nullptr;
+#if USE(LCMS)
+    m_iccTransform.reset();
+#endif
+}
+
 bool PNGImageDecoder::setFailed()
 {
     if (m_doNothingOnFailure)
         return false;
-    m_reader = nullptr;
+    clear();
     return ScalableImageDecoder::setFailed();
 }
 
@@ -381,6 +393,23 @@ void PNGImageDecoder::headerAvailable()
 #endif
     } else
         png_set_gamma(png, cDefaultGamma, cInverseGamma);
+
+#if USE(LCMS)
+    if (!m_ignoreGammaAndColorProfile) {
+        char* iccProfileTitle;
+        unsigned char* iccProfileData;
+        png_uint_32 iccProfileDataSize;
+        int compressionType;
+        if (png_get_iCCP(png, info, &iccProfileTitle, &compressionType, &iccProfileData, &iccProfileDataSize)) {
+            auto iccProfile = LCMSProfilePtr(cmsOpenProfileFromMem(iccProfileData, iccProfileDataSize));
+            if (iccProfile) {
+                auto* displayProfile = PlatformDisplay::sharedDisplay().colorProfile();
+                if (cmsGetColorSpace(iccProfile.get()) == cmsSigRgbData && cmsGetColorSpace(displayProfile) == cmsSigRgbData)
+                    m_iccTransform = LCMSTransformPtr(cmsCreateTransform(iccProfile.get(), TYPE_BGRA_8, displayProfile, TYPE_BGRA_8, INTENT_RELATIVE_COLORIMETRIC, 0));
+            }
+        }
+    }
+#endif
 
     // Tell libpng to send us rows for interlaced pngs.
     if (interlaceType == PNG_INTERLACE_ADAM7)
@@ -498,7 +527,8 @@ void PNGImageDecoder::rowAvailable(unsigned char* rowBuffer, unsigned rowIndex, 
     }
 
     // Write the decoded row pixels to the frame buffer.
-    auto* address = buffer.backingStore()->pixelAt(0, rowIndex);
+    auto* destRow = buffer.backingStore()->pixelAt(0, rowIndex);
+    auto* address = destRow;
     int width = size().width();
     unsigned char nonTrivialAlphaMask = 0;
 
@@ -513,6 +543,11 @@ void PNGImageDecoder::rowAvailable(unsigned char* rowBuffer, unsigned rowIndex, 
         for (int x = 0; x < width; ++x, pixel += 3, ++address)
             *address = 0xFF000000 | pixel[0] << 16 | pixel[1] << 8 | pixel[2];
     }
+
+#if USE(LCMS)
+    if (m_iccTransform)
+        cmsDoTransform(m_iccTransform.get(), destRow, destRow, width);
+#endif
 
     if (nonTrivialAlphaMask && !buffer.hasAlpha())
         buffer.setHasAlpha(true);
@@ -537,8 +572,10 @@ void PNGImageDecoder::decode(bool onlySize, unsigned haltAtFrame, bool allDataRe
     if (failed())
         return;
 
-    if (!m_reader)
+    if (!m_reader) {
+        clear();
         m_reader = makeUnique<PNGImageReader>(this);
+    }
 
     // If we couldn't decode the image but we've received all the data, decoding
     // has failed.
@@ -547,7 +584,7 @@ void PNGImageDecoder::decode(bool onlySize, unsigned haltAtFrame, bool allDataRe
     // If we're done decoding the image, we don't need the PNGImageReader
     // anymore.  (If we failed, |m_reader| has already been cleared.)
     else if (isComplete())
-        m_reader = nullptr;
+        clear();
 }
 
 #if ENABLE(APNG)
@@ -807,7 +844,8 @@ void PNGImageDecoder::frameComplete()
         png_bytep row = interlaceBuffer;
         for (int y = rect.y(); y < rect.maxY(); ++y, row += colorChannels * size().width()) {
             png_bytep pixel = row;
-            auto* address = buffer.backingStore()->pixelAt(rect.x(), y);
+            auto* destRow = buffer.backingStore()->pixelAt(rect.x(), y);
+            auto* address = destRow;
             for (int x = rect.x(); x < rect.maxX(); ++x, pixel += colorChannels) {
                 unsigned alpha = hasAlpha ? pixel[3] : 255;
                 nonTrivialAlpha |= alpha < 255;
@@ -816,6 +854,10 @@ void PNGImageDecoder::frameComplete()
                 else
                     buffer.backingStore()->blendPixel(address++, pixel[0], pixel[1], pixel[2], alpha);
             }
+#if USE(LCMS)
+            if (m_iccTransform)
+                cmsDoTransform(m_iccTransform.get(), destRow, destRow, rect.maxX());
+#endif
         }
 
         if (!nonTrivialAlpha) {

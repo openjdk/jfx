@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,7 +30,6 @@
 #include "ComposedTreeAncestorIterator.h"
 #include "ComposedTreeIterator.h"
 #include "Document.h"
-#include "DocumentTimeline.h"
 #include "Element.h"
 #include "FullscreenManager.h"
 #include "HTMLParserIdioms.h"
@@ -58,14 +57,14 @@
 #include "LayoutTreeBuilder.h"
 #endif
 
-#if PLATFORM(IOS_FAMILY)
+#if ENABLE(CONTENT_CHANGE_OBSERVER)
 #include "ContentChangeObserver.h"
 #endif
 
 namespace WebCore {
 
 RenderTreeUpdater::Parent::Parent(ContainerNode& root)
-    : element(is<Document>(root) ? nullptr : downcast<Element>(&root))
+    : element(dynamicDowncast<Element>(root))
     , renderTreePosition(RenderTreePosition(*root.renderer()))
 {
 }
@@ -73,7 +72,7 @@ RenderTreeUpdater::Parent::Parent(ContainerNode& root)
 RenderTreeUpdater::Parent::Parent(Element& element, const Style::ElementUpdates* updates)
     : element(&element)
     , updates(updates)
-    , renderTreePosition(element.renderer() ? makeOptional(RenderTreePosition(*element.renderer())) : WTF::nullopt)
+    , renderTreePosition(element.renderer() ? std::make_optional(RenderTreePosition(*element.renderer())) : std::nullopt)
 {
 }
 
@@ -96,13 +95,13 @@ static ContainerNode* findRenderingRoot(ContainerNode& node)
         if (!ancestor.hasDisplayContents())
             return nullptr;
     }
-    return &node.document();
+    return nullptr;
 }
 
 static ListHashSet<ContainerNode*> findRenderingRoots(const Style::Update& update)
 {
     ListHashSet<ContainerNode*> renderingRoots;
-    for (auto* root : update.roots()) {
+    for (auto& root : update.roots()) {
         auto* renderingRoot = findRenderingRoot(*root);
         if (!renderingRoot)
             continue;
@@ -266,6 +265,7 @@ void RenderTreeUpdater::updateAfterDescendants(Element& element, const Style::El
     if (!renderer)
         return;
 
+    generatedContent().updateBackdropRenderer(*renderer);
     m_builder.updateAfterDescendants(*renderer);
 
     if (element.hasCustomStyleResolveCallbacks() && updates && updates->update.change == Style::Change::Renderer)
@@ -302,7 +302,7 @@ void RenderTreeUpdater::updateRendererStyle(RenderElement& renderer, RenderStyle
 
 void RenderTreeUpdater::updateElementRenderer(Element& element, const Style::ElementUpdates& updates)
 {
-#if PLATFORM(IOS_FAMILY)
+#if ENABLE(CONTENT_CHANGE_OBSERVER)
     ContentChangeObserver::StyleChangeScope observingScope(m_document, element);
 #endif
 
@@ -316,7 +316,7 @@ void RenderTreeUpdater::updateElementRenderer(Element& element, const Style::Ele
         elementUpdateStyle->addCachedPseudoStyle(RenderStyle::clonePtr(*it.value.style));
     }
 
-    bool shouldTearDownRenderers = elementUpdate.change == Style::Change::Renderer && (element.renderer() || element.hasDisplayContents());
+    bool shouldTearDownRenderers = elementUpdate.change == Style::Change::Renderer && (element.renderer() || element.hasDisplayContents() || element.isInTopLayer());
     if (shouldTearDownRenderers) {
         if (!element.renderer()) {
             // We may be tearing down a descendant renderer cached in renderTreePosition.
@@ -568,7 +568,6 @@ void RenderTreeUpdater::tearDownRenderers(Element& root, TeardownType teardownTy
     };
 
     auto& document = root.document();
-    auto* timeline = document.existingTimeline();
 
     auto pop = [&] (unsigned depth) {
         while (teardownStack.size() > depth) {
@@ -583,25 +582,20 @@ void RenderTreeUpdater::tearDownRenderers(Element& root, TeardownType teardownTy
             case TeardownType::FullAfterSlotChange:
                 if (&element == &root) {
                     // Keep animations going on the host.
-                    if (timeline)
-                        timeline->willChangeRendererForStyleable(styleable);
+                    styleable.willChangeRenderer();
                     break;
                 }
                 FALLTHROUGH;
             case TeardownType::Full:
-                if (timeline) {
-                    if (document.renderTreeBeingDestroyed())
-                        timeline->cancelDeclarativeAnimationsForStyleable(styleable, WebAnimation::Silently::Yes);
-                }
+                if (document.renderTreeBeingDestroyed())
+                    styleable.cancelDeclarativeAnimations();
                 element.clearHoverAndActiveStatusBeforeDetachingRenderer();
                 break;
             case TeardownType::RendererUpdateCancelingAnimations:
-                if (timeline)
-                    timeline->cancelDeclarativeAnimationsForStyleable(styleable, WebAnimation::Silently::No);
+                styleable.cancelDeclarativeAnimations();
                 break;
             case TeardownType::RendererUpdate:
-                if (timeline)
-                    timeline->willChangeRendererForStyleable(Styleable::fromElement(element));
+                styleable.willChangeRenderer();
                 break;
             }
 

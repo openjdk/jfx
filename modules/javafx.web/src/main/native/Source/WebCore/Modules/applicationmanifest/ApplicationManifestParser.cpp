@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,14 +28,17 @@
 
 #if ENABLE(APPLICATION_MANIFEST)
 
+#include "CSSParser.h"
+#include "Color.h"
+#include "Document.h"
 #include "SecurityOrigin.h"
 #include <JavaScriptCore/ConsoleMessage.h>
 
 namespace WebCore {
 
-ApplicationManifest ApplicationManifestParser::parse(ScriptExecutionContext& scriptExecutionContext, const String& source, const URL& manifestURL, const URL& documentURL)
+ApplicationManifest ApplicationManifestParser::parse(Document& document, const String& source, const URL& manifestURL, const URL& documentURL)
 {
-    ApplicationManifestParser parser { &scriptExecutionContext };
+    ApplicationManifestParser parser { &document };
     return parser.parseManifest(source, manifestURL, documentURL);
 }
 
@@ -45,8 +48,8 @@ ApplicationManifest ApplicationManifestParser::parse(const String& source, const
     return parser.parseManifest(source, manifestURL, documentURL);
 }
 
-ApplicationManifestParser::ApplicationManifestParser(RefPtr<ScriptExecutionContext> consoleContext)
-    : m_consoleContext(consoleContext)
+ApplicationManifestParser::ApplicationManifestParser(RefPtr<Document> document)
+    : m_document(document)
 {
 }
 
@@ -74,6 +77,11 @@ ApplicationManifest ApplicationManifestParser::parseManifest(const String& text,
     parsedManifest.description = parseDescription(*manifest);
     parsedManifest.shortName = parseShortName(*manifest);
     parsedManifest.scope = parseScope(*manifest, documentURL, parsedManifest.startURL);
+    parsedManifest.themeColor = parseColor(*manifest, "theme_color"_s);
+    parsedManifest.icons = parseIcons(*manifest);
+
+    if (m_document)
+        m_document->processApplicationManifest(parsedManifest);
 
     return parsedManifest;
 }
@@ -90,8 +98,8 @@ void ApplicationManifestParser::logManifestPropertyInvalidURL(const String& prop
 
 void ApplicationManifestParser::logDeveloperWarning(const String& message)
 {
-    if (m_consoleContext)
-        m_consoleContext->addConsoleMessage(makeUnique<Inspector::ConsoleMessage>(JSC::MessageSource::Other, JSC::MessageType::Log, JSC::MessageLevel::Warning, makeString("Parsing application manifest "_s, m_manifestURL.string(), ": "_s, message)));
+    if (m_document)
+        m_document->addConsoleMessage(makeUnique<Inspector::ConsoleMessage>(JSC::MessageSource::Other, JSC::MessageType::Log, JSC::MessageLevel::Warning, makeString("Parsing application manifest "_s, m_manifestURL.string(), ": "_s, message)));
 }
 
 URL ApplicationManifestParser::parseStartURL(const JSON::Object& manifest, const URL& documentURL)
@@ -167,6 +175,87 @@ String ApplicationManifestParser::parseShortName(const JSON::Object& manifest)
     return parseGenericString(manifest, "short_name"_s);
 }
 
+Vector<ApplicationManifest::Icon> ApplicationManifestParser::parseIcons(const JSON::Object& manifest)
+{
+    auto manifestIcons = manifest.getValue("icons"_s);
+
+    Vector<ApplicationManifest::Icon> imageResources;
+    if (!manifestIcons)
+        return imageResources;
+
+    auto manifestIconsArray = manifestIcons->asArray();
+    if (!manifestIconsArray) {
+        logDeveloperWarning("The value of icons is not a valid array."_s);
+        return imageResources;
+    }
+
+    for (const auto& iconValue : *manifestIconsArray) {
+        ApplicationManifest::Icon currentIcon;
+        auto iconObject = iconValue->asObject();
+        if (!iconObject)
+            continue;
+        const auto& iconJSON = *iconObject;
+
+        auto srcValue = iconJSON.getValue("src"_s);
+        if (!srcValue)
+            continue;
+        auto srcStringValue = srcValue->asString();
+        if (!srcStringValue) {
+            logManifestPropertyNotAString("src"_s);
+            continue;
+        }
+        URL srcURL(m_manifestURL, srcStringValue);
+        if (srcURL.isEmpty())
+            continue;
+        if (!srcURL.isValid()) {
+            logManifestPropertyInvalidURL("src"_s);
+            continue;
+        }
+        currentIcon.src = srcURL;
+
+        currentIcon.sizes = parseGenericString(iconJSON, "sizes"_s).split(' ');
+
+        currentIcon.type = parseGenericString(iconJSON, "type"_s);
+
+        auto purposeValue = iconJSON.getValue("purpose"_s);
+        OptionSet<ApplicationManifest::Icon::Purpose> purposes;
+
+        if (!purposeValue) {
+            purposes.add(ApplicationManifest::Icon::Purpose::Any);
+            currentIcon.purposes = purposes;
+        } else {
+            auto purposeStringValue = purposeValue->asString();
+            if (!purposeStringValue) {
+                logManifestPropertyNotAString("purpose"_s);
+                purposes.add(ApplicationManifest::Icon::Purpose::Any);
+                currentIcon.purposes = purposes;
+            } else {
+                purposeStringValue = purposeStringValue.stripWhiteSpace().convertToASCIILowercase();
+                Vector<String> keywords = purposeStringValue.splitAllowingEmptyEntries(" ");
+
+                for (const auto& keyword : keywords) {
+                    if (keyword == "monochrome")
+                        purposes.add(ApplicationManifest::Icon::Purpose::Monochrome);
+                    else if (keyword == "maskable")
+                        purposes.add(ApplicationManifest::Icon::Purpose::Maskable);
+                    else if (keyword == "any")
+                        purposes.add(ApplicationManifest::Icon::Purpose::Any);
+                    else
+                        logDeveloperWarning(makeString("\""_s, purposeStringValue, "\" is not a valid purpose."_s));
+                }
+                if (purposes.isEmpty())
+                    continue;
+
+                currentIcon.purposes = purposes;
+            }
+        }
+
+        imageResources.append(WTFMove(currentIcon));
+    }
+
+    return imageResources;
+}
+
 static bool isInScope(const URL& scopeURL, const URL& targetURL)
 {
     // 1. If scopeURL is undefined (i.e., it is unbounded because of an error or it was not declared in the manifest), return true.
@@ -227,6 +316,11 @@ URL ApplicationManifestParser::parseScope(const JSON::Object& manifest, const UR
     }
 
     return scopeURL;
+}
+
+Color ApplicationManifestParser::parseColor(const JSON::Object& manifest, const String& propertyName)
+{
+    return CSSParser::parseColorWithoutContext(parseGenericString(manifest, propertyName));
 }
 
 String ApplicationManifestParser::parseGenericString(const JSON::Object& manifest, const String& propertyName)

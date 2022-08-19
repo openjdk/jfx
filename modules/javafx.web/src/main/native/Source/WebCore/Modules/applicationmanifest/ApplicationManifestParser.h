@@ -28,18 +28,20 @@
 #if ENABLE(APPLICATION_MANIFEST)
 
 #include "ApplicationManifest.h"
-#include "ScriptExecutionContext.h"
 #include <wtf/JSONValues.h>
 
 namespace WebCore {
 
+class Color;
+class Document;
+
 class ApplicationManifestParser {
 public:
-    WEBCORE_EXPORT static ApplicationManifest parse(ScriptExecutionContext&, const String&, const URL& manifestURL, const URL& documentURL);
+    WEBCORE_EXPORT static ApplicationManifest parse(Document&, const String&, const URL& manifestURL, const URL& documentURL);
     WEBCORE_EXPORT static ApplicationManifest parse(const String&, const URL& manifestURL, const URL& documentURL);
 
 private:
-    ApplicationManifestParser(RefPtr<ScriptExecutionContext>);
+    ApplicationManifestParser(RefPtr<Document>);
     ApplicationManifest parseManifest(const String&, const URL&, const URL&);
 
     URL parseStartURL(const JSON::Object&, const URL&);
@@ -48,14 +50,16 @@ private:
     String parseDescription(const JSON::Object&);
     String parseShortName(const JSON::Object&);
     URL parseScope(const JSON::Object&, const URL&, const URL&);
+    Vector<ApplicationManifest::Icon> parseIcons(const JSON::Object&);
 
+    Color parseColor(const JSON::Object&, const String& propertyName);
     String parseGenericString(const JSON::Object&, const String&);
 
     void logManifestPropertyNotAString(const String&);
     void logManifestPropertyInvalidURL(const String&);
     void logDeveloperWarning(const String& message);
 
-    RefPtr<ScriptExecutionContext> m_consoleContext;
+    RefPtr<Document> m_document;
     URL m_manifestURL;
 };
 

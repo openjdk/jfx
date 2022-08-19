@@ -1144,6 +1144,43 @@ public class VirtualFlowTest {
     }
 
     @Test
+    public void testScrollToTopOfLastLargeCell() {
+        double flowHeight = 150;
+        int cellCount = 2;
+
+        flow = new VirtualFlowShim<>();
+        flow.setCellFactory(p -> new CellStub(flow) {
+            @Override
+            protected double computePrefHeight(double width) {
+                return getIndex() == cellCount -1 ? 200 : 100;
+            }
+
+            @Override
+            protected double computeMinHeight(double width) {
+                return computePrefHeight(width);
+            }
+
+            @Override
+            protected double computeMaxHeight(double width) {
+                return computePrefHeight(width);
+            }
+        });
+        flow.setVertical(true);
+
+        flow.resize(50,flowHeight);
+        flow.setCellCount(cellCount);
+        pulse();
+
+        flow.scrollToTop(cellCount - 1);
+        pulse();
+
+        IndexedCell<?> cell = flow.getCell(cellCount - 1);
+        double cellPosition = flow.getCellPosition(cell);
+
+        assertEquals("Last cell must be aligned to top of the viewport", 0, cellPosition, 0.1);
+    }
+
+    @Test
     public void testImmediateScrollTo() {
         flow.setCellCount(100);
         flow.scrollTo(90);
@@ -1215,6 +1252,40 @@ public class VirtualFlowTest {
         pulse();
         sheetChildrenSize = flow.sheetChildren.size();
         assertEquals("Wrong number of sheet children after removing all items", 12, sheetChildrenSize);
+    }
+
+    @Test
+    // See JDK-8291908
+    public void test_noEmptyTrailingCells() {
+        flow = new VirtualFlowShim();
+        flow.setVertical(true);
+        flow.setCellFactory(p -> new CellStub(flow) {
+            @Override
+            protected double computeMaxHeight(double width) {
+                return computePrefHeight(width);
+            }
+
+            @Override
+            protected double computePrefHeight(double width) {
+                return (getIndex() > 100) ? 1 : 20;
+            }
+
+            @Override
+            protected double computeMinHeight(double width) {
+                return computePrefHeight(width);
+            }
+
+        });
+        flow.setCellCount(100);
+        flow.setViewportLength(1000);
+        flow.resize(100, 1000);
+        pulse();
+        flow.sheetChildren.addListener((InvalidationListener) (o) -> {
+            int count = ((List) o).size();
+            assertTrue(Integer.toString(count), count < 101);
+        });
+        flow.scrollTo(99);
+        pulse();
     }
 
     private ArrayLinkedListShim<GraphicalCellStub> circlelist = new ArrayLinkedListShim<GraphicalCellStub>();

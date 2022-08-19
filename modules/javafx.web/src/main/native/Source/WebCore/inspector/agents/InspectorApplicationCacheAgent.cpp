@@ -35,7 +35,6 @@
 #include "LoaderStrategy.h"
 #include "Page.h"
 #include "PlatformStrategies.h"
-#include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
 
@@ -115,21 +114,21 @@ Expected<Ref<JSON::ArrayOf<Protocol::ApplicationCache::FrameWithManifest>>, Prot
         return makeUnexpected("Page domain must be enabled"_s);
 
     auto result = JSON::ArrayOf<Protocol::ApplicationCache::FrameWithManifest>::create();
-    for (Frame* frame = &m_inspectedPage.mainFrame(); frame; frame = frame->tree().traverseNext()) {
-        auto* documentLoader = frame->loader().documentLoader();
+    m_inspectedPage.forEachFrame([&](Frame& frame) {
+        auto* documentLoader = frame.loader().documentLoader();
         if (!documentLoader)
-            continue;
+            return;
 
         auto& host = documentLoader->applicationCacheHost();
         String manifestURL = host.applicationCacheInfo().manifest.string();
         if (!manifestURL.isEmpty()) {
             result->addItem(Protocol::ApplicationCache::FrameWithManifest::create()
-                .setFrameId(pageAgent->frameId(frame))
+                .setFrameId(pageAgent->frameId(&frame))
                 .setManifestURL(manifestURL)
                 .setStatus(static_cast<int>(host.status()))
                 .release());
         }
-    }
+    });
     return result;
 }
 
@@ -192,27 +191,15 @@ Ref<JSON::ArrayOf<Protocol::ApplicationCache::ApplicationCacheResource>> Inspect
 
 Ref<Protocol::ApplicationCache::ApplicationCacheResource> InspectorApplicationCacheAgent::buildObjectForApplicationCacheResource(const ApplicationCacheHost::ResourceInfo& resourceInfo)
 {
-    StringBuilder types;
-
-    if (resourceInfo.isMaster)
-        types.appendLiteral("Master ");
-
-    if (resourceInfo.isManifest)
-        types.appendLiteral("Manifest ");
-
-    if (resourceInfo.isFallback)
-        types.appendLiteral("Fallback ");
-
-    if (resourceInfo.isForeign)
-        types.appendLiteral("Foreign ");
-
-    if (resourceInfo.isExplicit)
-        types.appendLiteral("Explicit ");
-
+    auto types = makeString(resourceInfo.isMaster ? "Master " : "",
+        resourceInfo.isManifest ? "Manifest " : "",
+        resourceInfo.isFallback ? "Fallback " : "",
+        resourceInfo.isForeign ? "Foreign " : "",
+        resourceInfo.isExplicit ? "Explicit " : "");
     return Protocol::ApplicationCache::ApplicationCacheResource::create()
         .setUrl(resourceInfo.resource.string())
         .setSize(static_cast<int>(resourceInfo.size))
-        .setType(types.toString())
+        .setType(types)
         .release();
 }
 

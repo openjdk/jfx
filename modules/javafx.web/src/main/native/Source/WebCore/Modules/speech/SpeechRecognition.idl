@@ -25,18 +25,18 @@
 
 [
     ActiveDOMObject,
-    EnabledBySetting=SpeechRecognition,
+    EnabledBySetting=SpeechRecognitionEnabled,
     InterfaceName=webkitSpeechRecognition,
     Exposed=Window
 ] interface SpeechRecognition : EventTarget {
-    [CallWith=Document] constructor();
+    [CallWith=CurrentDocument] constructor();
 
     attribute DOMString lang;
     attribute boolean continuous;
     attribute boolean interimResults;
     attribute unsigned long maxAlternatives;
 
-    [MayThrowException, ImplementedAs=startRecognition] undefined start();
+    [ImplementedAs=startRecognition] undefined start();
     [ImplementedAs=stopRecognition] undefined stop();
     [ImplementedAs=abortRecognition] undefined abort();
 

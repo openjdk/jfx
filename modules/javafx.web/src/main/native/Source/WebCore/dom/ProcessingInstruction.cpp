@@ -27,7 +27,7 @@
 #include "CachedResourceLoader.h"
 #include "CachedResourceRequest.h"
 #include "CachedXSLStyleSheet.h"
-#include "Document.h"
+#include "DocumentInlines.h"
 #include "Frame.h"
 #include "FrameLoader.h"
 #include "MediaList.h"
@@ -85,10 +85,6 @@ Ref<Node> ProcessingInstruction::cloneNodeInternal(Document& targetDocument, Clo
 
 void ProcessingInstruction::checkStyleSheet()
 {
-    // Prevent recursive loading of stylesheet.
-    if (m_isHandlingBeforeLoad)
-        return;
-
     if (m_target == "xml-stylesheet" && document().frame() && parentNode() == &document()) {
         // see http://www.w3.org/TR/xml-stylesheet/
         // ### support stylesheet included in a fragment of this (or another) document
@@ -143,12 +139,6 @@ void ProcessingInstruction::checkStyleSheet()
 
             String url = document().completeURL(href).string();
 
-            {
-            SetForScope<bool> change(m_isHandlingBeforeLoad, true);
-            if (!dispatchBeforeLoadEvent(url))
-                return;
-            }
-
             bool didEventListenerDisconnectThisElement = !isConnected() || &document() != originalDocument.ptr();
             if (didEventListenerDisconnectThisElement)
                 return;
@@ -167,7 +157,7 @@ void ProcessingInstruction::checkStyleSheet()
 #endif
             {
                 String charset = attributes->get("charset");
-                CachedResourceRequest request(document().completeURL(href), CachedResourceLoader::defaultCachedResourceOptions(), WTF::nullopt, charset.isEmpty() ? document().charset() : WTFMove(charset));
+                CachedResourceRequest request(document().completeURL(href), CachedResourceLoader::defaultCachedResourceOptions(), std::nullopt, charset.isEmpty() ? document().charset() : WTFMove(charset));
 
                 m_cachedSheet = document().cachedResourceLoader().requestCSSStyleSheet(WTFMove(request)).value_or(nullptr);
             }

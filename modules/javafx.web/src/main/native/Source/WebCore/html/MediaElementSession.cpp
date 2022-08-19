@@ -31,8 +31,9 @@
 
 #include "Chrome.h"
 #include "ChromeClient.h"
-#include "Document.h"
+#include "DocumentInlines.h"
 #include "DocumentLoader.h"
+#include "ElementInlines.h"
 #include "Frame.h"
 #include "FrameView.h"
 #include "FullscreenManager.h"
@@ -56,7 +57,9 @@
 
 #if ENABLE(MEDIA_SESSION)
 #include "MediaMetadata.h"
+#include "MediaPositionState.h"
 #include "MediaSession.h"
+#include "MediaSessionPlaybackState.h"
 #include "NavigatorMediaSession.h"
 #endif
 
@@ -76,13 +79,14 @@ static bool isElementLargeEnoughForMainContent(const HTMLMediaElement&, MediaSes
 static bool isElementMainContentForPurposesOfAutoplay(const HTMLMediaElement&, bool shouldHitTestMainFrame);
 
 #if !RELEASE_LOG_DISABLED
+
 static String restrictionNames(MediaElementSession::BehaviorRestrictions restriction)
 {
     StringBuilder restrictionBuilder;
 #define CASE(restrictionType) \
     if (restriction & MediaElementSession::restrictionType) { \
         if (!restrictionBuilder.isEmpty()) \
-            restrictionBuilder.appendLiteral(", "); \
+            restrictionBuilder.append(", "); \
         restrictionBuilder.append(#restrictionType); \
     } \
 
@@ -105,6 +109,7 @@ static String restrictionNames(MediaElementSession::BehaviorRestrictions restric
 
     return restrictionBuilder.toString();
 }
+
 #endif
 
 static bool pageExplicitlyAllowsElementToAutoplayInline(const HTMLMediaElement& element)
@@ -114,13 +119,52 @@ static bool pageExplicitlyAllowsElementToAutoplayInline(const HTMLMediaElement& 
     return document.isMediaDocument() && !document.ownerElement() && page && page->allowsMediaDocumentInlinePlayback();
 }
 
+#if ENABLE(MEDIA_SESSION)
+class MediaSessionObserver : public MediaSession::Observer {
+    WTF_MAKE_FAST_ALLOCATED;
+
+public:
+    MediaSessionObserver(MediaElementSession& session, const Ref<MediaSession>& mediaSession)
+        : m_session(session), m_mediaSession(mediaSession)
+    {
+        m_mediaSession->addObserver(*this);
+    }
+    ~MediaSessionObserver()
+    {
+        m_mediaSession->removeObserver(*this);
+    }
+    void metadataChanged(const RefPtr<MediaMetadata>& metadata) final
+    {
+        if (m_session)
+            m_session->metadataChanged(metadata);
+    }
+    void positionStateChanged(const std::optional<MediaPositionState>& state) final
+    {
+        if (m_session)
+            m_session->positionStateChanged(state);
+    }
+    void playbackStateChanged(MediaSessionPlaybackState state) final
+    {
+        if (m_session)
+            m_session->playbackStateChanged(state);
+    }
+    void actionHandlersChanged()
+    {
+        if (m_session)
+            m_session->actionHandlersChanged();
+    }
+private:
+    WeakPtr<MediaElementSession> m_session;
+    Ref<MediaSession> m_mediaSession;
+};
+#endif
+
 MediaElementSession::MediaElementSession(HTMLMediaElement& element)
     : PlatformMediaSession(PlatformMediaSessionManager::sharedManager(), element)
     , m_element(element)
     , m_restrictions(NoRestrictions)
 #if ENABLE(WIRELESS_PLAYBACK_TARGET)
     , m_targetAvailabilityChangedTimer(*this, &MediaElementSession::targetAvailabilityChangedTimerFired)
-    , m_hasPlaybackTargets(manager().hasWirelessTargetsAvailable())
 #endif
     , m_mainContentCheckTimer(*this, &MediaElementSession::mainContentCheckTimerFired)
     , m_clientDataBufferingTimer(*this, &MediaElementSession::clientDataBufferingTimerFired)
@@ -161,6 +205,7 @@ void MediaElementSession::registerWithDocument(Document& document)
 #else
     UNUSED_PARAM(document);
 #endif
+    ensureIsObservingMediaSession();
 }
 
 void MediaElementSession::unregisterWithDocument(Document& document)
@@ -169,6 +214,9 @@ void MediaElementSession::unregisterWithDocument(Document& document)
     document.removePlaybackTargetPickerClient(*this);
 #else
     UNUSED_PARAM(document);
+#endif
+#if ENABLE(MEDIA_SESSION)
+    m_observer = nullptr;
 #endif
 }
 
@@ -202,10 +250,34 @@ void MediaElementSession::visibilityChanged()
 {
     scheduleClientDataBufferingCheck();
 
-    if (m_element.elementIsHidden() && !m_element.isFullscreen())
+    bool elementIsHidden = m_element.elementIsHidden();
+
+    if (elementIsHidden && !m_element.isFullscreen())
         m_elementIsHiddenUntilVisibleInViewport = true;
     else if (m_element.isVisibleInViewport())
         m_elementIsHiddenUntilVisibleInViewport = false;
+
+    bool isPlayingAudio = m_element.isPlaying() && m_element.hasAudio() && !m_element.muted() && m_element.volume();
+    if (!isPlayingAudio) {
+        if (elementIsHidden) {
+            ALWAYS_LOG(LOGIDENTIFIER, "Suspending silent playback after page visibility: hidden");
+            beginInterruption(PlatformMediaSession::EnteringBackground);
+        } else {
+            ALWAYS_LOG(LOGIDENTIFIER, "Resuming silent playback after page visibility: showing");
+            endInterruption(PlatformMediaSession::MayResumePlaying);
+        }
+        return;
+    }
+
+    if (hasBehaviorRestriction(RequirePageVisibilityToPlayAudio)) {
+        if (elementIsHidden) {
+            ALWAYS_LOG(LOGIDENTIFIER, "Suspending audible playback after page visibility: hidden");
+            beginInterruption(PlatformMediaSession::EnteringBackground);
+        } else {
+            ALWAYS_LOG(LOGIDENTIFIER, "Resuming audible playback after page visibility: showing");
+            endInterruption(PlatformMediaSession::MayResumePlaying);
+        }
+    }
 }
 
 void MediaElementSession::isVisibleInViewportChanged()
@@ -235,13 +307,13 @@ void MediaElementSession::clientDataBufferingTimerFired()
     updateClientDataBuffering();
 
 #if PLATFORM(IOS_FAMILY)
-    manager().configureWireLessTargetMonitoring();
+    PlatformMediaSessionManager::sharedManager().configureWireLessTargetMonitoring();
 #endif
 
     if (state() != Playing || !m_element.elementIsHidden())
         return;
 
-    PlatformMediaSessionManager::SessionRestrictions restrictions = manager().restrictions(mediaType());
+    PlatformMediaSessionManager::SessionRestrictions restrictions = PlatformMediaSessionManager::sharedManager().restrictions(mediaType());
     if ((restrictions & PlatformMediaSessionManager::BackgroundTabPlaybackRestricted) == PlatformMediaSessionManager::BackgroundTabPlaybackRestricted)
         pauseSession();
 }
@@ -280,18 +352,19 @@ void MediaElementSession::removeBehaviorRestriction(BehaviorRestrictions restric
     m_restrictions &= ~restriction;
 }
 
-SuccessOr<MediaPlaybackDenialReason> MediaElementSession::playbackPermitted(MediaPlaybackOperation operation) const
+Expected<void, MediaPlaybackDenialReason> MediaElementSession::playbackStateChangePermitted(MediaPlaybackState state) const
 {
+    INFO_LOG(LOGIDENTIFIER, "state = ", state);
     if (m_element.isSuspended()) {
         ALWAYS_LOG(LOGIDENTIFIER, "Returning FALSE because element is suspended");
-        return MediaPlaybackDenialReason::InvalidState;
+        return makeUnexpected(MediaPlaybackDenialReason::InvalidState);
     }
 
     auto& document = m_element.document();
     auto* page = document.page();
     if (!page || page->mediaPlaybackIsSuspended()) {
         ALWAYS_LOG(LOGIDENTIFIER, "Returning FALSE because media playback is suspended");
-        return MediaPlaybackDenialReason::PageConsentRequired;
+        return makeUnexpected(MediaPlaybackDenialReason::PageConsentRequired);
     }
 
     if (document.isMediaDocument() && !document.ownerElement())
@@ -302,7 +375,7 @@ SuccessOr<MediaPlaybackDenialReason> MediaElementSession::playbackPermitted(Medi
 
     if (requiresFullscreenForVideoPlayback() && !fullscreenPermitted()) {
         ALWAYS_LOG(LOGIDENTIFIER, "Returning FALSE because of fullscreen restriction");
-        return MediaPlaybackDenialReason::FullscreenRequired;
+        return makeUnexpected(MediaPlaybackDenialReason::FullscreenRequired);
     }
 
     if (m_restrictions & OverrideUserGestureRequirementForMainContent && updateIsMainContent())
@@ -312,7 +385,7 @@ SuccessOr<MediaPlaybackDenialReason> MediaElementSession::playbackPermitted(Medi
     if (m_element.hasMediaStreamSrcObject()) {
         if (document.isCapturing())
             return { };
-        if (document.mediaState() & MediaProducer::IsPlayingAudio)
+        if (document.mediaState() & MediaProducerMediaState::IsPlayingAudio)
             return { };
     }
 #endif
@@ -321,13 +394,13 @@ SuccessOr<MediaPlaybackDenialReason> MediaElementSession::playbackPermitted(Medi
     const auto& topDocument = document.topDocument();
     if (topDocument.quirks().requiresUserGestureToPauseInPictureInPicture()
         && m_element.fullscreenMode() & HTMLMediaElementEnums::VideoFullscreenModePictureInPicture
-        && !m_element.paused() && operation == MediaPlaybackOperation::Pause
+        && !m_element.paused() && state == MediaPlaybackState::Paused
         && !document.processingUserGestureForMedia()) {
         ALWAYS_LOG(LOGIDENTIFIER, "Returning FALSE because a quirk requires a user gesture to pause while in Picture-in-Picture");
-        return MediaPlaybackDenialReason::UserGestureRequired;
+        return makeUnexpected(MediaPlaybackDenialReason::UserGestureRequired);
     }
 
-    if (topDocument.mediaState() & MediaProducer::HasUserInteractedWithMediaElement && topDocument.quirks().needsPerDocumentAutoplayBehavior())
+    if (topDocument.mediaState() & MediaProducerMediaState::HasUserInteractedWithMediaElement && topDocument.quirks().needsPerDocumentAutoplayBehavior())
         return { };
 
     if (topDocument.hasHadUserInteraction() && document.quirks().shouldAutoplayForArbitraryUserGesture())
@@ -335,17 +408,22 @@ SuccessOr<MediaPlaybackDenialReason> MediaElementSession::playbackPermitted(Medi
 
     if (m_restrictions & RequireUserGestureForVideoRateChange && m_element.isVideo() && !document.processingUserGestureForMedia()) {
         ALWAYS_LOG(LOGIDENTIFIER, "Returning FALSE because a user gesture is required for video rate change restriction");
-        return MediaPlaybackDenialReason::UserGestureRequired;
+        return makeUnexpected(MediaPlaybackDenialReason::UserGestureRequired);
     }
 
     if (m_restrictions & RequireUserGestureForAudioRateChange && (!m_element.isVideo() || m_element.hasAudio()) && !m_element.muted() && m_element.volume() && !document.processingUserGestureForMedia()) {
         ALWAYS_LOG(LOGIDENTIFIER, "Returning FALSE because a user gesture is required for audio rate change restriction");
-        return MediaPlaybackDenialReason::UserGestureRequired;
+        return makeUnexpected(MediaPlaybackDenialReason::UserGestureRequired);
+    }
+
+    if (m_restrictions & RequirePageVisibilityToPlayAudio && (!m_element.isVideo() || m_element.hasAudio()) && !m_element.muted() && m_element.volume() && m_element.elementIsHidden()) {
+        ALWAYS_LOG(LOGIDENTIFIER, "Returning FALSE because page visibility required for audio rate change restriction");
+        return makeUnexpected(MediaPlaybackDenialReason::UserGestureRequired);
     }
 
     if (m_restrictions & RequireUserGestureForVideoDueToLowPowerMode && m_element.isVideo() && !document.processingUserGestureForMedia()) {
         ALWAYS_LOG(LOGIDENTIFIER, "Returning FALSE because of video low power mode restriction");
-        return MediaPlaybackDenialReason::UserGestureRequired;
+        return makeUnexpected(MediaPlaybackDenialReason::UserGestureRequired);
     }
 
     return { };
@@ -478,7 +556,7 @@ bool MediaElementSession::canShowControlsManager(PlaybackControlsPurpose purpose
         return true;
     }
 
-    if (client().presentationType() == MediaType::Audio && purpose == PlaybackControlsPurpose::ControlsManager) {
+    if (client().presentationType() == MediaType::Audio && (purpose == PlaybackControlsPurpose::ControlsManager || purpose == PlaybackControlsPurpose::MediaSession)) {
         if (!hasBehaviorRestriction(RequireUserGestureToControlControlsManager) || m_element.document().processingUserGestureForMedia()) {
             INFO_LOG(LOGIDENTIFIER, "returning TRUE: audio element with user gesture");
             return true;
@@ -503,7 +581,7 @@ bool MediaElementSession::canShowControlsManager(PlaybackControlsPurpose purpose
         return false;
     }
 
-    if (!playbackPermitted()) {
+    if (!playbackStateChangePermitted(MediaPlaybackState::Playing)) {
         INFO_LOG(LOGIDENTIFIER, "returning FALSE: playback not permitted");
         return false;
     }
@@ -518,7 +596,7 @@ bool MediaElementSession::canShowControlsManager(PlaybackControlsPurpose purpose
         return false;
     }
 
-    if (!m_element.hasEverNotifiedAboutPlaying()) {
+    if (purpose != PlaybackControlsPurpose::MediaSession && !m_element.hasEverNotifiedAboutPlaying()) {
         INFO_LOG(LOGIDENTIFIER, "returning FALSE: hasn't fired playing notification");
         return false;
     }
@@ -550,7 +628,7 @@ bool MediaElementSession::canShowControlsManager(PlaybackControlsPurpose purpose
         }
     }
 
-    if (purpose == PlaybackControlsPurpose::NowPlaying) {
+    if (purpose == PlaybackControlsPurpose::NowPlaying || purpose == PlaybackControlsPurpose::MediaSession) {
         INFO_LOG(LOGIDENTIFIER, "returning TRUE: potentially plays audio");
         return true;
     }
@@ -678,7 +756,7 @@ void MediaElementSession::setHasPlaybackTargetAvailabilityListeners(bool hasList
 
 #if PLATFORM(IOS_FAMILY)
     m_hasPlaybackTargetAvailabilityListeners = hasListeners;
-    manager().configureWireLessTargetMonitoring();
+    PlatformMediaSessionManager::sharedManager().configureWireLessTargetMonitoring();
 #else
     UNUSED_PARAM(hasListeners);
     m_element.document().playbackTargetPickerClientStateDidChange(*this, m_element.mediaState());
@@ -731,7 +809,7 @@ void MediaElementSession::playbackTargetPickerWasDismissed()
     client().playbackTargetPickerWasDismissed();
 }
 
-void MediaElementSession::mediaStateDidChange(MediaProducer::MediaStateFlags state)
+void MediaElementSession::mediaStateDidChange(MediaProducerMediaStateFlags state)
 {
     m_element.document().playbackTargetPickerClientStateDidChange(*this, state);
 }
@@ -777,9 +855,9 @@ bool MediaElementSession::requiresFullscreenForVideoPlayback() const
         return false;
 
 #if PLATFORM(IOS_FAMILY)
-    if (IOSApplication::isIBooks())
+    if (CocoaApplication::isIBooks())
         return !m_element.hasAttributeWithoutSynchronization(HTMLNames::webkit_playsinlineAttr) && !m_element.hasAttributeWithoutSynchronization(HTMLNames::playsinlineAttr);
-    if (applicationSDKVersion() < DYLD_IOS_VERSION_10_0)
+    if (!linkedOnOrAfter(SDKVersion::FirstWithUnprefixedPlaysInlineAttribute))
         return !m_element.hasAttributeWithoutSynchronization(HTMLNames::webkit_playsinlineAttr);
 #endif
 
@@ -912,10 +990,10 @@ static bool isElementMainContentForPurposesOfAutoplay(const HTMLMediaElement& el
 
     // Hit test the area of the main frame where the element appears, to determine if the element is being obscured.
     // Elements which are obscured by other elements cannot be main content.
-    IntRect rectRelativeToView = element.clientRect();
+    IntRect rectRelativeToView = element.boundingBoxInRootViewCoordinates();
     ScrollPosition scrollPosition = mainFrame.view()->documentScrollPositionRelativeToViewOrigin();
     IntRect rectRelativeToTopDocument(rectRelativeToView.location() + scrollPosition, rectRelativeToView.size());
-    OptionSet<HitTestRequest::RequestType> hitType { HitTestRequest::ReadOnly, HitTestRequest::Active, HitTestRequest::AllowChildFrameContent, HitTestRequest::IgnoreClipping, HitTestRequest::DisallowUserAgentShadowContent };
+    OptionSet<HitTestRequest::Type> hitType { HitTestRequest::Type::ReadOnly, HitTestRequest::Type::Active, HitTestRequest::Type::AllowChildFrameContent, HitTestRequest::Type::IgnoreClipping, HitTestRequest::Type::DisallowUserAgentShadowContent };
     HitTestResult result(rectRelativeToTopDocument.center());
 
     mainFrame.document()->hitTest(hitType, result);
@@ -932,7 +1010,7 @@ static bool isElementRectMostlyInMainFrame(const HTMLMediaElement& element)
     if (!element.renderer())
         return false;
 
-    auto documentFrame = makeRefPtr(element.document().frame());
+    RefPtr documentFrame = element.document().frame();
     if (!documentFrame)
         return false;
 
@@ -941,14 +1019,14 @@ static bool isElementRectMostlyInMainFrame(const HTMLMediaElement& element)
         return false;
 
     IntRect mainFrameRectAdjustedForScrollPosition = IntRect(-mainFrameView->documentScrollPositionRelativeToViewOrigin(), mainFrameView->contentsSize());
-    IntRect elementRectInMainFrame = element.clientRect();
+    IntRect elementRectInMainFrame = element.boundingBoxInRootViewCoordinates();
     auto totalElementArea = elementRectInMainFrame.area<RecordOverflow>();
     if (totalElementArea.hasOverflowed())
         return false;
 
     elementRectInMainFrame.intersect(mainFrameRectAdjustedForScrollPosition);
 
-    return elementRectInMainFrame.area().unsafeGet() > totalElementArea.unsafeGet() / 2;
+    return elementRectInMainFrame.area() > totalElementArea / 2;
 }
 
 static bool isElementLargeRelativeToMainFrame(const HTMLMediaElement& element)
@@ -958,7 +1036,7 @@ static bool isElementLargeRelativeToMainFrame(const HTMLMediaElement& element)
     if (!renderer)
         return false;
 
-    auto documentFrame = makeRefPtr(element.document().frame());
+    RefPtr documentFrame = element.document().frame();
     if (!documentFrame)
         return false;
 
@@ -1028,8 +1106,7 @@ bool MediaElementSession::allowsPlaybackControlsForAutoplayingAudio() const
 #if ENABLE(MEDIA_SESSION)
 void MediaElementSession::didReceiveRemoteControlCommand(RemoteControlCommandType commandType, const RemoteCommandArgument& argument)
 {
-    auto* window = m_element.document().domWindow();
-    auto* session = window ? &NavigatorMediaSession::mediaSession(window->navigator()) : nullptr;
+    auto* session = mediaSession();
     if (!session || !session->hasActiveActionHandlers()) {
         PlatformMediaSession::didReceiveRemoteControlCommand(commandType, argument);
         return;
@@ -1051,10 +1128,10 @@ void MediaElementSession::didReceiveRemoteControlCommand(RemoteControlCommandTyp
     case TogglePlayPauseCommand:
         actionDetails.action = m_element.paused() ? MediaSessionAction::Play : MediaSessionAction::Pause;
         break;
-    case BeginScrubbing:
+    case BeginScrubbingCommand:
         m_isScrubbing = true;
         return;
-    case EndScrubbing:
+    case EndScrubbingCommand:
         m_isScrubbing = false;
         return;
     case SeekToPlaybackPositionCommand:
@@ -1089,14 +1166,11 @@ void MediaElementSession::didReceiveRemoteControlCommand(RemoteControlCommandTyp
         return;
     }
 
-    if (auto handler = session->handlerForAction(actionDetails.action))
-        handler->handleEvent(actionDetails);
-    else
-        ALWAYS_LOG(LOGIDENTIFIER, "Ignoring command, no action handler registered for ", actionDetails.action);
+    session->callActionHandler(actionDetails);
 }
 #endif
 
-Optional<NowPlayingInfo> MediaElementSession::nowPlayingInfo() const
+std::optional<NowPlayingInfo> MediaElementSession::nowPlayingInfo() const
 {
     auto* page = m_element.document().page();
     bool allowsNowPlayingControlsVisibility = page && !page->isVisibleAndActive();
@@ -1108,13 +1182,19 @@ Optional<NowPlayingInfo> MediaElementSession::nowPlayingInfo() const
         currentTime = MediaPlayer::invalidTime();
 
 #if ENABLE(MEDIA_SESSION)
-    auto* window = m_element.document().domWindow();
-    auto* sessionMetadata = window ? NavigatorMediaSession::mediaSession(window->navigator()).metadata() : nullptr;
-    if (sessionMetadata)
-        return NowPlayingInfo { sessionMetadata->title(), sessionMetadata->artist(), sessionMetadata->album(), m_element.sourceApplicationIdentifier(), duration, currentTime, supportsSeeking, m_element.mediaSessionUniqueIdentifier(), isPlaying, allowsNowPlayingControlsVisibility };
+    auto* session = mediaSession();
+    auto* sessionMetadata = session ? session->metadata() : nullptr;
+    if (sessionMetadata) {
+        std::optional<NowPlayingInfoArtwork> artwork;
+        if (sessionMetadata->artworkImage()) {
+            ASSERT(sessionMetadata->artworkImage()->data(), "An image must always have associated data");
+            artwork = NowPlayingInfoArtwork { sessionMetadata->artworkSrc(), sessionMetadata->artworkImage()->mimeType(), sessionMetadata->artworkImage()->data() };
+        }
+        return NowPlayingInfo { sessionMetadata->title(), sessionMetadata->artist(), sessionMetadata->album(), m_element.sourceApplicationIdentifier(), duration, currentTime, supportsSeeking, m_element.mediaUniqueIdentifier(), isPlaying, allowsNowPlayingControlsVisibility, WTFMove(artwork) };
+    }
 #endif
 
-    return NowPlayingInfo { m_element.mediaSessionTitle(), emptyString(), emptyString(), m_element.sourceApplicationIdentifier(), duration, currentTime, supportsSeeking, m_element.mediaSessionUniqueIdentifier(), isPlaying, allowsNowPlayingControlsVisibility };
+    return NowPlayingInfo { m_element.mediaSessionTitle(), emptyString(), emptyString(), m_element.sourceApplicationIdentifier(), duration, currentTime, supportsSeeking, m_element.mediaUniqueIdentifier(), isPlaying, allowsNowPlayingControlsVisibility, { }};
 }
 
 void MediaElementSession::updateMediaUsageIfChanged()
@@ -1152,7 +1232,7 @@ void MediaElementSession::updateMediaUsageIfChanged()
         isAudio && hasBehaviorRestriction(RequireUserGestureToControlControlsManager) && !processingUserGesture,
         m_element.hasAudio() && isPlaying && allowsPlaybackControlsForAutoplayingAudio(), // userHasPlayedAudioBefore
         isElementRectMostlyInMainFrame(m_element),
-        !!playbackPermitted(),
+        !!playbackStateChangePermitted(MediaPlaybackState::Playing),
         page->mediaPlaybackIsSuspended(),
         document.isMediaDocument() && !document.ownerElement(),
         pageExplicitlyAllowsElementToAutoplayInline(m_element),
@@ -1194,6 +1274,39 @@ String convertEnumerationToString(const MediaPlaybackDenialReason enumerationVal
     ASSERT(static_cast<size_t>(enumerationValue) < WTF_ARRAY_LENGTH(values));
     return values[static_cast<size_t>(enumerationValue)];
 }
+
+MediaSession* MediaElementSession::mediaSession() const
+{
+#if ENABLE(MEDIA_SESSION)
+    auto* window = m_element.document().domWindow();
+    if (!window)
+        return nullptr;
+    return &NavigatorMediaSession::mediaSession(window->navigator());
+#else
+    return nullptr;
+#endif
+}
+
+void MediaElementSession::ensureIsObservingMediaSession()
+{
+#if ENABLE(MEDIA_SESSION)
+    auto* session = mediaSession();
+    if (!session || m_observer)
+        return;
+    m_observer = makeUnique<MediaSessionObserver>(*this, *session);
+#endif
+}
+
+void MediaElementSession::metadataChanged(const RefPtr<MediaMetadata>&)
+{
+    clientCharacteristicsChanged();
+}
+
+void MediaElementSession::positionStateChanged(const std::optional<MediaPositionState>&) { }
+
+void MediaElementSession::playbackStateChanged(MediaSessionPlaybackState) { }
+
+void MediaElementSession::actionHandlersChanged() { }
 
 }
 

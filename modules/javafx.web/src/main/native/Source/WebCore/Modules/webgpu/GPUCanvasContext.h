@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,48 +25,37 @@
 
 #pragma once
 
-#if ENABLE(WEBGPU)
-
-#include "GPUBasedCanvasRenderingContext.h"
+#include "GPUTexture.h"
+#include "GPUTextureFormat.h"
 #include "HTMLCanvasElement.h"
-#include "WebGPUSwapChain.h"
+#include "OffscreenCanvas.h"
+#include <variant>
+#include <wtf/Ref.h>
+#include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
 
 namespace WebCore {
 
-struct WebGPUSwapChainDescriptor;
+class GPUAdapter;
+struct GPUCanvasConfiguration;
 
-class GPUCanvasContext final : public GPUBasedCanvasRenderingContext {
-    WTF_MAKE_ISO_ALLOCATED(GPUCanvasContext);
+class GPUCanvasContext : public RefCounted<GPUCanvasContext> {
 public:
-    static std::unique_ptr<GPUCanvasContext> create(CanvasBase&);
+    static Ref<GPUCanvasContext> create()
+    {
+        return adoptRef(*new GPUCanvasContext());
+    }
 
-    HTMLCanvasElement& canvas() const { return downcast<HTMLCanvasElement>(canvasBase()); }
+    RefPtr<HTMLCanvasElement> canvas();
 
-    WebGPUSwapChain* swapChain() const { return m_swapChain.get(); }
-    Ref<WebGPUSwapChain> configureSwapChain(const WebGPUSwapChainDescriptor&);
+    void configure(const GPUCanvasConfiguration&);
+    void unconfigure();
+
+    GPUTextureFormat getPreferredFormat(const GPUAdapter&);
+    RefPtr<GPUTexture> getCurrentTexture();
 
 private:
-    GPUCanvasContext(CanvasBase&);
-
-    // GPUBasedCanvasRenderingContext
-    bool isWebGPU() const final { return true; }
-    PlatformLayer* platformLayer() const final;
-    void reshape(int width, int height) final;
-    void prepareForDisplayWithPaint() final;
-    void paintRenderingResultsToCanvas() final;
-
-    // ActiveDOMObject.
-    const char* activeDOMObjectName() const final { return "GPUCanvasContext"; }
-    // FIXME: Stubs.
-    void stop() final { }
-
-    bool m_isDisplayingWithPaint { false };
-    RefPtr<WebGPUSwapChain> m_swapChain;
+    GPUCanvasContext() = default;
 };
 
-} // namespace WebCore
-
-SPECIALIZE_TYPE_TRAITS_CANVASRENDERINGCONTEXT(WebCore::GPUCanvasContext, isWebGPU())
-
-#endif // ENABLE(WEBGPU)
+}

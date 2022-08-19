@@ -27,6 +27,7 @@
 
 #if ENABLE(LAYOUT_FORMATTING_CONTEXT)
 
+#include "DisplayGeometryTypes.h"
 #include "DisplayStyle.h"
 #include "FloatRect.h"
 #include <wtf/IsoMalloc.h>
@@ -37,9 +38,6 @@ namespace Display {
 
 class ContainerBox;
 class Tree;
-
-// FIXME: Make this a strong type.
-using AbsoluteFloatRect = FloatRect;
 
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(Box);
 class Box {
@@ -53,14 +51,18 @@ public:
         LineBreakBox    = 1 << 4, // FIXME: Workaround for webkit.org/b/219335
     };
 
-    Box(Tree&, AbsoluteFloatRect, Style&&, OptionSet<TypeFlags> = { });
+    enum class StyleFlags : uint8_t {
+        HasTransform     = 1 << 0,
+    };
+
+    Box(Tree&, UnadjustedAbsoluteFloatRect, Style&&, OptionSet<TypeFlags> = { });
     virtual ~Box();
 
     const Style& style() const { return m_style; }
 
-    AbsoluteFloatRect absoluteBoxRect() const { return m_absoluteBoxRect; }
+    UnadjustedAbsoluteFloatRect absoluteBoxRect() const { return m_absoluteBoxRect; }
 
-    virtual AbsoluteFloatRect absolutePaintingExtent() const { return m_absoluteBoxRect; }
+    virtual UnadjustedAbsoluteFloatRect absolutePaintingExtent() const { return m_absoluteBoxRect; }
 
     bool isBoxModelBox() const { return m_typeFlags.contains(TypeFlags::BoxModelBox); }
     bool isContainerBox() const { return m_typeFlags.contains(TypeFlags::ContainerBox); }
@@ -77,7 +79,10 @@ public:
     const Box* nextSibling() const { return m_nextSibling.get(); }
     void setNextSibling(std::unique_ptr<Box>&&);
 
-    void setNeedsDisplay(Optional<AbsoluteFloatRect> subrect = WTF::nullopt);
+    void setHasTransform(bool value) { m_styleFlags.set(StyleFlags::HasTransform, value); }
+    bool hasTransform() const { return m_styleFlags.contains(StyleFlags::HasTransform); }
+
+    void setNeedsDisplay(std::optional<UnadjustedAbsoluteFloatRect> subrect = std::nullopt);
 
     virtual String debugDescription() const;
 
@@ -85,11 +90,12 @@ private:
     virtual const char* boxName() const;
 
     const Tree& m_tree;
-    AbsoluteFloatRect m_absoluteBoxRect;
+    UnadjustedAbsoluteFloatRect m_absoluteBoxRect;
     Style m_style;
     ContainerBox* m_parent { nullptr };
     std::unique_ptr<Box> m_nextSibling;
-    OptionSet<TypeFlags> m_typeFlags;
+    const OptionSet<TypeFlags> m_typeFlags;
+    OptionSet<StyleFlags> m_styleFlags;
 };
 
 } // namespace Display

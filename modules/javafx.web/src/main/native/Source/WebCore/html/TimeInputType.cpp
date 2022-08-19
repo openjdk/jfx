@@ -35,6 +35,7 @@
 #include "DateComponents.h"
 #include "DateTimeFieldsState.h"
 #include "Decimal.h"
+#include "ElementInlines.h"
 #include "HTMLInputElement.h"
 #include "HTMLNames.h"
 #include "InputTypeNames.h"
@@ -89,15 +90,15 @@ StepRange TimeInputType::createStepRange(AnyStepHandling anyStepHandling) const
     const Decimal minimum = parseToNumber(element()->attributeWithoutSynchronization(minAttr), Decimal::fromDouble(DateComponents::minimumTime()));
     const Decimal maximum = parseToNumber(element()->attributeWithoutSynchronization(maxAttr), Decimal::fromDouble(DateComponents::maximumTime()));
     const Decimal step = StepRange::parseStep(anyStepHandling, timeStepDescription, element()->attributeWithoutSynchronization(stepAttr));
-    return StepRange(stepBase, RangeLimitations::Valid, minimum, maximum, step, timeStepDescription);
+    return StepRange(stepBase, RangeLimitations::Valid, minimum, maximum, step, timeStepDescription, StepRange::IsReversible::Yes);
 }
 
-Optional<DateComponents> TimeInputType::parseToDateComponents(const StringView& source) const
+std::optional<DateComponents> TimeInputType::parseToDateComponents(StringView source) const
 {
     return DateComponents::fromParsingTime(source);
 }
 
-Optional<DateComponents> TimeInputType::setMillisecondToDateComponents(double value) const
+std::optional<DateComponents> TimeInputType::setMillisecondToDateComponents(double value) const
 {
     return DateComponents::fromMillisecondsSinceMidnight(value);
 }

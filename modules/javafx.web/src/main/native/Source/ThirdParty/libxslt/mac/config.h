@@ -53,7 +53,7 @@
 #define HAVE_LOCALE_H 1
 
 /* Define to 1 if you have the `localtime' function. */
-
+#define HAVE_LOCALTIME 1
 
 /* Define to 1 if you have the `localtime_r' function. */
 #define HAVE_LOCALTIME_R 1
@@ -61,8 +61,8 @@
 /* Define to 1 if you have the <math.h> header file. */
 #define HAVE_MATH_H 1
 
-/* Define to 1 if you have the <memory.h> header file. */
-#define HAVE_MEMORY_H 1
+/* Define to 1 if you have the <minix/config.h> header file. */
+/* #undef HAVE_MINIX_CONFIG_H */
 
 /* Define to 1 if you have the <nan.h> header file. */
 /* #undef HAVE_NAN_H */
@@ -93,6 +93,9 @@
 
 /* Define to 1 if you have the <stdint.h> header file. */
 #define HAVE_STDINT_H 1
+
+/* Define to 1 if you have the <stdio.h> header file. */
+#define HAVE_STDIO_H 1
 
 /* Define to 1 if you have the <stdlib.h> header file. */
 #define HAVE_STDLIB_H 1
@@ -139,6 +142,9 @@
 /* Define to 1 if you have the `vsprintf' function. */
 #define HAVE_VSPRINTF 1
 
+/* Define to 1 if you have the <wchar.h> header file. */
+#define HAVE_WCHAR_H 1
+
 /* Define to 1 if you have the <xlocale.h> header file. */
 #define HAVE_XLOCALE_H 1
 
@@ -158,7 +164,7 @@
 #define PACKAGE_NAME "libxslt"
 
 /* Define to the full name and version of this package. */
-#define PACKAGE_STRING "libxslt 1.1.34"
+#define PACKAGE_STRING "libxslt 1.1.35"
 
 /* Define to the one symbol short name of this package. */
 #define PACKAGE_TARNAME "libxslt"
@@ -167,9 +173,11 @@
 #define PACKAGE_URL ""
 
 /* Define to the version of this package. */
-#define PACKAGE_VERSION "1.1.34"
+#define PACKAGE_VERSION "1.1.35"
 
-/* Define to 1 if you have the ANSI C header files. */
+/* Define to 1 if all of the C90 standard headers exist (not just the ones
+   required in a freestanding environment). This macro is provided for
+   backward compatibility; new code need not use it. */
 #define STDC_HEADERS 1
 
 /* Enable extensions on AIX 3, Interix.  */
@@ -195,7 +203,7 @@
 
 
 /* Version number of package */
-#define VERSION "1.1.34"
+#define VERSION "1.1.35"
 
 /* Define if debugging support is enabled */
 /* #undef WITH_DEBUGGER */

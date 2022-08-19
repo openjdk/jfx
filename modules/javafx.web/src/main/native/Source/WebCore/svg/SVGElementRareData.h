@@ -19,6 +19,7 @@
 
 #pragma once
 
+#include "SVGResourceElementClient.h"
 #include "StyleProperties.h"
 #include "StyleResolver.h"
 #include <wtf/HashSet.h>
@@ -41,13 +42,25 @@ public:
     {
     }
 
-    HashSet<SVGElement*>& instances() { return m_instances; }
-    const HashSet<SVGElement*>& instances() const { return m_instances; }
+    void addInstance(SVGElement& element) { m_instances.add(element); }
+    void removeInstance(SVGElement& element) { m_instances.remove(element); }
+    const WeakHashSet<SVGElement>& instances() const { return m_instances; }
 
     bool instanceUpdatesBlocked() const { return m_instancesUpdatesBlocked; }
     void setInstanceUpdatesBlocked(bool value) { m_instancesUpdatesBlocked = value; }
 
-    SVGElement* correspondingElement() { return m_correspondingElement; }
+    void addReferencingElement(SVGElement& element) { m_referencingElements.add(element); }
+    void removeReferencingElement(SVGElement& element) { m_referencingElements.remove(element); }
+    const WeakHashSet<SVGElement>& referencingElements() const { return m_referencingElements; }
+    WeakHashSet<SVGElement> takeReferencingElements() { return std::exchange(m_referencingElements, { }); }
+    SVGElement* referenceTarget() const { return m_referenceTarget.get(); }
+    void setReferenceTarget(WeakPtr<SVGElement>&& element) { m_referenceTarget = WTFMove(element); }
+
+    void addReferencingCSSClient(SVGResourceElementClient& client) { m_referencingCSSClients.add(client); }
+    void removeReferencingCSSClient(SVGResourceElementClient& client) { m_referencingCSSClients.remove(client); }
+    const WeakHashSet<SVGResourceElementClient>& referencingCSSClients() const { return m_referencingCSSClients; }
+
+    SVGElement* correspondingElement() { return m_correspondingElement.get(); }
     void setCorrespondingElement(SVGElement* correspondingElement) { m_correspondingElement = correspondingElement; }
 
     MutableStyleProperties* animatedSMILStyleProperties() const { return m_animatedSMILStyleProperties.get(); }
@@ -64,7 +77,7 @@ public:
             return nullptr;
         if (!m_overrideComputedStyle || m_needsOverrideComputedStyleUpdate) {
             // The style computed here contains no CSS Animations/Transitions or SMIL induced rules - this is needed to compute the "base value" for the SMIL animation sandwhich model.
-            m_overrideComputedStyle = element.styleResolver().styleForElement(element, parentStyle, nullptr, RuleMatchingBehavior::MatchAllRulesExcludingSMIL).renderStyle;
+            m_overrideComputedStyle = element.styleResolver().styleForElement(element, { parentStyle }, RuleMatchingBehavior::MatchAllRulesExcludingSMIL).renderStyle;
             m_needsOverrideComputedStyleUpdate = false;
         }
         ASSERT(m_overrideComputedStyle);
@@ -76,8 +89,13 @@ public:
     void setNeedsOverrideComputedStyleUpdate() { m_needsOverrideComputedStyleUpdate = true; }
 
 private:
-    HashSet<SVGElement*> m_instances;
-    SVGElement* m_correspondingElement { nullptr };
+    WeakHashSet<SVGElement> m_referencingElements;
+    WeakPtr<SVGElement> m_referenceTarget;
+
+    WeakHashSet<SVGResourceElementClient> m_referencingCSSClients;
+
+    WeakHashSet<SVGElement> m_instances;
+    WeakPtr<SVGElement> m_correspondingElement;
     bool m_instancesUpdatesBlocked : 1;
     bool m_useOverrideComputedStyle : 1;
     bool m_needsOverrideComputedStyleUpdate : 1;

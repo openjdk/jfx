@@ -109,13 +109,13 @@ void PageGroup::captionPreferencesChanged()
     BackForwardCache::singleton().markPagesForCaptionPreferencesChanged();
 }
 
-CaptionUserPreferences& PageGroup::captionPreferences()
+CaptionUserPreferences& PageGroup::ensureCaptionPreferences()
 {
     if (!m_captionPreferences) {
 #if PLATFORM(MAC) || HAVE(MEDIA_ACCESSIBILITY_FRAMEWORK)
-        m_captionPreferences = makeUnique<CaptionUserPreferencesMediaAF>(*this);
+        m_captionPreferences = CaptionUserPreferencesMediaAF::create(*this);
 #else
-        m_captionPreferences = makeUnique<CaptionUserPreferences>(*this);
+        m_captionPreferences = CaptionUserPreferences::create(*this);
 #endif
     }
 

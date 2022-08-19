@@ -31,7 +31,7 @@
 #include "B3PCToOriginMap.h"
 #include "DFGNode.h"
 #include "LinkBuffer.h"
-#include <wtf/Optional.h>
+#include "WasmOpcodeOrigin.h"
 
 #if COMPILER(MSVC)
 // See https://msdn.microsoft.com/en-us/library/4wz07268.aspx
@@ -100,20 +100,17 @@ private:
 } // anonymous namespace
 
 PCToCodeOriginMapBuilder::PCToCodeOriginMapBuilder(VM& vm)
-    : m_vm(vm)
-    , m_shouldBuildMapping(vm.shouldBuilderPCToCodeOriginMapping())
+    : m_shouldBuildMapping(vm.shouldBuilderPCToCodeOriginMapping())
 { }
 
 PCToCodeOriginMapBuilder::PCToCodeOriginMapBuilder(PCToCodeOriginMapBuilder&& other)
-    : m_vm(other.m_vm)
-    , m_codeRanges(WTFMove(other.m_codeRanges))
+    : m_codeRanges(WTFMove(other.m_codeRanges))
     , m_shouldBuildMapping(other.m_shouldBuildMapping)
 { }
 
 #if ENABLE(FTL_JIT)
-PCToCodeOriginMapBuilder::PCToCodeOriginMapBuilder(VM& vm, B3::PCToOriginMap&& b3PCToOriginMap)
-    : m_vm(vm)
-    , m_shouldBuildMapping(vm.shouldBuilderPCToCodeOriginMapping())
+PCToCodeOriginMapBuilder::PCToCodeOriginMapBuilder(JSTag, VM& vm, B3::PCToOriginMap b3PCToOriginMap)
+    : m_shouldBuildMapping(vm.shouldBuilderPCToCodeOriginMapping())
 {
     if (!m_shouldBuildMapping)
         return;
@@ -123,6 +120,22 @@ PCToCodeOriginMapBuilder::PCToCodeOriginMapBuilder(VM& vm, B3::PCToOriginMap&& b
         if (node)
             appendItem(originRange.label, node->origin.semantic);
         else
+            appendItem(originRange.label, PCToCodeOriginMapBuilder::defaultCodeOrigin());
+    }
+}
+#endif
+
+#if ENABLE(WEBASSEMBLY_B3JIT)
+PCToCodeOriginMapBuilder::PCToCodeOriginMapBuilder(WasmTag, B3::PCToOriginMap b3PCToOriginMap)
+    : m_shouldBuildMapping(true)
+{
+    for (const B3::PCToOriginMap::OriginRange& originRange : b3PCToOriginMap.ranges()) {
+        B3::Origin b3Origin = originRange.origin;
+        if (b3Origin) {
+            Wasm::OpcodeOrigin wasmOrigin { b3Origin };
+            // We stash the location into a BytecodeIndex.
+            appendItem(originRange.label, CodeOrigin(BytecodeIndex(wasmOrigin.location())));
+        } else
             appendItem(originRange.label, PCToCodeOriginMapBuilder::defaultCodeOrigin());
     }
 }
@@ -247,11 +260,11 @@ double PCToCodeOriginMap::memorySize()
     return size;
 }
 
-Optional<CodeOrigin> PCToCodeOriginMap::findPC(void* pc) const
+std::optional<CodeOrigin> PCToCodeOriginMap::findPC(void* pc) const
 {
     uintptr_t pcAsInt = bitwise_cast<uintptr_t>(pc);
     if (!(m_pcRangeStart <= pcAsInt && pcAsInt <= m_pcRangeEnd))
-        return WTF::nullopt;
+        return std::nullopt;
 
     uintptr_t currentPC = 0;
     BytecodeIndex currentBytecodeIndex = BytecodeIndex(0);
@@ -295,12 +308,12 @@ Optional<CodeOrigin> PCToCodeOriginMap::findPC(void* pc) const
             // We subtract 1 because we generate end points inclusively in this table, even though we are interested in ranges of the form: [previousPC, currentPC)
             uintptr_t endOfRange = currentPC - 1;
             if (startOfRange <= pcAsInt && pcAsInt <= endOfRange)
-                return Optional<CodeOrigin>(previousOrigin); // We return previousOrigin here because CodeOrigin's are mapped to the startValue of the range.
+                return std::optional<CodeOrigin>(previousOrigin); // We return previousOrigin here because CodeOrigin's are mapped to the startValue of the range.
         }
     }
 
     RELEASE_ASSERT_NOT_REACHED();
-    return WTF::nullopt;
+    return std::nullopt;
 }
 
 } // namespace JSC

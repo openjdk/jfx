@@ -27,6 +27,8 @@
 
 #include <memory>
 #include <wtf/Assertions.h>
+#include <wtf/GetPtr.h>
+#include <wtf/TypeCasts.h>
 
 namespace WTF {
 
@@ -46,9 +48,9 @@ UniqueRef<T> makeUniqueRef(Args&&... args)
 }
 
 template<typename T>
-UniqueRef<T> makeUniqueRefFromNonNullUniquePtr(std::unique_ptr<T> ptr)
+UniqueRef<T> makeUniqueRefFromNonNullUniquePtr(std::unique_ptr<T>&& ptr)
 {
-    return UniqueRef<T>(*ptr.release());
+    return UniqueRef<T>(WTFMove(ptr));
 }
 
 template<typename T>
@@ -60,6 +62,15 @@ public:
     {
         ASSERT(m_ref);
     }
+
+    explicit UniqueRef(T& other)
+        : m_ref(&other)
+    {
+        ASSERT(m_ref);
+    }
+
+    T* ptr() RETURNS_NONNULL { ASSERT(m_ref); return m_ref.get(); }
+    T* ptr() const RETURNS_NONNULL { ASSERT(m_ref); return m_ref.get(); }
 
     T& get() { ASSERT(m_ref); return *m_ref; }
     const T& get() const { ASSERT(m_ref); return *m_ref; }
@@ -77,17 +88,40 @@ public:
 
 private:
     template<class U, class... Args> friend UniqueRef<U> makeUniqueRefWithoutFastMallocCheck(Args&&...);
-    template<class U> friend UniqueRef<U> makeUniqueRefFromNonNullUniquePtr(std::unique_ptr<U>);
+    template<class U> friend UniqueRef<U> makeUniqueRefFromNonNullUniquePtr(std::unique_ptr<U>&&);
     template<class U> friend class UniqueRef;
 
-    UniqueRef(T& other)
-        : m_ref(&other)
+    explicit UniqueRef(std::unique_ptr<T>&& ptr)
+        : m_ref(WTFMove(ptr))
     {
         ASSERT(m_ref);
     }
 
     std::unique_ptr<T> m_ref;
 };
+
+template <typename T>
+struct GetPtrHelper<UniqueRef<T>> {
+    using PtrType = T*;
+    static T* getPtr(const UniqueRef<T>& p) { return const_cast<T*>(p.ptr()); }
+};
+
+template <typename T>
+struct IsSmartPtr<UniqueRef<T>> {
+    static constexpr bool value = true;
+};
+
+template<typename ExpectedType, typename ArgType>
+inline bool is(UniqueRef<ArgType>& source)
+{
+    return is<ExpectedType>(source.get());
+}
+
+template<typename ExpectedType, typename ArgType>
+inline bool is(const UniqueRef<ArgType>& source)
+{
+    return is<ExpectedType>(source.get());
+}
 
 } // namespace WTF
 

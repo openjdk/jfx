@@ -28,6 +28,142 @@
 
 G_BEGIN_DECLS
 
+/**
+ * _GST_ELEMENT_REGISTER_DEFINE_BEGIN: (attributes doc.skip=true)
+ */
+#define _GST_ELEMENT_REGISTER_DEFINE_BEGIN(element) \
+G_BEGIN_DECLS \
+gboolean G_PASTE (gst_element_register_, element) (GstPlugin * plugin) \
+{ \
+  {
+
+/**
+ * _GST_ELEMENT_REGISTER_DEFINE_END: (attributes doc.skip=true)
+ */
+#define _GST_ELEMENT_REGISTER_DEFINE_END(element_name, rank, type) \
+  } \
+  return gst_element_register (plugin, element_name, rank, type); \
+} \
+G_END_DECLS
+
+/**
+ * GST_ELEMENT_REGISTER_DEFINE_CUSTOM:
+ * @element: The element name in lower case, with words separated by '_'.
+ * Used to generate `gst_element_register_*(GstPlugin* plugin)`.
+ * @register_func: pointer to a method with the format: `gboolean register_func (GstPlugin* plugin);`
+ *
+ * A convenience macro to define the entry point of an
+ * element `gst_element_register_*(GstPlugin* plugin)` which uses
+ * register_func as the main registration method for the element.
+ * As an example, you may define the element named "streamer-filter"
+ * with the namespace `my` as following using `element_register_custom`:
+ *
+ * ```
+ * GST_ELEMENT_REGISTER_DEFINE_CUSTOM (my_element, element_register_custom)
+ * ```
+ *
+ * Since: 1.20
+ */
+#define GST_ELEMENT_REGISTER_DEFINE_CUSTOM(element, register_func) \
+G_BEGIN_DECLS \
+gboolean G_PASTE (gst_element_register_, element) (GstPlugin * plugin) \
+{ \
+  return register_func (plugin); \
+} \
+G_END_DECLS
+
+/**
+ * GST_ELEMENT_REGISTER_DEFINE:
+ * @e: The element name in lower case, with words separated by '_'.
+ * Used to generate `gst_element_register_*(GstPlugin* plugin)`.
+ * @e_n: The public name of the element
+ * @r: The #GstRank of the element (higher rank means more importance when autoplugging, see #GstRank)
+ * @t: The #GType of the element.
+ *
+ * A convenience macro to define the entry point of an
+ * element `gst_element_register_*(GstPlugin* plugin)`.
+ * As an example, you may define the element named "streamer-filter"
+ * with the namespace `my` as following:
+ *
+ * ```
+ * GST_ELEMENT_REGISTER_REGISTER_DEFINE (stream_filter, "stream-filter", GST_RANK_PRIMARY, MY_TYPE_STREAM_FILTER)
+ * ```
+ *
+ * Since: 1.20
+ */
+#define GST_ELEMENT_REGISTER_DEFINE(e, e_n, r, t) _GST_ELEMENT_REGISTER_DEFINE_BEGIN(e) _GST_ELEMENT_REGISTER_DEFINE_END(e_n, r, t)
+
+/**
+ * GST_ELEMENT_REGISTER_DEFINE_WITH_CODE:
+ * @e: The element name in lower case, with words separated by '_'.
+ * Used to generate `gst_element_register_*(GstPlugin* plugin)`.
+ * @e_n: The public name of the element
+ * @r: The #GstRank of the element (higher rank means more importance when autoplugging, see #GstRank)
+ * @t: The #GType of the element.
+ * @_c_: Custom code that gets inserted in the gst_element_register_*() function.
+ *
+ * A convenience macro to define the entry point of an
+ * element `gst_element_register_*(GstPlugin* plugin)` executing code
+ * before gst_element_register in `gst_element_register_*(GstPlugin* plugin)`.
+
+ * As an example, you may define the element named "stream-filter"
+ * with the namespace `my` as following:
+ *
+ * ```
+ * #define _pre_register_init \
+ *   my_stream_filter_pre_register (plugin);
+ * GST_ELEMENT_REGISTER_DEFINE_WITH_CODE (stream_filter, "stream-filter", GST_RANK_PRIMARY, MY_TYPE_STREAM_FILTER, _pre_register_init)
+ * ```
+ *
+ * Since: 1.20
+ */
+#define GST_ELEMENT_REGISTER_DEFINE_WITH_CODE(e, e_n, r, t, _c_) _GST_ELEMENT_REGISTER_DEFINE_BEGIN(e) {_c_;} _GST_ELEMENT_REGISTER_DEFINE_END(e_n, r, t)
+
+/**
+ * GST_ELEMENT_REGISTER_DECLARE:
+ * @element: The element name in lower case, with words separated by '_'.
+ *
+ * This macro can be used to declare a new element.
+ * It has to be used in combination with #GST_ELEMENT_REGISTER_DEFINE macros
+ * and must be placed outside any block to declare the element registration
+ * function.
+ * As an example, you may declare the element named "stream-filter"
+ * with the namespace `my` as following:
+ *
+ * ```
+ * GST_ELEMENT_REGISTER_DECLARE (stream_filter)
+ * ```
+ *
+ * Since: 1.20
+ */
+#define GST_ELEMENT_REGISTER_DECLARE(element) \
+G_BEGIN_DECLS \
+gboolean G_PASTE(gst_element_register_, element) (GstPlugin * plugin); \
+G_END_DECLS
+
+/**
+ * GST_ELEMENT_REGISTER:
+ * @element: The element name in lower case, with words separated by '_'.
+ * @plugin: The #GstPlugin where to register the element.
+ *
+ * This macro can be used to register an element into a #GstPlugin.
+ * This method will be usually called in the plugin init function
+ * but can also be called with a NULL plugin,
+ * for example with a static registration of the element.
+ * It has to be used in combination with #GST_ELEMENT_REGISTER_DECLARE.
+ *
+ * ```
+ * GstPlugin* plugin;
+ *
+ * ...
+ *
+ * GST_ELEMENT_REGISTER (stream_filter, plugin);
+ * ```
+ *
+ * Since: 1.20
+ */
+#define GST_ELEMENT_REGISTER(element, plugin) G_PASTE(gst_element_register_, element) (plugin)
+
 /* gstelement.h and gstelementfactory.h include each other */
 typedef struct _GstElement GstElement;
 typedef struct _GstElementClass GstElementClass;
@@ -348,7 +484,7 @@ typedef enum
 #define GST_ELEMENT_START_TIME(elem)            (GST_ELEMENT_CAST(elem)->start_time)
 
 GST_API
-GstStructure *gst_make_element_message_details (const char *name, ...);
+GstStructure *gst_make_element_message_details (const char *name, ...) G_GNUC_NULL_TERMINATED;
 
 #define GST_ELEMENT_MESSAGE_MAKE_DETAILS(args) gst_make_element_message_details args
 
@@ -902,8 +1038,11 @@ void                    gst_element_no_more_pads        (GstElement *element);
 GST_API
 GstPad*                 gst_element_get_static_pad      (GstElement *element, const gchar *name);
 
-GST_API
+GST_API G_DEPRECATED_FOR(gst_element_request_pad_simple)
 GstPad*                 gst_element_get_request_pad     (GstElement *element, const gchar *name);
+
+GST_API
+GstPad*                 gst_element_request_pad_simple  (GstElement *element, const gchar *name);
 
 GST_API
 GstPad*                 gst_element_request_pad         (GstElement *element, GstPadTemplate *templ,

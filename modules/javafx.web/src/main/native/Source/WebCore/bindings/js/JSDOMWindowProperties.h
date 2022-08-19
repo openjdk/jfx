@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -37,7 +37,7 @@ public:
 
     static constexpr bool needsDestruction = false;
     template<typename CellType, JSC::SubspaceAccess>
-    static JSC::IsoSubspace* subspaceFor(JSC::VM& vm)
+    static JSC::GCClient::IsoSubspace* subspaceFor(JSC::VM& vm)
     {
         static_assert(CellType::destroy == JSC::JSCell::destroy, "JSDOMWindowProperties is not destructible actually");
         return subspaceForImpl(vm);
@@ -45,8 +45,8 @@ public:
 
     static JSDOMWindowProperties* create(JSC::Structure* structure, JSC::JSGlobalObject& globalObject)
     {
-        JSDOMWindowProperties* ptr = new (NotNull, JSC::allocateCell<JSDOMWindowProperties>(globalObject.vm().heap)) JSDOMWindowProperties(structure, globalObject);
-        ptr->finishCreation(globalObject.vm());
+        JSDOMWindowProperties* ptr = new (NotNull, JSC::allocateCell<JSDOMWindowProperties>(globalObject.vm())) JSDOMWindowProperties(structure, globalObject);
+        ptr->finishCreation(globalObject);
         return ptr;
     }
 
@@ -59,6 +59,11 @@ public:
 
     static bool getOwnPropertySlot(JSC::JSObject*, JSC::JSGlobalObject*, JSC::PropertyName, JSC::PropertySlot&);
     static bool getOwnPropertySlotByIndex(JSC::JSObject*, JSC::JSGlobalObject*, unsigned propertyName, JSC::PropertySlot&);
+    static bool deleteProperty(JSC::JSCell*, JSC::JSGlobalObject*, JSC::PropertyName, JSC::DeletePropertySlot&);
+    static bool deletePropertyByIndex(JSC::JSCell*, JSC::JSGlobalObject*, unsigned propertyName);
+    static bool preventExtensions(JSC::JSObject*, JSC::JSGlobalObject*);
+    static bool isExtensible(JSC::JSObject*, JSC::JSGlobalObject*);
+    static bool defineOwnProperty(JSC::JSObject*, JSC::JSGlobalObject*, JSC::PropertyName, const JSC::PropertyDescriptor&, bool shouldThrow);
 
 private:
     JSDOMWindowProperties(JSC::Structure* structure, JSC::JSGlobalObject& globalObject)
@@ -66,8 +71,8 @@ private:
     {
     }
 
-    void finishCreation(JSC::VM&);
-    static JSC::IsoSubspace* subspaceForImpl(JSC::VM&);
+    void finishCreation(JSC::JSGlobalObject&);
+    static JSC::GCClient::IsoSubspace* subspaceForImpl(JSC::VM&);
 };
 
 } // namespace WebCore

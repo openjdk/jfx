@@ -27,7 +27,7 @@
  * if you need to check at runtime what version of the gst-plugins-base
  * libraries are being used / you are currently linked against.
  *
- * The version macros get defined by including &lt;gst/pbutils/pbutils.h&gt;.
+ * The version macros get defined by including <gst/pbutils/pbutils.h>.
  */
 #ifdef HAVE_CONFIG_H
 #include "config.h"

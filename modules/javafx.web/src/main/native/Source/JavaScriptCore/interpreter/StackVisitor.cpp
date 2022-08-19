@@ -34,7 +34,7 @@
 #include "WasmCallee.h"
 #include "WasmIndexOrName.h"
 #include "WebAssemblyFunction.h"
-#include <wtf/text/StringBuilder.h>
+#include <wtf/text/StringConcatenateNumbers.h>
 
 namespace JSC {
 
@@ -166,23 +166,20 @@ void StackVisitor::readNonInlinedFrame(CallFrame* callFrame, CodeOrigin* codeOri
     m_frame.m_inlineCallFrame = nullptr;
 #endif
 
-#if ENABLE(WEBASSEMBLY)
-    if (callFrame->isAnyWasmCallee()) {
-        m_frame.m_isWasmFrame = true;
-        m_frame.m_codeBlock = nullptr;
-        m_frame.m_bytecodeIndex = BytecodeIndex();
-
-        if (m_frame.m_callee.isWasm())
-            m_frame.m_wasmFunctionIndexOrName = m_frame.m_callee.asWasmCallee()->indexOrName();
-
-        return;
-    }
-#endif
     m_frame.m_codeBlock = callFrame->codeBlock();
     m_frame.m_bytecodeIndex = !m_frame.codeBlock() ? BytecodeIndex(0)
         : codeOrigin ? codeOrigin->bytecodeIndex()
         : callFrame->bytecodeIndex();
 
+#if ENABLE(WEBASSEMBLY)
+    if (callFrame->isAnyWasmCallee()) {
+        m_frame.m_isWasmFrame = true;
+        m_frame.m_codeBlock = nullptr;
+
+        if (m_frame.m_callee.isWasm())
+            m_frame.m_wasmFunctionIndexOrName = m_frame.m_callee.asWasmCallee()->indexOrName();
+    }
+#endif
 }
 
 #if ENABLE(DFG_JIT)
@@ -251,19 +248,19 @@ StackVisitor::Frame::CodeType StackVisitor::Frame::codeType() const
 }
 
 #if ENABLE(ASSEMBLER)
-Optional<RegisterAtOffsetList> StackVisitor::Frame::calleeSaveRegistersForUnwinding()
+std::optional<RegisterAtOffsetList> StackVisitor::Frame::calleeSaveRegistersForUnwinding()
 {
     if (!NUMBER_OF_CALLEE_SAVES_REGISTERS)
-        return WTF::nullopt;
+        return std::nullopt;
 
     if (isInlinedFrame())
-        return WTF::nullopt;
+        return std::nullopt;
 
 #if ENABLE(WEBASSEMBLY)
     if (isWasmFrame()) {
         if (callee().isCell()) {
             RELEASE_ASSERT(isWebAssemblyModule(callee().asCell()));
-            return WTF::nullopt;
+            return std::nullopt;
         }
         Wasm::Callee* wasmCallee = callee().asWasmCallee();
         return *wasmCallee->calleeSaveRegisters();
@@ -276,9 +273,9 @@ Optional<RegisterAtOffsetList> StackVisitor::Frame::calleeSaveRegistersForUnwind
 #endif // ENABLE(WEBASSEMBLY)
 
     if (CodeBlock* codeBlock = this->codeBlock())
-        return *codeBlock->calleeSaveRegisters();
+        return *codeBlock->jitCode()->calleeSaveRegisters();
 
-    return WTF::nullopt;
+    return std::nullopt;
 }
 #endif // ENABLE(ASSEMBLER)
 
@@ -338,28 +335,20 @@ String StackVisitor::Frame::sourceURL() const
 
 String StackVisitor::Frame::toString() const
 {
-    StringBuilder traceBuild;
     String functionName = this->functionName();
     String sourceURL = this->sourceURL();
-    traceBuild.append(functionName);
-    if (!sourceURL.isEmpty()) {
-        if (!functionName.isEmpty())
-            traceBuild.append('@');
-        traceBuild.append(sourceURL);
-        if (hasLineAndColumnInfo()) {
-            unsigned line = 0;
-            unsigned column = 0;
-            computeLineAndColumn(line, column);
-            traceBuild.append(':');
-            traceBuild.appendNumber(line);
-            traceBuild.append(':');
-            traceBuild.appendNumber(column);
-        }
-    }
-    return traceBuild.toString().impl();
+    const char* separator = !sourceURL.isEmpty() && !functionName.isEmpty() ? "@" : "";
+
+    if (sourceURL.isEmpty() || !hasLineAndColumnInfo())
+        return makeString(functionName, separator, sourceURL);
+
+    unsigned line = 0;
+    unsigned column = 0;
+    computeLineAndColumn(line, column);
+    return makeString(functionName, separator, sourceURL, ':', line, ':', column);
 }
 
-intptr_t StackVisitor::Frame::sourceID()
+SourceID StackVisitor::Frame::sourceID()
 {
     if (CodeBlock* codeBlock = this->codeBlock())
         return codeBlock->ownerExecutable()->sourceID();
@@ -413,7 +402,7 @@ void StackVisitor::Frame::computeLineAndColumn(unsigned& line, unsigned& column)
     line = divotLine + codeBlock->ownerExecutable()->firstLine();
     column = divotColumn + (divotLine ? 1 : codeBlock->firstLineColumnOffset());
 
-    if (Optional<int> overrideLineNumber = codeBlock->ownerExecutable()->overrideLineNumber(codeBlock->vm()))
+    if (std::optional<int> overrideLineNumber = codeBlock->ownerExecutable()->overrideLineNumber(codeBlock->vm()))
         line = overrideLineNumber.value();
 }
 

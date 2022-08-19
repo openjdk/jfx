@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -154,7 +154,13 @@ public abstract class ObjectBinding<T> extends ObjectExpression<T> implements
     @Override
     public final T get() {
         if (!valid) {
-            value = computeValue();
+            T computed = computeValue();
+
+            if (!allowValidation()) {
+                return computed;
+            }
+
+            value = computed;
             valid = true;
         }
         return value;
@@ -174,12 +180,50 @@ public abstract class ObjectBinding<T> extends ObjectExpression<T> implements
             valid = false;
             onInvalidating();
             ExpressionHelper.fireValueChangedEvent(helper);
+
+            /*
+             * Cached value should be cleared to avoid a strong reference to stale data,
+             * but only if this binding didn't become valid after firing the event:
+             */
+
+            if (!valid) {
+                value = null;
+            }
         }
     }
 
     @Override
     public final boolean isValid() {
         return valid;
+    }
+
+    /**
+     * Checks if the binding has at least one listener registered on it. This
+     * is useful for subclasses which want to conserve resources when not observed.
+     *
+     * @return {@code true} if this binding currently has one or more
+     *     listeners registered on it, otherwise {@code false}
+     * @since 19
+     */
+    protected final boolean isObserved() {
+        return helper != null;
+    }
+
+    /**
+     * Checks if the binding is allowed to become valid. Overriding classes can
+     * prevent a binding from becoming valid. This is useful in subclasses which
+     * do not always listen for invalidations of their dependencies and prefer to
+     * recompute the current value instead. This can also be useful if caching of
+     * the current computed value is not desirable.
+     * <p>
+     * The default implementation always allows bindings to become valid.
+     *
+     * @return {@code true} if this binding is allowed to become valid, otherwise
+     *     {@code false}
+     * @since 19
+     */
+    protected boolean allowValidation() {
+        return true;
     }
 
     /**

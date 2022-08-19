@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -22,15 +22,18 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
-// https://gpuweb.github.io/gpuweb
 
-typedef unsigned long long u64;
-typedef unsigned long GPUBufferUsageFlags;
+// https://gpuweb.github.io/gpuweb/#dictdef-gpubufferdescriptor
+
+// https://bugs.webkit.org/show_bug.cgi?id=232548 These shouldn't need to be here.
+typedef [EnforceRange] unsigned long long GPUSize64;
+typedef [EnforceRange] unsigned long GPUBufferUsageFlags;
 
 [
-    Conditional=WEBGPU,
-    EnabledAtRuntime=WebGPU
-] dictionary GPUBufferDescriptor {
-    required u64 size;
+    EnabledBySetting=WebGPU
+]
+dictionary GPUBufferDescriptor : GPUObjectDescriptorBase {
+    required GPUSize64 size;
     required GPUBufferUsageFlags usage;
+    boolean mappedAtCreation = false;
 };

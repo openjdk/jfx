@@ -76,9 +76,9 @@ void PaintWorklet::addModule(const String& moduleURL, WorkletOptions&&, DOMPromi
     auto context = maybeContext.releaseNonNull();
     context->evaluate();
 
-    auto locker = holdLock(context->paintDefinitionLock());
+    Locker locker { context->paintDefinitionLock() };
     for (auto& name : context->paintDefinitionMap().keys())
-        document->setPaintWorkletGlobalScopeForName(name, makeRef(context.get()));
+        document->setPaintWorkletGlobalScopeForName(name, context.copyRef());
     promise.resolve();
 }
 

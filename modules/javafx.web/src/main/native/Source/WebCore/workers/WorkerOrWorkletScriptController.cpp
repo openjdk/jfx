@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2020 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008-2021 Apple Inc. All Rights Reserved.
  * Copyright (C) 2011, 2012 Google Inc. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,6 +27,7 @@
 #include "config.h"
 #include "WorkerOrWorkletScriptController.h"
 
+#include "CommonVM.h"
 #include "DedicatedWorkerGlobalScope.h"
 #include "EventLoop.h"
 #include "JSAudioWorkletGlobalScope.h"
@@ -36,14 +37,18 @@
 #include "JSExecState.h"
 #include "JSPaintWorkletGlobalScope.h"
 #include "JSServiceWorkerGlobalScope.h"
+#include "JSSharedWorkerGlobalScope.h"
 #include "ModuleFetchFailureKind.h"
 #include "ModuleFetchParameters.h"
 #include "ScriptSourceCode.h"
 #include "WebCoreJSClientData.h"
 #include "WorkerConsoleClient.h"
 #include "WorkerModuleScriptLoader.h"
+#include "WorkerOrWorkletThread.h"
+#include "WorkerRunLoop.h"
 #include "WorkerScriptFetcher.h"
 #include <JavaScriptCore/Completion.h>
+#include <JavaScriptCore/DeferTermination.h>
 #include <JavaScriptCore/DeferredWorkTimer.h>
 #include <JavaScriptCore/Exception.h>
 #include <JavaScriptCore/ExceptionHelpers.h>
@@ -56,6 +61,7 @@
 #include <JavaScriptCore/JSScriptFetcher.h>
 #include <JavaScriptCore/ScriptCallStack.h>
 #include <JavaScriptCore/StrongInlines.h>
+#include <JavaScriptCore/VMTrapsInlines.h>
 
 namespace WebCore {
 
@@ -66,13 +72,16 @@ WorkerOrWorkletScriptController::WorkerOrWorkletScriptController(WorkerThreadTyp
     , m_globalScope(globalScope)
     , m_globalScopeWrapper(*m_vm)
 {
-    m_vm->heap.acquireAccess(); // It's not clear that we have good discipline for heap access, so turn it on permanently.
-    JSVMClientData::initNormalWorld(m_vm.get(), type);
-}
+    if (!isMainThread() || m_vm != &commonVM()) {
+        m_vm->heap.acquireAccess(); // It's not clear that we have good discipline for heap access, so turn it on permanently.
+        {
+            JSLockHolder lock(m_vm.get());
+            m_vm->ensureTerminationException();
+            m_vm->forbidExecutionOnTermination();
+        }
 
-WorkerOrWorkletScriptController::WorkerOrWorkletScriptController(WorkerThreadType type, WorkerOrWorkletGlobalScope* globalScope)
-    : WorkerOrWorkletScriptController(type, JSC::VM::create(), globalScope)
-{
+        JSVMClientData::initNormalWorld(m_vm.get(), type);
+    }
 }
 
 WorkerOrWorkletScriptController::~WorkerOrWorkletScriptController()
@@ -101,34 +110,35 @@ void WorkerOrWorkletScriptController::detachDebugger(JSC::Debugger* debugger)
 void WorkerOrWorkletScriptController::forbidExecution()
 {
     ASSERT(m_globalScope->isContextThread());
-    m_executionForbidden = true;
+    m_vm->setExecutionForbidden();
 }
 
 bool WorkerOrWorkletScriptController::isExecutionForbidden() const
 {
     ASSERT(m_globalScope->isContextThread());
-    return m_executionForbidden;
+    return m_vm->executionForbidden();
 }
 
 void WorkerOrWorkletScriptController::scheduleExecutionTermination()
 {
-    if (m_isTerminatingExecution)
-        return;
-
     {
         // The mutex provides a memory barrier to ensure that once
         // termination is scheduled, isTerminatingExecution() will
         // accurately reflect that lexicalGlobalObject when called from another thread.
-        LockHolder locker(m_scheduledTerminationMutex);
+        Locker locker { m_scheduledTerminationLock };
+        if (m_isTerminatingExecution)
+            return;
+
         m_isTerminatingExecution = true;
     }
-    m_vm->notifyNeedTermination();
+    if (m_vm != &commonVM())
+        m_vm->notifyNeedTermination();
 }
 
 bool WorkerOrWorkletScriptController::isTerminatingExecution() const
 {
     // See comments in scheduleExecutionTermination regarding mutex usage.
-    LockHolder locker(m_scheduledTerminationMutex);
+    Locker locker { m_scheduledTerminationLock };
     return m_isTerminatingExecution;
 }
 
@@ -197,11 +207,16 @@ void WorkerOrWorkletScriptController::evaluate(const ScriptSourceCode& sourceCod
     if (isExecutionForbidden())
         return;
 
-    NakedPtr<JSC::Exception> exception;
-    evaluate(sourceCode, exception, returnedExceptionMessage);
-    if (exception) {
-        JSLockHolder lock(vm());
-        reportException(m_globalScopeWrapper.get(), exception);
+    VM& vm = this->vm();
+    NakedPtr<JSC::Exception> uncaughtException;
+    evaluate(sourceCode, uncaughtException, returnedExceptionMessage);
+    if ((uncaughtException && vm.isTerminationException(uncaughtException)) || isTerminatingExecution()) {
+        forbidExecution();
+        return;
+    }
+    if (uncaughtException) {
+        JSLockHolder lock(vm);
+        reportException(m_globalScopeWrapper.get(), uncaughtException);
     }
 }
 
@@ -218,7 +233,7 @@ void WorkerOrWorkletScriptController::evaluate(const ScriptSourceCode& sourceCod
 
     JSExecState::profiledEvaluate(&globalObject, JSC::ProfilingReason::Other, sourceCode.jsSourceCode(), m_globalScopeWrapper->globalThis(), returnedException);
 
-    if ((returnedException && isTerminatedExecutionException(vm, returnedException)) || isTerminatingExecution()) {
+    if ((returnedException && vm.isTerminationException(returnedException)) || isTerminatingExecution()) {
         forbidExecution();
         return;
     }
@@ -255,20 +270,23 @@ JSC::JSValue WorkerOrWorkletScriptController::evaluateModule(JSC::JSModuleRecord
     return moduleRecord.evaluate(&globalObject, awaitedValue, resumeMode);
 }
 
-MessageQueueWaitResult WorkerOrWorkletScriptController::loadModuleSynchronously(WorkerScriptFetcher& scriptFetcher, const ScriptSourceCode& sourceCode)
+bool WorkerOrWorkletScriptController::loadModuleSynchronously(WorkerScriptFetcher& scriptFetcher, const ScriptSourceCode& sourceCode)
 {
     if (isExecutionForbidden())
-        return MessageQueueTerminated;
+        return false;
 
     initScriptIfNeeded();
 
     auto& globalObject = *m_globalScopeWrapper.get();
     VM& vm = globalObject.vm();
     JSLockHolder lock { vm };
+    auto scope = DECLARE_THROW_SCOPE(vm);
 
-    auto protector = makeRef(scriptFetcher);
+    Ref protector { scriptFetcher };
     {
         auto& promise = JSExecState::loadModule(globalObject, sourceCode.jsSourceCode(), JSC::JSScriptFetcher::create(vm, { &scriptFetcher }));
+        scope.assertNoExceptionExceptTermination();
+        RETURN_IF_EXCEPTION(scope, false);
 
         auto& fulfillHandler = *JSNativeStdFunction::create(vm, &globalObject, 1, String(), [protector](JSGlobalObject* globalObject, CallFrame* callFrame) -> JSC::EncodedJSValue {
             VM& vm = globalObject->vm();
@@ -284,15 +302,31 @@ MessageQueueWaitResult WorkerOrWorkletScriptController::loadModuleSynchronously(
             VM& vm = globalObject->vm();
             JSLockHolder lock { vm };
             JSValue errorValue = callFrame->argument(0);
+            auto scope = DECLARE_CATCH_SCOPE(vm);
             if (errorValue.isObject()) {
                 auto* object = JSC::asObject(errorValue);
                 if (JSValue failureKindValue = object->getDirect(vm, static_cast<JSVMClientData&>(*vm.clientData).builtinNames().failureKindPrivateName())) {
                     // This is host propagated error in the module loader pipeline.
                     switch (static_cast<ModuleFetchFailureKind>(failureKindValue.asInt32())) {
-                    case ModuleFetchFailureKind::WasErrored:
+                    case ModuleFetchFailureKind::WasPropagatedError:
                         protector->notifyLoadFailed(LoadableScript::Error {
                             LoadableScript::ErrorType::CachedScript,
-                            WTF::nullopt
+                            std::nullopt,
+                            std::nullopt
+                        });
+                        break;
+                    // For a fetch error that was not propagated from further in the
+                    // pipeline, we include the console error message but do not
+                    // include an error value as it should not be reported.
+                    case ModuleFetchFailureKind::WasFetchError:
+                        protector->notifyLoadFailed(LoadableScript::Error {
+                            LoadableScript::ErrorType::CachedScript,
+                            LoadableScript::ConsoleMessage {
+                                MessageSource::JS,
+                                MessageLevel::Error,
+                                retrieveErrorMessage(*globalObject, vm, errorValue, scope),
+                            },
+                            std::nullopt
                         });
                         break;
                     case ModuleFetchFailureKind::WasCanceled:
@@ -303,14 +337,16 @@ MessageQueueWaitResult WorkerOrWorkletScriptController::loadModuleSynchronously(
                 }
             }
 
-            auto scope = DECLARE_CATCH_SCOPE(vm);
             protector->notifyLoadFailed(LoadableScript::Error {
                 LoadableScript::ErrorType::CachedScript,
                 LoadableScript::ConsoleMessage {
                     MessageSource::JS,
                     MessageLevel::Error,
                     retrieveErrorMessage(*globalObject, vm, errorValue, scope),
-                }
+                },
+                // The error value may need to be propagated here as it is in
+                // ScriptController in the future.
+                std::nullopt
             });
             return JSValue::encode(jsUndefined());
         });
@@ -328,14 +364,14 @@ MessageQueueWaitResult WorkerOrWorkletScriptController::loadModuleSynchronously(
     // task is queued in WorkerRunLoop before start running module scripts. This task should not be discarded
     // in the following driving of the RunLoop which mainly attempt to collect initial load of module scripts.
     String taskMode = WorkerModuleScriptLoader::taskMode();
-    MessageQueueWaitResult result = MessageQueueMessageReceived;
-    while ((!protector->isLoaded() && !protector->wasCanceled()) && result != MessageQueueTerminated) {
-        result = runLoop.runInMode(m_globalScope, taskMode);
-        if (result != MessageQueueTerminated)
+    bool success = true;
+    while ((!protector->isLoaded() && !protector->wasCanceled()) && success) {
+        success = runLoop.runInMode(m_globalScope, taskMode);
+        if (success)
             m_globalScope->eventLoop().performMicrotaskCheckpoint();
     }
 
-    return result;
+    return success;
 }
 
 void WorkerOrWorkletScriptController::linkAndEvaluateModule(WorkerScriptFetcher& scriptFetcher, const ScriptSourceCode& sourceCode, String* returnedExceptionMessage)
@@ -351,7 +387,7 @@ void WorkerOrWorkletScriptController::linkAndEvaluateModule(WorkerScriptFetcher&
 
     NakedPtr<JSC::Exception> returnedException;
     JSExecState::linkAndEvaluateModule(globalObject, Identifier::fromUid(vm, scriptFetcher.moduleKey()), jsUndefined(), returnedException);
-    if ((returnedException && isTerminatedExecutionException(vm, returnedException)) || isTerminatingExecution()) {
+    if ((returnedException && vm.isTerminationException(returnedException)) || isTerminatingExecution()) {
         forbidExecution();
         return;
     }
@@ -367,10 +403,13 @@ void WorkerOrWorkletScriptController::linkAndEvaluateModule(WorkerScriptFetcher&
             if (returnedExceptionMessage)
                 *returnedExceptionMessage = genericErrorMessage;
         }
+
+        JSLockHolder lock(vm);
+        reportException(m_globalScopeWrapper.get(), returnedException);
     }
 }
 
-void WorkerOrWorkletScriptController::loadAndEvaluateModule(const URL& moduleURL, FetchOptions::Credentials credentials, CompletionHandler<void(Optional<Exception>&&)>&& completionHandler)
+void WorkerOrWorkletScriptController::loadAndEvaluateModule(const URL& moduleURL, FetchOptions::Credentials credentials, CompletionHandler<void(std::optional<Exception>&&)>&& completionHandler)
 {
     if (isExecutionForbidden()) {
         completionHandler(Exception { NotAllowedError });
@@ -385,14 +424,14 @@ void WorkerOrWorkletScriptController::loadAndEvaluateModule(const URL& moduleURL
 
     auto scriptFetcher = WorkerScriptFetcher::create(credentials, globalScope()->destination(), globalScope()->referrerPolicy());
     {
-        auto& promise = JSExecState::loadModule(globalObject, moduleURL.string(), JSC::JSScriptFetchParameters::create(vm, makeRef(scriptFetcher->parameters())), JSC::JSScriptFetcher::create(vm, { scriptFetcher.ptr() }));
+        auto& promise = JSExecState::loadModule(globalObject, moduleURL.string(), JSC::JSScriptFetchParameters::create(vm, scriptFetcher->parameters()), JSC::JSScriptFetcher::create(vm, { scriptFetcher.ptr() }));
 
-        auto task = createSharedTask<void(Optional<Exception>&&)>([completionHandler = WTFMove(completionHandler)](Optional<Exception>&& exception) mutable {
+        auto task = createSharedTask<void(std::optional<Exception>&&)>([completionHandler = WTFMove(completionHandler)](std::optional<Exception>&& exception) mutable {
             completionHandler(WTFMove(exception));
         });
 
         auto& fulfillHandler = *JSNativeStdFunction::create(vm, &globalObject, 1, String(), [task, scriptFetcher](JSGlobalObject* globalObject, CallFrame* callFrame) -> JSC::EncodedJSValue {
-            // task->run(WTF::nullopt);
+            // task->run(std::nullopt);
             VM& vm = globalObject->vm();
             JSLockHolder lock { vm };
             auto scope = DECLARE_THROW_SCOPE(vm);
@@ -403,16 +442,16 @@ void WorkerOrWorkletScriptController::loadAndEvaluateModule(const URL& moduleURL
 
             auto* context = downcast<WorkerOrWorkletGlobalScope>(jsCast<JSDOMGlobalObject*>(globalObject)->scriptExecutionContext());
             if (!context || !context->script()) {
-                task->run(WTF::nullopt);
+                task->run(std::nullopt);
                 return JSValue::encode(jsUndefined());
             }
 
             NakedPtr<JSC::Exception> returnedException;
             JSExecState::linkAndEvaluateModule(*globalObject, moduleKey, jsUndefined(), returnedException);
-            if ((returnedException && isTerminatedExecutionException(vm, returnedException)) || context->script()->isTerminatingExecution()) {
+            if ((returnedException && vm.isTerminationException(returnedException)) || context->script()->isTerminatingExecution()) {
                 if (context->script())
                     context->script()->forbidExecution();
-                task->run(WTF::nullopt);
+                task->run(std::nullopt);
                 return JSValue::encode(jsUndefined());
             }
 
@@ -427,7 +466,7 @@ void WorkerOrWorkletScriptController::loadAndEvaluateModule(const URL& moduleURL
                 context->reportException(message, { }, { }, { }, { }, { });
             }
 
-            task->run(WTF::nullopt);
+            task->run(std::nullopt);
             return JSValue::encode(jsUndefined());
         });
 
@@ -437,10 +476,18 @@ void WorkerOrWorkletScriptController::loadAndEvaluateModule(const URL& moduleURL
             JSValue errorValue = callFrame->argument(0);
             if (errorValue.isObject()) {
                 auto* object = JSC::asObject(errorValue);
-                if (object->getDirect(vm, static_cast<JSVMClientData&>(*vm.clientData).builtinNames().failureKindPrivateName())) {
+                if (JSValue failureKindValue = object->getDirect(vm, static_cast<JSVMClientData&>(*vm.clientData).builtinNames().failureKindPrivateName())) {
                     auto catchScope = DECLARE_CATCH_SCOPE(vm);
                     String message = retrieveErrorMessageWithoutName(*globalObject, vm, object, catchScope);
-                    task->run(Exception { AbortError, message });
+                    switch (static_cast<ModuleFetchFailureKind>(failureKindValue.asInt32())) {
+                    case ModuleFetchFailureKind::WasFetchError:
+                        task->run(Exception { TypeError, message });
+                        break;
+                    case ModuleFetchFailureKind::WasPropagatedError:
+                    case ModuleFetchFailureKind::WasCanceled:
+                        task->run(Exception { AbortError, message });
+                        break;
+                    }
                     return JSValue::encode(jsUndefined());
                 }
                 if (object->inherits<ErrorInstance>(vm)) {
@@ -488,7 +535,7 @@ void WorkerOrWorkletScriptController::initScriptWithSubclass()
     Structure* contextPrototypeStructure = JSGlobalScopePrototype::createStructure(*m_vm, nullptr, jsNull());
     auto* contextPrototype = JSGlobalScopePrototype::create(*m_vm, nullptr, contextPrototypeStructure);
     Structure* structure = JSGlobalScope::createStructure(*m_vm, nullptr, contextPrototype);
-    auto* proxyStructure = JSProxy::createStructure(*m_vm, nullptr, jsNull(), PureForwardingProxyType);
+    auto* proxyStructure = JSProxy::createStructure(*m_vm, nullptr, jsNull());
     auto* proxy = JSProxy::create(*m_vm, proxyStructure);
 
     m_globalScopeWrapper.set(*m_vm, JSGlobalScope::create(*m_vm, structure, static_cast<GlobalScope&>(*m_globalScope), proxy));
@@ -507,13 +554,21 @@ void WorkerOrWorkletScriptController::initScriptWithSubclass()
     ASSERT(asObject(m_globalScopeWrapper->getPrototypeDirect(*m_vm))->globalObject() == m_globalScopeWrapper);
 
     m_consoleClient = makeUnique<WorkerConsoleClient>(*m_globalScope);
-    m_globalScopeWrapper->setConsoleClient(makeWeakPtr(*m_consoleClient));
+    m_globalScopeWrapper->setConsoleClient(*m_consoleClient);
 }
 
 void WorkerOrWorkletScriptController::initScript()
 {
+    ASSERT(m_vm.get());
+    JSC::DeferTermination deferTermination(*m_vm.get());
+
     if (is<DedicatedWorkerGlobalScope>(m_globalScope)) {
         initScriptWithSubclass<JSDedicatedWorkerGlobalScopePrototype, JSDedicatedWorkerGlobalScope, DedicatedWorkerGlobalScope>();
+        return;
+    }
+
+    if (is<SharedWorkerGlobalScope>(m_globalScope)) {
+        initScriptWithSubclass<JSSharedWorkerGlobalScopePrototype, JSSharedWorkerGlobalScope, SharedWorkerGlobalScope>();
         return;
     }
 

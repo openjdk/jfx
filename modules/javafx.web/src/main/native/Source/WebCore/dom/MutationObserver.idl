@@ -30,14 +30,13 @@
 
 [
     CustomIsReachable,
-    ImplementationLacksVTable,
     LegacyWindowAlias=WebKitMutationObserver,
     JSCustomMarkFunction,
     Exposed=Window
 ] interface MutationObserver {
     constructor(MutationCallback callback);
 
-    [MayThrowException] undefined observe(Node target, optional MutationObserverInit options);
+    undefined observe(Node target, optional MutationObserverInit options);
     undefined disconnect();
     [ResultField=records] sequence<MutationRecord> takeRecords();
 };

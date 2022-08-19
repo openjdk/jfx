@@ -60,7 +60,7 @@ private:
 DatabaseManager::ProposedDatabase::ProposedDatabase(DatabaseManager& manager, SecurityOrigin& origin, const String& name, const String& displayName, unsigned long estimatedSize)
     : m_manager(manager)
     , m_origin(origin.isolatedCopy())
-    , m_details(name.isolatedCopy(), displayName.isolatedCopy(), estimatedSize, 0, WTF::nullopt, WTF::nullopt)
+    , m_details(name.isolatedCopy(), displayName.isolatedCopy(), estimatedSize, 0, std::nullopt, std::nullopt)
 {
     m_manager.addProposedDatabase(*this);
 }
@@ -102,7 +102,9 @@ Ref<DatabaseContext> DatabaseManager::databaseContext(Document& document)
 {
     if (auto databaseContext = document.databaseContext())
         return *databaseContext;
-    return adoptRef(*new DatabaseContext(document));
+    auto context = adoptRef(*new DatabaseContext(document));
+    context->suspendIfNeeded();
+    return context;
 }
 
 #if LOG_DISABLED
@@ -181,13 +183,13 @@ ExceptionOr<Ref<Database>> DatabaseManager::tryToOpenDatabaseBackend(Document& d
 
 void DatabaseManager::addProposedDatabase(ProposedDatabase& database)
 {
-    auto locker = holdLock(m_proposedDatabasesMutex);
+    Locker locker { m_proposedDatabasesLock };
     m_proposedDatabases.add(&database);
 }
 
 void DatabaseManager::removeProposedDatabase(ProposedDatabase& database)
 {
-    auto locker = holdLock(m_proposedDatabasesMutex);
+    Locker locker { m_proposedDatabasesLock };
     m_proposedDatabases.remove(&database);
 }
 
@@ -241,7 +243,7 @@ void DatabaseManager::stopDatabases(Document& document, DatabaseTaskSynchronizer
 String DatabaseManager::fullPathForDatabase(SecurityOrigin& origin, const String& name, bool createIfDoesNotExist)
 {
     {
-        auto locker = holdLock(m_proposedDatabasesMutex);
+        Locker locker { m_proposedDatabasesLock };
         for (auto* proposedDatabase : m_proposedDatabases) {
             if (proposedDatabase->details().name() == name && proposedDatabase->origin().equal(&origin))
                 return String();
@@ -253,7 +255,7 @@ String DatabaseManager::fullPathForDatabase(SecurityOrigin& origin, const String
 DatabaseDetails DatabaseManager::detailsForNameAndOrigin(const String& name, SecurityOrigin& origin)
 {
     {
-        auto locker = holdLock(m_proposedDatabasesMutex);
+        Locker locker { m_proposedDatabasesLock };
         for (auto* proposedDatabase : m_proposedDatabases) {
             if (proposedDatabase->details().name() == name && proposedDatabase->origin().equal(&origin)) {
                 ASSERT(&proposedDatabase->details().thread() == &Thread::current() || isMainThread());

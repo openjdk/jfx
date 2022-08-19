@@ -24,7 +24,6 @@
 #include "config.h"
 #include <wtf/text/AtomStringImpl.h>
 
-#include <wtf/HashSet.h>
 #include <wtf/Threading.h>
 #include <wtf/text/AtomStringTable.h>
 #include <wtf/text/StringHash.h>
@@ -46,7 +45,7 @@ class AtomStringTableLocker : public LockHolder {
     static Lock s_stringTableLock;
 public:
     AtomStringTableLocker()
-        : LockHolder(&s_stringTableLock)
+        : LockHolder(s_stringTableLock)
     {
     }
 };
@@ -63,7 +62,7 @@ public:
 
 #endif // USE(WEB_THREAD)
 
-using StringTableImpl = HashSet<PackedPtr<StringImpl>>;
+using StringTableImpl = AtomStringTable::StringTableImpl;
 
 static ALWAYS_INLINE StringTableImpl& stringTable()
 {
@@ -198,7 +197,7 @@ struct HashAndUTF8CharactersTranslator {
         bool isAllASCII;
         const char* source = buffer.characters;
         if (!convertUTF8ToUTF16(source, source + buffer.length, &target, target + buffer.utf16Length, &isAllASCII))
-            ASSERT_NOT_REACHED();
+            RELEASE_ASSERT_NOT_REACHED();
 
         if (isAllASCII)
             newString = StringImpl::create(buffer.characters, buffer.length);

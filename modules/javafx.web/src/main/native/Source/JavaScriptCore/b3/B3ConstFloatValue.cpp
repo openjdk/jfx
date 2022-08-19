@@ -130,6 +130,20 @@ Value* ConstFloatValue::divConstant(Procedure& proc, const Value* other) const
     return proc.add<ConstFloatValue>(origin(), m_value / other->asFloat());
 }
 
+Value* ConstFloatValue::fMinConstant(Procedure& proc, const Value* other) const
+{
+    if (!other->hasFloat())
+        return nullptr;
+    return proc.add<ConstFloatValue>(origin(), fMin(m_value, other->asFloat()));
+}
+
+Value* ConstFloatValue::fMaxConstant(Procedure& proc, const Value* other) const
+{
+    if (!other->hasFloat())
+        return nullptr;
+    return proc.add<ConstFloatValue>(origin(), fMax(m_value, other->asFloat()));
+}
+
 TriState ConstFloatValue::equalConstant(const Value* other) const
 {
     if (!other->hasFloat())
@@ -186,7 +200,7 @@ TriState ConstFloatValue::equalOrUnorderedConstant(const Value* other) const
 void ConstFloatValue::dumpMeta(CommaPrinter& comma, PrintStream& out) const
 {
     out.print(comma);
-    out.printf("%le", m_value);
+    out.printf("%le(%u)", m_value, bitwise_cast<uint32_t>(m_value));
 }
 
 } } // namespace JSC::B3

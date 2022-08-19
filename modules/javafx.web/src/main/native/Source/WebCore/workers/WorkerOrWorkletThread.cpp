@@ -27,6 +27,7 @@
 #include "WorkerOrWorkletThread.h"
 
 #include "ThreadGlobalData.h"
+#include "WorkerEventLoop.h"
 #include "WorkerOrWorkletGlobalScope.h"
 #include "WorkerOrWorkletScriptController.h"
 
@@ -40,10 +41,11 @@
 
 namespace WebCore {
 
+Lock WorkerOrWorkletThread::s_workerOrWorkletThreadsLock;
+
 Lock& WorkerOrWorkletThread::workerOrWorkletThreadsLock()
 {
-    static Lock mutex;
-    return mutex;
+    return s_workerOrWorkletThreadsLock;
 }
 
 HashSet<WorkerOrWorkletThread*>& WorkerOrWorkletThread::workerOrWorkletThreads()
@@ -53,16 +55,28 @@ HashSet<WorkerOrWorkletThread*>& WorkerOrWorkletThread::workerOrWorkletThreads()
     return workerOrWorkletThreads;
 }
 
-WorkerOrWorkletThread::WorkerOrWorkletThread(const String& identifier)
-    : m_identifier(identifier)
+static UniqueRef<WorkerRunLoop> constructRunLoop(WorkerThreadMode workerThreadMode)
 {
-    auto locker = holdLock(workerOrWorkletThreadsLock());
+    switch (workerThreadMode) {
+    case WorkerThreadMode::UseMainThread:
+        return makeUniqueRef<WorkerMainRunLoop>();
+    case WorkerThreadMode::CreateNewThread:
+        break;
+    }
+    return makeUniqueRef<WorkerDedicatedRunLoop>();
+}
+
+WorkerOrWorkletThread::WorkerOrWorkletThread(const String& inspectorIdentifier, WorkerThreadMode workerThreadMode)
+    : m_inspectorIdentifier(inspectorIdentifier)
+    , m_runLoop(constructRunLoop(workerThreadMode))
+{
+    Locker locker { workerOrWorkletThreadsLock() };
     workerOrWorkletThreads().add(this);
 }
 
 WorkerOrWorkletThread::~WorkerOrWorkletThread()
 {
-    auto locker = holdLock(workerOrWorkletThreadsLock());
+    Locker locker { workerOrWorkletThreadsLock() };
     ASSERT(workerOrWorkletThreads().contains(this));
     workerOrWorkletThreads().remove(this);
 }
@@ -72,9 +86,13 @@ void WorkerOrWorkletThread::startRunningDebuggerTasks()
     ASSERT(!m_pausedForDebugger);
     m_pausedForDebugger = true;
 
+    // FIXME: Add support for debugging workers running on the main thread.
+    if (!is<WorkerDedicatedRunLoop>(m_runLoop.get()))
+        return;
+
     MessageQueueWaitResult result;
     do {
-        result = m_runLoop.runInDebuggerMode(*m_globalScope);
+        result = downcast<WorkerDedicatedRunLoop>(m_runLoop.get()).runInDebuggerMode(*m_globalScope);
     } while (result != MessageQueueTerminated && m_pausedForDebugger);
 }
 
@@ -86,12 +104,30 @@ void WorkerOrWorkletThread::stopRunningDebuggerTasks()
 void WorkerOrWorkletThread::runEventLoop()
 {
     // Does not return until terminated.
-    m_runLoop.run(m_globalScope.get());
+    if (is<WorkerDedicatedRunLoop>(m_runLoop.get()))
+        downcast<WorkerDedicatedRunLoop>(m_runLoop.get()).run(m_globalScope.get());
 }
 
 void WorkerOrWorkletThread::workerOrWorkletThread()
 {
-    auto protectedThis = makeRef(*this);
+    Ref protectedThis { *this };
+
+    if (isMainThread()) {
+        m_globalScope = createGlobalScope();
+        if (!m_globalScope)
+            return;
+
+        downcast<WorkerMainRunLoop>(m_runLoop.get()).setGlobalScope(*m_globalScope);
+
+        String exceptionMessage;
+        evaluateScriptIfNecessary(exceptionMessage);
+
+        callOnMainThread([evaluateCallback = WTFMove(m_evaluateCallback), message = WTFMove(exceptionMessage)] {
+            if (evaluateCallback)
+                evaluateCallback(message);
+        });
+        return;
+    }
 
     // Propagate the mainThread's fenv to workers.
 #if PLATFORM(IOS_FAMILY)
@@ -108,7 +144,7 @@ void WorkerOrWorkletThread::workerOrWorkletThread()
         // Mutex protection is necessary to ensure that we don't change m_globalScope
         // while WorkerThread::stop() is accessing it. Note that WorkerThread::stop() can
         // be called before we've finished creating the WorkerGlobalScope.
-        auto locker = holdLock(m_threadCreationAndGlobalScopeLock);
+        Locker locker { m_threadCreationAndGlobalScopeLock };
         m_globalScope = createGlobalScope();
 
         // When running out of memory, createGlobalScope() may return null because we could not allocate a JSC::VM.
@@ -119,7 +155,7 @@ void WorkerOrWorkletThread::workerOrWorkletThread()
 
         scriptController = m_globalScope->script();
 
-        if (m_runLoop.terminated()) {
+        if (m_runLoop->terminated()) {
             // The worker was terminated before the thread had a chance to run. Since the context didn't exist yet,
             // forbidExecution() couldn't be called from stop().
             scriptController->scheduleExecutionTermination();
@@ -131,7 +167,7 @@ void WorkerOrWorkletThread::workerOrWorkletThread()
         startRunningDebuggerTasks();
 
         // If the worker was somehow terminated while processing debugger commands.
-        if (m_runLoop.terminated())
+        if (m_runLoop->terminated())
             scriptController->forbidExecution();
     }
 
@@ -157,7 +193,7 @@ void WorkerOrWorkletThread::workerOrWorkletThread()
     {
         // Mutex protection is necessary to ensure that we don't change m_globalScope
         // while WorkerThread::stop is accessing it.
-        auto locker = holdLock(m_threadCreationAndGlobalScopeLock);
+        Locker locker { m_threadCreationAndGlobalScopeLock };
 
         // Delay the destruction of the WorkerGlobalScope context until after we've unlocked the
         // m_threadCreationAndWorkerGlobalScopeMutex. This is needed because destructing the
@@ -183,10 +219,10 @@ void WorkerOrWorkletThread::workerOrWorkletThread()
     protector->detach();
 }
 
-void WorkerOrWorkletThread::start(WTF::Function<void(const String&)>&& evaluateCallback)
+void WorkerOrWorkletThread::start(Function<void(const String&)>&& evaluateCallback)
 {
     // Mutex protection is necessary to ensure that m_thread is initialized when the thread starts.
-    auto locker = holdLock(m_threadCreationAndGlobalScopeLock);
+    Locker locker { m_threadCreationAndGlobalScopeLock };
 
     if (m_thread)
         return;
@@ -206,8 +242,7 @@ void WorkerOrWorkletThread::stop(Function<void()>&& stoppedCallback)
     // Mutex protection is necessary to ensure that m_workerGlobalScope isn't changed by
     // WorkerThread::workerThread() while we're accessing it. Note also that stop() can
     // be called before m_workerGlobalScope is fully created.
-    auto locker = tryHoldLock(m_threadCreationAndGlobalScopeLock);
-    if (!locker) {
+    if (!m_threadCreationAndGlobalScopeLock.tryLock()) {
         // The thread is still starting, spin the runloop and try again to avoid deadlocks if the worker thread
         // needs to interact with the main thread during startup.
         callOnMainThread([this, stoppedCallback = WTFMove(stoppedCallback)]() mutable {
@@ -215,6 +250,7 @@ void WorkerOrWorkletThread::stop(Function<void()>&& stoppedCallback)
         });
         return;
     }
+    Locker locker { AdoptLock, m_threadCreationAndGlobalScopeLock };
 
     // If the thread is suspended, resume it now so that we can dispatch the cleanup tasks below.
     if (m_isSuspended)
@@ -227,7 +263,18 @@ void WorkerOrWorkletThread::stop(Function<void()>&& stoppedCallback)
     if (globalScope()) {
         globalScope()->script()->scheduleExecutionTermination();
 
-        m_runLoop.postTaskAndTerminate({ ScriptExecutionContext::Task::CleanupTask, [] (ScriptExecutionContext& context ) {
+        if (is<WorkerMainRunLoop>(m_runLoop.get())) {
+            auto globalScope = std::exchange(m_globalScope, nullptr);
+            globalScope->prepareForDestruction();
+            globalScope->clearScript();
+            m_runLoop->terminate();
+
+            if (m_stoppedCallback)
+                callOnMainThread(std::exchange(m_stoppedCallback, nullptr));
+            return;
+        }
+
+        m_runLoop->postTaskAndTerminate({ ScriptExecutionContext::Task::CleanupTask, [] (ScriptExecutionContext& context ) {
             auto& globalScope = downcast<WorkerOrWorkletGlobalScope>(context);
 
             globalScope.prepareForDestruction();
@@ -243,13 +290,16 @@ void WorkerOrWorkletThread::stop(Function<void()>&& stoppedCallback)
         } });
         return;
     }
-    m_runLoop.terminate();
+    m_runLoop->terminate();
 }
 
 void WorkerOrWorkletThread::suspend()
 {
     m_isSuspended = true;
-    m_runLoop.postTask([&](ScriptExecutionContext&) {
+    if (is<WorkerMainRunLoop>(m_runLoop.get()))
+        return;
+
+    m_runLoop->postTask([&](ScriptExecutionContext&) {
         if (globalScope())
             globalScope()->suspend();
 
@@ -264,12 +314,15 @@ void WorkerOrWorkletThread::resume()
 {
     ASSERT(m_isSuspended);
     m_isSuspended = false;
+    if (is<WorkerMainRunLoop>(m_runLoop.get()))
+        return;
+
     m_suspensionSemaphore.signal();
 }
 
 void WorkerOrWorkletThread::releaseFastMallocFreeMemoryInAllThreads()
 {
-    auto locker = holdLock(workerOrWorkletThreadsLock());
+    Locker locker { workerOrWorkletThreadsLock() };
     for (auto* workerOrWorkletThread : workerOrWorkletThreads()) {
         workerOrWorkletThread->runLoop().postTask([] (ScriptExecutionContext&) {
             WTF::releaseFastMallocFreeMemory();

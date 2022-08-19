@@ -110,7 +110,7 @@ void lowerStackArgs(Code& code)
 
             inst.forEachArg(
                 [&] (Arg& arg, Arg::Role role, Bank, Width width) {
-                    auto stackAddr = [&] (Value::OffsetType offsetFromFP) -> Arg {
+                    auto stackAddr = [&] (unsigned instIndex, Value::OffsetType offsetFromFP) -> Arg {
                         int32_t offsetFromSP = offsetFromFP + code.frameSize();
 
                         if (inst.admitsExtendedOffsetAddr(arg)) {
@@ -127,7 +127,7 @@ void lowerStackArgs(Code& code)
                         result = Arg::addr(Air::Tmp(MacroAssembler::stackPointerRegister), offsetFromSP);
                         if (result.isValidForm(width))
                             return result;
-#if CPU(ARM64)
+#if CPU(ARM64) || CPU(RISCV64)
                         ASSERT(pinnedExtendedOffsetAddrRegister());
                         Air::Tmp tmp = Air::Tmp(*pinnedExtendedOffsetAddrRegister());
 
@@ -137,6 +137,7 @@ void lowerStackArgs(Code& code)
                         result = Arg::addr(tmp, 0);
                         return result;
 #elif CPU(X86_64)
+                        UNUSED_PARAM(instIndex);
                         // Can't happen on x86: immediates are always big enough for frame size.
                         RELEASE_ASSERT_NOT_REACHED();
 #else
@@ -157,16 +158,27 @@ void lowerStackArgs(Code& code)
                             RELEASE_ASSERT(slot->byteSize() == 8);
                             RELEASE_ASSERT(width == Width32);
 
-                            RELEASE_ASSERT(isValidForm(StoreZero32, Arg::Stack));
+#if CPU(ARM64) || CPU(RISCV64)
+                            Air::Opcode storeOpcode = Store32;
+                            Air::Arg::Kind operandKind = Arg::ZeroReg;
+                            Air::Arg operand = Arg::zeroReg();
+#elif CPU(X86_64)
+                            Air::Opcode storeOpcode = Move32;
+                            Air::Arg::Kind operandKind = Arg::Imm;
+                            Air::Arg operand = Arg::imm(0);
+#else
+#error Unhandled architecture.
+#endif
+                            RELEASE_ASSERT(isValidForm(storeOpcode, operandKind, Arg::Stack));
                             insertionSet.insert(
-                                instIndex + 1, StoreZero32, inst.origin,
-                                stackAddr(arg.offset() + 4 + slot->offsetFromFP()));
+                                instIndex + 1, storeOpcode, inst.origin, operand,
+                                stackAddr(instIndex + 1, arg.offset() + 4 + slot->offsetFromFP()));
                         }
-                        arg = stackAddr(arg.offset() + slot->offsetFromFP());
+                        arg = stackAddr(instIndex, arg.offset() + slot->offsetFromFP());
                         break;
                     }
                     case Arg::CallArg:
-                        arg = stackAddr(arg.offset() - code.frameSize());
+                        arg = stackAddr(instIndex, arg.offset() - code.frameSize());
                         break;
                     default:
                         break;

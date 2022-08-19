@@ -32,7 +32,7 @@
  * GVariantTypeInfo:
  *
  * This structure contains the necessary information to facilitate the
- * serialisation and fast deserialisation of a given type of GVariant
+ * serialization and fast deserialization of a given type of GVariant
  * value.  A GVariant instance holds a pointer to one of these
  * structures to provide for efficient operation.
  *
@@ -93,7 +93,7 @@ typedef struct
 } ArrayInfo;
 
 /* For 'tuple' and 'dict entry' types, we store extra information for
- * each member -- its type and how to find it inside the serialised data
+ * each member -- its type and how to find it inside the serialized data
  * in O(1) time using 4 variables -- 'i', 'a', 'b', and 'c'.  See the
  * comment on GVariantMemberInfo in gvarianttypeinfo.h.
  */

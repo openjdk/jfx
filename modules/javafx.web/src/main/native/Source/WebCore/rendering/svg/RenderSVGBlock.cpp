@@ -23,6 +23,8 @@
 #include "RenderSVGBlock.h"
 
 #include "RenderSVGResource.h"
+#include "SVGGraphicsElement.h"
+#include "SVGRenderSupport.h"
 #include "SVGResourcesCache.h"
 #include "StyleInheritedData.h"
 #include <wtf/IsoMallocInlines.h>
@@ -40,19 +42,19 @@ void RenderSVGBlock::updateFromStyle()
 {
     RenderBlockFlow::updateFromStyle();
 
-    // RenderSVGlock, used by Render(SVGText|ForeignObject), is not allowed to call setHasOverflowClip(true).
+    // RenderSVGlock, used by Render(SVGText|ForeignObject), is not allowed to call setHasNonVisibleOverflow(true).
     // RenderBlock assumes a layer to be present when the overflow clip functionality is requested. Both
     // Render(SVGText|ForeignObject) return 'false' on 'requiresLayer'. Fine for RenderSVGText.
     //
     // If we want to support overflow rules for <foreignObject> we can choose between two solutions:
     // a) make RenderSVGForeignObject require layers and SVG layer aware
-    // b) reactor overflow logic out of RenderLayer (as suggested by dhyatt), which is a large task
+    // b) refactor overflow logic out of RenderLayer (as suggested by dhyatt), which is a large task
     //
     // Until this is resolved, disable overflow support. Opera/FF don't support it as well at the moment (Feb 2010).
     //
     // Note: This does NOT affect overflow handling on outer/inner <svg> elements - this is handled
-    // manually by RenderSVGRoot - which owns the documents enclosing root layer and thus works fine.
-    setHasOverflowClip(false);
+    // manually by LegacyRenderSVGRoot - which owns the documents enclosing root layer and thus works fine.
+    setHasNonVisibleOverflow(false);
 }
 
 void RenderSVGBlock::absoluteRects(Vector<IntRect>&, const LayoutPoint&) const
@@ -86,6 +88,40 @@ void RenderSVGBlock::computeOverflow(LayoutUnit oldClientAfterEdge, bool recompu
     LayoutRect borderRect = borderBoxRect();
     textShadow->adjustRectForShadow(borderRect);
     addVisualOverflow(snappedIntRect(borderRect));
+}
+
+LayoutRect RenderSVGBlock::clippedOverflowRect(const RenderLayerModelObject* repaintContainer, VisibleRectContext) const
+{
+    return SVGRenderSupport::clippedOverflowRectForRepaint(*this, repaintContainer);
+}
+
+std::optional<LayoutRect> RenderSVGBlock::computeVisibleRectInContainer(const LayoutRect& rect, const RenderLayerModelObject* container, VisibleRectContext context) const
+{
+    std::optional<FloatRect> adjustedRect = computeFloatVisibleRectInContainer(rect, container, context);
+    if (adjustedRect)
+        return enclosingLayoutRect(*adjustedRect);
+    return std::nullopt;
+}
+
+std::optional<FloatRect> RenderSVGBlock::computeFloatVisibleRectInContainer(const FloatRect& rect, const RenderLayerModelObject* container, VisibleRectContext context) const
+{
+    return SVGRenderSupport::computeFloatVisibleRectInContainer(*this, rect, container, context);
+}
+
+void RenderSVGBlock::mapLocalToContainer(const RenderLayerModelObject* ancestorContainer, TransformState& transformState, OptionSet<MapCoordinatesMode>, bool* wasFixed) const
+{
+    SVGRenderSupport::mapLocalToContainer(*this, ancestorContainer, transformState, wasFixed);
+}
+
+const RenderObject* RenderSVGBlock::pushMappingToContainer(const RenderLayerModelObject* ancestorToStopAt, RenderGeometryMap& geometryMap) const
+{
+    return SVGRenderSupport::pushMappingToContainer(*this, ancestorToStopAt, geometryMap);
+}
+
+bool RenderSVGBlock::nodeAtPoint(const HitTestRequest&, HitTestResult&, const HitTestLocation&, const LayoutPoint&, HitTestAction)
+{
+    ASSERT_NOT_REACHED();
+    return false;
 }
 
 }

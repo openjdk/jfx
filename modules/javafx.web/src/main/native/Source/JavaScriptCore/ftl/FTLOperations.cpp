@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -47,6 +47,7 @@
 #include "JSMapIterator.h"
 #include "JSSetIterator.h"
 #include "RegExpObject.h"
+#include "VMTrapsInlines.h"
 #include <wtf/Assertions.h>
 
 IGNORE_WARNINGS_BEGIN("frame-address")
@@ -65,7 +66,7 @@ JSC_DEFINE_JIT_OPERATION(operationPopulateObjectInOSR, void, (JSGlobalObject* gl
     // We cannot GC. We've got pointers in evil places.
     // FIXME: We are not doing anything that can GC here, and this is
     // probably unnecessary.
-    DeferGCForAWhile deferGC(vm.heap);
+    DeferGCForAWhile deferGC(vm);
 
     switch (materialization->type()) {
     case PhantomNewObject: {
@@ -189,8 +190,12 @@ JSC_DEFINE_JIT_OPERATION(operationMaterializeObjectInOSR, JSCell*, (JSGlobalObje
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
 
+    // It's too hairy to handle TerminationExceptions during OSR object materialization.
+    // Let's just wait until after.
+    DeferTermination deferTermination(vm);
+
     // We cannot GC. We've got pointers in evil places.
-    DeferGCForAWhile deferGC(vm.heap);
+    DeferGCForAWhile deferGC(vm);
 
     switch (materialization->type()) {
     case PhantomNewObject: {
@@ -612,7 +617,7 @@ JSC_DEFINE_JIT_OPERATION(operationMaterializeObjectInOSR, JSCell*, (JSGlobalObje
         JSGlobalObject* globalObject = codeBlock->globalObject();
         Structure* structure = globalObject->arrayStructureForIndexingTypeDuringAllocation(ArrayWithContiguous);
 
-        Checked<unsigned, RecordOverflow> checkedArraySize = 0;
+        CheckedUint32 checkedArraySize = 0;
         unsigned numProperties = 0;
         for (unsigned i = materialization->properties().size(); i--;) {
             const ExitPropertyValue& property = materialization->properties()[i];
@@ -628,7 +633,7 @@ JSC_DEFINE_JIT_OPERATION(operationMaterializeObjectInOSR, JSCell*, (JSGlobalObje
 
         // FIXME: we should throw an out of memory error here if checkedArraySize has hasOverflowed() or tryCreate() fails.
         // https://bugs.webkit.org/show_bug.cgi?id=169784
-        unsigned arraySize = checkedArraySize.unsafeGet(); // Crashes if overflowed.
+        unsigned arraySize = checkedArraySize; // Crashes if overflowed.
         JSArray* result = JSArray::tryCreate(vm, structure, arraySize);
         RELEASE_ASSERT(result);
 
@@ -689,7 +694,8 @@ JSC_DEFINE_JIT_OPERATION(operationMaterializeObjectInOSR, JSCell*, (JSGlobalObje
         RELEASE_ASSERT(regExp);
         CodeBlock* codeBlock = baselineCodeBlockForOriginAndBaselineCodeBlock(materialization->origin(), callFrame->codeBlock()->baselineAlternative());
         Structure* structure = codeBlock->globalObject()->regExpStructure();
-        return RegExpObject::create(vm, structure, regExp);
+        static constexpr bool areLegacyFeaturesEnabled = true;
+        return RegExpObject::create(vm, structure, regExp, areLegacyFeaturesEnabled);
     }
 
     default:
@@ -698,7 +704,7 @@ JSC_DEFINE_JIT_OPERATION(operationMaterializeObjectInOSR, JSCell*, (JSGlobalObje
     }
 }
 
-JSC_DEFINE_JIT_OPERATION(operationSwitchStringAndGetBranchOffset, int32_t, (JSGlobalObject* globalObject, size_t tableIndex, JSString* string))
+JSC_DEFINE_JIT_OPERATION(operationSwitchStringAndGetIndex, unsigned, (JSGlobalObject* globalObject, const UnlinkedStringJumpTable* unlinkedTable, JSString* string))
 {
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
@@ -709,7 +715,7 @@ JSC_DEFINE_JIT_OPERATION(operationSwitchStringAndGetBranchOffset, int32_t, (JSGl
 
     RETURN_IF_EXCEPTION(throwScope, 0);
 
-    return callFrame->codeBlock()->stringSwitchJumpTable(tableIndex).offsetForValue(strImpl, std::numeric_limits<int32_t>::min());
+    return unlinkedTable->indexForValue(strImpl, std::numeric_limits<unsigned>::max());
 }
 
 JSC_DEFINE_JIT_OPERATION(operationTypeOfObjectAsTypeofType, int32_t, (JSGlobalObject* globalObject, JSCell* object))
@@ -730,9 +736,10 @@ JSC_DEFINE_JIT_OPERATION(operationTypeOfObjectAsTypeofType, int32_t, (JSGlobalOb
 JSC_DEFINE_JIT_OPERATION(operationCompileFTLLazySlowPath, void*, (CallFrame* callFrame, unsigned index))
 {
     VM& vm = callFrame->deprecatedVM();
+    // Don't need an ActiveScratchBufferScope here because we DeferGCForAWhile.
 
     // We cannot GC. We've got pointers in evil places.
-    DeferGCForAWhile deferGC(vm.heap);
+    DeferGCForAWhile deferGC(vm);
 
     CodeBlock* codeBlock = callFrame->codeBlock();
     JITCode* jitCode = codeBlock->jitCode()->ftl();

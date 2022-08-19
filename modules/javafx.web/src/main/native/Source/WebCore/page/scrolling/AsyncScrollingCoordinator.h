@@ -54,26 +54,24 @@ public:
 
     void applyPendingScrollUpdates();
 
-    WEBCORE_EXPORT void applyScrollUpdate(ScrollingNodeID, const FloatPoint&, Optional<FloatPoint> layoutViewportOrigin, ScrollType, ScrollingLayerPositionAction);
+    WEBCORE_EXPORT void applyScrollUpdate(ScrollUpdate&&, ScrollType = ScrollType::User);
 
 #if PLATFORM(COCOA)
     WEBCORE_EXPORT void handleWheelEventPhase(ScrollingNodeID, PlatformWheelEventPhase) final;
 
-    WEBCORE_EXPORT void setActiveScrollSnapIndices(ScrollingNodeID, unsigned horizontalIndex, unsigned verticalIndex);
+    WEBCORE_EXPORT void setActiveScrollSnapIndices(ScrollingNodeID, std::optional<unsigned> horizontalIndex, std::optional<unsigned> verticalIndex);
 #endif
 
-#if ENABLE(CSS_SCROLL_SNAP)
     WEBCORE_EXPORT void updateScrollSnapPropertiesWithFrameView(const FrameView&) override;
-#endif
 
     WEBCORE_EXPORT void updateIsMonitoringWheelEventsForFrameView(const FrameView&) override;
 
     void reportExposedUnfilledArea(MonotonicTime, unsigned unfilledArea);
     void reportSynchronousScrollingReasonsChanged(MonotonicTime, OptionSet<SynchronousScrollingReason>);
 
-#if ENABLE(SMOOTH_SCROLLING)
     bool scrollAnimatorEnabled() const;
-#endif
+
+    virtual void hasNodeWithAnimatedScrollChanged(bool) { };
 
 protected:
     WEBCORE_EXPORT AsyncScrollingCoordinator(Page*);
@@ -84,8 +82,8 @@ protected:
 
     RefPtr<ScrollingTree> releaseScrollingTree() { return WTFMove(m_scrollingTree); }
 
-    WEBCORE_EXPORT String scrollingStateTreeAsText(ScrollingStateTreeAsTextBehavior = ScrollingStateTreeAsTextBehaviorNormal) const override;
-    WEBCORE_EXPORT String scrollingTreeAsText(ScrollingStateTreeAsTextBehavior = ScrollingStateTreeAsTextBehaviorNormal) const override;
+    WEBCORE_EXPORT String scrollingStateTreeAsText(OptionSet<ScrollingStateTreeAsTextBehavior> = { }) const override;
+    WEBCORE_EXPORT String scrollingTreeAsText(OptionSet<ScrollingStateTreeAsTextBehavior> = { }) const override;
     WEBCORE_EXPORT void willCommitTree() override;
     void synchronizeStateFromScrollingTree();
     void scheduleRenderingUpdate();
@@ -103,8 +101,11 @@ private:
     WEBCORE_EXPORT void frameViewRootLayerDidChange(FrameView&) override;
     WEBCORE_EXPORT void frameViewVisualViewportChanged(FrameView&) override;
     WEBCORE_EXPORT void frameViewEventTrackingRegionsChanged(FrameView&) override;
+    WEBCORE_EXPORT void frameViewWillBeDetached(FrameView&) override;
 
-    WEBCORE_EXPORT bool requestScrollPositionUpdate(ScrollableArea&, const IntPoint&, ScrollType, ScrollClamping) override;
+    WEBCORE_EXPORT bool requestScrollPositionUpdate(ScrollableArea&, const ScrollPosition&, ScrollType, ScrollClamping) final;
+    WEBCORE_EXPORT bool requestAnimatedScrollToPosition(ScrollableArea&, const ScrollPosition&, ScrollClamping) final;
+    WEBCORE_EXPORT void stopAnimatedScroll(ScrollableArea&) final;
 
     WEBCORE_EXPORT void applyScrollingTreeLayerPositions() override;
 
@@ -132,21 +133,19 @@ private:
     WEBCORE_EXPORT void scrollBySimulatingWheelEventForTesting(ScrollingNodeID, FloatSize) final;
 
     WEBCORE_EXPORT bool isUserScrollInProgress(ScrollingNodeID) const override;
-    bool isRubberBandInProgress(ScrollingNodeID) const override;
+    WEBCORE_EXPORT bool isRubberBandInProgress(ScrollingNodeID) const override;
 
-#if ENABLE(CSS_SCROLL_SNAP)
     WEBCORE_EXPORT bool isScrollSnapInProgress(ScrollingNodeID) const override;
-#endif
 
-    void setScrollPinningBehavior(ScrollPinningBehavior) override;
+    WEBCORE_EXPORT void setScrollPinningBehavior(ScrollPinningBehavior) override;
 
     WEBCORE_EXPORT void reconcileViewportConstrainedLayerPositions(ScrollingNodeID, const LayoutRect& viewportRect, ScrollingLayerPositionAction) override;
     WEBCORE_EXPORT void scrollableAreaScrollbarLayerDidChange(ScrollableArea&, ScrollbarOrientation) override;
 
     WEBCORE_EXPORT void setSynchronousScrollingReasons(ScrollingNodeID, OptionSet<SynchronousScrollingReason>) final;
-    WEBCORE_EXPORT bool hasSynchronousScrollingReasons(ScrollingNodeID) const final;
+    WEBCORE_EXPORT OptionSet<SynchronousScrollingReason> synchronousScrollingReasons(ScrollingNodeID) const final;
 
-    WEBCORE_EXPORT void windowScreenDidChange(PlatformDisplayID, Optional<unsigned> nominalFramesPerSecond) final;
+    WEBCORE_EXPORT void windowScreenDidChange(PlatformDisplayID, std::optional<FramesPerSecond> nominalFramesPerSecond) final;
 
     WEBCORE_EXPORT bool hasSubscrollers() const final;
 
@@ -157,7 +156,9 @@ private:
     void setEventTrackingRegionsDirty();
     void updateEventTrackingRegions();
 
-    void updateScrollPositionAfterAsyncScroll(ScrollingNodeID, const FloatPoint&, Optional<FloatPoint> layoutViewportOrigin, ScrollType, ScrollingLayerPositionAction);
+    void applyScrollPositionUpdate(ScrollUpdate&&, ScrollType);
+    void updateScrollPositionAfterAsyncScroll(ScrollingNodeID, const FloatPoint&, std::optional<FloatPoint> layoutViewportOrigin, ScrollingLayerPositionAction, ScrollType);
+    void animatedScrollDidEndForNode(ScrollingNodeID);
 
     FrameView* frameViewForScrollingNode(ScrollingNodeID) const;
 

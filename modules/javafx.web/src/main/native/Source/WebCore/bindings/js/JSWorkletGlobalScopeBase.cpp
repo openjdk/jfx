@@ -28,9 +28,7 @@
 #include "JSWorkletGlobalScopeBase.h"
 
 #include "DOMWrapperWorld.h"
-#include "JSDOMGlobalObjectTask.h"
 #include "JSDOMGuardedObject.h"
-#include "JSWorkletGlobalScope.h"
 #include "WorkerOrWorkletScriptController.h"
 #include "WorkletGlobalScope.h"
 #include <JavaScriptCore/JSCInlines.h>
@@ -58,7 +56,8 @@ const GlobalObjectMethodTable JSWorkletGlobalScopeBase::s_globalObjectMethodTabl
     &reportUncaughtExceptionAtEventLoop,
     &currentScriptExecutionOwner,
     &scriptExecutionStatus,
-    &defaultLanguage,
+    &reportViolationForUnsafeEval,
+    [] { return defaultLanguage(); },
 #if ENABLE(WEBASSEMBLY)
     &compileStreaming,
     &instantiateStreaming,
@@ -66,6 +65,7 @@ const GlobalObjectMethodTable JSWorkletGlobalScopeBase::s_globalObjectMethodTabl
     nullptr,
     nullptr,
 #endif
+    deriveShadowRealmGlobalObject,
 };
 
 JSWorkletGlobalScopeBase::JSWorkletGlobalScopeBase(JSC::VM& vm, JSC::Structure* structure, RefPtr<WorkletGlobalScope>&& impl)
@@ -109,6 +109,11 @@ JSC::ScriptExecutionStatus JSWorkletGlobalScopeBase::scriptExecutionStatus(JSC::
     return jsCast<JSWorkletGlobalScopeBase*>(globalObject)->scriptExecutionContext()->jscScriptExecutionStatus();
 }
 
+void JSWorkletGlobalScopeBase::reportViolationForUnsafeEval(JSC::JSGlobalObject* globalObject, JSC::JSString* source)
+{
+    return JSGlobalObject::reportViolationForUnsafeEval(globalObject, source);
+}
+
 bool JSWorkletGlobalScopeBase::supportsRichSourceInfo(const JSGlobalObject* object)
 {
     return JSGlobalObject::supportsRichSourceInfo(object);
@@ -143,18 +148,6 @@ JSValue toJS(JSGlobalObject*, WorkletGlobalScope& workletGlobalScope)
     if (!contextWrapper)
         return jsUndefined();
     return &contextWrapper->proxy();
-}
-
-JSWorkletGlobalScope* toJSWorkletGlobalScope(VM& vm, JSValue value)
-{
-    if (!value.isObject())
-        return nullptr;
-    auto* classInfo = asObject(value)->classInfo(vm);
-
-    if (classInfo == JSProxy::info())
-        return jsDynamicCast<JSWorkletGlobalScope*>(vm, jsCast<JSProxy*>(asObject(value))->target());
-
-    return nullptr;
 }
 
 } // namespace WebCore

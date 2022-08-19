@@ -26,9 +26,10 @@
 #pragma once
 
 #include "ActivityState.h"
-#include "FocusDirection.h"
+#include "FocusOptions.h"
 #include "LayoutRect.h"
 #include "Timer.h"
+#include <wtf/CheckedRef.h>
 #include <wtf/Forward.h>
 #include <wtf/RefPtr.h>
 
@@ -47,7 +48,7 @@ class TreeScope;
 
 struct FocusCandidate;
 
-class FocusController {
+class FocusController : public CanMakeCheckedPtr {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     explicit FocusController(Page&, OptionSet<ActivityState::Flag>);
@@ -59,7 +60,7 @@ public:
     WEBCORE_EXPORT bool setInitialFocus(FocusDirection, KeyboardEvent*);
     bool advanceFocus(FocusDirection, KeyboardEvent*, bool initialFocus = false);
 
-    WEBCORE_EXPORT bool setFocusedElement(Element*, Frame&, FocusDirection = FocusDirection::None);
+    WEBCORE_EXPORT bool setFocusedElement(Element*, Frame&, const FocusOptions& = { });
 
     void setActivityState(OptionSet<ActivityState::Flag>);
 

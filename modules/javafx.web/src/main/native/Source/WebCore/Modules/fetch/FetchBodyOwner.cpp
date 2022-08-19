@@ -34,18 +34,18 @@
 #include "FetchLoader.h"
 #include "HTTPParsers.h"
 #include "JSBlob.h"
+#include "JSDOMFormData.h"
 #include "ResourceError.h"
 #include "ResourceResponse.h"
 #include "WindowEventLoop.h"
 
 namespace WebCore {
 
-FetchBodyOwner::FetchBodyOwner(ScriptExecutionContext& context, Optional<FetchBody>&& body, Ref<FetchHeaders>&& headers)
-    : ActiveDOMObject(&context)
+FetchBodyOwner::FetchBodyOwner(ScriptExecutionContext* context, std::optional<FetchBody>&& body, Ref<FetchHeaders>&& headers)
+    : ActiveDOMObject(context)
     , m_body(WTFMove(body))
     , m_headers(WTFMove(headers))
 {
-    suspendIfNeeded();
 }
 
 FetchBodyOwner::~FetchBodyOwner()
@@ -56,6 +56,7 @@ FetchBodyOwner::~FetchBodyOwner()
 
 void FetchBodyOwner::stop()
 {
+    m_readableStreamSource = nullptr;
     if (m_body)
         m_body->cleanConsumer();
 
@@ -184,14 +185,24 @@ void FetchBodyOwner::formData(Ref<DeferredPromise>&& promise)
         return;
     }
 
-    if (isBodyNullOrOpaque()) {
-        promise->reject();
-        return;
-    }
     if (isDisturbedOrLocked()) {
         promise->reject(Exception { TypeError, "Body is disturbed or locked"_s });
         return;
     }
+
+    if (isBodyNullOrOpaque()) {
+        if (isBodyNull()) {
+            // If the content-type is 'application/x-www-form-urlencoded', a body is not required and we should package an empty byte sequence as per the specification.
+            if (auto formData = FetchBodyConsumer::packageFormData(promise->scriptExecutionContext(), m_contentType, nullptr, 0)) {
+                promise->resolve<IDLInterface<DOMFormData>>(*formData);
+                return;
+            }
+        }
+
+        promise->reject(TypeError);
+        return;
+    }
+
     m_isDisturbed = true;
     m_body->formData(*this, WTFMove(promise));
 }
@@ -251,7 +262,7 @@ void FetchBodyOwner::loadBlob(const Blob& blob, FetchBodyConsumer* consumer)
     m_blobLoader->loader->start(*scriptExecutionContext(), blob);
     if (!m_blobLoader->loader->isStarted()) {
         m_body->loadingFailed(Exception { TypeError, "Blob loading failed"_s});
-        m_blobLoader = WTF::nullopt;
+        m_blobLoader = std::nullopt;
         return;
     }
 }
@@ -260,7 +271,7 @@ void FetchBodyOwner::finishBlobLoading()
 {
     ASSERT(m_blobLoader);
 
-    m_blobLoader = WTF::nullopt;
+    m_blobLoader = std::nullopt;
 }
 
 void FetchBodyOwner::blobLoadingSucceeded()
@@ -287,11 +298,10 @@ void FetchBodyOwner::blobLoadingFailed()
     finishBlobLoading();
 }
 
-void FetchBodyOwner::blobChunk(const char* data, size_t size)
+void FetchBodyOwner::blobChunk(const SharedBuffer& buffer)
 {
-    ASSERT(data);
     ASSERT(m_readableStreamSource);
-    if (!m_readableStreamSource->enqueue(ArrayBuffer::tryCreate(data, size)))
+    if (!m_readableStreamSource->enqueue(buffer.tryCreateArrayBuffer()))
         stop();
 }
 
@@ -374,14 +384,14 @@ ResourceError FetchBodyOwner::loadingError() const
     });
 }
 
-Optional<Exception> FetchBodyOwner::loadingException() const
+std::optional<Exception> FetchBodyOwner::loadingException() const
 {
-    return WTF::switchOn(m_loadingError, [](const ResourceError& error) {
-        return Exception { TypeError, error.localizedDescription().isEmpty() ? "Loading failed"_s : error.localizedDescription() };
-    }, [](const Exception& exception) {
+    return WTF::switchOn(m_loadingError, [](const ResourceError& error) -> std::optional<Exception> {
+        return Exception { TypeError, error.sanitizedDescription() };
+    }, [](const Exception& exception) -> std::optional<Exception> {
         return Exception { exception };
-    }, [](auto&&) -> Optional<Exception> {
-        return WTF::nullopt;
+    }, [](auto&&) -> std::optional<Exception> {
+        return std::nullopt;
     });
 }
 

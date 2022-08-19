@@ -44,6 +44,7 @@
 #include "ResourceError.h"
 #include "ResourceRequest.h"
 #include "ResourceResponse.h"
+#include "SVGElementTypeHelpers.h"
 #include "SVGForeignObjectElement.h"
 #include "SVGNames.h"
 #include "SVGStyleElement.h"
@@ -159,7 +160,7 @@ bool XMLDocumentParser::updateLeafTextNode()
         return true;
 
     // This operation might fire mutation event, see below.
-    m_leafTextNode->appendData(String::fromUTF8(reinterpret_cast<const char*>(m_bufferedText.data()), m_bufferedText.size()));
+    m_leafTextNode->appendData(String::fromUTF8(m_bufferedText.data(), m_bufferedText.size()));
     m_bufferedText = { };
 
     m_leafTextNode = nullptr;
@@ -191,8 +192,11 @@ void XMLDocumentParser::end()
     // doEnd() could process a script tag, thus pausing parsing.
     if (m_parserPaused)
         return;
-
+#if PLATFORM(JAVA)
+    if (m_sawError && isStopped()) {
+#else
     if (m_sawError && !isStopped()) {
+#endif
         insertErrorMessageBlock();
         if (isDetached()) // Inserting an error message may have ran arbitrary scripts.
             return;

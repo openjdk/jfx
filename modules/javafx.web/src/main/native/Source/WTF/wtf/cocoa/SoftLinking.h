@@ -85,19 +85,6 @@ static void* lib##Library() \
         return frameworkLibrary; \
     }
 
-#if USE(REALPATH_FOR_DLOPEN_PREFLIGHT)
-#define DLOPEN_PREFLIGHT(path) dlopen_preflight(FileSystem::realPath(path##_s).utf8().data())
-#else
-#define DLOPEN_PREFLIGHT(path) dlopen_preflight(path)
-#endif
-
-#define SOFT_LINK_FRAMEWORK_OPTIONAL_PREFLIGHT(framework) \
-    static bool framework##LibraryIsAvailable() \
-    { \
-        static bool frameworkLibraryIsAvailable = DLOPEN_PREFLIGHT("/System/Library/Frameworks/" #framework ".framework/" #framework); \
-        return frameworkLibraryIsAvailable; \
-    }
-
 #define SOFT_LINK_FRAMEWORK_OPTIONAL(framework) \
     static void* framework##Library() \
     { \
@@ -127,6 +114,29 @@ static void* lib##Library() \
     static void* framework##Library() \
     { \
         static void* frameworkLibrary = dlopen("/System/Library/Frameworks/" #umbrella ".framework/Frameworks/" #framework ".framework/" #framework, RTLD_NOW); \
+        return frameworkLibrary; \
+    }
+
+#define SOFT_LINK_FRAMEWORK_IN_UMBRELLA_FOR_SOURCE_WITH_EXPORT(functionNamespace, umbrella, framework, export) \
+    namespace functionNamespace { \
+    export void* framework##Library(bool isOptional = false); \
+    void* framework##Library(bool isOptional) \
+    { \
+        static void* frameworkLibrary; \
+        static dispatch_once_t once; \
+        dispatch_once(&once, ^{ \
+            frameworkLibrary = dlopen("/System/Library/Frameworks/" #umbrella ".framework/Frameworks/" #framework ".framework/" #framework, RTLD_NOW); \
+            if (!isOptional) \
+                RELEASE_ASSERT_WITH_MESSAGE(frameworkLibrary, "%s", dlerror()); \
+        }); \
+        return frameworkLibrary; \
+    } \
+    }
+
+#define SOFT_LINK_PRIVATE_FRAMEWORK_IN_UMBRELLA_OPTIONAL(umbrella, framework) \
+    static void* framework##Library() \
+    { \
+        static void* frameworkLibrary = dlopen("/System/Library/PrivateFrameworks/" #umbrella ".framework/Frameworks/" #framework ".framework/" #framework, RTLD_NOW); \
         return frameworkLibrary; \
     }
 
@@ -332,6 +342,7 @@ static void* lib##Library() \
 #define SOFT_LINK_LIBRARY_FOR_HEADER(functionNamespace, lib) \
     namespace functionNamespace { \
     extern void* lib##Library(bool isOptional = false); \
+    bool is##lib##LibraryAvailable(); \
     inline bool is##lib##LibaryAvailable() { \
         return lib##Library(true) != nullptr; \
     } \
@@ -339,7 +350,7 @@ static void* lib##Library() \
 
 #define SOFT_LINK_LIBRARY_FOR_SOURCE(functionNamespace, lib) \
     namespace functionNamespace { \
-    void* lib##Library(bool isOptional); \
+    extern void* lib##Library(bool isOptional = false); \
     void* lib##Library(bool isOptional) \
     { \
         static void* library; \
@@ -411,7 +422,14 @@ static void* lib##Library() \
     } \
     }
 
-#define SOFT_LINK_CLASS_FOR_SOURCE_WITH_EXPORT_AND_IS_OPTIONAL(functionNamespace, framework, className, export, isOptional) \
+#define SOFT_LINK_CLASS_FOR_HEADER_WITH_AVAILABILITY(functionNamespace, className, availability) \
+    @class className; \
+    namespace functionNamespace { \
+    extern Class (*get##className##Class)(); \
+    className *alloc##className##Instance() availability; \
+    }
+
+#define SOFT_LINK_CLASS_FOR_SOURCE_INTERNAL(functionNamespace, framework, className, export, isOptional, availability) \
     @class className; \
     namespace functionNamespace { \
     static Class init##className(); \
@@ -435,10 +453,14 @@ static void* lib##Library() \
         }); \
         return class##className; \
     } \
+    availability \
     }
 
 #define SOFT_LINK_IS_OPTIONAL true
 #define SOFT_LINK_IS_NOT_OPTIONAL false
+
+#define SOFT_LINK_CLASS_FOR_SOURCE_WITH_EXPORT_AND_IS_OPTIONAL(functionNamespace, framework, className, export, isOptional) \
+    SOFT_LINK_CLASS_FOR_SOURCE_INTERNAL(functionNamespace, framework, className, export, isOptional, )
 
 #define SOFT_LINK_CLASS_FOR_SOURCE_WITH_EXPORT(functionNamespace, framework, className, export) \
     SOFT_LINK_CLASS_FOR_SOURCE_WITH_EXPORT_AND_IS_OPTIONAL(functionNamespace, framework, className, export, SOFT_LINK_IS_NOT_OPTIONAL)
@@ -451,6 +473,16 @@ static void* lib##Library() \
 
 #define SOFT_LINK_CLASS_FOR_SOURCE_OPTIONAL(functionNamespace, framework, className) \
     SOFT_LINK_CLASS_FOR_SOURCE_WITH_EXPORT_AND_IS_OPTIONAL(functionNamespace, framework, className, , SOFT_LINK_IS_OPTIONAL)
+
+#define SOFT_LINK_CLASS_ALLOC_FUNCTION(className, availability) \
+    className *alloc##className##Instance() availability; \
+    className *alloc##className##Instance() availability \
+    { \
+        return [get##className##Class() alloc]; \
+    } \
+
+#define SOFT_LINK_CLASS_FOR_SOURCE_OPTIONAL_WITH_EXPORT_AND_AVAILABILITY(functionNamespace, framework, className, export, availability) \
+    SOFT_LINK_CLASS_FOR_SOURCE_INTERNAL(functionNamespace, framework, className, export, SOFT_LINK_IS_OPTIONAL, SOFT_LINK_CLASS_ALLOC_FUNCTION(className, availability))
 
 #define SOFT_LINK_CONSTANT_FOR_HEADER(functionNamespace, framework, variableName, variableType) \
     namespace functionNamespace { \
@@ -522,10 +554,6 @@ static void* lib##Library() \
         return softLink##framework##functionName parameterNames; \
     } \
     } \
-    inline __attribute__((__always_inline__)) resultType functionName parameterDeclarations \
-    {\
-        return functionNamespace::softLink##framework##functionName parameterNames; \
-    }
 
 #define SOFT_LINK_FUNCTION_FOR_SOURCE_WITH_EXPORT(functionNamespace, framework, functionName, resultType, parameterDeclarations, parameterNames, export) \
     WTF_EXTERN_C_BEGIN \

@@ -185,7 +185,20 @@ function extractHighWaterMark(strategy, defaultHWM)
     if (@isNaN(highWaterMark) || highWaterMark < 0)
         @throwRangeError("highWaterMark value is negative or not a number");
 
-    return highWaterMark;
+    return @toNumber(highWaterMark);
+}
+
+function extractHighWaterMarkFromQueuingStrategyInit(init)
+{
+    "use strict";
+
+    if (!@isObject(init))
+        @throwTypeError("QueuingStrategyInit argument must be an object.");
+    const {highWaterMark} = init;
+    if (highWaterMark === @undefined)
+        @throwTypeError("QueuingStrategyInit.highWaterMark member is required.");
+
+    return @toNumber(highWaterMark);
 }
 
 function createFulfilledPromise(value)
@@ -193,4 +206,13 @@ function createFulfilledPromise(value)
     const promise = @newPromise();
     @fulfillPromise(promise, value);
     return promise;
+}
+
+function toDictionary(value, defaultValue, errorMessage)
+{
+    if (value === @undefined || value === null)
+        return defaultValue;
+    if (!@isObject(value))
+        @throwTypeError(errorMessage);
+    return value;
 }

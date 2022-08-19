@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -93,7 +93,17 @@
 #endif
 
 #if defined(__SCE__)
-#define BPLATORM_PLAYSTATION 1
+#define BPLATFORM_PLAYSTATION 1
+#endif
+
+#if defined(BUILDING_GTK__)
+#define BPLATFORM_GTK 1
+#elif defined(BUILDING_WPE__)
+#define BPLATFORM_WPE 1
+#elif defined(BUILDING_JSCONLY__)
+/* JSCOnly does not provide BPLATFORM() macro */
+#elif BOS(WINDOWS)
+#define BPLATFORM_WIN 1
 #endif
 
 /* ==== Feature decision macros: these define feature choices for a particular port. ==== */
@@ -133,6 +143,9 @@
 /* BCPU(ARM64) */
 #if defined(__arm64__) || defined(__aarch64__)
 #define BCPU_ARM64 1
+#if defined(__arm64e__)
+#define BCPU_ARM64E 1
+#endif
 #endif
 
 /* BCPU(ARM) - ARM, any version*/
@@ -274,8 +287,8 @@
 #endif
 
 #if BCPU(ADDRESS64)
-#if (BOS(IOS) || BOS(TVOS) || BOS(WATCHOS)) && BCPU(ARM64)
-#define BOS_EFFECTIVE_ADDRESS_WIDTH 36
+#if BOS(DARWIN)
+#define BOS_EFFECTIVE_ADDRESS_WIDTH (bmalloc::getMSBSetConstexpr(MACH_VM_MAX_ADDRESS) + 1)
 #else
 /* We strongly assume that effective address width is <= 48 in 64bit architectures (e.g. NaN boxing). */
 #define BOS_EFFECTIVE_ADDRESS_WIDTH 48
@@ -309,10 +322,25 @@
 /* This is used for debugging when hacking on how bmalloc calculates its physical footprint. */
 #define ENABLE_PHYSICAL_PAGE_MAP 0
 
-#if BPLATFORM(MAC)
-#define BUSE_PARTIAL_SCAVENGE 1
+/* BENABLE(LIBPAS) is enabling libpas build. But this does not mean we use libpas for bmalloc replacement. */
+#if !defined(BENABLE_LIBPAS)
+#if BCPU(ADDRESS64) && (BOS(DARWIN) || (!BOS(LINUX) && !BPLATFORM(GTK) && !BPLATFORM(WPE)))
+#define BENABLE_LIBPAS 1
+#ifndef PAS_BMALLOC
+#define PAS_BMALLOC 1
+#endif
 #else
-#define BUSE_PARTIAL_SCAVENGE 0
+#define BENABLE_LIBPAS 0
+#endif
+#endif
+
+/* BUSE(LIBPAS) is using libpas for bmalloc replacement. */
+#if !defined(BUSE_LIBPAS)
+#if defined(BENABLE_LIBPAS) && BENABLE_LIBPAS
+#define BUSE_LIBPAS 1
+#else
+#define BUSE_LIBPAS 0
+#endif
 #endif
 
 #if !defined(BUSE_PRECOMPUTED_CONSTANTS_VMPAGE4K)

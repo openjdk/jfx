@@ -33,6 +33,7 @@ G_BEGIN_DECLS
  * @type: A #GType value.
  *
  * Checks whether the passed in type ID can be used for g_value_init().
+ *
  * That is, this macro checks whether this type provides an implementation
  * of the #GTypeValueTable functions required for a type to create a #GValue of.
  *
@@ -97,10 +98,12 @@ typedef void (*GValueTransform) (const GValue *src_value,
  * GValue:
  *
  * An opaque structure used to hold different types of values.
+ *
  * The data within the structure has protected scope: it is accessible only
  * to functions within a #GTypeValueTable structure, or implementations of
  * the g_value_*() API. That is, code portions which implement new fundamental
  * types.
+ *
  * #GValue users cannot make any assumptions about how data is stored
  * within the 2 element @data union, and the @g_type member should
  * only be accessed through the G_VALUE_TYPE() macro.
@@ -193,7 +196,7 @@ void  g_value_register_transform_func (GType     src_type,
  * be used as initializer instead of an explicit `{ 0 }` when declaring
  * a variable, but it cannot be assigned to a variable.
  *
- * |[
+ * |[<!-- language="C" -->
  *   GValue value = G_VALUE_INIT;
  * ]|
  *

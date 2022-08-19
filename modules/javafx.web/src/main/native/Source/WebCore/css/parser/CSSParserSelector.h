@@ -60,6 +60,7 @@ public:
     const CSSSelectorList* selectorList() const { return m_selector->selectorList(); }
 
     void setPseudoElementType(CSSSelector::PseudoElementType type) { m_selector->setPseudoElementType(type); }
+    void setPseudoClassType(CSSSelector::PseudoClassType type) { m_selector->setPseudoClassType(type); }
 
     void adoptSelectorVector(Vector<std::unique_ptr<CSSParserSelector>>&&);
     void setArgumentList(std::unique_ptr<Vector<AtomString>>);
@@ -70,7 +71,6 @@ public:
 
     bool isPseudoElementCueFunction() const;
 
-    bool hasShadowDescendant() const;
     bool matchesPseudoElement() const;
 
     bool isHostPseudoSelector() const;
@@ -95,11 +95,6 @@ private:
     std::unique_ptr<CSSParserSelector> m_tagHistory;
 };
 
-inline bool CSSParserSelector::hasShadowDescendant() const
-{
-    return m_selector->relation() == CSSSelector::ShadowDescendant;
-}
-
 inline bool CSSParserSelector::needsImplicitShadowCombinatorForMatching() const
 {
     return match() == CSSSelector::PseudoElement
@@ -108,6 +103,7 @@ inline bool CSSParserSelector::needsImplicitShadowCombinatorForMatching() const
             || pseudoElementType() == CSSSelector::PseudoElementCue
 #endif
             || pseudoElementType() == CSSSelector::PseudoElementPart
+            || pseudoElementType() == CSSSelector::PseudoElementSlotted
             || pseudoElementType() == CSSSelector::PseudoElementWebKitCustomLegacyPrefixed);
 }
 

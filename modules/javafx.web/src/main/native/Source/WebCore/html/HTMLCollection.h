@@ -75,7 +75,7 @@ public:
     Vector<Ref<Element>> namedItems(const AtomString& name) const;
     size_t memoryCost() const override;
 
-    bool isRootedAtDocument() const;
+    bool isRootedAtTreeScope() const;
     NodeListInvalidationType invalidationType() const;
     CollectionType type() const;
     ContainerNode& ownerNode() const;
@@ -103,7 +103,7 @@ protected:
 
     void invalidateNamedElementCache(Document&) const;
 
-    enum RootType { IsRootedAtNode, IsRootedAtDocument };
+    enum RootType { IsRootedAtNode, IsRootedAtTreeScope };
     static RootType rootTypeFromCollectionType(CollectionType);
 
     mutable Lock m_namedElementCacheAssignmentLock;
@@ -119,9 +119,8 @@ protected:
 
 inline ContainerNode& HTMLCollection::rootNode() const
 {
-    if (isRootedAtDocument() && ownerNode().isConnected())
-        return ownerNode().document();
-
+    if (isRootedAtTreeScope() && ownerNode().isInTreeScope())
+        return ownerNode().treeScope().rootNode();
     return ownerNode();
 }
 
@@ -179,13 +178,13 @@ inline size_t HTMLCollection::memoryCost() const
 {
     // memoryCost() may be invoked concurrently from a GC thread, and we need to be careful about what data we access here and how.
     // Hence, we need to guard m_namedElementCache from being replaced while accessing it.
-    auto locker = holdLock(m_namedElementCacheAssignmentLock);
+    Locker locker { m_namedElementCacheAssignmentLock };
     return m_namedElementCache ? m_namedElementCache->memoryCost() : 0;
 }
 
-inline bool HTMLCollection::isRootedAtDocument() const
+inline bool HTMLCollection::isRootedAtTreeScope() const
 {
-    return m_rootType == IsRootedAtDocument;
+    return m_rootType == IsRootedAtTreeScope;
 }
 
 inline NodeListInvalidationType HTMLCollection::invalidationType() const
@@ -227,7 +226,7 @@ inline void HTMLCollection::setNamedItemCache(std::unique_ptr<CollectionNamedEle
     ASSERT(!m_namedElementCache);
     cache->didPopulate();
     {
-        auto locker = holdLock(m_namedElementCacheAssignmentLock);
+        Locker locker { m_namedElementCacheAssignmentLock };
         m_namedElementCache = WTFMove(cache);
     }
     document().collectionCachedIdNameMap(*this);

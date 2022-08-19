@@ -110,9 +110,9 @@ JSC_DEFINE_HOST_FUNCTION(reflectObjectConstruct, (JSGlobalObject* globalObject, 
     if (!argumentsObject)
         return JSValue::encode(throwTypeError(globalObject, scope, "Reflect.construct requires the second argument be an object"_s));
 
-    createListFromArrayLike(globalObject, argumentsObject, RuntimeTypeMaskAllTypes, "This error must not be raised"_s, "This error must not be raised"_s, [&] (JSValue value, RuntimeType) -> bool {
+    forEachInArrayLike(globalObject, argumentsObject, [&] (JSValue value) -> bool {
         arguments.append(value);
-        return false;
+        return true;
     });
     RETURN_IF_EXCEPTION(scope, (arguments.overflowCheckNotNeeded(), encodedJSValue()));
     if (UNLIKELY(arguments.hasOverflowed())) {
@@ -222,7 +222,7 @@ JSC_DEFINE_HOST_FUNCTION(reflectObjectOwnKeys, (JSGlobalObject* globalObject, Ca
     JSValue target = callFrame->argument(0);
     if (!target.isObject())
         return JSValue::encode(throwTypeError(globalObject, scope, "Reflect.ownKeys requires the first argument be an object"_s));
-    RELEASE_AND_RETURN(scope, JSValue::encode(ownPropertyKeys(globalObject, jsCast<JSObject*>(target), PropertyNameMode::StringsAndSymbols, DontEnumPropertiesMode::Include, WTF::nullopt)));
+    RELEASE_AND_RETURN(scope, JSValue::encode(ownPropertyKeys(globalObject, jsCast<JSObject*>(target), PropertyNameMode::StringsAndSymbols, DontEnumPropertiesMode::Include, std::nullopt)));
 }
 
 // https://tc39.github.io/ecma262/#sec-reflect.preventextensions
@@ -260,7 +260,7 @@ JSC_DEFINE_HOST_FUNCTION(reflectObjectSet, (JSGlobalObject* globalObject, CallFr
 
     // Do not raise any readonly errors that happen in strict mode.
     bool shouldThrowIfCantSet = false;
-    PutPropertySlot slot(receiver, shouldThrowIfCantSet);
+    PutPropertySlot slot(receiver, shouldThrowIfCantSet, PutPropertySlot::ReflectSet);
     RELEASE_AND_RETURN(scope, JSValue::encode(jsBoolean(targetObject->methodTable(vm)->put(targetObject, globalObject, propertyName, callFrame->argument(2), slot))));
 }
 

@@ -49,17 +49,17 @@ Vector<String> ClipboardItemPasteboardDataSource::types() const
 
 void ClipboardItemPasteboardDataSource::getType(const String& type, Ref<DeferredPromise>&& promise)
 {
-    if (auto clipboard = makeRefPtr(m_item.clipboard()))
+    if (RefPtr clipboard = m_item.clipboard())
         clipboard->getType(m_item, type, WTFMove(promise));
     else
         promise->reject(NotAllowedError);
 }
 
-void ClipboardItemPasteboardDataSource::collectDataForWriting(Clipboard&, CompletionHandler<void(Optional<PasteboardCustomData>)>&& completion)
+void ClipboardItemPasteboardDataSource::collectDataForWriting(Clipboard&, CompletionHandler<void(std::optional<PasteboardCustomData>)>&& completion)
 {
     // FIXME: Not implemented. This is needed to support writing platform-backed ClipboardItems
     // back to the pasteboard using Clipboard.write().
-    completion(WTF::nullopt);
+    completion(std::nullopt);
 }
 
 } // namespace WebCore

@@ -58,20 +58,24 @@ public:
             return;
 
         Checked<size_t> initialSize = sizeof(T) * n;
-        const size_t alignment = 16;
+        // Accelerate.framework behaves differently based on input vector alignment. And each implementation
+        // has very small difference in output! We ensure 32byte alignment so that we will always take the most
+        // optimized implementation if possible, which makes the result deterministic.
+        constexpr size_t alignment = 32;
 
         fastAlignedFree(m_allocation);
 
-        m_allocation = static_cast<T*>(fastAlignedMalloc(alignment, initialSize.unsafeGet()));
+        m_allocation = static_cast<T*>(fastAlignedMalloc(alignment, initialSize));
         if (!m_allocation)
             CRASH();
-        m_size = n.unsafeGet();
+        m_size = n;
         zero();
     }
 
     T* data() { return m_allocation; }
     const T* data() const { return m_allocation; }
     size_t size() const { return m_size; }
+    bool isEmpty() const { return !m_size; }
 
     T& at(size_t i)
     {

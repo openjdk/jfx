@@ -83,14 +83,6 @@ public final class IosApplication extends Application {
      * @inheritDoc
      */
     @Override
-    public Window createWindow(long parent) {
-        return new IosWindow(parent);
-    }
-
-    /**
-     * @inheritDoc
-     */
-    @Override
     public View createView() {
         return new IosView();
     }
@@ -126,6 +118,11 @@ public final class IosApplication extends Application {
     @Override
     public Pixels createPixels(int width, int height, ByteBuffer data) {
         return new IosPixels(width, height, data);
+    }
+
+    @Override
+    public Pixels createPixels(int width, int height, ByteBuffer data, float scalex, float scaley) {
+        return new IosPixels(width, height, data, scalex, scaley);
     }
 
     /**

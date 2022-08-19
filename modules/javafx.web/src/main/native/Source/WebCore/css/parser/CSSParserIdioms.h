@@ -32,6 +32,7 @@
 #pragma once
 
 #include "CSSParserContext.h"
+#include "CSSValueKeywords.h"
 #include <wtf/ASCIICType.h>
 
 namespace WebCore {
@@ -59,6 +60,24 @@ bool isNameCodePoint(CharacterType c)
 
 bool isValueAllowedInMode(unsigned short, CSSParserMode);
 
-URL completeURL(const CSSParserContext&, const String& url);
+inline bool isCSSWideKeyword(CSSValueID valueID)
+{
+    switch (valueID) {
+    case CSSValueInitial:
+    case CSSValueInherit:
+    case CSSValueUnset:
+    case CSSValueRevert:
+    case CSSValueRevertLayer:
+        return true;
+    default:
+        return false;
+    };
+}
+
+inline bool isValidCustomIdentifier(CSSValueID valueID)
+{
+    // "default" is obsolete as a CSS-wide keyword but is still not allowed as a custom identifier.
+    return !isCSSWideKeyword(valueID) && valueID != CSSValueDefault;
+}
 
 } // namespace WebCore

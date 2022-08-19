@@ -58,7 +58,7 @@ static void platformRegisterFactories(FactoryVector& factories)
 
 static FactoryVector& installedFactories()
 {
-    static auto factories = makeNeverDestroyed<FactoryVector>({ });
+    static NeverDestroyed<FactoryVector> factories;
     static std::once_flag registerDefaults;
     std::call_once(registerDefaults, [&] {
         platformRegisterFactories(factories);
@@ -84,7 +84,7 @@ void ImageDecoder::clearFactories()
 }
 #endif
 
-RefPtr<ImageDecoder> ImageDecoder::create(SharedBuffer& data, const String& mimeType, AlphaOption alphaOption, GammaAndColorProfileOption gammaAndColorProfileOption)
+RefPtr<ImageDecoder> ImageDecoder::create(FragmentedSharedBuffer& data, const String& mimeType, AlphaOption alphaOption, GammaAndColorProfileOption gammaAndColorProfileOption)
 {
     UNUSED_PARAM(mimeType);
 

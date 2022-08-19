@@ -28,7 +28,6 @@
 
 #include "RuntimeApplicationChecks.h"
 #include <wtf/Lock.h>
-#include <wtf/Locker.h>
 #include <wtf/MainThread.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/URLParser.h>
@@ -45,21 +44,21 @@ namespace WebCore {
 // FIXME: URLSchemesMap is a peculiar type name given that it is a set.
 
 static const URLSchemesMap& builtinLocalURLSchemes();
-static const Vector<String>& builtinSecureSchemes();
-static const Vector<String>& builtinSchemesWithUniqueOrigins();
-static const Vector<String>& builtinEmptyDocumentSchemes();
-static const Vector<String>& builtinCanDisplayOnlyIfCanRequestSchemes();
-static const Vector<String>& builtinCORSEnabledSchemes();
+static Span<const ASCIILiteral> builtinSecureSchemes();
+static Span<const ASCIILiteral> builtinSchemesWithUniqueOrigins();
+static Span<const ASCIILiteral> builtinEmptyDocumentSchemes();
+static Span<const ASCIILiteral> builtinCanDisplayOnlyIfCanRequestSchemes();
+static Span<const ASCIILiteral> builtinCORSEnabledSchemes();
 
-using StringVectorFunction = const Vector<String>& (*)();
+using ASCIILiteralSpanFunction = Span<const ASCIILiteral> (*)();
 
-static void add(URLSchemesMap& set, StringVectorFunction function)
+static void add(URLSchemesMap& set, ASCIILiteralSpanFunction function)
 {
     for (auto& scheme : function())
         set.add(scheme);
 }
 
-static NeverDestroyed<URLSchemesMap> makeNeverDestroyedSchemeSet(const Vector<String>& (*function)())
+static NeverDestroyed<URLSchemesMap> makeNeverDestroyedSchemeSet(ASCIILiteralSpanFunction function)
 {
     URLSchemesMap set;
     add(set, function);
@@ -70,8 +69,8 @@ static Lock schemeRegistryLock;
 
 static const URLSchemesMap& allBuiltinSchemes()
 {
-    static const auto schemes = makeNeverDestroyed([] {
-        static const StringVectorFunction functions[] {
+    static NeverDestroyed schemes = [] {
+        static constexpr ASCIILiteralSpanFunction functions[] {
             builtinSecureSchemes,
             builtinSchemesWithUniqueOrigins,
             builtinEmptyDocumentSchemes,
@@ -95,92 +94,91 @@ static const URLSchemesMap& allBuiltinSchemes()
 
         URLSchemesMap set;
         {
-            Locker<Lock> locker(schemeRegistryLock);
+            Locker locker { schemeRegistryLock };
             for (auto& scheme : builtinLocalURLSchemes())
                 set.add(scheme);
-
-            for (auto& function : functions)
-                add(set, function);
         }
+        for (auto& function : functions)
+            add(set, function);
         for (auto& scheme : otherSchemes)
             set.add(scheme);
         return set;
-    }());
+    }();
     return schemes;
 }
 
-static const URLSchemesMap& builtinLocalURLSchemes()
+static const URLSchemesMap& builtinLocalURLSchemes() WTF_REQUIRES_LOCK(schemeRegistryLock)
 {
     ASSERT(schemeRegistryLock.isHeld());
-    static const auto schemes = makeNeverDestroyed(URLSchemesMap {
-        "file",
+    static NeverDestroyed schemes = URLSchemesMap {
+        "file"_s,
 #if PLATFORM(COCOA)
-        "applewebdata",
+        "applewebdata"_s,
 #endif
-    });
+    };
     return schemes;
 }
 
-static URLSchemesMap& localURLSchemes()
+static URLSchemesMap& localURLSchemes() WTF_REQUIRES_LOCK(schemeRegistryLock)
 {
     ASSERT(schemeRegistryLock.isHeld());
     static NeverDestroyed<URLSchemesMap> localSchemes = builtinLocalURLSchemes();
     return localSchemes;
 }
 
-static URLSchemesMap& displayIsolatedURLSchemes()
+static URLSchemesMap& displayIsolatedURLSchemes() WTF_REQUIRES_LOCK(schemeRegistryLock)
 {
     ASSERT(schemeRegistryLock.isHeld());
     static NeverDestroyed<URLSchemesMap> displayIsolatedSchemes;
     return displayIsolatedSchemes;
 }
 
-const Vector<String>& builtinSecureSchemes()
+static Span<const ASCIILiteral> builtinSecureSchemes()
 {
-    ASSERT(schemeRegistryLock.isHeld());
-    static const auto schemes = makeNeverDestroyed(Vector<String> {
-        "https",
-        "about",
-        "data",
-        "wss",
+    static constexpr std::array schemes {
+        "https"_s,
+        "about"_s,
+        "data"_s,
+        "wss"_s,
 #if PLATFORM(GTK) || PLATFORM(WPE)
-        "resource",
+        "resource"_s,
 #endif
-    });
+#if PLATFORM(COCOA)
+        "webkit-pdfjs-viewer"_s,
+#endif
+    };
     return schemes;
 }
 
-static URLSchemesMap& secureSchemes()
+static URLSchemesMap& secureSchemes() WTF_REQUIRES_LOCK(schemeRegistryLock)
 {
     ASSERT(schemeRegistryLock.isHeld());
     static auto secureSchemes = makeNeverDestroyedSchemeSet(builtinSecureSchemes);
     return secureSchemes;
 }
 
-const Vector<String>& builtinSchemesWithUniqueOrigins()
+static Span<const ASCIILiteral> builtinSchemesWithUniqueOrigins()
 {
-    ASSERT(schemeRegistryLock.isHeld());
-    static const auto schemes = makeNeverDestroyed(Vector<String> {
-        "about",
-        "javascript",
+    static constexpr std::array schemes {
+        "about"_s,
+        "javascript"_s,
         // This is an intentional difference from the behavior the HTML specification calls for.
         // See https://bugs.webkit.org/show_bug.cgi?id=11885
-        "data",
-    });
+        "data"_s,
+    };
     return schemes;
 }
 
-static URLSchemesMap& schemesWithUniqueOrigins()
+static URLSchemesMap& schemesWithUniqueOrigins() WTF_REQUIRES_LOCK(schemeRegistryLock)
 {
     ASSERT(schemeRegistryLock.isHeld());
     static auto schemesWithUniqueOrigins = makeNeverDestroyedSchemeSet(builtinSchemesWithUniqueOrigins);
     return schemesWithUniqueOrigins;
 }
 
-const Vector<String>& builtinEmptyDocumentSchemes()
+static Span<const ASCIILiteral> builtinEmptyDocumentSchemes()
 {
-    ASSERT(isMainThread());
-    static const auto schemes = makeNeverDestroyed(Vector<String> { "about" });
+    static constexpr std::array schemes { "about"_s };
     return schemes;
 }
 
@@ -198,14 +196,13 @@ static URLSchemesMap& schemesForbiddenFromDomainRelaxation()
     return schemes;
 }
 
-const Vector<String>& builtinCanDisplayOnlyIfCanRequestSchemes()
+static Span<const ASCIILiteral> builtinCanDisplayOnlyIfCanRequestSchemes()
 {
-    ASSERT(schemeRegistryLock.isHeld());
-    static const auto schemes = makeNeverDestroyed(Vector<String> { "blob" });
+    static constexpr std::array schemes { "blob"_s };
     return schemes;
 }
 
-static URLSchemesMap& canDisplayOnlyIfCanRequestSchemes()
+static URLSchemesMap& canDisplayOnlyIfCanRequestSchemes() WTF_REQUIRES_LOCK(schemeRegistryLock)
 {
     ASSERT(!isInNetworkProcess());
     ASSERT(schemeRegistryLock.isHeld());
@@ -225,20 +222,20 @@ void LegacySchemeRegistry::registerURLSchemeAsLocal(const String& scheme)
     if (scheme.isNull())
         return;
 
-    Locker<Lock> locker(schemeRegistryLock);
+    Locker locker { schemeRegistryLock };
     localURLSchemes().add(scheme);
 }
 
 void LegacySchemeRegistry::removeURLSchemeRegisteredAsLocal(const String& scheme)
 {
-    Locker<Lock> locker(schemeRegistryLock);
+    Locker locker { schemeRegistryLock };
     if (builtinLocalURLSchemes().contains(scheme))
         return;
 
     localURLSchemes().remove(scheme);
 }
 
-static HashSet<String>& schemesHandledBySchemeHandler()
+static HashSet<String>& schemesHandledBySchemeHandler() WTF_REQUIRES_LOCK(schemeRegistryLock)
 {
     ASSERT(schemeRegistryLock.isHeld());
     static NeverDestroyed<HashSet<String>> set;
@@ -247,14 +244,14 @@ static HashSet<String>& schemesHandledBySchemeHandler()
 
 void LegacySchemeRegistry::registerURLSchemeAsHandledBySchemeHandler(const String& scheme)
 {
-    Locker<Lock> locker(schemeRegistryLock);
+    Locker locker { schemeRegistryLock };
     schemesHandledBySchemeHandler().add(scheme);
 }
 
 bool LegacySchemeRegistry::schemeIsHandledBySchemeHandler(StringView scheme)
 {
-    Locker<Lock> locker(schemeRegistryLock);
-    return schemesHandledBySchemeHandler().contains(scheme.toString());
+    Locker locker { schemeRegistryLock };
+    return schemesHandledBySchemeHandler().contains(scheme.toStringWithoutCopying());
 }
 
 static URLSchemesMap& schemesAllowingDatabaseAccessInPrivateBrowsing()
@@ -264,10 +261,9 @@ static URLSchemesMap& schemesAllowingDatabaseAccessInPrivateBrowsing()
     return schemesAllowingDatabaseAccessInPrivateBrowsing;
 }
 
-const Vector<String>& builtinCORSEnabledSchemes()
+static Span<const ASCIILiteral> builtinCORSEnabledSchemes()
 {
-    ASSERT(isMainThread());
-    static const auto schemes = makeNeverDestroyed(Vector<String> { "http", "https" });
+    static constexpr std::array schemes { "http"_s, "https"_s };
     return schemes;
 }
 
@@ -279,14 +275,14 @@ static URLSchemesMap& CORSEnabledSchemes()
     return schemes;
 }
 
-static URLSchemesMap& ContentSecurityPolicyBypassingSchemes()
+static URLSchemesMap& ContentSecurityPolicyBypassingSchemes() WTF_REQUIRES_LOCK(schemeRegistryLock)
 {
     ASSERT(schemeRegistryLock.isHeld());
     static NeverDestroyed<URLSchemesMap> schemes;
     return schemes;
 }
 
-static URLSchemesMap& cachePartitioningSchemes()
+static URLSchemesMap& cachePartitioningSchemes() WTF_REQUIRES_LOCK(schemeRegistryLock)
 {
     ASSERT(schemeRegistryLock.isHeld());
     static NeverDestroyed<URLSchemesMap> schemes;
@@ -305,7 +301,7 @@ bool LegacySchemeRegistry::shouldTreatURLSchemeAsLocal(const String& scheme)
     if (scheme.isNull())
         return false;
 
-    Locker<Lock> locker(schemeRegistryLock);
+    Locker locker { schemeRegistryLock };
     return localURLSchemes().contains(scheme);
 }
 
@@ -314,7 +310,7 @@ void LegacySchemeRegistry::registerURLSchemeAsNoAccess(const String& scheme)
     if (scheme.isNull())
         return;
 
-    Locker<Lock> locker(schemeRegistryLock);
+    Locker locker { schemeRegistryLock };
     schemesWithUniqueOrigins().add(scheme);
 }
 
@@ -323,7 +319,7 @@ bool LegacySchemeRegistry::shouldTreatURLSchemeAsNoAccess(const String& scheme)
     if (scheme.isNull())
         return false;
 
-    Locker<Lock> locker(schemeRegistryLock);
+    Locker locker { schemeRegistryLock };
     return schemesWithUniqueOrigins().contains(scheme);
 }
 
@@ -332,7 +328,7 @@ void LegacySchemeRegistry::registerURLSchemeAsDisplayIsolated(const String& sche
     if (scheme.isNull())
         return;
 
-    Locker<Lock> locker(schemeRegistryLock);
+    Locker locker { schemeRegistryLock };
     displayIsolatedURLSchemes().add(scheme);
 }
 
@@ -341,7 +337,7 @@ bool LegacySchemeRegistry::shouldTreatURLSchemeAsDisplayIsolated(const String& s
     if (scheme.isNull())
         return false;
 
-    Locker<Lock> locker(schemeRegistryLock);
+    Locker locker { schemeRegistryLock };
     return displayIsolatedURLSchemes().contains(scheme);
 }
 
@@ -350,7 +346,7 @@ void LegacySchemeRegistry::registerURLSchemeAsSecure(const String& scheme)
     if (scheme.isNull())
         return;
 
-    Locker<Lock> locker(schemeRegistryLock);
+    Locker locker { schemeRegistryLock };
     secureSchemes().add(scheme);
 }
 
@@ -359,7 +355,7 @@ bool LegacySchemeRegistry::shouldTreatURLSchemeAsSecure(const String& scheme)
     if (scheme.isNull())
         return false;
 
-    Locker<Lock> locker(schemeRegistryLock);
+    Locker locker { schemeRegistryLock };
     return secureSchemes().contains(scheme);
 }
 
@@ -397,7 +393,7 @@ bool LegacySchemeRegistry::canDisplayOnlyIfCanRequest(const String& scheme)
     if (scheme.isNull())
         return false;
 
-    Locker<Lock> locker(schemeRegistryLock);
+    Locker locker { schemeRegistryLock };
     return canDisplayOnlyIfCanRequestSchemes().contains(scheme);
 }
 
@@ -407,7 +403,7 @@ void LegacySchemeRegistry::registerAsCanDisplayOnlyIfCanRequest(const String& sc
     if (scheme.isNull())
         return;
 
-    Locker<Lock> locker(schemeRegistryLock);
+    Locker locker { schemeRegistryLock };
     canDisplayOnlyIfCanRequestSchemes().add(scheme);
 }
 
@@ -460,7 +456,7 @@ void LegacySchemeRegistry::registerURLSchemeAsBypassingContentSecurityPolicy(con
     if (scheme.isNull())
         return;
 
-    Locker<Lock> locker(schemeRegistryLock);
+    Locker locker { schemeRegistryLock };
     ContentSecurityPolicyBypassingSchemes().add(scheme);
 }
 
@@ -469,7 +465,7 @@ void LegacySchemeRegistry::removeURLSchemeRegisteredAsBypassingContentSecurityPo
     if (scheme.isNull())
         return;
 
-    Locker<Lock> locker(schemeRegistryLock);
+    Locker locker { schemeRegistryLock };
     ContentSecurityPolicyBypassingSchemes().remove(scheme);
 }
 
@@ -478,7 +474,7 @@ bool LegacySchemeRegistry::schemeShouldBypassContentSecurityPolicy(const String&
     if (scheme.isNull())
         return false;
 
-    Locker<Lock> locker(schemeRegistryLock);
+    Locker locker { schemeRegistryLock };
     return ContentSecurityPolicyBypassingSchemes().contains(scheme);
 }
 
@@ -499,7 +495,7 @@ void LegacySchemeRegistry::registerURLSchemeAsCachePartitioned(const String& sch
     if (scheme.isNull())
         return;
 
-    Locker<Lock> locker(schemeRegistryLock);
+    Locker locker { schemeRegistryLock };
     cachePartitioningSchemes().add(scheme);
 }
 
@@ -508,7 +504,7 @@ bool LegacySchemeRegistry::shouldPartitionCacheForURLScheme(const String& scheme
     if (scheme.isNull())
         return false;
 
-    Locker<Lock> locker(schemeRegistryLock);
+    Locker locker { schemeRegistryLock };
     return cachePartitioningSchemes().contains(scheme);
 }
 

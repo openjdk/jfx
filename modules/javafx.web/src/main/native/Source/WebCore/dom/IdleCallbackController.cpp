@@ -33,7 +33,7 @@
 namespace WebCore {
 
 IdleCallbackController::IdleCallbackController(Document& document)
-    : m_document(makeWeakPtr(document))
+    : m_document(document)
 {
 
 }
@@ -71,7 +71,7 @@ void IdleCallbackController::removeIdleCallback(int signedIdentifier)
 
 void IdleCallbackController::queueTaskToStartIdlePeriod()
 {
-    m_document->eventLoop().queueTask(TaskSource::IdleTask, [protectedDocument = makeRef(*m_document), this] {
+    m_document->eventLoop().queueTask(TaskSource::IdleTask, [protectedDocument = Ref { *m_document }, this] {
         RELEASE_ASSERT(protectedDocument->idleCallbackController() == this);
         startIdlePeriod();
     });
@@ -100,7 +100,7 @@ void IdleCallbackController::startIdlePeriod()
 
 void IdleCallbackController::queueTaskToInvokeIdleCallbacks(MonotonicTime deadline)
 {
-    m_document->eventLoop().queueTask(TaskSource::IdleTask, [protectedDocument = makeRef(*m_document), deadline, this] {
+    m_document->eventLoop().queueTask(TaskSource::IdleTask, [protectedDocument = Ref { *m_document }, deadline, this] {
         RELEASE_ASSERT(protectedDocument->idleCallbackController() == this);
         invokeIdleCallbacks(deadline);
     });
@@ -109,7 +109,7 @@ void IdleCallbackController::queueTaskToInvokeIdleCallbacks(MonotonicTime deadli
 // https://w3c.github.io/requestidlecallback/#invoke-idle-callbacks-algorithm
 void IdleCallbackController::invokeIdleCallbacks(MonotonicTime deadline)
 {
-    if (!m_document)
+    if (!m_document || !m_document->frame())
         return;
 
     auto now = MonotonicTime::now();

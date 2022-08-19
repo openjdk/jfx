@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # Copyright (C) 2014 Apple Inc. All rights reserved.
 #
@@ -33,6 +33,10 @@ def enumerablePseudoType(stringPseudoType):
 
     if stringPseudoType.endswith('('):
         stringPseudoType = stringPseudoType[:-1]
+
+    internalPrefix = '-internal-'
+    if (stringPseudoType.startswith(internalPrefix)):
+        stringPseudoType = stringPseudoType[len(internalPrefix):]
 
     webkitPrefix = '-webkit-'
     if (stringPseudoType.startswith(webkitPrefix)):
