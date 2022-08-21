@@ -26,12 +26,14 @@
 package test.com.sun.javafx.css;
 
 import com.sun.javafx.css.TransitionTimer;
+import com.sun.javafx.tk.Toolkit;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import test.util.memory.JMemoryBuddy;
 import javafx.animation.AnimationTimer;
 import javafx.animation.Interpolator;
+import javafx.beans.property.Property;
 import javafx.css.CssMetaData;
 import javafx.css.SimpleStyleableDoubleProperty;
 import javafx.css.SimpleStyleableFloatProperty;
@@ -75,13 +77,13 @@ public class TransitionTimerTest {
 
         timer.start();
 
-        timer.fire(Duration.seconds(0.4));
+        timer.fire(seconds(0.4));
         assertEquals(1, trace.size());
         assertTrue(trace.get(0) > 0.3 && trace.get(0) < 0.5);
 
-        timer.fire(Duration.seconds(0.7));
+        timer.fire(seconds(0.7));
         assertEquals(2, trace.size());
-        assertTrue(trace.get(1) == 1); // must be exactly 1
+        assertTrue(trace.get(1) == 1.0); // must be exactly 1
     }
 
     @Test
@@ -100,9 +102,9 @@ public class TransitionTimerTest {
         };
 
         timer.start();
-        timer.fire(Duration.seconds(0.9));
+        timer.fire(seconds(0.9));
         assertFalse(flag[0]);
-        timer.fire(Duration.seconds(0.2));
+        timer.fire(seconds(0.2));
         assertTrue(flag[0]);
     }
 
@@ -119,7 +121,7 @@ public class TransitionTimerTest {
         };
 
         timer.start();
-        timer.fire(Duration.seconds(0.2));
+        timer.fire(seconds(0.2));
         assertTrue(TransitionTimer.tryStop(timer));
     }
 
@@ -134,12 +136,12 @@ public class TransitionTimerTest {
         };
 
         timer.start();
-        timer.fire(Duration.seconds(0.2));
+        timer.fire(seconds(0.2));
         assertFalse(flag[0]);
     }
 
     private static abstract class TransitionTimerMock extends TransitionTimer {
-        long now = System.nanoTime();
+        long now = Toolkit.getToolkit().getPrimaryTimer().nanos();
 
         TransitionTimerMock(TransitionDefinition transition) {
             super(transition);
@@ -148,6 +150,11 @@ public class TransitionTimerTest {
         public void fire(Duration elapsedTime) {
             now += (long)(elapsedTime.toMillis() * 1000000);
             handle(now);
+        }
+
+        @Override
+        protected Property<?> getProperty() {
+            return null;
         }
     }
 

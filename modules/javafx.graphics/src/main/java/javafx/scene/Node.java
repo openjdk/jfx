@@ -1082,7 +1082,7 @@ public abstract class Node implements EventTarget, Styleable {
         }
         if (sceneChanged) {
             if (newScene == null && transitions != null) {
-                transitions.completeTransitionTimers();
+                transitions.cancelTransitionTimers();
             }
             updateCanReceiveFocus();
             if (isFocusTraversable()) {
@@ -8586,7 +8586,7 @@ public abstract class Node implements EventTarget, Styleable {
         if (treeVisible != value) {
             treeVisible = value;
             if (!value && transitions != null) {
-                transitions.completeTransitionTimers();
+                transitions.cancelTransitionTimers();
             }
             updateCanReceiveFocus();
             focusSetDirty(getScene());
@@ -8992,10 +8992,10 @@ public abstract class Node implements EventTarget, Styleable {
         }
 
         /**
-         * Completes all running timers, which skips the rest of their transition animation
+         * Cancels all running timers, which skips the rest of their transition animation
          * and sets the property value to the target value of the transition.
          */
-        void completeTransitionTimers() {
+        void cancelTransitionTimers() {
             if (timers.isEmpty()) {
                 return;
             }
@@ -9003,7 +9003,7 @@ public abstract class Node implements EventTarget, Styleable {
             // Make a copy of the list, because completing the timers will remove them
             // from the list, which would result in a ConcurrentModificationException.
             for (TransitionTimer timer : new ArrayList<>(timers)) {
-                timer.update(1);
+                timer.cancel();
             }
         }
 
@@ -9088,6 +9088,13 @@ public abstract class Node implements EventTarget, Styleable {
     // package-private for testing
     List<TransitionTimer> getTransitionTimers() {
         return transitions.timers;
+    }
+
+    // package-private for testing
+    void cancelTransitionTimers() {
+        if (transitions != null) {
+            transitions.cancelTransitionTimers();
+        }
     }
 
 

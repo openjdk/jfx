@@ -96,4 +96,8 @@ public class NodeShim {
     public static List<TransitionTimer> getTransitionTimers(Node n) {
         return n.getTransitionTimers();
     }
+
+    public static void cancelTransitionTimers(Node n) {
+        n.cancelTransitionTimers();
+    }
 }

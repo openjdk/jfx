@@ -28,6 +28,7 @@ package javafx.css;
 import com.sun.javafx.css.TransitionTimer;
 import com.sun.javafx.scene.NodeHelper;
 import javafx.beans.property.IntegerPropertyBase;
+import javafx.beans.property.Property;
 import javafx.beans.value.ObservableValue;
 import javafx.scene.Node;
 import java.lang.ref.WeakReference;
@@ -79,9 +80,7 @@ public abstract class StyleableIntegerProperty
             NodeHelper.findTransition(node, getCssMetaData()) : null;
 
         if (transition != null) {
-            timer = new TransitionTimerImpl(this, v, transition);
-            timer.start();
-            NodeHelper.addTransitionTimer((Node)getBean(), timer);
+            timer = TransitionTimer.run(this, new TransitionTimerImpl(this, v, transition));
         } else {
             setValue(v);
         }
@@ -120,6 +119,11 @@ public abstract class StyleableIntegerProperty
         final int oldValue;
         final int newValue;
 
+        @Override
+        protected Property<?> getProperty() {
+            return wref.get();
+        }
+
         TransitionTimerImpl(StyleableIntegerProperty property, Number value, TransitionDefinition transition) {
             super(transition);
             this.wref = new WeakReference<>(property);
@@ -144,7 +148,6 @@ public abstract class StyleableIntegerProperty
             StyleableIntegerProperty property = wref.get();
             if (property != null) {
                 property.timer = null;
-                NodeHelper.removeTransitionTimer((Node)property.getBean(), this);
             }
         }
     }

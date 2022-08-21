@@ -28,6 +28,7 @@ package javafx.css;
 import com.sun.javafx.css.TransitionTimer;
 import com.sun.javafx.scene.NodeHelper;
 import javafx.beans.property.FloatPropertyBase;
+import javafx.beans.property.Property;
 import javafx.beans.value.ObservableValue;
 import javafx.scene.Node;
 import java.lang.ref.WeakReference;
@@ -79,9 +80,7 @@ public abstract class StyleableFloatProperty
             NodeHelper.findTransition(node, getCssMetaData()) : null;
 
         if (transition != null) {
-            timer = new TransitionTimerImpl(this, v, transition);
-            timer.start();
-            NodeHelper.addTransitionTimer((Node)getBean(), timer);
+            timer = TransitionTimer.run(this, new TransitionTimerImpl(this, v, transition));
         } else {
             setValue(v);
         }
@@ -128,6 +127,11 @@ public abstract class StyleableFloatProperty
         }
 
         @Override
+        protected Property<?> getProperty() {
+            return wref.get();
+        }
+
+        @Override
         protected void onUpdate(double progress) {
             StyleableFloatProperty property = wref.get();
             if (property != null) {
@@ -144,7 +148,6 @@ public abstract class StyleableFloatProperty
             StyleableFloatProperty property = wref.get();
             if (property != null) {
                 property.timer = null;
-                NodeHelper.removeTransitionTimer((Node)property.getBean(), this);
             }
         }
     }

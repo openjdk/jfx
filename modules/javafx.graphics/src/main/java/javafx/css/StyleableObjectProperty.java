@@ -29,6 +29,7 @@ import com.sun.javafx.css.TransitionTimer;
 import com.sun.javafx.scene.NodeHelper;
 import javafx.animation.Interpolatable;
 import javafx.beans.property.ObjectPropertyBase;
+import javafx.beans.property.Property;
 import javafx.beans.value.ObservableValue;
 import javafx.scene.Node;
 import java.lang.ref.WeakReference;
@@ -88,9 +89,8 @@ public abstract class StyleableObjectProperty<T>
                 && getBean() instanceof Node node ? NodeHelper.findTransition(node, getCssMetaData()) : null;
 
             if (transition != null) {
-                timer = new TransitionTimerImpl<>(this, oldValue, v, transition);
-                timer.start();
-                NodeHelper.addTransitionTimer((Node)getBean(), timer);
+                timer = TransitionTimer.run(
+                    this, new TransitionTimerImpl<>(this, oldValue, v, transition));
             } else {
                 set(v);
             }
@@ -139,6 +139,11 @@ public abstract class StyleableObjectProperty<T>
         }
 
         @Override
+        protected Property<?> getProperty() {
+            return wref.get();
+        }
+
+        @Override
         @SuppressWarnings("unchecked")
         protected void onUpdate(double progress) {
             StyleableObjectProperty<U> property = wref.get();
@@ -156,7 +161,6 @@ public abstract class StyleableObjectProperty<T>
             StyleableObjectProperty<U> property = wref.get();
             if (property != null) {
                 property.timer = null;
-                NodeHelper.removeTransitionTimer((Node)property.getBean(), this);
             }
         }
     }

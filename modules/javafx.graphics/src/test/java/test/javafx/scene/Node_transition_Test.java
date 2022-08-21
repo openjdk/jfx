@@ -27,12 +27,15 @@ package test.javafx.scene;
 
 import com.sun.javafx.css.TransitionTimer;
 import com.sun.javafx.scene.NodeHelper;
+import com.sun.javafx.tk.Toolkit;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
+import test.com.sun.javafx.pgstub.StubToolkit;
 import javafx.animation.Interpolator;
 import javafx.css.CssMetaData;
 import javafx.css.PseudoClass;
 import javafx.css.TransitionDefinition;
+import javafx.css.TransitionEvent;
 import javafx.css.TransitionPropertySelector;
 import javafx.scene.Group;
 import javafx.scene.NodeShim;
@@ -40,6 +43,7 @@ import javafx.scene.Scene;
 import javafx.scene.shape.Rectangle;
 import javafx.util.Duration;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
 
@@ -244,6 +248,137 @@ public class Node_transition_Test {
         List<TransitionDefinition> transitions = NodeShim.getTransitionDefinitions(node);
         assertEquals(1, transitions.size());
         assertTransitionEquals("-fx-scale-x", Duration.seconds(2), Duration.ZERO, LINEAR, transitions.get(0));
+    }
+
+    @Test
+    public void testTransitionEventCycle() {
+        String url = "data:text/css;base64," + Base64.getUrlEncoder().encodeToString("""
+            .testClass {
+                -fx-opacity: 0;
+                transition: -fx-opacity 0.75s 0.25s;
+            }
+
+            .testClass:hover {
+                -fx-opacity: 1;
+            }
+            """.getBytes(StandardCharsets.UTF_8));
+
+        StubToolkit tk = (StubToolkit)Toolkit.getToolkit();
+        tk.setCurrentTime(0);
+
+        var node = new Rectangle();
+        var scene = new Scene(new Group(node));
+        scene.getStylesheets().add(url);
+        node.getStyleClass().add("testClass");
+        node.applyCss();
+
+        List<TransitionEvent> trace = new ArrayList<>();
+        node.addEventHandler(TransitionEvent.ANY, trace::add);
+        node.pseudoClassStateChanged(PseudoClass.getPseudoClass("hover"), true);
+        node.applyCss();
+
+        // The transition starts with a delay, which means the elapsed time is 0.
+        assertEquals(1, trace.size());
+        assertEquals(TransitionEvent.RUN.getName(), trace.get(0).getEventType().getName());
+        assertEquals(Duration.millis(0), trace.get(0).getElapsedTime());
+
+        // After 0.5s, the transition is in the active period (elapsed time was 0 at START).
+        tk.setCurrentTime(500);
+        tk.handleAnimation();
+        assertEquals(2, trace.size());
+        assertEquals(TransitionEvent.START.getName(), trace.get(1).getEventType().getName());
+        assertEquals(Duration.millis(0), trace.get(1).getElapsedTime());
+
+        // After 1s, the transition has already ended (elapsed time was 0.75s at END).
+        tk.setCurrentTime(1000);
+        tk.handleAnimation();
+        assertEquals(3, trace.size());
+        assertEquals(TransitionEvent.END.getName(), trace.get(2).getEventType().getName());
+        assertEquals(Duration.millis(750), trace.get(2).getElapsedTime());
+    }
+
+    @Test
+    public void testTransitionCancelEvent() {
+        String url = "data:text/css;base64," + Base64.getUrlEncoder().encodeToString("""
+            .testClass {
+                -fx-opacity: 0;
+                transition: -fx-opacity 0.75s 0.25s;
+            }
+
+            .testClass:hover {
+                -fx-opacity: 1;
+            }
+            """.getBytes(StandardCharsets.UTF_8));
+
+        StubToolkit tk = (StubToolkit)Toolkit.getToolkit();
+        tk.setCurrentTime(0);
+
+        var node = new Rectangle();
+        var scene = new Scene(new Group(node));
+        scene.getStylesheets().add(url);
+        node.getStyleClass().add("testClass");
+        node.applyCss();
+
+        List<TransitionEvent> trace = new ArrayList<>();
+        node.addEventHandler(TransitionEvent.ANY, trace::add);
+        node.pseudoClassStateChanged(PseudoClass.getPseudoClass("hover"), true);
+        node.applyCss();
+
+        // The animation advances 500ms and is then cancelled, which means that the
+        // elapsed time is 250ms (since we have a 250ms delay).
+        tk.setCurrentTime(500);
+        tk.handleAnimation();
+        NodeShim.cancelTransitionTimers(node);
+
+        assertEquals(3, trace.size());
+        assertEquals(TransitionEvent.RUN.getName(), trace.get(0).getEventType().getName());
+        assertEquals(TransitionEvent.START.getName(), trace.get(1).getEventType().getName());
+        assertEquals(TransitionEvent.CANCEL.getName(), trace.get(2).getEventType().getName());
+        assertEquals(Duration.millis(0), trace.get(0).getElapsedTime());
+        assertEquals(Duration.millis(0), trace.get(1).getElapsedTime());
+        assertEquals(Duration.millis(250), trace.get(2).getElapsedTime());
+    }
+
+    @Test
+    public void testTransitionCancelEventWithNegativeDelay() {
+        String url = "data:text/css;base64," + Base64.getUrlEncoder().encodeToString("""
+            .testClass {
+                -fx-opacity: 0;
+                transition: -fx-opacity 1s -0.25s;
+            }
+
+            .testClass:hover {
+                -fx-opacity: 1;
+            }
+            """.getBytes(StandardCharsets.UTF_8));
+
+        StubToolkit tk = (StubToolkit)Toolkit.getToolkit();
+        tk.setCurrentTime(0);
+
+        var node = new Rectangle();
+        var scene = new Scene(new Group(node));
+        scene.getStylesheets().add(url);
+        node.getStyleClass().add("testClass");
+        node.applyCss();
+
+        List<TransitionEvent> trace = new ArrayList<>();
+        node.addEventHandler(TransitionEvent.ANY, trace::add);
+        node.pseudoClassStateChanged(PseudoClass.getPseudoClass("hover"), true);
+        node.applyCss();
+
+        // The animation advances 500ms and is then cancelled, which means that the
+        // elapsed time is 750ms (since we started with a negative 250ms delay).
+        tk.setCurrentTime(500);
+        tk.handleAnimation();
+        NodeShim.cancelTransitionTimers(node);
+
+        assertEquals(3, trace.size());
+        assertEquals(TransitionEvent.RUN.getName(), trace.get(0).getEventType().getName());
+        assertEquals(TransitionEvent.START.getName(), trace.get(1).getEventType().getName());
+        assertEquals(TransitionEvent.CANCEL.getName(), trace.get(2).getEventType().getName());
+        assertEquals(Duration.millis(250), trace.get(0).getElapsedTime());
+        assertEquals(Duration.millis(250), trace.get(1).getElapsedTime());
+        assertEquals(Duration.millis(750), trace.get(2).getElapsedTime());
     }
 
 }

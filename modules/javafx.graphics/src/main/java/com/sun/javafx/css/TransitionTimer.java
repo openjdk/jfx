@@ -25,11 +25,18 @@
 
 package com.sun.javafx.css;
 
+import com.sun.javafx.animation.AnimationTimerHelper;
+import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.util.Utils;
 import javafx.animation.AnimationTimer;
 import javafx.animation.Interpolator;
+import javafx.beans.property.Property;
 import javafx.css.StyleableProperty;
 import javafx.css.TransitionDefinition;
+import javafx.css.TransitionEvent;
+import javafx.event.EventType;
+import javafx.scene.Node;
+import javafx.util.Duration;
 
 /**
  * {@code TransitionTimer} is the base class for timers that compute intermediate
@@ -37,14 +44,37 @@ import javafx.css.TransitionDefinition;
  */
 public abstract class TransitionTimer extends AnimationTimer {
 
-    private final long startTime, duration;
+    private final long startTime, delay, duration;
     private final Interpolator interpolator;
     private boolean updating;
+    private boolean started;
 
     protected TransitionTimer(TransitionDefinition transition) {
-        this.startTime = System.nanoTime() + (long)(transition.getDelay().toMillis() * 1000000);
+        this.delay = (long)(transition.getDelay().toMillis() * 1000000);
+        this.startTime = AnimationTimerHelper.getPrimaryTimer(this).nanos() + delay;
         this.duration = (long)(transition.getDuration().toMillis() * 1000000);
         this.interpolator = transition.getInterpolator();
+    }
+
+    /**
+     * Adds the specified transition timer to the list of running timers
+     * and fires the {@link TransitionEvent#RUN} event.
+     */
+    public static TransitionTimer run(Property<?> property, TransitionTimer timer) {
+        timer.start();
+
+        if (property.getBean() instanceof Node node) {
+            NodeHelper.addTransitionTimer(node, timer);
+
+            if (property instanceof StyleableProperty<?> styleableProperty) {
+                // https://www.w3.org/TR/css-transitions-1/#event-transitionevent
+                // The elapsed time for this event is equal to min(max(-'delay', 0), 'duration')
+                double elapsed = (double)Math.min(Math.max(-timer.delay, 0), timer.duration) / 1_000_000.0;
+                node.fireEvent(new TransitionEvent(TransitionEvent.RUN, styleableProperty, Duration.millis(elapsed)));
+            }
+        }
+
+        return timer;
     }
 
     /**
@@ -73,6 +103,15 @@ public abstract class TransitionTimer extends AnimationTimer {
 
     @Override
     public final void handle(long now) {
+        if (!started && now - startTime > 0) {
+            started = true;
+
+            // https://www.w3.org/TR/css-transitions-1/#event-transitionevent
+            // The elapsed time for this event is equal to min(max(-'delay', 0), 'duration')
+            double elapsed = (double)Math.min(Math.max(-delay, 0), duration) / 1_000_000.0;
+            fireEvent(TransitionEvent.START, Duration.millis(elapsed));
+        }
+
         double progress = Utils.clamp(
             interpolator.isValidBeforeInterval() ? Double.NEGATIVE_INFINITY : 0,
             (double)(now - startTime) / (double)duration,
@@ -85,7 +124,8 @@ public abstract class TransitionTimer extends AnimationTimer {
      * Updates the transition timer by mapping the specified input progress to an output progress
      * value using the timer's interpolator, and then calling {@link #onUpdate(double)}} with the
      * output progress value.
-     * When the specified input progress value is 1, the timer is automatically stopped.
+     * When the specified input progress value is 1, the timer is automatically stopped and the
+     * {@link TransitionEvent#CANCEL} event is fired.
      *
      * @param progress the input progress value
      */
@@ -99,8 +139,45 @@ public abstract class TransitionTimer extends AnimationTimer {
 
         if (progress == 1) {
             stop();
+
+            // https://www.w3.org/TR/css-transitions-1/#event-transitionevent
+            // The elapsedTime for this event is equal to the value of 'duration'.
+            fireEvent(TransitionEvent.END, Duration.millis((double)duration / 1_000_000.0));
         }
     }
+
+    /**
+     * Skips the rest of a running transition and updates the value to the target value.
+     * Calling this method fires the {@link TransitionEvent#CANCEL} event.
+     */
+    public final void cancel() {
+        try {
+            updating = true;
+            onUpdate(interpolator.interpolate(0D, 1D, 1D));
+        } finally {
+            updating = false;
+        }
+
+        stop();
+
+        // https://www.w3.org/TR/css-transitions-1/#event-transitionevent
+        // The elapsedTime for this event is equal to the number of seconds from the end
+        // of the transition's delay to the moment when the transition was canceled.
+        long elapsed = AnimationTimerHelper.getPrimaryTimer(this).nanos() - startTime;
+        fireEvent(TransitionEvent.CANCEL, Duration.millis((double)Math.max(0, elapsed) / 1_000_000.0));
+    }
+
+    @Override
+    public void stop() {
+        super.stop();
+
+        Property<?> property = getProperty();
+        if (property != null && property.getBean() instanceof Node node) {
+            NodeHelper.removeTransitionTimer(node, this);
+        }
+    }
+
+    protected abstract Property<?> getProperty();
 
     /**
      * Derived classes should implement this method to compute a new intermediate value
@@ -109,5 +186,14 @@ public abstract class TransitionTimer extends AnimationTimer {
      * @param progress the progress of the transition, ranging from 0 to 1
      */
     protected abstract void onUpdate(double progress);
+
+    private void fireEvent(EventType<TransitionEvent> eventType, Duration elapsedTime) {
+        Property<?> property = getProperty();
+        if (property != null
+                && property.getBean() instanceof Node node
+                && property instanceof StyleableProperty<?> styleableProperty) {
+            node.fireEvent(new TransitionEvent(eventType, styleableProperty, elapsedTime));
+        }
+    }
 
 }
