@@ -125,7 +125,7 @@ public abstract class TransitionTimer extends AnimationTimer {
      * value using the timer's interpolator, and then calling {@link #onUpdate(double)}} with the
      * output progress value.
      * When the specified input progress value is 1, the timer is automatically stopped and the
-     * {@link TransitionEvent#CANCEL} event is fired.
+     * {@link TransitionEvent#END} event is fired.
      *
      * @param progress the input progress value
      */
