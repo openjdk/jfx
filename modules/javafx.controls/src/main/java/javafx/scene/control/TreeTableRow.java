@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -439,12 +439,19 @@ public class TreeTableRow<T> extends IndexedCell<T> {
     private void updateSelection() {
         if (isEmpty()) return;
         if (index == -1 || getTreeTableView() == null) return;
-        if (getTreeTableView().getSelectionModel() == null) return;
 
-        boolean isSelected = getTreeTableView().getSelectionModel().isSelected(index);
-        if (isSelected() == isSelected) return;
+        TreeTableViewSelectionModel<T> sm = getTreeTableView().getSelectionModel();
+        if (sm == null) {
+            if (isSelected()) {
+                updateSelected(false);
+            }
+            return;
+        }
 
-        updateSelected(isSelected);
+        boolean isSelected = !sm.isCellSelectionEnabled() && sm.isSelected(index);
+        if (isSelected() != isSelected) {
+            updateSelected(isSelected);
+        }
     }
 
     private void updateFocus() {
