@@ -52,7 +52,7 @@ import test.com.sun.javafx.scene.control.infrastructure.MouseEventFirer;
 import test.com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
 
 /**
- * Tests wor/cell seleciton logic for JDK-8292353.
+ * Tests for/cell seleciton logic for JDK-8292353.
  */
 public class TreeAndTableViewTest {
     /** TreeTableView with cell selection enabled should not select TreeTableRows */
