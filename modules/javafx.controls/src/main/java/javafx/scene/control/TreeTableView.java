@@ -1069,6 +1069,7 @@ public class TreeTableView<S> extends Control {
                     // need to listen to the cellSelectionEnabledProperty
                     // in order to set pseudo-class state
                     if (oldValue != null) {
+                        oldValue.clearSelection();
                         oldValue.cellSelectionEnabledProperty().removeListener(weakCellSelectionModelInvalidationListener);
 
                         if (oldValue instanceof TreeTableViewArrayListSelectionModel) {
