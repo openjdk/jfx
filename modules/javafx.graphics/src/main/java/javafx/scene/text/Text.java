@@ -383,7 +383,10 @@ public class Text extends Shape {
 
     private GlyphList[] getRuns() {
         if (textRuns != null) return textRuns;
-        if (!isSpan()) {
+        if (isSpan()) {
+            /* List of run is initialized when the TextFlow layout the children */
+            getParent().layout();
+        } else {
             TextLayout layout = getTextLayout();
             textRuns = layout.getRuns();
         }
