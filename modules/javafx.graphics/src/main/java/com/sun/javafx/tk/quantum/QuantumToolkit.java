@@ -445,6 +445,23 @@ public final class QuantumToolkit extends Toolkit {
         }
     }
 
+    public static void runInRenderThreadAndWait(Runnable runnable) {
+        try {
+            CountDownLatch latch = new CountDownLatch(1);
+            QuantumRenderer.getInstance().execute(() -> {
+                try {
+                    runnable.run();
+                } catch (Throwable e) {
+                    e.printStackTrace();
+                }
+                latch.countDown();
+            });
+            latch.await();
+        } catch (Throwable e) {
+            e.printStackTrace();
+        }
+    }
+
     boolean hasNativeSystemVsync() {
         return nativeSystemVsync;
     }

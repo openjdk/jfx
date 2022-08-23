@@ -2813,10 +2813,6 @@ public class TableView<S> extends Control {
             stopAtomic();
         }
 
-        @Override public boolean isSelected(int index) {
-            return isSelected(index, null);
-        }
-
         @Override
         public boolean isSelected(int row, TableColumn<S,?> column) {
             // When in cell selection mode, if the column is null, then we interpret
