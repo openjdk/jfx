@@ -127,8 +127,8 @@ import java.util.TimerTask;
  * <p>For this purposes of this class, any Duration that answers true to {@link javafx.util.Duration#isUnknown()}
  * will treat that duration as if it were Duration.ZERO. Likewise, any Duration which answers true
  * to {@link javafx.util.Duration#isIndefinite()} will be treated as if it were a duration of Double.MAX_VALUE
- * milliseconds. Any {@code null} Duration is treated as Duration.ZERO. Any custom implementation of a backoff strategy
- * callback must be prepared to handle these different potential values.</p>
+ * milliseconds. Any {@code null} Duration is treated as {@code Duration.ZERO}. Any custom implementation of a backoff
+ * strategy callback must be prepared to handle these different potential values.</p>
  *
  * <p>The ScheduledService introduces a new property called {@link #lastValueProperty() lastValue}. The
  * {@code lastValue} is the value that was last successfully computed. Because a Service clears its {@code value}

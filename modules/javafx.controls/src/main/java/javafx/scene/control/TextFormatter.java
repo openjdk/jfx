@@ -44,8 +44,8 @@ import java.util.function.UnaryOperator;
  *     text.
  * </ul>
  * <p>
- * It's possible to have a formatter with just filter or value converter. If value converter is not provided however,
- * setting a value will result in an {@code IllegalStateException} and the value is always {#code null}.
+ * It's possible to have a formatter with just a filter or a value converter. If a value converter is not provided,
+ * setting a value will result in an {@code IllegalStateException} and the value is always {@code null}.
  * <p>
  * Since {@code Formatter} contains a value which represents the state of the {@code TextInputControl} to which it is
  * currently assigned, a single {@code Formatter} instance can be used only in one {@code TextInputControl} at a time.

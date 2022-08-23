@@ -99,9 +99,9 @@ import static javafx.concurrent.WorkerStateEvent.WORKER_STATE_SUCCEEDED;
  * <p>
  *     Because a Service is intended to simplify declarative use cases, subclasses
  *     should expose as properties the input parameters to the work to be done.
- *     For example, suppose I wanted to write a Service that reads the first line
- *     from any URL and returned it as a String. Such a Service might be defined
- *     such that it had a single property, {@code url}. It might be implemented
+ *     For example, to write a Service that reads the first line
+ *     from any URL and returned it as a String, it might be defined
+ *     such that it had a single property, {@code url}, and might be implemented
  *     as:
  * </p>
  *     <pre><code>
