@@ -30,8 +30,7 @@ import javafx.beans.value.WritableValue;
 
 /**
  * Generic interface that defines the methods common to all (writable)
- * properties independent of their type.
- *
+ * properties, independent of their type.
  *
  * @param <T>
  *            the type of the wrapped value
@@ -91,7 +90,7 @@ public interface Property<T> extends ReadOnlyProperty<T>, WritableValue<T> {
     void bindBidirectional(Property<T> other);
 
     /**
-     * Remove a bidirectional binding between this {@code Property} and another
+     * Removes a bidirectional binding between this {@code Property} and another
      * one.
      *
      * If no bidirectional binding between the properties exists, calling this
@@ -100,7 +99,7 @@ public interface Property<T> extends ReadOnlyProperty<T>, WritableValue<T> {
      * It is possible to unbind by a call on the second property. This code will work:
      *
      * <blockquote><pre>
-     *     property1.bindBirectional(property2);
+     *     property1.bindBidirectional(property2);
      *     property2.unbindBidirectional(property1);
      * </pre></blockquote>
      *
