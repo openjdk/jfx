@@ -53,7 +53,7 @@ import test.com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
 
 /**
  * Tests for:
- * - cell seleciton logic JDK-8292353.
+ * - cell selection logic JDK-8292353.
  */
 public class TreeAndTableViewTest {
     /** TreeTableView with cell selection enabled should not select TreeTableRows */
