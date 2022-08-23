@@ -161,11 +161,17 @@ public final class Bindings {
                 }
             }
 
+            /**
+             * Calls {@link BooleanBinding#unbind(Observable...)}.
+             */
             @Override
             public void dispose() {
                 super.unbind(dependencies);
             }
 
+            /**
+             * Returns an immutable list of the dependencies of this binding.
+             */
             @Override
             public ObservableList<?> getDependencies() {
                 return  ((dependencies == null) || (dependencies.length == 0))?
@@ -201,11 +207,17 @@ public final class Bindings {
                 }
             }
 
+            /**
+             * Calls {@link DoubleBinding#unbind(Observable...)}.
+             */
             @Override
             public void dispose() {
                 super.unbind(dependencies);
             }
 
+            /**
+             * Returns an immutable list of the dependencies of this binding.
+             */
             @Override
             public ObservableList<?> getDependencies() {
                 return  ((dependencies == null) || (dependencies.length == 0))?
@@ -241,11 +253,17 @@ public final class Bindings {
                 }
             }
 
+            /**
+             * Calls {@link FloatBinding#unbind(Observable...)}.
+             */
             @Override
             public void dispose() {
                 super.unbind(dependencies);
             }
 
+            /**
+             * Returns an immutable list of the dependencies of this binding.
+             */
             @Override
             public ObservableList<?> getDependencies() {
                 return  ((dependencies == null) || (dependencies.length == 0))?
@@ -281,11 +299,17 @@ public final class Bindings {
                 }
             }
 
+            /**
+             * Calls {@link IntegerBinding#unbind(Observable...)}.
+             */
             @Override
             public void dispose() {
                 super.unbind(dependencies);
             }
 
+            /**
+             * Returns an immutable list of the dependencies of this binding.
+             */
             @Override
             public ObservableList<?> getDependencies() {
                 return  ((dependencies == null) || (dependencies.length == 0))?
@@ -321,11 +345,17 @@ public final class Bindings {
                 }
             }
 
+            /**
+             * Calls {@link LongBinding#unbind(Observable...)}.
+             */
             @Override
             public void dispose() {
                 super.unbind(dependencies);
             }
 
+            /**
+             * Returns an immutable list of the dependencies of this binding.
+             */
             @Override
             public ObservableList<?> getDependencies() {
                 return  ((dependencies == null) || (dependencies.length == 0))?
@@ -362,11 +392,17 @@ public final class Bindings {
                 }
             }
 
+            /**
+             * Calls {@link ObjectBinding#unbind(Observable...)}.
+             */
             @Override
             public void dispose() {
                 super.unbind(dependencies);
             }
 
+            /**
+             * Returns an immutable list of the dependencies of this binding.
+             */
             @Override
             public ObservableList<?> getDependencies() {
                 return  ((dependencies == null) || (dependencies.length == 0))?
@@ -402,11 +438,17 @@ public final class Bindings {
                 }
             }
 
+            /**
+             * Calls {@link StringBinding#unbind(Observable...)}.
+             */
             @Override
             public void dispose() {
                 super.unbind(dependencies);
             }
 
+            /**
+             * Returns an immutable list of the dependencies of this binding.
+             */
             @Override
             public ObservableList<?> getDependencies() {
                 return  ((dependencies == null) || (dependencies.length == 0))?
