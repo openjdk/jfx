@@ -208,7 +208,7 @@ public abstract class NGShape3D extends NGNode {
         meshView.setLight(0,
                 (float) cameraPos.x, (float) cameraPos.y, (float) cameraPos.z,
                 1.0f, 1.0f, 1.0f, 1.0f,
-                NGPointLight.getDefaultCa(), NGPointLight.getDefaultLa(), NGPointLight.getDefaultQa(), 0,
+                NGPointLight.getDefaultCa(), NGPointLight.getDefaultLa(), NGPointLight.getDefaultQa(), 1,
                 NGPointLight.getDefaultMaxRange(),
                 (float) direction.getX(), (float) direction.getY(), (float) direction.getZ(),
                 NGPointLight.getSimulatedInnerAngle(),

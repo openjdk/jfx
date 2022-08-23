@@ -53,13 +53,13 @@ float3 getLocalVector(float3 global, float3 N[3]) {
     return float3(dot(global, N[1]), dot(global, N[2]), dot(global, N[0]));
 }
 
-void transformVertexAttributes(float4 modelVertexPos, float4 modelVertexNormal, out PsInput psInput) {
+void transformVertexAttributes(float4 modelVertexPos, float4 modelVertexNormal, in out VsOutput vsOutput) {
     float3 worldVertexPos = mul(modelVertexPos, mWorld);
 
 //  needed for pixel lighting
-//  psInput.worldPos = worldVertexPos;
+//  vsOutput.worldPos = worldVertexPos;
 
-    psInput.projPos = mul(float4(worldVertexPos, 1), mViewProj);
+    vsOutput.projPos = mul(float4(worldVertexPos, 1), mViewProj);
 
     float3 n[3];
     quatToMatrix(modelVertexNormal, n);
@@ -68,7 +68,7 @@ void transformVertexAttributes(float4 modelVertexPos, float4 modelVertexNormal, 
     }
 
 //  needed for pixel lighting
-//  psInput.worldNormals = n;
+//  vsOutput.worldNormals = n;
 
 #if 0
     float3 s = pos*0.5+getTime();
@@ -76,18 +76,18 @@ void transformVertexAttributes(float4 modelVertexPos, float4 modelVertexNormal, 
 #endif
 
     float3 worldVecToEye = gCameraPos.xyz - worldVertexPos;
-    psInput.worldVecToEye = getLocalVector(worldVecToEye, n);
+    vsOutput.worldVecToEye = getLocalVector(worldVecToEye, n);
 
     for (int k = 0; k < PsInput::nLights; ++k) {
         float3 worldVecToLight = gLightsPos[k].xyz - worldVertexPos;
-        psInput.worldVecsToLights[k] = getLocalVector(worldVecToLight, n);
+        vsOutput.worldVecsToLights[k] = getLocalVector(worldVecToLight, n);
         float3 worldNormLightDir = gLightsNormDir[k].xyz;
-        psInput.worldNormLightDirs[k] = getLocalVector(worldNormLightDir, n);
+        vsOutput.worldNormLightDirs[k] = getLocalVector(worldNormLightDir, n);
     }
 
-//    psInput.debug = n[0];
+//    vsOutput.debug = n[0];
 
-//    psInput.oFog  = 1; // getFogExp2(pos);
+//    vsOutput.oFog  = 1; // getFogExp2(pos);
 
 }
 

@@ -23,9 +23,14 @@
  * questions.
  */
 
-struct PsInput {
+/*
+ * The output of the vertex shader is the input of the pixel shader.
+ */
+typedef struct PsInput {
 
     static const float nLights = 3;
+
+    float2  texD : texcoord0;
 
     // projection space = homogeneous clip space
     float4 projPos : position; // must be outputed even if unused
@@ -42,9 +47,4 @@ struct PsInput {
 
 //  float  oFog  : fog;
 //  float3 debug : texcoord11;
-};
-
-struct VsOutput {
-    float2  texD : texcoord0;
-    PsInput psInput;
-};
+} VsOutput;

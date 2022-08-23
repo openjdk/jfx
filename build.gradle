@@ -2341,7 +2341,7 @@ project(":graphics") {
                         ["$FXC", "/nologo", "/T", "ps_3_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_b1mi.h", "/DSpec=1", "/DSType=3", "/DBump=1", "/DIllumMap=1", "$PS_3D_SRC"],
                         ["$FXC", "/nologo", "/T", "ps_3_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_b2mi.h", "/DSpec=2", "/DSType=3", "/DBump=1", "/DIllumMap=1", "$PS_3D_SRC"],
                         ["$FXC", "/nologo", "/T", "ps_3_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_b3mi.h", "/DSpec=3", "/DSType=3", "/DBump=1", "/DIllumMap=1", "$PS_3D_SRC"],
-                        ["$FXC", "/nologo", "/T", "vs_3_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1VS_Obj.h", "/DVertexType=ObjVertex", "$VS_3D_SRC"]
+                        ["$FXC", "/nologo", "/T", "vs_3_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1VS_Obj.h", "/DVertexType=VsInput", "$VS_3D_SRC"]
                 ]
                 final ExecutorService executor = Executors.newFixedThreadPool(Integer.parseInt(project.NUM_COMPILE_THREADS.toString()));
                 final CountDownLatch latch = new CountDownLatch(jobs.size());

@@ -63,10 +63,12 @@ float4 debug() {
     return float4(0,0,1,1);
 }
 
-float4 main(float2 texD : texcoord0, PsInput psInput) : color {
+float4 main(PsInput psInput) : color {
 
     if (0) return debug();
     // return retNormal(lSpace.debug);
+
+    float2 texD = psInput.texD;
 
     // diffuse
     float4 tDiff = tex2D(mapDiffuse, texD);
@@ -75,12 +77,12 @@ float4 main(float2 texD : texcoord0, PsInput psInput) : color {
 
     // return gDiffuseColor.aaaa;
 
-    float3 n = float3(0, 0, 1);
+    float3 normal = float3(0, 0, 1);
 
     //bump
     if (bump) {
         float4 BumpSpec = tex2D(mapBumpHeight, texD);
-        n = normalize(BumpSpec.xyz * 2 - 1);
+        normal = normalize(BumpSpec.xyz * 2 - 1);
     }
 
     // specular
@@ -103,7 +105,7 @@ float4 main(float2 texD : texcoord0, PsInput psInput) : color {
 
     // lighting
     float3 worldNormVecToEye = normalize(psInput.worldVecToEye);
-    float3 refl = reflect(worldNormVecToEye, n);
+    float3 refl = reflect(worldNormVecToEye, normal);
     float3 diffLightColor = 0;
     float3 specLightColor = 0;
 
@@ -114,7 +116,7 @@ float4 main(float2 texD : texcoord0, PsInput psInput) : color {
         //
         //  float3 worldNormLightDir = gLightsNormDirs[i].xyz;
         //  worldNormLightDir = getLocalVector(worldNormLightDir, worldNormals); // renormalize?
-        computeLight(i, n, refl, specPower, psInput.worldVecsToLights[i], psInput.worldNormLightDirs[i], diffLightColor, specLightColor);
+        computeLight(i, normal, refl, specPower, psInput.worldVecsToLights[i], psInput.worldNormLightDirs[i], diffLightColor, specLightColor);
     }
 
     float3 ambLightColor = gAmbientLightColor.rgb;

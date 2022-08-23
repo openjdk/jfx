@@ -26,16 +26,11 @@
 #include "vsDecl.h"
 #include "vsMath.h"
 
-
-//float2 transformTexture(float2 t) { return t; }
-
 VsOutput main(VsInput vsInput) {
     VsOutput vsOutput;
 
-    transformVertexAttributes(vsInput.modelVertexPos, vsInput.modelVertexNormal, vsOutput.psInput);
-
-//    vsOutput.objAttr.texD = transformTexture(vsInput.texD);
     vsOutput.texD = vsInput.texD;
+    transformVertexAttributes(vsInput.modelVertexPos, vsInput.modelVertexNormal, vsOutput);
 
     return vsOutput;
 }

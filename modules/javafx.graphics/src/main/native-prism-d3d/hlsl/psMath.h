@@ -95,12 +95,11 @@ float computeSpotlightFactor3(float3 l, float3 lightDir, float cosOuter, float d
  * Computes the light's contribution by using the Phong shading model. A contribution consists of a diffuse component and a
  * specular component. The computation is done in world space.
  */
-void computeLight(float i, float3 n, float3 refl, float specPower, float3 toLight, float3 lightDir, in out float3 d, in out float3 s) {
-    float3 l = normalize(toLight);
+void computeLight(float i, float3 normal, float3 refl, float specPower, float3 toLight, float3 lightDir, in out float3 diff, in out float3 spec) {
     // testing if w is 0 or 1 using <0.5 since equality check for floating points might not work well
     if (gLightAttenuation[i].w < 0.5) {
-        d += saturate(dot(n, l)) * gLightColor[i].xyz;
-        s += pow(saturate(dot(-refl, l)), specPower) * gLightColor[i].xyz;
+        diff += saturate(dot(normal, -lightDir)) * gLightColor[i].xyz;
+        spec += pow(saturate(dot(-refl, -lightDir)), specPower) * gLightColor[i].xyz;
         return;
     }
 
@@ -108,6 +107,7 @@ void computeLight(float i, float3 n, float3 refl, float specPower, float3 toLigh
     if (dist > gLightRange[i].x) {
         return;
     }
+    float3 l = normalize(toLight);
 
     float cosOuter = gSpotLightFactors[i].x;
     float denom = gSpotLightFactors[i].y;
@@ -120,6 +120,6 @@ void computeLight(float i, float3 n, float3 refl, float specPower, float3 toLigh
     float invAttnFactor = ca + la * dist + qa * dist * dist;
 
     float3 attenuatedColor = gLightColor[i].xyz * spotlightFactor / invAttnFactor;
-    d += saturate(dot(n, l)) * attenuatedColor;
-    s += pow(saturate(dot(-refl, l)), specPower) * attenuatedColor;
+    diff += saturate(dot(normal, l)) * attenuatedColor;
+    spec += pow(saturate(dot(-refl, l)), specPower) * attenuatedColor;
 }
