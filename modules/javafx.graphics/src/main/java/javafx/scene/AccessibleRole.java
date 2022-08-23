@@ -822,4 +822,18 @@ public enum AccessibleRole {
      * </ul>
      */
     TREE_VIEW,
+
+    /**
+     * Dialog role.
+     * <p>
+     * Attributes:
+     * <ul>
+     * <li> {@link AccessibleAttribute#TEXT} </li>
+     * <li> {@link AccessibleAttribute#ROLE_DESCRIPTION} </li>
+     * <li> {@link AccessibleAttribute#CHILDREN} </li>
+     * </ul>
+     *
+     * @since 20
+     */
+    DIALOG
 }
