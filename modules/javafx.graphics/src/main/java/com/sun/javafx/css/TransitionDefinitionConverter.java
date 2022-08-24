@@ -40,12 +40,12 @@ import java.util.Map;
 
 /**
  * Converts an array of parsed values to a {@link TransitionDefinition}.
- * The array must contain four elements:
+ * The array must contain four elements, all of which may be {@code null}:
  * <ol>
  *     <li>property: {@code ParsedValue<?, String>}
  *     <li>duration: {@code ParsedValue<?, Duration>}
- *     <li>delay: {@code ParsedValue<?, Duration>} (may be {@code null})
- *     <li>timingFunction: {@code ParsedValue<?, Interpolator>} (may be {@code null})
+ *     <li>delay: {@code ParsedValue<?, Duration>}
+ *     <li>timingFunction: {@code ParsedValue<?, Interpolator>}
  * </ol>
  */
 @SuppressWarnings("rawtypes")
@@ -71,27 +71,26 @@ public final class TransitionDefinitionConverter extends StyleConverter<ParsedVa
         ParsedValue<ParsedValue<?, Size>, Duration> parsedDelay = values[2];
         ParsedValue<?, Interpolator> parsedInterpolator = values[3];
 
-        String property = parsedProperty.convert(null);
-        if (property == null || property.isEmpty()) {
-            throw new IllegalArgumentException("property");
+        String property;
+        if (parsedProperty != null) {
+            property = parsedProperty.convert(null);
+        } else {
+            property = "all";
         }
 
         Duration duration;
-        try {
+        if (parsedDuration != null) {
             duration = parsedDuration.convert(null);
-            if (duration.lessThan(Duration.ZERO)) {
-                throw new IllegalArgumentException("duration");
-            }
-        } catch (RuntimeException ex) {
-            throw new IllegalArgumentException("duration");
+        } else {
+            duration = Duration.ZERO;
         }
 
         return new TransitionDefinition(
             "all".equals(property) ? TransitionPropertySelector.ALL : TransitionPropertySelector.CSS,
             property,
-            duration,
+            duration.lessThan(Duration.ZERO) ? Duration.ZERO : duration,
             parsedDelay != null ? parsedDelay.convert(null) : Duration.ZERO,
-            parsedInterpolator != null ? parsedInterpolator.convert(null) : Interpolator.LINEAR);
+            parsedInterpolator != null ? parsedInterpolator.convert(null) : InterpolatorConverter.EASE);
     }
 
     /**
@@ -132,7 +131,7 @@ public final class TransitionDefinitionConverter extends StyleConverter<ParsedVa
             for (int i = 0; i < transitions.length; ++i) {
                 Duration delay = delays == null || delays.length == 0 ? Duration.ZERO : delays[i % delays.length];
                 Interpolator timingFunction = timingFunctions == null || timingFunctions.length == 0 ?
-                    Interpolator.LINEAR : timingFunctions[i % timingFunctions.length];
+                    InterpolatorConverter.EASE : timingFunctions[i % timingFunctions.length];
 
                 TransitionPropertySelector selector = "all".equals(properties[i]) ?
                     TransitionPropertySelector.ALL : TransitionPropertySelector.CSS;

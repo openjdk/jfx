@@ -70,6 +70,35 @@ public class CssParser_transition_Test {
         assertTrue(actual.startsWith(expected), "Expected: " + expected + ", but was: " + actual);
     }
 
+    /*
+     * Default values specified by https://www.w3.org/TR/css-transitions-1
+     *
+     *     transition-property: 'all'
+     *     transition-duration: '0s'
+     *     transition-timing-function: 'ease'
+     *     transition-delay: '0s'
+     */
+    @Test
+    public void testDefaultValues() {
+        Stylesheet stylesheet = parse("""
+            .rule1 { transition: foo; }
+            .rule2 { transition: 1s; }
+            .rule3 { transition: linear; }
+        """);
+
+        assertTransition(
+            new TransitionDefinition(TransitionPropertySelector.CSS, "foo", seconds(0), seconds(0), EASE),
+            ((TransitionDefinition[])values("transition", stylesheet.getRules().get(0)))[0]);
+
+        assertTransition(
+            new TransitionDefinition(TransitionPropertySelector.ALL, "all", seconds(1), seconds(0), EASE),
+            ((TransitionDefinition[])values("transition", stylesheet.getRules().get(1)))[0]);
+
+        assertTransition(
+            new TransitionDefinition(TransitionPropertySelector.ALL, "all", seconds(0), seconds(0), LINEAR),
+            ((TransitionDefinition[])values("transition", stylesheet.getRules().get(2)))[0]);
+    }
+
     @Test
     public void testTransitionDuration() {
         Stylesheet stylesheet = parse("""
@@ -185,7 +214,7 @@ public class CssParser_transition_Test {
         """);
 
         assertTransition(
-            new TransitionDefinition(TransitionPropertySelector.ALL, null, seconds(0.25), seconds(0), LINEAR),
+            new TransitionDefinition(TransitionPropertySelector.ALL, null, seconds(0.25), seconds(0), EASE),
             ((TransitionDefinition[])values("transition", stylesheet.getRules().get(0)))[0]);
 
         assertEquals("null",

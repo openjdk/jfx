@@ -54,7 +54,7 @@ public abstract class TransitionDefinitionCssMetaData<S extends Styleable>
 
     private static final Duration[] DURATION_ZERO = new Duration[] { Duration.ZERO };
 
-    private static final Interpolator[] INTERPOLATOR_LINEAR = new Interpolator[] { Interpolator.LINEAR };
+    private static final Interpolator[] INTERPOLATOR_EASE = new Interpolator[] { InterpolatorConverter.EASE };
 
     private static <S extends Styleable> List<CssMetaData<? extends Styleable, ?>> createSubProperties() {
         return List.of(
@@ -95,7 +95,7 @@ public abstract class TransitionDefinitionCssMetaData<S extends Styleable>
                 }
             },
             new CssMetaData<S, Interpolator[]>( "transition-timing-function",
-                    InterpolatorConverter.SequenceConverter.getInstance(), INTERPOLATOR_LINEAR, false) {
+                    InterpolatorConverter.SequenceConverter.getInstance(), INTERPOLATOR_EASE, false) {
                 @Override
                 public boolean isSettable(S styleable) {
                     return false;

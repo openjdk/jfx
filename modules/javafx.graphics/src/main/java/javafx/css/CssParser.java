@@ -3957,7 +3957,7 @@ final public class CssParser {
             term = term.nextInSeries;
         }
 
-        if (parsedProperty == null || parsedDuration == null) {
+        if (parsedProperty == null && parsedDuration == null && parsedTimingFunction == null) {
             error(term, "Expected \'<single-transition>#\'");
         }
 

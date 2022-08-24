@@ -61,10 +61,10 @@ public class InterpolatorConverter extends StyleConverter<Object, Interpolator> 
     // SMIL 3.0's definitions that are used for Interpolator.EASE_IN and Interpolator.EASE_OUT.
     // https://www.w3.org/TR/css-easing-1/#cubic-bezier-easing-functions
     //
-    private static final Interpolator EASE = Interpolator.SPLINE(0.25, 0.1, 0.25, 1);
-    private static final Interpolator EASE_IN = Interpolator.SPLINE(0.42, 0, 1, 1);
-    private static final Interpolator EASE_OUT = Interpolator.SPLINE(0, 0, 0.58, 1);
-    private static final Interpolator EASE_IN_OUT = Interpolator.SPLINE(0.42, 0, 0.58, 1);
+    static final Interpolator EASE = Interpolator.SPLINE(0.25, 0.1, 0.25, 1);
+    static final Interpolator EASE_IN = Interpolator.SPLINE(0.42, 0, 1, 1);
+    static final Interpolator EASE_OUT = Interpolator.SPLINE(0, 0, 0.58, 1);
+    static final Interpolator EASE_IN_OUT = Interpolator.SPLINE(0.42, 0, 0.58, 1);
 
     // We're using an LRU cache (least recently used) to limit the number of redundant instances.
     private static final Map<Object, Interpolator> CACHE = new LinkedHashMap<>(10, 0.75f, true) {

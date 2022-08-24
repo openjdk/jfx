@@ -68,7 +68,7 @@ public class TransitionDefinitionConverterTest {
         }, null);
 
         var result = TransitionDefinitionConverter.getInstance().convert(value, null);
-        assertTransitionEquals("test", Duration.seconds(1), Duration.ZERO, LINEAR, result);
+        assertTransitionEquals("test", Duration.seconds(1), Duration.ZERO, EASE, result);
     }
 
     @Test
@@ -85,39 +85,7 @@ public class TransitionDefinitionConverterTest {
     }
 
     @Test
-    public void testConvertParsedValuesWithMissingPropertyValueThrowsException() {
-        var value = new ParsedValueImpl<ParsedValue[], TransitionDefinition>(new ParsedValue[] {
-            new ParsedValueImpl<String, String>(null /* property value is null */, null),
-            new ParsedValueImpl<>(new ParsedValueImpl<>(new Size(1, SizeUnits.S), null), DurationConverter.getInstance()),
-            null,
-            null
-        }, null);
-
-        IllegalArgumentException exception = assertThrows(
-            IllegalArgumentException.class,
-            () -> TransitionDefinitionConverter.getInstance().convert(value, null));
-
-        assertEquals("property", exception.getMessage());
-    }
-
-    @Test
-    public void testConvertParsedValuesWithMissingDurationValueThrowsException() {
-        var value = new ParsedValueImpl<ParsedValue[], TransitionDefinition>(new ParsedValue[] {
-            new ParsedValueImpl<String, String>("test", null),
-            new ParsedValueImpl<>(new ParsedValueImpl<>(null /* duration is null */ , null), DurationConverter.getInstance()),
-            null,
-            null
-        }, null);
-
-        IllegalArgumentException exception = assertThrows(
-            IllegalArgumentException.class,
-            () -> TransitionDefinitionConverter.getInstance().convert(value, null));
-
-        assertEquals("duration", exception.getMessage());
-    }
-
-    @Test
-    public void testConvertParsedValuesWithNegativeDurationValueThrowsException() {
+    public void testConvertParsedValuesWithNegativeDurationIsCoercedToZeroDuration() {
         var value = new ParsedValueImpl<ParsedValue[], TransitionDefinition>(new ParsedValue[] {
             new ParsedValueImpl<String, String>("test", null),
             new ParsedValueImpl<>(new ParsedValueImpl<>(new Size(-1, SizeUnits.S), null), DurationConverter.getInstance()),
@@ -125,11 +93,8 @@ public class TransitionDefinitionConverterTest {
             null
         }, null);
 
-        IllegalArgumentException exception = assertThrows(
-            IllegalArgumentException.class,
-            () -> TransitionDefinitionConverter.getInstance().convert(value, null));
-
-        assertEquals("duration", exception.getMessage());
+        var transition = TransitionDefinitionConverter.getInstance().convert(value, null);
+        assertEquals(Duration.ZERO, transition.getDuration());
     }
 
     @Nested
@@ -156,7 +121,7 @@ public class TransitionDefinitionConverterTest {
 
             var result = SequenceConverter.getInstance().convert(values, null);
             assertEquals(2, result.length);
-            assertTransitionEquals("test1", Duration.seconds(1), Duration.ZERO, LINEAR, result[0]);
+            assertTransitionEquals("test1", Duration.seconds(1), Duration.ZERO, EASE, result[0]);
             assertTransitionEquals("test2", Duration.seconds(0.5), Duration.seconds(-1.5), EASE_IN, result[1]);
         }
 
@@ -170,7 +135,7 @@ public class TransitionDefinitionConverterTest {
 
             var result = SequenceConverter.getInstance().convert(values);
             assertEquals(1, result.length);
-            assertTransitionEquals("test", Duration.seconds(1), Duration.ZERO, LINEAR, result[0]);
+            assertTransitionEquals("test", Duration.seconds(1), Duration.ZERO, EASE, result[0]);
         }
 
         @Test
