@@ -167,9 +167,8 @@ public abstract class ObjectBinding<T> extends ObjectExpression<T> implements
     }
 
     /**
-     * The method onInvalidating() can be overridden by extending classes to
-     * react, if this binding becomes invalid. The default implementation is
-     * empty.
+     * Called when this binding becomes invalid. Can be overridden by extending classes to react to the invalidation.
+     * The default implementation is empty.
      */
     protected void onInvalidating() {
     }
