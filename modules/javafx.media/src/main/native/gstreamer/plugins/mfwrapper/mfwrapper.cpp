@@ -357,7 +357,7 @@ static void mfwrapper_set_src_caps(GstMFWrapper *decoder)
     }
 }
 
-static void mfwrapper_nalu_to_start_code(BYTE *pbBuffer, guint size)
+static void mfwrapper_nalu_to_start_code(BYTE *pbBuffer, gsize size)
 {
     gint leftSize = size;
 
@@ -389,9 +389,9 @@ static gboolean mfwrapper_process_input(GstMFWrapper *decoder, GstBuffer *buf)
 {
     IMFSample *pSample = NULL;
     IMFMediaBuffer *pBuffer = NULL;
+    DWORD dwBufferSize = 0;
     BYTE *pbBuffer = NULL;
     GstMapInfo info;
-    gsize size = 0;
     gboolean unmap_buf = FALSE;
     gboolean unlock_buf = FALSE;
 
@@ -418,9 +418,15 @@ static gboolean mfwrapper_process_input(GstMFWrapper *decoder, GstBuffer *buf)
         hr = E_FAIL;
 
     if (SUCCEEDED(hr) && decoder->header != NULL && decoder->header_size > 0)
-        hr = MFCreateMemoryBuffer(decoder->header_size + info.size, &pBuffer);
+        dwBufferSize = (DWORD)decoder->header_size + (DWORD)info.size;
     else if (SUCCEEDED(hr))
-        hr = MFCreateMemoryBuffer(info.size, &pBuffer);
+        dwBufferSize = (DWORD)info.size;
+
+    if (SUCCEEDED(hr))
+        hr = MFCreateMemoryBuffer(dwBufferSize, &pBuffer);
+
+    if (SUCCEEDED(hr))
+        hr = pBuffer->SetCurrentLength(dwBufferSize);
 
     if (SUCCEEDED(hr))
         hr = pBuffer->Lock(&pbBuffer, NULL, NULL);
@@ -430,22 +436,38 @@ static gboolean mfwrapper_process_input(GstMFWrapper *decoder, GstBuffer *buf)
 
     if (SUCCEEDED(hr) && decoder->header != NULL && decoder->header_size > 0)
     {
-        memcpy_s(pbBuffer, decoder->header_size + info.size, decoder->header, decoder->header_size);
-        pbBuffer += decoder->header_size;
-        memcpy_s(pbBuffer, info.size, info.data, info.size);
-        mfwrapper_nalu_to_start_code(pbBuffer, info.size);
+        if (dwBufferSize >= decoder->header_size)
+        {
+            memcpy_s(pbBuffer, dwBufferSize, decoder->header, decoder->header_size);
+            pbBuffer += decoder->header_size;
+            dwBufferSize -= decoder->header_size;
 
-        delete[] decoder->header;
-        decoder->header = NULL;
-
-        hr = pBuffer->SetCurrentLength(decoder->header_size + info.size);
-        decoder->header_size = 0;
+            if (dwBufferSize >= info.size)
+            {
+                memcpy_s(pbBuffer, dwBufferSize, info.data, info.size);
+                mfwrapper_nalu_to_start_code(pbBuffer, info.size);
+            }
+            else
+            {
+                hr = E_FAIL;
+            }
+        }
+        else
+        {
+            hr = E_FAIL;
+        }
     }
     else if (SUCCEEDED(hr))
     {
-        memcpy_s(pbBuffer, info.size, info.data, info.size);
+        memcpy_s(pbBuffer, dwBufferSize, info.data, info.size);
         mfwrapper_nalu_to_start_code(pbBuffer, info.size);
-        hr = pBuffer->SetCurrentLength(info.size);
+    }
+
+    if (decoder->header != NULL)
+    {
+        delete[] decoder->header;
+        decoder->header = NULL;
+        decoder->header_size = 0;
     }
 
     if (unlock_buf)
