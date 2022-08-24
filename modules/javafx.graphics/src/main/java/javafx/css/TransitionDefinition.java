@@ -30,7 +30,27 @@ import javafx.util.Duration;
 import java.util.Objects;
 
 /**
- * {@code TransitionDefinition} defines how a property changes smoothly from one value to another.
+ * {@code TransitionDefinition} describes how a {@link StyleableProperty} changes from one value to
+ * another when its value is changed implicitly by the CSS subsystem. The transition can be smooth,
+ * for example using linear or Bézier interpolation, or discrete using stepwise interpolation.
+ * <p>
+ * In this example, the button's opacity property is configured to change smoothly using linear
+ * interpolation over a duration of 0.5 seconds:
+ *
+ * <pre>{@code
+ * var button = new Button();
+ *
+ * button.getTransitions().add(
+ *     new TransitionDefinition(
+ *         TransitionPropertySelector.BEAN,
+ *         "opacity",
+ *         Duration.seconds(0.5),
+ *         Duration.ZERO,
+ *         Interpolator.LINEAR));
+ * }</pre>
+ *
+ * Note that {@link TransitionPropertySelector#BEAN} is used to match the specified property name
+ * against JavaFX Bean property names instead of JavaFX CSS property names.
  *
  * @since 20
  */
@@ -46,7 +66,8 @@ public class TransitionDefinition {
      * Creates a new {@code TransitionDefinition} instance with zero delay and linear interpolation.
      *
      * @param selector property selector
-     * @param property name of the property (may be {@code null} when {@code selector} is {@code PropertySelector.ALL})
+     * @param property name of the property (may be {@code null} when {@code selector}
+     *                 is {@link TransitionPropertySelector#ALL})
      * @param duration duration of the transition
      * @throws NullPointerException if any of the arguments is {@code null}
      * @throws IllegalArgumentException if the duration is negative
@@ -59,7 +80,8 @@ public class TransitionDefinition {
      * Creates a new {@code TransitionDefinition} instance.
      *
      * @param selector property selector
-     * @param property name of the property (may be {@code null} when {@code selector} is {@code PropertySelector.ALL})
+     * @param property name of the property (may be {@code null} when {@code selector}
+     *                 is {@link TransitionPropertySelector#ALL})
      * @param duration duration of the transition
      * @param delay delay after which the transition is started; if negative, the transition starts
      *              immediately, but will appear to have begun at an earlier point in time
@@ -77,7 +99,7 @@ public class TransitionDefinition {
         if (selector != TransitionPropertySelector.ALL) {
             this.property = Objects.requireNonNull(property, "property cannot be null");
         } else {
-            this.property = null;
+            this.property = "all";
         }
 
         if (duration.lessThan(Duration.ZERO)) {
@@ -87,6 +109,8 @@ public class TransitionDefinition {
 
     /**
      * Gets the property selector of the transition.
+     *
+     * @return the {@code TransitionPropertySelector}
      */
     public TransitionPropertySelector getSelector() {
         return selector;
@@ -94,6 +118,8 @@ public class TransitionDefinition {
 
     /**
      * Gets the name of the property for which the transition is specified.
+     *
+     * @return the property name
      */
     public String getProperty() {
         return property;
@@ -101,6 +127,8 @@ public class TransitionDefinition {
 
     /**
      * Gets the duration of the transition.
+     *
+     * @return the duration of the transition
      */
     public Duration getDuration() {
         return duration;
@@ -108,6 +136,8 @@ public class TransitionDefinition {
 
     /**
      * Gets the delay after which the transition starts.
+     *
+     * @return the delay after which the transition starts
      */
     public Duration getDelay() {
         return delay;
@@ -115,6 +145,8 @@ public class TransitionDefinition {
 
     /**
      * Gets the interpolator for the transition.
+     *
+     * @return the {@code Interpolator}
      */
     public Interpolator getInterpolator() {
         return interpolator;
