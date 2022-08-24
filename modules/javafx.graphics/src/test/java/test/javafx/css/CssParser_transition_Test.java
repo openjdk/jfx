@@ -75,6 +75,7 @@ public class CssParser_transition_Test {
         Stylesheet stylesheet = parse("""
             .rule1 { transition-duration: 1s; }
             .rule2 { transition-duration: 1s, 0.5s, 0.25ms, 0s; }
+            .rule3 { transition-duration: indefinite; }
             .err1 { transition-duration: 10; }
             .err2 { transition-duration: -5s; }
         """);
@@ -85,8 +86,11 @@ public class CssParser_transition_Test {
         assertArrayEquals(new Duration[] { seconds(1), seconds(0.5), millis(0.25), ZERO },
             values("transition-duration", stylesheet.getRules().get(1)));
 
-        assertStartsWith("Expected '<time>'", CssParser.errorsProperty().get(0).getMessage());
-        assertStartsWith("Invalid '<transition-duration>'", CssParser.errorsProperty().get(2).getMessage());
+        assertArrayEquals(new Duration[] { INDEFINITE },
+            values("transition-duration", stylesheet.getRules().get(2)));
+
+        assertStartsWith("Expected '<duration>'", CssParser.errorsProperty().get(0).getMessage());
+        assertStartsWith("Invalid '<duration>'", CssParser.errorsProperty().get(2).getMessage());
     }
 
     @Test
@@ -103,7 +107,7 @@ public class CssParser_transition_Test {
         assertArrayEquals(new Duration[] { seconds(1), seconds(0.5), millis(0.25) },
             values("transition-delay", stylesheet.getRules().get(1)));
 
-        assertStartsWith("Expected '<time>'", CssParser.errorsProperty().get(0).getMessage());
+        assertStartsWith("Expected '<duration>'", CssParser.errorsProperty().get(0).getMessage());
     }
 
     @Test
@@ -132,6 +136,7 @@ public class CssParser_transition_Test {
                                                  steps(3, jump-start), steps(3, jump-end),
                                                  steps(3, jump-none), steps(3, jump-both),
                                                  steps(3, start), steps(3, end); }
+            .rule4 { transition-timing-function: steps(3); }
             .err1 { transition-timing-function: cubic-bezier(2, 0, 0, 0); }
             .err2 { transition-timing-function: steps(2, 3); }
             .err3 { transition-timing-function: steps(1, foo); }
@@ -157,6 +162,9 @@ public class CssParser_transition_Test {
         assertInterpolatorEquals(STEPS(3, StepPosition.BOTH), values[5]);
         assertInterpolatorEquals(STEPS(3, StepPosition.START), values[6]);
         assertInterpolatorEquals(STEPS(3, StepPosition.END), values[7]);
+
+        values = values("transition-timing-function", stylesheet.getRules().get(3));
+        assertInterpolatorEquals(STEPS(3, StepPosition.END), values[0]);
 
         assertStartsWith("Expected '<number [0,1]>'", CssParser.errorsProperty().get(0).getMessage());
         assertStartsWith("Expected '<step-position>'", CssParser.errorsProperty().get(2).getMessage());

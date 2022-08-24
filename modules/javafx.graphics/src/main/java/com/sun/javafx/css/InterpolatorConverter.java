@@ -102,6 +102,10 @@ public class InterpolatorConverter extends StyleConverter<Object, Interpolator> 
 
                 case "steps(" -> {
                     Object[] args = (Object[])parsedValues[1].getValue();
+                    if (args[1] == null) {
+                        args[1] = "end";
+                    }
+
                     yield CACHE.computeIfAbsent(args, key -> Interpolator.STEPS((int)args[0], switch ((String)args[1]) {
                         case "jump-start", "start" -> StepPosition.START;
                         case "jump-both" -> StepPosition.BOTH;

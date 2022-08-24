@@ -644,7 +644,7 @@ final public class CssParser {
 
     // Return true if the token is a time type or an identifier
     // (which would indicate a lookup).
-    private boolean isTime(Token token) {
+    private boolean isDuration(Token token) {
         switch (token.getType()) {
             case CssLexer.SECONDS:
             case CssLexer.MS:
@@ -654,7 +654,7 @@ final public class CssParser {
         }
     }
 
-    private Size time(Token token) throws ParseException {
+    private Size duration(Token token) throws ParseException {
         return switch (token.getType()) {
             case CssLexer.SECONDS -> {
                 String sval = token.getText().trim();
@@ -670,9 +670,9 @@ final public class CssParser {
 
             default -> {
                 if (LOGGER.isLoggable(Level.FINEST)) {
-                    LOGGER.finest("Expected \'<time>\'");
+                    LOGGER.finest("Expected \'<duration>\'");
                 }
-                ParseException re = new ParseException("Expected \'<time>\'",token, this);
+                ParseException re = new ParseException("Expected \'<duration>\'",token, this);
                 reportError(createError(re.toString()));
                 throw re;
             }
@@ -1001,18 +1001,19 @@ final public class CssParser {
         return value;
     }
 
-    private ParsedValueImpl<?, Size> parseTime(final Term root) throws ParseException {
-        if (root.token == null || !isTime(root.token)) {
-            error(root, "Expected \'<time>\'");
+    private ParsedValueImpl<?, Size> parseDuration(final Term root) throws ParseException {
+        if (root.token == null || !isDuration(root.token)) {
+            error(root, "Expected \'<duration>\'");
         }
 
         if (root.token.getType() != CssLexer.IDENT) {
-            Size time = time(root.token);
-            return new ParsedValueImpl<>(time, null);
+            Size duration = duration(root.token);
+            return new ParsedValueImpl<>(duration, null);
         } else {
             String key = root.token.getText();
             return switch (key) {
                 case "initial", "inherit" -> new ParsedValueImpl<>(new Size(0, SizeUnits.S), null);
+                case "indefinite" -> new ParsedValueImpl<>(new Size(Double.POSITIVE_INFINITY, SizeUnits.S), null);
                 default -> new ParsedValueImpl<>(key, null, true);
             };
         }
@@ -3929,17 +3930,17 @@ final public class CssParser {
                 break;
             } else if (isEasingFunction(term.token)) {
                 if (parsedTimingFunction != null) {
-                    error(term, "Expected \'<single-transition-property>\' or \'<time>\'");
+                    error(term, "Expected \'<single-transition-property>\' or \'<duration>\'");
                 }
 
                 parsedTimingFunction = parseEasingFunction(term);
             } else if (isTransitionProperty(term.token)) {
                 if (parsedProperty != null) {
-                    error(term, "Expected \'<easing-function>\' or \'<time>\'");
+                    error(term, "Expected \'<easing-function>\' or \'<duration>\'");
                 }
 
                 parsedProperty = parseTransitionProperty(term);
-            } else if (isTime(term.token)) {
+            } else if (isDuration(term.token)) {
                 if (parsedDuration == null) {
                     parsedDuration = parseTransitionDuration(term);
                 } else if (parsedDelay == null) {
@@ -3949,7 +3950,7 @@ final public class CssParser {
                 List<String> args = new ArrayList<>();
                 if (parsedTimingFunction == null) args.add("\'<easing-function>\'");
                 if (parsedProperty == null) args.add("\'<single-transition-property>\'");
-                if (parsedDuration == null || parsedDelay == null) args.add("\'<time>\'");
+                if (parsedDuration == null || parsedDelay == null) args.add("\'<duration>\'");
                 error(term, "Expected " + String.join(" or ", args));
             }
 
@@ -4017,13 +4018,13 @@ final public class CssParser {
     }
 
     private ParsedValueImpl<ParsedValue<?, Size>, Duration> parseTransitionDuration(Term term) throws ParseException {
-        ParsedValue<?, Size> time = parseTime(term);
-        Size size = (Size)time.getValue();
+        ParsedValue<?, Size> duration = parseDuration(term);
+        Size size = (Size)duration.getValue();
         if (size.getValue() < 0) {
-            error(term, "Invalid \'<transition-duration>\'");
+            error(term, "Invalid \'<duration>\'");
         }
 
-        return new ParsedValueImpl<>(time, DurationConverter.getInstance());
+        return new ParsedValueImpl<>(duration, DurationConverter.getInstance());
     }
 
     /*
@@ -4044,7 +4045,7 @@ final public class CssParser {
     }
 
     private ParsedValueImpl<ParsedValue<?, Size>, Duration> parseTransitionDelay(Term term) throws ParseException {
-        return new ParsedValueImpl<>(parseTime(term), DurationConverter.getInstance());
+        return new ParsedValueImpl<>(parseDuration(term), DurationConverter.getInstance());
     }
 
     /*
