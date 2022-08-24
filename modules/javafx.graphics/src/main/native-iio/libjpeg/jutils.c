@@ -174,8 +174,8 @@ jzero_far (void FAR * target, size_t bytestozero)
 
 
 GLOBAL(void)
-jcopy_sample_rows (JSAMPARRAY input_array, int source_row,
-           JSAMPARRAY output_array, int dest_row,
+jcopy_sample_rows (JSAMPARRAY input_array,
+           JSAMPARRAY output_array,
            int num_rows, JDIMENSION num_cols)
 /* Copy some rows of samples from one place to another.
  * num_rows rows are copied from input_array[source_row++]
@@ -191,8 +191,6 @@ jcopy_sample_rows (JSAMPARRAY input_array, int source_row,
 #endif
   register int row;
 
-  input_array += source_row;
-  output_array += dest_row;
 
   for (row = num_rows; row > 0; row--) {
     inptr = *input_array++;
