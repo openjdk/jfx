@@ -35,7 +35,6 @@ import javafx.scene.control.TablePosition;
 import javafx.scene.control.TableRow;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TreeTableCell;
-import javafx.scene.control.TreeTableColumn;
 import javafx.scene.control.TreeTablePosition;
 import javafx.scene.control.TreeTableRow;
 import javafx.scene.control.TreeTableView;
@@ -253,76 +252,6 @@ public class TreeAndTableViewTest {
             assertFalse(c1.isSelected());
             assertFalse(c2.isSelected());
             assertFalse(row.isSelected());
-        } finally {
-            stageLoader.dispose();
-        }
-    }
-    
-    /** TreeTableView with cell selection enabled should not select TreeTableRows */
-    @Test
-    public void test_TreeTableView_jdk_8292353_Kleopatra() {
-        TreeTableView<String> tree = ControlUtils.createTreeTableView();
-
-        StageLoader stageLoader = new StageLoader(tree);
-        try {
-            TreeTableView.TreeTableViewSelectionModel<String> sm = tree.getSelectionModel();
-            sm.setSelectionMode(SelectionMode.MULTIPLE);
-            sm.setCellSelectionEnabled(true);
-            sm.clearSelection();
-
-            TreeTableRow row = ControlUtils.getTreeTableRow(tree, 0);
-            TreeTableCell c0 = ControlUtils.getTreeTableCell(tree, 0, 0);
-            TreeTableCell c1 = ControlUtils.getTreeTableCell(tree, 0, 1);
-            TreeTableCell c2 = ControlUtils.getTreeTableCell(tree, 0, 2);
-
-            assertFalse(c0.isSelected());
-            assertFalse(c1.isSelected());
-            assertFalse(c2.isSelected());
-            assertFalse(row.isSelected());
-
-            // select all cells in the first row
-            sm.select(0, null);
-            
-            assertTrue(c0.isSelected());
-            assertTrue(c1.isSelected());
-            assertTrue(c2.isSelected());
-            assertFalse(row.isSelected()); // JDK-8292353 failure
-        } finally {
-            stageLoader.dispose();
-        }
-    }
-
-    /** TreeTableView with cell selection enabled should not select TreeTableRows */
-    @Test
-    public void test_TreeTableView_jdk_8292353_Kleopatra2() {
-        TreeTableView<String> tree = ControlUtils.createTreeTableView();
-
-        StageLoader stageLoader = new StageLoader(tree);
-        try {
-            TreeTableView.TreeTableViewSelectionModel<String> sm = tree.getSelectionModel();
-            sm.setSelectionMode(SelectionMode.MULTIPLE);
-            sm.setCellSelectionEnabled(true);
-            sm.clearSelection();
-
-            TreeTableColumn<String,?> col1 = tree.getColumns().get(1);
-            TreeTableRow row = ControlUtils.getTreeTableRow(tree, 0);
-            TreeTableCell c0 = ControlUtils.getTreeTableCell(tree, 0, 0);
-            TreeTableCell c1 = ControlUtils.getTreeTableCell(tree, 0, 1);
-            TreeTableCell c2 = ControlUtils.getTreeTableCell(tree, 0, 2);
-
-            assertFalse(c0.isSelected());
-            assertFalse(c1.isSelected());
-            assertFalse(c2.isSelected());
-            assertFalse(row.isSelected());
-
-            // select 0:0 and 0:2
-            sm.select(0, null);
-            sm.clearSelection(0, col1);
-            
-            assertTrue(c0.isSelected());
-            assertFalse(c1.isSelected());
-            assertTrue(c2.isSelected());
-            assertFalse(row.isSelected()); // JDK-8292353 failure
         } finally {
             stageLoader.dispose();
         }
