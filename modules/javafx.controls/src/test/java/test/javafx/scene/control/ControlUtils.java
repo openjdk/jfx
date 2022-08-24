@@ -44,7 +44,7 @@ import test.com.sun.javafx.scene.control.infrastructure.MouseEventFirer;
  * Miscellaneous convenience methods to support javafx.controls tests.
  */
 public class ControlUtils {
-    /** 
+    /**
      * Creates a TableView with three columns and three rows.
      * Each cell contains a "..." string.
      */
@@ -63,7 +63,7 @@ public class ControlUtils {
         return t;
     }
 
-    /** 
+    /**
      * Creates a TreeTableView with three columns and three rows (root is hidden).
      * Each cell contains a "..." string.
      */
@@ -88,8 +88,8 @@ public class ControlUtils {
         return t;
     }
 
-    /** 
-     * Performs a node lookup, returning a TreeTableCell at the given (row, column), 
+    /**
+     * Performs a node lookup, returning a TreeTableCell at the given (row, column),
      * or throws an Error if not found.
      */
     public static TreeTableCell getTreeTableCell(TreeTableView t, int row, int column) {
@@ -107,8 +107,8 @@ public class ControlUtils {
         throw new Error("TreeTableCell not found at " + row + ":" + column);
     }
 
-    /** 
-     * Performs a node lookup, returning a TreeTableRow at the given row, 
+    /**
+     * Performs a node lookup, returning a TreeTableRow at the given row,
      * or throws an Error if not found.
      */
     public static TreeTableRow getTreeTableRow(TreeTableView t, int row) {
@@ -122,8 +122,8 @@ public class ControlUtils {
         throw new Error("TreeTableRow not found at " + row);
     }
 
-    /** 
-     * Performs a node lookup, returning a TableCell at the given (row, column) 
+    /**
+     * Performs a node lookup, returning a TableCell at the given (row, column)
      * or throws an Error if not found.
      */
     public static TableCell getTableCell(TableView t, int row, int column) {
@@ -141,8 +141,8 @@ public class ControlUtils {
         throw new Error("TableCell not found at " + row + ":" + column);
     }
 
-    /** 
-     * Performs a node lookup, returning a TableRow at the given row, 
+    /**
+     * Performs a node lookup, returning a TableRow at the given row,
      * or throws an Error if not found.
      */
     public static TableRow getTableRow(TableView t, int row) {

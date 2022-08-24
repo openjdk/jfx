@@ -68,7 +68,7 @@ public class TableViewRowTest {
             sm.select(0, col0);
             sm.select(0, col1);
             sm.select(0, col2);
-            
+
             assertTrue(c0.isSelected());
             assertTrue(c1.isSelected());
             assertTrue(c2.isSelected());
@@ -104,7 +104,7 @@ public class TableViewRowTest {
             // select 0:0 and 0:2
             sm.select(0, null);
             sm.clearSelection(0, col1);
-            
+
             assertTrue(c0.isSelected());
             assertFalse(c1.isSelected());
             assertTrue(c2.isSelected());
