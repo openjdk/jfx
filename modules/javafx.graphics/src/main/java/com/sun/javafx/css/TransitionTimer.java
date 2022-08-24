@@ -28,7 +28,6 @@ package com.sun.javafx.css;
 import com.sun.javafx.animation.AnimationTimerHelper;
 import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.util.Utils;
-import javafx.animation.AnimationTimer;
 import javafx.animation.Interpolator;
 import javafx.beans.property.Property;
 import javafx.css.StyleableProperty;
@@ -42,7 +41,7 @@ import javafx.util.Duration;
  * {@code TransitionTimer} is the base class for timers that compute intermediate
  * values for implicit transitions of a {@link StyleableProperty}.
  */
-public abstract class TransitionTimer extends AnimationTimer {
+public abstract class TransitionTimer extends StyleableTimer {
 
     private final long startTime, delay, duration;
     private final Interpolator interpolator;
@@ -77,28 +76,9 @@ public abstract class TransitionTimer extends AnimationTimer {
         return timer;
     }
 
-    /**
-     * Stops the specified timer if it is currently running, but only if this method
-     * was not called from the timer's {@link #onUpdate(double)} method (i.e. a timer
-     * will not stop itself).
-     * If {@code timer} is {@code null}, it is considered to be trivially stopped, so
-     * the method returns {@code true}.
-     *
-     * @param timer the timer
-     * @return {@code true} if the timer was stopped or {@code timer} is {@code null},
-     *         {@code false} otherwise
-     */
-    public static boolean tryStop(TransitionTimer timer) {
-        if (timer == null) {
-            return true;
-        }
-
-        if (timer.updating) {
-            return false;
-        }
-
-        timer.stop();
-        return true;
+    @Override
+    public boolean isUpdating() {
+        return updating;
     }
 
     @Override

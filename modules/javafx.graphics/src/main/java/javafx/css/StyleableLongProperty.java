@@ -25,6 +25,7 @@
 
 package javafx.css;
 
+import com.sun.javafx.css.StyleableTimer;
 import com.sun.javafx.css.TransitionTimer;
 import com.sun.javafx.scene.NodeHelper;
 import javafx.beans.property.LongPropertyBase;
@@ -91,7 +92,7 @@ public abstract class StyleableLongProperty
     /** {@inheritDoc} */
     @Override
     public void bind(ObservableValue<? extends Number> observable) {
-        if (TransitionTimer.tryStop(timer)) {
+        if (StyleableTimer.tryStop(timer)) {
             super.bind(observable);
             origin = StyleOrigin.USER;
         }
@@ -102,7 +103,7 @@ public abstract class StyleableLongProperty
     public void set(long v) {
         super.set(v);
 
-        if (TransitionTimer.tryStop(timer)) {
+        if (StyleableTimer.tryStop(timer)) {
             origin = StyleOrigin.USER;
         }
     }
@@ -112,7 +113,7 @@ public abstract class StyleableLongProperty
     public StyleOrigin getStyleOrigin() { return origin; }
 
     private StyleOrigin origin = null;
-    private TransitionTimer timer = null;
+    private StyleableTimer timer = null;
 
     private static class TransitionTimerImpl extends TransitionTimer {
         final WeakReference<StyleableLongProperty> wref;
