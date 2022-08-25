@@ -57,12 +57,11 @@ public class Node_transition_Test {
             TransitionDefinition transition) {
         if (property.equals("all")) {
             assertEquals(TransitionPropertySelector.ALL, transition.getSelector());
-            assertNull(transition.getProperty());
         } else {
             assertEquals(TransitionPropertySelector.CSS, transition.getSelector());
-            assertEquals(property, transition.getProperty());
         }
 
+        assertEquals(property, transition.getProperty());
         assertEquals(duration, transition.getDuration());
         assertEquals(delay, transition.getDelay());
         assertInterpolatorEquals(interpolator, transition.getInterpolator());
@@ -93,20 +92,6 @@ public class Node_transition_Test {
             .findFirst().get();
         TransitionDefinition transition = NodeHelper.findTransition(node, propertyMetadata);
         assertTransitionEquals("-fx-fill", Duration.seconds(2), Duration.ZERO, EASE_IN_OUT, transition);
-    }
-
-    @Test
-    public void testTransitionWithZeroDurationIsElided() {
-        var node = new Rectangle();
-        var scene = new Scene(new Group(node));
-        node.setStyle("transition: -fx-fill 1s, -fx-fill 0s;");
-        node.applyCss();
-
-        CssMetaData<?, ?> propertyMetadata = node.getCssMetaData().stream()
-            .filter(m -> m.getProperty().equals("-fx-fill"))
-            .findFirst().get();
-
-        assertNull(NodeHelper.findTransition(node, propertyMetadata));
     }
 
     @Test

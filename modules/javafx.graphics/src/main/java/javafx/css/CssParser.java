@@ -644,7 +644,7 @@ final public class CssParser {
 
     // Return true if the token is a time type or an identifier
     // (which would indicate a lookup).
-    private boolean isDuration(Token token) {
+    private boolean isTime(Token token) {
         switch (token.getType()) {
             case CssLexer.SECONDS:
             case CssLexer.MS:
@@ -654,7 +654,7 @@ final public class CssParser {
         }
     }
 
-    private Size duration(Token token) throws ParseException {
+    private Size time(Token token) throws ParseException {
         return switch (token.getType()) {
             case CssLexer.SECONDS -> {
                 String sval = token.getText().trim();
@@ -870,11 +870,11 @@ final public class CssParser {
         } else if ("transition".equals(prop)) {
             return parseTransitionLayers(root);
         } else if ("transition-duration".equals(prop)) {
-            return parseTransitionDurationLayers(root);
+            return parseDurationLayers(root, false);
         } else if ("transition-delay".equals(prop)) {
-            return parseTransitionDelayLayers(root);
+            return parseDurationLayers(root, true);
         } else if ("transition-timing-function".equals(prop)) {
-            return parseTransitionTimingFunctionLayers(root);
+            return parseEasingFunctionLayers(root);
         } else if ("transition-property".equals(prop)) {
             return parseTransitionPropertyLayers(root);
         }
@@ -1001,14 +1001,14 @@ final public class CssParser {
         return value;
     }
 
-    private ParsedValueImpl<?, Size> parseDuration(final Term root) throws ParseException {
-        if (root.token == null || !isDuration(root.token)) {
+    private ParsedValueImpl<?, Size> parseTime(final Term root) throws ParseException {
+        if (root.token == null || !isTime(root.token)) {
             error(root, "Expected \'<duration>\'");
         }
 
         if (root.token.getType() != CssLexer.IDENT) {
-            Size duration = duration(root.token);
-            return new ParsedValueImpl<>(duration, null);
+            Size time = time(root.token);
+            return new ParsedValueImpl<>(time, null);
         } else {
             String key = root.token.getText();
             return switch (key) {
@@ -1017,6 +1017,30 @@ final public class CssParser {
                 default -> new ParsedValueImpl<>(key, null, true);
             };
         }
+    }
+
+    private ParsedValueImpl<ParsedValue<?, Size>, Duration> parseDuration(
+            Term term, boolean allowNegative) throws ParseException {
+        ParsedValue<?, Size> time = parseTime(term);
+        if (!allowNegative && time.getValue() instanceof Size size && size.getValue() < 0) {
+            error(term, "Invalid \'<duration>\'");
+        }
+
+        return new ParsedValueImpl<>(time, DurationConverter.getInstance());
+    }
+
+    private ParsedValueImpl<ParsedValue<ParsedValue<?, Size>, Duration>[], Duration[]>
+            parseDurationLayers(Term term, boolean allowNegative) throws ParseException {
+        int nLayers = numberOfLayers(term);
+        ParsedValue<ParsedValue<?, Size>, Duration>[] layers = new ParsedValueImpl[nLayers];
+
+        for (int i = 0; i < nLayers; ++i) {
+            layers[i] = parseDuration(term, allowNegative);
+            term = nextLayer(term);
+        }
+
+        return new ParsedValueImpl<ParsedValue<ParsedValue<?, Size>, Duration>[], Duration[]>(
+                layers, DurationConverter.SequenceConverter.getInstance());
     }
 
     private ParsedValueImpl<?,Color> parseColor(final Term root) throws ParseException {
@@ -3940,11 +3964,11 @@ final public class CssParser {
                 }
 
                 parsedProperty = parseTransitionProperty(term);
-            } else if (isDuration(term.token)) {
+            } else if (isTime(term.token)) {
                 if (parsedDuration == null) {
-                    parsedDuration = parseTransitionDuration(term);
+                    parsedDuration = parseDuration(term, false);
                 } else if (parsedDelay == null) {
-                    parsedDelay = parseTransitionDelay(term);
+                    parsedDelay = parseDuration(term, true);
                 }
             } else {
                 List<String> args = new ArrayList<>();
@@ -4001,58 +4025,10 @@ final public class CssParser {
     }
 
     /*
-     * https://www.w3.org/TR/css-transitions-1/#transition-duration-property
-     */
-    private ParsedValueImpl<ParsedValue<ParsedValue<?, Size>, Duration>[], Duration[]>
-            parseTransitionDurationLayers(Term term) throws ParseException {
-        int nLayers = numberOfLayers(term);
-        ParsedValue<ParsedValue<?, Size>, Duration>[] layers = new ParsedValueImpl[nLayers];
-
-        for (int i = 0; i < nLayers; ++i) {
-            layers[i] = parseTransitionDuration(term);
-            term = nextLayer(term);
-        }
-
-        return new ParsedValueImpl<ParsedValue<ParsedValue<?, Size>, Duration>[], Duration[]>(
-                layers, DurationConverter.SequenceConverter.getInstance());
-    }
-
-    private ParsedValueImpl<ParsedValue<?, Size>, Duration> parseTransitionDuration(Term term) throws ParseException {
-        ParsedValue<?, Size> duration = parseDuration(term);
-        Size size = (Size)duration.getValue();
-        if (size.getValue() < 0) {
-            error(term, "Invalid \'<duration>\'");
-        }
-
-        return new ParsedValueImpl<>(duration, DurationConverter.getInstance());
-    }
-
-    /*
-     * https://www.w3.org/TR/css-transitions-1/#transition-delay-property
-     */
-    private ParsedValueImpl<ParsedValue<ParsedValue<?, Size>, Duration>[], Duration[]>
-            parseTransitionDelayLayers(Term term) throws ParseException {
-        int nLayers = numberOfLayers(term);
-        ParsedValue<ParsedValue<?, Size>, Duration>[] layers = new ParsedValueImpl[nLayers];
-
-        for (int i = 0; i < nLayers; ++i) {
-            layers[i] = parseTransitionDelay(term);
-            term = nextLayer(term);
-        }
-
-        return new ParsedValueImpl<ParsedValue<ParsedValue<?, Size>, Duration>[], Duration[]>(
-                layers, DurationConverter.SequenceConverter.getInstance());
-    }
-
-    private ParsedValueImpl<ParsedValue<?, Size>, Duration> parseTransitionDelay(Term term) throws ParseException {
-        return new ParsedValueImpl<>(parseDuration(term), DurationConverter.getInstance());
-    }
-
-    /*
-     * https://www.w3.org/TR/css-transitions-1/#transition-timing-function-property
+     * https://www.w3.org/TR/css-easing-1/#easing-functions
      */
     private ParsedValueImpl<ParsedValue<?, Interpolator>[], Interpolator[]>
-            parseTransitionTimingFunctionLayers(Term term) throws ParseException {
+            parseEasingFunctionLayers(Term term) throws ParseException {
         int nLayers = numberOfLayers(term);
         ParsedValue<?, Interpolator>[] layers = new ParsedValue[nLayers];
 
@@ -4065,7 +4041,6 @@ final public class CssParser {
             layers, InterpolatorConverter.SequenceConverter.getInstance());
     }
 
-    // https://www.w3.org/TR/css-easing-1/#easing-functions
     private ParsedValueImpl<?, Interpolator> parseEasingFunction(Term term) throws ParseException {
         if (term == null || !isEasingFunction(term.token)) {
             error(term,  "Expected \'<easing-function>\'");
