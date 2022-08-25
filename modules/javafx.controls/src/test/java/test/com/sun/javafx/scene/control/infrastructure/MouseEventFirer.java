@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -59,6 +59,9 @@ public final class MouseEventFirer {
 
     public MouseEventFirer(EventTarget target) {
         this.target = target;
+
+        // Use the alternative creation path for MouseEvent by default, see JDK-8253769
+        this.alternative = true;
 
         // Force the target node onto a stage so that it is accessible
         if (target instanceof Node) {

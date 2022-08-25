@@ -189,7 +189,7 @@ bool RenderThemeJava::paintWidget(
             "(JIIIIILjava/nio/ByteBuffer;)Lcom/sun/webkit/graphics/Ref;");
     ASSERT(mid);
 
-    auto [r, g, b, a] = bgColor.toSRGBALossy<uint8_t>();
+    auto [r, g, b, a] = bgColor.toColorTypeLossy<SRGBA<uint8_t>>().resolved();
     RefPtr<RQRef> widgetRef = RQRef::create(
         env->CallObjectMethod(jobject(*jRenderTheme), mid,
             ptr_to_jlong(&object),
@@ -543,22 +543,22 @@ Color RenderThemeJava::getSelectionColor(int index) const
         static_cast<uint8_t>(color), static_cast<uint8_t>(color >> 24) };
 }
 
-Color RenderThemeJava::platformActiveSelectionBackgroundColor(OptionSet<StyleColor::Options>) const
+Color RenderThemeJava::platformActiveSelectionBackgroundColor(OptionSet<StyleColorOptions>) const
 {
     return getSelectionColor(JNI_EXPAND(BACKGROUND));
 }
 
-Color RenderThemeJava::platformInactiveSelectionBackgroundColor(OptionSet<StyleColor::Options> opt) const
+Color RenderThemeJava::platformInactiveSelectionBackgroundColor(OptionSet<StyleColorOptions> opt) const
 {
     return platformActiveSelectionBackgroundColor(opt);
 }
 
-Color RenderThemeJava::platformActiveSelectionForegroundColor(OptionSet<StyleColor::Options>) const
+Color RenderThemeJava::platformActiveSelectionForegroundColor(OptionSet<StyleColorOptions>) const
 {
     return getSelectionColor(JNI_EXPAND(FOREGROUND));
 }
 
-Color RenderThemeJava::platformInactiveSelectionForegroundColor(OptionSet<StyleColor::Options> opt) const
+Color RenderThemeJava::platformInactiveSelectionForegroundColor(OptionSet<StyleColorOptions> opt) const
 {
     return platformActiveSelectionForegroundColor(opt);
 }

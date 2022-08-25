@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2018, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -184,7 +184,8 @@ public class FXDnDInteropN {
             if (c != null) recognizers.put(c, this);
         }
 
-        @Override public void setComponent(Component c) {
+        @Override
+        public synchronized void setComponent(Component c) {
             final Component old = getComponent();
             if (old != null) recognizers.remove(old);
             super.setComponent(c);

@@ -26,6 +26,7 @@
 #include "RenderTableCell.h"
 
 #include "CollapsedBorderValue.h"
+#include "ElementInlines.h"
 #include "FloatQuad.h"
 #include "GraphicsContext.h"
 #include "HTMLNames.h"
@@ -200,6 +201,17 @@ void RenderTableCell::computePreferredLogicalWidths()
         // of hiptop.com.
         m_minPreferredLogicalWidth = std::max(LayoutUnit(w.value()), m_minPreferredLogicalWidth);
     }
+}
+
+LayoutRect RenderTableCell::frameRectForStickyPositioning() const
+{
+    // RenderTableCell has the RenderTableRow as the container, but is positioned relatively
+    // to the RenderTableSection. The sticky positioning algorithm assumes that elements are
+    // positioned relatively to their container, so we correct for that here.
+    ASSERT(parentBox());
+    auto returnValue = frameRect();
+    returnValue.move(-parentBox()->locationOffset());
+    return returnValue;
 }
 
 void RenderTableCell::computeIntrinsicPadding(LayoutUnit rowHeight)
@@ -1347,7 +1359,7 @@ void RenderTableCell::paintMask(PaintInfo& paintInfo, const LayoutPoint& paintOf
     paintMaskImages(paintInfo, paintRect);
 }
 
-bool RenderTableCell::boxShadowShouldBeAppliedToBackground(const LayoutPoint&, BackgroundBleedAvoidance, LegacyInlineFlowBox*) const
+bool RenderTableCell::boxShadowShouldBeAppliedToBackground(const LayoutPoint&, BackgroundBleedAvoidance, const InlineIterator::InlineBoxIterator&) const
 {
     return false;
 }

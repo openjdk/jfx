@@ -61,6 +61,7 @@ void raiseDOMErrorException(JNIEnv*, Exception&&);
 
 template<typename T> T raiseOnDOMError(JNIEnv*, ExceptionOr<T>&&);
 template<typename T> T* raiseOnDOMError(JNIEnv*, ExceptionOr<Ref<T>>&&);
+template<typename T> T* raiseOnDOMError(JNIEnv*, ExceptionOr<RefPtr<T>>&&);
 String raiseOnDOMError(JNIEnv*, ExceptionOr<String>&&);
 void raiseOnDOMError(JNIEnv*, ExceptionOr<void>&&);
 
@@ -80,6 +81,15 @@ inline String raiseOnDOMError(JNIEnv* env, ExceptionOr<String>&& exceptionOrRetu
 }
 
 template<typename T> inline T* raiseOnDOMError(JNIEnv* env, ExceptionOr<Ref<T>>&& exceptionOrReturnValue)
+{
+    if (exceptionOrReturnValue.hasException()) {
+        raiseDOMErrorException(env, exceptionOrReturnValue.releaseException());
+        return nullptr;
+    }
+    return WTF::getPtr(exceptionOrReturnValue.returnValue());
+}
+
+template<typename T> inline T* raiseOnDOMError(JNIEnv* env, ExceptionOr<RefPtr<T>>&& exceptionOrReturnValue)
 {
     if (exceptionOrReturnValue.hasException()) {
         raiseDOMErrorException(env, exceptionOrReturnValue.releaseException());

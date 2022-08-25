@@ -77,10 +77,10 @@ void BoxPainter::paintBoxContent(const Box& box, PaintingContext& paintingContex
         paintingContext.context.setFillColor(style.color());
 
         // FIXME: Add non-baseline align painting
-        auto baseline = textRect.y() + style.fontMetrics().ascent();
+        auto baseline = textRect.y() + style.metricsOfPrimaryFont().ascent();
         auto expansion = textBox.expansion();
 
-        auto textRun = TextRun { textBox.text().originalContent().substring(textBox.text().start(), textBox.text().length()), textRect.x(), expansion.horizontalExpansion, expansion.behavior };
+        auto textRun = TextRun { textBox.text().originalContent(), textRect.x(), expansion.horizontalExpansion, expansion.behavior };
         textRun.setTabSize(!style.collapseWhiteSpace(), style.tabSize());
         paintingContext.context.drawText(style.fontCascade(), textRun, { textRect.x(), baseline });
         return;

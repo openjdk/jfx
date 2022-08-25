@@ -109,6 +109,7 @@ namespace WebCore {
         virtual void paint(GraphicsContext&, const FloatRect&);
 
         //virtual void paintCurrentFrameInContext(GraphicsContext* c, const IntRect& r) { paint(c, r); }
+        virtual DestinationColorSpace colorSpace();
 
         virtual void setPreload(MediaPlayer::Preload);
 

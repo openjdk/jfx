@@ -29,6 +29,7 @@
 #include "HighlightVisibility.h"
 #include <wtf/HashMap.h>
 #include <wtf/RefCounted.h>
+#include <wtf/text/AtomStringHash.h>
 
 namespace WebCore {
 
@@ -46,13 +47,13 @@ public:
     void clear();
     bool remove(const String&);
 
-    HighlightVisibility highlightsVisibility() const { return m_highlightVisibility; }
-    WEBCORE_EXPORT void setHighlightVisibility(HighlightVisibility);
 
+    HighlightVisibility highlightsVisibility() const { return m_highlightVisibility; }
 #if ENABLE(APP_HIGHLIGHTS)
-    WEBCORE_EXPORT void addAppHighlight(Ref<StaticRange>&&);
-    static ASCIILiteral appHighlightKey();
+    WEBCORE_EXPORT void setHighlightVisibility(HighlightVisibility);
 #endif
+
+    WEBCORE_EXPORT void addAnnotationHighlightWithRange(Ref<StaticRange>&&);
     const HashMap<String, Ref<Highlight>>& map() const { return m_map; }
 
 private:
