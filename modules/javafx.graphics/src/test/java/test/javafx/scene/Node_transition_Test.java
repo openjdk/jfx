@@ -381,4 +381,40 @@ public class Node_transition_Test {
         assertEquals(Duration.millis(750), trace.get(2).getElapsedTime());
     }
 
+    @Test
+    public void testEventsAreFiredWhenDurationIsZero() {
+        String url = "data:text/css;base64," + Base64.getUrlEncoder().encodeToString("""
+            .testClass {
+                -fx-opacity: 0;
+                transition: -fx-opacity 0s;
+            }
+
+            .testClass:hover {
+                -fx-opacity: 1;
+            }
+            """.getBytes(StandardCharsets.UTF_8));
+
+        StubToolkit tk = (StubToolkit)Toolkit.getToolkit();
+        tk.setCurrentTime(0);
+
+        var node = new Rectangle();
+        var scene = new Scene(new Group(node));
+        scene.getStylesheets().add(url);
+        node.getStyleClass().add("testClass");
+        node.applyCss();
+
+        List<TransitionEvent> trace = new ArrayList<>();
+        node.addEventHandler(TransitionEvent.ANY, trace::add);
+        node.pseudoClassStateChanged(PseudoClass.getPseudoClass("hover"), true);
+        node.applyCss();
+        assertEquals(1, trace.size());
+        assertEquals(TransitionEvent.RUN.getName(), trace.get(0).getEventType().getName());
+
+        tk.setCurrentTime(1);
+        tk.handleAnimation();
+        assertEquals(3, trace.size());
+        assertEquals(TransitionEvent.START.getName(), trace.get(1).getEventType().getName());
+        assertEquals(TransitionEvent.END.getName(), trace.get(2).getEventType().getName());
+    }
+
 }

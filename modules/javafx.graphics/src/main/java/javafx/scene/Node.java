@@ -8951,7 +8951,7 @@ public abstract class Node implements EventTarget, Styleable {
                 };
 
                 if (selected) {
-                    return transition.getDuration().equals(Duration.ZERO) ? null : transition;
+                    return transition;
                 }
             }
 
@@ -8966,7 +8966,7 @@ public abstract class Node implements EventTarget, Styleable {
             for (int i = 0, max = subMetadata.size(); i < max; ++i) {
                 TransitionDefinition transition = find(subMetadata.get(i));
                 if (transition != null) {
-                    return transition.getDuration().equals(Duration.ZERO) ? null : transition;
+                    return transition;
                 }
             }
 
