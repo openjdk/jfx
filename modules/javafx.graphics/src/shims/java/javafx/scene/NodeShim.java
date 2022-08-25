@@ -87,6 +87,6 @@ public class NodeShim {
     }
 
     public static void setTreeVisible(Node n, boolean visible) {
-        n.setTreeVisible(visible);
+        n.setTreeVisible(visible, false);
     }
 }

@@ -310,7 +310,7 @@ public class SubScene extends Node {
                     }
 
                     // disabled and isTreeVisible properties are inherited
-                    _value.setTreeVisible(isTreeVisible());
+                    _value.setTreeVisible(isTreeVisible(), false);
                     _value.setDisabled(isDisabled());
 
                     if (oldRoot != null) {
