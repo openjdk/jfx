@@ -99,6 +99,24 @@ public class Node_transition_Test {
     }
 
     @Test
+    public void testAllIdentifierIsCaseInsensitive() {
+        var node = new Rectangle();
+        var scene = new Scene(new Group(node));
+
+        node.setStyle("transition: ALL 1s");
+        node.applyCss();
+        List<TransitionDefinition> transitions = NodeShim.getTransitionDefinitions(node);
+        assertEquals(1, transitions.size());
+        assertTransitionEquals("all", Duration.seconds(1), Duration.ZERO, EASE, transitions.get(0));
+
+        node.setStyle("transition: all 1s");
+        node.applyCss();
+        transitions = NodeShim.getTransitionDefinitions(node);
+        assertEquals(1, transitions.size());
+        assertTransitionEquals("all", Duration.seconds(1), Duration.ZERO, EASE, transitions.get(0));
+    }
+
+    @Test
     public void testLastOccurrenceOfMultiplyReferencedPropertyIsSelected() {
         var node = new Rectangle();
         var scene = new Scene(new Group(node));

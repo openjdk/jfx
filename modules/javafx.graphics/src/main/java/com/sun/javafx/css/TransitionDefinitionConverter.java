@@ -86,7 +86,7 @@ public final class TransitionDefinitionConverter extends StyleConverter<ParsedVa
         }
 
         return new TransitionDefinition(
-            "all".equals(property) ? TransitionPropertyKind.ALL : TransitionPropertyKind.CSS,
+            "all".equalsIgnoreCase(property) ? TransitionPropertyKind.ALL : TransitionPropertyKind.CSS,
             property,
             duration.lessThan(Duration.ZERO) ? Duration.ZERO : duration,
             parsedDelay != null ? parsedDelay.convert(null) : Duration.ZERO,
