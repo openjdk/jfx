@@ -1986,8 +1986,8 @@ public class Text extends Shape {
             }
             case LINE_FOR_OFFSET: {
                 int offset = (Integer)parameters[0];
+                if (offset > getTextInternal().length()) return null;
                 TextLine[] lines = getTextLayout().getLines();
-                if (offset > getTextInternal().length()) return lines.length;
                 int lineIndex = 0;
                 for (int i = 1; i < lines.length; i++) {
                     TextLine line = lines[i];

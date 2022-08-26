@@ -177,6 +177,7 @@ class WinTextRangeProvider {
                 break;
             }
             case TextUnit_Line: {
+                if (start > length) start = length;
                 Integer lineIndex = (Integer)getAttribute(LINE_FOR_OFFSET, start);
                 Integer lineStart = (Integer)getAttribute(LINE_START, lineIndex);
                 Integer lineEnd = (Integer)getAttribute(LINE_END, lineIndex);
