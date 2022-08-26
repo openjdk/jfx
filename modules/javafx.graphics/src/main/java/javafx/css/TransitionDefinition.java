@@ -42,22 +42,22 @@ import java.util.Objects;
  *
  * button.getTransitions().add(
  *     new TransitionDefinition(
- *         TransitionPropertySelector.BEAN,
+ *         TransitionPropertyKind.BEAN,
  *         "opacity",
  *         Duration.seconds(0.5),
  *         Duration.ZERO,
  *         Interpolator.LINEAR));
  * }</pre>
  *
- * Note that {@link TransitionPropertySelector#BEAN} is used to match the specified property name
+ * Note that {@link TransitionPropertyKind#BEAN} is used to match the specified property name
  * against JavaFX Bean property names instead of JavaFX CSS property names.
  *
  * @since 20
  */
 public class TransitionDefinition {
 
-    private final TransitionPropertySelector selector;
-    private final String property;
+    private final TransitionPropertyKind propertyKind;
+    private final String propertyName;
     private final Duration duration;
     private final Duration delay;
     private final Interpolator interpolator;
@@ -65,41 +65,43 @@ public class TransitionDefinition {
     /**
      * Creates a new {@code TransitionDefinition} instance with zero delay and linear interpolation.
      *
-     * @param selector property selector
-     * @param property name of the property (may be {@code null} when {@code selector}
-     *                 is {@link TransitionPropertySelector#ALL})
+     * @param propertyKind property selector
+     * @param propertyName name of the property (may be {@code null} when {@code propertyKind}
+     *                     is {@link TransitionPropertyKind#ALL})
      * @param duration duration of the transition
+     *
      * @throws NullPointerException if any of the arguments is {@code null}
      * @throws IllegalArgumentException if the duration is negative
      */
-    public TransitionDefinition(TransitionPropertySelector selector, String property, Duration duration) {
-        this(selector, property, duration, Duration.ZERO, Interpolator.LINEAR);
+    public TransitionDefinition(TransitionPropertyKind propertyKind, String propertyName, Duration duration) {
+        this(propertyKind, propertyName, duration, Duration.ZERO, Interpolator.LINEAR);
     }
 
     /**
      * Creates a new {@code TransitionDefinition} instance.
      *
-     * @param selector property selector
-     * @param property name of the property (may be {@code null} when {@code selector}
-     *                 is {@link TransitionPropertySelector#ALL})
+     * @param propertyKind the property kind
+     * @param propertyName name of the property (may be {@code null} when {@code propertyKind}
+     *                     is {@link TransitionPropertyKind#ALL})
      * @param duration duration of the transition
      * @param delay delay after which the transition is started; if negative, the transition starts
      *              immediately, but will appear to have begun at an earlier point in time
      * @param interpolator interpolator for the transition
+     *
      * @throws NullPointerException if any of the arguments is {@code null}
      * @throws IllegalArgumentException if the duration is negative
      */
-    public TransitionDefinition(TransitionPropertySelector selector, String property, Duration duration,
+    public TransitionDefinition(TransitionPropertyKind propertyKind, String propertyName, Duration duration,
                                 Duration delay, Interpolator interpolator) {
-        this.selector = Objects.requireNonNull(selector, "selector cannot be null");
+        this.propertyKind = Objects.requireNonNull(propertyKind, "propertyKind cannot be null");
         this.duration = Objects.requireNonNull(duration, "duration cannot be null");
         this.delay = Objects.requireNonNull(delay, "delay cannot be null");
         this.interpolator = Objects.requireNonNull(interpolator, "interpolator cannot be null");
 
-        if (selector != TransitionPropertySelector.ALL) {
-            this.property = Objects.requireNonNull(property, "property cannot be null");
+        if (propertyKind != TransitionPropertyKind.ALL) {
+            this.propertyName = Objects.requireNonNull(propertyName, "propertyName cannot be null");
         } else {
-            this.property = "all";
+            this.propertyName = "all";
         }
 
         if (duration.lessThan(Duration.ZERO)) {
@@ -108,21 +110,21 @@ public class TransitionDefinition {
     }
 
     /**
-     * Gets the property selector of the transition.
+     * Gets the property kind targeted by this transition.
      *
-     * @return the {@code TransitionPropertySelector}
+     * @return the {@code TransitionPropertyKind}
      */
-    public TransitionPropertySelector getSelector() {
-        return selector;
+    public TransitionPropertyKind getPropertyKind() {
+        return propertyKind;
     }
 
     /**
-     * Gets the name of the property for which the transition is specified.
+     * Gets the name of the property targeted by this transition.
      *
      * @return the property name
      */
-    public String getProperty() {
-        return property;
+    public String getPropertyName() {
+        return propertyName;
     }
 
     /**

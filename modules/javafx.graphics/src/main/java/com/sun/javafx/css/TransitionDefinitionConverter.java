@@ -32,7 +32,7 @@ import javafx.css.Size;
 import javafx.css.StyleConverter;
 import javafx.css.Styleable;
 import javafx.css.TransitionDefinition;
-import javafx.css.TransitionPropertySelector;
+import javafx.css.TransitionPropertyKind;
 import javafx.scene.text.Font;
 import javafx.util.Duration;
 import java.util.Arrays;
@@ -86,7 +86,7 @@ public final class TransitionDefinitionConverter extends StyleConverter<ParsedVa
         }
 
         return new TransitionDefinition(
-            "all".equals(property) ? TransitionPropertySelector.ALL : TransitionPropertySelector.CSS,
+            "all".equals(property) ? TransitionPropertyKind.ALL : TransitionPropertyKind.CSS,
             property,
             duration.lessThan(Duration.ZERO) ? Duration.ZERO : duration,
             parsedDelay != null ? parsedDelay.convert(null) : Duration.ZERO,
@@ -133,11 +133,11 @@ public final class TransitionDefinitionConverter extends StyleConverter<ParsedVa
                 Interpolator timingFunction = timingFunctions == null || timingFunctions.length == 0 ?
                     InterpolatorConverter.EASE : timingFunctions[i % timingFunctions.length];
 
-                TransitionPropertySelector selector = "all".equals(properties[i]) ?
-                    TransitionPropertySelector.ALL : TransitionPropertySelector.CSS;
+                TransitionPropertyKind kind = "all".equals(properties[i]) ?
+                    TransitionPropertyKind.ALL : TransitionPropertyKind.CSS;
 
                 transitions[i] = new TransitionDefinition(
-                    selector, properties[i], durations[i % durations.length], delay, timingFunction);
+                    kind, properties[i], durations[i % durations.length], delay, timingFunction);
             }
 
             return transitions;

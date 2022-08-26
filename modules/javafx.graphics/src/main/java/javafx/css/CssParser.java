@@ -4012,7 +4012,7 @@ final public class CssParser {
             error(term,  "Expected \'<transition-property>\'");
         }
 
-        return new ParsedValueImpl<String, String>(term.token.getText().toLowerCase(Locale.ROOT), null);
+        return new ParsedValueImpl<String, String>(term.token.getText(), null);
     }
 
     private boolean isTransitionProperty(Token token) {

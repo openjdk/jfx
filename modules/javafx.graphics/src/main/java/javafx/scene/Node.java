@@ -28,7 +28,6 @@ package javafx.scene;
 
 import com.sun.javafx.geometry.BoundsUtils;
 import com.sun.javafx.scene.traversal.TraversalMethod;
-import javafx.css.TransitionDefinition;
 import javafx.application.Platform;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
@@ -69,6 +68,7 @@ import javafx.css.StyleableBooleanProperty;
 import javafx.css.StyleableDoubleProperty;
 import javafx.css.StyleableObjectProperty;
 import javafx.css.StyleableProperty;
+import javafx.css.TransitionDefinition;
 import javafx.event.Event;
 import javafx.event.EventDispatchChain;
 import javafx.event.EventDispatcher;
@@ -126,9 +126,9 @@ import com.sun.javafx.beans.IDProperty;
 import com.sun.javafx.beans.event.AbstractNotifyListener;
 import com.sun.javafx.collections.TrackableObservableList;
 import com.sun.javafx.collections.UnmodifiableListSet;
+import com.sun.javafx.css.PseudoClassState;
 import com.sun.javafx.css.TransitionDefinitionCssMetaData;
 import com.sun.javafx.css.TransitionTimer;
-import com.sun.javafx.css.PseudoClassState;
 import javafx.css.Selector;
 import javafx.css.Style;
 import javafx.css.converter.BooleanConverter;
@@ -167,7 +167,6 @@ import com.sun.prism.impl.PrismSettings;
 import com.sun.scenario.effect.EffectHelper;
 
 import javafx.scene.shape.Shape3D;
-import javafx.util.Duration;
 import com.sun.javafx.logging.PlatformLogger;
 import com.sun.javafx.logging.PlatformLogger.Level;
 
@@ -8925,7 +8924,7 @@ public abstract class Node implements EventTarget, Styleable {
 
         /**
          * Returns the transition for the property referenced by the specified CSS metadata,
-         * or {@code null} if no transition with a duration larger than 0 was found.
+         * or {@code null} if no transition was found.
          */
         TransitionDefinition find(CssMetaData<? extends Styleable, ?> metadata) {
             if (list.size() == 0) {
@@ -8940,13 +8939,13 @@ public abstract class Node implements EventTarget, Styleable {
             for (int i = list.size() - 1; i >= 0; --i) {
                 TransitionDefinition transition = list.get(i);
 
-                // Depending on the property selector, we match the transition's property name against
+                // Depending on the property kind, we match the transition's property name against
                 // the JavaFX Bean property name, the CSS property name, or both.
-                boolean selected = switch (transition.getSelector()) {
-                    case BEAN -> beanPropertyName != null && beanPropertyName.equals(transition.getProperty());
-                    case CSS -> metadata.getProperty().equals(transition.getProperty());
-                    case ANY -> beanPropertyName != null && beanPropertyName.equals(transition.getProperty())
-                                || metadata.getProperty().equals(transition.getProperty());
+                boolean selected = switch (transition.getPropertyKind()) {
+                    case BEAN -> beanPropertyName != null && beanPropertyName.equals(transition.getPropertyName());
+                    case CSS -> metadata.getProperty().equals(transition.getPropertyName());
+                    case ANY -> beanPropertyName != null && beanPropertyName.equals(transition.getPropertyName())
+                                || metadata.getProperty().equals(transition.getPropertyName());
                     case ALL -> true;
                 };
 

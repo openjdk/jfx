@@ -33,7 +33,7 @@ import javafx.css.Declaration;
 import javafx.css.Rule;
 import javafx.css.Stylesheet;
 import javafx.css.TransitionDefinition;
-import javafx.css.TransitionPropertySelector;
+import javafx.css.TransitionPropertyKind;
 import javafx.util.Duration;
 
 import static test.javafx.animation.InterpolatorUtils.*;
@@ -60,7 +60,7 @@ public class CssParser_transition_Test {
     }
 
     private void assertTransition(TransitionDefinition expected, TransitionDefinition actual) {
-        assertEquals(expected.getProperty(), actual.getProperty());
+        assertEquals(expected.getPropertyName(), actual.getPropertyName());
         assertEquals(expected.getDuration(), actual.getDuration());
         assertEquals(expected.getDelay(), actual.getDelay());
         assertInterpolatorEquals(expected.getInterpolator(), actual.getInterpolator());
@@ -87,15 +87,15 @@ public class CssParser_transition_Test {
         """);
 
         assertTransition(
-            new TransitionDefinition(TransitionPropertySelector.CSS, "foo", seconds(0), seconds(0), EASE),
+            new TransitionDefinition(TransitionPropertyKind.CSS, "foo", seconds(0), seconds(0), EASE),
             ((TransitionDefinition[])values("transition", stylesheet.getRules().get(0)))[0]);
 
         assertTransition(
-            new TransitionDefinition(TransitionPropertySelector.ALL, "all", seconds(1), seconds(0), EASE),
+            new TransitionDefinition(TransitionPropertyKind.ALL, "all", seconds(1), seconds(0), EASE),
             ((TransitionDefinition[])values("transition", stylesheet.getRules().get(1)))[0]);
 
         assertTransition(
-            new TransitionDefinition(TransitionPropertySelector.ALL, "all", seconds(0), seconds(0), LINEAR),
+            new TransitionDefinition(TransitionPropertyKind.ALL, "all", seconds(0), seconds(0), LINEAR),
             ((TransitionDefinition[])values("transition", stylesheet.getRules().get(2)))[0]);
     }
 
@@ -214,23 +214,23 @@ public class CssParser_transition_Test {
         """);
 
         assertTransition(
-            new TransitionDefinition(TransitionPropertySelector.ALL, null, seconds(0.25), seconds(0), EASE),
+            new TransitionDefinition(TransitionPropertyKind.ALL, null, seconds(0.25), seconds(0), EASE),
             ((TransitionDefinition[])values("transition", stylesheet.getRules().get(0)))[0]);
 
         assertEquals("null",
             stylesheet.getRules().get(1).getDeclarations().get(0).getParsedValue().convert(null));
 
         assertTransition(
-            new TransitionDefinition(TransitionPropertySelector.ALL, null, seconds(0.125), seconds(0), EASE),
+            new TransitionDefinition(TransitionPropertyKind.ALL, null, seconds(0.125), seconds(0), EASE),
             ((TransitionDefinition[])values("transition", stylesheet.getRules().get(2)))[0]);
 
         assertTransition(
-            new TransitionDefinition(TransitionPropertySelector.BEAN, "foo", seconds(0.3), seconds(0.4),
+            new TransitionDefinition(TransitionPropertyKind.BEAN, "foo", seconds(0.3), seconds(0.4),
                                      CUBIC_BEZIER(0.1, 0.2, 0.3, .4)),
             ((TransitionDefinition[])values("transition", stylesheet.getRules().get(3)))[0]);
 
         assertTransition(
-            new TransitionDefinition(TransitionPropertySelector.BEAN, "foo", seconds(0.3), seconds(0.4),
+            new TransitionDefinition(TransitionPropertyKind.BEAN, "foo", seconds(0.3), seconds(0.4),
                                      CUBIC_BEZIER(0.1, 0.2, 0.3, .4)),
             ((TransitionDefinition[])values("transition", stylesheet.getRules().get(4)))[0]);
 

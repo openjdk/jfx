@@ -25,30 +25,36 @@
 
 package javafx.css;
 
+import javafx.beans.property.ReadOnlyProperty;
+
 /**
- * Specifies how the property name defined by {@link TransitionDefinition} is interpreted.
+ * Specifies the property kind targeted by {@link TransitionDefinition}.
  *
  * @since 20
  */
-public enum TransitionPropertySelector {
+public enum TransitionPropertyKind {
 
     /**
-     * Selects JavaFX Beans properties.
+     * Targets a JavaFX Bean property name.
+     *
+     * @see ReadOnlyProperty#getName()
      */
     BEAN,
 
     /**
-     * Selects CSS properties.
+     * Targets a CSS property name.
+     *
+     * @see CssMetaData#getProperty()
      */
     CSS,
 
     /**
-     * Selects both JavaFX Bean and CSS properties.
+     * Targets both JavaFX Bean and CSS property names.
      */
     ANY,
 
     /**
-     * Selects all properties independent of type.
+     * Targets all properties independent of type or name.
      */
     ALL
 

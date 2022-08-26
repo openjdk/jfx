@@ -25,13 +25,13 @@
 
 package javafx.scene;
 
-import javafx.css.TransitionDefinition;
 import com.sun.javafx.css.TransitionTimer;
 import com.sun.javafx.scene.DirtyBits;
 import com.sun.javafx.sg.prism.NGNode;
 
 import javafx.collections.ObservableSet;
 import javafx.css.PseudoClass;
+import javafx.css.TransitionDefinition;
 import javafx.scene.transform.Transform;
 import java.util.List;
 

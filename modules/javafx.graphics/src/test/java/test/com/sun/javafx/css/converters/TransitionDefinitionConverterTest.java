@@ -52,7 +52,7 @@ public class TransitionDefinitionConverterTest {
     private static void assertTransitionEquals(
             String property, Duration duration, Duration delay, Interpolator interpolator,
             TransitionDefinition transition) {
-        assertEquals(property, transition.getProperty());
+        assertEquals(property, transition.getPropertyName());
         assertEquals(duration, transition.getDuration());
         assertEquals(delay, transition.getDelay());
         assertInterpolatorEquals(interpolator, transition.getInterpolator());

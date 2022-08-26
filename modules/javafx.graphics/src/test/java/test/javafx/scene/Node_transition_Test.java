@@ -36,8 +36,9 @@ import javafx.css.CssMetaData;
 import javafx.css.PseudoClass;
 import javafx.css.TransitionDefinition;
 import javafx.css.TransitionEvent;
-import javafx.css.TransitionPropertySelector;
+import javafx.css.TransitionPropertyKind;
 import javafx.scene.Group;
+import javafx.scene.Node;
 import javafx.scene.NodeShim;
 import javafx.scene.Scene;
 import javafx.scene.shape.Rectangle;
@@ -56,12 +57,12 @@ public class Node_transition_Test {
             String property, Duration duration, Duration delay, Interpolator interpolator,
             TransitionDefinition transition) {
         if (property.equals("all")) {
-            assertEquals(TransitionPropertySelector.ALL, transition.getSelector());
+            assertEquals(TransitionPropertyKind.ALL, transition.getPropertyKind());
         } else {
-            assertEquals(TransitionPropertySelector.CSS, transition.getSelector());
+            assertEquals(TransitionPropertyKind.CSS, transition.getPropertyKind());
         }
 
-        assertEquals(property, transition.getProperty());
+        assertEquals(property, transition.getPropertyName());
         assertEquals(duration, transition.getDuration());
         assertEquals(delay, transition.getDelay());
         assertInterpolatorEquals(interpolator, transition.getInterpolator());
@@ -78,6 +79,23 @@ public class Node_transition_Test {
         assertEquals(2, transitions.size());
         assertTransitionEquals("-fx-fill", Duration.seconds(1), Duration.ZERO, EASE, transitions.get(0));
         assertTransitionEquals("all", Duration.seconds(2), Duration.ZERO, EASE_IN_OUT, transitions.get(1));
+    }
+
+    @Test
+    public void testPropertyNameIsCaseSensitive() {
+        var node = new Rectangle();
+        var scene = new Scene(new Group(node));
+        CssMetaData<?, ?> opacityProperty = Node.getClassCssMetaData().stream()
+            .filter(md -> md.getProperty().equals("-fx-opacity"))
+            .findFirst().get();
+
+        node.setStyle("transition: -fx-OPACITY 1s");
+        node.applyCss();
+        assertNull(NodeHelper.findTransition(node, opacityProperty));
+
+        node.setStyle("transition: -fx-opacity 1s");
+        node.applyCss();
+        assertNotNull(NodeHelper.findTransition(node, opacityProperty));
     }
 
     @Test

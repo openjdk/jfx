@@ -35,6 +35,7 @@ import javafx.animation.AnimationTimer;
 import javafx.animation.Interpolator;
 import javafx.beans.property.Property;
 import javafx.css.CssMetaData;
+import javafx.css.TransitionPropertyKind;
 import javafx.css.SimpleStyleableDoubleProperty;
 import javafx.css.SimpleStyleableFloatProperty;
 import javafx.css.SimpleStyleableIntegerProperty;
@@ -44,7 +45,6 @@ import javafx.css.StyleConverter;
 import javafx.css.StyleOrigin;
 import javafx.css.StyleableProperty;
 import javafx.css.TransitionDefinition;
-import javafx.css.TransitionPropertySelector;
 import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.paint.Color;
@@ -57,7 +57,7 @@ import java.util.List;
 import java.util.function.Supplier;
 
 import static javafx.animation.Interpolator.*;
-import static javafx.css.TransitionPropertySelector.*;
+import static javafx.css.TransitionPropertyKind.*;
 import static javafx.util.Duration.*;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -243,7 +243,7 @@ public class TransitionTimerTest {
                 TestArgs args = testRun.args.get();
                 args.node.getTransitions().add(
                     new TransitionDefinition(
-                        TransitionPropertySelector.BEAN, "testProperty",
+                        TransitionPropertyKind.BEAN, "testProperty",
                         Duration.seconds(1), Duration.ZERO, Interpolator.LINEAR));
 
                 handleMethod = AnimationTimer.class.getDeclaredMethod("handle", long.class);
