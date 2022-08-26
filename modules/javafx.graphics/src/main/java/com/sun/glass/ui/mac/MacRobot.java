@@ -141,15 +141,21 @@ final class MacRobot extends GlassRobot {
     public WritableImage getScreenCapture(WritableImage image, double x, double y, double width,
                                           double height, boolean scaleToFit) {
         Application.checkEventThread();
-        if (width <= 0) {
+
+        int iWidth = (int) width;
+        int iHeight = (int) height;
+        if (iWidth <= 0) {
             throw new IllegalArgumentException("width must be > 0");
         }
-        if (height <= 0) {
+        if (iHeight <= 0) {
             throw new IllegalArgumentException("height must be > 0");
+        }
+        if (iWidth >= (Integer.MAX_VALUE / iHeight)) {
+            throw new IllegalArgumentException("invalid capture size");
         }
 
         Pixels pixels;
-        pixels = _getScreenCapture((int) x, (int) y, (int) width, (int) height, scaleToFit);
+        pixels = _getScreenCapture((int) x, (int) y, iWidth, iHeight, scaleToFit);
         return convertFromPixels(image, pixels);
     }
 }

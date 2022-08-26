@@ -275,9 +275,25 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_win_WinRobot__1getPixelColor
 JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinRobot__1getScreenCapture
     (JNIEnv *env, jobject jrobot, jint x, jint y, jint width, jint height, jintArray pixelArray)
 {
-    int numPixels = width * height;
+    if (!pixelArray) {
+        return;
+    }
+    if (width <= 0 || height <= 0) {
+        return;
+    }
+
+    const int maxPixels = INT_MAX / sizeof(jint);
+    if (width >= maxPixels / height) {
+        return;
+    }
+
+    const int numPixels = width * height;
     int pixelDataSize = sizeof(jint) * numPixels;
     ASSERT(pixelDataSize > 0 && pixelDataSize % 4 == 0);
+
+    if (numPixels > env->GetArrayLength(pixelArray)) {
+        return;
+    }
 
     jint * pixelData = (jint *)(new BYTE[pixelDataSize]);
 

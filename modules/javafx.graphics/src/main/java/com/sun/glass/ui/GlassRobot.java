@@ -184,11 +184,16 @@ public abstract class GlassRobot {
      */
     public WritableImage getScreenCapture(WritableImage image, double x, double y, double width,
                                           double height, boolean scaleToFit) {
-        if (width <= 0) {
+        int iWidth = (int) width;
+        int iHeight = (int) height;
+        if (iWidth <= 0) {
             throw new IllegalArgumentException("width must be > 0");
         }
-        if (height <= 0) {
+        if (iHeight <= 0) {
             throw new IllegalArgumentException("height must be > 0");
+        }
+        if (iWidth >= (Integer.MAX_VALUE / iHeight)) {
+            throw new IllegalArgumentException("invalid capture size");
         }
         Screen primaryScreen = Screen.getPrimary();
         Objects.requireNonNull(primaryScreen);
@@ -198,10 +203,10 @@ public abstract class GlassRobot {
         int dw, dh;
         if (outputScaleX == 1.0f && outputScaleY == 1.0f) {
             // No scaling will be necessary regardless of if "scaleToFit" is set or not.
-            data = new int[(int) (width * height)];
-            getScreenCapture((int) x, (int) y, (int) width, (int) height, data, scaleToFit);
-            dw = (int) width;
-            dh = (int) height;
+            data = new int[iWidth * iHeight];
+            getScreenCapture((int) x, (int) y, iWidth, iHeight, data, scaleToFit);
+            dw = iWidth;
+            dh = iHeight;
         } else {
             // Compute the absolute pixel bounds that the requested size will fill given
             // the display's scale.
@@ -211,6 +216,15 @@ public abstract class GlassRobot {
             int pmaxy = (int) Math.ceil((y + height) * outputScaleY);
             int pwidth = pmaxx - pminx;
             int pheight = pmaxy - pminy;
+            if (pwidth <= 0) {
+                throw new IllegalArgumentException("invalid width");
+            }
+            if (pheight <= 0) {
+                throw new IllegalArgumentException("invalid height");
+            }
+            if (pwidth >= (Integer.MAX_VALUE / pheight)) {
+                throw new IllegalArgumentException("invalid capture size");
+            }
             int tmpdata[] = new int[pwidth * pheight];
             getScreenCapture(pminx, pminy, pwidth, pheight, tmpdata, scaleToFit);
             dw = pwidth;
@@ -221,21 +235,21 @@ public abstract class GlassRobot {
                 // We must resize the image to fit the requested bounds. This means
                 // resizing the pixel data array which we accomplish using bilinear (?)
                 // interpolation.
-                data = new int[(int) (width * height)];
+                data = new int[iWidth * iHeight];
                 int index = 0;
-                for (int iy = 0; iy < height; iy++) {
+                for (int iy = 0; iy < iHeight; iy++) {
                     double rely = ((y + iy + 0.5f) * outputScaleY) - (pminy + 0.5f);
                     int irely = (int) Math.floor(rely);
                     int fracty = (int) ((rely - irely) * 256);
-                    for (int ix = 0; ix < width; ix++) {
+                    for (int ix = 0; ix < iWidth; ix++) {
                         double relx = ((x + ix + 0.5f) * outputScaleX) - (pminx + 0.5f);
                         int irelx = (int) Math.floor(relx);
                         int fractx = (int) ((relx - irelx) * 256);
                         data[index++] = interp(tmpdata, irelx, irely, pwidth, pheight, fractx, fracty);
                     }
                 }
-                dw = (int) width;
-                dh = (int) height;
+                dw = iWidth;
+                dh = iHeight;
             }
         }
 
