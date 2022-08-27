@@ -28,16 +28,13 @@ package com.sun.javafx.css;
 import javafx.animation.AnimationTimer;
 
 /**
- * {@code StyleableTimer} is the base class for timers that compute intermediate
- * values for styleable properties.
- *
- * @see TransitionTimer
+ * {@code AbstractPropertyTimer} is the base class for timers that compute intermediate property values.
  */
-public abstract class StyleableTimer extends AnimationTimer {
+public abstract class AbstractPropertyTimer extends AnimationTimer {
 
     /**
      * Stops the specified timer if it is currently running, but only if this method was not
-     * called from the timer's {@code onUpdate} method (i.e. a timer will not stop itself).
+     * called from the timer's {@link #update(double)} method (i.e. a timer will not stop itself).
      * If {@code timer} is {@code null}, it is considered to be trivially stopped, so the
      * method returns {@code true}.
      *
@@ -45,7 +42,7 @@ public abstract class StyleableTimer extends AnimationTimer {
      * @return {@code true} if the timer was stopped or {@code timer} is {@code null},
      *         {@code false} otherwise
      */
-    public static boolean tryStop(StyleableTimer timer) {
+    public static boolean tryStop(AbstractPropertyTimer timer) {
         if (timer == null) {
             return true;
         }
@@ -59,7 +56,19 @@ public abstract class StyleableTimer extends AnimationTimer {
     }
 
     /**
-     * Returns whether the timer is currently updating the value of the {@code StyleableProperty}.
+     * Cancels the running timer and updates the property to the target value.
+     */
+    public abstract void cancel();
+
+    /**
+     * Updates the value of the property for the specified progress.
+     *
+     * @param progress the input progress value from 0 (inclusive) to 1 (inclusive)
+     */
+    public abstract void update(double progress);
+
+    /**
+     * Returns whether the timer is currently updating the value of the property.
      */
     public abstract boolean isUpdating();
 

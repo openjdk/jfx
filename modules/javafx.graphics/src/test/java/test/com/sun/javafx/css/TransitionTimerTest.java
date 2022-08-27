@@ -33,8 +33,8 @@ import org.junit.jupiter.params.provider.MethodSource;
 import test.util.memory.JMemoryBuddy;
 import javafx.animation.AnimationTimer;
 import javafx.animation.Interpolator;
-import javafx.beans.property.Property;
 import javafx.css.CssMetaData;
+import javafx.css.StyleableDoubleProperty;
 import javafx.css.TransitionPropertyKind;
 import javafx.css.SimpleStyleableDoubleProperty;
 import javafx.css.SimpleStyleableFloatProperty;
@@ -70,9 +70,12 @@ public class TransitionTimerTest {
         var transition = new TransitionDefinition(BEAN, "test", seconds(1), ZERO, LINEAR);
         var timer = new TransitionTimerMock(transition) {
             @Override
-            protected void onUpdate(double progress) {
+            protected void onUpdate(StyleableDoubleProperty property, double progress) {
                 trace.add(progress);
             }
+
+            @Override
+            protected void onStop(StyleableDoubleProperty property) {}
         };
 
         timer.start();
@@ -92,12 +95,11 @@ public class TransitionTimerTest {
         var transition = new TransitionDefinition(BEAN, "test", seconds(1), ZERO, LINEAR);
         var timer = new TransitionTimerMock(transition) {
             @Override
-            protected void onUpdate(double progress) {}
+            protected void onUpdate(StyleableDoubleProperty property, double progress) {}
 
             @Override
-            public void stop() {
+            public void onStop(StyleableDoubleProperty property) {
                 flag[0] = true;
-                super.stop();
             }
         };
 
@@ -117,7 +119,8 @@ public class TransitionTimerTest {
     public void testRunningTimerCanBeStopped() {
         var transition = new TransitionDefinition(BEAN, "test", seconds(1), ZERO, LINEAR);
         var timer = new TransitionTimerMock(transition) {
-            @Override protected void onUpdate(double progress) {}
+            @Override protected void onUpdate(StyleableDoubleProperty property, double progress) {}
+            @Override protected void onStop(StyleableDoubleProperty property) {}
         };
 
         timer.start();
@@ -130,9 +133,11 @@ public class TransitionTimerTest {
         var flag = new boolean[1];
         var transition = new TransitionDefinition(BEAN, "test", seconds(1), ZERO, LINEAR);
         var timer = new TransitionTimerMock(transition) {
-            @Override protected void onUpdate(double progress) {
+            @Override protected void onUpdate(StyleableDoubleProperty property, double progress) {
                 flag[0] = TransitionTimer.tryStop(this);
             }
+
+            @Override protected void onStop(StyleableDoubleProperty property) {}
         };
 
         timer.start();
@@ -140,21 +145,16 @@ public class TransitionTimerTest {
         assertFalse(flag[0]);
     }
 
-    private static abstract class TransitionTimerMock extends TransitionTimer {
+    private static abstract class TransitionTimerMock extends TransitionTimer<StyleableDoubleProperty> {
         long now = Toolkit.getToolkit().getPrimaryTimer().nanos();
 
         TransitionTimerMock(TransitionDefinition transition) {
-            super(transition);
+            super(new SimpleStyleableDoubleProperty(null), transition);
         }
 
         public void fire(Duration elapsedTime) {
             now += (long)(elapsedTime.toMillis() * 1000000);
             handle(now);
-        }
-
-        @Override
-        protected Property<?> getProperty() {
-            return null;
         }
     }
 
@@ -163,8 +163,8 @@ public class TransitionTimerTest {
 
     private static List<TestRun> testTimerIsStoppedWhenPropertyIsCollected_parameters() {
         class DoubleTestNode extends Group {
-            StyleableProperty testProperty = new SimpleStyleableDoubleProperty(METADATA, this, "testProperty", 0D);
-            static CssMetaData<DoubleTestNode, Number> METADATA = new CssMetaData<>(
+            final StyleableProperty testProperty = new SimpleStyleableDoubleProperty(METADATA, this, "testProperty", 0D);
+            static final CssMetaData<DoubleTestNode, Number> METADATA = new CssMetaData<>(
                     "testProperty", StyleConverter.getSizeConverter()) {
                 @Override public boolean isSettable(DoubleTestNode styleable) { return true; }
                 @Override public StyleableProperty<Number> getStyleableProperty(DoubleTestNode n) { return n.testProperty; }
@@ -172,8 +172,8 @@ public class TransitionTimerTest {
         }
 
         class FloatTestNode extends Group {
-            StyleableProperty testProperty = new SimpleStyleableFloatProperty(METADATA, this, "testProperty");
-            static CssMetaData<FloatTestNode, Number> METADATA = new CssMetaData<>(
+            final StyleableProperty testProperty = new SimpleStyleableFloatProperty(METADATA, this, "testProperty");
+            static final CssMetaData<FloatTestNode, Number> METADATA = new CssMetaData<>(
                     "testProperty", StyleConverter.getSizeConverter()) {
                 @Override public boolean isSettable(FloatTestNode styleable) { return true; }
                 @Override public StyleableProperty<Number> getStyleableProperty(FloatTestNode n) { return n.testProperty; }
@@ -181,8 +181,8 @@ public class TransitionTimerTest {
         }
 
         class IntegerTestNode extends Group {
-            StyleableProperty testProperty = new SimpleStyleableIntegerProperty(METADATA, this, "testProperty");
-            static CssMetaData<IntegerTestNode, Number> METADATA = new CssMetaData<>(
+            final StyleableProperty testProperty = new SimpleStyleableIntegerProperty(METADATA, this, "testProperty");
+            static final CssMetaData<IntegerTestNode, Number> METADATA = new CssMetaData<>(
                     "testProperty", StyleConverter.getSizeConverter()) {
                 @Override public boolean isSettable(IntegerTestNode styleable) { return true; }
                 @Override public StyleableProperty<Number> getStyleableProperty(IntegerTestNode n) { return n.testProperty; }
@@ -190,8 +190,8 @@ public class TransitionTimerTest {
         }
 
         class LongTestNode extends Group {
-            StyleableProperty testProperty = new SimpleStyleableLongProperty(METADATA, this, "testProperty");
-            static CssMetaData<LongTestNode, Number> METADATA = new CssMetaData<>(
+            final StyleableProperty testProperty = new SimpleStyleableLongProperty(METADATA, this, "testProperty");
+            static final CssMetaData<LongTestNode, Number> METADATA = new CssMetaData<>(
                     "testProperty", StyleConverter.getSizeConverter()) {
                 @Override public boolean isSettable(LongTestNode styleable) { return true; }
                 @Override public StyleableProperty<Number> getStyleableProperty(LongTestNode n) { return n.testProperty; }
@@ -199,8 +199,8 @@ public class TransitionTimerTest {
         }
 
         class ObjectTestNode extends Group {
-            StyleableProperty testProperty = new SimpleStyleableObjectProperty<>(METADATA, this, "testProperty");
-            static CssMetaData<ObjectTestNode, Color> METADATA = new CssMetaData<>(
+            final StyleableProperty testProperty = new SimpleStyleableObjectProperty<>(METADATA, this, "testProperty");
+            static final CssMetaData<ObjectTestNode, Color> METADATA = new CssMetaData<>(
                     "testProperty", StyleConverter.getColorConverter()) {
                 @Override public boolean isSettable(ObjectTestNode styleable) { return true; }
                 @Override public StyleableProperty<Color> getStyleableProperty(ObjectTestNode n) { return n.testProperty; }

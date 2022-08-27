@@ -25,7 +25,7 @@
 
 package javafx.scene;
 
-import com.sun.javafx.css.TransitionTimer;
+import com.sun.javafx.css.AbstractPropertyTimer;
 import com.sun.javafx.scene.DirtyBits;
 import com.sun.javafx.sg.prism.NGNode;
 
@@ -93,11 +93,11 @@ public class NodeShim {
         return n.getTransitionDefinitions();
     }
 
-    public static List<TransitionTimer> getTransitionTimers(Node n) {
-        return n.getTransitionTimers();
+    public static List<AbstractPropertyTimer> getPropertyTimers(Node n) {
+        return n.getPropertyTimers();
     }
 
-    public static void cancelTransitionTimers(Node n) {
-        n.cancelTransitionTimers();
+    public static void cancelPropertyTimers(Node n) {
+        n.cancelPropertyTimers();
     }
 }

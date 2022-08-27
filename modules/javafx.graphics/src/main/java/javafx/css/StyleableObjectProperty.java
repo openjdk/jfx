@@ -25,15 +25,13 @@
 
 package javafx.css;
 
-import com.sun.javafx.css.StyleableTimer;
+import com.sun.javafx.css.AbstractPropertyTimer;
 import com.sun.javafx.css.TransitionTimer;
 import com.sun.javafx.scene.NodeHelper;
 import javafx.animation.Interpolatable;
 import javafx.beans.property.ObjectPropertyBase;
-import javafx.beans.property.Property;
 import javafx.beans.value.ObservableValue;
 import javafx.scene.Node;
-import java.lang.ref.WeakReference;
 
 /**
  * This class extends {@code ObjectPropertyBase} and provides a partial
@@ -103,7 +101,7 @@ public abstract class StyleableObjectProperty<T>
     /** {@inheritDoc} */
     @Override
     public void bind(ObservableValue<? extends T> observable) {
-        if (StyleableTimer.tryStop(timer)) {
+        if (AbstractPropertyTimer.tryStop(timer)) {
             super.bind(observable);
             origin = StyleOrigin.USER;
         }
@@ -114,7 +112,7 @@ public abstract class StyleableObjectProperty<T>
     public void set(T v) {
         super.set(v);
 
-        if (StyleableTimer.tryStop(timer)) {
+        if (AbstractPropertyTimer.tryStop(timer)) {
             origin = StyleOrigin.USER;
         }
     }
@@ -124,45 +122,28 @@ public abstract class StyleableObjectProperty<T>
     public StyleOrigin getStyleOrigin() { return origin; }
 
     private StyleOrigin origin = null;
-    private StyleableTimer timer = null;
+    private AbstractPropertyTimer timer = null;
 
-    private static class TransitionTimerImpl<U> extends TransitionTimer {
-        final WeakReference<StyleableObjectProperty<U>> wref;
+    private static class TransitionTimerImpl<U> extends TransitionTimer<StyleableObjectProperty<U>> {
         final U oldValue;
         final U newValue;
 
         TransitionTimerImpl(StyleableObjectProperty<U> property, U oldValue, U newValue,
                             TransitionDefinition transition) {
-            super(transition);
-            this.wref = new WeakReference<>(property);
+            super(property, transition);
             this.oldValue = oldValue;
             this.newValue = newValue;
         }
 
         @Override
-        protected Property<?> getProperty() {
-            return wref.get();
-        }
-
-        @Override
         @SuppressWarnings("unchecked")
-        protected void onUpdate(double progress) {
-            StyleableObjectProperty<U> property = wref.get();
-            if (property != null) {
-                property.set(progress < 1 ? ((Interpolatable<U>)oldValue).interpolate(newValue, progress) : newValue);
-            } else {
-                super.stop();
-            }
+        protected void onUpdate(StyleableObjectProperty<U> property, double progress) {
+            property.set(progress < 1 ? ((Interpolatable<U>)oldValue).interpolate(newValue, progress) : newValue);
         }
 
         @Override
-        public void stop() {
-            super.stop();
-
-            StyleableObjectProperty<U> property = wref.get();
-            if (property != null) {
-                property.timer = null;
-            }
+        public void onStop(StyleableObjectProperty<U> property) {
+            property.timer = null;
         }
     }
 

@@ -26,7 +26,7 @@
 package com.sun.javafx.scene;
 
 import com.sun.glass.ui.Accessible;
-import com.sun.javafx.css.TransitionTimer;
+import com.sun.javafx.css.AbstractPropertyTimer;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.PickRay;
 import com.sun.javafx.geom.transform.BaseTransform;
@@ -318,12 +318,12 @@ public abstract class NodeHelper {
         return nodeAccessor.findTransition(node, metadata);
     }
 
-    public static void addTransitionTimer(Node node, TransitionTimer timer) {
-        nodeAccessor.addTransitionTimer(node, timer);
+    public static void addPropertyTimer(Node node, AbstractPropertyTimer timer) {
+        nodeAccessor.addPropertyTimer(node, timer);
     }
 
-    public static void removeTransitionTimer(Node node, TransitionTimer timer) {
-        nodeAccessor.removeTransitionTimer(node, timer);
+    public static void removePropertyTimer(Node node, AbstractPropertyTimer timer) {
+        nodeAccessor.removePropertyTimer(node, timer);
     }
 
     public static void setNodeAccessor(final NodeAccessor newAccessor) {
@@ -387,8 +387,8 @@ public abstract class NodeHelper {
                 Map<StyleableProperty<?>,List<Style>> styleMap);
         void requestFocusVisible(Node node);
         TransitionDefinition findTransition(Node node, CssMetaData<? extends Styleable, ?> metadata);
-        void addTransitionTimer(Node node, TransitionTimer timer);
-        void removeTransitionTimer(Node node, TransitionTimer timer);
+        void addPropertyTimer(Node node, AbstractPropertyTimer timer);
+        void removePropertyTimer(Node node, AbstractPropertyTimer timer);
     }
 
 }

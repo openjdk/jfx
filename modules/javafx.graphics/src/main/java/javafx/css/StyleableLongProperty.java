@@ -25,14 +25,12 @@
 
 package javafx.css;
 
-import com.sun.javafx.css.StyleableTimer;
+import com.sun.javafx.css.AbstractPropertyTimer;
 import com.sun.javafx.css.TransitionTimer;
 import com.sun.javafx.scene.NodeHelper;
 import javafx.beans.property.LongPropertyBase;
-import javafx.beans.property.Property;
 import javafx.beans.value.ObservableValue;
 import javafx.scene.Node;
-import java.lang.ref.WeakReference;
 
 /**
  * This class extends {@code LongPropertyBase} and provides a partial
@@ -92,7 +90,7 @@ public abstract class StyleableLongProperty
     /** {@inheritDoc} */
     @Override
     public void bind(ObservableValue<? extends Number> observable) {
-        if (StyleableTimer.tryStop(timer)) {
+        if (AbstractPropertyTimer.tryStop(timer)) {
             super.bind(observable);
             origin = StyleOrigin.USER;
         }
@@ -103,7 +101,7 @@ public abstract class StyleableLongProperty
     public void set(long v) {
         super.set(v);
 
-        if (StyleableTimer.tryStop(timer)) {
+        if (AbstractPropertyTimer.tryStop(timer)) {
             origin = StyleOrigin.USER;
         }
     }
@@ -113,43 +111,26 @@ public abstract class StyleableLongProperty
     public StyleOrigin getStyleOrigin() { return origin; }
 
     private StyleOrigin origin = null;
-    private StyleableTimer timer = null;
+    private AbstractPropertyTimer timer = null;
 
-    private static class TransitionTimerImpl extends TransitionTimer {
-        final WeakReference<StyleableLongProperty> wref;
+    private static class TransitionTimerImpl extends TransitionTimer<StyleableLongProperty> {
         final long oldValue;
         final long newValue;
 
-        @Override
-        protected Property<?> getProperty() {
-            return wref.get();
-        }
-
         TransitionTimerImpl(StyleableLongProperty property, Number value, TransitionDefinition transition) {
-            super(transition);
-            this.wref = new WeakReference<>(property);
+            super(property, transition);
             this.oldValue = property.get();
             this.newValue = value != null ? value.longValue() : 0;
         }
 
         @Override
-        protected void onUpdate(double progress) {
-            StyleableLongProperty property = wref.get();
-            if (property != null) {
-                property.set(progress < 1 ? oldValue + (long)((newValue - oldValue) * progress) : newValue);
-            } else {
-                super.stop();
-            }
+        protected void onUpdate(StyleableLongProperty property, double progress) {
+            property.set(progress < 1 ? oldValue + (long)((newValue - oldValue) * progress) : newValue);
         }
 
         @Override
-        public void stop() {
-            super.stop();
-
-            StyleableLongProperty property = wref.get();
-            if (property != null) {
-                property.timer = null;
-            }
+        public void onStop(StyleableLongProperty property) {
+            property.timer = null;
         }
     }
 

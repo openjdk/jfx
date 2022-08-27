@@ -25,6 +25,7 @@
 
 package test.javafx.scene;
 
+import com.sun.javafx.css.AbstractPropertyTimer;
 import com.sun.javafx.css.TransitionTimer;
 import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.tk.Toolkit;
@@ -173,22 +174,28 @@ public class Node_transition_Test {
             .testClass:hover { -fx-opacity: 1; }
             """.getBytes(StandardCharsets.UTF_8));
 
+        StubToolkit tk = (StubToolkit)Toolkit.getToolkit();
+        tk.setCurrentTime(0);
+
         var node = new Rectangle();
         var scene = new Scene(new Group(node));
         scene.getStylesheets().add(url);
         node.getStyleClass().add("testClass");
         node.applyCss();
 
-        List<TransitionTimer> timers = NodeShim.getTransitionTimers(node);
-        assertEquals(0, timers.size());
+        List<AbstractPropertyTimer> timers = NodeShim.getPropertyTimers(node);
+        assertNull(timers);
 
         // The hover state starts the timer.
         node.pseudoClassStateChanged(PseudoClass.getPseudoClass("hover"), true);
         node.applyCss();
+        timers = NodeShim.getPropertyTimers(node);
         assertEquals(1, timers.size());
+        assertTrue(timers.get(0) instanceof TransitionTimer);
 
         // Complete the timer, which removes it from the list.
-        timers.get(0).update(1);
+        tk.setCurrentTime(2000);
+        tk.handleAnimation();
         assertEquals(0, timers.size());
     }
 
@@ -205,13 +212,15 @@ public class Node_transition_Test {
         node.getStyleClass().add("testClass");
         node.applyCss();
 
-        List<TransitionTimer> timers = NodeShim.getTransitionTimers(node);
-        assertEquals(0, timers.size());
+        List<AbstractPropertyTimer> timers = NodeShim.getPropertyTimers(node);
+        assertNull(timers);
 
         // The hover state starts the timer.
         node.pseudoClassStateChanged(PseudoClass.getPseudoClass("hover"), true);
         node.applyCss();
+        timers = NodeShim.getPropertyTimers(node);
         assertEquals(1, timers.size());
+        assertTrue(timers.get(0) instanceof TransitionTimer);
         assertTrue(node.getOpacity() < 1);
 
         // The original node is removed from the scene graph, causing the timer to complete early
@@ -234,13 +243,15 @@ public class Node_transition_Test {
         node.getStyleClass().add("testClass");
         node.applyCss();
 
-        List<TransitionTimer> timers = NodeShim.getTransitionTimers(node);
-        assertEquals(0, timers.size());
+        List<AbstractPropertyTimer> timers = NodeShim.getPropertyTimers(node);
+        assertNull(timers);
 
         // The hover state starts the timer.
         node.pseudoClassStateChanged(PseudoClass.getPseudoClass("hover"), true);
         node.applyCss();
+        timers = NodeShim.getPropertyTimers(node);
         assertEquals(1, timers.size());
+        assertTrue(timers.get(0) instanceof TransitionTimer);
         assertTrue(node.getOpacity() < 1);
 
         // The node is made invisible, causing the timer to complete early with the
@@ -349,7 +360,7 @@ public class Node_transition_Test {
         // elapsed time is 250ms (since we have a 250ms delay).
         tk.setCurrentTime(500);
         tk.handleAnimation();
-        NodeShim.cancelTransitionTimers(node);
+        NodeShim.cancelPropertyTimers(node);
 
         assertEquals(3, trace.size());
         assertEquals(TransitionEvent.RUN.getName(), trace.get(0).getEventType().getName());
@@ -391,7 +402,7 @@ public class Node_transition_Test {
         // elapsed time is 750ms (since we started with a negative 250ms delay).
         tk.setCurrentTime(500);
         tk.handleAnimation();
-        NodeShim.cancelTransitionTimers(node);
+        NodeShim.cancelPropertyTimers(node);
 
         assertEquals(3, trace.size());
         assertEquals(TransitionEvent.RUN.getName(), trace.get(0).getEventType().getName());

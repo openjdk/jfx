@@ -25,14 +25,12 @@
 
 package javafx.css;
 
-import com.sun.javafx.css.StyleableTimer;
+import com.sun.javafx.css.AbstractPropertyTimer;
 import com.sun.javafx.css.TransitionTimer;
 import com.sun.javafx.scene.NodeHelper;
 import javafx.beans.property.DoublePropertyBase;
-import javafx.beans.property.Property;
 import javafx.beans.value.ObservableValue;
 import javafx.scene.Node;
-import java.lang.ref.WeakReference;
 
 /**
  * This class extends {@code DoublePropertyBase} and provides a partial
@@ -92,7 +90,7 @@ public abstract class StyleableDoubleProperty
     /** {@inheritDoc} */
     @Override
     public void bind(ObservableValue<? extends Number> observable) {
-        if (StyleableTimer.tryStop(timer)) {
+        if (AbstractPropertyTimer.tryStop(timer)) {
             super.bind(observable);
             origin = StyleOrigin.USER;
         }
@@ -103,7 +101,7 @@ public abstract class StyleableDoubleProperty
     public void set(double v) {
         super.set(v);
 
-        if (StyleableTimer.tryStop(timer)) {
+        if (AbstractPropertyTimer.tryStop(timer)) {
             origin = StyleOrigin.USER;
         }
     }
@@ -113,43 +111,26 @@ public abstract class StyleableDoubleProperty
     public StyleOrigin getStyleOrigin() { return origin; }
 
     private StyleOrigin origin = null;
-    private StyleableTimer timer = null;
+    private AbstractPropertyTimer timer = null;
 
-    private static class TransitionTimerImpl extends TransitionTimer {
-        final WeakReference<StyleableDoubleProperty> wref;
+    private static class TransitionTimerImpl extends TransitionTimer<StyleableDoubleProperty> {
         final double oldValue;
         final double newValue;
 
         TransitionTimerImpl(StyleableDoubleProperty property, Number value, TransitionDefinition transition) {
-            super(transition);
-            this.wref = new WeakReference<>(property);
+            super(property, transition);
             this.oldValue = property.get();
             this.newValue = value != null ? value.doubleValue() : 0;
         }
 
         @Override
-        protected Property<?> getProperty() {
-            return wref.get();
+        protected void onUpdate(StyleableDoubleProperty property, double progress) {
+            property.set(progress < 1 ? oldValue + (newValue - oldValue) * progress : newValue);
         }
 
         @Override
-        protected void onUpdate(double progress) {
-            StyleableDoubleProperty property = wref.get();
-            if (property != null) {
-                property.set(progress < 1 ? oldValue + (newValue - oldValue) * progress : newValue);
-            } else {
-                super.stop();
-            }
-        }
-
-        @Override
-        public void stop() {
-            super.stop();
-
-            StyleableDoubleProperty property = wref.get();
-            if (property != null) {
-                property.timer = null;
-            }
+        public void onStop(StyleableDoubleProperty property) {
+            property.timer = null;
         }
     }
 
