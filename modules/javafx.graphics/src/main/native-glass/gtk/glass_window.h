@@ -192,6 +192,7 @@ protected:
     bool is_iconified;
     bool is_maximized;
     bool is_mouse_entered;
+    bool is_focusable;
 
     /*
      * sm_grab_window points to WindowContext holding a mouse grab.
@@ -211,6 +212,15 @@ protected:
      * should be reported during this drag.
      */
     static WindowContext* sm_mouse_drag_window;
+
+    /*
+     * sm_deferred_focusable_windows is a set of windows that were
+     * created and set as focusable while another window was doing a
+     * mouse drag. In order to not disrupt the drag, the setting of the
+     * window(s) as focusable is deferred until the drag is finished.
+     */
+    static std::set<WindowContext*> sm_deferred_focusable_windows;
+
 public:
     bool isEnabled();
     bool hasIME();

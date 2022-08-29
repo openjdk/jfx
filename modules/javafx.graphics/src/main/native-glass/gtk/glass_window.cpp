@@ -54,6 +54,8 @@
 WindowContext * WindowContextBase::sm_grab_window = NULL;
 WindowContext * WindowContextBase::sm_mouse_drag_window = NULL;
 
+std::set<WindowContext*> WindowContextBase::sm_deferred_focusable_windows = {};
+
 GdkWindow* WindowContextBase::get_gdk_window(){
     return gdk_window;
 }
@@ -133,6 +135,21 @@ void WindowContextBase::process_state(GdkEventWindowState* event) {
 }
 
 void WindowContextBase::process_focus(GdkEventFocus* event) {
+
+    // KCR: start debugging
+    fprintf(stderr, "KCR: process_focus 0x%p (%s)\n", this,
+            (event->in ? "true" : "false"));
+    if (!is_focusable) {
+        fprintf(stderr, "    skipping because window is not focusable\n");
+    } else {
+        fprintf(stderr, "KCR: proceed\n");
+    }
+    // KCR: end debugging
+
+    if (!is_focusable) {
+        return;
+    }
+
     if (!event->in && WindowContextBase::sm_mouse_drag_window == this) {
         ungrab_mouse_drag_focus();
     }
@@ -197,6 +214,9 @@ void WindowContextBase::process_destroy() {
     if (WindowContextBase::sm_grab_window == this) {
         ungrab_focus();
     }
+
+    // Remove this window from the set of deferred focusable windows
+    WindowContextBase::sm_deferred_focusable_windows.erase(this);
 
     std::set<WindowContextTop*>::iterator it;
     for (it = children.begin(); it != children.end(); ++it) {
@@ -620,6 +640,10 @@ bool WindowContextBase::set_view(jobject view) {
 }
 
 bool WindowContextBase::grab_mouse_drag_focus() {
+    // KCR: start debugging
+    fprintf(stderr, "KCR: grab_mouse_drag_focus 0x%p\n", this);
+    // KCR: end debugging
+
     if (glass_gdk_mouse_devices_grab_with_cursor(
             gdk_window, gdk_window_get_cursor(gdk_window), FALSE)) {
         WindowContextBase::sm_mouse_drag_window = this;
@@ -630,14 +654,39 @@ bool WindowContextBase::grab_mouse_drag_focus() {
 }
 
 void WindowContextBase::ungrab_mouse_drag_focus() {
+    // KCR: start debugging
+    fprintf(stderr, "KCR: ungrab_mouse_drag_focus 0x%p\n", this);
+    // KCR: end debugging
+
     WindowContextBase::sm_mouse_drag_window = NULL;
     glass_gdk_mouse_devices_ungrab();
+    std::set<WindowContext*>& wins =
+            WindowContextBase::sm_deferred_focusable_windows;
+    if (wins.size() > 0) {
+        // KCR: start debugging
+        fprintf(stderr, "  *** re-enable focusability %d\n", (int)wins.size());
+        // KCR: end debugging
+
+        std::set<WindowContext*>::iterator it;
+        for (it = wins.begin(); it != wins.end(); it++) {
+            (*it)->set_focusable(true);
+        }
+        wins.clear();
+// KCR: start debugging
+    } else {
+        fprintf(stderr, "  *** no windows to re-enable\n");
+// KCR: end debugging
+    }
     if (WindowContextBase::sm_grab_window) {
         WindowContextBase::sm_grab_window->grab_focus();
     }
 }
 
 bool WindowContextBase::grab_focus() {
+    // KCR: start debugging
+    fprintf(stderr, "KCR: grab_focus 0x%p\n", this);
+    // KCR: end debugging
+
     if (WindowContextBase::sm_mouse_drag_window
             || glass_gdk_mouse_devices_grab(gdk_window)) {
         WindowContextBase::sm_grab_window = this;
@@ -648,6 +697,10 @@ bool WindowContextBase::grab_focus() {
 }
 
 void WindowContextBase::ungrab_focus() {
+    // KCR: start debugging
+    fprintf(stderr, "KCR: ungrab_focus 0x%p\n", this);
+    // KCR: end debugging
+
     if (!WindowContextBase::sm_mouse_drag_window) {
         glass_gdk_mouse_devices_ungrab();
     }
@@ -1170,8 +1223,18 @@ void WindowContextTop::set_visible(bool visible)
         }
     }
     WindowContextBase::set_visible(visible);
+
+    // KCR: start debugging
+    fprintf(stderr, "KCR: send focus gained message 0x%p\n", this);
+    if (!is_focusable) {
+        fprintf(stderr, "    skipping because window is not focusable\n");
+    } else {
+        fprintf(stderr, "    proceed\n");
+    }
+    // KCR: end debugging
+
     //JDK-8220272 - fire event first because GDK_FOCUS_CHANGE is not always in order
-    if (visible && jwindow && isEnabled()) {
+    if (visible && is_focusable && jwindow && isEnabled()) {
         mainEnv->CallVoidMethod(jwindow, jWindowNotifyFocus, com_sun_glass_events_WindowEvent_FOCUS_GAINED);
         CHECK_JNI_EXCEPTION(mainEnv);
     }
@@ -1380,10 +1443,20 @@ void WindowContextTop::exit_fullscreen() {
 }
 
 void WindowContextTop::request_focus() {
+    // KCR: start debugging
+    fprintf(stderr, "KCR: request_focus 0x%p\n", this);
+
+    if (!is_focusable) {
+        fprintf(stderr, "    skipping because window is not focusable\n");
+    } else {
+        fprintf(stderr, "    proceed\n");
+    }
+    // KCR: end debugging
+
     //JDK-8212060: Window show and then move glitch.
     //The WindowContextBase::set_visible will take care of showing the window.
     //The below code will only handle later request_focus.
-    if (is_visible()) {
+    if (is_visible() && is_focusable) {
         // event_serial holds an event serial that will help X11 determine which window should have the focus and
         // prevents activeWindows on WindowStage.java to be out of order which may cause the FOCUS_DISABLED event
         // to bring up the wrong window (it brings up the last which will not be the real "last" if out of order).
@@ -1393,6 +1466,25 @@ void WindowContextTop::request_focus() {
 }
 
 void WindowContextTop::set_focusable(bool focusable) {
+    fprintf(stderr, "KCR: set_focusable 0x%p (%s)\n", this,
+            (focusable ? "true" : "false"));
+
+    // Defer setting focuable if another window is doing a mouse drag
+    if (focusable &&
+            WindowContextBase::sm_mouse_drag_window != NULL &&
+            WindowContextBase::sm_mouse_drag_window != this) {
+
+        // KCR: start debugging
+        fprintf(stderr, "    other window being dragged; defer setting focusble for this window!\n");
+        // KCR: end debugging
+
+        std::set<WindowContext*>& wins =
+                WindowContextBase::sm_deferred_focusable_windows;
+        wins.insert(wins.end(), this);
+        focusable = false;
+    }
+
+    is_focusable = focusable;
     gtk_window_set_accept_focus(GTK_WINDOW(gtk_widget), focusable ? TRUE : FALSE);
 }
 
