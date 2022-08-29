@@ -28,6 +28,7 @@
 
 #include "WebCoreJSClientData.h"
 #include <JavaScriptCore/CatchScope.h>
+#include <JavaScriptCore/HashMapImplInlines.h>
 #include <JavaScriptCore/JSMap.h>
 #include <JavaScriptCore/VMTrapsInlines.h>
 
@@ -36,17 +37,12 @@ namespace WebCore {
 std::pair<bool, std::reference_wrapper<JSC::JSObject>> getBackingMap(JSC::JSGlobalObject& lexicalGlobalObject, JSC::JSObject& mapLike)
 {
     auto& vm = lexicalGlobalObject.vm();
-    auto backingMap = mapLike.get(&lexicalGlobalObject, static_cast<JSVMClientData*>(vm.clientData)->builtinNames().backingMapPrivateName());
+    auto backingMap = mapLike.get(&lexicalGlobalObject, builtinNames(vm).backingMapPrivateName());
     if (!backingMap.isUndefined())
         return { false, *JSC::asObject(backingMap) };
 
-    JSC::DeferTerminationForAWhile deferScope(vm);
-    auto scope = DECLARE_CATCH_SCOPE(vm);
-
-    backingMap = JSC::JSMap::create(&lexicalGlobalObject, vm, lexicalGlobalObject.mapStructure());
-    scope.releaseAssertNoException();
-
-    mapLike.putDirect(vm, static_cast<JSVMClientData*>(vm.clientData)->builtinNames().backingMapPrivateName(), backingMap, static_cast<unsigned>(JSC::PropertyAttribute::DontEnum));
+    backingMap = JSC::JSMap::create(vm, lexicalGlobalObject.mapStructure());
+    mapLike.putDirect(vm, builtinNames(vm).backingMapPrivateName(), backingMap, static_cast<unsigned>(JSC::PropertyAttribute::DontEnum));
     return { true, *JSC::asObject(backingMap) };
 }
 
