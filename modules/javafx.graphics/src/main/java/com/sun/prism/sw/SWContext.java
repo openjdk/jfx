@@ -30,9 +30,9 @@ import com.sun.javafx.geom.Rectangle;
 import com.sun.javafx.geom.Shape;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.util.Logging;
+import com.sun.marlin.ArrayCacheIntClean;
 import com.sun.marlin.DMarlinRenderingEngine;
 import com.sun.marlin.RendererContext;
-import com.sun.marlin.IntArrayCache;
 import com.sun.marlin.MarlinAlphaConsumer;
 import com.sun.marlin.MarlinConst;
 import com.sun.marlin.MarlinRenderer;
@@ -137,7 +137,7 @@ final class SWContext {
             }
 
             if (MarlinConst.DO_CHECKS) {
-                IntArrayCache.check(alphaDeltas, pix_from - x, to + 1, 0);
+                ArrayCacheIntClean.check(alphaDeltas, pix_from - x, to + 1, 0);
             }
         }
 
