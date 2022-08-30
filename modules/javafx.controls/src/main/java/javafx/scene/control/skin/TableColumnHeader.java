@@ -33,7 +33,6 @@ import com.sun.javafx.scene.control.skin.Utils;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
-import javafx.beans.value.ChangeListener;
 import javafx.beans.value.WritableValue;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
@@ -295,13 +294,6 @@ public class TableColumnHeader extends Region {
         }
     };
 
-    private final ChangeListener<Number> cornerPaddingChangeListener = (obs, ov, nv) -> {
-        if (isLastVisibleColumn) {
-            requestLayout();
-        }
-    };
-
-
     /* *************************************************************************
      *                                                                         *
      * Properties                                                              *
@@ -378,7 +370,7 @@ public class TableColumnHeader extends Region {
             isSizeDirty = false;
         }
 
-        double cornerRegionPadding = tableHeaderRow == null ? 0d : tableHeaderRow.cornerPadding.get();
+        double cornerRegionPadding = tableHeaderRow == null ? 0.0 : tableHeaderRow.cornerPadding.get();
         double sortWidth = 0;
         double w = snapSizeX(getWidth()) - (snappedLeftInset() + snappedRightInset()) - cornerRegionPadding;
         double h = getHeight() - (snappedTopInset() + snappedBottomInset());
@@ -482,13 +474,17 @@ public class TableColumnHeader extends Region {
         return tableHeaderRow;
     }
 
-   void setTableHeaderRow(TableHeaderRow thr) {
+    void setTableHeaderRow(TableHeaderRow thr) {
         if (tableHeaderRow != null) {
-            tableHeaderRow.cornerPadding.removeListener(cornerPaddingChangeListener);
+            changeListenerHandler.unregisterChangeListeners(tableHeaderRow.cornerPadding);
         }
         tableHeaderRow = thr;
         if (tableHeaderRow != null) {
-            tableHeaderRow.cornerPadding.addListener(cornerPaddingChangeListener);
+            changeListenerHandler.registerChangeListener(tableHeaderRow.cornerPadding, o -> {
+                if (isLastVisibleColumn) {
+                    requestLayout();
+                }
+            });
         }
         updateTableSkin();
     }
@@ -565,9 +561,6 @@ public class TableColumnHeader extends Region {
         }
 
         changeListenerHandler.dispose();
-        if (tableHeaderRow != null) {
-            tableHeaderRow.cornerPadding.removeListener(cornerPaddingChangeListener);
-        }
     }
 
     private boolean isSortingEnabled() {

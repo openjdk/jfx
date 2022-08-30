@@ -5878,6 +5878,8 @@ public class TableViewTest {
         assertTrue(corner.isVisible());
         double cornerMinX = corner.localToScene(corner.getLayoutBounds()).getMinX();
 
+        // Verify that the slider's thumb is fully visible, and it is not overlapped
+        // by the corner region
         assertTrue(thumbMaxX < cornerMinX);
 
         sl.dispose();
@@ -5927,8 +5929,12 @@ public class TableViewTest {
         assertTrue(corner.isVisible());
         double cornerMinX = corner.localToScene(corner.getLayoutBounds()).getMinX();
 
+        // Verify that the corner region is over the last visible column header
         assertTrue(headerMinX < cornerMinX);
         assertTrue(cornerMinX < headerMaxX);
+
+        // Verify that the arrow is fully visible, and it is not overlapped
+        // by the corner region
         assertTrue(arrowMaxX < cornerMinX);
 
         sl.dispose();

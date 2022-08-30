@@ -680,7 +680,7 @@ public class TableHeaderRow extends StackPane {
     // for that header, to prevent the content of the latter from being partially
     // covered.
     private void updateCornerPadding() {
-        double padding = 0;
+        double padding = 0.0;
         if (cornerRegion.isVisible() && !flow.getVbar().isVisible()) {
             double x = cornerRegion.getLayoutX();
             padding = getRootHeader().getColumnHeaders().stream()
@@ -689,9 +689,9 @@ public class TableHeaderRow extends StackPane {
                     .map(header -> {
                         Bounds bounds = header.localToScene(header.getBoundsInLocal());
                         return bounds.getMinX() <= x && x < bounds.getMaxX() ?
-                             cornerRegion.getWidth() : 0d;
+                             cornerRegion.getWidth() : 0.0;
                     })
-                    .orElse(0d);
+                    .orElse(0.0);
         }
         cornerPadding.set(padding);
     }
