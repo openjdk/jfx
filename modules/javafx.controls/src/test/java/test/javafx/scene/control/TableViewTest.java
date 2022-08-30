@@ -48,6 +48,7 @@ import javafx.css.PseudoClass;
 import javafx.scene.Node;
 import javafx.scene.control.Slider;
 import javafx.scene.layout.Region;
+import org.junit.After;
 import test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils;
 import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import test.com.sun.javafx.scene.control.infrastructure.KeyModifier;
@@ -122,6 +123,8 @@ public class TableViewTest {
     private TableView.TableViewSelectionModel sm;
     private TableView.TableViewFocusModel<String> fm;
 
+    private StageLoader stageLoader;
+
     private ObservableList<Person> personTestData;
 
     @Before public void setup() {
@@ -137,6 +140,12 @@ public class TableViewTest {
                 new Person("Michael", "Brown", "michael.brown@example.com"));
     }
 
+    @After
+    public void cleanup() {
+        if (stageLoader != null) {
+            stageLoader.dispose();
+        }
+    }
 
     /*********************************************************************
      * Tests for the constructors                                        *
@@ -5862,7 +5871,7 @@ public class TableViewTest {
         column.setGraphic(slider);
         table.getColumns().add(column);
 
-        StageLoader sl = new StageLoader(table);
+        stageLoader = new StageLoader(table);
 
         Toolkit.getToolkit().firePulse();
 
@@ -5881,8 +5890,6 @@ public class TableViewTest {
         // Verify that the slider's thumb is fully visible, and it is not overlapped
         // by the corner region
         assertTrue(thumbMaxX < cornerMinX);
-
-        sl.dispose();
     }
 
     // See JDK-8087673
@@ -5899,7 +5906,7 @@ public class TableViewTest {
             table.getItems().add(Integer.toString(i));
         }
 
-        StageLoader sl = new StageLoader(new Scene(table, 300, 300));
+        stageLoader = new StageLoader(new Scene(table, 300, 300));
 
         TableColumn<String, ?> lastColumn = table.getColumns().get(9);
         lastColumn.setSortType(DESCENDING);
@@ -5936,7 +5943,5 @@ public class TableViewTest {
         // Verify that the arrow is fully visible, and it is not overlapped
         // by the corner region
         assertTrue(arrowMaxX < cornerMinX);
-
-        sl.dispose();
     }
 }

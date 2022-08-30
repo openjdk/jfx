@@ -51,6 +51,7 @@ import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.skin.TableColumnHeader;
 import javafx.scene.layout.Region;
+import org.junit.After;
 import test.javafx.collections.MockListObserver;
 import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import test.com.sun.javafx.scene.control.infrastructure.KeyModifier;
@@ -126,6 +127,7 @@ public class TreeTableViewTest {
     private TreeTableView.TreeTableViewSelectionModel sm;
     private TreeTableViewFocusModel<String> fm;
 
+    private StageLoader stageLoader;
 
     // sample data #1
     private TreeItem<String> root;
@@ -185,6 +187,13 @@ public class TreeTableViewTest {
             judyMayer,
             gregorySmith
         );
+    }
+
+    @After
+    public void cleanup() {
+        if (stageLoader != null) {
+            stageLoader.dispose();
+        }
     }
 
     private void installChildren() {
@@ -7004,7 +7013,7 @@ public class TreeTableViewTest {
         column.setGraphic(slider);
         table.getColumns().add(column);
 
-        StageLoader sl = new StageLoader(table);
+        stageLoader = new StageLoader(table);
 
         Toolkit.getToolkit().firePulse();
 
@@ -7023,8 +7032,6 @@ public class TreeTableViewTest {
         // Verify that the slider's thumb is fully visible, and it is not overlapped
         // by the corner region
         assertTrue(thumbMaxX < cornerMinX);
-
-        sl.dispose();
     }
 
     // See JDK-8087673
@@ -7046,7 +7053,7 @@ public class TreeTableViewTest {
         table.setRoot(root);
         table.setShowRoot(false);
 
-        StageLoader sl = new StageLoader(new Scene(table, 300, 300));
+        stageLoader = new StageLoader(new Scene(table, 300, 300));
 
         TreeTableColumn<String, ?> lastColumn = table.getColumns().get(9);
         lastColumn.setSortType(TreeTableColumn.SortType.DESCENDING);
@@ -7083,7 +7090,5 @@ public class TreeTableViewTest {
         // Verify that the arrow is fully visible, and it is not overlapped
         // by the corner region
         assertTrue(arrowMaxX < cornerMinX);
-
-        sl.dispose();
     }
 }
