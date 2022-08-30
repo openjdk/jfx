@@ -2182,6 +2182,11 @@ public class TreeTableView<S> extends Control {
          * @return the TreeTableView upon which the resize operation is occurring
          */
         public TreeTableView<S> getTable() { return treeTable; }
+
+        @Override
+        public double getContentWidth() {
+            return treeTable.contentWidth;
+        }
     }
 
 
