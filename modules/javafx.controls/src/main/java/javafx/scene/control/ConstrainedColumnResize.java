@@ -40,7 +40,7 @@ import javafx.util.Callback;
  * @since 20
  */
 public class ConstrainedColumnResize {
-    protected static final double EPSILON = .0000001;
+    protected static final double EPSILON = 0.0000001;
     private boolean firstRun = true;
     
     public ConstrainedColumnResize() {
@@ -102,9 +102,6 @@ public class ConstrainedColumnResize {
                                         boolean isFirstRun,
                                         double tableWidth,
                                         List<? extends TableColumnBase<?,?>> visibleLeafColumns) {
-        TableColumnBase<?,?> column = rf.getColumn();
-        double delta = rf.getDelta();
-
         /*
          * There are two phases to the constrained resize policy:
          *   1) Ensuring internal consistency (i.e. table width == sum of all visible
@@ -115,66 +112,72 @@ public class ConstrainedColumnResize {
          * occur.
          */
 
-        boolean isShrinking;
-        double target;
-        double totalLowerBound = 0;
-        double totalUpperBound = 0;
-
-        if (tableWidth == 0) { 
+        if (tableWidth == 0.0) { 
             return false;
         }
+        
+        // FIX
+        isFirstRun = false;
 
         /*
          * PHASE 1: Check to ensure we have internal consistency. Based on the
          *          Swing JTable implementation.
          */
+        
         // determine the width of all visible columns, and their preferred width
-        double colWidth = 0;
+        double colWidth = 0.0;
         for (TableColumnBase<?,?> col: visibleLeafColumns) {
             colWidth += col.getWidth();
         }
+        
+        boolean isShrinking;
 
         if (Math.abs(colWidth - tableWidth) > EPSILON) {
+            // if we are here we have an inconsistency - these two values should be
+            // equal when this resizing policy is being used.
             isShrinking = colWidth > tableWidth;
-            target = tableWidth;
+            double target = tableWidth;
 
             if (isFirstRun) {
-                // if we are here we have an inconsistency - these two values should be
-                // equal when this resizing policy is being used.
+                double totalLowerBound = 0.0;
+                double totalUpperBound = 0.0;
+
                 for (TableColumnBase<?,?> col: visibleLeafColumns) {
                     totalLowerBound += col.getMinWidth();
                     totalUpperBound += col.getMaxWidth();
                 }
 
                 // We run into trouble if the numbers are set to infinity later on
+                // FIX NEGATIVE_INFINITY??
                 totalUpperBound = (totalUpperBound == Double.POSITIVE_INFINITY) ? 
                     Double.MAX_VALUE :
                     (totalUpperBound == Double.NEGATIVE_INFINITY ? Double.MIN_VALUE : totalUpperBound);
 
                 for (TableColumnBase col: visibleLeafColumns) {
                     // TODO pref width
-                    double lowerBound = col.getMinWidth();
-                    double upperBound = col.getMaxWidth();
+                    double min = col.getMinWidth();
+                    double max = col.getMaxWidth();
 
                     // Check for zero. This happens when the distribution of the delta
                     // finishes early due to a series of "fixed" entries at the end.
                     // In this case, lowerBound == upperBound, for all subsequent terms.
                     double newSize;
                     if (Math.abs(totalLowerBound - totalUpperBound) < EPSILON) {
-                        newSize = lowerBound;
+                        newSize = min;
                     } else {
+                        // TODO use pref here?
                         double f = (target - totalLowerBound) / (totalUpperBound - totalLowerBound);
-                        newSize = Math.round(lowerBound + f * (upperBound - lowerBound));
+                        newSize = Math.round(min + f * (max - min));
                     }
 
                     double remainder = resize(rf, col, newSize - col.getWidth());
 
                     target -= newSize + remainder;
-                    totalLowerBound -= lowerBound;
-                    totalUpperBound -= upperBound;
+                    totalLowerBound -= min;
+                    totalUpperBound -= max;
                 }
 
-                isFirstRun = false; // TODO why?  will never execute this line again
+                isFirstRun = false; // TODO why?  will never execute this line again FIX remove
             } else {
                 double actualDelta = tableWidth - colWidth;
                 List<? extends TableColumnBase<?,?>> cols = visibleLeafColumns;
@@ -190,6 +193,7 @@ public class ConstrainedColumnResize {
          * Column may be null if we just changed the resize policy, and we
          * just wanted to enforce internal consistency, as mentioned above.
          */
+        TableColumnBase<?,?> column = rf.getColumn();
         if (column == null) {
             return false;
         }
@@ -199,6 +203,7 @@ public class ConstrainedColumnResize {
          *          implementation (based on the UX spec).
          */
 
+        double delta = rf.getDelta();
         isShrinking = delta < 0;
 
         // need to find the last leaf column of the given column - it is this
@@ -267,13 +272,13 @@ public class ConstrainedColumnResize {
         } else {
             double newWidth = column.getWidth() + delta;
             if (newWidth > column.getMaxWidth()) {
-                rf.doSetWidth(column, column.getMaxWidth());
+                rf.setColumnWidth(column, column.getMaxWidth());
                 return newWidth - column.getMaxWidth();
             } else if (newWidth < column.getMinWidth()) {
-                rf.doSetWidth(column, column.getMinWidth());
+                rf.setColumnWidth(column, column.getMinWidth());
                 return newWidth - column.getMinWidth();
             } else {
-                rf.doSetWidth(column, newWidth);
+                rf.setColumnWidth(column, newWidth);
                 return 0.0F;
             }
         }

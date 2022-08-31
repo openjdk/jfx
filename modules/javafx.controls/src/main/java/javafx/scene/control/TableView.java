@@ -409,6 +409,7 @@ public class TableView<S> extends Control {
      */
     public static final Callback<ResizeFeatures, Boolean> CONSTRAINED_RESIZE_POLICY = new Callback<ResizeFeatures, Boolean>() {
 
+        // FIX this field is effectively singleton, JDK-8088010?
         private boolean isFirstRun = true;
 
         @Override public String toString() {

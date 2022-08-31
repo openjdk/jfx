@@ -74,9 +74,9 @@ public abstract class ResizeFeaturesBase<S> {
   public Double getDelta() { return delta; }
 
   /**
-   * Sets the column width during resizing pass.
+   * Sets the column width during the resizing pass.
    */
-  public void doSetWidth(TableColumnBase<S,?> col, double width) {
+  public void setColumnWidth(TableColumnBase<S,?> col, double width) {
       col.doSetWidth(width);
   }
 }
