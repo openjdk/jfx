@@ -254,53 +254,47 @@ public interface ObservableValue<T> extends Observable {
     }
 
     /**
-     * Returns an {@code ObservableValue} that holds this value whenever the given
-     * condition evaluates to {@code true}, otherwise holds the last value when
-     * {@code condition} became {@code false}. The value is updated whenever this
-     * {@code ObservableValue} changes, unless the condition currently evaluates
-     * to {@code false}.
+     * Returns an {@code ObservableValue} that holds this value and is updated only
+     * when {@code condition} holds {@code true}.
      * <p>
-     * The returned {@code ObservableValue} only observes this value when the given
-     * {@code condition} evaluates to {@code true}. This allows this {@code ObservableValue}
+     * The returned {@code ObservableValue} only observes this value when
+     * {@code condition} holds {@code true}. This allows this {@code ObservableValue}
      * and the conditional {@code ObservableValue} to be garbage collected if neither is
-     * otherwise strongly referenced when {@code condition} becomes {@code false}.
+     * otherwise strongly referenced when {@code condition} holds {@code false}.
      * <p>
      * A currently observed binding will observe its source, which means it will not be eligible
-     * for garbage collection while source isn't. However, using {@code when} this {@code ObservableValue}
-     * can still be eligible for garbage collection when the condition is {@code false} and the
-     * conditional itself is also eligible for garbage collection.
+     * for garbage collection while its source isn't. However, when using {@code when} this {@code ObservableValue}
+     * can still be eligible for garbage collection when {@code condition} holds {@code false} and {@code condition}
+     * itself is also eligible for garbage collection.
      * <p>
-     * Returning {@code null} from the given condition is treated the same as
-     * returning {@code false}.
+     * A {@code condition} holding {@code null} is treated as holding {@code false}.
      * <p>
      * For example:
      * <pre>{@code
      * ObservableValue<Boolean> condition = new SimpleBooleanProperty(true);
-     * ObservableValue<String> globalProperty = new SimpleStringProperty("A");
-     * ObservableValue<String> whenProperty = property.when(condition);
+     * ObservableValue<String> longLivedProperty = new SimpleStringProperty("A");
+     * ObservableValue<String> whenProperty = longLivedProperty.when(condition);
      *
-     * // observe whenProperty, which will in turn observe globalProperty
+     * // observe whenProperty, which will in turn observe longLivedProperty
      * whenProperty.addChangeListener((ov, old, current) -> System.out.println(current));
      *
-     * globalProperty.setValue("B");  // "B" is printed
+     * longLivedProperty.setValue("B");  // "B" is printed
      *
      * condition.setValue(false);
      *
-     * // After condition becomes false, whenProperty stops observing globalProperty; condition
+     * // After condition becomes false, whenProperty stops observing longLivedProperty; condition
      * // and whenProperty may now be eligible for GC despite being observed by the ChangeListener
      *
-     * globalProperty.setValue("C");  // nothing is printed
-     * globalProperty.setValue("D");  // nothing is printed
+     * longLivedProperty.setValue("C");  // nothing is printed
+     * longLivedProperty.setValue("D");  // nothing is printed
      *
-     * condition.setValue(true);  // globalProperty is observed again, and "D" is printed
+     * condition.setValue(true);  // longLivedProperty is observed again, and "D" is printed
      * }</pre>
-     * Another example:
+     * An example for binding a label's text to a long-lived property only when it is shown:
      * <pre>{@code
      * Label label = ... ;
-     * ObservableValue<String> globalProperty = new SimpleStringProperty("A");
-     *
-     * // bind label's text to a global property only when it is shown:
-     * label.textProperty().bind(globalProperty.when(label::isShownProperty));
+     * ObservableValue<String> longLivedProperty = new SimpleStringProperty("A");
+     * label.textProperty().bind(longLivedProperty.when(label::isShownProperty));
      * }</pre>
      * @param condition a boolean {@code ObservableValue}, cannot be {@code null}
      * @return an {@code ObservableValue} that holds this value whenever the given
