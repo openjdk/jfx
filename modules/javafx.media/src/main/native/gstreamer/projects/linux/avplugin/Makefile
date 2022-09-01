@@ -33,7 +33,7 @@ CFLAGS = -fPIC                   \
          -DGLIB_VERSION_MAX_ALLOWED=GLIB_VERSION_2_48 \
          -ffunction-sections -fdata-sections
 
-ifneq ($(ARCH), aarch64)
+ifeq (,$(findstring $(ARCH), aarch64 loongarch64))
     CFLAGS += -msse2
 endif
 
