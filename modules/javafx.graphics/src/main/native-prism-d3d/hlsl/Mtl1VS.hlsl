@@ -26,7 +26,8 @@
 #include "vsDecl.h"
 #include "vsMath.h"
 
-VsOutput main(VsInput vsInput) {
+// VertexType = VsInput as defined the gradle build file
+VsOutput main(VertexType vsInput) {
     VsOutput vsOutput;
 
     vsOutput.texD = vsInput.texD;
