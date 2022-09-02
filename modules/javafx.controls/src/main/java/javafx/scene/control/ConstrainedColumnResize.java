@@ -53,6 +53,7 @@ public abstract class ConstrainedColumnResize {
     public ConstrainedColumnResize() {
     }
 
+    // TODO bring back once done
 //    public static TablePolicy forTable() {
 //        return new TablePolicy();
 //    }
@@ -85,7 +86,10 @@ public abstract class ConstrainedColumnResize {
 
     /**
      * The constrained resize algorithm used by TableView and TreeTableView.
-     * TODO meaning of return?
+     * Called when initially sizing the table (rf.getColumn() == null),
+     * or when manually resizing a specific column.
+     * 
+     * @return true when manual column resizing is allowed, false otherwise
      */
     public abstract boolean constrainedResize(ResizeFeaturesBase rf,
                                      double contentWidth,
