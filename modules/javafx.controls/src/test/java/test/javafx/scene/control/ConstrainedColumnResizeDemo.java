@@ -30,18 +30,15 @@ import javafx.geometry.Insets;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.CheckBox;
-import javafx.scene.control.MenuButton;
-import javafx.scene.control.MenuItem;
-import javafx.scene.control.ConstrainedColumnResize;
 import javafx.scene.control.SelectionMode;
 import javafx.scene.control.Skin;
 import javafx.scene.control.SplitPane;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableColumnBase;
 import javafx.scene.control.TableView;
-import javafx.scene.control.TextArea;
 import javafx.scene.control.TableView.ResizeFeatures;
 import javafx.scene.control.TableView.TableViewSelectionModel;
+import javafx.scene.control.TextArea;
 import javafx.scene.control.skin.TableViewSkin;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.Region;
@@ -134,7 +131,8 @@ public class ConstrainedColumnResizeDemo extends Application {
         constrainedTableModel.setSelected(true);
         constrainedTableModel.selectedProperty().addListener((src, prev, on) -> {
             if (on) {
-                table.setColumnResizePolicy(wrap(ConstrainedColumnResize.forTable()));
+                // TODO table.setColumnResizePolicy(wrap(ConstrainedColumnResize.forTable()));
+                table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
             } else {
                 table.setColumnResizePolicy(TableView.UNCONSTRAINED_RESIZE_POLICY);
             }
