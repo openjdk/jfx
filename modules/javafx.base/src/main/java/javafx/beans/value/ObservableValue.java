@@ -261,11 +261,8 @@ public interface ObservableValue<T> extends Observable {
      * {@code condition} holds {@code true}. This allows this {@code ObservableValue}
      * and the conditional {@code ObservableValue} to be garbage collected if neither is
      * otherwise strongly referenced when {@code condition} holds {@code false}.
-     * <p>
-     * A currently observed binding will observe its source, which means it will not be eligible
-     * for garbage collection while its source isn't. However, when using {@code when} this {@code ObservableValue}
-     * can still be eligible for garbage collection when {@code condition} holds {@code false} and {@code condition}
-     * itself is also eligible for garbage collection.
+     * This is in contrast to the general behavior of bindings, where the binding is
+     * only eligible for garbage collection when not observed itself.
      * <p>
      * A {@code condition} holding {@code null} is treated as holding {@code false}.
      * <p>
@@ -276,7 +273,7 @@ public interface ObservableValue<T> extends Observable {
      * ObservableValue<String> whenProperty = longLivedProperty.when(condition);
      *
      * // observe whenProperty, which will in turn observe longLivedProperty
-     * whenProperty.addChangeListener((ov, old, current) -> System.out.println(current));
+     * whenProperty.addListener((ov, old, current) -> System.out.println(current));
      *
      * longLivedProperty.setValue("B");  // "B" is printed
      *
