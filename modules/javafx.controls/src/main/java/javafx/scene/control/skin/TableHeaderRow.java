@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,14 +30,17 @@ import java.util.*;
 import javafx.beans.InvalidationListener;
 import javafx.beans.WeakInvalidationListener;
 import javafx.beans.property.BooleanProperty;
-import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.SimpleBooleanProperty;
-import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.property.StringProperty;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.WeakChangeListener;
 import javafx.collections.ListChangeListener;
 import javafx.collections.WeakListChangeListener;
+import javafx.geometry.Bounds;
 import javafx.geometry.HPos;
 import javafx.geometry.Insets;
 import javafx.geometry.Side;
@@ -46,9 +49,7 @@ import javafx.scene.control.CheckMenuItem;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Control;
 import javafx.scene.control.Label;
-import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableColumnBase;
-import javafx.scene.layout.Border;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
@@ -108,6 +109,7 @@ public class TableHeaderRow extends StackPane {
      * when clicked shows a PopupMenu consisting of all leaf columns.
      */
     private Pane cornerRegion;
+    final DoubleProperty cornerPadding = new SimpleDoubleProperty();
 
     /**
      * PopupMenu shown to users to allow for them to hide/show columns in the
@@ -155,6 +157,8 @@ public class TableHeaderRow extends StackPane {
         }
     };
 
+    private final ChangeListener<Boolean> cornerPaddingListener = (obs, ov, nv) -> updateCornerPadding();
+
     private final WeakInvalidationListener weakTableWidthListener =
             new WeakInvalidationListener(tableWidthListener);
 
@@ -169,6 +173,9 @@ public class TableHeaderRow extends StackPane {
 
     private final WeakInvalidationListener weakColumnTextListener =
             new WeakInvalidationListener(columnTextListener);
+
+    private final WeakChangeListener<Boolean> weakCornerPaddingListener =
+            new WeakChangeListener<>(cornerPaddingListener);
 
 
 
@@ -261,6 +268,8 @@ public class TableHeaderRow extends StackPane {
             columnPopupMenu.show(cornerRegion, Side.BOTTOM, 0, 0);
             me.consume();
         });
+        cornerRegion.visibleProperty().addListener(weakCornerPaddingListener);
+        flow.getVbar().visibleProperty().addListener(weakCornerPaddingListener);
 
         // the actual header
         // the region that is anchored above the vertical scrollbar
@@ -381,8 +390,10 @@ public class TableHeaderRow extends StackPane {
             filler.resizeRelocate(x + headerWidth, snappedTopInset(), fillerWidth, prefHeight);
         }
 
-        // position the top-right rectangle (which sits above the scrollbar)
+        // position the top-right rectangle (which sits above the scrollbar if visible, or adds padding to the
+        // header of the last visible column if not)
         cornerRegion.resizeRelocate(tableWidth - cornerWidth, snappedTopInset(), cornerWidth, prefHeight);
+        updateCornerPadding();
     }
 
     /** {@inheritDoc} */
@@ -662,4 +673,27 @@ public class TableHeaderRow extends StackPane {
 
         return false;
     }
+
+    // When the corner region is visible, and the vertical scrollbar is not,
+    // in case the corner region is over the header of the last
+    // visible column, if any, we have to consider its width as extra padding
+    // for that header, to prevent the content of the latter from being partially
+    // covered.
+    private void updateCornerPadding() {
+        double padding = 0.0;
+        if (cornerRegion.isVisible() && !flow.getVbar().isVisible()) {
+            double x = cornerRegion.getLayoutX();
+            padding = getRootHeader().getColumnHeaders().stream()
+                    .filter(header -> header.isLastVisibleColumn)
+                    .findFirst()
+                    .map(header -> {
+                        Bounds bounds = header.localToScene(header.getBoundsInLocal());
+                        return bounds.getMinX() <= x && x < bounds.getMaxX() ?
+                             cornerRegion.getWidth() : 0.0;
+                    })
+                    .orElse(0.0);
+        }
+        cornerPadding.set(padding);
+    }
+
 }
