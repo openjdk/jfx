@@ -44,9 +44,14 @@ import java.util.stream.Collectors;
 import com.sun.javafx.scene.control.behavior.TreeTableCellBehavior;
 import javafx.beans.property.ReadOnlyIntegerWrapper;
 import javafx.collections.transformation.FilteredList;
+import javafx.scene.control.ScrollBar;
 import javafx.scene.control.SelectionModel;
+import javafx.scene.control.Slider;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
+import javafx.scene.control.skin.TableColumnHeader;
+import javafx.scene.layout.Region;
+import org.junit.After;
 import test.javafx.collections.MockListObserver;
 import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import test.com.sun.javafx.scene.control.infrastructure.KeyModifier;
@@ -122,6 +127,7 @@ public class TreeTableViewTest {
     private TreeTableView.TreeTableViewSelectionModel sm;
     private TreeTableViewFocusModel<String> fm;
 
+    private StageLoader stageLoader;
 
     // sample data #1
     private TreeItem<String> root;
@@ -181,6 +187,13 @@ public class TreeTableViewTest {
             judyMayer,
             gregorySmith
         );
+    }
+
+    @After
+    public void cleanup() {
+        if (stageLoader != null) {
+            stageLoader.dispose();
+        }
     }
 
     private void installChildren() {
@@ -6986,5 +6999,96 @@ public class TreeTableViewTest {
         assertEquals("Node 0", table.getSelectionModel().getSelectedItem().getValue());
         assertEquals(0, table.getFocusModel().getFocusedIndex());
         assertEquals("Node 0", table.getFocusModel().getFocusedItem().getValue());
+    }
+
+    // See JDK-8087673
+    @Test
+    public void testTreeTableMenuButtonDoesNotOverlapColumnHeaderGraphic() {
+        TreeTableView<String> table = new TreeTableView<>();
+        table.setColumnResizePolicy(TreeTableView.CONSTRAINED_RESIZE_POLICY);
+        table.setTableMenuButtonVisible(true);
+        TreeTableColumn<String, String> column = new TreeTableColumn<>();
+        Slider slider = new Slider();
+        slider.setValue(100);
+        column.setGraphic(slider);
+        table.getColumns().add(column);
+
+        stageLoader = new StageLoader(table);
+
+        Toolkit.getToolkit().firePulse();
+
+        ScrollBar vbar = VirtualFlowTestUtils.getVirtualFlowVerticalScrollbar(table);
+        assertFalse(vbar.isVisible());
+
+        StackPane thumb = (StackPane) slider.lookup(".thumb");
+        assertNotNull(thumb);
+        double thumbMaxX = thumb.localToScene(thumb.getLayoutBounds()).getMaxX();
+
+        StackPane corner = (StackPane) table.lookup(".show-hide-columns-button");
+        assertNotNull(corner);
+        assertTrue(corner.isVisible());
+        double cornerMinX = corner.localToScene(corner.getLayoutBounds()).getMinX();
+
+        // Verify that the slider's thumb is fully visible, and it is not overlapped
+        // by the corner region
+        assertTrue(thumbMaxX < cornerMinX);
+    }
+
+    // See JDK-8087673
+    @Test
+    public void testTableMenuButtonDoesNotOverlapLastColumnHeader() {
+        TreeTableView<String> table = new TreeTableView<>();
+        table.setTableMenuButtonVisible(true);
+        for (int i = 0; i < 10; i++) {
+            TreeTableColumn<String, String> column = new TreeTableColumn<>(i + "          ");
+            column.setCellValueFactory(value -> new SimpleStringProperty(value.getValue().getValue()));
+            table.getColumns().add(column);
+        }
+
+        TreeItem<String> root = new TreeItem<>();
+        root.setExpanded(true);
+        for (int i = 0; i < 10; i++) {
+            root.getChildren().add(new TreeItem<>(Integer.toString(i)));
+        }
+        table.setRoot(root);
+        table.setShowRoot(false);
+
+        stageLoader = new StageLoader(new Scene(table, 300, 300));
+
+        TreeTableColumn<String, ?> lastColumn = table.getColumns().get(9);
+        lastColumn.setSortType(TreeTableColumn.SortType.DESCENDING);
+        table.getSortOrder().setAll(lastColumn);
+        Toolkit.getToolkit().firePulse();
+
+        TableColumnHeader lastColumnHeader = VirtualFlowTestUtils.getTableColumnHeader(table, lastColumn);
+        assertNotNull(lastColumnHeader);
+
+        Region arrow = (Region) lastColumnHeader.lookup(".arrow");
+        assertNotNull(arrow);
+
+        ScrollBar vbar = VirtualFlowTestUtils.getVirtualFlowVerticalScrollbar(table);
+        assertFalse(vbar.isVisible());
+        ScrollBar hbar = VirtualFlowTestUtils.getVirtualFlowHorizontalScrollbar(table);
+        assertTrue(hbar.isVisible());
+
+        table.scrollToColumnIndex(9);
+
+        double headerMinX = lastColumnHeader.localToScene(lastColumnHeader.getLayoutBounds()).getMinX();
+        double headerMaxX = lastColumnHeader.localToScene(lastColumnHeader.getLayoutBounds()).getMaxX();
+
+        double arrowMaxX = arrow.localToScene(arrow.getLayoutBounds()).getMaxX();
+
+        StackPane corner = (StackPane) table.lookup(".show-hide-columns-button");
+        assertNotNull(corner);
+        assertTrue(corner.isVisible());
+        double cornerMinX = corner.localToScene(corner.getLayoutBounds()).getMinX();
+
+        // Verify that the corner region is over the last visible column header
+        assertTrue(headerMinX < cornerMinX);
+        assertTrue(cornerMinX < headerMaxX);
+
+        // Verify that the arrow is fully visible, and it is not overlapped
+        // by the corner region
+        assertTrue(arrowMaxX < cornerMinX);
     }
 }
