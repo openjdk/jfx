@@ -23,14 +23,8 @@
  * questions.
  */
 package javafx.scene.control;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
-import javafx.scene.control.ResizeFeaturesBase;
-import javafx.scene.control.TableColumnBase;
-import javafx.scene.control.TableView;
-import javafx.scene.control.TreeTableView;
-import javafx.util.Callback;
+import javafx.scene.Node;
 
 /**
  * Constrained columns resize algorithm which:
@@ -49,40 +43,10 @@ public abstract class ConstrainedColumnResize {
     }
 
     protected static final double EPSILON = 0.0000001;
+    private static final Object FIRST_RUN = new Object();
 
     public ConstrainedColumnResize() {
     }
-
-    // TODO bring back once done
-//    public static TablePolicy forTable() {
-//        return new TablePolicy();
-//    }
-//
-//    public static TreeTablePolicy forTreeTable() {
-//        return new TreeTablePolicy();
-//    }
-//
-//    public static class TablePolicy
-//        extends ConstrainedColumnResize
-//        implements Callback<TableView.ResizeFeatures,Boolean> {
-//
-//        @Override
-//        public Boolean call(TableView.ResizeFeatures f) {
-//            List<? extends TableColumnBase<?,?>> visibleLeafColumns = f.getTable().getVisibleLeafColumns();
-//            return constrainedResize(f, f.getContentWidth(), visibleLeafColumns);
-//        }
-//    }
-//    
-//    public static class TreeTablePolicy
-//        extends ConstrainedColumnResize
-//        implements Callback<TreeTableView.ResizeFeatures,Boolean> {
-//        
-//        @Override
-//        public Boolean call(TreeTableView.ResizeFeatures f) {
-//            List<? extends TableColumnBase<?,?>> visibleLeafColumns = f.getTable().getVisibleLeafColumns();
-//            return constrainedResize(f, f.getContentWidth(), visibleLeafColumns);
-//        }
-//    }
 
     /**
      * The constrained resize algorithm used by TableView and TreeTableView.
@@ -91,7 +55,8 @@ public abstract class ConstrainedColumnResize {
      * 
      * @return true when manual column resizing is allowed, false otherwise
      */
-    public abstract boolean constrainedResize(ResizeFeaturesBase rf,
+    public abstract boolean constrainedResize(boolean firstRun,
+                                     ResizeFeaturesBase rf,
                                      double contentWidth,
                                      List<? extends TableColumnBase<?,?>> visibleLeafColumns);
     
@@ -99,5 +64,14 @@ public abstract class ConstrainedColumnResize {
     public String toString() {
         // TODO rename
         return "new-constrained-resize";
+    }
+
+    protected static boolean isFirstRun(Node treeOrTable) {
+        // FIX need to reset once the resize policy is set
+        return !Boolean.FALSE.equals(treeOrTable.getProperties().get(FIRST_RUN));
+    }
+
+    protected static void setFirstRun(Node treeOrTable, boolean on) {
+        treeOrTable.getProperties().put(FIRST_RUN, Boolean.valueOf(on));
     }
 }

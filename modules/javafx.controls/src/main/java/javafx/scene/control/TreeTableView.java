@@ -415,6 +415,7 @@ public class TreeTableView<S> extends Control {
         });
 
         pseudoClassStateChanged(PseudoClass.getPseudoClass(getColumnResizePolicy().toString()), true);
+        ConstrainedColumnResize.setFirstRun(TreeTableView.this, true);
 
         isInited = true;
     }
@@ -1254,6 +1255,8 @@ public class TreeTableView<S> extends Control {
                         }
                         oldPolicy = get();
                     }
+ 
+                    ConstrainedColumnResize.setFirstRun(TreeTableView.this, true);
                 }
             };
         }

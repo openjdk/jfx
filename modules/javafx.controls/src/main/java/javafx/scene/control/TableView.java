@@ -562,6 +562,7 @@ public class TableView<S> extends Control {
         });
 
         pseudoClassStateChanged(PseudoClass.getPseudoClass(getColumnResizePolicy().toString()), true);
+        ConstrainedColumnResize.setFirstRun(TableView.this, true);
 
         isInited = true;
     }
@@ -923,6 +924,8 @@ public class TableView<S> extends Control {
                         }
                         oldPolicy = get();
                     }
+
+                    ConstrainedColumnResize.setFirstRun(TableView.this, true);
                 }
             };
         }
