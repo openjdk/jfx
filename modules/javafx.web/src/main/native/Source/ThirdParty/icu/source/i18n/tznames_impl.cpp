@@ -184,7 +184,7 @@ TextTrieMapSearchResultHandler::~TextTrieMapSearchResultHandler(){
 // TextTrieMap class implementation
 // ---------------------------------------------------
 TextTrieMap::TextTrieMap(UBool ignoreCase, UObjectDeleter *valueDeleter)
-: fIgnoreCase(ignoreCase), fNodes(NULL), fNodesCapacity(0), fNodesCount(0), 
+: fIgnoreCase(ignoreCase), fNodes(NULL), fNodesCapacity(0), fNodesCount(0),
   fLazyContents(NULL), fIsEmpty(TRUE), fValueDeleter(valueDeleter) {
 }
 
@@ -199,7 +199,7 @@ TextTrieMap::~TextTrieMap() {
             if (fValueDeleter) {
                 fValueDeleter(fLazyContents->elementAt(i+1));
             }
-        } 
+        }
         delete fLazyContents;
     }
 }
@@ -216,7 +216,7 @@ int32_t TextTrieMap::isEmpty() const {
 //  We defer actually building the TextTrieMap node structure until the first time a
 //     search is performed.  put() simply saves the parameters in case we do
 //     eventually need to build it.
-//     
+//
 void
 TextTrieMap::put(const UnicodeString &key, void *value, ZNStringPool &sp, UErrorCode &status) {
     const UChar *s = sp.get(key, status);
@@ -381,7 +381,7 @@ void TextTrieMap::buildTrie(UErrorCode &status) {
             putImpl(keyString, val, status);
         }
         delete fLazyContents;
-        fLazyContents = NULL; 
+        fLazyContents = NULL;
     }
 }
 
@@ -478,9 +478,9 @@ ZNStringPool::ZNStringPool(UErrorCode &status) {
         return;
     }
 
-    fHash   = uhash_open(uhash_hashUChars      /* keyHash */, 
-                         uhash_compareUChars   /* keyComp */, 
-                         uhash_compareUChars   /* valueComp */, 
+    fHash   = uhash_open(uhash_hashUChars      /* keyHash */,
+                         uhash_compareUChars   /* keyComp */,
+                         uhash_compareUChars   /* valueComp */,
                          &status);
     if (U_FAILURE(status)) {
         return;
@@ -529,13 +529,13 @@ const UChar *ZNStringPool::get(const UChar *s, UErrorCode &status) {
         }
         fChunks->fNext = oldChunk;
     }
-    
+
     UChar *destString = &fChunks->fStrings[fChunks->fLimit];
     u_strcpy(destString, s);
     fChunks->fLimit += (length + 1);
     uhash_put(fHash, destString, destString, &status);
     return destString;
-}        
+}
 
 
 //
@@ -558,7 +558,7 @@ const UChar *ZNStringPool::adopt(const UChar * s, UErrorCode &status) {
     return s;
 }
 
-    
+
 const UChar *ZNStringPool::get(const UnicodeString &s, UErrorCode &status) {
     UnicodeString &nonConstStr = const_cast<UnicodeString &>(s);
     return this->get(nonConstStr.getTerminatedBuffer(), status);
@@ -878,11 +878,11 @@ private:
 
 UOBJECT_DEFINE_RTTI_IMPLEMENTATION(MetaZoneIDsEnumeration)
 
-MetaZoneIDsEnumeration::MetaZoneIDsEnumeration() 
+MetaZoneIDsEnumeration::MetaZoneIDsEnumeration()
 : fLen(0), fPos(0), fMetaZoneIDs(NULL), fLocalVector(NULL) {
 }
 
-MetaZoneIDsEnumeration::MetaZoneIDsEnumeration(const UVector& mzIDs) 
+MetaZoneIDsEnumeration::MetaZoneIDsEnumeration(const UVector& mzIDs)
 : fPos(0), fMetaZoneIDs(&mzIDs), fLocalVector(NULL) {
     fLen = fMetaZoneIDs->size();
 }
@@ -935,7 +935,7 @@ private:
     TimeZoneNames::MatchInfoCollection* fResults;
 };
 
-ZNameSearchHandler::ZNameSearchHandler(uint32_t types) 
+ZNameSearchHandler::ZNameSearchHandler(uint32_t types)
 : fTypes(types), fMaxMatchLen(0), fResults(NULL) {
 }
 
@@ -1902,7 +1902,7 @@ private:
     const char* fRegion;
 };
 
-TZDBNameSearchHandler::TZDBNameSearchHandler(uint32_t types, const char* region) 
+TZDBNameSearchHandler::TZDBNameSearchHandler(uint32_t types, const char* region)
 : fTypes(types), fMaxMatchLen(0), fResults(NULL), fRegion(region) {
 }
 

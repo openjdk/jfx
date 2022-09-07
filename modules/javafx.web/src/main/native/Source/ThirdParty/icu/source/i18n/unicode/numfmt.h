@@ -79,7 +79,7 @@ class StringEnumeration;
  *    #include "unicode/unistr.h"
  *    #include "unicode/ustream.h"
  *    using namespace std;
- *    
+ *
  *    int main() {
  *        double myNumber = 7.0;
  *        UnicodeString myString;
@@ -1041,7 +1041,7 @@ public:
 
     /**
      * Get the rounding mode. This will always return NumberFormat::ERoundingMode::kRoundUnnecessary
-     * if the subclass does not support rounding. 
+     * if the subclass does not support rounding.
      * @return A rounding mode
      * @stable ICU 60
      */

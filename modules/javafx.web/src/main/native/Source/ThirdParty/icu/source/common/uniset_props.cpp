@@ -333,7 +333,7 @@ void UnicodeSet::applyPattern(RuleCharacterIterator& chars,
                     mode = 1;
                     patLocal.append(u'[');
                     chars.getPos(backup); // prepare to backup
-                    c = chars.next(opts, literal, ec); 
+                    c = chars.next(opts, literal, ec);
                     if (U_FAILURE(ec)) return;
                     if (c == u'^' && !literal) {
                         invert = TRUE;
@@ -1084,7 +1084,7 @@ UnicodeSet& UnicodeSet::applyPropertyPattern(const UnicodeString& pattern,
     else {
         // Handle case where no '=' is seen, and \N{}
         pattern.extractBetween(pos, close, propName);
-            
+
         // Handle \N{name}
         if (isName) {
             // This is a little inefficient since it means we have to

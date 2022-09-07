@@ -37,7 +37,7 @@ public:
     static RegexStaticSets *gStaticSets;  // Ptr to all lazily initialized constant
                                           //   shared sets.
 
-    RegexStaticSets(UErrorCode *status);         
+    RegexStaticSets(UErrorCode *status);
     ~RegexStaticSets();
     static void    initGlobals(UErrorCode *status);
 

@@ -35,13 +35,13 @@
 #include "unicode/calendar.h"
 
 /**
- * \file 
+ * \file
  * \brief C++ API: Concrete class which provides the standard calendar.
  */
 
 U_NAMESPACE_BEGIN
 
-/** 
+/**
  * Concrete class which provides the standard calendar used by most of the world.
  * <P>
  * The standard (Gregorian) calendar has 2 eras, BC and AD.
@@ -347,7 +347,7 @@ public:
      * Returns true if the given Calendar object is equivalent to this
      * one.  Calendar override.
      *
-     * @param other the Calendar to be compared with this Calendar   
+     * @param other the Calendar to be compared with this Calendar
      * @stable ICU 2.4
      */
     virtual UBool isEquivalentTo(const Calendar& other) const override;
@@ -518,7 +518,7 @@ public:
      * Subclasses may override this.  This method calls
      * handleGetMonthLength() to obtain the calendar-specific month
      * length.
-     * @param bestField which field to use to calculate the date 
+     * @param bestField which field to use to calculate the date
      * @return julian day specified by calendar fields.
      * @internal
      */
@@ -567,7 +567,7 @@ public:
      * @internal
      */
     int32_t yearLength(int32_t year) const;
-    
+
     /**
      * return the length of the year field.
      * @return    the length of the year field
@@ -589,7 +589,7 @@ public:
      * Return the day number with respect to the epoch.  January 1, 1970 (Gregorian)
      * is day zero.
      * @param status Fill-in parameter which receives the status of this operation.
-     * @return       the day number with respect to the epoch.  
+     * @return       the day number with respect to the epoch.
      * @internal
      */
     virtual UDate getEpochDay(UErrorCode& status);
@@ -627,8 +627,8 @@ public:
      */
     virtual int32_t handleGetExtendedYear() override;
 
-    /** 
-     * Subclasses may override this to convert from week fields 
+    /**
+     * Subclasses may override this to convert from week fields
      * (YEAR_WOY and WEEK_OF_YEAR) to an extended year in the case
      * where YEAR, EXTENDED_YEAR are not set.
      * The Gregorian implementation assumes a yearWoy in gregorian format, according to the current era.
@@ -660,12 +660,12 @@ public:
      * Compute the julian day number of the given year.
      * @param isGregorian    if true, using Gregorian calendar, otherwise using Julian calendar
      * @param year           the given year.
-     * @param isLeap         true if the year is a leap year.       
-     * @return 
+     * @param isLeap         true if the year is a leap year.
+     * @return
      */
     static double computeJulianDayOfYear(UBool isGregorian, int32_t year,
                                          UBool& isLeap);
-    
+
     /**
      * Validates the values of the set time fields.  True if they're all valid.
      * @return    True if the set time fields are all valid.
@@ -757,7 +757,7 @@ public:
 
     /**
      * @return true if this calendar has the notion of a default century
-     * @internal 
+     * @internal
      */
     virtual UBool haveDefaultCentury() const override;
 
@@ -769,7 +769,7 @@ public:
 
     /**
      * @return the beginning year of the default century
-     * @internal 
+     * @internal
      */
     virtual int32_t defaultCenturyStartYear() const override;
 };

@@ -38,7 +38,7 @@ protected:
     uint32_t fCount;
     uint32_t fCapacity;
 public:
-    NFRuleList(uint32_t capacity = 10) 
+    NFRuleList(uint32_t capacity = 10)
         : fStuff(capacity ? (NFRule**)uprv_malloc(capacity * sizeof(NFRule*)) : NULL)
         , fCount(0)
         , fCapacity(capacity) {}

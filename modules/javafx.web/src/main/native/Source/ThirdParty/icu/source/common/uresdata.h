@@ -522,7 +522,7 @@ public:
     void setData(const ResourceData &data) {
         pResData = &data;
     }
-    
+
     void setValidLocaleDataEntry(UResourceDataEntry *entry) {
         validLocaleDataEntry = entry;
     }

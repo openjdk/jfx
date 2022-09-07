@@ -364,7 +364,7 @@ MeasureFormat::MeasureFormat(
         const Locale &locale,
         UMeasureFormatWidth w,
         NumberFormat *nfToAdopt,
-        UErrorCode &status) 
+        UErrorCode &status)
         : cache(NULL),
           numberFormat(NULL),
           pluralRules(NULL),
@@ -649,7 +649,7 @@ UBool MeasureFormat::setMeasureFormatLocale(const Locale &locale, UErrorCode &st
     }
     initMeasureFormat(locale, fWidth, NULL, status);
     return U_SUCCESS(status);
-} 
+}
 
 const NumberFormat &MeasureFormat::getNumberFormatInternal() const {
     return **numberFormat;

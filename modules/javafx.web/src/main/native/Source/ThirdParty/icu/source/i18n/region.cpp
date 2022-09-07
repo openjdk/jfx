@@ -223,7 +223,7 @@ void U_CALLCONV Region::loadRegionData(UErrorCode &status) {
         }
     }
     ures_close(groupingBundle);
-    
+
     // Process the territory aliases
     while (U_SUCCESS(status) && ures_hasNext(territoryAlias.getAlias())) {
         LocalUResourceBundlePointer res(ures_getNextResource(territoryAlias.getAlias(),NULL,&status));
@@ -239,7 +239,7 @@ void U_CALLCONV Region::loadRegionData(UErrorCode &status) {
             uhash_put(newRegionAliases.getAlias(),(void *)aliasFromStr.orphan(), (void *)aliasToRegion,&status);
         } else {
             if ( aliasFromRegion == NULL ) { // Deprecated region code not in the primary codes list - so need to create a deprecated region for it.
-                LocalPointer<Region> newRgn(new Region, status); 
+                LocalPointer<Region> newRgn(new Region, status);
                 if ( U_SUCCESS(status) ) {
                     aliasFromRegion = newRgn.orphan();
                 } else {
@@ -409,7 +409,7 @@ void U_CALLCONV Region::loadRegionData(UErrorCode &status) {
         }
         availableRegions[ar->fType]->adoptElement(arString.orphan(), status);
     }
-    
+
     // copy hashtables
     numericCodeMap = newNumericCodeMap.orphan();
     regionIDMap = newRegionIDMap.orphan();

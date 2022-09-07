@@ -121,7 +121,7 @@ BreakIterator::buildInstance(const Locale& loc, const char *type, UErrorCode &st
     // If there is a result, set the valid locale and actual locale, and the kind
     if (U_SUCCESS(status) && result != NULL) {
         U_LOCALE_BASED(locBased, *(BreakIterator*)result);
-        locBased.setLocaleIDs(ures_getLocaleByType(b, ULOC_VALID_LOCALE, &status), 
+        locBased.setLocaleIDs(ures_getLocaleByType(b, ULOC_VALID_LOCALE, &status),
                               actualLocale.data());
     }
 
@@ -301,7 +301,7 @@ static UBool U_CALLCONV breakiterator_cleanup(void) {
 U_CDECL_END
 U_NAMESPACE_BEGIN
 
-static void U_CALLCONV 
+static void U_CALLCONV
 initService(void) {
     gService = new ICUBreakIteratorService();
     ucln_common_registerCleanup(UCLN_COMMON_BREAKITERATOR, breakiterator_cleanup);

@@ -2072,7 +2072,7 @@ class U_I18N_API DecimalFormat : public NumberFormat {
      * You can use the returned LocalizedNumberFormatter to format numbers and
      * get a FormattedNumber, which contains a string as well as additional
      * annotations about the formatted value.
-     * 
+     *
      * If a memory allocation failure occurs, the return value of this method
      * might be null. If you are concerned about correct recovery from
      * out-of-memory situations, use this pattern:

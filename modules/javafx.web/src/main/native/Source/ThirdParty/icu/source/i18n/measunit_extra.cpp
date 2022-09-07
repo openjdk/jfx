@@ -950,7 +950,7 @@ void SingleUnitImpl::appendNeutralIdentifier(CharString &result, UErrorCode &sta
     int32_t absPower = std::abs(this->dimensionality);
 
     U_ASSERT(absPower > 0); // "this function does not support the dimensionless single units";
-    
+
     if (absPower == 1) {
         // no-op
     } else if (absPower == 2) {
@@ -1032,7 +1032,7 @@ MeasureUnitImpl MeasureUnitImpl::copyAndSimplify(UErrorCode &status) const {
     MeasureUnitImpl result;
     for (int32_t i = 0; i < singleUnits.length(); i++) {
         const SingleUnitImpl &singleUnit = *this->singleUnits[i];
-        
+
         // The following `for` loop will cause time complexity to be O(n^2).
         // However, n is very small (number of units, generally, at maximum equal to 10)
         bool unitExist = false;

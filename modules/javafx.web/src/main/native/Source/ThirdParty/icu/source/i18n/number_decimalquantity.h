@@ -200,11 +200,11 @@ class U_I18N_API DecimalQuantity : public IFixedDecimal, public UMemory {
     /** @return Whether the value represented by this {@link DecimalQuantity} is not a number. */
     bool isNaN() const U_OVERRIDE;
 
-    /**  
+    /**
      * Note: this method incorporates the value of {@code exponent}
      * (for cases such as compact notation) to return the proper long value
      * represented by the result.
-     * @param truncateIfOverflow if false and the number does NOT fit, fails with an assertion error. 
+     * @param truncateIfOverflow if false and the number does NOT fit, fails with an assertion error.
      */
     int64_t toLong(bool truncateIfOverflow = false) const;
 

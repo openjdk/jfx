@@ -168,7 +168,7 @@ private:
 // -------------------------------------------------------------
 // Some standard implementations
 
-/** 
+/**
  * Implementation of ByteSink that writes to a flat byte array,
  * with bounds-checking:
  * This sink will not write more than capacity bytes to outbuf.
@@ -258,7 +258,7 @@ private:
   CheckedArrayByteSink &operator=(const CheckedArrayByteSink &) = delete;
 };
 
-/** 
+/**
  * Implementation of ByteSink that writes to a "string".
  * The StringClass is usually instantiated with a std::string.
  * @stable ICU 4.2
@@ -274,7 +274,7 @@ class StringByteSink : public ByteSink {
   StringByteSink(StringClass* dest) : dest_(dest) { }
   /**
    * Constructs a ByteSink that reserves append capacity and will append bytes to the dest string.
-   * 
+   *
    * @param dest pointer to string object to append to
    * @param initialAppendCapacity capacity beyond dest->length() to be reserve()d
    * @stable ICU 60

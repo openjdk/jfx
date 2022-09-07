@@ -208,7 +208,7 @@ class U_I18N_API UnitsConverter : public UMemory {
 
     /**
      * Initialises the object.
-     */ 
+     */
     void init(const ConversionRates &ratesInfo, UErrorCode &status);
 };
 

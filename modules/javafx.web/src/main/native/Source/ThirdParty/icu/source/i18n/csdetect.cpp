@@ -126,7 +126,7 @@ static void U_CALLCONV initRecognizers(UErrorCode &status) {
 
     if (fCSRecognizers == NULL) {
         status = U_MEMORY_ALLOCATION_ERROR;
-    } 
+    }
     else {
         fCSRecognizers_size = rCount;
         for (int32_t r = 0; r < rCount; r += 1) {
@@ -224,7 +224,7 @@ int32_t CharsetDetector::getDetectableCount()
 
     setRecognizers(status);
 
-    return fCSRecognizers_size; 
+    return fCSRecognizers_size;
 }
 
 const CharsetMatch *CharsetDetector::detect(UErrorCode &status)

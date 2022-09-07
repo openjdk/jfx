@@ -19,7 +19,7 @@
 #include "unicode/unistr.h"
 
 /**
- * \file 
+ * \file
  * \brief C++ API: Formats in scientific notation.
  */
 
@@ -219,4 +219,4 @@ U_NAMESPACE_END
 
 #endif /* U_SHOW_CPLUSPLUS_API */
 
-#endif 
+#endif

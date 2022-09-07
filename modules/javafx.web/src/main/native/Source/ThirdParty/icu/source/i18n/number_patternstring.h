@@ -251,7 +251,7 @@ class U_I18N_API PatternStringUtils {
      * it should not be ignored if maxFrac is 2 or more (but a roundingIncrement of
      * 0.005 is treated like 0.001 for significance).
      *
-     * This test is needed for both NumberPropertyMapper::oldToNew and 
+     * This test is needed for both NumberPropertyMapper::oldToNew and
      * PatternStringUtils::propertiesToPatternString. In Java it cannot be
      * exported by NumberPropertyMapper (package private) so it is in
      * PatternStringUtils, do the same in C.

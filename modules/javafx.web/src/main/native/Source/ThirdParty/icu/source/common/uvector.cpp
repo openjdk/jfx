@@ -26,7 +26,7 @@ constexpr int32_t DEFAULT_CAPACITY = 8;
  */
 constexpr int8_t HINT_KEY_POINTER = 1;
 constexpr int8_t HINT_KEY_INTEGER = 0;
- 
+
 UOBJECT_DEFINE_RTTI_IMPLEMENTATION(UVector)
 
 UVector::UVector(UErrorCode &status) :
@@ -491,7 +491,7 @@ void UVector::sortedInsert(UElement e, UElementComparator *compare, UErrorCode& 
   *
   *  The context pointer to this function is a pointer back
   *  (with some extra indirection) to the user supplied comparator.
-  *  
+  *
   */
 static int32_t U_CALLCONV
 sortComparator(const void *context, const void *left, const void *right) {

@@ -529,7 +529,7 @@ void UnitsConverter::init(const ConversionRates &ratesInfo, UErrorCode &status) 
 
     loadConversionRate(conversionRate_, conversionRate_.source, conversionRate_.target, unitsState,
                        ratesInfo, status);
-                          
+
 }
 
 int32_t UnitsConverter::compareTwoUnits(const MeasureUnitImpl &firstUnit,

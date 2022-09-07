@@ -1502,7 +1502,7 @@ struct CalendarDataSink : public ResourceSink {
     Hashtable arrays;
     Hashtable arraySizes;
     Hashtable maps;
-    /** 
+    /**
      * Whenever there are aliases, the same object will be added twice to 'map'.
      * To avoid double deletion, 'maps' won't take ownership of the objects. Instead,
      * 'mapRefs' will own them and will delete them when CalendarDataSink is deleted.
@@ -2381,7 +2381,7 @@ DateFormatSymbols::initializeData(const Locale& locale, const char *type, UError
         status = U_ZERO_ERROR;
         assignArray(fNarrowQuarters, fNarrowQuartersCount, fStandaloneNarrowQuarters, fStandaloneNarrowQuartersCount);
     }
-    
+
     // ICU 3.8 or later version no longer uses localized date-time pattern characters by default (ticket#5597)
     /*
     // fastCopyFrom()/setTo() - see assignArray comments

@@ -9,7 +9,7 @@
 ******************************************************************************
 *
 * File locmap.h      : Locale Mapping Classes
-* 
+*
 *
 * Created by: Helena Shih
 *

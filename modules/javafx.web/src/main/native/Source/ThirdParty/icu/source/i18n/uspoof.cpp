@@ -261,10 +261,10 @@ uspoof_setChecks(USpoofChecker *sc, int32_t checks, UErrorCode *status) {
         return;
     }
 
-    // Verify that the requested checks are all ones (bits) that 
+    // Verify that the requested checks are all ones (bits) that
     //   are acceptable, known values.
     if (checks & ~(USPOOF_ALL_CHECKS | USPOOF_AUX_INFO)) {
-        *status = U_ILLEGAL_ARGUMENT_ERROR; 
+        *status = U_ILLEGAL_ARGUMENT_ERROR;
         return;
     }
 
@@ -445,7 +445,7 @@ uspoof_areConfusable(const USpoofChecker *sc,
         *status = U_ILLEGAL_ARGUMENT_ERROR;
         return 0;
     }
-        
+
     UnicodeString id1Str((length1==-1), id1, length1);  // Aliasing constructor
     UnicodeString id2Str((length2==-1), id2, length2);  // Aliasing constructor
     return uspoof_areConfusableUnicodeString(sc, id1Str, id2Str, status);
@@ -470,7 +470,7 @@ uspoof_areConfusableUTF8(const USpoofChecker *sc,
     int32_t results = uspoof_areConfusableUnicodeString(sc, id1Str, id2Str, status);
     return results;
 }
- 
+
 
 U_CAPI int32_t U_EXPORT2
 uspoof_areConfusableUnicodeString(const USpoofChecker *sc,
@@ -484,7 +484,7 @@ uspoof_areConfusableUnicodeString(const USpoofChecker *sc,
     //
     // See section 4 of UAX 39 for the algorithm for checking whether two strings are confusable,
     //   and for definitions of the types (single, whole, mixed-script) of confusables.
-    
+
     // We only care about a few of the check flags.  Ignore the others.
     // If no tests relevant to this function have been specified, return an error.
     // TODO:  is this really the right thing to do?  It's probably an error on the caller's part,
@@ -611,9 +611,9 @@ int32_t checkImpl(const SpoofImpl* This, const UnicodeString& id, CheckResult* c
         int32_t     i;
         UChar32     c;
         UChar32     firstNonspacingMark = 0;
-        UBool       haveMultipleMarks = FALSE;  
+        UBool       haveMultipleMarks = FALSE;
         UnicodeSet  marksSeenSoFar;   // Set of combining marks in a single combining sequence.
-        
+
         for (i=0; i<nfdLength ;) {
             c = nfdText.char32At(i);
             i += U16_LENGTH(c);

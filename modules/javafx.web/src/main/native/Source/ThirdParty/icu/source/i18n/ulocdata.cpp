@@ -104,8 +104,8 @@ U_CAPI USet* U_EXPORT2
 ulocdata_getExemplarSet(ULocaleData *uld, USet *fillIn,
                         uint32_t options, ULocaleDataExemplarSetType extype, UErrorCode *status){
 
-    static const char* const exemplarSetTypes[] = { "ExemplarCharacters", 
-                                                    "AuxExemplarCharacters", 
+    static const char* const exemplarSetTypes[] = { "ExemplarCharacters",
+                                                    "AuxExemplarCharacters",
                                                     "ExemplarCharactersIndex",
                                                     "ExemplarCharactersPunctuation"};
     const UChar *exemplarChars = NULL;
@@ -195,9 +195,9 @@ static UResourceBundle * measurementTypeBundleForLocale(const char *localeID, co
     char region[ULOC_COUNTRY_CAPACITY];
     UResourceBundle *rb;
     UResourceBundle *measTypeBundle = NULL;
-    
+
     ulocimp_getRegionForSupplementalData(localeID, TRUE, region, ULOC_COUNTRY_CAPACITY, status);
-    
+
     rb = ures_openDirect(NULL, "supplementalData", status);
     ures_getByKey(rb, "measurementData", rb, status);
     if (rb != NULL) {

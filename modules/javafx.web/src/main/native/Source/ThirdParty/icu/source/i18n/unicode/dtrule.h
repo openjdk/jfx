@@ -14,7 +14,7 @@
 #if U_SHOW_CPLUSPLUS_API
 
 /**
- * \file 
+ * \file
  * \brief C++ API: Rule for specifying date and time in an year
  */
 
@@ -27,7 +27,7 @@ U_NAMESPACE_BEGIN
  * <code>DateTimeRule</code> is a class representing a time in a year by
  * a rule specified by month, day of month, day of week and
  * time in the day.
- * 
+ *
  * @stable ICU 3.8
  */
 class U_I18N_API DateTimeRule : public UObject {
@@ -62,7 +62,7 @@ public:
      * Constructs a <code>DateTimeRule</code> by the day of month and
      * the time rule.  The date rule type for an instance created by
      * this constructor is <code>DOM</code>.
-     * 
+     *
      * @param month         The rule month, for example, <code>Calendar::JANUARY</code>
      * @param dayOfMonth    The day of month, 1-based.
      * @param millisInDay   The milliseconds in the rule date.
@@ -77,7 +77,7 @@ public:
      * Constructs a <code>DateTimeRule</code> by the day of week and its ordinal
      * number and the time rule.  The date rule type for an instance created
      * by this constructor is <code>DOW</code>.
-     * 
+     *
      * @param month         The rule month, for example, <code>Calendar::JANUARY</code>.
      * @param weekInMonth   The ordinal number of the day of week.  Negative number
      *                      may be used for specifying a rule date counted from the
@@ -96,7 +96,7 @@ public:
      * on or after/before the day of month and the time rule.  The date rule
      * type for an instance created by this constructor is either
      * <code>DOM_GEQ_DOM</code> or <code>DOM_LEQ_DOM</code>.
-     * 
+     *
      * @param month         The rule month, for example, <code>Calendar::JANUARY</code>
      * @param dayOfMonth    The day of month, 1-based.
      * @param dayOfWeek     The day of week, for example, <code>Calendar::SUNDAY</code>.

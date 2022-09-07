@@ -530,7 +530,7 @@ TimeZone::detectHostTimeZone()
 static UMutex gDefaultZoneMutex;
 
 /**
- * Initialize DEFAULT_ZONE from the system default time zone.  
+ * Initialize DEFAULT_ZONE from the system default time zone.
  * Upon return, DEFAULT_ZONE will not be NULL, unless operator new()
  * returns NULL.
  */
@@ -544,7 +544,7 @@ static void U_CALLCONV initDefault()
     if (DEFAULT_ZONE != NULL) {
         return;
     }
-    
+
     // NOTE:  this code is safely single threaded, being only
     // run via umtx_initOnce().
     //
@@ -1125,7 +1125,7 @@ TimeZone::dereferOlsonLink(const UnicodeString& id) {
 
     // open the zone bundle by index
     ures_getByKey(rb, kZONES, rb, &ec);
-    ures_getByIndex(rb, idx, rb, &ec); 
+    ures_getByIndex(rb, idx, rb, &ec);
 
     if (U_SUCCESS(ec)) {
         if (ures_getType(rb) == URES_INT) {

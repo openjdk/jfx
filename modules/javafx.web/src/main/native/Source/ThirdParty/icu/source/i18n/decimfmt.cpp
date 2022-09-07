@@ -269,7 +269,7 @@ DecimalFormat::setAttribute(UNumberFormatAttribute attr, int32_t newValue, UErro
 
 int32_t DecimalFormat::getAttribute(UNumberFormatAttribute attr, UErrorCode& status) const {
     if (U_FAILURE(status)) { return -1; }
-    
+
     if (fields == nullptr) {
         // We only get here if an OOM error happened during construction, copy construction, assignment, or modification.
         status = U_MEMORY_ALLOCATION_ERROR;
@@ -1485,12 +1485,12 @@ UBool DecimalFormat::areSignificantDigitsUsed() const {
     } else {
         dfp = &fields->properties;
     }
-    return dfp->minimumSignificantDigits != -1 || dfp->maximumSignificantDigits != -1;    
+    return dfp->minimumSignificantDigits != -1 || dfp->maximumSignificantDigits != -1;
 }
 
 void DecimalFormat::setSignificantDigitsUsed(UBool useSignificantDigits) {
     if (fields == nullptr) { return; }
-    
+
     // These are the default values from the old implementation.
     if (useSignificantDigits) {
         if (fields->properties.minimumSignificantDigits != -1 ||
@@ -1617,12 +1617,12 @@ void DecimalFormat::touch(UErrorCode& status) {
     // is the source of truth for the locale.
     const DecimalFormatSymbols* symbols = getDecimalFormatSymbols();
     Locale locale = symbols->getLocale();
-    
+
     // Note: The formatter is relatively cheap to create, and we need it to populate fields->exportedProperties,
     // so automatically recompute it here. The parser is a bit more expensive and is not needed until the
     // parse method is called, so defer that until needed.
     // TODO: Only update the pieces that changed instead of re-computing the whole formatter?
- 
+
     // Since memory has already been allocated for the formatter, we can move assign a stack-allocated object
     // and don't need to call new. (Which is slower and could possibly fail).
     // [Note that "symbols" above might point to the DecimalFormatSymbols object owned by fields->formatter.
@@ -1632,7 +1632,7 @@ void DecimalFormat::touch(UErrorCode& status) {
         fields->properties, *symbols, fields->warehouse, fields->exportedProperties, status
     ).locale(locale);
     fields->symbols.adoptInstead(nullptr); // the fields->symbols property is only temporary, until we can copy it into a new LocalizedNumberFormatter
-    
+
     // Do this after fields->exportedProperties are set up
     setupFastFormat();
 
@@ -1787,7 +1787,7 @@ void DecimalFormat::setupFastFormat() {
     }
 
     const DecimalFormatSymbols* symbols = getDecimalFormatSymbols();
-    
+
     // Grouping (secondary grouping is forbidden in equalsDefaultExceptFastFormat):
     bool groupingUsed = fields->properties.groupingUsed;
     int32_t groupingSize = fields->properties.groupingSize;

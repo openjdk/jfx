@@ -96,7 +96,7 @@ public:
     /**
      * Computes the spans for duplicated values.
      * For example, if the string has fields:
-     * 
+     *
      *     ...aa..[b.cc]..d.[bb.e.c]..a..
      *
      * then the spans will be the bracketed regions.

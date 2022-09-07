@@ -30,7 +30,7 @@
 /**
  * \file
  * \brief C++ API: All-in-one formatter for localized numbers, currencies, and units.
- * 
+ *
  * For a full list of options, see icu::number::NumberFormatterSettings.
  *
  * <pre>
@@ -2520,12 +2520,12 @@ class U_I18N_API LocalizedNumberFormatter
 
 #ifndef U_HIDE_INTERNAL_API
 
-            
+
     /**
      * @internal
      */
     const DecimalFormatSymbols* getDecimalFormatSymbols() const;
-    
+
     /** Internal method.
      * @internal
      */
