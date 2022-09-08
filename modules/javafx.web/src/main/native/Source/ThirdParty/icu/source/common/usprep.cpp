@@ -403,7 +403,7 @@ usprep_open(const char* path,
 
 U_CAPI UStringPrepProfile* U_EXPORT2
 usprep_openByType(UStringPrepProfileType type,
-				  UErrorCode* status) {
+                                  UErrorCode* status) {
     if(status == NULL || U_FAILURE(*status)){
         return NULL;
     }

@@ -1658,10 +1658,10 @@ RuleBasedNumberFormat::setContext(UDisplayContext value, UErrorCode& status)
 {
     NumberFormat::setContext(value, status);
     if (U_SUCCESS(status)) {
-    	if (!capitalizationInfoSet &&
-    	        (value==UDISPCTX_CAPITALIZATION_FOR_UI_LIST_OR_MENU || value==UDISPCTX_CAPITALIZATION_FOR_STANDALONE)) {
-    	    initCapitalizationContextInfo(locale);
-    	    capitalizationInfoSet = TRUE;
+        if (!capitalizationInfoSet &&
+                (value==UDISPCTX_CAPITALIZATION_FOR_UI_LIST_OR_MENU || value==UDISPCTX_CAPITALIZATION_FOR_STANDALONE)) {
+            initCapitalizationContextInfo(locale);
+            capitalizationInfoSet = TRUE;
         }
 #if !UCONFIG_NO_BREAK_ITERATION
         if ( capitalizationBrkIter == NULL && (value==UDISPCTX_CAPITALIZATION_FOR_BEGINNING_OF_SENTENCE ||

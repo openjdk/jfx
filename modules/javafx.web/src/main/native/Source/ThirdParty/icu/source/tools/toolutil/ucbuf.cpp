@@ -191,8 +191,8 @@ ucbuf_fillucbuf( UCHARBUF* buf,UErrorCode* error){
         cbufSize = T_FileStream_size(buf->in);
         cbuf = (char*)uprv_malloc(cbufSize);
         if (cbuf == NULL) {
-        	*error = U_MEMORY_ALLOCATION_ERROR;
-        	return NULL;
+                *error = U_MEMORY_ALLOCATION_ERROR;
+                return NULL;
         }
         inputRead= T_FileStream_read(buf->in,cbuf,cbufSize);
         buf->remaining-=inputRead;

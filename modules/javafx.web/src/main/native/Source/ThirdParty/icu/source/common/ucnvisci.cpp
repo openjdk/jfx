@@ -807,8 +807,8 @@ static const uint16_t toUnicodeTable[256]={
 };
 
 static const uint16_t vowelSignESpecialCases[][2]={
-	{ 2 /*length of array*/    , 0      },
-	{ 0xA4 , 0x0904 },
+        { 2 /*length of array*/    , 0      },
+        { 0xA4 , 0x0904 },
 };
 
 static const uint16_t nuktaSpecialCases[][2]={
