@@ -15,4 +15,6 @@ Set ICU_DATA_FILE_NAME variable to the correct icudt*l.dat file.
 
 5) Expand tabs and remove trailing white spaces from source files.
 
-6) Verification: FX sdk build and all test run, on all supported platforms.
+6) Make sure that the Line Endings are UNIX style for all the files.
+
+7) Verification: FX sdk build and all test run, on all supported platforms.
