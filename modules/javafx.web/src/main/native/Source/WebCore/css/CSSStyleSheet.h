@@ -55,7 +55,7 @@ public:
     virtual ~CSSStyleSheet();
 
     CSSStyleSheet* parentStyleSheet() const final;
-    Node* ownerNode() const final { return m_ownerNode; }
+    Node* ownerNode() const final;
     MediaList* media() const final;
     String href() const final;
     String title() const final { return m_title; }
@@ -77,11 +77,11 @@ public:
     CSSRule* item(unsigned index);
 
     void clearOwnerNode() final;
-    CSSImportRule* ownerRule() const final { return m_ownerRule; }
+    WEBCORE_EXPORT CSSImportRule* ownerRule() const final;
     URL baseURL() const final;
     bool isLoading() const final;
 
-    void clearOwnerRule() { m_ownerRule = 0; }
+    void clearOwnerRule() { m_ownerRule = nullptr; }
 
     Document* ownerDocument() const;
     CSSStyleSheet& rootStyleSheet();
@@ -126,7 +126,7 @@ public:
     bool isInline() const { return m_isInlineStylesheet; }
     TextPosition startPosition() const { return m_startPosition; }
 
-    void detachFromDocument() { m_ownerNode = nullptr; }
+    void detachFromDocument() { clearOwnerNode(); }
 
     bool canAccessRules() const;
 
@@ -148,8 +148,8 @@ private:
     String m_title;
     RefPtr<MediaQuerySet> m_mediaQueries;
 
-    Node* m_ownerNode { nullptr };
-    CSSImportRule* m_ownerRule { nullptr };
+    WeakPtr<Node> m_ownerNode;
+    WeakPtr<CSSImportRule> m_ownerRule;
 
     TextPosition m_startPosition;
 

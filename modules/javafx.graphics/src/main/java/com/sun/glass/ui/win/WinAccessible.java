@@ -105,6 +105,7 @@ final class WinAccessible extends Accessible {
     private static final int UIA_ToggleToggleStatePropertyId     = 30086;
     private static final int UIA_AriaRolePropertyId              = 30101;
     private static final int UIA_ProviderDescriptionPropertyId   = 30107;
+    private static final int UIA_IsDialogPropertyId              = 30174;
 
     /* Control Pattern Identifiers */
     private static final int UIA_InvokePatternId                 = 10000;
@@ -795,6 +796,7 @@ final class WinAccessible extends Accessible {
                     switch (role) {
                         case TITLED_PANE: description = "title pane"; break;
                         case PAGE_ITEM: description = "page"; break;
+                        case DIALOG: description = "dialog"; break;
                         default:
                     }
                 }
@@ -834,6 +836,12 @@ final class WinAccessible extends Accessible {
                 variant.boolVal = focus != null ? focus : false;
                 break;
             }
+            case UIA_IsDialogPropertyId: {
+                AccessibleRole role = (AccessibleRole) getAttribute(ROLE);
+                variant = new WinVariant();
+                variant.vt = WinVariant.VT_BOOL;
+                variant.boolVal = (role == AccessibleRole.DIALOG);
+            } break;
             case UIA_IsContentElementPropertyId:
             case UIA_IsControlElementPropertyId: {
                 //TODO how to handle ControlElement versus ContentElement

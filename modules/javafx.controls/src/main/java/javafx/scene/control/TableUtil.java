@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -37,6 +37,11 @@ import javafx.collections.ObservableList;
  * the level of code duplication.
  */
 class TableUtil {
+
+    /**
+     * Constant to consider floating-point arithmetic precision.
+      */
+    private static final double EPSILON = .0000001;
 
     private TableUtil() {
         // no-op
@@ -223,7 +228,7 @@ class TableUtil {
             colWidth += col.getWidth();
         }
 
-        if (Math.abs(colWidth - tableWidth) > 1) {
+        if (Math.abs(colWidth - tableWidth) > EPSILON) {
             isShrinking = colWidth > tableWidth;
             target = tableWidth;
 
@@ -248,7 +253,7 @@ class TableUtil {
                     // finishes early due to a series of "fixed" entries at the end.
                     // In this case, lowerBound == upperBound, for all subsequent terms.
                     double newSize;
-                    if (Math.abs(totalLowerBound - totalUpperBound) < .0000001) {
+                    if (Math.abs(totalLowerBound - totalUpperBound) < EPSILON) {
                         newSize = lowerBound;
                     } else {
                         double f = (target - totalLowerBound) / (totalUpperBound - totalLowerBound);

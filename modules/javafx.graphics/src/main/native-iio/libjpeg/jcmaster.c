@@ -432,9 +432,7 @@ per_scan_setup (j_compress_ptr cinfo)
     cinfo->MCUs_per_row = (JDIMENSION)
       jdiv_round_up((long) cinfo->jpeg_width,
             (long) (cinfo->max_h_samp_factor * cinfo->block_size));
-    cinfo->MCU_rows_in_scan = (JDIMENSION)
-      jdiv_round_up((long) cinfo->jpeg_height,
-            (long) (cinfo->max_v_samp_factor * cinfo->block_size));
+    cinfo->MCU_rows_in_scan = cinfo->total_iMCU_rows;
 
     cinfo->blocks_in_MCU = 0;
 

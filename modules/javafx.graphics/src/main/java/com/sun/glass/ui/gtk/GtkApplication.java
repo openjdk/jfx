@@ -438,6 +438,11 @@ final class GtkApplication extends Application implements
     }
 
     @Override
+    public Pixels createPixels(int width, int height, ByteBuffer data, float scalex, float scaley) {
+        return new GtkPixels(width, height, data, scalex, scaley);
+    }
+
+    @Override
     public Pixels createPixels(int width, int height, IntBuffer data) {
         return new GtkPixels(width, height, data);
     }

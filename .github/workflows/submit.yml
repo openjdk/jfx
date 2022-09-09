@@ -45,6 +45,8 @@ on:
       - main
       - 'jfx[0-9]+'
       - 'WIP*'
+  # Enable triggering the workflow manually
+  workflow_dispatch:
 
 jobs:
   validation:
@@ -151,9 +153,10 @@ jobs:
       BOOT_JDK_VERSION: "18.0.2"
       BOOT_JDK_FILENAME: "jdk-18.0.2_macos-x64_bin.tar.gz"
       BOOT_JDK_URL: "https://download.oracle.com/java/18/archive/jdk-18.0.2_macos-x64_bin.tar.gz"
-      ANT_DIR: "apache-ant-1.10.5"
-      ANT_FILENAME: "apache-ant-1.10.5.tar.gz"
-      ANT_URL: "https://archive.apache.org/dist/ant/binaries/apache-ant-1.10.5-bin.tar.gz"
+      # Disabled due to timeout downloading ant; use ant installed on system
+      #ANT_DIR: "apache-ant-1.10.5"
+      #ANT_FILENAME: "apache-ant-1.10.5.tar.gz"
+      #ANT_URL: "https://archive.apache.org/dist/ant/binaries/apache-ant-1.10.5-bin.tar.gz"
 
     steps:
       - name: Checkout the source
@@ -165,9 +168,10 @@ jobs:
         run: |
           set -x
           echo "NOT NEEDED: brew install make"
-          mkdir -p "${HOME}/build-tools"
-          wget -O "${HOME}/build-tools/${ANT_FILENAME}" "${ANT_URL}"
-          tar -zxf "${HOME}/build-tools/${ANT_FILENAME}" -C "${HOME}/build-tools"
+          echo "NOT NEEDED: wget ... ant"
+          #mkdir -p "${HOME}/build-tools"
+          #wget -O "${HOME}/build-tools/${ANT_FILENAME}" "${ANT_URL}"
+          #tar -zxf "${HOME}/build-tools/${ANT_FILENAME}" -C "${HOME}/build-tools"
 
 # FIXME: enable cache for boot JDK
 #      - name: Restore boot JDK from cache
@@ -191,9 +195,10 @@ jobs:
           set -x
           export JAVA_HOME="${HOME}/bootjdk/jdk-${BOOT_JDK_VERSION}.jdk/Contents/Home"
           echo "JAVA_HOME=${JAVA_HOME}" >> "${GITHUB_ENV}"
-          export ANT_HOME="${HOME}/build-tools/${ANT_DIR}"
-          echo "ANT_HOME=${ANT_HOME}" >> "${GITHUB_ENV}"
-          export PATH="$JAVA_HOME/bin:$ANT_HOME/bin:$PATH"
+          #export ANT_HOME="${HOME}/build-tools/${ANT_DIR}"
+          #echo "ANT_HOME=${ANT_HOME}" >> "${GITHUB_ENV}"
+          #export PATH="$JAVA_HOME/bin:$ANT_HOME/bin:$PATH"
+          export PATH="$JAVA_HOME/bin:$PATH"
           env | sort
           which java
           java -version
@@ -206,7 +211,8 @@ jobs:
         working-directory: jfx
         run: |
           set -x
-          export PATH="$JAVA_HOME/bin:$ANT_HOME/bin:$PATH"
+          #export PATH="$JAVA_HOME/bin:$ANT_HOME/bin:$PATH"
+          export PATH="$JAVA_HOME/bin:$PATH"
           bash gradlew -version
           bash gradlew --info all
 
@@ -214,7 +220,8 @@ jobs:
         working-directory: jfx
         run: |
           set -x
-          export PATH="$JAVA_HOME/bin:$ANT_HOME/bin:$PATH"
+          #export PATH="$JAVA_HOME/bin:$ANT_HOME/bin:$PATH"
+          export PATH="$JAVA_HOME/bin:$PATH"
           bash gradlew --info --continue -PBUILD_SDK_FOR_TEST=false test -x :web:test
 
 
