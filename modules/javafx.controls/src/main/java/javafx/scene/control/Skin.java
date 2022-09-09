@@ -28,9 +28,7 @@ package javafx.scene.control;
 import javafx.scene.Node;
 
 /**
- * An interface for defining the visual representation of user interface controls
- * by defining a scene graph of nodes to represent the skin.
- * A user interface control is abstracted behind the {@link Skinnable} interface.
+ * An interface for defining the visual representation of user interface controls.
  * <p>
  * A Skin implementation should generally avoid modifying its control outside of
  * {@link #install()} method.  The life cycle of a Skin implementation
@@ -80,6 +78,13 @@ public interface Skin<C extends Skinnable> {
      * required properties and/or event handlers.
      * <p>
      * The default implementation of this method does nothing.
+     *
+     * @implNote
+     * Most implementations of Skin in the <code>javafx.controls</code> module
+     * do not need to implement {@link Skin#install()} unless they must set one or more
+     * properties in the corresponding Skinnable.
+     *
+     * @since 20
      */
     default public void install() { }
 

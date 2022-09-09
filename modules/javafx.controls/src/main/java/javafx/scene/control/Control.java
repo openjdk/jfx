@@ -222,7 +222,12 @@ public abstract class Control extends Region implements Skinnable {
      * {@code Skin}. Every {@code Skin} maintains a back reference to the
      * {@code Control} via the {@link Skin#getSkinnable()} method.
      * <p>
+     * To ensure a one-to-one relationship between a {@code Control} and its {@code Skin},
+     * {@link Control#setSkin(Skin)} method will check the return value of {@link Skin#getSkinnable()}
+     * against this Control, and throw an {@code IllegalArgumentException} if it is not the same.
+     * <p>
      * A skin may be null.
+     *
      * @return the skin property for this control
      */
     @Override public final ObjectProperty<Skin<?>> skinProperty() { return skin; }

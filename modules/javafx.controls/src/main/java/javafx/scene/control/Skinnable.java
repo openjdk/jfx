@@ -36,7 +36,7 @@ import javafx.beans.property.ObjectProperty;
  */
 public interface Skinnable {
     /**
-     * Skin is responsible for rendering this {@code Skinnable}. From the
+     * The Skin is responsible for rendering this {@code Skinnable}. From the
      * perspective of the {@code Skinnable}, the {@code Skin} is a black box.
      * It listens and responds to changes in state in a {@code Skinnable}.
      * <p>
@@ -44,28 +44,18 @@ public interface Skinnable {
      * {@code Skin}. Every {@code Skin} maintains a back reference to the
      * {@code Skinnable}.
      * <p>
+     * To ensure a one-to-one relationship between a {@code Skinnable} and its
+     * {@code Skin}, some implementations of {@link Skinnable#setSkin(Skin)} method will check
+     * the return value of {@link Skin#getSkinnable()} against this Skinnable,
+     * and throw an {@code IllegalArgumentException} if it is not the same.
+     * <p>
      * A skin may be null.
      *
      * @return the skin property for this Skinnable
      */
     public ObjectProperty<Skin<?>> skinProperty();
 
-    /**
-     * Sets the skin that will render this {@link Skinnable}.
-     * <p>
-     * To ensure a one-to-one relationship between a {@code Skinnable} and its
-     * {@code Skin}, this method may check the return value of
-     * {@link Skin#getSkinnable()} against this Skinnable,
-     * and may throw an {@code IllegalArgumentException} if it is not the same.
-     *
-     * @param value the skin value for this Skinnable
-     * @throws IllegalArgumentException if {@link Skin#getSkinnable()} returns a different {@code Skinnable}
-     */
     public void setSkin(Skin<?> value);
 
-    /**
-     * Returns the skin that renders this {@link Control}
-     * @return the skin for this control
-     */
     public Skin<?> getSkin();
 }

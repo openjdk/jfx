@@ -264,7 +264,7 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
             }
 
             // let the new skin modify this control
-            if(skin != null) {
+            if (skin != null) {
                 skin.install();
             }
 
