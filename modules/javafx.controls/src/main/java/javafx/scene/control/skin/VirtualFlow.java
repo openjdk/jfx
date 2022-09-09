@@ -2380,7 +2380,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
     /**
      * Suppresses the breadth bar from appearing.
      */
-    public void setSuppressBreadthBar(boolean suppress) {
+    void setSuppressBreadthBar(boolean suppress) {
         this.suppressBreadthBar = suppress;
     }
 
