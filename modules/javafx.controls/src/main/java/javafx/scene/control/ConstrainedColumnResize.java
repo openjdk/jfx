@@ -33,8 +33,10 @@ import javafx.scene.Node;
  * 
  * @since 20
  */
+// TODO this could be a marker interface, unless we need to encapsulate first run
 public abstract class ConstrainedColumnResize {
 
+    // TODO move to implementation
     public enum ResizeMode {
         AUTO_RESIZE_NEXT_COLUMN,
         AUTO_RESIZE_SUBSEQUENT_COLUMNS,
@@ -42,7 +44,6 @@ public abstract class ConstrainedColumnResize {
         AUTO_RESIZE_ALL_COLUMNS
     }
 
-    protected static final double EPSILON = 0.0000001;
     private static final Object FIRST_RUN = new Object();
 
     public ConstrainedColumnResize() {
@@ -62,8 +63,8 @@ public abstract class ConstrainedColumnResize {
     
     @Override
     public String toString() {
-        // TODO rename
-        return "new-constrained-resize";
+        // used to set a pseudo-style
+        return "constrained-resize";
     }
 
     protected static boolean isFirstRun(Node treeOrTable) {
