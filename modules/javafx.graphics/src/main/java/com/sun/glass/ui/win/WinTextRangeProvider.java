@@ -114,7 +114,7 @@ class WinTextRangeProvider {
 
     private boolean isWordStart(BreakIterator bi, String text, int offset) {
         if (offset == 0) return true;
-        if (offset == text.length()) return true;
+        if (offset >= text.length()) return true;
         if (offset == BreakIterator.DONE) return true;
         return bi.isBoundary(offset) && Character.isLetterOrDigit(text.charAt(offset));
     }
@@ -177,6 +177,7 @@ class WinTextRangeProvider {
                 break;
             }
             case TextUnit_Line: {
+                if (start > length) start = length;
                 Integer lineIndex = (Integer)getAttribute(LINE_FOR_OFFSET, start);
                 Integer lineStart = (Integer)getAttribute(LINE_START, lineIndex);
                 Integer lineEnd = (Integer)getAttribute(LINE_END, lineIndex);

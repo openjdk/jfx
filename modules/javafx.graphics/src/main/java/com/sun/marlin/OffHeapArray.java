@@ -79,7 +79,7 @@ final class OffHeapArray  {
         }
 
         // Register a cleaning function to ensure freeing off-heap memory:
-        MarlinUtils.getCleaner().register(parent, () -> this.free());
+        MarlinUtils.getCleaner().register(parent, this::free);
     }
 
     /*

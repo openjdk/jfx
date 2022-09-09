@@ -122,14 +122,14 @@ public final class RendererNoAA implements MarlinRenderer, MarlinConst {
     private int activeEdgeMaxUsed;
 
     // crossings ref (dirty)
-    private final IntArrayCache.Reference crossings_ref;
+    private final ArrayCacheInt.Reference crossings_ref;
     // edgePtrs ref (dirty)
-    private final IntArrayCache.Reference edgePtrs_ref;
+    private final ArrayCacheInt.Reference edgePtrs_ref;
     // merge sort initial arrays (large enough to satisfy most usages) (1024)
     // aux_crossings ref (dirty)
-    private final IntArrayCache.Reference aux_crossings_ref;
+    private final ArrayCacheInt.Reference aux_crossings_ref;
     // aux_edgePtrs ref (dirty)
-    private final IntArrayCache.Reference aux_edgePtrs_ref;
+    private final ArrayCacheInt.Reference aux_edgePtrs_ref;
 
 //////////////////////////////////////////////////////////////////////////////
 //  EDGE LIST
@@ -149,9 +149,9 @@ public final class RendererNoAA implements MarlinRenderer, MarlinConst {
     private int buckets_maxY;
 
     // edgeBuckets ref (clean)
-    private final IntArrayCache.Reference edgeBuckets_ref;
+    private final ArrayCacheIntClean.Reference edgeBuckets_ref;
     // edgeBucketCounts ref (clean)
-    private final IntArrayCache.Reference edgeBucketCounts_ref;
+    private final ArrayCacheIntClean.Reference edgeBucketCounts_ref;
 
     boolean useRLE = false;
 
@@ -487,7 +487,7 @@ public final class RendererNoAA implements MarlinRenderer, MarlinConst {
     private int[] alphaLine;
 
     // alphaLine ref (clean)
-    private final IntArrayCache.Reference alphaLine_ref;
+    private final ArrayCacheIntClean.Reference alphaLine_ref;
 
     private boolean enableBlkFlags = false;
     private boolean prevUseBlkFlags = false;
@@ -496,7 +496,7 @@ public final class RendererNoAA implements MarlinRenderer, MarlinConst {
     private int[] blkFlags;
 
     // blkFlags ref (clean)
-    private final IntArrayCache.Reference blkFlags_ref;
+    private final ArrayCacheIntClean.Reference blkFlags_ref;
 
     RendererNoAA(final RendererContext rdrCtx) {
         this.rdrCtx = rdrCtx;
@@ -794,6 +794,8 @@ public final class RendererNoAA implements MarlinRenderer, MarlinConst {
 
         int lastY = -1; // last emited row
 
+        final DPQSSorterContext sorter = rdrCtx.sorterCtx;
+        boolean skipISort, useDPQS;
 
         // Iteration on scanlines
         for (; y < ymax; y++, bucket++) {
@@ -806,7 +808,7 @@ public final class RendererNoAA implements MarlinRenderer, MarlinConst {
             // bucketCount indicates new edge / edge end:
             if (bucketcount != 0) {
                 if (DO_STATS) {
-                    rdrCtx.stats.stat_rdr_activeEdges_updates.add(numCrossings);
+                    rdrCtx.stats.stat_rdr_activeEdges_updates.add(prevNumCrossings);
                 }
 
                 // last bit set to 1 means that edges ends
@@ -815,7 +817,7 @@ public final class RendererNoAA implements MarlinRenderer, MarlinConst {
                     // cache edges[] address + offset
                     addr = addr0 + _OFF_YMAX;
 
-                    for (i = 0, newCount = 0; i < numCrossings; i++) {
+                    for (i = 0, newCount = 0; i < prevNumCrossings; i++) {
                         // get the pointer to the edge
                         ecur = _edgePtrs[i];
                         // random access so use unsafe:
@@ -843,7 +845,7 @@ public final class RendererNoAA implements MarlinRenderer, MarlinConst {
                             rdrCtx.stats.stat_array_renderer_edgePtrs.add(ptrEnd);
                         }
                         this.edgePtrs = _edgePtrs
-                            = edgePtrs_ref.widenArray(_edgePtrs, numCrossings,
+                            = edgePtrs_ref.widenArray(_edgePtrs, edgePtrsLen, // bad mark ? TODO: fix edge ptr mark
                                                       ptrEnd);
 
                         edgePtrsLen = _edgePtrs.length;
@@ -912,7 +914,7 @@ public final class RendererNoAA implements MarlinRenderer, MarlinConst {
                  * thresholds to switch to optimized merge sort
                  * for newly added edges + final merge pass.
                  */
-                if ((ptrLen < 10) || (numCrossings < 40)) {
+                if (((numCrossings <= 40) || ((ptrLen <= 10) && (numCrossings <= MergeSort.DISABLE_ISORT_THRESHOLD)))) {
                     if (DO_STATS) {
                         rdrCtx.stats.hist_rdr_crossings.add(numCrossings);
                         rdrCtx.stats.hist_rdr_crossings_adds.add(ptrLen);
@@ -998,7 +1000,7 @@ public final class RendererNoAA implements MarlinRenderer, MarlinConst {
                             } else {
                                 j = i - 1;
                                 _crossings[i] = _crossings[j];
-                                _edgePtrs[i] = _edgePtrs[j];
+                                _edgePtrs[i]  = _edgePtrs[j];
 
                                 while ((--j >= 0) && (_crossings[j] > cross)) {
                                     _crossings[j + 1] = _crossings[j];
@@ -1024,6 +1026,13 @@ public final class RendererNoAA implements MarlinRenderer, MarlinConst {
                     // Copy sorted data in auxiliary arrays
                     // and perform insertion sort on almost sorted data
                     // (ie i < prevNumCrossings):
+
+                    skipISort = (prevNumCrossings >= MergeSort.DISABLE_ISORT_THRESHOLD);
+                    useDPQS   = MergeSort.USE_DPQS && (skipISort || (ptrLen >= MergeSort.DPQS_THRESHOLD));
+
+                    if (DO_STATS && useDPQS) {
+                        rdrCtx.stats.stat_rdr_crossings_dpqs.add((skipISort) ? numCrossings : ptrLen);
+                    }
 
                     lastCross = _MIN_VALUE;
 
@@ -1061,39 +1070,58 @@ public final class RendererNoAA implements MarlinRenderer, MarlinConst {
                             rdrCtx.stats.stat_rdr_crossings_updates.add(numCrossings);
                         }
 
-                        if (i >= prevNumCrossings) {
-                            // simply store crossing as edgePtrs is in-place:
-                            // will be copied and sorted efficiently by mergesort later:
-                            _crossings[i]     = cross;
-
-                        } else if (cross < lastCross) {
-                            if (DO_STATS) {
-                                rdrCtx.stats.stat_rdr_crossings_sorts.add(i);
+                        if (skipISort) {
+                            if (useDPQS) {
+                                // simply store crossing as edgePtrs is in-place:
+                                // will be sorted efficiently by DPQS later:
+                                _crossings[i]     = cross;
+                            } else {
+                                // store crossing/edgePtrs in auxiliary arrays:
+                                // will be sorted efficiently by MergeSort later:
+                                _aux_crossings[i] = cross;
+                                _aux_edgePtrs [i] = ecur;
                             }
-
-                            // (straight) insertion sort of crossings:
-                            j = i - 1;
-                            _aux_crossings[i] = _aux_crossings[j];
-                            _aux_edgePtrs[i] = _aux_edgePtrs[j];
-
-                            while ((--j >= 0) && (_aux_crossings[j] > cross)) {
-                                _aux_crossings[j + 1] = _aux_crossings[j];
-                                _aux_edgePtrs [j + 1] = _aux_edgePtrs[j];
+                        } else if (i >= prevNumCrossings) {
+                            if (useDPQS) {
+                                // store crossing/edgePtrs in auxiliary arrays:
+                                // will be sorted efficiently by DPQS later:
+                                _aux_crossings[i] = cross;
+                                _aux_edgePtrs [i] = ecur;
+                            } else {
+                                // simply store crossing as edgePtrs is in-place:
+                                // will be sorted efficiently by MergeSort later:
+                                _crossings[i]      = cross;
                             }
-                            _aux_crossings[j + 1] = cross;
-                            _aux_edgePtrs [j + 1] = ecur;
-
                         } else {
-                            // auxiliary storage:
-                            _aux_crossings[i] = lastCross = cross;
-                            _aux_edgePtrs [i] = ecur;
+                            if (cross < lastCross) {
+                                if (DO_STATS) {
+                                    rdrCtx.stats.stat_rdr_crossings_sorts.add(i);
+                                }
+                                // (straight) insertion sort of crossings:
+                                j = i - 1;
+                                _aux_crossings[i] = _aux_crossings[j];
+                                _aux_edgePtrs [i]  = _aux_edgePtrs[j];
+
+                                while ((--j >= 0) && (_aux_crossings[j] > cross)) {
+                                    _aux_crossings[j + 1] = _aux_crossings[j];
+                                    _aux_edgePtrs [j + 1] = _aux_edgePtrs[j];
+                                }
+                                _aux_crossings[j + 1] = cross;
+                                _aux_edgePtrs [j + 1] = ecur;
+                            } else {
+                                // auxiliary storage:
+                                _aux_crossings[i] = lastCross = cross;
+                                _aux_edgePtrs [i] = ecur;
+                            }
                         }
                     }
 
                     // use Mergesort using auxiliary arrays (sort only right part)
                     MergeSort.mergeSortNoCopy(_crossings,     _edgePtrs,
                                               _aux_crossings, _aux_edgePtrs,
-                                              numCrossings,   prevNumCrossings);
+                                              numCrossings, prevNumCrossings,
+                                              skipISort, sorter, useDPQS
+                                            );
                 }
 
                 // reset ptrLen
