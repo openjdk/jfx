@@ -32,7 +32,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import test.com.sun.javafx.scene.control.infrastructure.MouseEventFirer;
 import com.sun.javafx.tk.Toolkit;
 import javafx.collections.ListChangeListener;
-import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.FocusModel;
 import javafx.scene.control.ListView;
@@ -58,6 +57,8 @@ public class ListViewMouseInputTest {
     private MultipleSelectionModel<String> sm;
     private FocusModel<String> fm;
 
+    private StageLoader stageLoader;
+
     @Before public void setup() {
         listView = new ListView<String>();
         sm = listView.getSelectionModel();
@@ -71,6 +72,10 @@ public class ListViewMouseInputTest {
 
     @After public void tearDown() {
         listView.getSkin().dispose();
+
+        if (stageLoader != null) {
+            stageLoader.dispose();
+        }
     }
 
 
@@ -324,11 +329,10 @@ public class ListViewMouseInputTest {
         Button btn = new Button("Button");
         VBox vbox = new VBox(btn, listView);
 
-        StageLoader sl = new StageLoader(vbox);
-        sl.getStage().requestFocus();
+        stageLoader = new StageLoader(vbox);
+        stageLoader.getStage().requestFocus();
         btn.requestFocus();
         Toolkit.getToolkit().firePulse();
-        Scene scene = sl.getStage().getScene();
 
         assertTrue(btn.isFocused());
         assertFalse(listView.isFocused());
@@ -339,8 +343,6 @@ public class ListViewMouseInputTest {
 
         assertTrue(btn.isFocused());
         assertFalse(listView.isFocused());
-
-        sl.dispose();
     }
 
     @Test public void test_jdk_8147823() {
@@ -389,11 +391,9 @@ public class ListViewMouseInputTest {
     @Test public void testClickWithNullSelectionModelDoesNotThrowNPE() {
         listView.setSelectionModel(null);
 
-        StageLoader loader = new StageLoader(listView);
+        stageLoader = new StageLoader(listView);
 
         assertDoesNotThrow(()  -> VirtualFlowTestUtils.clickOnRow(listView, 2));
-
-        loader.dispose();
     }
 
 }

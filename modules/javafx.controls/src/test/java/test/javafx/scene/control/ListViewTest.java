@@ -99,6 +99,8 @@ public class ListViewTest {
     private MultipleSelectionModel<String> sm;
     private FocusModel<String> fm;
 
+    private StageLoader stageLoader;
+
     @Before public void setup() {
         listView = new ListView<>();
         sm = listView.getSelectionModel();
@@ -116,6 +118,10 @@ public class ListViewTest {
     @After
     public void cleanup() {
         Thread.currentThread().setUncaughtExceptionHandler(null);
+
+        if (stageLoader != null) {
+            stageLoader.dispose();
+        }
     }
 
 
@@ -2192,7 +2198,7 @@ public class ListViewTest {
         listView.getItems().addAll("1", "2");
         listView.setFocusModel(null);
 
-        StageLoader stageLoader = new StageLoader(listView);
+        stageLoader = new StageLoader(listView);
 
         assertDoesNotThrow(() -> listView.getSelectionModel().select(1));
 
@@ -2204,12 +2210,10 @@ public class ListViewTest {
         listView.getItems().addAll("1", "2");
         listView.setFocusModel(null);
 
-        StageLoader stageLoader = new StageLoader(listView);
+        stageLoader = new StageLoader(listView);
 
         listView.getSelectionModel().clearAndSelect(1);
         assertDoesNotThrow(() -> listView.getItems().add("3"));
-
-        stageLoader.dispose();
     }
 
     private void attemptGC(WeakReference<? extends Object> weakRef, int n) {
