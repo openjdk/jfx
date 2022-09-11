@@ -762,18 +762,17 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
     }
 
     private void activate() {
-        MultipleSelectionModel<T> selectionModel = getNode().getSelectionModel();
-        if (selectionModel == null) {
-            return;
-        }
-
         FocusModel<T> focusModel = getNode().getFocusModel();
         if (focusModel == null) {
             return;
         }
 
         int focusedIndex = focusModel.getFocusedIndex();
-        selectionModel.select(focusedIndex);
+
+        MultipleSelectionModel<T> selectionModel = getNode().getSelectionModel();
+        if (selectionModel != null) {
+            selectionModel.select(focusedIndex);
+        }
         setAnchor(focusedIndex);
 
         // edit this row also
