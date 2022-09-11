@@ -46,7 +46,7 @@ ModuleProgramExecutable* ModuleProgramExecutable::create(JSGlobalObject* globalO
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    ModuleProgramExecutable* executable = new (NotNull, allocateCell<ModuleProgramExecutable>(vm.heap)) ModuleProgramExecutable(globalObject, source);
+    ModuleProgramExecutable* executable = new (NotNull, allocateCell<ModuleProgramExecutable>(vm)) ModuleProgramExecutable(globalObject, source);
     executable->finishCreation(globalObject->vm());
 
     ParserError error;
@@ -89,7 +89,7 @@ void ModuleProgramExecutable::visitChildrenImpl(JSCell* cell, Visitor& visitor)
     visitor.append(thisObject->m_moduleEnvironmentSymbolTable);
     visitor.append(thisObject->m_moduleProgramCodeBlock);
     if (TemplateObjectMap* map = thisObject->m_templateObjectMap.get()) {
-        auto locker = holdLock(thisObject->cellLock());
+        Locker locker { thisObject->cellLock() };
         for (auto& entry : *map)
             visitor.append(entry.value);
     }

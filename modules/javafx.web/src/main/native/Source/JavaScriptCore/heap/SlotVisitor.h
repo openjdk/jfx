@@ -27,8 +27,8 @@
 
 #include "AbstractSlotVisitor.h"
 #include "HandleTypes.h"
-#include "IterationStatus.h"
 #include <wtf/Forward.h>
+#include <wtf/IterationStatus.h>
 #include <wtf/MonotonicTime.h>
 
 namespace JSC {
@@ -51,9 +51,10 @@ class SlotVisitor final : public AbstractSlotVisitor {
     friend class Heap;
 
 public:
-    class Context {
+    class ReferrerContext {
     public:
-        ALWAYS_INLINE Context(AbstractSlotVisitor&, HeapCell*) { }
+        ALWAYS_INLINE ReferrerContext(AbstractSlotVisitor&, ReferrerToken) { }
+        ALWAYS_INLINE ReferrerContext(AbstractSlotVisitor&, OpaqueRootTag) { }
     };
 
     class SuppressGCVerifierScope {
@@ -91,6 +92,8 @@ public:
 
     template<typename T, typename Traits> void append(const WriteBarrierBase<T, Traits>&);
     template<typename T, typename Traits> void appendHidden(const WriteBarrierBase<T, Traits>&);
+    void append(const WriteBarrierStructureID&);
+    void appendHidden(const WriteBarrierStructureID&);
     template<typename Iterator> void append(Iterator begin , Iterator end);
     ALWAYS_INLINE void appendValues(const WriteBarrierBase<Unknown, RawValueTraits<Unknown>>*, size_t count);
     ALWAYS_INLINE void appendValuesHidden(const WriteBarrierBase<Unknown, RawValueTraits<Unknown>>*, size_t count);
@@ -160,7 +163,7 @@ public:
 
     bool mutatorIsStopped() const final { return m_mutatorIsStopped; }
 
-    Lock& rightToRun() { return m_rightToRun; }
+    Lock& rightToRun() WTF_RETURNS_LOCK(m_rightToRun) { return m_rightToRun; }
 
     void updateMutatorIsStopped(const AbstractLocker&);
     void updateMutatorIsStopped();
@@ -219,8 +222,6 @@ private:
 
     MarkStackArray& correspondingGlobalStack(MarkStackArray&);
 
-    bool m_isInParallelMode { false };
-
     HeapVersion m_markingVersion;
 
     size_t m_bytesVisited { 0 };
@@ -232,6 +233,7 @@ private:
     bool m_isFirstVisit { false };
     bool m_mutatorIsStopped { false };
     bool m_canOptimizeForStoppedMutator { false };
+    bool m_isInParallelMode { false };
     Lock m_rightToRun;
 
     // Put padding here to mitigate false sharing between multiple SlotVisitors.

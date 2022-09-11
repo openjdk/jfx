@@ -33,39 +33,39 @@ XMLPUBFUN int XMLCALL  xmlInitializeDict(void);
  * Constructor and destructor.
  */
 XMLPUBFUN xmlDictPtr XMLCALL
-            xmlDictCreate   (void);
+                        xmlDictCreate   (void);
 XMLPUBFUN size_t XMLCALL
-            xmlDictSetLimit (xmlDictPtr dict,
+                        xmlDictSetLimit (xmlDictPtr dict,
                                          size_t limit);
 XMLPUBFUN size_t XMLCALL
-            xmlDictGetUsage (xmlDictPtr dict);
+                        xmlDictGetUsage (xmlDictPtr dict);
 XMLPUBFUN xmlDictPtr XMLCALL
-            xmlDictCreateSub(xmlDictPtr sub);
+                        xmlDictCreateSub(xmlDictPtr sub);
 XMLPUBFUN int XMLCALL
-            xmlDictReference(xmlDictPtr dict);
+                        xmlDictReference(xmlDictPtr dict);
 XMLPUBFUN void XMLCALL
-            xmlDictFree (xmlDictPtr dict);
+                        xmlDictFree     (xmlDictPtr dict);
 
 /*
  * Lookup of entry in the dictionary.
  */
 XMLPUBFUN const xmlChar * XMLCALL
-            xmlDictLookup   (xmlDictPtr dict,
-                                 const xmlChar *name,
-                                 int len);
+                        xmlDictLookup   (xmlDictPtr dict,
+                                         const xmlChar *name,
+                                         int len);
 XMLPUBFUN const xmlChar * XMLCALL
-            xmlDictExists   (xmlDictPtr dict,
-                                 const xmlChar *name,
-                                 int len);
+                        xmlDictExists   (xmlDictPtr dict,
+                                         const xmlChar *name,
+                                         int len);
 XMLPUBFUN const xmlChar * XMLCALL
-            xmlDictQLookup  (xmlDictPtr dict,
-                                 const xmlChar *prefix,
-                                 const xmlChar *name);
+                        xmlDictQLookup  (xmlDictPtr dict,
+                                         const xmlChar *prefix,
+                                         const xmlChar *name);
 XMLPUBFUN int XMLCALL
-            xmlDictOwns (xmlDictPtr dict,
-                     const xmlChar *str);
+                        xmlDictOwns     (xmlDictPtr dict,
+                                         const xmlChar *str);
 XMLPUBFUN int XMLCALL
-            xmlDictSize (xmlDictPtr dict);
+                        xmlDictSize     (xmlDictPtr dict);
 
 /*
  * Cleanup function

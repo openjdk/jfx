@@ -29,7 +29,6 @@
 #include "PseudoElement.h"
 
 #include "ContentData.h"
-#include "DocumentTimeline.h"
 #include "InspectorInstrumentation.h"
 #include "KeyframeEffectStack.h"
 #include "RenderElement.h"
@@ -75,8 +74,7 @@ void PseudoElement::clearHostElement()
 {
     InspectorInstrumentation::pseudoElementDestroyed(document().page(), *this);
 
-    if (auto* timeline = document().existingTimeline())
-        timeline->elementWasRemoved(Styleable::fromElement(*this));
+    Styleable::fromElement(*this).elementWasRemoved();
 
     m_hostElement = nullptr;
 }

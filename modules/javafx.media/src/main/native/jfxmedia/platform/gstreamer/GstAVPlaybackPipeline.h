@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -82,6 +82,7 @@ private:
     gulong                  m_videoDecoderSrcProbeHID;
     gfloat                  m_EncodedVideoFrameRate;
     int                     m_videoCodecErrorCode;
+    GstClockTime            m_FirstPTS;
 };
 
 #endif  //_GST_AV_PLAYBACK_PIPELINE_H_

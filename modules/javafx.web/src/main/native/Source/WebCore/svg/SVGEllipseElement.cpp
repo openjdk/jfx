@@ -24,6 +24,7 @@
 
 #include "RenderSVGEllipse.h"
 #include "RenderSVGResource.h"
+#include "SVGElementInlines.h"
 #include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
@@ -71,7 +72,7 @@ void SVGEllipseElement::svgAttributeChanged(const QualifiedName& attrName)
 {
     if (PropertyRegistry::isKnownAttribute(attrName)) {
         InstanceInvalidationGuard guard(*this);
-        invalidateSVGPresentationAttributeStyle();
+        invalidateSVGPresentationalHintStyle();
         return;
     }
 

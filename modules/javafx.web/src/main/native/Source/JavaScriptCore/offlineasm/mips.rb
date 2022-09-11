@@ -1,4 +1,4 @@
-# Copyright (C) 2012-2018 Apple Inc. All rights reserved.
+# Copyright (C) 2012-2021 Apple Inc. All rights reserved.
 # Copyright (C) 2012 MIPS Technologies, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -62,12 +62,6 @@ require 'risc'
 # $f14 =>        fa1
 # $f16 =>            (scratch)
 # $f18 =>            (scratch)
-
-class Assembler
-    def putStr(str)
-        @outp.puts str
-    end
-end
 
 class Node
     def mipsSingleHi
@@ -559,18 +553,18 @@ class Instruction
     # Note: in contrast to the risc version, this method drops all other operands.
     def mipsCloneWithOperandLowered(preList, postList, operandIndex, needRestore)
         operand = self.operands[operandIndex]
-    tmp = MIPS_CALL_REG
-    if operand.address?
+        tmp = MIPS_CALL_REG
+        if operand.address?
             preList << Instruction.new(self.codeOrigin, "loadp", [operand, MIPS_CALL_REG])
-    elsif operand.is_a? LabelReference
+        elsif operand.is_a? LabelReference
             preList << Instruction.new(self.codeOrigin, "la", [operand, MIPS_CALL_REG])
-    elsif operand.register? and operand != MIPS_CALL_REG
+        elsif operand.register? and operand != MIPS_CALL_REG
             preList << Instruction.new(self.codeOrigin, "move", [operand, MIPS_CALL_REG])
-    else
-        needRestore = false
-        tmp = operand
-    end
-    if needRestore
+        else
+            needRestore = false
+            tmp = operand
+        end
+        if needRestore
             postList << Instruction.new(self.codeOrigin, "move", [MIPS_GPSAVE_REG, MIPS_GP_REG])
         end
         cloneWithNewOperands([tmp])
@@ -807,6 +801,16 @@ def emitMIPS(opcode, operands)
     end
 end
 
+def emitMIPSDoubleCompare(branchOpcode, neg, operands)
+    mipsMoveImmediate(1, operands[2])
+    $asm.puts "c.#{branchOpcode}.d $fcc0, #{mipsOperands(operands[0..1])}"
+    if (!neg)
+        $asm.puts "movf #{operands[2].mipsOperand}, $zero, $fcc0"
+    else
+        $asm.puts "movt #{operands[2].mipsOperand}, $zero, $fcc0"
+    end
+end
+
 def emitMIPSDoubleBranch(branchOpcode, neg, operands)
     $asm.puts "c.#{branchOpcode}.d #{mipsOperands(operands[0..1])}"
     if (!neg)
@@ -1011,6 +1015,14 @@ class Instruction
         when "cilteq", "cplteq", "cblteq"
             $asm.puts "slt #{operands[2].mipsOperand}, #{operands[1].mipsOperand}, #{operands[0].mipsOperand}"
             $asm.puts "xori #{operands[2].mipsOperand}, 1"
+        when "cdgt"
+            emitMIPSDoubleCompare("ule", true, operands)
+        when "cdgteq"
+            emitMIPSDoubleCompare("ult", true, operands)
+        when "cdlt"
+            emitMIPSDoubleCompare("olt", false, operands)
+        when "cdlteq"
+            emitMIPSDoubleCompare("ole", false, operands)
         when "peek"
             $asm.puts "lw #{operands[1].mipsOperand}, #{operands[0].value * 4}($sp)"
         when "poke"

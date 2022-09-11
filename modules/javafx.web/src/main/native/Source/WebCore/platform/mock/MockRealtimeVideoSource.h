@@ -49,6 +49,9 @@ class GraphicsContext;
 class MockRealtimeVideoSource : public RealtimeVideoCaptureSource, private OrientationNotifier::Observer {
 public:
     static CaptureSourceOrError create(String&& deviceID, String&& name, String&& hashSalt, const MediaConstraints*);
+    ~MockRealtimeVideoSource();
+
+    static void setIsInterrupted(bool);
 
     ImageBuffer* imageBuffer() const;
 
@@ -62,6 +65,8 @@ protected:
     MediaSample::VideoRotation sampleRotation() const final { return m_deviceOrientation; }
     void generatePresets() override;
 
+    IntSize captureSize() const;
+
 private:
     const RealtimeMediaSourceCapabilities& capabilities() final;
     const RealtimeMediaSourceSettings& settings() final;
@@ -69,11 +74,10 @@ private:
     void startProducingData() final;
     void stopProducingData() final;
     bool isCaptureSource() const final { return true; }
-    CaptureDevice::DeviceType deviceType() const final { return CaptureDevice::DeviceType::Camera; }
-    bool supportsSizeAndFrameRate(Optional<int> width, Optional<int> height, Optional<double>) final;
-    void setSizeAndFrameRate(Optional<int> width, Optional<int> height, Optional<double>) final;
+    CaptureDevice::DeviceType deviceType() const final { return mockCamera() ? CaptureDevice::DeviceType::Camera : CaptureDevice::DeviceType::Screen; }
+    bool supportsSizeAndFrameRate(std::optional<int> width, std::optional<int> height, std::optional<double>) final;
+    void setSizeAndFrameRate(std::optional<int> width, std::optional<int> height, std::optional<double>) final;
     void setFrameRateWithPreset(double, RefPtr<VideoPreset>) final;
-    IntSize captureSize() const;
 
 
     bool isMockSource() const final { return true; }
@@ -91,8 +95,8 @@ private:
 
     void delaySamples(Seconds) final;
 
-    bool mockCamera() const { return WTF::holds_alternative<MockCameraProperties>(m_device.properties); }
-    bool mockDisplay() const { return WTF::holds_alternative<MockDisplayProperties>(m_device.properties); }
+    bool mockCamera() const { return std::holds_alternative<MockCameraProperties>(m_device.properties); }
+    bool mockDisplay() const { return std::holds_alternative<MockDisplayProperties>(m_device.properties); }
     bool mockScreen() const { return mockDisplayType(CaptureDevice::DeviceType::Screen); }
     bool mockWindow() const { return mockDisplayType(CaptureDevice::DeviceType::Window); }
     bool mockDisplayType(CaptureDevice::DeviceType) const;
@@ -112,8 +116,8 @@ private:
 
     unsigned m_frameNumber { 0 };
     RunLoop::Timer<MockRealtimeVideoSource> m_emitFrameTimer;
-    Optional<RealtimeMediaSourceCapabilities> m_capabilities;
-    Optional<RealtimeMediaSourceSettings> m_currentSettings;
+    std::optional<RealtimeMediaSourceCapabilities> m_capabilities;
+    std::optional<RealtimeMediaSourceSettings> m_currentSettings;
     RealtimeMediaSourceSupportedConstraints m_supportedConstraints;
     Color m_fillColor { Color::black };
     MockMediaDevice m_device;

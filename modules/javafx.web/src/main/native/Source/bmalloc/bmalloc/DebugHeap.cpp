@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,6 +32,10 @@
 #include <cstdlib>
 #include <thread>
 
+#if BENABLE(LIBPAS)
+#include "pas_debug_heap.h"
+#endif
+
 namespace bmalloc {
 
 DebugHeap* debugHeapCache { nullptr };
@@ -40,11 +44,27 @@ DEFINE_STATIC_PER_PROCESS_STORAGE(DebugHeap);
 
 #if BOS(DARWIN)
 
+static bool shouldUseDefaultMallocZone()
+{
+    if (getenv("DEBUG_HEAP_USE_DEFAULT_ZONE"))
+        return true;
+
+    // The lite logging mode only intercepts allocations from the default zone.
+    const char* mallocStackLogging = getenv("MallocStackLogging");
+    if (mallocStackLogging && !strcmp(mallocStackLogging, "lite"))
+        return true;
+
+    return false;
+}
+
 DebugHeap::DebugHeap(const LockHolder&)
-    : m_zone(malloc_create_zone(0, 0))
+    : m_zone(malloc_default_zone())
     , m_pageSize(vmPageSize())
 {
-    malloc_set_zone_name(m_zone, "WebKit Using System Malloc");
+    if (!shouldUseDefaultMallocZone()) {
+        m_zone = malloc_create_zone(0, 0);
+        malloc_set_zone_name(m_zone, "WebKit Using System Malloc");
+    }
 }
 
 void* DebugHeap::malloc(size_t size, FailureAction action)
@@ -163,4 +183,103 @@ void DebugHeap::freeLarge(void* base)
     vmDeallocate(base, size);
 }
 
+DebugHeap* DebugHeap::tryGetSlow()
+{
+    DebugHeap* result;
+    if (Environment::get()->isDebugHeapEnabled()) {
+        debugHeapCache = DebugHeap::get();
+        result = debugHeapCache;
+    } else {
+        debugHeapCache = debugHeapDisabled();
+        result = nullptr;
+    }
+    RELEASE_BASSERT(debugHeapCache);
+    return result;
+}
+
 } // namespace bmalloc
+
+#if BENABLE(LIBPAS)
+
+#if BUSE(LIBPAS)
+
+using namespace bmalloc;
+
+bool pas_debug_heap_is_enabled(pas_heap_config_kind kind)
+{
+    switch (kind) {
+    case pas_heap_config_kind_bmalloc:
+        return !!DebugHeap::tryGet();
+    case pas_heap_config_kind_jit:
+    case pas_heap_config_kind_pas_utility:
+        return false;
+    default:
+        BCRASH();
+        return false;
+    }
+}
+
+void* pas_debug_heap_malloc(size_t size)
+{
+    return DebugHeap::getExisting()->malloc(size, FailureAction::ReturnNull);
+}
+
+void* pas_debug_heap_memalign(size_t alignment, size_t size)
+{
+    return DebugHeap::getExisting()->memalign(alignment, size, FailureAction::ReturnNull);
+}
+
+void* pas_debug_heap_realloc(void* ptr, size_t size)
+{
+    return DebugHeap::getExisting()->realloc(ptr, size, FailureAction::ReturnNull);
+}
+
+void pas_debug_heap_free(void* ptr)
+{
+    DebugHeap::getExisting()->free(ptr);
+}
+
+#else // BUSE(LIBPAS) -> so !BUSE(LIBPAS)
+
+bool pas_debug_heap_is_enabled(pas_heap_config_kind kind)
+{
+    BUNUSED_PARAM(kind);
+    return false;
+}
+
+void* pas_debug_heap_malloc(size_t size)
+{
+    BUNUSED_PARAM(size);
+    RELEASE_BASSERT_NOT_REACHED();
+    return nullptr;
+}
+
+void* pas_debug_heap_memalign(size_t alignment, size_t size)
+{
+    BUNUSED_PARAM(size);
+    BUNUSED_PARAM(alignment);
+    RELEASE_BASSERT_NOT_REACHED();
+    return nullptr;
+}
+
+void* pas_debug_heap_realloc(void* ptr, size_t size)
+{
+    BUNUSED_PARAM(ptr);
+    BUNUSED_PARAM(size);
+    RELEASE_BASSERT_NOT_REACHED();
+    return nullptr;
+}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wmissing-noreturn"
+void pas_debug_heap_free(void* ptr)
+{
+    BUNUSED_PARAM(ptr);
+    RELEASE_BASSERT_NOT_REACHED();
+}
+#pragma clang diagnostic pop
+
+#endif // BUSE(LIBPAS) -> so end of !BUSE(LIBPAS)
+
+#endif // BENABLE(LIBPAS)
+

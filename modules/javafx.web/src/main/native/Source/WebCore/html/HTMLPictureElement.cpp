@@ -47,12 +47,6 @@ HTMLPictureElement::~HTMLPictureElement()
 {
 }
 
-void HTMLPictureElement::didMoveToNewDocument(Document& oldDocument, Document& newDocument)
-{
-    HTMLElement::didMoveToNewDocument(oldDocument, newDocument);
-    sourcesChanged();
-}
-
 Ref<HTMLPictureElement> HTMLPictureElement::create(const QualifiedName& tagName, Document& document)
 {
     return adoptRef(*new HTMLPictureElement(tagName, document));
@@ -62,6 +56,14 @@ void HTMLPictureElement::sourcesChanged()
 {
     for (auto& element : childrenOfType<HTMLImageElement>(*this))
         element.selectImageSource(RelevantMutation::Yes);
+}
+
+void HTMLPictureElement::sourceDimensionAttributesChanged(const HTMLSourceElement& sourceElement)
+{
+    for (auto& element : childrenOfType<HTMLImageElement>(*this)) {
+        if (&sourceElement == element.sourceElement())
+            element.invalidateAttributeMapping();
+    }
 }
 
 #if USE(SYSTEM_PREVIEW)

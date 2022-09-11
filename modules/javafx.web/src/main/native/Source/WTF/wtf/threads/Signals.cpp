@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -44,8 +44,13 @@ extern "C" {
 #include <mach/thread_act.h>
 #endif
 
+#if OS(DARWIN)
+#include <mach/vm_param.h>
+#endif
+
 #include <wtf/Atomics.h>
 #include <wtf/DataLog.h>
+#include <wtf/MathExtras.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/PlatformRegisters.h>
 #include <wtf/ThreadGroup.h>
@@ -62,7 +67,7 @@ void SignalHandlers::add(Signal signal, SignalHandler&& handler)
 {
     Config::AssertNotFrozenScope assertScope;
     static Lock lock;
-    auto locker = holdLock(lock);
+    Locker locker { lock };
 
     size_t signalIndex = static_cast<size_t>(signal);
     size_t nextFree = numberOfHandlers[signalIndex];
@@ -167,10 +172,14 @@ inline ptrauth_generic_signature_t hashThreadState(const thread_state_t source)
 
     const uintptr_t* srcPtr = reinterpret_cast<const uintptr_t*>(source);
 
-    for (size_t i = 0; i < threadStateSizeInPointers; ++i) {
+    // Exclude the __opaque_flags field which is reserved for OS use.
+    // __opaque_flags is at the end of the payload.
+    for (size_t i = 0; i < threadStateSizeInPointers - 1; ++i) {
         if (i != threadStatePCPointerIndex)
             hash = ptrauth_sign_generic_data(srcPtr[i], hash);
     }
+    const uint32_t* cpsrPtr = reinterpret_cast<const uint32_t*>(&srcPtr[threadStateSizeInPointers - 1]);
+    hash = ptrauth_sign_generic_data(static_cast<uint64_t>(*cpsrPtr), hash);
 
     return hash;
 }
@@ -299,7 +308,7 @@ static ThreadGroup& activeThreads()
 
 void registerThreadForMachExceptionHandling(Thread& thread)
 {
-    auto locker = holdLock(activeThreads().getLock());
+    Locker locker { activeThreads().getLock() };
     if (activeThreads().add(locker, thread) == ThreadGroupAddResult::NewlyAdded)
         setExceptionPorts(locker, thread);
 }
@@ -358,7 +367,7 @@ void activateSignalHandlersFor(Signal signal)
     ASSERT(signal < Signal::Unknown);
     ASSERT(!handlers.useMach || signal != Signal::Usr);
 
-    auto locker = holdLock(activeThreads().getLock());
+    Locker locker { activeThreads().getLock() };
     if (handlers.useMach) {
         activeExceptions |= toMachMask(signal);
 
@@ -379,7 +388,7 @@ void jscSignalHandler(int sig, siginfo_t* info, void* ucontext)
         sigfillset(&defaultAction.sa_mask);
         defaultAction.sa_flags = 0;
         auto result = sigaction(sig, &defaultAction, nullptr);
-        dataLogLnIf(result == -1, "Unable to restore the default handler while proccessing signal ", sig, " the process is probably deadlocked. (errno: ", strerror(errno), ")");
+        dataLogLnIf(result == -1, "Unable to restore the default handler while processing signal ", sig, " the process is probably deadlocked. (errno: ", errno, ")");
     };
 
     // This shouldn't happen but we might as well be careful.

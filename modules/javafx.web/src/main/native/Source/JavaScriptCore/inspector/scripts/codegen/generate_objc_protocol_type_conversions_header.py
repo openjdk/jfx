@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # Copyright (c) 2014, 2016 Apple Inc. All rights reserved.
 # Copyright (c) 2014 University of Washington. All rights reserved.
@@ -34,7 +34,7 @@ try:
     from .models import EnumType, Frameworks
     from .objc_generator import ObjCGenerator
     from .objc_generator_templates import ObjCGeneratorTemplates as ObjCTemplates
-except ValueError:
+except ImportError:
     from generator import Generator
     from models import EnumType, Frameworks
     from objc_generator import ObjCGenerator
@@ -163,11 +163,11 @@ class ObjCProtocolTypeConversionsHeaderGenerator(ObjCGenerator):
     def _generate_enum_from_protocol_string(self, objc_enum_name, enum_values):
         lines = []
         lines.append('template<>')
-        lines.append('inline Optional<%s> fromProtocolString(const String& value)' % objc_enum_name)
+        lines.append('inline std::optional<%s> fromProtocolString(const String& value)' % objc_enum_name)
         lines.append('{')
         for enum_value in enum_values:
             lines.append('    if (value == "%s")' % enum_value)
             lines.append('        return %s%s;' % (objc_enum_name, Generator.stylized_name_for_enum_value(enum_value)))
-        lines.append('    return WTF::nullopt;')
+        lines.append('    return std::nullopt;')
         lines.append('}')
         return '\n'.join(lines)

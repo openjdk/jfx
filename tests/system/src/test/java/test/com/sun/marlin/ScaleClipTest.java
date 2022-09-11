@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2018, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -48,6 +48,7 @@ import javafx.stage.Stage;
 import junit.framework.AssertionFailedError;
 import org.junit.AfterClass;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -101,20 +102,12 @@ public class ScaleClipTest {
     }
 
     @BeforeClass
-    public static void setupOnce() {
+    public static void setupOnce() throws Exception {
         // Start the Application
         new Thread(() -> Application.launch(MyApp.class, (String[]) null)).start();
 
-        try {
-            if (!launchLatch.await(TIMEOUT, TimeUnit.MILLISECONDS)) {
-                throw new AssertionFailedError("Timeout waiting for Application to launch");
-            }
-
-        } catch (InterruptedException ex) {
-            AssertionFailedError err = new AssertionFailedError("Unexpected exception");
-            err.initCause(ex);
-            throw err;
-        }
+        assertTrue("Timeout waiting for Application to launch",
+                launchLatch.await(TIMEOUT, TimeUnit.MILLISECONDS));
 
         assertEquals(0, launchLatch.getCount());
 

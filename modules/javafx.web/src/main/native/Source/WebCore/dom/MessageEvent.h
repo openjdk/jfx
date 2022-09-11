@@ -33,22 +33,22 @@
 #include "SerializedScriptValue.h"
 #include "ServiceWorker.h"
 #include "WindowProxy.h"
-#include <wtf/Variant.h>
+#include <variant>
 
 namespace WebCore {
 
 class Blob;
 
 #if ENABLE(SERVICE_WORKER)
-using MessageEventSource = Variant<RefPtr<WindowProxy>, RefPtr<MessagePort>, RefPtr<ServiceWorker>>;
+using MessageEventSource = std::variant<RefPtr<WindowProxy>, RefPtr<MessagePort>, RefPtr<ServiceWorker>>;
 #else
-using MessageEventSource = Variant<RefPtr<WindowProxy>, RefPtr<MessagePort>>;
+using MessageEventSource = std::variant<RefPtr<WindowProxy>, RefPtr<MessagePort>>;
 #endif
 
 class MessageEvent final : public Event {
     WTF_MAKE_ISO_ALLOCATED(MessageEvent);
 public:
-    static Ref<MessageEvent> create(Vector<RefPtr<MessagePort>>&&, Ref<SerializedScriptValue>&&, const String& origin = { }, const String& lastEventId = { }, Optional<MessageEventSource>&& source = WTF::nullopt);
+    static Ref<MessageEvent> create(Vector<RefPtr<MessagePort>>&&, Ref<SerializedScriptValue>&&, const String& origin = { }, const String& lastEventId = { }, std::optional<MessageEventSource>&& source = std::nullopt);
     static Ref<MessageEvent> create(const AtomString& type, Ref<SerializedScriptValue>&&, const String& origin, const String& lastEventId);
     static Ref<MessageEvent> create(const String& data, const String& origin = { });
     static Ref<MessageEvent> create(Ref<Blob>&& data, const String& origin);
@@ -59,23 +59,25 @@ public:
         JSC::JSValue data;
         String origin;
         String lastEventId;
-        Optional<MessageEventSource> source;
+        std::optional<MessageEventSource> source;
         Vector<RefPtr<MessagePort>> ports;
     };
     static Ref<MessageEvent> create(const AtomString& type, Init&&, IsTrusted = IsTrusted::No);
 
     virtual ~MessageEvent();
 
-    void initMessageEvent(const AtomString& type, bool canBubble, bool cancelable, JSC::JSValue data, const String& origin, const String& lastEventId, Optional<MessageEventSource>&&, Vector<RefPtr<MessagePort>>&&);
+    void initMessageEvent(const AtomString& type, bool canBubble, bool cancelable, JSC::JSValue data, const String& origin, const String& lastEventId, std::optional<MessageEventSource>&&, Vector<RefPtr<MessagePort>>&&);
 
     const String& origin() const { return m_origin; }
     const String& lastEventId() const { return m_lastEventId; }
-    const Optional<MessageEventSource>& source() const { return m_source; }
+    const std::optional<MessageEventSource>& source() const { return m_source; }
     const Vector<RefPtr<MessagePort>>& ports() const { return m_ports; }
 
-    using DataType = Variant<JSValueInWrappedObject, Ref<SerializedScriptValue>, String, Ref<Blob>, Ref<ArrayBuffer>>;
+    struct JSValueTag { };
+    using DataType = std::variant<JSValueTag, Ref<SerializedScriptValue>, String, Ref<Blob>, Ref<ArrayBuffer>>;
     const DataType& data() const { return m_data; }
 
+    JSValueInWrappedObject& jsData() { return m_jsData; }
     JSValueInWrappedObject& cachedData() { return m_cachedData; }
     JSValueInWrappedObject& cachedPorts() { return m_cachedPorts; }
 
@@ -85,18 +87,21 @@ private:
     MessageEvent();
     MessageEvent(const AtomString& type, Init&&, IsTrusted);
     MessageEvent(const AtomString& type, Ref<SerializedScriptValue>&& data, const String& origin, const String& lastEventId);
-    MessageEvent(DataType&&, const String& origin, const String& lastEventId = { }, Optional<MessageEventSource>&& = WTF::nullopt, Vector<RefPtr<MessagePort>>&& = { });
+    MessageEvent(DataType&&, const String& origin, const String& lastEventId = { }, std::optional<MessageEventSource>&& = std::nullopt, Vector<RefPtr<MessagePort>>&& = { });
 
     EventInterface eventInterface() const final;
 
     DataType m_data;
     String m_origin;
     String m_lastEventId;
-    Optional<MessageEventSource> m_source;
+    std::optional<MessageEventSource> m_source;
     Vector<RefPtr<MessagePort>> m_ports;
 
+    JSValueInWrappedObject m_jsData;
     JSValueInWrappedObject m_cachedData;
     JSValueInWrappedObject m_cachedPorts;
+
+    mutable Lock m_concurrentDataAccessLock;
 };
 
 } // namespace WebCore

@@ -26,6 +26,8 @@
 #include "LargeMap.h"
 #include <utility>
 
+#if !BUSE(LIBPAS)
+
 namespace bmalloc {
 
 LargeRange LargeMap::remove(size_t alignment, size_t size)
@@ -76,9 +78,7 @@ void LargeMap::add(const LargeRange& range)
         merged = merge(merged, m_free.pop(i--));
     }
 
-#if !BUSE(PARTIAL_SCAVENGE)
     merged.setUsedSinceLastScavenge();
-#endif
     m_free.push(merged);
 }
 
@@ -89,3 +89,5 @@ void LargeMap::markAllAsEligibile()
 }
 
 } // namespace bmalloc
+
+#endif

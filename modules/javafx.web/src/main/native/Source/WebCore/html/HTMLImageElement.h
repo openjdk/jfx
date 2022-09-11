@@ -42,6 +42,7 @@ class HTMLMapElement;
 
 struct ImageCandidate;
 
+enum class ReferrerPolicy : uint8_t;
 enum class RelevantMutation : bool;
 
 class HTMLImageElement : public HTMLElement, public FormNamedItem {
@@ -50,7 +51,7 @@ class HTMLImageElement : public HTMLElement, public FormNamedItem {
 public:
     static Ref<HTMLImageElement> create(Document&);
     static Ref<HTMLImageElement> create(const QualifiedName&, Document&, HTMLFormElement* = nullptr);
-    static Ref<HTMLImageElement> createForLegacyFactoryFunction(Document&, Optional<unsigned> width, Optional<unsigned> height);
+    static Ref<HTMLImageElement> createForLegacyFactoryFunction(Document&, std::optional<unsigned> width, std::optional<unsigned> height);
 
     virtual ~HTMLImageElement();
 
@@ -91,6 +92,9 @@ public:
 
     WEBCORE_EXPORT bool complete() const;
 
+    void setDecoding(String&&);
+    String decoding() const;
+
     DecodingMode decodingMode() const;
 
     WEBCORE_EXPORT void decode(Ref<DeferredPromise>&&);
@@ -111,6 +115,10 @@ public:
     bool canContainRangeEndPoint() const override { return false; }
 
     const AtomString& imageSourceURL() const override;
+
+#if ENABLE(SERVICE_CONTROLS)
+    bool imageMenuEnabled() const { return m_imageMenuEnabled; }
+#endif
 
     HTMLPictureElement* pictureElement() const;
     void setPictureElement(HTMLPictureElement*);
@@ -140,6 +148,10 @@ public:
 
     bool allowsOrientationOverride() const;
 
+#if ENABLE(SERVICE_CONTROLS)
+    WEBCORE_EXPORT bool hasImageControls() const;
+#endif
+
 protected:
     HTMLImageElement(const QualifiedName&, Document&, HTMLFormElement* = nullptr);
 
@@ -148,8 +160,10 @@ protected:
 private:
     void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) final;
     void parseAttribute(const QualifiedName&, const AtomString&) override;
-    bool isPresentationAttribute(const QualifiedName&) const override;
-    void collectStyleForPresentationAttribute(const QualifiedName&, const AtomString&, MutableStyleProperties&) override;
+    bool hasPresentationalHintsForAttribute(const QualifiedName&) const override;
+    void collectPresentationalHintsForAttribute(const QualifiedName&, const AtomString&, MutableStyleProperties&) override;
+    void collectExtraStyleForPresentationalHints(MutableStyleProperties&) override;
+    void invalidateAttributeMapping();
 
     void didAttachRenderers() override;
     RenderPtr<RenderElement> createElementRenderer(RenderStyle&&, const RenderTreePosition&) override;
@@ -161,7 +175,7 @@ private:
     bool attributeContainsURL(const Attribute&) const override;
     String completeURLsInAttributeValue(const URL& base, const Attribute&) const override;
 
-    bool draggable() const override;
+    bool isDraggableIgnoringAttributes() const final { return true; }
 
     void addSubresourceAttributeURLs(ListHashSet<URL>&) const override;
 
@@ -183,6 +197,16 @@ private:
 
     float effectiveImageDevicePixelRatio() const;
 
+#if ENABLE(SERVICE_CONTROLS)
+    void updateImageControls();
+    void tryCreateImageControls();
+    void destroyImageControls();
+    bool childShouldCreateRenderer(const Node&) const override;
+#endif
+
+    HTMLSourceElement* sourceElement() const;
+    void setSourceElement(HTMLSourceElement*);
+
     std::unique_ptr<HTMLImageLoader> m_imageLoader;
     WeakPtr<HTMLFormElement> m_form;
     WeakPtr<HTMLFormElement> m_formSetByParser;
@@ -192,10 +216,15 @@ private:
     AtomString m_currentSrc;
     AtomString m_parsedUsemap;
     float m_imageDevicePixelRatio;
+#if ENABLE(SERVICE_CONTROLS)
+    bool m_imageMenuEnabled { false };
+#endif
     bool m_hadNameBeforeAttributeChanged { false }; // FIXME: We only need this because parseAttribute() can't see the old value.
     bool m_isDroppedImagePlaceholder { false };
 
     WeakPtr<HTMLPictureElement> m_pictureElement;
+    // The source element that was selected to provide the source URL.
+    WeakPtr<HTMLSourceElement> m_sourceElement;
     MediaQueryDynamicResults m_mediaQueryDynamicResults;
 
 #if ENABLE(ATTACHMENT_ELEMENT)

@@ -801,9 +801,9 @@ ALWAYS_INLINE JSValue jsURShift(JSGlobalObject* globalObject, JSValue left, JSVa
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    Optional<uint32_t> leftUint32 = left.toUInt32AfterToNumeric(globalObject);
+    std::optional<uint32_t> leftUint32 = left.toUInt32AfterToNumeric(globalObject);
     RETURN_IF_EXCEPTION(scope, { });
-    Optional<uint32_t> rightUint32 = right.toUInt32AfterToNumeric(globalObject);
+    std::optional<uint32_t> rightUint32 = right.toUInt32AfterToNumeric(globalObject);
     RETURN_IF_EXCEPTION(scope, { });
 
     if (UNLIKELY(!leftUint32 || !rightUint32)) {
@@ -898,8 +898,8 @@ ALWAYS_INLINE EncodedJSValue getByValWithIndex(JSGlobalObject* globalObject, JSC
 {
     if (base->isObject()) {
         JSObject* object = asObject(base);
-        if (object->canGetIndexQuickly(index))
-            return JSValue::encode(object->getIndexQuickly(index));
+        if (JSValue result = object->tryGetIndexQuickly(index))
+            return JSValue::encode(result);
     }
 
     if (isJSString(base) && asString(base)->canGetIndex(index))

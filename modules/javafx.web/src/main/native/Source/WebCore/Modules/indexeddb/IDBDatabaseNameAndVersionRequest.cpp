@@ -26,8 +26,6 @@
 #include "config.h"
 #include "IDBDatabaseNameAndVersionRequest.h"
 
-#if ENABLE(INDEXED_DATABASE)
-
 #include "IDBConnectionProxy.h"
 #include "ScriptExecutionContext.h"
 #include <wtf/IsoMallocInlines.h>
@@ -38,7 +36,9 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(IDBDatabaseNameAndVersionRequest);
 
 Ref<IDBDatabaseNameAndVersionRequest> IDBDatabaseNameAndVersionRequest::create(ScriptExecutionContext& context, IDBClient::IDBConnectionProxy& connectionProxy, InfoCallback&& callback)
 {
-    return adoptRef(*new IDBDatabaseNameAndVersionRequest(context, connectionProxy, WTFMove(callback)));
+    auto result = adoptRef(*new IDBDatabaseNameAndVersionRequest(context, connectionProxy, WTFMove(callback)));
+    result->suspendIfNeeded();
+    return result;
 }
 
 IDBDatabaseNameAndVersionRequest::IDBDatabaseNameAndVersionRequest(ScriptExecutionContext& context, IDBClient::IDBConnectionProxy& connectionProxy, InfoCallback&& callback)
@@ -48,11 +48,9 @@ IDBDatabaseNameAndVersionRequest::IDBDatabaseNameAndVersionRequest(ScriptExecuti
     , m_callback(WTFMove(callback))
 {
     ASSERT(canCurrentThreadAccessThreadLocalData(originThread()));
-
-    suspendIfNeeded();
 }
 
-void IDBDatabaseNameAndVersionRequest::complete(Optional<Vector<IDBDatabaseNameAndVersion>>&& databases)
+void IDBDatabaseNameAndVersionRequest::complete(std::optional<Vector<IDBDatabaseNameAndVersion>>&& databases)
 {
     ASSERT(canCurrentThreadAccessThreadLocalData(originThread()));
 
@@ -78,5 +76,3 @@ void IDBDatabaseNameAndVersionRequest::stop()
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(INDEXED_DATABASE)

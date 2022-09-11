@@ -42,7 +42,7 @@ ClipboardItem::~ClipboardItem() = default;
 Ref<Blob> ClipboardItem::blobFromString(ScriptExecutionContext* context, const String& stringData, const String& type)
 {
     auto utf8 = stringData.utf8();
-    return Blob::create(context, SharedBuffer::create(utf8.data(), utf8.length()), Blob::normalizedContentType(type));
+    return Blob::create(context, Vector { utf8.dataAsUInt8Ptr(), utf8.length() }, Blob::normalizedContentType(type));
 }
 
 static ClipboardItem::PresentationStyle clipboardItemPresentationStyle(const PasteboardItemInfo& info)
@@ -66,8 +66,8 @@ ClipboardItem::ClipboardItem(Vector<KeyValuePair<String, RefPtr<DOMPromise>>>&& 
 }
 
 ClipboardItem::ClipboardItem(Clipboard& clipboard, const PasteboardItemInfo& info)
-    : m_clipboard(makeWeakPtr(clipboard))
-    , m_navigator(makeWeakPtr(clipboard.navigator()))
+    : m_clipboard(clipboard)
+    , m_navigator(clipboard.navigator())
     , m_dataSource(makeUnique<ClipboardItemPasteboardDataSource>(*this, info))
     , m_presentationStyle(clipboardItemPresentationStyle(info))
 {
@@ -93,7 +93,7 @@ void ClipboardItem::getType(const String& type, Ref<DeferredPromise>&& promise)
     m_dataSource->getType(type, WTFMove(promise));
 }
 
-void ClipboardItem::collectDataForWriting(Clipboard& destination, CompletionHandler<void(Optional<PasteboardCustomData>)>&& completion)
+void ClipboardItem::collectDataForWriting(Clipboard& destination, CompletionHandler<void(std::optional<PasteboardCustomData>)>&& completion)
 {
     m_dataSource->collectDataForWriting(destination, WTFMove(completion));
 }

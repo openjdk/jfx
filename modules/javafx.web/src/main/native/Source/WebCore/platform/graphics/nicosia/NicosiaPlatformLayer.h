@@ -58,13 +58,13 @@ public:
 
     void setSceneIntegration(RefPtr<SceneIntegration>&& sceneIntegration)
     {
-        LockHolder locker(m_state.lock);
+        Locker locker { m_state.lock };
         m_state.sceneIntegration = WTFMove(sceneIntegration);
     }
 
     std::unique_ptr<SceneIntegration::UpdateScope> createUpdateScope()
     {
-        LockHolder locker(m_state.lock);
+        Locker locker { m_state.lock };
         if (m_state.sceneIntegration)
             return m_state.sceneIntegration->createUpdateScope();
         return nullptr;
@@ -89,7 +89,7 @@ class CompositionLayer : public PlatformLayer {
 public:
     class Impl {
     public:
-        using Factory = WTF::Function<std::unique_ptr<Impl>(uint64_t, CompositionLayer&)>;
+        using Factory = Function<std::unique_ptr<Impl>(uint64_t, CompositionLayer&)>;
 
         virtual ~Impl();
         virtual bool isTextureMapperImpl() const { return false; }
@@ -208,14 +208,14 @@ public:
     template<typename T>
     void updateState(const T& functor)
     {
-        LockHolder locker(PlatformLayer::m_state.lock);
+        Locker locker { PlatformLayer::m_state.lock };
         functor(m_state.pending);
     }
 
     template<typename T>
     void flushState(const T& functor)
     {
-        LockHolder locker(PlatformLayer::m_state.lock);
+        Locker locker { PlatformLayer::m_state.lock };
         auto& pending = m_state.pending;
         auto& staging = m_state.staging;
 
@@ -293,7 +293,7 @@ public:
     template<typename T>
     void commitState(const T& functor)
     {
-        LockHolder locker(PlatformLayer::m_state.lock);
+        Locker locker { PlatformLayer::m_state.lock };
         m_state.committed = m_state.staging;
         m_state.staging.delta = { };
 
@@ -303,14 +303,14 @@ public:
     template<typename T>
     void accessPending(const T& functor)
     {
-        LockHolder locker(PlatformLayer::m_state.lock);
+        Locker locker { PlatformLayer::m_state.lock };
         functor(m_state.pending);
     }
 
     template<typename T>
     void accessCommitted(const T& functor)
     {
-        LockHolder locker(PlatformLayer::m_state.lock);
+        Locker locker { PlatformLayer::m_state.lock };
         functor(m_state.committed);
     }
 
@@ -330,7 +330,7 @@ class ContentLayer : public PlatformLayer {
 public:
     class Impl {
     public:
-        using Factory = WTF::Function<std::unique_ptr<Impl>(ContentLayer&)>;
+        using Factory = Function<std::unique_ptr<Impl>(ContentLayer&)>;
 
         virtual ~Impl();
         virtual bool isTextureMapperImpl() const { return false; }
@@ -355,7 +355,7 @@ class BackingStore : public ThreadSafeRefCounted<BackingStore> {
 public:
     class Impl {
     public:
-        using Factory = WTF::Function<std::unique_ptr<Impl>(BackingStore&)>;
+        using Factory = Function<std::unique_ptr<Impl>(BackingStore&)>;
 
         virtual ~Impl();
         virtual bool isTextureMapperImpl() const { return false; }
@@ -379,7 +379,7 @@ class ImageBacking : public ThreadSafeRefCounted<ImageBacking> {
 public:
     class Impl {
     public:
-        using Factory = WTF::Function<std::unique_ptr<Impl>(ImageBacking&)>;
+        using Factory = Function<std::unique_ptr<Impl>(ImageBacking&)>;
 
         virtual ~Impl();
         virtual bool isTextureMapperImpl() const { return false; }

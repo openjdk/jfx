@@ -30,12 +30,12 @@
 #if ENABLE(WEBASSEMBLY)
 
 #include "JSCJSValueInlines.h"
+#include "WasmBranchHintsSectionParser.h"
 #include "WasmMemoryInformation.h"
 #include "WasmNameSectionParser.h"
 #include "WasmOps.h"
 #include "WasmSignatureInlines.h"
 #include <wtf/HexNumber.h>
-#include <wtf/Optional.h>
 
 namespace JSC { namespace Wasm {
 
@@ -53,7 +53,7 @@ auto SectionParser::parseType() -> PartialResult
         Vector<Type> argumentTypes;
 
         WASM_PARSER_FAIL_IF(!parseInt7(type), "can't get ", i, "th Type's type");
-        WASM_PARSER_FAIL_IF(type != Func, i, "th Type is non-Func ", type);
+        WASM_PARSER_FAIL_IF(type != static_cast<int8_t>(TypeKind::Func), i, "th Type is non-Func ", type);
         WASM_PARSER_FAIL_IF(!parseVarUInt32(argumentCount), "can't get ", i, "th Type's argument count");
         WASM_PARSER_FAIL_IF(argumentCount > maxFunctionParams, i, "th argument count is too big ", argumentCount, " maximum ", maxFunctionParams);
         Vector<Type> arguments;
@@ -61,19 +61,18 @@ auto SectionParser::parseType() -> PartialResult
 
         for (unsigned i = 0; i < argumentCount; ++i) {
             Type argumentType;
-            WASM_PARSER_FAIL_IF(!parseValueType(argumentType), "can't get ", i, "th argument Type");
+            WASM_PARSER_FAIL_IF(!parseValueType(m_info, argumentType), "can't get ", i, "th argument Type");
             arguments.append(argumentType);
         }
 
         uint32_t returnCount;
         WASM_PARSER_FAIL_IF(!parseVarUInt32(returnCount), "can't get ", i, "th Type's return count");
-        WASM_PARSER_FAIL_IF(returnCount > 1 && !Options::useWebAssemblyMultiValues(), "Signatures cannot have more than one result type yet.");
 
         Vector<Type, 1> returnTypes;
         WASM_PARSER_FAIL_IF(!returnTypes.tryReserveCapacity(argumentCount), "can't allocate enough memory for Type section's ", i, "th signature");
         for (unsigned i = 0; i < returnCount; ++i) {
             Type value;
-            WASM_PARSER_FAIL_IF(!parseValueType(value), "can't get ", i, "th Type's return value");
+            WASM_PARSER_FAIL_IF(!parseValueType(m_info, value), "can't get ", i, "th Type's return value");
             returnTypes.append(value);
         }
 
@@ -93,6 +92,8 @@ auto SectionParser::parseImport() -> PartialResult
     WASM_PARSER_FAIL_IF(!m_info->globals.tryReserveCapacity(importCount), "can't allocate enough memory for ", importCount, " globals"); // FIXME this over-allocates when we fix the FIXMEs below.
     WASM_PARSER_FAIL_IF(!m_info->imports.tryReserveCapacity(importCount), "can't allocate enough memory for ", importCount, " imports"); // FIXME this over-allocates when we fix the FIXMEs below.
     WASM_PARSER_FAIL_IF(!m_info->importFunctionSignatureIndices.tryReserveCapacity(importCount), "can't allocate enough memory for ", importCount, " import function signatures"); // FIXME this over-allocates when we fix the FIXMEs below.
+    if (Options::useWebAssemblyExceptions())
+        WASM_PARSER_FAIL_IF(!m_info->importExceptionSignatureIndices.tryReserveCapacity(importCount), "can't allocate enough memory for ", importCount, " import exception signatures"); // FIXME this over-allocates when we fix the FIXMEs below.
 
     for (uint32_t importNumber = 0; importNumber < importCount; ++importNumber) {
         uint32_t moduleLen;
@@ -144,6 +145,21 @@ auto SectionParser::parseImport() -> PartialResult
             m_info->globals.uncheckedAppend(WTFMove(global));
             break;
         }
+        case ExternalKind::Exception: {
+            WASM_PARSER_FAIL_IF(!Options::useWebAssemblyExceptions(), "wasm exceptions are not enabled");
+
+            uint8_t tagType;
+            WASM_PARSER_FAIL_IF(!parseUInt8(tagType), "can't get ", importNumber, "th Import exception's tag type");
+            WASM_PARSER_FAIL_IF(tagType, importNumber, "th Import exception has tag type ", tagType, " but the only supported tag type is 0");
+
+            uint32_t exceptionSignatureIndex;
+            WASM_PARSER_FAIL_IF(!parseVarUInt32(exceptionSignatureIndex), "can't get ", importNumber, "th Import's exception signature in module '", moduleString, "' field '", fieldString, "'");
+            WASM_PARSER_FAIL_IF(exceptionSignatureIndex >= m_info->usedSignatures.size(), "invalid exception signature for ", importNumber, "th Import, ", exceptionSignatureIndex, " is out of range of ", m_info->usedSignatures.size(), " in module '", moduleString, "' field '", fieldString, "'");
+            kindIndex = m_info->importExceptionSignatureIndices.size();
+            SignatureIndex signatureIndex = SignatureInformation::get(m_info->usedSignatures[exceptionSignatureIndex]);
+            m_info->importExceptionSignatureIndices.uncheckedAppend(signatureIndex);
+            break;
+        }
         }
 
         m_info->imports.uncheckedAppend({ WTFMove(moduleString), WTFMove(fieldString), kind, kindIndex });
@@ -177,7 +193,7 @@ auto SectionParser::parseFunction() -> PartialResult
     return { };
 }
 
-auto SectionParser::parseResizableLimits(uint32_t& initial, Optional<uint32_t>& maximum, bool& isShared, LimitsType limitsType) -> PartialResult
+auto SectionParser::parseResizableLimits(uint32_t& initial, std::optional<uint32_t>& maximum, bool& isShared, LimitsType limitsType) -> PartialResult
 {
     ASSERT(!maximum);
 
@@ -206,10 +222,10 @@ auto SectionParser::parseTableHelper(bool isImport) -> PartialResult
 
     int8_t type;
     WASM_PARSER_FAIL_IF(!parseInt7(type), "can't parse Table type");
-    WASM_PARSER_FAIL_IF(type != Wasm::Funcref && type != Wasm::Externref, "Table type should be funcref or anyref, got ", type);
+    WASM_PARSER_FAIL_IF(type != static_cast<int8_t>(TypeKind::Funcref) && type != static_cast<int8_t>(TypeKind::Externref), "Table type should be funcref or anyref, got ", type);
 
     uint32_t initial;
-    Optional<uint32_t> maximum;
+    std::optional<uint32_t> maximum;
     bool isShared = false;
     PartialResult limits = parseResizableLimits(initial, maximum, isShared, LimitsType::Table);
     if (UNLIKELY(!limits))
@@ -218,7 +234,7 @@ auto SectionParser::parseTableHelper(bool isImport) -> PartialResult
 
     ASSERT(!maximum || *maximum >= initial);
 
-    TableElementType tableType = type == Wasm::Funcref ? TableElementType::Funcref : TableElementType::Externref;
+    TableElementType tableType = type == static_cast<int8_t>(TypeKind::Funcref) ? TableElementType::Funcref : TableElementType::Externref;
     m_info->tables.append(TableInformation(initial, maximum, isImport, tableType));
 
     return { };
@@ -248,7 +264,7 @@ auto SectionParser::parseMemoryHelper(bool isImport) -> PartialResult
     bool isShared = false;
     {
         uint32_t initial;
-        Optional<uint32_t> maximum;
+        std::optional<uint32_t> maximum;
         PartialResult limits = parseResizableLimits(initial, maximum, isShared, LimitsType::Memory);
         if (UNLIKELY(!limits))
             return makeUnexpected(WTFMove(limits.error()));
@@ -304,7 +320,7 @@ auto SectionParser::parseGlobal() -> PartialResult
             global.initializationType = GlobalInformation::FromRefFunc;
         else
             global.initializationType = GlobalInformation::FromExpression;
-        WASM_PARSER_FAIL_IF(typeForInitOpcode != global.type, "Global init_expr opcode of type ", typeForInitOpcode, " doesn't match global's type ", global.type);
+        WASM_PARSER_FAIL_IF(!isSubtype(typeForInitOpcode, global.type), "Global init_expr opcode of type ", typeForInitOpcode.kind, " doesn't match global's type ", global.type.kind);
 
         if (initOpcode == RefFunc)
             m_info->addDeclaredFunction(global.initialBitsOrImportNumber);
@@ -360,6 +376,13 @@ auto SectionParser::parseExport() -> PartialResult
                 global.bindingMode = GlobalInformation::BindingMode::Portable;
             break;
         }
+        case ExternalKind::Exception: {
+            WASM_PARSER_FAIL_IF(!Options::useWebAssemblyExceptions(), "wasm exceptions are not enabled");
+
+            WASM_PARSER_FAIL_IF(kindIndex >= m_info->exceptionIndexSpaceSize(), exportNumber, "th Export has invalid exception number ", kindIndex, " it exceeds the exception index space ", m_info->exceptionIndexSpaceSize(), ", named '", fieldString, "'");
+            m_info->addDeclaredException(kindIndex);
+            break;
+        }
         }
 
         m_info->exports.uncheckedAppend({ WTFMove(fieldString), kind, kindIndex });
@@ -396,7 +419,7 @@ auto SectionParser::parseElement() -> PartialResult
             constexpr uint32_t tableIndex = 0;
             WASM_FAIL_IF_HELPER_FAILS(validateElementTableIdx(tableIndex));
 
-            Optional<I32InitExpr> initExpr;
+            std::optional<I32InitExpr> initExpr;
             WASM_FAIL_IF_HELPER_FAILS(parseI32InitExprForElementSection(initExpr));
 
             uint32_t indexCount;
@@ -411,8 +434,6 @@ auto SectionParser::parseElement() -> PartialResult
             break;
         }
         case 0x01: {
-            WASM_PARSER_FAIL_IF(!Options::useWebAssemblyReferences(), "references are not enabled");
-
             uint8_t elementKind;
             WASM_FAIL_IF_HELPER_FAILS(parseElementKind(elementKind));
 
@@ -430,7 +451,7 @@ auto SectionParser::parseElement() -> PartialResult
             WASM_PARSER_FAIL_IF(!parseVarUInt32(tableIndex), "can't get ", elementNum, "th Element table index");
             WASM_FAIL_IF_HELPER_FAILS(validateElementTableIdx(tableIndex));
 
-            Optional<I32InitExpr> initExpr;
+            std::optional<I32InitExpr> initExpr;
             WASM_FAIL_IF_HELPER_FAILS(parseI32InitExprForElementSection(initExpr));
 
             uint8_t elementKind;
@@ -448,8 +469,6 @@ auto SectionParser::parseElement() -> PartialResult
             break;
         }
         case 0x03: {
-            WASM_PARSER_FAIL_IF(!Options::useWebAssemblyReferences(), "references are not enabled");
-
             uint8_t elementKind;
             WASM_FAIL_IF_HELPER_FAILS(parseElementKind(elementKind));
 
@@ -463,11 +482,10 @@ auto SectionParser::parseElement() -> PartialResult
             break;
         }
         case 0x04: {
-            WASM_PARSER_FAIL_IF(!Options::useWebAssemblyReferences(), "references are not enabled");
             constexpr uint32_t tableIndex = 0;
             WASM_FAIL_IF_HELPER_FAILS(validateElementTableIdx(tableIndex));
 
-            Optional<I32InitExpr> initExpr;
+            std::optional<I32InitExpr> initExpr;
             WASM_FAIL_IF_HELPER_FAILS(parseI32InitExprForElementSection(initExpr));
 
             uint32_t indexCount;
@@ -482,10 +500,9 @@ auto SectionParser::parseElement() -> PartialResult
             break;
         }
         case 0x05: {
-            WASM_PARSER_FAIL_IF(!Options::useWebAssemblyReferences(), "references are not enabled");
             Type refType;
-            WASM_PARSER_FAIL_IF(!parseRefType(refType), "can't parse reftype in elem section");
-            WASM_PARSER_FAIL_IF(refType != Funcref, "reftype in element section should be funcref");
+            WASM_PARSER_FAIL_IF(!parseRefType(m_info, refType), "can't parse reftype in elem section");
+            WASM_PARSER_FAIL_IF(!refType.isFuncref(), "reftype in element section should be funcref");
 
             uint32_t indexCount;
             WASM_FAIL_IF_HELPER_FAILS(parseIndexCountForElementSection(indexCount, elementNum));
@@ -498,18 +515,16 @@ auto SectionParser::parseElement() -> PartialResult
             break;
         }
         case 0x06: {
-            WASM_PARSER_FAIL_IF(!Options::useWebAssemblyReferences(), "references are not enabled");
-
             uint32_t tableIndex;
             WASM_PARSER_FAIL_IF(!parseVarUInt32(tableIndex), "can't get ", elementNum, "th Element table index");
             WASM_FAIL_IF_HELPER_FAILS(validateElementTableIdx(tableIndex));
 
-            Optional<I32InitExpr> initExpr;
+            std::optional<I32InitExpr> initExpr;
             WASM_FAIL_IF_HELPER_FAILS(parseI32InitExprForElementSection(initExpr));
 
             Type refType;
-            WASM_PARSER_FAIL_IF(!parseRefType(refType), "can't parse reftype in elem section");
-            WASM_PARSER_FAIL_IF(refType != Funcref, "reftype in element section should be funcref");
+            WASM_PARSER_FAIL_IF(!parseRefType(m_info, refType), "can't parse reftype in elem section");
+            WASM_PARSER_FAIL_IF(!refType.isFuncref(), "reftype in element section should be funcref");
 
             uint32_t indexCount;
             WASM_FAIL_IF_HELPER_FAILS(parseIndexCountForElementSection(indexCount, elementNum));
@@ -523,11 +538,9 @@ auto SectionParser::parseElement() -> PartialResult
             break;
         }
         case 0x07: {
-            WASM_PARSER_FAIL_IF(!Options::useWebAssemblyReferences(), "references are not enabled");
-
             Type refType;
-            WASM_PARSER_FAIL_IF(!parseRefType(refType), "can't parse reftype in elem section");
-            WASM_PARSER_FAIL_IF(refType != Funcref, "reftype in element section should be funcref");
+            WASM_PARSER_FAIL_IF(!parseRefType(m_info, refType), "can't parse reftype in elem section");
+            WASM_PARSER_FAIL_IF(!refType.isFuncref(), "reftype in element section should be funcref");
 
             uint32_t indexCount;
             WASM_FAIL_IF_HELPER_FAILS(parseIndexCountForElementSection(indexCount, elementNum));
@@ -563,7 +576,7 @@ auto SectionParser::parseInitExpr(uint8_t& opcode, uint64_t& bitsOrImportNumber,
         int32_t constant;
         WASM_PARSER_FAIL_IF(!parseVarInt32(constant), "can't get constant value for init_expr's i32.const");
         bitsOrImportNumber = static_cast<uint64_t>(constant);
-        resultType = I32;
+        resultType = Types::I32;
         break;
     }
 
@@ -571,7 +584,7 @@ auto SectionParser::parseInitExpr(uint8_t& opcode, uint64_t& bitsOrImportNumber,
         int64_t constant;
         WASM_PARSER_FAIL_IF(!parseVarInt64(constant), "can't get constant value for init_expr's i64.const");
         bitsOrImportNumber = constant;
-        resultType = I64;
+        resultType = Types::I64;
         break;
     }
 
@@ -579,7 +592,7 @@ auto SectionParser::parseInitExpr(uint8_t& opcode, uint64_t& bitsOrImportNumber,
         uint32_t constant;
         WASM_PARSER_FAIL_IF(!parseUInt32(constant), "can't get constant value for init_expr's f32.const");
         bitsOrImportNumber = constant;
-        resultType = F32;
+        resultType = Types::F32;
         break;
     }
 
@@ -587,7 +600,7 @@ auto SectionParser::parseInitExpr(uint8_t& opcode, uint64_t& bitsOrImportNumber,
         uint64_t constant;
         WASM_PARSER_FAIL_IF(!parseUInt64(constant), "can't get constant value for init_expr's f64.const");
         bitsOrImportNumber = constant;
-        resultType = F64;
+        resultType = Types::F64;
         break;
     }
 
@@ -606,7 +619,17 @@ auto SectionParser::parseInitExpr(uint8_t& opcode, uint64_t& bitsOrImportNumber,
 
     case RefNull: {
         Type typeOfNull;
-        WASM_PARSER_FAIL_IF(!parseRefType(typeOfNull), "ref.null type must be a reference type");
+        if (Options::useWebAssemblyTypedFunctionReferences()) {
+            int32_t heapType;
+            WASM_PARSER_FAIL_IF(!parseHeapType(m_info, heapType), "ref.null heaptype must be funcref, externref or type_idx");
+            if (isTypeIndexHeapType(heapType)) {
+                SignatureIndex signatureIndex = SignatureInformation::get(m_info->usedSignatures[heapType].get());
+                typeOfNull = Type { TypeKind::RefNull, Nullable::Yes, signatureIndex };
+            } else
+                typeOfNull = Type { TypeKind::RefNull, Nullable::Yes, static_cast<SignatureIndex>(heapType) };
+        } else
+            WASM_PARSER_FAIL_IF(!parseRefType(m_info, typeOfNull), "ref.null type must be a reference type");
+
         resultType = typeOfNull;
         bitsOrImportNumber = JSValue::encode(jsNull());
         break;
@@ -617,7 +640,12 @@ auto SectionParser::parseInitExpr(uint8_t& opcode, uint64_t& bitsOrImportNumber,
         WASM_PARSER_FAIL_IF(!parseVarUInt32(index), "can't get ref.func index");
         WASM_PARSER_FAIL_IF(index >= m_info->functions.size(), "ref.func index", index, " exceeds the number of functions ", m_info->functions.size());
 
-        resultType = Funcref;
+        if (Options::useWebAssemblyTypedFunctionReferences()) {
+            SignatureIndex signatureIndex = m_info->signatureIndexFromFunctionIndexSpace(index);
+            resultType = { TypeKind::Ref, Nullable::No, signatureIndex };
+        } else
+            resultType = Types::Funcref;
+
         bitsOrImportNumber = index;
         break;
     }
@@ -641,19 +669,19 @@ auto SectionParser::validateElementTableIdx(uint32_t tableIndex) -> PartialResul
     return { };
 }
 
-auto SectionParser::parseI32InitExpr(Optional<I32InitExpr>& initExpr, ASCIILiteral failMessage) -> PartialResult
+auto SectionParser::parseI32InitExpr(std::optional<I32InitExpr>& initExpr, ASCIILiteral failMessage) -> PartialResult
 {
     uint8_t initOpcode;
     uint64_t initExprBits;
     Type initExprType;
     WASM_FAIL_IF_HELPER_FAILS(parseInitExpr(initOpcode, initExprBits, initExprType));
-    WASM_PARSER_FAIL_IF(initExprType != I32, failMessage);
+    WASM_PARSER_FAIL_IF(!initExprType.isI32(), failMessage);
     initExpr = makeI32InitExpr(initOpcode, initExprBits);
 
     return { };
 }
 
-auto SectionParser::parseI32InitExprForElementSection(Optional<I32InitExpr>& initExpr) -> PartialResult
+auto SectionParser::parseI32InitExprForElementSection(std::optional<I32InitExpr>& initExpr) -> PartialResult
 {
     return parseI32InitExpr(initExpr, "Element init_expr must produce an i32"_s);
 }
@@ -692,8 +720,8 @@ auto SectionParser::parseElementSegmentVectorOfExpressions(Vector<uint32_t>& res
             m_info->addDeclaredFunction(functionIndex);
         } else {
             Type typeOfNull;
-            WASM_PARSER_FAIL_IF(!parseRefType(typeOfNull), "ref.null type must be a func type in elem section");
-            WASM_PARSER_FAIL_IF(typeOfNull != Funcref, "ref.null extern is forbidden in element section's, ", elementNum, "th element's ", index, "th index");
+            WASM_PARSER_FAIL_IF(!parseRefType(m_info, typeOfNull), "ref.null type must be a func type in elem section");
+            WASM_PARSER_FAIL_IF(!typeOfNull.isFuncref(), "ref.null extern is forbidden in element section's, ", elementNum, "th element's ", index, "th index");
             functionIndex = Element::nullFuncIndex;
         }
 
@@ -720,7 +748,7 @@ auto SectionParser::parseElementSegmentVectorOfIndexes(Vector<uint32_t>& result,
     return { };
 }
 
-auto SectionParser::parseI32InitExprForDataSection(Optional<I32InitExpr>& initExpr) -> PartialResult
+auto SectionParser::parseI32InitExprForDataSection(std::optional<I32InitExpr>& initExpr) -> PartialResult
 {
     return parseI32InitExpr(initExpr, "Data init_expr must produce an i32"_s);
 }
@@ -728,7 +756,7 @@ auto SectionParser::parseI32InitExprForDataSection(Optional<I32InitExpr>& initEx
 auto SectionParser::parseGlobalType(GlobalInformation& global) -> PartialResult
 {
     uint8_t mutability;
-    WASM_PARSER_FAIL_IF(!parseValueType(global.type), "can't get Global's value type");
+    WASM_PARSER_FAIL_IF(!parseValueType(m_info, global.type), "can't get Global's value type");
     WASM_PARSER_FAIL_IF(!parseUInt8(mutability), "can't get Global type's mutability");
     WASM_PARSER_FAIL_IF(mutability != 0x0 && mutability != 0x1, "invalid Global's mutability: 0x", hex(mutability, 2, Lowercase));
     global.mutability = static_cast<GlobalInformation::Mutability>(mutability);
@@ -746,11 +774,11 @@ auto SectionParser::parseData() -> PartialResult
         uint32_t memoryIndexOrDataFlag = UINT32_MAX;
         WASM_PARSER_FAIL_IF(!parseVarUInt32(memoryIndexOrDataFlag), "can't get ", segmentNumber, "th Data segment's flag");
 
-        if (!Options::useWebAssemblyReferences() || !memoryIndexOrDataFlag) {
+        if (!memoryIndexOrDataFlag) {
             const uint32_t memoryIndex = memoryIndexOrDataFlag;
             WASM_PARSER_FAIL_IF(memoryIndex >= m_info->memoryCount(), segmentNumber, "th Data segment has index ", memoryIndex, " which exceeds the number of Memories ", m_info->memoryCount());
 
-            Optional<I32InitExpr> initExpr;
+            std::optional<I32InitExpr> initExpr;
             WASM_FAIL_IF_HELPER_FAILS(parseI32InitExprForDataSection(initExpr));
 
             uint32_t dataByteLength;
@@ -768,15 +796,13 @@ auto SectionParser::parseData() -> PartialResult
             continue;
         }
 
-        ASSERT(Options::useWebAssemblyReferences());
-
         const uint32_t dataFlag = memoryIndexOrDataFlag;
         if (dataFlag == 0x01) {
             uint32_t dataByteLength;
             WASM_PARSER_FAIL_IF(!parseVarUInt32(dataByteLength), "can't get ", segmentNumber, "th Data segment's data byte length");
             WASM_PARSER_FAIL_IF(dataByteLength > maxModuleSize, segmentNumber, "th Data segment's data byte length is too big ", dataByteLength, " maximum ", maxModuleSize);
 
-            auto segment = Segment::create(WTF::nullopt, dataByteLength, Segment::Kind::Passive);
+            auto segment = Segment::create(std::nullopt, dataByteLength, Segment::Kind::Passive);
             WASM_PARSER_FAIL_IF(!segment, "can't allocate enough memory for ", segmentNumber, "th Data segment of size ", dataByteLength);
             for (uint32_t dataByte = 0; dataByte < dataByteLength; ++dataByte) {
                 uint8_t byte;
@@ -793,7 +819,7 @@ auto SectionParser::parseData() -> PartialResult
             WASM_PARSER_FAIL_IF(!parseVarUInt32(memoryIndex), "can't get ", segmentNumber, "th Data segment's index");
             WASM_PARSER_FAIL_IF(memoryIndex >= m_info->memoryCount(), segmentNumber, "th Data segment has index ", memoryIndex, " which exceeds the number of Memories ", m_info->memoryCount());
 
-            Optional<I32InitExpr> initExpr;
+            std::optional<I32InitExpr> initExpr;
             WASM_FAIL_IF_HELPER_FAILS(parseI32InitExprForDataSection(initExpr));
 
             uint32_t dataByteLength;
@@ -819,7 +845,6 @@ auto SectionParser::parseData() -> PartialResult
 
 auto SectionParser::parseDataCount() -> PartialResult
 {
-    WASM_PARSER_FAIL_IF(!Options::useWebAssemblyReferences(), "references are not enabled");
     uint32_t numberOfDataSegments;
     WASM_PARSER_FAIL_IF(!parseVarUInt32(numberOfDataSegments), "can't get Data Count section's count");
 
@@ -827,6 +852,29 @@ auto SectionParser::parseDataCount() -> PartialResult
     return { };
 }
 
+auto SectionParser::parseException() -> PartialResult
+{
+    WASM_PARSER_FAIL_IF(!Options::useWebAssemblyExceptions(), "wasm exceptions are not enabled");
+
+    uint32_t exceptionCount;
+    WASM_PARSER_FAIL_IF(!parseVarUInt32(exceptionCount), "can't get Exception section's count");
+    WASM_PARSER_FAIL_IF(exceptionCount > maxExceptions, "Export section's count is too big ", exceptionCount, " maximum ", maxExceptions);
+    WASM_PARSER_FAIL_IF(!m_info->internalExceptionSignatureIndices.tryReserveCapacity(exceptionCount), "can't allocate enough memory for ", exceptionCount, " exceptions");
+
+    for (uint32_t exceptionNumber = 0; exceptionNumber < exceptionCount; ++exceptionNumber) {
+        uint8_t tagType;
+        WASM_PARSER_FAIL_IF(!parseUInt8(tagType), "can't get ", exceptionNumber, "th Exception tag type");
+        WASM_PARSER_FAIL_IF(tagType, exceptionNumber, "th Exception has tag type ", tagType, " but the only supported tag type is 0");
+
+        uint32_t typeNumber;
+        WASM_PARSER_FAIL_IF(!parseVarUInt32(typeNumber), "can't get ", exceptionNumber, "th Exception's type number");
+        WASM_PARSER_FAIL_IF(typeNumber >= m_info->usedSignatures.size(), exceptionNumber, "th Exception type number is invalid ", typeNumber);
+        SignatureIndex signatureIndex = SignatureInformation::get(m_info->usedSignatures[typeNumber]);
+        m_info->internalExceptionSignatureIndices.uncheckedAppend(signatureIndex);
+    }
+
+    return { };
+}
 auto SectionParser::parseCustom() -> PartialResult
 {
     CustomSection section;
@@ -849,6 +897,12 @@ auto SectionParser::parseCustom() -> PartialResult
         NameSectionParser nameSectionParser(section.payload.begin(), section.payload.size(), m_info);
         if (auto nameSection = nameSectionParser.parse())
             m_info->nameSection = WTFMove(*nameSection);
+    } else if (Options::useWebAssemblyBranchHints()) {
+        Name branchHintsName = { 'c', 'o', 'd', 'e', '_', 'a', 'n', 'n', 'o', 't', 'a', 't', 'i', 'o', 'n', '.', 'b', 'r', 'a', 'n', 'c', 'h', '_', 'h', 'i', 'n', 't' };
+        if (section.name == branchHintsName) {
+            BranchHintsSectionParser branchHintsSectionParser(section.payload.begin(), section.payload.size(), m_info);
+            branchHintsSectionParser.parse();
+        }
     }
 
     m_info->customSections.uncheckedAppend(WTFMove(section));

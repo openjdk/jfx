@@ -22,6 +22,8 @@
 #include "config.h"
 #include "CSSImportRule.h"
 
+#include "CSSLayerBlockRule.h"
+#include "CSSMarkup.h"
 #include "CSSStyleSheet.h"
 #include "MediaList.h"
 #include "StyleRuleImport.h"
@@ -56,30 +58,42 @@ MediaList& CSSImportRule::media() const
     return *m_mediaCSSOMWrapper;
 }
 
+String CSSImportRule::layerName() const
+{
+    auto name = m_importRule.get().cascadeLayerName();
+    if (!name)
+        return { };
+
+    return stringFromCascadeLayerName(*name);
+}
+
 String CSSImportRule::cssText() const
 {
-    StringBuilder result;
-    result.appendLiteral("@import url(\"");
-    result.append(m_importRule.get().href());
-    result.appendLiteral("\")");
+    StringBuilder builder;
 
-    if (m_importRule.get().mediaQueries()) {
-        String mediaText = m_importRule.get().mediaQueries()->mediaText();
-        if (!mediaText.isEmpty()) {
-            result.append(' ');
-            result.append(mediaText);
-        }
+    builder.append("@import ", serializeURL(m_importRule.get().href()));
+
+    if (auto layerName = this->layerName(); !layerName.isNull()) {
+        if (layerName.isEmpty())
+            builder.append(" layer");
+        else
+            builder.append(" layer(", layerName, ')');
     }
-    result.append(';');
 
-    return result.toString();
+    if (auto queries = m_importRule.get().mediaQueries()) {
+        if (auto mediaText = queries->mediaText(); !mediaText.isEmpty())
+            builder.append(' ', mediaText);
+    }
+
+    builder.append(';');
+
+    return builder.toString();
 }
 
 CSSStyleSheet* CSSImportRule::styleSheet() const
 {
     if (!m_importRule.get().styleSheet())
-        return 0;
-
+        return nullptr;
     if (!m_styleSheetCSSOMWrapper)
         m_styleSheetCSSOMWrapper = CSSStyleSheet::create(*m_importRule.get().styleSheet(), const_cast<CSSImportRule*>(this));
     return m_styleSheetCSSOMWrapper.get();

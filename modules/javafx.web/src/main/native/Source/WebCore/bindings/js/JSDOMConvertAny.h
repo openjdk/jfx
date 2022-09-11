@@ -27,6 +27,7 @@
 
 #include "IDLTypes.h"
 #include "JSDOMConvertBase.h"
+#include "JSValueInWrappedObject.h"
 
 namespace WebCore {
 
@@ -59,18 +60,23 @@ template<> struct JSConverter<IDLAny> {
     {
         return value.get();
     }
+
+    static JSC::JSValue convert(const JSValueInWrappedObject& value)
+    {
+        return value.getValue();
+    }
 };
 
 template<> struct VariadicConverter<IDLAny> {
     using Item = typename IDLAny::ImplementationType;
 
-    static Optional<Item> convert(JSC::JSGlobalObject& lexicalGlobalObject, JSC::JSValue value)
+    static std::optional<Item> convert(JSC::JSGlobalObject& lexicalGlobalObject, JSC::JSValue value)
     {
         auto& vm = JSC::getVM(&lexicalGlobalObject);
         auto scope = DECLARE_THROW_SCOPE(vm);
 
         auto result = Converter<IDLAny>::convert(lexicalGlobalObject, value);
-        RETURN_IF_EXCEPTION(scope, WTF::nullopt);
+        RETURN_IF_EXCEPTION(scope, std::nullopt);
 
         return Item { vm, result };
     }

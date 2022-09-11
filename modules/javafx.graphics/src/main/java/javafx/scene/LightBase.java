@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -56,33 +56,113 @@ import javafx.scene.shape.Shape3D;
 import com.sun.javafx.logging.PlatformLogger;
 
 /**
- * The {@code LightBase} class provides definitions of common properties for
- * objects that represent a form of light source. These properties
- * include:
+ * The {@code LightBase} class is the base class for all objects that represent a form of light source. All light types
+ * share the following common properties that are defined in this class:
  * <ul>
- * <li>{@code color} - the color of the light source</li>
- * <li>{@code scope} - a list of nodes the light source affects</li>
- * <li>{@code exlusionScope} - a list of nodes the light source does not affect</li>
+ *   <li>{@code color} - the color of the light source</li>
+ *   <li>{@code scope} - a list of nodes the light source affects</li>
+ *   <li>{@code exlusionScope} - a list of nodes the light source does not affect</li>
  * </ul>
  *
+ * In addition to these, each light type supports a different set of properties, summarized in the following table:
+ *
+ * <table border="1">
+ *   <caption>Summary of Light types by attributes</caption>
+ *   <tr>
+ *     <th scope="col">Light type</th>
+ *     <th scope="col">Rotation and Direction</th>
+ *     <th scope="col">Location and Attenuation</th>
+ *   </tr>
+ *   <tr>
+ *     <th scope="row">{@link AmbientLight}</th>
+ *     <td style="text-align:center">&#10007;</td>
+ *     <td style="text-align:center">&#10007;</td>
+ *   </tr>
+ *   <tr>
+ *     <th scope="row">{@link DirectionalLight}</th>
+ *     <td style="text-align:center">&#10003;</td>
+ *     <td style="text-align:center">&#10007;</td>
+ *   </tr>
+ *   <tr>
+ *     <th scope="row">{@link PointLight}</th>
+ *     <td style="text-align:center">&#10007;</td>
+ *     <td style="text-align:center">&#10003;</td>
+ *   </tr>
+ *   <tr>
+ *     <th scope="row">{@link SpotLight}*</th>
+ *     <td style="text-align:center">&#10003;</td>
+ *     <td style="text-align:center">&#10003;</td>
+ *   </tr>
+ * </table>
+ * * Supports spotlight attenuation factors as described in its class docs.
+ *
  * <p>
- * A node can exist in only one of the lists, if it is added to one, it is silently removed from the other. If a node
- * does not exist in any list, it inherits its affected state from its parent, recursively. An exception to this is that
- * a light with an empty {@code scope} affects all nodes in its scene/subscene implicitly (except for those in its
- * {@code exlusionScope}) as if the root of the scene is in the {@code scope}. <br>
+ * An application cannot add its own light types. Extending {@code LightBase} directly may lead to an
+ * {@code UnsupportedOperationException} being thrown.
+ * <p>
+ * All light types are not affected by scaling and shearing transforms.
+ *
+ * <h2><a id="Color">Color</a></h2>
+ * A light source produces a light of a single color. The appearance of an object illuminated by the light is a result
+ * of the color of the light and the material the object is made of. For example, for a blue light, a white object will
+ * appear blue, a black object will appear black, and a (255, 0, 255)-colored object will appear blue, as the light
+ * "selects" only the blue component of the material color. The mathematical definition of the material-light
+ * interaction is available in {@link javafx.scene.paint.PhongMaterial PhongMaterial}.
+ * <p>
+ * See also the implementation notes section.
+ *
+ * <h2><a id="Scopes">Scopes</a></h2>
+ * A light has a {@code scope} list and an {@code exclusionScope} list that define which nodes are illuminated by it and
+ * which aren't. A node can exist in only one of the lists: if it is added to one, it is silently removed from the
+ * other. If a node does not exist in any list, it inherits its affected state from its parent, recursively. An
+ * exception to this is that a light with an empty {@code scope} affects all nodes in its scene/subscene implicitly
+ * (except for those in its {@code exlusionScope}) as if the root of the scene is in the {@code scope}.
+ * <p>
  * The {@code exlusionScope} is useful only for nodes that would otherwise be in scope of the light. Excluding a node is
  * a convenient alternative to traversing the scenegraph hierarchy and adding all of the other nodes to the light's
- * scope. Instead, the scope can remain wide and specific nodes can be excluded.
+ * scope. Instead, the scope can remain wide, and specific nodes can be excluded with the exclusion scope.
+ *
+ * <h2><a id="Direction">Direction</a></h2>
+ * The direction of the light is defined by the {@code direction} vector property of the light. The light's
+ * direction can be rotated by setting a rotation transform on the light. For example, if the direction vector is
+ * {@code (1, 1, 1)} and the light is not rotated, it will point in the {@code (1, 1, 1)} direction, and if the light is
+ * rotated 90 degrees on the y axis, it will point in the {@code (1, 1, -1)} direction.
+ * <p>
+ * Light types that do not have a direction are not affected by rotation transforms.
+ *
+ * <h2><a id="Attenuation">Distance Attenuation</a></h2>
+ * Any pixel within the range of the light will be illuminated by it (unless it belongs to a {@code Shape3D} outside of
+ * its <a href="#Scopes">scope</a>). The distance is measured from the light's position to the pixel's position, and is
+ * checked to be within the maximum range of the light, as defined by its {@code maxRange} property. The light's
+ * position can be changed by setting a translation transform on the light.
+ * <p>
+ * The light's intensity can be set to change over distance by attenuating it. The attenuation formula
+ * <p>
+ * {@code attn = 1 / (ca + la * dist + qa * dist^2)}
+ * <p>
+ * defines 3 coefficients: {@code ca}, {@code la}, and {@code qa}, which control the constant, linear, and quadratic
+ * behaviors of intensity falloff over distance, respectively. The effective color of the light at a given point in
+ * space is {@code color * attn}. It is possible, albeit unrealistic, to specify negative values to attenuation
+ * coefficients. This allows the resulting attenuation factor to be negative, which results in the light's color being
+ * subtracted from the material color instead of added to it, thus creating a "shadow caster".
+ * <p>
+ * For a realistic effect, {@code maxRange} should be set to a distance at which the attenuation is close to 0, as this
+ * will give a soft cutoff.
+ * <p>
+ * Light types that are not distance-attenuated are not affected by translation transforms. For these types, a decrease
+ * in intensity can be achieved by using a darker color.
  *
  * <p>
- * Note that this is a conditional feature. See
- * {@link javafx.application.ConditionalFeature#SCENE3D ConditionalFeature.SCENE3D}
- * for more information.
+ * <b>Note</b>: this is a conditional feature. See
+ * {@link javafx.application.ConditionalFeature#SCENE3D ConditionalFeature.SCENE3D} for more information.
  *
- * <p>
- * An application should not extend the {@code LightBase} class directly. Doing so may lead to
- * an {@code UnsupportedOperationException} being thrown.
- * </p>
+ * @implNote
+ * The following applies to the {@code color} property of the light:
+ * <ol>
+ *   <li> A black colored light is ignored since its contribution is 0.
+ *   <li> The transparency (alpha) component of a light is ignored.
+ * </ol>
+ * These behaviors are not specified and could change in the future.
  *
  * @since JavaFX 8.0
  */

@@ -24,6 +24,7 @@
                __ZNK3WTF6String4utf8Ev
                __ZNK14OpaqueJSString6stringEv
                __ZN3WTF5equalEPKNS_10StringImplEPKh
+               __ZN3WTF26setPermissionsOfConfigPageEv
                _kJSClassDefinitionEmpty
                _JSCheckScriptSyntax
                _JSClassCreate
@@ -1659,6 +1660,7 @@
                _Java_com_sun_webkit_ColorChooser_twkSetSelectedColor
                _Java_com_sun_webkit_ContextMenu_twkHandleItemSelected
                _Java_com_sun_webkit_MainThread_twkScheduleDispatchFunctions
+               _Java_com_sun_webkit_MainThread_twkSetShutdown
                _Java_com_sun_webkit_PageCache_twkGetCapacity
                _Java_com_sun_webkit_PageCache_twkSetCapacity
                _Java_com_sun_webkit_PopupMenu_twkPopupClosed

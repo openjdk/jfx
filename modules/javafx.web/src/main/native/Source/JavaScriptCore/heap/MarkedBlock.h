@@ -24,13 +24,13 @@
 #include "CellAttributes.h"
 #include "DestructionMode.h"
 #include "HeapCell.h"
-#include "IterationStatus.h"
 #include "WeakSet.h"
 #include <algorithm>
 #include <wtf/Atomics.h>
 #include <wtf/Bitmap.h>
 #include <wtf/CountingLock.h>
 #include <wtf/HashFunctions.h>
+#include <wtf/IterationStatus.h>
 #include <wtf/PageBlock.h>
 #include <wtf/StdLibExtras.h>
 
@@ -161,7 +161,7 @@ public:
         size_t cellSize();
         inline unsigned cellsPerBlock();
 
-        const CellAttributes& attributes() const;
+        CellAttributes attributes() const;
         DestructionMode destruction() const;
         bool needsDestruction() const;
         HeapCell::Kind cellKind() const;
@@ -347,7 +347,7 @@ public:
     void resetAllocated();
 
     size_t cellSize();
-    const CellAttributes& attributes() const;
+    CellAttributes attributes() const;
 
     bool hasAnyMarked() const;
     void noteMarked();
@@ -511,12 +511,12 @@ inline size_t MarkedBlock::cellSize()
     return handle().cellSize();
 }
 
-inline const CellAttributes& MarkedBlock::Handle::attributes() const
+inline CellAttributes MarkedBlock::Handle::attributes() const
 {
     return m_attributes;
 }
 
-inline const CellAttributes& MarkedBlock::attributes() const
+inline CellAttributes MarkedBlock::attributes() const
 {
     return handle().attributes();
 }
@@ -567,10 +567,11 @@ inline bool MarkedBlock::areMarksStale(HeapVersion markingVersion)
 
 inline Dependency MarkedBlock::aboutToMark(HeapVersion markingVersion)
 {
-    HeapVersion version = footer().m_markingVersion;
+    HeapVersion version;
+    Dependency dependency = Dependency::loadAndFence(&footer().m_markingVersion, version);
     if (UNLIKELY(version != markingVersion))
         aboutToMarkSlow(markingVersion);
-    return Dependency::fence(version);
+    return dependency;
 }
 
 inline void MarkedBlock::Handle::assertMarksNotStale()
@@ -585,10 +586,11 @@ inline bool MarkedBlock::isMarkedRaw(const void* p)
 
 inline bool MarkedBlock::isMarked(HeapVersion markingVersion, const void* p)
 {
-    HeapVersion version = footer().m_markingVersion;
+    HeapVersion version;
+    Dependency dependency = Dependency::loadAndFence(&footer().m_markingVersion, version);
     if (UNLIKELY(version != markingVersion))
         return false;
-    return footer().m_marks.get(atomNumber(p), Dependency::fence(version));
+    return footer().m_marks.get(atomNumber(p), dependency);
 }
 
 inline bool MarkedBlock::isMarked(const void* p, Dependency dependency)

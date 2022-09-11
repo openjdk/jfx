@@ -27,7 +27,6 @@
 
 #include "MediaCapabilitiesInfo.h"
 #include "MediaDecodingConfiguration.h"
-#include <wtf/Optional.h>
 
 namespace WebCore {
 
@@ -48,9 +47,16 @@ struct MediaCapabilitiesDecodingInfo : MediaCapabilitiesInfo {
 
     MediaDecodingConfiguration supportedConfiguration;
 
+    MediaCapabilitiesDecodingInfo isolatedCopy() const;
+
     template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static Optional<MediaCapabilitiesDecodingInfo> decode(Decoder&);
+    template<class Decoder> static std::optional<MediaCapabilitiesDecodingInfo> decode(Decoder&);
 };
+
+inline MediaCapabilitiesDecodingInfo MediaCapabilitiesDecodingInfo::isolatedCopy() const
+{
+    return { MediaCapabilitiesInfo::isolatedCopy(), supportedConfiguration.isolatedCopy() };
+}
 
 template<class Encoder>
 void MediaCapabilitiesDecodingInfo::encode(Encoder& encoder) const
@@ -60,16 +66,16 @@ void MediaCapabilitiesDecodingInfo::encode(Encoder& encoder) const
 }
 
 template<class Decoder>
-Optional<MediaCapabilitiesDecodingInfo> MediaCapabilitiesDecodingInfo::decode(Decoder& decoder)
+std::optional<MediaCapabilitiesDecodingInfo> MediaCapabilitiesDecodingInfo::decode(Decoder& decoder)
 {
     auto info = MediaCapabilitiesInfo::decode(decoder);
     if (!info)
-        return WTF::nullopt;
+        return std::nullopt;
 
-    Optional<MediaDecodingConfiguration> supportedConfiguration;
+    std::optional<MediaDecodingConfiguration> supportedConfiguration;
     decoder >> supportedConfiguration;
     if (!supportedConfiguration)
-        return WTF::nullopt;
+        return std::nullopt;
 
     return MediaCapabilitiesDecodingInfo(
         WTFMove(*info),

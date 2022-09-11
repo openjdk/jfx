@@ -42,6 +42,14 @@
 #include "RealtimeMediaSourceSettings.h"
 #include <wtf/UUID.h>
 
+#if PLATFORM(COCOA)
+#include "MockAudioSharedUnit.h"
+#endif
+
+#if USE(GSTREAMER)
+#include "MockRealtimeAudioSourceGStreamer.h"
+#endif
+
 namespace WebCore {
 
 #if !PLATFORM(MAC) && !PLATFORM(IOS_FAMILY) && !USE(GSTREAMER)
@@ -71,7 +79,7 @@ MockRealtimeAudioSource::MockRealtimeAudioSource(String&& deviceID, String&& nam
     ASSERT(device);
     m_device = *device;
 
-    setSampleRate(WTF::get<MockMicrophoneProperties>(m_device.properties).defaultSampleRate);
+    setSampleRate(std::get<MockMicrophoneProperties>(m_device.properties).defaultSampleRate);
     initializeEchoCancellation(true);
 }
 
@@ -130,7 +138,7 @@ const RealtimeMediaSourceCapabilities& MockRealtimeAudioSource::capabilities()
 
 void MockRealtimeAudioSource::settingsDidChange(OptionSet<RealtimeMediaSourceSettings::Flag>)
 {
-    m_currentSettings = WTF::nullopt;
+    m_currentSettings = std::nullopt;
 }
 
 void MockRealtimeAudioSource::startProducingData()
@@ -138,11 +146,11 @@ void MockRealtimeAudioSource::startProducingData()
 #if PLATFORM(IOS_FAMILY)
     RealtimeMediaSourceCenter::singleton().audioCaptureFactory().setActiveSource(*this);
     PlatformMediaSessionManager::sharedManager().sessionCanProduceAudioChanged();
-    ASSERT(AudioSession::sharedSession().category() == AudioSession::PlayAndRecord);
+    ASSERT(AudioSession::sharedSession().category() == AudioSession::CategoryType::PlayAndRecord);
 #endif
 
     if (!sampleRate())
-        setSampleRate(WTF::get<MockMicrophoneProperties>(m_device.properties).defaultSampleRate);
+        setSampleRate(std::get<MockMicrophoneProperties>(m_device.properties).defaultSampleRate);
 
     m_startTime = MonotonicTime::now();
     m_timer.startRepeating(renderInterval());
@@ -170,7 +178,7 @@ void MockRealtimeAudioSource::tick()
     Seconds delta = now - m_lastRenderTime;
     m_lastRenderTime = now;
 
-    m_workQueue->dispatch([this, delta, protectedThis = makeRef(*this)] {
+    m_workQueue->dispatch([this, delta, protectedThis = Ref { *this }] {
         render(delta);
     });
 }
@@ -178,6 +186,20 @@ void MockRealtimeAudioSource::tick()
 void MockRealtimeAudioSource::delaySamples(Seconds delta)
 {
     m_delayUntil = MonotonicTime::now() + delta;
+}
+
+void MockRealtimeAudioSource::setIsInterrupted(bool isInterrupted)
+{
+    UNUSED_PARAM(isInterrupted);
+#if PLATFORM(COCOA)
+    if (isInterrupted)
+        MockAudioSharedUnit::singleton().suspend();
+    else
+        MockAudioSharedUnit::singleton().resume();
+#elif USE(GSTREAMER)
+    for (auto* source : MockRealtimeAudioSourceGStreamer::allMockRealtimeAudioSources())
+        source->setInterruptedForTesting(isInterrupted);
+#endif
 }
 
 } // namespace WebCore

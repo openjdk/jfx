@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009 Apple Inc. All rights reserved.
+ * Copyright (C) 2009-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,11 +28,14 @@
 
 #include "CachedImage.h"
 #include "CanvasPattern.h"
+#include "DestinationColorSpace.h"
+#include "GraphicsLayerContentsDisplayDelegate.h"
 #include "HTMLCanvasElement.h"
 #include "HTMLImageElement.h"
 #include "HTMLVideoElement.h"
 #include "Image.h"
 #include "ImageBitmap.h"
+#include "PixelFormat.h"
 #include "SecurityOrigin.h"
 #include <wtf/HashSet.h>
 #include <wtf/IsoMallocInlines.h>
@@ -44,30 +47,31 @@ namespace WebCore {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(CanvasRenderingContext);
 
-HashSet<CanvasRenderingContext*>& CanvasRenderingContext::instances(const LockHolder&)
+Lock CanvasRenderingContext::s_instancesLock;
+
+HashSet<CanvasRenderingContext*>& CanvasRenderingContext::instances()
 {
     static NeverDestroyed<HashSet<CanvasRenderingContext*>> instances;
     return instances;
 }
 
-Lock& CanvasRenderingContext::instancesMutex()
+Lock& CanvasRenderingContext::instancesLock()
 {
-    static Lock mutex;
-    return mutex;
+    return s_instancesLock;
 }
 
 CanvasRenderingContext::CanvasRenderingContext(CanvasBase& canvas)
     : m_canvas(canvas)
 {
-    LockHolder lock(instancesMutex());
-    instances(lock).add(this);
+    Locker locker { instancesLock() };
+    instances().add(this);
 }
 
 CanvasRenderingContext::~CanvasRenderingContext()
 {
-    LockHolder lock(instancesMutex());
-    ASSERT(instances(lock).contains(this));
-    instances(lock).remove(this);
+    Locker locker { instancesLock() };
+    ASSERT(instances().contains(this));
+    instances().remove(this);
 }
 
 void CanvasRenderingContext::ref()
@@ -78,6 +82,21 @@ void CanvasRenderingContext::ref()
 void CanvasRenderingContext::deref()
 {
     m_canvas.derefCanvasBase();
+}
+
+RefPtr<GraphicsLayerContentsDisplayDelegate> CanvasRenderingContext::layerContentsDisplayDelegate()
+{
+    return nullptr;
+}
+
+PixelFormat CanvasRenderingContext::pixelFormat() const
+{
+    return PixelFormat::BGRA8;
+}
+
+DestinationColorSpace CanvasRenderingContext::colorSpace() const
+{
+    return DestinationColorSpace::SRGB();
 }
 
 bool CanvasRenderingContext::wouldTaintOrigin(const CanvasPattern* pattern)
@@ -103,7 +122,7 @@ bool CanvasRenderingContext::wouldTaintOrigin(const HTMLImageElement* element)
     if (!cachedImage)
         return false;
 
-    auto image = makeRefPtr(cachedImage->image());
+    RefPtr image = cachedImage->image();
     if (!image)
         return false;
 
@@ -170,7 +189,7 @@ void CanvasRenderingContext::checkOrigin(const URL& url)
         m_canvas.setOriginTainted();
 }
 
-void CanvasRenderingContext::checkOrigin(const TypedOMCSSImageValue&)
+void CanvasRenderingContext::checkOrigin(const CSSStyleImageValue&)
 {
     m_canvas.setOriginTainted();
 }

@@ -34,7 +34,7 @@
 namespace WebCore {
 
 struct MediaStreamRequest {
-    enum class Type { UserMedia, DisplayMedia };
+    enum class Type { UserMedia, DisplayMedia, DisplayMediaWithAudio };
     Type type { Type::UserMedia };
     MediaConstraints audioConstraints;
     MediaConstraints videoConstraints;
@@ -49,13 +49,13 @@ struct MediaStreamRequest {
         encoder << isUserGesturePriviledged;
     }
 
-    template <class Decoder> static Optional<MediaStreamRequest> decode(Decoder& decoder)
+    template <class Decoder> static std::optional<MediaStreamRequest> decode(Decoder& decoder)
     {
         MediaStreamRequest request;
         if (decoder.decode(request.type) && decoder.decode(request.audioConstraints) && decoder.decode(request.videoConstraints) && decoder.decode(request.isUserGesturePriviledged))
             return request;
 
-        return WTF::nullopt;
+        return std::nullopt;
     }
 };
 
@@ -66,7 +66,7 @@ struct MediaStreamRequest {
 namespace WebCore {
 
 struct MediaStreamRequest {
-    enum class Type { UserMedia, DisplayMedia };
+    enum class Type { UserMedia, DisplayMedia, DisplayMediaWithAudio };
     Type type;
 };
 
@@ -80,7 +80,8 @@ template<> struct EnumTraits<WebCore::MediaStreamRequest::Type> {
     using values = EnumValues<
         WebCore::MediaStreamRequest::Type,
         WebCore::MediaStreamRequest::Type::UserMedia,
-        WebCore::MediaStreamRequest::Type::DisplayMedia
+        WebCore::MediaStreamRequest::Type::DisplayMedia,
+        WebCore::MediaStreamRequest::Type::DisplayMediaWithAudio
     >;
 };
 

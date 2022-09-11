@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,33 +32,32 @@ namespace JSC {
 class JSProxy : public JSNonFinalObject {
 public:
     using Base = JSNonFinalObject;
-    static constexpr unsigned StructureFlags = Base::StructureFlags | OverridesGetOwnPropertySlot | OverridesGetOwnPropertyNames | OverridesGetPrototype | InterceptsGetOwnPropertySlotByIndexEvenWhenLengthIsNotZero;
+    static constexpr unsigned StructureFlags = Base::StructureFlags | OverridesGetOwnPropertySlot | OverridesGetOwnPropertyNames | OverridesPut | OverridesGetPrototype | InterceptsGetOwnPropertySlotByIndexEvenWhenLengthIsNotZero;
 
     template<typename CellType, SubspaceAccess>
-    static IsoSubspace* subspaceFor(VM& vm)
+    static GCClient::IsoSubspace* subspaceFor(VM& vm)
     {
         static_assert(sizeof(CellType) == sizeof(JSProxy));
-        return &vm.jsProxySpace;
+        return &vm.jsProxySpace();
     }
 
     static JSProxy* create(VM& vm, Structure* structure, JSObject* target)
     {
-        JSProxy* proxy = new (NotNull, allocateCell<JSProxy>(vm.heap)) JSProxy(vm, structure);
+        JSProxy* proxy = new (NotNull, allocateCell<JSProxy>(vm)) JSProxy(vm, structure);
         proxy->finishCreation(vm, target);
         return proxy;
     }
 
     static JSProxy* create(VM& vm, Structure* structure)
     {
-        JSProxy* proxy = new (NotNull, allocateCell<JSProxy>(vm.heap)) JSProxy(vm, structure);
+        JSProxy* proxy = new (NotNull, allocateCell<JSProxy>(vm)) JSProxy(vm, structure);
         proxy->finishCreation(vm);
         return proxy;
     }
 
-    static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype, JSType proxyType)
+    static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
     {
-        ASSERT(proxyType == ImpureProxyType || proxyType == PureForwardingProxyType);
-        return Structure::create(vm, globalObject, prototype, TypeInfo(proxyType, StructureFlags), info());
+        return Structure::create(vm, globalObject, prototype, TypeInfo(PureForwardingProxyType, StructureFlags), info());
     }
 
     DECLARE_EXPORT_INFO;
@@ -87,8 +86,6 @@ protected:
 
     DECLARE_VISIT_CHILDREN_WITH_MODIFIER(JS_EXPORT_PRIVATE);
 
-    JS_EXPORT_PRIVATE static String className(const JSObject*, VM&);
-    JS_EXPORT_PRIVATE static String toStringName(const JSObject*, JSGlobalObject*);
     JS_EXPORT_PRIVATE static bool getOwnPropertySlot(JSObject*, JSGlobalObject*, PropertyName, PropertySlot&);
     JS_EXPORT_PRIVATE static bool getOwnPropertySlotByIndex(JSObject*, JSGlobalObject*, unsigned, PropertySlot&);
     JS_EXPORT_PRIVATE static bool put(JSCell*, JSGlobalObject*, PropertyName, JSValue, PutPropertySlot&);
@@ -96,7 +93,6 @@ protected:
     JS_EXPORT_PRIVATE static bool deleteProperty(JSCell*, JSGlobalObject*, PropertyName, DeletePropertySlot&);
     JS_EXPORT_PRIVATE static bool deletePropertyByIndex(JSCell*, JSGlobalObject*, unsigned);
     JS_EXPORT_PRIVATE static void getOwnPropertyNames(JSObject*, JSGlobalObject*, PropertyNameArray&, DontEnumPropertiesMode);
-    JS_EXPORT_PRIVATE static uint32_t getEnumerableLength(JSGlobalObject*, JSObject*);
     JS_EXPORT_PRIVATE static bool defineOwnProperty(JSObject*, JSGlobalObject*, PropertyName, const PropertyDescriptor&, bool shouldThrow);
     JS_EXPORT_PRIVATE static bool setPrototype(JSObject*, JSGlobalObject*, JSValue, bool shouldThrowIfCantSet);
     JS_EXPORT_PRIVATE static JSValue getPrototype(JSObject*, JSGlobalObject*);

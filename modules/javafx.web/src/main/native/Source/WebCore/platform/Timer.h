@@ -30,7 +30,6 @@
 #include <wtf/Function.h>
 #include <wtf/MonotonicTime.h>
 #include <wtf/Noncopyable.h>
-#include <wtf/Optional.h>
 #include <wtf/Seconds.h>
 #include <wtf/Threading.h>
 #include <wtf/Vector.h>
@@ -71,7 +70,7 @@ public:
 private:
     virtual void fired() = 0;
 
-    virtual Optional<MonotonicTime> alignedFireTime(MonotonicTime) const { return WTF::nullopt; }
+    virtual std::optional<MonotonicTime> alignedFireTime(MonotonicTime) const { return std::nullopt; }
 
     void checkConsistency() const;
     void checkHeapIndex() const;
@@ -109,7 +108,7 @@ private:
 class Timer : public TimerBase {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    static void schedule(Seconds delay, WTF::Function<void()>&& function)
+    static void schedule(Seconds delay, Function<void()>&& function)
     {
         auto* timer = new Timer([] { });
         timer->m_function = [timer, function = WTFMove(function)] {
@@ -125,7 +124,7 @@ public:
     {
     }
 
-    Timer(WTF::Function<void ()>&& function)
+    Timer(Function<void()>&& function)
         : m_function(WTFMove(function))
     {
     }
@@ -136,7 +135,7 @@ private:
         m_function();
     }
 
-    WTF::Function<void ()> m_function;
+    Function<void()> m_function;
 };
 
 inline bool TimerBase::isActive() const
@@ -159,7 +158,7 @@ public:
     {
     }
 
-    DeferrableOneShotTimer(WTF::Function<void()>&& function, Seconds delay)
+    DeferrableOneShotTimer(Function<void()>&& function, Seconds delay)
         : m_function(WTFMove(function))
         , m_delay(delay)
         , m_shouldRestartWhenTimerFires(false)
@@ -199,7 +198,7 @@ private:
         m_function();
     }
 
-    WTF::Function<void ()> m_function;
+    Function<void()> m_function;
 
     Seconds m_delay;
     bool m_shouldRestartWhenTimerFires;

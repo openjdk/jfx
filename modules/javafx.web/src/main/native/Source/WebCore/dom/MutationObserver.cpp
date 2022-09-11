@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2011 Google Inc. All rights reserved.
- * Copyright (C) 2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -66,42 +66,42 @@ MutationObserver::MutationObserver(Ref<MutationCallback>&& callback)
 
 MutationObserver::~MutationObserver()
 {
-    ASSERT(m_registrations.isEmpty());
+    ASSERT(m_registrations.computesEmpty());
 }
 
 bool MutationObserver::validateOptions(MutationObserverOptions options)
 {
-    return (options & (Attributes | CharacterData | ChildList))
-        && ((options & Attributes) || !(options & AttributeOldValue))
-        && ((options & Attributes) || !(options & AttributeFilter))
-        && ((options & CharacterData) || !(options & CharacterDataOldValue));
+    return options.containsAny(AllMutationTypes)
+        && (options.contains(OptionType::Attributes) || !options.contains(OptionType::AttributeOldValue))
+        && (options.contains(OptionType::Attributes) || !options.contains(OptionType::AttributeFilter))
+        && (options.contains(OptionType::CharacterData) || !options.contains(OptionType::CharacterDataOldValue));
 }
 
 ExceptionOr<void> MutationObserver::observe(Node& node, const Init& init)
 {
-    MutationObserverOptions options = 0;
+    MutationObserverOptions options;
 
     if (init.childList)
-        options |= ChildList;
+        options.add(OptionType::ChildList);
     if (init.subtree)
-        options |= Subtree;
-    if (init.attributeOldValue.valueOr(false))
-        options |= AttributeOldValue;
-    if (init.characterDataOldValue.valueOr(false))
-        options |= CharacterDataOldValue;
+        options.add(OptionType::Subtree);
+    if (init.attributeOldValue.value_or(false))
+        options.add(OptionType::AttributeOldValue);
+    if (init.characterDataOldValue.value_or(false))
+        options.add(OptionType::CharacterDataOldValue);
 
     HashSet<AtomString> attributeFilter;
     if (init.attributeFilter) {
         for (auto& value : init.attributeFilter.value())
             attributeFilter.add(value);
-        options |= AttributeFilter;
+        options.add(OptionType::AttributeFilter);
     }
 
-    if (init.attributes ? init.attributes.value() : (options & (AttributeFilter | AttributeOldValue)))
-        options |= Attributes;
+    if (init.attributes ? init.attributes.value() : options.containsAny({ OptionType::AttributeFilter, OptionType::AttributeOldValue }))
+        options.add(OptionType::Attributes);
 
-    if (init.characterData ? init.characterData.value() : (options & CharacterDataOldValue))
-        options |= CharacterData;
+    if (init.characterData ? init.characterData.value() : options.contains(OptionType::CharacterDataOldValue))
+        options.add(OptionType::CharacterData);
 
     if (!validateOptions(options))
         return Exception { TypeError };
@@ -120,33 +120,35 @@ void MutationObserver::disconnect()
 {
     m_pendingTargets.clear();
     m_records.clear();
-    HashSet<MutationObserverRegistration*> registrations(m_registrations);
-    for (auto* registration : registrations)
-        registration->node().unregisterMutationObserver(*registration);
+    WeakHashSet registrations { m_registrations };
+    for (auto& registration : registrations) {
+        Ref nodeRef { registration.node() };
+        nodeRef->unregisterMutationObserver(registration);
+    }
 }
 
 void MutationObserver::observationStarted(MutationObserverRegistration& registration)
 {
-    ASSERT(!m_registrations.contains(&registration));
-    m_registrations.add(&registration);
+    ASSERT(!m_registrations.contains(registration));
+    m_registrations.add(registration);
 }
 
 void MutationObserver::observationEnded(MutationObserverRegistration& registration)
 {
-    ASSERT(m_registrations.contains(&registration));
-    m_registrations.remove(&registration);
+    ASSERT(m_registrations.contains(registration));
+    m_registrations.remove(registration);
 }
 
 void MutationObserver::enqueueMutationRecord(Ref<MutationRecord>&& mutation)
 {
     ASSERT(isMainThread());
     ASSERT(mutation->target());
-    auto document = makeRef(mutation->target()->document());
+    Ref document = mutation->target()->document();
 
     m_pendingTargets.add(*mutation->target());
     m_records.append(WTFMove(mutation));
 
-    auto eventLoop = makeRef(document->windowEventLoop());
+    Ref eventLoop = document->windowEventLoop();
     eventLoop->activeMutationObservers().add(this);
     eventLoop->queueMutationObserverCompoundMicrotask();
 }
@@ -154,9 +156,9 @@ void MutationObserver::enqueueMutationRecord(Ref<MutationRecord>&& mutation)
 void MutationObserver::enqueueSlotChangeEvent(HTMLSlotElement& slot)
 {
     ASSERT(isMainThread());
-    auto eventLoop = makeRef(slot.document().windowEventLoop());
+    Ref eventLoop = slot.document().windowEventLoop();
     auto& list = eventLoop->signalSlotList();
-    ASSERT(list.findMatching([&slot](auto& entry) { return entry.ptr() == &slot; }) == notFound);
+    ASSERT(list.findIf([&slot](auto& entry) { return entry.ptr() == &slot; }) == notFound);
     list.append(slot);
 
     eventLoop->queueMutationObserverCompoundMicrotask();
@@ -164,17 +166,18 @@ void MutationObserver::enqueueSlotChangeEvent(HTMLSlotElement& slot)
 
 void MutationObserver::setHasTransientRegistration(Document& document)
 {
-    auto eventLoop = makeRef(document.windowEventLoop());
+    Ref eventLoop = document.windowEventLoop();
     eventLoop->activeMutationObservers().add(this);
     eventLoop->queueMutationObserverCompoundMicrotask();
 }
 
-HashSet<Node*> MutationObserver::observedNodes() const
+bool MutationObserver::isReachableFromOpaqueRoots(JSC::AbstractSlotVisitor& visitor) const
 {
-    HashSet<Node*> observedNodes;
-    for (auto* registration : m_registrations)
-        registration->addRegistrationNodesToSet(observedNodes);
-    return observedNodes;
+    for (auto& registration : m_registrations) {
+        if (registration.isReachableFromOpaqueRoots(visitor))
+            return true;
+    }
+    return false;
 }
 
 bool MutationObserver::canDeliver()
@@ -192,9 +195,9 @@ void MutationObserver::deliver()
     Vector<std::unique_ptr<HashSet<GCReachableRef<Node>>>, 1> nodesToKeepAlive;
     HashSet<GCReachableRef<Node>> pendingTargets;
     pendingTargets.swap(m_pendingTargets);
-    for (auto* registration : m_registrations) {
-        if (registration->hasTransientRegistrations())
-            transientRegistrations.append(registration);
+    for (auto& registration : m_registrations) {
+        if (registration.hasTransientRegistrations())
+            transientRegistrations.append(&registration);
     }
     for (auto& registration : transientRegistrations)
         nodesToKeepAlive.append(registration->takeTransientRegistrations());

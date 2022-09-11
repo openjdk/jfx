@@ -114,7 +114,7 @@ class WinTextRangeProvider {
 
     private boolean isWordStart(BreakIterator bi, String text, int offset) {
         if (offset == 0) return true;
-        if (offset == text.length()) return true;
+        if (offset >= text.length()) return true;
         if (offset == BreakIterator.DONE) return true;
         return bi.isBoundary(offset) && Character.isLetterOrDigit(text.charAt(offset));
     }
@@ -177,6 +177,7 @@ class WinTextRangeProvider {
                 break;
             }
             case TextUnit_Line: {
+                if (start > length) start = length;
                 Integer lineIndex = (Integer)getAttribute(LINE_FOR_OFFSET, start);
                 Integer lineStart = (Integer)getAttribute(LINE_START, lineIndex);
                 Integer lineEnd = (Integer)getAttribute(LINE_END, lineIndex);
@@ -326,10 +327,16 @@ class WinTextRangeProvider {
             int index = 0;
             for (int i = 0; i < bounds.length; i++) {
                 Bounds b = bounds[i];
-                result[index++] = b.getMinX();
-                result[index++] = b.getMinY();
-                result[index++] = b.getWidth();
-                result[index++] = b.getHeight();
+                float[] platformBounds = accessible.getPlatformBounds(
+                        (float) b.getMinX(),
+                        (float) b.getMinY(),
+                        (float) b.getWidth(),
+                        (float) b.getHeight());
+
+                result[index++] = platformBounds[0];
+                result[index++] = platformBounds[1];
+                result[index++] = platformBounds[2];
+                result[index++] = platformBounds[3];
             }
             return result;
         }

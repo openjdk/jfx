@@ -25,7 +25,6 @@
 
 #pragma once
 
-#include <pal/LogMacros.h>
 #include <wtf/Assertions.h>
 #include <wtf/Forward.h>
 
@@ -40,6 +39,7 @@ namespace WebCore {
 #define WEBCORE_LOG_CHANNELS(M) \
     M(Accessibility) \
     M(Animations) \
+    M(AppHighlights) \
     M(ApplePay) \
     M(Archives) \
     M(BackForwardCache) \
@@ -50,6 +50,7 @@ namespace WebCore {
     M(ContentFiltering) \
     M(ContentObservation) \
     M(DatabaseTracker) \
+    M(DisplayLink) \
     M(DisplayLists) \
     M(DOMTimers) \
     M(Editing) \
@@ -85,6 +86,7 @@ namespace WebCore {
     M(MediaSourceSamples) \
     M(MemoryPressure) \
     M(MessagePorts) \
+    M(ModelElement) \
     M(Network) \
     M(NotYetImplemented) \
     M(OverlayScrollbars) \
@@ -93,12 +95,15 @@ namespace WebCore {
     M(Plugins) \
     M(PopupBlocking) \
     M(PrivateClickMeasurement) \
+    M(Process) \
     M(Progress) \
+    M(Push) \
     M(RemoteInspector) \
     M(RequestAnimationFrame) \
     M(ResourceLoading) \
     M(ResourceLoadObserver) \
     M(ResourceLoadStatistics) \
+    M(ScrollAnimations) \
     M(ScrollSnap) \
     M(Scrolling) \
     M(ScrollingTree) \
@@ -106,21 +111,26 @@ namespace WebCore {
     M(Selection) \
     M(Services) \
     M(ServiceWorker) \
+    M(SharedWorker) \
     M(SpellingAndGrammar) \
     M(SQLDatabase) \
     M(Storage) \
     M(StorageAPI) \
+    M(StyleSheets) \
     M(SVG) \
     M(TextAutosizing) \
+    M(TextFragment) \
+    M(TextManipulation) \
+    M(TextShaping) \
     M(Tiling) \
     M(Threading) \
     M(URLParser) \
     M(Viewports) \
     M(WebAudio) \
     M(WebGL) \
-    M(WebGPU) \
     M(WebRTC) \
     M(WebRTCStats) \
+    M(Worker) \
     M(XR) \
     M(WheelEventTestMonitor) \
 
@@ -130,11 +140,6 @@ namespace WebCore {
 
 WEBCORE_LOG_CHANNELS(DECLARE_LOG_CHANNEL)
 
-String logLevelString();
-bool isLogChannelEnabled(const String& name);
-
 #endif // !LOG_DISABLED || !RELEASE_LOG_DISABLED
-
-WEBCORE_EXPORT WTFLogChannel* getLogChannel(const String& name);
 
 } // namespace WebCore

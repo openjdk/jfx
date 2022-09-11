@@ -26,8 +26,6 @@
 #include "config.h"
 #include "IDBOpenDBRequest.h"
 
-#if ENABLE(INDEXED_DATABASE)
-
 #include "DOMException.h"
 #include "EventNames.h"
 #include "IDBConnectionProxy.h"
@@ -48,20 +46,23 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(IDBOpenDBRequest);
 
 Ref<IDBOpenDBRequest> IDBOpenDBRequest::createDeleteRequest(ScriptExecutionContext& context, IDBClient::IDBConnectionProxy& connectionProxy, const IDBDatabaseIdentifier& databaseIdentifier)
 {
-    return adoptRef(*new IDBOpenDBRequest(context, connectionProxy, databaseIdentifier, 0, IndexedDB::RequestType::Delete));
+    auto result = adoptRef(*new IDBOpenDBRequest(context, connectionProxy, databaseIdentifier, 0, IndexedDB::RequestType::Delete));
+    result->suspendIfNeeded();
+    return result;
 }
 
 Ref<IDBOpenDBRequest> IDBOpenDBRequest::createOpenRequest(ScriptExecutionContext& context, IDBClient::IDBConnectionProxy& connectionProxy, const IDBDatabaseIdentifier& databaseIdentifier, uint64_t version)
 {
-    return adoptRef(*new IDBOpenDBRequest(context, connectionProxy, databaseIdentifier, version, IndexedDB::RequestType::Open));
+    auto result = adoptRef(*new IDBOpenDBRequest(context, connectionProxy, databaseIdentifier, version, IndexedDB::RequestType::Open));
+    result->suspendIfNeeded();
+    return result;
 }
 
 IDBOpenDBRequest::IDBOpenDBRequest(ScriptExecutionContext& context, IDBClient::IDBConnectionProxy& connectionProxy, const IDBDatabaseIdentifier& databaseIdentifier, uint64_t version, IndexedDB::RequestType requestType)
-    : IDBRequest(context, connectionProxy)
+    : IDBRequest(context, connectionProxy, requestType)
     , m_databaseIdentifier(databaseIdentifier)
     , m_version(version)
 {
-    m_requestType = requestType;
 }
 
 IDBOpenDBRequest::~IDBOpenDBRequest()
@@ -83,7 +84,7 @@ void IDBOpenDBRequest::versionChangeTransactionDidFinish()
 
     // 3.3.7 "versionchange" transaction steps
     // When the transaction is finished, after firing complete/abort on the transaction, immediately set request's transaction property to null.
-    m_shouldExposeTransactionToDOM = false;
+    setShouldExposeTransactionToDOM(false);
 }
 
 void IDBOpenDBRequest::fireSuccessAfterVersionChangeCommit()
@@ -124,7 +125,7 @@ void IDBOpenDBRequest::dispatchEvent(Event& event)
 {
     ASSERT(canCurrentThreadAccessThreadLocalData(originThread()));
 
-    auto protectedThis = makeRef(*this);
+    Ref protectedThis { *this };
 
     IDBRequest::dispatchEvent(event);
 
@@ -139,7 +140,7 @@ void IDBOpenDBRequest::onSuccess(const IDBResultData& resultData)
     ASSERT(canCurrentThreadAccessThreadLocalData(originThread()));
 
     setResult(IDBDatabase::create(*scriptExecutionContext(), connectionProxy(), resultData));
-    m_readyState = ReadyState::Done;
+    setReadyState(ReadyState::Done);
 
     enqueueEvent(IDBRequestCompletionEvent::create(eventNames().successEvent, Event::CanBubble::No, Event::IsCancelable::No, *this));
 }
@@ -160,7 +161,7 @@ void IDBOpenDBRequest::onUpgradeNeeded(const IDBResultData& resultData)
     LOG(IndexedDB, "IDBOpenDBRequest::onUpgradeNeeded() - current version is %" PRIu64 ", new is %" PRIu64, oldVersion, newVersion);
 
     setResult(WTFMove(database));
-    m_readyState = ReadyState::Done;
+    setReadyState(ReadyState::Done);
     m_transaction = WTFMove(transaction);
     m_transaction->addRequest(*this);
 
@@ -175,7 +176,7 @@ void IDBOpenDBRequest::onDeleteDatabaseSuccess(const IDBResultData& resultData)
 
     LOG(IndexedDB, "IDBOpenDBRequest::onDeleteDatabaseSuccess() - current version is %" PRIu64, oldVersion);
 
-    m_readyState = ReadyState::Done;
+    setReadyState(ReadyState::Done);
     setResultToUndefined();
 
     enqueueEvent(IDBVersionChangeEvent::create(oldVersion, 0, eventNames().successEvent));
@@ -251,5 +252,3 @@ void IDBOpenDBRequest::setIsContextSuspended(bool isContextSuspended)
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(INDEXED_DATABASE)

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2020-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,13 +31,6 @@
 
 namespace JSC {
 
-#if !defined(HAVE_ICU_U_LOCALE_DISPLAY_NAMES)
-// We need 61 or later since part of implementation uses UCURR_NARROW_SYMBOL_NAME.
-#if U_ICU_VERSION_MAJOR_NUM >= 61
-#define HAVE_ICU_U_LOCALE_DISPLAY_NAMES 1
-#endif
-#endif
-
 enum class RelevantExtensionKey : uint8_t;
 
 class IntlDisplayNames final : public JSNonFinalObject {
@@ -52,7 +45,7 @@ public:
     }
 
     template<typename CellType, SubspaceAccess mode>
-    static IsoSubspace* subspaceFor(VM& vm)
+    static GCClient::IsoSubspace* subspaceFor(VM& vm)
     {
         return vm.intlDisplayNamesSpace<mode>();
     }
@@ -72,12 +65,14 @@ private:
     void finishCreation(VM&);
 
     enum class Style : uint8_t { Narrow, Short, Long };
-    enum class Type : uint8_t { Language, Region, Script, Currency };
+    enum class Type : uint8_t { Language, Region, Script, Currency, Calendar, DateTimeField };
     enum class Fallback : uint8_t { Code, None };
+    enum class LanguageDisplay : uint8_t { Dialect, Standard };
 
     static ASCIILiteral styleString(Style);
     static ASCIILiteral typeString(Type);
     static ASCIILiteral fallbackString(Fallback);
+    static ASCIILiteral languageDisplayString(LanguageDisplay);
 
     using ULocaleDisplayNamesDeleter = ICUDeleter<uldn_close>;
     std::unique_ptr<ULocaleDisplayNames, ULocaleDisplayNamesDeleter> m_displayNames;
@@ -88,6 +83,7 @@ private:
     Style m_style { Style::Long };
     Type m_type { Type::Language };
     Fallback m_fallback { Fallback::Code };
+    LanguageDisplay m_languageDisplay { LanguageDisplay::Dialect };
 };
 
 } // namespace JSC

@@ -40,7 +40,7 @@ class Page;
 struct MediaQueryParserContext;
 
 template<typename T> class EventSender;
-typedef EventSender<HTMLLinkElement> LinkEventSender;
+using LinkEventSender = EventSender<HTMLLinkElement>;
 
 class HTMLLinkElement final : public HTMLElement, public CachedStyleSheetClient, public LinkLoaderClient {
     WTF_MAKE_ISO_ALLOCATED(HTMLLinkElement);
@@ -55,7 +55,7 @@ public:
 
     const AtomString& type() const;
 
-    Optional<LinkIconType> iconType() const;
+    std::optional<LinkIconType> iconType() const;
 
     CSSStyleSheet* sheet() const { return m_sheet.get(); }
 
@@ -64,6 +64,8 @@ public:
     bool isDisabled() const { return m_disabledState == Disabled; }
     bool isEnabledViaScript() const { return m_disabledState == EnabledViaScript; }
     DOMTokenList& sizes();
+
+    bool mediaAttributeMatches() const;
 
     WEBCORE_EXPORT void setCrossOrigin(const AtomString&);
     WEBCORE_EXPORT String crossOrigin() const;
@@ -114,14 +116,13 @@ private:
 
     bool isURLAttribute(const Attribute&) const final;
 
-    void defaultEventHandler(Event&) final;
-    void handleClick(Event&);
-
     HTMLLinkElement(const QualifiedName&, Document&, bool createdByParser);
 
     void addSubresourceAttributeURLs(ListHashSet<URL>&) const final;
 
     void finishParsingChildren() final;
+
+    String debugDescription() const final;
 
     enum PendingSheetType : uint8_t { Unknown, ActiveSheet, InactiveSheet };
     void addPendingSheet(PendingSheetType);

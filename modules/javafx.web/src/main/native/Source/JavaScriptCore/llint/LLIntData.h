@@ -321,6 +321,24 @@ ALWAYS_INLINE MacroAssemblerCodePtr<tag> getWide32CodePtr(WasmOpcodeID opcodeID)
 }
 
 template<PtrTag tag>
+ALWAYS_INLINE MacroAssemblerCodeRef<tag> getCodeRef(WasmOpcodeID opcodeID)
+{
+    return MacroAssemblerCodeRef<tag>::createSelfManagedCodeRef(getCodePtr<tag>(opcodeID));
+}
+
+template<PtrTag tag>
+ALWAYS_INLINE MacroAssemblerCodeRef<tag> getWide16CodeRef(WasmOpcodeID opcodeID)
+{
+    return MacroAssemblerCodeRef<tag>::createSelfManagedCodeRef(getWide16CodePtr<tag>(opcodeID));
+}
+
+template<PtrTag tag>
+ALWAYS_INLINE MacroAssemblerCodeRef<tag> getWide32CodeRef(WasmOpcodeID opcodeID)
+{
+    return MacroAssemblerCodeRef<tag>::createSelfManagedCodeRef(getWide32CodePtr<tag>(opcodeID));
+}
+
+template<PtrTag tag>
 ALWAYS_INLINE LLIntCode getCodeFunctionPtr(WasmOpcodeID opcodeID)
 {
 #if COMPILER(MSVC)
@@ -379,7 +397,7 @@ struct Registers {
 #elif CPU(X86_64) && OS(WINDOWS)
     static constexpr GPRReg metadataTableGPR = GPRInfo::regCS3;
     static constexpr GPRReg pbGPR = GPRInfo::regCS4;
-#elif CPU(ARM64)
+#elif CPU(ARM64) || CPU(RISCV64)
     static constexpr GPRReg metadataTableGPR = GPRInfo::regCS6;
     static constexpr GPRReg pbGPR = GPRInfo::regCS7;
 #elif CPU(MIPS) || CPU(ARM_THUMB2)

@@ -71,19 +71,19 @@ void ScrollingCoordinatorNicosia::commitTreeStateIfNeeded()
     scrollingTree()->commitTreeState(WTFMove(stateTree));
 }
 
-bool ScrollingCoordinatorNicosia::handleWheelEventForScrolling(const PlatformWheelEvent& wheelEvent, ScrollingNodeID targetNode, Optional<WheelScrollGestureState> gestureState)
+bool ScrollingCoordinatorNicosia::handleWheelEventForScrolling(const PlatformWheelEvent& wheelEvent, ScrollingNodeID targetNode, std::optional<WheelScrollGestureState> gestureState)
 {
     ASSERT(isMainThread());
     ASSERT(m_page);
     ASSERT(scrollingTree());
 
-    ScrollingThread::dispatch([threadedScrollingTree = makeRef(downcast<ThreadedScrollingTree>(*scrollingTree())), wheelEvent, targetNode, gestureState] {
+    ScrollingThread::dispatch([threadedScrollingTree = Ref { downcast<ThreadedScrollingTree>(*scrollingTree()) }, wheelEvent, targetNode, gestureState] {
         threadedScrollingTree->handleWheelEventAfterMainThread(wheelEvent, targetNode, gestureState);
     });
     return true;
 }
 
-void ScrollingCoordinatorNicosia::wheelEventWasProcessedByMainThread(const PlatformWheelEvent& wheelEvent, Optional<WheelScrollGestureState> gestureState)
+void ScrollingCoordinatorNicosia::wheelEventWasProcessedByMainThread(const PlatformWheelEvent& wheelEvent, std::optional<WheelScrollGestureState> gestureState)
 {
     RefPtr<ThreadedScrollingTree> threadedScrollingTree = downcast<ThreadedScrollingTree>(scrollingTree());
     threadedScrollingTree->wheelEventWasProcessedByMainThread(wheelEvent, gestureState);
@@ -100,6 +100,22 @@ void ScrollingCoordinatorNicosia::willStartRenderingUpdate()
     threadedScrollingTree->willStartRenderingUpdate();
     commitTreeStateIfNeeded();
     synchronizeStateFromScrollingTree();
+}
+
+void ScrollingCoordinatorNicosia::didCompleteRenderingUpdate()
+{
+    downcast<ThreadedScrollingTree>(scrollingTree())->didCompleteRenderingUpdate();
+
+    // Scroll animations are driven by the display refresh, so make sure that we
+    // keep firing until they're complete.
+    if (scrollingTree()->hasNodeWithActiveScrollAnimations())
+        scheduleRenderingUpdate();
+}
+
+void ScrollingCoordinatorNicosia::hasNodeWithAnimatedScrollChanged(bool hasAnimatingNode)
+{
+    if (hasAnimatingNode)
+        scheduleRenderingUpdate();
 }
 
 } // namespace WebCore

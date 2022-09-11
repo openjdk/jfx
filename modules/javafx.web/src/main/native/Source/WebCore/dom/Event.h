@@ -26,11 +26,17 @@
 #include "DOMHighResTimeStamp.h"
 #include "EventInit.h"
 #include "EventInterfaces.h"
+#include "EventOptions.h"
 #include "ExceptionOr.h"
 #include "ScriptWrappable.h"
+#include <wtf/CheckedPtr.h>
 #include <wtf/MonotonicTime.h>
 #include <wtf/TypeCasts.h>
 #include <wtf/text/AtomString.h>
+
+namespace WTF {
+class TextStream;
+}
 
 namespace WebCore {
 
@@ -41,10 +47,10 @@ class ScriptExecutionContext;
 class Event : public ScriptWrappable, public RefCounted<Event> {
     WTF_MAKE_ISO_ALLOCATED(Event);
 public:
-    enum class IsTrusted : uint8_t { No, Yes };
-    enum class CanBubble : uint8_t { No, Yes };
-    enum class IsCancelable : uint8_t { No, Yes };
-    enum class IsComposed : uint8_t { No, Yes };
+    using IsTrusted = EventIsTrusted;
+    using CanBubble = EventCanBubble;
+    using IsCancelable = EventIsCancelable;
+    using IsComposed = EventIsComposed;
 
     enum PhaseType : uint8_t {
         NONE = 0,
@@ -70,7 +76,7 @@ public:
     void setTarget(RefPtr<EventTarget>&&);
 
     EventTarget* currentTarget() const { return m_currentTarget.get(); }
-    void setCurrentTarget(EventTarget*, Optional<bool> isInShadowTree = WTF::nullopt);
+    void setCurrentTarget(EventTarget*, std::optional<bool> isInShadowTree = std::nullopt);
     bool currentTargetIsInShadowTree() const { return m_currentTargetIsInShadowTree; }
 
     unsigned short eventPhase() const { return m_eventPhase; }
@@ -83,8 +89,8 @@ public:
     DOMHighResTimeStamp timeStampForBindings(ScriptExecutionContext&) const;
     MonotonicTime timeStamp() const { return m_createTime; }
 
-    void setEventPath(const EventPath& path) { m_eventPath = &path; }
-    Vector<EventTarget*> composedPath() const;
+    void setEventPath(const EventPath&);
+    Vector<Ref<EventTarget>> composedPath() const;
 
     void stopPropagation() { m_propagationStopped = true; }
     void stopImmediatePropagation() { m_immediatePropagationStopped = true; }
@@ -147,6 +153,8 @@ public:
     virtual EventTarget* relatedTarget() const { return nullptr; }
     virtual void setRelatedTarget(EventTarget*) { }
 
+    virtual String debugDescription() const;
+
 protected:
     explicit Event(IsTrusted = IsTrusted::No);
     Event(const AtomString& type, CanBubble, IsCancelable, IsComposed = IsComposed::No);
@@ -179,7 +187,7 @@ private:
     AtomString m_type;
 
     RefPtr<EventTarget> m_currentTarget;
-    const EventPath* m_eventPath { nullptr };
+    CheckedPtr<const EventPath> m_eventPath;
     RefPtr<EventTarget> m_target;
     MonotonicTime m_createTime;
 
@@ -211,6 +219,8 @@ inline void Event::setCancelBubble(bool cancel)
     if (cancel)
         m_propagationStopped = true;
 }
+
+WTF::TextStream& operator<<(WTF::TextStream&, const Event&);
 
 } // namespace WebCore
 

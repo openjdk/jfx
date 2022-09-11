@@ -73,7 +73,7 @@ public:
     ~AbortableTaskQueue()
     {
         ASSERT(isMainThread());
-        ASSERT(!m_mutex.isHeld());
+        ASSERT(!m_lock.isHeld());
         ASSERT(m_channel.isEmpty());
     }
 
@@ -94,7 +94,7 @@ public:
         ASSERT(isMainThread());
 
         {
-            LockHolder lockHolder(m_mutex);
+            Locker locker { m_lock };
             m_aborting = true;
             cancelAllTasks();
         }
@@ -108,7 +108,7 @@ public:
     {
         ASSERT(isMainThread());
 
-        LockHolder lockHolder(m_mutex);
+        Locker locker { m_lock };
         ASSERT(m_aborting);
         m_aborting = false;
     }
@@ -119,11 +119,11 @@ public:
 
     // Enqueue a task to be run on the main thread. The task may be cancelled if an abort starts before it's
     // handled.
-    void enqueueTask(WTF::Function<void()>&& mainThreadTaskHandler)
+    void enqueueTask(Function<void()>&& mainThreadTaskHandler)
     {
         ASSERT(!isMainThread());
 
-        LockHolder lockHolder(m_mutex);
+        Locker locker { m_lock };
         if (m_aborting)
             return;
 
@@ -138,24 +138,25 @@ public:
     // It is allowed for the main thread task handler to abort the AbortableTaskQueue. In that case, the return
     // value is discarded and the caller receives an empty optional.
     template<typename R>
-    Optional<R> enqueueTaskAndWait(WTF::Function<R()>&& mainThreadTaskHandler)
+    std::optional<R> enqueueTaskAndWait(Function<R()>&& mainThreadTaskHandler)
     {
         // Don't deadlock the main thread with itself.
         ASSERT(!isMainThread());
 
-        LockHolder lockHolder(m_mutex);
+        Locker locker { m_lock };
         if (m_aborting)
-            return WTF::nullopt;
+            return std::nullopt;
 
-        Optional<R> response = WTF::nullopt;
+        std::optional<R> response = std::nullopt;
         postTask([this, &response, &mainThreadTaskHandler]() {
             R responseValue = mainThreadTaskHandler();
-            LockHolder lockHolder(m_mutex);
+            Locker locker { m_lock };
             if (!m_aborting)
                 response = WTFMove(responseValue);
             m_abortedOrResponseSet.notifyAll();
         });
-        m_abortedOrResponseSet.wait(m_mutex, [this, &response]() {
+        m_abortedOrResponseSet.wait(m_lock, [this, &response]() {
+            assertIsHeld(m_lock);
             return m_aborting || response;
         });
         return response;
@@ -174,7 +175,7 @@ private:
         WTF_MAKE_NONCOPYABLE(Task);
         WTF_MAKE_FAST_ALLOCATED(Task);
     public:
-        static Ref<Task> create(AbortableTaskQueue* taskQueue, WTF::Function<void()>&& taskCallback)
+        static Ref<Task> create(AbortableTaskQueue* taskQueue, Function<void()>&& taskCallback)
         {
             return adoptRef(*new Task(taskQueue, WTFMove(taskCallback)));
         }
@@ -197,43 +198,44 @@ private:
             if (isCancelled())
                 return;
 
-            LockHolder lock(m_taskQueue->m_mutex);
-            ASSERT(this == m_taskQueue->m_channel.first().ptr());
-            m_taskQueue->m_channel.removeFirst();
-            lock.unlockEarly();
+            {
+                Locker lock { m_taskQueue->m_lock };
+                ASSERT(this == m_taskQueue->m_channel.first().ptr());
+                m_taskQueue->m_channel.removeFirst();
+            }
             m_taskCallback();
         }
 
     private:
         AbortableTaskQueue* m_taskQueue;
-        WTF::Function<void()> m_taskCallback;
+        Function<void()> m_taskCallback;
 
-        Task(AbortableTaskQueue* taskQueue, WTF::Function<void()>&& taskCallback)
+        Task(AbortableTaskQueue* taskQueue, Function<void()>&& taskCallback)
             : m_taskQueue(taskQueue), m_taskCallback(WTFMove(taskCallback))
         { }
     };
 
-    void postTask(WTF::Function<void()>&& callback)
+    void postTask(Function<void()>&& callback) WTF_REQUIRES_LOCK(m_lock)
     {
-        ASSERT(m_mutex.isHeld());
+        ASSERT(m_lock.isHeld());
         Ref<Task> task = Task::create(this, WTFMove(callback));
         m_channel.append(task.copyRef());
         RunLoop::main().dispatch([task = WTFMove(task)]() { task->dispatch(); });
     }
 
-    void cancelAllTasks()
+    void cancelAllTasks() WTF_REQUIRES_LOCK(m_lock)
     {
         ASSERT(isMainThread());
-        ASSERT(m_mutex.isHeld());
+        ASSERT(m_lock.isHeld());
         for (Ref<Task>& task : m_channel)
             task->cancel();
         m_channel.clear();
     }
 
-    bool m_aborting { false };
-    Lock m_mutex;
+    bool m_aborting WTF_GUARDED_BY_LOCK(m_lock) { false };
+    Lock m_lock;
     Condition m_abortedOrResponseSet;
-    WTF::Deque<Ref<Task>> m_channel;
+    Deque<Ref<Task>> m_channel WTF_GUARDED_BY_LOCK(m_lock);
 };
 
 } // namespace WebCore

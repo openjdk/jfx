@@ -28,11 +28,11 @@
 
 [
     Conditional=ENCRYPTED_MEDIA,
-    EnabledBySetting=EncryptedMediaAPI,
+    EnabledBySetting=EncryptedMediaAPIEnabled,
     ExportToWrappedFunction,
     DisabledByQuirk=hasBrokenEncryptedMediaAPISupport,
     Exposed=Window
 ] interface MediaKeys {
-    [CallWith=Document, MayThrowException] MediaKeySession createSession(optional MediaKeySessionType sessionType = "temporary");
-    Promise<bool> setServerCertificate(BufferSource serverCertificate);
+    [CallWith=CurrentDocument] MediaKeySession createSession(optional MediaKeySessionType sessionType = "temporary");
+    Promise<boolean> setServerCertificate(BufferSource serverCertificate);
 };

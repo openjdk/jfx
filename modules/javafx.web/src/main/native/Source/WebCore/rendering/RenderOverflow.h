@@ -26,7 +26,7 @@
 namespace WebCore
 {
 // RenderOverflow is a class for tracking content that spills out of a box.  This class is used by RenderBox and
-// InlineFlowBox.
+// LegacyInlineFlowBox.
 //
 // There are two types of overflow: layout overflow (which is expected to be reachable via scrolling mechanisms) and
 // visual overflow (which is not expected to be reachable via scrolling mechanisms).
@@ -37,7 +37,7 @@ namespace WebCore
 // Examples of visual overflow are shadows, text stroke, outline (and eventually border-image).
 
 // This object is allocated only when some of these fields have non-default values in the owning box.
-class RenderOverflow : public WTF::RefCounted<RenderOverflow> {
+class RenderOverflow : public RefCounted<RenderOverflow> {
     WTF_MAKE_NONCOPYABLE(RenderOverflow); WTF_MAKE_FAST_ALLOCATED;
 public:
     RenderOverflow(const LayoutRect& layoutRect, const LayoutRect& visualRect)

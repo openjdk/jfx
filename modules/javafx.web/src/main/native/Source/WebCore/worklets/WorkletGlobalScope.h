@@ -38,7 +38,6 @@
 #include <wtf/CompletionHandler.h>
 #include <wtf/Deque.h>
 #include <wtf/ObjectIdentifier.h>
-#include <wtf/Optional.h>
 #include <wtf/URL.h>
 #include <wtf/WeakPtr.h>
 
@@ -87,7 +86,7 @@ public:
 
     void prepareForDestruction() override;
 
-    void fetchAndInvokeScript(const URL&, FetchRequestCredentials, CompletionHandler<void(Optional<Exception>&&)>&&);
+    void fetchAndInvokeScript(const URL&, FetchRequestCredentials, CompletionHandler<void(std::optional<Exception>&&)>&&);
 
     Document* responsibleDocument() { return m_document.get(); }
     const Document* responsibleDocument() const { return m_document.get(); }
@@ -97,9 +96,7 @@ protected:
     WorkletGlobalScope(Document&, Ref<JSC::VM>&&, ScriptSourceCode&&);
 
 private:
-#if ENABLE(INDEXED_DATABASE)
     IDBClient::IDBConnectionProxy* idbConnectionProxy() final { ASSERT_NOT_REACHED(); return nullptr; }
-#endif
 
     // EventTarget.
     EventTargetInterface eventTargetInterface() const final { return WorkletGlobalScopeEventTargetInterfaceType; }
@@ -126,7 +123,7 @@ private:
 
     URL m_url;
     JSC::RuntimeFlags m_jsRuntimeFlags;
-    Optional<ScriptSourceCode> m_code;
+    std::optional<ScriptSourceCode> m_code;
 
     std::unique_ptr<WorkerMessagePortChannelProvider> m_messagePortChannelProvider;
 

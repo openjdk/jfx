@@ -108,8 +108,6 @@ RefPtr<CSSValue> ComputedStyleExtractor::svgPropertyValue(CSSPropertyID property
         return CSSPrimitiveValue::create(svgStyle.fillOpacity(), CSSUnitType::CSS_NUMBER);
     case CSSPropertyFillRule:
         return CSSPrimitiveValue::create(svgStyle.fillRule());
-    case CSSPropertyColorRendering:
-        return CSSPrimitiveValue::create(svgStyle.colorRendering());
     case CSSPropertyShapeRendering:
         return CSSPrimitiveValue::create(svgStyle.shapeRendering());
     case CSSPropertyStrokeOpacity:
@@ -120,10 +118,6 @@ RefPtr<CSSValue> ComputedStyleExtractor::svgPropertyValue(CSSPropertyID property
         return CSSPrimitiveValue::create(svgStyle.dominantBaseline());
     case CSSPropertyTextAnchor:
         return CSSPrimitiveValue::create(svgStyle.textAnchor());
-    case CSSPropertyMask:
-        if (!svgStyle.maskerResource().isEmpty())
-            return CSSPrimitiveValue::create(svgStyle.maskerResource(), CSSUnitType::CSS_URI);
-        return CSSPrimitiveValue::createIdentifier(CSSValueNone);
     case CSSPropertyFloodColor:
         return currentColorOrValidColor(style, svgStyle.floodColor());
     case CSSPropertyLightingColor:
@@ -136,15 +130,15 @@ RefPtr<CSSValue> ComputedStyleExtractor::svgPropertyValue(CSSPropertyID property
         return SVGLengthValue::toCSSPrimitiveValue(svgStyle.kerning());
     case CSSPropertyMarkerEnd:
         if (!svgStyle.markerEndResource().isEmpty())
-            return CSSPrimitiveValue::create(svgStyle.markerEndResource(), CSSUnitType::CSS_URI);
+            return CSSPrimitiveValue::create(makeString('#', svgStyle.markerEndResource()), CSSUnitType::CSS_URI);
         return CSSPrimitiveValue::createIdentifier(CSSValueNone);
     case CSSPropertyMarkerMid:
         if (!svgStyle.markerMidResource().isEmpty())
-            return CSSPrimitiveValue::create(svgStyle.markerMidResource(), CSSUnitType::CSS_URI);
+            return CSSPrimitiveValue::create(makeString('#', svgStyle.markerMidResource()), CSSUnitType::CSS_URI);
         return CSSPrimitiveValue::createIdentifier(CSSValueNone);
     case CSSPropertyMarkerStart:
         if (!svgStyle.markerStartResource().isEmpty())
-            return CSSPrimitiveValue::create(svgStyle.markerStartResource(), CSSUnitType::CSS_URI);
+            return CSSPrimitiveValue::create(makeString('#', svgStyle.markerStartResource()), CSSUnitType::CSS_URI);
         return CSSPrimitiveValue::createIdentifier(CSSValueNone);
     case CSSPropertyStroke:
         return adjustSVGPaintForCurrentColor(svgStyle.strokePaintType(), svgStyle.strokePaintUri(), svgStyle.strokePaintColor(), style->color());
@@ -182,9 +176,7 @@ RefPtr<CSSValue> ComputedStyleExtractor::svgPropertyValue(CSSPropertyID property
     case CSSPropertyMaskType:
         return CSSPrimitiveValue::create(svgStyle.maskType());
     case CSSPropertyMarker:
-    case CSSPropertyEnableBackground:
-    case CSSPropertyColorProfile:
-        // the above properties are not yet implemented in the engine
+        // this property is not yet implemented in the engine
         break;
     default:
         // If you crash here, it's because you added a css property and are not handling it

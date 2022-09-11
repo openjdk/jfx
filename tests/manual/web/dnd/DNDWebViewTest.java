@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -44,7 +44,7 @@ public class DNDWebViewTest extends Application {
         final Button offlineButton = new Button("Offline test");
         final Button onlineButton = new Button("Online test");
         offlineButton.setOnAction(e -> webView.getEngine().load(getClass().getResource("drag.html").toExternalForm()));
-        onlineButton.setOnAction(e -> webView.getEngine().load("https://openjdk.java.net"));
+        onlineButton.setOnAction(e -> webView.getEngine().load("https://openjdk.org"));
 
         final Label instructions = new Label("Select a test and drag the images");
         final Label readTime = new Label("");

@@ -46,13 +46,25 @@ WebXRSpace::WebXRSpace(Document& document, Ref<WebXRRigidTransform>&& offset)
 
 WebXRSpace::~WebXRSpace() = default;
 
-TransformationMatrix WebXRSpace::effectiveOrigin() const
+std::optional<TransformationMatrix> WebXRSpace::effectiveOrigin() const
 {
     // https://immersive-web.github.io/webxr/#xrspace-effective-origin
     // The effective origin can be obtained by multiplying origin offset and the native origin.
-    return m_originOffset->rawTransform() * nativeOrigin();
+    auto origin = nativeOrigin();
+    if (!origin)
+        return std::nullopt;
+    return origin.value() * m_originOffset->rawTransform();
 }
 
+
+std::optional<bool> WebXRSpace::isPositionEmulated() const
+{
+    WebXRSession* xrSession = session();
+    if (!xrSession)
+        return std::nullopt;
+
+    return xrSession->isPositionEmulated();
+}
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(WebXRViewerSpace);
 
@@ -64,9 +76,11 @@ WebXRViewerSpace::WebXRViewerSpace(Document& document, WebXRSession& session)
 
 WebXRViewerSpace::~WebXRViewerSpace() = default;
 
-TransformationMatrix WebXRViewerSpace::nativeOrigin() const
+std::optional<TransformationMatrix> WebXRViewerSpace::nativeOrigin() const
 {
-    return WebXRFrame::matrixFromPose(m_session.frameData().origin);
+    if (!m_session)
+        return std::nullopt;
+    return WebXRFrame::matrixFromPose(m_session->frameData().origin);
 }
 
 

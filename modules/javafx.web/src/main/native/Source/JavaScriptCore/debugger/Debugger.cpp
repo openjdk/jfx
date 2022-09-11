@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2008-2019 Apple Inc. All rights reserved.
+ *  Copyright (C) 2008-2021 Apple Inc. All rights reserved.
  *  Copyright (C) 1999-2001 Harri Porten (porten@kde.org)
  *  Copyright (C) 2001 Peter Kelly (pmk@post.com)
  *
@@ -29,6 +29,7 @@
 #include "JSCInlines.h"
 #include "MarkedSpaceInlines.h"
 #include "VMEntryScope.h"
+#include "VMTrapsInlines.h"
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
 #include <wtf/RefPtr.h>
@@ -349,7 +350,7 @@ void Debugger::toggleBreakpoint(CodeBlock* codeBlock, Breakpoint& breakpoint, Br
 
     ScriptExecutable* executable = codeBlock->ownerExecutable();
 
-    SourceID sourceID = static_cast<SourceID>(executable->sourceID());
+    SourceID sourceID = executable->sourceID();
     if (breakpoint.sourceID() != sourceID)
         return;
 
@@ -361,7 +362,7 @@ void Debugger::toggleBreakpoint(CodeBlock* codeBlock, Breakpoint& breakpoint, Br
     // Inspector breakpoint line and column values are zero-based but the executable
     // and CodeBlock line and column values are one-based.
     unsigned line = breakpoint.lineNumber() + 1;
-    Optional<unsigned> column;
+    std::optional<unsigned> column;
     if (breakpoint.columnNumber())
         column = breakpoint.columnNumber() + 1;
 
@@ -456,7 +457,7 @@ bool Debugger::resolveBreakpoint(Breakpoint& breakpoint, SourceProvider* sourceP
     }
 
     DebuggerParseData& parseData = debuggerParseData(breakpoint.sourceID(), sourceProvider);
-    Optional<JSTextPosition> resolvedPosition = parseData.pausePositions.breakpointLocationForLineColumn(line, column);
+    std::optional<JSTextPosition> resolvedPosition = parseData.pausePositions.breakpointLocationForLineColumn(line, column);
     if (!resolvedPosition)
         return false;
 
@@ -492,9 +493,9 @@ bool Debugger::setBreakpoint(Breakpoint& breakpoint)
         }
     }
 
-    breakpoints.append(makeRef(breakpoint));
+    breakpoints.append(breakpoint);
 
-    m_breakpoints.add(makeRef(breakpoint));
+    m_breakpoints.add(breakpoint);
 
     toggleBreakpoint(breakpoint, BreakpointEnabled);
 
@@ -744,7 +745,7 @@ bool Debugger::schedulePauseForSpecialBreakpoint(Breakpoint& breakpoint)
     if (m_specialBreakpoint)
         return false;
 
-    m_specialBreakpoint = makeRef(breakpoint);
+    m_specialBreakpoint = &breakpoint;
     setSteppingMode(SteppingModeEnabled);
     return true;
 }
@@ -865,6 +866,7 @@ void Debugger::updateCallFrameInternal(CallFrame* callFrame)
 void Debugger::pauseIfNeeded(JSGlobalObject* globalObject)
 {
     VM& vm = m_vm;
+    DeferTermination deferScope(vm);
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     if (m_isPaused)
@@ -873,7 +875,7 @@ void Debugger::pauseIfNeeded(JSGlobalObject* globalObject)
     if (m_suppressAllPauses)
         return;
 
-    intptr_t sourceID = DebuggerCallFrame::sourceIDForCallFrame(m_currentCallFrame);
+    SourceID sourceID = DebuggerCallFrame::sourceIDForCallFrame(m_currentCallFrame);
 
     auto blackboxTypeIterator = m_blackboxedScripts.find(sourceID);
     if (blackboxTypeIterator != m_blackboxedScripts.end() && blackboxTypeIterator->value == BlackboxType::Ignored)
@@ -1201,7 +1203,7 @@ DebuggerCallFrame& Debugger::currentDebuggerCallFrame()
     return *m_currentDebuggerCallFrame;
 }
 
-void Debugger::setBlackboxType(SourceID sourceID, Optional<BlackboxType> type)
+void Debugger::setBlackboxType(SourceID sourceID, std::optional<BlackboxType> type)
 {
     if (type)
         m_blackboxedScripts.set(sourceID, type.value());

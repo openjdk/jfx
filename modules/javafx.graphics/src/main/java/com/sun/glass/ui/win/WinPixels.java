@@ -46,6 +46,10 @@ final class WinPixels extends Pixels {
         super(width, height, data);
     }
 
+    protected WinPixels(int width, int height, ByteBuffer data, float scalex, float scaley) {
+        super(width, height, data, scalex, scaley);
+    }
+
     protected WinPixels(int width, int height, IntBuffer data) {
         super(width, height, data);
     }

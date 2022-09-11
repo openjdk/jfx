@@ -25,9 +25,9 @@
 
 #pragma once
 
+#include "ExecutableMemoryHandle.h"
 #include "JSCPtrTag.h"
 #include <wtf/DataLog.h>
-#include <wtf/MetaAllocatorHandle.h>
 #include <wtf/PrintStream.h>
 #include <wtf/RefPtr.h>
 #include <wtf/text/CString.h>
@@ -54,7 +54,11 @@
 
 namespace JSC {
 
-typedef WTF::MetaAllocatorHandle ExecutableMemoryHandle;
+namespace Wasm {
+enum class CompilationMode : uint8_t;
+} // namespace Wasm
+
+class CodeBlock;
 template<PtrTag> class MacroAssemblerCodePtr;
 
 enum OpcodeID : unsigned;
@@ -244,6 +248,11 @@ public:
         ASSERT_VALID_CODE_POINTER(m_value);
     }
 
+    static ReturnAddressPtr fromTaggedPC(const void* pc, const void* sp)
+    {
+        return ReturnAddressPtr(untagReturnPC(pc, sp));
+    }
+
     const void* value() const
     {
         return m_value;
@@ -373,7 +382,10 @@ public:
 
     void dumpWithName(const char* name, PrintStream& out) const
     {
-        MacroAssemblerCodePtrBase::dumpWithName(executableAddress(), dataLocation(), name, out);
+        if (m_value)
+            MacroAssemblerCodePtrBase::dumpWithName(executableAddress(), dataLocation(), name, out);
+        else
+            MacroAssemblerCodePtrBase::dumpWithName(nullptr, nullptr, name, out);
     }
 
     void dump(PrintStream& out) const { dumpWithName("CodePtr", out); }
@@ -532,6 +544,9 @@ inline FunctionPtr<tag>::FunctionPtr(MacroAssemblerCodePtr<tag> ptr)
     : m_value(ptr.executableAddress())
 {
 }
+
+bool shouldDumpDisassemblyFor(CodeBlock*);
+bool shouldDumpDisassemblyFor(Wasm::CompilationMode);
 
 } // namespace JSC
 

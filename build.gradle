@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -365,6 +365,9 @@ if (BUILD_CLOSED) {
 defineProperty("GRADLE_VERSION_CHECK", "true")
 ext.IS_GRADLE_VERSION_CHECK = Boolean.parseBoolean(GRADLE_VERSION_CHECK)
 
+// JAVA_TARGET_VERSION specifies the minimum compile and runtime Java version that we will target when building the JavaFX classes
+ext.JAVA_TARGET_VERSION = Integer.parseInt(jfxJdkTargetVersion)
+
 // JFX_DEPS_URL specifies the optional location of an alternate local repository
 defineProperty("JFX_DEPS_URL", "")
 
@@ -627,8 +630,12 @@ try {
             defineProperty("jdkBuildNumber", jdkVersionInfo[1])
 
             // Define global properties based on the version of Java
-            def status = compareJdkVersion(jdkVersion, "12")
-            ext.jdk12OrLater = (status >= 0)
+            // For example, we could define a "jdk18OrLater" property as
+            // follows that could then be used to implement conditional build
+            // logic based on whether we were running on JDK 18 or later,
+            // should the need arise.
+//            def status = compareJdkVersion(jdkVersion, "18")
+//            ext.jdk18OrLater = (status >= 0)
         }
     }
 } finally {
@@ -780,6 +787,33 @@ void ant(String conf,   // platform configuration
     String antHome = antHomeEnv != null ? cygpath(antHomeEnv) : null;
     String ant = (antHome != null && !antHome.equals("")) ? "$antHome/bin/ant" : "ant";
 
+    List<String> cmdArgs = new ArrayList<String>()
+    if (IS_WINDOWS) {
+        cmdArgs += !ant.matches("\\s+") ? '"' + ant + '"' : ant
+    }
+
+    cmdArgs += "-Dbuild.compiler=javac1.7"
+
+    if ((conf != null) && !rootProject.defaultHostTarget.equals(conf)) {
+        def targetProperties = rootProject.ext[conf.trim().toUpperCase()]
+        cmdArgs += "-Dcross.platform=$conf"
+        if (targetProperties.containsKey('arch')) {
+            cmdArgs += "-Dcross.platform.arch=${targetProperties.arch}"
+        }
+    }
+
+    if (params != null) {
+        params.each() { s->
+            cmdArgs += IS_WINDOWS && !s.matches("\\s+") ? '"' + s + '"' : s
+        }
+    }
+
+    if (IS_MILESTONE_FCS) {
+        cmdArgs += '-Djfx.release.suffix=""'
+    }
+
+    cmdArgs += target
+
     exec {
         workingDir = dir
         environment("JDK_HOME", JDK_HOME)
@@ -796,26 +830,11 @@ void ant(String conf,   // platform configuration
                     "DXSDK_DIR"            : WINDOWS_DXSDK_DIR,
                     "PATH"                 : WINDOWS_VS_PATH
             ]);
-            commandLine "cmd", "/c", ant, "-Dbuild.compiler=javac1.7"
+            commandLine "cmd", "/s", "/c", '"' + String.join(" ", cmdArgs) + '"'
         } else {
-            commandLine ant, "-Dbuild.compiler=javac1.7"
+            commandLine ant
+            args(cmdArgs)
         }
-        if ((conf != null) && !rootProject.defaultHostTarget.equals(conf)) {
-            def targetProperties = rootProject.ext[conf.trim().toUpperCase()]
-            args("-Dcross.platform=$conf")
-            if (targetProperties.containsKey('arch')) {
-                args("-Dcross.platform.arch=${targetProperties.arch}")
-            }
-        }
-        if (params != null) {
-            params.each() { s->
-                args(s)
-            }
-        }
-        if (IS_MILESTONE_FCS) {
-            args('-Djfx.release.suffix=""')
-        }
-        args(target);
     }
 }
 
@@ -1328,6 +1347,7 @@ logger.quiet("jdk version: ${jdkVersion}")
 logger.quiet("jdk build number: ${jdkBuildNumber}")
 logger.quiet("minimum jdk version: ${jfxBuildJdkVersionMin}")
 logger.quiet("minimum jdk build number: ${jfxBuildJdkBuildnumMin}")
+logger.quiet("Java target version: ${JAVA_TARGET_VERSION}")
 
 if (IS_LINUX) {
     logger.quiet("GCC version: ${jfxBuildLinuxGccVersion}")
@@ -1942,7 +1962,11 @@ allprojects {
     // All of our projects are java projects
 
     apply plugin: "java"
-    sourceCompatibility = 11
+
+    // Set sourceCompatibility to the target release of Java. Most modules
+    // set compiler.options.release (to the same target version), which will
+    // override this setting, but it is needed for those modules that can't.
+    sourceCompatibility = JAVA_TARGET_VERSION
 
     // By default all of our projects require junit for testing so we can just
     // setup this dependency here.
@@ -1951,13 +1975,13 @@ allprojects {
         testImplementation group: "org.hamcrest", name: "hamcrest-core", version: "1.3"
         testImplementation group: "org.junit.jupiter", name: "junit-jupiter", version: "5.8.1"
         testImplementation group: "org.junit.jupiter", name: "junit-jupiter-api", version: "5.8.1"
+        testImplementation group: "org.opentest4j", name: "opentest4j", version: "1.2.0"
         testRuntimeOnly group: "org.apiguardian", name: "apiguardian-api", version: "1.1.2"
         testRuntimeOnly group: "org.junit.jupiter", name: "junit-jupiter-engine", version: "5.8.1"
         testRuntimeOnly group: "org.junit.jupiter", name: "junit-jupiter-params", version: "5.8.1"
         testRuntimeOnly group: "org.junit.platform", name: "junit-platform-commons", version: "1.8.1"
         testRuntimeOnly group: "org.junit.platform", name: "junit-platform-engine", version: "1.8.1"
         testRuntimeOnly group: "org.junit.vintage", name: "junit-vintage-engine", version: "5.8.1"
-        testRuntimeOnly group: "org.opentest4j", name: "opentest4j", version: "1.2.0"
 
         if (BUILD_CLOSED && DO_JCOV)  {
             testImplementation name: "jcov"
@@ -2477,6 +2501,17 @@ project(":graphics") {
         }
     }
 
+    task initShaderDirs() {
+        doLast {
+            // Create empty hlsl dirs on all platforms for IDE support
+            file("$project.buildDir/hlsl/Decora").mkdirs()
+            file("$project.buildDir/hlsl/Prism").mkdirs()
+            file("$project.buildDir/gensrc/jsl-prism").mkdirs()
+            file("$project.buildDir/gensrc/jsl-decora").mkdirs()
+        }
+    }
+    project.processShaders.dependsOn(initShaderDirs)
+
     nativePrism.dependsOn compilePrismHLSLShaders;
 
     project.nativeAllTask.dependsOn nativeDecora
@@ -2613,6 +2648,12 @@ project(":controls") {
 }
 
 project(":swing") {
+
+    // We need to skip setting compiler.options.release for this module,
+    // since javafx.swing requires jdk.unsupported.desktop, which is
+    // excluded by "--release NN". This will fall back to using
+    // "-source NN -target NN" for this module.
+    project.ext.skipJavaCompilerOptionRelease = true
 
     tasks.all {
         if (!COMPILE_SWING) it.enabled = false
@@ -3474,9 +3515,7 @@ project(":web") {
         dependsOn webArchiveJar
         def testResourceDir = file("$buildDir/testing/resources")
         jvmArgs "-DWEB_ARCHIVE_JAR_TEST_DIR=$testResourceDir"
-        if (jdk12OrLater) {
-            systemProperty 'java.security.manager', 'allow'
-        }
+        systemProperty 'java.security.manager', 'allow'
     }
 
     task compileJavaDOMBinding()
@@ -3685,6 +3724,12 @@ project(":systemTests") {
         sourceSets.testscriptapp2
     ]
 
+    // We need to skip setting compiler.options.release for system tests,
+    // since the tests export an internal package from java.desktop, which
+    // is disallowed by "--release NN". This will fall back to using
+    // "-source NN -target NN" for the system tests.
+    project.ext.skipJavaCompilerOptionRelease = true
+
     project.ext.buildModule = false
     project.ext.moduleRuntime = false
     project.ext.moduleName = "systemTests"
@@ -3854,9 +3899,7 @@ project(":systemTests") {
             systemProperty "ClipShapeTest.numTests", rootProject.getProperty("ClipShapeTest.numTests")
         }
 
-        if (jdk12OrLater) {
-            systemProperty 'java.security.manager', 'allow'
-        }
+        systemProperty 'java.security.manager', 'allow'
 
         if (!IS_USE_ROBOT) {
             // Disable all robot-based visual tests
@@ -3891,6 +3934,15 @@ allprojects {
         } else if (compile.options.hasProperty("incremental")) {
             compile.options.incremental = IS_INCREMENTAL
         }
+
+        if (project.hasProperty('skipJavaCompilerOptionRelease') &&
+                project.ext.skipJavaCompilerOptionRelease) {
+
+            logger.info "Using 'javac -source/-target' for ${compile}"
+        } else {
+            compile.options.release = JAVA_TARGET_VERSION
+        }
+
         compile.options.debug = true // we always generate debugging info in the class files
         compile.options.debugOptions.debugLevel = IS_DEBUG_JAVA ? "source,lines,vars" : "source,lines"
         compile.options.fork = true
@@ -4981,6 +5033,9 @@ compileTargets { t ->
         def doStrip = targetProperties.containsKey('strip') && IS_RELEASE
         def strip = doStrip ? targetProperties.strip : null
         def stripArgs = doStrip ? targetProperties.stripArgs : null
+        def doSign = rootProject.hasProperty('codeSignCmd') && IS_RELEASE
+        def signCmd = doSign ? rootProject.ext.codeSignCmd : null
+        def signArgs = doSign ? rootProject.ext.codeSignArgs : null
         def useLipo = targetProperties.containsKey('useLipo') ? targetProperties.useLipo : false
         def modLibDest = targetProperties.modLibDest
         def moduleNativeDirName = "${platformPrefix}module-$modLibDest"
@@ -5074,6 +5129,23 @@ compileTargets { t ->
                     }
                 }
             }
+            if (doSign) {
+                doLast {
+                    def inputFiles = fileTree(dir: destDirName)
+                    inputFiles.include("*.dll")
+                    inputFiles.include("*.dylib")
+                    inputFiles.include("*.so")
+                    // FIXME: if we ever need to sign on Windows platforms, we must
+                    // exclude the Microsoft DLLs (VS2017DLLNames and WinSDKDLLNames)
+
+                    inputFiles.each { file ->
+                        exec {
+                            def cmd = [ signCmd, signArgs, file ].flatten()
+                            commandLine(cmd)
+                        }
+                    }
+                }
+            }
         }
 
         def buildModuleMediaTask = task("buildModuleMedia$t.capital", type: Copy, dependsOn: [mediaProject.assemble, prepOpenJfxStubs]) {
@@ -5128,6 +5200,23 @@ compileTargets { t ->
                     }
                 }
             }
+            if (doSign && IS_COMPILE_MEDIA) {
+                doLast {
+                    def inputFiles = fileTree(dir: destDirName)
+                    inputFiles.include("*.dll")
+                    inputFiles.include("*.dylib")
+                    inputFiles.include("*.so")
+                    // FIXME: if we ever need to sign on Windows platforms, we must
+                    // exclude the Microsoft DLLs (VS2017DLLNames and WinSDKDLLNames)
+
+                    inputFiles.each { file ->
+                        exec {
+                            def cmd = [ signCmd, signArgs, file ].flatten()
+                            commandLine(cmd)
+                        }
+                    }
+                }
+            }
         }
 
         def buildModuleWeb = task("buildModuleWeb$t.capital", type: Copy, dependsOn: [webProject.assemble, prepOpenJfxStubs]) {
@@ -5155,6 +5244,23 @@ compileTargets { t ->
                     inputFiles.each { file ->
                         exec {
                             def cmd = [ strip, stripArgs, file ].flatten()
+                            commandLine(cmd)
+                        }
+                    }
+                }
+            }
+            if (doSign && IS_COMPILE_WEBKIT) {
+                doLast {
+                    def inputFiles = fileTree(dir: destDirName)
+                    inputFiles.include("*.dll")
+                    inputFiles.include("*.dylib")
+                    inputFiles.include("*.so")
+                    // FIXME: if we ever need to sign on Windows platforms, we must
+                    // exclude the Microsoft DLLs (VS2017DLLNames and WinSDKDLLNames)
+
+                    inputFiles.each { file ->
+                        exec {
+                            def cmd = [ signCmd, signArgs, file ].flatten()
                             commandLine(cmd)
                         }
                     }
@@ -5331,13 +5437,6 @@ compileTargets { t ->
         def standaloneSdkDir = "${rootProject.buildDir}/${standaloneSdkDirName}"
         def standaloneLegalDir = "${standaloneSdkDir}/legal"
 
-        def excludeNativeLibs = []
-        if (IS_WINDOWS) {
-            // List of duplicate Microsoft DLLs to exclude
-            excludeNativeLibs += targetProperties.VS2017DLLNames
-            excludeNativeLibs += targetProperties.WinSDKDLLNames
-        }
-
         moduleProjList.each { project ->
             def moduleName = project.ext.moduleName
             def buildDir = project.buildDir
@@ -5346,9 +5445,36 @@ compileTargets { t ->
             def srcLibDir = "${buildDir}/${platformPrefix}module-lib"
             def srcLegalDir = "${standaloneLegalDir}/${moduleName}"
 
+            def jmodLibDir = srcLibDir
+            if (IS_WINDOWS) {
+                jmodLibDir = "${srcLibDir}-jmod"
+            }
+
             def jmodName = "${moduleName}.jmod"
             def jmodFile = "${jmodsDir}/${jmodName}"
-            def jmodTask = project.task("jmod$t.capital", group: "Build", dependsOn: sdk) {
+
+            // On Windows, copy the native libraries in the jmod image
+            // to a "javafx" subdir to avoid conflicting with the Microsoft
+            // DLLs that are shipped with the JDK
+            def jmodCopyLibTask = project.task("jmodCopyLib$t.capital", type: Copy, dependsOn: sdk) {
+                enabled = IS_WINDOWS
+
+                group = "Basic"
+                description = "copied Windows DLLs into javafx subdir for jmods"
+
+                into jmodLibDir
+
+                from (srcLibDir) {
+                    exclude("*.dll")
+                }
+
+                from (srcLibDir) {
+                    include("*.dll")
+                    into("javafx")
+                }
+            }
+
+            def jmodTask = project.task("jmod$t.capital", group: "Build", dependsOn: [sdk, jmodCopyLibTask]) {
                 doLast {
                     mkdir jmodsDir
                     delete(jmodFile);
@@ -5359,16 +5485,9 @@ compileTargets { t ->
                         args(srcClassesDir)
                         args("--module-version", "$RELEASE_VERSION_SHORT")
                         // Not all modules have a "lib" dir
-                        if (file(srcLibDir).isDirectory()) {
+                        if (file(jmodLibDir).isDirectory()) {
                             args("--libs")
-                            args(srcLibDir)
-                        }
-                        // Exclude duplicate native libs from javafx.graphics.jmod
-                        if (moduleName == "javafx.graphics") {
-                            excludeNativeLibs.each { name ->
-                                args("--exclude")
-                                args(name)
-                            }
+                            args(jmodLibDir)
                         }
                         args("--legal-notices")
                         args(srcLegalDir)

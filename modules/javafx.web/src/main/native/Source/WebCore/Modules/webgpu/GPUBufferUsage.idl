@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -22,24 +22,24 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
-// https://gpuweb.github.io/gpuweb
 
-typedef unsigned long u32;
+// https://gpuweb.github.io/gpuweb/#namespacedef-gpubufferusage
 
+typedef [EnforceRange] unsigned long GPUBufferUsageFlags;
 [
-    Conditional=WEBGPU,
-    DoNotCheckConstants,
-    EnabledAtRuntime=WebGPU,
-    ImplementationLacksVTable,
-    Exposed=Window
-] interface GPUBufferUsage {
-    const u32 NONE = 0;
-    const u32 MAP_READ = 1;
-    const u32 MAP_WRITE = 2;
-    const u32 COPY_SRC = 4;
-    const u32 COPY_DST = 8;
-    const u32 INDEX = 16;
-    const u32 VERTEX = 32;
-    const u32 UNIFORM = 64;
-    const u32 STORAGE = 128;
+    EnabledBySetting=WebGPU,
+    Exposed=(Window), /* https://bugs.webkit.org/show_bug.cgi?id=232542: DedicatedWorker */
+    SecureContext
+]
+interface GPUBufferUsage {
+    const GPUFlagsConstant MAP_READ      = 0x0001;
+    const GPUFlagsConstant MAP_WRITE     = 0x0002;
+    const GPUFlagsConstant COPY_SRC      = 0x0004;
+    const GPUFlagsConstant COPY_DST      = 0x0008;
+    const GPUFlagsConstant INDEX         = 0x0010;
+    const GPUFlagsConstant VERTEX        = 0x0020;
+    const GPUFlagsConstant UNIFORM       = 0x0040;
+    const GPUFlagsConstant STORAGE       = 0x0080;
+    const GPUFlagsConstant INDIRECT      = 0x0100;
+    const GPUFlagsConstant QUERY_RESOLVE = 0x0200;
 };

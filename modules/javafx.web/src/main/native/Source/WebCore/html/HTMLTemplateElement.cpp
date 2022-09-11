@@ -31,6 +31,7 @@
 #include "config.h"
 #include "HTMLTemplateElement.h"
 
+#include "Document.h"
 #include "DocumentFragment.h"
 #include "TemplateContentDocumentFragment.h"
 #include "markup.h"
@@ -66,8 +67,7 @@ DocumentFragment* HTMLTemplateElement::contentIfAvailable() const
 DocumentFragment& HTMLTemplateElement::content() const
 {
     if (!m_content)
-        m_content = TemplateContentDocumentFragment::create(document().ensureTemplateDocument(), this);
-
+        m_content = TemplateContentDocumentFragment::create(document().ensureTemplateDocument(), *this);
     return *m_content;
 }
 

@@ -25,8 +25,13 @@
 #include "config.h"
 #include "LibWebRTCRtpReceiverBackend.h"
 
+#include "Document.h"
+#include "LibWebRTCAudioModule.h"
+#include "LibWebRTCDtlsTransportBackend.h"
+#include "LibWebRTCProvider.h"
 #include "LibWebRTCRtpReceiverTransformBackend.h"
 #include "LibWebRTCUtils.h"
+#include "Page.h"
 #include "RTCRtpTransformBackend.h"
 #include "RealtimeIncomingAudioSource.h"
 #include "RealtimeIncomingVideoSource.h"
@@ -98,15 +103,19 @@ Vector<RTCRtpSynchronizationSource> LibWebRTCRtpReceiverBackend::getSynchronizat
     return sources;
 }
 
-Ref<RealtimeMediaSource> LibWebRTCRtpReceiverBackend::createSource()
+Ref<RealtimeMediaSource> LibWebRTCRtpReceiverBackend::createSource(Document& document)
 {
     auto rtcTrack = m_rtcReceiver->track();
     switch (m_rtcReceiver->media_type()) {
     case cricket::MEDIA_TYPE_DATA:
+    case cricket::MEDIA_TYPE_UNSUPPORTED:
         break;
     case cricket::MEDIA_TYPE_AUDIO: {
         rtc::scoped_refptr<webrtc::AudioTrackInterface> audioTrack = static_cast<webrtc::AudioTrackInterface*>(rtcTrack.get());
-        return RealtimeIncomingAudioSource::create(WTFMove(audioTrack), fromStdString(rtcTrack->id()));
+        auto source = RealtimeIncomingAudioSource::create(WTFMove(audioTrack), fromStdString(rtcTrack->id()));
+        if (document.page())
+            source->setAudioModule(document.page()->libWebRTCProvider().audioModule());
+        return source;
     }
     case cricket::MEDIA_TYPE_VIDEO: {
         rtc::scoped_refptr<webrtc::VideoTrackInterface> videoTrack = static_cast<webrtc::VideoTrackInterface*>(rtcTrack.get());
@@ -116,9 +125,17 @@ Ref<RealtimeMediaSource> LibWebRTCRtpReceiverBackend::createSource()
     RELEASE_ASSERT_NOT_REACHED();
 }
 
-Ref<RTCRtpTransformBackend> LibWebRTCRtpReceiverBackend::createRTCRtpTransformBackend()
+Ref<RTCRtpTransformBackend> LibWebRTCRtpReceiverBackend::rtcRtpTransformBackend()
 {
-    return LibWebRTCRtpReceiverTransformBackend::create(m_rtcReceiver);
+    if (!m_transformBackend)
+        m_transformBackend = LibWebRTCRtpReceiverTransformBackend::create(m_rtcReceiver);
+    return *m_transformBackend;
+}
+
+std::unique_ptr<RTCDtlsTransportBackend> LibWebRTCRtpReceiverBackend::dtlsTransportBackend()
+{
+    auto backend = m_rtcReceiver->dtls_transport();
+    return backend ? makeUnique<LibWebRTCDtlsTransportBackend>(WTFMove(backend)) : nullptr;
 }
 
 } // namespace WebCore

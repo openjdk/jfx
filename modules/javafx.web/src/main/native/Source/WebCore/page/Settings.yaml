@@ -43,12 +43,6 @@ AcceleratedCompositedAnimationsEnabled:
     WebCore:
       default: true
 
-AcceleratedFiltersEnabled:
-  type: bool
-  defaultValue:
-    WebCore:
-      default: false
-
 AnimatedImageDebugCanvasDrawingEnabled:
   type: bool
   defaultValue:
@@ -283,6 +277,7 @@ IsAccessibilityIsolatedTreeEnabled:
   type: bool
   defaultValue:
     WebCore:
+      USE(ATSPI): true
       default: false
 
 IsPerActivityStateCPUUsageMeasurementEnabled:
@@ -328,14 +323,6 @@ JavaScriptRuntimeFlags:
       default: '{ }'
 
 LangAttributeAwareFormControlUIEnabled:
-  type: bool
-  defaultValue:
-    WebCore:
-      default: false
-
-LegacyBeforeLoadEventEnabled:
-  comment: >-
-    FIMXE: This does not appear to ever be set to true. Remove once verified.
   type: bool
   defaultValue:
     WebCore:
@@ -455,13 +442,7 @@ PrivateClickMeasurementFraudPreventionEnabled:
   type: bool
   defaultValue:
     WebCore:
-      default: false
-
-QuickTimePluginReplacementEnabled:
-  type: bool
-  defaultValue:
-    WebCore:
-      PLATFORM(IOS_FAMILY): true
+      "HAVE(RSA_BSSA)": true
       default: false
 
 RepaintOutsideLayoutEnabled:
@@ -490,7 +471,7 @@ SessionStorageQuota:
   type: uint32_t
   defaultValue:
     WebCore:
-      default: StorageMap::noQuota
+      default: 5242880
 
 ShouldDispatchSyntheticMouseEventsWhenModifyingSelection:
   type: bool
@@ -650,11 +631,4 @@ WebkitImageReadyEventEnabled:
   type: bool
   defaultValue:
     WebCore:
-      default: false
-
-YouTubeFlashPluginReplacementEnabled:
-  type: bool
-  defaultValue:
-    WebCore:
-      PLATFORM(COCOA): true
       default: false
