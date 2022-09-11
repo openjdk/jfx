@@ -355,6 +355,14 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListCell<
         switch (attribute) {
             case FOCUS_ITEM: {
                 FocusModel<?> fm = getSkinnable().getFocusModel();
+                if (fm == null) {
+                    if (placeholderRegion != null && placeholderRegion.isVisible()) {
+                        return placeholderRegion.getChildren().get(0);
+                    } else {
+                        return null;
+                    }
+                }
+
                 int focusedIndex = fm.getFocusedIndex();
                 if (focusedIndex == -1) {
                     if (placeholderRegion != null && placeholderRegion.isVisible()) {
@@ -379,6 +387,10 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListCell<
             }
             case SELECTED_ITEMS: {
                 MultipleSelectionModel<T> sm = getSkinnable().getSelectionModel();
+                if (sm == null) {
+                    return FXCollections.observableArrayList();
+                }
+
                 ObservableList<Integer> indices = sm.getSelectedIndices();
                 List<Node> selection = new ArrayList<>(indices.size());
                 for (int i : indices) {

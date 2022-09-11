@@ -49,9 +49,11 @@ import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.collections.transformation.SortedList;
+import javafx.scene.AccessibleAttribute;
 import javafx.scene.control.Button;
 import javafx.scene.control.FocusModel;
 import javafx.scene.control.IndexedCell;
+import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListCellShim;
 import javafx.scene.control.ListView;
@@ -2214,6 +2216,49 @@ public class ListViewTest {
 
         listView.getSelectionModel().clearAndSelect(1);
         assertDoesNotThrow(() -> listView.getItems().add("3"));
+    }
+
+    @Test
+    public void testQueryAccessibleAttributeSelectedItemsWithNullSelectionModel() {
+        listView.getItems().addAll("1", "2");
+        listView.setSelectionModel(null);
+
+        stageLoader = new StageLoader(listView);
+
+        Object result = listView.queryAccessibleAttribute(AccessibleAttribute.SELECTED_ITEMS);
+
+        // Should be an empty observable array list
+        assertEquals(FXCollections.observableArrayList(), result);
+    }
+
+    @Test
+    public void testQueryAccessibleAttributeFocusItemWithNullFocusModel() {
+        listView.getItems().addAll("1", "2");
+        listView.setFocusModel(null);
+
+        stageLoader = new StageLoader(listView);
+
+        Object result = listView.queryAccessibleAttribute(AccessibleAttribute.FOCUS_ITEM);
+
+        assertNull(result);
+    }
+
+    @Test
+    public void testQueryAccessibleAttributeFocusItemWithNullFocusModelAndNoItems() {
+        listView.setFocusModel(null);
+        Label placeholderNode = new Label("No items set");
+        listView.setPlaceholder(placeholderNode);
+
+        stageLoader = new StageLoader(listView);
+
+        Toolkit.getToolkit().firePulse();
+        Toolkit.getToolkit().firePulse();
+
+        Object result = listView.queryAccessibleAttribute(AccessibleAttribute.FOCUS_ITEM);
+
+        // Should be the placeholder node we set above
+        assertNotNull(result);
+        assertSame(placeholderNode, result);
     }
 
     private void attemptGC(WeakReference<? extends Object> weakRef, int n) {
