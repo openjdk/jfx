@@ -25,30 +25,6 @@
 
 package javafx.scene.control;
 
-import com.sun.javafx.collections.MappingChange;
-import com.sun.javafx.collections.NonIterableChange;
-import com.sun.javafx.scene.control.Properties;
-import com.sun.javafx.scene.control.SelectedCellsMap;
-
-import com.sun.javafx.scene.control.behavior.TableCellBehavior;
-import com.sun.javafx.scene.control.behavior.TableCellBehaviorBase;
-import com.sun.javafx.scene.control.behavior.TreeTableCellBehavior;
-
-import javafx.beans.property.DoubleProperty;
-import javafx.css.CssMetaData;
-import javafx.css.PseudoClass;
-
-import javafx.css.converter.SizeConverter;
-import com.sun.javafx.scene.control.ReadOnlyUnbackedObservableList;
-import com.sun.javafx.scene.control.TableColumnComparatorBase;
-
-import javafx.css.Styleable;
-import javafx.css.StyleableDoubleProperty;
-import javafx.css.StyleableProperty;
-import javafx.event.WeakEventHandler;
-
-import javafx.scene.control.skin.TreeTableViewSkin;
-
 import java.lang.ref.SoftReference;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
@@ -63,12 +39,21 @@ import java.util.Map;
 import java.util.Set;
 import java.util.WeakHashMap;
 import java.util.function.IntPredicate;
-
+import com.sun.javafx.collections.MappingChange;
+import com.sun.javafx.collections.NonIterableChange;
+import com.sun.javafx.scene.control.Properties;
+import com.sun.javafx.scene.control.ReadOnlyUnbackedObservableList;
+import com.sun.javafx.scene.control.SelectedCellsMap;
+import com.sun.javafx.scene.control.TableColumnComparatorBase;
+import com.sun.javafx.scene.control.behavior.TableCellBehavior;
+import com.sun.javafx.scene.control.behavior.TableCellBehaviorBase;
+import com.sun.javafx.scene.control.behavior.TreeTableCellBehavior;
 import javafx.application.Platform;
 import javafx.beans.DefaultProperty;
 import javafx.beans.InvalidationListener;
 import javafx.beans.WeakInvalidationListener;
 import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
 import javafx.beans.property.ReadOnlyIntegerProperty;
@@ -85,12 +70,20 @@ import javafx.collections.ListChangeListener;
 import javafx.collections.MapChangeListener;
 import javafx.collections.ObservableList;
 import javafx.collections.WeakListChangeListener;
+import javafx.css.CssMetaData;
+import javafx.css.PseudoClass;
+import javafx.css.Styleable;
+import javafx.css.StyleableDoubleProperty;
+import javafx.css.StyleableProperty;
+import javafx.css.converter.SizeConverter;
 import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
+import javafx.event.WeakEventHandler;
 import javafx.scene.AccessibleAttribute;
 import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
+import javafx.scene.control.skin.TreeTableViewSkin;
 import javafx.scene.layout.Region;
 import javafx.util.Callback;
 
@@ -415,7 +408,6 @@ public class TreeTableView<S> extends Control {
         });
 
         pseudoClassStateChanged(PseudoClass.getPseudoClass(getColumnResizePolicy().toString()), true);
-        ConstrainedColumnResize.setFirstRun(TreeTableView.this, true);
 
         isInited = true;
     }
@@ -1255,8 +1247,6 @@ public class TreeTableView<S> extends Control {
                         }
                         oldPolicy = get();
                     }
- 
-                    ConstrainedColumnResize.setFirstRun(TreeTableView.this, true);
                 }
             };
         }

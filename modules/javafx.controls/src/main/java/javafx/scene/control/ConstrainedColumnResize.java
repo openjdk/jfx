@@ -44,8 +44,6 @@ public abstract class ConstrainedColumnResize {
         AUTO_RESIZE_ALL_COLUMNS
     }
 
-    private static final Object FIRST_RUN = new Object();
-
     public ConstrainedColumnResize() {
     }
 
@@ -56,23 +54,12 @@ public abstract class ConstrainedColumnResize {
      * 
      * @return true when manual column resizing is allowed, false otherwise
      */
-    public abstract boolean constrainedResize(boolean firstRun,
-                                     ResizeFeaturesBase rf,
-                                     double contentWidth,
-                                     List<? extends TableColumnBase<?,?>> visibleLeafColumns);
+    public abstract boolean constrainedResize(ResizeFeaturesBase rf,
+                                              List<? extends TableColumnBase<?,?>> visibleLeafColumns);
     
     @Override
     public String toString() {
         // used to set a pseudo-style
         return "constrained-resize";
-    }
-
-    protected static boolean isFirstRun(Node treeOrTable) {
-        // FIX need to reset once the resize policy is set
-        return !Boolean.FALSE.equals(treeOrTable.getProperties().get(FIRST_RUN));
-    }
-
-    protected static void setFirstRun(Node treeOrTable, boolean on) {
-        treeOrTable.getProperties().put(FIRST_RUN, Boolean.valueOf(on));
     }
 }

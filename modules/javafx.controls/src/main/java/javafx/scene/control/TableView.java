@@ -36,16 +36,20 @@ import java.util.List;
 import java.util.Set;
 import java.util.WeakHashMap;
 import java.util.function.IntPredicate;
-
+import com.sun.javafx.collections.MappingChange;
+import com.sun.javafx.collections.NonIterableChange;
 import com.sun.javafx.logging.PlatformLogger.Level;
 import com.sun.javafx.scene.control.Logging;
 import com.sun.javafx.scene.control.Properties;
+import com.sun.javafx.scene.control.ReadOnlyUnbackedObservableList;
 import com.sun.javafx.scene.control.SelectedCellsMap;
+import com.sun.javafx.scene.control.TableColumnComparatorBase.TableColumnComparator;
 import com.sun.javafx.scene.control.behavior.TableCellBehavior;
 import com.sun.javafx.scene.control.behavior.TableCellBehaviorBase;
-
-import javafx.beans.*;
+import javafx.beans.DefaultProperty;
+import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
+import javafx.beans.WeakInvalidationListener;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
@@ -66,20 +70,15 @@ import javafx.css.PseudoClass;
 import javafx.css.Styleable;
 import javafx.css.StyleableDoubleProperty;
 import javafx.css.StyleableProperty;
+import javafx.css.converter.SizeConverter;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
 import javafx.scene.AccessibleAttribute;
 import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
+import javafx.scene.control.skin.TableViewSkin;
 import javafx.scene.layout.Region;
 import javafx.util.Callback;
-
-import com.sun.javafx.collections.MappingChange;
-import com.sun.javafx.collections.NonIterableChange;
-import javafx.css.converter.SizeConverter;
-import com.sun.javafx.scene.control.ReadOnlyUnbackedObservableList;
-import com.sun.javafx.scene.control.TableColumnComparatorBase.TableColumnComparator;
-import javafx.scene.control.skin.TableViewSkin;
 
 /**
  * The TableView control is designed to visualize an unlimited number of rows
@@ -562,7 +561,6 @@ public class TableView<S> extends Control {
         });
 
         pseudoClassStateChanged(PseudoClass.getPseudoClass(getColumnResizePolicy().toString()), true);
-        ConstrainedColumnResize.setFirstRun(TableView.this, true);
 
         isInited = true;
     }
@@ -924,8 +922,6 @@ public class TableView<S> extends Control {
                         }
                         oldPolicy = get();
                     }
-
-                    ConstrainedColumnResize.setFirstRun(TableView.this, true);
                 }
             };
         }
