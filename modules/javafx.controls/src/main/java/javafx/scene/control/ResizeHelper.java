@@ -75,7 +75,7 @@ public class ResizeHelper {
             }
         }
     }
-    
+
     public void resizeToContentWidth() {
         boolean needsAnotherPass = false;
 
@@ -101,12 +101,12 @@ public class ResizeHelper {
             if (isZero(total)) {
                 return;
             }
-    
+
             for (int i = 0; i < count(); i++) {
                 if (skip.get(i)) {
                     continue;
                 }
-    
+
                 double dw = delta * pref[i] / total;
                 double w = Math.round(size[i] + dw);
                 if (w < min[i]) {
@@ -122,7 +122,7 @@ public class ResizeHelper {
                 } else {
                     dw = (w - size[i]);
                 }
-    
+
                 delta -= dw;
                 total -= pref[i];
                 size[i] = w;
@@ -131,10 +131,10 @@ public class ResizeHelper {
             if (isZero(delta)) {
                 needsAnotherPass = false;
             }
-            
+
             if(needsAnotherPass) System.out.println("*** another pass"); // FIX
         } while(needsAnotherPass);
-        
+
         check();
     }
 
@@ -176,13 +176,13 @@ public class ResizeHelper {
     protected static String p(double x) { // FIX remove
         return new DecimalFormat("0.#").format(x);
     }
-    
+
     public String dump() {
         double sum = 0.0;
         for(double x: size) {
             sum += x;
         }
-        
+
         StringBuilder sb = new StringBuilder();
         sb.append("target=");
         sb.append(p(target));
@@ -208,33 +208,33 @@ public class ResizeHelper {
         while (leafColumn.getColumns().size() > 0) {
             leafColumn = leafColumn.getColumns().get(leafColumn.getColumns().size() - 1);
         }
-        
-        if(!leafColumn.isResizable()) {
+
+        if (!leafColumn.isResizable()) {
             return false;
         }
-        
+
         int ix = columns.indexOf(leafColumn);
         boolean expanding = delta > 0.0;
         // FIX don't need in case of multiple columns?
         double allowedDelta = getAllowedDelta(ix, expanding);
-        if(isZero(allowedDelta)) {
+        if (isZero(allowedDelta)) {
             return false;
         }
-        
+
         int ct = markOppositeColumns(ix);
-        if(ct == 0) {
+        if (ct == 0) {
             return false;
         }
-        
+
         double d = computeAllowedDelta(!expanding);
-        if(isZero(d)) {
+        if (isZero(d)) {
             return false;
         }
-        
+
         allowedDelta = Math.min(Math.abs(delta), Math.min(allowedDelta, d));
         allowedDelta = (expanding ? 1 : -1) * Math.floor(allowedDelta); // TODO use original value, round in ct==1 case
 
-        if(isCornerCase(allowedDelta, ix)) {
+        if (isCornerCase(allowedDelta, ix)) {
             return false;
         }
 
@@ -258,16 +258,16 @@ public class ResizeHelper {
 
     /** non-negative */
     protected double getAllowedDelta(int ix, boolean expanding) {
-        if(expanding) {
+        if (expanding) {
             return Math.abs(max[ix] - size[ix]);
         } else {
             return Math.abs(min[ix] - size[ix]);
         }
     }
-    
+
     /** updates skip bitset with columns that might be resized, and returns the number of the opposite columns */
     protected int markOppositeColumns(int ix) {
-        switch(mode) {
+        switch (mode) {
         case AUTO_RESIZE_NEXT_COLUMN:
             setSkip(0, ix + 1);
             setSkip(ix + 2, columns.size());
@@ -283,7 +283,7 @@ public class ResizeHelper {
             setSkip(ix, ix + 1);
             break;
         }
-        
+
         return count() - skip.cardinality();
     }
 
@@ -305,19 +305,19 @@ public class ResizeHelper {
     protected double computeAllowedDelta(boolean expanding) {
         double delta = 0.0;
         int i = 0;
-        for(;;) {
+        for (;;) {
             i = skip.nextClearBit(i);
             // are we at the end?
-            if(i >= count()) {
+            if (i >= count()) {
                 break;
             }
-            
-            if(expanding) {
+
+            if (expanding) {
                 delta += (max[i] - size[i]);
             } else {
                 delta += (size[i] - min[i]);
             }
-            
+
             i++;
         }
         return delta;
@@ -326,7 +326,6 @@ public class ResizeHelper {
     protected boolean distributeDelta(int ix, double delta) {
         int ct = count() - skip.cardinality();
         if (ct == 0) {
-            // should not happen
             return false;
         } else if (ct == 1) {
             int oppx = skip.nextClearBit(0);
@@ -342,7 +341,7 @@ public class ResizeHelper {
 
     protected void distributeDeltaMultipleColumns(double delta) {
         boolean needsAnotherPass = false;
-        
+
         do {
             double total = 0.0;
             for (int i = 0; i < count(); i++) {
@@ -350,16 +349,16 @@ public class ResizeHelper {
                     total += size[i];
                 }
             }
-            
-            if(isZero(total)) {
+
+            if (isZero(total)) {
                 return;
             }
-    
+
             for (int i = 0; i < count(); i++) {
                 if (skip.get(i)) {
                     continue;
                 }
-    
+
                 double dw = delta * size[i] / total;
                 double w = Math.round(size[i] + dw);
                 if (w < min[i]) {
@@ -375,7 +374,7 @@ public class ResizeHelper {
                 } else {
                     dw = (w - size[i]);
                 }
-    
+
                 delta -= dw;
                 total -= size[i];
                 size[i] = w;
@@ -384,22 +383,22 @@ public class ResizeHelper {
             if (isZero(delta)) {
                 needsAnotherPass = false;
             }
-            
-            if(needsAnotherPass) System.out.println("*** another pass (delta)"); // FIX
-            
-        } while(needsAnotherPass);
-        
+
+            if (needsAnotherPass) System.out.println("*** another pass (delta)"); // FIX
+
+        } while (needsAnotherPass);
+
         check();
     }
-    
+
     @Deprecated // FIX
     protected void check() {
         double total = 0.0;
         for (int i = 0; i < count(); i++) {
             total += size[i];
         }
-        
-        if(!isZero(total - target)) {
+
+        if (!isZero(total - target)) {
             System.out.println("  FAILED check total=" + total + " target=" + target); // FIX
         }
     }

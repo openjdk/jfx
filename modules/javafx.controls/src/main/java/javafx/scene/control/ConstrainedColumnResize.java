@@ -30,7 +30,7 @@ import javafx.util.Callback;
 /**
  * Implementation of constrained column resize algorithm that honors all Tree/TableColumn constraints -
  * minimum, preferred, and maximum width.
- * 
+ *
  * @since 20
  */
 public class ConstrainedColumnResize extends ConstrainedColumnResizeBase {

@@ -29,7 +29,7 @@ import java.util.List;
  * Base class for a constrained column resize policy.
  * Setting any policy that extends this class on a Tree/TableView results in
  * disabling of its horizontal scroll bar.
- * 
+ *
  * @since 20
  */
 public abstract class ConstrainedColumnResizeBase {
@@ -37,12 +37,12 @@ public abstract class ConstrainedColumnResizeBase {
      * The constrained resize algorithm used by TableView and TreeTableView.
      * Called when initially sizing the table (rf.getColumn() == null),
      * or when manually resizing a specific column.
-     * 
+     *
      * @return true when manual column resizing is allowed, false otherwise
      */
     public abstract boolean constrainedResize(ResizeFeaturesBase rf,
                                               List<? extends TableColumnBase<?,?>> visibleLeafColumns);
-    
+
     public ConstrainedColumnResizeBase() {
     }
 
