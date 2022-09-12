@@ -47,12 +47,10 @@ Issue key|Summary|Subcomponent
 [JDK-8284665](https://bugs.openjdk.java.net/browse/JDK-8284665)|First selected item of a TreeItem multiple selection gets removed if new items are constantly added to the TreeTableView|controls
 [JDK-8285197](https://bugs.openjdk.java.net/browse/JDK-8285197)|TableColumnHeader: calc of cell width must respect row styling (TreeTableView)|controls
 [JDK-8286261](https://bugs.openjdk.java.net/browse/JDK-8286261)|Selection of non-expanded non-leaf treeItem grows unexpectedly when adding two-level descendants|controls
-[JDK-8289171](https://bugs.openjdk.java.net/browse/JDK-8289171)|Blank final field 'dialog' may not have been initialized in scene.control.Dialog:521|controls
 [JDK-8289751](https://bugs.openjdk.java.net/browse/JDK-8289751)|Multiple unit test failures after JDK-8251483|controls
 [JDK-8290348](https://bugs.openjdk.java.net/browse/JDK-8290348)|TreeTableView jumping to top|controls
 [JDK-8277572](https://bugs.openjdk.java.net/browse/JDK-8277572)|ImageStorage should correctly handle MIME types for images encoded in data URIs|graphics
 [JDK-8279013](https://bugs.openjdk.java.net/browse/JDK-8279013)|ES2Pipeline fails to detect AMD vega20 graphics card|graphics
-[JDK-8279297](https://bugs.openjdk.java.net/browse/JDK-8279297)|Remove Shape::setMode method|graphics
 [JDK-8285217](https://bugs.openjdk.java.net/browse/JDK-8285217)|[Android] Window's screen is not updated after native screen was disposed|graphics
 [JDK-8288137](https://bugs.openjdk.java.net/browse/JDK-8288137)|The set of available printers is not updated without application restart|graphics
 [JDK-8291502](https://bugs.openjdk.java.net/browse/JDK-8291502)|Mouse or touch presses on a non-focusable region don't clear the focusVisible flag of the current focus owner|graphics
