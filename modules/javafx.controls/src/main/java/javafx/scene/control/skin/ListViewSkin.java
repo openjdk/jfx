@@ -592,12 +592,12 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListCell<
      * if this is a horizontal container, then the scrolling will be to the right.
      */
     private int onScrollPageDown(boolean isFocusDriven) {
-        ListCell<T> lastVisibleCell = flow.getLastVisibleCellWithinViewport();
-        if (lastVisibleCell == null) return -1;
-
         final SelectionModel<T> sm = getSkinnable().getSelectionModel();
         final FocusModel<T> fm = getSkinnable().getFocusModel();
         if (sm == null || fm == null) return -1;
+
+        ListCell<T> lastVisibleCell = flow.getLastVisibleCellWithinViewport();
+        if (lastVisibleCell == null) return -1;
 
         int lastVisibleCellIndex = lastVisibleCell.getIndex();
 
@@ -638,12 +638,12 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListCell<
      * if this is a horizontal container, then the scrolling will be to the left.
      */
     private int onScrollPageUp(boolean isFocusDriven) {
-        ListCell<T> firstVisibleCell = flow.getFirstVisibleCellWithinViewport();
-        if (firstVisibleCell == null) return -1;
-
         final SelectionModel<T> sm = getSkinnable().getSelectionModel();
         final FocusModel<T> fm = getSkinnable().getFocusModel();
         if (sm == null || fm == null) return -1;
+
+        ListCell<T> firstVisibleCell = flow.getFirstVisibleCellWithinViewport();
+        if (firstVisibleCell == null) return -1;
 
         int firstVisibleCellIndex = firstVisibleCell.getIndex();
 

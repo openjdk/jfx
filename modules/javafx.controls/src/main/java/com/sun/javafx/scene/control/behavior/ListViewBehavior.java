@@ -398,26 +398,28 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
     }
 
     private void scrollPageUp() {
+        MultipleSelectionModel<T> sm = getNode().getSelectionModel();
+        if (sm == null) return;
+
         int newSelectedIndex = -1;
         if (onScrollPageUp != null) {
             newSelectedIndex = onScrollPageUp.call(false);
         }
         if (newSelectedIndex == -1) return;
 
-        MultipleSelectionModel<T> sm = getNode().getSelectionModel();
-        if (sm == null) return;
         sm.clearAndSelect(newSelectedIndex);
     }
 
     private void scrollPageDown() {
+        MultipleSelectionModel<T> sm = getNode().getSelectionModel();
+        if (sm == null) return;
+
         int newSelectedIndex = -1;
         if (onScrollPageDown != null) {
             newSelectedIndex = onScrollPageDown.call(false);
         }
         if (newSelectedIndex == -1) return;
 
-        MultipleSelectionModel<T> sm = getNode().getSelectionModel();
-        if (sm == null) return;
         sm.clearAndSelect(newSelectedIndex);
     }
 
@@ -576,11 +578,13 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
         if (focusIndex <= 0) {
             return;
         }
+        setAnchor(focusIndex - 1);
 
         MultipleSelectionModel<T> selectionModel = getNode().getSelectionModel();
-        if (selectionModel == null) return;
+        if (selectionModel == null) {
+            return;
+        }
 
-        setAnchor(focusIndex - 1);
         selectionModel.clearAndSelect(focusIndex - 1);
         onSelectPreviousRow.run();
     }
@@ -594,11 +598,11 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
         if (focusIndex == getRowCount() - 1) {
             return;
         }
+        setAnchor(focusIndex + 1);
 
         MultipleSelectionModel<T> sm = listView.getSelectionModel();
         if (sm == null) return;
 
-        setAnchor(focusIndex + 1);
         sm.clearAndSelect(focusIndex + 1);
         if (onSelectNextRow != null) onSelectNextRow.run();
     }
