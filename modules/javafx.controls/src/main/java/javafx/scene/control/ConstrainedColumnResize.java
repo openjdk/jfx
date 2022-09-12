@@ -24,29 +24,15 @@
  */
 package javafx.scene.control;
 import java.util.List;
-import javafx.scene.Node;
 
 /**
- * Constrained columns resize algorithm which:
- * - honors minimal, preferred, and maximum widths
- * - unconditionally suppresses the horizontal scroll bar
+ * Base class for a constrained column resize policy.
+ * Setting any policy that extends this class on a Tree/TableView results in
+ * disabling of its horizontal scroll bar.
  * 
  * @since 20
  */
-// TODO this could be a marker interface, unless we need to encapsulate first run
 public abstract class ConstrainedColumnResize {
-
-    // TODO move to implementation
-    public enum ResizeMode {
-        AUTO_RESIZE_NEXT_COLUMN,
-        AUTO_RESIZE_SUBSEQUENT_COLUMNS,
-        AUTO_RESIZE_LAST_COLUMN,
-        AUTO_RESIZE_ALL_COLUMNS
-    }
-
-    public ConstrainedColumnResize() {
-    }
-
     /**
      * The constrained resize algorithm used by TableView and TreeTableView.
      * Called when initially sizing the table (rf.getColumn() == null),
@@ -57,9 +43,12 @@ public abstract class ConstrainedColumnResize {
     public abstract boolean constrainedResize(ResizeFeaturesBase rf,
                                               List<? extends TableColumnBase<?,?>> visibleLeafColumns);
     
+    public ConstrainedColumnResize() {
+    }
+
     @Override
     public String toString() {
-        // used to set a pseudo-style
+        // name of a pseudo-style set on a Tree/TableView when a constrained resize policy is in effect
         return "constrained-resize";
     }
 }
