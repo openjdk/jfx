@@ -2208,8 +2208,6 @@ public class ListViewTest {
         stageLoader = new StageLoader(listView);
 
         assertDoesNotThrow(() -> listView.getSelectionModel().select(1));
-
-        stageLoader.dispose();
     }
 
     @Test
@@ -2255,9 +2253,6 @@ public class ListViewTest {
         listView.setPlaceholder(placeholderNode);
 
         stageLoader = new StageLoader(listView);
-
-        Toolkit.getToolkit().firePulse();
-        Toolkit.getToolkit().firePulse();
 
         Object result = listView.queryAccessibleAttribute(AccessibleAttribute.FOCUS_ITEM);
 
