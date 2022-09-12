@@ -23,32 +23,90 @@
  * questions.
  */
 package javafx.scene.control;
+
 import java.util.List;
+import javafx.util.Callback;
 
 /**
- * Base class for a constrained column resize policy.
- * Setting any policy that extends this class on a Tree/TableView results in
- * disabling of its horizontal scroll bar.
+ * Implementation of constrained column resize algorithm that honors all Tree/TableColumn constraints -
+ * minimum, preferred, and maximum width.
  * 
  * @since 20
  */
-public abstract class ConstrainedColumnResize {
-    /**
-     * The constrained resize algorithm used by TableView and TreeTableView.
-     * Called when initially sizing the table (rf.getColumn() == null),
-     * or when manually resizing a specific column.
-     * 
-     * @return true when manual column resizing is allowed, false otherwise
-     */
-    public abstract boolean constrainedResize(ResizeFeaturesBase rf,
-                                              List<? extends TableColumnBase<?,?>> visibleLeafColumns);
-    
-    public ConstrainedColumnResize() {
+public class ConstrainedColumnResize extends ConstrainedColumnResizeBase {
+    public enum ResizeMode {
+        AUTO_RESIZE_NEXT_COLUMN,
+        AUTO_RESIZE_SUBSEQUENT_COLUMNS,
+        AUTO_RESIZE_LAST_COLUMN,
+        AUTO_RESIZE_ALL_COLUMNS
+    }
+
+    private final ResizeMode mode;
+
+    public ConstrainedColumnResize(ResizeMode m) {
+        this.mode = m;
     }
 
     @Override
-    public String toString() {
-        // name of a pseudo-style set on a Tree/TableView when a constrained resize policy is in effect
-        return "constrained-resize";
+    public boolean constrainedResize(ResizeFeaturesBase rf,
+        List<? extends TableColumnBase<?,?>> visibleLeafColumns) {
+
+        double contentWidth = rf.getContentWidth();
+        if (contentWidth == 0.0) {
+            return false;
+        }
+
+        ResizeHelper h = new ResizeHelper(rf, contentWidth, visibleLeafColumns, mode);
+        h.resizeToContentWidth();
+
+        boolean rv;
+        TableColumnBase<?,?> column = rf.getColumn();
+        if (column == null) {
+            rv = false;
+        } else {
+            rv = h.resizeColumn(column);
+        }
+
+        h.applySizes();
+        System.out.println(h.dump()); // FIX
+        return rv;
+    }
+
+    public static TablePolicy forTable(ResizeMode m) {
+        return new TablePolicy(m);
+    }
+
+    public static TreeTablePolicy forTreeTable(ResizeMode m) {
+        return new TreeTablePolicy(m);
+    }
+
+    public static class TablePolicy
+        extends ConstrainedColumnResize
+        implements Callback<TableView.ResizeFeatures,Boolean> {
+
+        public TablePolicy(ResizeMode m) {
+            super(m);
+        }
+
+        @Override
+        public Boolean call(TableView.ResizeFeatures rf) {
+            List<? extends TableColumnBase<?,?>> visibleLeafColumns = rf.getTable().getVisibleLeafColumns();
+            return constrainedResize(rf, visibleLeafColumns);
+        }
+    }
+
+    public static class TreeTablePolicy
+        extends ConstrainedColumnResize
+        implements Callback<TreeTableView.ResizeFeatures,Boolean> {
+
+        public TreeTablePolicy(ResizeMode m) {
+            super(m);
+        }
+
+        @Override
+        public Boolean call(TreeTableView.ResizeFeatures rf) {
+            List<? extends TableColumnBase<?,?>> visibleLeafColumns = rf.getTable().getVisibleLeafColumns();
+            return constrainedResize(rf, visibleLeafColumns);
+        }
     }
 }
