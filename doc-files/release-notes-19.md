@@ -21,7 +21,6 @@ Issue key|Summary|Subcomponent
 Issue key|Summary|Subcomponent
 ---------|-------|------------
 [JDK-8290331](https://bugs.openjdk.java.net/browse/JDK-8290331)|Binding value left null when immediately revalidated in invalidation listener|base
-[JDK-8290393](https://bugs.openjdk.java.net/browse/JDK-8290393)|Code sample in javadoc of ObservableValue flatMap is incorrect|base
 [JDK-8291906](https://bugs.openjdk.java.net/browse/JDK-8291906)|Bindings.createXxxBinding inherit incorrect method docs|base
 [JDK-8187307](https://bugs.openjdk.java.net/browse/JDK-8187307)|ListView, TableView, TreeView: receives editCancel event when edit is committed|controls
 [JDK-8187309](https://bugs.openjdk.java.net/browse/JDK-8187309)|TreeCell must not change tree's data|controls
