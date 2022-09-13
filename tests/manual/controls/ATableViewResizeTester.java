@@ -172,9 +172,9 @@ public class ATableViewResizeTester extends Application {
                 Boolean rv = policy.call(f);
                 int ix = f.getTable().getColumns().indexOf(f.getColumn());
                 System.out.println(
-                    "col=" + (ix < 0 ? f.getColumn() : ix) + 
-                    " delta=" + f.getDelta() + 
-                    " w=" + f.getTable().getWidth() + 
+                    "col=" + (ix < 0 ? f.getColumn() : ix) +
+                    " delta=" + f.getDelta() +
+                    " w=" + f.getTable().getWidth() +
                     " rv=" + rv
                 );
                 return rv;
