@@ -128,7 +128,7 @@ public class ResizeHelper {
                 size[i] = w;
             }
 
-            if (isZero(delta)) {
+            if (Math.abs(delta) < 0.5) {
                 needsAnotherPass = false;
             }
 
@@ -380,11 +380,11 @@ public class ResizeHelper {
                 size[i] = w;
             }
 
-            if (isZero(delta)) {
+            if (Math.abs(delta) < 0.5) {
                 needsAnotherPass = false;
             }
 
-            if (needsAnotherPass) System.out.println("*** another pass (delta)"); // FIX
+            if (needsAnotherPass) System.out.println("*** another pass (delta=" + delta + ")"); // FIX
 
         } while (needsAnotherPass);
 
