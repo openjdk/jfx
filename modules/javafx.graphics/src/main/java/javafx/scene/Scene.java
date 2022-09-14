@@ -3668,6 +3668,7 @@ public class Scene implements EventTarget {
                     ? currentEventTargets.get(0) : null;
             pdrEventTarget.clear();
             pdrEventTargets.clear();
+            fullPDRTmpTargetWrapper.clear();
         }
 
         public void enterFullPDR(EventTarget gestureSource) {
