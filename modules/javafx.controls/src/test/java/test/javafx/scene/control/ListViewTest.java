@@ -50,9 +50,11 @@ import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.collections.transformation.SortedList;
+import javafx.scene.AccessibleAttribute;
 import javafx.scene.control.Button;
 import javafx.scene.control.FocusModel;
 import javafx.scene.control.IndexedCell;
+import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListCellShim;
 import javafx.scene.control.ListView;
@@ -78,8 +80,12 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertStyleClassContains;
 import static javafx.collections.FXCollections.*;
 
@@ -96,10 +102,29 @@ public class ListViewTest {
     private MultipleSelectionModel<String> sm;
     private FocusModel<String> fm;
 
+    private StageLoader stageLoader;
+
     @Before public void setup() {
         listView = new ListView<>();
         sm = listView.getSelectionModel();
         fm = listView.getFocusModel();
+
+        Thread.currentThread().setUncaughtExceptionHandler((thread, throwable) -> {
+            if (throwable instanceof RuntimeException) {
+                throw (RuntimeException)throwable;
+            } else {
+                Thread.currentThread().getThreadGroup().uncaughtException(thread, throwable);
+            }
+        });
+    }
+
+    @After
+    public void cleanup() {
+        Thread.currentThread().setUncaughtExceptionHandler(null);
+
+        if (stageLoader != null) {
+            stageLoader.dispose();
+        }
     }
 
 
@@ -2173,6 +2198,67 @@ public class ListViewTest {
         items.clear();
         attemptGC(itemRef, 10);
         assertNull("ListView item is not GCed.", itemRef.get());
+    }
+
+    @Test
+    public void testSelectWithNullFocusModelDoesNotThrowNPE() {
+        listView.getItems().addAll("1", "2");
+        listView.setFocusModel(null);
+
+        stageLoader = new StageLoader(listView);
+
+        assertDoesNotThrow(() -> listView.getSelectionModel().select(1));
+    }
+
+    @Test
+    public void testItemChangeWithNullFocusModelDoesNotThrowNPE() {
+        listView.getItems().addAll("1", "2");
+        listView.setFocusModel(null);
+
+        stageLoader = new StageLoader(listView);
+
+        listView.getSelectionModel().clearAndSelect(1);
+        assertDoesNotThrow(() -> listView.getItems().add("3"));
+    }
+
+    @Test
+    public void testQueryAccessibleAttributeSelectedItemsWithNullSelectionModel() {
+        listView.getItems().addAll("1", "2");
+        listView.setSelectionModel(null);
+
+        stageLoader = new StageLoader(listView);
+
+        Object result = listView.queryAccessibleAttribute(AccessibleAttribute.SELECTED_ITEMS);
+
+        // Should be an empty observable array list
+        assertEquals(FXCollections.observableArrayList(), result);
+    }
+
+    @Test
+    public void testQueryAccessibleAttributeFocusItemWithNullFocusModel() {
+        listView.getItems().addAll("1", "2");
+        listView.setFocusModel(null);
+
+        stageLoader = new StageLoader(listView);
+
+        Object result = listView.queryAccessibleAttribute(AccessibleAttribute.FOCUS_ITEM);
+
+        assertNull(result);
+    }
+
+    @Test
+    public void testQueryAccessibleAttributeFocusItemWithNullFocusModelAndNoItems() {
+        listView.setFocusModel(null);
+        Label placeholderNode = new Label("No items set");
+        listView.setPlaceholder(placeholderNode);
+
+        stageLoader = new StageLoader(listView);
+
+        Object result = listView.queryAccessibleAttribute(AccessibleAttribute.FOCUS_ITEM);
+
+        // Should be the placeholder node we set above
+        assertNotNull(result);
+        assertSame(placeholderNode, result);
     }
 
     private void attemptGC(WeakReference<? extends Object> weakRef, int n) {
