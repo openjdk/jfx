@@ -153,7 +153,7 @@ public final class Platform {
      *
      * <p>
      * Memory consistency effects: Actions in a thread prior to submitting a
-     * runnable to this method <i>happen-before</i> actions performed by 
+     * runnable to this method <i>happen-before</i> actions performed by
      * the runnable in the JavaFX Application Thread.
      * </p>
      *
