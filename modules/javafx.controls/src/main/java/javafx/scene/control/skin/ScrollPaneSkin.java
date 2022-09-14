@@ -36,10 +36,12 @@ import javafx.animation.KeyValue;
 import javafx.animation.Timeline;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
+import javafx.beans.WeakInvalidationListener;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.DoublePropertyBase;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
+import javafx.beans.value.WeakChangeListener;
 import javafx.event.EventDispatcher;
 import javafx.event.EventHandler;
 import javafx.geometry.BoundingBox;
@@ -185,6 +187,7 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane> {
         }
     };
 
+    private final WeakInvalidationListener weakNodeListener = new WeakInvalidationListener(nodeListener);
 
     /*
     ** The content of the ScrollPane has just changed bounds, check scrollBar positions.
@@ -242,7 +245,7 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane> {
         }
     };
 
-
+    private final WeakChangeListener<Bounds> weakBoundsChangeListener = new WeakChangeListener(boundsChangeListener);
 
     /* *************************************************************************
      *                                                                         *
@@ -274,8 +277,8 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane> {
         registerChangeListener(control.contentProperty(), e -> {
             if (scrollNode != getSkinnable().getContent()) {
                 if (scrollNode != null) {
-                    scrollNode.layoutBoundsProperty().removeListener(nodeListener);
-                    scrollNode.layoutBoundsProperty().removeListener(boundsChangeListener);
+                    scrollNode.layoutBoundsProperty().removeListener(weakNodeListener);
+                    scrollNode.layoutBoundsProperty().removeListener(weakBoundsChangeListener);
                     viewContent.getChildren().remove(scrollNode);
                 }
                 scrollNode = getSkinnable().getContent();
@@ -283,8 +286,8 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane> {
                     nodeWidth = snapSizeX(scrollNode.getLayoutBounds().getWidth());
                     nodeHeight = snapSizeY(scrollNode.getLayoutBounds().getHeight());
                     viewContent.getChildren().setAll(scrollNode);
-                    scrollNode.layoutBoundsProperty().addListener(nodeListener);
-                    scrollNode.layoutBoundsProperty().addListener(boundsChangeListener);
+                    scrollNode.layoutBoundsProperty().addListener(weakNodeListener);
+                    scrollNode.layoutBoundsProperty().addListener(weakBoundsChangeListener);
                 }
             }
             getSkinnable().requestLayout();
@@ -635,8 +638,8 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane> {
         ParentHelper.setTraversalEngine(getSkinnable(), traversalEngine);
 
         if (scrollNode != null) {
-            scrollNode.layoutBoundsProperty().addListener(nodeListener);
-            scrollNode.layoutBoundsProperty().addListener(boundsChangeListener);
+            scrollNode.layoutBoundsProperty().addListener(weakNodeListener);
+            scrollNode.layoutBoundsProperty().addListener(weakBoundsChangeListener);
         }
 
         viewRect = new StackPane() {
