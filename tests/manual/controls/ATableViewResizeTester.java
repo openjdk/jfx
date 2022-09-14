@@ -81,12 +81,12 @@ public class ATableViewResizeTester extends Application {
     }
 
     public enum Policy {
-        AUTO_RESIZE_OFF(JTable.AUTO_RESIZE_OFF),
         AUTO_RESIZE_NEXT_COLUMN(JTable.AUTO_RESIZE_NEXT_COLUMN),
         AUTO_RESIZE_SUBSEQUENT_COLUMNS(JTable.AUTO_RESIZE_SUBSEQUENT_COLUMNS),
         AUTO_RESIZE_LAST_COLUMN(JTable.AUTO_RESIZE_LAST_COLUMN),
         AUTO_RESIZE_ALL_COLUMNS(JTable.AUTO_RESIZE_ALL_COLUMNS),
-        CONSTRAINED_RESIZE_POLICY(JTable.AUTO_RESIZE_SUBSEQUENT_COLUMNS);
+        CONSTRAINED_RESIZE_POLICY(JTable.AUTO_RESIZE_SUBSEQUENT_COLUMNS),
+        UNCONSTRAINED_RESIZE_POLICY(JTable.AUTO_RESIZE_OFF);
 
         private final int value;
         Policy(int v) { this.value = v; }
@@ -204,12 +204,12 @@ public class ATableViewResizeTester extends Application {
             return ConstrainedColumnResize.forTable(ResizeMode.AUTO_RESIZE_LAST_COLUMN);
         case AUTO_RESIZE_NEXT_COLUMN:
             return ConstrainedColumnResize.forTable(ResizeMode.AUTO_RESIZE_NEXT_COLUMN);
-        case AUTO_RESIZE_OFF:
-            return TableView.UNCONSTRAINED_RESIZE_POLICY;
         case AUTO_RESIZE_SUBSEQUENT_COLUMNS:
             return ConstrainedColumnResize.forTable(ResizeMode.AUTO_RESIZE_SUBSEQUENT_COLUMNS);
         case CONSTRAINED_RESIZE_POLICY:
             return TableView.CONSTRAINED_RESIZE_POLICY;
+        case UNCONSTRAINED_RESIZE_POLICY:
+            return TableView.UNCONSTRAINED_RESIZE_POLICY;
         default:
             throw new Error("?" + p);
         }
@@ -475,14 +475,14 @@ public class ATableViewResizeTester extends Application {
 
         private int createHSBPolicy(Policy p) {
             switch (p) {
-            case AUTO_RESIZE_OFF:
-                return JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED;
             case AUTO_RESIZE_ALL_COLUMNS:
             case AUTO_RESIZE_LAST_COLUMN:
             case AUTO_RESIZE_NEXT_COLUMN:
             case AUTO_RESIZE_SUBSEQUENT_COLUMNS:
             case CONSTRAINED_RESIZE_POLICY:
                 return JScrollPane.HORIZONTAL_SCROLLBAR_NEVER;
+            case UNCONSTRAINED_RESIZE_POLICY:
+                return JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED;
             default:
                 throw new Error("?" + p);
             }
