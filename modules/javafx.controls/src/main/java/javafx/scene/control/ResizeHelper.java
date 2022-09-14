@@ -272,6 +272,7 @@ public class ResizeHelper {
             setSkip(0, ix + 1);
             setSkip(ix + 2, columns.size());
             break;
+        case AUTO_RESIZE_NEW:
         case AUTO_RESIZE_SUBSEQUENT_COLUMNS:
             setSkip(0, ix + 1);
             break;
@@ -339,6 +340,17 @@ public class ResizeHelper {
         }
     }
 
+    protected double computeDelta(double delta, int ix, double total) {
+        if (mode == ResizeMode.AUTO_RESIZE_NEW) {
+            if (delta < 0) {
+                return delta;
+            } else if (size[ix] < pref[ix]) {
+                return delta;
+            }
+        }
+        return delta * size[ix] / total;
+    }
+
     protected void distributeDeltaMultipleColumns(double delta) {
         boolean needsAnotherPass = false;
 
@@ -354,12 +366,12 @@ public class ResizeHelper {
                 return;
             }
 
-            for (int i = 0; i < count(); i++) {
+            for (int i = count() - 1; i >= 0; i--) {
                 if (skip.get(i)) {
                     continue;
                 }
 
-                double dw = delta * size[i] / total;
+                double dw = computeDelta(delta, i, total);
                 double w = Math.round(size[i] + dw);
                 if (w < min[i]) {
                     dw -= (w - min[i]);

@@ -23,7 +23,6 @@
  * questions.
  */
 package javafx.scene.control;
-import java.util.List;
 
 /**
  * Base class for a constrained column resize policy.
@@ -33,18 +32,6 @@ import java.util.List;
  * @since 20
  */
 public abstract class ConstrainedColumnResizeBase {
-    /**
-     * The constrained resize algorithm used by TableView and TreeTableView.
-     * Called when initially sizing the table (rf.getColumn() == null),
-     * or when manually resizing a specific column.
-     *
-     * @return true when manual column resizing is allowed, false otherwise
-     */
-    public abstract boolean constrainedResize(ResizeFeaturesBase rf,
-                                              List<? extends TableColumnBase<?,?>> visibleLeafColumns);
-
-    public ConstrainedColumnResizeBase() {
-    }
 
     @Override
     public String toString() {

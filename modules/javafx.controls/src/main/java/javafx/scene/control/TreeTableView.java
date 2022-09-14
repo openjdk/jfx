@@ -542,6 +542,7 @@ public class TreeTableView<S> extends Control {
      * hand side columns reach minimum size, the user cannot increase the size of
      * resized column any more.
      */
+    @Deprecated(since="20")
     public static final Callback<TreeTableView.ResizeFeatures, Boolean> CONSTRAINED_RESIZE_POLICY =
             new Callback<TreeTableView.ResizeFeatures, Boolean>() {
 
@@ -572,7 +573,6 @@ public class TreeTableView<S> extends Control {
     public static final Callback<TreeTableView.ResizeFeatures, Boolean> CONSTRAINED_RESIZE_POLICY_NEXT_COLUMN =
         ConstrainedColumnResize.forTreeTable(ConstrainedColumnResize.ResizeMode.AUTO_RESIZE_NEXT_COLUMN);
 
-    // TODO to be renamed to CONSTRAINED_RESIZE_POLICY
     public static final Callback<TreeTableView.ResizeFeatures, Boolean> CONSTRAINED_RESIZE_POLICY_SUBSEQUENT_COLUMNS =
         ConstrainedColumnResize.forTreeTable(ConstrainedColumnResize.ResizeMode.AUTO_RESIZE_SUBSEQUENT_COLUMNS);
 

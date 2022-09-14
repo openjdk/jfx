@@ -25,6 +25,7 @@
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.EventQueue;
+import java.util.List;
 import javax.swing.JComponent;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
@@ -40,10 +41,13 @@ import javafx.scene.Scene;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.ConstrainedColumnResize;
 import javafx.scene.control.ConstrainedColumnResize.ResizeMode;
+import javafx.scene.control.ConstrainedColumnResizeBase;
 import javafx.scene.control.Label;
+import javafx.scene.control.ResizeFeaturesBase;
 import javafx.scene.control.SelectionMode;
 import javafx.scene.control.SplitPane;
 import javafx.scene.control.TableColumn;
+import javafx.scene.control.TableColumnBase;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TableView.ResizeFeatures;
 import javafx.scene.layout.BorderPane;
@@ -53,13 +57,13 @@ import javafx.stage.Stage;
 import javafx.util.Callback;
 
 /**
- * Tests TableView/JTable resize modes.
+ * Tests TableView/JTable constrained column resize modes.
  */
 public class ATableViewResizeTester extends Application {
 
     enum Demo {
-        ALL("all set: min, pref, max"),
         PREF("pref only"),
+        ALL("all set: min, pref, max"),
         EMPTY("empty with pref"),
         MIN_WIDTH("min width"),
         MAX_WIDTH("max width"),
@@ -72,8 +76,7 @@ public class ATableViewResizeTester extends Application {
         MAX_IN_CENTER("max widths set in middle columns"),
         NO_NESTED("no nested columns"),
         NESTED("nested columns"),
-        ALOT("many columns"),
-        ;
+        ALOT("many columns");
 
         private final String text;
         Demo(String text) { this.text = text; }
@@ -81,12 +84,14 @@ public class ATableViewResizeTester extends Application {
     }
 
     public enum Policy {
+        AUTO_RESIZE_NEW(JTable.AUTO_RESIZE_SUBSEQUENT_COLUMNS),
         AUTO_RESIZE_NEXT_COLUMN(JTable.AUTO_RESIZE_NEXT_COLUMN),
         AUTO_RESIZE_SUBSEQUENT_COLUMNS(JTable.AUTO_RESIZE_SUBSEQUENT_COLUMNS),
         AUTO_RESIZE_LAST_COLUMN(JTable.AUTO_RESIZE_LAST_COLUMN),
         AUTO_RESIZE_ALL_COLUMNS(JTable.AUTO_RESIZE_ALL_COLUMNS),
-        CONSTRAINED_RESIZE_POLICY(JTable.AUTO_RESIZE_SUBSEQUENT_COLUMNS),
-        UNCONSTRAINED_RESIZE_POLICY(JTable.AUTO_RESIZE_OFF);
+        USER(JTable.AUTO_RESIZE_ALL_COLUMNS),
+        UNCONSTRAINED_RESIZE_POLICY(JTable.AUTO_RESIZE_OFF),
+        CONSTRAINED_RESIZE_POLICY(JTable.AUTO_RESIZE_SUBSEQUENT_COLUMNS);
 
         private final int value;
         Policy(int v) { this.value = v; }
@@ -198,6 +203,8 @@ public class ATableViewResizeTester extends Application {
 
     protected Callback<ResizeFeatures, Boolean> createPolicy(Policy p) {
         switch(p) {
+        case AUTO_RESIZE_NEW:
+            return ConstrainedColumnResize.forTable(ResizeMode.AUTO_RESIZE_NEW);
         case AUTO_RESIZE_ALL_COLUMNS:
             return ConstrainedColumnResize.forTable(ResizeMode.AUTO_RESIZE_ALL_COLUMNS);
         case AUTO_RESIZE_LAST_COLUMN:
@@ -210,6 +217,8 @@ public class ATableViewResizeTester extends Application {
             return TableView.CONSTRAINED_RESIZE_POLICY;
         case UNCONSTRAINED_RESIZE_POLICY:
             return TableView.UNCONSTRAINED_RESIZE_POLICY;
+        case USER:
+            return new UserDefinedResizePolicy();
         default:
             throw new Error("?" + p);
         }
@@ -220,6 +229,7 @@ public class ATableViewResizeTester extends Application {
         case ALL:
             return new Object[] {
                 Cmd.ROWS, 3,
+                Cmd.COL,
                 Cmd.COL, Cmd.MIN, 20, Cmd.PREF, 20, Cmd.MAX, 20,
                 Cmd.COL, Cmd.PREF, 200,
                 Cmd.COL, Cmd.PREF, 300, Cmd.MAX, 400,
@@ -475,16 +485,10 @@ public class ATableViewResizeTester extends Application {
 
         private int createHSBPolicy(Policy p) {
             switch (p) {
-            case AUTO_RESIZE_ALL_COLUMNS:
-            case AUTO_RESIZE_LAST_COLUMN:
-            case AUTO_RESIZE_NEXT_COLUMN:
-            case AUTO_RESIZE_SUBSEQUENT_COLUMNS:
-            case CONSTRAINED_RESIZE_POLICY:
-                return JScrollPane.HORIZONTAL_SCROLLBAR_NEVER;
             case UNCONSTRAINED_RESIZE_POLICY:
                 return JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED;
             default:
-                throw new Error("?" + p);
+                return JScrollPane.HORIZONTAL_SCROLLBAR_NEVER;
             }
         }
 
@@ -561,6 +565,28 @@ public class ATableViewResizeTester extends Application {
             JSplitPane split = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, scroll, new JPanel());
             split.setContinuousLayout(true);
             return split;
+        }
+    }
+
+    /**
+     * a user-defined policy demonstrates that we can indeed create a custom policy using the new API.
+     * this policy simply sizes all columns equally.
+     */
+    protected static class UserDefinedResizePolicy
+        extends ConstrainedColumnResizeBase
+        implements Callback<TableView.ResizeFeatures,Boolean> {
+
+        @Override
+        public Boolean call(ResizeFeatures rf) {
+            List<? extends TableColumnBase<?,?>> visibleLeafColumns = rf.getTable().getVisibleLeafColumns();
+            int sz = visibleLeafColumns.size();
+            // using added public method getContentWidth()
+            double w = rf.getContentWidth() / sz;
+            for (TableColumnBase<?,?> c: visibleLeafColumns) {
+                // using added public method setColumnWidth()
+                rf.setColumnWidth(c, w);
+            }
+            return false;
         }
     }
 }

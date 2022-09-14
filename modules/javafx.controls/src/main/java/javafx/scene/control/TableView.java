@@ -406,6 +406,7 @@ public class TableView<S> extends Control {
      * hand side columns reach minimum size, the user cannot increase the size of
      * resized column any more.
      */
+    @Deprecated(since="20")
     public static final Callback<ResizeFeatures, Boolean> CONSTRAINED_RESIZE_POLICY = new Callback<ResizeFeatures, Boolean>() {
 
         // FIX this field is effectively singleton, JDK-8088010?
@@ -436,7 +437,6 @@ public class TableView<S> extends Control {
     public static final Callback<TableView.ResizeFeatures, Boolean> CONSTRAINED_RESIZE_POLICY_NEXT_COLUMN =
         ConstrainedColumnResize.forTable(ConstrainedColumnResize.ResizeMode.AUTO_RESIZE_NEXT_COLUMN);
 
-    // TODO to be renamed to CONSTRAINED_RESIZE_POLICY
     public static final Callback<TableView.ResizeFeatures, Boolean> CONSTRAINED_RESIZE_POLICY_SUBSEQUENT_COLUMNS =
         ConstrainedColumnResize.forTable(ConstrainedColumnResize.ResizeMode.AUTO_RESIZE_SUBSEQUENT_COLUMNS);
 

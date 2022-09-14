@@ -28,13 +28,14 @@ import java.util.List;
 import javafx.util.Callback;
 
 /**
- * Implementation of constrained column resize algorithm that honors all Tree/TableColumn constraints -
+ * A constrained column resize implementation that honors all Tree/TableColumn constraints -
  * minimum, preferred, and maximum width.
  *
  * @since 20
  */
 public class ConstrainedColumnResize extends ConstrainedColumnResizeBase {
     public enum ResizeMode {
+        AUTO_RESIZE_NEW, // will be used to replace a (deprecated) CONSTRAINED_RESIZE_POLICY.  needs a better name.
         AUTO_RESIZE_NEXT_COLUMN,
         AUTO_RESIZE_SUBSEQUENT_COLUMNS,
         AUTO_RESIZE_LAST_COLUMN,
@@ -47,7 +48,6 @@ public class ConstrainedColumnResize extends ConstrainedColumnResizeBase {
         this.mode = m;
     }
 
-    @Override
     public boolean constrainedResize(ResizeFeaturesBase rf,
         List<? extends TableColumnBase<?,?>> visibleLeafColumns) {
 
