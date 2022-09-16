@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,7 +32,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import test.com.sun.javafx.scene.control.infrastructure.MouseEventFirer;
 import com.sun.javafx.tk.Toolkit;
 import javafx.collections.ListChangeListener;
-import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.FocusModel;
 import javafx.scene.control.ListView;
@@ -50,12 +49,15 @@ import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
 import test.com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
 
 import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 
 //@Ignore("Disabling tests as they fail with OOM in continuous builds")
 public class ListViewMouseInputTest {
     private ListView<String> listView;
     private MultipleSelectionModel<String> sm;
     private FocusModel<String> fm;
+
+    private StageLoader stageLoader;
 
     @Before public void setup() {
         listView = new ListView<String>();
@@ -70,6 +72,10 @@ public class ListViewMouseInputTest {
 
     @After public void tearDown() {
         listView.getSkin().dispose();
+
+        if (stageLoader != null) {
+            stageLoader.dispose();
+        }
     }
 
 
@@ -323,11 +329,10 @@ public class ListViewMouseInputTest {
         Button btn = new Button("Button");
         VBox vbox = new VBox(btn, listView);
 
-        StageLoader sl = new StageLoader(vbox);
-        sl.getStage().requestFocus();
+        stageLoader = new StageLoader(vbox);
+        stageLoader.getStage().requestFocus();
         btn.requestFocus();
         Toolkit.getToolkit().firePulse();
-        Scene scene = sl.getStage().getScene();
 
         assertTrue(btn.isFocused());
         assertFalse(listView.isFocused());
@@ -338,8 +343,6 @@ public class ListViewMouseInputTest {
 
         assertTrue(btn.isFocused());
         assertFalse(listView.isFocused());
-
-        sl.dispose();
     }
 
     @Test public void test_jdk_8147823() {
@@ -384,4 +387,13 @@ public class ListViewMouseInputTest {
         assertNotNull(sm.getSelectedItems().get(0));
         assertNotNull(sm.getSelectedItem());
     }
+
+    @Test public void testClickWithNullSelectionModelDoesNotThrowNPE() {
+        listView.setSelectionModel(null);
+
+        stageLoader = new StageLoader(listView);
+
+        assertDoesNotThrow(()  -> VirtualFlowTestUtils.clickOnRow(listView, 2));
+    }
+
 }
