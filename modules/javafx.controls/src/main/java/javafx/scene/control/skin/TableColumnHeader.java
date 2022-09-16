@@ -690,7 +690,7 @@ public class TableColumnHeader extends Region {
 
         // RT-23486
         maxWidth += padding;
-        if (tv.getColumnResizePolicy() == TableView.CONSTRAINED_RESIZE_POLICY && tv.getWidth() > 0) {
+        if (TableSkinUtils.isConstrainedResizePolicy(tv.getColumnResizePolicy()) && tv.getWidth() > 0) {
             if (maxWidth > tc.getMaxWidth()) {
                 maxWidth = tc.getMaxWidth();
             }
@@ -785,7 +785,7 @@ public class TableColumnHeader extends Region {
 
         // RT-23486
         maxWidth += padding;
-        if (ttv.getColumnResizePolicy() == TreeTableView.CONSTRAINED_RESIZE_POLICY && ttv.getWidth() > 0) {
+        if (TableSkinUtils.isConstrainedResizePolicy(ttv.getColumnResizePolicy()) && ttv.getWidth() > 0) {
 
             if (maxWidth > tc.getMaxWidth()) {
                 maxWidth = tc.getMaxWidth();

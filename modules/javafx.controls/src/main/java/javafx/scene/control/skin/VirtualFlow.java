@@ -304,7 +304,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
     private boolean needBreadthBar;
     private boolean needLengthBar;
     private boolean tempVisibility = false;
-
+    private boolean suppressBreadthBar;
 
 
     /* *************************************************************************
@@ -2378,6 +2378,13 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
     }
 
     /**
+     * Suppresses the breadth bar from appearing.
+     */
+    void setSuppressBreadthBar(boolean suppress) {
+        this.suppressBreadthBar = suppress;
+    }
+
+    /**
      * @return true if bar visibility changed
      */
     private boolean computeBarVisiblity() {
@@ -2409,8 +2416,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
                 barVisibilityChanged = true;
             }
 
-            // second conditional removed for RT-36669.
-            final boolean breadthBarVisible = (maxPrefBreadth > viewportBreadth);// || (needLengthBar && maxPrefBreadth > (viewportBreadth - lengthBarBreadth));
+            final boolean breadthBarVisible = !suppressBreadthBar && (maxPrefBreadth > viewportBreadth);
             if (breadthBarVisible ^ needBreadthBar) {
                 needBreadthBar = breadthBarVisible;
                 barVisibilityChanged = true;
