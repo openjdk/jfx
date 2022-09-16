@@ -76,6 +76,7 @@ public class ATableViewResizeTester extends Application {
         MAX_IN_CENTER("max widths set in middle columns"),
         NO_NESTED("no nested columns"),
         NESTED("nested columns"),
+        MILLION("million rows"),
         ALOT("many columns");
 
         private final String text;
@@ -204,7 +205,7 @@ public class ATableViewResizeTester extends Application {
     protected Callback<ResizeFeatures, Boolean> createPolicy(Policy p) {
         switch(p) {
         case AUTO_RESIZE_NEW:
-            return ConstrainedColumnResize.forTable(ResizeMode.AUTO_RESIZE_NEW);
+            return ConstrainedColumnResize.forTable(ResizeMode.AUTO_RESIZE_FLEX);
         case AUTO_RESIZE_ALL_COLUMNS:
             return ConstrainedColumnResize.forTable(ResizeMode.AUTO_RESIZE_ALL_COLUMNS);
         case AUTO_RESIZE_LAST_COLUMN:
@@ -356,7 +357,7 @@ public class ATableViewResizeTester extends Application {
             };
         case ALOT:
             return new Object[] {
-                Cmd.ROWS, 3,
+                Cmd.ROWS, 300,
                 Cmd.COL,
                 Cmd.COL,
                 Cmd.COL,
@@ -373,7 +374,13 @@ public class ATableViewResizeTester extends Application {
                 Cmd.COL,
                 Cmd.COL,
                 Cmd.COL
-           };
+            };
+        case MILLION:
+            return new Object[] {
+                Cmd.ROWS, 1_000_000,
+                Cmd.COL,
+                Cmd.COL
+            };
         default:
             throw new Error("?" + d);
         }
@@ -426,6 +433,9 @@ public class ATableViewResizeTester extends Application {
                     TableColumn<String,String> c = new TableColumn<>();
                     table.getColumns().add(c);
                     c.setText("C" + table.getColumns().size());
+//                    if (table.getColumns().size() == 1) {
+//                        c.setText("Really really really really really really really really really really really really really long");
+//                    }
                     c.setCellValueFactory((f) -> new SimpleStringProperty(describe(c)));
                     lastColumn = c;
                     break;
@@ -447,7 +457,7 @@ public class ATableViewResizeTester extends Application {
                 case ROWS:
                     int n = (int)(spec[i++]);
                     for (int j = 0; j < n; j++) {
-                        table.getItems().add("");
+                        table.getItems().add(String.valueOf(n));
                     }
                     break;
                 case COMBINE:

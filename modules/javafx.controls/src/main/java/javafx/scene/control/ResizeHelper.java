@@ -272,7 +272,7 @@ public class ResizeHelper {
             setSkip(0, ix + 1);
             setSkip(ix + 2, columns.size());
             break;
-        case AUTO_RESIZE_NEW:
+        case AUTO_RESIZE_FLEX:
         case AUTO_RESIZE_SUBSEQUENT_COLUMNS:
             setSkip(0, ix + 1);
             break;
@@ -341,7 +341,7 @@ public class ResizeHelper {
     }
 
     protected double computeDelta(double delta, int ix, double total) {
-        if (mode == ResizeMode.AUTO_RESIZE_NEW) {
+        if (mode == ResizeMode.AUTO_RESIZE_FLEX) {
             if (delta < 0) {
                 return delta;
             } else if (size[ix] < pref[ix]) {

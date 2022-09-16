@@ -35,7 +35,7 @@ import javafx.util.Callback;
  */
 public class ConstrainedColumnResize extends ConstrainedColumnResizeBase {
     public enum ResizeMode {
-        AUTO_RESIZE_NEW, // will be used to replace a (deprecated) CONSTRAINED_RESIZE_POLICY.  needs a better name.
+        AUTO_RESIZE_FLEX, // will be used to replace a (deprecated) CONSTRAINED_RESIZE_POLICY.  needs a better name.
         AUTO_RESIZE_NEXT_COLUMN,
         AUTO_RESIZE_SUBSEQUENT_COLUMNS,
         AUTO_RESIZE_LAST_COLUMN,

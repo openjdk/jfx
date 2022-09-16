@@ -23,18 +23,150 @@
  * questions.
  */
 package test.javafx.scene.control;
-import java.util.BitSet;
+import static org.junit.Assert.assertTrue;
+import java.util.List;
+import org.junit.After;
 import org.junit.Test;
+import com.sun.javafx.tk.Toolkit;
+import javafx.beans.property.SimpleStringProperty;
+import javafx.scene.control.SelectionMode;
+import javafx.scene.control.TableColumn;
+import javafx.scene.control.TableView;
+import javafx.scene.layout.BorderPane;
+import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
 
 /**
- *
+ * Tests the new column resize policies with TableView.
+ * 
+ * TODO rename
+ * TODO parallel class with TreeTableView, or as part of each test?
  */
 public class ResizeHelperTest {
+
+    public enum Cmd {
+        ROWS,
+        COL,
+        MIN,
+        PREF,
+        MAX,
+        COMBINE
+    }
+
+    private StageLoader stageLoader;
+    
+    @After
+    public void after() {
+        if(stageLoader != null) {
+            stageLoader.dispose();
+        }
+    }
+
+    protected void checkInvariants(TableView<String> t) {
+        System.out.println(t.getWidth()); // FIX
+        List<TableColumn<String,?>> cols = t.getColumns();
+        for (TableColumn<String,?> c: cols) {
+            assertTrue("violated min constraint: w=" + c.getWidth() + " min=" + c.getMinWidth(),
+                       c.getWidth() >= c.getMinWidth());
+            assertTrue("violated max constraint: w=" + c.getWidth() + " max=" + c.getMaxWidth(),
+                       c.getWidth() <= c.getMaxWidth());
+        }
+    }
+    
+    protected static TableView<String> createTable(Object[] spec) {
+        TableView<String> table = new TableView();
+        table.getSelectionModel().setCellSelectionEnabled(true);
+        table.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+
+        TableColumn<String,String> lastColumn = null;
+        int id = 1;
+
+        for (int i = 0; i < spec.length;) {
+            Object x = spec[i++];
+            if (x instanceof Cmd cmd) {
+                switch (cmd) {
+                case COL:
+                    TableColumn<String,String> c = new TableColumn<>();
+                    table.getColumns().add(c);
+                    c.setText("C" + table.getColumns().size());
+                    c.setCellValueFactory((f) -> new SimpleStringProperty(" "));
+                    lastColumn = c;
+                    break;
+                case MAX:
+                    {
+                        int w = (int)(spec[i++]);
+                        lastColumn.setMaxWidth(w);
+                    }
+                    break;
+                case MIN:
+                    {
+                        int w = (int)(spec[i++]);
+                        lastColumn.setMinWidth(w);
+                    }
+                    break;
+                case PREF:
+                    {
+                        int w = (int)(spec[i++]);
+                        lastColumn.setPrefWidth(w);
+                    }
+                    break;
+                case ROWS:
+                    int n = (int)(spec[i++]);
+                    for (int j = 0; j < n; j++) {
+                        table.getItems().add(String.valueOf(n));
+                    }
+                    break;
+                case COMBINE:
+                    int ix = (int)(spec[i++]);
+                    int ct = (int)(spec[i++]);
+                    combineColumns(table, ix, ct, id++);
+                    break;
+                default:
+                    throw new Error("?" + cmd);
+                }
+            } else {
+                throw new Error("?" + x);
+            }
+        }
+
+        return table;
+    }
+
+    protected static void combineColumns(TableView<String> t, int ix, int count, int name) {
+        TableColumn<String,String> tc = new TableColumn<>();
+        tc.setText("N" + name);
+
+        for (int i = 0; i < count; i++) {
+            TableColumn<String,String> c = (TableColumn<String,String>)t.getColumns().remove(ix);
+            tc.getColumns().add(c);
+        }
+        t.getColumns().add(ix, tc);
+    }
+
     @Test
-    public void bitset() {
-        BitSet b = new BitSet(1);
-        b.set(0);
-        int ix = b.nextClearBit(0);
-        System.out.println(ix);
+    public void testInvariants() {
+        Object[] spec = {
+            Cmd.ROWS, 3,
+            Cmd.COL, Cmd.PREF, 100,
+            Cmd.COL, Cmd.PREF, 200,
+            Cmd.COL, Cmd.PREF, 300,
+            Cmd.COL, Cmd.PREF, 400
+        };
+        TableView<String> table = createTable(spec);
+
+        table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX);
+        
+        table.setPrefWidth(100); // TODO 100, 500, 10000
+
+        stageLoader = new StageLoader(new BorderPane(table));
+        
+        Toolkit.getToolkit().firePulse();
+        
+        checkInvariants(table);
+        
+        table.setPrefWidth(900); // TODO 100, 500, 10000
+        
+        Toolkit.getToolkit().firePulse();
+        
+        checkInvariants(table);
     }
 }
