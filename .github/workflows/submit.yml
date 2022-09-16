@@ -48,6 +48,9 @@ on:
   # Enable triggering the workflow manually
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   validation:
     name: "Gradle Wrapper Validation"
