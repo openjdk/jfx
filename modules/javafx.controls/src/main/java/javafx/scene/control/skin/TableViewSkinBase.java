@@ -896,7 +896,7 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
     }
 
     void updateSuppressBreadthBar() {
-        Callback<ResizeFeaturesBase,Boolean> p = TableSkinUtils.columnResizePolicyProperty(this).get();
+        Callback<ResizeFeaturesBase, Boolean> p = TableSkinUtils.columnResizePolicyProperty(this).get();
         boolean suppress = TableSkinUtils.isConstrainedResizePolicy(p);
         flow.setSuppressBreadthBar(suppress);
     }

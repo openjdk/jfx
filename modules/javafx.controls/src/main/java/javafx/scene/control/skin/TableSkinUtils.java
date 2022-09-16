@@ -210,7 +210,7 @@ class TableSkinUtils {
     }
 
     /** returns true if the column resize policy is constrained */
-    public static boolean isConstrainedResizePolicy(Callback<? extends ResizeFeaturesBase,Boolean> x) {
+    public static boolean isConstrainedResizePolicy(Callback<? extends ResizeFeaturesBase, Boolean> x) {
         return (x == TableView.CONSTRAINED_RESIZE_POLICY) ||
                (x == TreeTableView.CONSTRAINED_RESIZE_POLICY);
     }

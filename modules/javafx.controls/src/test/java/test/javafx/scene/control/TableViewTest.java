@@ -5950,7 +5950,7 @@ public class TableViewTest {
     public void testSuppressHorizontalScrollBar() {
         TableView<String> table = new TableView<>();
         for (int i = 0; i < 10; i++) {
-            final TableColumn<String,String> c = new TableColumn<>("C" + i);
+            final TableColumn<String, String> c = new TableColumn<>("C" + i);
             c.setCellValueFactory(value -> new SimpleStringProperty(value.getValue()));
             c.setMinWidth(200); // caused HSB before the fix
             table.getColumns().add(c);

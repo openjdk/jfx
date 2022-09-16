@@ -7106,7 +7106,7 @@ public class TreeTableViewTest {
 
         TreeTableView<String> table = new TreeTableView<>();
         for (int i = 0; i < 10; i++) {
-            TreeTableColumn<String,String> c = new TreeTableColumn<>("C" + i);
+            TreeTableColumn<String, String> c = new TreeTableColumn<>("C" + i);
             c.setCellValueFactory(value -> new SimpleStringProperty(value.getValue().getValue()));
             table.getColumns().add(c);
         }
