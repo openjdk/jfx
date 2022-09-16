@@ -26,9 +26,7 @@
 package test.javafx.scene.control.skin;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
@@ -62,6 +60,7 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
+import test.util.memory.JMemoryBuddy;
 
 
 public class ScrollPaneSkinTest {
@@ -903,7 +902,7 @@ public class ScrollPaneSkinTest {
 
         int ct = 0;
         for (WeakReference<ScrollPane> ref : refs) {
-            attemptGC(ref);
+            JMemoryBuddy.checkCollectable(ref);
             if (ref.get() != null) {
                 ct++;
             }
@@ -911,21 +910,5 @@ public class ScrollPaneSkinTest {
 
         // one instance is still held by the 'content' label
         assertTrue("uncollected objects=" + ct, ct <= 1);
-    }
-
-    // this should be in common test utils
-    private static void attemptGC(WeakReference<?> ref) {
-        for (int i = 0; i < 10; i++) {
-            System.gc();
-
-            if (ref.get() == null) {
-                break;
-            }
-            try {
-                Thread.sleep(50);
-            } catch (InterruptedException e) {
-                fail("InterruptedException occurred during Thread.sleep()");
-            }
-        }
     }
 }
