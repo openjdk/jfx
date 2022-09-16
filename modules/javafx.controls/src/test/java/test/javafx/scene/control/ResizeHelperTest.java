@@ -24,15 +24,19 @@
  */
 package test.javafx.scene.control;
 import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import java.util.List;
 import org.junit.After;
 import org.junit.Test;
 import com.sun.javafx.tk.Toolkit;
 import javafx.beans.property.SimpleStringProperty;
+import javafx.scene.control.ConstrainedColumnResizeBase;
 import javafx.scene.control.SelectionMode;
 import javafx.scene.control.TableColumn;
+import javafx.scene.control.TableColumnBase;
 import javafx.scene.control.TableView;
 import javafx.scene.layout.BorderPane;
+import javafx.util.Callback;
 import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
 
 /**
@@ -53,10 +57,10 @@ public class ResizeHelperTest {
     }
 
     private StageLoader stageLoader;
-    
+
     @After
     public void after() {
-        if(stageLoader != null) {
+        if (stageLoader != null) {
             stageLoader.dispose();
         }
     }
@@ -71,13 +75,13 @@ public class ResizeHelperTest {
                        c.getWidth() <= c.getMaxWidth());
         }
     }
-    
+
     protected static TableView<String> createTable(Object[] spec) {
         TableView<String> table = new TableView();
         table.getSelectionModel().setCellSelectionEnabled(true);
         table.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
 
-        TableColumn<String,String> lastColumn = null;
+        TableColumn<String, String> lastColumn = null;
         int id = 1;
 
         for (int i = 0; i < spec.length;) {
@@ -85,7 +89,7 @@ public class ResizeHelperTest {
             if (x instanceof Cmd cmd) {
                 switch (cmd) {
                 case COL:
-                    TableColumn<String,String> c = new TableColumn<>();
+                    TableColumn<String, String> c = new TableColumn<>();
                     table.getColumns().add(c);
                     c.setText("C" + table.getColumns().size());
                     c.setCellValueFactory((f) -> new SimpleStringProperty(" "));
@@ -136,14 +140,75 @@ public class ResizeHelperTest {
         tc.setText("N" + name);
 
         for (int i = 0; i < count; i++) {
-            TableColumn<String,String> c = (TableColumn<String,String>)t.getColumns().remove(ix);
+            TableColumn<String, String> c = (TableColumn<String, String>)t.getColumns().remove(ix);
             tc.getColumns().add(c);
         }
         t.getColumns().add(ix, tc);
     }
 
+    /** verify that a custom constrained resize policy can indeed be implemented using public APIs */
     @Test
-    public void testInvariants() {
+    public void testCanImplementCustomResizePolicy() {
+        double WIDTH = 15.0;
+
+        // constrained resize policy that simply sets all column widths to WIDTH 
+        class UserPolicy
+            extends ConstrainedColumnResizeBase
+            implements Callback<TableView.ResizeFeatures, Boolean> {
+
+            @Override
+            public Boolean call(TableView.ResizeFeatures rf) {
+                List<? extends TableColumnBase<?, ?>> columns = rf.getTable().getVisibleLeafColumns();
+                int sz = columns.size();
+                // new public method getContentWidth() is visible
+                double w = rf.getContentWidth();
+                for (TableColumnBase<?, ?> c: columns) {
+                    // using added public method setColumnWidth()
+                    rf.setColumnWidth(c, WIDTH);
+                }
+                return false;
+            }
+        }
+
+        Object[] spec = {
+            Cmd.ROWS, 3,
+            Cmd.COL,
+            Cmd.COL,
+            Cmd.COL,
+            Cmd.COL
+        };
+        TableView<String> table = createTable(spec);
+
+        UserPolicy policy = new UserPolicy();
+        table.setColumnResizePolicy(policy);
+        table.setPrefWidth(10);
+
+        // verify the policy is in effect
+
+        stageLoader = new StageLoader(new BorderPane(table));
+        Toolkit.getToolkit().firePulse();
+
+        for (TableColumn<?, ?> c: table.getColumns()) {
+            assertEquals(WIDTH, c.getWidth());
+        }
+
+        // resize and check again
+        table.setPrefWidth(10_000);
+        Toolkit.getToolkit().firePulse();
+
+        for (TableColumn<?, ?> c: table.getColumns()) {
+            assertEquals(WIDTH, c.getWidth());
+        }
+    }
+
+    /**
+     * goes through all policies and valid combinations of constraints and checks that the initial
+     * resize (a resize caused by a change to the container width rather than user resizing
+     * a single column) does not violate (min,max) constraints.
+     */
+    @Test
+    public void testWidthChange() {
+        // TODO policy, columns(0..4), constr(def,[min,pref,max],fixed, widths(10,100,10k,100)
         Object[] spec = {
             Cmd.ROWS, 3,
             Cmd.COL, Cmd.PREF, 100,
@@ -154,19 +219,19 @@ public class ResizeHelperTest {
         TableView<String> table = createTable(spec);
 
         table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX);
-        
+
         table.setPrefWidth(100); // TODO 100, 500, 10000
 
         stageLoader = new StageLoader(new BorderPane(table));
-        
+
         Toolkit.getToolkit().firePulse();
-        
+
         checkInvariants(table);
-        
-        table.setPrefWidth(900); // TODO 100, 500, 10000
-        
+
+        table.setPrefWidth(10_000); // TODO 100, 500, 10000
+
         Toolkit.getToolkit().firePulse();
-        
+
         checkInvariants(table);
     }
 }

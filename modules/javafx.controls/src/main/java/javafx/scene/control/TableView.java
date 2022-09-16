@@ -440,7 +440,7 @@ public class TableView<S> extends Control {
     public static final Callback<TableView.ResizeFeatures, Boolean> CONSTRAINED_RESIZE_POLICY_SUBSEQUENT_COLUMNS =
         ConstrainedColumnResize.forTable(ConstrainedColumnResize.ResizeMode.AUTO_RESIZE_SUBSEQUENT_COLUMNS);
 
-    // TODO replacement for the CONSTRAINED_RESIZE_POLICY 
+    // TODO replacement for the CONSTRAINED_RESIZE_POLICY
     public static final Callback<TableView.ResizeFeatures, Boolean> CONSTRAINED_RESIZE_POLICY_FLEX =
         ConstrainedColumnResize.forTable(ConstrainedColumnResize.ResizeMode.AUTO_RESIZE_FLEX);
 
