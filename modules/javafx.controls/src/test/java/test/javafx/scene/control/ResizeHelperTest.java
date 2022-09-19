@@ -25,6 +25,7 @@
 package test.javafx.scene.control;
 import static org.junit.Assert.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import java.util.ArrayList;
 import java.util.List;
 import org.junit.After;
 import org.junit.Test;
@@ -41,7 +42,7 @@ import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
 
 /**
  * Tests the new column resize policies with TableView.
- * 
+ *
  * TODO rename
  * TODO parallel class with TreeTableView, or as part of each test?
  */
@@ -151,7 +152,7 @@ public class ResizeHelperTest {
     public void testCanImplementCustomResizePolicy() {
         double WIDTH = 15.0;
 
-        // constrained resize policy that simply sets all column widths to WIDTH 
+        // constrained resize policy that simply sets all column widths to WIDTH
         class UserPolicy
             extends ConstrainedColumnResizeBase
             implements Callback<TableView.ResizeFeatures, Boolean> {
@@ -202,36 +203,107 @@ public class ResizeHelperTest {
     }
 
     /**
-     * goes through all policies and valid combinations of constraints and checks that the initial
-     * resize (a resize caused by a change to the container width rather than user resizing
-     * a single column) does not violate (min,max) constraints.
+     * Exhausive behavioral test.
+     *
+     * Goes through all the policies, all valid combinations of constraints,
+     * and widths increasing to MAX_WIDTH and back,
+     * checkint that the initial resize does not violate (min,max) constraints.
      */
     @Test
     public void testWidthChange() {
-        // TODO policy, columns(0..4), constr(def,[min,pref,max],fixed, widths(10,100,10k,100)
-        Object[] spec = {
-            Cmd.ROWS, 3,
-            Cmd.COL, Cmd.PREF, 100,
-            Cmd.COL, Cmd.PREF, 200,
-            Cmd.COL, Cmd.PREF, 300,
-            Cmd.COL, Cmd.PREF, 400
-        };
-        TableView<String> table = createTable(spec);
+        for (int numCols = 0; numCols < MAX_COLUMNS; numCols++) {
+            SpecGen gen = new SpecGen(numCols);
+            while (gen.hasNext()) {
+                Object[] spec = gen.next();
+                TableView<String> table = createTable(spec);
+                stageLoader = new StageLoader(new BorderPane(table));
 
-        table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX);
+                for (int ip = 0; ip < POLICIES.length; ip++) {
+                    Callback<TableView.ResizeFeatures, Boolean> policy = createPolicy(ip);
+                    table.setColumnResizePolicy(policy);
+                    for (int w = 0; w < WIDTH_ITERATIONS; w++) {
+                        int width = getWidth(w);
 
-        table.setPrefWidth(100); // TODO 100, 500, 10000
+                        table.setPrefWidth(width);
+                        Toolkit.getToolkit().firePulse();
+                        checkInvariants(table);
+                    }
+                }
+            }
+        }
+    }
 
-        stageLoader = new StageLoader(new BorderPane(table));
+    protected static final Object[] POLICIES = {
+        TableView.CONSTRAINED_RESIZE_POLICY_FLEX,
+        TableView.CONSTRAINED_RESIZE_POLICY_ALL_COLUMNS,
+        TableView.CONSTRAINED_RESIZE_POLICY_LAST_COLUMN,
+        TableView.CONSTRAINED_RESIZE_POLICY_NEXT_COLUMN,
+        TableView.CONSTRAINED_RESIZE_POLICY_SUBSEQUENT_COLUMNS
+    };
 
-        Toolkit.getToolkit().firePulse();
+    protected static Callback<TableView.ResizeFeatures, Boolean> createPolicy(int ix) {
+        return (Callback<TableView.ResizeFeatures, Boolean>)POLICIES[ix];
+    }
 
-        checkInvariants(table);
+    protected static final int MAX_COLUMNS = 5;
+    protected static final int MAX_WIDTH = 1000;
+    protected static final int WIDTH_ITERATIONS = MAX_WIDTH + MAX_WIDTH + 1;
 
-        table.setPrefWidth(10_000); // TODO 100, 500, 10000
+    protected static int getWidth(int w) {
+        if (w < MAX_WIDTH) {
+            return w;
+        } else {
+            return MAX_WIDTH - (MAX_WIDTH - w);
+        }
+    }
 
-        Toolkit.getToolkit().firePulse();
+    protected static class SpecGen {
+        private static final int LAST = 8; // 2^3 min,pref,max + 1 fixed
+        private final int[] phase;
 
-        checkInvariants(table);
+        public SpecGen(int numcols) {
+            this.phase = new int[numcols];
+        }
+
+        public boolean hasNext() {
+            int terminal = LAST;
+            for (int n: phase) {
+                if (n != terminal) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        public Object[] next() {
+            ArrayList<Object> rv = new ArrayList<>(phase.length);
+            for (int i = 0; i < phase.length; i++) {
+                rv.add(Cmd.COL);
+
+                int n = phase[i];
+                if (n < 8) {
+                    if ((n & 0x01) != 0) {
+                        rv.add(Cmd.MIN);
+                        rv.add(100);
+                    }
+
+                    if ((n & 0x02) != 0) {
+                        rv.add(Cmd.PREF);
+                        rv.add(200 + 50 * i);
+                    }
+
+                    if ((n & 0x04) != 0) {
+                        rv.add(Cmd.MAX);
+                        rv.add(200 + 100 * i);
+                    }
+                } else if (n == LAST) {
+                    rv.add(Cmd.MIN);
+                    rv.add(50);
+                    rv.add(Cmd.MAX);
+                    rv.add(50);
+                }
+            }
+            return rv.toArray();
+        }
     }
 }
