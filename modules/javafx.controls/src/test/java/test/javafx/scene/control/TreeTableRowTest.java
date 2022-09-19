@@ -31,6 +31,8 @@ import static org.junit.Assert.assertSame;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertStyleClassContains;
+
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -56,6 +58,15 @@ public class TreeTableRowTest {
     private TreeItem<String> apples;
     private TreeItem<String> oranges;
     private TreeItem<String> pears;
+
+    StageLoader stageLoader;
+
+    @After
+    public void after() {
+        if (stageLoader != null) {
+            stageLoader.dispose();
+        }
+    }
 
     @Before public void setup() {
         cell = new TreeTableRow<String>();
@@ -829,38 +840,34 @@ public class TreeTableRowTest {
     public void test_TreeTableView_jdk_8292353_select_all() {
         TreeTableView<String> tree = ControlUtils.createTreeTableView();
 
-        StageLoader stageLoader = new StageLoader(tree);
-        try {
-            TreeTableView.TreeTableViewSelectionModel<String> sm = tree.getSelectionModel();
-            sm.setSelectionMode(SelectionMode.MULTIPLE);
-            sm.setCellSelectionEnabled(true);
-            sm.clearSelection();
+        stageLoader = new StageLoader(tree);
+        TreeTableView.TreeTableViewSelectionModel<String> sm = tree.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        sm.setCellSelectionEnabled(true);
+        sm.clearSelection();
 
-            TreeTableColumn<String,?> col0 = tree.getColumns().get(0);
-            TreeTableColumn<String,?> col1 = tree.getColumns().get(1);
-            TreeTableColumn<String,?> col2 = tree.getColumns().get(2);
-            TreeTableRow row = ControlUtils.getTreeTableRow(tree, 0);
-            TreeTableCell c0 = ControlUtils.getTreeTableCell(tree, 0, 0);
-            TreeTableCell c1 = ControlUtils.getTreeTableCell(tree, 0, 1);
-            TreeTableCell c2 = ControlUtils.getTreeTableCell(tree, 0, 2);
+        TreeTableColumn<String,?> col0 = tree.getColumns().get(0);
+        TreeTableColumn<String,?> col1 = tree.getColumns().get(1);
+        TreeTableColumn<String,?> col2 = tree.getColumns().get(2);
+        TreeTableRow row = ControlUtils.getTreeTableRow(tree, 0);
+        TreeTableCell c0 = ControlUtils.getTreeTableCell(tree, 0, 0);
+        TreeTableCell c1 = ControlUtils.getTreeTableCell(tree, 0, 1);
+        TreeTableCell c2 = ControlUtils.getTreeTableCell(tree, 0, 2);
 
-            assertFalse(c0.isSelected());
-            assertFalse(c1.isSelected());
-            assertFalse(c2.isSelected());
-            assertFalse(row.isSelected());
+        assertFalse(c0.isSelected());
+        assertFalse(c1.isSelected());
+        assertFalse(c2.isSelected());
+        assertFalse(row.isSelected());
 
-            // select all cells in the first row
-            sm.select(0, col0);
-            sm.select(0, col1);
-            sm.select(0, col2);
+        // select all cells in the first row
+        sm.select(0, col0);
+        sm.select(0, col1);
+        sm.select(0, col2);
 
-            assertTrue(c0.isSelected());
-            assertTrue(c1.isSelected());
-            assertTrue(c2.isSelected());
-            assertFalse(row.isSelected()); // JDK-8292353 failure
-        } finally {
-            stageLoader.dispose();
-        }
+        assertTrue(c0.isSelected());
+        assertTrue(c1.isSelected());
+        assertTrue(c2.isSelected());
+        assertFalse(row.isSelected()); // JDK-8292353 failure
     }
 
     /** TreeTableView with cell selection enabled should not select TreeTableRows */
@@ -868,34 +875,30 @@ public class TreeTableRowTest {
     public void test_TreeTableView_jdk_8292353_select_all_but_one() {
         TreeTableView<String> tree = ControlUtils.createTreeTableView();
 
-        StageLoader stageLoader = new StageLoader(tree);
-        try {
-            TreeTableView.TreeTableViewSelectionModel<String> sm = tree.getSelectionModel();
-            sm.setSelectionMode(SelectionMode.MULTIPLE);
-            sm.setCellSelectionEnabled(true);
-            sm.clearSelection();
+        stageLoader = new StageLoader(tree);
+        TreeTableView.TreeTableViewSelectionModel<String> sm = tree.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        sm.setCellSelectionEnabled(true);
+        sm.clearSelection();
 
-            TreeTableColumn<String,?> col1 = tree.getColumns().get(1);
-            TreeTableRow row = ControlUtils.getTreeTableRow(tree, 0);
-            TreeTableCell c0 = ControlUtils.getTreeTableCell(tree, 0, 0);
-            TreeTableCell c1 = ControlUtils.getTreeTableCell(tree, 0, 1);
-            TreeTableCell c2 = ControlUtils.getTreeTableCell(tree, 0, 2);
+        TreeTableColumn<String,?> col1 = tree.getColumns().get(1);
+        TreeTableRow row = ControlUtils.getTreeTableRow(tree, 0);
+        TreeTableCell c0 = ControlUtils.getTreeTableCell(tree, 0, 0);
+        TreeTableCell c1 = ControlUtils.getTreeTableCell(tree, 0, 1);
+        TreeTableCell c2 = ControlUtils.getTreeTableCell(tree, 0, 2);
 
-            assertFalse(c0.isSelected());
-            assertFalse(c1.isSelected());
-            assertFalse(c2.isSelected());
-            assertFalse(row.isSelected());
+        assertFalse(c0.isSelected());
+        assertFalse(c1.isSelected());
+        assertFalse(c2.isSelected());
+        assertFalse(row.isSelected());
 
-            // select 0:0 and 0:2
-            sm.select(0, null);
-            sm.clearSelection(0, col1);
+        // select 0:0 and 0:2
+        sm.select(0, null);
+        sm.clearSelection(0, col1);
 
-            assertTrue(c0.isSelected());
-            assertFalse(c1.isSelected());
-            assertTrue(c2.isSelected());
-            assertFalse(row.isSelected()); // JDK-8292353 failure
-        } finally {
-            stageLoader.dispose();
-        }
+        assertTrue(c0.isSelected());
+        assertFalse(c1.isSelected());
+        assertTrue(c2.isSelected());
+        assertFalse(row.isSelected()); // JDK-8292353 failure
     }
 }

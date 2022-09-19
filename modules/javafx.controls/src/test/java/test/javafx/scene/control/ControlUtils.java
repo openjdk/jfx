@@ -24,7 +24,16 @@
  */
 package test.javafx.scene.control;
 
+import static org.junit.Assert.assertEquals;
+
+import java.util.Set;
+import java.util.concurrent.Callable;
+import java.util.function.Function;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
+
 import com.sun.javafx.tk.Toolkit;
+
 import javafx.beans.property.SimpleStringProperty;
 import javafx.event.EventTarget;
 import javafx.scene.Node;
@@ -45,8 +54,8 @@ import test.com.sun.javafx.scene.control.infrastructure.MouseEventFirer;
  */
 public class ControlUtils {
     /**
-     * Creates a TableView with three columns and three rows.
-     * Each cell contains a "..." string.
+     * Creates a TableView with three columns and three rows. Each cell contains a
+     * "..." string.
      */
     public static TableView<String> createTableView() {
         TableView<String> t = new TableView<>();
@@ -54,12 +63,13 @@ public class ControlUtils {
         t.getColumns().addAll(
             createTableColumn("C0"),
             createTableColumn("C1"),
-            createTableColumn("C2"));
+            createTableColumn("C2")
+        );
         t.getItems().addAll(
             "",
             "",
             ""
-            );
+        );
         return t;
     }
 
@@ -74,7 +84,7 @@ public class ControlUtils {
             new TreeItem<>(""),
             new TreeItem<>(""),
             new TreeItem<>("")
-            );
+        );
 
         TreeTableView<String> t = new TreeTableView<>();
         t.setRoot(root);
@@ -84,81 +94,79 @@ public class ControlUtils {
             createTreeTableColumn("C0"),
             createTreeTableColumn("C1"),
             createTreeTableColumn("C2")
-            );
+        );
         return t;
     }
 
     /**
      * Performs a node lookup, returning a TreeTableCell at the given (row, column),
-     * or throws an Error if not found.
+     * or throws an Error if not found, or more than one instance is found.
      */
     public static TreeTableCell getTreeTableCell(TreeTableView t, int row, int column) {
         TreeTableColumn col = (TreeTableColumn)t.getColumns().get(column);
-
-        for (Node n: t.lookupAll(".tree-table-cell")) {
+        return findTheOnly(t, ".tree-table-cell", TreeTableCell.class, (n) -> {
             if (n instanceof TreeTableCell c) {
                 if (row == c.getTableRow().getIndex()) {
                     if (col == c.getTableColumn()) {
-                        return c;
+                        return true;
                     }
                 }
             }
-        }
-        throw new Error("TreeTableCell not found at " + row + ":" + column);
+            return false;
+        });
     }
 
     /**
-     * Performs a node lookup, returning a TreeTableRow at the given row,
-     * or throws an Error if not found.
+     * Performs a node lookup, returning a TreeTableRow at the given row, or throws
+     * an Error if not found, or more than one instance is found.
      */
     public static TreeTableRow getTreeTableRow(TreeTableView t, int row) {
-        for (Node n: t.lookupAll(".tree-table-row-cell")) {
+        return findTheOnly(t, ".tree-table-row-cell", TreeTableRow.class, (n) -> {
             if (n instanceof TreeTableRow c) {
                 if (row == c.getIndex()) {
-                    return c;
+                    return true;
                 }
             }
-        }
-        throw new Error("TreeTableRow not found at " + row);
+            return false;
+        });
     }
 
     /**
-     * Performs a node lookup, returning a TableCell at the given (row, column)
-     * or throws an Error if not found.
+     * Performs a node lookup, returning a TableCell at the given (row, column) or
+     * throws an Error if not found, or more than one instance is found.
      */
     public static TableCell getTableCell(TableView t, int row, int column) {
         TableColumn col = (TableColumn)t.getColumns().get(column);
-
-        for (Node n: t.lookupAll(".table-cell")) {
-            if (n instanceof TableCell c) {
+        return findTheOnly(t, ".table-cell", TableCell.class, (x) -> {
+            if (x instanceof TableCell c) {
                 if (row == c.getTableRow().getIndex()) {
                     if (col == c.getTableColumn()) {
-                        return c;
+                        return true;
                     }
                 }
             }
-        }
-        throw new Error("TableCell not found at " + row + ":" + column);
+            return false;
+        });
     }
 
     /**
-     * Performs a node lookup, returning a TableRow at the given row,
-     * or throws an Error if not found.
+     * Performs a node lookup, returning a TableRow at the given row, or throws an
+     * Error if not found, or more than one instance is found.
      */
     public static TableRow getTableRow(TableView t, int row) {
-        for (Node n: t.lookupAll(".table-row-cell")) {
-            if (n instanceof TableRow c) {
+        return findTheOnly(t, ".table-row-cell", TableRow.class, (x) -> {
+            if (x instanceof TableRow c) {
                 if (row == c.getIndex()) {
-                    return c;
+                    return true;
                 }
             }
-        }
-        throw new Error("TableRow not found at " + row);
+            return false;
+        });
     }
 
     /**
-     * Creates a TreeTableColumn with the given name,
-     * setting up the cell value factory to place a "..." string at each cell.
+     * Creates a TreeTableColumn with the given name, setting up the cell value
+     * factory to place a "..." string at each cell.
      */
     public static TreeTableColumn createTreeTableColumn(String name) {
         TreeTableColumn c = new TreeTableColumn(name);
@@ -167,8 +175,8 @@ public class ControlUtils {
     }
 
     /**
-     * Creates a TableColumn with the given name,
-     * setting up the cell value factory to place a "..." string at each cell.
+     * Creates a TableColumn with the given name, setting up the cell value factory
+     * to place a "..." string at each cell.
      */
     public static TableColumn createTableColumn(String name) {
         TableColumn c = new TableColumn(name);
@@ -186,5 +194,19 @@ public class ControlUtils {
         m.dispose();
 
         Toolkit.getToolkit().firePulse();
+    }
+
+    /**
+     * Finds a Node given the selector and predicate filter, then insures there is
+     * one one such node
+     */
+    protected static <T> T findTheOnly(Node container, String selector, Class<T> type, Predicate<Node> filter) {
+        Set<Node> nodes = container.lookupAll(selector).
+            stream().
+            filter(filter).
+            collect(Collectors.toSet());
+
+        assertEquals(1, nodes.size());
+        return (T)nodes.toArray()[0];
     }
 }
