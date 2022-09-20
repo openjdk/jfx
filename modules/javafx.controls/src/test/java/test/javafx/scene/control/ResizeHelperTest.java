@@ -209,7 +209,7 @@ public class ResizeHelperTest {
      * and widths increasing to MAX_WIDTH and back,
      * checkint that the initial resize does not violate (min,max) constraints.
      */
-    @Test
+    //@Test // this test takes too much time!
     public void testWidthChange() {
         for (int numCols = 0; numCols < MAX_COLUMNS; numCols++) {
             SpecGen gen = new SpecGen(numCols);

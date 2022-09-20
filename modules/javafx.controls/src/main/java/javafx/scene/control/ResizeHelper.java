@@ -123,7 +123,8 @@ public class ResizeHelper {
                     dw = (w - size[i]);
                 }
 
-                delta -= dw;
+                //delta -= dw;
+                delta -= (w - size[i]); // TODO ?
                 total -= pref[i];
                 size[i] = w;
             }
@@ -340,63 +341,68 @@ public class ResizeHelper {
         }
     }
 
-    protected double computeDelta(double delta, int ix, double total) {
-        if (mode == ResizeMode.AUTO_RESIZE_FLEX) {
-            if (delta < 0) {
-                return delta;
-            } else if (size[ix] < pref[ix]) {
-                return delta;
-            }
+    protected double step(int ix) {
+        double w = size[ix];
+        if (w < pref[ix]) {
+            return pref[ix];
+        } else if (w >= max[ix]) {
+            return max[ix];
+        } else {
+            return w;
         }
-        return delta * size[ix] / total;
     }
 
     protected void distributeDeltaMultipleColumns(double delta) {
         boolean needsAnotherPass = false;
 
         do {
-            double total = 0.0;
+            double sumPrefs = 0.0;
+            double sumWidths = 0.0;
             for (int i = 0; i < count(); i++) {
                 if (!skip.get(i)) {
-                    total += size[i];
+                    sumPrefs += step(i);
+                    sumWidths += size[i];
                 }
             }
 
-            if (isZero(total)) {
+            if (isZero(sumPrefs)) {
                 return;
             }
+            
+            double tgt = sumWidths + delta;
+            double acc = 0.0; // actual column widths
+            double pref = 0.0; // prefs
 
+            // going backwards
             for (int i = count() - 1; i >= 0; i--) {
                 if (skip.get(i)) {
                     continue;
                 }
-
-                double dw = computeDelta(delta, i, total);
-                double w = Math.round(size[i] + dw);
+                
+                pref += step(i);
+                double pos = pref * tgt / sumPrefs;
+                double w = Math.round(pos - acc);
                 if (w < min[i]) {
-                    dw -= (w - min[i]);
                     w = min[i];
                     skip.set(i, true);
                     needsAnotherPass = true;
                 } else if (w > max[i]) {
-                    dw -= (w - max[i]);
                     w = max[i];
                     skip.set(i, true);
                     needsAnotherPass = true;
-                } else {
-                    dw = (w - size[i]);
                 }
 
-                delta -= dw;
-                total -= size[i];
+                acc += w;
                 size[i] = w;
             }
 
-            if (Math.abs(delta) < 0.5) {
+            if (isZero(tgt - acc)) {
                 needsAnotherPass = false;
             }
 
-            if (needsAnotherPass) System.out.println("*** another pass (delta=" + delta + ")"); // FIX
+            if (needsAnotherPass) {
+                System.out.println("*** another pass (delta=" + delta + ")"); // FIX
+            }
 
         } while (needsAnotherPass);
 
