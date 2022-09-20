@@ -58,7 +58,7 @@ public class TreeAndTableViewTest {
         }
     }
 
-    /** TreeTableView with cell selection enabled should not select TreeTableRows */
+    /** TableView with cell selection enabled should not select TableRows */
     @Test
     public void test_TableView_jdk_8292353() {
         TableView<String> table = ControlUtils.createTableView();

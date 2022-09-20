@@ -186,7 +186,7 @@ public class ControlUtils {
 
     /**
      * Simulates a mouse click with given KeyModifier(s) over the specified target,
-     * then fire a pulse.
+     * then fires a pulse.
      */
     public static void mouseClick(EventTarget target, KeyModifier... modifiers) {
         MouseEventFirer m = new MouseEventFirer(target);
@@ -198,7 +198,7 @@ public class ControlUtils {
 
     /**
      * Finds a Node given the selector and predicate filter, then insures there is
-     * one one such node
+     * only one such node
      */
     protected static <T> T findTheOnly(Node container, String selector, Class<T> type, Predicate<Node> filter) {
         Set<Node> nodes = container.lookupAll(selector).
