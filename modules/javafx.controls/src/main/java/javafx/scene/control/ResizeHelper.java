@@ -45,6 +45,7 @@ public class ResizeHelper {
     private final double[] pref;
     private final double[] max;
     private final BitSet skip;
+    public static boolean print; // FIX remove
 
     public ResizeHelper(ResizeFeaturesBase rf,
                         double target,
@@ -140,12 +141,12 @@ public class ResizeHelper {
             }
 
             if (isZero(target - acc)) {
-                System.out.println("*  target == acc"); // FIX
+                p("*  target == acc"); // FIX
                 needsAnotherPass = false;
             }
 
             if (needsAnotherPass) {
-                System.out.println("*** another pass"); // FIX
+                p("*** another pass"); // FIX
             }
         } while (needsAnotherPass);
 
@@ -383,7 +384,7 @@ public class ResizeHelper {
             double total = 0.0;
             for (int i = 0; i < count; i++) {
                 if (!skip.get(i)) {
-                    total += size[i];
+                    total += step2(i);
                 }
             }
 
@@ -391,12 +392,15 @@ public class ResizeHelper {
                 return;
             }
 
+            double cur = 0.0; // current x position
+
             for (int i = count - 1; i >= 0; i--) {
                 if (skip.get(i)) {
                     continue;
                 }
-
-                double dw = computeDelta(delta, i, total);
+                
+                cur += step2(i);
+                double dw = delta * cur / total;
                 double w = Math.round(size[i] + dw);
                 if (w < min[i]) {
                     dw -= (w - min[i]);
@@ -413,15 +417,14 @@ public class ResizeHelper {
                 }
 
                 delta -= dw;
-                total -= size[i];
                 size[i] = w;
             }
 
-            if (Math.abs(delta) < 0.5) {
+            if (Math.abs(delta) < 1.0) {
                 needsAnotherPass = false;
             }
 
-            if (needsAnotherPass) System.out.println("*** another pass (delta=" + delta + ")"); // FIX
+            if (needsAnotherPass) p("*** another pass (delta=" + delta + ")"); // FIX
 
         } while (needsAnotherPass);
 
@@ -437,7 +440,13 @@ public class ResizeHelper {
         }
 
         if (!isZero(total - target)) {
-            System.out.println("  FAILED check " + dump()); // FIX
+            p("  FAILED check " + dump()); // FIX
+        }
+    }
+    
+    protected static void p(Object x) {
+        if(print) {
+            System.out.println(x);
         }
     }
 }
