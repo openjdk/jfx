@@ -370,30 +370,65 @@ public class ResizeHelper {
     }
 
     protected double distributeDeltaFlex(double delta) {
-        int delete = 5; // FIX
-        // from last to first column
+        if(delta < 0) {
+            // when shrinking, first resize columns that are wider than their preferred width 
+            for (int i = count - 1; i >= 0; --i) {
+                if (skip.get(i)) {
+                    continue;
+                }
+                
+                if(size[i] > pref[i]) {
+                    delta = resize(i, delta);
+                    
+                    if (isZero(delta)) {
+                        break;
+                    }
+                }
+            }
+        } else {
+            // when expanding, first resize columns that are narrower than their preferred width
+            for (int i = count - 1; i >= 0; --i) {
+                if (skip.get(i)) {
+                    continue;
+                }
+                
+                if(size[i] < pref[i]) {
+                    delta = resize(i, delta);
+                    
+                    if (isZero(delta)) {
+                        break;
+                    }
+                }
+            }
+        }
+        
         for (int i = count - 1; i >= 0; --i) {
             if (skip.get(i)) {
                 continue;
             }
-
-            double w = Math.round(size[i] + delta);
-            if (w < min[i]) {
-                delta = (w - min[i]);
-                w = min[i];
-            } else if (w > max[i]) {
-                delta = (w - max[i]);
-                w = max[i];
-            } else {
-                delta = 0.0;
-            }
-
-            size[i] = w;
+            
+            delta = resize(i, delta);
 
             if (isZero(delta)) {
                 break;
             }
         }
+        return delta;
+    }
+    
+    protected double resize(int i, double delta) {
+        double w = Math.round(size[i] + delta);
+        if (w < min[i]) {
+            delta = (w - min[i]);
+            w = min[i];
+        } else if (w > max[i]) {
+            delta = (w - max[i]);
+            w = max[i];
+        } else {
+            delta = 0.0;
+        }
+
+        size[i] = w;
         return delta;
     }
 
