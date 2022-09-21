@@ -68,7 +68,9 @@ public class ConstrainedColumnResize extends ConstrainedColumnResizeBase {
         }
 
         h.applySizes();
-        System.out.println(h.dump()); // FIX
+        if (ResizeHelper.print) {
+            ResizeHelper.p(h.dump()); // FIX
+        }
         return rv;
     }
 

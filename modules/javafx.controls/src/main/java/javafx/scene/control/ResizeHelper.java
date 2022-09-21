@@ -150,7 +150,7 @@ public class ResizeHelper {
             }
         } while (needsAnotherPass);
 
-        check();
+        check("1");
     }
     
     protected double step1(int ix) {
@@ -258,7 +258,9 @@ public class ResizeHelper {
             return false;
         }
 
-        return distributeDelta(ix, allowedDelta);
+        boolean rv = distributeDelta(ix, allowedDelta);
+        check("3"); // FIX
+        return rv;
     }
 
     protected boolean isCornerCase(double delta, int ix) {
@@ -355,8 +357,8 @@ public class ResizeHelper {
         } else {
             skip.set(ix);
             size[ix] += delta;
-            // TODO account for left over delta
-            distributeDeltaMultipleColumns(-delta);
+            double adj = distributeDeltaMultipleColumns(-delta);
+            size[ix] += adj;
             return true;
         }
     }
@@ -377,8 +379,9 @@ public class ResizeHelper {
         return w;
     }
 
-    protected void distributeDeltaMultipleColumns(double delta) {
+    protected double distributeDeltaMultipleColumns(double delta) {
         boolean needsAnotherPass = false;
+        double adj = 0.0;
 
         do {
             double total = 0.0;
@@ -389,7 +392,7 @@ public class ResizeHelper {
             }
 
             if (isZero(total)) {
-                return;
+                return adj;
             }
 
             double cur = 0.0; // current x position
@@ -421,26 +424,33 @@ public class ResizeHelper {
             }
 
             if (Math.abs(delta) < 1.0) {
+                p(delta + "<1.0, stop");
+                if (Math.abs(delta) >= 0.5) {
+                    adj = Math.signum(delta);
+                }
                 needsAnotherPass = false;
             }
 
-            if (needsAnotherPass) p("*** another pass (delta=" + delta + ")"); // FIX
+            if (needsAnotherPass) {
+                p("*** another pass (delta=" + delta + ")"); // FIX
+            }
 
         } while (needsAnotherPass);
 
-        check();
+//        check("2"); // FIX
+        return adj;
     }
 
 
     @Deprecated // FIX
-    protected void check() {
+    protected void check(String where) {
         double total = 0.0;
         for (double w: size) {
             total += w;
         }
 
         if (!isZero(total - target)) {
-            p("  FAILED check " + dump()); // FIX
+            p("  FAILED check " + where + " " + dump()); // FIX
         }
     }
     
