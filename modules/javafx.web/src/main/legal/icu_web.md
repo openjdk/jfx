@@ -443,14 +443,18 @@ publicity pertaining to distribution of the software without specific,
 written prior permission.  M.I.T. makes no representations about the
 suitability of this software for any purpose.  It is provided "as is"
 without express or implied warranty.
+
 ----------------------------------------------------------------------
+
 File: selfmt.cpp
 File: selfmt.h
 File: selfmtimpl.h
 File: umsg.h
+
 Copyright (c) 1995-2016 International Business Machines Corporation and others
 All rights reserved.
 Copyright (C) 2010 , Yahoo! Inc.
+
 Permission is hereby granted, free of charge, to any person obtaining
 a copy of this software and associated documentation files (the
 "Software"), to deal in the Software without restriction, including
