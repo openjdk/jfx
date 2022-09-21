@@ -355,31 +355,49 @@ public class ResizeHelper {
             size[oppx] -= delta;
             return true;
         } else {
-            skip.set(ix);
+//            skip.set(ix);
             size[ix] += delta;
-            double adj = distributeDeltaMultipleColumns(-delta);
+            double adj = (mode == ResizeMode.AUTO_RESIZE_FLEX) ?
+                distributeDeltaFlex(-delta) :
+                distributeDeltaRemainingColumns(-delta);
             size[ix] += adj;
             return true;
         }
     }
-
-    protected double computeDelta(double delta, int ix, double total) {
-        if (mode == ResizeMode.AUTO_RESIZE_FLEX) {
-            if (delta < 0) {
-                return delta;
-            } else if (size[ix] < pref[ix]) {
-                return delta;
-            }
-        }
-        return delta * size[ix] / total;
-    }
     
     protected double step2(int ix) {
-        double w = size[ix];
-        return w;
+        return pref[ix];
     }
 
-    protected double distributeDeltaMultipleColumns(double delta) {
+    protected double distributeDeltaFlex(double delta) {
+        int delete = 5; // FIX
+        // from last to first column
+        for (int i = count - 1; i >= 0; --i) {
+            if (skip.get(i)) {
+                continue;
+            }
+
+            double w = Math.round(size[i] + delta);
+            if (w < min[i]) {
+                delta = (w - min[i]);
+                w = min[i];
+            } else if (w > max[i]) {
+                delta = (w - max[i]);
+                w = max[i];
+            } else {
+                delta = 0.0;
+            }
+
+            size[i] = w;
+
+            if (isZero(delta)) {
+                break;
+            }
+        }
+        return delta;
+    }
+
+    protected double distributeDeltaRemainingColumns(double delta) {
         boolean needsAnotherPass = false;
         double adj = 0.0;
 
@@ -397,7 +415,7 @@ public class ResizeHelper {
 
             double cur = 0.0; // current x position
 
-            for (int i = count - 1; i >= 0; i--) {
+            for (int i = 0; i < count; i++) {
                 if (skip.get(i)) {
                     continue;
                 }
