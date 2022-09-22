@@ -576,6 +576,13 @@ public class TreeTableView<S> extends Control {
     public static final Callback<TreeTableView.ResizeFeatures, Boolean> CONSTRAINED_RESIZE_POLICY_SUBSEQUENT_COLUMNS =
         ConstrainedColumnResize.forTreeTable(ConstrainedColumnResize.ResizeMode.AUTO_RESIZE_SUBSEQUENT_COLUMNS);
 
+    public static final Callback<TreeTableView.ResizeFeatures, Boolean> CONSTRAINED_RESIZE_POLICY_FLEX_HEAD =
+        ConstrainedColumnResize.forTreeTable(ConstrainedColumnResize.ResizeMode.AUTO_RESIZE_FLEX_HEAD);
+
+    // TODO this will replace CONSTRAINED_RESIZE_POLICY
+    public static final Callback<TreeTableView.ResizeFeatures, Boolean> CONSTRAINED_RESIZE_POLICY_FLEX_TAIL =
+        ConstrainedColumnResize.forTreeTable(ConstrainedColumnResize.ResizeMode.AUTO_RESIZE_FLEX_TAIL);
+
     /**
      * The default {@link #sortPolicyProperty() sort policy} that this TreeTableView
      * will use if no other policy is specified. The sort policy is a simple

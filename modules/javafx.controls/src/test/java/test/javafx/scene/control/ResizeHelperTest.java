@@ -67,7 +67,6 @@ public class ResizeHelperTest {
     }
 
     protected void checkInvariants(TableView<String> t) {
-        System.out.println(t.getWidth()); // FIX
         List<TableColumn<String,?>> cols = t.getColumns();
         for (TableColumn<String,?> c: cols) {
             assertTrue("violated min constraint: w=" + c.getWidth() + " min=" + c.getMinWidth(),
@@ -209,9 +208,9 @@ public class ResizeHelperTest {
      * and widths increasing to MAX_WIDTH and back,
      * checkint that the initial resize does not violate (min,max) constraints.
      */
-    //@Test // this test takes too much time!
+    @Test // this test takes too much time!
     public void testWidthChange() {
-        for (int numCols = 0; numCols < MAX_COLUMNS; numCols++) {
+        for (int numCols: COLUMNS) {
             SpecGen gen = new SpecGen(numCols);
             while (gen.hasNext()) {
                 Object[] spec = gen.next();
@@ -221,9 +220,7 @@ public class ResizeHelperTest {
                 for (int ip = 0; ip < POLICIES.length; ip++) {
                     Callback<TableView.ResizeFeatures, Boolean> policy = createPolicy(ip);
                     table.setColumnResizePolicy(policy);
-                    for (int w = 0; w < WIDTH_ITERATIONS; w++) {
-                        int width = getWidth(w);
-
+                    for (int width: WIDTHS) {
                         table.setPrefWidth(width);
                         Toolkit.getToolkit().firePulse();
                         checkInvariants(table);
@@ -234,7 +231,8 @@ public class ResizeHelperTest {
     }
 
     protected static final Object[] POLICIES = {
-        TableView.CONSTRAINED_RESIZE_POLICY_FLEX,
+        TableView.CONSTRAINED_RESIZE_POLICY_FLEX_HEAD,
+        TableView.CONSTRAINED_RESIZE_POLICY_FLEX_TAIL,
         TableView.CONSTRAINED_RESIZE_POLICY_ALL_COLUMNS,
         TableView.CONSTRAINED_RESIZE_POLICY_LAST_COLUMN,
         TableView.CONSTRAINED_RESIZE_POLICY_NEXT_COLUMN,
@@ -244,18 +242,14 @@ public class ResizeHelperTest {
     protected static Callback<TableView.ResizeFeatures, Boolean> createPolicy(int ix) {
         return (Callback<TableView.ResizeFeatures, Boolean>)POLICIES[ix];
     }
+    
+    protected static final int[] WIDTHS = {
+        0, 10, 100, 10_000, 200, 50
+    };
 
-    protected static final int MAX_COLUMNS = 5;
-    protected static final int MAX_WIDTH = 1000;
-    protected static final int WIDTH_ITERATIONS = MAX_WIDTH + MAX_WIDTH + 1;
-
-    protected static int getWidth(int w) {
-        if (w < MAX_WIDTH) {
-            return w;
-        } else {
-            return MAX_WIDTH - (MAX_WIDTH - w);
-        }
-    }
+    protected static final int[] COLUMNS = {
+        0, 1, 2, 5
+    };
 
     protected static class SpecGen {
         private static final int LAST = 8; // 2^3 min,pref,max + 1 fixed

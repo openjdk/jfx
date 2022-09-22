@@ -294,7 +294,8 @@ public class ResizeHelper {
             setSkip(0, ix + 1);
             setSkip(ix + 2, columns.size());
             break;
-        case AUTO_RESIZE_FLEX:
+        case AUTO_RESIZE_FLEX_HEAD:
+        case AUTO_RESIZE_FLEX_TAIL:
         case AUTO_RESIZE_SUBSEQUENT_COLUMNS:
             setSkip(0, ix + 1);
             break;
@@ -355,31 +356,87 @@ public class ResizeHelper {
             size[oppx] -= delta;
             return true;
         } else {
-//            skip.set(ix);
             size[ix] += delta;
-            double adj = (mode == ResizeMode.AUTO_RESIZE_FLEX) ?
-                distributeDeltaFlex(-delta) :
-                distributeDeltaRemainingColumns(-delta);
+            double adj;
+            switch(mode) {
+            case AUTO_RESIZE_FLEX_HEAD:
+                adj = distributeDeltaFlexHead(-delta);
+                break;
+            case AUTO_RESIZE_FLEX_TAIL:
+                adj = distributeDeltaFlexTail(-delta);
+                break;
+            default:
+                adj = distributeDeltaRemainingColumns(-delta);
+                break;
+            }
             size[ix] += adj;
             return true;
         }
     }
-    
+
+    // FIX remove
     protected double step2(int ix) {
         return pref[ix];
     }
 
-    protected double distributeDeltaFlex(double delta) {
-        if(delta < 0) {
+    protected double distributeDeltaFlexHead(double delta) {
+        if (delta < 0) {
+            // when shrinking, first resize columns that are wider than their preferred width 
+            for (int i = 0; i < count; i++) {
+                if (skip.get(i)) {
+                    continue;
+                }
+
+                if (size[i] > pref[i]) {
+                    delta = resize(i, delta);
+
+                    if (isZero(delta)) {
+                        break;
+                    }
+                }
+            }
+        } else {
+            // when expanding, first resize columns that are narrower than their preferred width
+            for (int i = 0; i < count; i++) {
+                if (skip.get(i)) {
+                    continue;
+                }
+
+                if (size[i] < pref[i]) {
+                    delta = resize(i, delta);
+
+                    if (isZero(delta)) {
+                        break;
+                    }
+                }
+            }
+        }
+
+        for (int i = 0; i < count; i++) {
+            if (skip.get(i)) {
+                continue;
+            }
+
+            delta = resize(i, delta);
+
+            if (isZero(delta)) {
+                break;
+            }
+        }
+        return delta;
+    }
+
+    protected double distributeDeltaFlexTail(double delta) {
+        if (delta < 0) {
             // when shrinking, first resize columns that are wider than their preferred width 
             for (int i = count - 1; i >= 0; --i) {
                 if (skip.get(i)) {
                     continue;
                 }
-                
-                if(size[i] > pref[i]) {
+
+                if (size[i] > pref[i]) {
                     delta = resize(i, delta);
-                    
+
                     if (isZero(delta)) {
                         break;
                     }
@@ -391,22 +448,22 @@ public class ResizeHelper {
                 if (skip.get(i)) {
                     continue;
                 }
-                
-                if(size[i] < pref[i]) {
+
+                if (size[i] < pref[i]) {
                     delta = resize(i, delta);
-                    
+
                     if (isZero(delta)) {
                         break;
                     }
                 }
             }
         }
-        
+
         for (int i = count - 1; i >= 0; --i) {
             if (skip.get(i)) {
                 continue;
             }
-            
+
             delta = resize(i, delta);
 
             if (isZero(delta)) {
@@ -415,7 +472,7 @@ public class ResizeHelper {
         }
         return delta;
     }
-    
+
     protected double resize(int i, double delta) {
         double w = Math.round(size[i] + delta);
         if (w < min[i]) {
