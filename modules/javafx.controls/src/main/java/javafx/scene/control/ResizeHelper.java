@@ -27,7 +27,6 @@ package javafx.scene.control;
 import java.text.DecimalFormat;
 import java.util.BitSet;
 import java.util.List;
-import javafx.scene.control.ConstrainedColumnResize.ResizeMode;
 
 /**
  * Helps resize Tree/TableView columns.
@@ -39,7 +38,7 @@ public class ResizeHelper {
     private final double target;
     private final List<? extends TableColumnBase<?,?>> columns;
     private final int count;
-    private final ResizeMode mode;
+    private final ConstrainedColumnResize.ResizeMode mode;
     private final double[] size;
     private final double[] min;
     private final double[] pref;
@@ -50,7 +49,7 @@ public class ResizeHelper {
     public ResizeHelper(ResizeFeaturesBase rf,
                         double target,
                         List<? extends TableColumnBase<?,?>> columns,
-                        ResizeMode mode) {
+                        ConstrainedColumnResize.ResizeMode mode) {
         this.rf = rf;
         this.target = target;
         this.columns = columns;
@@ -88,7 +87,7 @@ public class ResizeHelper {
                 sumWidths += size[i];
                 sumMins += min[i];
             }
-            
+
             if(sumMins >= target) {
                 return;
             }
@@ -97,7 +96,7 @@ public class ResizeHelper {
             if (isZero(delta)) {
                 return;
             }
-            
+
             // remove fixed and skipped columns from consideration
             double total = 0.0;
             for (int i = 0; i < count; i++) {
@@ -111,31 +110,29 @@ public class ResizeHelper {
             }
 
             double acc = 0.0; // accumulating widths of processed columns
-            double cur = 0.0; // current x position
+            double rem = 0.0; // remainder from previous column
 
             for (int i = 0; i < count; i++) {
                 if (skip.get(i)) {
                     continue;
                 }
 
-                cur += step1(i);
-                double dw = delta * cur / total;
+                double dw = rem + (delta * step1(i) / total);
                 double w = Math.round(size[i] + dw);
                 if (w < min[i]) {
-                    dw -= (w - min[i]);
+                    rem = (w - min[i]);
                     w = min[i];
                     skip.set(i, true);
                     needsAnotherPass = true;
                 } else if (w > max[i]) {
-                    dw -= (w - max[i]);
+                    rem = (w - max[i]);
                     w = max[i];
                     skip.set(i, true);
                     needsAnotherPass = true;
                 } else {
-                    dw = (w - size[i]);
+                    rem = dw - (w - size[i]);
                 }
 
-                delta -= dw;
                 acc += w;
                 size[i] = w;
             }
@@ -152,7 +149,7 @@ public class ResizeHelper {
 
         check("1");
     }
-    
+
     protected double step1(int ix) {
         double w = pref[ix] - size[ix];
         if(w <= 0) {
@@ -374,11 +371,6 @@ public class ResizeHelper {
         }
     }
 
-    // FIX remove
-    protected double step2(int ix) {
-        return pref[ix];
-    }
-
     protected double distributeDeltaFlexHead(double delta) {
         if (delta < 0) {
             // when shrinking, first resize columns that are wider than their preferred width 
@@ -497,7 +489,7 @@ public class ResizeHelper {
             double total = 0.0;
             for (int i = 0; i < count; i++) {
                 if (!skip.get(i)) {
-                    total += step2(i);
+                    total += pref[i];
                 }
             }
 
@@ -506,13 +498,14 @@ public class ResizeHelper {
             }
 
             double cur = 0.0; // current x position
+            // TODO use rem?
 
             for (int i = 0; i < count; i++) {
                 if (skip.get(i)) {
                     continue;
                 }
                 
-                cur += step2(i);
+                cur += pref[i];
                 double dw = delta * cur / total;
                 double w = Math.round(size[i] + dw);
                 if (w < min[i]) {

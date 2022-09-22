@@ -208,7 +208,7 @@ public class ResizeHelperTest {
      * and widths increasing to MAX_WIDTH and back,
      * checkint that the initial resize does not violate (min,max) constraints.
      */
-    @Test // this test takes too much time!
+    //@Test // this test takes too much time!
     public void testWidthChange() {
         for (int numCols: COLUMNS) {
             SpecGen gen = new SpecGen(numCols);
@@ -242,7 +242,7 @@ public class ResizeHelperTest {
     protected static Callback<TableView.ResizeFeatures, Boolean> createPolicy(int ix) {
         return (Callback<TableView.ResizeFeatures, Boolean>)POLICIES[ix];
     }
-    
+
     protected static final int[] WIDTHS = {
         0, 10, 100, 10_000, 200, 50
     };
