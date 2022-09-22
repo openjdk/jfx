@@ -373,7 +373,7 @@ public class ResizeHelper {
 
     protected double distributeDeltaFlexHead(double delta) {
         if (delta < 0) {
-            // when shrinking, first resize columns that are wider than their preferred width 
+            // when shrinking, first resize columns that are wider than their preferred width
             for (int i = 0; i < count; i++) {
                 if (skip.get(i)) {
                     continue;
@@ -420,7 +420,7 @@ public class ResizeHelper {
 
     protected double distributeDeltaFlexTail(double delta) {
         if (delta < 0) {
-            // when shrinking, first resize columns that are wider than their preferred width 
+            // when shrinking, first resize columns that are wider than their preferred width
             for (int i = count - 1; i >= 0; --i) {
                 if (skip.get(i)) {
                     continue;
@@ -497,32 +497,29 @@ public class ResizeHelper {
                 return adj;
             }
 
-            double cur = 0.0; // current x position
-            // TODO use rem?
+            double rem = 0.0; // remainder from previous column
 
             for (int i = 0; i < count; i++) {
                 if (skip.get(i)) {
                     continue;
                 }
-                
-                cur += pref[i];
-                double dw = delta * cur / total;
+
+                double dw = rem + (delta * pref[i] / total);
                 double w = Math.round(size[i] + dw);
                 if (w < min[i]) {
-                    dw -= (w - min[i]);
+                    rem = (w - min[i]);
                     w = min[i];
                     skip.set(i, true);
                     needsAnotherPass = true;
                 } else if (w > max[i]) {
-                    dw -= (w - max[i]);
+                    rem = (w - max[i]);
                     w = max[i];
                     skip.set(i, true);
                     needsAnotherPass = true;
                 } else {
-                    dw = (w - size[i]);
+                    rem = dw - (w - size[i]);
                 }
 
-                delta -= dw;
                 size[i] = w;
             }
 
@@ -556,9 +553,9 @@ public class ResizeHelper {
             p("  FAILED check " + where + " " + dump()); // FIX
         }
     }
-    
+
     protected static void p(Object x) {
-        if(print) {
+        if (print) {
             System.out.println(x);
         }
     }
