@@ -293,6 +293,7 @@ public interface ObservableValue<T> extends Observable {
      * ObservableValue<String> longLivedProperty = new SimpleStringProperty("A");
      * label.textProperty().bind(longLivedProperty.when(label::isShownProperty));
      * }</pre>
+     *
      * @param condition a boolean {@code ObservableValue}, cannot be {@code null}
      * @return an {@code ObservableValue} that holds this value whenever the given
      *     condition evaluates to {@code true}, otherwise holds the last seen value;
