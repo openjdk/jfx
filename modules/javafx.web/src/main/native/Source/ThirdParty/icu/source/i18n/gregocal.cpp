@@ -388,7 +388,7 @@ void GregorianCalendar::handleComputeFields(int32_t julianDay, UErrorCode& statu
         // The Julian epoch day (not the same as Julian Day)
         // is zero on Saturday December 30, 0 (Gregorian).
         int32_t julianEpochDay = julianDay - (kJan1_1JulianDay - 2);
-        eyear = (int32_t) ClockMath::floorDivide((4.0*julianEpochDay) + 1464.0, (int32_t) 1461, unusedRemainder);
+                eyear = (int32_t) ClockMath::floorDivide((4.0*julianEpochDay) + 1464.0, (int32_t) 1461, unusedRemainder);
 
         // Compute the Julian calendar day number for January 1, eyear
         int32_t january1 = 365*(eyear-1) + ClockMath::floorDivide(eyear-1, (int32_t)4);
@@ -398,7 +398,7 @@ void GregorianCalendar::handleComputeFields(int32_t julianDay, UErrorCode& statu
         // with 8 AD.  Before 8 AD the spacing is irregular; every 3 years
         // from 45 BC to 9 BC, and then none until 8 AD.  However, we don't
         // implement this historical detail; instead, we implement the
-        // computatinally cleaner proleptic calendar, which assumes
+        // computationally cleaner proleptic calendar, which assumes
         // consistent 4-year cycles throughout time.
         UBool isLeap = ((eyear&0x3) == 0); // equiv. to (eyear%4 == 0)
 
