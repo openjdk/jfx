@@ -43,7 +43,7 @@ import javafx.scene.control.ConstrainedColumnResize;
 import javafx.scene.control.ConstrainedColumnResize.ResizeMode;
 import javafx.scene.control.ConstrainedColumnResizeBase;
 import javafx.scene.control.Label;
-import javafx.scene.control.ResizeFeaturesBase;
+import javafx.scene.control.ResizeHelper;
 import javafx.scene.control.SelectionMode;
 import javafx.scene.control.SplitPane;
 import javafx.scene.control.TableColumn;
@@ -71,13 +71,14 @@ public class ATableViewResizeTester extends Application {
         MAX_WIDTH2("max width (middle)"),
         MIN_WIDTH3("min width (beginning)"),
         MAX_WIDTH3("max width (beginning)"),
-        INCONSISTENT("inconsistent: pref < min"),
         FIXED_MIDDLE("fixed in the middle"),
+        MIN_IN_CENTER("min widths set in middle columns"),
         MAX_IN_CENTER("max widths set in middle columns"),
         NO_NESTED("no nested columns"),
         NESTED("nested columns"),
         MILLION("million rows"),
-        ALOT("many columns");
+        MANY_COLUMNS("many columns"),
+        MANY_COLUMNS_SAME("many columns, same pref");
 
         private final String text;
         Demo(String text) { this.text = text; }
@@ -85,7 +86,8 @@ public class ATableViewResizeTester extends Application {
     }
 
     public enum Policy {
-        AUTO_RESIZE_NEW(JTable.AUTO_RESIZE_SUBSEQUENT_COLUMNS),
+        AUTO_RESIZE_FLEX_HEAD(JTable.AUTO_RESIZE_SUBSEQUENT_COLUMNS),
+        AUTO_RESIZE_FLEX_TAIL(JTable.AUTO_RESIZE_SUBSEQUENT_COLUMNS),
         AUTO_RESIZE_NEXT_COLUMN(JTable.AUTO_RESIZE_NEXT_COLUMN),
         AUTO_RESIZE_SUBSEQUENT_COLUMNS(JTable.AUTO_RESIZE_SUBSEQUENT_COLUMNS),
         AUTO_RESIZE_LAST_COLUMN(JTable.AUTO_RESIZE_LAST_COLUMN),
@@ -114,6 +116,7 @@ public class ATableViewResizeTester extends Application {
     protected SwingPanel swingPanel;
 
     public static void main(String[] args) {
+        ResizeHelper.print = true;
         Application.launch(ATableViewResizeTester.class, args);
     }
 
@@ -204,8 +207,10 @@ public class ATableViewResizeTester extends Application {
 
     protected Callback<ResizeFeatures, Boolean> createPolicy(Policy p) {
         switch(p) {
-        case AUTO_RESIZE_NEW:
-            return ConstrainedColumnResize.forTable(ResizeMode.AUTO_RESIZE_FLEX);
+        case AUTO_RESIZE_FLEX_HEAD:
+            return ConstrainedColumnResize.forTable(ResizeMode.AUTO_RESIZE_FLEX_HEAD);
+        case AUTO_RESIZE_FLEX_TAIL:
+            return ConstrainedColumnResize.forTable(ResizeMode.AUTO_RESIZE_FLEX_TAIL);
         case AUTO_RESIZE_ALL_COLUMNS:
             return ConstrainedColumnResize.forTable(ResizeMode.AUTO_RESIZE_ALL_COLUMNS);
         case AUTO_RESIZE_LAST_COLUMN:
@@ -298,11 +303,16 @@ public class ATableViewResizeTester extends Application {
                 Cmd.COL,
                 Cmd.COL
             };
-        case INCONSISTENT:
+        case MIN_IN_CENTER:
             return new Object[] {
                 Cmd.ROWS, 3,
-                Cmd.COL, Cmd.PREF, 2000, Cmd.MAX, 200,
-                Cmd.COL, Cmd.MIN, 300, Cmd.PREF, 20
+                Cmd.COL,
+                Cmd.COL, Cmd.MIN, 20,
+                Cmd.COL, Cmd.MIN, 30,
+                Cmd.COL, Cmd.MIN, 40,
+                Cmd.COL, Cmd.MIN, 50,
+                Cmd.COL, Cmd.MIN, 60,
+                Cmd.COL
             };
         case MAX_IN_CENTER:
             return new Object[] {
@@ -355,7 +365,7 @@ public class ATableViewResizeTester extends Application {
                 Cmd.COMBINE, 0, 3,
                 Cmd.COMBINE, 1, 2
             };
-        case ALOT:
+        case MANY_COLUMNS:
             return new Object[] {
                 Cmd.ROWS, 300,
                 Cmd.COL,
@@ -374,6 +384,30 @@ public class ATableViewResizeTester extends Application {
                 Cmd.COL,
                 Cmd.COL,
                 Cmd.COL
+            };
+        case MANY_COLUMNS_SAME:
+            return new Object[] {
+                Cmd.ROWS, 300,
+                Cmd.COL, Cmd.PREF, 30,
+                Cmd.COL, Cmd.PREF, 30,
+                Cmd.COL, Cmd.PREF, 30,
+                Cmd.COL, Cmd.PREF, 30,
+                Cmd.COL, Cmd.PREF, 30,
+                Cmd.COL, Cmd.PREF, 30,
+                Cmd.COL, Cmd.PREF, 30,
+                Cmd.COL, Cmd.PREF, 30,
+                Cmd.COL, Cmd.PREF, 30,
+                Cmd.COL, Cmd.PREF, 30,
+                Cmd.COL, Cmd.PREF, 30,
+                Cmd.COL, Cmd.PREF, 30,
+                Cmd.COL, Cmd.PREF, 30,
+                Cmd.COL, Cmd.PREF, 30,
+                Cmd.COL, Cmd.PREF, 30,
+                Cmd.COL, Cmd.PREF, 30,
+                Cmd.COL, Cmd.PREF, 30,
+                Cmd.COL, Cmd.PREF, 30,
+                Cmd.COL, Cmd.PREF, 30,
+                Cmd.COL, Cmd.PREF, 30
             };
         case MILLION:
             return new Object[] {
