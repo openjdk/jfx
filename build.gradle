@@ -362,7 +362,7 @@ defineProperty("libAVRepositoryURL", "https://libav.org/releases/")
 defineProperty("FFmpegRepositoryURL", "https://www.ffmpeg.org/releases/")
 defineProperty("icuRepositoryURL", "https://github.com/unicode-org/icu/releases/")
 
-defineProperty("icuVersion", "68.2")
+defineProperty("icuVersion", "71.1")
 
 loadProperties("$projectDir/build.properties")
 
@@ -3461,7 +3461,8 @@ project(":web") {
 
     dependencies {
         if (IS_COMPILE_WEBKIT) {
-            icu name: "icu4c-${icuVersion}-data-bin-l", ext: "zip"
+            def icuFileVersion = icuVersion.replaceAll('\\.', '_')
+            icu name: "icu4c-${icuFileVersion}-data-bin-l", ext: "zip"
         }
         implementation project(":base")
         implementation project(":graphics")
