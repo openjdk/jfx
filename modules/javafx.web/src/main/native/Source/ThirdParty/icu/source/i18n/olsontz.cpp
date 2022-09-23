@@ -274,6 +274,7 @@ OlsonTimeZone::OlsonTimeZone(const OlsonTimeZone& other) :
  * Assignment operator
  */
 OlsonTimeZone& OlsonTimeZone::operator=(const OlsonTimeZone& other) {
+    if (this == &other) { return *this; }  // self-assignment: no-op
     canonicalID = other.canonicalID;
 
     transitionTimesPre32 = other.transitionTimesPre32;
@@ -310,7 +311,7 @@ OlsonTimeZone::~OlsonTimeZone() {
 /**
  * Returns true if the two TimeZone objects are equal.
  */
-UBool OlsonTimeZone::operator==(const TimeZone& other) const {
+bool OlsonTimeZone::operator==(const TimeZone& other) const {
     return ((this == &other) ||
             (typeid(*this) == typeid(other) &&
             TimeZone::operator==(other) &&
@@ -399,9 +400,9 @@ void OlsonTimeZone::getOffset(UDate date, UBool local, int32_t& rawoff,
     }
 }
 
-void
-OlsonTimeZone::getOffsetFromLocal(UDate date, int32_t nonExistingTimeOpt, int32_t duplicatedTimeOpt,
-                                  int32_t& rawoff, int32_t& dstoff, UErrorCode& ec) const {
+void OlsonTimeZone::getOffsetFromLocal(UDate date, UTimeZoneLocalOption nonExistingTimeOpt,
+                                       UTimeZoneLocalOption duplicatedTimeOpt,
+                                       int32_t& rawoff, int32_t& dstoff, UErrorCode& ec) const {
     if (U_FAILURE(ec)) {
         return;
     }
@@ -805,14 +806,14 @@ OlsonTimeZone::initTransitionRules(UErrorCode& status) {
         }
     }
     if (finalZone != NULL) {
-        // Get the first occurence of final rule starts
+        // Get the first occurrence of final rule starts
         UDate startTime = (UDate)finalStartMillis;
         TimeZoneRule *firstFinalRule = NULL;
 
         if (finalZone->useDaylightTime()) {
             /*
              * Note: When an OlsonTimeZone is constructed, we should set the final year
-             * as the start year of finalZone.  However, the bounday condition used for
+             * as the start year of finalZone.  However, the boundary condition used for
              * getting offset from finalZone has some problems.
              * For now, we do not set the valid start year when the construction time
              * and create a clone and set the start year when extracting rules.
