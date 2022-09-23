@@ -422,7 +422,7 @@ public class Locator {
                             InputStream stream = getInputStream(uri);
                             stream.close();
                             isConnected = true;
-                            contentType = MediaUtils.filenameToContentType(uri.getPath()); // We need to provide at least something
+                            contentType = MediaUtils.filenameToContentType(uri); // We need to provide at least something
                         }
 
                         if (isConnected) {
@@ -438,7 +438,7 @@ public class Locator {
                             } else {
                                 if (contentType == null || !MediaManager.canPlayContentType(contentType)) {
                                     // Try content based on file name.
-                                    contentType = MediaUtils.filenameToContentType(uri.getPath());
+                                    contentType = MediaUtils.filenameToContentType(uri);
 
                                     if (Locator.DEFAULT_CONTENT_TYPE.equals(contentType)) {
                                         // Try content based on file signature.
@@ -469,7 +469,7 @@ public class Locator {
             }
             else {
                 // in case of iPod files we can be sure all files are supported
-                contentType = MediaUtils.filenameToContentType(uri.getPath());
+                contentType = MediaUtils.filenameToContentType(uri);
             }
 
             if (Logger.canLog(Logger.WARNING)) {
