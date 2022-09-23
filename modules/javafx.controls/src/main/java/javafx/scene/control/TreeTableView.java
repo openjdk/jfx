@@ -564,6 +564,7 @@ public class TreeTableView<S> extends Control {
         }
     };
 
+    // TODO descriptions to be copied from TableView + (table)->(tree table)
     public static final Callback<TreeTableView.ResizeFeatures, Boolean> CONSTRAINED_RESIZE_POLICY_ALL_COLUMNS =
         ConstrainedColumnResize.forTreeTable(ConstrainedColumnResize.ResizeMode.AUTO_RESIZE_ALL_COLUMNS);
 
