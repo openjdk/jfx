@@ -232,10 +232,14 @@ public class ResizeHelper {
 
         int ix = columns.indexOf(leafColumn);
         boolean expanding = delta > 0.0;
-        // FIX don't need in case of multiple columns?
-        double allowedDelta = getAllowedDelta(ix, expanding);
-        if (isZero(allowedDelta)) {
-            return false;
+        double allowedDelta;
+        if (mode == ConstrainedColumnResize.ResizeMode.AUTO_RESIZE_ALL_COLUMNS) {
+            allowedDelta = Math.abs(delta);
+        } else {
+            allowedDelta = getAllowedDelta(ix, expanding);
+            if (isZero(allowedDelta)) {
+                return false;
+            }
         }
 
         int ct = markOppositeColumns(ix);
@@ -249,7 +253,7 @@ public class ResizeHelper {
         }
 
         allowedDelta = Math.min(Math.abs(delta), Math.min(allowedDelta, d));
-        allowedDelta = (expanding ? 1 : -1) * Math.floor(allowedDelta); // TODO use original value, round in ct==1 case
+        allowedDelta = (expanding ? 1 : -1) * Math.floor(allowedDelta);
 
         if (isCornerCase(allowedDelta, ix)) {
             return false;
