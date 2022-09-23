@@ -72,6 +72,8 @@ public class ATableViewResizeTester extends Application {
         MIN_WIDTH3("min width (beginning)"),
         MAX_WIDTH3("max width (beginning)"),
         FIXED_MIDDLE("fixed in the middle"),
+        ALL_FIXED("all fixed"),
+        ALL_MAX("all with maximum width"),
         MIN_IN_CENTER("min widths set in middle columns"),
         MAX_IN_CENTER("max widths set in middle columns"),
         NO_NESTED("no nested columns"),
@@ -337,7 +339,21 @@ public class ATableViewResizeTester extends Application {
                 Cmd.COL,
                 Cmd.COL
             };
-        case NO_NESTED:
+        case ALL_FIXED:
+            return new Object[] {
+                Cmd.ROWS, 3,
+                Cmd.COL, Cmd.MIN, 50, Cmd.MAX, 50,
+                Cmd.COL, Cmd.MIN, 50, Cmd.MAX, 50,
+                Cmd.COL, Cmd.MIN, 50, Cmd.MAX, 50
+            };
+        case ALL_MAX:
+            return new Object[] {
+                Cmd.ROWS, 3,
+                Cmd.COL, Cmd.MAX, 50,
+                Cmd.COL, Cmd.MAX, 50,
+                Cmd.COL, Cmd.MAX, 50
+            };
+       case NO_NESTED:
             return new Object[] {
                 Cmd.ROWS, 3,
                 Cmd.COL, Cmd.PREF, 100,
