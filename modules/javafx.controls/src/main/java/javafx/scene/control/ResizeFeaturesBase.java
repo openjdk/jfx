@@ -33,7 +33,7 @@ import javafx.beans.NamedArg;
  * controls such as {@link TableView} and {@link TreeTableView}.
  * @since JavaFX 8.0
  */
-public abstract class ResizeFeaturesBase<S> {
+public class ResizeFeaturesBase<S> {
   private final TableColumnBase<S,?> column;
   private final Double delta;
 
@@ -55,7 +55,10 @@ public abstract class ResizeFeaturesBase<S> {
   /**
    * Returns the width of the area available for columns.
    */
-  public abstract double getContentWidth();
+  public double getContentWidth() {
+      // not available in the base class
+      throw new UnsupportedOperationException("method not available in the base class");
+  }
 
   /**
    * Returns the column upon which the resize is occurring, or null
