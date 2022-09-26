@@ -68,8 +68,8 @@ udata_create(const char *dir, const char *type, const char *name,
 #endif
 
     /* Check that the full path won't be too long */
-    length = 0;                    /* Start with nothing */
-    if(dir != NULL  && *dir !=0)    /* Add directory length if one was given */
+    length = 0;                                 /* Start with nothing */
+    if(dir != NULL  && *dir !=0)        /* Add directory length if one was given */
     {
         length += static_cast<int32_t>(strlen(dir));
 
@@ -77,8 +77,8 @@ udata_create(const char *dir, const char *type, const char *name,
         if (dir[strlen(dir) - 1]!= dirSepChar) {
             length++;
         }
-    }
-    length += static_cast<int32_t>(strlen(name));        /* Add the filename length */
+        }
+    length += static_cast<int32_t>(strlen(name));               /* Add the filename length */
 
     if(type != NULL  && *type !=0) { /* Add directory length if  given */
         length += static_cast<int32_t>(strlen(type));
@@ -88,9 +88,9 @@ udata_create(const char *dir, const char *type, const char *name,
      /* LDH buffer Length error check */
     if(length  > ((int32_t)sizeof(filename) - 1))
     {
-           *pErrorCode = U_BUFFER_OVERFLOW_ERROR;
-           uprv_free(pData);
-        return NULL;
+            *pErrorCode = U_BUFFER_OVERFLOW_ERROR;
+            uprv_free(pData);
+            return NULL;
     }
 
     /* open the output file */

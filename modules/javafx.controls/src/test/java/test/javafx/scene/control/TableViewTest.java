@@ -5944,4 +5944,32 @@ public class TableViewTest {
         // by the corner region
         assertTrue(arrowMaxX < cornerMinX);
     }
+
+    // See JDK-8089280
+    @Test
+    public void testSuppressHorizontalScrollBar() {
+        TableView<String> table = new TableView<>();
+        for (int i = 0; i < 10; i++) {
+            final TableColumn<String, String> c = new TableColumn<>("C" + i);
+            c.setCellValueFactory(value -> new SimpleStringProperty(value.getValue()));
+            c.setMinWidth(200); // caused HSB before the fix
+            table.getColumns().add(c);
+        }
+
+        for (int i = 0; i < 10; i++) {
+            table.getItems().add("");
+        }
+
+        stageLoader = new StageLoader(new Scene(table, 50, 50));
+
+        ScrollBar hbar = VirtualFlowTestUtils.getVirtualFlowHorizontalScrollbar(table);
+        assertTrue(hbar.isVisible());
+
+        table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+
+        Toolkit.getToolkit().firePulse();
+
+        hbar = VirtualFlowTestUtils.getVirtualFlowHorizontalScrollbar(table);
+        assertFalse(hbar.isVisible()); // used to fail here
+    }
 }
