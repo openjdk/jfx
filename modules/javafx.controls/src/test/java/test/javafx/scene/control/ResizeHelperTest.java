@@ -218,18 +218,19 @@ public class ResizeHelperTest {
                 Object[] spec = gen.next();
                 TableView<String> table = createTable(spec);
                 stageLoader = new StageLoader(new BorderPane(table));
-
-                for (int ip = 0; ip < POLICIES.length; ip++) {
-                    Callback<TableView.ResizeFeatures, Boolean> policy = createPolicy(ip);
-                    table.setColumnResizePolicy(policy);
-                    for (int width: WIDTHS) {
-                        table.setPrefWidth(width);
-                        Toolkit.getToolkit().firePulse();
-                        checkInvariants(table);
+                try {
+                    for (int ip = 0; ip < POLICIES.length; ip++) {
+                        Callback<TableView.ResizeFeatures, Boolean> policy = createPolicy(ip);
+                        table.setColumnResizePolicy(policy);
+                        for (int width: WIDTHS) {
+                            table.setPrefWidth(width);
+                            Toolkit.getToolkit().firePulse();
+                            checkInvariants(table);
+                        }
                     }
+                } finally {
+                    stageLoader.dispose();
                 }
-                
-                stageLoader.dispose();
             }
         }
 
