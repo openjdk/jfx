@@ -558,7 +558,7 @@ public class ResizeHelper {
         }
     }
 
-    protected static void p(Object x) {
+    public static void p(Object x) {
         if (print) {
             System.out.println(x);
         }

@@ -32,6 +32,7 @@ import org.junit.Test;
 import com.sun.javafx.tk.Toolkit;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.scene.control.ConstrainedColumnResizeBase;
+import javafx.scene.control.ResizeHelper;
 import javafx.scene.control.SelectionMode;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableColumnBase;
@@ -210,6 +211,7 @@ public class ResizeHelperTest {
      */
     //@Test // this test takes too much time!
     public void testWidthChange() {
+        long start = System.currentTimeMillis();
         for (int numCols: COLUMNS) {
             SpecGen gen = new SpecGen(numCols);
             while (gen.hasNext()) {
@@ -226,8 +228,12 @@ public class ResizeHelperTest {
                         checkInvariants(table);
                     }
                 }
+                
+                stageLoader.dispose();
             }
         }
+
+        ResizeHelper.p("elapsed time = " + (System.currentTimeMillis() - start) / 60_000 + " minutes.");
     }
 
     protected static final Object[] POLICIES = {
