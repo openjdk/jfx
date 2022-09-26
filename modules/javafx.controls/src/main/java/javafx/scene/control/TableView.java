@@ -395,40 +395,6 @@ public class TableView<S> extends Control {
     };
 
     /**
-     * <p>Simple policy that ensures the width of all visible leaf columns in
-     * this table sum up to equal the width of the table itself.
-     *
-     * <p>When the user resizes a column width with this policy, the table automatically
-     * adjusts the width of the right hand side columns. When the user increases a
-     * column width, the table decreases the width of the rightmost column until it
-     * reaches its minimum width. Then it decreases the width of the second
-     * rightmost column until it reaches minimum width and so on. When all right
-     * hand side columns reach minimum size, the user cannot increase the size of
-     * resized column any more.
-     */
-    @Deprecated(since="20")
-    public static final Callback<ResizeFeatures, Boolean> CONSTRAINED_RESIZE_POLICY = new Callback<ResizeFeatures, Boolean>() {
-
-        // FIX this field is effectively singleton, JDK-8088010?
-        private boolean isFirstRun = true;
-
-        @Override public String toString() {
-            return "constrained-resize";
-        }
-
-        @Override public Boolean call(ResizeFeatures prop) {
-            TableView<?> table = prop.getTable();
-            List<? extends TableColumnBase<?,?>> visibleLeafColumns = table.getVisibleLeafColumns();
-            Boolean result = TableUtil.constrainedResize(prop,
-                                               isFirstRun,
-                                               table.contentWidth,
-                                               visibleLeafColumns);
-            isFirstRun = ! isFirstRun ? false : ! result;
-            return result;
-        }
-    };
-
-    /**
      * A policy that ensures all the columns are sized to fit the table width, unless constraints prevent that,
      * in which case the columns are either clipped or occupy less space.
      * <p>
@@ -482,9 +448,24 @@ public class TableView<S> extends Control {
      * When the user resizes a column, the table starts with the last column until its constraint is hit,
      * followed by the preceding column, and so on.
      */
-    // TODO this will replace CONSTRAINED_RESIZE_POLICY
     public static final Callback<TableView.ResizeFeatures, Boolean> CONSTRAINED_RESIZE_POLICY_FLEX_TAIL =
         ConstrainedColumnResize.forTable(ConstrainedColumnResize.ResizeMode.AUTO_RESIZE_FLEX_TAIL);
+
+    /**
+     * <p>Simple policy that ensures the width of all visible leaf columns in
+     * this table sum up to equal the width of the table itself.
+     *
+     * <p>When the user resizes a column width with this policy, the table automatically
+     * adjusts the width of the right hand side columns. When the user increases a
+     * column width, the table decreases the width of the rightmost column until it
+     * reaches its minimum width. Then it decreases the width of the second
+     * rightmost column until it reaches minimum width and so on. When all right
+     * hand side columns reach minimum size, the user cannot increase the size of
+     * resized column any more.
+     */
+    @Deprecated(since="20")
+    public static final Callback<ResizeFeatures, Boolean> CONSTRAINED_RESIZE_POLICY =
+        CONSTRAINED_RESIZE_POLICY_FLEX_TAIL;
 
     /**
      * The default {@link #sortPolicyProperty() sort policy} that this TableView

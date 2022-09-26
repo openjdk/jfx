@@ -118,7 +118,6 @@ public class ATableViewResizeTester extends Application {
     protected SwingPanel swingPanel;
 
     public static void main(String[] args) {
-        ResizeHelper.print = true;
         Application.launch(ATableViewResizeTester.class, args);
     }
 

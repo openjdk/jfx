@@ -24,7 +24,6 @@
  */
 package javafx.scene.control;
 
-import java.text.DecimalFormat;
 import java.util.BitSet;
 import java.util.List;
 
@@ -44,7 +43,6 @@ public class ResizeHelper {
     private final double[] pref;
     private final double[] max;
     private final BitSet skip;
-    public static boolean print; // FIX remove
 
     public ResizeHelper(ResizeFeaturesBase rf,
                         double target,
@@ -138,16 +136,12 @@ public class ResizeHelper {
             }
 
             if (isZero(target - acc)) {
-                p("*  target == acc"); // FIX
                 needsAnotherPass = false;
             }
 
             if (needsAnotherPass) {
-                p("*** another pass"); // FIX
             }
         } while (needsAnotherPass);
-
-        check("1");
     }
 
     protected double step1(int ix) {
@@ -179,41 +173,6 @@ public class ResizeHelper {
             return max;
         }
         return v;
-    }
-
-    @Override
-    public String toString() {
-        return
-        //            "sumMin=" + p(sumMin) +
-        //            " sumPref=" + p(sumPref) +
-        //            " sumMax=" + p(sumMax) +
-        " target=" + p(target);
-    }
-
-    protected static String p(double x) { // FIX remove
-        return new DecimalFormat("0.#").format(x);
-    }
-
-    public String dump() {
-        double sum = 0.0;
-        for (double x: size) {
-            sum += x;
-        }
-
-        StringBuilder sb = new StringBuilder();
-        sb.append("target=");
-        sb.append(p(target));
-        sb.append(" [");
-        for (int i = 0; i < count; i++) {
-            if (i > 0) {
-                sb.append(",");
-            }
-            sb.append(p(size[i]));
-        }
-        sb.append("]");
-        sb.append(" sum=");
-        sb.append(sum);
-        return sb.toString();
     }
 
     public boolean resizeColumn(TableColumnBase<?,?> column) {
@@ -259,9 +218,7 @@ public class ResizeHelper {
             return false;
         }
 
-        boolean rv = distributeDelta(ix, allowedDelta);
-        check("3"); // FIX
-        return rv;
+        return distributeDelta(ix, allowedDelta);
     }
 
     protected boolean isCornerCase(double delta, int ix) {
@@ -528,39 +485,14 @@ public class ResizeHelper {
             }
 
             if (Math.abs(delta) < 1.0) {
-                p(delta + "<1.0, stop");
                 if (Math.abs(delta) >= 0.5) {
                     adj = Math.signum(delta);
                 }
                 needsAnotherPass = false;
             }
 
-            if (needsAnotherPass) {
-                p("*** another pass (delta=" + delta + ")"); // FIX
-            }
-
         } while (needsAnotherPass);
 
-//        check("2"); // FIX
         return adj;
-    }
-
-
-    @Deprecated // FIX
-    protected void check(String where) {
-        double total = 0.0;
-        for (double w: size) {
-            total += w;
-        }
-
-        if (!isZero(total - target)) {
-            p("  FAILED check " + where + " " + dump()); // FIX
-        }
-    }
-
-    public static void p(Object x) {
-        if (print) {
-            System.out.println(x);
-        }
     }
 }

@@ -233,7 +233,7 @@ public class ResizeHelperTest {
             }
         }
 
-        ResizeHelper.p("elapsed time = " + (System.currentTimeMillis() - start) / 60_000 + " minutes.");
+        System.out.println("elapsed time = " + (System.currentTimeMillis() - start) / 60_000 + " minutes.");
     }
 
     protected static final Object[] POLICIES = {

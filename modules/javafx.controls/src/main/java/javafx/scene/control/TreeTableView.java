@@ -530,41 +530,7 @@ public class TreeTableView<S> extends Control {
         }
     };
 
-    /**
-     * <p>Simple policy that ensures the width of all visible leaf columns in
-     * this table sum up to equal the width of the table itself.
-     *
-     * <p>When the user resizes a column width with this policy, the table automatically
-     * adjusts the width of the right hand side columns. When the user increases a
-     * column width, the table decreases the width of the rightmost column until it
-     * reaches its minimum width. Then it decreases the width of the second
-     * rightmost column until it reaches minimum width and so on. When all right
-     * hand side columns reach minimum size, the user cannot increase the size of
-     * resized column any more.
-     */
-    @Deprecated(since="20")
-    public static final Callback<TreeTableView.ResizeFeatures, Boolean> CONSTRAINED_RESIZE_POLICY =
-            new Callback<TreeTableView.ResizeFeatures, Boolean>() {
-
-        private boolean isFirstRun = true;
-
-        @Override public String toString() {
-            return "constrained-resize";
-        }
-
-        @Override public Boolean call(TreeTableView.ResizeFeatures prop) {
-            TreeTableView<?> table = prop.getTable();
-            List<? extends TableColumnBase<?,?>> visibleLeafColumns = table.getVisibleLeafColumns();
-            Boolean result = TableUtil.constrainedResize(prop,
-                                               isFirstRun,
-                                               table.contentWidth,
-                                               visibleLeafColumns);
-            isFirstRun = ! isFirstRun ? false : ! result;
-            return result;
-        }
-    };
-
-    // TODO descriptions to be copied from TableView + (table)->(tree table)
+    // TODO descriptions to be copied from TableView once they stabilize + (table)->(tree table)
     public static final Callback<TreeTableView.ResizeFeatures, Boolean> CONSTRAINED_RESIZE_POLICY_ALL_COLUMNS =
         ConstrainedColumnResize.forTreeTable(ConstrainedColumnResize.ResizeMode.AUTO_RESIZE_ALL_COLUMNS);
 
@@ -580,9 +546,24 @@ public class TreeTableView<S> extends Control {
     public static final Callback<TreeTableView.ResizeFeatures, Boolean> CONSTRAINED_RESIZE_POLICY_FLEX_HEAD =
         ConstrainedColumnResize.forTreeTable(ConstrainedColumnResize.ResizeMode.AUTO_RESIZE_FLEX_HEAD);
 
-    // TODO this will replace CONSTRAINED_RESIZE_POLICY
     public static final Callback<TreeTableView.ResizeFeatures, Boolean> CONSTRAINED_RESIZE_POLICY_FLEX_TAIL =
         ConstrainedColumnResize.forTreeTable(ConstrainedColumnResize.ResizeMode.AUTO_RESIZE_FLEX_TAIL);
+
+    /**
+     * <p>Simple policy that ensures the width of all visible leaf columns in
+     * this table sum up to equal the width of the table itself.
+     *
+     * <p>When the user resizes a column width with this policy, the table automatically
+     * adjusts the width of the right hand side columns. When the user increases a
+     * column width, the table decreases the width of the rightmost column until it
+     * reaches its minimum width. Then it decreases the width of the second
+     * rightmost column until it reaches minimum width and so on. When all right
+     * hand side columns reach minimum size, the user cannot increase the size of
+     * resized column any more.
+     */
+    @Deprecated(since="20")
+    public static final Callback<TreeTableView.ResizeFeatures, Boolean> CONSTRAINED_RESIZE_POLICY =
+        CONSTRAINED_RESIZE_POLICY_FLEX_TAIL;
 
     /**
      * The default {@link #sortPolicyProperty() sort policy} that this TreeTableView
