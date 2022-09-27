@@ -153,13 +153,21 @@ public class ResizeHelper {
         }
     }
 
-    public void applySizes() {
+    /**
+     * Applies computed column widths to the tree/table columns.
+     * @return true if sum of columns equals or greater than the target area
+     */
+    public boolean applySizes() {
+        double w = 0.0;
         for (int i = 0; i < count; i++) {
             TableColumnBase<?,?> c = columns.get(i);
             if (c.isResizable()) {
                 rf.setColumnWidth(c, size[i]);
+                w += size[i];
             }
         }
+        
+        return (w > (target - 1.0));
     }
 
     protected static boolean isZero(double x) {

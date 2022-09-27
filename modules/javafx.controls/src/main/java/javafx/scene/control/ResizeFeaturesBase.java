@@ -26,6 +26,7 @@
 package javafx.scene.control;
 
 import javafx.beans.NamedArg;
+import javafx.scene.Node;
 
 
 /**
@@ -58,6 +59,14 @@ public class ResizeFeaturesBase<S> {
   public double getContentWidth() {
       // not available in the base class
       throw new UnsupportedOperationException("method not available in the base class");
+  }
+  
+  /**
+   * Returns the associated TreeView or TreeTableView
+   */
+  public Node getTableNode() {
+      // not available in the base class
+      throw new UnsupportedOperationException("method not available in the base class");  
   }
 
   /**

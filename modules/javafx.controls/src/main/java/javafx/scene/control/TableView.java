@@ -1899,6 +1899,11 @@ public class TableView<S> extends Control {
         }
 
         @Override
+        public Node getTableNode() {
+            return table;
+        }
+
+        @Override
         public double getContentWidth() {
             return table.contentWidth;
         }

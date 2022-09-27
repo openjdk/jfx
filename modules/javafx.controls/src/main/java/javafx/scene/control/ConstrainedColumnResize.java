@@ -25,6 +25,8 @@
 package javafx.scene.control;
 
 import java.util.List;
+import javafx.css.PseudoClass;
+import javafx.scene.Node;
 import javafx.util.Callback;
 
 /**
@@ -68,7 +70,20 @@ public class ConstrainedColumnResize extends ConstrainedColumnResizeBase {
             rv = h.resizeColumn(column);
         }
 
-        h.applySizes();
+        // conditionally remove pseudoclass (given by this policy toString()) when the columns
+        // are narrower than the available area and the rightmost column boundary line needs to be drawn.
+        // hint: search modena.css for "constrained-resize" token
+        Node n = rf.getTableNode();
+        PseudoClass pc = PseudoClass.getPseudoClass(toString());
+        boolean wide = h.applySizes();
+        boolean current = n.getPseudoClassStates().contains(pc);
+        if (wide != current) {
+            if (wide) {
+                n.pseudoClassStateChanged(pc, true);
+            } else {
+                n.pseudoClassStateChanged(pc, false);
+            }
+        }
         return rv;
     }
 

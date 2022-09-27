@@ -2179,6 +2179,11 @@ public class TreeTableView<S> extends Control {
         public TreeTableView<S> getTable() { return treeTable; }
 
         @Override
+        public Node getTableNode() {
+            return treeTable;
+        }
+
+        @Override
         public double getContentWidth() {
             return treeTable.contentWidth;
         }
