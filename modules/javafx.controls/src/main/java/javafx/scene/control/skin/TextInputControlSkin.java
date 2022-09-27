@@ -353,20 +353,20 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
                             window.getY() + scene.getY() + p.getY());
                     return location;
                 }
-    
+
                 @Override public int getLocationOffset(int x, int y) {
                     return getInsertionPoint(x, y);
                 }
-    
+
                 @Override public void cancelLatestCommittedText() {
                     // TODO
                 }
-    
+
                 @Override public String getSelectedText() {
                     IndexRange selection = control.getSelection();
                     return control.getText(selection.getStart(), selection.getEnd());
                 }
-    
+
                 @Override public int getInsertPositionOffset() {
                     int caretPosition = control.getCaretPosition();
                     if (caretPosition < imstart) {
@@ -377,7 +377,7 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
                         return caretPosition - imlength;
                     }
                 }
-    
+
                 @Override public String getCommittedText(int begin, int end) {
                     if (begin < imstart) {
                         if (end <= imstart) {
@@ -389,7 +389,7 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
                         return control.getText(begin + imlength, end + imlength);
                     }
                 }
-    
+
                 @Override public int getCommittedTextLength() {
                     return control.getText().length() - imlength;
                 }
