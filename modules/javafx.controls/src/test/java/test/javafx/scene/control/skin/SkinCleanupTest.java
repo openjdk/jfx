@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2020, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -51,6 +51,7 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.Event;
 import javafx.event.EventHandler;
+import javafx.geometry.Point2D;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
@@ -82,6 +83,7 @@ import javafx.scene.control.skin.TableRowSkin;
 import javafx.scene.control.skin.TreeTableRowSkin;
 import javafx.scene.control.skin.VirtualFlow;
 import javafx.scene.input.InputMethodEvent;
+import javafx.scene.input.InputMethodRequests;
 import javafx.scene.input.ScrollEvent;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
@@ -1264,7 +1266,7 @@ public class SkinCleanupTest {
      * Test that handler installed by skin is reset on replacing skin.
      * Here we test the effect by firing an inputEvent.
      */
-    @Ignore("JDK-8268877")
+    // FIX @Ignore("JDK-8268877")
     @Test
     public void testTextInputOnInputMethodTextChangedEvent() {
         String initialText = "some text";
@@ -1284,7 +1286,7 @@ public class SkinCleanupTest {
      * Test that handler installed by skin is reset on replacing skin.
      * Here we test the instance of the handler.
      */
-    @Ignore("JDK-8268877")
+    // FIX @Ignore("JDK-8268877")
     @Test
     public void testTextInputOnInputMethodTextChangedHandler() {
         TextField field = new TextField("some text");
@@ -1293,6 +1295,56 @@ public class SkinCleanupTest {
         replaceSkin(field);
         assertNotSame("replaced skin must replace skin handler", handler, field.getOnInputMethodTextChanged());
         assertNotNull("handler must not be null  ", field.getOnInputMethodTextChanged());
+    }
+
+    /**
+     * Test that input method requests installed by skin is reset on replacing skin.
+     */
+    @Test // TODO
+    public void testTextInput_InputMethodRequestsIsResetOnReplacingSkin() {
+        TextField t = new TextField();
+        installDefaultSkin(t);
+        InputMethodRequests im = t.getInputMethodRequests();
+
+        replaceSkin(t);
+        InputMethodRequests im2 = t.getInputMethodRequests();
+
+        assertNotEquals("InputMethodRequests set by an old skin must be replaced by the new skin", im, im2);
+    }
+
+    /**
+     * Test that the user input method requests is not affected by the skin.
+     */
+    @Test // TODO
+    public void testTextInput_UserMethodRequestsNotAffectedBySkin() {
+        InputMethodRequests im = createInputMethodRequests();
+        TextField t = new TextField();
+        t.setInputMethodRequests(im);
+        installDefaultSkin(t);
+        assertEquals("skin must not alter user-set InputMethodRequests", im, t.getInputMethodRequests());
+    }
+
+    protected static InputMethodRequests createInputMethodRequests() {
+        return new InputMethodRequests() {
+            @Override
+            public Point2D getTextLocation(int offset) {
+                return new Point2D(0, 0);
+            }
+
+            @Override
+            public int getLocationOffset(int x, int y) {
+                return 0;
+            }
+
+            @Override
+            public void cancelLatestCommittedText() {
+            }
+
+            @Override
+            public String getSelectedText() {
+                return "";
+            }
+        };
     }
 
 
