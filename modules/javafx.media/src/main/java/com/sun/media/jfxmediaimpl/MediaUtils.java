@@ -182,7 +182,7 @@ public class MediaUtils {
         return contentType;
     }
     /**
-     * Returns the content type given the file name.
+     * Returns the content type given the uri.
      *
      * @param uri
      * @return content type
@@ -238,7 +238,7 @@ public class MediaUtils {
         }
 
         String scheme = uri.getScheme().toLowerCase();
-        if (scheme.equals("jar")) {
+        if ("jar".equals(scheme)) {
             // Split to get entry
             // jar:<url>!/{entry}
             String[] jarURI = uri.toASCIIString().split("!/");

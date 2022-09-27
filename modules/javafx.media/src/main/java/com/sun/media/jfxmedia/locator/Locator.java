@@ -422,7 +422,8 @@ public class Locator {
                             InputStream stream = getInputStream(uri);
                             stream.close();
                             isConnected = true;
-                            contentType = MediaUtils.filenameToContentType(uri); // We need to provide at least something
+                            // Try to get the content type based on extension
+                            contentType = MediaUtils.filenameToContentType(uri);
                         }
 
                         if (isConnected) {
