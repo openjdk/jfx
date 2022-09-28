@@ -31,12 +31,6 @@ import static org.junit.Assert.assertTrue;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Test;
-
-import com.sun.javafx.tk.Toolkit;
-
 import javafx.beans.value.ObservableValue;
 import javafx.event.Event;
 import javafx.event.EventType;
@@ -60,6 +54,13 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
+
+import org.junit.Before;
+import org.junit.Ignore;
+import org.junit.Test;
+
+import com.sun.javafx.tk.Toolkit;
+
 import test.util.memory.JMemoryBuddy;
 
 
@@ -872,10 +873,11 @@ public class ScrollPaneSkinTest {
     }
 
     /**
-     * checks that there are no memory leaks when replacing scroll pane content
+     * Test that ScrollPane object is not leaked when 'same' node
+     * is used as content for different ScrollPane objects, see JDK-8293444.
      */
     @Test
-    public void checkMemoryLeaks_JDK_8293444() {
+    public void testScrollPaneObjLeakWhenUsedSameContent() {
 
         ArrayList<WeakReference<ScrollPane>> refs = new ArrayList<>();
 
@@ -883,8 +885,6 @@ public class ScrollPaneSkinTest {
 
         Stage stage = new Stage();
         stage.setScene(new Scene(bp));
-        stage.setWidth(600);
-        stage.setHeight(600);
         stage.show();
 
         Label content = new Label("content");
@@ -909,6 +909,18 @@ public class ScrollPaneSkinTest {
         }
 
         // one instance is still held by the 'content' label
-        assertTrue("uncollected objects=" + ct, ct <= 1);
+        assertEquals("One instance should be held by the 'content' label", 1, ct);
+
+        // releasing the last instance
+        content = null;
+
+        ct = 0;
+        for (WeakReference<ScrollPane> ref : refs) {
+            JMemoryBuddy.checkCollectable(ref);
+            if (ref.get() != null) {
+                ct++;
+            }
+        }
+        assertEquals(ct + " references of ScrollPane are not freed.", 0, ct);
     }
 }
