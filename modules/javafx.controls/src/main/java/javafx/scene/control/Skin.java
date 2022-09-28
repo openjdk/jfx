@@ -81,7 +81,7 @@ public interface Skin<C extends Skinnable> {
      *
      * @implNote
      * Most implementations of Skin in the <code>javafx.controls</code> module
-     * do not need to implement {@link Skin#install()} unless they must set one or more
+     * do not need to implement {@code install} unless they must set one or more
      * properties in the corresponding Skinnable.
      *
      * @since 20
