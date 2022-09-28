@@ -24,33 +24,32 @@
  */
 package javafx.scene.control.skin;
 
+import java.util.List;
+
 import com.sun.javafx.scene.ParentHelper;
-import com.sun.javafx.scene.control.behavior.BehaviorBase;
-import com.sun.javafx.scene.traversal.Algorithm;
 import com.sun.javafx.scene.control.FakeFocusTextField;
+import com.sun.javafx.scene.control.behavior.SpinnerBehavior;
+import com.sun.javafx.scene.traversal.Algorithm;
 import com.sun.javafx.scene.traversal.Direction;
 import com.sun.javafx.scene.traversal.ParentTraversalEngine;
-import javafx.scene.control.Accordion;
-import javafx.scene.control.Button;
-import javafx.scene.control.Control;
-import javafx.scene.control.SkinBase;
-import com.sun.javafx.scene.control.behavior.SpinnerBehavior;
 import com.sun.javafx.scene.traversal.TraversalContext;
+
 import javafx.collections.ListChangeListener;
 import javafx.css.PseudoClass;
+import javafx.event.EventHandler;
 import javafx.geometry.HPos;
 import javafx.geometry.VPos;
 import javafx.scene.AccessibleAction;
 import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
+import javafx.scene.control.Control;
+import javafx.scene.control.SkinBase;
 import javafx.scene.control.Spinner;
 import javafx.scene.control.TextField;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
-
-import java.util.List;
 
 /**
  * Default skin implementation for the {@link Spinner} control.
@@ -86,6 +85,9 @@ public class SpinnerSkin<T> extends SkinBase<Spinner<T>> {
 
     private final SpinnerBehavior behavior;
 
+    private EventHandler<KeyEvent> keyEventFilter;
+    private EventHandler<KeyEvent> textFieldKeyEventFilter;
+    private ListChangeListener<String> listChangeListener;
 
 
     /* *************************************************************************
@@ -109,10 +111,10 @@ public class SpinnerSkin<T> extends SkinBase<Spinner<T>> {
 //        control.setInputMap(behavior.getInputMap());
 
         textField = control.getEditor();
-        getChildren().add(textField);
 
         updateStyleClass();
-        control.getStyleClass().addListener((ListChangeListener<String>) c -> updateStyleClass());
+        listChangeListener = ch -> updateStyleClass();
+        control.getStyleClass().addListener(listChangeListener);
 
         // increment / decrement arrows
         incrementArrow = new Region();
@@ -170,12 +172,12 @@ public class SpinnerSkin<T> extends SkinBase<Spinner<T>> {
         // Fixes in the same vein as ComboBoxListViewSkin
 
         // move fake focus in to the textfield if the spinner is editable
-        control.focusedProperty().addListener((ov, t, hasFocus) -> {
+        registerChangeListener(control.focusedProperty(), (op) -> {
             // Fix for the regression noted in a comment in RT-29885.
-            ((FakeFocusTextField)textField).setFakeFocus(hasFocus);
+            ((FakeFocusTextField)textField).setFakeFocus(control.isFocused());
         });
 
-        control.addEventFilter(KeyEvent.ANY, ke -> {
+        control.addEventFilter(KeyEvent.ANY, keyEventFilter = ke -> {
             if (control.isEditable()) {
                 // This prevents a stack overflow from our rebroadcasting of the
                 // event to the textfield that occurs in the final else statement
@@ -205,14 +207,15 @@ public class SpinnerSkin<T> extends SkinBase<Spinner<T>> {
         // Spinner control. Without this the up/down/left/right arrow keys don't
         // work when you click inside the TextField area (but they do in the case
         // of tabbing in).
-        textField.addEventFilter(KeyEvent.ANY, ke -> {
+        textField.addEventFilter(KeyEvent.ANY, textFieldKeyEventFilter = ke -> {
             if (! control.isEditable() || isIncDecKeyEvent(ke)) {
                 control.fireEvent(ke.copyFor(control, control));
                 ke.consume();
             }
         });
 
-        textField.focusedProperty().addListener((ov, t, hasFocus) -> {
+        registerChangeListener(textField.focusedProperty(), (op) -> {
+            boolean hasFocus = textField.isFocused();
             // Fix for RT-29885
             control.getProperties().put("FOCUSED", hasFocus);
             // --- end of RT-29885
@@ -262,13 +265,25 @@ public class SpinnerSkin<T> extends SkinBase<Spinner<T>> {
      *                                                                         *
      **************************************************************************/
 
+    @Override
+    public void install() {
+        getChildren().add(textField);
+    }
+
     /** {@inheritDoc} */
-    @Override public void dispose() {
-        super.dispose();
+    @Override
+    public void dispose() {
+        getSkinnable().getStyleClass().removeListener(listChangeListener);
+        getSkinnable().removeEventFilter(KeyEvent.ANY, keyEventFilter);
+        textField.removeEventFilter(KeyEvent.ANY, textFieldKeyEventFilter);
+
+        getChildren().removeAll(textField, incrementArrowButton, decrementArrowButton);
 
         if (behavior != null) {
             behavior.dispose();
         }
+
+        super.dispose();
     }
 
     /** {@inheritDoc} */
