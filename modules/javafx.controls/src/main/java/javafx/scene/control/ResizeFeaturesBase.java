@@ -60,13 +60,13 @@ public class ResizeFeaturesBase<S> {
       // not available in the base class
       throw new UnsupportedOperationException("method not available in the base class");
   }
-  
+
   /**
    * Returns the associated TreeView or TreeTableView
    */
   public Node getTableNode() {
       // not available in the base class
-      throw new UnsupportedOperationException("method not available in the base class");  
+      throw new UnsupportedOperationException("method not available in the base class");
   }
 
   /**

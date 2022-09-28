@@ -395,58 +395,61 @@ public class TableView<S> extends Control {
     };
 
     /**
-     * A policy that ensures all the columns are sized to fit the table width, unless constraints prevent that,
-     * in which case the columns are either clipped or occupy less space.
+     * A policy that tries to adjust other columns in order to fit the table width.
      * <p>
-     * When the user resizes a column, the table adjusts all other columns, excluding the columns where a constraint
-     * would prevent the column from either growing or shrinking.
+     * When column constraints make it impossible to fit all the columns into the allowed area,
+     * the columns are either clipped, or an empty space appears.  This policy disables the horizontal
+     * scroll bar.
      */
     public static final Callback<TableView.ResizeFeatures, Boolean> CONSTRAINED_RESIZE_POLICY_ALL_COLUMNS =
         ConstrainedColumnResize.forTable(ConstrainedColumnResize.ResizeMode.AUTO_RESIZE_ALL_COLUMNS);
 
     /**
-     * A policy that ensures all the columns are sized to fit the table width, unless constraints prevent that,
-     * in which case the columns are either clipped or occupy less space.
+     * A policy that tries to adjust last column in order to fit the table width.
      * <p>
-     * When the user resizes a column, the table adjusts the last column only.
+     * When column constraints make it impossible to fit all the columns into the allowed area,
+     * the columns are either clipped, or an empty space appears.  This policy disables the horizontal
+     * scroll bar.
      */
     public static final Callback<TableView.ResizeFeatures, Boolean> CONSTRAINED_RESIZE_POLICY_LAST_COLUMN =
         ConstrainedColumnResize.forTable(ConstrainedColumnResize.ResizeMode.AUTO_RESIZE_LAST_COLUMN);
 
     /**
-     * A policy that ensures all the columns are sized to fit the table width, unless constraints prevent that,
-     * in which case the columns are either clipped or occupy less space.
+     * A policy adjusts the next column in the opposite way in order to fit the table width.
      * <p>
-     * When the user resizes a column, the table adjusts the next column the opposite way.
+     * When column constraints make it impossible to fit all the columns into the allowed area,
+     * the columns are either clipped, or an empty space appears.  This policy disables the horizontal
+     * scroll bar.
      */
     public static final Callback<TableView.ResizeFeatures, Boolean> CONSTRAINED_RESIZE_POLICY_NEXT_COLUMN =
         ConstrainedColumnResize.forTable(ConstrainedColumnResize.ResizeMode.AUTO_RESIZE_NEXT_COLUMN);
 
     /**
-     * A policy that ensures all the columns are sized to fit the table width, unless constraints prevent that,
-     * in which case the columns are either clipped or occupy less space.
+     * A policy that tries to adjust subsequent columns in order to fit the table width.
      * <p>
-     * When the user resizes a column, the table adjusts subsequent columns.
+     * When column constraints make it impossible to fit all the columns into the allowed area,
+     * the columns are either clipped, or an empty space appears.  This policy disables the horizontal
+     * scroll bar.
      */
     public static final Callback<TableView.ResizeFeatures, Boolean> CONSTRAINED_RESIZE_POLICY_SUBSEQUENT_COLUMNS =
         ConstrainedColumnResize.forTable(ConstrainedColumnResize.ResizeMode.AUTO_RESIZE_SUBSEQUENT_COLUMNS);
 
     /**
-     * A policy that ensures all the columns are sized to fit the table width, unless constraints prevent that,
-     * in which case the columns are either clipped or occupy less space.
+     * A policy that tries to adjust columns, starting with the next one, in order to fit the table width.
      * <p>
-     * When the user resizes a column, the table starts with the next column until its constraint is hit,
-     * followed by the following column, and so on.
+     * When column constraints make it impossible to fit all the columns into the allowed area,
+     * the columns are either clipped, or an empty space appears.  This policy disables the horizontal
+     * scroll bar.
      */
     public static final Callback<TableView.ResizeFeatures, Boolean> CONSTRAINED_RESIZE_POLICY_FLEX_HEAD =
         ConstrainedColumnResize.forTable(ConstrainedColumnResize.ResizeMode.AUTO_RESIZE_FLEX_HEAD);
 
     /**
-     * A policy that ensures all the columns are sized to fit the table width, unless constraints prevent that,
-     * in which case the columns are either clipped or occupy less space.
+     * A policy that tries to adjust columns, starting with the last one, in order to fit the table width.
      * <p>
-     * When the user resizes a column, the table starts with the last column until its constraint is hit,
-     * followed by the preceding column, and so on.
+     * When column constraints make it impossible to fit all the columns into the allowed area,
+     * the columns are either clipped, or an empty space appears.  This policy disables the horizontal
+     * scroll bar.
      */
     public static final Callback<TableView.ResizeFeatures, Boolean> CONSTRAINED_RESIZE_POLICY_FLEX_TAIL =
         ConstrainedColumnResize.forTable(ConstrainedColumnResize.ResizeMode.AUTO_RESIZE_FLEX_TAIL);

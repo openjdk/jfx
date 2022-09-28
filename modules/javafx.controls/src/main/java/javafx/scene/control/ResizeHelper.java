@@ -166,7 +166,7 @@ public class ResizeHelper {
                 w += size[i];
             }
         }
-        
+
         return (w > (target - 1.0));
     }
 
