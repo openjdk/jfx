@@ -108,7 +108,6 @@ public class SpinnerSkin<T> extends SkinBase<Spinner<T>> {
 
         // install default input map for the Button control
         behavior = new SpinnerBehavior<>(control);
-//        control.setInputMap(behavior.getInputMap());
 
         textField = control.getEditor();
 
@@ -273,8 +272,11 @@ public class SpinnerSkin<T> extends SkinBase<Spinner<T>> {
     /** {@inheritDoc} */
     @Override
     public void dispose() {
-        getSkinnable().getStyleClass().removeListener(listChangeListener);
-        getSkinnable().removeEventFilter(KeyEvent.ANY, keyEventFilter);
+        if(getSkinnable() != null) {
+            getSkinnable().getStyleClass().removeListener(listChangeListener);
+            getSkinnable().removeEventFilter(KeyEvent.ANY, keyEventFilter);
+        }
+
         textField.removeEventFilter(KeyEvent.ANY, textFieldKeyEventFilter);
 
         getChildren().removeAll(textField, incrementArrowButton, decrementArrowButton);
