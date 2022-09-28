@@ -53,6 +53,8 @@ import test.com.sun.javafx.scene.control.infrastructure.MouseEventFirer;
  * Miscellaneous convenience methods to support javafx.controls tests.
  */
 public class ControlUtils {
+    private ControlUtils() { }
+
     /**
      * Creates a TableView with three columns and three rows. Each cell contains a
      * "..." string.
