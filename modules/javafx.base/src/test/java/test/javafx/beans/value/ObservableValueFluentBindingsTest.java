@@ -49,6 +49,7 @@ import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 
 public class ObservableValueFluentBindingsTest {
+
     private int invalidations;
 
     private final List<String> values = new ArrayList<>();
