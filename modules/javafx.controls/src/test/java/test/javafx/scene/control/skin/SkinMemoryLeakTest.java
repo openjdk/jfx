@@ -84,10 +84,13 @@ public class SkinMemoryLeakTest {
     public void testMemoryLeakSameSkinClass() {
         installDefaultSkin(control);
         Skin<?> skin = control.getSkin();
+        WeakReference<?> weakRef = new WeakReference<>(skin);
+
         installDefaultSkin(control);
 
-        WeakReference<?> weakRef = new WeakReference<>(skin);
         skin = null;
+        Toolkit.getToolkit().firePulse();
+
         attemptGC(weakRef);
         assertNull("Unused Skin must be gc'ed", weakRef.get());
     }
@@ -117,9 +120,14 @@ public class SkinMemoryLeakTest {
     @Test
     public void testMemoryLeakAlternativeSkin() {
         installDefaultSkin(control);
-        // FIXME: JDK-8265406 - fragile test pattern
-        WeakReference<?> weakRef = new WeakReference<>(replaceSkin(control));
+        Skin<?> replacedSkin = replaceSkin(control);
+        WeakReference<?> weakRef = new WeakReference<>(replacedSkin);
         assertNotNull(weakRef.get());
+
+        // beware: this is important - we might get false reds without!
+        replacedSkin = null;
+        Toolkit.getToolkit().firePulse();
+
         attemptGC(weakRef);
         assertEquals("Skin must be gc'ed", null, weakRef.get());
     }
@@ -133,9 +141,11 @@ public class SkinMemoryLeakTest {
         Skin<?> replacedSkin = replaceSkin(control);
         WeakReference<?> weakRef = new WeakReference<>(replacedSkin);
         assertNotNull(weakRef.get());
+
         // beware: this is important - we might get false reds without!
-        Toolkit.getToolkit().firePulse();
         replacedSkin = null;
+        Toolkit.getToolkit().firePulse();
+
         attemptGC(weakRef);
         assertEquals("Skin must be gc'ed", null, weakRef.get());
     }
@@ -166,7 +176,6 @@ public class SkinMemoryLeakTest {
                 ColorPicker.class,
                 ComboBox.class,
                 DatePicker.class,
-                MenuBar.class,
                 MenuButton.class,
                 Pagination.class,
                 PasswordField.class,
