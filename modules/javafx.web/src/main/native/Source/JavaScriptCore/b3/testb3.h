@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -97,9 +97,9 @@ inline void usage()
 using namespace JSC;
 using namespace JSC::B3;
 
-inline bool shouldBeVerbose()
+inline bool shouldBeVerbose(Procedure& procedure)
 {
-    return shouldDumpIR(B3Mode);
+    return shouldDumpIR(procedure, B3Mode);
 }
 
 extern Lock crashLock;
@@ -220,13 +220,13 @@ inline void lowerToAirForTesting(Procedure& proc)
 {
     proc.resetReachability();
 
-    if (shouldBeVerbose())
+    if (shouldBeVerbose(proc))
         dataLog("B3 before lowering:\n", proc);
 
     validate(proc);
     lowerToAir(proc);
 
-    if (shouldBeVerbose())
+    if (shouldBeVerbose(proc))
         dataLog("Air after lowering:\n", proc.code());
 
     Air::validate(proc.code());
@@ -532,7 +532,7 @@ void testPatchpointDoubleRegs();
 void testSpillDefSmallerThanUse();
 void testSpillUseLargerThanDef();
 void testLateRegister();
-void interpreterPrint(Vector<intptr_t>* stream, intptr_t value);
+extern "C" void interpreterPrint(Vector<intptr_t>* stream, intptr_t value);
 void testInterpreter();
 void testReduceStrengthCheckBottomUseInAnotherBlock();
 void testResetReachabilityDanglingReference();
@@ -555,6 +555,7 @@ void testTrappingLoadAddStore();
 void testTrappingLoadDCE();
 void testTrappingStoreElimination();
 void testMoveConstants();
+void testMoveConstantsWithLargeOffsets();
 void testPCOriginMapDoesntInsertNops();
 void testBitOrBitOrArgImmImm32(int, int, int c);
 void testBitOrImmBitOrArgImm32(int, int, int c);
@@ -1172,5 +1173,8 @@ void testStorePreIndex32();
 void testStorePreIndex64();
 void testStorePostIndex32();
 void testStorePostIndex64();
+
+void testFloatMaxMin();
+void testDoubleMaxMin();
 
 #endif // ENABLE(B3_JIT)

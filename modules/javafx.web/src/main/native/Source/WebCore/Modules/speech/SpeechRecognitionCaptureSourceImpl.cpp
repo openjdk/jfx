@@ -70,7 +70,7 @@ SpeechRecognitionCaptureSourceImpl::SpeechRecognitionCaptureSourceImpl(SpeechRec
     m_source->setLogger(*nullLogger(), nextLogIdentifier());
 #endif
 
-    auto weakThis = makeWeakPtr(this);
+    initializeWeakPtrFactory();
 }
 
 SpeechRecognitionCaptureSourceImpl::~SpeechRecognitionCaptureSourceImpl()
@@ -90,7 +90,7 @@ bool SpeechRecognitionCaptureSourceImpl::updateDataSource(const CAAudioStreamDes
 
     auto dataSource = AudioSampleDataSource::create(audioDescription.sampleRate() * 1, m_source.get());
     if (dataSource->setInputFormat(audioDescription)) {
-        callOnMainThread([this, weakThis = makeWeakPtr(this)] {
+        callOnMainThread([this, weakThis = WeakPtr { *this }] {
             if (weakThis)
                 m_stateUpdateCallback(SpeechRecognitionUpdate::createError(m_clientIdentifier, SpeechRecognitionError { SpeechRecognitionErrorType::AudioCapture, "Unable to set input format" }));
         });
@@ -98,7 +98,7 @@ bool SpeechRecognitionCaptureSourceImpl::updateDataSource(const CAAudioStreamDes
     }
 
     if (dataSource->setOutputFormat(audioDescription)) {
-        callOnMainThread([this, weakThis = makeWeakPtr(this)] {
+        callOnMainThread([this, weakThis = WeakPtr { *this }] {
             if (weakThis)
                 m_stateUpdateCallback(SpeechRecognitionUpdate::createError(m_clientIdentifier, SpeechRecognitionError { SpeechRecognitionErrorType::AudioCapture, "Unable to set output format" }));
         });
@@ -113,7 +113,7 @@ void SpeechRecognitionCaptureSourceImpl::pullSamplesAndCallDataCallback(const Me
 {
     ASSERT(isMainThread());
 
-    auto data = WebAudioBufferList { audioDescription, static_cast<uint32_t>(sampleCount) };
+    auto data = WebAudioBufferList { audioDescription, sampleCount };
     {
         Locker locker { m_dataSourceLock };
         m_dataSource->pullSamples(*data.list(), sampleCount, time.timeValue(), 0, AudioSampleDataSource::Copy);
@@ -138,7 +138,7 @@ void SpeechRecognitionCaptureSourceImpl::audioSamplesAvailable(const MediaTime& 
 
     m_dataSource->pushSamples(time, data, sampleCount);
 
-    callOnMainThread([weakThis = makeWeakPtr(this), time, audioDescription, sampleCount] {
+    callOnMainThread([weakThis = WeakPtr { *this }, time, audioDescription, sampleCount] {
         if (weakThis)
             weakThis->pullSamplesAndCallDataCallback(time, audioDescription, sampleCount);
     });

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -889,7 +889,7 @@ public class TreeTableViewMouseInputTest {
             assertFalse(sm.isSelected(row, firstNameCol));
             assertFalse(sm.isSelected(row, lastNameCol));
             assertTrue(sm.isSelected(row, emailCol));
-            assertFalse(sm.isSelected(row));
+            assertTrue(sm.isSelected(row));
 
             // and assert that the visuals are accurate
             // (some TableCells should be selected, but TableRows should not be)
@@ -966,7 +966,7 @@ public class TreeTableViewMouseInputTest {
         if (cellSelection) {
             // Because we are in cell selection mode, this has the effect of
             // selecting just the one cell.
-            assertFalse(sm.isSelected(0));
+            assertTrue(sm.isSelected(0));
             assertTrue(sm.isSelected(0, firstNameCol));
             assertFalse(sm.isSelected(0, lastNameCol));
             assertFalse(sm.isSelected(0, emailCol));
@@ -992,7 +992,7 @@ public class TreeTableViewMouseInputTest {
         if (cellSelection) {
             // Everything should remain the same, except the
             // column of the single selected cell should change to lastNameCol.
-            assertFalse(sm.isSelected(0));
+            assertTrue(sm.isSelected(0));
             assertFalse(sm.isSelected(0, firstNameCol));
             assertTrue(sm.isSelected(0, lastNameCol));
             assertFalse(sm.isSelected(0, emailCol));

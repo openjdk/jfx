@@ -51,10 +51,6 @@ public:
     void removeResource(const AtomString& id);
     RenderSVGResourceContainer* resourceById(const AtomString& id) const;
 
-    void addUseElementWithPendingShadowTreeUpdate(SVGUseElement&);
-    void removeUseElementWithPendingShadowTreeUpdate(SVGUseElement&);
-    const WeakHashSet<SVGUseElement>& useElementsWithPendingShadowTreeUpdate() const { return m_useElementsWithPendingShadowTreeUpdate; }
-
     void startAnimations();
     void pauseAnimations();
     void unpauseAnimations();
@@ -86,7 +82,6 @@ private:
     std::unique_ptr<SVGResourcesCache> m_resourcesCache;
 
     Vector<Ref<SVGElement>> m_rebuildElements;
-    WeakHashSet<SVGUseElement> m_useElementsWithPendingShadowTreeUpdate;
     bool m_areAnimationsPaused;
 
 public:

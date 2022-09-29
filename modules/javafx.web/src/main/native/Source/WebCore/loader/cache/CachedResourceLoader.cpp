@@ -50,7 +50,7 @@
 #include "DateComponents.h"
 #include "DiagnosticLoggingClient.h"
 #include "DiagnosticLoggingKeys.h"
-#include "Document.h"
+#include "DocumentInlines.h"
 #include "DocumentLoader.h"
 #include "Frame.h"
 #include "FrameLoader.h"
@@ -72,6 +72,7 @@
 #include "ResourceTiming.h"
 #include "RuntimeApplicationChecks.h"
 #include "RuntimeEnabledFeatures.h"
+#include "SVGElementTypeHelpers.h"
 #include "SVGImage.h"
 #include "ScriptController.h"
 #include "SecurityOrigin.h"
@@ -95,8 +96,8 @@
 #endif
 
 #undef CACHEDRESOURCELOADER_RELEASE_LOG
-#define PAGE_ID(frame) (frame.pageID().value_or(PageIdentifier()).toUInt64())
-#define FRAME_ID(frame) (frame.frameID().value_or(FrameIdentifier()).toUInt64())
+#define PAGE_ID(frame) (valueOrDefault(frame.pageID()).toUInt64())
+#define FRAME_ID(frame) (valueOrDefault(frame.frameID()).toUInt64())
 #define CACHEDRESOURCELOADER_RELEASE_LOG(fmt, ...) RELEASE_LOG(Network, "%p - CachedResourceLoader::" fmt, this, ##__VA_ARGS__)
 #define CACHEDRESOURCELOADER_RELEASE_LOG_WITH_FRAME(fmt, frame, ...) RELEASE_LOG(Network, "%p - [pageID=%" PRIu64 ", frameID=%" PRIu64 "] CachedResourceLoader::" fmt, this, PAGE_ID(frame), FRAME_ID(frame), ##__VA_ARGS__)
 
@@ -358,7 +359,7 @@ ResourceErrorOr<CachedResourceHandle<CachedRawResource>> CachedResourceLoader::r
 
 ResourceErrorOr<CachedResourceHandle<CachedRawResource>> CachedResourceLoader::requestPingResource(CachedResourceRequest&& request)
 {
-    ASSERT(request.options().destination == FetchOptions::Destination::EmptyString);
+    ASSERT(request.options().destination == FetchOptions::Destination::EmptyString || request.options().destination == FetchOptions::Destination::Report);
     return castCachedResourceTo<CachedRawResource>(requestResource(CachedResource::Type::Ping, WTFMove(request)));
 }
 
@@ -495,16 +496,21 @@ bool CachedResourceLoader::allowedByContentSecurityPolicy(CachedResource::Type t
     ASSERT(m_document);
     ASSERT(m_document->contentSecurityPolicy());
 
+    // All content loaded through embed or object elements goes through object-src: https://www.w3.org/TR/CSP3/#directive-object-src.
+    if (options.loadedFromPluginElement == LoadedFromPluginElement::Yes
+        && !m_document->contentSecurityPolicy()->allowObjectFromSource(url, redirectResponseReceived, preRedirectURL))
+        return false;
+
     switch (type) {
 #if ENABLE(XSLT)
     case CachedResource::Type::XSLStyleSheet:
 #endif
     case CachedResource::Type::Script:
-        if (!m_document->contentSecurityPolicy()->allowScriptFromSource(url, redirectResponseReceived, preRedirectURL))
+        if (!m_document->contentSecurityPolicy()->allowScriptFromSource(url, redirectResponseReceived, preRedirectURL, options.integrity, options.nonce))
             return false;
         break;
     case CachedResource::Type::CSSStyleSheet:
-        if (!m_document->contentSecurityPolicy()->allowStyleFromSource(url, redirectResponseReceived, preRedirectURL))
+        if (!m_document->contentSecurityPolicy()->allowStyleFromSource(url, redirectResponseReceived, preRedirectURL, options.nonce))
             return false;
         break;
     case CachedResource::Type::SVGDocumentResource:
@@ -795,10 +801,11 @@ void CachedResourceLoader::updateHTTPRequestHeaders(FrameLoader& frameLoader, Ca
     request.updateAcceptEncodingHeader();
 }
 
-static FetchOptions::Destination destinationForType(CachedResource::Type type)
+static FetchOptions::Destination destinationForType(CachedResource::Type type, Frame& frame)
 {
     switch (type) {
     case CachedResource::Type::MainResource:
+        return frame.isMainFrame() ? FetchOptions::Destination::Document : FetchOptions::Destination::Iframe;
     case CachedResource::Type::SVGDocumentResource:
         return FetchOptions::Destination::Document;
     case CachedResource::Type::ImageResource:
@@ -868,7 +875,7 @@ ResourceErrorOr<CachedResourceHandle<CachedResource>> CachedResourceLoader::requ
 
     LOG(ResourceLoading, "CachedResourceLoader::requestResource '%.255s', charset '%s', priority=%d, forPreload=%u", url.stringCenterEllipsizedToLength().latin1().data(), request.charset().latin1().data(), request.priority() ? static_cast<int>(request.priority().value()) : -1, forPreload == ForPreload::Yes);
 
-    request.setDestinationIfNotSet(destinationForType(type));
+    request.setDestinationIfNotSet(destinationForType(type, frame));
 
     // Entry point to https://fetch.spec.whatwg.org/#main-fetch.
     std::unique_ptr<ResourceRequest> originalRequest;
@@ -880,7 +887,7 @@ ResourceErrorOr<CachedResourceHandle<CachedResource>> CachedResourceLoader::requ
 
     prepareFetch(type, request);
 
-    if (request.options().destination == FetchOptions::Destination::Document) {
+    if (request.options().destination == FetchOptions::Destination::Document || request.options().destination == FetchOptions::Destination::Iframe) {
         // FIXME: Identify HSTS cases and avoid adding the header. <https://bugs.webkit.org/show_bug.cgi?id=157885>
         if (!url.protocolIs("https"))
             request.resourceRequest().setHTTPHeaderField(HTTPHeaderName::UpgradeInsecureRequests, "1"_s);
@@ -949,7 +956,7 @@ ResourceErrorOr<CachedResourceHandle<CachedResource>> CachedResourceLoader::requ
             else if (auto* topDocument = frame.mainFrame().document())
                 sameOriginRequest = topDocument->securityOrigin().isSameSchemeHostPort(requestedOrigin.get());
         } else if (document()) {
-            sameOriginRequest = document()->topDocument().securityOrigin().isSameSchemeHostPort(requestedOrigin.get())
+            sameOriginRequest = document()->topOrigin().isSameSchemeHostPort(requestedOrigin.get())
                 && document()->securityOrigin().isSameSchemeHostPort(requestedOrigin.get());
         }
         for (auto& fields : m_documentLoader->customHeaderFields()) {
@@ -1012,11 +1019,15 @@ ResourceErrorOr<CachedResourceHandle<CachedResource>> CachedResourceLoader::requ
                     return makeUnexpected(WTFMove(*error));
             }
         }
-        if (request.options().mode == FetchOptions::Mode::NoCors) {
+        // Per the Fetch specification, the "cross-origin resource policy check" should only occur in the HTTP Fetch case (https://fetch.spec.whatwg.org/#concept-http-fetch).
+        // However, per https://fetch.spec.whatwg.org/#main-fetch, if the request URL's protocol is "data:", then we should perform a scheme fetch which would end up
+        // returning a response WITHOUT performing an HTTP fetch (and thus no CORP check).
+        if (request.options().mode == FetchOptions::Mode::NoCors && !url.protocolIsData()) {
             auto coep = document() ? document()->crossOriginEmbedderPolicy().value : CrossOriginEmbedderPolicyValue::UnsafeNone;
             if (auto error = validateCrossOriginResourcePolicy(coep, *request.origin(), request.resourceRequest().url(), resource->response(), ForNavigation::No))
                 return makeUnexpected(WTFMove(*error));
-
+        }
+        if (request.options().mode == FetchOptions::Mode::NoCors) {
             if (auto error = validateRangeRequestedFlag(request.resourceRequest(), resource->response()))
                 return makeUnexpected(WTFMove(*error));
         }
@@ -1040,7 +1051,7 @@ ResourceErrorOr<CachedResourceHandle<CachedResource>> CachedResourceLoader::requ
                 // for this document because it may have been speculatively preloaded.
                 if (auto metricsFromResource = resource->takeNetworkLoadMetrics(); metricsFromResource && documentLoader && metricsFromResource->redirectStart >= documentLoader->timing().timeOrigin())
                     metrics = WTFMove(metricsFromResource);
-                auto resourceTiming = ResourceTiming::fromMemoryCache(url, request.initiatorName(), loadTiming, resource->response(), metrics ? *metrics : NetworkLoadMetrics { }, *request.origin());
+                auto resourceTiming = ResourceTiming::fromMemoryCache(url, request.initiatorName(), loadTiming, resource->response(), metrics ? *metrics : NetworkLoadMetrics::emptyMetrics(), *request.origin());
                 if (initiatorContext == InitiatorContext::Worker) {
                     ASSERT(is<CachedRawResource>(resource.get()));
                     downcast<CachedRawResource>(resource.get())->finishedTimingForWorkerLoad(WTFMove(resourceTiming));
@@ -1081,11 +1092,11 @@ ResourceErrorOr<CachedResourceHandle<CachedResource>> CachedResourceLoader::requ
     }
 
     if (document() && !document()->loadEventFinished() && !resource->resourceRequest().url().protocolIsData())
-        m_validatedURLs.add(resource->resourceRequest().url().string());
+        m_validatedURLs.add(resource->resourceRequest().url());
 
     ASSERT(resource->url() == url.string());
     m_documentResources.set(resource->url().string(), resource);
-#if ENABLE(RESOURCE_LOAD_STATISTICS)
+#if ENABLE(INTELLIGENT_TRACKING_PREVENTION)
     frame.loader().client().didLoadFromRegistrableDomain(RegistrableDomain(resource->resourceRequest().url()));
 #endif
     return resource;
@@ -1289,7 +1300,7 @@ CachedResourceLoader::RevalidationPolicy CachedResourceLoader::determineRevalida
     }
 
     // During the initial load, avoid loading the same resource multiple times for a single document, even if the cache policies would tell us to.
-    if (document() && !document()->loadEventFinished() && m_validatedURLs.contains(existingResource->url().string()))
+    if (document() && !document()->loadEventFinished() && m_validatedURLs.contains(existingResource->url()))
         return Use;
 
     // CachePolicy::Reload always reloads
@@ -1498,7 +1509,7 @@ void CachedResourceLoader::decrementRequestCount(const CachedResource& resource)
 void CachedResourceLoader::notifyFinished(const CachedResource& resource)
 {
     if (isSVGImageCachedResource(&resource))
-        m_cachedSVGImagesURLs.add(resource.url().string());
+        m_cachedSVGImagesURLs.add(resource.url());
 }
 
 Vector<Ref<SVGImage>> CachedResourceLoader::allCachedSVGImages() const

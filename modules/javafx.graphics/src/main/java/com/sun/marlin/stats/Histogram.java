@@ -88,7 +88,7 @@ public final class Histogram extends StatLong {
         super.toString(sb).append(" { ");
 
         for (int i = 0; i < MAX; i++) {
-            if (stats[i].count != 0l) {
+            if (stats[i].count != 0L) {
                 sb.append("\n        ").append(stats[i].toString());
             }
         }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -425,8 +425,8 @@ final class NativeMediaAudioClipPlayer
     }
 
     /*
-     * Override equals for using in a List of clips pended for pllayback.
-     * Equals is used to avoid repetitions. hashCode is not necessary here.
+     * Override equals for using in a List of clips pended for playback.
+     * Equals is used to avoid repetitions.
      */
     @Override
     public boolean equals(Object that) {
@@ -449,6 +449,19 @@ final class NativeMediaAudioClipPlayer
         } else {
             return false;
         }
+    }
+
+    @Override
+    public int hashCode() {
+        int h = NativeMediaAudioClipPlayer.class.hashCode();
+        h = 31 * h + sourceClip.getLocator().getURI().hashCode();
+        h = 31 * h + priority;
+        h = 31 * h + loopCount;
+        h = 31 * h + Double.hashCode(volume);
+        h = 31 * h + Double.hashCode(balance);
+        h = 31 * h + Double.hashCode(rate);
+        h = 31 * h + Double.hashCode(pan);
+        return h;
     }
 
     private static class SchedulerEntry {
@@ -516,6 +529,11 @@ final class NativeMediaAudioClipPlayer
                 }
             }
             return false;
+        }
+
+        @Override
+        public int hashCode() {
+            return player == null ? 0 : player.hashCode();
         }
     }
 }

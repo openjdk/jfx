@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -55,7 +55,7 @@ import java.util.Locale;
 import java.util.ResourceBundle;
 import static com.sun.javafx.FXPermissions.*;
 
-class WindowStage extends GlassStage {
+public class WindowStage extends GlassStage {
 
     protected Window platformWindow;
 
@@ -223,7 +223,7 @@ class WindowStage extends GlassStage {
         }
     }
 
-    final Window getPlatformWindow() {
+    public final Window getPlatformWindow() {
         return platformWindow;
     }
 

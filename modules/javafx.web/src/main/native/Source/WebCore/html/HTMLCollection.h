@@ -75,7 +75,7 @@ public:
     Vector<Ref<Element>> namedItems(const AtomString& name) const;
     size_t memoryCost() const override;
 
-    bool isRootedAtDocument() const;
+    bool isRootedAtTreeScope() const;
     NodeListInvalidationType invalidationType() const;
     CollectionType type() const;
     ContainerNode& ownerNode() const;
@@ -103,7 +103,7 @@ protected:
 
     void invalidateNamedElementCache(Document&) const;
 
-    enum RootType { IsRootedAtNode, IsRootedAtDocument };
+    enum RootType { IsRootedAtNode, IsRootedAtTreeScope };
     static RootType rootTypeFromCollectionType(CollectionType);
 
     mutable Lock m_namedElementCacheAssignmentLock;
@@ -119,9 +119,8 @@ protected:
 
 inline ContainerNode& HTMLCollection::rootNode() const
 {
-    if (isRootedAtDocument() && ownerNode().isConnected())
-        return ownerNode().document();
-
+    if (isRootedAtTreeScope() && ownerNode().isInTreeScope())
+        return ownerNode().treeScope().rootNode();
     return ownerNode();
 }
 
@@ -183,9 +182,9 @@ inline size_t HTMLCollection::memoryCost() const
     return m_namedElementCache ? m_namedElementCache->memoryCost() : 0;
 }
 
-inline bool HTMLCollection::isRootedAtDocument() const
+inline bool HTMLCollection::isRootedAtTreeScope() const
 {
-    return m_rootType == IsRootedAtDocument;
+    return m_rootType == IsRootedAtTreeScope;
 }
 
 inline NodeListInvalidationType HTMLCollection::invalidationType() const

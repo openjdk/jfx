@@ -31,6 +31,7 @@ import com.sun.javafx.geom.Rectangle;
 import com.sun.javafx.geom.Shape;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.marlin.DMarlinRenderingEngine;
+import com.sun.marlin.MarlinProperties;
 import com.sun.marlin.MarlinRenderer;
 import com.sun.marlin.MaskMarlinAlphaConsumer;
 import com.sun.marlin.RendererContext;
@@ -42,6 +43,8 @@ import com.sun.prism.impl.PrismSettings;
  */
 public final class DMarlinRasterizer implements ShapeRasterizer {
     private static final MaskData EMPTY_MASK = MaskData.create(new byte[1], 0, 0, 1, 1);
+
+    private static final boolean DO_RENDER = !MarlinProperties.isSkipRenderTiles();
 
     @Override
     public MaskData getMaskData(Shape shape,
@@ -107,6 +110,9 @@ public final class DMarlinRasterizer implements ShapeRasterizer {
             consumer.setBoundsNoClone(outpix_xmin, outpix_ymin, w, h);
             renderer.produceAlphas(consumer);
 
+            if (!DO_RENDER) {
+                return EMPTY_MASK;
+            }
             return consumer.getMaskData();
         } finally {
             if (renderer != null) {

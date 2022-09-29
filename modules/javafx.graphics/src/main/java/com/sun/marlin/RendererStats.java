@@ -100,6 +100,8 @@ public final class RendererStats implements MarlinConst {
         = new StatLong("renderer.crossings.bsearch");
     final StatLong stat_rdr_crossings_msorts
         = new StatLong("renderer.crossings.msorts");
+    final StatLong stat_rdr_crossings_dpqs
+        = new StatLong("renderer.crossings.dpqs");
     final StatLong stat_str_polystack_curves
         = new StatLong("stroker.polystack.curves");
     final StatLong stat_str_polystack_types
@@ -195,6 +197,7 @@ public final class RendererStats implements MarlinConst {
         stat_rdr_crossings_sorts,
         stat_rdr_crossings_bsearch,
         stat_rdr_crossings_msorts,
+        stat_rdr_crossings_dpqs,
         stat_str_polystack_types,
         stat_str_polystack_curves,
         stat_cpd_polystack_curves,
@@ -333,7 +336,7 @@ public final class RendererStats implements MarlinConst {
     static final class RendererStatsHolder {
 
         // singleton
-        private static volatile RendererStatsHolder SINGLETON = null;
+        private static volatile RendererStatsHolder SINGLETON;
 
         static synchronized RendererStatsHolder getInstance() {
             if (SINGLETON == null) {

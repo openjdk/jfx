@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -43,7 +43,7 @@ public interface TestedObservableLists {
     Callable<ObservableList<String>> VETOABLE_LIST = () -> new VetoableListDecorator<String>(FXCollections.<String>observableArrayList()) {
 
         @Override
-        protected void onProposedChange(List list, int[] idx) { }
+        protected void onProposedChange(List list, int... idx) { }
     };
 
     Callable<ObservableList<String>> CHECKED_OBSERVABLE_ARRAY_LIST = () -> FXCollections.checkedObservableList(FXCollections.observableList(new ArrayList()), String.class);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2016, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -207,5 +207,11 @@ class TableSkinUtils {
             return treeTableViewSkin.tableBackingListProperty;
         }
         return null;
+    }
+
+    /** returns true if the column resize policy is constrained */
+    public static boolean isConstrainedResizePolicy(Callback<? extends ResizeFeaturesBase, Boolean> x) {
+        return (x == TableView.CONSTRAINED_RESIZE_POLICY) ||
+               (x == TreeTableView.CONSTRAINED_RESIZE_POLICY);
     }
 }

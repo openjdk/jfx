@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -243,7 +243,7 @@ public abstract class TableRowSkinBase<T,
     }
 
     /** {@inheritDoc} */
-    @Override protected void layoutChildren(double x, final double y, final double w, final double h) {
+    @Override protected void layoutChildren(double x, double y, final double w, final double h) {
         checkState();
         if (cellsMap.isEmpty()) return;
 
@@ -316,10 +316,6 @@ public abstract class TableRowSkinBase<T,
         double width;
         double height;
 
-        final double verticalPadding = snappedTopInset() + snappedBottomInset();
-        final double horizontalPadding = snappedLeftInset() + snappedRightInset();
-        final double controlHeight = control.getHeight();
-
         /**
          * RT-26743:TreeTableView: Vertical Line looks unfinished.
          * We used to not do layout on cells whose row exceeded the number
@@ -347,18 +343,18 @@ public abstract class TableRowSkinBase<T,
                 // may be variable and / or dynamic.
                 isVisible = isColumnPartiallyOrFullyVisible(tableColumn);
 
+                y = 0;
                 height = fixedCellSize;
             } else {
-                height = Math.max(controlHeight, tableCell.prefHeight(-1));
-                height = snapSizeY(height) - snapSizeY(verticalPadding);
+                height = h;
             }
+
+            width = tableCell.prefWidth(height);
 
             if (isVisible) {
                 if (fixedCellSizeEnabled && tableCell.getParent() == null) {
                     getChildren().add(tableCell);
                 }
-
-                width = tableCell.prefWidth(height) - snapSizeX(horizontalPadding);
 
                 // Added for RT-32700, and then updated for RT-34074.
                 // We change the alignment from CENTER_LEFT to TOP_LEFT if the
@@ -367,7 +363,7 @@ public abstract class TableRowSkinBase<T,
                 // What I would rather do is only change the alignment if the
                 // alignment has not been manually changed, but for now this will
                 // do.
-                final boolean centreContent = h <= 24.0;
+                final boolean centreContent = height <= 24.0;
 
                 // if the style origin is null then the property has not been
                 // set (or it has been reset to its default), which means that
@@ -392,7 +388,7 @@ public abstract class TableRowSkinBase<T,
                             disclosureNode.resize(disclosureWidth, ph);
 
                             disclosureNode.relocate(x + leftMargin,
-                                    centreContent ? (h / 2.0 - ph / 2.0) :
+                                    centreContent ? y + (h / 2.0 - ph / 2.0) :
                                             (y + tableCell.getPadding().getTop()));
                             disclosureNode.toFront();
                         }
@@ -423,16 +419,13 @@ public abstract class TableRowSkinBase<T,
                 ///////////////////////////////////////////
                 // further indentation code ends here
                 ///////////////////////////////////////////
-
                 tableCell.resize(width, height);
-                tableCell.relocate(x, snappedTopInset());
+                tableCell.relocate(x, y);
 
                 // Request layout is here as (partial) fix for RT-28684.
                 // This does not appear to impact performance...
                 tableCell.requestLayout();
             } else {
-                width = snapSizeX(tableCell.prefWidth(-1)) - snapSizeX(horizontalPadding);
-
                 if (fixedCellSizeEnabled) {
                     // we only add/remove to the scenegraph if the fixed cell
                     // length support is enabled - otherwise we keep all
@@ -562,7 +555,7 @@ public abstract class TableRowSkinBase<T,
 
     /** {@inheritDoc} */
     @Override protected double computePrefWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
-        double prefWidth = 0.0;
+        double prefWidth = leftInset + rightInset;
         for (R cell : cells) {
             prefWidth += cell.prefWidth(height);
         }
@@ -582,8 +575,9 @@ public abstract class TableRowSkinBase<T,
         // cells via CSS, where the desired height is less than the height
         // of the TableCells. Essentially, -fx-cell-size is given higher
         // precedence now
+        double cellSizeWithInsets = getCellSize() + topInset + bottomInset;
         if (getCellSize() < DEFAULT_CELL_SIZE) {
-            return getCellSize();
+            return cellSizeWithInsets;
         }
 
         // FIXME according to profiling, this method is slow and should
@@ -594,8 +588,10 @@ public abstract class TableRowSkinBase<T,
             final R tableCell = cells.get(i);
             prefHeight = Math.max(prefHeight, tableCell.prefHeight(-1));
         }
-        double ph = Math.max(prefHeight, Math.max(getCellSize(), getSkinnable().minHeight(-1)));
+        prefHeight += topInset + bottomInset;
 
+        double cellSizeOrMinHeight = Math.max(cellSizeWithInsets, getSkinnable().minHeight(-1));
+        double ph = Math.max(prefHeight, cellSizeOrMinHeight);
         return ph;
     }
 
@@ -613,7 +609,7 @@ public abstract class TableRowSkinBase<T,
         // of the TableCells. Essentially, -fx-cell-size is given higher
         // precedence now
         if (getCellSize() < DEFAULT_CELL_SIZE) {
-            return getCellSize();
+            return getCellSize() + topInset + bottomInset;
         }
 
         // FIXME according to profiling, this method is slow and should
@@ -624,6 +620,8 @@ public abstract class TableRowSkinBase<T,
             final R tableCell = cells.get(i);
             minHeight = Math.max(minHeight, tableCell.minHeight(-1));
         }
+
+        minHeight += topInset + bottomInset;
         return minHeight;
     }
 

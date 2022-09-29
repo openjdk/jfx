@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -76,7 +76,7 @@ public class TimelineController {
                 endBtn.setDisable(false);
                 loopBtn.setDisable(false);
                 playBtn.setSelected(t.getCurrentRate() != 0);
-                loopBtn.setSelected(t.getCycleDuration().equals(Timeline.INDEFINITE));
+                loopBtn.setSelected(t.getCycleCount() == Timeline.INDEFINITE);
                 t.currentRateProperty().addListener(rateListener);
             }
             old = t;

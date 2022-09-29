@@ -44,7 +44,7 @@ typedef uint64_t GLNativeWindowType;
 typedef struct _cairo_device cairo_device_t;
 #endif
 
-typedef void* PlatformGraphicsContextGL;
+typedef void* GCGLContext;
 
 // X11 headers define a bunch of macros with common terms, interfering with WebCore and WTF enum values.
 // As a workaround, we explicitly undef them here.
@@ -108,7 +108,7 @@ public:
 
     virtual bool isEGLContext() const = 0;
 
-    virtual PlatformGraphicsContextGL platformContext() = 0;
+    virtual GCGLContext platformContext() = 0;
 
 protected:
     GLContext(PlatformDisplay&);
@@ -118,5 +118,10 @@ protected:
 };
 
 } // namespace WebCore
+
+#define SPECIALIZE_TYPE_TRAITS_GLCONTEXT(ToValueTypeName, predicate) \
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::ToValueTypeName) \
+    static bool isType(const WebCore::GLContext& context) { return context.predicate; } \
+SPECIALIZE_TYPE_TRAITS_END()
 
 #endif // GLContext_h

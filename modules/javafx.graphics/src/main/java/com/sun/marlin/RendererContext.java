@@ -33,6 +33,7 @@ import com.sun.marlin.ArrayCacheConst.CacheStats;
 import com.sun.marlin.TransformingPathConsumer2D.CurveBasicMonotonizer;
 import com.sun.marlin.TransformingPathConsumer2D.CurveClipSplitter;
 import com.sun.util.reentrant.ReentrantContext;
+import com.sun.marlin.ArrayCacheIntClean;
 
 /**
  * This class is a renderer context dedicated to a single thread
@@ -48,8 +49,7 @@ public final class RendererContext extends ReentrantContext implements MarlinCon
      * @return new RendererContext instance
      */
     public static RendererContext createContext() {
-        return new RendererContext("ctx"
-                       + Integer.toString(CTX_COUNT.getAndIncrement()));
+        return new RendererContext("ctx" + CTX_COUNT.getAndIncrement());
     }
 
     // Smallest object used as Cleaner's parent reference
@@ -83,8 +83,15 @@ public final class RendererContext extends ReentrantContext implements MarlinCon
     public double clipInvScale = 0.0d;
     // CurveBasicMonotonizer instance
     public final CurveBasicMonotonizer monotonizer;
+    // bit flags indicating to skip the stroker to process joins
+    // bits: 2 : Dasher CurveClipSplitter
+    // bits: 1 : Dasher CurveBasicMonotonizer
+    // bits: 0 : Stroker CurveClipSplitter
+    public int firstFlags = 0;
     // CurveClipSplitter instance
     final CurveClipSplitter curveClipSplitter;
+    // DPQS Sorter context
+    final DPQSSorterContext sorterCtx;
 
 // MarlinFX specific:
     // shared memory between renderer instances:
@@ -97,13 +104,13 @@ public final class RendererContext extends ReentrantContext implements MarlinCon
 
     // Array caches:
     /* clean int[] cache (zero-filled) = 5 refs */
-    private final IntArrayCache cleanIntCache = new IntArrayCache(true, 5);
+    private final ArrayCacheIntClean cleanIntCache = new ArrayCacheIntClean(5);
     /* dirty int[] cache = 5 refs */
-    private final IntArrayCache dirtyIntCache = new IntArrayCache(false, 5);
+    private final ArrayCacheInt dirtyIntCache = new ArrayCacheInt(5);
     /* dirty double[] cache = 4 refs (2 polystack) */
-    private final DoubleArrayCache dirtyDoubleCache = new DoubleArrayCache(false, 4);
+    private final ArrayCacheDouble dirtyDoubleCache = new ArrayCacheDouble(4);
     /* dirty byte[] cache = 2 ref (2 polystack) */
-    private final ByteArrayCache dirtyByteCache = new ByteArrayCache(false, 2);
+    private final ArrayCacheByte dirtyByteCache = new ArrayCacheByte(2);
 
     // RendererContext statistics
     final RendererStats stats;
@@ -145,6 +152,8 @@ public final class RendererContext extends ReentrantContext implements MarlinCon
 
         stroker = new Stroker(this);
         dasher = new Dasher(this);
+
+        sorterCtx = (MergeSort.USE_DPQS) ? new DPQSSorterContext() : null;
     }
 
     /**
@@ -162,6 +171,7 @@ public final class RendererContext extends ReentrantContext implements MarlinCon
         doClip     = false;
         closedPath = false;
         clipInvScale = 0.0d;
+        firstFlags = 0;
 
         // if context is maked as DIRTY:
         if (dirty) {
@@ -208,19 +218,19 @@ public final class RendererContext extends ReentrantContext implements MarlinCon
         return new OffHeapArray(cleanerObj, initialSize);
     }
 
-    IntArrayCache.Reference newCleanIntArrayRef(final int initialSize) {
+    ArrayCacheIntClean.Reference newCleanIntArrayRef(final int initialSize) {
         return cleanIntCache.createRef(initialSize);
     }
 
-    IntArrayCache.Reference newDirtyIntArrayRef(final int initialSize) {
+    ArrayCacheInt.Reference newDirtyIntArrayRef(final int initialSize) {
         return dirtyIntCache.createRef(initialSize);
     }
 
-    DoubleArrayCache.Reference newDirtyDoubleArrayRef(final int initialSize) {
+    ArrayCacheDouble.Reference newDirtyDoubleArrayRef(final int initialSize) {
         return dirtyDoubleCache.createRef(initialSize);
     }
 
-    ByteArrayCache.Reference newDirtyByteArrayRef(final int initialSize) {
+    ArrayCacheByte.Reference newDirtyByteArrayRef(final int initialSize) {
         return dirtyByteCache.createRef(initialSize);
     }
 
@@ -230,25 +240,25 @@ public final class RendererContext extends ReentrantContext implements MarlinCon
         final OffHeapArray edges;
 
         // edgeBuckets ref (clean)
-        final IntArrayCache.Reference edgeBuckets_ref;
+        final ArrayCacheIntClean.Reference edgeBuckets_ref;
         // edgeBucketCounts ref (clean)
-        final IntArrayCache.Reference edgeBucketCounts_ref;
+        final ArrayCacheIntClean.Reference edgeBucketCounts_ref;
 
         // alphaLine ref (clean)
-        final IntArrayCache.Reference alphaLine_ref;
+        final ArrayCacheIntClean.Reference alphaLine_ref;
 
         // crossings ref (dirty)
-        final IntArrayCache.Reference crossings_ref;
+        final ArrayCacheInt.Reference crossings_ref;
         // edgePtrs ref (dirty)
-        final IntArrayCache.Reference edgePtrs_ref;
-        // merge sort initial arrays
+        final ArrayCacheInt.Reference edgePtrs_ref;
+        // merge sort initial arrays (large enough to satisfy most usages) (1024)
         // aux_crossings ref (dirty)
-        final IntArrayCache.Reference aux_crossings_ref;
+        final ArrayCacheInt.Reference aux_crossings_ref;
         // aux_edgePtrs ref (dirty)
-        final IntArrayCache.Reference aux_edgePtrs_ref;
+        final ArrayCacheInt.Reference aux_edgePtrs_ref;
 
         // blkFlags ref (clean)
-        final IntArrayCache.Reference blkFlags_ref;
+        final ArrayCacheIntClean.Reference blkFlags_ref;
 
         RendererSharedMemory(final RendererContext rdrCtx) {
             edges = rdrCtx.newOffHeapArray(INITIAL_EDGES_CAPACITY); // 96K

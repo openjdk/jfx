@@ -78,6 +78,10 @@ list(APPEND WebCore_LIBRARIES
 
 add_definitions(-DSTATICALLY_LINKED_WITH_JavaScriptCore)
 add_definitions(-DSTATICALLY_LINKED_WITH_WTF)
+if (USE_SYSTEM_MALLOC)
+    message(STATUS "Using system malloc")
+    add_definitions(-DUSE_SYSTEM_MALLOC)
+endif ()
 
 list(APPEND WebCore_PRIVATE_FRAMEWORK_HEADERS
     bindings/java/JavaDOMUtils.h

@@ -37,4 +37,5 @@ final class MainThread {
     }
 
     private static native void twkScheduleDispatchFunctions();
+    static native void twkSetShutdown(boolean isShutdown);
 }

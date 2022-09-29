@@ -27,7 +27,7 @@
 #include "CachedResourceLoader.h"
 #include "CachedResourceRequest.h"
 #include "CachedXSLStyleSheet.h"
-#include "Document.h"
+#include "DocumentInlines.h"
 #include "Frame.h"
 #include "FrameLoader.h"
 #include "MediaList.h"
@@ -85,10 +85,6 @@ Ref<Node> ProcessingInstruction::cloneNodeInternal(Document& targetDocument, Clo
 
 void ProcessingInstruction::checkStyleSheet()
 {
-    // Prevent recursive loading of stylesheet.
-    if (m_isHandlingBeforeLoad)
-        return;
-
     if (m_target == "xml-stylesheet" && document().frame() && parentNode() == &document()) {
         // see http://www.w3.org/TR/xml-stylesheet/
         // ### support stylesheet included in a fragment of this (or another) document
@@ -123,7 +119,7 @@ void ProcessingInstruction::checkStyleSheet()
             // to kick off import/include loads that can hang off some parent sheet.
             if (m_isXSL) {
                 URL finalURL({ }, m_localHref);
-                m_sheet = XSLStyleSheet::createEmbedded(this, finalURL);
+                m_sheet = XSLStyleSheet::createEmbedded(*this, finalURL);
                 m_loading = false;
                 document().scheduleToApplyXSLTransforms();
             }
@@ -142,12 +138,6 @@ void ProcessingInstruction::checkStyleSheet()
             Ref<Document> originalDocument = document();
 
             String url = document().completeURL(href).string();
-
-            {
-            SetForScope<bool> change(m_isHandlingBeforeLoad, true);
-            if (!dispatchBeforeLoadEvent(url))
-                return;
-            }
 
             bool didEventListenerDisconnectThisElement = !isConnected() || &document() != originalDocument.ptr();
             if (didEventListenerDisconnectThisElement)
@@ -237,7 +227,7 @@ void ProcessingInstruction::setCSSStyleSheet(const String& href, const URL& base
 void ProcessingInstruction::setXSLStyleSheet(const String& href, const URL& baseURL, const String& sheet)
 {
     ASSERT(m_isXSL);
-    m_sheet = XSLStyleSheet::create(this, href, baseURL);
+    m_sheet = XSLStyleSheet::create(*this, href, baseURL);
     Ref<Document> protect(document());
     parseStyleSheet(sheet);
 }

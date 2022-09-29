@@ -30,8 +30,6 @@
 
 #if USE(CG)
 #include "ImageBufferCGBitmapBackend.h"
-#elif USE(DIRECT2D)
-#include "ImageBufferDirect2DBackend.h"
 #elif USE(CAIRO)
 #include "ImageBufferCairoImageSurfaceBackend.h"
 #elif PLATFORM(JAVA)
@@ -46,8 +44,6 @@ namespace WebCore {
 
 #if USE(CG)
 using UnacceleratedImageBufferBackend = ImageBufferCGBitmapBackend;
-#elif USE(DIRECT2D)
-using UnacceleratedImageBufferBackend = ImageBufferDirect2DBackend;
 #elif USE(CAIRO)
 using UnacceleratedImageBufferBackend = ImageBufferCairoImageSurfaceBackend;
 #elif PLATFORM(JAVA)

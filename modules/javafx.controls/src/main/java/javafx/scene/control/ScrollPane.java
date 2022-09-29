@@ -291,7 +291,7 @@ public class ScrollPane extends Control {
         return hmin;
     }
     /**
-     * The minimum allowable {@link #hvalueProperty vvalue} for this ScrollPane.
+     * The minimum allowable {@link #vvalueProperty vvalue} for this ScrollPane.
      * Default value is 0.
      */
     private DoubleProperty vmin;
@@ -331,7 +331,7 @@ public class ScrollPane extends Control {
         return hmax;
     }
     /**
-     * The maximum allowable {@link #hvalueProperty vvalue} for this ScrollPane.
+     * The maximum allowable {@link #vvalueProperty vvalue} for this ScrollPane.
      * Default value is 1.
      */
     private DoubleProperty vmax;

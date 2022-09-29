@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1271,8 +1271,8 @@ final public class StyleManager {
                     if (fname == null || fname.isEmpty()) break;
 
                     StylesheetContainer container = platformUserAgentStylesheetContainers.get(n);
-                    // assignment in this conditional is intentional!
-                    if(isSame = fname.equals(container.fname)) {
+                    isSame = fname.equals(container.fname);
+                    if (isSame) {
                         // don't use fname in calculateCheckSum since it is just the key to
                         // find the StylesheetContainer. Rather, use the URL of the
                         // stylesheet that was already loaded. For example, we could have

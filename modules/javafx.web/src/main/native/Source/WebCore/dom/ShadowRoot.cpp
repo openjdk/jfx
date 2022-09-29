@@ -29,6 +29,8 @@
 #include "ShadowRoot.h"
 
 #include "CSSStyleSheet.h"
+#include "ChildListMutationScope.h"
+#include "ElementInlines.h"
 #include "ElementTraversal.h"
 #include "HTMLParserIdioms.h"
 #include "HTMLSlotElement.h"
@@ -181,6 +183,12 @@ String ShadowRoot::innerHTML() const
 
 ExceptionOr<void> ShadowRoot::setInnerHTML(const String& markup)
 {
+    if (markup.isEmpty()) {
+        ChildListMutationScope mutation(*this);
+        removeChildren();
+        return { };
+    }
+
     auto fragment = createFragmentForInnerOuterHTML(*host(), markup, AllowScriptingContent);
     if (fragment.hasException())
         return fragment.releaseException();
@@ -226,7 +234,7 @@ HTMLSlotElement* ShadowRoot::findAssignedSlot(const Node& node)
     ASSERT(node.parentNode() == host());
     if (!m_slotAssignment)
         return nullptr;
-    return m_slotAssignment->findAssignedSlot(node, *this);
+    return m_slotAssignment->findAssignedSlot(node);
 }
 
 void ShadowRoot::renameSlotElement(HTMLSlotElement& slot, const AtomString& oldName, const AtomString& newName)

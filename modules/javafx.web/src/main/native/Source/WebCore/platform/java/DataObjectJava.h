@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -204,7 +204,7 @@ public:
 
     // tav todo: where and how it's supposed to be used?
     String m_fileContentFilename;
-    RefPtr<SharedBuffer> m_fileContent;
+    RefPtr<FragmentedSharedBuffer> m_fileContent;
 
     ~DataObjectJava() {
     }

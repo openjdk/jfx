@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include <wtf/ApproximateTime.h>
 #include <wtf/ClockType.h>
 #include <wtf/MonotonicTime.h>
 #include <wtf/WallTime.h>
@@ -47,6 +48,12 @@ public:
     TimeWithDynamicClockType(MonotonicTime time)
         : m_value(time.secondsSinceEpoch().value())
         , m_type(ClockType::Monotonic)
+    {
+    }
+
+    TimeWithDynamicClockType(ApproximateTime time)
+        : m_value(time.secondsSinceEpoch().value())
+        , m_type(ClockType::Approximate)
     {
     }
 
@@ -73,6 +80,7 @@ public:
     // Asserts that the time is of the type you want.
     WTF_EXPORT_PRIVATE WallTime wallTime() const;
     WTF_EXPORT_PRIVATE MonotonicTime monotonicTime() const;
+    WTF_EXPORT_PRIVATE ApproximateTime approximateTime() const;
 
     WTF_EXPORT_PRIVATE WallTime approximateWallTime() const;
     WTF_EXPORT_PRIVATE MonotonicTime approximateMonotonicTime() const;

@@ -61,7 +61,9 @@ public class LazyObjectBindingTest {
             }
         };
 
-        binding.addListener(obs -> assertEquals("A", binding.get()));
+        binding.addListener(obs -> {
+            assertEquals("A", binding.get());
+        });
 
         binding.invalidate();  // becomes valid again immediately
 

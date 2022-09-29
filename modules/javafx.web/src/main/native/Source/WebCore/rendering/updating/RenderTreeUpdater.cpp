@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,7 +30,6 @@
 #include "ComposedTreeAncestorIterator.h"
 #include "ComposedTreeIterator.h"
 #include "Document.h"
-#include "DocumentTimeline.h"
 #include "Element.h"
 #include "FullscreenManager.h"
 #include "HTMLParserIdioms.h"
@@ -65,7 +64,7 @@
 namespace WebCore {
 
 RenderTreeUpdater::Parent::Parent(ContainerNode& root)
-    : element(is<Document>(root) ? nullptr : downcast<Element>(&root))
+    : element(dynamicDowncast<Element>(root))
     , renderTreePosition(RenderTreePosition(*root.renderer()))
 {
 }
@@ -96,7 +95,7 @@ static ContainerNode* findRenderingRoot(ContainerNode& node)
         if (!ancestor.hasDisplayContents())
             return nullptr;
     }
-    return &node.document();
+    return nullptr;
 }
 
 static ListHashSet<ContainerNode*> findRenderingRoots(const Style::Update& update)

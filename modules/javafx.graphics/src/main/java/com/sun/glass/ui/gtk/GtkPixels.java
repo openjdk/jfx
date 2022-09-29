@@ -35,6 +35,10 @@ final class GtkPixels extends Pixels {
         super(width, height, data);
     }
 
+    public GtkPixels(int width, int height, ByteBuffer data, float scalex, float scaley) {
+        super(width, height, data, scalex, scaley);
+    }
+
     public GtkPixels(int width, int height, IntBuffer data) {
         super(width, height, data);
     }
