@@ -193,7 +193,7 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
     // Holds concrete attributes for the composition runs
     private List<Shape> imattrs = new java.util.ArrayList<Shape>();
 
-    private EventHandler<InputMethodEvent> inputMethodTextChangedHandler;
+    private final EventHandler<InputMethodEvent> inputMethodTextChangedHandler = this::handleInputMethodEvent;
     private InputMethodRequests inputMethodRequests;
 
 
@@ -326,6 +326,8 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
                 }
             });
         }
+
+        control.addEventHandler(InputMethodEvent.INPUT_METHOD_TEXT_CHANGED, inputMethodTextChangedHandler);
     }
 
     @Override
@@ -333,10 +335,6 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
         super.install();
 
         TextInputControl control = getSkinnable();
-        if (control.getOnInputMethodTextChanged() == null) {
-            inputMethodTextChangedHandler = this::handleInputMethodEvent;
-            control.setOnInputMethodTextChanged(inputMethodTextChangedHandler);
-        }
 
         if (control.getInputMethodRequests() == null) {
             inputMethodRequests = new ExtendedInputMethodRequests() {
@@ -404,9 +402,7 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
             return;
         }
 
-        if (getSkinnable().getOnInputMethodTextChanged() == inputMethodTextChangedHandler) {
-            getSkinnable().setOnInputMethodTextChanged(null);
-        }
+        getSkinnable().removeEventHandler(InputMethodEvent.INPUT_METHOD_TEXT_CHANGED, inputMethodTextChangedHandler);
 
         if (getSkinnable().getInputMethodRequests() == inputMethodRequests) {
             getSkinnable().setInputMethodRequests(null);
