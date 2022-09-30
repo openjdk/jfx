@@ -91,6 +91,18 @@ class WinTextRangeProvider {
         peer = 0L;
     }
 
+    private void validateRange() {
+        String text = (String)getAttribute(TEXT);
+        if (text == null) {
+            start = end = 0;
+            return;
+        }
+
+        int length = text.length();
+        start = Math.max(0, Math.min(start, length));
+        end = Math.max(start, Math.min(end, length));
+    }
+
     void setRange(int start, int end) {
         this.start = start;
         this.end = end;
@@ -105,7 +117,7 @@ class WinTextRangeProvider {
     }
 
     @Override public String toString() {
-        return "Range(start: "+start+", end: "+end+", id: " + id + ")";
+        return "Range(start: " + start + ", end: " + end + ", id: " + id + ")";
     }
 
     private Object getAttribute(AccessibleAttribute attribute, Object... parameters) {
@@ -149,6 +161,7 @@ class WinTextRangeProvider {
         if (text == null) return;
         int length = text.length();
         if (length == 0) return;
+        validateRange();
 
         switch (unit) {
             case TextUnit_Character: {
@@ -177,7 +190,6 @@ class WinTextRangeProvider {
                 break;
             }
             case TextUnit_Line: {
-                if (start > length) start = length;
                 Integer lineIndex = (Integer)getAttribute(LINE_FOR_OFFSET, start);
                 Integer lineStart = (Integer)getAttribute(LINE_START, lineIndex);
                 Integer lineEnd = (Integer)getAttribute(LINE_END, lineIndex);
@@ -308,6 +320,7 @@ class WinTextRangeProvider {
         String text = (String)getAttribute(TEXT);
         if (text == null) return null;
         int length = text.length();
+        validateRange();
 
         /* Narrator will not focus an empty text control if the bounds are NULL */
         if (length == 0) return new double[0];
@@ -350,6 +363,7 @@ class WinTextRangeProvider {
     private String GetText(int maxLength) {
         String text = (String)getAttribute(TEXT);
         if (text == null) return null;
+        validateRange();
         int endOffset = maxLength != -1 ? Math.min(end, start + maxLength) : end;
 //        System.out.println("+GetText [" + text.substring(start, endOffset)+"]");
         return text.substring(start, endOffset);
@@ -454,8 +468,7 @@ class WinTextRangeProvider {
         }
 
         /* Always ensure range consistency */
-        start = Math.max(0, Math.min(start, length));
-        end = Math.max(start, Math.min(end, length));
+        validateRange();
         return actualCount;
     }
 
@@ -464,6 +477,7 @@ class WinTextRangeProvider {
         String text = (String)getAttribute(TEXT);
         if (text == null) return 0;
         int length = text.length();
+        validateRange();
 
         int actualCount = 0;
         int offset = endpoint == TextPatternRangeEndpoint_Start ? start : end;
@@ -559,8 +573,7 @@ class WinTextRangeProvider {
         }
 
         /* Always ensure range consistency */
-        start = Math.max(0, Math.min(start, length));
-        end = Math.max(start, Math.min(end, length));
+        validateRange();
         return actualCount;
     }
 
@@ -580,8 +593,7 @@ class WinTextRangeProvider {
         }
 
         /* Always ensure range consistency */
-        start = Math.max(0, Math.min(start, length));
-        end = Math.max(start, Math.min(end, length));
+        validateRange();
     }
 
     private void Select() {
