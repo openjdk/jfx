@@ -121,6 +121,16 @@ final class BitmapInfoHeader {
                 throw new IOException("BitmapInfoHeader is corrupt");
             }
         }
+        if (biWidth <= 0) {
+            throw new IOException("Bad BMP image width, must be > 0!");
+        }
+        if (biHeight <= 0) {
+            throw new IOException("Bad BMP image height, must be > 0!");
+        }
+        if (biWidth >= (Integer.MAX_VALUE / biHeight)) {
+            throw new IOException("Bad BMP image size!");
+        }
+
         validate();
     }
 
@@ -472,12 +482,16 @@ final class BMPImageLoader extends ImageLoaderImpl {
         if (0 != imageIndex) {
             return null;
         }
-
         int hght = Math.abs(bih.biHeight);
 
         int[] outWH = ImageTools.computeDimensions(bih.biWidth, hght, width, height, preserveAspectRatio);
         width = outWH[0];
         height = outWH[1];
+
+        int bpp = 3;
+        if (width >= (Integer.MAX_VALUE / height / bpp)) {
+            throw new IOException("Bad BMP image size!");
+        }
 
         // Pass image metadata to any listeners.
         ImageMetadata imageMetadata = new ImageMetadata(null, Boolean.TRUE,
@@ -485,9 +499,7 @@ final class BMPImageLoader extends ImageLoaderImpl {
             null, null, null);
         updateImageMetadata(imageMetadata);
 
-        int bpp = 3;
         int stride = bih.biWidth * bpp;
-
         byte image[] = new byte[stride * hght];
 
         switch (bih.biBitCount) {
