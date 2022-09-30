@@ -25,26 +25,35 @@
 
 package test.javafx.scene.control.skin;
 
+import static javafx.collections.FXCollections.observableArrayList;
+import static javafx.scene.control.ControlShim.installDefaultSkin;
+import static javafx.scene.control.SkinBaseShim.unregisterChangeListeners;
+import static javafx.scene.control.skin.TableSkinShim.getCells;
+import static javafx.scene.control.skin.TableSkinShim.getTableViewSkin;
+import static javafx.scene.control.skin.TableSkinShim.getVirtualFlow;
+import static javafx.scene.control.skin.TableSkinShim.isDirty;
+import static javafx.scene.control.skin.TableSkinShim.isFixedCellSizeEnabled;
+import static javafx.scene.control.skin.TextInputSkinShim.getPromptNode;
+import static javafx.scene.control.skin.TextInputSkinShim.getScrollPane;
+import static javafx.scene.control.skin.TextInputSkinShim.getTextNode;
+import static javafx.scene.control.skin.TextInputSkinShim.getTextTranslateX;
+import static javafx.scene.control.skin.TextInputSkinShim.setHandlePressed;
+import static javafx.scene.layout.Region.USE_COMPUTED_SIZE;
+import static javafx.scene.layout.Region.USE_PREF_SIZE;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
+import static test.com.sun.javafx.scene.control.infrastructure.ControlSkinFactory.attemptGC;
+import static test.com.sun.javafx.scene.control.infrastructure.ControlSkinFactory.replaceSkin;
+import static test.com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils.getCell;
+
 import java.lang.ref.WeakReference;
 import java.util.List;
 import java.util.stream.Collectors;
-
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Test;
-
-import com.sun.javafx.tk.Toolkit;
-
-import static javafx.collections.FXCollections.*;
-import static javafx.scene.control.ControlShim.*;
-import static javafx.scene.control.SkinBaseShim.*;
-import static javafx.scene.control.skin.TableSkinShim.*;
-import static javafx.scene.control.skin.TableSkinShim.getVirtualFlow;
-import static javafx.scene.control.skin.TextInputSkinShim.*;
-import static org.junit.Assert.*;
-import static test.com.sun.javafx.scene.control.infrastructure.ControlSkinFactory.*;
-import static test.com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils.*;
 
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
@@ -91,6 +100,14 @@ import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Font;
 import javafx.scene.text.Text;
 import javafx.stage.Stage;
+
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Ignore;
+import org.junit.Test;
+
+import com.sun.javafx.tk.Toolkit;
+
 import test.com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
 import test.com.sun.javafx.scene.control.test.Person;
 
@@ -1266,7 +1283,6 @@ public class SkinCleanupTest {
      * Test that handler installed by skin is reset on replacing skin.
      * Here we test the effect by firing an inputEvent.
      */
-    // FIX @Ignore("JDK-8268877")
     @Test
     public void testTextInputOnInputMethodTextChangedEvent() {
         String initialText = "some text";
@@ -1283,24 +1299,28 @@ public class SkinCleanupTest {
     }
 
     /**
-     * Test that handler installed by skin is reset on replacing skin.
-     * Here we test the instance of the handler.
+     * Test that handler installed by the user is not reset on replacing skin.
      */
-    // FIX @Ignore("JDK-8268877")
     @Test
-    public void testTextInputOnInputMethodTextChangedHandler() {
+    public void testTextInputUserOnInputMethodTextChangedHandler() {
         TextField field = new TextField("some text");
+        EventHandler<InputMethodEvent> h = (ev) -> { };
+        field.setOnInputMethodTextChanged(h);
+
         installDefaultSkin(field);
+
         EventHandler<? super InputMethodEvent> handler = field.getOnInputMethodTextChanged();
+
         replaceSkin(field);
-        assertNotSame("replaced skin must replace skin handler", handler, field.getOnInputMethodTextChanged());
-        assertNotNull("handler must not be null  ", field.getOnInputMethodTextChanged());
+
+        assertSame("user handler must not be changed", h, handler);
+        assertSame("replaced skin must not change handler", handler, field.getOnInputMethodTextChanged());
     }
 
     /**
      * Test that input method requests installed by skin is reset on replacing skin.
      */
-    @Test // TODO
+    @Test
     public void testTextInput_InputMethodRequestsIsResetOnReplacingSkin() {
         TextField t = new TextField();
         installDefaultSkin(t);
@@ -1315,7 +1335,7 @@ public class SkinCleanupTest {
     /**
      * Test that the user input method requests is not affected by the skin.
      */
-    @Test // TODO
+    @Test
     public void testTextInput_UserMethodRequestsNotAffectedBySkin() {
         InputMethodRequests im = createInputMethodRequests();
         TextField t = new TextField();
