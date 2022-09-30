@@ -221,7 +221,6 @@ public class SkinMemoryLeakTest {
      * @param focused if true, requests focus on the added control
      */
     protected void showControl(Control control, boolean focused) {
-        // use StageLoader maybe?
         if (root == null) {
             root = new VBox();
             scene = new Scene(root);

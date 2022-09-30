@@ -139,9 +139,9 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
     private static Stage currentMenuBarStage;
     private List<MenuBase> wrappedMenus;
 
-    private WeakEventHandler<KeyEvent> weakSceneKeyEventHandler;
-    private WeakEventHandler<MouseEvent> weakSceneMouseEventHandler;
-    private WeakEventHandler<KeyEvent> weakSceneAltKeyEventHandler;
+    private final WeakEventHandler<KeyEvent> weakSceneKeyEventHandler;
+    private final WeakEventHandler<MouseEvent> weakSceneMouseEventHandler;
+    private final WeakEventHandler<KeyEvent> weakSceneAltKeyEventHandler;
     private WeakChangeListener<Boolean> weakWindowFocusListener;
     private WeakChangeListener<Window> weakWindowSceneListener;
     private EventHandler<KeyEvent> keyEventHandler;
@@ -434,15 +434,9 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
         sceneChangeListener2 = (ov, t, t1) -> {
             // remove event handlers / filters from the old scene (t)
             if (t != null) {
-                if (weakSceneKeyEventHandler != null) {
-                    t.removeEventFilter(KeyEvent.KEY_PRESSED, weakSceneKeyEventHandler);
-                }
-                if (weakSceneMouseEventHandler != null) {
-                    t.removeEventFilter(MouseEvent.MOUSE_CLICKED, weakSceneMouseEventHandler);
-                }
-                if (weakSceneAltKeyEventHandler != null) {
-                    t.removeEventHandler(KeyEvent.ANY, weakSceneAltKeyEventHandler);
-                }
+                t.removeEventFilter(KeyEvent.KEY_PRESSED, weakSceneKeyEventHandler);
+                t.removeEventFilter(MouseEvent.MOUSE_CLICKED, weakSceneMouseEventHandler);
+                t.removeEventHandler(KeyEvent.ANY, weakSceneAltKeyEventHandler);
             }
 
             /**
@@ -695,7 +689,12 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
      **************************************************************************/
 
     /** {@inheritDoc} */
-    @Override public void dispose() {
+    @Override
+    public void dispose() {
+        if (getSkinnable() == null) {
+            return;
+        }
+
         cleanUpListeners();
         cleanUpSystemMenu();
         getChildren().remove(container);
