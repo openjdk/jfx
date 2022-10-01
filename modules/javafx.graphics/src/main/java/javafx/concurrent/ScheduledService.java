@@ -41,7 +41,7 @@ import java.util.Timer;
 import java.util.TimerTask;
 
 /**
- * <p>The ScheduledService is a {@link Service} which will automatically restart
+ * <p>The ScheduledService is a {@link Service} that will automatically restart
  * itself after a successful execution, and under some conditions will
  * restart even in case of failure. A new ScheduledService begins in
  * the READY state, just as a normal Service. After calling
@@ -70,7 +70,7 @@ import java.util.TimerTask;
  *
  * <p>If a failure occurs and <code>restartOnFailure</code> is false, then
  * the ScheduledService will transition to FAILED and will stop. To restart
- * a failed ScheduledService, you must call restart manually.</p>
+ * a failed ScheduledService, you must call <code>restart</code> manually.</p>
  *
  * <p>If a failure occurs and <code>restartOnFailure</code> is true, then
  * the the ScheduledService <em>may</em> restart automatically. First,
@@ -82,7 +82,7 @@ import java.util.TimerTask;
  *
  * <p>ScheduledService defines static EXPONENTIAL_BACKOFF_STRATEGY and LOGARITHMIC_BACKOFF_STRATEGY
  * implementations, of which LOGARITHMIC_BACKOFF_STRATEGY is the default value for
- * backoffStrategy. After <code>maximumFailureCount</code> is reached, the
+ * <code>backoffStrategy</code>. After <code>maximumFailureCount</code> is reached, the
  * ScheduledService will transition to FAILED in exactly the same way as if
  * <code>restartOnFailure</code> were false.</p>
  *
@@ -127,16 +127,16 @@ import java.util.TimerTask;
  * <p>For this purposes of this class, any Duration that answers true to {@link javafx.util.Duration#isUnknown()}
  * will treat that duration as if it were Duration.ZERO. Likewise, any Duration which answers true
  * to {@link javafx.util.Duration#isIndefinite()} will be treated as if it were a duration of Double.MAX_VALUE
- * milliseconds. Any null Duration is treated as Duration.ZERO. Any custom implementation of an backoff strategy
- * callback must be prepared to handle these different potential values.</p>
+ * milliseconds. Any {@code null} Duration is treated as {@code Duration.ZERO}. Any custom implementation of a backoff
+ * strategy callback must be prepared to handle these different potential values.</p>
  *
- * <p>The ScheduledService introduces a new property called {@link #lastValueProperty() lastValue}. The lastValue is the value that
- * was last successfully computed. Because a Service clears its {@code value} property on each run, and
- * because the ScheduledService will reschedule a run immediately after completion (unless it enters the
- * cancelled or failed states), the value property is not overly useful on a ScheduledService. In most cases
- * you will want to instead use the value returned by lastValue.</p>
+ * <p>The ScheduledService introduces a new property called {@link #lastValueProperty() lastValue}. The
+ * {@code lastValue} is the value that was last successfully computed. Because a Service clears its {@code value}
+ * property on each run, and because the ScheduledService will reschedule a run immediately after completion (unless it
+ * enters the cancelled or failed states), the value property is not overly useful on a ScheduledService. In most cases
+ * you will want to instead use the value returned by {@code lastValue}.</p>
  *
- * <b>Implementer Note:</b> The {@link #ready()}, {@link #scheduled()}, {@link #running()}, {@link #succeeded()},
+ * @implNote The {@link #ready()}, {@link #scheduled()}, {@link #running()}, {@link #succeeded()},
  * {@link #cancelled()}, and {@link #failed()} methods are implemented in this class. Subclasses which also
  * override these methods must take care to invoke the super implementation.
  *

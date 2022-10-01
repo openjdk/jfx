@@ -371,7 +371,7 @@ struct _GstSystemClockPrivate
 #  define DEFAULT_CLOCK_TYPE GST_CLOCK_TYPE_REALTIME
 # endif
 #else
-#define DEFAULT_CLOCK_TYPE GST_CLOCK_TYPE_REALTIME
+#define DEFAULT_CLOCK_TYPE GST_CLOCK_TYPE_MONOTONIC
 #endif
 
 enum
@@ -392,6 +392,10 @@ static void gst_system_clock_get_property (GObject * object, guint prop_id,
     GValue * value, GParamSpec * pspec);
 
 static GstClockTime gst_system_clock_get_internal_time (GstClock * clock);
+#if !defined HAVE_POSIX_TIMERS || !defined HAVE_CLOCK_GETTIME
+static GstClockTime gst_system_clock_get_mono_time (GstSystemClock * clock);
+static GstClockTime gst_system_clock_get_real_time ();
+#endif
 static guint64 gst_system_clock_get_resolution (GstClock * clock);
 static GstClockReturn gst_system_clock_id_wait_jitter (GstClock * clock,
     GstClockEntry * entry, GstClockTimeDiff * jitter);
@@ -831,15 +835,46 @@ clock_type_to_posix_id (GstClockType clock_type)
 static GstClockTime
 gst_system_clock_get_internal_time (GstClock * clock)
 {
-#if defined __APPLE__
   GstSystemClock *sysclock = GST_SYSTEM_CLOCK_CAST (clock);
+#if defined HAVE_POSIX_TIMERS && defined HAVE_CLOCK_GETTIME
+  // BSD and Linux' Posix timers and clock_gettime cover all of the different clock types
+  // without need for special handling so we'll use those.
+  clockid_t ptype;
+  struct timespec ts;
+
+  ptype = clock_type_to_posix_id (sysclock->priv->clock_type);
+
+  if (G_UNLIKELY (clock_gettime (ptype, &ts)))
+    return GST_CLOCK_TIME_NONE;
+
+  return GST_TIMESPEC_TO_TIME (ts);
+#else
+  if (sysclock->priv->clock_type == GST_CLOCK_TYPE_REALTIME) {
+    return gst_system_clock_get_real_time ();
+  } else {
+    return gst_system_clock_get_mono_time (sysclock);
+  }
+#endif /* !HAVE_POSIX_TIMERS || !HAVE_CLOCK_GETTIME */
+}
+
+#if !defined HAVE_POSIX_TIMERS || !defined HAVE_CLOCK_GETTIME
+static GstClockTime
+gst_system_clock_get_real_time ()
+{
+  gint64 rt_micros = g_get_real_time ();
+  // g_get_real_time returns microseconds but we need nanos, so we'll multiply by 1000
+  return ((guint64) rt_micros) * 1000;
+}
+
+static GstClockTime
+gst_system_clock_get_mono_time (GstSystemClock * sysclock)
+{
+#if defined __APPLE__
   uint64_t mach_t = mach_absolute_time ();
   return gst_util_uint64_scale (mach_t, sysclock->priv->mach_timebase.numer,
       sysclock->priv->mach_timebase.denom);
 #else
-#ifdef G_OS_WIN32
-  GstSystemClock *sysclock = GST_SYSTEM_CLOCK_CAST (clock);
-
+#if defined G_OS_WIN32
   if (sysclock->priv->frequency.QuadPart != 0) {
     LARGE_INTEGER now;
 
@@ -850,7 +885,6 @@ gst_system_clock_get_internal_time (GstClock * clock)
         GST_SECOND, sysclock->priv->frequency.QuadPart);
   } else
 #endif /* G_OS_WIN32 */
-#if !defined HAVE_POSIX_TIMERS || !defined HAVE_CLOCK_GETTIME
   {
     gint64 monotime;
 
@@ -858,56 +892,45 @@ gst_system_clock_get_internal_time (GstClock * clock)
 
     return monotime * 1000;
   }
-#else
-  {
-    GstSystemClock *sysclock = GST_SYSTEM_CLOCK_CAST (clock);
-    clockid_t ptype;
-    struct timespec ts;
-
-    ptype = clock_type_to_posix_id (sysclock->priv->clock_type);
-
-    if (G_UNLIKELY (clock_gettime (ptype, &ts)))
-      return GST_CLOCK_TIME_NONE;
-
-    return GST_TIMESPEC_TO_TIME (ts);
-  }
-#endif
 #endif /* __APPLE__ */
 }
+#endif /* !HAVE_POSIX_TIMERS || !HAVE_CLOCK_GETTIME */
 
 static guint64
 gst_system_clock_get_resolution (GstClock * clock)
 {
-#if defined __APPLE__
   GstSystemClock *sysclock = GST_SYSTEM_CLOCK_CAST (clock);
-  return gst_util_uint64_scale (GST_NSECOND,
-      sysclock->priv->mach_timebase.numer, sysclock->priv->mach_timebase.denom);
-#else
-#ifdef G_OS_WIN32
-  GstSystemClock *sysclock = GST_SYSTEM_CLOCK_CAST (clock);
-
-  if (sysclock->priv->frequency.QuadPart != 0) {
-    return GST_SECOND / sysclock->priv->frequency.QuadPart;
-  } else
-#endif /* G_OS_WIN32 */
-#if defined(HAVE_POSIX_TIMERS) && defined(HAVE_CLOCK_GETTIME)
-  {
-    GstSystemClock *sysclock = GST_SYSTEM_CLOCK_CAST (clock);
-    clockid_t ptype;
-    struct timespec ts;
-
-    ptype = clock_type_to_posix_id (sysclock->priv->clock_type);
-
-    if (G_UNLIKELY (clock_getres (ptype, &ts)))
-      return GST_CLOCK_TIME_NONE;
-
-    return GST_TIMESPEC_TO_TIME (ts);
-  }
-#else
-  {
+#if defined __APPLE__ || defined G_OS_WIN32
+  if (sysclock->priv->clock_type == GST_CLOCK_TYPE_REALTIME) {
     return 1 * GST_USECOND;
-  }
+  } else
 #endif
+#if defined __APPLE__
+  {
+    return gst_util_uint64_scale (GST_NSECOND,
+        sysclock->priv->mach_timebase.numer,
+        sysclock->priv->mach_timebase.denom);
+  }
+#elif defined G_OS_WIN32
+  {
+    if (sysclock->priv->frequency.QuadPart != 0) {
+      return GST_SECOND / sysclock->priv->frequency.QuadPart;
+    } else {
+      return 1 * GST_USECOND;
+    }
+  }
+#elif defined(HAVE_POSIX_TIMERS) && defined(HAVE_CLOCK_GETTIME)
+    clockid_t ptype;
+  struct timespec ts;
+
+  ptype = clock_type_to_posix_id (sysclock->priv->clock_type);
+
+  if (G_UNLIKELY (clock_getres (ptype, &ts)))
+    return GST_CLOCK_TIME_NONE;
+
+  return GST_TIMESPEC_TO_TIME (ts);
+#else
+    return 1 * GST_USECOND;
 #endif /* __APPLE__ */
 }
 
@@ -967,11 +990,34 @@ gst_system_clock_id_wait_jitter_unlocked (GstClock * clock,
     while (TRUE) {
       gboolean waitret;
 
-      /* now wait on the entry, it either times out or the cond is signalled.
-       * The status of the entry is BUSY only around the wait. */
-      waitret =
-          GST_SYSTEM_CLOCK_ENTRY_WAIT_UNTIL ((GstClockEntryImpl *) entry,
-          mono_ts * 1000 + diff);
+#ifdef HAVE_CLOCK_NANOSLEEP
+      if (diff <= 500 * GST_USECOND) {
+        /* In order to provide more accurate wait, we will use BLOCKING
+           clock_nanosleep for any deadlines at or below 500us */
+        struct timespec end;
+        GST_TIME_TO_TIMESPEC (mono_ts * 1000 + diff, end);
+        GST_SYSTEM_CLOCK_ENTRY_UNLOCK ((GstClockEntryImpl *) entry);
+        waitret =
+            clock_nanosleep (CLOCK_MONOTONIC, TIMER_ABSTIME, &end, NULL) == 0;
+        GST_SYSTEM_CLOCK_ENTRY_LOCK ((GstClockEntryImpl *) entry);
+      } else {
+
+        if (diff < 2 * GST_MSECOND) {
+          /* For any deadline within 2ms, we first use the regular non-blocking
+             wait by reducing the diff accordingly */
+          diff -= 500 * GST_USECOND;
+        }
+#endif
+
+        /* now wait on the entry, it either times out or the cond is signalled.
+         * The status of the entry is BUSY only around the wait. */
+        waitret =
+            GST_SYSTEM_CLOCK_ENTRY_WAIT_UNTIL ((GstClockEntryImpl *) entry,
+            mono_ts * 1000 + diff);
+
+#ifdef HAVE_CLOCK_NANOSLEEP
+      }
+#endif
 
       /* get the new status, mark as DONE. We do this so that the unschedule
        * function knows when we left the poll and doesn't need to wakeup the
@@ -1016,6 +1062,7 @@ gst_system_clock_id_wait_jitter_unlocked (GstClock * clock,
 
         /* reschedule if gst_cond_wait_until returned early or we have to reschedule after
          * an unlock*/
+        mono_ts = g_get_monotonic_time ();
         now = gst_clock_get_time (clock);
         diff = GST_CLOCK_DIFF (now, entryt);
 

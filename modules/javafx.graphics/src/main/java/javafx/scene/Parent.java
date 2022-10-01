@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -466,7 +466,7 @@ public abstract class Parent extends Node {
 
     }) {
         @Override
-        protected void onProposedChange(final List<Node> newNodes, int[] toBeRemoved) {
+        protected void onProposedChange(final List<Node> newNodes, int... toBeRemoved) {
             final Scene scene = getScene();
             if (scene != null) {
                 Window w = scene.getWindow();

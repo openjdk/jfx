@@ -32,7 +32,7 @@
 #include "ResourceRequest.h"
 #include "Timer.h"
 #include <wtf/MonotonicTime.h>
-
+#include "SecurityOrigin.h"
 #if USE(CFURLCONNECTION)
 #include "ResourceHandleCFURLConnectionDelegate.h"
 #include <pal/spi/win/CFNetworkSPIWin.h>

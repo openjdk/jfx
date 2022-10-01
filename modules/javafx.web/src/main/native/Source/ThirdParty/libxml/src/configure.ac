@@ -3,7 +3,7 @@ AC_PREREQ([2.63])
 
 m4_define([MAJOR_VERSION], 2)
 m4_define([MINOR_VERSION], 9)
-m4_define([MICRO_VERSION], 13)
+m4_define([MICRO_VERSION], 14)
 
 AC_INIT([libxml2],[MAJOR_VERSION.MINOR_VERSION.MICRO_VERSION])
 AC_CONFIG_SRCDIR([entities.c])
@@ -40,7 +40,7 @@ AC_SUBST(LIBXML_VERSION_EXTRA)
 
 VERSION=${LIBXML_VERSION}
 
-AM_INIT_AUTOMAKE([foreign])
+AM_INIT_AUTOMAKE([foreign no-dist-gzip dist-xz])
 
 # Support silent build rules, requires at least automake-1.11. Disable
 # by either passing --disable-silent-rules to configure or passing V=1
@@ -1474,6 +1474,13 @@ else
     PKG_CHECK_MODULES([ICU],[icu-i18n],
         [have_libicu=yes],
         [have_libicu=no])
+
+    if test "x$have_libicu" = "xyes"; then
+        PKG_CHECK_VAR([ICU_DEFS], [icu-i18n], [DEFS])
+        if test "x$ICU_DEFS" != "x"; then
+            CPPFLAGS="$CPPFLAGS $ICU_DEFS"
+        fi
+    fi
 
     # If pkg-config failed, fall back to AC_CHECK_LIB. This
     # will not pick up the necessary LIBS flags for liblzma's

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,6 +26,7 @@
 package com.sun.javafx.scene.control.behavior;
 
 import com.sun.javafx.scene.NodeHelper;
+import com.sun.javafx.scene.traversal.TraversalMethod;
 import javafx.scene.Node;
 import javafx.scene.control.PopupControl;
 
@@ -105,27 +106,27 @@ public class TwoLevelFocusPopupBehavior extends TwoLevelFocusBehavior {
                     switch (((KeyEvent)event).getCode()) {
                       case TAB :
                           if (((KeyEvent)event).isShiftDown()) {
-                              NodeHelper.traverse((Node) obj, com.sun.javafx.scene.traversal.Direction.PREVIOUS);
+                              NodeHelper.traverse((Node) obj, com.sun.javafx.scene.traversal.Direction.PREVIOUS, TraversalMethod.KEY);
                           }
                           else {
-                              NodeHelper.traverse((Node) obj, com.sun.javafx.scene.traversal.Direction.NEXT);
+                              NodeHelper.traverse((Node) obj, com.sun.javafx.scene.traversal.Direction.NEXT, TraversalMethod.KEY);
                           }
                           event.consume();
                           break;
                       case UP :
-                          NodeHelper.traverse((Node) obj, com.sun.javafx.scene.traversal.Direction.UP);
+                          NodeHelper.traverse((Node) obj, com.sun.javafx.scene.traversal.Direction.UP, TraversalMethod.KEY);
                           event.consume();
                           break;
                       case DOWN :
-                          NodeHelper.traverse((Node) obj, com.sun.javafx.scene.traversal.Direction.DOWN);
+                          NodeHelper.traverse((Node) obj, com.sun.javafx.scene.traversal.Direction.DOWN, TraversalMethod.KEY);
                           event.consume();
                           break;
                       case LEFT :
-                          NodeHelper.traverse((Node) obj, com.sun.javafx.scene.traversal.Direction.LEFT);
+                          NodeHelper.traverse((Node) obj, com.sun.javafx.scene.traversal.Direction.LEFT, TraversalMethod.KEY);
                           event.consume();
                           break;
                       case RIGHT :
-                          NodeHelper.traverse((Node) obj, com.sun.javafx.scene.traversal.Direction.RIGHT);
+                          NodeHelper.traverse((Node) obj, com.sun.javafx.scene.traversal.Direction.RIGHT, TraversalMethod.KEY);
                           event.consume();
                           break;
                       case ENTER :
@@ -165,26 +166,26 @@ public class TwoLevelFocusPopupBehavior extends TwoLevelFocusBehavior {
                           break;
                       case LEFT :
                           if (obj instanceof Node) {
-                              NodeHelper.traverse((Node) obj, com.sun.javafx.scene.traversal.Direction.LEFT);
+                              NodeHelper.traverse((Node) obj, com.sun.javafx.scene.traversal.Direction.LEFT, TraversalMethod.KEY);
                               event.consume();
                           }
                           else if (obj instanceof Scene) {
                               Node node = ((Scene)obj).getFocusOwner();
                               if (node != null) {
-                                  NodeHelper.traverse(node, com.sun.javafx.scene.traversal.Direction.LEFT);
+                                  NodeHelper.traverse(node, com.sun.javafx.scene.traversal.Direction.LEFT, TraversalMethod.KEY);
                                   event.consume();
                               }
                           }
                           break;
                       case RIGHT :
                           if (obj instanceof Node) {
-                              NodeHelper.traverse((Node) obj, com.sun.javafx.scene.traversal.Direction.RIGHT);
+                              NodeHelper.traverse((Node) obj, com.sun.javafx.scene.traversal.Direction.RIGHT, TraversalMethod.KEY);
                               event.consume();
                           }
                           else if (obj instanceof Scene) {
                               Node node = ((Scene)obj).getFocusOwner();
                               if (node != null) {
-                                  NodeHelper.traverse(node, com.sun.javafx.scene.traversal.Direction.RIGHT);
+                                  NodeHelper.traverse(node, com.sun.javafx.scene.traversal.Direction.RIGHT, TraversalMethod.KEY);
                                   event.consume();
                               }
                           }

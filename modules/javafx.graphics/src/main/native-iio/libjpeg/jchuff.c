@@ -544,7 +544,7 @@ emit_restart_e (huff_entropy_ptr entropy, int restart_num)
  */
 
 METHODDEF(boolean)
-encode_mcu_DC_first (j_compress_ptr cinfo, JBLOCKROW *MCU_data)
+encode_mcu_DC_first (j_compress_ptr cinfo, JBLOCKARRAY MCU_data)
 {
   huff_entropy_ptr entropy = (huff_entropy_ptr) cinfo->entropy;
   register int temp, temp2;
@@ -627,7 +627,7 @@ encode_mcu_DC_first (j_compress_ptr cinfo, JBLOCKROW *MCU_data)
  */
 
 METHODDEF(boolean)
-encode_mcu_AC_first (j_compress_ptr cinfo, JBLOCKROW *MCU_data)
+encode_mcu_AC_first (j_compress_ptr cinfo, JBLOCKARRAY MCU_data)
 {
   huff_entropy_ptr entropy = (huff_entropy_ptr) cinfo->entropy;
   const int * natural_order;
@@ -738,7 +738,7 @@ encode_mcu_AC_first (j_compress_ptr cinfo, JBLOCKROW *MCU_data)
  */
 
 METHODDEF(boolean)
-encode_mcu_DC_refine (j_compress_ptr cinfo, JBLOCKROW *MCU_data)
+encode_mcu_DC_refine (j_compress_ptr cinfo, JBLOCKARRAY MCU_data)
 {
   huff_entropy_ptr entropy = (huff_entropy_ptr) cinfo->entropy;
   int Al, blkn;
@@ -781,7 +781,7 @@ encode_mcu_DC_refine (j_compress_ptr cinfo, JBLOCKROW *MCU_data)
  */
 
 METHODDEF(boolean)
-encode_mcu_AC_refine (j_compress_ptr cinfo, JBLOCKROW *MCU_data)
+encode_mcu_AC_refine (j_compress_ptr cinfo, JBLOCKARRAY MCU_data)
 {
   huff_entropy_ptr entropy = (huff_entropy_ptr) cinfo->entropy;
   const int * natural_order;
@@ -1013,7 +1013,7 @@ encode_one_block (working_state * state, JCOEFPTR block, int last_dc_val,
  */
 
 METHODDEF(boolean)
-encode_mcu_huff (j_compress_ptr cinfo, JBLOCKROW *MCU_data)
+encode_mcu_huff (j_compress_ptr cinfo, JBLOCKARRAY MCU_data)
 {
   huff_entropy_ptr entropy = (huff_entropy_ptr) cinfo->entropy;
   working_state state;
@@ -1194,7 +1194,7 @@ htest_one_block (j_compress_ptr cinfo, JCOEFPTR block, int last_dc_val,
  */
 
 METHODDEF(boolean)
-encode_mcu_gather (j_compress_ptr cinfo, JBLOCKROW *MCU_data)
+encode_mcu_gather (j_compress_ptr cinfo, JBLOCKARRAY MCU_data)
 {
   huff_entropy_ptr entropy = (huff_entropy_ptr) cinfo->entropy;
   int blkn, ci;

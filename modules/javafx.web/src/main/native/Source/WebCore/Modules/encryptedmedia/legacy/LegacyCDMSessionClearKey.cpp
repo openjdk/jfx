@@ -28,8 +28,9 @@
 
 #include "JSExecState.h"
 #include "Logging.h"
-#include "TextEncoding.h"
+#include <pal/text/TextEncoding.h>
 #include "WebKitMediaKeyError.h"
+#include <JavaScriptCore/BuiltinNames.h>
 #include <JavaScriptCore/JSGlobalObjectInlines.h>
 #include <JavaScriptCore/JSLock.h>
 #include <JavaScriptCore/JSONObject.h>
@@ -51,7 +52,7 @@ static VM& clearKeyVM()
 
 CDMSessionClearKey::CDMSessionClearKey(LegacyCDMSessionClient* client)
     : m_client(client)
-    , m_sessionId(createCanonicalUUIDString())
+    , m_sessionId(createVersion4UUIDString())
 {
 }
 
@@ -70,7 +71,7 @@ RefPtr<Uint8Array> CDMSessionClearKey::generateKeyRequest(const String& mimeType
     m_initData = initData;
 
     bool sawError = false;
-    String keyID = UTF8Encoding().decode(static_cast<char*>(m_initData->baseAddress()), m_initData->byteLength(), true, sawError);
+    String keyID = PAL::UTF8Encoding().decode(static_cast<char*>(m_initData->baseAddress()), m_initData->byteLength(), true, sawError);
     if (sawError) {
         errorCode = WebKitMediaKeyError::MEDIA_KEYERR_CLIENT;
         return nullptr;
@@ -109,7 +110,7 @@ bool CDMSessionClearKey::update(Uint8Array* rawKeysData, RefPtr<Uint8Array>& nex
             break;
         }
 
-        auto keysArrayValue = asObject(keysDataValue)->get(&lexicalGlobalObject, Identifier::fromString(vm, "keys"));
+        auto keysArrayValue = asObject(keysDataValue)->get(&lexicalGlobalObject, vm.propertyNames->builtinNames().keysPublicName());
         if (scope.exception() || !isJSArray(keysArrayValue)) {
             LOG(Media, "CDMSessionClearKey::update(%p) - failed: keys array missing or empty", this);
             break;

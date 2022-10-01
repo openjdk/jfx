@@ -44,7 +44,7 @@ typedef gsize GType;
  * The #GType for a boxed type holding a %NULL-terminated array of strings.
  *
  * The code fragments in the following example show the use of a property of
- * type #G_TYPE_STRV with g_object_class_install_property(), g_object_set()
+ * type %G_TYPE_STRV with g_object_class_install_property(), g_object_set()
  * and g_object_get().
  *
  * |[
@@ -306,6 +306,24 @@ typedef gsize GType;
  */
 #define G_TYPE_URI (g_uri_get_type ())
 
+/**
+ * G_TYPE_TREE:
+ *
+ * The #GType for #GTree.
+ *
+ * Since: 2.68
+ */
+#define G_TYPE_TREE (g_tree_get_type ())
+
+/**
+ * G_TYPE_PATTERN_SPEC:
+ *
+ * The #GType for #GPatternSpec.
+ *
+ * Since: 2.70
+ */
+#define G_TYPE_PATTERN_SPEC (g_pattern_spec_get_type ())
+
 GLIB_AVAILABLE_IN_ALL
 GType   g_date_get_type            (void) G_GNUC_CONST;
 GLIB_AVAILABLE_IN_ALL
@@ -366,6 +384,10 @@ GLIB_AVAILABLE_IN_2_44
 GType   g_option_group_get_type    (void) G_GNUC_CONST;
 GLIB_AVAILABLE_IN_2_66
 GType   g_uri_get_type             (void) G_GNUC_CONST;
+GLIB_AVAILABLE_IN_2_68
+GType   g_tree_get_type            (void) G_GNUC_CONST;
+GLIB_AVAILABLE_IN_2_70
+GType g_pattern_spec_get_type (void) G_GNUC_CONST;
 
 GLIB_DEPRECATED_FOR('G_TYPE_VARIANT')
 GType   g_variant_get_gtype        (void) G_GNUC_CONST;

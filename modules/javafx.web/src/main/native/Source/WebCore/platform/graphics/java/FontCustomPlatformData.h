@@ -44,7 +44,7 @@ public:
     FontCustomPlatformData(const JLObject& data);
     ~FontCustomPlatformData();
 
-    FontPlatformData fontPlatformData(const FontDescription&, bool bold, bool italic, const FontFeatureSettings&, FontSelectionSpecifiedCapabilities);
+    FontPlatformData fontPlatformData(const FontDescription&, bool bold, bool italic, const FontCreationContext&);
 
     static bool supportsFormat(const String&);
 

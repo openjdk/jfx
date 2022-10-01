@@ -78,7 +78,7 @@ typedef enum
  * into the bus. This function is mostly used internally. Only one sync handler
  * can be attached to a given bus.
  *
- * If the handler returns GST_BUS_DROP, it should unref the message, else the
+ * If the handler returns %GST_BUS_DROP, it should unref the message, else the
  * message should not be unreffed by the sync handler.
  *
  * Returns: #GstBusSyncReply stating what to do with the message
@@ -98,8 +98,8 @@ typedef GstBusSyncReply (*GstBusSyncHandler)    (GstBus * bus, GstMessage * mess
  * The message passed to the function will be unreffed after execution of this
  * function so it should not be freed in the function.
  *
- * Note that this function is used as a GSourceFunc which means that returning
- * %FALSE will remove the GSource from the mainloop.
+ * Note that this function is used as a #GSourceFunc which means that returning
+ * %FALSE will remove the #GSource from the mainloop.
  *
  * Returns: %FALSE if the event source should be removed.
  */
@@ -107,6 +107,7 @@ typedef gboolean        (*GstBusFunc)           (GstBus * bus, GstMessage * mess
 
 /**
  * GstBus:
+ * @object: the parent structure
  *
  * The opaque #GstBus data structure.
  */
@@ -120,12 +121,34 @@ struct _GstBus
   gpointer _gst_reserved[GST_PADDING];
 };
 
+/**
+ * GstBusClass:
+ * @parent_class: the parent class structure
+ *
+ * GStreamer bus class.
+ */
 struct _GstBusClass
 {
   GstObjectClass parent_class;
 
   /* signals */
+
+  /**
+   * GstBusClass::message:
+   * @bus: the #GstBus
+   * @message: the message that has been posted asynchronously
+   *
+   * A message has been posted on the bus.
+   */
   void (*message)       (GstBus *bus, GstMessage *message);
+
+  /**
+   * GstBusClass::sync_message:
+   * @bus: the #GstBus
+   * @message: the message that has been posted synchronously
+   *
+   * A message has been posted on the bus.
+   */
   void (*sync_message)  (GstBus *bus, GstMessage *message);
 
   /*< private >*/

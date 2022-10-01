@@ -34,8 +34,6 @@
 
 #include <string.h>
 
-#include "gstrfuncsprivate.h"
-
 /**
  * GBytes:
  *
@@ -539,4 +537,76 @@ g_bytes_unref_to_array (GBytes *bytes)
 
   data = g_bytes_unref_to_data (bytes, &size);
   return g_byte_array_new_take (data, size);
+}
+
+/**
+ * g_bytes_get_region:
+ * @bytes: a #GBytes
+ * @element_size: a non-zero element size
+ * @offset: an offset to the start of the region within the @bytes
+ * @n_elements: the number of elements in the region
+ *
+ * Gets a pointer to a region in @bytes.
+ *
+ * The region starts at @offset many bytes from the start of the data
+ * and contains @n_elements many elements of @element_size size.
+ *
+ * @n_elements may be zero, but @element_size must always be non-zero.
+ * Ideally, @element_size is a static constant (eg: sizeof a struct).
+ *
+ * This function does careful bounds checking (including checking for
+ * arithmetic overflows) and returns a non-%NULL pointer if the
+ * specified region lies entirely within the @bytes. If the region is
+ * in some way out of range, or if an overflow has occurred, then %NULL
+ * is returned.
+ *
+ * Note: it is possible to have a valid zero-size region. In this case,
+ * the returned pointer will be equal to the base pointer of the data of
+ * @bytes, plus @offset.  This will be non-%NULL except for the case
+ * where @bytes itself was a zero-sized region.  Since it is unlikely
+ * that you will be using this function to check for a zero-sized region
+ * in a zero-sized @bytes, %NULL effectively always means "error".
+ *
+ * Returns: (nullable): the requested region, or %NULL in case of an error
+ *
+ * Since: 2.70
+ */
+gconstpointer
+g_bytes_get_region (GBytes *bytes,
+                    gsize   element_size,
+                    gsize   offset,
+                    gsize   n_elements)
+{
+  gsize total_size;
+  gsize end_offset;
+
+  g_return_val_if_fail (element_size > 0, NULL);
+
+  /* No other assertion checks here.  If something is wrong then we will
+   * simply crash (via NULL dereference or divide-by-zero).
+   */
+
+  if (!g_size_checked_mul (&total_size, element_size, n_elements))
+    return NULL;
+
+  if (!g_size_checked_add (&end_offset, offset, total_size))
+    return NULL;
+
+  /* We now have:
+   *
+   *   0 <= offset <= end_offset
+   *
+   * So we need only check that end_offset is within the range of the
+   * size of @bytes and we're good to go.
+   */
+
+  if (end_offset > bytes->size)
+    return NULL;
+
+  /* We now have:
+   *
+   *   0 <= offset <= end_offset <= bytes->size
+   */
+
+  return ((guchar *) bytes->data) + offset;
 }

@@ -28,13 +28,16 @@
 
 #if ENABLE(MEDIA_SOURCE)
 
+#include "AudioTrackPrivate.h"
 #include "Logging.h"
 #include "MediaDescription.h"
 #include "MediaSample.h"
 #include "PlatformTimeRanges.h"
 #include "SampleMap.h"
+#include "SharedBuffer.h"
 #include "SourceBufferPrivateClient.h"
 #include "TimeRanges.h"
+#include "VideoTrackPrivate.h"
 #include <wtf/CheckedArithmetic.h>
 #include <wtf/MediaTime.h>
 #include <wtf/StringPrintStream.h>
@@ -52,7 +55,7 @@ static const MediaTime discontinuityTolerance = MediaTime(1, 1);
 
 SourceBufferPrivate::TrackBuffer::TrackBuffer()
     : lastDecodeTimestamp(MediaTime::invalidTime())
-    , greatestDecodeDuration(MediaTime::invalidTime())
+    , greatestFrameDuration(MediaTime::invalidTime())
     , lastFrameDuration(MediaTime::invalidTime())
     , highestPresentationTimestamp(MediaTime::invalidTime())
     , highestEnqueuedPresentationTime(MediaTime::invalidTime())
@@ -86,7 +89,7 @@ void SourceBufferPrivate::resetTrackBuffers()
 {
     for (auto& trackBufferPair : m_trackBufferMap.values()) {
         trackBufferPair.get().lastDecodeTimestamp = MediaTime::invalidTime();
-        trackBufferPair.get().greatestDecodeDuration = MediaTime::invalidTime();
+        trackBufferPair.get().greatestFrameDuration = MediaTime::invalidTime();
         trackBufferPair.get().lastFrameDuration = MediaTime::invalidTime();
         trackBufferPair.get().highestPresentationTimestamp = MediaTime::invalidTime();
         trackBufferPair.get().needRandomAccessFlag = true;
@@ -450,7 +453,7 @@ static PlatformTimeRanges removeSamplesFromTrackBuffer(const DecodeOrderSampleMa
     MediaTime earliestSample = MediaTime::positiveInfiniteTime();
     MediaTime latestSample = MediaTime::zeroTime();
     uint64_t bytesRemoved = 0;
-    auto logIdentifier = WTF::Logger::LogSiteIdentifier(sourceBufferPrivate->logClassName(), logPrefix, sourceBufferPrivate->logIdentifier());
+    auto logIdentifier = Logger::LogSiteIdentifier(sourceBufferPrivate->logClassName(), logPrefix, sourceBufferPrivate->logIdentifier());
     auto& logger = sourceBufferPrivate->logger();
     auto willLog = logger.willLog(sourceBufferPrivate->logChannel(), WTFLogLevel::Debug);
 #endif
@@ -691,8 +694,8 @@ void SourceBufferPrivate::evictCodedFrames(uint64_t newDataSize, uint64_t maximu
     // If there still isn't enough free space and there buffers in time ranges after the current range (ie. there is a gap after
     // the current buffered range), delete 30 seconds at a time from duration back to the current time range or 30 seconds after
     // currenTime whichever we hit first.
-    auto buffered = m_buffered->ranges();
-    uint64_t currentTimeRange = buffered.find(currentTime);
+    auto buffered = m_buffered->ranges().copyWithEpsilon(timeFudgeFactor());
+    uint64_t currentTimeRange = buffered.findWithEpsilon(currentTime, timeFudgeFactor());
     if (!buffered.length() || currentTimeRange == buffered.length() - 1) {
 #if !RELEASE_LOG_DISABLED
         ERROR_LOG(LOGIDENTIFIER, "FAILED to free enough after evicting ", initialBufferedSize - totalTrackBufferSizeInBytes());
@@ -765,11 +768,12 @@ void SourceBufferPrivate::addTrackBuffer(const AtomString& trackId, RefPtr<Media
 
 void SourceBufferPrivate::updateTrackIds(Vector<std::pair<AtomString, AtomString>>&& trackIdPairs)
 {
+    auto trackBufferMap = std::exchange(m_trackBufferMap, { });
     for (auto& trackIdPair : trackIdPairs) {
         auto oldId = trackIdPair.first;
         auto newId = trackIdPair.second;
         ASSERT(oldId != newId);
-        auto trackBuffer = m_trackBufferMap.take(oldId);
+        auto trackBuffer = trackBufferMap.take(oldId);
         if (!trackBuffer)
             continue;
         m_trackBufferMap.add(newId, makeUniqueRefFromNonNullUniquePtr(WTFMove(trackBuffer)));
@@ -953,14 +957,8 @@ void SourceBufferPrivate::didReceiveSample(Ref<MediaSample>&& originalSample)
         // OR
         // ↳ If last decode timestamp for track buffer is set and the difference between decode timestamp and
         // last decode timestamp is greater than 2 times last frame duration:
-        MediaTime decodeDurationToCheck = trackBuffer.greatestDecodeDuration;
-
-        if (decodeDurationToCheck.isValid() && trackBuffer.lastFrameDuration.isValid()
-            && (trackBuffer.lastFrameDuration > decodeDurationToCheck))
-            decodeDurationToCheck = trackBuffer.lastFrameDuration;
-
         if (trackBuffer.lastDecodeTimestamp.isValid() && (decodeTimestamp < trackBuffer.lastDecodeTimestamp
-            || (decodeDurationToCheck.isValid() && abs(decodeTimestamp - trackBuffer.lastDecodeTimestamp) > (decodeDurationToCheck * 2)))) {
+            || (trackBuffer.greatestFrameDuration.isValid() && decodeTimestamp - trackBuffer.lastDecodeTimestamp > (trackBuffer.greatestFrameDuration * 2)))) {
 
             // 1.6.1:
             if (m_appendMode == SourceBufferAppendMode::Segments) {
@@ -977,7 +975,7 @@ void SourceBufferPrivate::didReceiveSample(Ref<MediaSample>&& originalSample)
                 // 1.6.2 Unset the last decode timestamp on all track buffers.
                 trackBuffer.get().lastDecodeTimestamp = MediaTime::invalidTime();
                 // 1.6.3 Unset the last frame duration on all track buffers.
-                trackBuffer.get().greatestDecodeDuration = MediaTime::invalidTime();
+                trackBuffer.get().greatestFrameDuration = MediaTime::invalidTime();
                 trackBuffer.get().lastFrameDuration = MediaTime::invalidTime();
                 // 1.6.4 Unset the highest presentation timestamp on all track buffers.
                 trackBuffer.get().highestPresentationTimestamp = MediaTime::invalidTime();
@@ -1165,7 +1163,7 @@ void SourceBufferPrivate::didReceiveSample(Ref<MediaSample>&& originalSample)
                     break;
 
                 MediaTime highestBufferedTime = trackBuffer.buffered.maximumBufferedTime();
-                MediaTime eraseBeginTime = trackBuffer.highestPresentationTimestamp - contiguousFrameTolerance;
+                MediaTime eraseBeginTime = trackBuffer.highestPresentationTimestamp;
                 MediaTime eraseEndTime = frameEndTimestamp - contiguousFrameTolerance;
 
                 PresentationOrderSampleMap::iterator_range range;
@@ -1252,12 +1250,15 @@ void SourceBufferPrivate::didReceiveSample(Ref<MediaSample>&& originalSample)
                 trackBuffer.needsMinimumUpcomingPresentationTimeUpdating = true;
         }
 
-        // NOTE: the spec considers "Coded Frame Duration" to be the presentation duration, but this is not necessarily equal
-        // to the decoded duration. When comparing deltas between decode timestamps, the decode duration, not the presentation.
+        // NOTE: the spec considers the need to check the last frame duration but doesn't specify if that last frame
+        // is the one prior in presentation or decode order.
+        // So instead, as a workaround we use the largest frame duration seen in the current coded frame group (as defined in https://www.w3.org/TR/media-source/#coded-frame-group.
         if (trackBuffer.lastDecodeTimestamp.isValid()) {
             MediaTime lastDecodeDuration = decodeTimestamp - trackBuffer.lastDecodeTimestamp;
-            if (!trackBuffer.greatestDecodeDuration.isValid() || lastDecodeDuration > trackBuffer.greatestDecodeDuration)
-                trackBuffer.greatestDecodeDuration = lastDecodeDuration;
+            if (!trackBuffer.greatestFrameDuration.isValid())
+                trackBuffer.greatestFrameDuration = std::max(lastDecodeDuration, frameDuration);
+            else
+                trackBuffer.greatestFrameDuration = std::max({ trackBuffer.greatestFrameDuration, frameDuration, lastDecodeDuration });
         }
 
         // 1.17 Set last decode timestamp for track buffer to decode timestamp.
@@ -1312,6 +1313,16 @@ void SourceBufferPrivate::didReceiveSample(Ref<MediaSample>&& originalSample)
         m_client->sourceBufferPrivateDurationChanged(m_groupEndTimestamp);
 
     updateHighestPresentationTimestamp();
+}
+
+void SourceBufferPrivate::append(Ref<SharedBuffer>&& buffer)
+{
+    append(buffer->extractData());
+}
+
+void SourceBufferPrivate::append(Vector<unsigned char>&&)
+{
+    RELEASE_ASSERT_NOT_REACHED();
 }
 
 } // namespace WebCore

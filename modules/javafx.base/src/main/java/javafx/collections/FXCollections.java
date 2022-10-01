@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -347,9 +347,7 @@ public class FXCollections {
      * @see #observableArrayList()
      */
     public static <E> ObservableList<E> observableArrayList(E... items) {
-        ObservableList<E> list = observableArrayList();
-        list.addAll(items);
-        return list;
+        return observableList(new ArrayList<>(Arrays.asList(items)));
     }
 
     /**
@@ -360,9 +358,7 @@ public class FXCollections {
      * @return a newly created observableArrayList
      */
     public static <E> ObservableList<E> observableArrayList(Collection<? extends E> col) {
-        ObservableList<E> list = observableArrayList();
-        list.addAll(col);
-        return list;
+        return observableList(new ArrayList<>(col));
     }
 
     /**
@@ -1055,7 +1051,7 @@ public class FXCollections {
         }
 
         @Override
-        public <T> T[] toArray(T[] a) {
+        public <X> X[] toArray(X[] a) {
             synchronized(mutex) {
                 return backingList.toArray(a);
             }
@@ -1339,7 +1335,7 @@ public class FXCollections {
         }
 
         @Override
-        public <T> T[] toArray(T[] a) {
+        public <X> X[] toArray(X[] a) {
             return list.toArray(a);
         }
 
@@ -1635,7 +1631,7 @@ public class FXCollections {
         }
 
         @Override
-        public <E> E[] toArray(E[] a) {
+        public <X> X[] toArray(X[] a) {
             if (a.length > 0)
                 a[0] = null;
             return a;
@@ -1821,7 +1817,7 @@ public class FXCollections {
         }
 
         @Override
-        public <E> E[] toArray(E[] a) {
+        public <X> X[] toArray(X[] a) {
             synchronized(mutex) {
                 return backingSet.toArray(a);
             }

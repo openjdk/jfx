@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2020, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -107,7 +107,6 @@ public class JMemoryBuddy {
         if (weakReference.get() != null) {
             createGarbage();
             System.gc();
-            System.runFinalization();
         }
 
         while (counter > 0 && weakReference.get() != null) {
@@ -119,7 +118,6 @@ public class JMemoryBuddy {
             counter = counter - 1;
             createGarbage();
             System.gc();
-            System.runFinalization();
         }
 
         if (weakReference.get() == null && counter < steps / 3) {
@@ -148,7 +146,6 @@ public class JMemoryBuddy {
     public static boolean checkNotCollectable(WeakReference weakReference) {
         createGarbage();
         System.gc();
-        System.runFinalization();
         createGarbage();
         System.gc();
         return weakReference.get() != null;

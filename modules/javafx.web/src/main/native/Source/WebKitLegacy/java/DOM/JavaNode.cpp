@@ -30,6 +30,7 @@
 #include <WebCore/AddEventListenerOptions.h>
 #include <WebCore/Document.h>
 #include <WebCore/Element.h>
+#include <WebCore/ElementInlines.h>
 #include <WebCore/Event.h>
 #include <WebCore/EventListener.h>
 #include <WebCore/EventTarget.h>

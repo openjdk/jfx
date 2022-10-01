@@ -27,6 +27,10 @@
 #include <gst/gstutils.h>
 #include <gst/tag/tag.h>
 
+#ifdef GSTREAMER_LITE
+#include "gst/glib-compat-private.h"
+#endif // GSTREAMER_LITE
+
 #include "riff-read.h"
 
 GST_DEBUG_CATEGORY_EXTERN (riff_debug);
@@ -293,7 +297,7 @@ gst_riff_parse_strh (GstElement * element,
   if (info.size < sizeof (gst_riff_strh))
     goto too_small;
 
-  strh = g_memdup (info.data, info.size);
+  strh = g_memdup2 (info.data, info.size);
   gst_buffer_unmap (buf, &info);
 
   gst_buffer_unref (buf);
@@ -384,7 +388,7 @@ gst_riff_parse_strf_vids (GstElement * element,
   if (info.size < sizeof (gst_riff_strf_vids))
     goto too_small;
 
-  strf = g_memdup (info.data, info.size);
+  strf = g_memdup2 (info.data, info.size);
   gst_buffer_unmap (buf, &info);
 
 #if (G_BYTE_ORDER == G_BIG_ENDIAN)
@@ -482,7 +486,7 @@ gst_riff_parse_strf_auds (GstElement * element,
   if (info.size < sizeof (gst_riff_strf_auds))
     goto too_small;
 
-  strf = g_memdup (info.data, info.size);
+  strf = g_memdup2 (info.data, info.size);
 
 #if (G_BYTE_ORDER == G_BIG_ENDIAN)
   strf->format = GUINT16_FROM_LE (strf->format);
@@ -574,7 +578,7 @@ gst_riff_parse_strf_iavs (GstElement * element,
   if (info.size < sizeof (gst_riff_strf_iavs))
     goto too_small;
 
-  strf = g_memdup (info.data, info.size);
+  strf = g_memdup2 (info.data, info.size);
   gst_buffer_unmap (buf, &info);
 
   gst_buffer_unref (buf);

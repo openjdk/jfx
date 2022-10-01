@@ -25,7 +25,7 @@
 
 #undef IMPL
 
-
+#include <WebCore/Document.h>
 #include <WebCore/HTMLFieldSetElement.h>
 #include <WebCore/HTMLFormElement.h>
 #include <WebCore/HTMLNames.h>

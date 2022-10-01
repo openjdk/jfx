@@ -1299,6 +1299,7 @@ final class MacAccessible extends Accessible {
                         case PAGE_ITEM: result = "page"; break;
                         case TAB_ITEM: result = "tab"; break;
                         case LIST_VIEW: result = "list"; break;
+                        case DIALOG: result = "dialog"; break;
                         default:
                             MacRole macRole = getRole(role);
                             MacSubrole subRole = MacSubrole.getRole(role);

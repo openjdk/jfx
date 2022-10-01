@@ -12,15 +12,15 @@
   use GLIB_GET_MIRRORING_DELTA(key) to access your table
 
   assumed sizeof(gint16): 2
-  required memory: 1008
+  required memory: 1116
   lookups: 4
   partition shape: Mir[256][16][4][4]
-  different table entries: 1 14 56 38
+  different table entries: 1 15 57 49
 */
 
 /* *INDENT-OFF* */
 
-static const gint16 MirLev3[4*38] = {
+static const gint16 MirLev3[4*49] = {
 #define MirLev3_0000 0x0
   0,0,0,0,
 #define MirLev3_0028 0x4
@@ -49,57 +49,79 @@ static const gint16 MirLev3[4*38] = {
   -3,-3,0,0,
 #define MirLev3_2214 0x34
   0,2016,0,0,
-#define MirLev3_2240 0x38
+#define MirLev3_221C 0x38
+  0,0,0,2527,
+#define MirLev3_2220 0x3C
+  1923,1914,1918,0,
+#define MirLev3_2224 0x40
+  2250,0,0,0,
+#define MirLev3_2240 0x44
   0,0,0,138,
-#define MirLev3_2264 0x3C
+#define MirLev3_2244 0x48
+  0,7,0,0,
+#define MirLev3_224C 0x4C
+  -7,0,0,0,
+#define MirLev3_2264 0x50
   1,-1,1,-1,
-#define MirLev3_2290 0x40
+#define MirLev3_2290 0x54
   -1,1,-1,0,
-#define MirLev3_2298 0x44
+#define MirLev3_2298 0x58
   1824,0,0,0,
-#define MirLev3_22A4 0x48
+#define MirLev3_22A4 0x5C
   0,0,2104,0,
-#define MirLev3_22A8 0x4C
+#define MirLev3_22A8 0x60
   2108,2106,0,2106,
-#define MirLev3_22C8 0x50
+#define MirLev3_22B8 0x64
+  1316,0,0,0,
+#define MirLev3_22C8 0x68
   0,1,-1,1,
-#define MirLev3_22CC 0x54
+#define MirLev3_22CC 0x6C
   -1,-138,0,0,
-#define MirLev3_22F0 0x58
+#define MirLev3_22F0 0x70
   1,-1,8,8,
-#define MirLev3_22F4 0x5C
+#define MirLev3_22F4 0x74
   8,0,7,7,
-#define MirLev3_22F8 0x60
+#define MirLev3_22F8 0x78
   0,0,-8,-8,
-#define MirLev3_22FC 0x64
+#define MirLev3_22FC 0x7C
   -8,-7,-7,0,
-#define MirLev3_2984 0x68
+#define MirLev3_27C8 0x80
+  1,-1,0,2,
+#define MirLev3_27DC 0x84
+  -1316,1,-1,0,
+#define MirLev3_2984 0x88
   -1,1,-1,1,
-#define MirLev3_298C 0x6C
+#define MirLev3_298C 0x8C
   -1,3,1,-1,
-#define MirLev3_2990 0x70
+#define MirLev3_2990 0x90
   -3,1,-1,1,
-#define MirLev3_29B8 0x74
+#define MirLev3_2998 0x94
+  -1,0,0,-1914,
+#define MirLev3_29A0 0x98
+  -1918,0,0,-1923,
+#define MirLev3_29B8 0x9C
   -1824,0,0,0,
-#define MirLev3_29F4 0x78
+#define MirLev3_29F4 0xA0
   0,-2016,0,0,
-#define MirLev3_2AAC 0x7C
+#define MirLev3_2AAC 0xA4
   1,-1,0,1,
-#define MirLev3_2AB0 0x80
-  -1,0,0,1,
-#define MirLev3_2ADC 0x84
+#define MirLev3_2ADC 0xA8
   0,0,-2104,0,
-#define MirLev3_2AE0 0x88
+#define MirLev3_2AE0 0xAC
   0,0,0,-2106,
-#define MirLev3_2AE4 0x8C
+#define MirLev3_2AE4 0xB0
   -2108,-2106,0,0,
-#define MirLev3_FF5C 0x90
+#define MirLev3_2AEC 0xB4
+  1,-1,-2250,0,
+#define MirLev3_2BFC 0xB8
+  0,0,-2527,0,
+#define MirLev3_FF5C 0xBC
   0,-2,0,1,
-#define MirLev3_FF60 0x94
+#define MirLev3_FF60 0xC0
   -1,0,1,-1,
 };
 
-static const PACKTAB_UINT8 MirLev2[4*56] = {
+static const PACKTAB_UINT8 MirLev2[4*57] = {
 #define MirLev2_0000 0x0
   MirLev3_0000,  /* 0000..0003 */
   MirLev3_0000,  /* 0004..0007 */
@@ -164,192 +186,192 @@ static const PACKTAB_UINT8 MirLev2[4*56] = {
   MirLev3_0000,  /* 2210..2213 */
   MirLev3_2214,  /* 2214..2217 */
   MirLev3_0000,  /* 2218..221B */
-  MirLev3_0000,  /* 221C..221F */
-#define MirLev2_2230 0x34
+  MirLev3_221C,  /* 221C..221F */
+#define MirLev2_2220 0x34
+  MirLev3_2220,  /* 2220..2223 */
+  MirLev3_2224,  /* 2224..2227 */
+  MirLev3_0000,  /* 2228..222B */
+  MirLev3_0000,  /* 222C..222F */
+#define MirLev2_2230 0x38
   MirLev3_0000,  /* 2230..2233 */
   MirLev3_0000,  /* 2234..2237 */
   MirLev3_0000,  /* 2238..223B */
   MirLev3_0028,  /* 223C..223F */
-#define MirLev2_2240 0x38
+#define MirLev2_2240 0x3C
   MirLev3_2240,  /* 2240..2243 */
-  MirLev3_0000,  /* 2244..2247 */
+  MirLev3_2244,  /* 2244..2247 */
   MirLev3_0000,  /* 2248..224B */
-  MirLev3_0000,  /* 224C..224F */
-#define MirLev2_2250 0x3C
+  MirLev3_224C,  /* 224C..224F */
+#define MirLev2_2250 0x40
   MirLev3_0F38,  /* 2250..2253 */
   MirLev3_0028,  /* 2254..2257 */
   MirLev3_0000,  /* 2258..225B */
   MirLev3_0000,  /* 225C..225F */
-#define MirLev2_2260 0x40
+#define MirLev2_2260 0x44
   MirLev3_0000,  /* 2260..2263 */
   MirLev3_2264,  /* 2264..2267 */
   MirLev3_2264,  /* 2268..226B */
   MirLev3_0F38,  /* 226C..226F */
-#define MirLev2_2270 0x44
+#define MirLev2_2270 0x48
   MirLev3_2264,  /* 2270..2273 */
   MirLev3_2264,  /* 2274..2277 */
   MirLev3_2264,  /* 2278..227B */
   MirLev3_2264,  /* 227C..227F */
-#define MirLev2_2280 0x48
+#define MirLev2_2280 0x4C
   MirLev3_2264,  /* 2280..2283 */
   MirLev3_2264,  /* 2284..2287 */
   MirLev3_2264,  /* 2288..228B */
   MirLev3_1698,  /* 228C..228F */
-#define MirLev2_2290 0x4C
+#define MirLev2_2290 0x50
   MirLev3_2290,  /* 2290..2293 */
   MirLev3_0000,  /* 2294..2297 */
   MirLev3_2298,  /* 2298..229B */
   MirLev3_0000,  /* 229C..229F */
-#define MirLev2_22A0 0x50
+#define MirLev2_22A0 0x54
   MirLev3_0F38,  /* 22A0..22A3 */
   MirLev3_22A4,  /* 22A4..22A7 */
   MirLev3_22A8,  /* 22A8..22AB */
   MirLev3_0000,  /* 22AC..22AF */
-#define MirLev2_22B0 0x54
+#define MirLev2_22B0 0x58
   MirLev3_2264,  /* 22B0..22B3 */
   MirLev3_2264,  /* 22B4..22B7 */
-  MirLev3_0000,  /* 22B8..22BB */
+  MirLev3_22B8,  /* 22B8..22BB */
   MirLev3_0000,  /* 22BC..22BF */
-#define MirLev2_22C0 0x58
+#define MirLev2_22C0 0x5C
   MirLev3_0000,  /* 22C0..22C3 */
   MirLev3_0000,  /* 22C4..22C7 */
   MirLev3_22C8,  /* 22C8..22CB */
   MirLev3_22CC,  /* 22CC..22CF */
-#define MirLev2_22D0 0x5C
+#define MirLev2_22D0 0x60
   MirLev3_0028,  /* 22D0..22D3 */
   MirLev3_0F38,  /* 22D4..22D7 */
   MirLev3_2264,  /* 22D8..22DB */
   MirLev3_2264,  /* 22DC..22DF */
-#define MirLev2_22E0 0x60
+#define MirLev2_22E0 0x64
   MirLev3_2264,  /* 22E0..22E3 */
   MirLev3_2264,  /* 22E4..22E7 */
   MirLev3_2264,  /* 22E8..22EB */
   MirLev3_0028,  /* 22EC..22EF */
-#define MirLev2_22F0 0x64
+#define MirLev2_22F0 0x68
   MirLev3_22F0,  /* 22F0..22F3 */
   MirLev3_22F4,  /* 22F4..22F7 */
   MirLev3_22F8,  /* 22F8..22FB */
   MirLev3_22FC,  /* 22FC..22FF */
-#define MirLev2_2300 0x68
+#define MirLev2_2300 0x6C
   MirLev3_0000,  /* 2300..2303 */
   MirLev3_0000,  /* 2304..2307 */
   MirLev3_2264,  /* 2308..230B */
   MirLev3_0000,  /* 230C..230F */
-#define MirLev2_2760 0x6C
+#define MirLev2_2760 0x70
   MirLev3_0000,  /* 2760..2763 */
   MirLev3_0000,  /* 2764..2767 */
   MirLev3_2264,  /* 2768..276B */
   MirLev3_2264,  /* 276C..276F */
-#define MirLev2_2770 0x70
+#define MirLev2_2770 0x74
   MirLev3_2264,  /* 2770..2773 */
   MirLev3_0028,  /* 2774..2777 */
   MirLev3_0000,  /* 2778..277B */
   MirLev3_0000,  /* 277C..277F */
-#define MirLev2_27C0 0x74
+#define MirLev2_27C0 0x78
   MirLev3_1698,  /* 27C0..27C3 */
   MirLev3_2290,  /* 27C4..27C7 */
-  MirLev3_0028,  /* 27C8..27CB */
-  MirLev3_0000,  /* 27CC..27CF */
-#define MirLev2_27D0 0x78
+  MirLev3_27C8,  /* 27C8..27CB */
+  MirLev3_005C,  /* 27CC..27CF */
+#define MirLev2_27D0 0x7C
   MirLev3_0000,  /* 27D0..27D3 */
   MirLev3_2038,  /* 27D4..27D7 */
   MirLev3_0000,  /* 27D8..27DB */
-  MirLev3_2038,  /* 27DC..27DF */
-#define MirLev2_27E0 0x7C
+  MirLev3_27DC,  /* 27DC..27DF */
+#define MirLev2_27E0 0x80
   MirLev3_0F38,  /* 27E0..27E3 */
   MirLev3_2264,  /* 27E4..27E7 */
   MirLev3_2264,  /* 27E8..27EB */
   MirLev3_2264,  /* 27EC..27EF */
-#define MirLev2_2980 0x80
+#define MirLev2_2980 0x84
   MirLev3_1698,  /* 2980..2983 */
   MirLev3_2984,  /* 2984..2987 */
   MirLev3_2984,  /* 2988..298B */
   MirLev3_298C,  /* 298C..298F */
-#define MirLev2_2990 0x84
+#define MirLev2_2990 0x88
   MirLev3_2990,  /* 2990..2993 */
   MirLev3_2984,  /* 2994..2997 */
-  MirLev3_169C,  /* 2998..299B */
+  MirLev3_2998,  /* 2998..299B */
   MirLev3_0000,  /* 299C..299F */
-#define MirLev2_29B0 0x88
+#define MirLev2_29A0 0x8C
+  MirLev3_29A0,  /* 29A0..29A3 */
+  MirLev3_0028,  /* 29A4..29A7 */
+  MirLev3_2264,  /* 29A8..29AB */
+  MirLev3_2264,  /* 29AC..29AF */
+#define MirLev2_29B0 0x90
   MirLev3_0000,  /* 29B0..29B3 */
   MirLev3_0000,  /* 29B4..29B7 */
   MirLev3_29B8,  /* 29B8..29BB */
   MirLev3_0000,  /* 29BC..29BF */
-#define MirLev2_29C0 0x8C
+#define MirLev2_29C0 0x94
   MirLev3_0028,  /* 29C0..29C3 */
   MirLev3_0028,  /* 29C4..29C7 */
   MirLev3_0000,  /* 29C8..29CB */
   MirLev3_1698,  /* 29CC..29CF */
-#define MirLev2_29D0 0x90
+#define MirLev2_29D0 0x98
   MirLev3_2290,  /* 29D0..29D3 */
   MirLev3_0028,  /* 29D4..29D7 */
   MirLev3_2264,  /* 29D8..29DB */
   MirLev3_0000,  /* 29DC..29DF */
-#define MirLev2_29F0 0x94
+#define MirLev2_29F0 0x9C
   MirLev3_0000,  /* 29F0..29F3 */
   MirLev3_29F4,  /* 29F4..29F7 */
   MirLev3_0028,  /* 29F8..29FB */
   MirLev3_0028,  /* 29FC..29FF */
-#define MirLev2_2A20 0x98
+#define MirLev2_2A20 0xA0
   MirLev3_0000,  /* 2A20..2A23 */
   MirLev3_0000,  /* 2A24..2A27 */
   MirLev3_1698,  /* 2A28..2A2B */
   MirLev3_2290,  /* 2A2C..2A2F */
-#define MirLev2_2A30 0x9C
+#define MirLev2_2A30 0xA4
   MirLev3_0000,  /* 2A30..2A33 */
   MirLev3_0028,  /* 2A34..2A37 */
   MirLev3_0000,  /* 2A38..2A3B */
   MirLev3_0028,  /* 2A3C..2A3F */
-#define MirLev2_2A60 0xA0
+#define MirLev2_2A60 0xA8
   MirLev3_0000,  /* 2A60..2A63 */
   MirLev3_0028,  /* 2A64..2A67 */
   MirLev3_0000,  /* 2A68..2A6B */
   MirLev3_0000,  /* 2A6C..2A6F */
-#define MirLev2_2A70 0xA4
+#define MirLev2_2A70 0xAC
   MirLev3_0000,  /* 2A70..2A73 */
   MirLev3_0000,  /* 2A74..2A77 */
-  MirLev3_2038,  /* 2A78..2A7B */
-  MirLev3_22C8,  /* 2A7C..2A7F */
-#define MirLev2_2A80 0xA8
+  MirLev3_22C8,  /* 2A78..2A7B */
+  MirLev3_2984,  /* 2A7C..2A7F */
+#define MirLev2_2A80 0xB0
   MirLev3_2984,  /* 2A80..2A83 */
-  MirLev3_169C,  /* 2A84..2A87 */
-  MirLev3_1698,  /* 2A88..2A8B */
-  MirLev3_169C,  /* 2A8C..2A8F */
-#define MirLev2_2A90 0xAC
-  MirLev3_22C8,  /* 2A90..2A93 */
-  MirLev3_2984,  /* 2A94..2A97 */
-  MirLev3_2984,  /* 2A98..2A9B */
-  MirLev3_169C,  /* 2A9C..2A9F */
-#define MirLev2_2AA0 0xB0
-  MirLev3_2038,  /* 2AA0..2AA3 */
+  MirLev3_2984,  /* 2A84..2A87 */
+  MirLev3_2984,  /* 2A88..2A8B */
+  MirLev3_2984,  /* 2A8C..2A8F */
+#define MirLev2_2AA0 0xB4
+  MirLev3_2290,  /* 2AA0..2AA3 */
   MirLev3_0F38,  /* 2AA4..2AA7 */
   MirLev3_2264,  /* 2AA8..2AAB */
   MirLev3_2AAC,  /* 2AAC..2AAF */
-#define MirLev2_2AB0 0xB4
-  MirLev3_2AB0,  /* 2AB0..2AB3 */
-  MirLev3_169C,  /* 2AB4..2AB7 */
-  MirLev3_1698,  /* 2AB8..2ABB */
-  MirLev3_2984,  /* 2ABC..2ABF */
-#define MirLev2_2AC0 0xB8
-  MirLev3_2984,  /* 2AC0..2AC3 */
-  MirLev3_2290,  /* 2AC4..2AC7 */
-  MirLev3_0000,  /* 2AC8..2ACB */
-  MirLev3_22C8,  /* 2ACC..2ACF */
-#define MirLev2_2AD0 0xBC
+#define MirLev2_2AD0 0xB8
   MirLev3_2984,  /* 2AD0..2AD3 */
   MirLev3_2290,  /* 2AD4..2AD7 */
   MirLev3_0000,  /* 2AD8..2ADB */
   MirLev3_2ADC,  /* 2ADC..2ADF */
-#define MirLev2_2AE0 0xC0
+#define MirLev2_2AE0 0xBC
   MirLev3_2AE0,  /* 2AE0..2AE3 */
   MirLev3_2AE4,  /* 2AE4..2AE7 */
   MirLev3_0000,  /* 2AE8..2AEB */
-  MirLev3_0028,  /* 2AEC..2AEF */
-#define MirLev2_2AF0 0xC4
+  MirLev3_2AEC,  /* 2AEC..2AEF */
+#define MirLev2_2AF0 0xC0
   MirLev3_0000,  /* 2AF0..2AF3 */
   MirLev3_1698,  /* 2AF4..2AF7 */
   MirLev3_2290,  /* 2AF8..2AFB */
   MirLev3_0000,  /* 2AFC..2AFF */
+#define MirLev2_2BF0 0xC4
+  MirLev3_0000,  /* 2BF0..2BF3 */
+  MirLev3_0000,  /* 2BF4..2BF7 */
+  MirLev3_0000,  /* 2BF8..2BFB */
+  MirLev3_2BFC,  /* 2BFC..2BFF */
 #define MirLev2_2E00 0xC8
   MirLev3_0F38,  /* 2E00..2E03 */
   MirLev3_0028,  /* 2E04..2E07 */
@@ -360,29 +382,34 @@ static const PACKTAB_UINT8 MirLev2[4*56] = {
   MirLev3_2264,  /* 2E24..2E27 */
   MirLev3_0028,  /* 2E28..2E2B */
   MirLev3_0000,  /* 2E2C..2E2F */
-#define MirLev2_3010 0xD0
+#define MirLev2_2E50 0xD0
+  MirLev3_0000,  /* 2E50..2E53 */
+  MirLev3_22C8,  /* 2E54..2E57 */
+  MirLev3_2984,  /* 2E58..2E5B */
+  MirLev3_169C,  /* 2E5C..2E5F */
+#define MirLev2_3010 0xD4
   MirLev3_0028,  /* 3010..3013 */
   MirLev3_2264,  /* 3014..3017 */
   MirLev3_2264,  /* 3018..301B */
   MirLev3_0000,  /* 301C..301F */
-#define MirLev2_FE50 0xD4
+#define MirLev2_FE50 0xD8
   MirLev3_0000,  /* FE50..FE53 */
   MirLev3_0000,  /* FE54..FE57 */
   MirLev3_22C8,  /* FE58..FE5B */
   MirLev3_2290,  /* FE5C..FE5F */
-#define MirLev2_FF50 0xD8
+#define MirLev2_FF50 0xDC
   MirLev3_0000,  /* FF50..FF53 */
   MirLev3_0000,  /* FF54..FF57 */
   MirLev3_0058,  /* FF58..FF5B */
   MirLev3_FF5C,  /* FF5C..FF5F */
-#define MirLev2_FF60 0xDC
+#define MirLev2_FF60 0xE0
   MirLev3_FF60,  /* FF60..FF63 */
   MirLev3_0000,  /* FF64..FF67 */
   MirLev3_0000,  /* FF68..FF6B */
   MirLev3_0000,  /* FF6C..FF6F */
 };
 
-static const PACKTAB_UINT8 MirLev1[16*14] = {
+static const PACKTAB_UINT8 MirLev1[16*15] = {
 #define MirLev1_0000 0x0
   MirLev2_0000,  /* 0000..000F */
   MirLev2_0000,  /* 0010..001F */
@@ -471,7 +498,7 @@ static const PACKTAB_UINT8 MirLev1[16*14] = {
 #define MirLev1_2200 0x50
   MirLev2_2200,  /* 2200..220F */
   MirLev2_2210,  /* 2210..221F */
-  MirLev2_0000,  /* 2220..222F */
+  MirLev2_2220,  /* 2220..222F */
   MirLev2_2230,  /* 2230..223F */
   MirLev2_2240,  /* 2240..224F */
   MirLev2_2250,  /* 2250..225F */
@@ -530,11 +557,11 @@ static const PACKTAB_UINT8 MirLev1[16*14] = {
   MirLev2_0000,  /* 2970..297F */
   MirLev2_2980,  /* 2980..298F */
   MirLev2_2990,  /* 2990..299F */
-  MirLev2_0000,  /* 29A0..29AF */
+  MirLev2_29A0,  /* 29A0..29AF */
   MirLev2_29B0,  /* 29B0..29BF */
   MirLev2_29C0,  /* 29C0..29CF */
   MirLev2_29D0,  /* 29D0..29DF */
-  MirLev2_0000,  /* 29E0..29EF */
+  MirLev2_0020,  /* 29E0..29EF */
   MirLev2_29F0,  /* 29F0..29FF */
 #define MirLev1_2A00 0x90
   MirLev2_0000,  /* 2A00..2A0F */
@@ -546,20 +573,37 @@ static const PACKTAB_UINT8 MirLev1[16*14] = {
   MirLev2_2A60,  /* 2A60..2A6F */
   MirLev2_2A70,  /* 2A70..2A7F */
   MirLev2_2A80,  /* 2A80..2A8F */
-  MirLev2_2A90,  /* 2A90..2A9F */
+  MirLev2_2A80,  /* 2A90..2A9F */
   MirLev2_2AA0,  /* 2AA0..2AAF */
-  MirLev2_2AB0,  /* 2AB0..2ABF */
-  MirLev2_2AC0,  /* 2AC0..2ACF */
+  MirLev2_2A80,  /* 2AB0..2ABF */
+  MirLev2_2A80,  /* 2AC0..2ACF */
   MirLev2_2AD0,  /* 2AD0..2ADF */
   MirLev2_2AE0,  /* 2AE0..2AEF */
   MirLev2_2AF0,  /* 2AF0..2AFF */
-#define MirLev1_2E00 0xA0
+#define MirLev1_2B00 0xA0
+  MirLev2_0000,  /* 2B00..2B0F */
+  MirLev2_0000,  /* 2B10..2B1F */
+  MirLev2_0000,  /* 2B20..2B2F */
+  MirLev2_0000,  /* 2B30..2B3F */
+  MirLev2_0000,  /* 2B40..2B4F */
+  MirLev2_0000,  /* 2B50..2B5F */
+  MirLev2_0000,  /* 2B60..2B6F */
+  MirLev2_0000,  /* 2B70..2B7F */
+  MirLev2_0000,  /* 2B80..2B8F */
+  MirLev2_0000,  /* 2B90..2B9F */
+  MirLev2_0000,  /* 2BA0..2BAF */
+  MirLev2_0000,  /* 2BB0..2BBF */
+  MirLev2_0000,  /* 2BC0..2BCF */
+  MirLev2_0000,  /* 2BD0..2BDF */
+  MirLev2_0000,  /* 2BE0..2BEF */
+  MirLev2_2BF0,  /* 2BF0..2BFF */
+#define MirLev1_2E00 0xB0
   MirLev2_2E00,  /* 2E00..2E0F */
   MirLev2_2230,  /* 2E10..2E1F */
   MirLev2_2E20,  /* 2E20..2E2F */
   MirLev2_0000,  /* 2E30..2E3F */
   MirLev2_0000,  /* 2E40..2E4F */
-  MirLev2_0000,  /* 2E50..2E5F */
+  MirLev2_2E50,  /* 2E50..2E5F */
   MirLev2_0000,  /* 2E60..2E6F */
   MirLev2_0000,  /* 2E70..2E7F */
   MirLev2_0000,  /* 2E80..2E8F */
@@ -570,7 +614,7 @@ static const PACKTAB_UINT8 MirLev1[16*14] = {
   MirLev2_0000,  /* 2ED0..2EDF */
   MirLev2_0000,  /* 2EE0..2EEF */
   MirLev2_0000,  /* 2EF0..2EFF */
-#define MirLev1_3000 0xB0
+#define MirLev1_3000 0xC0
   MirLev2_2760,  /* 3000..300F */
   MirLev2_3010,  /* 3010..301F */
   MirLev2_0000,  /* 3020..302F */
@@ -587,7 +631,7 @@ static const PACKTAB_UINT8 MirLev1[16*14] = {
   MirLev2_0000,  /* 30D0..30DF */
   MirLev2_0000,  /* 30E0..30EF */
   MirLev2_0000,  /* 30F0..30FF */
-#define MirLev1_FE00 0xC0
+#define MirLev1_FE00 0xD0
   MirLev2_0000,  /* FE00..FE0F */
   MirLev2_0000,  /* FE10..FE1F */
   MirLev2_0000,  /* FE20..FE2F */
@@ -604,7 +648,7 @@ static const PACKTAB_UINT8 MirLev1[16*14] = {
   MirLev2_0000,  /* FED0..FEDF */
   MirLev2_0000,  /* FEE0..FEEF */
   MirLev2_0000,  /* FEF0..FEFF */
-#define MirLev1_FF00 0xD0
+#define MirLev1_FF00 0xE0
   MirLev2_0020,  /* FF00..FF0F */
   MirLev2_0030,  /* FF10..FF1F */
   MirLev2_0000,  /* FF20..FF2F */
@@ -668,7 +712,7 @@ static const PACKTAB_UINT8 MirLev0[256*1] = {
   MirLev1_0100,  /* 2800..28FF */
   MirLev1_2900,  /* 2900..29FF */
   MirLev1_2A00,  /* 2A00..2AFF */
-  MirLev1_0100,  /* 2B00..2BFF */
+  MirLev1_2B00,  /* 2B00..2BFF */
   MirLev1_0100,  /* 2C00..2CFF */
   MirLev1_0100,  /* 2D00..2DFF */
   MirLev1_2E00,  /* 2E00..2EFF */

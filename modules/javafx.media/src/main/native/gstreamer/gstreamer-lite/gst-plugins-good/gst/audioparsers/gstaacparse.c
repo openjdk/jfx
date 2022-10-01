@@ -46,6 +46,7 @@
 
 #include <gst/base/gstbitreader.h>
 #include <gst/pbutils/pbutils.h>
+#include "gstaudioparserselements.h"
 #include "gstaacparse.h"
 
 
@@ -108,6 +109,8 @@ static gboolean gst_aac_parse_read_audio_specific_config (GstAacParse *
 
 #define gst_aac_parse_parent_class parent_class
 G_DEFINE_TYPE (GstAacParse, gst_aac_parse, GST_TYPE_BASE_PARSE);
+GST_ELEMENT_REGISTER_DEFINE (aacparse, "aacparse",
+    GST_RANK_PRIMARY + 1, GST_TYPE_AAC_PARSE);
 
 /**
  * gst_aac_parse_class_init:

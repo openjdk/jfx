@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -61,6 +61,7 @@ import javafx.scene.input.KeyCodeCombination;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
+import javafx.util.converter.IntegerStringConverter;
 import test.com.sun.javafx.pgstub.StubToolkit;
 import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
@@ -363,7 +364,7 @@ public class TextFieldTest {
     }
 
     /**
-     * Test related to https://bugs.openjdk.java.net/browse/JDK-8207759
+     * Test related to https://bugs.openjdk.org/browse/JDK-8207759
      * broken event dispatch sequence by forwardToParent.
      */
     @Test
@@ -472,6 +473,80 @@ public class TextFieldTest {
         assertEquals("x aayyy", txtField.getText());
         assertEquals(4, txtField.getSelection().getStart());
         assertEquals(4, txtField.getSelection().getEnd());
+    }
+
+    @Test
+    public void testTextFormatterWithFilter() {
+        txtField.setText("abc");
+        txtField.setTextFormatter(new TextFormatter<>(this::upperCase));
+        assertEquals("abc", txtField.getText());
+
+        // Set text again to trigger the text formatter filter.
+        txtField.setText("abc");
+        assertEquals("ABC", txtField.getText());
+    }
+
+    @Test
+    public void testTextFormatterWithConverter() {
+        txtField.setText("200");
+        txtField.setTextFormatter(new TextFormatter<>(new IntegerStringConverter() {
+            @Override
+            public Integer fromString(String value) {
+                // Converter to integer and add 100.
+                return super.fromString(value) + 100;
+            }
+        }));
+        // No default value -> text is cleared.
+        assertEquals("", txtField.getText());
+
+        txtField.setText("500");
+        assertEquals("600", txtField.getText());
+    }
+
+    @Test
+    public void testTextFormatterWithConverterAndDefaultValue() {
+        txtField.setText("200");
+        txtField.setTextFormatter(new TextFormatter<>(new IntegerStringConverter() {
+            @Override
+            public Integer fromString(String value) {
+                // Converter to integer and add 100.
+                return super.fromString(value) + 100;
+            }
+        }, 1000));
+        // Default value is set as text.
+        assertEquals("1000", txtField.getText());
+
+        txtField.setText("500");
+        assertEquals("600", txtField.getText());
+    }
+
+    @Test
+    public void testTextFormatterWithConverterAndFilter() {
+        txtField.setText("200");
+        txtField.setTextFormatter(new TextFormatter<>(new IntegerStringConverter() {
+            @Override
+            public Integer fromString(String value) {
+                // Converter to integer and add 100.
+                return super.fromString(value) + 100;
+            }
+        }, 1000, change -> {
+            change.setText(change.getText().replace("3", ""));
+            return change;
+        }));
+        // Default value is set as text.
+        assertEquals("1000", txtField.getText());
+
+        txtField.setText("500");
+        assertEquals("600", txtField.getText());
+
+        // 3 is removed, therefore we get 100. The value converter above will then add 100 (=200).
+        txtField.setText("1300");
+        assertEquals("200", txtField.getText());
+    }
+
+    private Change upperCase(Change change) {
+        change.setText(change.getText().toUpperCase());
+        return change;
     }
 
     private Change noDigits(Change change) {

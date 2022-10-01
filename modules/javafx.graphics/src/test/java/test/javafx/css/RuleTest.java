@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -162,17 +162,6 @@ public class RuleTest {
         Rule instance = null;
         long expResult = 0l;
         long result = RuleShim.applies(instance, node, null);
-        assertEquals(expResult, result);
-        fail("The test case is a prototype.");
-    }
-
-    @Ignore("JDK-8234154")
-    @Test
-    public void testToString() {
-        System.out.println("toString");
-        Rule instance = null;
-        String expResult = "";
-        String result = instance.toString();
         assertEquals(expResult, result);
         fail("The test case is a prototype.");
     }

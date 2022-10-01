@@ -294,8 +294,6 @@ public class TableColumnHeader extends Region {
         }
     };
 
-
-
     /* *************************************************************************
      *                                                                         *
      * Properties                                                              *
@@ -372,8 +370,9 @@ public class TableColumnHeader extends Region {
             isSizeDirty = false;
         }
 
+        double cornerRegionPadding = tableHeaderRow == null ? 0.0 : tableHeaderRow.cornerPadding.get();
         double sortWidth = 0;
-        double w = snapSizeX(getWidth()) - (snappedLeftInset() + snappedRightInset());
+        double w = snapSizeX(getWidth()) - (snappedLeftInset() + snappedRightInset()) - cornerRegionPadding;
         double h = getHeight() - (snappedTopInset() + snappedBottomInset());
         double x = w;
 
@@ -476,7 +475,17 @@ public class TableColumnHeader extends Region {
     }
 
     void setTableHeaderRow(TableHeaderRow thr) {
+        if (tableHeaderRow != null) {
+            changeListenerHandler.unregisterChangeListeners(tableHeaderRow.cornerPadding);
+        }
         tableHeaderRow = thr;
+        if (tableHeaderRow != null) {
+            changeListenerHandler.registerChangeListener(tableHeaderRow.cornerPadding, o -> {
+                if (isLastVisibleColumn) {
+                    requestLayout();
+                }
+            });
+        }
         updateTableSkin();
     }
 
@@ -681,7 +690,7 @@ public class TableColumnHeader extends Region {
 
         // RT-23486
         maxWidth += padding;
-        if (tv.getColumnResizePolicy() == TableView.CONSTRAINED_RESIZE_POLICY && tv.getWidth() > 0) {
+        if (TableSkinUtils.isConstrainedResizePolicy(tv.getColumnResizePolicy()) && tv.getWidth() > 0) {
             if (maxWidth > tc.getMaxWidth()) {
                 maxWidth = tc.getMaxWidth();
             }
@@ -737,8 +746,9 @@ public class TableColumnHeader extends Region {
             padding = r.snappedLeftInset() + r.snappedRightInset();
         }
 
-        TreeTableRow<T> treeTableRow = new TreeTableRow<>();
-        treeTableRow.updateTreeTableView(ttv);
+        Callback<TreeTableView<T>, TreeTableRow<T>> rowFactory = ttv.getRowFactory();
+        TreeTableRow<T> treeTableRow = createMeasureRow(ttv, tableSkin, rowFactory);
+        ((SkinBase<?>) treeTableRow.getSkin()).getChildren().add(cell);
 
         int rows = maxRows == -1 ? items.size() : Math.min(items.size(), maxRows);
         double maxWidth = 0;
@@ -752,8 +762,7 @@ public class TableColumnHeader extends Region {
             cell.updateIndex(row);
 
             if ((cell.getText() != null && !cell.getText().isEmpty()) || cell.getGraphic() != null) {
-                tableSkin.getChildren().add(cell);
-                cell.applyCss();
+                treeTableRow.applyCss();
 
                 double w = cell.prefWidth(-1);
 
@@ -776,7 +785,7 @@ public class TableColumnHeader extends Region {
 
         // RT-23486
         maxWidth += padding;
-        if (ttv.getColumnResizePolicy() == TreeTableView.CONSTRAINED_RESIZE_POLICY && ttv.getWidth() > 0) {
+        if (TableSkinUtils.isConstrainedResizePolicy(ttv.getColumnResizePolicy()) && ttv.getWidth() > 0) {
 
             if (maxWidth > tc.getMaxWidth()) {
                 maxWidth = tc.getMaxWidth();
@@ -795,6 +804,20 @@ public class TableColumnHeader extends Region {
         } else {
             TableColumnBaseHelper.setWidth(tc, maxWidth);
         }
+    }
+
+    private <T> TreeTableRow<T> createMeasureRow(TreeTableView<T> ttv, TableViewSkinBase tableSkin,
+            Callback<TreeTableView<T>, TreeTableRow<T>> rowFactory) {
+        TreeTableRow<T> treeTableRow = rowFactory != null ? rowFactory.call(ttv) : new TreeTableRow<>();
+        tableSkin.getChildren().add(treeTableRow);
+        treeTableRow.applyCss();
+        if (!(treeTableRow.getSkin() instanceof SkinBase<?>)) {
+            tableSkin.getChildren().remove(treeTableRow);
+            // recreate with null rowFactory will result in a standard TableRow that will
+            // have a SkinBase-derived skin
+            treeTableRow = createMeasureRow(ttv, tableSkin, null);
+        }
+        return treeTableRow;
     }
 
     private void updateSortPosition() {

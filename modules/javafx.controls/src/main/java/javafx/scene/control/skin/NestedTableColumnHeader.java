@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -598,15 +598,9 @@ public class NestedTableColumnHeader extends TableColumnHeader {
             return;
         }
 
-        boolean isConstrainedResize = false;
         TableViewSkinBase tableSkin = getTableSkin();
         Callback<ResizeFeaturesBase,Boolean> columnResizePolicy = TableSkinUtils.columnResizePolicyProperty(tableSkin).get();
-        if (columnResizePolicy != null) {
-            isConstrainedResize =
-                    tableSkin instanceof TableViewSkin ? TableView.CONSTRAINED_RESIZE_POLICY.equals(columnResizePolicy) :
-                    tableSkin instanceof TreeTableViewSkin ? TreeTableView.CONSTRAINED_RESIZE_POLICY.equals(columnResizePolicy) :
-                    false;
-        }
+        boolean isConstrainedResize = TableSkinUtils.isConstrainedResizePolicy(columnResizePolicy);
 
         // RT-32547 - don't show resize cursor when in constrained resize mode
         // and there is only one column

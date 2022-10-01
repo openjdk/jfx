@@ -29,6 +29,7 @@ require "config"
 require "backends"
 require "digest/sha1"
 require "offsets"
+require 'optparse'
 require "parser"
 require "self_hash"
 require "settings"
@@ -45,6 +46,14 @@ includeOnlyBackends(validBackends)
 
 variants = ARGV.shift.split(/[,\s]+/)
 
+$options = {}
+OptionParser.new do |opts|
+    opts.banner = "Usage: generate_offset_extractor.rb asmFile settingFile outputFileName backends variants [--webkit-additions-path=<path>]"
+    opts.on("--webkit-additions-path=PATH", "WebKitAdditions path.") do |path|
+        $options[:webkit_additions_path] = path
+    end
+end.parse!
+
 begin
     configurationList = configurationIndicesForVariants(settingsFlnm, variants)
 rescue MissingMagicValuesException
@@ -60,7 +69,7 @@ def emitMagicNumber
 end
 
 configurationHash = Digest::SHA1.hexdigest(configurationList.join(' '))
-inputHash = "// OffsetExtractor input hash: #{parseHash(inputFlnm)} #{configurationHash} #{selfHash}"
+inputHash = "// OffsetExtractor input hash: #{parseHash(inputFlnm, $options)} #{configurationHash} #{selfHash}"
 
 if FileTest.exist? outputFlnm
     File.open(outputFlnm, "r") {
@@ -73,7 +82,7 @@ if FileTest.exist? outputFlnm
     }
 end
 
-ast = parse(inputFlnm)
+ast = parse(inputFlnm, $options)
 settingsCombinations = computeSettingsCombinations(ast)
 
 File.open(outputFlnm, "w") {

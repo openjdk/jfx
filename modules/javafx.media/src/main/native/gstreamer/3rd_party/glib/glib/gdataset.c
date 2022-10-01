@@ -121,9 +121,9 @@
 /**
  * GData:
  *
- * The #GData struct is an opaque data structure to represent a
- * [Keyed Data List][glib-Keyed-Data-Lists]. It should only be
- * accessed via the following functions.
+ * An opaque data structure that represents a keyed data list.
+ *
+ * See also: [Keyed data lists][glib-Keyed-Data-Lists].
  **/
 
 /**
@@ -907,7 +907,7 @@ g_datalist_id_dup_data (GData          **datalist,
  * If the previous value was replaced then ownership of the
  * old value (@oldval) is passed to the caller, including
  * the registered destroy notify for it (passed out in @old_destroy).
- * Its up to the caller to free this as he wishes, which may
+ * Its up to the caller to free this as they wish, which may
  * or may not include using @old_destroy as sometimes replacement
  * should not destroy the object in the normal way.
  *

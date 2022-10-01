@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -870,9 +870,16 @@ public class Utils {
         }
     }
 
+    /**
+     * @return true if and only if assertions are enabled at runtime.
+     */
     public static boolean assertionEnabled() {
         boolean assertsEnabled = false;
-        assert assertsEnabled = true;  // Intentional side-effect !!!
+
+        // The following assertion check will always pass. The side-effect
+        // of the `assertsEnabled = true` assignment is intentional. It will
+        // be executed if-and-only-if assertions are enabled at runtime.
+        assert (assertsEnabled = true) == true;
 
         return assertsEnabled;
     }

@@ -25,7 +25,7 @@
 [
     Conditional=WEB_AUDIO,
     JSGenerateToJSObject,
-    EnabledBySetting=WebAudio,
+    EnabledBySetting=WebAudioEnabled,
     Exposed=Window
 ] interface PannerNode : AudioNode {
     constructor (BaseAudioContext context, optional PannerOptions options);
@@ -36,7 +36,7 @@
     // Uses a 3D cartesian coordinate system 
     undefined setPosition(float x, float y, float z);
     undefined setOrientation(float x, float y, float z);
-
+    
     // Default distance model is inverse
     [ImplementedAs=distanceModelForBindings] attribute DistanceModelType distanceModel;
 
@@ -48,12 +48,12 @@
     [ImplementedAs=coneInnerAngleForBindings] attribute double coneInnerAngle;
     [ImplementedAs=coneOuterAngleForBindings] attribute double coneOuterAngle;
     [ImplementedAs=coneOuterGainForBindings] attribute double coneOuterGain;
-
+    
     // Position of audio source in 3D Cartesian system
     readonly attribute AudioParam positionX;
     readonly attribute AudioParam positionY;
     readonly attribute AudioParam positionZ;
-
+    
     // Vector of direction of audio source in 3D cartesian system
     readonly attribute AudioParam orientationX;
     readonly attribute AudioParam orientationY;

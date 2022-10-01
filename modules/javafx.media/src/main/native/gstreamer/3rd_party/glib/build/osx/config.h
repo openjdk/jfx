@@ -39,7 +39,7 @@
 #define GETTEXT_PACKAGE "glib20"
 
 /* Define to the GLIB binary age */
-#define GLIB_BINARY_AGE 6607
+#define GLIB_BINARY_AGE 7200
 
 /* Define to the GLIB interface age */
 #define GLIB_INTERFACE_AGE 1
@@ -51,10 +51,10 @@
 #define GLIB_MAJOR_VERSION 2
 
 /* Define to the GLIB micro version */
-#define GLIB_MICRO_VERSION 7
+#define GLIB_MICRO_VERSION 0
 
 /* Define to the GLIB minor version */
-#define GLIB_MINOR_VERSION 66
+#define GLIB_MINOR_VERSION 72
 
 /* Have inline keyword */
 #define G_HAVE_INLINE 1
@@ -705,7 +705,7 @@
 #define PACKAGE_NAME "glib"
 
 /* Define to the full name and version of this package. */
-#define PACKAGE_STRING "glib 2.66.7"
+#define PACKAGE_STRING "glib 2.72.0"
 
 /* Define to the one symbol short name of this package. */
 #define PACKAGE_TARNAME "glib"
@@ -714,7 +714,7 @@
 #define PACKAGE_URL ""
 
 /* Define to the version of this package. */
-#define PACKAGE_VERSION "2.66.7"
+#define PACKAGE_VERSION "2.72.0"
 
 /* define if posix_memalign() can allocate any size */
 #define POSIX_MEMALIGN_WITH_COMPLIANT_ALLOCS 1

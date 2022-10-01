@@ -32,6 +32,7 @@ import javafx.scene.input.ClipboardContent;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import org.junit.Test;
+import org.junit.Ignore;
 
 import static javafx.concurrent.Worker.State.SUCCEEDED;
 import static org.junit.Assert.assertEquals;
@@ -44,6 +45,7 @@ public class HTMLEditingTest extends TestBase {
      * @bug 8143894
      * summary intercept clipboard data in javascript for onpaste event
      */
+    @Ignore("JDK-8290237")
     @Test public void clipboardGetDataOnPaste() {
         // Read the clipboard data from JavaScript onpaste event
         // Verify the paste data from pasteTarget element
@@ -71,14 +73,12 @@ public class HTMLEditingTest extends TestBase {
                             false, !PlatformUtil.isMac(),// Ctrl+V(Non Mac)
                             false, PlatformUtil.isMac()));// Cmd+V (Mac)
 
-            assertEquals("Source Default value",getEngine().
-                    executeScript("srcInput.defaultValue").toString(),
-                    defaultText);
-            assertEquals("Source clipboard onpaste data", getEngine().
-                    executeScript("srcInput.value").toString(), clipboardData + defaultText);
-            assertEquals("Target onpaste data", getEngine().
-                    executeScript("pasteTarget.value").toString(),
-                    clipboardData);
+            assertEquals("Source Default value",defaultText,getEngine().
+                    executeScript("srcInput.defaultValue").toString());
+            assertEquals("Source clipboard onpaste data", clipboardData + defaultText, getEngine().
+                    executeScript("srcInput.value").toString());
+            assertEquals("Target onpaste data",clipboardData, getEngine().
+                    executeScript("pasteTarget.value").toString());
         });
     }
 }

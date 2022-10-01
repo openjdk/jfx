@@ -241,7 +241,7 @@
 #define PACKAGE_NAME "libxml2"
 
 /* Define to the full name and version of this package. */
-#define PACKAGE_STRING "libxml2 2.9.13"
+#define PACKAGE_STRING "libxml2 2.9.14"
 
 /* Define to the one symbol short name of this package. */
 #define PACKAGE_TARNAME "libxml2"
@@ -250,7 +250,7 @@
 #define PACKAGE_URL ""
 
 /* Define to the version of this package. */
-#define PACKAGE_VERSION "2.9.13"
+#define PACKAGE_VERSION "2.9.14"
 
 /* Type cast for the send() function 2nd arg */
 #define SEND_ARG2_CAST /**/
@@ -265,7 +265,7 @@
 #define VA_LIST_IS_ARRAY 1
 
 /* Version number of package */
-#define VERSION "2.9.13"
+#define VERSION "2.9.14"
 
 /* Determine what socket length (socklen_t) data type is */
 #define XML_SOCKLEN_T socklen_t

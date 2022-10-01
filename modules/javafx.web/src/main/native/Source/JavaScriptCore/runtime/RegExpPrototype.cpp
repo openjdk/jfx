@@ -132,6 +132,12 @@ JSC_DEFINE_HOST_FUNCTION(regExpProtoFuncCompile, (JSGlobalObject* globalObject, 
     if (UNLIKELY(!thisRegExp))
         return throwVMTypeError(globalObject, scope);
 
+    if (thisRegExp->globalObject(vm) != globalObject)
+        return throwVMTypeError(globalObject, scope, "RegExp.prototype.compile function's Realm must be the same to |this| RegExp object"_s);
+
+    if (!thisRegExp->areLegacyFeaturesEnabled())
+        return throwVMTypeError(globalObject, scope, "|this| RegExp object's legacy features are not enabled"_s);
+
     RegExp* regExp;
     JSValue arg0 = callFrame->argument(0);
     JSValue arg1 = callFrame->argument(1);
@@ -154,6 +160,8 @@ JSC_DEFINE_HOST_FUNCTION(regExpProtoFuncCompile, (JSGlobalObject* globalObject, 
 
     if (!regExp->isValid())
         return throwVMError(globalObject, scope, regExp->errorToThrow(globalObject));
+
+    globalObject->regExpRecompiledWatchpoint()->fireAll(vm, "RegExp is recompiled");
 
     thisRegExp->setRegExp(vm, regExp);
     scope.release();
@@ -191,7 +199,7 @@ JSC_DEFINE_HOST_FUNCTION(regExpProtoFuncToString, (JSGlobalObject* globalObject,
         return throwVMTypeError(globalObject, scope);
 
     JSObject* thisObject = asObject(thisValue);
-    Integrity::auditStructureID(vm, thisObject->structureID());
+    Integrity::auditStructureID(thisObject->structureID());
 
     StringRecursionChecker checker(globalObject, thisObject);
     EXCEPTION_ASSERT(!scope.exception() || checker.earlyReturnValue());
@@ -397,7 +405,7 @@ void genericSplit(
             auto result = control();
             RETURN_IF_EXCEPTION(scope, void());
             if (result == AbortSplit)
-            return;
+                return;
         }
 
         ovector.shrink(0);
@@ -445,7 +453,7 @@ void genericSplit(
             auto result = push(true, position, matchPosition - position);
             RETURN_IF_EXCEPTION(scope, void());
             if (result == AbortSplit)
-            return;
+                return;
         }
 
         // 5. Let p be e.

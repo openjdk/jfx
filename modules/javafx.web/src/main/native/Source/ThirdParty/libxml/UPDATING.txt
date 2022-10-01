@@ -41,15 +41,17 @@ Updating libxml in OpenJFX:
 
 9.2 Copy libxml\src\config.h to libxml\linux\config.h
 
-10. Helper commands for removing tabs and trailing whitespaces from source files(.h and .c).
+10. Update version info in 'modules/javafx.web/src/main/legal/libxml.md'. Also, update copyright if any new files are added.
 
-10.1 > cd modules/javafx.web/src/main/native/Source/ThirdParty/libxml
+11. Helper commands for removing tabs and trailing whitespaces from source files(.h and .c).
 
-10.2 Remove tabs from source files:
+11.1 > cd modules/javafx.web/src/main/native/Source/ThirdParty/libxml
+
+11.2 Remove tabs from source files:
     > sudo apt install moreutils
     > find src/ -name "*.c" -type f -exec bash -c 'expand -t 8 "$0" | sponge "$0"' {} \;
     > find src/ -name "*.h" -type f -exec bash -c 'expand -t 8 "$0" | sponge "$0"' {} \;
 
-10.3 Remove trailing whitespaces from source files:
+11.3 Remove trailing whitespaces from source files:
     > find src/ -name “*.c” -type f -exec sed --in-place 's/[[:space:]]\+$//' {} \+
     > find src/ -name “*.h” -type f -exec sed --in-place 's/[[:space:]]\+$//' {} \+

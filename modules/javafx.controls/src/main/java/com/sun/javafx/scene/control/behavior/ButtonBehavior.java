@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -178,8 +178,7 @@ public class ButtonBehavior<C extends ButtonBase> extends BehaviorBase<C> {
      * potentially arming the Button, this will transfer focus to the button
      */
     protected void mousePressed(MouseEvent e) {
-        // if the button is not already focused, then request the focus
-        if (! getNode().isFocused() && getNode().isFocusTraversable()) {
+        if (getNode().isFocusTraversable()) {
             getNode().requestFocus();
         }
 

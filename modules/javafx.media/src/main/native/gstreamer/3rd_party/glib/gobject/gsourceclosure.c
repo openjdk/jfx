@@ -32,7 +32,7 @@ G_DEFINE_BOXED_TYPE (GIOChannel, g_io_channel, g_io_channel_ref, g_io_channel_un
 GType
 g_io_condition_get_type (void)
 {
-  static volatile GType etype = 0;
+  static GType etype = 0;
 
   if (g_once_init_enter (&etype))
     {

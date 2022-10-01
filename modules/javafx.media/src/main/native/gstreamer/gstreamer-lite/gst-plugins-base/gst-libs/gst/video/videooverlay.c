@@ -127,13 +127,13 @@
  * ## GstVideoOverlay and Gtk+
  *
  * |[
- * #include &lt;gst/video/videooverlay.h&gt;
- * #include &lt;gtk/gtk.h&gt;
+ * #include <gst/video/videooverlay.h>
+ * #include <gtk/gtk.h>
  * #ifdef GDK_WINDOWING_X11
- * #include &lt;gdk/gdkx.h&gt;  // for GDK_WINDOW_XID
+ * #include <gdk/gdkx.h>  // for GDK_WINDOW_XID
  * #endif
  * #ifdef GDK_WINDOWING_WIN32
- * #include &lt;gdk/gdkwin32.h&gt;  // for GDK_WINDOW_HWND
+ * #include <gdk/gdkwin32.h>  // for GDK_WINDOW_HWND
  * #endif
  * ...
  * static guintptr video_window_handle = 0;

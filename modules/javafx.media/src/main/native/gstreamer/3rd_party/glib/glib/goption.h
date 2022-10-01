@@ -278,13 +278,31 @@ struct _GOptionEntry
  * or %G_OPTION_ARG_FILENAME_ARRAY.
  *
  *
- * Using #G_OPTION_REMAINING instead of simply scanning `argv`
+ * Using %G_OPTION_REMAINING instead of simply scanning `argv`
  * for leftover arguments has the advantage that GOption takes care of
  * necessary encoding conversions for strings or filenames.
  *
  * Since: 2.6
  */
 #define G_OPTION_REMAINING ""
+
+/**
+ * G_OPTION_ENTRY_NULL:
+ *
+ * A #GOptionEntry array requires a %NULL terminator, this macro can
+ * be used as terminator instead of an explicit `{ 0 }` but it cannot
+ * be assigned to a variable.
+ *
+ * |[
+ *   GOptionEntry option[] = { G_OPTION_ENTRY_NULL };
+ * ]|
+ *
+ * Since: 2.70
+ */
+#define G_OPTION_ENTRY_NULL    \
+  GLIB_AVAILABLE_MACRO_IN_2_70 \
+  { NULL, 0, 0, 0, NULL, NULL, NULL }
+
 
 GLIB_AVAILABLE_IN_ALL
 GOptionContext *g_option_context_new              (const gchar         *parameter_string);
