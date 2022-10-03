@@ -90,7 +90,6 @@ import com.sun.javafx.scene.ParentHelper;
 import com.sun.javafx.scene.SceneHelper;
 import com.sun.javafx.scene.control.GlobalMenuAdapter;
 import com.sun.javafx.scene.control.MenuBarButton;
-//import com.sun.javafx.scene.control.skin.Utils;
 import com.sun.javafx.scene.traversal.Direction;
 import com.sun.javafx.scene.traversal.ParentTraversalEngine;
 import com.sun.javafx.tk.Toolkit;
