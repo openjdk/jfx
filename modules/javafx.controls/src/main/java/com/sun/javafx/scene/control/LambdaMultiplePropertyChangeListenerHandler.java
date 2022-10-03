@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -156,6 +156,32 @@ public final class LambdaMultiplePropertyChangeListenerHandler {
             observable.addListener(weakInvalidationListener);
         }
         observableReferenceMap.merge(observable, consumer, Consumer::andThen);
+    }
+
+    /**
+     * Executes a lambda if the property value is not null, otherwise adds a listener to the ObservableValue {@code p}
+     * to wait until it is set and calls the lambda then, followed by removing the said listener.
+     *
+     * @param p Observable value
+     * @param consumer lambda to invoke when the property value is not null
+     */
+    public <T> void executeOnceWhenPropertyIsNonNull(ObservableValue<T> p, Consumer<T> consumer) {
+        if (p == null) {
+            return;
+        }
+
+        T value = p.getValue();
+        if (value != null) {
+            consumer.accept(value);
+        } else {
+            registerInvalidationListener(p, (x) -> {
+                T v = p.getValue();
+                if (v != null) {
+                    unregisterInvalidationListeners(p);
+                    consumer.accept(v);
+                }
+            });
+        }
     }
 
     /**

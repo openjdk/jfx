@@ -90,7 +90,7 @@ import com.sun.javafx.scene.ParentHelper;
 import com.sun.javafx.scene.SceneHelper;
 import com.sun.javafx.scene.control.GlobalMenuAdapter;
 import com.sun.javafx.scene.control.MenuBarButton;
-import com.sun.javafx.scene.control.skin.Utils;
+//import com.sun.javafx.scene.control.skin.Utils;
 import com.sun.javafx.scene.traversal.Direction;
 import com.sun.javafx.scene.traversal.ParentTraversalEngine;
 import com.sun.javafx.tk.Toolkit;
@@ -319,7 +319,7 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
         weakMenuBarFocusedPropertyListener = new WeakChangeListener(menuBarFocusedPropertyListener);
 
         weakSceneKeyEventHandler = new WeakEventHandler<KeyEvent>(keyEventHandler);
-        Utils.executeOnceWhenPropertyIsNonNull(control.sceneProperty(), (Scene scene) -> {
+        executeOnceWhenPropertyIsNonNull(control.sceneProperty(), (Scene scene) -> {
             scene.addEventFilter(KeyEvent.KEY_PRESSED, weakSceneKeyEventHandler);
         });
 
@@ -333,7 +333,7 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
             }
         };
         weakSceneMouseEventHandler = new WeakEventHandler<MouseEvent>(mouseEventHandler);
-        Utils.executeOnceWhenPropertyIsNonNull(control.sceneProperty(), (Scene scene) -> {
+        executeOnceWhenPropertyIsNonNull(control.sceneProperty(), (Scene scene) -> {
             scene.addEventFilter(MouseEvent.MOUSE_CLICKED, weakSceneMouseEventHandler);
         });
 
@@ -345,7 +345,7 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
             }
         });
         // When the parent window looses focus - menu selection should be cleared
-        Utils.executeOnceWhenPropertyIsNonNull(control.sceneProperty(), (Scene scene) -> {
+        executeOnceWhenPropertyIsNonNull(control.sceneProperty(), (Scene scene) -> {
             if (scene.getWindow() != null) {
                 scene.getWindow().focusedProperty().addListener(weakWindowFocusListener);
             } else {
@@ -419,7 +419,7 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
         };
         weakSceneAltKeyEventHandler = new WeakEventHandler<>(altKeyEventHandler);
 
-        Utils.executeOnceWhenPropertyIsNonNull(control.sceneProperty(), (Scene scene) -> {
+        executeOnceWhenPropertyIsNonNull(control.sceneProperty(), (Scene scene) -> {
             scene.getAccelerators().put(acceleratorKeyCombo, firstMenuRunnable);
             scene.addEventHandler(KeyEvent.ANY, weakSceneAltKeyEventHandler);
         });

@@ -90,6 +90,25 @@ public class SkinMemoryLeakTest {
      */
     @Test
     public void testMemoryLeakSameSkinClass() {
+        installDefaultSkin(control);
+        Skin<?> skin = control.getSkin();
+        WeakReference<?> weakRef = new WeakReference<>(skin);
+
+        installDefaultSkin(control);
+
+        skin = null;
+        Toolkit.getToolkit().firePulse();
+
+        attemptGC(weakRef);
+        assertNull("Unused Skin must be gc'ed", weakRef.get());
+    }
+
+    /**
+     * default skin -> set another instance of default skin,
+     * with scene property set.
+     */
+    @Test
+    public void testMemoryLeakSameSkinClassWithScene() {
         showControl(control, true);
         installDefaultSkin(control);
         Skin<?> skin = control.getSkin();
@@ -128,6 +147,25 @@ public class SkinMemoryLeakTest {
      */
     @Test
     public void testMemoryLeakAlternativeSkin() {
+        installDefaultSkin(control);
+        Skin<?> replacedSkin = replaceSkin(control);
+        WeakReference<?> weakRef = new WeakReference<>(replacedSkin);
+        assertNotNull(weakRef.get());
+
+        // beware: this is important - we might get false reds without!
+        replacedSkin = null;
+        Toolkit.getToolkit().firePulse();
+
+        attemptGC(weakRef);
+        assertEquals("Skin must be gc'ed", null, weakRef.get());
+    }
+
+    /**
+     * default skin -> set alternative,
+     * with scene property set
+     */
+    @Test
+    public void testMemoryLeakAlternativeSkinWithScene() {
         showControl(control, true);
         installDefaultSkin(control);
         Skin<?> replacedSkin = replaceSkin(control);
