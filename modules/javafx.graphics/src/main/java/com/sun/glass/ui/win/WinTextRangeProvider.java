@@ -91,8 +91,7 @@ class WinTextRangeProvider {
         peer = 0L;
     }
 
-    private void validateRange() {
-        String text = (String)getAttribute(TEXT);
+    private void validateRange(String text) {
         if (text == null) {
             start = end = 0;
             return;
@@ -161,7 +160,7 @@ class WinTextRangeProvider {
         if (text == null) return;
         int length = text.length();
         if (length == 0) return;
-        validateRange();
+        validateRange(text);
 
         switch (unit) {
             case TextUnit_Character: {
@@ -320,7 +319,7 @@ class WinTextRangeProvider {
         String text = (String)getAttribute(TEXT);
         if (text == null) return null;
         int length = text.length();
-        validateRange();
+        validateRange(text);
 
         /* Narrator will not focus an empty text control if the bounds are NULL */
         if (length == 0) return new double[0];
@@ -363,7 +362,7 @@ class WinTextRangeProvider {
     private String GetText(int maxLength) {
         String text = (String)getAttribute(TEXT);
         if (text == null) return null;
-        validateRange();
+        validateRange(text);
         int endOffset = maxLength != -1 ? Math.min(end, start + maxLength) : end;
 //        System.out.println("+GetText [" + text.substring(start, endOffset)+"]");
         return text.substring(start, endOffset);
@@ -468,7 +467,7 @@ class WinTextRangeProvider {
         }
 
         /* Always ensure range consistency */
-        validateRange();
+        validateRange(text);
         return actualCount;
     }
 
@@ -477,7 +476,7 @@ class WinTextRangeProvider {
         String text = (String)getAttribute(TEXT);
         if (text == null) return 0;
         int length = text.length();
-        validateRange();
+        validateRange(text);
 
         int actualCount = 0;
         int offset = endpoint == TextPatternRangeEndpoint_Start ? start : end;
@@ -573,7 +572,7 @@ class WinTextRangeProvider {
         }
 
         /* Always ensure range consistency */
-        validateRange();
+        validateRange(text);
         return actualCount;
     }
 
@@ -593,7 +592,7 @@ class WinTextRangeProvider {
         }
 
         /* Always ensure range consistency */
-        validateRange();
+        validateRange(text);
     }
 
     private void Select() {
