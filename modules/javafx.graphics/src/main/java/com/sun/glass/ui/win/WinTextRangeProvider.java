@@ -232,8 +232,7 @@ class WinTextRangeProvider {
         }
 
         /* Always ensure range consistency */
-        start = Math.max(0, Math.min(start, length));
-        end = Math.max(start, Math.min(end, length));
+        validateRange(text);
     }
 
     private long FindAttribute(int attributeId, WinVariant val, boolean backward) {
