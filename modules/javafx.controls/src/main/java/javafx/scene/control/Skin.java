@@ -72,15 +72,17 @@ public interface Skin<C extends Skinnable> {
     public Node getNode();
 
     /**
-     * Called by {@link Skinnable#setSkin(Skin)} after the
+     * Called once by {@link Skinnable#setSkin(Skin)} after the
      * previous skin, if any, has been uninstalled via its {@link #dispose()} method.
      * This method allows a Skin to register listeners, add child nodes, set
      * required properties and/or event handlers.
      * <p>
+     * Client code must not call this method.
+     * <p>
      * The default implementation of this method does nothing.
      *
      * @implNote
-     * Most implementations of Skin in the <code>javafx.controls</code> module
+     * Most implementations of Skin
      * do not need to implement {@code install} unless they must set one or more
      * properties in the corresponding Skinnable.
      *

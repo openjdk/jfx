@@ -40,14 +40,11 @@ public interface Skinnable {
      * perspective of the {@code Skinnable}, the {@code Skin} is a black box.
      * It listens and responds to changes in state in a {@code Skinnable}.
      * <p>
-     * There is typically a one-to-one relationship between a {@code Skinnable} and its
-     * {@code Skin}. Every {@code Skin} maintains a back reference to the
-     * {@code Skinnable}.
-     * <p>
-     * To ensure a one-to-one relationship between a {@code Skinnable} and its
-     * {@code Skin}, some implementations of {@link Skinnable#setSkin(Skin)} method will check
-     * the return value of {@link Skin#getSkinnable()} against this Skinnable,
-     * and throw an {@code IllegalArgumentException} if it is not the same.
+     * Some implementations of {@code Skinnable} define a one-to-one relationship between {@code Skinnable}
+     * and its {@code Skin}. Every {@code Skin} maintains a back reference to the
+     * {@code Skinnable}.  When required, this relationship is enforced inside {@link Skinnable#setSkin(Skin)} method
+     * which checks the return value of {@link Skin#getSkinnable()} against this {@code Skinnable},
+     * throwing an {@code IllegalArgumentException} if it is not the same.
      * <p>
      * A skin may be null.
      *
