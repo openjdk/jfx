@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,6 +28,9 @@ package test.javafx.scene.control.skin;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+import java.lang.ref.WeakReference;
+import java.util.ArrayList;
+
 import javafx.beans.value.ObservableValue;
 import javafx.event.Event;
 import javafx.event.EventType;
@@ -40,7 +43,11 @@ import javafx.scene.control.RadioButton;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.skin.ScrollPaneSkin;
 import javafx.scene.control.skin.ScrollPaneSkinShim;
-import javafx.scene.input.*;
+import javafx.scene.input.MouseButton;
+import javafx.scene.input.MouseEvent;
+import javafx.scene.input.ScrollEvent;
+import javafx.scene.input.SwipeEvent;
+import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.StackPane;
@@ -51,6 +58,10 @@ import javafx.stage.Stage;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
+
+import com.sun.javafx.tk.Toolkit;
+
+import test.util.memory.JMemoryBuddy;
 
 
 public class ScrollPaneSkinTest {
@@ -859,5 +870,57 @@ public class ScrollPaneSkinTest {
 
             return event;
         }
+    }
+
+    /**
+     * Test that ScrollPane object is not leaked when 'same' node
+     * is used as content for different ScrollPane objects, see JDK-8293444.
+     */
+    @Test
+    public void testScrollPaneObjLeakWhenUsedSameContent() {
+
+        ArrayList<WeakReference<ScrollPane>> refs = new ArrayList<>();
+
+        BorderPane bp = new BorderPane();
+
+        Stage stage = new Stage();
+        stage.setScene(new Scene(bp));
+        stage.show();
+
+        Label content = new Label("content");
+
+        for (int i = 0; i < 10; i++) {
+            ScrollPane sp = new ScrollPane(content);
+            refs.add(new WeakReference<ScrollPane>(sp));
+            bp.setCenter(sp);
+
+            Toolkit.getToolkit().firePulse();
+        }
+
+        bp.setCenter(null);
+        Toolkit.getToolkit().firePulse();
+
+        int ct = 0;
+        for (WeakReference<ScrollPane> ref : refs) {
+            JMemoryBuddy.checkCollectable(ref);
+            if (ref.get() != null) {
+                ct++;
+            }
+        }
+
+        // one instance is still held by the 'content' label
+        assertEquals("One instance should be held by the 'content' label", 1, ct);
+
+        // releasing the last instance
+        content = null;
+
+        ct = 0;
+        for (WeakReference<ScrollPane> ref : refs) {
+            JMemoryBuddy.checkCollectable(ref);
+            if (ref.get() != null) {
+                ct++;
+            }
+        }
+        assertEquals(ct + " references of ScrollPane are not freed.", 0, ct);
     }
 }
