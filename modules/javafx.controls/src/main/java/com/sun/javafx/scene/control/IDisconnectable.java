@@ -32,7 +32,7 @@ package com.sun.javafx.scene.control;
  * Copyright © 2021-2022 Andy Goryachev <andy@goryachev.com>
  */
 @FunctionalInterface
-public interface Disconnectable {
+public interface IDisconnectable {
     /**
      * Disconnects what has been connected. May be called multiple times, only the
      * first invocation actually disconnects.
