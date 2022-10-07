@@ -1,8 +1,32 @@
-// Copyright © 2021-2022 Andy Goryachev <andy@goryachev.com>
+/*
+ * Copyright (c) 2022, Oracle and/or its affiliates. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the "Classpath" exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
+ */
 package com.sun.javafx.scene.control;
-import goryachev.common.util.CList;
-import goryachev.common.util.Disconnectable;
+
 import java.lang.ref.WeakReference;
+import java.util.ArrayList;
+
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.value.ChangeListener;
@@ -11,466 +35,356 @@ import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.scene.Node;
 
-
 /**
- * Fx Disconnector.
+ * This class provides convenience methods for adding various listeners, both strong and weak,
+ * as well as a single {@link #disconnect()} method to remove all listeners.
+ * <p>
+ * There are two usage patterns:
+ * <ul>
+ * <li>Client code registers a number of listeners and removes them all at once via {@link #disconnect()} call.
+ * <li>Client code registers a number of listeners and removes one via its {@link IDisconnectable} instance.
+ * </ul>
+ * <p>
+ * Original code is re-licensed to Oracle by the author.
+ * https://github.com/andy-goryachev/FxTextEditor/blob/master/src/goryachev/fx/FxDisconnector.java
+ * Copyright © 2021-2022 Andy Goryachev <andy@goryachev.com>
  */
-public class FxDisconnector
-	implements Disconnectable
-{
-	private final CList<Disconnectable> items = new CList();
-	private static final Object KEY = new Object();
-	
-	
-	public FxDisconnector()
-	{
-	}
-	
-	
-	public static FxDisconnector get(Node n)
-	{
-		Object x = n.getProperties().get(KEY);
-		if(x instanceof FxDisconnector)
-		{
-			return (FxDisconnector)x;
-		}
-		FxDisconnector d = new FxDisconnector();
-		n.getProperties().put(KEY, d);
-		return d;
-	}
-	
-	
-	public static void disconnect(Node n)
-	{
-		Object x = n.getProperties().get(KEY);
-		if(x instanceof FxDisconnector)
-		{
-			((FxDisconnector)x).disconnect();
-		}
-	}
-	
-	
-	public void addDisconnectable(Disconnectable d)
-	{
-		items.add(d);
-	}
+public class FxDisconnector implements Disconnectable {
+    private final ArrayList<Disconnectable> items = new ArrayList<>();
+    private static final Object KEY = new Object();
 
+    public FxDisconnector() {
+    }
 
-	public void disconnect()
-	{
-		for(int i=items.size()-1; i>=0; i--)
-		{
-			Disconnectable d = items.remove(i);
-			d.disconnect();
-		}
-	}
-	
-	
-	// change listeners
-	
-	
-	public Disconnectable addChangeListener(Runnable callback, ObservableValue<?> ... props)
-	{
-		return addChangeListener(callback, false, props);
-	}
-	
+    public static FxDisconnector get(Node n) {
+        Object x = n.getProperties().get(KEY);
+        if (x instanceof FxDisconnector) {
+            return (FxDisconnector)x;
+        }
+        FxDisconnector d = new FxDisconnector();
+        n.getProperties().put(KEY, d);
+        return d;
+    }
 
-	public Disconnectable addChangeListener(Runnable onChange, boolean fireImmediately, ObservableValue<?> ... props)
-	{
-		ChLi li = new ChLi()
-		{
-			public void disconnect()
-			{
-				for(ObservableValue p: props)
-				{
-					p.removeListener(this);
-				}
-			}
+    public static void disconnect(Node n) {
+        Object x = n.getProperties().get(KEY);
+        if (x instanceof FxDisconnector) {
+            ((FxDisconnector)x).disconnect();
+        }
+    }
 
-			
-			public void changed(ObservableValue p, Object oldValue, Object newValue)
-			{
-				onChange.run();
-			}
-		};
-		
-		items.add(li);
-		
-		for(ObservableValue p: props)
-		{
-			p.addListener(li);
-		}
-		
-		if(fireImmediately)
-		{
-			onChange.run();
-		}
-		
-		return li;
-	}
-	
-	
-	public <T> Disconnectable addChangeListener(ObservableValue<T> prop, ChangeListener<T> li)
-	{
-		return addChangeListener(prop, false, li);
-	}
-	
-	
-	public <T> Disconnectable addChangeListener(ObservableValue<T> prop, boolean fireImmediately, ChangeListener<T> li)
-	{
-		Disconnectable d = new Disconnectable()
-		{
-			public void disconnect()
-			{
-				prop.removeListener(li);
-			}
-		};
-		
-		items.add(d);
-		prop.addListener(li);
-		
-		if(fireImmediately)
-		{
-			T v = prop.getValue();
-			li.changed(prop, null, v);
-		}
-		
-		return d;
-	}
+    public void addDisconnectable(Disconnectable d) {
+        items.add(d);
+    }
 
+    public void disconnect() {
+        for (int i = items.size() - 1; i >= 0; i--) {
+            Disconnectable d = items.remove(i);
+            d.disconnect();
+        }
+    }
 
-	public Disconnectable addWeakChangeListener(Runnable onChange, ObservableValue<?> ... props)
-	{
-		return addWeakChangeListener(onChange, false, props);
-	}
+    // change listeners
 
+    public Disconnectable addChangeListener(Runnable callback, ObservableValue<?>... props) {
+        return addChangeListener(callback, false, props);
+    }
 
-	public Disconnectable addWeakChangeListener(Runnable onChange, boolean fireImmediately, ObservableValue<?> ... props)
-	{
-		ChLi li = new ChLi()
-		{
-			WeakReference<Runnable> ref = new WeakReference(onChange);
+    public Disconnectable addChangeListener(Runnable onChange, boolean fireImmediately, ObservableValue<?>... props) {
+        ChLi li = new ChLi() {
+            public void disconnect() {
+                for (ObservableValue p : props) {
+                    p.removeListener(this);
+                }
+            }
 
+            public void changed(ObservableValue p, Object oldValue, Object newValue) {
+                onChange.run();
+            }
+        };
 
-			public void disconnect()
-			{
-				for(ObservableValue p: props)
-				{
-					p.removeListener(this);
-				}
-			}
+        items.add(li);
 
+        for (ObservableValue p : props) {
+            p.addListener(li);
+        }
 
-			public void changed(ObservableValue p, Object oldValue, Object newValue)
-			{
-				Runnable r = ref.get();
-				if(r == null)
-				{
-					disconnect();
-				}
-				else
-				{
-					r.run();
-				}
-			}
-		};
+        if (fireImmediately) {
+            onChange.run();
+        }
 
-		items.add(li);
+        return li;
+    }
 
-		for(ObservableValue p: props)
-		{
-			p.addListener(li);
-		}
+    public <T> Disconnectable addChangeListener(ObservableValue<T> prop, ChangeListener<T> li) {
+        return addChangeListener(prop, false, li);
+    }
 
-		if(fireImmediately)
-		{
-			onChange.run();
-		}
+    public <T> Disconnectable addChangeListener(ObservableValue<T> prop, boolean fireImmediately,
+            ChangeListener<T> li) {
+        Disconnectable d = new Disconnectable() {
+            public void disconnect() {
+                prop.removeListener(li);
+            }
+        };
 
-		return li;
-	}
+        items.add(d);
+        prop.addListener(li);
 
+        if (fireImmediately) {
+            T v = prop.getValue();
+            li.changed(prop, null, v);
+        }
 
-	public <T> Disconnectable addWeakChangeListener(ObservableValue<T> prop, ChangeListener<T> li)
-	{
-		return addChangeListener(prop, false, li);
-	}
+        return d;
+    }
 
+    public Disconnectable addWeakChangeListener(Runnable onChange, ObservableValue<?>... props) {
+        return addWeakChangeListener(onChange, false, props);
+    }
 
-	public <T> Disconnectable addWeakChangeListener(ObservableValue<T> prop, boolean fireImmediately, ChangeListener<T> listener)
-	{
-		ChLi<T> d = new ChLi<T>()
-		{
-			WeakReference<ChangeListener<T>> ref = new WeakReference<>(listener);
+    public Disconnectable addWeakChangeListener(Runnable onChange, boolean fireImmediately,
+            ObservableValue<?>... props) {
+        ChLi li = new ChLi() {
+            WeakReference<Runnable> ref = new WeakReference(onChange);
 
+            public void disconnect() {
+                for (ObservableValue p : props) {
+                    p.removeListener(this);
+                }
+            }
 
-			public void disconnect()
-			{
-				prop.removeListener(this);
-			}
+            public void changed(ObservableValue p, Object oldValue, Object newValue) {
+                Runnable r = ref.get();
+                if (r == null) {
+                    disconnect();
+                } else {
+                    r.run();
+                }
+            }
+        };
 
+        items.add(li);
 
-			public void changed(ObservableValue p, T oldValue, T newValue)
-			{
-				ChangeListener<T> li = ref.get();
-				if(li == null)
-				{
-					disconnect();
-				}
-				else
-				{
-					li.changed(p, oldValue, newValue);
-				}
-			}
-		};
+        for (ObservableValue p : props) {
+            p.addListener(li);
+        }
 
-		items.add(d);
-		prop.addListener(d);
+        if (fireImmediately) {
+            onChange.run();
+        }
 
-		if(fireImmediately)
-		{
-			T v = prop.getValue();
-			listener.changed(prop, null, v);
-		}
-		
-		return d;
-	}
-	
-	
-	// invalidation listeners
-	
-	
-	public Disconnectable addInvalidationListener(Runnable callback, ObservableValue<?> ... props)
-	{
-		return addInvalidationListener(callback, false, props);
-	}
-	
+        return li;
+    }
 
-	public Disconnectable addInvalidationListener(Runnable onChange, boolean fireImmediately, ObservableValue<?> ... props)
-	{
-		InLi li = new InLi()
-		{
-			public void disconnect()
-			{
-				for(ObservableValue p: props)
-				{
-					p.removeListener(this);
-				}
-			}
+    public <T> Disconnectable addWeakChangeListener(ObservableValue<T> prop, ChangeListener<T> li) {
+        return addChangeListener(prop, false, li);
+    }
 
+    public <T> Disconnectable addWeakChangeListener(ObservableValue<T> prop, boolean fireImmediately,
+            ChangeListener<T> listener) {
+        ChLi<T> d = new ChLi<T>() {
+            WeakReference<ChangeListener<T>> ref = new WeakReference<>(listener);
 
-			public void invalidated(Observable p)
-			{
-				onChange.run();
-			}
-		};
-		
-		items.add(li);
-		
-		for(ObservableValue p: props)
-		{
-			p.addListener(li);
-		}
-		
-		if(fireImmediately)
-		{
-			onChange.run();
-		}
-		
-		return li;
-	}
-	
-	
-	public <T> Disconnectable addInvalidationListener(ObservableValue<T> prop, InvalidationListener li)
-	{
-		return addInvalidationListener(prop, false, li);
-	}
-	
-	
-	public <T> Disconnectable addInvalidationListener(ObservableValue<T> prop, boolean fireImmediately, InvalidationListener li)
-	{
-		Disconnectable d = new Disconnectable()
-		{
-			public void disconnect()
-			{
-				prop.removeListener(li);
-			}
-		};
-		
-		items.add(d);
-		prop.addListener(li);
-		
-		if(fireImmediately)
-		{
-			li.invalidated(prop);
-		}
-		
-		return d;
-	}
+            public void disconnect() {
+                prop.removeListener(this);
+            }
 
+            public void changed(ObservableValue p, T oldValue, T newValue) {
+                ChangeListener<T> li = ref.get();
+                if (li == null) {
+                    disconnect();
+                } else {
+                    li.changed(p, oldValue, newValue);
+                }
+            }
+        };
 
-	public Disconnectable addWeakInvalidationListener(Runnable onChange, ObservableValue<?> ... props)
-	{
-		return addWeakInvalidationListener(onChange, false, props);
-	}
+        items.add(d);
+        prop.addListener(d);
 
+        if (fireImmediately) {
+            T v = prop.getValue();
+            listener.changed(prop, null, v);
+        }
 
-	public Disconnectable addWeakInvalidationListener(Runnable onChange, boolean fireImmediately, ObservableValue<?> ... props)
-	{
-		InLi li = new InLi()
-		{
-			WeakReference<Runnable> ref = new WeakReference(onChange);
+        return d;
+    }
 
+    // invalidation listeners
 
-			public void disconnect()
-			{
-				for(ObservableValue p: props)
-				{
-					p.removeListener(this);
-				}
-			}
+    public Disconnectable addInvalidationListener(Runnable callback, ObservableValue<?>... props) {
+        return addInvalidationListener(callback, false, props);
+    }
 
+    public Disconnectable addInvalidationListener(Runnable onChange, boolean fireImmediately,
+            ObservableValue<?>... props) {
+        InLi li = new InLi() {
+            public void disconnect() {
+                for (ObservableValue p : props) {
+                    p.removeListener(this);
+                }
+            }
 
-			public void invalidated(Observable p)
-			{
-				Runnable r = ref.get();
-				if(r == null)
-				{
-					disconnect();
-				}
-				else
-				{
-					r.run();
-				}
-			}
-		};
+            public void invalidated(Observable p) {
+                onChange.run();
+            }
+        };
 
-		items.add(li);
+        items.add(li);
 
-		for(ObservableValue p: props)
-		{
-			p.addListener(li);
-		}
+        for (ObservableValue p : props) {
+            p.addListener(li);
+        }
 
-		if(fireImmediately)
-		{
-			onChange.run();
-		}
+        if (fireImmediately) {
+            onChange.run();
+        }
 
-		return li;
-	}
+        return li;
+    }
 
+    public <T> Disconnectable addInvalidationListener(ObservableValue<T> prop, InvalidationListener li) {
+        return addInvalidationListener(prop, false, li);
+    }
 
-	public Disconnectable addWeakInvalidationListener(ObservableValue<?> prop, InvalidationListener li)
-	{
-		return addWeakInvalidationListener(prop, false, li);
-	}
+    public <T> Disconnectable addInvalidationListener(ObservableValue<T> prop, boolean fireImmediately,
+            InvalidationListener li) {
+        Disconnectable d = new Disconnectable() {
+            public void disconnect() {
+                prop.removeListener(li);
+            }
+        };
 
+        items.add(d);
+        prop.addListener(li);
 
-	public Disconnectable addWeakInvalidationListener(ObservableValue<?> prop, boolean fireImmediately, InvalidationListener listener)
-	{
-		InLi d = new InLi()
-		{
-			WeakReference<InvalidationListener> ref = new WeakReference<>(listener);
+        if (fireImmediately) {
+            li.invalidated(prop);
+        }
 
+        return d;
+    }
 
-			public void disconnect()
-			{
-				prop.removeListener(this);
-			}
+    public Disconnectable addWeakInvalidationListener(Runnable onChange, ObservableValue<?>... props) {
+        return addWeakInvalidationListener(onChange, false, props);
+    }
 
+    public Disconnectable addWeakInvalidationListener(Runnable onChange, boolean fireImmediately,
+            ObservableValue<?>... props) {
+        InLi li = new InLi() {
+            WeakReference<Runnable> ref = new WeakReference(onChange);
 
-			public void invalidated(Observable p)
-			{
-				InvalidationListener li = ref.get();
-				if(li == null)
-				{
-					disconnect();
-				}
-				else
-				{
-					li.invalidated(p);
-				}
-			}
-		};
+            public void disconnect() {
+                for (ObservableValue p : props) {
+                    p.removeListener(this);
+                }
+            }
 
-		items.add(d);
-		prop.addListener(d);
+            public void invalidated(Observable p) {
+                Runnable r = ref.get();
+                if (r == null) {
+                    disconnect();
+                } else {
+                    r.run();
+                }
+            }
+        };
 
-		if(fireImmediately)
-		{
-			listener.invalidated(prop);
-		}
-		
-		return d;
-	}
-	
-	
-	// list change listeners
-	
-	
-	public <T> Disconnectable addListChangeListener(ObservableList<T> list, ListChangeListener<T> listener)
-	{
-		Disconnectable d = new Disconnectable()
-		{
-			public void disconnect()
-			{
-				list.removeListener(listener);
-			}
-		};
-		
-		items.add(d);
-		list.addListener(listener);
-		
-		return d;
-	}
-	
-	
-	public <T> Disconnectable addWeakListChangeListener(ObservableList<T> list, ListChangeListener<T> listener)
-	{
-		LiChLi<T> li = new LiChLi<T>()
-		{
-			WeakReference<ListChangeListener<T>> ref = new WeakReference<>(listener);
-			
-			
-			public void disconnect()
-			{
-				list.removeListener(this);
-			}
+        items.add(li);
 
-			public void onChanged(Change<? extends T> ch)
-			{
-				ListChangeListener<T> li = ref.get();
-				if(li == null)
-				{
-					disconnect();
-				}
-				else
-				{
-					li.onChanged(ch);
-				}
-			}
-		};
-		
-		items.add(li);
-		list.addListener(li);
-		
-		return li;
-	}
-	
-	
-	// TODO event handlers
-	
-	
-	// TODO event filters
-	
-	
-	//
-	
-	
-	protected static abstract class ChLi<T> implements Disconnectable, ChangeListener<T> { }
-	
-	protected static abstract class InLi implements Disconnectable, InvalidationListener { }
-	
-	protected static abstract class LiChLi<T> implements Disconnectable, ListChangeListener<T> { }
+        for (ObservableValue p : props) {
+            p.addListener(li);
+        }
+
+        if (fireImmediately) {
+            onChange.run();
+        }
+
+        return li;
+    }
+
+    public Disconnectable addWeakInvalidationListener(ObservableValue<?> prop, InvalidationListener li) {
+        return addWeakInvalidationListener(prop, false, li);
+    }
+
+    public Disconnectable addWeakInvalidationListener(ObservableValue<?> prop, boolean fireImmediately,
+            InvalidationListener listener) {
+        InLi d = new InLi() {
+            WeakReference<InvalidationListener> ref = new WeakReference<>(listener);
+
+            public void disconnect() {
+                prop.removeListener(this);
+            }
+
+            public void invalidated(Observable p) {
+                InvalidationListener li = ref.get();
+                if (li == null) {
+                    disconnect();
+                } else {
+                    li.invalidated(p);
+                }
+            }
+        };
+
+        items.add(d);
+        prop.addListener(d);
+
+        if (fireImmediately) {
+            listener.invalidated(prop);
+        }
+
+        return d;
+    }
+
+    // list change listeners
+
+    public <T> Disconnectable addListChangeListener(ObservableList<T> list, ListChangeListener<T> listener) {
+        Disconnectable d = new Disconnectable() {
+            public void disconnect() {
+                list.removeListener(listener);
+            }
+        };
+
+        items.add(d);
+        list.addListener(listener);
+
+        return d;
+    }
+
+    public <T> Disconnectable addWeakListChangeListener(ObservableList<T> list, ListChangeListener<T> listener) {
+        LiChLi<T> li = new LiChLi<T>() {
+            WeakReference<ListChangeListener<T>> ref = new WeakReference<>(listener);
+
+            public void disconnect() {
+                list.removeListener(this);
+            }
+
+            public void onChanged(Change<? extends T> ch) {
+                ListChangeListener<T> li = ref.get();
+                if (li == null) {
+                    disconnect();
+                } else {
+                    li.onChanged(ch);
+                }
+            }
+        };
+
+        items.add(li);
+        list.addListener(li);
+
+        return li;
+    }
+
+    // TODO event handlers
+
+    // TODO event filters
+
+    //
+
+    protected static abstract class ChLi<T> implements Disconnectable, ChangeListener<T> { }
+
+    protected static abstract class InLi implements Disconnectable, InvalidationListener { }
+
+    protected static abstract class LiChLi<T> implements Disconnectable, ListChangeListener<T> { }
 }
