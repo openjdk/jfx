@@ -91,12 +91,13 @@ public interface Skin<C extends Skinnable> {
     default public void install() { }
 
     /**
-     * Called by a Skinnable when the Skin is replaced on the Skinnable. This method
-     * allows a Skin to implement any logic necessary to clean up itself after
-     * the Skin is no longer needed. It may be used to release native resources.
+     * Disconnects the {@link Skin} from its {@link Skinnable}.
+     * This method allows a {@link Skin} to implement any logic necessary to clean up itself after
+     * the {@code Skin} is no longer needed. It may be used to release native resources.
      * The methods {@link #getSkinnable()} and {@link #getNode()}
-     * should return null following a call to dispose. Calling dispose twice
-     * has no effect.
+     * should return null following a call to dispose.
+     * <p>
+     * Calling {@link #dispose()} more than once has no effect.
      */
     public void dispose();
 }
