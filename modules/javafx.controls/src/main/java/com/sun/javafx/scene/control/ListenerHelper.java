@@ -58,8 +58,8 @@ public class ListenerHelper implements IDisconnectable {
 
     public static ListenerHelper get(Node n) {
         Object x = n.getProperties().get(KEY);
-        if (x instanceof ListenerHelper) {
-            return (ListenerHelper)x;
+        if (x instanceof ListenerHelper h) {
+            return h;
         }
         ListenerHelper d = new ListenerHelper();
         n.getProperties().put(KEY, d);
@@ -67,9 +67,9 @@ public class ListenerHelper implements IDisconnectable {
     }
 
     public static void disconnect(Node n) {
-        Object x = n.getProperties().get(KEY);
-        if (x instanceof ListenerHelper) {
-            ((ListenerHelper)x).disconnect();
+        Object x = n.getProperties().remove(KEY);
+        if (x instanceof ListenerHelper h) {
+            h.disconnect();
         }
     }
 
@@ -91,6 +91,10 @@ public class ListenerHelper implements IDisconnectable {
     }
 
     public IDisconnectable addChangeListener(Runnable onChange, boolean fireImmediately, ObservableValue<?>... props) {
+        if (onChange == null) {
+            throw new NullPointerException("onChange must not be null.");
+        }
+
         ChLi li = new ChLi() {
             public void disconnect() {
                 for (ObservableValue p : props) {
@@ -116,24 +120,27 @@ public class ListenerHelper implements IDisconnectable {
         return li;
     }
 
-    public <T> IDisconnectable addChangeListener(ObservableValue<T> prop, ChangeListener<T> li) {
-        return addChangeListener(prop, false, li);
+    public <T> IDisconnectable addChangeListener(ObservableValue<T> prop, ChangeListener<T> listener) {
+        return addChangeListener(prop, false, listener);
     }
 
-    public <T> IDisconnectable addChangeListener(ObservableValue<T> prop, boolean fireImmediately,
-            ChangeListener<T> li) {
+    public <T> IDisconnectable addChangeListener(ObservableValue<T> prop, boolean fireImmediately, ChangeListener<T> listener) {
+        if (listener == null) {
+            throw new NullPointerException("Listener must be specified.");
+        }
+
         IDisconnectable d = new IDisconnectable() {
             public void disconnect() {
-                prop.removeListener(li);
+                prop.removeListener(listener);
             }
         };
 
         items.add(d);
-        prop.addListener(li);
+        prop.addListener(listener);
 
         if (fireImmediately) {
             T v = prop.getValue();
-            li.changed(prop, null, v);
+            listener.changed(prop, null, v);
         }
 
         return d;
@@ -143,8 +150,11 @@ public class ListenerHelper implements IDisconnectable {
         return addWeakChangeListener(onChange, false, props);
     }
 
-    public IDisconnectable addWeakChangeListener(Runnable onChange, boolean fireImmediately,
-            ObservableValue<?>... props) {
+    public IDisconnectable addWeakChangeListener(Runnable onChange, boolean fireImmediately, ObservableValue<?>... props) {
+        if (onChange == null) {
+            throw new NullPointerException("onChange must not be null.");
+        }
+
         ChLi li = new ChLi() {
             WeakReference<Runnable> ref = new WeakReference(onChange);
 
@@ -177,12 +187,15 @@ public class ListenerHelper implements IDisconnectable {
         return li;
     }
 
-    public <T> IDisconnectable addWeakChangeListener(ObservableValue<T> prop, ChangeListener<T> li) {
-        return addChangeListener(prop, false, li);
+    public <T> IDisconnectable addWeakChangeListener(ObservableValue<T> prop, ChangeListener<T> listener) {
+        return addChangeListener(prop, false, listener);
     }
 
-    public <T> IDisconnectable addWeakChangeListener(ObservableValue<T> prop, boolean fireImmediately,
-            ChangeListener<T> listener) {
+    public <T> IDisconnectable addWeakChangeListener(ObservableValue<T> prop, boolean fireImmediately, ChangeListener<T> listener) {
+        if (listener == null) {
+            throw new NullPointerException("Listener must be specified.");
+        }
+
         ChLi<T> d = new ChLi<T>() {
             WeakReference<ChangeListener<T>> ref = new WeakReference<>(listener);
 
@@ -217,8 +230,11 @@ public class ListenerHelper implements IDisconnectable {
         return addInvalidationListener(callback, false, props);
     }
 
-    public IDisconnectable addInvalidationListener(Runnable onChange, boolean fireImmediately,
-            ObservableValue<?>... props) {
+    public IDisconnectable addInvalidationListener(Runnable callback, boolean fireImmediately, ObservableValue<?>... props) {
+        if (callback == null) {
+            throw new NullPointerException("Callback must be specified.");
+        }
+
         InLi li = new InLi() {
             public void disconnect() {
                 for (ObservableValue p : props) {
@@ -227,7 +243,7 @@ public class ListenerHelper implements IDisconnectable {
             }
 
             public void invalidated(Observable p) {
-                onChange.run();
+                callback.run();
             }
         };
 
@@ -238,29 +254,32 @@ public class ListenerHelper implements IDisconnectable {
         }
 
         if (fireImmediately) {
-            onChange.run();
+            callback.run();
         }
 
         return li;
     }
 
-    public <T> IDisconnectable addInvalidationListener(ObservableValue<T> prop, InvalidationListener li) {
-        return addInvalidationListener(prop, false, li);
+    public <T> IDisconnectable addInvalidationListener(ObservableValue<T> prop, InvalidationListener listener) {
+        return addInvalidationListener(prop, false, listener);
     }
 
-    public <T> IDisconnectable addInvalidationListener(ObservableValue<T> prop, boolean fireImmediately,
-            InvalidationListener li) {
+    public <T> IDisconnectable addInvalidationListener(ObservableValue<T> prop, boolean fireImmediately, InvalidationListener listener) {
+        if (listener == null) {
+            throw new NullPointerException("Listener must be specified.");
+        }
+
         IDisconnectable d = new IDisconnectable() {
             public void disconnect() {
-                prop.removeListener(li);
+                prop.removeListener(listener);
             }
         };
 
         items.add(d);
-        prop.addListener(li);
+        prop.addListener(listener);
 
         if (fireImmediately) {
-            li.invalidated(prop);
+            listener.invalidated(prop);
         }
 
         return d;
@@ -270,8 +289,11 @@ public class ListenerHelper implements IDisconnectable {
         return addWeakInvalidationListener(onChange, false, props);
     }
 
-    public IDisconnectable addWeakInvalidationListener(Runnable onChange, boolean fireImmediately,
-            ObservableValue<?>... props) {
+    public IDisconnectable addWeakInvalidationListener(Runnable onChange, boolean fireImmediately, ObservableValue<?>... props) {
+        if (onChange == null) {
+            throw new NullPointerException("onChange must not be null.");
+        }
+
         InLi li = new InLi() {
             WeakReference<Runnable> ref = new WeakReference(onChange);
 
@@ -304,12 +326,15 @@ public class ListenerHelper implements IDisconnectable {
         return li;
     }
 
-    public IDisconnectable addWeakInvalidationListener(ObservableValue<?> prop, InvalidationListener li) {
-        return addWeakInvalidationListener(prop, false, li);
+    public IDisconnectable addWeakInvalidationListener(ObservableValue<?> prop, InvalidationListener listener) {
+        return addWeakInvalidationListener(prop, false, listener);
     }
 
-    public IDisconnectable addWeakInvalidationListener(ObservableValue<?> prop, boolean fireImmediately,
-            InvalidationListener listener) {
+    public IDisconnectable addWeakInvalidationListener(ObservableValue<?> prop, boolean fireImmediately, InvalidationListener listener) {
+        if (listener == null) {
+            throw new NullPointerException("Listener must be specified.");
+        }
+
         InLi d = new InLi() {
             WeakReference<InvalidationListener> ref = new WeakReference<>(listener);
 
@@ -340,6 +365,10 @@ public class ListenerHelper implements IDisconnectable {
     // list change listeners
 
     public <T> IDisconnectable addListChangeListener(ObservableList<T> list, ListChangeListener<T> listener) {
+        if (listener == null) {
+            throw new NullPointerException("Listener must be specified.");
+        }
+
         IDisconnectable d = new IDisconnectable() {
             public void disconnect() {
                 list.removeListener(listener);
@@ -353,6 +382,10 @@ public class ListenerHelper implements IDisconnectable {
     }
 
     public <T> IDisconnectable addWeakListChangeListener(ObservableList<T> list, ListChangeListener<T> listener) {
+        if (listener == null) {
+            throw new NullPointerException("Listener must be specified.");
+        }
+
         LiChLi<T> li = new LiChLi<T>() {
             WeakReference<ListChangeListener<T>> ref = new WeakReference<>(listener);
 
