@@ -427,10 +427,6 @@ public class ListenerHelper implements IDisconnectable {
         return li;
     }
 
-    // TODO event handlers
-
-    // TODO event filters
-
     //
 
     protected static abstract class ChLi<T> implements IDisconnectable, ChangeListener<T> { }
