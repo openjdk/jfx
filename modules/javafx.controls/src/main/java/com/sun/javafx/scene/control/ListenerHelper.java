@@ -77,6 +77,7 @@ public class ListenerHelper implements IDisconnectable {
         items.add(d);
     }
 
+    @Override
     public void disconnect() {
         for (int i = items.size() - 1; i >= 0; i--) {
             IDisconnectable d = items.remove(i);
@@ -96,12 +97,14 @@ public class ListenerHelper implements IDisconnectable {
         }
 
         ChLi li = new ChLi() {
+            @Override
             public void disconnect() {
                 for (ObservableValue p : props) {
                     p.removeListener(this);
                 }
             }
 
+            @Override
             public void changed(ObservableValue p, Object oldValue, Object newValue) {
                 onChange.run();
             }
@@ -130,6 +133,7 @@ public class ListenerHelper implements IDisconnectable {
         }
 
         IDisconnectable d = new IDisconnectable() {
+            @Override
             public void disconnect() {
                 prop.removeListener(listener);
             }
@@ -158,12 +162,14 @@ public class ListenerHelper implements IDisconnectable {
         ChLi li = new ChLi() {
             WeakReference<Runnable> ref = new WeakReference(onChange);
 
+            @Override
             public void disconnect() {
                 for (ObservableValue p : props) {
                     p.removeListener(this);
                 }
             }
 
+            @Override
             public void changed(ObservableValue p, Object oldValue, Object newValue) {
                 Runnable r = ref.get();
                 if (r == null) {
@@ -199,11 +205,13 @@ public class ListenerHelper implements IDisconnectable {
         ChLi<T> d = new ChLi<T>() {
             WeakReference<ChangeListener<T>> ref = new WeakReference<>(listener);
 
+            @Override
             public void disconnect() {
                 prop.removeListener(this);
             }
 
-            public void changed(ObservableValue p, T oldValue, T newValue) {
+            @Override
+            public void changed(ObservableValue<? extends T> p, T oldValue, T newValue) {
                 ChangeListener<T> li = ref.get();
                 if (li == null) {
                     disconnect();
@@ -236,12 +244,14 @@ public class ListenerHelper implements IDisconnectable {
         }
 
         InLi li = new InLi() {
+            @Override
             public void disconnect() {
                 for (ObservableValue p : props) {
                     p.removeListener(this);
                 }
             }
 
+            @Override
             public void invalidated(Observable p) {
                 callback.run();
             }
@@ -270,6 +280,7 @@ public class ListenerHelper implements IDisconnectable {
         }
 
         IDisconnectable d = new IDisconnectable() {
+            @Override
             public void disconnect() {
                 prop.removeListener(listener);
             }
@@ -297,12 +308,14 @@ public class ListenerHelper implements IDisconnectable {
         InLi li = new InLi() {
             WeakReference<Runnable> ref = new WeakReference(onChange);
 
+            @Override
             public void disconnect() {
                 for (ObservableValue p : props) {
                     p.removeListener(this);
                 }
             }
 
+            @Override
             public void invalidated(Observable p) {
                 Runnable r = ref.get();
                 if (r == null) {
@@ -338,10 +351,12 @@ public class ListenerHelper implements IDisconnectable {
         InLi d = new InLi() {
             WeakReference<InvalidationListener> ref = new WeakReference<>(listener);
 
+            @Override
             public void disconnect() {
                 prop.removeListener(this);
             }
 
+            @Override
             public void invalidated(Observable p) {
                 InvalidationListener li = ref.get();
                 if (li == null) {
@@ -370,6 +385,7 @@ public class ListenerHelper implements IDisconnectable {
         }
 
         IDisconnectable d = new IDisconnectable() {
+            @Override
             public void disconnect() {
                 list.removeListener(listener);
             }
@@ -389,10 +405,12 @@ public class ListenerHelper implements IDisconnectable {
         LiChLi<T> li = new LiChLi<T>() {
             WeakReference<ListChangeListener<T>> ref = new WeakReference<>(listener);
 
+            @Override
             public void disconnect() {
                 list.removeListener(this);
             }
 
+            @Override
             public void onChanged(Change<? extends T> ch) {
                 ListChangeListener<T> li = ref.get();
                 if (li == null) {
