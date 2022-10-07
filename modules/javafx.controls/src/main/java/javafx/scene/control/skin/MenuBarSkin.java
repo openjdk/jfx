@@ -166,14 +166,14 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
 
     // RT-20411 : reset menu selected/focused state
     private EventHandler<ActionEvent> menuActionEventHandler = t -> {
-        if (getSkinnable() != null) {
-            if (t.getSource() instanceof CustomMenuItem) {
-                // RT-29614 If CustomMenuItem hideOnClick is false, dont hide
-                CustomMenuItem cmi = (CustomMenuItem)t.getSource();
-                if (!cmi.isHideOnClick()) return;
+        if (t.getSource() instanceof CustomMenuItem) {
+            // RT-29614 If CustomMenuItem hideOnClick is false, dont hide
+            CustomMenuItem cmi = (CustomMenuItem)t.getSource();
+            if (!cmi.isHideOnClick()) {
+                return;
             }
-            unSelectMenus();
         }
+        unSelectMenus();
     };
 
     private ListChangeListener<MenuItem> menuItemListener = (c) -> {
@@ -324,11 +324,9 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
 
         // When we click else where in the scene - menu selection should be cleared.
         mouseEventHandler = t -> {
-            if (getSkinnable() != null) {
-                Bounds containerScreenBounds = container.localToScreen(container.getLayoutBounds());
-                if (containerScreenBounds == null || !containerScreenBounds.contains(t.getScreenX(), t.getScreenY())) {
-                    unSelectMenus();
-                }
+            Bounds containerScreenBounds = container.localToScreen(container.getLayoutBounds());
+            if (containerScreenBounds == null || !containerScreenBounds.contains(t.getScreenX(), t.getScreenY())) {
+                unSelectMenus();
             }
         };
         weakSceneMouseEventHandler = new WeakEventHandler<MouseEvent>(mouseEventHandler);
@@ -337,10 +335,8 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
         });
 
         weakWindowFocusListener = new WeakChangeListener<Boolean>((ov, t, t1) -> {
-            if (getSkinnable() != null) {
-                if (!t1) {
-                  unSelectMenus();
-                }
+            if (!t1) {
+                unSelectMenus();
             }
         });
         // When the parent window looses focus - menu selection should be cleared
@@ -962,13 +958,11 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
             container.getChildren().add(menuButton);
 
             menuButton.menuListener = (observable, oldValue, newValue) -> {
-                if (getSkinnable() != null) {
-                    if (menu.isShowing()) {
-                        menuButton.show();
-                        menuModeStart(container.getChildren().indexOf(menuButton));
-                    } else {
-                        menuButton.hide();
-                    }
+                if (menu.isShowing()) {
+                    menuButton.show();
+                    menuModeStart(container.getChildren().indexOf(menuButton));
+                } else {
+                    menuButton.hide();
                 }
             };
             menuButton.menu = menu;
