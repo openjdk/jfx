@@ -223,18 +223,19 @@ public abstract class Control extends Region implements Skinnable {
      * {@code Control} via the {@link Skin#getSkinnable()} method.
      * <p>
      * To ensure a one-to-one relationship between a {@code Control} and its {@code Skin},
-     * setting the {@link #skinProperty() skin property} first triggers a check of the return value of
-     * {@link Skin#getSkinnable()} against this Control, and throw an {@code IllegalArgumentException}
-     * if it is not the same.  Then, {@link Skin#dispose()} is called on the old skin, disconnecting
+     * setting the {@link #skinProperty() skin property} to a non-null {@code Skin} first checks
+     * the return value of {@link Skin#getSkinnable()} against this Control,
+     * and throws an {@code IllegalArgumentException} if it is not the same.
+     * Then, {@link Skin#dispose()} is called on the old skin, disconnecting
      * it from the corresponding {@code Control}.  And finally, {@link Skin#install()} is invoked
      * to complete the process.  Only inside of {@link Skin#install()} should {@code Skin} implementations
-     * set/overwrite properties of their {@code Control} (though commutative operations like add/remove listener
-     * can still be done in the {@code Skin} constructor.
+     * set/overwrite properties of their {@code Control} (though some operations like adding/removing a listener
+     * can still be done in the {@code Skin} constructor).
      * <p>
      * A skin may be null.
      *
      * @return the skin property for this control
-     * @throws IllegalArgumentException if {@code (skin != null && skin.getSkinnable() != Control.this)}
+     * @throws IllegalArgumentException if {@code (skin != null && skin.getSkinnable() != this)}
      */
     @Override public final ObjectProperty<Skin<?>> skinProperty() { return skin; }
     @Override public final void setSkin(Skin<?> value) {

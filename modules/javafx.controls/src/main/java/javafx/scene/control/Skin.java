@@ -36,7 +36,7 @@ import javafx.scene.Node;
  * <ul>
  * <li>instantiation
  * <li>configuration, such as passing of dependencies and parameters
- * <li>inside of {@link Control#setSkin(Skin)}:
+ * <li>when the skin is set on a {@link Skinnable}:
  * <ul>
  * <li>uninstalling of the old skin via its {@link #dispose()} method
  * <li>installing of the new skin via {@link #install()}
@@ -72,12 +72,12 @@ public interface Skin<C extends Skinnable> {
     public Node getNode();
 
     /**
-     * Called once by {@link Skinnable#setSkin(Skin)} after the
+     * Called once when {@link Skin} is set, after the
      * previous skin, if any, has been uninstalled via its {@link #dispose()} method.
      * This method allows a Skin to register listeners, add child nodes, set
      * required properties and/or event handlers.
      * <p>
-     * Client code must not call this method.
+     * Application code must not call this method.
      * <p>
      * The default implementation of this method does nothing.
      *
