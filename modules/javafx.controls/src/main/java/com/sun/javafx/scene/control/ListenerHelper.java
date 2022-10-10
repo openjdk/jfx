@@ -33,7 +33,17 @@ import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
+import javafx.concurrent.Task;
+import javafx.event.Event;
+import javafx.event.EventHandler;
+import javafx.event.EventType;
 import javafx.scene.Node;
+import javafx.scene.Scene;
+import javafx.scene.control.MenuItem;
+import javafx.scene.control.TableColumnBase;
+import javafx.scene.control.TreeItem;
+import javafx.scene.transform.Transform;
+import javafx.stage.Window;
 
 /**
  * This class provides convenience methods for adding various listeners, both strong and weak,
@@ -73,8 +83,9 @@ public class ListenerHelper implements IDisconnectable {
         }
     }
 
-    public void addDisconnectable(IDisconnectable d) {
+    public IDisconnectable addDisconnectable(IDisconnectable d) {
         items.add(d);
+        return d;
     }
 
     @Override
@@ -427,6 +438,175 @@ public class ListenerHelper implements IDisconnectable {
         return li;
     }
 
+    // event handlers
+
+    public <T extends Event> IDisconnectable addEventHandler(Object x, EventType<T> t, EventHandler<T> h) {
+
+        // we really need an interface here ... "HasEventHandlers"
+        IDisconnectable d = addDisconnectable(() -> {
+            if (x instanceof Node n) {
+                n.removeEventHandler(t, h);
+            } else if (x instanceof Window y) {
+                y.removeEventHandler(t, h);
+            } else if (x instanceof Scene y) {
+                y.removeEventHandler(t, h);
+            } else if (x instanceof MenuItem y) {
+                y.removeEventHandler(t, h);
+            } else if (x instanceof TreeItem y) {
+                y.removeEventHandler(t, h);
+            } else if (x instanceof TableColumnBase y) {
+                y.removeEventHandler(t, h);
+            } else if (x instanceof Transform y) {
+                y.removeEventHandler(t, h);
+            } else if (x instanceof Task y) {
+                y.removeEventHandler(t, h);
+            }
+        });
+
+        if (x instanceof Node y) {
+            y.addEventHandler(t, h);
+        } else if (x instanceof Window y) {
+            y.addEventHandler(t, h);
+        } else if (x instanceof Scene y) {
+            y.addEventHandler(t, h);
+        } else if (x instanceof MenuItem y) {
+            y.addEventHandler(t, h);
+        } else if (x instanceof TreeItem y) {
+            y.addEventHandler(t, h);
+        } else if (x instanceof TableColumnBase y) {
+            y.addEventHandler(t, h);
+        } else if (x instanceof Transform y) {
+            y.addEventHandler(t, h);
+        } else if (x instanceof Task y) {
+            y.addEventHandler(t, h);
+        } else {
+            throw new IllegalArgumentException("Cannot add event handler to " + x);
+        }
+
+        return d;
+    }
+
+    public <T extends Event> IDisconnectable addWeakEventHandler(Object x, EventType<T> t, EventHandler<T> h) {
+        WeHa<T> li = new WeHa<T>(h) {
+            @Override
+            public void disconnect() {
+                if (x instanceof Node n) {
+                    n.removeEventHandler(t, this);
+                } else if (x instanceof Window y) {
+                    y.removeEventHandler(t, this);
+                } else if (x instanceof Scene y) {
+                    y.removeEventHandler(t, this);
+                } else if (x instanceof MenuItem y) {
+                    y.removeEventHandler(t, this);
+                } else if (x instanceof TreeItem y) {
+                    y.removeEventHandler(t, this);
+                } else if (x instanceof TableColumnBase y) {
+                    y.removeEventHandler(t, this);
+                } else if (x instanceof Transform y) {
+                    y.removeEventHandler(t, this);
+                } else if (x instanceof Task y) {
+                    y.removeEventHandler(t, this);
+                }
+            }
+        };
+
+        items.add(li);
+
+        if (x instanceof Node y) {
+            y.addEventHandler(t, li);
+        } else if (x instanceof Window y) {
+            y.addEventHandler(t, li);
+        } else if (x instanceof Scene y) {
+            y.addEventHandler(t, li);
+        } else if (x instanceof MenuItem y) {
+            y.addEventHandler(t, li);
+        } else if (x instanceof TreeItem y) {
+            y.addEventHandler(t, li);
+        } else if (x instanceof TableColumnBase y) {
+            y.addEventHandler(t, li);
+        } else if (x instanceof Transform y) {
+            y.addEventHandler(t, li);
+        } else if (x instanceof Task y) {
+            y.addEventHandler(t, li);
+        } else {
+            throw new IllegalArgumentException("Cannot add weak event handler to " + x);
+        }
+
+        return li;
+    }
+
+    // event filters
+
+    public <T extends Event> IDisconnectable addEventFilter(Object x, EventType<T> t, EventHandler<T> h) {
+        // we really need an interface here ... "HasEventFilters"
+        IDisconnectable d = addDisconnectable(() -> {
+            if (x instanceof Node n) {
+                n.removeEventFilter(t, h);
+            } else if (x instanceof Window y) {
+                y.removeEventFilter(t, h);
+            } else if (x instanceof Scene y) {
+                y.removeEventFilter(t, h);
+            } else if (x instanceof Transform y) {
+                y.removeEventFilter(t, h);
+            } else if (x instanceof Task y) {
+                y.removeEventFilter(t, h);
+            }
+        });
+
+        if (x instanceof Node y) {
+            y.addEventFilter(t, h);
+        } else if (x instanceof Window y) {
+            y.addEventFilter(t, h);
+        } else if (x instanceof Scene y) {
+            y.addEventFilter(t, h);
+        } else if (x instanceof Transform y) {
+            y.addEventFilter(t, h);
+        } else if (x instanceof Task y) {
+            y.addEventFilter(t, h);
+        } else {
+            throw new IllegalArgumentException("Cannot add event filter to " + x);
+        }
+
+        return d;
+    }
+
+    public <T extends Event> IDisconnectable addWeakEventFilter(Object x, EventType<T> t, EventHandler<? super T> h) {
+        WeHa<T> li = new WeHa<T>(h) {
+            @Override
+            public void disconnect() {
+                if (x instanceof Node n) {
+                    n.removeEventFilter(t, this);
+                } else if (x instanceof Window y) {
+                    y.removeEventFilter(t, this);
+                } else if (x instanceof Scene y) {
+                    y.removeEventFilter(t, this);
+                } else if (x instanceof Transform y) {
+                    y.removeEventFilter(t, this);
+                } else if (x instanceof Task y) {
+                    y.removeEventFilter(t, this);
+                }
+            }
+        };
+
+        items.add(li);
+
+        if (x instanceof Node y) {
+            y.addEventFilter(t, li);
+        } else if (x instanceof Window y) {
+            y.addEventFilter(t, li);
+        } else if (x instanceof Scene y) {
+            y.addEventFilter(t, li);
+        } else if (x instanceof Transform y) {
+            y.addEventFilter(t, li);
+        } else if (x instanceof Task y) {
+            y.addEventFilter(t, li);
+        } else {
+            throw new IllegalArgumentException("Cannot add weak event filter to " + x);
+        }
+
+        return li;
+    }
+
     //
 
     protected static abstract class ChLi<T> implements IDisconnectable, ChangeListener<T> { }
@@ -434,4 +614,22 @@ public class ListenerHelper implements IDisconnectable {
     protected static abstract class InLi implements IDisconnectable, InvalidationListener { }
 
     protected static abstract class LiChLi<T> implements IDisconnectable, ListChangeListener<T> { }
+    
+    protected static abstract class WeHa<T extends Event> implements IDisconnectable, EventHandler<T> {
+        private final WeakReference<EventHandler<? super T>> ref;
+
+        public WeHa(EventHandler<? super T> h) {
+            ref = new WeakReference<>(h);
+        }
+
+        @Override
+        public void handle(T ev) {
+            EventHandler<? super T> h = ref.get();
+            if (h == null) {
+                disconnect();
+            } else {
+                h.handle(ev);
+            }
+        }
+    }
 }
