@@ -29,6 +29,7 @@
 #include <memory>
 #include <wtf/HashSet.h>
 #include <wtf/ListHashSet.h>
+#include <wtf/WeakHashSet.h>
 
 namespace WebCore {
 
@@ -141,7 +142,12 @@ public:
     // Renderer that paints the root background has background-images which all have background-attachment: fixed.
     bool rootBackgroundIsEntirelyFixed() const;
 
-    IntSize viewportSizeForCSSViewportUnits() const;
+    bool shouldPaintBaseBackground() const;
+
+    FloatSize sizeForCSSSmallViewportUnits() const;
+    FloatSize sizeForCSSLargeViewportUnits() const;
+    FloatSize sizeForCSSDynamicViewportUnits() const;
+    FloatSize sizeForCSSDefaultViewportUnits() const;
 
     bool hasQuotesNeedingUpdate() const { return m_hasQuotesNeedingUpdate; }
     void setHasQuotesNeedingUpdate(bool b) { m_hasQuotesNeedingUpdate = b; }
@@ -198,6 +204,10 @@ public:
     void registerBoxWithScrollSnapPositions(const RenderBox&);
     void unregisterBoxWithScrollSnapPositions(const RenderBox&);
     const HashSet<const RenderBox*>& boxesWithScrollSnapPositions() { return m_boxesWithScrollSnapPositions; }
+
+    void registerContainerQueryBox(const RenderBox&);
+    void unregisterContainerQueryBox(const RenderBox&);
+    const WeakHashSet<const RenderBox>& containerQueryBoxes() const { return m_containerQueryBoxes; }
 
 private:
     void mapLocalToContainer(const RenderLayerModelObject* repaintContainer, TransformState&, OptionSet<MapCoordinatesMode>, bool* wasFixed) const override;
@@ -265,6 +275,7 @@ private:
     Vector<RefPtr<RenderWidget>> m_protectedRenderWidgets;
 
     HashSet<const RenderBox*> m_boxesWithScrollSnapPositions;
+    WeakHashSet<const RenderBox> m_containerQueryBoxes;
 };
 
 } // namespace WebCore

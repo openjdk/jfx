@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -40,9 +40,6 @@
 #endif
 
 #if BUSE(LIBPAS)
-#ifndef PAS_BMALLOC
-#define PAS_BMALLOC 1
-#endif
 #include "iso_heap.h"
 #endif
 
@@ -126,7 +123,7 @@ void ensureGigacage()
 #if BENABLE(UNIFIED_AND_FREEZABLE_CONFIG_RECORD)
             // We might only get page size alignment, but that's also the minimum
             // alignment we need for freezing the Config.
-            RELEASE_BASSERT(!(reinterpret_cast<size_t>(&g_gigacageConfig) & (vmPageSize() - 1)));
+            RELEASE_BASSERT(!(reinterpret_cast<size_t>(&WebConfig::g_config) & (vmPageSize() - 1)));
 #endif
 
             Kind shuffledKinds[NumberOfKinds];
@@ -323,7 +320,12 @@ size_t size(Kind kind)
 
 size_t footprint(Kind kind)
 {
+#if BUSE(LIBPAS)
+    BUNUSED(kind);
+    return 0;
+#else
     return PerProcess<PerHeapKind<Heap>>::get()->at(heapKind(kind)).footprint();
+#endif
 }
 
 } // namespace Gigacage

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -41,6 +41,47 @@ import javafx.collections.ObservableSet;
 import static org.junit.Assert.*;
 
 public class FXCollectionsTest {
+
+    @Test
+    public void testCreateObservableArrayListFromArray() {
+        ObservableList<String> observableList = FXCollections.observableArrayList("1", "2", null);
+
+        assertEquals(3, observableList.size());
+        assertTrue(observableList.contains("1"));
+        assertTrue(observableList.contains("2"));
+        assertTrue(observableList.contains(null));
+    }
+
+    @Test
+    public void testCreateObservableArrayListFromCollection() {
+        List<String> list = Arrays.asList("1", "2", null);
+        ObservableList<String> observableList = FXCollections.observableArrayList(list);
+
+        assertEquals(3, observableList.size());
+        assertTrue(observableList.contains("1"));
+        assertTrue(observableList.contains("2"));
+        assertTrue(observableList.contains(null));
+    }
+
+    @Test
+    public void testCreateObservableArrayListWithNullCollection() {
+        assertThrows(NullPointerException.class, () -> FXCollections.observableArrayList((Collection<Object>) null));
+    }
+
+    @Test
+    public void testCreateObservableArrayListWithNullArray() {
+        assertThrows(NullPointerException.class, () -> FXCollections.observableArrayList((Object[]) null));
+    }
+
+    @Test
+    public void testCreateObservableArrayListDoesNotModifyOriginalCollection() {
+        List<String> list = List.of("1", "2", "3");
+        ObservableList<String> observableList = FXCollections.observableArrayList(list);
+        observableList.add("4");
+
+        assertEquals(4, observableList.size());
+        assertEquals(3, list.size());
+    }
 
     @Test
     @SuppressWarnings("unchecked")

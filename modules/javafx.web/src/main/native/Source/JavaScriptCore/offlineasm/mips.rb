@@ -1,4 +1,4 @@
-# Copyright (C) 2012-2018 Apple Inc. All rights reserved.
+# Copyright (C) 2012-2021 Apple Inc. All rights reserved.
 # Copyright (C) 2012 MIPS Technologies, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -62,12 +62,6 @@ require 'risc'
 # $f14 =>        fa1
 # $f16 =>            (scratch)
 # $f18 =>            (scratch)
-
-class Assembler
-    def putStr(str)
-        @outp.puts str
-    end
-end
 
 class Node
     def mipsSingleHi
@@ -559,18 +553,18 @@ class Instruction
     # Note: in contrast to the risc version, this method drops all other operands.
     def mipsCloneWithOperandLowered(preList, postList, operandIndex, needRestore)
         operand = self.operands[operandIndex]
-    tmp = MIPS_CALL_REG
-    if operand.address?
+        tmp = MIPS_CALL_REG
+        if operand.address?
             preList << Instruction.new(self.codeOrigin, "loadp", [operand, MIPS_CALL_REG])
-    elsif operand.is_a? LabelReference
+        elsif operand.is_a? LabelReference
             preList << Instruction.new(self.codeOrigin, "la", [operand, MIPS_CALL_REG])
-    elsif operand.register? and operand != MIPS_CALL_REG
+        elsif operand.register? and operand != MIPS_CALL_REG
             preList << Instruction.new(self.codeOrigin, "move", [operand, MIPS_CALL_REG])
-    else
-        needRestore = false
-        tmp = operand
-    end
-    if needRestore
+        else
+            needRestore = false
+            tmp = operand
+        end
+        if needRestore
             postList << Instruction.new(self.codeOrigin, "move", [MIPS_GPSAVE_REG, MIPS_GP_REG])
         end
         cloneWithNewOperands([tmp])

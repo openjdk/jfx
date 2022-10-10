@@ -49,6 +49,11 @@ String SecurityOriginData::toString() const
     return makeString(protocol, "://", host, ':', static_cast<uint32_t>(*port));
 }
 
+URL SecurityOriginData::toURL() const
+{
+    return URL { URL(), toString() };
+}
+
 SecurityOriginData SecurityOriginData::fromFrame(Frame* frame)
 {
     if (!frame)
@@ -115,12 +120,23 @@ std::optional<SecurityOriginData> SecurityOriginData::fromDatabaseIdentifier(con
     return SecurityOriginData { protocol, host, port };
 }
 
-SecurityOriginData SecurityOriginData::isolatedCopy() const
+SecurityOriginData SecurityOriginData::isolatedCopy() const &
 {
     SecurityOriginData result;
 
     result.protocol = protocol.isolatedCopy();
     result.host = host.isolatedCopy();
+    result.port = port;
+
+    return result;
+}
+
+SecurityOriginData SecurityOriginData::isolatedCopy() &&
+{
+    SecurityOriginData result;
+
+    result.protocol = WTFMove(protocol).isolatedCopy();
+    result.host = WTFMove(host).isolatedCopy();
     result.port = port;
 
     return result;

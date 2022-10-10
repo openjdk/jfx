@@ -330,7 +330,6 @@ initial_setup (j_decompress_ptr cinfo)
     default:
       ERREXIT4(cinfo, JERR_BAD_PROGRESSION,
            cinfo->Ss, cinfo->Se, cinfo->Ah, cinfo->Al);
-      break;
     }
 
   /* We initialize DCT_scaled_size and min_DCT_scaled_size to block_size.
@@ -429,9 +428,7 @@ per_scan_setup (j_decompress_ptr cinfo)
     cinfo->MCUs_per_row = (JDIMENSION)
       jdiv_round_up((long) cinfo->image_width,
             (long) (cinfo->max_h_samp_factor * cinfo->block_size));
-    cinfo->MCU_rows_in_scan = (JDIMENSION)
-      jdiv_round_up((long) cinfo->image_height,
-            (long) (cinfo->max_v_samp_factor * cinfo->block_size));
+    cinfo->MCU_rows_in_scan = cinfo->total_iMCU_rows;
 
     cinfo->blocks_in_MCU = 0;
 
@@ -501,9 +498,8 @@ latch_quant_tables (j_decompress_ptr cinfo)
     cinfo->quant_tbl_ptrs[qtblno] == NULL)
       ERREXIT1(cinfo, JERR_NO_QUANT_TABLE, qtblno);
     /* OK, save away the quantization table */
-    qtbl = (JQUANT_TBL *)
-      (*cinfo->mem->alloc_small) ((j_common_ptr) cinfo, JPOOL_IMAGE,
-                  SIZEOF(JQUANT_TBL));
+    qtbl = (JQUANT_TBL *) (*cinfo->mem->alloc_small)
+      ((j_common_ptr) cinfo, JPOOL_IMAGE, SIZEOF(JQUANT_TBL));
     MEMCOPY(qtbl, cinfo->quant_tbl_ptrs[qtblno], SIZEOF(JQUANT_TBL));
     compptr->quant_table = qtbl;
   }
@@ -644,9 +640,8 @@ jinit_input_controller (j_decompress_ptr cinfo)
   my_inputctl_ptr inputctl;
 
   /* Create subobject in permanent pool */
-  inputctl = (my_inputctl_ptr)
-    (*cinfo->mem->alloc_small) ((j_common_ptr) cinfo, JPOOL_PERMANENT,
-                SIZEOF(my_input_controller));
+  inputctl = (my_inputctl_ptr) (*cinfo->mem->alloc_small)
+    ((j_common_ptr) cinfo, JPOOL_PERMANENT, SIZEOF(my_input_controller));
   cinfo->inputctl = &inputctl->pub;
   /* Initialize method pointers */
   inputctl->pub.consume_input = consume_markers;

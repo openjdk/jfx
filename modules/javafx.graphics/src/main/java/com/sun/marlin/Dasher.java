@@ -28,6 +28,7 @@ package com.sun.marlin;
 import java.util.Arrays;
 import com.sun.marlin.TransformingPathConsumer2D.CurveBasicMonotonizer;
 import com.sun.marlin.TransformingPathConsumer2D.CurveClipSplitter;
+import com.sun.marlin.TransformingPathConsumer2D.StartFlagPathConsumer2D;
 
 /**
  * The <code>Dasher</code> class takes a series of linear commands
@@ -40,7 +41,7 @@ import com.sun.marlin.TransformingPathConsumer2D.CurveClipSplitter;
  * semantics are unclear.
  *
  */
-public final class Dasher implements DPathConsumer2D, MarlinConst {
+public final class Dasher implements StartFlagPathConsumer2D, MarlinConst {
 
     /* huge circle with radius ~ 2E9 only needs 12 subdivision levels */
     static final int REC_LIMIT = 16;
@@ -90,9 +91,9 @@ public final class Dasher implements DPathConsumer2D, MarlinConst {
     private int firstSegidx;
 
     // dashes ref (dirty)
-    final DoubleArrayCache.Reference dashes_ref;
+    final ArrayCacheDouble.Reference dashes_ref;
     // firstSegmentsBuffer ref (dirty)
-    final DoubleArrayCache.Reference firstSegmentsBuffer_ref;
+    final ArrayCacheDouble.Reference firstSegmentsBuffer_ref;
 
     // Bounds of the drawing region, at pixel precision.
     private double[] clipRect;
@@ -223,9 +224,13 @@ public final class Dasher implements DPathConsumer2D, MarlinConst {
         }
         // Return arrays:
         if (recycleDashes) {
-            dash = dashes_ref.putArray(dash);
+            if (dashes_ref.doCleanRef(dash)) {
+                dash = dashes_ref.putArray(dash);
+            }
         }
-        firstSegmentsBuffer = firstSegmentsBuffer_ref.putArray(firstSegmentsBuffer);
+        if (firstSegmentsBuffer_ref.doCleanRef(firstSegmentsBuffer)) {
+            firstSegmentsBuffer = firstSegmentsBuffer_ref.putArray(firstSegmentsBuffer);
+        }
     }
 
     public double[] copyDashArray(final float[] dashes) {
@@ -346,6 +351,26 @@ public final class Dasher implements DPathConsumer2D, MarlinConst {
         // small arraycopy (2, 4 or 6) but with offset:
         System.arraycopy(pts, off, buf, segIdx, len);
         firstSegidx = segIdx + len;
+    }
+
+    /* Callback from CurveClipSplitter */
+    @Override
+    public void setStartFlag(boolean first) {
+        if (first) {
+            // reset flag:
+            rdrCtx.firstFlags &= 0b011;
+        } else {
+            rdrCtx.firstFlags |= 0b100;
+        }
+    }
+
+    public void setMonotonizerStartFlag(boolean first) {
+        if (first) {
+            // reset flag:
+            rdrCtx.firstFlags &= 0b101;
+        } else {
+            rdrCtx.firstFlags |= 0b010;
+        }
     }
 
     @Override
@@ -538,7 +563,7 @@ public final class Dasher implements DPathConsumer2D, MarlinConst {
     // that contains the curve we want to dash in the first type elements
     private void somethingTo(final int type) {
         final double[] _curCurvepts = curCurvepts;
-        if (pointCurve(_curCurvepts, type)) {
+        if (Helpers.isPointCurve(_curCurvepts, type)) {
             return;
         }
         final LengthIterator _li = li;
@@ -594,7 +619,7 @@ public final class Dasher implements DPathConsumer2D, MarlinConst {
 
     private void skipSomethingTo(final int type) {
         final double[] _curCurvepts = curCurvepts;
-        if (pointCurve(_curCurvepts, type)) {
+        if (Helpers.isPointCurve(_curCurvepts, type)) {
             return;
         }
         final LengthIterator _li = li;
@@ -612,15 +637,6 @@ public final class Dasher implements DPathConsumer2D, MarlinConst {
         // Fix initial move:
         this.needsMoveTo = true;
         this.starting = false;
-    }
-
-    private static boolean pointCurve(final double[] curve, final int type) {
-        for (int i = 2; i < type; i++) {
-            if (curve[i] != curve[i-2]) {
-                return false;
-            }
-        }
-        return true;
     }
 
     // Objects of this class are used to iterate through curves. They return
@@ -704,7 +720,9 @@ public final class Dasher implements DPathConsumer2D, MarlinConst {
             this.lenAtLastT = 0.0d;
             this.nextT = 0.0d;
             this.lenAtNextT = 0.0d;
-            goLeft(); // initializes nextT and lenAtNextT properly
+            // initializes nextT and lenAtNextT properly
+            goLeft();
+
             this.lenAtLastSplit = 0.0d;
             if (recLevel > 0) {
                 this.sidesRight[0] = false;
@@ -810,7 +828,7 @@ public final class Dasher implements DPathConsumer2D, MarlinConst {
                 // and our quadratic root finder doesn't filter, so it's just a
                 // matter of convenience.
                 final int n = Helpers.cubicRootsInAB(a, b, c, d, nextRoots, 0, 0.0d, 1.0d);
-                if (n == 1 && !Double.isNaN(nextRoots[0])) {
+                if (n == 1) {
                     t = nextRoots[0];
                 }
             }
@@ -957,7 +975,6 @@ public final class Dasher implements DPathConsumer2D, MarlinConst {
                     return;
                 }
             }
-
             this.cOutCode = outcode3;
 
             if (this.outside) {
@@ -987,7 +1004,14 @@ public final class Dasher implements DPathConsumer2D, MarlinConst {
             System.arraycopy(mid, off, _curCurvepts, 0, 8);
 
             somethingTo(8);
+
+            if (i == 0) {
+                // disable start flag:
+                setMonotonizerStartFlag(false);
+            }
         }
+        // reset start flag:
+        setMonotonizerStartFlag(true);
     }
 
     private void skipCurveTo(final double x1, final double y1,
@@ -1043,7 +1067,6 @@ public final class Dasher implements DPathConsumer2D, MarlinConst {
                     return;
                 }
             }
-
             this.cOutCode = outcode2;
 
             if (this.outside) {
@@ -1072,7 +1095,14 @@ public final class Dasher implements DPathConsumer2D, MarlinConst {
             System.arraycopy(mid, off, _curCurvepts, 0, 8);
 
             somethingTo(6);
+
+            if (i == 0) {
+                // disable start flag:
+                setMonotonizerStartFlag(false);
+            }
         }
+        // reset start flag:
+        setMonotonizerStartFlag(true);
     }
 
     private void skipQuadTo(final double x1, final double y1,

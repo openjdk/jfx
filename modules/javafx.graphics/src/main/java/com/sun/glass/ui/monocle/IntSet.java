@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -150,6 +150,15 @@ class IntSet {
         } else {
             return false;
         }
+    }
+
+    @Override
+    public int hashCode() {
+        int h = 1;
+        for (int i = 0; i < size; i++) {
+            h = 31 * h + elements[i];
+        }
+        return h;
     }
 
     public String toString() {

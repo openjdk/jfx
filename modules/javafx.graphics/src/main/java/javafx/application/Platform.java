@@ -151,6 +151,12 @@ public final class Platform {
      * {@link #startup(Runnable)} once.
      * </p>
      *
+     * <p>
+     * Memory consistency effects: Actions in a thread prior to submitting a
+     * {@code runnable} to this method <i>happen-before</i> actions performed
+     * by the runnable in the JavaFX Application Thread.
+     * </p>
+     *
      * @param runnable the Runnable whose run method will be executed on the
      * JavaFX Application Thread
      *

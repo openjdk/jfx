@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,15 +29,20 @@ import com.sun.javafx.css.BitSetShim;
 import com.sun.javafx.css.PseudoClassState;
 import com.sun.javafx.css.PseudoClassStateShim;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import javafx.collections.ObservableSet;
 import javafx.collections.SetChangeListener;
 import javafx.css.PseudoClass;
 import static org.junit.Assert.*;
+
+import org.junit.AfterClass;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 /**
@@ -46,7 +51,37 @@ import org.junit.Test;
  */
 public class PseudoClassTest {
 
-    public PseudoClassTest() {
+    private static Map<String, Integer> initialPseudoClassMap;
+    private static List<PseudoClass> initialPseudoClasses;
+
+    /**
+     * Before we run any of the tests in this class, we must store the current content
+     * of both the 'PseudoClassState.pseudoClassMap' and 'PseudoClassState.pseudoClasses'
+     * static fields, and restore the exact content after we have completed all tests.
+     *
+     * Once a pseudo-class has been loaded via 'PseudoClass.getPseudoClass(String)', the
+     * returned singleton 'PseudoClassImpl' instance will be stored in the static list
+     * 'PseudoClassState.pseudoClasses', and the instance will store the index of itself
+     * in this list.
+     *
+     * Clearing the content of 'pseudoClassMap' and 'pseudoClasses' will therefore break
+     * existing 'PseudoClass' instances, because their stored index will no longer refer
+     * to the correct instance in the 'pseudoClasses' list. This can cause other tests
+     * that happen to use a broken pseudo-class instance to fail undeterministically,
+     * depending on whether or not they are executed before or after this class.
+     */
+    @BeforeClass
+    public static void beforeClass() {
+        initialPseudoClassMap = new HashMap<>(PseudoClassStateShim.pseudoClassMap);
+        initialPseudoClasses = new ArrayList<>(PseudoClassStateShim.pseudoClasses);
+    }
+
+    @AfterClass
+    public static void afterClass() {
+        PseudoClassStateShim.pseudoClassMap.clear();
+        PseudoClassStateShim.pseudoClassMap.putAll(initialPseudoClassMap);
+        PseudoClassStateShim.pseudoClasses.clear();
+        PseudoClassStateShim.pseudoClasses.addAll(initialPseudoClasses);
     }
 
     @Before

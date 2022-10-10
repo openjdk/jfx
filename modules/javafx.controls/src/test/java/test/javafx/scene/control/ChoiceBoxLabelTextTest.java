@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2020, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -52,7 +52,7 @@ import javafx.util.StringConverter;
 
 /**
  * Contains tests around the text shown in the box's label, mainly covering
- * fix for https://bugs.openjdk.java.net/browse/JDK-8087555.
+ * fix for https://bugs.openjdk.org/browse/JDK-8087555.
  *
  * <p>
  * It is parameterized in the converter

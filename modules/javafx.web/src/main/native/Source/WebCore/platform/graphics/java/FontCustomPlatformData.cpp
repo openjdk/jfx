@@ -27,6 +27,7 @@
 
 #include "FontCustomPlatformData.h"
 
+#include "FontCreationContext.h"
 #include "SharedBuffer.h"
 #include "FontDescription.h"
 #include "FontPlatformData.h"
@@ -41,9 +42,7 @@ FontCustomPlatformData::FontCustomPlatformData(const JLObject& data)
 FontCustomPlatformData::~FontCustomPlatformData()
 {
 }
-
-FontPlatformData FontCustomPlatformData::fontPlatformData(
-        const FontDescription& fontDescription, bool bold, bool italic, const FontFeatureSettings&, FontSelectionSpecifiedCapabilities)
+FontPlatformData FontCustomPlatformData::fontPlatformData(const FontDescription& fontDescription, bool bold, bool italic, const FontCreationContext&)
 {
     JNIEnv* env = WTF::GetJavaEnv();
 

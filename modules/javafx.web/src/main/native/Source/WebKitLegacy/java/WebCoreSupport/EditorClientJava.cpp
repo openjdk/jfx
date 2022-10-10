@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -567,6 +567,10 @@ void EditorClientJava::overflowScrollPositionChanged() {
     notImplemented();
 }
 
+void EditorClientJava::subFrameScrollPositionChanged() {
+     notImplemented();
+}
+
 void EditorClientJava::updateSpellingUIWithGrammarString(const String&, const GrammarDetail&)
 {
     notImplemented();
@@ -634,6 +638,11 @@ bool EditorClientJava::canPaste(Frame*, bool defaultValue) const
 
 void EditorClientJava::discardedComposition(Frame*)
 {
+}
+
+DOMPasteAccessResponse EditorClientJava::requestDOMPasteAccess(DOMPasteAccessCategory, const String& originIdentifier)
+{
+    return DOMPasteAccessResponse::DeniedForGesture;
 }
 
 void EditorClientJava::canceledComposition()

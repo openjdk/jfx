@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2018, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -61,6 +61,7 @@ import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Assume;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -137,6 +138,15 @@ public class RobotTest {
     private enum KeyAction {
         PRESSED,
         TYPED
+    }
+
+    @Before
+    public void before() {
+        double x = stage.getX() + stage.getWidth();
+        double y = stage.getY() + stage.getHeight();
+        Util.runAndWait(() -> {
+            robot.mouseMove(x,y);
+        });
     }
 
     @Test

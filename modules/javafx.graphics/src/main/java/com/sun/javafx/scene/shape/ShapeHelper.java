@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2016, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -109,10 +109,6 @@ public abstract class ShapeHelper extends NodeHelper {
         return shapeAccessor.getMode(shape);
     }
 
-    public static void setMode(Shape shape, NGShape.Mode mode) {
-        shapeAccessor.setMode(shape, mode);
-    }
-
     public static void setShapeChangeListener(Shape shape, Runnable listener) {
         shapeAccessor.setShapeChangeListener(shape, listener);
     }
@@ -133,7 +129,6 @@ public abstract class ShapeHelper extends NodeHelper {
         Paint doCssGetFillInitialValue(Shape shape);
         Paint doCssGetStrokeInitialValue(Shape shape);
         NGShape.Mode getMode(Shape shape);
-        void setMode(Shape shape, NGShape.Mode mode);
         void setShapeChangeListener(Shape shape, Runnable listener);
     }
 

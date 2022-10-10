@@ -41,8 +41,10 @@ class Document;
 class SVGDocumentExtensions;
 class SVGElementRareData;
 class SVGPropertyAnimatorFactory;
+class SVGResourceElementClient;
 class SVGSVGElement;
 class SVGUseElement;
+class Timer;
 
 void mapAttributeToCSSProperty(HashMap<AtomStringImpl*, CSSPropertyID>* propertyNameToIdMap, const QualifiedName& attrName);
 
@@ -80,13 +82,8 @@ public:
 
     virtual AffineTransform* supplementalTransform() { return nullptr; }
 
-    void invalidateSVGAttributes() { ensureUniqueElementData().setAnimatedSVGAttributesAreDirty(true); }
-    void invalidateSVGPresentationalHintStyle()
-    {
-        ensureUniqueElementData().setPresentationalHintStyleIsDirty(true);
-        // Trigger style recalculation for "elements as resource" (e.g. referenced by feImage).
-        invalidateStyle();
-    }
+    inline void invalidateSVGAttributes();
+    inline void invalidateSVGPresentationalHintStyle();
 
     // The instances of an element are clones made in shadow trees to implement <use>.
     const WeakHashSet<SVGElement>& instances() const;
@@ -98,12 +95,17 @@ public:
     void removeReferencingElement(SVGElement&);
     void removeElementReference();
 
+    Vector<WeakPtr<SVGResourceElementClient>> referencingCSSClients() const;
+    void addReferencingCSSClient(SVGResourceElementClient&);
+    void removeReferencingCSSClient(SVGResourceElementClient&);
+
+
     SVGElement* correspondingElement() const;
     RefPtr<SVGUseElement> correspondingUseElement() const;
 
     void setCorrespondingElement(SVGElement*);
 
-    std::optional<Style::ElementStyle> resolveCustomStyle(const RenderStyle& parentStyle, const RenderStyle* shadowHostStyle) override;
+    std::optional<Style::ElementStyle> resolveCustomStyle(const Style::ResolutionContext&, const RenderStyle* shadowHostStyle) override;
 
     static QualifiedName animatableAttributeForName(const AtomString&);
 #ifndef NDEBUG
@@ -217,18 +219,6 @@ private:
     SVGElement& m_element;
 };
 
-struct SVGAttributeHashTranslator {
-    static unsigned hash(const QualifiedName& key)
-    {
-        if (key.hasPrefix()) {
-            QualifiedNameComponents components = { nullAtom().impl(), key.localName().impl(), key.namespaceURI().impl() };
-            return hashComponents(components);
-        }
-        return DefaultHash<QualifiedName>::hash(key);
-    }
-    static bool equal(const QualifiedName& a, const QualifiedName& b) { return a.matches(b); }
-};
-
 inline SVGElement::InstanceInvalidationGuard::InstanceInvalidationGuard(SVGElement& element)
     : m_element(element)
 {
@@ -250,15 +240,12 @@ inline SVGElement::InstanceUpdateBlocker::~InstanceUpdateBlocker()
     m_element.setInstanceUpdatesBlocked(false);
 }
 
-inline bool Node::hasTagName(const SVGQualifiedName& name) const
-{
-    return isSVGElement() && downcast<SVGElement>(*this).hasTagName(name);
-}
+
 
 } // namespace WebCore
 
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::SVGElement)
+    static bool isType(const WebCore::EventTarget& eventTarget) { return eventTarget.isNode() && static_cast<const WebCore::Node&>(eventTarget).isSVGElement(); }
     static bool isType(const WebCore::Node& node) { return node.isSVGElement(); }
 SPECIALIZE_TYPE_TRAITS_END()
 
-#include "SVGElementTypeHelpers.h"

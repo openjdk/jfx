@@ -27,6 +27,7 @@
 #if USE(LIBWEBRTC)
 
 #include "LibWebRTCMacros.h"
+#include "RTCSignalingState.h"
 
 ALLOW_UNUSED_PARAMETERS_BEGIN
 ALLOW_DEPRECATED_DECLARATIONS_BEGIN
@@ -285,7 +286,8 @@ private:
     const webrtc::SessionDescriptionInterface* local_description() const override { return nullptr; }
     const webrtc::SessionDescriptionInterface* remote_description() const override { return nullptr; }
     bool AddIceCandidate(const webrtc::IceCandidateInterface*) override { return true; }
-    SignalingState signaling_state() override { return kStable; }
+    void AddIceCandidate(std::unique_ptr<webrtc::IceCandidateInterface>, std::function<void(webrtc::RTCError)> callback) override { callback({ }); }
+    SignalingState signaling_state() override;
     IceConnectionState ice_connection_state() override { return kIceConnectionNew; }
     IceGatheringState ice_gathering_state() override { return kIceGatheringNew; }
     void StopRtcEventLog() override { }
@@ -297,8 +299,8 @@ private:
     std::vector<rtc::scoped_refptr<webrtc::RtpTransceiverInterface>> GetTransceivers() const final;
 
 protected:
-    void SetRemoteDescription(webrtc::SetSessionDescriptionObserver*, webrtc::SessionDescriptionInterface*) final;
-    void SetRemoteDescription(std::unique_ptr<webrtc::SessionDescriptionInterface>, rtc::scoped_refptr<webrtc::SetRemoteDescriptionObserverInterface>) override { }
+    void SetRemoteDescription(webrtc::SetSessionDescriptionObserver*, webrtc::SessionDescriptionInterface*) final { ASSERT_NOT_REACHED(); }
+    void SetRemoteDescription(std::unique_ptr<webrtc::SessionDescriptionInterface>, rtc::scoped_refptr<webrtc::SetRemoteDescriptionObserverInterface>) override;
     bool RemoveIceCandidates(const std::vector<cricket::Candidate>&) override { return true; }
     rtc::scoped_refptr<webrtc::DtlsTransportInterface> LookupDtlsTransportByMid(const std::string&) override { return { }; }
     rtc::scoped_refptr<webrtc::SctpTransportInterface> GetSctpTransport() const override { return { }; }
@@ -307,12 +309,13 @@ protected:
     bool StartRtcEventLog(std::unique_ptr<webrtc::RtcEventLogOutput>) override { return true; }
 
     void CreateAnswer(webrtc::CreateSessionDescriptionObserver*, const webrtc::PeerConnectionInterface::RTCOfferAnswerOptions&) final;
-    rtc::scoped_refptr<webrtc::DataChannelInterface> CreateDataChannel(const std::string&, const webrtc::DataChannelInit*) final;
+    webrtc::RTCErrorOr<rtc::scoped_refptr<webrtc::DataChannelInterface>> CreateDataChannelOrError(const std::string&, const webrtc::DataChannelInit*) final;
     webrtc::RTCErrorOr<rtc::scoped_refptr<webrtc::RtpSenderInterface>> AddTrack(rtc::scoped_refptr<webrtc::MediaStreamTrackInterface>, const std::vector<std::string>& streams) final;
     bool RemoveTrack(webrtc::RtpSenderInterface*) final;
     webrtc::RTCError SetBitrate(const webrtc::BitrateSettings&) final { return { }; }
 
-    void SetLocalDescription(webrtc::SetSessionDescriptionObserver*, webrtc::SessionDescriptionInterface*) override;
+    void SetLocalDescription(webrtc::SetSessionDescriptionObserver*, webrtc::SessionDescriptionInterface*) final { ASSERT_NOT_REACHED(); };
+    void SetLocalDescription(std::unique_ptr<webrtc::SessionDescriptionInterface>, rtc::scoped_refptr<webrtc::SetLocalDescriptionObserverInterface>) override;
     bool GetStats(webrtc::StatsObserver*, webrtc::MediaStreamTrackInterface*, StatsOutputLevel) override { return false; }
     void CreateOffer(webrtc::CreateSessionDescriptionObserver*, const webrtc::PeerConnectionInterface::RTCOfferAnswerOptions&) override;
 
@@ -325,6 +328,7 @@ protected:
     bool m_isReceivingAudio { false };
     bool m_isReceivingVideo { false };
     std::string m_streamLabel;
+    RTCSignalingState m_signalingState { RTCSignalingState::Stable };
 };
 
 class MockLibWebRTCPeerConnectionFactory : public webrtc::PeerConnectionFactoryInterface {

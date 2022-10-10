@@ -25,6 +25,8 @@
 
 package com.sun.prism.impl;
 
+import com.sun.javafx.tk.quantum.QuantumToolkit;
+
 import java.lang.ref.Reference;
 import java.lang.ref.ReferenceQueue;
 import java.lang.ref.PhantomReference;
@@ -126,6 +128,10 @@ public class Disposer {
      * thread on which  the resources were created).
      */
     public static void cleanUp() {
+        if (!Thread.currentThread().getName().startsWith("QuantumRenderer")) {
+            QuantumToolkit.runInRenderThreadAndWait(() -> cleanUp());
+            return;
+        }
         disposerInstance.disposeUnreachables();
         disposerInstance.processDisposalQueue();
     }

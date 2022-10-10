@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -73,9 +73,15 @@ public class Node_cssStyleMap_Test {
 
     boolean disabled = false;
 
+    /**
+     * @param property - must be a StyleableProperty
+     * @param map
+     * @param decls
+     */
     private void checkFoundStyle(Property<?> property, Map<StyleableProperty<?>, List<Style>> map, List<Declaration> decls) {
 
-        List<Style> styles = map.get(property);
+        assertTrue(property instanceof StyleableProperty);
+        List<Style> styles = map.get((StyleableProperty<?>)property);
         assert (styles != null && !styles.isEmpty());
 
         String pname = ((StyleableProperty<?>)property).getCssMetaData().getProperty();
@@ -284,18 +290,6 @@ public class Node_cssStyleMap_Test {
 
         checkFoundStyle(text.fontProperty(), map, textDecls);
 
-    }
-
-    boolean containsProperty(CssMetaData key, Map<String,List<CascadingStyle>> map) {
-
-        if (map.containsKey(key)) return true;
-        List<CssMetaData> subProperties = key.getSubProperties();
-        if (subProperties != null && !subProperties.isEmpty()) {
-            for (CssMetaData subKey: subProperties) {
-                if (map.containsKey(subKey)) return true;
-            }
-        }
-        return false;
     }
 
     @Test

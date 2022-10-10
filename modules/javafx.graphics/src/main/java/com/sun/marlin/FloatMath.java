@@ -48,26 +48,6 @@ public final class FloatMath implements MarlinConst {
     }
 
     /**
-     * Faster alternative to ceil(float) optimized for the integer domain
-     * and supporting NaN and +/-Infinity.
-     *
-     * @param a a value.
-     * @return the largest (closest to positive infinity) integer value
-     * that less than or equal to the argument and is equal to a mathematical
-     * integer.
-     */
-    public static int ceil_int(final float a) {
-        final int intpart = (int) a;
-
-        if (a <= intpart
-                || (CHECK_OVERFLOW && intpart == Integer.MAX_VALUE)
-                || CHECK_NAN && Float.isNaN(a)) {
-            return intpart;
-        }
-        return intpart + 1;
-    }
-
-    /**
      * Faster alternative to ceil(double) optimized for the integer domain
      * and supporting NaN and +/-Infinity.
      *
@@ -85,26 +65,6 @@ public final class FloatMath implements MarlinConst {
             return intpart;
         }
         return intpart + 1;
-    }
-
-    /**
-     * Faster alternative to floor(float) optimized for the integer domain
-     * and supporting NaN and +/-Infinity.
-     *
-     * @param a a value.
-     * @return the largest (closest to positive infinity) floating-point value
-     * that less than or equal to the argument and is equal to a mathematical
-     * integer.
-     */
-    public static int floor_int(final float a) {
-        final int intpart = (int) a;
-
-        if (a >= intpart
-                || (CHECK_OVERFLOW && intpart == Integer.MIN_VALUE)
-                || CHECK_NAN && Float.isNaN(a)) {
-            return intpart;
-        }
-        return intpart - 1;
     }
 
     /**
