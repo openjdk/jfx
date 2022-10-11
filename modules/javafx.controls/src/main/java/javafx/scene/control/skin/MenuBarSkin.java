@@ -377,12 +377,11 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
                     }
 
                     if (w != null) {
-                        windowFocusHelper = 
-                            sceneListenerHelper.addWeakChangeListener(w.focusedProperty(), true, (sr2, oldf, focused) -> {
-                                if (!focused) {
-                                    unSelectMenus();
-                                }
-                            });
+                        windowFocusHelper = sceneListenerHelper.addWeakChangeListener(w.focusedProperty(), true, (s, p, focused) -> {
+                            if (!focused) {
+                                unSelectMenus();
+                            }
+                        });
                     }
                 });
 
