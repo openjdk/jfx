@@ -614,7 +614,7 @@ public class ListenerHelper implements IDisconnectable {
     protected static abstract class InLi implements IDisconnectable, InvalidationListener { }
 
     protected static abstract class LiChLi<T> implements IDisconnectable, ListChangeListener<T> { }
-    
+
     protected static abstract class WeHa<T extends Event> implements IDisconnectable, EventHandler<T> {
         private final WeakReference<EventHandler<? super T>> ref;
 
