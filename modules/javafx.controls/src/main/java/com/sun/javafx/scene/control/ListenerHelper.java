@@ -26,7 +26,7 @@ package com.sun.javafx.scene.control;
 
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
-
+import java.util.function.Consumer;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.value.ChangeListener;
@@ -161,6 +161,38 @@ public class ListenerHelper implements IDisconnectable {
         return d;
     }
 
+    public <T> IDisconnectable addChangeListener(ObservableValue<T> prop, Consumer<T> callback) {
+        return addChangeListener(prop, false, callback);
+    }
+
+    public <T> IDisconnectable addChangeListener(ObservableValue<T> prop, boolean fireImmediately, Consumer<T> callback) {
+        if (callback == null) {
+            throw new NullPointerException("Callback must be specified.");
+        }
+
+        ChLi<T> d = new ChLi<T>() {
+            @Override
+            public void disconnect() {
+                prop.removeListener(this);
+            }
+
+            @Override
+            public void changed(ObservableValue<? extends T> observable, T oldValue, T newValue) {
+                callback.accept(newValue);
+            }
+        };
+
+        items.add(d);
+        prop.addListener(d);
+
+        if (fireImmediately) {
+            T v = prop.getValue();
+            callback.accept(v);
+        }
+
+        return d;
+    }
+
     public IDisconnectable addWeakChangeListener(Runnable onChange, ObservableValue<?>... props) {
         return addWeakChangeListener(onChange, false, props);
     }
@@ -238,6 +270,45 @@ public class ListenerHelper implements IDisconnectable {
         if (fireImmediately) {
             T v = prop.getValue();
             listener.changed(prop, null, v);
+        }
+
+        return d;
+    }
+
+    public <T> IDisconnectable addWeakChangeListener(ObservableValue<T> prop, Consumer<T> callback) {
+        return addWeakChangeListener(prop, false, callback);
+    }
+
+    public <T> IDisconnectable addWeakChangeListener(ObservableValue<T> prop, boolean fireImmediately, Consumer<T> callback) {
+        if (callback == null) {
+            throw new NullPointerException("Callback must be specified.");
+        }
+
+        ChLi<T> d = new ChLi<T>() {
+            WeakReference<Consumer<T>> ref = new WeakReference<>(callback);
+
+            @Override
+            public void disconnect() {
+                prop.removeListener(this);
+            }
+
+            @Override
+            public void changed(ObservableValue<? extends T> observable, T oldValue, T newValue) {
+                Consumer<T> cb = ref.get();
+                if (cb == null) {
+                    disconnect();
+                } else {
+                    cb.accept(newValue);
+                }
+            }
+        };
+
+        items.add(d);
+        prop.addListener(d);
+
+        if (fireImmediately) {
+            T v = prop.getValue();
+            callback.accept(v);
         }
 
         return d;
