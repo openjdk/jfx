@@ -143,7 +143,6 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
     private ChangeListener<Scene> sceneChangeListener;
     private ChangeListener<Boolean> menuVisibilityChangeListener;
     private WeakChangeListener<Boolean> weakMenuVisibilityChangeListener;
-    private ListenerHelper listenerHelper = new ListenerHelper();
     private ListenerHelper sceneListenerHelper;
     private IDisconnectable windowFocusHelper;
 
@@ -243,12 +242,12 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
         weakMenuVisibilityChangeListener = new WeakChangeListener(menuVisibilityChangeListener);
 
         rebuildUI();
-        registerListChangeListener(control.getMenus(), (ch) -> {
+        listenerHelper().addListChangeListener(control.getMenus(), (v) -> {
             rebuildUI();
         });
 
         if (Toolkit.getToolkit().getSystemMenu().isSupported()) {
-            registerInvalidationListener(control.useSystemMenuBarProperty(), (p) -> {
+            listenerHelper().addInvalidationListener(control.useSystemMenuBarProperty(), (v) -> {
                 rebuildUI();
             });
         }
@@ -282,7 +281,7 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
         });
         ParentHelper.setTraversalEngine(getSkinnable(), engine);
 
-        listenerHelper.addChangeListener(control.sceneProperty(), true, (src,old,scene) -> {
+        listenerHelper().addChangeListener(control.sceneProperty(), true, (scene) -> {
             if (sceneListenerHelper != null) {
                 sceneListenerHelper.disconnect();
                 sceneListenerHelper = null;
@@ -654,9 +653,6 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
         if (getSkinnable() == null) {
             return;
         }
-
-        listenerHelper.disconnect();
-        listenerHelper = null;
 
         if (sceneListenerHelper != null) {
             sceneListenerHelper.disconnect();
