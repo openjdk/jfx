@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -280,8 +280,7 @@ public class AnchorPane extends Pane {
                     child.minWidth(childHeight) : computeChildPrefAreaWidth(child, -1, null, childHeight, false)) + right);
         }
 
-        final Insets insets = getInsets();
-        return insets.getLeft() + max + insets.getRight();
+        return snappedLeftInset() + max + snappedRightInset();
     }
 
     private double computeHeight(final boolean minimum, final double width) {
@@ -303,28 +302,24 @@ public class AnchorPane extends Pane {
                     child.minHeight(childWidth) : computeChildPrefAreaHeight(child, -1, null, childWidth)) + bottom);
         }
 
-        final Insets insets = getInsets();
-        return insets.getTop() + max + insets.getBottom();
+        return snappedTopInset() + max + snappedBottomInset();
     }
 
     private double computeChildWidth(Node child, Double leftAnchor, Double rightAnchor, double areaWidth, double height) {
         if (leftAnchor != null && rightAnchor != null && child.isResizable()) {
-            final Insets insets = getInsets();
-            return areaWidth - insets.getLeft() - insets.getRight() - leftAnchor - rightAnchor;
+            return areaWidth - snappedLeftInset() - snappedRightInset() - leftAnchor - rightAnchor;
         }
         return computeChildPrefAreaWidth(child, -1, Insets.EMPTY, height, true);
     }
 
     private double computeChildHeight(Node child, Double topAnchor, Double bottomAnchor, double areaHeight, double width) {
         if (topAnchor != null && bottomAnchor != null && child.isResizable()) {
-            final Insets insets = getInsets();
-            return areaHeight - insets.getTop() - insets.getBottom() - topAnchor - bottomAnchor;
+            return areaHeight - snappedTopInset() - snappedBottomInset() - topAnchor - bottomAnchor;
         }
         return computeChildPrefAreaHeight(child, -1, Insets.EMPTY, width);
     }
 
     @Override protected void layoutChildren() {
-        final Insets insets = getInsets();
         final List<Node> children = getManagedChildren();
         for (Node child : children) {
             final Double topAnchor = getTopAnchor(child);
@@ -355,15 +350,15 @@ public class AnchorPane extends Pane {
             }
 
             if (leftAnchor != null) {
-                x = insets.getLeft() + leftAnchor;
+                x = snappedLeftInset() + leftAnchor;
             } else if (rightAnchor != null) {
-                x = getWidth() - insets.getRight() - rightAnchor - w;
+                x = getWidth() - snappedRightInset() - rightAnchor - w;
             }
 
             if (topAnchor != null) {
-                y = insets.getTop() + topAnchor;
+                y = snappedTopInset() + topAnchor;
             } else if (bottomAnchor != null) {
-                y = getHeight() - insets.getBottom() - bottomAnchor - h;
+                y = getHeight() - snappedBottomInset() - bottomAnchor - h;
             }
 
             child.resizeRelocate(x, y, w, h);
