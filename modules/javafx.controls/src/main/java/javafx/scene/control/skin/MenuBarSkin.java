@@ -370,23 +370,24 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
                 });
 
                 // When the parent window looses focus - menu selection should be cleared
-                sceneListenerHelper.addWeakChangeListener(scene.windowProperty(), true, (sr,oldw,w) -> {
-                    if(windowFocusHelper != null) {
+                sceneListenerHelper.addWeakChangeListener(scene.windowProperty(), true, (sr, oldw, w) -> {
+                    if (windowFocusHelper != null) {
                         windowFocusHelper.disconnect();
                         windowFocusHelper = null;
                     }
-                    
-                    if(w != null) {
-                        windowFocusHelper = sceneListenerHelper.addWeakChangeListener(w.focusedProperty(), true, (sr2, oldf, focused) -> {
-                            if (!focused) {
-                                unSelectMenus();
-                            }
-                        });
+
+                    if (w != null) {
+                        windowFocusHelper = 
+                            sceneListenerHelper.addWeakChangeListener(w.focusedProperty(), true, (sr2, oldf, focused) -> {
+                                if (!focused) {
+                                    unSelectMenus();
+                                }
+                            });
                     }
                 });
 
                 sceneListenerHelper.addWeakEventFilter(scene, KeyEvent.ANY, (ev) -> {
-                        // Clear menu selection when ALT is pressed by itself
+                    // Clear menu selection when ALT is pressed by itself
                     if (ev.getEventType() == KeyEvent.KEY_PRESSED) {
                         altKeyPressed = false;
                         if (ev.getCode() == KeyCode.ALT && !ev.isConsumed()) {
@@ -404,7 +405,7 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
                         altKeyPressed = false;
                     }
                 });
-                
+
                 // F10 accelerator
                 scene.getAccelerators().put(acceleratorKeyCombo, firstMenuRunnable);
                 sceneListenerHelper.addDisconnectable(() -> {
