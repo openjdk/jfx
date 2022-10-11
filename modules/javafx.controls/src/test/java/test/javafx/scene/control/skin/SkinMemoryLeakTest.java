@@ -175,7 +175,7 @@ public class SkinMemoryLeakTest {
                 // @Ignore("8245145")
                 Spinner.class,
                 SplitMenuButton.class,
-                SplitPane.class,
+                //SplitPane.class,
                 TableView.class,
                 TreeTableView.class
         );

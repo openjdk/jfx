@@ -89,7 +89,7 @@ public class SplitPaneSkin extends SkinBase<SplitPane> {
      */
     public SplitPaneSkin(final SplitPane control) {
         super(control);
-//        control.setManaged(false);
+
         horizontal = getSkinnable().getOrientation() == Orientation.HORIZONTAL;
 
         contentRegions = FXCollections.<Content>observableArrayList();
@@ -105,7 +105,7 @@ public class SplitPaneSkin extends SkinBase<SplitPane> {
             addDivider(d);
         }
 
-        registerChangeListener(control.orientationProperty(), e -> {
+        listenerHelper().addChangeListener(control.orientationProperty(), (v) -> {
             this.horizontal = getSkinnable().getOrientation() == Orientation.HORIZONTAL;
             this.previousSize = -1;
             for (ContentDivider c: contentDividers) {
@@ -113,8 +113,8 @@ public class SplitPaneSkin extends SkinBase<SplitPane> {
             }
             getSkinnable().requestLayout();
         });
-        registerChangeListener(control.widthProperty(), e -> getSkinnable().requestLayout());
-        registerChangeListener(control.heightProperty(), e -> getSkinnable().requestLayout());
+        listenerHelper().addChangeListener(control.widthProperty(), (v) -> getSkinnable().requestLayout());
+        listenerHelper().addChangeListener(control.heightProperty(), (v) -> getSkinnable().requestLayout());
     }
 
 
@@ -520,7 +520,7 @@ public class SplitPaneSkin extends SkinBase<SplitPane> {
     }
 
     private void initializeContentListener() {
-        getSkinnable().getItems().addListener((ListChangeListener<Node>) c -> {
+        listenerHelper().addListChangeListener(getSkinnable().getItems(), (ListChangeListener<Node>) c -> {
             while (c.next()) {
                 if (c.wasPermutated() || c.wasUpdated()) {
                     /**
