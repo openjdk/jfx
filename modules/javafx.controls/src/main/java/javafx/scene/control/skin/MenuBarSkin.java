@@ -25,9 +25,6 @@
 
 package javafx.scene.control.skin;
 
-import static com.sun.javafx.FXPermissions.ACCESS_WINDOW_LIST_PERMISSION;
-import static javafx.scene.input.KeyCode.ALT;
-
 import java.lang.ref.Reference;
 import java.lang.ref.WeakReference;
 import java.security.AccessController;
@@ -76,6 +73,7 @@ import javafx.scene.control.MenuItem;
 import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.control.Skin;
 import javafx.scene.control.SkinBase;
+import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCombination;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
@@ -84,6 +82,7 @@ import javafx.stage.Stage;
 import javafx.stage.Window;
 import javafx.util.Pair;
 
+import com.sun.javafx.FXPermissions;
 import com.sun.javafx.menu.MenuBase;
 import com.sun.javafx.scene.ParentHelper;
 import com.sun.javafx.scene.SceneHelper;
@@ -113,7 +112,7 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
         ObservableList<Window> windows = AccessController.doPrivileged(
             (PrivilegedAction<ObservableList<Window>>) () -> Window.getWindows(),
             null,
-            ACCESS_WINDOW_LIST_PERMISSION);
+            FXPermissions.ACCESS_WINDOW_LIST_PERMISSION);
         stages = windows.filtered(findStage);
     }
 
@@ -238,7 +237,6 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
         };
         weakMenuBarFocusedPropertyListener = new WeakChangeListener(menuBarFocusedPropertyListener);
 
-        // TODO
         menuVisibilityChangeListener = (ov, t, t1) -> {
             rebuildUI();
         };
@@ -391,7 +389,7 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
                         // Clear menu selection when ALT is pressed by itself
                     if (ev.getEventType() == KeyEvent.KEY_PRESSED) {
                         altKeyPressed = false;
-                        if (ev.getCode() == ALT && !ev.isConsumed()) {
+                        if (ev.getCode() == KeyCode.ALT && !ev.isConsumed()) {
                             if (focusedMenuIndex == -1) {
                                 altKeyPressed = true;
                             }
@@ -400,7 +398,7 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
                     } else if (ev.getEventType() == KeyEvent.KEY_RELEASED) {
                         // Put focus on the first menu when ALT is released
                         // directly after being pressed by itself
-                        if (altKeyPressed && ev.getCode() == ALT && !ev.isConsumed()) {
+                        if (altKeyPressed && ev.getCode() == KeyCode.ALT && !ev.isConsumed()) {
                             firstMenuRunnable.run();
                         }
                         altKeyPressed = false;
