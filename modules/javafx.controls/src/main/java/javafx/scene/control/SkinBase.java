@@ -281,20 +281,6 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
     }
 
     /**
-     * Executes a lambda if the property value is not null, otherwise adds a listener to the ObservableValue {@code p}
-     * to wait until it is set and calls the lambda then, followed by removing the said listener.
-     *
-     * @param p Observable value
-     * @param consumer lambda to invoke when the property value is not null
-     */
-    protected final <T> void executeOnceWhenPropertyIsNonNull(ObservableValue<T> p, Consumer<T> consumer) {
-        if (lambdaChangeListenerHandler == null) {
-            lambdaChangeListenerHandler = new LambdaMultiplePropertyChangeListenerHandler();
-        }
-        lambdaChangeListenerHandler.executeOnceWhenPropertyIsNonNull(p, consumer);
-    }
-
-    /**
      * Registers an operation to perform when the given {@code observableList} sends a list change event.
      * Does nothing if either {@code observableList} or {@code operation} are {@code null}.
      * If multiple operations are registered on the same observable list, they will be performed in the
