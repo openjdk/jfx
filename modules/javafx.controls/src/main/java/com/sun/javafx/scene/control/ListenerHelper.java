@@ -83,7 +83,14 @@ public class ListenerHelper implements IDisconnectable {
         }
     }
 
-    public IDisconnectable addDisconnectable(IDisconnectable d) {
+    public IDisconnectable addDisconnectable(Runnable r) {
+        IDisconnectable d = new IDisconnectable() {
+            @Override
+            public void disconnect() {
+                items.remove(this);
+                r.run();
+            }
+        };
         items.add(d);
         return d;
     }
@@ -113,6 +120,7 @@ public class ListenerHelper implements IDisconnectable {
                 for (ObservableValue p : props) {
                     p.removeListener(this);
                 }
+                items.remove(this);
             }
 
             @Override
@@ -147,6 +155,7 @@ public class ListenerHelper implements IDisconnectable {
             @Override
             public void disconnect() {
                 prop.removeListener(listener);
+                items.remove(this);
             }
         };
 
@@ -174,6 +183,7 @@ public class ListenerHelper implements IDisconnectable {
             @Override
             public void disconnect() {
                 prop.removeListener(this);
+                items.remove(this);
             }
 
             @Override
@@ -210,6 +220,7 @@ public class ListenerHelper implements IDisconnectable {
                 for (ObservableValue p : props) {
                     p.removeListener(this);
                 }
+                items.remove(this);
             }
 
             @Override
@@ -251,6 +262,7 @@ public class ListenerHelper implements IDisconnectable {
             @Override
             public void disconnect() {
                 prop.removeListener(this);
+                items.remove(this);
             }
 
             @Override
@@ -290,6 +302,7 @@ public class ListenerHelper implements IDisconnectable {
             @Override
             public void disconnect() {
                 prop.removeListener(this);
+                items.remove(this);
             }
 
             @Override
@@ -331,6 +344,7 @@ public class ListenerHelper implements IDisconnectable {
                 for (ObservableValue p : props) {
                     p.removeListener(this);
                 }
+                items.remove(this);
             }
 
             @Override
@@ -365,6 +379,7 @@ public class ListenerHelper implements IDisconnectable {
             @Override
             public void disconnect() {
                 prop.removeListener(listener);
+                items.remove(this);
             }
         };
 
@@ -395,6 +410,7 @@ public class ListenerHelper implements IDisconnectable {
                 for (ObservableValue p : props) {
                     p.removeListener(this);
                 }
+                items.remove(this);
             }
 
             @Override
@@ -436,6 +452,7 @@ public class ListenerHelper implements IDisconnectable {
             @Override
             public void disconnect() {
                 prop.removeListener(this);
+                items.remove(this);
             }
 
             @Override
@@ -470,6 +487,7 @@ public class ListenerHelper implements IDisconnectable {
             @Override
             public void disconnect() {
                 list.removeListener(listener);
+                items.remove(this);
             }
         };
 
@@ -490,6 +508,7 @@ public class ListenerHelper implements IDisconnectable {
             @Override
             public void disconnect() {
                 list.removeListener(this);
+                items.remove(this);
             }
 
             @Override
@@ -578,6 +597,7 @@ public class ListenerHelper implements IDisconnectable {
                 } else if (x instanceof Task y) {
                     y.removeEventHandler(t, this);
                 }
+                items.remove(this);
             }
         };
 
@@ -656,6 +676,7 @@ public class ListenerHelper implements IDisconnectable {
                 } else if (x instanceof Task y) {
                     y.removeEventFilter(t, this);
                 }
+                items.remove(this);
             }
         };
 
