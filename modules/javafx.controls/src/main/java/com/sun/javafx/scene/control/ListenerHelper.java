@@ -212,9 +212,9 @@ public class ListenerHelper implements IDisconnectable {
             throw new NullPointerException("onChange must not be null.");
         }
 
-        ChLi li = new ChLi() {
-            WeakReference<Runnable> ref = new WeakReference(onChange);
+        WeakReference<Runnable> ref = new WeakReference(onChange);
 
+        ChLi li = new ChLi() {
             @Override
             public void disconnect() {
                 for (ObservableValue p : props) {
@@ -256,9 +256,9 @@ public class ListenerHelper implements IDisconnectable {
             throw new NullPointerException("Listener must be specified.");
         }
 
-        ChLi<T> d = new ChLi<T>() {
-            WeakReference<ChangeListener<T>> ref = new WeakReference<>(listener);
+        WeakReference<ChangeListener<T>> ref = new WeakReference<>(listener);
 
+        ChLi<T> d = new ChLi<T>() {
             @Override
             public void disconnect() {
                 prop.removeListener(this);
@@ -296,9 +296,9 @@ public class ListenerHelper implements IDisconnectable {
             throw new NullPointerException("Callback must be specified.");
         }
 
-        ChLi<T> d = new ChLi<T>() {
-            WeakReference<Consumer<T>> ref = new WeakReference<>(callback);
+        WeakReference<Consumer<T>> ref = new WeakReference<>(callback);
 
+        ChLi<T> d = new ChLi<T>() {
             @Override
             public void disconnect() {
                 prop.removeListener(this);
@@ -402,9 +402,9 @@ public class ListenerHelper implements IDisconnectable {
             throw new NullPointerException("onChange must not be null.");
         }
 
-        InLi li = new InLi() {
-            WeakReference<Runnable> ref = new WeakReference(onChange);
+        WeakReference<Runnable> ref = new WeakReference(onChange);
 
+        InLi li = new InLi() {
             @Override
             public void disconnect() {
                 for (ObservableValue p : props) {
@@ -446,9 +446,9 @@ public class ListenerHelper implements IDisconnectable {
             throw new NullPointerException("Listener must be specified.");
         }
 
-        InLi d = new InLi() {
-            WeakReference<InvalidationListener> ref = new WeakReference<>(listener);
+        WeakReference<InvalidationListener> ref = new WeakReference<>(listener);
 
+        InLi d = new InLi() {
             @Override
             public void disconnect() {
                 prop.removeListener(this);
@@ -502,9 +502,9 @@ public class ListenerHelper implements IDisconnectable {
             throw new NullPointerException("Listener must be specified.");
         }
 
-        LiChLi<T> li = new LiChLi<T>() {
-            WeakReference<ListChangeListener<T>> ref = new WeakReference<>(listener);
+        WeakReference<ListChangeListener<T>> ref = new WeakReference<>(listener);
 
+        LiChLi<T> li = new LiChLi<T>() {
             @Override
             public void disconnect() {
                 list.removeListener(this);
