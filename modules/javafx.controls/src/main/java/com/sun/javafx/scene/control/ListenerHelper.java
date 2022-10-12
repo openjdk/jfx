@@ -83,7 +83,14 @@ public class ListenerHelper implements IDisconnectable {
         }
     }
 
-    public IDisconnectable addDisconnectable(IDisconnectable d) {
+    public IDisconnectable addDisconnectable(Runnable r) {
+        IDisconnectable d = new IDisconnectable() {
+            @Override
+            public void disconnect() {
+                items.remove(this);
+                r.run();
+            }
+        };
         items.add(d);
         return d;
     }
@@ -113,6 +120,7 @@ public class ListenerHelper implements IDisconnectable {
                 for (ObservableValue p : props) {
                     p.removeListener(this);
                 }
+                items.remove(this);
             }
 
             @Override
@@ -147,6 +155,7 @@ public class ListenerHelper implements IDisconnectable {
             @Override
             public void disconnect() {
                 prop.removeListener(listener);
+                items.remove(this);
             }
         };
 
@@ -174,6 +183,7 @@ public class ListenerHelper implements IDisconnectable {
             @Override
             public void disconnect() {
                 prop.removeListener(this);
+                items.remove(this);
             }
 
             @Override
@@ -202,14 +212,15 @@ public class ListenerHelper implements IDisconnectable {
             throw new NullPointerException("onChange must not be null.");
         }
 
-        ChLi li = new ChLi() {
-            WeakReference<Runnable> ref = new WeakReference(onChange);
+        WeakReference<Runnable> ref = new WeakReference(onChange);
 
+        ChLi li = new ChLi() {
             @Override
             public void disconnect() {
                 for (ObservableValue p : props) {
                     p.removeListener(this);
                 }
+                items.remove(this);
             }
 
             @Override
@@ -237,7 +248,7 @@ public class ListenerHelper implements IDisconnectable {
     }
 
     public <T> IDisconnectable addWeakChangeListener(ObservableValue<T> prop, ChangeListener<T> listener) {
-        return addChangeListener(prop, false, listener);
+        return addWeakChangeListener(prop, false, listener);
     }
 
     public <T> IDisconnectable addWeakChangeListener(ObservableValue<T> prop, boolean fireImmediately, ChangeListener<T> listener) {
@@ -245,12 +256,13 @@ public class ListenerHelper implements IDisconnectable {
             throw new NullPointerException("Listener must be specified.");
         }
 
-        ChLi<T> d = new ChLi<T>() {
-            WeakReference<ChangeListener<T>> ref = new WeakReference<>(listener);
+        WeakReference<ChangeListener<T>> ref = new WeakReference<>(listener);
 
+        ChLi<T> d = new ChLi<T>() {
             @Override
             public void disconnect() {
                 prop.removeListener(this);
+                items.remove(this);
             }
 
             @Override
@@ -284,12 +296,13 @@ public class ListenerHelper implements IDisconnectable {
             throw new NullPointerException("Callback must be specified.");
         }
 
-        ChLi<T> d = new ChLi<T>() {
-            WeakReference<Consumer<T>> ref = new WeakReference<>(callback);
+        WeakReference<Consumer<T>> ref = new WeakReference<>(callback);
 
+        ChLi<T> d = new ChLi<T>() {
             @Override
             public void disconnect() {
                 prop.removeListener(this);
+                items.remove(this);
             }
 
             @Override
@@ -331,6 +344,7 @@ public class ListenerHelper implements IDisconnectable {
                 for (ObservableValue p : props) {
                     p.removeListener(this);
                 }
+                items.remove(this);
             }
 
             @Override
@@ -365,6 +379,7 @@ public class ListenerHelper implements IDisconnectable {
             @Override
             public void disconnect() {
                 prop.removeListener(listener);
+                items.remove(this);
             }
         };
 
@@ -387,14 +402,15 @@ public class ListenerHelper implements IDisconnectable {
             throw new NullPointerException("onChange must not be null.");
         }
 
-        InLi li = new InLi() {
-            WeakReference<Runnable> ref = new WeakReference(onChange);
+        WeakReference<Runnable> ref = new WeakReference(onChange);
 
+        InLi li = new InLi() {
             @Override
             public void disconnect() {
                 for (ObservableValue p : props) {
                     p.removeListener(this);
                 }
+                items.remove(this);
             }
 
             @Override
@@ -430,12 +446,13 @@ public class ListenerHelper implements IDisconnectable {
             throw new NullPointerException("Listener must be specified.");
         }
 
-        InLi d = new InLi() {
-            WeakReference<InvalidationListener> ref = new WeakReference<>(listener);
+        WeakReference<InvalidationListener> ref = new WeakReference<>(listener);
 
+        InLi d = new InLi() {
             @Override
             public void disconnect() {
                 prop.removeListener(this);
+                items.remove(this);
             }
 
             @Override
@@ -470,6 +487,7 @@ public class ListenerHelper implements IDisconnectable {
             @Override
             public void disconnect() {
                 list.removeListener(listener);
+                items.remove(this);
             }
         };
 
@@ -484,12 +502,13 @@ public class ListenerHelper implements IDisconnectable {
             throw new NullPointerException("Listener must be specified.");
         }
 
-        LiChLi<T> li = new LiChLi<T>() {
-            WeakReference<ListChangeListener<T>> ref = new WeakReference<>(listener);
+        WeakReference<ListChangeListener<T>> ref = new WeakReference<>(listener);
 
+        LiChLi<T> li = new LiChLi<T>() {
             @Override
             public void disconnect() {
                 list.removeListener(this);
+                items.remove(this);
             }
 
             @Override
@@ -578,6 +597,7 @@ public class ListenerHelper implements IDisconnectable {
                 } else if (x instanceof Task y) {
                     y.removeEventHandler(t, this);
                 }
+                items.remove(this);
             }
         };
 
@@ -656,6 +676,7 @@ public class ListenerHelper implements IDisconnectable {
                 } else if (x instanceof Task y) {
                     y.removeEventFilter(t, this);
                 }
+                items.remove(this);
             }
         };
 
