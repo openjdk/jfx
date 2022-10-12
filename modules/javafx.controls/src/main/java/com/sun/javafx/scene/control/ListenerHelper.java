@@ -248,7 +248,7 @@ public class ListenerHelper implements IDisconnectable {
     }
 
     public <T> IDisconnectable addWeakChangeListener(ObservableValue<T> prop, ChangeListener<T> listener) {
-        return addChangeListener(prop, false, listener);
+        return addWeakChangeListener(prop, false, listener);
     }
 
     public <T> IDisconnectable addWeakChangeListener(ObservableValue<T> prop, boolean fireImmediately, ChangeListener<T> listener) {
