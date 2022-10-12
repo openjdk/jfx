@@ -410,10 +410,14 @@ public class Point3D implements Interpolatable<Point3D> {
     }
 
     /**
-     * Returns a hash code value for the point.
-     * @return a hash code value for the point.
+     * Determines whether or not two objects are equal. Two instances of {@code Point3D}
+     * are equal if the values of their x, y, and z properties are equal.
+     * @param obj an object to be compared with this {@code Point3D}.
+     * @return true if the object to be compared is an instance of Point3D and
+     * has the same values; false otherwise.
      */
-    @Override public boolean equals(Object obj) {
+    @Override
+    public boolean equals(Object obj) {
         if (obj == this) return true;
         if (obj instanceof Point3D) {
             Point3D other = (Point3D) obj;
@@ -425,7 +429,8 @@ public class Point3D implements Interpolatable<Point3D> {
      * Returns a hash code for this {@code Point3D} object.
      * @return a hash code for this {@code Point3D} object.
      */
-    @Override public int hashCode() {
+    @Override
+    public int hashCode() {
         if (hash == 0) {
             long bits = 7L;
             bits = 31L * bits + Double.doubleToLongBits(getX());
@@ -443,7 +448,8 @@ public class Point3D implements Interpolatable<Point3D> {
      * implementations.
      * The returned string might be empty but cannot be {@code null}.
      */
-    @Override public String toString() {
+    @Override
+    public String toString() {
         return "Point3D [x = " + getX() + ", y = " + getY() + ", z = " + getZ() + "]";
     }
 }
