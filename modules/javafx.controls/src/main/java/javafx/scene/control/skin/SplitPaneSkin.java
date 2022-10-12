@@ -25,6 +25,11 @@
 
 package javafx.scene.control.skin;
 
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.ListIterator;
+
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
@@ -42,10 +47,8 @@ import javafx.scene.control.SplitPane;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.StackPane;
 import javafx.scene.shape.Rectangle;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import java.util.ListIterator;
+
+import com.sun.javafx.scene.control.ListenerHelper;
 
 /**
  * Default skin implementation for the {@link SplitPane} control.
@@ -63,6 +66,7 @@ public class SplitPaneSkin extends SkinBase<SplitPane> {
 
     private ObservableList<Content> contentRegions;
     private ObservableList<ContentDivider> contentDividers;
+    private ListenerHelper contentDividerListenerHelper;
     private boolean horizontal;
     /**
      * Flag which is used to determine whether we need to request layout when a divider position changed or not.
@@ -101,9 +105,7 @@ public class SplitPaneSkin extends SkinBase<SplitPane> {
         }
         initializeContentListener();
 
-        for (SplitPane.Divider d: getSkinnable().getDividers()) {
-            addDivider(d);
-        }
+        rebuildDividers(false);
 
         listenerHelper().addChangeListener(control.orientationProperty(), (v) -> {
             this.horizontal = getSkinnable().getOrientation() == Orientation.HORIZONTAL;
@@ -124,6 +126,13 @@ public class SplitPaneSkin extends SkinBase<SplitPane> {
      * Public API                                                              *
      *                                                                         *
      **************************************************************************/
+
+    @Override
+    public void dispose() {
+        removeAllDividers();
+
+        super.dispose();
+    }
 
     /** {@inheritDoc} */
     @Override protected void layoutChildren(final double x, final double y,
@@ -545,12 +554,8 @@ public class SplitPaneSkin extends SkinBase<SplitPane> {
                     }
                 }
             }
-            // TODO there may be a more efficient way than rebuilding all the dividers
-            // everytime the list changes.
-            removeAllDividers();
-            for (SplitPane.Divider d: getSkinnable().getDividers()) {
-                addDivider(d);
-            }
+
+            rebuildDividers(true);
         });
     }
 
@@ -618,16 +623,27 @@ public class SplitPaneSkin extends SkinBase<SplitPane> {
         checkDividerPos = true;
     }
 
-    private void addDivider(SplitPane.Divider d) {
-        ContentDivider c = new ContentDivider(d);
-        c.setInitialPos(d.getPosition());
-        c.setDividerPos(-1);
-        ChangeListener<Number> posPropertyListener = new PosPropertyListener(c);
-        c.setPosPropertyListener(posPropertyListener);
-        d.positionProperty().addListener(posPropertyListener);
-        initializeDividerEventHandlers(c);
-        contentDividers.add(c);
-        getChildren().add(c);
+    private void rebuildDividers(boolean removeAllDividers) {
+        if (removeAllDividers) {
+            removeAllDividers();
+        }
+
+        contentDividerListenerHelper = new ListenerHelper();
+
+        for (SplitPane.Divider d : getSkinnable().getDividers()) {
+            ContentDivider c = new ContentDivider(d);
+            c.setInitialPos(d.getPosition());
+            c.setDividerPos(-1);
+
+            ChangeListener<Number> li = new PosPropertyListener(c);
+            contentDividerListenerHelper.addChangeListener(d.positionProperty(), li);
+
+            // TODO
+            initializeDividerEventHandlers(c);
+
+            contentDividers.add(c);
+            getChildren().add(c);
+        }
     }
 
     private void removeAllDividers() {
@@ -635,10 +651,15 @@ public class SplitPaneSkin extends SkinBase<SplitPane> {
         while (dividers.hasNext()) {
             ContentDivider c = dividers.next();
             getChildren().remove(c);
-            c.getDivider().positionProperty().removeListener(c.getPosPropertyListener());
             dividers.remove();
         }
+
         lastDividerUpdate = 0;
+
+        if(contentDividerListenerHelper != null) {
+            contentDividerListenerHelper.disconnect();
+            contentDividerListenerHelper = null;
+        }
     }
 
     private void initializeDividerEventHandlers(final ContentDivider divider) {
@@ -978,7 +999,6 @@ public class SplitPaneSkin extends SkinBase<SplitPane> {
         private double x;
         private double y;
         private boolean posExplicit;
-        private ChangeListener<Number> listener;
 
         public ContentDivider(SplitPane.Divider d) {
             getStyleClass().setAll("split-pane-divider");
@@ -1072,14 +1092,6 @@ public class SplitPaneSkin extends SkinBase<SplitPane> {
 
         public void setY(double y) {
             this.y = y;
-        }
-
-        public ChangeListener<Number> getPosPropertyListener() {
-            return listener;
-        }
-
-        public void setPosPropertyListener(ChangeListener<Number> listener) {
-            this.listener = listener;
         }
 
         @Override protected double computeMinWidth(double height) {
