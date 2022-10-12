@@ -530,22 +530,63 @@ public class TreeTableView<S> extends Control {
         }
     };
 
-    // TODO descriptions to be copied from TableView once they stabilize + (table)->(tree table)
+    /**
+     * A policy that tries to adjust other columns in order to fit the tree table width.
+     * <p>
+     * When column constraints make it impossible to fit all the columns into the allowed area,
+     * the columns are either clipped, or an empty space appears.  This policy disables the horizontal
+     * scroll bar.
+     */
     public static final Callback<TreeTableView.ResizeFeatures, Boolean> CONSTRAINED_RESIZE_POLICY_ALL_COLUMNS =
         ConstrainedColumnResize.forTreeTable(ConstrainedColumnResize.ResizeMode.AUTO_RESIZE_ALL_COLUMNS);
 
+    /**
+     * A policy that tries to adjust last column in order to fit the tree table width.
+     * <p>
+     * When column constraints make it impossible to fit all the columns into the allowed area,
+     * the columns are either clipped, or an empty space appears.  This policy disables the horizontal
+     * scroll bar.
+     */
     public static final Callback<TreeTableView.ResizeFeatures, Boolean> CONSTRAINED_RESIZE_POLICY_LAST_COLUMN =
         ConstrainedColumnResize.forTreeTable(ConstrainedColumnResize.ResizeMode.AUTO_RESIZE_LAST_COLUMN);
 
+    /**
+     * A policy adjusts the next column in the opposite way in order to fit the tree table width.
+     * <p>
+     * When column constraints make it impossible to fit all the columns into the allowed area,
+     * the columns are either clipped, or an empty space appears.  This policy disables the horizontal
+     * scroll bar.
+     */
     public static final Callback<TreeTableView.ResizeFeatures, Boolean> CONSTRAINED_RESIZE_POLICY_NEXT_COLUMN =
         ConstrainedColumnResize.forTreeTable(ConstrainedColumnResize.ResizeMode.AUTO_RESIZE_NEXT_COLUMN);
 
+    /**
+     * A policy that tries to adjust subsequent columns in order to fit the tree table width.
+     * <p>
+     * When column constraints make it impossible to fit all the columns into the allowed area,
+     * the columns are either clipped, or an empty space appears.  This policy disables the horizontal
+     * scroll bar.
+     */
     public static final Callback<TreeTableView.ResizeFeatures, Boolean> CONSTRAINED_RESIZE_POLICY_SUBSEQUENT_COLUMNS =
         ConstrainedColumnResize.forTreeTable(ConstrainedColumnResize.ResizeMode.AUTO_RESIZE_SUBSEQUENT_COLUMNS);
 
+    /**
+     * A policy that tries to adjust columns, starting with the next one, in order to fit the tree table width.
+     * <p>
+     * When column constraints make it impossible to fit all the columns into the allowed area,
+     * the columns are either clipped, or an empty space appears.  This policy disables the horizontal
+     * scroll bar.
+     */
     public static final Callback<TreeTableView.ResizeFeatures, Boolean> CONSTRAINED_RESIZE_POLICY_FLEX_HEAD =
         ConstrainedColumnResize.forTreeTable(ConstrainedColumnResize.ResizeMode.AUTO_RESIZE_FLEX_HEAD);
 
+    /**
+     * A policy that tries to adjust columns, starting with the last one, in order to fit the table width.
+     * <p>
+     * When column constraints make it impossible to fit all the columns into the allowed area,
+     * the columns are either clipped, or an empty space appears.  This policy disables the horizontal
+     * scroll bar.
+     */
     public static final Callback<TreeTableView.ResizeFeatures, Boolean> CONSTRAINED_RESIZE_POLICY_FLEX_TAIL =
         ConstrainedColumnResize.forTreeTable(ConstrainedColumnResize.ResizeMode.AUTO_RESIZE_FLEX_TAIL);
 
