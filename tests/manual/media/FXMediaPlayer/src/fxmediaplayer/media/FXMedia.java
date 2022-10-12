@@ -47,11 +47,11 @@ import java.nio.file.NoSuchFileException;
  * compile "FXMediaPlayer", run it and go to "Play List" tab and you should see
  * your embeded media files.
  *
- * File protcol:
+ * FILE protocol:
  * cd rt/tests/manual/media/FXMediaPlayer
  * and run
  *
- * JAR protcol:
+ * JAR protocol:
  * cd rt/tests/manual/media/FXMediaPlayer
  * ant
  * java @../../../../build/run.args -jar dist/FXMediaPlayer.jar
@@ -59,9 +59,9 @@ import java.nio.file.NoSuchFileException;
  * JRT protocol:
  * cd rt/tests/manual/media/FXMediaPlayer
  * ant
- * [macOS/Linux] jlink --output dist/FXMediaPlayer -p ../../../../build/jmods:dist --add-modules javafx.base,javafx.controls,javafx.media,javafx.graphics,FXMediaPlayer --launcher FXMediaPlayer=FXMediaPlayer/fxmediaplayer.FXMediaPlayer
+ * [macOS/Linux] jlink --output dist/FXMediaPlayer -p ../../../../build/jmods:dist --add-modules javafx.controls,javafx.media,FXMediaPlayer --launcher FXMediaPlayer=FXMediaPlayer/fxmediaplayer.FXMediaPlayer
  * [macOS/Linux] ./dist/FXMediaPlayer/bin/FXMediaPlayer
- * [Windows] jlink --output dist/FXMediaPlayer -p ../../../../build/jmods;dist --add-modules javafx.base,javafx.controls,javafx.media,javafx.graphics,FXMediaPlayer --launcher FXMediaPlayer=FXMediaPlayer/fxmediaplayer.FXMediaPlayer
+ * [Windows] jlink --output dist/FXMediaPlayer -p ../../../../build/jmods;dist --add-modules javafx.controls,javafx.media,FXMediaPlayer --launcher FXMediaPlayer=FXMediaPlayer/fxmediaplayer.FXMediaPlayer
  * [Windows] dist\FXMediaPlayer\bin\FXMediaPlayer.bat
  */
 public class FXMedia {
@@ -128,7 +128,7 @@ public class FXMedia {
                 }
             });
         } catch (URISyntaxException | IOException ex) {
-            System.out.println("Exception: " + ex);
+            System.err.println("Exception: " + ex);
         }
 
         return sources;

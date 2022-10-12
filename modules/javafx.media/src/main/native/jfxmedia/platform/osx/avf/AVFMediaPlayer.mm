@@ -86,7 +86,7 @@ static void append_log(NSMutableString *s, NSString *fmt, ...) {
 #endif
 
 // Max number of bytes we will provide per request
-#define MAX_READ_SIZE 1048576
+#define MAX_READ_SIZE (1024 * 1024)
 
 @implementation AVFMediaPlayer
 
@@ -776,7 +776,7 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
         }
 
         // Do not provide more then MAX_READ_SIZE at one call, otherwise
-        // AVFoundation might fail if we providing too much data.
+        // AVFoundation might fail if we provide too much data.
         // We will be requested again if not all data provided.
         if (requestedLength > MAX_READ_SIZE) {
            requestedLength = MAX_READ_SIZE;

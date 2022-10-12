@@ -64,12 +64,16 @@ jstring CLocator::LocatorGetStringLocation(JNIEnv *env, jobject locator)
         mid_toString = env->GetMethodID(klass, "getStringLocation", "()Ljava/lang/String;");
         env->DeleteLocalRef(klass);
         if (javaEnv.clearException())
+        {
             return NULL;
+        }
     }
 
     result = (jstring)env->CallObjectMethod(locator, mid_toString);
     if (javaEnv.clearException())
+    {
         return NULL;
+    }
 
     return result;
 }
