@@ -41,28 +41,44 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.nio.file.NoSuchFileException;
 
 /**
- * Helper class to generate playlist from embeded media files located under
+ * <p>Helper class to generate playlist from embeded media files located under
  * src/fxmediaplayer/media. This is useful to test "file", "jar" and "jrt" protocol.
  * Copy supported media files under src/fxmediaplayer/media,
  * compile "FXMediaPlayer", run it and go to "Play List" tab and you should see
- * your embeded media files.
+ * your embeded media files.</p><p>
  *
  * FILE protocol:
+ * <br>
  * cd rt/tests/manual/media/FXMediaPlayer
+ * <br>
  * and run
+ * </p><p>
  *
  * JAR protocol:
+ * <br>
  * cd rt/tests/manual/media/FXMediaPlayer
+ * <br>
  * ant
+ * <br>
  * java @../../../../build/run.args -jar dist/FXMediaPlayer.jar
+ * </p><p>
  *
  * JRT protocol:
+ * <br>
  * cd rt/tests/manual/media/FXMediaPlayer
+ * <br>
  * ant
- * [macOS/Linux] jlink --output dist/FXMediaPlayer -p ../../../../build/jmods:dist --add-modules javafx.controls,javafx.media,FXMediaPlayer --launcher FXMediaPlayer=FXMediaPlayer/fxmediaplayer.FXMediaPlayer
- * [macOS/Linux] ./dist/FXMediaPlayer/bin/FXMediaPlayer
- * [Windows] jlink --output dist/FXMediaPlayer -p ../../../../build/jmods;dist --add-modules javafx.controls,javafx.media,FXMediaPlayer --launcher FXMediaPlayer=FXMediaPlayer/fxmediaplayer.FXMediaPlayer
- * [Windows] dist\FXMediaPlayer\bin\FXMediaPlayer.bat
+ * <br><br>
+ * [macOS/Linux]<br>
+ * jlink --output dist/FXMediaPlayer -p ../../../../build/jmods:dist --add-modules javafx.controls,javafx.media,FXMediaPlayer --launcher FXMediaPlayer=FXMediaPlayer/fxmediaplayer.FXMediaPlayer
+ * <br>
+ * ./dist/FXMediaPlayer/bin/FXMediaPlayer
+ * <br><br>
+ * [Windows]<br>
+ * jlink --output dist/FXMediaPlayer -p ../../../../build/jmods;dist --add-modules javafx.controls,javafx.media,FXMediaPlayer --launcher FXMediaPlayer=FXMediaPlayer/fxmediaplayer.FXMediaPlayer
+ * <br>
+ * dist\FXMediaPlayer\bin\FXMediaPlayer.bat
+ * </p>
  */
 public class FXMedia {
 
