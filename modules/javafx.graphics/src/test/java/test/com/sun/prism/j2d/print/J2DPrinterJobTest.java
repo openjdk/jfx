@@ -236,7 +236,7 @@ public class J2DPrinterJobTest {
     private static class PrinterJobMock extends java.awt.print.PrinterJob {
         private PrintService service;
         private Pageable pageable;
-        private boolean printed;
+        private volatile boolean printed;
 
         public void waitUntilPrinted(int timeoutInSeconds) {
             for (int i = 0; !printed && i < timeoutInSeconds; i++) {
