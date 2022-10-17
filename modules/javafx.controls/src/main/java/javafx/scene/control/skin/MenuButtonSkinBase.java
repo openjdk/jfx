@@ -25,30 +25,28 @@
 
 package javafx.scene.control.skin;
 
-import com.sun.javafx.scene.NodeHelper;
-import com.sun.javafx.scene.control.ContextMenuContent;
-import com.sun.javafx.scene.control.ControlAcceleratorSupport;
-import com.sun.javafx.scene.control.LabeledImpl;
-import com.sun.javafx.scene.control.skin.Utils;
+import java.util.ArrayList;
+import java.util.List;
+
 import javafx.application.Platform;
-import javafx.beans.value.ChangeListener;
-import javafx.collections.ListChangeListener;
 import javafx.event.ActionEvent;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.MenuButton;
-import javafx.scene.control.MenuItem;
 import javafx.scene.control.Skin;
 import javafx.scene.control.SkinBase;
 import javafx.scene.input.Mnemonic;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
-import com.sun.javafx.scene.control.behavior.MenuButtonBehaviorBase;
 
-import java.util.ArrayList;
-import java.util.List;
+import com.sun.javafx.scene.NodeHelper;
+import com.sun.javafx.scene.control.ContextMenuContent;
+import com.sun.javafx.scene.control.ControlAcceleratorSupport;
+import com.sun.javafx.scene.control.LabeledImpl;
+import com.sun.javafx.scene.control.behavior.MenuButtonBehaviorBase;
+import com.sun.javafx.scene.control.skin.Utils;
 
 /**
  * Base class for MenuButtonSkin and SplitMenuButtonSkin. It consists of the
@@ -73,8 +71,6 @@ public class MenuButtonSkinBase<C extends MenuButton> extends SkinBase<C> {
      * If true, the control should behave like a button for mouse button events.
      */
     boolean behaveLikeButton = false;
-    private ListChangeListener<MenuItem> itemsChangedListener;
-    private final ChangeListener<? super Scene> sceneChangeListener;
 
 
     /* *************************************************************************
@@ -93,23 +89,19 @@ public class MenuButtonSkinBase<C extends MenuButton> extends SkinBase<C> {
     public MenuButtonSkinBase(final C control) {
         super(control);
 
-        if (control.getOnMousePressed() == null) {
-            control.addEventHandler(MouseEvent.MOUSE_PRESSED, e -> {
-                MenuButtonBehaviorBase behavior = getBehavior();
-                if (behavior != null) {
-                    behavior.mousePressed(e, behaveLikeButton);
-                }
-            });
-        }
+        listenerHelper().addEventHandler(control, MouseEvent.MOUSE_PRESSED, (ev) -> {
+            MenuButtonBehaviorBase behavior = getBehavior();
+            if (behavior != null) {
+                behavior.mousePressed(ev, behaveLikeButton);
+            }
+        });
 
-        if (control.getOnMouseReleased() == null) {
-            control.addEventHandler(MouseEvent.MOUSE_RELEASED, e -> {
-                MenuButtonBehaviorBase behavior = getBehavior();
-                if (behavior != null) {
-                    behavior.mouseReleased(e, behaveLikeButton);
-                }
-            });
-        }
+        listenerHelper().addEventHandler(control, MouseEvent.MOUSE_RELEASED, (ev) -> {
+            MenuButtonBehaviorBase behavior = getBehavior();
+            if (behavior != null) {
+                behavior.mouseReleased(ev, behaveLikeButton);
+            }
+        });
 
         /*
          * Create the objects we will be displaying.
@@ -136,20 +128,16 @@ public class MenuButtonSkinBase<C extends MenuButton> extends SkinBase<C> {
 
         getSkinnable().requestLayout();
 
-        itemsChangedListener = c -> {
-            while (c.next()) {
-                popup.getItems().removeAll(c.getRemoved());
-                popup.getItems().addAll(c.getFrom(), c.getAddedSubList());
+        listenerHelper().addListChangeListener(control.getItems(), (ch) -> {
+            while (ch.next()) {
+                popup.getItems().removeAll(ch.getRemoved());
+                popup.getItems().addAll(ch.getFrom(), ch.getAddedSubList());
             }
-        };
-        control.getItems().addListener(itemsChangedListener);
-
-        if (getSkinnable().getScene() != null) {
-            ControlAcceleratorSupport.addAcceleratorsIntoScene(getSkinnable().getItems(), getSkinnable());
-        }
+        });
 
         List<Mnemonic> mnemonics = new ArrayList<>();
-        sceneChangeListener = (scene, oldValue, newValue) -> {
+
+        listenerHelper().addChangeListener(control.sceneProperty(), true, (scene, oldValue, newValue) -> {
             if (oldValue != null) {
                 ControlAcceleratorSupport.removeAcceleratorsFromScene(getSkinnable().getItems(), oldValue);
 
@@ -158,12 +146,10 @@ public class MenuButtonSkinBase<C extends MenuButton> extends SkinBase<C> {
                 removeMnemonicsFromScene(mnemonics, oldValue);
             }
 
-            // FIXME: null skinnable should not happen
-            if (getSkinnable() != null && getSkinnable().getScene() != null) {
+            if (getSkinnable().getScene() != null) {
                 ControlAcceleratorSupport.addAcceleratorsIntoScene(getSkinnable().getItems(), getSkinnable());
             }
-        };
-        control.sceneProperty().addListener(sceneChangeListener);
+        });
 
         // Register listeners
         registerChangeListener(control.showingProperty(), e -> {
@@ -173,6 +159,7 @@ public class MenuButtonSkinBase<C extends MenuButton> extends SkinBase<C> {
                 hide();
             }
         });
+
         registerChangeListener(control.focusedProperty(), e -> {
             // Handle tabbing away from an open MenuButton
             if (!getSkinnable().isFocused() && getSkinnable().isShowing()) {
@@ -182,10 +169,12 @@ public class MenuButtonSkinBase<C extends MenuButton> extends SkinBase<C> {
                 hide();
             }
         });
+
         registerChangeListener(control.mnemonicParsingProperty(), e -> {
             label.setMnemonicParsing(getSkinnable().isMnemonicParsing());
             getSkinnable().requestLayout();
         });
+
         registerChangeListener(popup.showingProperty(), e -> {
             if (!popup.isShowing() && getSkinnable().isShowing()) {
                 // Popup was dismissed. Maybe user clicked outside or typed ESCAPE.
@@ -197,13 +186,6 @@ public class MenuButtonSkinBase<C extends MenuButton> extends SkinBase<C> {
                 boolean showMnemonics = NodeHelper.isShowMnemonics(getSkinnable());
                 Utils.addMnemonics(popup, getSkinnable().getScene(), showMnemonics, mnemonics);
             } else {
-                // we wrap this in a runLater so that mnemonics are not removed
-                // before all key events are fired (because KEY_PRESSED might have
-                // been used to hide the menu, but KEY_TYPED and KEY_RELEASED
-                // events are still to be fired, and shouldn't miss out on going
-                // through the mnemonics code (especially in case they should be
-                // consumed to prevent them being used elsewhere).
-                // See JBS-8090026 for more detail.
                 Scene scene = getSkinnable().getScene();
                 // JDK-8244234: MenuButton: NPE on removing from scene with open popup
                 if (scene != null) {
@@ -223,17 +205,17 @@ public class MenuButtonSkinBase<C extends MenuButton> extends SkinBase<C> {
 
     /** {@inheritDoc} */
     @Override public void dispose() {
-        if (getSkinnable() == null) return;
+        if (getSkinnable() == null) {
+            return;
+        }
 
         // Cleanup accelerators
         if (getSkinnable().getScene() != null) {
             ControlAcceleratorSupport.removeAcceleratorsFromScene(getSkinnable().getItems(), getSkinnable().getScene());
         }
 
-        // Remove listeners
-        getSkinnable().sceneProperty().removeListener(sceneChangeListener);
-        getSkinnable().getItems().removeListener(itemsChangedListener);
         super.dispose();
+
         if (popup != null ) {
             if (popup.getSkin() != null && popup.getSkin().getNode() != null) {
                 ContextMenuContent cmContent = (ContextMenuContent)popup.getSkin().getNode();
@@ -319,6 +301,14 @@ public class MenuButtonSkinBase<C extends MenuButton> extends SkinBase<C> {
     private void removeMnemonicsFromScene(List<Mnemonic> mnemonics, Scene scene) {
         List<Mnemonic> mnemonicsToRemove = new ArrayList<>(mnemonics);
         mnemonics.clear();
+
+        // we wrap this in a runLater so that mnemonics are not removed
+        // before all key events are fired (because KEY_PRESSED might have
+        // been used to hide the menu, but KEY_TYPED and KEY_RELEASED
+        // events are still to be fired, and shouldn't miss out on going
+        // through the mnemonics code (especially in case they should be
+        // consumed to prevent them being used elsewhere).
+        // See JDK-8090026 for more detail.
         Platform.runLater(() -> mnemonicsToRemove.forEach(scene::removeMnemonic));
     }
 

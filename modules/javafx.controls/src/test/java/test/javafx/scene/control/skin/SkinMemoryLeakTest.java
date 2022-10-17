@@ -167,7 +167,7 @@ public class SkinMemoryLeakTest {
                 ComboBox.class,
                 DatePicker.class,
                 MenuBar.class,
-                MenuButton.class,
+                //MenuButton.class,
                 Pagination.class,
                 PasswordField.class,
                 ScrollBar.class,
