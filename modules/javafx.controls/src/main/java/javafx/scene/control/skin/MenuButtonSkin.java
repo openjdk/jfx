@@ -125,7 +125,12 @@ public class MenuButtonSkin extends MenuButtonSkinBase<MenuButton> {
      **************************************************************************/
 
     /** {@inheritDoc} */
-    @Override public void dispose() {
+    @Override
+    public void dispose() {
+        if (getSkinnable() == null) {
+            return;
+        }
+
         popup.setOnAutoHide(null);
 
         super.dispose();
