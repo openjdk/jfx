@@ -89,19 +89,23 @@ public class MenuButtonSkinBase<C extends MenuButton> extends SkinBase<C> {
     public MenuButtonSkinBase(final C control) {
         super(control);
 
-        listenerHelper().addEventHandler(control, MouseEvent.MOUSE_PRESSED, (ev) -> {
-            MenuButtonBehaviorBase behavior = getBehavior();
-            if (behavior != null) {
-                behavior.mousePressed(ev, behaveLikeButton);
-            }
-        });
+        if (control.getOnMousePressed() == null) {
+            listenerHelper().addEventHandler(control, MouseEvent.MOUSE_PRESSED, (ev) -> {
+                MenuButtonBehaviorBase behavior = getBehavior();
+                if (behavior != null) {
+                    behavior.mousePressed(ev, behaveLikeButton);
+                }
+            });
+        }
 
-        listenerHelper().addEventHandler(control, MouseEvent.MOUSE_RELEASED, (ev) -> {
-            MenuButtonBehaviorBase behavior = getBehavior();
-            if (behavior != null) {
-                behavior.mouseReleased(ev, behaveLikeButton);
-            }
-        });
+        if (control.getOnMouseReleased() == null) {
+            listenerHelper().addEventHandler(control, MouseEvent.MOUSE_RELEASED, (ev) -> {
+                MenuButtonBehaviorBase behavior = getBehavior();
+                if (behavior != null) {
+                    behavior.mouseReleased(ev, behaveLikeButton);
+                }
+            });
+        }
 
         /*
          * Create the objects we will be displaying.

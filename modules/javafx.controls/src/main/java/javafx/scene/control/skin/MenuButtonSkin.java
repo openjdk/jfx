@@ -85,7 +85,7 @@ public class MenuButtonSkin extends MenuButtonSkinBase<MenuButton> {
         // as that hide happens under the covers. So we add to the menuButton's
         // properties map to which the MenuButton can react and update accordingly..
         // JDK-8295426:
-        // onAutoHide triggers an Event.ANY, impossible to add a listener which dispose() can remove.
+        // onAutoHide triggers an Event.ANY, making it impossible to add a listener which dispose() can remove.
         // keeping the existing setOnAutoHide(), making sure to setOnAutoHide(null) later.
         popup.setOnAutoHide(e -> {
             MenuButton menuButton = getSkinnable();
