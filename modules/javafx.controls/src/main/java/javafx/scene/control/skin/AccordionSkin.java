@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -96,9 +96,8 @@ public class AccordionSkin extends SkinBase<Accordion> {
 
         // install default input map for the accordion control
         behavior = new AccordionBehavior(control);
-//        control.setInputMap(behavior.getInputMap());
 
-        control.getPanes().addListener((ListChangeListener<TitledPane>) c -> {
+        listenerHelper().addListChangeListener(control.getPanes(), (c) -> {
             if (firstTitledPane != null) {
                 firstTitledPane.getStyleClass().remove("first-titled-pane");
             }
@@ -129,7 +128,7 @@ public class AccordionSkin extends SkinBase<Accordion> {
         getSkinnable().setClip(clipRect);
 
         initTitledPaneListeners(control.getPanes());
-        getChildren().setAll(control.getPanes());
+        getChildren().setAll(control.getPanes()); // TODO remove?
         getSkinnable().requestLayout();
 
         registerChangeListener(getSkinnable().widthProperty(), e -> clipRect.setWidth(getSkinnable().getWidth()));
@@ -148,7 +147,14 @@ public class AccordionSkin extends SkinBase<Accordion> {
      **************************************************************************/
 
     /** {@inheritDoc} */
-    @Override public void dispose() {
+    @Override
+    public void dispose() {
+        if (getSkinnable() == null) {
+            return;
+        }
+
+        removeTitledPaneListeners(getSkinnable().getPanes());
+
         super.dispose();
 
         if (behavior != null) {
