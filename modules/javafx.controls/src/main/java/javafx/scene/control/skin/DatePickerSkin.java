@@ -88,13 +88,13 @@ public class DatePickerSkin extends ComboBoxPopupControl<LocalDate> {
 
         // install default input map for the control
         this.behavior = new DatePickerBehavior(control);
-//        control.setInputMap(behavior.getInputMap());
 
         // The "arrow" is actually a rectangular svg icon resembling a calendar.
         // Round the size of the icon to whole integers to get sharp edges.
-        arrow.paddingProperty().addListener(new InvalidationListener() {
+        listenerHelper().addInvalidationListener(arrow.paddingProperty(), new InvalidationListener() {
             // This boolean protects against unwanted recursion.
             private boolean rounding = false;
+
             @Override public void invalidated(Observable observable) {
                 if (!rounding) {
                     Insets padding = arrow.getPadding();
@@ -109,24 +109,24 @@ public class DatePickerSkin extends ComboBoxPopupControl<LocalDate> {
             }
         });
 
-        registerChangeListener(control.chronologyProperty(), e -> {
+        listenerHelper().addChangeListener(control.chronologyProperty(), e -> {
             updateDisplayNode();
             datePickerContent = null;
             popup = null;
         });
-        registerChangeListener(control.converterProperty(), e -> updateDisplayNode());
-        registerChangeListener(control.dayCellFactoryProperty(), e -> {
+        listenerHelper().addChangeListener(control.converterProperty(), e -> updateDisplayNode());
+        listenerHelper().addChangeListener(control.dayCellFactoryProperty(), e -> {
             updateDisplayNode();
             datePickerContent = null;
             popup = null;
         });
-        registerChangeListener(control.showWeekNumbersProperty(), e -> {
+        listenerHelper().addChangeListener(control.showWeekNumbersProperty(), e -> {
             if (datePickerContent != null) {
                 datePickerContent.updateGrid();
                 datePickerContent.updateWeeknumberDateCells();
             }
         });
-        registerChangeListener(control.valueProperty(), e -> {
+        listenerHelper().addChangeListener(control.valueProperty(), e -> {
             updateDisplayNode();
             if (datePickerContent != null) {
                 LocalDate date = control.getValue();
@@ -135,7 +135,7 @@ public class DatePickerSkin extends ComboBoxPopupControl<LocalDate> {
             }
             control.fireEvent(new ActionEvent());
         });
-        registerChangeListener(control.showingProperty(), e -> {
+        listenerHelper().addChangeListener(control.showingProperty(), e -> {
             if (control.isShowing()) {
                 if (datePickerContent != null) {
                     LocalDate date = control.getValue();

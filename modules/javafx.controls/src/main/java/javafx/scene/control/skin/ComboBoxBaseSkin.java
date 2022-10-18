@@ -111,7 +111,7 @@ public abstract class ComboBoxBaseSkin<T> extends SkinBase<ComboBoxBase<T>> {
         getChildren().add(arrowButton);
 
         // When ComboBoxBase focus shifts to another node, it should hide.
-        getSkinnable().focusedProperty().addListener((observable, oldValue, newValue) -> {
+        listenerHelper().addChangeListener(getSkinnable().focusedProperty(), (observable, oldValue, newValue) -> {
             if (!newValue) {
                 focusLost();
             }
@@ -119,18 +119,21 @@ public abstract class ComboBoxBaseSkin<T> extends SkinBase<ComboBoxBase<T>> {
 
         // Register listeners
         updateArrowButtonListeners();
-        registerChangeListener(control.editableProperty(), e -> {
+
+        listenerHelper().addChangeListener(control.editableProperty(), e -> {
             updateArrowButtonListeners();
             updateDisplayArea();
         });
-        registerChangeListener(control.showingProperty(), e -> {
+
+        listenerHelper().addChangeListener(control.showingProperty(), e -> {
             if (getSkinnable().isShowing()) {
                 show();
             } else {
                 hide();
             }
         });
-        registerChangeListener(control.valueProperty(), e -> updateDisplayArea());
+
+        listenerHelper().addChangeListener(control.valueProperty(), e -> updateDisplayArea());
     }
 
 
