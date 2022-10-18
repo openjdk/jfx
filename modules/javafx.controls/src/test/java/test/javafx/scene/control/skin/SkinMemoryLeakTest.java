@@ -164,7 +164,7 @@ public class SkinMemoryLeakTest {
                 Accordion.class,
                 ButtonBar.class,
                 //ColorPicker.class,
-                ComboBox.class,
+                //ComboBox.class,
                 //DatePicker.class,
                 MenuBar.class,
                 MenuButton.class,
