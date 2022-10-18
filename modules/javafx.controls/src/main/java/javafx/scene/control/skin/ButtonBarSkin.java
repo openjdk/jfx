@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -108,7 +108,7 @@ public class ButtonBarSkin extends SkinBase<ButtonBar> {
         layoutButtons();
 
         updateButtonListeners(control.getButtons(), true);
-        control.getButtons().addListener((ListChangeListener<Node>) c -> {
+        listenerHelper().addListChangeListener(control.getButtons(), (c) -> {
             while (c.next()) {
                 updateButtonListeners(c.getRemoved(), false);
                 updateButtonListeners(c.getAddedSubList(), true);
@@ -116,8 +116,8 @@ public class ButtonBarSkin extends SkinBase<ButtonBar> {
             layoutButtons();
         });
 
-        registerChangeListener(control.buttonOrderProperty(), e -> layoutButtons());
-        registerChangeListener(control.buttonMinWidthProperty(), e -> resizeButtons());
+        listenerHelper().addChangeListener(control.buttonOrderProperty(), (ev) -> layoutButtons());
+        listenerHelper().addChangeListener(control.buttonMinWidthProperty(), (ev) -> resizeButtons());
     }
 
 
@@ -127,6 +127,18 @@ public class ButtonBarSkin extends SkinBase<ButtonBar> {
      * Implementation
      *
      **************************************************************************/
+
+    @Override
+    public void dispose() {
+        if (getSkinnable() == null) {
+            return;
+        }
+
+        updateButtonListeners(getSkinnable().getButtons(), false);
+        getChildren().remove(layout);
+
+        super.dispose();
+    }
 
     private void updateButtonListeners(List<? extends Node> list, boolean buttonsAdded) {
         if (list != null) {

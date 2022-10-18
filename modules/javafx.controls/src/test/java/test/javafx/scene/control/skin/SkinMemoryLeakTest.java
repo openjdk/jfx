@@ -162,7 +162,7 @@ public class SkinMemoryLeakTest {
         // step 2: fix and remove from list
         List<Class<? extends Control>> leakingClasses = List.of(
                 Accordion.class,
-                ButtonBar.class,
+                //ButtonBar.class,
                 ColorPicker.class,
                 ComboBox.class,
                 DatePicker.class,
