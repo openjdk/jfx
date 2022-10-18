@@ -410,12 +410,12 @@ public class Point3D implements Interpolatable<Point3D> {
     }
 
     /**
-     * Determines whether this Point3D is equal to a given object.
+     * Indicates whether some other object is "equal to" this one.
      * Two instances of Point3D are equal if the return values of their
      * {@code getX}, {@code getY}, and {@code getZ} methods are equal.
-     * @param obj an object to be compared with this Point3D.
-     * @return true if the object to be compared is an instance of Point3D and
-     * has the same values; false otherwise.
+     *
+     * @param obj the reference object with which to compare
+     * @return true if this Point3D is the same as the obj argument; false otherwise
      */
     @Override
     public boolean equals(Object obj) {
