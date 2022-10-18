@@ -131,8 +131,11 @@ public class AccordionSkin extends SkinBase<Accordion> {
         getChildren().setAll(control.getPanes());
         getSkinnable().requestLayout();
 
-        registerChangeListener(getSkinnable().widthProperty(), e -> clipRect.setWidth(getSkinnable().getWidth()));
-        registerChangeListener(getSkinnable().heightProperty(), e -> {
+        listenerHelper().addChangeListener(getSkinnable().widthProperty(), (ev) -> {
+            clipRect.setWidth(getSkinnable().getWidth());
+        });
+
+        listenerHelper().addChangeListener(getSkinnable().heightProperty(), (ev) -> {
             clipRect.setHeight(getSkinnable().getHeight());
             relayout = true;
         });
