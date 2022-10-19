@@ -570,10 +570,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
             comboBox.notifyAccessibleAttributeChanged(AccessibleAttribute.TEXT);
         });
 
-        // FIX memory leak
         listenerHelper().addChangeListener(comboBox.selectionModelProperty(), true, (src, oldsm, newsm) -> {
-            IDisconnectable old;
-            
             if (selectedItemWatcher != null) {
                 selectedItemWatcher.disconnect();
             }
