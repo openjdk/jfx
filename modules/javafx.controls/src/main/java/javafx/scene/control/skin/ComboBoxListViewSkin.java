@@ -25,14 +25,9 @@
 
 package javafx.scene.control.skin;
 
-import com.sun.javafx.scene.control.behavior.ComboBoxBaseBehavior;
-import com.sun.javafx.scene.control.behavior.ComboBoxListViewBehavior;
-
 import java.util.List;
 import java.util.function.Supplier;
 
-import javafx.beans.InvalidationListener;
-import javafx.beans.WeakInvalidationListener;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.value.ObservableValue;
@@ -55,9 +50,14 @@ import javafx.scene.control.SelectionMode;
 import javafx.scene.control.SelectionModel;
 import javafx.scene.control.SingleSelectionModel;
 import javafx.scene.control.TextField;
-import javafx.scene.input.*;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.MouseEvent;
 import javafx.util.Callback;
 import javafx.util.StringConverter;
+
+import com.sun.javafx.scene.control.IDisconnectable;
+import com.sun.javafx.scene.control.behavior.ComboBoxBaseBehavior;
+import com.sun.javafx.scene.control.behavior.ComboBoxListViewBehavior;
 
 /**
  * Default skin implementation for the {@link ComboBox} control.
@@ -100,7 +100,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
     private boolean listViewSelectionDirty = false;
 
     private final ComboBoxListViewBehavior behavior;
-
+    private IDisconnectable selectedItemWatcher;
 
 
     /* *************************************************************************
@@ -570,12 +570,20 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
             comboBox.notifyAccessibleAttributeChanged(AccessibleAttribute.TEXT);
         });
 
-        SingleSelectionModel<T> selectionModel = comboBox.getSelectionModel();
-        if (selectionModel != null) {
-            listenerHelper().addInvalidationListener(selectionModel.selectedItemProperty(), (o) -> {
-                listViewSelectionDirty = true;
-            });
-        }
+        // FIX memory leak
+        listenerHelper().addChangeListener(comboBox.selectionModelProperty(), true, (src, oldsm, newsm) -> {
+            IDisconnectable old;
+            
+            if (selectedItemWatcher != null) {
+                selectedItemWatcher.disconnect();
+            }
+
+            if (newsm != null) {
+                selectedItemWatcher = listenerHelper().addInvalidationListener(newsm.selectedItemProperty(), (x) -> {
+                    listViewSelectionDirty = true;
+                });
+            }
+        });
 
         _listView.addEventFilter(MouseEvent.MOUSE_RELEASED, t -> {
             // RT-18672: Without checking if the user is clicking in the
