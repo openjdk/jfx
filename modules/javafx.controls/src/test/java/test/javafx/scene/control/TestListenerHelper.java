@@ -27,6 +27,7 @@ package test.javafx.scene.control;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
+import java.lang.ref.WeakReference;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import javafx.beans.property.SimpleStringProperty;
@@ -51,6 +52,7 @@ import com.sun.javafx.event.EventUtil;
 import com.sun.javafx.scene.control.ListenerHelper;
 
 import test.com.sun.javafx.scene.control.infrastructure.MouseEventGenerator;
+import test.util.memory.JMemoryBuddy;
 
 /**
  * Tests ListenerHelper utility class.
@@ -69,6 +71,35 @@ public class TestListenerHelper {
 
         ListenerHelper.disconnect(node);
         assertEquals(1, ct.get());
+    }
+
+    @Test
+    public void testCheckAlive() {
+        Object owner = new Object();
+        WeakReference<Object> ref = new WeakReference<>(owner);
+        SimpleStringProperty p = new SimpleStringProperty();
+        AtomicInteger ct = new AtomicInteger();
+        AtomicInteger disconnected = new AtomicInteger();
+
+        ListenerHelper h = new ListenerHelper(owner);
+
+        h.addChangeListener(p, (v) -> ct.incrementAndGet());
+        h.addDisconnectable(() -> disconnected.incrementAndGet());
+
+        // check that the listener is working
+        p.set("1");
+        assertEquals(1, ct.get());
+
+        // collect
+        owner = null;
+        JMemoryBuddy.assertCollectable(ref);
+
+        // fire an event that should be ignored
+        p.set("2");
+        assertEquals(1, ct.get());
+
+        // check that helper has disconnected all its items
+        assertEquals(1, disconnected.get());
     }
 
     // change listeners
