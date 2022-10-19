@@ -27,6 +27,7 @@ package com.sun.javafx.scene.control;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.function.Consumer;
+
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.value.ChangeListener;
@@ -46,13 +47,16 @@ import javafx.scene.transform.Transform;
 import javafx.stage.Window;
 
 /**
- * This class provides convenience methods for adding various listeners, both strong and weak,
- * as well as a single {@link #disconnect()} method to remove all listeners.
+ * This class provides convenience methods for adding various listeners, both
+ * strong and weak, as well as a single {@link #disconnect()} method to remove
+ * all listeners.
  * <p>
  * There are two usage patterns:
  * <ul>
- * <li>Client code registers a number of listeners and removes them all at once via {@link #disconnect()} call.
- * <li>Client code registers a number of listeners and removes one via its {@link IDisconnectable} instance.
+ * <li>Client code registers a number of listeners and removes them all at once
+ * via {@link #disconnect()} call.
+ * <li>Client code registers a number of listeners and removes one via its
+ * {@link IDisconnectable} instance.
  * </ul>
  * <p>
  * Original code is re-licensed to Oracle by the author.
@@ -60,8 +64,13 @@ import javafx.stage.Window;
  * Copyright © 2021-2022 Andy Goryachev <andy@goryachev.com>
  */
 public class ListenerHelper implements IDisconnectable {
+    private WeakReference<Object> ownerRef;
     private final ArrayList<IDisconnectable> items = new ArrayList<>(4);
     private static final Object KEY = new Object();
+
+    public ListenerHelper(Object owner) {
+        ownerRef = new WeakReference<>(owner);
+    }
 
     public ListenerHelper() {
     }
@@ -71,7 +80,7 @@ public class ListenerHelper implements IDisconnectable {
         if (x instanceof ListenerHelper h) {
             return h;
         }
-        ListenerHelper d = new ListenerHelper();
+        ListenerHelper d = new ListenerHelper(n);
         n.getProperties().put(KEY, d);
         return d;
     }
@@ -103,6 +112,16 @@ public class ListenerHelper implements IDisconnectable {
         }
     }
 
+    protected boolean isAliveOrDisconnect() {
+        if (ownerRef != null) {
+            if (ownerRef.get() == null) {
+                disconnect();
+                return false;
+            }
+        }
+        return true;
+    }
+
     // change listeners
 
     public IDisconnectable addChangeListener(Runnable callback, ObservableValue<?>... props) {
@@ -125,7 +144,9 @@ public class ListenerHelper implements IDisconnectable {
 
             @Override
             public void changed(ObservableValue p, Object oldValue, Object newValue) {
-                onChange.run();
+                if (isAliveOrDisconnect()) {
+                    onChange.run();
+                }
             }
         };
 
@@ -151,23 +172,30 @@ public class ListenerHelper implements IDisconnectable {
             throw new NullPointerException("Listener must be specified.");
         }
 
-        IDisconnectable d = new IDisconnectable() {
+        ChLi<T> li = new ChLi<T>() {
             @Override
             public void disconnect() {
-                prop.removeListener(listener);
+                prop.removeListener(this);
                 items.remove(this);
+            }
+
+            @Override
+            public void changed(ObservableValue src, T oldValue, T newValue) {
+                if (isAliveOrDisconnect()) {
+                    listener.changed(src, oldValue, newValue);
+                }
             }
         };
 
-        items.add(d);
-        prop.addListener(listener);
+        items.add(li);
+        prop.addListener(li);
 
         if (fireImmediately) {
             T v = prop.getValue();
             listener.changed(prop, null, v);
         }
 
-        return d;
+        return li;
     }
 
     public <T> IDisconnectable addChangeListener(ObservableValue<T> prop, Consumer<T> callback) {
@@ -179,7 +207,7 @@ public class ListenerHelper implements IDisconnectable {
             throw new NullPointerException("Callback must be specified.");
         }
 
-        ChLi<T> d = new ChLi<T>() {
+        ChLi<T> li = new ChLi<T>() {
             @Override
             public void disconnect() {
                 prop.removeListener(this);
@@ -188,143 +216,21 @@ public class ListenerHelper implements IDisconnectable {
 
             @Override
             public void changed(ObservableValue<? extends T> observable, T oldValue, T newValue) {
-                callback.accept(newValue);
-            }
-        };
-
-        items.add(d);
-        prop.addListener(d);
-
-        if (fireImmediately) {
-            T v = prop.getValue();
-            callback.accept(v);
-        }
-
-        return d;
-    }
-
-    public IDisconnectable addWeakChangeListener(Runnable onChange, ObservableValue<?>... props) {
-        return addWeakChangeListener(onChange, false, props);
-    }
-
-    public IDisconnectable addWeakChangeListener(Runnable onChange, boolean fireImmediately, ObservableValue<?>... props) {
-        if (onChange == null) {
-            throw new NullPointerException("onChange must not be null.");
-        }
-
-        WeakReference<Runnable> ref = new WeakReference(onChange);
-
-        ChLi li = new ChLi() {
-            @Override
-            public void disconnect() {
-                for (ObservableValue p : props) {
-                    p.removeListener(this);
-                }
-                items.remove(this);
-            }
-
-            @Override
-            public void changed(ObservableValue p, Object oldValue, Object newValue) {
-                Runnable r = ref.get();
-                if (r == null) {
-                    disconnect();
-                } else {
-                    r.run();
+                if (isAliveOrDisconnect()) {
+                    callback.accept(newValue);
                 }
             }
         };
 
         items.add(li);
-
-        for (ObservableValue p : props) {
-            p.addListener(li);
-        }
-
-        if (fireImmediately) {
-            onChange.run();
-        }
-
-        return li;
-    }
-
-    public <T> IDisconnectable addWeakChangeListener(ObservableValue<T> prop, ChangeListener<T> listener) {
-        return addWeakChangeListener(prop, false, listener);
-    }
-
-    public <T> IDisconnectable addWeakChangeListener(ObservableValue<T> prop, boolean fireImmediately, ChangeListener<T> listener) {
-        if (listener == null) {
-            throw new NullPointerException("Listener must be specified.");
-        }
-
-        WeakReference<ChangeListener<T>> ref = new WeakReference<>(listener);
-
-        ChLi<T> d = new ChLi<T>() {
-            @Override
-            public void disconnect() {
-                prop.removeListener(this);
-                items.remove(this);
-            }
-
-            @Override
-            public void changed(ObservableValue<? extends T> p, T oldValue, T newValue) {
-                ChangeListener<T> li = ref.get();
-                if (li == null) {
-                    disconnect();
-                } else {
-                    li.changed(p, oldValue, newValue);
-                }
-            }
-        };
-
-        items.add(d);
-        prop.addListener(d);
-
-        if (fireImmediately) {
-            T v = prop.getValue();
-            listener.changed(prop, null, v);
-        }
-
-        return d;
-    }
-
-    public <T> IDisconnectable addWeakChangeListener(ObservableValue<T> prop, Consumer<T> callback) {
-        return addWeakChangeListener(prop, false, callback);
-    }
-
-    public <T> IDisconnectable addWeakChangeListener(ObservableValue<T> prop, boolean fireImmediately, Consumer<T> callback) {
-        if (callback == null) {
-            throw new NullPointerException("Callback must be specified.");
-        }
-
-        WeakReference<Consumer<T>> ref = new WeakReference<>(callback);
-
-        ChLi<T> d = new ChLi<T>() {
-            @Override
-            public void disconnect() {
-                prop.removeListener(this);
-                items.remove(this);
-            }
-
-            @Override
-            public void changed(ObservableValue<? extends T> observable, T oldValue, T newValue) {
-                Consumer<T> cb = ref.get();
-                if (cb == null) {
-                    disconnect();
-                } else {
-                    cb.accept(newValue);
-                }
-            }
-        };
-
-        items.add(d);
-        prop.addListener(d);
+        prop.addListener(li);
 
         if (fireImmediately) {
             T v = prop.getValue();
             callback.accept(v);
         }
 
-        return d;
+        return li;
     }
 
     // invalidation listeners
@@ -349,7 +255,9 @@ public class ListenerHelper implements IDisconnectable {
 
             @Override
             public void invalidated(Observable p) {
-                callback.run();
+                if (isAliveOrDisconnect()) {
+                    callback.run();
+                }
             }
         };
 
@@ -375,80 +283,7 @@ public class ListenerHelper implements IDisconnectable {
             throw new NullPointerException("Listener must be specified.");
         }
 
-        IDisconnectable d = new IDisconnectable() {
-            @Override
-            public void disconnect() {
-                prop.removeListener(listener);
-                items.remove(this);
-            }
-        };
-
-        items.add(d);
-        prop.addListener(listener);
-
-        if (fireImmediately) {
-            listener.invalidated(prop);
-        }
-
-        return d;
-    }
-
-    public IDisconnectable addWeakInvalidationListener(Runnable onChange, ObservableValue<?>... props) {
-        return addWeakInvalidationListener(onChange, false, props);
-    }
-
-    public IDisconnectable addWeakInvalidationListener(Runnable onChange, boolean fireImmediately, ObservableValue<?>... props) {
-        if (onChange == null) {
-            throw new NullPointerException("onChange must not be null.");
-        }
-
-        WeakReference<Runnable> ref = new WeakReference(onChange);
-
         InLi li = new InLi() {
-            @Override
-            public void disconnect() {
-                for (ObservableValue p : props) {
-                    p.removeListener(this);
-                }
-                items.remove(this);
-            }
-
-            @Override
-            public void invalidated(Observable p) {
-                Runnable r = ref.get();
-                if (r == null) {
-                    disconnect();
-                } else {
-                    r.run();
-                }
-            }
-        };
-
-        items.add(li);
-
-        for (ObservableValue p : props) {
-            p.addListener(li);
-        }
-
-        if (fireImmediately) {
-            onChange.run();
-        }
-
-        return li;
-    }
-
-    public IDisconnectable addWeakInvalidationListener(ObservableValue<?> prop, InvalidationListener listener) {
-        return addWeakInvalidationListener(prop, false, listener);
-    }
-
-    public IDisconnectable addWeakInvalidationListener(ObservableValue<?> prop, boolean fireImmediately, InvalidationListener listener) {
-        if (listener == null) {
-            throw new NullPointerException("Listener must be specified.");
-        }
-
-        WeakReference<InvalidationListener> ref = new WeakReference<>(listener);
-
-        InLi d = new InLi() {
             @Override
             public void disconnect() {
                 prop.removeListener(this);
@@ -456,24 +291,21 @@ public class ListenerHelper implements IDisconnectable {
             }
 
             @Override
-            public void invalidated(Observable p) {
-                InvalidationListener li = ref.get();
-                if (li == null) {
-                    disconnect();
-                } else {
-                    li.invalidated(p);
+            public void invalidated(Observable observable) {
+                if (isAliveOrDisconnect()) {
+                    listener.invalidated(observable);
                 }
             }
         };
 
-        items.add(d);
-        prop.addListener(d);
+        items.add(li);
+        prop.addListener(li);
 
         if (fireImmediately) {
             listener.invalidated(prop);
         }
 
-        return d;
+        return li;
     }
 
     // list change listeners
@@ -482,27 +314,6 @@ public class ListenerHelper implements IDisconnectable {
         if (listener == null) {
             throw new NullPointerException("Listener must be specified.");
         }
-
-        IDisconnectable d = new IDisconnectable() {
-            @Override
-            public void disconnect() {
-                list.removeListener(listener);
-                items.remove(this);
-            }
-        };
-
-        items.add(d);
-        list.addListener(listener);
-
-        return d;
-    }
-
-    public <T> IDisconnectable addWeakListChangeListener(ObservableList<T> list, ListChangeListener<T> listener) {
-        if (listener == null) {
-            throw new NullPointerException("Listener must be specified.");
-        }
-
-        WeakReference<ListChangeListener<T>> ref = new WeakReference<>(listener);
 
         LiChLi<T> li = new LiChLi<T>() {
             @Override
@@ -513,11 +324,8 @@ public class ListenerHelper implements IDisconnectable {
 
             @Override
             public void onChanged(Change<? extends T> ch) {
-                ListChangeListener<T> li = ref.get();
-                if (li == null) {
-                    disconnect();
-                } else {
-                    li.onChanged(ch);
+                if (isAliveOrDisconnect()) {
+                    listener.onChanged(ch);
                 }
             }
         };
@@ -530,29 +338,33 @@ public class ListenerHelper implements IDisconnectable {
 
     // event handlers
 
-    public <T extends Event> IDisconnectable addEventHandler(Object x, EventType<T> t, EventHandler<T> h) {
+    public <T extends Event> IDisconnectable addEventHandler(Object x, EventType<T> t, EventHandler<T> handler) {
+        EvHa<T> h = new EvHa<>(handler) {
+            @Override
+            public void disconnect() {
+                if (x instanceof Node n) {
+                    n.removeEventHandler(t, this);
+                } else if (x instanceof Window y) {
+                    y.removeEventHandler(t, this);
+                } else if (x instanceof Scene y) {
+                    y.removeEventHandler(t, this);
+                } else if (x instanceof MenuItem y) {
+                    y.removeEventHandler(t, this);
+                } else if (x instanceof TreeItem y) {
+                    y.removeEventHandler(t, this);
+                } else if (x instanceof TableColumnBase y) {
+                    y.removeEventHandler(t, this);
+                } else if (x instanceof Transform y) {
+                    y.removeEventHandler(t, this);
+                } else if (x instanceof Task y) {
+                    y.removeEventHandler(t, this);
+                }
+            }
+        };
+
+        items.add(h);
 
         // we really need an interface here ... "HasEventHandlers"
-        IDisconnectable d = addDisconnectable(() -> {
-            if (x instanceof Node n) {
-                n.removeEventHandler(t, h);
-            } else if (x instanceof Window y) {
-                y.removeEventHandler(t, h);
-            } else if (x instanceof Scene y) {
-                y.removeEventHandler(t, h);
-            } else if (x instanceof MenuItem y) {
-                y.removeEventHandler(t, h);
-            } else if (x instanceof TreeItem y) {
-                y.removeEventHandler(t, h);
-            } else if (x instanceof TableColumnBase y) {
-                y.removeEventHandler(t, h);
-            } else if (x instanceof Transform y) {
-                y.removeEventHandler(t, h);
-            } else if (x instanceof Task y) {
-                y.removeEventHandler(t, h);
-            }
-        });
-
         if (x instanceof Node y) {
             y.addEventHandler(t, h);
         } else if (x instanceof Window y) {
@@ -573,77 +385,32 @@ public class ListenerHelper implements IDisconnectable {
             throw new IllegalArgumentException("Cannot add event handler to " + x);
         }
 
-        return d;
-    }
-
-    public <T extends Event> IDisconnectable addWeakEventHandler(Object x, EventType<T> t, EventHandler<T> h) {
-        WeHa<T> li = new WeHa<T>(h) {
-            @Override
-            public void disconnect() {
-                if (x instanceof Node n) {
-                    n.removeEventHandler(t, this);
-                } else if (x instanceof Window y) {
-                    y.removeEventHandler(t, this);
-                } else if (x instanceof Scene y) {
-                    y.removeEventHandler(t, this);
-                } else if (x instanceof MenuItem y) {
-                    y.removeEventHandler(t, this);
-                } else if (x instanceof TreeItem y) {
-                    y.removeEventHandler(t, this);
-                } else if (x instanceof TableColumnBase y) {
-                    y.removeEventHandler(t, this);
-                } else if (x instanceof Transform y) {
-                    y.removeEventHandler(t, this);
-                } else if (x instanceof Task y) {
-                    y.removeEventHandler(t, this);
-                }
-                items.remove(this);
-            }
-        };
-
-        items.add(li);
-
-        if (x instanceof Node y) {
-            y.addEventHandler(t, li);
-        } else if (x instanceof Window y) {
-            y.addEventHandler(t, li);
-        } else if (x instanceof Scene y) {
-            y.addEventHandler(t, li);
-        } else if (x instanceof MenuItem y) {
-            y.addEventHandler(t, li);
-        } else if (x instanceof TreeItem y) {
-            y.addEventHandler(t, li);
-        } else if (x instanceof TableColumnBase y) {
-            y.addEventHandler(t, li);
-        } else if (x instanceof Transform y) {
-            y.addEventHandler(t, li);
-        } else if (x instanceof Task y) {
-            y.addEventHandler(t, li);
-        } else {
-            throw new IllegalArgumentException("Cannot add weak event handler to " + x);
-        }
-
-        return li;
+        return h;
     }
 
     // event filters
 
-    public <T extends Event> IDisconnectable addEventFilter(Object x, EventType<T> t, EventHandler<T> h) {
-        // we really need an interface here ... "HasEventFilters"
-        IDisconnectable d = addDisconnectable(() -> {
-            if (x instanceof Node n) {
-                n.removeEventFilter(t, h);
-            } else if (x instanceof Window y) {
-                y.removeEventFilter(t, h);
-            } else if (x instanceof Scene y) {
-                y.removeEventFilter(t, h);
-            } else if (x instanceof Transform y) {
-                y.removeEventFilter(t, h);
-            } else if (x instanceof Task y) {
-                y.removeEventFilter(t, h);
+    public <T extends Event> IDisconnectable addEventFilter(Object x, EventType<T> t, EventHandler<T> handler) {
+        EvHa<T> h = new EvHa<>(handler) {
+            @Override
+            public void disconnect() {
+                if (x instanceof Node n) {
+                    n.removeEventFilter(t, this);
+                } else if (x instanceof Window y) {
+                    y.removeEventFilter(t, this);
+                } else if (x instanceof Scene y) {
+                    y.removeEventFilter(t, this);
+                } else if (x instanceof Transform y) {
+                    y.removeEventFilter(t, this);
+                } else if (x instanceof Task y) {
+                    y.removeEventFilter(t, this);
+                }
             }
-        });
+        };
 
+        items.add(h);
+
+        // we really need an interface here ... "HasEventFilters"
         if (x instanceof Node y) {
             y.addEventFilter(t, h);
         } else if (x instanceof Window y) {
@@ -658,45 +425,7 @@ public class ListenerHelper implements IDisconnectable {
             throw new IllegalArgumentException("Cannot add event filter to " + x);
         }
 
-        return d;
-    }
-
-    public <T extends Event> IDisconnectable addWeakEventFilter(Object x, EventType<T> t, EventHandler<? super T> h) {
-        WeHa<T> li = new WeHa<T>(h) {
-            @Override
-            public void disconnect() {
-                if (x instanceof Node n) {
-                    n.removeEventFilter(t, this);
-                } else if (x instanceof Window y) {
-                    y.removeEventFilter(t, this);
-                } else if (x instanceof Scene y) {
-                    y.removeEventFilter(t, this);
-                } else if (x instanceof Transform y) {
-                    y.removeEventFilter(t, this);
-                } else if (x instanceof Task y) {
-                    y.removeEventFilter(t, this);
-                }
-                items.remove(this);
-            }
-        };
-
-        items.add(li);
-
-        if (x instanceof Node y) {
-            y.addEventFilter(t, li);
-        } else if (x instanceof Window y) {
-            y.addEventFilter(t, li);
-        } else if (x instanceof Scene y) {
-            y.addEventFilter(t, li);
-        } else if (x instanceof Transform y) {
-            y.addEventFilter(t, li);
-        } else if (x instanceof Task y) {
-            y.addEventFilter(t, li);
-        } else {
-            throw new IllegalArgumentException("Cannot add weak event filter to " + x);
-        }
-
-        return li;
+        return h;
     }
 
     //
@@ -707,20 +436,17 @@ public class ListenerHelper implements IDisconnectable {
 
     protected static abstract class LiChLi<T> implements IDisconnectable, ListChangeListener<T> { }
 
-    protected static abstract class WeHa<T extends Event> implements IDisconnectable, EventHandler<T> {
-        private final WeakReference<EventHandler<? super T>> ref;
+    protected abstract class EvHa<T extends Event> implements IDisconnectable, EventHandler<T> {
+        private final EventHandler<T> handler;
 
-        public WeHa(EventHandler<? super T> h) {
-            ref = new WeakReference<>(h);
+        public EvHa(EventHandler<T> h) {
+            this.handler = h;
         }
 
         @Override
         public void handle(T ev) {
-            EventHandler<? super T> h = ref.get();
-            if (h == null) {
-                disconnect();
-            } else {
-                h.handle(ev);
+            if (isAliveOrDisconnect()) {
+                handler.handle(ev);
             }
         }
     }
