@@ -288,10 +288,10 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
             }
 
             if (scene != null ) {
-                sceneListenerHelper = new ListenerHelper();
+                sceneListenerHelper = new ListenerHelper(MenuBarSkin.this);
 
                 // Key navigation
-                sceneListenerHelper.addWeakEventFilter(scene, KeyEvent.KEY_PRESSED, (ev) -> {
+                sceneListenerHelper.addEventFilter(scene, KeyEvent.KEY_PRESSED, (ev) -> {
                     // process right left and may be tab key events
                     if (focusedMenu != null) {
                         switch (ev.getCode()) {
@@ -361,7 +361,7 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
                 });
 
                 // When we click else where in the scene - menu selection should be cleared.
-                sceneListenerHelper.addWeakEventFilter(scene, MouseEvent.MOUSE_CLICKED, (ev) -> {
+                sceneListenerHelper.addEventFilter(scene, MouseEvent.MOUSE_CLICKED, (ev) -> {
                     Bounds containerScreenBounds = container.localToScreen(container.getLayoutBounds());
                     if ((containerScreenBounds == null) || !containerScreenBounds.contains(ev.getScreenX(), ev.getScreenY())) {
                         unSelectMenus();
@@ -369,14 +369,14 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
                 });
 
                 // When the parent window looses focus - menu selection should be cleared
-                sceneListenerHelper.addWeakChangeListener(scene.windowProperty(), true, (sr, oldw, w) -> {
+                sceneListenerHelper.addChangeListener(scene.windowProperty(), true, (sr, oldw, w) -> {
                     if (windowFocusHelper != null) {
                         windowFocusHelper.disconnect();
                         windowFocusHelper = null;
                     }
 
                     if (w != null) {
-                        windowFocusHelper = sceneListenerHelper.addWeakChangeListener(w.focusedProperty(), true, (s, p, focused) -> {
+                        windowFocusHelper = sceneListenerHelper.addChangeListener(w.focusedProperty(), true, (s, p, focused) -> {
                             if (!focused) {
                                 unSelectMenus();
                             }
@@ -384,7 +384,7 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
                     }
                 });
 
-                sceneListenerHelper.addWeakEventFilter(scene, KeyEvent.ANY, (ev) -> {
+                sceneListenerHelper.addEventFilter(scene, KeyEvent.ANY, (ev) -> {
                     // Clear menu selection when ALT is pressed by itself
                     if (ev.getEventType() == KeyEvent.KEY_PRESSED) {
                         altKeyPressed = false;
