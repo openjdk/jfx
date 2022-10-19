@@ -414,7 +414,7 @@ public class Point3D implements Interpolatable<Point3D> {
      * Two instances of {@code Point3D} are equal if the return values of their
      * {@code getX}, {@code getY}, and {@code getZ} methods are equal.
      *
-     * @param {@code obj} the reference object with which to compare
+     * @param obj the reference object with which to compare
      * @return {@code true} if this {@code Point3D} is the same as the {@code obj} argument; {@code false} otherwise
      */
     @Override
