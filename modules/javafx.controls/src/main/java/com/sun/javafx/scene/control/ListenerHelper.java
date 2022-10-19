@@ -180,7 +180,7 @@ public class ListenerHelper implements IDisconnectable {
             }
 
             @Override
-            public void changed(ObservableValue src, T oldValue, T newValue) {
+            public void changed(ObservableValue<? extends T> src, T oldValue, T newValue) {
                 if (isAliveOrDisconnect()) {
                     listener.changed(src, oldValue, newValue);
                 }
