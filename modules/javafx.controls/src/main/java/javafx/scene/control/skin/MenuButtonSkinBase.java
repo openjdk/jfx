@@ -141,13 +141,13 @@ public class MenuButtonSkinBase<C extends MenuButton> extends SkinBase<C> {
 
         List<Mnemonic> mnemonics = new ArrayList<>();
 
-        listenerHelper().addChangeListener(control.sceneProperty(), true, (scene, oldValue, newValue) -> {
-            if (oldValue != null) {
-                ControlAcceleratorSupport.removeAcceleratorsFromScene(getSkinnable().getItems(), oldValue);
+        listenerHelper().addChangeListener(control.sceneProperty(), true, (src, oldScene, newScene) -> {
+            if (oldScene != null) {
+                ControlAcceleratorSupport.removeAcceleratorsFromScene(getSkinnable().getItems(), oldScene);
 
                 // We only need to remove the mnemonics from the old scene,
                 // they will be added to the new one as soon as the popup becomes visible again.
-                removeMnemonicsFromScene(mnemonics, oldValue);
+                removeMnemonicsFromScene(mnemonics, oldScene);
             }
 
             if (getSkinnable().getScene() != null) {
@@ -156,7 +156,7 @@ public class MenuButtonSkinBase<C extends MenuButton> extends SkinBase<C> {
         });
 
         // Register listeners
-        registerChangeListener(control.showingProperty(), e -> {
+        listenerHelper().addChangeListener(control.showingProperty(), (ev) -> {
             if (getSkinnable().isShowing()) {
                 show();
             } else {
@@ -164,7 +164,7 @@ public class MenuButtonSkinBase<C extends MenuButton> extends SkinBase<C> {
             }
         });
 
-        registerChangeListener(control.focusedProperty(), e -> {
+        listenerHelper().addChangeListener(control.focusedProperty(), (ev) -> {
             // Handle tabbing away from an open MenuButton
             if (!getSkinnable().isFocused() && getSkinnable().isShowing()) {
                 hide();
@@ -174,12 +174,12 @@ public class MenuButtonSkinBase<C extends MenuButton> extends SkinBase<C> {
             }
         });
 
-        registerChangeListener(control.mnemonicParsingProperty(), e -> {
+        listenerHelper().addChangeListener(control.mnemonicParsingProperty(), (ev) -> {
             label.setMnemonicParsing(getSkinnable().isMnemonicParsing());
             getSkinnable().requestLayout();
         });
 
-        registerChangeListener(popup.showingProperty(), e -> {
+        listenerHelper().addChangeListener(popup.showingProperty(), (ev) -> {
             if (!popup.isShowing() && getSkinnable().isShowing()) {
                 // Popup was dismissed. Maybe user clicked outside or typed ESCAPE.
                 // Make sure button is in sync.

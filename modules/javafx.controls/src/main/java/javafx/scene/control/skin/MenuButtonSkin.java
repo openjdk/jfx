@@ -109,7 +109,7 @@ public class MenuButtonSkin extends MenuButtonSkinBase<MenuButton> {
             }
         });
 
-        listenerHelper().addEventHandler(control, ActionEvent.ACTION, (ev) -> {
+        listenerHelper().addWeakEventHandler(control, ActionEvent.ACTION, (ev) -> {
             control.show();
         });
 
