@@ -27,13 +27,18 @@ package test.javafx.scene.control;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
+import java.lang.ref.WeakReference;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Consumer;
 
+import javafx.beans.InvalidationListener;
 import javafx.beans.property.SimpleStringProperty;
+import javafx.beans.value.ChangeListener;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.concurrent.Task;
+import javafx.event.EventHandler;
 import javafx.event.EventTarget;
 import javafx.scene.Group;
 import javafx.scene.Scene;
@@ -51,6 +56,7 @@ import com.sun.javafx.event.EventUtil;
 import com.sun.javafx.scene.control.ListenerHelper;
 
 import test.com.sun.javafx.scene.control.infrastructure.MouseEventGenerator;
+import test.util.memory.JMemoryBuddy;
 
 /**
  * Tests ListenerHelper utility class.
@@ -181,6 +187,138 @@ public class TestListenerHelper {
         assertEquals(2, ct.get());
     }
 
+    @Test
+    public void testWeakChangeListener_MultipleProperties() {
+        ListenerHelper h = new ListenerHelper();
+        SimpleStringProperty p1 = new SimpleStringProperty();
+        SimpleStringProperty p2 = new SimpleStringProperty();
+        AtomicInteger ct = new AtomicInteger();
+        Runnable li = () -> ct.incrementAndGet();
+        WeakReference<Runnable> ref = new WeakReference<>(li);
+
+        h.addWeakChangeListener(li, p1, p2);
+
+        p1.set("1");
+        p2.set("2");
+        assertEquals(2, ct.get());
+
+        li = null;
+
+        JMemoryBuddy.assertCollectable(ref);
+
+        p1.set("3");
+        p2.set("4");
+        assertEquals(2, ct.get());
+    }
+
+    @Test
+    public void testWeakChangeListener_MultipleProperties_FireImmediately() {
+        ListenerHelper h = new ListenerHelper();
+        SimpleStringProperty p1 = new SimpleStringProperty();
+        SimpleStringProperty p2 = new SimpleStringProperty();
+        AtomicInteger ct = new AtomicInteger();
+        Runnable li = () -> ct.incrementAndGet();
+        WeakReference<Runnable> ref = new WeakReference<>(li);
+
+        h.addWeakChangeListener(() -> ct.incrementAndGet(), true, p1, p2);
+
+        p1.set("1");
+        p2.set("2");
+        assertEquals(3, ct.get());
+
+        li = null;
+
+        JMemoryBuddy.assertCollectable(ref);
+
+        p1.set("3");
+        p2.set("4");
+        assertEquals(3, ct.get());
+    }
+
+    @Test
+    public void testWeakChangeListener_Plain() {
+        ListenerHelper h = new ListenerHelper();
+        SimpleStringProperty p = new SimpleStringProperty();
+        AtomicInteger ct = new AtomicInteger();
+        ChangeListener<String> li = (src, old, cur) -> ct.incrementAndGet();
+        WeakReference<ChangeListener<String>> ref = new WeakReference<>(li);
+
+        h.addWeakChangeListener(p, li);
+
+        p.set("1");
+        assertEquals(1, ct.get());
+
+        li = null;
+
+        JMemoryBuddy.assertCollectable(ref);
+
+        p.set("2");
+        assertEquals(1, ct.get());
+    }
+
+    @Test
+    public void testWeakChangeListener_Plain_FireImmediately() {
+        ListenerHelper h = new ListenerHelper();
+        SimpleStringProperty p = new SimpleStringProperty();
+        AtomicInteger ct = new AtomicInteger();
+        ChangeListener<String> li = (src, old, cur) -> ct.incrementAndGet();
+        WeakReference<ChangeListener<String>> ref = new WeakReference<>(li);
+
+        h.addWeakChangeListener(p, true, li);
+
+        p.set("1");
+        assertEquals(2, ct.get());
+
+        li = null;
+
+        JMemoryBuddy.assertCollectable(ref);
+
+        p.set("2");
+        assertEquals(2, ct.get());
+    }
+
+    @Test
+    public void testWeakChangeListener_Callback() {
+        ListenerHelper h = new ListenerHelper();
+        SimpleStringProperty p = new SimpleStringProperty();
+        AtomicInteger ct = new AtomicInteger();
+        Consumer<String> li = (s) -> ct.incrementAndGet();
+        WeakReference<Consumer<String>> ref = new WeakReference<>(li);
+
+        h.addWeakChangeListener(p, li);
+
+        p.set("1");
+        assertEquals(1, ct.get());
+
+        li = null;
+
+        JMemoryBuddy.assertCollectable(ref);
+
+        p.set("2");
+        assertEquals(1, ct.get());
+    }
+
+    @Test
+    public void testWeakChangeListener_Callback_FireImmediately() {
+        ListenerHelper h = new ListenerHelper();
+        SimpleStringProperty p = new SimpleStringProperty();
+        AtomicInteger ct = new AtomicInteger();
+        Consumer<String> li = (s) -> ct.incrementAndGet();
+        WeakReference<Consumer<String>> ref = new WeakReference<>(li);
+
+        h.addWeakChangeListener(p, true, li);
+
+        p.set("1");
+        assertEquals(2, ct.get());
+
+        li = null;
+
+        JMemoryBuddy.assertCollectable(ref);
+
+        p.set("2");
+        assertEquals(2, ct.get());
+    }
+
     // invalidation listeners
 
     @Test
@@ -291,6 +429,96 @@ public class TestListenerHelper {
         assertEquals(2, ct.get());
     }
 
+    @Test
+    public void testWeakInvalidationListener_MultipleProperties() {
+        ListenerHelper h = new ListenerHelper();
+        SimpleStringProperty p1 = new SimpleStringProperty();
+        SimpleStringProperty p2 = new SimpleStringProperty();
+        AtomicInteger ct = new AtomicInteger();
+        Runnable li = () -> ct.incrementAndGet();
+        WeakReference<Runnable> ref = new WeakReference<>(li);
+
+        h.addWeakInvalidationListener(li, p1, p2);
+
+        p1.set("1");
+        p2.set("2");
+        assertEquals(2, ct.get());
+
+        li = null;
+
+        JMemoryBuddy.assertCollectable(ref);
+
+        p1.set("3");
+        p2.set("4");
+        assertEquals(2, ct.get());
+    }
+
+    @Test
+    public void testWeakInvalidationListener_MultipleProperties_FireImmediately() {
+        ListenerHelper h = new ListenerHelper();
+        SimpleStringProperty p1 = new SimpleStringProperty();
+        SimpleStringProperty p2 = new SimpleStringProperty();
+        AtomicInteger ct = new AtomicInteger();
+        Runnable li = () -> ct.incrementAndGet();
+        WeakReference<Runnable> ref = new WeakReference<>(li);
+
+        h.addWeakInvalidationListener(() -> ct.incrementAndGet(), true, p1, p2);
+
+        p1.set("1");
+        p2.set("2");
+        assertEquals(3, ct.get());
+
+        li = null;
+
+        JMemoryBuddy.assertCollectable(ref);
+
+        p1.set("3");
+        p2.set("4");
+        assertEquals(3, ct.get());
+    }
+
+    @Test
+    public void testWeakInvalidationListener_Plain() {
+        ListenerHelper h = new ListenerHelper();
+        SimpleStringProperty p = new SimpleStringProperty();
+        AtomicInteger ct = new AtomicInteger();
+        InvalidationListener li = (x) -> ct.incrementAndGet();
+        WeakReference<InvalidationListener> ref = new WeakReference<>(li);
+
+        h.addWeakInvalidationListener(p, li);
+
+        p.set("1");
+        assertEquals(1, ct.get());
+
+        li = null;
+
+        JMemoryBuddy.assertCollectable(ref);
+
+        p.set("2");
+        assertEquals(1, ct.get());
+    }
+
+    @Test
+    public void testWeakInvalidationListener_Plain_FireImmediately() {
+        ListenerHelper h = new ListenerHelper();
+        SimpleStringProperty p = new SimpleStringProperty();
+        AtomicInteger ct = new AtomicInteger();
+        InvalidationListener li = (x) -> ct.incrementAndGet();
+        WeakReference<InvalidationListener> ref = new WeakReference<>(li);
+
+        h.addWeakInvalidationListener(p, true, li);
+
+        p.set("1");
+        assertEquals(2, ct.get());
+
+        li = null;
+
+        JMemoryBuddy.assertCollectable(ref);
+
+        p.set("2");
+        assertEquals(2, ct.get());
+    }
+
     // list change listeners
 
     @Test
@@ -306,6 +534,26 @@ public class TestListenerHelper {
         assertEquals(1, ct.get());
 
         h.disconnect();
+
+        list.add("2");
+        assertEquals(1, ct.get());
+    }
+
+    @Test
+    public void testWeakListChangeListener() {
+        ListenerHelper h = new ListenerHelper();
+        ObservableList<String> list = FXCollections.observableArrayList();
+        AtomicInteger ct = new AtomicInteger();
+        ListChangeListener<String> li = (ch) -> ct.incrementAndGet();
+        WeakReference<ListChangeListener<String>> ref = new WeakReference<>(li);
+
+        h.addWeakListChangeListener(list, li);
+
+        list.add("1");
+        assertEquals(1, ct.get());
+
+        li = null;
+        JMemoryBuddy.assertCollectable(ref);
 
         list.add("2");
         assertEquals(1, ct.get());
@@ -329,6 +577,31 @@ public class TestListenerHelper {
             assertEquals(1, ct.get());
 
             h.disconnect();
+
+            EventUtil.fireEvent(ev, item);
+            assertEquals(1, ct.get());
+        }
+    }
+
+    @Test
+    public void testWeakEventHandler() {
+        EventTarget[] items = eventHandlerTargets();
+
+        for (EventTarget item : items) {
+            ListenerHelper h = new ListenerHelper();
+            AtomicInteger ct = new AtomicInteger();
+            EventHandler<MouseEvent> li = (ev) -> ct.incrementAndGet();
+            WeakReference<EventHandler<MouseEvent>> ref = new WeakReference(li);
+
+            h.addWeakEventHandler(item, MouseEvent.ANY, li);
+
+            MouseEvent ev = MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_CLICKED, 0, 0);
+            EventUtil.fireEvent(ev, item);
+
+            assertEquals(1, ct.get());
+
+            li = null;
+            JMemoryBuddy.assertCollectable(ref);
 
             EventUtil.fireEvent(ev, item);
             assertEquals(1, ct.get());
@@ -359,6 +632,31 @@ public class TestListenerHelper {
             assertEquals(1, ct.get());
 
             h.disconnect();
+
+            EventUtil.fireEvent(ev, item);
+            assertEquals(1, ct.get());
+        }
+    }
+
+    @Test
+    public void testWeakEventFilter() {
+        EventTarget[] items = eventHandlerFilters();
+
+        for (EventTarget item : items) {
+            ListenerHelper h = new ListenerHelper();
+            AtomicInteger ct = new AtomicInteger();
+            EventHandler<MouseEvent> li = (ev) -> ct.incrementAndGet();
+            WeakReference<EventHandler<MouseEvent>> ref = new WeakReference(li);
+
+            h.addWeakEventFilter(item, MouseEvent.ANY, li);
+
+            MouseEvent ev = MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_CLICKED, 0, 0);
+            EventUtil.fireEvent(ev, item);
+
+            assertEquals(1, ct.get());
+
+            li = null;
+            JMemoryBuddy.assertCollectable(ref);
 
             EventUtil.fireEvent(ev, item);
             assertEquals(1, ct.get());
