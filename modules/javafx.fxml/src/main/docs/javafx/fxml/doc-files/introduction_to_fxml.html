@@ -643,6 +643,8 @@ myText = This is the text!
 
 <p>Note: to turn off automatic compilation of script code place the processing instruction <span class="code">&lt;?compile false?&gt;</span> before the element that contains the script. To turn on compilation of script code again use the processing instruction <span class="code">&lt;?compile true?&gt;</span> (or short: <span class="code">&lt;?compile?&gt;</span>). The compile processing instruction can be used repeatedly to turn compilation of script code off and on.</p>
 
+<p><strong>Note:</strong> The JavaScript script engine is disabled by default. If the JDK has a JavaScript script engine, it can be enabled using a system property <span class="code">javafx.allowjs=true.</span></p>
+
 <h4><a id="controller_method_event_handlers">Controller Method Event Handlers</a></h4>
 <p>A controller method event handler is a method defined by a document's "controller". A controller is an object that is associated with the deserialized contents of an FXML document and is responsible for coordinating the behaviors of the objects (often user interface elements) defined by the document.</p>
 
@@ -771,6 +773,8 @@ attribute must be used.</p>
 <h2><a id="scripting">Scripting</a></h2>
 <p>
 The <span class="code">&lt;fx:script&gt;</span> tag allows a caller to import scripting code into or embed script within a FXML file. Any JVM scripting language can be used, including JavaScript, Groovy, and Clojure, among others. Script code is often used to define event handlers directly in markup or in an associated source file, since event handlers can often be written more concisely in more loosely-typed scripting languages than they can in a statically-typed language such as Java.</p>
+
+<p><strong>Note:</strong> The JavaScript script engine is disabled by default. If the JDK has a JavaScript script engine, it can be enabled using a system property <span class="code">javafx.allowjs=true.</span></p>
 
 <p>Scripts are compiled by default, when they are first loaded, if the <span class="code">ScriptEngine</span> implements the <span class="code">javax.script.Compilable</span> interface. If compilation fails, the <span class="code">FXMLLoader</span> will fall back to interpreted mode.</p>
 
