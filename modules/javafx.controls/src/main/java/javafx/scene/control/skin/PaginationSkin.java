@@ -198,8 +198,6 @@ public class PaginationSkin extends SkinBase<Pagination> {
         nextStackPane.getStyleClass().add("page");
         nextStackPane.setVisible(false);
 
-        resetIndexes(true);
-
         this.navigation = new NavigationControl();
 
         getChildren().addAll(currentStackPane, nextStackPane, navigation);
@@ -239,6 +237,7 @@ public class PaginationSkin extends SkinBase<Pagination> {
     @Override
     public void install() {
         getSkinnable().setClip(clipRect);
+        resetIndexes(true);
     }
 
 
@@ -1294,21 +1293,16 @@ public class PaginationSkin extends SkinBase<Pagination> {
     }
 
     class IndicatorButton extends ToggleButton {
-        private final ListChangeListener<String> updateSkinIndicatorType =
-                                                    c -> setIndicatorType();
-
-        private final ChangeListener<Boolean> updateTooltipVisibility =
-                       (ob, oldValue, newValue) -> setTooltipVisible(newValue);
-
         private int pageNumber;
 
         public IndicatorButton(int pageNumber) {
             this.pageNumber = pageNumber;
             setFocusTraversable(false);
-            setIndicatorType();
-            setTooltipVisible(isTooltipVisible());
 
-            getSkinnable().getStyleClass().addListener(updateSkinIndicatorType);
+            listenerHelper().addListChangeListener(getSkinnable().getStyleClass(), (ch) -> {
+                setIndicatorType();
+            });
+            setIndicatorType();
 
             setOnAction(arg0 -> {
                     getNode().requestFocus();
@@ -1320,7 +1314,9 @@ public class PaginationSkin extends SkinBase<Pagination> {
                     }
             });
 
-            tooltipVisibleProperty().addListener(updateTooltipVisibility);
+            listenerHelper().addChangeListener(tooltipVisibleProperty(), true, (visible) -> {
+                setTooltipVisible(visible);
+            });
 
             prefHeightProperty().bind(minHeightProperty());
             setAccessibleRole(AccessibleRole.PAGE_ITEM);
@@ -1364,8 +1360,9 @@ public class PaginationSkin extends SkinBase<Pagination> {
         }
 
         public void release() {
-            getSkinnable().getStyleClass().removeListener(updateSkinIndicatorType);
-            tooltipVisibleProperty().removeListener(updateTooltipVisibility);
+            // FIX own listener helper?
+            //getSkinnable().getStyleClass().removeListener(updateSkinIndicatorType);
+            //tooltipVisibleProperty().removeListener(updateTooltipVisibility);
         }
 
         /** {@inheritDoc} */
