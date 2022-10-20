@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,31 +25,32 @@
 
 package javafx.scene.control.skin;
 
-import com.sun.javafx.scene.control.skin.Utils;
-import javafx.beans.property.DoubleProperty;
-import javafx.css.StyleableBooleanProperty;
-import javafx.css.StyleableDoubleProperty;
-import javafx.css.StyleableObjectProperty;
-import javafx.css.CssMetaData;
-
-import javafx.css.converter.BooleanConverter;
-import javafx.css.converter.EnumConverter;
-import javafx.css.converter.SizeConverter;
-import com.sun.javafx.scene.control.behavior.PaginationBehavior;
+import static com.sun.javafx.scene.control.skin.resources.ControlResources.getString;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import javafx.animation.*;
+import javafx.animation.Interpolator;
+import javafx.animation.KeyFrame;
+import javafx.animation.KeyValue;
+import javafx.animation.Timeline;
 import javafx.application.Platform;
 import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.WritableValue;
 import javafx.collections.ListChangeListener;
+import javafx.css.CssMetaData;
 import javafx.css.Styleable;
+import javafx.css.StyleableBooleanProperty;
+import javafx.css.StyleableDoubleProperty;
+import javafx.css.StyleableObjectProperty;
 import javafx.css.StyleableProperty;
+import javafx.css.converter.BooleanConverter;
+import javafx.css.converter.EnumConverter;
+import javafx.css.converter.SizeConverter;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.HPos;
@@ -61,7 +62,15 @@ import javafx.scene.AccessibleAction;
 import javafx.scene.AccessibleAttribute;
 import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
-import javafx.scene.control.*;
+import javafx.scene.control.Button;
+import javafx.scene.control.Control;
+import javafx.scene.control.Label;
+import javafx.scene.control.Pagination;
+import javafx.scene.control.SkinBase;
+import javafx.scene.control.Toggle;
+import javafx.scene.control.ToggleButton;
+import javafx.scene.control.ToggleGroup;
+import javafx.scene.control.Tooltip;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.TouchEvent;
 import javafx.scene.layout.HBox;
@@ -69,7 +78,8 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.shape.Rectangle;
 import javafx.util.Duration;
 
-import static com.sun.javafx.scene.control.skin.resources.ControlResources.getString;
+import com.sun.javafx.scene.control.behavior.PaginationBehavior;
+import com.sun.javafx.scene.control.skin.Utils;
 
 /**
  * Default skin implementation for the {@link Pagination} control.
@@ -98,7 +108,7 @@ public class PaginationSkin extends SkinBase<Pagination> {
      *                                                                         *
      **************************************************************************/
 
-    private Pagination pagination;
+    private Pagination pagination; // FIX can be replaced with getSkinnable()
     private StackPane currentStackPane;
     private StackPane nextStackPane;
     private Timeline timeline;
@@ -179,11 +189,8 @@ public class PaginationSkin extends SkinBase<Pagination> {
 
         // install default input map for the Pagination control
         behavior = new PaginationBehavior(control);
-//        control.setInputMap(behavior.getInputMap());
 
-//        setManaged(false);
         clipRect = new Rectangle();
-        getSkinnable().setClip(clipRect);
 
         this.pagination = control;
 
@@ -200,14 +207,23 @@ public class PaginationSkin extends SkinBase<Pagination> {
 
         getChildren().addAll(currentStackPane, nextStackPane, navigation);
 
-        control.maxPageIndicatorCountProperty().addListener(o -> {
+        listenerHelper().addInvalidationListener(pagination.maxPageIndicatorCountProperty(), (o) -> {
             resetIndiciesAndNav();
         });
 
-        registerChangeListener(control.widthProperty(), e -> clipRect.setWidth(getSkinnable().getWidth()));
-        registerChangeListener(control.heightProperty(), e -> clipRect.setHeight(getSkinnable().getHeight()));
-        registerChangeListener(control.pageCountProperty(), e -> resetIndiciesAndNav());
-        registerChangeListener(control.pageFactoryProperty(), e -> {
+        listenerHelper().addChangeListener(pagination.widthProperty(), (ev) -> {
+            clipRect.setWidth(getSkinnable().getWidth());
+        });
+
+        listenerHelper().addChangeListener(pagination.heightProperty(), (ev) -> {
+            clipRect.setHeight(getSkinnable().getHeight());
+        });
+
+        listenerHelper().addChangeListener(pagination.pageCountProperty(), (ev) -> {
+            resetIndiciesAndNav();
+        });
+
+        listenerHelper().addChangeListener(pagination.pageFactoryProperty(), (ev) -> {
             if (animate && timeline != null) {
                 // If we are in the middle of a page animation.
                 // Speedup and finish the animation then update the page factory.
@@ -221,6 +237,11 @@ public class PaginationSkin extends SkinBase<Pagination> {
         });
 
         initializeSwipeAndTouchHandlers();
+    }
+
+    @Override
+    public void install() {
+        getSkinnable().setClip(clipRect);
     }
 
 
@@ -382,12 +403,20 @@ public class PaginationSkin extends SkinBase<Pagination> {
      **************************************************************************/
 
     /** {@inheritDoc} */
-    @Override public void dispose() {
-        super.dispose();
+    @Override
+    public void dispose() {
+        if (getSkinnable() == null) {
+            return;
+        }
+        
+        getChildren().removeAll(currentStackPane, nextStackPane, navigation);
+        getSkinnable().setClip(null);
 
         if (behavior != null) {
             behavior.dispose();
         }
+
+        super.dispose();
     }
 
     /** {@inheritDoc} */
@@ -468,7 +497,7 @@ public class PaginationSkin extends SkinBase<Pagination> {
     private void initializeSwipeAndTouchHandlers() {
         final Pagination control = getSkinnable();
 
-        getSkinnable().addEventHandler(TouchEvent.TOUCH_PRESSED, e -> {
+        listenerHelper().addEventHandler(control, TouchEvent.TOUCH_PRESSED, e -> {
             if (touchEventId == -1) {
                 touchEventId = e.getTouchPoint().getId();
             }
@@ -481,7 +510,7 @@ public class PaginationSkin extends SkinBase<Pagination> {
             e.consume();
         });
 
-        getSkinnable().addEventHandler(TouchEvent.TOUCH_MOVED, e -> {
+        listenerHelper().addEventHandler(control, TouchEvent.TOUCH_MOVED, e -> {
             if (touchEventId != e.getTouchPoint().getId()) {
                 return;
             }
@@ -559,7 +588,7 @@ public class PaginationSkin extends SkinBase<Pagination> {
             e.consume();
         });
 
-        getSkinnable().addEventHandler(TouchEvent.TOUCH_RELEASED, e -> {
+        listenerHelper().addEventHandler(control, TouchEvent.TOUCH_RELEASED, e -> {
             if (touchEventId != e.getTouchPoint().getId()) {
                 return;
             } else {
