@@ -108,7 +108,6 @@ public class PaginationSkin extends SkinBase<Pagination> {
      *                                                                         *
      **************************************************************************/
 
-    private Pagination pagination; // FIX can be replaced with getSkinnable()
     private StackPane currentStackPane;
     private StackPane nextStackPane;
     private Timeline timeline;
@@ -192,8 +191,6 @@ public class PaginationSkin extends SkinBase<Pagination> {
 
         clipRect = new Rectangle();
 
-        this.pagination = control;
-
         this.currentStackPane = new StackPane();
         currentStackPane.getStyleClass().add("page");
 
@@ -207,23 +204,23 @@ public class PaginationSkin extends SkinBase<Pagination> {
 
         getChildren().addAll(currentStackPane, nextStackPane, navigation);
 
-        listenerHelper().addInvalidationListener(pagination.maxPageIndicatorCountProperty(), (o) -> {
+        listenerHelper().addInvalidationListener(getSkinnable().maxPageIndicatorCountProperty(), (o) -> {
             resetIndiciesAndNav();
         });
 
-        listenerHelper().addChangeListener(pagination.widthProperty(), (ev) -> {
+        listenerHelper().addChangeListener(getSkinnable().widthProperty(), true, (ev) -> {
             clipRect.setWidth(getSkinnable().getWidth());
         });
 
-        listenerHelper().addChangeListener(pagination.heightProperty(), (ev) -> {
+        listenerHelper().addChangeListener(getSkinnable().heightProperty(), true, (ev) -> {
             clipRect.setHeight(getSkinnable().getHeight());
         });
 
-        listenerHelper().addChangeListener(pagination.pageCountProperty(), (ev) -> {
+        listenerHelper().addChangeListener(getSkinnable().pageCountProperty(), (ev) -> {
             resetIndiciesAndNav();
         });
 
-        listenerHelper().addChangeListener(pagination.pageFactoryProperty(), (ev) -> {
+        listenerHelper().addChangeListener(getSkinnable().pageFactoryProperty(), (ev) -> {
             if (animate && timeline != null) {
                 // If we are in the middle of a page animation.
                 // Speedup and finish the animation then update the page factory.
@@ -409,8 +406,8 @@ public class PaginationSkin extends SkinBase<Pagination> {
             return;
         }
 
-        getChildren().removeAll(currentStackPane, nextStackPane, navigation);
         getSkinnable().setClip(null);
+        getChildren().removeAll(currentStackPane, nextStackPane, navigation);
 
         if (behavior != null) {
             behavior.dispose();
@@ -478,13 +475,13 @@ public class PaginationSkin extends SkinBase<Pagination> {
 
     private void selectNext() {
         if (getCurrentPageIndex() < getPageCount() - 1) {
-            pagination.setCurrentPageIndex(getCurrentPageIndex() + 1);
+            getSkinnable().setCurrentPageIndex(getCurrentPageIndex() + 1);
         }
     }
 
     private void selectPrevious() {
         if (getCurrentPageIndex() > 0) {
-            pagination.setCurrentPageIndex(getCurrentPageIndex() - 1);
+            getSkinnable().setCurrentPageIndex(getCurrentPageIndex() - 1);
         }
     }
 
@@ -654,7 +651,7 @@ public class PaginationSkin extends SkinBase<Pagination> {
         currentStackPane.getChildren().clear();
         nextStackPane.getChildren().clear();
 
-        pagination.setCurrentPageIndex(currentIndex);
+        getSkinnable().setCurrentPageIndex(currentIndex);
         createPage(currentStackPane, currentIndex);
 
         if (isAnimate) {
@@ -663,8 +660,8 @@ public class PaginationSkin extends SkinBase<Pagination> {
     }
 
     private boolean createPage(StackPane pane, int index) {
-        if (pagination.getPageFactory() != null && pane.getChildren().isEmpty()) {
-            Node content = pagination.getPageFactory().call(index);
+        if (getSkinnable().getPageFactory() != null && pane.getChildren().isEmpty()) {
+            Node content = getSkinnable().getPageFactory().call(index);
             // If the content is null we don't want to switch pages.
             if (content != null) {
                 pane.getChildren().setAll(content);
@@ -677,12 +674,12 @@ public class PaginationSkin extends SkinBase<Pagination> {
                     animate = false;
                 }
 
-                if (pagination.getPageFactory().call(previousIndex) != null) {
-                    pagination.setCurrentPageIndex(previousIndex);
+                if (getSkinnable().getPageFactory().call(previousIndex) != null) {
+                    getSkinnable().setCurrentPageIndex(previousIndex);
                 } else {
                     // Set the page index to 0 because both the current,
                     // and the previous pages have no content.
-                    pagination.setCurrentPageIndex(0);
+                    getSkinnable().setCurrentPageIndex(0);
                 }
 
                 if (isAnimate) {
@@ -922,9 +919,9 @@ public class PaginationSkin extends SkinBase<Pagination> {
                 requestLayout();
             });
 
-            pagination.currentPageIndexProperty().addListener((arg0, arg1, arg2) -> {
-                previousIndex = arg1.intValue();
-                currentIndex = arg2.intValue();
+            listenerHelper().addChangeListener(getSkinnable().currentPageIndexProperty(), (src, old, cur) -> {
+                previousIndex = old.intValue();
+                currentIndex = cur.intValue();
                 updatePageIndex();
                 if (animate) {
                     currentAnimatedIndex = currentIndex;
@@ -1318,7 +1315,7 @@ public class PaginationSkin extends SkinBase<Pagination> {
                     int selected = getCurrentPageIndex();
                     // We do not need to update the selection if it has not changed.
                     if (selected != IndicatorButton.this.pageNumber) {
-                        pagination.setCurrentPageIndex(IndicatorButton.this.pageNumber);
+                        getSkinnable().setCurrentPageIndex(IndicatorButton.this.pageNumber);
                         requestLayout();
                     }
             });
