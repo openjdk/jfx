@@ -408,7 +408,7 @@ public class PaginationSkin extends SkinBase<Pagination> {
         if (getSkinnable() == null) {
             return;
         }
-        
+
         getChildren().removeAll(currentStackPane, nextStackPane, navigation);
         getSkinnable().setClip(null);
 
