@@ -27,13 +27,14 @@ package com.sun.javafx.scene.control;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.function.Consumer;
-
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.ListChangeListener;
+import javafx.collections.MapChangeListener;
 import javafx.collections.ObservableList;
+import javafx.collections.ObservableMap;
 import javafx.concurrent.Task;
 import javafx.event.Event;
 import javafx.event.EventHandler;
@@ -336,6 +337,34 @@ public class ListenerHelper implements IDisconnectable {
         return li;
     }
 
+    // map change listener
+
+    public <K,V> IDisconnectable addMapChangeListener(ObservableMap<K,V> list, MapChangeListener<K,V> listener) {
+        if (listener == null) {
+            throw new NullPointerException("Listener must be specified.");
+        }
+
+        MaChLi<K,V> li = new MaChLi<K,V>() {
+            @Override
+            public void disconnect() {
+                list.removeListener(this);
+                items.remove(this);
+            }
+
+            @Override
+            public void onChanged(Change<? extends K, ? extends V> ch) {
+                if (isAliveOrDisconnect()) {
+                    listener.onChanged(ch);
+                }
+            }
+        };
+
+        items.add(li);
+        list.addListener(li);
+
+        return li;
+    }
+
     // event handlers
 
     public <T extends Event> IDisconnectable addEventHandler(Object x, EventType<T> t, EventHandler<T> handler) {
@@ -435,6 +464,8 @@ public class ListenerHelper implements IDisconnectable {
     protected static abstract class InLi implements IDisconnectable, InvalidationListener { }
 
     protected static abstract class LiChLi<T> implements IDisconnectable, ListChangeListener<T> { }
+
+    protected static abstract class MaChLi<K,V> implements IDisconnectable, MapChangeListener<K,V> { }
 
     protected abstract class EvHa<T extends Event> implements IDisconnectable, EventHandler<T> {
         private final EventHandler<T> handler;
