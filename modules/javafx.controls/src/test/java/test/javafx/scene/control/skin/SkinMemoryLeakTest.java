@@ -171,7 +171,7 @@ public class SkinMemoryLeakTest {
                 Pagination.class,
                 PasswordField.class,
                 //ScrollBar.class,
-                ScrollPane.class,
+                //ScrollPane.class,
                 // @Ignore("8245145")
                 Spinner.class,
                 SplitMenuButton.class,
