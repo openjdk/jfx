@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -404,6 +404,24 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
 
     private Runnable onFocusLeftCell;
     public void setOnFocusLeftCell(Runnable r) { onFocusLeftCell = r; }
+
+    @Override
+    public void dispose() {
+        onScrollPageUp = null;
+        onScrollPageDown = null;
+        onFocusPreviousRow = null;
+        onFocusNextRow = null;
+        onSelectPreviousRow = null;
+        onSelectNextRow = null;
+        onMoveToFirstCell = null;
+        onMoveToLastCell = null;
+        onSelectRightCell = null;
+        onSelectLeftCell = null;
+        onFocusRightCell = null;
+        onFocusLeftCell = null;
+
+        super.dispose();
+    }
 
     public void mousePressed(MouseEvent e) {
 //        // FIXME can't assume (yet) cells.get(0) is necessarily the lead cell

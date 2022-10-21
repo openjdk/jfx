@@ -161,18 +161,6 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
      *                                                                         *
      **************************************************************************/
 
-    private MapChangeListener<Object, Object> propertiesMapListener = c -> {
-        if (! c.wasAdded()) return;
-        if (Properties.REFRESH.equals(c.getKey())) {
-            refreshView();
-            getSkinnable().getProperties().remove(Properties.REFRESH);
-        } else if (Properties.RECREATE.equals(c.getKey())) {
-            needCellsRecreated = true;
-            refreshView();
-            getSkinnable().getProperties().remove(Properties.RECREATE);
-        }
-    };
-
     private ListChangeListener<S> rowCountListener = c -> {
         while (c.next()) {
             if (c.wasReplaced()) {
@@ -211,13 +199,6 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
         getSkinnable().requestLayout();
     };
 
-    private ListChangeListener<TC> visibleLeafColumnsListener = c -> {
-        updateVisibleColumnCount();
-        while (c.next()) {
-            updateVisibleLeafColumnWidthListeners(c.getAddedSubList(), c.getRemoved());
-        }
-    };
-
     private InvalidationListener widthListener = observable -> {
         // This forces the horizontal scrollbar to show when the column
         // resizing occurs. It is not ideal, but will work for now.
@@ -230,15 +211,10 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
         }
     };
 
-    private InvalidationListener itemsChangeListener;
-
     private WeakListChangeListener<S> weakRowCountListener =
             new WeakListChangeListener<>(rowCountListener);
-    private WeakListChangeListener<TC> weakVisibleLeafColumnsListener =
-            new WeakListChangeListener<>(visibleLeafColumnsListener);
     private WeakInvalidationListener weakWidthListener =
             new WeakInvalidationListener(widthListener);
-    private WeakInvalidationListener weakItemsChangeListener;
 
 
 
@@ -258,13 +234,14 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
         // init the VirtualFlow
         flow = getVirtualFlow();
         flow.setPannable(IS_PANNABLE);
-//        flow.setCellFactory(flow1 -> TableViewSkinBase.this.createCell());
 
         /*
          * Listening for scrolling along the X axis, but we need to be careful
          * to handle the situation appropriately when the hbar is invisible.
          */
-        flow.getHbar().valueProperty().addListener(o -> horizontalScroll());
+        listenerHelper().addInvalidationListener(flow.getHbar().valueProperty(), (o) -> {
+            horizontalScroll();
+        });
 
         // RT-37152
         flow.getHbar().setUnitIncrement(15);
@@ -289,15 +266,21 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
         updateVisibleColumnCount();
         updateVisibleLeafColumnWidthListeners(getVisibleLeafColumns(), FXCollections.<TC>emptyObservableList());
 
-        tableHeaderRow.reorderingProperty().addListener(valueModel -> {
+        listenerHelper().addInvalidationListener(tableHeaderRow.reorderingProperty(), (ob) -> {
             getSkinnable().requestLayout();
         });
 
-        getVisibleLeafColumns().addListener(weakVisibleLeafColumnsListener);
+        listenerHelper().addListChangeListener(getVisibleLeafColumns(), (c) -> {
+            updateVisibleColumnCount();
+            while (c.next()) {
+                updateVisibleLeafColumnWidthListeners(c.getAddedSubList(), c.getRemoved());
+            }
+        });
 
         final ObjectProperty<ObservableList<S>> itemsProperty = TableSkinUtils.itemsProperty(this);
         updateTableItems(null, itemsProperty.get());
-        itemsChangeListener = new InvalidationListener() {
+
+        listenerHelper().addInvalidationListener(itemsProperty, new InvalidationListener() {
             private WeakReference<ObservableList<S>> weakItemsRef = new WeakReference<>(itemsProperty.get());
 
             @Override public void invalidated(Observable observable) {
@@ -305,40 +288,60 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
                 weakItemsRef = new WeakReference<>(itemsProperty.get());
                 updateTableItems(oldItems, itemsProperty.get());
             }
-        };
-        weakItemsChangeListener = new WeakInvalidationListener(itemsChangeListener);
-        itemsProperty.addListener(weakItemsChangeListener);
+        });
 
         final ObservableMap<Object, Object> properties = control.getProperties();
         properties.remove(Properties.REFRESH);
         properties.remove(Properties.RECREATE);
-        properties.addListener(propertiesMapListener);
+        listenerHelper().addMapChangeListener(properties, (c) -> {
+            if (!c.wasAdded()) {
+                return;
+            }
+            if (Properties.REFRESH.equals(c.getKey())) {
+                refreshView();
+                getSkinnable().getProperties().remove(Properties.REFRESH);
+            } else if (Properties.RECREATE.equals(c.getKey())) {
+                needCellsRecreated = true;
+                refreshView();
+                getSkinnable().getProperties().remove(Properties.RECREATE);
+            }
+        });
 
-        control.addEventHandler(ScrollToEvent.<TC>scrollToColumn(), event -> {
-            scrollHorizontally(event.getScrollTarget());
+        listenerHelper().addEventHandler(control, ScrollToEvent.<TC>scrollToColumn(), (ev) -> {
+            scrollHorizontally(ev.getScrollTarget());
         });
 
         // flow and flow.vbar width observer
-        InvalidationListener widthObserver = valueModel -> {
-            contentWidthDirty = true;
-            getSkinnable().requestLayout();
-        };
-        flow.widthProperty().addListener(widthObserver);
-        flow.getVbar().widthProperty().addListener(widthObserver);
+        listenerHelper().addInvalidationListener(
+            () -> {
+                contentWidthDirty = true;
+                getSkinnable().requestLayout();
+            },
+            flow.widthProperty(),
+            flow.getVbar().widthProperty()
+        );
 
         final ObjectProperty<Callback<C, I>> rowFactoryProperty = TableSkinUtils.rowFactoryProperty(this);
-        registerChangeListener(rowFactoryProperty, e -> {
+        listenerHelper().addChangeListener(rowFactoryProperty, e -> {
             Callback<C, I> oldFactory = rowFactory;
             rowFactory = rowFactoryProperty.get();
             if (oldFactory != rowFactory) {
                 requestRebuildCells();
             }
         });
-        registerChangeListener(TableSkinUtils.placeholderProperty(this), e -> updatePlaceholderRegionVisibility());
-        registerChangeListener(flow.getVbar().visibleProperty(), e -> updateContentWidth());
-        registerChangeListener(TableSkinUtils.columnResizePolicyProperty(this), (v) -> {
+
+        listenerHelper().addChangeListener(TableSkinUtils.placeholderProperty(this), (ev) -> {
+            updatePlaceholderRegionVisibility();
+        });
+
+        listenerHelper().addChangeListener(flow.getVbar().visibleProperty(), (ev) -> {
+            updateContentWidth();
+        });
+
+        listenerHelper().addChangeListener(TableSkinUtils.columnResizePolicyProperty(this), (ev) -> {
             updateSuppressBreadthBar();
         });
+
         updateSuppressBreadthBar();
     }
 
@@ -361,13 +364,15 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
      **************************************************************************/
 
     /** {@inheritDoc} */
-    @Override public void dispose() {
-        if (getSkinnable() == null) return;
-        final ObjectProperty<ObservableList<S>> itemsProperty = TableSkinUtils.itemsProperty(this);
+    @Override
+    public void dispose() {
+        if (getSkinnable() == null) {
+            return;
+        }
 
-        getVisibleLeafColumns().removeListener(weakVisibleLeafColumnsListener);
-        itemsProperty.removeListener(weakItemsChangeListener);
-        getSkinnable().getProperties().removeListener(propertiesMapListener);
+        getChildren().removeAll(tableHeaderRow, flow, columnReorderOverlay, columnReorderLine);
+
+        final ObjectProperty<ObservableList<S>> itemsProperty = TableSkinUtils.itemsProperty(this);
         updateTableItems(itemsProperty.get(), null);
 
         super.dispose();

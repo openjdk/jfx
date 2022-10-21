@@ -176,7 +176,7 @@ public class SkinMemoryLeakTest {
                 Spinner.class,
                 SplitMenuButton.class,
                 SplitPane.class,
-                TableView.class,
+                //TableView.class,
                 TreeTableView.class
         );
         // remove the known issues to make the test pass

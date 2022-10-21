@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -92,7 +92,6 @@ public class TableViewSkin<T> extends TableViewSkinBase<T, T, TableView<T>, Tabl
 
         // install default input map for the TableView control
         behavior = new TableViewBehavior<>(control);
-//        control.setInputMap(behavior.getInputMap());
 
         flow.setFixedCellSize(control.getFixedCellSize());
         flow.setCellFactory(flow -> createCell());
@@ -107,8 +106,8 @@ public class TableViewSkin<T> extends TableViewSkinBase<T, T, TableView<T>, Tabl
                 control.requestFocus();
             }
         };
-        flow.getVbar().addEventFilter(MouseEvent.MOUSE_PRESSED, ml);
-        flow.getHbar().addEventFilter(MouseEvent.MOUSE_PRESSED, ml);
+        listenerHelper().addEventFilter(flow.getVbar(), MouseEvent.MOUSE_PRESSED, ml);
+        listenerHelper().addEventFilter(flow.getHbar(), MouseEvent.MOUSE_PRESSED, ml);
 
         // init the behavior 'closures'
         behavior.setOnFocusPreviousRow(() -> onFocusAboveCell());
@@ -124,7 +123,9 @@ public class TableViewSkin<T> extends TableViewSkinBase<T, T, TableView<T>, Tabl
         behavior.setOnFocusLeftCell(() -> onFocusLeftCell());
         behavior.setOnFocusRightCell(() -> onFocusRightCell());
 
-        registerChangeListener(control.fixedCellSizeProperty(), e -> flow.setFixedCellSize(getSkinnable().getFixedCellSize()));
+        listenerHelper().addChangeListener(control.fixedCellSizeProperty(), (ev) -> {
+            flow.setFixedCellSize(getSkinnable().getFixedCellSize());
+        });
 
         updateItemCount();
     }
@@ -138,12 +139,13 @@ public class TableViewSkin<T> extends TableViewSkinBase<T, T, TableView<T>, Tabl
      **************************************************************************/
 
     /** {@inheritDoc} */
-    @Override public void dispose() {
-        super.dispose();
-
+    @Override
+    public void dispose() {
         if (behavior != null) {
             behavior.dispose();
         }
+
+        super.dispose();
     }
 
     /** {@inheritDoc} */
