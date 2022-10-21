@@ -370,6 +370,10 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
             return;
         }
 
+        if (placeholderRegion != null) {
+            getChildren().remove(placeholderRegion);
+        }
+
         getChildren().removeAll(tableHeaderRow, flow, columnReorderOverlay, columnReorderLine);
 
         final ObjectProperty<ObservableList<S>> itemsProperty = TableSkinUtils.itemsProperty(this);

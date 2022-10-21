@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -54,8 +54,6 @@ public abstract class VirtualContainerBase<C extends Control, I extends IndexedC
      */
     private final VirtualFlow<I> flow;
 
-    private EventHandler<? super ScrollToEvent<Integer>> scrollToEventHandler;
-
 
     /* *************************************************************************
      *                                                                         *
@@ -71,7 +69,7 @@ public abstract class VirtualContainerBase<C extends Control, I extends IndexedC
         super(control);
         flow = createVirtualFlow();
 
-        scrollToEventHandler = event -> {
+        listenerHelper().addEventHandler(control, ScrollToEvent.scrollToTopIndex(), (ev) -> {
             // Fix for RT-24630: The row count in VirtualFlow was incorrect
             // (normally zero), so the scrollTo call was misbehaving.
             if (itemCountDirty) {
@@ -79,9 +77,8 @@ public abstract class VirtualContainerBase<C extends Control, I extends IndexedC
                 updateItemCount();
                 itemCountDirty = false;
             }
-            flow.scrollToTop(event.getScrollTarget());
-        };
-        control.addEventHandler(ScrollToEvent.scrollToTopIndex(), scrollToEventHandler);
+            flow.scrollToTop(ev.getScrollTarget());
+        });
     }
 
 
@@ -132,8 +129,9 @@ public abstract class VirtualContainerBase<C extends Control, I extends IndexedC
      */
     @Override
     public void dispose() {
-        if (getSkinnable() == null) return;
-        getSkinnable().removeEventHandler(ScrollToEvent.scrollToTopIndex(), scrollToEventHandler);
+        if (getSkinnable() == null) {
+            return;
+        }
         super.dispose();
     }
 
