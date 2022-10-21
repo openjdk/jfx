@@ -16,7 +16,7 @@
 			<attribute name="module" value="true"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry combineaccessrules="false" kind="src" path="/swing">
+	<classpathentry combineaccessrules="false" kind="src" path="/controls">
 		<attributes>
 			<attribute name="module" value="true"/>
 		</attributes>

@@ -1,17 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <classpath>
-	<classpathentry kind="src" output="testbin" path="src/test/java">
+	<classpathentry kind="src" output="bin/test" path="src/test/java">
 		<attributes>
+			<attribute name="gradle_scope" value="test"/>
+			<attribute name="gradle_used_by_scope" value="test"/>
 			<attribute name="test" value="true"/>
-			<attribute name="gradle_scope" value="test"/>
-			<attribute name="gradle_used_by_scope" value="test"/>
-		</attributes>
-	</classpathentry>
-	<classpathentry kind="src" path="src/testapp1/java"/>
-	<classpathentry kind="src" path="src/test/resources">
-		<attributes>
-			<attribute name="gradle_scope" value="test"/>
-			<attribute name="gradle_used_by_scope" value="test"/>
 		</attributes>
 	</classpathentry>
 	<classpathentry combineaccessrules="false" kind="src" path="/swing">
@@ -59,5 +52,105 @@
 			<attribute name="test" value="true"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry kind="output" path="bin"/>
+	<classpathentry kind="src" output="bin/testapp1" path="src/testapp1/java">
+		<attributes>
+			<attribute name="gradle_scope" value="testapp1"/>
+			<attribute name="gradle_used_by_scope" value="testapp1"/>
+			<attribute name="test" value="true"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="src" output="bin/test" path="src/test/resources">
+		<attributes>
+			<attribute name="gradle_scope" value="test"/>
+			<attribute name="gradle_used_by_scope" value="test"/>
+			<attribute name="test" value="true"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="src" output="bin/testapp2" path="src/testapp2/java">
+		<attributes>
+			<attribute name="gradle_scope" value="testapp2"/>
+			<attribute name="gradle_used_by_scope" value="testapp2"/>
+			<attribute name="test" value="true"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="src" output="bin/testapp3" path="src/testapp3/java">
+		<attributes>
+			<attribute name="gradle_scope" value="testapp3"/>
+			<attribute name="gradle_used_by_scope" value="testapp3"/>
+			<attribute name="test" value="true"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="src" output="bin/testapp4" path="src/testapp4/java">
+		<attributes>
+			<attribute name="gradle_scope" value="testapp4"/>
+			<attribute name="gradle_used_by_scope" value="testapp4"/>
+			<attribute name="test" value="true"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="src" output="bin/testapp5" path="src/testapp5/java">
+		<attributes>
+			<attribute name="gradle_scope" value="testapp5"/>
+			<attribute name="gradle_used_by_scope" value="testapp5"/>
+			<attribute name="test" value="true"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="src" output="bin/testapp6" path="src/testapp6/java">
+		<attributes>
+			<attribute name="gradle_scope" value="testapp6"/>
+			<attribute name="gradle_used_by_scope" value="testapp6"/>
+			<attribute name="test" value="true"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="src" output="bin/testapp6" path="src/testapp6/resources">
+		<attributes>
+			<attribute name="gradle_scope" value="testapp6"/>
+			<attribute name="gradle_used_by_scope" value="testapp6"/>
+			<attribute name="test" value="true"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="src" output="bin/testapp7" path="src/testapp7/java">
+		<attributes>
+			<attribute name="gradle_scope" value="testapp7"/>
+			<attribute name="gradle_used_by_scope" value="testapp7"/>
+			<attribute name="test" value="true"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="src" output="bin/testapp7" path="src/testapp7/resources">
+		<attributes>
+			<attribute name="gradle_scope" value="testapp7"/>
+			<attribute name="gradle_used_by_scope" value="testapp7"/>
+			<attribute name="test" value="true"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="src" output="bin/testscriptapp1" path="src/testscriptapp1/java">
+		<attributes>
+			<attribute name="gradle_scope" value="testscriptapp1"/>
+			<attribute name="gradle_used_by_scope" value="testscriptapp1"/>
+			<attribute name="test" value="true"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="src" output="bin/testscriptapp1" path="src/testscriptapp1/resources">
+		<attributes>
+			<attribute name="gradle_scope" value="testscriptapp1"/>
+			<attribute name="gradle_used_by_scope" value="testscriptapp1"/>
+			<attribute name="test" value="true"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="src" output="bin/testscriptapp2" path="src/testscriptapp2/java">
+		<attributes>
+			<attribute name="gradle_scope" value="testscriptapp2"/>
+			<attribute name="gradle_used_by_scope" value="testscriptapp2"/>
+			<attribute name="test" value="true"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="src" output="bin/testscriptapp2" path="src/testscriptapp2/resources">
+		<attributes>
+			<attribute name="gradle_scope" value="testscriptapp2"/>
+			<attribute name="gradle_used_by_scope" value="testscriptapp2"/>
+			<attribute name="test" value="true"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-11/"/>
+	<classpathentry kind="con" path="org.eclipse.buildship.core.gradleclasspathcontainer"/>
+	<classpathentry kind="output" path="bin/default"/>
 </classpath>
