@@ -12,17 +12,17 @@
 			<attribute name="module" value="true"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry kind="lib" path="C:/Users/Nir/git/jfx/apps/samples/Ensemble8/lib/lucene-core-7.7.3.jar">
+	<classpathentry kind="lib" path="lib/lucene-core-7.7.3.jar">
 		<attributes>
 			<attribute name="module" value="true"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry kind="lib" path="C:/Users/Nir/git/jfx/apps/samples/Ensemble8/lib/lucene-grouping-7.7.3.jar">
+	<classpathentry kind="lib" path="lib/lucene-grouping-7.7.3.jar">
 		<attributes>
 			<attribute name="module" value="true"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry kind="lib" path="C:/Users/Nir/git/jfx/apps/samples/Ensemble8/lib/lucene-queryparser-7.7.3.jar">
+	<classpathentry kind="lib" path="lib/lucene-queryparser-7.7.3.jar">
 		<attributes>
 			<attribute name="module" value="true"/>
 		</attributes>
