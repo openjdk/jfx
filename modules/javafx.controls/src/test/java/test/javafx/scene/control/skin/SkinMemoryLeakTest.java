@@ -175,9 +175,9 @@ public class SkinMemoryLeakTest {
                 // @Ignore("8245145")
                 Spinner.class,
                 SplitMenuButton.class,
-                SplitPane.class,
+                SplitPane.class
                 //TableView.class,
-                TreeTableView.class
+                //TreeTableView.class
         );
         // remove the known issues to make the test pass
         controlClasses.removeAll(leakingClasses);
