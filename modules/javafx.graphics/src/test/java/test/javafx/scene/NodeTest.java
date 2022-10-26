@@ -1279,7 +1279,7 @@ public class NodeTest {
         assertTrue(g.shownProperty().get());
         assertTrue(c.shownProperty().get());
 
-        g.setVisible(false);  // irrelevant change for isShowing
+        g.setVisible(false);  // irrelevant change for isShown
         SceneShim.scenePulseListener_pulse(s);
 
         assertTrue(g.isShown());
