@@ -1406,15 +1406,18 @@ public abstract class Node implements EventTarget, Styleable {
     }
 
     /**
-     * Whether or not this {@code Node} is showing (that is, it is part of an
-     * open Window on the user's system). The Window might be "showing", yet the user might not
-     * be able to see it due to the Window being rendered behind another Window
-     * or due to the Window being positioned off the monitor.
+     * Indicates whether or not this {@code Node} is shown. A node is considered shown if it's
+     * part of a {@code Scene} which is part of a {@code Window} whose
+     * {@link shown #Window::showingProperty} is {@code true}. The {@link visibility #visibleProperty}
+     * of the node or its scene do not affect this property.
+     * <p>
+     * This property can be used in conjunction with {@link ObservableValue#when} to
+     * create bindings which are only actively listening to their source when the node is shown.
+     * <p>
+     * This property can also be used to start animations when the node is shown, and to stop them
+     * when it is no longer shown.
      *
-     * <p>Note that the {@code Node} does not need to be visible for this property
-     * to be {@code true}.
-     *
-     * @defaultValue false
+     * @see ObservableValue#when(ObservableValue)
      * @since 20
      */
     private ReadOnlyBooleanProperty shown;
@@ -1430,7 +1433,7 @@ public abstract class Node implements EventTarget, Styleable {
         if (shown == null) {
             ObservableValue<Boolean> ov = sceneProperty()
                 .flatMap(Scene::windowProperty)
-                .flatMap(Window::showingProperty);
+                .flatMap(Window::showingProperty);  // note: the null case is handled by the delegate with an orElse(false)
 
             shown = new ReadOnlyBooleanDelegate(Node.this, "shown", ov);
         }
