@@ -1408,8 +1408,8 @@ public abstract class Node implements EventTarget, Styleable {
     /**
      * Indicates whether or not this {@code Node} is shown. A node is considered shown if it's
      * part of a {@code Scene} which is part of a {@code Window} whose
-     * {@link shown #Window::showingProperty} is {@code true}. The {@link visibility #visibleProperty}
-     * of the node or its scene do not affect this property.
+     * {@link Window#showingProperty showing property} is {@code true}. The {@link Node#visibleProperty visibility}
+     * of the node or its scene does not affect this property.
      * <p>
      * This property can be used in conjunction with {@link ObservableValue#when} to
      * create bindings which are only actively listening to their source when the node is shown.
