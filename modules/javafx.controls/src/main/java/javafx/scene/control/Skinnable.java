@@ -36,9 +36,9 @@ import javafx.beans.property.ObjectProperty;
  */
 public interface Skinnable {
     /**
-     * The Skin is responsible for rendering this {@code Skinnable}. From the
+     * The Skin responsible for rendering this {@code Skinnable}. From the
      * perspective of the {@code Skinnable}, the {@code Skin} is a black box.
-     * It listens and responds to changes in state in a {@code Skinnable}.
+     * It listens and responds to changes in state of its {@code Skinnable}.
      * <p>
      * Some implementations of {@code Skinnable} define a one-to-one relationship between {@code Skinnable}
      * and its {@code Skin}. Every {@code Skin} maintains a back reference to the

@@ -223,9 +223,8 @@ public abstract class Control extends Region implements Skinnable {
      * {@code Control} via the {@link Skin#getSkinnable()} method.
      * <p>
      * To ensure a one-to-one relationship between a {@code Control} and its {@code Skin},
-     * setting the skin property to a non-null {@code Skin} first checks
-     * the return value of {@link Skin#getSkinnable()} against this Control,
-     * and throws an {@code IllegalArgumentException} if it is not the same.
+     * skins which were not created for this control are rejected with an
+     * {@code IllegalArgumentException}.
      * Then, {@link Skin#dispose()} is called on the old skin, disconnecting
      * it from the corresponding {@code Control}.  And finally, {@link Skin#install()} is invoked
      * to complete the process.  Only inside of {@link Skin#install()} should {@code Skin} implementations

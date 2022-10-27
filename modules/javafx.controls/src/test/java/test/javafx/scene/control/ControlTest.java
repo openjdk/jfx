@@ -809,10 +809,12 @@ public class ControlTest {
     }
 
     /** Verifies that an IllegalArgumentException is thrown when setting skin for an unrelated control JDK-8290844 */
-    @Test(expected=IllegalArgumentException.class)
+    @Test
     public void skinMustCorrespondToControl() {
         SkinStub skin = new SkinStub(new ControlStub());
-        c.setSkin(skin);
+        assertThrows(IllegalArgumentException.class, () -> {
+            c.setSkin(skin);
+        });
     }
 
     @Test public void skinPropertyHasBeanReference() {
