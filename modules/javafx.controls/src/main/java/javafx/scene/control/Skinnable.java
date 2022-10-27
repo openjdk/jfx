@@ -42,9 +42,8 @@ public interface Skinnable {
      * <p>
      * Some implementations of {@code Skinnable} define a one-to-one relationship between {@code Skinnable}
      * and its {@code Skin}. Every {@code Skin} maintains a back reference to the
-     * {@code Skinnable}.  When required, this relationship is enforced inside {@link Skinnable#setSkin(Skin)} method
-     * which checks the return value of {@link Skin#getSkinnable()} against this {@code Skinnable},
-     * throwing an {@code IllegalArgumentException} if it is not the same.
+     * {@code Skinnable}.  When required, this relationship is enforced when the {@code Skin} is set,
+     * throwing an {@code IllegalArgumentException}.
      * <p>
      * A skin may be null.
      *
