@@ -72,30 +72,29 @@ public interface Skin<C extends Skinnable> {
     public Node getNode();
 
     /**
-     * Called once when {@link Skin} is set, after the
+     * Called once when {@link Skin} is set, or after the
      * previous skin, if any, has been uninstalled via its {@link #dispose()} method.
-     * This method allows a Skin to register listeners, add child nodes, set
-     * required properties and/or event handlers.
+     * The skin can now safely make changes to its associated control, like registering listeners,
+     * adding child nodes, and modifying properties and event handlers.
      * <p>
      * Application code must not call this method.
      * <p>
      * The default implementation of this method does nothing.
      *
      * @implNote
-     * Most implementations of Skin
-     * do not need to implement {@code install} unless they must set one or more
-     * properties in the corresponding Skinnable.
+     * Skins only need to implement {@code install} if they need to make direct changes to the control
+     * like overwriting properties or event handlers.  Such skins should ensure these changes are undone in
+     * their {@link #dispose()} method.
      *
      * @since 20
      */
     default public void install() { }
 
     /**
-     * Disconnects the {@link Skin} from its {@link Skinnable}.
-     * This method allows a {@link Skin} to implement any logic necessary to clean up itself after
-     * the {@code Skin} is no longer needed. It may be used to release native resources.
-     * The methods {@link #getSkinnable()} and {@link #getNode()}
-     * should return null following a call to dispose.
+     * Called when a previously installed skin is about to be removed from its associated control.
+     * This allows the skin to do clean up, like removing listeners and bindings, and undo any changes
+     * to the control's properties.
+     * After this method completes, {@link #getSkinnable()} and {@link #getNode()} should return {@code null}.
      * <p>
      * Calling {@link #dispose()} more than once has no effect.
      */
