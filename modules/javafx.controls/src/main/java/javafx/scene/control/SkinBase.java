@@ -82,11 +82,16 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
      * This is part of the workaround introduced during delomboking. We probably will
      * want to adjust the way listeners are added rather than continuing to use this
      * map (although it doesn't really do much harm).
+     *
+     * TODO remove after migration to ListenerHelper
      */
-    @Deprecated // replace with listenerHelper
     private LambdaMultiplePropertyChangeListenerHandler lambdaChangeListenerHandler;
 
     private ListenerHelper listenerHelper;
+    
+    static {
+        ListenerHelper.setAccessor((skin) -> skin.listenerHelper());
+    }
 
 
     /* *************************************************************************
@@ -219,7 +224,7 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
      *
      * @since 20
      */
-    protected ListenerHelper listenerHelper() {
+    ListenerHelper listenerHelper() {
         if (listenerHelper == null) {
             listenerHelper = new ListenerHelper();
         }
@@ -237,7 +242,6 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
      *  may be {@code null}
      * @since 9
      */
-    // TODO I would like to deprecate and remove these methods, and replace them by listenerHelper().add**()
     protected final void registerChangeListener(ObservableValue<?> observable, Consumer<ObservableValue<?>> operation) {
         if (lambdaChangeListenerHandler == null) {
             lambdaChangeListenerHandler = new LambdaMultiplePropertyChangeListenerHandler();

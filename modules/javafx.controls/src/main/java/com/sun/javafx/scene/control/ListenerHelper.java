@@ -27,13 +27,17 @@ package com.sun.javafx.scene.control;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.function.Consumer;
-
+import java.util.function.Function;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.ListChangeListener;
+import javafx.collections.MapChangeListener;
 import javafx.collections.ObservableList;
+import javafx.collections.ObservableMap;
+import javafx.collections.ObservableSet;
+import javafx.collections.SetChangeListener;
 import javafx.concurrent.Task;
 import javafx.event.Event;
 import javafx.event.EventHandler;
@@ -41,6 +45,7 @@ import javafx.event.EventType;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.MenuItem;
+import javafx.scene.control.SkinBase;
 import javafx.scene.control.TableColumnBase;
 import javafx.scene.control.TreeItem;
 import javafx.scene.transform.Transform;
@@ -66,7 +71,7 @@ import javafx.stage.Window;
 public class ListenerHelper implements IDisconnectable {
     private WeakReference<Object> ownerRef;
     private final ArrayList<IDisconnectable> items = new ArrayList<>(4);
-    private static final Object KEY = new Object();
+    private static Function<SkinBase<?>,ListenerHelper> accessor;
 
     public ListenerHelper(Object owner) {
         ownerRef = new WeakReference<>(owner);
@@ -75,21 +80,17 @@ public class ListenerHelper implements IDisconnectable {
     public ListenerHelper() {
     }
 
-    public static ListenerHelper get(Node n) {
-        Object x = n.getProperties().get(KEY);
-        if (x instanceof ListenerHelper h) {
-            return h;
-        }
-        ListenerHelper d = new ListenerHelper(n);
-        n.getProperties().put(KEY, d);
-        return d;
+    public static void setAccessor(Function<SkinBase<?>,ListenerHelper> a) {
+        accessor = a;
     }
 
-    public static void disconnect(Node n) {
-        Object x = n.getProperties().remove(KEY);
-        if (x instanceof ListenerHelper h) {
-            h.disconnect();
-        }
+    public static ListenerHelper get(SkinBase<?> skin) {
+        return accessor.apply(skin);
+    }
+
+    public static void disconnect(SkinBase<?> skin) {
+        ListenerHelper h = get(skin);
+        h.disconnect();
     }
 
     public IDisconnectable addDisconnectable(Runnable r) {
@@ -336,6 +337,62 @@ public class ListenerHelper implements IDisconnectable {
         return li;
     }
 
+    // map change listener
+
+    public <K,V> IDisconnectable addMapChangeListener(ObservableMap<K,V> list, MapChangeListener<K,V> listener) {
+        if (listener == null) {
+            throw new NullPointerException("Listener must be specified.");
+        }
+
+        MaChLi<K,V> li = new MaChLi<K,V>() {
+            @Override
+            public void disconnect() {
+                list.removeListener(this);
+                items.remove(this);
+            }
+
+            @Override
+            public void onChanged(Change<? extends K, ? extends V> ch) {
+                if (isAliveOrDisconnect()) {
+                    listener.onChanged(ch);
+                }
+            }
+        };
+
+        items.add(li);
+        list.addListener(li);
+
+        return li;
+    }
+
+    // set change listeners
+
+    public <T> IDisconnectable addSetChangeListener(ObservableSet<T> set, SetChangeListener<T> listener) {
+        if (listener == null) {
+            throw new NullPointerException("Listener must be specified.");
+        }
+
+        SeChLi<T> li = new SeChLi<T>() {
+            @Override
+            public void disconnect() {
+                set.removeListener(this);
+                items.remove(this);
+            }
+
+            @Override
+            public void onChanged(Change<? extends T> ch) {
+                if (isAliveOrDisconnect()) {
+                    listener.onChanged(ch);
+                }
+            }
+        };
+
+        items.add(li);
+        set.addListener(li);
+
+        return li;
+    }
+
     // event handlers
 
     public <T extends Event> IDisconnectable addEventHandler(Object x, EventType<T> t, EventHandler<T> handler) {
@@ -435,6 +492,10 @@ public class ListenerHelper implements IDisconnectable {
     protected static abstract class InLi implements IDisconnectable, InvalidationListener { }
 
     protected static abstract class LiChLi<T> implements IDisconnectable, ListChangeListener<T> { }
+
+    protected static abstract class MaChLi<K,V> implements IDisconnectable, MapChangeListener<K,V> { }
+
+    protected static abstract class SeChLi<T> implements IDisconnectable, SetChangeListener<T> { }
 
     protected abstract class EvHa<T extends Event> implements IDisconnectable, EventHandler<T> {
         private final EventHandler<T> handler;

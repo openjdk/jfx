@@ -26,31 +26,32 @@ package test.javafx.scene.control;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
-
 import java.lang.ref.WeakReference;
 import java.util.concurrent.atomic.AtomicInteger;
-
+import org.junit.Test;
+import com.sun.javafx.event.EventUtil;
+import com.sun.javafx.scene.control.ListenerHelper;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
+import javafx.collections.MapChangeListener;
 import javafx.collections.ObservableList;
+import javafx.collections.ObservableMap;
+import javafx.collections.ObservableSet;
+import javafx.collections.SetChangeListener;
 import javafx.concurrent.Task;
 import javafx.event.EventTarget;
 import javafx.scene.Group;
 import javafx.scene.Scene;
+import javafx.scene.control.Label;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TreeItem;
+import javafx.scene.control.skin.LabelSkin;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Region;
 import javafx.scene.transform.Scale;
 import javafx.stage.Stage;
-
-import org.junit.Test;
-
-import com.sun.javafx.event.EventUtil;
-import com.sun.javafx.scene.control.ListenerHelper;
-
 import test.com.sun.javafx.scene.control.infrastructure.MouseEventGenerator;
 import test.util.memory.JMemoryBuddy;
 
@@ -61,15 +62,15 @@ public class TestListenerHelper {
     @Test
     public void testStaticDisconnect() {
         AtomicInteger ct = new AtomicInteger();
-        Group node = new Group();
-        ListenerHelper h = ListenerHelper.get(node);
+        LabelSkin skin = new LabelSkin(new Label("yo"));
+        ListenerHelper h = ListenerHelper.get(skin);
         assertNotNull(h);
 
         h.addDisconnectable(() -> {
             ct.incrementAndGet();
         });
 
-        ListenerHelper.disconnect(node);
+        ListenerHelper.disconnect(skin);
         assertEquals(1, ct.get());
     }
 
@@ -339,6 +340,46 @@ public class TestListenerHelper {
         h.disconnect();
 
         list.add("2");
+        assertEquals(1, ct.get());
+    }
+
+    // set change listeners
+
+    @Test
+    public void testSetChangeListener() {
+        ListenerHelper h = new ListenerHelper();
+        ObservableSet<String> list = FXCollections.observableSet();
+        AtomicInteger ct = new AtomicInteger();
+        SetChangeListener<String> li = (ch) -> ct.incrementAndGet();
+
+        h.addSetChangeListener(list, li);
+
+        list.add("1");
+        assertEquals(1, ct.get());
+
+        h.disconnect();
+
+        list.add("2");
+        assertEquals(1, ct.get());
+    }
+
+    // map change listeners
+
+    @Test
+    public void testMapChangeListener() {
+        ListenerHelper h = new ListenerHelper();
+        ObservableMap<String, String> m = FXCollections.observableHashMap();
+        AtomicInteger ct = new AtomicInteger();
+        MapChangeListener<String, String> li = (ch) -> ct.incrementAndGet();
+
+        h.addMapChangeListener(m, li);
+
+        m.put("1", "a");
+        assertEquals(1, ct.get());
+
+        h.disconnect();
+
+        m.put("2", "b");
         assertEquals(1, ct.get());
     }
 
