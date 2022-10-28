@@ -26,8 +26,8 @@
 package test.javafx.concurrent;
 
 import java.util.concurrent.Semaphore;
-import javafx.concurrent.Task;
 import javafx.concurrent.TaskShim;
+import javafx.concurrent.Worker;
 
 /**
  * For testing purposes, we use this subclass of Task that will fake out the
@@ -59,7 +59,7 @@ public abstract class AbstractTask extends TaskShim<String> {
 
     // Simulates scheduling the concurrent for execution
     public void simulateSchedule() {
-        shim_setState(State.SCHEDULED);
+        shim_setState(Worker.State.SCHEDULED);
     }
 
     // For most tests, we want to pretend that we are on the FX app thread, always.

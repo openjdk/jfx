@@ -65,7 +65,7 @@ public class TaskSimpleTest {
      ***********************************************************************/
 
     @Test public void stateShouldBe_READY_ByDefault() {
-        assertEquals(Task.State.READY, task.getState());
+        assertEquals(Worker.State.READY, task.getState());
     }
 
     @Test public void workDoneShouldBe_Indeterminate_ByDefault() {

@@ -49,7 +49,7 @@ public abstract class TaskShim<V> extends Task<V> {
         super.runLater(r);
     }
 
-    public void shim_setState(State value) {
+    public void shim_setState(Worker.State value) {
         super.setState(value);
     }
 
