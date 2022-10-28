@@ -26,11 +26,12 @@
 package javafx.scene.control.skin;
 
 import static com.sun.javafx.scene.control.skin.resources.ControlResources.getString;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-
+import com.sun.javafx.scene.control.ListenerHelper;
+import com.sun.javafx.scene.control.behavior.PaginationBehavior;
+import com.sun.javafx.scene.control.skin.Utils;
 import javafx.animation.Interpolator;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
@@ -39,9 +40,7 @@ import javafx.application.Platform;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
-import javafx.beans.value.ChangeListener;
 import javafx.beans.value.WritableValue;
-import javafx.collections.ListChangeListener;
 import javafx.css.CssMetaData;
 import javafx.css.Styleable;
 import javafx.css.StyleableBooleanProperty;
@@ -77,9 +76,6 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
 import javafx.scene.shape.Rectangle;
 import javafx.util.Duration;
-
-import com.sun.javafx.scene.control.behavior.PaginationBehavior;
-import com.sun.javafx.scene.control.skin.Utils;
 
 /**
  * Default skin implementation for the {@link Pagination} control.
@@ -202,23 +198,23 @@ public class PaginationSkin extends SkinBase<Pagination> {
 
         getChildren().addAll(currentStackPane, nextStackPane, navigation);
 
-        listenerHelper().addInvalidationListener(getSkinnable().maxPageIndicatorCountProperty(), (o) -> {
+        ListenerHelper.get(this).addInvalidationListener(getSkinnable().maxPageIndicatorCountProperty(), (o) -> {
             resetIndiciesAndNav();
         });
 
-        listenerHelper().addChangeListener(getSkinnable().widthProperty(), true, (ev) -> {
+        ListenerHelper.get(this).addChangeListener(getSkinnable().widthProperty(), true, (ev) -> {
             clipRect.setWidth(getSkinnable().getWidth());
         });
 
-        listenerHelper().addChangeListener(getSkinnable().heightProperty(), true, (ev) -> {
+        ListenerHelper.get(this).addChangeListener(getSkinnable().heightProperty(), true, (ev) -> {
             clipRect.setHeight(getSkinnable().getHeight());
         });
 
-        listenerHelper().addChangeListener(getSkinnable().pageCountProperty(), (ev) -> {
+        ListenerHelper.get(this).addChangeListener(getSkinnable().pageCountProperty(), (ev) -> {
             resetIndiciesAndNav();
         });
 
-        listenerHelper().addChangeListener(getSkinnable().pageFactoryProperty(), (ev) -> {
+        ListenerHelper.get(this).addChangeListener(getSkinnable().pageFactoryProperty(), (ev) -> {
             if (animate && timeline != null) {
                 // If we are in the middle of a page animation.
                 // Speedup and finish the animation then update the page factory.
@@ -493,7 +489,7 @@ public class PaginationSkin extends SkinBase<Pagination> {
     private void initializeSwipeAndTouchHandlers() {
         final Pagination control = getSkinnable();
 
-        listenerHelper().addEventHandler(control, TouchEvent.TOUCH_PRESSED, e -> {
+        ListenerHelper.get(this).addEventHandler(control, TouchEvent.TOUCH_PRESSED, e -> {
             if (touchEventId == -1) {
                 touchEventId = e.getTouchPoint().getId();
             }
@@ -506,7 +502,7 @@ public class PaginationSkin extends SkinBase<Pagination> {
             e.consume();
         });
 
-        listenerHelper().addEventHandler(control, TouchEvent.TOUCH_MOVED, e -> {
+        ListenerHelper.get(this).addEventHandler(control, TouchEvent.TOUCH_MOVED, e -> {
             if (touchEventId != e.getTouchPoint().getId()) {
                 return;
             }
@@ -584,7 +580,7 @@ public class PaginationSkin extends SkinBase<Pagination> {
             e.consume();
         });
 
-        listenerHelper().addEventHandler(control, TouchEvent.TOUCH_RELEASED, e -> {
+        ListenerHelper.get(this).addEventHandler(control, TouchEvent.TOUCH_RELEASED, e -> {
             if (touchEventId != e.getTouchPoint().getId()) {
                 return;
             } else {
@@ -918,7 +914,7 @@ public class PaginationSkin extends SkinBase<Pagination> {
                 requestLayout();
             });
 
-            listenerHelper().addChangeListener(getSkinnable().currentPageIndexProperty(), (src, old, cur) -> {
+            ListenerHelper.get(PaginationSkin.this).addChangeListener(getSkinnable().currentPageIndexProperty(), (src, old, cur) -> {
                 previousIndex = old.intValue();
                 currentIndex = cur.intValue();
                 updatePageIndex();
@@ -1299,7 +1295,7 @@ public class PaginationSkin extends SkinBase<Pagination> {
             this.pageNumber = pageNumber;
             setFocusTraversable(false);
 
-            listenerHelper().addListChangeListener(getSkinnable().getStyleClass(), (ch) -> {
+            ListenerHelper.get(PaginationSkin.this).addListChangeListener(getSkinnable().getStyleClass(), (ch) -> {
                 setIndicatorType();
             });
             setIndicatorType();
@@ -1314,7 +1310,7 @@ public class PaginationSkin extends SkinBase<Pagination> {
                     }
             });
 
-            listenerHelper().addChangeListener(tooltipVisibleProperty(), true, (visible) -> {
+            ListenerHelper.get(PaginationSkin.this).addChangeListener(tooltipVisibleProperty(), true, (visible) -> {
                 setTooltipVisible(visible);
             });
 
