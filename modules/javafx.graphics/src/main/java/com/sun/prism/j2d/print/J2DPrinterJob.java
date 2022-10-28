@@ -1154,7 +1154,7 @@ public class J2DPrinterJob implements PrinterJobImpl {
         }
 
         public int print(Graphics g, PageFormat pf, int pageIndex) {
-            if (jobError || jobDone || jobCanceled || !getPage(pageIndex)) {
+            if (jobError || jobCanceled || jobDone && !getPage(pageIndex)) {
                 return Printable.NO_SUCH_PAGE;
             }
             int x = (int)pf.getImageableX();
