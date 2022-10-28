@@ -372,28 +372,32 @@ public class JFXPanel extends JComponent {
         Rectangle awtBounds = graphicsConfiguration.getBounds();
         AffineTransform awtScales = graphicsConfiguration.getDefaultTransform();
         for (Screen screen : Screen.getScreens()) {
-            if ((Math.abs(screen.getPlatformX() - awtBounds.getX() * awtScales.getScaleX()) < 0.001) &&
-                    (Math.abs(screen.getPlatformY() - awtBounds.getY() * awtScales.getScaleY()) < 0.001) &&
-                    (Math.abs(screen.getPlatformWidth() - awtBounds.getWidth()) < 0.001) &&
-                    (Math.abs(screen.getPlatformHeight() - awtBounds.getHeight()) < 0.001)) {
+            if ((Math.abs(screen.getPlatformX() - awtBounds.getX()) < 2.) &&
+                    (Math.abs(screen.getPlatformY() - awtBounds.getY()) < 2.) &&
+                    (Math.abs(screen.getPlatformWidth() - awtScales.getScaleX() * awtBounds.getWidth()) < 2.) &&
+                    (Math.abs(screen.getPlatformHeight() - awtScales.getScaleY() * awtBounds.getHeight()) < 2.)) {
                 return screen;
             }
         }
         return null;
     }
 
-    private Dimension2D getSwingToFxPixel(GraphicsConfiguration g, float wx, float wy) {
+    private Dimension2D convertSwingToFxPixel(GraphicsConfiguration g, float wx, float wy) {
         float newx, newy;
         Screen screen = findScreen(getGraphicsConfiguration());
         if (screen != null) {
+            AffineTransform awtScales = getGraphicsConfiguration().getDefaultTransform();
             float pScaleX = screen.getPlatformScaleX();
             float pScaleY = screen.getPlatformScaleY();
             float sx = screen.getX();
             float sy = screen.getY();
+            float awtScaleX = (float)awtScales.getScaleX();
+            float awtScaleY = (float)awtScales.getScaleY();
+
             float px = screen.getPlatformX();
             float py = screen.getPlatformY();
-            newx = sx + (wx - px) / pScaleX;
-            newy = sy + (wy - py) / pScaleY;
+            newx = sx + (wx - px) * awtScaleX / pScaleX;
+            newy = sy + (wy - py) * awtScaleY / pScaleY;
         } else {
             newx = wx;
             newy = wy;
@@ -446,7 +450,7 @@ public class JFXPanel extends JComponent {
         if (e.getID() == MouseEvent.MOUSE_PRESSED || e.getID() == MouseEvent.MOUSE_RELEASED) {
             popupTrigger = e.isPopupTrigger();
         }
-        Dimension2D onScreen = getSwingToFxPixel(getGraphicsConfiguration(), e.getXOnScreen(), e.getYOnScreen());
+        Dimension2D onScreen = convertSwingToFxPixel(getGraphicsConfiguration(), e.getXOnScreen(), e.getYOnScreen());
         int fxXOnScreen = (int) onScreen.getWidth();
         int fxYOnScreen = (int) onScreen.getHeight();
 
@@ -641,7 +645,7 @@ public class JFXPanel extends JComponent {
         synchronized (getTreeLock()) {
             if (isShowing()) {
                 Point p = getLocationOnScreen();
-                Dimension2D fxcoord = getSwingToFxPixel(getGraphicsConfiguration(), p.x, p.y);
+                Dimension2D fxcoord = convertSwingToFxPixel(getGraphicsConfiguration(), p.x, p.y);
                 screenX = (int)fxcoord.getWidth();
                 screenY = (int)fxcoord.getHeight();
                 return true;
