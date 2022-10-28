@@ -939,7 +939,7 @@ public class J2DPrinterJob implements PrinterJobImpl {
         }
     }
 
-    private static class PageInfo {
+    protected static class PageInfo {
 
         private PageLayout pageLayout;
         private Node node;
@@ -1068,12 +1068,7 @@ public class J2DPrinterJob implements PrinterJobImpl {
             }
 
             if (currPageInfo != null) {
-                if (Toolkit.getToolkit().isFxUserThread()) {
-                    currPageInfo.clearScene();
-                } else {
-                    Application.
-                        invokeAndWait(new ClearSceneRunnable(currPageInfo));
-                }
+                clearScene(currPageInfo);
             }
             currPageInfo = null;
             setPageDone(true);
@@ -1097,6 +1092,15 @@ public class J2DPrinterJob implements PrinterJobImpl {
             currPageIndex = pageIndex;
             currPageFormat = getPageFormatFromLayout(currPageInfo.getPageLayout());
             return true;
+        }
+
+        protected void clearScene(PageInfo pageInfo) {
+            if (Toolkit.getToolkit().isFxUserThread()) {
+                pageInfo.clearScene();
+            } else {
+                Application.
+                        invokeAndWait(new ClearSceneRunnable(pageInfo));
+            }
         }
 
         private PageFormat getPageFormatFromLayout(PageLayout layout) {
@@ -1157,13 +1161,13 @@ public class J2DPrinterJob implements PrinterJobImpl {
             int y = (int)pf.getImageableY();
             int w = (int)pf.getImageableWidth();
             int h = (int)pf.getImageableHeight();
-            Node appNode = currPageInfo.getNode();
             g.translate(x, y);
-            printNode(appNode, g, w, h);
+            printNode(g, w, h);
             return Printable.PAGE_EXISTS;
         }
 
-        private void printNode(Node node, Graphics g, int w, int h) {
+        protected void printNode(Graphics g, int w, int h) {
+            Node node = currPageInfo.getNode();
             PrismPrintGraphics ppg =
                     new PrismPrintGraphics((Graphics2D) g, w, h);
             NGNode pgNode = NodeHelper.getPeer(node);
@@ -1185,10 +1189,6 @@ public class J2DPrinterJob implements PrinterJobImpl {
         public Printable getPrintable(int pageIndex) {
             getPage(pageIndex);
             return this;
-        }
-
-        protected PageFormat getCurrentPageFormat() {
-            return currPageFormat;
         }
 
         public PageFormat getPageFormat(int pageIndex) {
