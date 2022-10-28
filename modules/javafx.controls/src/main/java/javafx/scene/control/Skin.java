@@ -84,7 +84,7 @@ public interface Skin<C extends Skinnable> {
      * @implNote
      * Skins only need to implement {@code install} if they need to make direct changes to the control
      * like overwriting properties or event handlers.  Such skins should ensure these changes are undone in
-     * their {@link #dipose()} method.
+     * their {@link #dispose()} method.
      *
      * @since 20
      */
