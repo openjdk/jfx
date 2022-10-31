@@ -88,7 +88,7 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
     private LambdaMultiplePropertyChangeListenerHandler lambdaChangeListenerHandler;
 
     private ListenerHelper listenerHelper;
-    
+
     static {
         ListenerHelper.setAccessor((skin) -> skin.listenerHelper());
     }
