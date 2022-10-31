@@ -72,8 +72,8 @@ public interface Skin<C extends Skinnable> {
     public Node getNode();
 
     /**
-     * Called once when {@link Skin} is set, or after the
-     * previous skin, if any, has been uninstalled via its {@link #dispose()} method.
+     * Called once when {@link Skin} is set.  This method is called after the previous skin,
+     * if any, has been uninstalled via its {@link #dispose()} method.
      * The skin can now safely make changes to its associated control, like registering listeners,
      * adding child nodes, and modifying properties and event handlers.
      * <p>
