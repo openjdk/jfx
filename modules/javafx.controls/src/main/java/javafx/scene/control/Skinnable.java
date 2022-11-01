@@ -36,18 +36,15 @@ import javafx.beans.property.ObjectProperty;
  */
 public interface Skinnable {
     /**
-     * The Skin is responsible for rendering this {@code Skinnable}. From the
+     * The Skin responsible for rendering this {@code Skinnable}. From the
      * perspective of the {@code Skinnable}, the {@code Skin} is a black box.
-     * It listens and responds to changes in state in a {@code Skinnable}.
+     * It listens and responds to changes in state of its {@code Skinnable}.
      * <p>
-     * There is typically a one-to-one relationship between a {@code Skinnable} and its
-     * {@code Skin}. Every {@code Skin} maintains a back reference to the
-     * {@code Skinnable}.
-     * <p>
-     * To ensure a one-to-one relationship between a {@code Skinnable} and its
-     * {@code Skin}, some implementations of {@link Skinnable#setSkin(Skin)} method will check
-     * the return value of {@link Skin#getSkinnable()} against this Skinnable,
-     * and throw an {@code IllegalArgumentException} if it is not the same.
+     * Some implementations of {@code Skinnable} define a one-to-one relationship between {@code Skinnable}
+     * and its {@code Skin}. Every {@code Skin} maintains a back reference to the
+     * {@code Skinnable}.  When required, this relationship is enforced when the {@code Skin} is set,
+     * throwing an {@code IllegalArgumentException} if the return value of {@link Skin#getSkinnable()}
+     * is not the same as this {@code Skinnable}.
      * <p>
      * A skin may be null.
      *

@@ -36,7 +36,7 @@ import javafx.scene.Node;
  * <ul>
  * <li>instantiation
  * <li>configuration, such as passing of dependencies and parameters
- * <li>inside of {@link Control#setSkin(Skin)}:
+ * <li>when the skin is set on a {@link Skinnable}:
  * <ul>
  * <li>uninstalling of the old skin via its {@link #dispose()} method
  * <li>installing of the new skin via {@link #install()}
@@ -72,29 +72,31 @@ public interface Skin<C extends Skinnable> {
     public Node getNode();
 
     /**
-     * Called by {@link Skinnable#setSkin(Skin)} after the
-     * previous skin, if any, has been uninstalled via its {@link #dispose()} method.
-     * This method allows a Skin to register listeners, add child nodes, set
-     * required properties and/or event handlers.
+     * Called once when {@link Skin} is set.  This method is called after the previous skin,
+     * if any, has been uninstalled via its {@link #dispose()} method.
+     * The skin can now safely make changes to its associated control, like registering listeners,
+     * adding child nodes, and modifying properties and event handlers.
+     * <p>
+     * Application code must not call this method.
      * <p>
      * The default implementation of this method does nothing.
      *
      * @implNote
-     * Most implementations of Skin in the <code>javafx.controls</code> module
-     * do not need to implement {@link Skin#install()} unless they must set one or more
-     * properties in the corresponding Skinnable.
+     * Skins only need to implement {@code install} if they need to make direct changes to the control
+     * like overwriting properties or event handlers.  Such skins should ensure these changes are undone in
+     * their {@link #dispose()} method.
      *
      * @since 20
      */
     default public void install() { }
 
     /**
-     * Called by a Skinnable when the Skin is replaced on the Skinnable. This method
-     * allows a Skin to implement any logic necessary to clean up itself after
-     * the Skin is no longer needed. It may be used to release native resources.
-     * The methods {@link #getSkinnable()} and {@link #getNode()}
-     * should return null following a call to dispose. Calling dispose twice
-     * has no effect.
+     * Called when a previously installed skin is about to be removed from its associated control.
+     * This allows the skin to do clean up, like removing listeners and bindings, and undo any changes
+     * to the control's properties.
+     * After this method completes, {@link #getSkinnable()} and {@link #getNode()} should return {@code null}.
+     * <p>
+     * Calling {@link #dispose()} more than once has no effect.
      */
     public void dispose();
 }

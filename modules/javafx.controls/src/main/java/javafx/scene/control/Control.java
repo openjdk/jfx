@@ -223,12 +223,18 @@ public abstract class Control extends Region implements Skinnable {
      * {@code Control} via the {@link Skin#getSkinnable()} method.
      * <p>
      * To ensure a one-to-one relationship between a {@code Control} and its {@code Skin},
-     * {@link Control#setSkin(Skin)} method will check the return value of {@link Skin#getSkinnable()}
-     * against this Control, and throw an {@code IllegalArgumentException} if it is not the same.
+     * skins which were not created for this control are rejected with an
+     * {@code IllegalArgumentException}.
+     * Then, {@link Skin#dispose()} is called on the old skin, disconnecting
+     * it from the corresponding {@code Control}.  And finally, {@link Skin#install()} is invoked
+     * to complete the process.  Only inside of {@link Skin#install()} should {@code Skin} implementations
+     * set/overwrite properties of their {@code Control} (though some operations like adding/removing a listener
+     * can still be done in the {@code Skin} constructor).
      * <p>
      * A skin may be null.
      *
      * @return the skin property for this control
+     * @throws IllegalArgumentException if {@code (skin != null && skin.getSkinnable() != this)}
      */
     @Override public final ObjectProperty<Skin<?>> skinProperty() { return skin; }
     @Override public final void setSkin(Skin<?> value) {
@@ -249,7 +255,7 @@ public abstract class Control extends Region implements Skinnable {
                 if (skin.getSkinnable() != Control.this) {
                     unbind();
                     set(oldValue);
-                    throw new IllegalArgumentException("Skin does not correspond to this Skinnable");
+                    throw new IllegalArgumentException("Skin does not correspond to this Control");
                 }
             }
 
