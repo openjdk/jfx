@@ -226,7 +226,9 @@ static void mpegts_demuxer_class_init(MpegTSDemuxerClass *g_class)
     G_OBJECT_CLASS (g_class)->finalize = GST_DEBUG_FUNCPTR(mpegts_demuxer_finalize);
     gstelement_class->change_state = mpegts_demuxer_change_state;
 
+#if !NO_REGISTER_ALL
     av_register_all();
+#endif
 }
 
 static void mpegts_demuxer_init(MpegTSDemuxer *demuxer)
@@ -515,7 +517,11 @@ static void mpegts_demuxer_add_pad(MpegTSDemuxer *demuxer, GstPad *pad, GstCaps 
     gst_element_add_pad(GST_ELEMENT(demuxer), pad);
 }
 
+#if CODEC_PAR
+static GstBuffer* get_codec_extradata(AVCodecParameters *codec)
+#else
 static GstBuffer* get_codec_extradata(AVCodecContext *codec)
+#endif
 {
     GstBuffer *codec_data = NULL;
     if (codec->extradata)
@@ -536,28 +542,42 @@ static void mpegts_demuxer_check_streams(MpegTSDemuxer *demuxer)
     int i;
     for (i = 0; i < demuxer->context->nb_streams; i++)
     {
+#if CODEC_PAR
+        switch (demuxer->context->streams[i]->codecpar->codec_type)
+#else
         switch (demuxer->context->streams[i]->codec->codec_type)
+#endif
         {
             case AVMEDIA_TYPE_VIDEO:
 
                 if (demuxer->video.stream_index < 0)
                 {
                     AVStream *stream = demuxer->context->streams[i];
-#if NEW_CODEC_ID
+#if CODEC_PAR
+                    if (stream->codecpar->codec_id == AV_CODEC_ID_H264)
+#elif NEW_CODEC_ID
                     if (stream->codec->codec_id == AV_CODEC_ID_H264)
 #else
                     if (stream->codec->codec_id == CODEC_ID_H264)
 #endif
                     {
                         demuxer->video.stream_index = i;
+#if CODEC_PAR
+                        demuxer->video.codec_id = stream->codecpar->codec_id;
+#else
                         demuxer->video.codec_id = stream->codec->codec_id;
+#endif
 
 #ifdef ENABLE_VIDEO
                         gchar *name = g_strdup_printf ("video%02d", i);
                         GstCaps *caps = gst_caps_new_simple ("video/x-h264",
                                                              "hls", G_TYPE_BOOLEAN, TRUE, NULL);
 
+#if CODEC_PAR
+                        GstBuffer *codec_data = get_codec_extradata(stream->codecpar);
+#else
                         GstBuffer *codec_data = get_codec_extradata(stream->codec);
+#endif
                         if (codec_data)
                             gst_caps_set_simple(caps, "codec_data", GST_TYPE_BUFFER, codec_data, NULL);
 
@@ -574,24 +594,38 @@ static void mpegts_demuxer_check_streams(MpegTSDemuxer *demuxer)
                 if (demuxer->audio.stream_index < 0)
                 {
                     AVStream *stream = demuxer->context->streams[i];
-#if NEW_CODEC_ID
+#if CODEC_PAR
+                    if (stream->codecpar->codec_id == AV_CODEC_ID_AAC)
+#elif NEW_CODEC_ID
                     if (stream->codec->codec_id == AV_CODEC_ID_AAC)
 #else
                     if (stream->codec->codec_id == CODEC_ID_AAC)
 #endif
                     {
                         demuxer->audio.stream_index = i;
+#if CODEC_PAR
+                        demuxer->audio.codec_id = stream->codecpar->codec_id;
+                        gint channels = stream->codecpar->ch_layout.nb_channels;
+                        gint sample_rate = stream->codecpar->sample_rate;
+                        gint bit_rate = stream->codecpar->bit_rate;
+#else
                         demuxer->audio.codec_id = stream->codec->codec_id;
-
+                        gint channels = stream->codec->channels;
+                        gint sample_rate = stream->codec->sample_rate;
+                        gint bit_rate = stream->codec->bit_rate;
+#endif
                         gchar *name = g_strdup_printf ("audio%02d", i);
                         GstCaps *caps = gst_caps_new_simple ("audio/mpeg",
                                                     "mpegversion", G_TYPE_INT, 4,
-                                                    "channels", G_TYPE_INT, stream->codec->channels,
-                                                    "rate", G_TYPE_INT, stream->codec->sample_rate,
-                                                    "bitrate", G_TYPE_INT, stream->codec->bit_rate,
+                                                    "channels", G_TYPE_INT, channels,
+                                                    "rate", G_TYPE_INT, sample_rate,
+                                                    "bitrate", G_TYPE_INT, bit_rate,
                                                     "hls", G_TYPE_BOOLEAN, TRUE, NULL);
-
+#if CODEC_PAR
+                        GstBuffer *codec_data = get_codec_extradata(stream->codecpar);
+#else
                         GstBuffer *codec_data = get_codec_extradata(stream->codec);
+#endif
                         if (codec_data)
                             gst_caps_set_simple(caps, "codec_data", GST_TYPE_BUFFER, codec_data, NULL);
 
@@ -631,7 +665,11 @@ static inline GstBuffer* packet_to_buffer(AVPacket *packet)
 
 static inline gboolean same_stream(MpegTSDemuxer *demuxer, Stream *stream, AVPacket *packet)
 {
+#if CODEC_PAR
+    return demuxer->context->streams[packet->stream_index]->codecpar->codec_id == stream->codec_id;
+#else
     return demuxer->context->streams[packet->stream_index]->codec->codec_id == stream->codec_id;
+#endif
 }
 
 static GstFlowReturn process_video_packet(MpegTSDemuxer *demuxer, AVPacket *packet)
@@ -874,7 +912,11 @@ static ParseAction mpegts_demuxer_read_frame(MpegTSDemuxer *demuxer)
             break;
     }
 
+#if PACKET_UNREF
+    av_packet_unref(&packet);
+#else
     av_free_packet(&packet);
+#endif
     return result;
 }
 
