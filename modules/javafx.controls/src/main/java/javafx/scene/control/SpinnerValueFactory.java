@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -272,6 +272,8 @@ public abstract class SpinnerValueFactory<T> {
             });
 
             valueProperty().addListener((o, oldValue, newValue) -> {
+                if (newValue == null) return;
+
                 // when the value is set, we need to react to ensure it is a
                 // valid value (and if not, blow up appropriately)
                 int newIndex = -1;
@@ -468,6 +470,8 @@ public abstract class SpinnerValueFactory<T> {
             setConverter(new IntegerStringConverter());
 
             valueProperty().addListener((o, oldValue, newValue) -> {
+                if (newValue == null) return;
+
                 // when the value is set, we need to react to ensure it is a
                 // valid value (and if not, blow up appropriately)
                 if (newValue < getMin()) {
@@ -957,6 +961,8 @@ public abstract class SpinnerValueFactory<T> {
             });
 
             valueProperty().addListener((o, oldValue, newValue) -> {
+                if (newValue == null) return;
+
                 // when the value is set, we need to react to ensure it is a
                 // valid value (and if not, blow up appropriately)
                 if (getMin() != null && newValue.isBefore(getMin())) {
@@ -1213,6 +1219,8 @@ public abstract class SpinnerValueFactory<T> {
             });
 
             valueProperty().addListener((o, oldValue, newValue) -> {
+                if (newValue == null) return;
+
                 // when the value is set, we need to react to ensure it is a
                 // valid value (and if not, blow up appropriately)
                 if (getMin() != null && newValue.isBefore(getMin())) {

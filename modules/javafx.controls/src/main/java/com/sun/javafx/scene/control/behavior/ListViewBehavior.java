@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -262,6 +262,10 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
     private boolean selectionChanging = false;
 
     private final ListChangeListener<Integer> selectedIndicesListener = c -> {
+        if (getNode().getFocusModel() == null) {
+            return;
+        }
+
         int newAnchor = getAnchor();
 
         while (c.next()) {
@@ -299,6 +303,10 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
     };
 
     private final ListChangeListener<T> itemsListListener = c -> {
+        if (getNode().getFocusModel() == null) {
+            return;
+        }
+
         while (c.next()) {
             if (!hasAnchor()) continue;
 
@@ -366,8 +374,11 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
 
     private void mousePressed(MouseEvent e) {
         if (! e.isShiftDown() && ! e.isSynthesized()) {
-            int index = getNode().getSelectionModel().getSelectedIndex();
-            setAnchor(index);
+            MultipleSelectionModel<T> selectionModel = getNode().getSelectionModel();
+            if (selectionModel != null) {
+                int index = selectionModel.getSelectedIndex();
+                setAnchor(index);
+            }
         }
 
         if (! getNode().isFocused() && getNode().isFocusTraversable()) {
@@ -380,30 +391,35 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
     }
 
     private void clearSelection() {
-        getNode().getSelectionModel().clearSelection();
+        MultipleSelectionModel<T> selectionModel = getNode().getSelectionModel();
+        if (selectionModel != null) {
+            selectionModel.clearSelection();
+        }
     }
 
     private void scrollPageUp() {
+        MultipleSelectionModel<T> sm = getNode().getSelectionModel();
+        if (sm == null) return;
+
         int newSelectedIndex = -1;
         if (onScrollPageUp != null) {
             newSelectedIndex = onScrollPageUp.call(false);
         }
         if (newSelectedIndex == -1) return;
 
-        MultipleSelectionModel<T> sm = getNode().getSelectionModel();
-        if (sm == null) return;
         sm.clearAndSelect(newSelectedIndex);
     }
 
     private void scrollPageDown() {
+        MultipleSelectionModel<T> sm = getNode().getSelectionModel();
+        if (sm == null) return;
+
         int newSelectedIndex = -1;
         if (onScrollPageDown != null) {
             newSelectedIndex = onScrollPageDown.call(false);
         }
         if (newSelectedIndex == -1) return;
 
-        MultipleSelectionModel<T> sm = getNode().getSelectionModel();
-        if (sm == null) return;
         sm.clearAndSelect(newSelectedIndex);
     }
 
@@ -562,9 +578,14 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
         if (focusIndex <= 0) {
             return;
         }
-
         setAnchor(focusIndex - 1);
-        getNode().getSelectionModel().clearAndSelect(focusIndex - 1);
+
+        MultipleSelectionModel<T> selectionModel = getNode().getSelectionModel();
+        if (selectionModel == null) {
+            return;
+        }
+
+        selectionModel.clearAndSelect(focusIndex - 1);
         onSelectPreviousRow.run();
     }
 
@@ -577,24 +598,34 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
         if (focusIndex == getRowCount() - 1) {
             return;
         }
+        setAnchor(focusIndex + 1);
 
         MultipleSelectionModel<T> sm = listView.getSelectionModel();
         if (sm == null) return;
 
-        setAnchor(focusIndex + 1);
         sm.clearAndSelect(focusIndex + 1);
         if (onSelectNextRow != null) onSelectNextRow.run();
     }
 
     private void selectFirstRow() {
+        MultipleSelectionModel<T> selectionModel = getNode().getSelectionModel();
+        if (selectionModel == null) {
+            return;
+        }
+
         if (getRowCount() > 0) {
-            getNode().getSelectionModel().clearAndSelect(0);
+            selectionModel.clearAndSelect(0);
             if (onMoveToFirstCell != null) onMoveToFirstCell.run();
         }
     }
 
     private void selectLastRow() {
-        getNode().getSelectionModel().clearAndSelect(getRowCount() - 1);
+        MultipleSelectionModel<T> selectionModel = getNode().getSelectionModel();
+        if (selectionModel == null) {
+            return;
+        }
+
+        selectionModel.clearAndSelect(getRowCount() - 1);
         if (onMoveToLastCell != null) onMoveToLastCell.run();
     }
 
@@ -735,8 +766,17 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
     }
 
     private void activate() {
-        int focusedIndex = getNode().getFocusModel().getFocusedIndex();
-        getNode().getSelectionModel().select(focusedIndex);
+        FocusModel<T> focusModel = getNode().getFocusModel();
+        if (focusModel == null) {
+            return;
+        }
+
+        int focusedIndex = focusModel.getFocusedIndex();
+
+        MultipleSelectionModel<T> selectionModel = getNode().getSelectionModel();
+        if (selectionModel != null) {
+            selectionModel.select(focusedIndex);
+        }
         setAnchor(focusedIndex);
 
         // edit this row also

@@ -25,13 +25,18 @@
 
 package test.javafx.scene.control;
 
-import com.sun.javafx.scene.control.TableColumnBaseHelper;
-import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertStyleClassContains;
 import static javafx.scene.control.TreeTableColumn.SortType.ASCENDING;
 import static javafx.scene.control.TreeTableColumn.SortType.DESCENDING;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
-
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNotSame;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertStyleClassContains;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -40,20 +45,15 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
-
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Ignore;
+import org.junit.Test;
+import com.sun.javafx.scene.control.TableColumnBaseHelper;
+import com.sun.javafx.scene.control.TableColumnComparatorBase.TreeTableColumnComparator;
+import com.sun.javafx.scene.control.VirtualScrollBar;
 import com.sun.javafx.scene.control.behavior.TreeTableCellBehavior;
-import javafx.beans.property.ReadOnlyIntegerWrapper;
-import javafx.collections.transformation.FilteredList;
-import javafx.scene.control.SelectionModel;
-import javafx.scene.control.TableColumn;
-import javafx.scene.control.TableView;
-import test.javafx.collections.MockListObserver;
-import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
-import test.com.sun.javafx.scene.control.infrastructure.KeyModifier;
-import test.com.sun.javafx.scene.control.infrastructure.MouseEventFirer;
-import javafx.scene.control.skin.TreeTableCellSkin;
-import test.com.sun.javafx.scene.control.test.Data;
-
+import com.sun.javafx.tk.Toolkit;
 import javafx.application.Platform;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
@@ -61,6 +61,7 @@ import javafx.beans.binding.Bindings;
 import javafx.beans.binding.ObjectBinding;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
+import javafx.beans.property.ReadOnlyIntegerWrapper;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.beans.property.SimpleObjectProperty;
@@ -68,41 +69,21 @@ import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
+import javafx.collections.transformation.FilteredList;
 import javafx.event.EventHandler;
 import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.Scene;
-import javafx.scene.control.TreeTableView.TreeTableViewFocusModel;
-import javafx.scene.control.cell.*;
-import javafx.scene.image.ImageView;
-import javafx.scene.input.KeyCode;
-import javafx.scene.layout.StackPane;
-import javafx.scene.layout.VBox;
-import javafx.scene.paint.Color;
-import javafx.scene.shape.Circle;
-import javafx.scene.shape.Rectangle;
-import javafx.stage.Stage;
-import javafx.util.Callback;
-
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Test;
-
-import com.sun.javafx.scene.control.TableColumnComparatorBase.TreeTableColumnComparator;
-import test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils;
-import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
-import test.com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
-import com.sun.javafx.scene.control.VirtualScrollBar;
-import test.com.sun.javafx.scene.control.test.Person;
-import test.com.sun.javafx.scene.control.test.RT_22463_Person;
-import com.sun.javafx.tk.Toolkit;
 import javafx.scene.control.Button;
 import javafx.scene.control.Cell;
 import javafx.scene.control.FocusModel;
 import javafx.scene.control.IndexedCell;
 import javafx.scene.control.MultipleSelectionModel;
 import javafx.scene.control.MultipleSelectionModelBaseShim;
+import javafx.scene.control.ScrollBar;
 import javafx.scene.control.SelectionMode;
+import javafx.scene.control.SelectionModel;
+import javafx.scene.control.Slider;
 import javafx.scene.control.TableColumnBaseShim;
 import javafx.scene.control.TableSelectionModel;
 import javafx.scene.control.TextField;
@@ -114,14 +95,42 @@ import javafx.scene.control.TreeTablePosition;
 import javafx.scene.control.TreeTableRow;
 import javafx.scene.control.TreeTableRowShim;
 import javafx.scene.control.TreeTableView;
+import javafx.scene.control.TreeTableView.TreeTableViewFocusModel;
 import javafx.scene.control.TreeTableViewShim;
 import javafx.scene.control.TreeView;
+import javafx.scene.control.cell.CheckBoxTreeTableCell;
+import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.control.cell.TextFieldTreeTableCell;
+import javafx.scene.control.cell.TreeItemPropertyValueFactory;
+import javafx.scene.control.skin.TableColumnHeader;
+import javafx.scene.control.skin.TreeTableCellSkin;
+import javafx.scene.image.ImageView;
+import javafx.scene.input.KeyCode;
+import javafx.scene.layout.Region;
+import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
+import javafx.scene.paint.Color;
+import javafx.scene.shape.Circle;
+import javafx.scene.shape.Rectangle;
+import javafx.stage.Stage;
+import javafx.util.Callback;
+import test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils;
+import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
+import test.com.sun.javafx.scene.control.infrastructure.KeyModifier;
+import test.com.sun.javafx.scene.control.infrastructure.MouseEventFirer;
+import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
+import test.com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
+import test.com.sun.javafx.scene.control.test.Data;
+import test.com.sun.javafx.scene.control.test.Person;
+import test.com.sun.javafx.scene.control.test.RT_22463_Person;
+import test.javafx.collections.MockListObserver;
 
 public class TreeTableViewTest {
     private TreeTableView<String> treeTableView;
     private TreeTableView.TreeTableViewSelectionModel sm;
     private TreeTableViewFocusModel<String> fm;
 
+    private StageLoader stageLoader;
 
     // sample data #1
     private TreeItem<String> root;
@@ -181,6 +190,13 @@ public class TreeTableViewTest {
             judyMayer,
             gregorySmith
         );
+    }
+
+    @After
+    public void cleanup() {
+        if (stageLoader != null) {
+            stageLoader.dispose();
+        }
     }
 
     private void installChildren() {
@@ -6986,5 +7002,127 @@ public class TreeTableViewTest {
         assertEquals("Node 0", table.getSelectionModel().getSelectedItem().getValue());
         assertEquals(0, table.getFocusModel().getFocusedIndex());
         assertEquals("Node 0", table.getFocusModel().getFocusedItem().getValue());
+    }
+
+    // See JDK-8087673
+    @Test
+    public void testTreeTableMenuButtonDoesNotOverlapColumnHeaderGraphic() {
+        TreeTableView<String> table = new TreeTableView<>();
+        table.setColumnResizePolicy(TreeTableView.CONSTRAINED_RESIZE_POLICY);
+        table.setTableMenuButtonVisible(true);
+        TreeTableColumn<String, String> column = new TreeTableColumn<>();
+        Slider slider = new Slider();
+        slider.setValue(100);
+        column.setGraphic(slider);
+        table.getColumns().add(column);
+
+        stageLoader = new StageLoader(table);
+
+        Toolkit.getToolkit().firePulse();
+
+        ScrollBar vbar = VirtualFlowTestUtils.getVirtualFlowVerticalScrollbar(table);
+        assertFalse(vbar.isVisible());
+
+        StackPane thumb = (StackPane) slider.lookup(".thumb");
+        assertNotNull(thumb);
+        double thumbMaxX = thumb.localToScene(thumb.getLayoutBounds()).getMaxX();
+
+        StackPane corner = (StackPane) table.lookup(".show-hide-columns-button");
+        assertNotNull(corner);
+        assertTrue(corner.isVisible());
+        double cornerMinX = corner.localToScene(corner.getLayoutBounds()).getMinX();
+
+        // Verify that the slider's thumb is fully visible, and it is not overlapped
+        // by the corner region
+        assertTrue(thumbMaxX < cornerMinX);
+    }
+
+    // See JDK-8087673
+    @Test
+    public void testTableMenuButtonDoesNotOverlapLastColumnHeader() {
+        TreeTableView<String> table = new TreeTableView<>();
+        table.setTableMenuButtonVisible(true);
+        for (int i = 0; i < 10; i++) {
+            TreeTableColumn<String, String> column = new TreeTableColumn<>(i + "          ");
+            column.setCellValueFactory(value -> new SimpleStringProperty(value.getValue().getValue()));
+            table.getColumns().add(column);
+        }
+
+        TreeItem<String> root = new TreeItem<>();
+        root.setExpanded(true);
+        for (int i = 0; i < 10; i++) {
+            root.getChildren().add(new TreeItem<>(Integer.toString(i)));
+        }
+        table.setRoot(root);
+        table.setShowRoot(false);
+
+        stageLoader = new StageLoader(new Scene(table, 300, 300));
+
+        TreeTableColumn<String, ?> lastColumn = table.getColumns().get(9);
+        lastColumn.setSortType(TreeTableColumn.SortType.DESCENDING);
+        table.getSortOrder().setAll(lastColumn);
+        Toolkit.getToolkit().firePulse();
+
+        TableColumnHeader lastColumnHeader = VirtualFlowTestUtils.getTableColumnHeader(table, lastColumn);
+        assertNotNull(lastColumnHeader);
+
+        Region arrow = (Region) lastColumnHeader.lookup(".arrow");
+        assertNotNull(arrow);
+
+        ScrollBar vbar = VirtualFlowTestUtils.getVirtualFlowVerticalScrollbar(table);
+        assertFalse(vbar.isVisible());
+        ScrollBar hbar = VirtualFlowTestUtils.getVirtualFlowHorizontalScrollbar(table);
+        assertTrue(hbar.isVisible());
+
+        table.scrollToColumnIndex(9);
+
+        double headerMinX = lastColumnHeader.localToScene(lastColumnHeader.getLayoutBounds()).getMinX();
+        double headerMaxX = lastColumnHeader.localToScene(lastColumnHeader.getLayoutBounds()).getMaxX();
+
+        double arrowMaxX = arrow.localToScene(arrow.getLayoutBounds()).getMaxX();
+
+        StackPane corner = (StackPane) table.lookup(".show-hide-columns-button");
+        assertNotNull(corner);
+        assertTrue(corner.isVisible());
+        double cornerMinX = corner.localToScene(corner.getLayoutBounds()).getMinX();
+
+        // Verify that the corner region is over the last visible column header
+        assertTrue(headerMinX < cornerMinX);
+        assertTrue(cornerMinX < headerMaxX);
+
+        // Verify that the arrow is fully visible, and it is not overlapped
+        // by the corner region
+        assertTrue(arrowMaxX < cornerMinX);
+    }
+
+    // See JDK-8089280
+    @Test
+    public void testSuppressHorizontalScrollBar() {
+        TreeItem<String> root = new TreeItem<>();
+        root.setExpanded(true);
+        for (int i = 0; i < 10; i++) {
+            root.getChildren().add(new TreeItem<>(""));
+        }
+
+        TreeTableView<String> table = new TreeTableView<>();
+        for (int i = 0; i < 10; i++) {
+            TreeTableColumn<String, String> c = new TreeTableColumn<>("C" + i);
+            c.setCellValueFactory(value -> new SimpleStringProperty(value.getValue().getValue()));
+            table.getColumns().add(c);
+        }
+        table.setRoot(root);
+        table.setShowRoot(false);
+
+        stageLoader = new StageLoader(new Scene(table, 50, 50));
+
+        ScrollBar hbar = VirtualFlowTestUtils.getVirtualFlowHorizontalScrollbar(table);
+        assertTrue(hbar.isVisible());
+
+        table.setColumnResizePolicy(TreeTableView.CONSTRAINED_RESIZE_POLICY);
+
+        Toolkit.getToolkit().firePulse();
+
+        hbar = VirtualFlowTestUtils.getVirtualFlowHorizontalScrollbar(table);
+        assertFalse(hbar.isVisible()); // used to fail here
     }
 }

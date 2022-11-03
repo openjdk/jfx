@@ -45,6 +45,11 @@ on:
       - main
       - 'jfx[0-9]+'
       - 'WIP*'
+  # Enable triggering the workflow manually
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   validation:

@@ -358,6 +358,10 @@
 #include "NavigatorMediaSession.h"
 #endif
 
+#if ENABLE(MEDIA_SESSION) && USE(GLIB)
+#include "MediaSessionManagerGLib.h"
+#endif
+
 #if ENABLE(IMAGE_ANALYSIS)
 #include "TextRecognitionResult.h"
 #endif
@@ -621,6 +625,11 @@ void Internals::resetToConsistentState(Page& page)
 
 #if PLATFORM(IOS)
     RenderThemeIOS::setContentSizeCategory(kCTFontContentSizeCategoryL);
+#endif
+
+#if ENABLE(MEDIA_SESSION) && USE(GLIB)
+    auto& sessionManager = reinterpret_cast<MediaSessionManagerGLib&>(PlatformMediaSessionManager::sharedManager());
+    sessionManager.setDBusNotificationsEnabled(false);
 #endif
 }
 
@@ -5021,9 +5030,8 @@ bool Internals::isReadableStreamDisturbed(JSC::JSGlobalObject& lexicalGlobalObje
 
 JSValue Internals::cloneArrayBuffer(JSC::JSGlobalObject& lexicalGlobalObject, JSValue buffer, JSValue srcByteOffset, JSValue srcLength)
 {
-    JSC::VM& vm = lexicalGlobalObject.vm();
-    JSVMClientData* clientData = static_cast<JSVMClientData*>(vm.clientData);
-    const Identifier& privateName = clientData->builtinNames().cloneArrayBufferPrivateName();
+    auto& vm = lexicalGlobalObject.vm();
+    const Identifier& privateName = builtinNames(vm).cloneArrayBufferPrivateName();
     JSValue value;
     PropertySlot propertySlot(value, PropertySlot::InternalMethodType::Get);
     lexicalGlobalObject.methodTable(vm)->getOwnPropertySlot(&lexicalGlobalObject, &lexicalGlobalObject, privateName, propertySlot);

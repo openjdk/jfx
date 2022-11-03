@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2007, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -190,6 +190,11 @@ public final class DMarlinRenderingEngine implements MarlinConst
         logInfo("prism.marlin.pathSimplifier.pixTol = "
                 + MarlinProperties.getPathSimplifierPixelTolerance());
 
+        logInfo("prism.marlin.stroker.joinError= "
+                + MarlinProperties.getStrokerJoinError());
+        logInfo("prism.marlin.stroker.joinStyle= "
+                + MarlinProperties.getStrokerJoinStyle());
+
         logInfo("prism.marlin.clip             = "
                 + MarlinProperties.isDoClip());
         logInfo("prism.marlin.clip.runtime.enable = "
@@ -207,6 +212,11 @@ public final class DMarlinRenderingEngine implements MarlinConst
                 + MarlinConst.DO_MONITORS);
         logInfo("prism.marlin.doChecks         = "
                 + MarlinConst.DO_CHECKS);
+
+        logInfo("prism.marlin.skip_rdr         = "
+                + MarlinProperties.isSkipRenderer());
+        logInfo("prism.marlin.skip_pipe        = "
+                + MarlinProperties.isSkipRenderTiles());
 
         // logging parameters
         logInfo("prism.marlin.log              = "
@@ -229,6 +239,7 @@ public final class DMarlinRenderingEngine implements MarlinConst
                 + MarlinProperties.getQuadDecD2());
 
         logInfo("Renderer settings:");
+        logInfo("SORT         = " + MergeSort.SORT_TYPE);
         logInfo("CUB_DEC_BND  = " + Renderer.CUB_DEC_BND);
         logInfo("CUB_INC_BND  = " + Renderer.CUB_INC_BND);
         logInfo("QUAD_DEC_BND = " + Renderer.QUAD_DEC_BND);

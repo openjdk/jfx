@@ -336,6 +336,10 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
         });
         registerChangeListener(TableSkinUtils.placeholderProperty(this), e -> updatePlaceholderRegionVisibility());
         registerChangeListener(flow.getVbar().visibleProperty(), e -> updateContentWidth());
+        registerChangeListener(TableSkinUtils.columnResizePolicyProperty(this), (v) -> {
+            updateSuppressBreadthBar();
+        });
+        updateSuppressBreadthBar();
     }
 
 
@@ -893,6 +897,12 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
         // FIXME this isn't perfect, but it prevents RT-14885, which results in
         // undesired horizontal scrollbars when in constrained resize mode
         getSkinnable().getProperties().put("TableView.contentWidth", Math.floor(contentWidth));
+    }
+
+    void updateSuppressBreadthBar() {
+        Callback<ResizeFeaturesBase, Boolean> p = TableSkinUtils.columnResizePolicyProperty(this).get();
+        boolean suppress = TableSkinUtils.isConstrainedResizePolicy(p);
+        flow.setSuppressBreadthBar(suppress);
     }
 
     private void refreshView() {

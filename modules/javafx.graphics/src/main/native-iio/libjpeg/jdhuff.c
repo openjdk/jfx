@@ -708,7 +708,7 @@ process_restart (j_decompress_ptr cinfo)
  */
 
 METHODDEF(boolean)
-decode_mcu_DC_first (j_decompress_ptr cinfo, JBLOCKROW *MCU_data)
+decode_mcu_DC_first (j_decompress_ptr cinfo, JBLOCKARRAY MCU_data)
 {
   huff_entropy_ptr entropy = (huff_entropy_ptr) cinfo->entropy;
   int Al = cinfo->Al;
@@ -780,7 +780,7 @@ decode_mcu_DC_first (j_decompress_ptr cinfo, JBLOCKROW *MCU_data)
  */
 
 METHODDEF(boolean)
-decode_mcu_AC_first (j_decompress_ptr cinfo, JBLOCKROW *MCU_data)
+decode_mcu_AC_first (j_decompress_ptr cinfo, JBLOCKARRAY MCU_data)
 {
   huff_entropy_ptr entropy = (huff_entropy_ptr) cinfo->entropy;
   register int s, k, r;
@@ -868,7 +868,7 @@ decode_mcu_AC_first (j_decompress_ptr cinfo, JBLOCKROW *MCU_data)
  */
 
 METHODDEF(boolean)
-decode_mcu_DC_refine (j_decompress_ptr cinfo, JBLOCKROW *MCU_data)
+decode_mcu_DC_refine (j_decompress_ptr cinfo, JBLOCKARRAY MCU_data)
 {
   huff_entropy_ptr entropy = (huff_entropy_ptr) cinfo->entropy;
   JCOEF p1;
@@ -917,7 +917,7 @@ decode_mcu_DC_refine (j_decompress_ptr cinfo, JBLOCKROW *MCU_data)
  */
 
 METHODDEF(boolean)
-decode_mcu_AC_refine (j_decompress_ptr cinfo, JBLOCKROW *MCU_data)
+decode_mcu_AC_refine (j_decompress_ptr cinfo, JBLOCKARRAY MCU_data)
 {
   huff_entropy_ptr entropy = (huff_entropy_ptr) cinfo->entropy;
   register int s, k, r;
@@ -1076,7 +1076,7 @@ undoit:
  */
 
 METHODDEF(boolean)
-decode_mcu_sub (j_decompress_ptr cinfo, JBLOCKROW *MCU_data)
+decode_mcu_sub (j_decompress_ptr cinfo, JBLOCKARRAY MCU_data)
 {
   huff_entropy_ptr entropy = (huff_entropy_ptr) cinfo->entropy;
   const int * natural_order;
@@ -1205,7 +1205,7 @@ decode_mcu_sub (j_decompress_ptr cinfo, JBLOCKROW *MCU_data)
  */
 
 METHODDEF(boolean)
-decode_mcu (j_decompress_ptr cinfo, JBLOCKROW *MCU_data)
+decode_mcu (j_decompress_ptr cinfo, JBLOCKARRAY MCU_data)
 {
   huff_entropy_ptr entropy = (huff_entropy_ptr) cinfo->entropy;
   int blkn;

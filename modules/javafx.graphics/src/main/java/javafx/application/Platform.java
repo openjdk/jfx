@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -149,6 +149,12 @@ public final class Platform {
      * For applications that do not follow any of these approaches, then it is
      * necessary to manually start the JavaFX runtime by calling
      * {@link #startup(Runnable)} once.
+     * </p>
+     *
+     * <p>
+     * Memory consistency effects: Actions in a thread prior to submitting a
+     * {@code runnable} to this method <i>happen-before</i> actions performed
+     * by the runnable in the JavaFX Application Thread.
      * </p>
      *
      * @param runnable the Runnable whose run method will be executed on the

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,6 +28,7 @@ import static junit.framework.Assert.*;
 
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -122,8 +123,20 @@ public class SpinnerTest {
                 LocalTime.MIN, LocalTime.MAX,
                 LocalTime.now(), 1, ChronoUnit.HOURS);
         localTimeValueFactory = localTimeSpinner.getValueFactory();
+
+        Thread.currentThread().setUncaughtExceptionHandler((thread, throwable) -> {
+            if (throwable instanceof RuntimeException) {
+                throw (RuntimeException)throwable;
+            } else {
+                Thread.currentThread().getThreadGroup().uncaughtException(thread, throwable);
+            }
+        });
     }
 
+    @After
+    public void tearDown() {
+        Thread.currentThread().setUncaughtExceptionHandler(null);
+    }
 
     /***************************************************************************
      *                                                                         *
@@ -1478,5 +1491,30 @@ public class SpinnerTest {
         } finally {
             stage.hide();
         }
+    }
+
+    @Test public void testSetValueNull_IntegerSpinner() {
+        intValueFactory.setValue(null);
+        assertNull(intSpinner.getValue());
+    }
+
+    @Test public void testSetValueNull_DoubleSpinner() {
+        dblValueFactory.setValue(null);
+        assertNull(dblSpinner.getValue());
+    }
+
+    @Test public void testSetValueNull_ListSpinner() {
+        listValueFactory.setValue(null);
+        assertNull(listSpinner.getValue());
+    }
+
+    @Test public void testSetValueNull_LocalDateSpinner() {
+        localDateValueFactory.setValue(null);
+        assertNull(localDateSpinner.getValue());
+    }
+
+    @Test public void testSetValueNull_LocalTimeSpinner() {
+        localTimeValueFactory.setValue(null);
+        assertNull(localTimeSpinner.getValue());
     }
 }
