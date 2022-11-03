@@ -439,12 +439,16 @@ public class TreeTableRow<T> extends IndexedCell<T> {
     private void updateSelection() {
         if (isEmpty()) return;
         if (index == -1 || getTreeTableView() == null) return;
-        if (getTreeTableView().getSelectionModel() == null) return;
 
-        boolean isSelected = getTreeTableView().getSelectionModel().isSelected(index, null);
-        if (isSelected() == isSelected) return;
+        TreeTableViewSelectionModel<T> sm = getTreeTableView().getSelectionModel();
+        if (sm == null) {
+            return;
+        }
 
-        updateSelected(isSelected);
+        boolean isSelected = !sm.isCellSelectionEnabled() && sm.isSelected(index);
+        if (isSelected() != isSelected) {
+            updateSelected(isSelected);
+        }
     }
 
     private void updateFocus() {
