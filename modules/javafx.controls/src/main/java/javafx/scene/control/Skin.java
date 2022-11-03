@@ -72,8 +72,8 @@ public interface Skin<C extends Skinnable> {
     public Node getNode();
 
     /**
-     * Called once when {@link Skin} is set, or after the
-     * previous skin, if any, has been uninstalled via its {@link #dispose()} method.
+     * Called once when {@code Skin} is set.  This method is called after the previous skin,
+     * if any, has been uninstalled via its {@link #dispose()} method.
      * The skin can now safely make changes to its associated control, like registering listeners,
      * adding child nodes, and modifying properties and event handlers.
      * <p>
@@ -83,7 +83,7 @@ public interface Skin<C extends Skinnable> {
      *
      * @implNote
      * Skins only need to implement {@code install} if they need to make direct changes to the control
-     * like overwriting properties or event handlers.  Such skins should ensure these changes are undone in
+     * like overwriting properties or event handlers. Such skins should ensure these changes are undone in
      * their {@link #dispose()} method.
      *
      * @since 20

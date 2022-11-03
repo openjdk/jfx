@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -335,13 +335,15 @@ abstract class GlassScene implements TKScene {
 
     protected Color getClearColor() {
         WindowStage windowStage = stage instanceof WindowStage ? (WindowStage)stage : null;
-        if (windowStage != null && windowStage.getPlatformWindow().isTransparentWindow()) {
+        if (windowStage != null && windowStage.getPlatformWindow() != null &&
+                windowStage.getPlatformWindow().isTransparentWindow()) {
             return (Color.TRANSPARENT);
         } else {
             if (fillPaint == null) {
                 return Color.WHITE;
             } else if (fillPaint.isOpaque() ||
-                    (windowStage != null && windowStage.getPlatformWindow().isUnifiedWindow())) {
+                    (windowStage != null && windowStage.getPlatformWindow() != null &&
+                    windowStage.getPlatformWindow().isUnifiedWindow())) {
                 //For bare windows the transparent fill is allowed
                 if (fillPaint.getType() == Paint.Type.COLOR) {
                     return (Color)fillPaint;
