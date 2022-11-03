@@ -25,18 +25,15 @@
 package javafx.scene.control.skin;
 
 import java.util.List;
-
 import com.sun.javafx.scene.ParentHelper;
 import com.sun.javafx.scene.control.FakeFocusTextField;
+import com.sun.javafx.scene.control.ListenerHelper;
 import com.sun.javafx.scene.control.behavior.SpinnerBehavior;
 import com.sun.javafx.scene.traversal.Algorithm;
 import com.sun.javafx.scene.traversal.Direction;
 import com.sun.javafx.scene.traversal.ParentTraversalEngine;
 import com.sun.javafx.scene.traversal.TraversalContext;
-
-import javafx.collections.ListChangeListener;
 import javafx.css.PseudoClass;
-import javafx.event.EventHandler;
 import javafx.geometry.HPos;
 import javafx.geometry.VPos;
 import javafx.scene.AccessibleAction;
@@ -82,12 +79,7 @@ public class SpinnerSkin<T> extends SkinBase<Spinner<T>> {
     private static final int SPLIT_ARROWS_HORIZONTAL    = 5;
 
     private int layoutMode = 0;
-
     private final SpinnerBehavior behavior;
-
-    private EventHandler<KeyEvent> keyEventFilter;
-    private EventHandler<KeyEvent> textFieldKeyEventFilter;
-    private ListChangeListener<String> listChangeListener;
 
 
     /* *************************************************************************
@@ -112,8 +104,9 @@ public class SpinnerSkin<T> extends SkinBase<Spinner<T>> {
         textField = control.getEditor();
 
         updateStyleClass();
-        listChangeListener = ch -> updateStyleClass();
-        control.getStyleClass().addListener(listChangeListener);
+        ListenerHelper.get(this).addListChangeListener(control.getStyleClass(), (ch) -> {
+            updateStyleClass();
+        });
 
         // increment / decrement arrows
         incrementArrow = new Region();
@@ -171,12 +164,12 @@ public class SpinnerSkin<T> extends SkinBase<Spinner<T>> {
         // Fixes in the same vein as ComboBoxListViewSkin
 
         // move fake focus in to the textfield if the spinner is editable
-        registerChangeListener(control.focusedProperty(), (op) -> {
+        ListenerHelper.get(this).addChangeListener(control.focusedProperty(), (op) -> {
             // Fix for the regression noted in a comment in RT-29885.
             ((FakeFocusTextField)textField).setFakeFocus(control.isFocused());
         });
 
-        control.addEventFilter(KeyEvent.ANY, keyEventFilter = ke -> {
+        ListenerHelper.get(this).addEventFilter(control, KeyEvent.ANY, (ke) -> {
             if (control.isEditable()) {
                 // This prevents a stack overflow from our rebroadcasting of the
                 // event to the textfield that occurs in the final else statement
@@ -206,14 +199,14 @@ public class SpinnerSkin<T> extends SkinBase<Spinner<T>> {
         // Spinner control. Without this the up/down/left/right arrow keys don't
         // work when you click inside the TextField area (but they do in the case
         // of tabbing in).
-        textField.addEventFilter(KeyEvent.ANY, textFieldKeyEventFilter = ke -> {
+        ListenerHelper.get(this).addEventFilter(textField, KeyEvent.ANY, (ke) -> {
             if (! control.isEditable() || isIncDecKeyEvent(ke)) {
                 control.fireEvent(ke.copyFor(control, control));
                 ke.consume();
             }
         });
 
-        registerChangeListener(textField.focusedProperty(), (op) -> {
+        ListenerHelper.get(this).addChangeListener(textField.focusedProperty(), (op) -> {
             boolean hasFocus = textField.isFocused();
             // Fix for RT-29885
             control.getProperties().put("FOCUSED", hasFocus);
@@ -231,7 +224,6 @@ public class SpinnerSkin<T> extends SkinBase<Spinner<T>> {
         // end of comboBox-esque fixes
 
         textField.focusTraversableProperty().bind(control.editableProperty());
-
 
         // Following code borrowed from ComboBoxPopupControl, to resolve the
         // issue initially identified in RT-36902, but specifically (for Spinner)
@@ -272,12 +264,9 @@ public class SpinnerSkin<T> extends SkinBase<Spinner<T>> {
     /** {@inheritDoc} */
     @Override
     public void dispose() {
-        if(getSkinnable() != null) {
-            getSkinnable().getStyleClass().removeListener(listChangeListener);
-            getSkinnable().removeEventFilter(KeyEvent.ANY, keyEventFilter);
+        if(getSkinnable() == null) {
+            return;
         }
-
-        textField.removeEventFilter(KeyEvent.ANY, textFieldKeyEventFilter);
 
         getChildren().removeAll(textField, incrementArrowButton, decrementArrowButton);
 
