@@ -36,11 +36,7 @@ import javafx.scene.Node;
  * <ul>
  * <li>instantiation
  * <li>configuration, such as passing of dependencies and parameters
-<<<<<<< HEAD
- * <li>inside of {@link Control#setSkin(Skin)}:
-=======
  * <li>when the skin is set on a {@link Skinnable}:
->>>>>>> refs/remotes/origin/master
  * <ul>
  * <li>uninstalling of the old skin via its {@link #dispose()} method
  * <li>installing of the new skin via {@link #install()}
