@@ -31,21 +31,21 @@ import javafx.geometry.Bounds;
 import javafx.scene.Scene;
 import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
-import static org.junit.Assert.assertEquals;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.scene.ParentShim;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.shape.Rectangle;
 
-import org.junit.Test;
-
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class AnchorPaneTest {
 
-    @Test public void testNoAnchorsSet() {
+    @Test
+    public void testNoAnchorsSet() {
         AnchorPane anchorpane = new AnchorPane();
         MockResizable child = new MockResizable(100,200, 300,400, 500,600);
         child.relocate(10, 20); // should honor position if no anchors set
