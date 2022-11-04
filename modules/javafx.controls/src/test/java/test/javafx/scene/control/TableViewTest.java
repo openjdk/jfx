@@ -5972,7 +5972,7 @@ public class TableViewTest {
         hbar = VirtualFlowTestUtils.getVirtualFlowHorizontalScrollbar(table);
         assertFalse(hbar.isVisible()); // used to fail here
     }
-    
+
     @Test
     public void testQueryAccessibleAttributeSelectedItemsWithNullSelectionModel() {
         table.getItems().addAll("1", "2");
