@@ -25,14 +25,14 @@
 
 package javafx.scene.control.skin;
 
+import com.sun.javafx.scene.control.ContextMenuContent;
+import com.sun.javafx.scene.control.ListenerHelper;
+import com.sun.javafx.scene.control.behavior.MenuButtonBehavior;
 import javafx.event.ActionEvent;
 import javafx.scene.AccessibleAttribute;
 import javafx.scene.control.Control;
 import javafx.scene.control.MenuButton;
 import javafx.stage.WindowEvent;
-
-import com.sun.javafx.scene.control.ContextMenuContent;
-import com.sun.javafx.scene.control.behavior.MenuButtonBehavior;
 
 /**
  * Default skin implementation for the {@link MenuButton} control.
@@ -96,8 +96,10 @@ public class MenuButtonSkin extends MenuButtonSkinBase<MenuButton> {
             }
         });
 
+        ListenerHelper lh = ListenerHelper.get(this);
+
         // request focus on content when the popup is shown
-        listenerHelper().addEventHandler(popup, WindowEvent.WINDOW_SHOWN, (ev) -> {
+        lh.addEventHandler(popup, WindowEvent.WINDOW_SHOWN, (ev) -> {
             if (requestFocusOnFirstMenuItem) {
                 requestFocusOnFirstMenuItem();
                 requestFocusOnFirstMenuItem = false;
@@ -109,7 +111,7 @@ public class MenuButtonSkin extends MenuButtonSkinBase<MenuButton> {
             }
         });
 
-        listenerHelper().addEventHandler(control, ActionEvent.ACTION, (ev) -> {
+        lh.addEventHandler(control, ActionEvent.ACTION, (ev) -> {
             control.show();
         });
 

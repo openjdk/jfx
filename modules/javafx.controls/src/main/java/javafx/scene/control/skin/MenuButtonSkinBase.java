@@ -27,7 +27,13 @@ package javafx.scene.control.skin;
 
 import java.util.ArrayList;
 import java.util.List;
-
+import com.sun.javafx.scene.NodeHelper;
+import com.sun.javafx.scene.control.ContextMenuContent;
+import com.sun.javafx.scene.control.ControlAcceleratorSupport;
+import com.sun.javafx.scene.control.LabeledImpl;
+import com.sun.javafx.scene.control.ListenerHelper;
+import com.sun.javafx.scene.control.behavior.MenuButtonBehaviorBase;
+import com.sun.javafx.scene.control.skin.Utils;
 import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.scene.Node;
@@ -40,13 +46,6 @@ import javafx.scene.input.Mnemonic;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
-
-import com.sun.javafx.scene.NodeHelper;
-import com.sun.javafx.scene.control.ContextMenuContent;
-import com.sun.javafx.scene.control.ControlAcceleratorSupport;
-import com.sun.javafx.scene.control.LabeledImpl;
-import com.sun.javafx.scene.control.behavior.MenuButtonBehaviorBase;
-import com.sun.javafx.scene.control.skin.Utils;
 
 /**
  * Base class for MenuButtonSkin and SplitMenuButtonSkin. It consists of the
@@ -89,8 +88,10 @@ public class MenuButtonSkinBase<C extends MenuButton> extends SkinBase<C> {
     public MenuButtonSkinBase(final C control) {
         super(control);
 
+        ListenerHelper lh = ListenerHelper.get(this);
+
         if (control.getOnMousePressed() == null) {
-            listenerHelper().addEventHandler(control, MouseEvent.MOUSE_PRESSED, (ev) -> {
+            lh.addEventHandler(control, MouseEvent.MOUSE_PRESSED, (ev) -> {
                 MenuButtonBehaviorBase behavior = getBehavior();
                 if (behavior != null) {
                     behavior.mousePressed(ev, behaveLikeButton);
@@ -99,7 +100,7 @@ public class MenuButtonSkinBase<C extends MenuButton> extends SkinBase<C> {
         }
 
         if (control.getOnMouseReleased() == null) {
-            listenerHelper().addEventHandler(control, MouseEvent.MOUSE_RELEASED, (ev) -> {
+            lh.addEventHandler(control, MouseEvent.MOUSE_RELEASED, (ev) -> {
                 MenuButtonBehaviorBase behavior = getBehavior();
                 if (behavior != null) {
                     behavior.mouseReleased(ev, behaveLikeButton);
@@ -132,7 +133,7 @@ public class MenuButtonSkinBase<C extends MenuButton> extends SkinBase<C> {
 
         getSkinnable().requestLayout();
 
-        listenerHelper().addListChangeListener(control.getItems(), (ch) -> {
+        lh.addListChangeListener(control.getItems(), (ch) -> {
             while (ch.next()) {
                 popup.getItems().removeAll(ch.getRemoved());
                 popup.getItems().addAll(ch.getFrom(), ch.getAddedSubList());
@@ -141,7 +142,7 @@ public class MenuButtonSkinBase<C extends MenuButton> extends SkinBase<C> {
 
         List<Mnemonic> mnemonics = new ArrayList<>();
 
-        listenerHelper().addChangeListener(control.sceneProperty(), true, (src, oldScene, newScene) -> {
+        lh.addChangeListener(control.sceneProperty(), true, (src, oldScene, newScene) -> {
             if (oldScene != null) {
                 ControlAcceleratorSupport.removeAcceleratorsFromScene(getSkinnable().getItems(), oldScene);
 
@@ -156,7 +157,7 @@ public class MenuButtonSkinBase<C extends MenuButton> extends SkinBase<C> {
         });
 
         // Register listeners
-        listenerHelper().addChangeListener(control.showingProperty(), (ev) -> {
+        lh.addChangeListener(control.showingProperty(), (ev) -> {
             if (getSkinnable().isShowing()) {
                 show();
             } else {
@@ -164,7 +165,7 @@ public class MenuButtonSkinBase<C extends MenuButton> extends SkinBase<C> {
             }
         });
 
-        listenerHelper().addChangeListener(control.focusedProperty(), (ev) -> {
+        lh.addChangeListener(control.focusedProperty(), (ev) -> {
             // Handle tabbing away from an open MenuButton
             if (!getSkinnable().isFocused() && getSkinnable().isShowing()) {
                 hide();
@@ -174,12 +175,12 @@ public class MenuButtonSkinBase<C extends MenuButton> extends SkinBase<C> {
             }
         });
 
-        listenerHelper().addChangeListener(control.mnemonicParsingProperty(), (ev) -> {
+        lh.addChangeListener(control.mnemonicParsingProperty(), (ev) -> {
             label.setMnemonicParsing(getSkinnable().isMnemonicParsing());
             getSkinnable().requestLayout();
         });
 
-        listenerHelper().addChangeListener(popup.showingProperty(), (ev) -> {
+        lh.addChangeListener(popup.showingProperty(), (ev) -> {
             if (!popup.isShowing() && getSkinnable().isShowing()) {
                 // Popup was dismissed. Maybe user clicked outside or typed ESCAPE.
                 // Make sure button is in sync.
