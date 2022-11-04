@@ -165,8 +165,8 @@ public class TableRowSkin<T> extends TableRowSkinBase<T, TableRow<T>, TableCell<
                         return FXCollections.observableArrayList(selection);
                     }
                 }
+                return FXCollections.observableArrayList();
             }
-            // fall through
             case CELL_AT_ROW_COLUMN: {
                 int colIndex = (Integer)parameters[1];
                 TableColumn<T,?> column = getTableView().getVisibleLeafColumn(colIndex);
@@ -175,7 +175,6 @@ public class TableRowSkin<T> extends TableRowSkinBase<T, TableRow<T>, TableCell<
                 }
                 return null;
             }
-            // fall through
             case FOCUS_ITEM: {
                 TableViewFocusModel<T> fm = getTableView().getFocusModel();
                 TablePosition<T,?> focusedCell = fm.getFocusedCell();
@@ -189,8 +188,8 @@ public class TableRowSkin<T> extends TableRowSkinBase<T, TableRow<T>, TableCell<
                 }
                 return null;
             }
-            // fall through
-            default: return super.queryAccessibleAttribute(attribute, parameters);
+            default:
+                return super.queryAccessibleAttribute(attribute, parameters);
         }
     }
 
