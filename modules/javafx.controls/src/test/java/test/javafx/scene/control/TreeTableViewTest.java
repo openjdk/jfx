@@ -7143,8 +7143,6 @@ public class TreeTableViewTest {
         treeTableView.setSelectionModel(null);
         stageLoader = new StageLoader(treeTableView);
 
-        stageLoader = new StageLoader(treeTableView);
-
         Object result = treeTableView.queryAccessibleAttribute(AccessibleAttribute.FOCUS_ITEM);
 
         // TODO it seems to return a Label; possibly the placeholder label.
