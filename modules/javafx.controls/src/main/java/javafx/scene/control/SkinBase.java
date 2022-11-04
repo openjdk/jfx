@@ -221,8 +221,6 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
 
     /**
      * Returns the skin's instance of {@link ListenerHelper}, creating it if necessary.
-     *
-     * @since 20
      */
     ListenerHelper listenerHelper() {
         if (listenerHelper == null) {
