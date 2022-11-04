@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -785,6 +785,36 @@ public class ControlTest {
         assertSame(s, c.getSkin());
         other.set(null);
         assertNull(c.getSkin());
+    }
+
+    /** verifies that Control.setSkin() calls Skin.install() JDK-8290844 */
+    @Test
+    public void setSkinCallsInstall() {
+        class SkinWithInstall extends SkinStub {
+            public boolean installed;
+
+            public SkinWithInstall(Control c) {
+                super(c);
+            }
+
+            @Override
+            public void install() {
+                installed = true;
+            }
+        }
+
+        SkinWithInstall skin = new SkinWithInstall(c);
+        c.setSkin(skin);
+        assertTrue("Control.setSkin() must call Skin.install()", skin.installed);
+    }
+
+    /** Verifies that an IllegalArgumentException is thrown when setting skin for an unrelated control JDK-8290844 */
+    @Test
+    public void skinMustCorrespondToControl() {
+        SkinStub skin = new SkinStub(new ControlStub());
+        assertThrows(IllegalArgumentException.class, () -> {
+            c.setSkin(skin);
+        });
     }
 
     @Test public void skinPropertyHasBeanReference() {
