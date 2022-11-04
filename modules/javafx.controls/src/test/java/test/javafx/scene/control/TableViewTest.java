@@ -5984,7 +5984,6 @@ public class TableViewTest {
         assertEquals(FXCollections.observableArrayList(), result);
     }
 
-    @Ignore("JDK-8296413")
     @Test
     public void testQueryAccessibleAttributeFocusItemWithNullFocusModel() {
         table.getItems().addAll("1", "2");

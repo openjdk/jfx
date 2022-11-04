@@ -1027,6 +1027,9 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
         switch (attribute) {
             case FOCUS_ITEM: {
                 TableFocusModel<M,?> fm = getFocusModel();
+                if (fm == null) {
+                    return null;
+                }
                 int focusedIndex = fm.getFocusedIndex();
                 if (focusedIndex == -1) {
                     if (placeholderRegion != null && placeholderRegion.isVisible()) {

@@ -827,10 +827,22 @@ public class TableCell<S,T> extends IndexedCell<T> {
     @Override
     public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
         switch (attribute) {
-            case ROW_INDEX: return getIndex();
-            case COLUMN_INDEX: return columnIndex;
-            case SELECTED: return isInCellSelectionMode() ? isSelected() : getTableRow().isSelected();
-            default: return super.queryAccessibleAttribute(attribute, parameters);
+        case ROW_INDEX:
+            return getIndex();
+        case COLUMN_INDEX:
+            return columnIndex;
+        case SELECTED:
+            if (isInCellSelectionMode()) {
+                return isSelected();
+            } else {
+                if(getTableRow() == null) {
+                    return null;
+                } else {
+                    return getTableRow().isSelected();
+                }
+            }
+        default:
+            return super.queryAccessibleAttribute(attribute, parameters);
         }
     }
 

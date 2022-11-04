@@ -2130,12 +2130,17 @@ public class TreeTableView<S> extends Control {
              */
             case SELECTED_ITEMS: {
                 @SuppressWarnings("unchecked")
-                ObservableList<TreeTableRow<S>> rows = (ObservableList<TreeTableRow<S>>)super.queryAccessibleAttribute(attribute, parameters);
+                ObservableList<TreeTableRow<S>> rows =
+                    (ObservableList<TreeTableRow<S>>)super.queryAccessibleAttribute(attribute, parameters);
                 List<Node> selection = new ArrayList<>();
-                for (TreeTableRow<S> row : rows) {
-                    @SuppressWarnings("unchecked")
-                    ObservableList<Node> cells = (ObservableList<Node>)row.queryAccessibleAttribute(attribute, parameters);
-                    if (cells != null) selection.addAll(cells);
+                if (rows != null) {
+                    for (TreeTableRow<S> row: rows) {
+                        @SuppressWarnings("unchecked")
+                        ObservableList<Node> cells =
+                            (ObservableList<Node>)row.queryAccessibleAttribute(attribute, parameters);
+                        if (cells != null)
+                            selection.addAll(cells);
+                    }
                 }
                 return FXCollections.observableArrayList(selection);
             }
