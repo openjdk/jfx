@@ -144,23 +144,14 @@ public class MenuButtonSkinBase<C extends MenuButton> extends SkinBase<C> {
         };
         control.getItems().addListener(itemsChangedListener);
 
-        if (getSkinnable().getScene() != null) {
-            ControlAcceleratorSupport.addAcceleratorsIntoScene(getSkinnable().getItems(), getSkinnable());
-        }
+        ControlAcceleratorSupport.addAcceleratorsIntoScene(getSkinnable().getItems(), getSkinnable());
 
         List<Mnemonic> mnemonics = new ArrayList<>();
         sceneChangeListener = (scene, oldValue, newValue) -> {
             if (oldValue != null) {
-                ControlAcceleratorSupport.removeAcceleratorsFromScene(getSkinnable().getItems(), oldValue);
-
                 // We only need to remove the mnemonics from the old scene,
                 // they will be added to the new one as soon as the popup becomes visible again.
                 removeMnemonicsFromScene(mnemonics, oldValue);
-            }
-
-            // FIXME: null skinnable should not happen
-            if (getSkinnable() != null && getSkinnable().getScene() != null) {
-                ControlAcceleratorSupport.addAcceleratorsIntoScene(getSkinnable().getItems(), getSkinnable());
             }
         };
         control.sceneProperty().addListener(sceneChangeListener);

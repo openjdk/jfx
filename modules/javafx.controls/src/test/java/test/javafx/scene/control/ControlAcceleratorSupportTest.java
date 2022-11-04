@@ -27,6 +27,7 @@ package test.javafx.scene.control;
 
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.Menu;
+import javafx.scene.control.MenuButton;
 import javafx.scene.control.MenuItem;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.StackPane;
@@ -114,5 +115,20 @@ public class ControlAcceleratorSupportTest {
 
             checker.assertCollectable(menuItem);
         });
+    }
+
+    @Test
+    public void testMemoryButtonSkinDoesntAddAdditionalListeners() {
+        // JDK-8296409
+        MenuItem menuItem = new MenuItem("Menu Item");
+        MenuButton menuButton = new MenuButton("Menu Button", null, menuItem);
+        StackPane root = new StackPane(menuButton);
+        StageLoader sl = new StageLoader(root);
+        assertEquals(1, getListenerCount(menuItem.acceleratorProperty()));
+        root.getChildren().remove(menuButton);
+        assertEquals(0, getListenerCount(menuItem.acceleratorProperty()));
+        root.getChildren().add(menuButton);
+        assertEquals(1, getListenerCount(menuItem.acceleratorProperty()));
+        sl.dispose();
     }
 }
