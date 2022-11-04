@@ -473,8 +473,8 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
                         return FXCollections.observableArrayList(selection);
                     }
                 }
+                return FXCollections.observableArrayList();
             }
-            // fall through
             case CELL_AT_ROW_COLUMN: {
                 int colIndex = (Integer)parameters[1];
                 TreeTableColumn<T,?> column = treeTableView.getVisibleLeafColumn(colIndex);
@@ -483,7 +483,6 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
                 }
                 return null;
             }
-            // fall through
             case FOCUS_ITEM: {
                 TreeTableView.TreeTableViewFocusModel<T> fm = treeTableView.getFocusModel();
                 TreeTablePosition<T,?> focusedCell = fm.getFocusedCell();
@@ -497,8 +496,8 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
                 }
                 return null;
             }
-            // fall through
-            default: return super.queryAccessibleAttribute(attribute, parameters);
+            default:
+                return super.queryAccessibleAttribute(attribute, parameters);
         }
     }
 }
