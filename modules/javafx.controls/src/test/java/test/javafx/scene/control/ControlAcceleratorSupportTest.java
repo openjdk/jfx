@@ -25,6 +25,7 @@
 
 package test.javafx.scene.control;
 
+import javafx.beans.value.ChangeListener;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuButton;
@@ -32,6 +33,7 @@ import javafx.scene.control.MenuItem;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.StackPane;
 
+import test.com.sun.javafx.binding.ExpressionHelperUtility;
 import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
 import test.util.memory.JMemoryBuddy;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.*;
@@ -39,6 +41,7 @@ import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.
 import org.junit.Test;
 import org.junit.BeforeClass;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
 
 public class ControlAcceleratorSupportTest {
 
@@ -130,5 +133,31 @@ public class ControlAcceleratorSupportTest {
         root.getChildren().add(menuButton);
         assertEquals(1, getListenerCount(menuItem.acceleratorProperty()));
         sl.dispose();
+    }
+
+    @Test
+    public void testMemoryButtonSkinDoesntAddAdditionalListenersOnSceneChange() {
+        // JDK-8296409
+        MenuItem menuItem = new MenuItem("Menu Item");
+        MenuButton menuButton = new MenuButton("Menu Button", null, menuItem);
+        StackPane root = new StackPane(menuButton);
+        StackPane root2 = new StackPane();
+        StageLoader sl1 = new StageLoader(root);
+        StageLoader sl2 = new StageLoader(root2);
+        assertEquals(1, getListenerCount(menuItem.acceleratorProperty()));
+        ChangeListener originalChangeListener =
+                ExpressionHelperUtility.getChangeListeners(menuItem.acceleratorProperty()).get(0);
+        root2.getChildren().add(menuButton);
+        assertEquals(1, getListenerCount(menuItem.acceleratorProperty()));
+        ChangeListener secondChangeListener =
+                ExpressionHelperUtility.getChangeListeners(menuItem.acceleratorProperty()).get(0);
+        assertNotEquals(originalChangeListener, secondChangeListener);
+        root.getChildren().add(menuButton);
+        assertEquals(1, getListenerCount(menuItem.acceleratorProperty()));
+        ChangeListener thirdChangeListener =
+                ExpressionHelperUtility.getChangeListeners(menuItem.acceleratorProperty()).get(0);
+        assertNotEquals(secondChangeListener,thirdChangeListener);
+        sl1.dispose();
+        sl2.dispose();
     }
 }
