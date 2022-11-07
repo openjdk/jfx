@@ -25,9 +25,9 @@
 
 package test;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import org.junit.jupiter.params.ParameterizedTest;
@@ -46,6 +46,7 @@ public class JUnit5Test {
 
     static int callCount;
     static int[] intValues = {1, 2, 3};
+
     @ValueSource(ints = {1, 2, 3})
     @ParameterizedTest
     void testParameterizedTest(int value) {
@@ -63,9 +64,7 @@ public class JUnit5Test {
         assertTrue(callCount <= intValues.length, "Test function called more than number of ValueSources");
         if (callCount == intValues.length) {
             for (int i : intValues) {
-                if (i != 0) {
-                    fail("Test method not called for Value " + i);
-                }
+                assertEquals(0, i, "Test method not called for Value " + i);
             }
         }
     }
