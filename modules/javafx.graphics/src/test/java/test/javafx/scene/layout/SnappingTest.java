@@ -43,7 +43,17 @@ import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+/**
+ * Tests the snapping of all container inside {@link javafx.scene.layout}.
+ * Containers must always snap their width/height as well as there insets, otherwise the children may look blurry or
+ * have other side effects.
+ *
+ * @see Region#snapPositionX(double)
+ * @see Region#snapPositionY(double)
+ */
 class SnappingTest {
+
+    private static final double DELTA = 0.00001;
 
     private Stage stage;
 
@@ -56,36 +66,36 @@ class SnappingTest {
     }
 
     @ParameterizedTest
-    @MethodSource(value = { "getContainerInstruction" })
-    void testContainerSnappingScale100(ContainerInstruction<Region> containerInstruction) {
-        testContainerSnappingImpl(containerInstruction, 1);
+    @MethodSource(value = { "getContainerCreators" })
+    void testContainerSnappingScale100(ContainerCreator<Region> containerCreator) {
+        testContainerSnappingImpl(containerCreator, 1);
     }
 
     @ParameterizedTest
-    @MethodSource(value = { "getContainerInstruction" })
-    void testContainerSnappingScale125(ContainerInstruction<Region> containerInstruction) {
-        testContainerSnappingImpl(containerInstruction, 1.25);
+    @MethodSource(value = { "getContainerCreators" })
+    void testContainerSnappingScale125(ContainerCreator<Region> containerCreator) {
+        testContainerSnappingImpl(containerCreator, 1.25);
     }
 
     @ParameterizedTest
-    @MethodSource(value = { "getContainerInstruction" })
-    void testContainerSnappingScale150(ContainerInstruction<Region> containerInstruction) {
-        testContainerSnappingImpl(containerInstruction, 1.5);
+    @MethodSource(value = { "getContainerCreators" })
+    void testContainerSnappingScale150(ContainerCreator<Region> containerCreator) {
+        testContainerSnappingImpl(containerCreator, 1.5);
     }
 
     @ParameterizedTest
-    @MethodSource(value = { "getContainerInstruction" })
-    void testContainerSnappingScale175(ContainerInstruction<Region> containerInstruction) {
-        testContainerSnappingImpl(containerInstruction, 1.75);
+    @MethodSource(value = { "getContainerCreators" })
+    void testContainerSnappingScale175(ContainerCreator<Region> containerCreator) {
+        testContainerSnappingImpl(containerCreator, 1.75);
     }
 
     @ParameterizedTest
-    @MethodSource(value = { "getContainerInstruction" })
-    void testContainerSnappingScale200(ContainerInstruction<Region> containerInstruction) {
-        testContainerSnappingImpl(containerInstruction, 2);
+    @MethodSource(value = { "getContainerCreators" })
+    void testContainerSnappingScale200(ContainerCreator<Region> containerCreator) {
+        testContainerSnappingImpl(containerCreator, 2);
     }
 
-    private void testContainerSnappingImpl(ContainerInstruction<Region> containerInstruction, double scale) {
+    private void testContainerSnappingImpl(ContainerCreator<Region> containerCreator, double scale) {
         double widthHeight = 100;
         double padding = 9.6;
 
@@ -97,7 +107,7 @@ class SnappingTest {
         child.setMaxWidth(widthHeight);
         child.setMaxHeight(widthHeight);
 
-        Region container = containerInstruction.apply(child);
+        Region container = containerCreator.apply(child);
         container.setStyle("-fx-padding: " + padding + "px;");
 
         DoubleProperty renderScaleProperty = new SimpleDoubleProperty(scale);
@@ -119,36 +129,36 @@ class SnappingTest {
             assertEquals(snappedPaddingX, container.minWidth(-1), 0.00001, className);
             assertEquals(snappedPaddingY, container.minHeight(-1), 0.00001, className);
         } else {
-            assertEquals(widthHeight + snappedPaddingX, container.minWidth(-1), 0.00001, className);
-            assertEquals(widthHeight + snappedPaddingY, container.minHeight(-1), 0.00001, className);
+            assertEquals(widthHeight + snappedPaddingX, container.minWidth(-1), DELTA, className);
+            assertEquals(widthHeight + snappedPaddingY, container.minHeight(-1), DELTA, className);
         }
 
-        assertEquals(widthHeight + snappedPaddingX, container.prefWidth(-1), 0.00001, className);
-        assertEquals(widthHeight + snappedPaddingY, container.prefHeight(-1), 0.00001, className);
+        assertEquals(widthHeight + snappedPaddingX, container.prefWidth(-1), DELTA, className);
+        assertEquals(widthHeight + snappedPaddingY, container.prefHeight(-1), DELTA, className);
     }
 
-    static Stream<ContainerInstruction<?>> getContainerInstruction() {
+    static Stream<ContainerCreator<?>> getContainerCreators() {
         // TODO: Create issues and fix snapping for all commented out layout containers below.
         // Note that the working layout container do not necessary use the optimized snappedXXXInsets() methods,
         // but instead snap the insets (again). This can be optimized as well.
         return Stream.of(
-//                new ContainerInstruction<>(Pane::new),
-//                new ContainerInstruction<>(StackPane::new),
-//                new ContainerInstruction<>(BorderPane::new),
-                new ContainerInstruction<>(HBox::new),
-                new ContainerInstruction<>(VBox::new),
-                new ContainerInstruction<>(node -> {
-                GridPane gridPane = new GridPane();
+                new ContainerCreator<>(HBox::new),
+                new ContainerCreator<>(VBox::new),
+                new ContainerCreator<>(node -> {
+                    GridPane gridPane = new GridPane();
                     gridPane.getChildren().add(node);
                     return gridPane;
                 })
-//                new ContainerInstruction<>(node -> {
+//                new ContainerCreator<>(Pane::new),
+//                new ContainerCreator<>(StackPane::new),
+//                new ContainerCreator<>(BorderPane::new),
+//                new ContainerCreator<>(node -> {
 //                    TilePane tilePane = new TilePane(node);
 //                    tilePane.setPrefColumns(1);
 //                    return tilePane;
 //                }),
-//                new ContainerInstruction<>(AnchorPane::new), // JDK-8295078
-//                new ContainerInstruction<>(node -> {
+//                new ContainerCreator<>(AnchorPane::new), // fixed by JDK-8295078
+//                new ContainerCreator<>(node -> {
 //                    FlowPane flowPane = new FlowPane(node);
 //                    flowPane.setPrefWrapLength(0);
 //                    return flowPane;
@@ -156,9 +166,9 @@ class SnappingTest {
         );
     }
 
-    private record ContainerInstruction<S extends Region>(Function<Node, S> containerFunction) {
+    private record ContainerCreator<S extends Region>(Function<Node, S> containerCreatorFunction) {
         public S apply(Node child) {
-            return containerFunction().apply(child);
+            return containerCreatorFunction().apply(child);
         }
     }
 
