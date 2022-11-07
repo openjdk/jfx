@@ -1,10 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <classpath>
-	<classpathentry combineaccessrules="false" kind="src" path="/swing">
-		<attributes>
-			<attribute name="module" value="true"/>
-		</attributes>
-	</classpathentry>
 	<classpathentry combineaccessrules="false" kind="src" path="/base">
 		<attributes>
 			<attribute name="module" value="true"/>
@@ -28,12 +23,6 @@
 			<attribute name="module" value="true"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry combineaccessrules="false" kind="src" path="/web">
-		<attributes>
-			<attribute name="module" value="true"/>
-			<attribute name="add-exports" value="javafx.web/com.sun.webkit=ALL-UNNAMED"/>
-		</attributes>
-	</classpathentry>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER">
 		<attributes>
 			<attribute name="module" value="true"/>
@@ -45,6 +34,6 @@
 			<attribute name="module" value="true"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry excluding=".classpath|.project" kind="src" output="bin" path=""/>
+	<classpathentry excluding=".classpath|.project|.settings" kind="src" output="bin" path=""/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

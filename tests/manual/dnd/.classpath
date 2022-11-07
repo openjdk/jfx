@@ -23,23 +23,12 @@
 			<attribute name="add-exports" value="javafx.controls/test.com.sun.javafx.scene.control.infrastructure=ALL-UNNAMED:javafx.controls/com.sun.javafx.scene.control=ALL-UNNAMED"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry combineaccessrules="false" kind="src" path="/fxml">
-		<attributes>
-			<attribute name="module" value="true"/>
-		</attributes>
-	</classpathentry>
-	<classpathentry combineaccessrules="false" kind="src" path="/web">
-		<attributes>
-			<attribute name="module" value="true"/>
-			<attribute name="add-exports" value="javafx.web/com.sun.webkit=ALL-UNNAMED"/>
-		</attributes>
-	</classpathentry>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER">
 		<attributes>
 			<attribute name="module" value="true"/>
 			<attribute name="add-exports" value="java.desktop/sun.awt.datatransfer=ALL-UNNAMED"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry excluding=".classpath|.project" kind="src" output="bin" path=""/>
+	<classpathentry excluding=".classpath|.project|.settings" kind="src" output="bin" path=""/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
