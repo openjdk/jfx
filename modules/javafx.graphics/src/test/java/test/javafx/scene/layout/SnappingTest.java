@@ -126,8 +126,8 @@ class SnappingTest {
         // Special case: The min width/height of the Pane is only the padding
         String className = container.getClass().getSimpleName();
         if (container.getClass() == Pane.class) {
-            assertEquals(snappedPaddingX, container.minWidth(-1), 0.00001, className);
-            assertEquals(snappedPaddingY, container.minHeight(-1), 0.00001, className);
+            assertEquals(snappedPaddingX, container.minWidth(-1), DELTA, className);
+            assertEquals(snappedPaddingY, container.minHeight(-1), DELTA, className);
         } else {
             assertEquals(widthHeight + snappedPaddingX, container.minWidth(-1), DELTA, className);
             assertEquals(widthHeight + snappedPaddingY, container.minHeight(-1), DELTA, className);
