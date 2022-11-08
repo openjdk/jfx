@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,30 +23,7 @@
  * questions.
  */
 
-/**
- * Defines the UI controls, charts, and skins that are available
- * for the JavaFX UI toolkit.
- *
- * @moduleGraph
- * @since 9
- */
-module javafx.controls {
-    requires transitive javafx.base;
-    requires transitive javafx.graphics;
+package javafx.scene.control.theme;
 
-    exports javafx.scene.chart;
-    exports javafx.scene.control;
-    exports javafx.scene.control.cell;
-    exports javafx.scene.control.skin;
-    exports javafx.scene.control.theme;
-
-    exports com.sun.javafx.scene.control to
-        javafx.web;
-    exports com.sun.javafx.scene.control.behavior to
-        javafx.web;
-    exports com.sun.javafx.scene.control.inputmap to
-        javafx.web;
-    exports com.sun.javafx.scene.control.skin to
-        javafx.graphics,
-        javafx.web;
+public class StylesheetListShim extends StylesheetList {
 }

@@ -364,9 +364,9 @@ public final class QuantumToolkit extends Toolkit {
                     GlassStage.requestClosingAllWindows();
                 }
 
-                @Override public boolean handleThemeChanged(String themeName) {
-                    String highContrastSchemeName = Application.GetApplication().getHighContrastScheme(themeName);
-                    return PlatformImpl.setAccessibilityTheme(highContrastSchemeName);
+                @Override
+                public void handlePreferencesChanged(Map<String, Object> preferences) {
+                    PlatformImpl.updatePreferences(preferences);
                 }
             });
         }
@@ -1803,11 +1803,6 @@ public final class QuantumToolkit extends Toolkit {
     @Override
     public int getMultiClickMaxY() {
         return View.getMultiClickMaxY();
-    }
-
-    @Override
-    public String getThemeName() {
-        return Application.GetApplication().getHighContrastTheme();
     }
 
     @Override

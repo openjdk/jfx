@@ -1,5 +1,8 @@
+<!doctype html>
+
+<!--
 /*
- * Copyright (c) 2015, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,31 +25,30 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+-->
 
-/**
- * Defines the UI controls, charts, and skins that are available
- * for the JavaFX UI toolkit.
- *
- * @moduleGraph
- * @since 9
- */
-module javafx.controls {
-    requires transitive javafx.base;
-    requires transitive javafx.graphics;
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>javafx.scene.control.theme</title>
+</head>
+<body>
+<p>This package contains the built-in style themes for JavaFX controls.</p>
+<ol>
+    <li>{@link javafx.scene.control.theme.CaspianTheme Caspian}, which is the default theme for JavaFX 2.X</li>
+    <li>{@link javafx.scene.control.theme.ModenaTheme Modena}, which is the default theme for JavaFX 8.X and later</li>
+</ol>
+<p>Style themes can be applied using the {@link javafx.application.Application#setStyleTheme} method:</p>
+<pre>{@code
+    public class App extends Application {
+        @Override
+        public void start(Stage primaryStage) {
+            setStyleTheme(new CaspianTheme());
 
-    exports javafx.scene.chart;
-    exports javafx.scene.control;
-    exports javafx.scene.control.cell;
-    exports javafx.scene.control.skin;
-    exports javafx.scene.control.theme;
-
-    exports com.sun.javafx.scene.control to
-        javafx.web;
-    exports com.sun.javafx.scene.control.behavior to
-        javafx.web;
-    exports com.sun.javafx.scene.control.inputmap to
-        javafx.web;
-    exports com.sun.javafx.scene.control.skin to
-        javafx.graphics,
-        javafx.web;
-}
+            primaryStage.setScene(...);
+            primaryStage.show();
+        }
+    }
+}</pre>
+</body>
+</html>

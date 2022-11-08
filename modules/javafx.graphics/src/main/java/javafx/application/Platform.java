@@ -416,4 +416,15 @@ public final class Platform {
         }
         return accessibilityActiveProperty.getReadOnlyProperty();
     }
+
+    /**
+     * Gets all {@link PlatformPreferences} of the current platform.
+     *
+     * @return a {@code PlatformPreferences} instance
+     * @since 20
+     */
+    public static PlatformPreferences getPreferences() {
+        return PlatformImpl.getPlatformPreferences();
+    }
+
 }

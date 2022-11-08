@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,30 +23,44 @@
  * questions.
  */
 
-/**
- * Defines the UI controls, charts, and skins that are available
- * for the JavaFX UI toolkit.
- *
- * @moduleGraph
- * @since 9
- */
-module javafx.controls {
-    requires transitive javafx.base;
-    requires transitive javafx.graphics;
+#pragma once
 
-    exports javafx.scene.chart;
-    exports javafx.scene.control;
-    exports javafx.scene.control.cell;
-    exports javafx.scene.control.skin;
-    exports javafx.scene.control.theme;
+#define _ROAPI_
+#include <roapi.h>
+#include <wrl.h>
+#include <hstring.h>
 
-    exports com.sun.javafx.scene.control to
-        javafx.web;
-    exports com.sun.javafx.scene.control.behavior to
-        javafx.web;
-    exports com.sun.javafx.scene.control.inputmap to
-        javafx.web;
-    exports com.sun.javafx.scene.control.skin to
-        javafx.graphics,
-        javafx.web;
-}
+#define RO_CHECKED(NAME, FUNC) \
+    { HRESULT res = FUNC; if (FAILED(res)) throw RoException(NAME ## " failed: ", res); }
+
+struct hstring
+{
+    hstring(const char* str);
+    ~hstring();
+    operator HSTRING();
+
+private:
+    HSTRING hstr_;
+};
+
+void tryInitializeRoActivationSupport();
+void uninitializeRoActivationSupport();
+bool isRoActivationSupported();
+
+class RoException
+{
+public:
+    RoException(const char* message);
+    RoException(const char* message, HRESULT);
+    RoException(const RoException&);
+    RoException(RoException&&);
+    ~RoException();
+
+    RoException& operator=(const RoException&);
+    RoException& operator=(RoException&&);
+
+    const char* message() const;
+
+private:
+    const char* message_;
+};

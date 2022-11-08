@@ -85,10 +85,8 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
     public static final double USE_COMPUTED_SIZE = -1;
 
     static {
-        // Ensures that the default application user agent stylesheet is loaded
-        if (Application.getUserAgentStylesheet() == null) {
-            PlatformImpl.setDefaultPlatformUserAgentStylesheet();
-        }
+        // Ensures that the default theme is loaded
+        PlatformImpl.ensureDefaultTheme();
     }
 
     /**

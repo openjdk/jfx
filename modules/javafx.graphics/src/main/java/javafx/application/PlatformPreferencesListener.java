@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,30 +23,28 @@
  * questions.
  */
 
+package javafx.application;
+
+import java.util.Map;
+
 /**
- * Defines the UI controls, charts, and skins that are available
- * for the JavaFX UI toolkit.
+ * A {@code PlatformPreferencesListener} is notified when a platform preference has changed.
+ * It can be registered and unregistered with {@link PlatformPreferences#addListener}
+ * and {@link PlatformPreferences#removeListener}.
  *
- * @moduleGraph
- * @since 9
+ * @since 20
  */
-module javafx.controls {
-    requires transitive javafx.base;
-    requires transitive javafx.graphics;
+public interface PlatformPreferencesListener {
 
-    exports javafx.scene.chart;
-    exports javafx.scene.control;
-    exports javafx.scene.control.cell;
-    exports javafx.scene.control.skin;
-    exports javafx.scene.control.theme;
+    /**
+     * Occurs when one or several platform preferences have changed.
+     * <p>
+     * The {@code changed} map contains only the changed preferences.
+     *
+     * @param preferences the {@code PlatformPreferences} instance
+     * @param changed a map of all preferences that have changed
+     * @see Platform#getPreferences()
+     */
+    void onPreferencesChanged(PlatformPreferences preferences, Map<String, Object> changed);
 
-    exports com.sun.javafx.scene.control to
-        javafx.web;
-    exports com.sun.javafx.scene.control.behavior to
-        javafx.web;
-    exports com.sun.javafx.scene.control.inputmap to
-        javafx.web;
-    exports com.sun.javafx.scene.control.skin to
-        javafx.graphics,
-        javafx.web;
 }

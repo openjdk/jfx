@@ -817,11 +817,6 @@ public class Scene implements EventTarget {
             return;
         }
 
-        final boolean isTransparentWindowsSupported = Platform.isSupported(ConditionalFeature.TRANSPARENT_WINDOW);
-        if (!isTransparentWindowsSupported) {
-            PlatformImpl.addNoTransparencyStylesheetToScene(this);
-        }
-
         PerformanceTracker.logEvent("Scene.initPeer started");
 
         setAllowPGAccess(true);

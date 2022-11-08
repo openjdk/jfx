@@ -84,8 +84,7 @@ public abstract class Application {
         // currently used only on Mac OS X
         public void handleQuitAction(Application app, long time) {
         }
-        public boolean handleThemeChanged(String themeName) {
-            return false;
+        public void handlePreferencesChanged(Map<String, Object> properties) {
         }
     }
 
@@ -115,7 +114,7 @@ public abstract class Application {
     }
 
     // May be called on any thread.
-    protected static synchronized void loadNativeLibrary() {
+    public static synchronized void loadNativeLibrary() {
         // use the "platform default" name of "glass"
         loadNativeLibrary("glass");
     }
@@ -259,12 +258,11 @@ public abstract class Application {
         }
     }
 
-    protected boolean notifyThemeChanged(String themeName) {
+    protected void notifyPreferencesChanged(Map<String, Object> preferences) {
         EventHandler handler = getEventHandler();
         if (handler != null) {
-            return handler.handleThemeChanged(themeName);
+            handler.handlePreferencesChanged(preferences);
         }
-        return false;
     }
 
     protected void notifyDidResignActive() {
@@ -674,19 +672,6 @@ public abstract class Application {
     protected abstract long staticView_getMultiClickTime();
     protected abstract int staticView_getMultiClickMaxX();
     protected abstract int staticView_getMultiClickMaxY();
-
-    public String getHighContrastScheme(String themeName) {
-        return themeName;
-    }
-
-    /**
-     * Gets the Name of the currently active high contrast theme.
-     * If null, then high contrast is not enabled.
-     */
-    public String getHighContrastTheme() {
-        checkEventThread();
-        return null;
-    }
 
     protected boolean _supportsInputMethods() {
         // Overridden in subclasses
