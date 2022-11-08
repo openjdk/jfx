@@ -451,8 +451,8 @@ public class JFXPanel extends JComponent {
             popupTrigger = e.isPopupTrigger();
         }
         Point2D onScreen = convertSwingToFxPixel(getGraphicsConfiguration(), e.getXOnScreen(), e.getYOnScreen());
-        int fxXOnScreen = (int)Math.floor(onScreen.getX());
-        int fxYOnScreen = (int)Math.floor(onScreen.getY());
+        int fxXOnScreen = (int)Math.round(onScreen.getX());
+        int fxYOnScreen = (int)Math.round(onScreen.getY());
 
         if(e.getID() == MouseEvent.MOUSE_WHEEL) {
             scenePeer.scrollEvent(AbstractEvents.MOUSEEVENT_VERTICAL_WHEEL,
@@ -646,8 +646,8 @@ public class JFXPanel extends JComponent {
             if (isShowing()) {
                 Point p = getLocationOnScreen();
                 Point2D fxcoord = convertSwingToFxPixel(getGraphicsConfiguration(), p.x, p.y);
-                screenX = (int)Math.floor(fxcoord.getX());
-                screenY = (int)Math.floor(fxcoord.getY());
+                screenX = (int)Math.round(fxcoord.getX());
+                screenY = (int)Math.round(fxcoord.getY());
                 return true;
             }
         }
