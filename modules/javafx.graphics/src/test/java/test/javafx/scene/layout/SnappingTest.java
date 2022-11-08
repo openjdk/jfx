@@ -53,7 +53,7 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 class SnappingTest {
 
-    private static final double DELTA = 0.00001;
+    private static final double EPSILON = 0.00001;
 
     private Stage stage;
 
@@ -126,15 +126,15 @@ class SnappingTest {
         // Special case: The min width/height of the Pane is only the padding
         String className = container.getClass().getSimpleName();
         if (container.getClass() == Pane.class) {
-            assertEquals(snappedPaddingX, container.minWidth(-1), DELTA, className);
-            assertEquals(snappedPaddingY, container.minHeight(-1), DELTA, className);
+            assertEquals(snappedPaddingX, container.minWidth(-1), EPSILON, className);
+            assertEquals(snappedPaddingY, container.minHeight(-1), EPSILON, className);
         } else {
-            assertEquals(widthHeight + snappedPaddingX, container.minWidth(-1), DELTA, className);
-            assertEquals(widthHeight + snappedPaddingY, container.minHeight(-1), DELTA, className);
+            assertEquals(widthHeight + snappedPaddingX, container.minWidth(-1), EPSILON, className);
+            assertEquals(widthHeight + snappedPaddingY, container.minHeight(-1), EPSILON, className);
         }
 
-        assertEquals(widthHeight + snappedPaddingX, container.prefWidth(-1), DELTA, className);
-        assertEquals(widthHeight + snappedPaddingY, container.prefHeight(-1), DELTA, className);
+        assertEquals(widthHeight + snappedPaddingX, container.prefWidth(-1), EPSILON, className);
+        assertEquals(widthHeight + snappedPaddingY, container.prefHeight(-1), EPSILON, className);
     }
 
     static Stream<ContainerCreator<?>> getContainerCreators() {
