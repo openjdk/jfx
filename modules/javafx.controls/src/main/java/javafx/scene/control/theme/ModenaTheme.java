@@ -35,7 +35,7 @@ import java.util.Map;
 import java.util.ResourceBundle;
 
 /**
- * {@code Modena} is a built-in JavaFX theme.
+ * {@code Modena} is the default built-in JavaFX theme as of JavaFX 8.
  *
  * @since 20
  */
