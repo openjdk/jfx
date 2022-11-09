@@ -45,9 +45,12 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Tests the snapping of all container inside {@link javafx.scene.layout}.
- * Containers must always snap their width/height as well as there insets, otherwise the children may look blurry or
- * have other side effects.
+ * Containers must always snap their width/height as well as their insets, otherwise the children may look blurry or
+ * have other side effects. This also ensures that the containers and their children have the correct position and size
+ * on all different render scales.
  *
+ * @see Stage#setRenderScaleX(double)
+ * @see Stage#setRenderScaleY(double)
  * @see Region#snapPositionX(double)
  * @see Region#snapPositionY(double)
  */
@@ -139,7 +142,7 @@ class SnappingTest {
 
     static Stream<ContainerCreator<?>> getContainerCreators() {
         // TODO: Create issues and fix snapping for all commented out layout containers below.
-        // Note that the working layout container do not necessary use the optimized snappedXXXInsets() methods,
+        // Note that the working layout containers do not necessarily use the optimized snappedXXXInsets() methods,
         // but instead snap the insets (again). This can be optimized as well.
         return Stream.of(
                 new ContainerCreator<>(HBox::new),
