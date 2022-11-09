@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2019, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -186,10 +186,11 @@ public class PixelBufferDrawTest {
     }
 
     private void compareColor(Color exp, Color act) {
-        Assert.assertEquals(exp.getRed(), act.getRed(), 0.005);
-        Assert.assertEquals(exp.getBlue(), act.getBlue(), 0.005);
-        Assert.assertEquals(exp.getGreen(), act.getGreen(), 0.005);
-        Assert.assertEquals(exp.getOpacity(), act.getOpacity(), 0.005);
+        final double COMPARE_DELTA = 0.01;
+        Assert.assertEquals(exp.getRed(), act.getRed(), COMPARE_DELTA);
+        Assert.assertEquals(exp.getBlue(), act.getBlue(), COMPARE_DELTA);
+        Assert.assertEquals(exp.getGreen(), act.getGreen(), COMPARE_DELTA);
+        Assert.assertEquals(exp.getOpacity(), act.getOpacity(), COMPARE_DELTA);
     }
 
     private void verifyColor(Color color1, Color color2) {
