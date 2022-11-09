@@ -41,6 +41,7 @@ import javax.swing.JLabel;
 
 import test.util.Util;
 import static test.util.Util.TIMEOUT;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.BeforeClass;
 import org.junit.AfterClass;
@@ -71,6 +72,7 @@ public class SwingNodeDnDMemoryLeakTest {
         Platform.exit();
     }
 
+    @Ignore("JDK-8296618")
     @Test
     public void testSwingNodeMemoryLeak() {
         Util.runAndWait(() -> {
