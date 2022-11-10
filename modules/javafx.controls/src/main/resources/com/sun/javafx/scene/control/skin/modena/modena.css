@@ -377,6 +377,9 @@ is being used to size a border should also be in pixels.
      **************************************************************************/
 
     -fx-background-color: -fx-background;
+
+	/* avoid race condition */
+    -fx-table-cell-border-color: transparent;
 }
 
 /* Make popups transparent */

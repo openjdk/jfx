@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -65,11 +65,7 @@ public class ParsedValueImpl<V, T> extends ParsedValue<V,T> {
         // Assume the value does not contain lookups
         boolean containsLookupsFlag = false;
 
-        if (obj instanceof Size) {
-            containsLookupsFlag = false;
-        }
-
-        else if(obj instanceof ParsedValueImpl) {
+        if(obj instanceof ParsedValueImpl) {
             ParsedValueImpl value = (ParsedValueImpl)obj;
             containsLookupsFlag = value.lookup || value.containsLookups;
         }
