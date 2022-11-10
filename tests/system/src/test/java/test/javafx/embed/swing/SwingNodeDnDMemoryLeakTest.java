@@ -49,7 +49,7 @@ import static org.junit.Assert.assertTrue;
 
 public class SwingNodeDnDMemoryLeakTest {
 
-    final static int TOTAL_SWINGNODE = 10;
+    final static int TOTAL_SWINGNODE = 5;
     static CountDownLatch launchLatch;
     final static int GC_ATTEMPTS = 10;
     ArrayList<WeakReference<SwingNode>> weakRefArrSN =
@@ -127,7 +127,7 @@ public class SwingNodeDnDMemoryLeakTest {
                 break;
             }
             try {
-                Thread.sleep(250);
+                Thread.sleep(500);
             } catch (InterruptedException e) {
                 System.err.println("InterruptedException occurred during Thread.sleep()");
             }
