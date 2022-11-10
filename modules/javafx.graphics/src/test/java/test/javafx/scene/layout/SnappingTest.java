@@ -142,6 +142,7 @@ class SnappingTest {
 
     static Stream<ContainerCreator<?>> getContainerCreators() {
         // TODO: Create issues and fix snapping for all commented out layout containers below.
+        // The issues should be linked to JDK-8296609
         // Note that the working layout containers do not necessarily use the optimized snappedXXXInsets() methods,
         // but instead snap the insets (again). This can be optimized as well.
         return Stream.of(
