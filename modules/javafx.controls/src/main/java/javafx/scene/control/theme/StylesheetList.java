@@ -45,11 +45,6 @@ class StylesheetList extends ObservableListBase<String> {
         values = new ArrayList<>();
     }
 
-    public StylesheetList(int initialCapacity) {
-        elements = new ArrayList<>(initialCapacity);
-        values = new ArrayList<>(initialCapacity);
-    }
-
     public void lock() {
         if (++lockCount == 1) {
             beginChange();
