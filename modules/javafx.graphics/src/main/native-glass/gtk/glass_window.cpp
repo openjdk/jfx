@@ -54,7 +54,7 @@
 WindowContext * WindowContextBase::sm_grab_window = NULL;
 WindowContext * WindowContextBase::sm_mouse_drag_window = NULL;
 
-GdkWindow* WindowContextBase::get_gdk_window(){
+GdkWindow* WindowContextBase::get_gdk_window() {
     return gdk_window;
 }
 
@@ -629,7 +629,11 @@ bool WindowContextBase::grab_mouse_drag_focus() {
 
 void WindowContextBase::ungrab_mouse_drag_focus() {
     WindowContextBase::sm_mouse_drag_window = NULL;
-    glass_gdk_mouse_devices_ungrab();
+
+    if (!is_in_drag()) {
+        glass_gdk_mouse_devices_ungrab();
+    }
+
     if (WindowContextBase::sm_grab_window) {
         WindowContextBase::sm_grab_window->grab_focus();
     }

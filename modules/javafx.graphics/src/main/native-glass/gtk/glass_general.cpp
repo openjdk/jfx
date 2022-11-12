@@ -543,7 +543,6 @@ glass_gdk_mouse_devices_grab_with_cursor(GdkWindow *gdkWindow, GdkCursor *cursor
 
     GdkGrabStatus status = gdk_pointer_grab(gdkWindow, owner_events, (GdkEventMask)
                                             (GDK_POINTER_MOTION_MASK
-                                                | GDK_POINTER_MOTION_HINT_MASK
                                                 | GDK_BUTTON_MOTION_MASK
                                                 | GDK_BUTTON1_MOTION_MASK
                                                 | GDK_BUTTON2_MOTION_MASK
