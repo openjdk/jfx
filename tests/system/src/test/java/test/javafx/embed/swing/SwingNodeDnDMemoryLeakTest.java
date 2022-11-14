@@ -127,7 +127,7 @@ public class SwingNodeDnDMemoryLeakTest {
                 break;
             }
             try {
-                Thread.sleep(250);
+                Thread.sleep(500);
             } catch (InterruptedException e) {
                 System.err.println("InterruptedException occurred during Thread.sleep()");
             }
