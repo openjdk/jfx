@@ -49,7 +49,7 @@ import static org.junit.Assert.assertTrue;
 
 public class SwingNodeDnDMemoryLeakTest {
 
-    final static int TOTAL_SWINGNODE = 5;
+    final static int TOTAL_SWINGNODE = 10;
     static CountDownLatch launchLatch;
     final static int GC_ATTEMPTS = 10;
     ArrayList<WeakReference<SwingNode>> weakRefArrSN =
