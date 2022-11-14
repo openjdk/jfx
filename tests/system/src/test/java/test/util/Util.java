@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -37,9 +37,14 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+
+import javafx.application.Application;
 import javafx.application.Platform;
-import junit.framework.AssertionFailedError;
+import javafx.stage.Stage;
+
 import org.junit.Assert;
+
+import junit.framework.AssertionFailedError;
 
 /**
  * Utility methods for life-cycle testing
@@ -76,6 +81,7 @@ public class Util {
         } catch (InterruptedException ex) {}
     }
 
+    // FIX remove
     public static boolean await(final CountDownLatch latch) {
         try {
             return latch.await(TIMEOUT, TimeUnit.MILLISECONDS);
@@ -292,5 +298,40 @@ public class Util {
         }
 
         return cmd;
+    }
+
+    /** closes the stage, ignoring a null value */
+    public static void hide(Stage s) {
+        if (s != null) {
+            s.hide();
+        }
+    }
+
+    /**
+     * Launches an FX application, at the same time ensuring that it has been
+     * actually launched within the specified time.
+     * <p>
+     * The application being started must call {@link CountdownLatch#countDown()} once to signal
+     * its successful start (for example, by setting a handler for {@link javafx.stage.WindowEvent.WINDOW_SHOWN} event
+     * on its primary Stage).
+     *
+     * @param startupLatch
+     * @param timeoutSeconds - timeout in seconds after which the test fails
+     * @param applicationClass - application to launch
+     * @param args - command line arguments
+     */
+    public static <T extends Application> void launch (
+            CountDownLatch startupLatch,
+            int timeoutSeconds,
+            Class<T> applicationClass,
+            String... args) {
+
+        new Thread(() -> Application.launch(applicationClass, args)).start();
+        String msg = "Failed to launch FX application " + applicationClass + " within " + timeoutSeconds + " sec.";
+        try {
+            Assert.assertTrue(msg, startupLatch.await(timeoutSeconds, TimeUnit.SECONDS));
+        } catch (InterruptedException e) {
+            throw new AssertionError(e);
+        }
     }
 }

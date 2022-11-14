@@ -68,8 +68,7 @@ public class CanvasTest {
 
     @BeforeClass
     public static void setupOnce() {
-        // Start the Test Application
-        new Thread(() -> Application.launch(CanvasTestApp.class, (String[])null)).start();
+        Util.launch(launchLatch, 10, CanvasTestApp.class);
 
         assertTrue("Timeout waiting for FX runtime to start", Util.await(launchLatch));
     }
