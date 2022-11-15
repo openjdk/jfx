@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2017, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,11 +24,16 @@
  */
 package test.robot.javafx.scene;
 
-import com.sun.javafx.PlatformUtil;
+import static org.junit.Assert.fail;
+import static org.junit.Assume.assumeTrue;
+
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.collections.ListChangeListener;
+import javafx.geometry.Side;
 import javafx.scene.Scene;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
@@ -37,10 +42,6 @@ import javafx.scene.robot.Robot;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import javafx.stage.WindowEvent;
-import javafx.geometry.Side;
-
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 
 import org.junit.After;
 import org.junit.AfterClass;
@@ -48,8 +49,8 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import static org.junit.Assert.fail;
-import static org.junit.Assume.assumeTrue;
+
+import com.sun.javafx.PlatformUtil;
 
 import test.util.Util;
 
@@ -75,7 +76,7 @@ import test.util.Util;
 public class TabPaneDragPolicyTest {
     CountDownLatch[] latches;
     CountDownLatch changeListenerLatch;
-    static CountDownLatch startupLatch;
+    static CountDownLatch startupLatch = new CountDownLatch(1);
     static Robot robot;
     static TabPane tabPane;
     static volatile Stage stage;
@@ -347,17 +348,12 @@ public class TabPaneDragPolicyTest {
 
     @BeforeClass
     public static void initFX() {
-        startupLatch = new CountDownLatch(1);
-        new Thread(() -> Application.launch(TestApp.class, (String[])null)).start();
-        waitForLatch(startupLatch, 10, "Timeout waiting for FX runtime to start");
+        Util.launch(startupLatch, 10, TestApp.class);
     }
 
     @AfterClass
     public static void exit() {
-        Platform.runLater(() -> {
-            stage.hide();
-        });
-        Platform.exit();
+        Util.shutdown(stage);
     }
 
     @Before

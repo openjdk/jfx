@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2020, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,10 +24,16 @@
  */
 package test.robot.javafx.scene;
 
+import static org.junit.Assert.fail;
+
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.beans.InvalidationListener;
 import javafx.collections.ListChangeListener;
+import javafx.geometry.Side;
 import javafx.scene.Scene;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
@@ -37,11 +43,6 @@ import javafx.scene.layout.HBox;
 import javafx.scene.robot.Robot;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
-import javafx.stage.WindowEvent;
-import javafx.geometry.Side;
-
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 
 import org.junit.After;
 import org.junit.AfterClass;
@@ -49,8 +50,6 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import static org.junit.Assert.fail;
-import static org.junit.Assert.assertTrue;
 
 import test.util.Util;
 
@@ -68,7 +67,7 @@ import test.util.Util;
  */
 public class TabPaneReorderTest {
     static CountDownLatch selectionLatch;
-    static CountDownLatch startupLatch;
+    static CountDownLatch startupLatch = new CountDownLatch(1);
     static Robot robot;
     static HBox root;
     static volatile Scene scene;
@@ -208,18 +207,12 @@ public class TabPaneReorderTest {
 
     @BeforeClass
     public static void initFX() throws Exception {
-        startupLatch = new CountDownLatch(1);
-        new Thread(() -> Application.launch(TestApp.class, (String[])null)).start();
-        assertTrue("Timeout waiting for FX runtime to start",
-                startupLatch.await(15, TimeUnit.SECONDS));
+        Util.launch(startupLatch, 15, TestApp.class);
     }
 
     @AfterClass
     public static void exit() {
-        Platform.runLater(() -> {
-            stage.hide();
-        });
-        Platform.exit();
+        Util.shutdown(stage);
     }
 
     @Before

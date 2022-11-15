@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2018, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,27 +25,30 @@
 
 package test.robot.javafx.scene.treetableview;
 
+import static org.junit.Assert.fail;
+
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+
 import javafx.application.Application;
 import javafx.application.Platform;
-import javafx.scene.control.cell.TreeItemPropertyValueFactory;
+import javafx.scene.Scene;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeTableColumn;
 import javafx.scene.control.TreeTableView;
-import javafx.scene.Scene;
+import javafx.scene.control.cell.TreeItemPropertyValueFactory;
 import javafx.scene.input.MouseButton;
 import javafx.scene.robot.Robot;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import javafx.stage.WindowEvent;
 
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import static org.junit.Assert.fail;
+
+import test.util.Util;
 
 /*
  * Test to verify treeTableView resizeColumnToFitContent with
@@ -59,7 +62,7 @@ public class TreeTableViewResizeColumnToFitContentTest {
     static volatile Scene scene;
     static final int SCENE_WIDTH = 450;
     static final int SCENE_HEIGHT = 100;
-    static CountDownLatch startupLatch;
+    static CountDownLatch startupLatch = new CountDownLatch(1);
 
     public static void main(String[] args) {
         TreeTableViewResizeColumnToFitContentTest test =
@@ -104,19 +107,12 @@ public class TreeTableViewResizeColumnToFitContentTest {
 
     @BeforeClass
     public static void initFX() {
-        startupLatch = new CountDownLatch(1);
-        new Thread(() -> Application.launch(
-                TreeTableViewResizeColumnToFitContentTest.TestApp.class,
-                (String[]) null)).start();
-        waitForLatch(startupLatch, 10, "Timeout waiting for FX runtime to start");
+        Util.launch(startupLatch, 10, TestApp.class);
     }
 
     @AfterClass
     public static void exit() {
-        Platform.runLater(() -> {
-            stage.hide();
-        });
-        Platform.exit();
+        Util.shutdown(stage);
     }
 
     public static void waitForLatch(CountDownLatch latch,
