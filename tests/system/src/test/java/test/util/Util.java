@@ -334,4 +334,12 @@ public class Util {
             throw new AssertionError(e);
         }
     }
+
+    public static void waitForLatch(CountDownLatch latch, int seconds, String msg) {
+        try {
+            Assert.assertTrue("Timeout: " + msg, latch.await(seconds, TimeUnit.SECONDS));
+        } catch (InterruptedException e) {
+            throw new AssertionError(e);
+        }
+    }
 }

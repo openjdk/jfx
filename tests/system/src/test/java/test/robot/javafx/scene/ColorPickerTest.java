@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2018, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -171,16 +171,15 @@ public class ColorPickerTest {
 
     @BeforeClass
     public static void initFX() throws Exception {
-        new Thread(() -> Application.launch(TestApp.class, (String[])null)).start();
-        waitForLatch(startupLatch, 10, "FX runtime failed to start.");
+        Util.launch(startupLatch, 10, TestApp.class);
     }
 
     @AfterClass
     public static void exit() {
         Platform.runLater(() -> {
-            stage.hide();
+            Util.hide(stage);
+            Platform.exit();
         });
-        Platform.exit();
     }
 
     public static class TestApp extends Application {
