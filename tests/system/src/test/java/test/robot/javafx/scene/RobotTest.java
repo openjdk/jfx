@@ -24,13 +24,15 @@
  */
 package test.robot.javafx.scene;
 
+import static javafx.scene.paint.Color.MAGENTA;
+import static org.junit.Assert.fail;
+
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
-import com.sun.javafx.PlatformUtil;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.beans.InvalidationListener;
@@ -65,11 +67,11 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
+
+import com.sun.javafx.PlatformUtil;
+
 import junit.framework.AssertionFailedError;
 import test.util.Util;
-
-import static javafx.scene.paint.Color.MAGENTA;
-import static org.junit.Assert.fail;
 
 /**
  * Tests to verify that the native robot implementations all work correctly.
@@ -812,14 +814,12 @@ public class RobotTest {
 
     @BeforeClass
     public static void initFX() {
-        new Thread(() -> Application.launch(TestApp.class, (String[])null)).start();
-        waitForLatch(startupLatch, 10, "Timeout waiting for FX runtime to start");
+        Util.launch(startupLatch, 10, TestApp.class);
     }
 
     @AfterClass
     public static void exit() {
-        Platform.runLater(() -> stage.hide());
-        Platform.exit();
+        Util.shutdown(stage);
     }
 
     @After
