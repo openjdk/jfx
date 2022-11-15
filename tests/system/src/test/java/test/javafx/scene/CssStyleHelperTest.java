@@ -82,6 +82,11 @@ public class CssStyleHelperTest {
         Util.launch(startupLatch, 15, TestApp.class);
     }
 
+    @AfterClass
+    public static void teardownOnce() {
+        Util.shutdown(stage);
+    }
+
     @Test
     public void testCssIsCorrectlyAppliedToLabelOnStageHideAndShow() throws Exception {
         // sanity
@@ -98,13 +103,5 @@ public class CssStyleHelperTest {
 
         Assert.assertNull("Label1 should have no background", label1.getBackground());
         Assert.assertNull("Label2 should have no background", label2.getBackground());
-    }
-
-    @AfterClass
-    public static void teardownOnce() {
-        Platform.runLater(() -> {
-            Util.hide(stage);
-            Platform.exit();
-        });
     }
 }

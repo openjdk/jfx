@@ -70,7 +70,7 @@ public class DefaultExceptionHandlerTest {
 
     @AfterClass
     public static void teardownOnce() {
-        Platform.exit();
+        Util.shutdown();
     }
 
     @Test

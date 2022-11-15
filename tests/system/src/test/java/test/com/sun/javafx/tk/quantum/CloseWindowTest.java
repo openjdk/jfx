@@ -74,10 +74,7 @@ public class CloseWindowTest {
 
     @AfterClass
     public static void shutdown() {
-        Platform.runLater(() -> {
-            Util.hide(primaryStage);
-            Platform.exit();
-        });
+        Util.shutdown(primaryStage);
     }
 
     @Test

@@ -44,6 +44,8 @@ import javafx.stage.Stage;
 
 import org.junit.Assert;
 
+import com.sun.javafx.application.PlatformImpl;
+
 import junit.framework.AssertionFailedError;
 
 /**
@@ -300,13 +302,6 @@ public class Util {
         return cmd;
     }
 
-    /** closes the stage, ignoring a null value */
-    public static void hide(Stage s) {
-        if (s != null) {
-            s.hide();
-        }
-    }
-
     /**
      * Launches an FX application, at the same time ensuring that it has been
      * actually launched within the specified time.
@@ -333,6 +328,22 @@ public class Util {
         } catch (InterruptedException e) {
             throw new AssertionError(e);
         }
+    }
+
+    /**
+     * This synchronous method first hides all the specified stages (ignoring any null Stages)
+     * in the platform thread, then calls {@link Platform.exit()}.
+     */
+    public static void shutdown(Stage... stages) {
+        // why isn't runAndWait() exposed as a public API?
+        PlatformImpl.runAndWait(() -> {
+            for (Stage s : stages) {
+                if (s != null) {
+                    s.hide();
+                }
+            }
+            Platform.exit();
+        });
     }
 
     public static void waitForLatch(CountDownLatch latch, int seconds, String msg) {

@@ -979,6 +979,11 @@ NbPixels [All Test setups][n: 30] sum: 232 avg: 7.733 [1 | 27]
         assertEquals(0, launchLatch.getCount());
     }
 
+    @AfterClass
+    public static void teardownOnce() {
+        Util.shutdown();
+    }
+
     private void checkMarlin() {
         if (!isMarlin.get()) {
             throw new RuntimeException("Marlin renderer not used at runtime !");
@@ -986,11 +991,6 @@ NbPixels [All Test setups][n: 30] sum: 232 avg: 7.733 [1 | 27]
         if (!isClipRuntime.get()) {
             throw new RuntimeException("Marlin clipping not enabled at runtime !");
         }
-    }
-
-    @AfterClass
-    public static void teardownOnce() {
-        Platform.exit();
     }
 
     @Test(timeout = 600000)

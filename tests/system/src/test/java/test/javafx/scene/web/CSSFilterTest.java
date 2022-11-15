@@ -110,7 +110,7 @@ public class CSSFilterTest {
 
     @AfterClass
     public static void tearDownOnce() {
-        Platform.exit();
+        Util.shutdown();
     }
 
     @Before

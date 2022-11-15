@@ -76,6 +76,11 @@ public class DeiconifiedWithChildTest {
         Util.launch(startupLatch, 15, TestApp.class);
     }
 
+    @AfterClass
+    public static void teardown() {
+        Util.shutdown(childStage, stage);
+    }
+
     @Test
     public void testDeiconifiedPosition() throws Exception {
         Thread.sleep(200);
@@ -92,14 +97,5 @@ public class DeiconifiedWithChildTest {
         Thread.sleep(200);
         Assert.assertEquals("Child window was moved", x, childStage.getX(), 0.1);
         Assert.assertEquals("Child window was moved", y, childStage.getY(), 0.1);
-    }
-
-    @AfterClass
-    public static void teardown() {
-        Platform.runLater(() -> {
-            Util.hide(childStage);
-            Util.hide(stage);
-            Platform.exit();
-        });
     }
 }

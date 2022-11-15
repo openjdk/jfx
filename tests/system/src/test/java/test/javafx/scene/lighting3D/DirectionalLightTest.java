@@ -63,7 +63,7 @@ public class DirectionalLightTest extends LightingTest {
 
     @AfterClass
     public static void exit() {
-        Platform.exit();
+        Util.shutdown();
     }
 
     @Before

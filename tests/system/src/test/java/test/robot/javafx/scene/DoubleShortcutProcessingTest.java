@@ -77,10 +77,7 @@ public class DoubleShortcutProcessingTest {
 
     @AfterAll
     static void exit() {
-        Platform.runLater(() -> {
-            Util.hide(stage);
-            Platform.exit();
-        });
+        Util.shutdown(stage);
     }
 
     public static class TestApp extends Application {

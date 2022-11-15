@@ -30,7 +30,6 @@ import static org.junit.Assert.fail;
 import java.util.concurrent.CountDownLatch;
 
 import javafx.application.Application;
-import javafx.application.Platform;
 import javafx.collections.ObservableList;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Group;
@@ -109,7 +108,7 @@ public class DashedRectTest {
 
     @AfterClass
     public static void teardownOnce() {
-        Platform.exit();
+        Util.shutdown();
     }
 
     @Test(timeout = 10000)

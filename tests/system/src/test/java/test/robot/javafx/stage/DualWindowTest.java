@@ -119,11 +119,7 @@ public class DualWindowTest {
 
     @AfterClass
     public static void teardown() {
-        Platform.runLater(() -> {
-            Util.hide(stage1);
-            Util.hide(stage2);
-            Platform.exit();
-        });
+        Util.shutdown(stage1, stage2);
     }
 
     @Before
@@ -165,5 +161,4 @@ public class DualWindowTest {
         clickButton(button1);
         clickButton(button2);
     }
-
 }

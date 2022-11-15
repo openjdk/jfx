@@ -72,10 +72,7 @@ public class AccordionTitlePaneLeakTest {
 
     @AfterClass
     public static void teardownOnce() {
-        Platform.runLater(() -> {
-            Util.hide(stage);
-            Platform.exit();
-        });
+        Util.shutdown(stage);
     }
 
     @Test

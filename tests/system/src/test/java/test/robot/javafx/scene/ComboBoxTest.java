@@ -187,10 +187,7 @@ public class ComboBoxTest {
 
     @AfterClass
     public static void exit() {
-        Platform.runLater(() -> {
-            Util.hide(stage);
-            Platform.exit();
-        });
+        Util.shutdown(stage);
     }
 
     public static class TestApp extends Application {

@@ -81,11 +81,7 @@ public class FocusParentWindowOnChildCloseTest {
 
     @AfterClass
     public static void exit() {
-        Platform.runLater(() -> {
-            Util.hide(stage);
-            Util.hide(stage2);
-            Platform.exit();
-        });
+        Util.shutdown(stage, stage2);
     }
 
     private void mouseClick(double x, double y) {

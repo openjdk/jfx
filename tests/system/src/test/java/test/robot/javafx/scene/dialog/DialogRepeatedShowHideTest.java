@@ -95,10 +95,7 @@ public class DialogRepeatedShowHideTest {
 
     @AfterClass
     public static void exit() {
-        Platform.runLater(() -> {
-            Util.hide(stage);
-            Platform.exit();
-       });
+        Util.shutdown(stage);
     }
 
     private void mouseClick(double x, double y) {

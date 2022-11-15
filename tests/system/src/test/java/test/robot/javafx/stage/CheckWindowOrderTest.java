@@ -26,7 +26,6 @@
 package test.robot.javafx.stage;
 
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 
 import javafx.application.Application;
 import javafx.application.Platform;
@@ -65,13 +64,7 @@ public class CheckWindowOrderTest {
 
     @AfterClass
     public static void exit() {
-        Platform.runLater(() -> {
-            Util.hide(lastWindow);
-            Util.hide(secondWindow);
-            Util.hide(firstWindow);
-            Util.hide(stage);
-            Platform.exit();
-        });
+        Util.shutdown(lastWindow, secondWindow, firstWindow, stage);
     }
 
     public static class TestApp extends Application {

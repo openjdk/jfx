@@ -68,10 +68,7 @@ public class ColorChooserTest {
 
     @AfterAll
     public static void tearDownOnce() {
-        Platform.runLater(() -> {
-            Util.hide(stage);
-            Platform.exit();
-        });
+        Util.shutdown(stage);
     }
 
     public static class ColorChooserTestApp extends Application {

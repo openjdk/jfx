@@ -71,7 +71,7 @@ public class ChildStageLocationTest {
 
     @AfterClass
     public static void teardown() {
-        Platform.exit();
+        Util.shutdown();
     }
 
     @Test

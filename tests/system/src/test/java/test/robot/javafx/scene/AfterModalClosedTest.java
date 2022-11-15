@@ -88,10 +88,7 @@ public class AfterModalClosedTest {
 
     @AfterClass
     public static void teardown() {
-        Platform.runLater(() -> {
-            Util.hide(stage);
-            Platform.exit();
-        });
+        Util.shutdown(stage);
     }
 
     @Test

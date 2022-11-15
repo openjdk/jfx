@@ -69,7 +69,7 @@ public class ExceptionHandlerTest {
 
     @AfterClass
     public static void shutdown() {
-        Platform.exit();
+        Util.shutdown();
     }
 
     @Test
